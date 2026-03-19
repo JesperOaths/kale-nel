@@ -83,6 +83,7 @@
       color: #555;
       min-height: 22px;
       margin-top: 10px;
+      white-space: pre-wrap;
     }
   </style>
 </head>
@@ -111,8 +112,8 @@
   </div>
 
   <script>
-    const SUPABASE_URL = "PASTE_SUPABASE_URL_HERE";
-    const SUPABASE_ANON_KEY = "PASTE_SUPABASE_ANON_KEY_HERE";
+    const SUPABASE_URL = "https://uiqntazgnrxwliadkmy.supabase.co";
+    const SUPABASE_ANON_KEY = "PASTE_YOUR_ANON_KEY_HERE";
     const API = `${SUPABASE_URL}/rest/v1`;
 
     const TOKEN_KEY = "jas_token";
@@ -123,8 +124,30 @@
         apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
         "Content-Type": "application/json",
+        Accept: "application/json",
         ...extra
       };
+    }
+
+    async function parseResponse(res) {
+      const text = await res.text();
+      let data = null;
+
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch {
+        data = { raw: text };
+      }
+
+      if (!res.ok) {
+        const message =
+          (data && (data.message || data.error || data.msg)) ||
+          text ||
+          `HTTP ${res.status}`;
+        throw new Error(message);
+      }
+
+      return data;
     }
 
     function getToken() {
@@ -164,9 +187,7 @@
         `${API}/players?select=id,slug,display_name,claimed,active&active=eq.true&order=display_name.asc`,
         { headers: headers() }
       );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || JSON.stringify(data));
-      return data;
+      return await parseResponse(res);
     }
 
     async function fetchSessionByToken(token) {
@@ -174,19 +195,16 @@
         `${API}/sessions?select=player_id,session_token_hash&session_token_hash=eq.${encodeURIComponent(token)}`,
         { headers: headers() }
       );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || JSON.stringify(data));
+      const data = await parseResponse(res);
       return data[0] || null;
     }
 
     async function fetchVotesForWeek(weekKey) {
       const res = await fetch(
-        `${API}/votes?select=player_id,status&week_key=eq.${encodeURIComponent(weekKey)}`,
+        `${API}/votes?select=id,player_id,status&week_key=eq.${encodeURIComponent(weekKey)}`,
         { headers: headers() }
       );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || JSON.stringify(data));
-      return data;
+      return await parseResponse(res);
     }
 
     async function claimPlayer(slug) {
@@ -207,32 +225,24 @@
         `${API}/players?id=eq.${player.id}`,
         {
           method: "PATCH",
-          headers: headers({ Prefer: "return=minimal" }),
+          headers: headers({ Prefer: "return=representation" }),
           body: JSON.stringify({ claimed: true })
         }
       );
-
-      if (!updateRes.ok) {
-        const data = await updateRes.json();
-        throw new Error(data.message || JSON.stringify(data));
-      }
+      await parseResponse(updateRes);
 
       const sessionRes = await fetch(
         `${API}/sessions`,
         {
           method: "POST",
-          headers: headers({ Prefer: "return=minimal" }),
+          headers: headers({ Prefer: "return=representation" }),
           body: JSON.stringify({
             player_id: player.id,
             session_token_hash: token
           })
         }
       );
-
-      if (!sessionRes.ok) {
-        const data = await sessionRes.json();
-        throw new Error(data.message || JSON.stringify(data));
-      }
+      await parseResponse(sessionRes);
 
       setToken(token);
       setStoredName(player.display_name);
@@ -243,25 +253,40 @@
     async function saveVote(playerId, status) {
       const weekKey = getWeekKey();
 
-      const res = await fetch(
-        `${API}/votes?on_conflict=week_key,player_id`,
-        {
-          method: "POST",
-          headers: headers({
-            Prefer: "resolution=merge-duplicates,return=minimal"
-          }),
-          body: JSON.stringify({
-            week_key: weekKey,
-            player_id: playerId,
-            status,
-            updated_at: new Date().toISOString()
-          })
-        }
+      const existingRes = await fetch(
+        `${API}/votes?select=id&week_key=eq.${encodeURIComponent(weekKey)}&player_id=eq.${playerId}`,
+        { headers: headers() }
       );
+      const existing = await parseResponse(existingRes);
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || JSON.stringify(data));
+      if (existing.length > 0) {
+        const updateRes = await fetch(
+          `${API}/votes?id=eq.${existing[0].id}`,
+          {
+            method: "PATCH",
+            headers: headers({ Prefer: "return=representation" }),
+            body: JSON.stringify({
+              status,
+              updated_at: new Date().toISOString()
+            })
+          }
+        );
+        await parseResponse(updateRes);
+      } else {
+        const insertRes = await fetch(
+          `${API}/votes`,
+          {
+            method: "POST",
+            headers: headers({ Prefer: "return=representation" }),
+            body: JSON.stringify({
+              week_key: weekKey,
+              player_id: playerId,
+              status,
+              updated_at: new Date().toISOString()
+            })
+          }
+        );
+        await parseResponse(insertRes);
       }
     }
 
@@ -307,8 +332,9 @@
         .map(p => p.display_name)
         .sort((a, b) => a.localeCompare(b, "nl"));
 
-      document.getElementById("answer").textContent = computeAnswer(yesNames.length);
-      document.getElementById("answer").className = "answer " + computeAnswer(yesNames.length);
+      const answer = computeAnswer(yesNames.length);
+      document.getElementById("answer").textContent = answer;
+      document.getElementById("answer").className = "answer " + answer;
       document.getElementById("count").textContent = `${yesNames.length} mensen hebben ja gezegd`;
 
       const list = document.getElementById("list");
