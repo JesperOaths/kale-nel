@@ -1,188 +1,121 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+<script>
+  const API = "https://uiqntazgnrxwliadkmy.supabase.co/functions/v1/jas";
+  const KEY = "jas_token";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-};
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      ...corsHeaders,
-      "Content-Type": "application/json",
-    },
-  });
-}
-
-function getWeekKey() {
-  const now = new Date();
-  const first = new Date(now.getFullYear(), 0, 1);
-  const pastDays = (now.getTime() - first.getTime()) / 86400000;
-  const week = Math.ceil((pastDays + first.getDay() + 1) / 7);
-  return `${now.getFullYear()}-W${String(week).padStart(2, "0")}`;
-}
-
-function computeAnswer(count: number) {
-  if (count >= 4) return "ja";
-  if (count === 3) return "bijna";
-  return "nee";
-}
-
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+  function getToken() {
+    return localStorage.getItem(KEY);
   }
 
-  try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  function setToken(t) {
+    localStorage.setItem(KEY, t);
+  }
 
-    if (!supabaseUrl || !serviceRoleKey) {
-      return json({ error: "Missing Supabase secrets" }, 500);
-    }
+  async function load() {
+    try {
+      const res = await fetch(API);
+      const data = await res.json();
 
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
+      document.getElementById("answer").textContent = data.answer || "...";
+      document.getElementById("answer").className = "answer " + (data.answer || "");
+      document.getElementById("count").textContent = (data.yesCount ?? 0) + " mensen";
 
-    const url = new URL(req.url);
-    const action = url.searchParams.get("action");
-
-    if (url.searchParams.get("players")) {
-      const { data, error } = await supabase
-        .from("players")
-        .select("slug, display_name")
-        .eq("active", true)
-        .order("display_name");
-
-      if (error) {
-        return json({ error: error.message }, 500);
-      }
-
-      return json({ players: data ?? [] });
-    }
-
-    if (req.method === "GET") {
-      const weekKey = getWeekKey();
-
-      const { data: players, error: playersError } = await supabase
-        .from("players")
-        .select("id, display_name")
-        .eq("active", true);
-
-      if (playersError) {
-        return json({ error: playersError.message }, 500);
-      }
-
-      const { data: votes, error: votesError } = await supabase
-        .from("votes")
-        .select("player_id, status")
-        .eq("week_key", weekKey);
-
-      if (votesError) {
-        return json({ error: votesError.message }, 500);
-      }
-
-      const yesIds = new Set(
-        (votes ?? []).filter((v) => v.status === "ja").map((v) => v.player_id)
-      );
-
-      const yesNames = (players ?? [])
-        .filter((p) => yesIds.has(p.id))
-        .map((p) => p.display_name);
-
-      return json({
-        yesNames,
-        yesCount: yesNames.length,
-        answer: computeAnswer(yesNames.length),
+      const list = document.getElementById("list");
+      list.innerHTML = "";
+      (data.yesNames || []).forEach((n) => {
+        const li = document.createElement("li");
+        li.textContent = n;
+        list.appendChild(li);
       });
+
+      const select = document.getElementById("playerSelect");
+      select.innerHTML = "";
+
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "Kies je naam";
+      placeholder.disabled = true;
+      placeholder.selected = true;
+      select.appendChild(placeholder);
+
+      const resPlayers = await fetch(API + "?players=1");
+      const playersData = await resPlayers.json();
+
+      (playersData.players || []).forEach((p) => {
+        const o = document.createElement("option");
+        o.value = p.slug;
+        o.textContent = p.display_name;
+        select.appendChild(o);
+      });
+
+      if (getToken()) {
+        document.getElementById("login").style.display = "none";
+        document.getElementById("vote").style.display = "block";
+      } else {
+        document.getElementById("login").style.display = "block";
+        document.getElementById("vote").style.display = "none";
+      }
+    } catch (err) {
+      console.error(err);
+      document.getElementById("answer").textContent = "fout";
+      document.getElementById("count").textContent = "Kon site niet laden";
     }
-
-    if (action === "claim" && req.method === "POST") {
-      const { slug } = await req.json();
-
-      const { data: player, error: playerError } = await supabase
-        .from("players")
-        .select("id, display_name, claimed")
-        .eq("slug", slug)
-        .single();
-
-      if (playerError) {
-        return json({ error: playerError.message }, 500);
-      }
-
-      if (!player || player.claimed) {
-        return json({ error: "Naam al gebruikt" }, 400);
-      }
-
-      const token = crypto.randomUUID();
-
-      const { error: updateError } = await supabase
-        .from("players")
-        .update({ claimed: true })
-        .eq("id", player.id);
-
-      if (updateError) {
-        return json({ error: updateError.message }, 500);
-      }
-
-      const { error: sessionError } = await supabase
-        .from("sessions")
-        .insert({
-          player_id: player.id,
-          session_token_hash: token,
-        });
-
-      if (sessionError) {
-        return json({ error: sessionError.message }, 500);
-      }
-
-      return json({ token, player });
-    }
-
-    if (action === "vote" && req.method === "POST") {
-      const { token, status } = await req.json();
-
-      if (!["ja", "nee"].includes(status)) {
-        return json({ error: "Ongeldige stem" }, 400);
-      }
-
-      const { data: session, error: sessionError } = await supabase
-        .from("sessions")
-        .select("player_id")
-        .eq("session_token_hash", token)
-        .single();
-
-      if (sessionError || !session) {
-        return json({ error: "Geen sessie" }, 401);
-      }
-
-      const weekKey = getWeekKey();
-
-      const { error: voteError } = await supabase
-        .from("votes")
-        .upsert(
-          {
-            week_key: weekKey,
-            player_id: session.player_id,
-            status,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "week_key,player_id" }
-        );
-
-      if (voteError) {
-        return json({ error: voteError.message }, 500);
-      }
-
-      return json({ ok: true });
-    }
-
-    return json({ error: "Unknown route" }, 400);
-  } catch (err) {
-    return json(
-      { error: err instanceof Error ? err.message : "Unknown server error" },
-      500
-    );
   }
-});
+
+  async function claim() {
+    const slug = document.getElementById("playerSelect").value;
+
+    if (!slug) {
+      alert("Kies eerst je naam");
+      return;
+    }
+
+    const res = await fetch(API + "?action=claim", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ slug })
+    });
+
+    const data = await res.json();
+
+    if (data.token) {
+      setToken(data.token);
+      load();
+    } else {
+      alert(data.error || "Naam al gebruikt");
+    }
+  }
+
+  async function vote(status) {
+    const token = getToken();
+
+    if (!token) {
+      alert("Koppel eerst je naam");
+      return;
+    }
+
+    const res = await fetch(API + "?action=vote", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ token, status })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || "Stem opslaan mislukt");
+      return;
+    }
+
+    load();
+  }
+
+  document.getElementById("claimBtn").addEventListener("click", claim);
+  document.getElementById("yesBtn").addEventListener("click", () => vote("ja"));
+  document.getElementById("noBtn").addEventListener("click", () => vote("nee"));
+
+  load();
+</script>
