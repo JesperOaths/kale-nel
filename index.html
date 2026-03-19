@@ -1,32 +1,165 @@
-<script>
-  const API = "https://uiqntazgnrxwliadkmy.supabase.co/functions/v1/jas";
-  const KEY = "jas_token";
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wordt er gejast vanavond?</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
 
-  function getToken() {
-    return localStorage.getItem(KEY);
-  }
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      text-align: center;
+      max-width: 520px;
+      width: 100%;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
 
-  function setToken(t) {
-    localStorage.setItem(KEY, t);
-  }
+    h1 {
+      margin-bottom: 10px;
+      font-size: 2.2rem;
+      line-height: 1.15;
+    }
 
-  async function load() {
-    try {
-      const res = await fetch(API);
-      const data = await res.json();
+    .answer {
+      font-size: 32px;
+      margin: 15px 0;
+      font-weight: bold;
+    }
 
-      document.getElementById("answer").textContent = data.answer || "...";
-      document.getElementById("answer").className = "answer " + (data.answer || "");
-      document.getElementById("count").textContent = (data.yesCount ?? 0) + " mensen";
+    .ja { color: green; }
+    .bijna { color: orange; }
+    .nee { color: red; }
 
-      const list = document.getElementById("list");
-      list.innerHTML = "";
-      (data.yesNames || []).forEach((n) => {
-        const li = document.createElement("li");
-        li.textContent = n;
-        list.appendChild(li);
-      });
+    button {
+      padding: 12px 16px;
+      margin: 5px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 16px;
+    }
 
+    .yes { background: green; color: white; }
+    .no { background: red; color: white; }
+
+    select {
+      padding: 10px;
+      margin: 10px 0;
+      width: 100%;
+      font-size: 16px;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 10px 0 0;
+    }
+
+    li {
+      margin: 6px 0;
+    }
+
+    #vote {
+      margin-top: 10px;
+    }
+
+    #me {
+      margin-bottom: 8px;
+      color: #444;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Wordt er gejast vanavond?</h1>
+
+    <div id="answer" class="answer">...</div>
+    <p id="count"></p>
+
+    <div id="login">
+      <select id="playerSelect">
+        <option value="">Kies je naam</option>
+      </select>
+      <button id="claimBtn" type="button">Koppel naam</button>
+    </div>
+
+    <div id="vote" style="display:none;">
+      <p id="me">Je bent gekoppeld.</p>
+      <button id="yesBtn" class="yes" type="button">Ik kan</button>
+      <button id="noBtn" class="no" type="button">Ik kan niet</button>
+    </div>
+
+    <h3>Ja-lijst:</h3>
+    <ul id="list"></ul>
+  </div>
+
+  <script>
+    const API = "https://uiqntazgnrxwliadkmy.supabase.co/functions/v1/jas";
+    const KEY = "jas_token";
+
+    const PLAYERS = [
+      { slug: "bruis", display_name: "Bruis" },
+      { slug: "jelle", display_name: "Jelle" },
+      { slug: "nelis", display_name: "Nelis" },
+      { slug: "ruben", display_name: "Ruben" },
+      { slug: "siem", display_name: "Siem" },
+      { slug: "sierd", display_name: "Sierd" },
+      { slug: "antoni", display_name: "Antoni" },
+      { slug: "boudewijn", display_name: "Boudewijn" },
+      { slug: "bram", display_name: "Bram" },
+      { slug: "daniel", display_name: "Daniël" },
+      { slug: "david", display_name: "David" },
+      { slug: "jelmer-d", display_name: "Jelmer D" },
+      { slug: "jorrit", display_name: "Jorrit" },
+      { slug: "justin", display_name: "Justin" },
+      { slug: "koen", display_name: "Koen" },
+      { slug: "lyon", display_name: "Lyon" },
+      { slug: "mart", display_name: "Mart" },
+      { slug: "marvin", display_name: "Marvin" },
+      { slug: "max", display_name: "Max" },
+      { slug: "melson", display_name: "Melson" },
+      { slug: "merijn", display_name: "Merijn" },
+      { slug: "milan", display_name: "Milan" },
+      { slug: "rik", display_name: "Rik" },
+      { slug: "robin-s", display_name: "Robin S" },
+      { slug: "robin-m", display_name: "Robin M" },
+      { slug: "sam", display_name: "Sam" },
+      { slug: "sybren", display_name: "Sybren" },
+      { slug: "tim", display_name: "Tim" },
+      { slug: "tom", display_name: "Tom" },
+      { slug: "tom-a", display_name: "Tom A" },
+      { slug: "tristan", display_name: "Tristan" },
+      { slug: "vince", display_name: "Vince" },
+      { slug: "wolf", display_name: "Wolf" },
+      { slug: "bryan", display_name: "Bryan" },
+      { slug: "boris", display_name: "Boris" },
+      { slug: "roel", display_name: "Roel" },
+      { slug: "albert", display_name: "Albert" },
+      { slug: "jelmer-k", display_name: "Jelmer K" },
+      { slug: "thijs", display_name: "Thijs" },
+      { slug: "friso", display_name: "Friso" }
+    ];
+
+    function getToken() {
+      return localStorage.getItem(KEY);
+    }
+
+    function setToken(t) {
+      localStorage.setItem(KEY, t);
+    }
+
+    function fillPlayers() {
       const select = document.getElementById("playerSelect");
       select.innerHTML = "";
 
@@ -37,85 +170,106 @@
       placeholder.selected = true;
       select.appendChild(placeholder);
 
-      const resPlayers = await fetch(API + "?players=1");
-      const playersData = await resPlayers.json();
+      PLAYERS.forEach((p) => {
+        const option = document.createElement("option");
+        option.value = p.slug;
+        option.textContent = p.display_name;
+        select.appendChild(option);
+      });
+    }
 
-      (playersData.players || []).forEach((p) => {
-        const o = document.createElement("option");
-        o.value = p.slug;
-        o.textContent = p.display_name;
-        select.appendChild(o);
+    async function load() {
+      try {
+        fillPlayers();
+
+        const res = await fetch(API);
+        const data = await res.json();
+
+        document.getElementById("answer").textContent = data.answer || "...";
+        document.getElementById("answer").className = "answer " + (data.answer || "");
+        document.getElementById("count").textContent = (data.yesCount ?? 0) + " mensen";
+
+        const list = document.getElementById("list");
+        list.innerHTML = "";
+
+        (data.yesNames || []).forEach((n) => {
+          const li = document.createElement("li");
+          li.textContent = n;
+          list.appendChild(li);
+        });
+
+        if (getToken()) {
+          document.getElementById("login").style.display = "none";
+          document.getElementById("vote").style.display = "block";
+        } else {
+          document.getElementById("login").style.display = "block";
+          document.getElementById("vote").style.display = "none";
+        }
+      } catch (err) {
+        console.error(err);
+        fillPlayers();
+        document.getElementById("answer").textContent = "fout";
+        document.getElementById("count").textContent = "Kon site niet laden";
+      }
+    }
+
+    async function claim() {
+      const slug = document.getElementById("playerSelect").value;
+
+      if (!slug) {
+        alert("Kies eerst je naam");
+        return;
+      }
+
+      const res = await fetch(API + "?action=claim", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ slug })
       });
 
-      if (getToken()) {
-        document.getElementById("login").style.display = "none";
-        document.getElementById("vote").style.display = "block";
+      const data = await res.json();
+
+      if (data.token) {
+        setToken(data.token);
+        load();
       } else {
-        document.getElementById("login").style.display = "block";
-        document.getElementById("vote").style.display = "none";
+        alert(data.error || "Naam al gebruikt");
       }
-    } catch (err) {
-      console.error(err);
-      document.getElementById("answer").textContent = "fout";
-      document.getElementById("count").textContent = "Kon site niet laden";
-    }
-  }
-
-  async function claim() {
-    const slug = document.getElementById("playerSelect").value;
-
-    if (!slug) {
-      alert("Kies eerst je naam");
-      return;
     }
 
-    const res = await fetch(API + "?action=claim", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ slug })
-    });
+    async function vote(status) {
+      const token = getToken();
 
-    const data = await res.json();
+      if (!token) {
+        alert("Koppel eerst je naam");
+        return;
+      }
 
-    if (data.token) {
-      setToken(data.token);
+      const res = await fetch(API + "?action=vote", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ token, status })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Stem opslaan mislukt");
+        return;
+      }
+
       load();
-    } else {
-      alert(data.error || "Naam al gebruikt");
-    }
-  }
-
-  async function vote(status) {
-    const token = getToken();
-
-    if (!token) {
-      alert("Koppel eerst je naam");
-      return;
     }
 
-    const res = await fetch(API + "?action=vote", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ token, status })
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.error || "Stem opslaan mislukt");
-      return;
-    }
+    document.getElementById("claimBtn").addEventListener("click", claim);
+    document.getElementById("yesBtn").addEventListener("click", () => vote("ja"));
+    document.getElementById("noBtn").addEventListener("click", () => vote("nee"));
 
     load();
-  }
-
-  document.getElementById("claimBtn").addEventListener("click", claim);
-  document.getElementById("yesBtn").addEventListener("click", () => vote("ja"));
-  document.getElementById("noBtn").addEventListener("click", () => vote("nee"));
-
-  load();
-</script>
+  </script>
+</body>
+</html>
