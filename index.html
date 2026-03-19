@@ -5,116 +5,158 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wordt er gejast vanavond?</title>
   <style>
-    :root {
-      --bg1: #f8fafc;
-      --bg2: #e2e8f0;
-      --card: rgba(255, 255, 255, 0.75);
-      --text: #0f172a;
-      --muted: #475569;
-      --yes-bg: #dcfce7;
-      --yes-text: #166534;
-      --no-bg: #fee2e2;
-      --no-text: #991b1b;
-      --shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
-      --radius: 24px;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    html, body {
-      margin: 0;
-      min-height: 100%;
-      font-family: Inter, Arial, sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(circle at top left, #ffffff 0%, transparent 35%),
-        radial-gradient(circle at bottom right, #dbeafe 0%, transparent 30%),
-        linear-gradient(135deg, var(--bg1), var(--bg2));
-    }
-
     body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
       min-height: 100vh;
-      display: grid;
-      place-items: center;
-      padding: 24px;
+      margin: 0;
     }
 
     .card {
-      width: 100%;
-      max-width: 720px;
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
       text-align: center;
-      background: var(--card);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 56px 32px;
-      border: 1px solid rgba(255, 255, 255, 0.65);
-    }
-
-    .eyebrow {
-      margin: 0 0 16px;
-      font-size: 0.95rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--muted);
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     }
 
     h1 {
-      margin: 0;
-      font-size: clamp(2rem, 6vw, 4rem);
-      line-height: 1.1;
-      letter-spacing: -0.03em;
+      margin-bottom: 10px;
     }
 
     .answer {
-      display: inline-block;
-      margin-top: 28px;
-      padding: 14px 26px;
-      border-radius: 999px;
-      font-size: clamp(1.3rem, 4vw, 2rem);
-      font-weight: 700;
-      text-transform: lowercase;
+      font-size: 32px;
+      margin: 15px 0;
+      font-weight: bold;
     }
 
-    .answer.yes {
-      background: var(--yes-bg);
-      color: var(--yes-text);
+    .ja { color: green; }
+    .bijna { color: orange; }
+    .nee { color: red; }
+
+    button {
+      padding: 12px;
+      margin: 5px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
     }
 
-    .answer.no {
-      background: var(--no-bg);
-      color: var(--no-text);
-    }
+    .yes { background: green; color: white; }
+    .no { background: red; color: white; }
 
-    .hint {
-      margin-top: 18px;
-      font-size: 0.95rem;
-      color: var(--muted);
+    select {
+      padding: 10px;
+      margin: 10px 0;
+      width: 100%;
     }
   </style>
 </head>
 <body>
-  <main class="card">
-    <p class="eyebrow">Vanavond</p>
+  <div class="card">
     <h1>Wordt er gejast vanavond?</h1>
-    <div id="answer" class="answer">yes</div>
-    <p class="hint">Pas dit aan in de code.</p>
-  </main>
+
+    <div id="answer" class="answer">...</div>
+    <p id="count"></p>
+
+    <div id="login">
+      <select id="playerSelect"></select>
+      <button onclick="claim()">Koppel naam</button>
+    </div>
+
+    <div id="vote" style="display:none;">
+      <p id="me"></p>
+      <button class="yes" onclick="vote('ja')">Ik kan</button>
+      <button class="no" onclick="vote('nee')">Ik kan niet</button>
+    </div>
+
+    <h3>Ja-lijst:</h3>
+    <ul id="list"></ul>
+  </div>
 
   <script>
-    const answer = "yes"; // change to "no"
+    const API = "https://uiqntazgnrxwliadkmy.supabase.co/functions/v1/jas";
+    const KEY = "jas_token";
 
-    const answerElement = document.getElementById("answer");
-    answerElement.textContent = answer;
-
-    if (answer === "yes") {
-      answerElement.classList.add("yes");
-    } else {
-      answerElement.classList.add("no");
+    function getToken() {
+      return localStorage.getItem(KEY);
     }
+
+    function setToken(t) {
+      localStorage.setItem(KEY, t);
+    }
+
+    async function load() {
+      const res = await fetch(API);
+      const data = await res.json();
+
+      document.getElementById("answer").textContent = data.answer;
+      document.getElementById("answer").className = "answer " + data.answer;
+      document.getElementById("count").textContent = data.yesCount + " mensen";
+
+      const list = document.getElementById("list");
+      list.innerHTML = "";
+      data.yesNames.forEach(n => {
+        const li = document.createElement("li");
+        li.textContent = n;
+        list.appendChild(li);
+      });
+
+      // populate players
+      const select = document.getElementById("playerSelect");
+      select.innerHTML = "";
+      const players = [
+        "Bruis","Jelle","Nelis","Ruben","Siem","Sierd","Antoni","Boudewijn","Bram","Daniël","David","Jelmer D","Jorrit","Justin","Koen","Lyon","Mart","Marvin","Max","Melson","Merijn","Milan","Rik","Robin S","Robin M","Sam","Sybren","Tim","Tom","Tom A","Tristan","Vince","Wolf","Bryan","Boris","Roel","Albert","Jelmer K","Thijs","Friso"
+      ];
+
+      players.forEach(p => {
+        const o = document.createElement("option");
+        o.value = p.toLowerCase().replace(" ", "-");
+        o.textContent = p;
+        select.appendChild(o);
+      });
+
+      if (getToken()) {
+        document.getElementById("login").style.display = "none";
+        document.getElementById("vote").style.display = "block";
+      }
+    }
+
+    async function claim() {
+      const slug = document.getElementById("playerSelect").value;
+
+      const res = await fetch(API + "?action=claim", {
+        method: "POST",
+        body: JSON.stringify({ slug }),
+      });
+
+      const data = await res.json();
+
+      if (data.token) {
+        setToken(data.token);
+        load();
+      } else {
+        alert("Naam al gebruikt");
+      }
+    }
+
+    async function vote(status) {
+      const token = getToken();
+
+      await fetch(API + "?action=vote", {
+        method: "POST",
+        body: JSON.stringify({ token, status }),
+      });
+
+      load();
+    }
+
+    load();
   </script>
 </body>
 </html>
