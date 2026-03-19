@@ -1,111 +1,216 @@
-<script>
-  const API = "https://uiqntazgnrxwliadkmy.supabase.co/functions/v1/jas";
-  const KEY = "jas_token";
-
-  function getToken() {
-    return localStorage.getItem(KEY);
-  }
-
-  function setToken(t) {
-    localStorage.setItem(KEY, t);
-  }
-
-  async function load() {
-    const res = await fetch(API);
-    const data = await res.json();
-
-    document.getElementById("answer").textContent = data.answer;
-    document.getElementById("answer").className = "answer " + data.answer;
-    document.getElementById("count").textContent = data.yesCount + " mensen";
-
-    const list = document.getElementById("list");
-    list.innerHTML = "";
-    data.yesNames.forEach(n => {
-      const li = document.createElement("li");
-      li.textContent = n;
-      list.appendChild(li);
-    });
-
-    const select = document.getElementById("playerSelect");
-    select.innerHTML = "";
-
-    const placeholder = document.createElement("option");
-    placeholder.value = "";
-    placeholder.textContent = "Kies je naam";
-    placeholder.disabled = true;
-    placeholder.selected = true;
-    select.appendChild(placeholder);
-
-    const resPlayers = await fetch(API + "?players=1");
-    const playersData = await resPlayers.json();
-
-    playersData.players.forEach(p => {
-      const o = document.createElement("option");
-      o.value = p.slug;
-      o.textContent = p.display_name;
-      select.appendChild(o);
-    });
-
-    if (getToken()) {
-      document.getElementById("login").style.display = "none";
-      document.getElementById("vote").style.display = "block";
-    } else {
-      document.getElementById("login").style.display = "block";
-      document.getElementById("vote").style.display = "none";
-    }
-  }
-
-  async function claim() {
-    const slug = document.getElementById("playerSelect").value;
-
-    if (!slug) {
-      alert("Kies eerst je naam");
-      return;
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wordt er gejast vanavond?</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
     }
 
-    const res = await fetch(API + "?action=claim", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ slug }),
-    });
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      text-align: center;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
 
-    const data = await res.json();
+    h1 {
+      margin-bottom: 10px;
+    }
 
-    if (data.token) {
-      setToken(data.token);
+    .answer {
+      font-size: 32px;
+      margin: 15px 0;
+      font-weight: bold;
+    }
+
+    .ja { color: green; }
+    .bijna { color: orange; }
+    .nee { color: red; }
+
+    button {
+      padding: 12px;
+      margin: 5px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .yes { background: green; color: white; }
+    .no { background: red; color: white; }
+
+    select {
+      padding: 10px;
+      margin: 10px 0;
+      width: 100%;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      margin: 6px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Wordt er gejast vanavond?</h1>
+
+    <div id="answer" class="answer">...</div>
+    <p id="count"></p>
+
+    <div id="login">
+      <select id="playerSelect">
+        <option value="">Kies je naam</option>
+      </select>
+      <button id="claimBtn" type="button">Koppel naam</button>
+    </div>
+
+    <div id="vote" style="display:none;">
+      <p id="me">Je bent gekoppeld.</p>
+      <button id="yesBtn" class="yes" type="button">Ik kan</button>
+      <button id="noBtn" class="no" type="button">Ik kan niet</button>
+    </div>
+
+    <h3>Ja-lijst:</h3>
+    <ul id="list"></ul>
+  </div>
+
+  <script>
+    const API = "https://uiqntazgnrxwliadkmy.supabase.co/functions/v1/jas";
+    const KEY = "jas_token";
+
+    function getToken() {
+      return localStorage.getItem(KEY);
+    }
+
+    function setToken(t) {
+      localStorage.setItem(KEY, t);
+    }
+
+    async function load() {
+      try {
+        const res = await fetch(API);
+        const data = await res.json();
+
+        document.getElementById("answer").textContent = data.answer || "...";
+        document.getElementById("answer").className = "answer " + (data.answer || "");
+        document.getElementById("count").textContent = (data.yesCount ?? 0) + " mensen";
+
+        const list = document.getElementById("list");
+        list.innerHTML = "";
+
+        (data.yesNames || []).forEach((n) => {
+          const li = document.createElement("li");
+          li.textContent = n;
+          list.appendChild(li);
+        });
+
+        const select = document.getElementById("playerSelect");
+        select.innerHTML = "";
+
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Kies je naam";
+        placeholder.disabled = true;
+        placeholder.selected = true;
+        select.appendChild(placeholder);
+
+        const resPlayers = await fetch(API + "?players=1");
+        const playersData = await resPlayers.json();
+
+        (playersData.players || []).forEach((p) => {
+          const o = document.createElement("option");
+          o.value = p.slug;
+          o.textContent = p.display_name;
+          select.appendChild(o);
+        });
+
+        if (getToken()) {
+          document.getElementById("login").style.display = "none";
+          document.getElementById("vote").style.display = "block";
+        } else {
+          document.getElementById("login").style.display = "block";
+          document.getElementById("vote").style.display = "none";
+        }
+      } catch (err) {
+        console.error(err);
+        document.getElementById("answer").textContent = "fout";
+        document.getElementById("count").textContent = "Kon site niet laden";
+      }
+    }
+
+    async function claim() {
+      const slug = document.getElementById("playerSelect").value;
+
+      if (!slug) {
+        alert("Kies eerst je naam");
+        return;
+      }
+
+      const res = await fetch(API + "?action=claim", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ slug })
+      });
+
+      const data = await res.json();
+
+      if (data.token) {
+        setToken(data.token);
+        load();
+      } else {
+        alert(data.error || "Naam al gebruikt");
+      }
+    }
+
+    async function vote(status) {
+      const token = getToken();
+
+      if (!token) {
+        alert("Koppel eerst je naam");
+        return;
+      }
+
+      const res = await fetch(API + "?action=vote", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ token, status })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Stem opslaan mislukt");
+        return;
+      }
+
       load();
-    } else {
-      alert(data.error || "Naam al gebruikt");
-    }
-  }
-
-  async function vote(status) {
-    const token = getToken();
-
-    if (!token) {
-      alert("Koppel eerst je naam");
-      return;
     }
 
-    const res = await fetch(API + "?action=vote", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ token, status }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert(data.error || "Stem opslaan mislukt");
-      return;
-    }
+    document.getElementById("claimBtn").addEventListener("click", claim);
+    document.getElementById("yesBtn").addEventListener("click", () => vote("ja"));
+    document.getElementById("noBtn").addEventListener("click", () => vote("nee"));
 
     load();
-  }
-
-  load();
-</script>
+  </script>
+</body>
+</html>
