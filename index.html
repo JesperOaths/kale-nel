@@ -52,6 +52,7 @@
 
     .yes { background: green; color: white; }
     .no { background: red; color: white; }
+    .remove { background: #6b7280; color: white; }
 
     select {
       padding: 10px;
@@ -90,6 +91,7 @@
     <div>
       <button id="yesBtn" class="yes" type="button">Ik kan</button>
       <button id="noBtn" class="no" type="button">Ik kan niet</button>
+      <button id="removeBtn" class="remove" type="button">Verwijder mijn stem</button>
     </div>
 
     <div id="status"></div>
@@ -142,8 +144,8 @@
       "Wolf"
     ].sort((a, b) => a.localeCompare(b, "nl"));
 
-    const STORAGE_KEY = "jas_votes_local_v1";
-    const NAME_KEY = "jas_selected_name_v1";
+    const STORAGE_KEY = "jas_votes_local_v2";
+    const NAME_KEY = "jas_selected_name_v2";
 
     function getWeekKey() {
       const now = new Date();
@@ -184,6 +186,16 @@
       }
 
       allVotes[weekKey][name] = status;
+      saveVotes(allVotes);
+    }
+
+    function removeCurrentWeekVote(name) {
+      const allVotes = getVotes();
+      const weekKey = getWeekKey();
+
+      if (!allVotes[weekKey]) return;
+
+      delete allVotes[weekKey][name];
       saveVotes(allVotes);
     }
 
@@ -251,10 +263,10 @@
       if (selectedName) {
         const myVote = votes[selectedName];
         document.getElementById("status").textContent = myVote
-          ? `Gekozen naam: ${selectedName} — jouw keuze: ${myVote}`
-          : `Gekozen naam: ${selectedName}`;
+          ? `Jouw keuze: ${myVote}`
+          : "";
       } else {
-        document.getElementById("status").textContent = "Kies je naam en stem.";
+        document.getElementById("status").textContent = "";
       }
     }
 
@@ -272,10 +284,9 @@
       render();
     }
 
-    document.getElementById("yesBtn").addEventListener("click", () => castVote("ja"));
-    document.getElementById("noBtn").addEventListener("click", () => castVote("nee"));
+    function removeMyVote() {
+      const select = document.getElementById("playerSelect");
+      const name = select.value || localStorage.getItem(NAME_KEY);
 
-    render();
-  </script>
-</body>
-</html>
+      if (!name) {
+        ale
