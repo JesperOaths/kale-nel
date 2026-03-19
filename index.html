@@ -145,7 +145,7 @@
     const STORAGE_KEY = "jas_votes_local_v1";
     const NAME_KEY = "jas_selected_name_v1";
 
-    function getTodayKey() {
+    function getWeekKey() {
       const now = new Date();
       const utc = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
       const day = utc.getUTCDay() || 7;
@@ -171,13 +171,13 @@
 
     function getCurrentWeekVotes() {
       const allVotes = getVotes();
-      const weekKey = getTodayKey();
+      const weekKey = getWeekKey();
       return allVotes[weekKey] || {};
     }
 
     function setCurrentWeekVote(name, status) {
       const allVotes = getVotes();
-      const weekKey = getTodayKey();
+      const weekKey = getWeekKey();
 
       if (!allVotes[weekKey]) {
         allVotes[weekKey] = {};
