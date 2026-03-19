@@ -85,9 +85,7 @@
     <div id="answer" class="answer">...</div>
     <p id="count"></p>
 
-    <select id="playerSelect">
-      <option value="">Kies je naam</option>
-    </select>
+    <select id="playerSelect"></select>
 
     <div>
       <button id="yesBtn" class="yes" type="button">Ik kan</button>
@@ -101,100 +99,53 @@
   </div>
 
   <script>
-    const SUPABASE_URL = "https://uiqntazgnrxwliadkmy.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
-    const API = `${SUPABASE_URL}/rest/v1`;
-
-    const TOKEN_KEY = "jas_token";
-    const NAME_KEY = "jas_name";
-
     const PLAYERS = [
-      { slug: "albert", display_name: "Albert" },
-      { slug: "antoni", display_name: "Antoni" },
-      { slug: "boris", display_name: "Boris" },
-      { slug: "boudewijn", display_name: "Boudewijn" },
-      { slug: "bram", display_name: "Bram" },
-      { slug: "bruis", display_name: "Bruis" },
-      { slug: "bryan", display_name: "Bryan" },
-      { slug: "daniel", display_name: "Daniël" },
-      { slug: "david", display_name: "David" },
-      { slug: "friso", display_name: "Friso" },
-      { slug: "jelmer-d", display_name: "Jelmer D" },
-      { slug: "jelmer-k", display_name: "Jelmer K" },
-      { slug: "jelle", display_name: "Jelle" },
-      { slug: "jorrit", display_name: "Jorrit" },
-      { slug: "justin", display_name: "Justin" },
-      { slug: "koen", display_name: "Koen" },
-      { slug: "lyon", display_name: "Lyon" },
-      { slug: "mart", display_name: "Mart" },
-      { slug: "marvin", display_name: "Marvin" },
-      { slug: "max", display_name: "Max" },
-      { slug: "melson", display_name: "Melson" },
-      { slug: "merijn", display_name: "Merijn" },
-      { slug: "milan", display_name: "Milan" },
-      { slug: "nelis", display_name: "Nelis" },
-      { slug: "rik", display_name: "Rik" },
-      { slug: "robin-m", display_name: "Robin M" },
-      { slug: "robin-s", display_name: "Robin S" },
-      { slug: "roel", display_name: "Roel" },
-      { slug: "ruben", display_name: "Ruben" },
-      { slug: "sam", display_name: "Sam" },
-      { slug: "siem", display_name: "Siem" },
-      { slug: "sierd", display_name: "Sierd" },
-      { slug: "sybren", display_name: "Sybren" },
-      { slug: "thijs", display_name: "Thijs" },
-      { slug: "tim", display_name: "Tim" },
-      { slug: "tom", display_name: "Tom" },
-      { slug: "tom-a", display_name: "Tom A" },
-      { slug: "tristan", display_name: "Tristan" },
-      { slug: "vince", display_name: "Vince" },
-      { slug: "wolf", display_name: "Wolf" }
-    ];
+      "Albert",
+      "Antoni",
+      "Boris",
+      "Boudewijn",
+      "Bram",
+      "Bruis",
+      "Bryan",
+      "Daniël",
+      "David",
+      "Friso",
+      "Jelle",
+      "Jelmer D",
+      "Jelmer K",
+      "Jorrit",
+      "Justin",
+      "Koen",
+      "Lyon",
+      "Mart",
+      "Marvin",
+      "Max",
+      "Melson",
+      "Merijn",
+      "Milan",
+      "Nelis",
+      "Rik",
+      "Robin M",
+      "Robin S",
+      "Roel",
+      "Ruben",
+      "Sam",
+      "Siem",
+      "Sierd",
+      "Sybren",
+      "Thijs",
+      "Tim",
+      "Tom",
+      "Tom A",
+      "Tristan",
+      "Vince",
+      "Wolf"
+    ].sort((a, b) => a.localeCompare(b, "nl"));
 
-    function headers(extra = {}) {
-      return {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        ...extra
-      };
-    }
+    const STORAGE_KEY = "jas_votes_local_v1";
+    const NAME_KEY = "jas_selected_name_v1";
 
-    async function parseResponse(res) {
-      const text = await res.text();
-      let data = null;
-
-      try {
-        data = text ? JSON.parse(text) : null;
-      } catch {
-        throw new Error(text || `HTTP ${res.status}`);
-      }
-
-      if (!res.ok) {
-        throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
-      }
-
-      return data;
-    }
-
-    function getToken() {
-      return localStorage.getItem(TOKEN_KEY);
-    }
-
-    function setToken(token) {
-      localStorage.setItem(TOKEN_KEY, token);
-    }
-
-    function getStoredName() {
-      return localStorage.getItem(NAME_KEY);
-    }
-
-    function setStoredName(name) {
-      localStorage.setItem(NAME_KEY, name);
-    }
-
-    function getWeekKey() {
+    function getTodayKey() {
       const now = new Date();
       const utc = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
       const day = utc.getUTCDay() || 7;
@@ -202,6 +153,38 @@
       const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1));
       const weekNo = Math.ceil((((utc.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
       return `${utc.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+    }
+
+    function getVotes() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return {};
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return {};
+      }
+    }
+
+    function saveVotes(votes) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(votes));
+    }
+
+    function getCurrentWeekVotes() {
+      const allVotes = getVotes();
+      const weekKey = getTodayKey();
+      return allVotes[weekKey] || {};
+    }
+
+    function setCurrentWeekVote(name, status) {
+      const allVotes = getVotes();
+      const weekKey = getTodayKey();
+
+      if (!allVotes[weekKey]) {
+        allVotes[weekKey] = {};
+      }
+
+      allVotes[weekKey][name] = status;
+      saveVotes(allVotes);
     }
 
     function computeAnswer(yesCount) {
@@ -212,7 +195,7 @@
 
     function fillPlayers() {
       const select = document.getElementById("playerSelect");
-      const currentSlug = select.value;
+      const storedName = localStorage.getItem(NAME_KEY);
 
       select.innerHTML = "";
 
@@ -220,156 +203,43 @@
       placeholder.value = "";
       placeholder.textContent = "Kies je naam";
       placeholder.disabled = true;
-      placeholder.selected = !currentSlug && !getStoredName();
+      placeholder.selected = !storedName;
       select.appendChild(placeholder);
 
-      PLAYERS.forEach((p) => {
+      PLAYERS.forEach((name) => {
         const option = document.createElement("option");
-        option.value = p.slug;
-        option.textContent = p.display_name;
+        option.value = name;
+        option.textContent = name;
         select.appendChild(option);
       });
 
-      if (currentSlug) {
-        select.value = currentSlug;
-      } else {
-        const storedName = getStoredName();
-        if (storedName) {
-          const found = PLAYERS.find(p => p.display_name === storedName);
-          if (found) {
-            select.value = found.slug;
-          }
-        }
+      if (storedName && PLAYERS.includes(storedName)) {
+        select.value = storedName;
       }
     }
 
-    async function fetchPlayersFromDb() {
-      const res = await fetch(
-        `${API}/players?select=id,slug,display_name,claimed,active&active=eq.true&order=display_name.asc`,
-        { headers: headers() }
-      );
-      return await parseResponse(res);
-    }
+    function render() {
+      fillPlayers();
 
-    async function fetchSessionByToken(token) {
-      const res = await fetch(
-        `${API}/sessions?select=player_id,session_token_hash&session_token_hash=eq.${encodeURIComponent(token)}`,
-        { headers: headers() }
-      );
-      const data = await parseResponse(res);
-      return data[0] || null;
-    }
+      const votes = getCurrentWeekVotes();
+      const yesNames = Object.keys(votes)
+        .filter((name) => votes[name] === "ja")
+        .sort((a, b) => a.localeCompare(b, "nl"));
 
-    async function fetchVotesForWeek(weekKey) {
-      const res = await fetch(
-        `${API}/votes?select=id,player_id,status&week_key=eq.${encodeURIComponent(weekKey)}`,
-        { headers: headers() }
-      );
-      return await parseResponse(res);
-    }
+      const answer = computeAnswer(yesNames.length);
 
-    async function claimPlayer(slug) {
-      const dbPlayers = await fetchPlayersFromDb();
-      const player = dbPlayers.find(p => p.slug === slug);
-
-      if (!player) throw new Error("Speler niet gevonden in database");
-      if (player.claimed) throw new Error("Naam al gebruikt");
-
-      const token = crypto.randomUUID();
-
-      const updateRes = await fetch(
-        `${API}/players?id=eq.${player.id}`,
-        {
-          method: "PATCH",
-          headers: headers({ Prefer: "return=representation" }),
-          body: JSON.stringify({ claimed: true })
-        }
-      );
-      await parseResponse(updateRes);
-
-      const sessionRes = await fetch(
-        `${API}/sessions`,
-        {
-          method: "POST",
-          headers: headers({ Prefer: "return=representation" }),
-          body: JSON.stringify({
-            player_id: player.id,
-            session_token_hash: token
-          })
-        }
-      );
-      await parseResponse(sessionRes);
-
-      setToken(token);
-      setStoredName(player.display_name);
-
-      return { token, player };
-    }
-
-    async function saveVote(playerId, status) {
-      const weekKey = getWeekKey();
-
-      const existingRes = await fetch(
-        `${API}/votes?select=id&week_key=eq.${encodeURIComponent(weekKey)}&player_id=eq.${playerId}`,
-        { headers: headers() }
-      );
-      const existing = await parseResponse(existingRes);
-
-      if (existing.length > 0) {
-        const updateRes = await fetch(
-          `${API}/votes?id=eq.${existing[0].id}`,
-          {
-            method: "PATCH",
-            headers: headers({ Prefer: "return=representation" }),
-            body: JSON.stringify({
-              status,
-              updated_at: new Date().toISOString()
-            })
-          }
-        );
-        await parseResponse(updateRes);
-      } else {
-        const insertRes = await fetch(
-          `${API}/votes`,
-          {
-            method: "POST",
-            headers: headers({ Prefer: "return=representation" }),
-            body: JSON.stringify({
-              week_key: weekKey,
-              player_id: playerId,
-              status,
-              updated_at: new Date().toISOString()
-            })
-          }
-        );
-        await parseResponse(insertRes);
-      }
-    }
-
-    function renderState(votes, currentPlayerId = null) {
-      const yesVotes = votes.filter(v => v.status === "ja");
-      const yesIds = yesVotes.map(v => v.player_id);
-
-      document.getElementById("status").textContent = "";
-
-      const answer = computeAnswer(yesIds.length);
       document.getElementById("answer").textContent = answer;
       document.getElementById("answer").className = "answer " + answer;
-      document.getElementById("count").textContent = `${yesIds.length} mensen hebben ja gezegd`;
+      document.getElementById("count").textContent = `${yesNames.length} mensen hebben ja gezegd`;
 
       const list = document.getElementById("list");
       list.innerHTML = "";
 
-      if (yesIds.length === 0) {
+      if (yesNames.length === 0) {
         const li = document.createElement("li");
         li.textContent = "Nog niemand";
         list.appendChild(li);
       } else {
-        const yesNames = PLAYERS
-          .filter(p => yesIds.includes(p.id))
-          .map(p => p.display_name)
-          .sort((a, b) => a.localeCompare(b, "nl"));
-
         yesNames.forEach((name) => {
           const li = document.createElement("li");
           li.textContent = name;
@@ -377,90 +247,35 @@
         });
       }
 
-      if (currentPlayerId) {
-        const player = PLAYERS.find(p => p.id === currentPlayerId || p.slug === getStoredName()?.toLowerCase());
-        if (player) {
-          document.getElementById("status").textContent = `Gekoppeld als ${player.display_name}`;
-        }
+      const selectedName = localStorage.getItem(NAME_KEY);
+      if (selectedName) {
+        const myVote = votes[selectedName];
+        document.getElementById("status").textContent = myVote
+          ? `Gekozen naam: ${selectedName} — jouw keuze: ${myVote}`
+          : `Gekozen naam: ${selectedName}`;
+      } else {
+        document.getElementById("status").textContent = "Kies je naam en stem.";
       }
     }
 
-    async function load() {
-      fillPlayers();
+    function castVote(status) {
+      const select = document.getElementById("playerSelect");
+      const name = select.value;
 
-      try {
-        const dbPlayers = await fetchPlayersFromDb();
-        const votes = await fetchVotesForWeek(getWeekKey());
-
-        const yesIds = votes.filter(v => v.status === "ja").map(v => v.player_id);
-        const yesNames = dbPlayers
-          .filter(p => yesIds.includes(p.id))
-          .map(p => p.display_name)
-          .sort((a, b) => a.localeCompare(b, "nl"));
-
-        const answer = computeAnswer(yesNames.length);
-        document.getElementById("answer").textContent = answer;
-        document.getElementById("answer").className = "answer " + answer;
-        document.getElementById("count").textContent = `${yesNames.length} mensen hebben ja gezegd`;
-
-        const list = document.getElementById("list");
-        list.innerHTML = "";
-
-        if (yesNames.length === 0) {
-          const li = document.createElement("li");
-          li.textContent = "Nog niemand";
-          list.appendChild(li);
-        } else {
-          yesNames.forEach((name) => {
-            const li = document.createElement("li");
-            li.textContent = name;
-            list.appendChild(li);
-          });
-        }
-
-      } catch (err) {
-        console.error(err);
-        document.getElementById("answer").textContent = "fout";
-        document.getElementById("count").textContent = "Kon site niet laden";
-        document.getElementById("status").textContent = err instanceof Error ? err.message : "Onbekende fout";
+      if (!name) {
+        alert("Kies eerst je naam");
+        return;
       }
-    }
 
-    async function castVote(status) {
-      try {
-        fillPlayers();
-
-        let token = getToken();
-        let currentPlayerId = null;
-
-        if (token) {
-          const session = await fetchSessionByToken(token);
-          if (session) currentPlayerId = session.player_id;
-        }
-
-        if (!currentPlayerId) {
-          const slug = document.getElementById("playerSelect").value;
-          if (!slug) throw new Error("Kies eerst je naam");
-
-          const result = await claimPlayer(slug);
-          token = result.token;
-          currentPlayerId = result.player.id;
-        }
-
-        await saveVote(currentPlayerId, status);
-        await load();
-      } catch (err) {
-        console.error(err);
-        document.getElementById("status").textContent = err instanceof Error ? err.message : "Onbekende fout";
-        alert(err instanceof Error ? err.message : "Er ging iets mis bij het opslaan");
-      }
+      localStorage.setItem(NAME_KEY, name);
+      setCurrentWeekVote(name, status);
+      render();
     }
 
     document.getElementById("yesBtn").addEventListener("click", () => castVote("ja"));
     document.getElementById("noBtn").addEventListener("click", () => castVote("nee"));
 
-    fillPlayers();
-    load();
+    render();
   </script>
 </body>
 </html>
