@@ -20,7 +20,7 @@
       padding: 30px;
       border-radius: 16px;
       text-align: center;
-      max-width: 520px;
+      max-width: 700px;
       width: 100%;
       box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     }
@@ -61,10 +61,30 @@
       font-size: 16px;
     }
 
+    .lists {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 20px;
+      text-align: left;
+    }
+
+    .list-box {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .list-box h3 {
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+
     ul {
       list-style: none;
       padding: 0;
-      margin: 10px 0 0;
+      margin: 0;
     }
 
     li {
@@ -76,6 +96,18 @@
       min-height: 22px;
       margin-top: 10px;
       white-space: pre-wrap;
+    }
+
+    .small-note {
+      color: #666;
+      font-size: 14px;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 700px) {
+      .lists {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -95,9 +127,21 @@
     </div>
 
     <div id="status"></div>
+    <div class="small-note">
+      Deze versie werkt per browser. Je kunt alleen je eigen gekozen naam op dit apparaat aanpassen of verwijderen.
+    </div>
 
-    <h3>Ja-lijst:</h3>
-    <ul id="list"></ul>
+    <div class="lists">
+      <div class="list-box">
+        <h3>Legends</h3>
+        <ul id="legendsList"></ul>
+      </div>
+
+      <div class="list-box">
+        <h3>Losers</h3>
+        <ul id="losersList"></ul>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -144,8 +188,8 @@
       "Wolf"
     ].sort((a, b) => a.localeCompare(b, "nl"));
 
-    const STORAGE_KEY = "jas_votes_local_v2";
-    const NAME_KEY = "jas_selected_name_v2";
+    const VOTES_STORAGE_KEY = "jas_votes_secure_v1";
+    const IDENTITY_STORAGE_KEY = "jas_identity_secure_v1";
 
     function getWeekKey() {
       const now = new Date();
@@ -157,9 +201,50 @@
       return `${utc.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
     }
 
-    function getVotes() {
-      const raw = localStorage.getItem(STORAGE_KEY);
+    function computeAnswer(yesCount) {
+      if (yesCount >= 4) return "ja";
+      if (yesCount === 3) return "bijna";
+      return "nee";
+    }
+
+    function getIdentity() {
+      const raw = localStorage.getItem(IDENTITY_STORAGE_KEY);
+      if (!raw) return null;
+
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    }
+
+    function saveIdentity(identity) {
+      localStorage.setItem(IDENTITY_STORAGE_KEY, JSON.stringify(identity));
+    }
+
+    function ensureIdentity(name) {
+      const existing = getIdentity();
+
+      if (existing) {
+        if (existing.name !== name) {
+          throw new Error(`Dit apparaat is al gekoppeld aan ${existing.name}. Je kunt alleen je eigen naam aanpassen of verwijderen.`);
+        }
+        return existing;
+      }
+
+      const identity = {
+        id: crypto.randomUUID(),
+        name
+      };
+
+      saveIdentity(identity);
+      return identity;
+    }
+
+    function getAllVotes() {
+      const raw = localStorage.getItem(VOTES_STORAGE_KEY);
       if (!raw) return {};
+
       try {
         return JSON.parse(raw);
       } catch {
@@ -167,47 +252,59 @@
       }
     }
 
-    function saveVotes(votes) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(votes));
+    function saveAllVotes(votes) {
+      localStorage.setItem(VOTES_STORAGE_KEY, JSON.stringify(votes));
     }
 
     function getCurrentWeekVotes() {
-      const allVotes = getVotes();
+      const allVotes = getAllVotes();
       const weekKey = getWeekKey();
       return allVotes[weekKey] || {};
     }
 
     function setCurrentWeekVote(name, status) {
-      const allVotes = getVotes();
+      const identity = ensureIdentity(name);
+      const allVotes = getAllVotes();
       const weekKey = getWeekKey();
 
       if (!allVotes[weekKey]) {
         allVotes[weekKey] = {};
       }
 
-      allVotes[weekKey][name] = status;
-      saveVotes(allVotes);
+      const existingEntries = Object.values(allVotes[weekKey]);
+      const conflictingEntry = existingEntries.find(entry => entry.name === name && entry.ownerId !== identity.id);
+
+      if (conflictingEntry) {
+        throw new Error(`De naam ${name} is op dit apparaat niet van jou.`);
+      }
+
+      allVotes[weekKey][identity.id] = {
+        ownerId: identity.id,
+        name,
+        status
+      };
+
+      saveAllVotes(allVotes);
     }
 
-    function removeCurrentWeekVote(name) {
-      const allVotes = getVotes();
+    function removeCurrentWeekVote() {
+      const identity = getIdentity();
+      if (!identity) {
+        throw new Error("Er is geen gekoppelde naam op dit apparaat.");
+      }
+
+      const allVotes = getAllVotes();
       const weekKey = getWeekKey();
 
       if (!allVotes[weekKey]) return;
 
-      delete allVotes[weekKey][name];
-      saveVotes(allVotes);
-    }
-
-    function computeAnswer(yesCount) {
-      if (yesCount >= 4) return "ja";
-      if (yesCount === 3) return "bijna";
-      return "nee";
+      delete allVotes[weekKey][identity.id];
+      saveAllVotes(allVotes);
     }
 
     function fillPlayers() {
       const select = document.getElementById("playerSelect");
-      const storedName = localStorage.getItem(NAME_KEY);
+      const identity = getIdentity();
 
       select.innerHTML = "";
 
@@ -215,7 +312,7 @@
       placeholder.value = "";
       placeholder.textContent = "Kies je naam";
       placeholder.disabled = true;
-      placeholder.selected = !storedName;
+      placeholder.selected = !identity;
       select.appendChild(placeholder);
 
       PLAYERS.forEach((name) => {
@@ -225,77 +322,92 @@
         select.appendChild(option);
       });
 
-      if (storedName && PLAYERS.includes(storedName)) {
-        select.value = storedName;
+      if (identity && PLAYERS.includes(identity.name)) {
+        select.value = identity.name;
+        select.disabled = true;
+      } else {
+        select.disabled = false;
       }
+    }
+
+    function renderList(elementId, names, emptyText) {
+      const list = document.getElementById(elementId);
+      list.innerHTML = "";
+
+      if (names.length === 0) {
+        const li = document.createElement("li");
+        li.textContent = emptyText;
+        list.appendChild(li);
+        return;
+      }
+
+      names.forEach((name) => {
+        const li = document.createElement("li");
+        li.textContent = name;
+        list.appendChild(li);
+      });
     }
 
     function render() {
       fillPlayers();
 
-      const votes = getCurrentWeekVotes();
-      const yesNames = Object.keys(votes)
-        .filter((name) => votes[name] === "ja")
+      const currentVotes = Object.values(getCurrentWeekVotes());
+
+      const legends = currentVotes
+        .filter(entry => entry.status === "ja")
+        .map(entry => entry.name)
         .sort((a, b) => a.localeCompare(b, "nl"));
 
-      const answer = computeAnswer(yesNames.length);
+      const losers = currentVotes
+        .filter(entry => entry.status === "nee")
+        .map(entry => entry.name)
+        .sort((a, b) => a.localeCompare(b, "nl"));
+
+      const answer = computeAnswer(legends.length);
 
       document.getElementById("answer").textContent = answer;
       document.getElementById("answer").className = "answer " + answer;
-      document.getElementById("count").textContent = `${yesNames.length} mensen hebben ja gezegd`;
+      document.getElementById("count").textContent = `${legends.length} mensen hebben ja gezegd`;
 
-      const list = document.getElementById("list");
-      list.innerHTML = "";
+      renderList("legendsList", legends, "Nog niemand");
+      renderList("losersList", losers, "Nog niemand");
 
-      if (yesNames.length === 0) {
-        const li = document.createElement("li");
-        li.textContent = "Nog niemand";
-        list.appendChild(li);
-      } else {
-        yesNames.forEach((name) => {
-          const li = document.createElement("li");
-          li.textContent = name;
-          list.appendChild(li);
-        });
-      }
-
-      const selectedName = localStorage.getItem(NAME_KEY);
-      if (selectedName) {
-        const myVote = votes[selectedName];
-        document.getElementById("status").textContent = myVote
-          ? `Jouw keuze: ${myVote}`
-          : "";
-      } else {
+      const identity = getIdentity();
+      if (!identity) {
         document.getElementById("status").textContent = "";
+        return;
       }
+
+      const myVote = currentVotes.find(entry => entry.ownerId === identity.id);
+      document.getElementById("status").textContent = myVote
+        ? `Jouw keuze: ${myVote.status}`
+        : "";
     }
 
     function castVote(status) {
       const select = document.getElementById("playerSelect");
-      const name = select.value;
+      const selectedName = select.value || getIdentity()?.name;
 
-      if (!name) {
+      if (!selectedName) {
         alert("Kies eerst je naam");
         return;
       }
 
-      localStorage.setItem(NAME_KEY, name);
-      setCurrentWeekVote(name, status);
-      render();
+      try {
+        setCurrentWeekVote(selectedName, status);
+        render();
+      } catch (error) {
+        alert(error.message);
+      }
     }
 
     function removeMyVote() {
-      const select = document.getElementById("playerSelect");
-      const name = select.value || localStorage.getItem(NAME_KEY);
-
-      if (!name) {
-        alert("Kies eerst je naam");
-        return;
+      try {
+        removeCurrentWeekVote();
+        render();
+      } catch (error) {
+        alert(error.message);
       }
-
-      localStorage.setItem(NAME_KEY, name);
-      removeCurrentWeekVote(name);
-      render();
     }
 
     document.getElementById("yesBtn").addEventListener("click", () => castVote("ja"));
