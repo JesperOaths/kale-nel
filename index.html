@@ -289,4 +289,20 @@
       const name = select.value || localStorage.getItem(NAME_KEY);
 
       if (!name) {
-        ale
+        alert("Kies eerst je naam");
+        return;
+      }
+
+      localStorage.setItem(NAME_KEY, name);
+      removeCurrentWeekVote(name);
+      render();
+    }
+
+    document.getElementById("yesBtn").addEventListener("click", () => castVote("ja"));
+    document.getElementById("noBtn").addEventListener("click", () => castVote("nee"));
+    document.getElementById("removeBtn").addEventListener("click", removeMyVote);
+
+    render();
+  </script>
+</body>
+</html>
