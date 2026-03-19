@@ -207,6 +207,38 @@
       }
     }
 
+    function renderState(data) {
+      document.getElementById("answer").textContent = data.answer || "...";
+      document.getElementById("answer").className = "answer " + (data.answer || "");
+      document.getElementById("count").textContent = `${data.yesCount ?? 0} mensen hebben ja gezegd`;
+
+      const list = document.getElementById("list");
+      list.innerHTML = "";
+
+      (data.yesNames || []).forEach((n) => {
+        const li = document.createElement("li");
+        li.textContent = n;
+        list.appendChild(li);
+      });
+
+      if ((data.yesNames || []).length === 0) {
+        const li = document.createElement("li");
+        li.textContent = "Nog niemand";
+        list.appendChild(li);
+      }
+
+      if (data.me && data.me.display_name) {
+        setStoredName(data.me.display_name);
+        document.getElementById("me").textContent = data.me.status
+          ? `Gekoppeld als ${data.me.display_name} — jouw keuze: ${data.me.status}`
+          : `Gekoppeld als ${data.me.display_name} — je hebt nog niet gestemd`;
+      } else if (getStoredName()) {
+        document.getElementById("me").textContent = `Gekozen naam: ${getStoredName()}`;
+      } else {
+        document.getElementById("me").textContent = "Kies je naam en stem.";
+      }
+    }
+
     async function load() {
       try {
         fillPlayers();
@@ -221,36 +253,7 @@
           throw new Error(data.error || "Kon site niet laden");
         }
 
-        document.getElementById("answer").textContent = data.answer || "...";
-        document.getElementById("answer").className = "answer " + (data.answer || "");
-        document.getElementById("count").textContent = `${data.yesCount ?? 0} mensen hebben ja gezegd`;
-
-        const list = document.getElementById("list");
-        list.innerHTML = "";
-
-        (data.yesNames || []).forEach((n) => {
-          const li = document.createElement("li");
-          li.textContent = n;
-          list.appendChild(li);
-        });
-
-        if ((data.yesNames || []).length === 0) {
-          const li = document.createElement("li");
-          li.textContent = "Nog niemand";
-          list.appendChild(li);
-        }
-
-        if (data.me && data.me.display_name) {
-          setStoredName(data.me.display_name);
-          document.getElementById("me").textContent = data.me.status
-            ? `Gekoppeld als ${data.me.display_name} — jouw keuze: ${data.me.status}`
-            : `Gekoppeld als ${data.me.display_name} — je hebt nog niet gestemd`;
-        } else if (getStoredName()) {
-          document.getElementById("me").textContent = `Gekozen naam: ${getStoredName()}`;
-        } else {
-          document.getElementById("me").textContent = "Kies je naam en stem.";
-        }
-
+        renderState(data);
         document.getElementById("status").textContent = "";
       } catch (err) {
         console.error(err);
@@ -261,57 +264,32 @@
       }
     }
 
-    async function ensureToken() {
-      const existingToken = getToken();
-      if (existingToken) {
-        return existingToken;
-      }
-
-      const slug = document.getElementById("playerSelect").value;
-
-      if (!slug) {
-        throw new Error("Kies eerst je naam");
-      }
-
-      const selected = PLAYERS.find(p => p.slug === slug);
-      if (selected) {
-        setStoredName(selected.display_name);
-      }
-
-      const res = await fetch(`${API}?action=claim`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ slug })
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Naam koppelen mislukt");
-      }
-
-      setToken(data.token);
-      if (data.display_name) {
-        setStoredName(data.display_name);
-      }
-
-      return data.token;
-    }
-
-    async function vote(status) {
+    async function castVote(status) {
       try {
         document.getElementById("status").textContent = "Opslaan...";
 
-        const token = await ensureToken();
+        const token = getToken();
+        const slug = document.getElementById("playerSelect").value;
 
-        const res = await fetch(`${API}?action=vote`, {
+        if (!token && !slug) {
+          throw new Error("Kies eerst je naam");
+        }
+
+        const selected = PLAYERS.find(p => p.slug === slug);
+        if (selected) {
+          setStoredName(selected.display_name);
+        }
+
+        const res = await fetch(`${API}?action=cast`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({ token, status })
+          body: JSON.stringify({
+            token,
+            slug,
+            status
+          })
         });
 
         const data = await res.json();
@@ -320,8 +298,12 @@
           throw new Error(data.error || "Stem opslaan mislukt");
         }
 
+        if (data.token) {
+          setToken(data.token);
+        }
+
+        renderState(data);
         document.getElementById("status").textContent = "Opgeslagen";
-        await load();
       } catch (err) {
         console.error(err);
         document.getElementById("status").textContent = err instanceof Error ? err.message : "Onbekende fout";
@@ -329,8 +311,8 @@
       }
     }
 
-    document.getElementById("yesBtn").addEventListener("click", () => vote("ja"));
-    document.getElementById("noBtn").addEventListener("click", () => vote("nee"));
+    document.getElementById("yesBtn").addEventListener("click", () => castVote("ja"));
+    document.getElementById("noBtn").addEventListener("click", () => castVote("nee"));
 
     load();
   </script>
