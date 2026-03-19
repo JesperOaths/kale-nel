@@ -14,6 +14,7 @@
       min-height: 100vh;
       margin: 0;
     }
+
     .card {
       background: white;
       padding: 30px;
@@ -23,16 +24,19 @@
       width: 100%;
       box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     }
+
     h1 {
       margin-bottom: 10px;
       font-size: 2.2rem;
       line-height: 1.15;
     }
+
     .answer {
       font-size: 32px;
       margin: 15px 0;
       font-weight: bold;
     }
+
     .ja { color: green; }
     .bijna { color: orange; }
     .nee { color: red; }
@@ -45,6 +49,7 @@
       cursor: pointer;
       font-size: 16px;
     }
+
     .yes { background: green; color: white; }
     .no { background: red; color: white; }
 
@@ -102,6 +107,49 @@
 
     const TOKEN_KEY = "jas_token";
     const NAME_KEY = "jas_name";
+
+    const PLAYERS = [
+      { slug: "albert", display_name: "Albert" },
+      { slug: "antoni", display_name: "Antoni" },
+      { slug: "boris", display_name: "Boris" },
+      { slug: "boudewijn", display_name: "Boudewijn" },
+      { slug: "bram", display_name: "Bram" },
+      { slug: "bruis", display_name: "Bruis" },
+      { slug: "bryan", display_name: "Bryan" },
+      { slug: "daniel", display_name: "Daniël" },
+      { slug: "david", display_name: "David" },
+      { slug: "friso", display_name: "Friso" },
+      { slug: "jelmer-d", display_name: "Jelmer D" },
+      { slug: "jelmer-k", display_name: "Jelmer K" },
+      { slug: "jelle", display_name: "Jelle" },
+      { slug: "jorrit", display_name: "Jorrit" },
+      { slug: "justin", display_name: "Justin" },
+      { slug: "koen", display_name: "Koen" },
+      { slug: "lyon", display_name: "Lyon" },
+      { slug: "mart", display_name: "Mart" },
+      { slug: "marvin", display_name: "Marvin" },
+      { slug: "max", display_name: "Max" },
+      { slug: "melson", display_name: "Melson" },
+      { slug: "merijn", display_name: "Merijn" },
+      { slug: "milan", display_name: "Milan" },
+      { slug: "nelis", display_name: "Nelis" },
+      { slug: "rik", display_name: "Rik" },
+      { slug: "robin-m", display_name: "Robin M" },
+      { slug: "robin-s", display_name: "Robin S" },
+      { slug: "roel", display_name: "Roel" },
+      { slug: "ruben", display_name: "Ruben" },
+      { slug: "sam", display_name: "Sam" },
+      { slug: "siem", display_name: "Siem" },
+      { slug: "sierd", display_name: "Sierd" },
+      { slug: "sybren", display_name: "Sybren" },
+      { slug: "thijs", display_name: "Thijs" },
+      { slug: "tim", display_name: "Tim" },
+      { slug: "tom", display_name: "Tom" },
+      { slug: "tom-a", display_name: "Tom A" },
+      { slug: "tristan", display_name: "Tristan" },
+      { slug: "vince", display_name: "Vince" },
+      { slug: "wolf", display_name: "Wolf" }
+    ];
 
     function headers(extra = {}) {
       return {
@@ -162,7 +210,40 @@
       return "nee";
     }
 
-    async function fetchPlayers() {
+    function fillPlayers() {
+      const select = document.getElementById("playerSelect");
+      const currentSlug = select.value;
+
+      select.innerHTML = "";
+
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "Kies je naam";
+      placeholder.disabled = true;
+      placeholder.selected = !currentSlug && !getStoredName();
+      select.appendChild(placeholder);
+
+      PLAYERS.forEach((p) => {
+        const option = document.createElement("option");
+        option.value = p.slug;
+        option.textContent = p.display_name;
+        select.appendChild(option);
+      });
+
+      if (currentSlug) {
+        select.value = currentSlug;
+      } else {
+        const storedName = getStoredName();
+        if (storedName) {
+          const found = PLAYERS.find(p => p.display_name === storedName);
+          if (found) {
+            select.value = found.slug;
+          }
+        }
+      }
+    }
+
+    async function fetchPlayersFromDb() {
       const res = await fetch(
         `${API}/players?select=id,slug,display_name,claimed,active&active=eq.true&order=display_name.asc`,
         { headers: headers() }
@@ -188,10 +269,10 @@
     }
 
     async function claimPlayer(slug) {
-      const players = await fetchPlayers();
-      const player = players.find(p => p.slug === slug);
+      const dbPlayers = await fetchPlayersFromDb();
+      const player = dbPlayers.find(p => p.slug === slug);
 
-      if (!player) throw new Error("Speler niet gevonden");
+      if (!player) throw new Error("Speler niet gevonden in database");
       if (player.claimed) throw new Error("Naam al gebruikt");
 
       const token = crypto.randomUUID();
@@ -265,61 +346,30 @@
       }
     }
 
-    function fillPlayers(players) {
-      const select = document.getElementById("playerSelect");
-      const currentSlug = select.value;
-
-      select.innerHTML = "";
-
-      const placeholder = document.createElement("option");
-      placeholder.value = "";
-      placeholder.textContent = "Kies je naam";
-      placeholder.disabled = true;
-      placeholder.selected = !currentSlug && !getStoredName();
-      select.appendChild(placeholder);
-
-      players.forEach((p) => {
-        const option = document.createElement("option");
-        option.value = p.slug;
-        option.textContent = p.display_name;
-        select.appendChild(option);
-      });
-
-      if (currentSlug) {
-        select.value = currentSlug;
-      } else {
-        const storedName = getStoredName();
-        if (storedName) {
-          const found = players.find(p => p.display_name === storedName);
-          if (found) {
-            select.value = found.slug;
-          }
-        }
-      }
-    }
-
-    function renderState(players, votes, currentPlayerId = null) {
+    function renderState(votes, currentPlayerId = null) {
       const yesVotes = votes.filter(v => v.status === "ja");
       const yesIds = yesVotes.map(v => v.player_id);
 
-      const yesNames = players
-        .filter(p => yesIds.includes(p.id))
-        .map(p => p.display_name)
-        .sort((a, b) => a.localeCompare(b, "nl"));
+      document.getElementById("status").textContent = "";
 
-      const answer = computeAnswer(yesNames.length);
+      const answer = computeAnswer(yesIds.length);
       document.getElementById("answer").textContent = answer;
       document.getElementById("answer").className = "answer " + answer;
-      document.getElementById("count").textContent = `${yesNames.length} mensen hebben ja gezegd`;
+      document.getElementById("count").textContent = `${yesIds.length} mensen hebben ja gezegd`;
 
       const list = document.getElementById("list");
       list.innerHTML = "";
 
-      if (yesNames.length === 0) {
+      if (yesIds.length === 0) {
         const li = document.createElement("li");
         li.textContent = "Nog niemand";
         list.appendChild(li);
       } else {
+        const yesNames = PLAYERS
+          .filter(p => yesIds.includes(p.id))
+          .map(p => p.display_name)
+          .sort((a, b) => a.localeCompare(b, "nl"));
+
         yesNames.forEach((name) => {
           const li = document.createElement("li");
           li.textContent = name;
@@ -328,35 +378,46 @@
       }
 
       if (currentPlayerId) {
-        const player = players.find(p => p.id === currentPlayerId);
-        const vote = votes.find(v => v.player_id === currentPlayerId);
-
+        const player = PLAYERS.find(p => p.id === currentPlayerId || p.slug === getStoredName()?.toLowerCase());
         if (player) {
-          setStoredName(player.display_name);
-          document.getElementById("status").textContent = vote
-            ? `Gekoppeld als ${player.display_name} — jouw keuze: ${vote.status}`
-            : `Gekoppeld als ${player.display_name}`;
+          document.getElementById("status").textContent = `Gekoppeld als ${player.display_name}`;
         }
       }
     }
 
     async function load() {
+      fillPlayers();
+
       try {
-        const weekKey = getWeekKey();
-        const players = await fetchPlayers();
-        fillPlayers(players);
+        const dbPlayers = await fetchPlayersFromDb();
+        const votes = await fetchVotesForWeek(getWeekKey());
 
-        const votes = await fetchVotesForWeek(weekKey);
+        const yesIds = votes.filter(v => v.status === "ja").map(v => v.player_id);
+        const yesNames = dbPlayers
+          .filter(p => yesIds.includes(p.id))
+          .map(p => p.display_name)
+          .sort((a, b) => a.localeCompare(b, "nl"));
 
-        let currentPlayerId = null;
-        const token = getToken();
+        const answer = computeAnswer(yesNames.length);
+        document.getElementById("answer").textContent = answer;
+        document.getElementById("answer").className = "answer " + answer;
+        document.getElementById("count").textContent = `${yesNames.length} mensen hebben ja gezegd`;
 
-        if (token) {
-          const session = await fetchSessionByToken(token);
-          if (session) currentPlayerId = session.player_id;
+        const list = document.getElementById("list");
+        list.innerHTML = "";
+
+        if (yesNames.length === 0) {
+          const li = document.createElement("li");
+          li.textContent = "Nog niemand";
+          list.appendChild(li);
+        } else {
+          yesNames.forEach((name) => {
+            const li = document.createElement("li");
+            li.textContent = name;
+            list.appendChild(li);
+          });
         }
 
-        renderState(players, votes, currentPlayerId);
       } catch (err) {
         console.error(err);
         document.getElementById("answer").textContent = "fout";
@@ -367,8 +428,7 @@
 
     async function castVote(status) {
       try {
-        const players = await fetchPlayers();
-        fillPlayers(players);
+        fillPlayers();
 
         let token = getToken();
         let currentPlayerId = null;
@@ -388,12 +448,10 @@
         }
 
         await saveVote(currentPlayerId, status);
-
-        const updatedPlayers = await fetchPlayers();
-        const updatedVotes = await fetchVotesForWeek(getWeekKey());
-        renderState(updatedPlayers, updatedVotes, currentPlayerId);
+        await load();
       } catch (err) {
         console.error(err);
+        document.getElementById("status").textContent = err instanceof Error ? err.message : "Onbekende fout";
         alert(err instanceof Error ? err.message : "Er ging iets mis bij het opslaan");
       }
     }
@@ -401,6 +459,7 @@
     document.getElementById("yesBtn").addEventListener("click", () => castVote("ja"));
     document.getElementById("noBtn").addEventListener("click", () => castVote("nee"));
 
+    fillPlayers();
     load();
   </script>
 </body>
