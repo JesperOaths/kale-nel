@@ -176,13 +176,15 @@
 
     function fillPlayers() {
       const select = document.getElementById("playerSelect");
+      const currentSlug = select.value;
+
       select.innerHTML = "";
 
       const placeholder = document.createElement("option");
       placeholder.value = "";
       placeholder.textContent = "Kies je naam";
       placeholder.disabled = true;
-      placeholder.selected = !getStoredName();
+      placeholder.selected = !currentSlug && !getStoredName();
       select.appendChild(placeholder);
 
       PLAYERS.forEach((p) => {
@@ -192,11 +194,15 @@
         select.appendChild(option);
       });
 
-      const storedName = getStoredName();
-      if (storedName) {
-        const found = PLAYERS.find(p => p.display_name === storedName);
-        if (found) {
-          select.value = found.slug;
+      if (currentSlug) {
+        select.value = currentSlug;
+      } else {
+        const storedName = getStoredName();
+        if (storedName) {
+          const found = PLAYERS.find(p => p.display_name === storedName);
+          if (found) {
+            select.value = found.slug;
+          }
         }
       }
     }
@@ -296,31 +302,37 @@
     }
 
     async function vote(status) {
-      const token = await ensureToken();
-      if (!token) {
-        return;
-      }
+      try {
+        const token = await ensureToken();
+        if (!token) {
+          return;
+        }
 
-      document.getElementById("status").textContent = "Opslaan...";
+        document.getElementById("status").textContent = "Opslaan...";
 
-      const res = await fetch(`${API}?action=vote`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ token, status })
-      });
+        const res = await fetch(`${API}?action=vote`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ token, status })
+        });
 
-      const data = await res.json();
+        const data = await res.json();
 
-      if (!res.ok) {
+        if (!res.ok) {
+          document.getElementById("status").textContent = "";
+          alert(data.error || "Stem opslaan mislukt");
+          return;
+        }
+
+        document.getElementById("status").textContent = "Opgeslagen";
+        await load();
+      } catch (err) {
+        console.error(err);
         document.getElementById("status").textContent = "";
-        alert(data.error || "Stem opslaan mislukt");
-        return;
+        alert("Er ging iets mis bij het opslaan");
       }
-
-      document.getElementById("status").textContent = "Opgeslagen";
-      await load();
     }
 
     document.getElementById("yesBtn").addEventListener("click", () => vote("ja"));
