@@ -257,6 +257,7 @@
         fillPlayers();
         document.getElementById("answer").textContent = "fout";
         document.getElementById("count").textContent = "Kon site niet laden";
+        document.getElementById("status").textContent = err instanceof Error ? err.message : "Onbekende fout";
       }
     }
 
@@ -269,8 +270,7 @@
       const slug = document.getElementById("playerSelect").value;
 
       if (!slug) {
-        alert("Kies eerst je naam");
-        return null;
+        throw new Error("Kies eerst je naam");
       }
 
       const selected = PLAYERS.find(p => p.slug === slug);
@@ -289,8 +289,7 @@
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.error || "Naam koppelen mislukt");
-        return null;
+        throw new Error(data.error || "Naam koppelen mislukt");
       }
 
       setToken(data.token);
@@ -303,12 +302,9 @@
 
     async function vote(status) {
       try {
-        const token = await ensureToken();
-        if (!token) {
-          return;
-        }
-
         document.getElementById("status").textContent = "Opslaan...";
+
+        const token = await ensureToken();
 
         const res = await fetch(`${API}?action=vote`, {
           method: "POST",
@@ -321,17 +317,15 @@
         const data = await res.json();
 
         if (!res.ok) {
-          document.getElementById("status").textContent = "";
-          alert(data.error || "Stem opslaan mislukt");
-          return;
+          throw new Error(data.error || "Stem opslaan mislukt");
         }
 
         document.getElementById("status").textContent = "Opgeslagen";
         await load();
       } catch (err) {
         console.error(err);
-        document.getElementById("status").textContent = "";
-        alert("Er ging iets mis bij het opslaan");
+        document.getElementById("status").textContent = err instanceof Error ? err.message : "Onbekende fout";
+        alert(err instanceof Error ? err.message : "Er ging iets mis bij het opslaan");
       }
     }
 
