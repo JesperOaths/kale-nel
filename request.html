@@ -10,21 +10,21 @@
       --black: #111111;
       --soft: #f3f1ec;
       --soft-2: #ebe7df;
-      --card: rgba(255, 255, 255, 0.9);
+      --card: rgba(255, 255, 255, 0.95);
       --line: rgba(17, 17, 17, 0.08);
       --muted: #6b7280;
       --blue: #2563eb;
-      --shadow: 0 20px 55px rgba(17, 17, 17, 0.1);
+      --shadow: 0 28px 70px rgba(17, 17, 17, 0.14);
     }
 
     * { box-sizing: border-box; }
 
     body {
-      font-family: Arial, sans-serif;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background:
-        radial-gradient(circle at top left, rgba(212, 175, 55, 0.12), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(17, 17, 17, 0.06), transparent 24%),
-        linear-gradient(135deg, var(--soft), #f8f7f3 45%, var(--soft-2));
+        radial-gradient(circle at top left, rgba(212, 175, 55, 0.14), transparent 26%),
+        radial-gradient(circle at bottom right, rgba(17, 17, 17, 0.07), transparent 24%),
+        linear-gradient(135deg, #f2efe8, #f8f7f3 44%, #ece8e0);
       display: flex;
       justify-content: center;
       align-items: center;
@@ -46,10 +46,10 @@
 
     .page-bg {
       background-image: url('./123zwartkaart.png');
-      background-size: 240px;
+      background-size: 255px;
       background-repeat: repeat;
       background-position: center;
-      opacity: 0.12;
+      opacity: 0.13;
       filter: grayscale(100%) contrast(1.12) brightness(0.98);
       mix-blend-mode: multiply;
     }
@@ -74,13 +74,17 @@
 
     .spinoza-shadow {
       position: fixed;
-      right: -30px;
+      left: -18px;
       bottom: 0;
       width: min(28vw, 310px);
       opacity: 0.075;
       pointer-events: none;
       z-index: 0;
       filter: blur(0.15px);
+    }
+
+    .spinoza-shadow {
+      transform: none;
     }
 
     .spinoza-shadow img {
@@ -91,15 +95,15 @@
 
     .playing-card-accent {
       position: fixed;
-      left: -30px;
-      top: 35%;
+      right: -18px;
+      bottom: 8%;
       width: min(18vw, 180px);
       opacity: 0.095;
-      transform: rotate(-12deg);
+      transform: rotate(10deg);
       pointer-events: none;
       z-index: 0;
-      filter: none;
-      transform-origin: center left;
+      filter: sepia(0.35) saturate(0.9) contrast(1.04) brightness(1.01);
+      transform-origin: center right;
     }
 
     .playing-card-accent img {
@@ -113,14 +117,14 @@
       background: var(--card);
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255,255,255,0.75);
-      padding: 34px;
-      border-radius: 24px;
+      padding: 30px 34px 34px;
+      border-radius: 28px;
       text-align: center;
       max-width: 760px;
       width: 100%;
       box-shadow: var(--shadow);
       position: relative;
-      margin: 24px;
+      margin: 20px;
       z-index: 2;
       overflow: hidden;
     }
@@ -130,14 +134,14 @@
       position: absolute;
       inset: 0;
       border-radius: inherit;
-      background: linear-gradient(135deg, rgba(212,175,55,0.07), transparent 34%, rgba(17,17,17,0.035));
+      background: linear-gradient(135deg, rgba(212,175,55,0.085), transparent 34%, rgba(17,17,17,0.05));
       pointer-events: none;
     }
 
     .logo-corner {
       position: absolute;
-      top: 18px;
-      right: 18px;
+      top: 20px;
+      right: 20px;
       width: 84px;
       height: 84px;
       object-fit: contain;
@@ -148,7 +152,7 @@
     .back-link {
       position: absolute;
       left: 18px;
-      top: 18px;
+      top: 20px;
       font-size: 14px;
       text-decoration: none;
       color: var(--blue);
@@ -160,11 +164,11 @@
     }
 
     h1 {
-      margin: 18px 0 10px 0;
+      margin: 24px 0 8px 0;
       font-size: 2.1rem;
-      line-height: 1.1;
-      padding: 0 94px;
-      letter-spacing: -0.02em;
+      line-height: 1.02;
+      padding: 0 80px;
+      letter-spacing: -0.035em;
       position: relative;
       z-index: 1;
     }
@@ -177,13 +181,13 @@
     }
 
     select, textarea {
-      padding: 11px 12px;
+      padding: 12px 13px;
       margin: 10px 0;
       width: 100%;
-      font-size: 16px;
+      font-size: 15px;
       border: 1px solid rgba(17,17,17,0.1);
-      border-radius: 12px;
-      background: rgba(255,255,255,0.82);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.9);
     }
 
     textarea {
@@ -192,12 +196,12 @@
     }
 
     button {
-      padding: 12px 18px;
+      padding: 12px 20px;
       margin-top: 8px;
       border: none;
-      border-radius: 12px;
+      border-radius: 14px;
       cursor: pointer;
-      font-size: 16px;
+      font-size: 15px;
       background: var(--gold);
       color: var(--black);
       transition: transform 0.14s ease, box-shadow 0.14s ease;
@@ -219,7 +223,7 @@
 
     .watermark {
       position: fixed;
-      right: 18px;
+      right: 20px;
       bottom: 14px;
       color: rgba(17,17,17,0.28);
       font-size: 14px;
@@ -230,7 +234,7 @@
     }
 
     @media (max-width: 760px) {
-      body { padding: 18px; }
+      body { padding: 18px 18px 16px; }
 
       h1 {
         padding: 0;
@@ -289,7 +293,7 @@
     <div id="status"></div>
   </div>
 
-  <div class="watermark">Made by Bruis · v15</div>
+  <div class="watermark">Made by Bruis · v16</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
