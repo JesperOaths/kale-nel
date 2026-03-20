@@ -5,16 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin - Jas Site</title>
   <style>
+
     :root {
       --gold: #d4af37;
+      --gold-dark: #b89018;
       --black: #111111;
       --soft: #f3f1ec;
       --soft-2: #ebe7df;
       --card: rgba(255, 255, 255, 0.95);
-      --muted: #6b7280;
-      --green: #15803d;
-      --red: #b91c1c;
       --line: rgba(17, 17, 17, 0.08);
+      --muted: #6b7280;
+      --blue: #2563eb;
       --shadow: 0 28px 70px rgba(17, 17, 17, 0.14);
     }
 
@@ -22,25 +23,29 @@
 
     body {
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      margin: 0;
-      padding: 28px;
-      min-height: 100vh;
-      position: relative;
-      overflow-x: hidden;
       background:
         radial-gradient(circle at top left, rgba(212, 175, 55, 0.14), transparent 26%),
         radial-gradient(circle at bottom right, rgba(17, 17, 17, 0.07), transparent 24%),
         linear-gradient(135deg, #f2efe8, #f8f7f3 44%, #ece8e0);
       color: var(--black);
+      margin: 0;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
     }
 
     .page-bg,
     .brand-watermark,
     .spinoza-shadow,
-    .top-glow {
+    .top-glow,
+    .playing-card-accent {
       position: fixed;
-      inset: 0;
       pointer-events: none;
+    }
+
+    .page-bg,
+    .top-glow {
+      inset: 0;
     }
 
     .page-bg {
@@ -51,194 +56,54 @@
       opacity: 0.13;
       filter: grayscale(100%) contrast(1.12) brightness(0.98);
       mix-blend-mode: multiply;
+      z-index: 0;
     }
 
     .brand-watermark {
-      position: fixed;
       top: 50%;
       left: 50%;
-      width: min(38vw, 500px);
+      width: min(46vw, 620px);
       transform: translate(-50%, -50%);
-      opacity: 0.17;
-      pointer-events: none;
+      opacity: 0.19;
       z-index: 0;
-      filter: saturate(1.04) brightness(1.01);
+      filter: saturate(1.08) brightness(1.02);
     }
 
-    .brand-watermark img {
-      display: block;
-      width: 100%;
-      height: auto;
-    }
-
-    .spinoza-shadow {
-      position: fixed;
-      left: -18px;
-      bottom: 0;
-      width: min(34vw, 470px);
-      opacity: 0.34;
-      pointer-events: none;
-      z-index: 0;
-      filter: sepia(0.26) saturate(1.08) contrast(1.08) brightness(1.02);
-    }
-
-    .spinoza-shadow {
-      transform: none;
-    }
-
-    .spinoza-shadow img {
-      display: block;
-      width: 100%;
-      height: auto;
-    }
-
-    .playing-card-accent {
-      position: fixed;
-      right: -18px;
-      bottom: 8%;
-      width: min(23vw, 310px);
-      opacity: 0.62;
-      transform: rotate(7deg);
-      pointer-events: none;
-      z-index: 0;
-      filter: sepia(0.2) saturate(1.45) contrast(1.12) brightness(1.04);
-      transform-origin: center right;
-    }
-
+    .brand-watermark img,
+    .spinoza-shadow img,
     .playing-card-accent img {
       display: block;
       width: 100%;
       height: auto;
-      border-radius: 22px;
+    }
+
+    .spinoza-shadow {
+      left: -42px;
+      bottom: -8px;
+      width: min(42vw, 590px);
+      opacity: 0.42;
+      z-index: 0;
+      filter: sepia(0.22) saturate(1.18) contrast(1.08) brightness(1.03);
+    }
+
+    .playing-card-accent {
+      right: -44px;
+      bottom: 4%;
+      width: min(30vw, 420px);
+      opacity: 0.92;
+      z-index: 0;
+      filter: saturate(1.38) contrast(1.14) brightness(1.04) drop-shadow(0 20px 38px rgba(40, 18, 12, 0.18));
+      transform: rotate(7deg);
+      transform-origin: center right;
+    }
+
+    .playing-card-accent img {
+      border-radius: 24px;
     }
 
     .top-glow {
       background: linear-gradient(180deg, rgba(255,255,255,0.38), transparent 24%);
-    }
-
-
-    .wrap {
-      max-width: 900px;
-      margin: 0 auto;
-      position: relative;
-      z-index: 2;
-    }
-
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 14px;
-      margin-bottom: 16px;
-    }
-
-    .home-link {
-      text-decoration: none;
-      color: #2563eb;
-      background: rgba(255,255,255,0.7);
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(37,99,235,0.12);
-      backdrop-filter: blur(6px);
-    }
-
-    .mini-logo {
-      width: 74px;
-      height: 74px;
-      object-fit: contain;
-      filter: drop-shadow(0 6px 14px rgba(0,0,0,0.08));
-    }
-
-    .card {
-      background: var(--card);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.75);
-      border-radius: 28px;
-      padding: 26px;
-      box-shadow: var(--shadow);
-      margin-bottom: 20px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .card::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      background: linear-gradient(135deg, rgba(212,175,55,0.085), transparent 34%, rgba(17,17,17,0.05));
-      pointer-events: none;
-    }
-
-    h1, h2 {
-      margin-top: 0;
-      position: relative;
-      z-index: 1;
-    }
-
-    input {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid rgba(17,17,17,0.1);
-      border-radius: 14px;
-      margin: 8px 0;
-      font-size: 15px;
-      background: rgba(255,255,255,0.9);
-      position: relative;
-      z-index: 1;
-    }
-
-    button {
-      padding: 12px 16px;
-      border: none;
-      border-radius: 14px;
-      cursor: pointer;
-      font-size: 15px;
-      margin-right: 8px;
-      margin-top: 8px;
-      transition: transform 0.14s ease, box-shadow 0.14s ease;
-      position: relative;
-      z-index: 1;
-    }
-
-    button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 18px rgba(17,17,17,0.09);
-    }
-
-    .login-btn { background: var(--gold); color: var(--black); }
-    .approve-btn { background: var(--green); color: white; }
-    .reject-btn { background: var(--red); color: white; }
-    .logout-btn { background: var(--black); color: white; }
-
-    .request {
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 16px;
-      margin-top: 12px;
-      background: rgba(250, 250, 250, 0.72);
-      position: relative;
-      z-index: 1;
-    }
-
-    .muted { color: var(--muted); }
-
-    #status {
-      margin-top: 12px;
-      color: var(--muted);
-      white-space: pre-wrap;
-      position: relative;
-      z-index: 1;
-    }
-
-    .hidden { display: none; }
-
-    .row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      position: relative;
-      z-index: 1;
+      z-index: 0;
     }
 
     .watermark {
@@ -253,33 +118,68 @@
       letter-spacing: 0.02em;
     }
 
-    @media (max-width: 700px) {
-      body { padding: 18px 18px 16px; }
-      .row { grid-template-columns: 1fr; }
-      .mini-logo { width: 62px; height: 62px; }
+    @media (max-width: 760px) {
+      body {
+        padding-left: 0;
+        padding-right: 0;
+      }
 
       .brand-watermark {
-        width: min(70vw, 380px);
+        width: min(88vw, 560px);
+        opacity: 0.2;
       }
 
       .spinoza-shadow {
-        left: -20px;
-        bottom: 0;
-        width: min(42vw, 220px);
-        opacity: 0.28;
-        filter: none;
+        left: -34px;
+        bottom: -2px;
+        width: min(66vw, 390px);
+        opacity: 0.56;
+        filter: sepia(0.18) saturate(1.12) contrast(1.04) brightness(1.03);
       }
 
       .playing-card-accent {
-        right: -22px;
-        bottom: 8%;
-        width: min(38vw, 190px);
-        opacity: 0.58;
-        transform: rotate(7deg);
-        filter: sepia(0.58) saturate(1.18) contrast(1.08) brightness(1.01);
+        right: -38px;
+        bottom: 7%;
+        width: min(58vw, 320px);
+        opacity: 0.98;
+        filter: saturate(1.44) contrast(1.16) brightness(1.05) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.18));
       }
+    }
 
-      .card { padding: 22px 18px; }
+    body { padding: 28px; }
+    .wrap { max-width: 980px; margin: 0 auto; position: relative; z-index: 2; }
+    .topbar { display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:16px; }
+    .home-link { text-decoration:none; color:#2563eb; background:rgba(255,255,255,0.7); padding:8px 12px; border-radius:999px; border:1px solid rgba(37,99,235,0.12); backdrop-filter: blur(6px); }
+    .mini-logo { width:74px; height:74px; object-fit:contain; filter:drop-shadow(0 6px 14px rgba(0,0,0,0.08)); }
+    .card { background: var(--card); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.75); border-radius: 28px; padding: 26px; box-shadow: var(--shadow); margin-bottom: 20px; position: relative; overflow: hidden; }
+    .card::before { content: ""; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(135deg, rgba(212,175,55,0.085), transparent 34%, rgba(17,17,17,0.05)); pointer-events:none; }
+    h1, h2 { margin-top:0; position: relative; z-index: 1; }
+    .muted, #status { color: var(--muted); position: relative; z-index: 1; }
+    input, textarea, button { font: inherit; }
+    input, textarea { width:100%; padding:12px 13px; border:1px solid rgba(17,17,17,0.1); border-radius:14px; background: rgba(255,255,255,0.9); margin-top: 10px; }
+    textarea { resize: vertical; min-height: 90px; }
+    .hidden { display:none; }
+    .row { display:grid; grid-template-columns: 1fr 1fr; gap:14px; position:relative; z-index:1; }
+    .login-btn, .logout-btn, .approve-btn, .reject-btn { padding: 12px 18px; border-radius: 14px; border: none; cursor: pointer; margin-top: 12px; }
+    .login-btn { background: var(--gold); color: var(--black); }
+    .logout-btn { background: var(--black); color: white; }
+    .approve-btn { background: #166534; color: white; margin-right: 10px; }
+    .reject-btn { background: #b91c1c; color: white; }
+    .request { background: rgba(251,250,246,.88); border:1px solid var(--line); border-radius: 20px; padding: 18px; margin-top: 14px; position: relative; z-index: 1; }
+    .request-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px 18px; margin-top: 12px; }
+    .data-box { background: rgba(255,255,255,0.7); border:1px solid rgba(17,17,17,0.07); border-radius: 14px; padding: 10px 12px; }
+    .label { display:block; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 4px; }
+    details { margin-top: 12px; }
+    summary { cursor: pointer; color: #374151; }
+    pre { background: #fffdf7; border-radius: 14px; border:1px solid #e7dfcf; padding:12px; overflow:auto; white-space: pre-wrap; word-break: break-word; }
+
+    @media (max-width: 760px) {
+      body { padding: 16px 0; }
+      .wrap { max-width: none; }
+      .row, .request-grid { grid-template-columns: 1fr; }
+      .mini-logo { width: 64px; height: 64px; }
+      .topbar { padding: 0 22px; }
+      .card { padding: 22px 18px; max-width: calc(100vw - 82px); width: calc(100vw - 82px); margin: 14px auto; }
     }
   </style>
 </head>
@@ -287,7 +187,7 @@
   <div class="page-bg"></div>
   <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
   <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
-  <div class="playing-card-accent"><img src="./playingcard-accent.png" alt="" /></div>
+  <div class="playing-card-accent"><img src="./playingcard-accent-v23.png" alt="" /></div>
   <div class="top-glow"></div>
 
   <div class="wrap">
@@ -298,8 +198,7 @@
 
     <div class="card">
       <h1>Adminpaneel</h1>
-      <div class="muted" style="margin-top:-8px; margin-bottom:10px; position:relative; z-index:1;">Versie v22</div>
-
+      <div class="muted" style="margin-top:-8px; margin-bottom:10px;">Versie v23</div>
       <div id="loginView">
         <div class="row">
           <input id="usernameInput" type="text" placeholder="Gebruikersnaam" autocomplete="username" />
@@ -307,14 +206,12 @@
         </div>
         <input id="totpInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="Google Authenticator-code (6 cijfers)" autocomplete="one-time-code" />
         <button id="loginBtn" class="login-btn" type="button">Inloggen</button>
-        <div class="muted" style="margin-top:10px; position:relative; z-index:1;">Log in met je gebruikersnaam, wachtwoord en 6-cijferige code uit Google Authenticator.</div>
+        <div class="muted" style="margin-top:10px;">Log in met je gebruikersnaam, wachtwoord en 6-cijferige code uit Google Authenticator.</div>
       </div>
-
       <div id="adminView" class="hidden">
         <p id="welcomeText"></p>
         <button id="logoutBtn" class="logout-btn" type="button">Uitloggen</button>
       </div>
-
       <div id="status"></div>
     </div>
 
@@ -329,296 +226,161 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v22</div>
+  <div class="watermark">Made by Bruis · v23</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const ADMIN_SESSION_KEY = "jas_admin_session_v6";
 
-    function rpcHeaders() {
+    function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json", Accept: "application/json" }; }
+    async function parseResponse(res) { const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }
+    function getAdminSessionToken() { return localStorage.getItem(ADMIN_SESSION_KEY); }
+    function setAdminSessionToken(token) { localStorage.setItem(ADMIN_SESSION_KEY, token); }
+    function clearAdminSessionToken() { localStorage.removeItem(ADMIN_SESSION_KEY); }
+    function setStatus(text) { document.getElementById("status").textContent = text || ""; }
+    function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;"); }
+    function showLoggedOut() { document.getElementById("loginView").classList.remove("hidden"); document.getElementById("adminView").classList.add("hidden"); document.getElementById("requestsCard").classList.add("hidden"); document.getElementById("historyCard").classList.add("hidden"); document.getElementById("requestsList").innerHTML = ""; document.getElementById("historyList").innerHTML = ""; }
+    function showLoggedIn(username) { document.getElementById("loginView").classList.add("hidden"); document.getElementById("adminView").classList.remove("hidden"); document.getElementById("requestsCard").classList.remove("hidden"); document.getElementById("historyCard").classList.remove("hidden"); document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`; }
+
+    function metaBox(label, value) {
+      return `<div class="data-box"><span class="label">${escapeHtml(label)}</span>${escapeHtml(value || 'Onbekend')}</div>`;
+    }
+
+    function extractMeta(meta) {
+      const m = meta && typeof meta === 'object' ? meta : {};
       return {
-        apikey: SUPABASE_PUBLISHABLE_KEY,
-        "Content-Type": "application/json",
-        Accept: "application/json"
+        language: m.language || (Array.isArray(m.languages) ? m.languages.join(', ') : ''),
+        timezone: m.timezone || '',
+        platform: m.platform || '',
+        user_agent: m.user_agent || '',
+        screen: m.screen || '',
+        viewport: m.viewport || '',
+        referrer: m.referrer || '',
+        page_url: m.page_url || '',
+        color_scheme: m.color_scheme || '',
+        contact_hint: m.contact_hint || '',
+        max_touch_points: m.max_touch_points ?? ''
       };
     }
 
-    async function parseResponse(res) {
-      const text = await res.text();
-      let data = null;
-
-      try {
-        data = text ? JSON.parse(text) : null;
-      } catch {
-        throw new Error(text || `HTTP ${res.status}`);
-      }
-
-      if (!res.ok) {
-        throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
-      }
-
-      return data;
-    }
-
-    function getAdminSessionToken() {
-      return localStorage.getItem(ADMIN_SESSION_KEY);
-    }
-
-    function setAdminSessionToken(token) {
-      localStorage.setItem(ADMIN_SESSION_KEY, token);
-    }
-
-    function clearAdminSessionToken() {
-      localStorage.removeItem(ADMIN_SESSION_KEY);
-    }
-
-    function setStatus(text) {
-      document.getElementById("status").textContent = text || "";
-    }
-
-    function escapeHtml(value) {
-      return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#39;");
-    }
-
-    function showLoggedOut() {
-      document.getElementById("loginView").classList.remove("hidden");
-      document.getElementById("adminView").classList.add("hidden");
-      document.getElementById("requestsCard").classList.add("hidden");
-      document.getElementById("historyCard").classList.add("hidden");
-      document.getElementById("requestsList").innerHTML = "";
-      document.getElementById("historyList").innerHTML = "";
-    }
-
-    function showLoggedIn(username) {
-      document.getElementById("loginView").classList.add("hidden");
-      document.getElementById("adminView").classList.remove("hidden");
-      document.getElementById("requestsCard").classList.remove("hidden");
-      document.getElementById("historyCard").classList.remove("hidden");
-      document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`;
+    function requestHtml(req, includeDecision = false) {
+      const noteHtml = req.requester_note ? escapeHtml(req.requester_note).replaceAll("
+", "<br>") : "<span class='muted'>Geen toelichting</span>";
+      const reasonHtml = req.decision_reason ? escapeHtml(req.decision_reason).replaceAll("
+", "<br>") : "<span class='muted'>Geen reden opgegeven</span>";
+      const meta = extractMeta(req.requester_meta);
+      return `
+        <strong>${escapeHtml(req.display_name)}</strong><br>
+        <span class="muted">Aangevraagd op:</span> ${req.created_at ? new Date(req.created_at).toLocaleString('nl-NL') : 'Onbekend'}<br>
+        ${includeDecision ? `<span class="muted">Beslissing:</span> ${escapeHtml(req.decision || '')}<br>` : ''}
+        <div style="margin-top:10px;">${noteHtml}</div>
+        <div class="request-grid">
+          ${metaBox('E-mail', req.requester_email || 'Onbekend')}
+          ${metaBox('Contact / hint', meta.contact_hint || 'Onbekend')}
+          ${metaBox('Taal', meta.language || 'Onbekend')}
+          ${metaBox('Tijdzone', meta.timezone || 'Onbekend')}
+          ${metaBox('Platform', meta.platform || 'Onbekend')}
+          ${metaBox('Touch punten', String(meta.max_touch_points || 0))}
+          ${metaBox('Scherm', meta.screen || 'Onbekend')}
+          ${metaBox('Viewport', meta.viewport || 'Onbekend')}
+          ${metaBox('Referrer', meta.referrer || 'Direct / onbekend')}
+          ${metaBox('Pagina', meta.page_url || 'Onbekend')}
+        </div>
+        <details>
+          <summary>Browser- en verzoekdetails</summary>
+          <pre>${escapeHtml(JSON.stringify(req.requester_meta || {}, null, 2))}</pre>
+        </details>
+        ${includeDecision ? `<div style="margin-top:12px;"><span class="label">Reden besluit</span><div>${reasonHtml}</div></div>` : ''}
+      `;
     }
 
     function renderRequests(requests) {
       const root = document.getElementById("requestsList");
       root.innerHTML = "";
-
-      if (!requests || requests.length === 0) {
-        root.innerHTML = `<p class="muted">Geen openstaande aanvragen.</p>`;
-        return;
-      }
-
+      if (!requests || requests.length === 0) { root.innerHTML = `<p class="muted">Geen openstaande aanvragen.</p>`; return; }
       requests.forEach((req) => {
-        const div = document.createElement("div");
-        div.className = "request";
-
-        const noteHtml = req.requester_note
-          ? escapeHtml(req.requester_note).replaceAll("\n", "<br>")
-          : "<span class='muted'>Geen toelichting</span>";
-
-        div.innerHTML = `
-          <strong>${escapeHtml(req.display_name)}</strong><br>
-          <span class="muted">E-mail:</span> ${escapeHtml(req.requester_email || "Onbekend")}<br>
-          <span class="muted">Aangevraagd op:</span> ${new Date(req.created_at).toLocaleString("nl-NL")}<br>
-          <span class="muted">Toelichting:</span><br>
-          <div style="margin-top:6px;">${noteHtml}</div>
-          <div style="margin-top:12px;">
-            <textarea class="decision-reason" data-id="${req.id}" placeholder="Reden (optioneel, wordt opgeslagen in geschiedenis)" style="width:100%;min-height:84px;margin-bottom:10px;border-radius:14px;border:1px solid #d7d0c2;padding:12px;font:inherit;background:#fffdf7;color:#111;"></textarea>
-            <button class="approve-btn" data-id="${req.id}" data-decision="approved">Goedkeuren</button>
-            <button class="reject-btn" data-id="${req.id}" data-decision="rejected">Afwijzen</button>
-          </div>
-        `;
-
+        const div = document.createElement('div');
+        div.className = 'request';
+        div.innerHTML = `${requestHtml(req)}<div style="margin-top:12px;"><textarea class="decision-reason" data-id="${req.id}" placeholder="Reden (optioneel, wordt opgeslagen in geschiedenis)"></textarea><button class="approve-btn" data-id="${req.id}" data-decision="approved">Goedkeuren</button><button class="reject-btn" data-id="${req.id}" data-decision="rejected">Afwijzen</button></div>`;
         root.appendChild(div);
       });
-
-      document.querySelectorAll("[data-decision]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
+      document.querySelectorAll('[data-decision]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
           const requestId = Number(btn.dataset.id);
           const decision = btn.dataset.decision;
           const reasonEl = document.querySelector(`.decision-reason[data-id="${requestId}"]`);
-          const decisionReason = reasonEl ? reasonEl.value.trim() : "";
+          const decisionReason = reasonEl ? reasonEl.value.trim() : '';
           try {
-            setStatus("Opslaan...");
+            setStatus('Opslaan...');
             await decideRequest(requestId, decision, decisionReason);
             const data = await getRequests();
             renderRequests(data.requests);
             const history = await getHistory();
             renderHistory(history.history);
-            setStatus("Bijgewerkt.");
+            setStatus('Bijgewerkt.');
           } catch (err) {
-            const rawMessage = err instanceof Error ? err.message : "Er ging iets mis";
-            setStatus(rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage);
+            const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
+            setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
           }
         });
       });
     }
 
-    async function adminLogin() {
-      const username = document.getElementById("usernameInput").value.trim();
-      const password = document.getElementById("passwordInput").value;
-      const totp = document.getElementById("totpInput").value.trim();
-
-      if (!username) throw new Error("Vul een gebruikersnaam in");
-      if (!password) throw new Error("Vul een wachtwoord in");
-      if (!/^\d{6}$/.test(totp)) throw new Error("Vul je 6-cijferige Google Authenticator-code in");
-
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_login`, {
-        method: "POST",
-        mode: "cors",
-        cache: "no-store",
-        headers: rpcHeaders(),
-        body: JSON.stringify({
-          input_username: username,
-          input_password: password,
-          input_totp_code: totp
-        })
-      });
-
-      const data = await parseResponse(res);
-      setAdminSessionToken(data.admin_session_token);
-      document.getElementById("passwordInput").value = "";
-      document.getElementById("totpInput").value = "";
-      return data;
-    }
-
-    async function checkSession() {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, {
-        method: "POST",
-        mode: "cors",
-        cache: "no-store",
-        headers: rpcHeaders(),
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken() })
-      });
-      return await parseResponse(res);
-    }
-
-
-    async function getHistory() {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_history`, {
-        method: "POST",
-        mode: "cors",
-        cache: "no-store",
-        headers: rpcHeaders(),
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken() })
-      });
-      return await parseResponse(res);
-    }
-
     function renderHistory(items) {
-      const root = document.getElementById("historyList");
-      root.innerHTML = "";
-
-      if (!items || items.length === 0) {
-        root.innerHTML = `<p class="muted">Nog geen geschiedenis.</p>`;
-        return;
-      }
-
+      const root = document.getElementById('historyList');
+      root.innerHTML = '';
+      if (!items || items.length === 0) { root.innerHTML = `<p class="muted">Nog geen geschiedenis.</p>`; return; }
       items.forEach((item) => {
-        const div = document.createElement("div");
-        div.className = "request";
-        const noteHtml = item.requester_note
-          ? escapeHtml(item.requester_note).replaceAll("\n", "<br>")
-          : "<span class='muted'>Geen toelichting</span>";
-        const reasonHtml = item.decision_reason
-          ? escapeHtml(item.decision_reason).replaceAll("\n", "<br>")
-          : "<span class='muted'>Geen reden opgegeven</span>";
-
-        div.innerHTML = `
-          <strong>${escapeHtml(item.display_name)}</strong><br>
-          <span class="muted">Beslissing:</span> ${escapeHtml(item.decision)}<br>
-          <span class="muted">E-mail:</span> ${escapeHtml(item.requester_email || "Onbekend")}<br>
-          <span class="muted">Aanvraag:</span><br>
-          <div style="margin-top:6px;">${noteHtml}</div>
-          <span class="muted" style="display:block;margin-top:10px;">Reden besluit:</span>
-          <div style="margin-top:6px;">${reasonHtml}</div>
-          <div class="muted" style="margin-top:10px;">${new Date(item.decided_at).toLocaleString("nl-NL")}</div>
-        `;
+        const div = document.createElement('div');
+        div.className = 'request';
+        div.innerHTML = `${requestHtml(item, true)}<div class="muted" style="margin-top:10px;">${item.decided_at ? new Date(item.decided_at).toLocaleString('nl-NL') : ''}</div>`;
         root.appendChild(div);
       });
     }
 
-    async function getRequests() {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_requests`, {
-        method: "POST",
-        mode: "cors",
-        cache: "no-store",
-        headers: rpcHeaders(),
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken() })
-      });
-      return await parseResponse(res);
+    async function adminLogin() {
+      const username = document.getElementById('usernameInput').value.trim();
+      const password = document.getElementById('passwordInput').value;
+      const totp = document.getElementById('totpInput').value.trim();
+      if (!username) throw new Error('Vul een gebruikersnaam in');
+      if (!password) throw new Error('Vul een wachtwoord in');
+      if (!/^\d{6}$/.test(totp)) throw new Error('Vul je 6-cijferige Google Authenticator-code in');
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_login`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ input_username: username, input_password: password, input_totp_code: totp }) });
+      const data = await parseResponse(res);
+      setAdminSessionToken(data.admin_session_token || data.token);
+      document.getElementById('passwordInput').value = '';
+      document.getElementById('totpInput').value = '';
+      return data;
     }
-
-    async function decideRequest(requestId, decision, decisionReason) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request`, {
-        method: "POST",
-        mode: "cors",
-        cache: "no-store",
-        headers: rpcHeaders(),
-        body: JSON.stringify({
-          admin_session_token: getAdminSessionToken(),
-          request_id_input: requestId,
-          decision,
-          decision_reason_input: decisionReason
-        })
-      });
-      return await parseResponse(res);
-    }
+    async function checkSession() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); }
+    async function getRequests() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_requests`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); }
+    async function getHistory() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_history`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); }
+    async function decideRequest(requestId, decision, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: requestId, decision, decision_reason_input: decisionReason }) }); return await parseResponse(res); }
 
     async function loadAdmin() {
       try {
-        setStatus("");
+        setStatus('');
         const token = getAdminSessionToken();
-
-        if (!token) {
-          showLoggedOut();
-          return;
-        }
-
+        if (!token) { showLoggedOut(); return; }
         const session = await checkSession();
-
-        if (!session.ok) {
-          clearAdminSessionToken();
-          showLoggedOut();
-          return;
-        }
-
+        if (!session.ok) { clearAdminSessionToken(); showLoggedOut(); return; }
         showLoggedIn(session.username);
-
-        const data = await getRequests();
-        renderRequests(data.requests);
+        const [requests, history] = await Promise.all([getRequests(), getHistory()]);
+        renderRequests(requests.requests);
+        renderHistory(history.history);
       } catch (err) {
-        clearAdminSessionToken();
-        showLoggedOut();
-        const rawMessage = err instanceof Error ? err.message : "Er ging iets mis";
-        setStatus(rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage);
+        clearAdminSessionToken(); showLoggedOut();
+        const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
+        setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
       }
     }
 
-    document.getElementById("loginBtn").addEventListener("click", async () => {
-      try {
-        setStatus("Inloggen...");
-        const data = await adminLogin();
-        showLoggedIn(data.username);
-        const requests = await getRequests();
-        renderRequests(requests.requests);
-        setStatus("");
-      } catch (err) {
-        const rawMessage = err instanceof Error ? err.message : "Er ging iets mis";
-        setStatus(rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage);
-      }
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      try { setStatus('Inloggen...'); const data = await adminLogin(); showLoggedIn(data.username); const [requests, history] = await Promise.all([getRequests(), getHistory()]); renderRequests(requests.requests); renderHistory(history.history); setStatus(''); }
+      catch (err) { const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis'; setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage); }
     });
-
-    document.getElementById("logoutBtn").addEventListener("click", () => {
-      clearAdminSessionToken();
-      showLoggedOut();
-      setStatus("Uitgelogd.");
-    });
-
+    document.getElementById('logoutBtn').addEventListener('click', () => { clearAdminSessionToken(); showLoggedOut(); setStatus('Uitgelogd.'); });
     loadAdmin();
   </script>
 </body>

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wordt er gejast donderdag?</title>
   <style>
+
     :root {
       --gold: #d4af37;
       --gold-dark: #b89018;
@@ -26,24 +27,25 @@
         radial-gradient(circle at top left, rgba(212, 175, 55, 0.14), transparent 26%),
         radial-gradient(circle at bottom right, rgba(17, 17, 17, 0.07), transparent 24%),
         linear-gradient(135deg, #f2efe8, #f8f7f3 44%, #ece8e0);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
-      position: relative;
-      padding: 28px;
-      overflow-x: hidden;
       color: var(--black);
+      margin: 0;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
     }
 
     .page-bg,
     .brand-watermark,
     .spinoza-shadow,
-    .top-glow {
+    .top-glow,
+    .playing-card-accent {
       position: fixed;
-      inset: 0;
       pointer-events: none;
+    }
+
+    .page-bg,
+    .top-glow {
+      inset: 0;
     }
 
     .page-bg {
@@ -54,69 +56,101 @@
       opacity: 0.13;
       filter: grayscale(100%) contrast(1.12) brightness(0.98);
       mix-blend-mode: multiply;
+      z-index: 0;
     }
 
     .brand-watermark {
-      position: fixed;
       top: 50%;
       left: 50%;
-      width: min(38vw, 500px);
+      width: min(46vw, 620px);
       transform: translate(-50%, -50%);
-      opacity: 0.17;
-      pointer-events: none;
+      opacity: 0.19;
       z-index: 0;
-      filter: saturate(1.04) brightness(1.01);
+      filter: saturate(1.08) brightness(1.02);
     }
 
-    .brand-watermark img {
-      display: block;
-      width: 100%;
-      height: auto;
-    }
-
-    .spinoza-shadow {
-      position: fixed;
-      left: -24px;
-      bottom: 0;
-      width: min(34vw, 470px);
-      opacity: 0.34;
-      pointer-events: none;
-      z-index: 0;
-      filter: sepia(0.26) saturate(1.08) contrast(1.08) brightness(1.02);
-    }
-
-    .spinoza-shadow {
-      transform: none;
-    }
-
-    .spinoza-shadow img {
-      display: block;
-      width: 100%;
-      height: auto;
-    }
-
-    .playing-card-accent {
-      position: fixed;
-      right: -24px;
-      bottom: 7%;
-      width: min(23vw, 310px);
-      opacity: 0.62;
-      transform: rotate(8deg);
-      pointer-events: none;
-      z-index: 0;
-      filter: sepia(0.2) saturate(1.45) contrast(1.12) brightness(1.04);
-      transform-origin: center right;
-    }
-
+    .brand-watermark img,
+    .spinoza-shadow img,
     .playing-card-accent img {
       display: block;
       width: 100%;
       height: auto;
-      border-radius: 22px;
+    }
+
+    .spinoza-shadow {
+      left: -42px;
+      bottom: -8px;
+      width: min(42vw, 590px);
+      opacity: 0.42;
+      z-index: 0;
+      filter: sepia(0.22) saturate(1.18) contrast(1.08) brightness(1.03);
+    }
+
+    .playing-card-accent {
+      right: -44px;
+      bottom: 4%;
+      width: min(30vw, 420px);
+      opacity: 0.92;
+      z-index: 0;
+      filter: saturate(1.38) contrast(1.14) brightness(1.04) drop-shadow(0 20px 38px rgba(40, 18, 12, 0.18));
+      transform: rotate(7deg);
+      transform-origin: center right;
+    }
+
+    .playing-card-accent img {
+      border-radius: 24px;
     }
 
     .top-glow {
       background: linear-gradient(180deg, rgba(255,255,255,0.38), transparent 24%);
+      z-index: 0;
+    }
+
+    .watermark {
+      position: fixed;
+      right: 20px;
+      bottom: 14px;
+      color: rgba(17,17,17,0.28);
+      font-size: 14px;
+      user-select: none;
+      pointer-events: none;
+      z-index: 3;
+      letter-spacing: 0.02em;
+    }
+
+    @media (max-width: 760px) {
+      body {
+        padding-left: 0;
+        padding-right: 0;
+      }
+
+      .brand-watermark {
+        width: min(88vw, 560px);
+        opacity: 0.2;
+      }
+
+      .spinoza-shadow {
+        left: -34px;
+        bottom: -2px;
+        width: min(66vw, 390px);
+        opacity: 0.56;
+        filter: sepia(0.18) saturate(1.12) contrast(1.04) brightness(1.03);
+      }
+
+      .playing-card-accent {
+        right: -38px;
+        bottom: 7%;
+        width: min(58vw, 320px);
+        opacity: 0.98;
+        filter: saturate(1.44) contrast(1.16) brightness(1.05) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.18));
+      }
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 28px;
     }
 
     .card {
@@ -268,15 +302,8 @@
       margin: 0 0 10px 0;
     }
 
-    ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    li {
-      margin: 6px 0;
-    }
+    ul { list-style: none; padding: 0; margin: 0; }
+    li { margin: 6px 0; }
 
     .section {
       margin-top: 20px;
@@ -286,80 +313,16 @@
       z-index: 1;
     }
 
-    .request-link-wrap {
-      margin-top: 8px;
-    }
-
-    .request-link {
-      color: var(--blue);
-      text-decoration: none;
-      font-size: 15px;
-    }
-
-    .watermark {
-      position: fixed;
-      right: 20px;
-      bottom: 14px;
-      color: rgba(17,17,17,0.28);
-      font-size: 14px;
-      user-select: none;
-      pointer-events: none;
-      z-index: 3;
-      letter-spacing: 0.02em;
-    }
+    .request-link-wrap { margin-top: 8px; }
+    .request-link { color: var(--blue); text-decoration: none; font-size: 15px; }
 
     @media (max-width: 760px) {
-      body {
-        padding: 18px 18px 16px;
-      }
-
-      .lists, .two-col {
-        grid-template-columns: 1fr;
-      }
-
-      h1 {
-        padding: 0;
-        margin-top: 78px;
-        font-size: 2rem;
-      }
-
-      .brand-watermark {
-        width: min(82vw, 520px);
-      }
-
-      .spinoza-shadow {
-        left: -24px;
-        bottom: 0;
-        width: min(56vw, 340px);
-        opacity: 0.42;
-        filter: sepia(0.18) saturate(1.08) contrast(1.03);
-      }
-
-      .playing-card-accent {
-        right: -28px;
-        bottom: 6%;
-        width: min(48vw, 290px);
-        opacity: 0.82;
-        transform: rotate(7deg);
-        filter: sepia(0.24) saturate(1.55) contrast(1.13) brightness(1.05);
-      }
-
-      .logo-corner {
-        top: 12px;
-        right: 12px;
-        width: 68px;
-        height: 68px;
-      }
-
-      .admin-link {
-        top: 12px;
-        left: 12px;
-      }
-
-      .card {
-        padding: 24px 18px;
-        margin: 12px;
-      }
+      body { padding: 16px 0; }
+      .lists, .two-col { grid-template-columns: 1fr; }
+      h1 { padding: 0; margin-top: 78px; font-size: 2rem; }
+      .logo-corner { top: 12px; right: 12px; width: 68px; height: 68px; }
+      .admin-link { top: 12px; left: 12px; }
+      .card { padding: 22px 18px; margin: 14px auto; max-width: calc(100vw - 68px); width: calc(100vw - 68px); }
     }
   </style>
 </head>
@@ -367,7 +330,7 @@
   <div class="page-bg"></div>
   <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
   <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
-  <div class="playing-card-accent"><img src="./playingcard-accent.png" alt="" /></div>
+  <div class="playing-card-accent"><img src="./playingcard-accent-v23.png" alt="" /></div>
   <div class="top-glow"></div>
 
   <div class="card">
@@ -410,7 +373,7 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v22</div>
+  <div class="watermark">Made by Bruis · v23</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -442,54 +405,38 @@
       return data;
     }
 
-    function getSessionToken() {
-      return localStorage.getItem(SESSION_KEY);
-    }
-
-    function setSessionToken(token) {
-      localStorage.setItem(SESSION_KEY, token);
-    }
-
-    function clearSessionToken() {
-      localStorage.removeItem(SESSION_KEY);
-    }
+    function getSessionToken() { return localStorage.getItem(SESSION_KEY); }
+    function setSessionToken(token) { localStorage.setItem(SESSION_KEY, token); }
+    function clearSessionToken() { localStorage.removeItem(SESSION_KEY); }
 
     function fillNameSelect(names, selectedName = null, locked = false) {
       const select = document.getElementById("playerSelect");
       select.innerHTML = "";
-
       const placeholder = document.createElement("option");
       placeholder.value = "";
       placeholder.textContent = "Kies je naam";
       placeholder.disabled = true;
       placeholder.selected = !selectedName;
       select.appendChild(placeholder);
-
       (names || []).forEach((name) => {
         const option = document.createElement("option");
         option.value = name;
         option.textContent = name;
         select.appendChild(option);
       });
-
-      if (selectedName) {
-        select.value = selectedName;
-      }
-
+      if (selectedName) select.value = selectedName;
       select.disabled = locked;
     }
 
     function renderList(id, names, emptyText) {
       const list = document.getElementById(id);
       list.innerHTML = "";
-
       if (!names || names.length === 0) {
         const li = document.createElement("li");
         li.textContent = emptyText;
         list.appendChild(li);
         return;
       }
-
       names.forEach((name) => {
         const li = document.createElement("li");
         li.textContent = name;
@@ -502,16 +449,12 @@
       const answerClass = state.answer || "nee";
       const answerText = answerMap[answerClass] || "Nee";
       const yesCount = Number(state.yes_count || 0);
-
       document.getElementById("answer").textContent = answerText;
       document.getElementById("answer").className = `answer ${answerClass}`;
-      document.getElementById("count").textContent =
-        yesCount === 1 ? "1 mens heeft Ja gezegd" : `${yesCount} mensen hebben Ja gezegd`;
-
+      document.getElementById("count").textContent = yesCount === 1 ? "1 mens heeft Ja gezegd" : `${yesCount} mensen hebben Ja gezegd`;
       fillNameSelect(state.all_names || [], state.my_name || null, Boolean(state.my_name));
       renderList("legendsList", state.yes_names || [], "Nog niemand");
       renderList("losersList", state.no_names || [], "Nog niemand");
-
       document.getElementById("removeBtn").style.display = state.my_status ? "inline-block" : "none";
       document.getElementById("status").textContent = state.my_status ? `Jouw keuze: ${state.my_status}` : "";
     }
@@ -530,21 +473,12 @@
     async function loginPlayer() {
       const desiredName = document.getElementById("playerSelect").value;
       const enteredPin = document.getElementById("pinInput").value.trim();
-
       if (!desiredName) throw new Error("Kies eerst je naam");
       if (!enteredPin) throw new Error("Voer je pincode in");
-
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/login_player`, {
-        method: "POST",
-        mode: "cors",
-        cache: "no-store",
-        headers: rpcHeaders(),
-        body: JSON.stringify({
-          desired_name: desiredName,
-          entered_pin: enteredPin
-        })
+        method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(),
+        body: JSON.stringify({ desired_name: desiredName, entered_pin: enteredPin })
       });
-
       const data = await parseResponse(res);
       setSessionToken(data.session_token);
       document.getElementById("pinInput").value = "";
@@ -553,72 +487,40 @@
 
     async function castVote(desiredStatus) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cast_vote`, {
-        method: "POST",
-        mode: "cors",
-        cache: "no-store",
-        headers: rpcHeaders(),
-        body: JSON.stringify({
-          session_token: getSessionToken(),
-          desired_status: desiredStatus
-        })
+        method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(),
+        body: JSON.stringify({ session_token: getSessionToken(), desired_status: desiredStatus })
       });
       return await parseResponse(res);
     }
 
     async function removeMyVote() {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/remove_my_vote`, {
-        method: "POST",
-        mode: "cors",
-        cache: "no-store",
-        headers: rpcHeaders(),
+        method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(),
         body: JSON.stringify({ session_token: getSessionToken() })
       });
       return await parseResponse(res);
     }
 
-    async function ensureLoggedIn() {
-      if (getSessionToken()) return;
-      await loginPlayer();
-    }
+    async function ensureLoggedIn() { if (getSessionToken()) return; await loginPlayer(); }
 
     async function handleVote(status) {
-      try {
-        await ensureLoggedIn();
-        const state = await castVote(status);
-        renderState(state);
-      } catch (err) {
-        if (err instanceof Error && err.message.includes("Sessie ongeldig")) {
-          clearSessionToken();
-        }
-        alert(err instanceof Error ? err.message : "Er ging iets mis");
-      }
+      try { await ensureLoggedIn(); renderState(await castVote(status)); }
+      catch (err) { if (err instanceof Error && err.message.includes("Sessie ongeldig")) clearSessionToken(); alert(err instanceof Error ? err.message : "Er ging iets mis"); }
     }
 
     async function handleRemove() {
-      try {
-        const state = await removeMyVote();
-        renderState(state);
-      } catch (err) {
-        if (err instanceof Error && err.message.includes("Sessie ongeldig")) {
-          clearSessionToken();
-        }
-        alert(err instanceof Error ? err.message : "Er ging iets mis");
-      }
+      try { renderState(await removeMyVote()); }
+      catch (err) { if (err instanceof Error && err.message.includes("Sessie ongeldig")) clearSessionToken(); alert(err instanceof Error ? err.message : "Er ging iets mis"); }
     }
 
     async function load() {
-      try {
-        const state = await getState();
-        renderState(state);
-      } catch (err) {
+      try { renderState(await getState()); }
+      catch (err) {
         document.getElementById("answer").textContent = "Fout";
         document.getElementById("answer").className = "answer nee";
         document.getElementById("count").textContent = "Kon site niet laden";
         const rawMessage = err instanceof Error ? err.message : "Onbekende fout";
-        document.getElementById("status").textContent =
-          rawMessage === "Failed to fetch"
-            ? "Netwerk/CORS-fout bij contact met Supabase."
-            : rawMessage;
+        document.getElementById("status").textContent = rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage;
         renderList("legendsList", [], "Nog niemand");
         renderList("losersList", [], "Nog niemand");
         fillNameSelect([], null, false);
@@ -628,7 +530,6 @@
     document.getElementById("yesBtn").addEventListener("click", () => handleVote("ja"));
     document.getElementById("noBtn").addEventListener("click", () => handleVote("nee"));
     document.getElementById("removeBtn").addEventListener("click", handleRemove);
-
     load();
   </script>
 </body>
