@@ -3,43 +3,66 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wordt er gejast vanavond?</title>
+  <title>Wordt er gejast donderdagavond?</title>
   <style>
+    :root {
+      --gold: #d4af37;
+      --black: #111111;
+      --soft: #f5f7fb;
+      --card: #ffffff;
+      --muted: #6b7280;
+    }
+
     body {
       font-family: Arial, sans-serif;
-      background: #f5f7fb;
+      background: var(--soft);
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
       margin: 0;
+      position: relative;
+      overflow-x: hidden;
     }
 
     .card {
-      background: white;
-      padding: 30px;
-      border-radius: 16px;
+      background: var(--card);
+      padding: 32px;
+      border-radius: 18px;
       text-align: center;
-      max-width: 700px;
+      max-width: 760px;
       width: 100%;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.10);
+      position: relative;
+    }
+
+    .logo-corner {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 78px;
+      height: 78px;
+      object-fit: contain;
+      opacity: 0.95;
     }
 
     h1 {
-      margin-bottom: 10px;
-      font-size: 2.2rem;
+      margin: 12px 0 10px 0;
+      font-size: 2.3rem;
       line-height: 1.15;
+      padding-right: 88px;
     }
 
     .answer {
-      font-size: 32px;
-      margin: 15px 0;
+      font-size: 34px;
+      margin: 16px 0;
       font-weight: bold;
+      text-transform: capitalize;
     }
 
-    .ja { color: green; }
-    .bijna { color: orange; }
-    .nee { color: red; }
+    .ja { color: var(--gold); }
+    .bijna { color: #b8860b; }
+    .nee { color: var(--black); }
 
     button {
       padding: 12px 16px;
@@ -50,22 +73,39 @@
       font-size: 16px;
     }
 
-    .yes { background: green; color: white; }
-    .no { background: red; color: white; }
-    .remove { background: #6b7280; color: white; }
+    .yes { background: var(--gold); color: #111111; }
+    .no { background: var(--black); color: #ffffff; }
+    .remove { background: #6b7280; color: #ffffff; }
 
-    select {
+    select, input {
       padding: 10px;
       margin: 10px 0;
       width: 100%;
       font-size: 16px;
+      box-sizing: border-box;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+    }
+
+    .login-box {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    #status {
+      color: var(--muted);
+      min-height: 22px;
+      margin-top: 10px;
+      white-space: pre-wrap;
     }
 
     .lists {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 24px;
-      margin-top: 20px;
+      margin-top: 24px;
       text-align: left;
     }
 
@@ -73,12 +113,12 @@
       background: #f8fafc;
       border-radius: 12px;
       padding: 16px;
+      min-height: 180px;
     }
 
     .list-box h3 {
       text-align: center;
-      margin-top: 0;
-      margin-bottom: 10px;
+      margin: 0 0 10px 0;
     }
 
     ul {
@@ -91,45 +131,60 @@
       margin: 6px 0;
     }
 
-    #status {
-      color: #555;
-      min-height: 22px;
-      margin-top: 10px;
-      white-space: pre-wrap;
-    }
-
-    .small-note {
-      color: #666;
+    .watermark {
+      position: fixed;
+      right: 16px;
+      bottom: 12px;
+      color: rgba(17,17,17,0.22);
       font-size: 14px;
-      margin-top: 12px;
+      user-select: none;
+      pointer-events: none;
     }
 
-    @media (max-width: 700px) {
+    @media (max-width: 760px) {
       .lists {
         grid-template-columns: 1fr;
+      }
+
+      .login-box {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        padding-right: 0;
+        margin-top: 60px;
+      }
+
+      .logo-corner {
+        top: 12px;
+        right: 12px;
+        width: 64px;
+        height: 64px;
       }
     }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>Wordt er gejast vanavond?</h1>
+    <img src="logo.png" alt="Logo" class="logo-corner" />
+
+    <h1>Wordt er gejast donderdagavond?</h1>
 
     <div id="answer" class="answer">...</div>
     <p id="count"></p>
 
-    <select id="playerSelect"></select>
+    <div id="loginBox" class="login-box">
+      <select id="playerSelect"></select>
+      <input id="pinInput" type="password" inputmode="numeric" placeholder="Pincode" />
+    </div>
 
     <div>
       <button id="yesBtn" class="yes" type="button">Ik kan</button>
       <button id="noBtn" class="no" type="button">Ik kan niet</button>
-      <button id="removeBtn" class="remove" type="button">Verwijder mijn stem</button>
+      <button id="removeBtn" class="remove" type="button" style="display:none;">Verwijder mijn stem</button>
     </div>
 
     <div id="status"></div>
-    <div class="small-note">
-      Deze versie werkt per browser. Je kunt alleen je eigen gekozen naam op dit apparaat aanpassen of verwijderen.
-    </div>
 
     <div class="lists">
       <div class="list-box">
@@ -144,197 +199,82 @@
     </div>
   </div>
 
+  <div class="watermark">Made by Bruis</div>
+
   <script>
-    const PLAYERS = [
-      "Albert",
-      "Antoni",
-      "Boris",
-      "Boudewijn",
-      "Bram",
-      "Bruis",
-      "Bryan",
-      "Daniël",
-      "David",
-      "Friso",
-      "Jelle",
-      "Jelmer D",
-      "Jelmer K",
-      "Jorrit",
-      "Justin",
-      "Koen",
-      "Lyon",
-      "Mart",
-      "Marvin",
-      "Max",
-      "Melson",
-      "Merijn",
-      "Milan",
-      "Nelis",
-      "Rik",
-      "Robin M",
-      "Robin S",
-      "Roel",
-      "Ruben",
-      "Sam",
-      "Siem",
-      "Sierd",
-      "Sybren",
-      "Thijs",
-      "Tim",
-      "Tom",
-      "Tom A",
-      "Tristan",
-      "Vince",
-      "Wolf"
-    ].sort((a, b) => a.localeCompare(b, "nl"));
+    const SUPABASE_URL = "https://uiqntazgnrxwliadkmy.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+    const SESSION_KEY = "jas_session_token_v2";
 
-    const VOTES_STORAGE_KEY = "jas_votes_secure_v1";
-    const IDENTITY_STORAGE_KEY = "jas_identity_secure_v1";
-
-    function getWeekKey() {
-      const now = new Date();
-      const utc = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
-      const day = utc.getUTCDay() || 7;
-      utc.setUTCDate(utc.getUTCDate() + 4 - day);
-      const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1));
-      const weekNo = Math.ceil((((utc.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-      return `${utc.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+    function rpcHeaders() {
+      return {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      };
     }
 
-    function computeAnswer(yesCount) {
-      if (yesCount >= 4) return "ja";
-      if (yesCount === 3) return "bijna";
-      return "nee";
-    }
-
-    function getIdentity() {
-      const raw = localStorage.getItem(IDENTITY_STORAGE_KEY);
-      if (!raw) return null;
+    async function parseResponse(res) {
+      const text = await res.text();
+      let data = null;
 
       try {
-        return JSON.parse(raw);
+        data = text ? JSON.parse(text) : null;
       } catch {
-        return null;
-      }
-    }
-
-    function saveIdentity(identity) {
-      localStorage.setItem(IDENTITY_STORAGE_KEY, JSON.stringify(identity));
-    }
-
-    function ensureIdentity(name) {
-      const existing = getIdentity();
-
-      if (existing) {
-        if (existing.name !== name) {
-          throw new Error(`Dit apparaat is al gekoppeld aan ${existing.name}. Je kunt alleen je eigen naam aanpassen of verwijderen.`);
-        }
-        return existing;
+        throw new Error(text || `HTTP ${res.status}`);
       }
 
-      const identity = {
-        id: crypto.randomUUID(),
-        name
-      };
-
-      saveIdentity(identity);
-      return identity;
-    }
-
-    function getAllVotes() {
-      const raw = localStorage.getItem(VOTES_STORAGE_KEY);
-      if (!raw) return {};
-
-      try {
-        return JSON.parse(raw);
-      } catch {
-        return {};
-      }
-    }
-
-    function saveAllVotes(votes) {
-      localStorage.setItem(VOTES_STORAGE_KEY, JSON.stringify(votes));
-    }
-
-    function getCurrentWeekVotes() {
-      const allVotes = getAllVotes();
-      const weekKey = getWeekKey();
-      return allVotes[weekKey] || {};
-    }
-
-    function setCurrentWeekVote(name, status) {
-      const identity = ensureIdentity(name);
-      const allVotes = getAllVotes();
-      const weekKey = getWeekKey();
-
-      if (!allVotes[weekKey]) {
-        allVotes[weekKey] = {};
+      if (!res.ok) {
+        throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
       }
 
-      const existingEntries = Object.values(allVotes[weekKey]);
-      const conflictingEntry = existingEntries.find(entry => entry.name === name && entry.ownerId !== identity.id);
-
-      if (conflictingEntry) {
-        throw new Error(`De naam ${name} is op dit apparaat niet van jou.`);
-      }
-
-      allVotes[weekKey][identity.id] = {
-        ownerId: identity.id,
-        name,
-        status
-      };
-
-      saveAllVotes(allVotes);
+      return data;
     }
 
-    function removeCurrentWeekVote() {
-      const identity = getIdentity();
-      if (!identity) {
-        throw new Error("Er is geen gekoppelde naam op dit apparaat.");
-      }
-
-      const allVotes = getAllVotes();
-      const weekKey = getWeekKey();
-
-      if (!allVotes[weekKey]) return;
-
-      delete allVotes[weekKey][identity.id];
-      saveAllVotes(allVotes);
+    function getSessionToken() {
+      return localStorage.getItem(SESSION_KEY);
     }
 
-    function fillPlayers() {
+    function setSessionToken(token) {
+      localStorage.setItem(SESSION_KEY, token);
+    }
+
+    function clearSessionToken() {
+      localStorage.removeItem(SESSION_KEY);
+    }
+
+    function fillPlayers(names, selectedName = null, locked = false) {
       const select = document.getElementById("playerSelect");
-      const identity = getIdentity();
-
       select.innerHTML = "";
 
       const placeholder = document.createElement("option");
       placeholder.value = "";
       placeholder.textContent = "Kies je naam";
       placeholder.disabled = true;
-      placeholder.selected = !identity;
+      placeholder.selected = !selectedName;
       select.appendChild(placeholder);
 
-      PLAYERS.forEach((name) => {
+      (names || []).forEach((name) => {
         const option = document.createElement("option");
         option.value = name;
         option.textContent = name;
         select.appendChild(option);
       });
 
-      if (identity && PLAYERS.includes(identity.name)) {
-        select.value = identity.name;
-        select.disabled = true;
-      } else {
-        select.disabled = false;
+      if (selectedName) {
+        select.value = selectedName;
       }
+
+      select.disabled = locked;
+      document.getElementById("pinInput").style.display = locked ? "none" : "block";
     }
 
-    function renderList(elementId, names, emptyText) {
-      const list = document.getElementById(elementId);
+    function renderList(id, names, emptyText) {
+      const list = document.getElementById(id);
       list.innerHTML = "";
 
-      if (names.length === 0) {
+      if (!names || names.length === 0) {
         const li = document.createElement("li");
         li.textContent = emptyText;
         list.appendChild(li);
@@ -348,73 +288,147 @@
       });
     }
 
-    function render() {
-      fillPlayers();
+    function renderState(state) {
+      const answerMap = {
+        ja: "Ja",
+        bijna: "Bijna",
+        nee: "Nee"
+      };
 
-      const currentVotes = Object.values(getCurrentWeekVotes());
+      const answerClass = state.answer || "nee";
+      const answerText = answerMap[answerClass] || "Nee";
+      const yesCount = Number(state.yes_count || 0);
 
-      const legends = currentVotes
-        .filter(entry => entry.status === "ja")
-        .map(entry => entry.name)
-        .sort((a, b) => a.localeCompare(b, "nl"));
+      document.getElementById("answer").textContent = answerText;
+      document.getElementById("answer").className = `answer ${answerClass}`;
 
-      const losers = currentVotes
-        .filter(entry => entry.status === "nee")
-        .map(entry => entry.name)
-        .sort((a, b) => a.localeCompare(b, "nl"));
+      document.getElementById("count").textContent =
+        yesCount === 1
+          ? "1 mens heeft Ja gezegd"
+          : `${yesCount} mensen hebben Ja gezegd`;
 
-      const answer = computeAnswer(legends.length);
+      renderList("legendsList", state.yes_names || [], "Nog niemand");
+      renderList("losersList", state.no_names || [], "Nog niemand");
 
-      document.getElementById("answer").textContent = answer;
-      document.getElementById("answer").className = "answer " + answer;
-      document.getElementById("count").textContent = `${legends.length} mensen hebben ja gezegd`;
+      fillPlayers(state.all_names || [], state.my_name || null, Boolean(state.my_name));
 
-      renderList("legendsList", legends, "Nog niemand");
-      renderList("losersList", losers, "Nog niemand");
-
-      const identity = getIdentity();
-      if (!identity) {
-        document.getElementById("status").textContent = "";
-        return;
-      }
-
-      const myVote = currentVotes.find(entry => entry.ownerId === identity.id);
-      document.getElementById("status").textContent = myVote
-        ? `Jouw keuze: ${myVote.status}`
-        : "";
+      document.getElementById("removeBtn").style.display = state.my_status ? "inline-block" : "none";
+      document.getElementById("status").textContent = state.my_status ? `Jouw keuze: ${state.my_status}` : "";
     }
 
-    function castVote(status) {
-      const select = document.getElementById("playerSelect");
-      const selectedName = select.value || getIdentity()?.name;
+    async function getState() {
+      const sessionToken = getSessionToken();
 
-      if (!selectedName) {
-        alert("Kies eerst je naam");
-        return;
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, {
+        method: "POST",
+        headers: rpcHeaders(),
+        body: JSON.stringify({
+          session_token: sessionToken
+        })
+      });
+
+      return await parseResponse(res);
+    }
+
+    async function loginPlayer() {
+      const desiredName = document.getElementById("playerSelect").value;
+      const enteredPin = document.getElementById("pinInput").value.trim();
+
+      if (!desiredName) {
+        throw new Error("Kies eerst je naam");
       }
 
+      if (!enteredPin) {
+        throw new Error("Voer je pincode in");
+      }
+
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/login_player`, {
+        method: "POST",
+        headers: rpcHeaders(),
+        body: JSON.stringify({
+          desired_name: desiredName,
+          entered_pin: enteredPin
+        })
+      });
+
+      const data = await parseResponse(res);
+      setSessionToken(data.session_token);
+      document.getElementById("pinInput").value = "";
+      return data;
+    }
+
+    async function castVote(desiredStatus) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cast_vote`, {
+        method: "POST",
+        headers: rpcHeaders(),
+        body: JSON.stringify({
+          session_token: getSessionToken(),
+          desired_status: desiredStatus
+        })
+      });
+
+      return await parseResponse(res);
+    }
+
+    async function removeMyVote() {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/remove_my_vote`, {
+        method: "POST",
+        headers: rpcHeaders(),
+        body: JSON.stringify({
+          session_token: getSessionToken()
+        })
+      });
+
+      return await parseResponse(res);
+    }
+
+    async function ensureLoggedIn() {
+      if (getSessionToken()) return;
+      await loginPlayer();
+    }
+
+    async function handleVote(status) {
       try {
-        setCurrentWeekVote(selectedName, status);
-        render();
-      } catch (error) {
-        alert(error.message);
+        await ensureLoggedIn();
+        const state = await castVote(status);
+        renderState(state);
+      } catch (err) {
+        if ((err instanceof Error) && err.message.includes("Sessie ongeldig")) {
+          clearSessionToken();
+        }
+        alert(err instanceof Error ? err.message : "Er ging iets mis");
       }
     }
 
-    function removeMyVote() {
+    async function handleRemove() {
       try {
-        removeCurrentWeekVote();
-        render();
-      } catch (error) {
-        alert(error.message);
+        const state = await removeMyVote();
+        renderState(state);
+      } catch (err) {
+        if ((err instanceof Error) && err.message.includes("Sessie ongeldig")) {
+          clearSessionToken();
+        }
+        alert(err instanceof Error ? err.message : "Er ging iets mis");
       }
     }
 
-    document.getElementById("yesBtn").addEventListener("click", () => castVote("ja"));
-    document.getElementById("noBtn").addEventListener("click", () => castVote("nee"));
-    document.getElementById("removeBtn").addEventListener("click", removeMyVote);
+    async function load() {
+      try {
+        const state = await getState();
+        renderState(state);
+      } catch (err) {
+        document.getElementById("answer").textContent = "Fout";
+        document.getElementById("answer").className = "answer nee";
+        document.getElementById("count").textContent = "Kon site niet laden";
+        document.getElementById("status").textContent = err instanceof Error ? err.message : "Onbekende fout";
+      }
+    }
 
-    render();
+    document.getElementById("yesBtn").addEventListener("click", () => handleVote("ja"));
+    document.getElementById("noBtn").addEventListener("click", () => handleVote("nee"));
+    document.getElementById("removeBtn").addEventListener("click", handleRemove);
+
+    load();
   </script>
 </body>
 </html>
