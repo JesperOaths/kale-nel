@@ -1,9 +1,11 @@
 <!DOCTYPE html>
+
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wordt er gejast donderdagavond?</title>
+  <title>Wordt er gejast donderdag?</title>
+
   <style>
     :root {
       --gold: #d4af37;
@@ -185,55 +187,60 @@
       }
     }
   </style>
+
 </head>
+
 <body>
   <div class="card">
     <a href="./admin.html" class="admin-link">Admin</a>
     <img src="logo.png" alt="Logo" class="logo-corner" />
 
-    <h1>Wordt er gejast donderdagavond?</h1>
+```
+<h1>Wordt er gejast donderdag?</h1>
 
-    <div id="answer" class="answer">...</div>
-    <p id="count"></p>
+<div id="answer" class="answer">...</div>
+<p id="count"></p>
 
-    <div class="section">
-      <h3>Inloggen</h3>
-      <div class="two-col">
-        <select id="playerSelect"></select>
-        <input id="pinInput" type="password" placeholder="Pincode" />
-      </div>
-      <div>
-        <button id="yesBtn" class="yes" type="button">Ik kan</button>
-        <button id="noBtn" class="no" type="button">Ik kan niet</button>
-        <button id="removeBtn" class="remove" type="button" style="display:none;">Verwijder mijn stem</button>
-      </div>
-    </div>
+<div class="section">
+  <h3>Inloggen</h3>
+  <div class="two-col">
+    <select id="playerSelect"></select>
+    <input id="pinInput" type="password" placeholder="Pincode" />
+  </div>
+  <div>
+    <button id="yesBtn" class="yes" type="button">Ik kan</button>
+    <button id="noBtn" class="no" type="button">Ik kan niet</button>
+    <button id="removeBtn" class="remove" type="button" style="display:none;">Verwijder mijn stem</button>
+  </div>
+</div>
 
-    <div class="section">
-      <h3>Naam aanvragen</h3>
-      <div class="two-col">
-        <select id="requestNameSelect"></select>
-        <input id="requestEmailInput" type="email" placeholder="Jouw e-mailadres" />
-      </div>
-      <textarea id="requestNoteInput" placeholder="Leg kort uit waarom jij deze naam wilt claimen"></textarea>
-      <div>
-        <button id="requestBtn" class="request" type="button">Vraag naam aan</button>
-      </div>
-    </div>
+<div class="section">
+  <h3>Naam aanvragen</h3>
+  <div class="two-col">
+    <select id="requestNameSelect"></select>
+    <input id="requestEmailInput" type="email" placeholder="Jouw e-mailadres" />
+  </div>
+  <textarea id="requestNoteInput" placeholder="Leg kort uit waarom jij deze naam wilt claimen"></textarea>
+  <div>
+    <button id="requestBtn" class="request" type="button">Vraag naam aan</button>
+  </div>
+</div>
 
-    <div id="status"></div>
+<div id="status"></div>
 
-    <div class="lists">
-      <div class="list-box">
-        <h3>Legends</h3>
-        <ul id="legendsList"></ul>
-      </div>
+<div class="lists">
+  <div class="list-box">
+    <h3>Legends</h3>
+    <ul id="legendsList"></ul>
+  </div>
 
-      <div class="list-box">
-        <h3>Losers</h3>
-        <ul id="losersList"></ul>
-      </div>
-    </div>
+  <div class="list-box">
+    <h3>Losers</h3>
+    <ul id="losersList"></ul>
+  </div>
+</div>
+```
+
   </div>
 
   <div class="watermark">Made by Bruis</div>
@@ -498,438 +505,6 @@
 
     load();
   </script>
-</body>
-</html><!DOCTYPE html>
-<html lang="nl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wordt er gejast donderdagavond?</title>
-  <style>
-    :root {
-      --gold: #d4af37;
-      --black: #111111;
-      --soft: #f5f7fb;
-      --card: #ffffff;
-      --muted: #6b7280;
-    }
 
-    body {
-      font-family: Arial, sans-serif;
-      background: var(--soft);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
-      position: relative;
-      overflow-x: hidden;
-    }
-
-    .card {
-      background: var(--card);
-      padding: 32px;
-      border-radius: 18px;
-      text-align: center;
-      max-width: 760px;
-      width: 100%;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.10);
-      position: relative;
-    }
-
-    .logo-corner {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      width: 78px;
-      height: 78px;
-      object-fit: contain;
-      opacity: 0.95;
-    }
-
-    h1 {
-      margin: 12px 0 10px 0;
-      font-size: 2.3rem;
-      line-height: 1.15;
-      padding-right: 88px;
-    }
-
-    .answer {
-      font-size: 34px;
-      margin: 16px 0;
-      font-weight: bold;
-      text-transform: capitalize;
-    }
-
-    .ja { color: var(--gold); }
-    .bijna { color: #b8860b; }
-    .nee { color: var(--black); }
-
-    button {
-      padding: 12px 16px;
-      margin: 5px;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-
-    .yes { background: var(--gold); color: #111111; }
-    .no { background: var(--black); color: #ffffff; }
-    .remove { background: #6b7280; color: #ffffff; }
-
-    select, input {
-      padding: 10px;
-      margin: 10px 0;
-      width: 100%;
-      font-size: 16px;
-      box-sizing: border-box;
-      border: 1px solid #d1d5db;
-      border-radius: 10px;
-    }
-
-    .login-box {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-
-    #status {
-      color: var(--muted);
-      min-height: 22px;
-      margin-top: 10px;
-      white-space: pre-wrap;
-    }
-
-    .lists {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      margin-top: 24px;
-      text-align: left;
-    }
-
-    .list-box {
-      background: #f8fafc;
-      border-radius: 12px;
-      padding: 16px;
-      min-height: 180px;
-    }
-
-    .list-box h3 {
-      text-align: center;
-      margin: 0 0 10px 0;
-    }
-
-    ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    li {
-      margin: 6px 0;
-    }
-
-    .watermark {
-      position: fixed;
-      right: 16px;
-      bottom: 12px;
-      color: rgba(17,17,17,0.22);
-      font-size: 14px;
-      user-select: none;
-      pointer-events: none;
-    }
-
-    @media (max-width: 760px) {
-      .lists {
-        grid-template-columns: 1fr;
-      }
-
-      .login-box {
-        grid-template-columns: 1fr;
-      }
-
-      h1 {
-        padding-right: 0;
-        margin-top: 60px;
-      }
-
-      .logo-corner {
-        top: 12px;
-        right: 12px;
-        width: 64px;
-        height: 64px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <img src="logo.png" alt="Logo" class="logo-corner" />
-
-    <h1>Wordt er gejast donderdagavond?</h1>
-
-    <div id="answer" class="answer">...</div>
-    <p id="count"></p>
-
-    <div id="loginBox" class="login-box">
-      <select id="playerSelect"></select>
-      <input id="pinInput" type="password" inputmode="numeric" placeholder="Pincode" />
-    </div>
-
-    <div>
-      <button id="yesBtn" class="yes" type="button">Ik kan</button>
-      <button id="noBtn" class="no" type="button">Ik kan niet</button>
-      <button id="removeBtn" class="remove" type="button" style="display:none;">Verwijder mijn stem</button>
-    </div>
-
-    <div id="status"></div>
-
-    <div class="lists">
-      <div class="list-box">
-        <h3>Legends</h3>
-        <ul id="legendsList"></ul>
-      </div>
-
-      <div class="list-box">
-        <h3>Losers</h3>
-        <ul id="losersList"></ul>
-      </div>
-    </div>
-  </div>
-
-  <div class="watermark">Made by Bruis</div>
-
-  <script>
-    const SUPABASE_URL = "https://uiqntazgnrxwliadkmy.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
-    const SESSION_KEY = "jas_session_token_v2";
-
-    function rpcHeaders() {
-      return {
-        apikey: SUPABASE_PUBLISHABLE_KEY,
-        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-        "Content-Type": "application/json",
-        Accept: "application/json"
-      };
-    }
-
-    async function parseResponse(res) {
-      const text = await res.text();
-      let data = null;
-
-      try {
-        data = text ? JSON.parse(text) : null;
-      } catch {
-        throw new Error(text || `HTTP ${res.status}`);
-      }
-
-      if (!res.ok) {
-        throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
-      }
-
-      return data;
-    }
-
-    function getSessionToken() {
-      return localStorage.getItem(SESSION_KEY);
-    }
-
-    function setSessionToken(token) {
-      localStorage.setItem(SESSION_KEY, token);
-    }
-
-    function clearSessionToken() {
-      localStorage.removeItem(SESSION_KEY);
-    }
-
-    function fillPlayers(names, selectedName = null, locked = false) {
-      const select = document.getElementById("playerSelect");
-      select.innerHTML = "";
-
-      const placeholder = document.createElement("option");
-      placeholder.value = "";
-      placeholder.textContent = "Kies je naam";
-      placeholder.disabled = true;
-      placeholder.selected = !selectedName;
-      select.appendChild(placeholder);
-
-      (names || []).forEach((name) => {
-        const option = document.createElement("option");
-        option.value = name;
-        option.textContent = name;
-        select.appendChild(option);
-      });
-
-      if (selectedName) {
-        select.value = selectedName;
-      }
-
-      select.disabled = locked;
-      document.getElementById("pinInput").style.display = locked ? "none" : "block";
-    }
-
-    function renderList(id, names, emptyText) {
-      const list = document.getElementById(id);
-      list.innerHTML = "";
-
-      if (!names || names.length === 0) {
-        const li = document.createElement("li");
-        li.textContent = emptyText;
-        list.appendChild(li);
-        return;
-      }
-
-      names.forEach((name) => {
-        const li = document.createElement("li");
-        li.textContent = name;
-        list.appendChild(li);
-      });
-    }
-
-    function renderState(state) {
-      const answerMap = {
-        ja: "Ja",
-        bijna: "Bijna",
-        nee: "Nee"
-      };
-
-      const answerClass = state.answer || "nee";
-      const answerText = answerMap[answerClass] || "Nee";
-      const yesCount = Number(state.yes_count || 0);
-
-      document.getElementById("answer").textContent = answerText;
-      document.getElementById("answer").className = `answer ${answerClass}`;
-
-      document.getElementById("count").textContent =
-        yesCount === 1
-          ? "1 mens heeft Ja gezegd"
-          : `${yesCount} mensen hebben Ja gezegd`;
-
-      renderList("legendsList", state.yes_names || [], "Nog niemand");
-      renderList("losersList", state.no_names || [], "Nog niemand");
-
-      fillPlayers(state.all_names || [], state.my_name || null, Boolean(state.my_name));
-
-      document.getElementById("removeBtn").style.display = state.my_status ? "inline-block" : "none";
-      document.getElementById("status").textContent = state.my_status ? `Jouw keuze: ${state.my_status}` : "";
-    }
-
-    async function getState() {
-      const sessionToken = getSessionToken();
-
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, {
-        method: "POST",
-        headers: rpcHeaders(),
-        body: JSON.stringify({
-          session_token: sessionToken
-        })
-      });
-
-      return await parseResponse(res);
-    }
-
-    async function loginPlayer() {
-      const desiredName = document.getElementById("playerSelect").value;
-      const enteredPin = document.getElementById("pinInput").value.trim();
-
-      if (!desiredName) {
-        throw new Error("Kies eerst je naam");
-      }
-
-      if (!enteredPin) {
-        throw new Error("Voer je pincode in");
-      }
-
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/login_player`, {
-        method: "POST",
-        headers: rpcHeaders(),
-        body: JSON.stringify({
-          desired_name: desiredName,
-          entered_pin: enteredPin
-        })
-      });
-
-      const data = await parseResponse(res);
-      setSessionToken(data.session_token);
-      document.getElementById("pinInput").value = "";
-      return data;
-    }
-
-    async function castVote(desiredStatus) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cast_vote`, {
-        method: "POST",
-        headers: rpcHeaders(),
-        body: JSON.stringify({
-          session_token: getSessionToken(),
-          desired_status: desiredStatus
-        })
-      });
-
-      return await parseResponse(res);
-    }
-
-    async function removeMyVote() {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/remove_my_vote`, {
-        method: "POST",
-        headers: rpcHeaders(),
-        body: JSON.stringify({
-          session_token: getSessionToken()
-        })
-      });
-
-      return await parseResponse(res);
-    }
-
-    async function ensureLoggedIn() {
-      if (getSessionToken()) return;
-      await loginPlayer();
-    }
-
-    async function handleVote(status) {
-      try {
-        await ensureLoggedIn();
-        const state = await castVote(status);
-        renderState(state);
-      } catch (err) {
-        if ((err instanceof Error) && err.message.includes("Sessie ongeldig")) {
-          clearSessionToken();
-        }
-        alert(err instanceof Error ? err.message : "Er ging iets mis");
-      }
-    }
-
-    async function handleRemove() {
-      try {
-        const state = await removeMyVote();
-        renderState(state);
-      } catch (err) {
-        if ((err instanceof Error) && err.message.includes("Sessie ongeldig")) {
-          clearSessionToken();
-        }
-        alert(err instanceof Error ? err.message : "Er ging iets mis");
-      }
-    }
-
-    async function load() {
-      try {
-        const state = await getState();
-        renderState(state);
-      } catch (err) {
-        document.getElementById("answer").textContent = "Fout";
-        document.getElementById("answer").className = "answer nee";
-        document.getElementById("count").textContent = "Kon site niet laden";
-        document.getElementById("status").textContent = err instanceof Error ? err.message : "Onbekende fout";
-      }
-    }
-
-    document.getElementById("yesBtn").addEventListener("click", () => handleVote("ja"));
-    document.getElementById("noBtn").addEventListener("click", () => handleVote("nee"));
-    document.getElementById("removeBtn").addEventListener("click", handleRemove);
-
-    load();
-  </script>
 </body>
 </html>
