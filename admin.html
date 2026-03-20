@@ -149,7 +149,6 @@
     function rpcHeaders() {
       return {
         apikey: SUPABASE_PUBLISHABLE_KEY,
-        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
         "Content-Type": "application/json",
         Accept: "application/json"
       };
@@ -188,6 +187,16 @@
       document.getElementById("status").textContent = text || "";
     }
 
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+
     function showLoggedOut() {
       document.getElementById("loginView").classList.remove("hidden");
       document.getElementById("adminView").classList.add("hidden");
@@ -215,12 +224,17 @@
         const div = document.createElement("div");
         div.className = "request";
 
+        const noteHtml = req.requester_note
+          ? escapeHtml(req.requester_note).replaceAll("
+", "<br>")
+          : "<span class='muted'>Geen toelichting</span>";
+
         div.innerHTML = `
-          <strong>${req.display_name}</strong><br>
-          <span class="muted">E-mail:</span> ${req.requester_email}<br>
-          <span class="muted">Aangevraagd op:</span> ${new Date(req.created_at).toLocaleString()}<br>
+          <strong>${escapeHtml(req.display_name)}</strong><br>
+          <span class="muted">E-mail:</span> ${escapeHtml(req.requester_email || "Onbekend")}<br>
+          <span class="muted">Aangevraagd op:</span> ${new Date(req.created_at).toLocaleString("nl-NL")}<br>
           <span class="muted">Toelichting:</span><br>
-          <div style="margin-top:6px;">${req.requester_note ? req.requester_note : "<span class='muted'>Geen toelichting</span>"}</div>
+          <div style="margin-top:6px;">${noteHtml}</div>
           <div style="margin-top:12px;">
             <button class="approve-btn" data-id="${req.id}" data-decision="approved">Goedkeuren</button>
             <button class="reject-btn" data-id="${req.id}" data-decision="rejected">Afwijzen</button>
