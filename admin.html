@@ -36,7 +36,8 @@
 
     .page-bg,
     .brand-watermark,
-    .spinoza-shadow {
+    .spinoza-shadow,
+    .top-glow {
       position: fixed;
       inset: 0;
       pointer-events: none;
@@ -56,12 +57,12 @@
       position: fixed;
       top: 50%;
       left: 50%;
-      width: min(46vw, 500px);
+      width: min(34vw, 430px);
       transform: translate(-50%, -50%);
-      opacity: 0.115;
+      opacity: 0.15;
       pointer-events: none;
       z-index: 0;
-      filter: saturate(0.95) brightness(0.98);
+      filter: saturate(0.98) brightness(1.0);
     }
 
     .brand-watermark img {
@@ -74,11 +75,11 @@
       position: fixed;
       left: -18px;
       bottom: 0;
-      width: min(24vw, 260px);
-      opacity: 0.07;
+      width: min(29vw, 400px);
+      opacity: 0.27;
       pointer-events: none;
       z-index: 0;
-      filter: blur(0.15px);
+      filter: sepia(0.35) saturate(0.9) contrast(1.04) brightness(1.01);
     }
 
     .spinoza-shadow {
@@ -95,12 +96,12 @@
       position: fixed;
       right: -18px;
       bottom: 8%;
-      width: min(16vw, 160px);
-      opacity: 0.09;
-      transform: rotate(-10deg);
+      width: min(19.5vw, 255px);
+      opacity: 0.46;
+      transform: rotate(10deg);
       pointer-events: none;
       z-index: 0;
-      filter: sepia(0.35) saturate(0.9) contrast(1.04) brightness(1.01);
+      filter: sepia(0.42) saturate(1.05) contrast(1.05) brightness(1.01);
       transform-origin: center right;
     }
 
@@ -110,6 +111,11 @@
       height: auto;
       border-radius: 22px;
     }
+
+    .top-glow {
+      background: linear-gradient(180deg, rgba(255,255,255,0.38), transparent 24%);
+    }
+
 
     .wrap {
       max-width: 900px;
@@ -251,6 +257,11 @@
       body { padding: 18px 18px 16px; }
       .row { grid-template-columns: 1fr; }
       .mini-logo { width: 62px; height: 62px; }
+
+      .brand-watermark {
+        width: min(70vw, 380px);
+      }
+
       .spinoza-shadow {
         left: -20px;
         bottom: 0;
@@ -258,6 +269,7 @@
         opacity: 0.28;
         filter: none;
       }
+
       .playing-card-accent {
         right: -22px;
         bottom: 8%;
@@ -266,6 +278,7 @@
         transform: rotate(8deg);
         filter: sepia(0.58) saturate(1.18) contrast(1.08) brightness(1.01);
       }
+
       .card { padding: 22px 18px; }
     }
   </style>
@@ -275,6 +288,7 @@
   <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
   <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
   <div class="playing-card-accent"><img src="./playingcard-accent.png" alt="" /></div>
+  <div class="top-glow"></div>
 
   <div class="wrap">
     <div class="topbar">
@@ -284,7 +298,7 @@
 
     <div class="card">
       <h1>Adminpaneel</h1>
-      <div class="muted" style="margin-top:-8px; margin-bottom:10px; position:relative; z-index:1;">Versie v17</div>
+      <div class="muted" style="margin-top:-8px; margin-bottom:10px; position:relative; z-index:1;">Versie v21</div>
 
       <div id="loginView">
         <div class="row">
@@ -315,7 +329,7 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v17</div>
+  <div class="watermark">Made by Bruis · v21</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
