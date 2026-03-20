@@ -44,11 +44,11 @@
 
     .page-bg {
       background-image: url('./123zwartkaart.png');
-      background-size: 360px;
+      background-size: 240px;
       background-repeat: repeat;
       background-position: center;
-      opacity: 0.05;
-      filter: grayscale(100%) contrast(1.08) brightness(0.98);
+      opacity: 0.12;
+      filter: grayscale(100%) contrast(1.12) brightness(0.98);
       mix-blend-mode: multiply;
     }
 
@@ -72,7 +72,7 @@
 
     .spinoza-shadow {
       position: fixed;
-      right: max(2vw, 10px);
+      right: -30px;
       bottom: 0;
       width: min(24vw, 260px);
       opacity: 0.07;
@@ -89,15 +89,15 @@
 
     .playing-card-accent {
       position: fixed;
-      left: max(1vw, 8px);
-      bottom: max(2vh, 14px);
+      left: -30px;
+      top: 35%;
       width: min(16vw, 160px);
       opacity: 0.09;
       transform: rotate(-10deg);
       pointer-events: none;
       z-index: 0;
-      filter: grayscale(100%) contrast(1.05);
-      transform-origin: bottom left;
+      filter: none;
+      transform-origin: center left;
     }
 
     .playing-card-accent img {
@@ -291,7 +291,7 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v14</div>
+  <div class="watermark">Made by Bruis · v15</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
