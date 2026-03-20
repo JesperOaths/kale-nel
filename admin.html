@@ -15,6 +15,8 @@
       --red: #b91c1c;
     }
 
+    * { box-sizing: border-box; }
+
     body {
       font-family: Arial, sans-serif;
       background: var(--soft);
@@ -41,7 +43,6 @@
 
     input {
       width: 100%;
-      box-sizing: border-box;
       padding: 12px;
       border: 1px solid #d1d5db;
       border-radius: 10px;
@@ -59,25 +60,10 @@
       margin-top: 8px;
     }
 
-    .login-btn {
-      background: var(--gold);
-      color: var(--black);
-    }
-
-    .approve-btn {
-      background: var(--green);
-      color: white;
-    }
-
-    .reject-btn {
-      background: var(--red);
-      color: white;
-    }
-
-    .logout-btn {
-      background: var(--black);
-      color: white;
-    }
+    .login-btn { background: var(--gold); color: var(--black); }
+    .approve-btn { background: var(--green); color: white; }
+    .reject-btn { background: var(--red); color: white; }
+    .logout-btn { background: var(--black); color: white; }
 
     .request {
       border: 1px solid #e5e7eb;
@@ -87,9 +73,7 @@
       background: #fafafa;
     }
 
-    .muted {
-      color: var(--muted);
-    }
+    .muted { color: var(--muted); }
 
     #status {
       margin-top: 12px;
@@ -97,9 +81,7 @@
       white-space: pre-wrap;
     }
 
-    .hidden {
-      display: none;
-    }
+    .hidden { display: none; }
 
     .row {
       display: grid;
@@ -108,9 +90,7 @@
     }
 
     @media (max-width: 700px) {
-      .row {
-        grid-template-columns: 1fr;
-      }
+      .row { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -144,7 +124,7 @@
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliadkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
-    const ADMIN_SESSION_KEY = "jas_admin_session_v2";
+    const ADMIN_SESSION_KEY = "jas_admin_session_v3";
 
     function rpcHeaders() {
       return {
@@ -187,6 +167,7 @@
     function setStatus(text) {
       document.getElementById("status").textContent = text || "";
     }
+
     function escapeHtml(value) {
       return String(value ?? "")
         .replaceAll("&", "&amp;")
@@ -195,7 +176,6 @@
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#39;");
     }
-
 
     function showLoggedOut() {
       document.getElementById("loginView").classList.remove("hidden");
