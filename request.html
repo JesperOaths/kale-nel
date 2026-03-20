@@ -6,11 +6,10 @@
   <title>Naam aanvragen</title>
   <style>
     :root {
-      --gold: #d3af3a;
-      --gold-deep: #c7a12a;
+      --gold: #d4af37;
       --black: #111111;
-      --soft: #f3f0ea;
-      --soft-2: #eae4da;
+      --soft: #f3f1ec;
+      --soft-2: #ebe7df;
       --card: rgba(255, 255, 255, 0.9);
       --line: rgba(17, 17, 17, 0.08);
       --muted: #6b7280;
@@ -23,21 +22,23 @@
     body {
       font-family: Arial, sans-serif;
       background:
-        radial-gradient(circle at top left, rgba(211, 175, 58, 0.13), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(17, 17, 17, 0.045), transparent 24%),
-        linear-gradient(135deg, var(--soft), #f7f4ee 44%, var(--soft-2));
+        radial-gradient(circle at top left, rgba(212, 175, 55, 0.12), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(17, 17, 17, 0.06), transparent 24%),
+        linear-gradient(135deg, var(--soft), #f8f7f3 45%, var(--soft-2));
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
       margin: 0;
       position: relative;
+      padding: 28px;
       overflow-x: hidden;
       color: var(--black);
     }
 
-
     .page-bg,
-    .brand-emblem,
-    .spinoza-portrait,
-    .playing-card-accent,
-    .top-glow {
+    .brand-watermark,
+    .spinoza-shadow {
       position: fixed;
       inset: 0;
       pointer-events: none;
@@ -45,55 +46,81 @@
 
     .page-bg {
       background-image: url('./123zwartkaart.png');
-      background-size: 290px;
+      background-size: 360px;
       background-repeat: repeat;
       background-position: center;
-      opacity: 0.078;
-      filter: grayscale(100%) contrast(1.72) brightness(0.98);
+      opacity: 0.05;
+      filter: grayscale(100%) contrast(1.08) brightness(0.98);
       mix-blend-mode: multiply;
     }
 
-    .brand-emblem {
-      inset: auto;
-      top: 18px;
+    .brand-watermark {
+      position: fixed;
+      top: 50%;
       left: 50%;
-      transform: translateX(-50%);
-      width: min(13vw, 136px);
-      height: min(8vw, 82px);
-      background-color: #d4af37;
-      -webkit-mask: center / contain no-repeat url('./dubbeleD-goud.png');
-      mask: center / contain no-repeat url('./dubbeleD-goud.png');
-      opacity: 0.24;
-      filter: drop-shadow(0 10px 22px rgba(212, 175, 55, 0.12));
+      width: min(50vw, 520px);
+      transform: translate(-50%, -50%);
+      opacity: 0.12;
+      pointer-events: none;
+      z-index: 0;
+      filter: saturate(0.95) brightness(0.98);
     }
 
-    .spinoza-portrait {
-      inset: auto 3vw 0 auto;
-      width: min(28vw, 360px);
-      height: min(68vh, 760px);
-      opacity: 0.105;
-      background: right bottom / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 380 760'%3E%3Cg fill='none' stroke='%23111111' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath stroke-width='6' d='M218 84c32 4 63 21 84 46 17 21 27 48 27 78 0 36-13 69-36 97-18 22-40 42-51 69-14 35-13 74-4 110 8 32 24 62 27 95 4 42-10 86-41 116-34 33-87 45-133 33-45-12-84-48-99-94-12-36-8-78 10-111 18-33 48-56 74-82 25-24 48-50 60-83 12-34 11-71-1-108-8-25-20-49-18-76 2-26 17-49 40-65 18-13 40-22 61-25z'/%3E%3Cpath stroke-width='5' d='M170 98c-24 10-47 28-58 50-13 27-10 55 0 85 10 31 26 58 25 92-2 48-35 85-65 119-25 29-47 64-46 103 1 58 41 111 97 130 57 20 122 5 170-30 35-26 59-62 67-105 8-41-3-79-16-117-12-35-27-70-25-109 2-44 26-78 56-108 27-28 47-63 48-103 1-34-11-65-33-90-26-28-61-45-99-51'/%3E%3Cpath stroke-width='4' d='M214 118c20 10 35 29 39 51 5 28-7 55-25 76-18 21-42 37-58 60-18 26-28 60-22 92 8 42 40 74 53 114 10 31 5 68-16 94-18 22-48 37-78 38'/%3E%3Cpath stroke-width='5' d='M136 157c20-18 49-28 76-25 26 3 51 17 67 39'/%3E%3Cpath stroke-width='5' d='M130 152c-10 26-26 47-52 59-13 6-27 10-42 9'/%3E%3Cpath stroke-width='5' d='M118 156c6-38 37-68 74-76'/%3E%3Cpath stroke-width='4' d='M187 92c0-25 16-48 40-58'/%3E%3Cpath stroke-width='4' d='M212 71c-7-12-8-28-4-42'/%3E%3Cpath stroke-width='4' d='M147 465c26 14 59 20 89 15'/%3E%3Cpath stroke-width='4' d='M134 562c31 15 71 18 103 2'/%3E%3Cpath stroke-width='5' d='M114 604c24 61 69 116 132 143'/%3E%3Cpath stroke-width='5' d='M263 594c15 57 48 111 95 146'/%3E%3Cpath stroke-width='5' d='M101 611c-32 41-44 92-35 143'/%3E%3Cpath stroke-width='5' d='M90 605c26-18 59-25 90-18 24 5 46 18 68 29 22 11 47 21 71 18'/%3E%3Cpath stroke-width='4' d='M85 250c17 18 42 26 66 20 24-6 42-25 49-49'/%3E%3C/g%3E%3C/svg%3E");
+    .brand-watermark img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .spinoza-shadow {
+      position: fixed;
+      right: max(2vw, 10px);
+      bottom: 0;
+      width: min(28vw, 310px);
+      opacity: 0.075;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(0.15px);
+    }
+
+    .spinoza-shadow img {
+      display: block;
+      width: 100%;
+      height: auto;
     }
 
     .playing-card-accent {
-      inset: auto auto 46px 34px;
-      width: min(19vw, 220px);
-      height: min(22vw, 240px);
-      opacity: 0.22;
-      background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 280 240'%3E%3Cg fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke='%23d4af37' stroke-width='4'%3E%3Crect x='38' y='28' width='116' height='166' rx='16' transform='rotate(-9 96 111)'/%3E%3Cpath d='M93 78c8-13 25-13 33-1 8-12 25-12 33 1 8 13-1 28-12 39-10 10-18 18-21 25-4-7-12-15-22-25-11-11-20-26-11-39z'/%3E%3Cpath d='M123 129v24'/%3E%3Cpath d='M111 152c5 6 8 10 12 17 4-7 7-11 12-17'/%3E%3C/g%3E%3Cg stroke='%23111111' stroke-opacity='.42' stroke-width='3.4'%3E%3Crect x='118' y='52' width='116' height='166' rx='16' transform='rotate(8 176 135)'/%3E%3Cpath d='M170 98c9-12 27-12 35 0 8-12 26-12 35 0 8 12 1 25-10 36-10 10-19 17-25 25-6-8-15-15-25-25-11-11-18-24-10-36z'/%3E%3Cpath d='M203 149v23'/%3E%3Cpath d='M190 172c5 6 9 10 13 17 4-7 8-11 13-17'/%3E%3C/g%3E%3C/svg%3E");
-      filter: drop-shadow(0 16px 32px rgba(17, 17, 17, 0.05));
+      position: fixed;
+      left: max(1vw, 8px);
+      bottom: max(2vh, 14px);
+      width: min(18vw, 180px);
+      opacity: 0.095;
+      transform: rotate(-12deg);
+      pointer-events: none;
+      z-index: 0;
+      filter: grayscale(100%) contrast(1.05);
+      transform-origin: bottom left;
     }
 
-    .top-glow {
-      background: linear-gradient(180deg, rgba(255,255,255,0.22), transparent 24%);
+    .playing-card-accent img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 22px;
     }
 
     .card {
       background: var(--card);
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255,255,255,0.75);
+      padding: 34px;
+      border-radius: 24px;
+      text-align: center;
+      max-width: 760px;
+      width: 100%;
       box-shadow: var(--shadow);
       position: relative;
+      margin: 24px;
       z-index: 2;
       overflow: hidden;
     }
@@ -103,18 +130,91 @@
       position: absolute;
       inset: 0;
       border-radius: inherit;
-      background: linear-gradient(135deg, rgba(211,175,58,0.055), transparent 34%, rgba(17,17,17,0.025));
+      background: linear-gradient(135deg, rgba(212,175,55,0.07), transparent 34%, rgba(17,17,17,0.035));
       pointer-events: none;
     }
 
     .logo-corner {
       position: absolute;
-      top: 22px;
-      right: 26px;
-      width: 66px;
-      height: auto;
+      top: 18px;
+      right: 18px;
+      width: 84px;
+      height: 84px;
       object-fit: contain;
-      opacity: 0.98;
+      opacity: 0.96;
+      filter: drop-shadow(0 6px 14px rgba(0,0,0,0.08));
+    }
+
+    .back-link {
+      position: absolute;
+      left: 18px;
+      top: 18px;
+      font-size: 14px;
+      text-decoration: none;
+      color: var(--blue);
+      background: rgba(255,255,255,0.7);
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(37, 99, 235, 0.12);
+      backdrop-filter: blur(6px);
+    }
+
+    h1 {
+      margin: 18px 0 10px 0;
+      font-size: 2.1rem;
+      line-height: 1.1;
+      padding: 0 94px;
+      letter-spacing: -0.02em;
+      position: relative;
+      z-index: 1;
+    }
+
+    p {
+      color: var(--muted);
+      margin-bottom: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    select, textarea {
+      padding: 11px 12px;
+      margin: 10px 0;
+      width: 100%;
+      font-size: 16px;
+      border: 1px solid rgba(17,17,17,0.1);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.82);
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    button {
+      padding: 12px 18px;
+      margin-top: 8px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 16px;
+      background: var(--gold);
+      color: var(--black);
+      transition: transform 0.14s ease, box-shadow 0.14s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px rgba(17,17,17,0.09);
+    }
+
+    #status {
+      color: var(--muted);
+      min-height: 22px;
+      margin-top: 14px;
+      white-space: pre-wrap;
+      position: relative;
+      z-index: 1;
     }
 
     .watermark {
@@ -130,134 +230,50 @@
     }
 
     @media (max-width: 760px) {
-      .page-bg {
-        background-size: 220px;
-        opacity: 0.084;
-      }
-      .brand-emblem {
-        top: 14px;
-        width: 100px;
-        height: 60px;
-        opacity: 0.22;
-      }
-      .spinoza-portrait {
-        right: -10px;
-        width: min(44vw, 230px);
-        height: min(48vh, 360px);
-        opacity: 0.1;
-      }
-      .playing-card-accent {
-        left: 8px;
-        bottom: 84px;
-        width: 118px;
-        height: 126px;
-        opacity: 0.18;
-      }
-      .logo-corner {
-        top: 16px;
-        right: 18px;
-        width: 58px;
-      }
-    }
-
-
-    body {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      padding: 28px;
-    }
-
-    .card {
-      width: 100%;
-      max-width: 720px;
-      border-radius: 24px;
-      padding: 34px;
-      text-align: center;
-      margin: 24px;
-    }
-
-    .back-link {
-      position: absolute;
-      left: 18px;
-      top: 18px;
-      font-size: 14px;
-      text-decoration: none;
-      color: var(--blue);
-      background: rgba(255,255,255,0.7);
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(37,99,235,0.12);
-      backdrop-filter: blur(6px);
-    }
-
-    h1 {
-      margin: 18px 0 10px 0;
-      font-size: 2.2rem;
-      line-height: 1.1;
-      padding: 0 94px;
-      letter-spacing: -0.02em;
-      position: relative;
-      z-index: 1;
-    }
-
-    p { position: relative; z-index: 1; color: rgba(17,17,17,0.78); }
-
-    select, textarea {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid rgba(17,17,17,0.1);
-      border-radius: 12px;
-      margin: 10px 0;
-      font-size: 16px;
-      background: rgba(255,255,255,0.82);
-      position: relative;
-      z-index: 1;
-    }
-
-    textarea { min-height: 120px; resize: vertical; }
-
-    button {
-      padding: 12px 18px;
-      margin-top: 8px;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      font-size: 16px;
-      background: var(--gold);
-      color: var(--black);
-      transition: transform 0.14s ease, box-shadow 0.14s ease;
-      position: relative;
-      z-index: 1;
-    }
-
-    button:hover { transform: translateY(-1px); box-shadow: 0 10px 18px rgba(17,17,17,0.09); }
-
-    #status {
-      color: var(--muted);
-      min-height: 22px;
-      margin-top: 14px;
-      white-space: pre-wrap;
-      position: relative;
-      z-index: 1;
-    }
-
-    @media (max-width: 760px) {
       body { padding: 18px; }
-      h1 { padding: 0; margin-top: 78px; }
-      .back-link { top: 12px; left: 12px; }
-      .card { padding: 24px 18px; margin: 12px; }
-    }
 
+      h1 {
+        padding: 0;
+        margin-top: 78px;
+      }
+
+      .brand-watermark {
+        width: min(70vw, 380px);
+      }
+
+      .spinoza-shadow {
+        width: min(38vw, 180px);
+      }
+
+      .playing-card-accent {
+        width: min(28vw, 120px);
+        opacity: 0.085;
+      }
+
+      .logo-corner {
+        top: 12px;
+        right: 12px;
+        width: 68px;
+        height: 68px;
+      }
+
+      .back-link {
+        top: 12px;
+        left: 12px;
+      }
+
+      .card {
+        padding: 24px 18px;
+        margin: 12px;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="page-bg"></div>
-  <div class="brand-emblem"></div>
-  <div class="spinoza-portrait"></div>
-  <div class="playing-card-accent"></div>
-  <div class="top-glow"></div>
+  <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
+  <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
+  <div class="playing-card-accent"><img src="./playingcard-accent.png" alt="" /></div>
 
   <div class="card">
     <a href="./index.html" class="back-link">Terug</a>
@@ -273,7 +289,7 @@
     <div id="status"></div>
   </div>
 
-  <div class="watermark">Made by Bruis · v7</div>
+  <div class="watermark">Made by Bruis · v8</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
