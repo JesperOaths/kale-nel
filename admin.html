@@ -56,12 +56,12 @@
       position: fixed;
       top: 50%;
       left: 50%;
-      width: min(50vw, 560px);
+      width: min(46vw, 500px);
       transform: translate(-50%, -50%);
-      opacity: 0.15;
+      opacity: 0.115;
       pointer-events: none;
       z-index: 0;
-      filter: saturate(1.02) brightness(1.0);
+      filter: saturate(0.95) brightness(0.98);
     }
 
     .brand-watermark img {
@@ -72,13 +72,13 @@
 
     .spinoza-shadow {
       position: fixed;
-      left: -24px;
+      left: -18px;
       bottom: 0;
-      width: min(33vw, 390px);
-      opacity: 0.18;
+      width: min(24vw, 260px);
+      opacity: 0.07;
       pointer-events: none;
       z-index: 0;
-      filter: sepia(0.18) saturate(1.04) contrast(1.03) brightness(1.01);
+      filter: blur(0.15px);
     }
 
     .spinoza-shadow {
@@ -93,14 +93,14 @@
 
     .playing-card-accent {
       position: fixed;
-      right: -24px;
-      bottom: 7%;
-      width: min(22vw, 245px);
-      opacity: 0.32;
-      transform: rotate(-8deg);
+      right: -18px;
+      bottom: 8%;
+      width: min(16vw, 160px);
+      opacity: 0.09;
+      transform: rotate(-10deg);
       pointer-events: none;
       z-index: 0;
-      filter: sepia(0.18) saturate(1.42) contrast(1.12) brightness(1.05);
+      filter: sepia(0.35) saturate(0.9) contrast(1.04) brightness(1.01);
       transform-origin: center right;
     }
 
@@ -252,19 +252,18 @@
       .row { grid-template-columns: 1fr; }
       .mini-logo { width: 62px; height: 62px; }
       .spinoza-shadow {
-        left: -22px;
+        left: -20px;
         bottom: 0;
-        width: min(52vw, 300px);
-        opacity: 0.34;
-        filter: sepia(0.16) saturate(1.06) contrast(1.03);
+        width: min(42vw, 220px);
+        opacity: 0.28;
+        filter: none;
       }
       .playing-card-accent {
-        right: -24px;
-        bottom: 6%;
-        width: min(46vw, 255px);
-        opacity: 0.72;
-        transform: rotate(7deg);
-        filter: sepia(0.18) saturate(1.55) contrast(1.12) brightness(1.05);
+        right: -22px;
+        bottom: 8%;
+        width: min(38vw, 190px);
+        opacity: 0.58;
+        transform: rotate(8deg);
         filter: sepia(0.58) saturate(1.18) contrast(1.08) brightness(1.01);
       }
       .card { padding: 22px 18px; }
@@ -285,7 +284,7 @@
 
     <div class="card">
       <h1>Adminpaneel</h1>
-      <div class="muted" style="margin-top:-8px; margin-bottom:10px; position:relative; z-index:1;">Versie v19</div>
+      <div class="muted" style="margin-top:-8px; margin-bottom:10px; position:relative; z-index:1;">Versie v17</div>
 
       <div id="loginView">
         <div class="row">
@@ -309,9 +308,14 @@
       <h2>Openstaande naam-aanvragen</h2>
       <div id="requestsList"></div>
     </div>
+
+    <div id="historyCard" class="card hidden">
+      <h2>Geschiedenis aanvragen</h2>
+      <div id="historyList"></div>
+    </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v19</div>
+  <div class="watermark">Made by Bruis · v17</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -372,13 +376,16 @@
       document.getElementById("loginView").classList.remove("hidden");
       document.getElementById("adminView").classList.add("hidden");
       document.getElementById("requestsCard").classList.add("hidden");
+      document.getElementById("historyCard").classList.add("hidden");
       document.getElementById("requestsList").innerHTML = "";
+      document.getElementById("historyList").innerHTML = "";
     }
 
     function showLoggedIn(username) {
       document.getElementById("loginView").classList.add("hidden");
       document.getElementById("adminView").classList.remove("hidden");
       document.getElementById("requestsCard").classList.remove("hidden");
+      document.getElementById("historyCard").classList.remove("hidden");
       document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`;
     }
 
@@ -406,6 +413,7 @@
           <span class="muted">Toelichting:</span><br>
           <div style="margin-top:6px;">${noteHtml}</div>
           <div style="margin-top:12px;">
+            <textarea class="decision-reason" data-id="${req.id}" placeholder="Reden (optioneel, wordt opgeslagen in geschiedenis)" style="width:100%;min-height:84px;margin-bottom:10px;border-radius:14px;border:1px solid #d7d0c2;padding:12px;font:inherit;background:#fffdf7;color:#111;"></textarea>
             <button class="approve-btn" data-id="${req.id}" data-decision="approved">Goedkeuren</button>
             <button class="reject-btn" data-id="${req.id}" data-decision="rejected">Afwijzen</button>
           </div>
@@ -418,11 +426,15 @@
         btn.addEventListener("click", async () => {
           const requestId = Number(btn.dataset.id);
           const decision = btn.dataset.decision;
+          const reasonEl = document.querySelector(`.decision-reason[data-id="${requestId}"]`);
+          const decisionReason = reasonEl ? reasonEl.value.trim() : "";
           try {
             setStatus("Opslaan...");
-            await decideRequest(requestId, decision);
+            await decideRequest(requestId, decision, decisionReason);
             const data = await getRequests();
             renderRequests(data.requests);
+            const history = await getHistory();
+            renderHistory(history.history);
             setStatus("Bijgewerkt.");
           } catch (err) {
             const rawMessage = err instanceof Error ? err.message : "Er ging iets mis";
@@ -471,6 +483,51 @@
       return await parseResponse(res);
     }
 
+
+    async function getHistory() {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_history`, {
+        method: "POST",
+        mode: "cors",
+        cache: "no-store",
+        headers: rpcHeaders(),
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken() })
+      });
+      return await parseResponse(res);
+    }
+
+    function renderHistory(items) {
+      const root = document.getElementById("historyList");
+      root.innerHTML = "";
+
+      if (!items || items.length === 0) {
+        root.innerHTML = `<p class="muted">Nog geen geschiedenis.</p>`;
+        return;
+      }
+
+      items.forEach((item) => {
+        const div = document.createElement("div");
+        div.className = "request";
+        const noteHtml = item.requester_note
+          ? escapeHtml(item.requester_note).replaceAll("\n", "<br>")
+          : "<span class='muted'>Geen toelichting</span>";
+        const reasonHtml = item.decision_reason
+          ? escapeHtml(item.decision_reason).replaceAll("\n", "<br>")
+          : "<span class='muted'>Geen reden opgegeven</span>";
+
+        div.innerHTML = `
+          <strong>${escapeHtml(item.display_name)}</strong><br>
+          <span class="muted">Beslissing:</span> ${escapeHtml(item.decision)}<br>
+          <span class="muted">E-mail:</span> ${escapeHtml(item.requester_email || "Onbekend")}<br>
+          <span class="muted">Aanvraag:</span><br>
+          <div style="margin-top:6px;">${noteHtml}</div>
+          <span class="muted" style="display:block;margin-top:10px;">Reden besluit:</span>
+          <div style="margin-top:6px;">${reasonHtml}</div>
+          <div class="muted" style="margin-top:10px;">${new Date(item.decided_at).toLocaleString("nl-NL")}</div>
+        `;
+        root.appendChild(div);
+      });
+    }
+
     async function getRequests() {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_requests`, {
         method: "POST",
@@ -482,7 +539,7 @@
       return await parseResponse(res);
     }
 
-    async function decideRequest(requestId, decision) {
+    async function decideRequest(requestId, decision, decisionReason) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request`, {
         method: "POST",
         mode: "cors",
@@ -491,7 +548,8 @@
         body: JSON.stringify({
           admin_session_token: getAdminSessionToken(),
           request_id_input: requestId,
-          decision
+          decision,
+          decision_reason_input: decisionReason
         })
       });
       return await parseResponse(res);
