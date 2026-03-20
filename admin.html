@@ -251,8 +251,21 @@
       body { padding: 18px 18px 16px; }
       .row { grid-template-columns: 1fr; }
       .mini-logo { width: 62px; height: 62px; }
-      .spinoza-shadow { width: min(30vw, 150px); }
-      .playing-card-accent { width: min(26vw, 112px); opacity: 0.082; }
+      .spinoza-shadow {
+        left: -20px;
+        bottom: 0;
+        width: min(42vw, 220px);
+        opacity: 0.28;
+        filter: none;
+      }
+      .playing-card-accent {
+        right: -22px;
+        bottom: 8%;
+        width: min(38vw, 190px);
+        opacity: 0.58;
+        transform: rotate(8deg);
+        filter: sepia(0.58) saturate(1.18) contrast(1.08) brightness(1.01);
+      }
       .card { padding: 22px 18px; }
     }
   </style>
@@ -271,14 +284,16 @@
 
     <div class="card">
       <h1>Adminpaneel</h1>
-      <div class="muted" style="margin-top:-8px; margin-bottom:10px; position:relative; z-index:1;">Versie v8</div>
+      <div class="muted" style="margin-top:-8px; margin-bottom:10px; position:relative; z-index:1;">Versie v17</div>
 
       <div id="loginView">
         <div class="row">
-          <input id="usernameInput" type="text" placeholder="Gebruikersnaam" />
-          <input id="passwordInput" type="password" placeholder="Wachtwoord" />
+          <input id="usernameInput" type="text" placeholder="Gebruikersnaam" autocomplete="username" />
+          <input id="passwordInput" type="password" placeholder="Wachtwoord" autocomplete="current-password" />
         </div>
+        <input id="totpInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="Google Authenticator-code (6 cijfers)" autocomplete="one-time-code" />
         <button id="loginBtn" class="login-btn" type="button">Inloggen</button>
+        <div class="muted" style="margin-top:10px; position:relative; z-index:1;">Log in met je gebruikersnaam, wachtwoord en 6-cijferige code uit Google Authenticator.</div>
       </div>
 
       <div id="adminView" class="hidden">
@@ -295,12 +310,12 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v16</div>
+  <div class="watermark">Made by Bruis · v17</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
-    const ADMIN_SESSION_KEY = "jas_admin_session_v5";
+    const ADMIN_SESSION_KEY = "jas_admin_session_v6";
 
     function rpcHeaders() {
       return {
@@ -419,9 +434,11 @@
     async function adminLogin() {
       const username = document.getElementById("usernameInput").value.trim();
       const password = document.getElementById("passwordInput").value;
+      const totp = document.getElementById("totpInput").value.trim();
 
       if (!username) throw new Error("Vul een gebruikersnaam in");
       if (!password) throw new Error("Vul een wachtwoord in");
+      if (!/^\d{6}$/.test(totp)) throw new Error("Vul je 6-cijferige Google Authenticator-code in");
 
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_login`, {
         method: "POST",
@@ -430,13 +447,15 @@
         headers: rpcHeaders(),
         body: JSON.stringify({
           input_username: username,
-          input_password: password
+          input_password: password,
+          input_totp_code: totp
         })
       });
 
       const data = await parseResponse(res);
       setAdminSessionToken(data.admin_session_token);
       document.getElementById("passwordInput").value = "";
+      document.getElementById("totpInput").value = "";
       return data;
     }
 

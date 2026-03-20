@@ -78,8 +78,8 @@
       position: fixed;
       left: -18px;
       bottom: 0;
-      width: min(28vw, 390px);
-      opacity: 0.24;
+      width: min(29vw, 400px);
+      opacity: 0.27;
       pointer-events: none;
       z-index: 0;
       filter: sepia(0.35) saturate(0.9) contrast(1.04) brightness(1.01);
@@ -99,12 +99,12 @@
       position: fixed;
       right: -18px;
       bottom: 8%;
-      width: min(19vw, 250px);
-      opacity: 0.38;
+      width: min(19.5vw, 255px);
+      opacity: 0.46;
       transform: rotate(10deg);
       pointer-events: none;
       z-index: 0;
-      filter: none;
+      filter: sepia(0.42) saturate(1.05) contrast(1.05) brightness(1.01);
       transform-origin: center right;
     }
 
@@ -328,8 +328,20 @@
       }
 
       .spinoza-shadow {
-        width: min(46vw, 240px);
-        height: min(44vh, 340px);
+        left: -22px;
+        bottom: 0;
+        width: min(48vw, 280px);
+        opacity: 0.36;
+        filter: none;
+      }
+
+      .playing-card-accent {
+        right: -26px;
+        bottom: 7%;
+        width: min(42vw, 240px);
+        opacity: 0.72;
+        transform: rotate(8deg);
+        filter: sepia(0.58) saturate(1.18) contrast(1.08) brightness(1.01);
       }
 
       .logo-corner {
@@ -398,7 +410,7 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v16</div>
+  <div class="watermark">Made by Bruis · v17</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
