@@ -149,11 +149,12 @@
     <div id="status"></div>
   </div>
 
-  <div class="watermark">Made by Bruis</div>
+  <div class="watermark">Made by Bruis · v2</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliadkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+    const APP_VERSION = "v2";
 
     function rpcHeaders() {
       return {
@@ -202,6 +203,8 @@
     async function getState() {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, {
         method: "POST",
+        mode: "cors",
+        cache: "no-store",
         headers: rpcHeaders(),
         body: JSON.stringify({ session_token: null })
       });
@@ -216,6 +219,8 @@
 
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/request_claim`, {
         method: "POST",
+        mode: "cors",
+        cache: "no-store",
         headers: rpcHeaders(),
         body: JSON.stringify({
           desired_name: desiredName,
@@ -232,8 +237,11 @@
         fillNameSelect("requestNameSelect", state.all_names || []);
         document.getElementById("status").textContent = "";
       } catch (err) {
+        const rawMessage = err instanceof Error ? err.message : "Kon namen niet laden";
         document.getElementById("status").textContent =
-          err instanceof Error ? err.message : "Kon namen niet laden";
+          rawMessage === "Failed to fetch"
+            ? "Netwerk/CORS-fout bij contact met Supabase."
+            : rawMessage;
       }
     }
 
@@ -244,8 +252,11 @@
         document.getElementById("requestNoteInput").value = "";
         document.getElementById("status").textContent = data.message || "Aanvraag verstuurd";
       } catch (err) {
+        const rawMessage = err instanceof Error ? err.message : "Er ging iets mis";
         document.getElementById("status").textContent =
-          err instanceof Error ? err.message : "Er ging iets mis";
+          rawMessage === "Failed to fetch"
+            ? "Netwerk/CORS-fout bij contact met Supabase."
+            : rawMessage;
       }
     });
 

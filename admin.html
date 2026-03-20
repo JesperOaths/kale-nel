@@ -98,6 +98,7 @@
   <div class="wrap">
     <div class="card">
       <h1>Adminpaneel</h1>
+      <div class="muted" style="margin-top:-8px; margin-bottom:10px;">Versie v2</div>
 
       <div id="loginView">
         <div class="row">
@@ -124,7 +125,8 @@
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliadkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
-    const ADMIN_SESSION_KEY = "jas_admin_session_v3";
+    const ADMIN_SESSION_KEY = "jas_admin_session_v4";
+    const APP_VERSION = "v2";
 
     function rpcHeaders() {
       return {
@@ -237,6 +239,8 @@
 
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_login`, {
         method: "POST",
+        mode: "cors",
+        cache: "no-store",
         headers: rpcHeaders(),
         body: JSON.stringify({
           input_username: username,
@@ -256,6 +260,8 @@
 
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, {
         method: "POST",
+        mode: "cors",
+        cache: "no-store",
         headers: rpcHeaders(),
         body: JSON.stringify({
           admin_session_token: token
@@ -268,6 +274,8 @@
     async function getRequests() {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_requests`, {
         method: "POST",
+        mode: "cors",
+        cache: "no-store",
         headers: rpcHeaders(),
         body: JSON.stringify({
           admin_session_token: getAdminSessionToken()
@@ -294,7 +302,8 @@
         renderRequests(data.requests);
         setStatus(decision === "approved" ? "Aanvraag goedgekeurd." : "Aanvraag afgewezen.");
       } catch (err) {
-        setStatus(err instanceof Error ? err.message : "Er ging iets mis");
+        const rawMessage = err instanceof Error ? err.message : "Er ging iets mis";
+        setStatus(rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage);
       }
     }
 
@@ -316,7 +325,8 @@
       } catch (err) {
         clearAdminSessionToken();
         showLoggedOut();
-        setStatus(err instanceof Error ? err.message : "Er ging iets mis");
+        const rawMessage = err instanceof Error ? err.message : "Er ging iets mis";
+        setStatus(rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage);
       }
     }
 
@@ -329,7 +339,8 @@
         renderRequests(requests.requests);
         setStatus("");
       } catch (err) {
-        setStatus(err instanceof Error ? err.message : "Er ging iets mis");
+        const rawMessage = err instanceof Error ? err.message : "Er ging iets mis";
+        setStatus(rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage);
       }
     });
 
