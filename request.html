@@ -8,144 +8,145 @@
 
     
     :root {
-      --gold: #d4af37;
-      --gold-dark: #b89018;
-      --black: #111111;
-      --soft: #f3f1ec;
-      --soft-2: #ebe7df;
-      --card: rgba(255, 255, 255, 0.95);
-      --line: rgba(17, 17, 17, 0.08);
-      --muted: #6b7280;
-      --blue: #2563eb;
-      --shadow: 0 28px 70px rgba(17, 17, 17, 0.14);
-    }
+  --gold: #d4af37;
+  --gold-dark: #b89018;
+  --black: #111111;
+  --soft: #f3f1ec;
+  --soft-2: #ebe7df;
+  --card: rgba(255, 255, 255, 0.95);
+  --line: rgba(17, 17, 17, 0.08);
+  --muted: #6b7280;
+  --blue: #2563eb;
+  --shadow: 0 28px 70px rgba(17, 17, 17, 0.14);
+}
 
-    * { box-sizing: border-box; }
+* { box-sizing: border-box; }
 
-    body {
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background:
-        radial-gradient(circle at top left, rgba(212, 175, 55, 0.14), transparent 26%),
-        radial-gradient(circle at bottom right, rgba(17, 17, 17, 0.07), transparent 24%),
-        linear-gradient(135deg, #f2efe8, #f8f7f3 44%, #ece8e0);
-      color: var(--black);
-      margin: 0;
-      min-height: 100vh;
-      position: relative;
-      overflow-x: hidden;
-    }
+body {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(212, 175, 55, 0.14), transparent 26%),
+    radial-gradient(circle at bottom right, rgba(17, 17, 17, 0.07), transparent 24%),
+    linear-gradient(135deg, #f2efe8, #f8f7f3 44%, #ece8e0);
+  color: var(--black);
+  margin: 0;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
 
-    .page-bg,
-    .brand-watermark,
-    .spinoza-shadow,
-    .top-glow,
-    .playing-card-accent {
-      position: fixed;
-      pointer-events: none;
-    }
+.page-bg,
+.brand-watermark,
+.spinoza-shadow,
+.top-glow,
+.playing-card-accent {
+  position: fixed;
+  pointer-events: none;
+}
 
-    .page-bg,
-    .top-glow {
-      inset: 0;
-    }
+.page-bg,
+.top-glow {
+  inset: 0;
+}
 
-    .page-bg {
-      background-image: url('./123zwartkaart.png');
-      background-size: 255px;
-      background-repeat: repeat;
-      background-position: center;
-      opacity: 0.13;
-      filter: grayscale(100%) contrast(1.12) brightness(0.98);
-      mix-blend-mode: multiply;
-      z-index: 0;
-    }
+.page-bg {
+  background-image: url('./123zwartkaart.png');
+  background-size: 255px;
+  background-repeat: repeat;
+  background-position: center;
+  opacity: 0.13;
+  filter: grayscale(100%) contrast(1.12) brightness(0.98);
+  mix-blend-mode: multiply;
+  z-index: 0;
+}
 
-    .brand-watermark {
-      top: 50%;
-      left: 50%;
-      width: min(52vw, 720px);
-      transform: translate(-50%, -50%);
-      opacity: 0.24;
-      z-index: 0;
-      filter: saturate(1.12) brightness(1.03);
-    }
+.brand-watermark {
+  top: 50%;
+  left: 50%;
+  width: min(42vw, 560px);
+  transform: translate(-50%, -50%);
+  opacity: 0.2;
+  z-index: 0;
+  filter: saturate(1.08) brightness(1.02);
+}
 
-    .brand-watermark img,
-    .spinoza-shadow img,
-    .playing-card-accent img {
-      display: block;
-      width: 100%;
-      height: auto;
-    }
+.brand-watermark img,
+.spinoza-shadow img,
+.playing-card-accent img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
 
-    .spinoza-shadow {
-      left: -54px;
-      bottom: -12px;
-      width: min(48vw, 700px);
-      opacity: 0.56;
-      z-index: 0;
-      filter: sepia(0.22) saturate(1.22) contrast(1.08) brightness(1.04);
-    }
+.spinoza-shadow {
+  left: -34px;
+  bottom: -4px;
+  width: min(40vw, 560px);
+  opacity: 0.48;
+  z-index: 0;
+  filter: sepia(0.22) saturate(1.18) contrast(1.08) brightness(1.03);
+}
 
-    .playing-card-accent {
-      right: -58px;
-      bottom: 3%;
-      width: min(34vw, 500px);
-      opacity: 0.98;
-      z-index: 0;
-      filter: saturate(1.7) contrast(1.22) brightness(1.08) drop-shadow(0 22px 42px rgba(40, 18, 12, 0.22));
-      transform: rotate(7deg);
-      transform-origin: center right;
-    }
+.playing-card-accent {
+  right: -34px;
+  bottom: 6%;
+  width: min(28vw, 380px);
+  opacity: 0.88;
+  z-index: 0;
+  filter: sepia(0.18) saturate(1.72) contrast(1.18) brightness(1.08) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.2));
+  transform: rotate(7deg);
+  transform-origin: center right;
+}
 
-    .playing-card-accent img {
-      border-radius: 24px;
-    }
+.playing-card-accent img {
+  border-radius: 22px;
+}
 
-    .top-glow {
-      background: linear-gradient(180deg, rgba(255,255,255,0.38), transparent 24%);
-      z-index: 0;
-    }
+.top-glow {
+  background: linear-gradient(180deg, rgba(255,255,255,0.38), transparent 24%);
+  z-index: 0;
+}
 
-    .watermark {
-      position: fixed;
-      right: 20px;
-      bottom: 14px;
-      color: rgba(17,17,17,0.28);
-      font-size: 14px;
-      user-select: none;
-      pointer-events: none;
-      z-index: 3;
-      letter-spacing: 0.02em;
-    }
+.watermark {
+  position: fixed;
+  right: 20px;
+  bottom: 14px;
+  color: rgba(17,17,17,0.28);
+  font-size: 14px;
+  user-select: none;
+  pointer-events: none;
+  z-index: 3;
+  letter-spacing: 0.02em;
+}
 
-    @media (max-width: 760px) {
-      body {
-        padding-left: 0;
-        padding-right: 0;
-      }
+@media (max-width: 760px) {
+  body {
+    padding-left: 0;
+    padding-right: 0;
+  }
 
-      .brand-watermark {
-        width: min(94vw, 620px);
-        opacity: 0.24;
-      }
+  .brand-watermark {
+    width: min(84vw, 540px);
+    opacity: 0.22;
+  }
 
-      .spinoza-shadow {
-        left: -42px;
-        bottom: -4px;
-        width: min(74vw, 440px);
-        opacity: 0.64;
-        filter: sepia(0.18) saturate(1.16) contrast(1.05) brightness(1.03);
-      }
+  .spinoza-shadow {
+    left: -28px;
+    bottom: 0;
+    width: min(60vw, 380px);
+    opacity: 0.54;
+    filter: sepia(0.18) saturate(1.12) contrast(1.04) brightness(1.03);
+  }
 
-      .playing-card-accent {
-        right: -34px;
-        bottom: 10%;
-        width: min(48vw, 260px);
-        opacity: 1;
-        filter: saturate(1.78) contrast(1.24) brightness(1.09) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.2));
-      }
-    }
+  .playing-card-accent {
+    right: -28px;
+    bottom: 8%;
+    width: min(54vw, 320px);
+    opacity: 0.92;
+    filter: sepia(0.2) saturate(1.78) contrast(1.2) brightness(1.09) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.2));
+  }
+}
+
 
 
     body {
@@ -162,7 +163,7 @@
       padding: 30px 34px 34px;
       border-radius: 28px;
       text-align: center;
-      max-width: 760px;
+      max-width: 740px;
       width: 100%;
       box-shadow: var(--shadow);
       position: relative;
@@ -178,7 +179,6 @@
     p { color:var(--muted); margin-bottom:20px; position:relative; z-index:1; font-size:clamp(1rem,2vw,1.15rem); }
     select, textarea, input { padding:12px 13px; margin:10px 0; width:100%; font-size:15px; border:1px solid rgba(17,17,17,0.1); border-radius:14px; background:rgba(255,255,255,0.9); }
     textarea { min-height:120px; resize:vertical; }
-    .meta-row { display:grid; grid-template-columns: 1fr 1fr; gap: 14px; position: relative; z-index: 1; }
     button { padding:12px 20px; margin-top:8px; border:none; border-radius:14px; cursor:pointer; font-size:15px; background:var(--gold); color:var(--black); transition:transform .14s ease, box-shadow .14s ease; }
     button:hover { transform: translateY(-1px); box-shadow:0 10px 18px rgba(17,17,17,.09); }
     #status { color:var(--muted); min-height:22px; margin-top:14px; white-space:pre-wrap; position:relative; z-index:1; }
@@ -186,10 +186,9 @@
     @media (max-width: 760px) {
       body { padding: 16px 0; }
       h1 { padding:0; margin-top:78px; font-size:2rem; }
-      .meta-row { grid-template-columns: 1fr; gap: 0; }
       .logo-corner { top:12px; right:12px; width:68px; height:68px; }
       .back-link { top:12px; left:12px; }
-      .card { padding: 22px 18px; margin: 14px auto; max-width: calc(100vw - 116px); width: calc(100vw - 116px); }
+      .card { padding: 22px 18px; margin: 14px auto; max-width: calc(100vw - 140px); width: calc(100vw - 140px); }
       textarea { min-height: 102px; }
     }
   </style>
@@ -208,17 +207,13 @@
     <p>Kies je naam en leg kort uit waarom die van jou is.</p>
 
     <select id="requestNameSelect"></select>
-    <div class="meta-row">
-      <input id="requestEmailInput" type="email" placeholder="E-mail (optioneel)" autocomplete="email" />
-      <input id="requestContactInput" type="text" placeholder="Discord / contact (optioneel)" />
-    </div>
     <textarea id="requestNoteInput" placeholder="Leg kort uit waarom jij deze naam wilt claimen"></textarea>
     <button id="requestBtn" type="button">Vraag naam aan</button>
 
     <div id="status"></div>
   </div>
 
-  <div class="watermark">Made by Bruis · v24</div>
+  <div class="watermark">Made by Bruis · v25</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -266,11 +261,14 @@
         page_url: location.href,
         max_touch_points: navigator.maxTouchPoints || 0,
         color_scheme: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
-        contact_hint: document.getElementById('requestContactInput').value.trim() || ""
       };
     }
 
-    async function getState() {
+    async function getRequestableNames() {
+      const direct = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names`, {
+        method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(), body: JSON.stringify({})
+      });
+      if (direct.ok) return await parseResponse(direct);
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, {
         method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(), body: JSON.stringify({ session_token: null })
       });
@@ -280,8 +278,8 @@
     async function requestClaim() {
       const desiredName = document.getElementById("requestNameSelect").value;
       const requesterNote = document.getElementById("requestNoteInput").value.trim();
-      const requesterEmail = document.getElementById("requestEmailInput").value.trim();
       if (!desiredName) throw new Error("Kies eerst een naam");
+      if (!requesterNote) throw new Error("Geef kort een reden op");
 
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/request_claim`, {
         method: "POST",
@@ -291,7 +289,7 @@
         body: JSON.stringify({
           desired_name: desiredName,
           requester_note: requesterNote,
-          requester_email: requesterEmail || null,
+          requester_email: null,
           requester_meta: collectVisitorMeta()
         })
       });
@@ -300,8 +298,8 @@
 
     async function load() {
       try {
-        const state = await getState();
-        fillNameSelect("requestNameSelect", state.all_names || []);
+        const state = await getRequestableNames();
+        fillNameSelect("requestNameSelect", state.names || state.all_names || []);
         document.getElementById("status").textContent = "";
       } catch (err) {
         const rawMessage = err instanceof Error ? err.message : "Kon namen niet laden";
@@ -314,8 +312,6 @@
         document.getElementById("status").textContent = "Versturen...";
         const result = await requestClaim();
         document.getElementById("requestNoteInput").value = "";
-        document.getElementById("requestEmailInput").value = "";
-        document.getElementById("requestContactInput").value = "";
         document.getElementById("requestNameSelect").selectedIndex = 0;
         document.getElementById("status").textContent = result?.message || "Aanvraag verstuurd.";
       } catch (err) {
