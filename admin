@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin - Jas Site</title>
+  <style>
+    :root {
+      --gold: #d4af37;
+      --black: #111111;
+      --soft: #f5f7fb;
+      --card: #ffffff;
+      --muted: #6b7280;
+      --green: #15803d;
+      --red: #b91c1c;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--soft);
+      margin: 0;
+      padding: 24px;
+    }
+
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+
+    h1, h2 {
+      margin-top: 0;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      margin: 8px 0;
+      font-size: 16px;
+    }
+
+    button {
+      padding: 12px 16px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 15px;
+      margin-right: 8px;
+      margin-top: 8px;
+    }
+
+    .login-btn {
+      background: var(--gold);
+      color: var(--black);
+    }
+
+    .approve-btn {
+      background: var(--green);
+      color: white;
+    }
+
+    .reject-btn {
+      background: var(--red);
+      color: white;
+    }
+
+    .logout-btn {
+      background: var(--black);
+      color: white;
+    }
+
+    .request {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 12px;
+      background: #fafafa;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    #status {
+      margin-top: 12px;
+      color: var(--muted);
+      white-space: pre-wrap;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    @media (max-width: 700px) {
+      .row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Adminpaneel</h1>
+
+      <div id="loginView">
+        <div class="row">
+          <input id="usernameInput" type="text" placeholder="Gebruikersnaam" />
+          <input id="passwordInput" type="password" placeholder="Wachtwoord" />
+        </div>
+        <button id="loginBtn" class="login-btn" type="button">Inloggen</button>
+      </div>
+
+      <div id="adminView" class="hidden">
+        <p id="welcomeText"></p>
+        <button id="logoutBtn" class="logout-btn" type="button">Uitloggen</button>
+      </div>
+
+      <div id="status"></div>
+    </div>
+
+    <div id="requestsCard" class="card hidden">
+      <h2>Openstaande naam-aanvragen</h2>
+      <div id="requestsList"></div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://uiqntazgnrxwliadkmy.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+    const ADMIN_SESSION_KEY = "jas_admin_session_v1";
+
+    function rpcHeaders() {
+      return {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      };
+    }
+
+    async function parseResponse(res) {
+      const text = await res.text();
+      let data = null;
+
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch {
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+
+      if (!res.ok) {
+        throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
+      }
+
+      return data;
+    }
+
+    function getAdminSessionToken() {
+      return localStorage.getItem(ADMIN_SESSION_KEY);
+    }
+
+    function setAdminSessionToken(token) {
+      localStorage.setItem(ADMIN_SESSION_KEY, token);
+    }
+
+    function clearAdminSessionToken() {
+      localStorage.removeItem(ADMIN_SESSION_KEY);
+    }
+
+    function setStatus(text) {
+      document.getElementById("status").textContent = text || "";
+    }
+
+    function showLoggedOut() {
+      document.getElementById("loginView").classList.remove("hidden");
+      document.getElementById("adminView").classList.add("hidden");
+      document.getElementById("requestsCard").classList.add("hidden");
+      document.getElementById("requestsList").innerHTML = "";
+    }
+
+    function showLoggedIn(username) {
+      document.getElementById("loginView").classList.add("hidden");
+      document.getElementById("adminView").classList.remove("hidden");
+      document.getElementById("requestsCard").classList.remove("hidden");
+      document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`;
+    }
+
+    function renderRequests(requests) {
+      const root = document.getElementById("requestsList");
+      root.innerHTML = "";
+
+      if (!requests || requests.length === 0) {
+        root.innerHTML = `<p class="muted">Geen openstaande aanvragen.</p>`;
+        return;
+      }
+
+      requests.forEach((req) => {
+        const div = document.createElement("div");
+        div.className = "request";
+
+        div.innerHTML = `
+          <strong>${req.display_name}</strong><br>
+          <span class="muted">E-mail:</span> ${req.requester_email}<br>
+          <span class="muted">Aangevraagd op:</span> ${new Date(req.created_at).toLocaleString()}<br>
+          <span class="muted">Toelichting:</span><br>
+          <div style="margin-top:6px;">${req.requester_note ? req.requester_note : "<span class='muted'>Geen toelichting</span>"}</div>
+          <div style="margin-top:12px;">
+            <button class="approve-btn" data-id="${req.id}" data-decision="approved">Goedkeuren</button>
+            <button class="reject-btn" data-id="${req.id}" data-decision="rejected">Afwijzen</button>
+          </div>
+        `;
+
+        root.appendChild(div);
+      });
+
+      document.querySelectorAll("[data-decision]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const requestId = Number(btn.getAttribute("data-id"));
+          const decision = btn.getAttribute("data-decision");
+          await decideRequest(requestId, decision);
+        });
+      });
+    }
+
+    async function adminLogin() {
+      const username = document.getElementById("usernameInput").value.trim();
+      const password = document.getElementById("passwordInput").value;
+
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_login`, {
+        method: "POST",
+        headers: rpcHeaders(),
+        body: JSON.stringify({
+          input_username: username,
+          input_password: password
+        })
+      });
+
+      const data = await parseResponse(res);
+      setAdminSessionToken(data.admin_session_token);
+      document.getElementById("passwordInput").value = "";
+      return data;
+    }
+
+    async function checkSession() {
+      const token = getAdminSessionToken();
+      if (!token) return { ok: false };
+
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, {
+        method: "POST",
+        headers: rpcHeaders(),
+        body: JSON.stringify({
+          admin_session_token: token
+        })
+      });
+
+      return await parseResponse(res);
+    }
+
+    async function getRequests() {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_requests`, {
+        method: "POST",
+        headers: rpcHeaders(),
+        body: JSON.stringify({
+          admin_session_token: getAdminSessionToken()
+        })
+      });
+
+      return await parseResponse(res);
+    }
+
+    async function decideRequest(requestId, decision) {
+      try {
+        setStatus("Bezig...");
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request`, {
+          method: "POST",
+          headers: rpcHeaders(),
+          body: JSON.stringify({
+            admin_session_token: getAdminSessionToken(),
+            request_id_input: requestId,
+            decision: decision
+          })
+        });
+
+        const data = await parseResponse(res);
+        renderRequests(data.requests);
+        setStatus(decision === "approved" ? "Aanvraag goedgekeurd." : "Aanvraag afgewezen.");
+      } catch (err) {
+        setStatus(err instanceof Error ? err.message : "Er ging iets mis");
+      }
+    }
+
+    async function loadAdmin() {
+      try {
+        setStatus("");
+        const session = await checkSession();
+
+        if (!session.ok) {
+          clearAdminSessionToken();
+          showLoggedOut();
+          return;
+        }
+
+        showLoggedIn(session.username);
+
+        const data = await getRequests();
+        renderRequests(data.requests);
+      } catch (err) {
+        clearAdminSessionToken();
+        showLoggedOut();
+        setStatus(err instanceof Error ? err.message : "Er ging iets mis");
+      }
+    }
+
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      try {
+        setStatus("Inloggen...");
+        const data = await adminLogin();
+        showLoggedIn(data.username);
+        const requests = await getRequests();
+        renderRequests(requests.requests);
+        setStatus("");
+      } catch (err) {
+        setStatus(err instanceof Error ? err.message : "Er ging iets mis");
+      }
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      clearAdminSessionToken();
+      showLoggedOut();
+      setStatus("Uitgelogd.");
+    });
+
+    loadAdmin();
+  </script>
+</body>
+</html>
