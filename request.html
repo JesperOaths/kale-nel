@@ -58,12 +58,12 @@
       position: fixed;
       top: 50%;
       left: 50%;
-      width: min(50vw, 520px);
+      width: min(54vw, 560px);
       transform: translate(-50%, -50%);
-      opacity: 0.15;
+      opacity: 0.17;
       pointer-events: none;
       z-index: 0;
-      filter: saturate(0.98) brightness(1.0);
+      filter: saturate(1.04) brightness(1.01);
     }
 
     .brand-watermark img {
@@ -74,13 +74,13 @@
 
     .spinoza-shadow {
       position: fixed;
-      left: -18px;
+      left: -24px;
       bottom: 0;
-      width: min(33vw, 380px);
-      opacity: 0.16;
+      width: min(35vw, 420px);
+      opacity: 0.2;
       pointer-events: none;
       z-index: 0;
-      filter: saturate(1.04) contrast(1.02);
+      filter: sepia(0.18) saturate(1.04) contrast(1.03) brightness(1.01);
     }
 
     .spinoza-shadow {
@@ -95,14 +95,14 @@
 
     .playing-card-accent {
       position: fixed;
-      right: -18px;
-      bottom: 8%;
-      width: min(21vw, 235px);
-      opacity: 0.25;
-      transform: rotate(10deg);
+      right: -24px;
+      bottom: 7%;
+      width: min(24vw, 260px);
+      opacity: 0.34;
+      transform: rotate(8deg);
       pointer-events: none;
       z-index: 0;
-      filter: sepia(0.24) saturate(1.28) contrast(1.1) brightness(1.04);
+      filter: sepia(0.18) saturate(1.42) contrast(1.12) brightness(1.05);
       transform-origin: center right;
     }
 
@@ -242,16 +242,21 @@
       }
 
       .brand-watermark {
-        width: min(70vw, 380px);
+        width: min(78vw, 460px);
       }
 
       .spinoza-shadow {
-        width: min(48vw, 250px);
+        left: -18px;
+        width: min(50vw, 290px);
+        opacity: 0.28;
       }
 
       .playing-card-accent {
-        width: min(38vw, 175px);
-        opacity: 0.44;
+        width: min(42vw, 220px);
+        opacity: 0.62;
+        right: -24px;
+        bottom: 6%;
+        filter: sepia(0.18) saturate(1.55) contrast(1.12) brightness(1.05);
       }
 
       .logo-corner {
@@ -293,7 +298,7 @@
     <div id="status"></div>
   </div>
 
-  <div class="watermark">Made by Bruis · v17</div>
+  <div class="watermark">Made by Bruis · v19</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";

@@ -56,12 +56,12 @@
       position: fixed;
       top: 50%;
       left: 50%;
-      width: min(46vw, 500px);
+      width: min(50vw, 560px);
       transform: translate(-50%, -50%);
-      opacity: 0.115;
+      opacity: 0.15;
       pointer-events: none;
       z-index: 0;
-      filter: saturate(0.95) brightness(0.98);
+      filter: saturate(1.02) brightness(1.0);
     }
 
     .brand-watermark img {
@@ -72,13 +72,13 @@
 
     .spinoza-shadow {
       position: fixed;
-      left: -18px;
+      left: -24px;
       bottom: 0;
-      width: min(30vw, 360px);
-      opacity: 0.16;
+      width: min(33vw, 390px);
+      opacity: 0.18;
       pointer-events: none;
       z-index: 0;
-      filter: saturate(1.03) contrast(1.02);
+      filter: sepia(0.18) saturate(1.04) contrast(1.03) brightness(1.01);
     }
 
     .spinoza-shadow {
@@ -93,14 +93,14 @@
 
     .playing-card-accent {
       position: fixed;
-      right: -18px;
-      bottom: 8%;
-      width: min(20vw, 225px);
-      opacity: 0.4;
+      right: -24px;
+      bottom: 7%;
+      width: min(22vw, 245px);
+      opacity: 0.32;
       transform: rotate(-8deg);
       pointer-events: none;
       z-index: 0;
-      filter: sepia(0.24) saturate(1.28) contrast(1.1) brightness(1.04);
+      filter: sepia(0.18) saturate(1.42) contrast(1.12) brightness(1.05);
       transform-origin: center right;
     }
 
@@ -252,19 +252,20 @@
       .row { grid-template-columns: 1fr; }
       .mini-logo { width: 62px; height: 62px; }
       .spinoza-shadow {
-        left: -20px;
+        left: -22px;
         bottom: 0;
-        width: min(50vw, 270px);
-        opacity: 0.4;
-        filter: none;
+        width: min(52vw, 300px);
+        opacity: 0.34;
+        filter: sepia(0.16) saturate(1.06) contrast(1.03);
       }
       .playing-card-accent {
-        right: -22px;
-        bottom: 8%;
-        width: min(46vw, 240px);
-        opacity: 0.78;
-        transform: rotate(8deg);
-        filter: sepia(0.24) saturate(1.45) contrast(1.14) brightness(1.06);
+        right: -24px;
+        bottom: 6%;
+        width: min(46vw, 255px);
+        opacity: 0.72;
+        transform: rotate(7deg);
+        filter: sepia(0.18) saturate(1.55) contrast(1.12) brightness(1.05);
+        filter: sepia(0.58) saturate(1.18) contrast(1.08) brightness(1.01);
       }
       .card { padding: 22px 18px; }
     }
@@ -284,7 +285,7 @@
 
     <div class="card">
       <h1>Adminpaneel</h1>
-      <div class="muted" style="margin-top:-8px; margin-bottom:10px; position:relative; z-index:1;">Versie v17</div>
+      <div class="muted" style="margin-top:-8px; margin-bottom:10px; position:relative; z-index:1;">Versie v19</div>
 
       <div id="loginView">
         <div class="row">
@@ -310,7 +311,7 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v17</div>
+  <div class="watermark">Made by Bruis · v19</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
