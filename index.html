@@ -1,11 +1,9 @@
 <!DOCTYPE html>
-
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wordt er gejast donderdag?</title>
-
   <style>
     :root {
       --gold: #d4af37;
@@ -49,10 +47,17 @@
       opacity: 0.95;
     }
 
-    .admin-link {
+    .top-links {
       position: absolute;
       left: 16px;
       top: 16px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .top-links a {
       font-size: 14px;
       text-decoration: none;
       color: var(--blue);
@@ -62,7 +67,7 @@
       margin: 12px 0 10px 0;
       font-size: 2.3rem;
       line-height: 1.15;
-      padding: 0 88px;
+      padding: 0 120px;
     }
 
     .answer {
@@ -88,9 +93,8 @@
     .yes { background: var(--gold); color: #111111; }
     .no { background: var(--black); color: #ffffff; }
     .remove { background: #6b7280; color: #ffffff; }
-    .request { background: var(--blue); color: white; }
 
-    select, input, textarea {
+    select, input {
       padding: 10px;
       margin: 10px 0;
       width: 100%;
@@ -98,11 +102,6 @@
       box-sizing: border-box;
       border: 1px solid #d1d5db;
       border-radius: 10px;
-    }
-
-    textarea {
-      min-height: 90px;
-      resize: vertical;
     }
 
     .two-col {
@@ -154,6 +153,17 @@
       border-top: 1px solid #e5e7eb;
     }
 
+    .helper-link {
+      margin-top: 10px;
+      font-size: 15px;
+    }
+
+    .helper-link a {
+      color: var(--blue);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
     .watermark {
       position: fixed;
       right: 16px;
@@ -181,66 +191,56 @@
         height: 64px;
       }
 
-      .admin-link {
+      .top-links {
         top: 14px;
         left: 14px;
       }
     }
   </style>
-
 </head>
-
 <body>
   <div class="card">
-    <a href="./admin.html" class="admin-link">Admin</a>
+    <div class="top-links">
+      <a href="./admin.html">Admin</a>
+      <a href="./request.html">Naam aanvragen</a>
+    </div>
+
     <img src="logo.png" alt="Logo" class="logo-corner" />
 
-```
-<h1>Wordt er gejast donderdag?</h1>
+    <h1>Wordt er gejast donderdag?</h1>
 
-<div id="answer" class="answer">...</div>
-<p id="count"></p>
+    <div id="answer" class="answer">...</div>
+    <p id="count"></p>
 
-<div class="section">
-  <h3>Inloggen</h3>
-  <div class="two-col">
-    <select id="playerSelect"></select>
-    <input id="pinInput" type="password" placeholder="Pincode" />
-  </div>
-  <div>
-    <button id="yesBtn" class="yes" type="button">Ik kan</button>
-    <button id="noBtn" class="no" type="button">Ik kan niet</button>
-    <button id="removeBtn" class="remove" type="button" style="display:none;">Verwijder mijn stem</button>
-  </div>
-</div>
+    <div class="section">
+      <h3>Inloggen</h3>
+      <div class="two-col">
+        <select id="playerSelect"></select>
+        <input id="pinInput" type="password" placeholder="Pincode" />
+      </div>
+      <div>
+        <button id="yesBtn" class="yes" type="button">Ik kan</button>
+        <button id="noBtn" class="no" type="button">Ik kan niet</button>
+        <button id="removeBtn" class="remove" type="button" style="display:none;">Verwijder mijn stem</button>
+      </div>
+      <div class="helper-link">
+        Nog geen naam? <a href="./request.html">Vraag hier een naam aan</a>
+      </div>
+    </div>
 
-<div class="section">
-  <h3>Naam aanvragen</h3>
-  <div class="two-col">
-    <select id="requestNameSelect"></select>
-    <input id="requestEmailInput" type="email" placeholder="Jouw e-mailadres" />
-  </div>
-  <textarea id="requestNoteInput" placeholder="Leg kort uit waarom jij deze naam wilt claimen"></textarea>
-  <div>
-    <button id="requestBtn" class="request" type="button">Vraag naam aan</button>
-  </div>
-</div>
+    <div id="status"></div>
 
-<div id="status"></div>
+    <div class="lists">
+      <div class="list-box">
+        <h3>Legends</h3>
+        <ul id="legendsList"></ul>
+      </div>
 
-<div class="lists">
-  <div class="list-box">
-    <h3>Legends</h3>
-    <ul id="legendsList"></ul>
-  </div>
-
-  <div class="list-box">
-    <h3>Losers</h3>
-    <ul id="losersList"></ul>
-  </div>
-</div>
-```
-
+      <div class="list-box">
+        <h3>Losers</h3>
+        <ul id="losersList"></ul>
+      </div>
+    </div>
   </div>
 
   <div class="watermark">Made by Bruis</div>
@@ -248,7 +248,7 @@
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliadkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
-    const SESSION_KEY = "jas_session_token_v3";
+    const SESSION_KEY = "jas_session_token_v4";
 
     function rpcHeaders() {
       return {
@@ -351,8 +351,6 @@
           : `${yesCount} mensen hebben Ja gezegd`;
 
       fillNameSelect("playerSelect", state.all_names || [], state.my_name || null, Boolean(state.my_name));
-      fillNameSelect("requestNameSelect", state.all_names || [], null, false);
-
       renderList("legendsList", state.yes_names || [], "Nog niemand");
       renderList("losersList", state.no_names || [], "Nog niemand");
 
@@ -421,32 +419,6 @@
       return await parseResponse(res);
     }
 
-    async function requestClaim() {
-      const desiredName = document.getElementById("requestNameSelect").value;
-      const requesterEmail = document.getElementById("requestEmailInput").value.trim();
-      const requesterNote = document.getElementById("requestNoteInput").value.trim();
-
-      if (!desiredName) throw new Error("Kies eerst een naam voor de aanvraag");
-      if (!requesterEmail) throw new Error("Vul je e-mailadres in");
-
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/request_claim`, {
-        method: "POST",
-        headers: rpcHeaders(),
-        body: JSON.stringify({
-          desired_name: desiredName,
-          requester_email: requesterEmail,
-          requester_note: requesterNote
-        })
-      });
-
-      const data = await parseResponse(res);
-
-      document.getElementById("requestEmailInput").value = "";
-      document.getElementById("requestNoteInput").value = "";
-
-      return data;
-    }
-
     async function ensureLoggedIn() {
       if (getSessionToken()) return;
       await loginPlayer();
@@ -477,15 +449,6 @@
       }
     }
 
-    async function handleRequest() {
-      try {
-        const data = await requestClaim();
-        alert(data.message || "Aanvraag verstuurd");
-      } catch (err) {
-        alert(err instanceof Error ? err.message : "Er ging iets mis");
-      }
-    }
-
     async function load() {
       try {
         const state = await getState();
@@ -494,17 +457,16 @@
         document.getElementById("answer").textContent = "Fout";
         document.getElementById("answer").className = "answer nee";
         document.getElementById("count").textContent = "Kon site niet laden";
-        document.getElementById("status").textContent = err instanceof Error ? err.message : "Onbekende fout";
+        document.getElementById("status").textContent =
+          err instanceof Error ? err.message : "Onbekende fout";
       }
     }
 
     document.getElementById("yesBtn").addEventListener("click", () => handleVote("ja"));
     document.getElementById("noBtn").addEventListener("click", () => handleVote("nee"));
     document.getElementById("removeBtn").addEventListener("click", handleRemove);
-    document.getElementById("requestBtn").addEventListener("click", handleRequest);
 
     load();
   </script>
-
 </body>
 </html>
