@@ -15,10 +15,6 @@
       --red: #b91c1c;
     }
 
-    * {
-      box-sizing: border-box;
-    }
-
     body {
       font-family: Arial, sans-serif;
       background: var(--soft);
@@ -45,6 +41,7 @@
 
     input {
       width: 100%;
+      box-sizing: border-box;
       padding: 12px;
       border: 1px solid #d1d5db;
       border-radius: 10px;
@@ -147,7 +144,7 @@
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliadkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
-    const ADMIN_SESSION_KEY = "jas_admin_session_v1";
+    const ADMIN_SESSION_KEY = "jas_admin_session_v2";
 
     function rpcHeaders() {
       return {
@@ -190,7 +187,6 @@
     function setStatus(text) {
       document.getElementById("status").textContent = text || "";
     }
-
     function escapeHtml(value) {
       return String(value ?? "")
         .replaceAll("&", "&amp;")
@@ -199,6 +195,7 @@
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#39;");
     }
+
 
     function showLoggedOut() {
       document.getElementById("loginView").classList.remove("hidden");
