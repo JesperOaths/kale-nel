@@ -1,619 +1,82 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wordt er gejast donderdag?</title>
-  <style>
-    :root {
-      --gold: #d4af37;
-      --gold-dark: #b89018;
-      --black: #111111;
-      --soft: #f3f1ec;
-      --soft-2: #ebe7df;
-      --card: rgba(255, 255, 255, 0.9);
-      --line: rgba(17, 17, 17, 0.08);
-      --muted: #6b7280;
-      --blue: #2563eb;
-      --shadow: 0 20px 55px rgba(17, 17, 17, 0.1);
-    }
+<meta charset="UTF-8">
+<title>Wordt er gejast?</title>
+<style>
+body {
+  margin:0;
+  font-family: Arial, sans-serif;
+  background:#f5f4f1;
+  overflow-x:hidden;
+}
 
-    * { box-sizing: border-box; }
+.bg-pattern {
+  position:fixed;
+  inset:0;
+  background-image:url('123zwartkaart.png');
+  background-size:240px;
+  opacity:0.12;
+}
 
-    body {
-      font-family: Arial, sans-serif;
-      background:
-        radial-gradient(circle at top left, rgba(212, 175, 55, 0.12), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(17, 17, 17, 0.06), transparent 24%),
-        linear-gradient(135deg, var(--soft), #f8f7f3 45%, var(--soft-2));
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
-      position: relative;
-      padding: 28px;
-      overflow-x: hidden;
-      color: var(--black);
-    }
+.dd-center {
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  width:550px;
+  opacity:0.15;
+}
 
-    .page-bg,
-    .brand-watermark,
-    .spinoza-shadow,
-    .top-glow {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-    }
+.spinoza {
+  position:fixed;
+  right:-30px;
+  bottom:0;
+  height:95vh;
+  opacity:0.22;
+}
 
-    .page-bg {
-      background-image: url('./123zwartkaart.png');
-      background-size: 360px;
-      background-repeat: repeat;
-      background-position: center;
-      opacity: 0.05;
-      filter: grayscale(100%) contrast(1.08) brightness(0.98);
-      mix-blend-mode: multiply;
-    }
+.card {
+  position:fixed;
+  left:-30px;
+  top:35%;
+  width:260px;
+  transform:rotate(-12deg);
+  opacity:0.28;
+}
 
-    .brand-watermark {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      width: min(52vw, 560px);
-      transform: translate(-50%, -50%);
-      opacity: 0.12;
-      pointer-events: none;
-      z-index: 0;
-      filter: saturate(0.95) brightness(0.98);
-    }
+.container {
+  position:relative;
+  z-index:2;
+  max-width:820px;
+  margin:80px auto;
+  background:white;
+  padding:40px;
+  border-radius:20px;
+}
 
-    .brand-watermark img {
-      display: block;
-      width: 100%;
-      height: auto;
-    }
-
-    .spinoza-shadow {
-      position: fixed;
-      right: max(2vw, 10px);
-      bottom: 0;
-      width: min(31vw, 360px);
-      opacity: 0.08;
-      pointer-events: none;
-      z-index: 0;
-      filter: blur(0.15px);
-    }
-
-    .spinoza-shadow img {
-      display: block;
-      width: 100%;
-      height: auto;
-    }
-
-    .playing-card-accent {
-      position: fixed;
-      left: max(1vw, 8px);
-      bottom: max(2vh, 14px);
-      width: min(20vw, 220px);
-      opacity: 0.1;
-      transform: rotate(-12deg);
-      pointer-events: none;
-      z-index: 0;
-      filter: grayscale(100%) contrast(1.05);
-      transform-origin: bottom left;
-    }
-
-    .playing-card-accent img {
-      display: block;
-      width: 100%;
-      height: auto;
-      border-radius: 22px;
-    }
-
-    .top-glow {
-      background: linear-gradient(180deg, rgba(255,255,255,0.3), transparent 22%);
-    }
-
-    .card {
-      background: var(--card);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.75);
-      padding: 34px;
-      border-radius: 24px;
-      text-align: center;
-      max-width: 880px;
-      width: 100%;
-      box-shadow: var(--shadow);
-      position: relative;
-      margin: 24px;
-      z-index: 2;
-      overflow: hidden;
-    }
-
-    .card::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      background: linear-gradient(135deg, rgba(212,175,55,0.07), transparent 34%, rgba(17,17,17,0.035));
-      pointer-events: none;
-    }
-
-    .logo-corner {
-      position: absolute;
-      top: 18px;
-      right: 18px;
-      width: 86px;
-      height: 86px;
-      object-fit: contain;
-      opacity: 0.96;
-      filter: drop-shadow(0 6px 14px rgba(0,0,0,0.08));
-    }
-
-    .admin-link {
-      position: absolute;
-      left: 18px;
-      top: 18px;
-      font-size: 14px;
-      text-decoration: none;
-      color: var(--blue);
-      background: rgba(255,255,255,0.7);
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(37, 99, 235, 0.12);
-      backdrop-filter: blur(6px);
-    }
-
-    h1 {
-      margin: 18px 0 10px 0;
-      font-size: 2.4rem;
-      line-height: 1.1;
-      padding: 0 94px;
-      letter-spacing: -0.02em;
-      position: relative;
-      z-index: 1;
-    }
-
-    .answer {
-      font-size: 36px;
-      margin: 18px 0 12px 0;
-      font-weight: bold;
-      text-transform: capitalize;
-      min-height: 42px;
-      position: relative;
-      z-index: 1;
-    }
-
-    .ja { color: var(--gold); }
-    .bijna { color: var(--gold-dark); }
-    .nee { color: var(--black); }
-
-    button {
-      padding: 12px 18px;
-      margin: 5px;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      font-size: 16px;
-      transition: transform 0.14s ease, box-shadow 0.14s ease, opacity 0.14s ease;
-    }
-
-    button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 18px rgba(17,17,17,0.09);
-    }
-
-    .yes { background: var(--gold); color: #111111; }
-    .no { background: var(--black); color: #ffffff; }
-    .remove { background: #6b7280; color: #ffffff; }
-
-    select, input {
-      padding: 11px 12px;
-      margin: 10px 0;
-      width: 100%;
-      font-size: 16px;
-      border: 1px solid rgba(17,17,17,0.1);
-      border-radius: 12px;
-      background: rgba(255,255,255,0.82);
-    }
-
-    .two-col {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    #count {
-      margin: 0 0 8px 0;
-      color: rgba(17,17,17,0.78);
-      position: relative;
-      z-index: 1;
-    }
-
-    #status {
-      color: var(--muted);
-      min-height: 22px;
-      margin-top: 10px;
-      white-space: pre-wrap;
-      position: relative;
-      z-index: 1;
-    }
-
-    .lists {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      margin-top: 24px;
-      text-align: left;
-      position: relative;
-      z-index: 1;
-    }
-
-    .list-box {
-      background: rgba(248, 250, 252, 0.7);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 18px;
-      min-height: 180px;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.65);
-    }
-
-    .list-box h3 {
-      text-align: center;
-      margin: 0 0 10px 0;
-    }
-
-    ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    li {
-      margin: 6px 0;
-    }
-
-    .section {
-      margin-top: 20px;
-      padding-top: 18px;
-      border-top: 1px solid var(--line);
-      position: relative;
-      z-index: 1;
-    }
-
-    .request-link-wrap {
-      margin-top: 8px;
-    }
-
-    .request-link {
-      color: var(--blue);
-      text-decoration: none;
-      font-size: 16px;
-    }
-
-    .watermark {
-      position: fixed;
-      right: 18px;
-      bottom: 14px;
-      color: rgba(17,17,17,0.28);
-      font-size: 14px;
-      user-select: none;
-      pointer-events: none;
-      z-index: 3;
-      letter-spacing: 0.02em;
-    }
-
-    @media (max-width: 760px) {
-      body {
-        padding: 18px;
-      }
-
-      .lists, .two-col {
-        grid-template-columns: 1fr;
-      }
-
-      h1 {
-        padding: 0;
-        margin-top: 78px;
-        font-size: 2rem;
-      }
-
-      .brand-watermark {
-        width: min(78vw, 480px);
-      }
-
-      .spinoza-shadow {
-        width: min(46vw, 240px);
-        height: min(44vh, 340px);
-      }
-
-      .logo-corner {
-        top: 12px;
-        right: 12px;
-        width: 68px;
-        height: 68px;
-      }
-
-      .admin-link {
-        top: 12px;
-        left: 12px;
-      }
-
-      .card {
-        padding: 24px 18px;
-        margin: 12px;
-      }
-    }
-  </style>
+.footer {
+  position:fixed;
+  bottom:10px;
+  right:20px;
+  font-size:12px;
+  opacity:0.5;
+}
+</style>
 </head>
 <body>
-  <div class="page-bg"></div>
-  <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
-  <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
-  <div class="playing-card-accent"><img src="./playingcard-accent.png" alt="" /></div>
-  <div class="top-glow"></div>
 
-  <div class="card">
-    <a href="./admin.html" class="admin-link">Admin</a>
-    <img src="./logo.png" alt="Logo" class="logo-corner" />
+<div class="bg-pattern"></div>
+<img src="dubbeleD-goud.png" class="dd-center">
+<img src="spinoza-silhouette.png" class="spinoza">
+<img src="playingcard-accent.png" class="card">
 
-    <h1>Wordt er gejast donderdag?</h1>
+<div class="container">
+<h1>Wordt er gejast donderdag? <img src="logo.png" style="height:28px;vertical-align:middle;"></h1>
+<p>Nee</p>
+</div>
 
-    <div id="answer" class="answer">...</div>
-    <p id="count"></p>
+<div class="footer">Made by Bruis · v12</div>
 
-    <div class="section">
-      <h3>Inloggen</h3>
-      <div class="two-col">
-        <select id="playerSelect"></select>
-        <input id="pinInput" type="password" placeholder="Pincode" />
-      </div>
-      <div>
-        <button id="yesBtn" class="yes" type="button">Ik kan</button>
-        <button id="noBtn" class="no" type="button">Ik kan niet</button>
-        <button id="removeBtn" class="remove" type="button" style="display:none;">Verwijder mijn stem</button>
-      </div>
-      <div class="request-link-wrap">
-        <a href="./request.html" class="request-link">Naam aanvragen</a>
-      </div>
-    </div>
-
-    <div id="status"></div>
-
-    <div class="lists">
-      <div class="list-box">
-        <h3>Legends</h3>
-        <ul id="legendsList"></ul>
-      </div>
-
-      <div class="list-box">
-        <h3>Losers</h3>
-        <ul id="losersList"></ul>
-      </div>
-    </div>
-  </div>
-
-  <div class="watermark">Made by Bruis · v8</div>
-
-  <script>
-    const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
-    const SESSION_KEY = "jas_session_token_v9";
-
-    function rpcHeaders() {
-      return {
-        apikey: SUPABASE_PUBLISHABLE_KEY,
-        "Content-Type": "application/json",
-        Accept: "application/json"
-      };
-    }
-
-    async function parseResponse(res) {
-      const text = await res.text();
-      let data = null;
-
-      try {
-        data = text ? JSON.parse(text) : null;
-      } catch {
-        throw new Error(text || `HTTP ${res.status}`);
-      }
-
-      if (!res.ok) {
-        throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
-      }
-
-      return data;
-    }
-
-    function getSessionToken() {
-      return localStorage.getItem(SESSION_KEY);
-    }
-
-    function setSessionToken(token) {
-      localStorage.setItem(SESSION_KEY, token);
-    }
-
-    function clearSessionToken() {
-      localStorage.removeItem(SESSION_KEY);
-    }
-
-    function fillNameSelect(names, selectedName = null, locked = false) {
-      const select = document.getElementById("playerSelect");
-      select.innerHTML = "";
-
-      const placeholder = document.createElement("option");
-      placeholder.value = "";
-      placeholder.textContent = "Kies je naam";
-      placeholder.disabled = true;
-      placeholder.selected = !selectedName;
-      select.appendChild(placeholder);
-
-      (names || []).forEach((name) => {
-        const option = document.createElement("option");
-        option.value = name;
-        option.textContent = name;
-        select.appendChild(option);
-      });
-
-      if (selectedName) {
-        select.value = selectedName;
-      }
-
-      select.disabled = locked;
-    }
-
-    function renderList(id, names, emptyText) {
-      const list = document.getElementById(id);
-      list.innerHTML = "";
-
-      if (!names || names.length === 0) {
-        const li = document.createElement("li");
-        li.textContent = emptyText;
-        list.appendChild(li);
-        return;
-      }
-
-      names.forEach((name) => {
-        const li = document.createElement("li");
-        li.textContent = name;
-        list.appendChild(li);
-      });
-    }
-
-    function renderState(state) {
-      const answerMap = { ja: "Ja", bijna: "Bijna", nee: "Nee" };
-      const answerClass = state.answer || "nee";
-      const answerText = answerMap[answerClass] || "Nee";
-      const yesCount = Number(state.yes_count || 0);
-
-      document.getElementById("answer").textContent = answerText;
-      document.getElementById("answer").className = `answer ${answerClass}`;
-      document.getElementById("count").textContent =
-        yesCount === 1 ? "1 mens heeft Ja gezegd" : `${yesCount} mensen hebben Ja gezegd`;
-
-      fillNameSelect(state.all_names || [], state.my_name || null, Boolean(state.my_name));
-      renderList("legendsList", state.yes_names || [], "Nog niemand");
-      renderList("losersList", state.no_names || [], "Nog niemand");
-
-      document.getElementById("removeBtn").style.display = state.my_status ? "inline-block" : "none";
-      document.getElementById("status").textContent = state.my_status ? `Jouw keuze: ${state.my_status}` : "";
-    }
-
-    async function getState() {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, {
-        method: "POST",
-        mode: "cors",
-        cache: "no-store",
-        headers: rpcHeaders(),
-        body: JSON.stringify({ session_token: getSessionToken() })
-      });
-      return await parseResponse(res);
-    }
-
-    async function loginPlayer() {
-      const desiredName = document.getElementById("playerSelect").value;
-      const enteredPin = document.getElementById("pinInput").value.trim();
-
-      if (!desiredName) throw new Error("Kies eerst je naam");
-      if (!enteredPin) throw new Error("Voer je pincode in");
-
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/login_player`, {
-        method: "POST",
-        mode: "cors",
-        cache: "no-store",
-        headers: rpcHeaders(),
-        body: JSON.stringify({
-          desired_name: desiredName,
-          entered_pin: enteredPin
-        })
-      });
-
-      const data = await parseResponse(res);
-      setSessionToken(data.session_token);
-      document.getElementById("pinInput").value = "";
-      return data;
-    }
-
-    async function castVote(desiredStatus) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cast_vote`, {
-        method: "POST",
-        mode: "cors",
-        cache: "no-store",
-        headers: rpcHeaders(),
-        body: JSON.stringify({
-          session_token: getSessionToken(),
-          desired_status: desiredStatus
-        })
-      });
-      return await parseResponse(res);
-    }
-
-    async function removeMyVote() {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/remove_my_vote`, {
-        method: "POST",
-        mode: "cors",
-        cache: "no-store",
-        headers: rpcHeaders(),
-        body: JSON.stringify({ session_token: getSessionToken() })
-      });
-      return await parseResponse(res);
-    }
-
-    async function ensureLoggedIn() {
-      if (getSessionToken()) return;
-      await loginPlayer();
-    }
-
-    async function handleVote(status) {
-      try {
-        await ensureLoggedIn();
-        const state = await castVote(status);
-        renderState(state);
-      } catch (err) {
-        if (err instanceof Error && err.message.includes("Sessie ongeldig")) {
-          clearSessionToken();
-        }
-        alert(err instanceof Error ? err.message : "Er ging iets mis");
-      }
-    }
-
-    async function handleRemove() {
-      try {
-        const state = await removeMyVote();
-        renderState(state);
-      } catch (err) {
-        if (err instanceof Error && err.message.includes("Sessie ongeldig")) {
-          clearSessionToken();
-        }
-        alert(err instanceof Error ? err.message : "Er ging iets mis");
-      }
-    }
-
-    async function load() {
-      try {
-        const state = await getState();
-        renderState(state);
-      } catch (err) {
-        document.getElementById("answer").textContent = "Fout";
-        document.getElementById("answer").className = "answer nee";
-        document.getElementById("count").textContent = "Kon site niet laden";
-        const rawMessage = err instanceof Error ? err.message : "Onbekende fout";
-        document.getElementById("status").textContent =
-          rawMessage === "Failed to fetch"
-            ? "Netwerk/CORS-fout bij contact met Supabase."
-            : rawMessage;
-        renderList("legendsList", [], "Nog niemand");
-        renderList("losersList", [], "Nog niemand");
-        fillNameSelect([], null, false);
-      }
-    }
-
-    document.getElementById("yesBtn").addEventListener("click", () => handleVote("ja"));
-    document.getElementById("noBtn").addEventListener("click", () => handleVote("nee"));
-    document.getElementById("removeBtn").addEventListener("click", handleRemove);
-
-    load();
-  </script>
 </body>
 </html>

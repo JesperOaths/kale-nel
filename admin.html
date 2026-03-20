@@ -1,529 +1,82 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin - Jas Site</title>
-  <style>
-    :root {
-      --gold: #d4af37;
-      --black: #111111;
-      --soft: #f3f1ec;
-      --soft-2: #ebe7df;
-      --card: rgba(255, 255, 255, 0.9);
-      --muted: #6b7280;
-      --green: #15803d;
-      --red: #b91c1c;
-      --line: rgba(17, 17, 17, 0.08);
-      --shadow: 0 20px 55px rgba(17, 17, 17, 0.1);
-    }
+<meta charset="UTF-8">
+<title>Wordt er gejast?</title>
+<style>
+body {
+  margin:0;
+  font-family: Arial, sans-serif;
+  background:#f5f4f1;
+  overflow-x:hidden;
+}
 
-    * { box-sizing: border-box; }
+.bg-pattern {
+  position:fixed;
+  inset:0;
+  background-image:url('123zwartkaart.png');
+  background-size:240px;
+  opacity:0.12;
+}
 
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 28px;
-      min-height: 100vh;
-      position: relative;
-      overflow-x: hidden;
-      background:
-        radial-gradient(circle at top left, rgba(212, 175, 55, 0.12), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(17, 17, 17, 0.06), transparent 24%),
-        linear-gradient(135deg, var(--soft), #f8f7f3 45%, var(--soft-2));
-      color: var(--black);
-    }
+.dd-center {
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  width:550px;
+  opacity:0.15;
+}
 
-    .page-bg,
-    .brand-watermark,
-    .spinoza-shadow {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-    }
+.spinoza {
+  position:fixed;
+  right:-30px;
+  bottom:0;
+  height:95vh;
+  opacity:0.22;
+}
 
-    .page-bg {
-      background-image: url('./123zwartkaart.png');
-      background-size: 360px;
-      background-repeat: repeat;
-      background-position: center;
-      opacity: 0.05;
-      filter: grayscale(100%) contrast(1.08) brightness(0.98);
-      mix-blend-mode: multiply;
-    }
+.card {
+  position:fixed;
+  left:-30px;
+  top:35%;
+  width:260px;
+  transform:rotate(-12deg);
+  opacity:0.28;
+}
 
-    .brand-watermark {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      width: min(46vw, 500px);
-      transform: translate(-50%, -50%);
-      opacity: 0.115;
-      pointer-events: none;
-      z-index: 0;
-      filter: saturate(0.95) brightness(0.98);
-    }
+.container {
+  position:relative;
+  z-index:2;
+  max-width:820px;
+  margin:80px auto;
+  background:white;
+  padding:40px;
+  border-radius:20px;
+}
 
-    .brand-watermark img {
-      display: block;
-      width: 100%;
-      height: auto;
-    }
-
-    .spinoza-shadow {
-      position: fixed;
-      right: max(2vw, 10px);
-      bottom: 0;
-      width: min(24vw, 260px);
-      opacity: 0.07;
-      pointer-events: none;
-      z-index: 0;
-      filter: blur(0.15px);
-    }
-
-    .spinoza-shadow img {
-      display: block;
-      width: 100%;
-      height: auto;
-    }
-
-    .playing-card-accent {
-      position: fixed;
-      left: max(1vw, 8px);
-      bottom: max(2vh, 14px);
-      width: min(16vw, 160px);
-      opacity: 0.09;
-      transform: rotate(-10deg);
-      pointer-events: none;
-      z-index: 0;
-      filter: grayscale(100%) contrast(1.05);
-      transform-origin: bottom left;
-    }
-
-    .playing-card-accent img {
-      display: block;
-      width: 100%;
-      height: auto;
-      border-radius: 22px;
-    }
-
-    .wrap {
-      max-width: 900px;
-      margin: 0 auto;
-      position: relative;
-      z-index: 2;
-    }
-
-    .topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .home-link {
-      text-decoration: none;
-      color: #2563eb;
-      background: rgba(255,255,255,0.7);
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(37,99,235,0.12);
-      backdrop-filter: blur(6px);
-    }
-
-    .mini-logo {
-      width: 74px;
-      height: 74px;
-      object-fit: contain;
-      filter: drop-shadow(0 6px 14px rgba(0,0,0,0.08));
-    }
-
-    .card {
-      background: var(--card);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.75);
-      border-radius: 24px;
-      padding: 26px;
-      box-shadow: var(--shadow);
-      margin-bottom: 20px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .card::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      background: linear-gradient(135deg, rgba(212,175,55,0.07), transparent 34%, rgba(17,17,17,0.035));
-      pointer-events: none;
-    }
-
-    h1, h2 {
-      margin-top: 0;
-      position: relative;
-      z-index: 1;
-    }
-
-    input {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid rgba(17,17,17,0.1);
-      border-radius: 12px;
-      margin: 8px 0;
-      font-size: 16px;
-      background: rgba(255,255,255,0.82);
-      position: relative;
-      z-index: 1;
-    }
-
-    button {
-      padding: 12px 16px;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      font-size: 15px;
-      margin-right: 8px;
-      margin-top: 8px;
-      transition: transform 0.14s ease, box-shadow 0.14s ease;
-      position: relative;
-      z-index: 1;
-    }
-
-    button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 18px rgba(17,17,17,0.09);
-    }
-
-    .login-btn { background: var(--gold); color: var(--black); }
-    .approve-btn { background: var(--green); color: white; }
-    .reject-btn { background: var(--red); color: white; }
-    .logout-btn { background: var(--black); color: white; }
-
-    .request {
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 16px;
-      margin-top: 12px;
-      background: rgba(250, 250, 250, 0.72);
-      position: relative;
-      z-index: 1;
-    }
-
-    .muted { color: var(--muted); }
-
-    #status {
-      margin-top: 12px;
-      color: var(--muted);
-      white-space: pre-wrap;
-      position: relative;
-      z-index: 1;
-    }
-
-    .hidden { display: none; }
-
-    .row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      position: relative;
-      z-index: 1;
-    }
-
-    .watermark {
-      position: fixed;
-      right: 18px;
-      bottom: 14px;
-      color: rgba(17,17,17,0.28);
-      font-size: 14px;
-      user-select: none;
-      pointer-events: none;
-      z-index: 3;
-      letter-spacing: 0.02em;
-    }
-
-    @media (max-width: 700px) {
-      body { padding: 18px; }
-      .row { grid-template-columns: 1fr; }
-      .mini-logo { width: 62px; height: 62px; }
-      .spinoza-shadow { width: min(30vw, 150px); }
-      .playing-card-accent { width: min(26vw, 112px); opacity: 0.082; }
-      .card { padding: 22px 18px; }
-    }
-  </style>
+.footer {
+  position:fixed;
+  bottom:10px;
+  right:20px;
+  font-size:12px;
+  opacity:0.5;
+}
+</style>
 </head>
 <body>
-  <div class="page-bg"></div>
-  <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
-  <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
-  <div class="playing-card-accent"><img src="./playingcard-accent.png" alt="" /></div>
 
-  <div class="wrap">
-    <div class="topbar">
-      <a href="./index.html" class="home-link">Terug naar site</a>
-      <img src="./logo.png" alt="Logo" class="mini-logo" />
-    </div>
+<div class="bg-pattern"></div>
+<img src="dubbeleD-goud.png" class="dd-center">
+<img src="spinoza-silhouette.png" class="spinoza">
+<img src="playingcard-accent.png" class="card">
 
-    <div class="card">
-      <h1>Adminpaneel</h1>
-      <div class="muted" style="margin-top:-8px; margin-bottom:10px; position:relative; z-index:1;">Versie v8</div>
+<div class="container">
+<h1>Wordt er gejast donderdag? <img src="logo.png" style="height:28px;vertical-align:middle;"></h1>
+<p>Nee</p>
+</div>
 
-      <div id="loginView">
-        <div class="row">
-          <input id="usernameInput" type="text" placeholder="Gebruikersnaam" />
-          <input id="passwordInput" type="password" placeholder="Wachtwoord" />
-        </div>
-        <button id="loginBtn" class="login-btn" type="button">Inloggen</button>
-      </div>
+<div class="footer">Made by Bruis · v12</div>
 
-      <div id="adminView" class="hidden">
-        <p id="welcomeText"></p>
-        <button id="logoutBtn" class="logout-btn" type="button">Uitloggen</button>
-      </div>
-
-      <div id="status"></div>
-    </div>
-
-    <div id="requestsCard" class="card hidden">
-      <h2>Openstaande naam-aanvragen</h2>
-      <div id="requestsList"></div>
-    </div>
-  </div>
-
-  <div class="watermark">Made by Bruis · v8</div>
-
-  <script>
-    const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
-    const ADMIN_SESSION_KEY = "jas_admin_session_v5";
-
-    function rpcHeaders() {
-      return {
-        apikey: SUPABASE_PUBLISHABLE_KEY,
-        "Content-Type": "application/json",
-        Accept: "application/json"
-      };
-    }
-
-    async function parseResponse(res) {
-      const text = await res.text();
-      let data = null;
-
-      try {
-        data = text ? JSON.parse(text) : null;
-      } catch {
-        throw new Error(text || `HTTP ${res.status}`);
-      }
-
-      if (!res.ok) {
-        throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
-      }
-
-      return data;
-    }
-
-    function getAdminSessionToken() {
-      return localStorage.getItem(ADMIN_SESSION_KEY);
-    }
-
-    function setAdminSessionToken(token) {
-      localStorage.setItem(ADMIN_SESSION_KEY, token);
-    }
-
-    function clearAdminSessionToken() {
-      localStorage.removeItem(ADMIN_SESSION_KEY);
-    }
-
-    function setStatus(text) {
-      document.getElementById("status").textContent = text || "";
-    }
-
-    function escapeHtml(value) {
-      return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#39;");
-    }
-
-    function showLoggedOut() {
-      document.getElementById("loginView").classList.remove("hidden");
-      document.getElementById("adminView").classList.add("hidden");
-      document.getElementById("requestsCard").classList.add("hidden");
-      document.getElementById("requestsList").innerHTML = "";
-    }
-
-    function showLoggedIn(username) {
-      document.getElementById("loginView").classList.add("hidden");
-      document.getElementById("adminView").classList.remove("hidden");
-      document.getElementById("requestsCard").classList.remove("hidden");
-      document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`;
-    }
-
-    function renderRequests(requests) {
-      const root = document.getElementById("requestsList");
-      root.innerHTML = "";
-
-      if (!requests || requests.length === 0) {
-        root.innerHTML = `<p class="muted">Geen openstaande aanvragen.</p>`;
-        return;
-      }
-
-      requests.forEach((req) => {
-        const div = document.createElement("div");
-        div.className = "request";
-
-        const noteHtml = req.requester_note
-          ? escapeHtml(req.requester_note).replaceAll("\n", "<br>")
-          : "<span class='muted'>Geen toelichting</span>";
-
-        div.innerHTML = `
-          <strong>${escapeHtml(req.display_name)}</strong><br>
-          <span class="muted">E-mail:</span> ${escapeHtml(req.requester_email || "Onbekend")}<br>
-          <span class="muted">Aangevraagd op:</span> ${new Date(req.created_at).toLocaleString("nl-NL")}<br>
-          <span class="muted">Toelichting:</span><br>
-          <div style="margin-top:6px;">${noteHtml}</div>
-          <div style="margin-top:12px;">
-            <button class="approve-btn" data-id="${req.id}" data-decision="approved">Goedkeuren</button>
-            <button class="reject-btn" data-id="${req.id}" data-decision="rejected">Afwijzen</button>
-          </div>
-        `;
-
-        root.appendChild(div);
-      });
-
-      document.querySelectorAll("[data-decision]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const requestId = Number(btn.dataset.id);
-          const decision = btn.dataset.decision;
-          try {
-            setStatus("Opslaan...");
-            await decideRequest(requestId, decision);
-            const data = await getRequests();
-            renderRequests(data.requests);
-            setStatus("Bijgewerkt.");
-          } catch (err) {
-            const rawMessage = err instanceof Error ? err.message : "Er ging iets mis";
-            setStatus(rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage);
-          }
-        });
-      });
-    }
-
-    async function adminLogin() {
-      const username = document.getElementById("usernameInput").value.trim();
-      const password = document.getElementById("passwordInput").value;
-
-      if (!username) throw new Error("Vul een gebruikersnaam in");
-      if (!password) throw new Error("Vul een wachtwoord in");
-
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_login`, {
-        method: "POST",
-        mode: "cors",
-        cache: "no-store",
-        headers: rpcHeaders(),
-        body: JSON.stringify({
-          input_username: username,
-          input_password: password
-        })
-      });
-
-      const data = await parseResponse(res);
-      setAdminSessionToken(data.admin_session_token);
-      document.getElementById("passwordInput").value = "";
-      return data;
-    }
-
-    async function checkSession() {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, {
-        method: "POST",
-        mode: "cors",
-        cache: "no-store",
-        headers: rpcHeaders(),
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken() })
-      });
-      return await parseResponse(res);
-    }
-
-    async function getRequests() {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_requests`, {
-        method: "POST",
-        mode: "cors",
-        cache: "no-store",
-        headers: rpcHeaders(),
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken() })
-      });
-      return await parseResponse(res);
-    }
-
-    async function decideRequest(requestId, decision) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request`, {
-        method: "POST",
-        mode: "cors",
-        cache: "no-store",
-        headers: rpcHeaders(),
-        body: JSON.stringify({
-          admin_session_token: getAdminSessionToken(),
-          request_id_input: requestId,
-          decision
-        })
-      });
-      return await parseResponse(res);
-    }
-
-    async function loadAdmin() {
-      try {
-        setStatus("");
-        const token = getAdminSessionToken();
-
-        if (!token) {
-          showLoggedOut();
-          return;
-        }
-
-        const session = await checkSession();
-
-        if (!session.ok) {
-          clearAdminSessionToken();
-          showLoggedOut();
-          return;
-        }
-
-        showLoggedIn(session.username);
-
-        const data = await getRequests();
-        renderRequests(data.requests);
-      } catch (err) {
-        clearAdminSessionToken();
-        showLoggedOut();
-        const rawMessage = err instanceof Error ? err.message : "Er ging iets mis";
-        setStatus(rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage);
-      }
-    }
-
-    document.getElementById("loginBtn").addEventListener("click", async () => {
-      try {
-        setStatus("Inloggen...");
-        const data = await adminLogin();
-        showLoggedIn(data.username);
-        const requests = await getRequests();
-        renderRequests(requests.requests);
-        setStatus("");
-      } catch (err) {
-        const rawMessage = err instanceof Error ? err.message : "Er ging iets mis";
-        setStatus(rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage);
-      }
-    });
-
-    document.getElementById("logoutBtn").addEventListener("click", () => {
-      clearAdminSessionToken();
-      showLoggedOut();
-      setStatus("Uitgelogd.");
-    });
-
-    loadAdmin();
-  </script>
 </body>
 </html>
