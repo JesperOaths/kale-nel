@@ -400,150 +400,8 @@
       .topbar { padding: 0 14px; }
       .card { padding: 20px 16px; max-width: calc(100vw - 28px); width: calc(100vw - 28px); margin: 14px auto; }
     }
-  
-    /* v42 shared polish */
-    :root {
-      --gold: #c8a43b;
-      --gold-dark: #9b7822;
-      --black: #171311;
-      --muted: #6f5b35;
-      --soft-paper: rgba(255,255,255,0.12);
-      --glass-border: rgba(255,255,255,0.40);
-    }
-    body {
-      background:
-        linear-gradient(135deg, rgba(247,244,238,0.30), rgba(239,234,225,0.24)),
-        url('./site-bg-desktop.webp') center center / cover no-repeat fixed;
-      color: var(--black);
-    }
-    @media (orientation: portrait) {
-      body {
-        background:
-          linear-gradient(135deg, rgba(247,244,238,0.26), rgba(239,234,225,0.22)),
-          url('./site-bg-mobile.webp') center center / cover no-repeat fixed;
-      }
-    }
-    .scene, .page-bg, .brand-watermark, .spinoza-shadow, .kale-hand, .playing-card-accent { display:none !important; }
-    .card {
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.07)),
-        radial-gradient(circle at top left, rgba(255,255,255,0.18), transparent 34%),
-        linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
-      backdrop-filter: blur(28px) saturate(1.04);
-      -webkit-backdrop-filter: blur(28px) saturate(1.04);
-      border: 1px solid var(--glass-border);
-      box-shadow: 0 24px 60px rgba(17,17,17,0.14);
-    }
-    .card::before {
-      background:
-        linear-gradient(120deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.08) 18%, transparent 42%),
-        radial-gradient(circle at top right, rgba(200,164,59,0.08), transparent 28%);
-    }
-    .muted { color: var(--muted) !important; }
-    .notice, .info-band, .data-box, details, .activation-tools, .activation-link-box {
-      background: rgba(255,255,255,0.36) !important;
-      border-color: rgba(23,19,17,0.08) !important;
-      color: var(--black);
-    }
-    input, textarea, select {
-      background: rgba(255,255,255,0.56);
-      border-color: rgba(23,19,17,0.10);
-      color: var(--black);
-    }
-    button, .pill-link, .home-link, .ghost-link, .text-link {
-      transition: transform .1s ease, box-shadow .12s ease, filter .12s ease, background-color .12s ease, border-color .12s ease;
-    }
-    @media (hover: hover) and (pointer: fine) {
-      button:hover, .pill-link:hover, .home-link:hover, .ghost-link:hover, .text-link:hover {
-        transform: none;
-        box-shadow: 0 8px 16px rgba(17,17,17,0.06);
-        filter: brightness(1.01);
-      }
-    }
-    button:active, .pill-link:active, .home-link:active, .ghost-link:active, .text-link:active {
-      transform: scale(0.992);
-      box-shadow: 0 3px 10px rgba(17,17,17,0.05);
-      filter: brightness(0.99);
-    }
-
-    /* v42 admin layout + palette */
-    .wrap { max-width: 1220px; }
-    .topbar { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:18px; }
-    #status {
-      margin-top: 12px;
-      border-radius: 16px;
-      padding: 12px 14px;
-      background: rgba(255,255,255,0.34);
-      border: 1px solid rgba(23,19,17,0.08);
-      color: var(--black);
-      min-height: 0;
-    }
-    #status:empty { display:none; }
-    .admin-grid {
-      display:grid;
-      grid-template-columns: minmax(0,1.25fr) minmax(340px,0.95fr);
-      gap: 18px;
-      align-items:start;
-    }
-    .full-span { grid-column: 1 / -1; }
-    .request {
-      position: relative;
-      padding: 18px;
-      border-radius: 22px;
-      background: rgba(255,255,255,0.32);
-      border: 1px solid rgba(23,19,17,0.08);
-      margin-bottom: 14px;
-    }
-    .request-grid {
-      display:grid;
-      grid-template-columns: repeat(3, minmax(0,1fr));
-      gap: 10px;
-      margin-top: 12px;
-    }
-    .action-row { display:flex; flex-wrap:wrap; gap:10px; margin-top: 12px; }
-    .action-row button { flex: 1 1 170px; min-height: 48px; }
-    .decision-reason { min-height: 84px; resize: vertical; }
-    .inline-status { margin-top: 12px; }
-    .inline-status:empty { display:none; }
-    .state-badge {
-      display:inline-flex; align-items:center; gap:8px;
-      font-size: 0.78rem; font-weight:700; letter-spacing:0.02em;
-      border-radius:999px; padding:8px 12px; border:1px solid transparent; margin-bottom:10px;
-    }
-    .state-badge::before { content:''; width:8px; height:8px; border-radius:50%; background:currentColor; }
-    .state-pending { color:#7b6021; background:rgba(200,164,59,0.16); border-color:rgba(200,164,59,0.28); }
-    .state-approved, .state-awaiting { color:#614800; background:rgba(200,164,59,0.18); border-color:rgba(200,164,59,0.28); }
-    .state-activated { color:#171311; background:rgba(23,19,17,0.10); border-color:rgba(23,19,17,0.14); }
-    .state-rejected, .state-revoked { color:#5f4332; background:rgba(95,67,50,0.12); border-color:rgba(95,67,50,0.18); }
-    .approve-btn, .link-btn, .mail-btn, .copy-btn, .login-btn { background: linear-gradient(180deg, #d4af37, #c19a2d); color:#171311; font-weight:700; }
-    .reject-btn, .revoke-btn, .logout-btn { background: rgba(23,19,17,0.86); color:#f7f3ea; }
-    .copy-toast {
-      display:inline-block; margin-left:8px; padding:6px 10px; border-radius:999px; font-size:0.8rem;
-      background:rgba(200,164,59,0.18); color:#614800;
-    }
-    .dev-chip {
-      position:absolute; top:16px; right:16px; z-index:3;
-      display:inline-flex; align-items:center; gap:8px;
-      border:none; border-radius:999px; padding:8px 12px; font-weight:700;
-      background:rgba(23,19,17,0.86); color:#f7f3ea;
-      box-shadow:0 8px 18px rgba(17,17,17,0.12);
-    }
-    .dev-login-box { margin-top:12px; }
-    .dev-login-box[open] { margin-top:12px; }
-    .dev-login-box summary { display:none; }
-    .dev-login-inner { padding-top:2px; }
-    .section-head { display:flex; justify-content:space-between; align-items:end; gap:12px; margin-bottom:12px; }
-    .section-subtle { font-size:0.94rem; }
-    @media (max-width: 980px) {
-      .admin-grid { grid-template-columns: 1fr; }
-      .request-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
-      .dev-chip { position:static; margin-bottom:10px; }
-    }
-    @media (max-width: 640px) {
-      .request-grid { grid-template-columns: 1fr; }
-    }
-
   </style>
+  <link rel="stylesheet" href="./theme-v43.css" />
 </head>
 <body>
   <div class="scene" aria-hidden="true">
@@ -558,12 +416,12 @@
   <div class="wrap">
     <div class="topbar">
       <a href="./index.html" class="home-link">Terug naar site</a>
-      <img src="./logo.png" alt="Logo" class="mini-logo" />
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;"><span class="test-chip">Testmodus beschikbaar</span><img src="./logo.png" alt="Logo" class="mini-logo" /></div>
     </div>
 
     <div class="card">
       <h1>Adminpaneel</h1>
-      <div class="muted" style="margin-top:-8px; margin-bottom:10px;">Versie v42</div>
+      <div class="muted" style="margin-top:-8px; margin-bottom:10px;">Versie v43</div>
       <div id="loginView">
         <div class="row">
           <input id="usernameInput" type="text" placeholder="Gebruikersnaam" autocomplete="username" autocapitalize="none" spellcheck="false" />
@@ -571,65 +429,36 @@
         </div>
         <input id="totpInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="Google Authenticator-code (6 cijfers)" autocomplete="one-time-code" />
         <button id="loginBtn" class="login-btn" type="button">Inloggen</button>
-        <button id="devChip" class="dev-chip" type="button" aria-expanded="false">Testmodus</button>
-        <details class="dev-login-box" id="devLoginBox">
+        <details class="dev-login-box">
           <summary>Test-login zonder Authenticator</summary>
-          <div class="dev-login-inner">
-            <div class="muted" style="margin-top:10px;">Snelle bugfix-modus. Gebruik <strong>1</strong> / <strong>1</strong> / <strong>1</strong>.</div>
-            <input id="devKeyInput" type="password" inputmode="numeric" maxlength="8" placeholder="Dev key" autocomplete="one-time-code" style="margin-top:10px;" />
-            <button id="devLoginBtn" class="login-btn" type="button" style="margin-top:10px;">Dev-login zonder Authenticator</button>
-            <div id="devLoginHint" class="muted" style="margin-top:10px;">Dev-login: gebruikersnaam <strong>1</strong>, wachtwoord <strong>1</strong>, dev key <strong>1</strong>.</div>
-          </div>
+          <div class="muted" style="margin-top:10px;">Snelle bugfix-modus. Gebruik <strong>1</strong> / <strong>1</strong> / <strong>1</strong>.</div>
+          <input id="devKeyInput" type="password" inputmode="numeric" maxlength="8" placeholder="Dev key" autocomplete="one-time-code" style="margin-top:10px;" />
+          <button id="devLoginBtn" class="login-btn" type="button" style="margin-top:10px;">Dev-login zonder Authenticator</button>
+          <div id="devLoginHint" class="muted" style="margin-top:10px;">Dev-login: gebruikersnaam <strong>1</strong>, wachtwoord <strong>1</strong>, dev key <strong>1</strong>.</div>
         </details>
         <div class="muted" style="margin-top:10px;">Log in met je gebruikersnaam, wachtwoord en 6-cijferige code uit Google Authenticator.</div>
       </div>
       <div id="adminView" class="hidden">
-        <div class="section-head">
-          <div>
-            <p id="welcomeText" style="margin:0 0 6px 0;"></p>
-            <div class="muted section-subtle">Goedgekeurde aanvragen kunnen direct een activatielink krijgen. Redenen zijn optioneel.</div>
-          </div>
-          <button id="logoutBtn" class="logout-btn" type="button">Uitloggen</button>
-        </div>
+        <p id="welcomeText"></p>
+        <button id="logoutBtn" class="logout-btn" type="button">Uitloggen</button>
       </div>
-      <div class="info-band">Veilige flow: aanvraag → goedkeuring → persoonlijke activatielink → speler kiest zelf 4-cijferige pincode → daarna normaal inloggen op de hoofdpagina.</div>
+      <div class="info-band">Veilige flow: aanvraag → goedkeuring → unieke activatielink → speler zet zelf een 4-cijferige pincode → daarna inloggen op de hoofdpagina. Als automatische mail is ingesteld, wordt die meteen verstuurd.</div>
       <div id="status"></div>
     </div>
 
-    <div class="admin-grid">
-      <div id="requestsCard" class="card hidden">
-        <div class="section-head">
-          <div>
-            <h2 style="margin:0;">Openstaande naam-aanvragen</h2>
-            <div class="muted section-subtle">Goedkeuren, afwijzen, of meteen activatielink klaarmaken na goedkeuring.</div>
-          </div>
-        </div>
-        <div id="requestsList"></div>
-      </div>
+    <div id="workspace" class="admin-grid hidden"><div><div id="requestsCard" class="card hidden">
+      <h2>Openstaande naam-aanvragen</h2>
+      <div class="muted" style="margin-bottom:12px;">Doel: per goedgekeurde aanvraag een unieke activatielink genereren voor precies deze naam en precies dit e-mailadres.</div>
+      <div id="requestsList"></div>
+    </div>
 
-      <div id="accessCard" class="card hidden">
-        <div class="section-head">
-          <div>
-            <h2 style="margin:0;">Goedgekeurd / geactiveerd</h2>
-            <div class="muted section-subtle">Hier kun je bestaande toegang intrekken.</div>
-          </div>
-        </div>
-        <div id="accessList"></div>
-      </div>
-
-      <div id="historyCard" class="card hidden full-span">
-        <div class="section-head">
-          <div>
-            <h2 style="margin:0;">Geschiedenis aanvragen</h2>
-            <div class="muted section-subtle">Volledig overzicht van eerdere beslissingen.</div>
-          </div>
-        </div>
-        <div id="historyList"></div>
-      </div>
+    <div id="historyCard" class="card hidden">
+      <h2>Geschiedenis aanvragen</h2>
+      <div id="historyList"></div>
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v42</div>
+  <div class="watermark">Made by Bruis · v43</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -645,28 +474,9 @@
     }
     function clearAdminSessionToken() { sessionStorage.removeItem(ADMIN_SESSION_KEY); localStorage.removeItem(ADMIN_SESSION_KEY); }
     function setStatus(text) { document.getElementById("status").textContent = text || ""; }
-    function setInlineStatus(requestId, text = '', tone = 'warn') {
-      const el = document.getElementById(`inline-status-${requestId}`);
-      if (!el) return;
-      el.className = `notice inline-status show ${tone === 'ok' ? 'ok' : 'warn'}`;
-      el.textContent = text || '';
-      if (!text) {
-        el.classList.remove('show');
-        el.textContent = '';
-      }
-    }
-    function toggleDevBox(forceOpen) {
-      const box = document.getElementById('devLoginBox');
-      const chip = document.getElementById('devChip');
-      if (!box || !chip) return;
-      const next = typeof forceOpen === 'boolean' ? forceOpen : !box.open;
-      box.open = next;
-      chip.setAttribute('aria-expanded', next ? 'true' : 'false');
-      chip.textContent = next ? 'Testmodus actief' : 'Testmodus';
-    }
     function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;"); }
-    function showLoggedOut() { document.getElementById("loginView").classList.remove("hidden"); document.getElementById("adminView").classList.add("hidden"); document.getElementById("requestsCard").classList.add("hidden"); document.getElementById("historyCard").classList.add("hidden"); document.getElementById("accessCard").classList.add("hidden"); document.getElementById("requestsList").innerHTML = ""; document.getElementById("historyList").innerHTML = ""; document.getElementById("accessList").innerHTML = ""; }
-    function showLoggedIn(username) { document.getElementById("loginView").classList.add("hidden"); document.getElementById("adminView").classList.remove("hidden"); document.getElementById("requestsCard").classList.remove("hidden"); document.getElementById("historyCard").classList.remove("hidden"); document.getElementById("accessCard").classList.remove("hidden"); document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`; }
+    function showLoggedOut() { document.getElementById("loginView").classList.remove("hidden"); document.getElementById("adminView").classList.add("hidden"); document.getElementById("workspace").classList.add("hidden"); document.getElementById("requestsCard").classList.add("hidden"); document.getElementById("historyCard").classList.add("hidden"); document.getElementById("requestsList").innerHTML = ""; document.getElementById("historyList").innerHTML = ""; }
+    function showLoggedIn(username) { document.getElementById("loginView").classList.add("hidden"); document.getElementById("adminView").classList.remove("hidden"); document.getElementById("workspace").classList.remove("hidden"); document.getElementById("requestsCard").classList.remove("hidden"); document.getElementById("historyCard").classList.remove("hidden"); document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`; }
 
     function formatDateTime(value) { return value ? new Date(value).toLocaleString('nl-NL') : 'Onbekend'; }
     function getActivationBaseUrl() { return new URL('./activate.html', window.location.href).toString(); }
@@ -674,7 +484,7 @@
       return `
         <div class="activation-tools hidden" id="activation-tools-${req.id}">
           <div><strong>Activatielink klaarzetten</strong></div>
-          <div class="muted" style="margin-top:4px;">Genereer hier een veilige link, kopieer hem, of open meteen een e-mailconcept.</div>
+          <div class="muted" style="margin-top:4px;">Genereer hier een veilige link, kopieer hem, open meteen een e-mailconcept, of stuur automatisch een e-mail als de mailfunctie is ingesteld.</div>
           <div class="activation-meta">
             ${metaBox('E-mail', req.requester_email || 'Onbekend')}
             <div class="data-box"><span class="label">Activatie verloopt</span><span id="activation-expires-${req.id}">Nog niet gegenereerd</span></div>
@@ -683,7 +493,6 @@
           <div class="action-row">
             <button class="copy-btn" type="button" data-copy-activation data-id="${req.id}">Kopieer activatielink</button>
             <button class="mail-btn" type="button" data-mail-activation data-id="${req.id}">Open e-mailconcept</button>
-            <span class="copy-toast hidden" id="copy-toast-${req.id}">Gekopieerd</span>
           </div>
         </div>
       `;
@@ -715,7 +524,6 @@
     }
     function statusMeta(req, includeDecision = false) {
       const decision = String(req.decision || '').toLowerCase();
-      if (req.revoked === true || decision === 'revoked' || req.access_revoked === true) return { cls: 'state-revoked', label: 'Ingetrokken' };
       if (hasPin(req)) return { cls: 'state-activated', label: 'Activated' };
       if (decision === 'rejected' || req.approved === false) return { cls: 'state-rejected', label: 'Afgewezen' };
       if (decision === 'approved' || req.approved === true || req.active === true) return { cls: includeDecision ? 'state-awaiting' : 'state-approved', label: includeDecision ? 'Awaiting activation' : 'Approved' };
@@ -759,11 +567,14 @@
       const root = document.getElementById("requestsList");
       root.innerHTML = "";
       if (!requests || requests.length === 0) { root.innerHTML = `<p class="muted">Geen openstaande aanvragen.</p>`; return; }
-      requests.forEach((req) => {
+      const q = (document.getElementById('requestSearch')?.value || '').trim().toLowerCase();
+      (requests || []).filter((req) => {
+        if (!q) return true;
+        return [req.display_name, req.requester_email].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
+      }).forEach((req) => {
         const div = document.createElement('div');
         div.className = 'request';
-        div.id = `request-card-${req.id}`;
-        div.innerHTML = `${requestHtml(req)}<div style="margin-top:12px;"><textarea class="decision-reason" data-id="${req.id}" placeholder="Reden (optioneel)"></textarea><div class="action-row"><button class="approve-btn" type="button" data-id="${req.id}" data-decision="approved">Goedkeuren</button><button class="reject-btn" type="button" data-id="${req.id}" data-decision="rejected">Afwijzen</button><button class="link-btn" type="button" data-generate-activation data-id="${req.id}">Maak activatielink</button></div><div class="notice inline-status" id="inline-status-${req.id}"></div>${activationPanelHtml(req)}</div>`;
+        div.innerHTML = `${requestHtml(req)}<div style="margin-top:12px;"><textarea class="decision-reason" data-id="${req.id}" placeholder="Reden (optioneel)"></textarea><div class="action-row"><button class="approve-btn" type="button" data-id="${req.id}" data-decision="approved">Goedkeuren</button><button class="reject-btn" type="button" data-id="${req.id}" data-decision="rejected">Afwijzen</button><button class="link-btn" type="button" data-generate-activation data-id="${req.id}">Maak activatielink</button></div><div class="inline-msg" id="request-msg-${req.id}">Klaar om te beoordelen.</div>${activationPanelHtml(req)}</div>`;
         root.appendChild(div);
       });
       document.querySelectorAll('[data-decision]').forEach((btn) => {
@@ -772,59 +583,48 @@
           const decision = btn.dataset.decision;
           const reasonEl = document.querySelector(`.decision-reason[data-id="${requestId}"]`);
           const decisionReason = reasonEl ? reasonEl.value.trim() : '';
+          const msg = document.getElementById(`request-msg-${requestId}`);
           try {
-            setInlineStatus(requestId, decision === 'approved' ? 'Goedkeuren...' : 'Afwijzen...');
-            setStatus(decision === 'approved' ? 'Aanvraag goedkeuren...' : 'Aanvraag afwijzen...');
-            await decideRequest(requestId, decision, decisionReason);
+            if (msg) { msg.textContent = 'Besluit opslaan...'; msg.className = 'inline-msg'; }
+            await decideRequest(requestId, decision, decisionReason || null);
             if (decision === 'approved') {
-              setInlineStatus(requestId, 'Goedgekeurd. Activatielink wordt meteen klaargezet...', 'ok');
-              try {
-                const linkData = await createActivationLink(requestId);
-                showActivationPanel(requestId, linkData);
-                setInlineStatus(requestId, 'Goedgekeurd en activatielink klaar. Kopieer hem of open meteen een e-mailconcept.', 'ok');
-                setStatus('Goedgekeurd en activatielink gemaakt.');
-                const card = document.getElementById(`request-card-${requestId}`);
-                const badge = card?.querySelector('.state-badge');
-                if (badge) { badge.className = 'state-badge state-awaiting'; badge.textContent = 'Awaiting activation'; }
-              } catch (err) {
-                const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
-                setInlineStatus(requestId, rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
-                setStatus('Goedgekeurd, maar activatielink aanmaken mislukte.');
+              let mailMessage = ' Aanvraag is goedgekeurd en activatielink staat klaar.';
+              const linkData = await createActivationLink(requestId);
+              showActivationPanel(requestId, linkData);
+              if (AUTO_EMAIL_ENDPOINT) {
+                try {
+                  await sendActivationEmail(requestId);
+                  mailMessage = ' Aanvraag is goedgekeurd, activatielink is gemaakt en e-mail is automatisch verstuurd.';
+                } catch (mailErr) {
+                  mailMessage = ` Aanvraag is goedgekeurd en activatielink is gemaakt, maar de automatische e-mail mislukte: ${mailErr instanceof Error ? mailErr.message : mailErr}`;
+                }
               }
-            } else {
-              const data = await getRequests();
-              renderRequests(data.requests);
-              setStatus('Aanvraag afgewezen en bijgewerkt.');
+              if (msg) { msg.textContent = 'Goedgekeurd.' + mailMessage; msg.className = 'inline-msg ok'; }
+            } else if (msg) {
+              msg.textContent = 'Afwijzing opgeslagen.'; msg.className = 'inline-msg ok';
             }
-            const history = await getHistory();
-            renderHistory(history.history);
-            renderAccess(history.history);
+            await refreshAdminLists();
+            setStatus(decision === 'approved' ? 'Aanvraag goedgekeurd.' : 'Aanvraag afgewezen.');
           } catch (err) {
             const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
-            setInlineStatus(requestId, rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
+            if (msg) { msg.textContent = rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage; msg.className = 'inline-msg error'; }
             setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
           }
         });
       });
-      document.querySelectorAll('[data-generate-activation]').forEach((btn) => {
+       document.querySelectorAll('[data-generate-activation]').forEach((btn) => {
         btn.addEventListener('click', async () => {
           const requestId = Number(btn.dataset.id);
-          const card = document.getElementById(`request-card-${requestId}`);
-          const badgeText = card?.querySelector('.state-badge')?.textContent?.toLowerCase() || '';
-          if (badgeText.includes('openstaand')) {
-            setInlineStatus(requestId, 'Keur deze aanvraag eerst goed. Daarna wordt de activatielink automatisch klaargezet.');
-            return;
-          }
+          const msg = document.getElementById(`request-msg-${requestId}`) || document.getElementById(`activation-msg-${requestId}`);
           try {
-            setInlineStatus(requestId, 'Activatielink maken...');
-            setStatus('Activatielink maken...');
+            if (msg) { msg.textContent = 'Activatielink maken...'; msg.className = 'inline-msg'; }
             const linkData = await createActivationLink(requestId);
             showActivationPanel(requestId, linkData);
-            setInlineStatus(requestId, 'Activatielink gemaakt. Kopieer hem of open meteen een e-mailconcept.', 'ok');
+            if (msg) { msg.textContent = 'Activatielink gemaakt.'; msg.className = 'inline-msg ok'; }
             setStatus('Activatielink gemaakt.');
           } catch (err) {
             const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
-            setInlineStatus(requestId, rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
+            if (msg) { msg.textContent = rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage; msg.className = 'inline-msg error'; }
             setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
           }
         });
@@ -837,7 +637,7 @@
           if (!url) { setStatus('Maak eerst een activatielink.'); return; }
           try {
             await navigator.clipboard.writeText(url);
-            setStatus('Activatielink gekopieerd.');
+            const msg = document.getElementById(`activation-msg-${requestId}`); if (msg) { msg.textContent = 'Gekopieerd.'; msg.className = 'inline-msg ok'; } setStatus('Activatielink gekopieerd.');
           } catch {
             setStatus('Kopiëren lukte niet automatisch. Selecteer de link handmatig.');
           }
@@ -866,7 +666,21 @@
             'Groet,',
             'Wordt er gejast'
           ].filter(Boolean).join('\n');
-          window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+          const msg = document.getElementById(`activation-msg-${requestId}`); if (msg) { msg.textContent = 'E-mailconcept geopend.'; msg.className = 'inline-msg ok'; } window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        });
+      });
+      document.querySelectorAll('[data-send-activation]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const requestId = Number(btn.dataset.id);
+          const msg = document.getElementById(`activation-msg-${requestId}`);
+          if (!AUTO_EMAIL_ENDPOINT) { if (msg) { msg.textContent = 'Automatische e-mail is nog niet ingesteld. Deploy eerst de Edge Function en vul AUTO_EMAIL_ENDPOINT in.'; msg.className = 'inline-msg error'; } return; }
+          try {
+            if (msg) { msg.textContent = 'Automatische e-mail versturen...'; msg.className = 'inline-msg'; }
+            await sendActivationEmail(requestId);
+            if (msg) { msg.textContent = 'Automatische e-mail verzonden.'; msg.className = 'inline-msg ok'; }
+          } catch (err) {
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Automatische e-mail mislukt'; msg.className = 'inline-msg error'; }
+          }
         });
       });
     }
@@ -874,68 +688,53 @@
     function renderHistory(items) {
       const root = document.getElementById('historyList');
       root.innerHTML = '';
-      if (!items || items.length === 0) { root.innerHTML = `<p class="muted">Nog geen geschiedenis.</p>`; return; }
-      items.forEach((item) => {
+      const q = (document.getElementById('historySearch')?.value || '').trim().toLowerCase();
+      const filtered = (items || []).filter((item) => {
+        const state = statusMeta(item, true).label.toLowerCase();
+        const stateKey = statusMeta(item, true).cls.replace('state-','');
+        const matchFilter = historyFilter === 'all' || stateKey === historyFilter;
+        const matchQuery = !q || [item.display_name, item.requester_email, item.decision].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
+        return matchFilter && matchQuery;
+      });
+      if (filtered.length === 0) { root.innerHTML = `<p class="muted">Geen resultaten.</p>`; return; }
+      filtered.forEach((item) => {
         const div = document.createElement('div');
         div.className = 'request';
-        div.innerHTML = `${requestHtml(item, true)}<div class="muted" style="margin-top:10px;">${item.decided_at ? new Date(item.decided_at).toLocaleString('nl-NL') : ''}</div>`;
+        const canLink = String(item.decision || '').toLowerCase() === 'approved' || item.approved === true || item.active === true || hasPin(item);
+        div.innerHTML = `${requestHtml(item, true)}<div class="muted" style="margin-top:10px;">${item.decided_at ? new Date(item.decided_at).toLocaleString('nl-NL') : ''}</div>${canLink ? `<div class="compact-actions"><button class="link-btn" type="button" data-generate-activation data-id="${item.id}">Regenerate-link</button><button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${item.id}">Toegang intrekken</button></div>${activationPanelHtml(item)}` : ''}<div class="inline-msg" id="history-msg-${item.id}">Geschiedenisitem.</div>`;
         root.appendChild(div);
       });
-    }
-
-    function renderAccess(items) {
-      const root = document.getElementById('accessList');
-      root.innerHTML = '';
-      const relevant = (items || []).filter((item) => item.approved === true || item.active === true || hasPin(item));
-      if (!relevant.length) { root.innerHTML = `<p class="muted">Nog geen goedgekeurde of geactiveerde spelers.</p>`; return; }
-      relevant.forEach((item) => {
-        const div = document.createElement('div');
-        div.className = 'request';
-        const status = statusMeta(item, true);
-        div.innerHTML = `
-          <div class="request-head">
-            <div>
-              <div class="state-badge ${status.cls}">${status.label}</div>
-              <strong>${escapeHtml(item.display_name)}</strong><br>
-              <span class="muted">E-mail:</span> ${escapeHtml(item.requester_email || item.approved_email || 'Onbekend')}
-            </div>
-          </div>
-          <div class="request-grid">
-            ${metaBox('Status', status.label)}
-            ${metaBox('Aangevraagd', item.created_at ? new Date(item.created_at).toLocaleString('nl-NL') : 'Onbekend')}
-            ${metaBox('Beslist', item.decided_at ? new Date(item.decided_at).toLocaleString('nl-NL') : 'Onbekend')}
-          </div>
-          <textarea class="decision-reason" data-revoke-id="${item.id}" placeholder="Opmerking bij intrekken (optioneel)"></textarea>
-          <div class="action-row">
-            <button class="revoke-btn" type="button" data-revoke-access data-id="${item.id}">Toegang intrekken</button>
-          </div>
-          <div class="notice inline-status" id="inline-status-revoke-${item.id}"></div>
-        `;
-        root.appendChild(div);
-      });
-      document.querySelectorAll('[data-revoke-access]').forEach((btn) => {
-        btn.addEventListener('click', async () => {
+      document.querySelectorAll('[data-history-filter]').forEach((btn)=>{ btn.classList.toggle('active', btn.dataset.historyFilter===historyFilter); });
+      document.querySelectorAll('[data-revoke-access]').forEach((btn)=> {
+        btn.addEventListener('click', async ()=> {
           const requestId = Number(btn.dataset.id);
-          const reasonEl = document.querySelector(`.decision-reason[data-revoke-id="${requestId}"]`);
-          const reason = reasonEl ? reasonEl.value.trim() : '';
-          const inline = document.getElementById(`inline-status-revoke-${requestId}`);
+          const msg = document.getElementById(`history-msg-${requestId}`);
           try {
-            if (inline) { inline.className = 'notice inline-status show warn'; inline.textContent = 'Toegang intrekken...'; }
-            setStatus('Toegang intrekken...');
-            await revokeAccess(requestId, reason);
-            if (inline) { inline.className = 'notice inline-status show ok'; inline.textContent = 'Toegang ingetrokken.'; }
-            setStatus('Toegang ingetrokken.');
-            const [requests, history] = await Promise.all([getRequests(), getHistory()]);
-            renderRequests(requests.requests);
-            renderHistory(history.history);
-            renderAccess(history.history);
+            if (msg) { msg.textContent = 'Toegang intrekken...'; msg.className = 'inline-msg'; }
+            await revokePlayerAccess(requestId, null);
+            await refreshAdminLists();
+            if (msg) { msg.textContent = 'Toegang ingetrokken.'; msg.className = 'inline-msg ok'; }
           } catch (err) {
-            const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
-            if (inline) { inline.className = 'notice inline-status show warn'; inline.textContent = rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage; }
-            setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Intrekken mislukt'; msg.className = 'inline-msg error'; }
           }
         });
       });
+      document.querySelectorAll('[data-generate-activation]').forEach((btn) => {
+        if (btn.dataset.bound) return; btn.dataset.bound='1';
+        btn.addEventListener('click', async () => {
+          const requestId = Number(btn.dataset.id);
+          const msg = document.getElementById(`history-msg-${requestId}`) || document.getElementById(`activation-msg-${requestId}`);
+          try {
+            if (msg) { msg.textContent = 'Activatielink maken...'; msg.className = 'inline-msg'; }
+            const linkData = await createActivationLink(requestId);
+            showActivationPanel(requestId, linkData);
+            if (msg) { msg.textContent = 'Activatielink gemaakt.'; msg.className = 'inline-msg ok'; }
+          } catch (err) {
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Activatielink maken mislukt'; msg.className = 'inline-msg error'; }
+          }
+        });
+      });
+      document.querySelectorAll('[data-copy-activation], [data-mail-activation], [data-send-activation]').forEach((el)=>{});
     }
 
     async function adminDevLogin() {
@@ -975,8 +774,7 @@
     }
     async function getRequests() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_requests`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); }
     async function getHistory() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_history`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); }
-    async function decideRequest(requestId, decision, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: requestId, decision, decision_reason_input: decisionReason || null }) }); return await parseResponse(res); }
-    async function revokeAccess(requestId, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_revoke_player_access`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: requestId, decision_reason_input: decisionReason || null }) }); return await parseResponse(res); }
+    async function decideRequest(requestId, decision, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: requestId, decision, decision_reason_input: decisionReason }) }); return await parseResponse(res); }
 
     async function createActivationLink(requestId) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_player_activation_link`, {
@@ -991,6 +789,31 @@
         })
       });
       return await parseResponse(res);
+    }
+
+    async function revokePlayerAccess(requestId, reason) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_revoke_player_access`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: requestId, decision_reason_input: reason || null })
+      });
+      return await parseResponse(res);
+    }
+    async function sendActivationEmail(requestId) {
+      const res = await fetch(AUTO_EMAIL_ENDPOINT, {
+        method:'POST',
+        headers: { 'Content-Type':'application/json', 'apikey': SUPABASE_ANON_KEY },
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id: requestId, base_url: getActivationBaseUrl() })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.message || data?.error || 'Automatische e-mail mislukt');
+      return data;
+    }
+    async function refreshAdminLists() {
+      const [requests, history] = await Promise.all([getRequests(), getHistory()]);
+      lastRequests = requests.requests || [];
+      lastHistory = history.history || [];
+      renderRequests(lastRequests);
+      renderHistory(lastHistory);
     }
     function showActivationPanel(requestId, linkData) {
       const panel = document.getElementById(`activation-tools-${requestId}`);
@@ -1015,10 +838,7 @@
         const session = await checkSession();
         if (!session.ok) { clearAdminSessionToken(); showLoggedOut(); return; }
         showLoggedIn(session.username);
-        const [requests, history] = await Promise.all([getRequests(), getHistory()]);
-        renderRequests(requests.requests);
-        renderHistory(history.history);
-        renderAccess(history.history);
+        await refreshAdminLists();
       } catch (err) {
         clearAdminSessionToken(); showLoggedOut();
         const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
@@ -1031,10 +851,7 @@
         setStatus('Inloggen...');
         const data = await adminLogin();
         showLoggedIn(data.username);
-        const [requests, history] = await Promise.all([getRequests(), getHistory()]);
-        renderRequests(requests.requests);
-        renderHistory(history.history);
-        renderAccess(history.history);
+        await refreshAdminLists();
         setStatus('');
       } catch (err) {
         const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
@@ -1042,8 +859,7 @@
       }
     });
     document.getElementById('logoutBtn').addEventListener('click', () => { clearAdminSessionToken(); showLoggedOut(); setStatus('Uitgelogd.'); });
-    document.getElementById('devChip').addEventListener('click', () => toggleDevBox());
-    document.getElementById('totpInput').placeholder = 'Google Authenticator-code';
+    document.getElementById('totpInput').placeholder = 'Google Authenticator-code (of gebruik de test-login hieronder)';
     if (!document.getElementById('usernameInput').value) document.getElementById('usernameInput').value = '1';
     if (!document.getElementById('passwordInput').value) document.getElementById('passwordInput').value = '1';
     if (!document.getElementById('devKeyInput').value) document.getElementById('devKeyInput').value = '1';
@@ -1053,11 +869,8 @@
         setStatus('Dev-login...');
         const data = await adminDevLogin();
         showLoggedIn(data.username || document.getElementById('usernameInput').value.trim());
-        const [requests, history] = await Promise.all([getRequests(), getHistory()]);
-        renderRequests(requests.requests);
-        renderHistory(history.history);
-        renderAccess(history.history);
-        toggleDevBox(false); setStatus('Dev-login actief. Alleen voor lokaal testen.');
+        await refreshAdminLists();
+        setStatus('Dev-login actief. Alleen voor lokaal testen.');
       } catch (err) {
         const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
         setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
@@ -1087,7 +900,9 @@
       }, { passive: true });
     }
 
-    // v42: pre-rendered background, so parallax is disabled for performance.
+    document.getElementById('requestSearch').addEventListener('input', ()=> renderRequests(lastRequests));
+    document.getElementById('historySearch').addEventListener('input', ()=> renderHistory(lastHistory));
+    document.querySelectorAll('[data-history-filter]').forEach((btn)=> btn.addEventListener('click', ()=> { historyFilter = btn.dataset.historyFilter; renderHistory(lastHistory); }));
     loadAdmin();
   </script>
 </body>

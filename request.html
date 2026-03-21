@@ -391,73 +391,8 @@
       .back-link { top:12px; left:12px; }
       .card { padding:22px 18px; margin:14px auto; max-width: calc(100vw - 28px); width: calc(100vw - 28px); }
     }
-  
-    /* v42 shared polish */
-    :root {
-      --gold: #c8a43b;
-      --gold-dark: #9b7822;
-      --black: #171311;
-      --muted: #6f5b35;
-      --soft-paper: rgba(255,255,255,0.12);
-      --glass-border: rgba(255,255,255,0.40);
-    }
-    body {
-      background:
-        linear-gradient(135deg, rgba(247,244,238,0.30), rgba(239,234,225,0.24)),
-        url('./site-bg-desktop.webp') center center / cover no-repeat fixed;
-      color: var(--black);
-    }
-    @media (orientation: portrait) {
-      body {
-        background:
-          linear-gradient(135deg, rgba(247,244,238,0.26), rgba(239,234,225,0.22)),
-          url('./site-bg-mobile.webp') center center / cover no-repeat fixed;
-      }
-    }
-    .scene, .page-bg, .brand-watermark, .spinoza-shadow, .kale-hand, .playing-card-accent { display:none !important; }
-    .card {
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.07)),
-        radial-gradient(circle at top left, rgba(255,255,255,0.18), transparent 34%),
-        linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
-      backdrop-filter: blur(28px) saturate(1.04);
-      -webkit-backdrop-filter: blur(28px) saturate(1.04);
-      border: 1px solid var(--glass-border);
-      box-shadow: 0 24px 60px rgba(17,17,17,0.14);
-    }
-    .card::before {
-      background:
-        linear-gradient(120deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.08) 18%, transparent 42%),
-        radial-gradient(circle at top right, rgba(200,164,59,0.08), transparent 28%);
-    }
-    .muted { color: var(--muted) !important; }
-    .notice, .info-band, .data-box, details, .activation-tools, .activation-link-box {
-      background: rgba(255,255,255,0.36) !important;
-      border-color: rgba(23,19,17,0.08) !important;
-      color: var(--black);
-    }
-    input, textarea, select {
-      background: rgba(255,255,255,0.56);
-      border-color: rgba(23,19,17,0.10);
-      color: var(--black);
-    }
-    button, .pill-link, .home-link, .ghost-link, .text-link {
-      transition: transform .1s ease, box-shadow .12s ease, filter .12s ease, background-color .12s ease, border-color .12s ease;
-    }
-    @media (hover: hover) and (pointer: fine) {
-      button:hover, .pill-link:hover, .home-link:hover, .ghost-link:hover, .text-link:hover {
-        transform: none;
-        box-shadow: 0 8px 16px rgba(17,17,17,0.06);
-        filter: brightness(1.01);
-      }
-    }
-    button:active, .pill-link:active, .home-link:active, .ghost-link:active, .text-link:active {
-      transform: scale(0.992);
-      box-shadow: 0 3px 10px rgba(17,17,17,0.05);
-      filter: brightness(0.99);
-    }
-
   </style>
+  <link rel="stylesheet" href="./theme-v43.css" />
 </head>
 <body>
   <div class="scene" aria-hidden="true">
@@ -506,7 +441,7 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v42</div>
+  <div class="watermark">Made by Bruis · v43</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -653,7 +588,7 @@
       }, { passive: true });
     }
 
-    // v42: pre-rendered background, so parallax is disabled for performance.
+    // v40: pre-rendered background, so parallax is disabled for performance.
     load();
   </script>
 </body>
