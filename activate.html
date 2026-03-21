@@ -11,7 +11,7 @@
       --black: #111111;
       --soft: #f3f1ec;
       --soft-2: #ebe7df;
-      --card: rgba(255, 255, 255, 0.95);
+      --card: rgba(255, 255, 255, 0.76);
       --line: rgba(17, 17, 17, 0.08);
       --muted: #6b7280;
       --blue: #2563eb;
@@ -46,8 +46,9 @@
     .brand-watermark,
     .spinoza-shadow,
     .top-glow,
-    .playing-card-accent {
-      position: absolute;
+    .playing-card-accent,
+    .center-cards-art {
+      position: fixed;
       pointer-events: none;
     }
 
@@ -61,7 +62,7 @@
       background-size: 255px;
       background-repeat: repeat;
       background-position: center;
-      opacity: 0.10;
+      opacity: 0.13;
       filter: grayscale(100%) contrast(1.12) brightness(0.98);
       mix-blend-mode: multiply;
       z-index: 0;
@@ -79,7 +80,8 @@
 
     .brand-watermark img,
     .spinoza-shadow img,
-    .playing-card-accent img {
+    .playing-card-accent img,
+    .center-cards-art img {
       display: block;
       width: 100%;
       height: auto;
@@ -100,7 +102,7 @@
       width: min(30vw, 405px);
       opacity: 0.97;
       z-index: 0;
-      filter: sepia(0.08) saturate(1.18) contrast(1.05) brightness(1.03);
+      filter: sepia(0.16) saturate(2.08) contrast(1.24) brightness(1.11) drop-shadow(0 20px 38px rgba(40, 18, 12, 0.24));
       transform: rotate(7deg);
       transform-origin: center right;
     }
@@ -121,7 +123,7 @@
 
     .card {
       background: var(--card);
-      backdrop-filter: none;
+      backdrop-filter: blur(8px);
       border: 1px solid rgba(255,255,255,0.75);
       border-radius: 28px;
       box-shadow: var(--shadow);
@@ -400,7 +402,7 @@
     }
 
     .watermark {
-      position: absolute;
+      position: fixed;
       right: 20px;
       bottom: 14px;
       color: rgba(17,17,17,0.28);
@@ -416,48 +418,6 @@
         grid-template-columns: 1fr;
       }
     }
-
-
-    .keypad-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(17,17,17,0.45);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      z-index: 20;
-    }
-
-    .keypad-overlay.show { display: flex; }
-
-    .keypad-modal {
-      width: min(100%, 360px);
-      background: rgba(255,255,255,0.98);
-      border-radius: 26px;
-      border: 1px solid rgba(255,255,255,0.8);
-      box-shadow: 0 30px 70px rgba(17,17,17,0.22);
-      padding: 20px;
-      text-align: center;
-    }
-
-    .keypad-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-    }
-
-    .keypad-grid button {
-      min-height: 54px;
-      border-radius: 16px;
-      border: none;
-      font-size: 18px;
-      font-weight: 700;
-      cursor: pointer;
-      background: rgba(243,241,236,0.96);
-      color: var(--black);
-    }
-
 
     @media (max-width: 760px) {
       body { padding: 16px 0; }
@@ -528,6 +488,7 @@
   <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
   <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
   <div class="playing-card-accent"><img src="./playingcard-accent.png" alt="" /></div>
+  <div class="center-cards-art"><img src="./kale9goed.png" alt="" /></div>
   <div class="top-glow"></div>
 
   <div class="shell">
@@ -536,12 +497,12 @@
 
       <div class="top-links">
         <a href="./index.html" class="pill-link">Naar stemmen</a>
-        <a href="./request.html" class="pill-link">Nieuwe naam aanvragen</a>
+        <a href="./request.html" class="pill-link">Naam aanvragen</a>
       </div>
 
       <h1>Activeer je account</h1>
       <p class="hero-copy">
-        Open deze pagina alleen via de persoonlijke link uit je activatiemail. Via die link stel je veilig je 4-cijferige pincode in en rond je je account af.
+        Is je naam goedgekeurd? Stel hier één keer je pincode in. Daarna kun je op de hoofdpagina gewoon inloggen en stemmen.
       </p>
 
       <div class="grid">
@@ -549,45 +510,37 @@
           <h2>Eerste keer instellen</h2>
           <div class="stack">
             <div class="field">
-              <label for="nameInput">Goedgekeurde naam</label>
+              <label for="nameInput">Display name</label>
               <input id="nameInput" type="text" autocomplete="nickname" placeholder="Bijvoorbeeld: Jasper" />
-              <p class="hint">Gebruik exact de naam uit je activatiemail.</p>
-            </div>
-
-            <div class="field">
-              <label for="emailInput">E-mailadres</label>
-              <input id="emailInput" type="email" autocomplete="email" placeholder="jij@voorbeeld.nl" />
-              <p class="hint">Dit moet overeenkomen met het adres waarop de activatiemail is ontvangen.</p>
+              <p class="hint">Gebruik exact de naam die is goedgekeurd.</p>
             </div>
 
             <div class="field">
               <label for="pinInput">Nieuwe pincode</label>
               <div class="input-row">
-                <input id="pinInput" type="password" inputmode="numeric" autocomplete="new-password" placeholder="4 cijfers" maxlength="4" readonly />
+                <input id="pinInput" type="password" inputmode="numeric" autocomplete="new-password" placeholder="4 t/m 8 cijfers" maxlength="8" />
                 <button id="togglePinBtn" class="ghost-btn" type="button">Toon</button>
               </div>
             </div>
 
             <div class="field">
               <label for="pinConfirmInput">Bevestig pincode</label>
-              <input id="pinConfirmInput" type="password" inputmode="numeric" autocomplete="new-password" placeholder="Voer dezelfde pincode opnieuw in" maxlength="4" readonly />
+              <input id="pinConfirmInput" type="password" inputmode="numeric" autocomplete="new-password" placeholder="Voer dezelfde pincode opnieuw in" maxlength="8" />
             </div>
 
             <div class="pin-strength" aria-live="polite">
               <div class="pin-dots" id="pinDots">
                 <span></span><span></span><span></span><span></span>
               </div>
-              <span id="pinHint" class="hint">Kies een pincode van precies 4 cijfers.</span>
+              <span id="pinHint" class="hint">Kies een pincode van 4 t/m 8 cijfers.</span>
             </div>
 
-            <div class="notice info show" id="linkNotice">Je persoonlijke activatielink controleert op naam, e-mail en token. Deel deze link niet met anderen.</div>
-
             <div id="status" class="notice info show">
-              Open je persoonlijke mail, volg die link en kies daarna hieronder een 4-cijferige pincode.
+              Vul je naam in, kies een pincode en bevestig hem. Na activatie word je meteen ingelogd.
             </div>
 
             <div class="cta-row">
-              <button id="activateBtn" class="primary-btn" type="button">Account afronden</button>
+              <button id="activateBtn" class="primary-btn" type="button">Account activeren</button>
               <button id="clearBtn" class="ghost-btn" type="button">Leegmaken</button>
             </div>
           </div>
@@ -601,7 +554,7 @@
                 <span class="step-no">1</span>
                 <div class="mini-card">
                   <strong>Je naam is goedgekeurd</strong>
-                  Zodra een admin je aanvraag accepteert, ontvang je op jouw e-mailadres een persoonlijke activatielink.
+                  Zodra een admin je aanvraag accepteert, kun je hier je account activeren.
                 </div>
               </li>
               <li>
@@ -624,51 +577,19 @@
           <section class="panel">
             <h3>Goed om te weten</h3>
             <ul class="checklist">
-              <li>Je pincode moet uit <strong>precies 4 cijfers</strong> bestaan.</li>
-              <li>Deze pagina hoort via een <strong>persoonlijke link in je mail</strong> te worden geopend.</li>
-              <li>Werkt het niet? Dan klopt de link niet meer, of moet de admin een nieuwe activatiemail sturen.</li>
+              <li>Je pincode moet uit <strong>4 t/m 8 cijfers</strong> bestaan.</li>
+              <li>Je kunt je pincode hier maar <strong>één keer</strong> instellen.</li>
+              <li>Werkt het niet? Dan is je naam waarschijnlijk nog niet goedgekeurd, of je pincode is al ingesteld.</li>
             </ul>
           </section>
         </aside>
       </div>
 
-
-      <div id="keypadOverlay" class="keypad-overlay" aria-hidden="true">
-        <div class="keypad-modal" role="dialog" aria-modal="true" aria-labelledby="keypadTitle">
-          <h3 id="keypadTitle">Voer je pincode in</h3>
-          <p>Gebruik het telefoonblok hieronder. Je pincode bestaat altijd uit precies 4 cijfers.</p>
-          <div class="pin-strength" style="margin-bottom:14px;">
-            <div class="pin-dots" id="keypadDots">
-              <span></span><span></span><span></span><span></span>
-            </div>
-          </div>
-          <div class="keypad-grid">
-            <button type="button" data-key="1">1</button>
-            <button type="button" data-key="2">2</button>
-            <button type="button" data-key="3">3</button>
-            <button type="button" data-key="4">4</button>
-            <button type="button" data-key="5">5</button>
-            <button type="button" data-key="6">6</button>
-            <button type="button" data-key="7">7</button>
-            <button type="button" data-key="8">8</button>
-            <button type="button" data-key="9">9</button>
-            <button type="button" class="ghost-btn" data-action="back">Wis</button>
-            <button type="button" data-key="0">0</button>
-            <button type="button" class="ghost-btn" data-action="clear">Leeg</button>
-          </div>
-          <div class="cta-row" style="margin-top:12px;">
-            <button type="button" class="ghost-btn" data-action="cancel">Sluiten</button>
-            <button type="button" class="primary-btn" data-action="done">Klaar</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="footer-note">Made by Bruis · v30 · secure email activation</div>
+      <div class="footer-note">Made by Bruis · v31 · first-time activation</div>
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v30</div>
-
+  <div class="watermark">Made by Bruis · v31</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -676,22 +597,14 @@
     const SESSION_KEY = "jas_session_token_v9";
 
     const nameInput = document.getElementById("nameInput");
-    const emailInput = document.getElementById("emailInput");
     const pinInput = document.getElementById("pinInput");
     const pinConfirmInput = document.getElementById("pinConfirmInput");
     const statusEl = document.getElementById("status");
-    const linkNotice = document.getElementById("linkNotice");
     const activateBtn = document.getElementById("activateBtn");
     const clearBtn = document.getElementById("clearBtn");
     const togglePinBtn = document.getElementById("togglePinBtn");
     const pinHint = document.getElementById("pinHint");
     const pinDots = Array.from(document.querySelectorAll("#pinDots span"));
-    const keypadDots = Array.from(document.querySelectorAll("#keypadDots span"));
-
-    const searchParams = new URLSearchParams(window.location.search);
-    const activationToken = searchParams.get("token") || "";
-    let keypadTarget = null;
-    let keypadValue = "";
 
     function rpcHeaders() {
       return {
@@ -704,14 +617,17 @@
     async function parseResponse(res) {
       const text = await res.text();
       let data = null;
+
       try {
         data = text ? JSON.parse(text) : null;
       } catch {
         throw new Error(text || `HTTP ${res.status}`);
       }
+
       if (!res.ok) {
         throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`);
       }
+
       return data;
     }
 
@@ -720,7 +636,7 @@
     }
 
     function normalizePinValue(value) {
-      return value.replace(/\D/g, "").slice(0, 4);
+      return value.replace(/\D/g, "").slice(0, 8);
     }
 
     function setStatus(message, tone = "info") {
@@ -728,61 +644,56 @@
       statusEl.className = `notice ${tone} show`;
     }
 
-    function syncPinMeter(value = "") {
-      pinDots.forEach((dot, index) => dot.classList.toggle("filled", index < value.length));
-      keypadDots.forEach((dot, index) => dot.classList.toggle("filled", index < value.length));
-      if (!value.length) pinHint.textContent = "Kies een pincode van precies 4 cijfers.";
-      else if (value.length < 4) pinHint.textContent = "Nog even door: je hebt 4 cijfers nodig.";
-      else pinHint.textContent = "Mooi. Dit is een geldige 4-cijferige pincode.";
-    }
+    function updatePinMeter() {
+      const value = normalizePinValue(pinInput.value);
+      pinInput.value = value;
+      pinConfirmInput.value = normalizePinValue(pinConfirmInput.value);
 
-    function openKeypad(target) {
-      keypadTarget = target;
-      keypadValue = normalizePinValue(target.value || "");
-      if (target === pinInput) syncPinMeter(keypadValue);
-      document.getElementById("keypadOverlay").classList.add("show");
-    }
+      const filled = Math.min(4, value.length);
+      pinDots.forEach((dot, index) => {
+        dot.classList.toggle("filled", index < filled);
+      });
 
-    function closeKeypad(apply = false) {
-      if (apply && keypadTarget) {
-        keypadTarget.value = keypadValue;
-        if (keypadTarget === pinInput) syncPinMeter(keypadValue);
+      if (!value.length) {
+        pinHint.textContent = "Kies een pincode van 4 t/m 8 cijfers.";
+      } else if (value.length < 4) {
+        pinHint.textContent = "Nog even door: minimaal 4 cijfers.";
+      } else if (value.length <= 8) {
+        pinHint.textContent = "Ziet er goed uit.";
       }
-      document.getElementById("keypadOverlay").classList.remove("show");
-      keypadTarget = null;
     }
 
     function validateForm() {
       const desiredName = nameInput.value.trim();
-      const email = emailInput.value.trim().toLowerCase();
       const newPin = normalizePinValue(pinInput.value);
       const confirmPin = normalizePinValue(pinConfirmInput.value);
 
-      if (!activationToken) {
-        throw new Error("Open deze pagina via de persoonlijke link uit je activatiemail.");
+      if (!desiredName) {
+        throw new Error("Vul je display name in.");
       }
-      if (!desiredName) throw new Error("Vul je goedgekeurde naam in.");
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Vul hetzelfde e-mailadres in waarop je activatiemail is ontvangen.");
-      if (!/^\d{4}$/.test(newPin)) throw new Error("Pincode moet uit precies 4 cijfers bestaan.");
-      if (newPin !== confirmPin) throw new Error("De bevestiging van je pincode komt niet overeen.");
 
-      return { desiredName, email, newPin };
+      if (!/^\d{4,8}$/.test(newPin)) {
+        throw new Error("Pincode moet uit 4 t/m 8 cijfers bestaan.");
+      }
+
+      if (newPin !== confirmPin) {
+        throw new Error("De bevestiging van je pincode komt niet overeen.");
+      }
+
+      return { desiredName, newPin };
     }
 
     async function activateAccount() {
-      const { desiredName, email, newPin } = validateForm();
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/activate_player_from_email_link`, {
+      const { desiredName, newPin } = validateForm();
+
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/set_initial_pin`, {
         method: "POST",
         mode: "cors",
         cache: "no-store",
         headers: rpcHeaders(),
-        body: JSON.stringify({
-          desired_name: desiredName,
-          requester_email: email,
-          activation_token: activationToken,
-          new_pin: newPin
-        })
+        body: JSON.stringify({ desired_name: desiredName, new_pin: newPin })
       });
+
       return await parseResponse(res);
     }
 
@@ -793,13 +704,20 @@
         setStatus("Bezig met activeren...", "info");
 
         const data = await activateAccount();
-        if (data?.session_token) setSessionToken(data.session_token);
 
-        setStatus("Gelukt. Je account is geactiveerd en je bent ingelogd. Je gaat nu terug naar de hoofdpagina.", "ok");
+        if (data?.session_token) {
+          setSessionToken(data.session_token);
+        }
+
+        setStatus("Gelukt. Je account is geactiveerd en je bent ingelogd. Je gaat nu terug naar de hoofdpagina om te stemmen.", "ok");
+        pinInput.value = "";
+        pinConfirmInput.value = "";
+        updatePinMeter();
+
         window.setTimeout(() => {
           const targetName = encodeURIComponent(nameInput.value.trim());
           window.location.href = targetName ? `./index.html?name=${targetName}` : "./index.html";
-        }, 1200);
+        }, 1400);
       } catch (err) {
         setStatus(err instanceof Error ? err.message : "Activeren mislukt.", "warn");
       } finally {
@@ -808,77 +726,39 @@
       }
     }
 
-    function prefillFromQuery() {
-      const presetName = searchParams.get("name") || "";
-      const presetEmail = searchParams.get("email") || "";
-      if (presetName) nameInput.value = presetName;
-      if (presetEmail) emailInput.value = presetEmail;
-      if (!activationToken) {
-        linkNotice.textContent = "Deze pagina werkt alleen via de persoonlijke link uit je activatiemail. Vraag zo nodig een nieuwe link aan bij een admin.";
-        activateBtn.disabled = true;
+
+    function prefillNameFromQuery() {
+      const presetName = new URLSearchParams(window.location.search).get("name") || "";
+      if (presetName) {
+        nameInput.value = presetName;
       }
     }
 
     function clearForm() {
+      nameInput.value = "";
       pinInput.value = "";
       pinConfirmInput.value = "";
-      keypadValue = "";
-      syncPinMeter("");
-      setStatus("Je kunt nu een nieuwe 4-cijferige pincode invoeren.", "info");
-      pinInput.focus();
+      setStatus("Formulier leeggemaakt. Vul je goedgekeurde naam en nieuwe pincode in.", "info");
+      updatePinMeter();
+      nameInput.focus();
     }
 
-    pinInput.addEventListener("focus", () => openKeypad(pinInput));
-    pinInput.addEventListener("click", () => openKeypad(pinInput));
-    pinConfirmInput.addEventListener("focus", () => openKeypad(pinConfirmInput));
-    pinConfirmInput.addEventListener("click", () => openKeypad(pinConfirmInput));
+    pinInput.addEventListener("input", updatePinMeter);
+    pinConfirmInput.addEventListener("input", () => {
+      pinConfirmInput.value = normalizePinValue(pinConfirmInput.value);
+    });
 
     togglePinBtn.addEventListener("click", () => {
-      const hidden = pinInput.type === "password";
-      pinInput.type = hidden ? "text" : "password";
-      pinConfirmInput.type = hidden ? "text" : "password";
-      togglePinBtn.textContent = hidden ? "Verberg" : "Toon";
+      const visible = pinInput.type === "text";
+      pinInput.type = visible ? "password" : "text";
+      pinConfirmInput.type = visible ? "password" : "text";
+      togglePinBtn.textContent = visible ? "Toon" : "Verberg";
     });
 
-    clearBtn.addEventListener("click", clearForm);
     activateBtn.addEventListener("click", handleActivate);
+    clearBtn.addEventListener("click", clearForm);
 
-    const keypadOverlay = document.getElementById("keypadOverlay");
-    keypadOverlay.addEventListener("click", (event) => {
-      if (event.target === event.currentTarget) closeKeypad(false);
-    });
-
-    document.querySelectorAll("#keypadOverlay [data-key]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        if (keypadValue.length >= 4) return;
-        keypadValue += btn.dataset.key;
-        if (keypadTarget) keypadTarget.value = keypadValue;
-        if (keypadTarget === pinInput) syncPinMeter(keypadValue);
-      });
-    });
-
-    document.querySelector('#keypadOverlay [data-action="back"]').addEventListener("click", () => {
-      keypadValue = keypadValue.slice(0, -1);
-      if (keypadTarget) keypadTarget.value = keypadValue;
-      if (keypadTarget === pinInput) syncPinMeter(keypadValue);
-    });
-
-    document.querySelector('#keypadOverlay [data-action="clear"]').addEventListener("click", () => {
-      keypadValue = "";
-      if (keypadTarget) keypadTarget.value = "";
-      if (keypadTarget === pinInput) syncPinMeter("");
-    });
-
-    document.querySelector('#keypadOverlay [data-action="cancel"]').addEventListener("click", () => closeKeypad(false));
-    document.querySelector('#keypadOverlay [data-action="done"]').addEventListener("click", () => {
-      if (keypadValue.length !== 4) {
-        setStatus("Je pincode bestaat uit precies 4 cijfers.", "warn");
-        return;
-      }
-      closeKeypad(true);
-    });
-
-    [nameInput, emailInput, pinInput, pinConfirmInput].forEach((el) => {
+    [nameInput, pinInput, pinConfirmInput].forEach((el) => {
       el.addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
           event.preventDefault();
@@ -887,8 +767,8 @@
       });
     });
 
-    prefillFromQuery();
-    syncPinMeter("");
+    prefillNameFromQuery();
+    updatePinMeter();
   </script>
 </body>
 </html>

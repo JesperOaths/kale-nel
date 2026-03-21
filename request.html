@@ -9,7 +9,7 @@
       --gold: #d4af37;
       --gold-dark: #b89018;
       --black: #111111;
-      --card: rgba(255, 255, 255, 0.95);
+      --card: rgba(255, 255, 255, 0.76);
       --line: rgba(17, 17, 17, 0.08);
       --muted: #6b7280;
       --blue: #2563eb;
@@ -37,18 +37,34 @@
       align-items: center;
       padding: 28px;
     }
-    .page-bg,.brand-watermark,.spinoza-shadow,.top-glow,.playing-card-accent { position: absolute; pointer-events: none; }
+    .page-bg,.brand-watermark,.spinoza-shadow,.top-glow,.playing-card-accent { position: fixed; pointer-events: none; }
     .page-bg,.top-glow { inset: 0; }
-    .page-bg { background-image: url('./123zwartkaart.png'); background-size: 255px; background-repeat: repeat; background-position: center; opacity: 0.10; filter: grayscale(100%); z-index: 0; }
+    .page-bg { background-image: url('./123zwartkaart.png'); background-size: 255px; background-repeat: repeat; background-position: center; opacity: 0.13; filter: grayscale(100%) contrast(1.12) brightness(0.98); mix-blend-mode: multiply; z-index: 0; }
     .brand-watermark { top: 50%; left: 50%; width: min(46vw, 620px); transform: translate(-50%, -50%); opacity: 0.24; z-index: 0; filter: saturate(1.16) brightness(1.03); }
     .brand-watermark img,.spinoza-shadow img,.playing-card-accent img { display: block; width: 100%; height: auto; }
     .spinoza-shadow { left: -40px; bottom: -8px; width: min(43vw, 600px); opacity: 0.56; z-index: 0; filter: sepia(0.24) saturate(1.28) contrast(1.12) brightness(1.05); }
-    .playing-card-accent { right: -42px; bottom: 5%; width: min(30vw, 405px); opacity: 0.97; z-index: 0; filter: sepia(0.08) saturate(1.18) contrast(1.05) brightness(1.03); transform: rotate(7deg); transform-origin: center right; }
+    .playing-card-accent { right: -42px; bottom: 5%; width: min(30vw, 405px); opacity: 0.97; z-index: 0; filter: sepia(0.16) saturate(2.08) contrast(1.24) brightness(1.11) drop-shadow(0 20px 38px rgba(40, 18, 12, 0.24)); transform: rotate(7deg); transform-origin: center right; }
     .playing-card-accent img { border-radius: 22px; }
+
+    .center-cards-art {
+      top: 53%;
+      left: 50%;
+      width: min(42vw, 520px);
+      transform: translate(-50%, -50%) rotate(-5deg);
+      opacity: 0.18;
+      z-index: 1;
+      filter: drop-shadow(0 20px 42px rgba(40, 18, 12, 0.18));
+    }
+
+    .center-cards-art img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
     .top-glow { background: linear-gradient(180deg, rgba(255,255,255,0.38), transparent 24%); z-index: 0; }
     .watermark { position: fixed; right: 20px; bottom: 14px; color: rgba(17,17,17,0.28); font-size: 14px; user-select: none; pointer-events: none; z-index: 3; letter-spacing: 0.02em; }
     .card {
-      background: var(--card); backdrop-filter: none; border: 1px solid rgba(255,255,255,0.75);
+      background: var(--card); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.75);
       padding: 30px 34px 34px; border-radius: 28px; text-align: center; max-width: 860px; width: 100%;
       box-shadow: var(--shadow); position: relative; margin: 20px; z-index: 2; overflow: hidden;
     }
@@ -93,24 +109,24 @@
   <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
   <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
   <div class="playing-card-accent"><img src="./playingcard-accent.png" alt="" /></div>
+  <div class="center-cards-art"><img src="./kale9goed.png" alt="" /></div>
   <div class="top-glow"></div>
 
   <div class="card">
     <a href="./index.html" class="back-link">Terug</a>
     <img src="./logo.png" alt="Logo" class="logo-corner" />
     <h1>Naam aanvragen</h1>
-    <p class="intro">Vraag hier de naam aan waarmee je straks op de hoofdpagina inlogt. Na goedkeuring sturen we een persoonlijke activatiemail naar het e-mailadres dat je hieronder invult. Via die mail stel je veilig je 4-cijferige pincode in.</p>
+    <p class="intro">Vraag hier de naam aan waarmee je straks op de hoofdpagina inlogt. Na goedkeuring activeer je je account eenmalig met een eigen pincode op <strong>activate.html</strong>.</p>
 
     <div class="grid">
       <div class="panel">
         <h2>Aanvraagformulier</h2>
-        <p>Kies de naam die van jou is, vul je e-mailadres in en schrijf kort waarom die bij jou hoort.</p>
+        <p>Kies de naam die van jou is en schrijf kort waarom die bij jou hoort.</p>
         <select id="requestNameSelect"></select>
-        <input id="requestEmailInput" type="email" autocomplete="email" placeholder="jij@voorbeeld.nl" />
         <textarea id="requestNoteInput" placeholder="Leg kort uit waarom jij deze naam wilt claimen"></textarea>
         <div class="actions">
           <button id="requestBtn" type="button">Vraag naam aan</button>
-          <a href="./index.html" class="ghost-link">Terug naar stemmen</a>
+          <a id="activateLink" href="./activate.html" class="ghost-link">Ik ben al goedgekeurd</a>
         </div>
       </div>
       <div class="panel">
@@ -118,10 +134,11 @@
         <ol class="steps">
           <li>Vraag je naam aan via dit formulier.</li>
           <li>De admin keurt je aanvraag goed of af.</li>
-          <li>Na goedkeuring sturen we een persoonlijke activatiemail naar jouw e-mailadres.</li>
-          <li>Via die mail stel je een 4-cijferige pincode in en daarna log je in op de hoofdpagina.</li>
+          <li>Na goedkeuring ga je naar <strong>activate.html</strong> om je pincode in te stellen.</li>
+          <li>Daarna log je op de hoofdpagina in en kun je stemmen.</li>
         </ol>
         <div class="activate-cta">
+          <a id="activateLinkPanel" href="./activate.html" class="ghost-link">Naar activeren</a>
           <a href="./index.html" class="ghost-link">Terug naar stemmen</a>
         </div>
       </div>
@@ -130,7 +147,7 @@
     <div id="status" class="notice info"></div>
   </div>
 
-  <div class="watermark">Made by Bruis · v30</div>
+  <div class="watermark">Made by Bruis · v31</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -163,6 +180,13 @@
       el.innerHTML = html ?? escapeHtml(message);
     }
 
+    function updateActivateLinks(name) {
+      const cleanName = (name || "").trim();
+      const href = cleanName ? `./activate.html?name=${encodeURIComponent(cleanName)}` : "./activate.html";
+      document.getElementById("activateLink").href = href;
+      document.getElementById("activateLinkPanel").href = href;
+    }
+
     function fillNameSelect(id, names) {
       const select = document.getElementById(id);
       select.innerHTML = "";
@@ -178,7 +202,7 @@
         option.textContent = name;
         select.appendChild(option);
       });
-
+      updateActivateLinks("");
     }
 
     function collectVisitorMeta() {
@@ -210,10 +234,8 @@
 
     async function requestClaim() {
       const desiredName = document.getElementById("requestNameSelect").value;
-      const requesterEmail = document.getElementById("requestEmailInput").value.trim();
       const requesterNote = document.getElementById("requestNoteInput").value.trim();
       if (!desiredName) throw new Error("Kies eerst een naam");
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requesterEmail)) throw new Error("Vul een geldig e-mailadres in");
       if (!requesterNote) throw new Error("Geef kort een reden op");
 
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/request_claim`, {
@@ -224,7 +246,7 @@
         body: JSON.stringify({
           desired_name: desiredName,
           requester_note: requesterNote,
-          requester_email: requesterEmail,
+          requester_email: null,
           requester_meta: collectVisitorMeta()
         })
       });
@@ -242,14 +264,17 @@
       }
     }
 
+    document.getElementById("requestNameSelect").addEventListener("change", (event) => updateActivateLinks(event.target.value));
+
     document.getElementById("requestBtn").addEventListener("click", async () => {
       try {
+        const selectedName = document.getElementById("requestNameSelect").value;
         setStatus("Versturen...", "info");
         const result = await requestClaim();
         document.getElementById("requestNoteInput").value = "";
-        document.getElementById("requestEmailInput").value = "";
         document.getElementById("requestNameSelect").selectedIndex = 0;
-        setStatus(result?.message || "Aanvraag verstuurd.", "ok", `<strong>${escapeHtml(result?.message || 'Aanvraag verstuurd.')}</strong><br>Na goedkeuring sturen we een persoonlijke activatielink naar het opgegeven e-mailadres. Controleer daarna ook even je spamfolder.`);
+        updateActivateLinks(selectedName);
+        setStatus(result?.message || "Aanvraag verstuurd.", "ok", `<strong>${escapeHtml(result?.message || 'Aanvraag verstuurd.')}</strong><br>Na goedkeuring ga je naar <a href="${document.getElementById('activateLink').href}">activate.html</a> om je pincode in te stellen.`);
       } catch (err) {
         const rawMessage = err instanceof Error ? err.message : "Er ging iets mis";
         setStatus(rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage, "warn");
