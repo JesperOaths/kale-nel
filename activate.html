@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Account activeren</title>
+  <style>
+    :root {
+      --gold: #d4af37;
+      --gold-dark: #b89018;
+      --black: #111111;
+      --soft: #f3f1ec;
+      --soft-2: #ebe7df;
+      --card: rgba(255, 255, 255, 0.95);
+      --line: rgba(17, 17, 17, 0.08);
+      --muted: #6b7280;
+      --blue: #2563eb;
+      --blue-soft: rgba(37, 99, 235, 0.1);
+      --ok: #166534;
+      --ok-soft: rgba(22, 101, 52, 0.1);
+      --warn: #92400e;
+      --warn-soft: rgba(146, 64, 14, 0.1);
+      --shadow: 0 28px 70px rgba(17, 17, 17, 0.14);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(212, 175, 55, 0.14), transparent 26%),
+        radial-gradient(circle at bottom right, rgba(17, 17, 17, 0.07), transparent 24%),
+        linear-gradient(135deg, #f2efe8, #f8f7f3 44%, #ece8e0);
+      color: var(--black);
+      margin: 0;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 28px;
+    }
+
+    .page-bg,
+    .brand-watermark,
+    .spinoza-shadow,
+    .top-glow,
+    .playing-card-accent {
+      position: fixed;
+      pointer-events: none;
+    }
+
+    .page-bg,
+    .top-glow {
+      inset: 0;
+    }
+
+    .page-bg {
+      background-image: url('./123zwartkaart.png');
+      background-size: 255px;
+      background-repeat: repeat;
+      background-position: center;
+      opacity: 0.13;
+      filter: grayscale(100%) contrast(1.12) brightness(0.98);
+      mix-blend-mode: multiply;
+      z-index: 0;
+    }
+
+    .brand-watermark {
+      top: 50%;
+      left: 50%;
+      width: min(46vw, 620px);
+      transform: translate(-50%, -50%);
+      opacity: 0.24;
+      z-index: 0;
+      filter: saturate(1.16) brightness(1.03);
+    }
+
+    .brand-watermark img,
+    .spinoza-shadow img,
+    .playing-card-accent img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .spinoza-shadow {
+      left: -40px;
+      bottom: -8px;
+      width: min(43vw, 600px);
+      opacity: 0.56;
+      z-index: 0;
+      filter: sepia(0.24) saturate(1.28) contrast(1.12) brightness(1.05);
+    }
+
+    .playing-card-accent {
+      right: -42px;
+      bottom: 5%;
+      width: min(30vw, 405px);
+      opacity: 0.97;
+      z-index: 0;
+      filter: sepia(0.16) saturate(2.08) contrast(1.24) brightness(1.11) drop-shadow(0 20px 38px rgba(40, 18, 12, 0.24));
+      transform: rotate(7deg);
+      transform-origin: center right;
+    }
+
+    .playing-card-accent img { border-radius: 22px; }
+
+    .top-glow {
+      background: linear-gradient(180deg, rgba(255,255,255,0.38), transparent 24%);
+      z-index: 0;
+    }
+
+    .shell {
+      width: 100%;
+      max-width: 980px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .card {
+      background: var(--card);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.75);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+      padding: 32px 34px 34px;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(135deg, rgba(212,175,55,0.085), transparent 34%, rgba(17,17,17,0.05));
+      pointer-events: none;
+    }
+
+    .logo-corner {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 84px;
+      height: 84px;
+      object-fit: contain;
+      opacity: 0.96;
+      filter: drop-shadow(0 6px 14px rgba(0,0,0,0.08));
+    }
+
+    .top-links {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .pill-link {
+      font-size: 14px;
+      text-decoration: none;
+      color: var(--blue);
+      background: rgba(255,255,255,0.7);
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(37,99,235,0.12);
+      backdrop-filter: blur(6px);
+    }
+
+    h1 {
+      margin: 0 0 10px 0;
+      font-size: clamp(2.4rem, 4vw, 3.05rem);
+      line-height: 1.02;
+      letter-spacing: -0.035em;
+      padding-right: 104px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-copy {
+      color: var(--muted);
+      margin: 0 0 24px 0;
+      font-size: clamp(1rem, 2vw, 1.1rem);
+      max-width: 720px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 22px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .panel {
+      background: rgba(250, 250, 249, 0.82);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 20px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.65);
+    }
+
+    .panel h2,
+    .panel h3 {
+      margin: 0 0 12px 0;
+      letter-spacing: -0.02em;
+    }
+
+    .panel p,
+    .panel li {
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .field label {
+      font-size: 14px;
+      font-weight: 600;
+      color: rgba(17,17,17,0.88);
+    }
+
+    input {
+      padding: 14px 15px;
+      width: 100%;
+      font-size: 15px;
+      border: 1px solid rgba(17,17,17,0.1);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.92);
+      transition: border-color .14s ease, box-shadow .14s ease, transform .14s ease;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: rgba(212, 175, 55, 0.6);
+      box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.14);
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .ghost-btn,
+    .primary-btn {
+      padding: 12px 18px;
+      border-radius: 14px;
+      cursor: pointer;
+      font-size: 15px;
+      transition: transform .14s ease, box-shadow .14s ease, opacity .14s ease;
+    }
+
+    .primary-btn {
+      border: none;
+      background: var(--gold);
+      color: var(--black);
+      font-weight: 700;
+    }
+
+    .ghost-btn {
+      border: 1px solid rgba(17,17,17,0.08);
+      background: rgba(255,255,255,0.85);
+      color: var(--black);
+    }
+
+    .primary-btn:hover,
+    .ghost-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px rgba(17,17,17,0.09);
+    }
+
+    .primary-btn[disabled],
+    .ghost-btn[disabled] {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .cta-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .hint {
+      margin: 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .pin-strength {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: -4px;
+    }
+
+    .pin-dots {
+      display: inline-grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      width: 88px;
+    }
+
+    .pin-dots span {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(17,17,17,0.08);
+      transition: background .14s ease, transform .14s ease;
+    }
+
+    .pin-dots span.filled {
+      background: rgba(212,175,55,0.9);
+      transform: scaleY(1.05);
+    }
+
+    .notice {
+      border-radius: 16px;
+      padding: 14px 15px;
+      border: 1px solid transparent;
+      font-size: 14px;
+      line-height: 1.45;
+      display: none;
+    }
+
+    .notice.show { display: block; }
+    .notice.info { background: var(--blue-soft); border-color: rgba(37,99,235,0.14); color: #1d4ed8; }
+    .notice.ok { background: var(--ok-soft); border-color: rgba(22,101,52,0.16); color: var(--ok); }
+    .notice.warn { background: var(--warn-soft); border-color: rgba(146,64,14,0.16); color: var(--warn); }
+
+    .steps {
+      display: grid;
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .steps li {
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .step-no {
+      width: 34px;
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: rgba(212,175,55,0.16);
+      color: var(--gold-dark);
+      font-weight: 700;
+    }
+
+    .mini-card {
+      background: rgba(255,255,255,0.72);
+      border: 1px solid rgba(17,17,17,0.06);
+      border-radius: 18px;
+      padding: 14px 15px;
+    }
+
+    .mini-card strong {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .checklist {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .checklist li + li { margin-top: 8px; }
+
+    .footer-note {
+      margin-top: 18px;
+      color: rgba(17,17,17,0.62);
+      font-size: 13px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .watermark {
+      position: fixed;
+      right: 20px;
+      bottom: 14px;
+      color: rgba(17,17,17,0.28);
+      font-size: 14px;
+      user-select: none;
+      pointer-events: none;
+      z-index: 3;
+      letter-spacing: 0.02em;
+    }
+
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      body { padding: 16px 0; }
+
+      .brand-watermark {
+        width: min(82vw, 500px);
+        opacity: 0.24;
+      }
+
+      .spinoza-shadow {
+        left: -26px;
+        bottom: 2px;
+        width: min(50vw, 300px);
+        opacity: 0.56;
+        filter: sepia(0.18) saturate(1.18) contrast(1.06) brightness(1.04);
+      }
+
+      .playing-card-accent {
+        right: -18px;
+        bottom: 9%;
+        width: min(42vw, 250px);
+        opacity: 0.95;
+        filter: sepia(0.18) saturate(1.96) contrast(1.22) brightness(1.1) drop-shadow(0 16px 28px rgba(40, 18, 12, 0.22));
+      }
+
+      .card {
+        padding: 22px 18px 22px;
+        border-radius: 24px;
+        margin: 14px auto;
+        max-width: calc(100vw - 68px);
+        width: calc(100vw - 68px);
+      }
+
+      .logo-corner {
+        top: 12px;
+        right: 12px;
+        width: 68px;
+        height: 68px;
+      }
+
+      h1 {
+        padding-right: 0;
+        margin-top: 8px;
+        font-size: 2rem;
+      }
+
+      .top-links {
+        margin-right: 64px;
+      }
+
+      .input-row {
+        grid-template-columns: 1fr;
+      }
+
+      .cta-row {
+        flex-direction: column;
+      }
+
+      .primary-btn,
+      .ghost-btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-bg"></div>
+  <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
+  <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
+  <div class="playing-card-accent"><img src="./playingcard-accent.png" alt="" /></div>
+  <div class="top-glow"></div>
+
+  <div class="shell">
+    <div class="card">
+      <img src="./logo.png" alt="Logo" class="logo-corner" />
+
+      <div class="top-links">
+        <a href="./index.html" class="pill-link">Naar stemmen</a>
+        <a href="./request.html" class="pill-link">Naam aanvragen</a>
+      </div>
+
+      <h1>Activeer je account</h1>
+      <p class="hero-copy">
+        Is je naam goedgekeurd? Stel hier één keer je pincode in. Daarna kun je op de hoofdpagina gewoon inloggen en stemmen.
+      </p>
+
+      <div class="grid">
+        <section class="panel">
+          <h2>Eerste keer instellen</h2>
+          <div class="stack">
+            <div class="field">
+              <label for="nameInput">Display name</label>
+              <input id="nameInput" type="text" autocomplete="nickname" placeholder="Bijvoorbeeld: Jasper" />
+              <p class="hint">Gebruik exact de naam die is goedgekeurd.</p>
+            </div>
+
+            <div class="field">
+              <label for="pinInput">Nieuwe pincode</label>
+              <div class="input-row">
+                <input id="pinInput" type="password" inputmode="numeric" autocomplete="new-password" placeholder="4 t/m 8 cijfers" maxlength="8" />
+                <button id="togglePinBtn" class="ghost-btn" type="button">Toon</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="pinConfirmInput">Bevestig pincode</label>
+              <input id="pinConfirmInput" type="password" inputmode="numeric" autocomplete="new-password" placeholder="Voer dezelfde pincode opnieuw in" maxlength="8" />
+            </div>
+
+            <div class="pin-strength" aria-live="polite">
+              <div class="pin-dots" id="pinDots">
+                <span></span><span></span><span></span><span></span>
+              </div>
+              <span id="pinHint" class="hint">Kies een pincode van 4 t/m 8 cijfers.</span>
+            </div>
+
+            <div id="status" class="notice info show">
+              Vul je naam in, kies een pincode en bevestig hem. Na activatie word je meteen ingelogd.
+            </div>
+
+            <div class="cta-row">
+              <button id="activateBtn" class="primary-btn" type="button">Account activeren</button>
+              <button id="clearBtn" class="ghost-btn" type="button">Leegmaken</button>
+            </div>
+          </div>
+        </section>
+
+        <aside class="stack">
+          <section class="panel">
+            <h3>Zo werkt het</h3>
+            <ol class="steps">
+              <li>
+                <span class="step-no">1</span>
+                <div class="mini-card">
+                  <strong>Je naam is goedgekeurd</strong>
+                  Zodra een admin je aanvraag accepteert, kun je hier je account activeren.
+                </div>
+              </li>
+              <li>
+                <span class="step-no">2</span>
+                <div class="mini-card">
+                  <strong>Je kiest je pincode</strong>
+                  Die pincode gebruik je voortaan om in te loggen op de stempagina.
+                </div>
+              </li>
+              <li>
+                <span class="step-no">3</span>
+                <div class="mini-card">
+                  <strong>Je bent klaar</strong>
+                  Na activatie slaan we je sessie op en kun je direct terug naar de hoofdpagina.
+                </div>
+              </li>
+            </ol>
+          </section>
+
+          <section class="panel">
+            <h3>Goed om te weten</h3>
+            <ul class="checklist">
+              <li>Je pincode moet uit <strong>4 t/m 8 cijfers</strong> bestaan.</li>
+              <li>Je kunt je pincode hier maar <strong>één keer</strong> instellen.</li>
+              <li>Werkt het niet? Dan is je naam waarschijnlijk nog niet goedgekeurd, of je pincode is al ingesteld.</li>
+            </ul>
+          </section>
+        </aside>
+      </div>
+
+      <div class="footer-note">Made by Bruis · v29 · first-time activation</div>
+    </div>
+  </div>
+
+  <div class="watermark">Made by Bruis · v29</div>
+
+  <script>
+    const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+    const SESSION_KEY = "jas_session_token_v9";
+
+    const nameInput = document.getElementById("nameInput");
+    const pinInput = document.getElementById("pinInput");
+    const pinConfirmInput = document.getElementById("pinConfirmInput");
+    const statusEl = document.getElementById("status");
+    const activateBtn = document.getElementById("activateBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const togglePinBtn = document.getElementById("togglePinBtn");
+    const pinHint = document.getElementById("pinHint");
+    const pinDots = Array.from(document.querySelectorAll("#pinDots span"));
+
+    function rpcHeaders() {
+      return {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      };
+    }
+
+    async function parseResponse(res) {
+      const text = await res.text();
+      let data = null;
+
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch {
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+
+      if (!res.ok) {
+        throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`);
+      }
+
+      return data;
+    }
+
+    function setSessionToken(token) {
+      localStorage.setItem(SESSION_KEY, token);
+    }
+
+    function normalizePinValue(value) {
+      return value.replace(/\D/g, "").slice(0, 8);
+    }
+
+    function setStatus(message, tone = "info") {
+      statusEl.textContent = message;
+      statusEl.className = `notice ${tone} show`;
+    }
+
+    function updatePinMeter() {
+      const value = normalizePinValue(pinInput.value);
+      pinInput.value = value;
+      pinConfirmInput.value = normalizePinValue(pinConfirmInput.value);
+
+      const filled = Math.min(4, value.length);
+      pinDots.forEach((dot, index) => {
+        dot.classList.toggle("filled", index < filled);
+      });
+
+      if (!value.length) {
+        pinHint.textContent = "Kies een pincode van 4 t/m 8 cijfers.";
+      } else if (value.length < 4) {
+        pinHint.textContent = "Nog even door: minimaal 4 cijfers.";
+      } else if (value.length <= 8) {
+        pinHint.textContent = "Ziet er goed uit.";
+      }
+    }
+
+    function validateForm() {
+      const desiredName = nameInput.value.trim();
+      const newPin = normalizePinValue(pinInput.value);
+      const confirmPin = normalizePinValue(pinConfirmInput.value);
+
+      if (!desiredName) {
+        throw new Error("Vul je display name in.");
+      }
+
+      if (!/^\d{4,8}$/.test(newPin)) {
+        throw new Error("Pincode moet uit 4 t/m 8 cijfers bestaan.");
+      }
+
+      if (newPin !== confirmPin) {
+        throw new Error("De bevestiging van je pincode komt niet overeen.");
+      }
+
+      return { desiredName, newPin };
+    }
+
+    async function activateAccount() {
+      const { desiredName, newPin } = validateForm();
+
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/set_initial_pin`, {
+        method: "POST",
+        mode: "cors",
+        cache: "no-store",
+        headers: rpcHeaders(),
+        body: JSON.stringify({ desired_name: desiredName, new_pin: newPin })
+      });
+
+      return await parseResponse(res);
+    }
+
+    async function handleActivate() {
+      try {
+        activateBtn.disabled = true;
+        clearBtn.disabled = true;
+        setStatus("Bezig met activeren...", "info");
+
+        const data = await activateAccount();
+
+        if (data?.session_token) {
+          setSessionToken(data.session_token);
+        }
+
+        setStatus("Gelukt. Je account is geactiveerd en je bent ingelogd. Je gaat nu terug naar de hoofdpagina om te stemmen.", "ok");
+        pinInput.value = "";
+        pinConfirmInput.value = "";
+        updatePinMeter();
+
+        window.setTimeout(() => {
+          const targetName = encodeURIComponent(nameInput.value.trim());
+          window.location.href = targetName ? `./index.html?name=${targetName}` : "./index.html";
+        }, 1400);
+      } catch (err) {
+        setStatus(err instanceof Error ? err.message : "Activeren mislukt.", "warn");
+      } finally {
+        activateBtn.disabled = false;
+        clearBtn.disabled = false;
+      }
+    }
+
+
+    function prefillNameFromQuery() {
+      const presetName = new URLSearchParams(window.location.search).get("name") || "";
+      if (presetName) {
+        nameInput.value = presetName;
+      }
+    }
+
+    function clearForm() {
+      nameInput.value = "";
+      pinInput.value = "";
+      pinConfirmInput.value = "";
+      setStatus("Formulier leeggemaakt. Vul je goedgekeurde naam en nieuwe pincode in.", "info");
+      updatePinMeter();
+      nameInput.focus();
+    }
+
+    pinInput.addEventListener("input", updatePinMeter);
+    pinConfirmInput.addEventListener("input", () => {
+      pinConfirmInput.value = normalizePinValue(pinConfirmInput.value);
+    });
+
+    togglePinBtn.addEventListener("click", () => {
+      const visible = pinInput.type === "text";
+      pinInput.type = visible ? "password" : "text";
+      pinConfirmInput.type = visible ? "password" : "text";
+      togglePinBtn.textContent = visible ? "Toon" : "Verberg";
+    });
+
+    activateBtn.addEventListener("click", handleActivate);
+    clearBtn.addEventListener("click", clearForm);
+
+    [nameInput, pinInput, pinConfirmInput].forEach((el) => {
+      el.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          handleActivate();
+        }
+      });
+    });
+
+    prefillNameFromQuery();
+    updatePinMeter();
+  </script>
+</body>
+</html>

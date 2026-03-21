@@ -5,155 +5,125 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wordt er gejast donderdag?</title>
   <style>
-
-    
     :root {
-  --gold: #d4af37;
-  --gold-dark: #b89018;
-  --black: #111111;
-  --soft: #f3f1ec;
-  --soft-2: #ebe7df;
-  --card: rgba(255, 255, 255, 0.95);
-  --line: rgba(17, 17, 17, 0.08);
-  --muted: #6b7280;
-  --blue: #2563eb;
-  --shadow: 0 28px 70px rgba(17, 17, 17, 0.14);
-}
+      --gold: #d4af37;
+      --gold-dark: #b89018;
+      --black: #111111;
+      --soft: #f3f1ec;
+      --soft-2: #ebe7df;
+      --card: rgba(255, 255, 255, 0.95);
+      --line: rgba(17, 17, 17, 0.08);
+      --muted: #6b7280;
+      --blue: #2563eb;
+      --blue-soft: rgba(37, 99, 235, 0.1);
+      --ok: #166534;
+      --ok-soft: rgba(22, 101, 52, 0.1);
+      --warn: #92400e;
+      --warn-soft: rgba(146, 64, 14, 0.1);
+      --shadow: 0 28px 70px rgba(17, 17, 17, 0.14);
+    }
 
-* { box-sizing: border-box; }
-
-body {
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background:
-    radial-gradient(circle at top left, rgba(212, 175, 55, 0.14), transparent 26%),
-    radial-gradient(circle at bottom right, rgba(17, 17, 17, 0.07), transparent 24%),
-    linear-gradient(135deg, #f2efe8, #f8f7f3 44%, #ece8e0);
-  color: var(--black);
-  margin: 0;
-  min-height: 100vh;
-  position: relative;
-  overflow-x: hidden;
-}
-
-.page-bg,
-.brand-watermark,
-.spinoza-shadow,
-.top-glow,
-.playing-card-accent {
-  position: fixed;
-  pointer-events: none;
-}
-
-.page-bg,
-.top-glow {
-  inset: 0;
-}
-
-.page-bg {
-  background-image: url('./123zwartkaart.png');
-  background-size: 255px;
-  background-repeat: repeat;
-  background-position: center;
-  opacity: 0.13;
-  filter: grayscale(100%) contrast(1.12) brightness(0.98);
-  mix-blend-mode: multiply;
-  z-index: 0;
-}
-
-.brand-watermark {
-  top: 50%;
-  left: 50%;
-  width: min(42vw, 560px);
-  transform: translate(-50%, -50%);
-  opacity: 0.2;
-  z-index: 0;
-  filter: saturate(1.08) brightness(1.02);
-}
-
-.brand-watermark img,
-.spinoza-shadow img,
-.playing-card-accent img {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.spinoza-shadow {
-  left: -34px;
-  bottom: -4px;
-  width: min(40vw, 560px);
-  opacity: 0.48;
-  z-index: 0;
-  filter: sepia(0.22) saturate(1.18) contrast(1.08) brightness(1.03);
-}
-
-.playing-card-accent {
-  right: -34px;
-  bottom: 6%;
-  width: min(28vw, 380px);
-  opacity: 0.88;
-  z-index: 0;
-  filter: sepia(0.18) saturate(1.72) contrast(1.18) brightness(1.08) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.2));
-  transform: rotate(7deg);
-  transform-origin: center right;
-}
-
-.playing-card-accent img {
-  border-radius: 22px;
-}
-
-.top-glow {
-  background: linear-gradient(180deg, rgba(255,255,255,0.38), transparent 24%);
-  z-index: 0;
-}
-
-.watermark {
-  position: fixed;
-  right: 20px;
-  bottom: 14px;
-  color: rgba(17,17,17,0.28);
-  font-size: 14px;
-  user-select: none;
-  pointer-events: none;
-  z-index: 3;
-  letter-spacing: 0.02em;
-}
-
-@media (max-width: 760px) {
-  body {
-    padding-left: 0;
-    padding-right: 0;
-  }
-
-  .brand-watermark {
-    width: min(84vw, 540px);
-    opacity: 0.22;
-  }
-
-  .spinoza-shadow {
-    left: -28px;
-    bottom: 0;
-    width: min(60vw, 380px);
-    opacity: 0.54;
-    filter: sepia(0.18) saturate(1.12) contrast(1.04) brightness(1.03);
-  }
-
-  .playing-card-accent {
-    right: -28px;
-    bottom: 8%;
-    width: min(54vw, 320px);
-    opacity: 0.92;
-    filter: sepia(0.2) saturate(1.78) contrast(1.2) brightness(1.09) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.2));
-  }
-}
-
-
+    * { box-sizing: border-box; }
 
     body {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(212, 175, 55, 0.14), transparent 26%),
+        radial-gradient(circle at bottom right, rgba(17, 17, 17, 0.07), transparent 24%),
+        linear-gradient(135deg, #f2efe8, #f8f7f3 44%, #ece8e0);
+      color: var(--black);
+      margin: 0;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
       display: flex;
       justify-content: center;
       align-items: center;
       padding: 28px;
+    }
+
+    .page-bg,
+    .brand-watermark,
+    .spinoza-shadow,
+    .top-glow,
+    .playing-card-accent {
+      position: fixed;
+      pointer-events: none;
+    }
+
+    .page-bg,
+    .top-glow {
+      inset: 0;
+    }
+
+    .page-bg {
+      background-image: url('./123zwartkaart.png');
+      background-size: 255px;
+      background-repeat: repeat;
+      background-position: center;
+      opacity: 0.13;
+      filter: grayscale(100%) contrast(1.12) brightness(0.98);
+      mix-blend-mode: multiply;
+      z-index: 0;
+    }
+
+    .brand-watermark {
+      top: 50%;
+      left: 50%;
+      width: min(46vw, 620px);
+      transform: translate(-50%, -50%);
+      opacity: 0.24;
+      z-index: 0;
+      filter: saturate(1.16) brightness(1.03);
+    }
+
+    .brand-watermark img,
+    .spinoza-shadow img,
+    .playing-card-accent img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .spinoza-shadow {
+      left: -40px;
+      bottom: -8px;
+      width: min(43vw, 600px);
+      opacity: 0.56;
+      z-index: 0;
+      filter: sepia(0.24) saturate(1.28) contrast(1.12) brightness(1.05);
+    }
+
+    .playing-card-accent {
+      right: -42px;
+      bottom: 5%;
+      width: min(30vw, 405px);
+      opacity: 0.97;
+      z-index: 0;
+      filter: sepia(0.16) saturate(2.08) contrast(1.24) brightness(1.11) drop-shadow(0 20px 38px rgba(40, 18, 12, 0.24));
+      transform: rotate(7deg);
+      transform-origin: center right;
+    }
+
+    .playing-card-accent img {
+      border-radius: 22px;
+    }
+
+    .top-glow {
+      background: linear-gradient(180deg, rgba(255,255,255,0.38), transparent 24%);
+      z-index: 0;
+    }
+
+    .watermark {
+      position: fixed;
+      right: 20px;
+      bottom: 14px;
+      color: rgba(17,17,17,0.28);
+      font-size: 14px;
+      user-select: none;
+      pointer-events: none;
+      z-index: 3;
+      letter-spacing: 0.02em;
     }
 
     .card {
@@ -163,7 +133,7 @@ body {
       padding: 30px 34px 34px;
       border-radius: 28px;
       text-align: center;
-      max-width: 900px;
+      max-width: 960px;
       width: 100%;
       box-shadow: var(--shadow);
       position: relative;
@@ -214,6 +184,15 @@ body {
       letter-spacing: -0.035em;
       position: relative;
       z-index: 1;
+    }
+
+    .intro {
+      color: var(--muted);
+      margin: 0 auto 16px;
+      max-width: 640px;
+      position: relative;
+      z-index: 1;
+      line-height: 1.5;
     }
 
     .answer {
@@ -273,13 +252,28 @@ body {
     }
 
     #status {
-      color: var(--muted);
       min-height: 22px;
-      margin-top: 10px;
-      white-space: pre-wrap;
+      margin-top: 14px;
       position: relative;
       z-index: 1;
     }
+
+    .notice {
+      display: none;
+      text-align: left;
+      border-radius: 16px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.75);
+      color: var(--muted);
+    }
+
+    .notice.show { display: block; }
+    .notice.info { background: rgba(255,255,255,0.82); }
+    .notice.ok { background: var(--ok-soft); color: var(--ok); border-color: rgba(22,101,52,0.14); }
+    .notice.warn { background: var(--warn-soft); color: var(--warn); border-color: rgba(146,64,14,0.14); }
+    .notice a { color: inherit; }
+    .notice strong { color: var(--black); }
 
     .lists {
       display: grid;
@@ -300,11 +294,7 @@ body {
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.65);
     }
 
-    .list-box h3 {
-      text-align: center;
-      margin: 0 0 10px 0;
-    }
-
+    .list-box h3 { text-align: center; margin: 0 0 10px 0; }
     ul { list-style: none; padding: 0; margin: 0; }
     li { margin: 6px 0; }
 
@@ -316,12 +306,94 @@ body {
       z-index: 1;
     }
 
-    .request-link-wrap { margin-top: 8px; }
-    .request-link { color: var(--blue); text-decoration: none; font-size: 15px; }
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+      text-align: left;
+      margin-bottom: 8px;
+    }
+
+    .section-copy h3 {
+      margin: 0 0 4px;
+      text-align: left;
+    }
+
+    .section-copy p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .helper-panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 14px;
+      text-align: left;
+    }
+
+    .helper-panel {
+      background: rgba(250, 250, 249, 0.86);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.65);
+    }
+
+    .helper-panel strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 16px;
+    }
+
+    .helper-panel p {
+      margin: 0 0 12px;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    .helper-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .text-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: transform 0.14s ease, box-shadow 0.14s ease;
+    }
+
+    .text-link:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px rgba(17,17,17,0.09);
+    }
+
+    .text-link.primary {
+      background: var(--blue);
+      color: white;
+    }
+
+    .text-link.secondary {
+      background: rgba(255,255,255,0.7);
+      color: var(--blue);
+      border: 1px solid rgba(37,99,235,0.14);
+    }
 
     @media (max-width: 760px) {
       body { padding: 16px 0; }
-      .lists, .two-col { grid-template-columns: 1fr; }
+      .lists, .two-col, .helper-panels { grid-template-columns: 1fr; }
+      .section-head { flex-direction: column; }
       h1 { padding: 0; margin-top: 78px; font-size: 2rem; }
       .logo-corner { top: 12px; right: 12px; width: 68px; height: 68px; }
       .admin-link { top: 12px; left: 12px; }
@@ -341,27 +413,47 @@ body {
     <img src="./logo.png" alt="Logo" class="logo-corner" />
 
     <h1>Wordt er gejast donderdag?</h1>
+    <p class="intro">Stem hier op donderdag, en gebruik dezelfde naam die door de admin is goedgekeurd. Nieuwe spelers vragen eerst een naam aan en activeren daarna één keer hun account met een pincode.</p>
 
     <div id="answer" class="answer">...</div>
     <p id="count"></p>
 
     <div class="section">
-      <h3>Inloggen</h3>
+      <div class="section-head">
+        <div class="section-copy">
+          <h3>Inloggen en stemmen</h3>
+          <p>Kies je goedgekeurde naam, vul je pincode in en geef daarna aan of je kunt.</p>
+        </div>
+      </div>
       <div class="two-col">
         <select id="playerSelect"></select>
-        <input id="pinInput" type="password" placeholder="Pincode" />
+        <input id="pinInput" type="password" placeholder="Pincode" inputmode="numeric" maxlength="8" />
       </div>
       <div>
         <button id="yesBtn" class="yes" type="button">Ik kan</button>
         <button id="noBtn" class="no" type="button">Ik kan niet</button>
         <button id="removeBtn" class="remove" type="button" style="display:none;">Verwijder mijn stem</button>
       </div>
-      <div class="request-link-wrap">
-        <a href="./request.html" class="request-link">Naam aanvragen</a>
+
+      <div class="helper-panels">
+        <div class="helper-panel">
+          <strong>Nog geen naam?</strong>
+          <p>Vraag eerst je naam aan. Zodra die is goedgekeurd, kun je terugkomen om je account te activeren.</p>
+          <div class="helper-actions">
+            <a href="./request.html" class="text-link secondary">Naam aanvragen</a>
+          </div>
+        </div>
+        <div class="helper-panel">
+          <strong>Naam goedgekeurd, nog geen pincode?</strong>
+          <p>Activeer je account eenmalig met je goedgekeurde naam. Daarna log je hier gewoon in met die pincode.</p>
+          <div class="helper-actions">
+            <a id="activateLink" href="./activate.html" class="text-link primary">Account activeren</a>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div id="status"></div>
+    <div id="status" class="notice info"></div>
 
     <div class="lists">
       <div class="list-box">
@@ -376,7 +468,7 @@ body {
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v24</div>
+  <div class="watermark">Made by Bruis · v29</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -394,32 +486,47 @@ body {
     async function parseResponse(res) {
       const text = await res.text();
       let data = null;
-
-      try {
-        data = text ? JSON.parse(text) : null;
-      } catch {
-        throw new Error(text || `HTTP ${res.status}`);
-      }
-
-      if (!res.ok) {
-        throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
-      }
-
+      try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); }
+      if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`);
       return data;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', '&quot;').replaceAll("'", '&#39;');
     }
 
     function getSessionToken() { return localStorage.getItem(SESSION_KEY); }
     function setSessionToken(token) { localStorage.setItem(SESSION_KEY, token); }
     function clearSessionToken() { localStorage.removeItem(SESSION_KEY); }
+    function getSelectedName() { return document.getElementById("playerSelect").value || ""; }
+    function getPrefillName() { return new URLSearchParams(window.location.search).get("name") || ""; }
+
+    function updateActivateLink(name) {
+      const link = document.getElementById("activateLink");
+      const cleanName = (name || "").trim();
+      link.href = cleanName ? `./activate.html?name=${encodeURIComponent(cleanName)}` : "./activate.html";
+    }
+
+    function setStatus(message = "", tone = "info", html = null) {
+      const el = document.getElementById("status");
+      if (!message && !html) {
+        el.className = `notice ${tone}`;
+        el.innerHTML = "";
+        return;
+      }
+      el.className = `notice ${tone} show`;
+      el.innerHTML = html ?? escapeHtml(message);
+    }
 
     function fillNameSelect(names, selectedName = null, locked = false) {
       const select = document.getElementById("playerSelect");
+      const previous = selectedName || select.value || getPrefillName() || "";
       select.innerHTML = "";
       const placeholder = document.createElement("option");
       placeholder.value = "";
       placeholder.textContent = "Kies je naam";
       placeholder.disabled = true;
-      placeholder.selected = !selectedName;
+      placeholder.selected = !previous;
       select.appendChild(placeholder);
       (names || []).forEach((name) => {
         const option = document.createElement("option");
@@ -427,8 +534,9 @@ body {
         option.textContent = name;
         select.appendChild(option);
       });
-      if (selectedName) select.value = selectedName;
+      if (previous && (names || []).includes(previous)) select.value = previous;
       select.disabled = locked;
+      updateActivateLink(select.value || previous);
     }
 
     function renderList(id, names, emptyText) {
@@ -459,7 +567,11 @@ body {
       renderList("legendsList", state.yes_names || [], "Nog niemand");
       renderList("losersList", state.no_names || [], "Nog niemand");
       document.getElementById("removeBtn").style.display = state.my_status ? "inline-block" : "none";
-      document.getElementById("status").textContent = state.my_status ? `Jouw keuze: ${state.my_status}` : "";
+      if (state.my_status) {
+        setStatus(`Jouw keuze: ${state.my_status}`, "ok");
+      } else {
+        setStatus();
+      }
     }
 
     async function getState() {
@@ -474,7 +586,7 @@ body {
     }
 
     async function loginPlayer() {
-      const desiredName = document.getElementById("playerSelect").value;
+      const desiredName = getSelectedName();
       const enteredPin = document.getElementById("pinInput").value.trim();
       if (!desiredName) throw new Error("Kies eerst je naam");
       if (!enteredPin) throw new Error("Voer je pincode in");
@@ -504,35 +616,67 @@ body {
       return await parseResponse(res);
     }
 
-    async function ensureLoggedIn() { if (getSessionToken()) return; await loginPlayer(); }
+    async function ensureLoggedIn() {
+      if (getSessionToken()) return;
+      await loginPlayer();
+    }
+
+    function renderHelpfulError(err) {
+      const message = err instanceof Error ? err.message : "Er ging iets mis";
+      const selectedName = getSelectedName();
+      updateActivateLink(selectedName);
+      const activateHref = document.getElementById("activateLink").href;
+      if (/pincode.*ingesteld|nog niet geactiveerd|goedgekeurd maar nog niet/i.test(message)) {
+        setStatus(message, "warn", `<strong>${escapeHtml(message)}</strong><br>Is je naam net goedgekeurd? <a href="${activateHref}">Activeer hier eerst je account</a>.`);
+        return;
+      }
+      if (/Speler niet gevonden of nog niet goedgekeurd/i.test(message)) {
+        setStatus(message, "warn", `Deze naam is nog niet klaar om in te loggen. Vraag eerst je naam aan via <a href="./request.html">de aanvraagpagina</a>, of activeer je account zodra die is goedgekeurd via <a href="${activateHref}">activate.html</a>.`);
+        return;
+      }
+      if (/Sessie ongeldig/i.test(message)) clearSessionToken();
+      setStatus(message === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : message, "warn");
+    }
 
     async function handleVote(status) {
-      try { await ensureLoggedIn(); renderState(await castVote(status)); }
-      catch (err) { if (err instanceof Error && err.message.includes("Sessie ongeldig")) clearSessionToken(); alert(err instanceof Error ? err.message : "Er ging iets mis"); }
+      try {
+        await ensureLoggedIn();
+        renderState(await castVote(status));
+      } catch (err) {
+        renderHelpfulError(err);
+      }
     }
 
     async function handleRemove() {
-      try { renderState(await removeMyVote()); }
-      catch (err) { if (err instanceof Error && err.message.includes("Sessie ongeldig")) clearSessionToken(); alert(err instanceof Error ? err.message : "Er ging iets mis"); }
+      try {
+        renderState(await removeMyVote());
+      } catch (err) {
+        renderHelpfulError(err);
+      }
     }
 
     async function load() {
-      try { renderState(await getState()); }
-      catch (err) {
+      try {
+        renderState(await getState());
+      } catch (err) {
         document.getElementById("answer").textContent = "Fout";
         document.getElementById("answer").className = "answer nee";
         document.getElementById("count").textContent = "Kon site niet laden";
         const rawMessage = err instanceof Error ? err.message : "Onbekende fout";
-        document.getElementById("status").textContent = rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage;
+        setStatus(rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage, "warn");
         renderList("legendsList", [], "Nog niemand");
         renderList("losersList", [], "Nog niemand");
         fillNameSelect([], null, false);
       }
     }
 
+    document.getElementById("playerSelect").addEventListener("change", (event) => updateActivateLink(event.target.value));
     document.getElementById("yesBtn").addEventListener("click", () => handleVote("ja"));
     document.getElementById("noBtn").addEventListener("click", () => handleVote("nee"));
     document.getElementById("removeBtn").addEventListener("click", handleRemove);
+    document.getElementById("pinInput").addEventListener("input", (event) => {
+      event.target.value = event.target.value.replace(/\D/g, "").slice(0, 8);
+    });
     load();
   </script>
 </body>

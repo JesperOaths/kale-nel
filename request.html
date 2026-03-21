@@ -5,191 +5,86 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Naam aanvragen</title>
   <style>
-
-    
     :root {
-  --gold: #d4af37;
-  --gold-dark: #b89018;
-  --black: #111111;
-  --soft: #f3f1ec;
-  --soft-2: #ebe7df;
-  --card: rgba(255, 255, 255, 0.95);
-  --line: rgba(17, 17, 17, 0.08);
-  --muted: #6b7280;
-  --blue: #2563eb;
-  --shadow: 0 28px 70px rgba(17, 17, 17, 0.14);
-}
-
-* { box-sizing: border-box; }
-
-body {
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background:
-    radial-gradient(circle at top left, rgba(212, 175, 55, 0.14), transparent 26%),
-    radial-gradient(circle at bottom right, rgba(17, 17, 17, 0.07), transparent 24%),
-    linear-gradient(135deg, #f2efe8, #f8f7f3 44%, #ece8e0);
-  color: var(--black);
-  margin: 0;
-  min-height: 100vh;
-  position: relative;
-  overflow-x: hidden;
-}
-
-.page-bg,
-.brand-watermark,
-.spinoza-shadow,
-.top-glow,
-.playing-card-accent {
-  position: fixed;
-  pointer-events: none;
-}
-
-.page-bg,
-.top-glow {
-  inset: 0;
-}
-
-.page-bg {
-  background-image: url('./123zwartkaart.png');
-  background-size: 255px;
-  background-repeat: repeat;
-  background-position: center;
-  opacity: 0.13;
-  filter: grayscale(100%) contrast(1.12) brightness(0.98);
-  mix-blend-mode: multiply;
-  z-index: 0;
-}
-
-.brand-watermark {
-  top: 50%;
-  left: 50%;
-  width: min(42vw, 560px);
-  transform: translate(-50%, -50%);
-  opacity: 0.2;
-  z-index: 0;
-  filter: saturate(1.08) brightness(1.02);
-}
-
-.brand-watermark img,
-.spinoza-shadow img,
-.playing-card-accent img {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.spinoza-shadow {
-  left: -34px;
-  bottom: -4px;
-  width: min(40vw, 560px);
-  opacity: 0.48;
-  z-index: 0;
-  filter: sepia(0.22) saturate(1.18) contrast(1.08) brightness(1.03);
-}
-
-.playing-card-accent {
-  right: -34px;
-  bottom: 6%;
-  width: min(28vw, 380px);
-  opacity: 0.88;
-  z-index: 0;
-  filter: sepia(0.18) saturate(1.72) contrast(1.18) brightness(1.08) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.2));
-  transform: rotate(7deg);
-  transform-origin: center right;
-}
-
-.playing-card-accent img {
-  border-radius: 22px;
-}
-
-.top-glow {
-  background: linear-gradient(180deg, rgba(255,255,255,0.38), transparent 24%);
-  z-index: 0;
-}
-
-.watermark {
-  position: fixed;
-  right: 20px;
-  bottom: 14px;
-  color: rgba(17,17,17,0.28);
-  font-size: 14px;
-  user-select: none;
-  pointer-events: none;
-  z-index: 3;
-  letter-spacing: 0.02em;
-}
-
-@media (max-width: 760px) {
-  body {
-    padding-left: 0;
-    padding-right: 0;
-  }
-
-  .brand-watermark {
-    width: min(84vw, 540px);
-    opacity: 0.22;
-  }
-
-  .spinoza-shadow {
-    left: -28px;
-    bottom: 0;
-    width: min(60vw, 380px);
-    opacity: 0.54;
-    filter: sepia(0.18) saturate(1.12) contrast(1.04) brightness(1.03);
-  }
-
-  .playing-card-accent {
-    right: -28px;
-    bottom: 8%;
-    width: min(54vw, 320px);
-    opacity: 0.92;
-    filter: sepia(0.2) saturate(1.78) contrast(1.2) brightness(1.09) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.2));
-  }
-}
-
-
-
+      --gold: #d4af37;
+      --gold-dark: #b89018;
+      --black: #111111;
+      --card: rgba(255, 255, 255, 0.95);
+      --line: rgba(17, 17, 17, 0.08);
+      --muted: #6b7280;
+      --blue: #2563eb;
+      --blue-soft: rgba(37, 99, 235, 0.1);
+      --ok: #166534;
+      --ok-soft: rgba(22, 101, 52, 0.1);
+      --warn: #92400e;
+      --warn-soft: rgba(146, 64, 14, 0.1);
+      --shadow: 0 28px 70px rgba(17, 17, 17, 0.14);
+    }
+    * { box-sizing: border-box; }
     body {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(212, 175, 55, 0.14), transparent 26%),
+        radial-gradient(circle at bottom right, rgba(17, 17, 17, 0.07), transparent 24%),
+        linear-gradient(135deg, #f2efe8, #f8f7f3 44%, #ece8e0);
+      color: var(--black);
+      margin: 0;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
       display: flex;
       justify-content: center;
       align-items: center;
       padding: 28px;
     }
-
+    .page-bg,.brand-watermark,.spinoza-shadow,.top-glow,.playing-card-accent { position: fixed; pointer-events: none; }
+    .page-bg,.top-glow { inset: 0; }
+    .page-bg { background-image: url('./123zwartkaart.png'); background-size: 255px; background-repeat: repeat; background-position: center; opacity: 0.13; filter: grayscale(100%) contrast(1.12) brightness(0.98); mix-blend-mode: multiply; z-index: 0; }
+    .brand-watermark { top: 50%; left: 50%; width: min(46vw, 620px); transform: translate(-50%, -50%); opacity: 0.24; z-index: 0; filter: saturate(1.16) brightness(1.03); }
+    .brand-watermark img,.spinoza-shadow img,.playing-card-accent img { display: block; width: 100%; height: auto; }
+    .spinoza-shadow { left: -40px; bottom: -8px; width: min(43vw, 600px); opacity: 0.56; z-index: 0; filter: sepia(0.24) saturate(1.28) contrast(1.12) brightness(1.05); }
+    .playing-card-accent { right: -42px; bottom: 5%; width: min(30vw, 405px); opacity: 0.97; z-index: 0; filter: sepia(0.16) saturate(2.08) contrast(1.24) brightness(1.11) drop-shadow(0 20px 38px rgba(40, 18, 12, 0.24)); transform: rotate(7deg); transform-origin: center right; }
+    .playing-card-accent img { border-radius: 22px; }
+    .top-glow { background: linear-gradient(180deg, rgba(255,255,255,0.38), transparent 24%); z-index: 0; }
+    .watermark { position: fixed; right: 20px; bottom: 14px; color: rgba(17,17,17,0.28); font-size: 14px; user-select: none; pointer-events: none; z-index: 3; letter-spacing: 0.02em; }
     .card {
-      background: var(--card);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.75);
-      padding: 30px 34px 34px;
-      border-radius: 28px;
-      text-align: center;
-      max-width: 740px;
-      width: 100%;
-      box-shadow: var(--shadow);
-      position: relative;
-      margin: 20px;
-      z-index: 2;
-      overflow: hidden;
+      background: var(--card); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.75);
+      padding: 30px 34px 34px; border-radius: 28px; text-align: center; max-width: 860px; width: 100%;
+      box-shadow: var(--shadow); position: relative; margin: 20px; z-index: 2; overflow: hidden;
     }
-
     .card::before { content:""; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(135deg, rgba(212,175,55,0.085), transparent 34%, rgba(17,17,17,0.05)); pointer-events:none; }
     .logo-corner { position:absolute; top:20px; right:20px; width:84px; height:84px; object-fit:contain; opacity:0.96; filter:drop-shadow(0 6px 14px rgba(0,0,0,0.08)); }
     .back-link { position:absolute; left:18px; top:20px; font-size:14px; text-decoration:none; color:var(--blue); background:rgba(255,255,255,0.7); padding:6px 10px; border-radius:999px; border:1px solid rgba(37,99,235,0.12); backdrop-filter: blur(6px); }
     h1 { margin:24px 0 8px 0; font-size:clamp(2.35rem,4vw,3rem); line-height:1.02; padding:0 88px; letter-spacing:-0.035em; position:relative; z-index:1; }
-    p { color:var(--muted); margin-bottom:20px; position:relative; z-index:1; font-size:clamp(1rem,2vw,1.15rem); }
+    .intro { color:var(--muted); margin:0 auto 22px; position:relative; z-index:1; font-size:clamp(1rem,2vw,1.15rem); max-width: 690px; line-height: 1.5; }
+    .grid { display:grid; grid-template-columns: 1.1fr 0.9fr; gap:18px; text-align:left; position:relative; z-index:1; }
+    .panel { background: rgba(250,250,249,0.82); border:1px solid var(--line); border-radius:20px; padding:18px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.65); }
+    .panel h2, .panel h3 { margin:0 0 10px; letter-spacing:-0.02em; }
+    .panel p, .panel li { color:var(--muted); line-height:1.5; }
     select, textarea, input { padding:12px 13px; margin:10px 0; width:100%; font-size:15px; border:1px solid rgba(17,17,17,0.1); border-radius:14px; background:rgba(255,255,255,0.9); }
     textarea { min-height:120px; resize:vertical; }
-    button { padding:12px 20px; margin-top:8px; border:none; border-radius:14px; cursor:pointer; font-size:15px; background:var(--gold); color:var(--black); transition:transform .14s ease, box-shadow .14s ease; }
-    button:hover { transform: translateY(-1px); box-shadow:0 10px 18px rgba(17,17,17,.09); }
-    #status { color:var(--muted); min-height:22px; margin-top:14px; white-space:pre-wrap; position:relative; z-index:1; }
-
+    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top: 8px; }
+    button, .ghost-link { padding:12px 20px; border:none; border-radius:14px; cursor:pointer; font-size:15px; text-decoration:none; transition:transform .14s ease, box-shadow .14s ease; }
+    button:hover, .ghost-link:hover { transform: translateY(-1px); box-shadow:0 10px 18px rgba(17,17,17,.09); }
+    button { background:var(--gold); color:var(--black); }
+    .ghost-link { display:inline-flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.7); color:var(--blue); border:1px solid rgba(37,99,235,0.12); }
+    #status { min-height:22px; margin-top:14px; white-space:pre-wrap; position:relative; z-index:1; }
+    .notice { display:none; text-align:left; border-radius:16px; padding:14px 16px; border:1px solid var(--line); background: rgba(255,255,255,0.76); color:var(--muted); }
+    .notice.show { display:block; }
+    .notice.info { background: rgba(255,255,255,0.82); }
+    .notice.ok { background: var(--ok-soft); color: var(--ok); border-color: rgba(22,101,52,0.14); }
+    .notice.warn { background: var(--warn-soft); color: var(--warn); border-color: rgba(146,64,14,0.14); }
+    .notice a { color: inherit; }
+    .steps { margin:0; padding-left: 18px; }
+    .steps li + li { margin-top: 8px; }
+    .activate-cta { margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; }
     @media (max-width: 760px) {
       body { padding: 16px 0; }
+      .grid { grid-template-columns: 1fr; }
       h1 { padding:0; margin-top:78px; font-size:2rem; }
       .logo-corner { top:12px; right:12px; width:68px; height:68px; }
       .back-link { top:12px; left:12px; }
-      .card { padding: 22px 18px; margin: 14px auto; max-width: calc(100vw - 140px); width: calc(100vw - 140px); }
-      textarea { min-height: 102px; }
+      .card { padding: 22px 18px; margin: 14px auto; max-width: calc(100vw - 68px); width: calc(100vw - 68px); }
     }
   </style>
 </head>
@@ -204,16 +99,38 @@ body {
     <a href="./index.html" class="back-link">Terug</a>
     <img src="./logo.png" alt="Logo" class="logo-corner" />
     <h1>Naam aanvragen</h1>
-    <p>Kies je naam en leg kort uit waarom die van jou is.</p>
+    <p class="intro">Vraag hier de naam aan waarmee je straks op de hoofdpagina inlogt. Na goedkeuring activeer je je account eenmalig met een eigen pincode op <strong>activate.html</strong>.</p>
 
-    <select id="requestNameSelect"></select>
-    <textarea id="requestNoteInput" placeholder="Leg kort uit waarom jij deze naam wilt claimen"></textarea>
-    <button id="requestBtn" type="button">Vraag naam aan</button>
+    <div class="grid">
+      <div class="panel">
+        <h2>Aanvraagformulier</h2>
+        <p>Kies de naam die van jou is en schrijf kort waarom die bij jou hoort.</p>
+        <select id="requestNameSelect"></select>
+        <textarea id="requestNoteInput" placeholder="Leg kort uit waarom jij deze naam wilt claimen"></textarea>
+        <div class="actions">
+          <button id="requestBtn" type="button">Vraag naam aan</button>
+          <a id="activateLink" href="./activate.html" class="ghost-link">Ik ben al goedgekeurd</a>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Hoe werkt het?</h3>
+        <ol class="steps">
+          <li>Vraag je naam aan via dit formulier.</li>
+          <li>De admin keurt je aanvraag goed of af.</li>
+          <li>Na goedkeuring ga je naar <strong>activate.html</strong> om je pincode in te stellen.</li>
+          <li>Daarna log je op de hoofdpagina in en kun je stemmen.</li>
+        </ol>
+        <div class="activate-cta">
+          <a id="activateLinkPanel" href="./activate.html" class="ghost-link">Naar activeren</a>
+          <a href="./index.html" class="ghost-link">Terug naar stemmen</a>
+        </div>
+      </div>
+    </div>
 
-    <div id="status"></div>
+    <div id="status" class="notice info"></div>
   </div>
 
-  <div class="watermark">Made by Bruis · v25</div>
+  <div class="watermark">Made by Bruis · v29</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -227,8 +144,30 @@ body {
       const text = await res.text();
       let data = null;
       try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); }
-      if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
+      if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`);
       return data;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+    }
+
+    function setStatus(message = "", tone = "info", html = null) {
+      const el = document.getElementById("status");
+      if (!message && !html) {
+        el.className = `notice ${tone}`;
+        el.innerHTML = "";
+        return;
+      }
+      el.className = `notice ${tone} show`;
+      el.innerHTML = html ?? escapeHtml(message);
+    }
+
+    function updateActivateLinks(name) {
+      const cleanName = (name || "").trim();
+      const href = cleanName ? `./activate.html?name=${encodeURIComponent(cleanName)}` : "./activate.html";
+      document.getElementById("activateLink").href = href;
+      document.getElementById("activateLinkPanel").href = href;
     }
 
     function fillNameSelect(id, names) {
@@ -246,6 +185,7 @@ body {
         option.textContent = name;
         select.appendChild(option);
       });
+      updateActivateLinks("");
     }
 
     function collectVisitorMeta() {
@@ -300,23 +240,27 @@ body {
       try {
         const state = await getRequestableNames();
         fillNameSelect("requestNameSelect", state.names || state.all_names || []);
-        document.getElementById("status").textContent = "";
+        setStatus();
       } catch (err) {
         const rawMessage = err instanceof Error ? err.message : "Kon namen niet laden";
-        document.getElementById("status").textContent = rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage;
+        setStatus(rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage, "warn");
       }
     }
 
+    document.getElementById("requestNameSelect").addEventListener("change", (event) => updateActivateLinks(event.target.value));
+
     document.getElementById("requestBtn").addEventListener("click", async () => {
       try {
-        document.getElementById("status").textContent = "Versturen...";
+        const selectedName = document.getElementById("requestNameSelect").value;
+        setStatus("Versturen...", "info");
         const result = await requestClaim();
         document.getElementById("requestNoteInput").value = "";
         document.getElementById("requestNameSelect").selectedIndex = 0;
-        document.getElementById("status").textContent = result?.message || "Aanvraag verstuurd.";
+        updateActivateLinks(selectedName);
+        setStatus(result?.message || "Aanvraag verstuurd.", "ok", `<strong>${escapeHtml(result?.message || 'Aanvraag verstuurd.')}</strong><br>Na goedkeuring ga je naar <a href="${document.getElementById('activateLink').href}">activate.html</a> om je pincode in te stellen.`);
       } catch (err) {
         const rawMessage = err instanceof Error ? err.message : "Er ging iets mis";
-        document.getElementById("status").textContent = rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage;
+        setStatus(rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage, "warn");
       }
     });
 
