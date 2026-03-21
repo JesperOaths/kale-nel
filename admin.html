@@ -401,6 +401,7 @@
       .card { padding: 20px 16px; max-width: calc(100vw - 28px); width: calc(100vw - 28px); margin: 14px auto; }
     }
   </style>
+  <link rel="stylesheet" href="./site-shell.css" />
   <link rel="stylesheet" href="./theme-v45.css" />
 </head>
 <body>
@@ -409,7 +410,7 @@
     <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
     <div class="kale-hand"><img src="./kale9goed.png" alt="" /></div>
     <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
-    <div class="playing-card-accent"><img src="./playingcard-accent.png" alt="" /></div>
+    <div class="playing-card-accent"><img src="./playingcard-accent1-trimmed.png" alt="" /></div>
     <div class="top-glow"></div>
   </div>
 
@@ -427,28 +428,28 @@
           <input id="usernameInput" type="text" placeholder="Gebruikersnaam" autocomplete="username" autocapitalize="none" spellcheck="false" />
           <input id="passwordInput" type="password" placeholder="Wachtwoord" autocomplete="current-password" />
         </div>
-        <input id="totpInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="Google Authenticator-code (6 cijfers)" autocomplete="one-time-code" />
+        <input id="totpInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="6-cijferige code" autocomplete="one-time-code" />
         <button id="loginBtn" class="login-btn" type="button">Inloggen</button>
         <details class="dev-login-box hidden">
-          <summary>Test-login zonder Authenticator</summary>
-          <div class="muted" style="margin-top:10px;">Snelle bugfix-modus. Gebruik <strong>1</strong> / <strong>1</strong> / <strong>1</strong>.</div>
+          <summary>Dev-login</summary>
+          <div class="muted" style="margin-top:10px;">Alleen voor testen.</div>
           <input id="devKeyInput" type="password" inputmode="numeric" maxlength="8" placeholder="Dev key" autocomplete="one-time-code" style="margin-top:10px;" />
-          <button id="devLoginBtn" class="login-btn" type="button" style="margin-top:10px;">Dev-login zonder Authenticator</button>
-          <div id="devLoginHint" class="muted" style="margin-top:10px;">Dev-login: gebruikersnaam <strong>1</strong>, wachtwoord <strong>1</strong>, dev key <strong>1</strong>.</div>
+          <button id="devLoginBtn" class="login-btn" type="button" style="margin-top:10px;">Dev-login</button>
+          <div id="devLoginHint" class="muted" style="margin-top:10px;">Gebruik alleen als fallback.</div>
         </details>
-        <div class="muted" style="margin-top:10px;">Log in met je gebruikersnaam, wachtwoord en 6-cijferige code uit Google Authenticator.</div>
+        <div class="muted" style="margin-top:10px;">Log in met gebruikersnaam, wachtwoord en code.</div>
       </div>
       <div id="adminView" class="hidden">
         <p id="welcomeText"></p>
         <button id="logoutBtn" class="logout-btn" type="button">Uitloggen</button>
       </div>
-      <div class="info-band">Veilige flow: aanvraag → goedkeuring → unieke activatielink → speler zet zelf een 4-cijferige pincode → daarna inloggen op de hoofdpagina. Als automatische mail is ingesteld, wordt die meteen verstuurd.</div>
+      <div class="info-band">Flow: aanvraag → goedkeuren → activatielink → activeren.</div>
       <div id="status"></div>
     </div>
 
     <div id="workspace" class="admin-grid hidden"><div><div id="requestsCard" class="card hidden">
       <h2>Openstaande naam-aanvragen</h2>
-      <div class="muted" style="margin-bottom:12px;">Doel: per goedgekeurde aanvraag een unieke activatielink genereren voor precies deze naam en precies dit e-mailadres.</div>
+      <div class="muted" style="margin-bottom:12px;">Per aanvraag één activatielink.</div>
       <input id="requestSearch" class="search-input" type="search" placeholder="Zoek op naam of e-mail" />
       <div id="requestsList"></div>
     </div>

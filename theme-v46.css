@@ -97,3 +97,24 @@ select, input, textarea { width:100%; padding: 14px 16px; border-radius: 18px; b
   .hero, .panel { border-radius: 28px; }
   .hero { padding: 22px; }
 }
+
+
+.topbar-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.hero-home { padding: 36px; }
+.hero-grid-home { grid-template-columns: minmax(0,1.2fr) minmax(300px,.8fr); align-items:stretch; }
+.hero-intro { color: var(--muted); font-size: 1.12rem; margin: 14px 0 0; max-width: 20ch; }
+.quick-links { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top: 16px; }
+.state-panel { display:flex; flex-direction:column; justify-content:space-between; padding: 28px; }
+.state-mini-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; margin-top: 24px; }
+.mini-stat { padding: 16px 18px; border-radius: 20px; background: rgba(255,255,255,0.56); border: 1px solid rgba(17,17,17,0.06); }
+.mini-stat span { display:block; font-size: .9rem; color: var(--muted); }
+.mini-stat strong { display:block; font-size: 2rem; line-height: 1; margin-top: 6px; }
+.compact-lists { margin-top: 18px; }
+.compact-lists .list-box { padding: 20px; }
+.compact-lists .name-list { gap: 10px; }
+.compact-lists .name-list li { padding: 12px 14px; }
+@media (max-width: 860px) {
+  .topbar-actions { width: 100%; justify-content: space-between; }
+  .hero-grid-home { grid-template-columns: 1fr; }
+  .hero-home { padding: 24px; }
+}

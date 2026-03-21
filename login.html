@@ -4,9 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inloggen</title>
+  <link rel="stylesheet" href="./site-shell.css" />
   <link rel="stylesheet" href="./theme-v46.css" />
 </head>
 <body>
+  <div class="site-scene" aria-hidden="true">
+    <div class="page-bg"></div>
+    <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
+    <div class="kale-hand"><img src="./kale9goed.png" alt="" /></div>
+    <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
+    <div class="playing-card-accent"><img src="./playingcard-accent1-trimmed.png" alt="" /></div>
+    <div class="top-glow"></div>
+  </div>
+
   <main class="page">
     <div class="topbar">
       <a class="brand-link" href="./index.html">← Terug naar homepage</a>
@@ -18,12 +28,12 @@
         <div>
           <span class="kicker">Spelerlogin</span>
           <h1>Inloggen</h1>
-          <p style="color:var(--muted); max-width:44ch;">Kies je naam en voer je 4-cijferige pincode in. Deze browser blijft ingelogd tot je te lang inactief bent of zelf uitlogt.</p>
+          <p style="color:var(--muted); max-width:34ch;">Naam. Pincode. Klaar.</p>
         </div>
         <div class="panel state-tile">
-          <div class="kicker">Na login</div>
+          <div class="kicker">Sessie</div>
           <div id="loginStateWord" class="state-word maybe">Klaar</div>
-          <div class="state-copy" id="loginStateCopy">Je gaat daarna terug naar de homepage om te stemmen.</div>
+          <div class="state-copy" id="loginStateCopy">Daarna ga je terug naar de homepage.</div>
         </div>
       </div>
     </section>

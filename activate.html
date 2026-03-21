@@ -431,6 +431,7 @@
       .card { padding:22px 18px; margin:14px auto; max-width: calc(100vw - 28px); width: calc(100vw - 28px); }
     }
   </style>
+  <link rel="stylesheet" href="./site-shell.css" />
   <link rel="stylesheet" href="./theme-v45.css" />
 </head>
 <body>
@@ -439,7 +440,7 @@
     <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
     <div class="kale-hand"><img src="./kale9goed.png" alt="" /></div>
     <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
-    <div class="playing-card-accent"><img src="./playingcard-accent.png" alt="" /></div>
+    <div class="playing-card-accent"><img src="./playingcard-accent1-trimmed.png" alt="" /></div>
     <div class="top-glow"></div>
   </div>
 
@@ -554,7 +555,7 @@
 
     async function loadActivationContext() {
       if (!activationToken) {
-        throw new Error("Deze activatielink is onvolledig. Open de pagina via de link uit je mail.");
+        throw new Error("Deze activatielink is onvolledig. Open de link uit je mail.");
       }
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_activation_link_context`, {
         method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(),
@@ -634,7 +635,7 @@
         setStatus('Activeren...', 'info');
         const data = await activatePlayer();
         if (data?.session_token) setSessionToken(data.session_token);
-        setStatus('Gelukt', 'ok', `<strong>Je account is geactiveerd.</strong><br>Je wordt nu teruggestuurd naar de hoofdpagina.`);
+        setStatus('Klaar', 'ok', `<strong>Je account is geactiveerd.</strong><br>Je gaat terug naar de homepage.`);
         setTimeout(() => { window.location.href = './index.html'; }, 1100);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Activeren mislukt';

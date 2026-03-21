@@ -4,10 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Dev Diagnose</title>
+  <link rel="stylesheet" href="./site-shell.css" />
   <link rel="stylesheet" href="./theme-v45.css" />
   <style>
     body { margin:0; padding:28px; font-family:Inter, ui-sans-serif, system-ui, sans-serif; color:#111; min-height:100vh; }
-    .wrap { max-width: 980px; margin:0 auto; position:relative; z-index:2; }
+    .wrap { max-width: 1040px; margin:0 auto; position:relative; z-index:2; }
+    .topbar { display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:18px; }
+    .brand-row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
     .card { border-radius:30px; padding:28px; margin-bottom:20px; }
     .row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
     input, button, textarea { font:inherit; }
@@ -22,29 +25,33 @@
   </style>
 </head>
 <body>
+  <div class="site-scene" aria-hidden="true">
+    <div class="page-bg"></div>
+    <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
+    <div class="kale-hand"><img src="./kale9goed.png" alt="" /></div>
+    <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
+    <div class="playing-card-accent"><img src="./playingcard-accent1-trimmed.png" alt="" /></div>
+    <div class="top-glow"></div>
+  </div>
+
   <div class="wrap">
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
-        <div>
-          <h1 style="margin:0 0 8px 0;">Admin-dev diagnose</h1>
-          <div class="muted">Versie v45 · expliciete diagnose voor admin-mess, testmodus en auto-mail.</div>
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <span class="chip">Testmodus = dev-login fallback</span>
-          <a href="./admin.html" class="pill-link">Terug naar admin</a>
-          <a href="./index.html" class="pill-link">Terug naar site</a>
-        </div>
+    <div class="topbar">
+      <div class="brand-row">
+        <a href="./admin.html" class="pill-link">Admin</a>
+        <a href="./index.html" class="pill-link">Site</a>
       </div>
+      <img src="./logo.png" alt="Logo" class="mini-logo" />
+    </div>
+
+    <div class="card">
+      <h1 style="margin:0 0 8px 0;">Admin-dev</h1>
+      <div class="muted">Diagnose voor login, sessie en request-RPC's.</div>
     </div>
 
     <div class="card stack">
       <div class="diagnostic-box">
-        <strong>Wat testmodus doet</strong>
-        <div class="muted" style="margin-top:8px;">
-          Testmodus is alleen nuttig als de backend-RPC <code>admin_dev_login</code> echt bestaat en een geldige
-          <code>admin_session_token</code> teruggeeft die daarna ook slaagt bij <code>admin_check_session</code>.
-          Als dat niet zo is, is testmodus alleen verwarrend en mag hij weg.
-        </div>
+        <strong>Dev-login</strong>
+        <div class="muted" style="margin-top:8px;">Gebruik dit alleen om te controleren of <code>admin_dev_login</code> en <code>admin_check_session</code> echt werken.</div>
       </div>
 
       <div class="row">
@@ -52,27 +59,19 @@
         <input id="passwordInput" type="password" placeholder="Wachtwoord" value="1" />
         <input id="totpInput" type="text" placeholder="TOTP (6 cijfers)" />
       </div>
-      <input id="devKeyInput" type="password" placeholder="Dev key voor testmodus" value="1" />
+      <input id="devKeyInput" type="password" placeholder="Dev key" value="1" />
 
       <div class="actions">
-        <button class="dev-btn" id="realLoginBtn" type="button">Echte admin_login testen</button>
-        <button class="dev-btn" id="devLoginBtn" type="button">Testmodus / admin_dev_login testen</button>
-        <button class="dev-btn" id="checkBtn" type="button">admin_check_session testen</button>
-        <button class="dev-btn" id="pendingBtn" type="button">Openstaande aanvragen laden</button>
-        <button class="dev-btn" id="historyBtn" type="button">Geschiedenis laden</button>
-        <button class="reject-btn" id="clearBtn" type="button">Sessietoken wissen</button>
+        <button class="dev-btn" id="realLoginBtn" type="button">admin_login</button>
+        <button class="dev-btn" id="devLoginBtn" type="button">admin_dev_login</button>
+        <button class="dev-btn" id="checkBtn" type="button">admin_check_session</button>
+        <button class="dev-btn" id="pendingBtn" type="button">Openstaand</button>
+        <button class="dev-btn" id="historyBtn" type="button">Geschiedenis</button>
+        <button class="reject-btn" id="clearBtn" type="button">Wissen</button>
       </div>
 
       <div class="diagnostic-box">
-        <strong>Automatische activatie-mail</strong>
-        <div class="muted" style="margin-top:8px;">
-          De adminpagina stuurt nu standaard naar <code>/functions/v1/send-activation-email</code>.
-          Die functie moet worden gedeployed met <code>--no-verify-jwt</code>, anders krijg je weer een auth-401.
-        </div>
-      </div>
-
-      <div class="diagnostic-box">
-        <strong>Huidige sessietoken</strong>
+        <strong>Sessietoken</strong>
         <pre id="tokenOut">(nog geen token)</pre>
       </div>
 

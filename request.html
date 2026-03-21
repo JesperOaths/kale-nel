@@ -392,6 +392,7 @@
       .card { padding:22px 18px; margin:14px auto; max-width: calc(100vw - 28px); width: calc(100vw - 28px); }
     }
   </style>
+  <link rel="stylesheet" href="./site-shell.css" />
   <link rel="stylesheet" href="./theme-v45.css" />
 </head>
 <body>
@@ -400,7 +401,7 @@
     <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
     <div class="kale-hand"><img src="./kale9goed.png" alt="" /></div>
     <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
-    <div class="playing-card-accent"><img src="./playingcard-accent.png" alt="" /></div>
+    <div class="playing-card-accent"><img src="./playingcard-accent1-trimmed.png" alt="" /></div>
     <div class="top-glow"></div>
   </div>
 
@@ -410,31 +411,29 @@
     <h1>Naam aanvragen</h1>
         <div class="grid">
       <div class="panel">
-        <h2>Aanvraag versturen</h2>
+        <h2>Aanvragen</h2>
         <label for="requestNameSelect">Gewenste naam</label>
         <select id="requestNameSelect" autocomplete="name" aria-label="Gewenste naam"></select>
 
         <label for="requestEmailInput">E-mailadres</label>
         <input id="requestEmailInput" type="email" placeholder="jij@example.com" autocomplete="email" autocapitalize="off" spellcheck="false" enterkeyhint="next" />
 
-        <label for="requestNoteInput">Korte toelichting</label>
-        <textarea id="requestNoteInput" placeholder="Bijvoorbeeld: ik speel mee in huis / ik ben nieuw / dit is mijn vaste naam." autocomplete="off" enterkeyhint="send"></textarea>
+        <label for="requestNoteInput">Toelichting</label>
+        <textarea id="requestNoteInput" placeholder="Kort toelichten" autocomplete="off" enterkeyhint="send"></textarea>
 
         <div class="actions">
           <button id="requestBtn" class="primary-btn" type="button">Aanvraag versturen</button>
           <a href="./index.html" class="ghost-link">Terug</a>
         </div>
-        <div class="tiny">We vragen je e-mailadres alleen voor de persoonlijke activatielink en contact over deze aanvraag.</div>
+        <div class="tiny">Je mailadres gebruiken we voor je activatielink.</div>
       </div>
 
       <div class="panel">
-        <h3>Hoe het werkt</h3>
+        <h3>Kort</h3>
         <ol>
-          <li>Kies de naam waarmee je wilt stemmen.</li>
-          <li>Vul het e-mailadres in waarop jij de activatielink wilt ontvangen.</li>
-          <li>Na goedkeuring krijg je per mail een unieke link die alleen voor jouw aanvraag geldig is.</li>
-          <li>Via die link kies je je eigen 4-cijferige pincode.</li>
-          <li>Daarna log je voortaan in op de hoofdpagina met die naam en pincode.</li>
+          <li>Kies een naam.</li>
+          <li>Vul je e-mail in.</li>
+          <li>Na goedkeuring activeer je je account via mail.</li>
         </ol>
         <div id="status" class="notice"></div>
       </div>
