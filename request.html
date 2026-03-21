@@ -5,149 +5,434 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Naam aanvragen</title>
   <style>
+
     :root {
       --gold: #d4af37;
       --gold-dark: #b89018;
       --black: #111111;
-      --card: rgba(255, 255, 255, 0.76);
-      --line: rgba(17, 17, 17, 0.08);
-      --muted: #6b7280;
+      --card: rgba(255,255,255,0.58);
+      --card-2: rgba(255,255,255,0.44);
+      --line: rgba(17,17,17,0.08);
+      --muted: #5f6470;
       --blue: #2563eb;
-      --blue-soft: rgba(37, 99, 235, 0.1);
       --ok: #166534;
       --ok-soft: rgba(22, 101, 52, 0.1);
       --warn: #92400e;
-      --warn-soft: rgba(146, 64, 14, 0.1);
-      --shadow: 0 28px 70px rgba(17, 17, 17, 0.14);
+      --warn-soft: rgba(146, 64, 14, 0.12);
+      --shadow: 0 24px 64px rgba(17, 17, 17, 0.16);
+      --mouse-x: 0px;
+      --mouse-y: 0px;
     }
     * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background:
-        radial-gradient(circle at top left, rgba(212, 175, 55, 0.14), transparent 26%),
-        radial-gradient(circle at bottom right, rgba(17, 17, 17, 0.07), transparent 24%),
-        linear-gradient(135deg, #f2efe8, #f8f7f3 44%, #ece8e0);
+        radial-gradient(circle at top left, rgba(212, 175, 55, 0.12), transparent 24%),
+        radial-gradient(circle at bottom right, rgba(17, 17, 17, 0.06), transparent 22%),
+        linear-gradient(135deg, #f1eee7, #f7f5ef 42%, #ece7de 100%);
       color: var(--black);
       margin: 0;
       min-height: 100vh;
       position: relative;
       overflow-x: hidden;
-      display: flex;
-      justify-content: center;
-      align-items: center;
       padding: 28px;
     }
-    .page-bg,.brand-watermark,.spinoza-shadow,.top-glow,.playing-card-accent { position: fixed; pointer-events: none; }
-    .page-bg,.top-glow { inset: 0; }
-    .page-bg { background-image: url('./123zwartkaart.png'); background-size: 255px; background-repeat: repeat; background-position: center; opacity: 0.13; filter: grayscale(100%) contrast(1.12) brightness(0.98); mix-blend-mode: multiply; z-index: 0; }
-    .brand-watermark { top: 50%; left: 50%; width: min(46vw, 620px); transform: translate(-50%, -50%); opacity: 0.24; z-index: 0; filter: saturate(1.16) brightness(1.03); }
-    .brand-watermark img,.spinoza-shadow img,.playing-card-accent img { display: block; width: 100%; height: auto; }
-    .spinoza-shadow { left: -40px; bottom: -8px; width: min(43vw, 600px); opacity: 0.56; z-index: 0; filter: sepia(0.24) saturate(1.28) contrast(1.12) brightness(1.05); }
-    .playing-card-accent { right: -42px; bottom: 5%; width: min(30vw, 405px); opacity: 0.97; z-index: 0; filter: sepia(0.16) saturate(2.08) contrast(1.24) brightness(1.11) drop-shadow(0 20px 38px rgba(40, 18, 12, 0.24)); transform: rotate(7deg); transform-origin: center right; }
-    .playing-card-accent img { border-radius: 22px; }
-
-    .center-cards-art {
-      top: 53%;
-      left: 50%;
-      width: min(42vw, 520px);
-      transform: translate(-50%, -50%) rotate(-5deg);
-      opacity: 0.18;
-      z-index: 1;
-      filter: drop-shadow(0 20px 42px rgba(40, 18, 12, 0.18));
+    .scene, .page-bg, .top-glow, .brand-watermark, .spinoza-shadow, .playing-card-accent, .kale-hand, .watermark {
+      pointer-events: none;
     }
-
-    .center-cards-art img {
+    .scene {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      will-change: transform;
+      transform: translateZ(0);
+    }
+    .page-bg, .top-glow, .brand-watermark, .spinoza-shadow, .playing-card-accent, .kale-hand {
+      position: absolute;
+      will-change: transform;
+      transform: translate3d(0,0,0);
+    }
+    .page-bg,
+    .top-glow {
+      inset: 0;
+    }
+    .page-bg {
+      background-image: url('./123zwartkaart.png');
+      background-size: 255px;
+      background-repeat: repeat;
+      background-position: center;
+      opacity: 0.11;
+      mix-blend-mode: multiply;
+    }
+    .brand-watermark {
+      top: 50%;
+      left: 50%;
+      width: min(46vw, 620px);
+      transform: translate3d(calc(-50% + var(--mouse-x) * 0.009), calc(-50% + var(--mouse-y) * 0.009), 0);
+      opacity: 0.17;
+    }
+    .brand-watermark img,
+    .spinoza-shadow img,
+    .playing-card-accent img,
+    .kale-hand img {
       display: block;
       width: 100%;
       height: auto;
     }
-    .top-glow { background: linear-gradient(180deg, rgba(255,255,255,0.38), transparent 24%); z-index: 0; }
-    .watermark { position: fixed; right: 20px; bottom: 14px; color: rgba(17,17,17,0.28); font-size: 14px; user-select: none; pointer-events: none; z-index: 3; letter-spacing: 0.02em; }
-    .card {
-      background: var(--card); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.75);
-      padding: 30px 34px 34px; border-radius: 28px; text-align: center; max-width: 860px; width: 100%;
-      box-shadow: var(--shadow); position: relative; margin: 20px; z-index: 2; overflow: hidden;
+    .spinoza-shadow {
+      left: 50%;
+      top: 54%;
+      width: min(40vw, 520px);
+      transform: translate3d(calc(-50% + var(--mouse-x) * 0.013), calc(-50% + var(--mouse-y) * 0.013), 0);
+      opacity: 0.34;
+      filter: grayscale(1) contrast(1.9) brightness(0.78);
+      mix-blend-mode: multiply;
     }
-    .card::before { content:""; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(135deg, rgba(212,175,55,0.085), transparent 34%, rgba(17,17,17,0.05)); pointer-events:none; }
-    .logo-corner { position:absolute; top:20px; right:20px; width:84px; height:84px; object-fit:contain; opacity:0.96; filter:drop-shadow(0 6px 14px rgba(0,0,0,0.08)); }
-    .back-link { position:absolute; left:18px; top:20px; font-size:14px; text-decoration:none; color:var(--blue); background:rgba(255,255,255,0.7); padding:6px 10px; border-radius:999px; border:1px solid rgba(37,99,235,0.12); backdrop-filter: blur(6px); }
-    h1 { margin:24px 0 8px 0; font-size:clamp(2.35rem,4vw,3rem); line-height:1.02; padding:0 88px; letter-spacing:-0.035em; position:relative; z-index:1; }
-    .intro { color:var(--muted); margin:0 auto 22px; position:relative; z-index:1; font-size:clamp(1rem,2vw,1.15rem); max-width: 690px; line-height: 1.5; }
-    .grid { display:grid; grid-template-columns: 1.1fr 0.9fr; gap:18px; text-align:left; position:relative; z-index:1; }
-    .panel { background: rgba(250,250,249,0.82); border:1px solid var(--line); border-radius:20px; padding:18px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.65); }
-    .panel h2, .panel h3 { margin:0 0 10px; letter-spacing:-0.02em; }
-    .panel p, .panel li { color:var(--muted); line-height:1.5; }
-    select, textarea, input { padding:12px 13px; margin:10px 0; width:100%; font-size:15px; border:1px solid rgba(17,17,17,0.1); border-radius:14px; background:rgba(255,255,255,0.9); }
-    textarea { min-height:120px; resize:vertical; }
-    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top: 8px; }
-    button, .ghost-link { padding:12px 20px; border:none; border-radius:14px; cursor:pointer; font-size:15px; text-decoration:none; transition:transform .14s ease, box-shadow .14s ease; }
-    button:hover, .ghost-link:hover { transform: translateY(-1px); box-shadow:0 10px 18px rgba(17,17,17,.09); }
-    button { background:var(--gold); color:var(--black); }
-    .ghost-link { display:inline-flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.7); color:var(--blue); border:1px solid rgba(37,99,235,0.12); }
-    #status { min-height:22px; margin-top:14px; white-space:pre-wrap; position:relative; z-index:1; }
-    .notice { display:none; text-align:left; border-radius:16px; padding:14px 16px; border:1px solid var(--line); background: rgba(255,255,255,0.76); color:var(--muted); }
-    .notice.show { display:block; }
-    .notice.info { background: rgba(255,255,255,0.82); }
-    .notice.ok { background: var(--ok-soft); color: var(--ok); border-color: rgba(22,101,52,0.14); }
-    .notice.warn { background: var(--warn-soft); color: var(--warn); border-color: rgba(146,64,14,0.14); }
-    .notice a { color: inherit; }
-    .steps { margin:0; padding-left: 18px; }
-    .steps li + li { margin-top: 8px; }
-    .activate-cta { margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; }
-    @media (max-width: 760px) {
+    .kale-hand {
+      left: -48px;
+      top: 18%;
+      width: min(33vw, 470px);
+      transform: translate3d(calc(var(--mouse-x) * -0.02), calc(var(--mouse-y) * -0.012), 0) rotate(-12deg);
+      opacity: 0.9;
+      filter: drop-shadow(0 18px 30px rgba(61, 31, 18, 0.2));
+      transform-origin: center center;
+    }
+    .playing-card-accent {
+      right: -32px;
+      bottom: 6%;
+      width: min(28vw, 390px);
+      transform: translate3d(calc(var(--mouse-x) * -0.014), calc(var(--mouse-y) * -0.01), 0) rotate(7deg);
+      opacity: 0.94;
+      filter: drop-shadow(0 18px 28px rgba(40, 18, 12, 0.18));
+      transform-origin: center right;
+    }
+    .playing-card-accent img { border-radius: 22px; }
+    .top-glow {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.34), transparent 23%),
+        radial-gradient(circle at 50% -10%, rgba(255,255,255,0.48), transparent 34%);
+    }
+    .shell, .wrap {
+      width: 100%;
+      max-width: 980px;
+      position: relative;
+      z-index: 2;
+      margin: 0 auto;
+    }
+    .card {
+      position: relative;
+      z-index: 2;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.7), rgba(255,255,255,0.54)),
+        radial-gradient(circle at top left, rgba(255,255,255,0.44), transparent 36%),
+        linear-gradient(135deg, rgba(255,255,255,0.34), rgba(255,255,255,0.18));
+      backdrop-filter: blur(7px) saturate(1.08);
+      -webkit-backdrop-filter: blur(7px) saturate(1.08);
+      border: 1px solid rgba(255,255,255,0.58);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(120deg, rgba(255,255,255,0.46) 0%, rgba(255,255,255,0.18) 18%, transparent 42%),
+        radial-gradient(circle at top right, rgba(212,175,55,0.13), transparent 28%),
+        linear-gradient(135deg, rgba(212,175,55,0.06), transparent 34%, rgba(17,17,17,0.03));
+      pointer-events: none;
+    }
+    .card::after {
+      content: "";
+      position: absolute;
+      inset: 1px;
+      border-radius: inherit;
+      background: linear-gradient(180deg, rgba(255,255,255,0.13), transparent 22%, rgba(255,255,255,0.08) 72%, rgba(255,255,255,0.2));
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+    .logo-corner, .mini-logo {
+      object-fit: contain;
+      opacity: 0.96;
+      filter: drop-shadow(0 6px 14px rgba(0,0,0,0.08));
+      position: relative;
+      z-index: 1;
+    }
+    .watermark {
+      position: fixed;
+      right: 20px;
+      bottom: 14px;
+      color: rgba(17,17,17,0.28);
+      font-size: 14px;
+      user-select: none;
+      z-index: 3;
+      letter-spacing: 0.02em;
+    }
+    .muted { color: var(--muted); }
+    .notice {
+      display: none;
+      text-align: left;
+      border-radius: 16px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.54);
+      color: var(--muted);
+      position: relative;
+      z-index: 1;
+    }
+    .notice.show { display: block; }
+    .notice.ok { background: var(--ok-soft); color: var(--ok); border-color: rgba(22,101,52,0.15); }
+    .notice.warn { background: var(--warn-soft); color: var(--warn); border-color: rgba(146,64,14,0.16); }
+    input, textarea, select, button {
+      font: inherit;
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 13px 14px;
+      border: 1px solid rgba(17,17,17,0.1);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.78);
+      position: relative;
+      z-index: 1;
+      outline: none;
+      transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: rgba(37,99,235,0.32);
+      box-shadow: 0 0 0 4px rgba(37,99,235,0.09);
+    }
+    button {
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+      position: relative;
+      z-index: 1;
+    }
+    button:hover, .text-link:hover, .pill-link:hover, .home-link:hover, .ghost-link:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px rgba(17,17,17,0.08);
+    }
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 12;
+      background: rgba(17,17,17,0.32);
+      backdrop-filter: blur(4px);
+    }
+    .modal.show { display: flex; }
+    .modal-panel {
+      width: min(360px, 100%);
+      border-radius: 26px;
+      padding: 18px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.93), rgba(255,255,255,0.88)),
+        radial-gradient(circle at top left, rgba(255,255,255,0.52), transparent 36%);
+      border: 1px solid rgba(255,255,255,0.64);
+      box-shadow: 0 28px 60px rgba(17,17,17,0.24);
+    }
+    .pin-preview {
+      text-align: center;
+      letter-spacing: 0.44em;
+      font-size: 2rem;
+      padding: 14px 12px;
+      border-radius: 18px;
+      background: rgba(17,17,17,0.05);
+      margin: 10px 0 14px;
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pin-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .pin-key {
+      min-height: 58px;
+      font-size: 1.15rem;
+      font-weight: 700;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(17,17,17,0.08);
+    }
+    .pin-key.primary {
+      background: var(--gold);
+      color: #111;
+    }
+    .pin-trigger {
+      cursor: pointer;
+      caret-color: transparent;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .scene, .brand-watermark, .spinoza-shadow, .playing-card-accent, .kale-hand, .card, button { transition: none !important; }
+    }
+    @media (max-width: 900px) {
       body { padding: 16px 0; }
+      .brand-watermark { width: min(74vw, 500px); opacity: 0.14; }
+      .spinoza-shadow { width: min(62vw, 410px); top: 45%; opacity: 0.24; }
+      .kale-hand { width: min(54vw, 320px); top: 8%; left: -54px; opacity: 0.8; }
+      .playing-card-accent { width: min(42vw, 250px); right: -20px; bottom: 8%; }
+    }
+
+    body {
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      min-height:100vh;
+    }
+    .card {
+      padding: 30px 34px 34px;
+      border-radius: 30px;
+      text-align: center;
+      max-width: 920px;
+      width: 100%;
+      margin: 20px;
+    }
+    .logo-corner {
+      position:absolute;
+      top:20px;
+      right:20px;
+      width:84px;
+      height:84px;
+    }
+    .back-link {
+      position:absolute;
+      left:18px;
+      top:20px;
+      font-size:14px;
+      text-decoration:none;
+      color:var(--blue);
+      background:rgba(255,255,255,0.62);
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(37,99,235,0.12);
+      z-index:1;
+    }
+    h1 {
+      margin:24px 0 8px;
+      font-size:clamp(2.35rem,4vw,3rem);
+      line-height:1.02;
+      padding:0 88px;
+      letter-spacing:-0.04em;
+      position:relative;
+      z-index:1;
+    }
+    .intro {
+      color:var(--muted);
+      margin:0 auto 22px;
+      position:relative;
+      z-index:1;
+      font-size:clamp(1rem,2vw,1.08rem);
+      max-width: 700px;
+      line-height:1.5;
+    }
+    .grid {
+      display:grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      gap:18px;
+      text-align:left;
+      position:relative;
+      z-index:1;
+    }
+    .panel {
+      background: rgba(250,250,249,0.56);
+      border:1px solid var(--line);
+      border-radius:22px;
+      padding:18px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.52);
+    }
+    .panel h2, .panel h3 {
+      margin:0 0 10px;
+      letter-spacing:-0.02em;
+    }
+    .panel p, .panel li {
+      color:var(--muted);
+      line-height:1.5;
+    }
+    textarea { min-height:120px; resize:vertical; }
+    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
+    .primary-btn, .ghost-link {
+      display:inline-flex; align-items:center; justify-content:center;
+      min-height:46px; padding:12px 16px; border-radius:16px; text-decoration:none;
+    }
+    .primary-btn { background:var(--gold); color:#111; font-weight:700; }
+    .ghost-link {
+      background:rgba(255,255,255,0.66); color:var(--blue);
+      border:1px solid rgba(37,99,235,0.14); font-weight:600;
+    }
+    .tiny {
+      font-size:13px;
+      color:var(--muted);
+      margin-top:8px;
+      line-height:1.45;
+    }
+    @media (max-width: 760px) {
       .grid { grid-template-columns: 1fr; }
       h1 { padding:0; margin-top:78px; font-size:2rem; }
       .logo-corner { top:12px; right:12px; width:68px; height:68px; }
       .back-link { top:12px; left:12px; }
-      .card { padding: 22px 18px; margin: 14px auto; max-width: calc(100vw - 68px); width: calc(100vw - 68px); }
+      .card { padding:22px 18px; margin:14px auto; max-width: calc(100vw - 28px); width: calc(100vw - 28px); }
     }
   </style>
 </head>
 <body>
-  <div class="page-bg"></div>
-  <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
-  <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
-  <div class="playing-card-accent"><img src="./playingcard-accent.png" alt="" /></div>
-  <div class="center-cards-art"><img src="./kale9goed.png" alt="" /></div>
-  <div class="top-glow"></div>
+  <div class="scene" aria-hidden="true">
+    <div class="page-bg"></div>
+    <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
+    <div class="kale-hand"><img src="./kale9goed.png" alt="" /></div>
+    <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
+    <div class="playing-card-accent"><img src="./playingcard-accent.png" alt="" /></div>
+    <div class="top-glow"></div>
+  </div>
 
   <div class="card">
-    <a href="./index.html" class="back-link">Terug</a>
+    <a href="./index.html" class="back-link">Terug naar site</a>
     <img src="./logo.png" alt="Logo" class="logo-corner" />
     <h1>Naam aanvragen</h1>
-    <p class="intro">Vraag hier de naam aan waarmee je straks op de hoofdpagina inlogt. Na goedkeuring activeer je je account eenmalig met een eigen pincode op <strong>activate.html</strong>.</p>
+    <p class="intro">Vraag hieronder je naam aan met hetzelfde e-mailadres waarop je de activatielink wilt ontvangen. Na goedkeuring stuurt de admin een persoonlijke link naar juist dat adres. Via die link kun je alleen de naam activeren die jij hebt aangevraagd.</p>
 
     <div class="grid">
       <div class="panel">
-        <h2>Aanvraagformulier</h2>
-        <p>Kies de naam die van jou is en schrijf kort waarom die bij jou hoort.</p>
+        <h2>Aanvraag versturen</h2>
+        <label for="requestNameSelect">Gewenste naam</label>
         <select id="requestNameSelect"></select>
-        <textarea id="requestNoteInput" placeholder="Leg kort uit waarom jij deze naam wilt claimen"></textarea>
+
+        <label for="requestEmailInput">E-mailadres</label>
+        <input id="requestEmailInput" type="email" placeholder="jij@example.com" autocomplete="email" />
+
+        <label for="requestNoteInput">Korte toelichting</label>
+        <textarea id="requestNoteInput" placeholder="Bijvoorbeeld: ik speel mee in huis / ik ben nieuw / dit is mijn vaste naam."></textarea>
+
         <div class="actions">
-          <button id="requestBtn" type="button">Vraag naam aan</button>
-          <a id="activateLink" href="./activate.html" class="ghost-link">Ik ben al goedgekeurd</a>
+          <button id="requestBtn" class="primary-btn" type="button">Aanvraag versturen</button>
+          <a href="./index.html" class="ghost-link">Terug</a>
         </div>
+        <div class="tiny">We vragen je e-mailadres alleen voor de persoonlijke activatielink en contact over deze aanvraag.</div>
       </div>
+
       <div class="panel">
-        <h3>Hoe werkt het?</h3>
-        <ol class="steps">
-          <li>Vraag je naam aan via dit formulier.</li>
-          <li>De admin keurt je aanvraag goed of af.</li>
-          <li>Na goedkeuring ga je naar <strong>activate.html</strong> om je pincode in te stellen.</li>
-          <li>Daarna log je op de hoofdpagina in en kun je stemmen.</li>
+        <h3>Hoe het werkt</h3>
+        <ol>
+          <li>Kies de naam waarmee je wilt stemmen.</li>
+          <li>Vul het e-mailadres in waarop jij de activatielink wilt ontvangen.</li>
+          <li>Na goedkeuring krijg je per mail een unieke link die alleen voor jouw aanvraag geldig is.</li>
+          <li>Via die link kies je je eigen 4-cijferige pincode.</li>
+          <li>Daarna log je voortaan in op de hoofdpagina met die naam en pincode.</li>
         </ol>
-        <div class="activate-cta">
-          <a id="activateLinkPanel" href="./activate.html" class="ghost-link">Naar activeren</a>
-          <a href="./index.html" class="ghost-link">Terug naar stemmen</a>
-        </div>
+        <div id="status" class="notice"></div>
       </div>
     </div>
-
-    <div id="status" class="notice info"></div>
   </div>
 
-  <div class="watermark">Made by Bruis · v31</div>
+  <div class="watermark">Made by Bruis · v32</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -156,7 +441,6 @@
     function rpcHeaders() {
       return { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json", Accept: "application/json" };
     }
-
     async function parseResponse(res) {
       const text = await res.text();
       let data = null;
@@ -164,15 +448,13 @@
       if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`);
       return data;
     }
-
     function escapeHtml(value) {
       return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', '&quot;').replaceAll("'", '&#39;');
     }
-
     function setStatus(message = "", tone = "info", html = null) {
       const el = document.getElementById("status");
       if (!message && !html) {
-        el.className = `notice ${tone}`;
+        el.className = "notice";
         el.innerHTML = "";
         return;
       }
@@ -180,15 +462,8 @@
       el.innerHTML = html ?? escapeHtml(message);
     }
 
-    function updateActivateLinks(name) {
-      const cleanName = (name || "").trim();
-      const href = cleanName ? `./activate.html?name=${encodeURIComponent(cleanName)}` : "./activate.html";
-      document.getElementById("activateLink").href = href;
-      document.getElementById("activateLinkPanel").href = href;
-    }
-
-    function fillNameSelect(id, names) {
-      const select = document.getElementById(id);
+    function fillNameSelect(names) {
+      const select = document.getElementById("requestNameSelect");
       select.innerHTML = "";
       const placeholder = document.createElement("option");
       placeholder.value = "";
@@ -202,7 +477,6 @@
         option.textContent = name;
         select.appendChild(option);
       });
-      updateActivateLinks("");
     }
 
     function collectVisitorMeta() {
@@ -235,7 +509,10 @@
     async function requestClaim() {
       const desiredName = document.getElementById("requestNameSelect").value;
       const requesterNote = document.getElementById("requestNoteInput").value.trim();
+      const requesterEmail = document.getElementById("requestEmailInput").value.trim().toLowerCase();
+
       if (!desiredName) throw new Error("Kies eerst een naam");
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requesterEmail)) throw new Error("Vul een geldig e-mailadres in");
       if (!requesterNote) throw new Error("Geef kort een reden op");
 
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/request_claim`, {
@@ -246,7 +523,7 @@
         body: JSON.stringify({
           desired_name: desiredName,
           requester_note: requesterNote,
-          requester_email: null,
+          requester_email: requesterEmail,
           requester_meta: collectVisitorMeta()
         })
       });
@@ -256,7 +533,7 @@
     async function load() {
       try {
         const state = await getRequestableNames();
-        fillNameSelect("requestNameSelect", state.names || state.all_names || []);
+        fillNameSelect(state.names || state.all_names || []);
         setStatus();
       } catch (err) {
         const rawMessage = err instanceof Error ? err.message : "Kon namen niet laden";
@@ -264,23 +541,45 @@
       }
     }
 
-    document.getElementById("requestNameSelect").addEventListener("change", (event) => updateActivateLinks(event.target.value));
-
     document.getElementById("requestBtn").addEventListener("click", async () => {
       try {
-        const selectedName = document.getElementById("requestNameSelect").value;
         setStatus("Versturen...", "info");
         const result = await requestClaim();
         document.getElementById("requestNoteInput").value = "";
+        document.getElementById("requestEmailInput").value = "";
         document.getElementById("requestNameSelect").selectedIndex = 0;
-        updateActivateLinks(selectedName);
-        setStatus(result?.message || "Aanvraag verstuurd.", "ok", `<strong>${escapeHtml(result?.message || 'Aanvraag verstuurd.')}</strong><br>Na goedkeuring ga je naar <a href="${document.getElementById('activateLink').href}">activate.html</a> om je pincode in te stellen.`);
+        setStatus(result?.message || "Aanvraag verstuurd.", "ok", `<strong>${escapeHtml(result?.message || 'Aanvraag verstuurd.')}</strong><br>Na goedkeuring ontvang je op dit e-mailadres een persoonlijke activatielink.`);
       } catch (err) {
         const rawMessage = err instanceof Error ? err.message : "Er ging iets mis";
         setStatus(rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage, "warn");
       }
     });
 
+
+    function initParallax() {
+      const root = document.documentElement;
+      let mx = 0, my = 0, tx = 0, ty = 0, raf = null;
+      function step() {
+        tx += (mx - tx) * 0.1;
+        ty += (my - ty) * 0.1;
+        root.style.setProperty('--mouse-x', `${tx.toFixed(2)}px`);
+        root.style.setProperty('--mouse-y', `${ty.toFixed(2)}px`);
+        if (Math.abs(tx - mx) > 0.2 || Math.abs(ty - my) > 0.2) {
+          raf = requestAnimationFrame(step);
+        } else {
+          raf = null;
+        }
+      }
+      window.addEventListener('mousemove', (event) => {
+        const x = event.clientX / window.innerWidth - 0.5;
+        const y = event.clientY / window.innerHeight - 0.5;
+        mx = x * 30;
+        my = y * 24;
+        if (!raf) raf = requestAnimationFrame(step);
+      }, { passive: true });
+    }
+
+    initParallax();
     load();
   </script>
 </body>
