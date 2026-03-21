@@ -1,0 +1,103 @@
+
+:root{
+  --phase1-version: "v48";
+}
+body{
+  background:
+    linear-gradient(135deg, rgba(247,244,238,0.64), rgba(239,234,225,0.54)),
+    url('./site-bg-desktop.webp') center center / cover no-repeat fixed !important;
+}
+@media (orientation: portrait) {
+  body{
+    background:
+      linear-gradient(135deg, rgba(247,244,238,0.60), rgba(239,234,225,0.52)),
+      url('./site-bg-mobile.webp') center center / cover no-repeat fixed !important;
+  }
+}
+.site-scene, .scene{
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  display: block !important;
+}
+.site-scene .page-bg, .site-scene .top-glow, .site-scene .brand-watermark, .site-scene .spinoza-shadow, .site-scene .playing-card-accent,
+.scene .page-bg, .scene .top-glow, .scene .brand-watermark, .scene .spinoza-shadow, .scene .playing-card-accent{
+  position: absolute !important;
+  pointer-events: none !important;
+}
+.site-scene .page-bg, .site-scene .top-glow,
+.scene .page-bg, .scene .top-glow{
+  inset: 0 !important;
+}
+.site-scene .page-bg, .scene .page-bg{
+  background-image: url('./123zwartkaart.png') !important;
+  background-size: 255px !important;
+  background-repeat: repeat !important;
+  background-position: center !important;
+  opacity: .08 !important;
+  mix-blend-mode: multiply !important;
+}
+.site-scene .brand-watermark, .scene .brand-watermark{
+  top: 50% !important;
+  left: 50% !important;
+  width: min(46vw, 620px) !important;
+  transform: translate3d(-50%, -50%, 0) !important;
+  opacity: .14 !important;
+}
+.site-scene .spinoza-shadow, .scene .spinoza-shadow{
+  left: 50% !important;
+  top: 55% !important;
+  width: min(52vw, 700px) !important;
+  transform: translate3d(-50%, -50%, 0) !important;
+  opacity: .52 !important;
+  filter: grayscale(1) contrast(2.45) brightness(.44) drop-shadow(0 18px 40px rgba(17,17,17,.12)) !important;
+  mix-blend-mode: multiply !important;
+}
+.site-scene .playing-card-accent, .scene .playing-card-accent{
+  right: 20px !important;
+  bottom: 24px !important;
+  width: min(24vw, 320px) !important;
+  transform: rotate(7deg) !important;
+  opacity: .96 !important;
+  filter: drop-shadow(0 18px 34px rgba(40,18,12,.14)) !important;
+  transform-origin: center right !important;
+}
+.site-scene .brand-watermark img, .site-scene .spinoza-shadow img, .site-scene .playing-card-accent img,
+.scene .brand-watermark img, .scene .spinoza-shadow img, .scene .playing-card-accent img{
+  display:block !important;
+  width:100% !important;
+  height:auto !important;
+}
+.site-scene .playing-card-accent img, .scene .playing-card-accent img{
+  content: url('./playingcard-accent1-v48.png') !important;
+  border-radius: 28px !important;
+  background: transparent !important;
+}
+.site-scene .kale-hand, .scene .kale-hand{
+  display:none !important;
+}
+.site-scene .top-glow, .scene .top-glow{
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.34), transparent 23%),
+    radial-gradient(circle at 50% -10%, rgba(255,255,255,.48), transparent 34%) !important;
+}
+@media (max-width: 760px) {
+  .site-scene .brand-watermark, .scene .brand-watermark{ width:min(66vw, 420px) !important; }
+  .site-scene .spinoza-shadow, .scene .spinoza-shadow{ width:min(62vw, 420px) !important; top:46% !important; opacity:.46 !important; }
+  .site-scene .playing-card-accent, .scene .playing-card-accent{ width:min(34vw, 220px) !important; right:10px !important; bottom:20px !important; }
+}
+.topbar-actions, .nav-cluster{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.topbar .brand-link{ min-width:auto; }
+.nav-cluster .text-link, .nav-cluster .brand-link{ white-space: nowrap; }
+.pin-shell{ display:flex; gap:10px; align-items:stretch; }
+.pin-shell > input{ flex:1; }
+.pin-open{ flex:0 0 auto; border:0; border-radius:18px; padding:0 16px; cursor:pointer; font:inherit; font-weight:800; background: linear-gradient(180deg, #e0bf45, #d4af37); color:#17120b; }
+.modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background: rgba(17,17,17,.34); z-index: 30; padding:18px; }
+.modal.show{ display:flex; }
+.modal-panel{ width:min(360px, 100%); border-radius:28px; padding:22px; background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.82)); border:1px solid rgba(255,255,255,.86); box-shadow: 0 24px 60px rgba(17,17,17,.22); }
+.pin-preview{ min-height:54px; margin:14px 0 16px; padding:14px 16px; border-radius:18px; border:1px solid rgba(17,17,17,.08); background: rgba(255,255,255,.72); display:flex; align-items:center; justify-content:center; letter-spacing:.45em; font-size:1.35rem; }
+.pin-grid{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:10px; }
+.pin-key{ border:0; border-radius:18px; min-height:58px; cursor:pointer; font:inherit; font-weight:800; background: rgba(17,17,17,.06); box-shadow: 0 10px 22px rgba(17,17,17,.06); }
+.pin-actions{ display:flex; justify-content:space-between; gap:10px; margin-top:14px; }
+.pin-actions .secondary-btn, .pin-actions .primary-btn{ flex:1; }
+.watermark{ opacity:.82; }

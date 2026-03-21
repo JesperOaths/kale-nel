@@ -395,14 +395,14 @@
   <link rel="stylesheet" href="./site-shell.css" />
   <link rel="stylesheet" href="./theme-v45.css" />
   <link rel="stylesheet" href="./premium-v47.css" />
+  <link rel="stylesheet" href="./uniform-v48.css" />
 </head>
 <body>
   <div class="scene" aria-hidden="true">
     <div class="page-bg"></div>
     <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
-    <div class="kale-hand"><img src="./kale9goed.png" alt="" /></div>
-    <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
-    <div class="playing-card-accent"><img src="./playingcard-accent1-trimmed.png" alt="" /></div>
+        <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
+    <div class="playing-card-accent"><img src="./playingcard-accent1-v48.png" alt="" /></div>
     <div class="top-glow"></div>
   </div>
 
@@ -410,7 +410,7 @@
     <a href="./index.html" class="back-link">Terug</a>
     <img src="./logo.png" alt="Logo" class="logo-corner" />
     <h1>Claim je naam</h1>
-    <p class="intro">Kies je naam en laat je e-mailadres achter.</p>
+    
         <div class="grid">
       <div class="panel">
         <h2>Aanvraag</h2>
@@ -420,29 +420,21 @@
         <label for="requestEmailInput">E-mailadres</label>
         <input id="requestEmailInput" type="email" placeholder="jij@example.com" autocomplete="email" autocapitalize="off" spellcheck="false" enterkeyhint="next" />
 
-        <label for="requestNoteInput">Korte toelichting</label>
-        <textarea id="requestNoteInput" placeholder="Waarom hoor jij erbij?" autocomplete="off" enterkeyhint="send"></textarea>
-
+        
         <div class="actions">
           <button id="requestBtn" class="primary-btn" type="button">Aanvraag versturen</button>
-          <a href="./index.html" class="ghost-link">Terug</a>
-        </div>
-        <div class="tiny">Je mailadres gebruiken we voor je activatielink.</div>
+                  </div>
+        
       </div>
 
       <div class="panel">
-        <h3>Kort</h3>
-        <ol>
-          <li>Kies een naam.</li>
-          <li>Vul je e-mail in.</li>
-          <li>Na goedkeuring activeer je je account via mail.</li>
-        </ol>
+        <h3>Status</h3>
         <div id="status" class="notice"></div>
       </div>
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v45</div>
+  <div class="watermark">Made by Bruis · v48</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";

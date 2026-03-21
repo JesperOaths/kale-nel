@@ -7,41 +7,38 @@
   <link rel="stylesheet" href="./site-shell.css" />
   <link rel="stylesheet" href="./theme-v46.css" />
   <link rel="stylesheet" href="./premium-v47.css" />
+  <link rel="stylesheet" href="./uniform-v48.css" />
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
     <div class="page-bg"></div>
     <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
-    <div class="kale-hand"><img src="./kale9goed.png" alt="" /></div>
-    <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
-    <div class="playing-card-accent"><img src="./playingcard-accent1-trimmed.png" alt="" /></div>
+        <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
+    <div class="playing-card-accent"><img src="./playingcard-accent1-v48.png" alt="" /></div>
     <div class="top-glow"></div>
   </div>
   <main class="page">
     <div class="topbar">
-      <a class="brand-link" href="./index.html"><span>Wordt er gejast donderdag?</span></a>
-      <div class="topbar-actions">
+      <a class="brand-link" href="./index.html"><span>Home</span></a>
+      <div class="topbar-actions nav-cluster">
         <a class="text-link" href="./login.html">Inloggen</a>
         <a class="text-link" href="./request.html">Naam aanvragen</a>
+        <a class="text-link" href="./admin.html">Admin</a>
         <img src="./logo.png" alt="Despinoza-logo" class="brand-mini" />
       </div>
     </div>
     <section class="hero hero-home">
       <div class="hero-grid hero-grid-home">
         <div class="hero-copy">
-          <span class="kicker">Live donderdagstatus</span>
+          <span class="kicker">Live</span>
           <h1>Wordt er<br>gejast?</h1>
-          <p class="hero-intro">Stem meteen. De stand ververst direct.</p>
+          
           <div class="vote-row">
             <button class="vote-btn can" id="yesBtn" type="button"><strong>Ik kan</strong><span>Ja stemmen</span></button>
             <button class="vote-btn cant" id="noBtn" type="button"><strong>Ik kan niet</strong><span>Nee stemmen</span></button>
           </div>
           <div id="statusBox" class="status"></div>
-          <div class="hero-actions">
-            <a class="text-link" href="./activate.html">Activeren</a>
-            <a class="text-link" href="./login.html">Spelerlogin</a>
-          </div>
-          <div class="live-pill" id="sessionHint">Stemmen gebruikt je browsersessie.</div>
+          <div class="live-pill" id="sessionHint">Log in om te stemmen.</div>
           <div class="hero-stat-strip">
             <div class="hero-stat"><span>Legends</span><strong id="yesCount">0</strong></div>
             <div class="hero-stat"><span>Losers</span><strong id="noCount">0</strong></div>
@@ -63,15 +60,16 @@
     </section>
     <section class="lists compact-lists">
       <div class="panel list-box">
-        <div class="card-header"><div><h2 class="section-title">Legends</h2><p class="section-copy">Mensen die kunnen.</p></div></div>
+        <div class="card-header"><div><h2 class="section-title">Legends</h2></div></div>
         <ul id="legendsList" class="name-list"></ul>
       </div>
       <div class="panel list-box">
-        <div class="card-header"><div><h2 class="section-title">Losers</h2><p class="section-copy">Mensen die niet kunnen.</p></div></div>
+        <div class="card-header"><div><h2 class="section-title">Losers</h2></div></div>
         <ul id="losersList" class="name-list"></ul>
       </div>
     </section>
   </main>
+  <div class="watermark">Made by Bruis · v48</div>
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";

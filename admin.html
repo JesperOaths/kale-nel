@@ -404,14 +404,14 @@
   <link rel="stylesheet" href="./site-shell.css" />
   <link rel="stylesheet" href="./theme-v45.css" />
   <link rel="stylesheet" href="./premium-v47.css" />
+  <link rel="stylesheet" href="./uniform-v48.css" />
 </head>
 <body>
   <div class="scene" aria-hidden="true">
     <div class="page-bg"></div>
     <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
-    <div class="kale-hand"><img src="./kale9goed.png" alt="" /></div>
-    <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
-    <div class="playing-card-accent"><img src="./playingcard-accent1-trimmed.png" alt="" /></div>
+        <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
+    <div class="playing-card-accent"><img src="./playingcard-accent1-v48.png" alt="" /></div>
     <div class="top-glow"></div>
   </div>
 
@@ -423,7 +423,7 @@
 
     <div class="card">
       <h1>Admin</h1>
-      <div class="muted" style="margin-top:-8px; margin-bottom:10px;">Strakker, sneller, één flow.</div>
+      
       <div id="loginView">
         <div class="row">
           <input id="usernameInput" type="text" placeholder="Gebruikersnaam" autocomplete="username" autocapitalize="none" spellcheck="false" />
@@ -438,19 +438,19 @@
           <button id="devLoginBtn" class="login-btn" type="button" style="margin-top:10px;">Dev-login</button>
           <div id="devLoginHint" class="muted" style="margin-top:10px;">Gebruik alleen als fallback.</div>
         </details>
-        <div class="muted" style="margin-top:10px;">Gebruikersnaam, wachtwoord, code.</div>
+        
       </div>
       <div id="adminView" class="hidden">
         <p id="welcomeText"></p>
         <button id="logoutBtn" class="logout-btn" type="button">Uitloggen</button>
       </div>
-      <div class="info-band">Aanvraag → goedkeuren → link → actief.</div>
+      
       <div id="status"></div>
     </div>
 
     <div id="workspace" class="admin-grid hidden"><div><div id="requestsCard" class="card hidden">
       <h2>Open aanvragen</h2>
-      <div class="muted" style="margin-bottom:12px;">Eén aanvraag, één link.</div>
+      
       <input id="requestSearch" class="search-input" type="search" placeholder="Zoek op naam of e-mail" />
       <div id="requestsList"></div>
     </div>
@@ -470,7 +470,7 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v47</div>
+  <div class="watermark">Made by Bruis · v48</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";

@@ -7,34 +7,38 @@
   <link rel="stylesheet" href="./site-shell.css" />
   <link rel="stylesheet" href="./theme-v46.css" />
   <link rel="stylesheet" href="./premium-v47.css" />
+  <link rel="stylesheet" href="./uniform-v48.css" />
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
     <div class="page-bg"></div>
     <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
-    <div class="kale-hand"><img src="./kale9goed.png" alt="" /></div>
-    <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
-    <div class="playing-card-accent"><img src="./playingcard-accent1-trimmed.png" alt="" /></div>
+        <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
+    <div class="playing-card-accent"><img src="./playingcard-accent1-v48.png" alt="" /></div>
     <div class="top-glow"></div>
   </div>
 
   <main class="page">
     <div class="topbar">
-      <a class="brand-link" href="./index.html">← Terug naar homepage</a>
-      <img src="./logo.png" alt="Despinoza-logo" class="brand-mini" />
+      <a class="brand-link" href="./index.html">Home</a>
+      <div class="topbar-actions nav-cluster">
+        <a class="text-link" href="./request.html">Naam aanvragen</a>
+        <a class="text-link" href="./admin.html">Admin</a>
+        <img src="./logo.png" alt="Despinoza-logo" class="brand-mini" />
+      </div>
     </div>
 
     <section class="hero">
       <div class="hero-grid">
         <div>
-          <span class="kicker">Spelerlogin</span>
+          <span class="kicker">Login</span>
           <h1>Inloggen</h1>
-          <p style="color:var(--muted); max-width:34ch;">Naam. Pincode. Klaar.</p>
+          
         </div>
         <div class="panel state-tile">
           <div class="kicker">Sessie</div>
           <div id="loginStateWord" class="state-word maybe">Klaar</div>
-          <div class="state-copy" id="loginStateCopy">Log in en stem direct.</div>
+          <div class="state-copy" id="loginStateCopy">Naam + pincode.</div>
         </div>
       </div>
     </section>
@@ -45,17 +49,47 @@
           <select id="playerSelect"></select>
         </label>
         <label>Pincode
-          <input id="pinInput" inputmode="numeric" maxlength="4" placeholder="4 cijfers" />
+          <div class="pin-shell">
+            <input id="pinInput" inputmode="numeric" maxlength="4" placeholder="4 cijfers" readonly />
+            <button id="pinOpenBtn" class="pin-open" type="button">Toetsen</button>
+          </div>
         </label>
       </div>
       <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:16px;">
         <button id="loginBtn" class="primary-btn" type="button">Inloggen</button>
         <button id="logoutBtn" class="secondary-btn" type="button">Uitloggen</button>
-        <a class="text-link" href="./request.html">Naam claimen</a>
+        <a class="text-link" href="./request.html">Naam aanvragen</a>
       </div>
       <div id="statusBox" class="status" style="margin-top:16px;"></div>
     </section>
   </main>
+
+  <div id="pinModal" class="modal" aria-hidden="true">
+    <div class="modal-panel">
+      <div class="muted" style="text-align:center;">Voer je pincode in</div>
+      <div id="pinPreview" class="pin-preview" aria-live="polite"></div>
+      <div class="pin-grid">
+        <button class="pin-key" data-digit="1" type="button">1</button>
+        <button class="pin-key" data-digit="2" type="button">2</button>
+        <button class="pin-key" data-digit="3" type="button">3</button>
+        <button class="pin-key" data-digit="4" type="button">4</button>
+        <button class="pin-key" data-digit="5" type="button">5</button>
+        <button class="pin-key" data-digit="6" type="button">6</button>
+        <button class="pin-key" data-digit="7" type="button">7</button>
+        <button class="pin-key" data-digit="8" type="button">8</button>
+        <button class="pin-key" data-digit="9" type="button">9</button>
+        <button id="pinClearBtn" class="pin-key" type="button">Wis</button>
+        <button class="pin-key" data-digit="0" type="button">0</button>
+        <button id="pinBackBtn" class="pin-key" type="button">⌫</button>
+      </div>
+      <div class="pin-actions">
+        <button id="pinCancelBtn" class="secondary-btn" type="button">Sluit</button>
+        <button id="pinDoneBtn" class="primary-btn" type="button">Klaar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="watermark">Made by Bruis · v48</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -158,7 +192,29 @@
       }
     });
     document.getElementById('logoutBtn').addEventListener('click', () => { clearSessionToken(); setStatus('Browser-sessie gewist.', 'ok'); });
-    document.getElementById('pinInput').addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4); });
+
+    const pinModal = document.getElementById('pinModal');
+    const pinInput = document.getElementById('pinInput');
+    const pinPreview = document.getElementById('pinPreview');
+    function refreshPinPreview() { pinPreview.textContent = (pinInput.value || '').replace(/\d/g, '•'); }
+    function openPinModal() { refreshPinPreview(); pinModal.classList.add('show'); pinModal.setAttribute('aria-hidden', 'false'); }
+    function closePinModal() { pinModal.classList.remove('show'); pinModal.setAttribute('aria-hidden', 'true'); }
+    function addPinDigit(digit) { pinInput.value = (pinInput.value + digit).replace(/\D/g, '').slice(0, 4); refreshPinPreview(); }
+    document.querySelectorAll('[data-digit]').forEach((btn) => btn.addEventListener('click', () => addPinDigit(btn.dataset.digit)));
+    document.getElementById('pinClearBtn').addEventListener('click', () => { pinInput.value = ''; refreshPinPreview(); });
+    document.getElementById('pinBackBtn').addEventListener('click', () => { pinInput.value = pinInput.value.slice(0, -1); refreshPinPreview(); });
+    document.getElementById('pinCancelBtn').addEventListener('click', closePinModal);
+    document.getElementById('pinDoneBtn').addEventListener('click', closePinModal);
+    document.getElementById('pinOpenBtn').addEventListener('click', openPinModal);
+    pinInput.addEventListener('click', openPinModal);
+    pinModal.addEventListener('click', (event) => { if (event.target === pinModal) closePinModal(); });
+    window.addEventListener('keydown', (event) => {
+      if (!pinModal.classList.contains('show')) return;
+      if (/^[0-9]$/.test(event.key)) addPinDigit(event.key);
+      if (event.key === 'Backspace') { pinInput.value = pinInput.value.slice(0, -1); refreshPinPreview(); }
+      if (event.key === 'Escape' || event.key === 'Enter') closePinModal();
+    });
+
     load();
   </script>
 </body>
