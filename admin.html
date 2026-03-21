@@ -40,7 +40,7 @@ body {
 .spinoza-shadow,
 .top-glow,
 .playing-card-accent {
-  position: fixed;
+  position: absolute;
   pointer-events: none;
 }
 
@@ -93,7 +93,7 @@ body {
   width: min(30vw, 405px);
   opacity: 0.97;
   z-index: 0;
-  filter: sepia(0.16) saturate(2.08) contrast(1.24) brightness(1.11) drop-shadow(0 20px 38px rgba(40, 18, 12, 0.24));
+  filter: sepia(0.08) saturate(1.18) contrast(1.05) brightness(1.03);
   transform: rotate(7deg);
   transform-origin: center right;
 }
@@ -108,7 +108,7 @@ body {
 }
 
 .watermark {
-  position: fixed;
+  position: absolute;
   right: 20px;
   bottom: 14px;
   color: rgba(17,17,17,0.28);
@@ -154,7 +154,7 @@ body {
     .topbar { display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:16px; }
     .home-link { text-decoration:none; color:#2563eb; background:rgba(255,255,255,0.7); padding:8px 12px; border-radius:999px; border:1px solid rgba(37,99,235,0.12); backdrop-filter: blur(6px); }
     .mini-logo { width:74px; height:74px; object-fit:contain; filter:drop-shadow(0 6px 14px rgba(0,0,0,0.08)); }
-    .card { background: var(--card); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.75); border-radius: 28px; padding: 26px; box-shadow: var(--shadow); margin-bottom: 20px; position: relative; overflow: hidden; }
+    .card { background: var(--card); backdrop-filter: none; border: 1px solid rgba(255,255,255,0.75); border-radius: 28px; padding: 26px; box-shadow: var(--shadow); margin-bottom: 20px; position: relative; overflow: hidden; }
     .card::before { content: ""; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(135deg, rgba(212,175,55,0.085), transparent 34%, rgba(17,17,17,0.05)); pointer-events:none; }
     h1, h2 { margin-top:0; position: relative; z-index: 1; }
     .muted, #status { color: var(--muted); position: relative; z-index: 1; }
@@ -201,7 +201,7 @@ body {
 
     <div class="card">
       <h1>Adminpaneel</h1>
-      <div class="muted" style="margin-top:-8px; margin-bottom:10px;">Versie v29</div>
+      <div class="muted" style="margin-top:-8px; margin-bottom:10px;">Versie v30</div>
       <div id="loginView">
         <div class="row">
           <input id="usernameInput" type="text" placeholder="Gebruikersnaam" autocomplete="username" />
@@ -215,11 +215,11 @@ body {
         <p id="welcomeText"></p>
         <button id="logoutBtn" class="logout-btn" type="button">Uitloggen</button>
       </div>
-      <div class="muted" style="margin-top:12px; background:rgba(255,255,255,0.68); border:1px solid rgba(17,17,17,0.08); border-radius:16px; padding:12px 14px;">Na goedkeuring laat je de speler verdergaan via <strong>activate.html</strong> om een eerste pincode in te stellen. Daarna logt die speler gewoon in op de hoofdpagina.</div><div id="status"></div>
+      <div class="muted" style="margin-top:12px; background:rgba(255,255,255,0.68); border:1px solid rgba(17,17,17,0.08); border-radius:16px; padding:12px 14px;">Na goedkeuring gaat er voortaan een persoonlijke activatiemail naar het e-mailadres uit de aanvraag. Deel dus geen losse activatielinks of handmatige instructies meer.</div><div id="status"></div>
     </div>
 
     <div id="requestsCard" class="card hidden">
-      <h2>Openstaande naam-aanvragen</h2><div class="muted" style="margin-bottom:12px;">Pipeline: aanvraag → goedkeuren → speler activeert account via <strong>activate.html</strong> → speler logt in op <strong>index.html</strong>.</div>
+      <h2>Openstaande naam-aanvragen</h2><div class="muted" style="margin-bottom:12px;">Pipeline: aanvraag met e-mail → goedkeuren → persoonlijke activatiemail → speler stelt 4-cijferige pincode in → speler logt in op <strong>index.html</strong>.</div>
       <div id="requestsList"></div>
     </div>
 
@@ -229,7 +229,7 @@ body {
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v29</div>
+  <div class="watermark">Made by Bruis · v30</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -322,7 +322,7 @@ body {
             renderRequests(data.requests);
             const history = await getHistory();
             renderHistory(history.history);
-            setStatus(decision === 'approved' ? 'Aanvraag goedgekeurd. Verwijs de speler nu naar activate.html om de eerste pincode in te stellen.' : 'Aanvraag afgewezen en geschiedenis bijgewerkt.');
+            setStatus(decision === 'approved' ? 'Aanvraag goedgekeurd. Verstuur nu de persoonlijke activatiemail naar het opgegeven e-mailadres.' : 'Aanvraag afgewezen en geschiedenis bijgewerkt.');
           } catch (err) {
             const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
             setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);

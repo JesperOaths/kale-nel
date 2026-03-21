@@ -47,7 +47,7 @@
     .spinoza-shadow,
     .top-glow,
     .playing-card-accent {
-      position: fixed;
+      position: absolute;
       pointer-events: none;
     }
 
@@ -61,9 +61,8 @@
       background-size: 255px;
       background-repeat: repeat;
       background-position: center;
-      opacity: 0.13;
-      filter: grayscale(100%) contrast(1.12) brightness(0.98);
-      mix-blend-mode: multiply;
+      opacity: 0.10;
+      filter: grayscale(100%);
       z-index: 0;
     }
 
@@ -100,7 +99,7 @@
       width: min(30vw, 405px);
       opacity: 0.97;
       z-index: 0;
-      filter: sepia(0.16) saturate(2.08) contrast(1.24) brightness(1.11) drop-shadow(0 20px 38px rgba(40, 18, 12, 0.24));
+      filter: sepia(0.08) saturate(1.18) contrast(1.05) brightness(1.03);
       transform: rotate(7deg);
       transform-origin: center right;
     }
@@ -128,14 +127,14 @@
 
     .card {
       background: var(--card);
-      backdrop-filter: blur(10px);
+      backdrop-filter: none;
       border: 1px solid rgba(255,255,255,0.75);
       padding: 30px 34px 34px;
       border-radius: 28px;
       text-align: center;
       max-width: 960px;
       width: 100%;
-      box-shadow: var(--shadow);
+      box-shadow: 0 20px 44px rgba(17, 17, 17, 0.10);
       position: relative;
       margin: 20px;
       z-index: 2;
@@ -390,6 +389,125 @@
       border: 1px solid rgba(37,99,235,0.14);
     }
 
+
+    .vote-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    #yesBtn, #noBtn {
+      min-width: 190px;
+      min-height: 50px;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .pin-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(17,17,17,0.08);
+      background: rgba(255,255,255,0.75);
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 6px;
+    }
+
+    .keypad-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(17,17,17,0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 20;
+    }
+
+    .keypad-overlay.show { display: flex; }
+
+    .keypad-modal {
+      width: min(100%, 360px);
+      background: rgba(255,255,255,0.98);
+      border-radius: 26px;
+      border: 1px solid rgba(255,255,255,0.8);
+      box-shadow: 0 30px 70px rgba(17,17,17,0.22);
+      padding: 20px;
+      text-align: center;
+    }
+
+    .keypad-modal h3 {
+      margin: 4px 0 8px;
+      font-size: 1.3rem;
+    }
+
+    .keypad-modal p {
+      margin: 0 0 14px;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 14px;
+    }
+
+    .pin-preview {
+      height: 54px;
+      border-radius: 18px;
+      border: 1px solid rgba(17,17,17,0.08);
+      background: rgba(243,241,236,0.92);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .pin-preview span {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(17,17,17,0.14);
+    }
+
+    .pin-preview span.filled { background: var(--gold-dark); }
+
+    .keypad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .keypad-grid button, .keypad-actions button {
+      min-height: 54px;
+      border-radius: 16px;
+      border: none;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      background: rgba(243,241,236,0.96);
+      color: var(--black);
+    }
+
+    .keypad-grid button.action {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .keypad-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .keypad-actions .done-btn {
+      background: var(--gold);
+    }
+
+
     @media (max-width: 760px) {
       body { padding: 16px 0; }
       .lists, .two-col, .helper-panels { grid-template-columns: 1fr; }
@@ -413,7 +531,7 @@
     <img src="./logo.png" alt="Logo" class="logo-corner" />
 
     <h1>Wordt er gejast donderdag?</h1>
-    <p class="intro">Stem hier op donderdag, en gebruik dezelfde naam die door de admin is goedgekeurd. Nieuwe spelers vragen eerst een naam aan en activeren daarna één keer hun account met een pincode.</p>
+    <p class="intro">Stem hier op donderdag, en gebruik dezelfde naam die door de admin is goedgekeurd. Nieuwe spelers vragen eerst een naam aan. Na goedkeuring ontvangen ze per mail een persoonlijke activatielink om hun account veilig af te ronden.</p>
 
     <div id="answer" class="answer">...</div>
     <p id="count"></p>
@@ -422,14 +540,14 @@
       <div class="section-head">
         <div class="section-copy">
           <h3>Inloggen en stemmen</h3>
-          <p>Kies je goedgekeurde naam, vul je pincode in en geef daarna aan of je kunt.</p>
+          <p>Kies je naam, voer je 4-cijferige pincode in en laat weten of je erbij bent.</p>
         </div>
       </div>
       <div class="two-col">
         <select id="playerSelect"></select>
-        <input id="pinInput" type="password" placeholder="Pincode" inputmode="numeric" maxlength="8" />
+        <div><input id="pinInput" type="password" placeholder="4-cijferige pincode" inputmode="numeric" maxlength="4" readonly /><div class="pin-chip">Tik op het veld om het telefoonblok te openen</div></div>
       </div>
-      <div>
+      <div class="vote-row">
         <button id="yesBtn" class="yes" type="button">Ik kan</button>
         <button id="noBtn" class="no" type="button">Ik kan niet</button>
         <button id="removeBtn" class="remove" type="button" style="display:none;">Verwijder mijn stem</button>
@@ -444,11 +562,40 @@
           </div>
         </div>
         <div class="helper-panel">
-          <strong>Naam goedgekeurd, nog geen pincode?</strong>
-          <p>Activeer je account eenmalig met je goedgekeurde naam. Daarna log je hier gewoon in met die pincode.</p>
+          <strong>Nog geen mail gehad?</strong>
+          <p>Na goedkeuring krijg je op het e-mailadres van je aanvraag een persoonlijke activatielink. Open die mail om je 4-cijferige pincode veilig in te stellen.</p>
           <div class="helper-actions">
-            <a id="activateLink" href="./activate.html" class="text-link primary">Account activeren</a>
+            <a href="./request.html" class="text-link primary">Aanvraag bekijken</a>
           </div>
+        </div>
+      </div>
+    </div>
+
+
+    <div id="keypadOverlay" class="keypad-overlay" aria-hidden="true">
+      <div class="keypad-modal" role="dialog" aria-modal="true" aria-labelledby="keypadTitle">
+        <h3 id="keypadTitle">Voer je pincode in</h3>
+        <p>Gebruik het telefoonblok hieronder. Je pincode bestaat altijd uit precies 4 cijfers.</p>
+        <div class="pin-preview" id="pinPreview">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <div class="keypad-grid">
+          <button type="button" data-key="1">1</button>
+          <button type="button" data-key="2">2</button>
+          <button type="button" data-key="3">3</button>
+          <button type="button" data-key="4">4</button>
+          <button type="button" data-key="5">5</button>
+          <button type="button" data-key="6">6</button>
+          <button type="button" data-key="7">7</button>
+          <button type="button" data-key="8">8</button>
+          <button type="button" data-key="9">9</button>
+          <button type="button" class="action" data-action="back">Wis</button>
+          <button type="button" data-key="0">0</button>
+          <button type="button" class="action" data-action="clear">Leeg</button>
+        </div>
+        <div class="keypad-actions">
+          <button type="button" data-action="cancel">Sluiten</button>
+          <button type="button" class="done-btn" data-action="done">Klaar</button>
         </div>
       </div>
     </div>
@@ -468,7 +615,7 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v29</div>
+  <div class="watermark">Made by Bruis · v30</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -501,10 +648,31 @@
     function getSelectedName() { return document.getElementById("playerSelect").value || ""; }
     function getPrefillName() { return new URLSearchParams(window.location.search).get("name") || ""; }
 
-    function updateActivateLink(name) {
-      const link = document.getElementById("activateLink");
-      const cleanName = (name || "").trim();
-      link.href = cleanName ? `./activate.html?name=${encodeURIComponent(cleanName)}` : "./activate.html";
+    const pinInput = document.getElementById("pinInput");
+    const keypadOverlay = document.getElementById("keypadOverlay");
+    const keypadPreviewDots = Array.from(document.querySelectorAll("#pinPreview span"));
+    let keypadValue = "";
+    let keypadTarget = null;
+
+    function syncPinPreview(value = "") {
+      keypadPreviewDots.forEach((dot, index) => dot.classList.toggle("filled", index < value.length));
+    }
+
+    function openKeypad(target) {
+      keypadTarget = target;
+      keypadValue = (target.value || "").replace(/\D/g, "").slice(0, 4);
+      syncPinPreview(keypadValue);
+      keypadOverlay.classList.add("show");
+      keypadOverlay.setAttribute("aria-hidden", "false");
+    }
+
+    function closeKeypad(applyValue = false) {
+      if (applyValue && keypadTarget) {
+        keypadTarget.value = keypadValue;
+      }
+      keypadOverlay.classList.remove("show");
+      keypadOverlay.setAttribute("aria-hidden", "true");
+      keypadTarget = null;
     }
 
     function setStatus(message = "", tone = "info", html = null) {
@@ -536,7 +704,6 @@
       });
       if (previous && (names || []).includes(previous)) select.value = previous;
       select.disabled = locked;
-      updateActivateLink(select.value || previous);
     }
 
     function renderList(id, names, emptyText) {
@@ -589,7 +756,7 @@
       const desiredName = getSelectedName();
       const enteredPin = document.getElementById("pinInput").value.trim();
       if (!desiredName) throw new Error("Kies eerst je naam");
-      if (!enteredPin) throw new Error("Voer je pincode in");
+      if (!/^\d{4}$/.test(enteredPin)) throw new Error("Voer je 4-cijferige pincode in");
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/login_player`, {
         method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(),
         body: JSON.stringify({ desired_name: desiredName, entered_pin: enteredPin })
@@ -623,15 +790,12 @@
 
     function renderHelpfulError(err) {
       const message = err instanceof Error ? err.message : "Er ging iets mis";
-      const selectedName = getSelectedName();
-      updateActivateLink(selectedName);
-      const activateHref = document.getElementById("activateLink").href;
       if (/pincode.*ingesteld|nog niet geactiveerd|goedgekeurd maar nog niet/i.test(message)) {
-        setStatus(message, "warn", `<strong>${escapeHtml(message)}</strong><br>Is je naam net goedgekeurd? <a href="${activateHref}">Activeer hier eerst je account</a>.`);
+        setStatus(message, "warn", `<strong>${escapeHtml(message)}</strong><br>Kijk in je mail voor de persoonlijke activatielink. Geen mail gezien? Controleer ook je spamfolder of neem contact op met een admin.`);
         return;
       }
       if (/Speler niet gevonden of nog niet goedgekeurd/i.test(message)) {
-        setStatus(message, "warn", `Deze naam is nog niet klaar om in te loggen. Vraag eerst je naam aan via <a href="./request.html">de aanvraagpagina</a>, of activeer je account zodra die is goedgekeurd via <a href="${activateHref}">activate.html</a>.`);
+        setStatus(message, "warn", `Deze naam is nog niet klaar om in te loggen. Vraag eerst je naam aan via <a href="./request.html">de aanvraagpagina</a>. Na goedkeuring krijg je een persoonlijke activatiemail.`);
         return;
       }
       if (/Sessie ongeldig/i.test(message)) clearSessionToken();
@@ -670,13 +834,66 @@
       }
     }
 
-    document.getElementById("playerSelect").addEventListener("change", (event) => updateActivateLink(event.target.value));
     document.getElementById("yesBtn").addEventListener("click", () => handleVote("ja"));
     document.getElementById("noBtn").addEventListener("click", () => handleVote("nee"));
     document.getElementById("removeBtn").addEventListener("click", handleRemove);
-    document.getElementById("pinInput").addEventListener("input", (event) => {
-      event.target.value = event.target.value.replace(/\D/g, "").slice(0, 8);
+
+    pinInput.addEventListener("focus", () => openKeypad(pinInput));
+    pinInput.addEventListener("click", () => openKeypad(pinInput));
+    pinInput.addEventListener("keydown", (event) => {
+      event.preventDefault();
+      if (event.key === "Enter" || event.key === " ") openKeypad(pinInput);
     });
+
+    keypadOverlay.addEventListener("click", (event) => {
+      if (event.target === keypadOverlay) closeKeypad(false);
+    });
+
+    keypadOverlay.querySelectorAll("[data-key]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (keypadValue.length >= 4) return;
+        keypadValue += btn.dataset.key;
+        syncPinPreview(keypadValue);
+      });
+    });
+
+    keypadOverlay.querySelector('[data-action="back"]').addEventListener("click", () => {
+      keypadValue = keypadValue.slice(0, -1);
+      syncPinPreview(keypadValue);
+    });
+
+    keypadOverlay.querySelector('[data-action="clear"]').addEventListener("click", () => {
+      keypadValue = "";
+      syncPinPreview(keypadValue);
+    });
+
+    keypadOverlay.querySelector('[data-action="cancel"]').addEventListener("click", () => closeKeypad(false));
+    keypadOverlay.querySelector('[data-action="done"]').addEventListener("click", () => {
+      if (keypadValue.length !== 4) {
+        setStatus("Je pincode bestaat uit precies 4 cijfers.", "warn");
+        return;
+      }
+      closeKeypad(true);
+      setStatus("Pincode ingevuld.", "info");
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (!keypadOverlay.classList.contains("show")) return;
+      if (/^[0-9]$/.test(event.key)) {
+        if (keypadValue.length < 4) {
+          keypadValue += event.key;
+          syncPinPreview(keypadValue);
+        }
+      } else if (event.key === "Backspace") {
+        keypadValue = keypadValue.slice(0, -1);
+        syncPinPreview(keypadValue);
+      } else if (event.key === "Escape") {
+        closeKeypad(false);
+      } else if (event.key === "Enter") {
+        if (keypadValue.length === 4) closeKeypad(true);
+      }
+    });
+
     load();
   </script>
 </body>
