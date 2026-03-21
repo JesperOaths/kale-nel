@@ -295,13 +295,16 @@
     textarea { resize: vertical; min-height: 90px; }
     .hidden { display:none; }
     .row { display:grid; grid-template-columns: 1fr 1fr; gap:14px; position:relative; z-index:1; }
-    .login-btn, .logout-btn, .approve-btn, .reject-btn {
+    .login-btn, .logout-btn, .approve-btn, .reject-btn, .link-btn, .mail-btn, .copy-btn {
       min-height: 48px; padding: 12px 18px; border-radius: 16px; cursor: pointer; margin-top: 12px; font-weight:700;
     }
     .login-btn { background: var(--gold); color: var(--black); }
     .logout-btn { background: var(--black); color: white; }
     .approve-btn { background: #166534; color: white; margin-right: 10px; }
     .reject-btn { background: #b91c1c; color: white; }
+    .link-btn { background: #1d4ed8; color: white; }
+    .mail-btn { background: #7c3aed; color: white; }
+    .copy-btn { background: #374151; color: white; }
     .request {
       background: rgba(251,250,246,.58);
       border:1px solid var(--line);
@@ -313,6 +316,11 @@
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
     }
     .request-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px 18px; margin-top: 12px; }
+    .action-row { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
+    .activation-tools { margin-top: 14px; padding: 14px; border-radius: 18px; background: rgba(255,255,255,0.58); border: 1px solid rgba(17,17,17,0.08); }
+    .activation-tools.hidden { display:none; }
+    .activation-link-box { margin-top: 10px; padding: 12px 14px; border-radius: 14px; background: rgba(17,17,17,0.05); font-size: 0.95rem; word-break: break-all; }
+    .activation-meta { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px 18px; margin-top: 12px; }
     .data-box { background: rgba(255,255,255,0.56); border:1px solid rgba(17,17,17,0.07); border-radius: 14px; padding: 10px 12px; }
     .label { display:block; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 4px; }
     details { margin-top: 12px; }
@@ -353,7 +361,7 @@
 
     <div class="card">
       <h1>Adminpaneel</h1>
-      <div class="muted" style="margin-top:-8px; margin-bottom:10px;">Versie v32</div>
+      <div class="muted" style="margin-top:-8px; margin-bottom:10px;">Versie v35</div>
       <div id="loginView">
         <div class="row">
           <input id="usernameInput" type="text" placeholder="Gebruikersnaam" autocomplete="username" />
@@ -383,7 +391,7 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v32</div>
+  <div class="watermark">Made by Bruis · v35</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -402,6 +410,26 @@
     function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;"); }
     function showLoggedOut() { document.getElementById("loginView").classList.remove("hidden"); document.getElementById("adminView").classList.add("hidden"); document.getElementById("requestsCard").classList.add("hidden"); document.getElementById("historyCard").classList.add("hidden"); document.getElementById("requestsList").innerHTML = ""; document.getElementById("historyList").innerHTML = ""; }
     function showLoggedIn(username) { document.getElementById("loginView").classList.add("hidden"); document.getElementById("adminView").classList.remove("hidden"); document.getElementById("requestsCard").classList.remove("hidden"); document.getElementById("historyCard").classList.remove("hidden"); document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`; }
+
+    function formatDateTime(value) { return value ? new Date(value).toLocaleString('nl-NL') : 'Onbekend'; }
+    function getActivationBaseUrl() { return new URL('./activate.html', window.location.href).toString(); }
+    function activationPanelHtml(req) {
+      return `
+        <div class="activation-tools hidden" id="activation-tools-${req.id}">
+          <div><strong>Activatielink klaarzetten</strong></div>
+          <div class="muted" style="margin-top:4px;">Genereer hier een veilige link, kopieer hem, of open meteen een e-mailconcept.</div>
+          <div class="activation-meta">
+            ${metaBox('E-mail', req.requester_email || 'Onbekend')}
+            <div class="data-box"><span class="label">Activatie verloopt</span><span id="activation-expires-${req.id}">Nog niet gegenereerd</span></div>
+          </div>
+          <div class="activation-link-box" id="activation-url-${req.id}">Nog geen activatielink gegenereerd.</div>
+          <div class="action-row">
+            <button class="copy-btn" type="button" data-copy-activation data-id="${req.id}">Kopieer activatielink</button>
+            <button class="mail-btn" type="button" data-mail-activation data-id="${req.id}">Open e-mailconcept</button>
+          </div>
+        </div>
+      `;
+    }
 
     function metaBox(label, value) {
       return `<div class="data-box"><span class="label">${escapeHtml(label)}</span>${escapeHtml(value || 'Onbekend')}</div>`;
@@ -457,7 +485,7 @@
       requests.forEach((req) => {
         const div = document.createElement('div');
         div.className = 'request';
-        div.innerHTML = `${requestHtml(req)}<div style="margin-top:12px;"><textarea class="decision-reason" data-id="${req.id}" placeholder="Reden (verplicht)"></textarea><button class="approve-btn" data-id="${req.id}" data-decision="approved">Goedkeuren</button><button class="reject-btn" data-id="${req.id}" data-decision="rejected">Afwijzen</button></div>`;
+        div.innerHTML = `${requestHtml(req)}<div style="margin-top:12px;"><textarea class="decision-reason" data-id="${req.id}" placeholder="Reden (verplicht)"></textarea><div class="action-row"><button class="approve-btn" type="button" data-id="${req.id}" data-decision="approved">Goedkeuren</button><button class="reject-btn" type="button" data-id="${req.id}" data-decision="rejected">Afwijzen</button><button class="link-btn" type="button" data-generate-activation data-id="${req.id}">Maak activatielink</button></div>${activationPanelHtml(req)}</div>`;
         root.appendChild(div);
       });
       document.querySelectorAll('[data-decision]').forEach((btn) => {
@@ -481,6 +509,60 @@
             const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
             setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
           }
+        });
+      });
+       document.querySelectorAll('[data-generate-activation]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const requestId = Number(btn.dataset.id);
+          try {
+            setStatus('Activatielink maken...');
+            const linkData = await createActivationLink(requestId);
+            showActivationPanel(requestId, linkData);
+            setStatus('Activatielink gemaakt. Kopieer hem of open meteen een e-mailconcept.');
+          } catch (err) {
+            const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
+            setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
+          }
+        });
+      });
+      document.querySelectorAll('[data-copy-activation]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const requestId = Number(btn.dataset.id);
+          const urlEl = document.getElementById(`activation-url-${requestId}`);
+          const url = urlEl?.dataset.url;
+          if (!url) { setStatus('Maak eerst een activatielink.'); return; }
+          try {
+            await navigator.clipboard.writeText(url);
+            setStatus('Activatielink gekopieerd.');
+          } catch {
+            setStatus('Kopiëren lukte niet automatisch. Selecteer de link handmatig.');
+          }
+        });
+      });
+      document.querySelectorAll('[data-mail-activation]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const requestId = Number(btn.dataset.id);
+          const panel = document.getElementById(`activation-tools-${requestId}`);
+          const email = panel?.dataset.email || '';
+          const displayName = panel?.dataset.displayName || '';
+          const expiresAt = panel?.dataset.expiresAt || '';
+          const url = panel?.dataset.url || '';
+          if (!email || !url) { setStatus('Maak eerst een activatielink.'); return; }
+          const subject = 'Activeer je account voor Wordt er gejast';
+          const body = [
+            `Hoi ${displayName || 'daar'},`,
+            '',
+            'Je account is goedgekeurd.',
+            'Gebruik deze activatielink om je 4-cijferige pincode in te stellen:',
+            '',
+            url,
+            '',
+            expiresAt ? `Deze link verloopt op ${formatDateTime(expiresAt)}.` : '',
+            '',
+            'Groet,',
+            'Wordt er gejast'
+          ].filter(Boolean).join('\n');
+          window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         });
       });
     }
@@ -520,6 +602,35 @@
     async function getRequests() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_requests`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); }
     async function getHistory() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_history`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); }
     async function decideRequest(requestId, decision, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: requestId, decision, decision_reason_input: decisionReason }) }); return await parseResponse(res); }
+
+    async function createActivationLink(requestId) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_player_activation_link`, {
+        method:'POST',
+        mode:'cors',
+        cache:'no-store',
+        headers: rpcHeaders(),
+        body: JSON.stringify({
+          admin_session_token: getAdminSessionToken(),
+          request_id_input: requestId,
+          base_url: getActivationBaseUrl()
+        })
+      });
+      return await parseResponse(res);
+    }
+    function showActivationPanel(requestId, linkData) {
+      const panel = document.getElementById(`activation-tools-${requestId}`);
+      const urlEl = document.getElementById(`activation-url-${requestId}`);
+      const expiresEl = document.getElementById(`activation-expires-${requestId}`);
+      if (!panel || !urlEl || !expiresEl) return;
+      panel.classList.remove('hidden');
+      panel.dataset.url = linkData.activation_url || '';
+      panel.dataset.email = linkData.requester_email || '';
+      panel.dataset.displayName = linkData.display_name || '';
+      panel.dataset.expiresAt = linkData.expires_at || '';
+      urlEl.dataset.url = linkData.activation_url || '';
+      urlEl.textContent = linkData.activation_url || 'Geen link ontvangen van de server.';
+      expiresEl.textContent = formatDateTime(linkData.expires_at);
+    }
 
     async function loadAdmin() {
       try {
