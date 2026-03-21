@@ -4,624 +4,63 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wordt er gejast donderdag?</title>
-  <style>
-
-    :root {
-      --gold: #d4af37;
-      --gold-dark: #b89018;
-      --black: #111111;
-      --card: rgba(255,255,255,0.22);
-      --card-2: rgba(255,255,255,0.08);
-      --line: rgba(17,17,17,0.10);
-      --muted: #6d5830;
-      --blue: #b89018;
-      --ok: #7c6112;
-      --ok-soft: rgba(212, 175, 55, 0.16);
-      --warn: #6b5220;
-      --warn-soft: rgba(17,17,17,0.06);
-      --shadow: 0 24px 60px rgba(17, 17, 17, 0.16);
-      --mouse-x: 0px;
-      --mouse-y: 0px;
-    }
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background:
-        linear-gradient(135deg, rgba(247,244,238,0.64), rgba(239,234,225,0.54)),
-        url('./site-bg-desktop.webp') center center / cover no-repeat fixed;
-      color: var(--black);
-      margin: 0;
-      min-height: 100vh;
-      position: relative;
-      overflow-x: hidden;
-      padding: 28px;
-    }
-    .scene, .page-bg, .top-glow, .brand-watermark, .spinoza-shadow, .playing-card-accent, .kale-hand, .watermark {
-      pointer-events: none;
-    }
-    @media (orientation: portrait) {
-      body {
-        background:
-          linear-gradient(135deg, rgba(247,244,238,0.60), rgba(239,234,225,0.52)),
-          url('./site-bg-mobile.webp') center center / cover no-repeat fixed;
-      }
-    }
-    .scene {
-      display: none;
-    }
-    .page-bg, .top-glow, .brand-watermark, .spinoza-shadow, .playing-card-accent, .kale-hand {
-      position: absolute;
-      will-change: transform;
-      transform: translate3d(0,0,0);
-    }
-    .page-bg,
-    .top-glow {
-      inset: 0;
-    }
-    .page-bg {
-      background-image: url('./123zwartkaart.png');
-      background-size: 255px;
-      background-repeat: repeat;
-      background-position: center;
-      opacity: 0.08;
-      mix-blend-mode: multiply;
-    }
-    .brand-watermark {
-      top: 50%;
-      left: 50%;
-      width: min(46vw, 620px);
-      transform: translate3d(calc(-50% + var(--mouse-x) * 0.009), calc(-50% + var(--mouse-y) * 0.009), 0);
-      opacity: 0.14;
-    }
-    .brand-watermark img,
-    .spinoza-shadow img,
-    .playing-card-accent img,
-    .kale-hand img {
-      display: block;
-      width: 100%;
-      height: auto;
-    }
-    .spinoza-shadow {
-      left: 50%;
-      top: 55%;
-      width: min(52vw, 700px);
-      transform: translate3d(calc(-50% + var(--mouse-x) * 0.013), calc(-50% + var(--mouse-y) * 0.013), 0);
-      opacity: 0.52;
-      filter: grayscale(1) contrast(2.45) brightness(0.44) drop-shadow(0 18px 40px rgba(17,17,17,0.12));
-      mix-blend-mode: multiply;
-    }
-    .kale-hand {
-      left: -48px;
-      top: 18%;
-      width: min(33vw, 470px);
-      transform: translate3d(calc(var(--mouse-x) * -0.02), calc(var(--mouse-y) * -0.012), 0) rotate(-12deg);
-      opacity: 0.9;
-      filter: drop-shadow(0 18px 30px rgba(61, 31, 18, 0.2));
-      transform-origin: center center;
-    }
-    .playing-card-accent {
-      right: -14px;
-      bottom: 7%;
-      width: min(26vw, 350px);
-      transform: translate3d(calc(var(--mouse-x) * -0.014), calc(var(--mouse-y) * -0.01), 0) rotate(7deg);
-      opacity: 0.98;
-      filter: drop-shadow(0 18px 34px rgba(40, 18, 12, 0.14));
-      transform-origin: center right;
-    }
-    .playing-card-accent img { border-radius: 26px; background: transparent; }
-    .top-glow {
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.34), transparent 23%),
-        radial-gradient(circle at 50% -10%, rgba(255,255,255,0.48), transparent 34%);
-    }
-    .shell, .wrap {
-      width: 100%;
-      max-width: 980px;
-      position: relative;
-      z-index: 2;
-      margin: 0 auto;
-    }
-    .card {
-      position: relative;
-      z-index: 2;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.10)),
-        radial-gradient(circle at top left, rgba(255,255,255,0.20), transparent 36%),
-        linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
-      backdrop-filter: blur(22px) saturate(1.08);
-      -webkit-backdrop-filter: blur(22px) saturate(1.08);
-      border: 1px solid rgba(255,255,255,0.48);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-    .card::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background:
-        linear-gradient(120deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 18%, transparent 42%),
-        radial-gradient(circle at top right, rgba(212,175,55,0.11), transparent 28%),
-        linear-gradient(135deg, rgba(212,175,55,0.04), transparent 34%, rgba(17,17,17,0.02));
-      pointer-events: none;
-    }
-    .card::after {
-      content: "";
-      position: absolute;
-      inset: 1px;
-      border-radius: inherit;
-      background: linear-gradient(180deg, rgba(255,255,255,0.18), transparent 18%, rgba(255,255,255,0.04) 72%, rgba(255,255,255,0.10));
-      pointer-events: none;
-      mix-blend-mode: screen;
-    }
-    .logo-corner, .mini-logo {
-      object-fit: contain;
-      opacity: 0.96;
-      filter: drop-shadow(0 6px 14px rgba(0,0,0,0.08));
-      position: relative;
-      z-index: 1;
-    }
-    .watermark {
-      position: fixed;
-      right: 20px;
-      bottom: 14px;
-      color: rgba(17,17,17,0.42);
-      font-size: 14px;
-      user-select: none;
-      z-index: 3;
-      letter-spacing: 0.02em;
-    }
-    .muted { color: var(--muted); }
-    .notice {
-      display: none;
-      text-align: left;
-      border-radius: 16px;
-      padding: 14px 16px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.54);
-      color: var(--muted);
-      position: relative;
-      z-index: 1;
-    }
-    .notice.show { display: block; }
-    .notice.ok { background: var(--ok-soft); color: var(--ok); border-color: rgba(22,101,52,0.15); }
-    .notice.warn { background: var(--warn-soft); color: var(--warn); border-color: rgba(146,64,14,0.16); }
-    input, textarea, select, button {
-      font: inherit;
-    }
-    input, textarea, select {
-      width: 100%;
-      padding: 13px 14px;
-      border: 1px solid rgba(17,17,17,0.1);
-      border-radius: 16px;
-      background: rgba(255,255,255,0.58);
-      position: relative;
-      z-index: 1;
-      outline: none;
-      transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
-    }
-    input:focus, textarea:focus, select:focus {
-      border-color: rgba(184,144,24,0.44);
-      box-shadow: 0 0 0 4px rgba(212,175,55,0.16);
-    }
-    button {
-      border: none;
-      border-radius: 16px;
-      cursor: pointer;
-      transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease, background-color .12s ease, filter .12s ease;
-      position: relative;
-      z-index: 1;
-    }
-    @media (hover: hover) and (pointer: fine) {
-      button:hover, .text-link:hover, .pill-link:hover, .home-link:hover, .ghost-link:hover {
-        transform: none;
-        box-shadow: 0 8px 18px rgba(17,17,17,0.05);
-        filter: brightness(1.01);
-      }
-    }
-    button:active, .text-link:active, .pill-link:active, .home-link:active, .ghost-link:active {
-      transform: scale(0.992);
-      box-shadow: 0 3px 10px rgba(17,17,17,0.05);
-      filter: brightness(0.99);
-    }
-    .modal {
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      z-index: 12;
-      background: rgba(17,17,17,0.32);
-      backdrop-filter: blur(4px);
-    }
-    .modal.show { display: flex; }
-    .modal-panel {
-      width: min(360px, 100%);
-      border-radius: 26px;
-      padding: 18px;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.90), rgba(255,255,255,0.84)),
-        radial-gradient(circle at top left, rgba(255,255,255,0.52), transparent 36%);
-      border: 1px solid rgba(255,255,255,0.64);
-      box-shadow: 0 28px 60px rgba(17,17,17,0.24);
-    }
-    .pin-preview {
-      display: flex;
-      flex-wrap: nowrap;
-      justify-content: center;
-      align-items: center;
-      gap: 14px;
-      padding: 16px 14px;
-      border-radius: 20px;
-      background: rgba(17,17,17,0.045);
-      margin: 12px 0 16px;
-      min-height: 80px;
-      overflow: hidden;
-    }
-    .pin-slot {
-      width: 58px;
-      flex: 0 0 58px;
-      min-height: 46px;
-      border-radius: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(255,255,255,0.34);
-      border: 1px solid rgba(17,17,17,0.05);
-      font-size: 2rem;
-      font-weight: 650;
-      color: rgba(17,17,17,0.92);
-      line-height: 1;
-    }
-    .pin-slot.empty {
-      color: rgba(17,17,17,0.38);
-    }
-    .pin-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-    }
-    .pin-key {
-      min-height: 60px;
-      font-size: 1.12rem;
-      font-weight: 650;
-      letter-spacing: 0.01em;
-      background: rgba(255,255,255,0.86);
-      border: 1px solid rgba(17,17,17,0.07);
-    }
-    .pin-key.primary {
-      background: var(--gold);
-      color: #111;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.24);
-    }
-    .pin-trigger {
-      cursor: pointer;
-      caret-color: transparent;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      html { scroll-behavior: auto; }
-      .scene, .brand-watermark, .spinoza-shadow, .playing-card-accent, .kale-hand, .card, button { transition: none !important; }
-    }
-    @media (max-width: 900px) {
-      body { padding: 16px 0; }
-      .brand-watermark { width: min(74vw, 500px); opacity: 0.14; }
-      .spinoza-shadow { width: min(72vw, 520px); top: 47%; opacity: 0.42; }
-      .kale-hand { width: min(54vw, 320px); top: 8%; left: -54px; opacity: 0.8; }
-      .playing-card-accent { width: min(44vw, 270px); right: -10px; bottom: 9%; }
-    }
-
-    body {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-    }
-    .card {
-      padding: 30px 34px 34px;
-      border-radius: 30px;
-      text-align: center;
-      max-width: 960px;
-      width: 100%;
-      margin: 20px;
-    }
-    .logo-corner {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      width: 84px;
-      height: 84px;
-    }
-    .admin-link {
-      position: absolute;
-      left: 18px;
-      top: 20px;
-      font-size: 14px;
-      text-decoration: none;
-      color: var(--blue);
-      background: rgba(255,255,255,0.62);
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(37,99,235,0.12);
-      position: relative;
-      z-index: 1;
-    }
-    h1 {
-      margin: 24px 0 10px 0;
-      font-size: clamp(2.45rem, 4vw, 3.15rem);
-      line-height: 1.02;
-      padding: 0 80px;
-      letter-spacing: -0.04em;
-      position: relative;
-      z-index: 1;
-    }
-    .answer {
-      font-size: 44px;
-      margin: 20px 0 8px;
-      font-weight: 800;
-      text-transform: capitalize;
-      min-height: 48px;
-      position: relative;
-      z-index: 1;
-    }
-    .ja { color: var(--gold); }
-    .bijna { color: var(--gold-dark); }
-    .nee { color: var(--black); }
-    #count {
-      margin: 2px 0 10px;
-      color: rgba(17,17,17,0.78);
-      position: relative;
-      z-index: 1;
-    }
-    .section {
-      margin-top: 18px;
-      padding-top: 20px;
-      border-top: 1px solid var(--line);
-      position: relative;
-      z-index: 1;
-    }
-    .section-copy {
-      text-align: left;
-      margin-bottom: 8px;
-    }
-    .section-copy h3 {
-      margin: 0 0 2px;
-      font-size: 1.8rem;
-      letter-spacing: -0.03em;
-    }
-    .two-col {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-top: 12px;
-    }
-    .pin-shell {
-      position: relative;
-    }
-    .autofill-ghost {
-      position: absolute;
-      left: -9999px;
-      width: 1px;
-      height: 1px;
-      opacity: 0.01;
-      pointer-events: none;
-    }
-    .pin-trigger {
-      text-align: left;
-      padding-right: 58px;
-      letter-spacing: .2em;
-    }
-    .pin-open {
-      position: absolute;
-      right: 8px;
-      top: 50%;
-      transform: translateY(-50%);
-      min-height: 42px;
-      padding: 0 14px;
-      border-radius: 12px;
-      background: rgba(17,17,17,0.07);
-      color: #111;
-    }
-    .vote-actions {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-top: 8px;
-    }
-    .vote-actions button {
-      min-width: 156px;
-      min-height: 52px;
-      padding: 12px 28px;
-      font-size: 16px;
-    }
-    .yes { background: var(--gold); color: #111; }
-    .no { background: var(--black); color: #fff; }
-    .remove { background: #6b7280; color: #fff; }
-    .helper-panels {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-top: 16px;
-      text-align: left;
-    }
-    .helper-panel {
-      background: rgba(250,250,249,0.56);
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 18px;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.52);
-      position: relative;
-      z-index: 1;
-    }
-    .helper-panel strong {
-      display: block;
-      margin-bottom: 6px;
-      font-size: 16px;
-    }
-    .helper-panel p {
-      margin: 0;
-      color: var(--muted);
-      line-height: 1.5;
-      font-size: 14px;
-    }
-    .text-link {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 42px;
-      padding: 10px 14px;
-      border-radius: 14px;
-      text-decoration: none;
-      font-size: 14px;
-      font-weight: 600;
-      margin-top: 12px;
-    }
-    .text-link.primary { background: var(--blue); color: white; }
-    .text-link.secondary {
-      background: rgba(255,255,255,0.66);
-      color: var(--blue);
-      border: 1px solid rgba(37,99,235,0.14);
-    }
-    .lists {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-top: 28px;
-      text-align: left;
-      position: relative;
-      z-index: 1;
-    }
-    .list-box {
-      background: rgba(250,250,249,0.56);
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 18px;
-      min-height: 180px;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.52);
-    }
-    .list-box h3 { text-align: center; margin: 0 0 10px; font-size: 1.65rem; letter-spacing: -0.03em; }
-    ul { list-style: none; padding: 0; margin: 0; }
-    li { margin: 6px 0; }
-    @media (max-width: 760px) {
-      .lists, .two-col, .helper-panels { grid-template-columns: 1fr; }
-      h1 { padding: 0; margin-top: 78px; font-size: 2rem; }
-      .logo-corner { top: 12px; right: 12px; width: 68px; height: 68px; }
-      .admin-link { top: 12px; left: 12px; }
-      .card { padding: 22px 18px; margin: 14px auto; max-width: calc(100vw - 28px); width: calc(100vw - 28px); }
-      .pin-preview { gap: 10px; padding: 14px 10px; }
-      .pin-slot { width: 50px; flex-basis: 50px; min-height: 42px; font-size: 1.8rem; }
-      .pin-grid { gap: 10px; }
-      .pin-key { min-height: 54px; border-radius: 18px; font-weight: 600; letter-spacing: 0.01em; }
-      .vote-actions button { width: 100%; }
-    }
-  </style>
-  <link rel="stylesheet" href="./theme-v45.css" />
+  <link rel="stylesheet" href="./theme-v46.css" />
 </head>
 <body>
-  <div class="scene" aria-hidden="true">
-    <div class="page-bg"></div>
-    <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
-    <div class="kale-hand"><img src="./kale9goed.png" alt="" /></div>
-    <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
-    <div class="playing-card-accent"><img src="./playingcard-accent.png" alt="" /></div>
-    <div class="top-glow"></div>
-  </div>
-
-  <div class="card">
-    <a href="./admin.html" class="admin-link">Admin</a>
-    <img src="./logo.png" alt="Logo" class="logo-corner" />
-
-    <h1>Wordt er gejast donderdag?</h1>
-    <div id="answer" class="answer">...</div>
-    <p id="count"></p>
-
-    <div class="section">
-      <div class="section-copy">
-        <h3>Inloggen en stemmen</h3>
-      </div>
-      <div class="two-col">
-        <select id="playerSelect" autocomplete="username" aria-label="Spelersnaam"></select>
-        <input id="loginNameMirror" class="autofill-ghost" type="text" tabindex="-1" autocomplete="username" aria-hidden="true" />
-        <div class="pin-shell">
-          <input id="pinInput" class="pin-trigger" type="password" placeholder="4-cijferige pincode" inputmode="numeric" maxlength="4" autocomplete="current-password" enterkeyhint="done" name="player_pin" />
-          <button id="pinOpenBtn" class="pin-open" type="button">Toetsen</button>
-        </div>
-      </div>
-      <div class="vote-actions">
-        <button id="yesBtn" class="yes" type="button">Ik kan</button>
-        <button id="noBtn" class="no" type="button">Ik kan niet</button>
-        <button id="removeBtn" class="remove" type="button" style="display:none;">Verwijder mijn stem</button>
-      </div>
-
-      <div class="helper-panels">
-        <div class="helper-panel">
-          <strong>Nog geen naam?</strong>
-          <p>Vraag eerst je naam aan. Na goedkeuring krijg je per mail een persoonlijke activatielink. Daarmee rond je je account veilig af en kies je je 4-cijferige pincode.</p>
-          <a href="./request.html" class="text-link secondary">Naam aanvragen</a>
-        </div>
-        <div class="helper-panel">
-          <strong>Al goedgekeurd maar nog geen mail?</strong>
-          <p>Kijk eerst in je inbox en spam. De activatielink hoort alleen bij jouw aanvraag en jouw e-mailadres. Zonder die mail kun je geen account activeren.</p>
-        </div>
-      </div>
+  <main class="page">
+    <div class="topbar">
+      <a class="brand-link" href="./index.html"><span>Wordt er gejast donderdag?</span></a>
+      <img src="./logo.png" alt="Despinoza-logo" class="brand-mini" />
     </div>
 
-    <div id="status" class="notice"></div>
-
-    <div class="lists">
-      <div class="list-box">
-        <h3>Legends</h3>
-        <ul id="legendsList"></ul>
+    <section class="hero">
+      <div class="hero-grid">
+        <div>
+          <span class="kicker">Donderdagstatus</span>
+          <h1>Wordt er gejast donderdag?</h1>
+          <div class="vote-row">
+            <button class="vote-btn can" id="yesBtn" type="button"><strong>Ik kan</strong><span>Direct stemmen als je browser al is ingelogd.</span></button>
+            <button class="vote-btn cant" id="noBtn" type="button"><strong>Ik kan niet</strong><span>Geen loginveld meer op de homepage.</span></button>
+          </div>
+          <div id="statusBox" class="status"></div>
+        </div>
+        <div class="panel state-tile">
+          <div class="kicker">Stand van zaken</div>
+          <div id="stateWord" class="state-word no">Nee</div>
+          <div id="stateCopy" class="state-copy">Nog niemand heeft ja gezegd.</div>
+        </div>
       </div>
+    </section>
 
-      <div class="list-box">
-        <h3>Losers</h3>
-        <ul id="losersList"></ul>
+    <section class="lists">
+      <div class="panel list-box">
+        <h2>Legends</h2>
+        <ul id="legendsList" class="name-list"></ul>
       </div>
+      <div class="panel list-box">
+        <h2>Losers</h2>
+        <ul id="losersList" class="name-list"></ul>
+      </div>
+    </section>
+
+    <div class="footer-links">
+      <div class="left">
+        <a class="text-link" href="./login.html">Inloggen</a>
+        <a class="text-link" href="./request.html">Naam aanvragen</a>
+        <a class="text-link" href="./activate.html">Account activeren</a>
+      </div>
+      <div class="right footer-note" id="sessionHint">Homepage zonder login. Stemmen gebruikt je onthouden browsersessie.</div>
     </div>
-  </div>
-
-  <div class="watermark">Made by Bruis · v45</div>
-
-  <div id="pinModal" class="modal" aria-hidden="true">
-    <div class="modal-panel">
-      <div class="muted" style="text-align:center;">Voer je pincode in</div>
-      <div id="pinPreview" class="pin-preview" aria-live="polite"></div>
-      <div class="pin-grid">
-        <button class="pin-key" data-digit="1" type="button">1</button>
-        <button class="pin-key" data-digit="2" type="button">2</button>
-        <button class="pin-key" data-digit="3" type="button">3</button>
-        <button class="pin-key" data-digit="4" type="button">4</button>
-        <button class="pin-key" data-digit="5" type="button">5</button>
-        <button class="pin-key" data-digit="6" type="button">6</button>
-        <button class="pin-key" data-digit="7" type="button">7</button>
-        <button class="pin-key" data-digit="8" type="button">8</button>
-        <button class="pin-key" data-digit="9" type="button">9</button>
-        <button id="pinClearBtn" class="pin-key" type="button">Wis</button>
-        <button class="pin-key" data-digit="0" type="button">0</button>
-        <button id="pinBackBtn" class="pin-key" type="button">⌫</button>
-      </div>
-      <div style="display:flex; gap:10px; margin-top:12px;">
-        <button id="pinCancelBtn" class="pin-key" type="button" style="flex:1;">Sluiten</button>
-        <button id="pinDoneBtn" class="pin-key primary" type="button" style="flex:1;">Klaar</button>
-      </div>
-    </div>
-  </div>
+  </main>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
-    const SESSION_KEY = "jas_session_token_v10";
+    const SESSION_KEY = "jas_session_token_v11";
 
     function rpcHeaders() {
-      return {
-        apikey: SUPABASE_PUBLISHABLE_KEY,
-        "Content-Type": "application/json",
-        Accept: "application/json"
-      };
+      return { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json", Accept: "application/json" };
     }
-
     async function parseResponse(res) {
       const text = await res.text();
       let data = null;
@@ -629,252 +68,103 @@
       if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`);
       return data;
     }
-
-    function escapeHtml(value) {
-      return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', '&quot;').replaceAll("'", '&#39;');
-    }
-
     function getSessionToken() { return localStorage.getItem(SESSION_KEY); }
-    function setSessionToken(token) { localStorage.setItem(SESSION_KEY, token); }
     function clearSessionToken() { localStorage.removeItem(SESSION_KEY); }
-    function getSelectedName() { return document.getElementById("playerSelect").value || ""; }
-    function syncLoginAutofillName() {
-      const mirror = document.getElementById("loginNameMirror");
-      if (mirror) mirror.value = getSelectedName();
+    function setStatus(message = '', tone = 'info') {
+      const box = document.getElementById('statusBox');
+      if (!message) { box.className = 'status'; box.textContent = ''; return; }
+      box.className = `status show ${tone}`;
+      box.textContent = message;
     }
-
-    function setStatus(message = "", tone = "info", html = null) {
-      const el = document.getElementById("status");
-      if (!message && !html) {
-        el.className = "notice";
-        el.innerHTML = "";
-        return;
-      }
-      el.className = `notice ${tone} show`;
-      el.innerHTML = html ?? escapeHtml(message);
-    }
-
-    function fillNameSelect(names, selectedName = null, locked = false) {
-      const select = document.getElementById("playerSelect");
-      const previous = selectedName || select.value || "";
-      select.innerHTML = "";
-      const placeholder = document.createElement("option");
-      placeholder.value = "";
-      placeholder.textContent = "Kies je naam";
-      placeholder.disabled = true;
-      placeholder.selected = !previous;
-      select.appendChild(placeholder);
-      (names || []).forEach((name) => {
-        const option = document.createElement("option");
-        option.value = name;
-        option.textContent = name;
-        select.appendChild(option);
-      });
-      if (previous && (names || []).includes(previous)) select.value = previous;
-      select.disabled = locked;
-      syncLoginAutofillName();
-    }
-
-    function renderList(id, names, emptyText) {
-      const list = document.getElementById(id);
-      list.innerHTML = "";
-      if (!names || names.length === 0) {
-        const li = document.createElement("li");
+    function renderNames(id, items, emptyText) {
+      const root = document.getElementById(id);
+      root.innerHTML = '';
+      if (!items || items.length === 0) {
+        const li = document.createElement('li');
         li.textContent = emptyText;
-        list.appendChild(li);
+        root.appendChild(li);
         return;
       }
-      names.forEach((name) => {
-        const li = document.createElement("li");
+      items.forEach((name) => {
+        const li = document.createElement('li');
         li.textContent = name;
-        list.appendChild(li);
+        root.appendChild(li);
       });
     }
-
-    function renderState(state) {
-      const answerMap = { ja: "Ja", bijna: "Bijna", nee: "Nee" };
-      const answerClass = state.answer || "nee";
-      const answerText = answerMap[answerClass] || "Nee";
-      const yesCount = Number(state.yes_count || 0);
-      document.getElementById("answer").textContent = answerText;
-      document.getElementById("answer").className = `answer ${answerClass}`;
-      document.getElementById("count").textContent = yesCount === 1 ? "1 mens heeft Ja gezegd" : `${yesCount} mensen hebben Ja gezegd`;
-      fillNameSelect(state.all_names || [], state.my_name || null, Boolean(state.my_name));
-      renderList("legendsList", state.yes_names || [], "Nog niemand");
-      renderList("losersList", state.no_names || [], "Nog niemand");
-      document.getElementById("removeBtn").style.display = state.my_status ? "inline-block" : "none";
-      if (state.my_status) {
-        setStatus(`Jouw keuze: ${state.my_status}`, "ok");
-      } else {
-        setStatus();
+    function computeStateLabel(canCount) {
+      if (canCount >= 4) return { key: 'yes', label: 'Ja', copy: `${canCount} mensen kunnen.` };
+      if (canCount === 3) return { key: 'maybe', label: 'Wie maakt ons los?', copy: '3 mensen kunnen. Nog één extra en we gaan.' };
+      return { key: 'no', label: 'Nee', copy: canCount === 1 ? '1 mens kan.' : `${canCount} mensen kunnen.` };
+    }
+    function renderState(data) {
+      const canCount = Number(data.can_count ?? data.yes_count ?? 0);
+      const state = data.status_label
+        ? { key: data.status_key || 'no', label: data.status_label, copy: canCount === 1 ? '1 mens kan.' : `${canCount} mensen kunnen.` }
+        : computeStateLabel(canCount);
+      const word = document.getElementById('stateWord');
+      word.textContent = state.label;
+      word.className = `state-word ${state.key}`;
+      document.getElementById('stateCopy').textContent = state.copy;
+      renderNames('legendsList', data.legends || data.yes_names || [], 'Nog niemand');
+      renderNames('losersList', data.losers || data.no_names || [], 'Nog niemand');
+      if (data.my_name) {
+        document.getElementById('sessionHint').textContent = `Ingelogd als ${data.my_name}. Deze browser blijft onthouden tot je te lang inactief bent.`;
       }
     }
-
-    async function getState() {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, {
-        method: "POST",
-        mode: "cors",
-        cache: "no-store",
-        headers: rpcHeaders(),
-        body: JSON.stringify({ session_token: getSessionToken() })
-      });
-      return await parseResponse(res);
+    async function getHomepageState() {
+      const session_token = getSessionToken();
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_gejast_homepage_state`, {
+          method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token })
+        });
+        return await parseResponse(res);
+      } catch {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, {
+          method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token })
+        });
+        return await parseResponse(res);
+      }
     }
-
-    async function loginPlayer() {
-      const desiredName = getSelectedName();
-      const enteredPin = document.getElementById("pinInput").value.trim();
-      if (!desiredName) throw new Error("Kies eerst je naam");
-      if (!/^\d{4}$/.test(enteredPin)) throw new Error("Voer je 4-cijferige pincode in");
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/login_player`, {
-        method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(),
-        body: JSON.stringify({ desired_name: desiredName, entered_pin: enteredPin })
-      });
-      const data = await parseResponse(res);
-      setSessionToken(data.session_token);
-      document.getElementById("pinInput").value = "";
-      syncPinPreview();
-      return data;
-    }
-
-    async function castVote(desiredStatus) {
+    async function castVote(desired_status) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cast_vote`, {
-        method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(),
-        body: JSON.stringify({ session_token: getSessionToken(), desired_status: desiredStatus })
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token: getSessionToken(), desired_status })
       });
       return await parseResponse(res);
     }
-
-    async function removeMyVote() {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/remove_my_vote`, {
-        method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(),
-        body: JSON.stringify({ session_token: getSessionToken() })
-      });
-      return await parseResponse(res);
+    function goToLoginWithIntent(status) {
+      const url = new URL('./login.html', window.location.href);
+      url.searchParams.set('next', './index.html');
+      url.searchParams.set('vote', status);
+      window.location.href = url.toString();
     }
-
-    async function ensureLoggedIn() {
-      if (getSessionToken()) return;
-      await loginPlayer();
-    }
-
-    function renderHelpfulError(err) {
-      const message = err instanceof Error ? err.message : "Er ging iets mis";
-      if (/Speler niet gevonden of nog niet goedgekeurd/i.test(message)) {
-        setStatus(message, "warn", `Deze naam is nog niet klaar om in te loggen. Vraag eerst je naam aan via <a href="./request.html">de aanvraagpagina</a>. Na goedkeuring krijg je per mail een persoonlijke activatielink.`);
-        return;
-      }
-      if (/pincode.*ingesteld|nog niet geactiveerd|goedgekeurd maar nog niet/i.test(message)) {
-        setStatus(message, "warn", `Voor eerste activatie heb je de persoonlijke link uit je goedkeuringsmail nodig. Check je inbox en spam, of vraag de admin om de activatiemail opnieuw te versturen.`);
-        return;
-      }
-      if (/Sessie ongeldig/i.test(message)) clearSessionToken();
-      setStatus(message === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : message, "warn");
-    }
-
     async function handleVote(status) {
+      if (!getSessionToken()) { goToLoginWithIntent(status); return; }
       try {
-        await ensureLoggedIn();
-        renderState(await castVote(status));
+        const data = await castVote(status);
+        renderState(data);
+        setStatus(`Jouw stem is opgeslagen: ${status === 'ja' ? 'Ik kan' : 'Ik kan niet'}.`, 'ok');
       } catch (err) {
-        renderHelpfulError(err);
+        const msg = err instanceof Error ? err.message : 'Er ging iets mis';
+        if (/sessie|invalid/i.test(msg)) {
+          clearSessionToken();
+          goToLoginWithIntent(status);
+          return;
+        }
+        setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
       }
     }
-
-    async function handleRemove() {
-      try {
-        renderState(await removeMyVote());
-      } catch (err) {
-        renderHelpfulError(err);
-      }
-    }
-
     async function load() {
       try {
-        renderState(await getState());
+        renderState(await getHomepageState());
       } catch (err) {
-        document.getElementById("answer").textContent = "Fout";
-        document.getElementById("answer").className = "answer nee";
-        document.getElementById("count").textContent = "Kon site niet laden";
-        const rawMessage = err instanceof Error ? err.message : "Onbekende fout";
-        setStatus(rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage, "warn");
-        renderList("legendsList", [], "Nog niemand");
-        renderList("losersList", [], "Nog niemand");
-        fillNameSelect([], null, false);
+        const msg = err instanceof Error ? err.message : 'Er ging iets mis';
+        renderNames('legendsList', [], 'Nog niemand');
+        renderNames('losersList', [], 'Nog niemand');
+        setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
       }
     }
-
-    const pinModal = document.getElementById('pinModal');
-    const pinInput = document.getElementById('pinInput');
-    function syncPinPreview() {
-      const value = pinInput.value.slice(0, 4).split('');
-      document.getElementById('pinPreview').innerHTML = Array.from({ length: 4 }, (_, index) => {
-        const filled = index < value.length;
-        return `<span class="pin-slot${filled ? '' : ' empty'}">${filled ? '•' : '—'}</span>`;
-      }).join('');
-    }
-    function openPinModal() {
-      pinModal.classList.add('show');
-      pinModal.setAttribute('aria-hidden', 'false');
-      syncPinPreview();
-    }
-    function closePinModal() {
-      pinModal.classList.remove('show');
-      pinModal.setAttribute('aria-hidden', 'true');
-    }
-    function addPinDigit(digit) {
-      pinInput.value = (pinInput.value + digit).replace(/\D/g, '').slice(0, 4);
-      syncPinPreview();
-    }
-
-    document.querySelectorAll('[data-digit]').forEach((btn) => btn.addEventListener('click', () => addPinDigit(btn.dataset.digit)));
-    document.getElementById('pinClearBtn').addEventListener('click', () => { pinInput.value = ''; syncPinPreview(); });
-    document.getElementById('pinBackBtn').addEventListener('click', () => { pinInput.value = pinInput.value.slice(0, -1); syncPinPreview(); });
-    document.getElementById('pinCancelBtn').addEventListener('click', closePinModal);
-    document.getElementById('pinDoneBtn').addEventListener('click', closePinModal);
-    document.getElementById('pinOpenBtn').addEventListener('click', openPinModal);
-    pinInput.addEventListener('click', openPinModal);
-    pinInput.addEventListener('input', () => { pinInput.value = pinInput.value.replace(/\D/g, "").slice(0, 4); syncPinPreview(); });
-    pinInput.addEventListener('keydown', (event) => { if (event.key === 'Enter' && /^\d{4}$/.test(pinInput.value.trim())) { event.preventDefault(); document.getElementById('yesBtn').focus(); } });
-    document.getElementById('playerSelect').addEventListener('change', syncLoginAutofillName);
-    pinModal.addEventListener('click', (event) => { if (event.target === pinModal) closePinModal(); });
-    document.addEventListener('keydown', (event) => {
-      if (!pinModal.classList.contains('show')) return;
-      if (/^[0-9]$/.test(event.key)) addPinDigit(event.key);
-      if (event.key === 'Backspace') { pinInput.value = pinInput.value.slice(0, -1); syncPinPreview(); }
-      if (event.key === 'Escape') closePinModal();
-      if (event.key === 'Escape' || event.key === 'Enter') closePinModal();
-    });
-
-    document.getElementById("yesBtn").addEventListener("click", () => handleVote("ja"));
-    document.getElementById("noBtn").addEventListener("click", () => handleVote("nee"));
-    document.getElementById("removeBtn").addEventListener("click", handleRemove);
-
-
-    function initParallax() {
-      const root = document.documentElement;
-      let mx = 0, my = 0, tx = 0, ty = 0, raf = null;
-      function step() {
-        tx += (mx - tx) * 0.1;
-        ty += (my - ty) * 0.1;
-        root.style.setProperty('--mouse-x', `${tx.toFixed(2)}px`);
-        root.style.setProperty('--mouse-y', `${ty.toFixed(2)}px`);
-        if (Math.abs(tx - mx) > 0.2 || Math.abs(ty - my) > 0.2) {
-          raf = requestAnimationFrame(step);
-        } else {
-          raf = null;
-        }
-      }
-      window.addEventListener('mousemove', (event) => {
-        const x = event.clientX / window.innerWidth - 0.5;
-        const y = event.clientY / window.innerHeight - 0.5;
-        mx = x * 30;
-        my = y * 24;
-        if (!raf) raf = requestAnimationFrame(step);
-      }, { passive: true });
-    }
-
-    // v40: pre-rendered background, so parallax is disabled for performance.
+    document.getElementById('yesBtn').addEventListener('click', () => handleVote('ja'));
+    document.getElementById('noBtn').addEventListener('click', () => handleVote('nee'));
     load();
   </script>
 </body>

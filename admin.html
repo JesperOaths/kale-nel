@@ -416,7 +416,7 @@
   <div class="wrap">
     <div class="topbar">
       <a href="./index.html" class="home-link">Terug naar site</a>
-      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;"><span class="test-chip" title="Testmodus = dev-login zonder TOTP, alleen nuttig als admin_dev_login bestaat en werkt.">Testmodus beschikbaar</span><img src="./logo.png" alt="Logo" class="mini-logo" /></div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;"><img src="./logo.png" alt="Logo" class="mini-logo" /></div>
     </div>
 
     <div class="card">
@@ -429,14 +429,14 @@
         </div>
         <input id="totpInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="Google Authenticator-code (6 cijfers)" autocomplete="one-time-code" />
         <button id="loginBtn" class="login-btn" type="button">Inloggen</button>
-        <details class="dev-login-box">
+        <details class="dev-login-box hidden">
           <summary>Test-login zonder Authenticator</summary>
           <div class="muted" style="margin-top:10px;">Snelle bugfix-modus. Gebruik <strong>1</strong> / <strong>1</strong> / <strong>1</strong>.</div>
           <input id="devKeyInput" type="password" inputmode="numeric" maxlength="8" placeholder="Dev key" autocomplete="one-time-code" style="margin-top:10px;" />
           <button id="devLoginBtn" class="login-btn" type="button" style="margin-top:10px;">Dev-login zonder Authenticator</button>
           <div id="devLoginHint" class="muted" style="margin-top:10px;">Dev-login: gebruikersnaam <strong>1</strong>, wachtwoord <strong>1</strong>, dev key <strong>1</strong>.</div>
         </details>
-        <div class="muted" style="margin-top:10px;">Log in met je gebruikersnaam, wachtwoord en 6-cijferige code uit Google Authenticator. Testmodus is alleen een nuttige fallback als de RPC <code>admin_dev_login</code> echt bestaat. Anders kan hij weg.</div><div class="dev-link-row"><a href="./admin-dev.html" class="pill-link">Open admin-dev diagnose</a></div>
+        <div class="muted" style="margin-top:10px;">Log in met je gebruikersnaam, wachtwoord en 6-cijferige code uit Google Authenticator.</div>
       </div>
       <div id="adminView" class="hidden">
         <p id="welcomeText"></p>
@@ -474,7 +474,7 @@
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY;
-    const AUTO_EMAIL_ENDPOINT = `${SUPABASE_URL}/functions/v1/send-activation-email`;
+    const AUTO_EMAIL_ENDPOINT = ''; // cloud-mail loopt nu via queue + Make webhook
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
 
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json", Accept: "application/json" }; }
@@ -687,11 +687,11 @@
           const msg = document.getElementById(`activation-msg-${requestId}`);
           if (!AUTO_EMAIL_ENDPOINT) { if (msg) { msg.textContent = 'Automatische e-mail is nog niet ingesteld. Deploy eerst de Edge Function en vul AUTO_EMAIL_ENDPOINT in.'; msg.className = 'inline-msg error'; } return; }
           try {
-            if (msg) { msg.textContent = 'Automatische e-mail versturen...'; msg.className = 'inline-msg'; }
+            if (msg) { msg.textContent = 'Mailjob in wachtrij zetten...'; msg.className = 'inline-msg'; }
             await sendActivationEmail(requestId);
-            if (msg) { msg.textContent = 'Automatische e-mail verzonden.'; msg.className = 'inline-msg ok'; }
+            if (msg) { msg.textContent = 'Mailjob in wachtrij gezet. Make/Resend neemt het over.'; msg.className = 'inline-msg ok'; }
           } catch (err) {
-            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Automatische e-mail mislukt'; msg.className = 'inline-msg error'; }
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Mailjob kon niet in de wachtrij worden gezet'; msg.className = 'inline-msg error'; }
           }
         });
       });
@@ -814,15 +814,30 @@
       });
       return await parseResponse(res);
     }
-    async function sendActivationEmail(requestId) {
-      const res = await fetch(AUTO_EMAIL_ENDPOINT, {
-        method:'POST',
-        headers: { 'Content-Type':'application/json', 'apikey': SUPABASE_ANON_KEY },
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id: requestId, base_url: getActivationBaseUrl() })
+    async function queueActivationEmail(requestId) {
+      const panel = document.getElementById(`activation-tools-${requestId}`);
+      const recipientEmail = panel?.dataset.email || '';
+      const recipientName = panel?.dataset.displayName || '';
+      const activationLink = panel?.dataset.url || '';
+      if (!recipientEmail || !activationLink) throw new Error('Maak eerst een activatielink.');
+      const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
+      const playerId = req?.player_id ?? null;
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_queue_activation_email`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({
+          admin_session_token: getAdminSessionToken(),
+          request_id_input: requestId,
+          base_url: getActivationBaseUrl(),
+          recipient_email_input: recipientEmail,
+          recipient_name_input: recipientName || null,
+          activation_link_input: activationLink,
+          player_id_input: playerId
+        })
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.message || data?.error || 'Automatische e-mail mislukt');
-      return data;
+      return await parseResponse(res);
+    }
+    async function sendActivationEmail(requestId) {
+      return await queueActivationEmail(requestId);
     }
     async function refreshAdminLists() {
       const [requests, history] = await Promise.all([getRequests(), getHistory()]);
