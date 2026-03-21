@@ -410,13 +410,13 @@
       <div class="panel">
         <h2>Aanvraag versturen</h2>
         <label for="requestNameSelect">Gewenste naam</label>
-        <select id="requestNameSelect"></select>
+        <select id="requestNameSelect" autocomplete="name" aria-label="Gewenste naam"></select>
 
         <label for="requestEmailInput">E-mailadres</label>
-        <input id="requestEmailInput" type="email" placeholder="jij@example.com" autocomplete="email" />
+        <input id="requestEmailInput" type="email" placeholder="jij@example.com" autocomplete="email" autocapitalize="off" spellcheck="false" enterkeyhint="next" />
 
         <label for="requestNoteInput">Korte toelichting</label>
-        <textarea id="requestNoteInput" placeholder="Bijvoorbeeld: ik speel mee in huis / ik ben nieuw / dit is mijn vaste naam."></textarea>
+        <textarea id="requestNoteInput" placeholder="Bijvoorbeeld: ik speel mee in huis / ik ben nieuw / dit is mijn vaste naam." autocomplete="off" enterkeyhint="send"></textarea>
 
         <div class="actions">
           <button id="requestBtn" class="primary-btn" type="button">Aanvraag versturen</button>
@@ -439,7 +439,7 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v37</div>
+  <div class="watermark">Made by Bruis · v39</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";

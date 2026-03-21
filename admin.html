@@ -406,14 +406,16 @@
 
     <div class="card">
       <h1>Adminpaneel</h1>
-      <div class="muted" style="margin-top:-8px; margin-bottom:10px;">Versie v37</div>
+      <div class="muted" style="margin-top:-8px; margin-bottom:10px;">Versie v39</div>
       <div id="loginView">
         <div class="row">
-          <input id="usernameInput" type="text" placeholder="Gebruikersnaam" autocomplete="username" />
+          <input id="usernameInput" type="text" placeholder="Gebruikersnaam" autocomplete="username" autocapitalize="none" spellcheck="false" />
           <input id="passwordInput" type="password" placeholder="Wachtwoord" autocomplete="current-password" />
         </div>
         <input id="totpInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="Google Authenticator-code (6 cijfers)" autocomplete="one-time-code" />
         <button id="loginBtn" class="login-btn" type="button">Inloggen</button>
+        <input id="devKeyInput" class="hidden" type="password" inputmode="numeric" maxlength="8" placeholder="Dev key" autocomplete="one-time-code" />
+        <div id="devLoginHint" class="muted hidden" style="margin-top:10px;">Dev-login: gebruikersnaam <strong>1</strong>, wachtwoord <strong>1</strong>, dev key <strong>1</strong>. De dev key vul je in het extra veld hierboven in zodra je <code>?dev=1</code> gebruikt.</div>
         <div class="muted" style="margin-top:10px;">Log in met je gebruikersnaam, wachtwoord en 6-cijferige code uit Google Authenticator.</div>
       </div>
       <div id="adminView" class="hidden">
@@ -436,7 +438,7 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v37</div>
+  <div class="watermark">Made by Bruis · v39</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -649,7 +651,7 @@
       if (!password) throw new Error('Vul een wachtwoord in');
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_dev_login`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ input_username: username, input_password: password, input_dev_key: 'let-me-in-dev' })
+        body: JSON.stringify({ input_username: username, input_password: password, input_dev_key: document.getElementById('devKeyInput').value.trim() })
       });
       const data = await parseResponse(res);
       setAdminSessionToken(data.admin_session_token || data.token);
@@ -746,7 +748,13 @@
     if (new URLSearchParams(window.location.search).get('dev') === '1') {
       document.getElementById('devLoginBtn').classList.remove('hidden');
       document.getElementById('devLoginHint').classList.remove('hidden');
+      document.getElementById('devKeyInput').classList.remove('hidden');
+      document.getElementById('totpInput').placeholder = 'Google Authenticator-code (of gebruik dev-login hieronder)';
+      if (!document.getElementById('usernameInput').value) document.getElementById('usernameInput').value = '1';
+      if (!document.getElementById('passwordInput').value) document.getElementById('passwordInput').value = '1';
+      if (!document.getElementById('devKeyInput').value) document.getElementById('devKeyInput').value = '1';
     }
+    document.getElementById('devKeyInput').addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); document.getElementById('devLoginBtn').click(); } });
     document.getElementById('devLoginBtn').addEventListener('click', async () => {
       try {
         setStatus('Dev-login...');

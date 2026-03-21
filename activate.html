@@ -402,6 +402,7 @@
       letter-spacing: -0.02em;
     }
     .pin-shell { position: relative; }
+    .autofill-ghost { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; }
     .pin-trigger { padding-right: 58px; letter-spacing: .2em; cursor:pointer; caret-color: transparent; }
     .pin-open {
       position:absolute; right:8px; top:50%; transform:translateY(-50%);
@@ -455,6 +456,7 @@
         <div class="detail-box">
           <strong>Goedgekeurde naam</strong>
           <div id="approvedName" class="value-line">Wordt geladen…</div>
+          <input id="activationNameMirror" class="autofill-ghost" type="text" tabindex="-1" autocomplete="username" aria-hidden="true" />
         </div>
         <div class="detail-box">
           <strong>E-mailadres</strong>
@@ -463,13 +465,13 @@
 
         <label for="pinInput">Kies je 4-cijferige pincode</label>
         <div class="pin-shell">
-          <input id="pinInput" class="pin-trigger" type="password" placeholder="4 cijfers" inputmode="numeric" maxlength="4" readonly />
+          <input id="pinInput" class="pin-trigger" type="password" placeholder="4 cijfers" inputmode="numeric" maxlength="4" autocomplete="new-password" enterkeyhint="next" name="new_pin" />
           <button id="pinOpenBtn" class="pin-open" type="button">Toetsen</button>
         </div>
 
         <label for="pinConfirmInput">Bevestig je pincode</label>
         <div class="pin-shell">
-          <input id="pinConfirmInput" class="pin-trigger" type="password" placeholder="Nogmaals 4 cijfers" inputmode="numeric" maxlength="4" readonly />
+          <input id="pinConfirmInput" class="pin-trigger" type="password" placeholder="Nogmaals 4 cijfers" inputmode="numeric" maxlength="4" autocomplete="new-password" enterkeyhint="done" name="new_pin_confirm" />
           <button id="pinConfirmOpenBtn" class="pin-open" type="button">Toetsen</button>
         </div>
 
@@ -492,7 +494,7 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v37</div>
+  <div class="watermark">Made by Bruis · v39</div>
 
   <div id="pinModal" class="modal" aria-hidden="true">
     <div class="modal-panel">
@@ -573,6 +575,7 @@
 
     function setContext(data) {
       document.getElementById('approvedName').textContent = data.display_name || 'Onbekend';
+      document.getElementById('activationNameMirror').value = data.display_name || '';
       document.getElementById('approvedEmail').textContent = data.requester_email || 'Onbekend';
     }
 
@@ -611,6 +614,10 @@
     document.getElementById('pinConfirmOpenBtn').addEventListener('click', () => openPinModal('pinConfirmInput'));
     document.getElementById('pinInput').addEventListener('click', () => openPinModal('pinInput'));
     document.getElementById('pinConfirmInput').addEventListener('click', () => openPinModal('pinConfirmInput'));
+    document.getElementById('pinInput').addEventListener('input', () => { const el = document.getElementById('pinInput'); el.value = el.value.replace(/\D/g, '').slice(0, 4); syncPinPreview(); if (el.value.length === 4) document.getElementById('pinConfirmInput').focus(); });
+    document.getElementById('pinConfirmInput').addEventListener('input', () => { const el = document.getElementById('pinConfirmInput'); el.value = el.value.replace(/\D/g, '').slice(0, 4); syncPinPreview(); });
+    document.getElementById('pinInput').addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); document.getElementById('pinConfirmInput').focus(); } });
+    document.getElementById('pinConfirmInput').addEventListener('keydown', (event) => { if (event.key === 'Enter' && /^\d{4}$/.test(document.getElementById('pinConfirmInput').value.trim())) { event.preventDefault(); document.getElementById('activateBtn').focus(); } });
     pinModal.addEventListener('click', (event) => { if (event.target === pinModal) closePinModal(); });
     document.addEventListener('keydown', (event) => {
       if (!pinModal.classList.contains('show')) return;

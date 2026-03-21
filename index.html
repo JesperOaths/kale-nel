@@ -397,6 +397,14 @@
     .pin-shell {
       position: relative;
     }
+    .autofill-ghost {
+      position: absolute;
+      left: -9999px;
+      width: 1px;
+      height: 1px;
+      opacity: 0.01;
+      pointer-events: none;
+    }
     .pin-trigger {
       text-align: left;
       padding-right: 58px;
@@ -531,9 +539,10 @@
         <h3>Inloggen en stemmen</h3>
       </div>
       <div class="two-col">
-        <select id="playerSelect"></select>
+        <select id="playerSelect" autocomplete="username" aria-label="Spelersnaam"></select>
+        <input id="loginNameMirror" class="autofill-ghost" type="text" tabindex="-1" autocomplete="username" aria-hidden="true" />
         <div class="pin-shell">
-          <input id="pinInput" class="pin-trigger" type="password" placeholder="4-cijferige pincode" inputmode="numeric" maxlength="4" readonly />
+          <input id="pinInput" class="pin-trigger" type="password" placeholder="4-cijferige pincode" inputmode="numeric" maxlength="4" autocomplete="current-password" enterkeyhint="done" name="player_pin" />
           <button id="pinOpenBtn" class="pin-open" type="button">Toetsen</button>
         </div>
       </div>
@@ -571,7 +580,7 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v37</div>
+  <div class="watermark">Made by Bruis · v39</div>
 
   <div id="pinModal" class="modal" aria-hidden="true">
     <div class="modal-panel">
@@ -627,6 +636,10 @@
     function setSessionToken(token) { localStorage.setItem(SESSION_KEY, token); }
     function clearSessionToken() { localStorage.removeItem(SESSION_KEY); }
     function getSelectedName() { return document.getElementById("playerSelect").value || ""; }
+    function syncLoginAutofillName() {
+      const mirror = document.getElementById("loginNameMirror");
+      if (mirror) mirror.value = getSelectedName();
+    }
 
     function setStatus(message = "", tone = "info", html = null) {
       const el = document.getElementById("status");
@@ -657,6 +670,7 @@
       });
       if (previous && (names || []).includes(previous)) select.value = previous;
       select.disabled = locked;
+      syncLoginAutofillName();
     }
 
     function renderList(id, names, emptyText) {
@@ -818,6 +832,9 @@
     document.getElementById('pinDoneBtn').addEventListener('click', closePinModal);
     document.getElementById('pinOpenBtn').addEventListener('click', openPinModal);
     pinInput.addEventListener('click', openPinModal);
+    pinInput.addEventListener('input', () => { pinInput.value = pinInput.value.replace(/\D/g, "").slice(0, 4); syncPinPreview(); });
+    pinInput.addEventListener('keydown', (event) => { if (event.key === 'Enter' && /^\d{4}$/.test(pinInput.value.trim())) { event.preventDefault(); document.getElementById('yesBtn').focus(); } });
+    document.getElementById('playerSelect').addEventListener('change', syncLoginAutofillName);
     pinModal.addEventListener('click', (event) => { if (event.target === pinModal) closePinModal(); });
     document.addEventListener('keydown', (event) => {
       if (!pinModal.classList.contains('show')) return;
