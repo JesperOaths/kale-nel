@@ -421,7 +421,7 @@
 
     <div class="card">
       <h1>Adminpaneel</h1>
-      <div class="muted" style="margin-top:-8px; margin-bottom:10px;">Versie v43</div>
+      <div class="muted" style="margin-top:-8px; margin-bottom:10px;">Versie v44</div>
       <div id="loginView">
         <div class="row">
           <input id="usernameInput" type="text" placeholder="Gebruikersnaam" autocomplete="username" autocapitalize="none" spellcheck="false" />
@@ -446,24 +446,42 @@
       <div id="status"></div>
     </div>
 
-    <div id="workspace" class="admin-grid hidden"><div><div id="requestsCard" class="card hidden">
-      <h2>Openstaande naam-aanvragen</h2>
-      <div class="muted" style="margin-bottom:12px;">Doel: per goedgekeurde aanvraag een unieke activatielink genereren voor precies deze naam en precies dit e-mailadres.</div>
-      <div id="requestsList"></div>
+    <div id="workspace" class="admin-grid hidden">
+      <div>
+        <div id="requestsCard" class="card hidden">
+          <h2>Openstaande naam-aanvragen</h2>
+          <div class="muted" style="margin-bottom:12px;">Doel: per goedgekeurde aanvraag een unieke activatielink genereren voor precies deze naam en precies dit e-mailadres.</div>
+          <input id="requestSearch" class="search-input" type="search" placeholder="Zoek op naam of e-mailadres" autocomplete="off" />
+          <div id="requestsList"></div>
+        </div>
+      </div>
+      <div>
+        <div id="historyCard" class="card hidden sidebar-card">
+          <h2>Geschiedenis aanvragen</h2>
+          <input id="historySearch" class="search-input" type="search" placeholder="Zoek geschiedenis" autocomplete="off" />
+          <div class="filter-row">
+            <button type="button" class="filter-pill active" data-history-filter="all">Alles</button>
+            <button type="button" class="filter-pill" data-history-filter="approved">Approved</button>
+            <button type="button" class="filter-pill" data-history-filter="awaiting">Awaiting</button>
+            <button type="button" class="filter-pill" data-history-filter="activated">Activated</button>
+            <button type="button" class="filter-pill" data-history-filter="rejected">Afgewezen</button>
+          </div>
+          <div id="historyList"></div>
+        </div>
+      </div>
     </div>
 
-    <div id="historyCard" class="card hidden">
-      <h2>Geschiedenis aanvragen</h2>
-      <div id="historyList"></div>
-    </div>
-  </div>
-
-  <div class="watermark">Made by Bruis · v43</div>
+  <div class="watermark">Made by Bruis · v44</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
-    const ADMIN_SESSION_KEY = "jas_admin_session_v7";
+    const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY;
+    const AUTO_EMAIL_ENDPOINT = "";
+    const ADMIN_SESSION_KEY = "jas_admin_session_v8";
+    let lastRequests = [];
+    let lastHistory = [];
+    let historyFilter = 'all';
 
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json", Accept: "application/json" }; }
     async function parseResponse(res) { const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }
@@ -474,8 +492,26 @@
     }
     function clearAdminSessionToken() { sessionStorage.removeItem(ADMIN_SESSION_KEY); localStorage.removeItem(ADMIN_SESSION_KEY); }
     function setStatus(text) { document.getElementById("status").textContent = text || ""; }
+    function isInvalidAdminSessionMessage(message) {
+      const normalized = String(message || '').toLowerCase();
+      return normalized.includes('ongeldige admin-sessie') || normalized.includes('invalid admin') || normalized.includes('admin session');
+    }
+    function handleInvalidSession(message = 'Je admin-sessie is verlopen of ongeldig. Log opnieuw in.') {
+      clearAdminSessionToken();
+      showLoggedOut();
+      setStatus(message);
+    }
     function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;"); }
-    function showLoggedOut() { document.getElementById("loginView").classList.remove("hidden"); document.getElementById("adminView").classList.add("hidden"); document.getElementById("workspace").classList.add("hidden"); document.getElementById("requestsCard").classList.add("hidden"); document.getElementById("historyCard").classList.add("hidden"); document.getElementById("requestsList").innerHTML = ""; document.getElementById("historyList").innerHTML = ""; }
+    function showLoggedOut() {
+      document.getElementById("loginView").classList.remove("hidden");
+      document.getElementById("adminView").classList.add("hidden");
+      document.getElementById("workspace").classList.add("hidden");
+      document.getElementById("requestsCard").classList.add("hidden");
+      document.getElementById("historyCard").classList.add("hidden");
+      document.getElementById("requestsList").innerHTML = "";
+      document.getElementById("historyList").innerHTML = "";
+      document.getElementById("welcomeText").textContent = "";
+    }
     function showLoggedIn(username) { document.getElementById("loginView").classList.add("hidden"); document.getElementById("adminView").classList.remove("hidden"); document.getElementById("workspace").classList.remove("hidden"); document.getElementById("requestsCard").classList.remove("hidden"); document.getElementById("historyCard").classList.remove("hidden"); document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`; }
 
     function formatDateTime(value) { return value ? new Date(value).toLocaleString('nl-NL') : 'Onbekend'; }
@@ -737,6 +773,31 @@
       document.querySelectorAll('[data-copy-activation], [data-mail-activation], [data-send-activation]').forEach((el)=>{});
     }
 
+    async function withVerifiedSession(loginResult) {
+      const session = await checkSession();
+      if (!session?.ok) {
+        throw new Error('Admin-login gaf geen geldige sessie terug. Controleer admin_login/admin_dev_login in Supabase.');
+      }
+      return { ...loginResult, ...session };
+    }
+
+    async function runProtectedRpc(path, payload) {
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${path}`, {
+          method:'POST',
+          mode:'cors',
+          cache:'no-store',
+          headers: rpcHeaders(),
+          body: JSON.stringify(payload)
+        });
+        return await parseResponse(res);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err || 'Er ging iets mis');
+        if (isInvalidAdminSessionMessage(message)) handleInvalidSession();
+        throw err;
+      }
+    }
+
     async function adminDevLogin() {
       const username = document.getElementById('usernameInput').value.trim();
       const password = document.getElementById('passwordInput').value;
@@ -749,7 +810,7 @@
       const data = await parseResponse(res);
       setAdminSessionToken(data.admin_session_token || data.token);
       document.getElementById('passwordInput').value = '';
-      return data;
+      return await withVerifiedSession(data);
     }
 
     async function adminLogin() {
@@ -764,41 +825,35 @@
       setAdminSessionToken(data.admin_session_token || data.token);
       document.getElementById('passwordInput').value = '';
       document.getElementById('totpInput').value = '';
-      return data;
+      return await withVerifiedSession(data);
     }
+
     async function checkSession() {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) });
+      const token = getAdminSessionToken();
+      if (!token) return { ok: false };
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: token }) });
       const data = await parseResponse(res);
       if (data.admin_session_token) setAdminSessionToken(data.admin_session_token);
       return data;
     }
-    async function getRequests() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_requests`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); }
-    async function getHistory() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_history`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); }
-    async function decideRequest(requestId, decision, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: requestId, decision, decision_reason_input: decisionReason }) }); return await parseResponse(res); }
+
+    async function getRequests() { return await runProtectedRpc('admin_get_claim_requests', { admin_session_token: getAdminSessionToken() }); }
+    async function getHistory() { return await runProtectedRpc('admin_get_claim_history', { admin_session_token: getAdminSessionToken() }); }
+    async function decideRequest(requestId, decision, decisionReason) { return await runProtectedRpc('admin_decide_claim_request', { admin_session_token: getAdminSessionToken(), request_id_input: requestId, decision, decision_reason_input: decisionReason }); }
 
     async function createActivationLink(requestId) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_player_activation_link`, {
-        method:'POST',
-        mode:'cors',
-        cache:'no-store',
-        headers: rpcHeaders(),
-        body: JSON.stringify({
-          admin_session_token: getAdminSessionToken(),
-          request_id_input: requestId,
-          base_url: getActivationBaseUrl()
-        })
+      return await runProtectedRpc('create_player_activation_link', {
+        admin_session_token: getAdminSessionToken(),
+        request_id_input: requestId,
+        base_url: getActivationBaseUrl()
       });
-      return await parseResponse(res);
     }
 
     async function revokePlayerAccess(requestId, reason) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_revoke_player_access`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: requestId, decision_reason_input: reason || null })
-      });
-      return await parseResponse(res);
+      return await runProtectedRpc('admin_revoke_player_access', { admin_session_token: getAdminSessionToken(), request_id_input: requestId, decision_reason_input: reason || null });
     }
     async function sendActivationEmail(requestId) {
+      if (!AUTO_EMAIL_ENDPOINT) throw new Error('Automatische e-mail is nog niet ingesteld.');
       const res = await fetch(AUTO_EMAIL_ENDPOINT, {
         method:'POST',
         headers: { 'Content-Type':'application/json', 'apikey': SUPABASE_ANON_KEY },
@@ -836,12 +891,17 @@
         const token = getAdminSessionToken();
         if (!token) { showLoggedOut(); return; }
         const session = await checkSession();
-        if (!session.ok) { clearAdminSessionToken(); showLoggedOut(); return; }
-        showLoggedIn(session.username);
+        if (!session.ok) { handleInvalidSession(); return; }
+        showLoggedIn(session.username || session.display_name || 'admin');
         await refreshAdminLists();
       } catch (err) {
-        clearAdminSessionToken(); showLoggedOut();
         const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
+        if (isInvalidAdminSessionMessage(rawMessage)) {
+          handleInvalidSession();
+          return;
+        }
+        clearAdminSessionToken();
+        showLoggedOut();
         setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
       }
     }
@@ -850,7 +910,7 @@
       try {
         setStatus('Inloggen...');
         const data = await adminLogin();
-        showLoggedIn(data.username);
+        showLoggedIn(data.username || data.display_name || document.getElementById('usernameInput').value.trim());
         await refreshAdminLists();
         setStatus('');
       } catch (err) {
@@ -868,9 +928,9 @@
       try {
         setStatus('Dev-login...');
         const data = await adminDevLogin();
-        showLoggedIn(data.username || document.getElementById('usernameInput').value.trim());
+        showLoggedIn(data.username || data.display_name || document.getElementById('usernameInput').value.trim());
         await refreshAdminLists();
-        setStatus('Dev-login actief. Alleen voor lokaal testen.');
+        setStatus('Dev-login actief en sessie geverifieerd.');
       } catch (err) {
         const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
         setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
@@ -900,9 +960,10 @@
       }, { passive: true });
     }
 
-    document.getElementById('requestSearch').addEventListener('input', ()=> renderRequests(lastRequests));
-    document.getElementById('historySearch').addEventListener('input', ()=> renderHistory(lastHistory));
+    document.getElementById('requestSearch')?.addEventListener('input', ()=> renderRequests(lastRequests));
+    document.getElementById('historySearch')?.addEventListener('input', ()=> renderHistory(lastHistory));
     document.querySelectorAll('[data-history-filter]').forEach((btn)=> btn.addEventListener('click', ()=> { historyFilter = btn.dataset.historyFilter; renderHistory(lastHistory); }));
+    initParallax();
     loadAdmin();
   </script>
 </body>

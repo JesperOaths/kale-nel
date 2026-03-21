@@ -1,10 +1,11 @@
+
 :root {
   --gold: #d4af37;
   --gold-dark: #b89018;
   --black: #111111;
   --warm-bg: #efe9df;
   --paper: rgba(255,255,255,0.58);
-  --glass: rgba(255,255,255,0.18);
+  --glass: rgba(255,255,255,0.14);
   --line: rgba(17,17,17,0.10);
   --muted: #6d5830;
   --ok: #7c6112;
@@ -12,46 +13,179 @@
   --danger: #4f463f;
   --shadow: 0 24px 60px rgba(17,17,17,0.14);
 }
+
 body {
+  position: relative;
+  overflow-x: hidden;
   background:
-    linear-gradient(135deg, rgba(247,244,238,0.60), rgba(239,234,225,0.50)),
+    linear-gradient(135deg, rgba(247,244,238,0.44), rgba(239,234,225,0.32)),
     url('./site-bg-desktop.webp') center center / cover no-repeat fixed !important;
 }
+
 @media (orientation: portrait) {
   body {
     background:
-      linear-gradient(135deg, rgba(247,244,238,0.58), rgba(239,234,225,0.48)),
+      linear-gradient(135deg, rgba(247,244,238,0.42), rgba(239,234,225,0.30)),
       url('./site-bg-mobile.webp') center center / cover no-repeat fixed !important;
   }
 }
-.scene { display: none !important; }
+
+.scene {
+  display: block !important;
+  position: fixed !important;
+  inset: 0 !important;
+  overflow: hidden !important;
+  z-index: 0 !important;
+}
+
+.page-bg,
+.top-glow,
+.brand-watermark,
+.spinoza-shadow,
+.playing-card-accent,
+.kale-hand {
+  position: absolute;
+  will-change: transform;
+  transform: translate3d(0,0,0);
+}
+
+.page-bg,
+.top-glow {
+  inset: 0;
+}
+
+.page-bg {
+  background-image: url('./123zwartkaart.png');
+  background-size: 260px;
+  background-repeat: repeat;
+  background-position: center;
+  opacity: 0.065;
+  mix-blend-mode: multiply;
+}
+
+.top-glow {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.26), transparent 24%),
+    radial-gradient(circle at 50% -8%, rgba(255,255,255,0.34), transparent 34%);
+}
+
+.brand-watermark {
+  top: 50%;
+  left: 50%;
+  width: min(42vw, 560px);
+  transform: translate3d(calc(-50% + var(--mouse-x) * 0.009), calc(-50% + var(--mouse-y) * 0.009), 0);
+  opacity: 0.12;
+}
+
+.brand-watermark img,
+.spinoza-shadow img,
+.playing-card-accent img,
+.kale-hand img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.spinoza-shadow {
+  left: 50%;
+  top: 53%;
+  width: min(46vw, 620px);
+  transform: translate3d(calc(-50% + var(--mouse-x) * 0.01), calc(-50% + var(--mouse-y) * 0.01), 0);
+  opacity: 0.34;
+  filter: grayscale(1) contrast(2.9) brightness(0.34) drop-shadow(0 14px 28px rgba(17,17,17,0.12));
+  mix-blend-mode: multiply;
+}
+
+.kale-hand {
+  left: -40px;
+  top: 18%;
+  width: min(31vw, 450px);
+  transform: translate3d(calc(var(--mouse-x) * -0.02), calc(var(--mouse-y) * -0.012), 0) rotate(-12deg);
+  opacity: 0.92;
+  filter: drop-shadow(0 18px 30px rgba(61, 31, 18, 0.18));
+  transform-origin: center center;
+}
+
+.playing-card-accent {
+  right: clamp(18px, 3vw, 52px);
+  bottom: clamp(12px, 5vh, 56px);
+  width: min(31vw, 420px);
+  transform: translate3d(calc(var(--mouse-x) * -0.012), calc(var(--mouse-y) * -0.009), 0) rotate(4deg);
+  opacity: 0.99;
+  filter: drop-shadow(0 20px 34px rgba(40, 18, 12, 0.16));
+  transform-origin: center right;
+}
+
+.playing-card-accent img {
+  border-radius: 28px;
+  background: transparent;
+}
+
+.wrap,
+.shell,
+.card,
+.watermark {
+  position: relative;
+  z-index: 2;
+}
+
 .card {
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08)),
-    radial-gradient(circle at top left, rgba(255,255,255,0.20), transparent 36%),
-    linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)) !important;
-  backdrop-filter: blur(24px) saturate(1.08) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(1.08) !important;
-  border: 1px solid rgba(255,255,255,0.5) !important;
+    linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.07)),
+    radial-gradient(circle at top left, rgba(255,255,255,0.18), transparent 38%),
+    linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)) !important;
+  backdrop-filter: blur(16px) saturate(1.08) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.08) !important;
+  border: 1px solid rgba(255,255,255,0.58) !important;
   box-shadow: var(--shadow) !important;
 }
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(120deg, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0.10) 18%, transparent 42%),
+    radial-gradient(circle at top right, rgba(212,175,55,0.10), transparent 28%),
+    linear-gradient(135deg, rgba(212,175,55,0.03), transparent 36%, rgba(17,17,17,0.018));
+}
+
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.18), transparent 18%, rgba(255,255,255,0.035) 72%, rgba(255,255,255,0.08));
+  mix-blend-mode: screen;
+}
+
 .notice.ok, .status-ok, .state-approved, .state-awaiting, .state-activated {
   color: var(--ok) !important;
 }
-.home-link, .ghost-link, .pill-link { color: var(--black) !important; border-color: rgba(17,17,17,0.08) !important; }
+
+.home-link, .ghost-link, .pill-link {
+  color: var(--black) !important;
+  border-color: rgba(17,17,17,0.08) !important;
+}
+
 .approve-btn, .link-btn, .mail-btn, .copy-btn, .logout-btn, .reject-btn, .login-btn {
   min-height: 48px;
   border-radius: 16px;
 }
+
 .approve-btn, .link-btn, .mail-btn, .copy-btn, .login-btn {
   background: var(--gold) !important;
   color: var(--black) !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.26);
 }
+
 .reject-btn, .logout-btn, .danger-btn {
   background: rgba(17,17,17,0.78) !important;
   color: #fff !important;
 }
+
 @media (hover: hover) and (pointer: fine) {
   button:hover, .text-link:hover, .pill-link:hover, .home-link:hover, .ghost-link:hover {
     transform: none !important;
@@ -59,33 +193,74 @@ body {
     filter: brightness(1.02) !important;
   }
 }
+
 button:active, .text-link:active, .pill-link:active, .home-link:active, .ghost-link:active {
   transform: scale(0.992) !important;
   box-shadow: 0 3px 10px rgba(17,17,17,0.05) !important;
   filter: brightness(0.99) !important;
 }
+
 .request, .activation-tools, .data-box, .info-band, .dev-login-box, pre {
-  background: rgba(255,255,255,0.52) !important;
+  background: rgba(255,255,255,0.40) !important;
   border-color: rgba(17,17,17,0.08) !important;
 }
-.state-badge { border-color: rgba(17,17,17,0.08) !important; }
+
+.state-badge {
+  border-color: rgba(17,17,17,0.08) !important;
+}
+
 .state-pending { color: #8a6613 !important; background: rgba(212,175,55,0.18) !important; }
 .state-approved, .state-awaiting { background: rgba(212,175,55,0.14) !important; }
 .state-activated { background: rgba(212,175,55,0.12) !important; }
 .state-rejected { color: var(--danger) !important; background: rgba(17,17,17,0.10) !important; }
+
 .topbar { align-items: flex-start !important; }
 .test-chip {
-  display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; background:rgba(212,175,55,0.18); border:1px solid rgba(17,17,17,0.08); font-size:12px; font-weight:700; color:var(--black);
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  background:rgba(212,175,55,0.18);
+  border:1px solid rgba(17,17,17,0.08);
+  font-size:12px;
+  font-weight:700;
+  color:var(--black);
 }
-.test-chip::before { content:''; width:8px; height:8px; border-radius:999px; background:var(--gold-dark); }
-.inline-msg { margin-top:10px; padding:10px 12px; border-radius:14px; font-size:0.95rem; background:rgba(255,255,255,0.45); border:1px solid rgba(17,17,17,0.08); color:var(--muted); }
+.test-chip::before {
+  content:'';
+  width:8px;
+  height:8px;
+  border-radius:999px;
+  background:var(--gold-dark);
+}
+.inline-msg {
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:14px;
+  font-size:0.95rem;
+  background:rgba(255,255,255,0.35);
+  border:1px solid rgba(17,17,17,0.08);
+  color:var(--muted);
+}
 .inline-msg.ok { background: rgba(212,175,55,0.16); color: var(--ok); }
 .inline-msg.error { background: rgba(17,17,17,0.08); color: #43362a; }
-.admin-grid { display:grid; grid-template-columns: minmax(0,1.15fr) minmax(320px,0.85fr); gap:20px; }
+.admin-grid { display:grid; grid-template-columns: minmax(0,1.15fr) minmax(320px,0.85fr); gap:20px; align-items: start; }
 .sidebar-card { position:sticky; top:20px; }
 .filter-row { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 14px; }
 .filter-pill { padding:8px 12px; border-radius:999px; border:1px solid rgba(17,17,17,0.08); background:rgba(255,255,255,0.54); color:var(--black); cursor:pointer; }
 .filter-pill.active { background:rgba(212,175,55,0.22); }
 .search-input { margin-bottom:12px; }
 .compact-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
-@media (max-width: 980px) { .admin-grid { grid-template-columns: 1fr; } .sidebar-card{position:static;} }
+
+@media (max-width: 980px) {
+  .admin-grid { grid-template-columns: 1fr; }
+  .sidebar-card { position: static; }
+}
+
+@media (max-width: 900px) {
+  .brand-watermark { width: min(64vw, 440px); opacity: 0.12; }
+  .spinoza-shadow { width: min(66vw, 430px); top: 50%; opacity: 0.32; }
+  .kale-hand { width: min(48vw, 310px); top: 8%; left: -44px; opacity: 0.84; }
+  .playing-card-accent { width: min(38vw, 250px); right: 12px; bottom: 28px; }
+}
