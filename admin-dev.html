@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dev Diagnose</title>
+  <link rel="stylesheet" href="./theme-v45.css" />
+  <style>
+    body { margin:0; padding:28px; font-family:Inter, ui-sans-serif, system-ui, sans-serif; color:#111; min-height:100vh; }
+    .wrap { max-width: 980px; margin:0 auto; position:relative; z-index:2; }
+    .card { border-radius:30px; padding:28px; margin-bottom:20px; }
+    .row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+    input, button, textarea { font:inherit; }
+    input, textarea { width:100%; padding:13px 14px; border:1px solid rgba(17,17,17,0.1); border-radius:16px; background:rgba(255,255,255,0.58); }
+    button { padding:13px 16px; border:none; border-radius:16px; cursor:pointer; }
+    pre { white-space:pre-wrap; word-break:break-word; }
+    .muted { color:#6d5830; }
+    .stack { display:grid; gap:12px; }
+    .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
+    .chip { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; background:rgba(212,175,55,0.18); border:1px solid rgba(17,17,17,0.08); font-size:12px; font-weight:700; }
+    @media (max-width: 780px) { .row { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+        <div>
+          <h1 style="margin:0 0 8px 0;">Admin-dev diagnose</h1>
+          <div class="muted">Versie v45 · expliciete diagnose voor admin-mess, testmodus en auto-mail.</div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <span class="chip">Testmodus = dev-login fallback</span>
+          <a href="./admin.html" class="pill-link">Terug naar admin</a>
+          <a href="./index.html" class="pill-link">Terug naar site</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="card stack">
+      <div class="diagnostic-box">
+        <strong>Wat testmodus doet</strong>
+        <div class="muted" style="margin-top:8px;">
+          Testmodus is alleen nuttig als de backend-RPC <code>admin_dev_login</code> echt bestaat en een geldige
+          <code>admin_session_token</code> teruggeeft die daarna ook slaagt bij <code>admin_check_session</code>.
+          Als dat niet zo is, is testmodus alleen verwarrend en mag hij weg.
+        </div>
+      </div>
+
+      <div class="row">
+        <input id="usernameInput" type="text" placeholder="Gebruikersnaam" value="1" />
+        <input id="passwordInput" type="password" placeholder="Wachtwoord" value="1" />
+        <input id="totpInput" type="text" placeholder="TOTP (6 cijfers)" />
+      </div>
+      <input id="devKeyInput" type="password" placeholder="Dev key voor testmodus" value="1" />
+
+      <div class="actions">
+        <button class="dev-btn" id="realLoginBtn" type="button">Echte admin_login testen</button>
+        <button class="dev-btn" id="devLoginBtn" type="button">Testmodus / admin_dev_login testen</button>
+        <button class="dev-btn" id="checkBtn" type="button">admin_check_session testen</button>
+        <button class="dev-btn" id="pendingBtn" type="button">Openstaande aanvragen laden</button>
+        <button class="dev-btn" id="historyBtn" type="button">Geschiedenis laden</button>
+        <button class="reject-btn" id="clearBtn" type="button">Sessietoken wissen</button>
+      </div>
+
+      <div class="diagnostic-box">
+        <strong>Automatische activatie-mail</strong>
+        <div class="muted" style="margin-top:8px;">
+          De adminpagina stuurt nu standaard naar <code>/functions/v1/send-activation-email</code>.
+          Die functie moet worden gedeployed met <code>--no-verify-jwt</code>, anders krijg je weer een auth-401.
+        </div>
+      </div>
+
+      <div class="diagnostic-box">
+        <strong>Huidige sessietoken</strong>
+        <pre id="tokenOut">(nog geen token)</pre>
+      </div>
+
+      <div class="diagnostic-box">
+        <strong>Resultaat</strong>
+        <pre id="resultOut">Klaar.</pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+    const ADMIN_SESSION_KEY = "jas_admin_session_v8";
+    function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type":"application/json", Accept:"application/json" }; }
+    async function parseResponse(res) {
+      const text = await res.text();
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); }
+      if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
+      return data;
+    }
+    function getToken() { return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY) || ""; }
+    function setToken(token) { sessionStorage.setItem(ADMIN_SESSION_KEY, token); localStorage.removeItem(ADMIN_SESSION_KEY); renderToken(); }
+    function clearToken() { sessionStorage.removeItem(ADMIN_SESSION_KEY); localStorage.removeItem(ADMIN_SESSION_KEY); renderToken(); }
+    function renderToken() { document.getElementById('tokenOut').textContent = getToken() || "(nog geen token)"; }
+    function show(data) { document.getElementById('resultOut').textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2); }
+    async function callRpc(name, body) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(body) });
+      return await parseResponse(res);
+    }
+    document.getElementById('realLoginBtn').addEventListener('click', async () => {
+      try {
+        const data = await callRpc('admin_login', {
+          input_username: document.getElementById('usernameInput').value.trim(),
+          input_password: document.getElementById('passwordInput').value,
+          input_totp_code: document.getElementById('totpInput').value.trim()
+        });
+        const token = data.admin_session_token || data.token;
+        if (token) setToken(token);
+        show({ message: 'admin_login succeeded', data });
+      } catch (err) { show(err instanceof Error ? err.message : String(err)); }
+    });
+    document.getElementById('devLoginBtn').addEventListener('click', async () => {
+      try {
+        const data = await callRpc('admin_dev_login', {
+          input_username: document.getElementById('usernameInput').value.trim(),
+          input_password: document.getElementById('passwordInput').value,
+          input_dev_key: document.getElementById('devKeyInput').value.trim()
+        });
+        const token = data.admin_session_token || data.token;
+        if (token) setToken(token);
+        show({ message: 'admin_dev_login succeeded', data });
+      } catch (err) { show(err instanceof Error ? err.message : String(err)); }
+    });
+    document.getElementById('checkBtn').addEventListener('click', async () => {
+      try { show(await callRpc('admin_check_session', { admin_session_token: getToken() })); }
+      catch (err) { show(err instanceof Error ? err.message : String(err)); }
+    });
+    document.getElementById('pendingBtn').addEventListener('click', async () => {
+      try { show(await callRpc('admin_get_claim_requests', { admin_session_token: getToken() })); }
+      catch (err) { show(err instanceof Error ? err.message : String(err)); }
+    });
+    document.getElementById('historyBtn').addEventListener('click', async () => {
+      try { show(await callRpc('admin_get_claim_history', { admin_session_token: getToken() })); }
+      catch (err) { show(err instanceof Error ? err.message : String(err)); }
+    });
+    document.getElementById('clearBtn').addEventListener('click', () => { clearToken(); show('Sessietoken gewist.'); });
+    renderToken();
+  </script>
+</body>
+</html>
