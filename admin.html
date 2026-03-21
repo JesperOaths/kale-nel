@@ -14,11 +14,11 @@
       --card-2: rgba(255,255,255,0.08);
       --line: rgba(17,17,17,0.10);
       --muted: #6d5830;
-      --blue: #b89018;
-      --ok: #7c6112;
-      --ok-soft: rgba(212, 175, 55, 0.16);
-      --warn: #6b5220;
-      --warn-soft: rgba(17,17,17,0.06);
+      --blue: #d4af37;
+      --ok: #111111;
+      --ok-soft: rgba(212, 175, 55, 0.18);
+      --warn: #6d5830;
+      --warn-soft: rgba(17,17,17,0.05);
       --shadow: 0 24px 60px rgba(17, 17, 17, 0.16);
       --mouse-x: 0px;
       --mouse-y: 0px;
@@ -28,7 +28,7 @@
     body {
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background:
-        linear-gradient(135deg, rgba(247,244,238,0.64), rgba(239,234,225,0.54)),
+        linear-gradient(135deg, rgba(247,244,238,0.42), rgba(239,234,225,0.34)),
         url('./site-bg-desktop.webp') center center / cover no-repeat fixed;
       color: var(--black);
       margin: 0;
@@ -43,7 +43,7 @@
     @media (orientation: portrait) {
       body {
         background:
-          linear-gradient(135deg, rgba(247,244,238,0.60), rgba(239,234,225,0.52)),
+          linear-gradient(135deg, rgba(247,244,238,0.34), rgba(239,234,225,0.28)),
           url('./site-bg-mobile.webp') center center / cover no-repeat fixed;
       }
     }
@@ -126,12 +126,12 @@
       position: relative;
       z-index: 2;
       background:
-        linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.10)),
-        radial-gradient(circle at top left, rgba(255,255,255,0.20), transparent 36%),
+        linear-gradient(180deg, rgba(255,255,255,0.17), rgba(255,255,255,0.07)),
+        radial-gradient(circle at top left, rgba(255,255,255,0.24), transparent 36%),
         linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
-      backdrop-filter: blur(22px) saturate(1.08);
-      -webkit-backdrop-filter: blur(22px) saturate(1.08);
-      border: 1px solid rgba(255,255,255,0.48);
+      backdrop-filter: blur(24px) saturate(1.05);
+      -webkit-backdrop-filter: blur(24px) saturate(1.05);
+      border: 1px solid rgba(255,255,255,0.56);
       box-shadow: var(--shadow);
       overflow: hidden;
     }
@@ -178,14 +178,14 @@
       border-radius: 16px;
       padding: 14px 16px;
       border: 1px solid var(--line);
-      background: rgba(255,255,255,0.54);
+      background: rgba(255,255,255,0.38);
       color: var(--muted);
       position: relative;
       z-index: 1;
     }
     .notice.show { display: block; }
-    .notice.ok { background: var(--ok-soft); color: var(--ok); border-color: rgba(22,101,52,0.15); }
-    .notice.warn { background: var(--warn-soft); color: var(--warn); border-color: rgba(146,64,14,0.16); }
+    .notice.ok { background: var(--ok-soft); color: var(--black); border-color: rgba(212,175,55,0.28); }
+    .notice.warn { background: rgba(17,17,17,0.045); color: var(--black); border-color: rgba(17,17,17,0.10); }
     input, textarea, select, button {
       font: inherit;
     }
@@ -194,7 +194,7 @@
       padding: 13px 14px;
       border: 1px solid rgba(17,17,17,0.1);
       border-radius: 16px;
-      background: rgba(255,255,255,0.58);
+      background: rgba(255,255,255,0.44);
       position: relative;
       z-index: 1;
       outline: none;
@@ -215,13 +215,13 @@
     @media (hover: hover) and (pointer: fine) {
       button:hover, .text-link:hover, .pill-link:hover, .home-link:hover, .ghost-link:hover {
         transform: none;
-        box-shadow: 0 8px 18px rgba(17,17,17,0.05);
+        box-shadow: 0 6px 14px rgba(17,17,17,0.045);
         filter: brightness(1.01);
       }
     }
     button:active, .text-link:active, .pill-link:active, .home-link:active, .ghost-link:active {
-      transform: scale(0.992);
-      box-shadow: 0 3px 10px rgba(17,17,17,0.05);
+      transform: scale(0.997);
+      box-shadow: 0 2px 8px rgba(17,17,17,0.04);
       filter: brightness(0.99);
     }
     .modal {
@@ -331,12 +331,14 @@
     .wrap { max-width: 980px; margin: 0 auto; position: relative; z-index: 2; }
     .topbar { display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:16px; }
     .home-link {
-      text-decoration:none; color:#2563eb; background:rgba(255,255,255,0.62);
-      padding:8px 12px; border-radius:999px; border:1px solid rgba(37,99,235,0.12);
+      text-decoration:none; color:var(--black); background:rgba(255,255,255,0.46);
+      padding:8px 12px; border-radius:999px; border:1px solid rgba(17,17,17,0.08);
     }
     .mini-logo { width:74px; height:74px; }
     .card { border-radius: 28px; padding: 26px; margin-bottom: 20px; }
     h1, h2 { margin-top:0; position: relative; z-index: 1; }
+    .version-line { margin-top:-8px; margin-bottom:10px; }
+
     #status, .muted, #welcomeText { color: var(--muted); position: relative; z-index: 1; }
     textarea { resize: vertical; min-height: 90px; }
     .hidden { display:none; }
@@ -363,7 +365,7 @@
     }
     .request-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px 18px; margin-top: 12px; }
     .action-row { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
-    .activation-tools { margin-top: 14px; padding: 14px; border-radius: 18px; background: rgba(255,255,255,0.58); border: 1px solid rgba(17,17,17,0.08); }
+    .activation-tools { margin-top: 14px; padding: 14px; border-radius: 18px; background: rgba(255,255,255,0.44); border: 1px solid rgba(17,17,17,0.08); }
     .activation-tools.hidden { display:none; }
     .activation-link-box { margin-top: 10px; padding: 12px 14px; border-radius: 14px; background: rgba(17,17,17,0.05); font-size: 0.95rem; word-break: break-all; }
     .activation-meta { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px 18px; margin-top: 12px; }
@@ -385,12 +387,67 @@
       margin-top: 12px;
       padding: 12px 14px;
       border-radius: 18px;
-      background: rgba(255,255,255,0.40);
+      background: rgba(255,255,255,0.34);
       border: 1px solid rgba(17,17,17,0.08);
     }
     .dev-login-box summary {
       font-weight: 700;
       letter-spacing: 0.01em;
+      list-style: none;
+    }
+    .dev-login-box summary::-webkit-details-marker { display: none; }
+    .test-mode-chip {
+      position: absolute;
+      top: 22px;
+      right: 22px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(17,17,17,0.08);
+      background: rgba(255,255,255,0.48);
+      color: var(--black);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      z-index: 3;
+    }
+    .test-mode-chip::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--gold);
+      box-shadow: 0 0 0 3px rgba(212,175,55,0.14);
+    }
+    .status-stack { display:flex; flex-direction:column; gap:12px; }
+    #status.notice { display:none; }
+    #status.notice.show { display:block; }
+    .subtle-help { margin-top:10px; padding:12px 14px; border-radius:16px; background:rgba(255,255,255,0.30); border:1px solid rgba(17,17,17,0.07); color:var(--muted); }
+    .state-pending { color: #6d5830; background: rgba(17,17,17,0.05); border-color: rgba(17,17,17,0.08); }
+    .state-approved { color: #111111; background: rgba(212,175,55,0.18); border-color: rgba(212,175,55,0.28); }
+    .state-awaiting { color: #111111; background: rgba(212,175,55,0.11); border-color: rgba(212,175,55,0.23); }
+    .state-activated { color: #111111; background: rgba(212,175,55,0.24); border-color: rgba(212,175,55,0.34); }
+    .state-rejected { color: #4a1e1e; background: rgba(120, 40, 40, 0.10); border-color: rgba(120,40,40,0.18); }
+    .approve-btn { background: var(--gold); color: var(--black); margin-right: 10px; }
+    .reject-btn { background: #2a2320; color: white; }
+    .link-btn { background: #111111; color: white; }
+    .mail-btn { background: rgba(17,17,17,0.86); color: white; }
+    .copy-btn { background: rgba(255,255,255,0.82); color: var(--black); border: 1px solid rgba(17,17,17,0.08); }
+    .request { background: rgba(251,250,246,.46); }
+    .activation-tools, .data-box, .info-band, pre { background: rgba(255,255,255,0.34); border-color: rgba(17,17,17,0.08); }
+    .activation-link-box { background: rgba(17,17,17,0.04); }
+    .copy-confirm {
+      display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px;
+      background: rgba(212,175,55,0.16); color: var(--black); border:1px solid rgba(212,175,55,0.24);
+      font-size: 12px; font-weight:700; opacity:0; transform:translateY(2px); transition:opacity .16s ease, transform .16s ease;
+    }
+    .copy-confirm.show { opacity:1; transform:translateY(0); }
+    .copy-confirm::before { content:""; width:8px; height:8px; border-radius:999px; background:var(--gold); }
+    .action-row.compact { align-items:center; }
+    @media (max-width: 760px) {
+      .test-mode-chip { position: static; margin-bottom: 12px; }
     }
 
     @media (max-width: 760px) {
@@ -419,8 +476,9 @@
     </div>
 
     <div class="card">
+      <button id="testModeChip" class="test-mode-chip" type="button" aria-expanded="false">Testmodus</button>
       <h1>Adminpaneel</h1>
-      <div class="muted" style="margin-top:-8px; margin-bottom:10px;">Versie v40</div>
+      <div class="muted version-line">Versie v41</div>
       <div id="loginView">
         <div class="row">
           <input id="usernameInput" type="text" placeholder="Gebruikersnaam" autocomplete="username" autocapitalize="none" spellcheck="false" />
@@ -428,21 +486,21 @@
         </div>
         <input id="totpInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="Google Authenticator-code (6 cijfers)" autocomplete="one-time-code" />
         <button id="loginBtn" class="login-btn" type="button">Inloggen</button>
-        <details class="dev-login-box" open>
+        <details class="dev-login-box" id="devLoginBox">
           <summary>Test-login zonder Authenticator</summary>
           <div class="muted" style="margin-top:10px;">Snelle bugfix-modus. Gebruik <strong>1</strong> / <strong>1</strong> / <strong>1</strong>.</div>
           <input id="devKeyInput" type="password" inputmode="numeric" maxlength="8" placeholder="Dev key" autocomplete="one-time-code" style="margin-top:10px;" />
           <button id="devLoginBtn" class="login-btn" type="button" style="margin-top:10px;">Dev-login zonder Authenticator</button>
           <div id="devLoginHint" class="muted" style="margin-top:10px;">Dev-login: gebruikersnaam <strong>1</strong>, wachtwoord <strong>1</strong>, dev key <strong>1</strong>.</div>
         </details>
-        <div class="muted" style="margin-top:10px;">Log in met je gebruikersnaam, wachtwoord en 6-cijferige code uit Google Authenticator.</div>
+        <div class="subtle-help">Log in met je gebruikersnaam, wachtwoord en 6-cijferige code uit Google Authenticator. Voor testen kun je de compacte testmodus rechtsboven openen.</div>
       </div>
       <div id="adminView" class="hidden">
         <p id="welcomeText"></p>
         <button id="logoutBtn" class="logout-btn" type="button">Uitloggen</button>
       </div>
       <div class="info-band">Na goedkeuring hoort de speler géén publieke activatiepagina meer te gebruiken. De veilige flow is: aanvraag → goedkeuring → persoonlijke activatielink per mail → speler zet zelf een 4-cijferige pincode via die unieke link → daarna gewoon inloggen op de hoofdpagina.</div>
-      <div id="status"></div>
+      <div class="status-stack"><div id="status" class="notice"></div></div>
     </div>
 
     <div id="requestsCard" class="card hidden">
@@ -457,7 +515,7 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v40</div>
+  <div class="watermark">Made by Bruis · v41</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -472,7 +530,12 @@
       if (persist) localStorage.setItem(ADMIN_SESSION_KEY, token); else localStorage.removeItem(ADMIN_SESSION_KEY);
     }
     function clearAdminSessionToken() { sessionStorage.removeItem(ADMIN_SESSION_KEY); localStorage.removeItem(ADMIN_SESSION_KEY); }
-    function setStatus(text) { document.getElementById("status").textContent = text || ""; }
+    function setStatus(text, tone = 'warn') {
+      const el = document.getElementById("status");
+      if (!text) { el.className = 'notice'; el.textContent = ''; return; }
+      el.className = `notice ${tone} show`;
+      el.textContent = text;
+    }
     function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;"); }
     function showLoggedOut() { document.getElementById("loginView").classList.remove("hidden"); document.getElementById("adminView").classList.add("hidden"); document.getElementById("requestsCard").classList.add("hidden"); document.getElementById("historyCard").classList.add("hidden"); document.getElementById("requestsList").innerHTML = ""; document.getElementById("historyList").innerHTML = ""; }
     function showLoggedIn(username) { document.getElementById("loginView").classList.add("hidden"); document.getElementById("adminView").classList.remove("hidden"); document.getElementById("requestsCard").classList.remove("hidden"); document.getElementById("historyCard").classList.remove("hidden"); document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`; }
@@ -489,9 +552,10 @@
             <div class="data-box"><span class="label">Activatie verloopt</span><span id="activation-expires-${req.id}">Nog niet gegenereerd</span></div>
           </div>
           <div class="activation-link-box" id="activation-url-${req.id}">Nog geen activatielink gegenereerd.</div>
-          <div class="action-row">
+          <div class="action-row compact">
             <button class="copy-btn" type="button" data-copy-activation data-id="${req.id}">Kopieer activatielink</button>
             <button class="mail-btn" type="button" data-mail-activation data-id="${req.id}">Open e-mailconcept</button>
+            <span class="copy-confirm" id="copy-confirm-${req.id}">Gekopieerd</span>
           </div>
         </div>
       `;
@@ -588,7 +652,7 @@
             renderHistory(history.history);
             setStatus(decision === 'approved'
               ? 'Aanvraag goedgekeurd. De volgende stap is een unieke activatielink per mail naar dit e-mailadres sturen.'
-              : 'Aanvraag afgewezen en geschiedenis bijgewerkt.');
+              : 'Aanvraag afgewezen en geschiedenis bijgewerkt.', decision === 'approved' ? 'ok' : 'warn');
           } catch (err) {
             const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
             setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
@@ -602,7 +666,7 @@
             setStatus('Activatielink maken...');
             const linkData = await createActivationLink(requestId);
             showActivationPanel(requestId, linkData);
-            setStatus('Activatielink gemaakt. Kopieer hem of open meteen een e-mailconcept.');
+            setStatus('Activatielink gemaakt. Kopieer hem of open meteen een e-mailconcept.', 'ok');
           } catch (err) {
             const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
             setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
@@ -617,7 +681,8 @@
           if (!url) { setStatus('Maak eerst een activatielink.'); return; }
           try {
             await navigator.clipboard.writeText(url);
-            setStatus('Activatielink gekopieerd.');
+            setStatus('Activatielink gekopieerd.', 'ok');
+            showCopyConfirm(requestId);
           } catch {
             setStatus('Kopiëren lukte niet automatisch. Selecteer de link handmatig.');
           }
@@ -731,6 +796,14 @@
       expiresEl.textContent = formatDateTime(linkData.expires_at);
     }
 
+    function showCopyConfirm(requestId) {
+      const el = document.getElementById(`copy-confirm-${requestId}`);
+      if (!el) return;
+      el.classList.add('show');
+      clearTimeout(el._hideTimer);
+      el._hideTimer = setTimeout(() => el.classList.remove('show'), 1800);
+    }
+
     async function loadAdmin() {
       try {
         setStatus('');
@@ -763,7 +836,7 @@
         setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
       }
     });
-    document.getElementById('logoutBtn').addEventListener('click', () => { clearAdminSessionToken(); showLoggedOut(); setStatus('Uitgelogd.'); });
+    document.getElementById('logoutBtn').addEventListener('click', () => { clearAdminSessionToken(); showLoggedOut(); setStatus('Uitgelogd.', 'ok'); });
     document.getElementById('totpInput').placeholder = 'Google Authenticator-code (of gebruik de test-login hieronder)';
     if (!document.getElementById('usernameInput').value) document.getElementById('usernameInput').value = '1';
     if (!document.getElementById('passwordInput').value) document.getElementById('passwordInput').value = '1';
@@ -777,7 +850,7 @@
         const [requests, history] = await Promise.all([getRequests(), getHistory()]);
         renderRequests(requests.requests);
         renderHistory(history.history);
-        setStatus('Dev-login actief. Alleen voor lokaal testen.');
+        setStatus('Dev-login actief. Alleen voor lokaal testen.', 'ok');
       } catch (err) {
         const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
         setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
@@ -807,7 +880,7 @@
       }, { passive: true });
     }
 
-    // v40: pre-rendered background, so parallax is disabled for performance.
+    // v41: pre-rendered background, so parallax is disabled for performance.
     loadAdmin();
   </script>
 </body>
