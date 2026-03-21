@@ -14,11 +14,11 @@
       --card-2: rgba(255,255,255,0.08);
       --line: rgba(17,17,17,0.10);
       --muted: #6d5830;
-      --blue: #d4af37;
-      --ok: #111111;
-      --ok-soft: rgba(212, 175, 55, 0.18);
-      --warn: #6d5830;
-      --warn-soft: rgba(17,17,17,0.05);
+      --blue: #b89018;
+      --ok: #7c6112;
+      --ok-soft: rgba(212, 175, 55, 0.16);
+      --warn: #6b5220;
+      --warn-soft: rgba(17,17,17,0.06);
       --shadow: 0 24px 60px rgba(17, 17, 17, 0.16);
       --mouse-x: 0px;
       --mouse-y: 0px;
@@ -28,7 +28,7 @@
     body {
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background:
-        linear-gradient(135deg, rgba(247,244,238,0.42), rgba(239,234,225,0.34)),
+        linear-gradient(135deg, rgba(247,244,238,0.64), rgba(239,234,225,0.54)),
         url('./site-bg-desktop.webp') center center / cover no-repeat fixed;
       color: var(--black);
       margin: 0;
@@ -43,7 +43,7 @@
     @media (orientation: portrait) {
       body {
         background:
-          linear-gradient(135deg, rgba(247,244,238,0.34), rgba(239,234,225,0.28)),
+          linear-gradient(135deg, rgba(247,244,238,0.60), rgba(239,234,225,0.52)),
           url('./site-bg-mobile.webp') center center / cover no-repeat fixed;
       }
     }
@@ -126,12 +126,12 @@
       position: relative;
       z-index: 2;
       background:
-        linear-gradient(180deg, rgba(255,255,255,0.17), rgba(255,255,255,0.07)),
-        radial-gradient(circle at top left, rgba(255,255,255,0.24), transparent 36%),
+        linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.10)),
+        radial-gradient(circle at top left, rgba(255,255,255,0.20), transparent 36%),
         linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
-      backdrop-filter: blur(24px) saturate(1.05);
-      -webkit-backdrop-filter: blur(24px) saturate(1.05);
-      border: 1px solid rgba(255,255,255,0.56);
+      backdrop-filter: blur(22px) saturate(1.08);
+      -webkit-backdrop-filter: blur(22px) saturate(1.08);
+      border: 1px solid rgba(255,255,255,0.48);
       box-shadow: var(--shadow);
       overflow: hidden;
     }
@@ -178,14 +178,14 @@
       border-radius: 16px;
       padding: 14px 16px;
       border: 1px solid var(--line);
-      background: rgba(255,255,255,0.38);
+      background: rgba(255,255,255,0.54);
       color: var(--muted);
       position: relative;
       z-index: 1;
     }
     .notice.show { display: block; }
-    .notice.ok { background: var(--ok-soft); color: var(--black); border-color: rgba(212,175,55,0.28); }
-    .notice.warn { background: rgba(17,17,17,0.045); color: var(--black); border-color: rgba(17,17,17,0.10); }
+    .notice.ok { background: var(--ok-soft); color: var(--ok); border-color: rgba(22,101,52,0.15); }
+    .notice.warn { background: var(--warn-soft); color: var(--warn); border-color: rgba(146,64,14,0.16); }
     input, textarea, select, button {
       font: inherit;
     }
@@ -194,7 +194,7 @@
       padding: 13px 14px;
       border: 1px solid rgba(17,17,17,0.1);
       border-radius: 16px;
-      background: rgba(255,255,255,0.44);
+      background: rgba(255,255,255,0.58);
       position: relative;
       z-index: 1;
       outline: none;
@@ -215,13 +215,13 @@
     @media (hover: hover) and (pointer: fine) {
       button:hover, .text-link:hover, .pill-link:hover, .home-link:hover, .ghost-link:hover {
         transform: none;
-        box-shadow: 0 6px 14px rgba(17,17,17,0.045);
+        box-shadow: 0 8px 18px rgba(17,17,17,0.05);
         filter: brightness(1.01);
       }
     }
     button:active, .text-link:active, .pill-link:active, .home-link:active, .ghost-link:active {
-      transform: scale(0.997);
-      box-shadow: 0 2px 8px rgba(17,17,17,0.04);
+      transform: scale(0.992);
+      box-shadow: 0 3px 10px rgba(17,17,17,0.05);
       filter: brightness(0.99);
     }
     .modal {
@@ -331,14 +331,12 @@
     .wrap { max-width: 980px; margin: 0 auto; position: relative; z-index: 2; }
     .topbar { display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:16px; }
     .home-link {
-      text-decoration:none; color:var(--black); background:rgba(255,255,255,0.46);
-      padding:8px 12px; border-radius:999px; border:1px solid rgba(17,17,17,0.08);
+      text-decoration:none; color:#2563eb; background:rgba(255,255,255,0.62);
+      padding:8px 12px; border-radius:999px; border:1px solid rgba(37,99,235,0.12);
     }
     .mini-logo { width:74px; height:74px; }
     .card { border-radius: 28px; padding: 26px; margin-bottom: 20px; }
     h1, h2 { margin-top:0; position: relative; z-index: 1; }
-    .version-line { margin-top:-8px; margin-bottom:10px; }
-
     #status, .muted, #welcomeText { color: var(--muted); position: relative; z-index: 1; }
     textarea { resize: vertical; min-height: 90px; }
     .hidden { display:none; }
@@ -365,7 +363,7 @@
     }
     .request-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px 18px; margin-top: 12px; }
     .action-row { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
-    .activation-tools { margin-top: 14px; padding: 14px; border-radius: 18px; background: rgba(255,255,255,0.44); border: 1px solid rgba(17,17,17,0.08); }
+    .activation-tools { margin-top: 14px; padding: 14px; border-radius: 18px; background: rgba(255,255,255,0.58); border: 1px solid rgba(17,17,17,0.08); }
     .activation-tools.hidden { display:none; }
     .activation-link-box { margin-top: 10px; padding: 12px 14px; border-radius: 14px; background: rgba(17,17,17,0.05); font-size: 0.95rem; word-break: break-all; }
     .activation-meta { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px 18px; margin-top: 12px; }
@@ -387,67 +385,12 @@
       margin-top: 12px;
       padding: 12px 14px;
       border-radius: 18px;
-      background: rgba(255,255,255,0.34);
+      background: rgba(255,255,255,0.40);
       border: 1px solid rgba(17,17,17,0.08);
     }
     .dev-login-box summary {
       font-weight: 700;
       letter-spacing: 0.01em;
-      list-style: none;
-    }
-    .dev-login-box summary::-webkit-details-marker { display: none; }
-    .test-mode-chip {
-      position: absolute;
-      top: 22px;
-      right: 22px;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(17,17,17,0.08);
-      background: rgba(255,255,255,0.48);
-      color: var(--black);
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      z-index: 3;
-    }
-    .test-mode-chip::before {
-      content: "";
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: var(--gold);
-      box-shadow: 0 0 0 3px rgba(212,175,55,0.14);
-    }
-    .status-stack { display:flex; flex-direction:column; gap:12px; }
-    #status.notice { display:none; }
-    #status.notice.show { display:block; }
-    .subtle-help { margin-top:10px; padding:12px 14px; border-radius:16px; background:rgba(255,255,255,0.30); border:1px solid rgba(17,17,17,0.07); color:var(--muted); }
-    .state-pending { color: #6d5830; background: rgba(17,17,17,0.05); border-color: rgba(17,17,17,0.08); }
-    .state-approved { color: #111111; background: rgba(212,175,55,0.18); border-color: rgba(212,175,55,0.28); }
-    .state-awaiting { color: #111111; background: rgba(212,175,55,0.11); border-color: rgba(212,175,55,0.23); }
-    .state-activated { color: #111111; background: rgba(212,175,55,0.24); border-color: rgba(212,175,55,0.34); }
-    .state-rejected { color: #4a1e1e; background: rgba(120, 40, 40, 0.10); border-color: rgba(120,40,40,0.18); }
-    .approve-btn { background: var(--gold); color: var(--black); margin-right: 10px; }
-    .reject-btn { background: #2a2320; color: white; }
-    .link-btn { background: #111111; color: white; }
-    .mail-btn { background: rgba(17,17,17,0.86); color: white; }
-    .copy-btn { background: rgba(255,255,255,0.82); color: var(--black); border: 1px solid rgba(17,17,17,0.08); }
-    .request { background: rgba(251,250,246,.46); }
-    .activation-tools, .data-box, .info-band, pre { background: rgba(255,255,255,0.34); border-color: rgba(17,17,17,0.08); }
-    .activation-link-box { background: rgba(17,17,17,0.04); }
-    .copy-confirm {
-      display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px;
-      background: rgba(212,175,55,0.16); color: var(--black); border:1px solid rgba(212,175,55,0.24);
-      font-size: 12px; font-weight:700; opacity:0; transform:translateY(2px); transition:opacity .16s ease, transform .16s ease;
-    }
-    .copy-confirm.show { opacity:1; transform:translateY(0); }
-    .copy-confirm::before { content:""; width:8px; height:8px; border-radius:999px; background:var(--gold); }
-    .action-row.compact { align-items:center; }
-    @media (max-width: 760px) {
-      .test-mode-chip { position: static; margin-bottom: 12px; }
     }
 
     @media (max-width: 760px) {
@@ -457,6 +400,149 @@
       .topbar { padding: 0 14px; }
       .card { padding: 20px 16px; max-width: calc(100vw - 28px); width: calc(100vw - 28px); margin: 14px auto; }
     }
+  
+    /* v42 shared polish */
+    :root {
+      --gold: #c8a43b;
+      --gold-dark: #9b7822;
+      --black: #171311;
+      --muted: #6f5b35;
+      --soft-paper: rgba(255,255,255,0.12);
+      --glass-border: rgba(255,255,255,0.40);
+    }
+    body {
+      background:
+        linear-gradient(135deg, rgba(247,244,238,0.30), rgba(239,234,225,0.24)),
+        url('./site-bg-desktop.webp') center center / cover no-repeat fixed;
+      color: var(--black);
+    }
+    @media (orientation: portrait) {
+      body {
+        background:
+          linear-gradient(135deg, rgba(247,244,238,0.26), rgba(239,234,225,0.22)),
+          url('./site-bg-mobile.webp') center center / cover no-repeat fixed;
+      }
+    }
+    .scene, .page-bg, .brand-watermark, .spinoza-shadow, .kale-hand, .playing-card-accent { display:none !important; }
+    .card {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.07)),
+        radial-gradient(circle at top left, rgba(255,255,255,0.18), transparent 34%),
+        linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
+      backdrop-filter: blur(28px) saturate(1.04);
+      -webkit-backdrop-filter: blur(28px) saturate(1.04);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 24px 60px rgba(17,17,17,0.14);
+    }
+    .card::before {
+      background:
+        linear-gradient(120deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.08) 18%, transparent 42%),
+        radial-gradient(circle at top right, rgba(200,164,59,0.08), transparent 28%);
+    }
+    .muted { color: var(--muted) !important; }
+    .notice, .info-band, .data-box, details, .activation-tools, .activation-link-box {
+      background: rgba(255,255,255,0.36) !important;
+      border-color: rgba(23,19,17,0.08) !important;
+      color: var(--black);
+    }
+    input, textarea, select {
+      background: rgba(255,255,255,0.56);
+      border-color: rgba(23,19,17,0.10);
+      color: var(--black);
+    }
+    button, .pill-link, .home-link, .ghost-link, .text-link {
+      transition: transform .1s ease, box-shadow .12s ease, filter .12s ease, background-color .12s ease, border-color .12s ease;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      button:hover, .pill-link:hover, .home-link:hover, .ghost-link:hover, .text-link:hover {
+        transform: none;
+        box-shadow: 0 8px 16px rgba(17,17,17,0.06);
+        filter: brightness(1.01);
+      }
+    }
+    button:active, .pill-link:active, .home-link:active, .ghost-link:active, .text-link:active {
+      transform: scale(0.992);
+      box-shadow: 0 3px 10px rgba(17,17,17,0.05);
+      filter: brightness(0.99);
+    }
+
+    /* v42 admin layout + palette */
+    .wrap { max-width: 1220px; }
+    .topbar { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:18px; }
+    #status {
+      margin-top: 12px;
+      border-radius: 16px;
+      padding: 12px 14px;
+      background: rgba(255,255,255,0.34);
+      border: 1px solid rgba(23,19,17,0.08);
+      color: var(--black);
+      min-height: 0;
+    }
+    #status:empty { display:none; }
+    .admin-grid {
+      display:grid;
+      grid-template-columns: minmax(0,1.25fr) minmax(340px,0.95fr);
+      gap: 18px;
+      align-items:start;
+    }
+    .full-span { grid-column: 1 / -1; }
+    .request {
+      position: relative;
+      padding: 18px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.32);
+      border: 1px solid rgba(23,19,17,0.08);
+      margin-bottom: 14px;
+    }
+    .request-grid {
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .action-row { display:flex; flex-wrap:wrap; gap:10px; margin-top: 12px; }
+    .action-row button { flex: 1 1 170px; min-height: 48px; }
+    .decision-reason { min-height: 84px; resize: vertical; }
+    .inline-status { margin-top: 12px; }
+    .inline-status:empty { display:none; }
+    .state-badge {
+      display:inline-flex; align-items:center; gap:8px;
+      font-size: 0.78rem; font-weight:700; letter-spacing:0.02em;
+      border-radius:999px; padding:8px 12px; border:1px solid transparent; margin-bottom:10px;
+    }
+    .state-badge::before { content:''; width:8px; height:8px; border-radius:50%; background:currentColor; }
+    .state-pending { color:#7b6021; background:rgba(200,164,59,0.16); border-color:rgba(200,164,59,0.28); }
+    .state-approved, .state-awaiting { color:#614800; background:rgba(200,164,59,0.18); border-color:rgba(200,164,59,0.28); }
+    .state-activated { color:#171311; background:rgba(23,19,17,0.10); border-color:rgba(23,19,17,0.14); }
+    .state-rejected, .state-revoked { color:#5f4332; background:rgba(95,67,50,0.12); border-color:rgba(95,67,50,0.18); }
+    .approve-btn, .link-btn, .mail-btn, .copy-btn, .login-btn { background: linear-gradient(180deg, #d4af37, #c19a2d); color:#171311; font-weight:700; }
+    .reject-btn, .revoke-btn, .logout-btn { background: rgba(23,19,17,0.86); color:#f7f3ea; }
+    .copy-toast {
+      display:inline-block; margin-left:8px; padding:6px 10px; border-radius:999px; font-size:0.8rem;
+      background:rgba(200,164,59,0.18); color:#614800;
+    }
+    .dev-chip {
+      position:absolute; top:16px; right:16px; z-index:3;
+      display:inline-flex; align-items:center; gap:8px;
+      border:none; border-radius:999px; padding:8px 12px; font-weight:700;
+      background:rgba(23,19,17,0.86); color:#f7f3ea;
+      box-shadow:0 8px 18px rgba(17,17,17,0.12);
+    }
+    .dev-login-box { margin-top:12px; }
+    .dev-login-box[open] { margin-top:12px; }
+    .dev-login-box summary { display:none; }
+    .dev-login-inner { padding-top:2px; }
+    .section-head { display:flex; justify-content:space-between; align-items:end; gap:12px; margin-bottom:12px; }
+    .section-subtle { font-size:0.94rem; }
+    @media (max-width: 980px) {
+      .admin-grid { grid-template-columns: 1fr; }
+      .request-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .dev-chip { position:static; margin-bottom:10px; }
+    }
+    @media (max-width: 640px) {
+      .request-grid { grid-template-columns: 1fr; }
+    }
+
   </style>
 </head>
 <body>
@@ -476,9 +562,8 @@
     </div>
 
     <div class="card">
-      <button id="testModeChip" class="test-mode-chip" type="button" aria-expanded="false">Testmodus</button>
       <h1>Adminpaneel</h1>
-      <div class="muted version-line">Versie v41</div>
+      <div class="muted" style="margin-top:-8px; margin-bottom:10px;">Versie v42</div>
       <div id="loginView">
         <div class="row">
           <input id="usernameInput" type="text" placeholder="Gebruikersnaam" autocomplete="username" autocapitalize="none" spellcheck="false" />
@@ -486,36 +571,65 @@
         </div>
         <input id="totpInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="Google Authenticator-code (6 cijfers)" autocomplete="one-time-code" />
         <button id="loginBtn" class="login-btn" type="button">Inloggen</button>
+        <button id="devChip" class="dev-chip" type="button" aria-expanded="false">Testmodus</button>
         <details class="dev-login-box" id="devLoginBox">
           <summary>Test-login zonder Authenticator</summary>
-          <div class="muted" style="margin-top:10px;">Snelle bugfix-modus. Gebruik <strong>1</strong> / <strong>1</strong> / <strong>1</strong>.</div>
-          <input id="devKeyInput" type="password" inputmode="numeric" maxlength="8" placeholder="Dev key" autocomplete="one-time-code" style="margin-top:10px;" />
-          <button id="devLoginBtn" class="login-btn" type="button" style="margin-top:10px;">Dev-login zonder Authenticator</button>
-          <div id="devLoginHint" class="muted" style="margin-top:10px;">Dev-login: gebruikersnaam <strong>1</strong>, wachtwoord <strong>1</strong>, dev key <strong>1</strong>.</div>
+          <div class="dev-login-inner">
+            <div class="muted" style="margin-top:10px;">Snelle bugfix-modus. Gebruik <strong>1</strong> / <strong>1</strong> / <strong>1</strong>.</div>
+            <input id="devKeyInput" type="password" inputmode="numeric" maxlength="8" placeholder="Dev key" autocomplete="one-time-code" style="margin-top:10px;" />
+            <button id="devLoginBtn" class="login-btn" type="button" style="margin-top:10px;">Dev-login zonder Authenticator</button>
+            <div id="devLoginHint" class="muted" style="margin-top:10px;">Dev-login: gebruikersnaam <strong>1</strong>, wachtwoord <strong>1</strong>, dev key <strong>1</strong>.</div>
+          </div>
         </details>
-        <div class="subtle-help">Log in met je gebruikersnaam, wachtwoord en 6-cijferige code uit Google Authenticator. Voor testen kun je de compacte testmodus rechtsboven openen.</div>
+        <div class="muted" style="margin-top:10px;">Log in met je gebruikersnaam, wachtwoord en 6-cijferige code uit Google Authenticator.</div>
       </div>
       <div id="adminView" class="hidden">
-        <p id="welcomeText"></p>
-        <button id="logoutBtn" class="logout-btn" type="button">Uitloggen</button>
+        <div class="section-head">
+          <div>
+            <p id="welcomeText" style="margin:0 0 6px 0;"></p>
+            <div class="muted section-subtle">Goedgekeurde aanvragen kunnen direct een activatielink krijgen. Redenen zijn optioneel.</div>
+          </div>
+          <button id="logoutBtn" class="logout-btn" type="button">Uitloggen</button>
+        </div>
       </div>
-      <div class="info-band">Na goedkeuring hoort de speler géén publieke activatiepagina meer te gebruiken. De veilige flow is: aanvraag → goedkeuring → persoonlijke activatielink per mail → speler zet zelf een 4-cijferige pincode via die unieke link → daarna gewoon inloggen op de hoofdpagina.</div>
-      <div class="status-stack"><div id="status" class="notice"></div></div>
+      <div class="info-band">Veilige flow: aanvraag → goedkeuring → persoonlijke activatielink → speler kiest zelf 4-cijferige pincode → daarna normaal inloggen op de hoofdpagina.</div>
+      <div id="status"></div>
     </div>
 
-    <div id="requestsCard" class="card hidden">
-      <h2>Openstaande naam-aanvragen</h2>
-      <div class="muted" style="margin-bottom:12px;">Doel: per goedgekeurde aanvraag een unieke activatielink genereren voor precies deze naam en precies dit e-mailadres.</div>
-      <div id="requestsList"></div>
-    </div>
+    <div class="admin-grid">
+      <div id="requestsCard" class="card hidden">
+        <div class="section-head">
+          <div>
+            <h2 style="margin:0;">Openstaande naam-aanvragen</h2>
+            <div class="muted section-subtle">Goedkeuren, afwijzen, of meteen activatielink klaarmaken na goedkeuring.</div>
+          </div>
+        </div>
+        <div id="requestsList"></div>
+      </div>
 
-    <div id="historyCard" class="card hidden">
-      <h2>Geschiedenis aanvragen</h2>
-      <div id="historyList"></div>
+      <div id="accessCard" class="card hidden">
+        <div class="section-head">
+          <div>
+            <h2 style="margin:0;">Goedgekeurd / geactiveerd</h2>
+            <div class="muted section-subtle">Hier kun je bestaande toegang intrekken.</div>
+          </div>
+        </div>
+        <div id="accessList"></div>
+      </div>
+
+      <div id="historyCard" class="card hidden full-span">
+        <div class="section-head">
+          <div>
+            <h2 style="margin:0;">Geschiedenis aanvragen</h2>
+            <div class="muted section-subtle">Volledig overzicht van eerdere beslissingen.</div>
+          </div>
+        </div>
+        <div id="historyList"></div>
+      </div>
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v41</div>
+  <div class="watermark">Made by Bruis · v42</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -530,15 +644,29 @@
       if (persist) localStorage.setItem(ADMIN_SESSION_KEY, token); else localStorage.removeItem(ADMIN_SESSION_KEY);
     }
     function clearAdminSessionToken() { sessionStorage.removeItem(ADMIN_SESSION_KEY); localStorage.removeItem(ADMIN_SESSION_KEY); }
-    function setStatus(text, tone = 'warn') {
-      const el = document.getElementById("status");
-      if (!text) { el.className = 'notice'; el.textContent = ''; return; }
-      el.className = `notice ${tone} show`;
-      el.textContent = text;
+    function setStatus(text) { document.getElementById("status").textContent = text || ""; }
+    function setInlineStatus(requestId, text = '', tone = 'warn') {
+      const el = document.getElementById(`inline-status-${requestId}`);
+      if (!el) return;
+      el.className = `notice inline-status show ${tone === 'ok' ? 'ok' : 'warn'}`;
+      el.textContent = text || '';
+      if (!text) {
+        el.classList.remove('show');
+        el.textContent = '';
+      }
+    }
+    function toggleDevBox(forceOpen) {
+      const box = document.getElementById('devLoginBox');
+      const chip = document.getElementById('devChip');
+      if (!box || !chip) return;
+      const next = typeof forceOpen === 'boolean' ? forceOpen : !box.open;
+      box.open = next;
+      chip.setAttribute('aria-expanded', next ? 'true' : 'false');
+      chip.textContent = next ? 'Testmodus actief' : 'Testmodus';
     }
     function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;"); }
-    function showLoggedOut() { document.getElementById("loginView").classList.remove("hidden"); document.getElementById("adminView").classList.add("hidden"); document.getElementById("requestsCard").classList.add("hidden"); document.getElementById("historyCard").classList.add("hidden"); document.getElementById("requestsList").innerHTML = ""; document.getElementById("historyList").innerHTML = ""; }
-    function showLoggedIn(username) { document.getElementById("loginView").classList.add("hidden"); document.getElementById("adminView").classList.remove("hidden"); document.getElementById("requestsCard").classList.remove("hidden"); document.getElementById("historyCard").classList.remove("hidden"); document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`; }
+    function showLoggedOut() { document.getElementById("loginView").classList.remove("hidden"); document.getElementById("adminView").classList.add("hidden"); document.getElementById("requestsCard").classList.add("hidden"); document.getElementById("historyCard").classList.add("hidden"); document.getElementById("accessCard").classList.add("hidden"); document.getElementById("requestsList").innerHTML = ""; document.getElementById("historyList").innerHTML = ""; document.getElementById("accessList").innerHTML = ""; }
+    function showLoggedIn(username) { document.getElementById("loginView").classList.add("hidden"); document.getElementById("adminView").classList.remove("hidden"); document.getElementById("requestsCard").classList.remove("hidden"); document.getElementById("historyCard").classList.remove("hidden"); document.getElementById("accessCard").classList.remove("hidden"); document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`; }
 
     function formatDateTime(value) { return value ? new Date(value).toLocaleString('nl-NL') : 'Onbekend'; }
     function getActivationBaseUrl() { return new URL('./activate.html', window.location.href).toString(); }
@@ -552,10 +680,10 @@
             <div class="data-box"><span class="label">Activatie verloopt</span><span id="activation-expires-${req.id}">Nog niet gegenereerd</span></div>
           </div>
           <div class="activation-link-box" id="activation-url-${req.id}">Nog geen activatielink gegenereerd.</div>
-          <div class="action-row compact">
+          <div class="action-row">
             <button class="copy-btn" type="button" data-copy-activation data-id="${req.id}">Kopieer activatielink</button>
             <button class="mail-btn" type="button" data-mail-activation data-id="${req.id}">Open e-mailconcept</button>
-            <span class="copy-confirm" id="copy-confirm-${req.id}">Gekopieerd</span>
+            <span class="copy-toast hidden" id="copy-toast-${req.id}">Gekopieerd</span>
           </div>
         </div>
       `;
@@ -587,6 +715,7 @@
     }
     function statusMeta(req, includeDecision = false) {
       const decision = String(req.decision || '').toLowerCase();
+      if (req.revoked === true || decision === 'revoked' || req.access_revoked === true) return { cls: 'state-revoked', label: 'Ingetrokken' };
       if (hasPin(req)) return { cls: 'state-activated', label: 'Activated' };
       if (decision === 'rejected' || req.approved === false) return { cls: 'state-rejected', label: 'Afgewezen' };
       if (decision === 'approved' || req.approved === true || req.active === true) return { cls: includeDecision ? 'state-awaiting' : 'state-approved', label: includeDecision ? 'Awaiting activation' : 'Approved' };
@@ -633,7 +762,8 @@
       requests.forEach((req) => {
         const div = document.createElement('div');
         div.className = 'request';
-        div.innerHTML = `${requestHtml(req)}<div style="margin-top:12px;"><textarea class="decision-reason" data-id="${req.id}" placeholder="Reden (verplicht)"></textarea><div class="action-row"><button class="approve-btn" type="button" data-id="${req.id}" data-decision="approved">Goedkeuren</button><button class="reject-btn" type="button" data-id="${req.id}" data-decision="rejected">Afwijzen</button><button class="link-btn" type="button" data-generate-activation data-id="${req.id}">Maak activatielink</button></div>${activationPanelHtml(req)}</div>`;
+        div.id = `request-card-${req.id}`;
+        div.innerHTML = `${requestHtml(req)}<div style="margin-top:12px;"><textarea class="decision-reason" data-id="${req.id}" placeholder="Reden (optioneel)"></textarea><div class="action-row"><button class="approve-btn" type="button" data-id="${req.id}" data-decision="approved">Goedkeuren</button><button class="reject-btn" type="button" data-id="${req.id}" data-decision="rejected">Afwijzen</button><button class="link-btn" type="button" data-generate-activation data-id="${req.id}">Maak activatielink</button></div><div class="notice inline-status" id="inline-status-${req.id}"></div>${activationPanelHtml(req)}</div>`;
         root.appendChild(div);
       });
       document.querySelectorAll('[data-decision]').forEach((btn) => {
@@ -642,33 +772,59 @@
           const decision = btn.dataset.decision;
           const reasonEl = document.querySelector(`.decision-reason[data-id="${requestId}"]`);
           const decisionReason = reasonEl ? reasonEl.value.trim() : '';
-          if (!decisionReason) { setStatus('Geef een reden op voor dit besluit.'); return; }
           try {
-            setStatus('Opslaan...');
+            setInlineStatus(requestId, decision === 'approved' ? 'Goedkeuren...' : 'Afwijzen...');
+            setStatus(decision === 'approved' ? 'Aanvraag goedkeuren...' : 'Aanvraag afwijzen...');
             await decideRequest(requestId, decision, decisionReason);
-            const data = await getRequests();
-            renderRequests(data.requests);
+            if (decision === 'approved') {
+              setInlineStatus(requestId, 'Goedgekeurd. Activatielink wordt meteen klaargezet...', 'ok');
+              try {
+                const linkData = await createActivationLink(requestId);
+                showActivationPanel(requestId, linkData);
+                setInlineStatus(requestId, 'Goedgekeurd en activatielink klaar. Kopieer hem of open meteen een e-mailconcept.', 'ok');
+                setStatus('Goedgekeurd en activatielink gemaakt.');
+                const card = document.getElementById(`request-card-${requestId}`);
+                const badge = card?.querySelector('.state-badge');
+                if (badge) { badge.className = 'state-badge state-awaiting'; badge.textContent = 'Awaiting activation'; }
+              } catch (err) {
+                const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
+                setInlineStatus(requestId, rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
+                setStatus('Goedgekeurd, maar activatielink aanmaken mislukte.');
+              }
+            } else {
+              const data = await getRequests();
+              renderRequests(data.requests);
+              setStatus('Aanvraag afgewezen en bijgewerkt.');
+            }
             const history = await getHistory();
             renderHistory(history.history);
-            setStatus(decision === 'approved'
-              ? 'Aanvraag goedgekeurd. De volgende stap is een unieke activatielink per mail naar dit e-mailadres sturen.'
-              : 'Aanvraag afgewezen en geschiedenis bijgewerkt.', decision === 'approved' ? 'ok' : 'warn');
+            renderAccess(history.history);
           } catch (err) {
             const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
+            setInlineStatus(requestId, rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
             setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
           }
         });
       });
-       document.querySelectorAll('[data-generate-activation]').forEach((btn) => {
+      document.querySelectorAll('[data-generate-activation]').forEach((btn) => {
         btn.addEventListener('click', async () => {
           const requestId = Number(btn.dataset.id);
+          const card = document.getElementById(`request-card-${requestId}`);
+          const badgeText = card?.querySelector('.state-badge')?.textContent?.toLowerCase() || '';
+          if (badgeText.includes('openstaand')) {
+            setInlineStatus(requestId, 'Keur deze aanvraag eerst goed. Daarna wordt de activatielink automatisch klaargezet.');
+            return;
+          }
           try {
+            setInlineStatus(requestId, 'Activatielink maken...');
             setStatus('Activatielink maken...');
             const linkData = await createActivationLink(requestId);
             showActivationPanel(requestId, linkData);
-            setStatus('Activatielink gemaakt. Kopieer hem of open meteen een e-mailconcept.', 'ok');
+            setInlineStatus(requestId, 'Activatielink gemaakt. Kopieer hem of open meteen een e-mailconcept.', 'ok');
+            setStatus('Activatielink gemaakt.');
           } catch (err) {
             const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
+            setInlineStatus(requestId, rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
             setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
           }
         });
@@ -681,8 +837,7 @@
           if (!url) { setStatus('Maak eerst een activatielink.'); return; }
           try {
             await navigator.clipboard.writeText(url);
-            setStatus('Activatielink gekopieerd.', 'ok');
-            showCopyConfirm(requestId);
+            setStatus('Activatielink gekopieerd.');
           } catch {
             setStatus('Kopiëren lukte niet automatisch. Selecteer de link handmatig.');
           }
@@ -728,6 +883,61 @@
       });
     }
 
+    function renderAccess(items) {
+      const root = document.getElementById('accessList');
+      root.innerHTML = '';
+      const relevant = (items || []).filter((item) => item.approved === true || item.active === true || hasPin(item));
+      if (!relevant.length) { root.innerHTML = `<p class="muted">Nog geen goedgekeurde of geactiveerde spelers.</p>`; return; }
+      relevant.forEach((item) => {
+        const div = document.createElement('div');
+        div.className = 'request';
+        const status = statusMeta(item, true);
+        div.innerHTML = `
+          <div class="request-head">
+            <div>
+              <div class="state-badge ${status.cls}">${status.label}</div>
+              <strong>${escapeHtml(item.display_name)}</strong><br>
+              <span class="muted">E-mail:</span> ${escapeHtml(item.requester_email || item.approved_email || 'Onbekend')}
+            </div>
+          </div>
+          <div class="request-grid">
+            ${metaBox('Status', status.label)}
+            ${metaBox('Aangevraagd', item.created_at ? new Date(item.created_at).toLocaleString('nl-NL') : 'Onbekend')}
+            ${metaBox('Beslist', item.decided_at ? new Date(item.decided_at).toLocaleString('nl-NL') : 'Onbekend')}
+          </div>
+          <textarea class="decision-reason" data-revoke-id="${item.id}" placeholder="Opmerking bij intrekken (optioneel)"></textarea>
+          <div class="action-row">
+            <button class="revoke-btn" type="button" data-revoke-access data-id="${item.id}">Toegang intrekken</button>
+          </div>
+          <div class="notice inline-status" id="inline-status-revoke-${item.id}"></div>
+        `;
+        root.appendChild(div);
+      });
+      document.querySelectorAll('[data-revoke-access]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const requestId = Number(btn.dataset.id);
+          const reasonEl = document.querySelector(`.decision-reason[data-revoke-id="${requestId}"]`);
+          const reason = reasonEl ? reasonEl.value.trim() : '';
+          const inline = document.getElementById(`inline-status-revoke-${requestId}`);
+          try {
+            if (inline) { inline.className = 'notice inline-status show warn'; inline.textContent = 'Toegang intrekken...'; }
+            setStatus('Toegang intrekken...');
+            await revokeAccess(requestId, reason);
+            if (inline) { inline.className = 'notice inline-status show ok'; inline.textContent = 'Toegang ingetrokken.'; }
+            setStatus('Toegang ingetrokken.');
+            const [requests, history] = await Promise.all([getRequests(), getHistory()]);
+            renderRequests(requests.requests);
+            renderHistory(history.history);
+            renderAccess(history.history);
+          } catch (err) {
+            const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
+            if (inline) { inline.className = 'notice inline-status show warn'; inline.textContent = rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage; }
+            setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
+          }
+        });
+      });
+    }
+
     async function adminDevLogin() {
       const username = document.getElementById('usernameInput').value.trim();
       const password = document.getElementById('passwordInput').value;
@@ -765,7 +975,8 @@
     }
     async function getRequests() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_requests`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); }
     async function getHistory() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_history`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); }
-    async function decideRequest(requestId, decision, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: requestId, decision, decision_reason_input: decisionReason }) }); return await parseResponse(res); }
+    async function decideRequest(requestId, decision, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: requestId, decision, decision_reason_input: decisionReason || null }) }); return await parseResponse(res); }
+    async function revokeAccess(requestId, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_revoke_player_access`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: requestId, decision_reason_input: decisionReason || null }) }); return await parseResponse(res); }
 
     async function createActivationLink(requestId) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_player_activation_link`, {
@@ -796,14 +1007,6 @@
       expiresEl.textContent = formatDateTime(linkData.expires_at);
     }
 
-    function showCopyConfirm(requestId) {
-      const el = document.getElementById(`copy-confirm-${requestId}`);
-      if (!el) return;
-      el.classList.add('show');
-      clearTimeout(el._hideTimer);
-      el._hideTimer = setTimeout(() => el.classList.remove('show'), 1800);
-    }
-
     async function loadAdmin() {
       try {
         setStatus('');
@@ -815,6 +1018,7 @@
         const [requests, history] = await Promise.all([getRequests(), getHistory()]);
         renderRequests(requests.requests);
         renderHistory(history.history);
+        renderAccess(history.history);
       } catch (err) {
         clearAdminSessionToken(); showLoggedOut();
         const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
@@ -830,14 +1034,16 @@
         const [requests, history] = await Promise.all([getRequests(), getHistory()]);
         renderRequests(requests.requests);
         renderHistory(history.history);
+        renderAccess(history.history);
         setStatus('');
       } catch (err) {
         const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
         setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
       }
     });
-    document.getElementById('logoutBtn').addEventListener('click', () => { clearAdminSessionToken(); showLoggedOut(); setStatus('Uitgelogd.', 'ok'); });
-    document.getElementById('totpInput').placeholder = 'Google Authenticator-code (of gebruik de test-login hieronder)';
+    document.getElementById('logoutBtn').addEventListener('click', () => { clearAdminSessionToken(); showLoggedOut(); setStatus('Uitgelogd.'); });
+    document.getElementById('devChip').addEventListener('click', () => toggleDevBox());
+    document.getElementById('totpInput').placeholder = 'Google Authenticator-code';
     if (!document.getElementById('usernameInput').value) document.getElementById('usernameInput').value = '1';
     if (!document.getElementById('passwordInput').value) document.getElementById('passwordInput').value = '1';
     if (!document.getElementById('devKeyInput').value) document.getElementById('devKeyInput').value = '1';
@@ -850,7 +1056,8 @@
         const [requests, history] = await Promise.all([getRequests(), getHistory()]);
         renderRequests(requests.requests);
         renderHistory(history.history);
-        setStatus('Dev-login actief. Alleen voor lokaal testen.', 'ok');
+        renderAccess(history.history);
+        toggleDevBox(false); setStatus('Dev-login actief. Alleen voor lokaal testen.');
       } catch (err) {
         const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
         setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
@@ -880,7 +1087,7 @@
       }, { passive: true });
     }
 
-    // v41: pre-rendered background, so parallax is disabled for performance.
+    // v42: pre-rendered background, so parallax is disabled for performance.
     loadAdmin();
   </script>
 </body>

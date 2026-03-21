@@ -14,11 +14,11 @@
       --card-2: rgba(255,255,255,0.08);
       --line: rgba(17,17,17,0.10);
       --muted: #6d5830;
-      --blue: #d4af37;
-      --ok: #111111;
-      --ok-soft: rgba(212, 175, 55, 0.18);
-      --warn: #6d5830;
-      --warn-soft: rgba(17,17,17,0.05);
+      --blue: #b89018;
+      --ok: #7c6112;
+      --ok-soft: rgba(212, 175, 55, 0.16);
+      --warn: #6b5220;
+      --warn-soft: rgba(17,17,17,0.06);
       --shadow: 0 24px 60px rgba(17, 17, 17, 0.16);
       --mouse-x: 0px;
       --mouse-y: 0px;
@@ -28,7 +28,7 @@
     body {
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background:
-        linear-gradient(135deg, rgba(247,244,238,0.42), rgba(239,234,225,0.34)),
+        linear-gradient(135deg, rgba(247,244,238,0.64), rgba(239,234,225,0.54)),
         url('./site-bg-desktop.webp') center center / cover no-repeat fixed;
       color: var(--black);
       margin: 0;
@@ -43,7 +43,7 @@
     @media (orientation: portrait) {
       body {
         background:
-          linear-gradient(135deg, rgba(247,244,238,0.34), rgba(239,234,225,0.28)),
+          linear-gradient(135deg, rgba(247,244,238,0.60), rgba(239,234,225,0.52)),
           url('./site-bg-mobile.webp') center center / cover no-repeat fixed;
       }
     }
@@ -126,12 +126,12 @@
       position: relative;
       z-index: 2;
       background:
-        linear-gradient(180deg, rgba(255,255,255,0.17), rgba(255,255,255,0.07)),
-        radial-gradient(circle at top left, rgba(255,255,255,0.24), transparent 36%),
+        linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.10)),
+        radial-gradient(circle at top left, rgba(255,255,255,0.20), transparent 36%),
         linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
-      backdrop-filter: blur(24px) saturate(1.05);
-      -webkit-backdrop-filter: blur(24px) saturate(1.05);
-      border: 1px solid rgba(255,255,255,0.56);
+      backdrop-filter: blur(22px) saturate(1.08);
+      -webkit-backdrop-filter: blur(22px) saturate(1.08);
+      border: 1px solid rgba(255,255,255,0.48);
       box-shadow: var(--shadow);
       overflow: hidden;
     }
@@ -178,14 +178,14 @@
       border-radius: 16px;
       padding: 14px 16px;
       border: 1px solid var(--line);
-      background: rgba(255,255,255,0.38);
+      background: rgba(255,255,255,0.54);
       color: var(--muted);
       position: relative;
       z-index: 1;
     }
     .notice.show { display: block; }
-    .notice.ok { background: var(--ok-soft); color: var(--black); border-color: rgba(212,175,55,0.28); }
-    .notice.warn { background: rgba(17,17,17,0.045); color: var(--black); border-color: rgba(17,17,17,0.10); }
+    .notice.ok { background: var(--ok-soft); color: var(--ok); border-color: rgba(22,101,52,0.15); }
+    .notice.warn { background: var(--warn-soft); color: var(--warn); border-color: rgba(146,64,14,0.16); }
     input, textarea, select, button {
       font: inherit;
     }
@@ -194,7 +194,7 @@
       padding: 13px 14px;
       border: 1px solid rgba(17,17,17,0.1);
       border-radius: 16px;
-      background: rgba(255,255,255,0.44);
+      background: rgba(255,255,255,0.58);
       position: relative;
       z-index: 1;
       outline: none;
@@ -215,13 +215,13 @@
     @media (hover: hover) and (pointer: fine) {
       button:hover, .text-link:hover, .pill-link:hover, .home-link:hover, .ghost-link:hover {
         transform: none;
-        box-shadow: 0 6px 14px rgba(17,17,17,0.045);
+        box-shadow: 0 8px 18px rgba(17,17,17,0.05);
         filter: brightness(1.01);
       }
     }
     button:active, .text-link:active, .pill-link:active, .home-link:active, .ghost-link:active {
-      transform: scale(0.997);
-      box-shadow: 0 2px 8px rgba(17,17,17,0.04);
+      transform: scale(0.992);
+      box-shadow: 0 3px 10px rgba(17,17,17,0.05);
       filter: brightness(0.99);
     }
     .modal {
@@ -266,19 +266,16 @@
     }
     .pin-key {
       min-height: 58px;
-      font-size: 1.12rem;
-      font-weight: 650;
-      background: rgba(255,255,255,0.88);
+      font-size: 1.15rem;
+      font-weight: 700;
+      background: rgba(255,255,255,0.9);
       border: 1px solid rgba(17,17,17,0.08);
-      letter-spacing: 0.01em;
     }
     .pin-key.primary {
       background: var(--gold);
       color: #111;
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.24);
     }
-    .pin-key:hover { transform:none; }
-
     .pin-trigger {
       cursor: pointer;
       caret-color: transparent;
@@ -326,7 +323,7 @@
       background:rgba(255,255,255,0.62);
       padding:6px 10px;
       border-radius:999px;
-      border:1px solid rgba(17,17,17,0.08);
+      border:1px solid rgba(37,99,235,0.12);
       z-index:1;
     }
     h1 {
@@ -394,6 +391,72 @@
       .back-link { top:12px; left:12px; }
       .card { padding:22px 18px; margin:14px auto; max-width: calc(100vw - 28px); width: calc(100vw - 28px); }
     }
+  
+    /* v42 shared polish */
+    :root {
+      --gold: #c8a43b;
+      --gold-dark: #9b7822;
+      --black: #171311;
+      --muted: #6f5b35;
+      --soft-paper: rgba(255,255,255,0.12);
+      --glass-border: rgba(255,255,255,0.40);
+    }
+    body {
+      background:
+        linear-gradient(135deg, rgba(247,244,238,0.30), rgba(239,234,225,0.24)),
+        url('./site-bg-desktop.webp') center center / cover no-repeat fixed;
+      color: var(--black);
+    }
+    @media (orientation: portrait) {
+      body {
+        background:
+          linear-gradient(135deg, rgba(247,244,238,0.26), rgba(239,234,225,0.22)),
+          url('./site-bg-mobile.webp') center center / cover no-repeat fixed;
+      }
+    }
+    .scene, .page-bg, .brand-watermark, .spinoza-shadow, .kale-hand, .playing-card-accent { display:none !important; }
+    .card {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.07)),
+        radial-gradient(circle at top left, rgba(255,255,255,0.18), transparent 34%),
+        linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
+      backdrop-filter: blur(28px) saturate(1.04);
+      -webkit-backdrop-filter: blur(28px) saturate(1.04);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 24px 60px rgba(17,17,17,0.14);
+    }
+    .card::before {
+      background:
+        linear-gradient(120deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.08) 18%, transparent 42%),
+        radial-gradient(circle at top right, rgba(200,164,59,0.08), transparent 28%);
+    }
+    .muted { color: var(--muted) !important; }
+    .notice, .info-band, .data-box, details, .activation-tools, .activation-link-box {
+      background: rgba(255,255,255,0.36) !important;
+      border-color: rgba(23,19,17,0.08) !important;
+      color: var(--black);
+    }
+    input, textarea, select {
+      background: rgba(255,255,255,0.56);
+      border-color: rgba(23,19,17,0.10);
+      color: var(--black);
+    }
+    button, .pill-link, .home-link, .ghost-link, .text-link {
+      transition: transform .1s ease, box-shadow .12s ease, filter .12s ease, background-color .12s ease, border-color .12s ease;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      button:hover, .pill-link:hover, .home-link:hover, .ghost-link:hover, .text-link:hover {
+        transform: none;
+        box-shadow: 0 8px 16px rgba(17,17,17,0.06);
+        filter: brightness(1.01);
+      }
+    }
+    button:active, .pill-link:active, .home-link:active, .ghost-link:active, .text-link:active {
+      transform: scale(0.992);
+      box-shadow: 0 3px 10px rgba(17,17,17,0.05);
+      filter: brightness(0.99);
+    }
+
   </style>
 </head>
 <body>
@@ -443,7 +506,7 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v41</div>
+  <div class="watermark">Made by Bruis · v42</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -590,7 +653,7 @@
       }, { passive: true });
     }
 
-    // v41: pre-rendered background, so parallax is disabled for performance.
+    // v42: pre-rendered background, so parallax is disabled for performance.
     load();
   </script>
 </body>
