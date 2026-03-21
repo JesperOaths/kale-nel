@@ -1,4 +1,4 @@
-# File audit v48
+# File audit v49
 
 ## Needed for the live site
 - `index.html`
@@ -9,14 +9,14 @@
 - `site-shell.css`
 - `theme-v46.css`
 - `premium-v47.css`
-- `uniform-v48.css`
+- `uniform-v49.css`
 - `site-bg-desktop.webp`
 - `site-bg-mobile.webp`
 - `123zwartkaart.png`
 - `dubbeleD-goud.png`
 - `spinoza-silhouette.png`
 - `logo.png`
-- `playingcard-accent1-v48.png`
+- `playingcard-accent1-v49.png`
 - `CNAME`
 
 ## Backend / rollout docs to keep

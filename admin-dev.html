@@ -25,6 +25,7 @@
   </style>
   <link rel="stylesheet" href="./premium-v47.css" />
   <link rel="stylesheet" href="./uniform-v48.css" />
+  <link rel="stylesheet" href="./phase2-v49.css" />
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -40,13 +41,14 @@
       <div class="brand-row">
         <a href="./admin.html" class="pill-link">Admin</a>
         <a href="./index.html" class="pill-link">Site</a>
+        <a href="./login.html" class="pill-link">Login</a>
       </div>
       <img src="./logo.png" alt="Logo" class="mini-logo" />
     </div>
 
     <div class="card">
       <h1 style="margin:0 0 8px 0;">Admin-dev</h1>
-      <div class="muted">Diagnose voor login, sessie en request-RPC's.</div>
+      <div class="muted">Diagnose voor admin flows.</div>
     </div>
 
     <div class="card stack">
@@ -143,6 +145,6 @@
     document.getElementById('clearBtn').addEventListener('click', () => { clearToken(); show('Sessietoken gewist.'); });
     renderToken();
   </script>
-  <div class="watermark">Made by Bruis · v48</div>
+  <div class="watermark">Made by Bruis · v49</div>
 </body>
 </html>

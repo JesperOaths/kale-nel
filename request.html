@@ -396,6 +396,7 @@
   <link rel="stylesheet" href="./theme-v45.css" />
   <link rel="stylesheet" href="./premium-v47.css" />
   <link rel="stylesheet" href="./uniform-v48.css" />
+  <link rel="stylesheet" href="./phase2-v49.css" />
 </head>
 <body>
   <div class="scene" aria-hidden="true">
@@ -406,11 +407,21 @@
     <div class="top-glow"></div>
   </div>
 
+
+
+  <div class="topbar wrap">
+    <a class="brand-link" href="./index.html"><span>Wordt er gejast?</span></a>
+    <div class="topbar-actions nav-cluster">
+      <a class="text-link" href="./login.html">Inloggen</a>
+      <a class="text-link" href="./request.html">Naam aanvragen</a>
+      <a class="text-link" href="./admin.html">Admin</a>
+      <img src="./logo.png" alt="Despinoza-logo" class="brand-mini" />
+    </div>
+  </div>
   <div class="card">
     <a href="./index.html" class="back-link">Terug</a>
     <img src="./logo.png" alt="Logo" class="logo-corner" />
-    <h1>Claim je naam</h1>
-    
+    <h1>Naam aanvragen</h1>
         <div class="grid">
       <div class="panel">
         <h2>Aanvraag</h2>
@@ -434,7 +445,7 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v48</div>
+  <div class="watermark">Made by Bruis · v49</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -510,12 +521,10 @@
 
     async function requestClaim() {
       const desiredName = document.getElementById("requestNameSelect").value;
-      const requesterNote = document.getElementById("requestNoteInput").value.trim();
       const requesterEmail = document.getElementById("requestEmailInput").value.trim().toLowerCase();
 
       if (!desiredName) throw new Error("Kies eerst een naam");
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requesterEmail)) throw new Error("Vul een geldig e-mailadres in");
-      if (!requesterNote) throw new Error("Geef kort een reden op");
 
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/request_claim`, {
         method: "POST",
@@ -524,7 +533,6 @@
         headers: rpcHeaders(),
         body: JSON.stringify({
           desired_name: desiredName,
-          requester_note: requesterNote,
           requester_email: requesterEmail,
           requester_meta: collectVisitorMeta()
         })
@@ -547,7 +555,6 @@
       try {
         setStatus("Versturen...", "info");
         const result = await requestClaim();
-        document.getElementById("requestNoteInput").value = "";
         document.getElementById("requestEmailInput").value = "";
         document.getElementById("requestNameSelect").selectedIndex = 0;
         setStatus(result?.message || "Aanvraag verstuurd.", "ok", `<strong>${escapeHtml(result?.message || 'Aanvraag verstuurd.')}</strong><br>Na goedkeuring ontvang je op dit e-mailadres een persoonlijke activatielink.`);
