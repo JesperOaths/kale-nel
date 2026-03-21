@@ -43,3 +43,6 @@ Also very good for static sites. Connect the GitHub repo, deploy automatically o
 
 ## Recommendation
 For this project, GitHub Pages is the simplest if you just want the site live fast.
+
+## Fastest premium option: Vercel
+Connect the GitHub repo to Vercel, keep the site in the repo root, and add `kalenel.nl` as the production domain. For this static site, Vercel usually needs no build command.

@@ -403,6 +403,7 @@
   </style>
   <link rel="stylesheet" href="./site-shell.css" />
   <link rel="stylesheet" href="./theme-v45.css" />
+  <link rel="stylesheet" href="./premium-v47.css" />
 </head>
 <body>
   <div class="scene" aria-hidden="true">
@@ -421,8 +422,8 @@
     </div>
 
     <div class="card">
-      <h1>Adminpaneel</h1>
-      <div class="muted" style="margin-top:-8px; margin-bottom:10px;">Versie v45</div>
+      <h1>Admin</h1>
+      <div class="muted" style="margin-top:-8px; margin-bottom:10px;">Strakker, sneller, één flow.</div>
       <div id="loginView">
         <div class="row">
           <input id="usernameInput" type="text" placeholder="Gebruikersnaam" autocomplete="username" autocapitalize="none" spellcheck="false" />
@@ -437,25 +438,25 @@
           <button id="devLoginBtn" class="login-btn" type="button" style="margin-top:10px;">Dev-login</button>
           <div id="devLoginHint" class="muted" style="margin-top:10px;">Gebruik alleen als fallback.</div>
         </details>
-        <div class="muted" style="margin-top:10px;">Log in met gebruikersnaam, wachtwoord en code.</div>
+        <div class="muted" style="margin-top:10px;">Gebruikersnaam, wachtwoord, code.</div>
       </div>
       <div id="adminView" class="hidden">
         <p id="welcomeText"></p>
         <button id="logoutBtn" class="logout-btn" type="button">Uitloggen</button>
       </div>
-      <div class="info-band">Flow: aanvraag → goedkeuren → activatielink → activeren.</div>
+      <div class="info-band">Aanvraag → goedkeuren → link → actief.</div>
       <div id="status"></div>
     </div>
 
     <div id="workspace" class="admin-grid hidden"><div><div id="requestsCard" class="card hidden">
-      <h2>Openstaande naam-aanvragen</h2>
-      <div class="muted" style="margin-bottom:12px;">Per aanvraag één activatielink.</div>
+      <h2>Open aanvragen</h2>
+      <div class="muted" style="margin-bottom:12px;">Eén aanvraag, één link.</div>
       <input id="requestSearch" class="search-input" type="search" placeholder="Zoek op naam of e-mail" />
       <div id="requestsList"></div>
     </div>
 
     <div id="historyCard" class="card hidden">
-      <h2>Geschiedenis aanvragen</h2>
+      <h2>Geschiedenis</h2>
       <div class="filter-row">
         <button type="button" class="filter-pill active" data-history-filter="all">Alles</button>
         <button type="button" class="filter-pill" data-history-filter="pending">Openstaand</button>
@@ -469,7 +470,7 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v45</div>
+  <div class="watermark">Made by Bruis · v47</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -497,7 +498,7 @@
       return `
         <div class="activation-tools hidden" id="activation-tools-${req.id}">
           <div><strong>Activatielink klaarzetten</strong></div>
-          <div class="muted" style="margin-top:4px;">Genereer hier een veilige link, kopieer hem, open meteen een e-mailconcept, of stuur automatisch een e-mail als de mailfunctie is ingesteld.</div>
+          <div class="muted" style="margin-top:4px;">Genereer, kopieer of queue de activatielink.</div>
           <div class="activation-meta">
             ${metaBox('E-mail', req.requester_email || 'Onbekend')}
             <div class="data-box"><span class="label">Activatie verloopt</span><span id="activation-expires-${req.id}">Nog niet gegenereerd</span></div>
@@ -505,7 +506,7 @@
           <div class="activation-link-box" id="activation-url-${req.id}">Nog geen activatielink gegenereerd.</div>
           <div class="action-row">
             <button class="copy-btn" type="button" data-copy-activation data-id="${req.id}">Kopieer activatielink</button>
-            <button class="mail-btn" type="button" data-mail-activation data-id="${req.id}">Open e-mailconcept</button>
+            <button class="mail-btn" type="button" data-mail-activation data-id="${req.id}">Mailconcept</button>
           </div>
         </div>
       `;

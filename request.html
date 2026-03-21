@@ -394,6 +394,7 @@
   </style>
   <link rel="stylesheet" href="./site-shell.css" />
   <link rel="stylesheet" href="./theme-v45.css" />
+  <link rel="stylesheet" href="./premium-v47.css" />
 </head>
 <body>
   <div class="scene" aria-hidden="true">
@@ -406,20 +407,21 @@
   </div>
 
   <div class="card">
-    <a href="./index.html" class="back-link">Terug naar site</a>
+    <a href="./index.html" class="back-link">Terug</a>
     <img src="./logo.png" alt="Logo" class="logo-corner" />
-    <h1>Naam aanvragen</h1>
+    <h1>Claim je naam</h1>
+    <p class="intro">Kies je naam en laat je e-mailadres achter.</p>
         <div class="grid">
       <div class="panel">
-        <h2>Aanvragen</h2>
+        <h2>Aanvraag</h2>
         <label for="requestNameSelect">Gewenste naam</label>
         <select id="requestNameSelect" autocomplete="name" aria-label="Gewenste naam"></select>
 
         <label for="requestEmailInput">E-mailadres</label>
         <input id="requestEmailInput" type="email" placeholder="jij@example.com" autocomplete="email" autocapitalize="off" spellcheck="false" enterkeyhint="next" />
 
-        <label for="requestNoteInput">Toelichting</label>
-        <textarea id="requestNoteInput" placeholder="Kort toelichten" autocomplete="off" enterkeyhint="send"></textarea>
+        <label for="requestNoteInput">Korte toelichting</label>
+        <textarea id="requestNoteInput" placeholder="Waarom hoor jij erbij?" autocomplete="off" enterkeyhint="send"></textarea>
 
         <div class="actions">
           <button id="requestBtn" class="primary-btn" type="button">Aanvraag versturen</button>

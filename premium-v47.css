@@ -1,0 +1,83 @@
+
+:root{
+  --premium-panel: linear-gradient(180deg, rgba(255,255,255,0.84), rgba(255,255,255,0.68));
+  --premium-panel-soft: linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.56));
+  --premium-line: rgba(255,255,255,0.76);
+  --premium-shadow: 0 22px 55px rgba(17,17,17,0.12);
+  --premium-shadow-strong: 0 32px 70px rgba(17,17,17,0.18);
+}
+body{ letter-spacing:-0.01em; }
+.hero, .panel, .card, .diagnostic-box, .request, .activation-tools, .data-box, .info-band, pre, .notice, .status{
+  backdrop-filter: blur(20px) saturate(1.04);
+  -webkit-backdrop-filter: blur(20px) saturate(1.04);
+}
+.topbar,.top-links{ margin-bottom:18px; }
+.brand-link, .text-link, .pill-link, .home-link, .back-link{
+  background: rgba(255,255,255,0.64) !important;
+  border: 1px solid rgba(255,255,255,0.8) !important;
+  box-shadow: 0 12px 28px rgba(17,17,17,0.07);
+}
+.hero, .panel, .card, .diagnostic-box{
+  border-color: var(--premium-line) !important;
+  box-shadow: var(--premium-shadow);
+}
+.hero::before, .panel::before, .card::before, .diagnostic-box::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  border-radius:inherit;
+  background:
+    linear-gradient(120deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.08) 18%, transparent 42%),
+    radial-gradient(circle at top right, rgba(212,175,55,0.10), transparent 26%);
+}
+.hero-copy, .state-panel, .list-box, .request, .activation-tools, .data-box, .diagnostic-box{ position:relative; z-index:1; }
+.kicker{ box-shadow: inset 0 1px 0 rgba(255,255,255,0.62); }
+.vote-btn, .primary-btn, .secondary-btn, .login-btn, .logout-btn, .approve-btn, .reject-btn, .link-btn, .mail-btn, .copy-btn, .dev-btn, .submit-btn{
+  box-shadow: 0 16px 28px rgba(17,17,17,0.10);
+}
+.vote-btn strong{ letter-spacing:-0.03em; }
+.name-list li, .mini-stat, .request, .activation-tools, .data-box, .diagnostic-box, pre{
+  background: rgba(255,255,255,0.56) !important;
+  border-color: rgba(17,17,17,0.06) !important;
+}
+.footer-note, .muted, .tiny{ color: rgba(17,17,17,0.56) !important; }
+.status.show, .notice.show{ box-shadow: 0 14px 28px rgba(17,17,17,0.08); }
+#requestsList, #historyList{ display:grid; gap:14px; }
+.request-head strong{ font-size:1.1rem; letter-spacing:-0.02em; }
+.activation-link-box{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .88rem; line-height: 1.5;
+}
+.search-input, select, input, textarea{
+  background: rgba(255,255,255,0.74) !important;
+  border-color: rgba(17,17,17,0.08) !important;
+}
+label{ font-weight:700; }
+.watermark{ opacity:0.82; }
+.hero-home{ overflow:hidden; }
+.hero-home::after{
+  content:""; position:absolute; right:-80px; top:-80px; width:280px; height:280px; border-radius:50%;
+  background: radial-gradient(circle, rgba(212,175,55,0.15), transparent 68%); pointer-events:none;
+}
+.live-pill{
+  display:inline-flex; align-items:center; gap:10px; margin-top:14px; padding:10px 14px; border-radius:999px;
+  background: rgba(255,255,255,0.58); border:1px solid rgba(17,17,17,0.06); color: var(--muted); font-weight:700;
+}
+.live-pill::before{
+  content:""; width:9px; height:9px; border-radius:50%; background: var(--gold);
+  box-shadow: 0 0 0 6px rgba(212,175,55,0.16);
+}
+.hero-actions{ display:flex; gap:12px; flex-wrap:wrap; margin-top:18px; }
+.hero-stat-strip{ display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:12px; margin-top:18px; }
+.hero-stat{
+  padding:16px 18px; border-radius:22px; background: rgba(255,255,255,0.56); border:1px solid rgba(17,17,17,0.06);
+}
+.hero-stat span{ display:block; font-size:.9rem; color:var(--muted); }
+.hero-stat strong{ display:block; margin-top:6px; font-size:1.7rem; line-height:1; }
+.card-header{
+  display:flex; align-items:flex-start; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:18px;
+}
+.section-title{ margin:0; font-size: clamp(1.8rem, 4vw, 2.6rem); line-height:1; letter-spacing:-0.04em; }
+.section-copy{ margin:8px 0 0; color:var(--muted); max-width:44ch; }
+@media (max-width: 860px){ .hero-stat-strip{ grid-template-columns: 1fr; } }
