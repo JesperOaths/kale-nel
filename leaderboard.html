@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Klaverjas Leaderboard</title>
+  <link rel="stylesheet" href="./site-shell.css" />
+  <link rel="stylesheet" href="./theme-v46.css" />
+  <link rel="stylesheet" href="./premium-v47.css" />
+  <link rel="stylesheet" href="./klaverjas-app.css" />
+  <link rel="stylesheet" href="./ui-v51.css" />
+</head>
+<body>
+  <div class="site-scene" aria-hidden="true">
+    <div class="page-bg"></div>
+    <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
+        <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
+    <div class="playing-card-accent"><img src="./playingcard-accent1-trimmed.png" alt="" /></div>
+    <div class="top-glow"></div>
+  </div>
+
+  <main class="page app-page score-mobile-page">
+    <div class="topbar app-topbar">
+      <a class="brand-link" href="./index.html"><span>← Wordt er gejast?</span></a>
+      <div class="topbar-actions nav-pills">
+        <a class="text-link" href="./score.html">Score</a>
+        <a class="text-link active" href="./leaderboard.html">Leaderboard</a>
+        <a class="text-link" href="./login.html">Inloggen</a>
+        <img src="./logo.png" alt="Despinoza-logo" class="brand-mini" />
+      </div>
+    </div>
+
+    <section class="hero hero-home score-hero compact-hero">
+      <div class="hero-grid hero-grid-home score-hero-grid compact-hero-grid">
+        <div class="hero-copy">
+          <span class="kicker">Spelers van de site</span>
+          <h1>Leaderboard</h1>
+          <p class="hero-intro wider">Stand van zaken.</p>
+          <div class="hero-stat-strip slim-stats">
+            <div class="hero-stat"><span>Geregistreerde spelers</span><strong id="lbPlayers">0</strong></div>
+            <div class="hero-stat"><span>Opgeslagen potjes</span><strong id="lbGames">0</strong></div>
+            <div class="hero-stat"><span>Koploper</span><strong id="lbLeader">-</strong></div>
+          </div>
+          <div id="statusBox" class="status"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="app-stack bottom-gap">
+      <section class="panel app-card mobile-panel">
+        <div class="card-header tight">
+          <div>
+            <h2 class="section-title">Ranglijst</h2>
+            <p class="section-copy"></p>
+          </div>
+        </div>
+        <div class="stack-list" id="leaderCards"></div>
+      </section>
+
+      <section class="panel app-card mobile-panel">
+        <div class="card-header tight">
+          <div>
+            <h2 class="section-title">Recente potjes</h2>
+            <p class="section-copy"></p>
+          </div>
+        </div>
+        <div class="stack-list" id="recentWinners"></div>
+      </section>
+    </section>
+  </main>
+  <div class="watermark">Made by Bruis · v51</div>
+
+  <script>
+    const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+
+    function rpcHeaders() {
+      return {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      };
+    }
+
+    async function parseResponse(res) {
+      const text = await res.text();
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); }
+      if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`);
+      return data;
+    }
+
+    async function callRpc(name, payload = {}) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+        method: 'POST',
+        mode: 'cors',
+        cache: 'no-store',
+        headers: rpcHeaders(),
+        body: JSON.stringify(payload)
+      });
+      return parseResponse(res);
+    }
+
+    function setStatus(message = '', tone = 'info') {
+      const box = document.getElementById('statusBox');
+      if (!message) {
+        box.className = 'status';
+        box.textContent = '';
+        return;
+      }
+      box.className = `status show ${tone}`;
+      box.textContent = message;
+    }
+
+    function renderLeaderboard(rows) {
+      const root = document.getElementById('leaderCards');
+      root.innerHTML = '';
+      if (!rows.length) {
+        root.innerHTML = '<div class="empty-card small">Nog geen leaderboarddata.</div>';
+        return;
+      }
+      rows.forEach((row, index) => {
+        const card = document.createElement('article');
+        card.className = 'leader-mobile-card';
+        card.innerHTML = `
+          <div class="leader-mobile-head">
+            <div class="leader-rank">#${index + 1}</div>
+            <div>
+              <strong>${row.display_name}</strong>
+              <div class="feed-meta">${row.games_won} winst · ${row.games_played} potjes</div>
+            </div>
+          </div>
+          <div class="leader-mobile-grid">
+            <div><span>Winrate</span><strong>${row.win_rate}%</strong></div>
+            <div><span>Totaal</span><strong>${row.total_points}</strong></div>
+            <div><span>Gemiddeld</span><strong>${row.avg_points}</strong></div>
+            <div><span>Laatste potje</span><strong>${row.last_played_at || '-'}</strong></div>
+          </div>
+        `;
+        root.appendChild(card);
+      });
+      document.getElementById('lbPlayers').textContent = `${rows.length}`;
+      document.getElementById('lbLeader').textContent = rows[0]?.display_name || '-';
+    }
+
+    function renderRecent(games) {
+      const root = document.getElementById('recentWinners');
+      root.innerHTML = '';
+      if (!games.length) {
+        root.innerHTML = '<div class="empty-card small">Nog geen opgeslagen potjes.</div>';
+        return;
+      }
+      games.forEach((game) => {
+        const card = document.createElement('article');
+        card.className = 'feed-card';
+        card.innerHTML = `
+          <div class="feed-top">
+            <strong>${game.title || 'Klaverjas potje'}</strong>
+            <span>${game.played_at || ''}</span>
+          </div>
+          <div class="feed-meta">${(game.players || []).join(' · ')}</div>
+          <div class="feed-pill">Winnaar: ${(game.winners || []).join(', ') || 'Onbekend'}</div>
+        `;
+        root.appendChild(card);
+      });
+      document.getElementById('lbGames').textContent = `${games.length}`;
+    }
+
+    async function loadLeaderboard() {
+      try {
+        const data = await callRpc('get_jas_leaderboard', { limit_count: 250 });
+        renderLeaderboard(data.leaderboard || []);
+        renderRecent(data.recent_games || []);
+        setStatus('', 'ok');
+      } catch (error) {
+        setStatus(error?.message || 'Kon leaderboard niet laden.', 'warn');
+      }
+    }
+
+    loadLeaderboard();
+  </script>
+</body>
+</html>

@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Klaverjas Score</title>
+  <link rel="stylesheet" href="./site-shell.css" />
+  <link rel="stylesheet" href="./theme-v46.css" />
+  <link rel="stylesheet" href="./premium-v47.css" />
+  <link rel="stylesheet" href="./klaverjas-app.css" />
+  <link rel="stylesheet" href="./ui-v51.css" />
+</head>
+<body>
+  <div class="site-scene" aria-hidden="true">
+    <div class="page-bg"></div>
+    <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
+        <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
+    <div class="playing-card-accent"><img src="./playingcard-accent1-trimmed.png" alt="" /></div>
+    <div class="top-glow"></div>
+  </div>
+
+  <main class="page app-page score-mobile-page">
+    <div class="topbar app-topbar">
+      <a class="brand-link" href="./index.html"><span>← Wordt er gejast?</span></a>
+      <div class="topbar-actions nav-pills">
+        <a class="text-link active" href="./score.html">Score</a>
+        <a class="text-link" href="./leaderboard.html">Leaderboard</a>
+        <a class="text-link" href="./login.html">Inloggen</a>
+        <img src="./logo.png" alt="Despinoza-logo" class="brand-mini" />
+      </div>
+    </div>
+
+    <section class="hero hero-home score-hero compact-hero">
+      <div class="hero-grid hero-grid-home score-hero-grid compact-hero-grid">
+        <div class="hero-copy">
+          <span class="kicker">Mobiele scorekaart</span>
+          <h1>Klaverjas score</h1>
+          <p class="hero-intro wider">Spelers kiezen, punten bijhouden, opslaan.</p>
+          <div class="hero-stat-strip slim-stats">
+            <div class="hero-stat"><span>Spelers</span><strong id="playerCountHero">0</strong></div>
+            <div class="hero-stat"><span>Potjes</span><strong id="gameCountHero">0</strong></div>
+            <div class="hero-stat"><span>Ingelogd als</span><strong id="currentUserHero">-</strong></div>
+          </div>
+          <div id="statusBox" class="status"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="app-stack bottom-gap">
+      <section class="panel app-card mobile-panel">
+        <div class="card-header tight">
+          <div>
+            <h2 class="section-title">Spelers kiezen</h2>
+            <p class="section-copy"></p>
+          </div>
+        </div>
+
+        <div id="setupLock" class="empty-card small hidden"></div>
+
+        <div class="seat-grid-mobile" id="playerSlots"></div>
+
+        <div class="inline-setup-grid">
+          <label>Wie geeft in ronde 1?
+            <select id="startingDealer"></select>
+          </label>
+        </div>
+
+        <div class="team-preview" id="teamPreview"></div>
+      </section>
+
+      <section class="panel app-card mobile-panel" id="scoreAppPanel">
+        <div class="card-header tight">
+          <div>
+            <h2 class="section-title">Scoreformulier</h2>
+            <p class="section-copy">Verticaal opgebouwd voor gebruik op je telefoon.</p>
+          </div>
+        </div>
+
+        <div id="scoreLocked" class="empty-card">
+          Kies eerst vier geregistreerde spelers om het scoreformulier te openen.
+        </div>
+
+        <div id="scoreShell" class="hidden">
+          <section class="score-totals-hero">
+            <div class="totals-team-card team-one">
+              <div class="team-label-line">Team 1</div>
+              <strong id="teamOneNames">-</strong>
+              <div class="big-total" id="teamOneTotal">0</div>
+            </div>
+            <div class="totals-team-card team-two">
+              <div class="team-label-line">Team 2</div>
+              <strong id="teamTwoNames">-</strong>
+              <div class="big-total" id="teamTwoTotal">0</div>
+            </div>
+          </section>
+
+          <section class="turn-strip" id="turnStrip"></section>
+
+          <section class="round-form-card">
+            <div class="round-title-row">
+              <div>
+                <div class="kicker">Nu spelen</div>
+                <h3 id="roundTitle">Ronde 1</h3>
+              </div>
+              <div class="round-chip" id="roundStateChip">Nieuw</div>
+            </div>
+
+            <div class="form-section-block">
+              <div class="section-mini-title">Bieding</div>
+
+              <div class="toggle-pill-row" id="contractTypeRow">
+                <button type="button" class="pill-btn active" data-contract-type="troef">Troef</button>
+                <button type="button" class="pill-btn" data-contract-type="sans">Sans troef</button>
+              </div>
+
+              <div class="suit-grid" id="suitGrid">
+                <button type="button" class="suit-btn active" data-suit="clubs"><span class="suit-symbol suit-black">♣</span><span>Klaveren</span></button>
+                <button type="button" class="suit-btn" data-suit="spades"><span class="suit-symbol suit-black">♠</span><span>Schoppen</span></button>
+                <button type="button" class="suit-btn" data-suit="hearts"><span class="suit-symbol suit-red">♥</span><span>Harten</span></button>
+                <button type="button" class="suit-btn" data-suit="diamonds"><span class="suit-symbol suit-red">♦</span><span>Ruiten</span></button>
+              </div>
+
+              <div class="inline-setup-grid">
+                <label>Biedend team
+                  <select id="biddingTeam">
+                    <option value="1">Team 1</option>
+                    <option value="2">Team 2</option>
+                  </select>
+                </label>
+                <label>Bod
+                  <select id="bidValue"></select>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-section-block">
+              <div class="section-mini-title">Roem en pit</div>
+              <div class="roem-columns">
+                <div class="roem-card">
+                  <div class="roem-card-head"><strong>Team 1</strong><span id="roundRoem1">0 roem</span></div>
+                  <div class="button-row four-way compact-row">
+                    <button type="button" class="secondary-btn small-btn" data-roem-team="1" data-roem-value="20">+20</button>
+                    <button type="button" class="secondary-btn small-btn" data-roem-team="1" data-roem-value="50">+50</button>
+                    <button type="button" class="ghost-btn small-btn" data-roem-team="1" data-roem-value="-20">−20</button>
+                    <button type="button" class="ghost-btn small-btn" data-roem-team="1" data-roem-value="-50">−50</button>
+                  </div>
+                </div>
+                <div class="roem-card">
+                  <div class="roem-card-head"><strong>Team 2</strong><span id="roundRoem2">0 roem</span></div>
+                  <div class="button-row four-way compact-row">
+                    <button type="button" class="secondary-btn small-btn" data-roem-team="2" data-roem-value="20">+20</button>
+                    <button type="button" class="secondary-btn small-btn" data-roem-team="2" data-roem-value="50">+50</button>
+                    <button type="button" class="ghost-btn small-btn" data-roem-team="2" data-roem-value="-20">−20</button>
+                    <button type="button" class="ghost-btn small-btn" data-roem-team="2" data-roem-value="-50">−50</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pit-row" id="pitRow">
+                <button type="button" class="pill-btn" data-pit-team="0">Geen pit</button>
+                <button type="button" class="pill-btn" data-pit-team="1">Pit Team 1</button>
+                <button type="button" class="pill-btn" data-pit-team="2">Pit Team 2</button>
+              </div>
+            </div>
+
+            <div class="form-section-block">
+              <div class="section-mini-title">Kaartpunten</div>
+              <div class="inline-setup-grid points-grid-mobile">
+                <label>Team 1 kaartpunten
+                  <input id="cardPointsTeam1" type="number" inputmode="numeric" min="0" step="1" placeholder="0" />
+                </label>
+                <label>Team 2 kaartpunten
+                  <input id="cardPointsTeam2" type="number" inputmode="numeric" min="0" step="1" placeholder="0" />
+                </label>
+              </div>
+              <div class="micro-copy" id="pointsHint">Voer de kaartpunten van één team in. De andere kant wordt automatisch berekend uit 162.</div>
+            </div>
+
+            <div class="round-preview-box" id="roundPreview"></div>
+
+            <div class="button-row stacked-mobile">
+              <button id="submitRoundBtn" class="primary-btn" type="button">Ronde opslaan</button>
+              <button id="saveGameBtn" class="secondary-btn" type="button">Potje opslaan op server</button>
+            </div>
+          </section>
+
+          <section class="round-history" id="roundHistory"></section>
+        </div>
+      </section>
+
+      <section class="panel app-card mobile-panel">
+        <div class="card-header tight">
+          <div>
+            <h2 class="section-title">Recente potjes</h2>
+            <p class="section-copy"></p>
+          </div>
+        </div>
+        <div id="recentGames" class="stack-list"></div>
+      </section>
+    </section>
+  </main>
+  <div class="watermark">Made by Bruis · v51</div>
+
+  <script>
+    const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+    const SESSION_KEY = "jas_session_token_v11";
+    const PLAYER_COUNT = 4;
+    const TEAM_ONE_SEATS = [1, 3];
+    const TEAM_TWO_SEATS = [2, 4];
+
+    const state = {
+      players: [],
+      recentGames: [],
+      currentUser: '',
+      game: null
+    };
+
+    function rpcHeaders() {
+      return {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      };
+    }
+
+    async function parseResponse(res) {
+      const text = await res.text();
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); }
+      if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`);
+      return data;
+    }
+
+    function getSessionToken() { return localStorage.getItem(SESSION_KEY); }
+
+    function setStatus(message = '', tone = 'info') {
+      const box = document.getElementById('statusBox');
+      if (!message) {
+        box.className = 'status';
+        box.textContent = '';
+        return;
+      }
+      box.className = `status show ${tone}`;
+      box.textContent = message;
+    }
+
+    async function callRpc(name, payload = {}) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+        method: 'POST',
+        mode: 'cors',
+        cache: 'no-store',
+        headers: rpcHeaders(),
+        body: JSON.stringify(payload)
+      });
+      return parseResponse(res);
+    }
+
+    function todayIso() {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
+
+    function createPlayerSelect(index) {
+      const wrapper = document.createElement('label');
+      wrapper.className = 'seat-card';
+      wrapper.innerHTML = `<span class="seat-kicker">Stoel ${index + 1}</span><span class="seat-team-line">${(index % 2 === 0) ? 'Team 1' : 'Team 2'}</span>`;
+      const select = document.createElement('select');
+      select.dataset.seat = `${index + 1}`;
+      const empty = document.createElement('option');
+      empty.value = '';
+      empty.textContent = 'Kies geregistreerde speler';
+      select.appendChild(empty);
+      state.players.forEach((name) => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        select.appendChild(option);
+      });
+      wrapper.appendChild(select);
+      return wrapper;
+    }
+
+    function renderPlayerSlots() {
+      const root = document.getElementById('playerSlots');
+      root.innerHTML = '';
+      for (let i = 0; i < PLAYER_COUNT; i += 1) root.appendChild(createPlayerSelect(i));
+      renderDealerOptions();
+      renderTeamPreview();
+      updateSetupLock();
+    }
+
+    function renderDealerOptions() {
+      const select = document.getElementById('startingDealer');
+      select.innerHTML = '';
+      for (let seat = 1; seat <= PLAYER_COUNT; seat += 1) {
+        const option = document.createElement('option');
+        option.value = `${seat}`;
+        option.textContent = `Stoel ${seat}`;
+        if (seat === 1) option.selected = true;
+        select.appendChild(option);
+      }
+    }
+
+    function getSelectedPlayers() {
+      return [...document.querySelectorAll('#playerSlots select')].map((node) => node.value.trim());
+    }
+
+    function allSelectedPlayersValid() {
+      const selected = getSelectedPlayers();
+      if (selected.some((name) => !name)) return false;
+      return new Set(selected).size === PLAYER_COUNT;
+    }
+
+    function selectedParticipants() {
+      if (!allSelectedPlayersValid()) throw new Error('Kies vier verschillende geregistreerde spelers.');
+      return getSelectedPlayers().map((name, index) => ({
+        key: `p${index + 1}`,
+        seat_no: index + 1,
+        team_no: (index % 2) + 1,
+        name
+      }));
+    }
+
+    function teamNames(teamNo) {
+      if (!state.game) return '-';
+      return state.game.participants.filter((player) => player.team_no === teamNo).map((player) => player.name).join(' + ');
+    }
+
+    function renderTeamPreview() {
+      const selected = getSelectedPlayers();
+      const teamOne = TEAM_ONE_SEATS.map((seat) => selected[seat - 1] || `Stoel ${seat}`).join(' + ');
+      const teamTwo = TEAM_TWO_SEATS.map((seat) => selected[seat - 1] || `Stoel ${seat}`).join(' + ');
+      document.getElementById('teamPreview').innerHTML = `
+        <div class="team-preview-card"><span>Team 1</span><strong>${teamOne}</strong></div>
+        <div class="team-preview-card"><span>Team 2</span><strong>${teamTwo}</strong></div>
+      `;
+    }
+
+    function updateSetupLock() {
+      const lock = document.getElementById('setupLock');
+      if (!state.currentUser) {
+        lock.classList.remove('hidden');
+        lock.textContent = 'Log eerst in. Daarna kun je vier geregistreerde spelers selecteren.';
+        return;
+      }
+      lock.classList.add('hidden');
+      lock.textContent = '';
+    }
+
+    function roundBidOptions(contractType) {
+      if (contractType === 'sans') return [70, 80, 90, 100, 110, 120, 130];
+      return [80, 90, 100, 110, 120, 130, 140, 150, 160];
+    }
+
+    function createRoundTemplate() {
+      return {
+        contractType: 'troef',
+        trumpSuit: 'clubs',
+        biddingTeam: 1,
+        bidValue: 80,
+        roem1: 0,
+        roem2: 0,
+        pitTeam: 0,
+        cardPoints1: '',
+        cardPoints2: ''
+      };
+    }
+
+    function startOrUpdateGameFromSelection() {
+      if (!allSelectedPlayersValid()) {
+        state.game = null;
+        renderScoreShell();
+        return;
+      }
+      const participants = selectedParticipants();
+      const existingRounds = state.game?.rounds || [];
+      const startingDealerSeat = Number(document.getElementById('startingDealer').value || 1);
+      state.game = {
+        title: `Klaverjas ${todayIso()}`,
+        playedAt: todayIso(),
+        participants,
+        rounds: existingRounds,
+        currentRound: state.game?.currentRound || createRoundTemplate(),
+        startingDealerSeat
+      };
+      renderScoreShell();
+    }
+
+    function roundNumber() {
+      return (state.game?.rounds?.length || 0) + 1;
+    }
+
+    function currentDealerSeat() {
+      if (!state.game) return 1;
+      return ((state.game.startingDealerSeat - 1 + state.game.rounds.length) % PLAYER_COUNT) + 1;
+    }
+
+    function currentFirstSeat() {
+      return (currentDealerSeat() % PLAYER_COUNT) + 1;
+    }
+
+    function seatName(seatNo) {
+      return state.game?.participants.find((p) => p.seat_no === seatNo)?.name || `Stoel ${seatNo}`;
+    }
+
+    function currentRoundBase() {
+      return state.game?.currentRound?.contractType === 'sans' ? 132 : 162;
+    }
+
+    function currentCardPointLimit() {
+      return state.game?.currentRound?.contractType === 'sans' ? 13 : 16;
+    }
+
+    function syncBidOptions() {
+      const select = document.getElementById('bidValue');
+      const options = roundBidOptions(state.game?.currentRound?.contractType || 'troef');
+      const wanted = Number(state.game?.currentRound?.bidValue || options[0]);
+      select.innerHTML = '';
+      options.forEach((value) => {
+        const option = document.createElement('option');
+        option.value = `${value}`;
+        option.textContent = `${value}`;
+        if (value === wanted) option.selected = true;
+        select.appendChild(option);
+      });
+      if (!options.includes(wanted) && state.game) state.game.currentRound.bidValue = options[0];
+    }
+
+    function setContractType(type) {
+      if (!state.game) return;
+      state.game.currentRound.contractType = type;
+      if (type === 'sans') state.game.currentRound.trumpSuit = 'sans';
+      else if (state.game.currentRound.trumpSuit === 'sans') state.game.currentRound.trumpSuit = 'clubs';
+      syncBidOptions();
+      renderRoundControls();
+    }
+
+    function roundedScore(value) {
+      return Math.round(Number(value || 0) / 10);
+    }
+
+    function normalizePointsInput(changedTeam) {
+      if (!state.game) return;
+      const round = state.game.currentRound;
+      const base = currentRoundBase();
+      let p1 = round.cardPoints1 === '' ? '' : Number(round.cardPoints1);
+      let p2 = round.cardPoints2 === '' ? '' : Number(round.cardPoints2);
+
+      if (changedTeam === 1 && p1 !== '') {
+        p1 = Math.max(0, Math.min(base, p1));
+        p2 = base - p1;
+      } else if (changedTeam === 2 && p2 !== '') {
+        p2 = Math.max(0, Math.min(base, p2));
+        p1 = base - p2;
+      }
+
+      round.cardPoints1 = p1 === '' ? '' : Math.round(p1);
+      round.cardPoints2 = p2 === '' ? '' : Math.round(p2);
+      renderRoundPreview();
+      renderRoundControls();
+    }
+
+    function computeRoundOutcome(round) {
+      const base = round.contractType === 'sans' ? 132 : 162;
+      const cardPointLimit = round.contractType === 'sans' ? 13 : 16;
+      const cardPoints1 = Number(round.cardPoints1);
+      const cardPoints2 = Number(round.cardPoints2);
+      if (!Number.isFinite(cardPoints1) || !Number.isFinite(cardPoints2)) {
+        return { ok: false, message: 'Vul kaartpunten in voor één team.' };
+      }
+      if (cardPoints1 < 0 || cardPoints2 < 0 || cardPoints1 + cardPoints2 !== base) {
+        return { ok: false, message: `Kaartpunten moeten samen precies ${base} zijn.` };
+      }
+      if (roundedScore(cardPoints1) + roundedScore(cardPoints2) > cardPointLimit) {
+        return { ok: false, message: `Afgeronde kaartpunten mogen samen niet boven ${cardPointLimit} komen.` };
+      }
+
+      const bidTeam = Number(round.biddingTeam);
+      const otherTeam = bidTeam === 1 ? 2 : 1;
+      const biddingCardPoints = bidTeam === 1 ? cardPoints1 : cardPoints2;
+      const gehaald = biddingCardPoints >= Number(round.bidValue);
+      const pitTeam = Number(round.pitTeam || 0);
+      const totalRoem = Number(round.roem1 || 0) + Number(round.roem2 || 0);
+
+      let awardedRaw1 = cardPoints1 + Number(round.roem1 || 0);
+      let awardedRaw2 = cardPoints2 + Number(round.roem2 || 0);
+      let nat = false;
+      let pit = false;
+
+      if (pitTeam === 1 || pitTeam === 2) {
+        pit = true;
+        awardedRaw1 = pitTeam === 1 ? base + totalRoem + 10 : 0;
+        awardedRaw2 = pitTeam === 2 ? base + totalRoem + 10 : 0;
+      } else if (!gehaald) {
+        nat = true;
+        awardedRaw1 = otherTeam === 1 ? base + totalRoem : 0;
+        awardedRaw2 = otherTeam === 2 ? base + totalRoem : 0;
+      }
+
+      return {
+        ok: true,
+        base,
+        cardPointLimit,
+        nat,
+        pit,
+        gehaald,
+        awardedRaw1,
+        awardedRaw2,
+        awardedScore1: roundedScore(awardedRaw1),
+        awardedScore2: roundedScore(awardedRaw2),
+        cardPoints1,
+        cardPoints2,
+        biddingTeam: bidTeam,
+        otherTeam,
+        label: round.contractType === 'sans' ? 'Sans troef' : `Troef ${suitLabel(round.trumpSuit)}`
+      };
+    }
+
+    function suitLabel(key) {
+      return ({ clubs: '♣', spades: '♠', hearts: '♥', diamonds: '♦', sans: 'Sans' }[key] || key);
+    }
+
+    function totals() {
+      if (!state.game) return { team1: 0, team2: 0 };
+      return state.game.rounds.reduce((acc, round) => {
+        acc.team1 += Number(round.awardedScore1 || 0);
+        acc.team2 += Number(round.awardedScore2 || 0);
+        return acc;
+      }, { team1: 0, team2: 0 });
+    }
+
+    function renderTurnStrip() {
+      if (!state.game) return;
+      document.getElementById('turnStrip').innerHTML = `
+        <div class="turn-card"><span>Geeft</span><strong>Stoel ${currentDealerSeat()} · ${seatName(currentDealerSeat())}</strong></div>
+        <div class="turn-card"><span>Zit ervoor / biedt eerst</span><strong>Stoel ${currentFirstSeat()} · ${seatName(currentFirstSeat())}</strong></div>
+      `;
+    }
+
+    function renderRoundControls() {
+      if (!state.game) return;
+      const round = state.game.currentRound;
+      document.getElementById('roundTitle').textContent = `Ronde ${roundNumber()}`;
+      document.getElementById('roundStateChip').textContent = round.contractType === 'sans' ? 'Sans troef' : 'Troef';
+      document.querySelectorAll('[data-contract-type]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.contractType === round.contractType);
+      });
+      document.querySelectorAll('[data-suit]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.suit === round.trumpSuit);
+      });
+      document.getElementById('suitGrid').classList.toggle('disabled-ish', round.contractType === 'sans');
+      document.getElementById('biddingTeam').value = `${round.biddingTeam}`;
+      syncBidOptions();
+      document.getElementById('bidValue').value = `${round.bidValue}`;
+      document.getElementById('roundRoem1').textContent = `${round.roem1} roem`;
+      document.getElementById('roundRoem2').textContent = `${round.roem2} roem`;
+      document.querySelectorAll('[data-pit-team]').forEach((button) => {
+        button.classList.toggle('active', Number(button.dataset.pitTeam) === Number(round.pitTeam || 0));
+      });
+      document.getElementById('cardPointsTeam1').value = round.cardPoints1;
+      document.getElementById('cardPointsTeam2').value = round.cardPoints2;
+      document.getElementById('pointsHint').textContent = `Voer kaartpunten in uit ${currentRoundBase()}. Afgerond telt alleen kaartscore mee tot maximaal ${currentCardPointLimit()} punten.`;
+    }
+
+    function renderRoundPreview() {
+      const preview = document.getElementById('roundPreview');
+      if (!state.game) {
+        preview.innerHTML = '';
+        return;
+      }
+      const outcome = computeRoundOutcome(state.game.currentRound);
+      if (!outcome.ok) {
+        preview.innerHTML = `<div class="preview-warning">${outcome.message}</div>`;
+        return;
+      }
+      const statusBits = [];
+      if (outcome.pit) statusBits.push('Pit');
+      if (outcome.nat) statusBits.push(`Team ${outcome.biddingTeam} nat`);
+      if (!outcome.nat && !outcome.pit) statusBits.push(`Team ${outcome.biddingTeam} ${outcome.gehaald ? 'heeft gehaald' : 'is nat'}`);
+      preview.innerHTML = `
+        <div class="preview-grid">
+          <div>
+            <span>Contract</span>
+            <strong>${outcome.label} · bod ${state.game.currentRound.bidValue}</strong>
+          </div>
+          <div>
+            <span>Status</span>
+            <strong>${statusBits.join(' · ')}</strong>
+          </div>
+          <div>
+            <span>Rondescore Team 1</span>
+            <strong>${outcome.awardedScore1}</strong>
+          </div>
+          <div>
+            <span>Rondescore Team 2</span>
+            <strong>${outcome.awardedScore2}</strong>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderScoreShell() {
+      const locked = document.getElementById('scoreLocked');
+      const shell = document.getElementById('scoreShell');
+      if (!state.game) {
+        locked.classList.remove('hidden');
+        shell.classList.add('hidden');
+        return;
+      }
+      locked.classList.add('hidden');
+      shell.classList.remove('hidden');
+      const scoreTotals = totals();
+      document.getElementById('teamOneNames').textContent = teamNames(1);
+      document.getElementById('teamTwoNames').textContent = teamNames(2);
+      document.getElementById('teamOneTotal').textContent = `${scoreTotals.team1}`;
+      document.getElementById('teamTwoTotal').textContent = `${scoreTotals.team2}`;
+      renderTurnStrip();
+      renderRoundControls();
+      renderRoundPreview();
+      renderRoundHistory();
+    }
+
+    function renderRoundHistory() {
+      const root = document.getElementById('roundHistory');
+      if (!state.game || !state.game.rounds.length) {
+        root.innerHTML = '<div class="empty-card small">Nog geen gespeelde rondes.</div>';
+        return;
+      }
+      root.innerHTML = '<div class="section-mini-title history-title">Gespeelde rondes</div>';
+      state.game.rounds.forEach((round, index) => {
+        const natClass = round.nat ? 'round-result-badge bad' : round.pit ? 'round-result-badge gold' : 'round-result-badge ok';
+        const article = document.createElement('article');
+        article.className = 'round-history-card';
+        article.innerHTML = `
+          <div class="round-history-head">
+            <div>
+              <strong>Ronde ${index + 1}</strong>
+              <div class="feed-meta">${round.contractLabel} · bod ${round.bidValue} · biedend team ${round.biddingTeam}</div>
+            </div>
+            <div class="${natClass}">${round.pit ? 'Pit' : round.nat ? 'Nat' : 'Gehaald'}</div>
+          </div>
+          <div class="history-turn-line">Geeft: ${seatName(round.dealerSeat)} · Zit ervoor: ${seatName(round.firstSeat)}</div>
+          <div class="history-score-line">Kaartpunten ${round.cardPoints1}-${round.cardPoints2} · Roem ${round.roem1}-${round.roem2}</div>
+          <div class="history-score-hero">Rondescore <strong>${round.awardedScore1} - ${round.awardedScore2}</strong></div>
+        `;
+        root.appendChild(article);
+      });
+    }
+
+    function renderRecentGames() {
+      const root = document.getElementById('recentGames');
+      root.innerHTML = '';
+      if (!state.recentGames.length) {
+        root.innerHTML = '<div class="empty-card small">Nog geen opgeslagen potjes.</div>';
+        return;
+      }
+      state.recentGames.forEach((game) => {
+        const card = document.createElement('article');
+        card.className = 'feed-card';
+        card.innerHTML = `
+          <div class="feed-top">
+            <strong>${game.title || 'Klaverjas potje'}</strong>
+            <span>${game.played_at || ''}</span>
+          </div>
+          <div class="feed-meta">${(game.players || []).join(' · ')}</div>
+          <div class="feed-pill">Winnaar: ${(game.winners || []).join(', ') || 'Onbekend'}</div>
+        `;
+        root.appendChild(card);
+      });
+      document.getElementById('gameCountHero').textContent = `${state.recentGames.length}`;
+    }
+
+    function goToLogin() {
+      const url = new URL('./login.html', window.location.href);
+      url.searchParams.set('next', './score.html');
+      window.location.href = url.toString();
+    }
+
+    async function loadAppState() {
+      try {
+        const data = await callRpc('get_jas_app_state', { session_token: getSessionToken() });
+        state.players = data.all_names || [];
+        state.recentGames = data.recent_games || [];
+        state.currentUser = data.my_name || '';
+        document.getElementById('playerCountHero').textContent = `${state.players.length}`;
+        document.getElementById('currentUserHero').textContent = state.currentUser || '-';
+        renderPlayerSlots();
+        renderRecentGames();
+        if (!state.currentUser) setStatus('Log eerst in om een potje op te slaan.', 'warn');
+        else setStatus(`Ingelogd als ${state.currentUser}.`, 'ok');
+      } catch (error) {
+        setStatus(error?.message || 'Kon appstatus niet laden.', 'warn');
+      }
+    }
+
+    function pushRoem(team, delta) {
+      if (!state.game) return;
+      const key = team === 1 ? 'roem1' : 'roem2';
+      state.game.currentRound[key] = Math.max(0, Number(state.game.currentRound[key] || 0) + delta);
+      renderRoundControls();
+      renderRoundPreview();
+    }
+
+    function submitRound() {
+      if (!state.game) {
+        setStatus('Kies eerst vier spelers.', 'warn');
+        return;
+      }
+      const outcome = computeRoundOutcome(state.game.currentRound);
+      if (!outcome.ok) {
+        setStatus(outcome.message, 'warn');
+        return;
+      }
+      const round = state.game.currentRound;
+      state.game.rounds.push({
+        round_no: roundNumber(),
+        dealerSeat: currentDealerSeat(),
+        firstSeat: currentFirstSeat(),
+        contractType: round.contractType,
+        contractLabel: outcome.label,
+        trumpSuit: round.trumpSuit,
+        biddingTeam: Number(round.biddingTeam),
+        bidValue: Number(round.bidValue),
+        roem1: Number(round.roem1),
+        roem2: Number(round.roem2),
+        pitTeam: Number(round.pitTeam || 0),
+        cardPoints1: outcome.cardPoints1,
+        cardPoints2: outcome.cardPoints2,
+        nat: outcome.nat,
+        pit: outcome.pit,
+        awardedRaw1: outcome.awardedRaw1,
+        awardedRaw2: outcome.awardedRaw2,
+        awardedScore1: outcome.awardedScore1,
+        awardedScore2: outcome.awardedScore2
+      });
+      state.game.currentRound = createRoundTemplate();
+      renderScoreShell();
+      setStatus('Ronde toegevoegd.', 'ok');
+    }
+
+    function buildSavePayload() {
+      if (!state.game) throw new Error('Kies eerst vier spelers.');
+      if (!state.game.rounds.length) throw new Error('Voeg eerst minstens één gespeelde ronde toe.');
+      const scoreTotals = totals();
+      const winners = scoreTotals.team1 === scoreTotals.team2 ? [1, 2] : [scoreTotals.team1 > scoreTotals.team2 ? 1 : 2];
+      return {
+        title: state.game.title,
+        played_at: state.game.playedAt,
+        variant: '4_player',
+        scoreboard_mode: 'teams',
+        meta: {
+          starting_dealer_seat: state.game.startingDealerSeat,
+          saved_by: state.currentUser
+        },
+        participants: state.game.participants.map((player) => ({
+          name: player.name,
+          seat_no: player.seat_no,
+          team_no: player.team_no,
+          total_points: player.team_no === 1 ? scoreTotals.team1 : scoreTotals.team2,
+          is_winner: winners.includes(player.team_no)
+        })),
+        rounds: state.game.rounds
+      };
+    }
+
+    async function saveGame() {
+      if (!getSessionToken()) {
+        goToLogin();
+        return;
+      }
+      try {
+        const payload = buildSavePayload();
+        const result = await callRpc('create_jas_game', { session_token: getSessionToken(), game_payload: payload });
+        setStatus(`Potje opgeslagen${result?.game_id ? ` (#${result.game_id})` : ''}.`, 'ok');
+        state.game = null;
+        renderPlayerSlots();
+        renderScoreShell();
+        await loadAppState();
+      } catch (error) {
+        const message = error?.message || 'Opslaan mislukt.';
+        if (/login|sessie|token|ingelogd/i.test(message)) {
+          goToLogin();
+          return;
+        }
+        setStatus(message, 'warn');
+      }
+    }
+
+    document.getElementById('playerSlots').addEventListener('change', () => {
+      renderTeamPreview();
+      startOrUpdateGameFromSelection();
+    });
+    document.getElementById('startingDealer').addEventListener('change', startOrUpdateGameFromSelection);
+    document.getElementById('contractTypeRow').addEventListener('click', (event) => {
+      const button = event.target.closest('[data-contract-type]');
+      if (!button || !state.game) return;
+      setContractType(button.dataset.contractType);
+    });
+    document.getElementById('suitGrid').addEventListener('click', (event) => {
+      const button = event.target.closest('[data-suit]');
+      if (!button || !state.game || state.game.currentRound.contractType === 'sans') return;
+      state.game.currentRound.trumpSuit = button.dataset.suit;
+      renderRoundControls();
+      renderRoundPreview();
+    });
+    document.getElementById('biddingTeam').addEventListener('change', (event) => {
+      if (!state.game) return;
+      state.game.currentRound.biddingTeam = Number(event.target.value || 1);
+      renderRoundPreview();
+    });
+    document.getElementById('bidValue').addEventListener('change', (event) => {
+      if (!state.game) return;
+      state.game.currentRound.bidValue = Number(event.target.value || 80);
+      renderRoundPreview();
+    });
+    document.querySelectorAll('[data-roem-team]').forEach((button) => {
+      button.addEventListener('click', () => pushRoem(Number(button.dataset.roemTeam), Number(button.dataset.roemValue)));
+    });
+    document.getElementById('pitRow').addEventListener('click', (event) => {
+      const button = event.target.closest('[data-pit-team]');
+      if (!button || !state.game) return;
+      state.game.currentRound.pitTeam = Number(button.dataset.pitTeam || 0);
+      renderRoundControls();
+      renderRoundPreview();
+    });
+    document.getElementById('cardPointsTeam1').addEventListener('input', (event) => {
+      if (!state.game) return;
+      state.game.currentRound.cardPoints1 = event.target.value === '' ? '' : Number(event.target.value);
+      normalizePointsInput(1);
+    });
+    document.getElementById('cardPointsTeam2').addEventListener('input', (event) => {
+      if (!state.game) return;
+      state.game.currentRound.cardPoints2 = event.target.value === '' ? '' : Number(event.target.value);
+      normalizePointsInput(2);
+    });
+    document.getElementById('submitRoundBtn').addEventListener('click', submitRound);
+    document.getElementById('saveGameBtn').addEventListener('click', saveGame);
+
+    loadAppState();
+    renderScoreShell();
+  </script>
+</body>
+</html>
