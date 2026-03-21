@@ -207,13 +207,19 @@
       border: none;
       border-radius: 16px;
       cursor: pointer;
-      transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+      transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease, background-color .12s ease, filter .12s ease;
       position: relative;
       z-index: 1;
     }
     button:hover, .text-link:hover, .pill-link:hover, .home-link:hover, .ghost-link:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 18px rgba(17,17,17,0.08);
+      transform: translateY(-0.5px);
+      box-shadow: 0 8px 14px rgba(17,17,17,0.06);
+      filter: brightness(0.985);
+    }
+    button:active, .text-link:active, .pill-link:active, .home-link:active, .ghost-link:active {
+      transform: translateY(0.5px) scale(0.995);
+      box-shadow: 0 4px 10px rgba(17,17,17,0.05);
+      filter: brightness(0.97);
     }
     .modal {
       position: fixed;
@@ -238,17 +244,31 @@
       box-shadow: 0 28px 60px rgba(17,17,17,0.24);
     }
     .pin-preview {
-      text-align: center;
-      letter-spacing: 0.44em;
-      font-size: 2rem;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
       padding: 14px 12px;
       border-radius: 18px;
       background: rgba(17,17,17,0.05);
       margin: 10px 0 14px;
       min-height: 72px;
+      align-items: center;
+    }
+    .pin-slot {
+      min-height: 42px;
+      border-radius: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
+      background: rgba(255,255,255,0.42);
+      border: 1px solid rgba(17,17,17,0.05);
+      font-size: 2rem;
+      font-weight: 700;
+      color: rgba(17,17,17,0.9);
+      line-height: 1;
+    }
+    .pin-slot.empty {
+      color: rgba(17,17,17,0.36);
     }
     .pin-grid {
       display: grid;
@@ -464,12 +484,12 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v32</div>
+  <div class="watermark">Made by Bruis · v36</div>
 
   <div id="pinModal" class="modal" aria-hidden="true">
     <div class="modal-panel">
       <div class="muted" style="text-align:center;">Voer je pincode in</div>
-      <div id="pinPreview" class="pin-preview">— — — —</div>
+      <div id="pinPreview" class="pin-preview" aria-live="polite"></div>
       <div class="pin-grid">
         <button class="pin-key" data-digit="1" type="button">1</button>
         <button class="pin-key" data-digit="2" type="button">2</button>
@@ -552,8 +572,11 @@
     const pinModal = document.getElementById('pinModal');
     function currentTarget() { return document.getElementById(activePinTarget); }
     function syncPinPreview() {
-      const masked = currentTarget().value.split('').map(() => '•').join(' ');
-      document.getElementById('pinPreview').textContent = masked || '— — — —';
+      const value = currentTarget().value.slice(0, 4).split('');
+      document.getElementById('pinPreview').innerHTML = Array.from({ length: 4 }, (_, index) => {
+        const filled = index < value.length;
+        return `<span class="pin-slot${filled ? '' : ' empty'}">${filled ? '•' : '—'}</span>`;
+      }).join('');
     }
     function openPinModal(targetId) {
       activePinTarget = targetId;
@@ -585,6 +608,7 @@
       if (!pinModal.classList.contains('show')) return;
       if (/^[0-9]$/.test(event.key)) addPinDigit(event.key);
       if (event.key === 'Backspace') { const input = currentTarget(); input.value = input.value.slice(0, -1); syncPinPreview(); }
+      if (event.key === 'Escape') closePinModal();
       if (event.key === 'Escape' || event.key === 'Enter') closePinModal();
     });
 
