@@ -10,8 +10,8 @@
       --gold: #d4af37;
       --gold-dark: #b89018;
       --black: #111111;
-      --card: rgba(255,255,255,0.58);
-      --card-2: rgba(255,255,255,0.44);
+      --card: rgba(255,255,255,0.34);
+      --card-2: rgba(255,255,255,0.16);
       --line: rgba(17,17,17,0.08);
       --muted: #5f6470;
       --blue: #2563eb;
@@ -19,7 +19,7 @@
       --ok-soft: rgba(22, 101, 52, 0.1);
       --warn: #92400e;
       --warn-soft: rgba(146, 64, 14, 0.12);
-      --shadow: 0 24px 64px rgba(17, 17, 17, 0.16);
+      --shadow: 0 28px 80px rgba(17, 17, 17, 0.20);
       --mouse-x: 0px;
       --mouse-y: 0px;
     }
@@ -63,7 +63,7 @@
       background-size: 255px;
       background-repeat: repeat;
       background-position: center;
-      opacity: 0.11;
+      opacity: 0.08;
       mix-blend-mode: multiply;
     }
     .brand-watermark {
@@ -71,7 +71,7 @@
       left: 50%;
       width: min(46vw, 620px);
       transform: translate3d(calc(-50% + var(--mouse-x) * 0.009), calc(-50% + var(--mouse-y) * 0.009), 0);
-      opacity: 0.17;
+      opacity: 0.14;
     }
     .brand-watermark img,
     .spinoza-shadow img,
@@ -83,11 +83,11 @@
     }
     .spinoza-shadow {
       left: 50%;
-      top: 54%;
-      width: min(40vw, 520px);
+      top: 55%;
+      width: min(52vw, 700px);
       transform: translate3d(calc(-50% + var(--mouse-x) * 0.013), calc(-50% + var(--mouse-y) * 0.013), 0);
-      opacity: 0.34;
-      filter: grayscale(1) contrast(1.9) brightness(0.78);
+      opacity: 0.52;
+      filter: grayscale(1) contrast(2.45) brightness(0.44) drop-shadow(0 18px 40px rgba(17,17,17,0.12));
       mix-blend-mode: multiply;
     }
     .kale-hand {
@@ -100,15 +100,15 @@
       transform-origin: center center;
     }
     .playing-card-accent {
-      right: -32px;
-      bottom: 6%;
-      width: min(28vw, 390px);
+      right: -14px;
+      bottom: 7%;
+      width: min(26vw, 350px);
       transform: translate3d(calc(var(--mouse-x) * -0.014), calc(var(--mouse-y) * -0.01), 0) rotate(7deg);
-      opacity: 0.94;
-      filter: drop-shadow(0 18px 28px rgba(40, 18, 12, 0.18));
+      opacity: 0.98;
+      filter: drop-shadow(0 18px 34px rgba(40, 18, 12, 0.14));
       transform-origin: center right;
     }
-    .playing-card-accent img { border-radius: 22px; }
+    .playing-card-accent img { border-radius: 26px; background: transparent; }
     .top-glow {
       background:
         linear-gradient(180deg, rgba(255,255,255,0.34), transparent 23%),
@@ -125,12 +125,12 @@
       position: relative;
       z-index: 2;
       background:
-        linear-gradient(180deg, rgba(255,255,255,0.7), rgba(255,255,255,0.54)),
-        radial-gradient(circle at top left, rgba(255,255,255,0.44), transparent 36%),
-        linear-gradient(135deg, rgba(255,255,255,0.34), rgba(255,255,255,0.18));
-      backdrop-filter: blur(7px) saturate(1.08);
-      -webkit-backdrop-filter: blur(7px) saturate(1.08);
-      border: 1px solid rgba(255,255,255,0.58);
+        linear-gradient(180deg, rgba(255,255,255,0.34), rgba(255,255,255,0.18)),
+        radial-gradient(circle at top left, rgba(255,255,255,0.22), transparent 38%),
+        linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
+      backdrop-filter: blur(16px) saturate(1.16);
+      -webkit-backdrop-filter: blur(16px) saturate(1.16);
+      border: 1px solid rgba(255,255,255,0.40);
       box-shadow: var(--shadow);
       overflow: hidden;
     }
@@ -139,9 +139,9 @@
       position: absolute;
       inset: 0;
       background:
-        linear-gradient(120deg, rgba(255,255,255,0.46) 0%, rgba(255,255,255,0.18) 18%, transparent 42%),
-        radial-gradient(circle at top right, rgba(212,175,55,0.13), transparent 28%),
-        linear-gradient(135deg, rgba(212,175,55,0.06), transparent 34%, rgba(17,17,17,0.03));
+        linear-gradient(120deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 18%, transparent 42%),
+        radial-gradient(circle at top right, rgba(212,175,55,0.11), transparent 28%),
+        linear-gradient(135deg, rgba(212,175,55,0.04), transparent 34%, rgba(17,17,17,0.02));
       pointer-events: none;
     }
     .card::after {
@@ -149,7 +149,7 @@
       position: absolute;
       inset: 1px;
       border-radius: inherit;
-      background: linear-gradient(180deg, rgba(255,255,255,0.13), transparent 22%, rgba(255,255,255,0.08) 72%, rgba(255,255,255,0.2));
+      background: linear-gradient(180deg, rgba(255,255,255,0.20), transparent 22%, rgba(255,255,255,0.06) 72%, rgba(255,255,255,0.16));
       pointer-events: none;
       mix-blend-mode: screen;
     }
@@ -211,15 +211,17 @@
       position: relative;
       z-index: 1;
     }
-    button:hover, .text-link:hover, .pill-link:hover, .home-link:hover, .ghost-link:hover {
-      transform: translateY(-0.5px);
-      box-shadow: 0 8px 14px rgba(17,17,17,0.06);
-      filter: brightness(0.985);
+    @media (hover: hover) and (pointer: fine) {
+      button:hover, .text-link:hover, .pill-link:hover, .home-link:hover, .ghost-link:hover {
+        transform: translateY(-0.5px);
+        box-shadow: 0 6px 14px rgba(17,17,17,0.05);
+        filter: brightness(0.992);
+      }
     }
     button:active, .text-link:active, .pill-link:active, .home-link:active, .ghost-link:active {
-      transform: translateY(0.5px) scale(0.995);
-      box-shadow: 0 4px 10px rgba(17,17,17,0.05);
-      filter: brightness(0.97);
+      transform: translateY(0.5px) scale(0.997);
+      box-shadow: 0 2px 8px rgba(17,17,17,0.04);
+      filter: brightness(0.985);
     }
     .modal {
       position: fixed;
@@ -238,53 +240,59 @@
       border-radius: 26px;
       padding: 18px;
       background:
-        linear-gradient(180deg, rgba(255,255,255,0.93), rgba(255,255,255,0.88)),
+        linear-gradient(180deg, rgba(255,255,255,0.90), rgba(255,255,255,0.84)),
         radial-gradient(circle at top left, rgba(255,255,255,0.52), transparent 36%);
       border: 1px solid rgba(255,255,255,0.64);
       box-shadow: 0 28px 60px rgba(17,17,17,0.24);
     }
     .pin-preview {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-      padding: 14px 12px;
-      border-radius: 18px;
-      background: rgba(17,17,17,0.05);
-      margin: 10px 0 14px;
-      min-height: 72px;
+      display: flex;
+      flex-wrap: nowrap;
+      justify-content: center;
       align-items: center;
+      gap: 14px;
+      padding: 16px 14px;
+      border-radius: 20px;
+      background: rgba(17,17,17,0.045);
+      margin: 12px 0 16px;
+      min-height: 80px;
+      overflow: hidden;
     }
     .pin-slot {
-      min-height: 42px;
-      border-radius: 14px;
+      width: 58px;
+      flex: 0 0 58px;
+      min-height: 46px;
+      border-radius: 16px;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(255,255,255,0.42);
+      background: rgba(255,255,255,0.34);
       border: 1px solid rgba(17,17,17,0.05);
       font-size: 2rem;
-      font-weight: 700;
-      color: rgba(17,17,17,0.9);
+      font-weight: 650;
+      color: rgba(17,17,17,0.92);
       line-height: 1;
     }
     .pin-slot.empty {
-      color: rgba(17,17,17,0.36);
+      color: rgba(17,17,17,0.38);
     }
     .pin-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
     }
     .pin-key {
-      min-height: 58px;
-      font-size: 1.15rem;
-      font-weight: 700;
-      background: rgba(255,255,255,0.9);
-      border: 1px solid rgba(17,17,17,0.08);
+      min-height: 60px;
+      font-size: 1.12rem;
+      font-weight: 650;
+      letter-spacing: 0.01em;
+      background: rgba(255,255,255,0.86);
+      border: 1px solid rgba(17,17,17,0.07);
     }
     .pin-key.primary {
       background: var(--gold);
       color: #111;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.24);
     }
     .pin-trigger {
       cursor: pointer;
@@ -297,9 +305,9 @@
     @media (max-width: 900px) {
       body { padding: 16px 0; }
       .brand-watermark { width: min(74vw, 500px); opacity: 0.14; }
-      .spinoza-shadow { width: min(62vw, 410px); top: 45%; opacity: 0.24; }
+      .spinoza-shadow { width: min(72vw, 520px); top: 47%; opacity: 0.42; }
       .kale-hand { width: min(54vw, 320px); top: 8%; left: -54px; opacity: 0.8; }
-      .playing-card-accent { width: min(42vw, 250px); right: -20px; bottom: 8%; }
+      .playing-card-accent { width: min(44vw, 270px); right: -10px; bottom: 9%; }
     }
 
     body {
@@ -492,6 +500,10 @@
       .logo-corner { top: 12px; right: 12px; width: 68px; height: 68px; }
       .admin-link { top: 12px; left: 12px; }
       .card { padding: 22px 18px; margin: 14px auto; max-width: calc(100vw - 28px); width: calc(100vw - 28px); }
+      .pin-preview { gap: 10px; padding: 14px 10px; }
+      .pin-slot { width: 50px; flex-basis: 50px; min-height: 42px; font-size: 1.8rem; }
+      .pin-grid { gap: 10px; }
+      .pin-key { min-height: 56px; border-radius: 18px; font-weight: 620; }
       .vote-actions button { width: 100%; }
     }
   </style>
@@ -559,7 +571,7 @@
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v36</div>
+  <div class="watermark">Made by Bruis · v37</div>
 
   <div id="pinModal" class="modal" aria-hidden="true">
     <div class="modal-panel">
