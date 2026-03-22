@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Klaverjas Score</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <h1>Klaverjas</h1>
+    <div id="scoreboard">
+      <div>WIJ <span id="score-wij">0</span></div>
+      <div>ZIJ <span id="score-zij">0</span></div>
+    </div>
+  </header>
+
+  <section id="players">
+    <h3>Select 4 players</h3>
+    <div id="player-select"></div>
+    <button onclick="startGame()">Start Game</button>
+  </section>
+
+  <section id="game" class="hidden">
+    <div id="contract"></div>
+
+    <div class="input-row">
+      <input id="points-input" type="number" placeholder="Points (one team)" />
+    </div>
+
+    <div class="buttons">
+      <button onclick="addRoem(20)">+20</button>
+      <button onclick="addRoem(50)">+50</button>
+      <button onclick="setNat()">NAT</button>
+      <button onclick="setPit()">PIT</button>
+    </div>
+
+    <button onclick="submitRound()">Add Round</button>
+
+    <div id="history"></div>
+  </section>
+</div>
+
+<script src="score.js"></script>
+</body>
+</html>

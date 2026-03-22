@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<h2>Leaderboard</h2>
+<div id="leaderboard"></div>
+
+<script>
+let players = [
+  {name:"Jan", wins:10, games:15},
+  {name:"Piet", wins:8, games:15}
+];
+
+document.getElementById("leaderboard").innerHTML =
+  players.map(p => `
+    <div>
+      ${p.name} - ${Math.round((p.wins/p.games)*100)}%
+    </div>
+  `).join("");
+</script>
+
+</body>
+</html>
