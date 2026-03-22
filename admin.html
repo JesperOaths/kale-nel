@@ -3,477 +3,70 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin - Jas Site</title>
+  <title>Admin - Wordt er gejast?</title>
   <style>
-
-    :root {
-      --gold: #d4af37;
-      --gold-dark: #b89018;
-      --black: #111111;
-      --card: rgba(255,255,255,0.22);
-      --card-2: rgba(255,255,255,0.08);
-      --line: rgba(17,17,17,0.10);
-      --muted: #6d5830;
-      --blue: #b89018;
-      --ok: #7c6112;
-      --ok-soft: rgba(212, 175, 55, 0.16);
-      --warn: #6b5220;
-      --warn-soft: rgba(17,17,17,0.06);
-      --shadow: 0 24px 60px rgba(17, 17, 17, 0.16);
-      --mouse-x: 0px;
-      --mouse-y: 0px;
-    }
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background:
-        linear-gradient(135deg, rgba(247,244,238,0.64), rgba(239,234,225,0.54)),
-        url('./site-bg-desktop.webp') center center / cover no-repeat fixed;
-      color: var(--black);
-      margin: 0;
-      min-height: 100vh;
-      position: relative;
-      overflow-x: hidden;
-      padding: 28px;
-    }
-    .scene, .page-bg, .top-glow, .brand-watermark, .spinoza-shadow, .playing-card-accent, .kale-hand, .watermark {
-      pointer-events: none;
-    }
-    @media (orientation: portrait) {
-      body {
-        background:
-          linear-gradient(135deg, rgba(247,244,238,0.60), rgba(239,234,225,0.52)),
-          url('./site-bg-mobile.webp') center center / cover no-repeat fixed;
-      }
-    }
-    .scene {
-      display: none;
-    }
-    .page-bg, .top-glow, .brand-watermark, .spinoza-shadow, .playing-card-accent, .kale-hand {
-      position: absolute;
-      will-change: transform;
-      transform: translate3d(0,0,0);
-    }
-    .page-bg,
-    .top-glow {
-      inset: 0;
-    }
-    .page-bg {
-      background-image: url('./123zwartkaart.png');
-      background-size: 255px;
-      background-repeat: repeat;
-      background-position: center;
-      opacity: 0.08;
-      mix-blend-mode: multiply;
-    }
-    .brand-watermark {
-      top: 50%;
-      left: 50%;
-      width: min(46vw, 620px);
-      transform: translate3d(calc(-50% + var(--mouse-x) * 0.009), calc(-50% + var(--mouse-y) * 0.009), 0);
-      opacity: 0.14;
-    }
-    .brand-watermark img,
-    .spinoza-shadow img,
-    .playing-card-accent img,
-    .kale-hand img {
-      display: block;
-      width: 100%;
-      height: auto;
-    }
-    .spinoza-shadow {
-      left: 50%;
-      top: 55%;
-      width: min(52vw, 700px);
-      transform: translate3d(calc(-50% + var(--mouse-x) * 0.013), calc(-50% + var(--mouse-y) * 0.013), 0);
-      opacity: 0.52;
-      filter: grayscale(1) contrast(2.45) brightness(0.44) drop-shadow(0 18px 40px rgba(17,17,17,0.12));
-      mix-blend-mode: multiply;
-    }
-    .kale-hand {
-      left: -48px;
-      top: 18%;
-      width: min(33vw, 470px);
-      transform: translate3d(calc(var(--mouse-x) * -0.02), calc(var(--mouse-y) * -0.012), 0) rotate(-12deg);
-      opacity: 0.9;
-      filter: drop-shadow(0 18px 30px rgba(61, 31, 18, 0.2));
-      transform-origin: center center;
-    }
-    .playing-card-accent {
-      right: -14px;
-      bottom: 7%;
-      width: min(26vw, 350px);
-      transform: translate3d(calc(var(--mouse-x) * -0.014), calc(var(--mouse-y) * -0.01), 0) rotate(7deg);
-      opacity: 0.98;
-      filter: drop-shadow(0 18px 34px rgba(40, 18, 12, 0.14));
-      transform-origin: center right;
-    }
-    .playing-card-accent img { border-radius: 26px; background: transparent; }
-    .top-glow {
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.34), transparent 23%),
-        radial-gradient(circle at 50% -10%, rgba(255,255,255,0.48), transparent 34%);
-    }
-    .shell, .wrap {
-      width: 100%;
-      max-width: 980px;
-      position: relative;
-      z-index: 2;
-      margin: 0 auto;
-    }
-    .card {
-      position: relative;
-      z-index: 2;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.10)),
-        radial-gradient(circle at top left, rgba(255,255,255,0.20), transparent 36%),
-        linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
-      backdrop-filter: blur(22px) saturate(1.08);
-      -webkit-backdrop-filter: blur(22px) saturate(1.08);
-      border: 1px solid rgba(255,255,255,0.48);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-    .card::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background:
-        linear-gradient(120deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 18%, transparent 42%),
-        radial-gradient(circle at top right, rgba(212,175,55,0.11), transparent 28%),
-        linear-gradient(135deg, rgba(212,175,55,0.04), transparent 34%, rgba(17,17,17,0.02));
-      pointer-events: none;
-    }
-    .card::after {
-      content: "";
-      position: absolute;
-      inset: 1px;
-      border-radius: inherit;
-      background: linear-gradient(180deg, rgba(255,255,255,0.18), transparent 18%, rgba(255,255,255,0.04) 72%, rgba(255,255,255,0.10));
-      pointer-events: none;
-      mix-blend-mode: screen;
-    }
-    .logo-corner, .mini-logo {
-      object-fit: contain;
-      opacity: 0.96;
-      filter: drop-shadow(0 6px 14px rgba(0,0,0,0.08));
-      position: relative;
-      z-index: 1;
-    }
-    .watermark {
-      position: fixed;
-      right: 20px;
-      bottom: 14px;
-      color: rgba(17,17,17,0.42);
-      font-size: 14px;
-      user-select: none;
-      z-index: 3;
-      letter-spacing: 0.02em;
-    }
-    .muted { color: var(--muted); }
-    .notice {
-      display: none;
-      text-align: left;
-      border-radius: 16px;
-      padding: 14px 16px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.54);
-      color: var(--muted);
-      position: relative;
-      z-index: 1;
-    }
-    .notice.show { display: block; }
-    .notice.ok { background: var(--ok-soft); color: var(--ok); border-color: rgba(22,101,52,0.15); }
-    .notice.warn { background: var(--warn-soft); color: var(--warn); border-color: rgba(146,64,14,0.16); }
-    input, textarea, select, button {
-      font: inherit;
-    }
-    input, textarea, select {
-      width: 100%;
-      padding: 13px 14px;
-      border: 1px solid rgba(17,17,17,0.1);
-      border-radius: 16px;
-      background: rgba(255,255,255,0.58);
-      position: relative;
-      z-index: 1;
-      outline: none;
-      transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
-    }
-    input:focus, textarea:focus, select:focus {
-      border-color: rgba(184,144,24,0.44);
-      box-shadow: 0 0 0 4px rgba(212,175,55,0.16);
-    }
-    button {
-      border: none;
-      border-radius: 16px;
-      cursor: pointer;
-      transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease, background-color .12s ease, filter .12s ease;
-      position: relative;
-      z-index: 1;
-    }
-    @media (hover: hover) and (pointer: fine) {
-      button:hover, .text-link:hover, .pill-link:hover, .home-link:hover, .ghost-link:hover {
-        transform: none;
-        box-shadow: 0 8px 18px rgba(17,17,17,0.05);
-        filter: brightness(1.01);
-      }
-    }
-    button:active, .text-link:active, .pill-link:active, .home-link:active, .ghost-link:active {
-      transform: scale(0.992);
-      box-shadow: 0 3px 10px rgba(17,17,17,0.05);
-      filter: brightness(0.99);
-    }
-    .modal {
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      z-index: 12;
-      background: rgba(17,17,17,0.32);
-      backdrop-filter: blur(4px);
-    }
-    .modal.show { display: flex; }
-    .modal-panel {
-      width: min(360px, 100%);
-      border-radius: 26px;
-      padding: 18px;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.90), rgba(255,255,255,0.84)),
-        radial-gradient(circle at top left, rgba(255,255,255,0.52), transparent 36%);
-      border: 1px solid rgba(255,255,255,0.64);
-      box-shadow: 0 28px 60px rgba(17,17,17,0.24);
-    }
-    .pin-preview {
-      text-align: center;
-      letter-spacing: 0.44em;
-      font-size: 2rem;
-      padding: 14px 12px;
-      border-radius: 18px;
-      background: rgba(17,17,17,0.05);
-      margin: 10px 0 14px;
-      min-height: 72px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .pin-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-    }
-    .pin-key {
-      min-height: 58px;
-      font-size: 1.15rem;
-      font-weight: 700;
-      background: rgba(255,255,255,0.9);
-      border: 1px solid rgba(17,17,17,0.08);
-    }
-    .pin-key.primary {
-      background: var(--gold);
-      color: #111;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.24);
-    }
-    .pin-trigger {
-      cursor: pointer;
-      caret-color: transparent;
-    }
-
-    .state-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 12px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-      border: 1px solid rgba(17,17,17,0.08);
-      background: rgba(255,255,255,0.46);
-      margin: 0 0 12px;
-      line-height: 1;
-    }
-    .state-badge::before {
-      content: "";
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: currentColor;
-      opacity: 0.9;
-    }
-    .state-pending { color: #92400e; background: rgba(251,191,36,0.14); }
-    .state-approved { color: #1d4ed8; background: rgba(59,130,246,0.14); }
-    .state-awaiting { color: #7c3aed; background: rgba(124,58,237,0.12); }
-    .state-activated { color: #166534; background: rgba(34,197,94,0.14); }
-    .state-rejected { color: #991b1b; background: rgba(239,68,68,0.12); }
-    .request-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      html { scroll-behavior: auto; }
-      .scene, .brand-watermark, .spinoza-shadow, .playing-card-accent, .kale-hand, .card, button { transition: none !important; }
-    }
-    @media (max-width: 900px) {
-      body { padding: 16px 0; }
-      .brand-watermark { width: min(74vw, 500px); opacity: 0.14; }
-      .spinoza-shadow { width: min(72vw, 520px); top: 47%; opacity: 0.42; }
-      .kale-hand { width: min(54vw, 320px); top: 8%; left: -54px; opacity: 0.8; }
-      .playing-card-accent { width: min(44vw, 270px); right: -10px; bottom: 9%; }
-    }
-
-    .wrap { max-width: 980px; margin: 0 auto; position: relative; z-index: 2; }
-    .topbar { display:flex; justify-content:space-between; align-items:center; gap:14px; margin-bottom:16px; }
-    .home-link {
-      text-decoration:none; color:#2563eb; background:rgba(255,255,255,0.62);
-      padding:8px 12px; border-radius:999px; border:1px solid rgba(37,99,235,0.12);
-    }
-    .mini-logo { width:74px; height:74px; }
-    .card { border-radius: 28px; padding: 26px; margin-bottom: 20px; }
-    h1, h2 { margin-top:0; position: relative; z-index: 1; }
-    #status, .muted, #welcomeText { color: var(--muted); position: relative; z-index: 1; }
-    textarea { resize: vertical; min-height: 90px; }
-    .hidden { display:none; }
-    .row { display:grid; grid-template-columns: 1fr 1fr; gap:14px; position:relative; z-index:1; }
-    .login-btn, .logout-btn, .approve-btn, .reject-btn, .link-btn, .mail-btn, .copy-btn {
-      min-height: 48px; padding: 12px 18px; border-radius: 16px; cursor: pointer; margin-top: 12px; font-weight:700;
-    }
-    .login-btn { background: var(--gold); color: var(--black); }
-    .logout-btn { background: var(--black); color: white; }
-    .approve-btn { background: #166534; color: white; margin-right: 10px; }
-    .reject-btn { background: #b91c1c; color: white; }
-    .link-btn { background: #1d4ed8; color: white; }
-    .mail-btn { background: #7c3aed; color: white; }
-    .copy-btn { background: #374151; color: white; }
-    .request {
-      background: rgba(251,250,246,.58);
-      border:1px solid var(--line);
-      border-radius: 22px;
-      padding: 18px;
-      margin-top: 14px;
-      position: relative;
-      z-index: 1;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
-    }
-    .request-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px 18px; margin-top: 12px; }
-    .action-row { display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; }
-    .activation-tools { margin-top: 14px; padding: 14px; border-radius: 18px; background: rgba(255,255,255,0.58); border: 1px solid rgba(17,17,17,0.08); }
-    .activation-tools.hidden { display:none; }
-    .activation-link-box { margin-top: 10px; padding: 12px 14px; border-radius: 14px; background: rgba(17,17,17,0.05); font-size: 0.95rem; word-break: break-all; }
-    .activation-meta { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px 18px; margin-top: 12px; }
-    .data-box { background: rgba(255,255,255,0.56); border:1px solid rgba(17,17,17,0.07); border-radius: 14px; padding: 10px 12px; }
-    .label { display:block; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 4px; }
-    details { margin-top: 12px; }
-    summary { cursor: pointer; color: var(--black); }
-    pre { background: rgba(255,253,247,0.82); border-radius: 14px; border:1px solid #e7dfcf; padding:12px; overflow:auto; white-space: pre-wrap; word-break: break-word; }
-    .info-band {
-      margin-top:12px;
-      background: rgba(255,255,255,0.46);
-      border:1px solid rgba(17,17,17,0.08);
-      border-radius:18px;
-      padding:14px 16px;
-      line-height:1.5;
-    }
-
-    .dev-login-box {
-      margin-top: 12px;
-      padding: 12px 14px;
-      border-radius: 18px;
-      background: rgba(255,255,255,0.40);
-      border: 1px solid rgba(17,17,17,0.08);
-    }
-    .dev-login-box summary {
-      font-weight: 700;
-      letter-spacing: 0.01em;
-    }
-
-    @media (max-width: 760px) {
-      body { padding: 16px 0; }
-      .row, .request-grid { grid-template-columns: 1fr; }
-      .mini-logo { width: 64px; height: 64px; }
-      .topbar { padding: 0 14px; }
-      .card { padding: 20px 16px; max-width: calc(100vw - 28px); width: calc(100vw - 28px); margin: 14px auto; }
-    }
+    :root { --gold:#d4af37; --card-bg:#f9f7f2; --line:rgba(0,0,0,0.06); --muted:#666; --ok:#2b5b37; --warn:#8b3a30; }
+    * { box-sizing:border-box; }
+    body { margin:0; padding:20px; font-family:'Inter', sans-serif; background: linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./site-bg-desktop.webp') center/cover no-repeat fixed; min-height:100vh; }
+    .main-card { background:var(--card-bg); border-radius:24px; padding:30px; max-width:900px; margin:0 auto; box-shadow:0 20px 50px rgba(0,0,0,0.08); position:relative; }
+    .card-logo { position:absolute; top:25px; right:25px; width:40px; }
+    h1 { font-size:28px; margin-bottom:20px; }
+    input, textarea, select { width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #ddd; font:inherit; }
+    .btn, .login-btn, .logout-btn, .approve-btn, .reject-btn, .link-btn, .mail-btn, .copy-btn { padding:12px 20px; border-radius:8px; border:none; font-weight:700; cursor:pointer; }
+    .primary, .login-btn, .approve-btn { background:var(--gold); color:#000; }
+    .dark, .logout-btn, .reject-btn, .danger-btn { background:#000; color:#fff; }
+    .link-btn, .mail-btn, .copy-btn { background:#fff; border:1px solid #ddd; }
+    .request, .card { background:#fff; padding:20px; border-radius:16px; margin-bottom:15px; border:1px solid rgba(0,0,0,0.05); }
+    .hidden { display:none !important; }
+    .state-badge { font-size:11px; font-weight:bold; padding:4px 8px; border-radius:99px; display:inline-block; margin-bottom:10px; }
+    .state-pending { background:#fff3cd; color:#856404; }
+    .status-ok { color:var(--ok); } .status-warn { color:var(--warn); }
+    .admin-grid { margin-top:20px; display:grid; gap:18px; }
+    .action-row, .compact-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+    .request-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+    .muted, .inline-msg { color:var(--muted); font-size:13px; }
+    .data-box { background:#fafafa; border:1px solid #eee; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:4px; }
+    .data-box .label { font-size:11px; color:#999; text-transform:uppercase; }
+    .activation-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:12px; }
+    .activation-link-box { margin-top:10px; background:#fafafa; border:1px solid #eee; border-radius:10px; padding:10px; word-break:break-all; font-size:13px; }
+    .search-input { margin-top:8px; }
+    #status { margin-top:20px; font-size:14px; min-height:18px; }
+    hr { margin:20px 0; border:0; border-top:1px solid #eee; }
   </style>
-  <link rel="stylesheet" href="./site-shell.css" />
-  <link rel="stylesheet" href="./theme-v45.css" />
-  <link rel="stylesheet" href="./premium-v47.css" />
-  <link rel="stylesheet" href="./ui-v52.css" />
 </head>
 <body>
-  <div class="scene" aria-hidden="true">
-    <div class="page-bg"></div>
-    <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
-        <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
-    <div class="playing-card-accent"><img src="./playingcard-accent1-trimmed.png" alt="" /></div>
-    <div class="top-glow"></div>
-  </div>
-
-  <div class="wrap">
-    <div class="topbar">
-      <a href="./index.html" class="home-link">Terug naar site</a>
-      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;"><img src="./logo.png" alt="Logo" class="mini-logo" /></div>
+  <div class="main-card">
+    <img src="./logo.png" class="card-logo" />
+    <h1>Admin Console</h1>
+    <div id="loginView">
+      <input id="usernameInput" type="text" placeholder="Gebruikersnaam">
+      <input id="passwordInput" type="password" placeholder="Wachtwoord">
+      <input id="totpInput" type="text" placeholder="TOTP Code">
+      <button id="loginBtn" class="btn primary">Inloggen</button>
+      <input id="devKeyInput" type="password" placeholder="Dev key" class="hidden">
+      <button id="devLoginBtn" class="btn hidden">Dev-login</button>
     </div>
-
-    <div class="card">
-      <h1>Admin</h1>
-      
-      <div id="loginView">
-        <div class="row">
-          <input id="usernameInput" type="text" placeholder="Gebruikersnaam" autocomplete="username" autocapitalize="none" spellcheck="false" />
-          <input id="passwordInput" type="password" placeholder="Wachtwoord" autocomplete="current-password" />
+    <div id="adminView" class="hidden">
+      <p id="welcomeText"></p>
+      <button id="logoutBtn" class="btn dark">Uitloggen</button>
+      <hr>
+      <div id="workspace" class="admin-grid">
+        <div id="requestsCard" class="card hidden">
+          <h2>Open aanvragen</h2>
+          <input id="requestSearch" class="search-input" type="search" placeholder="Zoek op naam of e-mail" />
+          <div id="requestsList"></div>
         </div>
-        <input id="totpInput" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="6-cijferige code" autocomplete="one-time-code" />
-        <button id="loginBtn" class="login-btn" type="button">Inloggen</button>
-        <details class="dev-login-box hidden">
-          <summary>Dev-login</summary>
-          <div class="muted" style="margin-top:10px;">Alleen voor testen.</div>
-          <input id="devKeyInput" type="password" inputmode="numeric" maxlength="8" placeholder="Dev key" autocomplete="one-time-code" style="margin-top:10px;" />
-          <button id="devLoginBtn" class="login-btn" type="button" style="margin-top:10px;">Dev-login</button>
-          <div id="devLoginHint" class="muted" style="margin-top:10px;">Gebruik alleen als fallback.</div>
-        </details>
-        
+        <div id="historyCard" class="card hidden">
+          <h2>Geschiedenis</h2>
+          <input id="historySearch" class="search-input" type="search" placeholder="Zoek geschiedenis" />
+          <div id="historyList"></div>
+        </div>
       </div>
-      <div id="adminView" class="hidden">
-        <p id="welcomeText"></p>
-        <button id="logoutBtn" class="logout-btn" type="button">Uitloggen</button>
-      </div>
-      
-      <div id="status"></div>
     </div>
-
-    <div id="workspace" class="admin-grid hidden"><div><div id="requestsCard" class="card hidden">
-      <h2>Open aanvragen</h2>
-      
-      <input id="requestSearch" class="search-input" type="search" placeholder="Zoek op naam of e-mail" />
-      <div id="requestsList"></div>
-    </div>
-
-    <div id="historyCard" class="card hidden">
-      <h2>Geschiedenis</h2>
-      <div class="filter-row">
-        <button type="button" class="filter-pill active" data-history-filter="all">Alles</button>
-        <button type="button" class="filter-pill" data-history-filter="pending">Openstaand</button>
-        <button type="button" class="filter-pill" data-history-filter="approved">Approved</button>
-        <button type="button" class="filter-pill" data-history-filter="awaiting">Awaiting activation</button>
-        <button type="button" class="filter-pill" data-history-filter="activated">Activated</button>
-        <button type="button" class="filter-pill" data-history-filter="rejected">Afgewezen</button>
-      </div>
-      <input id="historySearch" class="search-input" type="search" placeholder="Zoek geschiedenis" />
-      <div id="historyList"></div>
-    </div>
+    <div id="status"></div>
   </div>
-
-  <div class="watermark">Bruis · v52</div>
-
   <script>
-    const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
+const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY;
     const AUTO_EMAIL_ENDPOINT = ''; // cloud-mail loopt nu via queue + Make webhook

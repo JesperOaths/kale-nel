@@ -5,437 +5,49 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Naam aanvragen</title>
   <style>
-
-    :root {
-      --gold: #d4af37;
-      --gold-dark: #b89018;
-      --black: #111111;
-      --card: rgba(255,255,255,0.22);
-      --card-2: rgba(255,255,255,0.08);
-      --line: rgba(17,17,17,0.10);
-      --muted: #6d5830;
-      --blue: #b89018;
-      --ok: #7c6112;
-      --ok-soft: rgba(212, 175, 55, 0.16);
-      --warn: #6b5220;
-      --warn-soft: rgba(17,17,17,0.06);
-      --shadow: 0 24px 60px rgba(17, 17, 17, 0.16);
-      --mouse-x: 0px;
-      --mouse-y: 0px;
-    }
+    :root { --gold: #dab33e; --black: #111; --bg: #f0ede4; }
     * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background:
-        linear-gradient(135deg, rgba(247,244,238,0.64), rgba(239,234,225,0.54)),
-        url('./site-bg-desktop.webp') center center / cover no-repeat fixed;
-      color: var(--black);
-      margin: 0;
-      min-height: 100vh;
-      position: relative;
-      overflow-x: hidden;
-      padding: 28px;
-    }
-    .scene, .page-bg, .top-glow, .brand-watermark, .spinoza-shadow, .playing-card-accent, .kale-hand, .watermark {
-      pointer-events: none;
-    }
-    @media (orientation: portrait) {
-      body {
-        background:
-          linear-gradient(135deg, rgba(247,244,238,0.60), rgba(239,234,225,0.52)),
-          url('./site-bg-mobile.webp') center center / cover no-repeat fixed;
-      }
-    }
-    .scene {
-      display: none;
-    }
-    .page-bg, .top-glow, .brand-watermark, .spinoza-shadow, .playing-card-accent, .kale-hand {
-      position: absolute;
-      will-change: transform;
-      transform: translate3d(0,0,0);
-    }
-    .page-bg,
-    .top-glow {
-      inset: 0;
-    }
-    .page-bg {
-      background-image: url('./123zwartkaart.png');
-      background-size: 255px;
-      background-repeat: repeat;
-      background-position: center;
-      opacity: 0.08;
-      mix-blend-mode: multiply;
-    }
-    .brand-watermark {
-      top: 50%;
-      left: 50%;
-      width: min(46vw, 620px);
-      transform: translate3d(calc(-50% + var(--mouse-x) * 0.009), calc(-50% + var(--mouse-y) * 0.009), 0);
-      opacity: 0.14;
-    }
-    .brand-watermark img,
-    .spinoza-shadow img,
-    .playing-card-accent img,
-    .kale-hand img {
-      display: block;
-      width: 100%;
-      height: auto;
-    }
-    .spinoza-shadow {
-      left: 50%;
-      top: 55%;
-      width: min(52vw, 700px);
-      transform: translate3d(calc(-50% + var(--mouse-x) * 0.013), calc(-50% + var(--mouse-y) * 0.013), 0);
-      opacity: 0.52;
-      filter: grayscale(1) contrast(2.45) brightness(0.44) drop-shadow(0 18px 40px rgba(17,17,17,0.12));
-      mix-blend-mode: multiply;
-    }
-    .kale-hand {
-      left: -48px;
-      top: 18%;
-      width: min(33vw, 470px);
-      transform: translate3d(calc(var(--mouse-x) * -0.02), calc(var(--mouse-y) * -0.012), 0) rotate(-12deg);
-      opacity: 0.9;
-      filter: drop-shadow(0 18px 30px rgba(61, 31, 18, 0.2));
-      transform-origin: center center;
-    }
-    .playing-card-accent {
-      right: -14px;
-      bottom: 7%;
-      width: min(26vw, 350px);
-      transform: translate3d(calc(var(--mouse-x) * -0.014), calc(var(--mouse-y) * -0.01), 0) rotate(7deg);
-      opacity: 0.98;
-      filter: drop-shadow(0 18px 34px rgba(40, 18, 12, 0.14));
-      transform-origin: center right;
-    }
-    .playing-card-accent img { border-radius: 26px; background: transparent; }
-    .top-glow {
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.34), transparent 23%),
-        radial-gradient(circle at 50% -10%, rgba(255,255,255,0.48), transparent 34%);
-    }
-    .shell, .wrap {
-      width: 100%;
-      max-width: 980px;
-      position: relative;
-      z-index: 2;
-      margin: 0 auto;
-    }
-    .card {
-      position: relative;
-      z-index: 2;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.10)),
-        radial-gradient(circle at top left, rgba(255,255,255,0.20), transparent 36%),
-        linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
-      backdrop-filter: blur(22px) saturate(1.08);
-      -webkit-backdrop-filter: blur(22px) saturate(1.08);
-      border: 1px solid rgba(255,255,255,0.48);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-    .card::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background:
-        linear-gradient(120deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 18%, transparent 42%),
-        radial-gradient(circle at top right, rgba(212,175,55,0.11), transparent 28%),
-        linear-gradient(135deg, rgba(212,175,55,0.04), transparent 34%, rgba(17,17,17,0.02));
-      pointer-events: none;
-    }
-    .card::after {
-      content: "";
-      position: absolute;
-      inset: 1px;
-      border-radius: inherit;
-      background: linear-gradient(180deg, rgba(255,255,255,0.18), transparent 18%, rgba(255,255,255,0.04) 72%, rgba(255,255,255,0.10));
-      pointer-events: none;
-      mix-blend-mode: screen;
-    }
-    .logo-corner, .mini-logo {
-      object-fit: contain;
-      opacity: 0.96;
-      filter: drop-shadow(0 6px 14px rgba(0,0,0,0.08));
-      position: relative;
-      z-index: 1;
-    }
-    .watermark {
-      position: fixed;
-      right: 20px;
-      bottom: 14px;
-      color: rgba(17,17,17,0.42);
-      font-size: 14px;
-      user-select: none;
-      z-index: 3;
-      letter-spacing: 0.02em;
-    }
-    .muted { color: var(--muted); }
-    .notice {
-      display: none;
-      text-align: left;
-      border-radius: 16px;
-      padding: 14px 16px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.54);
-      color: var(--muted);
-      position: relative;
-      z-index: 1;
-    }
-    .notice.show { display: block; }
-    .notice.ok { background: var(--ok-soft); color: var(--ok); border-color: rgba(22,101,52,0.15); }
-    .notice.warn { background: var(--warn-soft); color: var(--warn); border-color: rgba(146,64,14,0.16); }
-    input, textarea, select, button {
-      font: inherit;
-    }
-    input, textarea, select {
-      width: 100%;
-      padding: 13px 14px;
-      border: 1px solid rgba(17,17,17,0.1);
-      border-radius: 16px;
-      background: rgba(255,255,255,0.58);
-      position: relative;
-      z-index: 1;
-      outline: none;
-      transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
-    }
-    input:focus, textarea:focus, select:focus {
-      border-color: rgba(184,144,24,0.44);
-      box-shadow: 0 0 0 4px rgba(212,175,55,0.16);
-    }
-    button {
-      border: none;
-      border-radius: 16px;
-      cursor: pointer;
-      transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease, background-color .12s ease, filter .12s ease;
-      position: relative;
-      z-index: 1;
-    }
-    @media (hover: hover) and (pointer: fine) {
-      button:hover, .text-link:hover, .pill-link:hover, .home-link:hover, .ghost-link:hover {
-        transform: none;
-        box-shadow: 0 8px 18px rgba(17,17,17,0.05);
-        filter: brightness(1.01);
-      }
-    }
-    button:active, .text-link:active, .pill-link:active, .home-link:active, .ghost-link:active {
-      transform: scale(0.992);
-      box-shadow: 0 3px 10px rgba(17,17,17,0.05);
-      filter: brightness(0.99);
-    }
-    .modal {
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      z-index: 12;
-      background: rgba(17,17,17,0.32);
-      backdrop-filter: blur(4px);
-    }
-    .modal.show { display: flex; }
-    .modal-panel {
-      width: min(360px, 100%);
-      border-radius: 26px;
-      padding: 18px;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.90), rgba(255,255,255,0.84)),
-        radial-gradient(circle at top left, rgba(255,255,255,0.52), transparent 36%);
-      border: 1px solid rgba(255,255,255,0.64);
-      box-shadow: 0 28px 60px rgba(17,17,17,0.24);
-    }
-    .pin-preview {
-      text-align: center;
-      letter-spacing: 0.44em;
-      font-size: 2rem;
-      padding: 14px 12px;
-      border-radius: 18px;
-      background: rgba(17,17,17,0.05);
-      margin: 10px 0 14px;
-      min-height: 72px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .pin-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-    }
-    .pin-key {
-      min-height: 58px;
-      font-size: 1.15rem;
-      font-weight: 700;
-      background: rgba(255,255,255,0.9);
-      border: 1px solid rgba(17,17,17,0.08);
-    }
-    .pin-key.primary {
-      background: var(--gold);
-      color: #111;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.24);
-    }
-    .pin-trigger {
-      cursor: pointer;
-      caret-color: transparent;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      html { scroll-behavior: auto; }
-      .scene, .brand-watermark, .spinoza-shadow, .playing-card-accent, .kale-hand, .card, button { transition: none !important; }
-    }
-    @media (max-width: 900px) {
-      body { padding: 16px 0; }
-      .brand-watermark { width: min(74vw, 500px); opacity: 0.14; }
-      .spinoza-shadow { width: min(72vw, 520px); top: 47%; opacity: 0.42; }
-      .kale-hand { width: min(54vw, 320px); top: 8%; left: -54px; opacity: 0.8; }
-      .playing-card-accent { width: min(44vw, 270px); right: -10px; bottom: 9%; }
-    }
-
-    body {
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      min-height:100vh;
-    }
-    .card {
-      padding: 30px 34px 34px;
-      border-radius: 30px;
-      text-align: center;
-      max-width: 920px;
-      width: 100%;
-      margin: 20px;
-    }
-    .logo-corner {
-      position:absolute;
-      top:20px;
-      right:20px;
-      width:84px;
-      height:84px;
-    }
-    .back-link {
-      position:absolute;
-      left:18px;
-      top:20px;
-      font-size:14px;
-      text-decoration:none;
-      color:var(--blue);
-      background:rgba(255,255,255,0.62);
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid rgba(37,99,235,0.12);
-      z-index:1;
-    }
-    h1 {
-      margin:24px 0 8px;
-      font-size:clamp(2.35rem,4vw,3rem);
-      line-height:1.02;
-      padding:0 88px;
-      letter-spacing:-0.04em;
-      position:relative;
-      z-index:1;
-    }
-    .intro {
-      color:var(--muted);
-      margin:0 auto 22px;
-      position:relative;
-      z-index:1;
-      font-size:clamp(1rem,2vw,1.08rem);
-      max-width: 700px;
-      line-height:1.5;
-    }
-    .grid {
-      display:grid;
-      grid-template-columns: 1.08fr 0.92fr;
-      gap:18px;
-      text-align:left;
-      position:relative;
-      z-index:1;
-    }
-    .panel {
-      background: rgba(250,250,249,0.56);
-      border:1px solid var(--line);
-      border-radius:22px;
-      padding:18px;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.52);
-    }
-    .panel h2, .panel h3 {
-      margin:0 0 10px;
-      letter-spacing:-0.02em;
-    }
-    .panel p, .panel li {
-      color:var(--muted);
-      line-height:1.5;
-    }
-    textarea { min-height:120px; resize:vertical; }
-    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
-    .primary-btn, .ghost-link {
-      display:inline-flex; align-items:center; justify-content:center;
-      min-height:46px; padding:12px 16px; border-radius:16px; text-decoration:none;
-    }
-    .primary-btn { background:var(--gold); color:#111; font-weight:700; }
-    .ghost-link {
-      background:rgba(255,255,255,0.66); color:var(--blue);
-      border:1px solid rgba(37,99,235,0.14); font-weight:600;
-    }
-    .tiny {
-      font-size:13px;
-      color:var(--muted);
-      margin-top:8px;
-      line-height:1.45;
-    }
-    @media (max-width: 760px) {
-      .grid { grid-template-columns: 1fr; }
-      h1 { padding:0; margin-top:78px; font-size:2rem; }
-      .logo-corner { top:12px; right:12px; width:68px; height:68px; }
-      .back-link { top:12px; left:12px; }
-      .card { padding:22px 18px; margin:14px auto; max-width: calc(100vw - 28px); width: calc(100vw - 28px); }
-    }
+    body { font-family: 'Inter', sans-serif; background: linear-gradient(rgba(240,237,228,0.92), rgba(240,237,228,0.92)), url('./site-bg-desktop.webp') center/cover no-repeat fixed; margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .scene { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+    .brand-watermark { position: absolute; top: 10%; left: 5%; opacity: 0.05; width: 30vw; }
+    .spinoza-shadow { position: absolute; bottom: 0; right: 0; opacity: 0.1; width: 40vw; }
+    .playing-card-accent { position: absolute; bottom: 5%; left: 0; opacity: 0.15; width: 25vw; }
+    .main-card { background: #fff; border-radius: 32px; padding: 40px; width: 90%; max-width: 500px; box-shadow: 0 15px 45px rgba(0,0,0,0.05); text-align: center; position: relative; z-index: 1; }
+    .logo-top { position: absolute; top: 25px; right: 25px; width: 45px; }
+    h1 { font-size: 28px; margin: 0 0 10px; letter-spacing: -1px; }
+    .intro { font-size: 14px; color: #666; margin-bottom: 25px; }
+    input, textarea, select { width: 100%; padding: 12px 16px; margin-bottom: 12px; border: 1px solid #eee; border-radius: 12px; background: #fafafa; box-sizing: border-box; font-size: 15px; }
+    .btn-row { display: flex; gap: 10px; margin-top: 10px; }
+    .primary-btn { flex: 1; background: var(--gold); border: none; padding: 14px; border-radius: 10px; font-weight: 800; cursor: pointer; }
+    .ghost-link { flex: 1; background: var(--black); color: #fff; text-decoration: none; padding: 14px; border-radius: 10px; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+    .status { margin-top: 15px; font-size: 13px; min-height: 18px; }
+    label { display: block; text-align: left; font-size: 12px; font-weight: 700; color: #999; margin: 0 0 6px 4px; text-transform: uppercase; }
   </style>
-  <link rel="stylesheet" href="./site-shell.css" />
-  <link rel="stylesheet" href="./theme-v45.css" />
-  <link rel="stylesheet" href="./premium-v47.css" />
-  <link rel="stylesheet" href="./ui-v52.css" />
 </head>
 <body>
-  <div class="scene" aria-hidden="true">
-    <div class="page-bg"></div>
-    <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
-        <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
-    <div class="playing-card-accent"><img src="./playingcard-accent1-trimmed.png" alt="" /></div>
-    <div class="top-glow"></div>
+  <div class="scene">
+    <div class="brand-watermark"><img src="./dubbeleD-goud.png" width="100%"></div>
+    <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" width="100%"></div>
+    <div class="playing-card-accent"><img src="./playingcard-accent1-trimmed.png" width="100%"></div>
   </div>
-
-  <div class="card">
-    <a href="./index.html" class="back-link">Terug</a>
-    <img src="./logo.png" alt="Logo" class="logo-corner" />
+  <main class="main-card">
+    <img src="./logo.png" class="logo-top" />
     <h1>Claim je naam</h1>
-    
-        <div class="grid">
-      <div class="panel">
-        <h2>Aanvraag</h2>
-        <label for="requestNameSelect">Gewenste naam</label>
-        <select id="requestNameSelect" autocomplete="name" aria-label="Gewenste naam"></select>
-
-        <label for="requestEmailInput">E-mailadres</label>
-        <input id="requestEmailInput" type="email" placeholder="jij@example.com" autocomplete="email" autocapitalize="off" spellcheck="false" enterkeyhint="next" />
-
-        <label for="requestNoteInput">Notitie</label>
-        <textarea id="requestNoteInput" placeholder="Optioneel" autocomplete="off" enterkeyhint="send"></textarea>
-
-        <div class="actions">
-          <button id="requestBtn" class="primary-btn" type="button">Aanvraag versturen</button>
-          <a href="./index.html" class="ghost-link">Terug</a>
-        </div>
-        
-      </div>
+    <p class="intro">Kies je naam uit de lijst en vul je e-mailadres in.</p>
+    <label>Gewenste naam</label>
+    <select id="requestNameSelect"></select>
+    <label>E-mailadres</label>
+    <input id="requestEmailInput" type="email" placeholder="jouw@email.com">
+    <label>Notitie</label>
+    <textarea id="requestNoteInput" placeholder="Waarom wil je meedoen?"></textarea>
+    <div class="btn-row">
+      <button id="requestBtn" class="primary-btn">Aanvraag versturen</button>
+      <a href="./index.html" class="ghost-link">Terug</a>
     </div>
-  </div>
-
-  <div class="watermark">Bruis · v52</div>
-
+    <div id="status" class="status"></div>
+  </main>
   <script>
-    const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
+const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
 
     function rpcHeaders() {

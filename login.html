@@ -3,87 +3,70 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Inloggen</title>
-  <link rel="stylesheet" href="./site-shell.css" />
-  <link rel="stylesheet" href="./theme-v46.css" />
-  <link rel="stylesheet" href="./premium-v47.css" />
-  <link rel="stylesheet" href="./ui-v52.css" />
+  <title>Inloggen - Wordt er gejast?</title>
+  <style>
+    :root { --gold: #d4af37; --dark-bg: #111; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.08); }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(rgba(232,228,217,0.90), rgba(232,228,217,0.90)), url('./site-bg-desktop.webp') center/cover no-repeat fixed; }
+    .site-scene { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+    .brand-watermark { position: absolute; top: 5%; left: 5%; opacity: 0.1; width: 400px; }
+    .spinoza-shadow { position: absolute; bottom: 0; right: 0; opacity: 0.15; width: 600px; }
+    .main-card { background: var(--card-bg); border-radius: 24px; padding: 40px; width: 90%; max-width: 500px; box-shadow: 0 20px 50px rgba(0,0,0,0.08); position: relative; text-align: center; }
+    .card-logo { position: absolute; top: 25px; right: 25px; width: 50px; }
+    h1 { font-size: 32px; margin: 0 0 20px 0; letter-spacing: -1px; }
+    .state-tile { background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 25px; border: 1px solid var(--line); }
+    .state-word { font-weight: 800; }
+    select, input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px; font-size: 16px; box-sizing: border-box; }
+    .btn-row { display: flex; gap: 10px; margin-top: 10px; }
+    .primary-btn { flex: 1; background: var(--gold); border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    .secondary-btn { flex: 1; background: #000; color: #fff; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    .status { margin-top: 15px; font-size: 13px; min-height: 20px; }
+    .text-link { display: block; margin-top: 15px; color: #666; font-size: 14px; text-decoration: none; }
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); align-items: center; justify-content: center; z-index: 100; }
+    .modal.show { display: flex; }
+    .modal-panel { background: #fff; padding: 25px; border-radius: 20px; width: 300px; }
+    .pin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+    .pin-key { padding: 15px; border-radius: 8px; border: 1px solid #eee; background: #fafafa; font-weight: bold; cursor: pointer; }
+  </style>
 </head>
 <body>
-  <div class="site-scene" aria-hidden="true">
-    <div class="page-bg"></div>
-    <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
-        <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
-    <div class="playing-card-accent"><img src="./playingcard-accent1-trimmed.png" alt="" /></div>
-    <div class="top-glow"></div>
+  <div class="site-scene">
+    <div class="brand-watermark"><img src="./dubbeleD-goud.png" width="100%"></div>
+    <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" width="100%"></div>
   </div>
 
-  <main class="page">
-    <div class="topbar">
-      <a class="brand-link" href="./index.html">Site</a>
-      <div class="topbar-actions nav-pills">
-        <a class="text-link" href="./score.html">Score</a>
-        <a class="text-link" href="./leaderboard.html">Leaderboard</a>
-        <a class="text-link" href="./request.html">Naam</a>
-        <a class="text-link" href="./admin.html">Admin</a>
-      </div>
+  <main class="main-card">
+    <img src="./logo.png" class="card-logo" />
+    <h1>Inloggen</h1>
+    <div class="state-tile">
+      <div id="loginStateWord" class="state-word">Klaar</div>
+      <div id="loginStateCopy" style="font-size: 12px; color: #666;"></div>
     </div>
-
-    <section class="hero">
-      <div class="hero-grid">
-        <div>
-          <h1>Inloggen</h1>
-        </div>
-        <div class="panel state-tile">
-          <div id="loginStateWord" class="state-word maybe">Klaar</div>
-          <div class="state-copy" id="loginStateCopy"></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="panel" style="padding:24px; margin-top:18px;">
-      <div class="form-grid">
-        <label>Naam
-          <select id="playerSelect"></select>
-        </label>
-        <label>Pincode
-          <div class="pin-inline">
-            <input id="pinInput" inputmode="numeric" maxlength="4" placeholder="4 cijfers" />
-            <button id="pinOpenBtn" class="secondary-btn pin-open-inline" type="button">Toetsen</button>
-          </div>
-        </label>
-      </div>
-      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:16px;">
-        <button id="loginBtn" class="primary-btn" type="button">Inloggen</button>
-        <button id="logoutBtn" class="secondary-btn" type="button">Uitloggen</button>
-        <a class="text-link" href="./request.html">Naam aanvragen</a>
-      </div>
-      <div id="statusBox" class="status" style="margin-top:16px;"></div>
-    </section>
+    <select id="playerSelect"></select>
+    <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+      <input id="pinInput" type="password" inputmode="numeric" maxlength="4" placeholder="Pincode" style="margin:0;">
+      <button id="pinOpenBtn" class="primary-btn" style="flex: 0 0 auto; width: auto; padding: 0 15px;">Toetsen</button>
+    </div>
+    <div class="btn-row">
+      <button id="loginBtn" class="primary-btn">Inloggen</button>
+      <button id="logoutBtn" class="secondary-btn">Uitloggen</button>
+    </div>
+    <a class="text-link" href="./request.html">Naam aanvragen</a>
+    <div id="statusBox" class="status"></div>
   </main>
-  <div id="pinModal" class="modal" aria-hidden="true">
+  <div id="pinModal" class="modal">
     <div class="modal-panel">
-      <div class="muted" style="text-align:center;">Pincode</div>
-      <div id="pinPreview" class="pin-preview" aria-live="polite"></div>
+      <div id="pinPreview" style="font-size: 24px; letter-spacing: 10px; margin-bottom: 20px; font-weight: bold;"></div>
       <div class="pin-grid">
-        <button class="pin-key" data-digit="1" type="button">1</button>
-        <button class="pin-key" data-digit="2" type="button">2</button>
-        <button class="pin-key" data-digit="3" type="button">3</button>
-        <button class="pin-key" data-digit="4" type="button">4</button>
-        <button class="pin-key" data-digit="5" type="button">5</button>
-        <button class="pin-key" data-digit="6" type="button">6</button>
-        <button class="pin-key" data-digit="7" type="button">7</button>
-        <button class="pin-key" data-digit="8" type="button">8</button>
-        <button class="pin-key" data-digit="9" type="button">9</button>
-        <button class="pin-key pin-key-alt" data-action="clear" type="button">Wis</button>
-        <button class="pin-key" data-digit="0" type="button">0</button>
-        <button class="pin-key pin-key-alt" data-action="done" type="button">Klaar</button>
+        <button class="pin-key" data-digit="1">1</button><button class="pin-key" data-digit="2">2</button><button class="pin-key" data-digit="3">3</button>
+        <button class="pin-key" data-digit="4">4</button><button class="pin-key" data-digit="5">5</button><button class="pin-key" data-digit="6">6</button>
+        <button class="pin-key" data-digit="7">7</button><button class="pin-key" data-digit="8">8</button><button class="pin-key" data-digit="9">9</button>
+        <button class="pin-key" data-action="clear">C</button><button class="pin-key" data-digit="0">0</button><button class="pin-key" data-action="done">OK</button>
       </div>
     </div>
   </div>
-
   <script>
-    const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
+const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const SESSION_KEY = "jas_session_token_v11";
 
