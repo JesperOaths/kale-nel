@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="./theme-v46.css" />
   <link rel="stylesheet" href="./premium-v47.css" />
   <link rel="stylesheet" href="./klaverjas-app.css" />
-  <link rel="stylesheet" href="./ui-v51.css" />
+  <link rel="stylesheet" href="./ui-v52.css" />
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -21,11 +21,12 @@
 
   <main class="page app-page score-mobile-page">
     <div class="topbar app-topbar">
-      <a class="brand-link" href="./index.html"><span>← Wordt er gejast?</span></a>
+      <a class="brand-link" href="./index.html"><span>Site</span></a>
       <div class="topbar-actions nav-pills">
         <a class="text-link" href="./score.html">Score</a>
         <a class="text-link active" href="./leaderboard.html">Leaderboard</a>
         <a class="text-link" href="./login.html">Inloggen</a>
+        <a class="text-link" href="./admin.html">Admin</a>
         <img src="./logo.png" alt="Despinoza-logo" class="brand-mini" />
       </div>
     </div>
@@ -33,9 +34,7 @@
     <section class="hero hero-home score-hero compact-hero">
       <div class="hero-grid hero-grid-home score-hero-grid compact-hero-grid">
         <div class="hero-copy">
-          <span class="kicker">Spelers van de site</span>
           <h1>Leaderboard</h1>
-          <p class="hero-intro wider">Stand van zaken.</p>
           <div class="hero-stat-strip slim-stats">
             <div class="hero-stat"><span>Geregistreerde spelers</span><strong id="lbPlayers">0</strong></div>
             <div class="hero-stat"><span>Opgeslagen potjes</span><strong id="lbGames">0</strong></div>
@@ -51,7 +50,7 @@
         <div class="card-header tight">
           <div>
             <h2 class="section-title">Ranglijst</h2>
-            <p class="section-copy"></p>
+            
           </div>
         </div>
         <div class="stack-list" id="leaderCards"></div>
@@ -61,14 +60,13 @@
         <div class="card-header tight">
           <div>
             <h2 class="section-title">Recente potjes</h2>
-            <p class="section-copy"></p>
+            
           </div>
         </div>
         <div class="stack-list" id="recentWinners"></div>
       </section>
     </section>
   </main>
-  <div class="watermark">Made by Bruis · v51</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -171,7 +169,7 @@
         const data = await callRpc('get_jas_leaderboard', { limit_count: 250 });
         renderLeaderboard(data.leaderboard || []);
         renderRecent(data.recent_games || []);
-        setStatus('', 'ok');
+        setStatus('Leaderboard geladen.', 'ok');
       } catch (error) {
         setStatus(error?.message || 'Kon leaderboard niet laden.', 'warn');
       }

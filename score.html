@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="./theme-v46.css" />
   <link rel="stylesheet" href="./premium-v47.css" />
   <link rel="stylesheet" href="./klaverjas-app.css" />
-  <link rel="stylesheet" href="./ui-v51.css" />
+  <link rel="stylesheet" href="./ui-v52.css" />
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -21,11 +21,12 @@
 
   <main class="page app-page score-mobile-page">
     <div class="topbar app-topbar">
-      <a class="brand-link" href="./index.html"><span>← Wordt er gejast?</span></a>
+      <a class="brand-link" href="./index.html"><span>Site</span></a>
       <div class="topbar-actions nav-pills">
         <a class="text-link active" href="./score.html">Score</a>
         <a class="text-link" href="./leaderboard.html">Leaderboard</a>
         <a class="text-link" href="./login.html">Inloggen</a>
+        <a class="text-link" href="./admin.html">Admin</a>
         <img src="./logo.png" alt="Despinoza-logo" class="brand-mini" />
       </div>
     </div>
@@ -33,12 +34,10 @@
     <section class="hero hero-home score-hero compact-hero">
       <div class="hero-grid hero-grid-home score-hero-grid compact-hero-grid">
         <div class="hero-copy">
-          <span class="kicker">Mobiele scorekaart</span>
           <h1>Klaverjas score</h1>
-          <p class="hero-intro wider">Spelers kiezen, punten bijhouden, opslaan.</p>
           <div class="hero-stat-strip slim-stats">
-            <div class="hero-stat"><span>Spelers</span><strong id="playerCountHero">0</strong></div>
-            <div class="hero-stat"><span>Potjes</span><strong id="gameCountHero">0</strong></div>
+            <div class="hero-stat"><span>Registreerde spelers</span><strong id="playerCountHero">0</strong></div>
+            <div class="hero-stat"><span>Potjes opgeslagen</span><strong id="gameCountHero">0</strong></div>
             <div class="hero-stat"><span>Ingelogd als</span><strong id="currentUserHero">-</strong></div>
           </div>
           <div id="statusBox" class="status"></div>
@@ -51,7 +50,7 @@
         <div class="card-header tight">
           <div>
             <h2 class="section-title">Spelers kiezen</h2>
-            <p class="section-copy"></p>
+            
           </div>
         </div>
 
@@ -72,7 +71,7 @@
         <div class="card-header tight">
           <div>
             <h2 class="section-title">Scoreformulier</h2>
-            <p class="section-copy">Verticaal opgebouwd voor gebruik op je telefoon.</p>
+            
           </div>
         </div>
 
@@ -192,14 +191,13 @@
         <div class="card-header tight">
           <div>
             <h2 class="section-title">Recente potjes</h2>
-            <p class="section-copy"></p>
+            
           </div>
         </div>
         <div id="recentGames" class="stack-list"></div>
       </section>
     </section>
   </main>
-  <div class="watermark">Made by Bruis · v51</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";

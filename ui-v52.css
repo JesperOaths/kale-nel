@@ -1,0 +1,57 @@
+
+:root{--shell-width:780px;--nav-bg:rgba(255,255,255,.46);--panel-soft:rgba(255,255,255,.60);--panel-strong:rgba(255,255,255,.74);--line-soft:rgba(17,17,17,.08)}
+body{min-height:100vh}
+body::before{content:"Bruis · v52";position:fixed;top:12px;left:14px;z-index:5;font:600 11px/1 Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:rgba(17,17,17,.24);pointer-events:none}
+.site-scene .kale-hand{display:none!important}
+.site-scene .brand-watermark{top:14px;left:auto;right:18px;width:min(9vw,72px);transform:none!important;opacity:.11}
+.site-scene .spinoza-shadow{top:auto;bottom:-3%;left:50%;width:min(66vw,820px);opacity:.23;filter:grayscale(1) contrast(1.7) brightness(.58) drop-shadow(0 22px 46px rgba(17,17,17,.10))}
+.site-scene .playing-card-accent{right:22px;bottom:22px;width:min(18vw,235px);opacity:.95}
+.page,.wrap{width:min(var(--shell-width),calc(100% - 34px));padding-top:56px;padding-bottom:72px}
+.topbar{justify-content:center;gap:12px;padding:0;margin-bottom:28px}
+.topbar .brand-mini,.logo-corner,.mini-logo{display:none!important}
+.brand-link,.text-link,.pill-link,.home-link,.ghost-link{padding:10px 14px;border-radius:999px;background:var(--nav-bg)!important;border:1px solid rgba(255,255,255,.66)!important;box-shadow:none!important;color:#4d433a!important;backdrop-filter:blur(10px)}
+.topbar-actions,.nav-pills,.brand-row{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.hero,.panel,.card,.mobile-panel,.app-card{border-radius:30px!important;background:linear-gradient(180deg,var(--panel-strong),var(--panel-soft))!important;border:1px solid rgba(255,255,255,.72)!important;box-shadow:0 16px 40px rgba(17,17,17,.07)!important;backdrop-filter:blur(14px)}
+.hero,.card{padding:34px 30px!important}
+.hero-grid,.hero-grid-home,.score-hero-grid,.compact-hero-grid,.lists,.app-stack,.admin-grid,.row,.form-grid,.grid{grid-template-columns:1fr!important}
+.hero-home,.compact-hero{padding:40px 32px!important}
+.hero h1,.card h1{font-size:clamp(2.5rem,7vw,4.8rem)!important;line-height:.92!important;letter-spacing:-.05em;margin:0}
+.hero-intro,.kicker,.section-copy,.tiny,.info-band,.live-pill,.watermark,.hero-actions,.card .muted:empty{display:none!important}
+.hero-copy,.state-panel,.state-tile{display:grid;gap:18px;align-content:start}
+.vote-row{grid-template-columns:1fr!important;gap:14px;margin-top:8px}
+.vote-btn{min-height:88px!important;border-radius:24px!important;padding:20px 22px!important}
+.vote-btn strong{font-size:clamp(1.35rem,4vw,1.9rem)!important}
+.vote-btn span{display:none!important}
+.hero-stat-strip,.slim-stats,.state-mini-grid,.score-totals-hero,.inline-setup-grid,.team-preview{grid-template-columns:1fr 1fr!important;gap:10px!important}
+.hero-stat,.mini-stat,.totals-team-card,.seat-card,.turn-card,.team-preview-card,.empty-card,.detail-box,.diagnostic-box{background:rgba(255,255,255,.52)!important;border:1px solid var(--line-soft)!important;box-shadow:none!important}
+.hero-stat span,.mini-stat span,.seat-kicker,.seat-team-line,.section-mini-title,.micro-copy,.feed-meta,.team-label-line,.hero-stat-strip span{font-size:.78rem!important;letter-spacing:.02em}
+.hero-stat strong,.mini-stat strong,.big-total{font-size:1.6rem!important}
+.state-panel{padding:22px 0 0!important;background:transparent!important;border:none!important;box-shadow:none!important;backdrop-filter:none!important}
+.state-word{font-size:clamp(2.2rem,7vw,4rem)!important}
+.list-box{padding:18px!important}
+.name-list li{padding:13px 15px!important;border-radius:16px!important}
+.card-header{margin-bottom:12px!important}.card-header h2,.section-title{margin:0!important;font-size:1.25rem!important}
+.status{margin-top:14px!important;border-radius:16px!important;background:rgba(255,255,255,.56)!important}
+.primary-btn,.secondary-btn,.submit-btn,.login-btn,.logout-btn,.dev-btn,.reject-btn{min-height:48px;border-radius:16px!important;padding:13px 18px!important;box-shadow:none!important}
+.actions,.filter-row{display:flex;flex-wrap:wrap;gap:10px}
+input,select,textarea{border-radius:16px!important;min-height:48px;padding:13px 15px!important;background:rgba(255,255,255,.86)!important;border:1px solid rgba(17,17,17,.10)!important}
+textarea{min-height:110px!important}
+#statusBox:empty,#status:empty{display:none!important}
+#loginStateCopy:empty{display:none}
+.pin-inline{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}.pin-open-inline{white-space:nowrap}
+.modal{position:fixed;inset:0;background:rgba(17,17,17,.26);display:none;align-items:center;justify-content:center;padding:18px;z-index:20}.modal.show{display:flex}.modal-panel{width:min(360px,100%);background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,.82));border-radius:28px;padding:22px;border:1px solid rgba(255,255,255,.78);box-shadow:0 26px 56px rgba(17,17,17,.16)}.pin-preview{min-height:48px;border-radius:16px;background:rgba(255,255,255,.68);border:1px solid rgba(17,17,17,.08);display:flex;align-items:center;justify-content:center;font-size:1.65rem;letter-spacing:.45rem;margin:14px 0}.pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.pin-key{min-height:56px;border-radius:18px;border:0;background:rgba(255,255,255,.72);font:800 1.1rem/1 Inter,system-ui,sans-serif}.pin-key-alt{background:rgba(17,17,17,.08)}
+/* request/activate/admin legacy shells */
+body>.card{width:min(720px,calc(100% - 34px))!important;margin:68px auto 56px!important;padding:34px 28px!important;position:relative;z-index:2}
+body>.card>.grid{display:grid;grid-template-columns:1fr!important;gap:18px!important}
+body>.card .back-link{position:static!important;display:inline-flex!important;margin-bottom:18px}
+body>.card .top-links{display:flex;justify-content:center;gap:10px;margin-bottom:18px}
+body>.card .intro,body>.card .hero-copy,body>.card ol,body>.card .fineprint,body>.card p.muted{display:none!important}
+body>.card .panel{padding:0!important;background:transparent!important;border:none!important;box-shadow:none!important}
+body>.card h2,body>.card h3{margin:0 0 14px!important;font-size:1.25rem!important}
+#workspace{margin-top:22px!important}
+#workspace .card{padding:24px!important}
+#requestsList,.stack-list,#historyList{display:grid;gap:12px}
+.app-page{padding-bottom:70px}.bottom-gap{margin-top:18px}
+#scoreLocked{padding:18px 16px!important}
+@media (min-width:900px){.page,.wrap{width:min(860px,calc(100% - 48px))}.hero-home,.compact-hero{padding:48px 40px!important}.hero h1,.card h1{font-size:clamp(3rem,5vw,5.2rem)!important}.hero-stat-strip,.slim-stats,.score-totals-hero,.inline-setup-grid,.team-preview{grid-template-columns:repeat(3,minmax(0,1fr))!important}.vote-row{max-width:420px}.lists{gap:14px!important}}
+@media (max-width:640px){body::before{top:10px;left:12px}.page,.wrap,body>.card{width:min(100% - 24px,760px)!important}.hero,.card{padding:26px 20px!important}.hero-home,.compact-hero{padding:30px 22px!important}.hero-stat-strip,.slim-stats,.state-mini-grid,.score-totals-hero,.inline-setup-grid,.team-preview{grid-template-columns:1fr 1fr!important}.site-scene .playing-card-accent{width:min(31vw,170px);right:8px;bottom:12px}.site-scene .spinoza-shadow{width:min(95vw,640px);bottom:-1%}.brand-link,.text-link,.pill-link,.home-link,.ghost-link{padding:9px 12px;font-size:.94rem}}

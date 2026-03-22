@@ -395,7 +395,7 @@
   <link rel="stylesheet" href="./site-shell.css" />
   <link rel="stylesheet" href="./theme-v45.css" />
   <link rel="stylesheet" href="./premium-v47.css" />
-  <link rel="stylesheet" href="./ui-v51.css" />
+  <link rel="stylesheet" href="./ui-v52.css" />
 </head>
 <body>
   <div class="scene" aria-hidden="true">
@@ -410,7 +410,7 @@
     <a href="./index.html" class="back-link">Terug</a>
     <img src="./logo.png" alt="Logo" class="logo-corner" />
     <h1>Claim je naam</h1>
-    <p class="intro">Naam en mail.</p>
+    
         <div class="grid">
       <div class="panel">
         <h2>Aanvraag</h2>
@@ -420,24 +420,19 @@
         <label for="requestEmailInput">E-mailadres</label>
         <input id="requestEmailInput" type="email" placeholder="jij@example.com" autocomplete="email" autocapitalize="off" spellcheck="false" enterkeyhint="next" />
 
-        <label for="requestNoteInput">Toelichting</label>
+        <label for="requestNoteInput">Notitie</label>
         <textarea id="requestNoteInput" placeholder="Optioneel" autocomplete="off" enterkeyhint="send"></textarea>
 
         <div class="actions">
           <button id="requestBtn" class="primary-btn" type="button">Aanvraag versturen</button>
           <a href="./index.html" class="ghost-link">Terug</a>
         </div>
-        <div class="tiny"></div>
-      </div>
-
-      <div class="panel">
-        <h3>Na goedkeuring</h3>
-        <div id="status" class="notice"></div>
+        
       </div>
     </div>
   </div>
 
-  <div class="watermark">Made by Bruis · v51</div>
+  <div class="watermark">Bruis · v52</div>
 
   <script>
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
