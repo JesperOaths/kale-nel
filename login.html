@@ -50,16 +50,18 @@
       <div id="loginStateWord" class="state-word">Klaar</div>
       <div id="loginStateCopy" style="font-size: 12px; color: #666;"></div>
     </div>
-    <input id="playerNameMirror" type="text" class="autofill-ghost" tabindex="-1" aria-hidden="true" autocomplete="username" spellcheck="false" autocapitalize="none" />
-    <select id="playerSelect"></select>
+    <form id="loginForm" autocomplete="on">
+      <input id="playerNameInput" name="username" type="text" list="playerNameList" placeholder="Kies of typ je naam" autocomplete="username" autocapitalize="none" spellcheck="false">
+      <datalist id="playerNameList"></datalist>
     <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-      <input id="pinInput" name="player_pin" type="password" inputmode="numeric" maxlength="4" placeholder="Pincode" autocomplete="current-password" style="margin:0;">
-      <button id="pinOpenBtn" class="primary-btn" style="flex: 0 0 auto; width: auto; padding: 0 15px;">Toetsen</button>
+      <input id="pinInput" name="current-password" type="password" inputmode="numeric" maxlength="4" placeholder="Pincode" autocomplete="current-password" style="margin:0;">
+      <button id="pinOpenBtn" type="button" class="primary-btn" style="flex: 0 0 auto; width: auto; padding: 0 15px;">Toetsen</button>
     </div>
     <div class="btn-row">
-      <button id="loginBtn" class="primary-btn">Inloggen</button>
-      <button id="logoutBtn" class="secondary-btn">Uitloggen</button>
+      <button id="loginBtn" type="submit" class="primary-btn">Inloggen</button>
+      <button id="logoutBtn" type="button" class="secondary-btn">Uitloggen</button>
     </div>
+    </form>
     <a class="text-link" href="./request.html">Naam aanvragen</a>
     <div id="statusBox" class="status"></div>
   </main>
@@ -97,21 +99,16 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       box.textContent = message;
     }
     function fillNames(names, selected = '') {
-      const select = document.getElementById('playerSelect');
-      select.innerHTML = '';
-      const placeholder = document.createElement('option');
-      placeholder.value = '';
-      placeholder.textContent = 'Kies je naam';
-      placeholder.disabled = true;
-      placeholder.selected = !selected;
-      select.appendChild(placeholder);
+      const list = document.getElementById('playerNameList');
+      const input = document.getElementById('playerNameInput');
+      list.innerHTML = '';
       (names || []).forEach((name) => {
         const option = document.createElement('option');
         option.value = name;
-        option.textContent = name;
-        select.appendChild(option);
+        list.appendChild(option);
       });
-      if (selected && (names || []).includes(selected)) select.value = selected;
+      if (selected && (names || []).includes(selected)) input.value = selected;
+      else if (!input.value) input.value = '';
     }
     function nextUrl() { return new URLSearchParams(window.location.search).get('next') || './index.html'; }
     function pendingVote() { return new URLSearchParams(window.location.search).get('vote') || ''; }
@@ -130,7 +127,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       return await parseResponse(res);
     }
     async function loginPlayer() {
-      const desiredName = document.getElementById('playerSelect').value || '';
+      const desiredName = document.getElementById('playerNameInput').value.trim() || '';
       const enteredPin = document.getElementById('pinInput').value.trim();
       if (!desiredName) throw new Error('Kies eerst je naam');
       if (!/^\d{4}$/.test(enteredPin)) throw new Error('Voer je 4-cijferige pincode in');
@@ -148,7 +145,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     async function load() {
       try {
         const state = await getPublicState();
-        fillNames(state.all_names || [], state.my_name || ''); const ghost=document.getElementById('playerNameMirror'); if(ghost) ghost.value = state.my_name || document.getElementById('playerSelect').value || ''; 
+        fillNames(state.all_names || [], state.my_name || ''); 
         if (state.my_name) {
           document.getElementById('loginStateWord').textContent = state.my_name;
           document.getElementById('loginStateWord').className = 'state-word yes';
@@ -162,8 +159,8 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
       }
     }
-    document.getElementById('playerSelect').addEventListener('change', ()=>{ const ghost=document.getElementById('playerNameMirror'); if(ghost) ghost.value = document.getElementById('playerSelect').value || ''; });
-    document.getElementById('loginBtn').addEventListener('click', async () => {
+    document.getElementById('loginForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
       try {
         setStatus('Inloggen...');
         const data = await loginPlayer();

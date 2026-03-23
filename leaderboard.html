@@ -130,11 +130,14 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     function renderLeaderboard(rows) {
       const root = document.getElementById('leaderCards');
       root.innerHTML = '';
-      if (!rows.length) {
+      const filteredRows = rows.filter((row) => Number(row.games_played || 0) > 0);
+      if (!filteredRows.length) {
         root.innerHTML = '<div class="empty-card small">Nog geen leaderboarddata.</div>';
+        document.getElementById('lbPlayers').textContent = '0';
+        document.getElementById('lbLeader').textContent = '-';
         return;
       }
-      rows.forEach((row, index) => {
+      filteredRows.forEach((row, index) => {
         const card = document.createElement('article');
         card.className = 'leader-mobile-card';
         card.innerHTML = `
@@ -154,8 +157,8 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         `;
         root.appendChild(card);
       });
-      document.getElementById('lbPlayers').textContent = `${rows.length}`;
-      document.getElementById('lbLeader').textContent = rows[0]?.display_name || '-';
+      document.getElementById('lbPlayers').textContent = `${filteredRows.length}`;
+      document.getElementById('lbLeader').textContent = filteredRows[0]?.display_name || '-';
     }
 
     function renderRecent(games) {

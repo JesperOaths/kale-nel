@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin security - Wordt er gejast?</title>
+  <style>
+    :root { --card:#f9f7f2; --muted:#666; }
+    * { box-sizing:border-box; }
+    body { margin:0; padding:20px; font-family:Inter,sans-serif; background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed; min-height:100vh; }
+    .main-card { background:var(--card); border-radius:24px; padding:28px; max-width:920px; margin:0 auto; box-shadow:0 20px 50px rgba(0,0,0,0.08); }
+    h1 { margin:0; font-size:30px; }
+    p, li { line-height:1.55; }
+    .muted { color:var(--muted); }
+    .block { background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:18px; padding:18px; margin-top:14px; }
+    .btn { display:inline-block; text-decoration:none; color:#111; background:#fff; border:1px solid rgba(0,0,0,0.08); border-radius:12px; padding:12px 14px; font-weight:800; }
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(212,175,55,0.35);color:#f3e3a6;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
+    @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
+  </style>
+</head>
+<body>
+  <main class="main-card">
+    <a class="btn" href="./admin.html">← Terug naar hub</a>
+    <h1 style="margin-top:16px;">Security & hosting</h1>
+    <p class="muted">Deze pagina vat samen wat in de bundle is dichtgezet en welke stap buiten de repo nog nodig is voor echte hosting-level bescherming.</p>
+    <div class="block">
+      <h2>Wat al in de bundle zit</h2>
+      <ul>
+        <li>Force-HTTPS redirect script op de pagina’s.</li>
+        <li><code>noindex,nofollow</code> op admin-/vault-/leaderboard-pagina’s.</li>
+        <li>Admin-session gate op de gevoelige HTML-pagina’s.</li>
+        <li>Supabase admin-RPC’s blijven de echte backend-check doen.</li>
+      </ul>
+    </div>
+    <div class="block">
+      <h2>Wat nog buiten de repo moet gebeuren</h2>
+      <ul>
+        <li>GitHub Pages: zet <strong>Enforce HTTPS</strong> aan in de Pages-instellingen voor het domein.</li>
+        <li>Voor échte afscherming: verhuis admin-tools naar een protected subdomain/path achter Cloudflare Access, Netlify Identity, Vercel middleware of een reverse proxy.</li>
+        <li>Laat de v62 SQL draaien zodat expired queue, allowed usernames en admin audit-routes actief worden.</li>
+      </ul>
+    </div>
+    <div class="block">
+      <h2>Belangrijk</h2>
+      <p>Deze statische repo kan de admin-pagina’s niet echt server-side verbergen zolang ze rechtstreeks via GitHub Pages worden geserveerd. De frontend-gates zijn nuttig, maar geen vervanging voor hosting-auth.</p>
+    </div>
+  </main>
+  <div class="site-credit-watermark">v62 · Made by Bruis</div>
+</body>
+</html>

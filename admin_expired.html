@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Expired activation queue - Wordt er gejast?</title>
+  <style>
+    :root { --gold:#d4af37; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#666; --warn:#8b3a30; --ok:#2b5b37; }
+    * { box-sizing:border-box; }
+    body { margin:0; padding:20px; font-family:Inter,sans-serif; background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed; min-height:100vh; }
+    .main-card { background:var(--card); border-radius:24px; padding:28px; max-width:900px; margin:0 auto; box-shadow:0 20px 50px rgba(0,0,0,0.08); }
+    .top { display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; }
+    h1 { margin:0; font-size:30px; }
+    .sub { color:var(--muted); margin:8px 0 0; }
+    .btn { border:none; border-radius:12px; padding:12px 14px; font:inherit; font-weight:800; cursor:pointer; }
+    .ghost { background:#fff; border:1px solid rgba(0,0,0,0.08); color:#222; }
+    .primary { background:var(--gold); color:#111; }
+    .status { min-height:20px; margin:16px 0; font-size:14px; }
+    .status.ok { color:var(--ok); } .status.warn { color:var(--warn); }
+    .item { background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:18px; padding:16px; margin-bottom:12px; }
+    .item strong { font-size:20px; }
+    .meta { color:var(--muted); font-size:13px; margin-top:6px; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+    .empty { background:#fff; border:1px dashed rgba(0,0,0,0.12); border-radius:18px; padding:16px; color:var(--muted); }
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(212,175,55,0.35);color:#f3e3a6;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
+    @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
+  </style>
+</head>
+<body>
+  <main class="main-card">
+    <div class="top">
+      <div>
+        <h1>Expired activation queue</h1>
+        <p class="sub">Verlopen activatielinks die opnieuw beoordeeld of opnieuw verstuurd moeten worden.</p>
+      </div>
+      <div class="row"><a class="btn ghost" href="./admin.html">Hub</a><button id="refreshBtn" class="btn primary" type="button">Ververs</button></div>
+    </div>
+    <div id="statusBox" class="status"></div>
+    <div id="listRoot"></div>
+  </main>
+  <script>
+    const ADMIN_SESSION_KEY = 'jas_admin_session_v8';
+    const SUPABASE_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co';
+    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
+    function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json', Accept: 'application/json' }; }
+    async function parseResponse(res) { const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`); return data; }
+    function getToken(){ return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
+    function setStatus(message='', tone='') { const box=document.getElementById('statusBox'); box.className=`status ${tone}`.trim(); box.textContent=message; }
+    async function ensureGate(){
+      const token=getToken();
+      if(!token){ window.location.href='./admin.html'; return false; }
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: token }) }).then(parseResponse);
+        return true;
+      } catch { window.location.href='./admin.html'; return false; }
+    }
+    async function loadExpired(){
+      try {
+        setStatus('Laden...');
+        const data = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_expired_activation_queue`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: getToken() }) }).then(parseResponse);
+        const rows = data.items || [];
+        const root = document.getElementById('listRoot');
+        root.innerHTML = '';
+        if (!rows.length) { root.innerHTML = '<div class="empty">Geen verlopen activaties gevonden. Draai eerst de v62 SQL-migratie als deze functie nog niet bestaat.</div>'; setStatus('Queue geladen.', 'ok'); return; }
+        rows.forEach((row) => {
+          const card = document.createElement('article');
+          card.className = 'item';
+          card.innerHTML = `<strong>${row.display_name || row.requested_name || 'Onbekende naam'}</strong><div class="meta">${row.requester_email || '-'} · verlopen op ${row.expires_at || '-'} </div><div class="meta">Laatste status: ${row.status || row.request_status || 'expired'}</div><div class="row"><button class="btn primary" data-action="requeue">Opnieuw klaarzetten</button><button class="btn ghost" data-action="resend">Nieuwe link + mail</button></div>`;
+          card.querySelector('[data-action="requeue"]').addEventListener('click', async () => {
+            await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_requeue_expired_activation`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: getToken(), request_id_input: row.request_id }) }).then(parseResponse);
+            await loadExpired();
+          });
+          card.querySelector('[data-action="resend"]').addEventListener('click', async () => {
+            await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_resend_expired_activation`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: getToken(), request_id_input: row.request_id, base_url: 'https://kalenel.nl/activate.html' }) }).then(parseResponse);
+            await loadExpired();
+          });
+          root.appendChild(card);
+        });
+        setStatus('Queue geladen.', 'ok');
+      } catch (error) {
+        document.getElementById('listRoot').innerHTML = '<div class="empty">Deze pagina verwacht de nieuwe expired-queue SQL uit v62.</div>';
+        setStatus(error?.message || 'Laden mislukt.', 'warn');
+      }
+    }
+    document.getElementById('refreshBtn').addEventListener('click', loadExpired);
+    (async()=>{ if(await ensureGate()) loadExpired(); })();
+  </script>
+  <div class="site-credit-watermark">v62 · Made by Bruis</div>
+</body>
+</html>

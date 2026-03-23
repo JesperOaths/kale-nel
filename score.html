@@ -23,6 +23,10 @@
     select, input { width:100%; padding:10px; border-radius:8px; border:1px solid #eee; font-size:14px; background:#fff; }
     .primary-btn { background:var(--gold); border:none; padding:12px 20px; border-radius:10px; font-weight:800; cursor:pointer; width:100%; margin-top:10px; }
     .secondary-btn, .ghost-btn, .pill-btn, .suit-btn { background:var(--black); color:#fff; border:none; padding:12px 14px; border-radius:10px; font-weight:800; cursor:pointer; }
+    .suit-btn[data-suit='hearts'], .suit-btn[data-suit='diamonds'] { color:#d12b2b; background:#fff; border:1px solid #e4dcdc; }
+    .suit-btn[data-suit='clubs'], .suit-btn[data-suit='spades'] { color:#111; background:#fff; border:1px solid #ddd; }
+    .suit-btn.active[data-suit='hearts'], .suit-btn.active[data-suit='diamonds'] { background:#d12b2b; color:#fff; border-color:#d12b2b; }
+    .suit-btn.active[data-suit='clubs'], .suit-btn.active[data-suit='spades'] { background:#111; color:#fff; border-color:#111; }
     .ghost-btn { background:#f4f4f4; color:#111; border:1px solid #ddd; }
     .pill-btn.active, .suit-btn.active { background:var(--gold); color:#111; }
     .hidden { display:none !important; }
@@ -187,7 +191,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     }
 
-    function createPlayerSelect(index) {
+    function createPlayerSelect(index, takenNames = new Set(), selectedName = '') {
       const wrapper = document.createElement('label');
       wrapper.className = 'seat-card';
       wrapper.innerHTML = `<span class="seat-kicker">Stoel ${index + 1}</span><span class="seat-team-line">${(index % 2 === 0) ? 'Team 1' : 'Team 2'}</span>`;
@@ -197,20 +201,27 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       empty.value = '';
       empty.textContent = 'Kies geregistreerde speler';
       select.appendChild(empty);
-      state.players.forEach((name) => {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = name;
-        select.appendChild(option);
-      });
+      state.players
+        .filter((name) => !takenNames.has(name) || name === selectedName)
+        .forEach((name) => {
+          const option = document.createElement('option');
+          option.value = name;
+          option.textContent = name;
+          if (name === selectedName) option.selected = true;
+          select.appendChild(option);
+        });
       wrapper.appendChild(select);
       return wrapper;
     }
 
-    function renderPlayerSlots() {
+    function renderPlayerSlots(preserveSelection = true) {
       const root = document.getElementById('playerSlots');
+      const currentSelections = preserveSelection ? getSelectedPlayers() : Array(PLAYER_COUNT).fill('');
       root.innerHTML = '';
-      for (let i = 0; i < PLAYER_COUNT; i += 1) root.appendChild(createPlayerSelect(i));
+      for (let i = 0; i < PLAYER_COUNT; i += 1) {
+        const taken = new Set(currentSelections.filter((name, idx) => idx !== i && name));
+        root.appendChild(createPlayerSelect(i, taken, currentSelections[i] || ''));
+      }
       renderDealerOptions();
       renderTeamPreview();
       updateSetupLock();
@@ -611,7 +622,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         state.currentUser = data.my_name || '';
         document.getElementById('playerCountHero').textContent = `${state.players.length}`;
         document.getElementById('currentUserHero').textContent = state.currentUser || '-';
-        renderPlayerSlots();
+        renderPlayerSlots(false);
         renderRecentGames();
         if (!state.currentUser) setStatus('Log eerst in om een potje op te slaan.', 'warn');
         else setStatus(`Ingelogd als ${state.currentUser}.`, 'ok');
@@ -700,7 +711,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         const result = await callRpc('create_jas_game', { session_token: getSessionToken(), game_payload: payload });
         setStatus(`Potje opgeslagen${result?.game_id ? ` (#${result.game_id})` : ''}.`, 'ok');
         state.game = null;
-        renderPlayerSlots();
+        renderPlayerSlots(false);
         renderScoreShell();
         await loadAppState();
       } catch (error) {
@@ -714,6 +725,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     }
 
     document.getElementById('playerSlots').addEventListener('change', () => {
+      renderPlayerSlots(true);
       renderTeamPreview();
       startOrUpdateGameFromSelection();
     });
