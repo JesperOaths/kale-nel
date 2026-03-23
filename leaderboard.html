@@ -2,8 +2,9 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
+  <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Leaderboard - Wordt er gejast?</title>
+  <title>Ranglijst (admin) - Wordt er gejast?</title>
   <style>
     :root { --gold: #d4af37; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.06); --ink:#161616; --muted:#666; }
     * { box-sizing: border-box; }
@@ -34,12 +35,14 @@
   </style>
 </head>
 <body>
-  <main class="main-card">
+  <div id="gateNotice" class="main-card">Adminsessie controleren...</div>
+  <main id="leaderApp" class="main-card" style="display:none;">
     <div class="top-nav">
       <h1>Ranglijst</h1>
       <div class="nav-links">
-        <a href="./index.html">Home</a>
-        <a href="./score.html">Score</a>
+        <a href="./admin.html">Admin</a>
+        <a href="./vault.html">Vault</a>
+        <a href="./scorer.html">Scorer</a>
       </div>
     </div>
 
@@ -57,6 +60,30 @@
   </main>
 
   <script>
+    const ADMIN_SESSION_KEY = "jas_admin_session_v8";
+    function getAdminSessionToken(){ return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
+    async function ensureAdminGate(){
+      const token = getAdminSessionToken();
+      const notice = document.getElementById("gateNotice");
+      if(!token){
+        notice.textContent = "Geen adminsessie gevonden. Je wordt doorgestuurd naar admin.";
+        setTimeout(()=> window.location.href = "./admin.html", 900);
+        return false;
+      }
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:"POST", mode:"cors", cache:"no-store", headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: token }) });
+        const data = await parseResponse(res);
+        if (data?.admin_session_token) { sessionStorage.setItem(ADMIN_SESSION_KEY, data.admin_session_token); localStorage.setItem(ADMIN_SESSION_KEY, data.admin_session_token); }
+        document.getElementById("leaderApp").style.display = "";
+        notice.style.display = "none";
+        return true;
+      } catch (error) {
+        notice.textContent = "Adminsessie verlopen of ongeldig. Je wordt doorgestuurd naar admin.";
+        setTimeout(()=> window.location.href = "./admin.html", 1000);
+        return false;
+      }
+    }
+
 const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
 
@@ -163,9 +190,9 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       }
     }
 
-    loadLeaderboard();
+    (async ()=> { if (await ensureAdminGate()) loadLeaderboard(); })();
   </script>
 
-  <div class="site-credit-watermark">v58 · Made by Bruis</div>
+  <div class="site-credit-watermark">v59 · Made by Bruis</div>
 </body>
 </html>

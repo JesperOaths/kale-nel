@@ -4,292 +4,766 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Klaverjas Scorer</title>
-  <meta name="description" content="Voer klaverjasstanden in en sla wedstrijden op voor de vault." />
+  <meta name="description" content="Mobiele klaverjas scorer met takken, biedingen, roem en vault-opslag." />
   <style>
     :root {
-      --gold: #dab33e;
-      --black: #111;
-      --dark: #121212;
-      --grey: #2a2a2a;
-      --red: #ff4d4d;
-      --card: rgba(17,17,17,0.88);
-      --line: rgba(255,255,255,0.08);
+      --blue:#2791e8;
+      --blue-dark:#1f7fd0;
+      --ink:#2d2d2d;
+      --muted:#726b63;
+      --line:#d8d0c6;
+      --paper:rgba(255,252,247,0.94);
+      --panel:rgba(255,255,255,0.88);
+      --soft:#f2ede4;
+      --gold:#d4af37;
+      --red:#cc2d24;
+      --shadow:0 16px 34px rgba(37,24,14,0.12);
     }
-    * { box-sizing: border-box; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-tap-highlight-color: transparent; }
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    html, body { min-height:100%; }
     body {
-      margin: 0;
-      color: #fff;
+      margin:0;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color:var(--ink);
       background:
-        linear-gradient(rgba(9,9,9,0.70), rgba(9,9,9,0.70)),
-        url('./site-bg-desktop.webp') center/cover no-repeat fixed;
-      min-height: 100vh;
-      overflow-x: hidden;
+        linear-gradient(rgba(247,244,238,0.78), rgba(247,244,238,0.72)),
+        url('./site-bg-mobile.webp') center/cover no-repeat fixed;
     }
-    @media (orientation: portrait) {
-      body {
-        background:
-          linear-gradient(rgba(9,9,9,0.72), rgba(9,9,9,0.72)),
-          url('./site-bg-mobile.webp') center/cover no-repeat fixed;
-      }
+    .page { width:min(560px, 100%); margin:0 auto; min-height:100vh; padding-bottom:110px; }
+    .topbar {
+      position:sticky; top:0; z-index:15;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding:14px 14px calc(14px + env(safe-area-inset-top));
+      background:linear-gradient(180deg, rgba(39,145,232,0.98), rgba(39,145,232,0.95));
+      color:#fff; box-shadow:0 8px 18px rgba(14,58,96,0.22);
     }
-    .page {
-      width: min(980px, 100%);
-      margin: 0 auto;
-      padding: 20px 14px 88px;
+    .topbar-title { display:flex; flex-direction:column; }
+    .topbar-title strong { font-size:18px; letter-spacing:-0.03em; }
+    .topbar-title span { font-size:12px; opacity:0.9; }
+    .icon-btn, .text-btn {
+      border:none; border-radius:14px; cursor:pointer; font:inherit;
+      background:rgba(255,255,255,0.16); color:#fff; box-shadow:0 6px 16px rgba(0,0,0,0.12);
     }
-    .top-nav {
-      display:flex; justify-content:space-between; align-items:center; gap:12px;
-      margin-bottom: 12px; padding: 8px 4px;
+    .icon-btn { width:48px; height:48px; font-size:26px; display:grid; place-items:center; }
+    .text-btn { padding:12px 14px; font-weight:700; font-size:14px; }
+    .wrap { padding:14px; }
+    .sheet {
+      background:var(--paper); border:1px solid rgba(17,17,17,0.06); border-radius:28px;
+      box-shadow:var(--shadow); overflow:hidden;
     }
-    .nav-left { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
-    .nav-brand { color: var(--gold); text-decoration:none; font-weight:800; letter-spacing:-0.03em; font-size: 20px; }
-    .nav-links { display:flex; gap:10px; flex-wrap:wrap; }
-    .nav-links a, .nav-chip {
-      text-decoration:none; color:#f4efe5; font-size:13px; font-weight:700;
-      padding:8px 12px; border-radius:999px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.08);
+    .match-head { padding:18px 16px 10px; display:grid; gap:12px; }
+    .teams-line { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:10px; }
+    .team-chip { text-align:center; }
+    .team-chip .label { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:700; }
+    .team-chip .names { font-size:18px; font-weight:800; line-height:1.08; margin-top:4px; }
+    .center-tools { display:flex; flex-direction:column; align-items:center; gap:8px; }
+    .undo-hero {
+      border:none; background:#fff; border-radius:999px; padding:8px 12px; font-weight:800; color:#2d2d2d; box-shadow:0 8px 16px rgba(0,0,0,0.08); cursor:pointer;
     }
-    .nav-chip.hidden { display:none; }
-    .app-card {
-      background: rgba(12,12,12,0.86);
-      border:1px solid rgba(255,255,255,0.08);
-      border-radius: 24px;
-      box-shadow: 0 18px 40px rgba(0,0,0,0.28);
-      overflow:hidden;
+    .scoreboard {
+      position:relative; margin:0 10px 12px; padding:0 10px 8px;
     }
-    header.app-header { border-bottom: 1px solid var(--grey); padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; }
-    .h-btn { background: none; border: none; color: var(--gold); font-size: 24px; cursor: pointer; }
-    .reset-btn { background: var(--grey); color: var(--gold); border: 1px solid var(--gold); padding: 5px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; }
-    .board { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 2px solid var(--gold); height: 130px; position: relative; }
-    .board::after { content: ''; position: absolute; left: 50%; top: 20px; bottom: 20px; width: 1px; background: var(--grey); }
-    .team-box { text-align: center; padding-top: 15px; }
-    .team-title { color: var(--gold); font-weight: 800; font-size: 18px; text-transform: lowercase; text-decoration: underline; margin-bottom: 5px; }
-    .total-val { font-size: 45px; font-weight: 900; }
-    .prev-log { font-size: 11px; color: #888; margin-top: 5px; font-family: 'Times New Roman', serif; }
-    .controls { padding: 25px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; background: rgba(18,18,18,0.94); position: relative; }
-    .undo-btn { position: absolute; top: -5px; left: 50%; transform: translateX(-50%); color: #444; font-size: 24px; background:none; border:none; padding:10px; }
-    .label-r { font-size: 10px; color: #666; margin-bottom: 5px; text-align: center; }
-    input[type=number] { width: 100%; height: 50px; background: var(--black); border: 1px solid var(--grey); color: #fff; border-radius: 8px; text-align: center; font-size: 26px; font-weight: bold; }
-    .roem-row { display: flex; gap: 5px; margin-bottom: 10px; }
-    .btn-roman { background: var(--grey); color: var(--gold); border: 1px solid var(--grey); border-radius: 6px; padding: 10px; font-weight: bold; flex: 1; font-size: 13px; }
-    .btn-roman.active { background: var(--gold); color: #000; }
-    .spec-row { display: flex; gap: 5px; margin-top: 10px; }
-    .btn-spec { flex: 1; border: 1px solid #333; color: #555; background: none; padding: 8px; border-radius: 20px; font-size: 11px; font-weight: bold; }
-    .btn-spec.active-nat { border-color: var(--red); color: var(--red); }
-    .btn-spec.active-pit { border-color: var(--gold); color: var(--gold); }
-    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
-    .modal { background: #fff; color: #000; width: 92%; max-width: 380px; border-radius: 12px; padding: 30px; text-align: center; }
-    .m-title { font-weight: bold; margin-bottom: 25px; font-size: 17px; text-align: left; }
-    .m-teams { display: flex; justify-content: space-around; margin-bottom: 30px; font-size: 18px; color: #ccc; }
-    .m-teams span.active { color: #000; border-bottom: 2px solid #000; padding-bottom: 5px; }
-    .bid-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 30px; }
-    .bid-grid button { border: none; background: none; font-size: 17px; color: #666; cursor: pointer; }
-    .bid-grid button.active { font-weight: 900; color: #000; }
-    .suit-row { display: flex; justify-content: space-around; font-size: 34px; margin-bottom: 30px; align-items: center; }
-    .suit-btn { opacity: 0.2; cursor: pointer; filter: grayscale(1); }
-    .suit-btn.active { opacity: 1; filter: grayscale(0); }
-    .suit-btn.red { color: #e53935; filter: none; opacity: 0.2; }
-    .suit-btn.red.active { opacity: 1; }
-    .suit-btn.sans { font-size: 15px; font-weight: bold; filter: none; }
-    .btn-main { background: var(--gold); border: none; padding: 18px; width: calc(100% - 40px); margin: 10px 20px; border-radius: 12px; font-weight: 900; font-size: 16px; color: #000; }
-    .btn-penalty { background: none; border: 1px solid #333; color: #8f8f8f; padding: 10px; width: calc(100% - 40px); margin: 0 20px; border-radius: 8px; font-size: 10px; font-weight: bold; }
-    .btn-ok-modal { background: #eee; border: none; padding: 10px 40px; border-radius: 6px; color: #ccc; font-weight: bold; font-size: 16px; }
-    .btn-ok-modal.ready { background: #f0f0f0; color: #000; }
-    .footer { text-align: center; padding: 15px 16px 18px; font-size: 12px; color: #8d8d8d; }
+    .scoreboard::before { content:''; position:absolute; left:50%; top:12px; bottom:12px; width:3px; background:#1d1d1d; transform:translateX(-50%); border-radius:999px; }
+    .score-header, .score-row, .score-total { display:grid; grid-template-columns:1fr 1fr; gap:18px; position:relative; }
+    .score-header { padding:4px 0 10px; border-bottom:2px solid #111; }
+    .score-header .side { text-align:center; }
+    .score-header .side strong { font-size:26px; line-height:1; letter-spacing:-0.04em; display:block; }
+    .score-header .side span { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.08em; }
+    .score-total { padding:8px 10px 0; }
+    .score-total .side { text-align:center; font-size:22px; font-weight:900; }
+    .tak-section { border-top:1px solid rgba(17,17,17,0.14); padding:4px 0; }
+    .tak-section:first-of-type { border-top:none; }
+    .tak-label { text-align:center; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.12em; padding:8px 0 6px; }
+    .score-row { min-height:48px; align-items:center; padding:2px 0; }
+    .score-cell { display:grid; grid-template-columns:auto 1fr; gap:8px; align-items:center; min-height:40px; }
+    .score-cell.right { justify-content:end; grid-template-columns:1fr auto; }
+    .score-meta { font-size:12px; color:var(--muted); display:flex; flex-wrap:wrap; gap:6px; align-items:baseline; }
+    .score-cell.right .score-meta { justify-content:flex-end; text-align:right; }
+    .contract-tag { font-weight:800; color:#111; }
+    .special-tag { font-weight:800; color:var(--red); }
+    .roem-tag { color:#7c7368; }
+    .score-points { font-size:28px; line-height:1; font-weight:800; letter-spacing:-0.04em; }
+    .score-empty { height:40px; opacity:0.3; border-bottom:1px dashed rgba(17,17,17,0.08); }
+    .status-bar { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:0 16px 14px; flex-wrap:wrap; }
+    .status-pill { background:#fff; border:1px solid rgba(17,17,17,0.08); border-radius:999px; padding:9px 12px; font-size:13px; font-weight:700; color:#444; }
+    .action-row { display:flex; gap:10px; flex-wrap:wrap; }
+    .ghost-btn { border:1px solid rgba(17,17,17,0.10); background:#fff; color:#222; border-radius:14px; padding:10px 14px; font-weight:700; cursor:pointer; }
+    .contract-strip { display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; padding:0 16px 16px; }
+    .contract-card { background:rgba(255,255,255,0.84); border:1px solid rgba(17,17,17,0.06); border-radius:18px; padding:12px 14px; }
+    .contract-card .eyebrow { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+    .contract-card strong { display:block; font-size:22px; margin-top:2px; letter-spacing:-0.03em; }
+    .contract-card small { display:block; color:var(--muted); margin-top:4px; font-size:12px; }
+    .inputs { display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:0 14px 14px; }
+    .input-card { background:rgba(255,255,255,0.88); border:1px solid rgba(17,17,17,0.06); border-radius:22px; padding:14px; box-shadow:0 8px 16px rgba(0,0,0,0.04); }
+    .input-card h3 { margin:0 0 6px; font-size:14px; text-transform:uppercase; letter-spacing:.08em; color:#4d4a44; }
+    .input-card p { margin:0 0 12px; color:var(--muted); font-size:12px; }
+    .roem-row, .special-row { display:flex; gap:8px; }
+    .small-toggle {
+      flex:1; border:1px solid rgba(39,145,232,0.28); background:#eef6fd; color:#1b79cd; border-radius:14px; padding:11px 10px; font-weight:800; font-size:13px; cursor:pointer;
+    }
+    .small-toggle.active { background:var(--blue); color:#fff; border-color:var(--blue); }
+    .score-input {
+      margin-top:12px; width:100%; border:2px solid rgba(17,17,17,0.10); background:#fff; border-radius:18px; height:64px; text-align:center; font-size:34px; font-weight:800; color:#222;
+    }
+    .special-row { margin-top:10px; }
+    .special-btn { flex:1; border:1px solid rgba(17,17,17,0.12); background:#fff; color:#7a746b; border-radius:16px; padding:10px; font-weight:800; cursor:pointer; }
+    .special-btn.active.nat { border-color:rgba(204,45,36,0.28); background:#fff4f3; color:var(--red); }
+    .special-btn.active.pit { border-color:rgba(212,175,55,0.36); background:#fff8dd; color:#7d5e06; }
+    .danger-mini { width:100%; margin-top:10px; border:none; background:#f0e2de; color:#8f3028; border-radius:14px; padding:10px 12px; font-weight:800; cursor:pointer; }
+    .save-bar { position:sticky; bottom:0; z-index:14; padding:10px 14px calc(10px + env(safe-area-inset-bottom)); background:linear-gradient(180deg, rgba(247,244,238,0), rgba(247,244,238,0.96) 40%, rgba(247,244,238,0.98)); }
+    .save-btn { width:100%; border:none; border-radius:18px; padding:18px; background:#111; color:#fff; font-size:17px; font-weight:900; box-shadow:0 16px 24px rgba(0,0,0,0.16); cursor:pointer; }
+    .save-btn:disabled { opacity:.45; cursor:not-allowed; }
+    .footer { text-align:center; color:#58534b; font-size:14px; padding:10px 16px 2px; }
+    .message { min-height:20px; text-align:center; color:#7a7368; font-size:13px; padding:2px 14px 12px; }
+    .overlay {
+      position:fixed; inset:0; background:rgba(16,18,24,0.52); display:none; align-items:center; justify-content:center; z-index:40; padding:16px;
+    }
+    .overlay.show { display:flex; }
+    .modal {
+      width:min(420px, 100%); max-height:min(88vh, 720px); overflow:auto;
+      background:#fffdf9; color:#141414; border-radius:28px; padding:18px; box-shadow:0 28px 60px rgba(0,0,0,0.24);
+    }
+    .modal h2 { margin:0 0 8px; font-size:22px; letter-spacing:-0.04em; }
+    .modal p { margin:0 0 14px; color:#4e4a42; font-size:14px; }
+    .setup-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .field { display:grid; gap:7px; }
+    .field label { font-size:12px; font-weight:800; color:#5d584f; text-transform:uppercase; letter-spacing:.08em; }
+    .field select, .field input { width:100%; border:1px solid rgba(17,17,17,0.12); border-radius:16px; padding:12px 14px; background:#fff; color:#1e1e1e; font:inherit; }
+    .field input.custom-name { display:none; }
+    .field input.custom-name.show { display:block; }
+    .team-meta { display:flex; gap:10px; margin:10px 0 14px; }
+    .team-meta button, .suit-btn, .bid-btn {
+      border:1px solid rgba(17,17,17,0.10); background:#fff; border-radius:16px; padding:12px 14px; cursor:pointer; font-weight:800; color:#2a2a2a;
+    }
+    .team-meta button.active, .suit-btn.active, .bid-btn.active { background:#111; color:#fff; border-color:#111; }
+    .bids-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+    .suits-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-top:12px; }
+    .suit-btn.red { color:var(--red); }
+    .suit-btn.active.red { color:#fff; background:var(--red); border-color:var(--red); }
+    .modal-footer { display:flex; gap:10px; margin-top:18px; }
+    .modal-footer button { flex:1; border:none; border-radius:16px; padding:14px; cursor:pointer; font-weight:900; }
+    .btn-light { background:#efebe5; color:#262626; }
+    .btn-dark { background:#111; color:#fff; }
+    .btn-blue { background:var(--blue); color:#fff; }
+    .helper { margin-top:10px; color:#6a655d; font-size:13px; }
     .site-credit-watermark { position:fixed;right:16px;bottom:12px;z-index:9999;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(17,17,17,0.08);color:rgba(17,17,17,0.62);font:600 12px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.02em;pointer-events:none;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,0.05)}
-    @media (max-width: 720px) {
-      .page { padding-left: 10px; padding-right: 10px; }
-      .controls { grid-template-columns: 1fr; gap: 18px; }
-      .board { height:auto; padding-bottom:14px; }
-      .board::after { display:none; }
+    @media (max-width:460px) {
+      .inputs, .setup-grid { grid-template-columns:1fr 1fr; }
+      .topbar-title strong { font-size:16px; }
+      .score-points { font-size:25px; }
+      .score-cell { gap:6px; }
+      .score-meta { font-size:11px; }
+      .contract-card strong { font-size:19px; }
+      .small-toggle { padding:10px 8px; font-size:12px; }
     }
   </style>
 </head>
 <body>
   <div class="page">
-    
-  <header class="top-nav">
-    <div class="nav-left">
-      <a class="nav-brand" href="./index.html">Wordt er gejast</a>
-      <div class="nav-links">
-        <a href="./index.html">Home</a>
-        <a href="./leaderboard.html">Ranglijst</a>
-        <a href="./login.html">Login</a>
+    <header class="topbar">
+      <button class="icon-btn" type="button" onclick="window.location.href='./index.html'">☰</button>
+      <div class="topbar-title"><strong>Klaverjas scorer</strong><span>Mobiel, in takken, met biedingen en roem</span></div>
+      <button class="icon-btn" type="button" onclick="openBidModal()">✚</button>
+    </header>
+
+    <div class="wrap">
+      <section class="sheet">
+        <div class="match-head">
+          <div class="teams-line">
+            <div class="team-chip"><div class="label">wij</div><div class="names" id="teamWijNames">-</div></div>
+            <div class="center-tools">
+              <button class="undo-hero" type="button" onclick="undoRound()">Undo</button>
+              <button class="ghost-btn" type="button" onclick="openSetupModal()">Teams</button>
+            </div>
+            <div class="team-chip"><div class="label">zij</div><div class="names" id="teamZijNames">-</div></div>
+          </div>
+        </div>
+
+        <div class="scoreboard">
+          <div class="score-header">
+            <div class="side"><span>wij</span><strong id="totalW">0</strong></div>
+            <div class="side"><span>zij</span><strong id="totalZ">0</strong></div>
+          </div>
+          <div id="roundBoard"></div>
+        </div>
+
+        <div class="status-bar">
+          <div class="status-pill" id="roundLabel">Ronde 1 · tak 1</div>
+          <div class="action-row">
+            <button class="ghost-btn" type="button" onclick="openBidModal()">Bieding openen</button>
+            <button class="ghost-btn" type="button" onclick="newGame()">Nieuw spel</button>
+          </div>
+        </div>
+
+        <div class="contract-strip">
+          <div class="contract-card">
+            <div class="eyebrow">Actieve bieding</div>
+            <strong id="contractText">Nog geen bieding gekozen</strong>
+            <small id="contractHint">Kies eerst spelers, daarna de bieding voor deze ronde.</small>
+          </div>
+          <button class="text-btn" type="button" onclick="openBidModal()" style="background:var(--blue);">Pas bod aan</button>
+        </div>
+
+        <div class="inputs">
+          <div class="input-card">
+            <h3>Wij</h3>
+            <p id="labelW">invoer ronde 1</p>
+            <div class="roem-row">
+              <button class="small-toggle" type="button" data-roem="W" data-value="20">20 roem</button>
+              <button class="small-toggle" type="button" data-roem="W" data-value="50">50 roem</button>
+            </div>
+            <input class="score-input" id="inputW" type="number" inputmode="numeric" min="0" placeholder="0">
+            <div class="special-row">
+              <button class="special-btn" type="button" data-special="W" data-type="nat">nat</button>
+              <button class="special-btn" type="button" data-special="W" data-type="pit">pit</button>
+            </div>
+            <button class="danger-mini" type="button" onclick="applyVerzaak('W')">Wij verzaakt</button>
+          </div>
+
+          <div class="input-card">
+            <h3>Zij</h3>
+            <p id="labelZ">invoer ronde 1</p>
+            <div class="roem-row">
+              <button class="small-toggle" type="button" data-roem="Z" data-value="20">20 roem</button>
+              <button class="small-toggle" type="button" data-roem="Z" data-value="50">50 roem</button>
+            </div>
+            <input class="score-input" id="inputZ" type="number" inputmode="numeric" min="0" placeholder="0">
+            <div class="special-row">
+              <button class="special-btn" type="button" data-special="Z" data-type="nat">nat</button>
+              <button class="special-btn" type="button" data-special="Z" data-type="pit">pit</button>
+            </div>
+            <button class="danger-mini" type="button" onclick="applyVerzaak('Z')">Zij verzaakt</button>
+          </div>
+        </div>
+
+        <div class="message" id="messageBox"></div>
+        <div class="footer" id="dealerText">Kies eerst de vier spelers.</div>
+      </section>
+    </div>
+
+    <div class="save-bar"><button id="saveRoundBtn" class="save-btn" type="button" onclick="saveRound()">Ronde opslaan</button></div>
+  </div>
+
+  <div id="setupOverlay" class="overlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h2>Wie spelen er mee?</h2>
+      <p>Kies eerst per team de spelers. Daarna gaat pas het biedingsscherm open.</p>
+      <div class="setup-grid">
+        <div class="field"><label>Wij · speler 1</label><select id="playerW1"></select><input id="playerW1Custom" class="custom-name" type="text" placeholder="Naam invoeren"></div>
+        <div class="field"><label>Zij · speler 1</label><select id="playerZ1"></select><input id="playerZ1Custom" class="custom-name" type="text" placeholder="Naam invoeren"></div>
+        <div class="field"><label>Wij · speler 2</label><select id="playerW2"></select><input id="playerW2Custom" class="custom-name" type="text" placeholder="Naam invoeren"></div>
+        <div class="field"><label>Zij · speler 2</label><select id="playerZ2"></select><input id="playerZ2Custom" class="custom-name" type="text" placeholder="Naam invoeren"></div>
+      </div>
+      <div class="helper">Volgorde is ook de deelvolgorde: wij1 → zij1 → wij2 → zij2.</div>
+      <div class="modal-footer">
+        <button class="btn-light" type="button" onclick="closeSetupModal(false)">Later</button>
+        <button class="btn-blue" type="button" onclick="saveSetup()">Opslaan en bieding kiezen</button>
       </div>
     </div>
-    <div class="nav-right">
-      <a id="vaultQuickLink" class="nav-chip hidden" href="./vault.html">Vault</a>
-    </div>
-  </header>
+  </div>
 
-    <div class="app-card">
-      <header class="app-header">
-        <button class="h-btn" onclick="window.location.href='./index.html'">←</button>
-        <button class="reset-btn" onclick="newGame()">NIEUW SPEL</button>
-        <button class="h-btn" onclick="location.reload()">✕</button>
-      </header>
-
-      <div class="board">
-        <div class="team-box">
-          <div class="team-title">wij</div>
-          <div class="total-val" id="tvW">0</div>
-          <div class="prev-log" id="plW"></div>
-        </div>
-        <div class="team-box">
-          <div class="team-title">zij</div>
-          <div class="total-val" id="tvZ">0</div>
-          <div class="prev-log" id="plZ"></div>
-        </div>
+  <div id="bidOverlay" class="overlay">
+    <div class="modal" role="dialog" aria-modal="true" id="bidModal">
+      <h2>Bieding voor ronde <span id="bidRoundNo">1</span></h2>
+      <p>Klik naast dit venster om het te sluiten. Je kunt het altijd weer openen met <strong>Bieding openen</strong>.</p>
+      <div class="team-meta">
+        <button type="button" data-team-choice="W">Wij bieden</button>
+        <button type="button" data-team-choice="Z">Zij bieden</button>
       </div>
-
-      <div class="controls">
-        <button class="undo-btn" onclick="undo()">⟲</button>
-        <div>
-          <div class="label-r" id="lW">invoer ronde 1:</div>
-          <div class="roem-row">
-            <button class="btn-roman" onclick="setR('W',20,this)">XX</button>
-            <button class="btn-roman" onclick="setR('W',50,this)">L</button>
-          </div>
-          <input type="number" id="inW" placeholder="0" oninput="sync('W')" inputmode="numeric">
-          <div class="spec-row">
-            <button class="btn-spec" id="natW" onclick="setS('W','nat')">nat</button>
-            <button class="btn-spec" id="pitW" onclick="setS('W','pit')">pit</button>
-          </div>
-        </div>
-        <div>
-          <div class="label-r" id="lZ">invoer ronde 1:</div>
-          <div class="roem-row">
-            <button class="btn-roman" onclick="setR('Z',20,this)">XX</button>
-            <button class="btn-roman" onclick="setR('Z',50,this)">L</button>
-          </div>
-          <input type="number" id="inZ" placeholder="0" oninput="sync('Z')" inputmode="numeric">
-          <div class="spec-row">
-            <button class="btn-spec" id="natZ" onclick="setS('Z','nat')">nat</button>
-            <button class="btn-spec" id="pitZ" onclick="setS('Z','pit')">pit</button>
-          </div>
-        </div>
+      <div class="bids-grid" id="bidGrid"></div>
+      <div class="suits-grid">
+        <button class="suit-btn" type="button" data-suit="♣">♣</button>
+        <button class="suit-btn red" type="button" data-suit="♥">♥</button>
+        <button class="suit-btn" type="button" data-suit="♠">♠</button>
+        <button class="suit-btn red" type="button" data-suit="♦">♦</button>
+        <button class="suit-btn" type="button" data-suit="S">sans</button>
       </div>
-
-      <button class="btn-penalty" onclick="verzaken()">⚠️ VERZAKEN</button>
-      <button class="btn-main" onclick="save()">RONDE OPSLAAN ➕</button>
-      <div class="footer" id="fText"></div>
-    </div>
-
-    <div id="m-over" class="overlay">
-      <div class="modal">
-        <div class="m-title" id="m-title">Invoer ronde 1:</div>
-        <div class="m-teams">
-          <span id="tsW" onclick="mT('W')">wij</span>
-          <span id="tsZ" onclick="mT('Z')">zij</span>
-        </div>
-        <div class="bid-grid" id="m-grid"></div>
-        <div class="suit-row">
-          <span class="suit-btn" onclick="mS('♣',this)">♣</span>
-          <span class="suit-btn red" onclick="mS('♥',this)">♥</span>
-          <span class="suit-btn" onclick="mS('♠',this)">♠</span>
-          <span class="suit-btn red" onclick="mS('♦',this)">♦</span>
-          <span class="suit-btn sans" onclick="mS('S',this)">Sans</span>
-        </div>
-        <div style="display:flex; justify-content:space-between; align-items:center">
-          <span style="color:#ccc; font-size:11px;" id="m-hint">< selecteer een team ></span>
-          <button class="btn-ok-modal" id="m-ok" onclick="closeM()">OK</button>
-        </div>
+      <div class="helper" id="bidHelper">Kies biedend team, hoogte en soort.</div>
+      <div class="modal-footer">
+        <button class="btn-light" type="button" onclick="closeBidModal()">Sluiten</button>
+        <button class="btn-dark" type="button" onclick="confirmBid()">Bieding bewaren</button>
       </div>
     </div>
   </div>
 
   <script>
-    const ADMIN_SESSION_KEY = 'jas_admin_session_v8';
-    function toggleVaultQuickLink() {
-      const link = document.getElementById('vaultQuickLink');
-      if (!link) return;
-      if (sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY)) link.classList.remove('hidden');
-      else link.classList.add('hidden');
+    const MATCH_KEY = 'current_match_v59';
+    const LEGACY_MATCH_KEYS = ['current_match_v59','current_match'];
+    const HISTORY_KEY = 'vault_history';
+    const PLAYERS_KEY = 'vault_players';
+    const DEFAULT_NAMES = ['Bruis','Lyon','Jesper','Sjaak','Bep','Kees','Wim'];
+    const SUIT_LABELS = { '♣':'♣', '♥':'♥', '♠':'♠', '♦':'♦', 'S':'sans' };
+    const BID_OPTIONS = [80,90,100,110,120,130,140,150,160];
+
+    let game = loadGame();
+    let contract = freshContract();
+
+    function freshContract() {
+      return { team: '', bid: 80, suit: '♠', roem: { W:0, Z:0 }, special: { team:'', type:'' } };
     }
 
-    let G = JSON.parse(localStorage.getItem('current_match')) || { id: Date.now(), players: ["Sjaak", "Bep", "Kees", "Wim"], rounds: [], w: 0, z: 0 };
-    let C = { team: '', bid: 80, suit: '', rw: 0, rz: 0, spec: '' };
-
-    function toRom(n) { const m={C:100,L:50,XX:20,X:10}; let r=''; for(let i in m){while(n>=m[i]){r+=i;n-=m[i]}} return r; }
-
-    window.onload = () => { if(G.rounds.length < 16) trigger(); render(); };
-
-    function trigger() {
-        document.getElementById('m-over').style.display = 'flex';
-        document.getElementById('m-title').innerText = `Invoer ronde ${G.rounds.length + 1}:`;
-        C = { team: '', bid: 80, suit: '', rw: 0, rz: 0, spec: '' };
-        document.getElementById('m-grid').innerHTML = [70,80,90,100,110,120,130,140,150,160].map(v => 
-            `<button onclick="mB(${v},this)" class="${v===80?'active':''}">${v}</button>`).join('');
-        document.querySelectorAll('.m-teams span, .suit-btn').forEach(x => x.classList.remove('active'));
+    function loadGame() {
+      for (const key of LEGACY_MATCH_KEYS) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) continue;
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.rounds)) {
+            if (!parsed.version) parsed.version = 59;
+            if (!parsed.players || parsed.players.length !== 4) parsed.players = ['', '', '', ''];
+            if (typeof parsed.w !== 'number') parsed.w = (parsed.rounds || []).reduce((sum, r) => sum + Number(r.fw || r.scoreW || 0), 0);
+            if (typeof parsed.z !== 'number') parsed.z = (parsed.rounds || []).reduce((sum, r) => sum + Number(r.fz || r.scoreZ || 0), 0);
+            if (typeof parsed.rawW !== 'number') parsed.rawW = (parsed.rounds || []).reduce((sum, r) => sum + Number(r.rawW || 0), 0);
+            if (typeof parsed.rawZ !== 'number') parsed.rawZ = (parsed.rounds || []).reduce((sum, r) => sum + Number(r.rawZ || 0), 0);
+            localStorage.setItem(MATCH_KEY, JSON.stringify(parsed));
+            return parsed;
+          }
+        } catch {}
+      }
+      return {
+        id: Date.now(),
+        version: 59,
+        createdAt: new Date().toISOString(),
+        players: ['', '', '', ''],
+        rounds: [],
+        w: 0,
+        z: 0,
+        rawW: 0,
+        rawZ: 0
+      };
     }
 
-    function mT(t) { C.team = t; document.getElementById('tsW').className = t==='W'?'active':''; document.getElementById('tsZ').className = t==='Z'?'active':''; chk(); }
-    function mB(v, b) { C.bid=v; document.querySelectorAll('#m-grid button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); }
-    function mS(s, el) { C.suit=s; document.querySelectorAll('.suit-btn').forEach(x=>x.classList.remove('active')); el.classList.add('active'); chk(); }
-    function chk() { if(C.team && C.suit) { document.getElementById('m-ok').classList.add('ready'); document.getElementById('m-hint').innerText = ''; } }
-    function closeM() { if(C.team && C.suit) document.getElementById('m-over').style.display='none'; }
-
-    function sync(t) {
-        const target = C.suit === 'S' ? 130 : 162;
-        let val = Math.min(parseInt(document.getElementById('in'+t).value) || 0, target);
-        document.getElementById('in'+t).value = val;
-        document.getElementById('in'+(t==='W'?'Z':'W')).value = target - val;
+    function saveGame() {
+      localStorage.setItem(MATCH_KEY, JSON.stringify(game));
     }
 
-    function setR(t,v,b) { b.classList.toggle('active'); const add = b.classList.contains('active')?v:-v; if(t==='W') C.rw+=add; else C.rz+=add; }
-    function setS(t,s) { C.spec = (C.spec === t+s) ? '' : t+s; document.querySelectorAll('.btn-spec').forEach(x=>x.classList.remove('active-nat','active-pit')); if(C.spec) document.getElementById(C.spec).classList.add('active-'+s); }
+    function getKnownPlayers() {
+      const names = new Set(DEFAULT_NAMES);
+      try {
+        const stored = JSON.parse(localStorage.getItem(PLAYERS_KEY) || '[]');
+        (stored || []).forEach((name) => name && names.add(String(name).trim()));
+      } catch {}
+      try {
+        const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+        (history || []).forEach((match) => (match.players || []).forEach((name) => name && names.add(String(name).trim())));
+      } catch {}
+      return Array.from(names).filter(Boolean).sort((a,b) => a.localeCompare(b, 'nl'));
+    }
 
-    function verzaken() {
-        const winner = C.team === 'W' ? 'Z' : 'W';
-        if(confirm(`Penalty voor team ${C.team==='W'?'WIJ':'ZIJ'}. Alle punten gaan naar de tegenpartij.`)) {
-            const tot = C.suit === 'S' ? 130 : 162;
-            if(winner === 'W') { document.getElementById('inW').value = tot; document.getElementById('inZ').value = 0; C.rw+=100; }
-            else { document.getElementById('inZ').value = tot; document.getElementById('inW').value = 0; C.rz+=100; }
-            save(true);
+    function rememberPlayers(players) {
+      const merged = new Set(getKnownPlayers());
+      players.forEach((name) => name && merged.add(name));
+      localStorage.setItem(PLAYERS_KEY, JSON.stringify(Array.from(merged).sort((a,b) => a.localeCompare(b, 'nl'))));
+    }
+
+    function scoreFromRaw(raw) {
+      return Math.round(Number(raw || 0) / 10);
+    }
+
+    function totalRawForSuit(suit) {
+      return suit === 'S' ? 130 : 162;
+    }
+
+    function toRoman(n) {
+      const map = [['C',100],['L',50],['XXXX',40],['XX',20],['X',10],['V',5],['IIII',4],['II',2]];
+      let value = Number(n || 0);
+      let out = '';
+      for (const [label, amt] of map) {
+        while (value >= amt) { out += label; value -= amt; }
+      }
+      return out;
+    }
+
+    function currentRoundIndex() { return game.rounds.length + 1; }
+    function currentTak() { return Math.floor(game.rounds.length / 4) + 1; }
+
+    function currentDealerInfo() {
+      const players = game.players || [];
+      if (players.filter(Boolean).length < 4) return 'Kies eerst de vier spelers.';
+      const idx = game.rounds.length % 4;
+      const dealer = players[idx];
+      const forehand = players[(idx + 1) % 4];
+      return `${dealer} deelt, ${forehand} zit voor`;
+    }
+
+    function teamNames(side) {
+      const p = game.players || [];
+      return side === 'W' ? [p[0], p[2]].filter(Boolean).join(' · ') : [p[1], p[3]].filter(Boolean).join(' · ');
+    }
+
+    function setMessage(msg='') {
+      document.getElementById('messageBox').textContent = msg;
+    }
+
+    function renderSetupOptions() {
+      const options = getKnownPlayers();
+      [['playerW1','playerW1Custom'],['playerZ1','playerZ1Custom'],['playerW2','playerW2Custom'],['playerZ2','playerZ2Custom']].forEach(([selectId,inputId], index) => {
+        const select = document.getElementById(selectId);
+        const input = document.getElementById(inputId);
+        const current = game.players[index] || '';
+        select.innerHTML = ['<option value="">Kies speler</option>', ...options.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`), '<option value="__custom__">Anders...</option>'].join('');
+        if (options.includes(current)) {
+          select.value = current;
+          input.classList.remove('show');
+          input.value = '';
+        } else if (current) {
+          select.value = '__custom__';
+          input.classList.add('show');
+          input.value = current;
+        } else {
+          select.value = '';
+          input.classList.remove('show');
+          input.value = '';
         }
+        select.onchange = () => {
+          const custom = select.value === '__custom__';
+          input.classList.toggle('show', custom);
+          if (!custom) input.value = '';
+        };
+      });
     }
 
-    function save(isPenalty = false) {
-        const pW = parseInt(document.getElementById('inW').value) || 0;
-        const pZ = parseInt(document.getElementById('inZ').value) || 0;
-        const tot = C.suit === 'S' ? 130 : 162;
-        
-        let fw = pW + C.rw, fz = pZ + C.rz;
-        let isNat = (C.spec.includes('nat')) || (C.team==='W' && (pW < C.bid || pW <= pZ)) || (C.team==='Z' && (pZ < C.bid || pZ <= pW));
-        if(isNat) { if(C.team==='W') { fw=0; fz=tot+C.rw+C.rz; } else { fz=0; fw=tot+C.rw+C.rz; } }
-        if(C.spec.includes('pit')) { if(C.spec.startsWith('W')) fw+=100; else fz+=100; }
+    function openSetupModal() {
+      renderSetupOptions();
+      document.getElementById('setupOverlay').classList.add('show');
+    }
+    function closeSetupModal(force) {
+      if (force === false && game.players.filter(Boolean).length < 4) return;
+      document.getElementById('setupOverlay').classList.remove('show');
+    }
 
-        G.rounds.push({ team:C.team, bid:C.bid, fw, fz, rw:C.rw, rz:C.rz, suit:C.suit, penalty:isPenalty, tak: Math.floor(G.rounds.length/4)+1 });
-        G.w += fw; G.z += fz;
-        localStorage.setItem('current_match', JSON.stringify(G));
-        
-        render();
-        document.querySelectorAll('.btn-roman, .btn-spec').forEach(x=>x.classList.remove('active','active-nat','active-pit'));
-        document.getElementById('inW').value=''; document.getElementById('inZ').value='';
-        if(G.rounds.length === 16) finish(); else trigger();
+    function saveSetup() {
+      const picks = [];
+      for (const [selectId,inputId] of [['playerW1','playerW1Custom'],['playerZ1','playerZ1Custom'],['playerW2','playerW2Custom'],['playerZ2','playerZ2Custom']]) {
+        const select = document.getElementById(selectId);
+        const input = document.getElementById(inputId);
+        const value = select.value === '__custom__' ? input.value.trim() : select.value.trim();
+        picks.push(value);
+      }
+      if (picks.some((value) => !value)) {
+        setMessage('Kies eerst voor alle vier plekken een speler.');
+        return;
+      }
+      game.players = picks;
+      rememberPlayers(picks);
+      saveGame();
+      closeSetupModal(true);
+      render();
+      openBidModal();
+    }
+
+    function buildBidGrid() {
+      const root = document.getElementById('bidGrid');
+      root.innerHTML = BID_OPTIONS.map((bid) => `<button class="bid-btn ${contract.bid === bid ? 'active' : ''}" type="button" data-bid="${bid}">${bid}</button>`).join('');
+      root.querySelectorAll('[data-bid]').forEach((btn) => btn.addEventListener('click', () => {
+        contract.bid = Number(btn.dataset.bid);
+        root.querySelectorAll('.bid-btn').forEach((el) => el.classList.toggle('active', el === btn));
+      }));
+    }
+
+    function syncBidModalSelections() {
+      document.getElementById('bidRoundNo').textContent = currentRoundIndex();
+      document.querySelectorAll('[data-team-choice]').forEach((btn) => btn.classList.toggle('active', btn.dataset.teamChoice === contract.team));
+      document.querySelectorAll('[data-suit]').forEach((btn) => btn.classList.toggle('active', btn.dataset.suit === contract.suit));
+      buildBidGrid();
+    }
+
+    function openBidModal() {
+      if (game.players.filter(Boolean).length < 4) { openSetupModal(); return; }
+      syncBidModalSelections();
+      document.getElementById('bidOverlay').classList.add('show');
+    }
+    function closeBidModal() { document.getElementById('bidOverlay').classList.remove('show'); }
+    function confirmBid() {
+      if (!contract.team || !contract.suit) {
+        setMessage('Kies eerst welk team biedt, hoeveel en in welke soort.');
+        return;
+      }
+      closeBidModal();
+      renderContract();
+      setMessage('Bieding opgeslagen voor deze ronde.');
+    }
+
+    function resetInputUi() {
+      contract.roem = { W:0, Z:0 };
+      contract.special = { team:'', type:'' };
+      document.querySelectorAll('[data-roem]').forEach((btn) => btn.classList.remove('active'));
+      document.querySelectorAll('[data-special]').forEach((btn) => btn.classList.remove('active', 'nat', 'pit'));
+      document.getElementById('inputW').value = '';
+      document.getElementById('inputZ').value = '';
+    }
+
+    function renderContract() {
+      const text = document.getElementById('contractText');
+      const hint = document.getElementById('contractHint');
+      if (!contract.team) {
+        text.textContent = 'Nog geen bieding gekozen';
+        hint.textContent = 'Kies eerst spelers, daarna de bieding voor deze ronde.';
+        return;
+      }
+      const bidder = contract.team === 'W' ? 'Wij' : 'Zij';
+      text.textContent = `${bidder} · ${contract.bid}${SUIT_LABELS[contract.suit] || contract.suit}`;
+      hint.textContent = `Totaal voor deze ronde: ${totalRawForSuit(contract.suit)} raw punten → afgerond per team op tientallen.`;
+    }
+
+    function syncInputs(sideChanged) {
+      const total = totalRawForSuit(contract.suit || '♠');
+      const inputA = document.getElementById(sideChanged === 'W' ? 'inputW' : 'inputZ');
+      const inputB = document.getElementById(sideChanged === 'W' ? 'inputZ' : 'inputW');
+      let value = parseInt(inputA.value || '0', 10);
+      if (Number.isNaN(value) || value < 0) value = 0;
+      if (value > total) value = total;
+      inputA.value = value;
+      inputB.value = total - value;
+    }
+
+    function toggleRoem(side, value, button) {
+      const isActive = button.classList.toggle('active');
+      contract.roem[side] += isActive ? value : -value;
+      if (contract.roem[side] < 0) contract.roem[side] = 0;
+    }
+
+    function toggleSpecial(side, type, button) {
+      const already = contract.special.team === side && contract.special.type === type;
+      document.querySelectorAll('[data-special]').forEach((btn) => btn.classList.remove('active', 'nat', 'pit'));
+      if (already) {
+        contract.special = { team:'', type:'' };
+        return;
+      }
+      contract.special = { team: side, type };
+      button.classList.add('active', type);
+    }
+
+    function makeRoundRecord(rawW, rawZ, extra={}) {
+      const scoreW = scoreFromRaw(rawW);
+      const scoreZ = scoreFromRaw(rawZ);
+      const round = {
+        index: currentRoundIndex(),
+        tak: currentTak(),
+        team: contract.team,
+        bid: contract.bid,
+        suit: contract.suit,
+        contractLabel: `${contract.bid}${SUIT_LABELS[contract.suit] || contract.suit}`,
+        rw: contract.roem.W,
+        rz: contract.roem.Z,
+        fw: scoreW,
+        fz: scoreZ,
+        rawW,
+        rawZ,
+        dealer: (game.players || [])[game.rounds.length % 4] || '',
+        forehand: (game.players || [])[((game.rounds.length % 4) + 1) % 4] || '',
+        specialTeam: contract.special.team || '',
+        specialType: contract.special.type || '',
+        ...extra
+      };
+      return round;
+    }
+
+    function bidderFailed(inputW, inputZ) {
+      if (!contract.team) return false;
+      if (contract.team === 'W') return inputW < contract.bid;
+      return inputZ < contract.bid;
+    }
+
+    function applySpecialOutcome(baseW, baseZ) {
+      const total = totalRawForSuit(contract.suit);
+      const roemTotal = contract.roem.W + contract.roem.Z;
+      let rawW = baseW + contract.roem.W;
+      let rawZ = baseZ + contract.roem.Z;
+      let extra = {};
+      const explicitNat = contract.special.type === 'nat';
+      const failingBid = bidderFailed(baseW, baseZ);
+      if (explicitNat || failingBid) {
+        const winner = explicitNat ? (contract.special.team === 'W' ? 'Z' : 'W') : (contract.team === 'W' ? 'Z' : 'W');
+        rawW = winner === 'W' ? total + roemTotal : 0;
+        rawZ = winner === 'Z' ? total + roemTotal : 0;
+        extra = { nat: true, natBy: explicitNat ? contract.special.team : contract.team };
+      }
+      if (contract.special.type === 'pit') {
+        if (contract.special.team === 'W') rawW += 100;
+        if (contract.special.team === 'Z') rawZ += 100;
+      }
+      return { rawW, rawZ, extra };
+    }
+
+    function saveRound(extra={}) {
+      if (!contract.team) { setMessage('Open eerst de bieding en kies team, hoogte en soort.'); openBidModal(); return; }
+      const total = totalRawForSuit(contract.suit);
+      let baseW = parseInt(document.getElementById('inputW').value || '0', 10);
+      let baseZ = parseInt(document.getElementById('inputZ').value || '0', 10);
+      if (Number.isNaN(baseW)) baseW = 0;
+      if (Number.isNaN(baseZ)) baseZ = total - baseW;
+      if (baseW + baseZ !== total) {
+        baseZ = total - baseW;
+        document.getElementById('inputZ').value = baseZ;
+      }
+      const outcome = applySpecialOutcome(baseW, baseZ);
+      const round = makeRoundRecord(outcome.rawW, outcome.rawZ, extra.verzaaktBy ? { verzaaktBy: extra.verzaaktBy } : outcome.extra);
+      game.rounds.push(round);
+      game.w += round.fw;
+      game.z += round.fz;
+      game.rawW += round.rawW;
+      game.rawZ += round.rawZ;
+      saveGame();
+      resetInputUi();
+      contract = freshContract();
+      render();
+      if (game.rounds.length >= 16) finishGame();
+      else openBidModal();
+    }
+
+    function applyVerzaak(side) {
+      if (!contract.team) { setMessage('Kies eerst de bieding voor deze ronde.'); openBidModal(); return; }
+      const total = totalRawForSuit(contract.suit);
+      const roemTotal = contract.roem.W + contract.roem.Z;
+      let rawW = 0, rawZ = 0;
+      if (side === 'W') rawZ = total + roemTotal; else rawW = total + roemTotal;
+      if (contract.special.type === 'pit') {
+        if (contract.special.team === 'W') rawW += 100;
+        if (contract.special.team === 'Z') rawZ += 100;
+      }
+      const round = makeRoundRecord(rawW, rawZ, { verzaaktBy: side, nat: false });
+      game.rounds.push(round);
+      game.w += round.fw;
+      game.z += round.fz;
+      game.rawW += round.rawW;
+      game.rawZ += round.rawZ;
+      saveGame();
+      resetInputUi();
+      contract = freshContract();
+      render();
+      setMessage(`${side === 'W' ? 'Wij' : 'Zij'} verzaakt: alle punten gingen direct naar de tegenpartij.`);
+      if (game.rounds.length >= 16) finishGame(); else openBidModal();
+    }
+
+    function undoRound() {
+      if (!game.rounds.length) { setMessage('Er is nog niets om ongedaan te maken.'); return; }
+      if (!confirm('Laatste ronde verwijderen?')) return;
+      const removed = game.rounds.pop();
+      game.w = Math.max(0, game.w - Number(removed.fw || 0));
+      game.z = Math.max(0, game.z - Number(removed.fz || 0));
+      game.rawW = Math.max(0, game.rawW - Number(removed.rawW || 0));
+      game.rawZ = Math.max(0, game.rawZ - Number(removed.rawZ || 0));
+      saveGame();
+      render();
+      setMessage('Laatste ronde verwijderd.');
+      openBidModal();
+    }
+
+    function newGame() {
+      if (!confirm('Nieuw spel starten?')) return;
+      localStorage.removeItem(MATCH_KEY);
+      game = loadGame();
+      contract = freshContract();
+      render();
+      openSetupModal();
+    }
+
+    function finishGame() {
+      const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+      history.push({ ...game, finishedAt: new Date().toISOString() });
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+      localStorage.removeItem(MATCH_KEY);
+      setMessage('Wedstrijd opgeslagen in de vault.');
+      alert(`Klaar. Eindstand: wij ${game.w} - zij ${game.z}. Potje opgeslagen voor de vault.`);
+      game = loadGame();
+      contract = freshContract();
+      render();
+      openSetupModal();
+    }
+
+    function sideMeta(round, side) {
+      const parts = [];
+      if (round.team === side) parts.push(`<span class="contract-tag">${escapeHtml(round.contractLabel || '')}</span>`);
+      if (side === 'W' && round.rw) parts.push(`<span class="roem-tag">${escapeHtml(toRoman(round.rw))}</span>`);
+      if (side === 'Z' && round.rz) parts.push(`<span class="roem-tag">${escapeHtml(toRoman(round.rz))}</span>`);
+      if (round.specialType && round.specialTeam === side) parts.push(`<span class="special-tag">${escapeHtml(round.specialType)}</span>`);
+      if (round.nat && round.natBy === side) parts.push(`<span class="special-tag">nat</span>`);
+      if (round.verzaaktBy === side) parts.push(`<span class="special-tag">verzaak</span>`);
+      return parts.join(' ');
+    }
+
+    function renderBoard() {
+      const root = document.getElementById('roundBoard');
+      root.innerHTML = '';
+      for (let tak = 1; tak <= 4; tak += 1) {
+        const section = document.createElement('section');
+        section.className = 'tak-section';
+        section.innerHTML = `<div class="tak-label">Tak ${tak}</div>`;
+        const rows = game.rounds.filter((round) => round.tak === tak);
+        for (let i = 0; i < 4; i += 1) {
+          const row = rows[i];
+          const rowEl = document.createElement('div');
+          rowEl.className = 'score-row';
+          if (row) {
+            rowEl.innerHTML = `
+              <div class="score-cell left">
+                <div class="score-points">${row.fw}</div>
+                <div class="score-meta">${sideMeta(row, 'W')}</div>
+              </div>
+              <div class="score-cell right">
+                <div class="score-meta">${sideMeta(row, 'Z')}</div>
+                <div class="score-points">${row.fz}</div>
+              </div>`;
+          } else {
+            rowEl.innerHTML = '<div class="score-empty"></div><div class="score-empty"></div>';
+          }
+          section.appendChild(rowEl);
+        }
+        root.appendChild(section);
+      }
+      const totals = document.createElement('div');
+      totals.className = 'score-total';
+      totals.innerHTML = `<div class="side">${game.w}</div><div class="side">${game.z}</div>`;
+      root.appendChild(totals);
     }
 
     function render() {
-        document.getElementById('tvW').innerText = G.w; document.getElementById('tvZ').innerText = G.z;
-        const L = G.rounds[G.rounds.length-1];
-        if(L){
-            document.getElementById('plW').innerHTML = L.team==='W' ? `<b>${L.bid}${L.suit}</b> ${L.fw} ${toRom(L.rw)}` : L.fw;
-            document.getElementById('plZ').innerHTML = L.team==='Z' ? `<b>${L.bid}${L.suit}</b> ${L.fz} ${toRom(L.rz)}` : L.fz;
-        }
-        const d = G.rounds.length % 4;
-        document.getElementById('fText').innerText = `${G.players[d]} deelt, ${G.players[(d+1)%4]} zit voor`;
+      document.getElementById('teamWijNames').textContent = teamNames('W') || 'kies spelers';
+      document.getElementById('teamZijNames').textContent = teamNames('Z') || 'kies spelers';
+      document.getElementById('totalW').textContent = game.w;
+      document.getElementById('totalZ').textContent = game.z;
+      document.getElementById('roundLabel').textContent = `Ronde ${currentRoundIndex()} · tak ${currentTak()}`;
+      document.getElementById('labelW').textContent = `invoer ronde ${currentRoundIndex()}`;
+      document.getElementById('labelZ').textContent = `invoer ronde ${currentRoundIndex()}`;
+      document.getElementById('dealerText').textContent = currentDealerInfo();
+      renderContract();
+      renderBoard();
+      document.getElementById('saveRoundBtn').disabled = game.rounds.length >= 16;
     }
 
-    function undo() { if(G.rounds.length > 0 && confirm("Ronde wissen?")) { G.rounds.pop(); G.w=G.rounds.reduce((a,b)=>a+b.fw,0); G.z=G.rounds.reduce((a,b)=>a+b.fz,0); render(); trigger(); } }
-    function newGame() { if(confirm("Nieuw spel starten?")) { localStorage.removeItem('current_match'); location.reload(); } }
-    function finish() {
-        let history = JSON.parse(localStorage.getItem('vault_history')) || [];
-        history.push(G); localStorage.setItem('vault_history', JSON.stringify(history));
-        localStorage.removeItem('current_match');
-        alert("GEÜPLOAD NAAR VAULT."); location.reload();
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
-    toggleVaultQuickLink();
+    document.querySelectorAll('[data-team-choice]').forEach((btn) => btn.addEventListener('click', () => {
+      contract.team = btn.dataset.teamChoice;
+      syncBidModalSelections();
+    }));
+    document.querySelectorAll('[data-suit]').forEach((btn) => btn.addEventListener('click', () => {
+      contract.suit = btn.dataset.suit;
+      syncBidModalSelections();
+    }));
+    document.querySelectorAll('[data-roem]').forEach((btn) => btn.addEventListener('click', () => {
+      toggleRoem(btn.dataset.roem, Number(btn.dataset.value), btn);
+    }));
+    document.querySelectorAll('[data-special]').forEach((btn) => btn.addEventListener('click', () => {
+      toggleSpecial(btn.dataset.special, btn.dataset.type, btn);
+    }));
+    document.getElementById('inputW').addEventListener('input', () => syncInputs('W'));
+    document.getElementById('inputZ').addEventListener('input', () => syncInputs('Z'));
+    document.getElementById('setupOverlay').addEventListener('click', (event) => { if (event.target.id === 'setupOverlay' && game.players.filter(Boolean).length === 4) closeSetupModal(true); });
+    document.getElementById('bidOverlay').addEventListener('click', (event) => { if (event.target.id === 'bidOverlay') closeBidModal(); });
+
+    render();
+    if (game.players.filter(Boolean).length < 4) openSetupModal();
+    else if (game.rounds.length < 16) openBidModal();
   </script>
-  <div class="site-credit-watermark">v58 · Made by Bruis</div>
+  <div class="site-credit-watermark">v59 · Made by Bruis</div>
 </body>
 </html>

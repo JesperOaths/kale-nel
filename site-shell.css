@@ -10,21 +10,25 @@
   --mouse-y: 0px;
 }
 html { scroll-behavior: smooth; }
+
 body {
   background:
-    linear-gradient(135deg, rgba(247,244,238,0.64), rgba(239,234,225,0.54)),
+    linear-gradient(135deg, rgba(247,244,238,0.58), rgba(239,234,225,0.46)),
     url('./site-bg-desktop.webp') center center / cover no-repeat fixed;
   color: var(--black);
   position: relative;
   overflow-x: hidden;
 }
+
+
 @media (orientation: portrait) {
   body {
     background:
-      linear-gradient(135deg, rgba(247,244,238,0.60), rgba(239,234,225,0.52)),
+      linear-gradient(135deg, rgba(247,244,238,0.58), rgba(239,234,225,0.48)),
       url('./site-bg-mobile.webp') center center / cover no-repeat fixed;
   }
 }
+
 .site-scene,
 .site-scene .page-bg,
 .site-scene .top-glow,
@@ -112,3 +116,6 @@ body {
   .site-scene .spinoza-shadow { width: min(62vw, 420px); top: 46%; opacity: 0.46; }
   .site-scene .playing-card-accent { width: min(34vw, 240px); right: -8px; bottom: 8%; }
 }
+
+.site-scene{display:none!important;}
+.site-scene *{display:none!important;}

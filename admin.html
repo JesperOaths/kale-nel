@@ -79,6 +79,10 @@
     #workspace .card.current-view{display:block;}
     .pill-row.history-pills{display:none;}
     .compact-toolbar-note{font-size:12px;color:var(--muted);}
+    #workspace{margin-top:14px;}
+    #workspace .card.current-view{display:block; max-height:58vh; overflow:auto;}
+    #workspace .card.current-view::-webkit-scrollbar{width:10px;}
+    #workspace .card.current-view::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.12);border-radius:999px;}
     @media (max-width:700px){.tab-btn{width:100%;justify-content:space-between;}}
   </style>
 
@@ -97,7 +101,7 @@
       </div>
       <div class="toolbar hidden" id="adminToolbar">
         <button id="refreshBtn" class="btn ghost-btn" type="button">Ververs</button>
-        <button id="kickMakeBtn" class="btn ghost-btn" type="button">Herstart Make handmatig</button>
+        <a class="btn ghost-btn" href="./vault.html">Vault</a><a class="btn ghost-btn" href="./leaderboard.html">Ranglijst</a><button id="kickMakeBtn" class="btn ghost-btn" type="button">Herstart Make handmatig</button>
       </div>
     </div>
     <div id="loginView">
@@ -864,6 +868,6 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     loadAdmin();
   </script>
 
-  <div class="site-credit-watermark">v58 · Made by Bruis</div>
+  <div class="site-credit-watermark">v59 · Made by Bruis</div>
 </body>
 </html>
