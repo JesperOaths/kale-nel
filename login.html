@@ -102,23 +102,16 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     function normalizeDisplayName(name) {
       return String(name || '').replace(/\s+/g, ' ').trim();
     }
-    function isLikelyRealName(name) {
-      const value = normalizeDisplayName(name);
-      if (!value) return false;
-      if (/^(test|demo|voorbeeld|sample|dummy|admin|gebruiker)/i.test(value)) return false;
-      if (/\d/.test(value)) return false;
-      return /^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’ .-]{1,39}$/.test(value);
-    }
-    function sanitizeNames(names) {
+    function uniqueNames(names) {
       const seen = new Set();
       return (names || [])
         .map(normalizeDisplayName)
-        .filter((name) => isLikelyRealName(name) && !seen.has(name.toLowerCase()) && seen.add(name.toLowerCase()))
+        .filter((name) => name && !seen.has(name.toLowerCase()) && seen.add(name.toLowerCase()))
         .sort((a, b) => a.localeCompare(b, 'nl'));
     }
     function fillNames(names, selected = '') {
       const input = document.getElementById('playerNameInput');
-      const cleanNames = sanitizeNames(names);
+      const cleanNames = uniqueNames(names);
       const current = selected && cleanNames.includes(selected) ? selected : input.value;
       input.innerHTML = '<option value="">Kies je naam</option>';
       cleanNames.forEach((name) => {
@@ -171,12 +164,13 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     async function load() {
       try {
         const [state, loginNames] = await Promise.all([getPublicState(), getLoginNames().catch(() => null)]);
-        fillNames(loginNames?.names || state.all_names || [], state.my_name || ''); 
+        fillNames(loginNames?.names || [], state.my_name || ''); 
         if (state.my_name) {
           document.getElementById('loginStateWord').textContent = state.my_name;
           document.getElementById('loginStateWord').className = 'state-word yes';
           document.getElementById('loginStateCopy').textContent = 'Deze browser heeft al een geldige sessie.';
         }
+        if (!(loginNames?.names || []).length) setStatus('Er staan nog geen login-namen klaar.', 'warn');
         if (getSessionToken()) {
           try { await touchSession(); } catch { clearSessionToken(); }
         }

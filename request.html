@@ -40,7 +40,7 @@
   <main class="main-card">
     <img src="./logo.png" class="logo-top" />
     <h1>Claim je naam</h1>
-    <p class="intro">Kies je naam uit de lijst en vul je e-mailadres in.<br><br><strong>Nog niet geactiveerd of link verlopen?</strong> Dien niet opnieuw in als er al een open aanvraag loopt. Verlopen activatielinks kunnen in admin direct opnieuw worden klaargezet en opnieuw verstuurd.</p>
+    <p class="intro">Kies je naam uit de lijst en vul je e-mailadres in.</p>
     <label>Gewenste naam</label>
     <select id="requestNameSelect"></select>
     <label>E-mailadres</label>
@@ -84,31 +84,24 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     function normalizeDisplayName(name) {
       return String(name || '').replace(/\s+/g, ' ').trim();
     }
-    function isLikelyRealName(name) {
-      const value = normalizeDisplayName(name);
-      if (!value) return false;
-      if (/^(test|demo|voorbeeld|sample|dummy|admin|gebruiker)/i.test(value)) return false;
-      if (/\d/.test(value)) return false;
-      return /^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’ .-]{1,39}$/.test(value);
-    }
-    function sanitizeNames(names) {
+    function uniqueNames(names) {
       const seen = new Set();
       return (names || [])
         .map(normalizeDisplayName)
-        .filter((name) => isLikelyRealName(name) && !seen.has(name.toLowerCase()) && seen.add(name.toLowerCase()))
+        .filter((name) => name && !seen.has(name.toLowerCase()) && seen.add(name.toLowerCase()))
         .sort((a, b) => a.localeCompare(b, 'nl'));
     }
     function fillNameSelect(names) {
       const select = document.getElementById("requestNameSelect");
-      const uniqueNames = sanitizeNames(names);
+      const items = uniqueNames(names);
       select.innerHTML = "";
       const placeholder = document.createElement("option");
       placeholder.value = "";
-      placeholder.textContent = uniqueNames.length ? "Kies je naam" : "Nog geen namen beschikbaar";
+      placeholder.textContent = items.length ? "Kies je naam" : "Nog geen namen beschikbaar";
       placeholder.disabled = true;
       placeholder.selected = true;
       select.appendChild(placeholder);
-      uniqueNames.forEach((name) => {
+      items.forEach((name) => {
         const option = document.createElement("option");
         option.value = name;
         option.textContent = name;
@@ -133,12 +126,8 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     }
 
     async function getRequestableNames() {
-      const direct = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names`, {
         method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(), body: JSON.stringify({})
-      });
-      if (direct.ok) return await parseResponse(direct);
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, {
-        method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(), body: JSON.stringify({ session_token: null })
       });
       return await parseResponse(res);
     }
@@ -170,9 +159,9 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     async function load() {
       try {
         const state = await getRequestableNames();
-        const names = sanitizeNames(state.names || state.all_names || []);
+        const names = uniqueNames(state.names || []);
         fillNameSelect(names);
-        if (!names.length) setStatus('Er staan nog geen echte namen klaar. Voeg echte namen toe via admin → allowed names.', 'warn');
+        if (!names.length) setStatus('Er staan nog geen namen klaar in de allowed/reserved names-lijst.', 'warn');
         else setStatus();
       } catch (err) {
         const rawMessage = err instanceof Error ? err.message : "Kon namen niet laden";

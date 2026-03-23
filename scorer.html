@@ -360,22 +360,16 @@
     function normalizeDisplayName(name) {
       return String(name || '').replace(/\s+/g, ' ').trim();
     }
-    function isLikelyRealName(name) {
-      const value = normalizeDisplayName(name);
-      if (!value) return false;
-      if (/^(test|demo|voorbeeld|sample|dummy|admin|gebruiker)/i.test(value)) return false;
-      if (/\d/.test(value)) return false;
-      return /^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’ .-]{1,39}$/.test(value);
-    }
-    function sanitizeNames(names) {
+    function uniqueNames(names) {
       const seen = new Set();
       return (names || [])
         .map(normalizeDisplayName)
-        .filter((name) => isLikelyRealName(name) && !seen.has(name.toLowerCase()) && seen.add(name.toLowerCase()))
+        .filter((name) => name && !seen.has(name.toLowerCase()) && seen.add(name.toLowerCase()))
         .sort((a, b) => a.localeCompare(b, 'nl'));
     }
     const SUIT_LABELS = { '♣':'♣', '♥':'♥', '♠':'♠', '♦':'♦', 'S':'sans' };
-    const BID_OPTIONS = [80,90,100,110,120,130,140,150,160];
+    const REGULAR_BID_OPTIONS = [80,90,100,110,120,130,140,150,160];
+    const SANS_BID_OPTIONS = [70,80,90,100,110,120,130];
 
     let game = loadGame();
     let contract = freshContract();
@@ -427,19 +421,13 @@
 
     async function getSitePlayers() {
       try {
-        const [loginRes, directRes, stateRes] = await Promise.allSettled([
-          fetch(`${SUPABASE_URL}/rest/v1/rpc/get_login_names`, {
-            method:'POST', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify({})
-          }).then(async (res) => { const txt = await res.text(); const data = txt ? JSON.parse(txt) : {}; if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }),
-          fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names`, {
-            method:'POST', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify({})
-          }).then(async (res) => { const txt = await res.text(); const data = txt ? JSON.parse(txt) : {}; if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }),
-          fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, { method:'POST', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify({ session_token: null }) }).then(async (res) => { const txt = await res.text(); const data = txt ? JSON.parse(txt) : {}; if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; })
-        ]);
-        const loginNames = loginRes.status === 'fulfilled' ? sanitizeNames(loginRes.value?.names || []) : [];
-        const directNames = directRes.status === 'fulfilled' ? sanitizeNames(directRes.value?.names || []) : [];
-        const siteNames = stateRes.status === 'fulfilled' ? sanitizeNames(stateRes.value?.all_names || []) : [];
-        return loginNames.length ? loginNames : (siteNames.length ? siteNames : directNames);
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names`, {
+          method:'POST', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify({})
+        });
+        const txt = await res.text();
+        const data = txt ? JSON.parse(txt) : {};
+        if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
+        return uniqueNames(data?.names || []);
       } catch {
         return [];
       }
@@ -449,7 +437,7 @@
     function getKnownPlayers() { return knownPlayersCache.slice(); }
 
     function rememberPlayers(players) {
-      knownPlayersCache = sanitizeNames([...knownPlayersCache, ...players.filter(Boolean)]);
+      knownPlayersCache = uniqueNames([...knownPlayersCache, ...players.filter(Boolean)]);
       localStorage.setItem(PLAYERS_KEY, JSON.stringify(knownPlayersCache));
     }
 
@@ -459,6 +447,15 @@
 
     function totalRawForSuit(suit) {
       return suit === 'S' ? 130 : 162;
+    }
+
+    function bidOptionsForSuit(suit) {
+      return suit === 'S' ? SANS_BID_OPTIONS : REGULAR_BID_OPTIONS;
+    }
+
+    function syncBidToSuit() {
+      const options = bidOptionsForSuit(contract.suit);
+      if (!options.includes(contract.bid)) contract.bid = options[0];
     }
 
     function toRoman(n) {
@@ -646,7 +643,7 @@
 
     function buildBidGrid() {
       const root = document.getElementById('bidGrid');
-      root.innerHTML = BID_OPTIONS.map((bid) => `<button class="bid-btn ${contract.bid === bid ? 'active' : ''}" type="button" data-bid="${bid}">${bid}</button>`).join('');
+      root.innerHTML = bidOptionsForSuit(contract.suit).map((bid) => `<button class="bid-btn ${contract.bid === bid ? 'active' : ''}" type="button" data-bid="${bid}">${bid}</button>`).join('');
       root.querySelectorAll('[data-bid]').forEach((btn) => btn.addEventListener('click', () => {
         contract.bid = Number(btn.dataset.bid);
         root.querySelectorAll('.bid-btn').forEach((el) => el.classList.toggle('active', el === btn));
@@ -1171,7 +1168,6 @@
         if (!rows.length && !previewPlaced) {
           const empty = document.createElement('div');
           empty.className = 'current-empty';
-          empty.textContent = 'Deze tak is nu aan de beurt.';
           section.appendChild(empty);
         }
         root.appendChild(section);
@@ -1210,6 +1206,7 @@
     }));
     document.querySelectorAll('[data-suit]').forEach((btn) => btn.addEventListener('click', () => {
       contract.suit = btn.dataset.suit;
+      syncBidToSuit();
       syncBidModalSelections();
       applyInstantSpecialState();
       renderPendingStrip();
@@ -1233,9 +1230,9 @@
     async function initPage(){
       try {
         const storedPlayers = JSON.parse(localStorage.getItem(PLAYERS_KEY) || '[]');
-        if (Array.isArray(storedPlayers) && storedPlayers.length) knownPlayersCache = sanitizeNames([...knownPlayersCache, ...storedPlayers]);
+        if (Array.isArray(storedPlayers) && storedPlayers.length) knownPlayersCache = uniqueNames([...knownPlayersCache, ...storedPlayers]);
       } catch {}
-      knownPlayersCache = sanitizeNames([...(await getSitePlayers()), ...knownPlayersCache]);
+      knownPlayersCache = uniqueNames([...(await getSitePlayers()), ...knownPlayersCache]);
       renderSetupOptions();
       render();
       if (game.rounds.length || game.players.filter(Boolean).length) {

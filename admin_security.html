@@ -23,29 +23,45 @@
   <main class="main-card">
     <a class="btn" href="./admin.html">← Terug naar hub</a>
     <h1 style="margin-top:16px;">Security & hosting</h1>
-    <p class="muted">Deze pagina vat samen wat in de bundle is dichtgezet en welke stap buiten de repo nog nodig is voor echte hosting-level bescherming.</p>
+    <p class="muted">Deze pagina is bijgewerkt naar de huidige situatie: statische publieke site op <code>kalenel.nl</code>, admin-RPC’s in Supabase, en de wens om admin/vault/leaderboard echt af te schermen voor live gebruik.</p>
     <div class="block">
-      <h2>Wat al in de bundle zit</h2>
+      <h2>Wat op dit moment nog wél en níet klopt</h2>
       <ul>
-        <li>Force-HTTPS redirect script op de pagina’s.</li>
-        <li><code>noindex,nofollow</code> op admin-/vault-/leaderboard-pagina’s.</li>
-        <li>Admin-session gate op de gevoelige HTML-pagina’s.</li>
-        <li>Supabase admin-RPC’s blijven de echte backend-check doen.</li>
+        <li><strong>Klopt nog steeds:</strong> front-end session gates, <code>noindex,nofollow</code>, en force-HTTPS scripts zijn nuttig als UX-laag.</li>
+        <li><strong>Niet genoeg als echte beveiliging:</strong> zolang admin-bestanden rechtstreeks als statische HTML publiek bereikbaar blijven, kan iemand met de URL die pagina nog steeds proberen te openen.</li>
+        <li><strong>DB-checks blijven verplicht:</strong> gevoelige Supabase RPC’s moeten admin-sessie server-side blijven controleren, ook ná hosting-level afscherming.</li>
       </ul>
     </div>
     <div class="block">
-      <h2>Wat nog buiten de repo moet gebeuren</h2>
-      <ul>
-        <li>GitHub Pages: zet <strong>Enforce HTTPS</strong> aan in de Pages-instellingen voor het domein.</li>
-        <li>Voor échte afscherming: verhuis admin-tools naar een protected subdomain/path achter Cloudflare Access, Netlify Identity, Vercel middleware of een reverse proxy.</li>
-        <li>Laat de v62 SQL draaien zodat expired queue, allowed usernames en admin audit-routes actief worden.</li>
-      </ul>
+      <h2>Aanbevolen live plan: Cloudflare vóór de admin-laag</h2>
+      <ol>
+        <li><strong>Laat de publieke site op de root staan</strong> (<code>kalenel.nl</code>) voor <code>index.html</code>, <code>request.html</code>, <code>activate.html</code>, <code>login.html</code> en eventueel <code>scorer.html</code>.</li>
+        <li><strong>Maak een aparte admin-ingang</strong>, bij voorkeur <code>admin.kalenel.nl</code> of een beschermde <code>/admin/*</code>-route.</li>
+        <li><strong>Zet Cloudflare voor het domein</strong> en bescherm die admin-subdomain of route met Cloudflare Access policies.</li>
+        <li><strong>Verhuis alleen admin-intent pagina’s</strong> achter die Access-laag: <code>admin.html</code>, <code>admin_claims.html</code>, <code>admin_expired.html</code>, <code>admin_reserved_names.html</code>, <code>admin_security.html</code>, <code>vault.html</code> en desgewenst <code>leaderboard.html</code>.</li>
+        <li><strong>Laat Supabase admin-RPC checks bestaan</strong> als tweede slot op de deur.</li>
+      </ol>
     </div>
     <div class="block">
-      <h2>Belangrijk</h2>
-      <p>Deze statische repo kan de admin-pagina’s niet echt server-side verbergen zolang ze rechtstreeks via GitHub Pages worden geserveerd. De frontend-gates zijn nuttig, maar geen vervanging voor hosting-auth.</p>
+      <h2>Alternatieven</h2>
+      <ul>
+        <li><strong>Netlify Identity</strong>: bruikbaar als je die admin-surface naar Netlify verhuist.</li>
+        <li><strong>Vercel middleware</strong>: bruikbaar als je admin-routes op Vercel host en route-level auth wilt afdwingen.</li>
+        <li><strong>Reverse proxy auth</strong>: goed als je al een eigen proxy of serverlaag voor het admin-pad wilt beheren.</li>
+      </ul>
+      <p>Voor de huidige architectuur is Cloudflare het meest logische eerste pad, omdat het goed past vóór een bestaande statische site met custom domein.</p>
     </div>
-  </main>
+    <div class="block">
+      <h2>Operationele checklist vóór live testen</h2>
+      <ul>
+        <li>Zet GitHub Pages HTTPS enforcement aan voor het domein.</li>
+        <li>Verifieer het custom domein bij GitHub Pages.</li>
+        <li>Haal admin-links uit publieke navigatie waar niet nodig.</li>
+        <li>Zet admin/vault/leaderboard achter de gekozen hosting-auth laag.</li>
+        <li>Controleer daarna opnieuw dat admin-RPC’s nog steeds alleen met geldige admin-sessie werken.</li>
+      </ul>
+    </div>
+  </main></main>
   <div class="site-credit-watermark">v62 · Made by Bruis</div>
 </body>
 </html>
