@@ -198,7 +198,7 @@
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v62 · Made by Bruis</div>
+    <div class="version-tag">v63 · Made by Bruis</div>
   </div>
   <script>
 const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -282,6 +282,43 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       return req?.display_name || req?.requester_meta?.display_name || req?.requester_meta?.name || `Aanvraag #${req?.id ?? '?'}`;
     }
 
+    function parseMaybeJson(value) {
+      if (!value || typeof value !== 'string') return value;
+      try { return JSON.parse(value); } catch { return value; }
+    }
+
+    function extractIdLike(value) {
+      if (typeof value === 'number' && Number.isFinite(value)) return value;
+      const text = String(value || '').trim();
+      if (!text) return null;
+      const direct = Number(text);
+      if (Number.isFinite(direct)) return direct;
+      const tupleMatch = text.match(/^\(?\s*(\d+)/);
+      return tupleMatch ? Number(tupleMatch[1]) : null;
+    }
+
+    function normalizeAdminRow(input) {
+      let row = input;
+      if (row && typeof row === 'object') {
+        row = row.request && typeof row.request === 'object' ? { ...row.request, ...row } : row;
+        row = row.row && typeof row.row === 'object' ? { ...row.row, ...row } : row;
+        row = row.item && typeof row.item === 'object' ? { ...row.item, ...row } : row;
+      }
+      if (!row || typeof row !== 'object') return { id: extractIdLike(row), requester_meta: {} };
+      const out = { ...row };
+      out.requester_meta = parseMaybeJson(out.requester_meta) || {};
+      out.id = extractIdLike(out.id ?? out.request_id ?? out.claim_request_id);
+      out.request_id = extractIdLike(out.request_id ?? out.id ?? out.claim_request_id);
+      out.claim_request_id = extractIdLike(out.claim_request_id ?? out.request_id ?? out.id);
+      out.player_id = extractIdLike(out.player_id);
+      out.allowed_username_id = extractIdLike(out.allowed_username_id);
+      out.activation_link_id = extractIdLike(out.activation_link_id);
+      return out;
+    }
+
+    function normalizeAdminRows(rows) {
+      return (rows || []).map(normalizeAdminRow).filter((row) => row && row.id !== null);
+    }
 
     function hasPin(req) {
       return Boolean(req.has_pin ?? req.pin_is_set ?? req.player_has_pin ?? req.pin_set ?? req.activated ?? false);
@@ -800,8 +837,8 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
 
     async function refreshAdminLists() {
       const [requests, history] = await Promise.all([getRequests(), getHistory()]);
-      lastRequests = requests.requests || [];
-      lastHistory = history.history || [];
+      lastRequests = normalizeAdminRows(requests.requests || []);
+      lastHistory = normalizeAdminRows(history.history || []);
       renderStats(lastRequests, lastHistory);
       switchAdminView(currentAdminView);
     }
@@ -905,6 +942,6 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     loadAdmin();
   </script>
 
-  <div class="site-credit-watermark">v61 · Made by Bruis</div>
+  <div class="site-credit-watermark">v63 · Made by Bruis</div>
 </body>
 </html>
