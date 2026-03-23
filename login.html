@@ -51,8 +51,9 @@
       <div id="loginStateCopy" style="font-size: 12px; color: #666;"></div>
     </div>
     <form id="loginForm" autocomplete="on">
-      <input id="playerNameInput" name="username" type="text" list="playerNameList" placeholder="Kies of typ je naam" autocomplete="username" autocapitalize="none" spellcheck="false">
-      <datalist id="playerNameList"></datalist>
+      <select id="playerNameInput" name="username" autocomplete="username">
+        <option value="">Kies je naam</option>
+      </select>
     <div style="display: flex; gap: 8px; margin-bottom: 15px;">
       <input id="pinInput" name="current-password" type="password" inputmode="numeric" maxlength="4" placeholder="Pincode" autocomplete="current-password" style="margin:0;">
       <button id="pinOpenBtn" type="button" class="primary-btn" style="flex: 0 0 auto; width: auto; padding: 0 15px;">Toetsen</button>
@@ -99,16 +100,16 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       box.textContent = message;
     }
     function fillNames(names, selected = '') {
-      const list = document.getElementById('playerNameList');
       const input = document.getElementById('playerNameInput');
-      list.innerHTML = '';
+      const current = selected && (names || []).includes(selected) ? selected : input.value;
+      input.innerHTML = '<option value="">Kies je naam</option>';
       (names || []).forEach((name) => {
         const option = document.createElement('option');
         option.value = name;
-        list.appendChild(option);
+        option.textContent = name;
+        input.appendChild(option);
       });
-      if (selected && (names || []).includes(selected)) input.value = selected;
-      else if (!input.value) input.value = '';
+      input.value = (names || []).includes(current) ? current : '';
     }
     function nextUrl() { return new URLSearchParams(window.location.search).get('next') || './index.html'; }
     function pendingVote() { return new URLSearchParams(window.location.search).get('vote') || ''; }
@@ -195,6 +196,6 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     load();
   </script>
 
-  <div class="site-credit-watermark">v61 · Made by Bruis</div>
+  <div class="site-credit-watermark">v62 · Made by Bruis</div>
 </body>
 </html>

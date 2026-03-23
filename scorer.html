@@ -82,7 +82,11 @@
       text-transform:uppercase; letter-spacing:.18em; font-weight:900;
     }
     .score-row { min-height:50px; align-items:center; padding:2px 0; }
+    .score-row.preview-row { opacity:0.96; }
     .score-cell { display:grid; align-items:center; min-height:42px; }
+    .score-cell.strike-side .score-points,
+    .score-cell.strike-side .score-meta,
+    .score-cell.strike-side .meta-tag { text-decoration:line-through; }
     .score-cell.left { grid-template-columns:auto 1fr; gap:10px; }
     .score-cell.right { grid-template-columns:1fr auto; gap:10px; }
     .score-points { font-size:23px; line-height:1; font-weight:900; letter-spacing:-0.04em; }
@@ -189,10 +193,10 @@
     <header class="topbar">
       <button class="icon-btn" type="button" onclick="toggleAppMenu()">☰</button>
       <div class="topbar-title"><strong>Klaverjas scorer</strong><span>Mobiel, in takken, met biedingen en roem</span></div>
-      <button class="icon-btn" type="button" onclick="undoRound()">↶</button>
+      <button class="icon-btn" type="button" onclick="undoLastAction()">↶</button>
     </header>
 
-    <div id="appMenu" class="overlay"><div class="modal"><h2>Klaverjas menu</h2><div class="modal-footer" style="display:grid;grid-template-columns:1fr;"><button class="btn-light" type="button" onclick="openSetupModal()">Teams kiezen</button><button class="btn-light" type="button" onclick="newGame()">Nieuw spel</button><button class="btn-dark" type="button" onclick="window.location.href='./index.html'">Terug naar site</button></div></div></div>
+    <div id="appMenu" class="overlay"><div class="modal"><h2>Klaverjas menu</h2><div class="modal-footer" style="display:grid;grid-template-columns:1fr;"><button class="btn-light" type="button" onclick="openSetupModal()">Teams kiezen</button><button class="btn-light" type="button" onclick="undoRound()">Hele ronde undo</button><button class="btn-light" type="button" onclick="newGame()">Nieuw spel</button><button class="btn-dark" type="button" onclick="window.location.href='./index.html'">Terug naar site</button></div></div></div>
 
     <div class="wrap">
       <section class="sheet">
@@ -204,9 +208,7 @@
         <div class="match-head">
           <div class="teams-line">
             <div class="team-chip"><div class="label">wij</div><div class="names" id="teamWijNames">-</div></div>
-            <div class="center-tools">
-              <button class="undo-hero" type="button" onclick="undoRound()">Undo</button>
-            </div>
+            <div class="center-tools" aria-hidden="true"></div>
             <div class="team-chip"><div class="label">zij</div><div class="names" id="teamZijNames">-</div></div>
           </div>
         </div>
@@ -290,7 +292,7 @@
       </div>
       <div class="helper">De lijst wordt direct gefilterd zodat je geen dubbele naam meer kunt kiezen.</div>
       <div class="modal-footer">
-        <button class="btn-light" type="button" onclick="closeSetupModal(false)">Later</button>
+        <button class="btn-light" type="button" onclick="closeSetupModal()">Later</button>
         <button class="btn-blue" type="button" onclick="saveSetup()">Opslaan en bieding kiezen</button>
       </div>
     </div>
@@ -335,6 +337,7 @@
 
     let game = loadGame();
     let contract = freshContract();
+    let currentActionHistory = [];
 
     function freshGame() {
       return {
@@ -451,6 +454,58 @@
         .replace(/'/g, '&#39;');
     }
 
+
+    function cloneContractState() {
+      return JSON.parse(JSON.stringify(contract));
+    }
+
+    function currentRoundSnapshot() {
+      return {
+        contract: cloneContractState(),
+        inputW: document.getElementById('inputW')?.value || '',
+        inputZ: document.getElementById('inputZ')?.value || '',
+        bidOpen: document.getElementById('bidOverlay')?.classList.contains('show') || false
+      };
+    }
+
+    function recordActionSnapshot() {
+      const next = currentRoundSnapshot();
+      const prev = currentActionHistory[currentActionHistory.length - 1];
+      if (!prev || JSON.stringify(prev) !== JSON.stringify(next)) currentActionHistory.push(next);
+    }
+
+    function syncSpecialButtons() {
+      document.querySelectorAll('[data-special]').forEach((btn) => {
+        const active = btn.dataset.special === contract.special.team && btn.dataset.type === contract.special.type;
+        btn.classList.toggle('active', active);
+        btn.classList.toggle('nat', active && btn.dataset.type === 'nat');
+        btn.classList.toggle('pit', active && btn.dataset.type === 'pit');
+      });
+    }
+
+    function restoreActionSnapshot(snapshot) {
+      if (!snapshot) return;
+      contract = snapshot.contract ? JSON.parse(JSON.stringify(snapshot.contract)) : freshContract();
+      document.getElementById('inputW').value = snapshot.inputW ?? '';
+      document.getElementById('inputZ').value = snapshot.inputZ ?? '';
+      syncSpecialButtons();
+      applyInstantSpecialState();
+      syncBidModalSelections();
+      render();
+      if (snapshot.bidOpen) document.getElementById('bidOverlay').classList.add('show');
+      else closeBidModal();
+    }
+
+    function undoLastAction() {
+      if (!currentActionHistory.length) {
+        setMessage('Geen losse actie om ongedaan te maken.');
+        return;
+      }
+      const snapshot = currentActionHistory.pop();
+      restoreActionSnapshot(snapshot);
+      setMessage('Laatste losse actie ongedaan gemaakt.');
+    }
+
     function playerSelectIds() {
       return ['playerW1','playerZ1','playerW2','playerZ2'];
     }
@@ -490,8 +545,7 @@
       refreshSetupOptionsPreserving();
       document.getElementById('setupOverlay').classList.add('show');
     }
-    function closeSetupModal(force) {
-      if (force === false && game.players.filter(Boolean).length < 4) return;
+    function closeSetupModal() {
       document.getElementById('setupOverlay').classList.remove('show');
     }
 
@@ -502,7 +556,8 @@
       game.players = picks;
       rememberPlayers(picks);
       saveGame();
-      closeSetupModal(true);
+      closeSetupModal();
+      currentActionHistory = [];
       render();
       openBidModal();
     }
@@ -511,6 +566,7 @@
       const root = document.getElementById('bidGrid');
       root.innerHTML = BID_OPTIONS.map((bid) => `<button class="bid-btn ${contract.bid === bid ? 'active' : ''}" type="button" data-bid="${bid}">${bid}</button>`).join('');
       root.querySelectorAll('[data-bid]').forEach((btn) => btn.addEventListener('click', () => {
+        recordActionSnapshot();
         contract.bid = Number(btn.dataset.bid);
         root.querySelectorAll('.bid-btn').forEach((el) => el.classList.toggle('active', el === btn));
         renderPendingStrip();
@@ -538,6 +594,7 @@
       closeBidModal();
       renderContract();
       renderPendingStrip();
+      renderBoard();
       setMessage('Bieding opgeslagen voor deze ronde.');
     }
 
@@ -553,7 +610,8 @@
     function resetInputUi() {
       contract.roem = { W:0, Z:0 };
       contract.special = { team:'', type:'' };
-      document.querySelectorAll('[data-special]').forEach((btn) => btn.classList.remove('active', 'nat', 'pit'));
+      currentActionHistory = [];
+      syncSpecialButtons();
       clearRoundInputs();
       renderRoemLives();
       renderPendingStrip();
@@ -635,6 +693,7 @@
     }
 
     function addRoem(side, value) {
+      recordActionSnapshot();
       contract.roem[side] += value;
       renderRoemLives();
       renderPendingStrip();
@@ -642,6 +701,8 @@
     }
 
     function clearRoem(side) {
+      if (!contract.roem[side]) { setMessage(`${side === 'W' ? 'Wij' : 'Zij'} heeft geen roem om te wissen.`); return; }
+      recordActionSnapshot();
       contract.roem[side] = 0;
       renderRoemLives();
       renderPendingStrip();
@@ -649,6 +710,7 @@
     }
 
     function toggleSpecial(side, type, button) {
+      recordActionSnapshot();
       const already = contract.special.team === side && contract.special.type === type;
       document.querySelectorAll('[data-special]').forEach((btn) => btn.classList.remove('active', 'nat', 'pit'));
       if (already) {
@@ -660,6 +722,7 @@
       }
       applyInstantSpecialState();
       renderPendingStrip();
+      renderBoard();
       if (contract.special.type === 'nat') {
         setMessage(`${side === 'W' ? 'Wij' : 'Zij'} nat: alle punten gaan direct naar de tegenpartij.`);
       } else if (contract.special.type === 'pit') {
@@ -749,6 +812,7 @@
       saveGame();
       resetInputUi();
       contract = freshContract();
+      currentActionHistory = [];
       render();
       if (game.rounds.length >= 16) finishGame();
       else openBidModal();
@@ -781,6 +845,7 @@
       saveGame();
       resetInputUi();
       contract = freshContract();
+      currentActionHistory = [];
       render();
       setMessage(`${side === 'W' ? 'Wij' : 'Zij'} verzaakt: alle punten gingen direct naar de tegenpartij.`);
       if (game.rounds.length >= 16) finishGame(); else openBidModal();
@@ -808,6 +873,7 @@
       for (const key of LEGACY_MATCH_KEYS) localStorage.removeItem(key);
       game = freshGame();
       contract = freshContract();
+      currentActionHistory = [];
       clearRoundInputs();
       renderSetupOptions();
       render();
@@ -815,6 +881,60 @@
     function newGame() { document.getElementById('resumeOverlay').classList.add('show'); }
     function wipeAndStartNew(){ document.getElementById('resumeOverlay').classList.remove('show'); reallyResetGame(); openSetupModal(); setMessage('Nieuw spel gestart.'); }
     function resumeExistingGame(){ document.getElementById('resumeOverlay').classList.remove('show'); render(); setMessage('Verder met bestaand spel.'); }
+
+
+    function readPreviewBaseScores() {
+      const rawW = document.getElementById('inputW').value.trim();
+      const rawZ = document.getElementById('inputZ').value.trim();
+      const total = totalRawForSuit(contract.suit || '♠');
+      let baseW = rawW === '' ? null : parseInt(rawW, 10);
+      let baseZ = rawZ === '' ? null : parseInt(rawZ, 10);
+      if (Number.isNaN(baseW)) baseW = null;
+      if (Number.isNaN(baseZ)) baseZ = null;
+      if (baseW !== null && baseZ === null) baseZ = total - baseW;
+      if (baseZ !== null && baseW === null) baseW = total - baseZ;
+      return { baseW, baseZ, total, hasAny: baseW !== null || baseZ !== null };
+    }
+
+    function hasActiveRoundPreview() {
+      const preview = readPreviewBaseScores();
+      return Boolean(contract.team || contract.roem.W || contract.roem.Z || contract.special.type || preview.hasAny);
+    }
+
+    function buildPreviewRound() {
+      const preview = readPreviewBaseScores();
+      const total = preview.total;
+      const round = {
+        index: currentRoundIndex(),
+        tak: currentTak(),
+        team: contract.team,
+        bid: contract.bid,
+        suit: contract.suit,
+        rw: contract.roem.W,
+        rz: contract.roem.Z,
+        specialTeam: contract.special.team || '',
+        specialType: contract.special.type || '',
+        enteredScoreW: preview.baseW === null ? '' : scoreFromRaw(preview.baseW),
+        enteredScoreZ: preview.baseZ === null ? '' : scoreFromRaw(preview.baseZ),
+        fw: '',
+        fz: '',
+        preview: true
+      };
+      if (contract.special.type === 'nat') {
+        const loser = contract.special.team;
+        round.nat = true;
+        round.natBy = loser;
+        round.fw = loser === 'W' ? 0 : scoreFromRaw(total + contract.roem.W + contract.roem.Z);
+        round.fz = loser === 'Z' ? 0 : scoreFromRaw(total + contract.roem.W + contract.roem.Z);
+      } else if (contract.special.type === 'pit') {
+        round.fw = preview.baseW === null ? '' : scoreFromRaw(preview.baseW + contract.roem.W + (contract.special.team === 'W' ? 100 : 0));
+        round.fz = preview.baseZ === null ? '' : scoreFromRaw(preview.baseZ + contract.roem.Z + (contract.special.team === 'Z' ? 100 : 0));
+      } else if (preview.hasAny) {
+        round.fw = preview.baseW === null ? '' : scoreFromRaw(preview.baseW + contract.roem.W);
+        round.fz = preview.baseZ === null ? '' : scoreFromRaw(preview.baseZ + contract.roem.Z);
+      }
+      return round;
+    }
 
     function roemStrikeSide(round) {
       if (round.roemStruck) return round.roemStruck;
@@ -838,11 +958,11 @@
         if (round.team === 'W') tokens.push(`<span class="meta-tag">${escapeHtml(String(round.bid || ''))}</span>`);
         if (round.team === 'W' && round.suit) tokens.push(`<span class="meta-tag suit ${suitClass(round.suit)}">${escapeHtml(round.suit === 'S' ? 'sans' : round.suit)}</span>`);
         if (winningSide === 'W' && round.rz) tokens.push(`<span class="meta-tag transfer">+${escapeHtml(toRoman(round.rz))}</span>`);
-        if (round.specialType && round.specialTeam === 'W') tokens.push(`<span class="meta-tag special ${escapeHtml(round.specialType)}">${escapeHtml(round.specialType)}</span>`);
+        if (round.specialType && round.specialTeam === 'W' && round.specialType !== 'nat') tokens.push(`<span class="meta-tag special ${escapeHtml(round.specialType)}">${escapeHtml(round.specialType)}</span>`);
         if (round.nat && round.natBy === 'W') tokens.push('<span class="meta-tag special nat">nat</span>');
         if (round.verzaaktBy === 'W') tokens.push('<span class="meta-tag special nat">verzaakt</span>');
       } else {
-        if (round.specialType && round.specialTeam === 'Z') tokens.push(`<span class="meta-tag special ${escapeHtml(round.specialType)}">${escapeHtml(round.specialType)}</span>`);
+        if (round.specialType && round.specialTeam === 'Z' && round.specialType !== 'nat') tokens.push(`<span class="meta-tag special ${escapeHtml(round.specialType)}">${escapeHtml(round.specialType)}</span>`);
         if (winningSide === 'Z' && round.rw) tokens.push(`<span class="meta-tag transfer">+${escapeHtml(toRoman(round.rw))}</span>`);
         if (round.team === 'Z' && round.suit) tokens.push(`<span class="meta-tag suit ${suitClass(round.suit)}">${escapeHtml(round.suit === 'S' ? 'sans' : round.suit)}</span>`);
         if (round.team === 'Z') tokens.push(`<span class="meta-tag">${escapeHtml(String(round.bid || ''))}</span>`);
@@ -855,7 +975,7 @@
 
     function displayPointsForSide(round, side) {
       const losingSide = round.verzaaktBy || round.natBy || '';
-      if (losingSide === side && (round.enteredScoreW || round.enteredScoreZ)) {
+      if (losingSide === side && (round.enteredScoreW !== '' || round.enteredScoreZ !== '')) {
         return {
           value: side === 'W' ? round.enteredScoreW : round.enteredScoreZ,
           strike: true
@@ -870,31 +990,48 @@
     function renderBoard() {
       const root = document.getElementById('roundBoard');
       root.innerHTML = '';
+      const previewRound = hasActiveRoundPreview() ? buildPreviewRound() : null;
+
+      function renderRow(row, isPreview = false) {
+        const rowEl = document.createElement('div');
+        rowEl.className = `score-row ${isPreview ? 'preview-row' : ''}`.trim();
+        if (row) {
+          const pointsW = displayPointsForSide(row, 'W');
+          const pointsZ = displayPointsForSide(row, 'Z');
+          const losingSide = row.verzaaktBy || row.natBy || '';
+          const leftValue = pointsW.value === '' ? '&nbsp;' : escapeHtml(String(pointsW.value));
+          const rightValue = pointsZ.value === '' ? '&nbsp;' : escapeHtml(String(pointsZ.value));
+          rowEl.innerHTML = `
+              <div class="score-cell left ${losingSide === 'W' ? 'strike-side' : ''}">
+                <div class="score-points ${pointsW.strike ? 'strike' : ''}">${leftValue}</div>
+                <div class="score-meta left">${buildMetaTokens(row, 'W')}</div>
+              </div>
+              <div class="score-cell right ${losingSide === 'Z' ? 'strike-side' : ''}">
+                <div class="score-meta right">${buildMetaTokens(row, 'Z')}</div>
+                <div class="score-points ${pointsZ.strike ? 'strike' : ''}">${rightValue}</div>
+              </div>`;
+        } else {
+          rowEl.innerHTML = '<div class="score-empty"></div><div class="score-empty"></div>';
+        }
+        return rowEl;
+      }
+
       for (let tak = 1; tak <= 4; tak += 1) {
         const section = document.createElement('section');
         section.className = 'tak-section';
         section.innerHTML = `<div class="tak-divider"><div class="tak-label">Tak ${tak}</div></div>`;
         const rows = game.rounds.filter((round) => round.tak === tak);
+        let previewPlaced = false;
         for (let i = 0; i < 4; i += 1) {
           const row = rows[i];
-          const rowEl = document.createElement('div');
-          rowEl.className = 'score-row';
           if (row) {
-            const pointsW = displayPointsForSide(row, 'W');
-            const pointsZ = displayPointsForSide(row, 'Z');
-            rowEl.innerHTML = `
-              <div class="score-cell left">
-                <div class="score-points ${pointsW.strike ? 'strike' : ''}">${escapeHtml(String(pointsW.value))}</div>
-                <div class="score-meta left">${buildMetaTokens(row, 'W')}</div>
-              </div>
-              <div class="score-cell right">
-                <div class="score-meta right">${buildMetaTokens(row, 'Z')}</div>
-                <div class="score-points ${pointsZ.strike ? 'strike' : ''}">${escapeHtml(String(pointsZ.value))}</div>
-              </div>`;
+            section.appendChild(renderRow(row, false));
+          } else if (!previewPlaced && previewRound && tak === currentTak()) {
+            section.appendChild(renderRow(previewRound, true));
+            previewPlaced = true;
           } else {
-            rowEl.innerHTML = '<div class="score-empty"></div><div class="score-empty"></div>';
+            section.appendChild(renderRow(null, false));
           }
-          section.appendChild(rowEl);
         }
         root.appendChild(section);
       }
@@ -928,15 +1065,19 @@
     }
 
     document.querySelectorAll('[data-team-choice]').forEach((btn) => btn.addEventListener('click', () => {
+      recordActionSnapshot();
       contract.team = btn.dataset.teamChoice;
       syncBidModalSelections();
       renderPendingStrip();
+      renderBoard();
     }));
     document.querySelectorAll('[data-suit]').forEach((btn) => btn.addEventListener('click', () => {
+      recordActionSnapshot();
       contract.suit = btn.dataset.suit;
       syncBidModalSelections();
       applyInstantSpecialState();
       renderPendingStrip();
+      renderBoard();
     }));
     document.querySelectorAll('[data-roem]').forEach((btn) => btn.addEventListener('click', () => {
       addRoem(btn.dataset.roem, Number(btn.dataset.value));
@@ -944,10 +1085,10 @@
     document.querySelectorAll('[data-special]').forEach((btn) => btn.addEventListener('click', () => {
       toggleSpecial(btn.dataset.special, btn.dataset.type, btn);
     }));
-    document.getElementById('inputW').addEventListener('input', () => syncInputs('W'));
-    document.getElementById('inputZ').addEventListener('input', () => syncInputs('Z'));
+    document.getElementById('inputW').addEventListener('input', () => { recordActionSnapshot(); syncInputs('W'); renderBoard(); });
+    document.getElementById('inputZ').addEventListener('input', () => { recordActionSnapshot(); syncInputs('Z'); renderBoard(); });
     playerSelectIds().forEach((id) => document.getElementById(id).addEventListener('change', refreshSetupOptionsPreserving));
-    document.getElementById('setupOverlay').addEventListener('click', (event) => { if (event.target.id === 'setupOverlay' && game.players.filter(Boolean).length === 4) closeSetupModal(true); });
+    document.getElementById('setupOverlay').addEventListener('click', (event) => { if (event.target.id === 'setupOverlay') closeSetupModal(); });
     document.getElementById('bidOverlay').addEventListener('click', (event) => { if (event.target.id === 'bidOverlay') closeBidModal(); });
     document.getElementById('appMenu').addEventListener('click', (event) => { if (event.target.id === 'appMenu') toggleAppMenu(false); });
     document.getElementById('resumeOverlay').addEventListener('click', (event) => { if (event.target.id === 'resumeOverlay') document.getElementById('resumeOverlay').classList.remove('show'); });

@@ -198,7 +198,7 @@
     .lists-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 15px;
+      gap: 12px;
     }
 
     .list-box {
@@ -210,6 +210,9 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.04);
       text-align: left;
     }
+    .list-box.legends { text-align:right; }
+    .list-box.legends .name-list li { text-align:right; }
+    .list-box.losers { text-align:left; }
 
     .list-box h2 {
       font-size: 18px;
@@ -264,8 +267,9 @@
 
     .public-links-grid {
       display:grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
+      align-items:stretch;
     }
 
     .page-link-card {
@@ -278,7 +282,9 @@
       padding: 16px 18px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.04);
       transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+      text-align:center;
     }
+    .page-link-card.scorer-link { grid-column:2; }
 
     .page-link-card:hover {
       transform: translateY(-1px);
@@ -319,7 +325,8 @@
         padding: 28px 18px 20px;
         width: min(700px, 96vw);
       }
-      .card-top-right {
+      .card-top-right,
+      .card-top-left {
         position: static;
         justify-content: flex-end;
         margin-bottom: 16px;
@@ -365,8 +372,10 @@
 
   <main class="page">
     <section class="main-card">
-      <div class="card-top-right">
+      <div class="card-top-left">
         <a href="./admin.html" class="admin-badge">Admin</a>
+      </div>
+      <div class="card-top-right">
         <img src="./logo.png" alt="Logo" class="card-logo" />
       </div>
 
@@ -382,11 +391,11 @@
       </div>
 
       <div class="lists-grid">
-        <div class="list-box">
+        <div class="list-box legends">
           <h2>Legends</h2>
           <ul id="legendsList" class="name-list"></ul>
         </div>
-        <div class="list-box">
+        <div class="list-box losers">
           <h2>Losers</h2>
           <ul id="losersList" class="name-list"></ul>
         </div>
@@ -406,7 +415,7 @@
             <div class="page-link-label">Naam aanvragen</div>
             <div class="page-link-copy">Vraag een nieuwe spelersnaam aan als je nog niet op de lijst staat.</div>
           </a>
-          <a class="page-link-card" href="./scorer.html">
+          <a class="page-link-card scorer-link" href="./scorer.html">
             <div class="page-link-label">Klaverjas scorer</div>
             <div class="page-link-copy">Voer rondes in, houd de stand bij en sla wedstrijden op voor de vault.</div>
           </a>
