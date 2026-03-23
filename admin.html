@@ -32,6 +32,14 @@
     .search-input { margin-top:8px; }
     #status { margin-top:20px; font-size:14px; min-height:18px; }
     hr { margin:20px 0; border:0; border-top:1px solid #eee; }
+
+    .request-grid, .activation-meta { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:12px; }
+    .inline-msg.ok { color:var(--ok); }
+    .inline-msg.error { color:var(--warn); }
+    details { margin-top:12px; }
+    summary { cursor:pointer; font-weight:600; }
+    .version-tag { margin-top:18px; text-align:center; font-size:11px; color:rgba(0,0,0,0.38); }
+    @media (max-width: 700px) { .request-grid, .activation-meta { grid-template-columns:1fr; } .main-card { padding:22px; } }
   </style>
 </head>
 <body>
@@ -64,12 +72,13 @@
       </div>
     </div>
     <div id="status"></div>
+    <div class="version-tag">v53</div>
   </div>
   <script>
 const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY;
-    const AUTO_EMAIL_ENDPOINT = ''; // cloud-mail loopt nu via queue + Make webhook
+    const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/8eslkp3375gpmixa7826fpdpidx5j9qu3";
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
 
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json", Accept: "application/json" }; }
@@ -198,13 +207,11 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
               let mailMessage = ' Aanvraag is goedgekeurd en activatielink staat klaar.';
               const linkData = await createActivationLink(requestId);
               showActivationPanel(requestId, linkData);
-              if (AUTO_EMAIL_ENDPOINT) {
-                try {
-                  await sendActivationEmail(requestId);
-                  mailMessage = ' Aanvraag is goedgekeurd, activatielink is gemaakt en e-mail is automatisch verstuurd.';
-                } catch (mailErr) {
-                  mailMessage = ` Aanvraag is goedgekeurd en activatielink is gemaakt, maar de automatische e-mail mislukte: ${mailErr instanceof Error ? mailErr.message : mailErr}`;
-                }
+              try {
+                await sendActivationEmail(requestId);
+                mailMessage = ' Aanvraag is goedgekeurd, activatielink is gemaakt, mailjob is gequeued en Make is gepingd.';
+              } catch (mailErr) {
+                mailMessage = ` Aanvraag is goedgekeurd en activatielink is gemaakt, maar queue/webhook mislukte: ${mailErr instanceof Error ? mailErr.message : mailErr}`;
               }
               if (msg) { msg.textContent = 'Goedgekeurd.' + mailMessage; msg.className = 'inline-msg ok'; }
             } else if (msg) {
@@ -280,7 +287,6 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         btn.addEventListener('click', async () => {
           const requestId = Number(btn.dataset.id);
           const msg = document.getElementById(`activation-msg-${requestId}`);
-          if (!AUTO_EMAIL_ENDPOINT) { if (msg) { msg.textContent = 'Automatische e-mail is nog niet ingesteld. Deploy eerst de Edge Function en vul AUTO_EMAIL_ENDPOINT in.'; msg.className = 'inline-msg error'; } return; }
           try {
             if (msg) { msg.textContent = 'Mailjob in wachtrij zetten...'; msg.className = 'inline-msg'; }
             await sendActivationEmail(requestId);
@@ -402,6 +408,28 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       return await parseResponse(res);
     }
 
+    async function triggerMakeScenario(meta = {}) {
+      if (!MAKE_WEBHOOK_URL) throw new Error('MAKE_WEBHOOK_URL ontbreekt in admin.html');
+      const payload = {
+        trigger: 'admin_approval',
+        source: 'admin.html',
+        ts: new Date().toISOString(),
+        ...meta
+      };
+      if (navigator.sendBeacon) {
+        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+        if (navigator.sendBeacon(MAKE_WEBHOOK_URL, blob)) return { ok: true, via: 'sendBeacon' };
+      }
+      await fetch(MAKE_WEBHOOK_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        keepalive: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      return { ok: true, via: 'fetch' };
+    }
+
     async function revokePlayerAccess(requestId, reason) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_revoke_player_access`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
@@ -432,7 +460,13 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       return await parseResponse(res);
     }
     async function sendActivationEmail(requestId) {
-      return await queueActivationEmail(requestId);
+      const queued = await queueActivationEmail(requestId);
+      await triggerMakeScenario({
+        reason: 'activation_email_queued',
+        request_id: requestId,
+        job_id: queued?.job_id ?? queued?.id ?? null
+      });
+      return queued;
     }
     async function refreshAdminLists() {
       const [requests, history] = await Promise.all([getRequests(), getHistory()]);
