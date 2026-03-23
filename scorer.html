@@ -104,6 +104,23 @@
     .meta-tag.transfer { border-color:rgba(191,47,36,0.18); background:#fff4f3; }
     .meta-tag.special.pit { color:#7d5e06; border-color:rgba(212,175,55,0.26); background:#fff8dd; }
     .score-empty { height:40px; opacity:0.3; border-bottom:1px dashed rgba(17,17,17,0.08); }
+    .tak-summary { padding:2px 0 6px; }
+    .tak-summary .tak-divider { margin-bottom:6px; }
+    .tak-summary .tak-label { font-size:10px; letter-spacing:.14em; padding:0 8px; }
+    .compact-row { display:grid; grid-template-columns:1fr auto 1fr; gap:6px; align-items:center; min-height:24px; padding:2px 0; font-size:11px; }
+    .compact-side { display:flex; gap:4px; align-items:center; min-width:0; color:#403b35; }
+    .compact-side.left { justify-content:flex-end; text-align:right; }
+    .compact-side.right { justify-content:flex-start; text-align:left; }
+    .compact-points { font-size:13px; font-weight:900; letter-spacing:-0.03em; }
+    .compact-meta { display:flex; flex-wrap:wrap; gap:4px; align-items:center; min-width:0; }
+    .compact-meta.left { justify-content:flex-end; }
+    .compact-meta.right { justify-content:flex-start; }
+    .compact-divider { width:18px; text-align:center; color:rgba(17,17,17,0.34); font-weight:900; }
+    .meta-tag.compact { min-height:18px; padding:1px 6px; font-size:10px; }
+    .compact-side.strike-side .compact-points,
+    .compact-side.strike-side .compact-meta,
+    .compact-side.strike-side .meta-tag { text-decoration:line-through; color:#8b8278; }
+    .current-empty { padding:12px 0 4px; text-align:center; color:#6a655d; font-size:12px; }
     .status-bar { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:0 16px 14px; flex-wrap:wrap; }
     .status-pill { background:#fff; border:1px solid rgba(17,17,17,0.08); border-radius:999px; padding:9px 12px; font-size:13px; font-weight:700; color:#444; }
     .action-row { display:flex; gap:10px; flex-wrap:wrap; }
@@ -164,9 +181,10 @@
     .bids-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
     .suits-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-top:12px; }
     .suit-btn,.bid-btn{font-size:18px;}
-    .suit-btn.red { color:var(--red); }
-    .suit-btn.black { color:#111; }
-    .suit-btn.active.red { color:#fff; background:var(--red); border-color:var(--red); }
+    .suit-btn.red { color:var(--red); background:#111; border-color:#111; }
+    .suit-btn.black { color:#111; background:rgba(191,47,36,0.22); border-color:rgba(191,47,36,0.38); }
+    .suit-btn.sans { color:#111; background:#fff; }
+    .suit-btn.active.red, .suit-btn.active.black, .suit-btn.active.sans { color:#111; background:var(--gold); border-color:var(--gold-dark); }
     .modal-footer { display:flex; gap:10px; margin-top:18px; }
     .modal-footer button { flex:1; border:none; border-radius:16px; padding:14px; cursor:pointer; font-weight:900; }
     .btn-light { background:#efebe5; color:#262626; }
@@ -312,7 +330,7 @@
         <button class="suit-btn red" type="button" data-suit="♥">♥</button>
         <button class="suit-btn black" type="button" data-suit="♠">♠</button>
         <button class="suit-btn red" type="button" data-suit="♦">♦</button>
-        <button class="suit-btn black" type="button" data-suit="S">sans</button>
+        <button class="suit-btn sans" type="button" data-suit="S">sans</button>
       </div>
       <div class="helper" id="bidHelper">Kies biedend team, hoogte en soort.</div>
       <div class="modal-footer">
@@ -384,10 +402,18 @@
 
     async function getSitePlayers() {
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, { method:'POST', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify({ session_token: null }) });
-        const txt = await res.text();
-        const data = txt ? JSON.parse(txt) : {};
-        return Array.from(new Set([...(data.all_names || []), ...DEFAULT_NAMES])).filter(Boolean).sort((a,b)=>a.localeCompare(b,'nl'));
+        const [directRes, stateRes] = await Promise.allSettled([
+          fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names`, {
+            method:'POST', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify({})
+          }).then(async (res) => { const txt = await res.text(); const data = txt ? JSON.parse(txt) : {}; if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }),
+          fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, { method:'POST', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify({ session_token: null }) }).then(async (res) => { const txt = await res.text(); const data = txt ? JSON.parse(txt) : {}; if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; })
+        ]);
+        const directNames = directRes.status === 'fulfilled' ? (directRes.value?.names || []) : [];
+        const siteNames = stateRes.status === 'fulfilled' ? (stateRes.value?.all_names || []) : [];
+        const hasRealSiteNames = siteNames.some((name) => !/^test/i.test(String(name || '').trim()));
+        const directLooksLikeOnlyTests = directNames.length && directNames.every((name) => /^test/i.test(String(name || '').trim()));
+        const names = (!directNames.length || (directLooksLikeOnlyTests && hasRealSiteNames)) ? siteNames : directNames;
+        return Array.from(new Set([...(names || []), ...DEFAULT_NAMES])).filter(Boolean).sort((a,b)=>a.localeCompare(b,'nl'));
       } catch {
         return DEFAULT_NAMES.slice();
       }
@@ -950,25 +976,31 @@
 
     function buildMetaTokens(round, side) {
       const tokens = [];
-      const losingSide = round.verzaaktBy || round.natBy || '';
+      const seen = new Set();
+      const add = (html, key) => {
+        const tokenKey = key || html;
+        if (seen.has(tokenKey)) return;
+        seen.add(tokenKey);
+        tokens.push(html);
+      };
       const winningSide = winningSideFromNatOrVerzaak(round);
       const strikeRoemSide = roemStrikeSide(round);
       if (side === 'W') {
-        if (round.rw) tokens.push(`<span class="meta-tag ${strikeRoemSide === 'W' ? 'strike' : ''}">${escapeHtml(toRoman(round.rw))}</span>`);
-        if (round.team === 'W') tokens.push(`<span class="meta-tag">${escapeHtml(String(round.bid || ''))}</span>`);
-        if (round.team === 'W' && round.suit) tokens.push(`<span class="meta-tag suit ${suitClass(round.suit)}">${escapeHtml(round.suit === 'S' ? 'sans' : round.suit)}</span>`);
-        if (winningSide === 'W' && round.rz) tokens.push(`<span class="meta-tag transfer">+${escapeHtml(toRoman(round.rz))}</span>`);
-        if (round.specialType && round.specialTeam === 'W' && round.specialType !== 'nat') tokens.push(`<span class="meta-tag special ${escapeHtml(round.specialType)}">${escapeHtml(round.specialType)}</span>`);
-        if (round.nat && round.natBy === 'W') tokens.push('<span class="meta-tag special nat">nat</span>');
-        if (round.verzaaktBy === 'W') tokens.push('<span class="meta-tag special nat">verzaakt</span>');
+        if (round.rw) add(`<span class="meta-tag ${strikeRoemSide === 'W' ? 'strike' : ''}">${escapeHtml(toRoman(round.rw))}</span>`, `W-rw-${round.rw}-${strikeRoemSide}`);
+        if (round.team === 'W') add(`<span class="meta-tag">${escapeHtml(String(round.bid || ''))}</span>`, `W-bid-${round.bid}`);
+        if (round.team === 'W' && round.suit) add(`<span class="meta-tag suit ${suitClass(round.suit)}">${escapeHtml(round.suit === 'S' ? 'sans' : round.suit)}</span>`, `W-suit-${round.suit}`);
+        if (winningSide === 'W' && round.rz) add(`<span class="meta-tag transfer">+${escapeHtml(toRoman(round.rz))}</span>`, `W-transfer-${round.rz}`);
+        if (round.specialType && round.specialTeam === 'W' && round.specialType !== 'nat') add(`<span class="meta-tag special ${escapeHtml(round.specialType)}">${escapeHtml(round.specialType)}</span>`, `W-special-${round.specialType}`);
+        if (round.nat && round.natBy === 'W') add('<span class="meta-tag special nat">nat</span>', 'W-nat');
+        if (round.verzaaktBy === 'W') add('<span class="meta-tag special nat">verzaakt</span>', 'W-verzaakt');
       } else {
-        if (round.specialType && round.specialTeam === 'Z' && round.specialType !== 'nat') tokens.push(`<span class="meta-tag special ${escapeHtml(round.specialType)}">${escapeHtml(round.specialType)}</span>`);
-        if (winningSide === 'Z' && round.rw) tokens.push(`<span class="meta-tag transfer">+${escapeHtml(toRoman(round.rw))}</span>`);
-        if (round.team === 'Z' && round.suit) tokens.push(`<span class="meta-tag suit ${suitClass(round.suit)}">${escapeHtml(round.suit === 'S' ? 'sans' : round.suit)}</span>`);
-        if (round.team === 'Z') tokens.push(`<span class="meta-tag">${escapeHtml(String(round.bid || ''))}</span>`);
-        if (round.rz) tokens.push(`<span class="meta-tag ${strikeRoemSide === 'Z' ? 'strike' : ''}">${escapeHtml(toRoman(round.rz))}</span>`);
-        if (round.nat && round.natBy === 'Z') tokens.push('<span class="meta-tag special nat">nat</span>');
-        if (round.verzaaktBy === 'Z') tokens.push('<span class="meta-tag special nat">verzaakt</span>');
+        if (round.specialType && round.specialTeam === 'Z' && round.specialType !== 'nat') add(`<span class="meta-tag special ${escapeHtml(round.specialType)}">${escapeHtml(round.specialType)}</span>`, `Z-special-${round.specialType}`);
+        if (winningSide === 'Z' && round.rw) add(`<span class="meta-tag transfer">+${escapeHtml(toRoman(round.rw))}</span>`, `Z-transfer-${round.rw}`);
+        if (round.team === 'Z' && round.suit) add(`<span class="meta-tag suit ${suitClass(round.suit)}">${escapeHtml(round.suit === 'S' ? 'sans' : round.suit)}</span>`, `Z-suit-${round.suit}`);
+        if (round.team === 'Z') add(`<span class="meta-tag">${escapeHtml(String(round.bid || ''))}</span>`, `Z-bid-${round.bid}`);
+        if (round.rz) add(`<span class="meta-tag ${strikeRoemSide === 'Z' ? 'strike' : ''}">${escapeHtml(toRoman(round.rz))}</span>`, `Z-rz-${round.rz}-${strikeRoemSide}`);
+        if (round.nat && round.natBy === 'Z') add('<span class="meta-tag special nat">nat</span>', 'Z-nat');
+        if (round.verzaaktBy === 'Z') add('<span class="meta-tag special nat">verzaakt</span>', 'Z-verzaakt');
       }
       return tokens.join('');
     }
@@ -987,10 +1019,41 @@
       };
     }
 
+    function compactMeta(round, side) {
+      return buildMetaTokens(round, side).replace(/meta-tag/g, 'meta-tag compact');
+    }
+
+    function compactTakTotals(rows) {
+      return rows.reduce((acc, row) => {
+        acc.w += Number(row.fw || 0);
+        acc.z += Number(row.fz || 0);
+        return acc;
+      }, { w:0, z:0 });
+    }
+
+    function renderCompactRow(row) {
+      const losingSide = row.verzaaktBy || row.natBy || '';
+      const leftValue = row.fw === '' ? '&nbsp;' : escapeHtml(String(row.fw));
+      const rightValue = row.fz === '' ? '&nbsp;' : escapeHtml(String(row.fz));
+      return `
+        <div class="compact-row">
+          <div class="compact-side left ${losingSide === 'W' ? 'strike-side' : ''}">
+            <div class="compact-points">${leftValue}</div>
+            <div class="compact-meta left">${compactMeta(row, 'W')}</div>
+          </div>
+          <div class="compact-divider">·</div>
+          <div class="compact-side right ${losingSide === 'Z' ? 'strike-side' : ''}">
+            <div class="compact-meta right">${compactMeta(row, 'Z')}</div>
+            <div class="compact-points">${rightValue}</div>
+          </div>
+        </div>`;
+    }
+
     function renderBoard() {
       const root = document.getElementById('roundBoard');
       root.innerHTML = '';
       const previewRound = hasActiveRoundPreview() ? buildPreviewRound() : null;
+      const current = currentTak();
 
       function renderRow(row, isPreview = false) {
         const rowEl = document.createElement('div');
@@ -1017,21 +1080,34 @@
       }
 
       for (let tak = 1; tak <= 4; tak += 1) {
+        if (tak > current) continue;
+        const rows = game.rounds.filter((round) => round.tak === tak);
+        if (tak < current) {
+          const section = document.createElement('section');
+          section.className = 'tak-summary';
+          const totals = compactTakTotals(rows);
+          section.innerHTML = `<div class="tak-divider"><div class="tak-label">Tak ${tak} · ${totals.w} / ${totals.z}</div></div>`;
+          rows.forEach((row) => {
+            section.insertAdjacentHTML('beforeend', renderCompactRow(row));
+          });
+          root.appendChild(section);
+          continue;
+        }
+
         const section = document.createElement('section');
         section.className = 'tak-section';
         section.innerHTML = `<div class="tak-divider"><div class="tak-label">Tak ${tak}</div></div>`;
-        const rows = game.rounds.filter((round) => round.tak === tak);
         let previewPlaced = false;
-        for (let i = 0; i < 4; i += 1) {
-          const row = rows[i];
-          if (row) {
-            section.appendChild(renderRow(row, false));
-          } else if (!previewPlaced && previewRound && tak === currentTak()) {
-            section.appendChild(renderRow(previewRound, true));
-            previewPlaced = true;
-          } else {
-            section.appendChild(renderRow(null, false));
-          }
+        for (let i = 0; i < rows.length; i += 1) section.appendChild(renderRow(rows[i], false));
+        if (previewRound && tak === current) {
+          section.appendChild(renderRow(previewRound, true));
+          previewPlaced = true;
+        }
+        if (!rows.length && !previewPlaced) {
+          const empty = document.createElement('div');
+          empty.className = 'current-empty';
+          empty.textContent = 'Deze tak is nu aan de beurt.';
+          section.appendChild(empty);
         }
         root.appendChild(section);
       }

@@ -244,32 +244,19 @@
     }
 
     .public-links-head {
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-end;
-      gap:12px;
-      flex-wrap:wrap;
-    }
-
-    .public-links-head h2 {
-      margin: 0;
-      font-size: 18px;
-      color: #1a1a1a;
-      letter-spacing: -0.02em;
-    }
-
-    .public-links-head p {
-      margin: 6px 0 0;
-      font-size: 13px;
-      color: var(--muted-text);
-      max-width: 480px;
+      display:none;
     }
 
     .public-links-grid {
       display:grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
       align-items:stretch;
+    }
+
+    .scorer-link-row {
+      display:flex;
+      justify-content:center;
     }
 
     .page-link-card {
@@ -284,7 +271,9 @@
       transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
       text-align:center;
     }
-    .page-link-card.scorer-link { grid-column:2; }
+    .page-link-card.login-link { text-align:right; }
+    .page-link-card.request-link { text-align:left; }
+    .page-link-card.scorer-link { width:min(360px, 100%); }
 
     .page-link-card:hover {
       transform: translateY(-1px);
@@ -336,6 +325,7 @@
         font-size: clamp(1.8rem, 8vw, 2.2rem);
       }
       .lists-grid, .public-links-grid { grid-template-columns: 1fr; }
+      .page-link-card.login-link, .page-link-card.request-link { text-align:center; }
       .site-scene .brand-watermark {
         width: min(34vw, 180px);
         top: 4%;
@@ -402,19 +392,17 @@
       </div>
 
       <section class="public-links" aria-label="Sitepagina's">
-        <div class="public-links-head">
-          <div>
-                      </div>
-        </div>
         <div class="public-links-grid">
-          <a class="page-link-card" href="./login.html">
+          <a class="page-link-card login-link" href="./login.html">
             <div class="page-link-label">Spelerlogin</div>
             <div class="page-link-copy">Log in met je naam en pincode om te stemmen en je sessie te beheren.</div>
           </a>
-          <a class="page-link-card" href="./request.html">
+          <a class="page-link-card request-link" href="./request.html">
             <div class="page-link-label">Naam aanvragen</div>
             <div class="page-link-copy">Vraag een nieuwe spelersnaam aan als je nog niet op de lijst staat.</div>
           </a>
+        </div>
+        <div class="scorer-link-row">
           <a class="page-link-card scorer-link" href="./scorer.html">
             <div class="page-link-label">Klaverjas scorer</div>
             <div class="page-link-copy">Voer rondes in, houd de stand bij en sla wedstrijden op voor de vault.</div>

@@ -58,7 +58,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
 
     function rpcHeaders() {
-      return { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json", Accept: "application/json" };
+      return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, "Content-Type": "application/json", Accept: "application/json" };
     }
     async function parseResponse(res) {
       const text = await res.text();
@@ -83,14 +83,15 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
 
     function fillNameSelect(names) {
       const select = document.getElementById("requestNameSelect");
+      const uniqueNames = Array.from(new Set((names || []).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'nl'));
       select.innerHTML = "";
       const placeholder = document.createElement("option");
       placeholder.value = "";
-      placeholder.textContent = "Kies je naam";
+      placeholder.textContent = uniqueNames.length ? "Kies je naam" : "Nog geen namen beschikbaar";
       placeholder.disabled = true;
       placeholder.selected = true;
       select.appendChild(placeholder);
-      (names || []).forEach((name) => {
+      uniqueNames.forEach((name) => {
         const option = document.createElement("option");
         option.value = name;
         option.textContent = name;

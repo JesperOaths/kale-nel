@@ -43,7 +43,7 @@
     const ADMIN_SESSION_KEY = 'jas_admin_session_v8';
     const SUPABASE_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
-    function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json', Accept: 'application/json' }; }
+    function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type': 'application/json', Accept: 'application/json' }; }
     async function parseResponse(res) { const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`); return data; }
     function getToken(){ return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
     function setStatus(message='', tone='') { const box=document.getElementById('statusBox'); box.className=`status ${tone}`.trim(); box.textContent=message; }
@@ -79,7 +79,7 @@
         });
         setStatus('Queue geladen.', 'ok');
       } catch (error) {
-        document.getElementById('listRoot').innerHTML = '<div class="empty">Deze pagina verwacht de nieuwe expired-queue SQL uit v62.</div>';
+        document.getElementById('listRoot').innerHTML = `<div class="empty"><strong>Deze pagina verwacht de nieuwe expired-queue SQL uit v62.</strong><br><br>Draai de nieuwste SQL-patch opnieuw. De concrete fout die nu terugkomt is:<br><code>${String(error?.message || 'onbekend')}</code></div>`;
         setStatus(error?.message || 'Laden mislukt.', 'warn');
       }
     }

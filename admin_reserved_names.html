@@ -13,8 +13,12 @@
     .top { display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; }
     h1 { margin:0; font-size:30px; }
     .sub { color:var(--muted); margin:8px 0 0; }
-    .grid { display:grid; grid-template-columns:1.4fr .9fr .9fr; gap:10px; margin-top:16px; }
+    .callout { margin-top:16px; padding:14px 16px; background:#fff8df; border:1px solid rgba(212,175,55,0.32); border-radius:16px; color:#5b4a16; font-size:14px; line-height:1.45; }
+    .callout strong { color:#111; }
+    .grid { display:grid; grid-template-columns:1.4fr .9fr .9fr 1fr; gap:10px; margin-top:16px; }
     input, select { width:100%; padding:12px; border-radius:12px; border:1px solid #ddd; font:inherit; background:#fff; }
+    .field { display:grid; gap:6px; }
+    .field label { font-size:12px; font-weight:800; color:#6a6257; text-transform:uppercase; letter-spacing:.08em; }
     .btn { border:none; border-radius:12px; padding:12px 14px; font:inherit; font-weight:800; cursor:pointer; }
     .ghost { background:#fff; border:1px solid rgba(0,0,0,0.08); color:#222; }
     .primary { background:var(--gold); color:#111; }
@@ -40,10 +44,25 @@
       <a class="btn ghost" href="./admin.html">Hub</a>
     </div>
 
+    <div class="callout"><strong>Dit is de kieslijst voor account-aanvragen.</strong> Alles wat je hier toevoegt, hoort daarna zichtbaar/selecteerbaar te worden op <code>request.html</code> en later ook in de scorer-selectie.</div>
+
     <div class="grid">
-      <input id="newNameInput" type="text" placeholder="Display name" autocomplete="off" autocapitalize="none" spellcheck="false">
-      <input id="newEmailInput" type="email" placeholder="Optioneel reserveren voor e-mail" autocomplete="email">
-      <button id="createBtn" class="btn primary" type="button">Reserveer naam</button>
+      <div class="field">
+        <label for="newNameInput">Naam die op de lijst moet komen</label>
+        <input id="newNameInput" type="text" placeholder="Bijv. Jan Jansen" autocomplete="off" autocapitalize="words" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="newEmailInput">Optioneel vast e-mailadres</label>
+        <input id="newEmailInput" type="email" placeholder="optioneel@voorbeeld.nl" autocomplete="email">
+      </div>
+      <div class="field">
+        <label for="newNoteInput">Notitie voor admin</label>
+        <input id="newNoteInput" type="text" placeholder="Bijv. echte speler / reserve" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>&nbsp;</label>
+        <button id="createBtn" class="btn primary" type="button">Toevoegen aan kieslijst</button>
+      </div>
     </div>
 
     <div id="statusBox" class="status"></div>
@@ -53,7 +72,7 @@
     const ADMIN_SESSION_KEY = 'jas_admin_session_v8';
     const SUPABASE_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
-    function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json', Accept: 'application/json' }; }
+    function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type': 'application/json', Accept: 'application/json' }; }
     async function parseResponse(res) { const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`); return data; }
     function getToken(){ return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
     function setStatus(message='', tone='') { const box=document.getElementById('statusBox'); box.className=`status ${tone}`.trim(); box.textContent=message; }
@@ -76,7 +95,7 @@
         rows.forEach((row) => {
           const card = document.createElement('article');
           card.className = 'item';
-          card.innerHTML = `<strong>${row.display_name}</strong><div class="pill">${row.status || 'available'}</div><div class="meta">slug: ${row.username || '-'} · e-mail: ${row.reserved_for_email || '-'}</div>`;
+          card.innerHTML = `<strong>${row.display_name}</strong><div class="pill">${row.status || 'available'}</div><div class="meta">slug: ${row.username || '-'} · e-mail: ${row.reserved_for_email || '-'} </div>${row.player_id ? `<div class="meta">gekoppelde speler-id: ${row.player_id}</div>` : ''}`;
           root.appendChild(card);
         });
         setStatus('Lijst geladen.', 'ok');
@@ -90,10 +109,11 @@
         setStatus('Naam reserveren...');
         await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_reserve_allowed_username`, {
           method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(),
-          body:JSON.stringify({ admin_session_token: getToken(), display_name_input: document.getElementById('newNameInput').value.trim(), reserved_for_email_input: document.getElementById('newEmailInput').value.trim().toLowerCase() || null })
+          body:JSON.stringify({ admin_session_token: getToken(), display_name_input: document.getElementById('newNameInput').value.trim(), reserved_for_email_input: document.getElementById('newEmailInput').value.trim().toLowerCase() || null, reserved_for_person_note_input: document.getElementById('newNoteInput').value.trim() || null })
         }).then(parseResponse);
         document.getElementById('newNameInput').value='';
         document.getElementById('newEmailInput').value='';
+        document.getElementById('newNoteInput').value='';
         await loadNames();
       } catch (error) {
         setStatus(error?.message || 'Reserveren mislukt.', 'warn');

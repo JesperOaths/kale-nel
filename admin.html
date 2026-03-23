@@ -47,16 +47,16 @@
     <h1>Admin hub</h1>
     <p class="sub">Hoofdingang voor alle admintaken. Hier staan alleen samenvattingen en links naar de losse tools.</p>
 
-    <section id="loginView">
+    <form id="loginView">
       <div class="login-grid">
         <input id="usernameInput" name="username" type="text" placeholder="Gebruikersnaam" autocomplete="username" autocapitalize="none" spellcheck="false">
         <input id="passwordInput" name="current-password" type="password" placeholder="Wachtwoord" autocomplete="current-password">
         <input id="totpInput" name="one-time-code" type="text" placeholder="Google Authenticator-code" autocomplete="one-time-code" inputmode="numeric">
       </div>
       <div class="btn-row">
-        <button id="loginBtn" class="btn primary" type="button">Inloggen</button>
+        <button id="loginBtn" class="btn primary" type="submit">Inloggen</button>
       </div>
-    </section>
+    </form>
 
     <section id="hubView" class="hidden">
       <div class="top-actions">
@@ -123,7 +123,8 @@
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
         body: JSON.stringify({ input_username: username, input_password: password, input_totp_code: totp })
       });
-      const data = await parseResponse(res);
+      let data = await parseResponse(res);
+      if (Array.isArray(data)) data = data[0] || {};
       const token = data.admin_session_token || data.token;
       if (!token) throw new Error('Login gaf geen admin-sessie terug');
       setAdminSessionToken(token);
@@ -170,7 +171,8 @@
       }
     }
 
-    document.getElementById('loginBtn').addEventListener('click', async () => {
+    document.getElementById('loginView').addEventListener('submit', async (event) => {
+      event.preventDefault();
       try {
         setStatus('Inloggen...');
         await adminLogin();
@@ -197,8 +199,11 @@
     });
     ['usernameInput','passwordInput','totpInput'].forEach((id) => {
       document.getElementById(id).addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') { event.preventDefault(); document.getElementById('loginBtn').click(); }
+        if (event.key === 'Enter') { event.preventDefault(); document.getElementById('loginView').requestSubmit(); }
       });
+    });
+    window.addEventListener('error', (event) => {
+      if (event?.message) setStatus(event.message, 'warn');
     });
     boot();
   </script>

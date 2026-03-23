@@ -129,8 +129,6 @@
       <input id="passwordInput" name="current-password" type="password" placeholder="Wachtwoord" autocomplete="current-password">
       <input id="totpInput" name="one-time-code" type="text" placeholder="TOTP Code" autocomplete="one-time-code" inputmode="numeric">
       <button id="loginBtn" class="btn primary">Inloggen</button>
-      <input id="devKeyInput" type="password" placeholder="Dev key" class="hidden" autocomplete="off">
-      <button id="devLoginBtn" class="btn hidden">Dev-login</button>
     </div>
     <div id="adminView" class="hidden">
       <div class="panel-head">
@@ -187,14 +185,14 @@
           <div id="pagesHubList" class="hub-grid"></div>
         </div>
         <div id="manualNamesCard" class="card">
-          <div class="panel-head"><h2>Naam handmatig klaarzetten</h2><div class="toolbar-note">Maakt een nieuwe aanvraag/reservering zodat iemand daarna via het normale proces kan registreren.</div></div>
+          <div class="panel-head"><h2>Naam toevoegen aan de kieslijst</h2><div class="toolbar-note">Gebruik dit om een naam zichtbaar/selecteerbaar te maken op request.html. Dit maakt geen test-aanvraag meer aan.</div></div>
           <div class="manual-grid">
-            <input id="manualNameInput" type="text" placeholder="Gebruikersnaam / display name" autocomplete="off" autocapitalize="none" spellcheck="false">
-            <input id="manualEmailInput" type="email" placeholder="E-mail voor activatielink" autocomplete="email">
-            <input id="manualNoteInput" type="text" placeholder="Notitie (optioneel)" autocomplete="off">
+            <input id="manualNameInput" type="text" placeholder="Naam die op de lijst moet komen" autocomplete="off" autocapitalize="words" spellcheck="false">
+            <input id="manualEmailInput" type="email" placeholder="Optioneel reserveren voor e-mail" autocomplete="email">
+            <input id="manualNoteInput" type="text" placeholder="Adminnotitie (optioneel)" autocomplete="off">
           </div>
-          <div class="action-row"><button id="manualCreateBtn" class="btn primary" type="button">Naam klaarzetten</button></div>
-          <div class="soft-note">Gebruik dit voor vooraf goedgekeurde spelers. In <strong>Pending activation</strong> kun je altijd opnieuw een activatielink genereren of mailen.</div>
+          <div class="action-row"><button id="manualCreateBtn" class="btn primary" type="button">Toevoegen aan kieslijst</button></div>
+          <div class="soft-note">Na toevoegen hoort deze naam op request.html in de keuzelijst te verschijnen. Goedkeuren en activatielinks blijven in de normale aanvraagflow zitten.</div>
           <div id="manualCreateMsg" class="inline-msg"></div>
         </div>
       </div>
@@ -663,23 +661,6 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       renderAdminTabs();
     }
 
-    async function adminDevLogin() {
-      const username = document.getElementById('usernameInput').value.trim();
-      const password = document.getElementById('passwordInput').value;
-      if (!username) throw new Error('Vul een gebruikersnaam in');
-      if (!password) throw new Error('Vul een wachtwoord in');
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_dev_login`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ input_username: username, input_password: password, input_dev_key: document.getElementById('devKeyInput').value.trim() })
-      });
-      const data = await parseResponse(res);
-      const token = data.admin_session_token || data.token;
-      if (!token) throw new Error('Dev-login gaf geen admin-sessie terug');
-      setAdminSessionToken(token);
-      document.getElementById('passwordInput').value = '';
-      return await checkSession();
-    }
-
     async function adminLogin() {
       const username = document.getElementById('usernameInput').value.trim();
       const password = document.getElementById('passwordInput').value;
@@ -688,7 +669,8 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       if (!password) throw new Error('Vul een wachtwoord in');
       if (!/^\d{6}$/.test(totp)) throw new Error('Vul je 6-cijferige Google Authenticator-code in');
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_login`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ input_username: username, input_password: password, input_totp_code: totp }) });
-      const data = await parseResponse(res);
+      let data = await parseResponse(res);
+      if (Array.isArray(data)) data = data[0] || {};
       const token = data.admin_session_token || data.token;
       if (!token) throw new Error('Login gaf geen admin-sessie terug');
       setAdminSessionToken(token);
@@ -802,14 +784,16 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     async function createManualName() {
       const displayName = document.getElementById('manualNameInput').value.trim();
       const email = document.getElementById('manualEmailInput').value.trim().toLowerCase();
-      const note = document.getElementById('manualNoteInput').value.trim() || 'Handmatig klaargezet vanuit admin';
+      const note = document.getElementById('manualNoteInput').value.trim() || null;
       const msg = document.getElementById('manualCreateMsg');
-      if (!displayName) throw new Error('Vul een gebruikersnaam in');
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Vul een geldig e-mailadres in');
-      if (msg) { msg.textContent = 'Naam klaarzetten...'; msg.className = 'inline-msg'; }
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/dev_create_test_claim_simple`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ p_display_name: displayName, p_requester_email: email, p_requester_note: note }) });
+      if (!displayName) throw new Error('Vul een naam in voor de kieslijst');
+      if (msg) { msg.textContent = 'Naam toevoegen aan kieslijst...'; msg.className = 'inline-msg'; }
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_reserve_allowed_username`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), display_name_input: displayName, reserved_for_email_input: email || null, reserved_for_person_note_input: note })
+      });
       const data = await parseResponse(res);
-      if (msg) { msg.textContent = `Aanvraag is aangemaakt voor ${displayName}.`; msg.className = 'inline-msg ok'; }
+      if (msg) { msg.textContent = `${displayName} staat nu in de kieslijst.`; msg.className = 'inline-msg ok'; }
       document.getElementById('manualNameInput').value=''; document.getElementById('manualEmailInput').value=''; document.getElementById('manualNoteInput').value='';
       return data;
     }
@@ -865,23 +849,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       }
     });
     document.getElementById('logoutBtn').addEventListener('click', () => { clearAdminSessionToken(); showLoggedOut(); setStatus('Uitgelogd.'); });
-    document.getElementById('totpInput').placeholder = 'Google Authenticator-code (of gebruik de test-login hieronder)';
-    if (!document.getElementById('usernameInput').value) document.getElementById('usernameInput').value = '1';
-    if (!document.getElementById('passwordInput').value) document.getElementById('passwordInput').value = '1';
-    if (!document.getElementById('devKeyInput').value) document.getElementById('devKeyInput').value = '1';
-    document.getElementById('devKeyInput').addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); document.getElementById('devLoginBtn').click(); } });
-    document.getElementById('devLoginBtn').addEventListener('click', async () => {
-      try {
-        setStatus('Dev-login...');
-        const session = await adminDevLogin();
-        showLoggedIn(session.username || session.admin_username || document.getElementById('usernameInput').value.trim());
-        await refreshAdminLists();
-        setStatus('Dev-login gelukt en sessie gevalideerd. Alleen nuttig voor debug/test.');
-      } catch (err) {
-        const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
-        setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
-      }
-    });
+    document.getElementById('totpInput').placeholder = 'Google Authenticator-code';
 
     function initParallax() {
       const root = document.documentElement;
@@ -933,6 +901,7 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
       }
     });
     document.querySelectorAll('[data-history-filter]').forEach((btn)=> btn.addEventListener('click', ()=> { historyFilter = btn.dataset.historyFilter; renderHistory(lastHistory); }));
+    window.addEventListener('error', (event) => { if (event?.message) setStatus(event.message); });
     loadAdmin();
   </script>
 
