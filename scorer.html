@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Klaverjas Scorer</title>
+  <meta name="description" content="Voer klaverjasstanden in en sla wedstrijden op voor de vault." />
+  <style>
+    :root {
+      --gold: #dab33e;
+      --black: #111;
+      --dark: #121212;
+      --grey: #2a2a2a;
+      --red: #ff4d4d;
+      --card: rgba(17,17,17,0.88);
+      --line: rgba(255,255,255,0.08);
+    }
+    * { box-sizing: border-box; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      color: #fff;
+      background:
+        linear-gradient(rgba(9,9,9,0.70), rgba(9,9,9,0.70)),
+        url('./site-bg-desktop.webp') center/cover no-repeat fixed;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    @media (orientation: portrait) {
+      body {
+        background:
+          linear-gradient(rgba(9,9,9,0.72), rgba(9,9,9,0.72)),
+          url('./site-bg-mobile.webp') center/cover no-repeat fixed;
+      }
+    }
+    .page {
+      width: min(980px, 100%);
+      margin: 0 auto;
+      padding: 20px 14px 88px;
+    }
+    .top-nav {
+      display:flex; justify-content:space-between; align-items:center; gap:12px;
+      margin-bottom: 12px; padding: 8px 4px;
+    }
+    .nav-left { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+    .nav-brand { color: var(--gold); text-decoration:none; font-weight:800; letter-spacing:-0.03em; font-size: 20px; }
+    .nav-links { display:flex; gap:10px; flex-wrap:wrap; }
+    .nav-links a, .nav-chip {
+      text-decoration:none; color:#f4efe5; font-size:13px; font-weight:700;
+      padding:8px 12px; border-radius:999px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.08);
+    }
+    .nav-chip.hidden { display:none; }
+    .app-card {
+      background: rgba(12,12,12,0.86);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius: 24px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.28);
+      overflow:hidden;
+    }
+    header.app-header { border-bottom: 1px solid var(--grey); padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; }
+    .h-btn { background: none; border: none; color: var(--gold); font-size: 24px; cursor: pointer; }
+    .reset-btn { background: var(--grey); color: var(--gold); border: 1px solid var(--gold); padding: 5px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+    .board { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 2px solid var(--gold); height: 130px; position: relative; }
+    .board::after { content: ''; position: absolute; left: 50%; top: 20px; bottom: 20px; width: 1px; background: var(--grey); }
+    .team-box { text-align: center; padding-top: 15px; }
+    .team-title { color: var(--gold); font-weight: 800; font-size: 18px; text-transform: lowercase; text-decoration: underline; margin-bottom: 5px; }
+    .total-val { font-size: 45px; font-weight: 900; }
+    .prev-log { font-size: 11px; color: #888; margin-top: 5px; font-family: 'Times New Roman', serif; }
+    .controls { padding: 25px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; background: rgba(18,18,18,0.94); position: relative; }
+    .undo-btn { position: absolute; top: -5px; left: 50%; transform: translateX(-50%); color: #444; font-size: 24px; background:none; border:none; padding:10px; }
+    .label-r { font-size: 10px; color: #666; margin-bottom: 5px; text-align: center; }
+    input[type=number] { width: 100%; height: 50px; background: var(--black); border: 1px solid var(--grey); color: #fff; border-radius: 8px; text-align: center; font-size: 26px; font-weight: bold; }
+    .roem-row { display: flex; gap: 5px; margin-bottom: 10px; }
+    .btn-roman { background: var(--grey); color: var(--gold); border: 1px solid var(--grey); border-radius: 6px; padding: 10px; font-weight: bold; flex: 1; font-size: 13px; }
+    .btn-roman.active { background: var(--gold); color: #000; }
+    .spec-row { display: flex; gap: 5px; margin-top: 10px; }
+    .btn-spec { flex: 1; border: 1px solid #333; color: #555; background: none; padding: 8px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+    .btn-spec.active-nat { border-color: var(--red); color: var(--red); }
+    .btn-spec.active-pit { border-color: var(--gold); color: var(--gold); }
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; justify-content: center; align-items: center; }
+    .modal { background: #fff; color: #000; width: 92%; max-width: 380px; border-radius: 12px; padding: 30px; text-align: center; }
+    .m-title { font-weight: bold; margin-bottom: 25px; font-size: 17px; text-align: left; }
+    .m-teams { display: flex; justify-content: space-around; margin-bottom: 30px; font-size: 18px; color: #ccc; }
+    .m-teams span.active { color: #000; border-bottom: 2px solid #000; padding-bottom: 5px; }
+    .bid-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 30px; }
+    .bid-grid button { border: none; background: none; font-size: 17px; color: #666; cursor: pointer; }
+    .bid-grid button.active { font-weight: 900; color: #000; }
+    .suit-row { display: flex; justify-content: space-around; font-size: 34px; margin-bottom: 30px; align-items: center; }
+    .suit-btn { opacity: 0.2; cursor: pointer; filter: grayscale(1); }
+    .suit-btn.active { opacity: 1; filter: grayscale(0); }
+    .suit-btn.red { color: #e53935; filter: none; opacity: 0.2; }
+    .suit-btn.red.active { opacity: 1; }
+    .suit-btn.sans { font-size: 15px; font-weight: bold; filter: none; }
+    .btn-main { background: var(--gold); border: none; padding: 18px; width: calc(100% - 40px); margin: 10px 20px; border-radius: 12px; font-weight: 900; font-size: 16px; color: #000; }
+    .btn-penalty { background: none; border: 1px solid #333; color: #8f8f8f; padding: 10px; width: calc(100% - 40px); margin: 0 20px; border-radius: 8px; font-size: 10px; font-weight: bold; }
+    .btn-ok-modal { background: #eee; border: none; padding: 10px 40px; border-radius: 6px; color: #ccc; font-weight: bold; font-size: 16px; }
+    .btn-ok-modal.ready { background: #f0f0f0; color: #000; }
+    .footer { text-align: center; padding: 15px 16px 18px; font-size: 12px; color: #8d8d8d; }
+    .site-credit-watermark { position:fixed;right:16px;bottom:12px;z-index:9999;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(17,17,17,0.08);color:rgba(17,17,17,0.62);font:600 12px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.02em;pointer-events:none;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,0.05)}
+    @media (max-width: 720px) {
+      .page { padding-left: 10px; padding-right: 10px; }
+      .controls { grid-template-columns: 1fr; gap: 18px; }
+      .board { height:auto; padding-bottom:14px; }
+      .board::after { display:none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    
+  <header class="top-nav">
+    <div class="nav-left">
+      <a class="nav-brand" href="./index.html">Wordt er gejast</a>
+      <div class="nav-links">
+        <a href="./index.html">Home</a>
+        <a href="./leaderboard.html">Ranglijst</a>
+        <a href="./login.html">Login</a>
+      </div>
+    </div>
+    <div class="nav-right">
+      <a id="vaultQuickLink" class="nav-chip hidden" href="./vault.html">Vault</a>
+    </div>
+  </header>
+
+    <div class="app-card">
+      <header class="app-header">
+        <button class="h-btn" onclick="window.location.href='./index.html'">←</button>
+        <button class="reset-btn" onclick="newGame()">NIEUW SPEL</button>
+        <button class="h-btn" onclick="location.reload()">✕</button>
+      </header>
+
+      <div class="board">
+        <div class="team-box">
+          <div class="team-title">wij</div>
+          <div class="total-val" id="tvW">0</div>
+          <div class="prev-log" id="plW"></div>
+        </div>
+        <div class="team-box">
+          <div class="team-title">zij</div>
+          <div class="total-val" id="tvZ">0</div>
+          <div class="prev-log" id="plZ"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="undo-btn" onclick="undo()">⟲</button>
+        <div>
+          <div class="label-r" id="lW">invoer ronde 1:</div>
+          <div class="roem-row">
+            <button class="btn-roman" onclick="setR('W',20,this)">XX</button>
+            <button class="btn-roman" onclick="setR('W',50,this)">L</button>
+          </div>
+          <input type="number" id="inW" placeholder="0" oninput="sync('W')" inputmode="numeric">
+          <div class="spec-row">
+            <button class="btn-spec" id="natW" onclick="setS('W','nat')">nat</button>
+            <button class="btn-spec" id="pitW" onclick="setS('W','pit')">pit</button>
+          </div>
+        </div>
+        <div>
+          <div class="label-r" id="lZ">invoer ronde 1:</div>
+          <div class="roem-row">
+            <button class="btn-roman" onclick="setR('Z',20,this)">XX</button>
+            <button class="btn-roman" onclick="setR('Z',50,this)">L</button>
+          </div>
+          <input type="number" id="inZ" placeholder="0" oninput="sync('Z')" inputmode="numeric">
+          <div class="spec-row">
+            <button class="btn-spec" id="natZ" onclick="setS('Z','nat')">nat</button>
+            <button class="btn-spec" id="pitZ" onclick="setS('Z','pit')">pit</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-penalty" onclick="verzaken()">⚠️ VERZAKEN</button>
+      <button class="btn-main" onclick="save()">RONDE OPSLAAN ➕</button>
+      <div class="footer" id="fText"></div>
+    </div>
+
+    <div id="m-over" class="overlay">
+      <div class="modal">
+        <div class="m-title" id="m-title">Invoer ronde 1:</div>
+        <div class="m-teams">
+          <span id="tsW" onclick="mT('W')">wij</span>
+          <span id="tsZ" onclick="mT('Z')">zij</span>
+        </div>
+        <div class="bid-grid" id="m-grid"></div>
+        <div class="suit-row">
+          <span class="suit-btn" onclick="mS('♣',this)">♣</span>
+          <span class="suit-btn red" onclick="mS('♥',this)">♥</span>
+          <span class="suit-btn" onclick="mS('♠',this)">♠</span>
+          <span class="suit-btn red" onclick="mS('♦',this)">♦</span>
+          <span class="suit-btn sans" onclick="mS('S',this)">Sans</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center">
+          <span style="color:#ccc; font-size:11px;" id="m-hint">< selecteer een team ></span>
+          <button class="btn-ok-modal" id="m-ok" onclick="closeM()">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ADMIN_SESSION_KEY = 'jas_admin_session_v8';
+    function toggleVaultQuickLink() {
+      const link = document.getElementById('vaultQuickLink');
+      if (!link) return;
+      if (sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY)) link.classList.remove('hidden');
+      else link.classList.add('hidden');
+    }
+
+    let G = JSON.parse(localStorage.getItem('current_match')) || { id: Date.now(), players: ["Sjaak", "Bep", "Kees", "Wim"], rounds: [], w: 0, z: 0 };
+    let C = { team: '', bid: 80, suit: '', rw: 0, rz: 0, spec: '' };
+
+    function toRom(n) { const m={C:100,L:50,XX:20,X:10}; let r=''; for(let i in m){while(n>=m[i]){r+=i;n-=m[i]}} return r; }
+
+    window.onload = () => { if(G.rounds.length < 16) trigger(); render(); };
+
+    function trigger() {
+        document.getElementById('m-over').style.display = 'flex';
+        document.getElementById('m-title').innerText = `Invoer ronde ${G.rounds.length + 1}:`;
+        C = { team: '', bid: 80, suit: '', rw: 0, rz: 0, spec: '' };
+        document.getElementById('m-grid').innerHTML = [70,80,90,100,110,120,130,140,150,160].map(v => 
+            `<button onclick="mB(${v},this)" class="${v===80?'active':''}">${v}</button>`).join('');
+        document.querySelectorAll('.m-teams span, .suit-btn').forEach(x => x.classList.remove('active'));
+    }
+
+    function mT(t) { C.team = t; document.getElementById('tsW').className = t==='W'?'active':''; document.getElementById('tsZ').className = t==='Z'?'active':''; chk(); }
+    function mB(v, b) { C.bid=v; document.querySelectorAll('#m-grid button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); }
+    function mS(s, el) { C.suit=s; document.querySelectorAll('.suit-btn').forEach(x=>x.classList.remove('active')); el.classList.add('active'); chk(); }
+    function chk() { if(C.team && C.suit) { document.getElementById('m-ok').classList.add('ready'); document.getElementById('m-hint').innerText = ''; } }
+    function closeM() { if(C.team && C.suit) document.getElementById('m-over').style.display='none'; }
+
+    function sync(t) {
+        const target = C.suit === 'S' ? 130 : 162;
+        let val = Math.min(parseInt(document.getElementById('in'+t).value) || 0, target);
+        document.getElementById('in'+t).value = val;
+        document.getElementById('in'+(t==='W'?'Z':'W')).value = target - val;
+    }
+
+    function setR(t,v,b) { b.classList.toggle('active'); const add = b.classList.contains('active')?v:-v; if(t==='W') C.rw+=add; else C.rz+=add; }
+    function setS(t,s) { C.spec = (C.spec === t+s) ? '' : t+s; document.querySelectorAll('.btn-spec').forEach(x=>x.classList.remove('active-nat','active-pit')); if(C.spec) document.getElementById(C.spec).classList.add('active-'+s); }
+
+    function verzaken() {
+        const winner = C.team === 'W' ? 'Z' : 'W';
+        if(confirm(`Penalty voor team ${C.team==='W'?'WIJ':'ZIJ'}. Alle punten gaan naar de tegenpartij.`)) {
+            const tot = C.suit === 'S' ? 130 : 162;
+            if(winner === 'W') { document.getElementById('inW').value = tot; document.getElementById('inZ').value = 0; C.rw+=100; }
+            else { document.getElementById('inZ').value = tot; document.getElementById('inW').value = 0; C.rz+=100; }
+            save(true);
+        }
+    }
+
+    function save(isPenalty = false) {
+        const pW = parseInt(document.getElementById('inW').value) || 0;
+        const pZ = parseInt(document.getElementById('inZ').value) || 0;
+        const tot = C.suit === 'S' ? 130 : 162;
+        
+        let fw = pW + C.rw, fz = pZ + C.rz;
+        let isNat = (C.spec.includes('nat')) || (C.team==='W' && (pW < C.bid || pW <= pZ)) || (C.team==='Z' && (pZ < C.bid || pZ <= pW));
+        if(isNat) { if(C.team==='W') { fw=0; fz=tot+C.rw+C.rz; } else { fz=0; fw=tot+C.rw+C.rz; } }
+        if(C.spec.includes('pit')) { if(C.spec.startsWith('W')) fw+=100; else fz+=100; }
+
+        G.rounds.push({ team:C.team, bid:C.bid, fw, fz, rw:C.rw, rz:C.rz, suit:C.suit, penalty:isPenalty, tak: Math.floor(G.rounds.length/4)+1 });
+        G.w += fw; G.z += fz;
+        localStorage.setItem('current_match', JSON.stringify(G));
+        
+        render();
+        document.querySelectorAll('.btn-roman, .btn-spec').forEach(x=>x.classList.remove('active','active-nat','active-pit'));
+        document.getElementById('inW').value=''; document.getElementById('inZ').value='';
+        if(G.rounds.length === 16) finish(); else trigger();
+    }
+
+    function render() {
+        document.getElementById('tvW').innerText = G.w; document.getElementById('tvZ').innerText = G.z;
+        const L = G.rounds[G.rounds.length-1];
+        if(L){
+            document.getElementById('plW').innerHTML = L.team==='W' ? `<b>${L.bid}${L.suit}</b> ${L.fw} ${toRom(L.rw)}` : L.fw;
+            document.getElementById('plZ').innerHTML = L.team==='Z' ? `<b>${L.bid}${L.suit}</b> ${L.fz} ${toRom(L.rz)}` : L.fz;
+        }
+        const d = G.rounds.length % 4;
+        document.getElementById('fText').innerText = `${G.players[d]} deelt, ${G.players[(d+1)%4]} zit voor`;
+    }
+
+    function undo() { if(G.rounds.length > 0 && confirm("Ronde wissen?")) { G.rounds.pop(); G.w=G.rounds.reduce((a,b)=>a+b.fw,0); G.z=G.rounds.reduce((a,b)=>a+b.fz,0); render(); trigger(); } }
+    function newGame() { if(confirm("Nieuw spel starten?")) { localStorage.removeItem('current_match'); location.reload(); } }
+    function finish() {
+        let history = JSON.parse(localStorage.getItem('vault_history')) || [];
+        history.push(G); localStorage.setItem('vault_history', JSON.stringify(history));
+        localStorage.removeItem('current_match');
+        alert("GEÜPLOAD NAAR VAULT."); location.reload();
+    }
+
+    toggleVaultQuickLink();
+  </script>
+  <div class="site-credit-watermark">v58 · Made by Bruis</div>
+</body>
+</html>

@@ -234,6 +234,89 @@
       color: #444;
     }
 
+
+    .site-scene { display: none; }
+
+    .public-links {
+      margin-top: 22px;
+      text-align: left;
+      display: grid;
+      gap: 14px;
+    }
+
+    .public-links-head {
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .public-links-head h2 {
+      margin: 0;
+      font-size: 18px;
+      color: #1a1a1a;
+      letter-spacing: -0.02em;
+    }
+
+    .public-links-head p {
+      margin: 6px 0 0;
+      font-size: 13px;
+      color: var(--muted-text);
+      max-width: 480px;
+    }
+
+    .public-links-grid {
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .page-link-card {
+      display:block;
+      text-decoration:none;
+      color:#1a1a1a;
+      background: rgba(255, 253, 248, 0.86);
+      border: 1px solid var(--card-line);
+      border-radius: 16px;
+      padding: 16px 18px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+
+    .page-link-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.06);
+      border-color: rgba(212,175,55,0.38);
+    }
+
+    .page-link-label {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .page-link-copy {
+      margin-top: 6px;
+      font-size: 13px;
+      line-height: 1.4;
+      color: var(--muted-text);
+    }
+
+    .page-link-chip {
+      display:inline-block;
+      margin-top: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #8a8275;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(17,17,17,0.08);
+      padding: 4px 8px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+
     @media (max-width: 760px) {
       .page { padding: 24px 14px; }
       .main-card {
@@ -249,7 +332,7 @@
         padding-right: 0;
         font-size: clamp(1.8rem, 8vw, 2.2rem);
       }
-      .lists-grid { grid-template-columns: 1fr; }
+      .lists-grid, .public-links-grid { grid-template-columns: 1fr; }
       .site-scene .brand-watermark {
         width: min(34vw, 180px);
         top: 4%;
@@ -310,6 +393,37 @@
           <ul id="losersList" class="name-list"></ul>
         </div>
       </div>
+
+      <section class="public-links" aria-label="Sitepagina's">
+        <div class="public-links-head">
+          <div>
+            <h2>Publieke pagina's</h2>
+            <p>Deze pagina's horen zichtbaar en bruikbaar te zijn voor spelers en bezoekers. Admin, vault en activatielinks blijven buiten het publieke menu.</p>
+          </div>
+        </div>
+        <div class="public-links-grid">
+          <a class="page-link-card" href="./login.html">
+            <div class="page-link-label">Spelerlogin</div>
+            <div class="page-link-copy">Log in met je naam en pincode om te stemmen en je sessie te beheren.</div>
+            <span class="page-link-chip">Publiek</span>
+          </a>
+          <a class="page-link-card" href="./request.html">
+            <div class="page-link-label">Naam aanvragen</div>
+            <div class="page-link-copy">Vraag een nieuwe spelersnaam aan als je nog niet op de lijst staat.</div>
+            <span class="page-link-chip">Publiek</span>
+          </a>
+          <a class="page-link-card" href="./scorer.html">
+            <div class="page-link-label">Klaverjas scorer</div>
+            <div class="page-link-copy">Voer rondes in, houd de stand bij en sla wedstrijden op voor de vault.</div>
+            <span class="page-link-chip">Publiek</span>
+          </a>
+          <a class="page-link-card" href="./leaderboard.html">
+            <div class="page-link-label">Ranglijst</div>
+            <div class="page-link-copy">Bekijk de huidige topspelers en recente standen van de site.</div>
+            <span class="page-link-chip">Publiek</span>
+          </a>
+        </div>
+      </section>
 
       <div style="display:none;">
         <span id="yesCount">0</span>
@@ -412,6 +526,6 @@
     load();
   </script>
 
-  <div class="site-credit-watermark">v57 · Made by Bruis</div>
+  <div class="site-credit-watermark">v58 · Made by Bruis</div>
 </body>
 </html>

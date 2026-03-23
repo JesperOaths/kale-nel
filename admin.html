@@ -2,6 +2,7 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
+  <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin - Wordt er gejast?</title>
   <style>
@@ -131,7 +132,7 @@
         <div id="adminTabs" class="tab-row"></div>
       </div>
       <div id="workspace" class="admin-grid">
-        <div id="requestsCard" class="card hidden">
+        <div id="requestsCard" class="card">
           <div class="panel-head">
             <h2>Nog te beoordelen</h2>
             <div class="toolbar-note">Approve zet ook de activatielink en mailqueue klaar.</div>
@@ -139,7 +140,7 @@
           <input id="requestSearch" class="search-input" type="search" placeholder="Zoek op naam of e-mail" />
           <div id="requestsList"></div>
         </div>
-        <div id="historyCard" class="card hidden">
+        <div id="historyCard" class="card">
           <div class="panel-head">
             <h2 id="historyTitle">Pending activation</h2>
             <div class="compact-toolbar-note" id="historyNote">Wacht op activatie, maar nog niet geactiveerd.</div>
@@ -147,7 +148,7 @@
           <input id="historySearch" class="search-input" type="search" placeholder="Zoek geschiedenis" />
           <div id="historyList"></div>
         </div>
-        <div id="approvedUsersCard" class="card hidden">
+        <div id="approvedUsersCard" class="card">
           <div class="panel-head">
             <h2 id="approvedUsersTitle">Active</h2>
             <div class="toolbar-note">Actieve gebruikers met snelle revoke-knoppen.</div>
@@ -158,7 +159,7 @@
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v57 admin tabs + background</div>
+    <div class="version-tag">v58 admin tabs + integrations</div>
   </div>
   <script>
 const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -182,7 +183,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     function setStatus(text) { document.getElementById("status").textContent = text || ""; }
     function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;"); }
     function showLoggedOut() { document.getElementById("loginView").classList.remove("hidden"); document.getElementById("adminView").classList.add("hidden"); document.getElementById("workspace").classList.add("hidden"); document.getElementById("adminTabsCard").classList.add("hidden"); document.getElementById("adminToolbar").classList.add("hidden"); document.getElementById("statsGrid").classList.add("hidden"); document.getElementById("requestsCard").classList.add("hidden"); document.getElementById("historyCard").classList.add("hidden"); document.getElementById("approvedUsersCard").classList.add("hidden"); document.getElementById("requestsList").innerHTML = ""; document.getElementById("historyList").innerHTML = ""; document.getElementById("approvedUsersList").innerHTML = ""; document.getElementById("adminTabs").innerHTML = ""; }
-    function showLoggedIn(username) { document.getElementById("loginView").classList.add("hidden"); document.getElementById("adminView").classList.remove("hidden"); document.getElementById("workspace").classList.remove("hidden"); document.getElementById("adminTabsCard").classList.remove("hidden"); document.getElementById("adminToolbar").classList.remove("hidden"); document.getElementById("statsGrid").classList.remove("hidden"); document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`; }
+    function showLoggedIn(username) { document.getElementById("loginView").classList.add("hidden"); document.getElementById("adminView").classList.remove("hidden"); document.getElementById("workspace").classList.remove("hidden"); document.getElementById("adminTabsCard").classList.remove("hidden"); document.getElementById("adminToolbar").classList.remove("hidden"); document.getElementById("statsGrid").classList.remove("hidden"); document.getElementById("requestsCard").classList.remove("hidden"); document.getElementById("historyCard").classList.remove("hidden"); document.getElementById("approvedUsersCard").classList.remove("hidden"); document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`; }
 
     function formatDateTime(value) { return value ? new Date(value).toLocaleString('nl-NL') : 'Onbekend'; }
     function getActivationBaseUrl() { const url = new URL('./activate.html', window.location.href); if (url.protocol === 'http:' && !/^(localhost|127\.0\.0\.1)$/i.test(url.hostname)) url.protocol = 'https:'; return url.toString(); }
@@ -222,6 +223,11 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         color_scheme: m.color_scheme || '',
         max_touch_points: m.max_touch_points ?? ''
       };
+    }
+
+
+    function displayNameOf(req) {
+      return req?.display_name || req?.requester_meta?.display_name || req?.requester_meta?.name || `Aanvraag #${req?.id ?? '?'}`;
     }
 
 
@@ -277,7 +283,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         <div class="request-head">
           <div>
             <div class="state-badge ${status.cls}">${status.label}</div>
-            <strong>${escapeHtml(req.display_name)}</strong><br>
+            <strong>${escapeHtml(displayNameOf(req))}</strong><br>
             <span class="muted">Aangevraagd op:</span> ${req.created_at ? new Date(req.created_at).toLocaleString('nl-NL') : 'Onbekend'}<br>
             ${includeDecision ? `<span class="muted">Beslissing:</span> ${escapeHtml(req.decision || '')}<br>` : ''}
           </div>
@@ -308,7 +314,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       const q = (document.getElementById('requestSearch')?.value || '').trim().toLowerCase();
       (requests || []).filter((req) => {
         if (!q) return true;
-        return [req.display_name, req.requester_email].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
+        return [displayNameOf(req), req.requester_email].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
       }).forEach((req) => {
         const div = document.createElement('div');
         div.className = 'request';
@@ -428,7 +434,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         const state = statusMeta(item, true).label.toLowerCase();
         const stateKey = statusMeta(item, true).cls.replace('state-','');
         const matchFilter = historyFilter === 'all' || stateKey === historyFilter;
-        const matchQuery = !q || [item.display_name, item.requester_email, item.decision].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
+        const matchQuery = !q || [displayNameOf(item), item.requester_email, item.decision].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
         return matchFilter && matchQuery;
       });
       if (filtered.length === 0) { root.innerHTML = `<p class="muted">Geen resultaten.</p>`; return; }
@@ -478,7 +484,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       const q = (document.getElementById('approvedSearch')?.value || '').trim().toLowerCase();
       const approvedItems = (items || []).filter((item) => currentAdminView === 'active' ? hasPin(item) : isApprovedLike(item)).filter((item) => {
         if (!q) return true;
-        return [item.display_name, item.requester_email, item.decision].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
+        return [displayNameOf(item), item.requester_email, item.decision].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
       });
       if (approvedItems.length === 0) { root.innerHTML = `<div class="empty-state">Geen goedgekeurde gebruikers gevonden.</div>`; return; }
       approvedItems.forEach((item) => {
@@ -579,9 +585,9 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       const cfg = getAdminViewConfig()[view] || getAdminViewConfig().pending;
       document.getElementById('currentListTitle').textContent = cfg.title;
       document.getElementById('currentListSubtitle').textContent = cfg.subtitle;
-      document.getElementById('requestsCard').classList.remove('current-view');
-      document.getElementById('historyCard').classList.remove('current-view');
-      document.getElementById('approvedUsersCard').classList.remove('current-view');
+      document.getElementById('requestsCard').classList.remove('hidden','current-view');
+      document.getElementById('historyCard').classList.remove('hidden','current-view');
+      document.getElementById('approvedUsersCard').classList.remove('hidden','current-view');
       document.getElementById(cfg.card).classList.add('current-view');
       applySharedSearchToVisibleCard();
       if (view === 'pending') {
@@ -753,7 +759,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       panel.classList.remove('hidden');
       panel.dataset.url = linkData.activation_url || '';
       panel.dataset.email = linkData.requester_email || '';
-      panel.dataset.displayName = linkData.display_name || '';
+      panel.dataset.displayName = linkData.display_name || panel.dataset.displayName || '';
       panel.dataset.expiresAt = linkData.expires_at || '';
       urlEl.dataset.url = linkData.activation_url || '';
       urlEl.textContent = linkData.activation_url || 'Geen link ontvangen van de server.';
@@ -858,6 +864,6 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     loadAdmin();
   </script>
 
-  <div class="site-credit-watermark">v57 · Made by Bruis</div>
+  <div class="site-credit-watermark">v58 · Made by Bruis</div>
 </body>
 </html>

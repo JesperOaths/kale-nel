@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Klaverjas Vault</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root { --gold: #dab33e; --black:#111; --dark: rgba(10,10,10,0.88); --line: rgba(255,255,255,0.08); }
+    * { box-sizing: border-box; }
+    body {
+      margin:0;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        linear-gradient(rgba(9,9,9,0.76), rgba(9,9,9,0.76)),
+        url('./site-bg-desktop.webp') center/cover no-repeat fixed;
+      color: #fff;
+      min-height:100vh;
+    }
+    .page { width:min(1120px,100%); margin:0 auto; padding:20px 16px 88px; }
+    .top-nav { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; }
+    .nav-left { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    .nav-brand { color: var(--gold); text-decoration:none; font-weight:800; font-size:20px; letter-spacing:-.03em; }
+    .nav-links { display:flex; gap:10px; flex-wrap:wrap; }
+    .nav-links a {
+      text-decoration:none; color:#f4efe5; font-size:13px; font-weight:700;
+      padding:8px 12px; border-radius:999px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.08);
+    }
+    .shell { background: rgba(12,12,12,0.84); border:1px solid rgba(255,255,255,0.08); border-radius: 26px; padding: 24px; box-shadow: 0 20px 46px rgba(0,0,0,0.28); }
+    h1 { color: var(--gold); margin:0 0 10px; }
+    .intro { color: rgba(255,255,255,0.72); font-size:14px; margin:0 0 18px; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
+    .card { background: rgba(18,18,18,0.92); padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); }
+    .stat-val { font-size: 24px; font-weight: bold; color: var(--gold); }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th { text-align: left; color: #8f8f8f; font-size: 12px; text-transform: uppercase; }
+    td { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .badge { background: var(--gold); color: #000; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+    .site-credit-watermark { position:fixed;right:16px;bottom:12px;z-index:9999;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(17,17,17,0.08);color:rgba(17,17,17,0.62);font:600 12px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.02em;pointer-events:none;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,0.05)}
+    #gateNotice { padding: 32px 8px; text-align:center; color: rgba(255,255,255,0.75); }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="top-nav">
+      <div class="nav-left">
+        <a class="nav-brand" href="./index.html">Wordt er gejast</a>
+        <div class="nav-links">
+          <a href="./index.html">Home</a>
+          <a href="./scorer.html">Scorer</a>
+          <a href="./admin.html">Admin</a>
+        </div>
+      </div>
+    </div>
+
+    <div id="vaultApp" class="shell" style="display:none;">
+      <h1>Klaverjas Vault</h1>
+      <p class="intro">Verborgen analyse-overzicht voor admins. De scorer schrijft wedstrijden naar <code>vault_history</code>; deze vault leest die data direct uit local storage.</p>
+      <div class="grid">
+        <div class="card">
+          <h3>Individuele stats</h3>
+          <table>
+            <thead><tr><th>Speler</th><th>ELO</th><th>Aggro</th><th>Roem-skill</th></tr></thead>
+            <tbody id="playerStats"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h3>Match momentum (laatste match)</h3>
+          <canvas id="gapChart"></canvas>
+        </div>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <h3>Partner matrix (synergy)</h3>
+          <div id="synergyMatrix"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="gateNotice" class="shell">
+      Adminsessie controleren...
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+    const ADMIN_SESSION_KEY = "jas_admin_session_v8";
+    function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json", Accept: "application/json" }; }
+    async function parseResponse(res) {
+      const text = await res.text();
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); }
+      if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`);
+      return data;
+    }
+    function getAdminSessionToken() {
+      return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY);
+    }
+    async function ensureAdminGate() {
+      const token = getAdminSessionToken();
+      const notice = document.getElementById('gateNotice');
+      if (!token) {
+        notice.textContent = 'Geen adminsessie gevonden. Je wordt doorgestuurd naar de admin-login.';
+        setTimeout(() => { window.location.href = './admin.html'; }, 800);
+        return false;
+      }
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, {
+          method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+          body: JSON.stringify({ admin_session_token: token })
+        });
+        const data = await parseResponse(res);
+        if (data?.admin_session_token) {
+          sessionStorage.setItem(ADMIN_SESSION_KEY, data.admin_session_token);
+          localStorage.setItem(ADMIN_SESSION_KEY, data.admin_session_token);
+        }
+        document.getElementById('vaultApp').style.display = '';
+        notice.style.display = 'none';
+        return true;
+      } catch (err) {
+        notice.textContent = 'Adminsessiie verlopen of ongeldig. Je wordt doorgestuurd naar admin.';
+        setTimeout(() => { window.location.href = './admin.html'; }, 1000);
+        return false;
+      }
+    }
+
+    const history = JSON.parse(localStorage.getItem('vault_history')) || [];
+    
+    function initVault() {
+        let players = {};
+
+        history.forEach(match => {
+            // Vereenvoudigde ELO & Aggro logica per ronde
+            match.rounds.forEach(r => {
+                // We middelen de aggro over de rondes
+                match.players.forEach((p, i) => {
+                    if(!players[p]) players[p] = { elo: 1500, aggroSum: 0, roemSum: 0, rounds: 0, wins: 0 };
+                    players[p].rounds++;
+                    
+                    // Alleen bijtelling voor het bieder-team
+                    const isWij = (i === 0 || i === 2);
+                    if((isWij && r.team === 'W') || (!isWij && r.team === 'Z')) {
+                        players[p].aggroSum += r.bid;
+                        players[p].roemSum += (r.team === 'W' ? r.rw : r.rz);
+                    }
+                });
+            });
+            // Match winnaar ELO bonus (simplified)
+            const winTeam = match.w > match.z ? 'wij' : 'zij';
+            match.players.forEach((p, i) => {
+                const isWij = (i === 0 || i === 2);
+                if((isWij && winTeam === 'wij') || (!isWij && winTeam === 'zij')) players[p].elo += 25;
+                else players[p].elo -= 20;
+            });
+        });
+
+        const tbody = document.getElementById('playerStats');
+        for(let p in players) {
+            const data = players[p];
+            const avgAggro = (data.aggroSum / (data.rounds/2)).toFixed(1);
+            const roemSkill = ((data.roemSum / data.rounds) * 10).toFixed(0);
+            tbody.innerHTML += `<tr>
+                <td>${p} ${avgAggro > 110 ? '<span class="badge">HUFT-BIEDER</span>' : ''}</td>
+                <td class="stat-val">${data.elo}</td>
+                <td>${avgAggro}</td>
+                <td>${roemSkill}</td>
+            </tr>`;
+        }
+
+        if(history.length > 0) renderGapChart(history[history.length-1]);
+    }
+
+    function renderGapChart(match) {
+        let runningW = 0, runningZ = 0;
+        const gaps = match.rounds.map(r => {
+            runningW += r.fw; runningZ += r.fz;
+            return runningW - runningZ;
+        });
+
+        new Chart(document.getElementById('gapChart'), {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 16}, (_, i) => i + 1),
+                datasets: [{
+                    label: 'Gap (Wij vs Zij)',
+                    data: gaps,
+                    borderColor: '#dab33e',
+                    backgroundColor: 'rgba(218, 179, 62, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: { scales: { y: { grid: { color: '#222' } } } }
+        });
+    }
+
+    (async () => {
+      if (await ensureAdminGate()) initVault();
+    })();
+  </script>
+  <div class="site-credit-watermark">v58 · Made by Bruis</div>
+</body>
+</html>

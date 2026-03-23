@@ -20,7 +20,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     function setStatus(text) { document.getElementById("status").textContent = text || ""; }
     function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;"); }
     function showLoggedOut() { document.getElementById("loginView").classList.remove("hidden"); document.getElementById("adminView").classList.add("hidden"); document.getElementById("workspace").classList.add("hidden"); document.getElementById("adminTabsCard").classList.add("hidden"); document.getElementById("adminToolbar").classList.add("hidden"); document.getElementById("statsGrid").classList.add("hidden"); document.getElementById("requestsCard").classList.add("hidden"); document.getElementById("historyCard").classList.add("hidden"); document.getElementById("approvedUsersCard").classList.add("hidden"); document.getElementById("requestsList").innerHTML = ""; document.getElementById("historyList").innerHTML = ""; document.getElementById("approvedUsersList").innerHTML = ""; document.getElementById("adminTabs").innerHTML = ""; }
-    function showLoggedIn(username) { document.getElementById("loginView").classList.add("hidden"); document.getElementById("adminView").classList.remove("hidden"); document.getElementById("workspace").classList.remove("hidden"); document.getElementById("adminTabsCard").classList.remove("hidden"); document.getElementById("adminToolbar").classList.remove("hidden"); document.getElementById("statsGrid").classList.remove("hidden"); document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`; }
+    function showLoggedIn(username) { document.getElementById("loginView").classList.add("hidden"); document.getElementById("adminView").classList.remove("hidden"); document.getElementById("workspace").classList.remove("hidden"); document.getElementById("adminTabsCard").classList.remove("hidden"); document.getElementById("adminToolbar").classList.remove("hidden"); document.getElementById("statsGrid").classList.remove("hidden"); document.getElementById("requestsCard").classList.remove("hidden"); document.getElementById("historyCard").classList.remove("hidden"); document.getElementById("approvedUsersCard").classList.remove("hidden"); document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`; }
 
     function formatDateTime(value) { return value ? new Date(value).toLocaleString('nl-NL') : 'Onbekend'; }
     function getActivationBaseUrl() { const url = new URL('./activate.html', window.location.href); if (url.protocol === 'http:' && !/^(localhost|127\.0\.0\.1)$/i.test(url.hostname)) url.protocol = 'https:'; return url.toString(); }
@@ -417,9 +417,9 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       const cfg = getAdminViewConfig()[view] || getAdminViewConfig().pending;
       document.getElementById('currentListTitle').textContent = cfg.title;
       document.getElementById('currentListSubtitle').textContent = cfg.subtitle;
-      document.getElementById('requestsCard').classList.remove('current-view');
-      document.getElementById('historyCard').classList.remove('current-view');
-      document.getElementById('approvedUsersCard').classList.remove('current-view');
+      document.getElementById('requestsCard').classList.remove('hidden','current-view');
+      document.getElementById('historyCard').classList.remove('hidden','current-view');
+      document.getElementById('approvedUsersCard').classList.remove('hidden','current-view');
       document.getElementById(cfg.card).classList.add('current-view');
       applySharedSearchToVisibleCard();
       if (view === 'pending') {
