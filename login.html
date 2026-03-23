@@ -25,14 +25,17 @@
     .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); align-items: center; justify-content: center; z-index: 100; }
     .modal.show { display: flex; }
     .modal-panel { background: #fff; padding: 25px; border-radius: 20px; width: 300px; }
+    .autofill-ghost{position:absolute;left:-9999px;top:auto;width:1px;height:1px;opacity:0;pointer-events:none;}
     .pin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
     .pin-key { padding: 15px; border-radius: 8px; border: 1px solid #eee; background: #fafafa; font-weight: bold; cursor: pointer; }
   </style>
 
   <style id="bruis-watermark-style">
-    .site-credit-watermark{position:fixed;right:16px;bottom:12px;z-index:9999;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(17,17,17,0.08);color:rgba(17,17,17,0.62);font:600 12px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.02em;pointer-events:none;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,0.05)}
-    @media (max-width:640px){.site-credit-watermark{right:10px;bottom:10px;font-size:11px;padding:5px 8px}}
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(212,175,55,0.35);color:#f3e3a6;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
+    @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
   </style>
+  <link rel="canonical" href="https://kalenel.nl/login.html" />
+  <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
 </head>
 <body>
   <div class="site-scene">
@@ -47,9 +50,10 @@
       <div id="loginStateWord" class="state-word">Klaar</div>
       <div id="loginStateCopy" style="font-size: 12px; color: #666;"></div>
     </div>
+    <input id="playerNameMirror" type="text" class="autofill-ghost" tabindex="-1" aria-hidden="true" autocomplete="username" spellcheck="false" autocapitalize="none" />
     <select id="playerSelect"></select>
     <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-      <input id="pinInput" type="password" inputmode="numeric" maxlength="4" placeholder="Pincode" style="margin:0;">
+      <input id="pinInput" name="player_pin" type="password" inputmode="numeric" maxlength="4" placeholder="Pincode" autocomplete="current-password" style="margin:0;">
       <button id="pinOpenBtn" class="primary-btn" style="flex: 0 0 auto; width: auto; padding: 0 15px;">Toetsen</button>
     </div>
     <div class="btn-row">
@@ -144,7 +148,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     async function load() {
       try {
         const state = await getPublicState();
-        fillNames(state.all_names || [], state.my_name || '');
+        fillNames(state.all_names || [], state.my_name || ''); const ghost=document.getElementById('playerNameMirror'); if(ghost) ghost.value = state.my_name || document.getElementById('playerSelect').value || ''; 
         if (state.my_name) {
           document.getElementById('loginStateWord').textContent = state.my_name;
           document.getElementById('loginStateWord').className = 'state-word yes';
@@ -158,6 +162,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
       }
     }
+    document.getElementById('playerSelect').addEventListener('change', ()=>{ const ghost=document.getElementById('playerNameMirror'); if(ghost) ghost.value = document.getElementById('playerSelect').value || ''; });
     document.getElementById('loginBtn').addEventListener('click', async () => {
       try {
         setStatus('Inloggen...');
@@ -193,6 +198,6 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     load();
   </script>
 
-  <div class="site-credit-watermark">v59 · Made by Bruis</div>
+  <div class="site-credit-watermark">v61 · Made by Bruis</div>
 </body>
 </html>
