@@ -39,13 +39,43 @@
     details { margin-top:12px; }
     summary { cursor:pointer; font-weight:600; }
     .version-tag { margin-top:18px; text-align:center; font-size:11px; color:rgba(0,0,0,0.38); }
-    @media (max-width: 700px) { .request-grid, .activation-meta { grid-template-columns:1fr; } .main-card { padding:22px; } }
+    .topbar { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:16px; }
+    .topbar-left h1 { margin:0; }
+    .topbar-sub { color:var(--muted); margin:6px 0 0; }
+    .toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .ghost-btn { background:#fff; border:1px solid rgba(0,0,0,0.08); color:#222; }
+    .stats-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:18px 0 6px; }
+    .stat-card { background:linear-gradient(180deg,#fff,#f5f1e8); border:1px solid rgba(0,0,0,0.06); border-radius:18px; padding:16px; box-shadow:0 8px 24px rgba(0,0,0,0.04); }
+    .stat-card .label { font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:#85754f; }
+    .stat-card .value { font-size:30px; font-weight:800; margin-top:6px; }
+    .panel-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; }
+    .panel-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .pill-row { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 14px; }
+    .pill { border:1px solid rgba(0,0,0,0.08); border-radius:999px; padding:8px 12px; background:#fff; font-size:13px; cursor:pointer; }
+    .pill.active { background:#000; color:#fff; }
+    .request strong { font-size:18px; }
+    .toolbar-note { font-size:12px; color:var(--muted); }
+    .card h2 { margin:0; }
+    .empty-state { padding:16px 4px; color:var(--muted); }
+    .admin-grid { grid-template-columns:1fr; }
+    @media (min-width: 980px) { .admin-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } #approvedUsersCard { grid-column:1 / -1; } }
+    @media (max-width: 900px) { .stats-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width: 700px) { .request-grid, .activation-meta, .stats-grid { grid-template-columns:1fr; } .main-card { padding:22px; } .topbar { flex-direction:column; align-items:flex-start; } }
   </style>
 </head>
 <body>
   <div class="main-card">
     <img src="./logo.png" class="card-logo" />
-    <h1>Admin Console</h1>
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1>Admin Console</h1>
+        <p class="topbar-sub">Aanvragen beoordelen, activatielinks beheren en goedgekeurde spelers snel kunnen intrekken.</p>
+      </div>
+      <div class="toolbar hidden" id="adminToolbar">
+        <button id="refreshBtn" class="btn ghost-btn" type="button">Ververs</button>
+        <button id="kickMakeBtn" class="btn ghost-btn" type="button">Ping Make nu</button>
+      </div>
+    </div>
     <div id="loginView">
       <input id="usernameInput" type="text" placeholder="Gebruikersnaam">
       <input id="passwordInput" type="password" placeholder="Wachtwoord">
@@ -55,24 +85,51 @@
       <button id="devLoginBtn" class="btn hidden">Dev-login</button>
     </div>
     <div id="adminView" class="hidden">
-      <p id="welcomeText"></p>
-      <button id="logoutBtn" class="btn dark">Uitloggen</button>
+      <div class="panel-head">
+        <p id="welcomeText"></p>
+        <button id="logoutBtn" class="btn dark">Uitloggen</button>
+      </div>
+      <div id="statsGrid" class="stats-grid hidden">
+        <div class="stat-card"><div class="label">Open aanvragen</div><div id="statPending" class="value">0</div></div>
+        <div class="stat-card"><div class="label">Goedgekeurd</div><div id="statApproved" class="value">0</div></div>
+        <div class="stat-card"><div class="label">Geactiveerd</div><div id="statActivated" class="value">0</div></div>
+        <div class="stat-card"><div class="label">Afgewezen</div><div id="statRejected" class="value">0</div></div>
+      </div>
       <hr>
       <div id="workspace" class="admin-grid">
         <div id="requestsCard" class="card hidden">
-          <h2>Open aanvragen</h2>
+          <div class="panel-head">
+            <h2>Open aanvragen</h2>
+            <div class="toolbar-note">Approve zet ook de activatielink en mailqueue klaar.</div>
+          </div>
           <input id="requestSearch" class="search-input" type="search" placeholder="Zoek op naam of e-mail" />
           <div id="requestsList"></div>
         </div>
         <div id="historyCard" class="card hidden">
-          <h2>Geschiedenis</h2>
+          <div class="panel-head">
+            <h2>Geschiedenis</h2>
+            <div class="pill-row">
+              <button class="pill active" type="button" data-history-filter="all">Alles</button>
+              <button class="pill" type="button" data-history-filter="awaiting">Awaiting activation</button>
+              <button class="pill" type="button" data-history-filter="activated">Activated</button>
+              <button class="pill" type="button" data-history-filter="rejected">Afgewezen</button>
+            </div>
+          </div>
           <input id="historySearch" class="search-input" type="search" placeholder="Zoek geschiedenis" />
           <div id="historyList"></div>
+        </div>
+        <div id="approvedUsersCard" class="card hidden">
+          <div class="panel-head">
+            <h2>Goedgekeurde gebruikers</h2>
+            <div class="toolbar-note">Snelle lijst om toegang in te trekken of een activatielink opnieuw te sturen.</div>
+          </div>
+          <input id="approvedSearch" class="search-input" type="search" placeholder="Zoek goedgekeurde of geactiveerde gebruiker" />
+          <div id="approvedUsersList"></div>
         </div>
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v53</div>
+    <div class="version-tag">v54 admin tools refresh</div>
   </div>
   <script>
 const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -80,6 +137,9 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY;
     const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/8eslkp3375gpmixa7826fpdpidx5j9qu3";
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
+    let lastRequests = [];
+    let lastHistory = [];
+    let historyFilter = "all";
 
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json", Accept: "application/json" }; }
     async function parseResponse(res) { const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }
@@ -91,11 +151,11 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     function clearAdminSessionToken() { sessionStorage.removeItem(ADMIN_SESSION_KEY); localStorage.removeItem(ADMIN_SESSION_KEY); }
     function setStatus(text) { document.getElementById("status").textContent = text || ""; }
     function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;"); }
-    function showLoggedOut() { document.getElementById("loginView").classList.remove("hidden"); document.getElementById("adminView").classList.add("hidden"); document.getElementById("workspace").classList.add("hidden"); document.getElementById("requestsCard").classList.add("hidden"); document.getElementById("historyCard").classList.add("hidden"); document.getElementById("requestsList").innerHTML = ""; document.getElementById("historyList").innerHTML = ""; }
-    function showLoggedIn(username) { document.getElementById("loginView").classList.add("hidden"); document.getElementById("adminView").classList.remove("hidden"); document.getElementById("workspace").classList.remove("hidden"); document.getElementById("requestsCard").classList.remove("hidden"); document.getElementById("historyCard").classList.remove("hidden"); document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`; }
+    function showLoggedOut() { document.getElementById("loginView").classList.remove("hidden"); document.getElementById("adminView").classList.add("hidden"); document.getElementById("workspace").classList.add("hidden"); document.getElementById("adminToolbar").classList.add("hidden"); document.getElementById("statsGrid").classList.add("hidden"); document.getElementById("requestsCard").classList.add("hidden"); document.getElementById("historyCard").classList.add("hidden"); document.getElementById("approvedUsersCard").classList.add("hidden"); document.getElementById("requestsList").innerHTML = ""; document.getElementById("historyList").innerHTML = ""; document.getElementById("approvedUsersList").innerHTML = ""; }
+    function showLoggedIn(username) { document.getElementById("loginView").classList.add("hidden"); document.getElementById("adminView").classList.remove("hidden"); document.getElementById("workspace").classList.remove("hidden"); document.getElementById("adminToolbar").classList.remove("hidden"); document.getElementById("statsGrid").classList.remove("hidden"); document.getElementById("requestsCard").classList.remove("hidden"); document.getElementById("historyCard").classList.remove("hidden"); document.getElementById("approvedUsersCard").classList.remove("hidden"); document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`; }
 
     function formatDateTime(value) { return value ? new Date(value).toLocaleString('nl-NL') : 'Onbekend'; }
-    function getActivationBaseUrl() { return new URL('./activate.html', window.location.href).toString(); }
+    function getActivationBaseUrl() { const url = new URL('./activate.html', window.location.href); if (url.protocol === 'http:' && !/^(localhost|127\.0\.0\.1)$/i.test(url.hostname)) url.protocol = 'https:'; return url.toString(); }
     function activationPanelHtml(req) {
       return `
         <div class="activation-tools hidden" id="activation-tools-${req.id}">
@@ -144,6 +204,38 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       if (decision === 'rejected' || req.approved === false) return { cls: 'state-rejected', label: 'Afgewezen' };
       if (decision === 'approved' || req.approved === true || req.active === true) return { cls: includeDecision ? 'state-awaiting' : 'state-approved', label: includeDecision ? 'Awaiting activation' : 'Approved' };
       return { cls: 'state-pending', label: 'Openstaand' };
+    }
+
+    function isApprovedLike(req) {
+      const decision = String(req.decision || '').toLowerCase();
+      return decision === 'approved' || req.approved === true || req.active === true || hasPin(req);
+    }
+
+    function renderStats(requests, history) {
+      const pending = (requests || []).length;
+      const approved = (history || []).filter((item) => isApprovedLike(item) && !hasPin(item)).length;
+      const activated = (history || []).filter((item) => hasPin(item)).length;
+      const rejected = (history || []).filter((item) => String(item.decision || '').toLowerCase() === 'rejected' || item.approved === false).length;
+      document.getElementById('statPending').textContent = String(pending);
+      document.getElementById('statApproved').textContent = String(approved);
+      document.getElementById('statActivated').textContent = String(activated);
+      document.getElementById('statRejected').textContent = String(rejected);
+    }
+
+    function approvedUserCardHtml(item) {
+      const activationState = hasPin(item) ? 'Geactiveerd' : 'Goedgekeurd';
+      const decided = item.decided_at ? new Date(item.decided_at).toLocaleString('nl-NL') : 'Onbekend';
+      return `${requestHtml(item, true)}
+        <div class="request-grid" style="margin-top:12px;">
+          ${metaBox('Status gebruiker', activationState)}
+          ${metaBox('Beslist op', decided)}
+        </div>
+        <div class="compact-actions">
+          <button class="link-btn" type="button" data-generate-activation data-id="${item.id}">Regenerate-link</button>
+          <button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${item.id}">Goedkeuring intrekken</button>
+        </div>
+        <div class="inline-msg" id="approved-msg-${item.id}">Gebruiker actief in admin-overzicht.</div>
+        ${activationPanelHtml(item)}`;
     }
 
     function requestHtml(req, includeDecision = false) {
@@ -208,8 +300,8 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
               const linkData = await createActivationLink(requestId);
               showActivationPanel(requestId, linkData);
               try {
-                await sendActivationEmail(requestId);
-                mailMessage = ' Aanvraag is goedgekeurd, activatielink is gemaakt, mailjob is gequeued en Make is gepingd.';
+                const queued = await sendActivationEmail(requestId);
+                mailMessage = ` Aanvraag is goedgekeurd, activatielink is gemaakt, mailjob #${queued?.job_id ?? queued?.id ?? '?'} is gequeued en Make is gepingd.`;
               } catch (mailErr) {
                 mailMessage = ` Aanvraag is goedgekeurd en activatielink is gemaakt, maar queue/webhook mislukte: ${mailErr instanceof Error ? mailErr.message : mailErr}`;
               }
@@ -350,6 +442,76 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       document.querySelectorAll('[data-copy-activation], [data-mail-activation], [data-send-activation]').forEach((el)=>{});
     }
 
+    function renderApprovedUsers(items) {
+      const root = document.getElementById('approvedUsersList');
+      root.innerHTML = '';
+      const q = (document.getElementById('approvedSearch')?.value || '').trim().toLowerCase();
+      const approvedItems = (items || []).filter((item) => isApprovedLike(item)).filter((item) => {
+        if (!q) return true;
+        return [item.display_name, item.requester_email, item.decision].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
+      });
+      if (approvedItems.length === 0) { root.innerHTML = `<div class="empty-state">Geen goedgekeurde gebruikers gevonden.</div>`; return; }
+      approvedItems.forEach((item) => {
+        const div = document.createElement('div');
+        div.className = 'request';
+        div.innerHTML = approvedUserCardHtml(item);
+        root.appendChild(div);
+      });
+      document.querySelectorAll('#approvedUsersList [data-revoke-access]').forEach((btn)=> {
+        btn.addEventListener('click', async ()=> {
+          const requestId = Number(btn.dataset.id);
+          const msg = document.getElementById(`approved-msg-${requestId}`);
+          try {
+            if (msg) { msg.textContent = 'Goedkeuring intrekken...'; msg.className = 'inline-msg'; }
+            await revokePlayerAccess(requestId, 'Admin revoke vanuit goedgekeurde gebruikerslijst');
+            await refreshAdminLists();
+            setStatus('Goedkeuring ingetrokken. De gebruiker hoort nu geen toegang meer te hebben.');
+          } catch (err) {
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Intrekken mislukt'; msg.className = 'inline-msg error'; }
+          }
+        });
+      });
+      document.querySelectorAll('#approvedUsersList [data-generate-activation]').forEach((btn)=> {
+        btn.addEventListener('click', async ()=> {
+          const requestId = Number(btn.dataset.id);
+          const msg = document.getElementById(`approved-msg-${requestId}`);
+          try {
+            if (msg) { msg.textContent = 'Activatielink maken...'; msg.className = 'inline-msg'; }
+            const linkData = await createActivationLink(requestId);
+            showActivationPanel(requestId, linkData);
+            if (msg) { msg.textContent = 'Nieuwe activatielink klaar.'; msg.className = 'inline-msg ok'; }
+          } catch (err) {
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Link maken mislukt'; msg.className = 'inline-msg error'; }
+          }
+        });
+      });
+      document.querySelectorAll('#approvedUsersList [data-copy-activation]').forEach((btn)=> {
+        btn.addEventListener('click', async ()=> {
+          const requestId = Number(btn.dataset.id);
+          const urlEl = document.getElementById(`activation-url-${requestId}`);
+          const url = urlEl?.dataset.url;
+          if (!url) { setStatus('Maak eerst een activatielink.'); return; }
+          await navigator.clipboard.writeText(url);
+          const msg = document.getElementById(`approved-msg-${requestId}`);
+          if (msg) { msg.textContent = 'Link gekopieerd.'; msg.className = 'inline-msg ok'; }
+        });
+      });
+      document.querySelectorAll('#approvedUsersList [data-mail-activation]').forEach((btn)=> {
+        btn.addEventListener('click', () => {
+          const requestId = Number(btn.dataset.id);
+          const panel = document.getElementById(`activation-tools-${requestId}`);
+          const email = panel?.dataset.email || '';
+          const displayName = panel?.dataset.displayName || '';
+          const expiresAt = panel?.dataset.expiresAt || '';
+          const url = panel?.dataset.url || '';
+          if (!email || !url) { setStatus('Maak eerst een activatielink.'); return; }
+          const subject = 'Activeer je account voor Wordt er gejast';
+          const body = ['Hoi ' + (displayName || 'daar') + ',', '', 'Je account is klaar voor gebruik.', 'Gebruik deze activatielink:', '', url, '', expiresAt ? `Deze link verloopt op ${formatDateTime(expiresAt)}.` : '', '', 'Groet,', 'Wordt er gejast'].filter(Boolean).join('\n');
+          window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        });
+      });
+    }
+
     async function adminDevLogin() {
       const username = document.getElementById('usernameInput').value.trim();
       const password = document.getElementById('passwordInput').value;
@@ -416,18 +578,36 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         ts: new Date().toISOString(),
         ...meta
       };
+      const payloadText = JSON.stringify(payload);
       if (navigator.sendBeacon) {
-        const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+        const blob = new Blob([payloadText], { type: 'text/plain;charset=UTF-8' });
         if (navigator.sendBeacon(MAKE_WEBHOOK_URL, blob)) return { ok: true, via: 'sendBeacon' };
       }
-      await fetch(MAKE_WEBHOOK_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        keepalive: true,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      return { ok: true, via: 'fetch' };
+      try {
+        await fetch(MAKE_WEBHOOK_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          keepalive: true,
+          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+          body: payloadText
+        });
+        return { ok: true, via: 'fetch-no-cors' };
+      } catch (fetchErr) {
+        const fallbackUrl = new URL(MAKE_WEBHOOK_URL);
+        fallbackUrl.searchParams.set('trigger', String(payload.trigger || 'admin_approval'));
+        fallbackUrl.searchParams.set('source', 'admin.html');
+        fallbackUrl.searchParams.set('ts', String(payload.ts || new Date().toISOString()));
+        Object.entries(meta || {}).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) fallbackUrl.searchParams.set(key, String(value));
+        });
+        await new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve();
+          img.onerror = () => reject(fetchErr);
+          img.src = fallbackUrl.toString();
+        });
+        return { ok: true, via: 'img-get-fallback' };
+      }
     }
 
     async function revokePlayerAccess(requestId, reason) {
@@ -474,6 +654,8 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       lastHistory = history.history || [];
       renderRequests(lastRequests);
       renderHistory(lastHistory);
+      renderApprovedUsers(lastHistory);
+      renderStats(lastRequests, lastHistory);
     }
     function showActivationPanel(requestId, linkData) {
       const panel = document.getElementById(`activation-tools-${requestId}`);
@@ -572,6 +754,17 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
 });
     document.getElementById('requestSearch').addEventListener('input', ()=> renderRequests(lastRequests));
     document.getElementById('historySearch').addEventListener('input', ()=> renderHistory(lastHistory));
+    document.getElementById('approvedSearch').addEventListener('input', ()=> renderApprovedUsers(lastHistory));
+    document.getElementById('refreshBtn').addEventListener('click', async ()=> { setStatus('Verversen...'); await refreshAdminLists(); setStatus('Admin-overzicht ververst.'); });
+    document.getElementById('kickMakeBtn').addEventListener('click', async ()=> {
+      try {
+        setStatus('Make webhook pingen...');
+        await triggerMakeScenario({ reason: 'manual_admin_kick' });
+        setStatus('Make webhook gepingd. Scenario kan nu de queue claimen.');
+      } catch (err) {
+        setStatus(err instanceof Error ? err.message : 'Make webhook pingen mislukt');
+      }
+    });
     document.querySelectorAll('[data-history-filter]').forEach((btn)=> btn.addEventListener('click', ()=> { historyFilter = btn.dataset.historyFilter; renderHistory(lastHistory); }));
     loadAdmin();
   </script>
