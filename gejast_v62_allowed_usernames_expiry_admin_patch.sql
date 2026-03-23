@@ -124,9 +124,13 @@ update public.claim_requests cr
 set allowed_username_id = au.id,
     request_status = coalesce(cr.request_status, cr.status)
 from public.allowed_usernames au
-left join public.players p on p.id = cr.player_id
 where cr.allowed_username_id is null
-  and au.username = public._normalize_allowed_username(coalesce(cr.requester_meta ->> 'display_name', p.display_name));
+  and au.username = public._normalize_allowed_username(
+    coalesce(
+      cr.requester_meta ->> 'display_name',
+      (select p.display_name from public.players p where p.id = cr.player_id limit 1)
+    )
+  );
 
 create or replace function public._claim_request_allowed_username_before_write()
 returns trigger

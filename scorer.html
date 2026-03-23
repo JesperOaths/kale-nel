@@ -192,7 +192,7 @@
       <button class="icon-btn" type="button" onclick="undoRound()">↶</button>
     </header>
 
-    <div id="appMenu" class="overlay"><div class="modal"><h2>Klaverjas menu</h2><div class="modal-footer" style="display:grid;grid-template-columns:1fr;"><button class="btn-light" type="button" onclick="openSetupModal()">Teams kiezen</button><button class="btn-light" type="button" onclick="openBidModal()">Bieding openen</button><button class="btn-light" type="button" onclick="undoRound()">Undo laatste ronde</button><button class="btn-light" type="button" onclick="newGame()">Nieuw spel</button><button class="btn-dark" type="button" onclick="window.location.href='./index.html'">Terug naar site</button></div></div></div>
+    <div id="appMenu" class="overlay"><div class="modal"><h2>Klaverjas menu</h2><div class="modal-footer" style="display:grid;grid-template-columns:1fr;"><button class="btn-light" type="button" onclick="openSetupModal()">Teams kiezen</button><button class="btn-light" type="button" onclick="newGame()">Nieuw spel</button><button class="btn-dark" type="button" onclick="window.location.href='./index.html'">Terug naar site</button></div></div></div>
 
     <div class="wrap">
       <section class="sheet">
@@ -206,7 +206,6 @@
             <div class="team-chip"><div class="label">wij</div><div class="names" id="teamWijNames">-</div></div>
             <div class="center-tools">
               <button class="undo-hero" type="button" onclick="undoRound()">Undo</button>
-              <button class="ghost-btn" type="button" onclick="openSetupModal()">Teams</button>
             </div>
             <div class="team-chip"><div class="label">zij</div><div class="names" id="teamZijNames">-</div></div>
           </div>
@@ -222,10 +221,7 @@
 
         <div class="status-bar">
           <div class="status-pill" id="roundLabel">Ronde 1 · tak 1</div>
-          <div class="action-row">
-            <button class="ghost-btn" type="button" onclick="openBidModal()">Bieding openen</button>
-            <button class="ghost-btn" type="button" onclick="newGame()">Nieuw spel</button>
-          </div>
+          <div class="action-row"></div>
         </div>
 
         <div class="contract-strip">
@@ -303,7 +299,7 @@
   <div id="bidOverlay" class="overlay">
     <div class="modal" role="dialog" aria-modal="true" id="bidModal">
       <h2>Bieding voor ronde <span id="bidRoundNo">1</span></h2>
-      <p>Klik naast dit venster om het te sluiten. Je kunt het altijd weer openen met <strong>Bieding openen</strong>.</p>
+      <p>Klik naast dit venster om het te sluiten. Je kunt het altijd weer openen met <strong>Pas bod aan</strong>.</p>
       <div class="team-meta">
         <button type="button" data-team-choice="W">Wij bieden</button>
         <button type="button" data-team-choice="Z">Zij bieden</button>
