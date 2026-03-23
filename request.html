@@ -7,7 +7,7 @@
   <style>
     :root { --gold: #dab33e; --black: #111; --bg: #f0ede4; }
     * { box-sizing: border-box; }
-    body { font-family: 'Inter', sans-serif; background: linear-gradient(rgba(240,237,228,0.92), rgba(240,237,228,0.92)), url('./site-bg-desktop.webp') center/cover no-repeat fixed; margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    body { font-family: 'Inter', sans-serif; background: linear-gradient(rgba(240,237,228,0.92), rgba(240,237,228,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed; margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
     .scene { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
     .brand-watermark { position: absolute; top: 10%; left: 5%; opacity: 0.05; width: 30vw; }
     .spinoza-shadow { position: absolute; bottom: 0; right: 0; opacity: 0.1; width: 40vw; }
@@ -32,13 +32,13 @@
 <body>
   <div class="scene">
     <div class="brand-watermark"><img src="./dubbeleD-goud.png" width="100%"></div>
-    <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" width="100%"></div>
+    
     <div class="playing-card-accent"><img src="./playingcard-accent1-trimmed.png" width="100%"></div>
   </div>
   <main class="main-card">
     <img src="./logo.png" class="logo-top" />
     <h1>Claim je naam</h1>
-    <p class="intro">Kies je naam uit de lijst en vul je e-mailadres in.</p>
+    <p class="intro">Kies je naam uit de lijst en vul je e-mailadres in.<br><br><strong>Nog niet geactiveerd of link verlopen?</strong> Dien dezelfde naam met hetzelfde e-mailadres opnieuw in; in admin kan daarna direct een nieuwe activatielink worden verstuurd.</p>
     <label>Gewenste naam</label>
     <select id="requestNameSelect"></select>
     <label>E-mailadres</label>

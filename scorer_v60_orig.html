@@ -7,8 +7,8 @@
   <meta name="description" content="Mobiele klaverjas scorer met takken, biedingen, roem en vault-opslag." />
   <style>
     :root {
-      --blue:#d4af37;
-      --blue-dark:#b88f14;
+      --blue:#2791e8;
+      --blue-dark:#1f7fd0;
       --ink:#2d2d2d;
       --muted:#726b63;
       --line:#d8d0c6;
@@ -27,14 +27,14 @@
       color:var(--ink);
       background:
         linear-gradient(rgba(247,244,238,0.78), rgba(247,244,238,0.72)),
-        url('./wordtergejast.png') center/cover no-repeat fixed;
+        url('./site-bg-mobile.webp') center/cover no-repeat fixed;
     }
     .page { width:min(560px, 100%); margin:0 auto; min-height:100vh; padding-bottom:110px; }
     .topbar {
-      position:relative; top:auto; z-index:2;
+      position:sticky; top:0; z-index:15;
       display:flex; align-items:center; justify-content:space-between; gap:10px;
       padding:14px 14px calc(14px + env(safe-area-inset-top));
-      background:linear-gradient(180deg, rgba(17,17,17,0.96), rgba(38,32,20,0.96));
+      background:linear-gradient(180deg, rgba(39,145,232,0.98), rgba(39,145,232,0.95));
       color:#fff; box-shadow:0 8px 18px rgba(14,58,96,0.22);
     }
     .topbar-title { display:flex; flex-direction:column; }
@@ -77,12 +77,12 @@
     .score-row { min-height:48px; align-items:center; padding:2px 0; }
     .score-cell { display:grid; grid-template-columns:auto 1fr; gap:8px; align-items:center; min-height:40px; }
     .score-cell.right { justify-content:end; grid-template-columns:1fr auto; }
-    .score-meta { font-size:10px; color:var(--muted); display:flex; flex-wrap:wrap; gap:6px; align-items:baseline; }
+    .score-meta { font-size:12px; color:var(--muted); display:flex; flex-wrap:wrap; gap:6px; align-items:baseline; }
     .score-cell.right .score-meta { justify-content:flex-end; text-align:right; }
     .contract-tag { font-weight:800; color:#111; }
     .special-tag { font-weight:800; color:var(--red); }
     .roem-tag { color:#7c7368; }
-    .score-points { font-size:22px; line-height:1; font-weight:800; letter-spacing:-0.04em; }
+    .score-points { font-size:28px; line-height:1; font-weight:800; letter-spacing:-0.04em; }
     .score-empty { height:40px; opacity:0.3; border-bottom:1px dashed rgba(17,17,17,0.08); }
     .status-bar { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:0 16px 14px; flex-wrap:wrap; }
     .status-pill { background:#fff; border:1px solid rgba(17,17,17,0.08); border-radius:999px; padding:9px 12px; font-size:13px; font-weight:700; color:#444; }
@@ -110,8 +110,8 @@
     .special-btn.active.nat { border-color:rgba(204,45,36,0.28); background:#fff4f3; color:var(--red); }
     .special-btn.active.pit { border-color:rgba(212,175,55,0.36); background:#fff8dd; color:#7d5e06; }
     .danger-mini { width:100%; margin-top:10px; border:none; background:#f0e2de; color:#8f3028; border-radius:14px; padding:10px 12px; font-weight:800; cursor:pointer; }
-    .save-bar { position:relative; bottom:auto; z-index:3; padding:10px 14px calc(10px + env(safe-area-inset-bottom)); background:linear-gradient(180deg, rgba(247,244,238,0), rgba(247,244,238,0.96) 40%, rgba(247,244,238,0.98)); }
-    .save-btn { width:100%; border:none; border-radius:16px; padding:14px; background:#111; color:#fff; font-size:17px; font-weight:900; box-shadow:0 16px 24px rgba(0,0,0,0.16); cursor:pointer; }
+    .save-bar { position:sticky; bottom:0; z-index:14; padding:10px 14px calc(10px + env(safe-area-inset-bottom)); background:linear-gradient(180deg, rgba(247,244,238,0), rgba(247,244,238,0.96) 40%, rgba(247,244,238,0.98)); }
+    .save-btn { width:100%; border:none; border-radius:18px; padding:18px; background:#111; color:#fff; font-size:17px; font-weight:900; box-shadow:0 16px 24px rgba(0,0,0,0.16); cursor:pointer; }
     .save-btn:disabled { opacity:.45; cursor:not-allowed; }
     .footer { text-align:center; color:#58534b; font-size:14px; padding:10px 16px 2px; }
     .message { min-height:20px; text-align:center; color:#7a7368; font-size:13px; padding:2px 14px 12px; }
@@ -138,7 +138,7 @@
     .team-meta button.active, .suit-btn.active, .bid-btn.active { background:#111; color:#fff; border-color:#111; }
     .bids-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
     .suits-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-top:12px; }
-    .suit-btn,.bid-btn{font-size:18px;} .suit-btn.red { color:var(--red); }
+    .suit-btn.red { color:var(--red); }
     .suit-btn.active.red { color:#fff; background:var(--red); border-color:var(--red); }
     .modal-footer { display:flex; gap:10px; margin-top:18px; }
     .modal-footer button { flex:1; border:none; border-radius:16px; padding:14px; cursor:pointer; font-weight:900; }
@@ -161,12 +161,12 @@
 <body>
   <div class="page">
     <header class="topbar">
-      <button class="icon-btn" type="button" onclick="toggleAppMenu()">☰</button>
+      <button class="icon-btn" type="button" onclick="window.location.href='./index.html'">☰</button>
       <div class="topbar-title"><strong>Klaverjas scorer</strong><span>Mobiel, in takken, met biedingen en roem</span></div>
-      <button class="icon-btn" type="button" onclick="undoRound()">↶</button>
+      <button class="icon-btn" type="button" onclick="openBidModal()">✚</button>
     </header>
 
-    <div id="appMenu" class="overlay"><div class="modal"><h2>Klaverjas menu</h2><div class="modal-footer" style="display:grid;grid-template-columns:1fr;"><button class="btn-light" type="button" onclick="openSetupModal()">Teams kiezen</button><button class="btn-light" type="button" onclick="openBidModal()">Bieding openen</button><button class="btn-light" type="button" onclick="undoRound()">Undo laatste ronde</button><button class="btn-light" type="button" onclick="newGame()">Nieuw spel</button><button class="btn-dark" type="button" onclick="window.location.href='./index.html'">Terug naar site</button></div></div></div><div class="wrap">
+    <div class="wrap">
       <section class="sheet">
         <div class="match-head">
           <div class="teams-line">
@@ -249,12 +249,12 @@
       <h2>Wie spelen er mee?</h2>
       <p>Kies eerst per team de spelers. Daarna gaat pas het biedingsscherm open.</p>
       <div class="setup-grid">
-        <div class="field"><label>Wij · speler 1</label><select id="playerW1"></select></div>
-        <div class="field"><label>Zij · speler 1</label><select id="playerZ1"></select></div>
-        <div class="field"><label>Wij · speler 2</label><select id="playerW2"></select></div>
-        <div class="field"><label>Zij · speler 2</label><select id="playerZ2"></select></div>
+        <div class="field"><label>Wij · speler 1</label><select id="playerW1"></select><input id="playerW1Custom" class="custom-name" type="text" placeholder="Naam invoeren"></div>
+        <div class="field"><label>Zij · speler 1</label><select id="playerZ1"></select><input id="playerZ1Custom" class="custom-name" type="text" placeholder="Naam invoeren"></div>
+        <div class="field"><label>Wij · speler 2</label><select id="playerW2"></select><input id="playerW2Custom" class="custom-name" type="text" placeholder="Naam invoeren"></div>
+        <div class="field"><label>Zij · speler 2</label><select id="playerZ2"></select><input id="playerZ2Custom" class="custom-name" type="text" placeholder="Naam invoeren"></div>
       </div>
-      <div class="helper">Kies alleen namen uit de vaste gebruikerslijst van de site.</div>
+      <div class="helper">Volgorde is ook de deelvolgorde: wij1 → zij1 → wij2 → zij2.</div>
       <div class="modal-footer">
         <button class="btn-light" type="button" onclick="closeSetupModal(false)">Later</button>
         <button class="btn-blue" type="button" onclick="saveSetup()">Opslaan en bieding kiezen</button>
@@ -286,15 +286,11 @@
     </div>
   </div>
 
-  <div id="resumeOverlay" class="overlay"><div class="modal"><h2>Oud spel gevonden</h2><p>Er staat nog een eerder spel op dit apparaat. Wil je doorgaan of alles wissen?</p><div class="modal-footer"><button class="btn-light" type="button" onclick="resumeExistingGame()">Doorgaan</button><button class="btn-dark" type="button" onclick="wipeAndStartNew()">Wissen en nieuw spel</button></div></div></div>
-
   <script>
-    const MATCH_KEY = 'current_match_v60';
-    const LEGACY_MATCH_KEYS = ['current_match_v60','current_match_v59','current_match'];
+    const MATCH_KEY = 'current_match_v59';
+    const LEGACY_MATCH_KEYS = ['current_match_v59','current_match'];
     const HISTORY_KEY = 'vault_history';
     const PLAYERS_KEY = 'vault_players';
-    const SUPABASE_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co';
-    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
     const DEFAULT_NAMES = ['Bruis','Lyon','Jesper','Sjaak','Bep','Kees','Wim'];
     const SUIT_LABELS = { '♣':'♣', '♥':'♥', '♠':'♠', '♦':'♦', 'S':'sans' };
     const BID_OPTIONS = [80,90,100,110,120,130,140,150,160];
@@ -341,27 +337,27 @@
       localStorage.setItem(MATCH_KEY, JSON.stringify(game));
     }
 
-    async function getSitePlayers() {
+    function getKnownPlayers() {
+      const names = new Set(DEFAULT_NAMES);
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, { method:'POST', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify({ session_token: null }) });
-        const txt = await res.text();
-        const data = txt ? JSON.parse(txt) : {};
-        return Array.from(new Set([...(data.all_names || []), ...DEFAULT_NAMES])).filter(Boolean).sort((a,b)=>a.localeCompare(b,'nl'));
-      } catch {
-        return DEFAULT_NAMES.slice();
-      }
+        const stored = JSON.parse(localStorage.getItem(PLAYERS_KEY) || '[]');
+        (stored || []).forEach((name) => name && names.add(String(name).trim()));
+      } catch {}
+      try {
+        const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+        (history || []).forEach((match) => (match.players || []).forEach((name) => name && names.add(String(name).trim())));
+      } catch {}
+      return Array.from(names).filter(Boolean).sort((a,b) => a.localeCompare(b, 'nl'));
     }
 
-    let knownPlayersCache = DEFAULT_NAMES.slice();
-    function getKnownPlayers() { return knownPlayersCache.slice(); }
-
     function rememberPlayers(players) {
-      knownPlayersCache = Array.from(new Set([...knownPlayersCache, ...players.filter(Boolean)])).sort((a,b)=>a.localeCompare(b,'nl'));
-      localStorage.setItem(PLAYERS_KEY, JSON.stringify(knownPlayersCache));
+      const merged = new Set(getKnownPlayers());
+      players.forEach((name) => name && merged.add(name));
+      localStorage.setItem(PLAYERS_KEY, JSON.stringify(Array.from(merged).sort((a,b) => a.localeCompare(b, 'nl'))));
     }
 
     function scoreFromRaw(raw) {
-      const n = Number(raw || 0); return Math.floor((n + 5) / 10);
+      return Math.round(Number(raw || 0) / 10);
     }
 
     function totalRawForSuit(suit) {
@@ -401,11 +397,29 @@
 
     function renderSetupOptions() {
       const options = getKnownPlayers();
-      [['playerW1',0],['playerZ1',1],['playerW2',2],['playerZ2',3]].forEach(([selectId,index]) => {
+      [['playerW1','playerW1Custom'],['playerZ1','playerZ1Custom'],['playerW2','playerW2Custom'],['playerZ2','playerZ2Custom']].forEach(([selectId,inputId], index) => {
         const select = document.getElementById(selectId);
+        const input = document.getElementById(inputId);
         const current = game.players[index] || '';
-        select.innerHTML = ['<option value="">Kies speler</option>', ...options.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)].join('');
-        select.value = options.includes(current) ? current : '';
+        select.innerHTML = ['<option value="">Kies speler</option>', ...options.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`), '<option value="__custom__">Anders...</option>'].join('');
+        if (options.includes(current)) {
+          select.value = current;
+          input.classList.remove('show');
+          input.value = '';
+        } else if (current) {
+          select.value = '__custom__';
+          input.classList.add('show');
+          input.value = current;
+        } else {
+          select.value = '';
+          input.classList.remove('show');
+          input.value = '';
+        }
+        select.onchange = () => {
+          const custom = select.value === '__custom__';
+          input.classList.toggle('show', custom);
+          if (!custom) input.value = '';
+        };
       });
     }
 
@@ -419,9 +433,17 @@
     }
 
     function saveSetup() {
-      const picks = ['playerW1','playerZ1','playerW2','playerZ2'].map((id) => document.getElementById(id).value.trim());
-      if (picks.some((value) => !value)) { setMessage('Kies eerst voor alle vier plekken een speler.'); return; }
-      if (new Set(picks).size < 4) { setMessage('Elke speler mag maar één keer gekozen worden.'); return; }
+      const picks = [];
+      for (const [selectId,inputId] of [['playerW1','playerW1Custom'],['playerZ1','playerZ1Custom'],['playerW2','playerW2Custom'],['playerZ2','playerZ2Custom']]) {
+        const select = document.getElementById(selectId);
+        const input = document.getElementById(inputId);
+        const value = select.value === '__custom__' ? input.value.trim() : select.value.trim();
+        picks.push(value);
+      }
+      if (picks.some((value) => !value)) {
+        setMessage('Kies eerst voor alle vier plekken een speler.');
+        return;
+      }
       game.players = picks;
       rememberPlayers(picks);
       saveGame();
@@ -480,8 +502,8 @@
         return;
       }
       const bidder = contract.team === 'W' ? 'Wij' : 'Zij';
-      text.textContent = `${bidder} biedt ${contract.bid} op ${contract.suit === 'S' ? 'sans' : (SUIT_LABELS[contract.suit] || contract.suit)}`;
-      hint.textContent = `Voer de rauwe slagpunten in; het blad toont per ronde de afgeronde tientallen.`;
+      text.textContent = `${bidder} · ${contract.bid}${SUIT_LABELS[contract.suit] || contract.suit}`;
+      hint.textContent = `Totaal voor deze ronde: ${totalRawForSuit(contract.suit)} raw punten → afgerond per team op tientallen.`;
     }
 
     function syncInputs(sideChanged) {
@@ -600,7 +622,7 @@
         if (contract.special.team === 'W') rawW += 100;
         if (contract.special.team === 'Z') rawZ += 100;
       }
-      const round = makeRoundRecord(rawW, rawZ, { verzaaktBy: side, nat: false, roemStruck: (contract.roem.W + contract.roem.Z) > 0 ? side : '' });
+      const round = makeRoundRecord(rawW, rawZ, { verzaaktBy: side, nat: false });
       game.rounds.push(round);
       game.w += round.fw;
       game.z += round.fz;
@@ -628,27 +650,36 @@
       openBidModal();
     }
 
-    function reallyResetGame() {
+    function newGame() {
+      if (!confirm('Nieuw spel starten?')) return;
       localStorage.removeItem(MATCH_KEY);
-      game = freshGame();
+      game = loadGame();
       contract = freshContract();
-      clearRoundInputs();
-      renderSetupOptions();
       render();
+      openSetupModal();
     }
-    function newGame() { document.getElementById('resumeOverlay').classList.add('show'); }
-    function wipeAndStartNew(){ document.getElementById('resumeOverlay').classList.remove('show'); reallyResetGame(); openSetupModal(); setMessage('Nieuw spel gestart.'); }
-    function resumeExistingGame(){ document.getElementById('resumeOverlay').classList.remove('show'); render(); setMessage('Verder met bestaand spel.'); }
+
+    function finishGame() {
+      const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+      history.push({ ...game, finishedAt: new Date().toISOString() });
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+      localStorage.removeItem(MATCH_KEY);
+      setMessage('Wedstrijd opgeslagen in de vault.');
+      alert(`Klaar. Eindstand: wij ${game.w} - zij ${game.z}. Potje opgeslagen voor de vault.`);
+      game = loadGame();
+      contract = freshContract();
+      render();
+      openSetupModal();
+    }
 
     function sideMeta(round, side) {
       const parts = [];
-      if (round.team === side) parts.push(`<span class="contract-tag">bod ${escapeHtml(String(round.bid || ''))}</span>`);
-      if (round.team === side && round.suit) parts.push(`<span class="contract-tag">troef ${escapeHtml(round.suit === 'S' ? 'sans' : round.suit)}</span>`);
-      if (side === 'W' && round.rw) parts.push(`<span class="roem-tag">${round.roemStruck === 'W' ? `<s>${escapeHtml(toRoman(round.rw))}</s>` : escapeHtml(toRoman(round.rw))}</span>`);
-      if (side === 'Z' && round.rz) parts.push(`<span class="roem-tag">${round.roemStruck === 'Z' ? `<s>${escapeHtml(toRoman(round.rz))}</s>` : escapeHtml(toRoman(round.rz))}</span>`);
+      if (round.team === side) parts.push(`<span class="contract-tag">${escapeHtml(round.contractLabel || '')}</span>`);
+      if (side === 'W' && round.rw) parts.push(`<span class="roem-tag">${escapeHtml(toRoman(round.rw))}</span>`);
+      if (side === 'Z' && round.rz) parts.push(`<span class="roem-tag">${escapeHtml(toRoman(round.rz))}</span>`);
       if (round.specialType && round.specialTeam === side) parts.push(`<span class="special-tag">${escapeHtml(round.specialType)}</span>`);
       if (round.nat && round.natBy === side) parts.push(`<span class="special-tag">nat</span>`);
-      if (round.verzaaktBy === side) parts.push(`<span class="special-tag">verzaakt</span>`);
+      if (round.verzaaktBy === side) parts.push(`<span class="special-tag">verzaak</span>`);
       return parts.join(' ');
     }
 
@@ -728,14 +759,11 @@
     document.getElementById('inputZ').addEventListener('input', () => syncInputs('Z'));
     document.getElementById('setupOverlay').addEventListener('click', (event) => { if (event.target.id === 'setupOverlay' && game.players.filter(Boolean).length === 4) closeSetupModal(true); });
     document.getElementById('bidOverlay').addEventListener('click', (event) => { if (event.target.id === 'bidOverlay') closeBidModal(); });
-    document.getElementById('appMenu').addEventListener('click', (event) => { if (event.target.id === 'appMenu') toggleAppMenu(false); });
-    document.getElementById('resumeOverlay').addEventListener('click', (event) => { if (event.target.id === 'resumeOverlay') document.getElementById('resumeOverlay').classList.remove('show'); });
 
     render();
-    async function initPage(){ knownPlayersCache = await getSitePlayers(); renderSetupOptions(); render(); if (game.rounds.length || game.players.filter(Boolean).length) { document.getElementById('resumeOverlay').classList.add('show'); } else { openSetupModal(); } }
-    function toggleAppMenu(force){ const el=document.getElementById('appMenu'); const should = typeof force === 'boolean' ? force : !el.classList.contains('show'); el.classList.toggle('show', should); }
-    initPage();
+    if (game.players.filter(Boolean).length < 4) openSetupModal();
+    else if (game.rounds.length < 16) openBidModal();
   </script>
-  <div class="site-credit-watermark">v60 · Made by Bruis</div>
+  <div class="site-credit-watermark">v59 · Made by Bruis</div>
 </body>
 </html>

@@ -8,7 +8,7 @@
   <style>
     :root { --gold:#d4af37; --card-bg:#f9f7f2; --line:rgba(0,0,0,0.06); --muted:#666; --ok:#2b5b37; --warn:#8b3a30; }
     * { box-sizing:border-box; }
-    body { margin:0; padding:20px; font-family:'Inter', sans-serif; background: linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed; min-height:100vh; }
+    body { margin:0; padding:20px; font-family:'Inter', sans-serif; background: linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./site-bg-desktop.webp') center/cover no-repeat fixed; min-height:100vh; }
     .main-card { background:var(--card-bg); border-radius:24px; padding:30px; max-width:900px; margin:0 auto; box-shadow:0 20px 50px rgba(0,0,0,0.08); position:relative; }
     .card-logo { position:absolute; top:25px; right:25px; width:40px; }
     h1 { font-size:28px; margin-bottom:20px; }
@@ -86,24 +86,6 @@
     @media (max-width:700px){.tab-btn{width:100%;justify-content:space-between;}}
   </style>
 
-  <style id="admin-v60-enhance">
-    .request{padding:18px 18px 16px;border-radius:20px;background:linear-gradient(180deg,#fff,#faf7ef);box-shadow:0 10px 24px rgba(0,0,0,.05)}
-    .entry-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:10px}
-    .entry-title{font-size:20px;font-weight:800;line-height:1.05}
-    .entry-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
-    .entry-note{background:#f6f3eb;border:1px solid rgba(0,0,0,.06);border-radius:14px;padding:12px 14px;color:#4d463c;font-size:14px}
-    .state-activated,.state-approved{background:#e9f4eb;color:#1f6b31}.state-awaiting{background:#fff4d7;color:#8a6212}.state-rejected{background:#f7e6e3;color:#8b3a30}
-    .hub-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-    .hub-link{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-radius:16px;border:1px solid rgba(0,0,0,0.08);background:#fff;color:#111;text-decoration:none;font-weight:700}
-    .hub-link small{display:block;color:#7b7468;font-weight:500}
-    .manual-grid{display:grid;grid-template-columns:1.2fr 1.2fr 1fr;gap:10px}
-    .soft-note{font-size:12px;color:#6b665d;margin-top:8px}
-    #workspace .card{display:none}
-    #workspace .card.current-view{display:block; max-height:none; overflow:visible}
-    @media (max-width:900px){.request-grid,.entry-meta,.hub-grid,.manual-grid{grid-template-columns:1fr 1fr}}
-    @media (max-width:700px){.request-grid,.entry-meta,.hub-grid,.manual-grid{grid-template-columns:1fr}}
-  </style>
-
   <style id="bruis-watermark-style">
     .site-credit-watermark{position:fixed;right:16px;bottom:12px;z-index:9999;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(17,17,17,0.08);color:rgba(17,17,17,0.62);font:600 12px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.02em;pointer-events:none;user-select:none;box-shadow:0 6px 18px rgba(0,0,0,0.05)}
     @media (max-width:640px){.site-credit-watermark{right:10px;bottom:10px;font-size:11px;padding:5px 8px}}
@@ -179,23 +161,6 @@
           <div id="approvedUsersList"></div>
         </div>
       </div>
-      <div id="adminExtras" class="admin-grid" style="margin-top:18px;">
-        <div id="pagesHubCard" class="card">
-          <div class="panel-head"><h2>Pagina-hub</h2><div class="toolbar-note">Alle pagina's uit deze sitebundle. Alleen via admin getoond.</div></div>
-          <div id="pagesHubList" class="hub-grid"></div>
-        </div>
-        <div id="manualNamesCard" class="card">
-          <div class="panel-head"><h2>Naam handmatig klaarzetten</h2><div class="toolbar-note">Maakt een nieuwe aanvraag/reservering zodat iemand daarna via het normale proces kan registreren.</div></div>
-          <div class="manual-grid">
-            <input id="manualNameInput" type="text" placeholder="Gebruikersnaam / display name">
-            <input id="manualEmailInput" type="email" placeholder="E-mail voor activatielink">
-            <input id="manualNoteInput" type="text" placeholder="Notitie (optioneel)">
-          </div>
-          <div class="action-row"><button id="manualCreateBtn" class="btn primary" type="button">Naam klaarzetten</button></div>
-          <div class="soft-note">Gebruik dit voor vooraf goedgekeurde spelers. In <strong>Pending activation</strong> kun je altijd opnieuw een activatielink genereren of mailen.</div>
-          <div id="manualCreateMsg" class="inline-msg"></div>
-        </div>
-      </div>
     </div>
     <div id="status"></div>
     <div class="version-tag">v58 admin tabs + integrations</div>
@@ -210,17 +175,6 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     let lastHistory = [];
     let historyFilter = "all";
     let currentAdminView = "pending";
-    const SITE_PAGES = [
-      {href:'./index.html', label:'Home', note:'Publieke stem-/hubpagina'},
-      {href:'./login.html', label:'Login', note:'Publieke login'},
-      {href:'./request.html', label:'Naam aanvragen', note:'Publieke aanvraagflow'},
-      {href:'./scorer.html', label:'Scorer', note:'Klaverjas scorer'},
-      {href:'./activate.html', label:'Activeren', note:'Alleen via activatielink'},
-      {href:'./score.html', label:'Score legacy', note:'Oud scoreblad'},
-      {href:'./vault.html', label:'Vault', note:'Admin-only analyse'},
-      {href:'./leaderboard.html', label:'Ranglijst', note:'Admin-only overzicht'},
-      {href:'./admin.html', label:'Admin', note:'Beheerportaal'}
-    ];
 
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json", Accept: "application/json" }; }
     async function parseResponse(res) { const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }
@@ -233,9 +187,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     function setStatus(text) { document.getElementById("status").textContent = text || ""; }
     function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;"); }
     function showLoggedOut() { document.getElementById("loginView").classList.remove("hidden"); document.getElementById("adminView").classList.add("hidden"); document.getElementById("workspace").classList.add("hidden"); document.getElementById("adminTabsCard").classList.add("hidden"); document.getElementById("adminToolbar").classList.add("hidden"); document.getElementById("statsGrid").classList.add("hidden"); document.getElementById("requestsCard").classList.add("hidden"); document.getElementById("historyCard").classList.add("hidden"); document.getElementById("approvedUsersCard").classList.add("hidden"); document.getElementById("requestsList").innerHTML = ""; document.getElementById("historyList").innerHTML = ""; document.getElementById("approvedUsersList").innerHTML = ""; document.getElementById("adminTabs").innerHTML = ""; }
-    function renderPagesHub(){ const root=document.getElementById('pagesHubList'); if(!root) return; root.innerHTML = SITE_PAGES.map((p)=>`<a class="hub-link" href="${p.href}"><span><strong>${p.label}</strong><small>${p.note}</small></span><span>→</span></a>`).join(''); }
-
-    function showLoggedIn(username) { document.getElementById("loginView").classList.add("hidden"); document.getElementById("adminView").classList.remove("hidden"); document.getElementById("workspace").classList.remove("hidden"); document.getElementById("adminTabsCard").classList.remove("hidden"); document.getElementById("adminToolbar").classList.remove("hidden"); document.getElementById("statsGrid").classList.remove("hidden"); document.getElementById("requestsCard").classList.remove("hidden"); document.getElementById("historyCard").classList.remove("hidden"); document.getElementById("approvedUsersCard").classList.remove("hidden"); document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`; renderPagesHub(); }
+    function showLoggedIn(username) { document.getElementById("loginView").classList.add("hidden"); document.getElementById("adminView").classList.remove("hidden"); document.getElementById("workspace").classList.remove("hidden"); document.getElementById("adminTabsCard").classList.remove("hidden"); document.getElementById("adminToolbar").classList.remove("hidden"); document.getElementById("statsGrid").classList.remove("hidden"); document.getElementById("requestsCard").classList.remove("hidden"); document.getElementById("historyCard").classList.remove("hidden"); document.getElementById("approvedUsersCard").classList.remove("hidden"); document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`; }
 
     function formatDateTime(value) { return value ? new Date(value).toLocaleString('nl-NL') : 'Onbekend'; }
     function getActivationBaseUrl() { const url = new URL('./activate.html', window.location.href); if (url.protocol === 'http:' && !/^(localhost|127\.0\.0\.1)$/i.test(url.hostname)) url.protocol = 'https:'; return url.toString(); }
@@ -327,39 +279,33 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     }
 
     function requestHtml(req, includeDecision = false) {
-      const noteHtml = req.requester_note ? escapeHtml(req.requester_note).replace(/
-/g, "<br>") : "<span class='muted'>Geen toelichting</span>";
-      const reasonHtml = req.decision_reason ? escapeHtml(req.decision_reason).replace(/
-/g, "<br>") : "<span class='muted'>Geen reden opgegeven</span>";
+      const noteHtml = req.requester_note ? escapeHtml(req.requester_note).replace(/\n/g, "<br>") : "<span class='muted'>Geen toelichting</span>";
+      const reasonHtml = req.decision_reason ? escapeHtml(req.decision_reason).replace(/\n/g, "<br>") : "<span class='muted'>Geen reden opgegeven</span>";
       const meta = extractMeta(req.requester_meta);
       const status = statusMeta(req, includeDecision);
       return `
-        <div class="entry-top">
+        <div class="request-head">
           <div>
             <div class="state-badge ${status.cls}">${status.label}</div>
-            <div class="entry-title">${escapeHtml(displayNameOf(req))}</div>
-            <div class="muted">${req.requester_email || 'Onbekend e-mailadres'} · aanvraag #${req.id ?? '?'}</div>
+            <strong>${escapeHtml(displayNameOf(req))}</strong><br>
+            <span class="muted">Aangevraagd op:</span> ${req.created_at ? new Date(req.created_at).toLocaleString('nl-NL') : 'Onbekend'}<br>
+            ${includeDecision ? `<span class="muted">Beslissing:</span> ${escapeHtml(req.decision || '')}<br>` : ''}
           </div>
-          <div class="muted" style="text-align:right;">Aangevraagd<br><strong>${req.created_at ? new Date(req.created_at).toLocaleString('nl-NL') : 'Onbekend'}</strong>${includeDecision ? `<br><span>Besluit: ${escapeHtml(req.decision || '')}</span>` : ''}</div>
         </div>
-        <div class="entry-note">${noteHtml}</div>
-        <div class="entry-meta">
+        <div style="margin-top:10px;">${noteHtml}</div>
+        <div class="request-grid">
+          ${metaBox('E-mail', req.requester_email || 'Onbekend')}
+          ${metaBox('Taal', meta.language || 'Onbekend')}
           ${metaBox('Tijdzone', meta.timezone || 'Onbekend')}
           ${metaBox('Platform', meta.platform || 'Onbekend')}
-          ${metaBox('Referrer', meta.referrer || 'Direct')}
+          ${metaBox('Touch punten', String(meta.max_touch_points || 0))}
+          ${metaBox('Scherm', meta.screen || 'Onbekend')}
+          ${metaBox('Viewport', meta.viewport || 'Onbekend')}
+          ${metaBox('Referrer', meta.referrer || 'Direct / onbekend')}
         </div>
         <details>
-          <summary>Meer details</summary>
-          <div class="request-grid">
-            ${metaBox('E-mail', req.requester_email || 'Onbekend')}
-            ${metaBox('Taal', meta.language || 'Onbekend')}
-            ${metaBox('Touch punten', String(meta.max_touch_points || 0))}
-            ${metaBox('Scherm', meta.screen || 'Onbekend')}
-            ${metaBox('Viewport', meta.viewport || 'Onbekend')}
-            ${metaBox('Pagina', meta.page_url || 'Onbekend')}
-            ${metaBox('User agent', meta.user_agent || 'Onbekend')}
-            ${metaBox('Kleurenschema', meta.color_scheme || 'Onbekend')}
-          </div>
+          <summary>Browser- en verzoekdetails</summary>
+          <pre>${escapeHtml(JSON.stringify(req.requester_meta || {}, null, 2))}</pre>
         </details>
         ${includeDecision ? `<div style="margin-top:12px;"><span class="label">Reden besluit</span><div>${reasonHtml}</div></div>` : ''}
       `;
@@ -643,7 +589,10 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       const cfg = getAdminViewConfig()[view] || getAdminViewConfig().pending;
       document.getElementById('currentListTitle').textContent = cfg.title;
       document.getElementById('currentListSubtitle').textContent = cfg.subtitle;
-      ['requestsCard','historyCard','approvedUsersCard'].forEach((id)=>{ const el=document.getElementById(id); el.classList.remove('current-view'); el.style.display='none'; }); const active=document.getElementById(cfg.card); active.style.display='block'; active.classList.add('current-view');
+      document.getElementById('requestsCard').classList.remove('hidden','current-view');
+      document.getElementById('historyCard').classList.remove('hidden','current-view');
+      document.getElementById('approvedUsersCard').classList.remove('hidden','current-view');
+      document.getElementById(cfg.card).classList.add('current-view');
       applySharedSearchToVisibleCard();
       if (view === 'pending') {
         renderRequests(lastRequests);
@@ -799,21 +748,6 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       });
       return queued;
     }
-    async function createManualName() {
-      const displayName = document.getElementById('manualNameInput').value.trim();
-      const email = document.getElementById('manualEmailInput').value.trim().toLowerCase();
-      const note = document.getElementById('manualNoteInput').value.trim() || 'Handmatig klaargezet vanuit admin';
-      const msg = document.getElementById('manualCreateMsg');
-      if (!displayName) throw new Error('Vul een gebruikersnaam in');
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Vul een geldig e-mailadres in');
-      if (msg) { msg.textContent = 'Naam klaarzetten...'; msg.className = 'inline-msg'; }
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/dev_create_test_claim_simple`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ p_display_name: displayName, p_requester_email: email, p_requester_note: note }) });
-      const data = await parseResponse(res);
-      if (msg) { msg.textContent = `Aanvraag is aangemaakt voor ${displayName}.`; msg.className = 'inline-msg ok'; }
-      document.getElementById('manualNameInput').value=''; document.getElementById('manualEmailInput').value=''; document.getElementById('manualNoteInput').value='';
-      return data;
-    }
-
     async function refreshAdminLists() {
       const [requests, history] = await Promise.all([getRequests(), getHistory()]);
       lastRequests = requests.requests || [];
@@ -921,8 +855,6 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     document.getElementById('historySearch').addEventListener('input', ()=> { if (currentAdminView === 'awaiting' || currentAdminView === 'rejected') renderHistory(lastHistory); });
     document.getElementById('approvedSearch').addEventListener('input', ()=> { if (currentAdminView === 'active') renderApprovedUsers(lastHistory); });
     document.getElementById('refreshBtn').addEventListener('click', async ()=> { setStatus('Verversen...'); await refreshAdminLists(); setStatus('Admin-overzicht ververst.'); });
-    document.getElementById('manualCreateBtn')?.addEventListener('click', async ()=> { try { await createManualName(); currentAdminView='pending'; await refreshAdminLists(); } catch(err){ const msg=document.getElementById('manualCreateMsg'); if(msg){ msg.textContent = err instanceof Error ? err.message : 'Naam klaarzetten mislukt'; msg.className='inline-msg error'; } } });
-
     document.getElementById('kickMakeBtn').addEventListener('click', async ()=> {
       try {
         setStatus('Make handmatig pingen...');
@@ -936,6 +868,6 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     loadAdmin();
   </script>
 
-  <div class="site-credit-watermark">v60 · Made by Bruis</div>
+  <div class="site-credit-watermark">v59 · Made by Bruis</div>
 </body>
 </html>
