@@ -614,10 +614,27 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       window.location.href = url.toString();
     }
 
+    function normalizeDisplayName(name) {
+      return String(name || '').replace(/\s+/g, ' ').trim();
+    }
+    function isLikelyRealName(name) {
+      const value = normalizeDisplayName(name);
+      if (!value) return false;
+      if (/^(test|demo|voorbeeld|sample|dummy|admin|gebruiker)/i.test(value)) return false;
+      if (/\d/.test(value)) return false;
+      return /^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’ .-]{1,39}$/.test(value);
+    }
+    function sanitizeNames(names) {
+      const seen = new Set();
+      return (names || [])
+        .map(normalizeDisplayName)
+        .filter((name) => isLikelyRealName(name) && !seen.has(name.toLowerCase()) && seen.add(name.toLowerCase()))
+        .sort((a, b) => a.localeCompare(b, 'nl'));
+    }
     async function loadAppState() {
       try {
         const data = await callRpc('get_jas_app_state', { session_token: getSessionToken() });
-        state.players = data.all_names || [];
+        state.players = sanitizeNames(data.all_names || []);
         state.recentGames = data.recent_games || [];
         state.currentUser = data.my_name || '';
         document.getElementById('playerCountHero').textContent = `${state.players.length}`;

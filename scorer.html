@@ -26,7 +26,7 @@
       color:var(--ink);
       background: linear-gradient(rgba(247,244,238,0.78), rgba(247,244,238,0.72)), url('./wordtergejast.png') center/cover no-repeat fixed;
     }
-    .page { width:min(580px, 100%); margin:0 auto; min-height:100vh; padding-bottom:110px; }
+    .page { width:min(580px, 100%); margin:0 auto; min-height:100vh; padding-bottom:94px; }
     .topbar {
       display:flex; align-items:center; justify-content:space-between; gap:10px;
       padding:14px 14px calc(14px + env(safe-area-inset-top));
@@ -41,6 +41,8 @@
       background:rgba(255,255,255,0.16); color:#fff; box-shadow:0 6px 16px rgba(0,0,0,0.12);
     }
     .icon-btn { width:48px; height:48px; font-size:26px; display:grid; place-items:center; }
+    .icon-btn:disabled { opacity:.38; cursor:not-allowed; }
+    .topbar-actions { display:flex; gap:8px; }
     .text-btn { padding:12px 14px; font-weight:700; font-size:14px; }
     .wrap { padding:14px; }
     .sheet {
@@ -74,14 +76,14 @@
     .score-header .side span { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.08em; }
     .score-total { padding:10px 10px 0; }
     .score-total .side { text-align:center; font-size:22px; font-weight:900; }
-    .tak-section { padding:8px 0 2px; }
+    .tak-section { padding:5px 0 2px; }
     .tak-divider { position:relative; margin:6px 0 8px; display:flex; justify-content:center; }
     .tak-divider::before { content:''; position:absolute; left:0; right:0; top:50%; height:1px; background:rgba(17,17,17,0.15); }
     .tak-label {
       position:relative; z-index:1; background:var(--paper); padding:0 12px; font-size:12px; color:#4d463d;
       text-transform:uppercase; letter-spacing:.18em; font-weight:900;
     }
-    .score-row { min-height:50px; align-items:center; padding:2px 0; }
+    .score-row { min-height:46px; align-items:center; padding:1px 0; }
     .score-row.preview-row { opacity:0.96; }
     .score-cell { display:grid; align-items:center; min-height:42px; }
     .score-cell.strike-side .score-points,
@@ -98,6 +100,7 @@
       display:inline-flex; align-items:center; justify-content:center; min-height:22px; padding:2px 8px; border-radius:999px;
       background:#fff; border:1px solid rgba(17,17,17,0.08); font-size:11px; font-weight:800; color:#2a2722;
     }
+    .meta-tag.suit { min-height:28px; min-width:28px; padding:2px 10px; font-size:18px; line-height:1; }
     .meta-tag.suit.red, .meta-tag.transfer, .meta-tag.special, .meta-tag.red { color:var(--red); }
     .meta-tag.suit.black { color:#111; }
     .meta-tag.strike { text-decoration:line-through; color:#8b8278; }
@@ -107,16 +110,17 @@
     .tak-summary { padding:2px 0 6px; }
     .tak-summary .tak-divider { margin-bottom:6px; }
     .tak-summary .tak-label { font-size:10px; letter-spacing:.14em; padding:0 8px; }
-    .compact-row { display:grid; grid-template-columns:1fr auto 1fr; gap:6px; align-items:center; min-height:24px; padding:2px 0; font-size:11px; }
+    .compact-row { display:grid; grid-template-columns:1fr auto 1fr; gap:5px; align-items:center; min-height:18px; padding:1px 0; font-size:10px; }
     .compact-side { display:flex; gap:4px; align-items:center; min-width:0; color:#403b35; }
     .compact-side.left { justify-content:flex-end; text-align:right; }
     .compact-side.right { justify-content:flex-start; text-align:left; }
-    .compact-points { font-size:13px; font-weight:900; letter-spacing:-0.03em; }
+    .compact-points { font-size:11px; font-weight:900; letter-spacing:-0.03em; }
     .compact-meta { display:flex; flex-wrap:wrap; gap:4px; align-items:center; min-width:0; }
     .compact-meta.left { justify-content:flex-end; }
     .compact-meta.right { justify-content:flex-start; }
     .compact-divider { width:18px; text-align:center; color:rgba(17,17,17,0.34); font-weight:900; }
-    .meta-tag.compact { min-height:18px; padding:1px 6px; font-size:10px; }
+    .meta-tag.compact { min-height:15px; padding:1px 5px; font-size:9px; }
+    .meta-tag.compact.suit { min-height:18px; min-width:18px; padding:1px 5px; font-size:12px; }
     .compact-side.strike-side .compact-points,
     .compact-side.strike-side .compact-meta,
     .compact-side.strike-side .meta-tag { text-decoration:line-through; color:#8b8278; }
@@ -130,7 +134,7 @@
     .contract-card .eyebrow { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
     .contract-card strong { display:block; font-size:22px; margin-top:2px; letter-spacing:-0.03em; }
     .contract-card small { display:block; color:var(--muted); margin-top:4px; font-size:12px; }
-    .pending-strip { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .pending-strip { display:none; }
     .pending-pill {
       display:inline-flex; align-items:center; gap:6px; padding:7px 10px; border-radius:999px; border:1px solid rgba(17,17,17,0.08); background:#fff; font-size:12px; font-weight:800;
     }
@@ -153,6 +157,7 @@
     .score-input.locked { background:#f5f0e6; border-color:rgba(212,175,55,0.24); color:#7d5e06; }
     .special-row { margin-top:10px; }
     .special-btn { flex:1; border:1px solid rgba(17,17,17,0.12); background:#fff; color:#7a746b; border-radius:16px; padding:10px; font-weight:800; cursor:pointer; }
+    .special-btn:disabled { opacity:.38; cursor:not-allowed; }
     .special-btn.active.nat { border-color:rgba(204,45,36,0.28); background:#fff4f3; color:var(--red); }
     .special-btn.active.pit { border-color:rgba(212,175,55,0.36); background:#fff8dd; color:#7d5e06; }
     .danger-mini { width:100%; margin-top:10px; border:none; background:#f0e2de; color:#8f3028; border-radius:14px; padding:10px 12px; font-weight:800; cursor:pointer; }
@@ -181,8 +186,9 @@
     .bids-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
     .suits-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-top:12px; }
     .suit-btn,.bid-btn{font-size:18px;}
+    .suit-btn { font-size:28px; line-height:1; padding:16px 10px; }
     .suit-btn.red { color:var(--red); background:#111; border-color:#111; }
-    .suit-btn.black { color:#111; background:rgba(191,47,36,0.22); border-color:rgba(191,47,36,0.38); }
+    .suit-btn.black { color:#111; background:var(--red); border-color:var(--red); }
     .suit-btn.sans { color:#111; background:#fff; }
     .suit-btn.active.red, .suit-btn.active.black, .suit-btn.active.sans { color:#111; background:var(--gold); border-color:var(--gold-dark); }
     .modal-footer { display:flex; gap:10px; margin-top:18px; }
@@ -211,7 +217,7 @@
     <header class="topbar">
       <button class="icon-btn" type="button" onclick="toggleAppMenu()">☰</button>
       <div class="topbar-title"><strong>Klaverjas scorer</strong><span>Mobiel, in takken, met biedingen en roem</span></div>
-      <button class="icon-btn" type="button" onclick="undoLastAction()">↶</button>
+      <div class="topbar-actions"><button id="undoBtn" class="icon-btn" type="button" onclick="undoLastAction()">↶</button><button id="redoBtn" class="icon-btn" type="button" onclick="redoLastAction()">↷</button></div>
     </header>
 
     <div id="appMenu" class="overlay"><div class="modal"><h2>Klaverjas menu</h2><div class="modal-footer" style="display:grid;grid-template-columns:1fr;"><button class="btn-light" type="button" onclick="openSetupModal()">Teams kiezen</button><button class="btn-light" type="button" onclick="undoRound()">Hele ronde undo</button><button class="btn-light" type="button" onclick="newGame()">Nieuw spel</button><button class="btn-dark" type="button" onclick="window.location.href='./index.html'">Terug naar site</button></div></div></div>
@@ -349,13 +355,32 @@
     const PLAYERS_KEY = 'vault_players';
     const SUPABASE_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
-    const DEFAULT_NAMES = ['Bruis','Lyon','Jesper','Sjaak','Bep','Kees','Wim'];
+    const DEFAULT_NAMES = [];
+
+    function normalizeDisplayName(name) {
+      return String(name || '').replace(/\s+/g, ' ').trim();
+    }
+    function isLikelyRealName(name) {
+      const value = normalizeDisplayName(name);
+      if (!value) return false;
+      if (/^(test|demo|voorbeeld|sample|dummy|admin|gebruiker)/i.test(value)) return false;
+      if (/\d/.test(value)) return false;
+      return /^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’ .-]{1,39}$/.test(value);
+    }
+    function sanitizeNames(names) {
+      const seen = new Set();
+      return (names || [])
+        .map(normalizeDisplayName)
+        .filter((name) => isLikelyRealName(name) && !seen.has(name.toLowerCase()) && seen.add(name.toLowerCase()))
+        .sort((a, b) => a.localeCompare(b, 'nl'));
+    }
     const SUIT_LABELS = { '♣':'♣', '♥':'♥', '♠':'♠', '♦':'♦', 'S':'sans' };
     const BID_OPTIONS = [80,90,100,110,120,130,140,150,160];
 
     let game = loadGame();
     let contract = freshContract();
-    let currentActionHistory = [];
+    let actionHistory = [];
+    let actionFuture = [];
 
     function freshGame() {
       return {
@@ -402,20 +427,21 @@
 
     async function getSitePlayers() {
       try {
-        const [directRes, stateRes] = await Promise.allSettled([
+        const [loginRes, directRes, stateRes] = await Promise.allSettled([
+          fetch(`${SUPABASE_URL}/rest/v1/rpc/get_login_names`, {
+            method:'POST', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify({})
+          }).then(async (res) => { const txt = await res.text(); const data = txt ? JSON.parse(txt) : {}; if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }),
           fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names`, {
             method:'POST', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify({})
           }).then(async (res) => { const txt = await res.text(); const data = txt ? JSON.parse(txt) : {}; if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }),
           fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, { method:'POST', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify({ session_token: null }) }).then(async (res) => { const txt = await res.text(); const data = txt ? JSON.parse(txt) : {}; if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; })
         ]);
-        const directNames = directRes.status === 'fulfilled' ? (directRes.value?.names || []) : [];
-        const siteNames = stateRes.status === 'fulfilled' ? (stateRes.value?.all_names || []) : [];
-        const hasRealSiteNames = siteNames.some((name) => !/^test/i.test(String(name || '').trim()));
-        const directLooksLikeOnlyTests = directNames.length && directNames.every((name) => /^test/i.test(String(name || '').trim()));
-        const names = (!directNames.length || (directLooksLikeOnlyTests && hasRealSiteNames)) ? siteNames : directNames;
-        return Array.from(new Set([...(names || []), ...DEFAULT_NAMES])).filter(Boolean).sort((a,b)=>a.localeCompare(b,'nl'));
+        const loginNames = loginRes.status === 'fulfilled' ? sanitizeNames(loginRes.value?.names || []) : [];
+        const directNames = directRes.status === 'fulfilled' ? sanitizeNames(directRes.value?.names || []) : [];
+        const siteNames = stateRes.status === 'fulfilled' ? sanitizeNames(stateRes.value?.all_names || []) : [];
+        return loginNames.length ? loginNames : (siteNames.length ? siteNames : directNames);
       } catch {
-        return DEFAULT_NAMES.slice();
+        return [];
       }
     }
 
@@ -423,7 +449,7 @@
     function getKnownPlayers() { return knownPlayersCache.slice(); }
 
     function rememberPlayers(players) {
-      knownPlayersCache = Array.from(new Set([...knownPlayersCache, ...players.filter(Boolean)])).sort((a,b)=>a.localeCompare(b,'nl'));
+      knownPlayersCache = sanitizeNames([...knownPlayersCache, ...players.filter(Boolean)]);
       localStorage.setItem(PLAYERS_KEY, JSON.stringify(knownPlayersCache));
     }
 
@@ -487,17 +513,31 @@
 
     function currentRoundSnapshot() {
       return {
+        game: JSON.parse(JSON.stringify(game)),
         contract: cloneContractState(),
         inputW: document.getElementById('inputW')?.value || '',
         inputZ: document.getElementById('inputZ')?.value || '',
-        bidOpen: document.getElementById('bidOverlay')?.classList.contains('show') || false
+        bidOpen: document.getElementById('bidOverlay')?.classList.contains('show') || false,
+        setupOpen: document.getElementById('setupOverlay')?.classList.contains('show') || false,
+        resumeOpen: document.getElementById('resumeOverlay')?.classList.contains('show') || false
       };
     }
 
-    function recordActionSnapshot() {
+    function updateUndoRedoButtons() {
+      const undoBtn = document.getElementById('undoBtn');
+      const redoBtn = document.getElementById('redoBtn');
+      if (undoBtn) undoBtn.disabled = actionHistory.length <= 1;
+      if (redoBtn) redoBtn.disabled = !actionFuture.length;
+    }
+
+    function commitActionState() {
       const next = currentRoundSnapshot();
-      const prev = currentActionHistory[currentActionHistory.length - 1];
-      if (!prev || JSON.stringify(prev) !== JSON.stringify(next)) currentActionHistory.push(next);
+      const prev = actionHistory[actionHistory.length - 1];
+      if (!prev || JSON.stringify(prev) !== JSON.stringify(next)) {
+        actionHistory.push(next);
+        actionFuture = [];
+      }
+      updateUndoRedoButtons();
     }
 
     function syncSpecialButtons() {
@@ -507,10 +547,12 @@
         btn.classList.toggle('nat', active && btn.dataset.type === 'nat');
         btn.classList.toggle('pit', active && btn.dataset.type === 'pit');
       });
+      renderSpecialAvailability();
     }
 
     function restoreActionSnapshot(snapshot) {
       if (!snapshot) return;
+      game = snapshot.game ? JSON.parse(JSON.stringify(snapshot.game)) : freshGame();
       contract = snapshot.contract ? JSON.parse(JSON.stringify(snapshot.contract)) : freshContract();
       document.getElementById('inputW').value = snapshot.inputW ?? '';
       document.getElementById('inputZ').value = snapshot.inputZ ?? '';
@@ -518,20 +560,35 @@
       applyInstantSpecialState();
       syncBidModalSelections();
       render();
-      if (snapshot.bidOpen) document.getElementById('bidOverlay').classList.add('show');
-      else closeBidModal();
+      document.getElementById('bidOverlay').classList.toggle('show', Boolean(snapshot.bidOpen));
+      document.getElementById('setupOverlay').classList.toggle('show', Boolean(snapshot.setupOpen));
+      document.getElementById('resumeOverlay').classList.toggle('show', Boolean(snapshot.resumeOpen));
+      updateUndoRedoButtons();
     }
 
     function undoLastAction() {
-      if (!currentActionHistory.length) {
-        setMessage('Geen losse actie om ongedaan te maken.');
+      if (actionHistory.length <= 1) {
+        setMessage('Geen actie om terug te draaien.');
+        updateUndoRedoButtons();
         return;
       }
-      const snapshot = currentActionHistory.pop();
-      restoreActionSnapshot(snapshot);
-      setMessage('Laatste losse actie ongedaan gemaakt.');
+      const current = actionHistory.pop();
+      actionFuture.push(current);
+      restoreActionSnapshot(actionHistory[actionHistory.length - 1]);
+      setMessage('Laatste actie teruggedraaid.');
     }
 
+    function redoLastAction() {
+      if (!actionFuture.length) {
+        setMessage('Geen actie om opnieuw te zetten.');
+        updateUndoRedoButtons();
+        return;
+      }
+      const next = actionFuture.pop();
+      actionHistory.push(next);
+      restoreActionSnapshot(next);
+      setMessage('Actie opnieuw gezet.');
+    }
     function playerSelectIds() {
       return ['playerW1','playerZ1','playerW2','playerZ2'];
     }
@@ -583,7 +640,6 @@
       rememberPlayers(picks);
       saveGame();
       closeSetupModal();
-      currentActionHistory = [];
       render();
       openBidModal();
     }
@@ -592,10 +648,11 @@
       const root = document.getElementById('bidGrid');
       root.innerHTML = BID_OPTIONS.map((bid) => `<button class="bid-btn ${contract.bid === bid ? 'active' : ''}" type="button" data-bid="${bid}">${bid}</button>`).join('');
       root.querySelectorAll('[data-bid]').forEach((btn) => btn.addEventListener('click', () => {
-        recordActionSnapshot();
         contract.bid = Number(btn.dataset.bid);
         root.querySelectorAll('.bid-btn').forEach((el) => el.classList.toggle('active', el === btn));
         renderPendingStrip();
+        renderBoard();
+        commitActionState();
       }));
     }
 
@@ -621,6 +678,7 @@
       renderContract();
       renderPendingStrip();
       renderBoard();
+      commitActionState();
       setMessage('Bieding opgeslagen voor deze ronde.');
     }
 
@@ -636,7 +694,6 @@
     function resetInputUi() {
       contract.roem = { W:0, Z:0 };
       contract.special = { team:'', type:'' };
-      currentActionHistory = [];
       syncSpecialButtons();
       clearRoundInputs();
       renderRoemLives();
@@ -664,17 +721,7 @@
 
     function renderPendingStrip() {
       const root = document.getElementById('pendingStrip');
-      if (!contract.team) {
-        root.innerHTML = '';
-        return;
-      }
-      const pills = [];
-      pills.push(`<span class="pending-pill">${contract.team === 'W' ? 'Wij' : 'Zij'} biedt ${contract.bid}</span>`);
-      pills.push(`<span class="pending-pill ${suitClass(contract.suit)}">${escapeHtml(contract.suit === 'S' ? 'sans' : contract.suit)}</span>`);
-      if (contract.roem.W) pills.push(`<span class="pending-pill">Wij roem ${contract.roem.W}</span>`);
-      if (contract.roem.Z) pills.push(`<span class="pending-pill">Zij roem ${contract.roem.Z}</span>`);
-      if (contract.special.type) pills.push(`<span class="pending-pill red">${contract.special.team === 'W' ? 'Wij' : 'Zij'} ${escapeHtml(contract.special.type)}</span>`);
-      root.innerHTML = pills.join('');
+      root.innerHTML = '';
     }
 
     function syncInputs(sideChanged) {
@@ -687,6 +734,19 @@
       if (value > total) value = total;
       inputA.value = value;
       inputB.value = total - value;
+    }
+
+    function renderSpecialAvailability() {
+      document.querySelectorAll('[data-special]').forEach((btn) => {
+        if (btn.dataset.type === 'nat') {
+          const disabled = !contract.team || btn.dataset.special !== contract.team;
+          btn.disabled = disabled;
+          btn.title = disabled ? 'Nat kan alleen aan de biedende kant.' : '';
+        } else {
+          btn.disabled = false;
+          btn.title = '';
+        }
+      });
     }
 
     function applyInstantSpecialState() {
@@ -719,24 +779,29 @@
     }
 
     function addRoem(side, value) {
-      recordActionSnapshot();
       contract.roem[side] += value;
       renderRoemLives();
       renderPendingStrip();
+      renderBoard();
+      commitActionState();
       setMessage(`${side === 'W' ? 'Wij' : 'Zij'} +${value} roem.`);
     }
 
     function clearRoem(side) {
       if (!contract.roem[side]) { setMessage(`${side === 'W' ? 'Wij' : 'Zij'} heeft geen roem om te wissen.`); return; }
-      recordActionSnapshot();
       contract.roem[side] = 0;
       renderRoemLives();
       renderPendingStrip();
+      renderBoard();
+      commitActionState();
       setMessage(`${side === 'W' ? 'Wij' : 'Zij'} roem gewist.`);
     }
 
     function toggleSpecial(side, type, button) {
-      recordActionSnapshot();
+      if (type === 'nat' && contract.team && side !== contract.team) {
+        setMessage('Nat kan alleen aan de biedende kant.');
+        return;
+      }
       const already = contract.special.team === side && contract.special.type === type;
       document.querySelectorAll('[data-special]').forEach((btn) => btn.classList.remove('active', 'nat', 'pit'));
       if (already) {
@@ -749,6 +814,7 @@
       applyInstantSpecialState();
       renderPendingStrip();
       renderBoard();
+      commitActionState();
       if (contract.special.type === 'nat') {
         setMessage(`${side === 'W' ? 'Wij' : 'Zij'} nat: alle punten gaan direct naar de tegenpartij.`);
       } else if (contract.special.type === 'pit') {
@@ -813,6 +879,7 @@
 
     function saveRound(extra={}) {
       if (!contract.team) { setMessage('Open eerst de bieding en kies team, hoogte en soort.'); openBidModal(); return; }
+      if (contract.special.type === 'nat' && contract.special.team !== contract.team) { setMessage('Nat kan alleen aan de biedende kant.'); return; }
       const total = totalRawForSuit(contract.suit);
       let baseW = parseInt(document.getElementById('inputW').value || '0', 10);
       let baseZ = parseInt(document.getElementById('inputZ').value || '0', 10);
@@ -838,7 +905,6 @@
       saveGame();
       resetInputUi();
       contract = freshContract();
-      currentActionHistory = [];
       render();
       if (game.rounds.length >= 16) finishGame();
       else openBidModal();
@@ -871,7 +937,6 @@
       saveGame();
       resetInputUi();
       contract = freshContract();
-      currentActionHistory = [];
       render();
       setMessage(`${side === 'W' ? 'Wij' : 'Zij'} verzaakt: alle punten gingen direct naar de tegenpartij.`);
       if (game.rounds.length >= 16) finishGame(); else openBidModal();
@@ -889,6 +954,7 @@
       render();
       setMessage('Laatste ronde verwijderd.');
       openBidModal();
+      commitActionState();
     }
 
     function finishGame() {
@@ -899,14 +965,13 @@
       for (const key of LEGACY_MATCH_KEYS) localStorage.removeItem(key);
       game = freshGame();
       contract = freshContract();
-      currentActionHistory = [];
       clearRoundInputs();
       renderSetupOptions();
       render();
     }
     function newGame() { document.getElementById('resumeOverlay').classList.add('show'); }
-    function wipeAndStartNew(){ document.getElementById('resumeOverlay').classList.remove('show'); reallyResetGame(); openSetupModal(); setMessage('Nieuw spel gestart.'); }
-    function resumeExistingGame(){ document.getElementById('resumeOverlay').classList.remove('show'); render(); setMessage('Verder met bestaand spel.'); }
+    function wipeAndStartNew(){ document.getElementById('resumeOverlay').classList.remove('show'); reallyResetGame(); openSetupModal(); commitActionState(); setMessage('Nieuw spel gestart.'); }
+    function resumeExistingGame(){ document.getElementById('resumeOverlay').classList.remove('show'); render(); commitActionState(); setMessage('Verder met bestaand spel.'); }
 
 
     function readPreviewBaseScores() {
@@ -1111,10 +1176,6 @@
         }
         root.appendChild(section);
       }
-      const totals = document.createElement('div');
-      totals.className = 'score-total';
-      totals.innerHTML = `<div class="side">${game.w}</div><div class="side">${game.z}</div>`;
-      root.appendChild(totals);
     }
 
     function renderDealerInfo() {
@@ -1141,19 +1202,19 @@
     }
 
     document.querySelectorAll('[data-team-choice]').forEach((btn) => btn.addEventListener('click', () => {
-      recordActionSnapshot();
       contract.team = btn.dataset.teamChoice;
       syncBidModalSelections();
       renderPendingStrip();
       renderBoard();
+      commitActionState();
     }));
     document.querySelectorAll('[data-suit]').forEach((btn) => btn.addEventListener('click', () => {
-      recordActionSnapshot();
       contract.suit = btn.dataset.suit;
       syncBidModalSelections();
       applyInstantSpecialState();
       renderPendingStrip();
       renderBoard();
+      commitActionState();
     }));
     document.querySelectorAll('[data-roem]').forEach((btn) => btn.addEventListener('click', () => {
       addRoem(btn.dataset.roem, Number(btn.dataset.value));
@@ -1161,8 +1222,8 @@
     document.querySelectorAll('[data-special]').forEach((btn) => btn.addEventListener('click', () => {
       toggleSpecial(btn.dataset.special, btn.dataset.type, btn);
     }));
-    document.getElementById('inputW').addEventListener('input', () => { recordActionSnapshot(); syncInputs('W'); renderBoard(); });
-    document.getElementById('inputZ').addEventListener('input', () => { recordActionSnapshot(); syncInputs('Z'); renderBoard(); });
+    document.getElementById('inputW').addEventListener('input', () => { syncInputs('W'); renderBoard(); commitActionState(); });
+    document.getElementById('inputZ').addEventListener('input', () => { syncInputs('Z'); renderBoard(); commitActionState(); });
     playerSelectIds().forEach((id) => document.getElementById(id).addEventListener('change', refreshSetupOptionsPreserving));
     document.getElementById('setupOverlay').addEventListener('click', (event) => { if (event.target.id === 'setupOverlay') closeSetupModal(); });
     document.getElementById('bidOverlay').addEventListener('click', (event) => { if (event.target.id === 'bidOverlay') closeBidModal(); });
@@ -1172,9 +1233,9 @@
     async function initPage(){
       try {
         const storedPlayers = JSON.parse(localStorage.getItem(PLAYERS_KEY) || '[]');
-        if (Array.isArray(storedPlayers) && storedPlayers.length) knownPlayersCache = Array.from(new Set([...knownPlayersCache, ...storedPlayers])).sort((a,b)=>a.localeCompare(b,'nl'));
+        if (Array.isArray(storedPlayers) && storedPlayers.length) knownPlayersCache = sanitizeNames([...knownPlayersCache, ...storedPlayers]);
       } catch {}
-      knownPlayersCache = await getSitePlayers();
+      knownPlayersCache = sanitizeNames([...(await getSitePlayers()), ...knownPlayersCache]);
       renderSetupOptions();
       render();
       if (game.rounds.length || game.players.filter(Boolean).length) {
@@ -1182,6 +1243,7 @@
       } else {
         openSetupModal();
       }
+      commitActionState();
     }
     function toggleAppMenu(force){ const el=document.getElementById('appMenu'); const should = typeof force === 'boolean' ? force : !el.classList.contains('show'); el.classList.toggle('show', should); }
     initPage();

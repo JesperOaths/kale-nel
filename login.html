@@ -99,17 +99,35 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       box.className = `status show ${tone}`;
       box.textContent = message;
     }
+    function normalizeDisplayName(name) {
+      return String(name || '').replace(/\s+/g, ' ').trim();
+    }
+    function isLikelyRealName(name) {
+      const value = normalizeDisplayName(name);
+      if (!value) return false;
+      if (/^(test|demo|voorbeeld|sample|dummy|admin|gebruiker)/i.test(value)) return false;
+      if (/\d/.test(value)) return false;
+      return /^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’ .-]{1,39}$/.test(value);
+    }
+    function sanitizeNames(names) {
+      const seen = new Set();
+      return (names || [])
+        .map(normalizeDisplayName)
+        .filter((name) => isLikelyRealName(name) && !seen.has(name.toLowerCase()) && seen.add(name.toLowerCase()))
+        .sort((a, b) => a.localeCompare(b, 'nl'));
+    }
     function fillNames(names, selected = '') {
       const input = document.getElementById('playerNameInput');
-      const current = selected && (names || []).includes(selected) ? selected : input.value;
+      const cleanNames = sanitizeNames(names);
+      const current = selected && cleanNames.includes(selected) ? selected : input.value;
       input.innerHTML = '<option value="">Kies je naam</option>';
-      (names || []).forEach((name) => {
+      cleanNames.forEach((name) => {
         const option = document.createElement('option');
         option.value = name;
         option.textContent = name;
         input.appendChild(option);
       });
-      input.value = (names || []).includes(current) ? current : '';
+      input.value = cleanNames.includes(current) ? current : '';
     }
     function nextUrl() { return new URLSearchParams(window.location.search).get('next') || './index.html'; }
     function pendingVote() { return new URLSearchParams(window.location.search).get('vote') || ''; }
@@ -117,6 +135,13 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token: getSessionToken() })
       });
+      return await parseResponse(res);
+    }
+    async function getLoginNames() {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_login_names`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({})
+      });
+      if (!res.ok) return null;
       return await parseResponse(res);
     }
     async function touchSession() {
@@ -145,8 +170,8 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     }
     async function load() {
       try {
-        const state = await getPublicState();
-        fillNames(state.all_names || [], state.my_name || ''); 
+        const [state, loginNames] = await Promise.all([getPublicState(), getLoginNames().catch(() => null)]);
+        fillNames(loginNames?.names || state.all_names || [], state.my_name || ''); 
         if (state.my_name) {
           document.getElementById('loginStateWord').textContent = state.my_name;
           document.getElementById('loginStateWord').className = 'state-word yes';
