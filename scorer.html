@@ -89,18 +89,18 @@
     .score-cell.strike-side .score-points,
     .score-cell.strike-side .score-meta,
     .score-cell.strike-side .meta-tag { text-decoration:line-through; }
-    .score-cell.left { grid-template-columns:auto 1fr; gap:10px; }
-    .score-cell.right { grid-template-columns:1fr auto; gap:10px; }
+    .score-cell.left { grid-template-columns:minmax(52px,max-content) minmax(0,1fr); gap:10px; }
+    .score-cell.right { grid-template-columns:minmax(0,1fr) minmax(52px,max-content); gap:10px; }
     .score-points { font-size:23px; line-height:1; font-weight:900; letter-spacing:-0.04em; }
     .score-points.strike { text-decoration:line-through; color:#8b8278; }
-    .score-meta { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
-    .score-meta.left { justify-content:flex-end; text-align:right; }
-    .score-meta.right { justify-content:flex-start; text-align:left; }
+    .score-meta { display:grid; grid-auto-flow:column; grid-auto-columns:max-content; gap:6px; align-items:center; white-space:nowrap; min-width:0; }
+    .score-meta.left { justify-content:end; text-align:right; }
+    .score-meta.right { justify-content:start; text-align:left; }
     .meta-tag {
       display:inline-flex; align-items:center; justify-content:center; min-height:22px; padding:2px 8px; border-radius:999px;
       background:#fff; border:1px solid rgba(17,17,17,0.08); font-size:11px; font-weight:800; color:#2a2722;
     }
-    .meta-tag.suit { min-height:28px; min-width:28px; padding:2px 10px; font-size:18px; line-height:1; }
+    .meta-tag.suit { min-height:32px; min-width:32px; padding:2px 11px; font-size:24px; line-height:1; }
     .meta-tag.suit.red, .meta-tag.transfer, .meta-tag.special, .meta-tag.red { color:var(--red); }
     .meta-tag.suit.black { color:#111; }
     .meta-tag.strike { text-decoration:line-through; color:#8b8278; }
@@ -110,17 +110,17 @@
     .tak-summary { padding:2px 0 6px; }
     .tak-summary .tak-divider { margin-bottom:6px; }
     .tak-summary .tak-label { font-size:10px; letter-spacing:.14em; padding:0 8px; }
-    .compact-row { display:grid; grid-template-columns:1fr auto 1fr; gap:5px; align-items:center; min-height:18px; padding:1px 0; font-size:10px; }
+    .compact-row { display:grid; grid-template-columns:1fr auto 1fr; gap:6px; align-items:center; min-height:20px; padding:2px 0; font-size:10px; }
     .compact-side { display:flex; gap:4px; align-items:center; min-width:0; color:#403b35; }
     .compact-side.left { justify-content:flex-end; text-align:right; }
     .compact-side.right { justify-content:flex-start; text-align:left; }
     .compact-points { font-size:11px; font-weight:900; letter-spacing:-0.03em; }
-    .compact-meta { display:flex; flex-wrap:wrap; gap:4px; align-items:center; min-width:0; }
-    .compact-meta.left { justify-content:flex-end; }
-    .compact-meta.right { justify-content:flex-start; }
+    .compact-meta { display:grid; grid-auto-flow:column; grid-auto-columns:max-content; gap:4px; align-items:center; min-width:0; white-space:nowrap; }
+    .compact-meta.left { justify-content:end; }
+    .compact-meta.right { justify-content:start; }
     .compact-divider { width:18px; text-align:center; color:rgba(17,17,17,0.34); font-weight:900; }
     .meta-tag.compact { min-height:15px; padding:1px 5px; font-size:9px; }
-    .meta-tag.compact.suit { min-height:18px; min-width:18px; padding:1px 5px; font-size:12px; }
+    .meta-tag.compact.suit { min-height:18px; min-width:18px; padding:1px 5px; font-size:14px; }
     .compact-side.strike-side .compact-points,
     .compact-side.strike-side .compact-meta,
     .compact-side.strike-side .meta-tag { text-decoration:line-through; color:#8b8278; }
@@ -178,19 +178,26 @@
     .field { display:grid; gap:7px; }
     .field label { font-size:12px; font-weight:800; color:#5d584f; text-transform:uppercase; letter-spacing:.08em; }
     .field select, .field input { width:100%; border:1px solid rgba(17,17,17,0.12); border-radius:16px; padding:12px 14px; background:#fff; color:#1e1e1e; font:inherit; }
-    .team-meta { display:flex; gap:10px; margin:10px 0 14px; }
+    .bid-layout { display:grid; gap:12px; margin-top:8px; }
+    .pick-group { background:linear-gradient(180deg, rgba(255,255,255,0.94), rgba(247,244,238,0.92)); border:1px solid rgba(17,17,17,0.08); border-radius:20px; padding:14px; }
+    .pick-label { display:block; margin-bottom:10px; font-size:12px; font-weight:900; color:#5d584f; text-transform:uppercase; letter-spacing:.14em; }
+    .team-meta { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
     .team-meta button, .suit-btn, .bid-btn {
-      border:1px solid rgba(17,17,17,0.10); background:#fff; border-radius:16px; padding:12px 14px; cursor:pointer; font-weight:800; color:#2a2a2a;
+      border:1px solid rgba(17,17,17,0.10); background:#fff; border-radius:16px; padding:12px 14px; cursor:pointer; font-weight:800; color:#2a2a2a; transition:transform .12s ease, box-shadow .12s ease, background .12s ease, color .12s ease, border-color .12s ease; box-shadow:0 4px 10px rgba(0,0,0,0.04);
     }
+    .team-meta button:hover, .suit-btn:hover, .bid-btn:hover { transform:translateY(-1px); box-shadow:0 8px 16px rgba(0,0,0,0.08); }
     .team-meta button.active, .suit-btn.active, .bid-btn.active { background:#111; color:#fff; border-color:#111; }
     .bids-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
-    .suits-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-top:12px; }
+    .suits-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
     .suit-btn,.bid-btn{font-size:18px;}
-    .suit-btn { font-size:28px; line-height:1; padding:16px 10px; }
+    .bid-btn.range-low { border-style:dashed; }
+    .suit-btn { font-size:34px; line-height:1; padding:18px 10px; }
     .suit-btn.red { color:var(--red); background:#111; border-color:#111; }
     .suit-btn.black { color:#111; background:var(--red); border-color:var(--red); }
-    .suit-btn.sans { color:#111; background:#fff; }
+    .suit-btn.sans { color:#111; background:#fff8dd; border-color:rgba(212,175,55,0.5); font-size:22px; font-weight:900; letter-spacing:-0.04em; }
     .suit-btn.active.red, .suit-btn.active.black, .suit-btn.active.sans { color:#111; background:var(--gold); border-color:var(--gold-dark); }
+    .bid-current-pill { display:inline-flex; align-items:center; gap:8px; margin-top:10px; padding:8px 12px; border-radius:999px; background:#fff; border:1px solid rgba(17,17,17,0.08); color:#4d463d; font-size:13px; font-weight:800; }
+    .bid-current-pill strong { color:#111; }
     .modal-footer { display:flex; gap:10px; margin-top:18px; }
     .modal-footer button { flex:1; border:none; border-radius:16px; padding:14px; cursor:pointer; font-weight:900; }
     .btn-light { background:#efebe5; color:#262626; }
@@ -200,13 +207,35 @@
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(212,175,55,0.35);color:#f3e3a6;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
     @media (max-width:460px) {
-      .inputs, .setup-grid { grid-template-columns:1fr 1fr; }
-      .topbar-title strong { font-size:16px; }
-      .score-points { font-size:25px; }
+      body { overflow-x:hidden; }
+      .page { width:100%; }
+      .wrap { padding:10px; }
+      .sheet { border-radius:24px; }
+      .inputs { grid-template-columns:1fr 1fr; gap:10px; padding:0 10px 12px; }
+      .input-card { padding:12px 10px; border-radius:18px; }
+      .input-card h3 { font-size:13px; }
+      .input-card p { font-size:11px; margin-bottom:10px; }
+      .scoreboard { margin:0 6px 10px; padding:0 6px 6px; }
+      .score-header { gap:14px; }
+      .score-points { font-size:22px; }
       .score-cell { gap:6px; }
-      .contract-card strong { font-size:19px; }
-      .small-toggle, .small-ghost { padding:10px 8px; font-size:12px; }
+      .score-cell.left { grid-template-columns:minmax(40px,max-content) minmax(0,1fr); }
+      .score-cell.right { grid-template-columns:minmax(0,1fr) minmax(40px,max-content); }
+      .meta-tag { min-height:20px; padding:2px 6px; font-size:10px; }
+      .meta-tag.suit { min-height:26px; min-width:26px; padding:2px 8px; font-size:20px; }
+      .contract-strip { grid-template-columns:1fr; padding:0 10px 12px; }
+      .status-bar { padding:0 12px 12px; }
+      .small-toggle, .small-ghost, .special-btn, .danger-mini { padding:10px 8px; font-size:12px; }
+      .small-ghost { min-width:58px; }
       .dealer-banner { grid-template-columns:1fr; }
+      .modal { width:min(420px, calc(100vw - 12px)); padding:16px; border-radius:24px; }
+      .team-meta { grid-template-columns:1fr 1fr; gap:8px; }
+      .bids-grid { grid-template-columns:repeat(3,1fr); gap:8px; }
+      .suits-grid { grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; }
+      .bid-btn { font-size:16px; padding:12px 8px; }
+      .suit-btn { font-size:28px; padding:16px 6px; }
+      .suit-btn.sans { font-size:18px; }
+      .modal-footer button { padding:13px 10px; }
     }
   </style>
   <link rel="canonical" href="https://kalenel.nl/scorer.html" />
@@ -267,7 +296,7 @@
             <div class="roem-row">
               <button class="small-toggle" type="button" data-roem="W" data-value="20">+20 roem</button>
               <button class="small-toggle" type="button" data-roem="W" data-value="50">+50 roem</button>
-              <button class="small-ghost" type="button" onclick="clearRoem('W')">Wis</button>
+              <button class="small-ghost" type="button" onclick="clearRoem('W')">Undo</button>
             </div>
             <div class="roem-live" id="roemLiveW">Roem: 0</div>
             <input class="score-input" id="inputW" type="number" inputmode="numeric" min="0" placeholder="0">
@@ -275,7 +304,7 @@
               <button class="special-btn" type="button" data-special="W" data-type="nat">nat</button>
               <button class="special-btn" type="button" data-special="W" data-type="pit">pit</button>
             </div>
-            <button class="danger-mini" type="button" onclick="applyVerzaak('W')">Wij verzaakt</button>
+            <button class="danger-mini" type="button" onclick="applyVerzaak('W')">verzaakt</button>
           </div>
 
           <div class="input-card">
@@ -284,7 +313,7 @@
             <div class="roem-row">
               <button class="small-toggle" type="button" data-roem="Z" data-value="20">+20 roem</button>
               <button class="small-toggle" type="button" data-roem="Z" data-value="50">+50 roem</button>
-              <button class="small-ghost" type="button" onclick="clearRoem('Z')">Wis</button>
+              <button class="small-ghost" type="button" onclick="clearRoem('Z')">Undo</button>
             </div>
             <div class="roem-live" id="roemLiveZ">Roem: 0</div>
             <input class="score-input" id="inputZ" type="number" inputmode="numeric" min="0" placeholder="0">
@@ -292,7 +321,7 @@
               <button class="special-btn" type="button" data-special="Z" data-type="nat">nat</button>
               <button class="special-btn" type="button" data-special="Z" data-type="pit">pit</button>
             </div>
-            <button class="danger-mini" type="button" onclick="applyVerzaak('Z')">Zij verzaakt</button>
+            <button class="danger-mini" type="button" onclick="applyVerzaak('Z')">verzaakt</button>
           </div>
         </div>
 
@@ -325,20 +354,31 @@
   <div id="bidOverlay" class="overlay">
     <div class="modal" role="dialog" aria-modal="true" id="bidModal">
       <h2>Bieding voor ronde <span id="bidRoundNo">1</span></h2>
-      <p>Klik naast dit venster om het te sluiten. Je kunt het altijd weer openen met <strong>Pas bod aan</strong>.</p>
-      <div class="team-meta">
-        <button type="button" data-team-choice="W">Wij bieden</button>
-        <button type="button" data-team-choice="Z">Zij bieden</button>
+      <div class="bid-layout">
+        <div class="pick-group">
+          <span class="pick-label">Wie biedt?</span>
+          <div class="team-meta">
+            <button type="button" data-team-choice="W">Wij bieden</button>
+            <button type="button" data-team-choice="Z">Zij bieden</button>
+          </div>
+        </div>
+        <div class="pick-group">
+          <span class="pick-label">Soort</span>
+          <div class="suits-grid">
+            <button class="suit-btn black" type="button" data-suit="♣">♣</button>
+            <button class="suit-btn red" type="button" data-suit="♥">♥</button>
+            <button class="suit-btn black" type="button" data-suit="♠">♠</button>
+            <button class="suit-btn red" type="button" data-suit="♦">♦</button>
+            <button class="suit-btn sans" type="button" data-suit="S">sans</button>
+          </div>
+        </div>
+        <div class="pick-group">
+          <span class="pick-label">Hoogte</span>
+          <div class="bids-grid" id="bidGrid"></div>
+          <div class="bid-current-pill" id="bidModePill">Reeks: <strong>80 t/m 160</strong></div>
+        </div>
       </div>
-      <div class="bids-grid" id="bidGrid"></div>
-      <div class="suits-grid">
-        <button class="suit-btn black" type="button" data-suit="♣">♣</button>
-        <button class="suit-btn red" type="button" data-suit="♥">♥</button>
-        <button class="suit-btn black" type="button" data-suit="♠">♠</button>
-        <button class="suit-btn red" type="button" data-suit="♦">♦</button>
-        <button class="suit-btn sans" type="button" data-suit="S">sans</button>
-      </div>
-      <div class="helper" id="bidHelper">Kies biedend team, hoogte en soort.</div>
+      <div class="helper" id="bidHelper">Kies team, soort en hoogte. Op mobiel past alles nu in rustigere blokken.</div>
       <div class="modal-footer">
         <button class="btn-light" type="button" onclick="closeBidModal()">Sluiten</button>
         <button class="btn-dark" type="button" onclick="confirmBid()">Bieding bewaren</button>
@@ -349,8 +389,10 @@
   <div id="resumeOverlay" class="overlay"><div class="modal"><h2>Oud spel gevonden</h2><p>Er staat nog een eerder spel op dit apparaat. Wil je doorgaan of alles wissen?</p><div class="modal-footer"><button class="btn-light" type="button" onclick="resumeExistingGame()">Doorgaan</button><button class="btn-dark" type="button" onclick="wipeAndStartNew()">Wissen en nieuw spel</button></div></div></div>
 
   <script>
-    const MATCH_KEY = 'current_match_v62';
-    const LEGACY_MATCH_KEYS = ['current_match_v62','current_match_v60','current_match_v59','current_match'];
+    const MATCH_KEY = 'current_match_v64';
+    const MATCH_STORAGE = sessionStorage;
+    const PLAYER_STORAGE = sessionStorage;
+    const LEGACY_MATCH_KEYS = ['current_match_v64'];
     const HISTORY_KEY = 'vault_history';
     const PLAYERS_KEY = 'vault_players';
     const SUPABASE_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co';
@@ -379,7 +421,7 @@
     function freshGame() {
       return {
         id: Date.now(),
-        version: 62,
+        version: 64,
         createdAt: new Date().toISOString(),
         players: ['', '', '', ''],
         rounds: [],
@@ -391,46 +433,46 @@
     }
 
     function freshContract() {
-      return { team: '', bid: 80, suit: '♠', roem: { W:0, Z:0 }, special: { team:'', type:'' } };
+      return { team: '', bid: 80, suit: '♠', roem: { W:0, Z:0 }, roemTrail: { W:[], Z:[] }, special: { team:'', type:'' } };
     }
 
     function loadGame() {
-      for (const key of LEGACY_MATCH_KEYS) {
-        try {
-          const raw = localStorage.getItem(key);
-          if (!raw) continue;
+      try {
+        const raw = MATCH_STORAGE.getItem(MATCH_KEY);
+        if (raw) {
           const parsed = JSON.parse(raw);
           if (parsed && Array.isArray(parsed.rounds)) {
-            if (!parsed.version) parsed.version = 62;
+            if (!parsed.version) parsed.version = 64;
             if (!parsed.players || parsed.players.length !== 4) parsed.players = ['', '', '', ''];
             if (typeof parsed.w !== 'number') parsed.w = (parsed.rounds || []).reduce((sum, r) => sum + Number(r.fw || r.scoreW || 0), 0);
             if (typeof parsed.z !== 'number') parsed.z = (parsed.rounds || []).reduce((sum, r) => sum + Number(r.fz || r.scoreZ || 0), 0);
             if (typeof parsed.rawW !== 'number') parsed.rawW = (parsed.rounds || []).reduce((sum, r) => sum + Number(r.rawW || 0), 0);
             if (typeof parsed.rawZ !== 'number') parsed.rawZ = (parsed.rounds || []).reduce((sum, r) => sum + Number(r.rawZ || 0), 0);
-            localStorage.setItem(MATCH_KEY, JSON.stringify(parsed));
             return parsed;
           }
-        } catch {}
-      }
+        }
+      } catch {}
       return freshGame();
     }
 
     function saveGame() {
-      localStorage.setItem(MATCH_KEY, JSON.stringify(game));
+      MATCH_STORAGE.setItem(MATCH_KEY, JSON.stringify(game));
     }
 
     async function getSitePlayers() {
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names`, {
-          method:'POST', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify({})
-        });
-        const txt = await res.text();
-        const data = txt ? JSON.parse(txt) : {};
-        if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
-        return uniqueNames(data?.names || []);
-      } catch {
-        return [];
+      for (const endpoint of ['get_login_names', 'get_requestable_names']) {
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${endpoint}`, {
+            method:'POST', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify({})
+          });
+          const txt = await res.text();
+          const data = txt ? JSON.parse(txt) : {};
+          if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
+          const names = uniqueNames(data?.names || []);
+          if (names.length) return names;
+        } catch {}
       }
+      return [];
     }
 
     let knownPlayersCache = DEFAULT_NAMES.slice();
@@ -438,7 +480,7 @@
 
     function rememberPlayers(players) {
       knownPlayersCache = uniqueNames([...knownPlayersCache, ...players.filter(Boolean)]);
-      localStorage.setItem(PLAYERS_KEY, JSON.stringify(knownPlayersCache));
+      PLAYER_STORAGE.setItem(PLAYERS_KEY, JSON.stringify(knownPlayersCache));
     }
 
     function scoreFromRaw(raw) {
@@ -643,7 +685,10 @@
 
     function buildBidGrid() {
       const root = document.getElementById('bidGrid');
-      root.innerHTML = bidOptionsForSuit(contract.suit).map((bid) => `<button class="bid-btn ${contract.bid === bid ? 'active' : ''}" type="button" data-bid="${bid}">${bid}</button>`).join('');
+      const options = bidOptionsForSuit(contract.suit);
+      root.innerHTML = options.map((bid) => `<button class="bid-btn ${contract.suit === 'S' && bid === 70 ? 'range-low' : ''} ${contract.bid === bid ? 'active' : ''}" type="button" data-bid="${bid}">${bid}</button>`).join('');
+      const pill = document.getElementById('bidModePill');
+      if (pill) pill.innerHTML = contract.suit === 'S' ? 'Reeks: <strong>70 t/m 130</strong>' : 'Reeks: <strong>80 t/m 160</strong>';
       root.querySelectorAll('[data-bid]').forEach((btn) => btn.addEventListener('click', () => {
         contract.bid = Number(btn.dataset.bid);
         root.querySelectorAll('.bid-btn').forEach((el) => el.classList.toggle('active', el === btn));
@@ -690,6 +735,7 @@
 
     function resetInputUi() {
       contract.roem = { W:0, Z:0 };
+      contract.roemTrail = { W:[], Z:[] };
       contract.special = { team:'', type:'' };
       syncSpecialButtons();
       clearRoundInputs();
@@ -776,6 +822,8 @@
     }
 
     function addRoem(side, value) {
+      if (!Array.isArray(contract.roemTrail?.[side])) contract.roemTrail = contract.roemTrail || { W:[], Z:[] };
+      contract.roemTrail[side].push(value);
       contract.roem[side] += value;
       renderRoemLives();
       renderPendingStrip();
@@ -785,13 +833,17 @@
     }
 
     function clearRoem(side) {
-      if (!contract.roem[side]) { setMessage(`${side === 'W' ? 'Wij' : 'Zij'} heeft geen roem om te wissen.`); return; }
-      contract.roem[side] = 0;
+      if (!Array.isArray(contract.roemTrail?.[side]) || !contract.roemTrail[side].length) {
+        setMessage(`${side === 'W' ? 'Wij' : 'Zij'} heeft geen roem om terug te draaien.`);
+        return;
+      }
+      const removed = Number(contract.roemTrail[side].pop() || 0);
+      contract.roem[side] = Math.max(0, Number(contract.roem[side] || 0) - removed);
       renderRoemLives();
       renderPendingStrip();
       renderBoard();
       commitActionState();
-      setMessage(`${side === 'W' ? 'Wij' : 'Zij'} roem gewist.`);
+      setMessage(`${side === 'W' ? 'Wij' : 'Zij'} roem -${removed}.`);
     }
 
     function toggleSpecial(side, type, button) {
@@ -959,7 +1011,7 @@
     }
 
     function reallyResetGame() {
-      for (const key of LEGACY_MATCH_KEYS) localStorage.removeItem(key);
+      for (const key of LEGACY_MATCH_KEYS) MATCH_STORAGE.removeItem(key);
       game = freshGame();
       contract = freshContract();
       clearRoundInputs();
@@ -1168,6 +1220,7 @@
         if (!rows.length && !previewPlaced) {
           const empty = document.createElement('div');
           empty.className = 'current-empty';
+          empty.textContent = 'Kies de bieding om ronde 1 te starten.';
           section.appendChild(empty);
         }
         root.appendChild(section);
@@ -1229,7 +1282,7 @@
 
     async function initPage(){
       try {
-        const storedPlayers = JSON.parse(localStorage.getItem(PLAYERS_KEY) || '[]');
+        const storedPlayers = JSON.parse(PLAYER_STORAGE.getItem(PLAYERS_KEY) || '[]');
         if (Array.isArray(storedPlayers) && storedPlayers.length) knownPlayersCache = uniqueNames([...knownPlayersCache, ...storedPlayers]);
       } catch {}
       knownPlayersCache = uniqueNames([...(await getSitePlayers()), ...knownPlayersCache]);
@@ -1245,6 +1298,6 @@
     function toggleAppMenu(force){ const el=document.getElementById('appMenu'); const should = typeof force === 'boolean' ? force : !el.classList.contains('show'); el.classList.toggle('show', should); }
     initPage();
   </script>
-  <div class="site-credit-watermark">v62 · Made by Bruis</div>
+  <div class="site-credit-watermark">v64 · Made by Bruis</div>
 </body>
 </html>

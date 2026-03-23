@@ -47,6 +47,8 @@
     async function parseResponse(res) { const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`); return data; }
     function getToken(){ return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
     function setStatus(message='', tone='') { const box=document.getElementById('statusBox'); box.className=`status ${tone}`.trim(); box.textContent=message; }
+    function extractIdLike(value){ if (typeof value === 'number' && Number.isFinite(value)) return value; const text=String(value||'').trim(); if(!text) return null; const direct=Number(text); if(Number.isFinite(direct)) return direct; const match=text.match(/^\(?\s*(\d+)/); return match ? Number(match[1]) : null; }
+    function normalizeExpiredRow(row){ const out={...(row||{})}; out.request_id = extractIdLike(out.request_id ?? out.id ?? out.claim_request_id); out.id = extractIdLike(out.id ?? out.request_id ?? out.claim_request_id); return out; }
     async function ensureGate(){
       const token=getToken();
       if(!token){ window.location.href='./admin.html'; return false; }
@@ -59,33 +61,33 @@
       try {
         setStatus('Laden...');
         const data = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_expired_activation_queue`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: getToken() }) }).then(parseResponse);
-        const rows = data.items || [];
+        const rows = (data.items || []).map(normalizeExpiredRow).filter((row) => row.request_id !== null);
         const root = document.getElementById('listRoot');
         root.innerHTML = '';
-        if (!rows.length) { root.innerHTML = '<div class="empty">Geen verlopen activaties gevonden. Draai eerst de v62 SQL-migratie als deze functie nog niet bestaat.</div>'; setStatus('Queue geladen.', 'ok'); return; }
+        if (!rows.length) { root.innerHTML = '<div class="empty">Geen verlopen activaties gevonden.</div>'; setStatus('Queue geladen.', 'ok'); return; }
         rows.forEach((row) => {
           const card = document.createElement('article');
           card.className = 'item';
           card.innerHTML = `<strong>${row.display_name || row.requested_name || 'Onbekende naam'}</strong><div class="meta">${row.requester_email || '-'} · verlopen op ${row.expires_at || '-'} </div><div class="meta">Laatste status: ${row.status || row.request_status || 'expired'}</div><div class="row"><button class="btn primary" data-action="requeue">Opnieuw klaarzetten</button><button class="btn ghost" data-action="resend">Nieuwe link + mail</button></div>`;
           card.querySelector('[data-action="requeue"]').addEventListener('click', async () => {
-            await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_requeue_expired_activation`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: getToken(), request_id_input: row.request_id }) }).then(parseResponse);
+            await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_requeue_expired_activation_safe`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: getToken(), request_id_input: row.request_id }) }).then(parseResponse);
             await loadExpired();
           });
           card.querySelector('[data-action="resend"]').addEventListener('click', async () => {
-            await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_resend_expired_activation`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: getToken(), request_id_input: row.request_id, base_url: 'https://kalenel.nl/activate.html' }) }).then(parseResponse);
+            await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_resend_expired_activation_safe`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: getToken(), request_id_input: row.request_id, base_url: 'https://kalenel.nl/activate.html' }) }).then(parseResponse);
             await loadExpired();
           });
           root.appendChild(card);
         });
         setStatus('Queue geladen.', 'ok');
       } catch (error) {
-        document.getElementById('listRoot').innerHTML = `<div class="empty"><strong>Deze pagina verwacht de nieuwe expired-queue SQL uit v62.</strong><br><br>Draai de nieuwste SQL-patch opnieuw. De concrete fout die nu terugkomt is:<br><code>${String(error?.message || 'onbekend')}</code></div>`;
+        document.getElementById('listRoot').innerHTML = `<div class="empty"><strong>Expired queue kon niet geladen worden.</strong><br><br>Run de v64 SQL-patch opnieuw. Huidige fout:<br><code>${String(error?.message || 'onbekend')}</code></div>`;
         setStatus(error?.message || 'Laden mislukt.', 'warn');
       }
     }
     document.getElementById('refreshBtn').addEventListener('click', loadExpired);
     (async()=>{ if(await ensureGate()) loadExpired(); })();
   </script>
-  <div class="site-credit-watermark">v62 · Made by Bruis</div>
+  <div class="site-credit-watermark">v64 · Made by Bruis</div>
 </body>
 </html>

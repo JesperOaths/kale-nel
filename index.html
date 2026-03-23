@@ -314,18 +314,25 @@
         padding: 28px 18px 20px;
         width: min(700px, 96vw);
       }
-      .card-top-right,
-      .card-top-left {
-        position: static;
-        justify-content: flex-end;
-        margin-bottom: 16px;
-      }
+      .card-top-right { position:absolute; top:16px; right:16px; margin:0; }
+      .card-top-left { position:absolute; top:16px; left:16px; margin:0; }
       h1 {
-        padding-right: 0;
-        font-size: clamp(1.8rem, 8vw, 2.2rem);
+        padding: 8px 44px 0;
+        font-size: clamp(1.7rem, 8vw, 2.1rem);
       }
-      .lists-grid, .public-links-grid { grid-template-columns: 1fr; }
-      .page-link-card.login-link, .page-link-card.request-link { text-align:center; }
+      .status-word { font-size: clamp(1.55rem, 7vw, 1.95rem); }
+      .status-sub { margin-bottom: 18px; font-size: 13px; }
+      .vote-row { gap: 10px; margin-bottom: 18px; }
+      .vote-btn { min-width: 0; flex: 1 1 calc(50% - 5px); padding: 12px 10px; }
+      .list-box { min-height: 138px; padding: 16px 12px; }
+      .list-box h2 { margin-bottom: 10px; font-size: 17px; }
+      .name-list li { font-size: 13px; }
+      .lists-grid, .public-links-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .page-link-card { min-height: 116px; padding: 14px 12px; }
+      .page-link-card.login-link { text-align:right; }
+      .page-link-card.request-link { text-align:left; }
+      .page-link-card.scorer-link { width: 100%; }
+      .scorer-link-row { margin-top: 2px; }
       .site-scene .brand-watermark {
         width: min(34vw, 180px);
         top: 4%;
@@ -511,6 +518,6 @@
     load();
   </script>
 
-  <div class="site-credit-watermark">v61 · Made by Bruis</div>
+  <div class="site-credit-watermark">v64 · Made by Bruis</div>
 </body>
 </html>

@@ -92,7 +92,7 @@
         const rows = data.items || [];
         const root = document.getElementById('listRoot');
         root.innerHTML = '';
-        if (!rows.length) { root.innerHTML = '<div class="empty">Nog geen allowed/reserved names gevonden. Draai eerst de v62 SQL-migratie.</div>'; setStatus('Lijst geladen.', 'ok'); return; }
+        if (!rows.length) { root.innerHTML = '<div class="empty">Nog geen namen gevonden. Voeg hierboven een echte naam toe om de kieslijst te vullen.</div>'; setStatus('Lijst geladen.', 'ok'); return; }
         rows.forEach((row) => {
           const card = document.createElement('article');
           card.className = 'item';
@@ -101,7 +101,7 @@
         });
         setStatus('Lijst geladen.', 'ok');
       } catch (error) {
-        document.getElementById('listRoot').innerHTML = '<div class="empty">Deze pagina verwacht de nieuwe allowed_usernames SQL uit v62.</div>';
+        document.getElementById('listRoot').innerHTML = '<div class="empty">Deze pagina kon de allowed names-bron niet laden. Run de v64 SQL-patch opnieuw.</div>';
         setStatus(error?.message || 'Laden mislukt.', 'warn');
       }
     }
@@ -132,12 +132,13 @@
         document.getElementById('newEmailInput').value='';
         document.getElementById('newNoteInput').value='';
         await loadNames();
+        setStatus('Naam toegevoegd aan de kieslijst.', 'ok');
       } catch (error) {
         setStatus(error?.message || 'Reserveren mislukt.', 'warn');
       }
     });
     (async()=>{ if(await ensureGate()) loadNames(); })();
   </script>
-  <div class="site-credit-watermark">v62 · Made by Bruis</div>
+  <div class="site-credit-watermark">v64 · Made by Bruis</div>
 </body>
 </html>

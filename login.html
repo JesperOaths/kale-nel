@@ -124,6 +124,12 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     }
     function nextUrl() { return new URLSearchParams(window.location.search).get('next') || './index.html'; }
     function pendingVote() { return new URLSearchParams(window.location.search).get('vote') || ''; }
+    function friendlyMessage(msg) {
+      const raw = String(msg || '');
+      if (/login_player\(desired_name, entered_pin\).*schema cache/i.test(raw)) return 'Login-RPC ontbreekt nog in Supabase. Draai de v64 SQL-patch opnieuw en vernieuw daarna de pagina hard.';
+      if (/failed to fetch/i.test(raw)) return 'Netwerk/CORS-fout bij contact met Supabase.';
+      return raw;
+    }
     async function getPublicState() {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token: getSessionToken() })
@@ -176,7 +182,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Er ging iets mis';
-        setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
+        setStatus(friendlyMessage(msg), 'warn');
       }
     }
     document.getElementById('loginForm').addEventListener('submit', async (event) => {
@@ -189,7 +195,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         window.location.href = nextUrl();
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Er ging iets mis';
-        setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
+        setStatus(friendlyMessage(msg), 'warn');
       }
     });
     document.getElementById('logoutBtn').addEventListener('click', () => { clearSessionToken(); setStatus('Browser-sessie gewist.', 'ok'); });
@@ -215,6 +221,6 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     load();
   </script>
 
-  <div class="site-credit-watermark">v62 · Made by Bruis</div>
+  <div class="site-credit-watermark">v64 · Made by Bruis</div>
 </body>
 </html>
