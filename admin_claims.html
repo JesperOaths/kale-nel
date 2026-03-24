@@ -45,6 +45,8 @@
     .topbar-sub { color:var(--muted); margin:6px 0 0; }
     .toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
     .ghost-btn { background:#fff; border:1px solid rgba(0,0,0,0.08); color:#222; }
+    .delete-btn { background:#fff3f0; border:1px solid rgba(139,58,48,0.18); color:#8b3a30; }
+    .delete-btn:hover { background:#fbe4df; }
     .stats-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin:18px 0 6px; }
     .stat-card { background:linear-gradient(180deg,#fff,#f5f1e8); border:1px solid rgba(0,0,0,0.06); border-radius:18px; padding:16px; box-shadow:0 8px 24px rgba(0,0,0,0.04); }
     .stat-card.clickable{cursor:pointer;}
@@ -202,13 +204,14 @@
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v73 · Made by Bruis</div>
+    <div class="version-tag">v74 · Made by Bruis</div>
   </div>
   <script>
 const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY;
     const MAKE_WEBHOOK_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.MAKE_WEBHOOK_URL) || "https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6";
+    const ACTIVATION_EMAIL_SUBJECT = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.EMAIL_SUBJECT) || 'Activeer je account voor de Kale Nel';
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
     let lastRequests = [];
     let lastHistory = [];
@@ -377,7 +380,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         </div>
         <div class="compact-actions">
           <button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(item)}">Nieuwe activatielink</button>
-          <button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Account verwijderen</button>
+          <button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button>
         </div>
         <div class="inline-msg" id="approved-msg-${requestIdOf(item)}">Gebruiker actief in admin-overzicht.</div>
         ${activationPanelHtml(item)}`;
@@ -509,7 +512,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           const expiresAt = panel?.dataset.expiresAt || '';
           const url = panel?.dataset.url || '';
           if (!email || !url) { setStatus('Maak eerst een activatielink.'); return; }
-          const subject = 'Activeer je account voor Wordt er gejast';
+          const subject = ACTIVATION_EMAIL_SUBJECT;
           const body = [
             `Hoi ${displayName || 'daar'},`,
             '',
@@ -521,7 +524,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
             expiresAt ? `Deze link verloopt op ${formatDateTime(expiresAt)}.` : '',
             '',
             'Groet,',
-            'Wordt er gejast'
+            'De Kale Nel'
           ].filter(Boolean).join('\n');
           const msg = document.getElementById(`activation-msg-${requestId}`); if (msg) { msg.textContent = 'E-mailconcept geopend.'; msg.className = 'inline-msg ok'; } window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         });
@@ -559,14 +562,14 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         const bucket = stateBucket(item);
         const canRemove = bucket === 'rejected' || bucket === 'awaiting' || bucket === 'active' || bucket === 'expired';
         const actionHtml = bucket === 'awaiting'
-          ? `<div class="compact-actions"><button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(item)}">Nieuwe activatielink</button><button class="link-btn" type="button" data-resend-verification data-id="${requestIdOf(item)}">Nieuwe link + mail</button><button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Account verwijderen</button></div>${activationPanelHtml(item)}`
+          ? `<div class="compact-actions"><button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(item)}">Nieuwe activatielink</button><button class="link-btn" type="button" data-resend-verification data-id="${requestIdOf(item)}">Nieuwe link + mail</button><button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button></div>${activationPanelHtml(item)}`
           : bucket === 'expired'
-            ? `<div class="compact-actions"><button class="approve-btn" type="button" data-requeue-expired data-id="${requestIdOf(item)}">Opnieuw klaarzetten</button><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Account verwijderen</button></div>`
+            ? `<div class="compact-actions"><button class="approve-btn" type="button" data-requeue-expired data-id="${requestIdOf(item)}">Opnieuw klaarzetten</button><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button></div>`
             : bucket === 'rejected'
-              ? `<div class="compact-actions"><button class="link-btn" type="button" data-return-claimable data-id="${requestIdOf(item)}">Terug naar claimbaar</button><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Account verwijderen</button></div>`
+              ? `<div class="compact-actions"><button class="link-btn" type="button" data-return-claimable data-id="${requestIdOf(item)}">Terug naar claimbaar</button><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button></div>`
               : bucket === 'active'
-                ? `<div class="compact-actions"><button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Account verwijderen</button></div>`
-                : (canRemove ? `<div class="compact-actions"><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Account verwijderen</button></div>` : '');
+                ? `<div class="compact-actions"><button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button></div>`
+                : (canRemove ? `<div class="compact-actions"><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button></div>` : '');
         div.innerHTML = `${requestHtml(item, true)}<div class="muted" style="margin-top:10px;">${item.decided_at ? new Date(item.decided_at).toLocaleString('nl-NL') : ''}</div>${actionHtml}<div class="inline-msg" id="history-msg-${requestIdOf(item)}">Geschiedenisitem.</div>`;
         root.appendChild(div);
       });
@@ -749,8 +752,8 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           const expiresAt = panel?.dataset.expiresAt || '';
           const url = panel?.dataset.url || '';
           if (!email || !url) { setStatus('Maak eerst een activatielink.'); return; }
-          const subject = 'Activeer je account voor Wordt er gejast';
-          const body = ['Hoi ' + (displayName || 'daar') + ',', '', 'Je account is klaar voor gebruik.', 'Gebruik deze activatielink:', '', url, '', expiresAt ? `Deze link verloopt op ${formatDateTime(expiresAt)}.` : '', '', 'Groet,', 'Wordt er gejast'].filter(Boolean).join('\n');
+          const subject = ACTIVATION_EMAIL_SUBJECT;
+          const body = ['Hoi ' + (displayName || 'daar') + ',', '', 'Je account is klaar voor gebruik.', 'Gebruik deze activatielink:', '', url, '', expiresAt ? `Deze link verloopt op ${formatDateTime(expiresAt)}.` : '', '', 'Groet,', 'De Kale Nel'].filter(Boolean).join('\n');
           window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         });
       });
@@ -866,14 +869,18 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
         body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: decisionReason || null, base_url: getActivationBaseUrl() })
       });
-      return await parseResponse(res);
+      const data = await parseResponse(res);
+      try { await updateActivationEmailSubject(requestId); } catch {}
+      return data;
     }
     async function requeueExpiredActivation(requestId) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_requeue_expired_activation_action`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
         body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), base_url: getActivationBaseUrl() })
       });
-      return await parseResponse(res);
+      const data = await parseResponse(res);
+      try { await updateActivationEmailSubject(requestId); } catch {}
+      return data;
     }
 
     async function resendPendingActivation(requestId) {
@@ -882,6 +889,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), base_url: getActivationBaseUrl() })
       });
       const data = await parseResponse(res);
+      try { await updateActivationEmailSubject(requestId); } catch {}
       await triggerMakeScenario({ reason: 'activation_email_queued', request_id: requestId, job_id: data?.job_id ?? data?.queue_job_id ?? data?.id ?? null, email: data?.requester_email ?? null });
       return data;
     }
@@ -991,8 +999,16 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       });
       return await parseResponse(res);
     }
+    async function updateActivationEmailSubject(requestId) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_set_activation_email_subject_action`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), desired_subject: ACTIVATION_EMAIL_SUBJECT })
+      });
+      return await parseResponse(res);
+    }
     async function sendActivationEmail(requestId) {
       const queued = await queueActivationEmail(requestId);
+      try { await updateActivationEmailSubject(requestId); } catch {}
       await triggerMakeScenario({
         reason: 'activation_email_queued',
         request_id: requestId,
@@ -1136,6 +1152,6 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     loadAdmin().then(startAdminAutoRefresh).catch(() => {});
   </script>
 
-  <div class="site-credit-watermark">v73 · Made by Bruis</div>
+  <div class="site-credit-watermark">v74 · Made by Bruis</div>
 </body>
 </html>
