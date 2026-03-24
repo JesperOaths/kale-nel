@@ -237,10 +237,32 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const enteredPin = document.getElementById('pinInput').value.trim();
       if (!desiredName) throw new Error('Kies eerst je naam');
       if (!/^\d{4}$/.test(enteredPin)) throw new Error('Voer je 4-cijferige pincode in');
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/login_player`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ desired_name: desiredName, entered_pin: enteredPin })
-      });
-      return await parseResponse(res);
+
+      const payloads = [
+        { desired_name: desiredName, entered_pin: enteredPin },
+        { input_username: desiredName, input_pin: enteredPin },
+        { input_display_name: desiredName, input_pin: enteredPin },
+        { display_name: desiredName, pin: enteredPin },
+        { input_name: desiredName, input_pin: enteredPin }
+      ];
+
+      let lastErr = null;
+      for (const payload of payloads) {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/login_player`, {
+          method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(payload)
+        });
+        try {
+          return await parseResponse(res);
+        } catch (err) {
+          const raw = String(err && err.message || '');
+          if (/schema cache|Could not find the function|no function matches/i.test(raw)) {
+            lastErr = err;
+            continue;
+          }
+          throw err;
+        }
+      }
+      throw lastErr || new Error('Login-RPC kon niet worden aangeroepen.');
     }
     async function castVote(desired_status) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cast_vote`, {
@@ -385,6 +407,6 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     load();
   </script>
 
-  <div class="site-credit-watermark">v88 · Made by Bruis</div>
+  <div class="site-credit-watermark">v90 · Made by Bruis</div>
 </body>
 </html>
