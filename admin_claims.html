@@ -122,7 +122,7 @@
         <p class="topbar-sub">Volledige aanvraagtool met goedkeuren, activatielinks, queueing en revoke-acties.</p>
       </div>
       <div class="toolbar hidden" id="adminToolbar">
-        <button id="refreshBtn" class="btn ghost-btn" type="button">Ververs</button>
+        <a class="btn ghost-btn" href="./admin.html">Hub</a><button id="refreshBtn" class="btn ghost-btn" type="button">Ververs</button>
         <a class="btn ghost-btn" href="./vault.html">Vault</a><a class="btn ghost-btn" href="./leaderboard.html">Ranglijst</a><button id="kickMakeBtn" class="btn ghost-btn" type="button">Herstart Make handmatig</button>
       </div>
     </div>
@@ -150,7 +150,7 @@
             <h2 id="currentListTitle">To be approved</h2>
             <div id="currentListSubtitle" class="list-subtitle">Nieuwe aanvragen die nog een besluit nodig hebben.</div>
           </div>
-          <div class="compact-toolbar-note">Goedkeuren pingt Make automatisch. <strong>Herstart Make handmatig</strong> is alleen een fallback als je een queued job opnieuw wilt laten oppakken.</div>
+          <div class="compact-toolbar-note">Goedkeuren en mail-opnieuw-sturen pingen Make automatisch. <strong>Herstart Make handmatig</strong> is alleen een fallback als je een queued job opnieuw wilt laten oppakken.</div>
         </div>
         <input id="adminSearchGlobal" class="search-input" type="search" placeholder="Zoek op naam of e-mail binnen de gekozen lijst" />
         <div id="adminTabs" class="tab-row"></div>
@@ -200,7 +200,7 @@
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v71 · Made by Bruis</div>
+    <div class="version-tag">v72 · Made by Bruis</div>
   </div>
   <script>
 const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -442,20 +442,21 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
           const msg = document.getElementById(`request-msg-${requestId}`);
           try {
             if (msg) { msg.textContent = 'Besluit opslaan...'; msg.className = 'inline-msg'; }
-            await decideRequest(requestId, decision, decisionReason || null);
             if (decision === 'approved') {
-              let mailMessage = ' Aanvraag is goedgekeurd en activatielink staat klaar.';
-              const linkData = await createActivationLink(requestId);
-              showActivationPanel(requestId, linkData);
-              try {
-                const queued = await sendActivationEmail(requestId);
-                mailMessage = ` Aanvraag is goedgekeurd, activatielink is gemaakt, mailjob #${queued?.job_id ?? queued?.id ?? '?'} is gequeued en Make is gepingd.`;
-              } catch (mailErr) {
-                mailMessage = ` Aanvraag is goedgekeurd en activatielink is gemaakt, maar queue/webhook mislukte: ${mailErr instanceof Error ? mailErr.message : mailErr}`;
-              }
-              if (msg) { msg.textContent = 'Wacht op activatie.' + mailMessage; msg.className = 'inline-msg ok'; }
-            } else if (msg) {
-              msg.textContent = 'Afwijzing opgeslagen.'; msg.className = 'inline-msg ok'; window.alert('Aanvraag afgewezen. De naam staat weer in de claimbare kieslijst.');
+              const prepared = await approveAndSendActivation(requestId, decisionReason || null);
+              showActivationPanel(requestId, prepared);
+              const wake = await triggerMakeScenario({
+                reason: 'activation_email_queued',
+                request_id: requestId,
+                job_id: prepared?.job_id ?? prepared?.queue_job_id ?? prepared?.id ?? null,
+                email: prepared?.requester_email ?? null
+              });
+              if (msg) { msg.textContent = (prepared?.message || 'Wacht op activatie. Nieuwe activatielink en mail zijn klaargezet.') + ` Make ping: ${wake?.via || 'ok'}.`; msg.className = 'inline-msg ok'; }
+              window.alert('Aanvraag goedgekeurd. Er is een nieuwe activatielink klaargezet, de verificatiemail is in de wachtrij gezet en Make is gepingd. De naam hoort nu onder pending activation te staan tot de link echt is gebruikt.');
+            } else {
+              const result = await returnNameToClaimable(requestId, decisionReason || 'Admin afwijzing');
+              if (msg) { msg.textContent = result?.message || 'Afwijzing opgeslagen. Naam staat weer in de claimbare kieslijst.'; msg.className = 'inline-msg ok'; }
+              window.alert('Aanvraag afgewezen. De naam staat weer in de claimbare kieslijst.');
             }
             await refreshAdminLists();
             setStatus(decision === 'approved' ? 'Aanvraag goedgekeurd.' : 'Aanvraag afgewezen.');
@@ -466,7 +467,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
           }
         });
       });
-       document.querySelectorAll('[data-generate-activation]').forEach((btn) => {
+      document.querySelectorAll('[data-generate-activation]').forEach((btn) => {
         btn.addEventListener('click', async () => {
           const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
           const msg = document.getElementById(`request-msg-${requestId}`) || document.getElementById(`activation-msg-${requestId}`);
@@ -556,7 +557,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         const bucket = stateBucket(item);
         const canReissue = bucket === 'awaiting' || bucket === 'active';
         const canRemove = bucket === 'rejected' || bucket === 'awaiting' || bucket === 'active' || bucket === 'expired';
-        div.innerHTML = `${requestHtml(item, true)}<div class="muted" style="margin-top:10px;">${item.decided_at ? new Date(item.decided_at).toLocaleString('nl-NL') : ''}</div>${canReissue ? `<div class="compact-actions"><button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(item)}">Regenerate-link</button><button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">User verwijderen</button></div>${activationPanelHtml(item)}` : (canRemove ? `<div class="compact-actions"><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">User verwijderen</button></div>` : '')}<div class="inline-msg" id="history-msg-${requestIdOf(item)}">Geschiedenisitem.</div>`;
+        div.innerHTML = `${requestHtml(item, true)}<div class="muted" style="margin-top:10px;">${item.decided_at ? new Date(item.decided_at).toLocaleString('nl-NL') : ''}</div>${canReissue ? `<div class="compact-actions"><button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(item)}">Regenerate-link</button><button class="link-btn" type="button" data-resend-verification data-id="${requestIdOf(item)}">Nieuwe link + mail</button><button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">User verwijderen</button></div>${activationPanelHtml(item)}` : (canRemove ? `<div class="compact-actions"><button class="link-btn" type="button" data-return-claimable data-id="${requestIdOf(item)}">Terug naar claimbaar</button><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">User verwijderen</button></div>` : '')}<div class="inline-msg" id="history-msg-${requestIdOf(item)}">Geschiedenisitem.</div>`;
         root.appendChild(div);
       });
       const historyPills = document.querySelectorAll('[data-history-filter]'); if (historyPills.length) historyPills.forEach((btn)=>{ btn.classList.toggle('active', btn.dataset.historyFilter===historyFilter); });
@@ -572,6 +573,38 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
             window.alert('Toegang ingetrokken. De naam staat weer in de claimbare lijst.');
           } catch (err) {
             if (msg) { msg.textContent = err instanceof Error ? err.message : 'Intrekken mislukt'; msg.className = 'inline-msg error'; }
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-resend-verification]').forEach((btn)=> {
+        btn.addEventListener('click', async ()=> {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const msg = document.getElementById(`history-msg-${requestId}`);
+          try {
+            if (msg) { msg.textContent = 'Nieuwe link + mail voorbereiden...'; msg.className = 'inline-msg'; }
+            const result = await resendPendingActivation(requestId);
+            setStatus(result?.message || 'Nieuwe activatielink en verificatiemail klaargezet.', 'ok');
+            if (msg) { msg.textContent = result?.message || 'Nieuwe link + mail klaargezet.'; msg.className = 'inline-msg ok'; }
+            window.alert('Nieuwe activatielink en verificatiemail klaargezet. De naam blijft onder pending activation staan totdat de link echt is gebruikt.');
+            await refreshAdminLists();
+          } catch (err) {
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Nieuwe link + mail mislukt'; msg.className = 'inline-msg error'; }
+          }
+        });
+      });
+      document.querySelectorAll('[data-return-claimable]').forEach((btn)=> {
+        btn.addEventListener('click', async ()=> {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const msg = document.getElementById(`history-msg-${requestId}`);
+          try {
+            if (msg) { msg.textContent = 'Naam terugzetten naar claimbaar...'; msg.className = 'inline-msg'; }
+            const result = await returnNameToClaimable(requestId, 'Admin teruggezet naar claimbare lijst');
+            await refreshAdminLists();
+            if (msg) { msg.textContent = result?.message || 'Naam staat weer in de claimbare lijst.'; msg.className = 'inline-msg ok'; }
+            window.alert('Naam staat weer in de claimbare lijst.');
+          } catch (err) {
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Terugzetten mislukt'; msg.className = 'inline-msg error'; }
           }
         });
       });
@@ -794,6 +827,29 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     async function getRequests() { const data = await callFirstRpc(['admin_get_claim_requests','admin_list_claim_requests_action'], { admin_session_token: getAdminSessionToken() }); return Array.isArray(data) ? data : (data?.requests || data?.items || []); }
     async function getHistory() { const data = await callFirstRpc(['admin_get_claim_history','admin_list_claim_history_action'], { admin_session_token: getAdminSessionToken() }); return Array.isArray(data) ? data : (data?.history || data?.items || []); }
     async function decideRequest(requestId, decision, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision, decision_reason_input: decisionReason }) }); return await parseResponse(res); }
+    async function approveAndSendActivation(requestId, decisionReason) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_approve_and_send_activation_action`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: decisionReason || null, base_url: getActivationBaseUrl() })
+      });
+      return await parseResponse(res);
+    }
+    async function resendPendingActivation(requestId) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_resend_pending_activation_action`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), base_url: getActivationBaseUrl() })
+      });
+      const data = await parseResponse(res);
+      await triggerMakeScenario({ reason: 'activation_email_queued', request_id: requestId, job_id: data?.job_id ?? data?.queue_job_id ?? data?.id ?? null, email: data?.requester_email ?? null });
+      return data;
+    }
+    async function returnNameToClaimable(requestId, reason) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_return_name_to_claimable_action`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: reason || null })
+      });
+      return await parseResponse(res);
+    }
 
     async function createActivationLink(requestId) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_player_activation_link_action`, {
@@ -812,42 +868,41 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
 
     async function triggerMakeScenario(meta = {}) {
       if (!MAKE_WEBHOOK_URL) throw new Error('MAKE_WEBHOOK_URL ontbreekt in admin.html');
-      const payload = {
-        trigger: 'admin_approval',
-        source: 'admin.html',
-        ts: new Date().toISOString(),
-        ...meta
-      };
+      const payload = { trigger: 'activation_email_queued', source: 'admin_claims.html', ts: new Date().toISOString(), ...meta };
       const payloadText = JSON.stringify(payload);
+      const vias = [];
       if (navigator.sendBeacon) {
-        const blob = new Blob([payloadText], { type: 'text/plain;charset=UTF-8' });
-        if (navigator.sendBeacon(MAKE_WEBHOOK_URL, blob)) return { ok: true, via: 'sendBeacon' };
+        try {
+          const blob = new Blob([payloadText], { type: 'application/json' });
+          if (navigator.sendBeacon(MAKE_WEBHOOK_URL, blob)) vias.push('sendBeacon');
+        } catch {}
       }
       try {
-        await fetch(MAKE_WEBHOOK_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          keepalive: true,
-          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-          body: payloadText
-        });
-        return { ok: true, via: 'fetch-no-cors' };
-      } catch (fetchErr) {
+        await fetch(MAKE_WEBHOOK_URL, { method:'POST', mode:'cors', keepalive:true, headers:{ 'Content-Type':'application/json' }, body:payloadText });
+        vias.push('fetch-cors-json');
+      } catch {}
+      try {
+        await fetch(MAKE_WEBHOOK_URL, { method:'POST', mode:'no-cors', keepalive:true, headers:{ 'Content-Type':'text/plain;charset=UTF-8' }, body:payloadText });
+        vias.push('fetch-no-cors');
+      } catch {}
+      try {
         const fallbackUrl = new URL(MAKE_WEBHOOK_URL);
-        fallbackUrl.searchParams.set('trigger', String(payload.trigger || 'admin_approval'));
-        fallbackUrl.searchParams.set('source', 'admin.html');
+        fallbackUrl.searchParams.set('trigger', String(payload.trigger || 'activation_email_queued'));
+        fallbackUrl.searchParams.set('source', 'admin_claims.html');
         fallbackUrl.searchParams.set('ts', String(payload.ts || new Date().toISOString()));
-        Object.entries(meta || {}).forEach(([key, value]) => {
+        Object.entries(payload || {}).forEach(([key, value]) => {
           if (value !== undefined && value !== null) fallbackUrl.searchParams.set(key, String(value));
         });
-        await new Promise((resolve, reject) => {
+        await new Promise((resolve) => {
           const img = new Image();
           img.onload = () => resolve();
-          img.onerror = () => reject(fetchErr);
+          img.onerror = () => resolve();
           img.src = fallbackUrl.toString();
         });
-        return { ok: true, via: 'img-get-fallback' };
-      }
+        vias.push('img-get-fallback');
+      } catch {}
+      if (!vias.length) throw new Error('Make webhook pingen mislukt');
+      return { ok:true, via:vias.join(', ') };
     }
 
     async function revokePlayerAccess(requestId, reason) {
@@ -1018,10 +1073,19 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     document.querySelectorAll('[data-admin-view-card]').forEach((card) => card.addEventListener('click', () => switchAdminView(card.dataset.adminViewCard)));
     window.addEventListener('hashchange', () => { const view = (location.hash.match(/view=([a-z]+)/i)||[])[1]; if (view) switchAdminView(view); });
     window.addEventListener('error', (event) => { if (event?.message) setStatus(event.message); });
+    let autoRefreshTimer = null;
+    function startAdminAutoRefresh() {
+      if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+      autoRefreshTimer = setInterval(async () => {
+        if (document.hidden || document.getElementById('adminView').classList.contains('hidden')) return;
+        try { await refreshAdminLists(); } catch {}
+      }, 15000);
+    }
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshAdminLists().catch(() => {}); });
     const initialView = (location.hash.match(/view=([a-z]+)/i)||[])[1]; if (initialView) currentAdminView = initialView;
-    loadAdmin();
+    loadAdmin().then(startAdminAutoRefresh).catch(() => {});
   </script>
 
-  <div class="site-credit-watermark">v71 · Made by Bruis</div>
+  <div class="site-credit-watermark">v72 · Made by Bruis</div>
 </body>
 </html>
