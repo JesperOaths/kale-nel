@@ -204,7 +204,7 @@
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v83 · Made by Bruis</div>
+    <div class="version-tag">v85 · Made by Bruis</div>
   </div>
   <script>
 const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -260,7 +260,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           <div class="activation-link-box" id="activation-url-${requestIdOf(req)}">Nog geen activatielink gegenereerd.</div>
           <div class="action-row">
             <button class="copy-btn" type="button" data-copy-activation data-id="${requestIdOf(req)}">Kopieer activatielink</button>
-            <button class="mail-btn" type="button" data-mail-activation data-id="${requestIdOf(req)}">Mailconcept</button>
+            <button class="mail-btn" type="button" data-mail-activation data-id="${requestIdOf(req)}">Mailconcept</button><button class="mail-btn" type="button" data-hide-activation data-id="${requestIdOf(req)}">Inklappen</button>
           </div>
         </div>
       `;
@@ -423,7 +423,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const infoText = bucket === 'active'
         ? 'Gebruiker actief in admin-overzicht.'
         : hasPin(item)
-          ? 'Waarschuwing: deze aanvraag staat nog op wacht op activatie, maar er hangt al een pincode aan de speler. Gebruik de v83 resetflow voordat je opnieuw een activatielink verstuurt.'
+          ? 'Waarschuwing: deze aanvraag staat nog op wacht op activatie, maar er hangt al een pincode aan de speler. Gebruik de v84 resetflow voordat je opnieuw een activatielink verstuurt.'
           : 'Gebruiker staat klaar onder wacht op activatie.';
       return `${requestHtml(item, true)}
         <div class="request-grid" style="margin-top:12px;">
@@ -497,6 +497,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           const reasonEl = document.querySelector(`.decision-reason[data-id="${requestId}"]`);
           const decisionReason = reasonEl ? reasonEl.value.trim() : '';
           const msg = document.getElementById(`request-msg-${requestId}`);
+          const requestRow = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
           try {
             if (msg) { msg.textContent = 'Besluit opslaan...'; msg.className = 'inline-msg'; }
             if (decision === 'approved') {
@@ -506,12 +507,12 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
                 reason: 'activation_email_queued',
                 request_id: requestId,
                 job_id: prepared?.job_id ?? prepared?.queue_job_id ?? prepared?.id ?? null,
-                player_id: prepared?.player_id ?? req?.player_id ?? null,
-                display_name: prepared?.display_name ?? displayNameOf(req),
-                email: prepared?.requester_email ?? req?.requester_email ?? null,
+                player_id: prepared?.player_id ?? requestRow?.player_id ?? null,
+                display_name: prepared?.display_name ?? displayNameOf(requestRow),
+                email: prepared?.requester_email ?? requestRow?.requester_email ?? null,
                 activation_url: prepared?.activation_url ?? null,
                 expires_at: prepared?.expires_at ?? null,
-                created_at: req?.created_at ?? null
+                created_at: requestRow?.created_at ?? null
               });
               if (msg) { msg.textContent = (prepared?.message || 'Wacht op activatie. Nieuwe activatielink en mail zijn klaargezet.') + ' — ' + formatMailDiagnostics(prepared, wake); msg.className = 'inline-msg ok'; }
               window.alert('Aanvraag goedgekeurd. Er is een nieuwe activatielink klaargezet, de verificatiemail is in de wachtrij gezet en Make is gepingd. De naam hoort nu onder wacht op activatie te staan tot de link echt is gebruikt.');
@@ -553,8 +554,8 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           const url = urlEl?.dataset.url;
           if (!url) { setStatus('Maak eerst een activatielink.'); return; }
           try {
-            await navigator.clipboard.writeText(url);
-            const msg = document.getElementById(`activation-msg-${requestId}`); if (msg) { msg.textContent = 'Gekopieerd.'; msg.className = 'inline-msg ok'; } setStatus('Activatielink gekopieerd.');
+            await copyTextRobust(url);
+            const msg = document.getElementById(`activation-msg-${requestId}`); if (msg) { msg.textContent = 'Activatielink gekopieerd.'; msg.className = 'inline-msg ok'; } setStatus('Activatielink gekopieerd.');
           } catch {
             setStatus('Kopiëren lukte niet automatisch. Selecteer de link handmatig.');
           }
@@ -717,7 +718,23 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         if (btn.dataset.bound) return; btn.dataset.bound='1';
         btn.addEventListener('click', async () => {
           const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const panel = document.getElementById(`activation-tools-${requestId}`);
           const msg = document.getElementById(`history-msg-${requestId}`) || document.getElementById(`activation-msg-${requestId}`);
+          if (panel && !panel.classList.contains('hidden') && panel.dataset.url) {
+            hideActivationPanel(requestId);
+            if (msg) { msg.textContent = 'Activatiepaneel verborgen.'; msg.className = 'inline-msg'; }
+            return;
+          }
+          if (panel && panel.dataset.url) {
+            showActivationPanel(requestId, {
+              activation_url: panel.dataset.url,
+              requester_email: panel.dataset.email || '',
+              display_name: panel.dataset.displayName || '',
+              expires_at: panel.dataset.expiresAt || ''
+            });
+            if (msg) { msg.textContent = 'Bestaande activatielink zichtbaar gemaakt.'; msg.className = 'inline-msg ok'; }
+            return;
+          }
           try {
             if (msg) { msg.textContent = 'Activatielink maken...'; msg.className = 'inline-msg'; }
             const linkData = await createActivationLink(requestId);
@@ -728,6 +745,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           }
         });
       });
+      document.querySelectorAll('[data-hide-activation]').forEach((btn) => { if (btn.dataset.bound) return; btn.dataset.bound='1'; btn.addEventListener('click', () => { const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id; hideActivationPanel(requestId); const msg = document.getElementById(`history-msg-${requestId}`) || document.getElementById(`activation-msg-${requestId}`); if (msg) { msg.textContent = 'Activatiepaneel verborgen.'; msg.className = 'inline-msg'; } }); });
       document.querySelectorAll('[data-copy-activation], [data-mail-activation], [data-send-activation]').forEach((el)=>{});
     }
 
@@ -797,9 +815,9 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           const urlEl = document.getElementById(`activation-url-${requestId}`);
           const url = urlEl?.dataset.url;
           if (!url) { setStatus('Maak eerst een activatielink.'); return; }
-          await navigator.clipboard.writeText(url);
+          await copyTextRobust(url);
           const msg = document.getElementById(`approved-msg-${requestId}`);
-          if (msg) { msg.textContent = 'Link gekopieerd.'; msg.className = 'inline-msg ok'; }
+          if (msg) { msg.textContent = 'Activatielink gekopieerd.'; msg.className = 'inline-msg ok'; }
         });
       });
       document.querySelectorAll('#approvedUsersList [data-mail-activation]').forEach((btn)=> {
@@ -987,7 +1005,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
 
     async function createActivationLink(requestId) {
       const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
-      if (req && hasPin(req) && stateBucket(req) !== 'active') throw new Error('Deze aanvraag staat nog op wacht op activatie, maar de speler heeft al een pincode. Draai eerst de v83 activatie-resetpatch of trek de toegang in.');
+      if (req && hasPin(req) && stateBucket(req) !== 'active') throw new Error('Deze aanvraag staat nog op wacht op activatie, maar de speler heeft al een pincode. Draai eerst de v84 activatie-resetpatch of trek de toegang in.');
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_player_activation_link_action`, {
         method:'POST',
         mode:'cors',
@@ -1123,19 +1141,60 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       renderStats(lastRequests, lastHistory);
       switchAdminView(currentAdminView);
     }
+
+    const activationPanelsOpen = new Set();
+    function rememberActivationPanel(requestId, isOpen) {
+      const key = String(requestId);
+      if (isOpen) activationPanelsOpen.add(key);
+      else activationPanelsOpen.delete(key);
+    }
+    async function copyTextRobust(value) {
+      const text = String(value || '');
+      if (!text) throw new Error('Niets om te kopiëren.');
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', 'readonly');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (!ok) throw new Error('Kopiëren mislukt in deze browser.');
+      return true;
+    }
+    function hideActivationPanel(requestId) {
+      const panel = document.getElementById(`activation-tools-${requestId}`);
+      if (!panel) return;
+      panel.classList.add('hidden');
+      rememberActivationPanel(requestId, false);
+      const toggleBtn = document.querySelector(`[data-generate-activation][data-id="${requestId}"]`);
+      if (toggleBtn && panel.dataset.url) toggleBtn.textContent = 'Maak activatielink';
+    }
+
     function showActivationPanel(requestId, linkData) {
       const panel = document.getElementById(`activation-tools-${requestId}`);
       const urlEl = document.getElementById(`activation-url-${requestId}`);
       const expiresEl = document.getElementById(`activation-expires-${requestId}`);
       if (!panel || !urlEl || !expiresEl) return;
       panel.classList.remove('hidden');
-      panel.dataset.url = linkData.activation_url || '';
-      panel.dataset.email = linkData.requester_email || '';
+      rememberActivationPanel(requestId, true);
+      panel.dataset.url = linkData.activation_url || panel.dataset.url || '';
+      panel.dataset.email = linkData.requester_email || panel.dataset.email || '';
       panel.dataset.displayName = linkData.display_name || panel.dataset.displayName || '';
-      panel.dataset.expiresAt = linkData.expires_at || '';
-      urlEl.dataset.url = linkData.activation_url || '';
-      urlEl.textContent = linkData.activation_url || 'Geen link ontvangen van de server.';
-      expiresEl.textContent = formatDateTime(linkData.expires_at);
+      panel.dataset.expiresAt = linkData.expires_at || panel.dataset.expiresAt || '';
+      urlEl.dataset.url = panel.dataset.url || '';
+      urlEl.textContent = panel.dataset.url || 'Geen link ontvangen van de server.';
+      expiresEl.textContent = formatDateTime(panel.dataset.expiresAt);
+      const toggleBtn = document.querySelector(`[data-generate-activation][data-id="${requestId}"]`);
+      if (toggleBtn && panel.dataset.url) toggleBtn.textContent = 'Verberg activatielink';
     }
 
     async function loadAdmin() {
@@ -1235,6 +1294,6 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     loadAdmin().then(startAdminAutoRefresh).catch(() => {});
   </script>
 
-  <div class="site-credit-watermark">v83 · Made by Bruis</div>
+  <div class="site-credit-watermark">v85 · Made by Bruis</div>
 </body>
 </html>

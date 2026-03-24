@@ -464,17 +464,21 @@
       if (!items || items.length === 0) { const li = document.createElement('li'); li.textContent = emptyText; root.appendChild(li); return; }
       items.forEach((name) => { const li = document.createElement('li'); li.textContent = name; root.appendChild(li); });
     }
+    function yesSaidCopy(canCount) {
+      if (canCount === 1) return '1 speler heeft Ja gezegd';
+      return `${canCount} spelers hebben Ja gezegd`;
+    }
     function computeStateLabel(canCount) {
-      if (canCount >= 4) return { key: 'yes', label: 'Ja', copy: `${canCount} mensen hebben Ja gezegd` };
+      if (canCount >= 4) return { key: 'yes', label: 'Ja', copy: yesSaidCopy(canCount) };
       if (canCount === 3) return { key: 'maybe', label: 'Bijna', copy: 'Nog één nodig.' };
-      return { key: 'no', label: 'Nee', copy: `${canCount} mensen hebben Ja gezegd` };
+      return { key: 'no', label: 'Nee', copy: yesSaidCopy(canCount) };
     }
     function renderState(data) {
       const legends = data.legends || data.yes_names || [];
       const losers = data.losers || data.no_names || [];
       const canCount = Number(data.can_count ?? data.yes_count ?? legends.length ?? 0);
       const state = data.status_label
-        ? { key: data.status_key || 'no', label: data.status_label, copy: `${canCount} mensen hebben Ja gezegd` }
+        ? { key: data.status_key || 'no', label: data.status_label, copy: yesSaidCopy(canCount) }
         : computeStateLabel(canCount);
 
       const word = document.getElementById('stateWord');
@@ -519,18 +523,29 @@
       } catch (error) {
         const msg = error?.message || 'Onbekende fout';
         if (/sessie|token|login|ingelogd/i.test(msg)) { clearSessionToken(); goToLoginWithIntent(status); return; }
+        if (/cycle_key/i.test(msg)) {
+          setStatus('De stemfunctie heeft nog een databasefout in de weekcyclus. Draai de v84 SQL-patch en vernieuw daarna de pagina hard.', 'warn');
+          return;
+        }
         setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
       }
     }
     async function load() {
       try { renderState(await getHomepageState()); setStatus(''); }
-      catch (error) { const msg = error?.message || 'Onbekende fout'; setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn'); }
+      catch (error) {
+        const msg = error?.message || 'Onbekende fout';
+        if (/cycle_key/i.test(msg)) {
+          setStatus('De stemfunctie heeft nog een databasefout in de weekcyclus. Draai de v84 SQL-patch en vernieuw daarna de pagina hard.', 'warn');
+          return;
+        }
+        setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
+      }
     }
     document.getElementById('yesBtn').addEventListener('click', () => handleVote('ja'));
     document.getElementById('noBtn').addEventListener('click', () => handleVote('nee'));
     load();
   </script>
 
-  <div class="site-credit-watermark">v83 · Made by Bruis</div>
+  <div class="site-credit-watermark">v85 · Made by Bruis</div>
 </body>
 </html>

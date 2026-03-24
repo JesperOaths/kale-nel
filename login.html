@@ -94,7 +94,7 @@
       <h2>Pincode resetten</h2>
       <p class="modal-copy">Vul de gebruikersnaam en het gekoppelde e-mailadres in. We wissen dan de oude pincode, zetten het account terug naar <strong>wacht op activatie</strong> en sturen automatisch een nieuwe activatiemail.</p>
       <form id="forgotPinForm" autocomplete="on">
-        <input id="resetNameInput" name="username" type="text" placeholder="Gebruikersnaam" autocomplete="username" autocapitalize="none" spellcheck="false">
+        <select id="resetNameInput" name="username" autocomplete="username"><option value="">Kies je naam</option></select>
         <input id="resetEmailInput" name="email" type="email" placeholder="jouw@email.com" autocomplete="email" autocapitalize="none" spellcheck="false">
         <div class="modal-actions">
           <button id="forgotPinCancelBtn" type="button" class="secondary-btn">Sluiten</button>
@@ -139,16 +139,22 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     }
     function fillNames(names, selected = '') {
       const input = document.getElementById('playerNameInput');
+      const resetInput = document.getElementById('resetNameInput');
       const cleanNames = uniqueNames(names);
       const current = selected && cleanNames.includes(selected) ? selected : input.value;
-      input.innerHTML = '<option value="">Kies je naam</option>';
+      const resetCurrent = resetInput ? resetInput.value : '';
+      const markup = '<option value="">Kies je naam</option>';
+      input.innerHTML = markup;
+      if (resetInput) resetInput.innerHTML = markup;
       cleanNames.forEach((name) => {
         const option = document.createElement('option');
         option.value = name;
         option.textContent = name;
         input.appendChild(option);
+        if (resetInput) resetInput.appendChild(option.cloneNode(true));
       });
       input.value = cleanNames.includes(current) ? current : '';
+      if (resetInput) resetInput.value = cleanNames.includes(resetCurrent) ? resetCurrent : (cleanNames.includes(input.value) ? input.value : '');
     }
     function nextUrl() { return new URLSearchParams(window.location.search).get('next') || './index.html'; }
     function pendingVote() { return new URLSearchParams(window.location.search).get('vote') || ''; }
@@ -156,7 +162,8 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const raw = String(msg || '');
       if (/login_player\(desired_name, entered_pin\).*schema cache/i.test(raw)) return 'Login-RPC ontbreekt nog in Supabase. Draai de v73 SQL-patch opnieuw en vernieuw daarna de pagina hard.';
       if (/failed to fetch/i.test(raw)) return 'Netwerk/CORS-fout bij contact met Supabase.';
-      if (/sessions_player_id_key/i.test(raw)) return 'Er stond nog een oude spelsessie open voor deze gebruiker. Probeer opnieuw; de v83 loginpatch vervangt zo'n oude sessie nu automatisch.';
+      if (/sessions_player_id_key/i.test(raw)) return 'Er stond nog een oude spelsessie open voor deze gebruiker. Probeer opnieuw; de v84 loginpatch vervangt zo'n oude sessie nu automatisch.';
+      if (/cycle_key/i.test(raw)) return 'De weekstatus kon niet worden geladen door een databasefout in de stemcyclus. De namenlijst hoort wel zichtbaar te blijven na de v84 bundle + SQL-patch.';
       return raw;
     }
     async function getPublicState() {
@@ -242,26 +249,37 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return await parseResponse(res);
     }
     async function load() {
-      try {
-        const [state, loginNames] = await Promise.all([getPublicState(), getLoginNames().catch(() => null)]);
-        fillNames(loginNames?.names || [], state.my_name || ''); 
-        const stateTile = document.querySelector('.state-tile');
-        if (state.my_name) {
-          if (stateTile) stateTile.classList.add('show');
-          document.getElementById('loginStateWord').textContent = state.my_name;
-          document.getElementById('loginStateWord').className = 'state-word yes';
-          document.getElementById('loginStateCopy').textContent = 'Deze browser heeft al een geldige sessie.';
-        } else {
-          if (stateTile) stateTile.classList.remove('show');
-          document.getElementById('loginStateWord').textContent = '';
-          document.getElementById('loginStateCopy').textContent = '';
-        }
-        if (getSessionToken()) {
-          try { await touchSession(); } catch { clearSessionToken(); }
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Er ging iets mis';
+      const [stateResult, loginNamesResult] = await Promise.allSettled([getPublicState(), getLoginNames()]);
+      const state = stateResult.status === 'fulfilled' ? stateResult.value : null;
+      const loginNames = loginNamesResult.status === 'fulfilled' ? loginNamesResult.value : null;
+      const fallbackNames = [];
+      if (state?.my_name) fallbackNames.push(state.my_name);
+      fillNames(uniqueNames([...(loginNames?.names || []), ...fallbackNames]), state?.my_name || '');
+
+      const stateTile = document.querySelector('.state-tile');
+      if (state?.my_name) {
+        if (stateTile) stateTile.classList.add('show');
+        document.getElementById('loginStateWord').textContent = state.my_name;
+        document.getElementById('loginStateWord').className = 'state-word yes';
+        document.getElementById('loginStateCopy').textContent = 'Deze browser heeft al een geldige sessie.';
+      } else {
+        if (stateTile) stateTile.classList.remove('show');
+        document.getElementById('loginStateWord').textContent = '';
+        document.getElementById('loginStateCopy').textContent = '';
+      }
+
+      if (stateResult.status === 'rejected') {
+        const msg = stateResult.reason instanceof Error ? stateResult.reason.message : 'Er ging iets mis';
         setStatus(friendlyMessage(msg), 'warn');
+      } else if (loginNamesResult.status === 'rejected') {
+        const msg = loginNamesResult.reason instanceof Error ? loginNamesResult.reason.message : 'Er ging iets mis';
+        setStatus(friendlyMessage(msg), 'warn');
+      } else {
+        setStatus('');
+      }
+
+      if (getSessionToken()) {
+        try { await touchSession(); } catch { clearSessionToken(); }
       }
     }
     document.getElementById('loginForm').addEventListener('submit', async (event) => {
@@ -355,6 +373,6 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     load();
   </script>
 
-  <div class="site-credit-watermark">v83 · Made by Bruis</div>
+  <div class="site-credit-watermark">v85 · Made by Bruis</div>
 </body>
 </html>

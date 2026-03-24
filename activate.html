@@ -474,7 +474,7 @@
     </div>
   </div>
 
-  <div id="versionWatermark" class="site-credit-watermark">v83 · Made by Bruis</div>
+  <div id="versionWatermark" class="site-credit-watermark">v85 · Made by Bruis</div>
 
   <script>
     const CONFIG = window.GEJAST_CONFIG || {};
@@ -762,7 +762,7 @@
           } catch (_) {}
 
           if (contextStillValid) {
-            setStatus('Deze link is nog geldig, maar de database denkt nu al dat dit account een pincode heeft. Dat hoort niet bij de normale flow. Vraag de beheerder om de activatie opnieuw klaar te zetten of de v83 activatie-resetpatch te draaien.', 'warn');
+            setStatus('Deze link is geldig, maar de backend ziet nog een oude pincode-restant op dit account. Dat hoort niet bij de normale flow. Draai de v84 SQL-patch en open daarna desnoods een nieuwe activatielink.', 'warn');
             setBusyState(false);
             return;
           }
