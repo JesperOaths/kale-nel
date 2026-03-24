@@ -113,7 +113,7 @@
 </head>
 <body>
   <div class="main-card">
-    <img src="./logo.png" class="card-logo" />
+    <a href="./index.html" aria-label="Terug naar home"><img src="./logo.png" class="card-logo" /></a>
     <div class="topbar">
       <div class="topbar-left">
         <h1>Admin Console</h1>
@@ -198,7 +198,7 @@
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v68 · Made by Bruis</div>
+    <div class="version-tag">v69 · Made by Bruis</div>
   </div>
   <script>
 const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -752,14 +752,28 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       document.getElementById('totpInput').value = '';
       return await checkSession();
     }
+
+    async function callFirstRpc(rpcNames, payload) {
+      let lastError = null;
+      for (const rpcName of rpcNames) {
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpcName}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(payload) });
+          return await parseResponse(res);
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      throw lastError || new Error('RPC mislukt');
+    }
+
     async function checkSession() {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) });
       const data = await parseResponse(res);
       if (data.admin_session_token) setAdminSessionToken(data.admin_session_token);
       return data;
     }
-    async function getRequests() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_list_claim_requests_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); const data = await parseResponse(res); return Array.isArray(data) ? data : (data?.items || []); }
-    async function getHistory() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_list_claim_history_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); const data = await parseResponse(res); return Array.isArray(data) ? data : (data?.items || []); }
+    async function getRequests() { const data = await callFirstRpc(['admin_get_claim_requests','admin_list_claim_requests_action'], { admin_session_token: getAdminSessionToken() }); return Array.isArray(data) ? data : (data?.requests || data?.items || []); }
+    async function getHistory() { const data = await callFirstRpc(['admin_get_claim_history','admin_list_claim_history_action'], { admin_session_token: getAdminSessionToken() }); return Array.isArray(data) ? data : (data?.history || data?.items || []); }
     async function decideRequest(requestId, decision, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision, decision_reason_input: decisionReason }) }); return await parseResponse(res); }
 
     async function createActivationLink(requestId) {
@@ -986,6 +1000,6 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     loadAdmin();
   </script>
 
-  <div class="site-credit-watermark">v68 · Made by Bruis</div>
+  <div class="site-credit-watermark">v69 · Made by Bruis</div>
 </body>
 </html>

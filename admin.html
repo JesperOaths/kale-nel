@@ -43,7 +43,7 @@
 </head>
 <body>
   <main class="main-card">
-    <img src="./logo.png" class="logo" alt="logo" />
+    <a href="./index.html" aria-label="Terug naar home"><img src="./logo.png" class="logo" alt="logo" /></a>
     <h1>Admin hub</h1>
     <p class="sub">Hoofdingang voor alle admintaken. Hier staan alleen samenvattingen en links naar de losse tools.</p>
 
@@ -130,6 +130,20 @@
       setAdminSessionToken(token);
       return data;
     }
+
+    async function callFirstRpc(rpcNames, payload) {
+      let lastError = null;
+      for (const rpcName of rpcNames) {
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpcName}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(payload) });
+          return await parseResponse(res);
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      throw lastError || new Error('RPC mislukt');
+    }
+
     async function checkSession() {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
@@ -149,13 +163,14 @@
     }
 
     async function loadCounts() {
+      const tokenPayload = { admin_session_token: getAdminSessionToken() };
       const [requestsRes, historyRes, expiredRes] = await Promise.all([
-        fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_list_claim_requests_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }).then(parseResponse),
-        fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_list_claim_history_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }).then(parseResponse),
-        fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_list_expired_activation_queue_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }).then(parseResponse).catch(() => ({ items: [] }))
+        callFirstRpc(['admin_get_claim_requests','admin_list_claim_requests_action'], tokenPayload),
+        callFirstRpc(['admin_get_claim_history','admin_list_claim_history_action'], tokenPayload),
+        callFirstRpc(['admin_get_expired_activation_queue','admin_list_expired_activation_queue_action'], tokenPayload).catch(() => ({ items: [] }))
       ]);
-      const requests = normalizeAdminRows(requestsRes.requests || []);
-      const history = normalizeAdminRows(historyRes.history || []);
+      const requests = normalizeAdminRows(requestsRes.requests || requestsRes.items || []);
+      const history = normalizeAdminRows(historyRes.history || historyRes.items || []);
       const expiredItems = Array.isArray(expiredRes?.items) ? expiredRes.items : [];
       const awaiting = history.filter((item) => (item.decision === 'approved' || item.approved === true || item.active === true) && !item.hasPin).length;
       const active = history.filter((item) => item.hasPin || /active|activated/i.test(String(item.status || ''))).length;
@@ -218,6 +233,6 @@
     boot();
   </script>
 
-  <div class="site-credit-watermark">v68 · Made by Bruis</div>
+  <div class="site-credit-watermark">v69 · Made by Bruis</div>
 </body>
 </html>

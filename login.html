@@ -44,7 +44,7 @@
   </div>
 
   <main class="main-card">
-    <img src="./logo.png" class="card-logo" />
+    <a href="./index.html" aria-label="Terug naar home"><img src="./logo.png" class="card-logo" /></a>
     <h1>Inloggen</h1>
     <div class="state-tile">
       <div id="loginStateWord" class="state-word">Klaar</div>
@@ -126,7 +126,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     function pendingVote() { return new URLSearchParams(window.location.search).get('vote') || ''; }
     function friendlyMessage(msg) {
       const raw = String(msg || '');
-      if (/login_player\(desired_name, entered_pin\).*schema cache/i.test(raw)) return 'Login-RPC ontbreekt nog in Supabase. Draai de v68 SQL-patch opnieuw en vernieuw daarna de pagina hard.';
+      if (/login_player\(desired_name, entered_pin\).*schema cache/i.test(raw)) return 'Login-RPC ontbreekt nog in Supabase. Draai de v69 SQL-patch opnieuw en vernieuw daarna de pagina hard.';
       if (/failed to fetch/i.test(raw)) return 'Netwerk/CORS-fout bij contact met Supabase.';
       return raw;
     }
@@ -221,6 +221,6 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     load();
   </script>
 
-  <div class="site-credit-watermark">v68 · Made by Bruis</div>
+  <div class="site-credit-watermark">v69 · Made by Bruis</div>
 </body>
 </html>
