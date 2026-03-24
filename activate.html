@@ -474,7 +474,7 @@
     </div>
   </div>
 
-  <div id="versionWatermark" class="site-credit-watermark">v76 · Made by Bruis</div>
+  <div id="versionWatermark" class="site-credit-watermark">v77 · Made by Bruis</div>
 
   <script>
     const CONFIG = window.GEJAST_CONFIG || {};
@@ -482,7 +482,7 @@
     const SUPABASE_PUBLISHABLE_KEY = CONFIG.SUPABASE_PUBLISHABLE_KEY || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const SESSION_KEY = "jas_session_token_v10";
 
-    document.getElementById('versionWatermark').textContent = `${CONFIG.VERSION || 'v76'} · Made by Bruis`;
+    document.getElementById('versionWatermark').textContent = `${CONFIG.VERSION || 'v77'} · Made by Bruis`;
 
     function rpcHeaders() {
       return {
@@ -499,6 +499,7 @@
       try { data = text ? JSON.parse(text) : null; }
       catch { throw new Error(text || `HTTP ${res.status}`); }
       if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`);
+      if (Array.isArray(data)) return data[0] || null;
       return data;
     }
 
@@ -565,6 +566,7 @@
     const params = new URLSearchParams(window.location.search);
     const activationToken = params.get('token') || params.get('activation_token') || '';
 
+    let activationContext = null;
     let activationBusy = false;
     let activePinTarget = 'pinInput';
     const pinModal = document.getElementById('pinModal');
@@ -610,10 +612,24 @@
       );
     }
 
+    async function loginAfterAlreadyActivated(pin) {
+      const desiredName = String(activationContext?.display_name || document.getElementById('approvedName').textContent || '').trim();
+      if (!desiredName || !/^\d{4}$/.test(pin)) throw new Error('Automatisch inloggen is niet mogelijk zonder geldige naam en pincode.');
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/login_player`, {
+        method: 'POST',
+        mode: 'cors',
+        cache: 'no-store',
+        headers: rpcHeaders(),
+        body: JSON.stringify({ desired_name: desiredName, entered_pin: pin })
+      });
+      return await parseResponse(res);
+    }
+
     function setContext(data) {
-      document.getElementById('approvedName').textContent = data?.display_name || 'Onbekend';
-      document.getElementById('activationNameMirror').value = data?.display_name || '';
-      document.getElementById('approvedEmail').textContent = data?.requester_email || 'Onbekend';
+      activationContext = Array.isArray(data) ? (data[0] || null) : (data || null);
+      document.getElementById('approvedName').textContent = activationContext?.display_name || 'Onbekend';
+      document.getElementById('activationNameMirror').value = activationContext?.display_name || '';
+      document.getElementById('approvedEmail').textContent = activationContext?.requester_email || 'Onbekend';
     }
 
     function currentTarget() {
@@ -705,6 +721,7 @@
 
     document.getElementById('activateBtn').addEventListener('click', async () => {
       if (activationBusy) return;
+      const pin = document.getElementById('pinInput').value.trim();
       try {
         setBusyState(true);
         setStatus('Activeren...');
@@ -716,6 +733,24 @@
         }, 900);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Activeren mislukt';
+        const lower = String(message || '').toLowerCase();
+        if (lower.includes('al geactiveerd') || lower.includes('already activated')) {
+          try {
+            setStatus('Account lijkt al geactiveerd. We proberen je direct in te loggen...');
+            const loginData = await loginAfterAlreadyActivated(pin);
+            if (loginData?.session_token) setSessionToken(loginData.session_token);
+            setStatus('Klaar', 'ok', '<strong>Dit account was al actief.</strong><br>Je bent nu direct ingelogd en gaat terug naar de homepage.');
+            window.setTimeout(() => {
+              window.location.href = './index.html';
+            }, 1100);
+            return;
+          } catch (loginErr) {
+            const loginMessage = loginErr instanceof Error ? loginErr.message : message;
+            setStatus(friendlyActivationMessage(loginMessage), 'warn');
+            setBusyState(false);
+            return;
+          }
+        }
         setStatus(friendlyActivationMessage(message), 'warn');
         setBusyState(false);
       }
