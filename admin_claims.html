@@ -198,7 +198,7 @@
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v64 · Made by Bruis</div>
+    <div class="version-tag">v65 · Made by Bruis</div>
   </div>
   <script>
 const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -416,7 +416,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       });
       document.querySelectorAll('[data-decision]').forEach((btn) => {
         btn.addEventListener('click', async () => {
-          const requestId = Number(btn.dataset.id);
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
           const decision = btn.dataset.decision;
           const reasonEl = document.querySelector(`.decision-reason[data-id="${requestId}"]`);
           const decisionReason = reasonEl ? reasonEl.value.trim() : '';
@@ -449,7 +449,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       });
        document.querySelectorAll('[data-generate-activation]').forEach((btn) => {
         btn.addEventListener('click', async () => {
-          const requestId = Number(btn.dataset.id);
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
           const msg = document.getElementById(`request-msg-${requestId}`) || document.getElementById(`activation-msg-${requestId}`);
           try {
             if (msg) { msg.textContent = 'Activatielink maken...'; msg.className = 'inline-msg'; }
@@ -466,7 +466,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       });
       document.querySelectorAll('[data-copy-activation]').forEach((btn) => {
         btn.addEventListener('click', async () => {
-          const requestId = Number(btn.dataset.id);
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
           const urlEl = document.getElementById(`activation-url-${requestId}`);
           const url = urlEl?.dataset.url;
           if (!url) { setStatus('Maak eerst een activatielink.'); return; }
@@ -480,7 +480,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       });
       document.querySelectorAll('[data-mail-activation]').forEach((btn) => {
         btn.addEventListener('click', () => {
-          const requestId = Number(btn.dataset.id);
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
           const panel = document.getElementById(`activation-tools-${requestId}`);
           const email = panel?.dataset.email || '';
           const displayName = panel?.dataset.displayName || '';
@@ -506,7 +506,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       });
       document.querySelectorAll('[data-send-activation]').forEach((btn) => {
         btn.addEventListener('click', async () => {
-          const requestId = Number(btn.dataset.id);
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
           const msg = document.getElementById(`activation-msg-${requestId}`);
           try {
             if (msg) { msg.textContent = 'Mailjob in wachtrij zetten...'; msg.className = 'inline-msg'; }
@@ -541,7 +541,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       const historyPills = document.querySelectorAll('[data-history-filter]'); if (historyPills.length) historyPills.forEach((btn)=>{ btn.classList.toggle('active', btn.dataset.historyFilter===historyFilter); });
       document.querySelectorAll('[data-revoke-access]').forEach((btn)=> {
         btn.addEventListener('click', async ()=> {
-          const requestId = Number(btn.dataset.id);
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
           const msg = document.getElementById(`history-msg-${requestId}`);
           try {
             if (msg) { msg.textContent = 'Toegang intrekken...'; msg.className = 'inline-msg'; }
@@ -556,7 +556,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       document.querySelectorAll('[data-generate-activation]').forEach((btn) => {
         if (btn.dataset.bound) return; btn.dataset.bound='1';
         btn.addEventListener('click', async () => {
-          const requestId = Number(btn.dataset.id);
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
           const msg = document.getElementById(`history-msg-${requestId}`) || document.getElementById(`activation-msg-${requestId}`);
           try {
             if (msg) { msg.textContent = 'Activatielink maken...'; msg.className = 'inline-msg'; }
@@ -588,7 +588,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       });
       document.querySelectorAll('#approvedUsersList [data-revoke-access]').forEach((btn)=> {
         btn.addEventListener('click', async ()=> {
-          const requestId = Number(btn.dataset.id);
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
           const msg = document.getElementById(`approved-msg-${requestId}`);
           try {
             if (msg) { msg.textContent = 'Goedkeuring intrekken...'; msg.className = 'inline-msg'; }
@@ -602,7 +602,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       });
       document.querySelectorAll('#approvedUsersList [data-generate-activation]').forEach((btn)=> {
         btn.addEventListener('click', async ()=> {
-          const requestId = Number(btn.dataset.id);
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
           const msg = document.getElementById(`approved-msg-${requestId}`);
           try {
             if (msg) { msg.textContent = 'Activatielink maken...'; msg.className = 'inline-msg'; }
@@ -616,7 +616,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       });
       document.querySelectorAll('#approvedUsersList [data-copy-activation]').forEach((btn)=> {
         btn.addEventListener('click', async ()=> {
-          const requestId = Number(btn.dataset.id);
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
           const urlEl = document.getElementById(`activation-url-${requestId}`);
           const url = urlEl?.dataset.url;
           if (!url) { setStatus('Maak eerst een activatielink.'); return; }
@@ -627,7 +627,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       });
       document.querySelectorAll('#approvedUsersList [data-mail-activation]').forEach((btn)=> {
         btn.addEventListener('click', () => {
-          const requestId = Number(btn.dataset.id);
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
           const panel = document.getElementById(`activation-tools-${requestId}`);
           const email = panel?.dataset.email || '';
           const displayName = panel?.dataset.displayName || '';
@@ -723,17 +723,17 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     }
     async function getRequests() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_requests`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); }
     async function getHistory() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_history`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); }
-    async function decideRequest(requestId, decision, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request_safe`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: requestId, decision, decision_reason_input: decisionReason }) }); return await parseResponse(res); }
+    async function decideRequest(requestId, decision, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision, decision_reason_input: decisionReason }) }); return await parseResponse(res); }
 
     async function createActivationLink(requestId) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_player_activation_link_safe`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_player_activation_link`, {
         method:'POST',
         mode:'cors',
         cache:'no-store',
         headers: rpcHeaders(),
         body: JSON.stringify({
           admin_session_token: getAdminSessionToken(),
-          request_id_input: requestId,
+          request_id_input: String(requestId),
           base_url: getActivationBaseUrl()
         })
       });
@@ -781,9 +781,9 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     }
 
     async function revokePlayerAccess(requestId, reason) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_revoke_player_access_safe`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_revoke_player_access`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: requestId, decision_reason_input: reason || null })
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: reason || null })
       });
       return await parseResponse(res);
     }
@@ -799,7 +799,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
         body: JSON.stringify({
           admin_session_token: getAdminSessionToken(),
-          request_id_input: requestId,
+          request_id_input: String(requestId),
           base_url: getActivationBaseUrl(),
           recipient_email_input: recipientEmail,
           recipient_name_input: recipientName || null,
@@ -942,6 +942,6 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     loadAdmin();
   </script>
 
-  <div class="site-credit-watermark">v64 · Made by Bruis</div>
+  <div class="site-credit-watermark">v65 · Made by Bruis</div>
 </body>
 </html>

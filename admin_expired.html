@@ -70,24 +70,24 @@
           card.className = 'item';
           card.innerHTML = `<strong>${row.display_name || row.requested_name || 'Onbekende naam'}</strong><div class="meta">${row.requester_email || '-'} · verlopen op ${row.expires_at || '-'} </div><div class="meta">Laatste status: ${row.status || row.request_status || 'expired'}</div><div class="row"><button class="btn primary" data-action="requeue">Opnieuw klaarzetten</button><button class="btn ghost" data-action="resend">Nieuwe link + mail</button></div>`;
           card.querySelector('[data-action="requeue"]').addEventListener('click', async () => {
-            await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_requeue_expired_activation_safe`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: getToken(), request_id_input: row.request_id }) }).then(parseResponse);
+            await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_requeue_expired_activation`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: getToken(), request_id_input: String(row.request_id) }) }).then(parseResponse);
             await loadExpired();
           });
           card.querySelector('[data-action="resend"]').addEventListener('click', async () => {
-            await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_resend_expired_activation_safe`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: getToken(), request_id_input: row.request_id, base_url: 'https://kalenel.nl/activate.html' }) }).then(parseResponse);
+            await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_resend_expired_activation`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: getToken(), request_id_input: String(row.request_id), base_url: 'https://kalenel.nl/activate.html' }) }).then(parseResponse);
             await loadExpired();
           });
           root.appendChild(card);
         });
         setStatus('Queue geladen.', 'ok');
       } catch (error) {
-        document.getElementById('listRoot').innerHTML = `<div class="empty"><strong>Expired queue kon niet geladen worden.</strong><br><br>Run de v64 SQL-patch opnieuw. Huidige fout:<br><code>${String(error?.message || 'onbekend')}</code></div>`;
+        document.getElementById('listRoot').innerHTML = `<div class="empty"><strong>Expired queue kon niet geladen worden.</strong><br><br>Run de v65 SQL-patch opnieuw. Huidige fout:<br><code>${String(error?.message || 'onbekend')}</code></div>`;
         setStatus(error?.message || 'Laden mislukt.', 'warn');
       }
     }
     document.getElementById('refreshBtn').addEventListener('click', loadExpired);
     (async()=>{ if(await ensureGate()) loadExpired(); })();
   </script>
-  <div class="site-credit-watermark">v64 · Made by Bruis</div>
+  <div class="site-credit-watermark">v65 · Made by Bruis</div>
 </body>
 </html>

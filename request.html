@@ -161,7 +161,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         const state = await getRequestableNames();
         const names = uniqueNames(state.names || []);
         fillNameSelect(names);
-        if (!names.length) setStatus('Er staan nog geen namen klaar in de allowed/reserved names-lijst.', 'warn');
+        if (!names.length) setStatus('Er staan nog geen beheerde namen klaar in de kieslijst.', 'warn');
         else setStatus();
       } catch (err) {
         const rawMessage = err instanceof Error ? err.message : "Kon namen niet laden";
@@ -211,6 +211,6 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     load();
   </script>
 
-  <div class="site-credit-watermark">v64 · Made by Bruis</div>
+  <div class="site-credit-watermark">v65 · Made by Bruis</div>
 </body>
 </html>

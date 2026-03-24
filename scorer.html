@@ -17,6 +17,10 @@
       --soft:#f2ede4;
       --red:#bf2f24;
       --shadow:0 16px 34px rgba(37,24,14,0.12);
+      --slot-roem:54px;
+      --slot-bid:48px;
+      --slot-suit:38px;
+      --slot-special:78px;
     }
     * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
     html, body { min-height:100%; }
@@ -93,13 +97,17 @@
     .score-cell.right { grid-template-columns:minmax(0,1fr) minmax(52px,max-content); gap:10px; }
     .score-points { font-size:23px; line-height:1; font-weight:900; letter-spacing:-0.04em; }
     .score-points.strike { text-decoration:line-through; color:#8b8278; }
-    .score-meta { display:grid; grid-auto-flow:column; grid-auto-columns:max-content; gap:6px; align-items:center; white-space:nowrap; min-width:0; }
-    .score-meta.left { justify-content:end; text-align:right; }
-    .score-meta.right { justify-content:start; text-align:left; }
+    .score-meta { display:grid; gap:6px; align-items:center; white-space:nowrap; min-width:0; }
+    .score-meta.left { grid-template-columns:var(--slot-roem) var(--slot-bid) var(--slot-suit) var(--slot-special); justify-content:end; text-align:right; }
+    .score-meta.right { grid-template-columns:var(--slot-special) var(--slot-suit) var(--slot-bid) var(--slot-roem); justify-content:start; text-align:left; }
+    .meta-slot { display:inline-flex; align-items:center; justify-content:center; min-width:0; }
+    .meta-slot.empty { opacity:0; pointer-events:none; }
     .meta-tag {
-      display:inline-flex; align-items:center; justify-content:center; min-height:22px; padding:2px 8px; border-radius:999px;
+      display:inline-flex; align-items:center; justify-content:center; width:100%; min-height:22px; padding:2px 8px; border-radius:999px;
       background:#fff; border:1px solid rgba(17,17,17,0.08); font-size:11px; font-weight:800; color:#2a2722;
     }
+    .meta-slot.suit .meta-tag { padding-inline:0; }
+    .meta-slot.special .meta-tag { font-size:10px; }
     .meta-tag.suit { min-height:32px; min-width:32px; padding:2px 11px; font-size:24px; line-height:1; }
     .meta-tag.suit.red, .meta-tag.transfer, .meta-tag.special, .meta-tag.red { color:var(--red); }
     .meta-tag.suit.black { color:#111; }
@@ -115,9 +123,10 @@
     .compact-side.left { justify-content:flex-end; text-align:right; }
     .compact-side.right { justify-content:flex-start; text-align:left; }
     .compact-points { font-size:11px; font-weight:900; letter-spacing:-0.03em; }
-    .compact-meta { display:grid; grid-auto-flow:column; grid-auto-columns:max-content; gap:4px; align-items:center; min-width:0; white-space:nowrap; }
-    .compact-meta.left { justify-content:end; }
-    .compact-meta.right { justify-content:start; }
+    .compact-meta { display:grid; gap:3px; align-items:center; min-width:0; white-space:nowrap; }
+    .compact-meta.left { grid-template-columns:34px 30px 22px 52px; justify-content:end; }
+    .compact-meta.right { grid-template-columns:52px 22px 30px 34px; justify-content:start; }
+    .compact-meta .meta-slot { display:inline-flex; align-items:center; justify-content:center; min-width:0; }
     .compact-divider { width:18px; text-align:center; color:rgba(17,17,17,0.34); font-weight:900; }
     .meta-tag.compact { min-height:15px; padding:1px 5px; font-size:9px; }
     .meta-tag.compact.suit { min-height:18px; min-width:18px; padding:1px 5px; font-size:14px; }
@@ -211,22 +220,30 @@
       .page { width:100%; }
       .wrap { padding:10px; }
       .sheet { border-radius:24px; }
-      .inputs { grid-template-columns:1fr 1fr; gap:10px; padding:0 10px 12px; }
-      .input-card { padding:12px 10px; border-radius:18px; }
-      .input-card h3 { font-size:13px; }
-      .input-card p { font-size:11px; margin-bottom:10px; }
-      .scoreboard { margin:0 6px 10px; padding:0 6px 6px; }
-      .score-header { gap:14px; }
-      .score-points { font-size:22px; }
-      .score-cell { gap:6px; }
-      .score-cell.left { grid-template-columns:minmax(40px,max-content) minmax(0,1fr); }
-      .score-cell.right { grid-template-columns:minmax(0,1fr) minmax(40px,max-content); }
-      .meta-tag { min-height:20px; padding:2px 6px; font-size:10px; }
-      .meta-tag.suit { min-height:26px; min-width:26px; padding:2px 8px; font-size:20px; }
+      .inputs { grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; padding:0 8px 10px; }
+      .input-card { padding:10px 8px; border-radius:18px; }
+      .input-card h3 { font-size:12px; }
+      .input-card p { font-size:10px; margin-bottom:8px; }
+      .scoreboard { margin:0 4px 8px; padding:0 4px 4px; }
+      .score-header { gap:10px; }
+      .score-points { font-size:20px; }
+      .score-cell { gap:4px; }
+      .score-cell.left { grid-template-columns:minmax(34px,max-content) minmax(0,1fr); }
+      .score-cell.right { grid-template-columns:minmax(0,1fr) minmax(34px,max-content); }
+      .score-meta.left { grid-template-columns:40px 34px 26px 58px; gap:4px; }
+      .score-meta.right { grid-template-columns:58px 26px 34px 40px; gap:4px; }
+      .meta-tag { min-height:20px; padding:2px 4px; font-size:9px; }
+      .meta-tag.suit { min-height:24px; min-width:24px; padding:2px 4px; font-size:18px; }
+      .meta-slot.special .meta-tag { font-size:9px; }
+      .compact-meta.left { grid-template-columns:28px 26px 18px 42px; gap:2px; }
+      .compact-meta.right { grid-template-columns:42px 18px 26px 28px; gap:2px; }
+      .compact-points { font-size:10px; }
       .contract-strip { grid-template-columns:1fr; padding:0 10px 12px; }
-      .status-bar { padding:0 12px 12px; }
-      .small-toggle, .small-ghost, .special-btn, .danger-mini { padding:10px 8px; font-size:12px; }
-      .small-ghost { min-width:58px; }
+      .status-bar { padding:0 10px 10px; }
+      .roem-row, .special-row { gap:6px; }
+      .small-toggle, .small-ghost, .special-btn, .danger-mini { padding:9px 6px; font-size:11px; min-width:0; }
+      .small-ghost { min-width:0; }
+      .score-input { height:56px; font-size:28px; margin-top:10px; }
       .dealer-banner { grid-template-columns:1fr; }
       .modal { width:min(420px, calc(100vw - 12px)); padding:16px; border-radius:24px; }
       .team-meta { grid-template-columns:1fr 1fr; gap:8px; }
@@ -389,7 +406,7 @@
   <div id="resumeOverlay" class="overlay"><div class="modal"><h2>Oud spel gevonden</h2><p>Er staat nog een eerder spel op dit apparaat. Wil je doorgaan of alles wissen?</p><div class="modal-footer"><button class="btn-light" type="button" onclick="resumeExistingGame()">Doorgaan</button><button class="btn-dark" type="button" onclick="wipeAndStartNew()">Wissen en nieuw spel</button></div></div></div>
 
   <script>
-    const MATCH_KEY = 'current_match_v64';
+    const MATCH_KEY = 'current_match_v65';
     const MATCH_STORAGE = sessionStorage;
     const PLAYER_STORAGE = sessionStorage;
     const LEGACY_MATCH_KEYS = ['current_match_v64'];
@@ -1088,35 +1105,32 @@
       return '';
     }
 
+    function metaSlot(type, html) {
+      return `<span class="meta-slot ${type}${html ? '' : ' empty'}">${html || ''}</span>`;
+    }
+
     function buildMetaTokens(round, side) {
-      const tokens = [];
-      const seen = new Set();
-      const add = (html, key) => {
-        const tokenKey = key || html;
-        if (seen.has(tokenKey)) return;
-        seen.add(tokenKey);
-        tokens.push(html);
-      };
       const winningSide = winningSideFromNatOrVerzaak(round);
       const strikeRoemSide = roemStrikeSide(round);
+      const slots = { roem:'', bid:'', suit:'', special:'' };
       if (side === 'W') {
-        if (round.rw) add(`<span class="meta-tag ${strikeRoemSide === 'W' ? 'strike' : ''}">${escapeHtml(toRoman(round.rw))}</span>`, `W-rw-${round.rw}-${strikeRoemSide}`);
-        if (round.team === 'W') add(`<span class="meta-tag">${escapeHtml(String(round.bid || ''))}</span>`, `W-bid-${round.bid}`);
-        if (round.team === 'W' && round.suit) add(`<span class="meta-tag suit ${suitClass(round.suit)}">${escapeHtml(round.suit === 'S' ? 'sans' : round.suit)}</span>`, `W-suit-${round.suit}`);
-        if (winningSide === 'W' && round.rz) add(`<span class="meta-tag transfer">+${escapeHtml(toRoman(round.rz))}</span>`, `W-transfer-${round.rz}`);
-        if (round.specialType && round.specialTeam === 'W' && round.specialType !== 'nat') add(`<span class="meta-tag special ${escapeHtml(round.specialType)}">${escapeHtml(round.specialType)}</span>`, `W-special-${round.specialType}`);
-        if (round.nat && round.natBy === 'W') add('<span class="meta-tag special nat">nat</span>', 'W-nat');
-        if (round.verzaaktBy === 'W') add('<span class="meta-tag special nat">verzaakt</span>', 'W-verzaakt');
-      } else {
-        if (round.specialType && round.specialTeam === 'Z' && round.specialType !== 'nat') add(`<span class="meta-tag special ${escapeHtml(round.specialType)}">${escapeHtml(round.specialType)}</span>`, `Z-special-${round.specialType}`);
-        if (winningSide === 'Z' && round.rw) add(`<span class="meta-tag transfer">+${escapeHtml(toRoman(round.rw))}</span>`, `Z-transfer-${round.rw}`);
-        if (round.team === 'Z' && round.suit) add(`<span class="meta-tag suit ${suitClass(round.suit)}">${escapeHtml(round.suit === 'S' ? 'sans' : round.suit)}</span>`, `Z-suit-${round.suit}`);
-        if (round.team === 'Z') add(`<span class="meta-tag">${escapeHtml(String(round.bid || ''))}</span>`, `Z-bid-${round.bid}`);
-        if (round.rz) add(`<span class="meta-tag ${strikeRoemSide === 'Z' ? 'strike' : ''}">${escapeHtml(toRoman(round.rz))}</span>`, `Z-rz-${round.rz}-${strikeRoemSide}`);
-        if (round.nat && round.natBy === 'Z') add('<span class="meta-tag special nat">nat</span>', 'Z-nat');
-        if (round.verzaaktBy === 'Z') add('<span class="meta-tag special nat">verzaakt</span>', 'Z-verzaakt');
+        if (round.rw) slots.roem = `<span class="meta-tag roem-tag ${strikeRoemSide === 'W' ? 'strike' : ''}">${escapeHtml(toRoman(round.rw))}</span>`;
+        if (round.team === 'W') slots.bid = `<span class="meta-tag bid-tag">${escapeHtml(String(round.bid || ''))}</span>`;
+        if (round.team === 'W' && round.suit) slots.suit = `<span class="meta-tag suit suit-tag ${suitClass(round.suit)}">${escapeHtml(round.suit === 'S' ? 'sans' : round.suit)}</span>`;
+        if (winningSide === 'W' && round.rz) slots.roem = `<span class="meta-tag transfer roem-tag">+${escapeHtml(toRoman(round.rz))}</span>`;
+        if (round.specialType && round.specialTeam === 'W' && round.specialType !== 'nat') slots.special = `<span class="meta-tag special special-tag ${escapeHtml(round.specialType)}">${escapeHtml(round.specialType)}</span>`;
+        if (round.nat && round.natBy === 'W') slots.special = '<span class="meta-tag special special-tag nat">nat</span>';
+        if (round.verzaaktBy === 'W') slots.special = '<span class="meta-tag special special-tag nat">verzaakt</span>';
+        return [metaSlot('roem', slots.roem), metaSlot('bid', slots.bid), metaSlot('suit', slots.suit), metaSlot('special', slots.special)].join('');
       }
-      return tokens.join('');
+      if (round.specialType && round.specialTeam === 'Z' && round.specialType !== 'nat') slots.special = `<span class="meta-tag special special-tag ${escapeHtml(round.specialType)}">${escapeHtml(round.specialType)}</span>`;
+      if (round.nat && round.natBy === 'Z') slots.special = '<span class="meta-tag special special-tag nat">nat</span>';
+      if (round.verzaaktBy === 'Z') slots.special = '<span class="meta-tag special special-tag nat">verzaakt</span>';
+      if (round.team === 'Z' && round.suit) slots.suit = `<span class="meta-tag suit suit-tag ${suitClass(round.suit)}">${escapeHtml(round.suit === 'S' ? 'sans' : round.suit)}</span>`;
+      if (round.team === 'Z') slots.bid = `<span class="meta-tag bid-tag">${escapeHtml(String(round.bid || ''))}</span>`;
+      if (round.rz) slots.roem = `<span class="meta-tag roem-tag ${strikeRoemSide === 'Z' ? 'strike' : ''}">${escapeHtml(toRoman(round.rz))}</span>`;
+      if (winningSide === 'Z' && round.rw) slots.roem = `<span class="meta-tag transfer roem-tag">+${escapeHtml(toRoman(round.rw))}</span>`;
+      return [metaSlot('special', slots.special), metaSlot('suit', slots.suit), metaSlot('bid', slots.bid), metaSlot('roem', slots.roem)].join('');
     }
 
     function displayPointsForSide(round, side) {
@@ -1298,6 +1312,6 @@
     function toggleAppMenu(force){ const el=document.getElementById('appMenu'); const should = typeof force === 'boolean' ? force : !el.classList.contains('show'); el.classList.toggle('show', should); }
     initPage();
   </script>
-  <div class="site-credit-watermark">v64 · Made by Bruis</div>
+  <div class="site-credit-watermark">v65 · Made by Bruis</div>
 </body>
 </html>
