@@ -204,7 +204,7 @@
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v81 · Made by Bruis</div>
+    <div class="version-tag">v83 · Made by Bruis</div>
   </div>
   <script>
 const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -417,9 +417,14 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const activationState = bucket === 'active' ? 'Actief' : bucket === 'expired' ? 'Verlopen' : 'Wacht op activatie';
       const decided = item.decided_at ? formatDateTime(item.decided_at) : 'Onbekend';
       const pinState = hasPin(item) ? 'Ingesteld' : 'Nog niet ingesteld';
-      const activationButton = bucket === 'active'
+      const activationButton = (bucket === 'active' || hasPin(item))
         ? ''
         : `<button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(item)}">Nieuwe activatielink</button>`;
+      const infoText = bucket === 'active'
+        ? 'Gebruiker actief in admin-overzicht.'
+        : hasPin(item)
+          ? 'Waarschuwing: deze aanvraag staat nog op wacht op activatie, maar er hangt al een pincode aan de speler. Gebruik de v83 resetflow voordat je opnieuw een activatielink verstuurt.'
+          : 'Gebruiker staat klaar onder wacht op activatie.';
       return `${requestHtml(item, true)}
         <div class="request-grid" style="margin-top:12px;">
           ${metaBox('Status gebruiker', activationState)}
@@ -429,7 +434,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         <div class="compact-actions">${activationButton}
           <button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button>
         </div>
-        <div class="inline-msg" id="approved-msg-${requestIdOf(item)}">${bucket === 'active' ? 'Gebruiker actief in admin-overzicht.' : 'Gebruiker staat klaar onder wacht op activatie.'}</div>
+        <div class="inline-msg" id="approved-msg-${requestIdOf(item)}">${infoText}</div>
         ${activationPanelHtml(item)}`;
     }
 
@@ -559,6 +564,8 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         btn.addEventListener('click', () => {
           const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
           const panel = document.getElementById(`activation-tools-${requestId}`);
+      const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
+      if (req && hasPin(req) && stateBucket(req) !== 'active') throw new Error('Deze speler heeft al een pincode in de database. Reset eerst de activatie voordat je opnieuw een mail verstuurt.');
           const email = panel?.dataset.email || '';
           const displayName = panel?.dataset.displayName || '';
           const expiresAt = panel?.dataset.expiresAt || '';
@@ -979,6 +986,8 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     }
 
     async function createActivationLink(requestId) {
+      const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
+      if (req && hasPin(req) && stateBucket(req) !== 'active') throw new Error('Deze aanvraag staat nog op wacht op activatie, maar de speler heeft al een pincode. Draai eerst de v83 activatie-resetpatch of trek de toegang in.');
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_player_activation_link_action`, {
         method:'POST',
         mode:'cors',
@@ -1044,6 +1053,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const activationLink = panel?.dataset.url || '';
       if (!recipientEmail || !activationLink) throw new Error('Maak eerst een activatielink.');
       const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
+      if (req && hasPin(req) && stateBucket(req) !== 'active') throw new Error('Deze speler heeft al een pincode in de database. Reset eerst de activatie voordat je opnieuw een mail verstuurt.');
       const playerId = req?.player_id ?? null;
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_queue_activation_email`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
@@ -1225,6 +1235,6 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     loadAdmin().then(startAdminAutoRefresh).catch(() => {});
   </script>
 
-  <div class="site-credit-watermark">v81 · Made by Bruis</div>
+  <div class="site-credit-watermark">v83 · Made by Bruis</div>
 </body>
 </html>

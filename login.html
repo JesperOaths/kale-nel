@@ -29,6 +29,13 @@
     .autofill-ghost{position:absolute;left:-9999px;top:auto;width:1px;height:1px;opacity:0;pointer-events:none;}
     .pin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
     .pin-key { padding: 15px; border-radius: 8px; border: 1px solid #eee; background: #fafafa; font-weight: bold; cursor: pointer; }
+    .helper-links { display:flex; justify-content:center; gap:14px; flex-wrap:wrap; margin-top:14px; }
+    .helper-btn { background:none; border:none; color:#666; font-size:14px; cursor:pointer; text-decoration:underline; padding:0; }
+    .helper-btn:hover { color:#111; }
+    .modal-panel h2 { margin:0 0 8px 0; font-size:26px; letter-spacing:-0.03em; }
+    .modal-copy { margin:0 0 16px 0; color:#666; font-size:14px; line-height:1.45; }
+    .modal-actions { display:flex; gap:10px; margin-top:10px; }
+    .muted-note { color:#666; font-size:12px; line-height:1.4; margin-top:12px; }
   </style>
 
   <style id="bruis-watermark-style">
@@ -57,7 +64,7 @@
         <option value="">Kies je naam</option>
       </select>
     <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-      <input id="pinInput" name="current-password" type="password" inputmode="numeric" maxlength="4" placeholder="Pincode" autocomplete="current-password" style="margin:0;">
+      <input id="pinInput" name="current-password" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="Pincode" autocomplete="current-password" style="margin:0;">
       <button id="pinOpenBtn" type="button" class="primary-btn" style="flex: 0 0 auto; width: auto; padding: 0 15px;">Toetsen</button>
     </div>
     <div class="btn-row">
@@ -65,23 +72,42 @@
       <button id="logoutBtn" type="button" class="secondary-btn">Uitloggen</button>
     </div>
     </form>
-    <a class="text-link" href="./request.html">Naam aanvragen</a>
+    <div class="helper-links">
+      <a class="text-link" href="./request.html" style="margin-top:0;">Naam aanvragen</a>
+      <button id="forgotPinBtn" type="button" class="helper-btn">Pincode vergeten?</button>
+    </div>
     <div id="statusBox" class="status"></div>
   </main>
   <div id="pinModal" class="modal">
     <div class="modal-panel">
       <div id="pinPreview" style="font-size: 24px; letter-spacing: 10px; margin-bottom: 20px; font-weight: bold;"></div>
       <div class="pin-grid">
-        <button class="pin-key" data-digit="1">1</button><button class="pin-key" data-digit="2">2</button><button class="pin-key" data-digit="3">3</button>
-        <button class="pin-key" data-digit="4">4</button><button class="pin-key" data-digit="5">5</button><button class="pin-key" data-digit="6">6</button>
-        <button class="pin-key" data-digit="7">7</button><button class="pin-key" data-digit="8">8</button><button class="pin-key" data-digit="9">9</button>
-        <button class="pin-key" data-action="clear">C</button><button class="pin-key" data-digit="0">0</button><button class="pin-key" data-action="done">OK</button>
+        <button class="pin-key" data-digit="1" type="button">1</button><button class="pin-key" data-digit="2" type="button">2</button><button class="pin-key" data-digit="3" type="button">3</button>
+        <button class="pin-key" data-digit="4" type="button">4</button><button class="pin-key" data-digit="5" type="button">5</button><button class="pin-key" data-digit="6" type="button">6</button>
+        <button class="pin-key" data-digit="7" type="button">7</button><button class="pin-key" data-digit="8" type="button">8</button><button class="pin-key" data-digit="9" type="button">9</button>
+        <button class="pin-key" data-action="clear" type="button">C</button><button class="pin-key" data-digit="0" type="button">0</button><button class="pin-key" data-action="done" type="button">OK</button>
       </div>
     </div>
   </div>
+  <div id="forgotPinModal" class="modal" aria-hidden="true">
+    <div class="modal-panel">
+      <h2>Pincode resetten</h2>
+      <p class="modal-copy">Vul de gebruikersnaam en het gekoppelde e-mailadres in. We wissen dan de oude pincode, zetten het account terug naar <strong>wacht op activatie</strong> en sturen automatisch een nieuwe activatiemail.</p>
+      <form id="forgotPinForm" autocomplete="on">
+        <input id="resetNameInput" name="username" type="text" placeholder="Gebruikersnaam" autocomplete="username" autocapitalize="none" spellcheck="false">
+        <input id="resetEmailInput" name="email" type="email" placeholder="jouw@email.com" autocomplete="email" autocapitalize="none" spellcheck="false">
+        <div class="modal-actions">
+          <button id="forgotPinCancelBtn" type="button" class="secondary-btn">Sluiten</button>
+          <button id="forgotPinSubmitBtn" type="submit" class="primary-btn">Nieuwe activatiemail sturen</button>
+        </div>
+      </form>
+      <div class="muted-note">Dit is voor bestaande accounts. Er wordt geen pincode getoond; er gaat een nieuwe activatielink naar hetzelfde e-mailadres.</div>
+    </div>
+  </div>
   <script>
-const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+    const MAKE_WEBHOOK_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.MAKE_WEBHOOK_URL) || "";
     const SESSION_KEY = "jas_session_token_v11";
 
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json", Accept: "application/json" }; }
@@ -130,6 +156,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       const raw = String(msg || '');
       if (/login_player\(desired_name, entered_pin\).*schema cache/i.test(raw)) return 'Login-RPC ontbreekt nog in Supabase. Draai de v73 SQL-patch opnieuw en vernieuw daarna de pagina hard.';
       if (/failed to fetch/i.test(raw)) return 'Netwerk/CORS-fout bij contact met Supabase.';
+      if (/sessions_player_id_key/i.test(raw)) return 'Er stond nog een oude spelsessie open voor deze gebruiker. Probeer opnieuw; de v83 loginpatch vervangt zo'n oude sessie nu automatisch.';
       return raw;
     }
     async function getPublicState() {
@@ -152,6 +179,51 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ input_token: token })
       });
       return await parseResponse(res);
+    }
+
+    function formatDateTime(value) {
+      if (!value) return '';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return new Intl.DateTimeFormat('nl-NL', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false }).format(date);
+    }
+    function activationBaseUrl() {
+      return new URL('./activate.html', window.location.href).toString();
+    }
+    function buildMakeWebhookMeta(source, meta = {}) {
+      const payload = { trigger: 'activation_email_queued', source, ts: new Date().toISOString(), ...meta };
+      payload.ts_local = payload.ts_local || formatDateTime(payload.ts);
+      if (payload.expires_at && !payload.expires_at_local) payload.expires_at_local = formatDateTime(payload.expires_at);
+      if (payload.created_at && !payload.created_at_local) payload.created_at_local = formatDateTime(payload.created_at);
+      return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined && value !== null && value !== ''));
+    }
+    async function triggerMakeScenario(meta = {}) {
+      if (!MAKE_WEBHOOK_URL) return { via: 'disabled' };
+      const payload = buildMakeWebhookMeta('login.html#pin-reset', meta);
+      const res = await fetch(MAKE_WEBHOOK_URL, {
+        method: 'POST',
+        mode: 'cors',
+        cache: 'no-store',
+        keepalive: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error(`Webhook gaf HTTP ${res.status}`);
+      return { via: 'raw-json', status: res.status };
+    }
+    async function requestPinReset() {
+      const desiredName = normalizeDisplayName(document.getElementById('resetNameInput').value || document.getElementById('playerNameInput').value || '');
+      const email = String(document.getElementById('resetEmailInput').value || '').trim().toLowerCase();
+      if (!desiredName) throw new Error('Vul de gebruikersnaam in waarvoor je de pincode wilt resetten.');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Vul het gekoppelde e-mailadres in.');
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/request_pin_reset_reactivation_action`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ input_display_name: desiredName, input_email: email, base_url: activationBaseUrl() })
+      });
+      return await parseResponse(res);
+    }
+    function clampFourDigits(input) {
+      input.value = String(input.value || '').replace(/\D/g, '').slice(0, 4);
     }
     async function loginPlayer() {
       const desiredName = document.getElementById('playerNameInput').value.trim() || '';
@@ -206,9 +278,11 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       }
     });
     document.getElementById('logoutBtn').addEventListener('click', () => { clearSessionToken(); setStatus('Browser-sessie gewist.', 'ok'); });
-    document.getElementById('pinInput').addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4); syncPinPreview(); });
+    document.getElementById('pinInput').addEventListener('input', (e) => { clampFourDigits(e.target); syncPinPreview(); });
+    document.getElementById('pinInput').addEventListener('paste', () => { requestAnimationFrame(() => { clampFourDigits(document.getElementById('pinInput')); syncPinPreview(); }); });
 
     const pinModal = document.getElementById("pinModal");
+    const forgotPinModal = document.getElementById('forgotPinModal');
     const pinPreview = document.getElementById("pinPreview");
     function openPinModal() { pinModal.classList.add("show"); pinModal.setAttribute("aria-hidden", "false"); syncPinPreview(); }
     function closePinModal() { pinModal.classList.remove("show"); pinModal.setAttribute("aria-hidden", "true"); }
@@ -223,11 +297,64 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       if (digit && input.value.length < 4) input.value += digit;
       if (action === 'clear') input.value = input.value.slice(0, -1);
       if (action === 'done') closePinModal();
+      clampFourDigits(input);
       syncPinPreview();
     }));
+
+    function openForgotPinModal() {
+      document.getElementById('resetNameInput').value = document.getElementById('playerNameInput').value || '';
+      document.getElementById('resetEmailInput').value = '';
+      forgotPinModal.classList.add('show');
+      forgotPinModal.setAttribute('aria-hidden', 'false');
+      setStatus('');
+      setTimeout(() => document.getElementById('resetNameInput').focus(), 10);
+    }
+    function closeForgotPinModal() {
+      forgotPinModal.classList.remove('show');
+      forgotPinModal.setAttribute('aria-hidden', 'true');
+    }
+    document.getElementById('forgotPinBtn').addEventListener('click', openForgotPinModal);
+    document.getElementById('forgotPinCancelBtn').addEventListener('click', closeForgotPinModal);
+    forgotPinModal.addEventListener('click', (e) => { if (e.target === forgotPinModal) closeForgotPinModal(); });
+    document.getElementById('forgotPinForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const submitBtn = document.getElementById('forgotPinSubmitBtn');
+      const cancelBtn = document.getElementById('forgotPinCancelBtn');
+      try {
+        submitBtn.disabled = true;
+        cancelBtn.disabled = true;
+        setStatus('Pincode resetten en nieuwe activatiemail klaarzetten...');
+        const result = await requestPinReset();
+        try {
+          await triggerMakeScenario({
+            reason: 'pin_reset_reactivation',
+            request_id: result?.request_id ?? null,
+            job_id: result?.job_id ?? null,
+            player_id: result?.player_id ?? null,
+            display_name: result?.display_name ?? document.getElementById('resetNameInput').value.trim(),
+            email: result?.requester_email ?? document.getElementById('resetEmailInput').value.trim().toLowerCase(),
+            activation_url: result?.activation_url ?? null,
+            expires_at: result?.expires_at ?? null,
+            created_at: result?.created_at ?? null
+          });
+        } catch (wakeErr) {
+          console.warn('Make webhook wake-up mislukt', wakeErr);
+        }
+        const expiresCopy = result?.expires_at ? ` Nieuwe link verloopt op ${formatDateTime(result.expires_at)}.` : '';
+        setStatus((result?.message || 'Je account staat weer op wacht op activatie. Controleer je mail voor de nieuwe activatielink.') + expiresCopy, 'ok');
+        closeForgotPinModal();
+        await load();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Resetten mislukt';
+        setStatus(friendlyMessage(msg), 'warn');
+      } finally {
+        submitBtn.disabled = false;
+        cancelBtn.disabled = false;
+      }
+    });
     load();
   </script>
 
-  <div class="site-credit-watermark">v81 · Made by Bruis</div>
+  <div class="site-credit-watermark">v83 · Made by Bruis</div>
 </body>
 </html>

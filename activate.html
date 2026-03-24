@@ -434,13 +434,13 @@
 
     <label for="pinInput">Kies je 4-cijferige pincode</label>
     <div class="pin-shell">
-      <input id="pinInput" class="pin-trigger" type="password" placeholder="4 cijfers" inputmode="numeric" maxlength="4" autocomplete="new-password" enterkeyhint="next" name="new_pin" />
+      <input id="pinInput" class="pin-trigger" type="password" placeholder="4 cijfers" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" enterkeyhint="next" name="new_pin" />
       <button id="pinOpenBtn" class="pin-open" type="button">Toetsen</button>
     </div>
 
     <label for="pinConfirmInput">Bevestig je pincode</label>
     <div class="pin-shell">
-      <input id="pinConfirmInput" class="pin-trigger" type="password" placeholder="Nogmaals 4 cijfers" inputmode="numeric" maxlength="4" autocomplete="new-password" enterkeyhint="done" name="new_pin_confirm" />
+      <input id="pinConfirmInput" class="pin-trigger" type="password" placeholder="Nogmaals 4 cijfers" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" enterkeyhint="done" name="new_pin_confirm" />
       <button id="pinConfirmOpenBtn" class="pin-open" type="button">Toetsen</button>
     </div>
 
@@ -474,7 +474,7 @@
     </div>
   </div>
 
-  <div id="versionWatermark" class="site-credit-watermark">v81 · Made by Bruis</div>
+  <div id="versionWatermark" class="site-credit-watermark">v83 · Made by Bruis</div>
 
   <script>
     const CONFIG = window.GEJAST_CONFIG || {};
@@ -547,12 +547,17 @@
       return await parseResponse(fallback);
     }
 
+    function isAlreadyActivatedError(message) {
+      const lower = String(message || '').toLowerCase();
+      return lower.includes('al geactiveerd') || lower.includes('already activated');
+    }
+
     function friendlyActivationMessage(message) {
       const raw = String(message || '').trim();
       const lower = raw.toLowerCase();
       if (raw === 'Failed to fetch') return 'Netwerk/CORS-fout bij contact met Supabase.';
-      if (lower.includes('al geactiveerd')) {
-        return 'Deze activatielink is al gebruikt of de activatie is dubbel verstuurd. Probeer in te loggen. Werkt dat niet, vraag dan om een nieuwe activatielink.';
+      if (isAlreadyActivatedError(raw)) {
+        return 'Deze activatielink kan niet worden gebruikt omdat het account al actief lijkt of omdat er intern al een pincode aan hangt. Vraag de beheerder om de activatie opnieuw klaar te zetten.';
       }
       if (lower.includes('expired') || lower.includes('verlopen')) {
         return 'Deze activatielink is verlopen. Vraag de beheerder om een nieuwe activatielink.';
@@ -636,6 +641,11 @@
       return document.getElementById(activePinTarget);
     }
 
+    function clampFourDigits(el) {
+      el.value = String(el.value || '').replace(/\D/g, '').slice(0, 4);
+      return el.value;
+    }
+
     function syncPinPreview() {
       const value = currentTarget().value.slice(0, 4).split('');
       document.getElementById('pinPreview').innerHTML = Array.from({ length: 4 }, (_, index) => {
@@ -660,7 +670,8 @@
     function addPinDigit(digit) {
       if (activationBusy) return;
       const input = currentTarget();
-      input.value = (input.value + digit).replace(/\D/g, '').slice(0, 4);
+      input.value = (input.value + digit);
+      clampFourDigits(input);
       syncPinPreview();
     }
 
@@ -684,14 +695,22 @@
     document.getElementById('pinConfirmInput').addEventListener('click', () => openPinModal('pinConfirmInput'));
     document.getElementById('pinInput').addEventListener('input', () => {
       const el = document.getElementById('pinInput');
-      el.value = el.value.replace(/\D/g, '').slice(0, 4);
+      clampFourDigits(el);
       syncPinPreview();
       if (el.value.length === 4) document.getElementById('pinConfirmInput').focus();
     });
     document.getElementById('pinConfirmInput').addEventListener('input', () => {
       const el = document.getElementById('pinConfirmInput');
-      el.value = el.value.replace(/\D/g, '').slice(0, 4);
+      clampFourDigits(el);
       syncPinPreview();
+    });
+    ['pinInput','pinConfirmInput'].forEach((id) => {
+      document.getElementById(id).addEventListener('paste', () => {
+        requestAnimationFrame(() => {
+          clampFourDigits(document.getElementById(id));
+          syncPinPreview();
+        });
+      });
     });
     document.getElementById('pinInput').addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
@@ -734,7 +753,20 @@
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Activeren mislukt';
         const lower = String(message || '').toLowerCase();
-        if (lower.includes('al geactiveerd') || lower.includes('already activated')) {
+        if (isAlreadyActivatedError(message)) {
+          let contextStillValid = false;
+          try {
+            const refreshed = await loadActivationContext();
+            setContext(refreshed);
+            contextStillValid = true;
+          } catch (_) {}
+
+          if (contextStillValid) {
+            setStatus('Deze link is nog geldig, maar de database denkt nu al dat dit account een pincode heeft. Dat hoort niet bij de normale flow. Vraag de beheerder om de activatie opnieuw klaar te zetten of de v83 activatie-resetpatch te draaien.', 'warn');
+            setBusyState(false);
+            return;
+          }
+
           try {
             setStatus('Account lijkt al geactiveerd. We proberen je direct in te loggen...');
             const loginData = await loginAfterAlreadyActivated(pin);
@@ -748,9 +780,9 @@
             const loginMessage = loginErr instanceof Error ? loginErr.message : message;
             const loginLower = String(loginMessage || '').toLowerCase();
             if (loginLower.includes('pincode klopt niet') || loginLower.includes('pin') || loginLower.includes('password')) {
-              setStatus('Dit account was al geactiveerd met een bestaande pincode. De pincode die je net invoerde hoort daar niet bij. Log in met je bestaande pincode of vraag de beheerder om hulp.', 'warn');
+              setStatus('Deze link kon niet meer activeren en de ingevoerde pincode hoort ook niet bij een bestaand account. Vraag de beheerder om de activatie opnieuw klaar te zetten.', 'warn');
             } else {
-              setStatus('Dit account lijkt al geactiveerd. Automatisch inloggen lukte niet. Log in met je bestaande pincode of vraag de beheerder om hulp.', 'warn');
+              setStatus('Dit account lijkt al geactiveerd. Automatisch inloggen lukte niet. Vraag de beheerder om de activatie opnieuw klaar te zetten.', 'warn');
             }
             setBusyState(false);
             return;
