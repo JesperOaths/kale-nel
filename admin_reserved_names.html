@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Allowed / reserved names - Wordt er gejast?</title>
+  <title>Claimbare namen - Wordt er gejast?</title>
   <style>
     :root { --gold:#d4af37; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#666; --warn:#8b3a30; --ok:#2b5b37; }
     * { box-sizing:border-box; }
@@ -34,15 +34,16 @@
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
     @media (max-width:760px){ .grid { grid-template-columns:1fr; } }
   </style>
+  <script src="./gejast-config.js"></script>
 </head>
 <body>
   <main class="main-card">
     <div class="top">
       <div>
-        <h1>Allowed / reserved names</h1>
+        <h1>Claimbare namen</h1>
         <p class="sub">Nieuwe database-bron voor alle geldige namen. Alleen deze lijst mag nog leidend zijn.</p>
       </div>
-      <a class="btn ghost" href="./admin.html">Hub</a>
+      <a class="btn ghost" href="./admin.html">Terug naar hub</a>
     </div>
 
     <div class="callout"><strong>Dit is de kieslijst voor account-aanvragen.</strong> Alles wat je hier toevoegt, hoort daarna zichtbaar/selecteerbaar te worden op <code>request.html</code> en in de scorer-selectie. Gebruik <strong>Toevoegen aan kieslijst</strong> hieronder om namen handmatig toe te voegen. Met <strong>Verwijderen uit kieslijst</strong> haal je test- of foutnamen weer uit de bronlijst.</div>
@@ -71,8 +72,8 @@
   </main>
   <script>
     const ADMIN_SESSION_KEY = 'jas_admin_session_v8';
-    const SUPABASE_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co';
-    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
+    const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || 'https://uiqntazgnrxwliaidkmy.supabase.co';
+    const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type': 'application/json', Accept: 'application/json' }; }
     async function parseResponse(res) { const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`); return data; }
     function getToken(){ return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
@@ -139,6 +140,6 @@
     });
     (async()=>{ if(await ensureGate()) loadNames(); })();
   </script>
-  <div class="site-credit-watermark">v72 · Made by Bruis</div>
+  <div class="site-credit-watermark">v73 · Made by Bruis</div>
 </body>
 </html>

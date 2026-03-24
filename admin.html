@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin hub - Wordt er gejast?</title>
+  <title>Admin-overzicht - Wordt er gejast?</title>
   <style>
     :root { --gold:#d4af37; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#6b655b; --ok:#2b5b37; --warn:#8b3a30; }
     * { box-sizing:border-box; }
@@ -42,12 +42,13 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
+  <script src="./gejast-config.js"></script>
 </head>
 <body>
   <main class="main-card">
     <a href="./index.html" aria-label="Terug naar home"><img src="./logo.png" class="logo" alt="logo" /></a>
-    <h1>Admin hub</h1>
-    <p class="sub">Hoofdingang voor alle admintaken. Hier staan alleen samenvattingen en links naar de losse tools.</p>
+    <h1>Admin-overzicht</h1>
+    <p class="sub">Hoofdingang voor alle admintaken. Hier staan samenvattingen, tellers en links naar de losse beheertools.</p>
 
     <form id="loginView">
       <div class="login-grid">
@@ -66,19 +67,20 @@
         <button id="logoutBtn" class="btn dark" type="button">Uitloggen</button>
       </div>
       <div class="stats">
-        <a class="stat stat-link" href="./admin_claims.html#view=pending"><span>Te beoordelen</span><strong id="statPending">0</strong></a>
-        <a class="stat stat-link" href="./admin_claims.html#view=awaiting"><span>Pending activation</span><strong id="statAwaiting">0</strong></a>
-        <a class="stat stat-link" href="./admin_expired.html"><span>Verlopen</span><strong id="statExpired">0</strong></a>
+        <a class="stat stat-link" href="./admin_claims.html#view=pending"><span>Nog te beoordelen</span><strong id="statPending">0</strong></a>
+        <a class="stat stat-link" href="./admin_claims.html#view=awaiting"><span>Wacht op activatie</span><strong id="statAwaiting">0</strong></a>
+        <a class="stat stat-link" href="./admin_claims.html#view=expired"><span>Verlopen</span><strong id="statExpired">0</strong></a>
         <a class="stat stat-link" href="./admin_claims.html#view=active"><span>Actief</span><strong id="statActive">0</strong></a>
         <a class="stat stat-link" href="./admin_claims.html#view=rejected"><span>Afgewezen</span><strong id="statRejected">0</strong></a>
       </div>
       <div class="hub-grid">
         <a class="hub-link" href="./admin_claims.html"><strong>Aanvragen & activaties</strong><small>De bestaande beheer-tool met goedkeuren, afwijzen, activatielinks en mailqueue.</small></a>
-        <a class="hub-link" href="./admin_expired.html"><strong>Expired activation queue</strong><small>Herbeoordelen en opnieuw versturen voor verlopen activatielinks.</small></a>
-        <a class="hub-link" href="./admin_reserved_names.html"><strong>Allowed / reserved names</strong><small>Overzicht van de nieuwe database-naambron en handmatige reserveringen.</small></a>
-        <a class="hub-link" href="./vault.html"><strong>Vault</strong><small>Admin-only spelhistorie en lokale analyses.</small></a>
-        <a class="hub-link" href="./leaderboard.html"><strong>Ranglijst</strong><small>DB-ranglijst zonder spelers die nog 0 potjes hebben.</small></a>
-        <a class="hub-link" href="./admin_security.html"><strong>Security & hosting</strong><small>Wat al is dichtgezet en welke hosting-stap nog nodig is voor echte server-side afscherming.</small></a>
+        <a class="hub-link" href="./admin_claims.html#view=expired"><strong>Verlopen activaties</strong><small>Verlopen activatielinks zijn geïntegreerd in de hoofdtool onder de status Verlopen.</small></a>
+        <a class="hub-link" href="./admin_reserved_names.html"><strong>Claimbare namen</strong><small>Overzicht van de database-bron voor claimbare namen en handmatige reserveringen.</small></a>
+        <a class="hub-link" href="./vault.html"><strong>Spelkluis</strong><small>Alleen admin spelhistorie en lokale analyses.</small></a>
+        <a class="hub-link" href="./leaderboard.html"><strong>Ranglijst</strong><small>Ranglijst zonder spelers die nog 0 potjes hebben.</small></a>
+        <a class="hub-link" href="./admin_security.html"><strong>Beveiliging & hosting</strong><small>Wat al is dichtgezet en welke hosting-stap nog nodig is voor echte server-side afscherming.</small></a>
+        <a class="hub-link" href="./admin_mail_audit.html"><strong>Maildiagnostiek</strong><small>Actieve Make-webhook, mail-RPC en laatste mailjobstatus voor admins.</small></a>
       </div>
     </section>
 
@@ -86,8 +88,8 @@
   </main>
 
   <script>
-    const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+    const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
 
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, "Content-Type": "application/json", Accept: "application/json" }; }
@@ -246,8 +248,10 @@
       if (event?.message) setStatus(event.message, 'warn');
     });
     boot();
+    setInterval(() => { if (!document.hidden && !document.getElementById('hubView').classList.contains('hidden')) loadCounts().catch(() => {}); }, 15000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && !document.getElementById('hubView').classList.contains('hidden')) loadCounts().catch(() => {}); });
   </script>
 
-  <div class="site-credit-watermark">v72 · Made by Bruis</div>
+  <div class="site-credit-watermark">v73 · Made by Bruis</div>
 </body>
 </html>

@@ -35,6 +35,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/leaderboard.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
+  <script src="./gejast-config.js"></script>
 </head>
 <body>
   <div id="gateNotice" class="main-card">Adminsessie controleren...</div>
@@ -42,8 +43,8 @@
     <div class="top-nav">
       <h1>Ranglijst</h1>
       <div class="nav-links">
-        <a href="./admin.html">Admin</a>
-        <a href="./vault.html">Vault</a>
+        <a href="./admin.html">Terug naar hub</a>
+        <a href="./vault.html">Spelkluis</a>
         <a href="./scorer.html">Scorer</a>
       </div>
     </div>
@@ -198,6 +199,6 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     (async ()=> { if (await ensureAdminGate()) loadLeaderboard(); })();
   </script>
 
-  <div class="site-credit-watermark">v72 · Made by Bruis</div>
+  <div class="site-credit-watermark">v73 · Made by Bruis</div>
 </body>
 </html>

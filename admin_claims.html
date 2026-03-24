@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin claims - Wordt er gejast?</title>
+  <title>Adminbeheer - Wordt er gejast?</title>
   <style>
     :root { --gold:#d4af37; --card-bg:#f9f7f2; --line:rgba(0,0,0,0.06); --muted:#666; --ok:#2b5b37; --warn:#8b3a30; }
     * { box-sizing:border-box; }
@@ -45,7 +45,7 @@
     .topbar-sub { color:var(--muted); margin:6px 0 0; }
     .toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
     .ghost-btn { background:#fff; border:1px solid rgba(0,0,0,0.08); color:#222; }
-    .stats-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:18px 0 6px; }
+    .stats-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin:18px 0 6px; }
     .stat-card { background:linear-gradient(180deg,#fff,#f5f1e8); border:1px solid rgba(0,0,0,0.06); border-radius:18px; padding:16px; box-shadow:0 8px 24px rgba(0,0,0,0.04); }
     .stat-card.clickable{cursor:pointer;}
     .stat-card.clickable:hover{transform:translateY(-1px);}
@@ -112,18 +112,19 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
+  <script src="./gejast-config.js"></script>
 </head>
 <body>
   <div class="main-card">
-    <a href="./index.html" aria-label="Terug naar home"><img src="./logo.png" class="card-logo" /></a>
+    <a href="./admin.html" aria-label="Terug naar admin-overzicht"><img src="./logo.png" class="card-logo" /></a>
     <div class="topbar">
       <div class="topbar-left">
-        <h1>Admin Console</h1>
-        <p class="topbar-sub">Volledige aanvraagtool met goedkeuren, activatielinks, queueing en revoke-acties.</p>
+        <h1>Adminbeheer</h1>
+        <p class="topbar-sub">Volledige beheerpagina met goedkeuren, afwijzen, activatielinks, mailwachtrij en intrekacties.</p>
       </div>
       <div class="toolbar hidden" id="adminToolbar">
-        <a class="btn ghost-btn" href="./admin.html">Hub</a><button id="refreshBtn" class="btn ghost-btn" type="button">Ververs</button>
-        <a class="btn ghost-btn" href="./vault.html">Vault</a><a class="btn ghost-btn" href="./leaderboard.html">Ranglijst</a><button id="kickMakeBtn" class="btn ghost-btn" type="button">Herstart Make handmatig</button>
+        <a class="btn ghost-btn" href="./admin.html">Terug naar hub</a><button id="refreshBtn" class="btn ghost-btn" type="button">Ververs</button>
+        <a class="btn ghost-btn" href="./vault.html">Spelkluis</a><a class="btn ghost-btn" href="./leaderboard.html">Ranglijst</a><button id="kickMakeBtn" class="btn ghost-btn" type="button">Herstart Make handmatig</button>
       </div>
     </div>
     <div id="loginView">
@@ -139,15 +140,16 @@
       </div>
       <div id="statsGrid" class="stats-grid hidden">
         <div class="stat-card clickable" data-admin-view-card="pending"><div class="label">Nog te beoordelen</div><div id="statPending" class="value">0</div></div>
-        <div class="stat-card clickable" data-admin-view-card="awaiting"><div class="label">Wacht op activatie</div><div id="statApproved" class="value">0</div></div>
-        <div class="stat-card clickable" data-admin-view-card="active"><div class="label">Actief</div><div id="statActivated" class="value">0</div></div>
+        <div class="stat-card clickable" data-admin-view-card="awaiting"><div class="label">Wacht op activatie</div><div id="statGoedgekeurd" class="value">0</div></div>
+        <div class="stat-card clickable" data-admin-view-card="active"><div class="label">Actief</div><div id="statActief" class="value">0</div></div>
         <div class="stat-card clickable" data-admin-view-card="rejected"><div class="label">Afgewezen</div><div id="statRejected" class="value">0</div></div>
+        <div class="stat-card clickable" data-admin-view-card="expired"><div class="label">Verlopen</div><div id="statExpired" class="value">0</div></div>
       </div>
       <hr>
       <div id="adminTabsCard" class="card hidden admin-tabs-card">
         <div class="panel-head">
           <div>
-            <h2 id="currentListTitle">To be approved</h2>
+            <h2 id="currentListTitle">Nog te beoordelen</h2>
             <div id="currentListSubtitle" class="list-subtitle">Nieuwe aanvragen die nog een besluit nodig hebben.</div>
           </div>
           <div class="compact-toolbar-note">Goedkeuren en mail-opnieuw-sturen pingen Make automatisch. <strong>Herstart Make handmatig</strong> is alleen een fallback als je een queued job opnieuw wilt laten oppakken.</div>
@@ -166,7 +168,7 @@
         </div>
         <div id="historyCard" class="card">
           <div class="panel-head">
-            <h2 id="historyTitle">Pending activation</h2>
+            <h2 id="historyTitle">Wacht op activatie</h2>
             <div class="compact-toolbar-note" id="historyNote">Wacht op activatie, maar nog niet geactiveerd.</div>
           </div>
           <input id="historySearch" class="search-input" type="search" placeholder="Zoek geschiedenis" />
@@ -174,7 +176,7 @@
         </div>
         <div id="approvedUsersCard" class="card">
           <div class="panel-head">
-            <h2 id="approvedUsersTitle">Active</h2>
+            <h2 id="approvedUsersTitle">Actief</h2>
             <div class="toolbar-note">Actieve gebruikers met snelle revoke-knoppen.</div>
           </div>
           <input id="approvedSearch" class="search-input" type="search" placeholder="Zoek goedgekeurde of geactiveerde gebruiker" />
@@ -183,11 +185,11 @@
       </div>
       <div id="adminExtras" class="admin-grid" style="margin-top:18px;">
         <div id="pagesHubCard" class="card">
-          <div class="panel-head"><h2>Pagina-hub</h2><div class="toolbar-note">Alle pagina's uit deze sitebundle. Alleen via admin getoond.</div></div>
+          <div class="panel-head"><h2>Adminkoppelingen</h2><div class="toolbar-note">Snelkoppelingen naar de adminpagina's en relevante sitepagina's.</div></div>
           <div id="pagesHubList" class="hub-grid"></div>
         </div>
         <div id="manualNamesCard" class="card">
-          <div class="panel-head"><h2>Naam toevoegen aan de kieslijst</h2><div class="toolbar-note">Gebruik dit om een naam zichtbaar/selecteerbaar te maken op request.html. Dit maakt geen test-aanvraag meer aan.</div></div>
+          <div class="panel-head"><h2>Naam toevoegen aan de kieslijst</h2><div class="toolbar-note">Gebruik dit om een naam zichtbaar en selecteerbaar te maken op request.html. Dit maakt geen testaanvraag aan.</div></div>
           <div class="manual-grid">
             <input id="manualNameInput" type="text" placeholder="Naam die op de lijst moet komen" autocomplete="off" autocapitalize="words" spellcheck="false">
             <input id="manualEmailInput" type="email" placeholder="Optioneel reserveren voor e-mail" autocomplete="email">
@@ -200,30 +202,30 @@
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v72 · Made by Bruis</div>
+    <div class="version-tag">v73 · Made by Bruis</div>
   </div>
   <script>
-const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY;
-    const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/8eslkp3375gpmixa7826fpdpidx5j9qu3";
+    const MAKE_WEBHOOK_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.MAKE_WEBHOOK_URL) || "https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6";
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
     let lastRequests = [];
     let lastHistory = [];
     let historyFilter = "all";
     let currentAdminView = "pending";
     const SITE_PAGES = [
-      {href:'./index.html', label:'Home', note:'Publieke stem-/hubpagina'},
-      {href:'./login.html', label:'Login', note:'Publieke login'},
+      {href:'./admin.html', label:'Admin-overzicht', note:'Hoofdhub voor admin'},
+      {href:'./admin_reserved_names.html', label:'Claimbare namen', note:'Beheer van claimbare namen'},
+      {href:'./admin_mail_audit.html', label:'Maildiagnostiek', note:'Webhook, mail-RPC en laatste mailjobs'},
+      {href:'./vault.html', label:'Spelkluis', note:'Adminanalyse van spelhistorie'},
+      {href:'./leaderboard.html', label:'Ranglijst', note:'Ranglijst zonder spelers met 0 potjes'},
+      {href:'./index.html', label:'Home', note:'Publieke homepage'},
+      {href:'./login.html', label:'Spelerlogin', note:'Publieke login'},
       {href:'./request.html', label:'Naam aanvragen', note:'Publieke aanvraagflow'},
-      {href:'./scorer.html', label:'Scorer', note:'Klaverjas scorer'},
-      {href:'./activate.html', label:'Activeren', note:'Alleen via activatielink'},
-      {href:'./score.html', label:'Score legacy', note:'Oud scoreblad'},
-      {href:'./vault.html', label:'Vault', note:'Admin-only analyse'},
-      {href:'./leaderboard.html', label:'Ranglijst', note:'Admin-only overzicht'},
-      {href:'./admin.html', label:'Admin hub', note:'Hoofdhub voor admin'}
+      {href:'./scorer.html', label:'Scorer', note:'Klaverjasscorer'},
+      {href:'./activate.html', label:'Activeren', note:'Alleen via activatielink'}
     ];
-
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, "Content-Type": "application/json", Accept: "application/json" }; }
     async function parseResponse(res) { const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }
     function getAdminSessionToken() { return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
@@ -342,26 +344,26 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     }
     function statusMeta(req, includeDecision = false) {
       const bucket = stateBucket(req);
-      if (bucket === 'active' || hasPin(req)) return { cls: 'state-activated', label: 'Activated' };
+      if (bucket === 'active' || hasPin(req)) return { cls: 'state-activated', label: 'Actief' };
       if (bucket === 'rejected') return { cls: 'state-rejected', label: 'Afgewezen' };
-      if (bucket === 'awaiting') return { cls: includeDecision ? 'state-awaiting' : 'state-approved', label: includeDecision ? 'Awaiting activation' : 'Approved' };
+      if (bucket === 'awaiting') return { cls: includeDecision ? 'state-awaiting' : 'state-approved', label: includeDecision ? 'Wacht op activatie' : 'Goedgekeurd' };
       if (bucket === 'expired') return { cls: 'state-rejected', label: 'Verlopen' };
       return { cls: 'state-pending', label: 'Openstaand' };
     }
 
-    function isApprovedLike(req) {
+    function isGoedgekeurdLike(req) {
       const bucket = stateBucket(req);
       return bucket === 'awaiting' || bucket === 'active' || hasPin(req);
     }
 
     function renderStats(requests, history) {
       const pending = (requests || []).length;
-      const approved = (history || []).filter((item) => isApprovedLike(item) && !hasPin(item)).length;
+      const approved = (history || []).filter((item) => isGoedgekeurdLike(item) && !hasPin(item)).length;
       const activated = (history || []).filter((item) => hasPin(item)).length;
       const rejected = (history || []).filter((item) => stateBucket(item) === 'rejected').length;
       document.getElementById('statPending').textContent = String(pending);
-      document.getElementById('statApproved').textContent = String(approved);
-      document.getElementById('statActivated').textContent = String(activated);
+      document.getElementById('statGoedgekeurd').textContent = String(approved);
+      document.getElementById('statActief').textContent = String(activated);
       document.getElementById('statRejected').textContent = String(rejected);
     }
 
@@ -374,8 +376,8 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
           ${metaBox('Beslist op', decided)}
         </div>
         <div class="compact-actions">
-          <button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(item)}">Regenerate-link</button>
-          <button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">User verwijderen</button>
+          <button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(item)}">Nieuwe activatielink</button>
+          <button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Account verwijderen</button>
         </div>
         <div class="inline-msg" id="approved-msg-${requestIdOf(item)}">Gebruiker actief in admin-overzicht.</div>
         ${activationPanelHtml(item)}`;
@@ -451,15 +453,15 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
                 job_id: prepared?.job_id ?? prepared?.queue_job_id ?? prepared?.id ?? null,
                 email: prepared?.requester_email ?? null
               });
-              if (msg) { msg.textContent = (prepared?.message || 'Wacht op activatie. Nieuwe activatielink en mail zijn klaargezet.') + ` Make ping: ${wake?.via || 'ok'}.`; msg.className = 'inline-msg ok'; }
-              window.alert('Aanvraag goedgekeurd. Er is een nieuwe activatielink klaargezet, de verificatiemail is in de wachtrij gezet en Make is gepingd. De naam hoort nu onder pending activation te staan tot de link echt is gebruikt.');
+              if (msg) { msg.textContent = (prepared?.message || 'Wacht op activatie. Nieuwe activatielink en mail zijn klaargezet.') + ' — ' + formatMailDiagnostics(prepared, wake); msg.className = 'inline-msg ok'; }
+              window.alert('Aanvraag goedgekeurd. Er is een nieuwe activatielink klaargezet, de verificatiemail is in de wachtrij gezet en Make is gepingd. De naam hoort nu onder wacht op activatie te staan tot de link echt is gebruikt.');
             } else {
               const result = await returnNameToClaimable(requestId, decisionReason || 'Admin afwijzing');
               if (msg) { msg.textContent = result?.message || 'Afwijzing opgeslagen. Naam staat weer in de claimbare kieslijst.'; msg.className = 'inline-msg ok'; }
               window.alert('Aanvraag afgewezen. De naam staat weer in de claimbare kieslijst.');
             }
             await refreshAdminLists();
-            setStatus(decision === 'approved' ? 'Aanvraag goedgekeurd.' : 'Aanvraag afgewezen.');
+            setStatus(decision === 'approved' ? 'Aanvraag goedgekeurd en mailflow gestart.' : 'Aanvraag afgewezen en naam teruggezet naar claimbaar.');
           } catch (err) {
             const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
             if (msg) { msg.textContent = rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage; msg.className = 'inline-msg error'; }
@@ -555,9 +557,17 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         const div = document.createElement('div');
         div.className = 'request';
         const bucket = stateBucket(item);
-        const canReissue = bucket === 'awaiting' || bucket === 'active';
         const canRemove = bucket === 'rejected' || bucket === 'awaiting' || bucket === 'active' || bucket === 'expired';
-        div.innerHTML = `${requestHtml(item, true)}<div class="muted" style="margin-top:10px;">${item.decided_at ? new Date(item.decided_at).toLocaleString('nl-NL') : ''}</div>${canReissue ? `<div class="compact-actions"><button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(item)}">Regenerate-link</button><button class="link-btn" type="button" data-resend-verification data-id="${requestIdOf(item)}">Nieuwe link + mail</button><button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">User verwijderen</button></div>${activationPanelHtml(item)}` : (canRemove ? `<div class="compact-actions"><button class="link-btn" type="button" data-return-claimable data-id="${requestIdOf(item)}">Terug naar claimbaar</button><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">User verwijderen</button></div>` : '')}<div class="inline-msg" id="history-msg-${requestIdOf(item)}">Geschiedenisitem.</div>`;
+        const actionHtml = bucket === 'awaiting'
+          ? `<div class="compact-actions"><button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(item)}">Nieuwe activatielink</button><button class="link-btn" type="button" data-resend-verification data-id="${requestIdOf(item)}">Nieuwe link + mail</button><button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Account verwijderen</button></div>${activationPanelHtml(item)}`
+          : bucket === 'expired'
+            ? `<div class="compact-actions"><button class="approve-btn" type="button" data-requeue-expired data-id="${requestIdOf(item)}">Opnieuw klaarzetten</button><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Account verwijderen</button></div>`
+            : bucket === 'rejected'
+              ? `<div class="compact-actions"><button class="link-btn" type="button" data-return-claimable data-id="${requestIdOf(item)}">Terug naar claimbaar</button><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Account verwijderen</button></div>`
+              : bucket === 'active'
+                ? `<div class="compact-actions"><button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Account verwijderen</button></div>`
+                : (canRemove ? `<div class="compact-actions"><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Account verwijderen</button></div>` : '');
+        div.innerHTML = `${requestHtml(item, true)}<div class="muted" style="margin-top:10px;">${item.decided_at ? new Date(item.decided_at).toLocaleString('nl-NL') : ''}</div>${actionHtml}<div class="inline-msg" id="history-msg-${requestIdOf(item)}">Geschiedenisitem.</div>`;
         root.appendChild(div);
       });
       const historyPills = document.querySelectorAll('[data-history-filter]'); if (historyPills.length) historyPills.forEach((btn)=>{ btn.classList.toggle('active', btn.dataset.historyFilter===historyFilter); });
@@ -577,6 +587,23 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         });
       });
 
+      document.querySelectorAll('[data-requeue-expired]').forEach((btn)=> {
+        btn.addEventListener('click', async ()=> {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const msg = document.getElementById(`history-msg-${requestId}`);
+          try {
+            if (msg) { msg.textContent = 'Opnieuw klaarzetten...'; msg.className = 'inline-msg'; }
+            const result = await requeueExpiredActivation(requestId);
+            const wake = await triggerMakeScenario({ reason: 'expired_requeue_mail', request_id: requestId, job_id: result?.job_id ?? result?.queue_job_id ?? null, email: result?.requester_email ?? null });
+            await refreshAdminLists();
+            if (msg) { msg.textContent = (result?.message || 'Nieuwe activatielink en mail zijn opnieuw klaargezet.') + ' — ' + formatMailDiagnostics(result, wake); msg.className = 'inline-msg ok'; }
+            window.alert('De verlopen activatie is opnieuw klaargezet. Er is een nieuwe activatielink gemaakt, de mailjob is gequeued en Make is gepingd. De naam hoort nu weer onder Wacht op activatie te staan.');
+          } catch (err) {
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Opnieuw klaarzetten mislukt'; msg.className = 'inline-msg error'; }
+          }
+        });
+      });
+
       document.querySelectorAll('[data-resend-verification]').forEach((btn)=> {
         btn.addEventListener('click', async ()=> {
           const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
@@ -585,8 +612,8 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
             if (msg) { msg.textContent = 'Nieuwe link + mail voorbereiden...'; msg.className = 'inline-msg'; }
             const result = await resendPendingActivation(requestId);
             setStatus(result?.message || 'Nieuwe activatielink en verificatiemail klaargezet.', 'ok');
-            if (msg) { msg.textContent = result?.message || 'Nieuwe link + mail klaargezet.'; msg.className = 'inline-msg ok'; }
-            window.alert('Nieuwe activatielink en verificatiemail klaargezet. De naam blijft onder pending activation staan totdat de link echt is gebruikt.');
+            if (msg) { msg.textContent = (result?.message || 'Nieuwe activatielink en mail klaargezet.') + ' — ' + formatMailDiagnostics(result, {via:'frontend-webhook'}); msg.className = 'inline-msg ok'; }
+            window.alert('Nieuwe activatielink en verificatiemail klaargezet. De naam blijft onder wacht op activatie staan totdat de link echt is gebruikt.');
             await refreshAdminLists();
           } catch (err) {
             if (msg) { msg.textContent = err instanceof Error ? err.message : 'Nieuwe link + mail mislukt'; msg.className = 'inline-msg error'; }
@@ -642,7 +669,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       document.querySelectorAll('[data-copy-activation], [data-mail-activation], [data-send-activation]').forEach((el)=>{});
     }
 
-    function renderApprovedUsers(items) {
+    function renderGoedgekeurdUsers(items) {
       const root = document.getElementById('approvedUsersList');
       root.innerHTML = '';
       const q = (document.getElementById('approvedSearch')?.value || '').trim().toLowerCase();
@@ -731,20 +758,22 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
 
     function getAdminViewConfig() {
       return {
-        pending: { title: 'To be approved', subtitle: 'Nieuwe aanvragen die nog een besluit nodig hebben.', card: 'requestsCard' },
-        awaiting: { title: 'Pending activation', subtitle: 'Goedgekeurd, maar nog niet geactiveerd.', card: 'historyCard' },
-        active: { title: 'Active', subtitle: 'Actieve gebruikers met snelle revoke-knoppen.', card: 'approvedUsersCard' },
-        rejected: { title: 'Afgewezen', subtitle: 'Afgewezen of ingetrokken aanvragen.', card: 'historyCard' }
+        pending: { title: 'Nog te beoordelen', subtitle: 'Nieuwe aanvragen die nog een besluit nodig hebben.', card: 'requestsCard' },
+        awaiting: { title: 'Wacht op activatie', subtitle: 'Goedgekeurd, maar nog niet geactiveerd.', card: 'historyCard' },
+        active: { title: 'Actief', subtitle: 'Geactiveerde accounts met snelle intrekknoppen.', card: 'approvedUsersCard' },
+        rejected: { title: 'Afgewezen', subtitle: 'Afgewezen of later ingetrokken aanvragen.', card: 'historyCard' },
+        expired: { title: 'Verlopen', subtitle: 'Verlopen activatielinks die opnieuw moeten worden klaargezet.', card: 'historyCard' }
       };
     }
 
     function renderAdminTabs() {
       const config = getAdminViewConfig();
       const tabs = [
-        { key: 'pending', label: 'To be approved', count: (lastRequests || []).length },
-        { key: 'awaiting', label: 'Pending activation', count: (lastHistory || []).filter((item) => stateBucket(item) === 'awaiting').length },
-        { key: 'active', label: 'Active', count: (lastHistory || []).filter((item) => stateBucket(item) === 'active').length },
-        { key: 'rejected', label: 'Afgewezen', count: (lastHistory || []).filter((item) => stateBucket(item) === 'rejected').length }
+        { key: 'pending', label: 'Nog te beoordelen', count: (lastRequests || []).length },
+        { key: 'awaiting', label: 'Wacht op activatie', count: (lastHistory || []).filter((item) => stateBucket(item) === 'awaiting').length },
+        { key: 'active', label: 'Actief', count: (lastHistory || []).filter((item) => stateBucket(item) === 'active').length },
+        { key: 'rejected', label: 'Afgewezen', count: (lastHistory || []).filter((item) => stateBucket(item) === 'rejected').length },
+        { key: 'expired', label: 'Verlopen', count: (lastHistory || []).filter((item) => stateBucket(item) === 'expired').length }
       ];
       const root = document.getElementById('adminTabs');
       root.innerHTML = tabs.map((tab) => `<button type="button" class="tab-btn ${tab.key === currentAdminView ? 'active' : ''}" data-admin-view="${tab.key}"><span>${tab.label}</span><span class="tab-count">${tab.count}</span></button>`).join('');
@@ -757,7 +786,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       const historySearch = document.getElementById('historySearch');
       const approvedSearch = document.getElementById('approvedSearch');
       if (requestSearch) requestSearch.value = currentAdminView === 'pending' ? sharedValue : '';
-      if (historySearch) historySearch.value = (currentAdminView === 'awaiting' || currentAdminView === 'rejected') ? sharedValue : '';
+      if (historySearch) historySearch.value = (currentAdminView === 'awaiting' || currentAdminView === 'rejected' || currentAdminView === 'expired') ? sharedValue : '';
       if (approvedSearch) approvedSearch.value = currentAdminView === 'active' ? sharedValue : '';
     }
 
@@ -773,7 +802,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         renderRequests(lastRequests);
       } else if (view === 'awaiting') {
         historyFilter = 'awaiting';
-        document.getElementById('historyTitle').textContent = 'Pending activation';
+        document.getElementById('historyTitle').textContent = 'Wacht op activatie';
         document.getElementById('historyNote').textContent = 'Goedgekeurd, maar nog niet geactiveerd.';
         renderHistory(lastHistory);
       } else if (view === 'rejected') {
@@ -781,8 +810,13 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         document.getElementById('historyTitle').textContent = 'Afgewezen';
         document.getElementById('historyNote').textContent = 'Afgewezen of later weer ingetrokken.';
         renderHistory(lastHistory);
+      } else if (view === 'expired') {
+        historyFilter = 'expired';
+        document.getElementById('historyTitle').textContent = 'Verlopen';
+        document.getElementById('historyNote').textContent = 'Verlopen activatielinks die opnieuw moeten worden klaargezet.';
+        renderHistory(lastHistory);
       } else if (view === 'active') {
-        renderApprovedUsers(lastHistory);
+        renderGoedgekeurdUsers(lastHistory);
       }
       renderAdminTabs();
     }
@@ -834,6 +868,14 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       });
       return await parseResponse(res);
     }
+    async function requeueExpiredActivation(requestId) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_requeue_expired_activation_action`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), base_url: getActivationBaseUrl() })
+      });
+      return await parseResponse(res);
+    }
+
     async function resendPendingActivation(requestId) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_resend_pending_activation_action`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
@@ -864,6 +906,14 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         })
       });
       return await parseResponse(res);
+    }
+
+    function formatMailDiagnostics(result, wake) {
+      const bits = [];
+      bits.push(result?.activation_url ? 'activatielink aangemaakt' : 'geen activatielink teruggekregen');
+      bits.push((result?.job_id || result?.queue_job_id || result?.id) ? 'mailjob gequeued' : 'geen mailjob-id gezien');
+      bits.push(wake?.via ? `Make gepingd via ${wake.via}` : 'Make-ping onbekend');
+      return bits.join(' · ');
     }
 
     async function triggerMakeScenario(meta = {}) {
@@ -1055,8 +1105,8 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
 });
     document.getElementById('adminSearchGlobal').addEventListener('input', ()=> switchAdminView(currentAdminView));
     document.getElementById('requestSearch').addEventListener('input', ()=> { if (currentAdminView === 'pending') renderRequests(lastRequests); });
-    document.getElementById('historySearch').addEventListener('input', ()=> { if (currentAdminView === 'awaiting' || currentAdminView === 'rejected') renderHistory(lastHistory); });
-    document.getElementById('approvedSearch').addEventListener('input', ()=> { if (currentAdminView === 'active') renderApprovedUsers(lastHistory); });
+    document.getElementById('historySearch').addEventListener('input', ()=> { if (currentAdminView === 'awaiting' || currentAdminView === 'rejected' || currentAdminView === 'expired') renderHistory(lastHistory); });
+    document.getElementById('approvedSearch').addEventListener('input', ()=> { if (currentAdminView === 'active') renderGoedgekeurdUsers(lastHistory); });
     document.getElementById('refreshBtn').addEventListener('click', async ()=> { setStatus('Verversen...'); await refreshAdminLists(); setStatus('Admin-overzicht ververst.'); });
     document.getElementById('manualCreateBtn')?.addEventListener('click', async ()=> { try { await createManualName(); currentAdminView='pending'; await refreshAdminLists(); } catch(err){ const msg=document.getElementById('manualCreateMsg'); if(msg){ msg.textContent = err instanceof Error ? err.message : 'Naam klaarzetten mislukt'; msg.className='inline-msg error'; } } });
 
@@ -1086,6 +1136,6 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     loadAdmin().then(startAdminAutoRefresh).catch(() => {});
   </script>
 
-  <div class="site-credit-watermark">v72 · Made by Bruis</div>
+  <div class="site-credit-watermark">v73 · Made by Bruis</div>
 </body>
 </html>

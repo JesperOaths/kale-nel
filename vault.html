@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Klaverjas Vault</title>
+  <title>Klaverjas Spelkluis</title>
   <style>
     :root { --gold:#dab33e; --black:#111; --dark: rgba(10,10,10,0.88); --line: rgba(255,255,255,0.08); --muted: rgba(255,255,255,0.72); }
     * { box-sizing: border-box; }
@@ -53,6 +53,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/vault.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
+  <script src="./gejast-config.js"></script>
 </head>
 <body>
   <div class="page">
@@ -60,17 +61,17 @@
       <div class="nav-left">
         <a class="nav-brand" href="./index.html">Wordt er gejast</a>
         <div class="nav-links">
-          <a href="./index.html">Home</a>
+          <a href="./index.html">Start</a>
           <a href="./scorer.html">Scorer</a>
           <a href="./leaderboard.html">Ranglijst</a>
-          <a href="./admin.html">Admin</a>
+          <a href="./admin.html">Terug naar hub</a>
         </div>
       </div>
     </div>
 
     <div id="vaultApp" class="shell" style="display:none;">
-      <h1>Klaverjas Vault</h1>
-      <p class="intro">Admin-only analyse-overzicht. De vault leest ruwe match history uit <span class="mono">vault_history</span> en berekent er profiel-, partner-, roem-, contract- en stijlstatistieken overheen.</p>
+      <h1>Klaverjas Spelkluis</h1>
+      <p class="intro">Alleen admin analyse-overzicht. De vault leest ruwe match history uit <span class="mono">vault_history</span> en berekent er profiel-, partner-, roem-, contract- en stijlstatistieken overheen.</p>
 
       <div id="vaultContent"></div>
     </div>
@@ -79,8 +80,8 @@
   </div>
 
   <script>
-    const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+    const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, "Content-Type": "application/json", Accept: "application/json" }; }
     async function parseResponse(res) {
@@ -439,6 +440,6 @@
       if (await ensureAdminGate()) renderVault();
     })();
   </script>
-  <div class="site-credit-watermark">v72 · Made by Bruis</div>
+  <div class="site-credit-watermark">v73 · Made by Bruis</div>
 </body>
 </html>
