@@ -239,6 +239,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       if (!/^\d{4}$/.test(enteredPin)) throw new Error('Voer je 4-cijferige pincode in');
 
       const payloads = [
+        { input_username: desiredName, entered_pin: enteredPin },
         { desired_name: desiredName, entered_pin: enteredPin },
         { input_username: desiredName, input_pin: enteredPin },
         { input_display_name: desiredName, input_pin: enteredPin },
@@ -407,6 +408,6 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     load();
   </script>
 
-  <div class="site-credit-watermark">v90 · Made by Bruis</div>
+  <div class="site-credit-watermark">v91 · Made by Bruis</div>
 </body>
 </html>
