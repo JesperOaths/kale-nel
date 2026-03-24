@@ -139,22 +139,32 @@
       if (data.admin_session_token) setAdminSessionToken(data.admin_session_token);
       return data;
     }
+    function normalizeAdminRows(rows) {
+      return (rows || []).map((row) => {
+        const out = row && typeof row === 'object' ? { ...row } : { value: row };
+        const decision = String(out.decision || '').toLowerCase();
+        const hasPin = Boolean(out.has_pin ?? out.pin_is_set ?? out.player_has_pin ?? out.pin_set ?? out.activated ?? false);
+        return { ...out, decision, hasPin };
+      });
+    }
+
     async function loadCounts() {
-      const [requestsRes, historyRes] = await Promise.all([
+      const [requestsRes, historyRes, expiredRes] = await Promise.all([
         fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_requests`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }).then(parseResponse),
-        fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_history`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }).then(parseResponse)
+        fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_history`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }).then(parseResponse),
+        fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_expired_activation_queue`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }).then(parseResponse).catch(() => ({ items: [] }))
       ]);
-      const requests = requestsRes.requests || [];
-      const history = historyRes.history || [];
-      const awaiting = history.filter((item) => /approved|awaiting/i.test(String(item.status || '')) && !/activated/i.test(String(item.status || ''))).length;
-      const active = history.filter((item) => /activated|active/i.test(String(item.status || ''))).length;
-      const rejected = history.filter((item) => /rejected|revoked/i.test(String(item.status || ''))).length;
-      const expired = history.filter((item) => /expired/i.test(String(item.status || ''))).length;
-      document.getElementById('statPending').textContent = requests.length;
-      document.getElementById('statAwaiting').textContent = awaiting;
-      document.getElementById('statExpired').textContent = expired;
-      document.getElementById('statActive').textContent = active;
-      document.getElementById('statRejected').textContent = rejected;
+      const requests = normalizeAdminRows(requestsRes.requests || []);
+      const history = normalizeAdminRows(historyRes.history || []);
+      const expiredItems = Array.isArray(expiredRes?.items) ? expiredRes.items : [];
+      const awaiting = history.filter((item) => (item.decision === 'approved' || item.approved === true || item.active === true) && !item.hasPin).length;
+      const active = history.filter((item) => item.hasPin || /active|activated/i.test(String(item.status || ''))).length;
+      const rejected = history.filter((item) => item.decision === 'rejected' || item.decision === 'revoked' || item.approved === false).length;
+      document.getElementById('statPending').textContent = String(requests.length);
+      document.getElementById('statAwaiting').textContent = String(awaiting);
+      document.getElementById('statExpired').textContent = String(expiredItems.length);
+      document.getElementById('statActive').textContent = String(active);
+      document.getElementById('statRejected').textContent = String(rejected);
     }
     async function boot() {
       const token = getAdminSessionToken();
@@ -208,6 +218,6 @@
     boot();
   </script>
 
-  <div class="site-credit-watermark">v66 · Made by Bruis</div>
+  <div class="site-credit-watermark">v67 · Made by Bruis</div>
 </body>
 </html>

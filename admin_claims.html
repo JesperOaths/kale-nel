@@ -198,7 +198,7 @@
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v66 · Made by Bruis</div>
+    <div class="version-tag">v67 · Made by Bruis</div>
   </div>
   <script>
 const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -241,17 +241,17 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     function getActivationBaseUrl() { const url = new URL('./activate.html', window.location.href); if (url.protocol === 'http:' && !/^(localhost|127\.0\.0\.1)$/i.test(url.hostname)) url.protocol = 'https:'; return url.toString(); }
     function activationPanelHtml(req) {
       return `
-        <div class="activation-tools hidden" id="activation-tools-${req.id}">
+        <div class="activation-tools hidden" id="activation-tools-${requestIdOf(req)}">
           <div><strong>Activatielink klaarzetten</strong></div>
           <div class="muted" style="margin-top:4px;">Genereer, kopieer of queue de activatielink.</div>
           <div class="activation-meta">
             ${metaBox('E-mail', req.requester_email || 'Onbekend')}
-            <div class="data-box"><span class="label">Activatie verloopt</span><span id="activation-expires-${req.id}">Nog niet gegenereerd</span></div>
+            <div class="data-box"><span class="label">Activatie verloopt</span><span id="activation-expires-${requestIdOf(req)}">Nog niet gegenereerd</span></div>
           </div>
-          <div class="activation-link-box" id="activation-url-${req.id}">Nog geen activatielink gegenereerd.</div>
+          <div class="activation-link-box" id="activation-url-${requestIdOf(req)}">Nog geen activatielink gegenereerd.</div>
           <div class="action-row">
-            <button class="copy-btn" type="button" data-copy-activation data-id="${req.id}">Kopieer activatielink</button>
-            <button class="mail-btn" type="button" data-mail-activation data-id="${req.id}">Mailconcept</button>
+            <button class="copy-btn" type="button" data-copy-activation data-id="${requestIdOf(req)}">Kopieer activatielink</button>
+            <button class="mail-btn" type="button" data-mail-activation data-id="${requestIdOf(req)}">Mailconcept</button>
           </div>
         </div>
       `;
@@ -307,10 +307,11 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       if (!row || typeof row !== 'object') return { id: extractIdLike(row), requester_meta: {} };
       const out = { ...row };
       out.requester_meta = parseMaybeJson(out.requester_meta) || {};
-      out.id = extractIdLike(out.id ?? out.request_id ?? out.claim_request_id);
-      out.request_id = extractIdLike(out.request_id ?? out.id ?? out.claim_request_id);
-      out.claim_request_id = extractIdLike(out.claim_request_id ?? out.request_id ?? out.id);
-      out.player_id = extractIdLike(out.player_id);
+      const primaryRequestId = extractIdLike(out.request_id ?? out.claim_request_id ?? out.related_claim_request_id ?? out.id);
+      out.request_id = primaryRequestId;
+      out.claim_request_id = extractIdLike(out.claim_request_id ?? out.request_id ?? out.related_claim_request_id ?? out.id);
+      out.id = primaryRequestId;
+      out.player_id = extractIdLike(out.player_id ?? out.related_player_id);
       out.allowed_username_id = extractIdLike(out.allowed_username_id);
       out.activation_link_id = extractIdLike(out.activation_link_id);
       return out;
@@ -318,6 +319,10 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
 
     function normalizeAdminRows(rows) {
       return (rows || []).map(normalizeAdminRow).filter((row) => row && row.id !== null);
+    }
+
+    function requestIdOf(item) {
+      return item?.request_id ?? item?.claim_request_id ?? item?.id ?? null;
     }
 
     function hasPin(req) {
@@ -356,10 +361,10 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
           ${metaBox('Beslist op', decided)}
         </div>
         <div class="compact-actions">
-          <button class="link-btn" type="button" data-generate-activation data-id="${item.id}">Regenerate-link</button>
-          <button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${item.id}">Goedkeuring intrekken</button>
+          <button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(item)}">Regenerate-link</button>
+          <button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">User verwijderen</button>
         </div>
-        <div class="inline-msg" id="approved-msg-${item.id}">Gebruiker actief in admin-overzicht.</div>
+        <div class="inline-msg" id="approved-msg-${requestIdOf(item)}">Gebruiker actief in admin-overzicht.</div>
         ${activationPanelHtml(item)}`;
     }
 
@@ -411,7 +416,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       }).forEach((req) => {
         const div = document.createElement('div');
         div.className = 'request';
-        div.innerHTML = `${requestHtml(req)}<div style="margin-top:12px;"><textarea class="decision-reason" data-id="${req.id}" placeholder="Reden (optioneel)"></textarea><div class="action-row"><button class="approve-btn" type="button" data-id="${req.id}" data-decision="approved">Goedkeuren</button><button class="reject-btn" type="button" data-id="${req.id}" data-decision="rejected">Afwijzen</button><button class="link-btn" type="button" data-generate-activation data-id="${req.id}">Maak activatielink</button></div><div class="inline-msg" id="request-msg-${req.id}">Klaar om te beoordelen.</div>${activationPanelHtml(req)}</div>`;
+        div.innerHTML = `${requestHtml(req)}<div style="margin-top:12px;"><textarea class="decision-reason" data-id="${requestIdOf(req)}" placeholder="Reden (optioneel)"></textarea><div class="action-row"><button class="approve-btn" type="button" data-id="${requestIdOf(req)}" data-decision="approved">Goedkeuren</button><button class="reject-btn" type="button" data-id="${requestIdOf(req)}" data-decision="rejected">Afwijzen</button><button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(req)}">Maak activatielink</button></div><div class="inline-msg" id="request-msg-${requestIdOf(req)}">Klaar om te beoordelen.</div>${activationPanelHtml(req)}</div>`;
         root.appendChild(div);
       });
       document.querySelectorAll('[data-decision]').forEach((btn) => {
@@ -535,7 +540,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         const div = document.createElement('div');
         div.className = 'request';
         const canLink = String(item.decision || '').toLowerCase() === 'approved' || item.approved === true || item.active === true || hasPin(item);
-        div.innerHTML = `${requestHtml(item, true)}<div class="muted" style="margin-top:10px;">${item.decided_at ? new Date(item.decided_at).toLocaleString('nl-NL') : ''}</div>${canLink ? `<div class="compact-actions"><button class="link-btn" type="button" data-generate-activation data-id="${item.id}">Regenerate-link</button><button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${item.id}">Toegang intrekken</button></div>${activationPanelHtml(item)}` : ''}<div class="inline-msg" id="history-msg-${item.id}">Geschiedenisitem.</div>`;
+        div.innerHTML = `${requestHtml(item, true)}<div class="muted" style="margin-top:10px;">${item.decided_at ? new Date(item.decided_at).toLocaleString('nl-NL') : ''}</div>${canLink ? `<div class="compact-actions"><button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(item)}">Regenerate-link</button><button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">User verwijderen</button></div>${activationPanelHtml(item)}` : ''}<div class="inline-msg" id="history-msg-${requestIdOf(item)}">Geschiedenisitem.</div>`;
         root.appendChild(div);
       });
       const historyPills = document.querySelectorAll('[data-history-filter]'); if (historyPills.length) historyPills.forEach((btn)=>{ btn.classList.toggle('active', btn.dataset.historyFilter===historyFilter); });
@@ -550,6 +555,21 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
             if (msg) { msg.textContent = 'Toegang ingetrokken.'; msg.className = 'inline-msg ok'; }
           } catch (err) {
             if (msg) { msg.textContent = err instanceof Error ? err.message : 'Intrekken mislukt'; msg.className = 'inline-msg error'; }
+          }
+        });
+      });
+      document.querySelectorAll('[data-remove-player]').forEach((btn)=> {
+        btn.addEventListener('click', async ()=> {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const msg = document.getElementById(`history-msg-${requestId}`);
+          if (!confirm('Deze gebruiker en gekoppelde testdata verwijderen?')) return;
+          try {
+            if (msg) { msg.textContent = 'Gebruiker verwijderen...'; msg.className = 'inline-msg'; }
+            await removePlayer(requestId, 'Admin user verwijderen');
+            await refreshAdminLists();
+            if (msg) { msg.textContent = 'Gebruiker verwijderd.'; msg.className = 'inline-msg ok'; }
+          } catch (err) {
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Verwijderen mislukt'; msg.className = 'inline-msg error'; }
           }
         });
       });
@@ -597,6 +617,21 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
             setStatus('Goedkeuring ingetrokken. De gebruiker hoort nu geen toegang meer te hebben.');
           } catch (err) {
             if (msg) { msg.textContent = err instanceof Error ? err.message : 'Intrekken mislukt'; msg.className = 'inline-msg error'; }
+          }
+        });
+      });
+      document.querySelectorAll('#approvedUsersList [data-remove-player]').forEach((btn)=> {
+        btn.addEventListener('click', async ()=> {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const msg = document.getElementById(`approved-msg-${requestId}`);
+          if (!confirm('Deze gebruiker en gekoppelde testdata verwijderen?')) return;
+          try {
+            if (msg) { msg.textContent = 'Gebruiker verwijderen...'; msg.className = 'inline-msg'; }
+            await removePlayer(requestId, 'Admin user verwijderen');
+            await refreshAdminLists();
+            setStatus('Gebruiker verwijderd.');
+          } catch (err) {
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Verwijderen mislukt'; msg.className = 'inline-msg error'; }
           }
         });
       });
@@ -723,10 +758,10 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     }
     async function getRequests() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_requests`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); }
     async function getHistory() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_history`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); }
-    async function decideRequest(requestId, decision, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request_safe`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision, decision_reason_input: decisionReason }) }); return await parseResponse(res); }
+    async function decideRequest(requestId, decision, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision, decision_reason_input: decisionReason }) }); return await parseResponse(res); }
 
     async function createActivationLink(requestId) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_player_activation_link_safe`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_player_activation_link_action`, {
         method:'POST',
         mode:'cors',
         cache:'no-store',
@@ -781,7 +816,14 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     }
 
     async function revokePlayerAccess(requestId, reason) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_revoke_player_access_safe`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_revoke_player_access_action`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: reason || null })
+      });
+      return await parseResponse(res);
+    }
+    async function removePlayer(requestId, reason) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_remove_player_action`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
         body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: reason || null })
       });
@@ -942,6 +984,6 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     loadAdmin();
   </script>
 
-  <div class="site-credit-watermark">v66 · Made by Bruis</div>
+  <div class="site-credit-watermark">v67 · Made by Bruis</div>
 </body>
 </html>

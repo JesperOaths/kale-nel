@@ -221,8 +221,8 @@
       .page { width:100%; }
       .wrap { padding:8px; }
       .sheet { border-radius:24px; }
-      .inputs { grid-template-columns:repeat(2, minmax(0,1fr)); gap:6px; padding:0 6px 10px; }
-      .input-card { padding:9px 7px; border-radius:18px; min-width:0; }
+      .inputs { grid-template-columns:repeat(2, minmax(0,1fr)); gap:5px; padding:0 5px 10px; }
+      .input-card { padding:8px 6px; border-radius:18px; min-width:0; }
       .input-card h3 { font-size:11px; }
       .input-card p { font-size:9px; margin-bottom:7px; }
       .scoreboard { margin:0 4px 8px; padding:0 4px 4px; }
@@ -231,10 +231,10 @@
       .score-cell { gap:4px; }
       .score-cell.left { grid-template-columns:minmax(34px,max-content) minmax(0,1fr); }
       .score-cell.right { grid-template-columns:minmax(0,1fr) minmax(34px,max-content); }
-      .score-meta.left { grid-template-columns:36px 32px 24px 52px; gap:3px; }
-      .score-meta.right { grid-template-columns:52px 24px 32px 36px; gap:3px; }
-      .meta-tag { min-height:20px; padding:2px 4px; font-size:9px; }
-      .meta-tag.suit { min-height:24px; min-width:24px; padding:2px 4px; font-size:18px; }
+      .score-meta.left { grid-template-columns:30px 28px 20px 42px; gap:2px; }
+      .score-meta.right { grid-template-columns:42px 20px 28px 30px; gap:2px; }
+      .meta-tag { min-height:18px; padding:1px 3px; font-size:8px; }
+      .meta-tag.suit { min-height:22px; min-width:22px; padding:1px 3px; font-size:17px; }
       .meta-slot.special .meta-tag { font-size:9px; }
       .compact-meta.left { grid-template-columns:24px 24px 18px 38px; gap:2px; }
       .compact-meta.right { grid-template-columns:38px 18px 24px 24px; gap:2px; }
@@ -243,13 +243,13 @@
       .status-bar { padding:0 8px 10px; }
       .roem-row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; }
       .special-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; }
-      .small-toggle, .small-ghost, .special-btn, .danger-mini { padding:8px 5px; font-size:10px; min-width:0; }
+      .small-toggle, .small-ghost, .special-btn, .danger-mini { padding:7px 4px; font-size:9px; min-width:0; }
       .small-ghost { min-width:0; }
-      .score-input { height:54px; font-size:26px; margin-top:8px; }
+      .score-input { height:50px; font-size:24px; margin-top:8px; }
       .dealer-banner { grid-template-columns:1fr; }
       .match-head { padding:14px 12px 8px; gap:10px; }
       .teams-line { gap:6px; }
-      .team-chip .names { font-size:16px; }
+      .team-chip .names { font-size:15px; }
       .contract-strip { padding:0 8px 10px; gap:8px; }
       .contract-card { padding:10px 12px; }
       .text-btn { padding:10px 12px; font-size:13px; }
@@ -416,12 +416,12 @@
   <div id="resumeOverlay" class="overlay"><div class="modal"><h2>Oud spel gevonden</h2><p>Er staat nog een eerder spel op dit apparaat. Wil je doorgaan of alles wissen?</p><div class="modal-footer"><button class="btn-light" type="button" onclick="resumeExistingGame()">Doorgaan</button><button class="btn-dark" type="button" onclick="wipeAndStartNew()">Wissen en nieuw spel</button></div></div></div>
 
   <script>
-    const MATCH_KEY = 'current_match_v65';
+    const MATCH_KEY = 'current_match_v67';
     const MATCH_STORAGE = sessionStorage;
     const PLAYER_STORAGE = sessionStorage;
-    const LEGACY_MATCH_KEYS = ['current_match_v64'];
+    const LEGACY_MATCH_KEYS = ['current_match_v64','current_match_v66'];
     const HISTORY_KEY = 'vault_history';
-    const PLAYERS_KEY = 'vault_players';
+    const PLAYERS_KEY = 'vault_players_v67';
     const SUPABASE_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
     const DEFAULT_NAMES = [];
@@ -448,7 +448,7 @@
     function freshGame() {
       return {
         id: Date.now(),
-        version: 64,
+        version: 67,
         createdAt: new Date().toISOString(),
         players: ['', '', '', ''],
         rounds: [],
@@ -469,7 +469,7 @@
         if (raw) {
           const parsed = JSON.parse(raw);
           if (parsed && Array.isArray(parsed.rounds)) {
-            if (!parsed.version) parsed.version = 64;
+            if (!parsed.version) parsed.version = 67;
             if (!parsed.players || parsed.players.length !== 4) parsed.players = ['', '', '', ''];
             if (typeof parsed.w !== 'number') parsed.w = (parsed.rounds || []).reduce((sum, r) => sum + Number(r.fw || r.scoreW || 0), 0);
             if (typeof parsed.z !== 'number') parsed.z = (parsed.rounds || []).reduce((sum, r) => sum + Number(r.fz || r.scoreZ || 0), 0);
@@ -1322,6 +1322,6 @@
     function toggleAppMenu(force){ const el=document.getElementById('appMenu'); const should = typeof force === 'boolean' ? force : !el.classList.contains('show'); el.classList.toggle('show', should); }
     initPage();
   </script>
-  <div class="site-credit-watermark">v66 · Made by Bruis</div>
+  <div class="site-credit-watermark">v67 · Made by Bruis</div>
 </body>
 </html>
