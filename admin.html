@@ -180,13 +180,15 @@
       );
     }
     function deriveAdminBucket(out) {
-      const raw = String(out.state_bucket || out.request_status || out.status || '').toLowerCase();
+      const states = [out.state_bucket, out.status, out.request_status]
+        .map((value) => String(value || '').toLowerCase())
+        .filter(Boolean);
       const decision = String(out.decision || '').toLowerCase();
       const hasPin = hasActivationEvidence(out);
-      if (raw.includes('expired')) return 'expired';
-      if (raw.includes('revok') || raw.includes('reject') || raw.includes('denied')) return 'rejected';
-      if (raw.includes('active') || raw.includes('activated')) return 'active';
-      if (raw.includes('approved') || raw.includes('await') || raw.includes('pending_activation') || raw.includes('pending activation') || raw.includes('awaiting_activation') || raw.includes('awaiting activation') || raw.includes('waiting')) return hasPin ? 'active' : 'awaiting';
+      if (states.some((raw) => raw.includes('expired'))) return 'expired';
+      if (states.some((raw) => raw.includes('revok') || raw.includes('reject') || raw.includes('denied'))) return 'rejected';
+      if (states.some((raw) => raw.includes('active') || raw.includes('activated'))) return 'active';
+      if (states.some((raw) => raw.includes('approved') || raw.includes('await') || raw.includes('pending_activation') || raw.includes('pending activation') || raw.includes('awaiting_activation') || raw.includes('awaiting activation') || raw.includes('waiting'))) return hasPin ? 'active' : 'awaiting';
       if (decision === 'rejected' || decision === 'revoked') return 'rejected';
       if (hasPin) return 'active';
       return 'pending';
@@ -274,6 +276,6 @@
     document.addEventListener('visibilitychange', () => { if (!document.hidden && !document.getElementById('hubView').classList.contains('hidden')) loadCounts().catch(() => {}); });
   </script>
 
-  <div class="site-credit-watermark">v77 · Made by Bruis</div>
+  <div class="site-credit-watermark">v78 · Made by Bruis</div>
 </body>
 </html>

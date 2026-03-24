@@ -204,7 +204,7 @@
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v77 · Made by Bruis</div>
+    <div class="version-tag">v78 · Made by Bruis</div>
   </div>
   <script>
 const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -322,6 +322,10 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       out.player_id = extractIdLike(out.player_id ?? out.related_player_id);
       out.allowed_username_id = extractIdLike(out.allowed_username_id);
       out.activation_link_id = extractIdLike(out.activation_link_id);
+      const canonicalStatus = String(out.status || '').toLowerCase();
+      if (canonicalStatus === 'activated' || canonicalStatus === 'activation_expired' || canonicalStatus === 'rejected' || canonicalStatus === 'revoked') {
+        out.request_status = out.status;
+      }
       return out;
     }
 
@@ -356,19 +360,23 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       );
     }
     function stateBucket(req) {
-      const raw = String(req?.state_bucket || req?.request_status || req?.status || '').toLowerCase();
+      const states = [req?.state_bucket, req?.status, req?.request_status]
+        .map((value) => String(value || '').toLowerCase())
+        .filter(Boolean);
       const decision = String(req?.decision || '').toLowerCase();
-      if (raw.includes('expired')) return 'expired';
-      if (raw.includes('revok') || raw.includes('reject') || raw.includes('denied')) return 'rejected';
-      if (raw.includes('active') || raw.includes('activated')) return 'active';
+      if (states.some((raw) => raw.includes('expired'))) return 'expired';
+      if (states.some((raw) => raw.includes('revok') || raw.includes('reject') || raw.includes('denied'))) return 'rejected';
+      if (states.some((raw) => raw.includes('active') || raw.includes('activated'))) return 'active';
       if (
-        raw.includes('approved') ||
-        raw.includes('await') ||
-        raw.includes('pending_activation') ||
-        raw.includes('pending activation') ||
-        raw.includes('awaiting_activation') ||
-        raw.includes('awaiting activation') ||
-        raw.includes('waiting')
+        states.some((raw) =>
+          raw.includes('approved') ||
+          raw.includes('await') ||
+          raw.includes('pending_activation') ||
+          raw.includes('pending activation') ||
+          raw.includes('awaiting_activation') ||
+          raw.includes('awaiting activation') ||
+          raw.includes('waiting')
+        )
       ) return hasPin(req) ? 'active' : 'awaiting';
       if (decision === 'rejected' || decision === 'revoked') return 'rejected';
       if (hasPin(req)) return 'active';
@@ -1208,6 +1216,6 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     loadAdmin().then(startAdminAutoRefresh).catch(() => {});
   </script>
 
-  <div class="site-credit-watermark">v77 · Made by Bruis</div>
+  <div class="site-credit-watermark">v78 · Made by Bruis</div>
 </body>
 </html>

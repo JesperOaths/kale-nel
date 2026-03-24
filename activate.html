@@ -474,7 +474,7 @@
     </div>
   </div>
 
-  <div id="versionWatermark" class="site-credit-watermark">v77 · Made by Bruis</div>
+  <div id="versionWatermark" class="site-credit-watermark">v78 · Made by Bruis</div>
 
   <script>
     const CONFIG = window.GEJAST_CONFIG || {};
@@ -482,7 +482,7 @@
     const SUPABASE_PUBLISHABLE_KEY = CONFIG.SUPABASE_PUBLISHABLE_KEY || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const SESSION_KEY = "jas_session_token_v10";
 
-    document.getElementById('versionWatermark').textContent = `${CONFIG.VERSION || 'v77'} · Made by Bruis`;
+    document.getElementById('versionWatermark').textContent = `${CONFIG.VERSION || 'v78'} · Made by Bruis`;
 
     function rpcHeaders() {
       return {
@@ -746,7 +746,12 @@
             return;
           } catch (loginErr) {
             const loginMessage = loginErr instanceof Error ? loginErr.message : message;
-            setStatus(friendlyActivationMessage(loginMessage), 'warn');
+            const loginLower = String(loginMessage || '').toLowerCase();
+            if (loginLower.includes('pincode klopt niet') || loginLower.includes('pin') || loginLower.includes('password')) {
+              setStatus('Dit account was al geactiveerd met een bestaande pincode. De pincode die je net invoerde hoort daar niet bij. Log in met je bestaande pincode of vraag de beheerder om hulp.', 'warn');
+            } else {
+              setStatus('Dit account lijkt al geactiveerd. Automatisch inloggen lukte niet. Log in met je bestaande pincode of vraag de beheerder om hulp.', 'warn');
+            }
             setBusyState(false);
             return;
           }
