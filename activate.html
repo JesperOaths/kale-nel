@@ -6,494 +6,452 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Account activeren</title>
   <style>
-
     :root {
       --gold: #d4af37;
       --gold-dark: #b89018;
-      --black: #111111;
-      --card: rgba(255,255,255,0.22);
-      --card-2: rgba(255,255,255,0.08);
-      --line: rgba(17,17,17,0.10);
-      --muted: #6d5830;
-      --blue: #b89018;
-      --ok: #7c6112;
-      --ok-soft: rgba(212, 175, 55, 0.16);
-      --warn: #6b5220;
-      --warn-soft: rgba(17,17,17,0.06);
-      --shadow: 0 24px 60px rgba(17, 17, 17, 0.16);
-      --mouse-x: 0px;
-      --mouse-y: 0px;
-    }
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background:
-        linear-gradient(135deg, rgba(247,244,238,0.64), rgba(239,234,225,0.54)),
-        url('./site-bg-desktop.webp') center center / cover no-repeat fixed;
-      color: var(--black);
-      margin: 0;
-      min-height: 100vh;
-      position: relative;
-      overflow-x: hidden;
-      padding: 28px;
-    }
-    .scene, .page-bg, .top-glow, .brand-watermark, .spinoza-shadow, .playing-card-accent, .kale-hand, .watermark {
-      pointer-events: none;
-    }
-    @media (orientation: portrait) {
-      body {
-        background:
-          linear-gradient(135deg, rgba(247,244,238,0.60), rgba(239,234,225,0.52)),
-          url('./site-bg-mobile.webp') center center / cover no-repeat fixed;
-      }
-    }
-    .scene {
-      display: none;
-    }
-    .page-bg, .top-glow, .brand-watermark, .spinoza-shadow, .playing-card-accent, .kale-hand {
-      position: absolute;
-      will-change: transform;
-      transform: translate3d(0,0,0);
-    }
-    .page-bg,
-    .top-glow {
-      inset: 0;
-    }
-    .page-bg {
-      background-image: url('./123zwartkaart.png');
-      background-size: 255px;
-      background-repeat: repeat;
-      background-position: center;
-      opacity: 0.08;
-      mix-blend-mode: multiply;
-    }
-    .brand-watermark {
-      top: 50%;
-      left: 50%;
-      width: min(46vw, 620px);
-      transform: translate3d(calc(-50% + var(--mouse-x) * 0.009), calc(-50% + var(--mouse-y) * 0.009), 0);
-      opacity: 0.14;
-    }
-    .brand-watermark img,
-    .spinoza-shadow img,
-    .playing-card-accent img,
-    .kale-hand img {
-      display: block;
-      width: 100%;
-      height: auto;
-    }
-    .spinoza-shadow {
-      left: 50%;
-      top: 55%;
-      width: min(52vw, 700px);
-      transform: translate3d(calc(-50% + var(--mouse-x) * 0.013), calc(-50% + var(--mouse-y) * 0.013), 0);
-      opacity: 0.52;
-      filter: grayscale(1) contrast(2.45) brightness(0.44) drop-shadow(0 18px 40px rgba(17,17,17,0.12));
-      mix-blend-mode: multiply;
-    }
-    .kale-hand {
-      left: -48px;
-      top: 18%;
-      width: min(33vw, 470px);
-      transform: translate3d(calc(var(--mouse-x) * -0.02), calc(var(--mouse-y) * -0.012), 0) rotate(-12deg);
-      opacity: 0.9;
-      filter: drop-shadow(0 18px 30px rgba(61, 31, 18, 0.2));
-      transform-origin: center center;
-    }
-    .playing-card-accent {
-      right: -14px;
-      bottom: 7%;
-      width: min(26vw, 350px);
-      transform: translate3d(calc(var(--mouse-x) * -0.014), calc(var(--mouse-y) * -0.01), 0) rotate(7deg);
-      opacity: 0.98;
-      filter: drop-shadow(0 18px 34px rgba(40, 18, 12, 0.14));
-      transform-origin: center right;
-    }
-    .playing-card-accent img { border-radius: 26px; background: transparent; }
-    .top-glow {
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.34), transparent 23%),
-        radial-gradient(circle at 50% -10%, rgba(255,255,255,0.48), transparent 34%);
-    }
-    .shell, .wrap {
-      width: 100%;
-      max-width: 980px;
-      position: relative;
-      z-index: 2;
-      margin: 0 auto;
-    }
-    .card {
-      position: relative;
-      z-index: 2;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.10)),
-        radial-gradient(circle at top left, rgba(255,255,255,0.20), transparent 36%),
-        linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03));
-      backdrop-filter: blur(22px) saturate(1.08);
-      -webkit-backdrop-filter: blur(22px) saturate(1.08);
-      border: 1px solid rgba(255,255,255,0.48);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-    .card::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background:
-        linear-gradient(120deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 18%, transparent 42%),
-        radial-gradient(circle at top right, rgba(212,175,55,0.11), transparent 28%),
-        linear-gradient(135deg, rgba(212,175,55,0.04), transparent 34%, rgba(17,17,17,0.02));
-      pointer-events: none;
-    }
-    .card::after {
-      content: "";
-      position: absolute;
-      inset: 1px;
-      border-radius: inherit;
-      background: linear-gradient(180deg, rgba(255,255,255,0.18), transparent 18%, rgba(255,255,255,0.04) 72%, rgba(255,255,255,0.10));
-      pointer-events: none;
-      mix-blend-mode: screen;
-    }
-    .logo-corner, .mini-logo {
-      object-fit: contain;
-      opacity: 0.96;
-      filter: drop-shadow(0 6px 14px rgba(0,0,0,0.08));
-      position: relative;
-      z-index: 1;
-    }
-    .watermark {
-      position: fixed;
-      right: 20px;
-      bottom: 14px;
-      color: rgba(17,17,17,0.42);
-      font-size: 14px;
-      user-select: none;
-      z-index: 3;
-      letter-spacing: 0.02em;
-    }
-    .muted { color: var(--muted); }
-    .notice {
-      display: none;
-      text-align: left;
-      border-radius: 16px;
-      padding: 14px 16px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.54);
-      color: var(--muted);
-      position: relative;
-      z-index: 1;
-    }
-    .notice.show { display: block; }
-    .notice.ok { background: var(--ok-soft); color: var(--ok); border-color: rgba(22,101,52,0.15); }
-    .notice.warn { background: var(--warn-soft); color: var(--warn); border-color: rgba(146,64,14,0.16); }
-    input, textarea, select, button {
-      font: inherit;
-    }
-    input, textarea, select {
-      width: 100%;
-      padding: 13px 14px;
-      border: 1px solid rgba(17,17,17,0.1);
-      border-radius: 16px;
-      background: rgba(255,255,255,0.58);
-      position: relative;
-      z-index: 1;
-      outline: none;
-      transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
-    }
-    input:focus, textarea:focus, select:focus {
-      border-color: rgba(184,144,24,0.44);
-      box-shadow: 0 0 0 4px rgba(212,175,55,0.16);
-    }
-    button {
-      border: none;
-      border-radius: 16px;
-      cursor: pointer;
-      transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease, background-color .12s ease, filter .12s ease;
-      position: relative;
-      z-index: 1;
-    }
-    @media (hover: hover) and (pointer: fine) {
-      button:hover, .text-link:hover, .pill-link:hover, .home-link:hover, .ghost-link:hover {
-        transform: none;
-        box-shadow: 0 8px 18px rgba(17,17,17,0.05);
-        filter: brightness(1.01);
-      }
-    }
-    button:active, .text-link:active, .pill-link:active, .home-link:active, .ghost-link:active {
-      transform: scale(0.992);
-      box-shadow: 0 3px 10px rgba(17,17,17,0.05);
-      filter: brightness(0.99);
-    }
-    .modal {
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      z-index: 12;
-      background: rgba(17,17,17,0.32);
-      backdrop-filter: blur(4px);
-    }
-    .modal.show { display: flex; }
-    .modal-panel {
-      width: min(360px, 100%);
-      border-radius: 26px;
-      padding: 18px;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.90), rgba(255,255,255,0.84)),
-        radial-gradient(circle at top left, rgba(255,255,255,0.52), transparent 36%);
-      border: 1px solid rgba(255,255,255,0.64);
-      box-shadow: 0 28px 60px rgba(17,17,17,0.24);
-    }
-    .pin-preview {
-      display: flex;
-      flex-wrap: nowrap;
-      justify-content: center;
-      align-items: center;
-      gap: 14px;
-      padding: 16px 14px;
-      border-radius: 20px;
-      background: rgba(17,17,17,0.045);
-      margin: 12px 0 16px;
-      min-height: 80px;
-      overflow: hidden;
-    }
-    .pin-slot {
-      width: 58px;
-      flex: 0 0 58px;
-      min-height: 46px;
-      border-radius: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: rgba(255,255,255,0.34);
-      border: 1px solid rgba(17,17,17,0.05);
-      font-size: 2rem;
-      font-weight: 650;
-      color: rgba(17,17,17,0.92);
-      line-height: 1;
-    }
-    .pin-slot.empty {
-      color: rgba(17,17,17,0.38);
-    }
-    .pin-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-    }
-    .pin-key {
-      min-height: 60px;
-      font-size: 1.12rem;
-      font-weight: 650;
-      letter-spacing: 0.01em;
-      background: rgba(255,255,255,0.86);
-      border: 1px solid rgba(17,17,17,0.07);
-    }
-    .pin-key.primary {
-      background: var(--gold);
-      color: #111;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.24);
-    }
-    .pin-trigger {
-      cursor: pointer;
-      caret-color: transparent;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      html { scroll-behavior: auto; }
-      .scene, .brand-watermark, .spinoza-shadow, .playing-card-accent, .kale-hand, .card, button { transition: none !important; }
-    }
-    @media (max-width: 900px) {
-      body { padding: 16px 0; }
-      .brand-watermark { width: min(74vw, 500px); opacity: 0.14; }
-      .spinoza-shadow { width: min(72vw, 520px); top: 47%; opacity: 0.42; }
-      .kale-hand { width: min(54vw, 320px); top: 8%; left: -54px; opacity: 0.8; }
-      .playing-card-accent { width: min(44vw, 270px); right: -10px; bottom: 9%; }
+      --black: #111;
+      --card-bg: rgba(249, 247, 242, 0.96);
+      --line: rgba(17,17,17,0.08);
+      --muted: #6a6458;
+      --ok-bg: rgba(212,175,55,0.12);
+      --ok-text: #6b5310;
+      --warn-bg: rgba(17,17,17,0.05);
+      --warn-text: #514a3f;
+      --shadow: 0 20px 50px rgba(0,0,0,0.08);
     }
 
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
     body {
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      min-height:100vh;
+      margin: 0;
+      padding: 24px 16px 88px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background: linear-gradient(rgba(240,237,228,0.92), rgba(240,237,228,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed;
+      color: var(--black);
     }
-    .card {
-      padding: 32px 34px 34px;
-      border-radius: 30px;
-      max-width: 980px;
+
+    .site-scene {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .brand-watermark {
+      position: absolute;
+      top: 6%;
+      left: 5%;
+      width: min(300px, 42vw);
+      opacity: 0.08;
+    }
+
+    .spinoza-shadow {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      width: min(480px, 46vw);
+      opacity: 0.10;
+    }
+
+    .brand-watermark img,
+    .spinoza-shadow img {
       width: 100%;
-      margin: 20px;
+      height: auto;
+      display: block;
     }
-    .logo-corner {
-      position:absolute;
-      top:20px;
-      right:20px;
-      width:84px;
-      height:84px;
+
+    .main-card {
+      width: min(560px, 100%);
+      background: var(--card-bg);
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.72);
+      box-shadow: var(--shadow);
+      padding: 32px;
+      position: relative;
+      text-align: left;
     }
-    .top-links {
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      margin-bottom:18px;
-      position:relative;
-      z-index:1;
+
+    .card-logo {
+      position: absolute;
+      top: 22px;
+      right: 22px;
+      width: 50px;
+      height: auto;
+      display: block;
     }
-    .pill-link {
-      font-size:14px;
-      text-decoration:none;
-      color:var(--blue);
-      background:rgba(255,255,255,0.62);
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid rgba(37,99,235,0.12);
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.75);
+      border: 1px solid rgba(17,17,17,0.06);
+      color: #8a8275;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
     }
+
     h1 {
-      margin:0 0 10px 0;
-      font-size: clamp(2.4rem, 4vw, 3.05rem);
+      font-size: clamp(2rem, 4vw, 2.7rem);
       line-height: 1.02;
       letter-spacing: -0.04em;
-      padding-right: 104px;
-      position: relative;
-      z-index: 1;
+      margin: 18px 0 12px;
+      padding-right: 70px;
     }
-    .hero-copy {
+
+    .intro {
+      margin: 0 0 22px;
       color: var(--muted);
-      margin: 0 0 24px 0;
-      font-size: clamp(1rem, 2vw, 1.08rem);
-      max-width: 720px;
-      position: relative;
-      z-index: 1;
-      line-height:1.5;
+      font-size: 15px;
+      line-height: 1.5;
     }
-    .grid {
-      display:grid;
-      grid-template-columns: 1.08fr 0.92fr;
-      gap:22px;
-      position:relative;
-      z-index:1;
-    }
-    .panel {
-      background: rgba(250,250,249,0.56);
+
+    .detail-card {
+      background: #fff;
       border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 20px;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.52);
-    }
-    .panel h2, .panel h3 { margin: 0 0 12px 0; letter-spacing: -0.02em; }
-    .panel p, .panel li { color: var(--muted); line-height: 1.5; }
-    .stack > * + * { margin-top: 12px; }
-    .detail-box {
-      border-radius: 18px;
-      background: rgba(255,255,255,0.56);
-      border: 1px solid rgba(17,17,17,0.07);
-      padding: 14px 16px;
-    }
-    .detail-box strong {
-      display:block;
-      margin-bottom:4px;
-      font-size:13px;
-      text-transform:uppercase;
-      letter-spacing:.08em;
-      color:var(--muted);
-    }
-    .value-line {
-      font-size: 1.15rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-    }
-    .pin-shell { position: relative; }
-    .autofill-ghost { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; }
-    .pin-trigger { padding-right: 58px; letter-spacing: .2em; cursor:pointer; caret-color: transparent; }
-    .pin-open {
-      position:absolute; right:8px; top:50%; transform:translateY(-50%);
-      min-height:42px; padding:0 14px; border-radius:12px; background: rgba(17,17,17,0.07); color:#111;
-    }
-    .submit-btn {
-      min-height: 50px;
-      padding: 12px 18px;
       border-radius: 16px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+    }
+
+    .detail-card strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #8a8275;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .value-line {
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      word-break: break-word;
+    }
+
+    label {
+      display: block;
+      margin: 16px 0 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #4f4a41;
+    }
+
+    .pin-shell {
+      display: flex;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .pin-trigger,
+    .pin-open,
+    .submit-btn,
+    .secondary-link,
+    .pin-key {
+      font: inherit;
+    }
+
+    .pin-trigger {
+      flex: 1;
+      width: 100%;
+      min-height: 50px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid #ddd;
+      background: #fff;
+      font-size: 16px;
+      letter-spacing: 0.22em;
+    }
+
+    .pin-trigger:focus {
+      outline: none;
+      border-color: rgba(212,175,55,0.65);
+      box-shadow: 0 0 0 4px rgba(212,175,55,0.14);
+    }
+
+    .pin-open {
+      flex: 0 0 auto;
+      min-width: 104px;
+      border: none;
+      border-radius: 12px;
+      background: rgba(17,17,17,0.07);
+      color: var(--black);
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .pin-open:disabled,
+    .submit-btn:disabled,
+    .pin-key:disabled {
+      cursor: wait;
+      opacity: 0.68;
+    }
+
+    .submit-btn {
+      width: 100%;
+      margin-top: 18px;
+      min-height: 52px;
+      border: none;
+      border-radius: 14px;
       background: var(--gold);
       color: #111;
       font-weight: 800;
-      width: 100%;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 10px 18px rgba(17,17,17,0.08);
+      transition: transform 0.1s ease, filter 0.15s ease;
     }
-    .fineprint {
-      margin-top: 10px;
+
+    .submit-btn:hover,
+    .pin-open:hover,
+    .pin-key:hover {
+      filter: brightness(0.99);
+    }
+
+    .submit-btn:active,
+    .pin-open:active,
+    .pin-key:active {
+      transform: scale(0.99);
+    }
+
+    .status {
+      margin-top: 14px;
+      min-height: 0;
+      border-radius: 14px;
       font-size: 13px;
-      color: var(--muted);
       line-height: 1.45;
     }
-    @media (max-width: 760px) {
-      .grid { grid-template-columns: 1fr; }
-      h1 { padding-right: 0; font-size:2rem; }
-      .logo-corner { top:12px; right:12px; width:68px; height:68px; }
-      .card { padding:22px 18px; margin:14px auto; max-width: calc(100vw - 28px); width: calc(100vw - 28px); }
+
+    .status.show {
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.6);
+    }
+
+    .status.show.ok {
+      background: var(--ok-bg);
+      color: var(--ok-text);
+      border-color: rgba(212,175,55,0.28);
+    }
+
+    .status.show.warn {
+      background: var(--warn-bg);
+      color: var(--warn-text);
+      border-color: rgba(17,17,17,0.10);
+    }
+
+    .fineprint {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .autofill-ghost {
+      position: absolute;
+      left: -9999px;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.42);
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 18px;
+    }
+
+    .modal.show { display: flex; }
+
+    .modal-panel {
+      width: min(340px, 100%);
+      background: #fff;
+      border-radius: 22px;
+      padding: 22px;
+      box-shadow: 0 28px 60px rgba(17,17,17,0.24);
+    }
+
+    .modal-title {
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 14px;
+    }
+
+    .pin-preview {
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(17,17,17,0.04);
+      margin-bottom: 16px;
+    }
+
+    .pin-slot {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      border: 1px solid rgba(17,17,17,0.06);
+      font-size: 24px;
+      font-weight: 800;
+    }
+
+    .pin-slot.empty {
+      color: rgba(17,17,17,0.28);
+    }
+
+    .pin-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .pin-key {
+      min-height: 54px;
+      border-radius: 12px;
+      border: 1px solid #eee;
+      background: #fafafa;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .pin-key.primary {
+      background: var(--gold);
+      border-color: rgba(212,175,55,0.38);
+      color: #111;
+    }
+
+    .pin-footer {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .site-credit-watermark {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 14px;
+      z-index: 9999;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(17,17,17,0.88);
+      border: 1px solid rgba(212,175,55,0.35);
+      color: #f3e3a6;
+      font: 700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      letter-spacing: .03em;
+      pointer-events: none;
+      user-select: none;
+      box-shadow: 0 12px 24px rgba(0,0,0,0.18);
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 16px 12px 84px;
+        align-items: flex-start;
+      }
+
+      .main-card {
+        padding: 22px 18px 20px;
+        border-radius: 20px;
+        margin-top: 10px;
+      }
+
+      .card-logo {
+        top: 16px;
+        right: 16px;
+        width: 42px;
+      }
+
+      h1 {
+        padding-right: 52px;
+        margin-top: 14px;
+      }
+
+      .pin-open {
+        min-width: 94px;
+      }
+
+      .site-credit-watermark {
+        bottom: 10px;
+        font-size: 12px;
+        padding: 7px 11px;
+        max-width: calc(100vw - 24px);
+        text-align: center;
+      }
     }
   </style>
-  <link rel="stylesheet" href="./site-shell.css" />
-  <link rel="stylesheet" href="./theme-v45.css" />
-  <link rel="stylesheet" href="./premium-v47.css" />
-  <link rel="stylesheet" href="./ui-v52.css" />
   <link rel="canonical" href="https://kalenel.nl/activate.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
   <script src="./gejast-config.js"></script>
 </head>
 <body>
-  <div class="scene" aria-hidden="true">
-    <div class="page-bg"></div>
+  <div class="site-scene" aria-hidden="true">
     <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
-        <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
-    <div class="playing-card-accent"><img src="./playingcard-accent1-trimmed.png" alt="" /></div>
-    <div class="top-glow"></div>
+    <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
   </div>
 
-  <div class="card">
-    <div class="top-links">
-      <a href="./index.html" class="pill-link">Site</a>
-    </div>
-    <a href="./index.html" aria-label="Terug naar home"><img src="./logo.png" alt="Logo" class="logo-corner" /></a>
+  <main class="main-card">
+    <a href="./index.html" aria-label="Terug naar home"><img src="./logo.png" class="card-logo" alt="Logo" /></a>
+    <div class="eyebrow">Site</div>
     <h1>Account activeren</h1>
-    
+    <p class="intro">Controleer je naam en e-mailadres en kies daarna een 4-cijferige pincode.</p>
 
-    <div class="grid">
-      <div class="panel stack">
-        <h2>Activeren</h2>
-        <div class="detail-box">
-          <strong>Goedgekeurde naam</strong>
-          <div id="approvedName" class="value-line">Laden…</div>
-          <input id="activationNameMirror" class="autofill-ghost" type="text" tabindex="-1" autocomplete="username" aria-hidden="true" />
-        </div>
-        <div class="detail-box">
-          <strong>E-mailadres</strong>
-          <div id="approvedEmail" class="value-line">Laden…</div>
-        </div>
-
-        <label for="pinInput">Kies je 4-cijferige pincode</label>
-        <div class="pin-shell">
-          <input id="pinInput" class="pin-trigger" type="password" placeholder="4 cijfers" inputmode="numeric" maxlength="4" autocomplete="new-password" enterkeyhint="next" name="new_pin" />
-          <button id="pinOpenBtn" class="pin-open" type="button">Toetsen</button>
-        </div>
-
-        <label for="pinConfirmInput">Bevestig je pincode</label>
-        <div class="pin-shell">
-          <input id="pinConfirmInput" class="pin-trigger" type="password" placeholder="Nogmaals 4 cijfers" inputmode="numeric" maxlength="4" autocomplete="new-password" enterkeyhint="done" name="new_pin_confirm" />
-          <button id="pinConfirmOpenBtn" class="pin-open" type="button">Toetsen</button>
-        </div>
-
-        <button id="activateBtn" class="submit-btn" type="button">Account activeren</button>
-        <div id="status" class="notice"></div>
-        
-      </div>
+    <div class="detail-card">
+      <strong>Goedgekeurde naam</strong>
+      <div id="approvedName" class="value-line">Laden…</div>
+      <input id="activationNameMirror" class="autofill-ghost" type="text" tabindex="-1" autocomplete="username" aria-hidden="true" />
     </div>
-  </div>
 
-  <div class="watermark">v75 · Made by Bruis</div>
+    <div class="detail-card">
+      <strong>E-mailadres</strong>
+      <div id="approvedEmail" class="value-line">Laden…</div>
+    </div>
+
+    <label for="pinInput">Kies je 4-cijferige pincode</label>
+    <div class="pin-shell">
+      <input id="pinInput" class="pin-trigger" type="password" placeholder="4 cijfers" inputmode="numeric" maxlength="4" autocomplete="new-password" enterkeyhint="next" name="new_pin" />
+      <button id="pinOpenBtn" class="pin-open" type="button">Toetsen</button>
+    </div>
+
+    <label for="pinConfirmInput">Bevestig je pincode</label>
+    <div class="pin-shell">
+      <input id="pinConfirmInput" class="pin-trigger" type="password" placeholder="Nogmaals 4 cijfers" inputmode="numeric" maxlength="4" autocomplete="new-password" enterkeyhint="done" name="new_pin_confirm" />
+      <button id="pinConfirmOpenBtn" class="pin-open" type="button">Toetsen</button>
+    </div>
+
+    <button id="activateBtn" class="submit-btn" type="button">Account activeren</button>
+    <div id="status" class="status"></div>
+    <p class="fineprint">Werkt deze link niet meer of zie je een melding dat de link al gebruikt is? Vraag dan de beheerder om een nieuwe activatielink.</p>
+  </main>
 
   <div id="pinModal" class="modal" aria-hidden="true">
     <div class="modal-panel">
-      <div class="muted" style="text-align:center;">Voer je pincode in</div>
+      <div class="modal-title">Voer je pincode in</div>
       <div id="pinPreview" class="pin-preview" aria-live="polite"></div>
       <div class="pin-grid">
         <button class="pin-key" data-digit="1" type="button">1</button>
@@ -509,51 +467,135 @@
         <button class="pin-key" data-digit="0" type="button">0</button>
         <button id="pinBackBtn" class="pin-key" type="button">⌫</button>
       </div>
-      <div style="display:flex; gap:10px; margin-top:12px;">
+      <div class="pin-footer">
         <button id="pinCancelBtn" class="pin-key" type="button" style="flex:1;">Sluiten</button>
         <button id="pinDoneBtn" class="pin-key primary" type="button" style="flex:1;">Klaar</button>
       </div>
     </div>
   </div>
 
+  <div id="versionWatermark" class="site-credit-watermark">v76 · Made by Bruis</div>
+
   <script>
-    const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+    const CONFIG = window.GEJAST_CONFIG || {};
+    const SUPABASE_URL = CONFIG.SUPABASE_URL || "https://uiqntazgnrxwliaidkmy.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = CONFIG.SUPABASE_PUBLISHABLE_KEY || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const SESSION_KEY = "jas_session_token_v10";
 
+    document.getElementById('versionWatermark').textContent = `${CONFIG.VERSION || 'v76'} · Made by Bruis`;
+
     function rpcHeaders() {
-      return { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json", Accept: "application/json" };
+      return {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      };
     }
+
     async function parseResponse(res) {
       const text = await res.text();
       let data = null;
-      try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); }
+      try { data = text ? JSON.parse(text) : null; }
+      catch { throw new Error(text || `HTTP ${res.status}`); }
       if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`);
       return data;
     }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
     function setStatus(message = "", tone = "info", html = null) {
       const el = document.getElementById("status");
-      if (!message && !html) { el.className = "notice"; el.innerHTML = ""; return; }
-      el.className = `notice ${tone} show`;
-      el.innerHTML = html ?? message;
+      if (!message && !html) {
+        el.className = "status";
+        el.innerHTML = "";
+        return;
+      }
+      el.className = `status show ${tone}`;
+      el.innerHTML = html ?? escapeHtml(message);
     }
-    function escapeHtml(value) {
-      return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+
+    function setSessionToken(token) {
+      localStorage.setItem(SESSION_KEY, token);
     }
-    function setSessionToken(token) { localStorage.setItem(SESSION_KEY, token); }
+
+    async function callRpcWithParamFallback(rpcName, primaryBody, fallbackBody) {
+      const primary = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpcName}`, {
+        method: "POST",
+        mode: "cors",
+        cache: "no-store",
+        headers: rpcHeaders(),
+        body: JSON.stringify(primaryBody)
+      });
+      if (primary.ok || !fallbackBody) return await parseResponse(primary);
+
+      const fallback = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpcName}`, {
+        method: "POST",
+        mode: "cors",
+        cache: "no-store",
+        headers: rpcHeaders(),
+        body: JSON.stringify(fallbackBody)
+      });
+      return await parseResponse(fallback);
+    }
+
+    function friendlyActivationMessage(message) {
+      const raw = String(message || '').trim();
+      const lower = raw.toLowerCase();
+      if (raw === 'Failed to fetch') return 'Netwerk/CORS-fout bij contact met Supabase.';
+      if (lower.includes('al geactiveerd')) {
+        return 'Deze activatielink is al gebruikt of de activatie is dubbel verstuurd. Probeer in te loggen. Werkt dat niet, vraag dan om een nieuwe activatielink.';
+      }
+      if (lower.includes('expired') || lower.includes('verlopen')) {
+        return 'Deze activatielink is verlopen. Vraag de beheerder om een nieuwe activatielink.';
+      }
+      if (lower.includes('invalid') || lower.includes('ongeldig')) {
+        return 'Deze activatielink is ongeldig. Open de nieuwste link uit je mail of vraag een nieuwe activatielink aan.';
+      }
+      return raw || 'Activeren mislukt';
+    }
 
     const params = new URLSearchParams(window.location.search);
     const activationToken = params.get('token') || params.get('activation_token') || '';
 
+    let activationBusy = false;
+    let activePinTarget = 'pinInput';
+    const pinModal = document.getElementById('pinModal');
+    const actionControls = [
+      document.getElementById('activateBtn'),
+      document.getElementById('pinOpenBtn'),
+      document.getElementById('pinConfirmOpenBtn'),
+      document.getElementById('pinClearBtn'),
+      document.getElementById('pinBackBtn'),
+      document.getElementById('pinCancelBtn'),
+      document.getElementById('pinDoneBtn'),
+      ...Array.from(document.querySelectorAll('[data-digit]'))
+    ];
+
+    function setBusyState(isBusy) {
+      activationBusy = isBusy;
+      actionControls.forEach((el) => {
+        if (el) el.disabled = isBusy;
+      });
+      document.getElementById('activateBtn').textContent = isBusy ? 'Bezig met activeren…' : 'Account activeren';
+    }
+
     async function loadActivationContext() {
       if (!activationToken) {
-        throw new Error("Deze activatielink is onvolledig. Open de link uit je mail.");
+        throw new Error('Deze activatielink is onvolledig. Open de link uit je mail.');
       }
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_activation_link_context`, {
-        method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(),
-        body: JSON.stringify({ activation_token: activationToken })
-      });
-      return await parseResponse(res);
+      return await callRpcWithParamFallback(
+        'get_activation_link_context',
+        { token: activationToken },
+        { activation_token: activationToken }
+      );
     }
 
     async function activatePlayer() {
@@ -561,22 +603,23 @@
       const pin2 = document.getElementById('pinConfirmInput').value.trim();
       if (!/^\d{4}$/.test(pin)) throw new Error('Kies een pincode van precies 4 cijfers.');
       if (pin !== pin2) throw new Error('De twee pincodes komen niet overeen.');
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/activate_player_from_email_link`, {
-        method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(),
-        body: JSON.stringify({ activation_token: activationToken, new_pin: pin })
-      });
-      return await parseResponse(res);
+      return await callRpcWithParamFallback(
+        'activate_player_from_email_link',
+        { token: activationToken, new_pin: pin },
+        { activation_token: activationToken, new_pin: pin }
+      );
     }
 
     function setContext(data) {
-      document.getElementById('approvedName').textContent = data.display_name || 'Onbekend';
-      document.getElementById('activationNameMirror').value = data.display_name || '';
-      document.getElementById('approvedEmail').textContent = data.requester_email || 'Onbekend';
+      document.getElementById('approvedName').textContent = data?.display_name || 'Onbekend';
+      document.getElementById('activationNameMirror').value = data?.display_name || '';
+      document.getElementById('approvedEmail').textContent = data?.requester_email || 'Onbekend';
     }
 
-    let activePinTarget = 'pinInput';
-    const pinModal = document.getElementById('pinModal');
-    function currentTarget() { return document.getElementById(activePinTarget); }
+    function currentTarget() {
+      return document.getElementById(activePinTarget);
+    }
+
     function syncPinPreview() {
       const value = currentTarget().value.slice(0, 4).split('');
       document.getElementById('pinPreview').innerHTML = Array.from({ length: 4 }, (_, index) => {
@@ -584,88 +627,109 @@
         return `<span class="pin-slot${filled ? '' : ' empty'}">${filled ? '•' : '—'}</span>`;
       }).join('');
     }
+
     function openPinModal(targetId) {
+      if (activationBusy) return;
       activePinTarget = targetId;
       pinModal.classList.add('show');
       pinModal.setAttribute('aria-hidden', 'false');
       syncPinPreview();
     }
+
     function closePinModal() {
       pinModal.classList.remove('show');
       pinModal.setAttribute('aria-hidden', 'true');
     }
+
     function addPinDigit(digit) {
+      if (activationBusy) return;
       const input = currentTarget();
       input.value = (input.value + digit).replace(/\D/g, '').slice(0, 4);
       syncPinPreview();
     }
 
     document.querySelectorAll('[data-digit]').forEach((btn) => btn.addEventListener('click', () => addPinDigit(btn.dataset.digit)));
-    document.getElementById('pinClearBtn').addEventListener('click', () => { currentTarget().value = ''; syncPinPreview(); });
-    document.getElementById('pinBackBtn').addEventListener('click', () => { const input = currentTarget(); input.value = input.value.slice(0, -1); syncPinPreview(); });
+    document.getElementById('pinClearBtn').addEventListener('click', () => {
+      if (activationBusy) return;
+      currentTarget().value = '';
+      syncPinPreview();
+    });
+    document.getElementById('pinBackBtn').addEventListener('click', () => {
+      if (activationBusy) return;
+      const input = currentTarget();
+      input.value = input.value.slice(0, -1);
+      syncPinPreview();
+    });
     document.getElementById('pinCancelBtn').addEventListener('click', closePinModal);
     document.getElementById('pinDoneBtn').addEventListener('click', closePinModal);
     document.getElementById('pinOpenBtn').addEventListener('click', () => openPinModal('pinInput'));
     document.getElementById('pinConfirmOpenBtn').addEventListener('click', () => openPinModal('pinConfirmInput'));
     document.getElementById('pinInput').addEventListener('click', () => openPinModal('pinInput'));
     document.getElementById('pinConfirmInput').addEventListener('click', () => openPinModal('pinConfirmInput'));
-    document.getElementById('pinInput').addEventListener('input', () => { const el = document.getElementById('pinInput'); el.value = el.value.replace(/\D/g, '').slice(0, 4); syncPinPreview(); if (el.value.length === 4) document.getElementById('pinConfirmInput').focus(); });
-    document.getElementById('pinConfirmInput').addEventListener('input', () => { const el = document.getElementById('pinConfirmInput'); el.value = el.value.replace(/\D/g, '').slice(0, 4); syncPinPreview(); });
-    document.getElementById('pinInput').addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); document.getElementById('pinConfirmInput').focus(); } });
-    document.getElementById('pinConfirmInput').addEventListener('keydown', (event) => { if (event.key === 'Enter' && /^\d{4}$/.test(document.getElementById('pinConfirmInput').value.trim())) { event.preventDefault(); document.getElementById('activateBtn').focus(); } });
-    pinModal.addEventListener('click', (event) => { if (event.target === pinModal) closePinModal(); });
+    document.getElementById('pinInput').addEventListener('input', () => {
+      const el = document.getElementById('pinInput');
+      el.value = el.value.replace(/\D/g, '').slice(0, 4);
+      syncPinPreview();
+      if (el.value.length === 4) document.getElementById('pinConfirmInput').focus();
+    });
+    document.getElementById('pinConfirmInput').addEventListener('input', () => {
+      const el = document.getElementById('pinConfirmInput');
+      el.value = el.value.replace(/\D/g, '').slice(0, 4);
+      syncPinPreview();
+    });
+    document.getElementById('pinInput').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        document.getElementById('pinConfirmInput').focus();
+      }
+    });
+    document.getElementById('pinConfirmInput').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && /^\d{4}$/.test(document.getElementById('pinConfirmInput').value.trim())) {
+        event.preventDefault();
+        document.getElementById('activateBtn').focus();
+      }
+    });
+    pinModal.addEventListener('click', (event) => {
+      if (event.target === pinModal) closePinModal();
+    });
     document.addEventListener('keydown', (event) => {
       if (!pinModal.classList.contains('show')) return;
       if (/^[0-9]$/.test(event.key)) addPinDigit(event.key);
-      if (event.key === 'Backspace') { const input = currentTarget(); input.value = input.value.slice(0, -1); syncPinPreview(); }
-      if (event.key === 'Escape') closePinModal();
+      if (event.key === 'Backspace') {
+        const input = currentTarget();
+        input.value = input.value.slice(0, -1);
+        syncPinPreview();
+      }
       if (event.key === 'Escape' || event.key === 'Enter') closePinModal();
     });
 
     document.getElementById('activateBtn').addEventListener('click', async () => {
+      if (activationBusy) return;
       try {
-        setStatus('Activeren...', 'info');
+        setBusyState(true);
+        setStatus('Activeren...');
         const data = await activatePlayer();
         if (data?.session_token) setSessionToken(data.session_token);
-        setStatus('Klaar', 'ok', `<strong>Je account is geactiveerd.</strong><br>Je gaat terug naar de homepage.`);
-        setTimeout(() => { window.location.href = './index.html'; }, 1100);
+        setStatus('Klaar', 'ok', '<strong>Je account is geactiveerd.</strong><br>Je gaat terug naar de homepage.');
+        window.setTimeout(() => {
+          window.location.href = './index.html';
+        }, 900);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Activeren mislukt';
-        setStatus(escapeHtml(message === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : message), 'warn');
+        setStatus(friendlyActivationMessage(message), 'warn');
+        setBusyState(false);
       }
     });
 
-
-    function initParallax() {
-      const root = document.documentElement;
-      let mx = 0, my = 0, tx = 0, ty = 0, raf = null;
-      function step() {
-        tx += (mx - tx) * 0.1;
-        ty += (my - ty) * 0.1;
-        root.style.setProperty('--mouse-x', `${tx.toFixed(2)}px`);
-        root.style.setProperty('--mouse-y', `${ty.toFixed(2)}px`);
-        if (Math.abs(tx - mx) > 0.2 || Math.abs(ty - my) > 0.2) {
-          raf = requestAnimationFrame(step);
-        } else {
-          raf = null;
-        }
-      }
-      window.addEventListener('mousemove', (event) => {
-        const x = event.clientX / window.innerWidth - 0.5;
-        const y = event.clientY / window.innerHeight - 0.5;
-        mx = x * 30;
-        my = y * 24;
-        if (!raf) raf = requestAnimationFrame(step);
-      }, { passive: true });
-    }
-
-    // v40: pre-rendered background, so parallax is disabled for performance.
-    loadActivationContext().then(setContext).catch((err) => {
-      const message = err instanceof Error ? err.message : 'Kon activatiegegevens niet laden';
-      setStatus(escapeHtml(message), 'warn');
-      document.getElementById('approvedName').textContent = 'Activatielink ongeldig';
-      document.getElementById('approvedEmail').textContent = '—';
-    });
+    loadActivationContext()
+      .then(setContext)
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : 'Kon activatiegegevens niet laden';
+        setStatus(friendlyActivationMessage(message), 'warn');
+        document.getElementById('approvedName').textContent = 'Activatielink ongeldig';
+        document.getElementById('approvedEmail').textContent = '—';
+        document.getElementById('activateBtn').disabled = true;
+      });
   </script>
 </body>
 </html>
