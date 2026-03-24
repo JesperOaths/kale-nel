@@ -218,6 +218,73 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     load();
   </script>
 
-  <div class="site-credit-watermark">v85 · Made by Bruis</div>
+  <div class="site-credit-watermark">v93 · Made by Bruis</div>
+
+<style>
+  .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
+  .player-session-corner.is-visible{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+  .player-session-corner-label{font-size:11px;line-height:1.15;color:#5f5b53;text-align:right}
+  .player-session-corner-name{font-size:13px;line-height:1.1;font-weight:800;color:#111;text-align:right;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .player-session-corner-btn{appearance:none;border:0;border-radius:999px;background:#111;color:#fff;font:inherit;font-weight:800;font-size:11px;line-height:1;padding:7px 10px;cursor:pointer;box-shadow:none}
+  .player-session-corner-btn:hover{opacity:.92}
+  @media (max-width:640px){.player-session-corner{top:10px;right:10px;padding:7px 9px;min-width:100px}.player-session-corner-name{max-width:120px}}
+</style>
+<div id="playerSessionCorner" class="player-session-corner" aria-live="polite">
+  <div class="player-session-corner-label">Ingelogd als</div>
+  <div id="playerSessionCornerName" class="player-session-corner-name"></div>
+  <button id="playerSessionCornerLogout" type="button" class="player-session-corner-btn">Log out</button>
+</div>
+<script>
+(function(){
+  const CONFIG = window.GEJAST_CONFIG || {};
+  const SUPABASE_URL = CONFIG.SUPABASE_URL || '';
+  const SUPABASE_KEY = CONFIG.SUPABASE_PUBLISHABLE_KEY || '';
+  const SESSION_KEYS = ['jas_session_token_v11','jas_session_token_v10'];
+  const box = document.getElementById('playerSessionCorner');
+  const nameEl = document.getElementById('playerSessionCornerName');
+  const btn = document.getElementById('playerSessionCornerLogout');
+  if (!box || !nameEl || !btn) return;
+  function getToken(){
+    for (const key of SESSION_KEYS){
+      const value = localStorage.getItem(key) || sessionStorage.getItem(key);
+      if (value) return value;
+    }
+    return '';
+  }
+  function clearTokens(){
+    for (const key of SESSION_KEYS){
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    }
+  }
+  function rpcHeaders(){
+    return { 'Content-Type':'application/json', apikey: SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}` };
+  }
+  async function fetchMyName(token){
+    if (!token || !SUPABASE_URL || !SUPABASE_KEY) return '';
+    const payload = JSON.stringify({ session_token: token });
+    for (const rpc of ['get_public_state','get_gejast_homepage_state','get_jas_app_state']){
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpc}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: payload });
+        const data = await res.json().catch(()=>null);
+        if (!res.ok) continue;
+        const name = data?.my_name || data?.display_name || data?.player_name || '';
+        if (name) return name;
+      } catch {}
+    }
+    return '';
+  }
+  function show(name){ nameEl.textContent = name; box.classList.add('is-visible'); }
+  function hide(){ box.classList.remove('is-visible'); nameEl.textContent = ''; }
+  btn.addEventListener('click', function(){ clearTokens(); hide(); window.location.reload(); });
+  document.addEventListener('DOMContentLoaded', async function(){
+    const token = getToken();
+    if (!token) return hide();
+    const name = await fetchMyName(token);
+    if (name) show(name); else hide();
+  });
+})();
+</script>
+
 </body>
 </html>
