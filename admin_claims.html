@@ -204,7 +204,7 @@
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v79 · Made by Bruis</div>
+    <div class="version-tag">v80 · Made by Bruis</div>
   </div>
   <script>
 const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -323,7 +323,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       out.allowed_username_id = extractIdLike(out.allowed_username_id);
       out.activation_link_id = extractIdLike(out.activation_link_id);
       const canonicalStatus = String(out.status || '').toLowerCase();
-      if (canonicalStatus === 'activated' || canonicalStatus === 'activation_expired' || canonicalStatus === 'rejected' || canonicalStatus === 'revoked') {
+      if (canonicalStatus === 'activated' || canonicalStatus === 'activation_expired' || canonicalStatus === 'rejected' || canonicalStatus === 'revoked' || canonicalStatus === 'returned_to_claimable') {
         out.request_status = out.status;
       }
       return out;
@@ -365,6 +365,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         .filter(Boolean);
       const decision = String(req?.decision || '').toLowerCase();
       if (states.some((raw) => raw.includes('expired'))) return 'expired';
+      if (states.some((raw) => raw.includes('returned_to_claimable') || raw.includes('claimable_again') || raw.includes('claimable'))) return 'rejected';
       if (states.some((raw) => raw.includes('revok') || raw.includes('reject') || raw.includes('denied'))) return 'rejected';
       if (states.some((raw) => raw.includes('active') || raw.includes('activated'))) return 'active';
       if (
@@ -385,6 +386,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     function statusMeta(req, includeDecision = false) {
       const bucket = stateBucket(req);
       if (bucket === 'active' || hasPin(req)) return { cls: 'state-activated', label: 'Actief' };
+      if ([req?.status, req?.request_status].map((value) => String(value || '').toLowerCase()).some((raw) => raw.includes('returned_to_claimable') || raw.includes('claimable_again') || raw.includes('claimable'))) return { cls: 'state-approved', label: 'Opnieuw claimbaar' };
       if (bucket === 'rejected') return { cls: 'state-rejected', label: 'Afgewezen' };
       if (bucket === 'awaiting') return { cls: includeDecision ? 'state-awaiting' : 'state-approved', label: includeDecision ? 'Wacht op activatie' : 'Goedgekeurd' };
       if (bucket === 'expired') return { cls: 'state-expired', label: 'Verlopen' };
@@ -609,7 +611,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           : bucket === 'expired'
             ? `<div class="compact-actions"><button class="approve-btn" type="button" data-requeue-expired data-id="${requestIdOf(item)}">Opnieuw klaarzetten</button><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button></div>`
             : bucket === 'rejected'
-              ? `<div class="compact-actions"><button class="link-btn" type="button" data-return-claimable data-id="${requestIdOf(item)}">Terug naar claimbaar</button><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button></div>`
+              ? `<div class="compact-actions"><button class="link-btn" type="button" data-return-claimable data-id="${requestIdOf(item)}">Opnieuw claimbaar maken</button><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button></div>`
               : bucket === 'active'
                 ? `<div class="compact-actions"><button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button></div>`
                 : (canRemove ? `<div class="compact-actions"><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button></div>` : '');
@@ -626,7 +628,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
             await revokePlayerAccess(requestId, null);
             await refreshAdminLists();
             if (msg) { msg.textContent = 'Toegang ingetrokken.'; msg.className = 'inline-msg ok'; }
-            window.alert('Toegang ingetrokken. De naam staat weer in de claimbare lijst.');
+            window.alert("Toegang ingetrokken. Controleer daarna in Geschiedenis/Afgewezen of de naam met 'Opnieuw claimbaar maken' weer is vrijgegeven.");
           } catch (err) {
             if (msg) { msg.textContent = err instanceof Error ? err.message : 'Intrekken mislukt'; msg.className = 'inline-msg error'; }
           }
@@ -674,8 +676,8 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
             if (msg) { msg.textContent = 'Naam terugzetten naar claimbaar...'; msg.className = 'inline-msg'; }
             const result = await returnNameToClaimable(requestId, 'Admin teruggezet naar claimbare lijst');
             await refreshAdminLists();
-            if (msg) { msg.textContent = result?.message || 'Naam staat weer in de claimbare lijst.'; msg.className = 'inline-msg ok'; }
-            window.alert('Naam staat weer in de claimbare lijst.');
+            if (msg) { msg.textContent = result?.message || 'Naam is weer claimbaar gemaakt.'; msg.className = 'inline-msg ok'; }
+            window.alert('Naam is weer claimbaar gemaakt en hoort nu opnieuw claimbaar te zijn op de openbare aanvraagpagina.');
           } catch (err) {
             if (msg) { msg.textContent = err instanceof Error ? err.message : 'Terugzetten mislukt'; msg.className = 'inline-msg error'; }
           }
@@ -738,8 +740,8 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
             if (msg) { msg.textContent = 'Goedkeuring intrekken...'; msg.className = 'inline-msg'; }
             await revokePlayerAccess(requestId, 'Admin revoke vanuit goedgekeurde gebruikerslijst');
             await refreshAdminLists();
-            setStatus('Goedkeuring ingetrokken. De gebruiker hoort nu geen toegang meer te hebben.');
-            window.alert('Toegang ingetrokken. De naam staat weer in de claimbare lijst.');
+            setStatus('Toegang ingetrokken. Maak de naam daarna indien nodig opnieuw claimbaar vanuit de geschiedenis.');
+            window.alert("Toegang ingetrokken. Controleer daarna in Geschiedenis/Afgewezen of de naam met 'Opnieuw claimbaar maken' weer is vrijgegeven.");
           } catch (err) {
             if (msg) { msg.textContent = err instanceof Error ? err.message : 'Intrekken mislukt'; msg.className = 'inline-msg error'; }
           }
@@ -807,7 +809,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         pending: { title: 'Nog te beoordelen', subtitle: 'Nieuwe aanvragen die nog een besluit nodig hebben.', card: 'requestsCard' },
         awaiting: { title: 'Wacht op activatie', subtitle: 'Goedgekeurd, maar nog niet geactiveerd.', card: 'historyCard' },
         active: { title: 'Actief', subtitle: 'Geactiveerde accounts met snelle intrekknoppen.', card: 'approvedUsersCard' },
-        rejected: { title: 'Afgewezen', subtitle: 'Afgewezen of later ingetrokken aanvragen.', card: 'historyCard' },
+        rejected: { title: 'Afgewezen', subtitle: 'Afgewezen, ingetrokken of opnieuw claimbaar gemaakte aanvragen.', card: 'historyCard' },
         expired: { title: 'Verlopen', subtitle: 'Verlopen activatielinks die opnieuw moeten worden klaargezet.', card: 'historyCard' }
       };
     }
@@ -854,7 +856,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       } else if (view === 'rejected') {
         historyFilter = 'rejected';
         document.getElementById('historyTitle').textContent = 'Afgewezen';
-        document.getElementById('historyNote').textContent = 'Afgewezen of later weer ingetrokken.';
+        document.getElementById('historyNote').textContent = 'Afgewezen, ingetrokken of opnieuw claimbaar gemaakte namen. Gebruik hier "Opnieuw claimbaar maken" om een naam echt vrij te geven.';
         renderHistory(lastHistory);
       } else if (view === 'expired') {
         historyFilter = 'expired';
@@ -1220,6 +1222,6 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     loadAdmin().then(startAdminAutoRefresh).catch(() => {});
   </script>
 
-  <div class="site-credit-watermark">v79 · Made by Bruis</div>
+  <div class="site-credit-watermark">v80 · Made by Bruis</div>
 </body>
 </html>

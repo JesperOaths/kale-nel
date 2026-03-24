@@ -180,7 +180,13 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         setStatus(result?.message || "Aanvraag verstuurd.", "ok", `<strong>${escapeHtml(result?.message || 'Aanvraag verstuurd.')}</strong><br>Na goedkeuring ontvang je op dit e-mailadres een persoonlijke activatielink.`);
       } catch (err) {
         const rawMessage = err instanceof Error ? err.message : "Er ging iets mis";
-        setStatus(rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage, "warn");
+        const friendlyMessage = /claim_requests_unique_pending|Er is al een open aanvraag voor deze naam/i.test(rawMessage)
+          ? 'Voor deze naam staat nog een open of nog niet goed vrijgegeven aanvraag in het systeem. Ververs de pagina of laat de beheerder de naam opnieuw claimbaar maken.'
+          : rawMessage === "Failed to fetch"
+            ? "Netwerk/CORS-fout bij contact met Supabase."
+            : rawMessage;
+        setStatus(friendlyMessage, "warn");
+        try { await load(); } catch {}
       }
     });
 
@@ -212,6 +218,6 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     load();
   </script>
 
-  <div class="site-credit-watermark">v79 · Made by Bruis</div>
+  <div class="site-credit-watermark">v80 · Made by Bruis</div>
 </body>
 </html>

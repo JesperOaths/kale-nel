@@ -186,6 +186,7 @@
       const decision = String(out.decision || '').toLowerCase();
       const hasPin = hasActivationEvidence(out);
       if (states.some((raw) => raw.includes('expired'))) return 'expired';
+      if (states.some((raw) => raw.includes('returned_to_claimable') || raw.includes('claimable_again') || raw.includes('claimable'))) return 'rejected';
       if (states.some((raw) => raw.includes('revok') || raw.includes('reject') || raw.includes('denied'))) return 'rejected';
       if (states.some((raw) => raw.includes('active') || raw.includes('activated'))) return 'active';
       if (states.some((raw) => raw.includes('approved') || raw.includes('await') || raw.includes('pending_activation') || raw.includes('pending activation') || raw.includes('awaiting_activation') || raw.includes('awaiting activation') || raw.includes('waiting'))) return hasPin ? 'active' : 'awaiting';
@@ -276,6 +277,6 @@
     document.addEventListener('visibilitychange', () => { if (!document.hidden && !document.getElementById('hubView').classList.contains('hidden')) loadCounts().catch(() => {}); });
   </script>
 
-  <div class="site-credit-watermark">v79 · Made by Bruis</div>
+  <div class="site-credit-watermark">v80 · Made by Bruis</div>
 </body>
 </html>
