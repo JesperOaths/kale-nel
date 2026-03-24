@@ -157,14 +157,36 @@
       if (data.admin_session_token) setAdminSessionToken(data.admin_session_token);
       return data;
     }
+    function hasActivationEvidence(out) {
+      return Boolean(
+        out.has_pin ??
+        out.pin_is_set ??
+        out.player_has_pin ??
+        out.pin_set ??
+        out.pin_hash_set ??
+        out.pin_hash_present ??
+        out.has_pin_hash ??
+        out.player_pin_hash_set ??
+        out.activated ??
+        out.activated_at ??
+        out.activated_on ??
+        out.link_used_at ??
+        out.activation_used_at ??
+        out.player_activation_used_at ??
+        out.used_at ??
+        out.pin_hash ??
+        out.player_pin_hash ??
+        false
+      );
+    }
     function deriveAdminBucket(out) {
       const raw = String(out.state_bucket || out.request_status || out.status || '').toLowerCase();
       const decision = String(out.decision || '').toLowerCase();
-      const hasPin = Boolean(out.has_pin ?? out.pin_is_set ?? out.player_has_pin ?? out.pin_set ?? out.activated ?? false);
+      const hasPin = hasActivationEvidence(out);
       if (raw.includes('expired')) return 'expired';
-      if (raw.includes('revok') || raw.includes('reject')) return 'rejected';
+      if (raw.includes('revok') || raw.includes('reject') || raw.includes('denied')) return 'rejected';
       if (raw.includes('active') || raw.includes('activated')) return 'active';
-      if (raw.includes('approved') || raw.includes('await')) return hasPin ? 'active' : 'awaiting';
+      if (raw.includes('approved') || raw.includes('await') || raw.includes('pending_activation') || raw.includes('pending activation') || raw.includes('awaiting_activation') || raw.includes('awaiting activation') || raw.includes('waiting')) return hasPin ? 'active' : 'awaiting';
       if (decision === 'rejected' || decision === 'revoked') return 'rejected';
       if (hasPin) return 'active';
       return 'pending';
@@ -173,7 +195,7 @@
       return (rows || []).map((row) => {
         const out = row && typeof row === 'object' ? { ...row } : { value: row };
         const decision = String(out.decision || '').toLowerCase();
-        const hasPin = Boolean(out.has_pin ?? out.pin_is_set ?? out.player_has_pin ?? out.pin_set ?? out.activated ?? false);
+        const hasPin = hasActivationEvidence(out);
         const state_bucket = deriveAdminBucket({ ...out, decision, hasPin });
         return { ...out, decision, hasPin, state_bucket };
       });
@@ -252,6 +274,6 @@
     document.addEventListener('visibilitychange', () => { if (!document.hidden && !document.getElementById('hubView').classList.contains('hidden')) loadCounts().catch(() => {}); });
   </script>
 
-  <div class="site-credit-watermark">v74 · Made by Bruis</div>
+  <div class="site-credit-watermark">v75 · Made by Bruis</div>
 </body>
 </html>

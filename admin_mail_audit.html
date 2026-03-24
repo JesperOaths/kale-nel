@@ -41,6 +41,6 @@
     document.addEventListener('visibilitychange',()=>{ if(!document.hidden) loadDiagnostics().catch(()=>{}); });
     (async()=>{ if(await ensureGate()) loadDiagnostics().catch((err)=>setStatus(err?.message||'Laden mislukt.','warn')); })();
   </script>
-  <div class="site-credit-watermark">v74 · Made by Bruis</div>
+  <div class="site-credit-watermark">v75 · Made by Bruis</div>
 </body>
 </html>

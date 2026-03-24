@@ -96,7 +96,7 @@
     .entry-title{font-size:20px;font-weight:800;line-height:1.05}
     .entry-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
     .entry-note{background:#f6f3eb;border:1px solid rgba(0,0,0,.06);border-radius:14px;padding:12px 14px;color:#4d463c;font-size:14px}
-    .state-activated,.state-approved{background:#e9f4eb;color:#1f6b31}.state-awaiting{background:#fff4d7;color:#8a6212}.state-rejected{background:#f7e6e3;color:#8b3a30}
+    .state-activated,.state-approved{background:#e9f4eb;color:#1f6b31}.state-awaiting,.state-expired{background:#fff4d7;color:#8a6212}.state-rejected{background:#f7e6e3;color:#8b3a30}
     .hub-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
     .hub-link{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-radius:16px;border:1px solid rgba(0,0,0,0.08);background:#fff;color:#111;text-decoration:none;font-weight:700}
     .hub-link small{display:block;color:#7b7468;font-weight:500}
@@ -204,7 +204,7 @@
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v74 · Made by Bruis</div>
+    <div class="version-tag">v75 · Made by Bruis</div>
   </div>
   <script>
 const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -215,6 +215,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
     let lastRequests = [];
     let lastHistory = [];
+    let lastExpired = [];
     let historyFilter = "all";
     let currentAdminView = "pending";
     const SITE_PAGES = [
@@ -333,15 +334,43 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     }
 
     function hasPin(req) {
-      return Boolean(req.has_pin ?? req.pin_is_set ?? req.player_has_pin ?? req.pin_set ?? req.activated ?? (String(req.state_bucket || '').toLowerCase() === 'active'));
+      return Boolean(
+        req.has_pin ??
+        req.pin_is_set ??
+        req.player_has_pin ??
+        req.pin_set ??
+        req.pin_hash_set ??
+        req.pin_hash_present ??
+        req.has_pin_hash ??
+        req.player_pin_hash_set ??
+        req.activated ??
+        req.activated_at ??
+        req.activated_on ??
+        req.link_used_at ??
+        req.activation_used_at ??
+        req.player_activation_used_at ??
+        req.used_at ??
+        req.pin_hash ??
+        req.player_pin_hash ??
+        (String(req.state_bucket || '').toLowerCase() === 'active')
+      );
     }
     function stateBucket(req) {
       const raw = String(req?.state_bucket || req?.request_status || req?.status || '').toLowerCase();
+      const decision = String(req?.decision || '').toLowerCase();
       if (raw.includes('expired')) return 'expired';
-      if (raw.includes('revok') || raw.includes('reject')) return 'rejected';
+      if (raw.includes('revok') || raw.includes('reject') || raw.includes('denied')) return 'rejected';
       if (raw.includes('active') || raw.includes('activated')) return 'active';
-      if (raw.includes('approved') || raw.includes('await')) return hasPin(req) ? 'active' : 'awaiting';
-      if (String(req?.decision || '').toLowerCase() === 'rejected' || String(req?.decision || '').toLowerCase() === 'revoked') return 'rejected';
+      if (
+        raw.includes('approved') ||
+        raw.includes('await') ||
+        raw.includes('pending_activation') ||
+        raw.includes('pending activation') ||
+        raw.includes('awaiting_activation') ||
+        raw.includes('awaiting activation') ||
+        raw.includes('waiting')
+      ) return hasPin(req) ? 'active' : 'awaiting';
+      if (decision === 'rejected' || decision === 'revoked') return 'rejected';
       if (hasPin(req)) return 'active';
       return 'pending';
     }
@@ -350,28 +379,31 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       if (bucket === 'active' || hasPin(req)) return { cls: 'state-activated', label: 'Actief' };
       if (bucket === 'rejected') return { cls: 'state-rejected', label: 'Afgewezen' };
       if (bucket === 'awaiting') return { cls: includeDecision ? 'state-awaiting' : 'state-approved', label: includeDecision ? 'Wacht op activatie' : 'Goedgekeurd' };
-      if (bucket === 'expired') return { cls: 'state-rejected', label: 'Verlopen' };
+      if (bucket === 'expired') return { cls: 'state-expired', label: 'Verlopen' };
       return { cls: 'state-pending', label: 'Openstaand' };
     }
 
     function isGoedgekeurdLike(req) {
       const bucket = stateBucket(req);
-      return bucket === 'awaiting' || bucket === 'active' || hasPin(req);
+      return bucket === 'awaiting' || bucket === 'active';
     }
 
     function renderStats(requests, history) {
-      const pending = (requests || []).length;
-      const approved = (history || []).filter((item) => isGoedgekeurdLike(item) && !hasPin(item)).length;
-      const activated = (history || []).filter((item) => hasPin(item)).length;
+      const pending = (requests || []).filter((item) => stateBucket(item) === 'pending').length;
+      const approved = (history || []).filter((item) => stateBucket(item) === 'awaiting').length;
+      const activated = (history || []).filter((item) => stateBucket(item) === 'active').length;
       const rejected = (history || []).filter((item) => stateBucket(item) === 'rejected').length;
+      const expired = (history || []).filter((item) => stateBucket(item) === 'expired').length;
       document.getElementById('statPending').textContent = String(pending);
       document.getElementById('statGoedgekeurd').textContent = String(approved);
       document.getElementById('statActief').textContent = String(activated);
       document.getElementById('statRejected').textContent = String(rejected);
+      document.getElementById('statExpired').textContent = String(expired);
     }
 
     function approvedUserCardHtml(item) {
-      const activationState = hasPin(item) ? 'Actief' : 'Wacht op activatie';
+      const bucket = stateBucket(item);
+      const activationState = bucket === 'active' ? 'Actief' : bucket === 'expired' ? 'Verlopen' : 'Wacht op activatie';
       const decided = item.decided_at ? new Date(item.decided_at).toLocaleString('nl-NL') : 'Onbekend';
       return `${requestHtml(item, true)}
         <div class="request-grid" style="margin-top:12px;">
@@ -382,7 +414,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           <button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(item)}">Nieuwe activatielink</button>
           <button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button>
         </div>
-        <div class="inline-msg" id="approved-msg-${requestIdOf(item)}">Gebruiker actief in admin-overzicht.</div>
+        <div class="inline-msg" id="approved-msg-${requestIdOf(item)}">${bucket === 'active' ? 'Gebruiker actief in admin-overzicht.' : 'Gebruiker staat klaar onder wacht op activatie.'}</div>
         ${activationPanelHtml(item)}`;
     }
 
@@ -549,9 +581,8 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       root.innerHTML = '';
       const q = (document.getElementById('historySearch')?.value || '').trim().toLowerCase();
       const filtered = (items || []).filter((item) => {
-        const state = statusMeta(item, true).label.toLowerCase();
-        const stateKey = statusMeta(item, true).cls.replace('state-','');
-        const matchFilter = historyFilter === 'all' || stateKey === historyFilter;
+        const bucket = stateBucket(item);
+        const matchFilter = historyFilter === 'all' || bucket === historyFilter;
         const matchQuery = !q || [displayNameOf(item), item.requester_email, item.decision].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
         return matchFilter && matchQuery;
       });
@@ -772,7 +803,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     function renderAdminTabs() {
       const config = getAdminViewConfig();
       const tabs = [
-        { key: 'pending', label: 'Nog te beoordelen', count: (lastRequests || []).length },
+        { key: 'pending', label: 'Nog te beoordelen', count: (lastRequests || []).filter((item) => stateBucket(item) === 'pending').length },
         { key: 'awaiting', label: 'Wacht op activatie', count: (lastHistory || []).filter((item) => stateBucket(item) === 'awaiting').length },
         { key: 'active', label: 'Actief', count: (lastHistory || []).filter((item) => stateBucket(item) === 'active').length },
         { key: 'rejected', label: 'Afgewezen', count: (lastHistory || []).filter((item) => stateBucket(item) === 'rejected').length },
@@ -863,6 +894,29 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     }
     async function getRequests() { const data = await callFirstRpc(['admin_get_claim_requests','admin_list_claim_requests_action'], { admin_session_token: getAdminSessionToken() }); return Array.isArray(data) ? data : (data?.requests || data?.items || []); }
     async function getHistory() { const data = await callFirstRpc(['admin_get_claim_history','admin_list_claim_history_action'], { admin_session_token: getAdminSessionToken() }); return Array.isArray(data) ? data : (data?.history || data?.items || []); }
+    async function getExpiredQueue() { const data = await callFirstRpc(['admin_get_expired_activation_queue','admin_list_expired_activation_queue_action'], { admin_session_token: getAdminSessionToken() }).catch(() => ({ items: [] })); return Array.isArray(data) ? data : (data?.items || []); }
+    function normalizeExpiredRows(rows) {
+      return normalizeAdminRows(rows).map((row) => ({
+        ...row,
+        state_bucket: 'expired',
+        request_status: row.request_status || row.status || 'activation_expired',
+        status: row.status || row.request_status || 'activation_expired'
+      }));
+    }
+    function mergeHistoryWithExpired(historyRows, expiredRows) {
+      const byId = new Map();
+      (historyRows || []).forEach((row) => {
+        const key = requestIdOf(row);
+        if (key !== null && key !== undefined) byId.set(String(key), row);
+      });
+      (expiredRows || []).forEach((row) => {
+        const key = requestIdOf(row);
+        if (key === null || key === undefined) return;
+        const existing = byId.get(String(key)) || {};
+        byId.set(String(key), { ...existing, ...row, state_bucket: 'expired', request_status: row.request_status || existing.request_status || 'activation_expired', status: row.status || existing.status || 'activation_expired' });
+      });
+      return Array.from(byId.values());
+    }
     async function decideRequest(requestId, decision, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision, decision_reason_input: decisionReason }) }); return await parseResponse(res); }
     async function approveAndSendActivation(requestId, decisionReason) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_approve_and_send_activation_action`, {
@@ -1034,9 +1088,11 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     }
 
     async function refreshAdminLists() {
-      const [requests, history] = await Promise.all([getRequests(), getHistory()]);
+      const [requests, history, expired] = await Promise.all([getRequests(), getHistory(), getExpiredQueue()]);
       lastRequests = normalizeAdminRows(Array.isArray(requests) ? requests : (requests?.items || []));
-      lastHistory = normalizeAdminRows(Array.isArray(history) ? history : (history?.items || []));
+      const normalizedHistory = normalizeAdminRows(Array.isArray(history) ? history : (history?.items || []));
+      lastExpired = normalizeExpiredRows(Array.isArray(expired) ? expired : (expired?.items || []));
+      lastHistory = mergeHistoryWithExpired(normalizedHistory, lastExpired);
       renderStats(lastRequests, lastHistory);
       switchAdminView(currentAdminView);
     }
@@ -1152,6 +1208,6 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     loadAdmin().then(startAdminAutoRefresh).catch(() => {});
   </script>
 
-  <div class="site-credit-watermark">v74 · Made by Bruis</div>
+  <div class="site-credit-watermark">v75 · Made by Bruis</div>
 </body>
 </html>
