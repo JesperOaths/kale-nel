@@ -233,6 +233,37 @@
       color: #444;
     }
 
+    .vote-name-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .list-box.legends .vote-name-row {
+      justify-content: flex-end;
+    }
+
+    .remove-vote-btn {
+      border: 1px solid rgba(17,17,17,0.12);
+      background: rgba(255,255,255,0.92);
+      color: #6a6256;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      line-height: 1.1;
+    }
+
+    .remove-vote-btn:hover {
+      border-color: rgba(17,17,17,0.2);
+      color: #1a1a1a;
+    }
+
+    .remove-vote-btn:disabled {
+      opacity: .6;
+      cursor: wait;
+    }
 
     .site-scene { display: none; }
 
@@ -454,15 +485,64 @@
     }
     function getSessionToken() { return localStorage.getItem(SESSION_KEY); }
     function clearSessionToken() { localStorage.removeItem(SESSION_KEY); }
+    let currentHomepageState = null;
+    let removingVote = false;
     function setStatus(message = '', tone = 'info') {
       const box = document.getElementById('statusBox');
       if (!message) { box.className = 'status'; box.textContent = ''; return; }
       box.className = `status show ${tone}`; box.textContent = message;
     }
-    function renderNames(id, items, emptyText) {
+    function canShowRemoveButton(name, listKey) {
+      const myName = currentHomepageState?.my_name;
+      const myStatus = currentHomepageState?.my_status;
+      if (!getSessionToken() || !myName || !myStatus) return false;
+      if (String(name || '').trim().toLowerCase() !== String(myName || '').trim().toLowerCase()) return false;
+      if (listKey === 'legends') return myStatus === 'ja';
+      if (listKey === 'losers') return myStatus === 'nee';
+      return false;
+    }
+    async function removeMyVote() {
+      if (removingVote) return;
+      removingVote = true;
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/remove_my_vote`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token: getSessionToken() }) });
+        const data = await parseResponse(res);
+        renderState(data);
+        setStatus('Je stem is verwijderd.', 'ok');
+      } catch (error) {
+        const msg = error?.message || 'Onbekende fout';
+        if (/sessie|token|login|ingelogd/i.test(msg)) {
+          clearSessionToken();
+          window.location.href = new URL('./login.html', window.location.href).toString();
+          return;
+        }
+        setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
+      } finally {
+        removingVote = false;
+      }
+    }
+    function renderNames(id, items, emptyText, listKey) {
       const root = document.getElementById(id); root.innerHTML = '';
       if (!items || items.length === 0) { const li = document.createElement('li'); li.textContent = emptyText; root.appendChild(li); return; }
-      items.forEach((name) => { const li = document.createElement('li'); li.textContent = name; root.appendChild(li); });
+      items.forEach((name) => {
+        const li = document.createElement('li');
+        const row = document.createElement('div');
+        row.className = 'vote-name-row';
+        const text = document.createElement('span');
+        text.textContent = name;
+        row.appendChild(text);
+        if (canShowRemoveButton(name, listKey)) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'remove-vote-btn';
+          btn.textContent = 'verwijderen';
+          btn.disabled = removingVote;
+          btn.addEventListener('click', removeMyVote);
+          row.appendChild(btn);
+        }
+        li.appendChild(row);
+        root.appendChild(li);
+      });
     }
     function yesSaidCopy(canCount) {
       if (canCount === 1) return '1 speler heeft Ja gezegd';
@@ -474,6 +554,7 @@
       return { key: 'no', label: 'Nee', copy: yesSaidCopy(canCount) };
     }
     function renderState(data) {
+      currentHomepageState = data || null;
       const legends = data.legends || data.yes_names || [];
       const losers = data.losers || data.no_names || [];
       const canCount = Number(data.can_count ?? data.yes_count ?? legends.length ?? 0);
@@ -492,8 +573,8 @@
       document.getElementById('yesCountPanel').textContent = legends.length;
       document.getElementById('noCountPanel').textContent = losers.length;
 
-      renderNames('legendsList', legends, 'Nog niemand');
-      renderNames('losersList', losers, 'Nog niemand');
+      renderNames('legendsList', legends, 'Nog niemand', 'legends');
+      renderNames('losersList', losers, 'Nog niemand', 'losers');
       if (data.my_name && document.getElementById('sessionHint')) document.getElementById('sessionHint').textContent = `Ingelogd als ${data.my_name}.`;
     }
     async function getHomepageState() {
@@ -546,6 +627,6 @@
     load();
   </script>
 
-  <div class="site-credit-watermark">v85 · Made by Bruis</div>
+  <div class="site-credit-watermark">v92 · Made by Bruis</div>
 </body>
 </html>
