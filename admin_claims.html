@@ -47,6 +47,8 @@
     .ghost-btn { background:#fff; border:1px solid rgba(0,0,0,0.08); color:#222; }
     .stats-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:18px 0 6px; }
     .stat-card { background:linear-gradient(180deg,#fff,#f5f1e8); border:1px solid rgba(0,0,0,0.06); border-radius:18px; padding:16px; box-shadow:0 8px 24px rgba(0,0,0,0.04); }
+    .stat-card.clickable{cursor:pointer;}
+    .stat-card.clickable:hover{transform:translateY(-1px);}
     .stat-card .label { font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:#85754f; }
     .stat-card .value { font-size:30px; font-weight:800; margin-top:6px; }
     .panel-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; }
@@ -136,10 +138,10 @@
         <button id="logoutBtn" class="btn dark">Uitloggen</button>
       </div>
       <div id="statsGrid" class="stats-grid hidden">
-        <div class="stat-card"><div class="label">Nog te beoordelen</div><div id="statPending" class="value">0</div></div>
-        <div class="stat-card"><div class="label">Wacht op activatie</div><div id="statApproved" class="value">0</div></div>
-        <div class="stat-card"><div class="label">Actief</div><div id="statActivated" class="value">0</div></div>
-        <div class="stat-card"><div class="label">Afgewezen</div><div id="statRejected" class="value">0</div></div>
+        <div class="stat-card clickable" data-admin-view-card="pending"><div class="label">Nog te beoordelen</div><div id="statPending" class="value">0</div></div>
+        <div class="stat-card clickable" data-admin-view-card="awaiting"><div class="label">Wacht op activatie</div><div id="statApproved" class="value">0</div></div>
+        <div class="stat-card clickable" data-admin-view-card="active"><div class="label">Actief</div><div id="statActivated" class="value">0</div></div>
+        <div class="stat-card clickable" data-admin-view-card="rejected"><div class="label">Afgewezen</div><div id="statRejected" class="value">0</div></div>
       </div>
       <hr>
       <div id="adminTabsCard" class="card hidden admin-tabs-card">
@@ -198,7 +200,7 @@
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v70 · Made by Bruis</div>
+    <div class="version-tag">v71 · Made by Bruis</div>
   </div>
   <script>
 const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -422,6 +424,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       if (!requests || requests.length === 0) { root.innerHTML = `<p class="muted">Geen openstaande aanvragen.</p>`; return; }
       const q = (document.getElementById('requestSearch')?.value || '').trim().toLowerCase();
       (requests || []).filter((req) => {
+        if (stateBucket(req) !== 'pending') return false;
         if (!q) return true;
         return [displayNameOf(req), req.requester_email].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
       }).forEach((req) => {
@@ -550,8 +553,10 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       filtered.forEach((item) => {
         const div = document.createElement('div');
         div.className = 'request';
-        const canLink = String(item.decision || '').toLowerCase() === 'approved' || item.approved === true || item.active === true || hasPin(item);
-        div.innerHTML = `${requestHtml(item, true)}<div class="muted" style="margin-top:10px;">${item.decided_at ? new Date(item.decided_at).toLocaleString('nl-NL') : ''}</div>${canLink ? `<div class="compact-actions"><button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(item)}">Regenerate-link</button><button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">User verwijderen</button></div>${activationPanelHtml(item)}` : ''}<div class="inline-msg" id="history-msg-${requestIdOf(item)}">Geschiedenisitem.</div>`;
+        const bucket = stateBucket(item);
+        const canReissue = bucket === 'awaiting' || bucket === 'active';
+        const canRemove = bucket === 'rejected' || bucket === 'awaiting' || bucket === 'active' || bucket === 'expired';
+        div.innerHTML = `${requestHtml(item, true)}<div class="muted" style="margin-top:10px;">${item.decided_at ? new Date(item.decided_at).toLocaleString('nl-NL') : ''}</div>${canReissue ? `<div class="compact-actions"><button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(item)}">Regenerate-link</button><button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">User verwijderen</button></div>${activationPanelHtml(item)}` : (canRemove ? `<div class="compact-actions"><button class="ghost-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">User verwijderen</button></div>` : '')}<div class="inline-msg" id="history-msg-${requestIdOf(item)}">Geschiedenisitem.</div>`;
         root.appendChild(div);
       });
       const historyPills = document.querySelectorAll('[data-history-filter]'); if (historyPills.length) historyPills.forEach((btn)=>{ btn.classList.toggle('active', btn.dataset.historyFilter===historyFilter); });
@@ -580,6 +585,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
             await removePlayer(requestId, 'Admin user verwijderen');
             await refreshAdminLists();
             if (msg) { msg.textContent = 'Gebruiker verwijderd.'; msg.className = 'inline-msg ok'; }
+            window.alert('Gebruiker verwijderd en uit alle adminlijsten gehaald.');
           } catch (err) {
             if (msg) { msg.textContent = err instanceof Error ? err.message : 'Verwijderen mislukt'; msg.className = 'inline-msg error'; }
           }
@@ -643,7 +649,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
             await removePlayer(requestId, 'Admin user verwijderen');
             await refreshAdminLists();
             setStatus('Gebruiker verwijderd.');
-            window.alert('Gebruiker verwijderd en uit de loginflow gehaald.');
+            window.alert('Gebruiker verwijderd en uit alle adminlijsten gehaald.');
           } catch (err) {
             if (msg) { msg.textContent = err instanceof Error ? err.message : 'Verwijderen mislukt'; msg.className = 'inline-msg error'; }
           }
@@ -724,6 +730,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
 
     function switchAdminView(view) {
       currentAdminView = view;
+      try { history.replaceState(null, '', `#view=${view}`); } catch {}
       const cfg = getAdminViewConfig()[view] || getAdminViewConfig().pending;
       document.getElementById('currentListTitle').textContent = cfg.title;
       document.getElementById('currentListSubtitle').textContent = cfg.subtitle;
@@ -1008,10 +1015,13 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
       }
     });
     document.querySelectorAll('[data-history-filter]').forEach((btn)=> btn.addEventListener('click', ()=> { historyFilter = btn.dataset.historyFilter; renderHistory(lastHistory); }));
+    document.querySelectorAll('[data-admin-view-card]').forEach((card) => card.addEventListener('click', () => switchAdminView(card.dataset.adminViewCard)));
+    window.addEventListener('hashchange', () => { const view = (location.hash.match(/view=([a-z]+)/i)||[])[1]; if (view) switchAdminView(view); });
     window.addEventListener('error', (event) => { if (event?.message) setStatus(event.message); });
+    const initialView = (location.hash.match(/view=([a-z]+)/i)||[])[1]; if (initialView) currentAdminView = initialView;
     loadAdmin();
   </script>
 
-  <div class="site-credit-watermark">v70 · Made by Bruis</div>
+  <div class="site-credit-watermark">v71 · Made by Bruis</div>
 </body>
 </html>
