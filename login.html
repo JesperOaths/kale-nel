@@ -248,13 +248,25 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       });
       return await parseResponse(res);
     }
+    function normalizeLoginNameRows(payload) {
+      if (Array.isArray(payload)) {
+        return payload.map((row) => row?.display_name || row?.name || row?.desired_name || '').filter(Boolean);
+      }
+      if (Array.isArray(payload?.names)) {
+        return payload.names.map((row) => {
+          if (typeof row === 'string') return row;
+          return row?.display_name || row?.name || row?.desired_name || '';
+        }).filter(Boolean);
+      }
+      return [];
+    }
     async function load() {
       const [stateResult, loginNamesResult] = await Promise.allSettled([getPublicState(), getLoginNames()]);
       const state = stateResult.status === 'fulfilled' ? stateResult.value : null;
       const loginNames = loginNamesResult.status === 'fulfilled' ? loginNamesResult.value : null;
       const fallbackNames = [];
       if (state?.my_name) fallbackNames.push(state.my_name);
-      fillNames(uniqueNames([...(loginNames?.names || []), ...fallbackNames]), state?.my_name || '');
+      fillNames(uniqueNames([...(normalizeLoginNameRows(loginNames)), ...fallbackNames]), state?.my_name || '');
 
       const stateTile = document.querySelector('.state-tile');
       if (state?.my_name) {
@@ -373,6 +385,6 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     load();
   </script>
 
-  <div class="site-credit-watermark">v87 · Made by Bruis</div>
+  <div class="site-credit-watermark">v88 · Made by Bruis</div>
 </body>
 </html>
