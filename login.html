@@ -197,8 +197,11 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     function activationBaseUrl() {
       return new URL('./activate.html', window.location.href).toString();
     }
+    const ACTIVATION_EMAIL_SUBJECT = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.EMAIL_SUBJECT) || 'Activeer je account voor de Kale Nel';
     function buildMakeWebhookMeta(source, meta = {}) {
       const payload = { trigger: 'activation_email_queued', source, ts: new Date().toISOString(), ...meta };
+      payload.subject = payload.subject || payload.email_subject || ACTIVATION_EMAIL_SUBJECT;
+      payload.email_subject = payload.email_subject || payload.subject || ACTIVATION_EMAIL_SUBJECT;
       payload.ts_local = payload.ts_local || formatDateTime(payload.ts);
       if (payload.expires_at && !payload.expires_at_local) payload.expires_at_local = formatDateTime(payload.expires_at);
       if (payload.created_at && !payload.created_at_local) payload.created_at_local = formatDateTime(payload.created_at);
@@ -408,7 +411,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     load();
   </script>
 
-  <div class="site-credit-watermark">v94 · Made by Bruis</div>
+  <div class="site-credit-watermark">v95 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
