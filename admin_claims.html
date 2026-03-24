@@ -204,7 +204,7 @@
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v80 · Made by Bruis</div>
+    <div class="version-tag">v81 · Made by Bruis</div>
   </div>
   <script>
 const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -245,7 +245,8 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
 
     function showLoggedIn(username) { document.getElementById("loginView").classList.add("hidden"); document.getElementById("adminView").classList.remove("hidden"); document.getElementById("workspace").classList.remove("hidden"); document.getElementById("adminTabsCard").classList.remove("hidden"); document.getElementById("adminToolbar").classList.remove("hidden"); document.getElementById("statsGrid").classList.remove("hidden"); document.getElementById("requestsCard").classList.remove("hidden"); document.getElementById("historyCard").classList.remove("hidden"); document.getElementById("approvedUsersCard").classList.remove("hidden"); document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`; renderPagesHub(); }
 
-    function formatDateTime(value) { return value ? new Date(value).toLocaleString('nl-NL') : 'Onbekend'; }
+    const DATE_TIME_24H = new Intl.DateTimeFormat('nl-NL', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
+    function formatDateTime(value) { if (!value) return 'Onbekend'; const date = value instanceof Date ? value : new Date(value); return Number.isNaN(date.getTime()) ? String(value) : DATE_TIME_24H.format(date).replace(',', ''); }
     function getActivationBaseUrl() { const url = new URL('./activate.html', window.location.href); if (url.protocol === 'http:' && !/^(localhost|127\.0\.0\.1)$/i.test(url.hostname)) url.protocol = 'https:'; return url.toString(); }
     function activationPanelHtml(req) {
       return `
@@ -414,7 +415,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     function approvedUserCardHtml(item) {
       const bucket = stateBucket(item);
       const activationState = bucket === 'active' ? 'Actief' : bucket === 'expired' ? 'Verlopen' : 'Wacht op activatie';
-      const decided = item.decided_at ? new Date(item.decided_at).toLocaleString('nl-NL') : 'Onbekend';
+      const decided = item.decided_at ? formatDateTime(item.decided_at) : 'Onbekend';
       const pinState = hasPin(item) ? 'Ingesteld' : 'Nog niet ingesteld';
       const activationButton = bucket === 'active'
         ? ''
@@ -444,7 +445,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
             <div class="entry-title">${escapeHtml(displayNameOf(req))}</div>
             <div class="muted">${req.requester_email || 'Onbekend e-mailadres'} · aanvraag #${req.id ?? '?'}</div>
           </div>
-          <div class="muted" style="text-align:right;">Aangevraagd<br><strong>${req.created_at ? new Date(req.created_at).toLocaleString('nl-NL') : 'Onbekend'}</strong>${includeDecision ? `<br><span>Besluit: ${escapeHtml(req.decision || '')}</span>` : ''}</div>
+          <div class="muted" style="text-align:right;">Aangevraagd<br><strong>${req.created_at ? formatDateTime(req.created_at) : 'Onbekend'}</strong>${includeDecision ? `<br><span>Besluit: ${escapeHtml(req.decision || '')}</span>` : ''}</div>
         </div>
         <div class="entry-note">${noteHtml}</div>
         <div class="entry-meta">
@@ -500,7 +501,12 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
                 reason: 'activation_email_queued',
                 request_id: requestId,
                 job_id: prepared?.job_id ?? prepared?.queue_job_id ?? prepared?.id ?? null,
-                email: prepared?.requester_email ?? null
+                player_id: prepared?.player_id ?? req?.player_id ?? null,
+                display_name: prepared?.display_name ?? displayNameOf(req),
+                email: prepared?.requester_email ?? req?.requester_email ?? null,
+                activation_url: prepared?.activation_url ?? null,
+                expires_at: prepared?.expires_at ?? null,
+                created_at: req?.created_at ?? null
               });
               if (msg) { msg.textContent = (prepared?.message || 'Wacht op activatie. Nieuwe activatielink en mail zijn klaargezet.') + ' — ' + formatMailDiagnostics(prepared, wake); msg.className = 'inline-msg ok'; }
               window.alert('Aanvraag goedgekeurd. Er is een nieuwe activatielink klaargezet, de verificatiemail is in de wachtrij gezet en Make is gepingd. De naam hoort nu onder wacht op activatie te staan tot de link echt is gebruikt.');
@@ -615,7 +621,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
               : bucket === 'active'
                 ? `<div class="compact-actions"><button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button></div>`
                 : (canRemove ? `<div class="compact-actions"><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button></div>` : '');
-        div.innerHTML = `${requestHtml(item, true)}<div class="muted" style="margin-top:10px;">${item.decided_at ? new Date(item.decided_at).toLocaleString('nl-NL') : ''}</div>${actionHtml}<div class="inline-msg" id="history-msg-${requestIdOf(item)}">Geschiedenisitem.</div>`;
+        div.innerHTML = `${requestHtml(item, true)}<div class="muted" style="margin-top:10px;">${item.decided_at ? formatDateTime(item.decided_at) : ''}</div>${actionHtml}<div class="inline-msg" id="history-msg-${requestIdOf(item)}">Geschiedenisitem.</div>`;
         root.appendChild(div);
       });
       const historyPills = document.querySelectorAll('[data-history-filter]'); if (historyPills.length) historyPills.forEach((btn)=>{ btn.classList.toggle('active', btn.dataset.historyFilter===historyFilter); });
@@ -642,7 +648,8 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           try {
             if (msg) { msg.textContent = 'Opnieuw klaarzetten...'; msg.className = 'inline-msg'; }
             const result = await requeueExpiredActivation(requestId);
-            const wake = await triggerMakeScenario({ reason: 'expired_requeue_mail', request_id: requestId, job_id: result?.job_id ?? result?.queue_job_id ?? null, email: result?.requester_email ?? null });
+            const item = (lastHistory || []).find((row) => Number(row.id) === Number(requestId)) || (lastRequests || []).find((row) => Number(row.id) === Number(requestId));
+            const wake = await triggerMakeScenario({ reason: 'expired_requeue_mail', request_id: requestId, job_id: result?.job_id ?? result?.queue_job_id ?? null, player_id: result?.player_id ?? item?.player_id ?? null, display_name: result?.display_name ?? displayNameOf(item), email: result?.requester_email ?? item?.requester_email ?? null, activation_url: result?.activation_url ?? null, expires_at: result?.expires_at ?? item?.expires_at ?? null, created_at: item?.created_at ?? null });
             await refreshAdminLists();
             if (msg) { msg.textContent = (result?.message || 'Nieuwe activatielink en mail zijn opnieuw klaargezet.') + ' — ' + formatMailDiagnostics(result, wake); msg.className = 'inline-msg ok'; }
             window.alert('De verlopen activatie is opnieuw klaargezet. Er is een nieuwe activatielink gemaakt, de mailjob is gequeued en Make is gepingd. De naam hoort nu weer onder Wacht op activatie te staan.');
@@ -958,7 +965,9 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       });
       const data = await parseResponse(res);
       try { await updateActivationEmailSubject(requestId); } catch {}
-      await triggerMakeScenario({ reason: 'activation_email_queued', request_id: requestId, job_id: data?.job_id ?? data?.queue_job_id ?? data?.id ?? null, email: data?.requester_email ?? null });
+      const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
+      const panel = document.getElementById(`activation-tools-${requestId}`);
+      await triggerMakeScenario({ reason: 'activation_email_queued', request_id: requestId, job_id: data?.job_id ?? data?.queue_job_id ?? data?.id ?? null, player_id: data?.player_id ?? req?.player_id ?? null, display_name: data?.display_name ?? displayNameOf(req), email: data?.requester_email ?? req?.requester_email ?? null, activation_url: data?.activation_url ?? panel?.dataset?.url ?? null, expires_at: data?.expires_at ?? panel?.dataset?.expiresAt ?? null, created_at: req?.created_at ?? null });
       return data;
     }
     async function returnNameToClaimable(requestId, reason) {
@@ -983,6 +992,13 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       });
       return await parseResponse(res);
     }
+    function buildMakeWebhookMeta(source, meta = {}) {
+      const payload = { trigger: 'activation_email_queued', source, ts: new Date().toISOString(), ...meta };
+      payload.ts_local = payload.ts_local || formatDateTime(payload.ts);
+      if (payload.expires_at && !payload.expires_at_local) payload.expires_at_local = formatDateTime(payload.expires_at);
+      if (payload.created_at && !payload.created_at_local) payload.created_at_local = formatDateTime(payload.created_at);
+      return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined && value !== null && value !== ''));
+    }
 
     function formatMailDiagnostics(result, wake) {
       const bits = [];
@@ -994,41 +1010,17 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
 
     async function triggerMakeScenario(meta = {}) {
       if (!MAKE_WEBHOOK_URL) throw new Error('MAKE_WEBHOOK_URL ontbreekt in admin.html');
-      const payload = { trigger: 'activation_email_queued', source: 'admin_claims.html', ts: new Date().toISOString(), ...meta };
-      const payloadText = JSON.stringify(payload);
-      const vias = [];
-      if (navigator.sendBeacon) {
-        try {
-          const blob = new Blob([payloadText], { type: 'application/json' });
-          if (navigator.sendBeacon(MAKE_WEBHOOK_URL, blob)) vias.push('sendBeacon');
-        } catch {}
-      }
-      try {
-        await fetch(MAKE_WEBHOOK_URL, { method:'POST', mode:'cors', keepalive:true, headers:{ 'Content-Type':'application/json' }, body:payloadText });
-        vias.push('fetch-cors-json');
-      } catch {}
-      try {
-        await fetch(MAKE_WEBHOOK_URL, { method:'POST', mode:'no-cors', keepalive:true, headers:{ 'Content-Type':'text/plain;charset=UTF-8' }, body:payloadText });
-        vias.push('fetch-no-cors');
-      } catch {}
-      try {
-        const fallbackUrl = new URL(MAKE_WEBHOOK_URL);
-        fallbackUrl.searchParams.set('trigger', String(payload.trigger || 'activation_email_queued'));
-        fallbackUrl.searchParams.set('source', 'admin_claims.html');
-        fallbackUrl.searchParams.set('ts', String(payload.ts || new Date().toISOString()));
-        Object.entries(payload || {}).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) fallbackUrl.searchParams.set(key, String(value));
-        });
-        await new Promise((resolve) => {
-          const img = new Image();
-          img.onload = () => resolve();
-          img.onerror = () => resolve();
-          img.src = fallbackUrl.toString();
-        });
-        vias.push('img-get-fallback');
-      } catch {}
-      if (!vias.length) throw new Error('Make webhook pingen mislukt');
-      return { ok:true, via:vias.join(', ') };
+      const payload = buildMakeWebhookMeta('admin_claims.html', meta);
+      const res = await fetch(MAKE_WEBHOOK_URL, {
+        method:'POST',
+        mode:'cors',
+        cache:'no-store',
+        keepalive:true,
+        headers:{ 'Content-Type':'application/json', 'Accept':'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error(`Make webhook pingen mislukt (HTTP ${res.status})`);
+      return { ok:true, via:'fetch-json', status:res.status };
     }
 
     async function revokePlayerAccess(requestId, reason) {
@@ -1075,12 +1067,23 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return await parseResponse(res);
     }
     async function sendActivationEmail(requestId) {
+      const panel = document.getElementById(`activation-tools-${requestId}`);
+      const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
+      const recipientEmail = panel?.dataset.email || req?.requester_email || '';
+      const recipientName = panel?.dataset.displayName || displayNameOf(req) || '';
+      const activationLink = panel?.dataset.url || '';
       const queued = await queueActivationEmail(requestId);
       try { await updateActivationEmailSubject(requestId); } catch {}
       await triggerMakeScenario({
         reason: 'activation_email_queued',
         request_id: requestId,
-        job_id: queued?.job_id ?? queued?.id ?? null
+        job_id: queued?.job_id ?? queued?.id ?? null,
+        player_id: queued?.player_id ?? req?.player_id ?? null,
+        display_name: queued?.display_name ?? recipientName ?? displayNameOf(req),
+        email: queued?.requester_email ?? recipientEmail,
+        activation_url: queued?.activation_url ?? activationLink,
+        expires_at: queued?.expires_at ?? panel?.dataset?.expiresAt ?? null,
+        created_at: req?.created_at ?? null
       });
       return queued;
     }
@@ -1222,6 +1225,6 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     loadAdmin().then(startAdminAutoRefresh).catch(() => {});
   </script>
 
-  <div class="site-credit-watermark">v80 · Made by Bruis</div>
+  <div class="site-credit-watermark">v81 · Made by Bruis</div>
 </body>
 </html>
