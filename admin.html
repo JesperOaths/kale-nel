@@ -153,12 +153,25 @@
       if (data.admin_session_token) setAdminSessionToken(data.admin_session_token);
       return data;
     }
+    function deriveAdminBucket(out) {
+      const raw = String(out.state_bucket || out.request_status || out.status || '').toLowerCase();
+      const decision = String(out.decision || '').toLowerCase();
+      const hasPin = Boolean(out.has_pin ?? out.pin_is_set ?? out.player_has_pin ?? out.pin_set ?? out.activated ?? false);
+      if (raw.includes('expired')) return 'expired';
+      if (raw.includes('revok') || raw.includes('reject')) return 'rejected';
+      if (raw.includes('active') || raw.includes('activated')) return 'active';
+      if (raw.includes('approved') || raw.includes('await')) return hasPin ? 'active' : 'awaiting';
+      if (decision === 'rejected' || decision === 'revoked') return 'rejected';
+      if (hasPin) return 'active';
+      return 'pending';
+    }
     function normalizeAdminRows(rows) {
       return (rows || []).map((row) => {
         const out = row && typeof row === 'object' ? { ...row } : { value: row };
         const decision = String(out.decision || '').toLowerCase();
         const hasPin = Boolean(out.has_pin ?? out.pin_is_set ?? out.player_has_pin ?? out.pin_set ?? out.activated ?? false);
-        return { ...out, decision, hasPin };
+        const state_bucket = deriveAdminBucket({ ...out, decision, hasPin });
+        return { ...out, decision, hasPin, state_bucket };
       });
     }
 
@@ -172,9 +185,9 @@
       const requests = normalizeAdminRows(requestsRes.requests || requestsRes.items || []);
       const history = normalizeAdminRows(historyRes.history || historyRes.items || []);
       const expiredItems = Array.isArray(expiredRes?.items) ? expiredRes.items : [];
-      const awaiting = history.filter((item) => (item.decision === 'approved' || item.approved === true || item.active === true) && !item.hasPin).length;
-      const active = history.filter((item) => item.hasPin || /active|activated/i.test(String(item.status || ''))).length;
-      const rejected = history.filter((item) => item.decision === 'rejected' || item.decision === 'revoked' || item.approved === false).length;
+      const awaiting = history.filter((item) => item.state_bucket === 'awaiting').length;
+      const active = history.filter((item) => item.state_bucket === 'active').length;
+      const rejected = history.filter((item) => item.state_bucket === 'rejected').length;
       document.getElementById('statPending').textContent = String(requests.length);
       document.getElementById('statAwaiting').textContent = String(awaiting);
       document.getElementById('statExpired').textContent = String(expiredItems.length);
@@ -233,6 +246,6 @@
     boot();
   </script>
 
-  <div class="site-credit-watermark">v69 · Made by Bruis</div>
+  <div class="site-credit-watermark">v70 · Made by Bruis</div>
 </body>
 </html>

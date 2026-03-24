@@ -198,7 +198,7 @@
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v69 · Made by Bruis</div>
+    <div class="version-tag">v70 · Made by Bruis</div>
   </div>
   <script>
 const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -328,7 +328,16 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     function hasPin(req) {
       return Boolean(req.has_pin ?? req.pin_is_set ?? req.player_has_pin ?? req.pin_set ?? req.activated ?? (String(req.state_bucket || '').toLowerCase() === 'active'));
     }
-    function stateBucket(req) { return String(req.state_bucket || '').toLowerCase(); }
+    function stateBucket(req) {
+      const raw = String(req?.state_bucket || req?.request_status || req?.status || '').toLowerCase();
+      if (raw.includes('expired')) return 'expired';
+      if (raw.includes('revok') || raw.includes('reject')) return 'rejected';
+      if (raw.includes('active') || raw.includes('activated')) return 'active';
+      if (raw.includes('approved') || raw.includes('await')) return hasPin(req) ? 'active' : 'awaiting';
+      if (String(req?.decision || '').toLowerCase() === 'rejected' || String(req?.decision || '').toLowerCase() === 'revoked') return 'rejected';
+      if (hasPin(req)) return 'active';
+      return 'pending';
+    }
     function statusMeta(req, includeDecision = false) {
       const bucket = stateBucket(req);
       if (bucket === 'active' || hasPin(req)) return { cls: 'state-activated', label: 'Activated' };
@@ -555,6 +564,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
             await revokePlayerAccess(requestId, null);
             await refreshAdminLists();
             if (msg) { msg.textContent = 'Toegang ingetrokken.'; msg.className = 'inline-msg ok'; }
+            window.alert('Toegang ingetrokken. De naam staat weer in de claimbare lijst.');
           } catch (err) {
             if (msg) { msg.textContent = err instanceof Error ? err.message : 'Intrekken mislukt'; msg.className = 'inline-msg error'; }
           }
@@ -617,6 +627,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
             await revokePlayerAccess(requestId, 'Admin revoke vanuit goedgekeurde gebruikerslijst');
             await refreshAdminLists();
             setStatus('Goedkeuring ingetrokken. De gebruiker hoort nu geen toegang meer te hebben.');
+            window.alert('Toegang ingetrokken. De naam staat weer in de claimbare lijst.');
           } catch (err) {
             if (msg) { msg.textContent = err instanceof Error ? err.message : 'Intrekken mislukt'; msg.className = 'inline-msg error'; }
           }
@@ -632,6 +643,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
             await removePlayer(requestId, 'Admin user verwijderen');
             await refreshAdminLists();
             setStatus('Gebruiker verwijderd.');
+            window.alert('Gebruiker verwijderd en uit de loginflow gehaald.');
           } catch (err) {
             if (msg) { msg.textContent = err instanceof Error ? err.message : 'Verwijderen mislukt'; msg.className = 'inline-msg error'; }
           }
@@ -1000,6 +1012,6 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     loadAdmin();
   </script>
 
-  <div class="site-credit-watermark">v69 · Made by Bruis</div>
+  <div class="site-credit-watermark">v70 · Made by Bruis</div>
 </body>
 </html>
