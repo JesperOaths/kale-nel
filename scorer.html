@@ -469,7 +469,7 @@
         if (raw) {
           const parsed = JSON.parse(raw);
           if (parsed && Array.isArray(parsed.rounds)) {
-            if (!parsed.version) parsed.version = 67;
+            if (!parsed.version) parsed.version = 68;
             if (!parsed.players || parsed.players.length !== 4) parsed.players = ['', '', '', ''];
             if (typeof parsed.w !== 'number') parsed.w = (parsed.rounds || []).reduce((sum, r) => sum + Number(r.fw || r.scoreW || 0), 0);
             if (typeof parsed.z !== 'number') parsed.z = (parsed.rounds || []).reduce((sum, r) => sum + Number(r.fz || r.scoreZ || 0), 0);
@@ -487,7 +487,7 @@
     }
 
     async function getSitePlayers() {
-      for (const endpoint of ['get_login_names', 'get_requestable_names']) {
+      for (const endpoint of ['get_login_names']) {
         try {
           const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${endpoint}`, {
             method:'POST', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify({})
@@ -1322,6 +1322,6 @@
     function toggleAppMenu(force){ const el=document.getElementById('appMenu'); const should = typeof force === 'boolean' ? force : !el.classList.contains('show'); el.classList.toggle('show', should); }
     initPage();
   </script>
-  <div class="site-credit-watermark">v67 · Made by Bruis</div>
+  <div class="site-credit-watermark">v68 · Made by Bruis</div>
 </body>
 </html>

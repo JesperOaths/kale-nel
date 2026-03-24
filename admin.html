@@ -150,9 +150,9 @@
 
     async function loadCounts() {
       const [requestsRes, historyRes, expiredRes] = await Promise.all([
-        fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_requests`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }).then(parseResponse),
-        fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_history`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }).then(parseResponse),
-        fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_expired_activation_queue`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }).then(parseResponse).catch(() => ({ items: [] }))
+        fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_list_claim_requests_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }).then(parseResponse),
+        fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_list_claim_history_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }).then(parseResponse),
+        fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_list_expired_activation_queue_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }).then(parseResponse).catch(() => ({ items: [] }))
       ]);
       const requests = normalizeAdminRows(requestsRes.requests || []);
       const history = normalizeAdminRows(historyRes.history || []);
@@ -218,6 +218,6 @@
     boot();
   </script>
 
-  <div class="site-credit-watermark">v67 · Made by Bruis</div>
+  <div class="site-credit-watermark">v68 · Made by Bruis</div>
 </body>
 </html>

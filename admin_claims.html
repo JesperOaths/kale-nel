@@ -198,7 +198,7 @@
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v67 · Made by Bruis</div>
+    <div class="version-tag">v68 · Made by Bruis</div>
   </div>
   <script>
 const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -326,26 +326,28 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     }
 
     function hasPin(req) {
-      return Boolean(req.has_pin ?? req.pin_is_set ?? req.player_has_pin ?? req.pin_set ?? req.activated ?? false);
+      return Boolean(req.has_pin ?? req.pin_is_set ?? req.player_has_pin ?? req.pin_set ?? req.activated ?? (String(req.state_bucket || '').toLowerCase() === 'active'));
     }
+    function stateBucket(req) { return String(req.state_bucket || '').toLowerCase(); }
     function statusMeta(req, includeDecision = false) {
-      const decision = String(req.decision || '').toLowerCase();
-      if (hasPin(req)) return { cls: 'state-activated', label: 'Activated' };
-      if (decision === 'rejected' || req.approved === false) return { cls: 'state-rejected', label: 'Afgewezen' };
-      if (decision === 'approved' || req.approved === true || req.active === true) return { cls: includeDecision ? 'state-awaiting' : 'state-approved', label: includeDecision ? 'Awaiting activation' : 'Approved' };
+      const bucket = stateBucket(req);
+      if (bucket === 'active' || hasPin(req)) return { cls: 'state-activated', label: 'Activated' };
+      if (bucket === 'rejected') return { cls: 'state-rejected', label: 'Afgewezen' };
+      if (bucket === 'awaiting') return { cls: includeDecision ? 'state-awaiting' : 'state-approved', label: includeDecision ? 'Awaiting activation' : 'Approved' };
+      if (bucket === 'expired') return { cls: 'state-rejected', label: 'Verlopen' };
       return { cls: 'state-pending', label: 'Openstaand' };
     }
 
     function isApprovedLike(req) {
-      const decision = String(req.decision || '').toLowerCase();
-      return decision === 'approved' || req.approved === true || req.active === true || hasPin(req);
+      const bucket = stateBucket(req);
+      return bucket === 'awaiting' || bucket === 'active' || hasPin(req);
     }
 
     function renderStats(requests, history) {
       const pending = (requests || []).length;
       const approved = (history || []).filter((item) => isApprovedLike(item) && !hasPin(item)).length;
       const activated = (history || []).filter((item) => hasPin(item)).length;
-      const rejected = (history || []).filter((item) => String(item.decision || '').toLowerCase() === 'rejected' || item.approved === false).length;
+      const rejected = (history || []).filter((item) => stateBucket(item) === 'rejected').length;
       document.getElementById('statPending').textContent = String(pending);
       document.getElementById('statApproved').textContent = String(approved);
       document.getElementById('statActivated').textContent = String(activated);
@@ -441,7 +443,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
               }
               if (msg) { msg.textContent = 'Wacht op activatie.' + mailMessage; msg.className = 'inline-msg ok'; }
             } else if (msg) {
-              msg.textContent = 'Afwijzing opgeslagen.'; msg.className = 'inline-msg ok';
+              msg.textContent = 'Afwijzing opgeslagen.'; msg.className = 'inline-msg ok'; window.alert('Aanvraag afgewezen. De naam staat weer in de claimbare kieslijst.');
             }
             await refreshAdminLists();
             setStatus(decision === 'approved' ? 'Aanvraag goedgekeurd.' : 'Aanvraag afgewezen.');
@@ -595,7 +597,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       const root = document.getElementById('approvedUsersList');
       root.innerHTML = '';
       const q = (document.getElementById('approvedSearch')?.value || '').trim().toLowerCase();
-      const approvedItems = (items || []).filter((item) => currentAdminView === 'active' ? hasPin(item) : isApprovedLike(item)).filter((item) => {
+      const approvedItems = (items || []).filter((item) => currentAdminView === 'active' ? stateBucket(item) === 'active' : stateBucket(item) === 'awaiting' || stateBucket(item) === 'active').filter((item) => {
         if (!q) return true;
         return [displayNameOf(item), item.requester_email, item.decision].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
       });
@@ -689,9 +691,9 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       const config = getAdminViewConfig();
       const tabs = [
         { key: 'pending', label: 'To be approved', count: (lastRequests || []).length },
-        { key: 'awaiting', label: 'Pending activation', count: (lastHistory || []).filter((item) => isApprovedLike(item) && !hasPin(item)).length },
-        { key: 'active', label: 'Active', count: (lastHistory || []).filter((item) => hasPin(item)).length },
-        { key: 'rejected', label: 'Afgewezen', count: (lastHistory || []).filter((item) => String(item.decision || '').toLowerCase() === 'rejected' || item.approved === false).length }
+        { key: 'awaiting', label: 'Pending activation', count: (lastHistory || []).filter((item) => stateBucket(item) === 'awaiting').length },
+        { key: 'active', label: 'Active', count: (lastHistory || []).filter((item) => stateBucket(item) === 'active').length },
+        { key: 'rejected', label: 'Afgewezen', count: (lastHistory || []).filter((item) => stateBucket(item) === 'rejected').length }
       ];
       const root = document.getElementById('adminTabs');
       root.innerHTML = tabs.map((tab) => `<button type="button" class="tab-btn ${tab.key === currentAdminView ? 'active' : ''}" data-admin-view="${tab.key}"><span>${tab.label}</span><span class="tab-count">${tab.count}</span></button>`).join('');
@@ -756,8 +758,8 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       if (data.admin_session_token) setAdminSessionToken(data.admin_session_token);
       return data;
     }
-    async function getRequests() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_requests`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); }
-    async function getHistory() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_claim_history`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); }
+    async function getRequests() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_list_claim_requests_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); const data = await parseResponse(res); return Array.isArray(data) ? data : (data?.items || []); }
+    async function getHistory() { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_list_claim_history_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); const data = await parseResponse(res); return Array.isArray(data) ? data : (data?.items || []); }
     async function decideRequest(requestId, decision, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision, decision_reason_input: decisionReason }) }); return await parseResponse(res); }
 
     async function createActivationLink(requestId) {
@@ -879,8 +881,8 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
 
     async function refreshAdminLists() {
       const [requests, history] = await Promise.all([getRequests(), getHistory()]);
-      lastRequests = normalizeAdminRows(requests.requests || []);
-      lastHistory = normalizeAdminRows(history.history || []);
+      lastRequests = normalizeAdminRows(Array.isArray(requests) ? requests : (requests?.items || []));
+      lastHistory = normalizeAdminRows(Array.isArray(history) ? history : (history?.items || []));
       renderStats(lastRequests, lastHistory);
       switchAdminView(currentAdminView);
     }
@@ -984,6 +986,6 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     loadAdmin();
   </script>
 
-  <div class="site-credit-watermark">v67 · Made by Bruis</div>
+  <div class="site-credit-watermark">v68 · Made by Bruis</div>
 </body>
 </html>

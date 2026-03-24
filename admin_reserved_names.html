@@ -101,7 +101,7 @@
         });
         setStatus('Lijst geladen.', 'ok');
       } catch (error) {
-        document.getElementById('listRoot').innerHTML = '<div class="empty">Deze pagina kon de allowed names-bron niet laden. Run de v67 SQL-patch opnieuw.</div>';
+        document.getElementById('listRoot').innerHTML = '<div class="empty">Deze pagina kon de allowed names-bron niet laden. Run de v68 SQL-patch opnieuw.</div>';
         setStatus(error?.message || 'Laden mislukt.', 'warn');
       }
     }
@@ -139,6 +139,6 @@
     });
     (async()=>{ if(await ensureGate()) loadNames(); })();
   </script>
-  <div class="site-credit-watermark">v67 · Made by Bruis</div>
+  <div class="site-credit-watermark">v68 · Made by Bruis</div>
 </body>
 </html>
