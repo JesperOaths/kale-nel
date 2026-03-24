@@ -1,7 +1,7 @@
 
 :root{--shell-width:780px;--nav-bg:rgba(255,255,255,.46);--panel-soft:rgba(255,255,255,.60);--panel-strong:rgba(255,255,255,.74);--line-soft:rgba(17,17,17,.08)}
 body{min-height:100vh}
-body::before{content:"Bruis · v78";position:fixed;top:12px;left:14px;z-index:5;font:600 11px/1 Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:rgba(17,17,17,.24);pointer-events:none}
+body::before{content:"Bruis · v79";position:fixed;top:12px;left:14px;z-index:5;font:600 11px/1 Inter,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:rgba(17,17,17,.24);pointer-events:none}
 .site-scene .kale-hand{display:none!important}
 .site-scene .brand-watermark{top:14px;left:auto;right:18px;width:min(9vw,72px);transform:none!important;opacity:.11}
 .site-scene .spinoza-shadow{top:auto;bottom:-3%;left:50%;width:min(66vw,820px);opacity:.23;filter:grayscale(1) contrast(1.7) brightness(.58) drop-shadow(0 22px 46px rgba(17,17,17,.10))}

@@ -204,7 +204,7 @@
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v78 · Made by Bruis</div>
+    <div class="version-tag">v79 · Made by Bruis</div>
   </div>
   <script>
 const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -413,13 +413,17 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const bucket = stateBucket(item);
       const activationState = bucket === 'active' ? 'Actief' : bucket === 'expired' ? 'Verlopen' : 'Wacht op activatie';
       const decided = item.decided_at ? new Date(item.decided_at).toLocaleString('nl-NL') : 'Onbekend';
+      const pinState = hasPin(item) ? 'Ingesteld' : 'Nog niet ingesteld';
+      const activationButton = bucket === 'active'
+        ? ''
+        : `<button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(item)}">Nieuwe activatielink</button>`;
       return `${requestHtml(item, true)}
         <div class="request-grid" style="margin-top:12px;">
           ${metaBox('Status gebruiker', activationState)}
+          ${metaBox('PIN status', pinState)}
           ${metaBox('Beslist op', decided)}
         </div>
-        <div class="compact-actions">
-          <button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(item)}">Nieuwe activatielink</button>
+        <div class="compact-actions">${activationButton}
           <button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button>
         </div>
         <div class="inline-msg" id="approved-msg-${requestIdOf(item)}">${bucket === 'active' ? 'Gebruiker actief in admin-overzicht.' : 'Gebruiker staat klaar onder wacht op activatie.'}</div>
@@ -1216,6 +1220,6 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     loadAdmin().then(startAdminAutoRefresh).catch(() => {});
   </script>
 
-  <div class="site-credit-watermark">v78 · Made by Bruis</div>
+  <div class="site-credit-watermark">v79 · Made by Bruis</div>
 </body>
 </html>
