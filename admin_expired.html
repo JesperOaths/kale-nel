@@ -1,9 +1,6 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <style>html.admin-gate-pending body > *{display:none!important} html.admin-gate-pending body::before{content:"🔐 Bezig met controleren van admin login..."; position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#efe9dd; color:#222; font:700 18px/1.4 Inter,system-ui,sans-serif; z-index:99999; padding:24px; text-align:center;}</style>
-  <script>document.documentElement.classList.add('admin-gate-pending');</script>
-
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -31,7 +28,6 @@
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
   </style>
   <script src="./gejast-config.js"></script>
-  <script src="./admin-gate-v105.js"></script>
 </head>
 <body>
   <main class="main-card">
@@ -47,21 +43,17 @@
   </main>
   <script>
     const ADMIN_SESSION_KEY = 'jas_admin_session_v8';
-    const ADMIN_SESSION_META_KEY = 'jas_admin_session_meta_v1';
-    const ADMIN_SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000;
     const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || 'https://uiqntazgnrxwliaidkmy.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
     const MAKE_WEBHOOK_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.MAKE_WEBHOOK_URL) || 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6';
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type': 'application/json', Accept: 'application/json' }; }
     async function parseResponse(res) { const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || data?.details || data?.hint || `HTTP ${res.status}`); return data; }
-    function readAdminSessionMeta(){ try { return JSON.parse(sessionStorage.getItem(ADMIN_SESSION_META_KEY) || localStorage.getItem(ADMIN_SESSION_META_KEY) || 'null'); } catch { return null; } }
-    function clearAdminSessionToken(){ sessionStorage.removeItem(ADMIN_SESSION_KEY); localStorage.removeItem(ADMIN_SESSION_KEY); sessionStorage.removeItem(ADMIN_SESSION_META_KEY); localStorage.removeItem(ADMIN_SESSION_META_KEY); }
-    function getToken(){ const meta=readAdminSessionMeta(); const token=(meta&&meta.token) || sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); if (meta?.issued_at && (Date.now() - Number(meta.issued_at) > ADMIN_SESSION_MAX_AGE_MS)) { clearAdminSessionToken(); return ''; } return token; }
+    function getToken(){ return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
     function setStatus(message='', tone='') { const box=document.getElementById('statusBox'); box.className=`status ${tone}`.trim(); box.textContent=message; }
     function extractIdLike(value){ if (typeof value === 'number' && Number.isFinite(value)) return value; const text=String(value||'').trim(); if(!text) return null; const direct=Number(text); if(Number.isFinite(direct)) return direct; const match=text.match(/^\(?\s*(\d+)/); return match ? Number(match[1]) : null; }
     function normalizeExpiredRow(row){ const out={...(row||{})}; out.request_id = extractIdLike(out.request_id ?? out.id ?? out.claim_request_id); out.id = extractIdLike(out.id ?? out.request_id ?? out.claim_request_id); return out; }
     function activationBaseUrl(){ const url = new URL('./activate.html', window.location.href); if (url.protocol === 'http:' && !/^(localhost|127\.0\.0\.1)$/i.test(url.hostname)) url.protocol = 'https:'; return url.toString(); }
-    async function ensureGate(){ const token=getToken(); if(!token){ clearAdminSessionToken(); window.location.href='./admin.html'; return false; } try { await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: token }) }).then(parseResponse); return true; } catch { clearAdminSessionToken(); window.location.href='./admin.html'; return false; } }
+    async function ensureGate(){ const token=getToken(); if(!token){ window.location.href='./admin.html'; return false; } try { await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: token }) }).then(parseResponse); return true; } catch { window.location.href='./admin.html'; return false; } }
     const DATE_TIME_24H = new Intl.DateTimeFormat('nl-NL', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
     function formatDateTime(value){ if(!value) return 'Onbekend'; const date = value instanceof Date ? value : new Date(value); return Number.isNaN(date.getTime()) ? String(value) : DATE_TIME_24H.format(date).replace(',', ''); }
     function buildMakeWebhookMeta(source, meta = {}) { const defaultSubject = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.EMAIL_SUBJECT) || 'Activeer je account voor de Kale Nel'; const payload = { trigger:'activation_email_queued', source, ts:new Date().toISOString(), ...meta }; payload.subject = payload.subject || payload.email_subject || defaultSubject; payload.email_subject = payload.email_subject || payload.subject || defaultSubject; payload.ts_local = payload.ts_local || formatDateTime(payload.ts); if (payload.expires_at && !payload.expires_at_local) payload.expires_at_local = formatDateTime(payload.expires_at); if (payload.created_at && !payload.created_at_local) payload.created_at_local = formatDateTime(payload.created_at); return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined && value !== null && value !== '')); }
@@ -77,6 +69,7 @@
     document.addEventListener('visibilitychange', () => { if (!document.hidden) loadExpired().catch(() => {}); });
     (async()=>{ if(await ensureGate()) loadExpired(); })();
   </script>
-  <div class="site-credit-watermark">v105 · Made by Bruis</div>
+  <div class="site-credit-watermark">v108 · Made by Bruis</div>
+  <script src="./site-analytics.js"></script>
 </body>
 </html>

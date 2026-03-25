@@ -1,9 +1,6 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <style>html.admin-gate-pending body > *{display:none!important} html.admin-gate-pending body::before{content:"🔐 Bezig met controleren van admin login..."; position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#efe9dd; color:#222; font:700 18px/1.4 Inter,system-ui,sans-serif; z-index:99999; padding:24px; text-align:center;}</style>
-  <script>document.documentElement.classList.add('admin-gate-pending');</script>
-
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -116,11 +113,8 @@
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
-  <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();
-    (function globalAdminLogout(){ const btn=document.createElement('button'); btn.textContent='Uitloggen'; btn.style.cssText='position:fixed;top:14px;right:14px;z-index:9999;border:none;border-radius:14px;padding:10px 14px;background:#111;color:#fff;font:700 14px Inter,sans-serif;cursor:pointer'; btn.onclick=()=>{ clearAdminSessionToken(); window.location.href='./admin.html'; }; document.addEventListener('DOMContentLoaded',()=>document.body.appendChild(btn)); })();
-  </script>
+  <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
   <script src="./gejast-config.js"></script>
-  <script src="./admin-gate-v105.js"></script>
 </head>
 <body>
   <div class="main-card">
@@ -210,7 +204,7 @@
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v105 · Made by Bruis</div>
+    <div class="version-tag">v108 · Made by Bruis</div>
   </div>
   <script>
 const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
@@ -219,8 +213,6 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     const MAKE_WEBHOOK_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.MAKE_WEBHOOK_URL) || "https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6";
     const ACTIVATION_EMAIL_SUBJECT = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.EMAIL_SUBJECT) || 'Activeer je account voor de Kale Nel';
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
-    const ADMIN_SESSION_META_KEY = 'jas_admin_session_meta_v1';
-    const ADMIN_SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000;
     let lastRequests = [];
     let lastHistory = [];
     let lastExpired = [];
@@ -232,18 +224,15 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       {href:'./admin_mail_audit.html', label:'Maildiagnostiek', note:'Webhook, mail-RPC en laatste mailjobs'},
       {href:'./vault.html', label:'Spelkluis', note:'Adminanalyse van spelhistorie'},
       {href:'./leaderboard.html', label:'Ranglijst', note:'Ranglijst zonder spelers met 0 potjes'},
-      {href:'./index.html', label:'Start', note:'Publieke homepage'},
+      {href:'./index.html', label:'Home', note:'Publieke homepage'},
       {href:'./login.html', label:'Spelerlogin', note:'Publieke login'},
       {href:'./request.html', label:'Naam aanvragen', note:'Publieke aanvraagflow'},
       {href:'./scorer.html', label:'Scorer', note:'Klaverjasscorer'},
-      {href:'./activate.html', label:'Activeren', note:'Alleen via activatielink'},
-      {href:'./boerenbridge_vault.html', label:'Boerenbridge kluis', note:'Admin-tussenopslag en Boerenbridgeprofielen'}
+      {href:'./activate.html', label:'Activeren', note:'Alleen via activatielink'}
     ];
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, "Content-Type": "application/json", Accept: "application/json" }; }
     async function parseResponse(res) { const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }
-    function readAdminSessionMeta(){ try { return JSON.parse(sessionStorage.getItem(ADMIN_SESSION_META_KEY) || localStorage.getItem(ADMIN_SESSION_META_KEY) || 'null'); } catch { return null; } }
-    function clearAdminSessionToken(){ sessionStorage.removeItem(ADMIN_SESSION_KEY); localStorage.removeItem(ADMIN_SESSION_KEY); sessionStorage.removeItem(ADMIN_SESSION_META_KEY); localStorage.removeItem(ADMIN_SESSION_META_KEY); }
-    function getAdminSessionToken() { const meta = readAdminSessionMeta(); const token = (meta && meta.token) || sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); if (meta?.issued_at && (Date.now() - Number(meta.issued_at) > ADMIN_SESSION_MAX_AGE_MS)) { clearAdminSessionToken(); return ''; } return token; }
+    function getAdminSessionToken() { return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
     function setAdminSessionToken(token, persist = false) {
       sessionStorage.setItem(ADMIN_SESSION_KEY, token);
       if (persist) localStorage.setItem(ADMIN_SESSION_KEY, token); else localStorage.removeItem(ADMIN_SESSION_KEY);
@@ -1307,6 +1296,7 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     loadAdmin().then(startAdminAutoRefresh).catch(() => {});
   </script>
 
-  <div class="site-credit-watermark">v105 · Made by Bruis</div>
+  <div class="site-credit-watermark">v108 · Made by Bruis</div>
+  <script src="./site-analytics.js"></script>
 </body>
 </html>

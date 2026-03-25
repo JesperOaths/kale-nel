@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bezoekers - Wordt er gejast?</title>
+  <style>
+    :root { --gold:#d4af37; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#6b655b; --ok:#2b5b37; --warn:#8b3a30; }
+    * { box-sizing:border-box; }
+    body { margin:0; padding:20px; font-family:Inter,sans-serif; background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed; min-height:100vh; }
+    .main-card { background:var(--card); border-radius:28px; padding:30px; max-width:1180px; margin:0 auto; box-shadow:0 20px 50px rgba(0,0,0,0.08); position:relative; }
+    .logo { position:absolute; top:24px; right:24px; width:44px; }
+    h1 { margin:0; font-size:32px; letter-spacing:-0.04em; }
+    .sub { color:var(--muted); margin:8px 0 0; }
+    .toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:18px; }
+    select,.ghost-btn { border-radius:14px; border:1px solid rgba(0,0,0,0.08); background:#fff; padding:12px 14px; font:inherit; }
+    .ghost-btn { cursor:pointer; font-weight:800; color:#222; text-decoration:none; display:inline-flex; align-items:center; }
+    .status { margin-top:14px; min-height:20px; font-size:14px; }
+    .status.ok { color:var(--ok); }
+    .status.warn { color:var(--warn); }
+    .cards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:18px; }
+    .card { background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:18px; padding:16px; }
+    .card span { display:block; font-size:11px; color:#8a7a55; text-transform:uppercase; letter-spacing:.08em; }
+    .card strong { display:block; margin-top:6px; font-size:28px; }
+    .split { display:grid; grid-template-columns:1.15fr .85fr; gap:16px; margin-top:18px; }
+    .panel { background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:22px; padding:18px; }
+    .panel h2 { margin:0 0 10px; font-size:22px; letter-spacing:-0.03em; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th, td { padding:10px 8px; border-bottom:1px solid rgba(0,0,0,0.06); text-align:left; vertical-align:top; }
+    th { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:#8a7a55; }
+    .list { display:grid; gap:10px; }
+    .list-item { display:flex; justify-content:space-between; gap:12px; padding:10px 12px; border-radius:14px; background:#fbfaf7; border:1px solid rgba(0,0,0,0.05); }
+    .list-item strong { font-size:15px; }
+    .list-item span { color:#6b655b; font-size:13px; }
+    .muted { color:#6b655b; }
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(212,175,55,0.35);color:#f3e3a6;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
+    @media (max-width:960px){ .cards{grid-template-columns:repeat(2,minmax(0,1fr));} .split{grid-template-columns:1fr;} }
+    @media (max-width:640px){ .cards{grid-template-columns:1fr;} .main-card{padding:22px;} .site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center} }
+  </style>
+  <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
+  <script src="./gejast-config.js"></script>
+</head>
+<body>
+  <main class="main-card">
+    <a href="./admin.html" aria-label="Terug naar admin"><img src="./logo.png" class="logo" alt="logo" /></a>
+    <h1>Bezoekers</h1>
+    <p class="sub">Paginaweergaves, apparaten en recente bezoeken.</p>
+
+    <div class="toolbar">
+      <a class="ghost-btn" href="./admin.html">Terug naar hub</a>
+      <select id="rangeSelect">
+        <option value="1">Vandaag</option>
+        <option value="7" selected>Afgelopen 7 dagen</option>
+        <option value="30">Afgelopen 30 dagen</option>
+      </select>
+      <button id="refreshBtn" class="ghost-btn" type="button">Ververs</button>
+    </div>
+
+    <div id="statusBox" class="status"></div>
+
+    <section class="cards">
+      <article class="card"><span>Paginaweergaves</span><strong id="totalViews">0</strong></article>
+      <article class="card"><span>Unieke bezoekers</span><strong id="uniqueVisitors">0</strong></article>
+      <article class="card"><span>Unieke sessies</span><strong id="uniqueSessions">0</strong></article>
+      <article class="card"><span>Pagina's</span><strong id="pageCount">0</strong></article>
+    </section>
+
+    <section class="split">
+      <section class="panel">
+        <h2>Populaire pagina's</h2>
+        <div id="pagesList" class="list"></div>
+      </section>
+      <section class="panel">
+        <h2>Apparaten</h2>
+        <div id="devicesList" class="list"></div>
+      </section>
+    </section>
+
+    <section class="split">
+      <section class="panel">
+        <h2>Browsers</h2>
+        <div id="browsersList" class="list"></div>
+      </section>
+      <section class="panel">
+        <h2>Verwijzers</h2>
+        <div id="referrersList" class="list"></div>
+      </section>
+    </section>
+
+    <section class="panel" style="margin-top:18px;">
+      <h2>Recente bezoeken</h2>
+      <table>
+        <thead><tr><th>Tijd</th><th>Pagina</th><th>Type</th><th>Browser</th><th>Verwijzer</th></tr></thead>
+        <tbody id="eventsBody"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || '';
+    const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || '';
+    const ADMIN_SESSION_KEY = 'jas_admin_session_v8';
+
+    function rpcHeaders(){ return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type': 'application/json', Accept: 'application/json' }; }
+    async function parseResponse(res){ const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || data?.details || data?.hint || `HTTP ${res.status}`); return data; }
+    function getAdminSessionToken(){ return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
+    function setAdminSessionToken(token){ if (!token) return; sessionStorage.setItem(ADMIN_SESSION_KEY, token); localStorage.setItem(ADMIN_SESSION_KEY, token); }
+    function setStatus(message='', tone=''){ const box = document.getElementById('statusBox'); box.textContent = message; box.className = `status ${tone}`.trim(); }
+    function row(label, value){ return `<div class="list-item"><strong>${label}</strong><span>${value}</span></div>`; }
+    function fmtTime(value){ try { return new Date(value).toLocaleString('nl-NL'); } catch { return value || '—'; } }
+    function fmtRef(value){ if (!value) return 'Direct'; try { return new URL(value).hostname || value; } catch { return value; } }
+    async function checkSession(){
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) });
+      const data = await parseResponse(res);
+      if (!data?.ok) throw new Error('Log opnieuw in als admin.');
+      if (data.admin_session_token) setAdminSessionToken(data.admin_session_token);
+      return data;
+    }
+    async function loadAnalytics(){
+      await checkSession();
+      const days = Number(document.getElementById('rangeSelect').value || 7);
+      const payload = { admin_session_token: getAdminSessionToken(), range_days: days, recent_limit: 80 };
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_site_analytics_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(payload) });
+      const data = await parseResponse(res);
+      if (data?.admin_session_token) setAdminSessionToken(data.admin_session_token);
+      const summary = data?.summary || {};
+      document.getElementById('totalViews').textContent = String(summary.total_views || 0);
+      document.getElementById('uniqueVisitors').textContent = String(summary.unique_visitors || 0);
+      document.getElementById('uniqueSessions').textContent = String(summary.unique_sessions || 0);
+      document.getElementById('pageCount').textContent = String((data.top_pages || []).length || 0);
+      document.getElementById('pagesList').innerHTML = (data.top_pages || []).map(item => row(item.page_path || 'Onbekend', `${item.views || 0}`)).join('') || '<p class="muted">Nog geen data.</p>';
+      document.getElementById('devicesList').innerHTML = (data.devices || []).map(item => row(item.device_type || 'Onbekend', `${item.views || 0}`)).join('') || '<p class="muted">Nog geen data.</p>';
+      document.getElementById('browsersList').innerHTML = (data.browsers || []).map(item => row(item.browser_name || 'Onbekend', `${item.views || 0}`)).join('') || '<p class="muted">Nog geen data.</p>';
+      document.getElementById('referrersList').innerHTML = (data.referrers || []).map(item => row(fmtRef(item.referrer_url), `${item.views || 0}`)).join('') || '<p class="muted">Nog geen data.</p>';
+      document.getElementById('eventsBody').innerHTML = (data.recent_events || []).map(item => `<tr><td>${fmtTime(item.created_at)}</td><td>${item.page_path || '—'}</td><td>${item.device_type || '—'}</td><td>${item.browser_name || '—'}</td><td>${fmtRef(item.referrer_url)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Nog geen data.</td></tr>';
+      setStatus(`Data geladen voor ${days} dag(en).`, 'ok');
+    }
+    document.getElementById('refreshBtn').addEventListener('click', () => { setStatus('Bezig met laden...'); loadAnalytics().catch(err => setStatus(err.message || 'Laden mislukt', 'warn')); });
+    document.getElementById('rangeSelect').addEventListener('change', () => { setStatus('Bezig met laden...'); loadAnalytics().catch(err => setStatus(err.message || 'Laden mislukt', 'warn')); });
+    setStatus('Bezig met laden...');
+    loadAnalytics().catch(err => setStatus(err.message || 'Laden mislukt', 'warn'));
+  </script>
+
+  <div class="site-credit-watermark">v108 · Made by Bruis</div>
+</body>
+</html>

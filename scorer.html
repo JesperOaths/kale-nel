@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Klaverjas Scorer</title>
-  <meta name="description" content="Klaverjas met takken, biedingen en roem." />
+  <meta name="description" content="Mobiele klaverjas scorer met takken, biedingen en roem." />
   <style>
     :root {
       --gold:#d4af37;
@@ -62,11 +62,11 @@
     }
     .dealer-card span { display:block; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; font-weight:800; }
     .dealer-card strong { display:block; margin-top:4px; font-size:16px; line-height:1.15; }
-    .match-head { padding:10px 14px 6px; display:grid; gap:8px; }
+    .match-head { padding:16px 16px 10px; display:grid; gap:12px; }
     .teams-line { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:10px; }
     .team-chip { text-align:center; }
     .team-chip .label { font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:700; }
-    .team-chip .names { font-size:15px; font-weight:800; line-height:1.06; margin-top:2px; }
+    .team-chip .names { font-size:18px; font-weight:800; line-height:1.08; margin-top:4px; }
     .center-tools { display:flex; flex-direction:column; align-items:center; gap:8px; }
     .undo-hero {
       border:none; background:#fff; border-radius:999px; padding:8px 12px; font-weight:800; color:#2d2d2d; box-shadow:0 8px 16px rgba(0,0,0,0.08); cursor:pointer;
@@ -138,14 +138,11 @@
     .status-pill { background:#fff; border:1px solid rgba(17,17,17,0.08); border-radius:999px; padding:9px 12px; font-size:13px; font-weight:700; color:#444; }
     .action-row { display:flex; gap:10px; flex-wrap:wrap; }
     .ghost-btn { border:1px solid rgba(17,17,17,0.10); background:#fff; color:#222; border-radius:14px; padding:10px 14px; font-weight:700; cursor:pointer; }
-
-    .quick-save-btn { border:none; border-radius:14px; padding:10px 12px; background:#111; color:#fff; font-weight:900; cursor:pointer; box-shadow:0 10px 18px rgba(0,0,0,0.14); }
-    .quick-save-btn:disabled { opacity:.45; cursor:not-allowed; }
-    .contract-strip { display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:6px; align-items:center; padding:0 10px 8px; }
-    .contract-card { background:rgba(255,255,255,0.84); border:1px solid rgba(17,17,17,0.06); border-radius:16px; padding:8px 10px; }
-    .contract-card .eyebrow { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
-    .contract-card strong { display:block; font-size:14px; margin-top:1px; letter-spacing:-0.03em; }
-    .contract-card small { display:block; color:var(--muted); margin-top:2px; font-size:11px; }
+    .contract-strip { display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; padding:0 16px 16px; }
+    .contract-card { background:rgba(255,255,255,0.84); border:1px solid rgba(17,17,17,0.06); border-radius:18px; padding:12px 14px; }
+    .contract-card .eyebrow { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+    .contract-card strong { display:block; font-size:22px; margin-top:2px; letter-spacing:-0.03em; }
+    .contract-card small { display:block; color:var(--muted); margin-top:4px; font-size:12px; }
     .pending-strip { display:none; }
     .pending-pill {
       display:inline-flex; align-items:center; gap:6px; padding:7px 10px; border-radius:999px; border:1px solid rgba(17,17,17,0.08); background:#fff; font-size:12px; font-weight:800;
@@ -220,13 +217,6 @@
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(212,175,55,0.35);color:#f3e3a6;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
     @media (max-width:460px) {
-      .contract-strip{grid-template-columns:minmax(0,1fr) auto auto;gap:6px;padding:0 12px 8px;}
-      .contract-card{padding:8px 10px;border-radius:16px;}
-      .contract-card .eyebrow{font-size:10px;}
-      .contract-card strong{font-size:15px;}
-      .contract-card small{font-size:11px;margin-top:2px;}
-      .text-btn,.quick-save-btn{padding:9px 10px;font-size:11px;border-radius:12px;}
-
       body { overflow-x:hidden; }
       .page { width:100%; }
       .wrap { padding:8px; }
@@ -259,7 +249,7 @@
       .dealer-banner { grid-template-columns:1fr; }
       .match-head { padding:14px 12px 8px; gap:10px; }
       .teams-line { gap:6px; }
-      .team-chip .names { font-size:13px; }
+      .team-chip .names { font-size:15px; }
       .contract-strip { padding:0 8px 10px; gap:8px; }
       .contract-card { padding:10px 12px; }
       .text-btn { padding:10px 12px; font-size:13px; }
@@ -283,7 +273,7 @@
   <div class="page">
     <header class="topbar">
       <button class="icon-btn" type="button" onclick="toggleAppMenu()">☰</button>
-      <div class="topbar-title"><strong>Klaverjas</strong><span>Takken, biedingen en roem</span></div>
+      <div class="topbar-title"><strong>Klaverjas scorer</strong><span>Mobiel, in takken, met biedingen en roem</span></div>
       <div class="topbar-actions"><button id="undoBtn" class="icon-btn" type="button" onclick="undoLastAction()">↶</button><button id="redoBtn" class="icon-btn" type="button" onclick="redoLastAction()">↷</button></div>
     </header>
 
@@ -325,7 +315,6 @@
             <div class="pending-strip" id="pendingStrip"></div>
           </div>
           <button class="text-btn" type="button" onclick="openBidModal()" style="background:var(--gold); color:#111;">Pas bod aan</button>
-          <button id="saveRoundTopBtn" class="quick-save-btn" type="button" onclick="saveRound()">Opslaan</button>
         </div>
 
         <div class="inputs">
@@ -335,7 +324,7 @@
             <div class="roem-row">
               <button class="small-toggle" type="button" data-roem="W" data-value="20">+20 roem</button>
               <button class="small-toggle" type="button" data-roem="W" data-value="50">+50 roem</button>
-              <button class="small-ghost" type="button" onclick="clearRoem('W')">Wissen</button>
+              <button class="small-ghost" type="button" onclick="clearRoem('W')">Undo</button>
             </div>
             <div class="roem-live" id="roemLiveW">Roem: 0</div>
             <input class="score-input" id="inputW" type="number" inputmode="numeric" min="0" placeholder="0">
@@ -352,7 +341,7 @@
             <div class="roem-row">
               <button class="small-toggle" type="button" data-roem="Z" data-value="20">+20 roem</button>
               <button class="small-toggle" type="button" data-roem="Z" data-value="50">+50 roem</button>
-              <button class="small-ghost" type="button" onclick="clearRoem('Z')">Wissen</button>
+              <button class="small-ghost" type="button" onclick="clearRoem('Z')">Undo</button>
             </div>
             <div class="roem-live" id="roemLiveZ">Roem: 0</div>
             <input class="score-input" id="inputZ" type="number" inputmode="numeric" min="0" placeholder="0">
@@ -507,8 +496,7 @@
           const txt = await res.text();
           const data = txt ? JSON.parse(txt) : {};
           if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
-          const rows = Array.isArray(data) ? data : (Array.isArray(data?.names) ? data.names : []);
-          const names = uniqueNames(rows.map((row)=> typeof row === 'string' ? row : (row?.display_name || row?.name || row?.desired_name || '')));
+          const names = uniqueNames(data?.names || []);
           if (names.length) return names;
         } catch {}
       }
@@ -1285,7 +1273,6 @@
       renderPendingStrip();
       renderBoard();
       document.getElementById('saveRoundBtn').disabled = game.rounds.length >= 16;
-      const quick = document.getElementById('saveRoundTopBtn'); if (quick) quick.disabled = game.rounds.length >= 16;
     }
 
     document.querySelectorAll('[data-team-choice]').forEach((btn) => btn.addEventListener('click', () => {
@@ -1336,7 +1323,7 @@
     function toggleAppMenu(force){ const el=document.getElementById('appMenu'); const should = typeof force === 'boolean' ? force : !el.classList.contains('show'); el.classList.toggle('show', should); }
     initPage();
   </script>
-  <div class="site-credit-watermark">v96 · Made by Bruis</div>
+  <div class="site-credit-watermark">v108 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
@@ -1350,7 +1337,7 @@
 <div id="playerSessionCorner" class="player-session-corner" aria-live="polite">
   <div class="player-session-corner-label">Ingelogd als</div>
   <div id="playerSessionCornerName" class="player-session-corner-name"></div>
-  <button id="playerSessionCornerLogout" type="button" class="player-session-corner-btn">Uitloggen</button>
+  <button id="playerSessionCornerLogout" type="button" class="player-session-corner-btn">Log out</button>
 </div>
 <script>
 (function(){
@@ -1404,5 +1391,6 @@
 })();
 </script>
 
+  <script src="./site-analytics.js"></script>
 </body>
 </html>

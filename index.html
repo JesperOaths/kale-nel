@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wordt er gejast donderdag?</title>
   <link rel="stylesheet" href="./site-shell.css" />
-  <style>body{background:linear-gradient(rgba(244,240,232,.56),rgba(244,240,232,.56)), url('./site-bg-desktop.webp') center/cover no-repeat fixed !important;}</style>
+  <style>body{background:linear-gradient(rgba(244,240,232,.88),rgba(244,240,232,.88)), url('./wordtergejast.png') center/cover no-repeat fixed !important;} .site-scene img{display:none !important;}</style>
   <style>
     :root {
       --gold: #d4af37;
@@ -38,36 +38,33 @@
       pointer-events: none;
     }
 
-    .site-scene .left-hand,
-    .site-scene .right-card,
-    .site-scene .spinoza-shadow {
-      position: absolute;
-      pointer-events: none;
-    }
-
-    .site-scene .left-hand {
-      left: -2%;
-      bottom: -1%;
-      width: min(31vw, 470px);
-      opacity: .98;
-      filter: saturate(1.24) contrast(1.1) brightness(1.14) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.18));
-    }
-
-    .site-scene .right-card {
-      right: 1%;
-      bottom: 7%;
-      width: min(24vw, 320px);
-      opacity: .98;
-      filter: contrast(1.14) brightness(1.16) saturate(1.08) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.18));
+    .site-scene .brand-watermark {
+      top: 8%;
+      left: 8%;
+      width: min(24vw, 300px);
+      transform: none;
+      opacity: 0.1;
     }
 
     .site-scene .spinoza-shadow {
-      right: 50%;
-      bottom: 8%;
-      transform: translateX(50%);
-      width: min(30vw, 380px);
-      opacity: 0.02;
-      filter: grayscale(1) contrast(1.6) brightness(0.72);
+      right: -20px;
+      bottom: -8px;
+      left: auto;
+      top: auto;
+      width: min(42vw, 560px);
+      transform: none;
+      opacity: 0.16;
+      filter: grayscale(1) contrast(2.15) brightness(0.46);
+    }
+
+    .site-scene .playing-card-accent {
+      left: 5%;
+      right: auto;
+      bottom: 6%;
+      width: min(25vw, 320px);
+      transform: none;
+      opacity: 0.18;
+      filter: drop-shadow(0 18px 34px rgba(40, 18, 12, 0.10));
     }
 
     .page {
@@ -82,7 +79,7 @@
     .topbar { display: none; }
 
     .main-card {
-      background: rgba(255, 251, 245, 0.58);
+      background: var(--card-bg);
       border: 1px solid rgba(255, 255, 255, 0.65);
       border-radius: 24px;
       padding: 40px;
@@ -90,7 +87,7 @@
       box-shadow: 0 20px 50px rgba(0,0,0,0.08);
       position: relative;
       text-align: center;
-      backdrop-filter: blur(5px);
+      backdrop-filter: blur(6px);
     }
 
     .card-top-right { position:absolute; top:25px; right:25px; display:flex; align-items:center; gap:14px; }
@@ -357,7 +354,7 @@
       cursor: wait;
     }
 
-    .site-scene { display: block; }
+    .site-scene { display: none; }
 
     .public-links {
       margin-top: 22px;
@@ -437,11 +434,7 @@
       .page { padding: 24px 14px; }
       .main-card {
         padding: 28px 18px 20px;
-        width: min(700px, 94vw);
-        background: rgba(255,255,255,0.02);
-        border: 2px solid rgba(212,175,55,0.35);
-        box-shadow: 0 18px 40px rgba(0,0,0,0.06);
-        backdrop-filter: blur(0px);
+        width: min(700px, 96vw);
       }
       .card-top-right { position:absolute; top:16px; right:16px; margin:0; }
       .card-top-left { position:absolute; top:16px; left:16px; margin:0; }
@@ -462,22 +455,20 @@
       .page-link-card.request-link { text-align:left; }
       .page-link-card.scorer-link { width: 100%; }
       .scorer-link-row { margin-top: 2px; }
-      .site-scene .left-hand {
-        width: min(48vw, 260px);
-        left: 7%;
-        bottom: 11%;
-        opacity: 1;
-      }
-      .site-scene .right-card {
-        width: min(42vw, 230px);
-        right: 8%;
-        bottom: 13%;
-        opacity: 1;
+      .site-scene .brand-watermark {
+        width: min(34vw, 180px);
+        top: 4%;
+        left: 4%;
       }
       .site-scene .spinoza-shadow {
-        width: min(26vw, 110px);
-        bottom: 20%;
-        opacity: 0.015;
+        width: min(58vw, 320px);
+        right: -20px;
+        bottom: 0;
+      }
+      .site-scene .playing-card-accent {
+        width: min(34vw, 200px);
+        left: -8px;
+        bottom: 8%;
       }
     }
 
@@ -502,9 +493,11 @@
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
-    <div class="left-hand"><img src="./kale9goed.png" alt="" style="width:100%;display:block;" /></div>
-    <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" style="width:100%;display:block;" /></div>
-    <div class="right-card"><img src="./playingcard-accent1-trimmed.png" alt="" style="width:100%;display:block;" /></div>
+    <div class="page-bg"></div>
+    <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
+    <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
+    <div class="playing-card-accent"><img src="./playingcard-accent1-trimmed.png" alt="" /></div>
+    <div class="top-glow"></div>
   </div>
 
   <main class="page">
@@ -542,23 +535,17 @@
         <div class="public-links-grid">
           <a class="page-link-card login-link" href="./login.html">
             <div class="page-link-label">Spelerlogin</div>
-            <div class="page-link-copy">Log in om te stemmen.</div>
+            <div class="page-link-copy">Log in met je naam en pincode om te stemmen en je sessie te beheren.</div>
           </a>
           <a class="page-link-card request-link" href="./request.html">
             <div class="page-link-label">Naam aanvragen</div>
-            <div class="page-link-copy">Vraag een nieuwe naam aan.</div>
+            <div class="page-link-copy">Vraag een nieuwe spelersnaam aan als je nog niet op de lijst staat.</div>
           </a>
         </div>
         <div class="scorer-link-row">
           <a class="page-link-card scorer-link" href="./scorer.html">
             <div class="page-link-label">Klaverjas scorer</div>
-            <div class="page-link-copy">Voer een potje in.</div>
-          </a>
-        </div>
-        <div class="scorer-link-row">
-          <a class="page-link-card scorer-link" href="./boerenbridge.html">
-            <div class="page-link-label">Boerenbridge scorer</div>
-            <div class="page-link-copy">Houd biedingen, slagen en specials mobiel bij en bewaar complete potjes veilig.</div>
+            <div class="page-link-copy">Voer rondes in, houd de stand bij en sla wedstrijden op voor de vault.</div>
           </a>
         </div>
       </section>
@@ -717,41 +704,25 @@
       const burst = document.createElement('span');
       burst.className = 'ja-party-burst';
       const specs = [
-        { kind:'balloon', tx:'-182px', ty:'-246px', rot:'-18deg', bg:'#ef476f', delay:'0ms' },
-        { kind:'balloon', tx:'182px', ty:'-238px', rot:'18deg', bg:'#ffd166', delay:'30ms' },
-        { kind:'balloon', tx:'8px', ty:'-286px', rot:'4deg', bg:'#06d6a0', delay:'60ms' },
-        { kind:'balloon', tx:'-78px', ty:'-214px', rot:'-8deg', bg:'#3a86ff', delay:'90ms' },
-        { kind:'balloon', tx:'92px', ty:'-216px', rot:'10deg', bg:'#ff99c8', delay:'120ms' },
-        { kind:'balloon', tx:'-12px', ty:'-210px', rot:'0deg', bg:'#f4a261', delay:'145ms' },
-        { kind:'streamer', tx:'-228px', ty:'-54px', rot:'-160deg', bg:'#118ab2', delay:'10ms' },
-        { kind:'streamer', tx:'232px', ty:'-44px', rot:'168deg', bg:'#8338ec', delay:'20ms' },
-        { kind:'streamer', tx:'-154px', ty:'-232px', rot:'-96deg', bg:'#ff006e', delay:'30ms' },
-        { kind:'streamer', tx:'156px', ty:'-238px', rot:'102deg', bg:'#06d6a0', delay:'40ms' },
-        { kind:'streamer', tx:'-206px', ty:'-130px', rot:'-120deg', bg:'#ef476f', delay:'50ms' },
-        { kind:'streamer', tx:'214px', ty:'-138px', rot:'140deg', bg:'#118ab2', delay:'60ms' },
-        { kind:'streamer', tx:'-30px', ty:'-276px', rot:'-18deg', bg:'#ffbe0b', delay:'70ms' },
-        { kind:'streamer', tx:'36px', ty:'-282px', rot:'14deg', bg:'#3a86ff', delay:'80ms' },
-        { kind:'confetti', tx:'-148px', ty:'-154px', rot:'-230deg', bg:'#ff006e', delay:'10ms' },
-        { kind:'confetti', tx:'-118px', ty:'-214px', rot:'-150deg', bg:'#fb5607', delay:'15ms' },
-        { kind:'confetti', tx:'-82px', ty:'-176px', rot:'-85deg', bg:'#ffbe0b', delay:'20ms' },
-        { kind:'confetti', tx:'-40px', ty:'-228px', rot:'-120deg', bg:'#8338ec', delay:'25ms' },
-        { kind:'confetti', tx:'-8px', ty:'-170px', rot:'180deg', bg:'#ffd166', delay:'30ms' },
-        { kind:'confetti', tx:'26px', ty:'-252px', rot:'-40deg', bg:'#06d6a0', delay:'35ms' },
-        { kind:'confetti', tx:'58px', ty:'-194px', rot:'110deg', bg:'#3a86ff', delay:'40ms' },
-        { kind:'confetti', tx:'94px', ty:'-156px', rot:'160deg', bg:'#06d6a0', delay:'45ms' },
-        { kind:'confetti', tx:'128px', ty:'-214px', rot:'220deg', bg:'#ef476f', delay:'50ms' },
-        { kind:'confetti', tx:'164px', ty:'-170px', rot:'250deg', bg:'#ff006e', delay:'55ms' },
-        { kind:'confetti', tx:'196px', ty:'-126px', rot:'280deg', bg:'#8338ec', delay:'60ms' },
-        { kind:'confetti', tx:'-190px', ty:'-176px', rot:'-280deg', bg:'#8338ec', delay:'65ms' },
-        { kind:'confetti', tx:'174px', ty:'-248px', rot:'200deg', bg:'#ffd166', delay:'70ms' },
-        { kind:'confetti', tx:'0px', ty:'-300px', rot:'180deg', bg:'#06d6a0', delay:'75ms' },
-        { kind:'card', tx:'-216px', ty:'-120px', rot:'-310deg', delay:'20ms', card:'A♠' },
-        { kind:'card', tx:'-140px', ty:'-248px', rot:'-250deg', delay:'40ms', card:'K♥' },
-        { kind:'card', tx:'-54px', ty:'-264px', rot:'-180deg', delay:'60ms', card:'Q♦' },
-        { kind:'card', tx:'42px', ty:'-266px', rot:'188deg', delay:'80ms', card:'J♣' },
-        { kind:'card', tx:'128px', ty:'-250px', rot:'230deg', delay:'100ms', card:'10♠' },
-        { kind:'card', tx:'212px', ty:'-110px', rot:'280deg', delay:'120ms', card:'A♥' },
-        { kind:'card', tx:'-10px', ty:'-320px', rot:'160deg', delay:'140ms', card:'K♣' }
+        { kind:'balloon', tx:'-154px', ty:'-210px', rot:'-18deg', bg:'#ef476f', delay:'0ms' },
+        { kind:'balloon', tx:'146px', ty:'-204px', rot:'18deg', bg:'#ffd166', delay:'120ms' },
+        { kind:'balloon', tx:'8px', ty:'-246px', rot:'4deg', bg:'#06d6a0', delay:'60ms' },
+        { kind:'balloon', tx:'-34px', ty:'-188px', rot:'-8deg', bg:'#3a86ff', delay:'140ms' },
+        { kind:'streamer', tx:'-210px', ty:'-54px', rot:'-160deg', bg:'#118ab2', delay:'30ms' },
+        { kind:'streamer', tx:'218px', ty:'-44px', rot:'168deg', bg:'#8338ec', delay:'80ms' },
+        { kind:'streamer', tx:'-124px', ty:'-212px', rot:'-96deg', bg:'#ff006e', delay:'10ms' },
+        { kind:'streamer', tx:'128px', ty:'-226px', rot:'102deg', bg:'#06d6a0', delay:'70ms' },
+        { kind:'confetti', tx:'-118px', ty:'-148px', rot:'-230deg', bg:'#ff006e', delay:'10ms' },
+        { kind:'confetti', tx:'-82px', ty:'-210px', rot:'-150deg', bg:'#fb5607', delay:'120ms' },
+        { kind:'confetti', tx:'-36px', ty:'-174px', rot:'-85deg', bg:'#ffbe0b', delay:'55ms' },
+        { kind:'confetti', tx:'44px', ty:'-188px', rot:'110deg', bg:'#3a86ff', delay:'95ms' },
+        { kind:'confetti', tx:'92px', ty:'-146px', rot:'160deg', bg:'#06d6a0', delay:'20ms' },
+        { kind:'confetti', tx:'144px', ty:'-118px', rot:'220deg', bg:'#ef476f', delay:'70ms' },
+        { kind:'confetti', tx:'0px', ty:'-164px', rot:'180deg', bg:'#ffd166', delay:'0ms' },
+        { kind:'card', tx:'-176px', ty:'-134px', rot:'-226deg', delay:'45ms', card:'A♠' },
+        { kind:'card', tx:'178px', ty:'-142px', rot:'202deg', delay:'110ms', card:'K♥' },
+        { kind:'card', tx:'-42px', ty:'-248px', rot:'-144deg', delay:'150ms', card:'J♣' },
+        { kind:'card', tx:'54px', ty:'-236px', rot:'188deg', delay:'90ms', card:'10♦' }
       ];
       specs.forEach((spec) => {
         const piece = document.createElement('span');
@@ -853,7 +824,7 @@
     load();
   </script>
 
-  <div class="site-credit-watermark">v107 · Made by Bruis</div>
+  <div class="site-credit-watermark">v108 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
@@ -921,5 +892,6 @@
 })();
 </script>
 
+  <script src="./site-analytics.js"></script>
 </body>
 </html>

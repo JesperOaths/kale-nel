@@ -1,9 +1,6 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <style>html.admin-gate-pending body > *{display:none!important} html.admin-gate-pending body::before{content:"🔐 Bezig met controleren van admin login..."; position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#efe9dd; color:#222; font:700 18px/1.4 Inter,system-ui,sans-serif; z-index:99999; padding:24px; text-align:center;}</style>
-  <script>document.documentElement.classList.add('admin-gate-pending');</script>
-
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -22,7 +19,6 @@
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
   </style>
   <script src="./gejast-config.js"></script>
-  <script src="./admin-gate-v105.js"></script>
 </head>
 <body>
   <main class="main-card">
@@ -94,6 +90,7 @@
       <p>Voor deze site blijft <strong>Cloudflare + aparte admin-subdomain</strong> de logische route.</p>
     </div>
   </main>
-  <div class="site-credit-watermark">v105 · Made by Bruis</div>
+  <div class="site-credit-watermark">v108 · Made by Bruis</div>
+  <script src="./site-analytics.js"></script>
 </body>
 </html>

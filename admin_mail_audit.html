@@ -1,15 +1,11 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <style>html.admin-gate-pending body > *{display:none!important} html.admin-gate-pending body::before{content:"🔐 Bezig met controleren van admin login..."; position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#efe9dd; color:#222; font:700 18px/1.4 Inter,system-ui,sans-serif; z-index:99999; padding:24px; text-align:center;}</style>
-  <script>document.documentElement.classList.add('admin-gate-pending');</script>
-
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Maildiagnostiek - Wordt er gejast?</title>
   <script src="./gejast-config.js"></script>
-  <script src="./admin-gate-v105.js"></script>
   <style>
     :root { --gold:#d4af37; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#6b655b; --ok:#2b5b37; --warn:#8b3a30; }
     *{box-sizing:border-box} body{margin:0;padding:20px;font-family:Inter,sans-serif;background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed;min-height:100vh}
@@ -47,6 +43,7 @@
     document.addEventListener('visibilitychange',()=>{ if(!document.hidden) loadDiagnostics().catch(()=>{}); });
     (async()=>{ if(await ensureGate()) loadDiagnostics().catch((err)=>setStatus(err?.message||'Laden mislukt.','warn')); })();
   </script>
-  <div class="site-credit-watermark">v105 · Made by Bruis</div>
+  <div class="site-credit-watermark">v108 · Made by Bruis</div>
+  <script src="./site-analytics.js"></script>
 </body>
 </html>
