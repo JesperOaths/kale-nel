@@ -49,16 +49,16 @@
       left: -2%;
       bottom: -1%;
       width: min(31vw, 470px);
-      opacity: 1;
-      filter: saturate(1.34) contrast(1.14) brightness(1.22) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.18));
+      opacity: .98;
+      filter: saturate(1.24) contrast(1.1) brightness(1.14) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.18));
     }
 
     .site-scene .right-card {
       right: 1%;
       bottom: 7%;
       width: min(24vw, 320px);
-      opacity: 1;
-      filter: contrast(1.2) brightness(1.24) saturate(1.12) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.18));
+      opacity: .98;
+      filter: contrast(1.14) brightness(1.16) saturate(1.08) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.18));
     }
 
     .site-scene .spinoza-shadow {
@@ -66,7 +66,7 @@
       bottom: 8%;
       transform: translateX(50%);
       width: min(30vw, 380px);
-      opacity: 0.04;
+      opacity: 0.02;
       filter: grayscale(1) contrast(1.6) brightness(0.72);
     }
 
@@ -82,7 +82,7 @@
     .topbar { display: none; }
 
     .main-card {
-      background: rgba(255, 251, 245, 0.86);
+      background: rgba(255, 251, 245, 0.58);
       border: 1px solid rgba(255, 255, 255, 0.65);
       border-radius: 24px;
       padding: 40px;
@@ -97,16 +97,16 @@
     .card-top-left { position:absolute; top:25px; left:25px; display:flex; align-items:center; gap:14px; }
 
     .admin-badge {
-      width: 44px;
-      height: 44px;
-      display:block;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(17,17,17,0.08);
+      padding: 3px 9px;
       border-radius: 999px;
-      background: transparent;
-      border: none;
-      color: transparent;
+      font-size: 10px;
+      color: #8a8275;
       text-decoration: none;
-      opacity: 0;
-      cursor: pointer;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
     }
 
     .card-logo {
@@ -260,9 +260,6 @@
       color: #514a3f;
     }
 
-
-    .admin-party-btn{display:none;margin:8px auto 0;border:none;border-radius:999px;padding:8px 12px;background:#111;color:#fff;font:800 12px/1 Inter,sans-serif;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,.14)}
-    .admin-party-btn.show{display:inline-flex;align-items:center;gap:6px}
     .vote-row {
       display: flex;
       justify-content: center;
@@ -454,10 +451,7 @@
       }
       .status-word { font-size: clamp(1.55rem, 7vw, 1.95rem); }
       .status-sub { margin-bottom: 18px; font-size: 13px; }
-  
-    .admin-party-btn{display:none;margin:8px auto 0;border:none;border-radius:999px;padding:8px 12px;background:#111;color:#fff;font:800 12px/1 Inter,sans-serif;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,.14)}
-    .admin-party-btn.show{display:inline-flex;align-items:center;gap:6px}
-    .vote-row { gap: 10px; margin-bottom: 18px; }
+      .vote-row { gap: 10px; margin-bottom: 18px; }
       .vote-btn { min-width: 0; flex: 1 1 calc(50% - 5px); padding: 12px 10px; }
       .list-box { min-height: 138px; padding: 16px 12px; }
       .list-box h2 { margin-bottom: 10px; font-size: 17px; }
@@ -532,8 +526,6 @@
         <button class="vote-btn can" id="yesBtn" type="button">Ik kan</button>
         <button class="vote-btn cant" id="noBtn" type="button">Ik kan niet</button>
       </div>
-      <button id="adminPartyBtn" class="admin-party-btn" type="button">🎉 Test confetti</button>
-
 
       <div class="lists-grid">
         <div class="list-box legends">
@@ -550,23 +542,23 @@
         <div class="public-links-grid">
           <a class="page-link-card login-link" href="./login.html">
             <div class="page-link-label">Spelerlogin</div>
-            <div class="page-link-copy">Log in met je naam en pincode.</div>
+            <div class="page-link-copy">Log in om te stemmen.</div>
           </a>
           <a class="page-link-card request-link" href="./request.html">
             <div class="page-link-label">Naam aanvragen</div>
-            <div class="page-link-copy">Vraag een naam aan.</div>
+            <div class="page-link-copy">Vraag een nieuwe naam aan.</div>
           </a>
         </div>
         <div class="scorer-link-row">
           <a class="page-link-card scorer-link" href="./scorer.html">
             <div class="page-link-label">Klaverjas scorer</div>
-            <div class="page-link-copy">Voer rondes in en bewaar potjes.</div>
+            <div class="page-link-copy">Voer een potje in.</div>
           </a>
         </div>
         <div class="scorer-link-row">
           <a class="page-link-card scorer-link" href="./boerenbridge.html">
             <div class="page-link-label">Boerenbridge scorer</div>
-            <div class="page-link-copy">Houd Boerenbridge mobiel bij.</div>
+            <div class="page-link-copy">Houd biedingen, slagen en specials mobiel bij en bewaar complete potjes veilig.</div>
           </a>
         </div>
       </section>
@@ -583,9 +575,8 @@
   </main>
 
   <script>
-    const CONFIG = window.GEJAST_CONFIG || {};
-    const SUPABASE_URL = CONFIG.SUPABASE_URL || "https://uiqntazgnrxwliaidkmy.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = CONFIG.SUPABASE_PUBLISHABLE_KEY || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+    const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const SESSION_KEY = "jas_session_token_v11";
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json", Accept: "application/json" }; }
     async function parseResponse(res) {
@@ -597,20 +588,13 @@
     function getSessionToken() { return localStorage.getItem(SESSION_KEY); }
     function clearSessionToken() { localStorage.removeItem(SESSION_KEY); }
     function getAdminSessionToken() { return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY) || ''; }
-    function getAdminDeviceToken() { return localStorage.getItem('jas_admin_device_v1') || ''; }
-    function getAdminUsername() { return localStorage.getItem('jas_admin_user_v1') || sessionStorage.getItem('jas_admin_user_v1') || ''; }
     async function ensureAdminViewer() {
       if (adminChecked) return isAdminViewer;
       adminChecked = true;
       const token = getAdminSessionToken();
-      const rawDeviceToken = getAdminDeviceToken();
-      const adminUsername = getAdminUsername();
-      if (!token || !rawDeviceToken || !adminUsername) { isAdminViewer = false; return false; }
+      if (!token) { isAdminViewer = false; return false; }
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session_with_device`, {
-          method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-          body: JSON.stringify({ admin_session_token: token, admin_username: adminUsername, raw_device_token: rawDeviceToken, device_fingerprint: [navigator.userAgent||'', navigator.language||'', Intl.DateTimeFormat().resolvedOptions().timeZone||'', String(screen?.width||0), String(screen?.height||0), navigator.platform||''].join('|').slice(0,500) })
-        });
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: token }) });
         await parseResponse(res);
         isAdminViewer = true;
       } catch {
@@ -733,40 +717,41 @@
       const burst = document.createElement('span');
       burst.className = 'ja-party-burst';
       const specs = [
-        { kind:'balloon', tx:'-154px', ty:'-210px', rot:'-18deg', bg:'#ef476f', delay:'0ms' },
-        { kind:'balloon', tx:'146px', ty:'-204px', rot:'18deg', bg:'#ffd166', delay:'120ms' },
-        { kind:'balloon', tx:'8px', ty:'-246px', rot:'4deg', bg:'#06d6a0', delay:'60ms' },
-        { kind:'balloon', tx:'-34px', ty:'-188px', rot:'-8deg', bg:'#3a86ff', delay:'140ms' },
-        { kind:'streamer', tx:'-210px', ty:'-54px', rot:'-160deg', bg:'#118ab2', delay:'30ms' },
-        { kind:'streamer', tx:'218px', ty:'-44px', rot:'168deg', bg:'#8338ec', delay:'80ms' },
-        { kind:'streamer', tx:'-124px', ty:'-212px', rot:'-96deg', bg:'#ff006e', delay:'10ms' },
-        { kind:'streamer', tx:'128px', ty:'-226px', rot:'102deg', bg:'#06d6a0', delay:'70ms' },
-        { kind:'confetti', tx:'-118px', ty:'-148px', rot:'-230deg', bg:'#ff006e', delay:'10ms' },
-        { kind:'confetti', tx:'-82px', ty:'-210px', rot:'-150deg', bg:'#fb5607', delay:'120ms' },
-        { kind:'confetti', tx:'-36px', ty:'-174px', rot:'-85deg', bg:'#ffbe0b', delay:'55ms' },
-        { kind:'confetti', tx:'44px', ty:'-188px', rot:'110deg', bg:'#3a86ff', delay:'95ms' },
-        { kind:'confetti', tx:'92px', ty:'-146px', rot:'160deg', bg:'#06d6a0', delay:'20ms' },
-        { kind:'confetti', tx:'144px', ty:'-118px', rot:'220deg', bg:'#ef476f', delay:'70ms' },
-        { kind:'confetti', tx:'0px', ty:'-164px', rot:'180deg', bg:'#ffd166', delay:'0ms' },
-        { kind:'card', tx:'-176px', ty:'-134px', rot:'-226deg', delay:'45ms', card:'A♠' },
-        { kind:'card', tx:'178px', ty:'-142px', rot:'202deg', delay:'110ms', card:'K♥' },
-        { kind:'card', tx:'-42px', ty:'-248px', rot:'-144deg', delay:'150ms', card:'J♣' },
-        { kind:'card', tx:'54px', ty:'-236px', rot:'188deg', delay:'90ms', card:'10♦' },
-        { kind:'card', tx:'-228px', ty:'-176px', rot:'-204deg', delay:'65ms', card:'Q♠' },
-        { kind:'card', tx:'236px', ty:'-174px', rot:'214deg', delay:'135ms', card:'A♥' },
-        { kind:'card', tx:'-96px', ty:'-274px', rot:'-118deg', delay:'35ms', card:'K♣' },
-        { kind:'card', tx:'108px', ty:'-270px', rot:'126deg', delay:'98ms', card:'Q♦' },
-        { kind:'confetti', tx:'-168px', ty:'-122px', rot:'-250deg', bg:'#ff006e', delay:'44ms' },
-        { kind:'confetti', tx:'-138px', ty:'-252px', rot:'-170deg', bg:'#ffd166', delay:'84ms' },
-        { kind:'confetti', tx:'-12px', ty:'-286px', rot:'-40deg', bg:'#06d6a0', delay:'22ms' },
-        { kind:'confetti', tx:'126px', ty:'-268px', rot:'148deg', bg:'#fb5607', delay:'52ms' },
-        { kind:'confetti', tx:'188px', ty:'-156px', rot:'210deg', bg:'#8338ec', delay:'102ms' },
-        { kind:'streamer', tx:'-258px', ty:'-102px', rot:'-178deg', bg:'#ffbe0b', delay:'18ms' },
-        { kind:'streamer', tx:'256px', ty:'-94px', rot:'182deg', bg:'#3a86ff', delay:'94ms' },
-        { kind:'streamer', tx:'-74px', ty:'-294px', rot:'-114deg', bg:'#ef476f', delay:'58ms' },
-        { kind:'streamer', tx:'76px', ty:'-298px', rot:'118deg', bg:'#06d6a0', delay:'128ms' },
-        { kind:'balloon', tx:'-206px', ty:'-246px', rot:'-14deg', bg:'#8338ec', delay:'22ms' },
-        { kind:'balloon', tx:'204px', ty:'-242px', rot:'12deg', bg:'#ffbe0b', delay:'132ms' }
+        { kind:'balloon', tx:'-182px', ty:'-246px', rot:'-18deg', bg:'#ef476f', delay:'0ms' },
+        { kind:'balloon', tx:'182px', ty:'-238px', rot:'18deg', bg:'#ffd166', delay:'30ms' },
+        { kind:'balloon', tx:'8px', ty:'-286px', rot:'4deg', bg:'#06d6a0', delay:'60ms' },
+        { kind:'balloon', tx:'-78px', ty:'-214px', rot:'-8deg', bg:'#3a86ff', delay:'90ms' },
+        { kind:'balloon', tx:'92px', ty:'-216px', rot:'10deg', bg:'#ff99c8', delay:'120ms' },
+        { kind:'balloon', tx:'-12px', ty:'-210px', rot:'0deg', bg:'#f4a261', delay:'145ms' },
+        { kind:'streamer', tx:'-228px', ty:'-54px', rot:'-160deg', bg:'#118ab2', delay:'10ms' },
+        { kind:'streamer', tx:'232px', ty:'-44px', rot:'168deg', bg:'#8338ec', delay:'20ms' },
+        { kind:'streamer', tx:'-154px', ty:'-232px', rot:'-96deg', bg:'#ff006e', delay:'30ms' },
+        { kind:'streamer', tx:'156px', ty:'-238px', rot:'102deg', bg:'#06d6a0', delay:'40ms' },
+        { kind:'streamer', tx:'-206px', ty:'-130px', rot:'-120deg', bg:'#ef476f', delay:'50ms' },
+        { kind:'streamer', tx:'214px', ty:'-138px', rot:'140deg', bg:'#118ab2', delay:'60ms' },
+        { kind:'streamer', tx:'-30px', ty:'-276px', rot:'-18deg', bg:'#ffbe0b', delay:'70ms' },
+        { kind:'streamer', tx:'36px', ty:'-282px', rot:'14deg', bg:'#3a86ff', delay:'80ms' },
+        { kind:'confetti', tx:'-148px', ty:'-154px', rot:'-230deg', bg:'#ff006e', delay:'10ms' },
+        { kind:'confetti', tx:'-118px', ty:'-214px', rot:'-150deg', bg:'#fb5607', delay:'15ms' },
+        { kind:'confetti', tx:'-82px', ty:'-176px', rot:'-85deg', bg:'#ffbe0b', delay:'20ms' },
+        { kind:'confetti', tx:'-40px', ty:'-228px', rot:'-120deg', bg:'#8338ec', delay:'25ms' },
+        { kind:'confetti', tx:'-8px', ty:'-170px', rot:'180deg', bg:'#ffd166', delay:'30ms' },
+        { kind:'confetti', tx:'26px', ty:'-252px', rot:'-40deg', bg:'#06d6a0', delay:'35ms' },
+        { kind:'confetti', tx:'58px', ty:'-194px', rot:'110deg', bg:'#3a86ff', delay:'40ms' },
+        { kind:'confetti', tx:'94px', ty:'-156px', rot:'160deg', bg:'#06d6a0', delay:'45ms' },
+        { kind:'confetti', tx:'128px', ty:'-214px', rot:'220deg', bg:'#ef476f', delay:'50ms' },
+        { kind:'confetti', tx:'164px', ty:'-170px', rot:'250deg', bg:'#ff006e', delay:'55ms' },
+        { kind:'confetti', tx:'196px', ty:'-126px', rot:'280deg', bg:'#8338ec', delay:'60ms' },
+        { kind:'confetti', tx:'-190px', ty:'-176px', rot:'-280deg', bg:'#8338ec', delay:'65ms' },
+        { kind:'confetti', tx:'174px', ty:'-248px', rot:'200deg', bg:'#ffd166', delay:'70ms' },
+        { kind:'confetti', tx:'0px', ty:'-300px', rot:'180deg', bg:'#06d6a0', delay:'75ms' },
+        { kind:'card', tx:'-216px', ty:'-120px', rot:'-310deg', delay:'20ms', card:'A♠' },
+        { kind:'card', tx:'-140px', ty:'-248px', rot:'-250deg', delay:'40ms', card:'K♥' },
+        { kind:'card', tx:'-54px', ty:'-264px', rot:'-180deg', delay:'60ms', card:'Q♦' },
+        { kind:'card', tx:'42px', ty:'-266px', rot:'188deg', delay:'80ms', card:'J♣' },
+        { kind:'card', tx:'128px', ty:'-250px', rot:'230deg', delay:'100ms', card:'10♠' },
+        { kind:'card', tx:'212px', ty:'-110px', rot:'280deg', delay:'120ms', card:'A♥' },
+        { kind:'card', tx:'-10px', ty:'-320px', rot:'160deg', delay:'140ms', card:'K♣' }
       ];
       specs.forEach((spec) => {
         const piece = document.createElement('span');
@@ -808,8 +793,6 @@
 
       renderNames('legendsList', legends, 'Nog niemand', 'legends');
       renderNames('losersList', losers, 'Nog niemand', 'losers');
-      const adminPartyBtn = document.getElementById('adminPartyBtn');
-      if (adminPartyBtn) adminPartyBtn.classList.toggle('show', !!isAdminViewer);
       if (data.my_name && document.getElementById('sessionHint')) document.getElementById('sessionHint').textContent = `Ingelogd als ${data.my_name}.`;
       if (state.key === 'yes' && !hasPlayedJaCelebration) {
         hasPlayedJaCelebration = true;
@@ -867,11 +850,10 @@
     }
     document.getElementById('yesBtn').addEventListener('click', () => handleVote('ja'));
     document.getElementById('noBtn').addEventListener('click', () => handleVote('nee'));
-    document.getElementById('adminPartyBtn').addEventListener('click', async () => { if (await ensureAdminViewer()) playJaCelebration(); });
     load();
   </script>
 
-  <div class="site-credit-watermark">v105 · Made by Bruis</div>
+  <div class="site-credit-watermark">v107 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
@@ -885,7 +867,7 @@
 <div id="playerSessionCorner" class="player-session-corner" aria-live="polite">
   <div class="player-session-corner-label">Ingelogd als</div>
   <div id="playerSessionCornerName" class="player-session-corner-name"></div>
-  <button id="playerSessionCornerLogout" type="button" class="player-session-corner-btn">Uitloggen</button>
+  <button id="playerSessionCornerLogout" type="button" class="player-session-corner-btn">Log out</button>
 </div>
 <script>
 (function(){

@@ -1,9 +1,6 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <style>html.admin-gate-pending body > *{display:none!important} html.admin-gate-pending body::before{content:"🔐 Bezig met controleren van admin login..."; position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#efe9dd; color:#222; font:700 18px/1.4 Inter,system-ui,sans-serif; z-index:99999; padding:24px; text-align:center;}</style>
-  <script>document.documentElement.classList.add('admin-gate-pending');</script>
-
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -37,8 +34,9 @@
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
     @media (max-width:760px){ .grid { grid-template-columns:1fr; } }
   </style>
-  <script src="./gejast-config.js"></script>
-  <script src="./admin-gate-v105.js"></script>
+  <script src="./gejast-config.js">
+    (function globalAdminLogout(){ const btn=document.createElement('button'); btn.textContent='Uitloggen'; btn.style.cssText='position:fixed;top:14px;right:14px;z-index:9999;border:none;border-radius:14px;padding:10px 14px;background:#111;color:#fff;font:700 14px Inter,sans-serif;cursor:pointer'; btn.onclick=()=>{ clearAdminSessionToken(); window.location.href='./admin.html'; }; document.addEventListener('DOMContentLoaded',()=>document.body.appendChild(btn)); })();
+  </script>
 </head>
 <body>
   <main class="main-card">
@@ -105,7 +103,7 @@
         rows.forEach((row) => {
           const card = document.createElement('article');
           card.className = 'item';
-          card.innerHTML = `<strong>${row.display_name}</strong><div class="pill">${row.status || 'available'}</div><div class="meta">slug: ${row.username || '-'} · e-mail: ${row.reserved_for_email || '-'} </div>${row.player_id ? `<div class="meta">gekoppelde speler-id: ${row.player_id}</div>` : ''}<div class="row"><button class="btn danger" type="button" data-remove-id="${row.id}">Verwijderen uit kieslijst</button></div>`;
+          card.innerHTML = `<strong>${row.display_name}</strong><div class="pill">${row.status || 'beschikbaar'}</div><div class="meta">slug: ${row.username || '-'} · e-mail: ${row.reserved_for_email || '-'} </div>${row.player_id ? `<div class="meta">gekoppelde speler-id: ${row.player_id}</div>` : ''}<div class="row"><button class="btn danger" type="button" data-remove-id="${row.id}">Verwijderen uit kieslijst</button></div>`;
           root.appendChild(card);
         });
         setStatus('Lijst geladen.', 'ok');
@@ -114,15 +112,38 @@
         setStatus(error?.message || 'Laden mislukt.', 'warn');
       }
     }
+
+    async function callRemoveAllowedUsername(id){
+      const payloads = [
+        { admin_session_token: getToken(), allowed_username_id_input: Number(id) },
+        { admin_session_token: getToken(), allowed_username_id: Number(id) },
+        { admin_session_token: getToken(), input_allowed_username_id: Number(id) },
+        { admin_session_token: getToken(), reserved_name_id_input: Number(id) },
+        { admin_session_token: getToken(), reserved_name_id: Number(id) },
+        { admin_session_token: getToken(), id_input: Number(id) },
+        { admin_session_token: getToken(), id: Number(id) }
+      ];
+      let lastError = null;
+      for (const payload of payloads) {
+        try {
+          return await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_remove_allowed_username`, {
+            method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify(payload)
+          }).then(parseResponse);
+        } catch (error) {
+          lastError = error;
+          const message = String(error?.message || '');
+          if (!/schema cache|function|parameter|argument|missing/i.test(message)) throw error;
+        }
+      }
+      throw lastError || new Error('Verwijderen mislukt.');
+    }
+
     document.getElementById('listRoot').addEventListener('click', async (event) => {
       const btn = event.target.closest('[data-remove-id]');
       if (!btn) return;
       try {
         setStatus('Naam verwijderen...');
-        await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_remove_allowed_username`, {
-          method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(),
-          body:JSON.stringify({ admin_session_token: getToken(), allowed_username_id_input: Number(btn.dataset.removeId) })
-        }).then(parseResponse);
+        await callRemoveAllowedUsername(btn.dataset.removeId);
         await loadNames();
         setStatus('Naam verwijderd uit de kieslijst.', 'ok');
       } catch (error) {
@@ -148,6 +169,6 @@
     });
     (async()=>{ if(await ensureGate()) loadNames(); })();
   </script>
-  <div class="site-credit-watermark">v105 · Made by Bruis</div>
+  <div class="site-credit-watermark">v107 · Made by Bruis</div>
 </body>
 </html>
