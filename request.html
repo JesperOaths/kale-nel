@@ -7,12 +7,10 @@
   <style>
     :root { --gold: #dab33e; --black: #111; --bg: #f0ede4; }
     * { box-sizing: border-box; }
-    body { font-family: 'Inter', sans-serif; background: linear-gradient(rgba(240,237,228,0.78), rgba(240,237,228,0.78)), url('./site-bg-desktop.webp') center/cover no-repeat fixed; margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    body { font-family: 'Inter', sans-serif; background: linear-gradient(rgba(240,237,228,0.52), rgba(240,237,228,0.52)), url('./site-bg-desktop.webp') center/cover no-repeat fixed; margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
     .scene { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
-    .left-hand, .right-card { position: absolute; pointer-events: none; }
-    .left-hand { left: -2%; bottom: 2%; opacity: 74; width: min(26vw, 340px); filter: saturate(1.07) contrast(1.06) brightness(1.05); }
-    .right-card { right: 2%; bottom: 10%; opacity: 72; width: min(17vw, 220px); filter: contrast(1.09) brightness(1.08); }
-    .main-card { background: rgba(255,255,255,0.72); border-radius: 32px; padding: 40px; width: 90%; max-width: 500px; box-shadow: 0 15px 45px rgba(0,0,0,0.05); text-align: center; position: relative; z-index: 1; backdrop-filter: blur(4px); }
+    .left-hand { position: absolute; pointer-events: none; left: -2%; bottom: 2%; opacity: .96; width: min(26vw, 340px); filter: saturate(1.18) contrast(1.12) brightness(1.16); }
+    .main-card { background: rgba(255,255,255,0.90); border-radius: 32px; padding: 40px; width: 90%; max-width: 500px; box-shadow: 0 15px 45px rgba(0,0,0,0.05); text-align: center; position: relative; z-index: 1; backdrop-filter: blur(4px); }
     .logo-top { position: absolute; top: 25px; right: 25px; width: 45px; }
     h1 { font-size: 28px; margin: 0 0 10px; letter-spacing: -1px; }
     .intro { font-size: 14px; color: #666; margin-bottom: 25px; }
@@ -22,7 +20,7 @@
     .ghost-link { flex: 1; background: var(--black); color: #fff; text-decoration: none; padding: 14px; border-radius: 10px; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; }
     .status { margin-top: 15px; font-size: 13px; min-height: 18px; }
     label { display: block; text-align: left; font-size: 12px; font-weight: 700; color: #999; margin: 0 0 6px 4px; text-transform: uppercase; }
-    @media (max-width:760px){ body{ background: linear-gradient(rgba(240,237,228,0.70), rgba(240,237,228,0.70)), url('./site-bg-mobile.webp') center/cover no-repeat fixed; } .left-hand{ width:min(44vw,210px); left:3%; bottom:12%; opacity:.72; } .right-card{ width:min(36vw,176px); right:4%; bottom:15%; opacity:.72; } .main-card{ background: rgba(255,255,255,0.30); }}
+    @media (max-width:760px){ body{ background: linear-gradient(rgba(240,237,228,0.54), rgba(240,237,228,0.54)), url('./site-bg-mobile.webp') center/cover no-repeat fixed; } .left-hand{ width:min(44vw,210px); left:2%; bottom:12%; opacity:.98; } .main-card{ background: rgba(255,255,255,0.84); }}
   </style>
 
   <style id="bruis-watermark-style">
@@ -36,12 +34,11 @@
 <body>
   <div class="scene">
     <div class="left-hand"><img src="./kale9goed.png" width="100%"></div>
-    <div class="right-card"><img src="./playingcard-accent1-trimmed.png" width="100%"></div>
   </div>
   <main class="main-card">
     <a href="./index.html" aria-label="Terug naar home"><img src="./logo.png" class="logo-top" /></a>
-    <h1>Claim je naam</h1>
-    <p class="intro">Kies je naam uit de lijst en vul je e-mailadres in.</p>
+    <h1>Naam aanvragen</h1>
+    <p class="intro">Kies een naam en vul je e-mailadres in.</p>
     <label>Gewenste naam</label>
     <select id="requestNameSelect"></select>
     <label>E-mailadres</label>
@@ -218,7 +215,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     load();
   </script>
 
-  <div class="site-credit-watermark">v103 · Made by Bruis</div>
+  <div class="site-credit-watermark">v105 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
@@ -232,7 +229,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
 <div id="playerSessionCorner" class="player-session-corner" aria-live="polite">
   <div class="player-session-corner-label">Ingelogd als</div>
   <div id="playerSessionCornerName" class="player-session-corner-name"></div>
-  <button id="playerSessionCornerLogout" type="button" class="player-session-corner-btn">Log out</button>
+  <button id="playerSessionCornerLogout" type="button" class="player-session-corner-btn">Uitloggen</button>
 </div>
 <script>
 (function(){
