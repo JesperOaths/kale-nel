@@ -28,7 +28,7 @@
       margin:0;
       font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color:var(--ink);
-      background: linear-gradient(rgba(247,244,238,0.52), rgba(247,244,238,0.42)), url('./wordtergejast.png') center/cover no-repeat fixed;
+      background: linear-gradient(rgba(247,244,238,0.78), rgba(247,244,238,0.72)), url('./wordtergejast.png') center/cover no-repeat fixed;
     }
     .page { width:min(580px, 100%); margin:0 auto; min-height:100vh; padding-bottom:94px; }
     .topbar {
@@ -487,22 +487,6 @@
       MATCH_STORAGE.setItem(MATCH_KEY, JSON.stringify(game));
     }
 
-    function normalizeSitePlayerRows(payload) {
-      if (Array.isArray(payload)) {
-        return uniqueNames(payload.map((row) => {
-          if (typeof row === 'string') return row;
-          return row?.display_name || row?.name || row?.desired_name || '';
-        }).filter(Boolean));
-      }
-      if (Array.isArray(payload?.names)) {
-        return uniqueNames(payload.names.map((row) => {
-          if (typeof row === 'string') return row;
-          return row?.display_name || row?.name || row?.desired_name || '';
-        }).filter(Boolean));
-      }
-      return [];
-    }
-
     async function getSitePlayers() {
       for (const endpoint of ['get_login_names']) {
         try {
@@ -512,7 +496,8 @@
           const txt = await res.text();
           const data = txt ? JSON.parse(txt) : {};
           if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
-          const names = normalizeSitePlayerRows(data);
+          const rows = Array.isArray(data) ? data : (Array.isArray(data?.names) ? data.names : []);
+          const names = uniqueNames(rows.map((row) => typeof row === 'string' ? row : (row?.display_name || row?.name || row?.desired_name || '')).filter(Boolean));
           if (names.length) return names;
         } catch {}
       }
@@ -1322,17 +1307,11 @@
     document.getElementById('resumeOverlay').addEventListener('click', (event) => { if (event.target.id === 'resumeOverlay') document.getElementById('resumeOverlay').classList.remove('show'); });
 
     async function initPage(){
-      let storedPlayers = [];
       try {
-        const parsed = JSON.parse(PLAYER_STORAGE.getItem(PLAYERS_KEY) || '[]');
-        if (Array.isArray(parsed)) storedPlayers = parsed.filter(Boolean);
+        const storedPlayers = JSON.parse(PLAYER_STORAGE.getItem(PLAYERS_KEY) || '[]');
+        if (Array.isArray(storedPlayers) && storedPlayers.length) knownPlayersCache = uniqueNames([...knownPlayersCache, ...storedPlayers]);
       } catch {}
-      const livePlayers = await getSitePlayers();
-      if (livePlayers.length) {
-        knownPlayersCache = uniqueNames([...livePlayers, ...(game.players || []).filter(Boolean)]);
-      } else {
-        knownPlayersCache = uniqueNames([...knownPlayersCache, ...storedPlayers, ...(game.players || []).filter(Boolean)]);
-      }
+      knownPlayersCache = uniqueNames([...(await getSitePlayers()), ...knownPlayersCache]);
       renderSetupOptions();
       render();
       if (game.rounds.length || game.players.filter(Boolean).length) {
@@ -1345,7 +1324,7 @@
     function toggleAppMenu(force){ const el=document.getElementById('appMenu'); const should = typeof force === 'boolean' ? force : !el.classList.contains('show'); el.classList.toggle('show', should); }
     initPage();
   </script>
-  <div class="site-credit-watermark">v97 · Made by Bruis</div>
+  <div class="site-credit-watermark">v102 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}

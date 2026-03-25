@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Boerenbridge scorer</title>
+  <script src="./gejast-config.js"></script>
+  <style>
+    :root {
+      --gold:#d4af37; --gold-dark:#b68d16; --ink:#121212; --muted:#666056; --panel:rgba(255,250,242,.88); --panel-line:rgba(17,17,17,.08);
+      --bg:linear-gradient(rgba(244,240,232,.76),rgba(244,240,232,.76)), url('./site-bg-desktop.webp') center/cover no-repeat fixed;
+    }
+    *{box-sizing:border-box}
+    html,body{min-height:100%}
+    body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--ink)}
+    .scene{position:fixed;inset:0;pointer-events:none;z-index:0}
+    .scene .left-hand,.scene .right-card{position:absolute;pointer-events:none}
+    .scene .left-hand{left:-2%;bottom:0;width:min(26vw,360px);opacity:.72;filter:saturate(1.03) contrast(1.05) brightness(1.03)}
+    .scene .right-card{right:2%;bottom:8%;width:min(18vw,240px);opacity:.66;filter:contrast(1.06) brightness(1.03)}
+    .page{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:18px 16px 96px}
+    .sheet{background:rgba(255,252,247,.82);backdrop-filter:blur(5px);border:1px solid rgba(255,255,255,.62);border-radius:28px;box-shadow:0 20px 46px rgba(0,0,0,.08);overflow:hidden}
+    .topbar{display:flex;justify-content:space-between;align-items:center;padding:18px 18px 12px;gap:10px;flex-wrap:wrap}
+    .title-wrap h1{margin:0;font-size:clamp(1.8rem,4vw,2.45rem);letter-spacing:-.05em}
+    .title-wrap p{margin:6px 0 0;color:var(--muted);font-size:14px}
+    .top-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .chip-btn,.ghost-btn,.gold-btn,.dark-btn{border:none;border-radius:16px;padding:12px 14px;font-weight:900;cursor:pointer;text-decoration:none;font:inherit}
+    .chip-btn{background:#fff;border:1px solid var(--panel-line);color:#4a463f}
+    .gold-btn{background:var(--gold);color:#111}
+    .dark-btn{background:#111;color:#fff}
+    .ghost-btn{background:rgba(255,255,255,.9);border:1px solid var(--panel-line);color:#222}
+    .status{padding:0 18px 14px;color:#6a6358;font-size:14px;min-height:20px}
+    .status.ok{color:#486d25}.status.warn{color:#8b5f11}.status.error{color:#9e3328}
+    .table-wrap{padding:0 12px 14px;overflow:auto}
+    table{width:100%;border-collapse:separate;border-spacing:0 10px;min-width:760px}
+    thead th{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#6b6458;padding:0 10px 4px;text-align:center}
+    thead th:first-child{text-align:left}
+    tbody tr{background:rgba(255,255,255,.84);box-shadow:0 6px 14px rgba(0,0,0,.04)}
+    tbody tr td{padding:12px 10px;border-top:1px solid var(--panel-line);border-bottom:1px solid var(--panel-line);vertical-align:top}
+    tbody tr td:first-child{border-left:1px solid var(--panel-line);border-radius:18px 0 0 18px;min-width:140px}
+    tbody tr td:last-child{border-right:1px solid var(--panel-line);border-radius:0 18px 18px 0}
+    .row-label{font-weight:900;font-size:15px}
+    .row-sub{font-size:12px;color:var(--muted);margin-top:4px}
+    .special-select{width:100%;border:1px solid rgba(17,17,17,.12);border-radius:12px;padding:9px 10px;background:#fff;color:#222;font:inherit}
+    .cell-wrap{display:grid;gap:5px;text-align:center}
+    .cell-line{font-size:12px;color:#6e675b}
+    .cell-line strong{color:#151515}
+    .current-row td{border-color:rgba(212,175,55,.4);background:rgba(255,248,222,.84)}
+    .done-row{cursor:pointer}
+    .done-row:hover td{box-shadow:inset 0 0 0 1px rgba(212,175,55,.28)}
+    .footer-actions{display:flex;gap:10px;flex-wrap:wrap;padding:0 16px 18px;align-items:center}
+    .summary-card{display:flex;gap:10px;flex-wrap:wrap;padding:0 16px 16px}
+    .stat-box{background:rgba(255,255,255,.86);border:1px solid var(--panel-line);border-radius:18px;padding:12px 14px;min-width:130px}
+    .stat-box .eyebrow{font-size:11px;color:#7a7266;text-transform:uppercase;letter-spacing:.08em}
+    .stat-box strong{display:block;font-size:22px;margin-top:3px}
+    .overlay{position:fixed;inset:0;background:rgba(18,22,28,.56);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+    .overlay.show{display:flex}
+    .modal{width:min(760px,100%);max-height:88vh;overflow:auto;background:#fffdf9;border-radius:28px;padding:18px;box-shadow:0 28px 70px rgba(0,0,0,.28)}
+    .modal h2{margin:0 0 8px;font-size:28px;letter-spacing:-.04em}
+    .modal p{margin:0 0 14px;color:#5c564d;line-height:1.45}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .field{display:grid;gap:6px}
+    .field label{font-size:12px;font-weight:800;color:#676153;text-transform:uppercase;letter-spacing:.08em}
+    .field input,.field select{width:100%;border:1px solid rgba(17,17,17,.12);border-radius:16px;padding:12px 14px;background:#fff;font:inherit}
+    .setup-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .setup-grid .field.span-2{grid-column:span 2}
+    .modal-footer{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+    .modal-footer > *{flex:1}
+    .round-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .player-card{background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(247,244,238,.95));border:1px solid var(--panel-line);border-radius:22px;padding:14px}
+    .player-card h3{margin:0 0 10px;font-size:18px;letter-spacing:-.03em}
+    .hint{font-size:12px;color:#71695e}
+    .rules-copy{white-space:pre-wrap;font-size:14px;line-height:1.55;color:#2d2a26;background:#fbf7ef;border:1px solid rgba(17,17,17,.08);border-radius:18px;padding:14px;max-height:58vh;overflow:auto}
+    .hidden{display:none!important}
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);backdrop-filter:blur(6px);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,.18)}
+    @media (max-width:760px){
+      :root{--bg:linear-gradient(rgba(244,240,232,.68),rgba(244,240,232,.68)), url('./site-bg-mobile.webp') center/cover no-repeat fixed}
+      .scene .left-hand{width:min(43vw,210px);left:-8px;bottom:10%;opacity:.76}
+      .scene .right-card{width:min(36vw,180px);right:-8px;bottom:13%;opacity:.7}
+      .sheet{background:rgba(255,252,247,.58)}
+      .topbar{padding:16px 14px 10px}
+      .title-wrap h1{font-size:clamp(1.7rem,8vw,2.2rem)}
+      .page{padding:10px 10px 88px}
+      .summary-card,.footer-actions,.status{padding-left:12px;padding-right:12px}
+      .grid,.setup-grid,.round-grid{grid-template-columns:1fr}
+      .setup-grid .field.span-2{grid-column:auto}
+      .modal{padding:16px;border-radius:24px}
+      .site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}
+    }
+  </style>
+</head>
+<body>
+  <div class="scene" aria-hidden="true">
+    <div class="left-hand"><img src="./kale9goed.png" style="width:100%;display:block" alt="" /></div>
+    <div class="right-card"><img src="./playingcard-accent1-trimmed.png" style="width:100%;display:block" alt="" /></div>
+  </div>
+  <main class="page">
+    <section class="sheet">
+      <div class="topbar">
+        <div class="title-wrap">
+          <h1>Boerenbridge scorer</h1>
+          <p>Mobiele scorekaart met biedingen, slagen, specials en veilige wedstrijdbewaring.</p>
+        </div>
+        <div class="top-actions">
+          <a class="chip-btn" href="./index.html">Terug naar home</a>
+          <button class="chip-btn" id="rulesBtn" type="button">Regels</button>
+          <a class="chip-btn" href="./boerenbridge_vault.html">Boerenbridge vault</a>
+        </div>
+      </div>
+      <div id="statusBox" class="status"></div>
+      <div class="summary-card">
+        <div class="stat-box"><div class="eyebrow">Ronde</div><strong id="roundStat">Nog niet gestart</strong></div>
+        <div class="stat-box"><div class="eyebrow">Deler</div><strong id="dealerStat">-</strong></div>
+        <div class="stat-box"><div class="eyebrow">Spelers</div><strong id="playersStat">0</strong></div>
+        <div class="stat-box"><div class="eyebrow">Status</div><strong id="finishStat">Concept</strong></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr id="tableHead"><th>Ronde</th></tr></thead>
+          <tbody id="roundBody"></tbody>
+        </table>
+      </div>
+      <div class="footer-actions">
+        <button class="ghost-btn" id="newGameBtn" type="button">Nieuw spel</button>
+        <button class="ghost-btn" id="undoBtn" type="button">Laatste ronde ongedaan maken</button>
+        <button class="ghost-btn hidden" id="saveRetryBtn" type="button">Opslag opnieuw proberen</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="overlay" id="continueOverlay"><div class="modal"><h2>Verder met lopend spel?</h2><p>Er staat nog een onafgemaakt Boerenbridge-potje in dit apparaat.</p><div class="modal-footer"><button class="ghost-btn" id="draftDiscardBtn" type="button">Nieuw spel</button><button class="gold-btn" id="draftContinueBtn" type="button">Doorgaan</button></div></div></div>
+  <div class="overlay" id="setupOverlay"><div class="modal"><h2>Wie spelen er mee?</h2><p>Kies eerst hoeveel spelers meedoen, daarna de namen en wie de deler is. Elke naam mag maar één keer gekozen worden.</p><div class="setup-grid"><div class="field"><label>Aantal spelers</label><select id="playerCountInput"></select></div><div class="field"><label>Deler</label><select id="dealerInput"></select></div><div class="field span-2"><label>Spelers</label><div class="grid" id="playerFields"></div></div></div><div class="modal-footer"><button class="ghost-btn" id="setupCancelBtn" type="button">Later</button><button class="gold-btn" id="setupSaveBtn" type="button">Opslaan en beginnen</button></div></div></div>
+  <div class="overlay" id="roundOverlay"><div class="modal"><h2 id="roundModalTitle">Ronde invullen</h2><p id="roundModalCopy">Voer eerst de biedingen in, daarna hoeveel slagen iedereen echt won.</p><div class="hint" id="roundModalHint"></div><div class="round-grid" id="roundPlayerCards"></div><div class="modal-footer"><button class="ghost-btn" id="roundCancelBtn" type="button">Sluiten</button><button class="gold-btn" id="roundSaveBtn" type="button">Ronde opslaan</button></div></div></div>
+  <div class="overlay" id="rulesOverlay"><div class="modal"><h2>Regels</h2><p>Deze uitleg komt rechtstreeks uit het meegeleverde Boerenbridge-regelbestand.</p><div class="rules-copy" id="rulesCopy"></div><div class="modal-footer"><button class="dark-btn" id="rulesCloseBtn" type="button">Sluiten</button></div></div></div>
+
+  <div class="site-credit-watermark" id="watermark">v102 · Made by Bruis</div>
+
+  <script>
+    const APP_VERSION = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.VERSION) || 'v102';
+    const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || '';
+    const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || '';
+    const BOERENBRIDGE_RULES_VERSION = 'boerenbridge_rules_v1';
+    const SESSION_KEYS = ['jas_session_token_v11','jas_session_token_v10'];
+    const DRAFT_KEY = `boerenbridge_draft_${APP_VERSION}`;
+    const HISTORY_KEY = `boerenbridge_history_local_${APP_VERSION}`;
+    const PLAYERS_KEY = `boerenbridge_players_${APP_VERSION}`;
+    const RULES_TEXT = `BOERENBRIDGE UITLEG
+====================
+
+Dit document herschrijft de bestaande Boerenbridge-uitleg in duidelijkere taal, zonder nieuwe regels toe te voegen. Het is bedoeld als bron voor de nieuwe Boerenbridge-pagina's.
+
+1. BASIS
+--------
+- Boerenbridge wordt gespeeld met minimaal 2 en maximaal 7 spelers.
+- Voor elk spel kies je eerst welke spelers meedoen.
+- Elke ronde voorspelt iedere speler hoeveel slagen hij of zij gaat winnen.
+- Het aantal kaarten in de ronde is ook het aantal slagen.
+
+2. PUNTENTELLING
+----------------
+- Altijd 3 punten per werkelijk gewonnen slag.
+- Bij exact goed bieden komt daar 10 bonuspunten bovenop.
+- Exact: 10 + (3 × gewonnen slagen).
+- Niet exact: 3 × gewonnen slagen.
+
+3. VOLGORDE
+-----------
+- 1 t/m 7 kaarten
+- daarna 4 speciale rondes
+- daarna 7 t/m 1 kaarten
+
+4. SPECIALS
+-----------
+- Blind bieden
+- Nul bieden
+- Zonder troef
+- Voor troef
+- Selectie maken
+- Doorgeven
+- Half half
+
+Belangrijk:
+- Selectie maken mag niet met 7 spelers en heeft maximaal 5 spelers.
+- Half half telt als 8 slagen.
+- Doorgeven telt als 7 slagen.
+- Selectie maken telt voor bieden en spelen als 7 slagen.
+
+5. BIEDEN
+---------
+- De speler links van de deler biedt als eerste.
+- Daarna met de klok mee totdat de deler als laatste biedt.
+- De totale som van alle biedingen mag nooit gelijk zijn aan het aantal slagen, dus de deler heeft altijd een verboden laatste waarde.
+
+6. SCOREPAGINA
+--------------
+Per speler per ronde zichtbaar houden:
+- bod
+- gewonnen slagen
+- punten in die ronde
+- doorlopend totaal
+
+7. OPSLAG
+---------
+- Voltooide wedstrijden horen als complete match history opgeslagen te worden.
+- Per speler moeten exact-bid keer, totaal slagen en totaal punten herleidbaar blijven.`;
+    const DEFAULT_SPECIALS = ['Blind bieden','Nul bieden','Zonder troef','Voor troef','Selectie maken','Doorgeven','Half half'];
+
+    const state = { players: [], availableNames: [], draft: null, roundEditorIndex: null };
+    const emptyMatch = () => ({
+      client_match_id: `bb_${new Date().toISOString().replace(/[-:.]/g,'').replace('T','_').slice(0,15)}_${Math.random().toString(36).slice(2,8)}`,
+      app_version: APP_VERSION,
+      rules_version: BOERENBRIDGE_RULES_VERSION,
+      created_at: new Date().toISOString(),
+      finished_at: null,
+      player_count: 4,
+      players: [],
+      dealer_index: 0,
+      special_choices: [null,null,null,null],
+      rounds: [],
+      saved_to_vault: false,
+      remote_saved: false,
+      remote_match_id: null
+    });
+
+    function byId(id){return document.getElementById(id)}
+    function setStatus(msg='', tone=''){ const box=byId('statusBox'); box.textContent=msg; box.className='status'+(tone?` ${tone}`:''); }
+    function getSessionToken(){ for (const k of SESSION_KEYS){ const v=localStorage.getItem(k); if(v) return v; } return ''; }
+    function rpcHeaders(){ return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }; }
+    async function parseResponse(res){ const txt=await res.text(); let data=null; try{ data=txt?JSON.parse(txt):null; }catch{ throw new Error(txt || `HTTP ${res.status}`); } if(!res.ok) throw new Error(data?.message||data?.error||data?.hint||`HTTP ${res.status}`); return data; }
+    function normalizeName(name){ return String(name||'').replace(/\s+/g,' ').trim(); }
+    function uniqueNames(list){ const seen=new Set(); return (list||[]).map((row)=> typeof row==='string'?row:(row?.display_name||row?.name||row?.desired_name||'')).map(normalizeName).filter((n)=> n && !seen.has(n.toLowerCase()) && seen.add(n.toLowerCase())).sort((a,b)=>a.localeCompare(b,'nl')); }
+    function saveDraft(){ localStorage.setItem(DRAFT_KEY, JSON.stringify(state.draft)); }
+    function clearDraft(){ localStorage.removeItem(DRAFT_KEY); }
+    function loadDraft(){ try{ const raw=localStorage.getItem(DRAFT_KEY); return raw?JSON.parse(raw):null; }catch{return null;} }
+    function loadHistory(){ try{ return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); }catch{return [];} }
+    function saveHistory(rows){ localStorage.setItem(HISTORY_KEY, JSON.stringify(rows)); }
+    function rememberPlayers(players){ const all=uniqueNames([...(JSON.parse(localStorage.getItem(PLAYERS_KEY)||'[]')), ...players]); localStorage.setItem(PLAYERS_KEY, JSON.stringify(all)); }
+    function getRoundPlan(match){
+      const up=[1,2,3,4,5,6,7].map((count,idx)=>({ key:`n${idx+1}`, label:`${count} kaart`, kind:'normal', trickCount:count }));
+      const specials=(match.special_choices||[null,null,null,null]).map((sp,idx)=>({ key:`s${idx+1}`, label:`Special ${idx+1}`, kind:'special', special:sp, trickCount:getSpecialTrickCount(sp) }));
+      const down=[7,6,5,4,3,2,1].map((count,idx)=>({ key:`d${idx+1}`, label:`${count} kaart`, kind:'normal', trickCount:count }));
+      return [...up,...specials,...down];
+    }
+    function getSpecialTrickCount(name){
+      switch(name){ case 'Half half': return 8; case 'Blind bieden': case 'Nul bieden': case 'Zonder troef': case 'Voor troef': case 'Selectie maken': case 'Doorgeven': return 7; default: return 7; }
+    }
+    function buildRoundOrder(match){ const players=match.players||[]; const count=players.length; return getRoundPlan(match).map((plan, idx)=>({ ...plan, dealer_index:(match.dealer_index+idx)%count, forehand_index:(match.dealer_index+idx+1)%count })); }
+    function calcRoundPoints(bid, won){ return Number(bid)===Number(won) ? 10 + (3*Number(won||0)) : (3*Number(won||0)); }
+    function recalcMatch(match){
+      let totals=Object.fromEntries((match.players||[]).map((p)=>[p,0]));
+      const order=buildRoundOrder(match);
+      match.rounds=(match.rounds||[]).map((round, idx)=>{
+        const meta=order[idx];
+        const players=(round.players||[]).map((pr)=>{ const points=calcRoundPoints(pr.bid, pr.won); totals[pr.name]=(totals[pr.name]||0)+points; return { ...pr, points, running_total: totals[pr.name] }; });
+        return { ...round, label: meta.label, trick_count: meta.trickCount, dealer_index: meta.dealer_index, special: meta.special || null, players };
+      });
+      return match;
+    }
+    async function fetchNames(){
+      try{
+        const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_login_names`,{method:'POST',mode:'cors',cache:'no-store',headers:rpcHeaders(),body:JSON.stringify({})});
+        const data=await parseResponse(res);
+        const rows=Array.isArray(data)?data:(Array.isArray(data?.names)?data.names:[]);
+        state.availableNames=uniqueNames(rows);
+      }catch{
+        state.availableNames=uniqueNames(JSON.parse(localStorage.getItem(PLAYERS_KEY)||'[]'));
+      }
+    }
+    function renderSetupFields(){
+      const count=Number(byId('playerCountInput').value||4);
+      const box=byId('playerFields');
+      const current=(state.draft?.players||[]).slice(0,count);
+      box.innerHTML='';
+      for(let i=0;i<count;i++){
+        const field=document.createElement('div'); field.className='field';
+        const used=current.filter((_,idx)=>idx!==i).map((n)=>normalizeName(n).toLowerCase());
+        const opts=state.availableNames.filter((n)=>!used.includes(normalizeName(n).toLowerCase()) || normalizeName(current[i]||'').toLowerCase()===normalizeName(n).toLowerCase());
+        field.innerHTML=`<label>Speler ${i+1}</label><select data-player-index="${i}"><option value="">Kies speler</option>${opts.map((name)=>`<option ${name===current[i]?'selected':''}>${name}</option>`).join('')}</select>`;
+        box.appendChild(field);
+      }
+      renderDealerSelect();
+      box.querySelectorAll('select').forEach((sel)=>sel.addEventListener('change',()=>{ const names=Array.from(box.querySelectorAll('select')).map((s)=>s.value); state.draft.players=names; renderSetupFields(); }));
+    }
+    function renderDealerSelect(){
+      const select=byId('dealerInput');
+      const names=(state.draft?.players||[]).filter(Boolean);
+      select.innerHTML=names.length?names.map((name,idx)=>`<option value="${idx}" ${idx===Number(state.draft?.dealer_index||0)?'selected':''}>${name}</option>`).join(''):'<option value="0">Kies eerst spelers</option>';
+    }
+    function openOverlay(id){ byId(id).classList.add('show'); }
+    function closeOverlay(id){ byId(id).classList.remove('show'); }
+    function openSetup(newGame=false){ if(newGame || !state.draft) state.draft=emptyMatch(); byId('playerCountInput').innerHTML=[2,3,4,5,6,7].map((n)=>`<option value="${n}" ${n===Number(state.draft.player_count||4)?'selected':''}>${n}</option>`).join(''); renderSetupFields(); openOverlay('setupOverlay'); }
+    function validateSetup(){
+      const names=(state.draft.players||[]).slice(0, Number(byId('playerCountInput').value||4)).map(normalizeName);
+      if(names.some((n)=>!n)) throw new Error('Kies voor elke stoel een speler.');
+      const lowered=names.map((n)=>n.toLowerCase()); if(new Set(lowered).size!==lowered.length) throw new Error('Elke naam mag maar één keer gebruikt worden.');
+      const dealerIdx=Number(byId('dealerInput').value||0); if(!names[dealerIdx]) throw new Error('Kies een geldige deler.');
+      state.draft.player_count=names.length; state.draft.players=names; state.draft.dealer_index=dealerIdx; return true;
+    }
+    function getCurrentPlan(){ return buildRoundOrder(state.draft||emptyMatch())[state.draft.rounds.length] || null; }
+    function ensureSpecialsValid(){
+      (state.draft.special_choices||[]).forEach((sp,idx)=>{ if(sp==='Selectie maken' && state.draft.players.length>5) state.draft.special_choices[idx]=null; });
+    }
+    function renderTable(){
+      const match=state.draft || emptyMatch();
+      const order=buildRoundOrder(match);
+      byId('tableHead').innerHTML='<th>Ronde</th>'+match.players.map((name)=>`<th>${name}</th>`).join('');
+      byId('roundBody').innerHTML=order.map((row,idx)=>{
+        const saved=match.rounds[idx];
+        const isCurrent=idx===match.rounds.length && !match.finished_at;
+        const cls=[saved?'done-row':'',isCurrent?'current-row':''].join(' ');
+        const specialSelect=row.kind==='special' ? `<select class="special-select" data-special-index="${idx-7}" ${saved?'disabled':''}><option value="">Kies special</option>${DEFAULT_SPECIALS.map((sp)=>{ const disabled=sp==='Selectie maken' && match.players.length>5; return `<option value="${sp}" ${(row.special===sp)?'selected':''} ${disabled?'disabled':''}>${sp}</option>`; }).join('')}</select>` : '';
+        const labelSub = row.kind==='special' ? (row.special ? `Special · ${row.trickCount} slagen` : 'Kies eerst special') : `${row.trickCount} slagen · deler ${match.players[row.dealer_index]||'-'}`;
+        return `<tr class="${cls}" data-round-index="${idx}"><td><div class="row-label">${row.label}</div><div class="row-sub">${labelSub}</div>${specialSelect}</td>${match.players.map((player,pIdx)=>{ const cell=saved?.players?.[pIdx]; return `<td><div class="cell-wrap"><div class="cell-line">Bod <strong>${cell?cell.bid:'—'}</strong></div><div class="cell-line">Slagen <strong>${cell?cell.won:'—'}</strong></div><div class="cell-line">Punten <strong>${cell?cell.points:'—'}</strong></div><div class="cell-line">Totaal <strong>${cell?cell.running_total:'—'}</strong></div></div></td>`; }).join('')}</tr>`;
+      }).join('');
+      byId('roundStat').textContent = match.finished_at ? 'Afgerond' : (getCurrentPlan()?.label || 'Nog niet gestart');
+      byId('dealerStat').textContent = match.players[(getCurrentPlan()?.dealer_index ?? match.dealer_index) || 0] || '-';
+      byId('playersStat').textContent = String(match.players.length || 0);
+      byId('finishStat').textContent = match.finished_at ? (match.remote_saved || match.saved_to_vault ? 'Opgeslagen' : 'Klaar') : 'Actief';
+      byId('saveRetryBtn').classList.toggle('hidden', !!match.remote_saved || !match.finished_at);
+      byId('newGameBtn').textContent = match.finished_at ? 'Nieuw spel starten' : 'Nieuw spel';
+      byId('undoBtn').disabled = !match.rounds.length || !!match.finished_at;
+      byId('roundBody').querySelectorAll('.special-select').forEach((sel)=>sel.addEventListener('change',(e)=>{ state.draft.special_choices[Number(e.target.dataset.specialIndex)] = e.target.value || null; saveDraft(); renderTable(); }));
+      byId('roundBody').querySelectorAll('tr.done-row, tr.current-row').forEach((tr)=>tr.addEventListener('click',(e)=>{ if(e.target.closest('select')) return; const idx=Number(tr.dataset.roundIndex); if(idx>state.draft.rounds.length) return; openRoundEditor(idx); }));
+    }
+    function openRoundEditor(roundIndex){
+      const order=buildRoundOrder(state.draft); const meta=order[roundIndex];
+      if(!meta) return;
+      if(meta.kind==='special' && !state.draft.special_choices[roundIndex-7]){ setStatus('Kies eerst een special in de tabelrij.', 'warn'); return; }
+      state.roundEditorIndex=roundIndex;
+      byId('roundModalTitle').textContent = `${meta.label} invullen`;
+      byId('roundModalCopy').textContent = `${meta.kind==='special' ? (meta.special || 'Special') : 'Normale ronde'} · deler ${state.draft.players[meta.dealer_index]} · ${meta.trickCount} slagen.`;
+      const forehandStart=(meta.dealer_index+1)%state.draft.players.length;
+      const orderIndices=[...state.draft.players.keys()].sort((a,b)=>((a-forehandStart+state.draft.players.length)%state.draft.players.length)-((b-forehandStart+state.draft.players.length)%state.draft.players.length));
+      const existing=state.draft.rounds[roundIndex]?.players || state.draft.players.map((name)=>({name,bid:0,won:0}));
+      byId('roundPlayerCards').innerHTML = orderIndices.map((playerIndex, seq)=>{ const player=state.draft.players[playerIndex]; const row=existing[playerIndex] || existing.find((r)=>r.name===player) || { bid:0, won:0 }; const forbidden = seq===orderIndices.length-1 ? Math.max(0, meta.trickCount - orderIndices.slice(0,-1).reduce((sum,idx)=> sum + Number((existing[idx]||existing.find((r)=>r.name===state.draft.players[idx])||{}).bid || (idx===playerIndex?row.bid:0)), 0)) : null; return `<div class="player-card"><h3>${player}</h3><div class="field"><label>Bod ${seq===orderIndices.length-1 ? '(deler als laatste)' : ''}</label><select data-kind="bid" data-player-index="${playerIndex}">${Array.from({length:meta.trickCount+1},(_,n)=>`<option value="${n}" ${Number(row.bid)===n?'selected':''} ${seq===orderIndices.length-1 && n===forbidden?'disabled':''}>${n}${seq===orderIndices.length-1 && n===forbidden?' · verboden':''}</option>`).join('')}</select></div><div class="field"><label>Gewonnen slagen</label><input data-kind="won" data-player-index="${playerIndex}" type="number" min="0" max="${meta.trickCount}" step="1" value="${Number(row.won)||0}" /></div></div>`; }).join('');
+      openOverlay('roundOverlay'); updateRoundHint();
+      byId('roundPlayerCards').querySelectorAll('select,input').forEach((el)=>el.addEventListener('input',updateRoundHint));
+    }
+    function updateRoundHint(){
+      const match=state.draft; const meta=buildRoundOrder(match)[state.roundEditorIndex]; if(!meta) return;
+      const wins=Array.from(byId('roundPlayerCards').querySelectorAll('[data-kind="won"]')).map((el)=>Number(el.value||0));
+      const bids=Array.from(byId('roundPlayerCards').querySelectorAll('[data-kind="bid"]')).map((el)=>Number(el.value||0));
+      const wonSum=wins.reduce((a,b)=>a+b,0); const bidSum=bids.reduce((a,b)=>a+b,0);
+      byId('roundModalHint').textContent = `Totaal bod: ${bidSum}. Totaal gewonnen slagen: ${wonSum}/${meta.trickCount}. De laatste bieder mag het totaal niet exact op ${meta.trickCount} laten eindigen.`;
+    }
+    function saveRound(){
+      const match=state.draft; const roundIndex=state.roundEditorIndex; const meta=buildRoundOrder(match)[roundIndex];
+      const cards=Array.from(byId('roundPlayerCards').querySelectorAll('.player-card'));
+      const players = match.players.map((name,idx)=>({ name, bid:Number(byId('roundPlayerCards').querySelector(`[data-kind="bid"][data-player-index="${idx}"]`).value||0), won:Number(byId('roundPlayerCards').querySelector(`[data-kind="won"][data-player-index="${idx}"]`).value||0) }));
+      const wonSum=players.reduce((sum,p)=>sum+Number(p.won||0),0);
+      if(wonSum!==meta.trickCount) throw new Error(`De gewonnen slagen moeten samen precies ${meta.trickCount} zijn.`);
+      const forehandStart=(meta.dealer_index+1)%match.players.length;
+      const bidOrder=[...match.players.keys()].sort((a,b)=>((a-forehandStart+match.players.length)%match.players.length)-((b-forehandStart+match.players.length)%match.players.length));
+      const dealerIdx=meta.dealer_index;
+      const totalBid=players.reduce((sum,p)=>sum+Number(p.bid||0),0);
+      if(totalBid===meta.trickCount) throw new Error('Het totaal van alle biedingen mag niet gelijk zijn aan het aantal slagen. Pas de deler aan.');
+      const entry={ label:meta.label, trick_count:meta.trickCount, dealer_index:meta.dealer_index, special:meta.special||null, players };
+      match.rounds[roundIndex]=entry;
+      match.rounds=match.rounds.slice(0, Math.max(match.rounds.length, roundIndex+1));
+      recalcMatch(match);
+      if(roundIndex===getRoundPlan(match).length-1){
+        match.finished_at=new Date().toISOString();
+        finishAndPersist();
+      }
+      saveDraft(); closeOverlay('roundOverlay'); renderTable(); setStatus('Ronde opgeslagen.', 'ok');
+    }
+    async function finishAndPersist(){
+      const match=state.draft; if(!match.finished_at) match.finished_at=new Date().toISOString();
+      const finalTotals=(match.rounds[match.rounds.length-1]?.players || []).map((p)=>({ name:p.name, final_total_points:p.running_total||0, total_slagen: match.rounds.reduce((s,r)=>s+Number((r.players.find((x)=>x.name===p.name)||{}).won||0),0), exact_bid_count: match.rounds.reduce((s,r)=>s+(Number((r.players.find((x)=>x.name===p.name)||{}).bid)===Number((r.players.find((x)=>x.name===p.name)||{}).won)?1:0),0) }));
+      const winners=[...finalTotals].sort((a,b)=>b.final_total_points-a.final_total_points); const top=winners[0]?.final_total_points; const winnerNames=winners.filter((r)=>r.final_total_points===top).map((r)=>r.name);
+      const payload={ client_match_id:match.client_match_id, app_version:APP_VERSION, rules_version:BOERENBRIDGE_RULES_VERSION, created_at:match.created_at, finished_at:match.finished_at, player_count:match.players.length, participants:match.players, rounds:match.rounds, totals:finalTotals, match_summary:{ winner_names:winnerNames, top_score:top, special_round_choices:match.special_choices }, analytics_snapshot:{ exact_bid_totals:Object.fromEntries(finalTotals.map((r)=>[r.name,r.exact_bid_count])) }, raw_payload:match };
+      let history=loadHistory(); if(!history.find((row)=>row.client_match_id===payload.client_match_id)){ history.unshift(payload); saveHistory(history); }
+      match.saved_to_vault=true; rememberPlayers(match.players); saveDraft();
+      const session_token=getSessionToken();
+      if(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY){
+        try{ const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/save_boerenbridge_match`,{method:'POST',mode:'cors',cache:'no-store',headers:rpcHeaders(),body:JSON.stringify({ session_token, match_payload: payload })}); const data=await parseResponse(res); match.remote_saved=true; match.remote_match_id=data?.match_id || data?.id || null; saveDraft(); setStatus('Potje afgerond en opgeslagen.', 'ok'); }catch(err){ setStatus('Potje lokaal bewaard. DB-opslag kon nu niet worden afgerond.', 'warn'); }
+      } else {
+        setStatus('Potje lokaal bewaard.', 'ok');
+      }
+      renderTable();
+    }
+    function discardDraftAndStart(){ state.draft=emptyMatch(); saveDraft(); closeOverlay('continueOverlay'); openSetup(true); }
+    function startNewGame(){ state.draft=emptyMatch(); saveDraft(); openSetup(true); renderTable(); }
+    function undoLast(){ if(!state.draft?.rounds?.length || state.draft.finished_at) return; state.draft.rounds.pop(); recalcMatch(state.draft); saveDraft(); renderTable(); setStatus('Laatste ronde verwijderd.', 'warn'); }
+
+    async function init(){
+      byId('watermark').textContent = `${APP_VERSION} · Made by Bruis`;
+      byId('rulesCopy').textContent = RULES_TEXT;
+      await fetchNames();
+      const stored=loadDraft();
+      if(stored && Array.isArray(stored.players) && stored.players.length){ state.draft=stored; ensureSpecialsValid(); recalcMatch(state.draft); renderTable(); openOverlay('continueOverlay'); }
+      else { state.draft=emptyMatch(); saveDraft(); renderTable(); openSetup(true); }
+
+      byId('playerCountInput').addEventListener('change',()=>{ state.draft.player_count=Number(byId('playerCountInput').value||4); state.draft.players=(state.draft.players||[]).slice(0,state.draft.player_count); while(state.draft.players.length<state.draft.player_count) state.draft.players.push(''); renderSetupFields(); });
+      byId('dealerInput').addEventListener('change',()=> state.draft.dealer_index=Number(byId('dealerInput').value||0));
+      byId('setupSaveBtn').addEventListener('click',()=>{ try{ validateSetup(); closeOverlay('setupOverlay'); recalcMatch(state.draft); saveDraft(); renderTable(); setStatus('Boerenbridge-potje klaar om in te voeren.', 'ok'); if(!state.draft.rounds.length) openRoundEditor(0); }catch(err){ setStatus(err.message || String(err), 'error'); } });
+      byId('setupCancelBtn').addEventListener('click',()=> closeOverlay('setupOverlay'));
+      byId('draftContinueBtn').addEventListener('click',()=> closeOverlay('continueOverlay'));
+      byId('draftDiscardBtn').addEventListener('click',discardDraftAndStart);
+      byId('newGameBtn').addEventListener('click',startNewGame);
+      byId('undoBtn').addEventListener('click',undoLast);
+      byId('saveRetryBtn').addEventListener('click',finishAndPersist);
+      byId('roundSaveBtn').addEventListener('click',()=>{ try{ saveRound(); if(!state.draft.finished_at && state.roundEditorIndex===state.draft.rounds.length-1) { const next=state.draft.rounds.length; if(buildRoundOrder(state.draft)[next]) setTimeout(()=>openRoundEditor(next), 120); } }catch(err){ setStatus(err.message || String(err), 'error'); } });
+      byId('roundCancelBtn').addEventListener('click',()=> closeOverlay('roundOverlay'));
+      byId('rulesBtn').addEventListener('click',()=> openOverlay('rulesOverlay'));
+      byId('rulesCloseBtn').addEventListener('click',()=> closeOverlay('rulesOverlay'));
+    }
+    init();
+  </script>
+</body>
+</html>

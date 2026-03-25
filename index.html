@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wordt er gejast donderdag?</title>
   <link rel="stylesheet" href="./site-shell.css" />
-  <style>body{background:linear-gradient(rgba(244,240,232,.62),rgba(244,240,232,.62)), url('./wordtergejast.png') center/cover no-repeat fixed !important;} .site-scene img{display:none !important;} @media (max-width:780px){body{background:linear-gradient(rgba(244,240,232,.18),rgba(244,240,232,.18)), url('./wordtergejast.png') center/cover no-repeat fixed !important;} .site-scene img{display:block !important;max-width:100%;height:auto;}}</style>
+  <style>body{background:linear-gradient(rgba(244,240,232,.70),rgba(244,240,232,.70)), url('./site-bg-desktop.webp') center/cover no-repeat fixed !important;}</style>
   <style>
     :root {
       --gold: #d4af37;
@@ -38,33 +38,36 @@
       pointer-events: none;
     }
 
-    .site-scene .brand-watermark {
-      top: 8%;
-      left: 8%;
-      width: min(24vw, 300px);
-      transform: none;
-      opacity: 0.16;
+    .site-scene .left-hand,
+    .site-scene .right-card,
+    .site-scene .spinoza-shadow {
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .site-scene .left-hand {
+      left: -2%;
+      bottom: -1%;
+      width: min(31vw, 470px);
+      opacity: .92;
+      filter: saturate(1.18) contrast(1.08) brightness(1.06) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.14));
+    }
+
+    .site-scene .right-card {
+      right: 1%;
+      bottom: 7%;
+      width: min(24vw, 320px);
+      opacity: .94;
+      filter: contrast(1.1) brightness(1.08) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.16));
     }
 
     .site-scene .spinoza-shadow {
-      right: max(-18px, -2vw);
-      bottom: 4%;
-      left: auto;
-      top: auto;
-      width: min(42vw, 560px);
-      transform: none;
-      opacity: 0.48;
-      filter: saturate(1.08) contrast(1.03) brightness(0.98) drop-shadow(0 16px 24px rgba(0,0,0,0.10));
-    }
-
-    .site-scene .playing-card-accent {
-      left: max(-16px, -2vw);
-      right: auto;
+      right: 50%;
       bottom: 8%;
-      width: min(25vw, 320px);
-      transform: rotate(-6deg);
-      opacity: 0.58;
-      filter: saturate(1.1) drop-shadow(0 20px 34px rgba(40, 18, 12, 0.16));
+      transform: translateX(50%);
+      width: min(30vw, 380px);
+      opacity: 0.08;
+      filter: grayscale(1) contrast(1.8) brightness(0.72);
     }
 
     .page {
@@ -79,17 +82,15 @@
     .topbar { display: none; }
 
     .main-card {
-      background: var(--card-bg);
+      background: rgba(255, 251, 245, 0.82);
       border: 1px solid rgba(255, 255, 255, 0.65);
       border-radius: 24px;
       padding: 40px;
       width: min(700px, 92vw);
-      box-shadow: 0 28px 72px rgba(0,0,0,0.12);
-      outline: 1px solid rgba(212,175,55,0.34);
-      outline-offset: 0px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.08);
       position: relative;
       text-align: center;
-      backdrop-filter: blur(4px);
+      backdrop-filter: blur(5px);
     }
 
     .card-top-right { position:absolute; top:25px; right:25px; display:flex; align-items:center; gap:14px; }
@@ -356,7 +357,7 @@
       cursor: wait;
     }
 
-    .site-scene { display: none; }
+    .site-scene { display: block; }
 
     .public-links {
       margin-top: 22px;
@@ -433,13 +434,14 @@
     }
 
     @media (max-width: 760px) {
-      .page { padding: 28px 20px 96px; }
+      .page { padding: 24px 14px; }
       .main-card {
         padding: 28px 18px 20px;
-        width: min(700px, 88vw);
-        border-radius: 28px;
-        outline: 2px solid rgba(212,175,55,0.28);
-        outline-offset: 6px;
+        width: min(700px, 94vw);
+        background: rgba(255,255,255,0.02);
+        border: 2px solid rgba(212,175,55,0.35);
+        box-shadow: 0 18px 40px rgba(0,0,0,0.06);
+        backdrop-filter: blur(0px);
       }
       .card-top-right { position:absolute; top:16px; right:16px; margin:0; }
       .card-top-left { position:absolute; top:16px; left:16px; margin:0; }
@@ -460,20 +462,22 @@
       .page-link-card.request-link { text-align:left; }
       .page-link-card.scorer-link { width: 100%; }
       .scorer-link-row { margin-top: 2px; }
-      .site-scene .brand-watermark {
-        width: min(34vw, 180px);
-        top: 4%;
-        left: 4%;
+      .site-scene .left-hand {
+        width: min(48vw, 260px);
+        left: -4px;
+        bottom: 11%;
+        opacity: .98;
+      }
+      .site-scene .right-card {
+        width: min(42vw, 230px);
+        right: -8px;
+        bottom: 12%;
+        opacity: .97;
       }
       .site-scene .spinoza-shadow {
-        width: min(58vw, 320px);
-        right: -20px;
-        bottom: 0;
-      }
-      .site-scene .playing-card-accent {
-        width: min(34vw, 200px);
-        left: -8px;
-        bottom: 8%;
+        width: min(42vw, 180px);
+        bottom: 18%;
+        opacity: 0.04;
       }
     }
 
@@ -486,33 +490,6 @@
       .page-link-card.request-link { align-items:flex-start; text-align:left; }
       .page-link-card.scorer-link { align-items:center; text-align:center; }
     }
-
-    @media (max-width: 900px) {
-      .main-card { width: min(680px, 90vw); outline-offset: 8px; }
-      .site-scene .playing-card-accent { width: min(30vw, 220px); bottom: 4%; left: -20px; opacity: 0.42; }
-      .site-scene .spinoza-shadow { width: min(34vw, 250px); right: -18px; bottom: 8%; opacity: 0.34; }
-    }
-
-    @media (max-width: 640px) {
-      body { background: linear-gradient(rgba(244,240,232,0.18), rgba(244,240,232,0.18)), url('./wordtergejast.png') center/cover no-repeat fixed !important; }
-      .page { padding: 30px 14px 96px; }
-      .main-card {
-        width: min(100%, 88vw);
-        padding: 30px 20px;
-        border-radius: 30px;
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.22);
-        box-shadow: 0 14px 34px rgba(0,0,0,0.06);
-        backdrop-filter: blur(1px);
-        -webkit-backdrop-filter: blur(1px);
-        outline: 2px solid rgba(212,175,55,0.42);
-        outline-offset: 10px;
-      }
-      .site-scene .playing-card-accent { width: 172px; bottom: 10%; left: 6px; opacity: 0.62; }
-      .site-scene .spinoza-shadow { width: 198px; right: 8px; bottom: 16%; opacity: 0.5; }
-      .site-scene .brand-watermark { width: 138px; top: 7%; left: 8px; opacity: 0.15; }
-    }
-
   </style>
 
   <style id="bruis-watermark-style">
@@ -525,11 +502,9 @@
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
-    <div class="page-bg"></div>
-    <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
-    <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
-    <div class="playing-card-accent"><img src="./playingcard-accent1-trimmed.png" alt="" /></div>
-    <div class="top-glow"></div>
+    <div class="left-hand"><img src="./kale9goed.png" alt="" style="width:100%;display:block;" /></div>
+    <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" style="width:100%;display:block;" /></div>
+    <div class="right-card"><img src="./playingcard-accent1-trimmed.png" alt="" style="width:100%;display:block;" /></div>
   </div>
 
   <main class="page">
@@ -578,6 +553,12 @@
           <a class="page-link-card scorer-link" href="./scorer.html">
             <div class="page-link-label">Klaverjas scorer</div>
             <div class="page-link-copy">Voer rondes in, houd de stand bij en sla wedstrijden op voor de vault.</div>
+          </a>
+        </div>
+        <div class="scorer-link-row">
+          <a class="page-link-card scorer-link" href="./boerenbridge.html">
+            <div class="page-link-label">Boerenbridge scorer</div>
+            <div class="page-link-copy">Houd biedingen, slagen en specials mobiel bij en bewaar complete potjes veilig.</div>
           </a>
         </div>
       </section>
@@ -856,7 +837,7 @@
     load();
   </script>
 
-  <div class="site-credit-watermark">v101 · Made by Bruis</div>
+  <div class="site-credit-watermark">v102 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
