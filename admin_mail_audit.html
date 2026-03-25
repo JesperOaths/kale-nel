@@ -5,7 +5,9 @@
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Maildiagnostiek - Wordt er gejast?</title>
-  <script src="./gejast-config.js"></script>
+  <script src="./gejast-config.js">
+    (function globalAdminLogout(){ const btn=document.createElement('button'); btn.textContent='Uitloggen'; btn.style.cssText='position:fixed;top:14px;right:14px;z-index:9999;border:none;border-radius:14px;padding:10px 14px;background:#111;color:#fff;font:700 14px Inter,sans-serif;cursor:pointer'; btn.onclick=()=>{ clearAdminSessionToken(); window.location.href='./admin.html'; }; document.addEventListener('DOMContentLoaded',()=>document.body.appendChild(btn)); })();
+  </script>
   <style>
     :root { --gold:#d4af37; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#6b655b; --ok:#2b5b37; --warn:#8b3a30; }
     *{box-sizing:border-box} body{margin:0;padding:20px;font-family:Inter,sans-serif;background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed;min-height:100vh}
@@ -43,6 +45,6 @@
     document.addEventListener('visibilitychange',()=>{ if(!document.hidden) loadDiagnostics().catch(()=>{}); });
     (async()=>{ if(await ensureGate()) loadDiagnostics().catch((err)=>setStatus(err?.message||'Laden mislukt.','warn')); })();
   </script>
-  <div class="site-credit-watermark">v96 · Made by Bruis</div>
+  <div class="site-credit-watermark">v103 · Made by Bruis</div>
 </body>
 </html>

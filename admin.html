@@ -78,6 +78,7 @@
         <a class="hub-link" href="./admin_claims.html#view=expired"><strong>Verlopen activaties</strong><small>Verlopen activatielinks zijn geïntegreerd in de hoofdtool onder de status Verlopen.</small></a>
         <a class="hub-link" href="./admin_reserved_names.html"><strong>Claimbare namen</strong><small>Overzicht van de database-bron voor claimbare namen en handmatige reserveringen.</small></a>
         <a class="hub-link" href="./vault.html"><strong>Spelkluis</strong><small>Alleen admin spelhistorie en lokale analyses.</small></a>
+        <a class="hub-link" href="./boerenbridge_vault.html"><strong>Boerenbridge vault</strong><small>Adminoverzicht voor Boerenbridge-history, savepoints en profielen.</small></a>
         <a class="hub-link" href="./leaderboard.html"><strong>Ranglijst</strong><small>Ranglijst zonder spelers die nog 0 potjes hebben.</small></a>
         <a class="hub-link" href="./admin_security.html"><strong>Beveiliging & hosting</strong><small>Wat al is dichtgezet en welke hosting-stap nog nodig is voor echte server-side afscherming.</small></a>
         <a class="hub-link" href="./admin_mail_audit.html"><strong>Maildiagnostiek</strong><small>Actieve Make-webhook, mail-RPC en laatste mailjobstatus voor admins.</small></a>
@@ -91,6 +92,8 @@
     const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
+    const ADMIN_SESSION_META_KEY = 'jas_admin_session_meta_v1';
+    const ADMIN_SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000;
 
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, "Content-Type": "application/json", Accept: "application/json" }; }
     async function parseResponse(res) {
@@ -100,9 +103,10 @@
       if (!res.ok) throw new Error(data?.message || data?.error || data?.details || data?.hint || `HTTP ${res.status}`);
       return data;
     }
-    function getAdminSessionToken() { return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
-    function setAdminSessionToken(token) { sessionStorage.setItem(ADMIN_SESSION_KEY, token); localStorage.setItem(ADMIN_SESSION_KEY, token); }
-    function clearAdminSessionToken() { sessionStorage.removeItem(ADMIN_SESSION_KEY); localStorage.removeItem(ADMIN_SESSION_KEY); }
+    function readAdminSessionMeta(){ try { return JSON.parse(sessionStorage.getItem(ADMIN_SESSION_META_KEY) || localStorage.getItem(ADMIN_SESSION_META_KEY) || 'null'); } catch { return null; } }
+    function getAdminSessionToken() { const meta = readAdminSessionMeta(); const token = (meta && meta.token) || sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); if (meta?.issued_at && (Date.now() - Number(meta.issued_at) > ADMIN_SESSION_MAX_AGE_MS)) { clearAdminSessionToken(); return ''; } return token; }
+    function setAdminSessionToken(token, username='Bruis') { const meta = { token, username, issued_at: Date.now() }; sessionStorage.setItem(ADMIN_SESSION_KEY, token); localStorage.setItem(ADMIN_SESSION_KEY, token); sessionStorage.setItem(ADMIN_SESSION_META_KEY, JSON.stringify(meta)); localStorage.setItem(ADMIN_SESSION_META_KEY, JSON.stringify(meta)); }
+    function clearAdminSessionToken() { sessionStorage.removeItem(ADMIN_SESSION_KEY); localStorage.removeItem(ADMIN_SESSION_KEY); sessionStorage.removeItem(ADMIN_SESSION_META_KEY); localStorage.removeItem(ADMIN_SESSION_META_KEY); }
     function setStatus(message = '', tone = '') {
       const box = document.getElementById('statusBox');
       box.textContent = message;
@@ -131,7 +135,7 @@
       if (Array.isArray(data)) data = data[0] || {};
       const token = data.admin_session_token || data.token;
       if (!token) throw new Error('Login gaf geen admin-sessie terug');
-      setAdminSessionToken(token);
+      setAdminSessionToken(token, username);
       return data;
     }
 
@@ -277,6 +281,6 @@
     document.addEventListener('visibilitychange', () => { if (!document.hidden && !document.getElementById('hubView').classList.contains('hidden')) loadCounts().catch(() => {}); });
   </script>
 
-  <div class="site-credit-watermark">v96 · Made by Bruis</div>
+  <div class="site-credit-watermark">v103 · Made by Bruis</div>
 </body>
 </html>

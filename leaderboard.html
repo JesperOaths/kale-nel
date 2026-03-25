@@ -34,7 +34,9 @@
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
   </style>
   <link rel="canonical" href="https://kalenel.nl/leaderboard.html" />
-  <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
+  <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();
+    (function globalAdminLogout(){ const btn=document.createElement('button'); btn.textContent='Uitloggen'; btn.style.cssText='position:fixed;top:14px;right:14px;z-index:9999;border:none;border-radius:14px;padding:10px 14px;background:#111;color:#fff;font:700 14px Inter,sans-serif;cursor:pointer'; btn.onclick=()=>{ clearAdminSessionToken(); window.location.href='./admin.html'; }; document.addEventListener('DOMContentLoaded',()=>document.body.appendChild(btn)); })();
+  </script>
   <script src="./gejast-config.js"></script>
 </head>
 <body>
@@ -64,6 +66,8 @@
 
   <script>
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
+    const ADMIN_SESSION_META_KEY = 'jas_admin_session_meta_v1';
+    const ADMIN_SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000;
     function getAdminSessionToken(){ return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
     async function ensureAdminGate(){
       const token = getAdminSessionToken();
@@ -199,7 +203,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     (async ()=> { if (await ensureAdminGate()) loadLeaderboard(); })();
   </script>
 
-  <div class="site-credit-watermark">v96 · Made by Bruis</div>
+  <div class="site-credit-watermark">v103 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}

@@ -20,11 +20,12 @@
   </style>
 </head>
 <body>
-  <main class="page">
+  <div id="gateNotice" class="page"><section class="sheet"><div class="panel">Adminsessie controleren...</div></section></div>
+  <main id="bbVaultApp" class="page" style="display:none;">
     <section class="sheet">
       <div class="top">
         <div><h1>Boerenbridge vault</h1><p>Lokale en toekomstige DB-matchhistorie voor Boerenbridge, met snelle spelerstatistieken en profielblik.</p></div>
-        <div class="actions"><a class="chip" href="./boerenbridge.html">Terug naar scorer</a><a class="chip" href="./index.html">Home</a></div>
+        <div class="actions"><a class="chip" href="./admin.html">Terug naar hub</a><a class="chip" href="./boerenbridge.html">Boerenbridge scorer</a></div>
       </div>
       <div class="cards">
         <div class="stat"><div class="eyebrow">Matches</div><strong id="matchCount">0</strong></div>
@@ -43,15 +44,20 @@
       <div class="panel"><h2 style="margin:0 0 10px;font-size:22px;letter-spacing:-.04em">Spelerprofielen</h2><div id="profileRows" class="muted">Nog geen spelerprofielen beschikbaar.</div></div>
     </section>
   </main>
-  <div class="site-credit-watermark" id="watermark">v102 · Made by Bruis</div>
+  <div class="site-credit-watermark" id="watermark">v103 · Made by Bruis</div>
   <script>
     const APP_VERSION=(window.GEJAST_CONFIG&&window.GEJAST_CONFIG.VERSION)||'v102';
     const SUPABASE_URL=(window.GEJAST_CONFIG&&window.GEJAST_CONFIG.SUPABASE_URL)||'';
     const SUPABASE_PUBLISHABLE_KEY=(window.GEJAST_CONFIG&&window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY)||'';
     const HISTORY_KEY=`boerenbridge_history_local_${APP_VERSION}`;
     const ADMIN_KEYS=['jas_admin_session_v8'];
+
+    const ADMIN_SESSION_META_KEY='jas_admin_session_meta_v1';
+    const ADMIN_SESSION_MAX_AGE_MS=8*60*60*1000;
+    function readAdminMeta(){ try{return JSON.parse(sessionStorage.getItem(ADMIN_SESSION_META_KEY)||localStorage.getItem(ADMIN_SESSION_META_KEY)||'null');}catch{return null;} }
+    function adminToken(){ const meta=readAdminMeta(); const token=(meta&&meta.token)||(sessionStorage.getItem(ADMIN_KEYS[0])||localStorage.getItem(ADMIN_KEYS[0])||''); if(meta&&meta.issued_at&&Date.now()-meta.issued_at>ADMIN_SESSION_MAX_AGE_MS){ sessionStorage.removeItem(ADMIN_KEYS[0]); localStorage.removeItem(ADMIN_KEYS[0]); sessionStorage.removeItem(ADMIN_SESSION_META_KEY); localStorage.removeItem(ADMIN_SESSION_META_KEY); return ''; } return token; }
+    async function ensureGate(){ const token=adminToken(); const notice=document.getElementById('gateNotice'); if(!token){ window.location.href='./admin.html'; return false; } try{ const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`,{method:'POST',mode:'cors',cache:'no-store',headers:rpcHeaders(),body:JSON.stringify({admin_session_token:token})}); await parseResponse(res); document.getElementById('bbVaultApp').style.display=''; if(notice) notice.style.display='none'; return true; }catch(e){ window.location.href='./admin.html?reason=mfa_required'; return false; } }
     document.getElementById('watermark').textContent=`${APP_VERSION} · Made by Bruis`;
-    function adminToken(){ for (const k of ADMIN_KEYS){ const v=sessionStorage.getItem(k)||localStorage.getItem(k); if(v) return v; } return ''; }
     function rpcHeaders(){ return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }; }
     async function parseResponse(res){ const txt=await res.text(); let data=null; try{ data=txt?JSON.parse(txt):null; }catch{ throw new Error(txt || `HTTP ${res.status}`); } if(!res.ok) throw new Error(data?.message||data?.error||data?.hint||`HTTP ${res.status}`); return data; }
     function loadLocal(){ try{ return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); }catch{return [];} }
@@ -65,7 +71,7 @@
       document.getElementById('matchRows').innerHTML = filtered.length ? filtered.map((row)=>`<tr><td>${escapeHtml((row.finished_at||row.created_at||'').replace('T',' ').slice(0,16))}</td><td>${escapeHtml((row.participants||[]).join(' · '))}</td><td>${escapeHtml((row.match_summary?.winner_names||[]).join(', ')||'-')}</td><td>${escapeHtml((row.match_summary?.special_round_choices||[]).filter(Boolean).join(' · ')||'-')}</td><td>${row.remote_saved || row.saved_to_vault ? 'Opgeslagen' : 'Lokaal'}</td></tr>`).join('') : '<tr><td colspan="5" class="muted">Nog geen matches.</td></tr>';
       document.getElementById('profileRows').innerHTML = players.length ? players.map((p)=>`<div style="padding:10px 0;border-bottom:1px solid rgba(17,17,17,.08)"><strong>${escapeHtml(p.name)}</strong> · ${p.matches} match(es) · ${p.points} punten · ${p.exact} keer exact · ${p.slagen} slagen</div>`).join('') : 'Nog geen spelerprofielen beschikbaar.';
     }
-    async function init(){ let rows=loadLocal(); const remote=await loadRemote(); if(remote && Array.isArray(remote.matches)) rows=remote.matches; ['nameFilter','specialFilter','startFilter','endFilter'].forEach((id)=>document.getElementById(id).addEventListener('input',()=>render(rows))); render(rows); }
+    async function init(){ if(!(await ensureGate())) return; let rows=loadLocal(); const remote=await loadRemote(); if(remote && Array.isArray(remote.matches)) rows=remote.matches; ['nameFilter','specialFilter','startFilter','endFilter'].forEach((id)=>document.getElementById(id).addEventListener('input',()=>render(rows))); render(rows); }
     init();
   </script>
 </body>
