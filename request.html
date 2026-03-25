@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Naam claimen</title>
+  <title>Naam aanvragen</title>
   <style>
     :root { --gold: #dab33e; --black: #111; --bg: #f0ede4; }
     * { box-sizing: border-box; }
@@ -141,14 +141,6 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       };
     }
 
-    function getInviteToken() {
-      try {
-        return new URLSearchParams(window.location.search).get('token') || '';
-      } catch {
-        return '';
-      }
-    }
-
     async function getRequestableNames() {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names`, {
         method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(), body: JSON.stringify({})
@@ -236,11 +228,17 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         if (!raf) raf = requestAnimationFrame(step);
       }, { passive: true });
     }
+
+    (function initInviteHint(){
+      const token = getInviteToken();
+      const hint = document.getElementById('inviteHint');
+      if (token && hint) hint.textContent = 'Je opent deze aanvraag via een uitnodigingslink.';
+    })();
     // v40: pre-rendered background, so parallax is disabled for performance.
     load();
   </script>
 
-  <div class="site-credit-watermark">v113 · Made by Bruis</div>
+  <div class="site-credit-watermark">v112 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
