@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wordt er gejast donderdag?</title>
   <link rel="stylesheet" href="./site-shell.css" />
-  <style>body{background:linear-gradient(rgba(244,240,232,.62),rgba(244,240,232,.62)), url('./wordtergejast.png') center/cover no-repeat fixed !important;} .site-scene img{display:none !important;} @media (max-width:780px){body{background:linear-gradient(rgba(244,240,232,.50),rgba(244,240,232,.50)), url('./wordtergejast.png') center/cover no-repeat fixed !important;} .site-scene img{display:block !important;max-width:100%;height:auto;}}</style>
+  <style>body{background:linear-gradient(rgba(244,240,232,.62),rgba(244,240,232,.62)), url('./wordtergejast.png') center/cover no-repeat fixed !important;} .site-scene img{display:none !important;} @media (max-width:780px){body{background:linear-gradient(rgba(244,240,232,.18),rgba(244,240,232,.18)), url('./wordtergejast.png') center/cover no-repeat fixed !important;} .site-scene img{display:block !important;max-width:100%;height:auto;}}</style>
   <style>
     :root {
       --gold: #d4af37;
@@ -494,11 +494,23 @@
     }
 
     @media (max-width: 640px) {
-      .page { padding: 38px 22px 96px; }
-      .main-card { width: min(100%, 84vw); padding: 30px 22px; border-radius: 30px; outline: 2px solid rgba(212,175,55,0.26); outline-offset: 8px; }
-      .site-scene .playing-card-accent { width: 180px; bottom: 8px; left: -42px; opacity: 0.4; }
-      .site-scene .spinoza-shadow { width: 210px; right: -54px; bottom: 14%; opacity: 0.32; }
-      .site-scene .brand-watermark { width: 150px; top: 7%; left: -18px; opacity: 0.12; }
+      body { background: linear-gradient(rgba(244,240,232,0.18), rgba(244,240,232,0.18)), url('./wordtergejast.png') center/cover no-repeat fixed !important; }
+      .page { padding: 30px 14px 96px; }
+      .main-card {
+        width: min(100%, 88vw);
+        padding: 30px 20px;
+        border-radius: 30px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.22);
+        box-shadow: 0 14px 34px rgba(0,0,0,0.06);
+        backdrop-filter: blur(1px);
+        -webkit-backdrop-filter: blur(1px);
+        outline: 2px solid rgba(212,175,55,0.42);
+        outline-offset: 10px;
+      }
+      .site-scene .playing-card-accent { width: 172px; bottom: 10%; left: 6px; opacity: 0.62; }
+      .site-scene .spinoza-shadow { width: 198px; right: 8px; bottom: 16%; opacity: 0.5; }
+      .site-scene .brand-watermark { width: 138px; top: 7%; left: 8px; opacity: 0.15; }
     }
 
   </style>
@@ -844,7 +856,7 @@
     load();
   </script>
 
-  <div class="site-credit-watermark">v100 · Made by Bruis</div>
+  <div class="site-credit-watermark">v101 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
