@@ -146,20 +146,21 @@
       position: absolute;
       left: 50%;
       top: 58%;
-      width: 10px;
-      height: 18px;
-      border-radius: 2px;
+      width: 16px;
+      height: 30px;
+      border-radius: 4px;
       opacity: 0;
       transform: translate(-50%, -50%) rotate(0deg);
-      animation: jaConfettiBurst 1600ms ease-out forwards;
+      animation: jaConfettiBurst 2200ms cubic-bezier(.18,.8,.22,1) forwards;
       will-change: transform, opacity;
+      box-shadow: 0 10px 18px rgba(0,0,0,0.12);
     }
 
     .ja-party-piece.balloon {
-      width: 22px;
-      height: 28px;
+      width: 42px;
+      height: 56px;
       border-radius: 50% 50% 46% 46%;
-      box-shadow: inset -3px -5px 0 rgba(255,255,255,0.18);
+      box-shadow: inset -5px -8px 0 rgba(255,255,255,0.18), 0 12px 20px rgba(0,0,0,0.12);
     }
 
     .ja-party-piece.balloon::after {
@@ -167,23 +168,59 @@
       position: absolute;
       left: 50%;
       top: 100%;
-      width: 1.5px;
-      height: 18px;
+      width: 2px;
+      height: 34px;
       background: rgba(60,60,60,0.55);
       transform: translateX(-50%);
     }
 
     .ja-party-piece.streamer {
-      width: 6px;
-      height: 34px;
+      width: 10px;
+      height: 68px;
       border-radius: 999px;
     }
 
+    .ja-party-piece.card {
+      width: 36px;
+      height: 52px;
+      background: linear-gradient(145deg, #fffdf7 0%, #f3ead7 100%);
+      border: 2px solid rgba(17,17,17,0.14);
+      border-radius: 8px;
+      color: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 18px;
+      overflow: hidden;
+    }
+
+    .ja-party-piece.card::before,
+    .ja-party-piece.card::after {
+      position: absolute;
+      font-size: 11px;
+      font-weight: 800;
+      opacity: .85;
+    }
+
+    .ja-party-piece.card::before {
+      content: attr(data-card);
+      top: 5px;
+      left: 6px;
+    }
+
+    .ja-party-piece.card::after {
+      content: attr(data-card);
+      right: 6px;
+      bottom: 5px;
+      transform: rotate(180deg);
+    }
+
     @keyframes jaConfettiBurst {
-      0% { opacity: 0; transform: translate(-50%, -25%) scale(.45) rotate(0deg); }
-      10% { opacity: 1; }
-      70% { opacity: 1; }
-      100% { opacity: 0; transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1) rotate(var(--rot)); }
+      0% { opacity: 0; transform: translate(-50%, -18%) scale(.35) rotate(0deg); }
+      8% { opacity: 1; }
+      78% { opacity: 1; }
+      100% { opacity: 0; transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.08) rotate(var(--rot)); }
     }
 
     .status-sub {
@@ -537,8 +574,27 @@
     }
     function getSessionToken() { return localStorage.getItem(SESSION_KEY); }
     function clearSessionToken() { localStorage.removeItem(SESSION_KEY); }
+    function getAdminSessionToken() { return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY) || ''; }
+    async function ensureAdminViewer() {
+      if (adminChecked) return isAdminViewer;
+      adminChecked = true;
+      const token = getAdminSessionToken();
+      if (!token) { isAdminViewer = false; return false; }
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: token }) });
+        await parseResponse(res);
+        isAdminViewer = true;
+      } catch {
+        isAdminViewer = false;
+      }
+      return isAdminViewer;
+    }
     let currentHomepageState = null;
     let removingVote = false;
+    let removingAdminVote = false;
+    let isAdminViewer = false;
+    let adminChecked = false;
+    const ADMIN_SESSION_KEY = 'jas_admin_session_v8';
     function setStatus(message = '', tone = 'info') {
       const box = document.getElementById('statusBox');
       if (!message) { box.className = 'status'; box.textContent = ''; return; }
@@ -552,6 +608,27 @@
       if (listKey === 'legends') return myStatus === 'ja';
       if (listKey === 'losers') return myStatus === 'nee';
       return false;
+    }
+    function canShowAdminRemoveButton() {
+      return !!isAdminViewer;
+    }
+    async function removeVoteAsAdmin(targetName) {
+      if (removingAdminVote || !targetName) return;
+      removingAdminVote = true;
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_remove_vote_action`, {
+          method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+          body: JSON.stringify({ admin_session_token: getAdminSessionToken(), display_name_input: targetName })
+        });
+        await parseResponse(res);
+        renderState(await getHomepageState());
+        setStatus(`Stem verwijderd voor ${targetName}.`, 'ok');
+      } catch (error) {
+        const msg = error?.message || 'Onbekende fout';
+        setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
+      } finally {
+        removingAdminVote = false;
+      }
     }
     async function removeMyVote() {
       if (removingVote) return;
@@ -592,6 +669,15 @@
           btn.addEventListener('click', removeMyVote);
           row.appendChild(btn);
         }
+        if (canShowAdminRemoveButton()) {
+          const adminBtn = document.createElement('button');
+          adminBtn.type = 'button';
+          adminBtn.className = 'remove-vote-btn admin-remove-vote-btn';
+          adminBtn.textContent = 'admin ×';
+          adminBtn.disabled = removingAdminVote;
+          adminBtn.addEventListener('click', () => removeVoteAsAdmin(name));
+          row.appendChild(adminBtn);
+        }
         li.appendChild(row);
         root.appendChild(li);
       });
@@ -618,18 +704,25 @@
       const burst = document.createElement('span');
       burst.className = 'ja-party-burst';
       const specs = [
-        { kind:'balloon', tx:'-92px', ty:'-122px', rot:'-12deg', bg:'#ef476f', delay:'0ms' },
-        { kind:'balloon', tx:'88px', ty:'-116px', rot:'14deg', bg:'#ffd166', delay:'90ms' },
-        { kind:'balloon', tx:'12px', ty:'-146px', rot:'5deg', bg:'#06d6a0', delay:'40ms' },
-        { kind:'streamer', tx:'-126px', ty:'-34px', rot:'-120deg', bg:'#118ab2', delay:'30ms' },
-        { kind:'streamer', tx:'132px', ty:'-28px', rot:'140deg', bg:'#8338ec', delay:'80ms' },
-        { kind:'confetti', tx:'-76px', ty:'-88px', rot:'-210deg', bg:'#ff006e', delay:'10ms' },
-        { kind:'confetti', tx:'-48px', ty:'-132px', rot:'-150deg', bg:'#fb5607', delay:'120ms' },
-        { kind:'confetti', tx:'-24px', ty:'-110px', rot:'-85deg', bg:'#ffbe0b', delay:'55ms' },
-        { kind:'confetti', tx:'30px', ty:'-122px', rot:'110deg', bg:'#3a86ff', delay:'95ms' },
-        { kind:'confetti', tx:'58px', ty:'-98px', rot:'160deg', bg:'#06d6a0', delay:'20ms' },
-        { kind:'confetti', tx:'94px', ty:'-80px', rot:'220deg', bg:'#ef476f', delay:'70ms' },
-        { kind:'confetti', tx:'0px', ty:'-100px', rot:'180deg', bg:'#ffd166', delay:'0ms' }
+        { kind:'balloon', tx:'-154px', ty:'-210px', rot:'-18deg', bg:'#ef476f', delay:'0ms' },
+        { kind:'balloon', tx:'146px', ty:'-204px', rot:'18deg', bg:'#ffd166', delay:'120ms' },
+        { kind:'balloon', tx:'8px', ty:'-246px', rot:'4deg', bg:'#06d6a0', delay:'60ms' },
+        { kind:'balloon', tx:'-34px', ty:'-188px', rot:'-8deg', bg:'#3a86ff', delay:'140ms' },
+        { kind:'streamer', tx:'-210px', ty:'-54px', rot:'-160deg', bg:'#118ab2', delay:'30ms' },
+        { kind:'streamer', tx:'218px', ty:'-44px', rot:'168deg', bg:'#8338ec', delay:'80ms' },
+        { kind:'streamer', tx:'-124px', ty:'-212px', rot:'-96deg', bg:'#ff006e', delay:'10ms' },
+        { kind:'streamer', tx:'128px', ty:'-226px', rot:'102deg', bg:'#06d6a0', delay:'70ms' },
+        { kind:'confetti', tx:'-118px', ty:'-148px', rot:'-230deg', bg:'#ff006e', delay:'10ms' },
+        { kind:'confetti', tx:'-82px', ty:'-210px', rot:'-150deg', bg:'#fb5607', delay:'120ms' },
+        { kind:'confetti', tx:'-36px', ty:'-174px', rot:'-85deg', bg:'#ffbe0b', delay:'55ms' },
+        { kind:'confetti', tx:'44px', ty:'-188px', rot:'110deg', bg:'#3a86ff', delay:'95ms' },
+        { kind:'confetti', tx:'92px', ty:'-146px', rot:'160deg', bg:'#06d6a0', delay:'20ms' },
+        { kind:'confetti', tx:'144px', ty:'-118px', rot:'220deg', bg:'#ef476f', delay:'70ms' },
+        { kind:'confetti', tx:'0px', ty:'-164px', rot:'180deg', bg:'#ffd166', delay:'0ms' },
+        { kind:'card', tx:'-176px', ty:'-134px', rot:'-226deg', delay:'45ms', card:'A♠' },
+        { kind:'card', tx:'178px', ty:'-142px', rot:'202deg', delay:'110ms', card:'K♥' },
+        { kind:'card', tx:'-42px', ty:'-248px', rot:'-144deg', delay:'150ms', card:'J♣' },
+        { kind:'card', tx:'54px', ty:'-236px', rot:'188deg', delay:'90ms', card:'10♦' }
       ];
       specs.forEach((spec) => {
         const piece = document.createElement('span');
@@ -637,12 +730,16 @@
         piece.style.setProperty('--tx', spec.tx);
         piece.style.setProperty('--ty', spec.ty);
         piece.style.setProperty('--rot', spec.rot);
-        piece.style.background = spec.bg;
+        if (spec.bg) piece.style.background = spec.bg;
+        if (spec.card) {
+          piece.dataset.card = spec.card;
+          piece.textContent = spec.card;
+        }
         piece.style.animationDelay = spec.delay;
         burst.appendChild(piece);
       });
       word.appendChild(burst);
-      window.setTimeout(() => { if (burst.isConnected) burst.remove(); }, 1900);
+      window.setTimeout(() => { if (burst.isConnected) burst.remove(); }, 2500);
     }
     function renderState(data) {
       currentHomepageState = data || null;
@@ -712,7 +809,7 @@
       }
     }
     async function load() {
-      try { renderState(await getHomepageState()); setStatus(''); }
+      try { await ensureAdminViewer(); renderState(await getHomepageState()); setStatus(''); }
       catch (error) {
         const msg = error?.message || 'Onbekende fout';
         if (/cycle_key/i.test(msg)) {
@@ -727,7 +824,7 @@
     load();
   </script>
 
-  <div class="site-credit-watermark">v95 · Made by Bruis</div>
+  <div class="site-credit-watermark">v96 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
