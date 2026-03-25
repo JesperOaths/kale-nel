@@ -1,0 +1,41 @@
+
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spelersprofielen</title>
+  <script src="./gejast-config.js"></script>
+  <style>
+    :root{--gold:#d4af37;--ink:#1b1711;--paper:rgba(255,250,243,.92);--line:#e0d6c6;--muted:#6f665e;}
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:linear-gradient(rgba(247,244,238,.84),rgba(247,244,238,.84)),url('./wordtergejast.png') center/cover fixed}
+    .page{width:min(1100px,100%);margin:0 auto;padding:20px 14px 90px}.sheet{background:var(--paper);border:1px solid rgba(17,17,17,.08);border-radius:28px;box-shadow:0 20px 40px rgba(0,0,0,.09);overflow:hidden}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line)}
+    .top h1{margin:0;font-size:clamp(28px,5vw,40px)} .top p{margin:4px 0 0;color:var(--muted)}
+    .back{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800}
+    .status{padding:0 20px;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;padding:18px}
+    .card{background:#fff;border:1px solid rgba(17,17,17,.07);border-radius:22px;padding:16px;display:grid;gap:12px;box-shadow:0 10px 20px rgba(0,0,0,.05)}
+    .head{display:grid;grid-template-columns:64px 1fr;gap:12px;align-items:center}.avatar{width:64px;height:64px;border-radius:50%;object-fit:cover;background:#efe7d7;border:2px solid rgba(212,175,55,.45)}
+    .initials{display:grid;place-items:center;font-weight:900;font-size:24px;color:#5d4820}
+    .name{font-size:22px;font-weight:900;line-height:1}.meta{color:var(--muted);font-size:13px}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{background:#fbf7ef;border:1px solid rgba(17,17,17,.06);border-radius:16px;padding:10px;text-align:center}.stat strong{display:block;font-size:22px}.stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+    .badges{display:flex;flex-wrap:wrap;gap:8px}.badge{padding:7px 10px;border-radius:999px;background:#111;color:#fff;font-size:12px;font-weight:800}.badge.gold{background:#b88f14}.badge.soft{background:#f4efe4;color:#3d3429;border:1px solid rgba(17,17,17,.08)}
+    .bio{font-size:14px;line-height:1.45}.section-title{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:800}
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}
+  </style>
+</head>
+<body>
+  <main class="page"><section class="sheet"><div class="top"><div><h1>Spelers</h1><p>Profielen, stats en badges</p></div><a class="back" href="./index.html">Terug</a></div><div id="status" class="status"></div><div id="grid" class="grid"></div></section></main>
+  <div class="site-credit-watermark">v111 · Made by Bruis</div>
+  <script>
+    const SUPABASE_URL=(window.GEJAST_CONFIG||{}).SUPABASE_URL; const SUPABASE_PUBLISHABLE_KEY=(window.GEJAST_CONFIG||{}).SUPABASE_PUBLISHABLE_KEY;
+    function rpcHeaders(){return {apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,'Content-Type':'application/json',Accept:'application/json'}}
+    async function parseResponse(res){const text=await res.text(); let data=null; try{data=text?JSON.parse(text):null}catch{throw new Error(text||`HTTP ${res.status}`)} if(!res.ok) throw new Error(data?.message||data?.error||`HTTP ${res.status}`); return data}
+    function initials(name){return String(name||'').split(/\s+/).filter(Boolean).slice(0,2).map(v=>v[0]).join('').toUpperCase()||'?'}
+    function badgeList(p){const badges=[]; if((p.reliability_score||0)>=90) badges.push(['Zekerheid','gold']); if((p.current_yes_streak||0)>=3) badges.push(['Reeks','soft']); if((p.total_matches||0)>=10) badges.push(['Veteraan','soft']); if((p.wins||0)>=5) badges.push(['Winnaar','soft']); if((p.favorite_game||'').toLowerCase().includes('boeren')) badges.push(['Boerenbridge','soft']); return badges}
+    function render(profiles){const grid=document.getElementById('grid'); grid.innerHTML=(profiles||[]).map((p)=>`<article class="card"><div class="head">${p.profile_picture_url?`<img class="avatar" src="${p.profile_picture_url}" alt="${p.display_name}">`:`<div class="avatar initials">${initials(p.nickname||p.display_name)}</div>`}<div><div class="name">${p.nickname||p.display_name}</div><div class="meta">${p.display_name}${p.favorite_game?` · ${p.favorite_game}`:''}</div></div></div><div class="stats"><div class="stat"><strong>${p.total_matches||0}</strong><span>Potjes</span></div><div class="stat"><strong>${p.wins||0}</strong><span>Winst</span></div><div class="stat"><strong>${Math.round(p.reliability_score||0)}</strong><span>Betrouwbaar</span></div><div class="stat"><strong>${p.vote_yes_count||0}</strong><span>Ik kan</span></div><div class="stat"><strong>${p.current_yes_streak||0}</strong><span>Reeks</span></div><div class="stat"><strong>${p.achievements_count||badgeList(p).length}</strong><span>Badges</span></div></div><div><div class="section-title">Badges</div><div class="badges">${badgeList(p).map(([label,cls])=>`<span class="badge ${cls}">${label}</span>`).join('')||'<span class="badge soft">Nog leeg</span>'}</div></div><div class="bio">${p.bio||'Geen extra tekst.'}</div></article>`).join('')}
+    async function boot(){const status=document.getElementById('status'); try{const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_player_profiles_public`,{method:'POST',mode:'cors',cache:'no-store',headers:rpcHeaders(),body:'{}'}); const data=await parseResponse(res); render(data?.profiles||data||[]); status.textContent=`${(data?.profiles||data||[]).length} profielen geladen.`}catch(err){status.textContent=err.message||'Profielen laden mislukt.'}}
+    boot();
+  </script>
+  <script src="./site-analytics.js"></script>
+</body></html>

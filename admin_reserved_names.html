@@ -34,7 +34,9 @@
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
     @media (max-width:760px){ .grid { grid-template-columns:1fr; } }
   </style>
-  <script src="./gejast-config.js"></script>
+  <script src="./gejast-config.js">
+    (function globalAdminLogout(){ const btn=document.createElement('button'); btn.textContent='Uitloggen'; btn.style.cssText='position:fixed;top:14px;right:14px;z-index:9999;border:none;border-radius:14px;padding:10px 14px;background:#111;color:#fff;font:700 14px Inter,sans-serif;cursor:pointer'; btn.onclick=()=>{ clearAdminSessionToken(); window.location.href='./admin.html'; }; document.addEventListener('DOMContentLoaded',()=>document.body.appendChild(btn)); })();
+  </script>
 </head>
 <body>
   <main class="main-card">
@@ -72,19 +74,23 @@
   </main>
   <script>
     const ADMIN_SESSION_KEY = 'jas_admin_session_v8';
+    const ADMIN_SESSION_META_KEY = 'jas_admin_session_meta_v1';
+    const ADMIN_SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000;
     const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || 'https://uiqntazgnrxwliaidkmy.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type': 'application/json', Accept: 'application/json' }; }
     async function parseResponse(res) { const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`); return data; }
-    function getToken(){ return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
+    function readAdminSessionMeta(){ try { return JSON.parse(sessionStorage.getItem(ADMIN_SESSION_META_KEY) || localStorage.getItem(ADMIN_SESSION_META_KEY) || 'null'); } catch { return null; } }
+    function clearAdminSessionToken(){ sessionStorage.removeItem(ADMIN_SESSION_KEY); localStorage.removeItem(ADMIN_SESSION_KEY); sessionStorage.removeItem(ADMIN_SESSION_META_KEY); localStorage.removeItem(ADMIN_SESSION_META_KEY); }
+    function getToken(){ const meta=readAdminSessionMeta(); const token=(meta&&meta.token) || sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); if (meta?.issued_at && (Date.now() - Number(meta.issued_at) > ADMIN_SESSION_MAX_AGE_MS)) { clearAdminSessionToken(); return ''; } return token; }
     function setStatus(message='', tone='') { const box=document.getElementById('statusBox'); box.className=`status ${tone}`.trim(); box.textContent=message; }
     async function ensureGate(){
       const token=getToken();
-      if(!token){ window.location.href='./admin.html'; return false; }
+      if(!token){ clearAdminSessionToken(); window.location.href='./admin.html'; return false; }
       try {
         await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: token }) }).then(parseResponse);
         return true;
-      } catch { window.location.href='./admin.html'; return false; }
+      } catch { clearAdminSessionToken(); window.location.href='./admin.html'; return false; }
     }
     async function loadNames(){
       try {
@@ -97,7 +103,7 @@
         rows.forEach((row) => {
           const card = document.createElement('article');
           card.className = 'item';
-          card.innerHTML = `<strong>${row.display_name}</strong><div class="pill">${row.status || 'available'}</div><div class="meta">slug: ${row.username || '-'} · e-mail: ${row.reserved_for_email || '-'} </div>${row.player_id ? `<div class="meta">gekoppelde speler-id: ${row.player_id}</div>` : ''}<div class="row"><button class="btn danger" type="button" data-remove-id="${row.id}">Verwijderen uit kieslijst</button></div>`;
+          card.innerHTML = `<strong>${row.display_name}</strong><div class="pill">${row.status || 'beschikbaar'}</div><div class="meta">slug: ${row.username || '-'} · e-mail: ${row.reserved_for_email || '-'} </div>${row.player_id ? `<div class="meta">gekoppelde speler-id: ${row.player_id}</div>` : ''}<div class="row"><button class="btn danger" type="button" data-remove-id="${row.id}">Verwijderen uit kieslijst</button></div>`;
           root.appendChild(card);
         });
         setStatus('Lijst geladen.', 'ok');
@@ -106,15 +112,38 @@
         setStatus(error?.message || 'Laden mislukt.', 'warn');
       }
     }
+
+    async function callRemoveAllowedUsername(id){
+      const payloads = [
+        { admin_session_token: getToken(), allowed_username_id_input: Number(id) },
+        { admin_session_token: getToken(), allowed_username_id: Number(id) },
+        { admin_session_token: getToken(), input_allowed_username_id: Number(id) },
+        { admin_session_token: getToken(), reserved_name_id_input: Number(id) },
+        { admin_session_token: getToken(), reserved_name_id: Number(id) },
+        { admin_session_token: getToken(), id_input: Number(id) },
+        { admin_session_token: getToken(), id: Number(id) }
+      ];
+      let lastError = null;
+      for (const payload of payloads) {
+        try {
+          return await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_remove_allowed_username`, {
+            method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify(payload)
+          }).then(parseResponse);
+        } catch (error) {
+          lastError = error;
+          const message = String(error?.message || '');
+          if (!/schema cache|function|parameter|argument|missing/i.test(message)) throw error;
+        }
+      }
+      throw lastError || new Error('Verwijderen mislukt.');
+    }
+
     document.getElementById('listRoot').addEventListener('click', async (event) => {
       const btn = event.target.closest('[data-remove-id]');
       if (!btn) return;
       try {
         setStatus('Naam verwijderen...');
-        await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_remove_allowed_username`, {
-          method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(),
-          body:JSON.stringify({ admin_session_token: getToken(), allowed_username_id_input: Number(btn.dataset.removeId) })
-        }).then(parseResponse);
+        await callRemoveAllowedUsername(btn.dataset.removeId);
         await loadNames();
         setStatus('Naam verwijderd uit de kieslijst.', 'ok');
       } catch (error) {
@@ -140,7 +169,6 @@
     });
     (async()=>{ if(await ensureGate()) loadNames(); })();
   </script>
-  <div class="site-credit-watermark">v108 · Made by Bruis</div>
-  <script src="./site-analytics.js"></script>
+  <div class="site-credit-watermark">v111 · Made by Bruis</div>
 </body>
 </html>

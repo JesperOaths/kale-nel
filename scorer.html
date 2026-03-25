@@ -1323,7 +1323,7 @@
     function toggleAppMenu(force){ const el=document.getElementById('appMenu'); const should = typeof force === 'boolean' ? force : !el.classList.contains('show'); el.classList.toggle('show', should); }
     initPage();
   </script>
-  <div class="site-credit-watermark">v108 · Made by Bruis</div>
+  <div class="site-credit-watermark">v111 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
@@ -1391,6 +1391,21 @@
 })();
 </script>
 
-  <script src="./site-analytics.js"></script>
+  
+<script>
+(function(){
+  function winnerSide(){ return game.w===game.z ? 'Gelijk' : (game.w>game.z ? 'Wij' : 'Zij'); }
+  function winnerNames(){ return winnerSide()==='Wij' ? teamNames('W') : winnerSide()==='Zij' ? teamNames('Z') : `${teamNames('W')} / ${teamNames('Z')}`; }
+  function buildRecap(){ const diff=Math.abs((game.w||0)-(game.z||0)); const specials=game.rounds.filter(r=>r.nat||r.pit||r.verzaaktBy).length; const lines=[]; lines.push(`${winnerNames()} wint met ${game.w||0} tegen ${game.z||0}.`); if(diff>=30) lines.push('Het verschil liep stevig op.'); else if(diff<=10) lines.push('Het bleef lang spannend.'); if(specials) lines.push(`${specials} ronde${specials===1?'':'s'} met nat, pit of verzaakt.`); const best=(game.rounds||[]).slice().sort((a,b)=>Math.max(b.fw,b.fz)-Math.max(a.fw,a.fz))[0]; if(best) lines.push(`Hoogste klap: ${Math.max(best.fw,best.fz)} punten in ronde ${best.round}.`); return lines.join(' '); }
+  function summaryPayload(){ return { game_type:'klaverjas', client_match_id:String(game.id||Date.now()), summary:{ created_at:game.createdAt||new Date().toISOString(), finished_at:new Date().toISOString(), players:game.players, totals:{ wij:game.w||0, zij:game.z||0 }, winner_side:winnerSide(), winner_names:winnerNames(), rounds:game.rounds||[], recap_text:buildRecap() } }; }
+  window.closeMatchSummary=function(){ document.getElementById('matchSummaryOverlay').classList.remove('show'); };
+  window.copyMatchRecapText=async function(){ const text=buildRecap(); try{ await navigator.clipboard.writeText(text); setMessage('Samenvatting gekopieerd.'); }catch(_){ setMessage(text);} };
+  window.downloadMatchSummaryImage=function(){ const payload=summaryPayload().summary; const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=630; const ctx=canvas.getContext('2d'); const grad=ctx.createLinearGradient(0,0,1200,630); grad.addColorStop(0,'#1b1711'); grad.addColorStop(1,'#5d4820'); ctx.fillStyle=grad; ctx.fillRect(0,0,1200,630); ctx.fillStyle='#f6f0e5'; ctx.fillRect(46,46,1108,538); ctx.fillStyle='#111'; ctx.font='900 52px Inter, sans-serif'; ctx.fillText('Klaverjas',84,132); ctx.font='800 34px Inter, sans-serif'; ctx.fillText(`${payload.winner_names}`,84,194); ctx.font='700 72px Inter, sans-serif'; ctx.fillText(`${payload.totals.wij} - ${payload.totals.zij}`,84,292); ctx.font='600 28px Inter, sans-serif'; wrap(ctx,payload.recap_text,84,360,1000,38); ctx.font='700 24px Inter, sans-serif'; ctx.fillText('v111 · Made by Bruis',84,560); const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download='klaverjas-uitslag.png'; a.click(); function wrap(ctx,text,x,y,maxWidth,lineHeight){ const words=String(text||'').split(/\s+/); let line=''; let yy=y; for(const w of words){ const test=line?line+' '+w:w; if(ctx.measureText(test).width>maxWidth && line){ ctx.fillText(line,x,yy); line=w; yy+=lineHeight; } else line=test; } if(line) ctx.fillText(line,x,yy); } };
+  async function saveSummary(){ const token=(localStorage.getItem('jas_session_token_v11')||localStorage.getItem('jas_session_token_v10')||''); if(!(window.GEJAST_CONFIG||{}).SUPABASE_URL) return; try{ await fetch(`${window.GEJAST_CONFIG.SUPABASE_URL}/rest/v1/rpc/save_game_match_summary`,{method:'POST',mode:'cors',cache:'no-store',headers:{apikey:window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY}`,'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({session_token:token, game_type:'klaverjas', client_match_id:String(game.id||Date.now()), summary_payload:summaryPayload().summary})}); }catch(_){} }
+  window.openMatchSummary=function(){ const payload=summaryPayload().summary; document.getElementById('matchSummaryCard').innerHTML=`<div class="dealer-card"><span>Winnaar</span><strong>${payload.winner_names}</strong></div><div class="dealer-banner"><div class="dealer-card"><span>Wij</span><strong>${payload.totals.wij}</strong></div><div class="dealer-card"><span>Zij</span><strong>${payload.totals.zij}</strong></div></div><div class="contract-card"><div class="eyebrow">Samenvatting</div><strong style="font-size:18px;line-height:1.3">${payload.recap_text}</strong></div>`; document.getElementById('matchSummaryOverlay').classList.add('show'); saveSummary(); };
+  const oldFinish=window.finishGame; window.finishGame=function(){ if(oldFinish) oldFinish(); openMatchSummary(); };
+})();
+</script>
+<script src="./site-analytics.js"></script>
 </body>
 </html>
