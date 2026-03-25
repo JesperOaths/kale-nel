@@ -433,10 +433,13 @@
     }
 
     @media (max-width: 760px) {
-      .page { padding: 24px 14px; }
+      .page { padding: 28px 20px 96px; }
       .main-card {
         padding: 28px 18px 20px;
-        width: min(700px, 96vw);
+        width: min(700px, 88vw);
+        border-radius: 28px;
+        outline: 2px solid rgba(212,175,55,0.28);
+        outline-offset: 6px;
       }
       .card-top-right { position:absolute; top:16px; right:16px; margin:0; }
       .card-top-left { position:absolute; top:16px; left:16px; margin:0; }
@@ -491,11 +494,11 @@
     }
 
     @media (max-width: 640px) {
-      .page { padding: 34px 16px 82px; }
-      .main-card { width: min(100%, 92vw); padding: 30px 22px; outline: 1px solid rgba(212,175,55,0.22); outline-offset: 4px; }
-      .site-scene .playing-card-accent { width: 150px; bottom: 10px; left: -30px; opacity: 0.3; }
-      .site-scene .spinoza-shadow { width: 170px; right: -36px; bottom: 16%; opacity: 0.24; }
-      .site-scene .brand-watermark { width: 140px; top: 7%; left: -12px; opacity: 0.1; }
+      .page { padding: 38px 22px 96px; }
+      .main-card { width: min(100%, 84vw); padding: 30px 22px; border-radius: 30px; outline: 2px solid rgba(212,175,55,0.26); outline-offset: 8px; }
+      .site-scene .playing-card-accent { width: 180px; bottom: 8px; left: -42px; opacity: 0.4; }
+      .site-scene .spinoza-shadow { width: 210px; right: -54px; bottom: 14%; opacity: 0.32; }
+      .site-scene .brand-watermark { width: 150px; top: 7%; left: -18px; opacity: 0.12; }
     }
 
   </style>
@@ -841,7 +844,7 @@
     load();
   </script>
 
-  <div class="site-credit-watermark">v99 · Made by Bruis</div>
+  <div class="site-credit-watermark">v100 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
