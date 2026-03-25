@@ -60,7 +60,7 @@
   <main class="main-card">
     <a href="./admin.html" aria-label="Terug naar admin"><img src="./logo.png" class="logo" alt="logo" /></a>
     <h1>Bezoekers</h1>
-    <p class="sub">Overzicht van verkeer en gebruik.</p>
+    <p class="sub">Verkeer, bezoekers en gebruik.</p>
 
     <div class="toolbar">
       <a class="ghost-btn" href="./admin.html">Terug naar hub</a>
@@ -75,12 +75,18 @@
 
     <div id="statusBox" class="status"></div>
 
+    
     <section class="cards">
       <article class="card"><span>Paginaweergaves</span><strong id="totalViews">0</strong></article>
       <article class="card"><span>Unieke bezoekers</span><strong id="uniqueVisitors">0</strong></article>
       <article class="card"><span>Unieke sessies</span><strong id="uniqueSessions">0</strong></article>
-      <article class="card"><span>Pagina's</span><strong id="pageCount">0</strong></article>
+      <article class="card"><span>Nieuwe bezoekers</span><strong id="newVisitors">0</strong></article>
+      <article class="card"><span>Terugkerend</span><strong id="returningVisitors">0</strong></article>
+      <article class="card"><span>Gem. pagina's / sessie</span><strong id="pagesPerSession">0</strong></article>
+      <article class="card"><span>Gem. sessieduur</span><strong id="avgSessionDuration">0m</strong></article>
+      <article class="card"><span>Clicks</span><strong id="clickEvents">0</strong></article>
     </section>
+
 
     <section class="grid-two">
       <section class="panel">
@@ -122,6 +128,21 @@
       </section>
     </section>
 
+    <section class="grid-three">
+      <section class="panel">
+        <h2>Instappagina's</h2>
+        <div id="entryPagesList" class="list"></div>
+      </section>
+      <section class="panel">
+        <h2>Uitstappagina's</h2>
+        <div id="exitPagesList" class="list"></div>
+      </section>
+      <section class="panel">
+        <h2>Gebeurtenissen</h2>
+        <div id="eventsBars" class="bars"></div>
+      </section>
+    </section>
+
     <section class="grid-two">
       <section class="panel">
         <h2>Verwijzers</h2>
@@ -130,6 +151,7 @@
       <section class="panel">
         <h2>Momentopname</h2>
         <div class="badge-row" id="snapshotBadges"></div>
+        <div class="badge-row" id="identityBadges"></div>
       </section>
     </section>
 
@@ -146,113 +168,34 @@
     const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || '';
     const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || '';
     const ADMIN_SESSION_KEY = 'jas_admin_session_v8';
-    const CHART_COLORS = ['#d4af37','#c6862a','#8a5b2a','#4d7a58','#7f4d8a','#ba6f1d'];
+    const CHART_COLORS = ['#d4af37','#c6862a','#8a5b2a','#4d7a58','#7f4d8a','#ba6f1d','#3f6d9f','#b8506b'];
 
     function rpcHeaders(){ return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type': 'application/json', Accept: 'application/json' }; }
     async function parseResponse(res){ const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || data?.details || data?.hint || `HTTP ${res.status}`); return data; }
     function getAdminSessionToken(){ return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
     function setAdminSessionToken(token){ if (!token) return; sessionStorage.setItem(ADMIN_SESSION_KEY, token); localStorage.setItem(ADMIN_SESSION_KEY, token); }
     function setStatus(message='', tone=''){ const box = document.getElementById('statusBox'); box.textContent = message; box.className = `status ${tone}`.trim(); }
+    function escapeHtml(value){ return String(value ?? '').replace(/[&<>"]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s])); }
     function row(label, value){ return `<div class="list-item"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(value)}</span></div>`; }
-    function escapeHtml(value){ return String(value ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-    function fmtTime(value){ try { return new Date(value).toLocaleString('nl-NL'); } catch { return value || '—'; } }
-    function fmtRef(value){ if (!value) return 'Direct'; try { return new URL(value).hostname || value; } catch { return value; } }
-    function makeBarRows(items, keyName){
-      const top = Math.max(...(items||[]).map(i => Number(i.views || i.count || 0)), 1);
-      return (items || []).map((item, index) => {
-        const value = Number(item.views || item.count || 0);
-        const pct = Math.max(4, Math.round((value / top) * 100));
-        const label = item[keyName] || 'Onbekend';
-        return `<div class="bar-row"><div class="bar-label">${escapeHtml(label)}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:linear-gradient(90deg, ${CHART_COLORS[index % CHART_COLORS.length]} 0%, #f0cf72 100%);"></div></div><div class="bar-value">${value}</div></div>`;
-      }).join('') || '<p class="muted">Nog geen data.</p>';
-    }
-    function renderDailyChart(points){
-      const svg = document.getElementById('dailyChart');
-      const width = 760, height = 280, left = 42, right = 18, top = 18, bottom = 38;
-      const innerW = width - left - right, innerH = height - top - bottom;
-      const vals = (points || []).map(p => Number(p.views || 0));
-      const max = Math.max(...vals, 1);
-      const count = Math.max((points || []).length, 1);
-      const stepX = count > 1 ? innerW / (count - 1) : innerW;
-      const coords = (points || []).map((p, i) => {
-        const x = left + (count === 1 ? innerW / 2 : i * stepX);
-        const y = top + innerH - ((Number(p.views || 0) / max) * innerH);
-        return { x, y, label: p.day_label || p.day || '', value: Number(p.views || 0) };
-      });
-      const grid = [0,.25,.5,.75,1].map(r => {
-        const y = top + innerH - innerH * r;
-        const v = Math.round(max * r);
-        return `<line x1="${left}" y1="${y}" x2="${width-right}" y2="${y}" stroke="rgba(0,0,0,0.08)" stroke-width="1"/><text x="${left-10}" y="${y+4}" text-anchor="end" font-size="11" fill="#867a66">${v}</text>`;
-      }).join('');
-      const labels = coords.map((c, i) => i % Math.ceil(count / 8 || 1) === 0 || count <= 8 ? `<text x="${c.x}" y="${height-12}" text-anchor="middle" font-size="11" fill="#867a66">${escapeHtml(c.label)}</text>` : '').join('');
-      const path = coords.map((c, i) => `${i===0?'M':'L'} ${c.x} ${c.y}`).join(' ');
-      const area = coords.length ? `${path} L ${coords[coords.length-1].x} ${top+innerH} L ${coords[0].x} ${top+innerH} Z` : '';
-      const dots = coords.map(c => `<circle cx="${c.x}" cy="${c.y}" r="4.5" fill="#d4af37" stroke="#fff8e6" stroke-width="2"><title>${escapeHtml(c.label)}: ${c.value}</title></circle>`).join('');
-      svg.innerHTML = `${grid}<path d="${area}" fill="rgba(212,175,55,0.18)"></path><path d="${path}" fill="none" stroke="#d4af37" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>${dots}${labels}`;
-    }
+    function num(value){ return Number(value || 0); }
+    function fmtRef(value){ if (!value || value === 'Direct') return 'Direct'; try { const u = new URL(value); return u.hostname + (u.pathname && u.pathname !== '/' ? u.pathname : ''); } catch { return value; } }
+    function fmtTime(value){ if (!value) return '—'; try { return new Date(value).toLocaleString('nl-NL', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }); } catch { return value; } }
+    function pct(value,total){ return total > 0 ? Math.round((value/total)*100) : 0; }
+    function barRows(items, key){ const max = Math.max(1, ...(items || []).map(item => Number(item.views || item.count || 0))); return (items || []).map((item, index) => { const value = Number(item.views || item.count || 0); const width = Math.max(6, Math.round((value / max) * 100)); const label = item[key] || 'Onbekend'; return `<div class="bar-row"><div class="bar-label">${escapeHtml(label)}</div><div class="bar-track"><div class="bar-fill" style="width:${width}%;background:linear-gradient(90deg, ${CHART_COLORS[index % CHART_COLORS.length]} 0%, #efd37c 100%);"></div></div><div class="bar-value">${value}</div></div>`; }).join('') || '<p class="muted">Nog geen data.</p>'; }
+    function renderDailyChart(points){ const svg = document.getElementById('dailyChart'); const w = 760, h = 280, left = 34, right = 20, top = 18, bottom = 36; const innerW = w-left-right, innerH = h-top-bottom; const max = Math.max(1, ...(points || []).map(p => Number(p.views || 0))); const stepX = points.length > 1 ? innerW/(points.length-1) : innerW; const coords = (points || []).map((item, i) => ({ x:left + i*stepX, y:top + innerH - ((Number(item.views||0)/max)*innerH), value:Number(item.views||0), label:item.day_label || item.day || '' })); const grid = Array.from({length:5}, (_, i) => { const y = top + (innerH/4)*i; return `<line x1="${left}" y1="${y}" x2="${w-right}" y2="${y}" stroke="rgba(0,0,0,0.08)" stroke-width="1"/>`; }).join(''); const labels = coords.map(c => `<text x="${c.x}" y="${h-10}" font-size="11" text-anchor="middle" fill="#877654">${escapeHtml(c.label)}</text>`).join(''); const path = coords.map((c,i)=>`${i===0?'M':'L'} ${c.x} ${c.y}`).join(' '); const area = coords.length ? `${path} L ${coords[coords.length-1].x} ${top+innerH} L ${coords[0].x} ${top+innerH} Z` : ''; const dots = coords.map(c => `<circle cx="${c.x}" cy="${c.y}" r="4.5" fill="#d4af37" stroke="#fff8e6" stroke-width="2"><title>${escapeHtml(c.label)}: ${c.value}</title></circle>`).join(''); svg.innerHTML = `${grid}<path d="${area}" fill="rgba(212,175,55,0.18)"></path><path d="${path}" fill="none" stroke="#d4af37" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>${dots}${labels}`; }
     function polar(cx, cy, r, a){ const rad = (a-90) * Math.PI / 180; return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }; }
-    function donutPath(cx, cy, r1, r2, start, end){
-      const large = end - start > 180 ? 1 : 0;
-      const a1 = polar(cx, cy, r2, start), a2 = polar(cx, cy, r2, end), b1 = polar(cx, cy, r1, end), b2 = polar(cx, cy, r1, start);
-      return `M ${a1.x} ${a1.y} A ${r2} ${r2} 0 ${large} 1 ${a2.x} ${a2.y} L ${b1.x} ${b1.y} A ${r1} ${r1} 0 ${large} 0 ${b2.x} ${b2.y} Z`;
-    }
-    function renderDeviceDonut(items){
-      const svg = document.getElementById('deviceDonut');
-      const badges = document.getElementById('deviceBadges');
-      const total = Math.max(1, (items || []).reduce((sum, item) => sum + Number(item.views || 0), 0));
-      let start = 0;
-      const slices = (items || []).map((item, index) => {
-        const value = Number(item.views || 0);
-        const angle = (value / total) * 360;
-        const end = start + angle;
-        const path = donutPath(132, 140, 52, 92, start, end);
-        const fill = CHART_COLORS[index % CHART_COLORS.length];
-        const out = `<path d="${path}" fill="${fill}"><title>${escapeHtml(item.device_type || 'Onbekend')}: ${value}</title></path>`;
-        start = end;
-        return out;
-      }).join('');
-      svg.innerHTML = `${slices}<circle cx="132" cy="140" r="42" fill="#fffdf8"></circle><text x="132" y="132" text-anchor="middle" font-size="16" font-weight="800" fill="#2f2619">Totaal</text><text x="132" y="156" text-anchor="middle" font-size="30" font-weight="900" fill="#d4af37">${total}</text>`;
-      badges.innerHTML = (items || []).map((item, index) => `<span class="badge"><i class="legend-dot" style="background:${CHART_COLORS[index % CHART_COLORS.length]}"></i>${escapeHtml(item.device_type || 'Onbekend')}: ${Number(item.views || 0)}</span>`).join('') || '<span class="badge">Nog geen data</span>';
-    }
-    async function checkSession(){
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) });
-      const data = await parseResponse(res);
-      if (!data?.ok) throw new Error('Log opnieuw in als admin.');
-      if (data.admin_session_token) setAdminSessionToken(data.admin_session_token);
-      return data;
-    }
-    async function loadAnalytics(){
-      await checkSession();
-      const days = Number(document.getElementById('rangeSelect').value || 7);
-      const payload = { admin_session_token: getAdminSessionToken(), range_days: days, recent_limit: 80 };
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_site_analytics_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(payload) });
-      const data = await parseResponse(res);
-      if (data?.admin_session_token) setAdminSessionToken(data.admin_session_token);
-      const summary = data?.summary || {};
-      document.getElementById('totalViews').textContent = String(summary.total_views || 0);
-      document.getElementById('uniqueVisitors').textContent = String(summary.unique_visitors || 0);
-      document.getElementById('uniqueSessions').textContent = String(summary.unique_sessions || 0);
-      document.getElementById('pageCount').textContent = String((data.top_pages || []).length || 0);
-      document.getElementById('pagesList').innerHTML = (data.top_pages || []).map(item => row(item.page_path || 'Onbekend', `${item.views || 0}`)).join('') || '<p class="muted">Nog geen data.</p>';
-      document.getElementById('devicesBars').innerHTML = makeBarRows(data.devices || [], 'device_type');
-      document.getElementById('browsersBars').innerHTML = makeBarRows(data.browsers || [], 'browser_name');
-      document.getElementById('referrersList').innerHTML = (data.referrers || []).map(item => row(fmtRef(item.referrer_url), `${item.views || 0}`)).join('') || '<p class="muted">Nog geen data.</p>';
-      document.getElementById('eventsBody').innerHTML = (data.recent_events || []).map(item => `<tr><td>${fmtTime(item.created_at)}</td><td>${escapeHtml(item.page_path || '—')}</td><td>${escapeHtml(item.device_type || '—')}</td><td>${escapeHtml(item.browser_name || '—')}</td><td>${escapeHtml(fmtRef(item.referrer_url))}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Nog geen data.</td></tr>';
-      document.getElementById('snapshotBadges').innerHTML = [
-        `<span class="badge">Periode: ${days} dag(en)</span>`,
-        `<span class="badge">Gem. per dag: ${Math.round((Number(summary.total_views || 0) / Math.max(days,1)) * 10) / 10}</span>`,
-        `<span class="badge">Uniek per sessie: ${Number(summary.unique_sessions || 0)}</span>`
-      ].join('');
-      renderDailyChart(data.daily_views || []);
-      renderDeviceDonut(data.devices || []);
-      setStatus(`Data geladen voor ${days} dag(en).`, 'ok');
-    }
+    function donutPath(cx, cy, r1, r2, start, end){ const large = end - start > 180 ? 1 : 0; const a1 = polar(cx, cy, r2, start), a2 = polar(cx, cy, r2, end), b1 = polar(cx, cy, r1, end), b2 = polar(cx, cy, r1, start); return `M ${a1.x} ${a1.y} A ${r2} ${r2} 0 ${large} 1 ${a2.x} ${a2.y} L ${b1.x} ${b1.y} A ${r1} ${r1} 0 ${large} 0 ${b2.x} ${b2.y} Z`; }
+    function renderDeviceDonut(items){ const svg = document.getElementById('deviceDonut'); const badges = document.getElementById('deviceBadges'); const total = Math.max(1, (items || []).reduce((sum, item) => sum + Number(item.views || 0), 0)); let start = 0; const slices = (items || []).map((item, index) => { const value = Number(item.views || 0); const angle = (value / total) * 360; const end = start + angle; const path = donutPath(132, 140, 52, 92, start, end); const fill = CHART_COLORS[index % CHART_COLORS.length]; const out = `<path d="${path}" fill="${fill}"><title>${escapeHtml(item.device_type || 'Onbekend')}: ${value}</title></path>`; start = end; return out; }).join(''); svg.innerHTML = `${slices}<circle cx="132" cy="140" r="42" fill="#fffdf8"></circle><text x="132" y="132" text-anchor="middle" font-size="16" font-weight="800" fill="#2f2619">Totaal</text><text x="132" y="156" text-anchor="middle" font-size="30" font-weight="900" fill="#d4af37">${total}</text>`; badges.innerHTML = (items || []).map((item, index) => `<span class="badge"><i class="legend-dot" style="background:${CHART_COLORS[index % CHART_COLORS.length]}"></i>${escapeHtml(item.device_type || 'Onbekend')}: ${Number(item.views || 0)}</span>`).join('') || '<span class="badge">Nog geen data</span>'; }
+    async function checkSession(){ const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); const data = await parseResponse(res); if (!data?.ok) throw new Error('Log opnieuw in als admin.'); if (data.admin_session_token) setAdminSessionToken(data.admin_session_token); return data; }
+    function setText(id, value){ const el = document.getElementById(id); if (el) el.textContent = String(value); }
+    function formatMinutes(value){ const minutes = Math.round(Number(value || 0)); if (!minutes) return '0m'; const h = Math.floor(minutes / 60), m = minutes % 60; return h ? `${h}u ${m}m` : `${m}m`; }
+    async function loadAnalytics(){ await checkSession(); const days = Number(document.getElementById('rangeSelect').value || 7); const payload = { admin_session_token: getAdminSessionToken(), range_days: days, recent_limit: 80 }; const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_site_analytics_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(payload) }); const data = await parseResponse(res); if (data?.admin_session_token) setAdminSessionToken(data.admin_session_token); const summary = data?.summary || {}; setText('totalViews', num(summary.total_views)); setText('uniqueVisitors', num(summary.unique_visitors)); setText('uniqueSessions', num(summary.unique_sessions)); setText('newVisitors', num(summary.new_visitors)); setText('returningVisitors', num(summary.returning_visitors)); setText('pagesPerSession', summary.avg_pages_per_session ? Number(summary.avg_pages_per_session).toFixed(1) : '0'); setText('avgSessionDuration', formatMinutes(summary.avg_session_minutes)); setText('clickEvents', num(summary.click_events)); document.getElementById('pagesList').innerHTML = (data.top_pages || []).map(item => row(item.page_path || 'Onbekend', `${item.views || 0}`)).join('') || '<p class="muted">Nog geen data.</p>'; document.getElementById('entryPagesList').innerHTML = (data.entry_pages || []).map(item => row(item.page_path || 'Onbekend', `${item.views || 0}`)).join('') || '<p class="muted">Nog geen data.</p>'; document.getElementById('exitPagesList').innerHTML = (data.exit_pages || []).map(item => row(item.page_path || 'Onbekend', `${item.views || 0}`)).join('') || '<p class="muted">Nog geen data.</p>'; document.getElementById('devicesBars').innerHTML = barRows(data.devices || [], 'device_type'); document.getElementById('browsersBars').innerHTML = barRows(data.browsers || [], 'browser_name'); document.getElementById('eventsBars').innerHTML = barRows(data.events_breakdown || [], 'event_name'); document.getElementById('referrersList').innerHTML = (data.referrers || []).map(item => row(fmtRef(item.referrer_url), `${item.views || 0}`)).join('') || '<p class="muted">Nog geen data.</p>'; document.getElementById('eventsBody').innerHTML = (data.recent_events || []).map(item => `<tr><td>${fmtTime(item.created_at)}</td><td>${escapeHtml(item.page_path || '—')}</td><td>${escapeHtml(item.device_type || '—')}</td><td>${escapeHtml(item.browser_name || '—')}</td><td>${escapeHtml(fmtRef(item.referrer_url))}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Nog geen data.</td></tr>'; document.getElementById('snapshotBadges').innerHTML = [`<span class="badge">Periode: ${days} dag(en)</span>`,`<span class="badge">Gem. per dag: ${Math.round((num(summary.total_views) / Math.max(days,1)) * 10) / 10}</span>`,`<span class="badge">Sessie-pagina's: ${summary.avg_pages_per_session ? Number(summary.avg_pages_per_session).toFixed(1) : '0'}</span>`,`<span class="badge">Terugkerend: ${pct(num(summary.returning_visitors), Math.max(1, num(summary.unique_visitors)))}%</span>`].join(''); document.getElementById('identityBadges').innerHTML = [`<span class="badge">Spelerbezoeken: ${num(summary.logged_in_views)}</span>`,`<span class="badge">Adminbezoeken: ${num(summary.admin_views)}</span>`,`<span class="badge">Clicks: ${num(summary.click_events)}</span>`,`<span class="badge">Formulieren: ${num(summary.form_events)}</span>`].join(''); renderDailyChart(data.daily_views || []); renderDeviceDonut(data.devices || []); setStatus(`Data geladen voor ${days} dag(en).`, 'ok'); }
     document.getElementById('refreshBtn').addEventListener('click', () => { setStatus('Bezig met laden...'); loadAnalytics().catch(err => setStatus(err.message || 'Laden mislukt', 'warn')); });
     document.getElementById('rangeSelect').addEventListener('change', () => { setStatus('Bezig met laden...'); loadAnalytics().catch(err => setStatus(err.message || 'Laden mislukt', 'warn')); });
     setStatus('Bezig met laden...');
     loadAnalytics().catch(err => setStatus(err.message || 'Laden mislukt', 'warn'));
   </script>
 
-  <div class="site-credit-watermark">v109 · Made by Bruis</div>
+  <div class="site-credit-watermark">v110 · Made by Bruis</div>
 </body>
 </html>
