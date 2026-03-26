@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Klaverjas Scorer</title>
+  <title>Klaverjas Scoreformulier</title>
   <meta name="description" content="Mobiele klaverjas scorer met takken, biedingen en roem." />
   <style>
     :root {
@@ -174,6 +174,7 @@
     .save-bar { padding:10px 14px calc(10px + env(safe-area-inset-bottom)); background:linear-gradient(180deg, rgba(247,244,238,0), rgba(247,244,238,0.96) 40%, rgba(247,244,238,0.98)); }
     .save-btn { width:100%; border:none; border-radius:16px; padding:14px; background:#111; color:#fff; font-size:17px; font-weight:900; box-shadow:0 16px 24px rgba(0,0,0,0.16); cursor:pointer; }
     .save-btn:disabled { opacity:.45; cursor:not-allowed; }
+    .contract-actions{display:flex;flex-direction:column;gap:10px;align-self:stretch;justify-content:center}.contract-actions .text-btn{min-width:160px} @media (max-width:760px){.contract-actions{width:100%}.contract-actions .text-btn{width:100%}}
     .footer { text-align:center; color:#58534b; font-size:14px; padding:10px 16px 2px; }
     .message { min-height:20px; text-align:center; color:#7a7368; font-size:13px; padding:2px 14px 12px; }
     .overlay { position:fixed; inset:0; background:rgba(16,18,24,0.52); display:none; align-items:center; justify-content:center; z-index:40; padding:16px; }
@@ -273,7 +274,7 @@
   <div class="page">
     <header class="topbar">
       <button class="icon-btn" type="button" onclick="toggleAppMenu()">☰</button>
-      <div class="topbar-title"><strong>Klaverjas scorer</strong><span>Mobiel, in takken, met biedingen en roem</span></div>
+      <div class="topbar-title"><strong>Klaverjas Scoreformulier</strong><span>Mobiel, in takken, met biedingen en roem</span></div>
       <div class="topbar-actions"><button id="undoBtn" class="icon-btn" type="button" onclick="undoLastAction()">↶</button><button id="redoBtn" class="icon-btn" type="button" onclick="redoLastAction()">↷</button></div>
     </header>
 
@@ -314,7 +315,10 @@
             <small id="contractHint">Kies eerst spelers, daarna de bieding voor deze ronde.</small>
             <div class="pending-strip" id="pendingStrip"></div>
           </div>
-          <button class="text-btn" type="button" onclick="openBidModal()" style="background:var(--gold); color:#111;">Pas bod aan</button>
+          <div class="contract-actions">
+            <button class="text-btn" type="button" onclick="openBidModal()" style="background:var(--gold); color:#111;">Pas bod aan</button>
+            <button class="text-btn" id="saveRoundBtnTop" type="button" onclick="saveRound()" style="background:#111; color:#fff;">Ronde opslaan</button>
+          </div>
         </div>
 
         <div class="inputs">
@@ -1272,7 +1276,7 @@
       renderRoemLives();
       renderPendingStrip();
       renderBoard();
-      document.getElementById('saveRoundBtn').disabled = game.rounds.length >= 16;
+      document.getElementById('saveRoundBtn').disabled = game.rounds.length >= 16; const topBtn=document.getElementById('saveRoundBtnTop'); if(topBtn) topBtn.disabled = document.getElementById('saveRoundBtn').disabled;
     }
 
     document.querySelectorAll('[data-team-choice]').forEach((btn) => btn.addEventListener('click', () => {
@@ -1323,7 +1327,7 @@
     function toggleAppMenu(force){ const el=document.getElementById('appMenu'); const should = typeof force === 'boolean' ? force : !el.classList.contains('show'); el.classList.toggle('show', should); }
     initPage();
   </script>
-  <div class="site-credit-watermark">v96 · Made by Bruis</div>
+  <div class="site-credit-watermark">v121 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
@@ -1391,5 +1395,21 @@
 })();
 </script>
 
+  
+<script>
+(function(){
+  function winnerSide(){ return game.w===game.z ? 'Gelijk' : (game.w>game.z ? 'Wij' : 'Zij'); }
+  function winnerNames(){ return winnerSide()==='Wij' ? teamNames('W') : winnerSide()==='Zij' ? teamNames('Z') : `${teamNames('W')} / ${teamNames('Z')}`; }
+  function buildRecap(){ const diff=Math.abs((game.w||0)-(game.z||0)); const specials=game.rounds.filter(r=>r.nat||r.pit||r.verzaaktBy).length; const lines=[]; lines.push(`${winnerNames()} wint met ${game.w||0} tegen ${game.z||0}.`); if(diff>=30) lines.push('Het verschil liep stevig op.'); else if(diff<=10) lines.push('Het bleef lang spannend.'); if(specials) lines.push(`${specials} ronde${specials===1?'':'s'} met nat, pit of verzaakt.`); const best=(game.rounds||[]).slice().sort((a,b)=>Math.max(b.fw,b.fz)-Math.max(a.fw,a.fz))[0]; if(best) lines.push(`Hoogste klap: ${Math.max(best.fw,best.fz)} punten in ronde ${best.round}.`); return lines.join(' '); }
+  function summaryPayload(){ return { game_type:'klaverjas', client_match_id:String(game.id||Date.now()), summary:{ created_at:game.createdAt||new Date().toISOString(), finished_at:new Date().toISOString(), players:game.players, totals:{ wij:game.w||0, zij:game.z||0 }, winner_side:winnerSide(), winner_names:winnerNames(), rounds:game.rounds||[], recap_text:buildRecap() } }; }
+  window.closeMatchSummary=function(){ document.getElementById('matchSummaryOverlay').classList.remove('show'); };
+  window.copyMatchRecapText=async function(){ const text=buildRecap(); try{ await navigator.clipboard.writeText(text); setMessage('Samenvatting gekopieerd.'); }catch(_){ setMessage(text);} };
+  window.downloadMatchSummaryImage=function(){ const payload=summaryPayload().summary; const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=630; const ctx=canvas.getContext('2d'); const grad=ctx.createLinearGradient(0,0,1200,630); grad.addColorStop(0,'#1b1711'); grad.addColorStop(1,'#5d4820'); ctx.fillStyle=grad; ctx.fillRect(0,0,1200,630); ctx.fillStyle='#f6f0e5'; ctx.fillRect(46,46,1108,538); ctx.fillStyle='#111'; ctx.font='900 52px Inter, sans-serif'; ctx.fillText('Klaverjas',84,132); ctx.font='800 34px Inter, sans-serif'; ctx.fillText(`${payload.winner_names}`,84,194); ctx.font='700 72px Inter, sans-serif'; ctx.fillText(`${payload.totals.wij} - ${payload.totals.zij}`,84,292); ctx.font='600 28px Inter, sans-serif'; wrap(ctx,payload.recap_text,84,360,1000,38); ctx.font='700 24px Inter, sans-serif'; ctx.fillText('v121 · Made by Bruis',84,560); const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download='klaverjas-uitslag.png'; a.click(); function wrap(ctx,text,x,y,maxWidth,lineHeight){ const words=String(text||'').split(/\s+/); let line=''; let yy=y; for(const w of words){ const test=line?line+' '+w:w; if(ctx.measureText(test).width>maxWidth && line){ ctx.fillText(line,x,yy); line=w; yy+=lineHeight; } else line=test; } if(line) ctx.fillText(line,x,yy); } };
+  async function saveSummary(){ const token=(localStorage.getItem('jas_session_token_v11')||localStorage.getItem('jas_session_token_v10')||''); if(!(window.GEJAST_CONFIG||{}).SUPABASE_URL) return; try{ await fetch(`${window.GEJAST_CONFIG.SUPABASE_URL}/rest/v1/rpc/save_game_match_summary`,{method:'POST',mode:'cors',cache:'no-store',headers:{apikey:window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY}`,'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({session_token:token, game_type:'klaverjas', client_match_id:String(game.id||Date.now()), summary_payload:summaryPayload().summary})}); }catch(_){} }
+  window.openMatchSummary=function(){ const payload=summaryPayload().summary; document.getElementById('matchSummaryCard').innerHTML=`<div class="dealer-card"><span>Winnaar</span><strong>${payload.winner_names}</strong></div><div class="dealer-banner"><div class="dealer-card"><span>Wij</span><strong>${payload.totals.wij}</strong></div><div class="dealer-card"><span>Zij</span><strong>${payload.totals.zij}</strong></div></div><div class="contract-card"><div class="eyebrow">Samenvatting</div><strong style="font-size:18px;line-height:1.3">${payload.recap_text}</strong></div>`; document.getElementById('matchSummaryOverlay').classList.add('show'); saveSummary(); };
+  const oldFinish=window.finishGame; window.finishGame=function(){ if(oldFinish) oldFinish(); openMatchSummary(); };
+})();
+</script>
+<script src="./site-analytics.js"></script>
 </body>
 </html>

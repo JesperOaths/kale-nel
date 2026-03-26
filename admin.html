@@ -86,7 +86,14 @@
               <a class="hub-link" href="./profiles.html"><strong>Spelers</strong><small>Profielen, badges en stats.</small></a>
               <a class="hub-link" href="./invite.html"><strong>Uitnodigingen</strong><small>Maak links voor nieuwe spelers.</small></a>
       </div>
-    </section>
+    
+          <a class="hub-link" href="./boerenbridge_vault.html"><strong>Boerenbridge kluis</strong><small>Adminoverzicht voor Boerenbridge-historie, tussenopslag en profielen.</small></a>
+          <a class="hub-link" href="./admin_analytics.html"><strong>Bezoekers</strong><small>Paginaweergaves, apparaten en recente bezoeken.</small></a>
+          <a class="hub-link" href="./profiles.html"><strong>Spelers</strong><small>Profielen, badges en persoonlijke statistieken.</small></a>
+          <a class="hub-link" href="./invite.html"><strong>Uitnodigen</strong><small>Maak of gebruik uitnodigingslinks.</small></a>
+          <a class="hub-link" href="./beerpong_vault.html"><strong>Beerpong ranglijst</strong><small>Publieke ELO-ranglijst, grafieken en wedstrijdstats.</small></a>
+
+      </section>
 
     <div id="statusBox" class="status"></div>
   </main>
@@ -281,7 +288,7 @@
     document.addEventListener('visibilitychange', () => { if (!document.hidden && !document.getElementById('hubView').classList.contains('hidden')) loadCounts().catch(() => {}); });
   </script>
 
-  <div class="site-credit-watermark">v118 · Made by Bruis</div>
+  <div class="site-credit-watermark">v121 · Made by Bruis</div>
   <script src="./site-analytics.js"></script>
-<script>(function(){const nav=document.querySelector(".admin-links,.nav-links,.card-links,.hub-links"); if(nav && !nav.innerHTML.includes("beerpong_vault.html")){ const a=document.createElement("a"); a.href="./beerpong_vault.html"; a.textContent="Beerpong Kluis"; nav.appendChild(a);} })();</script></body>
+</body>
 </html>
