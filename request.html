@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Naam claimen</title>
+  <title>Naam aanvragen</title>
   <style>
     :root { --gold: #dab33e; --black: #111; --bg: #f0ede4; }
     * { box-sizing: border-box; }
@@ -110,21 +110,6 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       });
     }
 
-
-    function normalizeRequestableNamesPayload(payload) {
-      if (Array.isArray(payload)) {
-        return payload.map((row) => {
-          if (typeof row === 'string') return row;
-          return row?.display_name || row?.desired_name || row?.name || row?.slug || '';
-        }).filter(Boolean);
-      }
-      const candidates = [payload?.names, payload?.requestable_names, payload?.items, payload?.rows, payload?.data];
-      for (const candidate of candidates) {
-        if (Array.isArray(candidate)) return normalizeRequestableNamesPayload(candidate);
-      }
-      return [];
-    }
-
     function collectVisitorMeta() {
       return {
         user_agent: navigator.userAgent || "",
@@ -141,40 +126,11 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       };
     }
 
-    function getInviteToken() {
-      try {
-        return new URLSearchParams(window.location.search).get('token') || '';
-      } catch {
-        return '';
-      }
-    }
-
     async function getRequestableNames() {
-      const attempts = [];
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names`, {
-          method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(), body: JSON.stringify({})
-        });
-        const data = await parseResponse(res);
-        const names = uniqueNames(normalizeRequestableNamesPayload(data));
-        if (names.length) return names;
-        attempts.push('rpc-empty');
-      } catch (err) {
-        attempts.push(err instanceof Error ? err.message : 'rpc-failed');
-      }
-
-      try {
-        const url = `${SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status&status=eq.available&order=display_name.asc`;
-        const res = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-store', headers: rpcHeaders() });
-        const data = await parseResponse(res);
-        const names = uniqueNames(normalizeRequestableNamesPayload(data));
-        if (names.length) return names;
-        attempts.push('rest-empty');
-      } catch (err) {
-        attempts.push(err instanceof Error ? err.message : 'rest-failed');
-      }
-
-      throw new Error(attempts.join(' | ') || 'Kon namen niet laden');
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names`, {
+        method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(), body: JSON.stringify({})
+      });
+      return await parseResponse(res);
     }
 
     async function requestClaim() {
@@ -203,7 +159,8 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
 
     async function load() {
       try {
-        const names = await getRequestableNames();
+        const state = await getRequestableNames();
+        const names = uniqueNames(state.names || []);
         fillNameSelect(names);
         if (!names.length) setStatus('Er staan nog geen beheerde namen klaar in de kieslijst.', 'warn');
         else setStatus();
@@ -256,11 +213,12 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         if (!raf) raf = requestAnimationFrame(step);
       }, { passive: true });
     }
+
     // v40: pre-rendered background, so parallax is disabled for performance.
     load();
   </script>
 
-  <div class="site-credit-watermark">v115 · Made by Bruis</div>
+  <div class="site-credit-watermark">v96 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
@@ -328,6 +286,5 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
 })();
 </script>
 
-  <script src="./site-analytics.js"></script>
 </body>
 </html>
