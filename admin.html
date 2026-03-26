@@ -78,9 +78,13 @@
         <a class="hub-link" href="./admin_claims.html#view=expired"><strong>Verlopen activaties</strong><small>Verlopen activatielinks zijn geïntegreerd in de hoofdtool onder de status Verlopen.</small></a>
         <a class="hub-link" href="./admin_reserved_names.html"><strong>Claimbare namen</strong><small>Overzicht van de database-bron voor claimbare namen en handmatige reserveringen.</small></a>
         <a class="hub-link" href="./vault.html"><strong>Spelkluis</strong><small>Alleen admin spelhistorie en lokale analyses.</small></a>
+          <a class="hub-link" href="./boerenbridge_vault.html"><strong>Boerenbridge kluis</strong><small>Adminoverzicht voor Boerenbridge-historie, tussenopslag en profielen.</small></a>
         <a class="hub-link" href="./leaderboard.html"><strong>Ranglijst</strong><small>Ranglijst zonder spelers die nog 0 potjes hebben.</small></a>
         <a class="hub-link" href="./admin_security.html"><strong>Beveiliging & hosting</strong><small>Wat al is dichtgezet en welke hosting-stap nog nodig is voor echte server-side afscherming.</small></a>
         <a class="hub-link" href="./admin_mail_audit.html"><strong>Maildiagnostiek</strong><small>Actieve Make-webhook, mail-RPC en laatste mailjobstatus voor admins.</small></a>
+              <a class="hub-link" href="./admin_analytics.html"><strong>Bezoekers</strong><small>Paginaweergaves, apparaten en recente bezoeken.</small></a>
+              <a class="hub-link" href="./profiles.html"><strong>Spelers</strong><small>Profielen, badges en stats.</small></a>
+              <a class="hub-link" href="./invite.html"><strong>Uitnodigingen</strong><small>Maak links voor nieuwe spelers.</small></a>
       </div>
     </section>
 
@@ -277,6 +281,7 @@
     document.addEventListener('visibilitychange', () => { if (!document.hidden && !document.getElementById('hubView').classList.contains('hidden')) loadCounts().catch(() => {}); });
   </script>
 
-  <div class="site-credit-watermark">v96 · Made by Bruis</div>
-</body>
+  <div class="site-credit-watermark">v118 · Made by Bruis</div>
+  <script src="./site-analytics.js"></script>
+<script>(function(){const nav=document.querySelector(".admin-links,.nav-links,.card-links,.hub-links"); if(nav && !nav.innerHTML.includes("beerpong_vault.html")){ const a=document.createElement("a"); a.href="./beerpong_vault.html"; a.textContent="Beerpong Kluis"; nav.appendChild(a);} })();</script></body>
 </html>

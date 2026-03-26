@@ -4,268 +4,122 @@
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ranglijst (admin) - Wordt er gejast?</title>
+  <title>Klaverjas Ranglijst (admin) - Wordt er gejast?</title>
+  <link rel="stylesheet" href="./site-shell.css" />
   <style>
-    :root { --gold: #d4af37; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.06); --ink:#161616; --muted:#666; }
-    * { box-sizing: border-box; }
-    body { margin: 0; padding: 20px; font-family: 'Inter', sans-serif; background: linear-gradient(rgba(232,228,217,0.90), rgba(232,228,217,0.90)), url('./wordtergejast.png') center/cover no-repeat fixed; min-height: 100vh; color:var(--ink); }
-    .main-card { background: var(--card-bg); border-radius: 24px; padding: 40px; max-width: 800px; margin: 0 auto; box-shadow: 0 20px 50px rgba(0,0,0,0.08); position: relative; overflow:hidden; }
-    .top-nav { display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; gap:20px; }
-    .nav-links a { color:#666; text-decoration:none; font-size:14px; margin-left:15px; font-weight:700; }
-    h1 { font-size:36px; margin:0; letter-spacing:-1px; }
-    .stats-strip { display:flex; gap:20px; margin:25px 0 18px; background:#fff; padding:20px; border-radius:16px; justify-content:space-around; border:1px solid var(--line); }
-    .stat-item span { display:block; font-size:11px; color:#999; text-transform:uppercase; }
-    .stat-item strong { font-size:20px; color:#111; }
-    .status { margin: 0 0 18px; font-size:13px; min-height:20px; color:#856404; }
-    .status.show.warn { color:#8b3a30; } .status.show.ok { color:#2b5b37; }
-    .leader-card { background:#fff; border-radius:12px; padding:15px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border:1px solid var(--line); gap:12px; }
-    .leader-card strong { display:block; }
-    .rank { background:var(--gold); width:30px; height:30px; display:flex; align-items:center; justify-content:center; border-radius:50%; font-weight:bold; margin-right:15px; flex:0 0 30px; }
-    .section-title { font-size:18px; margin:22px 0 12px; }
-    .muted { color:var(--muted); font-size:13px; }
-    .empty-card { background:#fff; border-radius:12px; padding:14px; border:1px dashed var(--line); color:var(--muted); }
-    .split { display:flex; align-items:center; gap:15px; }
-    .recent-item { background:#fff; border-radius:12px; padding:14px; margin-bottom:10px; border:1px solid var(--line); }
-    @media (max-width: 720px) { .main-card { padding:24px; } .top-nav, .stats-strip { display:block; } .nav-links a { margin-left:0; margin-right:12px; } }
+    :root{--gold:#d4af37;--gold-dark:#b89018;--ink:#161616;--muted:#6a655b;--line:rgba(0,0,0,.08);--card:#fffdfa;--bg:rgba(249,247,242,.96)}
+    *{box-sizing:border-box}body{margin:0;padding:24px;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:linear-gradient(rgba(232,228,217,.9),rgba(232,228,217,.92)),url('./wordtergejast.png') center/cover fixed}
+    .wrap{max-width:1380px;margin:0 auto}.shell{background:var(--bg);border-radius:28px;padding:28px;border:1px solid rgba(255,255,255,.7);box-shadow:0 20px 60px rgba(0,0,0,.08)}
+    .top{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}.nav a{font-weight:800;color:#554e43;text-decoration:none;margin-left:14px}
+    h1{margin:0;font-size:clamp(2rem,4vw,3rem);letter-spacing:-.05em}.sub{margin-top:8px;color:var(--muted)}
+    .stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin:18px 0}.stat,.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.03)}
+    .stat small{display:block;font-size:.75rem;text-transform:uppercase;color:#908670;font-weight:800;letter-spacing:.06em}.stat strong{display:block;margin-top:4px;font-size:1.75rem}
+    .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}.split{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .card h2{margin:0 0 12px;font-size:1.05rem;letter-spacing:-.02em}.leader-list,.recent-list,.detail-list{display:grid;gap:10px}
+    .leader{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+    .rank{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#111;color:#fff;font-weight:900}.name{font-weight:900}.meta{font-size:.9rem;color:var(--muted);margin-top:2px}.value{text-align:right;font-weight:900}
+    .mini-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px}.mini{background:#fffcf5;border:1px solid var(--line);border-radius:12px;padding:10px}.mini span{display:block;font-size:.7rem;text-transform:uppercase;color:#988d75;font-weight:800}.mini strong{display:block;margin-top:3px}
+    .detail{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px}.detail-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 10px;font-size:.8rem;font-weight:800;background:rgba(212,175,55,.14);border:1px solid rgba(212,175,55,.35);color:#7a5f00}
+    .formline{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.form-pill{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#efe6c5;color:#715400;font-weight:900;font-size:.78rem}.form-pill.loss{background:#222;color:#fff}.history-game{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+    .chart{width:100%;height:230px;background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(250,247,238,.98));border:1px solid var(--line);border-radius:18px;padding:10px}.chart svg{width:100%;height:100%;display:block}
+    .legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}.legend span{font-size:.8rem;color:#6a655b;font-weight:700}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+    .status{min-height:24px;margin-bottom:10px;font-size:.95rem;color:#7f2f1d;font-weight:800}.status.ok{color:#236740}
+    .empty{border:1px dashed var(--line);border-radius:16px;padding:14px;color:var(--muted);background:#fff}
+    @media (max-width:1100px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}.grid,.split{grid-template-columns:1fr}}
+    @media (max-width:720px){body{padding:14px}.shell{padding:18px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.mini-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
   </style>
-
-  <style id="bruis-watermark-style">
-    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(212,175,55,0.35);color:#f3e3a6;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
-    @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
-  </style>
-  <link rel="canonical" href="https://kalenel.nl/leaderboard.html" />
-  <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
   <script src="./gejast-config.js"></script>
 </head>
 <body>
-  <div id="gateNotice" class="main-card">Adminsessie controleren...</div>
-  <main id="leaderApp" class="main-card" style="display:none;">
-    <div class="top-nav">
-      <h1>Ranglijst</h1>
-      <div class="nav-links">
-        <a href="./admin.html">Terug naar hub</a>
+<div class="wrap">
+  <div id="gateNotice" class="shell">Adminsessie controleren...</div>
+  <main id="leaderApp" class="shell" style="display:none">
+    <div class="top">
+      <div>
+        <h1>Klaverjas Ranglijst</h1>
+        <div class="sub">Alle bekende spelers, potjes, trends en recente geschiedenis. Alleen voor admins.</div>
+      </div>
+      <div class="nav">
+        <a href="./admin.html">Hub</a>
         <a href="./vault.html">Spelkluis</a>
-        <a href="./scorer.html">Scorer</a>
+        <a href="./scorer.html">Klaverjas Scoreformulier</a>
+        <a href="./beerpong_vault.html">Beerpong Kluis</a>
       </div>
     </div>
-
-    <div class="stats-strip">
-      <div class="stat-item"><span>Spelers</span><strong id="lbPlayers">0</strong></div>
-      <div class="stat-item"><span>Potjes</span><strong id="lbGames">0</strong></div>
-      <div class="stat-item"><span>Koploper</span><strong id="lbLeader">-</strong></div>
-    </div>
-
     <div id="statusBox" class="status"></div>
-    <div id="leaderCards"></div>
+    <section class="stats">
+      <div class="stat"><small>Spelers</small><strong id="sumPlayers">0</strong></div>
+      <div class="stat"><small>Potjes</small><strong id="sumGames">0</strong></div>
+      <div class="stat"><small>Koploper</small><strong id="sumLeader">-</strong></div>
+      <div class="stat"><small>Gem. punten</small><strong id="sumAvg">0</strong></div>
+      <div class="stat"><small>Beste streak</small><strong id="sumStreak">0</strong></div>
+      <div class="stat"><small>Deze maand</small><strong id="sumMonthGames">0</strong></div>
+    </section>
 
-    <h2 class="section-title">Recente potjes</h2>
-    <div id="recentWinners"></div>
+    <section class="grid">
+      <section class="card">
+        <h2>Topspelers</h2>
+        <div id="leaderCards" class="leader-list"></div>
+      </section>
+      <section class="card">
+        <h2>Kort overzicht</h2>
+        <div class="split">
+          <div class="card"><h2 style="font-size:.95rem">Meeste punten</h2><div id="topPoints"></div></div>
+          <div class="card"><h2 style="font-size:.95rem">Meeste winst</h2><div id="topWins"></div></div>
+          <div class="card"><h2 style="font-size:.95rem">Beste vorm</h2><div id="topForm"></div></div>
+        </div>
+      </section>
+    </section>
+
+    <section class="grid" style="margin-top:16px">
+      <section class="card">
+        <h2>Potjes per dag</h2>
+        <div id="dailyChart" class="chart"></div>
+      </section>
+      <section class="card">
+        <h2>Potjes per maand</h2>
+        <div id="monthlyChart" class="chart"></div>
+      </section>
+    </section>
+
+    <section class="card" style="margin-top:16px">
+      <h2>Puntenverloop top 8</h2>
+      <div id="historyChart" class="chart"></div>
+      <div id="historyLegend" class="legend"></div>
+    </section>
+
+    <section class="grid" style="margin-top:16px">
+      <section class="card">
+        <h2>Spelersanalyse</h2>
+        <div id="playerBreakdowns" class="detail-list"></div>
+      </section>
+      <section class="card">
+        <h2>Recente potjes</h2>
+        <div id="recentGames" class="recent-list"></div>
+      </section>
+    </section>
   </main>
-
-  <script>
-    const ADMIN_SESSION_KEY = "jas_admin_session_v8";
-    function getAdminSessionToken(){ return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
-    async function ensureAdminGate(){
-      const token = getAdminSessionToken();
-      const notice = document.getElementById("gateNotice");
-      if(!token){
-        notice.textContent = "Geen adminsessie gevonden. Je wordt doorgestuurd naar admin.";
-        setTimeout(()=> window.location.href = "./admin.html", 900);
-        return false;
-      }
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:"POST", mode:"cors", cache:"no-store", headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: token }) });
-        const data = await parseResponse(res);
-        if (data?.admin_session_token) { sessionStorage.setItem(ADMIN_SESSION_KEY, data.admin_session_token); localStorage.setItem(ADMIN_SESSION_KEY, data.admin_session_token); }
-        document.getElementById("leaderApp").style.display = "";
-        notice.style.display = "none";
-        return true;
-      } catch (error) {
-        notice.textContent = "Adminsessie verlopen of ongeldig. Je wordt doorgestuurd naar admin.";
-        setTimeout(()=> window.location.href = "./admin.html", 1000);
-        return false;
-      }
-    }
-
-const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
-
-    function rpcHeaders() {
-      return {
-        apikey: SUPABASE_PUBLISHABLE_KEY,
-        'Content-Type': 'application/json',
-        Accept: 'application/json'
-      };
-    }
-
-    async function parseResponse(res) {
-      const text = await res.text();
-      let data = null;
-      try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); }
-      if (!res.ok) throw new Error(data?.message || data?.error || data?.details || data?.hint || `HTTP ${res.status}`);
-      return data;
-    }
-
-    async function callRpc(name, payload = {}) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
-        method: 'POST',
-        mode: 'cors',
-        cache: 'no-store',
-        headers: rpcHeaders(),
-        body: JSON.stringify(payload)
-      });
-      return parseResponse(res);
-    }
-
-    function setStatus(message = '', tone = 'info') {
-      const box = document.getElementById('statusBox');
-      if (!message) {
-        box.className = 'status';
-        box.textContent = '';
-        return;
-      }
-      box.className = `status show ${tone}`;
-      box.textContent = message;
-    }
-
-    function renderLeaderboard(rows) {
-      const root = document.getElementById('leaderCards');
-      root.innerHTML = '';
-      const filteredRows = rows.filter((row) => Number(row.games_played || 0) > 0);
-      if (!filteredRows.length) {
-        root.innerHTML = '<div class="empty-card small">Nog geen leaderboarddata.</div>';
-        document.getElementById('lbPlayers').textContent = '0';
-        document.getElementById('lbLeader').textContent = '-';
-        return;
-      }
-      filteredRows.forEach((row, index) => {
-        const card = document.createElement('article');
-        card.className = 'leader-mobile-card';
-        card.innerHTML = `
-          <div class="leader-mobile-head">
-            <div class="leader-rank">#${index + 1}</div>
-            <div>
-              <strong>${row.display_name}</strong>
-              <div class="feed-meta">${row.games_won} winst · ${row.games_played} potjes</div>
-            </div>
-          </div>
-          <div class="leader-mobile-grid">
-            <div><span>Winrate</span><strong>${row.win_rate}%</strong></div>
-            <div><span>Totaal</span><strong>${row.total_points}</strong></div>
-            <div><span>Gemiddeld</span><strong>${row.avg_points}</strong></div>
-            <div><span>Laatste potje</span><strong>${row.last_played_at || '-'}</strong></div>
-          </div>
-        `;
-        root.appendChild(card);
-      });
-      document.getElementById('lbPlayers').textContent = `${filteredRows.length}`;
-      document.getElementById('lbLeader').textContent = filteredRows[0]?.display_name || '-';
-    }
-
-    function renderRecent(games) {
-      const root = document.getElementById('recentWinners');
-      root.innerHTML = '';
-      if (!games.length) {
-        root.innerHTML = '<div class="empty-card small">Nog geen opgeslagen potjes.</div>';
-        return;
-      }
-      games.forEach((game) => {
-        const card = document.createElement('article');
-        card.className = 'feed-card';
-        card.innerHTML = `
-          <div class="feed-top">
-            <strong>${game.title || 'Klaverjas potje'}</strong>
-            <span>${game.played_at || ''}</span>
-          </div>
-          <div class="feed-meta">${(game.players || []).join(' · ')}</div>
-          <div class="feed-pill">Winnaar: ${(game.winners || []).join(', ') || 'Onbekend'}</div>
-        `;
-        root.appendChild(card);
-      });
-      document.getElementById('lbGames').textContent = `${games.length}`;
-    }
-
-    async function loadLeaderboard() {
-      try {
-        const data = await callRpc('get_jas_leaderboard', { limit_count: 250 });
-        renderLeaderboard(data.leaderboard || []);
-        renderRecent(data.recent_games || []);
-        setStatus('Leaderboard geladen.', 'ok');
-      } catch (error) {
-        setStatus(error?.message || 'Kon leaderboard niet laden.', 'warn');
-      }
-    }
-
-    (async ()=> { if (await ensureAdminGate()) loadLeaderboard(); })();
-  </script>
-
-  <div class="site-credit-watermark">v96 · Made by Bruis</div>
-
-<style>
-  .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
-  .player-session-corner.is-visible{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
-  .player-session-corner-label{font-size:11px;line-height:1.15;color:#5f5b53;text-align:right}
-  .player-session-corner-name{font-size:13px;line-height:1.1;font-weight:800;color:#111;text-align:right;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .player-session-corner-btn{appearance:none;border:0;border-radius:999px;background:#111;color:#fff;font:inherit;font-weight:800;font-size:11px;line-height:1;padding:7px 10px;cursor:pointer;box-shadow:none}
-  .player-session-corner-btn:hover{opacity:.92}
-  @media (max-width:640px){.player-session-corner{top:10px;right:10px;padding:7px 9px;min-width:100px}.player-session-corner-name{max-width:120px}}
-</style>
-<div id="playerSessionCorner" class="player-session-corner" aria-live="polite">
-  <div class="player-session-corner-label">Ingelogd als</div>
-  <div id="playerSessionCornerName" class="player-session-corner-name"></div>
-  <button id="playerSessionCornerLogout" type="button" class="player-session-corner-btn">Log out</button>
 </div>
+<div class="site-credit-watermark">v120 · Made by Bruis</div>
 <script>
-(function(){
-  const CONFIG = window.GEJAST_CONFIG || {};
-  const SUPABASE_URL = CONFIG.SUPABASE_URL || '';
-  const SUPABASE_KEY = CONFIG.SUPABASE_PUBLISHABLE_KEY || '';
-  const SESSION_KEYS = ['jas_session_token_v11','jas_session_token_v10'];
-  const box = document.getElementById('playerSessionCorner');
-  const nameEl = document.getElementById('playerSessionCornerName');
-  const btn = document.getElementById('playerSessionCornerLogout');
-  if (!box || !nameEl || !btn) return;
-  function getToken(){
-    for (const key of SESSION_KEYS){
-      const value = localStorage.getItem(key) || sessionStorage.getItem(key);
-      if (value) return value;
-    }
-    return '';
-  }
-  function clearTokens(){
-    for (const key of SESSION_KEYS){
-      localStorage.removeItem(key);
-      sessionStorage.removeItem(key);
-    }
-  }
-  function rpcHeaders(){
-    return { 'Content-Type':'application/json', apikey: SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}` };
-  }
-  async function fetchMyName(token){
-    if (!token || !SUPABASE_URL || !SUPABASE_KEY) return '';
-    const payload = JSON.stringify({ session_token: token });
-    for (const rpc of ['get_public_state','get_gejast_homepage_state','get_jas_app_state']){
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpc}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: payload });
-        const data = await res.json().catch(()=>null);
-        if (!res.ok) continue;
-        const name = data?.my_name || data?.display_name || data?.player_name || '';
-        if (name) return name;
-      } catch {}
-    }
-    return '';
-  }
-  function show(name){ nameEl.textContent = name; box.classList.add('is-visible'); }
-  function hide(){ box.classList.remove('is-visible'); nameEl.textContent = ''; }
-  btn.addEventListener('click', function(){ clearTokens(); hide(); window.location.reload(); });
-  document.addEventListener('DOMContentLoaded', async function(){
-    const token = getToken();
-    if (!token) return hide();
-    const name = await fetchMyName(token);
-    if (name) show(name); else hide();
-  });
-})();
+const ADMIN_SESSION_KEY='jas_admin_session_v8';
+const CFG=window.GEJAST_CONFIG||{}; const SUPABASE_URL=CFG.SUPABASE_URL; const SUPABASE_PUBLISHABLE_KEY=CFG.SUPABASE_PUBLISHABLE_KEY;
+function rpcHeaders(){return {apikey:SUPABASE_PUBLISHABLE_KEY,'Content-Type':'application/json',Accept:'application/json'}}
+async function parseResponse(res){const t=await res.text(); let d=null; try{d=t?JSON.parse(t):null}catch{throw new Error(t||`HTTP ${res.status}`)} if(!res.ok) throw new Error(d?.message||d?.error||d?.details||d?.hint||`HTTP ${res.status}`); return d}
+async function callRpc(name,payload={}){const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`,{method:'POST',mode:'cors',cache:'no-store',headers:rpcHeaders(),body:JSON.stringify(payload)}); return parseResponse(res)}
+function getAdminSessionToken(){return sessionStorage.getItem(ADMIN_SESSION_KEY)||localStorage.getItem(ADMIN_SESSION_KEY)}
+function setStatus(message='',tone=''){const box=document.getElementById('statusBox'); box.className=`status ${tone}`; box.textContent=message}
+async function ensureAdminGate(){const token=getAdminSessionToken(); const notice=document.getElementById('gateNotice'); if(!token){notice.textContent='Geen adminsessie gevonden. Je wordt doorgestuurd naar admin.'; setTimeout(()=>location.href='./admin.html',900); return false;} try{const data=await callRpc('admin_check_session',{admin_session_token:token}); if(data?.admin_session_token){sessionStorage.setItem(ADMIN_SESSION_KEY,data.admin_session_token); localStorage.setItem(ADMIN_SESSION_KEY,data.admin_session_token);} document.getElementById('leaderApp').style.display=''; notice.style.display='none'; return true;}catch(e){notice.textContent='Adminsessie verlopen of ongeldig. Je wordt doorgestuurd naar admin.'; setTimeout(()=>location.href='./admin.html',1000); return false;}}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function renderMiniList(id, items, key){const root=document.getElementById(id); if(!items?.length){root.innerHTML='<div class="empty">Nog geen data.</div>'; return;} root.innerHTML=items.map((item,idx)=>`<div class="leader"><div class="rank">${idx+1}</div><div><div class="name">${esc(item.display_name)}</div></div><div class="value">${esc(item[key] ?? '-')}</div></div>`).join('')}
+function renderLeader(rows){const root=document.getElementById('leaderCards'); if(!rows?.length){root.innerHTML='<div class="empty">Nog geen leaderboarddata.</div>'; return;} root.innerHTML=rows.map((row,idx)=>`<div class="leader"><div class="rank">${idx+1}</div><div><div class="name">${esc(row.display_name)}</div><div class="meta">${row.games_won} winst · ${row.games_played} potjes · ${row.win_rate}% winrate</div></div><div class="value">${row.total_points}<div class="meta">punten</div></div></div>`).join('')}
+function renderPlayerBreakdowns(rows){const root=document.getElementById('playerBreakdowns'); if(!rows?.length){root.innerHTML='<div class="empty">Nog geen spelersanalyse.</div>'; return;} root.innerHTML=rows.map(row=>`<article class="detail"><div class="detail-top"><div><strong>${esc(row.display_name)}</strong><div class="meta">${row.games_played} potjes · ${row.games_won} winst · ${row.win_rate}%</div></div><span class="badge">${row.current_win_streak} op rij</span></div><div class="mini-grid"><div class="mini"><span>Totaal</span><strong>${row.total_points}</strong></div><div class="mini"><span>Gem.</span><strong>${row.avg_points}</strong></div><div class="mini"><span>Beste</span><strong>${row.best_game_points}</strong></div><div class="mini"><span>Slechtste</span><strong>${row.worst_game_points}</strong></div><div class="mini"><span>Deze maand</span><strong>${row.games_this_month}</strong></div><div class="mini"><span>Punten maand</span><strong>${row.points_this_month}</strong></div><div class="mini"><span>Als wij</span><strong>${row.points_as_wij}</strong></div><div class="mini"><span>Als zij</span><strong>${row.points_as_zij}</strong></div></div><div class="formline">${(row.recent_form||[]).map(x=>`<span class="form-pill ${x==='V'?'loss':''}">${x}</span>`).join('') || '<span class="meta">Geen vormreeks</span>'}</div></article>`).join('')}
+function renderRecent(games){const root=document.getElementById('recentGames'); if(!games?.length){root.innerHTML='<div class="empty">Nog geen recente potjes.</div>'; return;} root.innerHTML=games.map(game=>`<article class="history-game"><strong>${esc(game.title||'Klaverjas potje')}</strong><div class="meta">${esc(game.played_at||'')} · ${esc((game.players||[]).join(' · '))}</div><div class="badge" style="margin-top:8px">Winnaar: ${esc((game.winners||[]).join(', ')||'Onbekend')}</div><div class="mini-grid">${(game.entries||[]).map(e=>`<div class="mini"><span>${esc(e.display_name)}</span><strong>${e.total_points}</strong></div>`).join('')}</div></article>`).join('')}
+function drawBarChart(id, data, valueKey, labelKey, color){const root=document.getElementById(id); if(!data?.length){root.innerHTML='<div class="empty">Nog geen data.</div>';return;} const max=Math.max(...data.map(x=>Number(x[valueKey]||0)),1); root.innerHTML=data.map(x=>`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;gap:8px;font-size:.88rem"><strong>${esc(x[labelKey])}</strong><span>${esc(x[valueKey])}</span></div><div style="height:10px;background:#f0ece2;border-radius:999px;overflow:hidden"><div style="height:100%;width:${Math.max(6,(Number(x[valueKey]||0)/max)*100)}%;background:${color};border-radius:999px"></div></div></div>`).join('')}
+function drawLineChart(containerId, seriesList, valueKey, fixedMax){const container=document.getElementById(containerId); if(!seriesList?.length){container.innerHTML='<div class="empty">Nog geen grafiekdata.</div>'; return;} const width=900, height=210, pad=24; const palette=['#d4af37','#1f4b99','#8a2d1f','#2f7a46','#7b4bb7','#d95f02','#008b8b','#c2185b','#6d4c41','#455a64']; const all=[]; seriesList.forEach(s=>(s.series||[]).forEach(p=>all.push(Number(p[valueKey]||0)))); const min=Math.min(...all,0); const max=fixedMax ?? Math.max(...all,1); const range=(max-min)||1; const paths=[]; const legend=[]; seriesList.forEach((s,idx)=>{const pts=(s.series||[]).map((p,i)=>{const x=pad + ((width-pad*2)* (s.series.length===1?0.5:i/(s.series.length-1||1))); const y=height-pad - (((Number(p[valueKey]||0)-min)/range)*(height-pad*2)); return [x,y,p]}); if(!pts.length) return; const d=pts.map((pt,i)=>`${i===0?'M':'L'}${pt[0].toFixed(1)},${pt[1].toFixed(1)}`).join(' '); const color=palette[idx%palette.length]; paths.push(`<path d="${d}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>`); pts.forEach(pt=>paths.push(`<circle cx="${pt[0]}" cy="${pt[1]}" r="3" fill="${color}"><title>${esc(s.display_name||s.player_name)} · ${esc(pt[2].label||pt[2].day_label||'')} · ${pt[2][valueKey]}</title></circle>`)); legend.push(`<span><i class="dot" style="background:${color}"></i>${esc(s.display_name||s.player_name)}</span>`); }); const grid=[0,.25,.5,.75,1].map(fr=>{const y=height-pad-(fr*(height-pad*2)); const val=(min+fr*range).toFixed(0); return `<line x1="${pad}" y1="${y}" x2="${width-pad}" y2="${y}" stroke="rgba(0,0,0,.08)" /><text x="4" y="${y+4}" font-size="11" fill="#8b826f">${val}</text>`}).join(''); container.innerHTML=`<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">${grid}${paths.join('')}</svg>`; if(containerId==='historyChart') document.getElementById('historyLegend').innerHTML=legend.join(''); }
+function applySummary(summary){document.getElementById('sumPlayers').textContent=summary?.players ?? 0; document.getElementById('sumGames').textContent=summary?.games ?? 0; document.getElementById('sumLeader').textContent=summary?.leader ?? '-'; document.getElementById('sumAvg').textContent=summary?.avg_points ?? 0; document.getElementById('sumStreak').textContent=summary?.best_streak ?? 0; document.getElementById('sumMonthGames').textContent=summary?.month_games ?? 0;}
+async function loadLeaderboard(){try{const data=await callRpc('get_jas_leaderboard',{limit_count:250}); renderLeader(data.leaderboard||[]); renderRecent(data.recent_games||[]); renderMiniList('topPoints',data.top_points||[],'total_points'); renderMiniList('topWins',data.top_wins||[],'games_won'); renderMiniList('topForm',data.top_form||[],'current_win_streak'); drawLineChart('dailyChart',[{display_name:'Potjes',series:(data.summary?.daily_games||[]).map(x=>({label:x.day_label,games:x.games}))}],'games'); drawLineChart('monthlyChart',[{display_name:'Maand',series:(data.summary?.monthly_games||[]).map(x=>({label:x.label,games:x.games}))}],'games'); drawLineChart('historyChart',data.player_histories||[],'running_points'); renderPlayerBreakdowns(data.player_breakdowns||[]); applySummary(data.summary||{}); setStatus('Klaverjasdata geladen.','ok');}catch(error){setStatus(error?.message||'Kon ranglijst niet laden.');}}
+(async()=>{if(await ensureAdminGate()) loadLeaderboard();})();
 </script>
-
 </body>
 </html>

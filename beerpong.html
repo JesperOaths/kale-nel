@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Beerpong Scoreformulier</title>
+  <link rel="stylesheet" href="./site-shell.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./gejast-config.js"></script>
+  <style>
+    :root{--gold:#d4af37;--gold-dark:#b89018;--black:#111;--card-bg:rgba(249,247,242,.95);--line:rgba(17,17,17,.08);--muted:#6f675b;}
+    *{box-sizing:border-box} html,body{min-height:100%}
+    body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:flex;justify-content:center;align-items:flex-start;padding:28px 16px;color:var(--black)}
+    .page{position:relative;z-index:2;width:min(1180px,100%)}
+    .shell{background:var(--card-bg);border:1px solid rgba(255,255,255,.65);border-radius:28px;padding:28px;box-shadow:0 20px 50px rgba(0,0,0,.08);backdrop-filter:blur(6px)}
+    .top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}
+    h1{margin:0;font-size:clamp(2rem,4vw,2.8rem);line-height:1;letter-spacing:-.05em}
+    .sub{color:var(--muted);margin-top:8px;font-size:1rem}
+    .logo{width:54px;height:auto}
+    .grid{display:grid;grid-template-columns:1.05fr .95fr;gap:18px}
+    .card{background:#fffdf9;border:1px solid var(--line);border-radius:22px;padding:18px;box-shadow:0 12px 28px rgba(0,0,0,.04)}
+    .card h2{margin:0 0 14px;font-size:1.05rem;letter-spacing:-.02em}
+    .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .field{display:flex;flex-direction:column;gap:6px}
+    .field.full{grid-column:1/-1}
+    label{font-size:.82rem;font-weight:800;text-transform:uppercase;color:#8a7f6b;letter-spacing:.04em}
+    input,select,textarea,button{font:inherit}
+    input,select,textarea{width:100%;border:1px solid rgba(17,17,17,.12);border-radius:14px;padding:12px 14px;background:#fff;color:#111}
+    textarea{min-height:92px;resize:vertical}
+    .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+    button{border:0;border-radius:14px;padding:14px 18px;font-weight:800;cursor:pointer}
+    .primary{background:var(--gold);color:#111}
+    .secondary{background:#111;color:#fff}
+    .ghost{background:#fff;border:1px solid rgba(17,17,17,.1)}
+    .status{margin-top:10px;min-height:24px;color:#7f2f1d;font-weight:700}
+    .stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+    .stat{background:#fffdf9;border:1px solid var(--line);border-radius:18px;padding:14px}
+    .stat-k{font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:#8a7f6b;font-weight:800}
+    .stat-v{font-size:1.7rem;font-weight:900;margin-top:4px}
+    .leader-list,.recent-list{display:grid;gap:10px}
+    .leader{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+    .rank{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#111;color:#fff;font-weight:900}
+    .name{font-weight:900}.meta{font-size:.92rem;color:var(--muted);margin-top:2px}
+    .rating{text-align:right;font-weight:900}
+    .recent{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+    .pill{display:inline-flex;align-items:center;gap:8px;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.35);padding:6px 10px;border-radius:999px;font-size:.85rem;font-weight:800;color:#6f5700}
+    .watermark{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:4;background:#221f1a;color:#f4dd95;border:2px solid rgba(212,175,55,.35);padding:8px 16px;border-radius:999px;font-weight:900;letter-spacing:.02em;box-shadow:0 12px 24px rgba(0,0,0,.18)}
+    @media (max-width: 900px){.grid{grid-template-columns:1fr}.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width: 640px){body{padding:18px 10px}.shell{padding:18px;border-radius:22px}.form-grid,.stats-grid{grid-template-columns:1fr}.leader{grid-template-columns:auto 1fr}.rating{text-align:left}.watermark{font-size:.9rem}}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="shell">
+      <div class="top">
+        <div>
+          <h1>Beerpong Scoreformulier</h1>
+          <div class="sub">Maak een wedstrijd aan en bekijk de openbare ELO-ranglijst.</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"><a href="./beerpong_vault.html" style="font-weight:800;color:#554e43;text-decoration:none">Beerpong Kluis</a><a href="./index.html" style="font-weight:800;color:#554e43;text-decoration:none">Home</a></div>
+        </div>
+        <img src="./logo.png" alt="Logo" class="logo" />
+      </div>
+
+      <div class="grid">
+        <section class="card">
+          <h2>Nieuwe wedstrijd</h2>
+          <div class="pill" id="sessionPill">Niet ingelogd</div>
+          <div class="form-grid" style="margin-top:14px">
+            <div class="field">
+              <label for="formatInput">Formaat</label>
+              <select id="formatInput">
+                <option value="2v2">2 tegen 2</option>
+                <option value="1v1">1 tegen 1</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="winnerInput">Winnend team</label>
+              <select id="winnerInput">
+                <option value="team_a">Team A</option>
+                <option value="team_b">Team B</option>
+              </select>
+            </div>
+            <div class="field"><label for="teamA1">Team A · Speler 1</label><select id="teamA1"></select></div>
+            <div class="field"><label for="teamB1">Team B · Speler 1</label><select id="teamB1"></select></div>
+            <div class="field duo"><label for="teamA2">Team A · Speler 2</label><select id="teamA2"></select></div>
+            <div class="field duo"><label for="teamB2">Team B · Speler 2</label><select id="teamB2"></select></div>
+            <div class="field"><label for="cupsA">Bekers over team A</label><input id="cupsA" type="number" min="0" max="10" step="1" value="0" /></div>
+            <div class="field"><label for="cupsB">Bekers over team B</label><input id="cupsB" type="number" min="0" max="10" step="1" value="0" /></div>
+            <div class="field full"><label for="notesInput">Notitie</label><textarea id="notesInput" placeholder="Korte notitie"></textarea></div>
+          </div>
+          <div class="actions">
+            <button class="primary" id="saveBtn" type="button">Wedstrijd opslaan</button>
+            <button class="ghost" id="resetBtn" type="button">Leegmaken</button>
+          </div>
+          <div class="status" id="formStatus"></div>
+        </section>
+
+        <section class="card">
+          <h2>Openbare ranglijst</h2>
+          <div class="stats-grid">
+            <div class="stat"><div class="stat-k">Spelers</div><div class="stat-v" id="playersCount">0</div></div>
+            <div class="stat"><div class="stat-k">Wedstrijden</div><div class="stat-v" id="matchesCount">0</div></div>
+            <div class="stat"><div class="stat-k">Gem. ELO</div><div class="stat-v" id="avgElo">0</div></div>
+            <div class="stat"><div class="stat-k">Laatste update</div><div class="stat-v" id="lastUpdate" style="font-size:1rem">—</div></div>
+          </div>
+          <div class="leader-list" id="leaderboard"></div>
+          <h2 style="margin-top:18px">Recente uitslagen</h2>
+          <div class="recent-list" id="recentMatches"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+  <div class="watermark">v118 · Made by Bruis</div>
+
+  <script>
+    const CFG = window.GEJAST_CONFIG || {};
+    const SUPABASE_URL = CFG.SUPABASE_URL;
+    const SUPABASE_PUBLISHABLE_KEY = CFG.SUPABASE_PUBLISHABLE_KEY;
+    const SESSION_KEY = 'jas_session_token_v11';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    const els = {
+      formatInput: document.getElementById('formatInput'), winnerInput: document.getElementById('winnerInput'),
+      teamA1: document.getElementById('teamA1'), teamA2: document.getElementById('teamA2'), teamB1: document.getElementById('teamB1'), teamB2: document.getElementById('teamB2'),
+      cupsA: document.getElementById('cupsA'), cupsB: document.getElementById('cupsB'), notesInput: document.getElementById('notesInput'), saveBtn: document.getElementById('saveBtn'), resetBtn: document.getElementById('resetBtn'),
+      formStatus: document.getElementById('formStatus'), sessionPill: document.getElementById('sessionPill'), leaderboard: document.getElementById('leaderboard'), recentMatches: document.getElementById('recentMatches'),
+      playersCount: document.getElementById('playersCount'), matchesCount: document.getElementById('matchesCount'), avgElo: document.getElementById('avgElo'), lastUpdate: document.getElementById('lastUpdate')
+    };
+    function getSessionToken(){ return localStorage.getItem(SESSION_KEY) || ''; }
+    function setStatus(msg,isError=true){ els.formStatus.style.color=isError?'#8a2d1f':'#1f7a44'; els.formStatus.textContent=msg||''; }
+    function uniqByValue(items){ const seen=new Set(); return items.filter(x=>{ const v=String(x?.value||''); if(!v||seen.has(v)) return false; seen.add(v); return true;}); }
+    function normalizeNames(payload){
+      let rows=[];
+      if(Array.isArray(payload)) rows=payload;
+      else if(Array.isArray(payload?.names)) rows=payload.names;
+      else if(Array.isArray(payload?.data)) rows=payload.data;
+      return rows.map((r)=> typeof r==='string'? {player_id:r,display_name:r}: r).map(r=>({ value:String(r.player_id ?? r.id ?? r.value ?? r.display_name ?? ''), label:String(r.display_name ?? r.name ?? r.label ?? r.desired_name ?? '') })).filter(r=>r.value&&r.label);
+    }
+    async function loadNames(){
+      const { data, error } = await sb.rpc('get_login_names');
+      if(error) throw error;
+      const options = uniqByValue(normalizeNames(data));
+      [els.teamA1, els.teamA2, els.teamB1, els.teamB2].forEach((sel)=>{
+        const prev=sel.value; sel.innerHTML='<option value="">Kies speler</option>' + options.map(o=>`<option value="${o.value}">${o.label}</option>`).join(''); if(prev) sel.value=prev;
+      });
+    }
+    function applyFormat(){
+      const two = els.formatInput.value === '2v2';
+      document.querySelectorAll('.duo').forEach(el=> el.style.display = two ? '' : 'none');
+    }
+    function getSelectedIds(){
+      const fields=[els.teamA1, els.teamA2, els.teamB1, els.teamB2];
+      return fields.map(x=>x.value).filter(Boolean);
+    }
+    function validateForm(){
+      const format = els.formatInput.value;
+      const fields = format==='2v2' ? [els.teamA1, els.teamA2, els.teamB1, els.teamB2] : [els.teamA1, els.teamB1];
+      const vals = fields.map(x=>x.value).filter(Boolean);
+      if(vals.length !== fields.length) return 'Kies alle spelers.';
+      if((new Set(vals)).size !== vals.length) return 'Elke speler mag maar één keer gekozen worden.';
+      const a = Number(els.cupsA.value||0), b = Number(els.cupsB.value||0);
+      if(a<0||a>10||b<0||b>10) return 'Bekers moeten tussen 0 en 10 liggen.';
+      return '';
+    }
+    async function saveMatch(){
+      const validation = validateForm(); if(validation) return setStatus(validation,true);
+      const format=els.formatInput.value;
+      const payload = {
+        status:'finished', format,
+        team_a_player_ids: format==='2v2' ? [Number(els.teamA1.value), Number(els.teamA2.value)] : [Number(els.teamA1.value)],
+        team_b_player_ids: format==='2v2' ? [Number(els.teamB1.value), Number(els.teamB2.value)] : [Number(els.teamB1.value)],
+        winner_team: els.winnerInput.value,
+        cups_left_team_a: Number(els.cupsA.value||0),
+        cups_left_team_b: Number(els.cupsB.value||0),
+        notes: els.notesInput.value.trim(),
+        finished_at: new Date().toISOString()
+      };
+      const clientMatchId = `beerpong-${Date.now()}-${Math.random().toString(16).slice(2,8)}`;
+      setStatus('Opslaan...', false);
+      const { data, error } = await sb.rpc('save_beerpong_match', { session_token: getSessionToken() || null, client_match_id: clientMatchId, payload });
+      if(error) return setStatus(error.message || 'Opslaan mislukt.');
+      setStatus('Wedstrijd opgeslagen.', false);
+      await loadLeaderboard();
+    }
+    async function loadLeaderboard(){
+      const { data, error } = await sb.rpc('get_beerpong_leaderboard_public');
+      if(error){ els.leaderboard.innerHTML='<div class="recent">Ranglijst laden mislukt.</div>'; return; }
+      const board = data?.leaderboard || data?.players || [];
+      const recent = data?.recent_matches || [];
+      els.playersCount.textContent = String(board.length || 0);
+      els.matchesCount.textContent = String(data?.matches_count || recent.length || 0);
+      const avg = board.length ? Math.round(board.reduce((s,x)=> s + Number(x.rating || 0),0) / board.length) : 0;
+      els.avgElo.textContent = String(avg || 0);
+      els.lastUpdate.textContent = new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+      els.leaderboard.innerHTML = board.length ? board.map((p,i)=>`<div class="leader"><div class="rank">${i+1}</div><div><div class="name">${p.display_name || p.nickname || 'Onbekend'}</div><div class="meta">${p.matches_played || 0} potjes · ${p.wins || 0} winst · ${p.losses || 0} verlies</div></div><div class="rating">${Math.round(Number(p.rating||1000))}<div class="meta">ELO</div></div></div>`).join('') : '<div class="recent">Nog geen uitslagen.</div>';
+      els.recentMatches.innerHTML = recent.length ? recent.map((m)=>`<div class="recent"><strong>${(m.winner_names||[]).join(' + ') || 'Onbekend'}</strong> won van ${(m.loser_names||[]).join(' + ') || 'Onbekend'}<div class="meta">${m.finished_at_local || m.finished_at || ''}</div></div>`).join('') : '<div class="recent">Nog geen gespeelde potjes.</div>';
+    }
+    function updateSessionPill(){ els.sessionPill.textContent = getSessionToken() ? 'Spelersessie gevonden' : 'Niet ingelogd'; }
+    function resetForm(){ [els.teamA1, els.teamA2, els.teamB1, els.teamB2].forEach(x=>x.value=''); els.winnerInput.value='team_a'; els.cupsA.value='0'; els.cupsB.value='0'; els.notesInput.value=''; setStatus(''); }
+    els.formatInput.addEventListener('change', applyFormat);
+    els.saveBtn.addEventListener('click', saveMatch);
+    els.resetBtn.addEventListener('click', resetForm);
+    applyFormat(); updateSessionPill();
+    loadNames().catch(err=> setStatus(err.message || 'Spelers laden mislukt.'));
+    loadLeaderboard();
+  </script>
+</body>
+</html>
