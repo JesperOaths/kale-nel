@@ -43,6 +43,7 @@
   <link rel="canonical" href="https://kalenel.nl/admin.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
   <script src="./gejast-config.js"></script>
+  <script src="./admin-session-sync.js"></script>
 </head>
 <body>
   <main class="main-card">
@@ -130,9 +131,9 @@
       if (!res.ok) throw new Error(data?.message || data?.error || data?.details || data?.hint || `HTTP ${res.status}`);
       return data;
     }
-    function getAdminSessionToken() { return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
-    function setAdminSessionToken(token, username = "") { sessionStorage.setItem(ADMIN_SESSION_KEY, token); localStorage.setItem(ADMIN_SESSION_KEY, token); if (username) { sessionStorage.setItem(ADMIN_USER_KEY, username); localStorage.setItem(ADMIN_USER_KEY, username); } const until = Date.now() + 8*60*60*1000; sessionStorage.setItem(ADMIN_DEADLINE_KEY, String(until)); localStorage.setItem(ADMIN_DEADLINE_KEY, String(until)); }
-    function clearAdminSessionToken() { [ADMIN_SESSION_KEY, ADMIN_DEVICE_KEY, ADMIN_USER_KEY, ADMIN_DEADLINE_KEY].forEach((key)=>{ sessionStorage.removeItem(key); localStorage.removeItem(key); }); }
+    function getAdminSessionToken() { return (window.GEJAST_ADMIN_SESSION && window.GEJAST_ADMIN_SESSION.getToken()) || sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
+    function setAdminSessionToken(token, username = "", deviceToken = "") { if (window.GEJAST_ADMIN_SESSION) return window.GEJAST_ADMIN_SESSION.setBundle(token, username, true, deviceToken); sessionStorage.setItem(ADMIN_SESSION_KEY, token); localStorage.setItem(ADMIN_SESSION_KEY, token); }
+    function clearAdminSessionToken() { if (window.GEJAST_ADMIN_SESSION) return window.GEJAST_ADMIN_SESSION.clearBundle(); [ADMIN_SESSION_KEY, ADMIN_DEVICE_KEY, ADMIN_USER_KEY, ADMIN_DEADLINE_KEY].forEach((key)=>{ sessionStorage.removeItem(key); localStorage.removeItem(key); }); }
     function setStatus(message = '', tone = '') {
       const box = document.getElementById('statusBox');
       box.textContent = message;
@@ -161,8 +162,7 @@
       if (Array.isArray(data)) data = data[0] || {};
       const token = data.admin_session_token || data.token;
       if (!token) throw new Error('Login gaf geen admin-sessie terug');
-      setAdminSessionToken(token, data.admin_username || username);
-      if (data.raw_device_token) localStorage.setItem(ADMIN_DEVICE_KEY, data.raw_device_token);
+      setAdminSessionToken(token, data.admin_username || username, data.raw_device_token || "");
       return data;
     }
 
@@ -180,11 +180,7 @@
     }
 
     async function checkSession() {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken() })
-      });
-      const data = await parseResponse(res);
+      const data = window.GEJAST_ADMIN_SESSION ? await window.GEJAST_ADMIN_SESSION.validate() : await (async()=>{ const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); })();
       if (data.admin_session_token) setAdminSessionToken(data.admin_session_token);
       return data;
     }

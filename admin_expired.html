@@ -28,6 +28,7 @@
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
   </style>
   <script src="./gejast-config.js"></script>
+  <script src="./admin-session-sync.js"></script>
 </head>
 <body>
   <main class="main-card">
@@ -42,18 +43,18 @@
     <div id="listRoot"></div>
   </main>
   <script>
-    const ADMIN_SESSION_KEY = 'jas_admin_session_v8';
+    const ADMIN_SESSION_KEY = "jas_admin_session_v8";
     const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || 'https://uiqntazgnrxwliaidkmy.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
     const MAKE_WEBHOOK_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.MAKE_WEBHOOK_URL) || 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6';
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type': 'application/json', Accept: 'application/json' }; }
     async function parseResponse(res) { const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || data?.details || data?.hint || `HTTP ${res.status}`); return data; }
-    function getToken(){ return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
+    function getToken(){ return (window.GEJAST_ADMIN_SESSION && window.GEJAST_ADMIN_SESSION.getToken()) || sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
     function setStatus(message='', tone='') { const box=document.getElementById('statusBox'); box.className=`status ${tone}`.trim(); box.textContent=message; }
     function extractIdLike(value){ if (typeof value === 'number' && Number.isFinite(value)) return value; const text=String(value||'').trim(); if(!text) return null; const direct=Number(text); if(Number.isFinite(direct)) return direct; const match=text.match(/^\(?\s*(\d+)/); return match ? Number(match[1]) : null; }
     function normalizeExpiredRow(row){ const out={...(row||{})}; out.request_id = extractIdLike(out.request_id ?? out.id ?? out.claim_request_id); out.id = extractIdLike(out.id ?? out.request_id ?? out.claim_request_id); return out; }
     function activationBaseUrl(){ const url = new URL('./activate.html', window.location.href); if (url.protocol === 'http:' && !/^(localhost|127\.0\.0\.1)$/i.test(url.hostname)) url.protocol = 'https:'; return url.toString(); }
-    async function ensureGate(){ const token=getToken(); if(!token){ window.location.href='./admin.html'; return false; } try { await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: token }) }).then(parseResponse); return true; } catch { window.location.href='./admin.html'; return false; } }
+    async function ensureGate(){ const token=getToken(); if(!token){ window.location.href='./admin.html'; return false; } try { await (window.GEJAST_ADMIN_SESSION ? window.GEJAST_ADMIN_SESSION.validate() : fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: token }) }).then(parseResponse)); return true; } catch { window.location.href='./admin.html'; return false; } }
     const DATE_TIME_24H = new Intl.DateTimeFormat('nl-NL', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
     function formatDateTime(value){ if(!value) return 'Onbekend'; const date = value instanceof Date ? value : new Date(value); return Number.isNaN(date.getTime()) ? String(value) : DATE_TIME_24H.format(date).replace(',', ''); }
     function buildMakeWebhookMeta(source, meta = {}) { const defaultSubject = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.EMAIL_SUBJECT) || 'Activeer je account voor de Kale Nel'; const payload = { trigger:'activation_email_queued', source, ts:new Date().toISOString(), ...meta }; payload.subject = payload.subject || payload.email_subject || defaultSubject; payload.email_subject = payload.email_subject || payload.subject || defaultSubject; payload.ts_local = payload.ts_local || formatDateTime(payload.ts); if (payload.expires_at && !payload.expires_at_local) payload.expires_at_local = formatDateTime(payload.expires_at); if (payload.created_at && !payload.created_at_local) payload.created_at_local = formatDateTime(payload.created_at); return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined && value !== null && value !== '')); }
