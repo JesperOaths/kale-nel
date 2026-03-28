@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spelerprofiel</title>
+  <link rel="stylesheet" href="./site-shell.css" />
+  <script src="./gejast-config.js"></script>
+  <style>
+    :root{--ink:#161616;--muted:#6e665a;--line:rgba(17,17,17,.08);--card:#fffdf9;--bg:rgba(249,247,242,.96)}*{box-sizing:border-box}
+    body{margin:0;padding:24px;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:linear-gradient(rgba(232,228,217,.9),rgba(232,228,217,.92)),url('./site-bg-desktop.webp') center/cover fixed}
+    .wrap{max-width:1380px;margin:0 auto}.shell{background:var(--bg);border-radius:28px;padding:28px;border:1px solid rgba(255,255,255,.7);box-shadow:0 20px 60px rgba(0,0,0,.08)}
+    .top{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}.nav a{font-weight:800;color:#554e43;text-decoration:none;margin-left:14px}
+    h1{margin:0;font-size:clamp(2rem,4vw,3rem);letter-spacing:-.05em}.sub{margin-top:8px;color:var(--muted)}
+    .stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin:18px 0}.stat,.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.03)} .stat small{display:block;font-size:.75rem;text-transform:uppercase;color:#908670;font-weight:800;letter-spacing:.06em}.stat strong{display:block;margin-top:4px;font-size:1.45rem}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.chart{height:300px;border-radius:18px;background:#f7f3eb;border:1px solid rgba(17,17,17,.06);padding:12px}.chart svg{width:100%;height:100%}
+    .matches{display:grid;gap:10px}.matches article{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px}.pill{display:inline-block;border-radius:999px;padding:4px 8px;font-size:.8rem;font-weight:800;background:#111;color:#fff;margin-top:8px}.meta{color:var(--muted);font-size:.92rem}
+    @media(max-width:980px){.stats,.grid{grid-template-columns:1fr 1fr}} @media(max-width:640px){.stats,.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="wrap"><main class="shell">
+  <div class="top"><div><h1 id="pageTitle">Spelerprofiel</h1><div id="pageSub" class="sub"></div></div><div class="nav"><a href="./index.html">Home</a><a id="ladderLink" href="./ladder.html">Terug naar ladder</a></div></div>
+  <section class="stats" id="stats"></section>
+  <section class="grid"><section class="card"><h2>ELO-verloop</h2><div id="chart" class="chart"></div></section><section class="card"><h2>Wat zegt dit profiel?</h2><div id="summaryCopy" class="meta">Nog geen data geladen.</div></section></section>
+  <section class="card" style="margin-top:16px"><h2>Gespeelde potjes</h2><div id="matches" class="matches"></div></section>
+</main></div>
+<div class="site-credit-watermark">v125 · Made by Bruis</div>
+<script>
+const CFG=window.GEJAST_CONFIG||{}; const SUPABASE_URL=CFG.SUPABASE_URL; const SUPABASE_PUBLISHABLE_KEY=CFG.SUPABASE_PUBLISHABLE_KEY;
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function rpcHeaders(){return {apikey:SUPABASE_PUBLISHABLE_KEY,'Content-Type':'application/json',Accept:'application/json'}}
+async function parseResponse(res){const t=await res.text(); let d=null; try{d=t?JSON.parse(t):null}catch{throw new Error(t||`HTTP ${res.status}`)} if(!res.ok) throw new Error(d?.message||d?.error||d?.details||d?.hint||`HTTP ${res.status}`); return d}
+async function callRpc(name,payload={}){const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`,{method:'POST',mode:'cors',cache:'no-store',headers:rpcHeaders(),body:JSON.stringify(payload)}); return parseResponse(res)}
+const params=new URLSearchParams(location.search); const game=(params.get('game')||'klaverjas').toLowerCase(); const player=params.get('player')||''; document.getElementById('pageTitle').textContent=player||'Spelerprofiel'; document.getElementById('pageSub').textContent=`${game} · alle potjes, kernstats en ratingverloop`; document.getElementById('ladderLink').href=`./ladder.html?game=${encodeURIComponent(game)}`;
+function renderStats(s){const items=[['ELO',Math.round(Number(s.rating||1000))],['Potjes',s.games_played||0],['Winrate',`${s.winrate??0}%`],['Winst',s.wins||0],['Verlies',s.losses||0]]; if(s.avg_points!=null) items.push(['Gem. punten',s.avg_points]); if(s.best_game!=null) items.push(['Beste score',s.best_game]); if(s.avg_finish!=null) items.push(['Gem. plek',s.avg_finish]); if(s.field_score!=null) items.push(['Veldscore',`${s.field_score}%`]); if(s.exact_bid_rate!=null) items.push(['Exact bied-rate',`${s.exact_bid_rate}%`]); document.getElementById('stats').innerHTML=items.map(([k,v])=>`<div class="stat"><small>${esc(k)}</small><strong>${esc(v)}</strong></div>`).join('')}
+function renderMatches(rows){const root=document.getElementById('matches'); if(!rows?.length){root.innerHTML='<div class="meta">Nog geen potjes.</div>'; return;} root.innerHTML=rows.map((m)=>`<article><strong>${esc(m.title||'Potje')}</strong><div class="meta">${esc(m.played_at||'')}</div><span class="pill">${esc(m.result||'-')}</span><div class="meta" style="margin-top:10px">${esc(JSON.stringify(m.details||{}))}</div></article>`).join('')}
+function drawHistory(series){const root=document.getElementById('chart'); if(!series?.length){root.innerHTML='<div class="meta">Nog geen ratingdata.</div>'; return;} const width=960,height=260,pad=28; const vals=series.map(p=>Number(p.rating||0)); const min=Math.min(...vals,950), max=Math.max(...vals,1050), range=(max-min)||1; const d=series.map((p,i)=>{const x=pad+((width-pad*2)*(series.length===1?0.5:i/(series.length-1||1))); const y=height-pad-(((Number(p.rating||0)-min)/range)*(height-pad*2)); return `${i===0?'M':'L'}${x.toFixed(1)},${y.toFixed(1)}`}).join(' '); const grid=[0,.25,.5,.75,1].map(fr=>{const y=height-pad-(fr*(height-pad*2)); const val=(min+fr*range).toFixed(0); return `<line x1="${pad}" y1="${y}" x2="${width-pad}" y2="${y}" stroke="rgba(0,0,0,.08)" /><text x="4" y="${y+4}" font-size="11" fill="#8b826f">${val}</text>`}).join(''); const circles=series.map((p,i)=>{const x=pad+((width-pad*2)*(series.length===1?0.5:i/(series.length-1||1))); const y=height-pad-(((Number(p.rating||0)-min)/range)*(height-pad*2)); return `<circle cx="${x}" cy="${y}" r="3" fill="#1f4b99"><title>${esc(p.label||'')} · ${p.rating}</title></circle>`}).join(''); root.innerHTML=`<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">${grid}<path d="${d}" fill="none" stroke="#1f4b99" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>${circles}</svg>`}
+(async()=>{try{const data=await callRpc('get_game_player_profile',{p_game_key:game,p_player_name:player,limit_matches:100}); renderStats(data.summary||{}); renderMatches(data.matches||[]); drawHistory(data.history||[]); const s=data.summary||{}; const extras=[]; if(game==='boerenbridge'){extras.push(`Naast ruwe winrate telt hier vooral veldscore mee: hoe hoger, hoe consistenter je bovenin eindigt.`);} if(s.best_game!=null) extras.push(`Beste geregistreerde score: ${s.best_game}.`); if(s.avg_points!=null) extras.push(`Gemiddelde score per potje: ${s.avg_points}.`); if(s.avg_finish!=null) extras.push(`Gemiddelde eindpositie: ${s.avg_finish}.`); document.getElementById('summaryCopy').textContent=extras.join(' ')||'Nog geen extra profielduiding.';}catch(e){document.getElementById('summaryCopy').textContent=e.message||'Kon profiel niet laden.'}})();
+</script>
+</body>
+</html>

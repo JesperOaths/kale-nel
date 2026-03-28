@@ -450,6 +450,99 @@
       color: #1a1a1a;
     }
 
+    
+
+    .hero-kicker {
+      margin: 0 0 8px 0;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .16em;
+      color: #8a8275;
+      font-weight: 800;
+    }
+
+    .hero-intro {
+      max-width: 560px;
+      margin: 0 auto 26px;
+      color: var(--muted-text);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .stats-hub-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin: 0 0 16px;
+      text-align: left;
+    }
+
+    .stats-card {
+      display: block;
+      text-decoration: none;
+      color: #1a1a1a;
+      background: rgba(255, 253, 248, 0.92);
+      border: 1px solid var(--card-line);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    }
+
+    .stats-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.06);
+      border-color: rgba(212,175,55,0.38);
+    }
+
+    .stats-card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: baseline;
+      margin-bottom: 10px;
+    }
+
+    .stats-card-title { font-size: 18px; font-weight: 900; letter-spacing: -.02em; }
+    .stats-card-copy { color: var(--muted-text); font-size: 13px; line-height: 1.4; margin-bottom: 14px; }
+    .stats-total-chip { font-size: 11px; font-weight: 800; color: #8a8275; background: rgba(255,255,255,.9); border: 1px solid rgba(17,17,17,.08); padding: 4px 8px; border-radius: 999px; }
+    .ladder-list { display: grid; gap: 8px; }
+    .ladder-row { display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; align-items: center; background: rgba(255,255,255,.84); border: 1px solid rgba(17,17,17,.06); border-radius: 12px; padding: 10px 12px; text-decoration: none; color: inherit; }
+    .ladder-rank { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #111; color: #fff; font-size: 12px; font-weight: 900; }
+    .ladder-name { font-size: 14px; font-weight: 800; }
+    .ladder-meta { font-size: 12px; color: var(--muted-text); margin-top: 2px; }
+    .ladder-rating { text-align: right; font-weight: 900; }
+    .ladder-rating small { display: block; color: var(--muted-text); font-size: 11px; font-weight: 700; }
+
+    .insight-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin: 0 0 22px;
+      text-align: left;
+    }
+
+    .insight-card {
+      background: rgba(255, 253, 248, 0.86);
+      border: 1px solid var(--card-line);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    }
+
+    .insight-card strong { display:block; margin-bottom: 6px; }
+    .insight-card span { color: var(--muted-text); font-size: 13px; line-height: 1.45; }
+
+    .vote-zone {
+      margin-top: 12px;
+      padding-top: 22px;
+      border-top: 1px solid rgba(17,17,17,0.08);
+    }
+
+    .vote-zone-head { margin-bottom: 14px; }
+    .vote-zone-title { font-size: 22px; margin: 0 0 6px; letter-spacing: -.03em; }
+    .vote-zone-copy { color: var(--muted-text); font-size: 14px; }
+
+
     @media (max-width: 760px) {
       .page { padding: 24px 14px; }
       .main-card {
@@ -473,7 +566,7 @@
       .list-box { min-height: 138px; padding: 16px 12px; }
       .list-box h2 { margin-bottom: 10px; font-size: 17px; }
       .name-list li { font-size: 13px; }
-      .lists-grid, .public-links-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .lists-grid, .public-links-grid, .stats-hub-grid, .insight-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
       .page-link-card { min-height: 116px; padding: 14px 12px; justify-content:center; }
       .page-link-card.login-link, .page-link-card.request-link, .page-link-card.scorer-link { text-align:center; align-items:center; width:100%; }
       .tiny-page-link { font-size: 11px; }
@@ -497,7 +590,7 @@
     }
 
     @media (max-width: 460px) {
-      .public-links-grid { grid-template-columns:1fr 1fr; gap:8px; }
+      .public-links-grid, .stats-hub-grid, .insight-grid { grid-template-columns:1fr; gap:8px; }
       .page-link-card { min-height:108px; padding:12px 10px; }
       .page-link-label { font-size:15px; }
       .page-link-copy { font-size:12px; }
@@ -529,64 +622,88 @@
         <img src="./logo.png" alt="Logo" class="card-logo" />
       </div>
 
-      <h1>Wordt er gejast donderdag?</h1>
-      <div id="stateWord" class="status-word no">Nee</div>
-      <div id="stateCopy" class="status-sub">0 mensen hebben Ja gezegd</div>
+      <div class="hero-kicker">Statshub</div>
+      <h1>Van geintje naar ranglijst</h1>
+      <div class="hero-intro">Deze homepage draait nu om skill, vorm en rivaliteit. Bovenaan staan de drie ladders, daarna de scoreformulieren, en helemaal onderaan nog steeds de vraag of er donderdag gejast wordt.</div>
 
-      <div id="statusBox" class="status"></div>
+      <section class="stats-hub-grid" aria-label="Top 5 ladders">
+        <a class="stats-card" href="./ladder.html?game=klaverjas">
+          <div class="stats-card-head"><div class="stats-card-title">Klaverjassen</div><div class="stats-total-chip" id="klaverjasPlayersChip">0 spelers</div></div>
+          <div class="stats-card-copy">Top 5 op basis van ELO. Klik door voor de volledige ladder, grafieken en profielen.</div>
+          <div id="klaverjasTop5" class="ladder-list"></div>
+        </a>
+        <a class="stats-card" href="./ladder.html?game=boerenbridge">
+          <div class="stats-card-head"><div class="stats-card-title">Boerenbridge</div><div class="stats-total-chip" id="boerenbridgePlayersChip">0 spelers</div></div>
+          <div class="stats-card-copy">Vrije-voor-allen ladder met een ELO die rekening houdt met plaatsing in het veld.</div>
+          <div id="boerenbridgeTop5" class="ladder-list"></div>
+        </a>
+        <a class="stats-card" href="./ladder.html?game=beerpong">
+          <div class="stats-card-head"><div class="stats-card-title">Beerpong</div><div class="stats-total-chip" id="beerpongPlayersChip">0 spelers</div></div>
+          <div class="stats-card-copy">Openbare ELO met recente uitslagen, stijgers en dalers.</div>
+          <div id="beerpongTop5" class="ladder-list"></div>
+        </a>
+      </section>
 
-      <div class="vote-row">
-        <button class="vote-btn can" id="yesBtn" type="button">Ik kan</button>
-        <button class="vote-btn cant" id="noBtn" type="button">Ik kan niet</button>
-      </div>
-
-      <div class="lists-grid">
-        <div class="list-box legends">
-          <h2>Legends</h2>
-          <ul id="legendsList" class="name-list"></ul>
-        </div>
-        <div class="list-box losers">
-          <h2>Losers</h2>
-          <ul id="losersList" class="name-list"></ul>
-        </div>
-      </div>
+      <section class="insight-grid" aria-label="Waarom deze opzet werkt">
+        <div class="insight-card"><strong>Één plek voor alle skilldata</strong><span>Elke discipline krijgt dezelfde basis: ladder, grafiek, profiel en wedstrijdhistorie.</span></div>
+        <div class="insight-card"><strong>Boerenbridge eerlijker meten</strong><span>Niet alleen winrate, maar ook gemiddelde eindpositie, veldscore en exact-bied-rate maken het profiel zinvoller.</span></div>
+        <div class="insight-card"><strong>Meer rivaliteit</strong><span>Spelerprofielen en live top 5’s maken stijgers, inzinkingen en terugkerende tegenstanders direct zichtbaar.</span></div>
+      </section>
 
       <section class="public-links" aria-label="Sitepagina's">
         <div class="public-links-grid">
-          <a class="page-link-card request-link" href="./request.html">
-            <div class="page-link-label">Naam aanvragen</div>
-            <div class="page-link-copy">Vraag een nieuwe naam aan.</div>
-          </a>
-          <a class="page-link-card login-link" href="./login.html">
-            <div class="page-link-label">Spelerlogin</div>
-            <div class="page-link-copy">Log in om te stemmen.</div>
-          </a>
-        </div>
-        <div class="public-links-grid">
           <a class="page-link-card scorer-link" href="./scorer.html">
-            <div class="page-link-label">Klaverjas Scoreformulier</div>
-            <div class="page-link-copy">Voer een potje in.</div>
+            <div class="page-link-label">Klaverjas invoeren</div>
+            <div class="page-link-copy">Voer een potje in en laat de ELO meteen meebewegen.</div>
           </a>
           <a class="page-link-card scorer-link" href="./boerenbridge.html">
-            <div class="page-link-label">Boerenbridge Scoreformulier</div>
-            <div class="page-link-copy">Houd biedingen, slagen en specials mobiel bij.</div>
+            <div class="page-link-label">Boerenbridge invoeren</div>
+            <div class="page-link-copy">Biedingen, slagen, specials en plaatsingen opslaan.</div>
           </a>
         </div>
         <div class="public-links-grid">
           <a class="page-link-card request-link" href="./beerpong.html">
-            <div class="page-link-label">Beerpong Scoreformulier</div>
-            <div class="page-link-copy">Voer een beerpongwedstrijd in.</div>
+            <div class="page-link-label">Beerpong invoeren</div>
+            <div class="page-link-copy">Nieuwe wedstrijd opslaan en de ladder verversen.</div>
           </a>
-          <a class="page-link-card login-link" href="./beerpong_vault.html">
-            <div class="page-link-label">Beerpong Ranglijst</div>
-            <div class="page-link-copy">Bekijk ELO en uitslagen.</div>
+          <a class="page-link-card login-link" href="./login.html">
+            <div class="page-link-label">Spelerlogin</div>
+            <div class="page-link-copy">Log in voor stemmen, spelen en persoonlijke flows.</div>
           </a>
         </div>
-
-        <div class="tiny-links-row">
-          <a class="tiny-page-link" href="./profiles.html">Spelers</a>
+        <div class="public-links-grid">
+          <a class="page-link-card request-link" href="./request.html">
+            <div class="page-link-label">Naam aanvragen</div>
+            <div class="page-link-copy">Nieuwe speler toevoegen aan het systeem.</div>
+          </a>
+          <a class="page-link-card login-link" href="./profiles.html">
+            <div class="page-link-label">Spelers</div>
+            <div class="page-link-copy">Overzicht van profielen, badges en speldata.</div>
+          </a>
         </div>
-
+        <div class="vote-zone">
+          <div class="vote-zone-head">
+            <div class="hero-kicker">Onderaan, maar nog steeds belangrijk</div>
+            <h2 class="vote-zone-title">Wordt er gejast donderdag?</h2>
+            <div id="stateCopy" class="vote-zone-copy">0 mensen hebben Ja gezegd</div>
+          </div>
+          <div id="stateWord" class="status-word no">Nee</div>
+          <div id="statusBox" class="status"></div>
+          <div class="vote-row">
+            <button class="vote-btn can" id="yesBtn" type="button">Ik kan</button>
+            <button class="vote-btn cant" id="noBtn" type="button">Ik kan niet</button>
+          </div>
+          <div class="lists-grid">
+            <div class="list-box legends">
+              <h2>Legends</h2>
+              <ul id="legendsList" class="name-list"></ul>
+            </div>
+            <div class="list-box losers">
+              <h2>Losers</h2>
+              <ul id="losersList" class="name-list"></ul>
+            </div>
+          </div>
+        </div>
       </section>
 
       <div style="display:none;">
@@ -863,6 +980,39 @@
         setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
       }
     }
+
+    function renderTopFive(gameKey, rows) {
+      const root = document.getElementById(`${gameKey}Top5`);
+      if (!root) return;
+      if (!rows || !rows.length) { root.innerHTML = '<div class="ladder-meta">Nog geen data.</div>'; return; }
+      root.innerHTML = rows.map((row, idx) => `
+        <a class="ladder-row" href="./player.html?game=${encodeURIComponent(gameKey)}&player=${encodeURIComponent(row.player_name)}">
+          <div class="ladder-rank">${idx + 1}</div>
+          <div><div class="ladder-name">${escapeHtml(row.player_name || 'Onbekend')}</div><div class="ladder-meta">${row.games_played || 0} potjes · ${row.wins || 0} winst</div></div>
+          <div class="ladder-rating">${Math.round(Number(row.rating || 1000))}<small>ELO</small></div>
+        </a>
+      `).join('');
+    }
+
+    async function loadStatsHub() {
+      try {
+        const data = await callRpc('get_stats_hub_homepage', {});
+        const top = data?.top_five || {};
+        const totals = data?.totals || {};
+        ['klaverjas','boerenbridge','beerpong'].forEach((gameKey) => {
+          renderTopFive(gameKey, top[gameKey] || []);
+          const chip = document.getElementById(`${gameKey}PlayersChip`);
+          if (chip) {
+            const players = totals?.[gameKey]?.players ?? 0;
+            const avg = totals?.[gameKey]?.avg_rating ?? 1000;
+            chip.textContent = `${players} spelers · avg ${Math.round(Number(avg || 1000))}`;
+          }
+        });
+      } catch (error) {
+        ['klaverjas','boerenbridge','beerpong'].forEach((gameKey) => renderTopFive(gameKey, []));
+      }
+    }
+
     async function load() {
       try { await ensureAdminViewer(); renderState(await getHomepageState()); setStatus(''); }
       catch (error) {
@@ -876,6 +1026,7 @@
     }
     document.getElementById('yesBtn').addEventListener('click', () => handleVote('ja'));
     document.getElementById('noBtn').addEventListener('click', () => handleVote('nee'));
+    loadStatsHub();
     load();
   </script>
 
