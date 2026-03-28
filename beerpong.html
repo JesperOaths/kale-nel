@@ -55,7 +55,7 @@
       <div class="top">
         <div>
           <h1>Beerpong Scoreformulier</h1>
-          <div class="sub">Maak een wedstrijd aan en bekijk de openbare ELO-ranglijst.</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"><a href="./beerpong_vault.html" style="font-weight:800;color:#554e43;text-decoration:none">Beerpong Kluis</a><a href="./match_control.html?game=beerpong" style="font-weight:800;color:#554e43;text-decoration:none">Recente matches bewerken</a><a href="./index.html" style="font-weight:800;color:#554e43;text-decoration:none">Home</a></div>
+          <div class="sub">Maak een wedstrijd aan en bekijk de openbare ELO-ranglijst.</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"><a href="./beerpong_vault.html" style="font-weight:800;color:#554e43;text-decoration:none">Beerpong Kluis</a><a href="./index.html" style="font-weight:800;color:#554e43;text-decoration:none">Home</a></div>
         </div>
         <img src="./logo.png" alt="Logo" class="logo" />
       </div>
@@ -73,18 +73,15 @@
               </select>
             </div>
             <div class="field">
-              <label for="winnerInput">Winnend team</label>
-              <select id="winnerInput">
-                <option value="team_a">Team A</option>
-                <option value="team_b">Team B</option>
-              </select>
+              <label>Uitslag</label>
+              <div style="padding:12px 14px;border:1px dashed rgba(17,17,17,0.18);border-radius:16px;background:#fffbef;color:#554e43;font-weight:700;line-height:1.35">Team met <strong>10 bekers raak</strong> wint automatisch.</div>
             </div>
             <div class="field"><label for="teamA1">Team A · Speler 1</label><select id="teamA1"></select></div>
             <div class="field"><label for="teamB1">Team B · Speler 1</label><select id="teamB1"></select></div>
             <div class="field duo"><label for="teamA2">Team A · Speler 2</label><select id="teamA2"></select></div>
             <div class="field duo"><label for="teamB2">Team B · Speler 2</label><select id="teamB2"></select></div>
-            <div class="field"><label for="cupsA">Bekers over team A</label><input id="cupsA" type="number" min="0" max="10" step="1" value="0" /></div>
-            <div class="field"><label for="cupsB">Bekers over team B</label><input id="cupsB" type="number" min="0" max="10" step="1" value="0" /></div>
+            <div class="field"><label for="cupsA">Bekers raak team A</label><input id="cupsA" type="number" min="0" max="10" step="1" value="0" /></div>
+            <div class="field"><label for="cupsB">Bekers raak team B</label><input id="cupsB" type="number" min="0" max="10" step="1" value="0" /></div>
             <div class="field full"><label for="notesInput">Notitie</label><textarea id="notesInput" placeholder="Korte notitie"></textarea></div>
           </div>
           <div class="actions">
@@ -109,7 +106,7 @@
       </div>
     </section>
   </main>
-  <div class="watermark" data-version-watermark>v129 · Made by Bruis</div>
+  <div class="watermark">v121 · Made by Bruis</div>
 
   <script>
     const CFG = window.GEJAST_CONFIG || {};
@@ -118,7 +115,7 @@
     const SESSION_KEY = 'jas_session_token_v11';
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
     const els = {
-      formatInput: document.getElementById('formatInput'), winnerInput: document.getElementById('winnerInput'),
+      formatInput: document.getElementById('formatInput'),
       teamA1: document.getElementById('teamA1'), teamA2: document.getElementById('teamA2'), teamB1: document.getElementById('teamB1'), teamB2: document.getElementById('teamB2'),
       cupsA: document.getElementById('cupsA'), cupsB: document.getElementById('cupsB'), notesInput: document.getElementById('notesInput'), saveBtn: document.getElementById('saveBtn'), resetBtn: document.getElementById('resetBtn'),
       formStatus: document.getElementById('formStatus'), sessionPill: document.getElementById('sessionPill'), leaderboard: document.getElementById('leaderboard'), recentMatches: document.getElementById('recentMatches'),
@@ -157,19 +154,26 @@
       if(vals.length !== fields.length) return 'Kies alle spelers.';
       if((new Set(vals)).size !== vals.length) return 'Elke speler mag maar één keer gekozen worden.';
       const a = Number(els.cupsA.value||0), b = Number(els.cupsB.value||0);
-      if(a<0||a>10||b<0||b>10) return 'Bekers moeten tussen 0 en 10 liggen.';
+      if(a<0||a>10||b<0||b>10) return 'Bekers raak moeten tussen 0 en 10 liggen.';
+      if(a === 10 && b === 10) return 'Niet allebei 10: er kan maar één winnaar zijn.';
+      if(a !== 10 && b !== 10) return 'Eén team moet precies 10 bekers raak hebben.';
       return '';
     }
     async function saveMatch(){
       const validation = validateForm(); if(validation) return setStatus(validation,true);
       const format=els.formatInput.value;
+      const cupsHitA = Number(els.cupsA.value||0);
+      const cupsHitB = Number(els.cupsB.value||0);
+      const winnerTeam = cupsHitA === 10 ? 'team_a' : 'team_b';
       const payload = {
         status:'finished', format,
         team_a_player_ids: format==='2v2' ? [Number(els.teamA1.value), Number(els.teamA2.value)] : [Number(els.teamA1.value)],
         team_b_player_ids: format==='2v2' ? [Number(els.teamB1.value), Number(els.teamB2.value)] : [Number(els.teamB1.value)],
-        winner_team: els.winnerInput.value,
-        cups_left_team_a: Number(els.cupsA.value||0),
-        cups_left_team_b: Number(els.cupsB.value||0),
+        winner_team: winnerTeam,
+        cups_left_team_a: Math.max(0, 10 - cupsHitB),
+        cups_left_team_b: Math.max(0, 10 - cupsHitA),
+        cups_hit_team_a: cupsHitA,
+        cups_hit_team_b: cupsHitB,
         notes: els.notesInput.value.trim(),
         finished_at: new Date().toISOString()
       };
@@ -194,7 +198,7 @@
       els.recentMatches.innerHTML = recent.length ? recent.map((m)=>`<div class="recent"><strong>${(m.winner_names||[]).join(' + ') || 'Onbekend'}</strong> won van ${(m.loser_names||[]).join(' + ') || 'Onbekend'}<div class="meta">${m.finished_at_local || m.finished_at || ''}</div></div>`).join('') : '<div class="recent">Nog geen gespeelde potjes.</div>';
     }
     function updateSessionPill(){ els.sessionPill.textContent = getSessionToken() ? 'Spelersessie gevonden' : 'Niet ingelogd'; }
-    function resetForm(){ [els.teamA1, els.teamA2, els.teamB1, els.teamB2].forEach(x=>x.value=''); els.winnerInput.value='team_a'; els.cupsA.value='0'; els.cupsB.value='0'; els.notesInput.value=''; setStatus(''); }
+    function resetForm(){ [els.teamA1, els.teamA2, els.teamB1, els.teamB2].forEach(x=>x.value=''); els.cupsA.value='0'; els.cupsB.value='0'; els.notesInput.value=''; setStatus(''); }
     els.formatInput.addEventListener('change', applyFormat);
     els.saveBtn.addEventListener('click', saveMatch);
     els.resetBtn.addEventListener('click', resetForm);
