@@ -686,6 +686,19 @@
       }).join('');
     }
 
+    async function fetchHomepageLadderFallback() {
+      const games = ['klaverjas','boerenbridge','beerpong'];
+      const out = {};
+      for (const game of games) {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_ladder_page`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ game_key: game }) });
+        const data = await parseResponse(res);
+        const payload = (Array.isArray(data) ? data[0] : data) || {};
+        const source = payload.get_public_ladder_page || payload;
+        out[game] = Array.isArray(source?.ladder) ? source.ladder.slice(0,5) : [];
+      }
+      return out;
+    }
+
     async function loadHomepageLadders() {
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_homepage_ladders_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({}) });
@@ -693,8 +706,15 @@
         renderHomepageLadders(data || {});
         setHomepageLiveState('live', 'Live');
       } catch (err) {
-        console.warn('Homepage ladders offline', err);
-        setHomepageLiveState('standby', 'Offline');
+        console.warn('Homepage ladders primary RPC failed, trying fallback', err);
+        try {
+          const fallback = await fetchHomepageLadderFallback();
+          renderHomepageLadders(fallback || {});
+          setHomepageLiveState('live', 'Live');
+        } catch (fallbackErr) {
+          console.warn('Homepage ladders offline', fallbackErr);
+          setHomepageLiveState('standby', 'Offline');
+        }
       }
     }
 
