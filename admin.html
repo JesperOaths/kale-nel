@@ -308,7 +308,9 @@
     document.addEventListener('visibilitychange', () => { if (!document.hidden && !document.getElementById('hubView').classList.contains('hidden')) loadCounts().catch(() => {}); });
   </script>
 
-  <div class="site-credit-watermark">v121 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v121 · Made by Bruis</div>
   <script src="./site-analytics.js"></script>
+
+<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>

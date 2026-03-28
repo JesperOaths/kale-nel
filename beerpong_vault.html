@@ -27,7 +27,7 @@
   <section class="card" style="margin-top:16px"><h2>Leuke stats</h2><div id="funStats" class="fun-grid"></div></section>
   <section class="card" style="margin-top:16px"><h2>Recente wedstrijden</h2><div id="recentMatches" class="recent-list"></div></section>
 </main></div>
-<div class="site-credit-watermark">v121 · Made by Bruis</div>
+<div class="site-credit-watermark" data-version-watermark>v121 · Made by Bruis</div>
 <script>
 const CFG=window.GEJAST_CONFIG||{}; const SUPABASE_URL=CFG.SUPABASE_URL; const SUPABASE_PUBLISHABLE_KEY=CFG.SUPABASE_PUBLISHABLE_KEY;
 function rpcHeaders(){return {apikey:SUPABASE_PUBLISHABLE_KEY,'Content-Type':'application/json',Accept:'application/json'}}
@@ -42,5 +42,7 @@ function applySummary(summary){document.getElementById('sumPlayers').textContent
 async function loadVault(){try{const data=await callRpc('get_beerpong_vault_public',{limit_count:10}); renderBoard(data.leaderboard||[]); renderRecent(data.recent_matches||[]); renderFun(data.fun_stats||{}); drawLineChart(data.elo_histories||[]); applySummary(data.summary||{});}catch(e){document.getElementById('leaderboard').innerHTML=`<div class="empty">${esc(e.message||'Kon beerpongdata niet laden.')}</div>`;}}
 loadVault();
 </script>
+
+<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>

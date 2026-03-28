@@ -411,7 +411,7 @@
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
-    <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
+    <div class="brand-watermark" data-version-watermark><img src="./dubbeleD-goud.png" alt="" /></div>
     <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
   </div>
 
@@ -474,7 +474,7 @@
     </div>
   </div>
 
-  <div id="versionWatermark" class="site-credit-watermark">v121 · Made by Bruis</div>
+  <div id="versionWatermark" class="site-credit-watermark" data-version-watermark>v121 · Made by Bruis</div>
 
   <script>
     const CONFIG = window.GEJAST_CONFIG || {};
@@ -871,5 +871,7 @@
 </script>
 
   <script src="./site-analytics.js"></script>
+
+<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>
