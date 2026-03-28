@@ -506,31 +506,18 @@
     .stats-card-copy { color: var(--muted-text); font-size: 13px; line-height: 1.4; margin-bottom: 14px; }
     .stats-total-chip { font-size: 11px; font-weight: 800; color: #8a8275; background: rgba(255,255,255,.9); border: 1px solid rgba(17,17,17,.08); padding: 4px 8px; border-radius: 999px; }
     .ladder-list { display: grid; gap: 8px; }
-    .ladder-row { display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; align-items: center; background: rgba(255,255,255,.84); border: 1px solid rgba(17,17,17,.06); border-radius: 12px; padding: 10px 12px; text-decoration: none; color: inherit; }
+    .ladder-row { display: grid; grid-template-columns: 30px minmax(0,1fr) auto; gap: 10px; align-items: center; background: rgba(255,255,255,.84); border: 1px solid rgba(17,17,17,.06); border-radius: 12px; padding: 10px 12px; text-decoration: none; color: inherit; }
     .ladder-rank { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #111; color: #fff; font-size: 12px; font-weight: 900; }
+    .ladder-name-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
     .ladder-name { font-size: 14px; font-weight: 800; }
     .ladder-meta { font-size: 12px; color: var(--muted-text); margin-top: 2px; }
+    .ladder-badges { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:6px; }
+    .ladder-badge { font-size:10px; font-weight:900; letter-spacing:.02em; border-radius:999px; padding:4px 7px; border:1px solid rgba(17,17,17,.08); background:rgba(255,255,255,.95); color:#5f5b53; }
+    .ladder-badge.up { color:#0d6b3c; border-color:rgba(28,168,91,.24); background:rgba(28,168,91,.08); }
+    .ladder-badge.down { color:#a14b0f; border-color:rgba(196,116,39,.24); background:rgba(196,116,39,.10); }
+    .ladder-badge.neutral { color:#6d665b; }
     .ladder-rating { text-align: right; font-weight: 900; }
     .ladder-rating small { display: block; color: var(--muted-text); font-size: 11px; font-weight: 700; }
-
-    .insight-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-      margin: 0 0 22px;
-      text-align: left;
-    }
-
-    .insight-card {
-      background: rgba(255, 253, 248, 0.86);
-      border: 1px solid var(--card-line);
-      border-radius: 16px;
-      padding: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-    }
-
-    .insight-card strong { display:block; margin-bottom: 6px; }
-    .insight-card span { color: var(--muted-text); font-size: 13px; line-height: 1.45; }
 
     .vote-zone {
       margin-top: 12px;
@@ -538,9 +525,10 @@
       border-top: 1px solid rgba(17,17,17,0.08);
     }
 
-    .vote-zone-head { margin-bottom: 14px; }
-    .vote-zone-title { font-size: 22px; margin: 0 0 6px; letter-spacing: -.03em; }
-    .vote-zone-copy { color: var(--muted-text); font-size: 14px; }
+    .vote-zone-head { margin-bottom: 14px; text-align: center; }
+    .vote-zone-title { font-size: 22px; margin: 0 0 6px; letter-spacing: -.03em; text-align: center; }
+    .vote-zone-copy { color: var(--muted-text); font-size: 14px; text-align: center; }
+    .vote-zone #stateWord { text-align: center; margin-left: auto; margin-right: auto; }
 
 
     @media (max-width: 760px) {
@@ -624,30 +612,24 @@
 
       <div class="hero-kicker">Statshub</div>
       <h1>Van geintje naar ranglijst</h1>
-      <div class="hero-intro">Deze homepage draait nu om skill, vorm en rivaliteit. Bovenaan staan de drie ladders, daarna de scoreformulieren, en helemaal onderaan nog steeds de vraag of er donderdag gejast wordt.</div>
+      <div class="hero-intro">Deze homepage draait nu om live rankings en speldata. Hieronder staan drie live top 5 ELO-ladders: Klaverjassen, Boerenbridge en Beerpong. Klik een ladder open voor de volledige ranking, grafieken en spelerprofielen.</div>
 
       <section class="stats-hub-grid" aria-label="Top 5 ladders">
         <a class="stats-card" href="./ladder.html?game=klaverjas">
-          <div class="stats-card-head"><div class="stats-card-title">Klaverjassen</div><div class="stats-total-chip" id="klaverjasPlayersChip">0 spelers</div></div>
+          <div class="stats-card-head"><div class="stats-card-title-wrap"><div class="stats-card-title">Klaverjassen</div><div class="live-badge"><span class="live-dot"></span>Live</div></div><div class="stats-total-chip" id="klaverjasPlayersChip">0 spelers</div></div>
           <div class="stats-card-copy">Top 5 op basis van ELO. Klik door voor de volledige ladder, grafieken en profielen.</div>
           <div id="klaverjasTop5" class="ladder-list"></div>
         </a>
         <a class="stats-card" href="./ladder.html?game=boerenbridge">
-          <div class="stats-card-head"><div class="stats-card-title">Boerenbridge</div><div class="stats-total-chip" id="boerenbridgePlayersChip">0 spelers</div></div>
+          <div class="stats-card-head"><div class="stats-card-title-wrap"><div class="stats-card-title">Boerenbridge</div><div class="live-badge"><span class="live-dot"></span>Live</div></div><div class="stats-total-chip" id="boerenbridgePlayersChip">0 spelers</div></div>
           <div class="stats-card-copy">Vrije-voor-allen ladder met een ELO die rekening houdt met plaatsing in het veld.</div>
           <div id="boerenbridgeTop5" class="ladder-list"></div>
         </a>
         <a class="stats-card" href="./ladder.html?game=beerpong">
-          <div class="stats-card-head"><div class="stats-card-title">Beerpong</div><div class="stats-total-chip" id="beerpongPlayersChip">0 spelers</div></div>
+          <div class="stats-card-head"><div class="stats-card-title-wrap"><div class="stats-card-title">Beerpong</div><div class="live-badge"><span class="live-dot"></span>Live</div></div><div class="stats-total-chip" id="beerpongPlayersChip">0 spelers</div></div>
           <div class="stats-card-copy">Openbare ELO met recente uitslagen, stijgers en dalers.</div>
           <div id="beerpongTop5" class="ladder-list"></div>
         </a>
-      </section>
-
-      <section class="insight-grid" aria-label="Waarom deze opzet werkt">
-        <div class="insight-card"><strong>Één plek voor alle skilldata</strong><span>Elke discipline krijgt dezelfde basis: ladder, grafiek, profiel en wedstrijdhistorie.</span></div>
-        <div class="insight-card"><strong>Boerenbridge eerlijker meten</strong><span>Niet alleen winrate, maar ook gemiddelde eindpositie, veldscore en exact-bied-rate maken het profiel zinvoller.</span></div>
-        <div class="insight-card"><strong>Meer rivaliteit</strong><span>Spelerprofielen en live top 5’s maken stijgers, inzinkingen en terugkerende tegenstanders direct zichtbaar.</span></div>
       </section>
 
       <section class="public-links" aria-label="Sitepagina's">
@@ -981,15 +963,46 @@
       }
     }
 
-    function renderTopFive(gameKey, rows) {
+    function formatSince(value) {
+      if (!value) return 'nog niet bijgewerkt';
+      const diffMs = Date.now() - new Date(value).getTime();
+      if (!Number.isFinite(diffMs)) return 'zojuist';
+      const mins = Math.max(0, Math.round(diffMs / 60000));
+      if (mins < 1) return 'zojuist';
+      if (mins < 60) return `${mins} min geleden`;
+      const hours = Math.round(mins / 60);
+      if (hours < 24) return `${hours} u geleden`;
+      const days = Math.round(hours / 24);
+      return `${days} d geleden`;
+    }
+
+    function renderRankDelta(value) {
+      const n = Number(value || 0);
+      if (n > 0) return `<span class="ladder-badge up">↑ ${n} plek${n === 1 ? '' : 'ken'}</span>`;
+      if (n < 0) return `<span class="ladder-badge down">↓ ${Math.abs(n)} plek${Math.abs(n) === 1 ? '' : 'ken'}</span>`;
+      return '<span class="ladder-badge neutral">→ zelfde plek</span>';
+    }
+
+    function renderStreak(value) {
+      const n = Number(value || 0);
+      if (n > 0) return `<span class="ladder-badge up">🔥 ${n} omhoog</span>`;
+      if (n < 0) return `<span class="ladder-badge down">🥶 ${Math.abs(n)} omlaag</span>`;
+      return '<span class="ladder-badge neutral">• rustig</span>';
+    }
+
+    function renderTopFive(gameKey, rows, meta = {}) {
       const root = document.getElementById(`${gameKey}Top5`);
       if (!root) return;
       if (!rows || !rows.length) { root.innerHTML = '<div class="ladder-meta">Nog geen data.</div>'; return; }
       root.innerHTML = rows.map((row, idx) => `
         <a class="ladder-row" href="./player.html?game=${encodeURIComponent(gameKey)}&player=${encodeURIComponent(row.player_name)}">
           <div class="ladder-rank">${idx + 1}</div>
-          <div><div class="ladder-name">${escapeHtml(row.player_name || 'Onbekend')}</div><div class="ladder-meta">${row.games_played || 0} potjes · ${row.wins || 0} winst</div></div>
-          <div class="ladder-rating">${Math.round(Number(row.rating || 1000))}<small>ELO</small></div>
+          <div>
+            <div class="ladder-name-row"><div class="ladder-name">${escapeHtml(row.player_name || 'Onbekend')}</div></div>
+            <div class="ladder-meta">${row.games_played || 0} potjes · ${row.wins || 0} winst · bijgewerkt ${formatSince(meta.last_updated_at)}</div>
+            <div class="ladder-badges">${renderRankDelta(row.rank_delta)}${renderStreak(row.streak)}</div>
+          </div>
+          <div class="ladder-rating">${Math.round(Number(row.rating || 1000))}<small>${Number(row.latest_delta || 0) >= 0 ? '+' : ''}${Math.round(Number(row.latest_delta || 0))} laatst</small></div>
         </a>
       `).join('');
     }
@@ -1000,12 +1013,12 @@
         const top = data?.top_five || {};
         const totals = data?.totals || {};
         ['klaverjas','boerenbridge','beerpong'].forEach((gameKey) => {
-          renderTopFive(gameKey, top[gameKey] || []);
+          renderTopFive(gameKey, top[gameKey] || [], totals?.[gameKey] || {});
           const chip = document.getElementById(`${gameKey}PlayersChip`);
           if (chip) {
             const players = totals?.[gameKey]?.players ?? 0;
             const avg = totals?.[gameKey]?.avg_rating ?? 1000;
-            chip.textContent = `${players} spelers · avg ${Math.round(Number(avg || 1000))}`;
+            chip.textContent = `${players} spelers · avg ${Math.round(Number(avg || 1000))} · ${formatSince(totals?.[gameKey]?.last_updated_at)}`;
           }
         });
       } catch (error) {
@@ -1030,7 +1043,7 @@
     load();
   </script>
 
-  <div class="site-credit-watermark">v121 · Made by Bruis</div>
+  <div class="site-credit-watermark">v127 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
