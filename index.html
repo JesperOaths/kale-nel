@@ -482,7 +482,8 @@
       .page-link-label { font-size:15px; }
       .page-link-copy { font-size:12px; }
       .page-link-card.login-link, .page-link-card.request-link, .page-link-card.scorer-link { align-items:center; text-align:center; width:100%; }
-      .page-link-plus { width:46px; height:46px; }
+      .page-link-plus { width:12px; height:12px; }
+      .ladder-grid { grid-template-columns:1fr; }
     }
   </style>
 
@@ -509,6 +510,18 @@
       <div class="card-top-right">
         <img src="./logo.png" alt="Logo" class="card-logo" />
       </div>
+
+            <section class="ladder-section" aria-label="Live ladders">
+        <div class="ladder-head">
+          <h2>Live ranglijsten</h2>
+          <div id="homeLivePill" class="live-pill standby">Stand-by</div>
+        </div>
+        <div id="ladderGrid" class="ladder-grid">
+          <div class="ladder-card"><div class="ladder-title"><strong>Klaverjassen</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
+          <div class="ladder-card"><div class="ladder-title"><strong>Boerenbridge</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
+          <div class="ladder-card"><div class="ladder-title"><strong>Beerpong</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
+        </div>
+      </section>
 
       <section class="public-links" aria-label="Sitepagina's">
         <div class="public-links-grid">
@@ -605,6 +618,42 @@
       return isAdminViewer;
     }
     let currentHomepageState = null;
+    const HOMEPAGE_LADDER_ROUTES = { klaverjas:'./leaderboard.html', boerenbridge:'./boerenbridge_vault.html', beerpong:'./beerpong_vault.html' };
+
+    function setHomepageLiveState(state='standby', text='Stand-by') {
+      const pill = document.getElementById('homeLivePill');
+      if (!pill) return;
+      pill.className = `live-pill ${state}`;
+      pill.textContent = text;
+    }
+
+    function renderHomepageLadders(payload) {
+      const root = document.getElementById('ladderGrid');
+      if (!root) return;
+      const groups = [
+        { key:'klaverjas', label:'Klaverjassen', rows: payload?.klaverjas || [] },
+        { key:'boerenbridge', label:'Boerenbridge', rows: payload?.boerenbridge || [] },
+        { key:'beerpong', label:'Beerpong', rows: payload?.beerpong || [] }
+      ];
+      root.innerHTML = groups.map((group) => {
+        const rows = Array.isArray(group.rows) ? group.rows : [];
+        const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><div class="ladder-name">${String(row.player_name || row.display_name || 'Onbekend')}</div><div class="ladder-elo">${Math.round(Number(row.elo_rating || row.rating || 1000))}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen ladderdata.</div>';
+        return `<a class="ladder-card" href="${HOMEPAGE_LADDER_ROUTES[group.key]}"><div class="ladder-title"><strong>${group.label}</strong><span>Top 5</span></div>${body}</a>`;
+      }).join('');
+    }
+
+    async function loadHomepageLadders() {
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_homepage_ladders_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({}) });
+        const data = await parseResponse(res);
+        renderHomepageLadders(data || {});
+        setHomepageLiveState('live', 'Live');
+      } catch (err) {
+        console.warn('Homepage ladders offline', err);
+        setHomepageLiveState('standby', 'Stand-by');
+      }
+    }
+
     let removingVote = false;
     let removingAdminVote = false;
     let isAdminViewer = false;

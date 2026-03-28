@@ -124,6 +124,7 @@
     function getSessionToken(){ return localStorage.getItem(SESSION_KEY) || ''; }
     function setStatus(msg,isError=true){ els.formStatus.style.color=isError?'#8a2d1f':'#1f7a44'; els.formStatus.textContent=msg||''; }
     function uniqByValue(items){ const seen=new Set(); return items.filter(x=>{ const v=String(x?.value||''); if(!v||seen.has(v)) return false; seen.add(v); return true;}); }
+    const DEFAULT_DUMMY_PLAYERS = [{ value:'Anna', label:'Anna' },{ value:'Bram', label:'Bram' },{ value:'Caro', label:'Caro' },{ value:'Daan', label:'Daan' }];
     function normalizeNames(payload){
       let rows=[];
       if(Array.isArray(payload)) rows=payload;
@@ -134,7 +135,8 @@
     async function loadNames(){
       const { data, error } = await sb.rpc('get_login_names');
       if(error) throw error;
-      const options = uniqByValue(normalizeNames(data));
+      const normalized = normalizeNames(data);
+      const options = uniqByValue(normalized.length ? normalized : DEFAULT_DUMMY_PLAYERS);
       [els.teamA1, els.teamA2, els.teamB1, els.teamB2].forEach((sel)=>{
         const prev=sel.value; sel.innerHTML='<option value="">Kies speler</option>' + options.map(o=>`<option value="${o.value}">${o.label}</option>`).join(''); if(prev) sel.value=prev;
       });
@@ -165,10 +167,14 @@
       const cupsHitA = Number(els.cupsA.value||0);
       const cupsHitB = Number(els.cupsB.value||0);
       const winnerTeam = cupsHitA === 10 ? 'team_a' : 'team_b';
+      const teamASelectors = format==='2v2' ? [els.teamA1, els.teamA2] : [els.teamA1];
+      const teamBSelectors = format==='2v2' ? [els.teamB1, els.teamB2] : [els.teamB1];
       const payload = {
         status:'finished', format,
-        team_a_player_ids: format==='2v2' ? [Number(els.teamA1.value), Number(els.teamA2.value)] : [Number(els.teamA1.value)],
-        team_b_player_ids: format==='2v2' ? [Number(els.teamB1.value), Number(els.teamB2.value)] : [Number(els.teamB1.value)],
+        team_a_player_ids: teamASelectors.map((sel)=> sel.value).filter(Boolean),
+        team_b_player_ids: teamBSelectors.map((sel)=> sel.value).filter(Boolean),
+        team_a_player_names: teamASelectors.map((sel)=> sel.options[sel.selectedIndex]?.textContent || sel.value).filter(Boolean),
+        team_b_player_names: teamBSelectors.map((sel)=> sel.options[sel.selectedIndex]?.textContent || sel.value).filter(Boolean),
         winner_team: winnerTeam,
         cups_left_team_a: Math.max(0, 10 - cupsHitB),
         cups_left_team_b: Math.max(0, 10 - cupsHitA),

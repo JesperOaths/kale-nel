@@ -429,7 +429,7 @@
     const PLAYERS_KEY = 'vault_players_v67';
     const SUPABASE_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
-    const DEFAULT_NAMES = [];
+    const DEFAULT_NAMES = ['Anna','Bram','Caro','Daan'];
 
     function normalizeDisplayName(name) {
       return String(name || '').replace(/\s+/g, ' ').trim();
@@ -515,7 +515,7 @@
           if (names.length) return names;
         } catch {}
       }
-      return [];
+      return DEFAULT_NAMES.slice();
     }
 
     let knownPlayersCache = DEFAULT_NAMES.slice();

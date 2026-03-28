@@ -16,9 +16,10 @@
   async function parse(res){ const txt=await res.text(); let data=null; try{ data=txt?JSON.parse(txt):null; }catch{ throw new Error(txt||`HTTP ${res.status}`); } if(!res.ok) throw new Error(data?.message||data?.error||data?.hint||`HTTP ${res.status}`); return data; }
   function fingerprint(){ const p=[navigator.userAgent||'', navigator.language||'', Intl.DateTimeFormat().resolvedOptions().timeZone||'', String(screen?.width||0), String(screen?.height||0), navigator.platform||'']; return p.join('|').slice(0,500); }
   function addLogout(){ if(document.getElementById('globalAdminLogoutBtn')) return; const btn=document.createElement('button'); btn.id='globalAdminLogoutBtn'; btn.textContent='Uitloggen'; btn.style.cssText='position:fixed;top:14px;right:14px;z-index:10001;background:#111;color:#fff;border:1px solid rgba(212,175,55,.35);border-radius:14px;padding:10px 14px;font:700 14px/1 Inter,system-ui,sans-serif;box-shadow:0 10px 24px rgba(0,0,0,.18);cursor:pointer;'; btn.onclick=()=>{ clearAll(); window.location.href='./admin.html'; }; document.body.appendChild(btn); }
+  function redirectToAdmin(reason='device_required'){ const here=encodeURIComponent(window.location.pathname.split('/').pop() + window.location.search + window.location.hash); window.location.href=`./admin.html?reason=${encodeURIComponent(reason)}&return_to=${here}`; }
   async function gate(){
     const t=token(), d=device(), u=username();
-    if(!t || !d || !u || (deadline() && Date.now()>deadline())){ clearAll(); window.location.href='./admin.html?reason=device_required'; return; }
+    if(!t || !d || !u || (deadline() && Date.now()>deadline())){ clearAll(); redirectToAdmin('device_required'); return; }
     try {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session_with_device`, { method:'POST', mode:'cors', cache:'no-store', headers: headers(), body: JSON.stringify({ admin_session_token:t, admin_username:u, raw_device_token:d, device_fingerprint:fingerprint() }) });
       const data = await parse(res);
@@ -28,9 +29,9 @@
     } catch(err){
       console.warn('Admin gate blocked page', err);
       clearAll();
-      window.location.href='./admin.html?reason=device_required';
+      redirectToAdmin('device_required');
     }
   }
-  window.GEJAST_ADMIN_DEVICE = { fingerprint, clearAll, setSession };
+  window.GEJAST_ADMIN_DEVICE = { fingerprint, clearAll, setSession, ensure: gate };
   window.addEventListener('DOMContentLoaded', gate);
 })();
