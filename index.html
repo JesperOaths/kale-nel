@@ -396,9 +396,7 @@
       transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
       text-align:center;
     }
-    .page-link-card.login-link { text-align:right; }
-    .page-link-card.request-link { text-align:left; }
-    .page-link-card.scorer-link { width:min(360px, 100%); }
+    .page-link-card.login-link, .page-link-card.request-link, .page-link-card.scorer-link { text-align:center; align-items:center; width:100%; }
 
     .page-link-card:hover {
       transform: translateY(-1px);
@@ -433,6 +431,25 @@
       letter-spacing: .03em;
     }
 
+    .tiny-links-row {
+      margin-top: 2px;
+      text-align: center;
+    }
+
+    .tiny-page-link {
+      display: inline-block;
+      font-size: 12px;
+      line-height: 1.2;
+      color: var(--muted-text);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      opacity: 0.9;
+    }
+
+    .tiny-page-link:hover {
+      color: #1a1a1a;
+    }
+
     @media (max-width: 760px) {
       .page { padding: 24px 14px; }
       .main-card {
@@ -458,10 +475,8 @@
       .name-list li { font-size: 13px; }
       .lists-grid, .public-links-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
       .page-link-card { min-height: 116px; padding: 14px 12px; justify-content:center; }
-      .page-link-card.login-link { text-align:right; }
-      .page-link-card.request-link { text-align:left; }
-      .page-link-card.scorer-link { width: 100%; }
-      .scorer-link-row { margin-top: 2px; }
+      .page-link-card.login-link, .page-link-card.request-link, .page-link-card.scorer-link { text-align:center; align-items:center; width:100%; }
+      .tiny-page-link { font-size: 11px; }
       .site-scene .left-hand {
         width: min(48vw, 260px);
         left: 7%;
@@ -486,9 +501,7 @@
       .page-link-card { min-height:108px; padding:12px 10px; }
       .page-link-label { font-size:15px; }
       .page-link-copy { font-size:12px; }
-      .page-link-card.login-link { align-items:flex-end; text-align:right; }
-      .page-link-card.request-link { align-items:flex-start; text-align:left; }
-      .page-link-card.scorer-link { align-items:center; text-align:center; }
+      .page-link-card.login-link, .page-link-card.request-link, .page-link-card.scorer-link { align-items:center; text-align:center; width:100%; }
     }
   </style>
 
@@ -540,49 +553,38 @@
 
       <section class="public-links" aria-label="Sitepagina's">
         <div class="public-links-grid">
-          <a class="page-link-card login-link" href="./login.html">
-            <div class="page-link-label">Spelerlogin</div>
-            <div class="page-link-copy">Log in om te stemmen.</div>
-          </a>
           <a class="page-link-card request-link" href="./request.html">
             <div class="page-link-label">Naam aanvragen</div>
             <div class="page-link-copy">Vraag een nieuwe naam aan.</div>
           </a>
+          <a class="page-link-card login-link" href="./login.html">
+            <div class="page-link-label">Spelerlogin</div>
+            <div class="page-link-copy">Log in om te stemmen.</div>
+          </a>
         </div>
-        <div class="scorer-link-row">
+        <div class="public-links-grid">
           <a class="page-link-card scorer-link" href="./scorer.html">
             <div class="page-link-label">Klaverjas Scoreformulier</div>
             <div class="page-link-copy">Voer een potje in.</div>
           </a>
-        </div>
-        <div class="scorer-link-row">
           <a class="page-link-card scorer-link" href="./boerenbridge.html">
             <div class="page-link-label">Boerenbridge Scoreformulier</div>
             <div class="page-link-copy">Houd biedingen, slagen en specials mobiel bij.</div>
           </a>
         </div>
         <div class="public-links-grid">
-          <a class="page-link-card login-link" href="./profiles.html">
-            <div class="page-link-label">Spelers</div>
-            <div class="page-link-copy">Profielen, stats en badges.</div>
-          </a>
-          <a class="page-link-card request-link" href="./invite.html">
-            <div class="page-link-label">Uitnodigen</div>
-            <div class="page-link-copy">Maak of gebruik een uitnodigingslink.</div>
-          </a>
-        </div>
-      
-        <div class="scorer-link-row">
-          <a class="page-link-card scorer-link" href="./beerpong.html">
+          <a class="page-link-card request-link" href="./beerpong.html">
             <div class="page-link-label">Beerpong Scoreformulier</div>
             <div class="page-link-copy">Voer een beerpongwedstrijd in.</div>
           </a>
-        </div>
-        <div class="scorer-link-row">
-          <a class="page-link-card scorer-link" href="./beerpong_vault.html">
+          <a class="page-link-card login-link" href="./beerpong_vault.html">
             <div class="page-link-label">Beerpong Ranglijst</div>
-            <div class="page-link-copy">Bekijk ELO, grafieken en recente uitslagen.</div>
+            <div class="page-link-copy">Bekijk ELO en uitslagen.</div>
           </a>
+        </div>
+
+        <div class="tiny-links-row">
+          <a class="tiny-page-link" href="./profiles.html">Spelers</a>
         </div>
 
       </section>
