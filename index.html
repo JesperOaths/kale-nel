@@ -416,6 +416,42 @@
       line-height: 1.4;
       color: var(--muted-text);
     }
+    .page-link-copy.plus-copy {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:32px;
+      padding-top:0;
+    }
+    .page-link-plus {
+      width:14px;
+      height:14px;
+      opacity:.5;
+      display:block;
+      filter: drop-shadow(0 2px 6px rgba(17,17,17,0.10));
+    }
+    .ladder-section { margin:4px 0 22px; }
+    .ladder-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+    .ladder-head h2 { margin:0; font-size:20px; letter-spacing:-.02em; }
+    .live-pill { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:.08em; border:1px solid rgba(0,0,0,.08); background:#fff; color:#554e43; }
+    .live-pill::before { content:''; width:9px; height:9px; border-radius:50%; background:#999; box-shadow:0 0 0 rgba(216,44,44,.0); }
+    .live-pill.live { color:#7e1111; background:rgba(255,236,236,.95); border-color:rgba(216,44,44,.28); }
+    .live-pill.live::before { background:#d82c2c; animation:livePulse 1.2s infinite; }
+    .live-pill.standby { color:#665d4f; background:rgba(255,248,234,.95); }
+    .live-pill.standby::before { background:#c7a34b; }
+    @keyframes livePulse { 0% { box-shadow:0 0 0 0 rgba(216,44,44,.65);} 70% { box-shadow:0 0 0 8px rgba(216,44,44,0);} 100% { box-shadow:0 0 0 0 rgba(216,44,44,0);} }
+    .ladder-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+    .ladder-card { display:block; text-decoration:none; color:#161616; background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:20px; padding:16px; box-shadow:0 12px 24px rgba(0,0,0,.04); }
+    .ladder-card:hover { transform:translateY(-1px); box-shadow:0 16px 30px rgba(0,0,0,.06); }
+    .ladder-title { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; }
+    .ladder-title strong { font-size:16px; }
+    .ladder-title span { color:#8a7a55; font-size:12px; font-weight:700; }
+    .ladder-list { display:grid; gap:8px; }
+    .ladder-row { display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; padding:9px 10px; border-radius:14px; background:rgba(249,247,242,.9); }
+    .ladder-rank { width:24px; height:24px; border-radius:50%; display:grid; place-items:center; background:#111; color:#fff; font-weight:900; font-size:12px; }
+    .ladder-name { font-weight:800; font-size:14px; }
+    .ladder-elo { text-align:right; font-weight:900; font-size:14px; }
+    .ladder-empty { padding:14px; border-radius:14px; background:rgba(249,247,242,.9); color:#6f675b; font-size:13px; }
 
     .page-link-chip {
       display:inline-block;
@@ -457,6 +493,8 @@
       .lists-grid, .public-links-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
       .page-link-card { min-height: 116px; padding: 14px 12px; justify-content:center; }
       .page-link-card.login-link, .page-link-card.request-link, .page-link-card.scorer-link { text-align:center; align-items:center; width:100%; }
+      .page-link-plus { width:12px; height:12px; }
+      .ladder-grid { grid-template-columns:1fr; }
       .site-scene .left-hand {
         width: min(48vw, 260px);
         left: 7%;
@@ -593,7 +631,7 @@
     const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const SESSION_KEY = "jas_session_token_v11";
-    function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json", Accept: "application/json" }; }
+    function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, "Content-Type": "application/json", Accept: "application/json" }; }
     async function parseResponse(res) {
       const text = await res.text(); let data = null;
       try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); }
