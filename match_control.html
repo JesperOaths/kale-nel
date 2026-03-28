@@ -1,1 +1,246 @@
-<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Wedstrijden beheren</title><script src="./gejast-config.js"></script><script src="./admin-gate-v105.js"></script><style>body{margin:0;padding:24px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(232,228,217,.9),rgba(232,228,217,.92)),url('./wordtergejast.png') center/cover fixed}.card{max-width:860px;margin:0 auto;background:rgba(249,247,242,.96);border-radius:24px;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.08)}a{font-weight:800;color:#554e43;text-decoration:none}ul{line-height:1.9}</style></head><body><main class="card"><h1>Wedstrijden beheren</h1><p>Deze beheerpagina is nu bereikbaar achter de adminsessie en wordt in fase 3 volledig gevuld met bewerken/verwijderen/rebuild-acties.</p><ul><li><a href="./scorer.html">Klaverjas invoeren</a></li><li><a href="./boerenbridge.html">Boerenbridge invoeren</a></li><li><a href="./beerpong.html">Beerpong invoeren</a></li><li><a href="./admin.html">Terug naar admin</a></li></ul></main></body></html>
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wedstrijden beheren</title>
+  <script src="./gejast-config.js"></script>
+  <style>
+    :root{
+      --bg:#e8e4d9;
+      --card:#f6f3ea;
+      --ink:#231f1a;
+      --muted:#6b6257;
+      --line:rgba(35,31,26,.10);
+      --gold:#d4af37;
+      --shadow:0 16px 40px rgba(0,0,0,.08);
+      --radius:28px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:linear-gradient(rgba(232,228,217,.9),rgba(232,228,217,.92)),url('./wordtergejast.png') center/cover fixed}
+    .page{max-width:1180px;margin:0 auto;padding:24px 18px 64px}
+    .hero,.panel,.row-card{background:rgba(246,243,234,.94);border:1px solid rgba(255,255,255,.45);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .hero{padding:24px 24px 18px;display:grid;gap:14px}
+    .hero-top{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap}
+    h1{margin:0;font-size:clamp(32px,6vw,52px);line-height:1}
+    .muted{color:var(--muted)}
+    .hero-actions,.filters{display:flex;gap:10px;flex-wrap:wrap}
+    .pill,.btn,.tab{border:none;border-radius:999px;padding:11px 16px;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+    .pill{background:rgba(255,255,255,.7);color:var(--muted);border:1px solid var(--line)}
+    .btn{background:#241f1b;color:#fff;cursor:pointer}
+    .btn.secondary{background:rgba(255,255,255,.78);color:var(--ink);border:1px solid var(--line)}
+    .btn.warn{background:#8a2c2c}
+    .tab{background:rgba(255,255,255,.65);color:var(--ink);border:1px solid var(--line);cursor:pointer}
+    .tab.active{background:#241f1b;color:#fff}
+    .notice{padding:14px 16px;border-radius:20px;background:rgba(255,255,255,.6);border:1px solid var(--line)}
+    .layout{display:grid;grid-template-columns:minmax(280px,380px) minmax(0,1fr);gap:18px;margin-top:18px}
+    .panel{padding:18px}
+    .list{display:grid;gap:12px;max-height:70vh;overflow:auto;padding-right:4px}
+    .row-card{padding:14px 16px;cursor:pointer;transition:transform .12s ease, box-shadow .12s ease,border-color .12s ease;border:1px solid transparent}
+    .row-card:hover{transform:translateY(-1px)}
+    .row-card.active{border-color:rgba(212,175,55,.7);box-shadow:0 0 0 2px rgba(212,175,55,.18), var(--shadow)}
+    .row-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .row-title{font-size:18px;font-weight:900}
+    .row-meta{font-size:13px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+    .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(212,175,55,.15);font-size:12px;font-weight:800}
+    .chip.bad{background:rgba(138,44,44,.12);color:#8a2c2c}
+    .detail-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px}
+    .detail-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0 18px}
+    .stat{padding:12px;border-radius:18px;background:rgba(255,255,255,.7);border:1px solid var(--line)}
+    .stat span{display:block;color:var(--muted);font-size:12px;margin-bottom:4px}
+    .stat strong{font-size:20px}
+    textarea{width:100%;min-height:420px;border-radius:22px;border:1px solid var(--line);padding:16px;font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;background:#fcfbf7;color:#201b16;resize:vertical}
+    .empty{padding:24px;border-radius:20px;border:1px dashed var(--line);text-align:center;color:var(--muted);background:rgba(255,255,255,.42)}
+    .tiny{font-size:12px;color:var(--muted)}
+    .status{margin-top:12px;min-height:24px;font-weight:700}
+    .status.error{color:#8a2c2c}
+    .status.ok{color:#1f6a3c}
+    .section-title{margin:0 0 12px;font-size:20px}
+    @media (max-width:920px){.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}textarea{min-height:320px}}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="pill">v139 · Made by Bruis</div>
+          <h1>Wedstrijden beheren</h1>
+          <p class="muted">Bewerk of verwijder je eigen inzendingen binnen 5 minuten. Met een adminsessie kun je alles beheren en rebuilds starten.</p>
+        </div>
+        <div class="hero-actions">
+          <a class="btn secondary" href="./index.html">Home</a>
+          <a class="btn secondary" href="./admin.html">Admin</a>
+          <a class="btn secondary" id="gameEntryLink" href="./scorer.html">Invoeren</a>
+        </div>
+      </div>
+      <div class="filters">
+        <button class="tab active" data-game="klaverjas">Klaverjas</button>
+        <button class="tab" data-game="boerenbridge">Boerenbridge</button>
+        <button class="tab" data-game="beerpong">Beerpong</button>
+        <button class="btn secondary" id="refreshBtn" type="button">Ververs</button>
+      </div>
+      <div class="notice" id="sessionNotice">Even laden…</div>
+    </section>
+
+    <section class="layout">
+      <aside class="panel">
+        <h2 class="section-title">Recente wedstrijden</h2>
+        <div class="list" id="matchList"><div class="empty">Nog geen wedstrijden gevonden.</div></div>
+      </aside>
+      <section class="panel">
+        <div id="detailEmpty" class="empty">Kies links een wedstrijd om de payload te bekijken en te bewerken.</div>
+        <div id="detailWrap" hidden>
+          <div class="detail-top">
+            <div>
+              <h2 class="section-title" id="detailTitle">Wedstrijd</h2>
+              <div class="tiny" id="detailMeta"></div>
+            </div>
+            <div class="detail-actions">
+              <button class="btn" id="saveBtn" type="button">Opslaan</button>
+              <button class="btn warn" id="deleteBtn" type="button">Verwijderen</button>
+            </div>
+          </div>
+          <div class="stats">
+            <div class="stat"><span>Spelers</span><strong id="statPlayers">–</strong></div>
+            <div class="stat"><span>Winnaars</span><strong id="statWinners">–</strong></div>
+            <div class="stat"><span>Afgerond</span><strong id="statFinished">–</strong></div>
+            <div class="stat"><span>Toegang</span><strong id="statAccess">–</strong></div>
+          </div>
+          <textarea id="payloadInput" spellcheck="false"></textarea>
+          <div class="tiny" style="margin-top:10px">Bewerk de JSON zorgvuldig. Opslaan triggert automatisch een rebuild van de ranglijst voor dit spel.</div>
+          <div class="status" id="detailStatus"></div>
+        </div>
+      </section>
+    </section>
+  </div>
+
+<script>
+(() => {
+  const cfg = window.GEJAST_CONFIG || {};
+  const SUPABASE_URL = cfg.SUPABASE_URL || '';
+  const APIKEY = cfg.SUPABASE_PUBLISHABLE_KEY || '';
+  const ADMIN_SESSION_KEY = 'jas_admin_session_v8';
+  const SESSION_KEYS = ['jas_session_token_v11','jas_session_token_v10'];
+  const GAME_ENTRY = { klaverjas:'./scorer.html', boerenbridge:'./boerenbridge.html', beerpong:'./beerpong.html' };
+  const params = new URLSearchParams(location.search);
+  const state = { game: (params.get('game') || 'klaverjas').toLowerCase(), rows: [], selected: null, adminToken: '', sessionToken: '' };
+
+  const els = {
+    tabs: Array.from(document.querySelectorAll('.tab')),
+    refreshBtn: document.getElementById('refreshBtn'),
+    sessionNotice: document.getElementById('sessionNotice'),
+    matchList: document.getElementById('matchList'),
+    detailEmpty: document.getElementById('detailEmpty'),
+    detailWrap: document.getElementById('detailWrap'),
+    detailTitle: document.getElementById('detailTitle'),
+    detailMeta: document.getElementById('detailMeta'),
+    statPlayers: document.getElementById('statPlayers'),
+    statWinners: document.getElementById('statWinners'),
+    statFinished: document.getElementById('statFinished'),
+    statAccess: document.getElementById('statAccess'),
+    payloadInput: document.getElementById('payloadInput'),
+    detailStatus: document.getElementById('detailStatus'),
+    saveBtn: document.getElementById('saveBtn'),
+    deleteBtn: document.getElementById('deleteBtn'),
+    gameEntryLink: document.getElementById('gameEntryLink')
+  };
+
+  function getPlayerSession(){ for(const key of SESSION_KEYS){ const v = localStorage.getItem(key) || sessionStorage.getItem(key); if(v) return v; } return ''; }
+  function getAdminSession(){ return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY) || ''; }
+  function rpcHeaders(){ return { apikey: APIKEY, Authorization: `Bearer ${APIKEY}`, 'Content-Type':'application/json', Accept:'application/json' }; }
+  async function parseResponse(res){ const text = await res.text(); let data = null; try{ data = text ? JSON.parse(text) : null; }catch{ data = text; } if(!res.ok){ throw new Error((data && data.message) || (data && data.error_description) || text || `HTTP ${res.status}`); } return data; }
+  function safeArray(v){ return Array.isArray(v) ? v : []; }
+  function formatDate(v){ if(!v) return '–'; const d = new Date(v); return isNaN(d) ? String(v) : d.toLocaleString('nl-NL'); }
+  function setStatus(msg, kind=''){ els.detailStatus.textContent = msg || ''; els.detailStatus.className = `status${kind ? ' '+kind : ''}`; }
+  function labelGame(game){ return game === 'klaverjas' ? 'Klaverjas' : game === 'boerenbridge' ? 'Boerenbridge' : 'Beerpong'; }
+  function updateSessionNotice(){
+    const parts = [];
+    if(state.adminToken) parts.push('Adminsessie actief');
+    if(state.sessionToken) parts.push('Spelersessie actief');
+    els.sessionNotice.textContent = parts.length ? `${parts.join(' · ')}. Eigen wedstrijden blijven 5 minuten bewerkbaar.` : 'Geen actieve sessie gevonden. Log in als speler om je eigen net ingevoerde wedstrijden te beheren, of als admin om alles te beheren.';
+  }
+  function syncTabUi(){
+    els.tabs.forEach(btn => btn.classList.toggle('active', btn.dataset.game === state.game));
+    els.gameEntryLink.href = GAME_ENTRY[state.game] || './index.html';
+    els.gameEntryLink.textContent = `${labelGame(state.game)} invoeren`;
+    const u = new URL(location.href); u.searchParams.set('game', state.game); history.replaceState({}, '', u);
+  }
+  function rowAccess(row){ return row?.can_edit ? 'Bewerkbaar' : 'Alleen lezen'; }
+  function renderList(){
+    const rows = state.rows;
+    if(!rows.length){ els.matchList.innerHTML = '<div class="empty">Nog geen wedstrijden voor deze sessie of dit spel.</div>'; return; }
+    els.matchList.innerHTML = rows.map((row, idx) => {
+      const players = safeArray(row.player_names || row.participant_names).join(' · ') || 'Onbekend';
+      const winners = safeArray(row.winner_names).join(', ') || '—';
+      return `<button class="row-card${state.selected?.client_match_id === row.client_match_id ? ' active' : ''}" data-id="${row.client_match_id}" type="button">
+        <div class="row-head"><div><div class="row-title">${players || row.client_match_id}</div><div class="row-meta"><span>${formatDate(row.finished_at || row.created_at)}</span><span>${row.client_match_id}</span></div></div><div class="chip${row.can_edit ? '' : ' bad'}">${rowAccess(row)}</div></div>
+        <div class="chips"><span class="chip">Winnaars: ${winners}</span>${row.can_delete ? '<span class="chip">Verwijderen toegestaan</span>' : ''}</div>
+      </button>`;
+    }).join('');
+    els.matchList.querySelectorAll('.row-card').forEach(btn => btn.addEventListener('click', () => selectRow(btn.dataset.id)));
+    if(!state.selected && rows[0]) selectRow(rows[0].client_match_id);
+  }
+  function selectRow(id){
+    state.selected = state.rows.find(row => row.client_match_id === id) || null;
+    renderList();
+    if(!state.selected){ els.detailWrap.hidden = true; els.detailEmpty.hidden = false; return; }
+    const row = state.selected;
+    els.detailEmpty.hidden = true; els.detailWrap.hidden = false;
+    els.detailTitle.textContent = `${labelGame(state.game)} · ${row.client_match_id}`;
+    els.detailMeta.textContent = `Aangemaakt ${formatDate(row.created_at)} · Afgerond ${formatDate(row.finished_at)}`;
+    els.statPlayers.textContent = safeArray(row.player_names || row.participant_names).length || '–';
+    els.statWinners.textContent = safeArray(row.winner_names).join(', ') || '–';
+    els.statFinished.textContent = formatDate(row.finished_at || row.created_at);
+    els.statAccess.textContent = rowAccess(row);
+    els.payloadInput.value = JSON.stringify(row.payload || {}, null, 2);
+    els.payloadInput.disabled = !row.can_edit;
+    els.saveBtn.disabled = !row.can_edit;
+    els.deleteBtn.disabled = !row.can_delete;
+    setStatus('');
+  }
+  async function loadRows(){
+    state.adminToken = getAdminSession();
+    state.sessionToken = getPlayerSession();
+    updateSessionNotice();
+    syncTabUi();
+    els.matchList.innerHTML = '<div class="empty">Laden…</div>';
+    try{
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_match_control_rows`, { method:'POST', headers: rpcHeaders(), body: JSON.stringify({ game_key: state.game, session_token: state.sessionToken || null, admin_session_token: state.adminToken || null, limit_count: 80 }) });
+      const data = await parseResponse(res);
+      state.rows = safeArray(data?.[state.game] || data || []);
+      state.selected = null;
+      renderList();
+    }catch(err){
+      els.matchList.innerHTML = `<div class="empty">${String(err.message || err)}</div>`;
+      setStatus(String(err.message || err), 'error');
+    }
+  }
+  async function saveEdit(deleteMatch=false){
+    if(!state.selected) return;
+    let replacement = {};
+    if(!deleteMatch){
+      try{ replacement = JSON.parse(els.payloadInput.value || '{}'); }
+      catch(err){ setStatus('JSON is ongeldig.', 'error'); return; }
+    }
+    setStatus(deleteMatch ? 'Verwijderen…' : 'Opslaan…');
+    try{
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/save_match_control_edit`, { method:'POST', headers: rpcHeaders(), body: JSON.stringify({ game_key: state.game, client_match_id: state.selected.client_match_id, replacement_payload: replacement, delete_match: deleteMatch, session_token: state.sessionToken || null, admin_session_token: state.adminToken || null }) });
+      await parseResponse(res);
+      setStatus(deleteMatch ? 'Wedstrijd verwijderd en ranglijst opnieuw opgebouwd.' : 'Wijziging opgeslagen en ranglijst opnieuw opgebouwd.', 'ok');
+      await loadRows();
+    }catch(err){ setStatus(String(err.message || err), 'error'); }
+  }
+
+  els.tabs.forEach(btn => btn.addEventListener('click', () => { state.game = btn.dataset.game; state.selected = null; loadRows(); }));
+  els.refreshBtn.addEventListener('click', loadRows);
+  els.saveBtn.addEventListener('click', () => saveEdit(false));
+  els.deleteBtn.addEventListener('click', () => { if(confirm('Weet je zeker dat je deze wedstrijd wilt verwijderen?')) saveEdit(true); });
+
+  loadRows();
+})();
+</script>
+</body>
+</html>
