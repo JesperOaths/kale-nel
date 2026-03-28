@@ -1028,6 +1028,7 @@
   function hide(){ box.classList.remove('is-visible'); nameEl.textContent = ''; }
   btn.addEventListener('click', function(){ clearTokens(); hide(); window.location.reload(); });
   document.addEventListener('DOMContentLoaded', async function(){
+    try { loadHomepageLadders(); } catch (_) {}
     const token = getToken();
     if (!token) return hide();
     const name = await fetchMyName(token);
