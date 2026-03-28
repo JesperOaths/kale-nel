@@ -137,6 +137,14 @@
     .status-word.yes { color: #1f8f52; position: relative; display: inline-block; }
     .status-word.maybe { color: #9b6b08; }
 
+    .arrow-copy {
+      font-size: clamp(2.4rem, 5vw, 3.4rem);
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: -0.08em;
+      margin-top: 6px;
+    }
+
     .ja-party-burst {
       position: absolute;
       inset: 0;
@@ -611,23 +619,21 @@
       </div>
 
       <div class="hero-kicker">Statshub</div>
-      <h1>Van geintje naar ranglijst</h1>
-      <div class="hero-intro">Deze homepage draait nu om live rankings en speldata. Hieronder staan drie live top 5 ELO-ladders: Klaverjassen, Boerenbridge en Beerpong. Klik een ladder open voor de volledige ranking, grafieken en spelerprofielen.</div>
 
       <section class="stats-hub-grid" aria-label="Top 5 ladders">
         <a class="stats-card" href="./ladder.html?game=klaverjas">
           <div class="stats-card-head"><div class="stats-card-title-wrap"><div class="stats-card-title">Klaverjassen</div><div class="live-badge"><span class="live-dot"></span>Live</div></div><div class="stats-total-chip" id="klaverjasPlayersChip">0 spelers</div></div>
-          <div class="stats-card-copy">Top 5 op basis van ELO. Klik door voor de volledige ladder, grafieken en profielen.</div>
+          <div class="stats-card-copy">Live top 5 op basis van actuele rating. Klik door voor de volledige ladder en spelersstats.</div>
           <div id="klaverjasTop5" class="ladder-list"></div>
         </a>
         <a class="stats-card" href="./ladder.html?game=boerenbridge">
           <div class="stats-card-head"><div class="stats-card-title-wrap"><div class="stats-card-title">Boerenbridge</div><div class="live-badge"><span class="live-dot"></span>Live</div></div><div class="stats-total-chip" id="boerenbridgePlayersChip">0 spelers</div></div>
-          <div class="stats-card-copy">Vrije-voor-allen ladder met een ELO die rekening houdt met plaatsing in het veld.</div>
+          <div class="stats-card-copy">Live top 5 op basis van actuele rating. Klik door voor de volledige ladder en spelersstats.</div>
           <div id="boerenbridgeTop5" class="ladder-list"></div>
         </a>
         <a class="stats-card" href="./ladder.html?game=beerpong">
           <div class="stats-card-head"><div class="stats-card-title-wrap"><div class="stats-card-title">Beerpong</div><div class="live-badge"><span class="live-dot"></span>Live</div></div><div class="stats-total-chip" id="beerpongPlayersChip">0 spelers</div></div>
-          <div class="stats-card-copy">Openbare ELO met recente uitslagen, stijgers en dalers.</div>
+          <div class="stats-card-copy">Live top 5 op basis van actuele rating. Klik door voor de volledige ladder en spelersstats.</div>
           <div id="beerpongTop5" class="ladder-list"></div>
         </a>
       </section>
@@ -636,31 +642,31 @@
         <div class="public-links-grid">
           <a class="page-link-card scorer-link" href="./scorer.html">
             <div class="page-link-label">Klaverjas invoeren</div>
-            <div class="page-link-copy">Voer een potje in en laat de ELO meteen meebewegen.</div>
+            <div class="page-link-copy arrow-copy" aria-hidden="true">→</div>
           </a>
           <a class="page-link-card scorer-link" href="./boerenbridge.html">
             <div class="page-link-label">Boerenbridge invoeren</div>
-            <div class="page-link-copy">Biedingen, slagen, specials en plaatsingen opslaan.</div>
+            <div class="page-link-copy arrow-copy" aria-hidden="true">→</div>
           </a>
         </div>
         <div class="public-links-grid">
           <a class="page-link-card request-link" href="./beerpong.html">
             <div class="page-link-label">Beerpong invoeren</div>
-            <div class="page-link-copy">Nieuwe wedstrijd opslaan en de ladder verversen.</div>
+            <div class="page-link-copy arrow-copy" aria-hidden="true">→</div>
           </a>
           <a class="page-link-card login-link" href="./login.html">
             <div class="page-link-label">Spelerlogin</div>
-            <div class="page-link-copy">Log in voor stemmen, spelen en persoonlijke flows.</div>
+            <div class="page-link-copy">Toegang tot je account en persoonlijke acties.</div>
           </a>
         </div>
         <div class="public-links-grid">
           <a class="page-link-card request-link" href="./request.html">
             <div class="page-link-label">Naam aanvragen</div>
-            <div class="page-link-copy">Nieuwe speler toevoegen aan het systeem.</div>
+            <div class="page-link-copy">Aanmelden en toegang aanvragen voor nieuwe spelers.</div>
           </a>
           <a class="page-link-card login-link" href="./profiles.html">
             <div class="page-link-label">Spelers</div>
-            <div class="page-link-copy">Overzicht van profielen, badges en speldata.</div>
+            <div class="page-link-copy">Profielen, rankings en wedstrijdgeschiedenis bekijken.</div>
           </a>
         </div>
         <div class="vote-zone">

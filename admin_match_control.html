@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wedstrijden beheren</title>
+  <link rel="stylesheet" href="./site-shell.css" />
+  <script defer src="./gejast-config.js"></script>
+  <script defer src="./admin-gate-v105.js"></script>
+  <style>
+    body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(rgba(244,240,232,.72),rgba(244,240,232,.72)), url('./site-bg-desktop.webp') center/cover no-repeat fixed;color:#161616}
+    .wrap{max-width:1180px;margin:0 auto;padding:28px 18px 60px}
+    .panel{background:rgba(255,251,245,.92);border:1px solid rgba(17,17,17,.08);border-radius:24px;padding:22px;box-shadow:0 18px 40px rgba(0,0,0,.08)}
+    h1{margin:0 0 8px;font-size:clamp(2rem,4vw,2.8rem);letter-spacing:-.04em}
+    .muted{color:#6d6559}.top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}
+    .chips{display:flex;gap:8px;flex-wrap:wrap}.chip{padding:6px 10px;border-radius:999px;background:#fff;border:1px solid rgba(17,17,17,.08);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+    .grid{display:grid;grid-template-columns:1.1fr 1.9fr;gap:18px}.stack{display:grid;gap:18px}
+    .card{background:#fff;border:1px solid rgba(17,17,17,.08);border-radius:18px;padding:16px}
+    .controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.controls input,.controls select,.controls button,textarea{width:100%;padding:12px 13px;border-radius:14px;border:1px solid rgba(17,17,17,.12);font:inherit;background:#fff}
+    .controls button,.btn{cursor:pointer;background:#161616;color:#fff;font-weight:700}.btn.ghost{background:#fff;color:#161616}
+    table{width:100%;border-collapse:collapse}.matches td,.matches th{padding:10px 8px;border-bottom:1px solid rgba(17,17,17,.08);text-align:left;vertical-align:top}.matches th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:#6d6559}
+    .row-actions{display:flex;gap:8px;flex-wrap:wrap}.mini{padding:8px 10px;border-radius:10px;border:1px solid rgba(17,17,17,.1);background:#fff;cursor:pointer}
+    .hidden{display:none}.status{margin-top:12px;padding:12px 14px;border-radius:14px;background:rgba(17,17,17,.05)}
+    @media (max-width: 900px){.grid{grid-template-columns:1fr}.controls{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <div class="top">
+        <div>
+          <div class="chips"><span class="chip">Admin</span><span class="chip">v128 · Made by Bruis</span></div>
+          <h1>Wedstrijden beheren</h1>
+          <div class="muted">Één plek om fout ingevoerde wedstrijden aan te passen, te verwijderen en recente speler-edits te controleren.</div>
+        </div>
+        <div class="row-actions"><a class="btn ghost" href="./admin.html">Terug</a><button class="btn ghost" id="refreshBtn" type="button">Ververs</button></div>
+      </div>
+      <div class="grid">
+        <div class="stack">
+          <div class="card">
+            <h3 style="margin-top:0">Zo werkt het</h3>
+            <ul>
+              <li>Admins kunnen wedstrijden altijd aanpassen of verwijderen.</li>
+              <li>Spelers mogen hun eigen wedstrijd 5 minuten na opslaan nog wijzigen.</li>
+              <li>Na elke wijziging moet de ratings-rebuild voor het betreffende spel opnieuw lopen.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3 style="margin-top:0">Filters</h3>
+            <div class="controls">
+              <select id="gameFilter"><option value="">Alle spellen</option><option value="klaverjas">Klaverjassen</option><option value="boerenbridge">Boerenbridge</option><option value="beerpong">Beerpong</option></select>
+              <input id="playerFilter" placeholder="Speler" />
+              <input id="fromFilter" type="date" />
+              <input id="toFilter" type="date" />
+            </div>
+          </div>
+          <div class="card">
+            <h3 style="margin-top:0">Selectie</h3>
+            <div id="selectionEmpty" class="muted">Kies een wedstrijd rechts om details te bekijken of te bewerken.</div>
+            <form id="editForm" class="hidden">
+              <div class="controls" style="grid-template-columns:1fr 1fr; margin-bottom:10px;">
+                <input id="editGame" disabled />
+                <input id="editClientId" disabled />
+              </div>
+              <textarea id="editPayload" rows="16" spellcheck="false"></textarea>
+              <div class="row-actions" style="margin-top:10px"><button class="btn" type="submit">Opslaan</button><button class="mini" id="deleteBtn" type="button">Verwijderen</button></div>
+            </form>
+            <div id="statusBox" class="status hidden"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">Recente wedstrijden</h3>
+          <table class="matches">
+            <thead><tr><th>Moment</th><th>Spel</th><th>Spelers</th><th>Status</th><th>Acties</th></tr></thead>
+            <tbody id="matchRows"><tr><td colspan="5" class="muted">Laden…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const CFG=window.GEJAST_CONFIG||{}; const SUPABASE_URL=CFG.SUPABASE_URL||''; const SUPABASE_PUBLISHABLE_KEY=CFG.SUPABASE_PUBLISHABLE_KEY||''; const ADMIN_SESSION_KEY='jas_admin_session_v8';
+    const state={rows:[],selected:null};
+    function adminToken(){return localStorage.getItem(ADMIN_SESSION_KEY)||''}
+    function rpcHeaders(){return {apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,'Content-Type':'application/json',Accept:'application/json'}}
+    async function parseResponse(res){const text=await res.text();let data=null;try{data=text?JSON.parse(text):null}catch{throw new Error(text||`HTTP ${res.status}`)} if(!res.ok) throw new Error((data&& (data.message||data.error_description||data.error))||`HTTP ${res.status}`); return data;}
+    async function callRpc(name,payload={}){const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`,{method:'POST',mode:'cors',cache:'no-store',headers:rpcHeaders(),body:JSON.stringify(payload)});return parseResponse(res)}
+    function esc(v){return String(v??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]))}
+    function setStatus(msg){const el=document.getElementById('statusBox');el.textContent=msg;el.classList.remove('hidden')}
+    function filteredRows(){const g=(document.getElementById('gameFilter').value||'').toLowerCase(); const p=(document.getElementById('playerFilter').value||'').trim().toLowerCase(); const f=document.getElementById('fromFilter').value||''; const t=document.getElementById('toFilter').value||''; return state.rows.filter(row=>{const d=String((row.finished_at||row.created_at||'')).slice(0,10); if(g && row.game_type!==g) return false; if(p && !(row.participant_names||[]).some(n=>String(n).toLowerCase().includes(p))) return false; if(f && d < f) return false; if(t && d > t) return false; return true;})}
+    function render(){const rows=filteredRows(); const body=document.getElementById('matchRows'); body.innerHTML=rows.length?rows.map(row=>`<tr><td>${esc(String(row.finished_at||row.created_at||'').replace('T',' ').slice(0,16))}</td><td>${esc(row.game_type)}</td><td>${esc((row.participant_names||[]).join(' · '))}</td><td>${row.player_editable_until ? 'Speler-editvenster open' : 'Alleen admin'}</td><td><div class="row-actions"><button class="mini" type="button" data-pick="${esc(row.game_type)}::${esc(row.client_match_id)}">Open</button></div></td></tr>`).join(''):`<tr><td colspan="5" class="muted">Geen wedstrijden gevonden.</td></tr>`; body.querySelectorAll('[data-pick]').forEach(btn=>btn.onclick=()=>pick(btn.dataset.pick));}
+    function pick(key){const row=state.rows.find(r=>`${r.game_type}::${r.client_match_id}`===key); if(!row) return; state.selected=row; document.getElementById('selectionEmpty').classList.add('hidden'); document.getElementById('editForm').classList.remove('hidden'); document.getElementById('editGame').value=row.game_type; document.getElementById('editClientId').value=row.client_match_id; document.getElementById('editPayload').value=JSON.stringify(row.summary_payload||row.payload||{},null,2)}
+    async function load(){try{const data=await callRpc('admin_get_match_edit_state_action',{admin_session_token:adminToken()}); state.rows=(data&&data.matches)||[]; render();}catch(e){document.getElementById('matchRows').innerHTML=`<tr><td colspan="5" class="muted">${esc(e.message||'Kon wedstrijden niet laden.')}</td></tr>`;}}
+    document.getElementById('refreshBtn').onclick=load; ['gameFilter','playerFilter','fromFilter','toFilter'].forEach(id=>document.getElementById(id).addEventListener('input',render));
+    document.getElementById('editForm').addEventListener('submit', async (e)=>{e.preventDefault(); if(!state.selected) return; try{const payload=JSON.parse(document.getElementById('editPayload').value||'{}'); await callRpc('admin_update_match_payload_action',{admin_session_token:adminToken(), game_type_input:state.selected.game_type, client_match_id_input:state.selected.client_match_id, replacement_payload:payload}); setStatus('Wedstrijd bijgewerkt. Laat daarna de ratings opnieuw opbouwen voor dit spel.'); await load();}catch(err){setStatus(err.message||'Opslaan mislukt.')}})
+    document.getElementById('deleteBtn').onclick=async()=>{if(!state.selected) return; if(!confirm('Wedstrijd verwijderen?')) return; try{await callRpc('admin_delete_match_action',{admin_session_token:adminToken(), game_type_input:state.selected.game_type, client_match_id_input:state.selected.client_match_id}); setStatus('Wedstrijd verwijderd. Laat daarna de ratings opnieuw opbouwen voor dit spel.'); document.getElementById('editForm').classList.add('hidden'); document.getElementById('selectionEmpty').classList.remove('hidden'); await load();}catch(err){setStatus(err.message||'Verwijderen mislukt.')}};
+    load();
+  </script>
+</body>
+</html>
