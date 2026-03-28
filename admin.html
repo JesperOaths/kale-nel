@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin-overzicht - Wordt er gejast?</title>
+  <title>Adminhub - Wordt er gejast?</title>
   <style>
     :root { --gold:#d4af37; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#6b655b; --ok:#2b5b37; --warn:#8b3a30; }
     * { box-sizing:border-box; }
@@ -30,9 +30,9 @@
     .stat-link:hover { transform:translateY(-1px); box-shadow:0 10px 24px rgba(0,0,0,0.05); }
     .stat span { display:block; font-size:11px; color:#8a7a55; text-transform:uppercase; letter-spacing:.08em; }
     .stat strong { display:block; margin-top:6px; font-size:28px; }
-    .hub-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-top:22px; }
+    .section-stack{display:grid;gap:18px;margin-top:22px}.hub-section{background:#fff;border:1px solid rgba(0,0,0,0.06);border-radius:22px;padding:18px;box-shadow:0 10px 24px rgba(0,0,0,0.03)}.hub-section h2{margin:0 0 6px;font-size:18px;letter-spacing:-.03em}.hub-section p{margin:0;color:var(--muted);font-size:13px}.hub-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:14px; }
     .hub-link { display:block; text-decoration:none; color:#111; background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:20px; padding:18px; box-shadow:0 10px 24px rgba(0,0,0,0.04); }
-    .hub-link strong { display:block; font-size:18px; }
+    .hub-link strong { display:block; font-size:16px; }
     .hub-link small { display:block; margin-top:6px; color:var(--muted); font-size:13px; line-height:1.45; }
     .top-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(212,175,55,0.35);color:#f3e3a6;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
@@ -47,8 +47,8 @@
 <body>
   <main class="main-card">
     <a href="./index.html" aria-label="Terug naar home"><img src="./logo.png" class="logo" alt="logo" /></a>
-    <h1>Admin-overzicht</h1>
-    <p class="sub">Hoofdingang voor alle admintaken. Hier staan samenvattingen, tellers en links naar de losse beheertools.</p>
+    <h1>Adminhub</h1>
+    <p class="sub">Eén rustige ingang voor accounts, speldata, kluizen en omgeving. Bestaande sessies worden hergebruikt zodat je niet steeds opnieuw hoeft in te loggen.</p>
 
     <form id="loginView">
       <div class="login-grid">
@@ -73,28 +73,43 @@
         <a class="stat stat-link" href="./admin_claims.html#view=active"><span>Actief</span><strong id="statActive">0</strong></a>
         <a class="stat stat-link" href="./admin_claims.html#view=rejected"><span>Afgewezen</span><strong id="statRejected">0</strong></a>
       </div>
-      <div class="hub-grid">
-        <a class="hub-link" href="./admin_claims.html"><strong>Aanvragen & activaties</strong><small>De bestaande beheer-tool met goedkeuren, afwijzen, activatielinks en mailqueue.</small></a>
-        <a class="hub-link" href="./admin_claims.html#view=expired"><strong>Verlopen activaties</strong><small>Verlopen activatielinks zijn geïntegreerd in de hoofdtool onder de status Verlopen.</small></a>
-        <a class="hub-link" href="./admin_reserved_names.html"><strong>Claimbare namen</strong><small>Overzicht van de database-bron voor claimbare namen en handmatige reserveringen.</small></a>
-        <a class="hub-link" href="./vault.html"><strong>Spelkluis</strong><small>Alleen admin spelhistorie en lokale analyses.</small></a>
-        <a class="hub-link" href="./match_control.html?game=klaverjas"><strong>Matchbeheer</strong><small>Corrigeer of verwijder gespeelde matches en start automatisch een rating-rebuild.</small></a>
-          <a class="hub-link" href="./boerenbridge_vault.html"><strong>Boerenbridge kluis</strong><small>Adminoverzicht voor Boerenbridge-historie, tussenopslag en profielen.</small></a>
-        <a class="hub-link" href="./leaderboard.html"><strong>Ranglijst</strong><small>Ranglijst zonder spelers die nog 0 potjes hebben.</small></a>
-        <a class="hub-link" href="./admin_security.html"><strong>Beveiliging & hosting</strong><small>Wat al is dichtgezet en welke hosting-stap nog nodig is voor echte server-side afscherming.</small></a>
-        <a class="hub-link" href="./admin_mail_audit.html"><strong>Maildiagnostiek</strong><small>Actieve Make-webhook, mail-RPC en laatste mailjobstatus voor admins.</small></a>
-              <a class="hub-link" href="./admin_analytics.html"><strong>Bezoekers</strong><small>Paginaweergaves, apparaten en recente bezoeken.</small></a>
-              <a class="hub-link" href="./profiles.html"><strong>Spelers</strong><small>Profielen, badges en stats.</small></a>
-              <a class="hub-link" href="./invite.html"><strong>Uitnodigingen</strong><small>Maak links voor nieuwe spelers.</small></a>
-      </div>
-    
-          <a class="hub-link" href="./boerenbridge_vault.html"><strong>Boerenbridge kluis</strong><small>Adminoverzicht voor Boerenbridge-historie, tussenopslag en profielen.</small></a>
-          <a class="hub-link" href="./admin_analytics.html"><strong>Bezoekers</strong><small>Paginaweergaves, apparaten en recente bezoeken.</small></a>
-          <a class="hub-link" href="./profiles.html"><strong>Spelers</strong><small>Profielen, badges en persoonlijke statistieken.</small></a>
-          <a class="hub-link" href="./invite.html"><strong>Uitnodigen</strong><small>Maak of gebruik uitnodigingslinks.</small></a>
-          <a class="hub-link" href="./beerpong_vault.html"><strong>Beerpong ranglijst</strong><small>Publieke ELO-ranglijst, grafieken en wedstrijdstats.</small></a>
 
-      </section>
+      <div class="section-stack">
+        <section class="hub-section">
+          <h2>Accounts & activatie</h2>
+          <p>Alles rondom aanvragen, activatie, mail en claimbare namen.</p>
+          <div class="hub-grid">
+            <a class="hub-link" href="./admin_claims.html"><strong>Aanvragen & activaties</strong><small>Goedkeuren, afwijzen, activatielinks en mailqueue.</small></a>
+            <a class="hub-link" href="./admin_claims.html#view=expired"><strong>Verlopen activaties</strong><small>Verlopen gevallen direct in dezelfde beheerflow.</small></a>
+            <a class="hub-link" href="./admin_reserved_names.html"><strong>Claimbare namen</strong><small>Bron voor aanvraagbare namen en handmatige reserveringen.</small></a>
+            <a class="hub-link" href="./admin_mail_audit.html"><strong>Maildiagnostiek</strong><small>Make-webhook, mail-RPC en laatste mailjobstatus.</small></a>
+          </div>
+        </section>
+
+        <section class="hub-section">
+          <h2>Spellen & data</h2>
+          <p>Statspagina's, kluizen en matchbeheer voor de drie spellen.</p>
+          <div class="hub-grid">
+            <a class="hub-link" href="./vault.html"><strong>Klaverjas kluis</strong><small>Adminanalyse voor klaverjashistorie en lokale stats.</small></a>
+            <a class="hub-link" href="./leaderboard.html"><strong>Klaverjas ranglijst</strong><small>Adminranglijst en analysepagina.</small></a>
+            <a class="hub-link" href="./boerenbridge_vault.html"><strong>Boerenbridge kluis</strong><small>Adminoverzicht voor Boerenbridge-historie en profielen.</small></a>
+            <a class="hub-link" href="./beerpong_vault.html"><strong>Beerpong kluis</strong><small>Admintoegang tot ELO, grafieken en wedstrijdstats.</small></a>
+            <a class="hub-link" href="./match_control.html"><strong>Wedstrijden beheren</strong><small>Centraal beheer voor bewerken, verwijderen en rebuilds.</small></a>
+          </div>
+        </section>
+
+        <section class="hub-section">
+          <h2>Omgeving & publiek</h2>
+          <p>Hosting, beveiliging, analytics en publieke spelersoppervlakken.</p>
+          <div class="hub-grid">
+            <a class="hub-link" href="./admin_security.html"><strong>Beveiliging & hosting</strong><small>Wat al is dichtgezet en wat nog server-side moet.</small></a>
+            <a class="hub-link" href="./admin_analytics.html"><strong>Bezoekers</strong><small>Paginaweergaves, apparaten en recente bezoeken.</small></a>
+            <a class="hub-link" href="./profiles.html"><strong>Spelers</strong><small>Profielen, badges en publieke statistieken.</small></a>
+            <a class="hub-link" href="./invite.html"><strong>Uitnodigingen</strong><small>Links voor nieuwe spelers en instroom.</small></a>
+          </div>
+        </section>
+      </div>
+    </section>
 
     <div id="statusBox" class="status"></div>
   </main>
@@ -103,6 +118,9 @@
     const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
+    const ADMIN_DEVICE_KEY = "jas_admin_device_v1";
+    const ADMIN_USER_KEY = "jas_admin_user_v1";
+    const ADMIN_DEADLINE_KEY = "jas_admin_deadline_v1";
 
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, "Content-Type": "application/json", Accept: "application/json" }; }
     async function parseResponse(res) {
@@ -113,8 +131,8 @@
       return data;
     }
     function getAdminSessionToken() { return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
-    function setAdminSessionToken(token) { sessionStorage.setItem(ADMIN_SESSION_KEY, token); localStorage.setItem(ADMIN_SESSION_KEY, token); }
-    function clearAdminSessionToken() { sessionStorage.removeItem(ADMIN_SESSION_KEY); localStorage.removeItem(ADMIN_SESSION_KEY); }
+    function setAdminSessionToken(token, username = "") { sessionStorage.setItem(ADMIN_SESSION_KEY, token); localStorage.setItem(ADMIN_SESSION_KEY, token); if (username) { sessionStorage.setItem(ADMIN_USER_KEY, username); localStorage.setItem(ADMIN_USER_KEY, username); } const until = Date.now() + 8*60*60*1000; sessionStorage.setItem(ADMIN_DEADLINE_KEY, String(until)); localStorage.setItem(ADMIN_DEADLINE_KEY, String(until)); }
+    function clearAdminSessionToken() { [ADMIN_SESSION_KEY, ADMIN_DEVICE_KEY, ADMIN_USER_KEY, ADMIN_DEADLINE_KEY].forEach((key)=>{ sessionStorage.removeItem(key); localStorage.removeItem(key); }); }
     function setStatus(message = '', tone = '') {
       const box = document.getElementById('statusBox');
       box.textContent = message;
@@ -143,7 +161,8 @@
       if (Array.isArray(data)) data = data[0] || {};
       const token = data.admin_session_token || data.token;
       if (!token) throw new Error('Login gaf geen admin-sessie terug');
-      setAdminSessionToken(token);
+      setAdminSessionToken(token, data.admin_username || username);
+      if (data.raw_device_token) localStorage.setItem(ADMIN_DEVICE_KEY, data.raw_device_token);
       return data;
     }
 

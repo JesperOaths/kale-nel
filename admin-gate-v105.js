@@ -19,9 +19,11 @@
   function redirectToAdmin(reason='device_required'){ const here=encodeURIComponent(window.location.pathname.split('/').pop() + window.location.search + window.location.hash); window.location.href=`./admin.html?reason=${encodeURIComponent(reason)}&return_to=${here}`; }
   async function gate(){
     const t=token(), d=device(), u=username();
-    if(!t || !d || !u || (deadline() && Date.now()>deadline())){ clearAll(); redirectToAdmin('device_required'); return; }
+    if(!t || !u || (deadline() && Date.now()>deadline())){ clearAll(); redirectToAdmin('device_required'); return; }
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session_with_device`, { method:'POST', mode:'cors', cache:'no-store', headers: headers(), body: JSON.stringify({ admin_session_token:t, admin_username:u, raw_device_token:d, device_fingerprint:fingerprint() }) });
+      const rpcName = d ? 'admin_check_session_with_device' : 'admin_check_session';
+      const payload = d ? { admin_session_token:t, admin_username:u, raw_device_token:d, device_fingerprint:fingerprint() } : { admin_session_token:t };
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpcName}`, { method:'POST', mode:'cors', cache:'no-store', headers: headers(), body: JSON.stringify(payload) });
       const data = await parse(res);
       if(data?.admin_session_token) setSession(data.admin_session_token, data.admin_username || u);
       document.documentElement.classList.remove('admin-gate-pending');

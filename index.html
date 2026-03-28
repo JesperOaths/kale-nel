@@ -424,15 +424,14 @@
       padding-top:0;
     }
     .page-link-plus {
-      width:14px;
-      height:14px;
-      opacity:.5;
+      width:24px;
+      height:24px;
+      opacity:.75;
       display:block;
       filter: drop-shadow(0 2px 6px rgba(17,17,17,0.10));
     }
     .ladder-section { margin:4px 0 22px; }
-    .ladder-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
-    .ladder-head h2 { margin:0; font-size:20px; letter-spacing:-.02em; }
+    .ladder-head { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
     .live-pill { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:.08em; border:1px solid rgba(0,0,0,.08); background:#fff; color:#554e43; }
     .live-pill::before { content:''; width:9px; height:9px; border-radius:50%; background:#999; box-shadow:0 0 0 rgba(216,44,44,.0); }
     .live-pill.live { color:#7e1111; background:rgba(255,236,236,.95); border-color:rgba(216,44,44,.28); }
@@ -551,7 +550,6 @@
 
             <section class="ladder-section" aria-label="Live ladders">
         <div class="ladder-head">
-          <h2>Live ranglijsten</h2>
           <div id="homeLivePill" class="live-pill standby">Stand-by</div>
         </div>
         <div id="ladderGrid" class="ladder-grid">
@@ -564,27 +562,27 @@
       <section class="public-links" aria-label="Sitepagina's">
         <div class="public-links-grid">
           <a class="page-link-card request-link" href="./request.html">
-            <div class="page-link-label">Naam aanvragen</div>
+            <div class="page-link-label">Account Aanmaken</div>
             <div class="page-link-copy">Vraag een account aan.</div>
           </a>
           <a class="page-link-card login-link" href="./login.html">
-            <div class="page-link-label">Spelerlogin</div>
+            <div class="page-link-label">Login</div>
             <div class="page-link-copy">Open je spelersessie.</div>
           </a>
         </div>
         <div class="public-links-grid">
           <a class="page-link-card scorer-link" href="./scorer.html">
-            <div class="page-link-label">Klaverjas invoeren</div>
+            <div class="page-link-label">Klaverjas Invoeren</div>
             <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
           </a>
           <a class="page-link-card scorer-link" href="./boerenbridge.html">
-            <div class="page-link-label">Boerenbridge invoeren</div>
+            <div class="page-link-label">Boerenbridge Invoeren</div>
             <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
           </a>
         </div>
         <div class="public-links-grid">
           <a class="page-link-card scorer-link" href="./beerpong.html">
-            <div class="page-link-label">Beerpong invoeren</div>
+            <div class="page-link-label">Beerpong Invoeren</div>
             <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
           </a>
           <a class="page-link-card login-link" href="./profiles.html">
@@ -656,7 +654,7 @@
       return isAdminViewer;
     }
     let currentHomepageState = null;
-    const HOMEPAGE_LADDER_ROUTES = { klaverjas:'./leaderboard.html', boerenbridge:'./boerenbridge_vault.html', beerpong:'./beerpong_vault.html' };
+    const HOMEPAGE_LADDER_ROUTES = { klaverjas:'./ladder.html?game=klaverjas', boerenbridge:'./ladder.html?game=boerenbridge', beerpong:'./ladder.html?game=beerpong' };
 
     function setHomepageLiveState(state='standby', text='Stand-by') {
       const pill = document.getElementById('homeLivePill');
@@ -665,13 +663,21 @@
       pill.textContent = text;
     }
 
+    function unwrapHomepageLadderPayload(payload){
+      if (payload && payload.get_homepage_ladders_public) return payload.get_homepage_ladders_public;
+      if (Array.isArray(payload) && payload[0] && payload[0].get_homepage_ladders_public) return payload[0].get_homepage_ladders_public;
+      if (Array.isArray(payload) && payload[0]) return payload[0];
+      return payload || {};
+    }
+
     function renderHomepageLadders(payload) {
       const root = document.getElementById('ladderGrid');
       if (!root) return;
+      const source = unwrapHomepageLadderPayload(payload);
       const groups = [
-        { key:'klaverjas', label:'Klaverjassen', rows: payload?.klaverjas || [] },
-        { key:'boerenbridge', label:'Boerenbridge', rows: payload?.boerenbridge || [] },
-        { key:'beerpong', label:'Beerpong', rows: payload?.beerpong || [] }
+        { key:'klaverjas', label:'Klaverjassen', rows: source?.klaverjas || [] },
+        { key:'boerenbridge', label:'Boerenbridge', rows: source?.boerenbridge || [] },
+        { key:'beerpong', label:'Beerpong', rows: source?.beerpong || [] }
       ];
       root.innerHTML = groups.map((group) => {
         const rows = Array.isArray(group.rows) ? group.rows : [];
@@ -688,7 +694,7 @@
         setHomepageLiveState('live', 'Live');
       } catch (err) {
         console.warn('Homepage ladders offline', err);
-        setHomepageLiveState('standby', 'Stand-by');
+        setHomepageLiveState('standby', 'Offline');
       }
     }
 
