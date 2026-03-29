@@ -42,9 +42,9 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v167"></script>
-  <script src="./admin-session-sync.js?v167"></script>
-  <script src="./admin-topnav.js?v167"></script>
+  <script src="./gejast-config.js?v168"></script>
+  <script src="./admin-session-sync.js?v168"></script>
+  <script src="./admin-topnav.js?v168"></script>
 </head>
 <body>
   <main class="main-card">
@@ -262,12 +262,14 @@
       const requests = normalizeAdminRows(requestsRes.requests || requestsRes.items || []);
       const history = normalizeAdminRows(historyRes.history || historyRes.items || []);
       const expiredItems = Array.isArray(expiredRes?.items) ? expiredRes.items : [];
-      const awaiting = history.filter((item) => item.state_bucket === 'awaiting').length;
+      const awaitingItems = history.filter((item) => item.state_bucket === 'awaiting');
       const active = history.filter((item) => item.state_bucket === 'active').length;
       const rejected = history.filter((item) => item.state_bucket === 'rejected').length;
+      const expiredHistory = history.filter((item) => item.state_bucket === 'expired').length;
+      const awaiting = awaitingItems.length;
       document.getElementById('statPending').textContent = String(requests.length);
       document.getElementById('statAwaiting').textContent = String(awaiting);
-      document.getElementById('statExpired').textContent = String(expiredItems.length);
+      document.getElementById('statExpired').textContent = String(Math.max(expiredItems.length, expiredHistory));
       document.getElementById('statActive').textContent = String(active);
       document.getElementById('statRejected').textContent = String(rejected);
     }
