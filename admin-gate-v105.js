@@ -21,12 +21,17 @@
     const t=token(), d=device(), u=username();
     if(!t || (deadline() && Date.now()>deadline())){ clearAll(); redirectToAdmin('session_required'); return; }
     try {
-      const useDevice = !!(d && u);
-      const rpcName = useDevice ? 'admin_check_session_with_device' : 'admin_check_session';
-      const payload = useDevice ? { admin_session_token:t, admin_username:u, raw_device_token:d, device_fingerprint:fingerprint() } : { admin_session_token:t };
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpcName}`, { method:'POST', mode:'cors', cache:'no-store', headers: headers(), body: JSON.stringify(payload) });
-      const data = await parse(res);
-      setSession(data?.admin_session_token || t, data?.admin_username || u, data?.raw_device_token || d);
+      if(window.GEJAST_ADMIN_SESSION && typeof window.GEJAST_ADMIN_SESSION.validate==='function'){
+        const data = await window.GEJAST_ADMIN_SESSION.validate();
+        setSession(data?.admin_session_token || t, data?.admin_username || u, data?.raw_device_token || d);
+      } else {
+        const useDevice = !!(d && u);
+        const rpcName = useDevice ? 'admin_check_session_with_device' : 'admin_check_session';
+        const payload = useDevice ? { admin_session_token:t, admin_username:u, raw_device_token:d, device_fingerprint:fingerprint() } : { admin_session_token:t };
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpcName}`, { method:'POST', mode:'cors', cache:'no-store', headers: headers(), body: JSON.stringify(payload) });
+        const data = await parse(res);
+        setSession(data?.admin_session_token || t, data?.admin_username || u, data?.raw_device_token || d);
+      }
       document.documentElement.classList.remove('admin-gate-pending');
       addLogout();
     } catch(err){

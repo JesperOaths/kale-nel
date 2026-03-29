@@ -29,5 +29,6 @@
     if(data?.admin_session_token || token){ setBundle(data?.admin_session_token || token, data?.admin_username || username, true, data?.raw_device_token || device); }
     return data || {};
   }
-  window.GEJAST_ADMIN_SESSION = { getToken, getUsername, getDevice, getDeadline, setBundle, clearBundle, validate, fingerprint };
+  async function requirePage(returnTo=''){ try{ await validate(); return true; } catch(err){ const here = returnTo || (window.location.pathname.split('/').pop() + window.location.search + window.location.hash); window.location.href = `./admin.html?reason=${encodeURIComponent((err&&err.message)||'session_invalid')}&return_to=${encodeURIComponent(here)}`; return false; } }
+  window.GEJAST_ADMIN_SESSION = { getToken, getUsername, getDevice, getDeadline, setBundle, clearBundle, validate, requirePage, fingerprint };
 })();

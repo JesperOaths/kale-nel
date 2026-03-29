@@ -114,9 +114,9 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v156"></script>
-  <script src="./admin-session-sync.js?v156"></script>
-  <script src="./admin-topnav.js?v156"></script>
+  <script src="./gejast-config.js?v157"></script>
+  <script src="./admin-session-sync.js?v157"></script>
+  <script src="./admin-topnav.js?v157"></script>
 </head>
 <body>
   <div class="main-card">
@@ -1205,7 +1205,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         const token = getAdminSessionToken();
         if (!token) { showLoggedOut(); return; }
         const session = await checkSession();
-        if (!session.ok) { clearAdminSessionToken(); showLoggedOut(); return; }
+        if (session && session.ok === false) { clearAdminSessionToken(); showLoggedOut(); return; }
         showLoggedIn(session.username);
         await refreshAdminLists();
       } catch (err) {
