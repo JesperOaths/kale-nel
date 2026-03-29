@@ -20,3 +20,10 @@
 - Beerpong now prevents duplicate selections visually and validates them logically.
 - Beerpong 1v1 asks for cup count first and uses that target for victory.
 - Boerenbridge name fallback now includes dummy players too.
+
+## v159 follow-up
+- Homepage ladder names and Top 5 labels are intentionally non-blue and non-underlined while remaining clickable.
+- Ladder page now links directly to the other ladder pages from the top navigation.
+- Boerenbridge no longer uses pair/matchup matrices; it now shows placement and bidding insight tables.
+- Ladder/player match history cards are collapsed by default and show winners/date in the summary line.
+- Badge set B is the chosen naming direction for the next SQL badge mapping.
