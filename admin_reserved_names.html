@@ -35,7 +35,7 @@
     @media (max-width:760px){ .grid { grid-template-columns:1fr; } }
   </style>
   <script src="./gejast-config.js?v151">
-    (function globalAdminLogout(){ const btn=document.createElement('button'); btn.textContent='Uitloggen'; btn.style.cssText='position:fixed;top:14px;right:14px;z-index:9999;border:none;border-radius:14px;padding:10px 14px;background:#111;color:#fff;font:700 14px Inter,sans-serif;cursor:pointer'; btn.onclick=()=>{ clearAdminSessionToken(); window.location.href='./admin.html'; }; document.addEventListener('DOMContentLoaded',()=>document.body.appendChild(btn)); })();
+    (function globalAdminLogout(){ const btn=document.createElement('button'); btn.textContent='Uitloggen'; btn.style.cssText='position:fixed;top:14px;right:14px;z-index:9999;border:none;border-radius:14px;padding:10px 14px;background:#111;color:#fff;font:700 14px Inter,sans-serif;cursor:pointer'; btn.onclick=()=>{ clearAdminSessionToken(); window.location.href='./admin.html?return_to=admin_reserved_names.html'; }; document.addEventListener('DOMContentLoaded',()=>document.body.appendChild(btn)); })();
   </script>
   <script src="./admin-session-sync.js?v151"></script>
 </head>
@@ -87,11 +87,11 @@
     function setStatus(message='', tone='') { const box=document.getElementById('statusBox'); box.className=`status ${tone}`.trim(); box.textContent=message; }
     async function ensureGate(){
       const token=getToken();
-      if(!token){ clearAdminSessionToken(); window.location.href='./admin.html'; return false; }
+      if(!token){ clearAdminSessionToken(); window.location.href='./admin.html?return_to=admin_reserved_names.html'; return false; }
       try {
         await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: token }) }).then(parseResponse);
         return true;
-      } catch { clearAdminSessionToken(); window.location.href='./admin.html'; return false; }
+      } catch { clearAdminSessionToken(); window.location.href='./admin.html?return_to=admin_reserved_names.html'; return false; }
     }
     async function loadNames(){
       try {

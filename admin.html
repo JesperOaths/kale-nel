@@ -122,6 +122,7 @@
     const ADMIN_DEVICE_KEY = "jas_admin_device_v1";
     const ADMIN_USER_KEY = "jas_admin_user_v1";
     const ADMIN_DEADLINE_KEY = "jas_admin_deadline_v1";
+    const RETURN_TO = new URLSearchParams(window.location.search).get("return_to") || "";
 
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, "Content-Type": "application/json", Accept: "application/json" }; }
     async function parseResponse(res) {
@@ -131,9 +132,24 @@
       if (!res.ok) throw new Error(data?.message || data?.error || data?.details || data?.hint || `HTTP ${res.status}`);
       return data;
     }
+
     function getAdminSessionToken() { return (window.GEJAST_ADMIN_SESSION && window.GEJAST_ADMIN_SESSION.getToken()) || sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
     function setAdminSessionToken(token, username = "", deviceToken = "") { if (window.GEJAST_ADMIN_SESSION) return window.GEJAST_ADMIN_SESSION.setBundle(token, username, true, deviceToken); sessionStorage.setItem(ADMIN_SESSION_KEY, token); localStorage.setItem(ADMIN_SESSION_KEY, token); }
     function clearAdminSessionToken() { if (window.GEJAST_ADMIN_SESSION) return window.GEJAST_ADMIN_SESSION.clearBundle(); [ADMIN_SESSION_KEY, ADMIN_DEVICE_KEY, ADMIN_USER_KEY, ADMIN_DEADLINE_KEY].forEach((key)=>{ sessionStorage.removeItem(key); localStorage.removeItem(key); }); }
+
+    function safeReturnTarget(raw) {
+      const value = String(raw || '').trim();
+      if (!value) return '';
+      if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('//')) return '';
+      if (value.includes('..')) return '';
+      return value.startsWith('./') ? value : `./${value}`;
+    }
+    function maybeReturnAfterLogin() {
+      const target = safeReturnTarget(RETURN_TO);
+      if (!target) return false;
+      window.location.href = target;
+      return true;
+    }
     function setStatus(message = '', tone = '') {
       const box = document.getElementById('statusBox');
       box.textContent = message;
@@ -166,6 +182,7 @@
       return data;
     }
 
+
     async function callFirstRpc(rpcNames, payload) {
       let lastError = null;
       for (const rpcName of rpcNames) {
@@ -184,6 +201,7 @@
       if (data.admin_session_token) setAdminSessionToken(data.admin_session_token);
       return data;
     }
+
     function hasActivationEvidence(out) {
       return Boolean(
         out.has_pin ??
@@ -257,6 +275,8 @@
         await checkSession();
         showLoggedIn();
         await loadCounts();
+        if (maybeReturnAfterLogin()) return;
+        if (maybeReturnAfterLogin()) return;
         setStatus('Adminhub geladen.', 'ok');
       } catch (error) {
         clearAdminSessionToken();
@@ -273,6 +293,7 @@
         showLoggedIn();
         await loadCounts();
         setStatus('Inloggen gelukt.', 'ok');
+        if (maybeReturnAfterLogin()) return;
       } catch (error) {
         setStatus(error?.message || 'Inloggen mislukt.', 'warn');
       }
