@@ -1,0 +1,1 @@
+v171 implements Phase 2 shared-stat foundation: shared ladder/player stat RPCs for recent form, activity, biggest rise/drop and volatility; ladder pages now show Snelle inzichten and add Vorm/30d columns; Klaverjas and Beerpong ladder headings use Teamchemie/Rivaliteit while Boerenbridge keeps Eindklassering/Biedprecisie.
