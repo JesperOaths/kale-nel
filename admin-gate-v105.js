@@ -10,7 +10,7 @@
   function device(){ return localStorage.getItem(ADMIN_DEVICE_KEY) || ''; }
   function username(){ return localStorage.getItem(ADMIN_USER_KEY) || sessionStorage.getItem(ADMIN_USER_KEY) || ''; }
   function deadline(){ return Number(localStorage.getItem(ADMIN_DEADLINE_KEY) || sessionStorage.getItem(ADMIN_DEADLINE_KEY) || '0'); }
-  function setSession(v,u){ if(v){ sessionStorage.setItem(ADMIN_SESSION_KEY,v); localStorage.setItem(ADMIN_SESSION_KEY,v); } if(u){ sessionStorage.setItem(ADMIN_USER_KEY,u); localStorage.setItem(ADMIN_USER_KEY,u); } const until=Date.now() + 8*60*60*1000; sessionStorage.setItem(ADMIN_DEADLINE_KEY,String(until)); localStorage.setItem(ADMIN_DEADLINE_KEY,String(until)); }
+  function setSession(v,u,d){ if(v){ sessionStorage.setItem(ADMIN_SESSION_KEY,v); localStorage.setItem(ADMIN_SESSION_KEY,v); } if(u){ sessionStorage.setItem(ADMIN_USER_KEY,u); localStorage.setItem(ADMIN_USER_KEY,u); } if(d){ localStorage.setItem(ADMIN_DEVICE_KEY,d); } const until=Date.now() + 8*60*60*1000; sessionStorage.setItem(ADMIN_DEADLINE_KEY,String(until)); localStorage.setItem(ADMIN_DEADLINE_KEY,String(until)); }
   function clearAll(){ [ADMIN_SESSION_KEY,ADMIN_DEVICE_KEY,ADMIN_USER_KEY,ADMIN_DEADLINE_KEY].forEach((k)=>{ sessionStorage.removeItem(k); localStorage.removeItem(k); }); }
   function headers(){ return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }; }
   async function parse(res){ const txt=await res.text(); let data=null; try{ data=txt?JSON.parse(txt):null; }catch{ throw new Error(txt||`HTTP ${res.status}`); } if(!res.ok) throw new Error(data?.message||data?.error||data?.hint||`HTTP ${res.status}`); return data; }
@@ -19,19 +19,20 @@
   function redirectToAdmin(reason='device_required'){ const here=encodeURIComponent(window.location.pathname.split('/').pop() + window.location.search + window.location.hash); window.location.href=`./admin.html?reason=${encodeURIComponent(reason)}&return_to=${here}`; }
   async function gate(){
     const t=token(), d=device(), u=username();
-    if(!t || !u || (deadline() && Date.now()>deadline())){ clearAll(); redirectToAdmin('device_required'); return; }
+    if(!t || (deadline() && Date.now()>deadline())){ clearAll(); redirectToAdmin('session_required'); return; }
     try {
-      const rpcName = d ? 'admin_check_session_with_device' : 'admin_check_session';
-      const payload = d ? { admin_session_token:t, admin_username:u, raw_device_token:d, device_fingerprint:fingerprint() } : { admin_session_token:t };
+      const useDevice = !!(d && u);
+      const rpcName = useDevice ? 'admin_check_session_with_device' : 'admin_check_session';
+      const payload = useDevice ? { admin_session_token:t, admin_username:u, raw_device_token:d, device_fingerprint:fingerprint() } : { admin_session_token:t };
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpcName}`, { method:'POST', mode:'cors', cache:'no-store', headers: headers(), body: JSON.stringify(payload) });
       const data = await parse(res);
-      if(data?.admin_session_token) setSession(data.admin_session_token, data.admin_username || u);
+      setSession(data?.admin_session_token || t, data?.admin_username || u, data?.raw_device_token || d);
       document.documentElement.classList.remove('admin-gate-pending');
       addLogout();
     } catch(err){
       console.warn('Admin gate blocked page', err);
       clearAll();
-      redirectToAdmin('device_required');
+      redirectToAdmin('session_invalid');
     }
   }
   window.GEJAST_ADMIN_DEVICE = { fingerprint, clearAll, setSession, ensure: gate };

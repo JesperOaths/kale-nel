@@ -530,7 +530,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v154"></script>
+  <script src="./gejast-config.js?v156"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -670,6 +670,7 @@
       return payload || {};
     }
 
+    function playerHref(name, game=''){ const qs = new URLSearchParams(); if (name) qs.set('player', name); if (game) qs.set('game', game); return `./player.html?${qs.toString()}`; }
     function renderHomepageLadders(payload) {
       const root = document.getElementById('ladderGrid');
       if (!root) return;
@@ -681,9 +682,14 @@
       ];
       root.innerHTML = groups.map((group) => {
         const rows = Array.isArray(group.rows) ? group.rows : [];
-        const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><div class="ladder-name">${String(row.player_name || row.display_name || 'Onbekend')}</div><div class="ladder-elo">${Math.round(Number(row.elo_rating || row.rating || 1000))}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen ladderdata.</div>';
-        return `<a class="ladder-card" href="${HOMEPAGE_LADDER_ROUTES[group.key]}"><div class="ladder-title"><strong>${group.label}</strong><span>Top 5</span></div>${body}</a>`;
+        const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><a class="ladder-name" href="${playerHref(String(row.player_name || row.display_name || ''), group.key)}" onclick="event.stopPropagation()">${String(row.player_name || row.display_name || 'Onbekend')}</a><div class="ladder-elo">${Math.round(Number(row.elo_rating || row.rating || 1000))}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen ladderdata.</div>';
+        return `<article class="ladder-card" role="link" tabindex="0" data-route="${HOMEPAGE_LADDER_ROUTES[group.key]}"><div class="ladder-title"><strong>${group.label}</strong><a class="ladder-open-link" href="${HOMEPAGE_LADDER_ROUTES[group.key]}" onclick="event.stopPropagation()">Top 5</a></div>${body}</article>`;
       }).join('');
+      root.querySelectorAll('.ladder-card[data-route]').forEach((card)=>{
+        const route = card.getAttribute('data-route');
+        card.addEventListener('click', ()=>{ window.location.href = route; });
+        card.addEventListener('keydown', (ev)=>{ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); window.location.href = route; } });
+      });
     }
 
     async function fetchHomepageLadderFallback() {
@@ -785,8 +791,12 @@
         const li = document.createElement('li');
         const row = document.createElement('div');
         row.className = 'vote-name-row';
-        const text = document.createElement('span');
+        const text = document.createElement('a');
+        text.href = playerHref(name, '');
         text.textContent = name;
+        text.style.color = 'inherit';
+        text.style.textDecoration = 'none';
+        text.style.fontWeight = '700';
         row.appendChild(text);
         if (canShowRemoveButton(name, listKey)) {
           const btn = document.createElement('button');

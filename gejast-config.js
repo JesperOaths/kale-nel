@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION: 'v154',
+    VERSION: 'v156',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -26,7 +26,7 @@
   }
 
   window.GEJAST_CONFIG = Object.assign({}, window.GEJAST_CONFIG || {}, CONFIG, {
-    VERSION_LABEL: 'v154 · Made by Bruis',
+    VERSION_LABEL: 'v156 · Made by Bruis',
     applyVersionLabel
   });
 
