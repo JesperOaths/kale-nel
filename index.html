@@ -986,17 +986,17 @@
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
-  .player-session-corner.is-visible{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+  .player-session-corner.is-visible{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
   .player-session-corner-label{font-size:11px;line-height:1.15;color:#5f5b53;text-align:right}
   .player-session-corner-name{font-size:13px;line-height:1.1;font-weight:800;color:#111;text-align:right;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .player-session-corner-btn{appearance:none;border:0;border-radius:999px;background:#111;color:#fff;font:inherit;font-weight:800;font-size:11px;line-height:1;padding:7px 10px;cursor:pointer;box-shadow:none}
+  .player-session-corner-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}.player-session-corner-btn{appearance:none;border:0;border-radius:999px;background:#111;color:#fff;font:inherit;font-weight:800;font-size:11px;line-height:1;padding:8px 11px;cursor:pointer;box-shadow:none;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.player-session-corner-btn.alt{background:#f3efe6;color:#111;border:1px solid rgba(0,0,0,.08)}
   .player-session-corner-btn:hover{opacity:.92}
   @media (max-width:640px){.player-session-corner{top:10px;right:10px;padding:7px 9px;min-width:100px}.player-session-corner-name{max-width:120px}}
 </style>
 <div id="playerSessionCorner" class="player-session-corner" aria-live="polite">
   <div class="player-session-corner-label">Ingelogd als</div>
   <div id="playerSessionCornerName" class="player-session-corner-name"></div>
-  <button id="playerSessionCornerLogout" type="button" class="player-session-corner-btn">Log out</button>
+  <div class="player-session-corner-actions"><a id="playerSessionCornerProfile" href="./my_profile.html" class="player-session-corner-btn alt">Mijn profiel</a><button id="playerSessionCornerLogout" type="button" class="player-session-corner-btn">Log out</button></div>
 </div>
 <script>
 (function(){
