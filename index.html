@@ -442,6 +442,9 @@
     .ladder-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
     .ladder-card { display:block; text-decoration:none; color:#161616; background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:20px; padding:16px; box-shadow:0 12px 24px rgba(0,0,0,.04); }
     .ladder-card:hover { transform:translateY(-1px); box-shadow:0 16px 30px rgba(0,0,0,.06); }
+    .ladder-title span, .ladder-open-link { font-size:13px; font-weight:800; color:#8a7a55; text-decoration:none; }
+    .ladder-card a { color:inherit; text-decoration:none; }
+    .ladder-card a:hover { text-decoration:none; }
     .ladder-title { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; }
     .ladder-title strong { font-size:16px; }
     .ladder-title span { color:#8a7a55; font-size:12px; font-weight:700; }
@@ -530,7 +533,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v156"></script>
+  <script src="./gejast-config.js?v157"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -683,7 +686,7 @@
       root.innerHTML = groups.map((group) => {
         const rows = Array.isArray(group.rows) ? group.rows : [];
         const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><a class="ladder-name" href="${playerHref(String(row.player_name || row.display_name || ''), group.key)}" onclick="event.stopPropagation()">${String(row.player_name || row.display_name || 'Onbekend')}</a><div class="ladder-elo">${Math.round(Number(row.elo_rating || row.rating || 1000))}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen ladderdata.</div>';
-        return `<article class="ladder-card" role="link" tabindex="0" data-route="${HOMEPAGE_LADDER_ROUTES[group.key]}"><div class="ladder-title"><strong>${group.label}</strong><a class="ladder-open-link" href="${HOMEPAGE_LADDER_ROUTES[group.key]}" onclick="event.stopPropagation()">Top 5</a></div>${body}</article>`;
+        return `<article class="ladder-card" role="link" tabindex="0" data-route="${HOMEPAGE_LADDER_ROUTES[group.key]}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link">Top 5</span></div>${body}</article>`;
       }).join('');
       root.querySelectorAll('.ladder-card[data-route]').forEach((card)=>{
         const route = card.getAttribute('data-route');
