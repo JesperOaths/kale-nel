@@ -114,9 +114,9 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v160"></script>
-  <script src="./admin-session-sync.js?v160"></script>
-  <script src="./admin-topnav.js?v160"></script>
+  <script src="./gejast-config.js?v162"></script>
+  <script src="./admin-session-sync.js?v162"></script>
+  <script src="./admin-topnav.js?v162"></script>
 </head>
 <body>
   <div class="main-card">
@@ -949,6 +949,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         status: row.status || row.request_status || 'activation_expired'
       }));
     }
+    function isLikelyExpired(row){ try { const bucket = stateBucket(row); if (bucket !== 'awaiting') return false; const exp = row?.expires_at ? new Date(row.expires_at) : null; if (exp && !isNaN(exp) && exp.getTime() < Date.now()) return true; const approvedAt = new Date(row?.approved_at || row?.decision_at || row?.updated_at || row?.requested_at || row?.created_at || ''); if (!isNaN(approvedAt)) return (Date.now() - approvedAt.getTime()) > (24*60*60*1000); } catch(_){} return false; }
     function mergeHistoryWithExpired(historyRows, expiredRows) {
       const byId = new Map();
       (historyRows || []).forEach((row) => {
@@ -961,7 +962,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         const existing = byId.get(String(key)) || {};
         byId.set(String(key), { ...existing, ...row, state_bucket: 'expired', request_status: row.request_status || existing.request_status || 'activation_expired', status: row.status || existing.status || 'activation_expired' });
       });
-      return Array.from(byId.values());
+      return Array.from(byId.values()).map((row)=> isLikelyExpired(row) ? { ...row, state_bucket:'expired', request_status:'activation_expired', status:'activation_expired' } : row);
     }
     async function decideRequest(requestId, decision, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision, decision_reason_input: decisionReason }) }); return await parseResponse(res); }
     async function approveAndSendActivation(requestId, decisionReason) {
