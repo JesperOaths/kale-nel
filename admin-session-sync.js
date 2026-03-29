@@ -26,8 +26,11 @@
     const payload = useDevice ? { admin_session_token:token, admin_username:username, raw_device_token:device, device_fingerprint:fingerprint() } : { admin_session_token:token };
     const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpc}`,{method:'POST',mode:'cors',cache:'no-store',headers:headers(),body:JSON.stringify(payload)});
     const data=await parse(res);
-    if(data?.admin_session_token || token){ setBundle(data?.admin_session_token || token, data?.admin_username || username, true, data?.raw_device_token || device); }
-    return data || {};
+    const nextToken = data?.admin_session_token || data?.token || token;
+    const nextUser = data?.admin_username || data?.username || username;
+    const nextDevice = data?.raw_device_token || device;
+    if(nextToken){ setBundle(nextToken, nextUser, true, nextDevice); }
+    return Object.assign({ ok:true, admin_session_token: nextToken, admin_username: nextUser }, data || {});
   }
   async function requirePage(returnTo=''){ try{ await validate(); return true; } catch(err){ const here = returnTo || (window.location.pathname.split('/').pop() + window.location.search + window.location.hash); window.location.href = `./admin.html?reason=${encodeURIComponent((err&&err.message)||'session_invalid')}&return_to=${encodeURIComponent(here)}`; return false; } }
   window.GEJAST_ADMIN_SESSION = { getToken, getUsername, getDevice, getDeadline, setBundle, clearBundle, validate, requirePage, fingerprint };

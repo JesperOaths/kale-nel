@@ -7,9 +7,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Boerenbridge kluis</title>
-  <script src="./gejast-config.js?v159"></script>
-  <script src="./admin-session-sync.js?v159"></script>
-  <script src="./admin-gate-v105.js?v159"></script>
+  <script src="./gejast-config.js?v160"></script>
+  <script src="./admin-session-sync.js?v160"></script>
+  <script src="./admin-gate-v105.js?v160"></script>
   <style>
     :root{--gold:#d4af37;--ink:#111;--muted:#6b6458}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(rgba(244,240,232,.78),rgba(244,240,232,.78)), url('./site-bg-desktop.webp') center/cover no-repeat fixed;color:var(--ink)}
@@ -23,7 +23,7 @@
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);backdrop-filter:blur(6px);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,.18)}
     @media (max-width:760px){body{background:linear-gradient(rgba(244,240,232,.72),rgba(244,240,232,.72)), url('./site-bg-mobile.webp') center/cover no-repeat fixed}.cards,.filters{grid-template-columns:1fr 1fr}.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
   </style>
-  <script src="./admin-topnav.js?v159"></script>
+  <script src="./admin-topnav.js?v160"></script>
 </head>
 <body>
   <div id="gateNotice" class="page"><section class="sheet"><div class="panel">Adminsessie controleren...</div></section></div>
@@ -62,7 +62,7 @@
     const ADMIN_SESSION_MAX_AGE_MS=8*60*60*1000;
     function readAdminMeta(){ try{return JSON.parse(sessionStorage.getItem(ADMIN_SESSION_META_KEY)||localStorage.getItem(ADMIN_SESSION_META_KEY)||'null');}catch{return null;} }
     function adminToken(){ const meta=readAdminMeta(); const token=(meta&&meta.token)||(sessionStorage.getItem(ADMIN_KEYS[0])||localStorage.getItem(ADMIN_KEYS[0])||''); if(meta&&meta.issued_at&&Date.now()-meta.issued_at>ADMIN_SESSION_MAX_AGE_MS){ sessionStorage.removeItem(ADMIN_KEYS[0]); localStorage.removeItem(ADMIN_KEYS[0]); sessionStorage.removeItem(ADMIN_SESSION_META_KEY); localStorage.removeItem(ADMIN_SESSION_META_KEY); return ''; } return token; }
-    async function ensureGate(){ const token=adminToken(); const notice=document.getElementById('gateNotice'); if(!token){ window.location.href='./admin.html?return_to=boerenbridge_vault.html'; return false; } try{ const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`,{method:'POST',mode:'cors',cache:'no-store',headers:rpcHeaders(),body:JSON.stringify({admin_session_token:token})}); await parseResponse(res); document.getElementById('bbVaultApp').style.display=''; if(notice) notice.style.display='none'; return true; }catch(e){ window.location.href='./admin.html?reason=mfa_required&return_to=boerenbridge_vault.html'; return false; } }
+    async function ensureGate(){ const notice=document.getElementById('gateNotice'); if(window.GEJAST_ADMIN_SESSION && typeof window.GEJAST_ADMIN_SESSION.requirePage==='function'){ const ok = await window.GEJAST_ADMIN_SESSION.requirePage('boerenbridge_vault.html'); if(ok){ document.getElementById('bbVaultApp').style.display=''; if(notice) notice.style.display='none'; } return ok; } const token=adminToken(); if(!token){ window.location.href='./admin.html?return_to=boerenbridge_vault.html'; return false; } try{ const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`,{method:'POST',mode:'cors',cache:'no-store',headers:rpcHeaders(),body:JSON.stringify({admin_session_token:token})}); await parseResponse(res); document.getElementById('bbVaultApp').style.display=''; if(notice) notice.style.display='none'; return true; }catch(e){ window.location.href='./admin.html?reason=mfa_required&return_to=boerenbridge_vault.html'; return false; } }
     document.getElementById('watermark').textContent=`${APP_VERSION} · Made by Bruis`;
     function rpcHeaders(){ return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }; }
     async function parseResponse(res){ const txt=await res.text(); let data=null; try{ data=txt?JSON.parse(txt):null; }catch{ throw new Error(txt || `HTTP ${res.status}`); } if(!res.ok) throw new Error(data?.message||data?.error||data?.hint||`HTTP ${res.status}`); return data; }
