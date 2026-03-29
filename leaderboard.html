@@ -28,9 +28,8 @@
     @media (max-width:1100px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}.grid,.split{grid-template-columns:1fr}}
     @media (max-width:720px){body{padding:14px}.shell{padding:18px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.mini-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
   </style>
-  <script src="./gejast-config.js?v151"></script>
-  <script src="./admin-session-sync.js?v151"></script>
-  <script src="./admin-gate-v105.js?v151"></script>
+  <script src="./gejast-config.js?v154"></script>
+  <script src="./admin-gate-v105.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -111,7 +110,7 @@ async function parseResponse(res){const t=await res.text(); let d=null; try{d=t?
 async function callRpc(name,payload={}){const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`,{method:'POST',mode:'cors',cache:'no-store',headers:rpcHeaders(),body:JSON.stringify(payload)}); return parseResponse(res)}
 function getAdminSessionToken(){return sessionStorage.getItem(ADMIN_SESSION_KEY)||localStorage.getItem(ADMIN_SESSION_KEY)}
 function setStatus(message='',tone=''){const box=document.getElementById('statusBox'); box.className=`status ${tone}`; box.textContent=message}
-async function ensureAdminGate(){const token=getAdminSessionToken(); const notice=document.getElementById('gateNotice'); if(!token){notice.textContent='Geen adminsessie gevonden. Je wordt doorgestuurd naar admin.'; setTimeout(()=>location.href='./admin.html?return_to=leaderboard.html',900); return false;} try{const data = window.GEJAST_ADMIN_SESSION ? await window.GEJAST_ADMIN_SESSION.validate() : await callRpc('admin_check_session',{admin_session_token:token}); document.getElementById('leaderApp').style.display=''; notice.style.display='none'; return true;}catch(e){notice.textContent='Adminsessie verlopen of ongeldig. Je wordt doorgestuurd naar admin.'; setTimeout(()=>location.href='./admin.html?return_to=leaderboard.html',1000); return false;}}
+async function ensureAdminGate(){const token=getAdminSessionToken(); const notice=document.getElementById('gateNotice'); if(!token){notice.textContent='Geen adminsessie gevonden. Je wordt doorgestuurd naar admin.'; setTimeout(()=>location.href='./admin.html',900); return false;} try{const data=await callRpc('admin_check_session',{admin_session_token:token}); if(data?.admin_session_token){sessionStorage.setItem(ADMIN_SESSION_KEY,data.admin_session_token); localStorage.setItem(ADMIN_SESSION_KEY,data.admin_session_token);} document.getElementById('leaderApp').style.display=''; notice.style.display='none'; return true;}catch(e){notice.textContent='Adminsessie verlopen of ongeldig. Je wordt doorgestuurd naar admin.'; setTimeout(()=>location.href='./admin.html',1000); return false;}}
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function renderMiniList(id, items, key){const root=document.getElementById(id); if(!items?.length){root.innerHTML='<div class="empty">Nog geen data.</div>'; return;} root.innerHTML=items.map((item,idx)=>`<div class="leader"><div class="rank">${idx+1}</div><div><div class="name">${esc(item.display_name)}</div></div><div class="value">${esc(item[key] ?? '-')}</div></div>`).join('')}
 function renderLeader(rows){const root=document.getElementById('leaderCards'); if(!rows?.length){root.innerHTML='<div class="empty">Nog geen leaderboarddata.</div>'; return;} root.innerHTML=rows.map((row,idx)=>`<div class="leader"><div class="rank">${idx+1}</div><div><div class="name">${esc(row.display_name)}</div><div class="meta">${row.games_won} winst · ${row.games_played} potjes · ${row.win_rate}% winrate</div></div><div class="value">${row.total_points}<div class="meta">punten</div></div></div>`).join('')}

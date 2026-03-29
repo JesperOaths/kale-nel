@@ -4,8 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wedstrijden beheren</title>
-  <script src="./gejast-config.js?v151"></script>
-  <script src="./admin-session-sync.js?v151"></script>
+  <script src="./gejast-config.js?v154"></script>
   <style>
     :root{
       --bg:#e8e4d9;
@@ -123,7 +122,7 @@
   const cfg = window.GEJAST_CONFIG || {};
   const SUPABASE_URL = cfg.SUPABASE_URL || '';
   const APIKEY = cfg.SUPABASE_PUBLISHABLE_KEY || '';
-  const ADMIN_SESSION_KEY = "jas_admin_session_v8";
+  const ADMIN_SESSION_KEY = 'jas_admin_session_v8';
   const SESSION_KEYS = ['jas_session_token_v11','jas_session_token_v10'];
   const GAME_ENTRY = { klaverjas:'./scorer.html', boerenbridge:'./boerenbridge.html', beerpong:'./beerpong.html' };
   const params = new URLSearchParams(location.search);
@@ -150,7 +149,7 @@
   };
 
   function getPlayerSession(){ for(const key of SESSION_KEYS){ const v = localStorage.getItem(key) || sessionStorage.getItem(key); if(v) return v; } return ''; }
-  function getAdminSession(){ return (window.GEJAST_ADMIN_SESSION && window.GEJAST_ADMIN_SESSION.getToken()) || sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY) || ''; }
+  function getAdminSession(){ return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY) || ''; }
   function rpcHeaders(){ return { apikey: APIKEY, Authorization: `Bearer ${APIKEY}`, 'Content-Type':'application/json', Accept:'application/json' }; }
   async function parseResponse(res){ const text = await res.text(); let data = null; try{ data = text ? JSON.parse(text) : null; }catch{ data = text; } if(!res.ok){ throw new Error((data && data.message) || (data && data.error_description) || text || `HTTP ${res.status}`); } return data; }
   function safeArray(v){ return Array.isArray(v) ? v : []; }

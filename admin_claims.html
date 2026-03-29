@@ -114,8 +114,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v151"></script>
-  <script src="./admin-session-sync.js?v151"></script>
+  <script src="./gejast-config.js?v154"></script>
 </head>
 <body>
   <div class="main-card">
@@ -235,9 +234,16 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     ];
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, "Content-Type": "application/json", Accept: "application/json" }; }
     async function parseResponse(res) { const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }
-    function getAdminSessionToken() { return (window.GEJAST_ADMIN_SESSION && window.GEJAST_ADMIN_SESSION.getToken()) || sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
-    function setAdminSessionToken(token, persist = true, username = "", deviceToken = "") { if (window.GEJAST_ADMIN_SESSION) return window.GEJAST_ADMIN_SESSION.setBundle(token, username, persist, deviceToken); sessionStorage.setItem(ADMIN_SESSION_KEY, token); if (persist) localStorage.setItem(ADMIN_SESSION_KEY, token); }
-    function clearAdminSessionToken() { if (window.GEJAST_ADMIN_SESSION) return window.GEJAST_ADMIN_SESSION.clearBundle(); [ADMIN_SESSION_KEY, ADMIN_USER_KEY, ADMIN_DEADLINE_KEY].forEach((key)=>{ sessionStorage.removeItem(key); localStorage.removeItem(key); }); }
+    function getAdminSessionToken() { return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
+    function setAdminSessionToken(token, persist = false, username = '') {
+      sessionStorage.setItem(ADMIN_SESSION_KEY, token);
+      if (persist) localStorage.setItem(ADMIN_SESSION_KEY, token); else localStorage.removeItem(ADMIN_SESSION_KEY);
+      if (username) { sessionStorage.setItem(ADMIN_USER_KEY, username); localStorage.setItem(ADMIN_USER_KEY, username); }
+      const until = Date.now() + 8*60*60*1000;
+      sessionStorage.setItem(ADMIN_DEADLINE_KEY, String(until));
+      localStorage.setItem(ADMIN_DEADLINE_KEY, String(until));
+    }
+    function clearAdminSessionToken() { [ADMIN_SESSION_KEY, ADMIN_USER_KEY, ADMIN_DEADLINE_KEY].forEach((key)=>{ sessionStorage.removeItem(key); localStorage.removeItem(key); }); }
     function setStatus(text) { document.getElementById("status").textContent = text || ""; }
     function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;"); }
     function showLoggedOut() { document.getElementById("loginView").classList.remove("hidden"); document.getElementById("adminView").classList.add("hidden"); document.getElementById("workspace").classList.add("hidden"); document.getElementById("adminTabsCard").classList.add("hidden"); document.getElementById("adminToolbar").classList.add("hidden"); document.getElementById("statsGrid").classList.add("hidden"); document.getElementById("requestsCard").classList.add("hidden"); document.getElementById("historyCard").classList.add("hidden"); document.getElementById("approvedUsersCard").classList.add("hidden"); document.getElementById("requestsList").innerHTML = ""; document.getElementById("historyList").innerHTML = ""; document.getElementById("approvedUsersList").innerHTML = ""; document.getElementById("adminTabs").innerHTML = ""; }
@@ -933,7 +939,8 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     }
 
     async function checkSession() {
-      const data = window.GEJAST_ADMIN_SESSION ? await window.GEJAST_ADMIN_SESSION.validate() : await (async()=>{ const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); })();
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) });
+      const data = await parseResponse(res);
       if (data.admin_session_token) setAdminSessionToken(data.admin_session_token);
       return data;
     }
@@ -1204,7 +1211,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         const token = getAdminSessionToken();
         if (!token) { showLoggedOut(); return; }
         const session = await checkSession();
-        if (!session || session.ok === false) { clearAdminSessionToken(); showLoggedOut(); return; }
+        if (!session.ok) { clearAdminSessionToken(); showLoggedOut(); return; }
         showLoggedIn(session.username);
         await refreshAdminLists();
       } catch (err) {

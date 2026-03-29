@@ -53,8 +53,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/vault.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v151"></script>
-  <script src="./admin-session-sync.js?v151"></script>
+  <script src="./gejast-config.js?v154"></script>
 </head>
 <body>
   <div class="page">
@@ -92,7 +91,7 @@
       if (!res.ok) throw new Error(data?.message || data?.error || data?.details || data?.hint || `HTTP ${res.status}`);
       return data;
     }
-    function getAdminSessionToken() { return (window.GEJAST_ADMIN_SESSION && window.GEJAST_ADMIN_SESSION.getToken()) || sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
+    function getAdminSessionToken() { return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
     async function ensureAdminGate() {
       const token = getAdminSessionToken();
       const notice = document.getElementById('gateNotice');
