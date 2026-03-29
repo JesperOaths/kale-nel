@@ -1,0 +1,1 @@
+v173 removes cups-hit display from public match detail cards because that value is not a reliable surfaced field, and expands the advanced stat layer beyond the first insight wave.
