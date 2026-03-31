@@ -528,13 +528,29 @@
     }
   </style>
 
+
+    .drinks-home-section{margin:18px 0 8px;display:grid;gap:12px}
+    .drinks-home-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    .drinks-home-head h2{margin:0;font-size:1.1rem}
+    .drinks-home-link{display:inline-flex;padding:9px 12px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800}
+    .drinks-home-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    .drinks-mini{background:rgba(255,255,255,.72);border:1px solid rgba(17,17,17,.06);border-radius:18px;padding:14px;text-align:left}
+    .drinks-mini-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:800;margin-bottom:6px}
+    .drinks-mini-value{font-size:1.55rem;font-weight:900;line-height:1.05}
+    .drinks-mini-sub{font-size:12px;color:var(--muted-text);margin-top:4px}
+    .drinks-top-list{display:grid;gap:8px}
+    .drinks-top-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.72);border:1px solid rgba(17,17,17,.06)}
+    .drinks-top-rank{display:inline-flex;width:26px;height:26px;border-radius:999px;background:#111;color:#fff;align-items:center;justify-content:center;font-size:12px;font-weight:800;margin-right:10px}
+    .drinks-top-name{font-weight:800;color:#111;text-decoration:none}
+    .drinks-top-meta{font-size:12px;color:var(--muted-text)}
+
   <style id="bruis-watermark-style">
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(212,175,55,0.35);color:#f3e3a6;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v173"></script>
+  <script src="./gejast-config.js?v179"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -561,6 +577,23 @@
           <div class="ladder-card"><div class="ladder-title"><strong>Boerenbridge</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
           <div class="ladder-card"><div class="ladder-title"><strong>Beerpong</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
         </div>
+      </section>
+
+      <section class="drinks-home-section" aria-label="Drinkstand">
+        <div class="drinks-home-head">
+          <div>
+            <h2>Drinkstand</h2>
+            <div class="status-sub" style="margin:4px 0 0">Geverifieerde drankjes en all-time ladder.</div>
+          </div>
+          <a class="drinks-home-link" href="./drinks.html">Open drinks</a>
+        </div>
+        <div id="drinksHomeGrid" class="drinks-home-grid">
+          <div class="drinks-mini"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">—</div></div>
+          <div class="drinks-mini"><div class="drinks-mini-label">Deze week</div><div class="drinks-mini-value">—</div></div>
+          <div class="drinks-mini"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">—</div></div>
+          <div class="drinks-mini"><div class="drinks-mini-label">Units</div><div class="drinks-mini-value">—</div></div>
+        </div>
+        <div id="drinksHomeTop" class="drinks-top-list"></div>
       </section>
 
       <section class="public-links" aria-label="Sitepagina's">
@@ -592,6 +625,12 @@
           <a class="page-link-card login-link" href="./profiles.html">
             <div class="page-link-label">Spelers</div>
             <div class="page-link-copy">Bekijk spelers en profielen.</div>
+          </a>
+        </div>
+        <div class="public-links-grid">
+          <a class="page-link-card login-link" href="./drinks.html">
+            <div class="page-link-label">Drinks</div>
+            <div class="page-link-copy">Log drankjes en bevestig elkaar.</div>
           </a>
         </div>
       </section>
@@ -966,6 +1005,26 @@
         setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
       }
     }
+
+    async function loadDrinksHome(){
+      try{
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
+        const data = await parseResponse(res);
+        const payload = data?.get_drinks_homepage_public || data || {};
+        const grid = document.getElementById('drinksHomeGrid');
+        const top = document.getElementById('drinksHomeTop');
+        if(!grid || !top) return;
+        const totals = payload.totals || {};
+        grid.innerHTML = `
+          <div class="drinks-mini"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">${totals.today_events||0}</div><div class="drinks-mini-sub">${Number(totals.today_units||0).toFixed(1)} units</div></div>
+          <div class="drinks-mini"><div class="drinks-mini-label">Deze week</div><div class="drinks-mini-value">${totals.week_events||0}</div><div class="drinks-mini-sub">${Number(totals.week_units||0).toFixed(1)} units</div></div>
+          <div class="drinks-mini"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">${totals.all_events||0}</div><div class="drinks-mini-sub">${Number(totals.all_units||0).toFixed(1)} units</div></div>
+          <div class="drinks-mini"><div class="drinks-mini-label">Open verificaties</div><div class="drinks-mini-value">${totals.pending_events||0}</div><div class="drinks-mini-sub">Wacht op bevestiging</div></div>`;
+        const leaders = Array.isArray(payload.top_units) ? payload.top_units : [];
+        top.innerHTML = leaders.length ? leaders.slice(0,5).map((r,i)=>`<div class="drinks-top-item"><div><span class="drinks-top-rank">${i+1}</span><a class="drinks-top-name" href="./player.html?player=${encodeURIComponent(r.player_name||'')}&game=beerpong">${r.player_name||'Speler'}</a><div class="drinks-top-meta">${r.events||0} drankjes · ${Number(r.units||0).toFixed(1)} units</div></div></div>`).join('') : '<div class="status show">Nog geen geverifieerde drankdata.</div>';
+      } catch(_){ }
+    }
+
     async function load() {
       try { await ensureAdminViewer(); renderState(await getHomepageState()); setStatus(''); }
       catch (error) {
@@ -980,6 +1039,7 @@
     document.getElementById('yesBtn').addEventListener('click', () => handleVote('ja'));
     document.getElementById('noBtn').addEventListener('click', () => handleVote('nee'));
     load();
+    loadDrinksHome();
   </script>
 
   <div class="site-credit-watermark" data-version-watermark></div>
