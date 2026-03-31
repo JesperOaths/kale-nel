@@ -559,7 +559,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v189';</script><script>window.GEJAST_PAGE_VERSION='v192';</script><script src="./gejast-config.js?v192"></script>
+  <script>window.GEJAST_PAGE_VERSION='v194';</script><script src="./gejast-config.js?v194"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -603,7 +603,7 @@
       <section class="drinks-home-section" style="margin-top:16px" aria-label="Drinkstand">
         <div class="drinks-home-head">
           <div>
-            <h2>Drankstand</h2>
+            <h2>Drankstand</h2><div style="margin-top:8px"><a class="drinks-home-link" href="./drinks_add.html">Drinks toevoegen</a></div>
           </div>
           
         </div>
@@ -1052,7 +1052,7 @@
         root.innerHTML = `
           <a class="drinks-home-top5-card" href="./drinks.html"><div class="drinks-home-top5-card-head"><strong>${dayTitle}</strong><span>Units</span></div><div class="drinks-home-top5-list">${renderRows(payload.session_top5,'units')}</div></a>
           <a class="drinks-home-top5-card" href="./drinks.html"><div class="drinks-home-top5-card-head"><strong>All-time </strong><span>Units</span></div><div class="drinks-home-top5-list">${renderRows(payload.all_time_top5,'units')}</div></a>
-          <a class="drinks-home-top5-card" href="./drinks.html"><div class="drinks-home-top5-card-head"><strong id="drinksSpeedTop5Title">Speed</strong><span>Seconds</span></div><div class="drinks-home-top5-list">${renderRows(payload.speed_top5,'seconds')}</div></a>`;
+          <a class="drinks-home-top5-card" href="./drinks_speed.html"><div class="drinks-home-top5-card-head"><strong id="drinksSpeedTop5Title">Speed</strong><span>Seconds</span></div><div class="drinks-home-top5-list">${renderRows(payload.speed_top5,'seconds')}</div></a>`;
       } catch(err){
         console.warn('Drinks homepage top 5 load failed', err);
       }
