@@ -10,8 +10,8 @@
     const code = err && typeof err.code === 'number' ? err.code : null;
     const raw = String((err && err.message) || '').toLowerCase();
     if (code === 1 || raw.includes('denied') || raw.includes('permission')) {
-      if (state === 'denied') return 'Locatie staat geblokkeerd voor deze site of browser. Zet locatietoegang weer aan in je browser- of Android-instellingen en probeer opnieuw.';
-      return 'Locatietoegang is geweigerd of het toestemmingsvenster is niet geopend. Probeer opnieuw of controleer je browser- en Android-instellingen.';
+      if (state === 'denied') return 'Locatie kwam niet door. Dit kan komen door een eerdere browser/sitekeuze, Android-locatie-instellingen of een prompt die niet is doorgekomen. Gebruik Geolocatie opnieuw proberen en controleer eventueel site-permissies.';
+      return 'Locatie kwam niet door. Probeer Geolocatie opnieuw proberen en controleer eventueel browser- en Android-locatie-instellingen.';
     }
     if (code === 2 || raw.includes('position unavailable') || raw.includes('unavailable')) return 'Locatie is nu niet beschikbaar. Controleer of locatie/gps op je toestel aanstaat en probeer opnieuw.';
     if (code === 3 || raw.includes('timeout')) return 'Locatie opvragen duurde te lang. Probeer opnieuw met betere gps of verbinding.';
