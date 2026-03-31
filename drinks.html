@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drinks overzicht</title>
-  <script>window.GEJAST_PAGE_VERSION='v199';</script><script src="./gejast-config.js?v199"></script>
+  <script>window.GEJAST_PAGE_VERSION='v201';</script><script src="./gejast-config.js?v201"></script>
   <style>
     :root{--line:rgba(0,0,0,.08);--muted:#6b6257;--ok:#1f8f52;--bad:#b53a30;--card:#fff}
     *{box-sizing:border-box}body{margin:0;padding:24px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(244,240,232,.9),rgba(244,240,232,.92)),url('./site-bg-desktop.webp') center/cover fixed;color:#201b16}
@@ -110,7 +110,7 @@
     function avatar(r){ const src=r.avatar_url||r.photo_url||''; return src?`<img class="avatar" src="${src}" alt="">`:`<div class="avatar"></div>`; }
     function renderList(el,rows,fmt,empty='Nog geen data.'){ el.innerHTML=(rows&&rows.length)?rows.map(fmt).join(''):`<div class="muted">${empty}</div>`; }
     function renderSession(data){ const s=data.session||{}; const totals=data.totals||{}; const pending=(data.verify_queue||[]).length || (data.my_pending_events||[]).length || 0; document.getElementById('sessionGrid').innerHTML=`
-      <div class="metric"><div class="label">Mijn sessie</div><div class="value">${Number(s.units||0).toFixed(1)}</div><div class="meta">${s.events||0} drankjes</div></div>
+      <div class="metric"><div class="label">Dagsessie</div><div class="value">${Number((s.units??totals.today_units)||0).toFixed(1)}</div><div class="meta">${(s.events??totals.today_events)||0} drankjes</div></div>
       <a class="metric metric-link" href="#ladderPanel"><div class="label">Vandaag</div><div class="value">${Number(totals.today_units||0).toFixed(1)}</div><div class="meta">${totals.today_events||0} drankjes</div></a>
       <a class="metric metric-link" href="#verifyPanel"><div class="label">Open verificaties</div><div class="value">${pending}</div><div class="meta">Bekijk pending verzoeken</div></a>
       <a class="metric metric-link" href="#ladderPanel"><div class="label">All-time</div><div class="value">${Number(totals.all_units||0).toFixed(1)}</div><div class="meta">${totals.all_events||0} drankjes</div></a>
@@ -135,6 +135,6 @@
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./drinks-verify-float.js?v199"></script>
+  <script src="./drinks-verify-float.js?v201"></script>
 </body>
 </html>
