@@ -1041,31 +1041,29 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     async function triggerMakeScenario(meta = {}) {
       if (!MAKE_WEBHOOK_URL) throw new Error('MAKE_WEBHOOK_URL ontbreekt in admin.html');
       const payload = buildMakeWebhookMeta('admin_claims.html', meta);
-      const payloadText = JSON.stringify(payload);
-      if (navigator.sendBeacon) {
-        const blob = new Blob([payloadText], { type: 'text/plain;charset=UTF-8' });
-        if (navigator.sendBeacon(MAKE_WEBHOOK_URL, blob)) return { ok:true, via:'sendBeacon' };
-      }
       try {
-        await fetch(MAKE_WEBHOOK_URL, {
-          method:'POST', mode:'no-cors', cache:'no-store', keepalive:true,
-          headers:{ 'Content-Type':'text/plain;charset=UTF-8' }, body: payloadText
+        const res = await fetch(MAKE_WEBHOOK_URL, {
+          method:'POST', mode:'cors', cache:'no-store', keepalive:true,
+          headers:{ 'Content-Type':'application/json', 'Accept':'application/json' },
+          body: JSON.stringify(payload)
         });
-        return { ok:true, via:'fetch-no-cors' };
+        if (!res.ok) throw new Error(`Make webhook gaf HTTP ${res.status}`);
+        return { ok:true, via:'fetch-json', status:res.status, payload };
       } catch (fetchErr) {
-        const fallbackUrl = new URL(MAKE_WEBHOOK_URL);
-        fallbackUrl.searchParams.set('trigger', String(payload.trigger || 'admin_approval'));
-        fallbackUrl.searchParams.set('source', 'admin_claims.html');
-        fallbackUrl.searchParams.set('ts', String(payload.ts || new Date().toISOString()));
-        Object.entries(meta || {}).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) fallbackUrl.searchParams.set(key, String(value));
-        });
+        const payloadText = JSON.stringify(payload);
+        if (navigator.sendBeacon) {
+          const blob = new Blob([payloadText], { type: 'application/json;charset=UTF-8' });
+          if (navigator.sendBeacon(MAKE_WEBHOOK_URL, blob)) return { ok:true, via:'sendBeacon-json', payload };
+        }
         try {
-          await fetch(fallbackUrl.toString(), { method:'GET', mode:'no-cors', cache:'no-store', keepalive:true });
-          return { ok:true, via:'get-fallback' };
+          await fetch(MAKE_WEBHOOK_URL, {
+            method:'POST', mode:'no-cors', cache:'no-store', keepalive:true,
+            headers:{ 'Content-Type':'application/json;charset=UTF-8', 'Accept':'application/json' },
+            body: payloadText
+          });
+          return { ok:true, via:'fetch-no-cors-json', payload };
         } catch (_) {
-          await new Promise((resolve) => { try { const img = new Image(); img.onload = img.onerror = () => resolve(); img.src = fallbackUrl.toString(); setTimeout(resolve, 1500); } catch(__) { resolve(); } });
-          return { ok:true, via:'img-fallback' };
+          throw fetchErr;
         }
       }
     }

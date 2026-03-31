@@ -2,7 +2,7 @@
 const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY;
-    const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/8eslkp3375gpmixa7826fpdpidx5j9qu3";
+    const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6";
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
     let lastRequests = [];
     let lastHistory = [];
@@ -500,41 +500,31 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
 
     async function triggerMakeScenario(meta = {}) {
       if (!MAKE_WEBHOOK_URL) throw new Error('MAKE_WEBHOOK_URL ontbreekt in admin.html');
-      const payload = {
-        trigger: 'admin_approval',
-        source: 'admin.html',
-        ts: new Date().toISOString(),
-        ...meta
-      };
-      const payloadText = JSON.stringify(payload);
-      if (navigator.sendBeacon) {
-        const blob = new Blob([payloadText], { type: 'text/plain;charset=UTF-8' });
-        if (navigator.sendBeacon(MAKE_WEBHOOK_URL, blob)) return { ok: true, via: 'sendBeacon' };
-      }
+      const payload = buildMakeWebhookMeta('admin.html', meta);
       try {
-        await fetch(MAKE_WEBHOOK_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          keepalive: true,
-          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-          body: payloadText
+        const res = await fetch(MAKE_WEBHOOK_URL, {
+          method:'POST', mode:'cors', cache:'no-store', keepalive:true,
+          headers:{ 'Content-Type':'application/json', 'Accept':'application/json' },
+          body: JSON.stringify(payload)
         });
-        return { ok: true, via: 'fetch-no-cors' };
+        if (!res.ok) throw new Error(`Make webhook gaf HTTP ${res.status}`);
+        return { ok:true, via:'fetch-json', status:res.status, payload };
       } catch (fetchErr) {
-        const fallbackUrl = new URL(MAKE_WEBHOOK_URL);
-        fallbackUrl.searchParams.set('trigger', String(payload.trigger || 'admin_approval'));
-        fallbackUrl.searchParams.set('source', 'admin.html');
-        fallbackUrl.searchParams.set('ts', String(payload.ts || new Date().toISOString()));
-        Object.entries(meta || {}).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) fallbackUrl.searchParams.set(key, String(value));
-        });
-        await new Promise((resolve, reject) => {
-          const img = new Image();
-          img.onload = () => resolve();
-          img.onerror = () => reject(fetchErr);
-          img.src = fallbackUrl.toString();
-        });
-        return { ok: true, via: 'img-get-fallback' };
+        const payloadText = JSON.stringify(payload);
+        if (navigator.sendBeacon) {
+          const blob = new Blob([payloadText], { type: 'application/json;charset=UTF-8' });
+          if (navigator.sendBeacon(MAKE_WEBHOOK_URL, blob)) return { ok:true, via:'sendBeacon-json', payload };
+        }
+        try {
+          await fetch(MAKE_WEBHOOK_URL, {
+            method:'POST', mode:'no-cors', cache:'no-store', keepalive:true,
+            headers:{ 'Content-Type':'application/json;charset=UTF-8', 'Accept':'application/json' },
+            body: payloadText
+          });
+          return { ok:true, via:'fetch-no-cors-json', payload };
+        } catch (_) {
+          throw fetchErr;
+        }
       }
     }
 
