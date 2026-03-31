@@ -577,7 +577,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v205';</script><script src="./gejast-config.js?v205"></script>
+  <script>window.GEJAST_PAGE_VERSION='v206';</script><script src="./gejast-config.js?v206"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -1076,6 +1076,10 @@
       }
     }
 
+
+    function getPlayerSessionToken(){ return localStorage.getItem('jas_session_token_v11') || sessionStorage.getItem('jas_session_token_v11') || localStorage.getItem('jas_session_token_v10') || sessionStorage.getItem('jas_session_token_v10') || ''; }
+    function wireProtectedDrinksLinks(){ document.querySelectorAll('a[href="./drinks_add.html"]').forEach((link)=>{ if(link.dataset.bound==='1') return; link.dataset.bound='1'; link.addEventListener('click',(ev)=>{ if(getPlayerSessionToken()) return; ev.preventDefault(); window.location.href = './login.html?return_to=drinks_add'; }); }); }
+
     async function load() {
       try { await ensureAdminViewer(); renderState(await getHomepageState()); setStatus(''); }
       catch (error) {
@@ -1089,6 +1093,7 @@
     }
     document.getElementById('yesBtn').addEventListener('click', () => handleVote('ja'));
     document.getElementById('noBtn').addEventListener('click', () => handleVote('nee'));
+    wireProtectedDrinksLinks();
     load();
     loadDrinksHome();
     loadDrinksHomeTop5();
@@ -1170,5 +1175,5 @@
 
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v205"></script></body>
+<script src="./drinks-verify-float.js?v206"></script><script src="./gejast-geo.js?v206"></script></body>
 </html>
