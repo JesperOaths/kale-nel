@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drinks toevoegen</title>
-  <script src="./gejast-config.js?v185"></script>
+  <script src="./gejast-config.js?v187"></script>
   <style>
     :root{--line:rgba(0,0,0,.08);--muted:#6b6257;--good:#1f8f52;--bad:#b53a30}
     *{box-sizing:border-box}
@@ -42,16 +42,24 @@
       </div>
 
       <div class="notice">Je drankje telt pas mee nadat iemand in de buurt het bevestigt. Verifiëren werkt alleen als de eisen kloppen, zoals afstand, sessie en ingelogde speler.</div>
+      <div id="locationGate" class="panel" style="margin-top:14px">
+        <h2>Locatie inschakelen</h2>
+        <div id="locationGateCopy" class="muted">Deze pagina vraagt locatie pas aan als jij dat zelf start.</div>
+        <div class="row-actions" style="margin-top:12px">
+          <button id="enableLocationBtn" type="button" class="btn">Locatie gebruiken</button>
+          <button id="retryLocationBtn" type="button" class="btn alt" style="display:none">Opnieuw proberen</button>
+        </div>
+      </div>
       <div id="statusLine" class="status" aria-live="polite"></div>
 
-      <div id="sessionGrid" class="metrics">
+      <div id="sessionGrid" class="metrics" style="display:none">
         <div class="metric"><div class="label">Mijn sessie</div><div class="value">—</div></div>
         <div class="metric"><div class="label">Vandaag</div><div class="value">—</div></div>
         <div class="metric"><div class="label">Open verificaties</div><div class="value">—</div></div>
         <div class="metric"><div class="label">All-time</div><div class="value">—</div></div>
       </div>
 
-      <div class="stack">
+      <div class="stack" id="drinksAppStack" style="display:none">
         <section class="panel">
           <h2>Snel toevoegen</h2>
           <div id="drinkButtons" class="drink-types"></div>
@@ -83,24 +91,35 @@
     const SUPABASE_URL=cfg.SUPABASE_URL||'';
     const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
     const SESSION_KEYS=['jas_session_token_v11','jas_session_token_v10'];
-    let latestData=null; let lastPosition=null;
+    let latestData=null; let lastPosition=null; let locationReady=false;
     const statusLine=document.getElementById('statusLine');
+    const locationGate=document.getElementById('locationGate');
+    const locationGateCopy=document.getElementById('locationGateCopy');
+    const enableLocationBtn=document.getElementById('enableLocationBtn');
+    const retryLocationBtn=document.getElementById('retryLocationBtn');
+    const sessionGrid=document.getElementById('sessionGrid');
+    const drinksAppStack=document.getElementById('drinksAppStack');
     function token(){ for(const k of SESSION_KEYS){ const v=localStorage.getItem(k)||sessionStorage.getItem(k); if(v) return v; } return ''; }
     function headers(){ return {'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${KEY}`,Accept:'application/json'}; }
     async function parse(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch{ throw new Error(t||`HTTP ${res.status}`); } if(!res.ok) throw new Error(d?.message||d?.error||`HTTP ${res.status}`); return d; }
     function setStatus(msg='',tone=''){ statusLine.textContent=msg; statusLine.className=`status ${tone}`.trim(); }
-    function getPosition(){ return new Promise((resolve,reject)=>{ if(!navigator.geolocation){ reject(new Error('Geolocatie niet beschikbaar.')); return; } navigator.geolocation.getCurrentPosition(pos=>resolve(pos),()=>reject(new Error('Geolocatie nodig voor drinks.')),{enableHighAccuracy:true,timeout:10000,maximumAge:60000}); }); }
+    function setLocationGate(msg,showRetry=false){ if(locationGateCopy) locationGateCopy.textContent=msg||''; if(retryLocationBtn) retryLocationBtn.style.display=showRetry?'inline-flex':'none'; }
+    function unlockApp(){ locationReady=true; if(locationGate) locationGate.style.display='none'; if(sessionGrid) sessionGrid.style.display='grid'; if(drinksAppStack) drinksAppStack.style.display='grid'; }
+    function getPosition(){ return new Promise((resolve,reject)=>{ if(!navigator.geolocation){ reject(new Error('Geolocatie niet beschikbaar op dit apparaat.')); return; } navigator.geolocation.getCurrentPosition(pos=>resolve(pos),(err)=>{ const msg = String(err&&err.message||'').toLowerCase(); if(msg.includes('permission')||msg.includes('denied')) reject(new Error('Locatie geweigerd. Sluit bubbels of overlays van andere apps en probeer opnieuw.')); else reject(new Error('Geolocatie nodig voor drinks.')); },{enableHighAccuracy:true,timeout:10000,maximumAge:60000}); }); }
+    async function requestLocationAndLoad(){ try{ setStatus('Locatie wordt opgevraagd...'); const pos=await getPosition(); lastPosition=pos; unlockApp(); setStatus('Locatie actief.', 'ok'); await loadPage(); }catch(err){ setLocationGate(err.message||'Locatie kon niet worden gestart.', true); setStatus(err.message||String(err),'bad'); } }
     function drinkCopy(key){ const map={bier:'Bier',shot:'Shot',wijnfles:'Wijnfles',ice:'Ice',liter_bier:'Liter bier'}; return map[key]||key; }
     function renderButtons(types){ const wrap=document.getElementById('drinkButtons'); wrap.innerHTML=(types||[]).length ? (types||[]).map(t=>`<button class="drink-btn" data-drink-type="${t.key}"><strong>+ ${t.label}</strong><small>${Number(t.unit_value||0).toFixed(1)} units per stuk</small></button>`).join('') : '<div class="muted">Geen drinktypes gevonden.</div>'; wrap.querySelectorAll('[data-drink-type]').forEach(btn=>btn.addEventListener('click',()=>submitDrink(btn.getAttribute('data-drink-type')))); }
     function renderSession(data){ const s=data.session||{}; const totals=data.totals||{}; const pending=(data.my_pending_events||[]).length; document.getElementById('sessionGrid').innerHTML=`<div class="metric"><div class="label">Mijn sessie</div><div class="value">${Number(s.units||0).toFixed(1)}</div><div class="meta">${s.events||0} drankjes</div></div><div class="metric"><div class="label">Vandaag</div><div class="value">${Number(totals.today_units||0).toFixed(1)}</div><div class="meta">${totals.today_events||0} drankjes</div></div><div class="metric"><div class="label">Open verificaties</div><div class="value">${pending}</div><div class="meta">Wacht op bevestiging</div></div><div class="metric"><div class="label">All-time</div><div class="value">${Number(totals.all_units||0).toFixed(1)}</div><div class="meta">${totals.all_events||0} drankjes</div></div>`; }
     function renderPending(rows){ const wrap=document.getElementById('pendingList'); wrap.innerHTML=(rows||[]).length ? (rows||[]).map(r=>`<div class="row"><div class="row-top"><div><strong>${r.event_type_label}</strong><div class="meta">${new Date(r.created_at).toLocaleString('nl-NL')} · ${Number(r.total_units||0).toFixed(1)} units</div></div><span class="pill pending">${r.status}</span></div><div class="row-actions"><button class="btn alt" data-cancel-id="${r.id}">Annuleren</button></div></div>`).join('') : '<div class="muted">Nog geen open aanvragen.</div>'; wrap.querySelectorAll('[data-cancel-id]').forEach(btn=>btn.addEventListener('click',()=>cancelDrink(btn.getAttribute('data-cancel-id')))); }
     function renderVerify(rows){ const wrap=document.getElementById('verifyQueue'); wrap.innerHTML=(rows||[]).length ? (rows||[]).map(r=>`<div class="verify-card"><div class="row-top"><div><strong>${r.player_name} · ${r.event_type_label}</strong><div class="verify-distance">${Number(r.total_units||0).toFixed(1)} units${r.distance_m!=null ? ` · ${Math.round(r.distance_m)}m afstand` : ''}</div></div><span class="pill pending">check</span></div><div class="row-actions"><button class="btn" data-verify-id="${r.id}">Bevestigen</button></div></div>`).join('') : '<div class="muted">Nog geen verificaties in de buurt.</div>'; wrap.querySelectorAll('[data-verify-id]').forEach(btn=>btn.addEventListener('click',()=>verifyDrink(btn.getAttribute('data-verify-id')))); }
     function renderRecent(rows){ const wrap=document.getElementById('recentList'); wrap.innerHTML=(rows||[]).length ? (rows||[]).map(r=>`<div class="row"><div class="row-top"><div><strong>${r.player_name} · ${r.event_type_label}</strong><div class="meta">${new Date(r.verified_at||r.created_at).toLocaleString('nl-NL')} · ${Number(r.total_units||0).toFixed(1)} units</div><div class="meta">Bevestigd door ${r.verifier_names?.join(', ')||'—'}</div></div><span class="pill verified">ok</span></div></div>`).join('') : '<div class="muted">Nog geen bevestigde drankjes.</div>'; }
-    async function loadPage(){ try{ const pos=await getPosition(); lastPosition=pos; const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),viewer_lat:pos.coords.latitude,viewer_lng:pos.coords.longitude})}); const raw=await parse(res); const data=raw?.get_drinks_page_public||raw||{}; latestData=data; renderButtons(data.event_types||[]); renderSession(data); renderPending(data.my_pending_events||[]); renderVerify(data.verify_queue||[]); renderRecent(data.recent_verified||[]); setStatus(''); }catch(err){ setStatus(err.message||String(err),'bad'); } }
+    async function loadPage(){ try{ const pos=lastPosition||await getPosition(); lastPosition=pos; const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),viewer_lat:pos.coords.latitude,viewer_lng:pos.coords.longitude})}); const raw=await parse(res); const data=raw?.get_drinks_page_public||raw||{}; latestData=data; renderButtons(data.event_types||[]); renderSession(data); renderPending(data.my_pending_events||[]); renderVerify(data.verify_queue||[]); renderRecent(data.recent_verified||[]); setStatus(''); }catch(err){ setStatus(err.message||String(err),'bad'); } }
     async function submitDrink(typeKey){ try{ const pos=lastPosition||await getPosition(); const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),event_type_key:typeKey,quantity:1,lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy})}); await parse(res); setStatus(`Gelogd: ${drinkCopy(typeKey)} wacht op bevestiging.`, 'ok'); await loadPage(); }catch(err){ setStatus(err.message||String(err),'bad'); } }
     async function verifyDrink(id){ try{ const pos=lastPosition||await getPosition(); const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,approve:true})}); await parse(res); setStatus('Drankje bevestigd.', 'ok'); await loadPage(); }catch(err){ setStatus(err.message||String(err),'bad'); } }
     async function cancelDrink(id){ try{ const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_my_pending_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id)})}); await parse(res); setStatus('Aanvraag geannuleerd.', 'ok'); await loadPage(); }catch(err){ setStatus(err.message||String(err),'bad'); } }
-    loadPage();
+    enableLocationBtn&&enableLocationBtn.addEventListener('click', requestLocationAndLoad);
+    retryLocationBtn&&retryLocationBtn.addEventListener('click', requestLocationAndLoad);
+    setLocationGate('Deze pagina vraagt locatie pas aan als jij op de knop drukt. Werkt Android niet mee? Sluit bubbels of overlays en probeer daarna opnieuw.');
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
