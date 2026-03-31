@@ -4,29 +4,158 @@
   const KEY = cfg.SUPABASE_PUBLISHABLE_KEY || '';
   const SESSION_KEYS = ['jas_session_token_v11','jas_session_token_v10'];
   const COOLDOWN_MS = 5 * 60 * 1000;
-  const POLL_MS = 30000;
+  const POLL_MS = 7000;
   const DISMISS_KEY = 'gejast_verify_float_dismiss';
   const APPROVED_KEY = 'gejast_verify_float_last_approved';
-  const GEO_KEY = 'gejast_site_geo_cache';
   const LAST_ALERT_KEY = 'gejast_verify_float_last_alert';
-  let watcherStarted = false;
-  let latestPos = null;
+  let activePromptId = null;
+  let pollBusy = false;
 
   function token(){ for (const key of SESSION_KEYS){ const value = localStorage.getItem(key) || sessionStorage.getItem(key); if (value) return value; } return ''; }
-  function headers(){ return {'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${KEY}`,Accept:'application/json'}; }
+  function headers(){ return {'Content-Type':'application/json', apikey:KEY, Authorization:`Bearer ${KEY}`, Accept:'application/json'}; }
   async function parse(res){ const t = await res.text(); let d = null; try { d = t ? JSON.parse(t) : null; } catch { throw new Error(t || `HTTP ${res.status}`); } if (!res.ok) throw new Error(d?.message || d?.error || `HTTP ${res.status}`); return d; }
-  function savePos(pos){ try { latestPos = pos; localStorage.setItem(GEO_KEY, JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy || null, at: Date.now() })); } catch(_){} }
-  function readCachedPos(){ try { const raw = JSON.parse(localStorage.getItem(GEO_KEY)||'null'); if (!raw || !raw.at || (Date.now()-raw.at) > 10*60*1000) return null; return { coords: { latitude: raw.lat, longitude: raw.lng, accuracy: raw.accuracy || null } }; } catch { return null; } }
-  function ensureBox(){ let box = document.getElementById('globalDrinksVerifyFloat'); if (box) return box; box = document.createElement('div'); box.id = 'globalDrinksVerifyFloat'; box.innerHTML = '<div class="gdf-card"><div class="gdf-title">Drinks verificatie</div><div id="gdfBody" class="gdf-body"></div><div class="gdf-actions"><button id="gdfVerifyBtn" class="gdf-btn">Bevestigen</button><button id="gdfOpenBtn" class="gdf-btn alt">Open drinks</button><button id="gdfDismissBtn" class="gdf-btn alt">Later</button></div></div>'; const style = document.createElement('style'); style.textContent = '#globalDrinksVerifyFloat{position:fixed;right:14px;bottom:74px;z-index:10000;max-width:330px;display:none}#globalDrinksVerifyFloat.show{display:block}.gdf-card{background:rgba(17,17,17,.94);color:#fff;border:1px solid rgba(212,175,55,.3);border-radius:18px;padding:14px;box-shadow:0 16px 40px rgba(0,0,0,.28);backdrop-filter:blur(8px)}.gdf-title{font-weight:900;margin-bottom:8px}.gdf-body{font-size:14px;line-height:1.4;color:rgba(255,255,255,.92)}.gdf-meta{font-size:12px;color:rgba(255,255,255,.72);margin-top:6px}.gdf-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.gdf-btn{appearance:none;border:0;border-radius:999px;padding:9px 12px;font:inherit;font-weight:800;background:#d4af37;color:#111;cursor:pointer}.gdf-btn.alt{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.12)}@media(max-width:640px){#globalDrinksVerifyFloat{left:10px;right:10px;bottom:88px;max-width:none}}'; document.body.appendChild(style); document.body.appendChild(box); return box; }
-  function showApprovedToast(){ const raw = localStorage.getItem(APPROVED_KEY); if (!raw) return; try { const payload = JSON.parse(raw); if (!payload || Date.now() - payload.at > 15000) return; const box = ensureBox(); box.classList.add('show'); document.getElementById('gdfBody').innerHTML = `<strong>Verificatie goedgekeurd</strong><div class="gdf-meta">${payload.text || 'Je bevestiging is gebruikt.'}</div>`; document.getElementById('gdfVerifyBtn').style.display = 'none'; document.getElementById('gdfOpenBtn').onclick = () => { location.href = './drinks.html'; }; document.getElementById('gdfDismissBtn').onclick = () => { box.classList.remove('show'); localStorage.removeItem(APPROVED_KEY); }; } catch {} }
-  function requestCurrentPosition(force){ return new Promise((resolve,reject)=>{ if (!navigator.geolocation) return reject(new Error('no geolocation')); navigator.geolocation.getCurrentPosition((pos)=>{ savePos(pos); resolve(pos); },reject,{enableHighAccuracy:true,timeout:10000,maximumAge:force?0:60000}); }); }
-  function bootstrapGeo(){ if (watcherStarted || !navigator.geolocation) return; watcherStarted = true; navigator.geolocation.watchPosition((pos)=>savePos(pos),()=>{}, {enableHighAccuracy:true,maximumAge:60000,timeout:15000}); }
-  async function ensureGeo(){ const helper = window.GEJAST_GEO; if (helper) { try { const pos = await helper.ensure(false); helper.startWatch(); latestPos = pos; return pos; } catch(_) { return readCachedPos(); } } if (latestPos) return latestPos; const cached = readCachedPos(); if (cached) { latestPos = cached; return cached; } try { const perm = navigator.permissions && await navigator.permissions.query({name:'geolocation'}); if (perm && perm.state === 'granted') { const pos = await requestCurrentPosition(false); bootstrapGeo(); return pos; } } catch(_){} return null; }
-  function armGeoOnInteraction(){ const once = async()=>{ document.removeEventListener('click', once); document.removeEventListener('touchstart', once); document.removeEventListener('keydown', once); try { await requestCurrentPosition(false); bootstrapGeo(); } catch(_){} }; document.addEventListener('click', once, {once:true}); document.addEventListener('touchstart', once, {once:true}); document.addEventListener('keydown', once, {once:true}); }
-  function canShowFor(eventId){ if (!eventId) return false; const raw = localStorage.getItem(DISMISS_KEY); if (!raw) return true; try { const data = JSON.parse(raw); if (data.id !== eventId) return true; return (Date.now() - data.at) > COOLDOWN_MS; } catch { return true; } }
-  function dismissEvent(eventId){ localStorage.setItem(DISMISS_KEY, JSON.stringify({id:eventId, at:Date.now()})); const box = document.getElementById('globalDrinksVerifyFloat'); if (box) box.classList.remove('show'); }
-  async function verifyEvent(item, pos){ const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{ method:'POST', headers: headers(), body: JSON.stringify({session_token: token(), drink_event_id: Number(item.id), lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy, approve:true}) }); await parse(res); localStorage.setItem(APPROVED_KEY, JSON.stringify({at:Date.now(), text:`${item.player_name} · ${item.event_type_label}`})); dismissEvent(item.id); showApprovedToast(); }
-  function maybeVibrate(item){ try { const last = localStorage.getItem(LAST_ALERT_KEY); if (last === String(item.id)) return; localStorage.setItem(LAST_ALERT_KEY, String(item.id)); if (navigator.vibrate && document.visibilityState === 'visible') navigator.vibrate([120,60,120]); } catch(_){} }
-  async function poll(){ if (!token() || !SUPABASE_URL || !KEY) return; let pos = await ensureGeo(); if (!pos) return; let data; try { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{ method:'POST', headers: headers(), body: JSON.stringify({session_token: token(), viewer_lat: pos.coords.latitude, viewer_lng: pos.coords.longitude}) }); const raw = await parse(res); data = raw?.get_drinks_page_public || raw || {}; } catch { return; } const item = Array.isArray(data.verify_queue) ? data.verify_queue[0] : null; if (!item || !canShowFor(item.id)) return; maybeVibrate(item); const box = ensureBox(); const locationBits = []; if (item.distance_m != null) locationBits.push(`${Math.round(item.distance_m)}m afstand`); if (item.lat != null && item.lng != null) locationBits.push(`(${Number(item.lat).toFixed(4)}, ${Number(item.lng).toFixed(4)})`); document.getElementById('gdfVerifyBtn').style.display = 'inline-flex'; document.getElementById('gdfBody').innerHTML = `<strong>${item.player_name} · ${item.event_type_label}</strong><div class="gdf-meta">${Number(item.total_units||0).toFixed(1)} units${locationBits.length ? ' · ' + locationBits.join(' · ') : ''}</div><div class="gdf-meta">Open drinks om alle verificaties en status te zien.</div>`; document.getElementById('gdfVerifyBtn').onclick = () => verifyEvent(item, pos).catch(()=>{}); document.getElementById('gdfOpenBtn').onclick = () => { location.href = './drinks.html#verifyPanel'; }; document.getElementById('gdfDismissBtn').onclick = () => dismissEvent(item.id); box.classList.add('show'); }
-  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', ()=>{ showApprovedToast(); armGeoOnInteraction(); ensureGeo().then((pos)=>{ if(pos) bootstrapGeo(); }); poll(); window.setInterval(poll, POLL_MS); }, {once:true}); } else { showApprovedToast(); armGeoOnInteraction(); ensureGeo().then((pos)=>{ if(pos) bootstrapGeo(); }); poll(); window.setInterval(poll, POLL_MS); }
+
+  function ensureBox(){
+    let box = document.getElementById('globalDrinksVerifyFloat');
+    if (box) return box;
+    box = document.createElement('div');
+    box.id = 'globalDrinksVerifyFloat';
+    box.innerHTML = '<div class="gdf-card"><div class="gdf-title">Drinks verificatie</div><div id="gdfBody" class="gdf-body"></div><div class="gdf-actions"><button id="gdfVerifyBtn" class="gdf-btn">Bevestigen</button><button id="gdfOpenBtn" class="gdf-btn alt">Open drinks</button><button id="gdfDismissBtn" class="gdf-btn alt">Later</button></div></div>';
+    const style = document.createElement('style');
+    style.textContent = '#globalDrinksVerifyFloat{position:fixed;right:14px;bottom:74px;z-index:10000;max-width:330px;opacity:0;transform:translate3d(120%,0,0);pointer-events:none;transition:transform .32s ease,opacity .24s ease}#globalDrinksVerifyFloat.show{opacity:1;transform:translate3d(0,0,0);pointer-events:auto}.gdf-card{background:rgba(17,17,17,.94);color:#fff;border:1px solid rgba(212,175,55,.3);border-radius:18px;padding:14px;box-shadow:0 16px 40px rgba(0,0,0,.28);backdrop-filter:blur(8px)}.gdf-title{font-weight:900;margin-bottom:8px}.gdf-body{font-size:14px;line-height:1.4;color:rgba(255,255,255,.92)}.gdf-meta{font-size:12px;color:rgba(255,255,255,.72);margin-top:6px}.gdf-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.gdf-btn{appearance:none;border:0;border-radius:999px;padding:9px 12px;font:inherit;font-weight:800;background:#d4af37;color:#111;cursor:pointer}.gdf-btn.alt{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.12)}@media(max-width:640px){#globalDrinksVerifyFloat{left:10px;right:10px;bottom:88px;max-width:none}}';
+    document.body.appendChild(style);
+    document.body.appendChild(box);
+    return box;
+  }
+
+  function showBox(){ const box = ensureBox(); requestAnimationFrame(()=> box.classList.add('show')); }
+  function hideBox(){ const box = document.getElementById('globalDrinksVerifyFloat'); if (box) box.classList.remove('show'); activePromptId = null; }
+
+  function showApprovedToast(){
+    const raw = localStorage.getItem(APPROVED_KEY);
+    if (!raw) return;
+    try {
+      const payload = JSON.parse(raw);
+      if (!payload || Date.now() - payload.at > 15000) return;
+      activePromptId = '__approved__';
+      const box = ensureBox();
+      document.getElementById('gdfBody').innerHTML = `<strong>Verificatie goedgekeurd</strong><div class="gdf-meta">${payload.text || 'Je bevestiging is gebruikt.'}</div>`;
+      document.getElementById('gdfVerifyBtn').style.display = 'none';
+      document.getElementById('gdfOpenBtn').onclick = () => { location.href = './drinks.html'; };
+      document.getElementById('gdfDismissBtn').onclick = () => { hideBox(); localStorage.removeItem(APPROVED_KEY); };
+      showBox();
+    } catch {}
+  }
+
+  function canShowFor(eventId){
+    if (!eventId) return false;
+    const raw = localStorage.getItem(DISMISS_KEY);
+    if (!raw) return true;
+    try {
+      const data = JSON.parse(raw);
+      if (data.id !== eventId) return true;
+      return (Date.now() - data.at) > COOLDOWN_MS;
+    } catch { return true; }
+  }
+
+  function dismissEvent(eventId){
+    localStorage.setItem(DISMISS_KEY, JSON.stringify({id:eventId, at:Date.now()}));
+    hideBox();
+  }
+
+  async function getGeoForPolling(){
+    const helper = window.GEJAST_GEO;
+    if (!helper) return null;
+    try {
+      const pos = await helper.ensure(false, { silent:true });
+      if (pos) helper.startWatch();
+      return pos || helper.cached();
+    } catch {
+      return helper.cached();
+    }
+  }
+
+  async function verifyEvent(item){
+    const helper = window.GEJAST_GEO;
+    if (!helper) throw new Error('Geolocatie helper ontbreekt.');
+    const pos = await helper.request(true);
+    helper.startWatch();
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`, {
+      method:'POST',
+      headers: headers(),
+      body: JSON.stringify({
+        session_token: token(),
+        drink_event_id: Number(item.id),
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+        approve: true
+      })
+    });
+    await parse(res);
+    localStorage.setItem(APPROVED_KEY, JSON.stringify({at:Date.now(), text:`${item.player_name} · ${item.event_type_label}`}));
+    dismissEvent(item.id);
+    showApprovedToast();
+  }
+
+  function maybeVibrate(item){
+    try {
+      const last = localStorage.getItem(LAST_ALERT_KEY);
+      if (last === String(item.id)) return;
+      localStorage.setItem(LAST_ALERT_KEY, String(item.id));
+      if (navigator.vibrate && document.visibilityState === 'visible') navigator.vibrate([120,60,120]);
+    } catch(_){}
+  }
+
+  function renderPrompt(item){
+    if (activePromptId === item.id) return;
+    activePromptId = item.id;
+    maybeVibrate(item);
+    const box = ensureBox();
+    const locationBits = [];
+    if (item.location_text) locationBits.push(item.location_text);
+    if (item.distance_m != null) locationBits.push(`${Math.round(item.distance_m)}m afstand`);
+    if (item.lat != null && item.lng != null) locationBits.push(`(${Number(item.lat).toFixed(4)}, ${Number(item.lng).toFixed(4)})`);
+    document.getElementById('gdfVerifyBtn').style.display = 'inline-flex';
+    document.getElementById('gdfBody').innerHTML = `<strong>${item.player_name} · ${item.event_type_label}</strong><div class="gdf-meta">${Number(item.total_units||0).toFixed(1)} units${locationBits.length ? ' · ' + locationBits.join(' · ') : ''}</div><div class="gdf-meta">Open drinks om alle verificaties en status te zien.</div>`;
+    document.getElementById('gdfVerifyBtn').onclick = () => verifyEvent(item).catch(()=>{});
+    document.getElementById('gdfOpenBtn').onclick = () => { location.href = './drinks.html#verifyPanel'; };
+    document.getElementById('gdfDismissBtn').onclick = () => dismissEvent(item.id);
+    showBox();
+  }
+
+  async function poll(){
+    if (pollBusy || !token() || !SUPABASE_URL || !KEY) return;
+    pollBusy = true;
+    try {
+      const pos = await getGeoForPolling();
+      if (!pos) { pollBusy = false; return; }
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`, {
+        method:'POST',
+        headers: headers(),
+        body: JSON.stringify({session_token: token(), viewer_lat: pos.coords.latitude, viewer_lng: pos.coords.longitude})
+      });
+      const raw = await parse(res);
+      const data = raw?.get_drinks_page_public || raw || {};
+      const item = Array.isArray(data.verify_queue) ? data.verify_queue[0] : null;
+      if (!item || !canShowFor(item.id)) {
+        if (activePromptId && activePromptId !== '__approved__') hideBox();
+        pollBusy = false;
+        return;
+      }
+      renderPrompt(item);
+    } catch {}
+    pollBusy = false;
+  }
+
+  function init(){
+    showApprovedToast();
+    poll();
+    window.setInterval(poll, POLL_MS);
+    document.addEventListener('visibilitychange', ()=>{ if (document.visibilityState === 'visible') poll(); });
+    window.addEventListener('focus', poll);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once:true });
+  else init();
 })();
