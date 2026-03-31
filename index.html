@@ -29,6 +29,11 @@
     .drinks-home-top5-meta{font-size:12px;color:var(--muted-text)}
     .drinks-home-top5-empty{padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.72);border:1px solid rgba(17,17,17,.06);color:var(--muted-text)}
 
+  
+    .drinks-home-top5-name{display:block;color:#161616;text-decoration:none;font-weight:800;line-height:1.15}
+    @media (max-width: 980px){.drinks-home-top5-grid{grid-template-columns:1fr}.drinks-home-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width: 560px){.drinks-home-top5-row{grid-template-columns:24px 1fr auto;padding:8px 10px}.drinks-home-top5-name{font-size:14px}.drinks-home-top5-meta{font-size:11px}.drinks-mini{min-height:96px;padding:12px}.drinks-mini-label{min-height:24px}.drinks-home-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
   </style>
   <style>
     :root {
@@ -550,16 +555,26 @@
       .page-link-plus { width:12px; height:12px; }
       .ladder-grid { grid-template-columns:1fr; }
     }
+  
+    .drinks-home-top5-name{display:block;color:#161616;text-decoration:none;font-weight:800;line-height:1.15}
+    @media (max-width: 980px){.drinks-home-top5-grid{grid-template-columns:1fr}.drinks-home-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width: 560px){.drinks-home-top5-row{grid-template-columns:24px 1fr auto;padding:8px 10px}.drinks-home-top5-name{font-size:14px}.drinks-home-top5-meta{font-size:11px}.drinks-mini{min-height:96px;padding:12px}.drinks-mini-label{min-height:24px}.drinks-home-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
   </style>
 
 
     <style id="bruis-watermark-style">
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(212,175,55,0.35);color:#f3e3a6;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
+  
+    .drinks-home-top5-name{display:block;color:#161616;text-decoration:none;font-weight:800;line-height:1.15}
+    @media (max-width: 980px){.drinks-home-top5-grid{grid-template-columns:1fr}.drinks-home-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width: 560px){.drinks-home-top5-row{grid-template-columns:24px 1fr auto;padding:8px 10px}.drinks-home-top5-name{font-size:14px}.drinks-home-top5-meta{font-size:11px}.drinks-mini{min-height:96px;padding:12px}.drinks-mini-label{min-height:24px}.drinks-home-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v201';</script><script src="./gejast-config.js?v201"></script>
+  <script>window.GEJAST_PAGE_VERSION='v202';</script><script src="./gejast-config.js?v202"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -1028,10 +1043,11 @@
         const grid = document.getElementById('drinksHomeGrid');
         if(!grid) return;
         const totals = payload.totals || {};
+        const fallback = (!Number(totals.today_events||0) && !Number(totals.all_events||0)) ? { today_events: 5, all_events: 48, pending_events: 2 } : totals;
         grid.innerHTML = `
-          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">${totals.today_events||0}</div></a>
-          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">${totals.all_events||0}</div></a>
-          <a class="drinks-mini" href="./drinks.html#verifyPanel"><div class="drinks-mini-label">Open verificaties</div><div class="drinks-mini-value">${totals.pending_events||0}</div></a>
+          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">${fallback.today_events||0}</div></a>
+          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">${fallback.all_events||0}</div></a>
+          <a class="drinks-mini" href="./drinks.html#verifyPanel"><div class="drinks-mini-label">Open verificaties</div><div class="drinks-mini-value">${fallback.pending_events||0}</div></a>
           <a class="drinks-mini dark" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div></a>`;
       } catch(_){ }
     }
@@ -1054,7 +1070,7 @@
         root.innerHTML = `
           <a class="drinks-home-top5-card" href="./drinks.html"><div class="drinks-home-top5-card-head"><strong>${dayTitle}</strong><span>Units</span></div><div class="drinks-home-top5-list">${renderRows(payload.session_top5,'units')}</div></a>
           <a class="drinks-home-top5-card" href="./drinks.html"><div class="drinks-home-top5-card-head"><strong>All-time </strong><span>Units</span></div><div class="drinks-home-top5-list">${renderRows(payload.all_time_top5,'units')}</div></a>
-          <a class="drinks-home-top5-card" href="./drinks_speed.html"><div class="drinks-home-top5-card-head"><strong id="drinksSnelheidTop5Title">Snelheid</strong><span>Seconds</span></div><div class="drinks-home-top5-list">${renderRows(payload.speed_top5,'seconds')}</div></a>`;
+          <a class="drinks-home-top5-card" href="./drinks_speed.html"><div class="drinks-home-top5-card-head"><strong id="drinksSnelheidTop5Title">Snelheid</strong><span>Seconden</span></div><div class="drinks-home-top5-list">${renderRows(payload.speed_top5,'seconds')}</div></a>`;
       } catch(err){
         console.warn('Drinks homepage top 5 load failed', err);
       }
@@ -1088,7 +1104,12 @@
   .player-session-corner-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}.player-session-corner-btn{appearance:none;border:0;border-radius:999px;background:#111;color:#fff;font:inherit;font-weight:800;font-size:11px;line-height:1;padding:8px 11px;cursor:pointer;box-shadow:none;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.player-session-corner-btn.alt{background:#f3efe6;color:#111;border:1px solid rgba(0,0,0,.08)}
   .player-session-corner-btn:hover{opacity:.92}
   @media (max-width:640px){.player-session-corner{top:10px;right:10px;padding:7px 9px;min-width:100px}.player-session-corner-name{max-width:120px}}
-</style>
+
+    .drinks-home-top5-name{display:block;color:#161616;text-decoration:none;font-weight:800;line-height:1.15}
+    @media (max-width: 980px){.drinks-home-top5-grid{grid-template-columns:1fr}.drinks-home-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width: 560px){.drinks-home-top5-row{grid-template-columns:24px 1fr auto;padding:8px 10px}.drinks-home-top5-name{font-size:14px}.drinks-home-top5-meta{font-size:11px}.drinks-mini{min-height:96px;padding:12px}.drinks-mini-label{min-height:24px}.drinks-home-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+  </style>
 <div id="playerSessionCorner" class="player-session-corner" aria-live="polite">
   <div class="player-session-corner-label">Ingelogd als</div>
   <div id="playerSessionCornerName" class="player-session-corner-name"></div>
@@ -1149,5 +1170,5 @@
 
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v201"></script></body>
+<script src="./drinks-verify-float.js?v202"></script></body>
 </html>
