@@ -10,7 +10,7 @@
     .drinks-home-head h2{margin:0;font-size:1.1rem}
     .drinks-home-link{display:inline-flex;padding:9px 12px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800}
     .drinks-home-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-    .drinks-mini{background:rgba(255,255,255,.72);border:1px solid rgba(17,17,17,.06);border-radius:18px;padding:14px;text-align:left}
+    .drinks-mini{background:rgba(255,255,255,.72);border:1px solid rgba(17,17,17,.06);border-radius:18px;padding:14px;text-align:left;text-decoration:none;color:inherit;display:block}.drinks-mini.dark{background:#111;color:#fff}.drinks-mini.dark .drinks-mini-label,.drinks-mini.dark .drinks-mini-sub{color:rgba(255,255,255,.82)}
     .drinks-mini-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:800;margin-bottom:6px}
     .drinks-mini-value{font-size:1.55rem;font-weight:900;line-height:1.05}
     .drinks-mini-sub{font-size:12px;color:var(--muted-text);margin-top:4px}
@@ -559,7 +559,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v196';</script><script src="./gejast-config.js?v196"></script>
+  <script>window.GEJAST_PAGE_VERSION='v197';</script><script src="./gejast-config.js?v197"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -610,7 +610,8 @@
         <div id="drinksHomeGrid" class="drinks-home-grid">
           <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">—</div></a>
           <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">—</div></a>
-          <a class="drinks-mini" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div></a>
+          <a class="drinks-mini" href="./drinks.html#verifyPanel"><div class="drinks-mini-label">Open verificaties</div><div class="drinks-mini-value">—</div></a>
+          <a class="drinks-mini dark" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div><div class="drinks-mini-sub">Mobiele invoer</div></a>
         </div>
         
       </section>
@@ -1030,7 +1031,8 @@
         grid.innerHTML = `
           <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">${totals.today_events||0}</div><div class="drinks-mini-sub">${Number(totals.today_units||0).toFixed(1)} units</div></a>
           <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">${totals.all_events||0}</div><div class="drinks-mini-sub">${Number(totals.all_units||0).toFixed(1)} units</div></a>
-          <a class="drinks-mini" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div><div class="drinks-mini-sub">Mobiele invoer</div></a>`;
+          <a class="drinks-mini" href="./drinks.html#verifyPanel"><div class="drinks-mini-label">Open verificaties</div><div class="drinks-mini-value">${totals.pending_events||0}</div><div class="drinks-mini-sub">Queue bekijken</div></a>
+          <a class="drinks-mini dark" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div><div class="drinks-mini-sub">Mobiele invoer</div></a>`;
       } catch(_){ }
     }
 

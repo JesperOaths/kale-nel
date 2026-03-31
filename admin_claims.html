@@ -114,7 +114,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v173"></script>
+  <script>window.GEJAST_PAGE_VERSION='v197';</script><script src="./gejast-config.js?v197"></script>
   <script src="./admin-session-sync.js?v173"></script>
   <script src="./admin-topnav.js?v173"></script>
 </head>
@@ -1041,16 +1041,33 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     async function triggerMakeScenario(meta = {}) {
       if (!MAKE_WEBHOOK_URL) throw new Error('MAKE_WEBHOOK_URL ontbreekt in admin.html');
       const payload = buildMakeWebhookMeta('admin_claims.html', meta);
-      const res = await fetch(MAKE_WEBHOOK_URL, {
-        method:'POST',
-        mode:'cors',
-        cache:'no-store',
-        keepalive:true,
-        headers:{ 'Content-Type':'application/json', 'Accept':'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error(`Make webhook pingen mislukt (HTTP ${res.status})`);
-      return { ok:true, via:'fetch-json', status:res.status };
+      const payloadText = JSON.stringify(payload);
+      if (navigator.sendBeacon) {
+        const blob = new Blob([payloadText], { type: 'text/plain;charset=UTF-8' });
+        if (navigator.sendBeacon(MAKE_WEBHOOK_URL, blob)) return { ok:true, via:'sendBeacon' };
+      }
+      try {
+        await fetch(MAKE_WEBHOOK_URL, {
+          method:'POST', mode:'no-cors', cache:'no-store', keepalive:true,
+          headers:{ 'Content-Type':'text/plain;charset=UTF-8' }, body: payloadText
+        });
+        return { ok:true, via:'fetch-no-cors' };
+      } catch (fetchErr) {
+        const fallbackUrl = new URL(MAKE_WEBHOOK_URL);
+        fallbackUrl.searchParams.set('trigger', String(payload.trigger || 'admin_approval'));
+        fallbackUrl.searchParams.set('source', 'admin_claims.html');
+        fallbackUrl.searchParams.set('ts', String(payload.ts || new Date().toISOString()));
+        Object.entries(meta || {}).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) fallbackUrl.searchParams.set(key, String(value));
+        });
+        try {
+          await fetch(fallbackUrl.toString(), { method:'GET', mode:'no-cors', cache:'no-store', keepalive:true });
+          return { ok:true, via:'get-fallback' };
+        } catch (_) {
+          await new Promise((resolve) => { try { const img = new Image(); img.onload = img.onerror = () => resolve(); img.src = fallbackUrl.toString(); setTimeout(resolve, 1500); } catch(__) { resolve(); } });
+          return { ok:true, via:'img-fallback' };
+        }
+      }
     }
 
     async function revokePlayerAccess(requestId, reason) {

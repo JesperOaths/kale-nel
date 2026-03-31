@@ -42,7 +42,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v194';</script><script src="./gejast-config.js?v194"></script>
+  <script>window.GEJAST_PAGE_VERSION='v197';</script><script src="./gejast-config.js?v197"></script>
   <script src="./admin-session-sync.js?v173"></script>
   <script src="./admin-topnav.js?v173"></script>
 </head>
@@ -100,6 +100,7 @@
             <a class="hub-link" href="./beerpong_vault.html"><strong>Beerpong kluis</strong><small>Admintoegang tot ELO, grafieken en wedstrijdstats.</small></a>
             <a class="hub-link" href="./match_control.html"><strong>Wedstrijden beheren</strong><small>Centraal beheer voor bewerken, verwijderen en rebuilds.</small></a>
             <a class="hub-link" href="./drinks.html"><strong>Drinks overzicht</strong><small>Gecombineerde ladder-, stats- en verificatiepagina.</small></a>
+            <a class="hub-link" href="./drinks_admin.html"><strong>Drinks audit</strong><small>Admin-only fraudechecks, flags en moderatie voor drinks.</small></a>
             <a class="hub-link" href="./drinks_add.html"><strong>Drinks toevoegen</strong><small>Mobiele invoerpagina voor drankjes en speedtijd.</small></a>
             <a class="hub-link" href="./drinks_speed.html"><strong>Drinks speed</strong><small>Speedladders en speedverificaties.</small></a>
           </div>
@@ -245,6 +246,7 @@
       if (hasPin) return 'active';
       return 'pending';
     }
+    function isLikelyExpired(row){ try { const bucket = deriveAdminBucket(row); if (bucket !== 'awaiting') return false; const exp = row?.expires_at ? new Date(row.expires_at) : null; if (exp && !isNaN(exp) && exp.getTime() < Date.now()) return true; const approvedAt = new Date(row?.approved_at || row?.decision_at || row?.updated_at || row?.requested_at || row?.created_at || ''); if (!isNaN(approvedAt)) return (Date.now() - approvedAt.getTime()) > (24*60*60*1000); } catch(_){} return false; }
     function normalizeAdminRows(rows) {
       return (rows || []).map((row) => {
         const out = row && typeof row === 'object' ? { ...row } : { value: row };
@@ -265,10 +267,10 @@
       const requests = normalizeAdminRows(requestsRes.requests || requestsRes.items || []);
       const history = normalizeAdminRows(historyRes.history || historyRes.items || []);
       const expiredItems = Array.isArray(expiredRes?.items) ? expiredRes.items : [];
-      const awaitingItems = history.filter((item) => item.state_bucket === 'awaiting');
+      const awaitingItems = history.filter((item) => item.state_bucket === 'awaiting' && !isLikelyExpired(item));
       const active = history.filter((item) => item.state_bucket === 'active').length;
       const rejected = history.filter((item) => item.state_bucket === 'rejected').length;
-      const expiredHistory = history.filter((item) => item.state_bucket === 'expired').length;
+      const expiredHistory = history.filter((item) => item.state_bucket === 'expired').length + history.filter((item)=>isLikelyExpired(item)).length;
       const awaiting = awaitingItems.length;
       document.getElementById('statPending').textContent = String(requests.length);
       document.getElementById('statAwaiting').textContent = String(awaiting);
