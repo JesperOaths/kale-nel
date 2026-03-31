@@ -559,7 +559,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v194';</script><script src="./gejast-config.js?v194"></script>
+  <script>window.GEJAST_PAGE_VERSION='v196';</script><script src="./gejast-config.js?v196"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -603,14 +603,14 @@
       <section class="drinks-home-section" style="margin-top:16px" aria-label="Drinkstand">
         <div class="drinks-home-head">
           <div>
-            <h2>Drankstand</h2><div style="margin-top:8px"><a class="drinks-home-link" href="./drinks_add.html">Drinks toevoegen</a></div>
+            <h2>Drankstand</h2>
           </div>
           
         </div>
         <div id="drinksHomeGrid" class="drinks-home-grid">
-          <div class="drinks-mini"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">—</div></div>
-          <div class="drinks-mini"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">—</div></div>
-          <div class="drinks-mini"><div class="drinks-mini-label">Units</div><div class="drinks-mini-value">—</div></div>
+          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">—</div></a>
+          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">—</div></a>
+          <a class="drinks-mini" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div></a>
         </div>
         
       </section>
@@ -1028,9 +1028,9 @@
         if(!grid) return;
         const totals = payload.totals || {};
         grid.innerHTML = `
-          <div class="drinks-mini"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">${totals.today_events||0}</div><div class="drinks-mini-sub">${Number(totals.today_units||0).toFixed(1)} units</div></div>
-          <div class="drinks-mini"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">${totals.all_events||0}</div><div class="drinks-mini-sub">${Number(totals.all_units||0).toFixed(1)} units</div></div>
-          <div class="drinks-mini"><div class="drinks-mini-label">Open verificaties</div><div class="drinks-mini-value">${totals.pending_events||0}</div><div class="drinks-mini-sub">Wacht op bevestiging</div></div>`;
+          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">${totals.today_events||0}</div><div class="drinks-mini-sub">${Number(totals.today_units||0).toFixed(1)} units</div></a>
+          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">${totals.all_events||0}</div><div class="drinks-mini-sub">${Number(totals.all_units||0).toFixed(1)} units</div></a>
+          <a class="drinks-mini" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div><div class="drinks-mini-sub">Mobiele invoer</div></a>`;
       } catch(_){ }
     }
 
