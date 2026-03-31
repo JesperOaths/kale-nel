@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Adminbeheer - Wordt er gejast?</title>
+  <style>
+    :root { --gold:#d4af37; --card-bg:#f9f7f2; --line:rgba(0,0,0,0.06); --muted:#666; --ok:#2b5b37; --warn:#8b3a30; }
+    * { box-sizing:border-box; }
+    body { margin:0; padding:20px; font-family:'Inter', sans-serif; background: linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed; min-height:100vh; }
+    .main-card { background:var(--card-bg); border-radius:24px; padding:30px; max-width:900px; margin:0 auto; box-shadow:0 20px 50px rgba(0,0,0,0.08); position:relative; }
+    .card-logo { position:absolute; top:25px; right:25px; width:40px; }
+    h1 { font-size:28px; margin-bottom:20px; }
+    input, textarea, select { width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:1px solid #ddd; font:inherit; }
+    .btn, .login-btn, .logout-btn, .approve-btn, .reject-btn, .link-btn, .mail-btn, .copy-btn { padding:12px 20px; border-radius:8px; border:none; font-weight:700; cursor:pointer; }
+    .primary, .login-btn, .approve-btn { background:var(--gold); color:#000; }
+    .dark, .logout-btn, .reject-btn, .danger-btn { background:#000; color:#fff; }
+    .link-btn, .mail-btn, .copy-btn { background:#fff; border:1px solid #ddd; }
+    .request, .card { background:#fff; padding:20px; border-radius:16px; margin-bottom:15px; border:1px solid rgba(0,0,0,0.05); }
+    .hidden { display:none !important; }
+    .state-badge { font-size:11px; font-weight:bold; padding:4px 8px; border-radius:99px; display:inline-block; margin-bottom:10px; }
+    .state-pending { background:#fff3cd; color:#856404; }
+    .status-ok { color:var(--ok); } .status-warn { color:var(--warn); }
+    .admin-grid { margin-top:20px; display:grid; gap:18px; }
+    .action-row, .compact-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+    .request-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+    .muted, .inline-msg { color:var(--muted); font-size:13px; }
+    .data-box { background:#fafafa; border:1px solid #eee; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:4px; }
+    .data-box .label { font-size:11px; color:#999; text-transform:uppercase; }
+    .activation-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:12px; }
+    .activation-link-box { margin-top:10px; background:#fafafa; border:1px solid #eee; border-radius:10px; padding:10px; word-break:break-all; font-size:13px; }
+    .search-input { margin-top:8px; }
+    #status { margin-top:20px; font-size:14px; min-height:18px; }
+    hr { margin:20px 0; border:0; border-top:1px solid #eee; }
+
+    .request-grid, .activation-meta { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:12px; }
+    .inline-msg.ok { color:var(--ok); }
+    .inline-msg.error { color:var(--warn); }
+    details { margin-top:12px; }
+    summary { cursor:pointer; font-weight:600; }
+    .version-tag { margin-top:18px; text-align:center; font-size:11px; color:rgba(0,0,0,0.38); }
+    .topbar { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:16px; }
+    .topbar-left h1 { margin:0; }
+    .topbar-sub { color:var(--muted); margin:6px 0 0; }
+    .toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .ghost-btn { background:#fff; border:1px solid rgba(0,0,0,0.08); color:#222; }
+    .delete-btn { background:#fff3f0; border:1px solid rgba(139,58,48,0.18); color:#8b3a30; }
+    .delete-btn:hover { background:#fbe4df; }
+    .stats-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin:18px 0 6px; }
+    .stat-card { background:linear-gradient(180deg,#fff,#f5f1e8); border:1px solid rgba(0,0,0,0.06); border-radius:18px; padding:16px; box-shadow:0 8px 24px rgba(0,0,0,0.04); }
+    .stat-card.clickable{cursor:pointer;}
+    .stat-card.clickable:hover{transform:translateY(-1px);}
+    .stat-card .label { font-size:12px; text-transform:uppercase; letter-spacing:0.04em; color:#85754f; }
+    .stat-card .value { font-size:30px; font-weight:800; margin-top:6px; }
+    .panel-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; }
+    .panel-actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .pill-row { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 14px; }
+    .pill { border:1px solid rgba(0,0,0,0.08); border-radius:999px; padding:8px 12px; background:#fff; font-size:13px; cursor:pointer; }
+    .pill.active { background:#000; color:#fff; }
+    .request strong { font-size:18px; }
+    .toolbar-note { font-size:12px; color:var(--muted); }
+    .card h2 { margin:0; }
+    .empty-state { padding:16px 4px; color:var(--muted); }
+    .admin-grid { grid-template-columns:1fr; }
+    @media (min-width: 980px) { .admin-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } #approvedUsersCard { grid-column:1 / -1; } }
+    @media (max-width: 900px) { .stats-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width: 700px) { .request-grid, .activation-meta, .stats-grid { grid-template-columns:1fr; } .main-card { padding:22px; } .topbar { flex-direction:column; align-items:flex-start; } }
+  </style>
+
+  
+  <style id="v57-admin-tabs">
+    .admin-grid{grid-template-columns:1fr;max-width:none;}
+    .admin-tabs-card{margin-bottom:18px;}
+    .tab-row{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 4px;}
+    .tab-btn{border:1px solid rgba(0,0,0,0.08);background:#fff;border-radius:16px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:700;color:#222;box-shadow:0 8px 18px rgba(0,0,0,0.03);}
+    .tab-btn .tab-count{display:inline-flex;min-width:28px;height:28px;align-items:center;justify-content:center;border-radius:999px;background:#f3ecdb;color:#6e5823;font-size:13px;font-weight:800;padding:0 8px;}
+    .tab-btn.active{background:#111;color:#fff;border-color:#111;}
+    .tab-btn.active .tab-count{background:rgba(255,255,255,0.16);color:#fff;}
+    .list-subtitle{color:var(--muted);font-size:13px;margin-top:4px;}
+    .view-note{font-size:12px;color:var(--muted);margin-top:8px;}
+    #workspace .card{display:none;}
+    #workspace .card.current-view{display:block;}
+    .pill-row.history-pills{display:none;}
+    .compact-toolbar-note{font-size:12px;color:var(--muted);}
+    #workspace{margin-top:14px;}
+    #workspace .card.current-view{display:block; max-height:58vh; overflow:auto;}
+    #workspace .card.current-view::-webkit-scrollbar{width:10px;}
+    #workspace .card.current-view::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.12);border-radius:999px;}
+    @media (max-width:700px){.tab-btn{width:100%;justify-content:space-between;}}
+  </style>
+
+  <style id="admin-v60-enhance">
+    .request{padding:18px 18px 16px;border-radius:20px;background:linear-gradient(180deg,#fff,#faf7ef);box-shadow:0 10px 24px rgba(0,0,0,.05)}
+    .entry-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:10px}
+    .entry-title{font-size:20px;font-weight:800;line-height:1.05}
+    .entry-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+    .entry-note{background:#f6f3eb;border:1px solid rgba(0,0,0,.06);border-radius:14px;padding:12px 14px;color:#4d463c;font-size:14px}
+    .state-activated,.state-approved{background:#e9f4eb;color:#1f6b31}.state-awaiting,.state-expired{background:#fff4d7;color:#8a6212}.state-rejected{background:#f7e6e3;color:#8b3a30}
+    .hub-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .hub-link{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-radius:16px;border:1px solid rgba(0,0,0,0.08);background:#fff;color:#111;text-decoration:none;font-weight:700}
+    .hub-link small{display:block;color:#7b7468;font-weight:500}
+    .manual-grid{display:grid;grid-template-columns:1.2fr 1.2fr 1fr;gap:10px}
+    .soft-note{font-size:12px;color:#6b665d;margin-top:8px}
+    #workspace .card{display:none}
+    #workspace .card.current-view{display:block; max-height:none; overflow:visible}
+    @media (max-width:900px){.request-grid,.entry-meta,.hub-grid,.manual-grid{grid-template-columns:1fr 1fr}}
+    @media (max-width:700px){.request-grid,.entry-meta,.hub-grid,.manual-grid{grid-template-columns:1fr}}
+  </style>
+
+  <style id="bruis-watermark-style">
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(212,175,55,0.35);color:#f3e3a6;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
+    @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
+  </style>
+  <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
+  <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
+  <script src="./gejast-config.js?v173"></script>
+  <script src="./admin-session-sync.js?v173"></script>
+  <script src="./admin-topnav.js?v173"></script>
+</head>
+<body>
+  <div class="main-card">
+    <a href="./admin.html" aria-label="Terug naar admin-overzicht"><img src="./logo.png" class="card-logo" /></a>
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1>Adminbeheer</h1>
+        <p class="topbar-sub">Volledige beheerpagina met goedkeuren, afwijzen, activatielinks, mailwachtrij en intrekacties.</p>
+      </div>
+      <div class="toolbar hidden" id="adminToolbar">
+        <a class="btn ghost-btn" href="./admin.html">Terug naar hub</a><button id="refreshBtn" class="btn ghost-btn" type="button">Ververs</button>
+        <a class="btn ghost-btn" href="./vault.html">Spelkluis</a><a class="btn ghost-btn" href="./leaderboard.html">Ranglijst</a><button id="kickMakeBtn" class="btn ghost-btn" type="button">Herstart Make handmatig</button>
+      </div>
+    </div>
+    <div id="loginView">
+      <input id="usernameInput" name="username" type="text" placeholder="Gebruikersnaam" autocomplete="username" autocapitalize="none" spellcheck="false">
+      <input id="passwordInput" name="current-password" type="password" placeholder="Wachtwoord" autocomplete="current-password">
+      <input id="totpInput" name="one-time-code" type="text" placeholder="TOTP Code" autocomplete="one-time-code" inputmode="numeric">
+      <button id="loginBtn" class="btn primary">Inloggen</button>
+    </div>
+    <div id="adminView" class="hidden">
+      <div class="panel-head">
+        <p id="welcomeText"></p>
+        <button id="logoutBtn" class="btn dark">Uitloggen</button>
+      </div>
+      <div id="statsGrid" class="stats-grid hidden">
+        <div class="stat-card clickable" data-admin-view-card="pending"><div class="label">Nog te beoordelen</div><div id="statPending" class="value">0</div></div>
+        <div class="stat-card clickable" data-admin-view-card="awaiting"><div class="label">Wacht op activatie</div><div id="statGoedgekeurd" class="value">0</div></div>
+        <div class="stat-card clickable" data-admin-view-card="active"><div class="label">Actief</div><div id="statActief" class="value">0</div></div>
+        <div class="stat-card clickable" data-admin-view-card="rejected"><div class="label">Afgewezen</div><div id="statRejected" class="value">0</div></div>
+        <div class="stat-card clickable" data-admin-view-card="expired"><div class="label">Verlopen</div><div id="statExpired" class="value">0</div></div>
+      </div>
+      <hr>
+      <div id="adminTabsCard" class="card hidden admin-tabs-card">
+        <div class="panel-head">
+          <div>
+            <h2 id="currentListTitle">Nog te beoordelen</h2>
+            <div id="currentListSubtitle" class="list-subtitle">Nieuwe aanvragen die nog een besluit nodig hebben.</div>
+          </div>
+          <div class="compact-toolbar-note">Goedkeuren en mail-opnieuw-sturen pingen Make automatisch. <strong>Herstart Make handmatig</strong> is alleen een fallback als je een queued job opnieuw wilt laten oppakken.</div>
+        </div>
+        <input id="adminSearchGlobal" class="search-input" type="search" placeholder="Zoek op naam of e-mail binnen de gekozen lijst" />
+        <div id="adminTabs" class="tab-row"></div>
+      </div>
+      <div id="workspace" class="admin-grid" aria-live="polite">
+        <div id="requestsCard" class="card">
+          <div class="panel-head">
+            <h2>Nog te beoordelen</h2>
+            <div class="toolbar-note">Approve zet ook de activatielink en mailqueue klaar.</div>
+          </div>
+          <input id="requestSearch" class="search-input" type="search" placeholder="Zoek op naam of e-mail" />
+          <div id="requestsList"></div>
+        </div>
+        <div id="historyCard" class="card">
+          <div class="panel-head">
+            <h2 id="historyTitle">Wacht op activatie</h2>
+            <div class="compact-toolbar-note" id="historyNote">Wacht op activatie, maar nog niet geactiveerd.</div>
+          </div>
+          <input id="historySearch" class="search-input" type="search" placeholder="Zoek geschiedenis" />
+          <div id="historyList"></div>
+        </div>
+        <div id="approvedUsersCard" class="card">
+          <div class="panel-head">
+            <h2 id="approvedUsersTitle">Actief</h2>
+            <div class="toolbar-note">Actieve gebruikers met snelle revoke-knoppen.</div>
+          </div>
+          <input id="approvedSearch" class="search-input" type="search" placeholder="Zoek goedgekeurde of geactiveerde gebruiker" />
+          <div id="approvedUsersList"></div>
+        </div>
+      </div>
+      <div id="adminExtras" class="admin-grid" style="margin-top:18px;">
+        <div id="pagesHubCard" class="card">
+          <div class="panel-head"><h2>Adminkoppelingen</h2><div class="toolbar-note">Snelkoppelingen naar de adminpagina's en relevante sitepagina's.</div></div>
+          <div id="pagesHubList" class="hub-grid"></div>
+        </div>
+        <div id="manualNamesCard" class="card">
+          <div class="panel-head"><h2>Naam toevoegen aan de kieslijst</h2><div class="toolbar-note">Gebruik dit om een naam zichtbaar en selecteerbaar te maken op request.html. Dit maakt geen testaanvraag aan.</div></div>
+          <div class="manual-grid">
+            <input id="manualNameInput" type="text" placeholder="Naam die op de lijst moet komen" autocomplete="off" autocapitalize="words" spellcheck="false">
+            <input id="manualEmailInput" type="email" placeholder="Optioneel reserveren voor e-mail" autocomplete="email">
+            <input id="manualNoteInput" type="text" placeholder="Adminnotitie (optioneel)" autocomplete="off">
+          </div>
+          <div class="action-row"><button id="manualCreateBtn" class="btn primary" type="button">Toevoegen aan kieslijst</button></div>
+          <div class="soft-note">Na toevoegen hoort deze naam op request.html in de keuzelijst te verschijnen. Goedkeuren en activatielinks blijven in de normale aanvraagflow zitten.</div>
+          <div id="manualCreateMsg" class="inline-msg"></div>
+        </div>
+      </div>
+    </div>
+    <div id="status"></div>
+    <div class="version-tag" data-version-watermark></div>
+  </div>
+  <script>
+const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+    const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY;
+    const MAKE_WEBHOOK_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.MAKE_WEBHOOK_URL) || "https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6";
+    const ACTIVATION_EMAIL_SUBJECT = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.EMAIL_SUBJECT) || 'Activeer je account voor de Kale Nel';
+    const ADMIN_SESSION_KEY = "jas_admin_session_v8";
+    const ADMIN_USER_KEY = "jas_admin_user_v1";
+    const ADMIN_DEADLINE_KEY = "jas_admin_deadline_v1";
+    let lastRequests = [];
+    let lastHistory = [];
+    let lastExpired = [];
+    let historyFilter = "all";
+    let currentAdminView = "pending";
+    const SITE_PAGES = [
+      {href:'./admin.html', label:'Admin-overzicht', note:'Hoofdhub voor admin'},
+      {href:'./admin_reserved_names.html', label:'Claimbare namen', note:'Beheer van claimbare namen'},
+      {href:'./admin_mail_audit.html', label:'Maildiagnostiek', note:'Webhook, mail-RPC en laatste mailjobs'},
+      {href:'./vault.html', label:'Spelkluis', note:'Adminanalyse van spelhistorie'},
+      {href:'./leaderboard.html', label:'Ranglijst', note:'Ranglijst zonder spelers met 0 potjes'},
+      {href:'./index.html', label:'Home', note:'Publieke homepage'},
+      {href:'./login.html', label:'Spelerlogin', note:'Publieke login'},
+      {href:'./request.html', label:'Naam aanvragen', note:'Publieke aanvraagflow'},
+      {href:'./scorer.html', label:'Scorer', note:'Klaverjasscorer'},
+      {href:'./activate.html', label:'Activeren', note:'Alleen via activatielink'}
+    ];
+    function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, "Content-Type": "application/json", Accept: "application/json" }; }
+    async function parseResponse(res) { const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }
+    function getAdminSessionToken() { return (window.GEJAST_ADMIN_SESSION && window.GEJAST_ADMIN_SESSION.getToken()) || sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
+    function setAdminSessionToken(token, persist = true, username = "", deviceToken = "") { if (window.GEJAST_ADMIN_SESSION) return window.GEJAST_ADMIN_SESSION.setBundle(token, username, persist, deviceToken); sessionStorage.setItem(ADMIN_SESSION_KEY, token); if (persist) localStorage.setItem(ADMIN_SESSION_KEY, token); }
+    function clearAdminSessionToken() { if (window.GEJAST_ADMIN_SESSION) return window.GEJAST_ADMIN_SESSION.clearBundle(); [ADMIN_SESSION_KEY, ADMIN_USER_KEY, ADMIN_DEADLINE_KEY].forEach((key)=>{ sessionStorage.removeItem(key); localStorage.removeItem(key); }); }
+    function setStatus(text) { document.getElementById("status").textContent = text || ""; }
+    function escapeHtml(value) { return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;"); }
+    function showLoggedOut() { document.getElementById("loginView").classList.remove("hidden"); document.getElementById("adminView").classList.add("hidden"); document.getElementById("workspace").classList.add("hidden"); document.getElementById("adminTabsCard").classList.add("hidden"); document.getElementById("adminToolbar").classList.add("hidden"); document.getElementById("statsGrid").classList.add("hidden"); document.getElementById("requestsCard").classList.add("hidden"); document.getElementById("historyCard").classList.add("hidden"); document.getElementById("approvedUsersCard").classList.add("hidden"); document.getElementById("requestsList").innerHTML = ""; document.getElementById("historyList").innerHTML = ""; document.getElementById("approvedUsersList").innerHTML = ""; document.getElementById("adminTabs").innerHTML = ""; }
+    function renderPagesHub(){ const root=document.getElementById('pagesHubList'); if(!root) return; root.innerHTML = SITE_PAGES.map((p)=>`<a class="hub-link" href="${p.href}"><span><strong>${p.label}</strong><small>${p.note}</small></span><span>→</span></a>`).join(''); }
+
+    function showLoggedIn(username) { document.getElementById("loginView").classList.add("hidden"); document.getElementById("adminView").classList.remove("hidden"); document.getElementById("workspace").classList.remove("hidden"); document.getElementById("adminTabsCard").classList.remove("hidden"); document.getElementById("adminToolbar").classList.remove("hidden"); document.getElementById("statsGrid").classList.remove("hidden"); document.getElementById("requestsCard").classList.remove("hidden"); document.getElementById("historyCard").classList.remove("hidden"); document.getElementById("approvedUsersCard").classList.remove("hidden"); document.getElementById("welcomeText").textContent = `Ingelogd als ${username}`; renderPagesHub(); }
+
+    const DATE_TIME_24H = new Intl.DateTimeFormat('nl-NL', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
+    function formatDateTime(value) { if (!value) return 'Onbekend'; const date = value instanceof Date ? value : new Date(value); return Number.isNaN(date.getTime()) ? String(value) : DATE_TIME_24H.format(date).replace(',', ''); }
+    function getActivationBaseUrl() { const url = new URL('./activate.html', window.location.href); if (url.protocol === 'http:' && !/^(localhost|127\.0\.0\.1)$/i.test(url.hostname)) url.protocol = 'https:'; return url.toString(); }
+    function activationPanelHtml(req) {
+      return `
+        <div class="activation-tools hidden" id="activation-tools-${requestIdOf(req)}">
+          <div><strong>Activatielink klaarzetten</strong></div>
+          <div class="muted" style="margin-top:4px;">Genereer, kopieer of queue de activatielink.</div>
+          <div class="activation-meta">
+            ${metaBox('E-mail', req.requester_email || 'Onbekend')}
+            <div class="data-box"><span class="label">Activatie verloopt</span><span id="activation-expires-${requestIdOf(req)}">Nog niet gegenereerd</span></div>
+          </div>
+          <div class="activation-link-box" id="activation-url-${requestIdOf(req)}">Nog geen activatielink gegenereerd.</div>
+          <div class="action-row">
+            <button class="copy-btn" type="button" data-copy-activation data-id="${requestIdOf(req)}">Kopieer activatielink</button>
+            <button class="mail-btn" type="button" data-mail-activation data-id="${requestIdOf(req)}">Mailconcept</button><button class="mail-btn" type="button" data-hide-activation data-id="${requestIdOf(req)}">Inklappen</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function metaBox(label, value) {
+      return `<div class="data-box"><span class="label">${escapeHtml(label)}</span>${escapeHtml(value || 'Onbekend')}</div>`;
+    }
+
+    function extractMeta(meta) {
+      const m = meta && typeof meta === 'object' ? meta : {};
+      return {
+        language: m.language || (Array.isArray(m.languages) ? m.languages.join(', ') : ''),
+        timezone: m.timezone || '',
+        platform: m.platform || '',
+        user_agent: m.user_agent || '',
+        screen: m.screen || '',
+        viewport: m.viewport || '',
+        referrer: m.referrer || '',
+        page_url: m.page_url || '',
+        color_scheme: m.color_scheme || '',
+        max_touch_points: m.max_touch_points ?? ''
+      };
+    }
+
+
+    function displayNameOf(req) {
+      return req?.display_name || req?.requester_meta?.display_name || req?.requester_meta?.name || `Aanvraag #${req?.id ?? '?'}`;
+    }
+
+    function parseMaybeJson(value) {
+      if (!value || typeof value !== 'string') return value;
+      try { return JSON.parse(value); } catch { return value; }
+    }
+
+    function extractIdLike(value) {
+      if (typeof value === 'number' && Number.isFinite(value)) return value;
+      const text = String(value || '').trim();
+      if (!text) return null;
+      const direct = Number(text);
+      if (Number.isFinite(direct)) return direct;
+      const tupleMatch = text.match(/^\(?\s*(\d+)/);
+      return tupleMatch ? Number(tupleMatch[1]) : null;
+    }
+
+    function normalizeAdminRow(input) {
+      let row = input;
+      if (row && typeof row === 'object') {
+        row = row.request && typeof row.request === 'object' ? { ...row.request, ...row } : row;
+        row = row.row && typeof row.row === 'object' ? { ...row.row, ...row } : row;
+        row = row.item && typeof row.item === 'object' ? { ...row.item, ...row } : row;
+      }
+      if (!row || typeof row !== 'object') return { id: extractIdLike(row), requester_meta: {} };
+      const out = { ...row };
+      out.requester_meta = parseMaybeJson(out.requester_meta) || {};
+      const primaryRequestId = extractIdLike(out.request_id ?? out.claim_request_id ?? out.related_claim_request_id ?? out.id);
+      out.request_id = primaryRequestId;
+      out.claim_request_id = extractIdLike(out.claim_request_id ?? out.request_id ?? out.related_claim_request_id ?? out.id);
+      out.id = primaryRequestId;
+      out.player_id = extractIdLike(out.player_id ?? out.related_player_id);
+      out.allowed_username_id = extractIdLike(out.allowed_username_id);
+      out.activation_link_id = extractIdLike(out.activation_link_id);
+      const canonicalStatus = String(out.status || '').toLowerCase();
+      if (canonicalStatus === 'activated' || canonicalStatus === 'activation_expired' || canonicalStatus === 'rejected' || canonicalStatus === 'revoked' || canonicalStatus === 'returned_to_claimable') {
+        out.request_status = out.status;
+      }
+      return out;
+    }
+
+    function normalizeAdminRows(rows) {
+      return (rows || []).map(normalizeAdminRow).filter((row) => row && row.id !== null);
+    }
+
+    function requestIdOf(item) {
+      return item?.request_id ?? item?.claim_request_id ?? item?.id ?? null;
+    }
+
+    function hasPin(req) {
+      return Boolean(
+        req.has_pin ??
+        req.pin_is_set ??
+        req.player_has_pin ??
+        req.pin_set ??
+        req.pin_hash_set ??
+        req.pin_hash_present ??
+        req.has_pin_hash ??
+        req.player_pin_hash_set ??
+        req.activated ??
+        req.activated_at ??
+        req.activated_on ??
+        req.link_used_at ??
+        req.activation_used_at ??
+        req.player_activation_used_at ??
+        req.used_at ??
+        req.pin_hash ??
+        req.player_pin_hash ??
+        (String(req.state_bucket || '').toLowerCase() === 'active')
+      );
+    }
+    function stateBucket(req) {
+      const states = [req?.state_bucket, req?.status, req?.request_status]
+        .map((value) => String(value || '').toLowerCase())
+        .filter(Boolean);
+      const decision = String(req?.decision || '').toLowerCase();
+      if (states.some((raw) => raw.includes('expired'))) return 'expired';
+      if (states.some((raw) => raw.includes('returned_to_claimable') || raw.includes('claimable_again') || raw.includes('claimable'))) return 'rejected';
+      if (states.some((raw) => raw.includes('revok') || raw.includes('reject') || raw.includes('denied'))) return 'rejected';
+      if (states.some((raw) => raw.includes('active') || raw.includes('activated'))) return 'active';
+      if (
+        states.some((raw) =>
+          raw.includes('approved') ||
+          raw.includes('await') ||
+          raw.includes('pending_activation') ||
+          raw.includes('pending activation') ||
+          raw.includes('awaiting_activation') ||
+          raw.includes('awaiting activation') ||
+          raw.includes('waiting')
+        )
+      ) return hasPin(req) ? 'active' : 'awaiting';
+      if (decision === 'rejected' || decision === 'revoked') return 'rejected';
+      if (hasPin(req)) return 'active';
+      return 'pending';
+    }
+    function statusMeta(req, includeDecision = false) {
+      const bucket = stateBucket(req);
+      if (bucket === 'active' || hasPin(req)) return { cls: 'state-activated', label: 'Actief' };
+      if ([req?.status, req?.request_status].map((value) => String(value || '').toLowerCase()).some((raw) => raw.includes('returned_to_claimable') || raw.includes('claimable_again') || raw.includes('claimable'))) return { cls: 'state-approved', label: 'Opnieuw claimbaar' };
+      if (bucket === 'rejected') return { cls: 'state-rejected', label: 'Afgewezen' };
+      if (bucket === 'awaiting') return { cls: includeDecision ? 'state-awaiting' : 'state-approved', label: includeDecision ? 'Wacht op activatie' : 'Goedgekeurd' };
+      if (bucket === 'expired') return { cls: 'state-expired', label: 'Verlopen' };
+      return { cls: 'state-pending', label: 'Openstaand' };
+    }
+
+    function isGoedgekeurdLike(req) {
+      const bucket = stateBucket(req);
+      return bucket === 'awaiting' || bucket === 'active';
+    }
+
+    function renderStats(requests, history) {
+      const pending = (requests || []).filter((item) => stateBucket(item) === 'pending').length;
+      const approved = (history || []).filter((item) => stateBucket(item) === 'awaiting').length;
+      const activated = (history || []).filter((item) => stateBucket(item) === 'active').length;
+      const rejected = (history || []).filter((item) => stateBucket(item) === 'rejected').length;
+      const expired = (history || []).filter((item) => stateBucket(item) === 'expired').length;
+      document.getElementById('statPending').textContent = String(pending);
+      document.getElementById('statGoedgekeurd').textContent = String(approved);
+      document.getElementById('statActief').textContent = String(activated);
+      document.getElementById('statRejected').textContent = String(rejected);
+      document.getElementById('statExpired').textContent = String(expired);
+    }
+
+    function approvedUserCardHtml(item) {
+      const bucket = stateBucket(item);
+      const activationState = bucket === 'active' ? 'Actief' : bucket === 'expired' ? 'Verlopen' : 'Wacht op activatie';
+      const decided = item.decided_at ? formatDateTime(item.decided_at) : 'Onbekend';
+      const pinState = hasPin(item) ? 'Ingesteld' : 'Nog niet ingesteld';
+      const activationButton = (bucket === 'active' || hasPin(item))
+        ? ''
+        : `<button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(item)}">Nieuwe activatielink</button>`;
+      const infoText = bucket === 'active'
+        ? 'Gebruiker actief in admin-overzicht.'
+        : hasPin(item)
+          ? 'Waarschuwing: deze aanvraag staat nog op wacht op activatie, maar er hangt al een pincode aan de speler. Gebruik de v84 resetflow voordat je opnieuw een activatielink verstuurt.'
+          : 'Gebruiker staat klaar onder wacht op activatie.';
+      return `${requestHtml(item, true)}
+        <div class="request-grid" style="margin-top:12px;">
+          ${metaBox('Status gebruiker', activationState)}
+          ${metaBox('PIN status', pinState)}
+          ${metaBox('Beslist op', decided)}
+        </div>
+        <div class="compact-actions">${activationButton}
+          <button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button>
+        </div>
+        <div class="inline-msg" id="approved-msg-${requestIdOf(item)}">${infoText}</div>
+        ${activationPanelHtml(item)}`;
+    }
+
+    function requestHtml(req, includeDecision = false) {
+      const noteHtml = req.requester_note ? escapeHtml(req.requester_note).replace(/\n/g, "<br>") : "<span class='muted'>Geen toelichting</span>";
+      const reasonHtml = req.decision_reason ? escapeHtml(req.decision_reason).replace(/\n/g, "<br>") : "<span class='muted'>Geen reden opgegeven</span>";
+      const meta = extractMeta(req.requester_meta);
+      const status = statusMeta(req, includeDecision);
+      return `
+        <div class="entry-top">
+          <div>
+            <div class="state-badge ${status.cls}">${status.label}</div>
+            <div class="entry-title">${escapeHtml(displayNameOf(req))}</div>
+            <div class="muted">${req.requester_email || 'Onbekend e-mailadres'} · aanvraag #${req.id ?? '?'}</div>
+          </div>
+          <div class="muted" style="text-align:right;">Aangevraagd<br><strong>${req.created_at ? formatDateTime(req.created_at) : 'Onbekend'}</strong>${includeDecision ? `<br><span>Besluit: ${escapeHtml(req.decision || '')}</span>` : ''}</div>
+        </div>
+        <div class="entry-note">${noteHtml}</div>
+        <div class="entry-meta">
+          ${metaBox('Tijdzone', meta.timezone || 'Onbekend')}
+          ${metaBox('Platform', meta.platform || 'Onbekend')}
+          ${metaBox('Referrer', meta.referrer || 'Direct')}
+        </div>
+        <details>
+          <summary>Meer details</summary>
+          <div class="request-grid">
+            ${metaBox('E-mail', req.requester_email || 'Onbekend')}
+            ${metaBox('Taal', meta.language || 'Onbekend')}
+            ${metaBox('Touch punten', String(meta.max_touch_points || 0))}
+            ${metaBox('Scherm', meta.screen || 'Onbekend')}
+            ${metaBox('Viewport', meta.viewport || 'Onbekend')}
+            ${metaBox('Pagina', meta.page_url || 'Onbekend')}
+            ${metaBox('User agent', meta.user_agent || 'Onbekend')}
+            ${metaBox('Kleurenschema', meta.color_scheme || 'Onbekend')}
+          </div>
+        </details>
+        ${includeDecision ? `<div style="margin-top:12px;"><span class="label">Reden besluit</span><div>${reasonHtml}</div></div>` : ''}
+      `;
+    }
+
+    function renderRequests(requests) {
+      const root = document.getElementById("requestsList");
+      root.innerHTML = "";
+      if (!requests || requests.length === 0) { root.innerHTML = `<p class="muted">Geen openstaande aanvragen.</p>`; return; }
+      const q = (document.getElementById('requestSearch')?.value || '').trim().toLowerCase();
+      (requests || []).filter((req) => {
+        if (stateBucket(req) !== 'pending') return false;
+        if (!q) return true;
+        return [displayNameOf(req), req.requester_email].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
+      }).forEach((req) => {
+        const div = document.createElement('div');
+        div.className = 'request';
+        div.innerHTML = `${requestHtml(req)}<div style="margin-top:12px;"><textarea class="decision-reason" data-id="${requestIdOf(req)}" placeholder="Reden (optioneel)"></textarea><div class="action-row"><button class="approve-btn" type="button" data-id="${requestIdOf(req)}" data-decision="approved">Goedkeuren</button><button class="reject-btn" type="button" data-id="${requestIdOf(req)}" data-decision="rejected">Afwijzen</button><button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(req)}">Maak activatielink</button></div><div class="inline-msg" id="request-msg-${requestIdOf(req)}">Klaar om te beoordelen.</div>${activationPanelHtml(req)}</div>`;
+        root.appendChild(div);
+      });
+      document.querySelectorAll('[data-decision]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const decision = btn.dataset.decision;
+          const reasonEl = document.querySelector(`.decision-reason[data-id="${requestId}"]`);
+          const decisionReason = reasonEl ? reasonEl.value.trim() : '';
+          const msg = document.getElementById(`request-msg-${requestId}`);
+          const requestRow = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
+          try {
+            if (msg) { msg.textContent = 'Besluit opslaan...'; msg.className = 'inline-msg'; }
+            if (decision === 'approved') {
+              const prepared = await approveAndSendActivation(requestId, decisionReason || null);
+              showActivationPanel(requestId, prepared);
+              const wake = await triggerMakeScenario({
+                reason: 'activation_email_queued',
+                request_id: requestId,
+                job_id: prepared?.job_id ?? prepared?.queue_job_id ?? prepared?.id ?? null,
+                player_id: prepared?.player_id ?? requestRow?.player_id ?? null,
+                display_name: prepared?.display_name ?? displayNameOf(requestRow),
+                email: prepared?.requester_email ?? requestRow?.requester_email ?? null,
+                activation_url: prepared?.activation_url ?? null,
+                expires_at: prepared?.expires_at ?? null,
+                created_at: requestRow?.created_at ?? null
+              });
+              if (msg) { msg.textContent = (prepared?.message || 'Wacht op activatie. Nieuwe activatielink en mail zijn klaargezet.') + ' — ' + formatMailDiagnostics(prepared, wake); msg.className = 'inline-msg ok'; }
+              window.alert('Aanvraag goedgekeurd. Er is een nieuwe activatielink klaargezet, de verificatiemail is in de wachtrij gezet en Make is gepingd. De naam hoort nu onder wacht op activatie te staan tot de link echt is gebruikt.');
+            } else {
+              const result = await returnNameToClaimable(requestId, decisionReason || 'Admin afwijzing');
+              if (msg) { msg.textContent = result?.message || 'Afwijzing opgeslagen. Naam staat weer in de claimbare kieslijst.'; msg.className = 'inline-msg ok'; }
+              window.alert('Aanvraag afgewezen. De naam staat weer in de claimbare kieslijst.');
+            }
+            await refreshAdminLists();
+            setStatus(decision === 'approved' ? 'Aanvraag goedgekeurd en mailflow gestart.' : 'Aanvraag afgewezen en naam teruggezet naar claimbaar.');
+          } catch (err) {
+            const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
+            if (msg) { msg.textContent = rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage; msg.className = 'inline-msg error'; }
+            setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
+          }
+        });
+      });
+      document.querySelectorAll('[data-generate-activation]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const msg = document.getElementById(`request-msg-${requestId}`) || document.getElementById(`activation-msg-${requestId}`);
+          try {
+            if (msg) { msg.textContent = 'Activatielink maken...'; msg.className = 'inline-msg'; }
+            const linkData = await createActivationLink(requestId);
+            showActivationPanel(requestId, linkData);
+            if (msg) { msg.textContent = 'Activatielink gemaakt.'; msg.className = 'inline-msg ok'; }
+            setStatus('Activatielink gemaakt.');
+          } catch (err) {
+            const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
+            if (msg) { msg.textContent = rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage; msg.className = 'inline-msg error'; }
+            setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
+          }
+        });
+      });
+      document.querySelectorAll('[data-copy-activation]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const urlEl = document.getElementById(`activation-url-${requestId}`);
+          const url = urlEl?.dataset.url;
+          if (!url) { setStatus('Maak eerst een activatielink.'); return; }
+          try {
+            await copyTextRobust(url);
+            const msg = document.getElementById(`activation-msg-${requestId}`); if (msg) { msg.textContent = 'Activatielink gekopieerd.'; msg.className = 'inline-msg ok'; } setStatus('Activatielink gekopieerd.');
+          } catch {
+            setStatus('Kopiëren lukte niet automatisch. Selecteer de link handmatig.');
+          }
+        });
+      });
+      document.querySelectorAll('[data-mail-activation]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const panel = document.getElementById(`activation-tools-${requestId}`);
+      const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
+      if (req && hasPin(req) && stateBucket(req) !== 'active') throw new Error('Deze speler heeft al een pincode in de database. Reset eerst de activatie voordat je opnieuw een mail verstuurt.');
+          const email = panel?.dataset.email || '';
+          const displayName = panel?.dataset.displayName || '';
+          const expiresAt = panel?.dataset.expiresAt || '';
+          const url = panel?.dataset.url || '';
+          if (!email || !url) { setStatus('Maak eerst een activatielink.'); return; }
+          const subject = ACTIVATION_EMAIL_SUBJECT;
+          const body = [
+            `Hoi ${displayName || 'daar'},`,
+            '',
+            'Je account is goedgekeurd.',
+            'Gebruik deze activatielink om je 4-cijferige pincode in te stellen:',
+            '',
+            url,
+            '',
+            expiresAt ? `Deze link verloopt op ${formatDateTime(expiresAt)}.` : '',
+            '',
+            'Groet,',
+            'De Kale Nel'
+          ].filter(Boolean).join('\n');
+          const msg = document.getElementById(`activation-msg-${requestId}`); if (msg) { msg.textContent = 'E-mailconcept geopend.'; msg.className = 'inline-msg ok'; } window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        });
+      });
+      document.querySelectorAll('[data-send-activation]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const msg = document.getElementById(`activation-msg-${requestId}`);
+          try {
+            if (msg) { msg.textContent = 'Mailjob in wachtrij zetten...'; msg.className = 'inline-msg'; }
+            await sendActivationEmail(requestId);
+            if (msg) { msg.textContent = 'Mailjob in wachtrij gezet. Make/Resend neemt het over.'; msg.className = 'inline-msg ok'; }
+          } catch (err) {
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Mailjob kon niet in de wachtrij worden gezet'; msg.className = 'inline-msg error'; }
+          }
+        });
+      });
+    }
+
+    function renderHistory(items) {
+      const root = document.getElementById('historyList');
+      root.innerHTML = '';
+      const q = (document.getElementById('historySearch')?.value || '').trim().toLowerCase();
+      const filtered = (items || []).filter((item) => {
+        const bucket = stateBucket(item);
+        const matchFilter = historyFilter === 'all' || bucket === historyFilter;
+        const matchQuery = !q || [displayNameOf(item), item.requester_email, item.decision].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
+        return matchFilter && matchQuery;
+      });
+      if (filtered.length === 0) { root.innerHTML = `<p class="muted">Geen resultaten.</p>`; return; }
+      filtered.forEach((item) => {
+        const div = document.createElement('div');
+        div.className = 'request';
+        const bucket = stateBucket(item);
+        const canRemove = bucket === 'rejected' || bucket === 'awaiting' || bucket === 'active' || bucket === 'expired';
+        const actionHtml = bucket === 'awaiting'
+          ? `<div class="compact-actions"><button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(item)}">Nieuwe activatielink</button><button class="link-btn" type="button" data-resend-verification data-id="${requestIdOf(item)}">Nieuwe link + mail</button><button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button></div>${activationPanelHtml(item)}`
+          : bucket === 'expired'
+            ? `<div class="compact-actions"><button class="approve-btn" type="button" data-requeue-expired data-id="${requestIdOf(item)}">Opnieuw klaarzetten</button><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button></div>`
+            : bucket === 'rejected'
+              ? `<div class="compact-actions"><button class="link-btn" type="button" data-return-claimable data-id="${requestIdOf(item)}">Opnieuw claimbaar maken</button><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button></div>`
+              : bucket === 'active'
+                ? `<div class="compact-actions"><button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button></div>`
+                : (canRemove ? `<div class="compact-actions"><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button></div>` : '');
+        div.innerHTML = `${requestHtml(item, true)}<div class="muted" style="margin-top:10px;">${item.decided_at ? formatDateTime(item.decided_at) : ''}</div>${actionHtml}<div class="inline-msg" id="history-msg-${requestIdOf(item)}">Geschiedenisitem.</div>`;
+        root.appendChild(div);
+      });
+      const historyPills = document.querySelectorAll('[data-history-filter]'); if (historyPills.length) historyPills.forEach((btn)=>{ btn.classList.toggle('active', btn.dataset.historyFilter===historyFilter); });
+      document.querySelectorAll('[data-revoke-access]').forEach((btn)=> {
+        btn.addEventListener('click', async ()=> {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const msg = document.getElementById(`history-msg-${requestId}`);
+          try {
+            if (msg) { msg.textContent = 'Toegang intrekken...'; msg.className = 'inline-msg'; }
+            await revokePlayerAccess(requestId, null);
+            await refreshAdminLists();
+            if (msg) { msg.textContent = 'Toegang ingetrokken.'; msg.className = 'inline-msg ok'; }
+            window.alert("Toegang ingetrokken. Controleer daarna in Geschiedenis/Afgewezen of de naam met 'Opnieuw claimbaar maken' weer is vrijgegeven.");
+          } catch (err) {
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Intrekken mislukt'; msg.className = 'inline-msg error'; }
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-requeue-expired]').forEach((btn)=> {
+        btn.addEventListener('click', async ()=> {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const msg = document.getElementById(`history-msg-${requestId}`);
+          try {
+            if (msg) { msg.textContent = 'Opnieuw klaarzetten...'; msg.className = 'inline-msg'; }
+            const result = await requeueExpiredActivation(requestId);
+            const item = (lastHistory || []).find((row) => Number(row.id) === Number(requestId)) || (lastRequests || []).find((row) => Number(row.id) === Number(requestId));
+            const wake = await triggerMakeScenario({ reason: 'expired_requeue_mail', request_id: requestId, job_id: result?.job_id ?? result?.queue_job_id ?? null, player_id: result?.player_id ?? item?.player_id ?? null, display_name: result?.display_name ?? displayNameOf(item), email: result?.requester_email ?? item?.requester_email ?? null, activation_url: result?.activation_url ?? null, expires_at: result?.expires_at ?? item?.expires_at ?? null, created_at: item?.created_at ?? null });
+            await refreshAdminLists();
+            if (msg) { msg.textContent = (result?.message || 'Nieuwe activatielink en mail zijn opnieuw klaargezet.') + ' — ' + formatMailDiagnostics(result, wake); msg.className = 'inline-msg ok'; }
+            window.alert('De verlopen activatie is opnieuw klaargezet. Er is een nieuwe activatielink gemaakt, de mailjob is gequeued en Make is gepingd. De naam hoort nu weer onder Wacht op activatie te staan.');
+          } catch (err) {
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Opnieuw klaarzetten mislukt'; msg.className = 'inline-msg error'; }
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-resend-verification]').forEach((btn)=> {
+        btn.addEventListener('click', async ()=> {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const msg = document.getElementById(`history-msg-${requestId}`);
+          try {
+            if (msg) { msg.textContent = 'Nieuwe link + mail voorbereiden...'; msg.className = 'inline-msg'; }
+            const result = await resendPendingActivation(requestId);
+            setStatus(result?.message || 'Nieuwe activatielink en verificatiemail klaargezet.', 'ok');
+            if (msg) { msg.textContent = (result?.message || 'Nieuwe activatielink en mail klaargezet.') + ' — ' + formatMailDiagnostics(result, {via:'frontend-webhook'}); msg.className = 'inline-msg ok'; }
+            window.alert('Nieuwe activatielink en verificatiemail klaargezet. De naam blijft onder wacht op activatie staan totdat de link echt is gebruikt.');
+            await refreshAdminLists();
+          } catch (err) {
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Nieuwe link + mail mislukt'; msg.className = 'inline-msg error'; }
+          }
+        });
+      });
+      document.querySelectorAll('[data-return-claimable]').forEach((btn)=> {
+        btn.addEventListener('click', async ()=> {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const msg = document.getElementById(`history-msg-${requestId}`);
+          try {
+            if (msg) { msg.textContent = 'Naam terugzetten naar claimbaar...'; msg.className = 'inline-msg'; }
+            const result = await returnNameToClaimable(requestId, 'Admin teruggezet naar claimbare lijst');
+            await refreshAdminLists();
+            if (msg) { msg.textContent = result?.message || 'Naam is weer claimbaar gemaakt.'; msg.className = 'inline-msg ok'; }
+            window.alert('Naam is weer claimbaar gemaakt en hoort nu opnieuw claimbaar te zijn op de openbare aanvraagpagina.');
+          } catch (err) {
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Terugzetten mislukt'; msg.className = 'inline-msg error'; }
+          }
+        });
+      });
+      document.querySelectorAll('[data-remove-player]').forEach((btn)=> {
+        btn.addEventListener('click', async ()=> {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const msg = document.getElementById(`history-msg-${requestId}`);
+          if (!confirm('Deze gebruiker en gekoppelde testdata verwijderen?')) return;
+          try {
+            if (msg) { msg.textContent = 'Gebruiker verwijderen...'; msg.className = 'inline-msg'; }
+            await removePlayer(requestId, 'Admin user verwijderen');
+            await refreshAdminLists();
+            if (msg) { msg.textContent = 'Gebruiker verwijderd.'; msg.className = 'inline-msg ok'; }
+            window.alert('Gebruiker verwijderd en uit alle adminlijsten gehaald.');
+          } catch (err) {
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Verwijderen mislukt'; msg.className = 'inline-msg error'; }
+          }
+        });
+      });
+      document.querySelectorAll('[data-generate-activation]').forEach((btn) => {
+        if (btn.dataset.bound) return; btn.dataset.bound='1';
+        btn.addEventListener('click', async () => {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const panel = document.getElementById(`activation-tools-${requestId}`);
+          const msg = document.getElementById(`history-msg-${requestId}`) || document.getElementById(`activation-msg-${requestId}`);
+          if (panel && !panel.classList.contains('hidden') && panel.dataset.url) {
+            hideActivationPanel(requestId);
+            if (msg) { msg.textContent = 'Activatiepaneel verborgen.'; msg.className = 'inline-msg'; }
+            return;
+          }
+          if (panel && panel.dataset.url) {
+            showActivationPanel(requestId, {
+              activation_url: panel.dataset.url,
+              requester_email: panel.dataset.email || '',
+              display_name: panel.dataset.displayName || '',
+              expires_at: panel.dataset.expiresAt || ''
+            });
+            if (msg) { msg.textContent = 'Bestaande activatielink zichtbaar gemaakt.'; msg.className = 'inline-msg ok'; }
+            return;
+          }
+          try {
+            if (msg) { msg.textContent = 'Activatielink maken...'; msg.className = 'inline-msg'; }
+            const linkData = await createActivationLink(requestId);
+            showActivationPanel(requestId, linkData);
+            if (msg) { msg.textContent = 'Activatielink gemaakt.'; msg.className = 'inline-msg ok'; }
+          } catch (err) {
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Activatielink maken mislukt'; msg.className = 'inline-msg error'; }
+          }
+        });
+      });
+      document.querySelectorAll('[data-hide-activation]').forEach((btn) => { if (btn.dataset.bound) return; btn.dataset.bound='1'; btn.addEventListener('click', () => { const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id; hideActivationPanel(requestId); const msg = document.getElementById(`history-msg-${requestId}`) || document.getElementById(`activation-msg-${requestId}`); if (msg) { msg.textContent = 'Activatiepaneel verborgen.'; msg.className = 'inline-msg'; } }); });
+      document.querySelectorAll('[data-copy-activation], [data-mail-activation], [data-send-activation]').forEach((el)=>{});
+    }
+
+    function renderGoedgekeurdUsers(items) {
+      const root = document.getElementById('approvedUsersList');
+      root.innerHTML = '';
+      const q = (document.getElementById('approvedSearch')?.value || '').trim().toLowerCase();
+      const approvedItems = (items || []).filter((item) => currentAdminView === 'active' ? stateBucket(item) === 'active' : stateBucket(item) === 'awaiting' || stateBucket(item) === 'active').filter((item) => {
+        if (!q) return true;
+        return [displayNameOf(item), item.requester_email, item.decision].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
+      });
+      if (approvedItems.length === 0) { root.innerHTML = `<div class="empty-state">Geen goedgekeurde gebruikers gevonden.</div>`; return; }
+      approvedItems.forEach((item) => {
+        const div = document.createElement('div');
+        div.className = 'request';
+        div.innerHTML = approvedUserCardHtml(item);
+        root.appendChild(div);
+      });
+      document.querySelectorAll('#approvedUsersList [data-revoke-access]').forEach((btn)=> {
+        btn.addEventListener('click', async ()=> {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const msg = document.getElementById(`approved-msg-${requestId}`);
+          try {
+            if (msg) { msg.textContent = 'Goedkeuring intrekken...'; msg.className = 'inline-msg'; }
+            await revokePlayerAccess(requestId, 'Admin revoke vanuit goedgekeurde gebruikerslijst');
+            await refreshAdminLists();
+            setStatus('Toegang ingetrokken. Maak de naam daarna indien nodig opnieuw claimbaar vanuit de geschiedenis.');
+            window.alert("Toegang ingetrokken. Controleer daarna in Geschiedenis/Afgewezen of de naam met 'Opnieuw claimbaar maken' weer is vrijgegeven.");
+          } catch (err) {
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Intrekken mislukt'; msg.className = 'inline-msg error'; }
+          }
+        });
+      });
+      document.querySelectorAll('#approvedUsersList [data-remove-player]').forEach((btn)=> {
+        btn.addEventListener('click', async ()=> {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const msg = document.getElementById(`approved-msg-${requestId}`);
+          if (!confirm('Deze gebruiker en gekoppelde testdata verwijderen?')) return;
+          try {
+            if (msg) { msg.textContent = 'Gebruiker verwijderen...'; msg.className = 'inline-msg'; }
+            await removePlayer(requestId, 'Admin user verwijderen');
+            await refreshAdminLists();
+            setStatus('Gebruiker verwijderd.');
+            window.alert('Gebruiker verwijderd en uit alle adminlijsten gehaald.');
+          } catch (err) {
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Verwijderen mislukt'; msg.className = 'inline-msg error'; }
+          }
+        });
+      });
+      document.querySelectorAll('#approvedUsersList [data-generate-activation]').forEach((btn)=> {
+        btn.addEventListener('click', async ()=> {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const msg = document.getElementById(`approved-msg-${requestId}`);
+          try {
+            if (msg) { msg.textContent = 'Activatielink maken...'; msg.className = 'inline-msg'; }
+            const linkData = await createActivationLink(requestId);
+            showActivationPanel(requestId, linkData);
+            if (msg) { msg.textContent = 'Nieuwe activatielink klaar.'; msg.className = 'inline-msg ok'; }
+          } catch (err) {
+            if (msg) { msg.textContent = err instanceof Error ? err.message : 'Link maken mislukt'; msg.className = 'inline-msg error'; }
+          }
+        });
+      });
+      document.querySelectorAll('#approvedUsersList [data-copy-activation]').forEach((btn)=> {
+        btn.addEventListener('click', async ()=> {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const urlEl = document.getElementById(`activation-url-${requestId}`);
+          const url = urlEl?.dataset.url;
+          if (!url) { setStatus('Maak eerst een activatielink.'); return; }
+          await copyTextRobust(url);
+          const msg = document.getElementById(`approved-msg-${requestId}`);
+          if (msg) { msg.textContent = 'Activatielink gekopieerd.'; msg.className = 'inline-msg ok'; }
+        });
+      });
+      document.querySelectorAll('#approvedUsersList [data-mail-activation]').forEach((btn)=> {
+        btn.addEventListener('click', () => {
+          const requestId = extractIdLike(btn.dataset.id) ?? btn.dataset.id;
+          const panel = document.getElementById(`activation-tools-${requestId}`);
+          const email = panel?.dataset.email || '';
+          const displayName = panel?.dataset.displayName || '';
+          const expiresAt = panel?.dataset.expiresAt || '';
+          const url = panel?.dataset.url || '';
+          if (!email || !url) { setStatus('Maak eerst een activatielink.'); return; }
+          const subject = ACTIVATION_EMAIL_SUBJECT;
+          const body = ['Hoi ' + (displayName || 'daar') + ',', '', 'Je account is klaar voor gebruik.', 'Gebruik deze activatielink:', '', url, '', expiresAt ? `Deze link verloopt op ${formatDateTime(expiresAt)}.` : '', '', 'Groet,', 'De Kale Nel'].filter(Boolean).join('\n');
+          window.location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        });
+      });
+    }
+
+    function getAdminViewConfig() {
+      return {
+        pending: { title: 'Nog te beoordelen', subtitle: 'Nieuwe aanvragen die nog een besluit nodig hebben.', card: 'requestsCard' },
+        awaiting: { title: 'Wacht op activatie', subtitle: 'Goedgekeurd, maar nog niet geactiveerd.', card: 'historyCard' },
+        active: { title: 'Actief', subtitle: 'Geactiveerde accounts met snelle intrekknoppen.', card: 'approvedUsersCard' },
+        rejected: { title: 'Afgewezen', subtitle: 'Afgewezen, ingetrokken of opnieuw claimbaar gemaakte aanvragen.', card: 'historyCard' },
+        expired: { title: 'Verlopen', subtitle: 'Verlopen activatielinks die opnieuw moeten worden klaargezet.', card: 'historyCard' }
+      };
+    }
+
+    function renderAdminTabs() {
+      const config = getAdminViewConfig();
+      const tabs = [
+        { key: 'pending', label: 'Nog te beoordelen', count: (lastRequests || []).filter((item) => stateBucket(item) === 'pending').length },
+        { key: 'awaiting', label: 'Wacht op activatie', count: (lastHistory || []).filter((item) => stateBucket(item) === 'awaiting').length },
+        { key: 'active', label: 'Actief', count: (lastHistory || []).filter((item) => stateBucket(item) === 'active').length },
+        { key: 'rejected', label: 'Afgewezen', count: (lastHistory || []).filter((item) => stateBucket(item) === 'rejected').length },
+        { key: 'expired', label: 'Verlopen', count: (lastHistory || []).filter((item) => stateBucket(item) === 'expired').length }
+      ];
+      const root = document.getElementById('adminTabs');
+      root.innerHTML = tabs.map((tab) => `<button type="button" class="tab-btn ${tab.key === currentAdminView ? 'active' : ''}" data-admin-view="${tab.key}"><span>${tab.label}</span><span class="tab-count">${tab.count}</span></button>`).join('');
+      root.querySelectorAll('[data-admin-view]').forEach((btn) => btn.addEventListener('click', () => switchAdminView(btn.dataset.adminView)));
+    }
+
+    function applySharedSearchToVisibleCard() {
+      const sharedValue = (document.getElementById('adminSearchGlobal')?.value || '').trim();
+      const requestSearch = document.getElementById('requestSearch');
+      const historySearch = document.getElementById('historySearch');
+      const approvedSearch = document.getElementById('approvedSearch');
+      if (requestSearch) requestSearch.value = currentAdminView === 'pending' ? sharedValue : '';
+      if (historySearch) historySearch.value = (currentAdminView === 'awaiting' || currentAdminView === 'rejected' || currentAdminView === 'expired') ? sharedValue : '';
+      if (approvedSearch) approvedSearch.value = currentAdminView === 'active' ? sharedValue : '';
+    }
+
+    function switchAdminView(view) {
+      currentAdminView = view;
+      try { history.replaceState(null, '', `#view=${view}`); } catch {}
+      const cfg = getAdminViewConfig()[view] || getAdminViewConfig().pending;
+      document.getElementById('currentListTitle').textContent = cfg.title;
+      document.getElementById('currentListSubtitle').textContent = cfg.subtitle;
+      ['requestsCard','historyCard','approvedUsersCard'].forEach((id)=>{ const el=document.getElementById(id); el.classList.remove('current-view'); el.style.display='none'; }); const active=document.getElementById(cfg.card); active.style.display='block'; active.classList.add('current-view');
+      applySharedSearchToVisibleCard();
+      if (view === 'pending') {
+        renderRequests(lastRequests);
+      } else if (view === 'awaiting') {
+        historyFilter = 'awaiting';
+        document.getElementById('historyTitle').textContent = 'Wacht op activatie';
+        document.getElementById('historyNote').textContent = 'Goedgekeurd, maar nog niet geactiveerd.';
+        renderHistory(lastHistory);
+      } else if (view === 'rejected') {
+        historyFilter = 'rejected';
+        document.getElementById('historyTitle').textContent = 'Afgewezen';
+        document.getElementById('historyNote').textContent = 'Afgewezen, ingetrokken of opnieuw claimbaar gemaakte namen. Gebruik hier "Opnieuw claimbaar maken" om een naam echt vrij te geven.';
+        renderHistory(lastHistory);
+      } else if (view === 'expired') {
+        historyFilter = 'expired';
+        document.getElementById('historyTitle').textContent = 'Verlopen';
+        document.getElementById('historyNote').textContent = 'Verlopen activatielinks die opnieuw moeten worden klaargezet.';
+        renderHistory(lastHistory);
+      } else if (view === 'active') {
+        renderGoedgekeurdUsers(lastHistory);
+      }
+      renderAdminTabs();
+    }
+
+    async function adminLogin() {
+      const username = document.getElementById('usernameInput').value.trim();
+      const password = document.getElementById('passwordInput').value;
+      const totp = document.getElementById('totpInput').value.replace(/\D/g, '').trim();
+      if (!username) throw new Error('Vul een gebruikersnaam in');
+      if (!password) throw new Error('Vul een wachtwoord in');
+      if (!/^\d{6}$/.test(totp)) throw new Error('Vul je 6-cijferige Google Authenticator-code in');
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_login`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ input_username: username, input_password: password, input_totp_code: totp }) });
+      let data = await parseResponse(res);
+      if (Array.isArray(data)) data = data[0] || {};
+      const token = data.admin_session_token || data.token;
+      if (!token) throw new Error('Login gaf geen admin-sessie terug');
+      setAdminSessionToken(token);
+      document.getElementById('passwordInput').value = '';
+      document.getElementById('totpInput').value = '';
+      return await checkSession();
+    }
+
+    async function callFirstRpc(rpcNames, payload) {
+      let lastError = null;
+      for (const rpcName of rpcNames) {
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpcName}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(payload) });
+          return await parseResponse(res);
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      throw lastError || new Error('RPC mislukt');
+    }
+
+    async function checkSession() {
+      const data = window.GEJAST_ADMIN_SESSION ? await window.GEJAST_ADMIN_SESSION.validate() : await (async()=>{ const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); })();
+      if (data.admin_session_token) setAdminSessionToken(data.admin_session_token);
+      return data;
+    }
+    async function getRequests() { const data = await callFirstRpc(['admin_get_claim_requests','admin_list_claim_requests_action'], { admin_session_token: getAdminSessionToken() }); return Array.isArray(data) ? data : (data?.requests || data?.items || []); }
+    async function getHistory() { const data = await callFirstRpc(['admin_get_claim_history','admin_list_claim_history_action'], { admin_session_token: getAdminSessionToken() }); return Array.isArray(data) ? data : (data?.history || data?.items || []); }
+    async function getExpiredQueue() { const data = await callFirstRpc(['admin_get_expired_activation_queue','admin_list_expired_activation_queue_action'], { admin_session_token: getAdminSessionToken() }).catch(() => ({ items: [] })); return Array.isArray(data) ? data : (data?.items || []); }
+    function normalizeExpiredRows(rows) {
+      return normalizeAdminRows(rows).map((row) => ({
+        ...row,
+        state_bucket: 'expired',
+        request_status: row.request_status || row.status || 'activation_expired',
+        status: row.status || row.request_status || 'activation_expired'
+      }));
+    }
+    function isLikelyExpired(row){ try { const bucket = stateBucket(row); if (bucket !== 'awaiting') return false; const exp = row?.expires_at ? new Date(row.expires_at) : null; if (exp && !isNaN(exp) && exp.getTime() < Date.now()) return true; const approvedAt = new Date(row?.approved_at || row?.decision_at || row?.updated_at || row?.requested_at || row?.created_at || ''); if (!isNaN(approvedAt)) return (Date.now() - approvedAt.getTime()) > (24*60*60*1000); } catch(_){} return false; }
+    function mergeHistoryWithExpired(historyRows, expiredRows) {
+      const byId = new Map();
+      (historyRows || []).forEach((row) => {
+        const key = requestIdOf(row);
+        if (key !== null && key !== undefined) byId.set(String(key), row);
+      });
+      (expiredRows || []).forEach((row) => {
+        const key = requestIdOf(row);
+        if (key === null || key === undefined) return;
+        const existing = byId.get(String(key)) || {};
+        byId.set(String(key), { ...existing, ...row, state_bucket: 'expired', request_status: row.request_status || existing.request_status || 'activation_expired', status: row.status || existing.status || 'activation_expired' });
+      });
+      return Array.from(byId.values()).map((row)=> isLikelyExpired(row) ? { ...row, state_bucket:'expired', request_status:'activation_expired', status:'activation_expired' } : row);
+    }
+    async function decideRequest(requestId, decision, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision, decision_reason_input: decisionReason }) }); return await parseResponse(res); }
+    async function approveAndSendActivation(requestId, decisionReason) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_approve_and_send_activation_action`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: decisionReason || null, base_url: getActivationBaseUrl() })
+      });
+      const data = await parseResponse(res);
+      try { await updateActivationEmailSubject(requestId); } catch {}
+      return data;
+    }
+    async function requeueExpiredActivation(requestId) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_requeue_expired_activation_action`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), base_url: getActivationBaseUrl() })
+      });
+      const data = await parseResponse(res);
+      try { await updateActivationEmailSubject(requestId); } catch {}
+      return data;
+    }
+
+    async function resendPendingActivation(requestId) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_resend_pending_activation_action`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), base_url: getActivationBaseUrl() })
+      });
+      const data = await parseResponse(res);
+      try { await updateActivationEmailSubject(requestId); } catch {}
+      const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
+      const panel = document.getElementById(`activation-tools-${requestId}`);
+      await triggerMakeScenario({ reason: 'activation_email_queued', request_id: requestId, job_id: data?.job_id ?? data?.queue_job_id ?? data?.id ?? null, player_id: data?.player_id ?? req?.player_id ?? null, display_name: data?.display_name ?? displayNameOf(req), email: data?.requester_email ?? req?.requester_email ?? null, activation_url: data?.activation_url ?? panel?.dataset?.url ?? null, expires_at: data?.expires_at ?? panel?.dataset?.expiresAt ?? null, created_at: req?.created_at ?? null });
+      return data;
+    }
+    async function returnNameToClaimable(requestId, reason) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_return_name_to_claimable_action`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: reason || null })
+      });
+      return await parseResponse(res);
+    }
+
+    async function createActivationLink(requestId) {
+      const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
+      if (req && hasPin(req) && stateBucket(req) !== 'active') throw new Error('Deze aanvraag staat nog op wacht op activatie, maar de speler heeft al een pincode. Draai eerst de v84 activatie-resetpatch of trek de toegang in.');
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_player_activation_link_action`, {
+        method:'POST',
+        mode:'cors',
+        cache:'no-store',
+        headers: rpcHeaders(),
+        body: JSON.stringify({
+          admin_session_token: getAdminSessionToken(),
+          request_id_input: String(requestId),
+          base_url: getActivationBaseUrl()
+        })
+      });
+      return await parseResponse(res);
+    }
+    function buildMakeWebhookMeta(source, meta = {}) {
+      const payload = { trigger: 'activation_email_queued', source, ts: new Date().toISOString(), ...meta };
+      payload.subject = payload.subject || payload.email_subject || ACTIVATION_EMAIL_SUBJECT;
+      payload.email_subject = payload.email_subject || payload.subject || ACTIVATION_EMAIL_SUBJECT;
+      payload.ts_local = payload.ts_local || formatDateTime(payload.ts);
+      if (payload.expires_at && !payload.expires_at_local) payload.expires_at_local = formatDateTime(payload.expires_at);
+      if (payload.created_at && !payload.created_at_local) payload.created_at_local = formatDateTime(payload.created_at);
+      return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined && value !== null && value !== ''));
+    }
+
+    function formatMailDiagnostics(result, wake) {
+      const bits = [];
+      bits.push(result?.activation_url ? 'activatielink aangemaakt' : 'geen activatielink teruggekregen');
+      bits.push((result?.job_id || result?.queue_job_id || result?.id) ? 'mailjob gequeued' : 'geen mailjob-id gezien');
+      bits.push(wake?.via ? `Make gepingd via ${wake.via}` : 'Make-ping onbekend');
+      return bits.join(' · ');
+    }
+
+    async function triggerMakeScenario(meta = {}) {
+      if (!MAKE_WEBHOOK_URL) throw new Error('MAKE_WEBHOOK_URL ontbreekt in admin.html');
+      const payload = buildMakeWebhookMeta('admin_claims.html', meta);
+      const res = await fetch(MAKE_WEBHOOK_URL, {
+        method:'POST',
+        mode:'cors',
+        cache:'no-store',
+        keepalive:true,
+        headers:{ 'Content-Type':'application/json', 'Accept':'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error(`Make webhook pingen mislukt (HTTP ${res.status})`);
+      return { ok:true, via:'fetch-json', status:res.status };
+    }
+
+    async function revokePlayerAccess(requestId, reason) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_revoke_player_access_action`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: reason || null })
+      });
+      return await parseResponse(res);
+    }
+    async function removePlayer(requestId, reason) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_remove_player_action`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: reason || null })
+      });
+      return await parseResponse(res);
+    }
+    async function queueActivationEmail(requestId) {
+      const panel = document.getElementById(`activation-tools-${requestId}`);
+      const recipientEmail = panel?.dataset.email || '';
+      const recipientName = panel?.dataset.displayName || '';
+      const activationLink = panel?.dataset.url || '';
+      if (!recipientEmail || !activationLink) throw new Error('Maak eerst een activatielink.');
+      const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
+      if (req && hasPin(req) && stateBucket(req) !== 'active') throw new Error('Deze speler heeft al een pincode in de database. Reset eerst de activatie voordat je opnieuw een mail verstuurt.');
+      const playerId = req?.player_id ?? null;
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_queue_activation_email`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({
+          admin_session_token: getAdminSessionToken(),
+          request_id_input: String(requestId),
+          base_url: getActivationBaseUrl(),
+          recipient_email_input: recipientEmail,
+          recipient_name_input: recipientName || null,
+          activation_link_input: activationLink,
+          player_id_input: playerId
+        })
+      });
+      return await parseResponse(res);
+    }
+    async function updateActivationEmailSubject(requestId) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_set_activation_email_subject_action`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), desired_subject: ACTIVATION_EMAIL_SUBJECT })
+      });
+      return await parseResponse(res);
+    }
+    async function sendActivationEmail(requestId) {
+      const panel = document.getElementById(`activation-tools-${requestId}`);
+      const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
+      const recipientEmail = panel?.dataset.email || req?.requester_email || '';
+      const recipientName = panel?.dataset.displayName || displayNameOf(req) || '';
+      const activationLink = panel?.dataset.url || '';
+      const queued = await queueActivationEmail(requestId);
+      try { await updateActivationEmailSubject(requestId); } catch {}
+      await triggerMakeScenario({
+        reason: 'activation_email_queued',
+        request_id: requestId,
+        job_id: queued?.job_id ?? queued?.id ?? null,
+        player_id: queued?.player_id ?? req?.player_id ?? null,
+        display_name: queued?.display_name ?? recipientName ?? displayNameOf(req),
+        email: queued?.requester_email ?? recipientEmail,
+        activation_url: queued?.activation_url ?? activationLink,
+        expires_at: queued?.expires_at ?? panel?.dataset?.expiresAt ?? null,
+        created_at: req?.created_at ?? null
+      });
+      return queued;
+    }
+    async function createManualName() {
+      const displayName = document.getElementById('manualNameInput').value.trim();
+      const email = document.getElementById('manualEmailInput').value.trim().toLowerCase();
+      const note = document.getElementById('manualNoteInput').value.trim() || null;
+      const msg = document.getElementById('manualCreateMsg');
+      if (!displayName) throw new Error('Vul een naam in voor de kieslijst');
+      if (msg) { msg.textContent = 'Naam toevoegen aan kieslijst...'; msg.className = 'inline-msg'; }
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_reserve_allowed_username`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), display_name_input: displayName, reserved_for_email_input: email || null, reserved_for_person_note_input: note })
+      });
+      const data = await parseResponse(res);
+      if (msg) { msg.textContent = `${displayName} staat nu in de kieslijst.`; msg.className = 'inline-msg ok'; }
+      document.getElementById('manualNameInput').value=''; document.getElementById('manualEmailInput').value=''; document.getElementById('manualNoteInput').value='';
+      return data;
+    }
+
+    async function refreshAdminLists() {
+      const [requests, history, expired] = await Promise.all([getRequests(), getHistory(), getExpiredQueue()]);
+      lastRequests = normalizeAdminRows(Array.isArray(requests) ? requests : (requests?.items || []));
+      const normalizedHistory = normalizeAdminRows(Array.isArray(history) ? history : (history?.items || []));
+      lastExpired = normalizeExpiredRows(Array.isArray(expired) ? expired : (expired?.items || []));
+      lastHistory = mergeHistoryWithExpired(normalizedHistory, lastExpired);
+      renderStats(lastRequests, lastHistory);
+      switchAdminView(currentAdminView);
+    }
+
+    const activationPanelsOpen = new Set();
+    function rememberActivationPanel(requestId, isOpen) {
+      const key = String(requestId);
+      if (isOpen) activationPanelsOpen.add(key);
+      else activationPanelsOpen.delete(key);
+    }
+    async function copyTextRobust(value) {
+      const text = String(value || '');
+      if (!text) throw new Error('Niets om te kopiëren.');
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', 'readonly');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      ta.setSelectionRange(0, ta.value.length);
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (!ok) throw new Error('Kopiëren mislukt in deze browser.');
+      return true;
+    }
+    function hideActivationPanel(requestId) {
+      const panel = document.getElementById(`activation-tools-${requestId}`);
+      if (!panel) return;
+      panel.classList.add('hidden');
+      rememberActivationPanel(requestId, false);
+      const toggleBtn = document.querySelector(`[data-generate-activation][data-id="${requestId}"]`);
+      if (toggleBtn && panel.dataset.url) toggleBtn.textContent = 'Maak activatielink';
+    }
+
+    function showActivationPanel(requestId, linkData) {
+      const panel = document.getElementById(`activation-tools-${requestId}`);
+      const urlEl = document.getElementById(`activation-url-${requestId}`);
+      const expiresEl = document.getElementById(`activation-expires-${requestId}`);
+      if (!panel || !urlEl || !expiresEl) return;
+      panel.classList.remove('hidden');
+      rememberActivationPanel(requestId, true);
+      panel.dataset.url = linkData.activation_url || panel.dataset.url || '';
+      panel.dataset.email = linkData.requester_email || panel.dataset.email || '';
+      panel.dataset.displayName = linkData.display_name || panel.dataset.displayName || '';
+      panel.dataset.expiresAt = linkData.expires_at || panel.dataset.expiresAt || '';
+      urlEl.dataset.url = panel.dataset.url || '';
+      urlEl.textContent = panel.dataset.url || 'Geen link ontvangen van de server.';
+      expiresEl.textContent = formatDateTime(panel.dataset.expiresAt);
+      const toggleBtn = document.querySelector(`[data-generate-activation][data-id="${requestId}"]`);
+      if (toggleBtn && panel.dataset.url) toggleBtn.textContent = 'Verberg activatielink';
+    }
+
+    async function loadAdmin() {
+      try {
+        setStatus('');
+        const token = getAdminSessionToken();
+        if (!token) { showLoggedOut(); return; }
+        const session = await checkSession();
+        if (session && session.ok === false) { clearAdminSessionToken(); showLoggedOut(); return; }
+        showLoggedIn(session.username);
+        await refreshAdminLists();
+      } catch (err) {
+        clearAdminSessionToken(); showLoggedOut();
+        const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
+        setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
+      }
+    }
+
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      try {
+        setStatus('Inloggen...');
+        const session = await adminLogin();
+        showLoggedIn(session.username || session.admin_username || document.getElementById('usernameInput').value.trim());
+        await refreshAdminLists();
+        setStatus('Inloggen gelukt. Sessieserver bevestigde de admin-sessie.');
+      } catch (err) {
+        const rawMessage = err instanceof Error ? err.message : 'Er ging iets mis';
+        setStatus(rawMessage === 'Failed to fetch' ? 'Netwerk/CORS-fout bij contact met Supabase.' : rawMessage);
+      }
+    });
+    document.getElementById('logoutBtn').addEventListener('click', () => { clearAdminSessionToken(); showLoggedOut(); setStatus('Uitgelogd.'); });
+    document.getElementById('totpInput').placeholder = 'Google Authenticator-code';
+
+    function initParallax() {
+      const root = document.documentElement;
+      let mx = 0, my = 0, tx = 0, ty = 0, raf = null;
+      function step() {
+        tx += (mx - tx) * 0.1;
+        ty += (my - ty) * 0.1;
+        root.style.setProperty('--mouse-x', `${tx.toFixed(2)}px`);
+        root.style.setProperty('--mouse-y', `${ty.toFixed(2)}px`);
+        if (Math.abs(tx - mx) > 0.2 || Math.abs(ty - my) > 0.2) {
+          raf = requestAnimationFrame(step);
+        } else {
+          raf = null;
+        }
+      }
+      window.addEventListener('mousemove', (event) => {
+        const x = event.clientX / window.innerWidth - 0.5;
+        const y = event.clientY / window.innerHeight - 0.5;
+        mx = x * 30;
+        my = y * 24;
+        if (!raf) raf = requestAnimationFrame(step);
+      }, { passive: true });
+    }
+
+
+document.getElementById('usernameInput').addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') { event.preventDefault(); document.getElementById('loginBtn').click(); }
+});
+document.getElementById('passwordInput').addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') { event.preventDefault(); document.getElementById('loginBtn').click(); }
+});
+document.getElementById('totpInput').addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') { event.preventDefault(); document.getElementById('loginBtn').click(); }
+});
+    document.getElementById('adminSearchGlobal').addEventListener('input', ()=> switchAdminView(currentAdminView));
+    document.getElementById('requestSearch').addEventListener('input', ()=> { if (currentAdminView === 'pending') renderRequests(lastRequests); });
+    document.getElementById('historySearch').addEventListener('input', ()=> { if (currentAdminView === 'awaiting' || currentAdminView === 'rejected' || currentAdminView === 'expired') renderHistory(lastHistory); });
+    document.getElementById('approvedSearch').addEventListener('input', ()=> { if (currentAdminView === 'active') renderGoedgekeurdUsers(lastHistory); });
+    document.getElementById('refreshBtn').addEventListener('click', async ()=> { setStatus('Verversen...'); await refreshAdminLists(); setStatus('Admin-overzicht ververst.'); });
+    document.getElementById('manualCreateBtn')?.addEventListener('click', async ()=> { try { await createManualName(); currentAdminView='pending'; await refreshAdminLists(); } catch(err){ const msg=document.getElementById('manualCreateMsg'); if(msg){ msg.textContent = err instanceof Error ? err.message : 'Naam klaarzetten mislukt'; msg.className='inline-msg error'; } } });
+
+    document.getElementById('kickMakeBtn').addEventListener('click', async ()=> {
+      try {
+        setStatus('Make handmatig pingen...');
+        await triggerMakeScenario({ reason: 'manual_admin_kick' });
+        setStatus('Make handmatig gepingd. Goedkeuren doet dit normaal al automatisch; dit is alleen een fallback.');
+      } catch (err) {
+        setStatus(err instanceof Error ? err.message : 'Make webhook pingen mislukt');
+      }
+    });
+    document.querySelectorAll('[data-history-filter]').forEach((btn)=> btn.addEventListener('click', ()=> { historyFilter = btn.dataset.historyFilter; renderHistory(lastHistory); }));
+    document.querySelectorAll('[data-admin-view-card]').forEach((card) => card.addEventListener('click', () => switchAdminView(card.dataset.adminViewCard)));
+    window.addEventListener('hashchange', () => { const view = (location.hash.match(/view=([a-z]+)/i)||[])[1]; if (view) switchAdminView(view); });
+    window.addEventListener('error', (event) => { if (event?.message) setStatus(event.message); });
+    let autoRefreshTimer = null;
+    function startAdminAutoRefresh() {
+      if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+      autoRefreshTimer = setInterval(async () => {
+        if (document.hidden || document.getElementById('adminView').classList.contains('hidden')) return;
+        try { await refreshAdminLists(); } catch {}
+      }, 15000);
+    }
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshAdminLists().catch(() => {}); });
+    const initialView = (location.hash.match(/view=([a-z]+)/i)||[])[1]; if (initialView) currentAdminView = initialView;
+    loadAdmin().then(startAdminAutoRefresh).catch(() => {});
+  </script>
+
+  <div class="site-credit-watermark" data-version-watermark></div>
+  <script src="./site-analytics.js"></script>
+
+<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+</body>
+</html>
