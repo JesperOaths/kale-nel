@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION: 'v194',
+    VERSION: 'v199',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -8,38 +8,32 @@
     EMAIL_SUBJECT: 'Activeer je account voor de Kale Nel'
   };
 
-  const effectiveVersion = window.GEJAST_PAGE_VERSION || CONFIG.VERSION;
+  function detectScriptVersion(){
+    try {
+      const scripts = Array.from(document.scripts || []);
+      const match = scripts.map((s)=>s.src||'').find((src)=>/gejast-config\.js\?v\d+/i.test(src));
+      const m = match && match.match(/\?v(\d+)/i);
+      return m ? `v${m[1]}` : null;
+    } catch (_) { return null; }
+  }
+
+  const effectiveVersion = detectScriptVersion() || window.GEJAST_PAGE_VERSION || CONFIG.VERSION;
   const label = `${effectiveVersion} · Made by Bruis`;
+  window.GEJAST_PAGE_VERSION = effectiveVersion;
 
   function applyVersionLabel(){
-    const selectors = [
-      '.site-credit-watermark',
-      '#versionWatermark',
-      '.version-tag',
-      '.watermark',
-      '[data-version-watermark]'
-    ];
-    selectors.forEach((selector) => {
-      document.querySelectorAll(selector).forEach((node) => {
-        node.textContent = label;
-      });
-    });
+    const selectors = ['.site-credit-watermark','#versionWatermark','.version-tag','.watermark','[data-version-watermark]'];
+    selectors.forEach((selector)=>{ document.querySelectorAll(selector).forEach((node)=>{ node.textContent = label; }); });
     const re = /v\d+\s*[·.-]?\s*Made by Bruis/i;
-    document.querySelectorAll('body *').forEach((node) => {
-      if (node.children.length) return;
-      const txt = (node.textContent || '').trim();
-      if (re.test(txt)) node.textContent = label;
-    });
+    document.querySelectorAll('body *').forEach((node)=>{ if (node.children.length) return; const txt=(node.textContent||'').trim(); if (re.test(txt)) node.textContent = label; });
   }
 
   window.GEJAST_CONFIG = Object.assign({}, window.GEJAST_CONFIG || {}, CONFIG, {
-    VERSION_LABEL: 'v189 · Made by Bruis',
+    VERSION: effectiveVersion,
+    VERSION_LABEL: label,
     applyVersionLabel
   });
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', applyVersionLabel, { once: true });
-  } else {
-    applyVersionLabel();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyVersionLabel, { once: true });
+  else applyVersionLabel();
 })();

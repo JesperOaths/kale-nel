@@ -4,19 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drinks toevoegen</title>
-  <script>window.GEJAST_PAGE_VERSION='v196';</script><script src="./gejast-config.js?v196"></script>
+  <script>window.GEJAST_PAGE_VERSION='v199';</script><script src="./gejast-config.js?v199"></script>
   <style>
     :root{--line:rgba(0,0,0,.08);--muted:#6b6257;--good:#1f8f52;--bad:#b53a30}
     *{box-sizing:border-box}
     body{margin:0;padding:14px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(244,240,232,.92),rgba(244,240,232,.94)),url('./site-bg-mobile.webp') center/cover fixed;color:#201b16}
     .wrap{max-width:760px;margin:0 auto}
     .card{background:rgba(255,251,245,.8);border:1px solid rgba(255,255,255,.7);border-radius:26px;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,.08)}
-    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}.logo{width:60px;height:60px;object-fit:contain}
+    .top{position:relative;display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;padding-right:76px}.logo{position:absolute;right:0;top:0;width:60px;height:60px;object-fit:contain}
     .actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}.btn{display:inline-flex;align-items:center;justify-content:center;padding:11px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:0;font:inherit;cursor:pointer}.btn.alt{background:#f3efe6;color:#111;border:1px solid rgba(0,0,0,.08)}
     .hero-title{margin:0 0 8px;font-size:clamp(2rem,8vw,2.8rem);line-height:1}.muted{color:var(--muted)}
     .notice{margin-top:14px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.78);border:1px solid var(--line);font-size:.95rem}
     .status{margin-top:12px;min-height:20px;font-weight:700}.status.bad{color:var(--bad)}.status.ok{color:var(--good)}
-    .metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:14px}.metric,.panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:11px}.metric .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:800;margin-bottom:8px}.metric .value{font-size:1.15rem;font-weight:900}.metric .meta{margin-top:4px;font-size:.84rem;color:var(--muted)}
+    .metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:14px}.metric,.panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:9px 11px}.metric .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:800;margin-bottom:8px}.metric .value{font-size:1rem;font-weight:900}.metric .meta{margin-top:4px;font-size:.84rem;color:var(--muted)}
     .stack{display:grid;gap:12px;margin-top:16px}.panel h2{margin:0 0 12px;font-size:1.05rem}.list{display:grid;gap:10px}.row,.verify-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px 14px}.row-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.row-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
     .drink-types{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.drink-btn{display:grid;gap:4px;padding:14px 12px;border-radius:20px;border:1px solid var(--line);background:#fff;cursor:pointer;text-align:left;font:inherit}.drink-btn strong{font-size:1rem}.drink-btn small{color:var(--muted)}.drink-btn:active{transform:translateY(1px)}
     .pill{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.pill.pending{background:#f3efe6;color:#7a6441}.pill.verified{background:#e8f6ec;color:#1f8f52}
@@ -53,13 +53,14 @@
 
       <div class="stack">
         <section class="panel">
-          <h2>Snel toevoegen</h2>
-          <div class="muted" style="margin-bottom:12px">Optioneel: vul seconden in als dit drankje ook een speedpoging is.</div>
-          <div style="display:grid;gap:10px;margin-bottom:12px">
-            <label class="muted" for="speedSecondsInput">Speed tijd in seconden</label>
+          <h2>Alcohol toevoegen</h2>
+          <div id="drinkButtons" class="drink-types"></div>
+          <div style="display:grid;gap:10px;margin-top:14px">
+            <h2 style="margin:6px 0 0">Tijd voor snelheids klassement toevoegen</h2>
+            <div class="muted">Optioneel: vul seconden in als dit drankje ook een snelheidspoging is.</div>
+            <label class="muted" for="speedSecondsInput">Tijd in seconden</label>
             <input id="speedSecondsInput" type="number" inputmode="decimal" min="0" step="0.1" placeholder="Bijv. 4.8" style="padding:12px 14px;border-radius:16px;border:1px solid var(--line);font:inherit" />
           </div>
-          <div id="drinkButtons" class="drink-types"></div>
         </section>
 
         <section class="panel">
@@ -103,12 +104,12 @@
     function renderVerify(rows){ const wrap=document.getElementById('verifyQueue'); wrap.innerHTML=(rows||[]).length ? (rows||[]).map(r=>`<div class="verify-card"><div class="row-top"><div><strong>${r.player_name} · ${r.event_type_label}</strong><div class="verify-distance">${Number(r.total_units||0).toFixed(1)} units${r.distance_m!=null ? ` · ${Math.round(r.distance_m)}m afstand` : ''}</div></div><span class="pill pending">check</span></div><div class="row-actions"><button class="btn" data-verify-id="${r.id}">Bevestigen</button></div></div>`).join('') : '<div class="muted">Nog geen verificaties in de buurt.</div>'; wrap.querySelectorAll('[data-verify-id]').forEach(btn=>btn.addEventListener('click',()=>verifyDrink(btn.getAttribute('data-verify-id')))); }
     function renderRecent(rows){ const wrap=document.getElementById('recentList'); wrap.innerHTML=(rows||[]).length ? (rows||[]).map(r=>`<div class="row"><div class="row-top"><div><strong>${r.player_name} · ${r.event_type_label}</strong><div class="meta">${new Date(r.verified_at||r.created_at).toLocaleString('nl-NL')} · ${Number(r.total_units||0).toFixed(1)} units</div><div class="meta">Bevestigd door ${r.verifier_names?.join(', ')||'—'}</div></div><span class="pill verified">ok</span></div></div>`).join('') : '<div class="muted">Nog geen bevestigde drankjes.</div>'; }
     async function loadPage(){ try{ const pos=lastPosition||await getPosition(); lastPosition=pos; const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),viewer_lat:pos.coords.latitude,viewer_lng:pos.coords.longitude})}); const raw=await parse(res); const data=raw?.get_drinks_page_public||raw||{}; latestData=data; renderButtons(data.event_types||[]); renderSession(data); renderPending(data.my_pending_events||[]); renderVerify(data.verify_queue||[]); renderRecent(data.recent_verified||[]); setStatus(''); }catch(err){ setStatus(err.message||String(err),'bad'); } }
-    async function submitDrink(typeKey){ try{ const pos=lastPosition||await getPosition(); const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),event_type_key:typeKey,quantity:1,lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy})}); const drinkData=await parse(res); const secondsRaw=(speedSecondsInput&&speedSecondsInput.value||'').trim(); if(secondsRaw){ const seconds=Number(secondsRaw); if(Number.isFinite(seconds) && seconds>0){ try{ await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_drink_speed_attempt`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),speed_type_key:typeKey,duration_seconds:seconds,lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy})}).then(parse); }catch(speedErr){ console.warn('Speed attempt save failed', speedErr); } } } if(speedSecondsInput) speedSecondsInput.value=''; setStatus(`Gelogd: ${drinkCopy(typeKey)} wacht op bevestiging.`, 'ok'); await loadPage(); }catch(err){ setStatus(err.message||String(err),'bad'); } }
+    async function submitDrink(typeKey){ try{ const pos=lastPosition||await getPosition(); const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),event_type_key:typeKey,quantity:1,lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy})}); const drinkData=await parse(res); const secondsRaw=(speedSecondsInput&&speedSecondsInput.value||'').trim(); if(secondsRaw){ const seconds=Number(secondsRaw); if(Number.isFinite(seconds) && seconds>0){ try{ await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_drink_speed_attempt`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),speed_type_key:typeKey,duration_seconds:seconds,lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy})}).then(parse); }catch(speedErr){ console.warn('Snelheid attempt save failed', speedErr); } } } if(speedSecondsInput) speedSecondsInput.value=''; setStatus(`Gelogd: ${drinkCopy(typeKey)} wacht op bevestiging.`, 'ok'); await loadPage(); }catch(err){ setStatus(err.message||String(err),'bad'); } }
     async function verifyDrink(id){ try{ const pos=lastPosition||await getPosition(); const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,approve:true})}); await parse(res); setStatus('Drankje bevestigd.', 'ok'); await loadPage(); }catch(err){ setStatus(err.message||String(err),'bad'); } }
     async function cancelDrink(id){ try{ const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_my_pending_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id)})}); await parse(res); setStatus('Aanvraag geannuleerd.', 'ok'); await loadPage(); }catch(err){ setStatus(err.message||String(err),'bad'); } }
     loadPage();
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v190"></script></body>
+<script src="./drinks-verify-float.js?v199"></script></body>
 </html>
