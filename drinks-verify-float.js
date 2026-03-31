@@ -78,7 +78,14 @@
   async function verifyEvent(item){
     const helper = window.GEJAST_GEO;
     if (!helper) throw new Error('Geolocatie helper ontbreekt.');
-    const pos = await helper.request(true);
+    let pos;
+    try {
+      pos = await helper.request(true);
+    } catch (err) {
+      pos = helper.cached(60*60*1000);
+      if (!pos) throw err;
+      document.getElementById('gdfBody').insertAdjacentHTML('beforeend','<div class="gdf-meta">Verse locatie kwam niet door; laatst bekende locatie gebruikt.</div>');
+    }
     helper.startWatch();
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`, {
       method:'POST',
@@ -118,7 +125,7 @@
     if (item.lat != null && item.lng != null) locationBits.push(`(${Number(item.lat).toFixed(4)}, ${Number(item.lng).toFixed(4)})`);
     document.getElementById('gdfVerifyBtn').style.display = 'inline-flex';
     document.getElementById('gdfBody').innerHTML = `<strong>${item.player_name} · ${item.event_type_label}</strong><div class="gdf-meta">${Number(item.total_units||0).toFixed(1)} units${locationBits.length ? ' · ' + locationBits.join(' · ') : ''}</div><div class="gdf-meta">Open drinks om alle verificaties en status te zien.</div>`;
-    document.getElementById('gdfVerifyBtn').onclick = () => verifyEvent(item).catch(()=>{});
+    document.getElementById('gdfVerifyBtn').onclick = async () => { try { await verifyEvent(item); } catch (err) { document.getElementById('gdfBody').insertAdjacentHTML('beforeend', `<div class="gdf-meta">${(err && err.message) || 'Bevestigen mislukt.'}</div>`); } };
     document.getElementById('gdfOpenBtn').onclick = () => { location.href = './drinks.html#verifyPanel'; };
     document.getElementById('gdfDismissBtn').onclick = () => dismissEvent(item.id);
     showBox();

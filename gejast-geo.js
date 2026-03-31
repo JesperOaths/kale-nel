@@ -1,5 +1,5 @@
 (function(){
-  const CACHE_KEY = 'gejast_geo_cache_v2';
+  const CACHE_KEY = 'gejast_geo_cache_v3';
   const ADDRESS_KEY = 'gejast_geo_address_cache_v1';
   let watchId = null;
   let lastPos = null;
@@ -99,7 +99,13 @@
     }
     const state = await permissionState();
     if (silent && state !== 'granted') return null;
-    return request(forceFresh);
+    try {
+      return await request(forceFresh);
+    } catch (err) {
+      const c = cached(60*60*1000);
+      if (c) return c;
+      throw err;
+    }
   }
 
   function startWatch(){
