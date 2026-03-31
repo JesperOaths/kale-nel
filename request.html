@@ -47,7 +47,7 @@
     <label>E-mailadres</label>
     <input id="requestEmailInput" name="email" type="email" placeholder="jouw@email.com" autocomplete="email" autocapitalize="none" spellcheck="false">
     <label>Notitie</label>
-    <textarea id="requestNoteInput" placeholder="Waarom wil je meedoen?" autocomplete="off"></textarea>
+    <textarea id="requestNoteInput" placeholder="Waarom wil je meedoen? (optioneel)" autocomplete="off"></textarea>
     <div class="btn-row">
       <a href="./index.html" class="ghost-link">Terug</a>
       <button id="requestBtn" class="primary-btn">Aanvraag versturen</button>
@@ -179,7 +179,8 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
 
     async function requestClaim() {
       const desiredName = document.getElementById("requestNameSelect").value;
-      const requesterNote = document.getElementById("requestNoteInput").value.trim();
+      const requesterNoteRaw = document.getElementById("requestNoteInput").value.trim();
+      const requesterNote = requesterNoteRaw || null;
       const requesterEmail = document.getElementById("requestEmailInput").value.trim().toLowerCase();
 
       if (!desiredName) throw new Error("Kies eerst een naam");
