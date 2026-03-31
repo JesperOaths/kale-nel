@@ -5,7 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wordt er gejast donderdag?</title>
   <link rel="stylesheet" href="./site-shell.css" />
-  <style>body{background:linear-gradient(rgba(244,240,232,.56),rgba(244,240,232,.56)), url('./site-bg-desktop.webp') center/cover no-repeat fixed !important;}</style>
+  <style>body{background:linear-gradient(rgba(244,240,232,.56),rgba(244,240,232,.56)), url('./site-bg-desktop.webp') center/cover no-repeat fixed !important;}.drinks-home-section{margin:18px 0 8px;display:grid;gap:12px}
+    .drinks-home-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    .drinks-home-head h2{margin:0;font-size:1.1rem}
+    .drinks-home-link{display:inline-flex;padding:9px 12px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800}
+    .drinks-home-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    .drinks-mini{background:rgba(255,255,255,.72);border:1px solid rgba(17,17,17,.06);border-radius:18px;padding:14px;text-align:left}
+    .drinks-mini-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:800;margin-bottom:6px}
+    .drinks-mini-value{font-size:1.55rem;font-weight:900;line-height:1.05}
+    .drinks-mini-sub{font-size:12px;color:var(--muted-text);margin-top:4px}
+    .drinks-top-list{display:grid;gap:8px}
+    .drinks-top-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.72);border:1px solid rgba(17,17,17,.06)}
+    .drinks-top-rank{display:inline-flex;width:26px;height:26px;border-radius:999px;background:#111;color:#fff;align-items:center;justify-content:center;font-size:12px;font-weight:800;margin-right:10px}
+    .drinks-top-name{font-weight:800;color:#111;text-decoration:none}
+    .drinks-top-meta{font-size:12px;color:var(--muted-text)}
+
+  </style>
   <style>
     :root {
       --gold: #d4af37;
@@ -529,28 +544,13 @@
   </style>
 
 
-    .drinks-home-section{margin:18px 0 8px;display:grid;gap:12px}
-    .drinks-home-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-    .drinks-home-head h2{margin:0;font-size:1.1rem}
-    .drinks-home-link{display:inline-flex;padding:9px 12px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800}
-    .drinks-home-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-    .drinks-mini{background:rgba(255,255,255,.72);border:1px solid rgba(17,17,17,.06);border-radius:18px;padding:14px;text-align:left}
-    .drinks-mini-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:800;margin-bottom:6px}
-    .drinks-mini-value{font-size:1.55rem;font-weight:900;line-height:1.05}
-    .drinks-mini-sub{font-size:12px;color:var(--muted-text);margin-top:4px}
-    .drinks-top-list{display:grid;gap:8px}
-    .drinks-top-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.72);border:1px solid rgba(17,17,17,.06)}
-    .drinks-top-rank{display:inline-flex;width:26px;height:26px;border-radius:999px;background:#111;color:#fff;align-items:center;justify-content:center;font-size:12px;font-weight:800;margin-right:10px}
-    .drinks-top-name{font-weight:800;color:#111;text-decoration:none}
-    .drinks-top-meta{font-size:12px;color:var(--muted-text)}
-
-  <style id="bruis-watermark-style">
+    <style id="bruis-watermark-style">
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(212,175,55,0.35);color:#f3e3a6;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v179"></script>
+  <script src="./gejast-config.js?v180"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -579,7 +579,7 @@
         </div>
       </section>
 
-      <section class="drinks-home-section" aria-label="Drinkstand">
+      <section class="drinks-home-section" style="margin-top:16px" aria-label="Drinkstand">
         <div class="drinks-home-head">
           <div>
             <h2>Drinkstand</h2>
