@@ -1,17 +1,12 @@
-
-v184 homepage drinks top-5 patch
+v185 drinks mobile add page + homepage top-5 fix
 
 Contents:
-- drinks-home-top5.js : frontend patch that injects a two-card Top 5 block
-  (Sessie / All-time) directly under the three game Top 5 cards and above the
-  existing Drinkstand stats block.
-- gejast_v184_drinks_homepage_top5.sql : companion SQL function
-  get_drinks_homepage_top5_public()
+- index.html : homepage now shows two drinks Top 5 cards between the 3 game ladders and the drinks stats block
+- drinks_add.html : dedicated mobile-first add/verify page for drinks
+- gejast_v185_drinks_homepage_top5_fix.sql : fixes the get_drinks_homepage_top5_public() RPC and removes the bad p.name reference
+- gejast-config.js : version bumped to v185
 
-Expected frontend environment:
-- window.supabaseClient available
-- homepage drinks container exists as one of:
-  .drinks-home-section / #drinksHomeSection / [data-drinks-home]
-
-If your existing homepage JS already has a drinks block bootstrap, just include
-drinks-home-top5.js after that script.
+Notes:
+- Homepage drinks Top 5 uses weighted alcohol units, not raw beer count
+- The two homepage cards are day-session Top 5 and all-time Top 5
+- Main homepage drinks entry now points to drinks_add.html
