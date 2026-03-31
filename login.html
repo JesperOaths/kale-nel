@@ -208,18 +208,26 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined && value !== null && value !== ''));
     }
     async function triggerMakeScenario(meta = {}) {
-      if (!MAKE_WEBHOOK_URL) return { via: 'disabled' };
-      const payload = buildMakeWebhookMeta('login.html#pin-reset', meta);
-      const res = await fetch(MAKE_WEBHOOK_URL, {
-        method: 'POST',
-        mode: 'cors',
-        cache: 'no-store',
-        keepalive: true,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error(`Webhook gaf HTTP ${res.status}`);
-      return { via: 'raw-json', status: res.status };
+      if (!MAKE_WEBHOOK_URL) throw new Error('MAKE_WEBHOOK_URL ontbreekt in login.html');
+      const payload = buildMakeWebhookMeta('login.html', meta);
+      const payloadText = JSON.stringify(payload);
+      const url = new URL(MAKE_WEBHOOK_URL);
+      Object.entries(payload).forEach(([key, value]) => { if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value)); });
+      url.searchParams.set('payload_json', payloadText);
+      try {
+        await fetch(url.toString(), {
+          method:'POST', mode:'no-cors', cache:'no-store', keepalive:true,
+          headers:{ 'Content-Type':'text/plain;charset=UTF-8' }, body: payloadText
+        });
+        return { ok:true, via:'post-query-plus-body', payload };
+      } catch (fetchErr) {
+        if (navigator.sendBeacon) {
+          const blob = new Blob([payloadText], { type: 'text/plain;charset=UTF-8' });
+          if (navigator.sendBeacon(url.toString(), blob)) return { ok:true, via:'sendBeacon-query-plus-body', payload };
+        }
+        await new Promise((resolve) => { try { const img = new Image(); img.onload = img.onerror = () => resolve(); img.src = url.toString(); setTimeout(resolve, 1500); } catch(_ ) { resolve(); } });
+        return { ok:true, via:'img-query-fallback', payload };
+      }
     }
     async function requestPinReset() {
       const desiredName = normalizeDisplayName(document.getElementById('resetNameInput').value || document.getElementById('playerNameInput').value || '');
@@ -482,5 +490,5 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
   <script src="./site-analytics.js"></script>
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-</body>
+<script src="./drinks-verify-float.js?v190"></script></body>
 </html>

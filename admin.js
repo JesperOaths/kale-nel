@@ -499,32 +499,25 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     }
 
     async function triggerMakeScenario(meta = {}) {
-      if (!MAKE_WEBHOOK_URL) throw new Error('MAKE_WEBHOOK_URL ontbreekt in admin.html');
-      const payload = buildMakeWebhookMeta('admin.html', meta);
+      if (!MAKE_WEBHOOK_URL) throw new Error('MAKE_WEBHOOK_URL ontbreekt in admin.js');
+      const payload = buildMakeWebhookMeta('admin.js', meta);
+      const payloadText = JSON.stringify(payload);
+      const url = new URL(MAKE_WEBHOOK_URL);
+      Object.entries(payload).forEach(([key, value]) => { if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value)); });
+      url.searchParams.set('payload_json', payloadText);
       try {
-        const res = await fetch(MAKE_WEBHOOK_URL, {
-          method:'POST', mode:'cors', cache:'no-store', keepalive:true,
-          headers:{ 'Content-Type':'application/json', 'Accept':'application/json' },
-          body: JSON.stringify(payload)
+        await fetch(url.toString(), {
+          method:'POST', mode:'no-cors', cache:'no-store', keepalive:true,
+          headers:{ 'Content-Type':'text/plain;charset=UTF-8' }, body: payloadText
         });
-        if (!res.ok) throw new Error(`Make webhook gaf HTTP ${res.status}`);
-        return { ok:true, via:'fetch-json', status:res.status, payload };
+        return { ok:true, via:'post-query-plus-body', payload };
       } catch (fetchErr) {
-        const payloadText = JSON.stringify(payload);
         if (navigator.sendBeacon) {
-          const blob = new Blob([payloadText], { type: 'application/json;charset=UTF-8' });
-          if (navigator.sendBeacon(MAKE_WEBHOOK_URL, blob)) return { ok:true, via:'sendBeacon-json', payload };
+          const blob = new Blob([payloadText], { type: 'text/plain;charset=UTF-8' });
+          if (navigator.sendBeacon(url.toString(), blob)) return { ok:true, via:'sendBeacon-query-plus-body', payload };
         }
-        try {
-          await fetch(MAKE_WEBHOOK_URL, {
-            method:'POST', mode:'no-cors', cache:'no-store', keepalive:true,
-            headers:{ 'Content-Type':'application/json;charset=UTF-8', 'Accept':'application/json' },
-            body: payloadText
-          });
-          return { ok:true, via:'fetch-no-cors-json', payload };
-        } catch (_) {
-          throw fetchErr;
-        }
+        await new Promise((resolve) => { try { const img = new Image(); img.onload = img.onerror = () => resolve(); img.src = url.toString(); setTimeout(resolve, 1500); } catch(_) { resolve(); } });
+        return { ok:true, via:'img-query-fallback', payload };
       }
     }
 
