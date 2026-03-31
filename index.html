@@ -550,7 +550,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v182"></script>
+  <script src="./gejast-config.js?v183"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -589,7 +589,7 @@
         </div>
         <div id="drinksHomeGrid" class="drinks-home-grid">
           <div class="drinks-mini"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">—</div></div>
-          <div class="drinks-mini"><div class="drinks-mini-label">Deze week</div><div class="drinks-mini-value">—</div></div>
+          <div class="drinks-mini"><div class="drinks-mini-label">Sessie</div><div class="drinks-mini-value">—</div></div>
           <div class="drinks-mini"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">—</div></div>
           <div class="drinks-mini"><div class="drinks-mini-label">Units</div><div class="drinks-mini-value">—</div></div>
         </div>
@@ -1017,7 +1017,7 @@
         const totals = payload.totals || {};
         grid.innerHTML = `
           <div class="drinks-mini"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">${totals.today_events||0}</div><div class="drinks-mini-sub">${Number(totals.today_units||0).toFixed(1)} units</div></div>
-          <div class="drinks-mini"><div class="drinks-mini-label">Deze week</div><div class="drinks-mini-value">${totals.week_events||0}</div><div class="drinks-mini-sub">${Number(totals.week_units||0).toFixed(1)} units</div></div>
+          <div class="drinks-mini"><div class="drinks-mini-label">Sessie</div><div class="drinks-mini-value">${totals.session_events||0}</div><div class="drinks-mini-sub">${Number(totals.session_units||0).toFixed(1)} units</div></div>
           <div class="drinks-mini"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">${totals.all_events||0}</div><div class="drinks-mini-sub">${Number(totals.all_units||0).toFixed(1)} units</div></div>
           <div class="drinks-mini"><div class="drinks-mini-label">Open verificaties</div><div class="drinks-mini-value">${totals.pending_events||0}</div><div class="drinks-mini-sub">Wacht op bevestiging</div></div>`;
         const leaders = Array.isArray(payload.top_units) ? payload.top_units : [];
