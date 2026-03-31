@@ -17,7 +17,7 @@
     .drinks-home-top5-section{margin:16px 0 8px;display:grid;gap:12px}
     .drinks-home-top5-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
     .drinks-home-top5-head h2{margin:0;font-size:1.1rem}
-    .drinks-home-top5-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .drinks-home-top5-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
     .drinks-home-top5-card{display:block;text-decoration:none;color:#161616;background:#fff;border:1px solid rgba(0,0,0,.06);border-radius:20px;padding:16px;box-shadow:0 12px 24px rgba(0,0,0,.04)}
     .drinks-home-top5-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
     .drinks-home-top5-card-head strong{font-size:16px}
@@ -559,7 +559,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v185"></script>
+  <script src="./gejast-config.js?v188"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -591,24 +591,21 @@
       <section class="drinks-home-top5-section" style="margin-top:16px" aria-label="Drinks top 5">
         <div class="drinks-home-top5-head">
           <div>
-            <h2>Drinks Top 5</h2>
-            <div class="status-sub" style="margin:4px 0 0">Dag-sessie en all-time op echte alcoholunits.</div>
-          </div>
-          <a class="drinks-home-link" href="./drinks_add.html">Drinks toevoegen</a>
+            </div>
         </div>
         <div id="drinksHomeTop5Grid" class="drinks-home-top5-grid">
-          <article class="drinks-home-top5-card"><div class="drinks-home-top5-card-head"><strong>Dag-sessie</strong><span>Top 5</span></div><div class="drinks-home-top5-empty">Nog geen sessiedata.</div></article>
-          <article class="drinks-home-top5-card"><div class="drinks-home-top5-card-head"><strong>All-time units</strong><span>Top 5</span></div><div class="drinks-home-top5-empty">Nog geen all-time data.</div></article>
+          <article class="drinks-home-top5-card"><div class="drinks-home-top5-card-head"><strong id="drinksDayTop5Title">Vandaag Top 5</strong><span>Units</span></div><div class="drinks-home-top5-empty">Nog geen sessiedata.</div></article>
+          <article class="drinks-home-top5-card"><div class="drinks-home-top5-card-head"><strong>All-time Top 5</strong><span>Units</span></div><div class="drinks-home-top5-empty">Nog geen all-time data.</div></article>
+          <article class="drinks-home-top5-card"><div class="drinks-home-top5-card-head"><strong>Speed Top 5</strong><span>Seconds</span></div><div class="drinks-home-top5-empty">Nog geen speed-data.</div></article>
         </div>
       </section>
 
       <section class="drinks-home-section" style="margin-top:16px" aria-label="Drinkstand">
         <div class="drinks-home-head">
           <div>
-            <h2>Drinkstand</h2>
-            <div class="status-sub" style="margin:4px 0 0">Geverifieerde drankjes, open checks en totale units.</div>
+            <h2>Drankstand</h2>
           </div>
-          <a class="drinks-home-link" href="./drinks_add.html">Drinks toevoegen</a>
+          
         </div>
         <div id="drinksHomeGrid" class="drinks-home-grid">
           <div class="drinks-mini"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">—</div></div>
@@ -648,12 +645,6 @@
           <a class="page-link-card login-link" href="./profiles.html">
             <div class="page-link-label">Spelers</div>
             <div class="page-link-copy">Bekijk spelers en profielen.</div>
-          </a>
-        </div>
-        <div class="public-links-grid">
-          <a class="page-link-card login-link" href="./drinks_add.html">
-            <div class="page-link-label">Drinks toevoegen</div>
-            <div class="page-link-copy">Log drankjes en verifieer elkaar.</div>
           </a>
         </div>
       </section>
@@ -1047,17 +1038,22 @@
 
     async function loadDrinksHomeTop5(){
       try{
+        const dayNames = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
+        const dayTitle = `${dayNames[new Date().getDay()]||'Vandaag'} Top 5`;
+        const dayTitleEl = document.getElementById('drinksDayTop5Title');
+        if(dayTitleEl) dayTitleEl.textContent = dayTitle;
         const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_top5_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
         const data = await parseResponse(res);
         const payload = data?.get_drinks_homepage_top5_public || data || {};
         const root = document.getElementById('drinksHomeTop5Grid');
         if(!root) return;
-        const renderRows = (rows) => (Array.isArray(rows) && rows.length)
-          ? rows.slice(0,5).map((r,i)=>`<div class="drinks-home-top5-row"><span class="drinks-home-top5-rank">${i+1}</span><a class="drinks-home-top5-name" href="./drinks_player.html?player=${encodeURIComponent(r.player_name||'')}">${r.display_name||r.player_name||'Speler'}</a><div class="drinks-home-top5-meta">${Number(r.total_units||0).toFixed(1)} units</div></div>`).join('')
+        const renderRows = (rows, mode='units') => (Array.isArray(rows) && rows.length)
+          ? rows.slice(0,5).map((r,i)=>`<div class="drinks-home-top5-row"><span class="drinks-home-top5-rank">${i+1}</span><a class="drinks-home-top5-name" href="./drinks.html">${r.display_name||r.player_name||'Speler'}</a><div class="drinks-home-top5-meta">${mode==='seconds'?`${Number(r.duration_seconds||0).toFixed(1)}s`:`${Number(r.total_units||0).toFixed(1)} units`}</div></div>`).join('')
           : '<div class="drinks-home-top5-empty">Nog geen data.</div>';
         root.innerHTML = `
-          <article class="drinks-home-top5-card"><div class="drinks-home-top5-card-head"><strong>Dag-sessie</strong><span>Top 5</span></div><div class="drinks-home-top5-list">${renderRows(payload.session_top5)}</div></article>
-          <article class="drinks-home-top5-card"><div class="drinks-home-top5-card-head"><strong>All-time units</strong><span>Top 5</span></div><div class="drinks-home-top5-list">${renderRows(payload.all_time_top5)}</div></article>`;
+          <a class="drinks-home-top5-card" href="./drinks.html"><div class="drinks-home-top5-card-head"><strong>${dayTitle}</strong><span>Units</span></div><div class="drinks-home-top5-list">${renderRows(payload.session_top5,'units')}</div></a>
+          <a class="drinks-home-top5-card" href="./drinks.html"><div class="drinks-home-top5-card-head"><strong>All-time Top 5</strong><span>Units</span></div><div class="drinks-home-top5-list">${renderRows(payload.all_time_top5,'units')}</div></a>
+          <a class="drinks-home-top5-card" href="./drinks.html"><div class="drinks-home-top5-card-head"><strong>Speed Top 5</strong><span>Seconds</span></div><div class="drinks-home-top5-list">${renderRows(payload.speed_top5,'seconds')}</div></a>`;
       } catch(err){
         console.warn('Drinks homepage top 5 load failed', err);
       }
