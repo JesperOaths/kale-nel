@@ -485,7 +485,7 @@
     .ladder-list { display:grid; gap:8px; }
     .ladder-row { display:grid; grid-template-columns:auto auto 1fr auto; gap:10px; align-items:center; padding:9px 10px; border-radius:14px; background:rgba(249,247,242,.9); }
     .mini-avatar{width:28px;height:28px;border-radius:999px;object-fit:cover;background:#efe7d7;border:1px solid rgba(0,0,0,.08);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#6f5b28;overflow:hidden}
-    .mini-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+    .mini-avatar img{width:100%;height:100%;object-fit:cover;display:block}.activity-feed{margin-top:16px;display:grid;gap:8px}.activity-row{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid rgba(0,0,0,.06);border-radius:14px;background:#fff}.activity-row strong{font-size:14px}.activity-row .meta{color:var(--muted-text);font-size:12px}
     .ladder-rank { width:24px; height:24px; border-radius:50%; display:grid; place-items:center; background:#111; color:#fff; font-weight:900; font-size:12px; }
     .ladder-name { font-weight:800; font-size:14px; }
     .ladder-elo { text-align:right; font-weight:900; font-size:14px; }
@@ -580,7 +580,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v237';</script><script src="./gejast-config.js?v237"></script>
+  <script>window.GEJAST_PAGE_VERSION='v238';</script><script src="./gejast-config.js?v238"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -728,6 +728,8 @@
       return isAdminViewer;
     }
     let currentHomepageState = null;
+    let latestDrinksPageData = null;
+    let latestLadderPageData = null;
     const HOMEPAGE_LADDER_ROUTES = { klaverjas:'./ladder.html?game=klaverjas', boerenbridge:'./ladder.html?game=boerenbridge', beerpong:'./ladder.html?game=beerpong' };
 
     function setHomepageLiveState(state='standby', text='Stand-by') {
@@ -1007,10 +1009,10 @@
       const session_token = getSessionToken();
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_gejast_homepage_state`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token }) });
-        return await parseResponse(res);
+        const out = await parseResponse(res); latestLadderPageData = out; return out;
       } catch {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token }) });
-        return await parseResponse(res);
+        const out = await parseResponse(res); latestLadderPageData = out; return out;
       }
     }
     async function castVote(desired_status) {
@@ -1061,7 +1063,8 @@
       } catch(_){ }
     }
 
-    function setRefreshStamp(){ let el=document.getElementById('homeRefreshStamp'); if(!el){ const section=document.querySelector('.drinks-home-top5-section'); if(!section) return; el=document.createElement('div'); el.id='homeRefreshStamp'; el.style.cssText='margin-top:6px;color:var(--muted-text);font-size:12px'; section.appendChild(el);} el.textContent=`Laatst ververst: ${new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`; }
+    function setRefreshStamp(){ let el=document.getElementById('homeRefreshStamp'); const section=document.querySelector('[aria-label="Drinks top 5"]'); if(!section) return; if(!el){ el=document.createElement('div'); el.id='homeRefreshStamp'; el.style.cssText='margin-top:6px;color:var(--muted-text);font-size:12px'; section.appendChild(el);} el.textContent=`Laatst ververst: ${new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`; }
+    function renderActivityFeed(){ const root=document.getElementById('homeActivityFeed'); if(!root) return; const recentDrinks=(latestDrinksPageData?.recent_verified||[]).slice(0,3).map((r)=>({kind:'drink',title:`${r.player_name||r.display_name||'Speler'} · ${r.event_type_label||'Drankje'}`,meta:`${Number(r.total_units||0).toFixed(1)} units`})); const recentMatches=(latestLadderPageData?.recent_matches||[]).slice(0,3).map((r)=>({kind:'match',title:`${(r.winner_names||[]).join(', ')||'Wedstrijd'}${r.scoreline?` · ${r.scoreline}`:''}`,meta:r.finished_at?new Date(r.finished_at).toLocaleString('nl-NL'):'Wedstrijd'})); const rows=[...recentDrinks,...recentMatches].slice(0,5); root.innerHTML=rows.length ? rows.map((r)=>`<div class="activity-row"><strong>${r.title}</strong><div class="meta">${r.meta}</div></div>`).join('') : '<div class="ladder-empty">Nog geen recente activiteit.</div>'; }
     async function loadDrinksHomeTop5(){
       try{
         const dayNames = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
@@ -1147,7 +1150,7 @@
         try {
           const typesRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
           const typesData = await parseResponse(typesRes);
-          const typesPayload = typesData?.get_drinks_page_public || typesData || {};
+          const typesPayload = typesData?.get_drinks_page_public || typesData || {}; latestDrinksPageData = typesPayload;
           eventTypeRows = Array.isArray(typesPayload.event_types) ? typesPayload.event_types : [];
         } catch (_) {}
         const defaultSpeedTypes = [
@@ -1189,6 +1192,7 @@
         };
         renderDrinkTop5Cards();
         setRefreshStamp();
+        renderActivityFeed();
         if (window.__gejastSpeedRotateTimer) window.clearInterval(window.__gejastSpeedRotateTimer);
         window.__gejastSpeedRotateTimer = window.setInterval(() => {
           if (!window.__gejastSpeedGroups || !window.__gejastSpeedGroups.length) return;
@@ -1299,5 +1303,5 @@
 
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v237"></script><script src="./gejast-geo.js?v237"></script></body>
+<script src="./drinks-verify-float.js?v238"></script><script src="./gejast-geo.js?v238"></script></body>
 </html>

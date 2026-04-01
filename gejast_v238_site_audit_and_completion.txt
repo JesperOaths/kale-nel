@@ -1,0 +1,30 @@
+GEJAST v238 COMPLETION / FOLLOW-UP SNAPSHOT
+
+Implemented now from the remaining v236 audit items:
+1. drinks_add.html
+   - pending requests now show vote countdowns
+   - verify queue now shows countdowns and approve/reject counts
+   - stronger open/final state labels
+2. drinks.html
+   - normal drinks verify queue now shows vote countdowns and approve/reject counts
+   - stronger open-vote state labels
+3. drinks-verify-float.js
+   - floating verify card now shows approve/reject counts
+   - floating verify card now shows remaining vote time when available
+4. profiles.html
+   - added load-more pagination on top of chunked rendering for large directories
+5. player.html
+   - added recent streak/badge chips in the extra stats area
+6. ladder.html
+   - matchup/pair tables now use avatar chips in headers too
+   - avatar URLs are sanitized before rendering
+7. index.html
+   - added a recent activity feed card on the homepage
+8. geo_diagnostics.html
+   - added a dedicated browser/device geolocation diagnostics page
+   - linked from drinks / drinks_add / drinks_speed
+9. version line
+   - touched files moved to v238
+
+Important note
+- This round did not add new SQL bodies; the full SQL is carried forward so you still have a complete runnable script file in the format you asked for.

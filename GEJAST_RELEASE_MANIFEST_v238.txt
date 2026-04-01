@@ -1,0 +1,32 @@
+GEJAST RELEASE MANIFEST v238
+
+Touched frontend/assets:
+- gejast-config.js
+- admin.html
+- admin_reserved_names.html
+- drinks_admin.html
+- request.html
+- index.html
+- login.html
+- admin_analytics.html
+- invite.html
+- drinks.html
+- drinks_add.html
+- drinks_speed.html
+- profiles.html
+- player.html
+- ladder.html
+- drinks-verify-float.js
+- geo_diagnostics.html
+
+SQL bundle:
+- gejast_v238_FULL.sql (carried forward full script line; no new SQL body changes this round)
+
+Deploy checklist:
+1. Run the full SQL file if not already applied on the current patch line.
+2. Upload the flat patch zip.
+3. Hard refresh request/login/admin_reserved_names/drinks/drinks_add/drinks_speed/profiles/player/ladder/admin_analytics/invite.
+4. Verify watermark shows v238 on touched pages.
+5. Verify geo diagnostics page opens from drinks-related pages.
+6. Verify pending vote countdowns and vote counts appear on drinks/drinks_add/drinks_speed/floating verify.
+7. Verify homepage recent activity feed renders.

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drinks overzicht</title>
-  <script>window.GEJAST_PAGE_VERSION='v237';</script><script src="./gejast-config.js?v237"></script>
+  <script>window.GEJAST_PAGE_VERSION='v238';</script><script src="./gejast-config.js?v238"></script>
   <style>
     :root{--line:rgba(0,0,0,.08);--muted:#6b6257;--ok:#1f8f52;--bad:#b53a30;--card:#fff}
     *{box-sizing:border-box}body{margin:0;padding:24px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(244,240,232,.9),rgba(244,240,232,.92)),url('./site-bg-desktop.webp') center/cover fixed;color:#201b16}
@@ -28,8 +28,8 @@
         <div class="hero-copy">
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
             <a class="btn alt" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</a>
-            <a class="btn alt" href="./drinks_speed.html">Snelheid</a>
-            <button id="retryGeoBtn" class="btn alt" type="button">Geolocatie opnieuw proberen</button>
+            <a class="btn alt" href="./drinks_speed.html">Snelheid</a><a class="btn alt" href="./geo_diagnostics.html">Geo diagnostiek</a>
+            <button id="retryGeoBtn" class="btn alt" type="button">Geolocatie opnieuw proberen</button><a class="btn alt" href="./geo_diagnostics.html">Geo diagnostiek</a>
           </div>
           <h1 style="margin:0 0 8px;font-size:42px">Drinks</h1>
           <div class="muted">Gecombineerd overzicht voor ladders, statistieken en verificaties. Nieuwe drankjes voeg je alleen toe via de aparte mobiele invoerpagina.</div>
@@ -92,7 +92,7 @@
     </div>
   </div>
   <div class="site-credit-watermark" data-version-watermark></div>
-  <script src="./gejast-geo.js?v237"></script><script src="./drinks-verify-float.js?v237"></script>
+  <script src="./gejast-geo.js?v238"></script><script src="./drinks-verify-float.js?v238"></script>
   <script>
   (()=>{
     const cfg=window.GEJAST_CONFIG||{};
@@ -116,7 +116,7 @@
       <a class="tile-link dark" href="./drinks_add.html"><div class="mini-label">Actie</div><div style="font-size:1.15rem;font-weight:900">Drinks toevoegen</div><div class="muted" style="margin-top:6px">Mobiele invoer</div></a>`; }
     function renderLadder(){ const ladders=latestPageData?.ladders||{}; let rows=ladders[currentLadderKey]||[]; if((!rows||!rows.length) && latestTop5Data){ if(currentLadderKey==='today_units') rows=latestTop5Data.session_top5||[]; else if(currentLadderKey==='all_units') rows=latestTop5Data.all_time_top5||[]; } if((!rows||!rows.length) && latestStatsData && currentLadderKey==='all_count') rows=latestStatsData.top_count||[]; renderList(document.getElementById('ladderList'),rows,(r,i)=>`<div class="row"><div style="display:flex;gap:10px">${avatar(r)}<div class="row-main"><strong><a href="./player.html?player=${encodeURIComponent(r.display_name||r.player_name||'')}" style="text-decoration:none;color:#111">${r.display_name||r.player_name||'Speler'}</a></strong><div class="muted">#${i+1}</div></div></div><div><strong>${currentLadderKey.includes('count')?(r.event_count??r.events??0):Number(r.total_units??r.units??0).toFixed(1)}</strong></div></div>`); document.querySelectorAll('[data-ladder-key]').forEach(b=>b.classList.toggle('active',b.dataset.ladderKey===currentLadderKey)); }
     function renderRecent(rows){ renderList(document.getElementById('recentList'),rows,(r)=>`<div class="row"><div style="display:flex;gap:10px">${avatar(r)}<div class="row-main"><strong>${r.player_name||r.display_name||'Speler'} · ${r.event_type_label||r.event_type_key||'Drankje'}</strong><div class="muted">${new Date(r.verified_at||r.created_at).toLocaleString('nl-NL')} · ${Number(r.total_units||0).toFixed(1)} units</div><div class="muted">Bevestigd door ${Array.isArray(r.verifier_names)&&r.verifier_names.length?r.verifier_names.join(', '):'—'}</div></div></div><span class="pill verified">ok</span></div>`,'Nog geen bevestigde drankjes.'); }
-    function renderVerify(rows){ renderList(document.getElementById('verifyQueue'),rows,(r)=>`<div class="verify-card"><div class="row-main"><strong>${r.player_name||'Speler'} · ${r.event_type_label||r.event_type_key||'Drankje'}</strong><div class="muted">${Number(r.total_units||0).toFixed(1)} units${r.distance_m!=null?` · ${Math.round(r.distance_m)}m afstand`:''}</div>${r.location_text?`<div class="muted">${r.location_text}</div>`:''}<div class="row-actions"><button class="btn" data-verify-id="${r.id}">Bevestigen</button><button class="btn alt" data-reject-id="${r.id}">Afkeuren</button></div></div><span class="pill pending">check</span></div>`,'Nog geen verificaties in de buurt.'); document.querySelectorAll('[data-verify-id]').forEach(btn=>btn.onclick=()=>verifyDrink(btn.dataset.verifyId)); }
+    function renderVerify(rows){ renderList(document.getElementById('verifyQueue'),rows,(r)=>`<div class="verify-card"><div class="row-main"><strong>${r.player_name||'Speler'} · ${r.event_type_label||r.event_type_key||'Drankje'}</strong><div class="muted">${Number(r.total_units||0).toFixed(1)} units${r.distance_m!=null?` · ${Math.round(r.distance_m)}m afstand`:''}${countdownText(r)}</div><div class="muted">${Number(r.approve_votes||0)} voor · ${Number(r.reject_votes||0)} tegen</div>${r.location_text?`<div class="muted">${r.location_text}</div>`:''}<div class="row-actions"><button class="btn" data-verify-id="${r.id}">Bevestigen</button><button class="btn alt" data-reject-id="${r.id}">Afkeuren</button></div></div>${statusChip(r.status||'pending')}</div>`,'Nog geen verificaties in de buurt.'); document.querySelectorAll('[data-verify-id]').forEach(btn=>btn.onclick=()=>verifyDrink(btn.dataset.verifyId)); }
     function renderFairness(rows){ renderList(document.getElementById('fairnessList'),rows,(r)=>`<div class="row"><div class="row-main"><strong>${r.label||'Fairness'}</strong><div class="muted">${r.description||''}</div></div><strong>${r.value||''}</strong></div>`,'Nog geen fairness-data.'); }
     function renderStats(data){ const totals=data.totals||{}; document.getElementById('statsMetrics').innerHTML=`<div class="metric"><div class="label">All-time drankjes</div><div class="value">${totals.all_events||0}</div></div><div class="metric"><div class="label">All-time units</div><div class="value">${Number(totals.all_units||0).toFixed(1)}</div></div><div class="metric"><div class="label">Deze maand</div><div class="value">${totals.month_events||0}</div></div><div class="metric"><div class="label">Open verificaties</div><div class="value">${totals.pending_events||0}</div></div>`;
       renderList(document.getElementById('topUnits'),data.top_units,(r)=>`<div class="row"><div style="display:flex;gap:10px">${avatar(r)}<div class="row-main"><strong><a href="./player.html?player=${encodeURIComponent(r.player_name||r.display_name||'')}" style="text-decoration:none;color:#111">${r.player_name||r.display_name||'Speler'}</a></strong><div class="muted">${r.events||0} drankjes</div></div></div><strong>${Number(r.units||0).toFixed(1)}</strong></div>`);
