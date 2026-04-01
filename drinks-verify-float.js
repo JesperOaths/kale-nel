@@ -9,6 +9,7 @@
   const APPROVED_KEY = 'gejast_verify_float_last_approved';
   const LAST_ALERT_KEY = 'gejast_verify_float_last_alert';
   let activePromptId = null;
+  let activePromptKind = null;
   let pollBusy = false;
 
   function token(){ for (const key of SESSION_KEYS){ const value = localStorage.getItem(key) || sessionStorage.getItem(key); if (value) return value; } return ''; }
@@ -29,7 +30,7 @@
   }
 
   function showBox(){ const box = ensureBox(); box.classList.remove('show'); void box.offsetWidth; requestAnimationFrame(()=> box.classList.add('show')); }
-  function hideBox(){ const box = document.getElementById('globalDrinksVerifyFloat'); if (box) box.classList.remove('show'); activePromptId = null; }
+  function hideBox(){ const box = document.getElementById('globalDrinksVerifyFloat'); if (box) box.classList.remove('show'); activePromptId = null; activePromptKind = null; }
 
   function showApprovedToast(){
     const raw = localStorage.getItem(APPROVED_KEY);
@@ -47,19 +48,19 @@
     } catch {}
   }
 
-  function canShowFor(eventId){
-    if (!eventId) return false;
+  function canShowFor(eventKey){
+    if (!eventKey) return false;
     const raw = localStorage.getItem(DISMISS_KEY);
     if (!raw) return true;
     try {
       const data = JSON.parse(raw);
-      if (data.id !== eventId) return true;
+      if (data.id !== eventKey) return true;
       return (Date.now() - data.at) > COOLDOWN_MS;
     } catch { return true; }
   }
 
-  function dismissEvent(eventId){
-    localStorage.setItem(DISMISS_KEY, JSON.stringify({id:eventId, at:Date.now()}));
+  function dismissEvent(eventKey){
+    localStorage.setItem(DISMISS_KEY, JSON.stringify({id:eventKey, at:Date.now()}));
     hideBox();
   }
 
@@ -75,7 +76,7 @@
     }
   }
 
-  async function verifyEvent(item){
+  async function verifyDrinkEvent(item){
     const helper = window.GEJAST_GEO;
     if (!helper) throw new Error('Geolocatie helper ontbreekt.');
     const verifyBtn = document.getElementById('gdfVerifyBtn');
@@ -120,18 +121,41 @@
     }
   }
 
+  async function verifySpeedEvent(item){
+    const helper = window.GEJAST_GEO;
+    if (!helper) throw new Error('Geolocatie helper ontbreekt.');
+    const verifyBtn = document.getElementById('gdfVerifyBtn');
+    const openBtn = document.getElementById('gdfOpenBtn');
+    const dismissBtn = document.getElementById('gdfDismissBtn');
+    verifyBtn.disabled = true; openBtn.disabled = true; dismissBtn.disabled = true;
+    const oldLabel = verifyBtn.textContent; verifyBtn.textContent = 'Bezig...';
+    try {
+      let pos;
+      try { pos = await helper.request(true); } catch (err) { pos = helper.cached(60*60*1000); if (!pos) throw err; }
+      helper.startWatch();
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_speed_attempt`, {
+        method:'POST', headers: headers(), body: JSON.stringify({ session_token: token(), attempt_id: Number(item.id), lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy })
+      });
+      await parse(res);
+      localStorage.setItem(APPROVED_KEY, JSON.stringify({at:Date.now(), text:`${item.player_name} · ${item.event_type_label || item.speed_type_label}`}));
+      dismissEvent(`${item.kind}:${item.id}`);
+      showApprovedToast();
+    } finally { verifyBtn.disabled=false; openBtn.disabled=false; dismissBtn.disabled=false; verifyBtn.textContent=oldLabel; }
+  }
+
   function maybeVibrate(item){
     try {
       const last = localStorage.getItem(LAST_ALERT_KEY);
       if (last === String(item.id)) return;
-      localStorage.setItem(LAST_ALERT_KEY, String(item.id));
-      if (navigator.vibrate && document.visibilityState === 'visible') navigator.vibrate([120,60,120]);
+      localStorage.setItem(LAST_ALERT_KEY, `${item.kind||'drink'}:${item.id}`);
+      if (navigator.vibrate && document.visibilityState === 'visible') navigator.vibrate([200,80,200,80,260]);
     } catch(_){}
   }
 
   function renderPrompt(item){
-    if (activePromptId === item.id) return;
+    if (activePromptId === item.id && activePromptKind === (item.kind||'drink')) return;
     activePromptId = item.id;
+    activePromptKind = item.kind || 'drink';
     maybeVibrate(item);
     const box = ensureBox();
     const locationBits = [];
@@ -140,9 +164,9 @@
     if (item.lat != null && item.lng != null) locationBits.push(`(${Number(item.lat).toFixed(4)}, ${Number(item.lng).toFixed(4)})`);
     document.getElementById('gdfVerifyBtn').style.display = 'inline-flex';
     document.getElementById('gdfBody').innerHTML = `<strong>${item.player_name} · ${item.event_type_label}</strong><div class="gdf-meta">${Number(item.total_units||0).toFixed(1)} units${locationBits.length ? ' · ' + locationBits.join(' · ') : ''}</div><div class="gdf-meta">Open drinks om alle verificaties en status te zien.</div>`;
-    document.getElementById('gdfVerifyBtn').onclick = async () => { const body = document.getElementById('gdfBody'); body.querySelectorAll('.gdf-meta.error').forEach((n)=>n.remove()); try { await verifyEvent(item); } catch (err) { body.insertAdjacentHTML('beforeend', `<div class="gdf-meta error">${(err && err.message) || 'Bevestigen mislukt.'}</div>`); } };
-    document.getElementById('gdfOpenBtn').onclick = () => { location.href = './drinks.html#verifyPanel'; };
-    document.getElementById('gdfDismissBtn').onclick = () => dismissEvent(item.id);
+    document.getElementById('gdfVerifyBtn').onclick = async () => { const body = document.getElementById('gdfBody'); body.querySelectorAll('.gdf-meta.error').forEach((n)=>n.remove()); try { await (item.kind==='speed' ? verifySpeedEvent(item) : verifyDrinkEvent(item)); } catch (err) { body.insertAdjacentHTML('beforeend', `<div class="gdf-meta error">${(err && err.message) || 'Bevestigen mislukt.'}</div>`); } };
+    document.getElementById('gdfOpenBtn').onclick = () => { location.href = item.kind==='speed' ? './drinks_speed.html' : './drinks.html#verifyPanel'; };
+    document.getElementById('gdfDismissBtn').onclick = () => dismissEvent(`${item.kind||'drink'}:${item.id}`);
     showBox();
   }
 
@@ -159,8 +183,24 @@
       });
       const raw = await parse(res);
       const data = raw?.get_drinks_page_public || raw || {};
-      const item = Array.isArray(data.verify_queue) ? data.verify_queue[0] : null;
-      if (!item || !canShowFor(item.id)) {
+      let item = Array.isArray(data.verify_queue) ? data.verify_queue[0] : null;
+      if (item) item.kind = 'drink';
+      if ((!item || !canShowFor(`${item.kind}:${item.id}`)) && SUPABASE_URL) {
+        try {
+          const speedRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_speed_page_public`, {
+            method:'POST', headers: headers(),
+            body: JSON.stringify({session_token: token(), viewer_lat: pos.coords.latitude, viewer_lng: pos.coords.longitude})
+          });
+          const speedRaw = await parse(speedRes);
+          const speedData = speedRaw?.get_drink_speed_page_public || speedRaw || {};
+          const speedItem = Array.isArray(speedData.verify_queue) ? speedData.verify_queue[0] : null;
+          if (speedItem && canShowFor(`speed:${speedItem.id}`)) { speedItem.kind = 'speed'; item = speedItem; }
+          else if (!item || !canShowFor(`drink:${item.id}`)) item = null;
+        } catch (_) {
+          if (!item || !canShowFor(`drink:${item.id}`)) item = null;
+        }
+      }
+      if (!item || !canShowFor(`${item.kind||'drink'}:${item.id}`)) {
         if (activePromptId && activePromptId !== '__approved__') hideBox();
         pollBusy = false;
         return;

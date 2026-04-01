@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wordt er gejast donderdag?</title>
   <link rel="stylesheet" href="./site-shell.css" />
-  <style>body{background:linear-gradient(rgba(244,240,232,.56),rgba(244,240,232,.56)), url('./site-bg-desktop.webp') center/cover no-repeat fixed !important;}.drinks-home-section{margin:18px 0 8px;display:grid;gap:12px}
+  <style>body{background:linear-gradient(rgba(244,240,232,.56),rgba(244,240,232,.56)), url('./site-bg-desktop.webp') center/cover no-repeat !important;}.drinks-home-section{margin:18px 0 8px;display:grid;gap:12px}
     .drinks-home-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
     .drinks-home-head h2{margin:0;font-size:1.1rem}
     .drinks-home-link{display:inline-flex;padding:9px 12px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800}
     .drinks-home-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-    .drinks-mini{background:rgba(255,255,255,.72);border:1px solid rgba(17,17,17,.06);border-radius:18px;padding:14px;text-align:left;text-decoration:none;color:inherit;display:flex;flex-direction:column;justify-content:flex-start}.drinks-mini.dark{background:#111;color:#fff}.drinks-mini.dark .drinks-mini-label,.drinks-mini.dark .drinks-mini-sub{color:rgba(255,255,255,.82)}
+    .drinks-mini{background:rgba(255,255,255,.72);border:1px solid rgba(17,17,17,.06);border-radius:18px;padding:14px;text-align:left;text-decoration:none;color:inherit;display:flex;flex-direction:column;justify-content:flex-start}.drinks-mini.dark{background:#111;color:#fff}.drinks-mini.gold{background:#d4af37;color:#111}.drinks-mini.dark .drinks-mini-label,.drinks-mini.dark .drinks-mini-sub{color:rgba(255,255,255,.82)}
     .drinks-mini-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:800;margin-bottom:6px;min-height:30px;display:flex;align-items:flex-start}
     .drinks-mini-value{font-size:1.55rem;font-weight:900;line-height:1.05;min-height:2.2rem;display:flex;align-items:flex-end}
     .drinks-mini-sub{display:none}
@@ -122,7 +122,7 @@
       box-shadow: 0 20px 50px rgba(0,0,0,0.08);
       position: relative;
       text-align: center;
-      backdrop-filter: blur(5px);
+      
     }
 
     .card-top-right { position:absolute; top:25px; right:25px; display:flex; align-items:center; gap:14px; }
@@ -567,7 +567,7 @@
 
 
     <style id="bruis-watermark-style">
-    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(212,175,55,0.35);color:#f3e3a6;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);border:1px solid rgba(212,175,55,0.35);color:#f3e3a6;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
   
     .drinks-home-top5-name{display:block;color:#161616;text-decoration:none;font-weight:800;line-height:1.15}
@@ -577,7 +577,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v210';</script><script src="./gejast-config.js?v210"></script>
+  <script>window.GEJAST_PAGE_VERSION='v214';</script><script src="./gejast-config.js?v214"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -1046,7 +1046,7 @@
         grid.innerHTML = `
           <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">${fallback.today_events||0}</div></a>
           <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">${fallback.all_events||0}</div></a>
-          <a class="drinks-mini" href="./drinks.html#verifyPanel"><div class="drinks-mini-label">Open verificaties</div><div class="drinks-mini-value">${fallback.pending_events||0}</div></a>
+          <a class="drinks-mini gold" href="./drinks_speed.html"><div class="drinks-mini-label">Snelheids poging</div><div class="drinks-mini-value">+</div></a>
           <a class="drinks-mini dark" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div></a>`;
       } catch(_){ }
     }
@@ -1058,12 +1058,24 @@
         const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_top5_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
         const data = await parseResponse(res);
         const payload = data?.get_drinks_homepage_top5_public || data || {};
+        if((!Array.isArray(payload.session_top5)||!payload.session_top5.length) || (!Array.isArray(payload.all_time_top5)||!payload.all_time_top5.length)){
+          try{
+            const statsRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_stats_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
+            const statsData = await parseResponse(statsRes);
+            const statsPayload = statsData?.get_drinks_stats_public || statsData || {};
+            if((!payload.all_time_top5||!payload.all_time_top5.length) && Array.isArray(statsPayload.top_units) && statsPayload.top_units.length){ payload.all_time_top5 = statsPayload.top_units; }
+            if((!payload.session_top5||!payload.session_top5.length) && Array.isArray(statsPayload.top_units) && statsPayload.top_units.length){ payload.session_top5 = statsPayload.top_units; }
+            if((!payload.speed_top5||!payload.speed_top5.length) && Array.isArray(statsPayload.speed_top5) && statsPayload.speed_top5.length){ payload.speed_top5 = statsPayload.speed_top5; }
+          }catch(_){ }
+        }
         const root = document.getElementById('drinksTop5Grid');
         if(!root) return;
+        const speedGroups = Array.isArray(payload.speed_top5_by_type) && payload.speed_top5_by_type.length ? payload.speed_top5_by_type : null;
+        const currentSpeedGroup = speedGroups ? speedGroups[(Math.floor(Date.now()/5000) % speedGroups.length)] : null;
         const groups = [
           { label: dayTitle, key:'./drinks.html', mode:'units', rows: payload.session_top5 || [] },
           { label: 'All-time', key:'./drinks.html', mode:'units', rows: payload.all_time_top5 || [] },
-          { label: 'Snelheid', key:'./drinks_speed.html', mode:'seconds', rows: payload.speed_top5 || [] }
+          { label: currentSpeedGroup?.label || 'Snelheid', key:'./drinks_speed.html', mode:'seconds', rows: currentSpeedGroup?.rows || payload.speed_top5 || [] }
         ];
         root.innerHTML = groups.map((group) => {
           const rows = Array.isArray(group.rows) ? group.rows : [];
@@ -1096,13 +1108,13 @@
     wireProtectedDrinksLinks();
     load();
     loadDrinksHome();
-    loadDrinksHomeTop5();
+    loadDrinksHomeTop5(); setInterval(loadDrinksHomeTop5, 5000);
   </script>
 
   <div class="site-credit-watermark" data-version-watermark></div>
 
 <style>
-  .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
+  .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;}
   .player-session-corner.is-visible{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
   .player-session-corner-label{font-size:11px;line-height:1.15;color:#5f5b53;text-align:right}
   .player-session-corner-name{font-size:13px;line-height:1.1;font-weight:800;color:#111;text-align:right;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
