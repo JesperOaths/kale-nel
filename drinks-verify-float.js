@@ -24,7 +24,7 @@
     if (box) return box;
     box = document.createElement('div');
     box.id = 'globalDrinksVerifyFloat';
-    box.innerHTML = '<div class="gdf-card"><div class="gdf-title">Drinks verificatie</div><div id="gdfBody" class="gdf-body"></div><div class="gdf-actions"><button id="gdfVerifyBtn" class="gdf-btn">Bevestigen</button><button id="gdfOpenBtn" class="gdf-btn alt">Open drinks</button><button id="gdfDismissBtn" class="gdf-btn alt">Later</button></div></div>';
+    box.innerHTML = '<div class="gdf-card"><div class="gdf-title" id="gdfTitle">Verificatie</div><div id="gdfBody" class="gdf-body"></div><div class="gdf-actions"><button id="gdfVerifyBtn" class="gdf-btn">Bevestigen</button><button id="gdfRejectBtn" class="gdf-btn alt">Afkeuren</button><button id="gdfOpenBtn" class="gdf-btn alt">Open pagina</button><button id="gdfDismissBtn" class="gdf-btn alt">Later</button></div></div>';
     const style = document.createElement('style');
     style.textContent = '#globalDrinksVerifyFloat{position:fixed;right:14px;bottom:74px;z-index:10000;max-width:340px;opacity:0;transform:translate3d(160%,48px,0) scale(.92);pointer-events:none}#globalDrinksVerifyFloat.show{opacity:1;transform:translate3d(0,0,0) scale(1);pointer-events:auto;animation:gdf-in .52s cubic-bezier(.2,.9,.2,1)}@keyframes gdf-in{0%{opacity:0;transform:translate3d(160%,58px,0) scale(.88)}65%{opacity:1;transform:translate3d(-10px,-4px,0) scale(1.02)}100%{opacity:1;transform:translate3d(0,0,0) scale(1)}}.gdf-card{background:rgba(17,17,17,.95);color:#fff;border:1px solid rgba(212,175,55,.34);border-radius:18px;padding:14px;box-shadow:0 16px 44px rgba(0,0,0,.34);backdrop-filter:blur(8px)}.gdf-title{font-weight:900;margin-bottom:8px}.gdf-body{font-size:14px;line-height:1.4;color:rgba(255,255,255,.92)}.gdf-meta{font-size:12px;color:rgba(255,255,255,.72);margin-top:6px}.gdf-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.gdf-btn{appearance:none;border:0;border-radius:999px;padding:9px 12px;font:inherit;font-weight:800;background:#9a8241;color:#111;cursor:pointer}.gdf-btn[disabled]{opacity:.6;cursor:wait}.gdf-btn.alt{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.12)}@media(max-width:640px){#globalDrinksVerifyFloat{left:10px;right:10px;bottom:88px;max-width:none}}';
     document.body.appendChild(style);
@@ -46,7 +46,7 @@
       document.getElementById('gdfBody').innerHTML = `<strong>Verificatie goedgekeurd</strong><div class="gdf-meta">${payload.text || 'Je bevestiging is gebruikt.'}</div>`;
       document.getElementById('gdfVerifyBtn').style.display = 'none';
       document.getElementById('gdfRejectBtn').style.display = 'none';
-      document.getElementById('gdfOpenBtn').onclick = () => { location.href = './drinks.html'; };
+      document.getElementById('gdfOpenBtn').onclick = () => { location.href = './drinks_speed.html'; };
       document.getElementById('gdfDismissBtn').onclick = () => { hideBox(); localStorage.removeItem(APPROVED_KEY); };
       showBox();
     } catch {}
@@ -177,7 +177,9 @@
     document.getElementById('gdfVerifyBtn').style.display = 'inline-flex';
     document.getElementById('gdfRejectBtn').style.display = (item.kind==='drink' || item.linked_drink_event_id || item.drink_event_id) ? 'inline-flex' : 'none';
     const promptLabel = item.kind==='speed' ? `${item.event_type_label || item.speed_type_label} · ${Number(item.duration_seconds||0).toFixed(1)}s` : `${item.event_type_label}`;
-    document.getElementById('gdfBody').innerHTML = `<strong>${item.player_name} · ${promptLabel}</strong><div class="gdf-meta">${Number(item.total_units||0).toFixed(1)} units${locationBits.length ? ' · ' + locationBits.join(' · ') : ''}</div><div class="gdf-meta">Open drinks om alle verificaties en status te zien.</div>`;
+    document.getElementById('gdfTitle').textContent = item.kind==='speed' ? 'Snelheid verificatie' : 'Drinks verificatie';
+    document.getElementById('gdfOpenBtn').textContent = item.kind==='speed' ? 'Open snelheid' : 'Open drinks';
+    document.getElementById('gdfBody').innerHTML = `<strong>${item.player_name} · ${promptLabel}</strong><div class="gdf-meta">${Number(item.total_units||0).toFixed(1)} units${item.kind==='speed' ? ` · ${Number(item.duration_seconds||0).toFixed(1)}s` : ''}${locationBits.length ? ' · ' + locationBits.join(' · ') : ''}</div><div class="gdf-meta">${item.kind==='speed' ? 'Open snelheid om alle verificaties en status te zien.' : 'Open drinks om alle verificaties en status te zien.'}</div>`;
     const linkedPrompt = (item.kind==='speed' && Number(item.linked_drink_event_id || item.drink_event_id || 0)) ? { ...item, id:Number(item.linked_drink_event_id || item.drink_event_id || 0) } : item;
     document.getElementById('gdfVerifyBtn').onclick = async () => { const body = document.getElementById('gdfBody'); body.querySelectorAll('.gdf-meta.error').forEach((n)=>n.remove()); try { await ((item.kind==='speed' && linkedPrompt.id) ? verifyDrinkEvent(linkedPrompt, true) : (item.kind==='speed' ? verifySpeedEvent(item, true) : verifyDrinkEvent(item, true))); } catch (err) { body.insertAdjacentHTML('beforeend', `<div class="gdf-meta error">${(err && err.message) || 'Bevestigen mislukt.'}</div>`); } };
     document.getElementById('gdfRejectBtn').onclick = async () => { const body = document.getElementById('gdfBody'); body.querySelectorAll('.gdf-meta.error').forEach((n)=>n.remove()); try { await ((item.kind==='speed' && linkedPrompt.id) ? verifyDrinkEvent(linkedPrompt, false) : (item.kind==='speed' ? verifySpeedEvent(item, false) : verifyDrinkEvent(item, false))); } catch (err) { body.insertAdjacentHTML('beforeend', `<div class="gdf-meta error">${(err && err.message) || 'Afkeuren mislukt.'}</div>`); } };
@@ -192,29 +194,27 @@
     try {
       const pos = await getGeoForPolling();
       if (!pos) { pollBusy = false; return; }
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`, {
-        method:'POST',
-        headers: headers(),
-        body: JSON.stringify({session_token: token(), viewer_lat: pos.coords.latitude, viewer_lng: pos.coords.longitude})
-      });
-      const raw = await parse(res);
-      const data = raw?.get_drinks_page_public || raw || {};
-      let item = Array.isArray(data.verify_queue) ? data.verify_queue[0] : null;
-      if (item) item.kind = 'drink';
-      if ((!item || !canShowFor(`${item.kind}:${item.id}`)) && SUPABASE_URL) {
-        try {
-          const speedRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_speed_page_public`, {
-            method:'POST', headers: headers(),
-            body: JSON.stringify({session_token: token(), viewer_lat: pos.coords.latitude, viewer_lng: pos.coords.longitude})
-          });
-          const speedRaw = await parse(speedRes);
-          const speedData = speedRaw?.get_drink_speed_page_public || speedRaw || {};
-          const speedItem = Array.isArray(speedData.verify_queue) ? speedData.verify_queue[0] : null;
-          if (speedItem && canShowFor(`speed:${speedItem.id}`)) { speedItem.kind = 'speed'; item = speedItem; }
-          else if (!item || !canShowFor(`drink:${item.id}`)) item = null;
-        } catch (_) {
-          if (!item || !canShowFor(`drink:${item.id}`)) item = null;
-        }
+      let item = null;
+      try {
+        const speedRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_speed_page_public`, {
+          method:'POST', headers: headers(),
+          body: JSON.stringify({session_token: token(), viewer_lat: pos.coords.latitude, viewer_lng: pos.coords.longitude})
+        });
+        const speedRaw = await parse(speedRes);
+        const speedData = speedRaw?.get_drink_speed_page_public || speedRaw || {};
+        const speedItem = Array.isArray(speedData.verify_queue) ? speedData.verify_queue[0] : null;
+        if (speedItem && canShowFor(`speed:${speedItem.id}`)) { speedItem.kind = 'speed'; item = speedItem; }
+      } catch (_) {}
+      if (!item) {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`, {
+          method:'POST',
+          headers: headers(),
+          body: JSON.stringify({session_token: token(), viewer_lat: pos.coords.latitude, viewer_lng: pos.coords.longitude})
+        });
+        const raw = await parse(res);
+        const data = raw?.get_drinks_page_public || raw || {};
+        const drinkItem = Array.isArray(data.verify_queue) ? data.verify_queue[0] : null;
+        if (drinkItem && canShowFor(`drink:${drinkItem.id}`)) { drinkItem.kind = 'drink'; item = drinkItem; }
       }
       if (!item || !canShowFor(`${item.kind||'drink'}:${item.id}`)) {
         const withinGrace = activePromptItem && activePromptId && activePromptId !== '__approved__' && Date.now() < activePromptGraceUntil;
@@ -222,7 +222,9 @@
           const box = ensureBox();
           document.getElementById('gdfVerifyBtn').style.display = 'none';
       document.getElementById('gdfRejectBtn').style.display = 'none';
-          document.getElementById('gdfBody').innerHTML = `<strong>${activePromptItem.player_name} · ${activePromptItem.event_type_label || activePromptItem.speed_type_label}</strong><div class="gdf-meta">Deze verificatie blijft nog even open zodat meerdere mensen kunnen stemmen.</div><div class="gdf-meta">Open drinks om de actuele status en extra stemmen te zien.</div>`;
+          document.getElementById('gdfTitle').textContent = activePromptItem.kind==='speed' ? 'Snelheid verificatie' : 'Drinks verificatie';
+          document.getElementById('gdfOpenBtn').textContent = activePromptItem.kind==='speed' ? 'Open snelheid' : 'Open drinks';
+          document.getElementById('gdfBody').innerHTML = `<strong>${activePromptItem.player_name} · ${activePromptItem.event_type_label || activePromptItem.speed_type_label}</strong><div class="gdf-meta">Deze verificatie blijft nog even open zodat meerdere mensen kunnen stemmen.</div><div class="gdf-meta">${activePromptItem.kind==='speed' ? 'Open snelheid om de actuele status en extra stemmen te zien.' : 'Open drinks om de actuele status en extra stemmen te zien.'}</div>`;
           document.getElementById('gdfOpenBtn').onclick = () => { location.href = activePromptItem.kind==='speed' ? './drinks_speed.html' : './drinks.html#verifyPanel'; };
           document.getElementById('gdfDismissBtn').onclick = () => dismissEvent(`${activePromptItem.kind||'drink'}:${activePromptItem.id}`);
           showBox();
