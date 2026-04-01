@@ -578,7 +578,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v260';</script><script src="./gejast-config.js?v260"></script>
+  <script>window.GEJAST_PAGE_VERSION='v261';</script><script src="./gejast-config.js?v261"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -1043,10 +1043,9 @@
         const grid = document.getElementById('drinksHomeGrid');
         if(!grid) return;
         const totals = payload.totals || {};
-        const fallback = (!Number(totals.today_events||0) && !Number(totals.all_events||0)) ? { today_events: 5, all_events: 48, pending_events: 2 } : totals;
         grid.innerHTML = `
-          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">${fallback.today_events||0}</div></a>
-          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">${fallback.all_events||0}</div></a>
+          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">${Number(totals.today_events||0)}</div></a>
+          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">${Number(totals.all_events||0)}</div></a>
           <a class="drinks-mini gold" href="./drinks_speed.html"><div class="drinks-mini-label">Snelheids poging</div><div class="drinks-mini-value">+</div></a>
           <a class="drinks-mini dark" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div></a>`;
       } catch(_){ }
@@ -1062,50 +1061,8 @@
         const root = document.getElementById('drinksTop5Grid');
         if(!root) return;
 
-        const demoSessionRows = [
-          { player_name:'Drinks Dummy 1', display_name:'Drinks Dummy 1', total_units:12.6 },
-          { player_name:'Drinks Dummy 2', display_name:'Drinks Dummy 2', total_units:10.8 },
-          { player_name:'Drinks Dummy 3', display_name:'Drinks Dummy 3', total_units:9.2 },
-          { player_name:'Verifier 1111', display_name:'Verifier 1111', total_units:8.4 },
-          { player_name:'Drinks Dummy 4', display_name:'Drinks Dummy 4', total_units:7.8 }
-        ];
-        const demoSpeedGroups = [
-          { key:'bier', label:'1 Bak', rows:[
-            { player_name:'Drinks Dummy 2', display_name:'Drinks Dummy 2', duration_seconds:4.2 },
-            { player_name:'Drinks Dummy 1', display_name:'Drinks Dummy 1', duration_seconds:4.8 },
-            { player_name:'Verifier 1111', display_name:'Verifier 1111', duration_seconds:5.1 },
-            { player_name:'Drinks Dummy 3', display_name:'Drinks Dummy 3', duration_seconds:5.7 },
-            { player_name:'Drinks Dummy 4', display_name:'Drinks Dummy 4', duration_seconds:6.2 }
-          ]},
-          { key:'2bakken', label:'2 Bakken', rows:[
-            { player_name:'Drinks Dummy 1', display_name:'Drinks Dummy 1', duration_seconds:8.9 },
-            { player_name:'Drinks Dummy 2', display_name:'Drinks Dummy 2', duration_seconds:9.4 },
-            { player_name:'Verifier 1111', display_name:'Verifier 1111', duration_seconds:9.9 },
-            { player_name:'Drinks Dummy 3', display_name:'Drinks Dummy 3', duration_seconds:10.6 },
-            { player_name:'Drinks Dummy 4', display_name:'Drinks Dummy 4', duration_seconds:11.2 }
-          ]},
-          { key:'ice', label:'Ice', rows:[
-            { player_name:'Drinks Dummy 2', display_name:'Drinks Dummy 2', duration_seconds:10.8 },
-            { player_name:'Drinks Dummy 1', display_name:'Drinks Dummy 1', duration_seconds:11.4 },
-            { player_name:'Verifier 1111', display_name:'Verifier 1111', duration_seconds:12.1 },
-            { player_name:'Drinks Dummy 3', display_name:'Drinks Dummy 3', duration_seconds:12.9 },
-            { player_name:'Drinks Dummy 4', display_name:'Drinks Dummy 4', duration_seconds:13.5 }
-          ]},
-          { key:'wijnfles', label:'Fles Wijn', rows:[
-            { player_name:'Drinks Dummy 1', display_name:'Drinks Dummy 1', duration_seconds:24.2 },
-            { player_name:'Drinks Dummy 2', display_name:'Drinks Dummy 2', duration_seconds:25.6 },
-            { player_name:'Verifier 1111', display_name:'Verifier 1111', duration_seconds:26.9 },
-            { player_name:'Drinks Dummy 3', display_name:'Drinks Dummy 3', duration_seconds:28.1 },
-            { player_name:'Drinks Dummy 4', display_name:'Drinks Dummy 4', duration_seconds:29.8 }
-          ]},
-          { key:'liter_bier', label:'Liter Bier', rows:[
-            { player_name:'Drinks Dummy 2', display_name:'Drinks Dummy 2', duration_seconds:18.5 },
-            { player_name:'Drinks Dummy 1', display_name:'Drinks Dummy 1', duration_seconds:19.1 },
-            { player_name:'Verifier 1111', display_name:'Verifier 1111', duration_seconds:20.0 },
-            { player_name:'Drinks Dummy 3', display_name:'Drinks Dummy 3', duration_seconds:21.4 },
-            { player_name:'Drinks Dummy 4', display_name:'Drinks Dummy 4', duration_seconds:22.7 }
-          ]}
-        ];
+        const demoSessionRows = []
+        const demoSpeedGroups = []
 
         const unitValue = (row) => {
           const n = Number(row?.total_units ?? row?.units ?? row?.unit_total ?? row?.value ?? 0);
@@ -1115,35 +1072,22 @@
           const n = Number(row?.duration_seconds ?? row?.seconds ?? row?.duration ?? row?.value ?? 0);
           return Number.isFinite(n) ? n : 0;
         };
-        const hasPositiveUnits = (rows) => Array.isArray(rows) && rows.some((r)=>unitValue(r) > 0);
-        const hasPositiveSeconds = (rows) => Array.isArray(rows) && rows.some((r)=>secondValue(r) > 0);
-        const normaliseUnitRows = (rows, fallback) => (hasPositiveUnits(rows) ? rows : fallback).slice(0,5).map((row)=>({ ...row, total_units: unitValue(row) }));
-        const normaliseSpeedRows = (rows, fallback) => (hasPositiveSeconds(rows) ? rows : fallback).slice(0,5).map((row)=>({ ...row, duration_seconds: secondValue(row) }));
+        const normaliseUnitRows = (rows) => (Array.isArray(rows) ? rows : []).filter((r)=>unitValue(r) > 0).slice(0,5).map((row)=>({ ...row, total_units: unitValue(row) }));
+        const normaliseSpeedRows = (rows) => (Array.isArray(rows) ? rows : []).filter((r)=>secondValue(r) > 0).slice(0,5).map((row)=>({ ...row, duration_seconds: secondValue(row) }));
 
-        let sessionRows = normaliseUnitRows(payload.session_top5 || [], demoSessionRows);
-        let allTimeRows = normaliseUnitRows(payload.all_time_top5 || [], demoSessionRows);
-        if((!hasPositiveUnits(payload.session_top5||[])) || (!hasPositiveUnits(payload.all_time_top5||[]))){
-          try{
-            const statsRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_stats_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
-            const statsData = await parseResponse(statsRes);
-            const statsPayload = statsData?.get_drinks_stats_public || statsData || {};
-            if(!hasPositiveUnits(payload.session_top5||[]) && hasPositiveUnits(statsPayload.top_units||[])) sessionRows = normaliseUnitRows(statsPayload.top_units, demoSessionRows);
-            if(!hasPositiveUnits(payload.all_time_top5||[]) && hasPositiveUnits(statsPayload.top_units||[])) allTimeRows = normaliseUnitRows(statsPayload.top_units, demoSessionRows);
-          }catch(_){ }
-        }
+        const sessionRows = normaliseUnitRows(payload.session_top5 || []);
+        const allTimeRows = normaliseUnitRows(payload.all_time_top5 || []);
 
         const rawSpeedGroups = Array.isArray(payload.speed_top5_by_type) && payload.speed_top5_by_type.length ? payload.speed_top5_by_type : [];
         const speedGroups = rawSpeedGroups
-          .filter((g)=>String(g?.key||'').toLowerCase() !== 'shot')
+          .filter((g)=>String(g?.key||g?.speed_type_key||'').toLowerCase() !== 'shot')
           .map((g)=>({
-            key:g.key,
-            label:g.label || '1 Bak',
-            rows:normaliseSpeedRows(Array.isArray(g.rows)?g.rows:[], (demoSpeedGroups.find((x)=>x.key===g.key)||demoSpeedGroups[0]).rows)
+            key:g.key || g.speed_type_key,
+            label:g.label || g.speed_type_label || '1 Bak',
+            rows:normaliseSpeedRows(Array.isArray(g.rows)?g.rows:[])
           }))
           .filter((g)=>g.rows.length);
-        const usableSpeedGroups = speedGroups.length ? speedGroups : demoSpeedGroups;
-        window.__gejastSpeedRotateIdx = ((window.__gejastSpeedRotateIdx||-1) + 1) % usableSpeedGroups.length;
-        const currentSpeedGroup = usableSpeedGroups[window.__gejastSpeedRotateIdx] || demoSpeedGroups[0];
+        const currentSpeedGroup = speedGroups.length ? speedGroups[(window.__gejastSpeedRotateIdx = ((window.__gejastSpeedRotateIdx||-1) + 1) % speedGroups.length)] : { key:'bier', label:'1 Bak', rows:[] };
 
         const groups = [
           { label: dayTitle, key:'./drinks.html', mode:'units', rows: sessionRows },
