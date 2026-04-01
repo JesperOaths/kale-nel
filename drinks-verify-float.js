@@ -138,8 +138,9 @@
       let pos;
       try { pos = await helper.request(true); } catch (err) { pos = helper.cached(60*60*1000); if (!pos) throw err; }
       helper.startWatch();
-      const res = item.linked_drink_event_id ? await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`, {
-        method:'POST', headers: headers(), body: JSON.stringify({ session_token: token(), drink_event_id: Number(item.linked_drink_event_id), lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy, approve: !!approve })
+      const linkedId = Number(item.linked_drink_event_id || item.drink_event_id || 0);
+      const res = linkedId ? await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`, {
+        method:'POST', headers: headers(), body: JSON.stringify({ session_token: token(), drink_event_id: linkedId, lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy, approve: !!approve })
       }) : await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_speed_attempt`, {
         method:'POST', headers: headers(), body: JSON.stringify({ session_token: token(), attempt_id: Number(item.id), lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy })
       });
@@ -175,8 +176,9 @@
     if (item.distance_m != null) locationBits.push(`${Math.round(item.distance_m)}m afstand`);
     if (item.lat != null && item.lng != null) locationBits.push(`(${Number(item.lat).toFixed(4)}, ${Number(item.lng).toFixed(4)})`);
     document.getElementById('gdfVerifyBtn').style.display = 'inline-flex';
-    document.getElementById('gdfRejectBtn').style.display = (item.kind==='drink' || item.linked_drink_event_id) ? 'inline-flex' : 'none';
-    document.getElementById('gdfBody').innerHTML = `<strong>${item.player_name} · ${item.event_type_label}</strong><div class="gdf-meta">${Number(item.total_units||0).toFixed(1)} units${locationBits.length ? ' · ' + locationBits.join(' · ') : ''}</div><div class="gdf-meta">Open drinks om alle verificaties en status te zien.</div>`;
+    document.getElementById('gdfRejectBtn').style.display = (item.kind==='drink' || item.linked_drink_event_id || item.drink_event_id) ? 'inline-flex' : 'none';
+    const promptLabel = item.kind==='speed' ? `${item.event_type_label || item.speed_type_label} · ${Number(item.duration_seconds||0).toFixed(1)}s` : `${item.event_type_label}`;
+    document.getElementById('gdfBody').innerHTML = `<strong>${item.player_name} · ${promptLabel}</strong><div class="gdf-meta">${Number(item.total_units||0).toFixed(1)} units${locationBits.length ? ' · ' + locationBits.join(' · ') : ''}</div><div class="gdf-meta">Open drinks om alle verificaties en status te zien.</div>`;
     document.getElementById('gdfVerifyBtn').onclick = async () => { const body = document.getElementById('gdfBody'); body.querySelectorAll('.gdf-meta.error').forEach((n)=>n.remove()); try { await (item.kind==='speed' ? verifySpeedEvent(item, true) : verifyDrinkEvent(item, true)); } catch (err) { body.insertAdjacentHTML('beforeend', `<div class="gdf-meta error">${(err && err.message) || 'Bevestigen mislukt.'}</div>`); } };
     document.getElementById('gdfRejectBtn').onclick = async () => { const body = document.getElementById('gdfBody'); body.querySelectorAll('.gdf-meta.error').forEach((n)=>n.remove()); try { await (item.kind==='speed' ? verifySpeedEvent(item, false) : verifyDrinkEvent(item, false)); } catch (err) { body.insertAdjacentHTML('beforeend', `<div class="gdf-meta error">${(err && err.message) || 'Afkeuren mislukt.'}</div>`); } };
     document.getElementById('gdfOpenBtn').onclick = () => { location.href = item.kind==='speed' ? './drinks_speed.html' : './drinks.html#verifyPanel'; };

@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION: 'v223',
+    VERSION: 'v224',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -42,7 +42,7 @@
       layer.setAttribute('aria-hidden','true');
       Object.assign(layer.style, {
         position:'absolute',
-        left:'0', right:'0', top:'100vh',
+        left:'0', right:'0', top:'calc(100vh + 140px)',
         height: Math.max(window.innerHeight, document.documentElement.scrollHeight) + 'px',
         zIndex:'-1',
         pointerEvents:'none',
@@ -52,7 +52,7 @@
         backgroundRepeat:cs.backgroundRepeat || 'no-repeat',
         transform:'rotate(180deg)',
         transformOrigin:'center center',
-        opacity:'1'
+        opacity:'0.92'
       });
       document.body.appendChild(layer);
       const sync = () => {
