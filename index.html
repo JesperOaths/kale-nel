@@ -580,7 +580,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v242';</script><script src="./gejast-config.js?v242"></script>
+  <script>window.GEJAST_PAGE_VERSION='v247';</script><script src="./gejast-config.js?v247"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -747,7 +747,7 @@
     }
 
     function playerHref(name, game=''){ const qs = new URLSearchParams(); if (name) qs.set('player', name); if (game) qs.set('game', game); return `./player.html?${qs.toString()}`; }
-    function miniAvatar(row){ const name=String(row.display_name||row.player_name||'Onbekend'); const initials=name.split(/\s+/).filter(Boolean).slice(0,2).map(v=>v[0]).join('').toUpperCase()||'?'; const url=String(row.avatar_url||'').trim(); return url ? `<span class="mini-avatar"><img src="${url}" alt="${name}" loading="lazy"></span>` : `<span class="mini-avatar">${initials}</span>`; }
+    function isHiddenishName(name){return /(drinks dummy|spookinoza|verifier\s*1111|voormalige speler|verwijderde speler)/i.test(String(name||''))} function playerLabel(name, href){ return isHiddenishName(name) ? `<span class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800">${name||'Onbekend'}</span>` : `<a class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800" href="${href}" onclick="event.stopPropagation()">${name||'Onbekend'}</a>`; } function miniAvatar(row){ const name=String(row.display_name||row.player_name||'Onbekend'); const initials=name.split(/\s+/).filter(Boolean).slice(0,2).map(v=>v[0]).join('').toUpperCase()||'?'; const url=String(row.avatar_url||'').trim(); return url ? `<span class="mini-avatar"><img src="${url}" alt="${name}" loading="lazy"></span>` : `<span class="mini-avatar">${initials}</span>`; }
     function renderHomepageLadders(payload) {
       const root = document.getElementById('ladderGrid');
       if (!root) return;
@@ -759,7 +759,7 @@
       ];
       root.innerHTML = groups.map((group) => {
         const rows = Array.isArray(group.rows) ? group.rows : [];
-        const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div>${miniAvatar(row)}<a class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800" href="${playerHref(String(row.player_name || row.display_name || ''), group.key)}" onclick="event.stopPropagation()">${String(row.player_name || row.display_name || 'Onbekend')}</a><div class="ladder-elo" style="color:var(--gold);font-weight:900">${Math.round(Number(row.elo_rating || row.rating || 1000))}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen ladderdata.</div>';
+        const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div>${miniAvatar(row)}${playerLabel(String(row.player_name || row.display_name || 'Onbekend'), playerHref(String(row.player_name || row.display_name || ''), group.key))}<div class="ladder-elo" style="color:var(--gold);font-weight:900">${Math.round(Number(row.elo_rating || row.rating || 1000))}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen ladderdata.</div>';
         return `<article class="ladder-card" role="link" tabindex="0" data-route="${HOMEPAGE_LADDER_ROUTES[group.key]}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none">Top 5</span></div>${body}</article>`;
       }).join('');
       root.querySelectorAll('.ladder-card[data-route]').forEach((card)=>{
@@ -1077,47 +1077,23 @@
         if(!root) return;
 
         const demoSessionRows = [
-          { player_name:'Drinks Dummy 1', display_name:'Drinks Dummy 1', total_units:12.6 },
-          { player_name:'Drinks Dummy 2', display_name:'Drinks Dummy 2', total_units:10.8 },
-          { player_name:'Drinks Dummy 3', display_name:'Drinks Dummy 3', total_units:9.2 },
-          { player_name:'Verifier 1111', display_name:'Verifier 1111', total_units:8.4 },
-          { player_name:'Drinks Dummy 4', display_name:'Drinks Dummy 4', total_units:7.8 }
+
         ];
         const demoSpeedGroups = [
           { key:'bier', label:'1 Bak', rows:[
-            { player_name:'Drinks Dummy 2', display_name:'Drinks Dummy 2', duration_seconds:4.2 },
-            { player_name:'Drinks Dummy 1', display_name:'Drinks Dummy 1', duration_seconds:4.8 },
-            { player_name:'Verifier 1111', display_name:'Verifier 1111', duration_seconds:5.1 },
-            { player_name:'Drinks Dummy 3', display_name:'Drinks Dummy 3', duration_seconds:5.7 },
-            { player_name:'Drinks Dummy 4', display_name:'Drinks Dummy 4', duration_seconds:6.2 }
+
           ]},
           { key:'2bakken', label:'2 Bakken', rows:[
-            { player_name:'Drinks Dummy 1', display_name:'Drinks Dummy 1', duration_seconds:8.9 },
-            { player_name:'Drinks Dummy 2', display_name:'Drinks Dummy 2', duration_seconds:9.4 },
-            { player_name:'Verifier 1111', display_name:'Verifier 1111', duration_seconds:9.9 },
-            { player_name:'Drinks Dummy 3', display_name:'Drinks Dummy 3', duration_seconds:10.6 },
-            { player_name:'Drinks Dummy 4', display_name:'Drinks Dummy 4', duration_seconds:11.2 }
+
           ]},
           { key:'ice', label:'Ice', rows:[
-            { player_name:'Drinks Dummy 2', display_name:'Drinks Dummy 2', duration_seconds:10.8 },
-            { player_name:'Drinks Dummy 1', display_name:'Drinks Dummy 1', duration_seconds:11.4 },
-            { player_name:'Verifier 1111', display_name:'Verifier 1111', duration_seconds:12.1 },
-            { player_name:'Drinks Dummy 3', display_name:'Drinks Dummy 3', duration_seconds:12.9 },
-            { player_name:'Drinks Dummy 4', display_name:'Drinks Dummy 4', duration_seconds:13.5 }
+
           ]},
           { key:'wijnfles', label:'Fles Wijn', rows:[
-            { player_name:'Drinks Dummy 1', display_name:'Drinks Dummy 1', duration_seconds:24.2 },
-            { player_name:'Drinks Dummy 2', display_name:'Drinks Dummy 2', duration_seconds:25.6 },
-            { player_name:'Verifier 1111', display_name:'Verifier 1111', duration_seconds:26.9 },
-            { player_name:'Drinks Dummy 3', display_name:'Drinks Dummy 3', duration_seconds:28.1 },
-            { player_name:'Drinks Dummy 4', display_name:'Drinks Dummy 4', duration_seconds:29.8 }
+
           ]},
           { key:'liter_bier', label:'Liter Bier', rows:[
-            { player_name:'Drinks Dummy 2', display_name:'Drinks Dummy 2', duration_seconds:18.5 },
-            { player_name:'Drinks Dummy 1', display_name:'Drinks Dummy 1', duration_seconds:19.1 },
-            { player_name:'Verifier 1111', display_name:'Verifier 1111', duration_seconds:20.0 },
-            { player_name:'Drinks Dummy 3', display_name:'Drinks Dummy 3', duration_seconds:21.4 },
-            { player_name:'Drinks Dummy 4', display_name:'Drinks Dummy 4', duration_seconds:22.7 }
+
           ]}
         ];
 
@@ -1186,7 +1162,7 @@
           if(speedTitle) speedTitle.textContent = currentSpeedGroup.label || '1 Bak';
           root.innerHTML = groups.map((group) => {
             const rows = Array.isArray(group.rows) ? group.rows : [];
-            const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div>${miniAvatar(row)}<a class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800" href="${playerHref(String(row.display_name || row.player_name || ''), '')}" onclick="event.stopPropagation()">${String(row.display_name || row.player_name || 'Onbekend')}</a><div class="ladder-elo" style="color:var(--gold);font-weight:900">${group.mode==='seconds' ? `${secondValue(row).toFixed(1)}s` : `${unitValue(row).toFixed(1)}`}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen data.</div>';
+            const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div>${miniAvatar(row)}${playerLabel(String(row.display_name || row.player_name || 'Onbekend'), playerHref(String(row.display_name || row.player_name || ''), ''))}<div class="ladder-elo" style="color:var(--gold);font-weight:900">${group.mode==='seconds' ? `${secondValue(row).toFixed(1)}s` : `${unitValue(row).toFixed(1)}`}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen data.</div>';
             return `<article class="ladder-card" role="link" tabindex="0" data-route="${group.key}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:var(--gold);text-decoration:none">${group.mode==='seconds' ? 'Seconden' : 'Alcoholunits'}</span></div>${body}</article>`;
           }).join('');
           root.querySelectorAll('.ladder-card[data-route]').forEach((card)=>{ const route = card.getAttribute('data-route'); card.addEventListener('click', ()=>{ window.location.href = route; }); card.addEventListener('keydown', (ev)=>{ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); window.location.href = route; } }); });
@@ -1304,5 +1280,5 @@
 
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v242"></script><script src="./gejast-geo.js?v242"></script></body>
+<script src="./drinks-verify-float.js?v247"></script><script src="./gejast-geo.js?v247"></script></body>
 </html>
