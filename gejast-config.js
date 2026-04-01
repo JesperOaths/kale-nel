@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION: 'v234',
+    VERSION: 'v235',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -42,7 +42,7 @@
       layer.setAttribute('aria-hidden','true');
       Object.assign(layer.style, {
         position:'absolute',
-        left:'0', right:'0', top:'calc(100vh + 140px)',
+        left:'0', right:'0', top:'calc(100vh + 260px)',
         height: Math.max(window.innerHeight, document.documentElement.scrollHeight) + 'px',
         zIndex:'-1',
         pointerEvents:'none',
@@ -62,6 +62,36 @@
       window.addEventListener('resize', sync, { passive:true });
       window.addEventListener('load', sync, { once:true });
       sync();
+    } catch (_) {}
+  }
+
+
+  function resolveAssetUrl(path){
+    if (!path) return path;
+    const version = effectiveVersion || CONFIG.VERSION;
+    try {
+      const url = new URL(path, window.location.href);
+      if (!url.searchParams.has('v')) url.searchParams.set('v', String(version).replace(/^v/i,''));
+      return url.pathname.replace(/^\//,'./') + '?' + url.searchParams.toString();
+    } catch (_) {
+      return path;
+    }
+  }
+
+  function hideBlankAuthCorners(){
+    try {
+      document.querySelectorAll('#playerSessionCorner, .player-session-corner').forEach((box)=>{
+        const nameEl = box.querySelector('#playerSessionCornerName, .player-session-corner-name');
+        const name = String(nameEl?.textContent || '').trim();
+        const hasToken = !!getPlayerSessionToken();
+        if (!hasToken || !name || name === '-' || /^onbekend$/i.test(name)) {
+          box.style.display = 'none';
+          box.setAttribute('aria-hidden','true');
+        } else {
+          box.style.display = '';
+          box.removeAttribute('aria-hidden');
+        }
+      });
     } catch (_) {}
   }
 
@@ -162,9 +192,13 @@
     installActivityKeepalive,
     requireMatchEntrySession,
     buildLoginUrl,
-    installBackgroundContinuation
+    installBackgroundContinuation,
+    resolveAssetUrl,
+    hideBlankAuthCorners
   });
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ()=>{ applyVersionLabel(); installBackgroundContinuation(); }, { once: true });
-  else { applyVersionLabel(); installBackgroundContinuation(); }
+  function bootCommonUi(){ applyVersionLabel(); installBackgroundContinuation(); hideBlankAuthCorners(); setTimeout(hideBlankAuthCorners,250); setTimeout(hideBlankAuthCorners,1200); }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootCommonUi, { once: true });
+  else { bootCommonUi(); }
 })();

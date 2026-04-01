@@ -4,23 +4,28 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drinks audit</title>
-  <script>window.GEJAST_PAGE_VERSION='v220';</script>
-  <script src="./gejast-config.js?v220"></script>
+  <script>window.GEJAST_PAGE_VERSION='v235';</script>
+  <script src="./gejast-config.js?v235"></script>
   <style>
-    :root{--line:rgba(0,0,0,.08);--muted:#6b6257;--gold:#9a8241}
-    *{box-sizing:border-box}body{margin:0;padding:24px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(244,240,232,.9),rgba(244,240,232,.92)),url('./site-bg-desktop.webp') center/cover fixed;color:#201b16}.wrap{max-width:1340px;margin:0 auto}.card{background:rgba(255,251,245,.72);border:1px solid rgba(255,255,255,.65);border-radius:28px;padding:28px;box-shadow:0 20px 50px rgba(0,0,0,.08)}.top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}.btn{display:inline-flex;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:none;cursor:pointer}.btn.alt{background:#f3efe6;color:#111;border:1px solid rgba(0,0,0,.08)}.btn.gold{background:var(--gold);color:#111}.logo{width:64px;height:64px}.grid{display:grid;gap:18px}.split{grid-template-columns:1fr 1fr;margin-top:18px}.panel{background:#fff;border:1px solid var(--line);border-radius:20px;padding:18px}.list{display:grid;gap:10px}.row{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:#fff;align-items:flex-start}.row-main{display:grid;gap:4px}.actions{display:flex;gap:8px;flex-wrap:wrap}.muted{color:var(--muted)} select,input{padding:10px;border-radius:12px;border:1px solid var(--line);font:inherit}.site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}@media(max-width:900px){.split{grid-template-columns:1fr}}
+    :root{--line:rgba(0,0,0,.08);--muted:#6b6257;--gold:#9a8241;--bad:#b53a30;--ok:#1f8f52}
+    *{box-sizing:border-box}body{margin:0;padding:24px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(244,240,232,.9),rgba(244,240,232,.92)),url('./site-bg-desktop.webp') center/cover fixed;color:#201b16}.wrap{max-width:1400px;margin:0 auto}.card{background:rgba(255,251,245,.72);border:1px solid rgba(255,255,255,.65);border-radius:28px;padding:28px;box-shadow:0 20px 50px rgba(0,0,0,.08)}.top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}.btn{display:inline-flex;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:none;cursor:pointer}.btn.alt{background:#f3efe6;color:#111;border:1px solid rgba(0,0,0,.08)}.btn.gold{background:var(--gold);color:#111}.btn.warn{background:#f4d8d2;color:#7f2d21}.btn.ok{background:#dff2e7;color:#1f6b31}.logo{width:64px;height:64px}.grid{display:grid;gap:18px}.split{grid-template-columns:1fr 1fr;margin-top:18px}.panel{background:#fff;border:1px solid var(--line);border-radius:20px;padding:18px}.list{display:grid;gap:10px}.row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:#fff;align-items:flex-start}.row-main{display:grid;gap:4px}.actions{display:flex;gap:8px;flex-wrap:wrap}.muted{color:var(--muted)} .toolbar,.filter-row,.bulk-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.filter-chip{padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:#fbfaf7;cursor:pointer;font-weight:800}.filter-chip.active{background:#111;color:#fff}.bulk-bar{margin:12px 0;padding:12px;border:1px solid rgba(154,130,65,.25);background:#fff8df;border-radius:16px}.site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}.status{min-height:22px;margin-top:8px}.status.ok{color:var(--ok)}.status.bad{color:var(--bad)}.tiny{font-size:12px}.checkbox{margin-top:4px} @media(max-width:1100px){.split{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
   <div class="wrap"><div class="card">
-    <div class="top"><div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px"><a class="btn alt" href="./admin.html">Adminhub</a><a class="btn" href="./drinks.html">Drinks</a></div><h1 style="margin:0 0 8px;font-size:42px">Drinks audit</h1><div class="muted">Admin-paneel voor flags, events, snelheidspogingen en moderatie. Alleen bereikbaar via de adminhub.</div><div id="adminStatus" class="muted" style="margin-top:8px"></div></div><a href="./index.html"><img class="logo" src="./logo.png" alt="Logo"></a></div>
+    <div class="top"><div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px"><a class="btn alt" href="./admin.html">Adminhub</a><a class="btn" href="./drinks.html">Drinks</a></div><h1 style="margin:0 0 8px;font-size:42px">Drinks audit</h1><div class="muted">Bulkmoderatie voor drankjes en snelheidspogingen, met selecteren, filters en undo voor de laatste 10 acties.</div><div id="adminStatus" class="status"></div></div><a href="./index.html"><img class="logo" src="./logo.png" alt="Logo"></a></div>
+    <div class="panel" style="margin-top:18px">
+      <div class="filter-row" id="statusFilters"></div>
+      <div class="toolbar" style="margin-top:10px"><button class="btn alt" id="selectVisibleBtn" type="button">Selecteer alles zichtbaar</button><button class="btn alt" id="clearSelectionBtn" type="button">Wis selectie</button><button class="btn alt" id="undoBtn" type="button">Undo laatste actie</button><span class="muted tiny" id="undoMeta"></span></div>
+      <div id="bulkBar" class="bulk-bar" style="display:none"></div>
+    </div>
+    <div class="grid split">
+      <section class="panel"><h2 style="margin:0 0 12px">Normale drink claims</h2><div id="events" class="list"></div></section>
+      <section class="panel"><h2 style="margin:0 0 12px">Speed test requests</h2><div id="speed" class="list"></div></section>
+    </div>
     <div class="grid split">
       <section class="panel"><h2 style="margin:0 0 12px">Flags</h2><div id="flags" class="list"></div></section>
       <section class="panel"><h2 style="margin:0 0 12px">Verdachte pairs</h2><div id="pairs" class="list"></div></section>
-    </div>
-    <div class="grid split">
-      <section class="panel"><h2 style="margin:0 0 12px">Recente drinks-events</h2><div id="events" class="list"></div></section>
-      <section class="panel"><h2 style="margin:0 0 12px">Recente snelheidspogingen</h2><div id="speed" class="list"></div></section>
     </div>
   </div></div>
   <div class="site-credit-watermark" data-version-watermark></div>
@@ -28,38 +33,85 @@
   (()=>{
     const cfg=window.GEJAST_CONFIG||{}; const SUPABASE_URL=cfg.SUPABASE_URL||''; const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
     const ADMIN_KEYS=['jas_admin_session_v8'];
+    const STACK_KEY='gejast_drinks_admin_undo_v1';
+    const state={events:[],speed:[],flags:[],pairs:[],selectedEvents:new Set(),selectedSpeed:new Set(),filters:new Set(['pending','verified','rejected','cancelled','deleted'])};
+    const FILTERS=[['pending','Pending'],['verified','Verified'],['rejected','Rejected'],['cancelled','Cancelled'],['deleted','Deleted']];
     function adminToken(){ for(const k of ADMIN_KEYS){ const v=localStorage.getItem(k)||sessionStorage.getItem(k); if(v) return v; } return ''; }
     function h(){ return {'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${KEY}`,Accept:'application/json'}; }
     async function p(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch{ throw new Error(t||`HTTP ${res.status}`); } if(!res.ok) throw new Error(d?.message||d?.error||d?.hint||`HTTP ${res.status}`); return d; }
-    function setStatus(msg=''){ document.getElementById('adminStatus').textContent=msg; }
+    function setStatus(msg='',tone=''){ const el=document.getElementById('adminStatus'); el.textContent=msg; el.className=`status ${tone}`.trim(); }
     function redirectLogin(){ location.href = './admin.html?return_to=drinks_admin.html'; }
+    function stack(){ try{return JSON.parse(sessionStorage.getItem(STACK_KEY)||'[]');}catch{return [];} }
+    function saveStack(items){ sessionStorage.setItem(STACK_KEY, JSON.stringify(items.slice(0,10))); renderUndoMeta(); }
+    function pushUndo(item){ const items=stack(); items.unshift(item); saveStack(items); }
+    function popUndo(){ const items=stack(); const top=items.shift(); saveStack(items); return top; }
+    function renderUndoMeta(){ const items=stack(); document.getElementById('undoMeta').textContent = items.length ? `${items.length} undo-actie(s) bewaard` : 'Nog geen undo-acties'; }
+    function visibleRows(kind){ const rows = kind==='event' ? state.events : state.speed; return rows.filter((row)=>state.filters.has(String(row.status||'pending'))); }
+    function selectedCount(){ return state.selectedEvents.size + state.selectedSpeed.size; }
+    function renderFilters(){ const root=document.getElementById('statusFilters'); root.innerHTML = FILTERS.map(([key,label])=>`<button type="button" class="filter-chip ${state.filters.has(key)?'active':''}" data-filter="${key}">${label}</button>`).join(''); root.querySelectorAll('[data-filter]').forEach((btn)=>btn.onclick=()=>{ const key=btn.getAttribute('data-filter'); if(state.filters.has(key)) state.filters.delete(key); else state.filters.add(key); render(); }); }
+    function bulkBar(){ const count=selectedCount(); const bar=document.getElementById('bulkBar'); if(!count){ bar.style.display='none'; return; } bar.style.display='flex'; bar.innerHTML=`<strong>${count} geselecteerd</strong><button class="btn ok" type="button" data-bulk="verified">Verify</button><button class="btn alt" type="button" data-bulk="rejected">Reject</button><button class="btn alt" type="button" data-bulk="cancelled">Cancel</button><button class="btn warn" type="button" data-bulk="deleted">Delete</button><button class="btn alt" type="button" data-bulk="pending">Restore</button>`; bar.querySelectorAll('[data-bulk]').forEach((btn)=>btn.onclick=()=>applyBulk(btn.getAttribute('data-bulk'))); }
     function list(el,rows,fmt,empty='Nog geen data.') { el.innerHTML=(rows||[]).length ? rows.map(fmt).join('') : `<div class="muted">${empty}</div>`; }
+    function checkbox(kind,id){ const checked = kind==='event' ? state.selectedEvents.has(Number(id)) : state.selectedSpeed.has(Number(id)); return `<input class="checkbox" type="checkbox" data-select-${kind}="${id}" ${checked?'checked':''}>`; }
+    function render(){ renderFilters(); bulkBar(); renderUndoMeta();
+      list(document.getElementById('flags'), state.flags, (r)=>`<div class="row" style="grid-template-columns:1fr auto"><div class="row-main"><strong>${r.flag_type||'Flag'}</strong><div class="muted">${r.details_text||r.reason||'—'}</div></div><div class="muted">${r.created_at?new Date(r.created_at).toLocaleString('nl-NL'):''}</div></div>`);
+      list(document.getElementById('pairs'), state.pairs, (r)=>`<div class="row" style="grid-template-columns:1fr"><div class="row-main"><strong>${r.submitter||r.player_name||'?'} ⇄ ${r.verifier||r.other_player||'?'}</strong><div class="muted">${r.count||r.times||0} keer</div></div></div>`);
+      const events = visibleRows('event'); const speed = visibleRows('speed');
+      list(document.getElementById('events'), events, (r)=>`<div class="row"><div>${checkbox('event',r.id)}</div><div class="row-main"><strong>${r.player_name||'Onbekend'} · ${r.event_type_label||r.event_type_key||'Drankje'}</strong><div class="muted">${r.status||'pending'} · ${Number(r.total_units||0).toFixed(1)} units · ${r.quantity||1}× · ${r.created_at?new Date(r.created_at).toLocaleString('nl-NL'):''}</div></div><div class="actions"><button class="btn ok" type="button" data-event-action="${r.id}:verified">Verify</button><button class="btn alt" type="button" data-event-action="${r.id}:rejected">Reject</button><button class="btn alt" type="button" data-event-action="${r.id}:cancelled">Cancel</button><button class="btn warn" type="button" data-event-action="${r.id}:deleted">Delete</button><button class="btn alt" type="button" data-event-action="${r.id}:pending">Restore</button></div></div>`, 'Nog geen drinks-events.');
+      list(document.getElementById('speed'), speed, (r)=>`<div class="row"><div>${checkbox('speed',r.id)}</div><div class="row-main"><strong>${r.player_name||'Onbekend'} · ${r.speed_type_label||r.speed_type_key||'Snelheid'}</strong><div class="muted">${r.status||'pending'} · ${Number(r.duration_seconds||0).toFixed(1)}s · ${Number(r.total_units||0).toFixed(1)} units · ${r.created_at?new Date(r.created_at).toLocaleString('nl-NL'):''}</div></div><div class="actions"><button class="btn ok" type="button" data-speed-action="${r.id}:verified">Verify</button><button class="btn alt" type="button" data-speed-action="${r.id}:rejected">Reject</button><button class="btn alt" type="button" data-speed-action="${r.id}:cancelled">Cancel</button><button class="btn warn" type="button" data-speed-action="${r.id}:deleted">Delete</button><button class="btn alt" type="button" data-speed-action="${r.id}:pending">Restore</button></div></div>`, 'Nog geen snelheidspogingen.');
+      document.querySelectorAll('[data-select-event]').forEach((el)=>el.onchange=()=>{ const id=Number(el.getAttribute('data-select-event')); el.checked ? state.selectedEvents.add(id) : state.selectedEvents.delete(id); bulkBar(); });
+      document.querySelectorAll('[data-select-speed]').forEach((el)=>el.onchange=()=>{ const id=Number(el.getAttribute('data-select-speed')); el.checked ? state.selectedSpeed.add(id) : state.selectedSpeed.delete(id); bulkBar(); });
+      document.querySelectorAll('[data-event-action]').forEach((btn)=>btn.onclick=()=>{ const [id,status]=String(btn.getAttribute('data-event-action')).split(':'); applyBatch('event',[Number(id)],status,true); });
+      document.querySelectorAll('[data-speed-action]').forEach((btn)=>btn.onclick=()=>{ const [id,status]=String(btn.getAttribute('data-speed-action')).split(':'); applyBatch('speed',[Number(id)],status,true); });
+    }
+    async function rpc(name,payload){ return fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`,{method:'POST',headers:h(),body:JSON.stringify(payload)}).then(p); }
     async function load(){
       try{
         if(!adminToken()){ redirectLogin(); return; }
-        const raw = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_admin_console`,{method:'POST',headers:h(),body:JSON.stringify({admin_session_token:adminToken()})}).then(p);
+        const raw = await rpc('get_drinks_admin_console',{admin_session_token:adminToken()});
         const data = raw?.get_drinks_admin_console || raw || {};
-        list(document.getElementById('flags'), data.flags, (r)=>`<div class="row"><div class="row-main"><strong>${r.flag_type||'Flag'}</strong><div class="muted">${r.details_text||r.reason||'—'}</div></div><div class="muted">${r.created_at?new Date(r.created_at).toLocaleString('nl-NL'):''}</div></div>`);
-        list(document.getElementById('pairs'), data.suspicious_pairs, (r)=>`<div class="row"><div class="row-main"><strong>${r.submitter||r.player_name||'?'} ⇄ ${r.verifier||r.other_player||'?'}</strong><div class="muted">${r.count||r.times||0} keer</div></div></div>`);
-        list(document.getElementById('events'), data.recent_events, (r)=>`<div class="row"><div class="row-main"><strong>${r.player_name} · ${r.event_type_label||r.event_type_key}</strong><div class="muted">${r.status||'pending'} · ${r.quantity||1} × ${Number(r.total_units||0).toFixed(1)} units · ${r.created_at?new Date(r.created_at).toLocaleString('nl-NL'):''}</div></div><div class="actions"><button class="btn alt" data-event-status="${r.id}:verified">Verify</button><button class="btn alt" data-event-status="${r.id}:rejected">Reject</button><button class="btn gold" data-event-delete="${r.id}">Delete</button></div></div>`,'Nog geen drinks-events.');
-        list(document.getElementById('speed'), data.recent_speed_attempts, (r)=>`<div class="row"><div class="row-main"><strong>${r.player_name} · ${r.speed_type_label||r.speed_type_key}</strong><div class="muted">${Number(r.duration_seconds||0).toFixed(1)}s · ${r.status||'pending'} · ${r.created_at?new Date(r.created_at).toLocaleString('nl-NL'):''}</div></div><div class="actions"><button class="btn alt" data-speed-status="${r.id}:verified">Verify</button><button class="btn alt" data-speed-status="${r.id}:rejected">Reject</button><button class="btn gold" data-speed-delete="${r.id}">Delete</button></div></div>`,'Nog geen snelheidspogingen.');
-        document.querySelectorAll('[data-event-status]').forEach((btn)=>btn.onclick=()=>updateEvent(btn.dataset.eventStatus));
-        document.querySelectorAll('[data-speed-status]').forEach((btn)=>btn.onclick=()=>updateSpeed(btn.dataset.speedStatus));
-        document.querySelectorAll('[data-event-delete]').forEach((btn)=>btn.onclick=()=>deleteEvent(btn.dataset.eventDelete));
-        document.querySelectorAll('[data-speed-delete]').forEach((btn)=>btn.onclick=()=>deleteSpeed(btn.dataset.speedDelete));
+        state.flags = Array.isArray(data.flags) ? data.flags : [];
+        state.pairs = Array.isArray(data.suspicious_pairs) ? data.suspicious_pairs : [];
+        state.events = Array.isArray(data.recent_events) ? data.recent_events : [];
+        state.speed = Array.isArray(data.recent_speed_attempts) ? data.recent_speed_attempts : [];
+        render();
         setStatus('');
       }catch(err){
         if(/niet ingelogd|admin|session|token/i.test(err.message||'')){ redirectLogin(); return; }
-        setStatus(err.message||String(err));
+        setStatus(err.message||String(err),'bad');
       }
     }
-    async function updateEvent(raw){ const [id,status] = String(raw).split(':'); await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_update_drink_event_entry`,{method:'POST',headers:h(),body:JSON.stringify({admin_session_token:adminToken(),drink_event_id_input:Number(id),new_status_input:status})}).then(p); await load(); }
-    async function updateSpeed(raw){ const [id,status] = String(raw).split(':'); await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_update_drink_speed_attempt_entry`,{method:'POST',headers:h(),body:JSON.stringify({admin_session_token:adminToken(),attempt_id_input:Number(id),new_status_input:status})}).then(p); await load(); }
-    async function deleteEvent(id){ if(!confirm('Drinks-event definitief verwijderen?')) return; await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_delete_drink_event_entry`,{method:'POST',headers:h(),body:JSON.stringify({admin_session_token:adminToken(),drink_event_id_input:Number(id)})}).then(p); await load(); }
-    async function deleteSpeed(id){ if(!confirm('Snelheidspoging definitief verwijderen?')) return; await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_delete_drink_speed_attempt_entry`,{method:'POST',headers:h(),body:JSON.stringify({admin_session_token:adminToken(),attempt_id_input:Number(id)})}).then(p); await load(); }
+    async function applyBatch(kind, ids, status, clearAfter=false){
+      if(!ids.length) return;
+      const fn = kind==='event' ? 'admin_batch_update_drink_event_entries' : 'admin_batch_update_drink_speed_attempt_entries';
+      const payload = kind==='event' ? {admin_session_token:adminToken(),drink_event_ids_input:ids,new_status_input:status} : {admin_session_token:adminToken(),attempt_ids_input:ids,new_status_input:status};
+      const res = await rpc(fn,payload);
+      pushUndo({ action_group_id: res.action_group_id, kind, ids, next:status, at:Date.now() });
+      if(clearAfter){ if(kind==='event') ids.forEach((id)=>state.selectedEvents.delete(id)); else ids.forEach((id)=>state.selectedSpeed.delete(id)); }
+      await load();
+      setStatus(`${ids.length} ${kind==='event'?'drink':'speed'} item(s) bijgewerkt naar ${status}.`,'ok');
+    }
+    async function applyBulk(status){
+      const eventIds=[...state.selectedEvents]; const speedIds=[...state.selectedSpeed];
+      if(eventIds.length) await applyBatch('event', eventIds, status, true);
+      if(speedIds.length) await applyBatch('speed', speedIds, status, true);
+    }
+    async function undoLast(){
+      const action = popUndo();
+      if(!action){ setStatus('Geen undo-actie beschikbaar.','bad'); return; }
+      try {
+        await rpc('admin_undo_drinks_action',{admin_session_token:adminToken(),action_group_id_input:action.action_group_id});
+        await load();
+        setStatus('Laatste actie ongedaan gemaakt.','ok');
+      } catch (err) {
+        setStatus(err.message||String(err),'bad');
+      }
+    }
+    document.getElementById('selectVisibleBtn').onclick=()=>{ visibleRows('event').forEach((row)=>state.selectedEvents.add(Number(row.id))); visibleRows('speed').forEach((row)=>state.selectedSpeed.add(Number(row.id))); render(); };
+    document.getElementById('clearSelectionBtn').onclick=()=>{ state.selectedEvents.clear(); state.selectedSpeed.clear(); render(); };
+    document.getElementById('undoBtn').onclick=undoLast;
     load();
   })();
   </script>
-  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();window.GEJAST_CONFIG&&window.GEJAST_CONFIG.hideBlankAuthCorners&&window.GEJAST_CONFIG.hideBlankAuthCorners();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>

@@ -44,8 +44,8 @@
       activePromptId = '__approved__';
       const box = ensureBox();
       document.getElementById('gdfBody').innerHTML = `<strong>Verificatie goedgekeurd</strong><div class="gdf-meta">${payload.text || 'Je bevestiging is gebruikt.'}</div>`;
-      document.getElementById('gdfVerifyBtn').style.display = 'none';
-      document.getElementById('gdfRejectBtn').style.display = 'none';
+      document.getElementById('gdfVerifyBtn').style.display = 'inline-flex';
+          document.getElementById('gdfRejectBtn').style.display = 'inline-flex';
       document.getElementById('gdfOpenBtn').onclick = () => { location.href = './drinks_speed.html'; };
       document.getElementById('gdfDismissBtn').onclick = () => { hideBox(); localStorage.removeItem(APPROVED_KEY); };
       showBox();
@@ -116,6 +116,7 @@
       await parse(res);
       localStorage.removeItem(APPROVED_KEY);
       dismissEvent(`${item.kind||'drink'}:${item.id}`);
+      hideBox();
     } finally {
       verifyBtn.disabled = false;
       openBtn.disabled = false;
@@ -142,6 +143,7 @@
       await parse(res);
       localStorage.removeItem(APPROVED_KEY);
       dismissEvent(`speed:${item.id}`);
+      hideBox();
     } finally { verifyBtn.disabled=false; openBtn.disabled=false; dismissBtn.disabled=false; verifyBtn.textContent=oldLabel; }
   }
 
@@ -213,8 +215,8 @@
         const withinGrace = activePromptItem && activePromptId && activePromptId !== '__approved__' && Date.now() < activePromptGraceUntil;
         if (withinGrace) {
           const box = ensureBox();
-          document.getElementById('gdfVerifyBtn').style.display = 'none';
-      document.getElementById('gdfRejectBtn').style.display = 'none';
+          document.getElementById('gdfVerifyBtn').style.display = 'inline-flex';
+          document.getElementById('gdfRejectBtn').style.display = 'inline-flex';
           document.getElementById('gdfTitle').textContent = activePromptItem.kind==='speed' ? 'Snelheid verificatie' : 'Drinks verificatie';
           document.getElementById('gdfOpenBtn').textContent = activePromptItem.kind==='speed' ? 'Open snelheid' : 'Open drinks';
           document.getElementById('gdfBody').innerHTML = `<strong>${activePromptItem.player_name} · ${activePromptItem.event_type_label || activePromptItem.speed_type_label}</strong><div class="gdf-meta">Deze verificatie blijft nog even open zodat meerdere mensen kunnen stemmen.</div><div class="gdf-meta">${activePromptItem.kind==='speed' ? 'Open snelheid om de actuele status en extra stemmen te zien.' : 'Open drinks om de actuele status en extra stemmen te zien.'}</div>`;

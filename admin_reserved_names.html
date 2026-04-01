@@ -6,59 +6,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Claimbare namen - Wordt er gejast?</title>
   <style>
-    :root { --gold:#9a8241; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#666; --warn:#8b3a30; --ok:#2b5b37; }
+    :root { --gold:#9a8241; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#666; --warn:#8b3a30; --ok:#2b5b37; --danger:#b53a30; }
     * { box-sizing:border-box; }
     body { margin:0; padding:20px; font-family:Inter,sans-serif; background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed; min-height:100vh; }
-    .main-card { background:var(--card); border-radius:24px; padding:28px; max-width:960px; margin:0 auto; box-shadow:0 20px 50px rgba(0,0,0,0.08); }
+    .main-card { background:var(--card); border-radius:24px; padding:28px; max-width:1080px; margin:0 auto; box-shadow:0 20px 50px rgba(0,0,0,0.08); }
     .top { display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; }
     h1 { margin:0; font-size:30px; }
     .sub { color:var(--muted); margin:8px 0 0; }
     .callout { margin-top:16px; padding:14px 16px; background:#fff8df; border:1px solid rgba(154,130,65,0.32); border-radius:16px; color:#5b4a16; font-size:14px; line-height:1.45; }
     .callout strong { color:#111; }
     .grid { display:grid; grid-template-columns:1.4fr .9fr .9fr 1fr; gap:10px; margin-top:16px; }
-    input, select { width:100%; padding:12px; border-radius:12px; border:1px solid #ddd; font:inherit; background:#fff; }
+    input { width:100%; padding:12px; border-radius:12px; border:1px solid #ddd; font:inherit; background:#fff; }
     .field { display:grid; gap:6px; }
     .field label { font-size:12px; font-weight:800; color:#6a6257; text-transform:uppercase; letter-spacing:.08em; }
-    .btn { border:none; border-radius:12px; padding:12px 14px; font:inherit; font-weight:800; cursor:pointer; }
+    .btn { border:none; border-radius:12px; padding:12px 14px; font:inherit; font-weight:800; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
     .ghost { background:#fff; border:1px solid rgba(0,0,0,0.08); color:#222; }
     .primary { background:var(--gold); color:#111; }
+    .danger { background:#f4d8d2; color:#7f2d21; }
+    .danger-solid { background:var(--danger); color:#fff; }
     .status { min-height:20px; margin:16px 0; font-size:14px; }
     .status.ok { color:var(--ok); } .status.warn { color:var(--warn); }
-    .item { background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:18px; padding:16px; margin-bottom:12px; }
-    .meta { color:var(--muted); font-size:13px; margin-top:6px; }
-    .pill { display:inline-flex; padding:4px 10px; border-radius:999px; background:#f4efe4; color:#6f5b28; font-size:11px; font-weight:800; margin-top:8px; }
-    .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
-    .danger { background:#f4d8d2; color:#7f2d21; }
+    .item { background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:18px; padding:16px; margin-bottom:12px; display:grid; gap:10px; }
+    .meta { color:var(--muted); font-size:13px; }
+    .pill { display:inline-flex; padding:4px 10px; border-radius:999px; background:#f4efe4; color:#6f5b28; font-size:11px; font-weight:800; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
     .empty { background:#fff; border:1px dashed rgba(0,0,0,0.12); border-radius:18px; padding:16px; color:var(--muted); }
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
     @media (max-width:760px){ .grid { grid-template-columns:1fr; } }
   </style>
-  <script>window.GEJAST_PAGE_VERSION='v220';</script><script src="./gejast-config.js?v220"></script>
-  <script>
-    (function globalAdminLogout(){ const btn=document.createElement('button'); btn.textContent='Uitloggen'; btn.style.cssText='position:fixed;top:14px;right:14px;z-index:9999;border:none;border-radius:14px;padding:10px 14px;background:#111;color:#fff;font:700 14px Inter,sans-serif;cursor:pointer'; btn.onclick=()=>{ clearAdminSessionToken(); window.location.href='./admin.html?return_to=admin_reserved_names.html'; }; document.addEventListener('DOMContentLoaded',()=>document.body.appendChild(btn)); })();
-  </script>
-  <script src="./admin-session-sync.js?v220"></script>
-  <script src="./admin-topnav.js?v220"></script>
-
-  <style id="page-floating-logo-style">
-    .page-floating-logo{position:fixed;top:18px;right:18px;z-index:9998;display:inline-flex;width:64px;height:64px;border-radius:50%;background:rgba(255,251,245,.72);border:1px solid rgba(255,255,255,.65);box-shadow:0 14px 32px rgba(0,0,0,.10);align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-    .page-floating-logo img{width:52px;height:52px;display:block}
-    @media(max-width:640px){.page-floating-logo{top:12px;right:12px;width:58px;height:58px}.page-floating-logo img{width:46px;height:46px}}
-  </style>
+  <script>window.GEJAST_PAGE_VERSION='v235';</script><script src="./gejast-config.js?v235"></script>
+  <script src="./admin-session-sync.js?v235"></script>
+  <script src="./admin-topnav.js?v235"></script>
 </head>
 <body>
-  <a class="page-floating-logo" href="./index.html" aria-label="Terug naar home"><img src="./logo.png" alt="Logo"></a>
   <main class="main-card">
     <div class="top">
       <div>
         <h1>Claimbare namen</h1>
-        <p class="sub">Nieuwe database-bron voor alle geldige namen. Alleen deze lijst mag nog leidend zijn.</p>
+        <p class="sub">Beheer de kieslijst, het account achter een naam en eventueel een onomkeerbare site-verwijdering.</p>
       </div>
       <a class="btn ghost" href="./admin.html">Terug naar hub</a>
     </div>
 
-    <div class="callout"><strong>Dit is de kieslijst voor account-aanvragen.</strong> Alles wat je hier toevoegt, hoort daarna zichtbaar/selecteerbaar te worden op <code>request.html</code> en in de scorer-selectie. Gebruik <strong>Toevoegen aan kieslijst</strong> hieronder om namen handmatig toe te voegen. Met <strong>Verwijderen uit kieslijst</strong> haal je test- of foutnamen weer uit de bronlijst.</div>
+    <div class="callout"><strong>Verwijderen uit kieslijst</strong> verwijdert het account/toegang maar laat de spelerdata bestaan zodat matchhistorie intact blijft. <strong>Permanent verwijderen</strong> vervangt de speler overal mogelijk door een placeholder zoals <code>Spookinoza 1</code> en blokkeert de naam definitief voor hergebruik.</div>
 
     <div class="grid">
       <div class="field">
@@ -86,8 +77,8 @@
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
     const ADMIN_SESSION_META_KEY = 'jas_admin_session_meta_v1';
     const ADMIN_SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000;
-    const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || 'https://uiqntazgnrxwliaidkmy.supabase.co';
-    const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
+    const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || '';
+    const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || '';
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type': 'application/json', Accept: 'application/json' }; }
     async function parseResponse(res) { const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`); return data; }
     function readAdminSessionMeta(){ try { return JSON.parse(sessionStorage.getItem(ADMIN_SESSION_META_KEY) || localStorage.getItem(ADMIN_SESSION_META_KEY) || 'null'); } catch { return null; } }
@@ -102,10 +93,13 @@
         return true;
       } catch { clearAdminSessionToken(); window.location.href='./admin.html?return_to=admin_reserved_names.html'; return false; }
     }
+    async function callRpc(name, payload){
+      return fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify(payload) }).then(parseResponse);
+    }
     async function loadNames(){
       try {
         setStatus('Laden...');
-        const data = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_allowed_usernames`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: getToken() }) }).then(parseResponse);
+        const data = await callRpc('admin_get_allowed_usernames', { admin_session_token: getToken() });
         const rows = data.items || [];
         const root = document.getElementById('listRoot');
         root.innerHTML = '';
@@ -113,61 +107,43 @@
         rows.forEach((row) => {
           const card = document.createElement('article');
           card.className = 'item';
-          card.innerHTML = `<strong>${row.display_name}</strong><div class="pill">${row.status || 'beschikbaar'}</div><div class="meta">slug: ${row.username || '-'} · e-mail: ${row.reserved_for_email || '-'} </div>${row.player_id ? `<div class="meta">gekoppelde speler-id: ${row.player_id}</div>` : ''}<div class="row"><button class="btn danger" type="button" data-remove-id="${row.id}">Verwijderen uit kieslijst</button></div>`;
+          card.innerHTML = `<strong>${row.display_name}</strong><div class="pill">${row.status || 'beschikbaar'}</div><div class="meta">slug: ${row.username || '-'} · e-mail: ${row.reserved_for_email || '-'} </div>${row.player_id ? `<div class="meta">gekoppelde speler-id: ${row.player_id}</div>` : ''}<div class="row"><button class="btn danger" type="button" data-remove-id="${row.id}">Account verwijderen + uit kieslijst</button><button class="btn danger-solid" type="button" data-purge-id="${row.id}">Permanent verwijderen</button></div>`;
           root.appendChild(card);
         });
         setStatus('Lijst geladen.', 'ok');
       } catch (error) {
-        document.getElementById('listRoot').innerHTML = '<div class="empty">Deze pagina kon de allowed names-bron niet laden. Run de v69 SQL-patch opnieuw.</div>';
+        document.getElementById('listRoot').innerHTML = '<div class="empty">De kieslijst kon niet geladen worden.</div>';
         setStatus(error?.message || 'Laden mislukt.', 'warn');
       }
     }
-
-    async function callRemoveAllowedUsername(id){
-      const payloads = [
-        { admin_session_token: getToken(), allowed_username_id_input: Number(id) },
-        { admin_session_token: getToken(), allowed_username_id: Number(id) },
-        { admin_session_token: getToken(), input_allowed_username_id: Number(id) },
-        { admin_session_token: getToken(), reserved_name_id_input: Number(id) },
-        { admin_session_token: getToken(), reserved_name_id: Number(id) },
-        { admin_session_token: getToken(), id_input: Number(id) },
-        { admin_session_token: getToken(), id: Number(id) }
-      ];
-      let lastError = null;
-      for (const payload of payloads) {
-        try {
-          return await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_remove_allowed_username`, {
-            method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify(payload)
-          }).then(parseResponse);
-        } catch (error) {
-          lastError = error;
-          const message = String(error?.message || '');
-          if (!/schema cache|function|parameter|argument|missing/i.test(message)) throw error;
-        }
-      }
-      throw lastError || new Error('Verwijderen mislukt.');
+    async function removeFromList(id){
+      setStatus('Account verwijderen uit kieslijst...');
+      await callRpc('admin_remove_allowed_username', { admin_session_token:getToken(), allowed_username_id_input:Number(id) });
+      await loadNames();
+      setStatus('Accounttoegang verwijderd en naam uit de kieslijst gehaald.', 'ok');
     }
-
+    async function purgeForever(id){
+      const confirmed = prompt('Typ VERWIJDER om deze speler definitief te vervangen door een Spookinoza-placeholder.');
+      if (confirmed !== 'VERWIJDER') return;
+      setStatus('Permanent verwijderen...');
+      const result = await callRpc('admin_permanently_delete_allowed_username', { admin_session_token:getToken(), allowed_username_id_input:Number(id) });
+      await loadNames();
+      setStatus(`Permanent verwijderd. Placeholder: ${result.placeholder_name || 'Spookinoza'}.`, 'ok');
+    }
     document.getElementById('listRoot').addEventListener('click', async (event) => {
-      const btn = event.target.closest('[data-remove-id]');
-      if (!btn) return;
+      const removeBtn = event.target.closest('[data-remove-id]');
+      const purgeBtn = event.target.closest('[data-purge-id]');
       try {
-        setStatus('Naam verwijderen...');
-        await callRemoveAllowedUsername(btn.dataset.removeId);
-        await loadNames();
-        setStatus('Naam verwijderd uit de kieslijst.', 'ok');
+        if (removeBtn) await removeFromList(removeBtn.dataset.removeId);
+        if (purgeBtn) await purgeForever(purgeBtn.dataset.purgeId);
       } catch (error) {
-        setStatus(error?.message || 'Verwijderen mislukt.', 'warn');
+        setStatus(error?.message || 'Actie mislukt.', 'warn');
       }
     });
-
     document.getElementById('createBtn').addEventListener('click', async () => {
       try {
         setStatus('Naam reserveren...');
-        await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_reserve_allowed_username`, {
-          method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(),
-          body:JSON.stringify({ admin_session_token: getToken(), display_name_input: document.getElementById('newNameInput').value.trim(), reserved_for_email_input: document.getElementById('newEmailInput').value.trim().toLowerCase() || null, reserved_for_person_note_input: document.getElementById('newNoteInput').value.trim() || null })
-        }).then(parseResponse);
+        await callRpc('admin_reserve_allowed_username', { admin_session_token: getToken(), display_name_input: document.getElementById('newNameInput').value.trim(), reserved_for_email_input: document.getElementById('newEmailInput').value.trim().toLowerCase() || null, reserved_for_person_note_input: document.getElementById('newNoteInput').value.trim() || null });
         document.getElementById('newNameInput').value='';
         document.getElementById('newEmailInput').value='';
         document.getElementById('newNoteInput').value='';
@@ -179,8 +155,7 @@
     });
     (async()=>{ if(await ensureGate()) loadNames(); })();
   </script>
-  <div class="site-credit-watermark" data-version-watermark>v220 · Made by Bruis</div>
-
-<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <div class="site-credit-watermark" data-version-watermark></div>
+<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();window.GEJAST_CONFIG&&window.GEJAST_CONFIG.hideBlankAuthCorners&&window.GEJAST_CONFIG.hideBlankAuthCorners();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>

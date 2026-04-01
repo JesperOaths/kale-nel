@@ -42,9 +42,9 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v228';</script><script src="./gejast-config.js?v228"></script>
-  <script src="./admin-session-sync.js?v228"></script>
-  <script src="./admin-topnav.js?v228"></script>
+  <script>window.GEJAST_PAGE_VERSION='v235';</script><script src="./gejast-config.js?v235"></script>
+  <script src="./admin-session-sync.js?v235"></script>
+  <script src="./admin-topnav.js?v235"></script>
 </head>
 <body>
   <main class="main-card">
@@ -85,7 +85,7 @@
             <a class="hub-link" href="./admin_claims.html#view=expired"><strong>Verlopen activaties</strong><small>Verlopen gevallen direct in dezelfde beheerflow.</small></a>
             <a class="hub-link" href="./admin_reserved_names.html"><strong>Claimbare namen</strong><small>Bron voor aanvraagbare namen en handmatige reserveringen.</small></a>
             <a class="hub-link" href="./admin_mail_audit.html"><strong>Maildiagnostiek</strong><small>Make-webhook, mail-RPC en laatste mailjobstatus.</small></a>
-          <a class="hub-link" href="./drinks_admin.html"><strong>Drinks audit</strong><small>Flags, verificaties en moderatie voor drinks.</small></a></div>
+          <a class="admin-link-card" href="./drinks_admin.html"><div class="admin-link-title">Drinks audit</div><div class="admin-link-copy">Flags, verificaties en moderatie voor drinks.</div></a></div>
         </section>
 
         <section class="hub-section">
@@ -233,9 +233,7 @@
         .filter(Boolean);
       const decision = String(out.decision || '').toLowerCase();
       const hasPin = hasActivationEvidence(out);
-      const expiry = out.expires_at ? new Date(out.expires_at) : null;
-      const isExpiredByDate = expiry && !Number.isNaN(expiry.getTime()) && expiry.getTime() < Date.now();
-      if (states.some((raw) => raw.includes('expired')) || isExpiredByDate) return 'expired';
+      if (states.some((raw) => raw.includes('expired'))) return 'expired';
       if (states.some((raw) => raw.includes('returned_to_claimable') || raw.includes('claimable_again') || raw.includes('claimable'))) return 'rejected';
       if (states.some((raw) => raw.includes('revok') || raw.includes('reject') || raw.includes('denied'))) return 'rejected';
       if (states.some((raw) => raw.includes('active') || raw.includes('activated'))) return 'active';
@@ -253,30 +251,34 @@
         return { ...out, decision, hasPin, state_bucket };
       });
     }
-    function requestIdOf(row) {
-      return row?.request_id ?? row?.claim_request_id ?? row?.id ?? row?.player_id ?? null;
+
+    function requestIdOf(row){
+      const candidates=[row?.id,row?.request_id,row?.claim_request_id,row?.player_id,row?.allowed_username_id,row?.email,row?.username,row?.player_name,row?.display_name];
+      const found=candidates.find((value)=>value!==null&&value!==undefined&&String(value).trim()!=='');
+      return found==null?null:String(found).toLowerCase();
     }
-    function normalizeExpiredRows(rows) {
-      return normalizeAdminRows(rows).map((row) => ({
+    function normalizeExpiredRows(rows){
+      return normalizeAdminRows(rows).map((row)=>({
         ...row,
-        state_bucket: 'expired',
+        state_bucket:'expired',
         request_status: row.request_status || row.status || 'activation_expired',
         status: row.status || row.request_status || 'activation_expired'
       }));
     }
-    function isLikelyExpired(row){ try { const bucket = deriveAdminBucket(row); if (bucket !== 'awaiting') return false; const exp = row?.expires_at ? new Date(row.expires_at) : null; if (exp && !isNaN(exp) && exp.getTime() < Date.now()) return true; const approvedAt = new Date(row?.approved_at || row?.decision_at || row?.updated_at || row?.requested_at || row?.created_at || ''); if (!isNaN(approvedAt)) return (Date.now() - approvedAt.getTime()) > (24*60*60*1000); } catch(_){} return false; }
-    function mergeHistoryWithExpired(historyRows, expiredRows) {
+    function isLikelyExpired(row){
+      try {
+        const bucket = deriveAdminBucket(row);
+        if (bucket === 'expired') return true;
+        if (bucket !== 'awaiting') return false;
+        const exp = row?.expires_at ? new Date(row.expires_at) : null;
+        if (exp && !isNaN(exp) && exp.getTime() < Date.now()) return true;
+      } catch (_) {}
+      return false;
+    }
+    function mergeHistoryWithExpired(historyRows, expiredRows){
       const byId = new Map();
-      (historyRows || []).forEach((row) => {
-        const key = requestIdOf(row);
-        if (key !== null && key !== undefined) byId.set(String(key), row);
-      });
-      (expiredRows || []).forEach((row) => {
-        const key = requestIdOf(row);
-        if (key === null || key === undefined) return;
-        const existing = byId.get(String(key)) || {};
-        byId.set(String(key), { ...existing, ...row, state_bucket: 'expired', request_status: row.request_status || existing.request_status || 'activation_expired', status: row.status || existing.status || 'activation_expired' });
-      });
+      (historyRows||[]).forEach((row)=>{ const key=requestIdOf(row); if(key) byId.set(key,row); });
+      (expiredRows||[]).forEach((row)=>{ const key=requestIdOf(row); if(!key) return; const existing=byId.get(key)||{}; byId.set(key,{...existing,...row,state_bucket:'expired',request_status: row.request_status || existing.request_status || 'activation_expired',status: row.status || existing.status || 'activation_expired'}); });
       return Array.from(byId.values()).map((row)=> isLikelyExpired(row) ? { ...row, state_bucket:'expired', request_status:'activation_expired', status:'activation_expired' } : row);
     }
 
@@ -291,14 +293,13 @@
       const history = normalizeAdminRows(historyRes.history || historyRes.items || []);
       const expiredItems = normalizeExpiredRows(Array.isArray(expiredRes?.items) ? expiredRes.items : []);
       const mergedHistory = mergeHistoryWithExpired(history, expiredItems);
-      const awaitingItems = mergedHistory.filter((item) => item.state_bucket === 'awaiting');
+      const awaiting = mergedHistory.filter((item) => item.state_bucket === 'awaiting').length;
       const active = mergedHistory.filter((item) => item.state_bucket === 'active').length;
       const rejected = mergedHistory.filter((item) => item.state_bucket === 'rejected').length;
-      const expiredHistory = mergedHistory.filter((item) => item.state_bucket === 'expired').length;
-      const awaiting = awaitingItems.length;
+      const expired = mergedHistory.filter((item) => item.state_bucket === 'expired').length;
       document.getElementById('statPending').textContent = String(requests.length);
       document.getElementById('statAwaiting').textContent = String(awaiting);
-      document.getElementById('statExpired').textContent = String(Math.max(expiredItems.length, expiredHistory));
+      document.getElementById('statExpired').textContent = String(expired);
       document.getElementById('statActive').textContent = String(active);
       document.getElementById('statRejected').textContent = String(rejected);
     }
