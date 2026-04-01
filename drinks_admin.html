@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drinks audit</title>
-  <script>window.GEJAST_PAGE_VERSION='v235';</script>
-  <script src="./gejast-config.js?v235"></script>
+  <script>window.GEJAST_PAGE_VERSION='v236';</script>
+  <script src="./gejast-config.js?v236"></script>
   <style>
     :root{--line:rgba(0,0,0,.08);--muted:#6b6257;--gold:#9a8241;--bad:#b53a30;--ok:#1f8f52}
     *{box-sizing:border-box}body{margin:0;padding:24px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(244,240,232,.9),rgba(244,240,232,.92)),url('./site-bg-desktop.webp') center/cover fixed;color:#201b16}.wrap{max-width:1400px;margin:0 auto}.card{background:rgba(255,251,245,.72);border:1px solid rgba(255,255,255,.65);border-radius:28px;padding:28px;box-shadow:0 20px 50px rgba(0,0,0,.08)}.top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}.btn{display:inline-flex;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:none;cursor:pointer}.btn.alt{background:#f3efe6;color:#111;border:1px solid rgba(0,0,0,.08)}.btn.gold{background:var(--gold);color:#111}.btn.warn{background:#f4d8d2;color:#7f2d21}.btn.ok{background:#dff2e7;color:#1f6b31}.logo{width:64px;height:64px}.grid{display:grid;gap:18px}.split{grid-template-columns:1fr 1fr;margin-top:18px}.panel{background:#fff;border:1px solid var(--line);border-radius:20px;padding:18px}.list{display:grid;gap:10px}.row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:#fff;align-items:flex-start}.row-main{display:grid;gap:4px}.actions{display:flex;gap:8px;flex-wrap:wrap}.muted{color:var(--muted)} .toolbar,.filter-row,.bulk-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.filter-chip{padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:#fbfaf7;cursor:pointer;font-weight:800}.filter-chip.active{background:#111;color:#fff}.bulk-bar{margin:12px 0;padding:12px;border:1px solid rgba(154,130,65,.25);background:#fff8df;border-radius:16px}.site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}.status{min-height:22px;margin-top:8px}.status.ok{color:var(--ok)}.status.bad{color:var(--bad)}.tiny{font-size:12px}.checkbox{margin-top:4px} @media(max-width:1100px){.split{grid-template-columns:1fr}}
@@ -34,7 +34,7 @@
     const cfg=window.GEJAST_CONFIG||{}; const SUPABASE_URL=cfg.SUPABASE_URL||''; const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
     const ADMIN_KEYS=['jas_admin_session_v8'];
     const STACK_KEY='gejast_drinks_admin_undo_v1';
-    const state={events:[],speed:[],flags:[],pairs:[],selectedEvents:new Set(),selectedSpeed:new Set(),filters:new Set(['pending','verified','rejected','cancelled','deleted'])};
+    const state={events:[],speed:[],flags:[],pairs:[],selectedEvents:new Set(),selectedSpeed:new Set(),filters:new Set(['pending','verified','rejected','cancelled','deleted']),renderToken:0,loadBusy:false};
     const FILTERS=[['pending','Pending'],['verified','Verified'],['rejected','Rejected'],['cancelled','Cancelled'],['deleted','Deleted']];
     function adminToken(){ for(const k of ADMIN_KEYS){ const v=localStorage.getItem(k)||sessionStorage.getItem(k); if(v) return v; } return ''; }
     function h(){ return {'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${KEY}`,Accept:'application/json'}; }
@@ -58,13 +58,11 @@
       const events = visibleRows('event'); const speed = visibleRows('speed');
       list(document.getElementById('events'), events, (r)=>`<div class="row"><div>${checkbox('event',r.id)}</div><div class="row-main"><strong>${r.player_name||'Onbekend'} · ${r.event_type_label||r.event_type_key||'Drankje'}</strong><div class="muted">${r.status||'pending'} · ${Number(r.total_units||0).toFixed(1)} units · ${r.quantity||1}× · ${r.created_at?new Date(r.created_at).toLocaleString('nl-NL'):''}</div></div><div class="actions"><button class="btn ok" type="button" data-event-action="${r.id}:verified">Verify</button><button class="btn alt" type="button" data-event-action="${r.id}:rejected">Reject</button><button class="btn alt" type="button" data-event-action="${r.id}:cancelled">Cancel</button><button class="btn warn" type="button" data-event-action="${r.id}:deleted">Delete</button><button class="btn alt" type="button" data-event-action="${r.id}:pending">Restore</button></div></div>`, 'Nog geen drinks-events.');
       list(document.getElementById('speed'), speed, (r)=>`<div class="row"><div>${checkbox('speed',r.id)}</div><div class="row-main"><strong>${r.player_name||'Onbekend'} · ${r.speed_type_label||r.speed_type_key||'Snelheid'}</strong><div class="muted">${r.status||'pending'} · ${Number(r.duration_seconds||0).toFixed(1)}s · ${Number(r.total_units||0).toFixed(1)} units · ${r.created_at?new Date(r.created_at).toLocaleString('nl-NL'):''}</div></div><div class="actions"><button class="btn ok" type="button" data-speed-action="${r.id}:verified">Verify</button><button class="btn alt" type="button" data-speed-action="${r.id}:rejected">Reject</button><button class="btn alt" type="button" data-speed-action="${r.id}:cancelled">Cancel</button><button class="btn warn" type="button" data-speed-action="${r.id}:deleted">Delete</button><button class="btn alt" type="button" data-speed-action="${r.id}:pending">Restore</button></div></div>`, 'Nog geen snelheidspogingen.');
-      document.querySelectorAll('[data-select-event]').forEach((el)=>el.onchange=()=>{ const id=Number(el.getAttribute('data-select-event')); el.checked ? state.selectedEvents.add(id) : state.selectedEvents.delete(id); bulkBar(); });
-      document.querySelectorAll('[data-select-speed]').forEach((el)=>el.onchange=()=>{ const id=Number(el.getAttribute('data-select-speed')); el.checked ? state.selectedSpeed.add(id) : state.selectedSpeed.delete(id); bulkBar(); });
-      document.querySelectorAll('[data-event-action]').forEach((btn)=>btn.onclick=()=>{ const [id,status]=String(btn.getAttribute('data-event-action')).split(':'); applyBatch('event',[Number(id)],status,true); });
-      document.querySelectorAll('[data-speed-action]').forEach((btn)=>btn.onclick=()=>{ const [id,status]=String(btn.getAttribute('data-speed-action')).split(':'); applyBatch('speed',[Number(id)],status,true); });
     }
     async function rpc(name,payload){ return fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`,{method:'POST',headers:h(),body:JSON.stringify(payload)}).then(p); }
     async function load(){
+      if(state.loadBusy) return;
+      state.loadBusy=true;
       try{
         if(!adminToken()){ redirectLogin(); return; }
         const raw = await rpc('get_drinks_admin_console',{admin_session_token:adminToken()});
@@ -78,7 +76,7 @@
       }catch(err){
         if(/niet ingelogd|admin|session|token/i.test(err.message||'')){ redirectLogin(); return; }
         setStatus(err.message||String(err),'bad');
-      }
+      } finally { state.loadBusy=false; }
     }
     async function applyBatch(kind, ids, status, clearAfter=false){
       if(!ids.length) return;
@@ -106,6 +104,21 @@
         setStatus(err.message||String(err),'bad');
       }
     }
+
+    document.addEventListener('change',(event)=>{
+      const t=event.target;
+      if(t && t.matches('[data-select-event]')){ const id=Number(t.getAttribute('data-select-event')); t.checked ? state.selectedEvents.add(id) : state.selectedEvents.delete(id); bulkBar(); }
+      if(t && t.matches('[data-select-speed]')){ const id=Number(t.getAttribute('data-select-speed')); t.checked ? state.selectedSpeed.add(id) : state.selectedSpeed.delete(id); bulkBar(); }
+    });
+    document.addEventListener('click', async (event)=>{
+      const eventBtn = event.target.closest('[data-event-action]');
+      const speedBtn = event.target.closest('[data-speed-action]');
+      if(!eventBtn && !speedBtn) return;
+      try {
+        if(eventBtn){ const [id,status]=String(eventBtn.getAttribute('data-event-action')).split(':'); await applyBatch('event',[Number(id)],status,true); }
+        if(speedBtn){ const [id,status]=String(speedBtn.getAttribute('data-speed-action')).split(':'); await applyBatch('speed',[Number(id)],status,true); }
+      } catch(err){ setStatus(err.message||String(err),'bad'); }
+    });
     document.getElementById('selectVisibleBtn').onclick=()=>{ visibleRows('event').forEach((row)=>state.selectedEvents.add(Number(row.id))); visibleRows('speed').forEach((row)=>state.selectedSpeed.add(Number(row.id))); render(); };
     document.getElementById('clearSelectionBtn').onclick=()=>{ state.selectedEvents.clear(); state.selectedSpeed.clear(); render(); };
     document.getElementById('undoBtn').onclick=undoLast;

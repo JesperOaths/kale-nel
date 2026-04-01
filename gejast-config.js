@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION: 'v235',
+    VERSION: 'v236',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -42,17 +42,20 @@
       layer.setAttribute('aria-hidden','true');
       Object.assign(layer.style, {
         position:'absolute',
-        left:'0', right:'0', top:'calc(100vh + 260px)',
+        left:'0', right:'0', top:'calc(100vh + 340px)',
         height: Math.max(window.innerHeight, document.documentElement.scrollHeight) + 'px',
         zIndex:'-1',
         pointerEvents:'none',
+        overflow:'hidden',
         backgroundImage:bgImage,
         backgroundSize:cs.backgroundSize || 'cover',
-        backgroundPosition:cs.backgroundPosition || 'center',
+        backgroundPosition:(cs.backgroundPosition && cs.backgroundPosition !== '0% 0%') ? cs.backgroundPosition : 'center top',
         backgroundRepeat:cs.backgroundRepeat || 'no-repeat',
         transform:'rotate(180deg)',
         transformOrigin:'center center',
-        opacity:'0.92'
+        opacity:'0.92',
+        maskImage:'linear-gradient(to bottom, transparent 0px, transparent 220px, rgba(0,0,0,0.5) 360px, #000 520px)',
+        WebkitMaskImage:'linear-gradient(to bottom, transparent 0px, transparent 220px, rgba(0,0,0,0.5) 360px, #000 520px)'
       });
       document.body.appendChild(layer);
       const sync = () => {

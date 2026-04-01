@@ -4,7 +4,7 @@
   const KEY = cfg.SUPABASE_PUBLISHABLE_KEY || '';
   const SESSION_KEYS = ['jas_session_token_v11','jas_session_token_v10'];
   const COOLDOWN_MS = 5 * 60 * 1000;
-  const POLL_MS = 6000;
+  const POLL_MS = 12000;
   const DISMISS_KEY = 'gejast_verify_float_dismiss';
   const APPROVED_KEY = 'gejast_verify_float_last_approved';
   const LAST_ALERT_KEY = 'gejast_verify_float_last_alert';
@@ -44,8 +44,8 @@
       activePromptId = '__approved__';
       const box = ensureBox();
       document.getElementById('gdfBody').innerHTML = `<strong>Verificatie goedgekeurd</strong><div class="gdf-meta">${payload.text || 'Je bevestiging is gebruikt.'}</div>`;
-      document.getElementById('gdfVerifyBtn').style.display = 'inline-flex';
-          document.getElementById('gdfRejectBtn').style.display = 'inline-flex';
+      document.getElementById('gdfVerifyBtn').style.display = 'none';
+      document.getElementById('gdfRejectBtn').style.display = 'none';
       document.getElementById('gdfOpenBtn').onclick = () => { location.href = './drinks_speed.html'; };
       document.getElementById('gdfDismissBtn').onclick = () => { hideBox(); localStorage.removeItem(APPROVED_KEY); };
       showBox();
@@ -163,7 +163,7 @@
     activePromptKind = item.kind || 'drink';
     activePromptItem = item;
     activePromptSeenAt = Date.now();
-    activePromptGraceUntil = Math.max(activePromptGraceUntil, Date.now() + 60000);
+    activePromptGraceUntil = Math.max(activePromptGraceUntil, Date.now() + 180000);
     maybeVibrate(item);
     const box = ensureBox();
     const locationBits = [];
@@ -184,6 +184,7 @@
   }
 
   async function poll(){
+    if (document.visibilityState === 'hidden') return;
     if (pollBusy || !token() || !SUPABASE_URL || !KEY) return;
     pollBusy = true;
     try {
@@ -215,11 +216,11 @@
         const withinGrace = activePromptItem && activePromptId && activePromptId !== '__approved__' && Date.now() < activePromptGraceUntil;
         if (withinGrace) {
           const box = ensureBox();
-          document.getElementById('gdfVerifyBtn').style.display = 'inline-flex';
-          document.getElementById('gdfRejectBtn').style.display = 'inline-flex';
+          document.getElementById('gdfVerifyBtn').style.display = 'none';
+      document.getElementById('gdfRejectBtn').style.display = 'none';
           document.getElementById('gdfTitle').textContent = activePromptItem.kind==='speed' ? 'Snelheid verificatie' : 'Drinks verificatie';
           document.getElementById('gdfOpenBtn').textContent = activePromptItem.kind==='speed' ? 'Open snelheid' : 'Open drinks';
-          document.getElementById('gdfBody').innerHTML = `<strong>${activePromptItem.player_name} · ${activePromptItem.event_type_label || activePromptItem.speed_type_label}</strong><div class="gdf-meta">Deze verificatie blijft nog even open zodat meerdere mensen kunnen stemmen.</div><div class="gdf-meta">${activePromptItem.kind==='speed' ? 'Open snelheid om de actuele status en extra stemmen te zien.' : 'Open drinks om de actuele status en extra stemmen te zien.'}</div>`;
+          document.getElementById('gdfBody').innerHTML = `<strong>${activePromptItem.player_name} · ${activePromptItem.event_type_label || activePromptItem.speed_type_label}</strong><div class="gdf-meta">Deze verificatie blijft nog even open zodat meerdere mensen kunnen stemmen voordat het oordeel wordt vastgezet.</div><div class="gdf-meta">${activePromptItem.kind==='speed' ? 'Open snelheid om de actuele status en extra stemmen te zien.' : 'Open drinks om de actuele status en extra stemmen te zien.'}</div>`;
           document.getElementById('gdfOpenBtn').onclick = () => { location.href = activePromptItem.kind==='speed' ? './drinks_speed.html' : './drinks.html#verifyPanel'; };
           document.getElementById('gdfDismissBtn').onclick = () => dismissEvent(`${activePromptItem.kind||'drink'}:${activePromptItem.id}`);
           showBox();
