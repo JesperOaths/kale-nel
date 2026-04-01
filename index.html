@@ -578,7 +578,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v225';</script><script src="./gejast-config.js?v225"></script>
+  <script>window.GEJAST_PAGE_VERSION='v226';</script><script src="./gejast-config.js?v226"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -1150,10 +1150,7 @@
           { key:'wijnfles', label:'Fles Wijn' },
           { key:'liter_bier', label:'Liter Bier' }
         ];
-        const availableSpeedTypes = (eventTypeRows.length ? eventTypeRows : defaultSpeedTypes)
-          .filter((t)=>String(t?.key||'').toLowerCase() !== 'shot')
-          .map((t)=>({ key:String(t.key||''), label:t.label || (defaultSpeedTypes.find((x)=>x.key===t.key)||{}).label || t.key }))
-          .filter((t)=>t.key);
+        const availableSpeedTypes = defaultSpeedTypes.filter((t)=>String(t?.key||'').toLowerCase() !== 'shot').map((t)=>({ key:String(t.key||''), label:t.label || t.key }));
         const rawByKey = new Map(rawSpeedGroups.map((g)=>[String(g?.key||''), g]));
         const speedGroups = (availableSpeedTypes.length ? availableSpeedTypes : defaultSpeedTypes)
           .map((t)=>{
@@ -1164,7 +1161,7 @@
               rows:Array.isArray(source.rows) ? source.rows.filter((row)=>secondValue(row) > 0).slice(0,5).map((row)=>({ ...row, duration_seconds: secondValue(row) })) : []
             };
           });
-        const usableSpeedGroups = speedGroups.length ? speedGroups : demoSpeedGroups;
+        const usableSpeedGroups = speedGroups.length ? speedGroups : defaultSpeedTypes.map((g)=>({ ...g, rows:[] }));
         const nextIdx = ((window.__gejastSpeedRotateIdx||-1) + 1) % usableSpeedGroups.length;
         window.__gejastSpeedRotateIdx = nextIdx;
         const currentSpeedGroup = usableSpeedGroups[nextIdx] || demoSpeedGroups[0];
