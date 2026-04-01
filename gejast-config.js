@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION: 'v249',
+    VERSION: 'v257',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -26,84 +26,6 @@
   const effectiveVersion = candidates.sort((a,b)=>parseVersion(b)-parseVersion(a))[0] || CONFIG.VERSION;
   const label = `${effectiveVersion} · Made by Bruis`;
   window.GEJAST_PAGE_VERSION = effectiveVersion;
-
-  CONFIG.shouldSuppressVerifyFloat = function(){
-    try {
-      const page = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
-      return ['scorer.html','boerenbridge.html','beerpong.html','score.html'].includes(page);
-    } catch (_) { return false; }
-  };
-
-
-  function installBackgroundContinuation(){
-    try {
-      if (!document.body || document.getElementById('gejast-bg-continuation')) return;
-      const cs = window.getComputedStyle(document.body);
-      const bgImage = cs.backgroundImage || '';
-      if (!bgImage || bgImage === 'none') return;
-      document.documentElement.style.background = cs.backgroundColor || '#000';
-      document.body.style.position = document.body.style.position || 'relative';
-      document.body.style.isolation = 'isolate';
-      const layer = document.createElement('div');
-      layer.id = 'gejast-bg-continuation';
-      layer.setAttribute('aria-hidden','true');
-      Object.assign(layer.style, {
-        position:'absolute',
-        left:'0', right:'0', top:'calc(100vh + 500px)',
-        height: Math.max(window.innerHeight, document.documentElement.scrollHeight) + 'px',
-        zIndex:'-1',
-        pointerEvents:'none',
-        overflow:'hidden',
-        backgroundImage:bgImage,
-        backgroundSize:cs.backgroundSize || 'cover',
-        backgroundPosition:(cs.backgroundPosition && cs.backgroundPosition !== '0% 0%') ? cs.backgroundPosition : 'center top',
-        backgroundRepeat:cs.backgroundRepeat || 'no-repeat',
-        transform:'rotate(180deg)',
-        transformOrigin:'center center',
-        opacity:'0.9',
-        maskImage:'linear-gradient(to bottom, transparent 0px, transparent 360px, rgba(0,0,0,0.35) 540px, #000 760px)',
-        WebkitMaskImage:'linear-gradient(to bottom, transparent 0px, transparent 360px, rgba(0,0,0,0.35) 540px, #000 760px)'
-      });
-      document.body.appendChild(layer);
-      const sync = () => {
-        const nextHeight = Math.max(window.innerHeight, document.documentElement.scrollHeight);
-        layer.style.height = nextHeight + 'px';
-      };
-      window.addEventListener('resize', sync, { passive:true });
-      window.addEventListener('load', sync, { once:true });
-      sync();
-    } catch (_) {}
-  }
-
-
-  function resolveAssetUrl(path){
-    if (!path) return path;
-    const version = effectiveVersion || CONFIG.VERSION;
-    try {
-      const url = new URL(path, window.location.href);
-      if (!url.searchParams.has('v')) url.searchParams.set('v', String(version).replace(/^v/i,''));
-      return url.pathname.replace(/^\//,'./') + '?' + url.searchParams.toString();
-    } catch (_) {
-      return path;
-    }
-  }
-
-  function hideBlankAuthCorners(){
-    try {
-      document.querySelectorAll('#playerSessionCorner, .player-session-corner').forEach((box)=>{
-        const nameEl = box.querySelector('#playerSessionCornerName, .player-session-corner-name');
-        const name = String(nameEl?.textContent || '').trim();
-        const hasToken = !!getPlayerSessionToken();
-        if (!hasToken || !name || name === '-' || /^onbekend$/i.test(name)) {
-          box.style.display = 'none';
-          box.setAttribute('aria-hidden','true');
-        } else {
-          box.style.display = '';
-          box.removeAttribute('aria-hidden');
-        }
-      });
-    } catch (_) {}
-  }
 
   function applyVersionLabel(){
     const selectors = ['.site-credit-watermark','#versionWatermark','.version-tag','.watermark','[data-version-watermark]'];
@@ -201,14 +123,9 @@
     ensurePlayerSessionOrRedirect,
     installActivityKeepalive,
     requireMatchEntrySession,
-    buildLoginUrl,
-    installBackgroundContinuation,
-    resolveAssetUrl,
-    hideBlankAuthCorners
+    buildLoginUrl
   });
 
-  function bootCommonUi(){ applyVersionLabel(); installBackgroundContinuation(); hideBlankAuthCorners(); setTimeout(hideBlankAuthCorners,250); setTimeout(hideBlankAuthCorners,1200); }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootCommonUi, { once: true });
-  else { bootCommonUi(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyVersionLabel, { once: true });
+  else applyVersionLabel();
 })();

@@ -4,304 +4,369 @@
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Claimbare namen - Wordt er gejast?</title>
+  <title>Claimbare namen & ghost-archief - Wordt er gejast?</title>
   <style>
     :root{
+      --bg:#ece7dc;
+      --card:#fbf8f2;
+      --card-2:#f7f2e8;
+      --line:rgba(17,17,17,.08);
+      --line-strong:rgba(154,130,65,.35);
+      --text:#171717;
+      --muted:#6b655c;
       --gold:#9a8241;
-      --gold-soft:#f3ecda;
-      --ink:#1f1a15;
-      --card:#f9f7f2;
-      --line:rgba(0,0,0,0.08);
-      --muted:#6b6257;
-      --warn:#8b3a30;
-      --ok:#2b5b37;
-      --danger-bg:#f4d8d2;
-      --danger-ink:#7f2d21;
-      --shadow:0 20px 50px rgba(0,0,0,0.08);
+      --gold-soft:#efe3bc;
+      --danger:#9f3028;
+      --danger-soft:#f4ddd8;
+      --ok:#27593a;
+      --ok-soft:#dfeee3;
+      --shadow:0 18px 40px rgba(0,0,0,.08);
     }
     *{box-sizing:border-box}
-    html{scroll-behavior:smooth}
+    html{scroll-behavior:auto}
     body{
       margin:0;
-      padding:20px;
-      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-      color:var(--ink);
-      background:linear-gradient(rgba(232,228,217,0.94), rgba(232,228,217,0.96)), url('./wordtergejast.png') center/cover no-repeat;
+      color:var(--text);
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:
+        linear-gradient(rgba(236,231,220,.94), rgba(236,231,220,.94)),
+        url('./site-bg-desktop.webp') center top/cover no-repeat;
       min-height:100vh;
     }
-    .page{max-width:1480px;margin:0 auto}
-    .main-card{
-      background:rgba(249,247,242,.96);
-      border-radius:30px;
-      padding:28px;
+    .page-shell{
+      max-width:1540px;
+      margin:0 auto;
+      padding:20px 18px 96px;
+    }
+    .topbar{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:18px;
+      background:rgba(251,248,242,.86);
+      border:1px solid rgba(255,255,255,.8);
+      border-radius:28px;
+      padding:24px;
       box-shadow:var(--shadow);
-      border:1px solid rgba(255,255,255,.55);
     }
-    .hero{
-      display:grid;
-      grid-template-columns:minmax(0,1fr) auto;
-      gap:18px;
-      align-items:start;
-    }
-    .hero h1{margin:0;font-size:clamp(30px,4vw,42px)}
-    .sub{margin:10px 0 0;color:var(--muted);max-width:900px;line-height:1.45}
-    .hero-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    .hero h1{margin:0;font-size:34px;line-height:1.05}
+    .hero p{margin:10px 0 0;color:var(--muted);max-width:840px;font-size:15px;line-height:1.55}
+    .top-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:flex-end}
     .btn{
-      border:none;
-      border-radius:16px;
-      padding:12px 16px;
-      font:inherit;
-      font-weight:900;
-      cursor:pointer;
-      text-decoration:none;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      gap:8px;
-      transition:transform .12s ease, box-shadow .12s ease;
+      appearance:none;border:none;border-radius:16px;padding:12px 16px;font:800 14px/1 Inter,ui-sans-serif,system-ui;
+      cursor:pointer;transition:transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+      box-shadow:0 8px 18px rgba(0,0,0,.08);
     }
     .btn:hover{transform:translateY(-1px)}
-    .btn.primary{background:var(--gold);color:#111}
-    .btn.ghost{background:#fff;border:1px solid var(--line);color:#222}
-    .btn.danger{background:var(--danger-bg);color:var(--danger-ink)}
-    .btn.dark{background:#161616;color:#fff}
-    .btn.soft{background:var(--gold-soft);color:#4f4120;border:1px solid rgba(154,130,65,.26)}
-    .top-summary{
-      display:grid;
-      grid-template-columns:repeat(4,minmax(0,1fr));
-      gap:12px;
-      margin-top:18px;
-    }
-    .stat{
-      background:#fff;
-      border:1px solid var(--line);
-      border-radius:20px;
-      padding:16px;
-    }
-    .stat .label{font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#8a7a55}
-    .stat strong{display:block;margin-top:8px;font-size:28px}
-    .callout{
-      margin-top:16px;
-      padding:16px 18px;
-      background:#fff8df;
-      border:1px solid rgba(154,130,65,.28);
-      border-radius:18px;
-      color:#5b4a16;
-      line-height:1.5;
-    }
-    .layout{
+    .btn:disabled{opacity:.6;cursor:default;transform:none}
+    .btn.dark{background:#171717;color:#fff}
+    .btn.gold{background:var(--gold);color:#111}
+    .btn.soft{background:#fff;border:1px solid var(--line);color:#222;box-shadow:none}
+    .btn.warn{background:var(--danger);color:#fff}
+    .btn.ok{background:var(--ok);color:#fff}
+    .workspace{
       display:grid;
       grid-template-columns:380px minmax(0,1fr);
       gap:18px;
-      margin-top:20px;
       align-items:start;
     }
     .panel{
-      background:#fff;
-      border:1px solid var(--line);
-      border-radius:24px;
-      padding:18px;
-      min-width:0;
+      background:rgba(251,248,242,.92);
+      border:1px solid rgba(255,255,255,.82);
+      border-radius:28px;
+      box-shadow:var(--shadow);
     }
-    .sticky{position:sticky;top:16px}
-    .panel h2{margin:0 0 6px;font-size:1.1rem}
-    .panel-sub{color:var(--muted);font-size:14px;line-height:1.45;margin-bottom:14px}
+    .controls{
+      position:sticky;
+      top:16px;
+      padding:20px;
+    }
+    .section-title{margin:0 0 8px;font-size:18px}
+    .section-sub{margin:0 0 16px;color:var(--muted);font-size:14px;line-height:1.45}
     .field-grid{display:grid;gap:12px}
-    .field-grid.cols-2{grid-template-columns:1fr 1fr}
-    .field{display:grid;gap:6px}
-    .field label{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#6a6257}
+    .field label{
+      display:block;
+      margin:0 0 7px;
+      font-size:11px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:#7a7164;
+    }
     input,select{
       width:100%;
-      padding:13px 14px;
-      border-radius:14px;
-      border:1px solid #ddd;
-      font:inherit;
+      border:1px solid var(--line);
       background:#fff;
+      border-radius:16px;
+      padding:13px 14px;
+      font:500 16px/1.25 Inter,ui-sans-serif,system-ui;
+      color:var(--text);
+    }
+    input:focus,select:focus{
+      outline:none;border-color:var(--gold);
+      box-shadow:0 0 0 3px rgba(154,130,65,.12);
+    }
+    .toggle{
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      background:var(--card-2);border:1px solid var(--line);border-radius:18px;padding:12px 14px;
+    }
+    .toggle strong{font-size:14px}
+    .toggle span{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+    .toggle input{width:auto;transform:scale(1.15)}
+    .form-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .status{
+      min-height:22px;margin-top:14px;padding:0 2px;font-size:14px;font-weight:700;
+    }
+    .status.ok{color:var(--ok)}
+    .status.warn{color:var(--danger)}
+    .content{
+      padding:20px;
       min-width:0;
     }
+    .summary-grid{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:12px;
+      margin-bottom:14px;
+    }
+    .summary-card{
+      background:var(--card-2);
+      border:1px solid rgba(154,130,65,.18);
+      border-radius:20px;
+      padding:14px 15px;
+    }
+    .summary-card .k{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#7c725f;font-weight:800}
+    .summary-card .v{margin-top:6px;font-size:28px;font-weight:900;line-height:1}
     .toolbar{
       display:grid;
-      grid-template-columns:minmax(0,1.2fr) repeat(2,minmax(180px,.5fr)) auto;
+      grid-template-columns:minmax(0,1fr) 180px 180px auto;
       gap:12px;
       align-items:end;
+      margin-bottom:14px;
     }
-    .toolbar .toggle-wrap{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      min-height:50px;
-      padding:0 14px;
-      border-radius:14px;
-      border:1px solid var(--line);
-      background:#fbfaf6;
-      font-weight:800;
+    .toolbar-meta{
+      margin-bottom:10px;color:var(--muted);font-size:14px
     }
-    .toolbar input[type="checkbox"]{width:18px;height:18px;accent-color:var(--gold)}
-    .status{min-height:22px;margin-top:12px;font-size:14px}
-    .status.ok{color:var(--ok)}
-    .status.warn{color:var(--warn)}
-    .results-meta{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin:16px 0 10px}
-    .results-meta .muted{color:var(--muted)}
-    .results-grid{
+    .list-root{
       display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+      grid-template-columns:repeat(auto-fill, minmax(320px,1fr));
       gap:14px;
       align-items:start;
     }
     .item{
       background:#fff;
-      border:1px solid rgba(0,0,0,0.06);
+      border:1px solid rgba(17,17,17,.07);
       border-radius:22px;
       padding:16px;
-      box-shadow:0 10px 24px rgba(0,0,0,0.04);
+      box-shadow:0 10px 24px rgba(0,0,0,.04);
       content-visibility:auto;
-      contain-intrinsic-size:280px;
+      contain:layout paint style;
     }
-    .item-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-    .item-title{font-size:1.2rem;font-weight:900;line-height:1.1}
-    .pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    .pill{display:inline-flex;padding:5px 10px;border-radius:999px;background:#f4efe4;color:#6f5b28;font-size:11px;font-weight:900}
-    .pill.dark{background:#1d1a16;color:#fff}
-    .pill.warn{background:#fff0cc;color:#7c5a09}
-    .pill.danger{background:#f4d8d2;color:#7f2d21}
-    .pill.ok{background:#e3f1e5;color:#245231}
-    .meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
-    .meta-card{background:#fbfaf6;border:1px solid var(--line);border-radius:16px;padding:12px}
-    .meta-card .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:900}
-    .meta-card .value{margin-top:6px;font-size:14px;line-height:1.35;font-weight:700;word-break:break-word}
-    .row-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-    .empty{background:#fff;border:1px dashed rgba(0,0,0,0.12);border-radius:18px;padding:18px;color:var(--muted)}
-    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
-    .page-floating-logo{position:fixed;top:18px;right:18px;z-index:9998;display:inline-flex;width:64px;height:64px;border-radius:50%;background:rgba(255,251,245,.74);border:1px solid rgba(255,255,255,.7);box-shadow:0 14px 32px rgba(0,0,0,.10);align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-    .page-floating-logo img{width:52px;height:52px;display:block}
+    .item-head{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;
+    }
+    .item-title{font-size:26px;font-weight:900;line-height:1.05;letter-spacing:-.02em}
+    .item-sub{margin-top:5px;color:var(--muted);font-size:13px}
+    .pill-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+    .pill{
+      display:inline-flex;align-items:center;justify-content:center;
+      min-height:28px;padding:5px 10px;border-radius:999px;
+      background:#f4eee1;color:#6e5927;font-size:11px;font-weight:900;letter-spacing:.03em;
+    }
+    .pill.dark{background:#171717;color:#fff}
+    .pill.danger{background:var(--danger-soft);color:#7d2b22}
+    .pill.warn{background:#f2e8c7;color:#6d5a1f}
+    .pill.ok{background:var(--ok-soft);color:#245438}
+    .meta-grid{
+      display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px
+    }
+    .meta-card{
+      border:1px solid var(--line);
+      background:#fbfaf7;
+      border-radius:16px;padding:12px 12px 11px;min-width:0;
+    }
+    .meta-card .label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#857b6d}
+    .meta-card .value{margin-top:6px;font-size:14px;font-weight:700;line-height:1.35;word-break:break-word}
+    .row-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+    .empty{
+      background:#fff;
+      border:1px dashed rgba(17,17,17,.16);
+      border-radius:24px;
+      padding:28px;
+      color:var(--muted);
+      text-align:center;
+      font-size:15px;
+    }
+    .site-credit-watermark{
+      position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;
+      padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.92);
+      border:1px solid rgba(154,130,65,.35);color:#f3e0ad;
+      font:700 13px/1.2 Inter,ui-sans-serif,system-ui;letter-spacing:.03em;pointer-events:none;user-select:none;
+      box-shadow:0 12px 24px rgba(0,0,0,.18)
+    }
+    .page-floating-logo{
+      position:fixed;top:14px;right:14px;z-index:9998;display:inline-flex;width:60px;height:60px;border-radius:50%;
+      background:rgba(255,251,245,.95);border:1px solid rgba(17,17,17,.08);align-items:center;justify-content:center;
+      box-shadow:0 10px 24px rgba(0,0,0,.08)
+    }
+    .page-floating-logo img{width:48px;height:48px;display:block}
     @media (max-width:1180px){
-      .layout{grid-template-columns:1fr}
-      .sticky{position:static}
-      .toolbar{grid-template-columns:1fr 1fr}
+      .workspace{grid-template-columns:1fr}
+      .controls{position:static}
+      .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     }
-    @media (max-width:860px){
-      body{padding:14px}
-      .main-card{padding:18px}
-      .hero{grid-template-columns:1fr}
-      .top-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
-      .toolbar,.field-grid.cols-2,.meta-grid{grid-template-columns:1fr}
-      .results-grid{grid-template-columns:1fr}
-      .page-floating-logo{top:12px;right:12px;width:58px;height:58px}
-      .page-floating-logo img{width:46px;height:46px}
+    @media (max-width:880px){
+      .toolbar{grid-template-columns:1fr 1fr;gap:10px}
+      .toolbar > .field:first-child{grid-column:1 / -1}
+    }
+    @media (max-width:640px){
+      .page-shell{padding:14px 12px 88px}
+      .topbar{padding:18px}
+      .hero h1{font-size:28px}
+      .summary-grid{grid-template-columns:1fr}
+      .toolbar{grid-template-columns:1fr}
+      .meta-grid{grid-template-columns:1fr}
+      .form-actions{grid-template-columns:1fr}
+      .list-root{grid-template-columns:1fr}
+      .site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}
     }
   </style>
-  <script>window.GEJAST_PAGE_VERSION='v255';</script><script src="./gejast-config.js?v255"></script>
+  <script>window.GEJAST_PAGE_VERSION='v257';</script><script src="./gejast-config.js?v257"></script>
   <script>
     (function globalAdminLogout(){
       const btn=document.createElement('button');
       btn.textContent='Uitloggen';
-      btn.style.cssText='position:fixed;top:14px;right:92px;z-index:9999;border:none;border-radius:14px;padding:10px 14px;background:#111;color:#fff;font:700 14px Inter,sans-serif;cursor:pointer';
+      btn.className='btn dark';
+      btn.style.cssText='position:fixed;top:14px;left:14px;z-index:9998';
       btn.onclick=()=>{ clearAdminSessionToken(); window.location.href='./admin.html?return_to=admin_reserved_names.html'; };
       document.addEventListener('DOMContentLoaded',()=>document.body.appendChild(btn));
     })();
   </script>
-  <script src="./admin-session-sync.js?v255"></script>
-  <script src="./admin-topnav.js?v255"></script>
+  <script src="./admin-session-sync.js?v220"></script>
+  <script src="./admin-topnav.js?v220"></script>
 </head>
 <body>
   <a class="page-floating-logo" href="./index.html" aria-label="Terug naar home"><img src="./logo.png" alt="Logo"></a>
-  <main class="page">
-    <section class="main-card">
+
+  <div class="page-shell">
+    <section class="topbar">
       <div class="hero">
-        <div>
-          <h1>Claimbare namen & ghost-archief</h1>
-          <p class="sub">Deze pagina is nu zowel de kieslijst voor echte claimbare namen als het cleanup-scherm voor dummy/test-profielen. Ghosten hoort de <strong>gekoppelde speler</strong> te verbergen, sessies op te ruimen en de originele naam weer claimbaar te maken.</p>
-        </div>
-        <div class="hero-actions">
-          <a class="btn ghost" href="./admin.html">Terug naar hub</a>
-          <button id="refreshBtn" class="btn dark" type="button">Ververs</button>
-        </div>
+        <h1>Claimbare namen & ghost-archief</h1>
+        <p>Deze pagina is tegelijk de kieslijst voor nieuwe claims én de cleanup-pagina voor dummy- of testprofielen. Ghosten moet de gekoppelde speler verbergen en de echte naam weer vrijmaken, zonder de historische rij te slopen.</p>
       </div>
-
-      <div class="top-summary" id="topSummary">
-        <div class="stat"><div class="label">Totaal namen</div><strong id="statTotal">0</strong></div>
-        <div class="stat"><div class="label">Claimbaar</div><strong id="statAvailable">0</strong></div>
-        <div class="stat"><div class="label">Gekoppelde spelers</div><strong id="statLinked">0</strong></div>
-        <div class="stat"><div class="label">Ghost-archief</div><strong id="statGhosted">0</strong></div>
-      </div>
-
-      <div class="callout"><strong>Werkrichting:</strong> gebruik <strong>Ghost maken</strong> voor dummy/test-accounts die nergens meer publiek zichtbaar mogen zijn. Dat houdt de historische speler-anker-rij in stand, maar maakt de oorspronkelijke naam weer vrij voor toekomstige claims.</div>
-
-      <div class="layout">
-        <aside class="panel sticky">
-          <h2>Naam toevoegen aan kieslijst</h2>
-          <div class="panel-sub">Handmatig een nieuwe claimbare naam toevoegen of reserveren met vast e-mailadres.</div>
-          <div class="field-grid">
-            <div class="field">
-              <label for="newNameInput">Naam</label>
-              <input id="newNameInput" type="text" placeholder="Bijv. Jan Jansen" autocomplete="off" autocapitalize="words" spellcheck="false">
-            </div>
-            <div class="field">
-              <label for="newEmailInput">Optioneel vast e-mailadres</label>
-              <input id="newEmailInput" type="email" placeholder="optioneel@voorbeeld.nl" autocomplete="email">
-            </div>
-            <div class="field">
-              <label for="newNoteInput">Admin-notitie</label>
-              <input id="newNoteInput" type="text" placeholder="Bijv. echte speler / reserve" autocomplete="off">
-            </div>
-            <button id="createBtn" class="btn primary" type="button">Toevoegen aan kieslijst</button>
-          </div>
-        </aside>
-
-        <section class="panel">
-          <h2>Zoeken, filteren en beheren</h2>
-          <div class="panel-sub">Standaard blijft het verborgen ghost-archief uit beeld. Zet het alleen aan als je bewust in verborgen dummy-rijen wilt werken.</div>
-
-          <div class="toolbar">
-            <div class="field">
-              <label for="searchInput">Zoek op naam, slug of e-mail</label>
-              <input id="searchInput" type="text" placeholder="Bijv. Anna of anna-jansen">
-            </div>
-            <div class="field">
-              <label for="statusFilter">Status</label>
-              <select id="statusFilter">
-                <option value="all">Alles</option>
-                <option value="available">Alleen claimbaar</option>
-                <option value="reserved">Alleen gereserveerd</option>
-                <option value="active">Alleen actief</option>
-                <option value="linked">Alleen gekoppeld</option>
-                <option value="ghosted">Alleen ghosted</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="sortInput">Sortering</label>
-              <select id="sortInput">
-                <option value="name">Naam A-Z</option>
-                <option value="updated">Laatst bijgewerkt</option>
-                <option value="status">Status</option>
-              </select>
-            </div>
-            <label class="toggle-wrap"><input id="showArchiveToggle" type="checkbox"> Toon verborgen archief</label>
-          </div>
-
-          <div id="statusBox" class="status"></div>
-          <div class="results-meta">
-            <div class="muted" id="resultCount">0 resultaten</div>
-            <div class="muted">Ghost-knoppen werken op de <strong>gekoppelde speler-rij</strong>, niet alleen op de naamregel.</div>
-          </div>
-          <div id="listRoot" class="results-grid"></div>
-        </section>
+      <div class="top-actions">
+        <button class="btn soft" type="button" id="refreshBtn">Verversen</button>
+        <a class="btn soft" href="./admin.html">Terug naar hub</a>
       </div>
     </section>
-  </main>
 
-  <div class="site-credit-watermark" data-version-watermark>v255 · Made by Bruis</div>
+    <div class="workspace">
+      <aside class="panel controls">
+        <h2 class="section-title">Nieuwe claimbare naam</h2>
+        <p class="section-sub">Voeg hier handmatig een naam toe die zichtbaar moet zijn op de aanvraaglijst.</p>
+        <div class="field-grid">
+          <div class="field">
+            <label for="newNameInput">Naam</label>
+            <input id="newNameInput" type="text" placeholder="Bijv. Jan Jansen" autocomplete="off" autocapitalize="words" spellcheck="false">
+          </div>
+          <div class="field">
+            <label for="newEmailInput">Vast e-mailadres</label>
+            <input id="newEmailInput" type="email" placeholder="optioneel@voorbeeld.nl" autocomplete="email">
+          </div>
+          <div class="field">
+            <label for="newNoteInput">Admin-notitie</label>
+            <input id="newNoteInput" type="text" placeholder="Bijv. echte speler / reserve" autocomplete="off">
+          </div>
+          <div class="form-actions">
+            <button id="createBtn" class="btn gold" type="button">Toevoegen</button>
+            <button id="clearBtn" class="btn soft" type="button">Leegmaken</button>
+          </div>
+        </div>
+
+        <div style="height:18px"></div>
+
+        <h2 class="section-title">Filteren</h2>
+        <p class="section-sub">Standaard blijft verborgen archief zichtbaar in deze beheerpagina, maar je kunt het hier uitzetten als je alleen de gewone kieslijst wilt zien.</p>
+        <div class="field-grid">
+          <div class="field">
+            <label for="searchInput">Zoek op naam, slug, notitie of ghostnaam</label>
+            <input id="searchInput" type="search" placeholder="Anna, Caro, dummy, __ghost..." autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="statusFilter">Statusfilter</label>
+            <select id="statusFilter">
+              <option value="all">Alles</option>
+              <option value="available">Alleen beschikbaar</option>
+              <option value="linked">Alleen gekoppeld aan speler</option>
+              <option value="ghosted">Alleen ghosted / verborgen</option>
+              <option value="archive-only">Alleen archiefvermeldingen</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="sortInput">Sorteren</label>
+            <select id="sortInput">
+              <option value="name">Naam A-Z</option>
+              <option value="updated">Laatst bijgewerkt</option>
+              <option value="status">Status</option>
+            </select>
+          </div>
+          <label class="toggle" for="showArchiveToggle">
+            <div>
+              <strong>Verborgen archief tonen</strong>
+              <span>Schakel uit om alleen de gewone kieslijst te zien.</span>
+            </div>
+            <input id="showArchiveToggle" type="checkbox" checked>
+          </label>
+        </div>
+        <div id="statusBox" class="status"></div>
+      </aside>
+
+      <section class="panel content">
+        <div class="summary-grid">
+          <div class="summary-card"><div class="k">Totaal zichtbaar</div><div class="v" id="statTotal">0</div></div>
+          <div class="summary-card"><div class="k">Beschikbaar</div><div class="v" id="statAvailable">0</div></div>
+          <div class="summary-card"><div class="k">Met spelerlink</div><div class="v" id="statLinked">0</div></div>
+          <div class="summary-card"><div class="k">Ghost / verborgen</div><div class="v" id="statGhosted">0</div></div>
+        </div>
+
+        <div class="toolbar-meta" id="resultCount">0 resultaten zichtbaar.</div>
+        <div class="toolbar">
+          <div class="field">
+            <label for="quickSearchMirror">Snelle zoekweergave</label>
+            <input id="quickSearchMirror" type="text" placeholder="Zoekveld hierboven synchroniseert hier" readonly>
+          </div>
+          <div class="field">
+            <label>Archief</label>
+            <button class="btn soft" type="button" id="toggleArchiveBtn">Archief aan/uit</button>
+          </div>
+          <div class="field">
+            <label>Reset filters</label>
+            <button class="btn soft" type="button" id="resetFiltersBtn">Reset</button>
+          </div>
+          <div class="field">
+            <label>Herlaad bron</label>
+            <button class="btn dark" type="button" id="reloadListBtn">Nu herladen</button>
+          </div>
+        </div>
+
+        <div id="listRoot" class="list-root"></div>
+      </section>
+    </div>
+  </div>
+
+  <div class="site-credit-watermark" data-version-watermark>v257 · Made by Bruis</div>
 
   <script>
-    const ADMIN_SESSION_KEY = 'jas_admin_session_v8';
+    const ADMIN_SESSION_KEY = "jas_admin_session_v8";
     const ADMIN_SESSION_META_KEY = 'jas_admin_session_meta_v1';
     const ADMIN_SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000;
     const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || 'https://uiqntazgnrxwliaidkmy.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
 
-    const state = { rows: [], filtered: [], renderSeq: 0 };
+    const state = { rows: [], filtered: [] };
 
-    function rpcHeaders(){
+    function rpcHeaders() {
       return {
         apikey: SUPABASE_PUBLISHABLE_KEY,
         Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
@@ -309,15 +374,17 @@
         Accept: 'application/json'
       };
     }
-    async function parseResponse(res){
+    async function parseResponse(res) {
       const text = await res.text();
       let data = null;
-      try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); }
+      try { data = text ? JSON.parse(text) : null; }
+      catch { throw new Error(text || `HTTP ${res.status}`); }
       if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`);
       return data;
     }
     function readAdminSessionMeta(){
-      try { return JSON.parse(sessionStorage.getItem(ADMIN_SESSION_META_KEY) || localStorage.getItem(ADMIN_SESSION_META_KEY) || 'null'); } catch { return null; }
+      try { return JSON.parse(sessionStorage.getItem(ADMIN_SESSION_META_KEY) || localStorage.getItem(ADMIN_SESSION_META_KEY) || 'null'); }
+      catch { return null; }
     }
     function clearAdminSessionToken(){
       sessionStorage.removeItem(ADMIN_SESSION_KEY);
@@ -332,31 +399,12 @@
         clearAdminSessionToken();
         return '';
       }
-      return token;
+      return token || '';
     }
-    function setStatus(message = '', tone = ''){
+    function setStatus(message='', tone=''){
       const box = document.getElementById('statusBox');
       box.className = `status ${tone}`.trim();
       box.textContent = message;
-    }
-    function escapeHtml(value){
-      return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
-    }
-    function formatDate(value){
-      const d = new Date(value);
-      return Number.isNaN(d.getTime()) ? '–' : d.toLocaleString('nl-NL');
-    }
-    function compactText(value){
-      const text = String(value ?? '').trim();
-      return text || '–';
-    }
-    function rowSearchBlob(row){
-      return [row.display_name,row.username,row.reserved_for_email,row.reserved_for_person_note,row.player_display_name,row.player_ghost_note]
-        .map(v => String(v || '').toLowerCase())
-        .join(' ');
-    }
-    function ghostedRow(row){
-      return Boolean(row.player_hidden_from_public || row.player_is_dummy || row.player_ghosted_at);
     }
     async function ensureGate(){
       const token = getToken();
@@ -376,117 +424,143 @@
         return false;
       }
     }
-    async function loadNames(){
-      try {
-        setStatus('Laden...');
-        const data = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_allowed_usernames`, {
-          method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: getToken() })
-        }).then(parseResponse);
-        state.rows = Array.isArray(data?.items) ? data.items : [];
-        renderAll();
-        setStatus('Lijst geladen.', 'ok');
-      } catch (error) {
-        document.getElementById('listRoot').innerHTML = '<div class="empty">Deze pagina kon de names-bron niet laden. Run de nieuwste full SQL opnieuw.</div>';
-        setStatus(error?.message || 'Laden mislukt.', 'warn');
-      }
+    function compactText(value){
+      const raw = String(value ?? '').trim();
+      return raw || '–';
+    }
+    function escapeHtml(value){
+      return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+    }
+    function formatDate(value){
+      if (!value) return '–';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return new Intl.DateTimeFormat('nl-NL', {
+        year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'
+      }).format(date);
+    }
+    function ghostedRow(row){
+      return Boolean(row.player_hidden_from_public || row.player_is_dummy || row.player_ghosted_at);
+    }
+    function rowSearchBlob(row){
+      return [
+        row.display_name, row.username, row.status, row.source_kind, row.reserved_for_email,
+        row.reserved_for_person_note, row.player_display_name, row.player_ghost_note,
+        ...(Array.isArray(row.player_ghost_original_names) ? row.player_ghost_original_names : [])
+      ].join(' ').toLowerCase();
     }
     function updateSummary(rows){
-      const total = rows.length;
       const available = rows.filter(r => String(r.status || '').toLowerCase() === 'available').length;
       const linked = rows.filter(r => Number(r.player_id) > 0).length;
       const ghosted = rows.filter(ghostedRow).length;
-      document.getElementById('statTotal').textContent = String(total);
+      document.getElementById('statTotal').textContent = String(rows.length);
       document.getElementById('statAvailable').textContent = String(available);
       document.getElementById('statLinked').textContent = String(linked);
       document.getElementById('statGhosted').textContent = String(ghosted);
     }
     function applyFilters(){
-      const q = document.getElementById('searchInput').value.trim().toLowerCase();
+      const query = document.getElementById('searchInput').value.trim().toLowerCase();
+      document.getElementById('quickSearchMirror').value = document.getElementById('searchInput').value;
       const statusFilter = document.getElementById('statusFilter').value;
       const sortInput = document.getElementById('sortInput').value;
       const showArchive = document.getElementById('showArchiveToggle').checked;
+
       const rows = state.rows.filter((row) => {
         const isGhost = ghostedRow(row);
+        const isArchiveOnly = row.is_virtual || String(row.status || '').toLowerCase() === 'archive-only';
         if (!showArchive && isGhost) return false;
-        if (q && !rowSearchBlob(row).includes(q)) return false;
         if (statusFilter === 'available' && String(row.status || '').toLowerCase() !== 'available') return false;
-        if (statusFilter === 'reserved' && String(row.status || '').toLowerCase() !== 'reserved') return false;
-        if (statusFilter === 'active' && String(row.status || '').toLowerCase() !== 'active') return false;
         if (statusFilter === 'linked' && !(Number(row.player_id) > 0)) return false;
         if (statusFilter === 'ghosted' && !isGhost) return false;
+        if (statusFilter === 'archive-only' && !isArchiveOnly) return false;
+        if (query && !rowSearchBlob(row).includes(query)) return false;
         return true;
       });
+
       rows.sort((a,b) => {
         if (sortInput === 'updated') return new Date(b.updated_at || 0) - new Date(a.updated_at || 0);
-        if (sortInput === 'status') return String(a.status || '').localeCompare(String(b.status || ''), 'nl', { sensitivity:'base' }) || String(a.display_name || '').localeCompare(String(b.display_name || ''), 'nl', { sensitivity:'base' });
+        if (sortInput === 'status') {
+          return String(a.status || '').localeCompare(String(b.status || ''), 'nl', { sensitivity:'base' }) ||
+                 String(a.display_name || '').localeCompare(String(b.display_name || ''), 'nl', { sensitivity:'base' });
+        }
         return String(a.display_name || '').localeCompare(String(b.display_name || ''), 'nl', { sensitivity:'base' });
       });
+
       state.filtered = rows;
-      document.getElementById('resultCount').textContent = `${rows.length} resultaat/resultaten zichtbaar.`;
+      document.getElementById('resultCount').textContent = `${rows.length} resultaten zichtbaar.`;
       return rows;
     }
-    function pill(label, className = ''){
+    function pill(label, className=''){
       return `<span class="pill ${className}">${escapeHtml(label)}</span>`;
     }
     function buildCard(row){
       const isGhost = ghostedRow(row);
-      const status = String(row.status || 'beschikbaar');
+      const sourceKind = String(row.source_kind || 'allowed_username');
       const originalNames = Array.isArray(row.player_ghost_original_names) ? row.player_ghost_original_names : [];
+      const canRemove = !row.is_virtual && Number(row.id) > 0;
+      const isArchiveOnly = row.is_virtual || String(row.status || '').toLowerCase() === 'archive-only';
+
       return `
         <article class="item">
           <div class="item-head">
             <div>
               <div class="item-title">${escapeHtml(row.display_name || 'Naamloos')}</div>
+              <div class="item-sub">${escapeHtml(sourceKind === 'player_archive' ? 'Archiefvermelding van verborgen speler' : 'Kieslijstregel')}</div>
               <div class="pill-row">
-                ${pill(status)}
+                ${pill(row.status || 'onbekend')}
                 ${Number(row.player_id) > 0 ? pill(`speler ${row.player_id}`, 'dark') : ''}
-                ${isGhost ? pill('ghost-archief', 'danger') : ''}
-                ${row.player_hidden_from_public ? pill('verborgen', 'warn') : ''}
+                ${isGhost ? pill('ghost / verborgen', 'danger') : ''}
+                ${row.player_hidden_from_public ? pill('uit publieke site', 'warn') : ''}
+                ${isArchiveOnly ? pill('virtuele archiefregel', 'ok') : ''}
               </div>
             </div>
           </div>
           <div class="meta-grid">
             <div class="meta-card"><div class="label">Slug</div><div class="value">${escapeHtml(compactText(row.username))}</div></div>
-            <div class="meta-card"><div class="label">E-mail</div><div class="value">${escapeHtml(compactText(row.reserved_for_email))}</div></div>
             <div class="meta-card"><div class="label">Gekoppelde speler</div><div class="value">${escapeHtml(compactText(row.player_display_name || row.player_id || '–'))}</div></div>
+            <div class="meta-card"><div class="label">E-mail</div><div class="value">${escapeHtml(compactText(row.reserved_for_email))}</div></div>
             <div class="meta-card"><div class="label">Bijgewerkt</div><div class="value">${escapeHtml(formatDate(row.updated_at))}</div></div>
             <div class="meta-card"><div class="label">Ghost notitie</div><div class="value">${escapeHtml(compactText(row.player_ghost_note))}</div></div>
             <div class="meta-card"><div class="label">Vrijgegeven namen</div><div class="value">${escapeHtml(originalNames.length ? originalNames.join(', ') : '–')}</div></div>
           </div>
           <div class="row-actions">
             ${Number(row.player_id) > 0 ? `<button class="btn ${isGhost ? 'soft' : 'dark'}" type="button" data-ghost-player-id="${row.player_id}" data-ghosted="${isGhost ? '0' : '1'}">${isGhost ? 'Unghost maken' : 'Ghost maken'}</button>` : ''}
-            <button class="btn danger" type="button" data-remove-id="${row.id}">Verwijderen uit kieslijst</button>
+            ${canRemove ? `<button class="btn warn" type="button" data-remove-id="${row.id}">Verwijderen uit kieslijst</button>` : ''}
           </div>
         </article>
       `;
     }
     function renderRows(rows){
       const root = document.getElementById('listRoot');
-      const renderSeq = ++state.renderSeq;
-      root.innerHTML = '';
       if (!rows.length) {
         root.innerHTML = '<div class="empty">Geen namen gevonden voor deze filtercombinatie.</div>';
         return;
       }
-      const batchSize = 40;
-      let index = 0;
-      function paintBatch(){
-        if (renderSeq !== state.renderSeq) return;
-        const fragment = document.createDocumentFragment();
-        const wrapper = document.createElement('div');
-        wrapper.style.display = 'contents';
-        for (let count = 0; index < rows.length && count < batchSize; index += 1, count += 1) {
-          wrapper.insertAdjacentHTML('beforeend', buildCard(rows[index]));
-        }
-        while (wrapper.firstChild) fragment.appendChild(wrapper.firstChild);
-        root.appendChild(fragment);
-        if (index < rows.length) requestAnimationFrame(paintBatch);
-      }
-      requestAnimationFrame(paintBatch);
+      root.innerHTML = rows.map(buildCard).join('');
     }
     function renderAll(){
       updateSummary(state.rows);
       renderRows(applyFilters());
+    }
+    let searchTimer = null;
+    function scheduleRender(){
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(renderAll, 90);
+    }
+    async function loadNames(){
+      try {
+        setStatus('Laden...');
+        const data = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_allowed_usernames`, {
+          method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(),
+          body:JSON.stringify({ admin_session_token: getToken() })
+        }).then(parseResponse);
+        state.rows = Array.isArray(data.items) ? data.items : [];
+        renderAll();
+        setStatus('Kieslijst en archief geladen.', 'ok');
+      } catch (error) {
+        document.getElementById('listRoot').innerHTML = '<div class="empty">Deze pagina kon de names-bron niet laden. Run de nieuwste full SQL opnieuw.</div>';
+        setStatus(error?.message || 'Laden mislukt.', 'warn');
+      }
     }
     async function callRemoveAllowedUsername(id){
       const payloads = [
@@ -525,8 +599,28 @@
     }
 
     document.getElementById('refreshBtn').addEventListener('click', loadNames);
-    ['searchInput','statusFilter','sortInput','showArchiveToggle'].forEach((id) => {
-      document.getElementById(id).addEventListener(id === 'searchInput' ? 'input' : 'change', renderAll);
+    document.getElementById('reloadListBtn').addEventListener('click', loadNames);
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      document.getElementById('newNameInput').value = '';
+      document.getElementById('newEmailInput').value = '';
+      document.getElementById('newNoteInput').value = '';
+    });
+    document.getElementById('toggleArchiveBtn').addEventListener('click', () => {
+      const box = document.getElementById('showArchiveToggle');
+      box.checked = !box.checked;
+      renderAll();
+    });
+    document.getElementById('resetFiltersBtn').addEventListener('click', () => {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('statusFilter').value = 'all';
+      document.getElementById('sortInput').value = 'name';
+      document.getElementById('showArchiveToggle').checked = true;
+      renderAll();
+    });
+
+    document.getElementById('searchInput').addEventListener('input', scheduleRender);
+    ['statusFilter','sortInput','showArchiveToggle'].forEach((id) => {
+      document.getElementById(id).addEventListener('change', renderAll);
     });
 
     document.getElementById('createBtn').addEventListener('click', async () => {
