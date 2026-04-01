@@ -578,7 +578,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v220';</script><script src="./gejast-config.js?v220"></script>
+  <script>window.GEJAST_PAGE_VERSION='v221';</script><script src="./gejast-config.js?v221"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -1043,10 +1043,13 @@
         const grid = document.getElementById('drinksHomeGrid');
         if(!grid) return;
         const totals = payload.totals || {};
-        const fallback = (!Number(totals.today_events||0) && !Number(totals.all_events||0)) ? { today_events: 5, all_events: 48, pending_events: 2 } : totals;
+        const numberOr = (value, fallback=0) => { const n = Number(value); return Number.isFinite(n) ? n : fallback; };
+        const fallback = (!Number(totals.today_units||0) && !Number(totals.all_units||0) && !Number(totals.today_events||0) && !Number(totals.all_events||0)) ? { today_units: 5, all_units: 48, pending_events: 2 } : totals;
+        const todayUnits = numberOr(fallback.today_units, numberOr(fallback.today_events, 0));
+        const allUnits = numberOr(fallback.all_units, numberOr(fallback.all_events, 0));
         grid.innerHTML = `
-          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">${fallback.today_events||0}</div></a>
-          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">${fallback.all_events||0}</div></a>
+          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">${todayUnits.toFixed(1)}</div></a>
+          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">${allUnits.toFixed(1)}</div></a>
           <a class="drinks-mini gold" href="./drinks_speed.html"><div class="drinks-mini-label">Snelheids poging</div><div class="drinks-mini-value">+</div></a>
           <a class="drinks-mini dark" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div></a>`;
       } catch(_){ }
@@ -1133,17 +1136,39 @@
         }
 
         const rawSpeedGroups = Array.isArray(payload.speed_top5_by_type) && payload.speed_top5_by_type.length ? payload.speed_top5_by_type : [];
-        const speedGroups = rawSpeedGroups
-          .filter((g)=>String(g?.key||'').toLowerCase() !== 'shot')
-          .map((g)=>({
-            key:g.key,
-            label:g.label || '1 Bak',
-            rows:normaliseSpeedRows(Array.isArray(g.rows)?g.rows:[], (demoSpeedGroups.find((x)=>x.key===g.key)||demoSpeedGroups[0]).rows)
-          }))
-          .filter((g)=>g.rows.length);
+        let eventTypeRows = [];
+        try {
+          const typesRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
+          const typesData = await parseResponse(typesRes);
+          const typesPayload = typesData?.get_drinks_page_public || typesData || {};
+          eventTypeRows = Array.isArray(typesPayload.event_types) ? typesPayload.event_types : [];
+        } catch (_) {}
+        const defaultSpeedTypes = [
+          { key:'bier', label:'1 Bak' },
+          { key:'2bakken', label:'2 Bakken' },
+          { key:'ice', label:'Ice' },
+          { key:'wijnfles', label:'Fles Wijn' },
+          { key:'liter_bier', label:'Liter Bier' }
+        ];
+        const availableSpeedTypes = (eventTypeRows.length ? eventTypeRows : defaultSpeedTypes)
+          .filter((t)=>String(t?.key||'').toLowerCase() !== 'shot')
+          .map((t)=>({ key:String(t.key||''), label:t.label || (defaultSpeedTypes.find((x)=>x.key===t.key)||{}).label || t.key }))
+          .filter((t)=>t.key);
+        const rawByKey = new Map(rawSpeedGroups.map((g)=>[String(g?.key||''), g]));
+        const speedGroups = (availableSpeedTypes.length ? availableSpeedTypes : defaultSpeedTypes)
+          .map((t)=>{
+            const source = rawByKey.get(t.key) || {};
+            const fallbackRows = (demoSpeedGroups.find((x)=>x.key===t.key) || demoSpeedGroups[0]).rows;
+            return {
+              key:t.key,
+              label:source.label || t.label || '1 Bak',
+              rows:normaliseSpeedRows(Array.isArray(source.rows)?source.rows:[], fallbackRows)
+            };
+          });
         const usableSpeedGroups = speedGroups.length ? speedGroups : demoSpeedGroups;
-        window.__gejastSpeedRotateIdx = ((window.__gejastSpeedRotateIdx||-1) + 1) % usableSpeedGroups.length;
-        const currentSpeedGroup = usableSpeedGroups[window.__gejastSpeedRotateIdx] || demoSpeedGroups[0];
+        const nextIdx = ((window.__gejastSpeedRotateIdx||-1) + 1) % usableSpeedGroups.length;
+        window.__gejastSpeedRotateIdx = nextIdx;
+        const currentSpeedGroup = usableSpeedGroups[nextIdx] || demoSpeedGroups[0];
 
         const groups = [
           { label: dayTitle, key:'./drinks.html', mode:'units', rows: sessionRows },
@@ -1155,7 +1180,7 @@
         root.innerHTML = groups.map((group) => {
           const rows = Array.isArray(group.rows) ? group.rows : [];
           const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><a class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800" href="${playerHref(String(row.display_name || row.player_name || ''), '')}" onclick="event.stopPropagation()">${String(row.display_name || row.player_name || 'Onbekend')}</a><div class="ladder-elo" style="color:var(--gold);font-weight:900">${group.mode==='seconds' ? `${secondValue(row).toFixed(1)}s` : `${unitValue(row).toFixed(1)}`}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen data.</div>';
-          return `<article class="ladder-card" role="link" tabindex="0" data-route="${group.key}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:var(--gold);text-decoration:none">${group.mode==='seconds' ? 'Seconden' : 'Units'}</span></div>${body}</article>`;
+          return `<article class="ladder-card" role="link" tabindex="0" data-route="${group.key}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:var(--gold);text-decoration:none">${group.mode==='seconds' ? 'Seconden' : 'Alcoholunits'}</span></div>${body}</article>`;
         }).join('');
         root.querySelectorAll('.ladder-card[data-route]').forEach((card)=>{ const route = card.getAttribute('data-route'); card.addEventListener('click', ()=>{ window.location.href = route; }); card.addEventListener('keydown', (ev)=>{ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); window.location.href = route; } }); });
       } catch(err){

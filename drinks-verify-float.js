@@ -10,6 +10,9 @@
   const LAST_ALERT_KEY = 'gejast_verify_float_last_alert';
   let activePromptId = null;
   let activePromptKind = null;
+  let activePromptItem = null;
+  let activePromptSeenAt = 0;
+  let activePromptGraceUntil = 0;
   let pollBusy = false;
 
   function token(){ for (const key of SESSION_KEYS){ const value = localStorage.getItem(key) || sessionStorage.getItem(key); if (value) return value; } return ''; }
@@ -30,7 +33,7 @@
   }
 
   function showBox(){ const box = ensureBox(); box.classList.remove('show'); void box.offsetWidth; requestAnimationFrame(()=> box.classList.add('show')); }
-  function hideBox(){ const box = document.getElementById('globalDrinksVerifyFloat'); if (box) box.classList.remove('show'); activePromptId = null; activePromptKind = null; }
+  function hideBox(){ const box = document.getElementById('globalDrinksVerifyFloat'); if (box) box.classList.remove('show'); activePromptId = null; activePromptKind = null; activePromptItem = null; activePromptSeenAt = 0; activePromptGraceUntil = 0; }
 
   function showApprovedToast(){
     const raw = localStorage.getItem(APPROVED_KEY);
@@ -111,7 +114,8 @@
       });
       await parse(res);
       localStorage.setItem(APPROVED_KEY, JSON.stringify({at:Date.now(), text:`${item.player_name} · ${item.event_type_label}`}));
-      dismissEvent(item.id);
+      activePromptGraceUntil = Date.now() + 60000;
+      activePromptSeenAt = Date.now();
       showApprovedToast();
     } finally {
       verifyBtn.disabled = false;
@@ -138,7 +142,8 @@
       });
       await parse(res);
       localStorage.setItem(APPROVED_KEY, JSON.stringify({at:Date.now(), text:`${item.player_name} · ${item.event_type_label || item.speed_type_label}`}));
-      dismissEvent(`${item.kind}:${item.id}`);
+      activePromptGraceUntil = Date.now() + 60000;
+      activePromptSeenAt = Date.now();
       showApprovedToast();
     } finally { verifyBtn.disabled=false; openBtn.disabled=false; dismissBtn.disabled=false; verifyBtn.textContent=oldLabel; }
   }
@@ -157,6 +162,9 @@
     if (activePromptId === item.id && activePromptKind === (item.kind||'drink')) return;
     activePromptId = item.id;
     activePromptKind = item.kind || 'drink';
+    activePromptItem = item;
+    activePromptSeenAt = Date.now();
+    activePromptGraceUntil = Math.max(activePromptGraceUntil, Date.now() + 60000);
     maybeVibrate(item);
     const box = ensureBox();
     const locationBits = [];
@@ -202,7 +210,15 @@
         }
       }
       if (!item || !canShowFor(`${item.kind||'drink'}:${item.id}`)) {
-        if (activePromptId && activePromptId !== '__approved__') hideBox();
+        const withinGrace = activePromptItem && activePromptId && activePromptId !== '__approved__' && Date.now() < activePromptGraceUntil;
+        if (withinGrace) {
+          const box = ensureBox();
+          document.getElementById('gdfVerifyBtn').style.display = 'none';
+          document.getElementById('gdfBody').innerHTML = `<strong>${activePromptItem.player_name} · ${activePromptItem.event_type_label || activePromptItem.speed_type_label}</strong><div class="gdf-meta">Deze verificatie blijft nog even open zodat meerdere mensen kunnen stemmen.</div><div class="gdf-meta">Open drinks om de actuele status en extra stemmen te zien.</div>`;
+          document.getElementById('gdfOpenBtn').onclick = () => { location.href = activePromptItem.kind==='speed' ? './drinks_speed.html' : './drinks.html#verifyPanel'; };
+          document.getElementById('gdfDismissBtn').onclick = () => dismissEvent(`${activePromptItem.kind||'drink'}:${activePromptItem.id}`);
+          showBox();
+        } else if (activePromptId && activePromptId !== '__approved__') hideBox();
         pollBusy = false;
         return;
       }

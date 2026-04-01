@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Snelheid</title>
-  <script>window.GEJAST_PAGE_VERSION='v220';</script>
-  <script src="./gejast-config.js?v220"></script>
+  <script>window.GEJAST_PAGE_VERSION='v221';</script>
+  <script src="./gejast-config.js?v221"></script>
   <style>
     :root{--line:rgba(0,0,0,.08);--muted:#6b6257;--gold:#9a8241;--bad:#b53a30;--ok:#1f8f52}
     *{box-sizing:border-box}
@@ -56,8 +56,8 @@
     </div>
   </div></div>
   <div class="site-credit-watermark" data-version-watermark></div>
-  <script src="./gejast-geo.js?v220"></script>
-  <script src="./drinks-verify-float.js?v220"></script>
+  <script src="./gejast-geo.js?v221"></script>
+  <script src="./drinks-verify-float.js?v221"></script>
   <script>
   if(window.GEJAST_CONFIG && !window.GEJAST_CONFIG.requireMatchEntrySession('drinks_speed')){}
   (()=>{
@@ -79,6 +79,19 @@
     function labelFor(key){ return (FALLBACK_TYPES.find((t)=>t.key===key)||{}).label || key; }
     function fillTypes(rows){ const list=((rows||[]).filter((t)=>String(t.key||'').toLowerCase()!=='shot').length ? (rows||[]).filter((t)=>String(t.key||'').toLowerCase()!=='shot') : FALLBACK_TYPES); const preferred=['bier','2bakken','ice','wijnfles','liter_bier']; list.sort((a,b)=> (preferred.indexOf(a.key)===-1?999:preferred.indexOf(a.key)) - (preferred.indexOf(b.key)===-1?999:preferred.indexOf(b.key))); document.getElementById('speedType').innerHTML = list.map((t)=>`<option value="${t.key}">${t.label||labelFor(t.key)}</option>`).join(''); }
     function renderList(el,rows,fmt,empty='Nog geen data.'){ el.innerHTML=(rows||[]).length ? rows.map(fmt).join('') : `<div class="muted">${empty}</div>`; }
+
+    function makeClientAttemptId(){
+      try {
+        if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+        const arr = new Uint8Array(16);
+        if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(arr);
+        const hex = Array.from(arr, (b)=>b.toString(16).padStart(2,'0')).join('');
+        return hex || `attempt_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+      } catch (_) {
+        return `attempt_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+      }
+    }
+
     async function load(){
       try{
         if(window.GEJAST_CONFIG && !window.GEJAST_CONFIG.ensurePlayerSessionOrRedirect('drinks_speed')) return;
@@ -104,7 +117,7 @@
       try{
         const pp=await pos(true,true); if(!pp) throw new Error('Geolocatie is nodig voor snelheid.');
         const type=document.getElementById('speedType').value; const seconds=Number(document.getElementById('speedSeconds').value||0); if(!(seconds>0)) throw new Error('Vul een geldige tijd in.');
-        await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_combined_drink_speed_attempt`,{method:'POST',headers:h(),body:JSON.stringify({session_token:token(),event_type_key:type,quantity:1,duration_seconds:seconds,lat:pp.coords.latitude,lng:pp.coords.longitude,accuracy:pp.coords.accuracy})}).then(p);
+        await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_combined_drink_speed_attempt`,{method:'POST',headers:h(),body:JSON.stringify({session_token:token(),client_attempt_id:makeClientAttemptId(),event_type_key:type,quantity:1,duration_seconds:seconds,lat:pp.coords.latitude,lng:pp.coords.longitude,accuracy:pp.coords.accuracy})}).then(p);
         document.getElementById('speedSeconds').value=''; setFormStatus('Gekoppelde snelheidspoging opgeslagen.','ok'); setStatus(''); await load();
       }catch(err){ setFormStatus(err.message||String(err),'bad'); }
     }
