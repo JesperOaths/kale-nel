@@ -1,8 +1,9 @@
 (function(){
-  const CACHE_KEY = 'gejast_geo_cache_v3';
+  const CACHE_KEY = 'gejast_geo_cache_v4';
   const ADDRESS_KEY = 'gejast_geo_address_cache_v1';
   let watchId = null;
   let lastPos = null;
+  let lastError = null;
 
   function normalize(pos, source='live'){
     if (!pos || !pos.coords) return null;
@@ -21,6 +22,7 @@
     const out = normalize(pos, source);
     if (!out) return null;
     lastPos = out;
+    lastError = null;
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify({
         lat: out.coords.latitude,
@@ -49,17 +51,22 @@
     } catch(_) { return 'unknown'; }
   }
 
-  function message(err, state='unknown'){
-    if (!window.isSecureContext) return 'Geolocatie werkt alleen via een beveiligde https-verbinding.';
-    if (!navigator.geolocation) return 'Geolocatie wordt niet ondersteund op dit apparaat of in deze browser.';
+  function classify(err){
     const code = err && typeof err.code === 'number' ? err.code : null;
     const raw = String((err && err.message) || '').toLowerCase();
-    if (code === 1 || raw.includes('denied') || raw.includes('permission')) {
-      if (state === 'denied') return 'Locatie staat voor deze site of browser uit. Zet locatietoegang weer aan in browser- of Android-instellingen en probeer daarna opnieuw.';
-      return 'Het locatieverzoek kwam niet goed door. Vaak komt dit door browser/site-permissies, Android-locatie-instellingen of doordat de prompt niet zichtbaar werd.';
-    }
-    if (code === 2 || raw.includes('position unavailable') || raw.includes('unavailable')) return 'Locatie is nu niet beschikbaar. Controleer of gps of locatievoorzieningen aanstaan en probeer opnieuw.';
-    if (code === 3 || raw.includes('timeout')) return 'Locatie opvragen duurde te lang. We proberen daarom beter te vallen op een minder strikte locatielezing.';
+    if (code === 1 || raw.includes('denied') || raw.includes('permission')) return 'permission';
+    if (code === 2 || raw.includes('position unavailable') || raw.includes('unavailable')) return 'unavailable';
+    if (code === 3 || raw.includes('timeout')) return 'timeout';
+    return 'unknown';
+  }
+
+  function message(err){
+    if (!window.isSecureContext) return 'Geolocatie werkt alleen via een beveiligde https-verbinding.';
+    if (!navigator.geolocation) return 'Geolocatie wordt niet ondersteund op dit apparaat of in deze browser.';
+    const kind = classify(err);
+    if (kind === 'permission') return 'De browser gaf geolocatie niet vrij. Probeer Geolocatie opnieuw proberen nogmaals; als dit blijft gebeuren zit het probleem meestal in de browser/site-permissie of Android-locatie zelf, niet in de drinks-logica.';
+    if (kind === 'unavailable') return 'Locatie is nu niet beschikbaar. Controleer of gps of locatievoorzieningen aanstaan en probeer opnieuw.';
+    if (kind === 'timeout') return 'Locatie opvragen duurde te lang. We proberen daarom ook een minder strikte locatielezing.';
     return 'Geolocatie ophalen is mislukt. Controleer toestemming, gps en browserinstellingen en probeer opnieuw.';
   }
 
@@ -69,25 +76,64 @@
       if (!navigator.geolocation) return reject(new Error(message()));
       navigator.geolocation.getCurrentPosition(
         (pos) => resolve(save(pos, 'live')),
-        async(err) => reject(new Error(message(err, await permissionState()))),
+        async(err) => {
+          lastError = { code: err && err.code, raw: String(err && err.message || ''), permission_state: await permissionState() };
+          reject(new Error(message(err)));
+        },
+        options
+      );
+    });
+  }
+
+  function watchOnce(options){
+    return new Promise((resolve, reject) => {
+      if (!window.isSecureContext || !navigator.geolocation) return reject(new Error(message()));
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        try { navigator.geolocation.clearWatch(wid); } catch(_){}
+        reject(new Error('watch timeout'));
+      }, (options.timeout || 12000) + 1500);
+      const wid = navigator.geolocation.watchPosition(
+        (pos) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          try { navigator.geolocation.clearWatch(wid); } catch(_){}
+          resolve(save(pos, 'watch-once'));
+        },
+        async(err) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          try { navigator.geolocation.clearWatch(wid); } catch(_){}
+          lastError = { code: err && err.code, raw: String(err && err.message || ''), permission_state: await permissionState() };
+          reject(new Error(message(err)));
+        },
         options
       );
     });
   }
 
   async function request(forceFresh=false){
-    const state = await permissionState();
-    if (!window.isSecureContext) throw new Error(message(null, state));
-    if (!navigator.geolocation) throw new Error(message(null, state));
+    if (!window.isSecureContext) throw new Error(message(null));
+    if (!navigator.geolocation) throw new Error(message(null));
 
     const maxAge = forceFresh ? 0 : 120000;
     try {
       return await currentPosition({ enableHighAccuracy:true, timeout:15000, maximumAge:maxAge });
     } catch (err) {
-      const msg = String(err && err.message || '').toLowerCase();
-      const isMaybeTimeout = msg.includes('duurde te lang') || msg.includes('timeout') || msg.includes('niet beschikbaar') || msg.includes('unavailable');
-      if (!isMaybeTimeout) throw err;
-      return currentPosition({ enableHighAccuracy:false, timeout:12000, maximumAge:5*60*1000 });
+      const kind = classify(lastError || err);
+      if (kind === 'timeout' || kind === 'unavailable') {
+        try {
+          return await currentPosition({ enableHighAccuracy:false, timeout:12000, maximumAge:5*60*1000 });
+        } catch (_) {}
+      }
+      try {
+        return await watchOnce({ enableHighAccuracy:false, timeout:12000, maximumAge:5*60*1000 });
+      } catch (_) {}
+      throw err;
     }
   }
 
@@ -97,8 +143,7 @@
       const c = cached();
       if (c) return c;
     }
-    const state = await permissionState();
-    if (silent && state !== 'granted') return null;
+    if (silent) return null;
     try {
       return await request(forceFresh);
     } catch (err) {
@@ -124,11 +169,9 @@
     try {
       const cachedMap = JSON.parse(localStorage.getItem(ADDRESS_KEY) || '{}');
       if (cachedMap[key] && (Date.now() - cachedMap[key].at) < 24*60*60*1000) return cachedMap[key].address;
-    } catch(_){}
+    } catch(_){ }
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`, {
-        headers: { Accept:'application/json' }
-      });
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`, { headers: { Accept:'application/json' } });
       const data = await res.json();
       const address = data?.display_name || '';
       if (address) {
@@ -136,7 +179,7 @@
           const cachedMap = JSON.parse(localStorage.getItem(ADDRESS_KEY) || '{}');
           cachedMap[key] = { address, at: Date.now() };
           localStorage.setItem(ADDRESS_KEY, JSON.stringify(cachedMap));
-        } catch(_){}
+        } catch(_){ }
       }
       return address;
     } catch(_) { return ''; }
@@ -147,5 +190,7 @@
     return `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)} · nauwkeurigheid ${Math.round(pos.coords.accuracy || 0)}m`;
   }
 
-  window.GEJAST_GEO = { cached, ensure, request, startWatch, permissionState, message, reverseGeocode, formatCoords };
+  function getLastError(){ return lastError; }
+
+  window.GEJAST_GEO = { cached, ensure, request, startWatch, permissionState, message, reverseGeocode, formatCoords, getLastError };
 })();
