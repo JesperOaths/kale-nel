@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drinks toevoegen</title>
-  <script>window.GEJAST_PAGE_VERSION='v215';</script><script src="./gejast-config.js?v215"></script>
+  <script>window.GEJAST_PAGE_VERSION='v216';</script><script src="./gejast-config.js?v216"></script>
   <style>
     :root{--line:rgba(0,0,0,.08);--muted:#6b6257;--good:#1f8f52;--bad:#b53a30}
     *{box-sizing:border-box}
@@ -55,13 +55,7 @@
         <section class="panel">
           <h2>Alcohol toevoegen</h2>
           <div id="drinkButtons" class="drink-types"></div>
-          <div style="display:grid;gap:10px;margin-top:14px">
-            <h2 style="margin:6px 0 0">Tijd voor snelheids klassement toevoegen</h2>
-            <div class="muted">Optioneel: vul seconden in als dit drankje ook een snelheidspoging is.</div>
-            <label class="muted" for="speedSecondsInput">Tijd in seconden</label>
-            <input id="speedSecondsInput" type="number" inputmode="decimal" min="0" step="0.1" placeholder="Bijv. 4.8" style="padding:12px 14px;border-radius:16px;border:1px solid var(--line);font:inherit" />
-          </div>
-        </section>
+          </section>
 
         <section class="panel">
           <h2>Wacht op bevestiging</h2>
@@ -83,7 +77,7 @@
 
   <div class="site-credit-watermark" data-version-watermark></div>
 
-  <script src="./gejast-geo.js?v215"></script><script src="./drinks-verify-float.js?v215"></script>
+  <script src="./gejast-geo.js?v216"></script><script src="./drinks-verify-float.js?v216"></script>
   <script>
   (()=>{
     const cfg=window.GEJAST_CONFIG||{};
@@ -92,7 +86,6 @@
     const SESSION_KEYS=['jas_session_token_v11','jas_session_token_v10'];
     let latestData=null; let lastPosition=null;
     const statusLine=document.getElementById('statusLine');
-    const speedSecondsInput=document.getElementById('speedSecondsInput');
     const AUTO_GEO_KEY='gejast_auto_geo_prompt_v1';
     function token(){ for(const k of SESSION_KEYS){ const v=localStorage.getItem(k)||sessionStorage.getItem(k); if(v) return v; } return ''; }
     function headers(){ return {'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${KEY}`,Accept:'application/json'}; }
@@ -107,7 +100,7 @@
     function renderVerify(rows){ const wrap=document.getElementById('verifyQueue'); wrap.innerHTML=(rows||[]).length ? (rows||[]).map(r=>`<div class="verify-card"><div class="row-top"><div><strong>${r.player_name} · ${r.event_type_label}</strong><div class="verify-distance">${Number(r.total_units||0).toFixed(1)} units${r.distance_m!=null ? ` · ${Math.round(r.distance_m)}m afstand` : ''}</div></div><span class="pill pending">check</span></div><div class="row-actions"><button class="btn" data-verify-id="${r.id}">Bevestigen</button></div></div>`).join('') : '<div class="muted">Nog geen verificaties in de buurt.</div>'; wrap.querySelectorAll('[data-verify-id]').forEach(btn=>btn.addEventListener('click',()=>verifyDrink(btn.getAttribute('data-verify-id')))); }
     function renderRecent(rows){ const wrap=document.getElementById('recentList'); wrap.innerHTML=(rows||[]).length ? (rows||[]).map(r=>`<div class="row"><div class="row-top"><div><strong>${r.player_name} · ${r.event_type_label}</strong><div class="meta">${new Date(r.verified_at||r.created_at).toLocaleString('nl-NL')} · ${Number(r.total_units||0).toFixed(1)} units</div><div class="meta">Bevestigd door ${r.verifier_names?.join(', ')||'—'}</div></div><span class="pill verified">ok</span></div></div>`).join('') : '<div class="muted">Nog geen bevestigde drankjes.</div>'; }
     async function loadPage(forceFresh=false,userInitiated=false){ try{ if(!token()){ location.href = './login.html?return_to=drinks_add'; return; } const pos=(forceFresh||!lastPosition)?await getPosition(forceFresh,userInitiated):lastPosition; if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); const usePos=lastPosition||pos; const payload={session_token:token(),viewer_lat:usePos?usePos.coords.latitude:null,viewer_lng:usePos?usePos.coords.longitude:null}; const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:headers(),body:JSON.stringify(payload)}); const raw=await parse(res); const data=raw?.get_drinks_page_public||raw||{}; latestData=data; renderButtons(data.event_types||[]); renderSession(data); renderPending(data.my_pending_events||[]); renderVerify(data.verify_queue||[]); renderRecent(data.recent_verified||[]); setStatus(usePos ? '' : 'Geolocatie nog niet actief. Je open aanvragen zijn wel zichtbaar; verifiëren en afstandschecks werken pas met locatie.'); }catch(err){ setStatus(err.message||String(err),'bad'); } }
-    async function submitDrink(typeKey){ try{ const pos=await getPosition(true,true); if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); const usePos=lastPosition||pos; if(!usePos) throw new Error('Geolocatie is nodig om een drankje in te dienen.'); const secondsRaw=(speedSecondsInput&&speedSecondsInput.value||'').trim(); const seconds=Number(secondsRaw||0); if(secondsRaw && Number.isFinite(seconds) && seconds>0){ try{ await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_combined_drink_speed_attempt`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),event_type_key:typeKey,quantity:1,duration_seconds:seconds,lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy})}).then(parse); if(speedSecondsInput) speedSecondsInput.value=''; setStatus(`Gelogd: ${drinkCopy(typeKey)} + snelheidspoging wacht op één gezamenlijke bevestiging.`, 'ok'); await loadPage(false,false); return; }catch(combinedErr){ console.warn('Combined attempt failed, falling back', combinedErr); } } const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),event_type_key:typeKey,quantity:1,lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy})}); await parse(res); if(secondsRaw && Number.isFinite(seconds) && seconds>0){ try{ await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_drink_speed_attempt`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),speed_type_key:typeKey,duration_seconds:seconds,lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy})}).then(parse); }catch(speedErr){ console.warn('Snelheid attempt save failed', speedErr); } } if(speedSecondsInput) speedSecondsInput.value=''; setStatus(`Gelogd: ${drinkCopy(typeKey)} wacht op bevestiging.`, 'ok'); await loadPage(false,false); }catch(err){ setStatus(err.message||String(err),'bad'); } }
+    async function submitDrink(typeKey){ try{ const pos=await getPosition(true,true); if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); const usePos=lastPosition||pos; if(!usePos) throw new Error('Geolocatie is nodig om een drankje in te dienen.'); const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),event_type_key:typeKey,quantity:1,lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy})}); await parse(res); setStatus(`Gelogd: ${drinkCopy(typeKey)} wacht op bevestiging.`, 'ok'); await loadPage(false,false); }catch(err){ setStatus(err.message||String(err),'bad'); } }
     async function verifyDrink(id){ try{ const pos=await getPosition(true,true); if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); const usePos=lastPosition||pos; if(!usePos) throw new Error('Geolocatie is nodig om een drankje te bevestigen.'); const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy,approve:true})}); await parse(res); setStatus('Drankje bevestigd.', 'ok'); await loadPage(false,false); }catch(err){ setStatus(err.message||String(err),'bad'); } }
     async function cancelDrink(id){ try{ const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_my_pending_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id)})}); await parse(res); setStatus('Aanvraag geannuleerd.', 'ok'); await loadPage(false,false); }catch(err){ setStatus(err.message||String(err),'bad'); } }
     async function tryAutoPrompt(){
