@@ -578,7 +578,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v233';</script><script src="./gejast-config.js?v233"></script>
+  <script>window.GEJAST_PAGE_VERSION='v234';</script><script src="./gejast-config.js?v234"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -1037,16 +1037,19 @@
 
     async function loadDrinksHome(){
       try{
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
-        const data = await parseResponse(res);
-        const payload = data?.get_drinks_homepage_public || data || {};
+        const [homeRes, statsRes] = await Promise.all([
+          fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' }).then(parseResponse).catch(()=>({})),
+          fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_stats_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' }).then(parseResponse).catch(()=>({}))
+        ]);
+        const payload = homeRes?.get_drinks_homepage_public || homeRes || {};
+        const statsPayload = statsRes?.get_drinks_stats_public || statsRes || {};
         const grid = document.getElementById('drinksHomeGrid');
         if(!grid) return;
-        const totals = payload.totals || {};
+        const homeTotals = payload.totals || {};
+        const statTotals = statsPayload.totals || {};
         const numberOr = (value, fallback=0) => { const n = Number(value); return Number.isFinite(n) ? n : fallback; };
-        const fallback = (!Number(totals.today_units||0) && !Number(totals.all_units||0) && !Number(totals.today_events||0) && !Number(totals.all_events||0)) ? { today_units: 5, all_units: 48, pending_events: 2 } : totals;
-        const todayUnits = numberOr(fallback.today_units, numberOr(fallback.today_events, 0));
-        const allUnits = numberOr(fallback.all_units, numberOr(fallback.all_events, 0));
+        const todayUnits = numberOr(statTotals.today_units, numberOr(homeTotals.today_units, numberOr(statTotals.today_events, numberOr(homeTotals.today_events, 0))));
+        const allUnits = numberOr(statTotals.all_units, numberOr(homeTotals.all_units, numberOr(statTotals.all_events, numberOr(homeTotals.all_events, 0))));
         grid.innerHTML = `
           <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">${todayUnits.toFixed(1)}</div></a>
           <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">${allUnits.toFixed(1)}</div></a>
@@ -1290,5 +1293,5 @@
 
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v233"></script><script src="./gejast-geo.js?v220"></script></body>
+<script src="./drinks-verify-float.js?v234"></script><script src="./gejast-geo.js?v220"></script></body>
 </html>
