@@ -6,208 +6,582 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Claimbare namen - Wordt er gejast?</title>
   <style>
-    :root { --gold:#9a8241; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#666; --warn:#8b3a30; --ok:#2b5b37; --danger:#b53a30; }
-    * { box-sizing:border-box; }
-    body { margin:0; padding:20px; font-family:Inter,sans-serif; background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed; min-height:100vh; }
-    .main-card { background:var(--card); border-radius:24px; padding:28px; max-width:1080px; margin:0 auto; box-shadow:0 20px 50px rgba(0,0,0,0.08); }
-    .top { display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; }
-    h1 { margin:0; font-size:30px; }
-    .sub { color:var(--muted); margin:8px 0 0; }
-    .callout { margin-top:16px; padding:14px 16px; background:#fff8df; border:1px solid rgba(154,130,65,0.32); border-radius:16px; color:#5b4a16; font-size:14px; line-height:1.45; }
-    .callout strong { color:#111; }
-    .grid { display:grid; grid-template-columns:1.4fr .9fr .9fr 1fr; gap:10px; margin-top:16px; }
-    input { width:100%; padding:12px; border-radius:12px; border:1px solid #ddd; font:inherit; background:#fff; }
-    .field { display:grid; gap:6px; }
-    .field label { font-size:12px; font-weight:800; color:#6a6257; text-transform:uppercase; letter-spacing:.08em; }
-    .btn { border:none; border-radius:12px; padding:12px 14px; font:inherit; font-weight:800; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
-    .ghost { background:#fff; border:1px solid rgba(0,0,0,0.08); color:#222; }
-    .primary { background:var(--gold); color:#111; }
-    .danger { background:#f4d8d2; color:#7f2d21; }
-    .danger-solid { background:var(--danger); color:#fff; }
-    .status { min-height:20px; margin:16px 0; font-size:14px; }
-    .status.ok { color:var(--ok); } .status.warn { color:var(--warn); }
-    .toolbar { position:sticky; top:10px; z-index:4; background:rgba(249,247,242,.92); backdrop-filter:blur(8px); border:1px solid rgba(0,0,0,.05); border-radius:18px; padding:14px; margin:16px 0 10px; box-shadow:0 10px 28px rgba(0,0,0,.04); }
-    .toolbar-grid { display:grid; grid-template-columns:1.2fr auto auto; gap:10px; align-items:end; }
-    .stats-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-    .stat-chip, .filter-chip { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:8px 12px; font-size:12px; font-weight:800; border:1px solid rgba(0,0,0,.08); background:#fff; color:#222; }
-    .filter-chip.active { background:#111; color:#fff; border-color:#111; }
-    .status-filters { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-    .item-list { display:grid; gap:12px; }
-    .item { background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:20px; padding:18px; display:grid; gap:10px; box-shadow:0 8px 20px rgba(0,0,0,.03); }
-    .item-head { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; flex-wrap:wrap; }
-    .item strong { font-size:28px; line-height:1.1; }
-    .meta-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 14px; }
-    .meta { color:var(--muted); font-size:13px; }
-    .meta-label { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#8b8477; font-weight:800; }
-    .pill { display:inline-flex; padding:4px 10px; border-radius:999px; background:#f4efe4; color:#6f5b28; font-size:11px; font-weight:800; }
-    .row { display:flex; gap:10px; flex-wrap:wrap; margin-top:4px; }
-    .btn.compact { padding:10px 12px; border-radius:14px; }
-    .empty { background:#fff; border:1px dashed rgba(0,0,0,0.12); border-radius:18px; padding:16px; color:var(--muted); }
-    .skeleton { height:120px; border-radius:20px; background:linear-gradient(90deg,#f6f2e8 0%,#fff 50%,#f6f2e8 100%); background-size:200% 100%; animation:shimmer 1.2s linear infinite; border:1px solid rgba(0,0,0,.04); }
-    @keyframes shimmer { from { background-position:200% 0; } to { background-position:-200% 0; } }
+    :root{
+      --gold:#9a8241;
+      --gold-soft:#f3ecda;
+      --ink:#1f1a15;
+      --card:#f9f7f2;
+      --line:rgba(0,0,0,0.08);
+      --muted:#6b6257;
+      --warn:#8b3a30;
+      --ok:#2b5b37;
+      --danger-bg:#f4d8d2;
+      --danger-ink:#7f2d21;
+      --shadow:0 20px 50px rgba(0,0,0,0.08);
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      padding:20px;
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      color:var(--ink);
+      background:linear-gradient(rgba(232,228,217,0.94), rgba(232,228,217,0.96)), url('./wordtergejast.png') center/cover no-repeat;
+      min-height:100vh;
+    }
+    .page{max-width:1480px;margin:0 auto}
+    .main-card{
+      background:rgba(249,247,242,.96);
+      border-radius:30px;
+      padding:28px;
+      box-shadow:var(--shadow);
+      border:1px solid rgba(255,255,255,.55);
+    }
+    .hero{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto;
+      gap:18px;
+      align-items:start;
+    }
+    .hero h1{margin:0;font-size:clamp(30px,4vw,42px)}
+    .sub{margin:10px 0 0;color:var(--muted);max-width:900px;line-height:1.45}
+    .hero-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    .btn{
+      border:none;
+      border-radius:16px;
+      padding:12px 16px;
+      font:inherit;
+      font-weight:900;
+      cursor:pointer;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      transition:transform .12s ease, box-shadow .12s ease;
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn.primary{background:var(--gold);color:#111}
+    .btn.ghost{background:#fff;border:1px solid var(--line);color:#222}
+    .btn.danger{background:var(--danger-bg);color:var(--danger-ink)}
+    .btn.dark{background:#161616;color:#fff}
+    .btn.soft{background:var(--gold-soft);color:#4f4120;border:1px solid rgba(154,130,65,.26)}
+    .top-summary{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:12px;
+      margin-top:18px;
+    }
+    .stat{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:20px;
+      padding:16px;
+    }
+    .stat .label{font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#8a7a55}
+    .stat strong{display:block;margin-top:8px;font-size:28px}
+    .callout{
+      margin-top:16px;
+      padding:16px 18px;
+      background:#fff8df;
+      border:1px solid rgba(154,130,65,.28);
+      border-radius:18px;
+      color:#5b4a16;
+      line-height:1.5;
+    }
+    .layout{
+      display:grid;
+      grid-template-columns:380px minmax(0,1fr);
+      gap:18px;
+      margin-top:20px;
+      align-items:start;
+    }
+    .panel{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:24px;
+      padding:18px;
+      min-width:0;
+    }
+    .sticky{position:sticky;top:16px}
+    .panel h2{margin:0 0 6px;font-size:1.1rem}
+    .panel-sub{color:var(--muted);font-size:14px;line-height:1.45;margin-bottom:14px}
+    .field-grid{display:grid;gap:12px}
+    .field-grid.cols-2{grid-template-columns:1fr 1fr}
+    .field{display:grid;gap:6px}
+    .field label{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#6a6257}
+    input,select{
+      width:100%;
+      padding:13px 14px;
+      border-radius:14px;
+      border:1px solid #ddd;
+      font:inherit;
+      background:#fff;
+      min-width:0;
+    }
+    .toolbar{
+      display:grid;
+      grid-template-columns:minmax(0,1.2fr) repeat(2,minmax(180px,.5fr)) auto;
+      gap:12px;
+      align-items:end;
+    }
+    .toolbar .toggle-wrap{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-height:50px;
+      padding:0 14px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:#fbfaf6;
+      font-weight:800;
+    }
+    .toolbar input[type="checkbox"]{width:18px;height:18px;accent-color:var(--gold)}
+    .status{min-height:22px;margin-top:12px;font-size:14px}
+    .status.ok{color:var(--ok)}
+    .status.warn{color:var(--warn)}
+    .results-meta{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin:16px 0 10px}
+    .results-meta .muted{color:var(--muted)}
+    .results-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+      gap:14px;
+      align-items:start;
+    }
+    .item{
+      background:#fff;
+      border:1px solid rgba(0,0,0,0.06);
+      border-radius:22px;
+      padding:16px;
+      box-shadow:0 10px 24px rgba(0,0,0,0.04);
+      content-visibility:auto;
+      contain-intrinsic-size:280px;
+    }
+    .item-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .item-title{font-size:1.2rem;font-weight:900;line-height:1.1}
+    .pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .pill{display:inline-flex;padding:5px 10px;border-radius:999px;background:#f4efe4;color:#6f5b28;font-size:11px;font-weight:900}
+    .pill.dark{background:#1d1a16;color:#fff}
+    .pill.warn{background:#fff0cc;color:#7c5a09}
+    .pill.danger{background:#f4d8d2;color:#7f2d21}
+    .pill.ok{background:#e3f1e5;color:#245231}
+    .meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+    .meta-card{background:#fbfaf6;border:1px solid var(--line);border-radius:16px;padding:12px}
+    .meta-card .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:900}
+    .meta-card .value{margin-top:6px;font-size:14px;line-height:1.35;font-weight:700;word-break:break-word}
+    .row-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+    .empty{background:#fff;border:1px dashed rgba(0,0,0,0.12);border-radius:18px;padding:18px;color:var(--muted)}
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
-    @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
-    @media (max-width:920px){ .toolbar-grid { grid-template-columns:1fr; } .meta-grid { grid-template-columns:1fr; } .item strong { font-size:24px; } }
-    @media (max-width:760px){ .grid { grid-template-columns:1fr; } .toolbar { position:static; } }
+    .page-floating-logo{position:fixed;top:18px;right:18px;z-index:9998;display:inline-flex;width:64px;height:64px;border-radius:50%;background:rgba(255,251,245,.74);border:1px solid rgba(255,255,255,.7);box-shadow:0 14px 32px rgba(0,0,0,.10);align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+    .page-floating-logo img{width:52px;height:52px;display:block}
+    @media (max-width:1180px){
+      .layout{grid-template-columns:1fr}
+      .sticky{position:static}
+      .toolbar{grid-template-columns:1fr 1fr}
+    }
+    @media (max-width:860px){
+      body{padding:14px}
+      .main-card{padding:18px}
+      .hero{grid-template-columns:1fr}
+      .top-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .toolbar,.field-grid.cols-2,.meta-grid{grid-template-columns:1fr}
+      .results-grid{grid-template-columns:1fr}
+      .page-floating-logo{top:12px;right:12px;width:58px;height:58px}
+      .page-floating-logo img{width:46px;height:46px}
+    }
   </style>
-  <script>window.GEJAST_PAGE_VERSION='v249';</script><script src="./gejast-config.js?v249"></script>
-  <script src="./admin-session-sync.js?v249"></script>
-  <script src="./admin-topnav.js?v249"></script>
+  <script>window.GEJAST_PAGE_VERSION='v255';</script><script src="./gejast-config.js?v255"></script>
+  <script>
+    (function globalAdminLogout(){
+      const btn=document.createElement('button');
+      btn.textContent='Uitloggen';
+      btn.style.cssText='position:fixed;top:14px;right:92px;z-index:9999;border:none;border-radius:14px;padding:10px 14px;background:#111;color:#fff;font:700 14px Inter,sans-serif;cursor:pointer';
+      btn.onclick=()=>{ clearAdminSessionToken(); window.location.href='./admin.html?return_to=admin_reserved_names.html'; };
+      document.addEventListener('DOMContentLoaded',()=>document.body.appendChild(btn));
+    })();
+  </script>
+  <script src="./admin-session-sync.js?v255"></script>
+  <script src="./admin-topnav.js?v255"></script>
 </head>
 <body>
-  <main class="main-card">
-    <div class="top">
-      <div>
-        <h1>Claimbare namen</h1>
-        <p class="sub">Beheer de kieslijst, het account achter een naam en eventueel een onomkeerbare site-verwijdering.</p>
+  <a class="page-floating-logo" href="./index.html" aria-label="Terug naar home"><img src="./logo.png" alt="Logo"></a>
+  <main class="page">
+    <section class="main-card">
+      <div class="hero">
+        <div>
+          <h1>Claimbare namen & ghost-archief</h1>
+          <p class="sub">Deze pagina is nu zowel de kieslijst voor echte claimbare namen als het cleanup-scherm voor dummy/test-profielen. Ghosten hoort de <strong>gekoppelde speler</strong> te verbergen, sessies op te ruimen en de originele naam weer claimbaar te maken.</p>
+        </div>
+        <div class="hero-actions">
+          <a class="btn ghost" href="./admin.html">Terug naar hub</a>
+          <button id="refreshBtn" class="btn dark" type="button">Ververs</button>
+        </div>
       </div>
-      <a class="btn ghost" href="./admin.html">Terug naar hub</a>
-    </div>
 
-    <div class="callout"><strong>Verwijderen uit kieslijst</strong> verwijdert het account/toegang maar laat de spelerdata bestaan zodat matchhistorie intact blijft. <strong>Permanent verwijderen</strong> vervangt de speler overal mogelijk door een placeholder zoals <code>Spookinoza 1</code> en blokkeert de naam definitief voor hergebruik.</div>
+      <div class="top-summary" id="topSummary">
+        <div class="stat"><div class="label">Totaal namen</div><strong id="statTotal">0</strong></div>
+        <div class="stat"><div class="label">Claimbaar</div><strong id="statAvailable">0</strong></div>
+        <div class="stat"><div class="label">Gekoppelde spelers</div><strong id="statLinked">0</strong></div>
+        <div class="stat"><div class="label">Ghost-archief</div><strong id="statGhosted">0</strong></div>
+      </div>
 
-    <div class="grid">
-      <div class="field">
-        <label for="newNameInput">Naam die op de lijst moet komen</label>
-        <input id="newNameInput" type="text" placeholder="Bijv. Jan Jansen" autocomplete="off" autocapitalize="words" spellcheck="false">
-      </div>
-      <div class="field">
-        <label for="newEmailInput">Optioneel vast e-mailadres</label>
-        <input id="newEmailInput" type="email" placeholder="optioneel@voorbeeld.nl" autocomplete="email">
-      </div>
-      <div class="field">
-        <label for="newNoteInput">Notitie voor admin</label>
-        <input id="newNoteInput" type="text" placeholder="Bijv. echte speler / reserve" autocomplete="off">
-      </div>
-      <div class="field">
-        <label>&nbsp;</label>
-        <button id="createBtn" class="btn primary" type="button">Toevoegen aan kieslijst</button>
-      </div>
-    </div>
+      <div class="callout"><strong>Werkrichting:</strong> gebruik <strong>Ghost maken</strong> voor dummy/test-accounts die nergens meer publiek zichtbaar mogen zijn. Dat houdt de historische speler-anker-rij in stand, maar maakt de oorspronkelijke naam weer vrij voor toekomstige claims.</div>
 
-    <div id="statusBox" class="status"></div>
-    <section class="toolbar">
-      <div class="toolbar-grid">
-        <div class="field"><label for="nameSearchInput">Zoek / filter</label><input id="nameSearchInput" type="text" placeholder="Zoek op naam, slug, mail of status"></div>
-        <label class="field" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span style="font-size:12px;font-weight:800;color:#6a6257;text-transform:uppercase;letter-spacing:.08em">Alleen dummy/test/spook</span><input id="dummyOnlyToggle" type="checkbox" style="width:auto;margin:0"></label>
-        <div class="field"><label>Weergave</label><div id="statusFilters" class="status-filters"><button class="filter-chip active" type="button" data-status-filter="all">Alles</button><button class="filter-chip" type="button" data-status-filter="active">Actief</button><button class="filter-chip" type="button" data-status-filter="available">Beschikbaar</button><button class="filter-chip" type="button" data-status-filter="blocked">Geblokkeerd</button></div><label class="field" style="display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-top:10px"><span style="font-size:12px;font-weight:800;color:#6a6257;text-transform:uppercase;letter-spacing:.08em">Toon verborgen archief</span><input id="showGhostArchiveToggle" type="checkbox" style="width:auto;margin:0"></label></div>
+      <div class="layout">
+        <aside class="panel sticky">
+          <h2>Naam toevoegen aan kieslijst</h2>
+          <div class="panel-sub">Handmatig een nieuwe claimbare naam toevoegen of reserveren met vast e-mailadres.</div>
+          <div class="field-grid">
+            <div class="field">
+              <label for="newNameInput">Naam</label>
+              <input id="newNameInput" type="text" placeholder="Bijv. Jan Jansen" autocomplete="off" autocapitalize="words" spellcheck="false">
+            </div>
+            <div class="field">
+              <label for="newEmailInput">Optioneel vast e-mailadres</label>
+              <input id="newEmailInput" type="email" placeholder="optioneel@voorbeeld.nl" autocomplete="email">
+            </div>
+            <div class="field">
+              <label for="newNoteInput">Admin-notitie</label>
+              <input id="newNoteInput" type="text" placeholder="Bijv. echte speler / reserve" autocomplete="off">
+            </div>
+            <button id="createBtn" class="btn primary" type="button">Toevoegen aan kieslijst</button>
+          </div>
+        </aside>
+
+        <section class="panel">
+          <h2>Zoeken, filteren en beheren</h2>
+          <div class="panel-sub">Standaard blijft het verborgen ghost-archief uit beeld. Zet het alleen aan als je bewust in verborgen dummy-rijen wilt werken.</div>
+
+          <div class="toolbar">
+            <div class="field">
+              <label for="searchInput">Zoek op naam, slug of e-mail</label>
+              <input id="searchInput" type="text" placeholder="Bijv. Anna of anna-jansen">
+            </div>
+            <div class="field">
+              <label for="statusFilter">Status</label>
+              <select id="statusFilter">
+                <option value="all">Alles</option>
+                <option value="available">Alleen claimbaar</option>
+                <option value="reserved">Alleen gereserveerd</option>
+                <option value="active">Alleen actief</option>
+                <option value="linked">Alleen gekoppeld</option>
+                <option value="ghosted">Alleen ghosted</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="sortInput">Sortering</label>
+              <select id="sortInput">
+                <option value="name">Naam A-Z</option>
+                <option value="updated">Laatst bijgewerkt</option>
+                <option value="status">Status</option>
+              </select>
+            </div>
+            <label class="toggle-wrap"><input id="showArchiveToggle" type="checkbox"> Toon verborgen archief</label>
+          </div>
+
+          <div id="statusBox" class="status"></div>
+          <div class="results-meta">
+            <div class="muted" id="resultCount">0 resultaten</div>
+            <div class="muted">Ghost-knoppen werken op de <strong>gekoppelde speler-rij</strong>, niet alleen op de naamregel.</div>
+          </div>
+          <div id="listRoot" class="results-grid"></div>
+        </section>
       </div>
-      <div id="statsRow" class="stats-row"></div>
     </section>
-    <div id="listRoot" class="item-list"></div>
   </main>
+
+  <div class="site-credit-watermark" data-version-watermark>v255 · Made by Bruis</div>
+
   <script>
-    const ADMIN_SESSION_KEY = "jas_admin_session_v8";
+    const ADMIN_SESSION_KEY = 'jas_admin_session_v8';
     const ADMIN_SESSION_META_KEY = 'jas_admin_session_meta_v1';
     const ADMIN_SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000;
-    const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || '';
-    const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || '';
-    function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type': 'application/json', Accept: 'application/json' }; }
-    async function parseResponse(res) { const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`); return data; }
-    function readAdminSessionMeta(){ try { return JSON.parse(sessionStorage.getItem(ADMIN_SESSION_META_KEY) || localStorage.getItem(ADMIN_SESSION_META_KEY) || 'null'); } catch { return null; } }
-    function clearAdminSessionToken(){ sessionStorage.removeItem(ADMIN_SESSION_KEY); localStorage.removeItem(ADMIN_SESSION_KEY); sessionStorage.removeItem(ADMIN_SESSION_META_KEY); localStorage.removeItem(ADMIN_SESSION_META_KEY); }
-    function getToken(){ const meta=readAdminSessionMeta(); const token=(meta&&meta.token) || (window.GEJAST_ADMIN_SESSION && window.GEJAST_ADMIN_SESSION.getToken()) || sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); if (meta?.issued_at && (Date.now() - Number(meta.issued_at) > ADMIN_SESSION_MAX_AGE_MS)) { clearAdminSessionToken(); return ''; } return token; }
-    const state={rows:[],busyId:null,busyMode:'',pendingPurgeId:null,purgeDeadlineAt:0,rowMessageId:null,rowMessageText:'',rowMessageTone:'',statusFilter:'all',rpcReady:{remove:true,purge:true},renderToken:0,scrollAnchorId:null,scrollAnchorY:null};
-    function setStatus(message='', tone='') { const box=document.getElementById('statusBox'); box.className=`status ${tone}`.trim(); box.textContent=message; }
-    function rememberScrollAnchor(rowId){ state.scrollAnchorId = rowId ? Number(rowId) : null; state.scrollAnchorY = window.scrollY; }
-    function restoreScrollAnchor(){ if(state.scrollAnchorY==null) return; const y=state.scrollAnchorY; requestAnimationFrame(()=>window.scrollTo({top:y, behavior:'instant'})); state.scrollAnchorY=null; state.scrollAnchorId=null; }
-    function filteredRows(){ const q=String(document.getElementById('nameSearchInput')?.value||'').trim().toLowerCase(); const dummyOnly=!!document.getElementById('dummyOnlyToggle')?.checked; const wanted=String(state.statusFilter||'all').toLowerCase(); return (state.rows||[]).filter((row)=>{ const hay=[row.display_name,row.username,row.reserved_for_email,row.status].map((v)=>String(v||'').toLowerCase()).join(' '); const status=String(row.status||'').toLowerCase(); if(q && !hay.includes(q)) return false; if(wanted!=='all' && status!==wanted) return false; if(dummyOnly && !/(dummy|test|spook|verifier\s*1111)/i.test([row.display_name,row.username,row.reserved_for_email].join(' '))) return false; return true; }).sort((a,b)=> String(a.display_name||'').localeCompare(String(b.display_name||''),'nl')); }
-    function renderStats(totalRows, visibleRows){ const root=document.getElementById('statsRow'); if(!root) return; const dummyCount=(state.rows||[]).filter((row)=>/(dummy|test|spook|verifier\s*1111)/i.test([row.display_name,row.username,row.reserved_for_email].join(' '))).length; const activeCount=(state.rows||[]).filter((row)=>String(row.status||'').toLowerCase()==='active').length; const blockedCount=(state.rows||[]).filter((row)=>String(row.status||'').toLowerCase()==='blocked').length; root.innerHTML=`<div class="stat-chip">Totaal <strong>${totalRows}</strong></div><div class="stat-chip">Zichtbaar <strong>${visibleRows}</strong></div><div class="stat-chip">Dummy/test/spook <strong>${dummyCount}</strong></div><div class="stat-chip">Actief <strong>${activeCount}</strong></div><div class="stat-chip">Geblokkeerd <strong>${blockedCount}</strong></div>`; }
-    function renderRows(){ const rows=filteredRows(); const root=document.getElementById('listRoot'); const token=++state.renderToken; root.innerHTML=''; renderStats((state.rows||[]).length, rows.length); document.querySelectorAll('[data-status-filter]').forEach((btn)=>btn.classList.toggle('active', btn.dataset.statusFilter===state.statusFilter)); if(!rows.length){ root.innerHTML='<div class="empty">Geen namen gevonden voor dit filter.</div>'; return; } const now=Date.now(); if(state.purgeDeadlineAt && now>state.purgeDeadlineAt){ state.pendingPurgeId=null; state.purgeDeadlineAt=0; } const skeletonCount=Math.min(4, rows.length); root.innerHTML=Array.from({length:skeletonCount}).map(()=>'<div class="skeleton"></div>').join(''); const chunkSize=24; let index=0; function pump(){ if(token!==state.renderToken) return; if(index===0) root.innerHTML=''; const frag=document.createDocumentFragment(); for(let i=0;i<chunkSize && index<rows.length;i++,index++){ const row=rows[index]; const busy=state.busyId===row.id; const removeDisabled=busy||!state.rpcReady.remove; const purgeDisabled=busy||!state.rpcReady.purge; const confirmPurge=state.pendingPurgeId===row.id && state.purgeDeadlineAt>Date.now(); const secondsLeft=confirmPurge ? Math.max(1, Math.ceil((state.purgeDeadlineAt-Date.now())/1000)) : 0; const card=document.createElement('article'); card.className='item'; card.dataset.rowId=String(row.id); const rowMessage = state.rowMessageId===row.id ? `<div class="status ${state.rowMessageTone||''}" style="display:block;margin-top:6px">${state.rowMessageText||''}</div>` : ''; card.innerHTML=`<div class="item-head"><div><strong>${row.display_name}</strong><div class="meta-grid" style="margin-top:10px"><div><div class="meta-label">Status</div><div class="pill">${row.status || 'beschikbaar'}</div></div><div><div class="meta-label">Slug</div><div class="meta">${row.username || '-'}</div></div><div><div class="meta-label">E-mail</div><div class="meta">${row.reserved_for_email || '-'}</div></div><div><div class="meta-label">Speler-id</div><div class="meta">${row.player_id || '-'}</div></div></div></div></div>${confirmPurge ? `<div class="callout" style="margin:0;padding:10px 12px"><strong>Definitief verwijderen?</strong> Klik binnen ${secondsLeft}s nogmaals op <strong>Permanent verwijderen</strong>.</div>` : ''}${rowMessage}<div class="row"><button class="btn compact danger" type="button" data-remove-id="${row.id}" ${removeDisabled?'disabled':''}>${busy && state.busyMode==='remove' ? 'Bezig…' : (state.rpcReady.remove ? 'Account verwijderen + uit kieslijst' : 'SQL/RPC nog niet live')}</button><button class="btn compact danger-solid" type="button" data-purge-id="${row.id}" ${purgeDisabled?'disabled':''}>${busy && state.busyMode==='purge' ? 'Bezig…' : (confirmPurge ? `Nogmaals klikken (${secondsLeft}s)` : (state.rpcReady.purge ? 'Permanent verwijderen' : 'SQL/RPC nog niet live'))}</button></div>`; frag.appendChild(card); } root.appendChild(frag); if(index<rows.length) requestAnimationFrame(pump); else restoreScrollAnchor(); } requestAnimationFrame(pump); }
-    async function ensureGate(){
-      const token=getToken();
-      if(!token){ clearAdminSessionToken(); window.location.href='./admin.html?return_to=admin_reserved_names.html'; return false; }
-      try {
-        await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: token }) }).then(parseResponse);
-        return true;
-      } catch { clearAdminSessionToken(); window.location.href='./admin.html?return_to=admin_reserved_names.html'; return false; }
+    const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || 'https://uiqntazgnrxwliaidkmy.supabase.co';
+    const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
+
+    const state = { rows: [], filtered: [], renderSeq: 0 };
+
+    function rpcHeaders(){
+      return {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      };
     }
-    async function callRpc(name, payload){
-      return fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify(payload) }).then(parseResponse);
+    async function parseResponse(res){
+      const text = await res.text();
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); }
+      if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`);
+      return data;
+    }
+    function readAdminSessionMeta(){
+      try { return JSON.parse(sessionStorage.getItem(ADMIN_SESSION_META_KEY) || localStorage.getItem(ADMIN_SESSION_META_KEY) || 'null'); } catch { return null; }
+    }
+    function clearAdminSessionToken(){
+      sessionStorage.removeItem(ADMIN_SESSION_KEY);
+      localStorage.removeItem(ADMIN_SESSION_KEY);
+      sessionStorage.removeItem(ADMIN_SESSION_META_KEY);
+      localStorage.removeItem(ADMIN_SESSION_META_KEY);
+    }
+    function getToken(){
+      const meta = readAdminSessionMeta();
+      const token = (meta && meta.token) || (window.GEJAST_ADMIN_SESSION && window.GEJAST_ADMIN_SESSION.getToken()) || sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY);
+      if (meta?.issued_at && (Date.now() - Number(meta.issued_at) > ADMIN_SESSION_MAX_AGE_MS)) {
+        clearAdminSessionToken();
+        return '';
+      }
+      return token;
+    }
+    function setStatus(message = '', tone = ''){
+      const box = document.getElementById('statusBox');
+      box.className = `status ${tone}`.trim();
+      box.textContent = message;
+    }
+    function escapeHtml(value){
+      return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+    }
+    function formatDate(value){
+      const d = new Date(value);
+      return Number.isNaN(d.getTime()) ? '–' : d.toLocaleString('nl-NL');
+    }
+    function compactText(value){
+      const text = String(value ?? '').trim();
+      return text || '–';
+    }
+    function rowSearchBlob(row){
+      return [row.display_name,row.username,row.reserved_for_email,row.reserved_for_person_note,row.player_display_name,row.player_ghost_note]
+        .map(v => String(v || '').toLowerCase())
+        .join(' ');
+    }
+    function ghostedRow(row){
+      return Boolean(row.player_hidden_from_public || row.player_is_dummy || row.player_ghosted_at);
+    }
+    async function ensureGate(){
+      const token = getToken();
+      if (!token) {
+        clearAdminSessionToken();
+        window.location.href = './admin.html?return_to=admin_reserved_names.html';
+        return false;
+      }
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, {
+          method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: token })
+        }).then(parseResponse);
+        return true;
+      } catch {
+        clearAdminSessionToken();
+        window.location.href = './admin.html?return_to=admin_reserved_names.html';
+        return false;
+      }
     }
     async function loadNames(){
       try {
         setStatus('Laden...');
-        const data = await callRpc('admin_get_allowed_usernames', { admin_session_token: getToken() });
-        state.rows = Array.isArray(data.items) ? data.items : [];
-        state.rpcReady.remove = true; state.rpcReady.purge = true;
-        if (!state.rows.length) { document.getElementById('listRoot').innerHTML = '<div class="empty">Nog geen namen gevonden. Voeg hierboven een echte naam toe om de kieslijst te vullen.</div>'; setStatus('Lijst geladen.', 'ok'); return; }
-        renderRows();
+        const data = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_allowed_usernames`, {
+          method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: getToken() })
+        }).then(parseResponse);
+        state.rows = Array.isArray(data?.items) ? data.items : [];
+        renderAll();
         setStatus('Lijst geladen.', 'ok');
       } catch (error) {
-        document.getElementById('listRoot').innerHTML = '<div class="empty">De kieslijst kon niet geladen worden.</div>';
+        document.getElementById('listRoot').innerHTML = '<div class="empty">Deze pagina kon de names-bron niet laden. Run de nieuwste full SQL opnieuw.</div>';
         setStatus(error?.message || 'Laden mislukt.', 'warn');
       }
     }
-    async function removeFromList(id){
-      rememberScrollAnchor(id); state.busyId=Number(id); state.busyMode='remove'; renderRows();
-      try {
-        setStatus('Account verwijderen uit kieslijst...');
-        await callRpc('admin_remove_allowed_username', { admin_session_token:getToken(), allowed_username_id_input:Number(id) });
-        state.rowMessageId = Number(id); state.rowMessageText = 'Accounttoegang verwijderd en naam uit de kieslijst gehaald.'; state.rowMessageTone = 'ok';
-        await loadNames();
-        setStatus('Accounttoegang verwijderd en naam uit de kieslijst gehaald.', 'ok');
-      } finally {
-        state.busyId=null; state.busyMode=''; renderRows();
-      }
+    function updateSummary(rows){
+      const total = rows.length;
+      const available = rows.filter(r => String(r.status || '').toLowerCase() === 'available').length;
+      const linked = rows.filter(r => Number(r.player_id) > 0).length;
+      const ghosted = rows.filter(ghostedRow).length;
+      document.getElementById('statTotal').textContent = String(total);
+      document.getElementById('statAvailable').textContent = String(available);
+      document.getElementById('statLinked').textContent = String(linked);
+      document.getElementById('statGhosted').textContent = String(ghosted);
     }
-    async function purgeForever(id){
-      const rowId = Number(id);
-      if (state.pendingPurgeId !== rowId || Date.now() > state.purgeDeadlineAt) {
-        rememberScrollAnchor(rowId);
-        state.pendingPurgeId = rowId;
-        state.purgeDeadlineAt = Date.now() + 8000;
-        state.rowMessageId = rowId; state.rowMessageText = 'Klik nogmaals om definitief te verwijderen.'; state.rowMessageTone = 'warn';
-        setStatus('Klik nogmaals op Permanent verwijderen om definitief te bevestigen.', 'warn');
-        renderRows();
+    function applyFilters(){
+      const q = document.getElementById('searchInput').value.trim().toLowerCase();
+      const statusFilter = document.getElementById('statusFilter').value;
+      const sortInput = document.getElementById('sortInput').value;
+      const showArchive = document.getElementById('showArchiveToggle').checked;
+      const rows = state.rows.filter((row) => {
+        const isGhost = ghostedRow(row);
+        if (!showArchive && isGhost) return false;
+        if (q && !rowSearchBlob(row).includes(q)) return false;
+        if (statusFilter === 'available' && String(row.status || '').toLowerCase() !== 'available') return false;
+        if (statusFilter === 'reserved' && String(row.status || '').toLowerCase() !== 'reserved') return false;
+        if (statusFilter === 'active' && String(row.status || '').toLowerCase() !== 'active') return false;
+        if (statusFilter === 'linked' && !(Number(row.player_id) > 0)) return false;
+        if (statusFilter === 'ghosted' && !isGhost) return false;
+        return true;
+      });
+      rows.sort((a,b) => {
+        if (sortInput === 'updated') return new Date(b.updated_at || 0) - new Date(a.updated_at || 0);
+        if (sortInput === 'status') return String(a.status || '').localeCompare(String(b.status || ''), 'nl', { sensitivity:'base' }) || String(a.display_name || '').localeCompare(String(b.display_name || ''), 'nl', { sensitivity:'base' });
+        return String(a.display_name || '').localeCompare(String(b.display_name || ''), 'nl', { sensitivity:'base' });
+      });
+      state.filtered = rows;
+      document.getElementById('resultCount').textContent = `${rows.length} resultaat/resultaten zichtbaar.`;
+      return rows;
+    }
+    function pill(label, className = ''){
+      return `<span class="pill ${className}">${escapeHtml(label)}</span>`;
+    }
+    function buildCard(row){
+      const isGhost = ghostedRow(row);
+      const status = String(row.status || 'beschikbaar');
+      const originalNames = Array.isArray(row.player_ghost_original_names) ? row.player_ghost_original_names : [];
+      return `
+        <article class="item">
+          <div class="item-head">
+            <div>
+              <div class="item-title">${escapeHtml(row.display_name || 'Naamloos')}</div>
+              <div class="pill-row">
+                ${pill(status)}
+                ${Number(row.player_id) > 0 ? pill(`speler ${row.player_id}`, 'dark') : ''}
+                ${isGhost ? pill('ghost-archief', 'danger') : ''}
+                ${row.player_hidden_from_public ? pill('verborgen', 'warn') : ''}
+              </div>
+            </div>
+          </div>
+          <div class="meta-grid">
+            <div class="meta-card"><div class="label">Slug</div><div class="value">${escapeHtml(compactText(row.username))}</div></div>
+            <div class="meta-card"><div class="label">E-mail</div><div class="value">${escapeHtml(compactText(row.reserved_for_email))}</div></div>
+            <div class="meta-card"><div class="label">Gekoppelde speler</div><div class="value">${escapeHtml(compactText(row.player_display_name || row.player_id || '–'))}</div></div>
+            <div class="meta-card"><div class="label">Bijgewerkt</div><div class="value">${escapeHtml(formatDate(row.updated_at))}</div></div>
+            <div class="meta-card"><div class="label">Ghost notitie</div><div class="value">${escapeHtml(compactText(row.player_ghost_note))}</div></div>
+            <div class="meta-card"><div class="label">Vrijgegeven namen</div><div class="value">${escapeHtml(originalNames.length ? originalNames.join(', ') : '–')}</div></div>
+          </div>
+          <div class="row-actions">
+            ${Number(row.player_id) > 0 ? `<button class="btn ${isGhost ? 'soft' : 'dark'}" type="button" data-ghost-player-id="${row.player_id}" data-ghosted="${isGhost ? '0' : '1'}">${isGhost ? 'Unghost maken' : 'Ghost maken'}</button>` : ''}
+            <button class="btn danger" type="button" data-remove-id="${row.id}">Verwijderen uit kieslijst</button>
+          </div>
+        </article>
+      `;
+    }
+    function renderRows(rows){
+      const root = document.getElementById('listRoot');
+      const renderSeq = ++state.renderSeq;
+      root.innerHTML = '';
+      if (!rows.length) {
+        root.innerHTML = '<div class="empty">Geen namen gevonden voor deze filtercombinatie.</div>';
         return;
       }
-      rememberScrollAnchor(rowId); state.busyId=rowId; state.busyMode='purge'; renderRows();
-      try {
-        setStatus('Permanent verwijderen...');
-        const result = await callRpc('admin_permanently_delete_allowed_username', { admin_session_token:getToken(), allowed_username_id_input:rowId });
-        state.pendingPurgeId=null; state.purgeDeadlineAt=0; state.rowMessageId = rowId; state.rowMessageText = `Permanent verwijderd. Placeholder: ${result.placeholder_name || 'Spookinoza'}.`; state.rowMessageTone = 'ok';
-        await loadNames();
-        setStatus(`Permanent verwijderd. Placeholder: ${result.placeholder_name || 'Spookinoza'}.`, 'ok');
-      } finally {
-        state.busyId=null; state.busyMode=''; renderRows();
+      const batchSize = 40;
+      let index = 0;
+      function paintBatch(){
+        if (renderSeq !== state.renderSeq) return;
+        const fragment = document.createDocumentFragment();
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'contents';
+        for (let count = 0; index < rows.length && count < batchSize; index += 1, count += 1) {
+          wrapper.insertAdjacentHTML('beforeend', buildCard(rows[index]));
+        }
+        while (wrapper.firstChild) fragment.appendChild(wrapper.firstChild);
+        root.appendChild(fragment);
+        if (index < rows.length) requestAnimationFrame(paintBatch);
       }
+      requestAnimationFrame(paintBatch);
     }
-    document.getElementById('listRoot').addEventListener('click', async (event) => {
-      const removeBtn = event.target.closest('[data-remove-id]');
-      const purgeBtn = event.target.closest('[data-purge-id]');
-      try {
-        if (removeBtn) await removeFromList(removeBtn.dataset.removeId);
-        if (purgeBtn) await purgeForever(purgeBtn.dataset.purgeId);
-      } catch (error) {
-        const msg=String(error?.message||'Actie mislukt.');
-        const rowId = Number((removeBtn && removeBtn.dataset.removeId) || (purgeBtn && purgeBtn.dataset.purgeId) || 0) || null;
-        if (rowId) { state.rowMessageId = rowId; state.rowMessageText = msg; state.rowMessageTone = 'warn'; }
-        if(/admin_remove_allowed_username|admin_permanently_delete_allowed_username|function .* does not exist|schema cache/i.test(msg)){ if(removeBtn) state.rpcReady.remove=false; if(purgeBtn) state.rpcReady.purge=false; renderRows(); }
-        renderRows();
-        setStatus(msg, 'warn');
+    function renderAll(){
+      updateSummary(state.rows);
+      renderRows(applyFilters());
+    }
+    async function callRemoveAllowedUsername(id){
+      const payloads = [
+        { admin_session_token: getToken(), allowed_username_id_input: Number(id) },
+        { admin_session_token: getToken(), allowed_username_id: Number(id) },
+        { admin_session_token: getToken(), input_allowed_username_id: Number(id) },
+        { admin_session_token: getToken(), reserved_name_id_input: Number(id) },
+        { admin_session_token: getToken(), reserved_name_id: Number(id) },
+        { admin_session_token: getToken(), id_input: Number(id) },
+        { admin_session_token: getToken(), id: Number(id) }
+      ];
+      let lastError = null;
+      for (const payload of payloads) {
+        try {
+          return await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_remove_allowed_username`, {
+            method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify(payload)
+          }).then(parseResponse);
+        } catch (error) {
+          lastError = error;
+          const message = String(error?.message || '');
+          if (!/schema cache|function|parameter|argument|missing/i.test(message)) throw error;
+        }
       }
+      throw lastError || new Error('Verwijderen mislukt.');
+    }
+    async function setGhostStatus(playerId, ghosted){
+      return fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_set_player_ghost_status`, {
+        method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(),
+        body:JSON.stringify({
+          admin_session_token: getToken(),
+          target_player_id: Number(playerId),
+          ghosted: Boolean(ghosted),
+          reason_input: ghosted ? 'admin reserved names ghost action' : 'admin reserved names unghost action'
+        })
+      }).then(parseResponse);
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', loadNames);
+    ['searchInput','statusFilter','sortInput','showArchiveToggle'].forEach((id) => {
+      document.getElementById(id).addEventListener(id === 'searchInput' ? 'input' : 'change', renderAll);
     });
-    let searchTimer=null; document.getElementById('nameSearchInput').addEventListener('input', ()=>{ clearTimeout(searchTimer); searchTimer=setTimeout(renderRows, 120); });
-    document.getElementById('dummyOnlyToggle').addEventListener('change', renderRows);
-    document.getElementById('showGhostArchiveToggle').addEventListener('change', renderRows);
-    document.getElementById('statusFilters').addEventListener('click', (event)=>{ const btn=event.target.closest('[data-status-filter]'); if(!btn) return; state.statusFilter=btn.dataset.statusFilter||'all'; renderRows(); });
+
     document.getElementById('createBtn').addEventListener('click', async () => {
       try {
-        setStatus('Naam reserveren...');
-        await callRpc('admin_reserve_allowed_username', { admin_session_token: getToken(), display_name_input: document.getElementById('newNameInput').value.trim(), reserved_for_email_input: document.getElementById('newEmailInput').value.trim().toLowerCase() || null, reserved_for_person_note_input: document.getElementById('newNoteInput').value.trim() || null });
-        document.getElementById('newNameInput').value='';
-        document.getElementById('newEmailInput').value='';
-        document.getElementById('newNoteInput').value='';
+        setStatus('Naam toevoegen...');
+        await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_reserve_allowed_username`, {
+          method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(),
+          body:JSON.stringify({
+            admin_session_token: getToken(),
+            display_name_input: document.getElementById('newNameInput').value.trim(),
+            reserved_for_email_input: document.getElementById('newEmailInput').value.trim().toLowerCase() || null,
+            reserved_for_person_note_input: document.getElementById('newNoteInput').value.trim() || null
+          })
+        }).then(parseResponse);
+        document.getElementById('newNameInput').value = '';
+        document.getElementById('newEmailInput').value = '';
+        document.getElementById('newNoteInput').value = '';
         await loadNames();
         setStatus('Naam toegevoegd aan de kieslijst.', 'ok');
       } catch (error) {
-        setStatus(error?.message || 'Reserveren mislukt.', 'warn');
+        setStatus(error?.message || 'Toevoegen mislukt.', 'warn');
       }
     });
-    (async()=>{ if(await ensureGate()) loadNames(); })();
+
+    document.getElementById('listRoot').addEventListener('click', async (event) => {
+      const removeBtn = event.target.closest('[data-remove-id]');
+      if (removeBtn) {
+        try {
+          setStatus('Naam verwijderen...');
+          await callRemoveAllowedUsername(removeBtn.dataset.removeId);
+          await loadNames();
+          setStatus('Naam verwijderd uit de kieslijst.', 'ok');
+        } catch (error) {
+          setStatus(error?.message || 'Verwijderen mislukt.', 'warn');
+        }
+        return;
+      }
+      const ghostBtn = event.target.closest('[data-ghost-player-id]');
+      if (ghostBtn) {
+        try {
+          const shouldGhost = ghostBtn.dataset.ghosted === '1';
+          setStatus(shouldGhost ? 'Profiel ghost maken...' : 'Profiel unghost maken...');
+          await setGhostStatus(ghostBtn.dataset.ghostPlayerId, shouldGhost);
+          await loadNames();
+          setStatus(shouldGhost ? 'Profiel is ghost gemaakt en naam is vrijgegeven.' : 'Profiel is weer zichtbaar gemaakt.', 'ok');
+        } catch (error) {
+          setStatus(error?.message || 'Ghost-actie mislukt.', 'warn');
+        }
+      }
+    });
+
+    (async () => {
+      if (await ensureGate()) loadNames();
+    })();
   </script>
-  <div class="site-credit-watermark" data-version-watermark></div>
-<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();window.GEJAST_CONFIG&&window.GEJAST_CONFIG.hideBlankAuthCorners&&window.GEJAST_CONFIG.hideBlankAuthCorners();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>
