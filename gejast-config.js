@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION: 'v221',
+    VERSION: 'v222',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -26,6 +26,44 @@
   const effectiveVersion = candidates.sort((a,b)=>parseVersion(b)-parseVersion(a))[0] || CONFIG.VERSION;
   const label = `${effectiveVersion} · Made by Bruis`;
   window.GEJAST_PAGE_VERSION = effectiveVersion;
+
+
+  function installBackgroundContinuation(){
+    try {
+      if (!document.body || document.getElementById('gejast-bg-continuation')) return;
+      const cs = window.getComputedStyle(document.body);
+      const bgImage = cs.backgroundImage || '';
+      if (!bgImage || bgImage === 'none') return;
+      document.documentElement.style.background = cs.backgroundColor || '#000';
+      document.body.style.position = document.body.style.position || 'relative';
+      document.body.style.isolation = 'isolate';
+      const layer = document.createElement('div');
+      layer.id = 'gejast-bg-continuation';
+      layer.setAttribute('aria-hidden','true');
+      Object.assign(layer.style, {
+        position:'absolute',
+        left:'0', right:'0', top:'100vh',
+        height: Math.max(window.innerHeight, document.documentElement.scrollHeight) + 'px',
+        zIndex:'-1',
+        pointerEvents:'none',
+        backgroundImage:bgImage,
+        backgroundSize:cs.backgroundSize || 'cover',
+        backgroundPosition:cs.backgroundPosition || 'center',
+        backgroundRepeat:cs.backgroundRepeat || 'no-repeat',
+        transform:'rotate(180deg)',
+        transformOrigin:'center center',
+        opacity:'1'
+      });
+      document.body.appendChild(layer);
+      const sync = () => {
+        const nextHeight = Math.max(window.innerHeight, document.documentElement.scrollHeight);
+        layer.style.height = nextHeight + 'px';
+      };
+      window.addEventListener('resize', sync, { passive:true });
+      window.addEventListener('load', sync, { once:true });
+      sync();
+    } catch (_) {}
+  }
 
   function applyVersionLabel(){
     const selectors = ['.site-credit-watermark','#versionWatermark','.version-tag','.watermark','[data-version-watermark]'];
@@ -123,9 +161,10 @@
     ensurePlayerSessionOrRedirect,
     installActivityKeepalive,
     requireMatchEntrySession,
-    buildLoginUrl
+    buildLoginUrl,
+    installBackgroundContinuation
   });
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyVersionLabel, { once: true });
-  else applyVersionLabel();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ()=>{ applyVersionLabel(); installBackgroundContinuation(); }, { once: true });
+  else { applyVersionLabel(); installBackgroundContinuation(); }
 })();

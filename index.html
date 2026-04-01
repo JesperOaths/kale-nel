@@ -578,7 +578,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v221';</script><script src="./gejast-config.js?v221"></script>
+  <script>window.GEJAST_PAGE_VERSION='v222';</script><script src="./gejast-config.js?v222"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -1058,7 +1058,9 @@
     async function loadDrinksHomeTop5(){
       try{
         const dayNames = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
-        const dayTitle = `${dayNames[new Date().getDay()]||'Vandaag'}`;
+        const sessionClock = new Date(Date.now() - (6 * 60 * 60 * 1000));
+        const sessionDayName = dayNames[sessionClock.getDay()] || 'Vandaag';
+        const dayTitle = `Vandaag (${sessionDayName})`;
         const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_top5_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
         const data = await parseResponse(res);
         const payload = data?.get_drinks_homepage_top5_public || data || {};
