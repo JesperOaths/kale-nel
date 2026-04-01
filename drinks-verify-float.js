@@ -146,9 +146,10 @@
   function maybeVibrate(item){
     try {
       const last = localStorage.getItem(LAST_ALERT_KEY);
-      if (last === String(item.id)) return;
-      localStorage.setItem(LAST_ALERT_KEY, `${item.kind||'drink'}:${item.id}`);
-      if (navigator.vibrate && document.visibilityState === 'visible') navigator.vibrate([200,80,200,80,260]);
+      const currentKey = `${item.kind||'drink'}:${item.id}`;
+      if (last === currentKey) return;
+      localStorage.setItem(LAST_ALERT_KEY, currentKey);
+      if (navigator.vibrate && document.visibilityState === 'visible') { navigator.vibrate([220,80,220,80,320]); setTimeout(()=>{ try{ navigator.vibrate([180,60,220]); }catch(_){ } }, 700); }
     } catch(_){}
   }
 

@@ -6,14 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Claimbare namen - Wordt er gejast?</title>
   <style>
-    :root { --gold:#d4af37; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#666; --warn:#8b3a30; --ok:#2b5b37; }
+    :root { --gold:#9a8241; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#666; --warn:#8b3a30; --ok:#2b5b37; }
     * { box-sizing:border-box; }
     body { margin:0; padding:20px; font-family:Inter,sans-serif; background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed; min-height:100vh; }
     .main-card { background:var(--card); border-radius:24px; padding:28px; max-width:960px; margin:0 auto; box-shadow:0 20px 50px rgba(0,0,0,0.08); }
     .top { display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; }
     h1 { margin:0; font-size:30px; }
     .sub { color:var(--muted); margin:8px 0 0; }
-    .callout { margin-top:16px; padding:14px 16px; background:#fff8df; border:1px solid rgba(212,175,55,0.32); border-radius:16px; color:#5b4a16; font-size:14px; line-height:1.45; }
+    .callout { margin-top:16px; padding:14px 16px; background:#fff8df; border:1px solid rgba(154,130,65,0.32); border-radius:16px; color:#5b4a16; font-size:14px; line-height:1.45; }
     .callout strong { color:#111; }
     .grid { display:grid; grid-template-columns:1.4fr .9fr .9fr 1fr; gap:10px; margin-top:16px; }
     input, select { width:100%; padding:12px; border-radius:12px; border:1px solid #ddd; font:inherit; background:#fff; }
@@ -30,15 +30,16 @@
     .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
     .danger { background:#f4d8d2; color:#7f2d21; }
     .empty { background:#fff; border:1px dashed rgba(0,0,0,0.12); border-radius:18px; padding:16px; color:var(--muted); }
-    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(212,175,55,0.35);color:#f3e3a6;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
     @media (max-width:760px){ .grid { grid-template-columns:1fr; } }
   </style>
-  <script src="./gejast-config.js?v201">
+  <script>window.GEJAST_PAGE_VERSION='v217';</script><script src="./gejast-config.js?v217"></script>
+  <script>
     (function globalAdminLogout(){ const btn=document.createElement('button'); btn.textContent='Uitloggen'; btn.style.cssText='position:fixed;top:14px;right:14px;z-index:9999;border:none;border-radius:14px;padding:10px 14px;background:#111;color:#fff;font:700 14px Inter,sans-serif;cursor:pointer'; btn.onclick=()=>{ clearAdminSessionToken(); window.location.href='./admin.html?return_to=admin_reserved_names.html'; }; document.addEventListener('DOMContentLoaded',()=>document.body.appendChild(btn)); })();
   </script>
-  <script src="./admin-session-sync.js?v160"></script>
-  <script src="./admin-topnav.js?v160"></script>
+  <script src="./admin-session-sync.js?v217"></script>
+  <script src="./admin-topnav.js?v217"></script>
 </head>
 <body>
   <main class="main-card">
@@ -171,7 +172,7 @@
     });
     (async()=>{ if(await ensureGate()) loadNames(); })();
   </script>
-  <div class="site-credit-watermark" data-version-watermark>v121 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v217 · Made by Bruis</div>
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>

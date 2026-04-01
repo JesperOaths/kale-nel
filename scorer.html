@@ -7,7 +7,7 @@
   <meta name="description" content="Mobiele klaverjas scorer met takken, biedingen en roem." />
   <style>
     :root {
-      --gold:#d4af37;
+      --gold:#9a8241;
       --gold-dark:#b88f14;
       --ink:#23201b;
       --muted:#6d665e;
@@ -113,7 +113,7 @@
     .meta-tag.suit.black { color:#111; }
     .meta-tag.strike { text-decoration:line-through; color:#8b8278; }
     .meta-tag.transfer { border-color:rgba(191,47,36,0.18); background:#fff4f3; }
-    .meta-tag.special.pit { color:#7d5e06; border-color:rgba(212,175,55,0.26); background:#fff8dd; }
+    .meta-tag.special.pit { color:#7d5e06; border-color:rgba(154,130,65,0.26); background:#fff8dd; }
     .score-empty { height:40px; opacity:0.3; border-bottom:1px dashed rgba(17,17,17,0.08); }
     .tak-summary { padding:2px 0 6px; }
     .tak-summary .tak-divider { margin-bottom:6px; }
@@ -155,7 +155,7 @@
     .input-card p { margin:0 0 12px; color:var(--muted); font-size:12px; }
     .roem-row, .special-row { display:flex; gap:8px; }
     .small-toggle {
-      flex:1; border:1px solid rgba(212,175,55,0.28); background:#fffaf0; color:#7b5e10; border-radius:14px; padding:11px 10px; font-weight:800; font-size:13px; cursor:pointer;
+      flex:1; border:1px solid rgba(154,130,65,0.28); background:#fffaf0; color:#7b5e10; border-radius:14px; padding:11px 10px; font-weight:800; font-size:13px; cursor:pointer;
     }
     .small-ghost {
       border:1px solid rgba(17,17,17,0.10); background:#fff; color:#555; border-radius:14px; padding:11px 10px; font-weight:800; font-size:12px; cursor:pointer;
@@ -164,12 +164,12 @@
     .score-input {
       margin-top:12px; width:100%; border:2px solid rgba(17,17,17,0.10); background:#fff; border-radius:18px; height:64px; text-align:center; font-size:34px; font-weight:800; color:#222;
     }
-    .score-input.locked { background:#f5f0e6; border-color:rgba(212,175,55,0.24); color:#7d5e06; }
+    .score-input.locked { background:#f5f0e6; border-color:rgba(154,130,65,0.24); color:#7d5e06; }
     .special-row { margin-top:10px; }
     .special-btn { flex:1; border:1px solid rgba(17,17,17,0.12); background:#fff; color:#7a746b; border-radius:16px; padding:10px; font-weight:800; cursor:pointer; }
     .special-btn:disabled { opacity:.38; cursor:not-allowed; }
     .special-btn.active.nat { border-color:rgba(204,45,36,0.28); background:#fff4f3; color:var(--red); }
-    .special-btn.active.pit { border-color:rgba(212,175,55,0.36); background:#fff8dd; color:#7d5e06; }
+    .special-btn.active.pit { border-color:rgba(154,130,65,0.36); background:#fff8dd; color:#7d5e06; }
     .danger-mini { width:100%; margin-top:10px; border:none; background:#f0e2de; color:#8f3028; border-radius:14px; padding:10px 12px; font-weight:800; cursor:pointer; }
     .save-bar { padding:10px 14px calc(10px + env(safe-area-inset-bottom)); background:linear-gradient(180deg, rgba(247,244,238,0), rgba(247,244,238,0.96) 40%, rgba(247,244,238,0.98)); }
     .save-btn { width:100%; border:none; border-radius:16px; padding:14px; background:#111; color:#fff; font-size:17px; font-weight:900; box-shadow:0 16px 24px rgba(0,0,0,0.16); cursor:pointer; }
@@ -205,7 +205,7 @@
     .suit-btn { font-size:34px; line-height:1; padding:18px 10px; }
     .suit-btn.red { color:var(--red); background:#111; border-color:#111; }
     .suit-btn.black { color:#111; background:var(--red); border-color:var(--red); }
-    .suit-btn.sans { color:#111; background:#fff8dd; border-color:rgba(212,175,55,0.5); font-size:22px; font-weight:900; letter-spacing:-0.04em; }
+    .suit-btn.sans { color:#111; background:#fff8dd; border-color:rgba(154,130,65,0.5); font-size:22px; font-weight:900; letter-spacing:-0.04em; }
     .suit-btn.active.red, .suit-btn.active.black, .suit-btn.active.sans { color:#111; background:var(--gold); border-color:var(--gold-dark); }
     .bid-current-pill { display:inline-flex; align-items:center; gap:8px; margin-top:10px; padding:8px 12px; border-radius:999px; background:#fff; border:1px solid rgba(17,17,17,0.08); color:#4d463d; font-size:13px; font-weight:800; }
     .bid-current-pill strong { color:#111; }
@@ -215,7 +215,7 @@
     .btn-dark { background:#111; color:#fff; }
     .btn-blue { background:var(--gold); color:#111; }
     .helper { margin-top:10px; color:#6a655d; font-size:13px; }
-    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(212,175,55,0.35);color:#f3e3a6;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
     @media (max-width:460px) {
       body { overflow-x:hidden; }
@@ -268,7 +268,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/scorer.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v201"></script>
+  <script>window.GEJAST_PAGE_VERSION='v217';</script><script src="./gejast-config.js?v217"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('scorer');</script>
 </head>
 <body>
   <div class="page">
@@ -1352,7 +1352,7 @@
 <div id="playerSessionCorner" class="player-session-corner" aria-live="polite">
   <div class="player-session-corner-label">Ingelogd als</div>
   <div id="playerSessionCornerName" class="player-session-corner-name"></div>
-  <button id="playerSessionCornerLogout" type="button" class="player-session-corner-btn">Log out</button>
+  <button id="playerSessionCornerLogout" type="button" class="player-session-corner-btn" style="display:none">Log out</button>
 </div>
 <script>
 (function(){
@@ -1412,7 +1412,8 @@
   function winnerSide(){ return game.w===game.z ? 'Gelijk' : (game.w>game.z ? 'Wij' : 'Zij'); }
   function winnerNames(){ return winnerSide()==='Wij' ? teamNames('W') : winnerSide()==='Zij' ? teamNames('Z') : `${teamNames('W')} / ${teamNames('Z')}`; }
   function buildRecap(){ const diff=Math.abs((game.w||0)-(game.z||0)); const specials=game.rounds.filter(r=>r.nat||r.pit||r.verzaaktBy).length; const lines=[]; lines.push(`${winnerNames()} wint met ${game.w||0} tegen ${game.z||0}.`); if(diff>=30) lines.push('Het verschil liep stevig op.'); else if(diff<=10) lines.push('Het bleef lang spannend.'); if(specials) lines.push(`${specials} ronde${specials===1?'':'s'} met nat, pit of verzaakt.`); const best=(game.rounds||[]).slice().sort((a,b)=>Math.max(b.fw,b.fz)-Math.max(a.fw,a.fz))[0]; if(best) lines.push(`Hoogste klap: ${Math.max(best.fw,best.fz)} punten in ronde ${best.round}.`); return lines.join(' '); }
-  function summaryPayload(){ return { game_type:'klaverjas', client_match_id:String(game.id||Date.now()), summary:{ created_at:game.createdAt||new Date().toISOString(), finished_at:new Date().toISOString(), players:game.players, totals:{ wij:game.w||0, zij:game.z||0 }, winner_side:winnerSide(), winner_names:winnerNames(), rounds:game.rounds||[], recap_text:buildRecap() } }; }
+  function getMatchSubmitterMeta(){ const token=(window.GEJAST_CONFIG&&window.GEJAST_CONFIG.getPlayerSessionToken?window.GEJAST_CONFIG.getPlayerSessionToken():''); const name=(document.getElementById('playerSessionCornerName')||{}).textContent||''; return { submitted_by_name:name||null, submitted_via:'klaverjas_form', submitted_at:new Date().toISOString(), session_present:!!token }; }
+  function summaryPayload(){ return { game_type:'klaverjas', client_match_id:String(game.id||Date.now()), summary:{ created_at:game.createdAt||new Date().toISOString(), finished_at:new Date().toISOString(), players:game.players, totals:{ wij:game.w||0, zij:game.z||0 }, winner_side:winnerSide(), winner_names:winnerNames(), rounds:game.rounds||[], recap_text:buildRecap(), submitter_meta:getMatchSubmitterMeta() } }; }
   window.closeMatchSummary=function(){ document.getElementById('matchSummaryOverlay').classList.remove('show'); };
   window.copyMatchRecapText=async function(){ const text=buildRecap(); try{ await navigator.clipboard.writeText(text); setMessage('Samenvatting gekopieerd.'); }catch(_){ setMessage(text);} };
   window.downloadMatchSummaryImage=function(){ const payload=summaryPayload().summary; const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=630; const ctx=canvas.getContext('2d'); const grad=ctx.createLinearGradient(0,0,1200,630); grad.addColorStop(0,'#1b1711'); grad.addColorStop(1,'#5d4820'); ctx.fillStyle=grad; ctx.fillRect(0,0,1200,630); ctx.fillStyle='#f6f0e5'; ctx.fillRect(46,46,1108,538); ctx.fillStyle='#111'; ctx.font='900 52px Inter, sans-serif'; ctx.fillText('Klaverjas',84,132); ctx.font='800 34px Inter, sans-serif'; ctx.fillText(`${payload.winner_names}`,84,194); ctx.font='700 72px Inter, sans-serif'; ctx.fillText(`${payload.totals.wij} - ${payload.totals.zij}`,84,292); ctx.font='600 28px Inter, sans-serif'; wrap(ctx,payload.recap_text,84,360,1000,38); ctx.font='700 24px Inter, sans-serif'; ctx.fillText('v121 · Made by Bruis',84,560); const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download='klaverjas-uitslag.png'; a.click(); function wrap(ctx,text,x,y,maxWidth,lineHeight){ const words=String(text||'').split(/\s+/); let line=''; let yy=y; for(const w of words){ const test=line?line+' '+w:w; if(ctx.measureText(test).width>maxWidth && line){ ctx.fillText(line,x,yy); line=w; yy+=lineHeight; } else line=test; } if(line) ctx.fillText(line,x,yy); } };
@@ -1430,5 +1431,5 @@
 <a class="manage-match-chip" href="./match_control.html?game=klaverjas">✎ <span>Beheer wedstrijden<br><small>Eigen inzendingen / admin</small></span></a>
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v201"></script></body>
+</body>
 </html>
