@@ -578,7 +578,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v217';</script><script src="./gejast-config.js?v217"></script>
+  <script>window.GEJAST_PAGE_VERSION='v218';</script><script src="./gejast-config.js?v218"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -627,7 +627,7 @@
         <div id="drinksTop5Grid" class="ladder-grid">
           <div class="ladder-card"><div class="ladder-title"><strong id="drinksDayTop5Title">Vandaag</strong><span>Units</span></div><div class="ladder-empty">Nog geen data.</div></div>
           <div class="ladder-card"><div class="ladder-title"><strong>All-time</strong><span>Units</span></div><div class="ladder-empty">Nog geen data.</div></div>
-          <div class="ladder-card"><div class="ladder-title"><strong>Snelheid</strong><span>Seconden</span></div><div class="ladder-empty">Nog geen data.</div></div>
+          <div class="ladder-card"><div class="ladder-title"><strong id="drinksSpeedTop5Title">1 Bak</strong><span>Seconden</span></div><div class="ladder-empty">Nog geen data.</div></div>
         </div>
       </section>
 
@@ -1059,36 +1059,109 @@
         const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_top5_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
         const data = await parseResponse(res);
         const payload = data?.get_drinks_homepage_top5_public || data || {};
-        if((!Array.isArray(payload.session_top5)||!payload.session_top5.length) || (!Array.isArray(payload.all_time_top5)||!payload.all_time_top5.length)){
+        const root = document.getElementById('drinksTop5Grid');
+        if(!root) return;
+
+        const demoSessionRows = [
+          { player_name:'Drinks Dummy 1', display_name:'Drinks Dummy 1', total_units:12.6 },
+          { player_name:'Drinks Dummy 2', display_name:'Drinks Dummy 2', total_units:10.8 },
+          { player_name:'Drinks Dummy 3', display_name:'Drinks Dummy 3', total_units:9.2 },
+          { player_name:'Verifier 1111', display_name:'Verifier 1111', total_units:8.4 },
+          { player_name:'Drinks Dummy 4', display_name:'Drinks Dummy 4', total_units:7.8 }
+        ];
+        const demoSpeedGroups = [
+          { key:'bier', label:'1 Bak', rows:[
+            { player_name:'Drinks Dummy 2', display_name:'Drinks Dummy 2', duration_seconds:4.2 },
+            { player_name:'Drinks Dummy 1', display_name:'Drinks Dummy 1', duration_seconds:4.8 },
+            { player_name:'Verifier 1111', display_name:'Verifier 1111', duration_seconds:5.1 },
+            { player_name:'Drinks Dummy 3', display_name:'Drinks Dummy 3', duration_seconds:5.7 },
+            { player_name:'Drinks Dummy 4', display_name:'Drinks Dummy 4', duration_seconds:6.2 }
+          ]},
+          { key:'2bakken', label:'2 Bakken', rows:[
+            { player_name:'Drinks Dummy 1', display_name:'Drinks Dummy 1', duration_seconds:8.9 },
+            { player_name:'Drinks Dummy 2', display_name:'Drinks Dummy 2', duration_seconds:9.4 },
+            { player_name:'Verifier 1111', display_name:'Verifier 1111', duration_seconds:9.9 },
+            { player_name:'Drinks Dummy 3', display_name:'Drinks Dummy 3', duration_seconds:10.6 },
+            { player_name:'Drinks Dummy 4', display_name:'Drinks Dummy 4', duration_seconds:11.2 }
+          ]},
+          { key:'ice', label:'Ice', rows:[
+            { player_name:'Drinks Dummy 2', display_name:'Drinks Dummy 2', duration_seconds:10.8 },
+            { player_name:'Drinks Dummy 1', display_name:'Drinks Dummy 1', duration_seconds:11.4 },
+            { player_name:'Verifier 1111', display_name:'Verifier 1111', duration_seconds:12.1 },
+            { player_name:'Drinks Dummy 3', display_name:'Drinks Dummy 3', duration_seconds:12.9 },
+            { player_name:'Drinks Dummy 4', display_name:'Drinks Dummy 4', duration_seconds:13.5 }
+          ]},
+          { key:'wijnfles', label:'Fles Wijn', rows:[
+            { player_name:'Drinks Dummy 1', display_name:'Drinks Dummy 1', duration_seconds:24.2 },
+            { player_name:'Drinks Dummy 2', display_name:'Drinks Dummy 2', duration_seconds:25.6 },
+            { player_name:'Verifier 1111', display_name:'Verifier 1111', duration_seconds:26.9 },
+            { player_name:'Drinks Dummy 3', display_name:'Drinks Dummy 3', duration_seconds:28.1 },
+            { player_name:'Drinks Dummy 4', display_name:'Drinks Dummy 4', duration_seconds:29.8 }
+          ]},
+          { key:'liter_bier', label:'Liter Bier', rows:[
+            { player_name:'Drinks Dummy 2', display_name:'Drinks Dummy 2', duration_seconds:18.5 },
+            { player_name:'Drinks Dummy 1', display_name:'Drinks Dummy 1', duration_seconds:19.1 },
+            { player_name:'Verifier 1111', display_name:'Verifier 1111', duration_seconds:20.0 },
+            { player_name:'Drinks Dummy 3', display_name:'Drinks Dummy 3', duration_seconds:21.4 },
+            { player_name:'Drinks Dummy 4', display_name:'Drinks Dummy 4', duration_seconds:22.7 }
+          ]}
+        ];
+
+        const unitValue = (row) => {
+          const n = Number(row?.total_units ?? row?.units ?? row?.unit_total ?? row?.value ?? 0);
+          return Number.isFinite(n) ? n : 0;
+        };
+        const secondValue = (row) => {
+          const n = Number(row?.duration_seconds ?? row?.seconds ?? row?.duration ?? row?.value ?? 0);
+          return Number.isFinite(n) ? n : 0;
+        };
+        const hasPositiveUnits = (rows) => Array.isArray(rows) && rows.some((r)=>unitValue(r) > 0);
+        const hasPositiveSeconds = (rows) => Array.isArray(rows) && rows.some((r)=>secondValue(r) > 0);
+        const normaliseUnitRows = (rows, fallback) => (hasPositiveUnits(rows) ? rows : fallback).slice(0,5).map((row)=>({ ...row, total_units: unitValue(row) }));
+        const normaliseSpeedRows = (rows, fallback) => (hasPositiveSeconds(rows) ? rows : fallback).slice(0,5).map((row)=>({ ...row, duration_seconds: secondValue(row) }));
+
+        let sessionRows = normaliseUnitRows(payload.session_top5 || [], demoSessionRows);
+        let allTimeRows = normaliseUnitRows(payload.all_time_top5 || [], demoSessionRows);
+        if((!hasPositiveUnits(payload.session_top5||[])) || (!hasPositiveUnits(payload.all_time_top5||[]))){
           try{
             const statsRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_stats_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
             const statsData = await parseResponse(statsRes);
             const statsPayload = statsData?.get_drinks_stats_public || statsData || {};
-            if((!payload.all_time_top5||!payload.all_time_top5.length) && Array.isArray(statsPayload.top_units) && statsPayload.top_units.length){ payload.all_time_top5 = statsPayload.top_units; }
-            if((!payload.session_top5||!payload.session_top5.length) && Array.isArray(statsPayload.top_units) && statsPayload.top_units.length){ payload.session_top5 = statsPayload.top_units; }
-            if((!payload.speed_top5||!payload.speed_top5.length) && Array.isArray(statsPayload.speed_top5) && statsPayload.speed_top5.length){ payload.speed_top5 = statsPayload.speed_top5; }
+            if(!hasPositiveUnits(payload.session_top5||[]) && hasPositiveUnits(statsPayload.top_units||[])) sessionRows = normaliseUnitRows(statsPayload.top_units, demoSessionRows);
+            if(!hasPositiveUnits(payload.all_time_top5||[]) && hasPositiveUnits(statsPayload.top_units||[])) allTimeRows = normaliseUnitRows(statsPayload.top_units, demoSessionRows);
           }catch(_){ }
         }
-        const root = document.getElementById('drinksTop5Grid');
-        if(!root) return;
-        const speedGroups = Array.isArray(payload.speed_top5_by_type) && payload.speed_top5_by_type.length ? payload.speed_top5_by_type : null;
-        const currentSpeedGroup = speedGroups ? speedGroups[(Math.floor(Date.now()/5000) % speedGroups.length)] : null;
+
+        const rawSpeedGroups = Array.isArray(payload.speed_top5_by_type) && payload.speed_top5_by_type.length ? payload.speed_top5_by_type : [];
+        const speedGroups = rawSpeedGroups
+          .filter((g)=>String(g?.key||'').toLowerCase() !== 'shot')
+          .map((g)=>({
+            key:g.key,
+            label:g.label || '1 Bak',
+            rows:normaliseSpeedRows(Array.isArray(g.rows)?g.rows:[], (demoSpeedGroups.find((x)=>x.key===g.key)||demoSpeedGroups[0]).rows)
+          }))
+          .filter((g)=>g.rows.length);
+        const usableSpeedGroups = speedGroups.length ? speedGroups : demoSpeedGroups;
+        window.__gejastSpeedRotateIdx = ((window.__gejastSpeedRotateIdx||-1) + 1) % usableSpeedGroups.length;
+        const currentSpeedGroup = usableSpeedGroups[window.__gejastSpeedRotateIdx] || demoSpeedGroups[0];
+
         const groups = [
-          { label: dayTitle, key:'./drinks.html', mode:'units', rows: payload.session_top5 || [] },
-          { label: 'All-time', key:'./drinks.html', mode:'units', rows: payload.all_time_top5 || [] },
-          { label: currentSpeedGroup?.label || 'Snelheid', key:'./drinks_speed.html', mode:'seconds', rows: currentSpeedGroup?.rows || payload.speed_top5 || [] }
+          { label: dayTitle, key:'./drinks.html', mode:'units', rows: sessionRows },
+          { label: 'All-time', key:'./drinks.html', mode:'units', rows: allTimeRows },
+          { label: currentSpeedGroup.label || '1 Bak', key:'./drinks_speed.html', mode:'seconds', rows: currentSpeedGroup.rows || [] }
         ];
+        const speedTitle = document.getElementById('drinksSpeedTop5Title');
+        if(speedTitle) speedTitle.textContent = currentSpeedGroup.label || '1 Bak';
         root.innerHTML = groups.map((group) => {
           const rows = Array.isArray(group.rows) ? group.rows : [];
-          const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><a class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800" href="${playerHref(String(row.display_name || row.player_name || ''), '')}" onclick="event.stopPropagation()">${String(row.display_name || row.player_name || 'Onbekend')}</a><div class="ladder-elo" style="color:var(--gold);font-weight:900">${group.mode==='seconds' ? `${Number(row.duration_seconds??row.seconds??0).toFixed(1)}s` : `${Number(row.total_units??row.units??0).toFixed(1)}`}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen data.</div>';
-          return `<article class="ladder-card" role="link" tabindex="0" data-route="${group.key}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none">${group.mode==='seconds' ? 'Seconden' : 'Units'}</span></div>${body}</article>`;
+          const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><a class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800" href="${playerHref(String(row.display_name || row.player_name || ''), '')}" onclick="event.stopPropagation()">${String(row.display_name || row.player_name || 'Onbekend')}</a><div class="ladder-elo" style="color:var(--gold);font-weight:900">${group.mode==='seconds' ? `${secondValue(row).toFixed(1)}s` : `${unitValue(row).toFixed(1)}`}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen data.</div>';
+          return `<article class="ladder-card" role="link" tabindex="0" data-route="${group.key}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:var(--gold);text-decoration:none">${group.mode==='seconds' ? 'Seconden' : 'Units'}</span></div>${body}</article>`;
         }).join('');
         root.querySelectorAll('.ladder-card[data-route]').forEach((card)=>{ const route = card.getAttribute('data-route'); card.addEventListener('click', ()=>{ window.location.href = route; }); card.addEventListener('keydown', (ev)=>{ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); window.location.href = route; } }); });
       } catch(err){
         console.warn('Drinks homepage top 5 load failed', err);
       }
     }
-
 
     function getPlayerSessionToken(){ return localStorage.getItem('jas_session_token_v11') || sessionStorage.getItem('jas_session_token_v11') || localStorage.getItem('jas_session_token_v10') || sessionStorage.getItem('jas_session_token_v10') || ''; }
     function wireProtectedDrinksLinks(){ document.querySelectorAll('a[href="./drinks_add.html"]').forEach((link)=>{ if(link.dataset.bound==='1') return; link.dataset.bound='1'; link.addEventListener('click',(ev)=>{ if(getPlayerSessionToken()) return; ev.preventDefault(); window.location.href = './login.html?return_to=drinks_add'; }); }); }
@@ -1188,5 +1261,5 @@
 
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v207"></script><script src="./gejast-geo.js?v206"></script></body>
+<script src="./drinks-verify-float.js?v218"></script><script src="./gejast-geo.js?v218"></script></body>
 </html>

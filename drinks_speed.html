@@ -4,15 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Snelheid</title>
-  <script>window.GEJAST_PAGE_VERSION='v217';</script>
-  <script src="./gejast-config.js?v217"></script>
+  <script>window.GEJAST_PAGE_VERSION='v218';</script>
+  <script src="./gejast-config.js?v218"></script>
   <style>
-    :root{--line:rgba(0,0,0,.08);--muted:#6b6257;--gold:#9a8241}
+    :root{--line:rgba(0,0,0,.08);--muted:#6b6257;--gold:#9a8241;--bad:#b53a30;--ok:#1f8f52}
     *{box-sizing:border-box}
     body{margin:0;padding:24px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(244,240,232,.9),rgba(244,240,232,.92)),url('./site-bg-desktop.webp') center/cover no-repeat;color:#201b16}
     .wrap{max-width:1240px;margin:0 auto}.card{background:rgba(255,251,245,.72);border:1px solid rgba(255,255,255,.65);border-radius:28px;padding:28px;box-shadow:0 20px 50px rgba(0,0,0,.08)}
     .top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}.btn{display:inline-flex;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:none;cursor:pointer}.btn.alt{background:#f3efe6;color:#111;border:1px solid rgba(0,0,0,.08)}.btn.gold{background:var(--gold);color:#111}.logo{width:64px;height:64px}.grid{display:grid;gap:18px}.split{grid-template-columns:1fr 1fr;margin-top:18px}.panel{background:#fff;border:1px solid var(--line);border-radius:20px;padding:18px}.list{display:grid;gap:10px}.row{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:#fff;align-items:flex-start}.row-main{display:grid;gap:4px}.muted{color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap}.site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
-    select,input{width:100%;padding:12px;border-radius:14px;border:1px solid var(--line);font:inherit}
+    select,input{width:100%;padding:12px;border-radius:14px;border:1px solid var(--line);font:inherit} .status-note{min-height:20px;font-weight:800;border-radius:12px;padding:0} .status-note.bad{color:var(--bad);background:rgba(181,58,48,.08);border:1px solid rgba(181,58,48,.18);padding:8px 10px} .status-note.ok{color:var(--ok);background:rgba(31,143,82,.08);border:1px solid rgba(31,143,82,.18);padding:8px 10px} .field-wrap{display:grid;gap:6px}
     @media(max-width:900px){.split{grid-template-columns:1fr}} 
   </style>
 </head>
@@ -38,8 +38,8 @@
       <section class="panel">
         <h2 style="margin:0 0 12px">Nieuwe snelheidspoging</h2>
         <div style="display:grid;gap:10px">
-          <select id="speedType"></select>
-          <input id="speedSeconds" type="number" step="0.1" min="0.1" placeholder="Tijd in seconden">
+          <div class="field-wrap"><select id="speedType"></select></div>
+          <div class="field-wrap"><input id="speedSeconds" type="number" step="0.1" min="0.1" placeholder="Tijd in seconden"><div id="speedFormStatus" class="status-note"></div></div>
           <button id="submitSpeed" class="btn gold" type="button">Snelheidspoging +</button>
           <div class="muted">Je kiest hetzelfde drankje als op de drinks-pagina. Dit maakt één gekoppeld verificatieticket.</div>
         </div>
@@ -56,8 +56,8 @@
     </div>
   </div></div>
   <div class="site-credit-watermark" data-version-watermark></div>
-  <script src="./gejast-geo.js?v217"></script>
-  <script src="./drinks-verify-float.js?v217"></script>
+  <script src="./gejast-geo.js?v218"></script>
+  <script src="./drinks-verify-float.js?v218"></script>
   <script>
   if(window.GEJAST_CONFIG && !window.GEJAST_CONFIG.requireMatchEntrySession('drinks_speed')){}
   (()=>{
@@ -67,16 +67,17 @@
     const SESSION_KEYS=['jas_session_token_v11','jas_session_token_v10'];
     let lastPos=null;
     const FALLBACK_TYPES=[
-      {key:'bier',label:'1 Bak'},{key:'2bakken',label:'2 Bakken'},{key:'shot',label:'Shot'},{key:'ice',label:'Ice'},{key:'wijnfles',label:'Fles Wijn'},{key:'liter_bier',label:'Liter Bier'}
+      {key:'bier',label:'1 Bak'},{key:'2bakken',label:'2 Bakken'},{key:'ice',label:'Ice'},{key:'wijnfles',label:'Fles Wijn'},{key:'liter_bier',label:'Liter Bier'}
     ];
     function token(){ for(const k of SESSION_KEYS){ const v=localStorage.getItem(k)||sessionStorage.getItem(k); if(v) return v; } return ''; }
     function h(){ return {'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${KEY}`,Accept:'application/json'}; }
     async function p(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch{ throw new Error(t||`HTTP ${res.status}`);} if(!res.ok) throw new Error(d?.message||d?.error||d?.hint||`HTTP ${res.status}`); return d; }
-    function setStatus(msg=''){ document.getElementById('speedStatus').textContent=msg; }
+    function setStatus(msg='',tone=''){ const el=document.getElementById('speedStatus'); el.textContent=msg; el.style.color=tone==='bad' ? 'var(--bad)' : (tone==='ok' ? 'var(--ok)' : ''); }
+    function setFormStatus(msg='',tone=''){ const el=document.getElementById('speedFormStatus'); el.textContent=msg; el.className='status-note' + (tone ? ' '+tone : ''); if(!tone) el.style.color='var(--muted)'; else el.style.color=''; }
     async function pos(force=false,user=false){ const geo=window.GEJAST_GEO; if(!geo) throw new Error('Geolocatie helper ontbreekt.'); const pp=await geo.ensure(force,{silent:!user&&!force}); if(pp){ lastPos=pp; geo.startWatch(); await updateGeo(pp); } return pp || lastPos || geo.cached(60*60*1000); }
     async function updateGeo(pp){ const geo=window.GEJAST_GEO; if(!pp){ document.getElementById('geoMeta').textContent='Geolocatie nog niet actief.'; document.getElementById('geoAddress').textContent=''; return; } document.getElementById('geoMeta').textContent=`Locatie: ${geo.formatCoords(pp)}`; const address = await geo.reverseGeocode(pp.coords.latitude, pp.coords.longitude); document.getElementById('geoAddress').textContent = address ? `Adres: ${address}` : 'Adres onbekend'; }
     function labelFor(key){ return (FALLBACK_TYPES.find((t)=>t.key===key)||{}).label || key; }
-    function fillTypes(rows){ const list=(rows||[]).length ? rows : FALLBACK_TYPES; const preferred=['bier','2bakken','shot','ice','wijnfles','liter_bier']; list.sort((a,b)=> (preferred.indexOf(a.key)===-1?999:preferred.indexOf(a.key)) - (preferred.indexOf(b.key)===-1?999:preferred.indexOf(b.key))); document.getElementById('speedType').innerHTML = list.map((t)=>`<option value="${t.key}">${t.label||labelFor(t.key)}</option>`).join(''); }
+    function fillTypes(rows){ const list=((rows||[]).filter((t)=>String(t.key||'').toLowerCase()!=='shot').length ? (rows||[]).filter((t)=>String(t.key||'').toLowerCase()!=='shot') : FALLBACK_TYPES); const preferred=['bier','2bakken','ice','wijnfles','liter_bier']; list.sort((a,b)=> (preferred.indexOf(a.key)===-1?999:preferred.indexOf(a.key)) - (preferred.indexOf(b.key)===-1?999:preferred.indexOf(b.key))); document.getElementById('speedType').innerHTML = list.map((t)=>`<option value="${t.key}">${t.label||labelFor(t.key)}</option>`).join(''); }
     function renderList(el,rows,fmt,empty='Nog geen data.'){ el.innerHTML=(rows||[]).length ? rows.map(fmt).join('') : `<div class="muted">${empty}</div>`; }
     async function load(){
       try{
@@ -104,14 +105,14 @@
         const pp=await pos(true,true); if(!pp) throw new Error('Geolocatie is nodig voor snelheid.');
         const type=document.getElementById('speedType').value; const seconds=Number(document.getElementById('speedSeconds').value||0); if(!(seconds>0)) throw new Error('Vul een geldige tijd in.');
         await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_combined_drink_speed_attempt`,{method:'POST',headers:h(),body:JSON.stringify({session_token:token(),event_type_key:type,quantity:1,duration_seconds:seconds,lat:pp.coords.latitude,lng:pp.coords.longitude,accuracy:pp.coords.accuracy})}).then(p);
-        document.getElementById('speedSeconds').value=''; setStatus('Gekoppelde snelheidspoging opgeslagen.'); await load();
-      }catch(err){ setStatus(err.message||String(err)); }
+        document.getElementById('speedSeconds').value=''; setFormStatus('Gekoppelde snelheidspoging opgeslagen.','ok'); setStatus(''); await load();
+      }catch(err){ setFormStatus(err.message||String(err),'bad'); }
     }
     async function verify(id){
-      try{ const pp=await pos(true,true); if(!pp) throw new Error('Geolocatie is nodig om te bevestigen.'); await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_speed_attempt`,{method:'POST',headers:h(),body:JSON.stringify({session_token:token(),attempt_id:Number(id),lat:pp.coords.latitude,lng:pp.coords.longitude,accuracy:pp.coords.accuracy})}).then(p); setStatus('Snelheidspoging bevestigd.'); await load(); }catch(err){ setStatus(err.message||String(err)); }
+      try{ const pp=await pos(true,true); if(!pp) throw new Error('Geolocatie is nodig om te bevestigen.'); await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_speed_attempt`,{method:'POST',headers:h(),body:JSON.stringify({session_token:token(),attempt_id:Number(id),lat:pp.coords.latitude,lng:pp.coords.longitude,accuracy:pp.coords.accuracy})}).then(p); setStatus('Snelheidspoging bevestigd.','ok'); await load(); }catch(err){ setStatus(err.message||String(err),'bad'); }
     }
     async function cancelMine(id){
-      try{ await fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_my_speed_attempt`,{method:'POST',headers:h(),body:JSON.stringify({session_token:token(),attempt_id:Number(id)})}).then(p); setStatus('Snelheidspoging geannuleerd.'); await load(); }catch(err){ setStatus(err.message||String(err)); }
+      try{ await fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_my_speed_attempt`,{method:'POST',headers:h(),body:JSON.stringify({session_token:token(),attempt_id:Number(id)})}).then(p); setStatus('Snelheidspoging geannuleerd.','ok'); await load(); }catch(err){ setStatus(err.message||String(err),'bad'); }
     }
     document.getElementById('submitSpeed').addEventListener('click',submit);
     document.getElementById('retryGeoBtn').addEventListener('click',()=>{ lastPos=null; pos(true,true).then(load).catch((err)=>setStatus(err.message||String(err))); });
