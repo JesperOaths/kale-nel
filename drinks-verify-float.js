@@ -138,10 +138,8 @@
       let pos;
       try { pos = await helper.request(true); } catch (err) { pos = helper.cached(60*60*1000); if (!pos) throw err; }
       helper.startWatch();
-      const linkedId = Number(item.linked_drink_event_id || item.drink_event_id || 0);
-      if (!linkedId) throw new Error('Geen gekoppeld drankverzoek gevonden voor deze speedverificatie.');
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`, {
-        method:'POST', headers: headers(), body: JSON.stringify({ session_token: token(), drink_event_id: linkedId, lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy, approve: !!approve })
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_speed_attempt`, {
+        method:'POST', headers: headers(), body: JSON.stringify({ session_token: token(), attempt_id: Number(item.id), lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy, approve: !!approve })
       });
       await parse(res);
       localStorage.setItem(APPROVED_KEY, JSON.stringify({at:Date.now(), text:`${item.player_name} · ${item.event_type_label || item.speed_type_label}`}));
@@ -180,9 +178,8 @@
     document.getElementById('gdfTitle').textContent = item.kind==='speed' ? 'Snelheid verificatie' : 'Drinks verificatie';
     document.getElementById('gdfOpenBtn').textContent = item.kind==='speed' ? 'Open snelheid' : 'Open drinks';
     document.getElementById('gdfBody').innerHTML = `<strong>${item.player_name} · ${promptLabel}</strong><div class="gdf-meta">${Number(item.total_units||0).toFixed(1)} units${item.kind==='speed' ? ` · ${Number(item.duration_seconds||0).toFixed(1)}s` : ''}${locationBits.length ? ' · ' + locationBits.join(' · ') : ''}</div><div class="gdf-meta">${item.kind==='speed' ? 'Open snelheid om alle verificaties en status te zien.' : 'Open drinks om alle verificaties en status te zien.'}</div>`;
-    const linkedPrompt = (item.kind==='speed' && Number(item.linked_drink_event_id || item.drink_event_id || 0)) ? { ...item, id:Number(item.linked_drink_event_id || item.drink_event_id || 0) } : item;
-    document.getElementById('gdfVerifyBtn').onclick = async () => { const body = document.getElementById('gdfBody'); body.querySelectorAll('.gdf-meta.error').forEach((n)=>n.remove()); try { await ((item.kind==='speed' && linkedPrompt.id) ? verifyDrinkEvent(linkedPrompt, true) : (item.kind==='speed' ? verifySpeedEvent(item, true) : verifyDrinkEvent(item, true))); } catch (err) { body.insertAdjacentHTML('beforeend', `<div class="gdf-meta error">${(err && err.message) || 'Bevestigen mislukt.'}</div>`); } };
-    document.getElementById('gdfRejectBtn').onclick = async () => { const body = document.getElementById('gdfBody'); body.querySelectorAll('.gdf-meta.error').forEach((n)=>n.remove()); try { await ((item.kind==='speed' && linkedPrompt.id) ? verifyDrinkEvent(linkedPrompt, false) : (item.kind==='speed' ? verifySpeedEvent(item, false) : verifyDrinkEvent(item, false))); } catch (err) { body.insertAdjacentHTML('beforeend', `<div class="gdf-meta error">${(err && err.message) || 'Afkeuren mislukt.'}</div>`); } };
+    document.getElementById('gdfVerifyBtn').onclick = async () => { const body = document.getElementById('gdfBody'); body.querySelectorAll('.gdf-meta.error').forEach((n)=>n.remove()); try { await (item.kind==='speed' ? verifySpeedEvent(item, true) : verifyDrinkEvent(item, true)); } catch (err) { body.insertAdjacentHTML('beforeend', `<div class="gdf-meta error">${(err && err.message) || 'Bevestigen mislukt.'}</div>`); } };
+    document.getElementById('gdfRejectBtn').onclick = async () => { const body = document.getElementById('gdfBody'); body.querySelectorAll('.gdf-meta.error').forEach((n)=>n.remove()); try { await (item.kind==='speed' ? verifySpeedEvent(item, false) : verifyDrinkEvent(item, false)); } catch (err) { body.insertAdjacentHTML('beforeend', `<div class="gdf-meta error">${(err && err.message) || 'Afkeuren mislukt.'}</div>`); } };
     document.getElementById('gdfOpenBtn').onclick = () => { location.href = item.kind==='speed' ? './drinks_speed.html' : './drinks.html#verifyPanel'; };
     document.getElementById('gdfDismissBtn').onclick = () => dismissEvent(`${item.kind||'drink'}:${item.id}`);
     showBox();

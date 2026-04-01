@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Snelheid</title>
-  <script>window.GEJAST_PAGE_VERSION='v227';</script>
-  <script src="./gejast-config.js?v227"></script>
+  <script>window.GEJAST_PAGE_VERSION='v229';</script>
+  <script src="./gejast-config.js?v229"></script>
   <style>
     :root{--line:rgba(0,0,0,.08);--muted:#6b6257;--gold:#9a8241;--bad:#b53a30;--ok:#1f8f52}
     *{box-sizing:border-box}
@@ -56,8 +56,8 @@
     </div>
   </div></div>
   <div class="site-credit-watermark" data-version-watermark></div>
-  <script src="./gejast-geo.js?v227"></script>
-  <script src="./drinks-verify-float.js?v227"></script>
+  <script src="./gejast-geo.js?v229"></script>
+  <script src="./drinks-verify-float.js?v229"></script>
   <script>
   if(window.GEJAST_CONFIG && !window.GEJAST_CONFIG.requireMatchEntrySession('drinks_speed')){}
   (()=>{
@@ -119,20 +119,15 @@
         const pp=await pos(true,true); if(!pp) throw new Error('Geolocatie is nodig voor snelheid.');
         const type=document.getElementById('speedType').value; const seconds=Number(document.getElementById('speedSeconds').value||0); if(!(seconds>0)) throw new Error('Vul een geldige tijd in.');
         await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_combined_drink_speed_attempt`,{method:'POST',headers:h(),body:JSON.stringify({session_token:token(),client_attempt_id:makeClientAttemptId(),event_type_key:type,quantity:1,duration_seconds:seconds,lat:pp.coords.latitude,lng:pp.coords.longitude,accuracy:pp.coords.accuracy})}).then(p);
-        document.getElementById('speedSeconds').value=''; setFormStatus('Gekoppelde snelheidspoging opgeslagen.','ok'); setStatus(''); await load();
+        document.getElementById('speedSeconds').value=''; setFormStatus('Snelheidspoging opgeslagen.','ok'); setStatus(''); await load();
       }catch(err){ setFormStatus(err.message||String(err),'bad'); }
     }
     async function verify(id, approve=true){
       try{
         const pp=await pos(true,true);
         if(!pp) throw new Error('Geolocatie is nodig om te bevestigen.');
-        const row = Array.from((window.__speedVerifyQueue||[])).find((item)=>Number(item.id)===Number(id));
-        if(row && row.linked_drink_event_id){
-          await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{method:'POST',headers:h(),body:JSON.stringify({session_token:token(),drink_event_id:Number(row.linked_drink_event_id),lat:pp.coords.latitude,lng:pp.coords.longitude,accuracy:pp.coords.accuracy,approve:!!approve})}).then(p);
-          setStatus(approve ? 'Gekoppeld drankverzoek bevestigd.' : 'Gekoppeld drankverzoek afgekeurd.','ok');
-        } else {
-          throw new Error('Deze speedverificatie is niet gekoppeld aan een drankverzoek. Open de drinks-pagina of maak de gekoppelde speedflow opnieuw aan.');
-        }
+        await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_speed_attempt`,{method:'POST',headers:h(),body:JSON.stringify({session_token:token(),attempt_id:Number(id),lat:pp.coords.latitude,lng:pp.coords.longitude,accuracy:pp.coords.accuracy,approve:!!approve})}).then(p);
+        setStatus(approve ? 'Snelheidspoging bevestigd.' : 'Snelheidspoging afgekeurd.','ok');
         await load();
       }catch(err){ setStatus(err.message||String(err),'bad'); }
     }
