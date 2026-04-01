@@ -114,10 +114,8 @@
         })
       });
       await parse(res);
-      localStorage.setItem(APPROVED_KEY, JSON.stringify({at:Date.now(), text:`${item.player_name} · ${item.event_type_label}`}));
-      activePromptGraceUntil = Date.now() + 60000;
-      activePromptSeenAt = Date.now();
-      showApprovedToast();
+      localStorage.removeItem(APPROVED_KEY);
+      dismissEvent(`${item.kind||'drink'}:${item.id}`);
     } finally {
       verifyBtn.disabled = false;
       openBtn.disabled = false;
@@ -142,10 +140,8 @@
         method:'POST', headers: headers(), body: JSON.stringify({ session_token: token(), attempt_id: Number(item.id), lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy, approve: !!approve })
       });
       await parse(res);
-      localStorage.setItem(APPROVED_KEY, JSON.stringify({at:Date.now(), text:`${item.player_name} · ${item.event_type_label || item.speed_type_label}`}));
-      activePromptGraceUntil = Date.now() + 60000;
-      activePromptSeenAt = Date.now();
-      showApprovedToast();
+      localStorage.removeItem(APPROVED_KEY);
+      dismissEvent(`speed:${item.id}`);
     } finally { verifyBtn.disabled=false; openBtn.disabled=false; dismissBtn.disabled=false; verifyBtn.textContent=oldLabel; }
   }
 
@@ -173,7 +169,7 @@
     if (item.distance_m != null) locationBits.push(`${Math.round(item.distance_m)}m afstand`);
     if (item.lat != null && item.lng != null) locationBits.push(`(${Number(item.lat).toFixed(4)}, ${Number(item.lng).toFixed(4)})`);
     document.getElementById('gdfVerifyBtn').style.display = 'inline-flex';
-    document.getElementById('gdfRejectBtn').style.display = (item.kind==='drink' || item.linked_drink_event_id || item.drink_event_id) ? 'inline-flex' : 'none';
+    document.getElementById('gdfRejectBtn').style.display = 'inline-flex';
     const promptLabel = item.kind==='speed' ? `${item.event_type_label || item.speed_type_label} · ${Number(item.duration_seconds||0).toFixed(1)}s` : `${item.event_type_label}`;
     document.getElementById('gdfTitle').textContent = item.kind==='speed' ? 'Snelheid verificatie' : 'Drinks verificatie';
     document.getElementById('gdfOpenBtn').textContent = item.kind==='speed' ? 'Open snelheid' : 'Open drinks';
