@@ -35,9 +35,9 @@
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
     @media (max-width:760px){ .grid { grid-template-columns:1fr; } }
   </style>
-  <script>window.GEJAST_PAGE_VERSION='v239';</script><script src="./gejast-config.js?v239"></script>
-  <script src="./admin-session-sync.js?v239"></script>
-  <script src="./admin-topnav.js?v239"></script>
+  <script>window.GEJAST_PAGE_VERSION='v240';</script><script src="./gejast-config.js?v240"></script>
+  <script src="./admin-session-sync.js?v240"></script>
+  <script src="./admin-topnav.js?v240"></script>
 </head>
 <body>
   <main class="main-card">
@@ -88,10 +88,10 @@
     function readAdminSessionMeta(){ try { return JSON.parse(sessionStorage.getItem(ADMIN_SESSION_META_KEY) || localStorage.getItem(ADMIN_SESSION_META_KEY) || 'null'); } catch { return null; } }
     function clearAdminSessionToken(){ sessionStorage.removeItem(ADMIN_SESSION_KEY); localStorage.removeItem(ADMIN_SESSION_KEY); sessionStorage.removeItem(ADMIN_SESSION_META_KEY); localStorage.removeItem(ADMIN_SESSION_META_KEY); }
     function getToken(){ const meta=readAdminSessionMeta(); const token=(meta&&meta.token) || (window.GEJAST_ADMIN_SESSION && window.GEJAST_ADMIN_SESSION.getToken()) || sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); if (meta?.issued_at && (Date.now() - Number(meta.issued_at) > ADMIN_SESSION_MAX_AGE_MS)) { clearAdminSessionToken(); return ''; } return token; }
-    const state={rows:[],busyId:null,busyMode:'',rpcReady:{remove:true,purge:true}};
+    const state={rows:[],busyId:null,busyMode:'',pendingPurgeId:null,purgeDeadlineAt:0,rpcReady:{remove:true,purge:true}};
     function setStatus(message='', tone='') { const box=document.getElementById('statusBox'); box.className=`status ${tone}`.trim(); box.textContent=message; }
     function filteredRows(){ const q=String(document.getElementById('nameSearchInput')?.value||'').trim().toLowerCase(); const dummyOnly=!!document.getElementById('dummyOnlyToggle')?.checked; return (state.rows||[]).filter((row)=>{ const hay=[row.display_name,row.username,row.reserved_for_email,row.status].map((v)=>String(v||'').toLowerCase()).join(' '); if(q && !hay.includes(q)) return false; if(dummyOnly && !/(dummy|test|spook|verifier\s*1111)/i.test([row.display_name,row.username,row.reserved_for_email].join(' '))) return false; return true; }); }
-    function renderRows(){ const rows=filteredRows(); const root=document.getElementById('listRoot'); root.innerHTML=''; if(!rows.length){ root.innerHTML='<div class="empty">Geen namen gevonden voor dit filter.</div>'; return; } rows.forEach((row)=>{ const busy=state.busyId===row.id; const removeDisabled=busy||!state.rpcReady.remove; const purgeDisabled=busy||!state.rpcReady.purge; const card=document.createElement('article'); card.className='item'; card.innerHTML=`<strong>${row.display_name}</strong><div class="pill">${row.status || 'beschikbaar'}</div><div class="meta">slug: ${row.username || '-'} · e-mail: ${row.reserved_for_email || '-'}</div>${row.player_id ? `<div class="meta">gekoppelde speler-id: ${row.player_id}</div>` : ''}<div class="row"><button class="btn danger" type="button" data-remove-id="${row.id}" ${removeDisabled?'disabled':''}>${busy && state.busyMode==='remove' ? 'Bezig…' : (state.rpcReady.remove ? 'Account verwijderen + uit kieslijst' : 'SQL/RPC nog niet live')}</button><button class="btn danger-solid" type="button" data-purge-id="${row.id}" ${purgeDisabled?'disabled':''}>${busy && state.busyMode==='purge' ? 'Bezig…' : (state.rpcReady.purge ? 'Permanent verwijderen' : 'SQL/RPC nog niet live')}</button></div>`; root.appendChild(card); }); }
+    function renderRows(){ const rows=filteredRows(); const root=document.getElementById('listRoot'); root.innerHTML=''; if(!rows.length){ root.innerHTML='<div class="empty">Geen namen gevonden voor dit filter.</div>'; return; } const now=Date.now(); if(state.purgeDeadlineAt && now>state.purgeDeadlineAt){ state.pendingPurgeId=null; state.purgeDeadlineAt=0; } rows.forEach((row)=>{ const busy=state.busyId===row.id; const removeDisabled=busy||!state.rpcReady.remove; const purgeDisabled=busy||!state.rpcReady.purge; const confirmPurge=state.pendingPurgeId===row.id && state.purgeDeadlineAt>now; const secondsLeft=confirmPurge ? Math.max(1, Math.ceil((state.purgeDeadlineAt-now)/1000)) : 0; const card=document.createElement('article'); card.className='item'; card.innerHTML=`<strong>${row.display_name}</strong><div class="pill">${row.status || 'beschikbaar'}</div><div class="meta">slug: ${row.username || '-'} · e-mail: ${row.reserved_for_email || '-'}</div>${row.player_id ? `<div class="meta">gekoppelde speler-id: ${row.player_id}</div>` : ''}${confirmPurge ? `<div class="callout" style="margin:10px 0 0 0;padding:10px 12px"><strong>Definitief verwijderen?</strong> Klik binnen ${secondsLeft}s nogmaals op <strong>Permanent verwijderen</strong> om deze speler naar een Spookinoza-placeholder om te zetten.</div>` : ''}<div class="row"><button class="btn danger" type="button" data-remove-id="${row.id}" ${removeDisabled?'disabled':''}>${busy && state.busyMode==='remove' ? 'Bezig…' : (state.rpcReady.remove ? 'Account verwijderen + uit kieslijst' : 'SQL/RPC nog niet live')}</button><button class="btn danger-solid" type="button" data-purge-id="${row.id}" ${purgeDisabled?'disabled':''}>${busy && state.busyMode==='purge' ? 'Bezig…' : (confirmPurge ? `Nogmaals klikken (${secondsLeft}s)` : (state.rpcReady.purge ? 'Permanent verwijderen' : 'SQL/RPC nog niet live'))}</button></div>`; root.appendChild(card); }); }
     async function ensureGate(){
       const token=getToken();
       if(!token){ clearAdminSessionToken(); window.location.href='./admin.html?return_to=admin_reserved_names.html'; return false; }
@@ -129,12 +129,19 @@
       }
     }
     async function purgeForever(id){
-      const confirmed = prompt('Typ VERWIJDER om deze speler definitief te vervangen door een Spookinoza-placeholder.');
-      if (confirmed !== 'VERWIJDER') return;
-      state.busyId=Number(id); state.busyMode='purge'; renderRows();
+      const rowId = Number(id);
+      if (state.pendingPurgeId !== rowId || Date.now() > state.purgeDeadlineAt) {
+        state.pendingPurgeId = rowId;
+        state.purgeDeadlineAt = Date.now() + 8000;
+        setStatus('Klik nogmaals op Permanent verwijderen om definitief te bevestigen.', 'warn');
+        renderRows();
+        return;
+      }
+      state.busyId=rowId; state.busyMode='purge'; renderRows();
       try {
         setStatus('Permanent verwijderen...');
-        const result = await callRpc('admin_permanently_delete_allowed_username', { admin_session_token:getToken(), allowed_username_id_input:Number(id) });
+        const result = await callRpc('admin_permanently_delete_allowed_username', { admin_session_token:getToken(), allowed_username_id_input:rowId });
+        state.pendingPurgeId=null; state.purgeDeadlineAt=0;
         await loadNames();
         setStatus(`Permanent verwijderd. Placeholder: ${result.placeholder_name || 'Spookinoza'}.`, 'ok');
       } finally {
