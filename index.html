@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wordt er gejast donderdag?</title>
   <link rel="stylesheet" href="./site-shell.css" />
-  <style>body{background:linear-gradient(rgba(244,240,232,.56),rgba(244,240,232,.56)), url('./site-bg-desktop.webp') center/cover no-repeat !important;}.drinks-home-section{margin:18px 0 8px;display:grid;gap:12px}
+  <style>body{background:linear-gradient(rgba(244,240,232,.56),rgba(244,240,232,.56)), url('./site-bg-desktop.webp') center/115% auto no-repeat !important;}.drinks-home-section{margin:18px 0 8px;display:grid;gap:12px}
     .drinks-home-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
     .drinks-home-head h2{margin:0;font-size:1.1rem}
     .drinks-home-link{display:inline-flex;padding:9px 12px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800}
     .drinks-home-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-    .drinks-mini{background:rgba(255,255,255,.72);border:1px solid rgba(17,17,17,.06);border-radius:18px;padding:14px;text-align:left;text-decoration:none;color:inherit;display:flex;flex-direction:column;justify-content:flex-start}.drinks-mini.dark{background:#111;color:#fff}.drinks-mini.gold{background:#d4af37;color:#111}.drinks-mini.dark .drinks-mini-label,.drinks-mini.dark .drinks-mini-sub{color:rgba(255,255,255,.82)}
+    .drinks-mini{background:rgba(255,255,255,.72);border:1px solid rgba(17,17,17,.06);border-radius:18px;padding:14px;text-align:left;text-decoration:none;color:inherit;display:flex;flex-direction:column;justify-content:flex-start}.drinks-mini.dark{background:#111;color:#fff}.drinks-mini.gold{background:#111;color:var(--gold)}.drinks-mini.gold .drinks-mini-label,.drinks-mini.gold .drinks-mini-value,.drinks-mini.gold .drinks-mini-sub{color:var(--gold)}.drinks-mini.dark .drinks-mini-label,.drinks-mini.dark .drinks-mini-sub{color:rgba(255,255,255,.82)}
     .drinks-mini-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:800;margin-bottom:6px;min-height:30px;display:flex;align-items:flex-start}
     .drinks-mini-value{font-size:1.55rem;font-weight:900;line-height:1.05;min-height:2.2rem;display:flex;align-items:flex-end}
     .drinks-mini-sub{display:none}
@@ -40,8 +40,8 @@
   </style>
   <style>
     :root {
-      --gold: #d4af37;
-      --gold-hover: #c5a028;
+      --gold: #9a8241;
+      --gold-hover: #8a7338;
       --dark-bg: #111;
       --card-bg: rgba(249, 247, 242, 0.94);
       --card-line: rgba(17, 17, 17, 0.06);
@@ -577,7 +577,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v214';</script><script src="./gejast-config.js?v214"></script>
+  <script>window.GEJAST_PAGE_VERSION='v215';</script><script src="./gejast-config.js?v215"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -1079,7 +1079,7 @@
         ];
         root.innerHTML = groups.map((group) => {
           const rows = Array.isArray(group.rows) ? group.rows : [];
-          const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><a class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800" href="${playerHref(String(row.display_name || row.player_name || ''), '')}" onclick="event.stopPropagation()">${String(row.display_name || row.player_name || 'Onbekend')}</a><div class="ladder-elo" style="color:#8a7a55">${group.mode==='seconds' ? `${Number(row.duration_seconds||0).toFixed(1)}s` : `${Number(row.total_units||0).toFixed(1)}`}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen data.</div>';
+          const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><a class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800" href="${playerHref(String(row.display_name || row.player_name || ''), '')}" onclick="event.stopPropagation()">${String(row.display_name || row.player_name || 'Onbekend')}</a><div class="ladder-elo" style="color:#8a7a55">${group.mode==='seconds' ? `${Number(row.duration_seconds??row.seconds??0).toFixed(1)}s` : `${Number(row.total_units??row.units??0).toFixed(1)}`}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen data.</div>';
           return `<article class="ladder-card" role="link" tabindex="0" data-route="${group.key}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none">${group.mode==='seconds' ? 'Seconden' : 'Units'}</span></div>${body}</article>`;
         }).join('');
         root.querySelectorAll('.ladder-card[data-route]').forEach((card)=>{ const route = card.getAttribute('data-route'); card.addEventListener('click', ()=>{ window.location.href = route; }); card.addEventListener('keydown', (ev)=>{ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); window.location.href = route; } }); });
