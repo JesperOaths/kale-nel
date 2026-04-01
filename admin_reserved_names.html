@@ -50,9 +50,9 @@
     @media (max-width:920px){ .toolbar-grid { grid-template-columns:1fr; } .meta-grid { grid-template-columns:1fr; } .item strong { font-size:24px; } }
     @media (max-width:760px){ .grid { grid-template-columns:1fr; } .toolbar { position:static; } }
   </style>
-  <script>window.GEJAST_PAGE_VERSION='v247';</script><script src="./gejast-config.js?v247"></script>
-  <script src="./admin-session-sync.js?v247"></script>
-  <script src="./admin-topnav.js?v247"></script>
+  <script>window.GEJAST_PAGE_VERSION='v248';</script><script src="./gejast-config.js?v248"></script>
+  <script src="./admin-session-sync.js?v248"></script>
+  <script src="./admin-topnav.js?v248"></script>
 </head>
 <body>
   <main class="main-card">
@@ -90,7 +90,7 @@
       <div class="toolbar-grid">
         <div class="field"><label for="nameSearchInput">Zoek / filter</label><input id="nameSearchInput" type="text" placeholder="Zoek op naam, slug, mail of status"></div>
         <label class="field" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span style="font-size:12px;font-weight:800;color:#6a6257;text-transform:uppercase;letter-spacing:.08em">Alleen dummy/test/spook</span><input id="dummyOnlyToggle" type="checkbox" style="width:auto;margin:0"></label>
-        <div class="field"><label>Weergave</label><div id="statusFilters" class="status-filters"><button class="filter-chip active" type="button" data-status-filter="all">Alles</button><button class="filter-chip" type="button" data-status-filter="active">Actief</button><button class="filter-chip" type="button" data-status-filter="available">Beschikbaar</button><button class="filter-chip" type="button" data-status-filter="blocked">Geblokkeerd</button></div></div>
+        <div class="field"><label>Weergave</label><div id="statusFilters" class="status-filters"><button class="filter-chip active" type="button" data-status-filter="all">Alles</button><button class="filter-chip" type="button" data-status-filter="active">Actief</button><button class="filter-chip" type="button" data-status-filter="available">Beschikbaar</button><button class="filter-chip" type="button" data-status-filter="blocked">Geblokkeerd</button></div><label class="field" style="display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-top:10px"><span style="font-size:12px;font-weight:800;color:#6a6257;text-transform:uppercase;letter-spacing:.08em">Toon verborgen archief</span><input id="showGhostArchiveToggle" type="checkbox" style="width:auto;margin:0"></label></div>
       </div>
       <div id="statsRow" class="stats-row"></div>
     </section>
@@ -187,6 +187,7 @@
     });
     let searchTimer=null; document.getElementById('nameSearchInput').addEventListener('input', ()=>{ clearTimeout(searchTimer); searchTimer=setTimeout(renderRows, 120); });
     document.getElementById('dummyOnlyToggle').addEventListener('change', renderRows);
+    document.getElementById('showGhostArchiveToggle').addEventListener('change', renderRows);
     document.getElementById('statusFilters').addEventListener('click', (event)=>{ const btn=event.target.closest('[data-status-filter]'); if(!btn) return; state.statusFilter=btn.dataset.statusFilter||'all'; renderRows(); });
     document.getElementById('createBtn').addEventListener('click', async () => {
       try {
