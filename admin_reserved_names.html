@@ -26,18 +26,33 @@
     .danger-solid { background:var(--danger); color:#fff; }
     .status { min-height:20px; margin:16px 0; font-size:14px; }
     .status.ok { color:var(--ok); } .status.warn { color:var(--warn); }
-    .item { background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:18px; padding:16px; margin-bottom:12px; display:grid; gap:10px; }
+    .toolbar { position:sticky; top:10px; z-index:4; background:rgba(249,247,242,.92); backdrop-filter:blur(8px); border:1px solid rgba(0,0,0,.05); border-radius:18px; padding:14px; margin:16px 0 10px; box-shadow:0 10px 28px rgba(0,0,0,.04); }
+    .toolbar-grid { display:grid; grid-template-columns:1.2fr auto auto; gap:10px; align-items:end; }
+    .stats-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .stat-chip, .filter-chip { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:8px 12px; font-size:12px; font-weight:800; border:1px solid rgba(0,0,0,.08); background:#fff; color:#222; }
+    .filter-chip.active { background:#111; color:#fff; border-color:#111; }
+    .status-filters { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .item-list { display:grid; gap:12px; }
+    .item { background:#fff; border:1px solid rgba(0,0,0,0.06); border-radius:20px; padding:18px; display:grid; gap:10px; box-shadow:0 8px 20px rgba(0,0,0,.03); }
+    .item-head { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; flex-wrap:wrap; }
+    .item strong { font-size:28px; line-height:1.1; }
+    .meta-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 14px; }
     .meta { color:var(--muted); font-size:13px; }
+    .meta-label { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#8b8477; font-weight:800; }
     .pill { display:inline-flex; padding:4px 10px; border-radius:999px; background:#f4efe4; color:#6f5b28; font-size:11px; font-weight:800; }
-    .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; margin-top:4px; }
+    .btn.compact { padding:10px 12px; border-radius:14px; }
     .empty { background:#fff; border:1px dashed rgba(0,0,0,0.12); border-radius:18px; padding:16px; color:var(--muted); }
+    .skeleton { height:120px; border-radius:20px; background:linear-gradient(90deg,#f6f2e8 0%,#fff 50%,#f6f2e8 100%); background-size:200% 100%; animation:shimmer 1.2s linear infinite; border:1px solid rgba(0,0,0,.04); }
+    @keyframes shimmer { from { background-position:200% 0; } to { background-position:-200% 0; } }
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
-    @media (max-width:760px){ .grid { grid-template-columns:1fr; } }
+    @media (max-width:920px){ .toolbar-grid { grid-template-columns:1fr; } .meta-grid { grid-template-columns:1fr; } .item strong { font-size:24px; } }
+    @media (max-width:760px){ .grid { grid-template-columns:1fr; } .toolbar { position:static; } }
   </style>
-  <script>window.GEJAST_PAGE_VERSION='v244';</script><script src="./gejast-config.js?v244"></script>
-  <script src="./admin-session-sync.js?v244"></script>
-  <script src="./admin-topnav.js?v244"></script>
+  <script>window.GEJAST_PAGE_VERSION='v246';</script><script src="./gejast-config.js?v246"></script>
+  <script src="./admin-session-sync.js?v246"></script>
+  <script src="./admin-topnav.js?v246"></script>
 </head>
 <body>
   <main class="main-card">
@@ -71,11 +86,15 @@
     </div>
 
     <div id="statusBox" class="status"></div>
-    <div class="grid" style="grid-template-columns:1fr auto;align-items:end;margin-top:10px">
-      <div class="field"><label for="nameSearchInput">Zoek / filter</label><input id="nameSearchInput" type="text" placeholder="Zoek op naam, slug of mail"></div>
-      <label class="field" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span style="font-size:12px;font-weight:800;color:#6a6257;text-transform:uppercase;letter-spacing:.08em">Alleen dummy/test/spook</span><input id="dummyOnlyToggle" type="checkbox" style="width:auto;margin:0"></label>
-    </div>
-    <div id="listRoot"></div>
+    <section class="toolbar">
+      <div class="toolbar-grid">
+        <div class="field"><label for="nameSearchInput">Zoek / filter</label><input id="nameSearchInput" type="text" placeholder="Zoek op naam, slug, mail of status"></div>
+        <label class="field" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span style="font-size:12px;font-weight:800;color:#6a6257;text-transform:uppercase;letter-spacing:.08em">Alleen dummy/test/spook</span><input id="dummyOnlyToggle" type="checkbox" style="width:auto;margin:0"></label>
+        <div class="field"><label>Weergave</label><div id="statusFilters" class="status-filters"><button class="filter-chip active" type="button" data-status-filter="all">Alles</button><button class="filter-chip" type="button" data-status-filter="active">Actief</button><button class="filter-chip" type="button" data-status-filter="available">Beschikbaar</button><button class="filter-chip" type="button" data-status-filter="blocked">Geblokkeerd</button></div></div>
+      </div>
+      <div id="statsRow" class="stats-row"></div>
+    </section>
+    <div id="listRoot" class="item-list"></div>
   </main>
   <script>
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
@@ -88,10 +107,11 @@
     function readAdminSessionMeta(){ try { return JSON.parse(sessionStorage.getItem(ADMIN_SESSION_META_KEY) || localStorage.getItem(ADMIN_SESSION_META_KEY) || 'null'); } catch { return null; } }
     function clearAdminSessionToken(){ sessionStorage.removeItem(ADMIN_SESSION_KEY); localStorage.removeItem(ADMIN_SESSION_KEY); sessionStorage.removeItem(ADMIN_SESSION_META_KEY); localStorage.removeItem(ADMIN_SESSION_META_KEY); }
     function getToken(){ const meta=readAdminSessionMeta(); const token=(meta&&meta.token) || (window.GEJAST_ADMIN_SESSION && window.GEJAST_ADMIN_SESSION.getToken()) || sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); if (meta?.issued_at && (Date.now() - Number(meta.issued_at) > ADMIN_SESSION_MAX_AGE_MS)) { clearAdminSessionToken(); return ''; } return token; }
-    const state={rows:[],busyId:null,busyMode:'',pendingPurgeId:null,purgeDeadlineAt:0,rowMessageId:null,rowMessageText:'',rowMessageTone:'',rpcReady:{remove:true,purge:true}};
+    const state={rows:[],busyId:null,busyMode:'',pendingPurgeId:null,purgeDeadlineAt:0,rowMessageId:null,rowMessageText:'',rowMessageTone:'',statusFilter:'all',rpcReady:{remove:true,purge:true},renderToken:0};
     function setStatus(message='', tone='') { const box=document.getElementById('statusBox'); box.className=`status ${tone}`.trim(); box.textContent=message; }
-    function filteredRows(){ const q=String(document.getElementById('nameSearchInput')?.value||'').trim().toLowerCase(); const dummyOnly=!!document.getElementById('dummyOnlyToggle')?.checked; return (state.rows||[]).filter((row)=>{ const hay=[row.display_name,row.username,row.reserved_for_email,row.status].map((v)=>String(v||'').toLowerCase()).join(' '); if(q && !hay.includes(q)) return false; if(dummyOnly && !/(dummy|test|spook|verifier\s*1111)/i.test([row.display_name,row.username,row.reserved_for_email].join(' '))) return false; return true; }); }
-    function renderRows(){ const rows=filteredRows(); const root=document.getElementById('listRoot'); root.innerHTML=''; if(!rows.length){ root.innerHTML='<div class="empty">Geen namen gevonden voor dit filter.</div>'; return; } const now=Date.now(); if(state.purgeDeadlineAt && now>state.purgeDeadlineAt){ state.pendingPurgeId=null; state.purgeDeadlineAt=0; } rows.forEach((row)=>{ const busy=state.busyId===row.id; const removeDisabled=busy||!state.rpcReady.remove; const purgeDisabled=busy||!state.rpcReady.purge; const confirmPurge=state.pendingPurgeId===row.id && state.purgeDeadlineAt>now; const secondsLeft=confirmPurge ? Math.max(1, Math.ceil((state.purgeDeadlineAt-now)/1000)) : 0; const card=document.createElement('article'); card.className='item'; const rowMessage = state.rowMessageId===row.id ? `<div class="status ${state.rowMessageTone||''}" style="display:block;margin-top:10px">${state.rowMessageText||''}</div>` : ''; card.innerHTML=`<strong>${row.display_name}</strong><div class="pill">${row.status || 'beschikbaar'}</div><div class="meta">slug: ${row.username || '-'} · e-mail: ${row.reserved_for_email || '-'}</div>${row.player_id ? `<div class="meta">gekoppelde speler-id: ${row.player_id}</div>` : ''}${confirmPurge ? `<div class="callout" style="margin:10px 0 0 0;padding:10px 12px"><strong>Definitief verwijderen?</strong> Klik binnen ${secondsLeft}s nogmaals op <strong>Permanent verwijderen</strong> om deze speler naar een Spookinoza-placeholder om te zetten.</div>` : ''}${rowMessage}<div class="row"><button class="btn danger" type="button" data-remove-id="${row.id}" ${removeDisabled?'disabled':''}>${busy && state.busyMode==='remove' ? 'Bezig…' : (state.rpcReady.remove ? 'Account verwijderen + uit kieslijst' : 'SQL/RPC nog niet live')}</button><button class="btn danger-solid" type="button" data-purge-id="${row.id}" ${purgeDisabled?'disabled':''}>${busy && state.busyMode==='purge' ? 'Bezig…' : (confirmPurge ? `Nogmaals klikken (${secondsLeft}s)` : (state.rpcReady.purge ? 'Permanent verwijderen' : 'SQL/RPC nog niet live'))}</button></div>`; root.appendChild(card); }); }
+    function filteredRows(){ const q=String(document.getElementById('nameSearchInput')?.value||'').trim().toLowerCase(); const dummyOnly=!!document.getElementById('dummyOnlyToggle')?.checked; const wanted=String(state.statusFilter||'all').toLowerCase(); return (state.rows||[]).filter((row)=>{ const hay=[row.display_name,row.username,row.reserved_for_email,row.status].map((v)=>String(v||'').toLowerCase()).join(' '); const status=String(row.status||'').toLowerCase(); if(q && !hay.includes(q)) return false; if(wanted!=='all' && status!==wanted) return false; if(dummyOnly && !/(dummy|test|spook|verifier\s*1111)/i.test([row.display_name,row.username,row.reserved_for_email].join(' '))) return false; return true; }).sort((a,b)=> String(a.display_name||'').localeCompare(String(b.display_name||''),'nl')); }
+    function renderStats(totalRows, visibleRows){ const root=document.getElementById('statsRow'); if(!root) return; const dummyCount=(state.rows||[]).filter((row)=>/(dummy|test|spook|verifier\s*1111)/i.test([row.display_name,row.username,row.reserved_for_email].join(' '))).length; const activeCount=(state.rows||[]).filter((row)=>String(row.status||'').toLowerCase()==='active').length; const blockedCount=(state.rows||[]).filter((row)=>String(row.status||'').toLowerCase()==='blocked').length; root.innerHTML=`<div class="stat-chip">Totaal <strong>${totalRows}</strong></div><div class="stat-chip">Zichtbaar <strong>${visibleRows}</strong></div><div class="stat-chip">Dummy/test/spook <strong>${dummyCount}</strong></div><div class="stat-chip">Actief <strong>${activeCount}</strong></div><div class="stat-chip">Geblokkeerd <strong>${blockedCount}</strong></div>`; }
+    function renderRows(){ const rows=filteredRows(); const root=document.getElementById('listRoot'); const token=++state.renderToken; root.innerHTML=''; renderStats((state.rows||[]).length, rows.length); document.querySelectorAll('[data-status-filter]').forEach((btn)=>btn.classList.toggle('active', btn.dataset.statusFilter===state.statusFilter)); if(!rows.length){ root.innerHTML='<div class="empty">Geen namen gevonden voor dit filter.</div>'; return; } const now=Date.now(); if(state.purgeDeadlineAt && now>state.purgeDeadlineAt){ state.pendingPurgeId=null; state.purgeDeadlineAt=0; } const skeletonCount=Math.min(4, rows.length); root.innerHTML=Array.from({length:skeletonCount}).map(()=>'<div class="skeleton"></div>').join(''); const chunkSize=24; let index=0; function pump(){ if(token!==state.renderToken) return; if(index===0) root.innerHTML=''; const frag=document.createDocumentFragment(); for(let i=0;i<chunkSize && index<rows.length;i++,index++){ const row=rows[index]; const busy=state.busyId===row.id; const removeDisabled=busy||!state.rpcReady.remove; const purgeDisabled=busy||!state.rpcReady.purge; const confirmPurge=state.pendingPurgeId===row.id && state.purgeDeadlineAt>Date.now(); const secondsLeft=confirmPurge ? Math.max(1, Math.ceil((state.purgeDeadlineAt-Date.now())/1000)) : 0; const card=document.createElement('article'); card.className='item'; const rowMessage = state.rowMessageId===row.id ? `<div class="status ${state.rowMessageTone||''}" style="display:block;margin-top:6px">${state.rowMessageText||''}</div>` : ''; card.innerHTML=`<div class="item-head"><div><strong>${row.display_name}</strong><div class="meta-grid" style="margin-top:10px"><div><div class="meta-label">Status</div><div class="pill">${row.status || 'beschikbaar'}</div></div><div><div class="meta-label">Slug</div><div class="meta">${row.username || '-'}</div></div><div><div class="meta-label">E-mail</div><div class="meta">${row.reserved_for_email || '-'}</div></div><div><div class="meta-label">Speler-id</div><div class="meta">${row.player_id || '-'}</div></div></div></div></div>${confirmPurge ? `<div class="callout" style="margin:0;padding:10px 12px"><strong>Definitief verwijderen?</strong> Klik binnen ${secondsLeft}s nogmaals op <strong>Permanent verwijderen</strong>.</div>` : ''}${rowMessage}<div class="row"><button class="btn compact danger" type="button" data-remove-id="${row.id}" ${removeDisabled?'disabled':''}>${busy && state.busyMode==='remove' ? 'Bezig…' : (state.rpcReady.remove ? 'Account verwijderen + uit kieslijst' : 'SQL/RPC nog niet live')}</button><button class="btn compact danger-solid" type="button" data-purge-id="${row.id}" ${purgeDisabled?'disabled':''}>${busy && state.busyMode==='purge' ? 'Bezig…' : (confirmPurge ? `Nogmaals klikken (${secondsLeft}s)` : (state.rpcReady.purge ? 'Permanent verwijderen' : 'SQL/RPC nog niet live'))}</button></div>`; frag.appendChild(card); } root.appendChild(frag); if(index<rows.length) requestAnimationFrame(pump); } requestAnimationFrame(pump); }
     async function ensureGate(){
       const token=getToken();
       if(!token){ clearAdminSessionToken(); window.location.href='./admin.html?return_to=admin_reserved_names.html'; return false; }
@@ -165,8 +185,9 @@
         setStatus(msg, 'warn');
       }
     });
-    document.getElementById('nameSearchInput').addEventListener('input', renderRows);
+    let searchTimer=null; document.getElementById('nameSearchInput').addEventListener('input', ()=>{ clearTimeout(searchTimer); searchTimer=setTimeout(renderRows, 120); });
     document.getElementById('dummyOnlyToggle').addEventListener('change', renderRows);
+    document.getElementById('statusFilters').addEventListener('click', (event)=>{ const btn=event.target.closest('[data-status-filter]'); if(!btn) return; state.statusFilter=btn.dataset.statusFilter||'all'; renderRows(); });
     document.getElementById('createBtn').addEventListener('click', async () => {
       try {
         setStatus('Naam reserveren...');
