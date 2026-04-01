@@ -1,0 +1,91 @@
+GEJAST v237 COMPLETION / AUDIT SNAPSHOT
+
+What was implemented in this round
+1. Version/caching continuity sweep
+   - Touched public/admin pages moved to v237.
+   - Old hardcoded v220 / v121 watermark strings on touched pages were updated.
+   - Added a release manifest/checklist file for deployment discipline.
+
+2. request.html
+   - Shows how many names are currently claimable.
+   - Clearer empty state when the name list is unavailable.
+   - Clearer post-submit messaging.
+
+3. login.html
+   - Better state tile handling when a session expired or login is required.
+   - Keeps blank auth/session copy from lingering.
+
+4. admin_reserved_names.html
+   - Search/filter for dummy/test/spook names.
+   - Loading/disabled button states while actions run.
+   - Buttons now clearly show when the required SQL/RPC is not live yet instead of silently appearing broken.
+
+5. drinks_admin.html
+   - Search/filter for player/type/status.
+   - Dummy/test/spook toggle.
+   - Pending finalization countdown in row meta.
+   - Load guard + delegated row actions retained.
+
+6. index.html
+   - Avatar chips beside visible Top 5 player names.
+   - Last-refresh timestamp under the drinks/home stats section.
+   - Stronger drinks Top 5 empty/error rendering.
+
+7. drinks.html
+   - Stronger section separation between totals / queue / history / fairness.
+   - Stronger speed-ladder failure state.
+
+8. drinks_add.html
+   - Keeps only Vandaag / Open verificaties / All-time in the metric row.
+
+9. drinks_speed.html
+   - Copy stays aligned with the separate speed-verification pipeline.
+   - Vote countdown shown for pending attempts where timing info is available.
+   - Current approve/reject counts shown when available.
+   - Clearer status chips for pending / verified / rejected / cancelled.
+   - Load guard + slower background refresh retained.
+
+10. profiles.html
+   - Uses real avatar_url when present, otherwise initials fallback.
+   - Added card chips for drinks units and best speed time when present.
+   - Debounced search + chunked rendering retained.
+
+11. player.html
+   - Added hero avatar.
+   - Player-name links in the page now render with avatar/initials chips when avatar info is available.
+   - Speed records remain visible in the drinks/speed profile section.
+
+12. ladder.html
+   - Added avatar chips to ladder rows and graph legend/name links.
+   - Added retry button in the ladder panel and retry buttons in failure cards.
+   - Timeout/error handling from v236 retained.
+
+13. admin_analytics.html / invite.html
+   - Brought to the same version line as the rest of the v237 patch.
+   - invite.html now also has an Adminhub back path in the top row.
+
+14. Background continuation
+   - Rotated continuation layer pushed lower again and top fade/mask strengthened to reduce visible white overlap seams.
+
+Lag fixes currently present
+1. drinks-verify-float.js
+   - 12s poll interval.
+   - Hidden-tab polling skipped.
+   - Busy guard prevents overlapping polls.
+2. drinks_admin.html
+   - loadBusy guard.
+   - Delegated click/change handlers.
+3. profiles.html
+   - Debounced search.
+   - requestAnimationFrame chunk rendering.
+4. ladder.html
+   - Shared + advanced insight loads in parallel.
+   - Timeout guards on side RPCs.
+5. drinks_speed.html
+   - loadBusy guard.
+   - 45s refresh cadence.
+   - expensive combined-speed fallback removed.
+
+Important deployment note
+- admin_reserved_names action buttons only work after the full SQL that defines admin_remove_allowed_username(...) and admin_permanently_delete_allowed_username(...) is actually run in Supabase.
+- If the live site still shows old screens/copy, the live bundle simply has not been replaced yet.

@@ -1,0 +1,31 @@
+GEJAST RELEASE MANIFEST v237
+
+Touched frontend/assets:
+- gejast-config.js
+- admin.html
+- admin_reserved_names.html
+- drinks_admin.html
+- request.html
+- login.html
+- drinks.html
+- drinks_add.html
+- drinks_speed.html
+- profiles.html
+- player.html
+- ladder.html
+- admin_analytics.html
+- invite.html
+- index.html
+- drinks-verify-float.js
+
+SQL bundle:
+- gejast_v236_FULL.sql carried forward as v237 full SQL (no new SQL body changes in this round)
+
+Deploy checklist:
+1. Run full SQL file.
+2. Upload flat patch zip.
+3. Hard refresh request/login/admin_reserved_names/drinks_speed/ladder/profiles/admin_analytics/invite.
+4. Verify watermark shows v237 on touched pages.
+5. Verify admin reserved names buttons after SQL is live.
+6. Verify ladder pages no longer sit on silent loading placeholders.
+7. Verify speed page shows countdown / vote counts / state chips.

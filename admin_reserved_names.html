@@ -35,9 +35,9 @@
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
     @media (max-width:760px){ .grid { grid-template-columns:1fr; } }
   </style>
-  <script>window.GEJAST_PAGE_VERSION='v236';</script><script src="./gejast-config.js?v236"></script>
-  <script src="./admin-session-sync.js?v236"></script>
-  <script src="./admin-topnav.js?v236"></script>
+  <script>window.GEJAST_PAGE_VERSION='v237';</script><script src="./gejast-config.js?v237"></script>
+  <script src="./admin-session-sync.js?v237"></script>
+  <script src="./admin-topnav.js?v237"></script>
 </head>
 <body>
   <main class="main-card">
@@ -71,6 +71,10 @@
     </div>
 
     <div id="statusBox" class="status"></div>
+    <div class="grid" style="grid-template-columns:1fr auto;align-items:end;margin-top:10px">
+      <div class="field"><label for="nameSearchInput">Zoek / filter</label><input id="nameSearchInput" type="text" placeholder="Zoek op naam, slug of mail"></div>
+      <label class="field" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span style="font-size:12px;font-weight:800;color:#6a6257;text-transform:uppercase;letter-spacing:.08em">Alleen dummy/test/spook</span><input id="dummyOnlyToggle" type="checkbox" style="width:auto;margin:0"></label>
+    </div>
     <div id="listRoot"></div>
   </main>
   <script>
@@ -84,7 +88,10 @@
     function readAdminSessionMeta(){ try { return JSON.parse(sessionStorage.getItem(ADMIN_SESSION_META_KEY) || localStorage.getItem(ADMIN_SESSION_META_KEY) || 'null'); } catch { return null; } }
     function clearAdminSessionToken(){ sessionStorage.removeItem(ADMIN_SESSION_KEY); localStorage.removeItem(ADMIN_SESSION_KEY); sessionStorage.removeItem(ADMIN_SESSION_META_KEY); localStorage.removeItem(ADMIN_SESSION_META_KEY); }
     function getToken(){ const meta=readAdminSessionMeta(); const token=(meta&&meta.token) || (window.GEJAST_ADMIN_SESSION && window.GEJAST_ADMIN_SESSION.getToken()) || sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); if (meta?.issued_at && (Date.now() - Number(meta.issued_at) > ADMIN_SESSION_MAX_AGE_MS)) { clearAdminSessionToken(); return ''; } return token; }
+    const state={rows:[],busyId:null,busyMode:'',rpcReady:{remove:true,purge:true}};
     function setStatus(message='', tone='') { const box=document.getElementById('statusBox'); box.className=`status ${tone}`.trim(); box.textContent=message; }
+    function filteredRows(){ const q=String(document.getElementById('nameSearchInput')?.value||'').trim().toLowerCase(); const dummyOnly=!!document.getElementById('dummyOnlyToggle')?.checked; return (state.rows||[]).filter((row)=>{ const hay=[row.display_name,row.username,row.reserved_for_email,row.status].map((v)=>String(v||'').toLowerCase()).join(' '); if(q && !hay.includes(q)) return false; if(dummyOnly && !/(dummy|test|spook|verifier\s*1111)/i.test([row.display_name,row.username,row.reserved_for_email].join(' '))) return false; return true; }); }
+    function renderRows(){ const rows=filteredRows(); const root=document.getElementById('listRoot'); root.innerHTML=''; if(!rows.length){ root.innerHTML='<div class="empty">Geen namen gevonden voor dit filter.</div>'; return; } rows.forEach((row)=>{ const busy=state.busyId===row.id; const removeDisabled=busy||!state.rpcReady.remove; const purgeDisabled=busy||!state.rpcReady.purge; const card=document.createElement('article'); card.className='item'; card.innerHTML=`<strong>${row.display_name}</strong><div class="pill">${row.status || 'beschikbaar'}</div><div class="meta">slug: ${row.username || '-'} · e-mail: ${row.reserved_for_email || '-'}</div>${row.player_id ? `<div class="meta">gekoppelde speler-id: ${row.player_id}</div>` : ''}<div class="row"><button class="btn danger" type="button" data-remove-id="${row.id}" ${removeDisabled?'disabled':''}>${busy && state.busyMode==='remove' ? 'Bezig…' : (state.rpcReady.remove ? 'Account verwijderen + uit kieslijst' : 'SQL/RPC nog niet live')}</button><button class="btn danger-solid" type="button" data-purge-id="${row.id}" ${purgeDisabled?'disabled':''}>${busy && state.busyMode==='purge' ? 'Bezig…' : (state.rpcReady.purge ? 'Permanent verwijderen' : 'SQL/RPC nog niet live')}</button></div>`; root.appendChild(card); }); }
     async function ensureGate(){
       const token=getToken();
       if(!token){ clearAdminSessionToken(); window.location.href='./admin.html?return_to=admin_reserved_names.html'; return false; }
@@ -100,16 +107,10 @@
       try {
         setStatus('Laden...');
         const data = await callRpc('admin_get_allowed_usernames', { admin_session_token: getToken() });
-        const rows = data.items || [];
-        const root = document.getElementById('listRoot');
-        root.innerHTML = '';
-        if (!rows.length) { root.innerHTML = '<div class="empty">Nog geen namen gevonden. Voeg hierboven een echte naam toe om de kieslijst te vullen.</div>'; setStatus('Lijst geladen.', 'ok'); return; }
-        rows.forEach((row) => {
-          const card = document.createElement('article');
-          card.className = 'item';
-          card.innerHTML = `<strong>${row.display_name}</strong><div class="pill">${row.status || 'beschikbaar'}</div><div class="meta">slug: ${row.username || '-'} · e-mail: ${row.reserved_for_email || '-'} </div>${row.player_id ? `<div class="meta">gekoppelde speler-id: ${row.player_id}</div>` : ''}<div class="row"><button class="btn danger" type="button" data-remove-id="${row.id}">Account verwijderen + uit kieslijst</button><button class="btn danger-solid" type="button" data-purge-id="${row.id}">Permanent verwijderen</button></div>`;
-          root.appendChild(card);
-        });
+        state.rows = Array.isArray(data.items) ? data.items : [];
+        state.rpcReady.remove = true; state.rpcReady.purge = true;
+        if (!state.rows.length) { document.getElementById('listRoot').innerHTML = '<div class="empty">Nog geen namen gevonden. Voeg hierboven een echte naam toe om de kieslijst te vullen.</div>'; setStatus('Lijst geladen.', 'ok'); return; }
+        renderRows();
         setStatus('Lijst geladen.', 'ok');
       } catch (error) {
         document.getElementById('listRoot').innerHTML = '<div class="empty">De kieslijst kon niet geladen worden.</div>';
@@ -117,16 +118,20 @@
       }
     }
     async function removeFromList(id){
+      state.busyId=Number(id); state.busyMode='remove'; renderRows();
       setStatus('Account verwijderen uit kieslijst...');
       await callRpc('admin_remove_allowed_username', { admin_session_token:getToken(), allowed_username_id_input:Number(id) });
+      state.busyId=null; state.busyMode='';
       await loadNames();
       setStatus('Accounttoegang verwijderd en naam uit de kieslijst gehaald.', 'ok');
     }
     async function purgeForever(id){
       const confirmed = prompt('Typ VERWIJDER om deze speler definitief te vervangen door een Spookinoza-placeholder.');
       if (confirmed !== 'VERWIJDER') return;
+      state.busyId=Number(id); state.busyMode='purge'; renderRows();
       setStatus('Permanent verwijderen...');
       const result = await callRpc('admin_permanently_delete_allowed_username', { admin_session_token:getToken(), allowed_username_id_input:Number(id) });
+      state.busyId=null; state.busyMode='';
       await loadNames();
       setStatus(`Permanent verwijderd. Placeholder: ${result.placeholder_name || 'Spookinoza'}.`, 'ok');
     }
@@ -137,9 +142,13 @@
         if (removeBtn) await removeFromList(removeBtn.dataset.removeId);
         if (purgeBtn) await purgeForever(purgeBtn.dataset.purgeId);
       } catch (error) {
-        setStatus(error?.message || 'Actie mislukt.', 'warn');
+        const msg=String(error?.message||'Actie mislukt.');
+        if(/admin_remove_allowed_username|admin_permanently_delete_allowed_username|function .* does not exist|schema cache/i.test(msg)){ if(removeBtn) state.rpcReady.remove=false; if(purgeBtn) state.rpcReady.purge=false; renderRows(); }
+        setStatus(msg, 'warn');
       }
     });
+    document.getElementById('nameSearchInput').addEventListener('input', renderRows);
+    document.getElementById('dummyOnlyToggle').addEventListener('change', renderRows);
     document.getElementById('createBtn').addEventListener('click', async () => {
       try {
         setStatus('Naam reserveren...');
