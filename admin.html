@@ -42,9 +42,9 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v238';</script><script src="./gejast-config.js?v238"></script>
-  <script src="./admin-session-sync.js?v238"></script>
-  <script src="./admin-topnav.js?v238"></script>
+  <script>window.GEJAST_PAGE_VERSION='v260';</script><script src="./gejast-config.js?v260"></script>
+  <script src="./admin-session-sync.js?v220"></script>
+  <script src="./admin-topnav.js?v220"></script>
 </head>
 <body>
   <main class="main-card">
@@ -85,14 +85,13 @@
             <a class="hub-link" href="./admin_claims.html#view=expired"><strong>Verlopen activaties</strong><small>Verlopen gevallen direct in dezelfde beheerflow.</small></a>
             <a class="hub-link" href="./admin_reserved_names.html"><strong>Claimbare namen</strong><small>Bron voor aanvraagbare namen en handmatige reserveringen.</small></a>
             <a class="hub-link" href="./admin_mail_audit.html"><strong>Maildiagnostiek</strong><small>Make-webhook, mail-RPC en laatste mailjobstatus.</small></a>
-          </div>
+          <a class="admin-link-card" href="./drinks_admin.html"><div class="admin-link-title">Drinks audit</div><div class="admin-link-copy">Flags, verificaties en moderatie voor drinks.</div></a></div>
         </section>
 
         <section class="hub-section">
           <h2>Spellen & data</h2>
-          <p>Statspagina's, kluizen, drinks-audit en matchbeheer voor de drie spellen.</p>
+          <p>Statspagina's, kluizen en matchbeheer voor de drie spellen.</p>
           <div class="hub-grid">
-            <a class="hub-link" href="./drinks_admin.html"><strong>Drinks audit</strong><small>Flags, verificaties en moderatie voor drinks en snelheid.</small></a>
             <a class="hub-link" href="./vault.html"><strong>Klaverjas kluis</strong><small>Adminanalyse voor klaverjashistorie en lokale stats.</small></a>
             <a class="hub-link" href="./leaderboard.html"><strong>Klaverjas ranglijst</strong><small>Adminranglijst en analysepagina.</small></a>
             <a class="hub-link" href="./ladder.html?game=boerenbridge"><strong>Boerenbridge ranglijst</strong><small>Publieke ranglijst en trends voor Boerenbridge.</small></a>
@@ -253,36 +252,6 @@
       });
     }
 
-    function requestIdOf(row){
-      const candidates=[row?.id,row?.request_id,row?.claim_request_id,row?.player_id,row?.allowed_username_id,row?.email,row?.username,row?.player_name,row?.display_name];
-      const found=candidates.find((value)=>value!==null&&value!==undefined&&String(value).trim()!=='');
-      return found==null?null:String(found).toLowerCase();
-    }
-    function normalizeExpiredRows(rows){
-      return normalizeAdminRows(rows).map((row)=>({
-        ...row,
-        state_bucket:'expired',
-        request_status: row.request_status || row.status || 'activation_expired',
-        status: row.status || row.request_status || 'activation_expired'
-      }));
-    }
-    function isLikelyExpired(row){
-      try {
-        const bucket = deriveAdminBucket(row);
-        if (bucket === 'expired') return true;
-        if (bucket !== 'awaiting') return false;
-        const exp = row?.expires_at ? new Date(row.expires_at) : null;
-        if (exp && !isNaN(exp) && exp.getTime() < Date.now()) return true;
-      } catch (_) {}
-      return false;
-    }
-    function mergeHistoryWithExpired(historyRows, expiredRows){
-      const byId = new Map();
-      (historyRows||[]).forEach((row)=>{ const key=requestIdOf(row); if(key) byId.set(key,row); });
-      (expiredRows||[]).forEach((row)=>{ const key=requestIdOf(row); if(!key) return; const existing=byId.get(key)||{}; byId.set(key,{...existing,...row,state_bucket:'expired',request_status: row.request_status || existing.request_status || 'activation_expired',status: row.status || existing.status || 'activation_expired'}); });
-      return Array.from(byId.values()).map((row)=> isLikelyExpired(row) ? { ...row, state_bucket:'expired', request_status:'activation_expired', status:'activation_expired' } : row);
-    }
-
     async function loadCounts() {
       const tokenPayload = { admin_session_token: getAdminSessionToken() };
       const [requestsRes, historyRes, expiredRes] = await Promise.all([
@@ -292,15 +261,15 @@
       ]);
       const requests = normalizeAdminRows(requestsRes.requests || requestsRes.items || []);
       const history = normalizeAdminRows(historyRes.history || historyRes.items || []);
-      const expiredItems = normalizeExpiredRows(Array.isArray(expiredRes?.items) ? expiredRes.items : []);
-      const mergedHistory = mergeHistoryWithExpired(history, expiredItems);
-      const awaiting = mergedHistory.filter((item) => item.state_bucket === 'awaiting').length;
-      const active = mergedHistory.filter((item) => item.state_bucket === 'active').length;
-      const rejected = mergedHistory.filter((item) => item.state_bucket === 'rejected').length;
-      const expired = mergedHistory.filter((item) => item.state_bucket === 'expired').length;
+      const expiredItems = Array.isArray(expiredRes?.items) ? expiredRes.items : [];
+      const awaitingItems = history.filter((item) => item.state_bucket === 'awaiting');
+      const active = history.filter((item) => item.state_bucket === 'active').length;
+      const rejected = history.filter((item) => item.state_bucket === 'rejected').length;
+      const expiredHistory = history.filter((item) => item.state_bucket === 'expired').length;
+      const awaiting = awaitingItems.length;
       document.getElementById('statPending').textContent = String(requests.length);
       document.getElementById('statAwaiting').textContent = String(awaiting);
-      document.getElementById('statExpired').textContent = String(expired);
+      document.getElementById('statExpired').textContent = String(Math.max(expiredItems.length, expiredHistory));
       document.getElementById('statActive').textContent = String(active);
       document.getElementById('statRejected').textContent = String(rejected);
     }

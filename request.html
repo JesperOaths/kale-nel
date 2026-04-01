@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Naam claimen</title>
-  <script>window.GEJAST_PAGE_VERSION='v238';</script>
+  <script>window.GEJAST_PAGE_VERSION='v260';</script>
   <style>
     :root { --gold: #9a8241; --black: #111; --bg: #f0ede4; }
     * { box-sizing: border-box; }
@@ -31,7 +31,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/request.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v238"></script>
+  <script src="./gejast-config.js?v260"></script>
 </head>
 <body>
   <div class="scene">
@@ -42,7 +42,7 @@
   <main class="main-card">
     <a href="./index.html" aria-label="Terug naar home"><img src="./logo.png" class="logo-top" /></a>
     <h1>Claim je naam</h1>
-    <p class="intro">Kies je naam uit de lijst en vul je e-mailadres in.</p><div id="nameCount" class="intro" style="margin-top:-10px;margin-bottom:18px;font-weight:700"></div>
+    <p class="intro">Kies je naam uit de lijst en vul je e-mailadres in.</p>
     <label>Gewenste naam</label>
     <select id="requestNameSelect"></select>
     <label>E-mailadres</label>
@@ -96,8 +96,6 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     function fillNameSelect(names) {
       const select = document.getElementById("requestNameSelect");
       const items = uniqueNames(names);
-      const countEl = document.getElementById('nameCount');
-      if (countEl) countEl.textContent = items.length ? `${items.length} claimbare naam/namen beschikbaar.` : 'Momenteel zijn er geen claimbare namen beschikbaar.';
       select.innerHTML = "";
       const placeholder = document.createElement("option");
       placeholder.value = "";
@@ -208,7 +206,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       try {
         const names = await getRequestableNames();
         fillNameSelect(names);
-        if (!names.length) setStatus('Er staan nog geen beheerde namen klaar in de kieslijst.', 'warn', '<strong>Nog geen claimbare namen beschikbaar.</strong><br>Voeg eerst namen toe in <code>admin_reserved_names.html</code> of laat de beheerder de kieslijst verversen.');
+        if (!names.length) setStatus('Er staan nog geen beheerde namen klaar in de kieslijst.', 'warn');
         else setStatus();
       } catch (err) {
         const rawMessage = err instanceof Error ? err.message : "Kon namen niet laden";
@@ -223,7 +221,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         document.getElementById("requestNoteInput").value = "";
         document.getElementById("requestEmailInput").value = "";
         document.getElementById("requestNameSelect").selectedIndex = 0;
-        setStatus(result?.message || "Aanvraag verstuurd.", "ok", `<strong>${escapeHtml(result?.message || 'Aanvraag verstuurd.')}</strong><br>Je aanvraag staat nu in de wachtrij. Na goedkeuring ontvang je op dit e-mailadres een persoonlijke activatielink.`);
+        setStatus(result?.message || "Aanvraag verstuurd.", "ok", `<strong>${escapeHtml(result?.message || 'Aanvraag verstuurd.')}</strong><br>Na goedkeuring ontvang je op dit e-mailadres een persoonlijke activatielink.`);
       } catch (err) {
         const rawMessage = err instanceof Error ? err.message : "Er ging iets mis";
         const friendlyMessage = /claim_requests_unique_pending|Er is al een open aanvraag voor deze naam/i.test(rawMessage)
@@ -263,7 +261,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     load();
   </script>
 
-  <div class="site-credit-watermark" data-version-watermark>v238 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v260 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}

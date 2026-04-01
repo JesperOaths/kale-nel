@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inloggen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v238';</script>
+  <script>window.GEJAST_PAGE_VERSION='v260';</script>
   <style>
     :root { --gold: #9a8241; --dark-bg: #111; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.08); }
     * { box-sizing: border-box; }
@@ -45,7 +45,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/login.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v238"></script>
+  <script src="./gejast-config.js?v260"></script>
 </head>
 <body>
   <div class="site-scene">
@@ -158,7 +158,6 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       if (resetInput) resetInput.value = cleanNames.includes(resetCurrent) ? resetCurrent : (cleanNames.includes(input.value) ? input.value : '');
     }
     function nextUrl() { return new URLSearchParams(window.location.search).get('next') || './index.html'; }
-    function showLoginNotice(word, copy){ const tile=document.querySelector('.state-tile'); if(!tile) return; tile.classList.add('show'); document.getElementById('loginStateWord').textContent=word||''; document.getElementById('loginStateWord').className='state-word'; document.getElementById('loginStateCopy').textContent=copy||''; }
     function pendingVote() { return new URLSearchParams(window.location.search).get('vote') || ''; }
     function friendlyMessage(msg) {
       const raw = String(msg || '');
@@ -303,11 +302,9 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         document.getElementById('loginStateWord').className = 'state-word yes';
         document.getElementById('loginStateCopy').textContent = 'Deze browser heeft al een geldige sessie.';
       } else {
-        const params = new URLSearchParams(window.location.search);
-        const reason = params.get('reason') || params.get('state') || '';
-        if (/expired|timeout|idle/i.test(reason)) showLoginNotice('Sessie verlopen', 'Je vorige sessie is verlopen door inactiviteit. Log opnieuw in om door te gaan.');
-        else if (/match|entry|required/i.test(reason)) showLoginNotice('Inloggen nodig', 'Log in om deze pagina of invoerflow te openen.');
-        else if (stateTile) { stateTile.classList.remove('show'); document.getElementById('loginStateWord').textContent = ''; document.getElementById('loginStateCopy').textContent = ''; }
+        if (stateTile) stateTile.classList.remove('show');
+        document.getElementById('loginStateWord').textContent = '';
+        document.getElementById('loginStateCopy').textContent = '';
       }
 
       if (stateResult.status === 'rejected') {
@@ -415,7 +412,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     load();
   </script>
 
-  <div class="site-credit-watermark" data-version-watermark>v238 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v260 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
