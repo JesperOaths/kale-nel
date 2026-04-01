@@ -578,7 +578,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v222';</script><script src="./gejast-config.js?v222"></script>
+  <script>window.GEJAST_PAGE_VERSION='v223';</script><script src="./gejast-config.js?v223"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -1160,14 +1160,13 @@
         const speedGroups = (availableSpeedTypes.length ? availableSpeedTypes : defaultSpeedTypes)
           .map((t)=>{
             const source = rawByKey.get(t.key) || {};
-            const fallbackRows = (demoSpeedGroups.find((x)=>x.key===t.key) || demoSpeedGroups[0]).rows;
             return {
               key:t.key,
               label:source.label || t.label || '1 Bak',
-              rows:normaliseSpeedRows(Array.isArray(source.rows)?source.rows:[], fallbackRows)
+              rows:Array.isArray(source.rows) ? source.rows.filter((row)=>secondValue(row) > 0).slice(0,5).map((row)=>({ ...row, duration_seconds: secondValue(row) })) : []
             };
           });
-        const usableSpeedGroups = speedGroups.length ? speedGroups : demoSpeedGroups;
+        const usableSpeedGroups = speedGroups.some((g)=>g.rows.length) ? speedGroups.filter((g)=>g.rows.length) : demoSpeedGroups;
         const nextIdx = ((window.__gejastSpeedRotateIdx||-1) + 1) % usableSpeedGroups.length;
         window.__gejastSpeedRotateIdx = nextIdx;
         const currentSpeedGroup = usableSpeedGroups[nextIdx] || demoSpeedGroups[0];
