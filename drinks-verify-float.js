@@ -139,10 +139,9 @@
       try { pos = await helper.request(true); } catch (err) { pos = helper.cached(60*60*1000); if (!pos) throw err; }
       helper.startWatch();
       const linkedId = Number(item.linked_drink_event_id || item.drink_event_id || 0);
-      const res = linkedId ? await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`, {
+      if (!linkedId) throw new Error('Geen gekoppeld drankverzoek gevonden voor deze speedverificatie.');
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`, {
         method:'POST', headers: headers(), body: JSON.stringify({ session_token: token(), drink_event_id: linkedId, lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy, approve: !!approve })
-      }) : await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_speed_attempt`, {
-        method:'POST', headers: headers(), body: JSON.stringify({ session_token: token(), attempt_id: Number(item.id), lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy })
       });
       await parse(res);
       localStorage.setItem(APPROVED_KEY, JSON.stringify({at:Date.now(), text:`${item.player_name} · ${item.event_type_label || item.speed_type_label}`}));

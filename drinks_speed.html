@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Snelheid</title>
-  <script>window.GEJAST_PAGE_VERSION='v224';</script>
-  <script src="./gejast-config.js?v224"></script>
+  <script>window.GEJAST_PAGE_VERSION='v225';</script>
+  <script src="./gejast-config.js?v225"></script>
   <style>
     :root{--line:rgba(0,0,0,.08);--muted:#6b6257;--gold:#9a8241;--bad:#b53a30;--ok:#1f8f52}
     *{box-sizing:border-box}
@@ -56,8 +56,8 @@
     </div>
   </div></div>
   <div class="site-credit-watermark" data-version-watermark></div>
-  <script src="./gejast-geo.js?v224"></script>
-  <script src="./drinks-verify-float.js?v224"></script>
+  <script src="./gejast-geo.js?v225"></script>
+  <script src="./drinks-verify-float.js?v225"></script>
   <script>
   if(window.GEJAST_CONFIG && !window.GEJAST_CONFIG.requireMatchEntrySession('drinks_speed')){}
   (()=>{
@@ -131,9 +131,7 @@
           await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{method:'POST',headers:h(),body:JSON.stringify({session_token:token(),drink_event_id:Number(row.linked_drink_event_id),lat:pp.coords.latitude,lng:pp.coords.longitude,accuracy:pp.coords.accuracy,approve:!!approve})}).then(p);
           setStatus(approve ? 'Gekoppeld drankverzoek bevestigd.' : 'Gekoppeld drankverzoek afgekeurd.','ok');
         } else {
-          if(!approve) throw new Error('Losse speedpogingen kunnen hier niet worden afgekeurd.');
-          await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_speed_attempt`,{method:'POST',headers:h(),body:JSON.stringify({session_token:token(),attempt_id:Number(id),lat:pp.coords.latitude,lng:pp.coords.longitude,accuracy:pp.coords.accuracy})}).then(p);
-          setStatus('Snelheidspoging bevestigd.','ok');
+          throw new Error('Deze speedverificatie is niet gekoppeld aan een drankverzoek. Open de drinks-pagina of maak de gekoppelde speedflow opnieuw aan.');
         }
         await load();
       }catch(err){ setStatus(err.message||String(err),'bad'); }

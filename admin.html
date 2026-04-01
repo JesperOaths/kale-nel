@@ -42,9 +42,9 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v224';</script><script src="./gejast-config.js?v224"></script>
-  <script src="./admin-session-sync.js?v224"></script>
-  <script src="./admin-topnav.js?v224"></script>
+  <script>window.GEJAST_PAGE_VERSION='v225';</script><script src="./gejast-config.js?v225"></script>
+  <script src="./admin-session-sync.js?v225"></script>
+  <script src="./admin-topnav.js?v225"></script>
 </head>
 <body>
   <main class="main-card">
@@ -233,7 +233,9 @@
         .filter(Boolean);
       const decision = String(out.decision || '').toLowerCase();
       const hasPin = hasActivationEvidence(out);
-      if (states.some((raw) => raw.includes('expired'))) return 'expired';
+      const expiry = out.expires_at ? new Date(out.expires_at) : null;
+      const isExpiredByDate = expiry && !Number.isNaN(expiry.getTime()) && expiry.getTime() < Date.now();
+      if (states.some((raw) => raw.includes('expired')) || isExpiredByDate) return 'expired';
       if (states.some((raw) => raw.includes('returned_to_claimable') || raw.includes('claimable_again') || raw.includes('claimable'))) return 'rejected';
       if (states.some((raw) => raw.includes('revok') || raw.includes('reject') || raw.includes('denied'))) return 'rejected';
       if (states.some((raw) => raw.includes('active') || raw.includes('activated'))) return 'active';
