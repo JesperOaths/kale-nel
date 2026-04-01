@@ -1,4 +1,5 @@
 (function(){
+  if (window.__GEJAST_FLOAT_VERIFY__) return;
   const cfg = window.GEJAST_CONFIG || {};
   const SUPABASE_URL = cfg.SUPABASE_URL || '';
   const KEY = cfg.SUPABASE_PUBLISHABLE_KEY || '';
@@ -14,6 +15,9 @@
   let activePromptSeenAt = 0;
   let activePromptGraceUntil = 0;
   let pollBusy = false;
+  const SHOULD_SUPPRESS = !!(cfg && typeof cfg.shouldSuppressVerifyFloat === 'function' && cfg.shouldSuppressVerifyFloat());
+  if (SHOULD_SUPPRESS) return;
+  window.__GEJAST_FLOAT_VERIFY__ = true;
 
   function token(){ for (const key of SESSION_KEYS){ const value = localStorage.getItem(key) || sessionStorage.getItem(key); if (value) return value; } return ''; }
   function headers(){ return {'Content-Type':'application/json', apikey:KEY, Authorization:`Bearer ${KEY}`, Accept:'application/json'}; }

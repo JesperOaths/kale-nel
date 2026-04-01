@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION: 'v240',
+    VERSION: 'v242',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -26,6 +26,13 @@
   const effectiveVersion = candidates.sort((a,b)=>parseVersion(b)-parseVersion(a))[0] || CONFIG.VERSION;
   const label = `${effectiveVersion} · Made by Bruis`;
   window.GEJAST_PAGE_VERSION = effectiveVersion;
+
+  CONFIG.shouldSuppressVerifyFloat = function(){
+    try {
+      const page = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+      return ['scorer.html','boerenbridge.html','beerpong.html','score.html'].includes(page);
+    } catch (_) { return false; }
+  };
 
 
   function installBackgroundContinuation(){
