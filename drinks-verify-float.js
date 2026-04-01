@@ -4,7 +4,7 @@
   const KEY = cfg.SUPABASE_PUBLISHABLE_KEY || '';
   const SESSION_KEYS = ['jas_session_token_v11','jas_session_token_v10'];
   const COOLDOWN_MS = 5 * 60 * 1000;
-  const POLL_MS = 7000;
+  const POLL_MS = 6000;
   const DISMISS_KEY = 'gejast_verify_float_dismiss';
   const APPROVED_KEY = 'gejast_verify_float_last_approved';
   const LAST_ALERT_KEY = 'gejast_verify_float_last_alert';
@@ -22,13 +22,13 @@
     box.id = 'globalDrinksVerifyFloat';
     box.innerHTML = '<div class="gdf-card"><div class="gdf-title">Drinks verificatie</div><div id="gdfBody" class="gdf-body"></div><div class="gdf-actions"><button id="gdfVerifyBtn" class="gdf-btn">Bevestigen</button><button id="gdfOpenBtn" class="gdf-btn alt">Open drinks</button><button id="gdfDismissBtn" class="gdf-btn alt">Later</button></div></div>';
     const style = document.createElement('style');
-    style.textContent = '#globalDrinksVerifyFloat{position:fixed;right:14px;bottom:74px;z-index:10000;max-width:330px;opacity:0;transform:translate3d(120%,0,0);pointer-events:none;transition:transform .32s ease,opacity .24s ease}#globalDrinksVerifyFloat.show{opacity:1;transform:translate3d(0,0,0);pointer-events:auto}.gdf-card{background:rgba(17,17,17,.94);color:#fff;border:1px solid rgba(212,175,55,.3);border-radius:18px;padding:14px;box-shadow:0 16px 40px rgba(0,0,0,.28);backdrop-filter:blur(8px)}.gdf-title{font-weight:900;margin-bottom:8px}.gdf-body{font-size:14px;line-height:1.4;color:rgba(255,255,255,.92)}.gdf-meta{font-size:12px;color:rgba(255,255,255,.72);margin-top:6px}.gdf-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.gdf-btn{appearance:none;border:0;border-radius:999px;padding:9px 12px;font:inherit;font-weight:800;background:#d4af37;color:#111;cursor:pointer}.gdf-btn.alt{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.12)}@media(max-width:640px){#globalDrinksVerifyFloat{left:10px;right:10px;bottom:88px;max-width:none}}';
+    style.textContent = '#globalDrinksVerifyFloat{position:fixed;right:14px;bottom:74px;z-index:10000;max-width:340px;opacity:0;transform:translate3d(160%,48px,0) scale(.92);pointer-events:none}#globalDrinksVerifyFloat.show{opacity:1;transform:translate3d(0,0,0) scale(1);pointer-events:auto;animation:gdf-in .52s cubic-bezier(.2,.9,.2,1)}@keyframes gdf-in{0%{opacity:0;transform:translate3d(160%,58px,0) scale(.88)}65%{opacity:1;transform:translate3d(-10px,-4px,0) scale(1.02)}100%{opacity:1;transform:translate3d(0,0,0) scale(1)}}.gdf-card{background:rgba(17,17,17,.95);color:#fff;border:1px solid rgba(212,175,55,.34);border-radius:18px;padding:14px;box-shadow:0 16px 44px rgba(0,0,0,.34);backdrop-filter:blur(8px)}.gdf-title{font-weight:900;margin-bottom:8px}.gdf-body{font-size:14px;line-height:1.4;color:rgba(255,255,255,.92)}.gdf-meta{font-size:12px;color:rgba(255,255,255,.72);margin-top:6px}.gdf-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.gdf-btn{appearance:none;border:0;border-radius:999px;padding:9px 12px;font:inherit;font-weight:800;background:#d4af37;color:#111;cursor:pointer}.gdf-btn[disabled]{opacity:.6;cursor:wait}.gdf-btn.alt{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.12)}@media(max-width:640px){#globalDrinksVerifyFloat{left:10px;right:10px;bottom:88px;max-width:none}}';
     document.body.appendChild(style);
     document.body.appendChild(box);
     return box;
   }
 
-  function showBox(){ const box = ensureBox(); requestAnimationFrame(()=> box.classList.add('show')); }
+  function showBox(){ const box = ensureBox(); box.classList.remove('show'); void box.offsetWidth; requestAnimationFrame(()=> box.classList.add('show')); }
   function hideBox(){ const box = document.getElementById('globalDrinksVerifyFloat'); if (box) box.classList.remove('show'); activePromptId = null; }
 
   function showApprovedToast(){
@@ -78,31 +78,46 @@
   async function verifyEvent(item){
     const helper = window.GEJAST_GEO;
     if (!helper) throw new Error('Geolocatie helper ontbreekt.');
-    let pos;
+    const verifyBtn = document.getElementById('gdfVerifyBtn');
+    const openBtn = document.getElementById('gdfOpenBtn');
+    const dismissBtn = document.getElementById('gdfDismissBtn');
+    verifyBtn.disabled = true;
+    openBtn.disabled = true;
+    dismissBtn.disabled = true;
+    const oldLabel = verifyBtn.textContent;
+    verifyBtn.textContent = 'Bezig...';
     try {
-      pos = await helper.request(true);
-    } catch (err) {
-      pos = helper.cached(60*60*1000);
-      if (!pos) throw err;
-      document.getElementById('gdfBody').insertAdjacentHTML('beforeend','<div class="gdf-meta">Verse locatie kwam niet door; laatst bekende locatie gebruikt.</div>');
+      let pos;
+      try {
+        pos = await helper.request(true);
+      } catch (err) {
+        pos = helper.cached(60*60*1000);
+        if (!pos) throw err;
+        document.getElementById('gdfBody').insertAdjacentHTML('beforeend','<div class="gdf-meta">Verse locatie kwam niet door; laatst bekende locatie gebruikt.</div>');
+      }
+      helper.startWatch();
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`, {
+        method:'POST',
+        headers: headers(),
+        body: JSON.stringify({
+          session_token: token(),
+          drink_event_id: Number(item.id),
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+          approve: true
+        })
+      });
+      await parse(res);
+      localStorage.setItem(APPROVED_KEY, JSON.stringify({at:Date.now(), text:`${item.player_name} · ${item.event_type_label}`}));
+      dismissEvent(item.id);
+      showApprovedToast();
+    } finally {
+      verifyBtn.disabled = false;
+      openBtn.disabled = false;
+      dismissBtn.disabled = false;
+      verifyBtn.textContent = oldLabel;
     }
-    helper.startWatch();
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`, {
-      method:'POST',
-      headers: headers(),
-      body: JSON.stringify({
-        session_token: token(),
-        drink_event_id: Number(item.id),
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude,
-        accuracy: pos.coords.accuracy,
-        approve: true
-      })
-    });
-    await parse(res);
-    localStorage.setItem(APPROVED_KEY, JSON.stringify({at:Date.now(), text:`${item.player_name} · ${item.event_type_label}`}));
-    dismissEvent(item.id);
-    showApprovedToast();
   }
 
   function maybeVibrate(item){
@@ -125,7 +140,7 @@
     if (item.lat != null && item.lng != null) locationBits.push(`(${Number(item.lat).toFixed(4)}, ${Number(item.lng).toFixed(4)})`);
     document.getElementById('gdfVerifyBtn').style.display = 'inline-flex';
     document.getElementById('gdfBody').innerHTML = `<strong>${item.player_name} · ${item.event_type_label}</strong><div class="gdf-meta">${Number(item.total_units||0).toFixed(1)} units${locationBits.length ? ' · ' + locationBits.join(' · ') : ''}</div><div class="gdf-meta">Open drinks om alle verificaties en status te zien.</div>`;
-    document.getElementById('gdfVerifyBtn').onclick = async () => { try { await verifyEvent(item); } catch (err) { document.getElementById('gdfBody').insertAdjacentHTML('beforeend', `<div class="gdf-meta">${(err && err.message) || 'Bevestigen mislukt.'}</div>`); } };
+    document.getElementById('gdfVerifyBtn').onclick = async () => { const body = document.getElementById('gdfBody'); body.querySelectorAll('.gdf-meta.error').forEach((n)=>n.remove()); try { await verifyEvent(item); } catch (err) { body.insertAdjacentHTML('beforeend', `<div class="gdf-meta error">${(err && err.message) || 'Bevestigen mislukt.'}</div>`); } };
     document.getElementById('gdfOpenBtn').onclick = () => { location.href = './drinks.html#verifyPanel'; };
     document.getElementById('gdfDismissBtn').onclick = () => dismissEvent(item.id);
     showBox();

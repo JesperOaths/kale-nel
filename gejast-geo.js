@@ -64,7 +64,7 @@
     if (!window.isSecureContext) return 'Geolocatie werkt alleen via een beveiligde https-verbinding.';
     if (!navigator.geolocation) return 'Geolocatie wordt niet ondersteund op dit apparaat of in deze browser.';
     const kind = classify(err);
-    if (kind === 'permission') return 'De browser gaf geolocatie niet vrij. Probeer Geolocatie opnieuw proberen nogmaals; als dit blijft gebeuren zit het probleem meestal in de browser/site-permissie of Android-locatie zelf, niet in de drinks-logica.';
+    if (kind === 'permission') return 'De browser gaf geolocatie nog niet vrij. Controleer browser-sitepermissie en apparaatlocatie, en probeer daarna opnieuw.';
     if (kind === 'unavailable') return 'Locatie is nu niet beschikbaar. Controleer of gps of locatievoorzieningen aanstaan en probeer opnieuw.';
     if (kind === 'timeout') return 'Locatie opvragen duurde te lang. We proberen daarom ook een minder strikte locatielezing.';
     return 'Geolocatie ophalen is mislukt. Controleer toestemming, gps en browserinstellingen en probeer opnieuw.';
@@ -125,14 +125,14 @@
       return await currentPosition({ enableHighAccuracy:true, timeout:15000, maximumAge:maxAge });
     } catch (err) {
       const kind = classify(lastError || err);
-      if (kind === 'timeout' || kind === 'unavailable') {
+      try {
+        return await watchOnce({ enableHighAccuracy:false, timeout:14000, maximumAge:5*60*1000 });
+      } catch (_) {}
+      if (kind === 'timeout' || kind === 'unavailable' || kind === 'permission' || kind === 'unknown') {
         try {
-          return await currentPosition({ enableHighAccuracy:false, timeout:12000, maximumAge:5*60*1000 });
+          return await currentPosition({ enableHighAccuracy:false, timeout:14000, maximumAge:5*60*1000 });
         } catch (_) {}
       }
-      try {
-        return await watchOnce({ enableHighAccuracy:false, timeout:12000, maximumAge:5*60*1000 });
-      } catch (_) {}
       throw err;
     }
   }
