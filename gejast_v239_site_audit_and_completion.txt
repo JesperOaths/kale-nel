@@ -1,0 +1,9 @@
+GEJAST v239 FOLLOW-UP SNAPSHOT
+
+Fixes in this round:
+1. Drinks speed submit SQL now writes speed_type_key / speed_type_label when those columns exist, fixing the not-null speed_type_key insert failure.
+2. Added get_drink_event_vote_queue_public(...) so the normal drinks verify queue can show vote counts and countdown metadata from a dedicated queue RPC.
+3. get_drink_speed_page_public(...) now includes approve/reject counts plus vote window metadata for speed attempts.
+4. admin_reserved_names buttons now always clear the busy state in finally blocks, so they do not stay stuck on Bezig... after a failed action.
+5. drinks_admin now defaults to hiding Deleted rows, so delete moves rows out of the normal visible list unless Deleted is explicitly turned on.
+6. Homepage recent activity feed is wired as a card underneath the drinks Top 5 section on index.html.

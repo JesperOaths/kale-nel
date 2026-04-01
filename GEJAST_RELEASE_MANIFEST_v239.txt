@@ -1,0 +1,25 @@
+GEJAST RELEASE MANIFEST v239
+
+Touched frontend/assets:
+- gejast-config.js
+- admin_reserved_names.html
+- drinks_admin.html
+- drinks.html
+- drinks_add.html
+- drinks_speed.html
+- drinks-verify-float.js
+- index.html
+- geo_diagnostics.html
+
+SQL bundle:
+- gejast_v239_FULL.sql
+
+Deploy checklist:
+1. Run gejast_v239_FULL.sql.
+2. Upload gejast_v239_patch_flat.zip.
+3. Hard refresh admin_reserved_names / drinks / drinks_add / drinks_speed / index.
+4. Verify speed submit no longer errors on speed_type_key.
+5. Verify reserved-names buttons no longer get stuck on Bezig... after failure.
+6. Verify deleted items disappear unless Deleted filter is explicitly enabled.
+7. Verify vote counts and countdowns appear on speed/drink queues and floating verify.
+8. Verify homepage recent activity renders under the drinks top 5 section.

@@ -35,9 +35,9 @@
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
     @media (max-width:760px){ .grid { grid-template-columns:1fr; } }
   </style>
-  <script>window.GEJAST_PAGE_VERSION='v238';</script><script src="./gejast-config.js?v238"></script>
-  <script src="./admin-session-sync.js?v238"></script>
-  <script src="./admin-topnav.js?v238"></script>
+  <script>window.GEJAST_PAGE_VERSION='v239';</script><script src="./gejast-config.js?v239"></script>
+  <script src="./admin-session-sync.js?v239"></script>
+  <script src="./admin-topnav.js?v239"></script>
 </head>
 <body>
   <main class="main-card">
@@ -119,21 +119,27 @@
     }
     async function removeFromList(id){
       state.busyId=Number(id); state.busyMode='remove'; renderRows();
-      setStatus('Account verwijderen uit kieslijst...');
-      await callRpc('admin_remove_allowed_username', { admin_session_token:getToken(), allowed_username_id_input:Number(id) });
-      state.busyId=null; state.busyMode='';
-      await loadNames();
-      setStatus('Accounttoegang verwijderd en naam uit de kieslijst gehaald.', 'ok');
+      try {
+        setStatus('Account verwijderen uit kieslijst...');
+        await callRpc('admin_remove_allowed_username', { admin_session_token:getToken(), allowed_username_id_input:Number(id) });
+        await loadNames();
+        setStatus('Accounttoegang verwijderd en naam uit de kieslijst gehaald.', 'ok');
+      } finally {
+        state.busyId=null; state.busyMode=''; renderRows();
+      }
     }
     async function purgeForever(id){
       const confirmed = prompt('Typ VERWIJDER om deze speler definitief te vervangen door een Spookinoza-placeholder.');
       if (confirmed !== 'VERWIJDER') return;
       state.busyId=Number(id); state.busyMode='purge'; renderRows();
-      setStatus('Permanent verwijderen...');
-      const result = await callRpc('admin_permanently_delete_allowed_username', { admin_session_token:getToken(), allowed_username_id_input:Number(id) });
-      state.busyId=null; state.busyMode='';
-      await loadNames();
-      setStatus(`Permanent verwijderd. Placeholder: ${result.placeholder_name || 'Spookinoza'}.`, 'ok');
+      try {
+        setStatus('Permanent verwijderen...');
+        const result = await callRpc('admin_permanently_delete_allowed_username', { admin_session_token:getToken(), allowed_username_id_input:Number(id) });
+        await loadNames();
+        setStatus(`Permanent verwijderd. Placeholder: ${result.placeholder_name || 'Spookinoza'}.`, 'ok');
+      } finally {
+        state.busyId=null; state.busyMode=''; renderRows();
+      }
     }
     document.getElementById('listRoot').addEventListener('click', async (event) => {
       const removeBtn = event.target.closest('[data-remove-id]');
