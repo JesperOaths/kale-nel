@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Balzaal</title>
+  <script>window.GEJAST_PAGE_VERSION='v285';</script>
+  <script src="./gejast-config.js?v285"></script>
+  <style>
+    :root{
+      --gold:#9a8241; --gold-deep:#7e682f; --wine:#7f1224; --wine-dark:#5d0917; --cream:#f7f0e6; --ink:#161311; --muted:#70665a;
+      --line:rgba(17,17,17,.08);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,sans-serif;background:
+      radial-gradient(circle at 50% -20%, rgba(255,240,193,.24), transparent 40%),
+      linear-gradient(180deg, #5f1020 0%, #3d0814 32%, #24130f 100%);color:#1b160f;min-height:100vh}
+    .page{max-width:1120px;margin:0 auto;padding:22px 16px 34px}
+    .shell{position:relative;background:linear-gradient(180deg, rgba(255,251,246,.95), rgba(245,236,224,.93));border:1px solid rgba(255,255,255,.52);border-radius:34px;padding:26px;box-shadow:0 28px 56px rgba(0,0,0,.2);overflow:hidden}
+    .shell::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% -10%, rgba(255,225,164,.33), transparent 40%);pointer-events:none}
+    .topbar{position:relative;z-index:2;display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+    .nav-left,.nav-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .pill,.btn,.small-btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;border:none;cursor:pointer;font:800 14px/1 Inter,sans-serif}
+    .pill,.small-btn{padding:12px 16px;border-radius:999px}
+    .pill{background:#111;color:#fff}
+    .pill.secondary,.small-btn.secondary{background:#fff;color:#1d1914;border:1px solid var(--line)}
+    .brand{width:54px;height:54px;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:#fff;border:1px solid rgba(0,0,0,.06)}
+    .brand img{width:100%;height:100%;object-fit:cover}
+    .hero{text-align:center;position:relative;z-index:2;padding:8px 0 20px}
+    .hero h1{margin:0;font-size:clamp(2rem,4.2vw,3.3rem);letter-spacing:-.05em;color:#1e140f}
+    .hero p{margin:10px auto 0;max-width:48ch;color:var(--muted);font-size:1rem}
+    .hero-badges{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:14px}
+    .hero-badge{padding:8px 12px;border-radius:999px;background:rgba(127,18,36,.08);border:1px solid rgba(127,18,36,.12);color:#6f1425;font-weight:800;font-size:12px;letter-spacing:.03em;text-transform:uppercase}
+
+    .ballroom-scene{position:relative;min-height:520px;border-radius:30px;background:
+      radial-gradient(circle at 50% 8%, rgba(255,226,163,.76), rgba(255,226,163,.18) 18%, transparent 38%),
+      linear-gradient(180deg, #6a1023 0%, #4f0d1b 26%, #2c1912 26.2%, #2a1a13 100%);
+      border:1px solid rgba(255,255,255,.18);box-shadow:inset 0 24px 46px rgba(255,255,255,.05), inset 0 -20px 50px rgba(0,0,0,.18);overflow:hidden}
+    .ballroom-scene::before{content:'';position:absolute;left:7%;right:7%;top:68px;height:24px;background:linear-gradient(180deg,#c7a04f,#8d6429);border-radius:999px;opacity:.9;box-shadow:0 8px 22px rgba(0,0,0,.18)}
+    .chandelier{position:absolute;left:50%;top:10px;transform:translateX(-50%);width:220px;height:140px;pointer-events:none;opacity:.95}
+    .chandelier .ring{position:absolute;left:50%;top:0;transform:translateX(-50%);width:112px;height:42px;border-radius:0 0 70px 70px/0 0 42px 42px;border:5px solid rgba(224,184,91,.95);border-top:none}
+    .chandelier .chain{position:absolute;left:50%;top:-38px;transform:translateX(-50%);width:4px;height:54px;background:linear-gradient(180deg,#ebc569,#9b742f)}
+    .chandelier .gem{position:absolute;width:12px;height:18px;background:linear-gradient(180deg,#fff0bc,#e0b969);clip-path:polygon(50% 0,100% 36%,78% 100%,22% 100%,0 36%)}
+    .chandelier .gem.g1{left:42px;top:52px}.chandelier .gem.g2{left:73px;top:60px}.chandelier .gem.g3{left:104px;top:64px}.chandelier .gem.g4{left:135px;top:60px}.chandelier .gem.g5{left:166px;top:52px}
+
+    .curtain{position:absolute;top:0;bottom:0;width:19%;background:linear-gradient(90deg, rgba(96,9,24,.98), rgba(137,18,40,.96) 48%, rgba(92,8,20,.98));box-shadow:inset -10px 0 18px rgba(0,0,0,.16)}
+    .curtain.left{left:0;border-radius:0 24px 24px 0}.curtain.right{right:0;border-radius:24px 0 0 24px;transform:scaleX(-1)}
+    .door{position:absolute;top:82px;bottom:132px;width:104px;background:linear-gradient(180deg,#93683b,#6c431f 46%,#835b34);border:1px solid rgba(52,27,10,.28);box-shadow:inset 0 0 0 4px rgba(255,240,208,.06), inset 10px 0 0 rgba(255,255,255,.05), inset -10px 0 0 rgba(0,0,0,.09)}
+    .door::before,.door::after{content:'';position:absolute;inset:18px 16px;border:1px solid rgba(255,241,209,.16);border-radius:16px}
+    .door.left{left:13%;border-radius:28px 10px 10px 28px}.door.right{right:13%;border-radius:10px 28px 28px 10px}
+
+    .rope-zone{position:absolute;left:10%;right:10%;bottom:118px;height:124px;pointer-events:none}
+    .rope-back,.rope-front{position:absolute;left:0;right:0;display:flex;align-items:flex-start;justify-content:space-between;padding:0 22px}
+    .rope-back{top:22px;opacity:.62;transform:scale(.96)}
+    .rope-front{bottom:0}
+    .rope-post{position:relative;width:18px;height:92px;border-radius:999px;background:linear-gradient(180deg,#d4b169,#8f682b);box-shadow:inset 0 0 0 2px rgba(255,255,255,.16),0 8px 18px rgba(0,0,0,.18)}
+    .rope-post::before{content:'';position:absolute;left:50%;top:-10px;transform:translateX(-50%);width:34px;height:18px;border-radius:999px;background:linear-gradient(180deg,#f3d995,#b58534)}
+    .rope-line{flex:1;height:16px;margin:18px 12px 0;border-radius:999px;background:linear-gradient(180deg,#9c182b,#6c0c18 62%,#aa2133);box-shadow:inset 0 2px 0 rgba(255,255,255,.18), 0 8px 18px rgba(108,12,24,.24)}
+
+    .king-throne{position:absolute;left:50%;bottom:112px;transform:translateX(-50%);width:min(320px,52vw);height:240px;display:flex;align-items:flex-end;justify-content:center;z-index:3}
+    .throne-back{position:absolute;left:50%;bottom:58px;transform:translateX(-50%);width:210px;height:166px;border-radius:40px 40px 14px 14px;background:linear-gradient(180deg,#8e1327,#5f0b18 72%);border:3px solid rgba(243,214,132,.65);box-shadow:inset 0 14px 30px rgba(255,255,255,.08), 0 18px 34px rgba(0,0,0,.18)}
+    .throne-back::before{content:'';position:absolute;left:50%;top:-28px;transform:translateX(-50%);width:78px;height:46px;border-radius:26px 26px 12px 12px;background:linear-gradient(180deg,#efcf7d,#b58434);box-shadow:0 8px 16px rgba(0,0,0,.16)}
+    .throne-seat{position:absolute;left:50%;bottom:44px;transform:translateX(-50%);width:228px;height:78px;border-radius:24px;background:linear-gradient(180deg,#c79c51,#8b6327)}
+    .king-avatar-wrap{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:62px}
+    .avatar{width:84px;height:84px;border-radius:50%;overflow:hidden;background:#f5eee2;border:3px solid rgba(243,214,132,.72);display:grid;place-items:center;font-size:2rem;font-weight:900;color:#684c1a;box-shadow:0 12px 24px rgba(0,0,0,.18)}
+    .avatar img{width:100%;height:100%;object-fit:cover}
+    .avatar.small{width:62px;height:62px;font-size:1.25rem;border-width:2px}
+    .king-name{padding:8px 14px;border-radius:999px;background:rgba(255,249,236,.92);border:1px solid rgba(212,175,95,.5);font-weight:900}
+
+    .member-layer{position:absolute;left:0;right:0;bottom:136px;height:190px;pointer-events:none}
+    .member-dot{position:absolute;display:flex;flex-direction:column;align-items:center;gap:6px;transform:translateX(-50%)}
+    .member-dot .avatar{box-shadow:0 10px 22px rgba(0,0,0,.12)}
+    .member-dot .name{font-size:12px;font-weight:800;color:#fff3db;text-shadow:0 2px 8px rgba(0,0,0,.28);max-width:90px;text-align:center;line-height:1.15}
+    .member-dot.pending{opacity:.62;filter:saturate(.8)}
+
+    .floor-glow{position:absolute;left:18%;right:18%;bottom:66px;height:84px;background:radial-gradient(ellipse at center, rgba(255,223,149,.25), rgba(255,223,149,0) 68%);pointer-events:none}
+
+    .info-grid{display:grid;grid-template-columns:1.12fr .88fr;gap:16px;margin-top:18px}
+    .panel{background:rgba(255,251,246,.94);border:1px solid var(--line);border-radius:24px;padding:18px;box-shadow:0 12px 24px rgba(0,0,0,.05)}
+    .panel h2{margin:0 0 8px;font-size:1.02rem}
+    .muted{color:var(--muted)}
+    .lux-copy{font-size:.98rem;line-height:1.6;color:#554b41}
+    .queue{display:grid;gap:10px;margin-top:12px}
+    .queue-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border-radius:18px;background:#fff;border:1px solid var(--line)}
+    .queue-main{display:flex;align-items:center;gap:10px;min-width:0}
+    .queue-name{font-weight:800}
+    .queue-meta{font-size:12px;color:var(--muted)}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{padding:13px 18px;border-radius:16px;background:linear-gradient(180deg,#a3172c,#7d0d1e);color:#fff;box-shadow:0 12px 24px rgba(125,13,30,.22)}
+    .btn.secondary{background:#111;color:#fff}.btn.ghost{background:#fff;color:#1b150f;border:1px solid var(--line);box-shadow:none}
+    .btn:disabled{opacity:.45;cursor:not-allowed}
+    .status{margin-top:12px;min-height:1.4em;font-weight:700;color:#7a1023}
+    .host-note{padding:10px 12px;border-radius:16px;background:rgba(127,18,36,.08);border:1px solid rgba(127,18,36,.12);color:#6a0f20;font-weight:700}
+    .member-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
+    .member-card{display:flex;gap:10px;align-items:center;padding:12px;border-radius:18px;background:#fff;border:1px solid var(--line)}
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}
+    @media (max-width:920px){.info-grid{grid-template-columns:1fr}.door.left{left:6%}.door.right{right:6%}.rope-zone{left:4%;right:4%}}
+    @media (max-width:700px){.shell{padding:18px}.topbar{align-items:flex-start}.hero h1{font-size:2rem}.ballroom-scene{min-height:460px}.door{display:none}.rope-zone{left:2%;right:2%;bottom:110px}.king-throne{width:84vw}.member-layer{bottom:132px;height:165px}.member-dot .name{max-width:72px}.public-row{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="shell">
+      <div class="topbar">
+        <div class="nav-left">
+          <a class="pill secondary" href="./index.html">Overzicht</a>
+          <a class="pill secondary" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</a>
+        </div>
+        <div class="nav-right">
+          <a class="brand" href="./index.html"><img src="./logo.png" alt="Logo" /></a>
+        </div>
+      </div>
+
+      <section class="hero">
+        <h1>De Balzaal</h1>
+        <p>Wie achter het fluweel mag staan, wordt hier beslist. Is de zaal leeg, dan kun jij de kroon pakken. Is er al een koning, dan vraagt jouw entree zijn zegen.</p>
+        <div class="hero-badges">
+          <div class="hero-badge">Fluweel</div>
+          <div class="hero-badge">Koning</div>
+          <div class="hero-badge">Entree op verzoek</div>
+        </div>
+      </section>
+
+      <section class="ballroom-scene" aria-label="Balzaal">
+        <div class="curtain left"></div>
+        <div class="curtain right"></div>
+        <div class="door left"></div>
+        <div class="door right"></div>
+        <div class="chandelier">
+          <div class="chain"></div><div class="ring"></div>
+          <span class="gem g1"></span><span class="gem g2"></span><span class="gem g3"></span><span class="gem g4"></span><span class="gem g5"></span>
+        </div>
+        <div class="member-layer" id="memberLayer"></div>
+        <div class="king-throne" id="kingThrone"></div>
+        <div class="rope-zone">
+          <div class="rope-back"><span class="rope-post"></span><span class="rope-line"></span><span class="rope-post"></span></div>
+          <div class="rope-front"><span class="rope-post"></span><span class="rope-line"></span><span class="rope-post"></span></div>
+        </div>
+        <div class="floor-glow"></div>
+      </section>
+
+      <div class="info-grid">
+        <section class="panel">
+          <h2>Wat speelt hier?</h2>
+          <div class="lux-copy" id="introCopy">De zaal is leeg. Wie als eerste trekt een adt, eist de troon op.</div>
+          <div class="actions" style="margin-top:14px">
+            <button class="btn" id="claimBtn" type="button">Trek een adt</button>
+            <button class="btn secondary" id="joinBtn" type="button">Trek een bak</button>
+            <a class="btn ghost" href="./profiles.html">Spelers</a>
+          </div>
+          <div class="status" id="statusMsg"></div>
+          <div class="host-note" id="hostNote" style="display:none;margin-top:14px"></div>
+          <div class="member-list" id="memberList"></div>
+        </section>
+        <section class="panel">
+          <h2>Entreeverzoeken</h2>
+          <div class="muted">Alleen de koning beslist wie achter het koord komt. De koning krijgt hier de wachtrij te zien.</div>
+          <div class="queue" id="queueList"><div class="muted" style="padding-top:10px">Nog geen open verzoeken.</div></div>
+        </section>
+      </div>
+    </div>
+  </div>
+  <div class="site-credit-watermark" data-version-watermark></div>
+
+  <script>
+  (()=>{
+    const cfg = window.GEJAST_CONFIG || {};
+    const SUPABASE_URL = cfg.SUPABASE_URL || '';
+    const KEY = cfg.SUPABASE_PUBLISHABLE_KEY || '';
+    const token = ()=> cfg.getPlayerSessionToken ? cfg.getPlayerSessionToken() : '';
+    const headers = ()=>({ apikey: KEY, Authorization:`Bearer ${KEY}`, 'Content-Type':'application/json', Accept:'application/json' });
+    let latest = null;
+
+    function avatarMarkup(src,name,small=false){
+      const initial = String(name||'?').trim().slice(0,1).toUpperCase() || '?';
+      return src ? `<div class="avatar ${small?'small':''}"><img src="${escapeHtml(src)}" alt="${escapeHtml(name||'Avatar')}"></div>` : `<div class="avatar ${small?'small':''}">${escapeHtml(initial)}</div>`;
+    }
+    function escapeHtml(v){ return String(v ?? '').replace(/[&<>"]/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m])); }
+    async function parse(res){ const txt = await res.text(); let data=null; try{ data = txt ? JSON.parse(txt) : null; } catch(err){ throw new Error(txt || `HTTP ${res.status}`); } if(!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }
+    async function rpc(name, body){ const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', headers:headers(), body:JSON.stringify(body||{}) }); const raw = await parse(res); return raw?.[name] || raw; }
+    function setStatus(msg, isError=false){ const el = document.getElementById('statusMsg'); el.textContent = msg || ''; el.style.color = isError ? '#8a091b' : '#7a1023'; }
+    function renderThrone(state){
+      const box = document.getElementById('kingThrone');
+      const king = state?.king || null;
+      if(!king){
+        box.innerHTML = `<div class="throne-back"></div><div class="throne-seat"></div><div class="king-avatar-wrap"><div class="avatar">?</div><div class="king-name">Nog geen koning</div></div>`;
+        return;
+      }
+      box.innerHTML = `<div class="throne-back"></div><div class="throne-seat"></div><div class="king-avatar-wrap">${avatarMarkup(king.avatar_url, king.display_name)}<div class="king-name">${escapeHtml(king.display_name)}</div></div>`;
+    }
+    function renderMembers(state){
+      const layer = document.getElementById('memberLayer');
+      const list = document.getElementById('memberList');
+      const members = Array.isArray(state?.approved_members) ? state.approved_members : [];
+      const scene = members.slice(0,8).map((m,idx)=>{
+        const positions = [16,28,39,61,72,84,50,8];
+        const depths = [0,18,8,22,12,20,30,4];
+        return `<div class="member-dot" style="left:${positions[idx]}%; bottom:${12+depths[idx]}px">${avatarMarkup(m.avatar_url,m.display_name,true)}<div class="name">${escapeHtml(m.display_name)}</div></div>`;
+      }).join('');
+      layer.innerHTML = scene;
+      list.innerHTML = members.length ? members.map((m)=>`<div class="member-card">${avatarMarkup(m.avatar_url,m.display_name,true)}<div><strong>${escapeHtml(m.display_name)}</strong><div class="muted">Achter het koord</div></div></div>`).join('') : '<div class="muted">Nog niemand achter het koord.</div>';
+    }
+    function renderQueue(state){
+      const queue = Array.isArray(state?.pending_requests) ? state.pending_requests : [];
+      const list = document.getElementById('queueList');
+      if(!queue.length){ list.innerHTML = '<div class="muted" style="padding-top:10px">Nog geen open verzoeken.</div>'; return; }
+      list.innerHTML = queue.map((row)=>`<div class="queue-row"><div class="queue-main">${avatarMarkup(row.avatar_url,row.display_name,true)}<div><div class="queue-name">${escapeHtml(row.display_name)}</div><div class="queue-meta">Aangemeld ${new Date(row.requested_at).toLocaleString('nl-NL')}</div></div></div><div class="actions">${latest?.viewer?.is_king ? `<button class="small-btn secondary" data-resolve="reject" data-id="${row.id}">Afwijzen</button><button class="small-btn" data-resolve="approve" data-id="${row.id}">Toelaten</button>` : '<span class="queue-meta">Wacht op oordeel</span>'}</div></div>`).join('');
+      list.querySelectorAll('[data-resolve]').forEach((btn)=>btn.addEventListener('click', async()=>{
+        try{ btn.disabled = true; await rpc('ballroom_resolve_request', { session_token: token(), request_id_input: Number(btn.dataset.id), approve_input: btn.dataset.resolve === 'approve' }); setStatus(btn.dataset.resolve === 'approve' ? 'De gast mag naar binnen.' : 'Het verzoek is afgewezen.'); await load(); } catch(err){ setStatus(err.message || String(err), true); btn.disabled = false; }
+      }));
+    }
+    function renderIntro(state){
+      const intro = document.getElementById('introCopy');
+      const hostNote = document.getElementById('hostNote');
+      const claimBtn = document.getElementById('claimBtn');
+      const joinBtn = document.getElementById('joinBtn');
+      const viewer = state?.viewer || {};
+      if(!state?.has_king){
+        intro.textContent = 'De zaal is leeg. Wie als eerste trekt een adt, eist de troon op.';
+        claimBtn.style.display = '';
+        claimBtn.disabled = !token();
+        joinBtn.style.display = 'none';
+        hostNote.style.display = 'none';
+        if(!token()) setStatus('Log eerst in als speler om de zaal te openen.');
+        return;
+      }
+      claimBtn.style.display = 'none';
+      joinBtn.style.display = '';
+      joinBtn.disabled = !token() || viewer.is_king || viewer.is_member || viewer.pending;
+      intro.textContent = `${state.king.display_name} houdt momenteel hof. Dien een verzoek in als jij ook achter het fluweel wilt staan.`;
+      hostNote.style.display = viewer.is_king ? '' : 'none';
+      hostNote.textContent = viewer.is_king ? 'Jij bent de koning van de balzaal. Alleen jij mag nieuwe gasten achter het koord toelaten.' : '';
+      if(viewer.is_member && !viewer.is_king) setStatus('Jij staat al in de balzaal.');
+      else if(viewer.pending) setStatus('Jouw entreeverzoek staat klaar voor beoordeling.');
+      else if(!token()) setStatus('Log eerst in als speler om een entreeverzoek te plaatsen.');
+      else setStatus('');
+    }
+    function render(state){ latest = state || {}; renderThrone(latest); renderMembers(latest); renderQueue(latest); renderIntro(latest); }
+    async function load(){ try{ const state = await rpc('get_ballroom_state', { session_token: token() || null }); render(state); } catch(err){ setStatus(err.message || String(err), true); } }
+
+    document.getElementById('claimBtn').addEventListener('click', async()=>{
+      if(!token()){ window.location.href = cfg.buildLoginUrl ? cfg.buildLoginUrl('ballroom.html') : './login.html?return_to=ballroom.html'; return; }
+      try{ await rpc('ballroom_claim_king', { session_token: token() }); setStatus('De kroon is van jou.'); await load(); } catch(err){ setStatus(err.message || String(err), true); }
+    });
+    document.getElementById('joinBtn').addEventListener('click', async()=>{
+      if(!token()){ window.location.href = cfg.buildLoginUrl ? cfg.buildLoginUrl('ballroom.html') : './login.html?return_to=ballroom.html'; return; }
+      try{ await rpc('ballroom_request_entry', { session_token: token() }); setStatus('Je entreeverzoek ligt nu bij de koning.'); await load(); } catch(err){ setStatus(err.message || String(err), true); }
+    });
+
+    load();
+    setInterval(load, 20000);
+  })();
+  </script>
+  <script src="./drinks-verify-float.js?v201"></script>
+</body>
+</html>

@@ -439,6 +439,38 @@
       align-items:stretch;
     }
 
+
+    .public-links-grid.centered-single { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+    .ballroom-link {
+      position: relative;
+      width: min(100%, 320px);
+      min-height: 122px;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(255,251,246,.98), rgba(248,242,232,.98));
+      border-color: rgba(122, 69, 43, 0.18);
+      box-shadow: 0 12px 28px rgba(38,22,16,0.10);
+      isolation: isolate;
+    }
+    .ballroom-link::before,
+    .ballroom-link::after {
+      content:'';
+      position:absolute;
+      top:14px;
+      bottom:14px;
+      width:30px;
+      background: linear-gradient(180deg, #8c6237, #6e4621 48%, #8b623a);
+      border:1px solid rgba(67,38,17,.22);
+      box-shadow: inset 0 0 0 3px rgba(255,239,204,.08), inset 6px 0 0 rgba(255,255,255,.06), inset -6px 0 0 rgba(0,0,0,.08);
+      z-index:0;
+    }
+    .ballroom-link::before { left:12px; border-radius:14px 8px 8px 14px; }
+    .ballroom-link::after { right:12px; border-radius:8px 14px 14px 8px; }
+    .ballroom-link-inner{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:7px}
+    .ballroom-link-rope{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:4px}
+    .ballroom-link-post{width:10px;height:38px;border-radius:999px;background:linear-gradient(180deg,#c9a254,#8b6526);box-shadow:inset 0 0 0 2px rgba(255,255,255,.14)}
+    .ballroom-link-velvet{height:12px;flex:1;max-width:170px;border-radius:999px;background:linear-gradient(180deg,#8f0d1c,#6a0712 62%,#a61626);box-shadow:inset 0 2px 0 rgba(255,255,255,.2), 0 6px 14px rgba(106,7,18,.22)}
+    .ballroom-link-copy{margin-top:2px;font-size:13px;line-height:1.35;color:#6d6051;max-width:24ch}
+
     .scorer-link-row {
       display:flex;
       justify-content:center;
@@ -615,7 +647,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v284';</script><script src="./gejast-config.js?v284"></script>
+  <script>window.GEJAST_PAGE_VERSION='v285';</script><script src="./gejast-config.js?v285"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -678,6 +710,15 @@
           <a class="page-link-card login-link" href="./login.html">
             <div class="page-link-label">Login</div>
             <div class="page-link-copy">Open je spelersessie.</div>
+          </a>
+        </div>
+        <div class="public-links-grid centered-single">
+          <a class="page-link-card ballroom-link" href="./ballroom.html">
+            <div class="ballroom-link-inner">
+              <div class="ballroom-link-rope"><span class="ballroom-link-post"></span><span class="ballroom-link-velvet"></span><span class="ballroom-link-post"></span></div>
+              <div class="page-link-label">Balzaal</div>
+              <div class="ballroom-link-copy">Achter het fluweel wacht de koning.</div>
+            </div>
           </a>
         </div>
         <div class="public-links-grid">
