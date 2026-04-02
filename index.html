@@ -578,7 +578,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v262';</script><script src="./gejast-config.js?v262"></script>
+  <script>window.GEJAST_PAGE_VERSION='v276';</script><script src="./gejast-config.js?v277"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -663,6 +663,36 @@
           </a>
         </div>
       </section>
+
+      <h1 style="margin-top:22px;text-align:center;">Wordt er gezopen vanavond?</h1>
+      <div id="drinksStateWord" class="status-word no">Nee</div>
+      <div id="drinksStateCopy" class="status-sub">0 spelers hebben Ja gezegd</div>
+
+      <div id="drinksStatusBox" class="status"></div>
+
+      <div class="vote-row">
+        <button class="vote-btn can" id="drinksYesBtn" type="button">Ik kan</button>
+        <button class="vote-btn cant" id="drinksNoBtn" type="button">Ik kan niet</button>
+      </div>
+
+      <div class="lists-grid">
+        <div class="list-box legends">
+          <h2>Legends</h2>
+          <ul id="drinksLegendsList" class="name-list"></ul>
+        </div>
+        <div class="list-box losers">
+          <h2>Losers</h2>
+          <ul id="drinksLosersList" class="name-list"></ul>
+        </div>
+      </div>
+
+      <div style="display:none;">
+        <span id="drinksYesCount">0</span>
+        <span id="drinksNoCount">0</span>
+        <span id="drinksYesCountPanel">0</span>
+        <span id="drinksNoCountPanel">0</span>
+        <span id="drinksStateWordInline">Nee</span>
+      </div>
 
       <h1 style="margin-top:22px;text-align:center;">Wordt er gejast donderdag?</h1>
       <div id="stateWord" class="status-word no">Nee</div>
@@ -892,6 +922,129 @@
         root.appendChild(li);
       });
     }
+
+const EXTRA_POLL_KEY = 'gezopen_vanavond';
+let currentDrinksPollState = null;
+let removingExtraVote = false;
+let removingExtraAdminVote = false;
+function setExtraPollStatus(message = '', tone = 'info') {
+  const box = document.getElementById('drinksStatusBox');
+  if (!box) return;
+  if (!message) { box.className = 'status'; box.textContent = ''; return; }
+  box.className = `status show ${tone}`; box.textContent = message;
+}
+function canShowExtraRemoveButton(name, listKey) {
+  const myName = currentDrinksPollState?.my_name;
+  const myStatus = currentDrinksPollState?.my_status;
+  if (!getSessionToken() || !myName || !myStatus) return false;
+  if (String(name || '').trim().toLowerCase() !== String(myName || '').trim().toLowerCase()) return false;
+  if (listKey === 'legends') return myStatus === 'ja';
+  if (listKey === 'losers') return myStatus === 'nee';
+  return false;
+}
+async function removeExtraVoteAsAdmin(targetName) {
+  if (removingExtraAdminVote || !targetName) return;
+  removingExtraAdminVote = true;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_remove_site_poll_vote`, {
+      method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+      body: JSON.stringify({ admin_session_token: getAdminSessionToken(), poll_key_input: EXTRA_POLL_KEY, display_name_input: targetName })
+    });
+    await parseResponse(res);
+    renderExtraPollState(await getExtraPollState());
+    setExtraPollStatus(`Stem verwijderd voor ${targetName}.`, 'ok');
+  } catch (error) {
+    const msg = error?.message || 'Onbekende fout';
+    setExtraPollStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
+  } finally {
+    removingExtraAdminVote = false;
+  }
+}
+async function removeMyExtraVote() {
+  if (removingExtraVote) return;
+  removingExtraVote = true;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/remove_my_site_poll_vote`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ poll_key_input: EXTRA_POLL_KEY, session_token: getSessionToken() }) });
+    const data = await parseResponse(res);
+    renderExtraPollState(data);
+    setExtraPollStatus('Je stem is verwijderd.', 'ok');
+  } catch (error) {
+    const msg = error?.message || 'Onbekende fout';
+    if (/sessie|token|login|ingelogd/i.test(msg)) {
+      clearSessionToken();
+      window.location.href = new URL('./login.html', window.location.href).toString();
+      return;
+    }
+    setExtraPollStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
+  } finally {
+    removingExtraVote = false;
+  }
+}
+function renderExtraNames(id, items, emptyText, listKey) {
+  const root = document.getElementById(id); if (!root) return; root.innerHTML = '';
+  if (!items || items.length === 0) { const li = document.createElement('li'); li.textContent = emptyText; root.appendChild(li); return; }
+  items.forEach((name) => {
+    const li = document.createElement('li');
+    const row = document.createElement('div');
+    row.className = 'vote-name-row';
+    const text = document.createElement('a');
+    text.href = playerHref(name, '');
+    text.textContent = name;
+    text.style.color = 'inherit';
+    text.style.textDecoration = 'none';
+    text.style.fontWeight = '700';
+    row.appendChild(text);
+    if (canShowExtraRemoveButton(name, listKey)) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'remove-vote-btn';
+      btn.textContent = 'verwijderen';
+      btn.disabled = removingExtraVote;
+      btn.addEventListener('click', removeMyExtraVote);
+      row.appendChild(btn);
+    }
+    if (canShowAdminRemoveButton()) {
+      const adminBtn = document.createElement('button');
+      adminBtn.type = 'button';
+      adminBtn.className = 'remove-vote-btn admin-remove-vote-btn';
+      adminBtn.textContent = 'admin ×';
+      adminBtn.disabled = removingExtraAdminVote;
+      adminBtn.addEventListener('click', () => removeExtraVoteAsAdmin(name));
+      row.appendChild(adminBtn);
+    }
+    li.appendChild(row);
+    root.appendChild(li);
+  });
+}
+function renderExtraPollState(data) {
+  currentDrinksPollState = data || null;
+  const legends = data.legends || data.yes_names || [];
+  const losers = data.losers || data.no_names || [];
+  const canCount = Number(data.can_count ?? data.yes_count ?? legends.length ?? 0);
+  const state = data.status_label
+    ? { key: data.status_key || 'no', label: data.status_label, copy: yesSaidCopy(canCount) }
+    : computeStateLabel(canCount);
+  const word = document.getElementById('drinksStateWord');
+  if (word) { word.textContent = state.label; word.className = `status-word ${state.key}`; }
+  const copy = document.getElementById('drinksStateCopy'); if (copy) copy.textContent = state.copy;
+  const yesCount = document.getElementById('drinksYesCount'); if (yesCount) yesCount.textContent = legends.length;
+  const noCount = document.getElementById('drinksNoCount'); if (noCount) noCount.textContent = losers.length;
+  const yesPanel = document.getElementById('drinksYesCountPanel'); if (yesPanel) yesPanel.textContent = legends.length;
+  const noPanel = document.getElementById('drinksNoCountPanel'); if (noPanel) noPanel.textContent = losers.length;
+  const inline = document.getElementById('drinksStateWordInline'); if (inline) inline.textContent = state.label;
+  renderExtraNames('drinksLegendsList', legends, 'Nog niemand', 'legends');
+  renderExtraNames('drinksLosersList', losers, 'Nog niemand', 'losers');
+  currentDrinksPollState = { ...(data || {}), computed_key: state.key, status_key: state.key };
+}
+async function getExtraPollState() {
+  const session_token = getSessionToken();
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_site_poll_state`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ poll_key_input: EXTRA_POLL_KEY, session_token }) });
+  return await parseResponse(res);
+}
+async function castExtraPollVote(desired_status) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cast_site_poll_vote`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ poll_key_input: EXTRA_POLL_KEY, session_token: getSessionToken(), desired_status }) });
+  return await parseResponse(res);
+}
     function yesSaidCopy(canCount) {
       if (canCount === 1) return '1 speler heeft Ja gezegd';
       return `${canCount} spelers hebben Ja gezegd`;
@@ -1014,24 +1167,37 @@
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cast_vote`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token: getSessionToken(), desired_status }) });
       return await parseResponse(res);
     }
-    function goToLoginWithIntent(status) {
+    function goToLoginWithIntent(status, pollKey = 'gejast_donderdag') {
       const url = new URL('./login.html', window.location.href);
-      url.searchParams.set('next', './index.html'); url.searchParams.set('vote', status);
+      url.searchParams.set('next', './index.html');
+      url.searchParams.set('vote', status);
+      url.searchParams.set('vote_poll', pollKey);
       window.location.href = url.toString();
     }
     async function handleVote(status) {
-      if (!getSessionToken()) { goToLoginWithIntent(status); return; }
+      if (!getSessionToken()) { goToLoginWithIntent(status, 'gejast_donderdag'); return; }
       try {
         const data = await castVote(status); renderState(data);
         setStatus(`Opgeslagen: ${status === 'ja' ? 'ik kan' : 'ik kan niet'}.`, 'ok');
       } catch (error) {
         const msg = error?.message || 'Onbekende fout';
-        if (/sessie|token|login|ingelogd/i.test(msg)) { clearSessionToken(); goToLoginWithIntent(status); return; }
+        if (/sessie|token|login|ingelogd/i.test(msg)) { clearSessionToken(); goToLoginWithIntent(status, 'gejast_donderdag'); return; }
         if (/cycle_key/i.test(msg)) {
           setStatus('De stemfunctie heeft nog een databasefout in de weekcyclus. Draai de v84 SQL-patch en vernieuw daarna de pagina hard.', 'warn');
           return;
         }
         setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
+      }
+    }
+    async function handleExtraPollVote(status) {
+      if (!getSessionToken()) { goToLoginWithIntent(status, EXTRA_POLL_KEY); return; }
+      try {
+        const data = await castExtraPollVote(status); renderExtraPollState(data);
+        setExtraPollStatus(`Opgeslagen: ${status === 'ja' ? 'ik kan' : 'ik kan niet'}.`, 'ok');
+      } catch (error) {
+        const msg = error?.message || 'Onbekende fout';
+        if (/sessie|token|login|ingelogd/i.test(msg)) { clearSessionToken(); goToLoginWithIntent(status, EXTRA_POLL_KEY); return; }
+        setExtraPollStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
       }
     }
 
@@ -1051,59 +1217,74 @@
       } catch(_){ }
     }
 
+    const __gejastDrinksTop5State={dayTitle:'Vandaag',sessionRows:[],allTimeRows:[],speedGroups:[{key:'bak',label:'1 Bak',rows:[]},{key:'2bak',label:'2 Bakken',rows:[]},{key:'ice',label:'Ice',rows:[]},{key:'liter',label:'Liter Bier',rows:[]},{key:'wijn',label:'Fles Wijn',rows:[]}],speedIdx:0,rotationTimer:null};
+    function renderDrinksHomeTop5(){
+      const root=document.getElementById('drinksTop5Grid');
+      if(!root) return;
+      const state=__gejastDrinksTop5State;
+      const speedGroups=Array.isArray(state.speedGroups)&&state.speedGroups.length?state.speedGroups:[{key:'bak',label:'1 Bak',rows:[]}];
+      const currentSpeedGroup=speedGroups[state.speedIdx % speedGroups.length] || {key:'bak',label:'1 Bak',rows:[]};
+      const unitValue=(row)=>{ const n=Number(row?.total_units ?? row?.units ?? row?.unit_total ?? row?.value ?? 0); return Number.isFinite(n) ? n : 0; };
+      const secondValue=(row)=>{ const n=Number(row?.duration_seconds ?? row?.seconds ?? row?.duration ?? row?.value ?? 0); return Number.isFinite(n) ? n : 0; };
+      const groups=[
+        { label: state.dayTitle || 'Vandaag', key:'./drinks.html', mode:'units', rows:Array.isArray(state.sessionRows)?state.sessionRows:[] },
+        { label: 'All-time', key:'./drinks.html', mode:'units', rows:Array.isArray(state.allTimeRows)?state.allTimeRows:[] },
+        { label: currentSpeedGroup.label || '1 Bak', key:'./drinks.html', mode:'seconds', rows:Array.isArray(currentSpeedGroup.rows)?currentSpeedGroup.rows:[] }
+      ];
+      const speedTitle=document.getElementById('drinksSpeedTop5Title');
+      if(speedTitle) speedTitle.textContent=currentSpeedGroup.label || '1 Bak';
+      root.innerHTML = groups.map((group) => {
+        const rows = Array.isArray(group.rows) ? group.rows : [];
+        const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><a class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800" href="${playerHref(String(row.display_name || row.player_name || ''), '')}" onclick="event.stopPropagation()">${String(row.display_name || row.player_name || 'Onbekend')}</a><div class="ladder-elo" style="color:var(--gold);font-weight:900">${group.mode==='seconds' ? `${secondValue(row).toFixed(1)}s` : `${unitValue(row).toFixed(1)}`}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen data.</div>';
+        return `<article class="ladder-card" role="link" tabindex="0" data-route="${group.key}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:var(--gold);text-decoration:none">${group.mode==='seconds' ? 'Seconden' : 'Units'}</span></div>${body}</article>`;
+      }).join('');
+      root.querySelectorAll('.ladder-card[data-route]').forEach((card)=>{ const route = card.getAttribute('data-route'); card.addEventListener('click', ()=>{ window.location.href = route; }); card.addEventListener('keydown', (ev)=>{ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); window.location.href = route; } }); });
+    }
+    function startDrinksHomeTop5Rotation(){
+      if(__gejastDrinksTop5State.rotationTimer) return;
+      __gejastDrinksTop5State.rotationTimer = window.setInterval(()=>{
+        const groups=Array.isArray(__gejastDrinksTop5State.speedGroups)&&__gejastDrinksTop5State.speedGroups.length?__gejastDrinksTop5State.speedGroups:[{key:'bak',label:'1 Bak',rows:[]}];
+        __gejastDrinksTop5State.speedIdx = (__gejastDrinksTop5State.speedIdx + 1) % groups.length;
+        renderDrinksHomeTop5();
+      }, 7000);
+    }
     async function loadDrinksHomeTop5(){
       try{
         const dayNames = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
-        const dayTitle = `${dayNames[new Date().getDay()]||'Vandaag'}`;
+        __gejastDrinksTop5State.dayTitle = `${dayNames[new Date().getDay()]||'Vandaag'}`;
         const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_top5_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
         const data = await parseResponse(res);
         const payload = data?.get_drinks_homepage_top5_public || data || {};
-        const root = document.getElementById('drinksTop5Grid');
-        if(!root) return;
-
-        const demoSessionRows = []
-        const demoSpeedGroups = []
-
-        const unitValue = (row) => {
-          const n = Number(row?.total_units ?? row?.units ?? row?.unit_total ?? row?.value ?? 0);
-          return Number.isFinite(n) ? n : 0;
-        };
-        const secondValue = (row) => {
-          const n = Number(row?.duration_seconds ?? row?.seconds ?? row?.duration ?? row?.value ?? 0);
-          return Number.isFinite(n) ? n : 0;
-        };
+        const unitValue = (row) => { const n = Number(row?.total_units ?? row?.units ?? row?.unit_total ?? row?.value ?? 0); return Number.isFinite(n) ? n : 0; };
+        const secondValue = (row) => { const n = Number(row?.duration_seconds ?? row?.seconds ?? row?.duration ?? row?.value ?? 0); return Number.isFinite(n) ? n : 0; };
         const normaliseUnitRows = (rows) => (Array.isArray(rows) ? rows : []).filter((r)=>unitValue(r) > 0).slice(0,5).map((row)=>({ ...row, total_units: unitValue(row) }));
         const normaliseSpeedRows = (rows) => (Array.isArray(rows) ? rows : []).filter((r)=>secondValue(r) > 0).slice(0,5).map((row)=>({ ...row, duration_seconds: secondValue(row) }));
-
-        const sessionRows = normaliseUnitRows(payload.session_top5 || []);
-        const allTimeRows = normaliseUnitRows(payload.all_time_top5 || []);
-
-        const rawSpeedGroups = Array.isArray(payload.speed_top5_by_type) && payload.speed_top5_by_type.length ? payload.speed_top5_by_type : [];
-        const speedGroups = rawSpeedGroups
-          .filter((g)=>String(g?.key||g?.speed_type_key||'').toLowerCase() !== 'shot')
-          .map((g)=>({
-            key:g.key || g.speed_type_key,
-            label:g.label || g.speed_type_label || '1 Bak',
-            rows:normaliseSpeedRows(Array.isArray(g.rows)?g.rows:[])
-          }))
-          .filter((g)=>g.rows.length);
-        const currentSpeedGroup = speedGroups.length ? speedGroups[(window.__gejastSpeedRotateIdx = ((window.__gejastSpeedRotateIdx||-1) + 1) % speedGroups.length)] : { key:'bier', label:'1 Bak', rows:[] };
-
-        const groups = [
-          { label: dayTitle, key:'./drinks.html', mode:'units', rows: sessionRows },
-          { label: 'All-time', key:'./drinks.html', mode:'units', rows: allTimeRows },
-          { label: currentSpeedGroup.label || '1 Bak', key:'./drinks.html', mode:'seconds', rows: currentSpeedGroup.rows || [] }
+        __gejastDrinksTop5State.sessionRows = normaliseUnitRows(payload.session_top5 || []);
+        __gejastDrinksTop5State.allTimeRows = normaliseUnitRows(payload.all_time_top5 || []);
+        const defaults=[
+          {key:'bak',label:'1 Bak',rows:[]},
+          {key:'2bak',label:'2 Bakken',rows:[]},
+          {key:'ice',label:'Ice',rows:[]},
+          {key:'liter',label:'Liter Bier',rows:[]},
+          {key:'wijn',label:'Fles Wijn',rows:[]}
         ];
-        const speedTitle = document.getElementById('drinksSpeedTop5Title');
-        if(speedTitle) speedTitle.textContent = currentSpeedGroup.label || '1 Bak';
-        root.innerHTML = groups.map((group) => {
-          const rows = Array.isArray(group.rows) ? group.rows : [];
-          const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><a class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800" href="${playerHref(String(row.display_name || row.player_name || ''), '')}" onclick="event.stopPropagation()">${String(row.display_name || row.player_name || 'Onbekend')}</a><div class="ladder-elo" style="color:var(--gold);font-weight:900">${group.mode==='seconds' ? `${secondValue(row).toFixed(1)}s` : `${unitValue(row).toFixed(1)}`}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen data.</div>';
-          return `<article class="ladder-card" role="link" tabindex="0" data-route="${group.key}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:var(--gold);text-decoration:none">${group.mode==='seconds' ? 'Seconden' : 'Units'}</span></div>${body}</article>`;
-        }).join('');
-        root.querySelectorAll('.ladder-card[data-route]').forEach((card)=>{ const route = card.getAttribute('data-route'); card.addEventListener('click', ()=>{ window.location.href = route; }); card.addEventListener('keydown', (ev)=>{ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); window.location.href = route; } }); });
+        const byKey=new Map(defaults.map((g)=>[g.key,g]));
+        const rawSpeedGroups = Array.isArray(payload.speed_top5_by_type) ? payload.speed_top5_by_type : [];
+        rawSpeedGroups.forEach((g)=>{
+          const rawKey=String(g?.key || g?.speed_type_key || '').toLowerCase();
+          if(rawKey==='shot') return;
+          const key = rawKey || 'bak';
+          const normalized = { key, label:g.label || g.speed_type_label || byKey.get(key)?.label || '1 Bak', rows:normaliseSpeedRows(Array.isArray(g.rows)?g.rows:[]) };
+          byKey.set(key, normalized);
+        });
+        __gejastDrinksTop5State.speedGroups = Array.from(byKey.values());
+        if(__gejastDrinksTop5State.speedIdx >= __gejastDrinksTop5State.speedGroups.length) __gejastDrinksTop5State.speedIdx = 0;
+        renderDrinksHomeTop5();
+        startDrinksHomeTop5Rotation();
       } catch(err){
         console.warn('Drinks homepage top 5 load failed', err);
+        renderDrinksHomeTop5();
+        startDrinksHomeTop5Rotation();
       }
     }
 
@@ -1111,7 +1292,14 @@
     function wireProtectedDrinksLinks(){ document.querySelectorAll('a[href="./drinks_add.html"]').forEach((link)=>{ if(link.dataset.bound==='1') return; link.dataset.bound='1'; link.addEventListener('click',(ev)=>{ if(getPlayerSessionToken()) return; ev.preventDefault(); window.location.href = './login.html?return_to=drinks_add'; }); }); }
 
     async function load() {
-      try { await ensureAdminViewer(); renderState(await getHomepageState()); setStatus(''); }
+      try {
+        await ensureAdminViewer();
+        const [homeState, extraState] = await Promise.all([getHomepageState(), getExtraPollState()]);
+        renderState(homeState);
+        renderExtraPollState(extraState);
+        setStatus('');
+        setExtraPollStatus('');
+      }
       catch (error) {
         const msg = error?.message || 'Onbekende fout';
         if (/cycle_key/i.test(msg)) {
@@ -1121,6 +1309,8 @@
         setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
       }
     }
+    document.getElementById('drinksYesBtn').addEventListener('click', () => handleExtraPollVote('ja'));
+    document.getElementById('drinksNoBtn').addEventListener('click', () => handleExtraPollVote('nee'));
     document.getElementById('yesBtn').addEventListener('click', () => handleVote('ja'));
     document.getElementById('noBtn').addEventListener('click', () => handleVote('nee'));
     wireProtectedDrinksLinks();

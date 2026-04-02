@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inloggen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v262';</script>
+  <script>window.GEJAST_PAGE_VERSION='v276';</script>
   <style>
     :root { --gold: #9a8241; --dark-bg: #111; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.08); }
     * { box-sizing: border-box; }
@@ -45,7 +45,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/login.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v262"></script>
+  <script src="./gejast-config.js?v277"></script>
 </head>
 <body>
   <div class="site-scene">
@@ -66,7 +66,6 @@
       </select>
     <div style="display: flex; gap: 8px; margin-bottom: 15px;">
       <input id="pinInput" name="current-password" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="Pincode" autocomplete="current-password" style="margin:0;">
-      <button id="pinOpenBtn" type="button" class="primary-btn" style="flex: 0 0 auto; width: auto; padding: 0 15px;">Toetsen</button>
     </div>
     <div class="btn-row">
       <button id="logoutBtn" type="button" class="secondary-btn">Uitloggen</button>
@@ -79,17 +78,6 @@
     </div>
     <div id="statusBox" class="status"></div>
   </main>
-  <div id="pinModal" class="modal">
-    <div class="modal-panel">
-      <div id="pinPreview" style="font-size: 24px; letter-spacing: 10px; margin-bottom: 20px; font-weight: bold;"></div>
-      <div class="pin-grid">
-        <button class="pin-key" data-digit="1" type="button">1</button><button class="pin-key" data-digit="2" type="button">2</button><button class="pin-key" data-digit="3" type="button">3</button>
-        <button class="pin-key" data-digit="4" type="button">4</button><button class="pin-key" data-digit="5" type="button">5</button><button class="pin-key" data-digit="6" type="button">6</button>
-        <button class="pin-key" data-digit="7" type="button">7</button><button class="pin-key" data-digit="8" type="button">8</button><button class="pin-key" data-digit="9" type="button">9</button>
-        <button class="pin-key" data-action="clear" type="button">C</button><button class="pin-key" data-digit="0" type="button">0</button><button class="pin-key" data-action="done" type="button">OK</button>
-      </div>
-    </div>
-  </div>
   <div id="forgotPinModal" class="modal" aria-hidden="true">
     <div class="modal-panel">
       <h2>Pincode resetten</h2>
@@ -269,7 +257,14 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       }
       throw lastErr || new Error('Login-RPC kon niet worden aangeroepen.');
     }
+    function pendingVotePoll(){ return (new URL(window.location.href)).searchParams.get('vote_poll') || 'gejast_donderdag'; }
     async function castVote(desired_status) {
+      if (pendingVotePoll() && pendingVotePoll() !== 'gejast_donderdag') {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cast_site_poll_vote`, {
+          method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ poll_key_input: pendingVotePoll(), session_token: getSessionToken(), desired_status })
+        });
+        return await parseResponse(res);
+      }
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cast_vote`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token: getSessionToken(), desired_status })
       });
@@ -335,28 +330,9 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       }
     });
     document.getElementById('logoutBtn').addEventListener('click', () => { clearSessionToken(); setStatus('Browser-sessie gewist.', 'ok'); });
-    document.getElementById('pinInput').addEventListener('input', (e) => { clampFourDigits(e.target); syncPinPreview(); });
-    document.getElementById('pinInput').addEventListener('paste', () => { requestAnimationFrame(() => { clampFourDigits(document.getElementById('pinInput')); syncPinPreview(); }); });
-
-    const pinModal = document.getElementById("pinModal");
+    document.getElementById('pinInput').addEventListener('input', (e) => { clampFourDigits(e.target); });
+    document.getElementById('pinInput').addEventListener('paste', () => { requestAnimationFrame(() => { clampFourDigits(document.getElementById('pinInput')); }); });
     const forgotPinModal = document.getElementById('forgotPinModal');
-    const pinPreview = document.getElementById("pinPreview");
-    function openPinModal() { pinModal.classList.add("show"); pinModal.setAttribute("aria-hidden", "false"); syncPinPreview(); }
-    function closePinModal() { pinModal.classList.remove("show"); pinModal.setAttribute("aria-hidden", "true"); }
-    function syncPinPreview() { pinPreview.textContent = (document.getElementById('pinInput').value || '').replace(/./g, '•'); }
-    document.getElementById('pinOpenBtn').addEventListener('click', openPinModal);
-    document.getElementById('pinInput').addEventListener('focus', openPinModal);
-    pinModal.addEventListener('click', (e) => { if (e.target === pinModal) closePinModal(); });
-    document.querySelectorAll('#pinModal .pin-key').forEach((btn) => btn.addEventListener('click', () => {
-      const input = document.getElementById('pinInput');
-      const digit = btn.dataset.digit;
-      const action = btn.dataset.action;
-      if (digit && input.value.length < 4) input.value += digit;
-      if (action === 'clear') input.value = input.value.slice(0, -1);
-      if (action === 'done') closePinModal();
-      clampFourDigits(input);
-      syncPinPreview();
-    }));
 
     function openForgotPinModal() {
       document.getElementById('resetNameInput').value = document.getElementById('playerNameInput').value || '';
