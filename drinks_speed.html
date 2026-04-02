@@ -4,119 +4,177 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Snelheid</title>
-  <script>window.GEJAST_PAGE_VERSION='v262';</script>
-  <script src="./gejast-config.js?v262"></script>
+  <script>window.GEJAST_PAGE_VERSION='v273';</script>
+  <script src="./gejast-config.js?v273"></script>
   <style>
-    :root{--line:rgba(0,0,0,.08);--muted:#6b6257;--gold:#9a8241;--bad:#b53a30;--ok:#1f8f52}
+    :root{
+      --line:rgba(0,0,0,.09);
+      --line-strong:rgba(0,0,0,.14);
+      --muted:#6b6257;
+      --paper:rgba(255,251,245,.84);
+      --panel:#fffdf9;
+      --gold:#9a8241;
+      --gold-soft:#e8d8ad;
+      --gold-border:#b39147;
+      --ink:#16120e;
+      --ink-soft:#2b241d;
+      --good:#587d4d;
+      --good-bg:#d5ddd2;
+      --bad:#8a665e;
+      --bad-bg:#ded2cb;
+      --pending-bg:#f1e4bb;
+      --pending-border:#b39147;
+      --pending-text:#5f4615;
+      --verify-bg:#d9e5d4;
+      --verify-border:#6f8a63;
+      --verify-text:#33482d;
+      --recent-bg:#dbe4eb;
+      --recent-border:#6b8293;
+      --recent-text:#314351;
+      --pending-item-bg:#6f4f14;
+      --pending-item-border:#b39147;
+      --pending-item-text:#fff7df;
+      --verify-item-bg:#476047;
+      --verify-item-border:#7fa06e;
+      --verify-item-text:#f4fbef;
+      --recent-item-bg:#455b68;
+      --recent-item-border:#8ba3b5;
+      --recent-item-text:#f6fbff;
+    }
     *{box-sizing:border-box}
-    body{margin:0;padding:24px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(244,240,232,.9),rgba(244,240,232,.92)),url('./site-bg-desktop.webp') center/cover no-repeat;color:#201b16}
-    .wrap{max-width:1240px;margin:0 auto}.card{background:rgba(255,251,245,.72);border:1px solid rgba(255,255,255,.65);border-radius:28px;padding:28px;box-shadow:0 20px 50px rgba(0,0,0,.08)}
-    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}.btn{display:inline-flex;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:none;cursor:pointer}.btn.alt{background:#f3efe6;color:#111;border:1px solid rgba(0,0,0,.08)}.btn.gold{background:var(--gold);color:#111}.logo{width:64px;height:64px}.grid{display:grid;gap:18px}.split{grid-template-columns:1fr 1fr;margin-top:18px}.panel{background:#fff;border:1px solid var(--line);border-radius:20px;padding:18px}.list{display:grid;gap:10px}.row{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:#fff;align-items:flex-start}.row-main{display:grid;gap:4px}.muted{color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap}.site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
-    select,input{width:100%;padding:12px;border-radius:14px;border:1px solid var(--line);font:inherit} .status-note{min-height:20px;font-weight:800;border-radius:12px;padding:0} .status-note.bad{color:var(--bad);background:rgba(181,58,48,.08);border:1px solid rgba(181,58,48,.18);padding:8px 10px} .status-note.ok{color:var(--ok);background:rgba(31,143,82,.08);border:1px solid rgba(31,143,82,.18);padding:8px 10px} .field-wrap{display:grid;gap:6px}
-    @media(max-width:900px){.split{grid-template-columns:1fr}} 
+    body{margin:0;padding:10px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(244,240,232,.92),rgba(244,240,232,.94)),url('./site-bg-mobile.webp') center/cover fixed;color:var(--ink)}
+    .wrap{max-width:760px;margin:0 auto}
+    .card{background:var(--paper);border:1px solid rgba(255,255,255,.72);border-radius:26px;padding:14px;box-shadow:0 20px 50px rgba(0,0,0,.08)}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .top-actions.right{margin-left:auto;gap:10px}
+    .btn,.geo-btn,.speed-btn,.action-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:800 1rem/1 Inter,system-ui,sans-serif;text-decoration:none;cursor:pointer}
+    .btn{min-height:44px;padding:10px 14px;border-radius:999px;border:1px solid rgba(0,0,0,.08);background:#111;color:#fff}
+    .btn.alt{background:#f3efe6;color:#111}
+    .btn.gold{background:var(--gold);color:#111}
+    .logo{width:52px;height:52px;object-fit:contain;flex:0 0 auto}
+    .geo-btn{min-width:68px;min-height:68px;padding:0;border-radius:999px;border:1px solid rgba(138,102,94,.22);background:var(--bad-bg);color:var(--bad);box-shadow:0 10px 22px rgba(0,0,0,.07);margin-right:18px;transition:background .18s ease,color .18s ease,border-color .18s ease,transform .1s ease,box-shadow .18s ease}
+    .geo-btn svg{width:42px;height:42px;display:block;stroke:currentColor;stroke-width:6;stroke-linecap:round;stroke-linejoin:round}
+    .geo-btn.is-ready{background:var(--good-bg);color:var(--good);border-color:rgba(88,112,79,.24)}
+    .geo-btn:active,.speed-btn:active,.action-btn:active{transform:translateY(1px)}
+    .speed-types{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(3,auto);grid-auto-flow:column;gap:10px;margin-bottom:12px}
+    .speed-btn{display:grid;gap:4px;padding:16px 14px;border-radius:22px;border:1px solid var(--line-strong);min-height:92px;text-align:left;align-content:center;box-shadow:0 8px 20px rgba(0,0,0,.05);background:#fff}
+    .speed-btn strong{font-size:1.05rem;line-height:1.15}
+    .speed-btn small{font-size:.9rem;opacity:.92}
+    .speed-btn.gold{background:var(--gold-soft);border-color:var(--gold-border);color:#17120d}
+    .speed-btn.dark{background:var(--ink-soft);border-color:#241c15;color:#fff}
+    .speed-btn.active{outline:3px solid rgba(154,130,65,.24)}
+    .entry-card,.panel,.stats-card,.geo-card{border-radius:20px;padding:14px 14px 12px;border:1px solid var(--line-strong);box-shadow:0 10px 24px rgba(0,0,0,.04)}
+    .entry-card{background:#f9f5ee;margin-bottom:12px}
+    .entry-card h2,.panel h2{margin:0 0 10px;font-size:1.05rem;line-height:1.15}
+    .entry-grid{display:grid;gap:10px}
+    .entry-grid input{width:100%;padding:14px 15px;border-radius:16px;border:1px solid var(--line);font:inherit;background:#fff}
+    .status{min-height:20px;margin:2px 2px 0;font-weight:800;font-size:.95rem}
+    .status.bad{color:var(--bad)}
+    .status.ok{color:var(--good)}
+    .stack{display:grid;gap:12px}
+    .panel.pending{background:var(--pending-bg);border-color:var(--pending-border);color:var(--pending-text)}
+    .panel.verify{background:var(--verify-bg);border-color:var(--verify-border);color:var(--verify-text)}
+    .panel.recent{background:var(--recent-bg);border-color:var(--recent-border);color:var(--recent-text)}
+    .panel .muted,.panel .meta{color:inherit;opacity:.9}
+    .list{display:grid;gap:10px}
+    .row{border-radius:18px;padding:12px 13px}
+    .panel.pending .row{background:var(--pending-item-bg);border:1px solid var(--pending-item-border);color:var(--pending-item-text)}
+    .panel.verify .row{background:var(--verify-item-bg);border:1px solid var(--verify-item-border);color:var(--verify-item-text)}
+    .panel.recent .row{background:var(--recent-item-bg);border:1px solid var(--recent-item-border);color:var(--recent-item-text)}
+    .row-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .row-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .action-btn{padding:10px 12px;border-radius:14px;border:0}
+    .action-btn.cancel{background:#fff2d4;color:#24180d}
+    .action-btn.verify{background:#eef8e7;color:#22351d}
+    .pill{display:inline-flex;align-items:center;justify-content:center;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);color:inherit}
+    .bottom-block{display:grid;gap:12px;margin-top:14px}
+    .stats-card,.geo-card{background:#f9f5ee;border-color:var(--line)}
+    .stats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .metric{background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px 11px;min-height:84px;display:flex;flex-direction:column;justify-content:space-between}
+    .metric .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:800;margin-bottom:10px}
+    .metric .value{font-size:1.12rem;font-weight:900;line-height:1;margin-top:auto}
+    .geo-copy{display:grid;gap:4px;font-size:.88rem;color:var(--muted)}
+    .geo-copy strong{color:var(--ink)}
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;z-index:9999;padding:7px 12px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 12px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,.18)}
+    @media (max-width:700px){body{padding:8px}.card{padding:12px}.btn{min-height:42px;padding:10px 12px;font-size:.95rem}.geo-btn{min-width:64px;min-height:64px;padding:0}.stats-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.metric .value{font-size:.96rem}}
   </style>
 </head>
 <body>
-  <div class="wrap"><div class="card">
-    <div class="top">
-      <div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+  <div class="wrap">
+    <div class="card">
+      <div class="topbar">
+        <div class="top-actions">
           <a class="btn alt" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./drinks.html';}">Terug</a>
-          <a class="btn alt" href="./drinks.html">Drinks</a>
-          <button id="retryGeoBtn" class="btn alt" type="button">Geolocatie opnieuw proberen</button>
+          <a class="btn alt" href="./drinks.html">Overzicht</a>
         </div>
-        <h1 style="margin:0 0 8px;font-size:42px">Snelheid</h1>
-        <div class="muted">Snelheidspogingen per dranktype. Een snelheidspoging maakt één gekoppeld drankverzoek aan, zodat bevestigen maar één keer nodig is.</div>
-        <div id="geoMeta" class="muted" style="margin-top:8px"></div>
-        <div id="geoAddress" class="muted" style="margin-top:4px"></div>
-        <div id="speedStatus" class="muted" style="margin-top:6px"></div>
+        <div class="top-actions right">
+          <button class="geo-btn" id="geoStateBtn" type="button" aria-label="Geolocatie opnieuw proberen" title="Geolocatie opnieuw proberen">
+            <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6v8"></path><path d="M32 50v8"></path><path d="M6 32h8"></path><path d="M50 32h8"></path><circle cx="32" cy="32" r="20"></circle><circle cx="32" cy="32" r="9" fill="currentColor" stroke="none"></circle></svg>
+          </button>
+          <a href="./index.html"><img class="logo" src="./logo.png" alt="Logo" /></a>
+        </div>
       </div>
-      <a href="./index.html"><img class="logo" src="./logo.png" alt="Logo"></a>
-    </div>
 
-    <div class="grid split">
-      <section class="panel">
-        <h2 style="margin:0 0 12px">Nieuwe snelheidspoging</h2>
-        <div style="display:grid;gap:10px">
-          <div class="field-wrap"><select id="speedType"></select></div>
-          <div class="field-wrap"><input id="speedSeconds" type="number" step="0.1" min="0.1" placeholder="Tijd in seconden"><div id="speedFormStatus" class="status-note"></div></div>
+      <div class="speed-types" id="speedTypeButtons"></div>
+
+      <section class="entry-card">
+        <h2>Nieuwe snelheidspoging</h2>
+        <div class="entry-grid">
+          <input id="speedSeconds" type="number" step="0.1" min="0.1" placeholder="Tijd in seconden" />
           <button id="submitSpeed" class="btn gold" type="button">Snelheidspoging +</button>
-          <div class="muted">Je kiest hetzelfde drankje als op de drinks-pagina. Dit maakt één gekoppeld verificatieticket.</div>
+          <div class="status" id="speedFormStatus"></div>
         </div>
       </section>
-      <section class="panel" id="speedVerifyPanel">
-        <h2 style="margin:0 0 12px">Losse snelheidspogingen in de buurt</h2>
-        <div id="speedVerifyQueue" class="list"><div class="muted">Nog geen speed-verificaties.</div></div>
-      </section>
-    </div>
 
-    <div class="grid split">
-      <section class="panel"><h2 style="margin:0 0 12px">Snelste all-time</h2><div id="speedTop" class="list"></div></section>
-      <section class="panel"><h2 style="margin:0 0 12px">Mijn pending / recente pogingen</h2><div id="speedMine" class="list"></div></section>
+      <div class="status" id="speedStatus"></div>
+
+      <div class="stack">
+        <section class="panel pending"><h2>Mijn pending / recente pogingen</h2><div id="speedMine" class="list"></div></section>
+        <section class="panel verify"><h2>Pending verificaties in de buurt</h2><div id="speedVerifyQueue" class="list"></div></section>
+        <section class="panel recent"><h2>Snelste all-time</h2><div id="speedTop" class="list"></div></section>
+      </div>
+
+      <div class="bottom-block">
+        <section class="stats-card"><div class="stats-grid" id="sessionGrid"></div></section>
+        <section class="geo-card"><div class="geo-copy"><strong>Locatie en verificatie</strong><div id="geoMetaLine">Locatie niet actief.</div><div id="geoAddressLine">Verifiëren en afstandschecks werken pas met locatie. Invoeren blijft mogelijk met een verse locatielezing.</div></div></section>
+      </div>
     </div>
-  </div></div>
-  <div class="site-credit-watermark" data-version-watermark></div>
-  <script src="./gejast-geo.js?v220"></script>
-  <script src="./drinks-verify-float.js?v220"></script>
+  </div>
+  <div class="site-credit-watermark" data-version-watermark>v273 · Made by Bruis</div>
+  <script src="./gejast-geo.js?v273"></script>
   <script>
   if(window.GEJAST_CONFIG && !window.GEJAST_CONFIG.requireMatchEntrySession('drinks_speed')){}
-  (()=>{
+  (function(){
     const cfg=window.GEJAST_CONFIG||{};
     const SUPABASE_URL=cfg.SUPABASE_URL||'';
     const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
     const SESSION_KEYS=['jas_session_token_v11','jas_session_token_v10'];
     let lastPos=null;
+    let currentType='bier';
     const FALLBACK_TYPES=[
-      {key:'bier',label:'1 Bak'},{key:'2bakken',label:'2 Bakken'},{key:'ice',label:'Ice'},{key:'wijnfles',label:'Fles Wijn'},{key:'liter_bier',label:'Liter Bier'}
+      {key:'bier',label:'1 Bak'},{key:'2bakken',label:'2 Bakken'},{key:'liter_bier',label:'Liter Bier'},{key:'ice',label:'Ice'},{key:'wijnfles',label:'Fles Wijn'}
     ];
+    const ORDER=['bier','2bakken','liter_bier','ice','wijnfles'];
     function token(){ for(const k of SESSION_KEYS){ const v=localStorage.getItem(k)||sessionStorage.getItem(k); if(v) return v; } return ''; }
     function h(){ return {'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${KEY}`,Accept:'application/json'}; }
     async function p(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch{ throw new Error(t||`HTTP ${res.status}`);} if(!res.ok) throw new Error(d?.message||d?.error||d?.hint||`HTTP ${res.status}`); return d; }
-    function setStatus(msg='',tone=''){ const el=document.getElementById('speedStatus'); el.textContent=msg; el.style.color=tone==='bad' ? 'var(--bad)' : (tone==='ok' ? 'var(--ok)' : ''); }
-    function setFormStatus(msg='',tone=''){ const el=document.getElementById('speedFormStatus'); el.textContent=msg; el.className='status-note' + (tone ? ' '+tone : ''); if(!tone) el.style.color='var(--muted)'; else el.style.color=''; }
-    async function pos(force=false,user=false){ const geo=window.GEJAST_GEO; if(!geo) throw new Error('Geolocatie helper ontbreekt.'); const pp=await geo.ensure(force,{silent:!user&&!force}); if(pp){ lastPos=pp; geo.startWatch(); await updateGeo(pp); } return pp || lastPos || geo.cached(60*60*1000); }
-    async function updateGeo(pp){ const geo=window.GEJAST_GEO; if(!pp){ document.getElementById('geoMeta').textContent='Geolocatie nog niet actief.'; document.getElementById('geoAddress').textContent=''; return; } document.getElementById('geoMeta').textContent=`Locatie: ${geo.formatCoords(pp)}`; const address = await geo.reverseGeocode(pp.coords.latitude, pp.coords.longitude); document.getElementById('geoAddress').textContent = address ? `Adres: ${address}` : 'Adres onbekend'; }
-    function labelFor(key){ return (FALLBACK_TYPES.find((t)=>t.key===key)||{}).label || key; }
-    function fillTypes(rows){ const list=((rows||[]).filter((t)=>String(t.key||'').toLowerCase()!=='shot').length ? (rows||[]).filter((t)=>String(t.key||'').toLowerCase()!=='shot') : FALLBACK_TYPES); const preferred=['bier','2bakken','ice','wijnfles','liter_bier']; list.sort((a,b)=> (preferred.indexOf(a.key)===-1?999:preferred.indexOf(a.key)) - (preferred.indexOf(b.key)===-1?999:preferred.indexOf(b.key))); document.getElementById('speedType').innerHTML = list.map((t)=>`<option value="${t.key}">${t.label||labelFor(t.key)}</option>`).join(''); }
+    function setStatus(msg='',tone=''){ const el=document.getElementById('speedStatus'); el.textContent=msg; el.className=`status ${tone}`.trim(); }
+    function setFormStatus(msg='',tone=''){ const el=document.getElementById('speedFormStatus'); el.textContent=msg; el.className=`status ${tone}`.trim(); }
+    function setGeoButtonState(ready){ const btn=document.getElementById('geoStateBtn'); btn.classList.toggle('is-ready',!!ready); btn.title=ready?'Geolocatie actief':'Geolocatie opnieuw proberen'; }
+    async function getPosition(forceFresh=false,userInitiated=false){ const geo=window.GEJAST_GEO; if(!geo) throw new Error('Geolocatie helper ontbreekt.'); const pos=await geo.ensure(forceFresh,{silent:!userInitiated&&!forceFresh}); if(pos) geo.startWatch(); return pos||lastPos||geo.cached(60*60*1000); }
+    async function updateGeoInfo(pos){ const geo=window.GEJAST_GEO; const meta=document.getElementById('geoMetaLine'); const addr=document.getElementById('geoAddressLine'); if(!pos){ setGeoButtonState(false); meta.textContent='Locatie niet actief.'; addr.textContent='Verifiëren en afstandschecks werken pas met locatie. Invoeren blijft mogelijk met een verse locatielezing.'; return; } setGeoButtonState(true); meta.textContent=`Locatie actief · ${geo && geo.formatCoords ? geo.formatCoords(pos) : `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`}`; const address=geo && geo.reverseGeocode ? await geo.reverseGeocode(pos.coords.latitude,pos.coords.longitude) : ''; addr.textContent=address || 'Adres onbekend'; }
+    function fillButtons(rows){ const host=document.getElementById('speedTypeButtons'); const types=((rows||[]).filter((row)=>String(row.key||'').toLowerCase()!=='shot').length ? rows.filter((row)=>String(row.key||'').toLowerCase()!=='shot') : FALLBACK_TYPES).sort((a,b)=>{ const ai=ORDER.indexOf(a.key); const bi=ORDER.indexOf(b.key); return (ai===-1?999:ai)-(bi===-1?999:bi); }); if(!currentType || !types.find((row)=>row.key===currentType)) currentType=(types[0]&&types[0].key)||'bier'; host.innerHTML=types.map((row,idx)=>`<button type="button" class="speed-btn ${(idx%2===0)?'gold':'dark'} ${row.key===currentType?'active':''}" data-speed-type="${row.key}"><strong>${row.label||row.key}</strong><small>Beste tijd per eenheid</small></button>`).join(''); host.querySelectorAll('[data-speed-type]').forEach((btn)=>btn.addEventListener('click',()=>{ currentType=btn.getAttribute('data-speed-type'); fillButtons(types); })); }
     function renderList(el,rows,fmt,empty='Nog geen data.'){ el.innerHTML=(rows||[]).length ? rows.map(fmt).join('') : `<div class="muted">${empty}</div>`; }
-    async function load(){
-      try{
-        if(window.GEJAST_CONFIG && !window.GEJAST_CONFIG.ensurePlayerSessionOrRedirect('drinks_speed')) return;
-        const pp=await pos(false,false);
-        const payload={session_token:token(),viewer_lat:pp?pp.coords.latitude:null,viewer_lng:pp?pp.coords.longitude:null};
-        let eventTypes=[];
-        try{
-          const drinksRaw=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:h(),body:JSON.stringify(payload)}).then(p);
-          const drinks=drinksRaw?.get_drinks_page_public||drinksRaw||{};
-          eventTypes=drinks.event_types||[];
-        }catch(_){ }
-        fillTypes(eventTypes);
-        const speedRaw=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_speed_page_public`,{method:'POST',headers:h(),body:JSON.stringify(payload)}).then(p);
-        const data=speedRaw?.get_drink_speed_page_public||speedRaw||{};
-        renderList(document.getElementById('speedTop'), data.top_attempts, (r)=>`<div class="row"><div class="row-main"><strong>${r.player_name} · ${r.speed_type_label||labelFor(r.speed_type_key)}</strong></div><div><strong>${Number(r.duration_seconds||0).toFixed(1)}s</strong></div></div>`);
-        renderList(document.getElementById('speedMine'), data.my_attempts, (r)=>`<div class="row"><div class="row-main"><strong>${r.speed_type_label||labelFor(r.speed_type_key)}</strong><div class="muted">${r.status||'pending'} · ${new Date(r.created_at||Date.now()).toLocaleString('nl-NL')}</div>${r.linked_drink_event_id?'<div class="muted">Gekoppeld aan drankverzoek</div>':''}</div><div class="actions"><strong>${Number(r.duration_seconds||0).toFixed(1)}s</strong>${(r.status||'')==='pending' ? `<button class="btn alt" data-cancel-speed="${r.id}">Annuleren</button>` : ''}</div></div>`, 'Nog geen eigen pogingen.');
-        document.querySelectorAll('[data-cancel-speed]').forEach((btn)=>btn.addEventListener('click',()=>cancelMine(btn.getAttribute('data-cancel-speed'))));
-        renderList(document.getElementById('speedVerifyQueue'), data.verify_queue, (r)=>`<div class="row"><div class="row-main"><strong>${r.player_name} · ${r.speed_type_label||labelFor(r.speed_type_key)}</strong><div class="muted">${Number(r.duration_seconds||0).toFixed(1)}s${r.distance_m!=null?` · ${Math.round(r.distance_m)}m afstand`:''}</div></div><div class="actions"><button class="btn" data-speed-verify="${r.id}">Bevestigen</button></div></div>`, 'Nog geen speed-verificaties.');
-        document.querySelectorAll('[data-speed-verify]').forEach((btn)=>btn.addEventListener('click',()=>verify(btn.getAttribute('data-speed-verify'))));
-      }catch(err){ setStatus(err.message||String(err)); }
-    }
-    async function submit(){
-      try{
-        const pp=await pos(true,true); if(!pp) throw new Error('Geolocatie is nodig voor snelheid.');
-        const type=document.getElementById('speedType').value; const seconds=Number(document.getElementById('speedSeconds').value||0); if(!(seconds>0)) throw new Error('Vul een geldige tijd in.');
-        await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_combined_drink_speed_attempt`,{method:'POST',headers:h(),body:JSON.stringify({session_token:token(),event_type_key:type,quantity:1,duration_seconds:seconds,lat:pp.coords.latitude,lng:pp.coords.longitude,accuracy:pp.coords.accuracy})}).then(p);
-        document.getElementById('speedSeconds').value=''; setFormStatus('Gekoppelde snelheidspoging opgeslagen.','ok'); setStatus(''); await load();
-      }catch(err){ setFormStatus(err.message||String(err),'bad'); }
-    }
-    async function verify(id){
-      try{ const pp=await pos(true,true); if(!pp) throw new Error('Geolocatie is nodig om te bevestigen.'); await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_speed_attempt`,{method:'POST',headers:h(),body:JSON.stringify({session_token:token(),attempt_id:Number(id),lat:pp.coords.latitude,lng:pp.coords.longitude,accuracy:pp.coords.accuracy})}).then(p); setStatus('Snelheidspoging bevestigd.','ok'); await load(); }catch(err){ setStatus(err.message||String(err),'bad'); }
-    }
-    async function cancelMine(id){
-      try{ await fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_my_speed_attempt`,{method:'POST',headers:h(),body:JSON.stringify({session_token:token(),attempt_id:Number(id)})}).then(p); setStatus('Snelheidspoging geannuleerd.','ok'); await load(); }catch(err){ setStatus(err.message||String(err),'bad'); }
-    }
+    function renderSession(data){ const top=(data.top_attempts||[]); const mine=(data.my_attempts||[]); const verify=(data.verify_queue||[]); document.getElementById('sessionGrid').innerHTML=`<div class="metric"><div class="label">Top tijden</div><div class="value">${top.length}</div></div><div class="metric"><div class="label">Open checks</div><div class="value">${verify.length}</div></div><div class="metric"><div class="label">Mijn pogingen</div><div class="value">${mine.length}</div></div>`; }
+    async function load(forceFresh=false,userInitiated=false){ try{ if(window.GEJAST_CONFIG && !window.GEJAST_CONFIG.ensurePlayerSessionOrRedirect('drinks_speed')) return; const pos=(forceFresh||!lastPos)?await getPosition(forceFresh,userInitiated):lastPos; if(pos) lastPos=pos; await updateGeoInfo(lastPos||pos||null); const payload={session_token:token(),viewer_lat:lastPos?lastPos.coords.latitude:null,viewer_lng:lastPos?lastPos.coords.longitude:null}; let eventTypes=[]; try{ const drinksRaw=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:h(),body:JSON.stringify(payload)}).then(p); const drinks=drinksRaw?.get_drinks_page_public||drinksRaw||{}; eventTypes=drinks.event_types||[]; }catch(_){ } fillButtons(eventTypes); const speedRaw=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_speed_page_public`,{method:'POST',headers:h(),body:JSON.stringify(payload)}).then(p); const data=speedRaw?.get_drink_speed_page_public||speedRaw||{}; renderSession(data); renderList(document.getElementById('speedTop'), data.top_attempts, (r)=>`<div class="row"><div class="row-top"><div><strong>${r.player_name} · ${r.speed_type_label||r.speed_type_key}</strong><div class="meta">${Number(r.duration_seconds||0).toFixed(1)}s</div></div><span class="pill">top</span></div></div>`, 'Nog geen snelheden.'); renderList(document.getElementById('speedMine'), data.my_attempts, (r)=>`<div class="row"><div class="row-top"><div><strong>${r.speed_type_label||r.speed_type_key}</strong><div class="meta">${(r.status||'pending')} · ${new Date(r.created_at||Date.now()).toLocaleString('nl-NL')}</div></div><span class="pill">${Number(r.duration_seconds||0).toFixed(1)}s</span></div><div class="row-actions">${(r.status||'')==='pending' ? `<button class="action-btn cancel" data-cancel-speed="${r.id}">Annuleren</button>` : ''}</div></div>`, 'Nog geen eigen pogingen.'); document.querySelectorAll('[data-cancel-speed]').forEach((btn)=>btn.addEventListener('click',()=>cancelMine(btn.getAttribute('data-cancel-speed')))); renderList(document.getElementById('speedVerifyQueue'), data.verify_queue, (r)=>`<div class="row"><div class="row-top"><div><strong>${r.player_name} · ${r.speed_type_label||r.speed_type_key}</strong><div class="meta">${Number(r.duration_seconds||0).toFixed(1)}s${r.distance_m!=null?` · ${Math.round(r.distance_m)}m afstand`:''}</div></div><span class="pill">check</span></div><div class="row-actions"><button class="action-btn verify" data-speed-verify="${r.id}">Bevestigen</button></div></div>`, 'Nog geen speed-verificaties.'); document.querySelectorAll('[data-speed-verify]').forEach((btn)=>btn.addEventListener('click',()=>verify(btn.getAttribute('data-speed-verify')))); setStatus(''); }catch(err){ setStatus(err.message||String(err),'bad'); if(!lastPos) setGeoButtonState(false); } }
+    async function submit(){ try{ const pos=await getPosition(true,true); if(pos) lastPos=pos; await updateGeoInfo(lastPos||pos||null); const usePos=lastPos||pos; if(!usePos) throw new Error('Geolocatie is nodig voor snelheid.'); const seconds=Number(document.getElementById('speedSeconds').value||0); if(!(seconds>0)) throw new Error('Vul een geldige tijd in.'); await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_combined_drink_speed_attempt`,{method:'POST',headers:h(),body:JSON.stringify({session_token:token(),event_type_key:currentType,quantity:1,duration_seconds:seconds,lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy})}).then(p); document.getElementById('speedSeconds').value=''; setFormStatus('Snelheidspoging opgeslagen.','ok'); await load(false,false); }catch(err){ setFormStatus(err.message||String(err),'bad'); } }
+    async function verify(id){ try{ const pos=await getPosition(true,true); if(pos) lastPos=pos; const usePos=lastPos||pos; if(!usePos) throw new Error('Geolocatie is nodig om te bevestigen.'); await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_speed_attempt`,{method:'POST',headers:h(),body:JSON.stringify({session_token:token(),attempt_id:Number(id),lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy})}).then(p); setStatus('Snelheidspoging bevestigd.','ok'); await load(false,false); }catch(err){ setStatus(err.message||String(err),'bad'); } }
+    async function cancelMine(id){ try{ await fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_my_speed_attempt`,{method:'POST',headers:h(),body:JSON.stringify({session_token:token(),attempt_id:Number(id)})}).then(p); setStatus('Snelheidspoging geannuleerd.','ok'); await load(false,false); }catch(err){ setStatus(err.message||String(err),'bad'); } }
     document.getElementById('submitSpeed').addEventListener('click',submit);
-    document.getElementById('retryGeoBtn').addEventListener('click',()=>{ lastPos=null; pos(true,true).then(load).catch((err)=>setStatus(err.message||String(err))); });
-    load(); setInterval(load,30000); document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') load(); }); window.addEventListener('focus',load);
+    document.getElementById('geoStateBtn').addEventListener('click',()=>{ lastPos=null; load(true,true); });
+    setGeoButtonState(false);
+    load(false,false);
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>

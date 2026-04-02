@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alcohol toevoegen</title>
-  <script>window.GEJAST_PAGE_VERSION='v272';</script><script src="./gejast-config.js?v272"></script>
+  <script>window.GEJAST_PAGE_VERSION='v273';</script><script src="./gejast-config.js?v273"></script>
   <style>
     :root{
       --line:rgba(0,0,0,.09);
@@ -68,12 +68,12 @@
     .btn.alt{background:#f3efe6;color:#111}
     .logo{width:52px;height:52px;object-fit:contain;flex:0 0 auto}
     .geo-btn{
-      min-width:56px;min-height:56px;padding:0;background:var(--bad-bg);color:var(--bad);border-color:rgba(141,95,84,.22);
-      box-shadow:0 8px 18px rgba(0,0,0,.05);margin-right:10px;
+      min-width:68px;min-height:68px;padding:0;background:#ded2cb;color:#8a665e;border-color:rgba(138,102,94,.22);
+      box-shadow:0 10px 22px rgba(0,0,0,.07);margin-right:18px;
       transition:background .18s ease,color .18s ease,border-color .18s ease,transform .1s ease,box-shadow .18s ease;
     }
-    .geo-btn svg{width:24px;height:24px;display:block}
-    .geo-btn.is-ready{background:var(--good-bg);color:var(--good);border-color:rgba(88,125,77,.22)}
+    .geo-btn svg{width:42px;height:42px;display:block;stroke:currentColor;stroke-width:6;stroke-linecap:round;stroke-linejoin:round}
+    .geo-btn.is-ready{background:#d5ddd2;color:#58704f;border-color:rgba(88,112,79,.24)}
     .geo-btn:active,.drink-btn:active,.action-btn:active{transform:translateY(1px)}
     .drink-types{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(3,auto);grid-auto-flow:column;gap:10px;margin-bottom:14px}
     .drink-btn{
@@ -126,7 +126,7 @@
       .topbar{margin-bottom:8px}
       .top-actions{gap:7px}
       .btn{min-height:42px;padding:10px 12px;font-size:.95rem}
-      .geo-btn{min-width:52px;min-height:52px;padding:0}
+      .geo-btn{min-width:64px;min-height:64px;padding:0}
       .drink-types{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
       .drink-btn{min-height:88px;padding:15px 12px}
       .stats-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -145,12 +145,13 @@
         </div>
         <div class="top-actions right">
           <button class="geo-btn" id="geoStateBtn" type="button" aria-label="Geolocatie opnieuw proberen" title="Geolocatie opnieuw proberen">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M12 2.75v3"></path>
-              <path d="M12 18.25v3"></path>
-              <path d="M2.75 12h3"></path>
-              <path d="M18.25 12h3"></path>
-              <circle cx="12" cy="12" r="8.25"></circle>
+            <svg viewBox="0 0 64 64" aria-hidden="true">
+              <path d="M32 6v8"></path>
+              <path d="M32 50v8"></path>
+              <path d="M6 32h8"></path>
+              <path d="M50 32h8"></path>
+              <circle cx="32" cy="32" r="20"></circle>
+              <circle cx="32" cy="32" r="9" fill="currentColor" stroke="none"></circle>
             </svg>
           </button>
           <a href="./index.html"><img class="logo" src="./logo.png" alt="Logo" /></a>
@@ -194,9 +195,9 @@
     </div>
   </div>
 
-  <div class="site-credit-watermark" data-version-watermark>v272 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v273 · Made by Bruis</div>
 
-  <script src="./gejast-geo.js?v272"></script>
+  <script src="./gejast-geo.js?v273"></script>
   <script>
   (function(){
     const cfg=window.GEJAST_CONFIG||{};

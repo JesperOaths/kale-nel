@@ -1113,7 +1113,7 @@
           { key:'liter_bier', label:'Liter Bier' },
           { key:'wijnfles', label:'Fles Wijn' }
         ];
-        const speedGroups = preferredSpeedGroups.map((fallback)=>{
+        window.__gejastSpeedGroups = preferredSpeedGroups.map((fallback)=>{
           const source = speedMap.get(fallback.key) || {};
           return {
             key: fallback.key,
@@ -1121,7 +1121,10 @@
             rows: normaliseSpeedRows(Array.isArray(source.rows) ? source.rows : [])
           };
         });
-        const currentSpeedGroup = speedGroups[(window.__gejastSpeedRotateIdx = ((window.__gejastSpeedRotateIdx||-1) + 1) % speedGroups.length)] || { key:'bier', label:'1 Bak', rows:[] };
+        const speedGroups = window.__gejastSpeedGroups;
+        const nextIdx = Number.isFinite(window.__gejastSpeedRotateIdx) ? window.__gejastSpeedRotateIdx : 0;
+        const currentSpeedGroup = speedGroups[nextIdx % speedGroups.length] || { key:'bier', label:'1 Bak', rows:[] };
+        window.__gejastSpeedRotateIdx = (nextIdx + 1) % speedGroups.length;
 
         const groups = [
           { label: dayTitle, key:'./drinks.html', mode:'units', rows: sessionRows },
@@ -1239,5 +1242,5 @@
 
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v220"></script><script src="./gejast-geo.js?v220"></script></body>
+<script src="./drinks-verify-float.js?v273"></script><script src="./gejast-geo.js?v273"></script></body>
 </html>

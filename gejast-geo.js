@@ -4,6 +4,7 @@
   let watchId = null;
   let lastPos = null;
   let lastError = null;
+  let monitorId = null;
 
   function normalize(pos, source='live'){
     if (!pos || !pos.coords) return null;
@@ -16,6 +17,10 @@
       },
       timestamp: pos.timestamp || Date.now()
     };
+  }
+
+  function announce(type, detail){
+    try { window.dispatchEvent(new CustomEvent(type, { detail })); } catch(_){}
   }
 
   function save(pos, source='live'){
@@ -31,6 +36,7 @@
         at: Date.now()
       }));
     } catch(_){}
+    announce('gejast:geo-update', out);
     return out;
   }
 
@@ -153,13 +159,42 @@
     }
   }
 
+  function stopWatch(){
+    if (watchId === null || !navigator.geolocation) return;
+    try { navigator.geolocation.clearWatch(watchId); } catch(_){}
+    watchId = null;
+  }
+
   function startWatch(){
     if (!navigator.geolocation || watchId !== null) return;
     watchId = navigator.geolocation.watchPosition(
       (pos)=>save(pos, 'watch'),
-      ()=>{},
-      { enableHighAccuracy:false, maximumAge:5*60*1000, timeout:20000 }
+      async(err)=>{
+        lastError = { code: err && err.code, raw: String(err && err.message || ''), permission_state: await permissionState() };
+        announce('gejast:geo-error', lastError);
+      },
+      { enableHighAccuracy:false, maximumAge:90*1000, timeout:12000 }
     );
+  }
+
+  function startMonitor(options={}){
+    const intervalMs = Math.max(20000, Number(options.intervalMs || 45000));
+    startWatch();
+    if (monitorId !== null) return;
+    monitorId = window.setInterval(async()=>{
+      try {
+        if (document.visibilityState === 'hidden') return;
+        await ensure(false, { silent:false });
+      } catch(_){}
+    }, intervalMs);
+  }
+
+  function stopMonitor(){
+    if (monitorId !== null) {
+      clearInterval(monitorId);
+      monitorId = null;
+    }
+    stopWatch();
   }
 
   function coordsKey(lat,lng){ return `${Number(lat).toFixed(3)},${Number(lng).toFixed(3)}`; }
@@ -192,5 +227,5 @@
 
   function getLastError(){ return lastError; }
 
-  window.GEJAST_GEO = { cached, ensure, request, startWatch, permissionState, message, reverseGeocode, formatCoords, getLastError };
+  window.GEJAST_GEO = { cached, ensure, request, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError };
 })();

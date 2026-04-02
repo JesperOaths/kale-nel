@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION: 'v272',
+    VERSION: 'v273',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -34,6 +34,19 @@
     document.querySelectorAll('body *').forEach((node)=>{ if (node.children.length) return; const txt=(node.textContent||'').trim(); if (re.test(txt)) node.textContent = label; });
   }
 
+  const PLAYER_SESSION_CYCLE_KEY = 'jas_session_cycle_start_v1';
+  function currentCycleStart(ts=Date.now()){
+    const d = new Date(ts);
+    const start = new Date(d);
+    if (d.getHours() < 6) start.setDate(start.getDate() - 1);
+    start.setHours(6,0,0,0);
+    return start.getTime();
+  }
+  function currentCycleEnd(ts=Date.now()){
+    const end = new Date(currentCycleStart(ts));
+    end.setDate(end.getDate() + 1);
+    return end.getTime();
+  }
   function getPlayerSessionToken(){
     for(const key of CONFIG.PLAYER_SESSION_KEYS){
       const value = localStorage.getItem(key) || sessionStorage.getItem(key);
@@ -45,26 +58,45 @@
     for(const key of CONFIG.PLAYER_SESSION_KEYS){
       localStorage.removeItem(key); sessionStorage.removeItem(key);
     }
-    localStorage.removeItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY);
-    sessionStorage.removeItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY);
+    [CONFIG.PLAYER_LAST_ACTIVITY_KEY, PLAYER_SESSION_CYCLE_KEY].forEach((key)=>{
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    });
   }
   function touchPlayerActivity(){
     if (!getPlayerSessionToken()) return;
     const ts = String(Date.now());
     localStorage.setItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY, ts);
     sessionStorage.setItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY, ts);
+    const cycle = String(currentCycleStart());
+    if (!(localStorage.getItem(PLAYER_SESSION_CYCLE_KEY) || sessionStorage.getItem(PLAYER_SESSION_CYCLE_KEY))) {
+      localStorage.setItem(PLAYER_SESSION_CYCLE_KEY, cycle);
+      sessionStorage.setItem(PLAYER_SESSION_CYCLE_KEY, cycle);
+    }
   }
   function lastPlayerActivity(){
     const raw = localStorage.getItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY) || sessionStorage.getItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY) || '';
     const n = Number(raw || 0);
     return Number.isFinite(n) ? n : 0;
   }
+  function getPlayerSessionExpiryAt(){
+    const raw = localStorage.getItem(PLAYER_SESSION_CYCLE_KEY) || sessionStorage.getItem(PLAYER_SESSION_CYCLE_KEY) || '';
+    const cycleStart = Number(raw || currentCycleStart());
+    const start = Number.isFinite(cycleStart) && cycleStart > 0 ? cycleStart : currentCycleStart();
+    const expiry = new Date(start);
+    expiry.setDate(expiry.getDate() + 1);
+    expiry.setHours(6,0,0,0);
+    return expiry.getTime();
+  }
   function isPlayerSessionExpired(){
     const token = getPlayerSessionToken();
     if (!token) return true;
-    const last = lastPlayerActivity();
-    if (!last) return false;
-    return (Date.now() - last) > CONFIG.PLAYER_SESSION_IDLE_MS;
+    const expiryAt = getPlayerSessionExpiryAt();
+    return Date.now() >= expiryAt;
+  }
+  function shouldSuppressVerifyFloat(){
+    const path = String((window.location && window.location.pathname) || '').toLowerCase();
+    return ['drinks_add.html','drinks_speed.html','scorer.html','boerenbridge.html','beerpong.html','match_control.html','admin_match_control.html'].some((name)=>path.endsWith('/'+name) || path.endsWith(name));
   }
   function buildLoginUrl(returnTo){
     const url = new URL('./login.html', window.location.href);
@@ -123,7 +155,11 @@
     ensurePlayerSessionOrRedirect,
     installActivityKeepalive,
     requireMatchEntrySession,
-    buildLoginUrl
+    buildLoginUrl,
+    shouldSuppressVerifyFloat,
+    getPlayerSessionExpiryAt,
+    currentCycleStart,
+    currentCycleEnd
   });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyVersionLabel, { once: true });

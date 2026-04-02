@@ -5,7 +5,8 @@
   const KEY = cfg.SUPABASE_PUBLISHABLE_KEY || '';
   const SESSION_KEYS = ['jas_session_token_v11','jas_session_token_v10'];
   const COOLDOWN_MS = 5 * 60 * 1000;
-  const POLL_MS = 12000;
+  const POLL_MS = 15000;
+  const HIDDEN_POLL_MS = 45000;
   const DISMISS_KEY = 'gejast_verify_float_dismiss';
   const APPROVED_KEY = 'gejast_verify_float_last_approved';
   const LAST_ALERT_KEY = 'gejast_verify_float_last_alert';
@@ -18,10 +19,68 @@
   const SHOULD_SUPPRESS = !!(cfg && typeof cfg.shouldSuppressVerifyFloat === 'function' && cfg.shouldSuppressVerifyFloat());
   if (SHOULD_SUPPRESS) return;
   window.__GEJAST_FLOAT_VERIFY__ = true;
+  let lastHiddenPollAt = 0;
+  let lastNotificationId = '';
 
   function token(){ for (const key of SESSION_KEYS){ const value = localStorage.getItem(key) || sessionStorage.getItem(key); if (value) return value; } return ''; }
   function headers(){ return {'Content-Type':'application/json', apikey:KEY, Authorization:`Bearer ${KEY}`, Accept:'application/json'}; }
   async function parse(res){ const t = await res.text(); let d = null; try { d = t ? JSON.parse(t) : null; } catch { throw new Error(t || `HTTP ${res.status}`); } if (!res.ok) throw new Error(d?.message || d?.error || `HTTP ${res.status}`); return d; }
+
+  function ensureGeoButton(){
+    let btn = document.getElementById('globalGeoStateButton');
+    if (btn) return btn;
+    btn = document.createElement('button');
+    btn.id = 'globalGeoStateButton';
+    btn.type = 'button';
+    btn.setAttribute('aria-label','Geolocatie opnieuw proberen');
+    btn.title = 'Geolocatie opnieuw proberen';
+    btn.innerHTML = '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6v8M32 50v8M6 32h8M50 32h8"/><circle cx="32" cy="32" r="20"/><circle cx="32" cy="32" r="9" fill="currentColor" stroke="none"/></svg>';
+    const style = document.createElement('style');
+    style.textContent = '#globalGeoStateButton{position:fixed;left:14px;bottom:78px;z-index:9998;width:64px;height:64px;border-radius:999px;border:1px solid rgba(0,0,0,.1);background:#d9cfc1;color:#7a6557;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 14px 26px rgba(0,0,0,.12);cursor:pointer;transition:transform .12s ease,background .2s ease,color .2s ease,border-color .2s ease}#globalGeoStateButton svg{width:42px;height:42px;display:block;stroke:currentColor;stroke-width:6;stroke-linecap:round;stroke-linejoin:round}#globalGeoStateButton.is-ready{background:#d5ddd2;color:#58704f;border-color:rgba(88,112,79,.24)}#globalGeoStateButton.is-bad{background:#ded2cb;color:#8a665e;border-color:rgba(138,102,94,.22)}#globalGeoStateButton:active{transform:translateY(1px)}@media(max-width:640px){#globalGeoStateButton{left:10px;bottom:92px;width:60px;height:60px}#globalGeoStateButton svg{width:40px;height:40px}}';
+    document.body.appendChild(style);
+    document.body.appendChild(btn);
+    btn.addEventListener('click', async()=>{
+      const helper = window.GEJAST_GEO;
+      if (!helper) return;
+      try {
+        const pos = await helper.request(true);
+        helper.startMonitor({ intervalMs: HIDDEN_POLL_MS });
+        setGeoButtonState(!!pos);
+        maybeAskNotificationPermission();
+        await poll();
+      } catch (_) {
+        setGeoButtonState(false);
+      }
+    });
+    return btn;
+  }
+
+  function setGeoButtonState(ready){
+    const btn = ensureGeoButton();
+    btn.classList.toggle('is-ready', !!ready);
+    btn.classList.toggle('is-bad', !ready);
+    btn.title = ready ? 'Geolocatie actief' : 'Geolocatie opnieuw proberen';
+  }
+
+  async function maybeAskNotificationPermission(){
+    try {
+      if (!('Notification' in window)) return;
+      if (Notification.permission === 'default') await Notification.requestPermission();
+    } catch(_){}
+  }
+
+  function notifyIfNeeded(item){
+    if (!item || !('Notification' in window) || Notification.permission !== 'granted' || document.visibilityState !== 'hidden') return;
+    const id = `${item.kind||'drink'}:${item.id}`;
+    if (id === lastNotificationId) return;
+    lastNotificationId = id;
+    try {
+      new Notification(item.kind === 'speed' ? 'Snelheid te verifiëren' : 'Drankje te verifiëren', {
+        body: `${item.player_name||'Speler'} · ${item.event_type_label || item.speed_type_label || ''}`.trim(),
+        silent: false
+      });
+    } catch(_){}
+  }
 
   function ensureBox(){
     let box = document.getElementById('globalDrinksVerifyFloat');
@@ -72,15 +131,18 @@
     hideBox();
   }
 
-  async function getGeoForPolling(){
+  async function getGeoForPolling(forceFresh=false){
     const helper = window.GEJAST_GEO;
     if (!helper) return null;
     try {
-      const pos = await helper.ensure(false, { silent:true });
-      if (pos) helper.startWatch();
+      const pos = await helper.ensure(forceFresh, { silent: !forceFresh });
+      if (pos) helper.startMonitor({ intervalMs: HIDDEN_POLL_MS });
+      setGeoButtonState(!!pos);
       return pos || helper.cached();
     } catch {
-      return helper.cached();
+      const cached = helper.cached(60*60*1000);
+      setGeoButtonState(!!cached);
+      return cached;
     }
   }
 
@@ -190,11 +252,12 @@
   }
 
   async function poll(){
-    if (document.visibilityState === 'hidden') return;
     if (pollBusy || !token() || !SUPABASE_URL || !KEY) return;
+    if (document.visibilityState === 'hidden' && (Date.now() - lastHiddenPollAt) < HIDDEN_POLL_MS) return;
     pollBusy = true;
     try {
-      const pos = await getGeoForPolling();
+      if (document.visibilityState === 'hidden') lastHiddenPollAt = Date.now();
+      const pos = await getGeoForPolling(false);
       if (!pos) { pollBusy = false; return; }
       let item = null;
       try {
@@ -234,12 +297,19 @@
         pollBusy = false;
         return;
       }
+      notifyIfNeeded(item);
+      if (document.visibilityState === 'hidden') { pollBusy = false; return; }
       renderPrompt(item);
     } catch {}
     pollBusy = false;
   }
 
   function init(){
+    ensureGeoButton();
+    setGeoButtonState(!!(window.GEJAST_GEO && window.GEJAST_GEO.cached()));
+    try { window.GEJAST_GEO && window.GEJAST_GEO.startMonitor && window.GEJAST_GEO.startMonitor({ intervalMs: HIDDEN_POLL_MS }); } catch(_){}
+    window.addEventListener('gejast:geo-update', (ev)=>{ setGeoButtonState(!!(ev && ev.detail)); });
+    window.addEventListener('gejast:geo-error', ()=>{ if (!(window.GEJAST_GEO && window.GEJAST_GEO.cached())) setGeoButtonState(false); });
     showApprovedToast();
     poll();
     window.setInterval(poll, POLL_MS);
