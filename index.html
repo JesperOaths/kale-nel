@@ -178,6 +178,10 @@
       text-wrap: balance;
     }
 
+    
+    .ja-party-piece.svg-item{background:transparent !important; box-shadow:none !important; border-radius:0 !important; overflow:visible; display:flex; align-items:center; justify-content:center}
+    .ja-party-piece.svg-item svg{width:100%;height:100%;overflow:visible;display:block}
+
     .ja-party-burst {
       position: absolute;
       inset: 0;
@@ -258,6 +262,23 @@
       right: 6px;
       bottom: 5px;
       transform: rotate(180deg);
+    }
+
+
+    .ja-party-piece.icon {
+      width:auto; height:auto; min-width: 34px; min-height: 34px;
+      border-radius:0; background:none !important; box-shadow:none;
+      font-size:34px; line-height:1; display:grid; place-items:center;
+      text-shadow:0 10px 16px rgba(0,0,0,.12);
+    }
+    .ja-party-piece.note {
+      width:52px; height:68px; border-radius:10px; background:linear-gradient(180deg,#fff8d9,#f4e7a3);
+      border:2px solid rgba(25,25,25,.12); box-shadow:0 10px 18px rgba(0,0,0,.12);
+      display:flex; align-items:center; justify-content:center; font-weight:900; color:#5f4919; font-size:12px; text-transform:uppercase;
+    }
+    .ja-party-piece.tablearrow {
+      width:auto; height:auto; min-width:42px; min-height:42px; border-radius:0; background:none !important; box-shadow:none; font-size:40px; line-height:1;
+      display:grid; place-items:center; text-shadow:0 10px 16px rgba(0,0,0,.12);
     }
 
     @keyframes jaConfettiBurst {
@@ -587,7 +608,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v279';</script><script src="./gejast-config.js?v279"></script>
+  <script>window.GEJAST_PAGE_VERSION='v281';</script><script src="./gejast-config.js?v282"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -1104,18 +1125,116 @@ async function castExtraPollVote(desired_status) {
     function buildBurstPieces(specs, burst) {
       specs.forEach((spec) => {
         const piece = document.createElement('span');
-        piece.className = `ja-party-piece ${spec.kind}`;
+        piece.className = `ja-party-piece ${spec.kind || ''} ${spec.svg ? 'svg-item' : ''}`.trim();
         piece.style.setProperty('--tx', spec.tx);
         piece.style.setProperty('--ty', spec.ty);
         piece.style.setProperty('--rot', spec.rot);
         if (spec.bg) piece.style.background = spec.bg;
+        if (spec.w) piece.style.width = spec.w;
+        if (spec.h) piece.style.height = spec.h;
+        if (spec.radius) piece.style.borderRadius = spec.radius;
         if (spec.card) {
-          piece.dataset.card = spec.card;
+          if (spec.kind === 'card') piece.dataset.card = spec.card;
           piece.textContent = spec.card;
         }
+        if (spec.svg) piece.innerHTML = spec.svg;
         piece.style.animationDelay = spec.delay;
         burst.appendChild(piece);
       });
+    }
+    function svgWrap(inner, viewBox='0 0 120 120'){ return `<svg viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`; }
+    function balloonSvg(fill='#d4b366', knot='#8a7338') {
+      return svgWrap(`
+        <path d="M60 14c-20 0-34 15-34 34 0 15 8 27 21 36 4 3 7 7 8 12l1 9h8l1-9c1-5 4-9 8-12 13-9 21-21 21-36 0-19-14-34-34-34z" fill="${fill}" stroke="#2d2418" stroke-width="4"/>
+        <ellipse cx="46" cy="34" rx="10" ry="15" fill="rgba(255,255,255,.22)" transform="rotate(-18 46 34)"/>
+        <path d="M54 103h12l-6 7z" fill="${knot}" stroke="#2d2418" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M60 110c0 10-10 13-10 20 0 6 9 6 10 14 1-8 10-8 10-14 0-7-10-10-10-20z" fill="none" stroke="#524a40" stroke-width="3" stroke-linecap="round"/>
+      `, '0 0 120 150');
+    }
+    function beerGlassSvg(body='#d6a63d', foam='#fffaf1') {
+      return svgWrap(`
+        <path d="M28 22h40c7 0 12 6 12 13v53c0 11-9 20-20 20H36c-11 0-20-9-20-20V35c0-7 5-13 12-13z" fill="${body}" stroke="#2d2418" stroke-width="4"/>
+        <path d="M80 37h11c7 0 13 6 13 13v18c0 10-8 18-18 18H80" fill="none" stroke="#2d2418" stroke-width="4"/>
+        <path d="M18 32c0-9 8-14 14-10 2-8 11-11 17-6 5-5 14-4 18 1 8-4 16 2 16 10 0 8-7 13-14 13H32c-8 0-14-4-14-8z" fill="${foam}" stroke="#2d2418" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M32 54h31M32 67h28M32 80h24" stroke="rgba(255,255,255,.22)" stroke-width="5" stroke-linecap="round"/>
+      `, '0 0 120 120');
+    }
+    function beerBottleSvg(liquid='#c78f2f', label='#f3e7b6') {
+      return svgWrap(`
+        <path d="M52 8h16v13l7 10v63c0 10-8 18-18 18h-4c-10 0-18-8-18-18V31l7-10z" fill="#5c3720" stroke="#2d2418" stroke-width="4"/>
+        <path d="M40 38h40v54H40z" fill="${liquid}" opacity=".92"/>
+        <rect x="42" y="50" width="36" height="22" rx="6" fill="${label}" stroke="#2d2418" stroke-width="3"/>
+        <path d="M48 20h24" stroke="#e7d27c" stroke-width="4" stroke-linecap="round"/>
+      `, '0 0 120 120');
+    }
+    function craftBeerSvg() {
+      return svgWrap(`
+        <path d="M26 28h50l-8 70c-1 8-7 14-15 14H49c-8 0-14-6-15-14z" fill="#d69f36" stroke="#2d2418" stroke-width="4"/>
+        <path d="M18 34c0-8 7-13 13-10 2-8 10-11 17-7 4-5 12-5 17 0 6-4 14-1 17 7 6-3 13 2 13 10 0 7-6 12-13 12H31c-7 0-13-5-13-12z" fill="#fff8ee" stroke="#2d2418" stroke-width="4"/>
+        <path d="M37 58h26M39 72h22M42 86h16" stroke="rgba(255,255,255,.22)" stroke-width="5" stroke-linecap="round"/>
+      `, '0 0 120 120');
+    }
+    function wineBottleSvg() {
+      return svgWrap(`
+        <path d="M56 8h8v17c0 7 6 12 6 24 0 10-4 17-6 24v29c0 6-4 10-8 10s-8-4-8-10V73c-2-7-6-14-6-24 0-12 6-17 6-24z" fill="#532537" stroke="#2d2418" stroke-width="4"/>
+        <rect x="44" y="52" width="24" height="24" rx="6" fill="#efe2c4" stroke="#2d2418" stroke-width="3"/>
+        <path d="M53 14h14" stroke="#d9c66e" stroke-width="4" stroke-linecap="round"/>
+      `, '0 0 120 120');
+    }
+    function champagneBottleSvg() {
+      return svgWrap(`
+        <path d="M50 10h20v15l6 10v59c0 10-8 18-18 18h-2c-10 0-18-8-18-18V35l6-10z" fill="#9a8f3e" stroke="#2d2418" stroke-width="4"/>
+        <rect x="42" y="48" width="36" height="28" rx="7" fill="#efe4b5" stroke="#2d2418" stroke-width="3"/>
+        <circle cx="82" cy="24" r="5" fill="#fff2c7" stroke="#2d2418" stroke-width="3"/><circle cx="95" cy="14" r="3" fill="#fff2c7" stroke="#2d2418" stroke-width="2"/>
+      `, '0 0 120 120');
+    }
+    function pisangBottleSvg() {
+      return svgWrap(`
+        <path d="M50 10h20v14l5 9v62c0 10-8 17-18 17h-2c-10 0-18-7-18-17V33l5-9z" fill="#5ba24c" stroke="#16331a" stroke-width="4"/>
+        <rect x="41" y="46" width="38" height="26" rx="7" fill="#dff1b8" stroke="#16331a" stroke-width="3"/>
+        <path d="M47 58c9-9 17-10 27 0-10 10-18 10-27 0z" fill="#8bc34a" stroke="#16331a" stroke-width="2"/>
+      `, '0 0 120 120');
+    }
+    function shirtSvg() {
+      return svgWrap(`
+        <path d="M39 18l9 11h24l9-11 15 14-10 12v54H34V44L24 32z" fill="#e0bf45" stroke="#2d2418" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M48 18l12 10 12-10" fill="none" stroke="#2d2418" stroke-width="4" stroke-linecap="round"/>
+        <path d="M60 28v62" stroke="#b08b25" stroke-width="4"/>
+      `, '0 0 120 120');
+    }
+    function briefcaseSvg() {
+      return svgWrap(`
+        <rect x="22" y="38" width="62" height="44" rx="8" fill="#5d452f" stroke="#2d2418" stroke-width="4"/>
+        <path d="M44 38v-8c0-6 5-10 11-10h-4c6 0 11 4 11 10v8" fill="none" stroke="#2d2418" stroke-width="4"/>
+        <rect x="47" y="55" width="12" height="10" rx="3" fill="#d9c66e" stroke="#2d2418" stroke-width="3"/>
+        <circle cx="94" cy="52" r="8" fill="none" stroke="#555" stroke-width="4"/>
+        <path d="M84 56c3 0 6 1 10 4" fill="none" stroke="#555" stroke-width="4" stroke-linecap="round"/>
+      `, '0 0 120 120');
+    }
+    function klaverCardSvg(rank='K') {
+      return svgWrap(`
+        <rect x="18" y="8" width="68" height="98" rx="8" fill="#fffdf8" stroke="#201a15" stroke-width="4"/>
+        <g fill="#111">
+          <text x="32" y="34" font-size="30" font-family="Georgia,serif" font-weight="700">${rank}</text>
+          <path d="M52 88c0-8 9-12 9-20 0-7-6-13-13-13-5 0-9 3-12 8-3-5-7-8-12-8-7 0-13 6-13 13 0 8 9 12 9 20-1 1-3 5-5 8h15c2-6 5-11 6-13 2 2 5 7 7 13h15c-2-3-4-7-6-8z" transform="translate(27,0) scale(.42)"/>
+        </g>
+        <path d="M78 14l18 10-18 10z" fill="#111" opacity=".9"/>
+      `, '0 0 120 120');
+    }
+    function noteSvg(text='nat') {
+      return svgWrap(`
+        <rect x="14" y="18" width="92" height="72" rx="8" fill="#fff8e8" stroke="#2d2418" stroke-width="4"/>
+        <path d="M24 38h50M24 50h56M24 62h48" stroke="#c7b274" stroke-width="3" stroke-linecap="round"/>
+        <text x="60" y="80" text-anchor="middle" font-size="20" font-family="Georgia,serif" font-weight="700" fill="#6a4d19">${text}</text>
+      `, '0 0 120 120');
+    }
+    function tableArrowSvg() {
+      return svgWrap(`
+        <ellipse cx="60" cy="44" rx="34" ry="16" fill="#baa06a" stroke="#2d2418" stroke-width="4"/>
+        <path d="M33 44v18M87 44v18" stroke="#7a6240" stroke-width="5" stroke-linecap="round"/>
+        <path d="M60 78V56" stroke="#1e1e1e" stroke-width="5" stroke-linecap="round"/>
+        <path d="M60 82l-12-12h24z" fill="#1e1e1e"/>
+      `, '0 0 120 120');
     }
     function playJaCelebration() {
       const word = document.getElementById('stateWord');
@@ -1124,45 +1243,29 @@ async function castExtraPollVote(desired_status) {
       const burst = document.createElement('span');
       burst.className = 'ja-party-burst';
       const specs = [
-        { kind:'balloon', tx:'-182px', ty:'-246px', rot:'-18deg', bg:'#ef476f', delay:'0ms' },
-        { kind:'balloon', tx:'182px', ty:'-238px', rot:'18deg', bg:'#ffd166', delay:'30ms' },
-        { kind:'balloon', tx:'8px', ty:'-286px', rot:'4deg', bg:'#06d6a0', delay:'60ms' },
-        { kind:'balloon', tx:'-78px', ty:'-214px', rot:'-8deg', bg:'#3a86ff', delay:'90ms' },
-        { kind:'balloon', tx:'92px', ty:'-216px', rot:'10deg', bg:'#ff99c8', delay:'120ms' },
-        { kind:'balloon', tx:'-12px', ty:'-210px', rot:'0deg', bg:'#f4a261', delay:'145ms' },
-        { kind:'streamer', tx:'-228px', ty:'-54px', rot:'-160deg', bg:'#118ab2', delay:'10ms' },
-        { kind:'streamer', tx:'232px', ty:'-44px', rot:'168deg', bg:'#8338ec', delay:'20ms' },
-        { kind:'streamer', tx:'-154px', ty:'-232px', rot:'-96deg', bg:'#ff006e', delay:'30ms' },
-        { kind:'streamer', tx:'156px', ty:'-238px', rot:'102deg', bg:'#06d6a0', delay:'40ms' },
-        { kind:'streamer', tx:'-206px', ty:'-130px', rot:'-120deg', bg:'#ef476f', delay:'50ms' },
-        { kind:'streamer', tx:'214px', ty:'-138px', rot:'140deg', bg:'#118ab2', delay:'60ms' },
-        { kind:'streamer', tx:'-30px', ty:'-276px', rot:'-18deg', bg:'#ffbe0b', delay:'70ms' },
-        { kind:'streamer', tx:'36px', ty:'-282px', rot:'14deg', bg:'#3a86ff', delay:'80ms' },
-        { kind:'confetti', tx:'-148px', ty:'-154px', rot:'-230deg', bg:'#ff006e', delay:'10ms' },
-        { kind:'confetti', tx:'-118px', ty:'-214px', rot:'-150deg', bg:'#fb5607', delay:'15ms' },
-        { kind:'confetti', tx:'-82px', ty:'-176px', rot:'-85deg', bg:'#ffbe0b', delay:'20ms' },
-        { kind:'confetti', tx:'-40px', ty:'-228px', rot:'-120deg', bg:'#8338ec', delay:'25ms' },
-        { kind:'confetti', tx:'-8px', ty:'-170px', rot:'180deg', bg:'#ffd166', delay:'30ms' },
-        { kind:'confetti', tx:'26px', ty:'-252px', rot:'-40deg', bg:'#06d6a0', delay:'35ms' },
-        { kind:'confetti', tx:'58px', ty:'-194px', rot:'110deg', bg:'#3a86ff', delay:'40ms' },
-        { kind:'confetti', tx:'94px', ty:'-156px', rot:'160deg', bg:'#06d6a0', delay:'45ms' },
-        { kind:'confetti', tx:'128px', ty:'-214px', rot:'220deg', bg:'#ef476f', delay:'50ms' },
-        { kind:'confetti', tx:'164px', ty:'-170px', rot:'250deg', bg:'#ff006e', delay:'55ms' },
-        { kind:'confetti', tx:'196px', ty:'-126px', rot:'280deg', bg:'#8338ec', delay:'60ms' },
-        { kind:'confetti', tx:'-190px', ty:'-176px', rot:'-280deg', bg:'#8338ec', delay:'65ms' },
-        { kind:'confetti', tx:'174px', ty:'-248px', rot:'200deg', bg:'#ffd166', delay:'70ms' },
-        { kind:'confetti', tx:'0px', ty:'-300px', rot:'180deg', bg:'#06d6a0', delay:'75ms' },
-        { kind:'card', tx:'-216px', ty:'-120px', rot:'-310deg', delay:'20ms', card:'A♠' },
-        { kind:'card', tx:'-140px', ty:'-248px', rot:'-250deg', delay:'40ms', card:'K♥' },
-        { kind:'card', tx:'-54px', ty:'-264px', rot:'-180deg', delay:'60ms', card:'Q♦' },
-        { kind:'card', tx:'42px', ty:'-266px', rot:'188deg', delay:'80ms', card:'J♣' },
-        { kind:'card', tx:'128px', ty:'-250px', rot:'230deg', delay:'100ms', card:'10♠' },
-        { kind:'card', tx:'212px', ty:'-110px', rot:'280deg', delay:'120ms', card:'A♥' },
-        { kind:'card', tx:'-10px', ty:'-320px', rot:'160deg', delay:'140ms', card:'K♣' }
+        { kind:'balloon-svg', svg:balloonSvg('#d4b366','#8a7338'), w:'54px', h:'90px', tx:'-260px', ty:'-300px', rot:'-18deg', delay:'0ms' },
+        { kind:'balloon-svg', svg:balloonSvg('#111111','#444444'), w:'54px', h:'90px', tx:'260px', ty:'-294px', rot:'18deg', delay:'20ms' },
+        { kind:'balloon-svg', svg:balloonSvg('#f0d68a','#a38a47'), w:'58px', h:'96px', tx:'0px', ty:'-350px', rot:'4deg', delay:'40ms' },
+        { kind:'streamer', tx:'-272px', ty:'-80px', rot:'-160deg', bg:'#9a8241', delay:'10ms' },
+        { kind:'streamer', tx:'272px', ty:'-64px', rot:'168deg', bg:'#111', delay:'20ms' },
+        { kind:'confetti', tx:'-200px', ty:'-190px', rot:'-230deg', bg:'#d4b366', delay:'15ms' },
+        { kind:'confetti', tx:'200px', ty:'-200px', rot:'220deg', bg:'#111', delay:'25ms' },
+        { kind:'card-svg', svg:klaverCardSvg('K'), w:'70px', h:'96px', tx:'-250px', ty:'-140px', rot:'-300deg', delay:'20ms' },
+        { kind:'card-svg', svg:klaverCardSvg('Q'), w:'66px', h:'92px', tx:'-168px', ty:'-280px', rot:'-250deg', delay:'45ms' },
+        { kind:'card-svg', svg:klaverCardSvg('J'), w:'64px', h:'90px', tx:'-60px', ty:'-308px', rot:'-180deg', delay:'70ms' },
+        { kind:'card-svg', svg:klaverCardSvg('A'), w:'64px', h:'90px', tx:'58px', ty:'-312px', rot:'188deg', delay:'95ms' },
+        { kind:'card-svg', svg:klaverCardSvg('10'), w:'68px', h:'94px', tx:'168px', ty:'-280px', rot:'230deg', delay:'120ms' },
+        { kind:'card-svg', svg:klaverCardSvg('K'), w:'70px', h:'96px', tx:'250px', ty:'-128px', rot:'280deg', delay:'145ms' },
+        { kind:'note-svg', svg:noteSvg('nat'), w:'92px', h:'68px', tx:'-126px', ty:'-344px', rot:'-16deg', delay:'80ms' },
+        { kind:'note-svg', svg:noteSvg('pit'), w:'88px', h:'64px', tx:'0px', ty:'-382px', rot:'8deg', delay:'105ms' },
+        { kind:'note-svg', svg:noteSvg('verzaakt'), w:'104px', h:'74px', tx:'132px', ty:'-344px', rot:'14deg', delay:'130ms' },
+        { kind:'table-svg', svg:tableArrowSvg(), w:'108px', h:'78px', tx:'-8px', ty:'-246px', rot:'0deg', delay:'120ms' },
+        { kind:'card-svg', svg:klaverCardSvg('Q'), w:'60px', h:'84px', tx:'-312px', ty:'-226px', rot:'-340deg', delay:'155ms' },
+        { kind:'card-svg', svg:klaverCardSvg('J'), w:'60px', h:'84px', tx:'312px', ty:'-220px', rot:'320deg', delay:'170ms' }
       ];
       buildBurstPieces(specs, burst);
       word.appendChild(burst);
-      window.setTimeout(() => { if (burst.isConnected) burst.remove(); }, 2500);
+      window.setTimeout(() => { if (burst.isConnected) burst.remove(); }, 3200);
     }
     function scalePx(value, factor) {
       const m = String(value || '').match(/(-?\d+(?:\.\d+)?)px/);
@@ -1175,50 +1278,42 @@ async function castExtraPollVote(desired_status) {
       clearJaCelebration('#drinksStateWord');
       const burst = document.createElement('span');
       burst.className = 'ja-party-burst';
-      const factor = 1 + Math.max(0, (Number(canCount) || 4) - 4) * 0.16;
+      const factor = 1 + Math.max(0, (Number(canCount) || 4) - 4) * 0.24;
       const specs = [
-        { kind:'balloon', tx:'-170px', ty:'-232px', rot:'-18deg', bg:'#c8932e', delay:'0ms' },
-        { kind:'balloon', tx:'176px', ty:'-224px', rot:'18deg', bg:'#2f241c', delay:'30ms' },
-        { kind:'balloon', tx:'6px', ty:'-274px', rot:'4deg', bg:'#d7b062', delay:'60ms' },
-        { kind:'balloon', tx:'-72px', ty:'-206px', rot:'-8deg', bg:'#845f24', delay:'90ms' },
-        { kind:'balloon', tx:'88px', ty:'-210px', rot:'10deg', bg:'#f0d68a', delay:'120ms' },
-        { kind:'streamer', tx:'-222px', ty:'-56px', rot:'-160deg', bg:'#2f241c', delay:'10ms' },
-        { kind:'streamer', tx:'224px', ty:'-44px', rot:'168deg', bg:'#c8932e', delay:'20ms' },
-        { kind:'streamer', tx:'-150px', ty:'-224px', rot:'-96deg', bg:'#8f6b2f', delay:'30ms' },
-        { kind:'streamer', tx:'150px', ty:'-234px', rot:'102deg', bg:'#d7b062', delay:'40ms' },
-        { kind:'confetti', tx:'-148px', ty:'-150px', rot:'-230deg', bg:'#d4a63d', delay:'10ms' },
-        { kind:'confetti', tx:'-118px', ty:'-208px', rot:'-150deg', bg:'#7c5c24', delay:'15ms' },
-        { kind:'confetti', tx:'-82px', ty:'-176px', rot:'-85deg', bg:'#f0d68a', delay:'20ms' },
-        { kind:'confetti', tx:'-40px', ty:'-224px', rot:'-120deg', bg:'#2f241c', delay:'25ms' },
-        { kind:'confetti', tx:'-8px', ty:'-170px', rot:'180deg', bg:'#d8b45a', delay:'30ms' },
-        { kind:'confetti', tx:'26px', ty:'-248px', rot:'-40deg', bg:'#9b722c', delay:'35ms' },
-        { kind:'confetti', tx:'58px', ty:'-194px', rot:'110deg', bg:'#2f241c', delay:'40ms' },
-        { kind:'confetti', tx:'94px', ty:'-156px', rot:'160deg', bg:'#d8b45a', delay:'45ms' },
-        { kind:'confetti', tx:'128px', ty:'-214px', rot:'220deg', bg:'#845f24', delay:'50ms' },
-        { kind:'confetti', tx:'164px', ty:'-170px', rot:'250deg', bg:'#f0d68a', delay:'55ms' },
-        { kind:'confetti', tx:'196px', ty:'-126px', rot:'280deg', bg:'#2f241c', delay:'60ms' },
-        { kind:'card', tx:'-206px', ty:'-116px', rot:'-300deg', delay:'20ms', card:'🍺' },
-        { kind:'card', tx:'-132px', ty:'-236px', rot:'-238deg', delay:'40ms', card:'🍻' },
-        { kind:'card', tx:'-46px', ty:'-258px', rot:'-176deg', delay:'60ms', card:'🍺' },
-        { kind:'card', tx:'36px', ty:'-258px', rot:'188deg', delay:'80ms', card:'🍻' },
-        { kind:'card', tx:'122px', ty:'-244px', rot:'228deg', delay:'100ms', card:'🍺' },
-        { kind:'card', tx:'206px', ty:'-108px', rot:'278deg', delay:'120ms', card:'🍻' },
-        { kind:'card', tx:'-8px', ty:'-310px', rot:'160deg', delay:'140ms', card:'🍺' }
+        { kind:'balloon-svg', svg:balloonSvg('#a8813b','#7f6529'), w:'54px', h:'90px', tx:'-214px', ty:'-262px', rot:'-18deg', delay:'0ms' },
+        { kind:'balloon-svg', svg:balloonSvg('#5e7d4b','#405c34'), w:'54px', h:'90px', tx:'214px', ty:'-256px', rot:'18deg', delay:'25ms' },
+        { kind:'balloon-svg', svg:balloonSvg('#d8c07a','#9d8748'), w:'58px', h:'96px', tx:'0px', ty:'-310px', rot:'4deg', delay:'50ms' },
+        { kind:'svg-item', svg:beerGlassSvg('#d6a63d'), w:'68px', h:'68px', tx:'-232px', ty:'-138px', rot:'-300deg', delay:'20ms' },
+        { kind:'svg-item', svg:beerBottleSvg('#c78f2f'), w:'62px', h:'62px', tx:'-146px', ty:'-258px', rot:'-238deg', delay:'40ms' },
+        { kind:'svg-item', svg:craftBeerSvg(), w:'70px', h:'70px', tx:'-46px', ty:'-288px', rot:'-176deg', delay:'60ms' },
+        { kind:'svg-item', svg:wineBottleSvg(), w:'62px', h:'62px', tx:'48px', ty:'-288px', rot:'188deg', delay:'80ms' },
+        { kind:'svg-item', svg:champagneBottleSvg(), w:'64px', h:'64px', tx:'148px', ty:'-262px', rot:'228deg', delay:'100ms' },
+        { kind:'svg-item', svg:beerGlassSvg('#d0a13b'), w:'68px', h:'68px', tx:'236px', ty:'-126px', rot:'278deg', delay:'120ms' },
+        { kind:'svg-item', svg:pisangBottleSvg(), w:'64px', h:'64px', tx:'0px', ty:'-340px', rot:'160deg', delay:'140ms' },
+        { kind:'svg-item', svg:shirtSvg(), w:'64px', h:'64px', tx:'-124px', ty:'-206px', rot:'-80deg', delay:'150ms' },
+        { kind:'svg-item', svg:briefcaseSvg(), w:'68px', h:'68px', tx:'124px', ty:'-206px', rot:'80deg', delay:'160ms' },
+        { kind:'streamer', tx:'-246px', ty:'-60px', rot:'-160deg', bg:'#8e6c2e', delay:'10ms' },
+        { kind:'streamer', tx:'246px', ty:'-48px', rot:'168deg', bg:'#355236', delay:'20ms' }
       ].map((spec) => ({ ...spec, tx: scalePx(spec.tx, factor), ty: scalePx(spec.ty, factor) }));
       const extras = Math.max(0, (Number(canCount) || 4) - 4);
-      for (let i = 0; i < extras; i += 1) {
+      const cycle = [
+        () => beerGlassSvg('#d6a63d'), () => beerBottleSvg('#c78f2f'), () => craftBeerSvg(), () => wineBottleSvg(),
+        () => champagneBottleSvg(), () => pisangBottleSvg(), () => shirtSvg(), () => briefcaseSvg()
+      ];
+      for (let i = 0; i < extras * 4; i += 1) {
         const swing = (i % 2 === 0 ? 1 : -1);
         specs.push(
-          { kind:'confetti', tx: `${Math.round((150 + i * 18) * swing)}px`, ty: `${Math.round((-210 - i * 16) * factor)}px`, rot: `${180 + i * 24}deg`, bg: i % 2 === 0 ? '#d8b45a' : '#2f241c', delay: `${90 + i * 18}ms` },
-          { kind:'balloon', tx: `${Math.round((110 + i * 26) * swing)}px`, ty: `${Math.round((-260 - i * 20) * factor)}px`, rot: `${swing * (12 + i * 4)}deg`, bg: i % 2 === 0 ? '#c8932e' : '#845f24', delay: `${100 + i * 18}ms` },
-          { kind:'card', tx: `${Math.round((44 + i * 22) * swing)}px`, ty: `${Math.round((-320 - i * 12) * factor)}px`, rot: `${swing * (170 + i * 10)}deg`, delay: `${120 + i * 18}ms`, card: i % 2 === 0 ? '🍺' : '🍻' }
+          { kind:'confetti', tx: `${Math.round((156 + i * 18) * swing)}px`, ty: `${Math.round((-214 - i * 16) * factor)}px`, rot: `${180 + i * 22}deg`, bg: i % 2 === 0 ? '#d8b45a' : '#2f241c', delay: `${90 + i * 14}ms` },
+          { kind:'balloon-svg', svg:balloonSvg(i % 2 === 0 ? '#c8932e' : '#567241', i % 2 === 0 ? '#8d6a24' : '#425b36'), w:'48px', h:'82px', tx: `${Math.round((118 + i * 22) * swing)}px`, ty: `${Math.round((-266 - i * 18) * factor)}px`, rot: `${swing * (12 + i * 4)}deg`, delay: `${100 + i * 14}ms` },
+          { kind:'svg-item', svg: cycle[i % cycle.length](), w:'58px', h:'58px', tx: `${Math.round((46 + i * 19) * swing)}px`, ty: `${Math.round((-332 - i * 12) * factor)}px`, rot: `${swing * (170 + i * 11)}deg`, delay: `${120 + i * 14}ms` }
         );
       }
       buildBurstPieces(specs, burst);
       word.appendChild(burst);
-      window.setTimeout(() => { if (burst.isConnected) burst.remove(); }, 2900);
+      window.setTimeout(() => { if (burst.isConnected) burst.remove(); }, 3600);
     }
     function renderState(data) {
+
       currentHomepageState = data || null;
       const legends = data.legends || data.yes_names || [];
       const losers = data.losers || data.no_names || [];
