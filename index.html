@@ -608,7 +608,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v281';</script><script src="./gejast-config.js?v282"></script>
+  <script>window.GEJAST_PAGE_VERSION='v283';</script><script src="./gejast-config.js?v283"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -1047,6 +1047,7 @@ function renderExtraNames(id, items, emptyText, listKey) {
   });
 }
 function renderExtraPollState(data) {
+  const previousCount = Number(currentDrinksPollState?.can_count ?? currentDrinksPollState?.yes_count ?? currentDrinksPollState?.legends?.length ?? currentDrinksPollState?.yes_names?.length ?? 0);
   currentDrinksPollState = data || null;
   const legends = data.legends || data.yes_names || [];
   const losers = data.losers || data.no_names || [];
@@ -1062,14 +1063,15 @@ function renderExtraPollState(data) {
   const inline = document.getElementById('drinksStateWordInline'); if (inline) inline.textContent = state.label;
   renderExtraNames('drinksLegendsList', legends, 'Nog niemand', 'legends');
   renderExtraNames('drinksLosersList', losers, 'Nog niemand', 'losers');
-  if (state.key === 'yes' && !hasPlayedDrinksCelebration) {
-    hasPlayedDrinksCelebration = true;
+  const shouldCelebrate = state.key === 'yes' && canCount >= 4 && canCount > previousCount;
+  if (shouldCelebrate) {
+    lastDrinksCelebrationCount = canCount;
     window.requestAnimationFrame(() => playDrinksCelebration(canCount));
   } else if (state.key !== 'yes') {
-    hasPlayedDrinksCelebration = false;
+    lastDrinksCelebrationCount = null;
     clearJaCelebration('#drinksStateWord');
   } else {
-    hasPlayedDrinksCelebration = true;
+    lastDrinksCelebrationCount = canCount;
   }
   currentDrinksPollState = { ...(data || {}), computed_key: state.key, status_key: state.key };
 }
@@ -1116,8 +1118,8 @@ async function castExtraPollVote(desired_status) {
       const key = canCount >= 4 ? 'yes' : (canCount >= 1 ? 'maybe' : 'no');
       return { key, label: labels[idx], copy: drinksYesCopy(canCount) };
     }
-    let hasPlayedJaCelebration = false;
-    let hasPlayedDrinksCelebration = false;
+    let lastHomepageCelebrationCount = null;
+    let lastDrinksCelebrationCount = null;
     function clearJaCelebration(targetSelector = '#stateWord') {
       const existing = document.querySelector(`${targetSelector} .ja-party-burst`);
       if (existing) existing.remove();
@@ -1314,6 +1316,7 @@ async function castExtraPollVote(desired_status) {
     }
     function renderState(data) {
 
+      const previousCount = Number(currentHomepageState?.can_count ?? currentHomepageState?.yes_count ?? currentHomepageState?.legends?.length ?? currentHomepageState?.yes_names?.length ?? 0);
       currentHomepageState = data || null;
       const legends = data.legends || data.yes_names || [];
       const losers = data.losers || data.no_names || [];
@@ -1323,7 +1326,6 @@ async function castExtraPollVote(desired_status) {
         : computeStateLabel(canCount);
 
       const word = document.getElementById('stateWord');
-      const previousKey = currentHomepageState?.status_key || currentHomepageState?.computed_key || null;
       word.textContent = state.label; word.className = `status-word ${state.key}`;
 
       document.getElementById('stateWordInline').textContent = state.label;
@@ -1337,12 +1339,15 @@ async function castExtraPollVote(desired_status) {
       renderNames('legendsList', legends, 'Nog niemand', 'legends');
       renderNames('losersList', losers, 'Nog niemand', 'losers');
       if (data.my_name && document.getElementById('sessionHint')) document.getElementById('sessionHint').textContent = `Ingelogd als ${data.my_name}.`;
-      if (state.key === 'yes' && !hasPlayedJaCelebration) {
-        hasPlayedJaCelebration = true;
+      const shouldCelebrate = state.key === 'yes' && canCount >= 4 && canCount > previousCount;
+      if (shouldCelebrate) {
+        lastHomepageCelebrationCount = canCount;
         window.requestAnimationFrame(() => playJaCelebration());
       } else if (state.key !== 'yes') {
-        hasPlayedJaCelebration = false;
+        lastHomepageCelebrationCount = null;
         clearJaCelebration();
+      } else {
+        lastHomepageCelebrationCount = canCount;
       }
       currentHomepageState = { ...(data || {}), computed_key: state.key, status_key: state.key };
     }
