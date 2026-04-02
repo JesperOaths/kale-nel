@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wedstrijden beheren</title>
-  <script>window.GEJAST_PAGE_VERSION='v269';</script>
-  <script src="./gejast-config.js?v269"></script>
+  <script>window.GEJAST_PAGE_VERSION='v270';</script>
+  <script src="./gejast-config.js?v270"></script>
   <script src="./admin-session-sync.js?v266"></script>
   <style>
     :root{
@@ -76,7 +76,7 @@
     <section class="hero">
       <div class="hero-top">
         <div>
-          <div class="pill">v266 · Made by Bruis</div>
+          <div class="pill">v270 · Made by Bruis</div>
           <h1>Wedstrijden beheren</h1>
           <p class="muted">Bewerk of verwijder je eigen inzendingen binnen 5 minuten. Met een adminsessie kun je alles beheren en rebuilds starten.</p>
         </div>
@@ -197,6 +197,15 @@
     const u = new URL(location.href); u.searchParams.set('game', state.game); history.replaceState({}, '', u);
   }
   function rowAccess(row){ return row?.can_edit ? 'Bewerkbaar' : 'Alleen lezen'; }
+
+  function unwrapMatchRowsPayload(payload){
+    if(payload && Array.isArray(payload[state.game])) return payload[state.game];
+    if(payload && payload.get_match_control_rows && Array.isArray(payload.get_match_control_rows[state.game])) return payload.get_match_control_rows[state.game];
+    if(Array.isArray(payload) && payload[0] && payload[0].get_match_control_rows && Array.isArray(payload[0].get_match_control_rows[state.game])) return payload[0].get_match_control_rows[state.game];
+    if(Array.isArray(payload) && payload[0] && Array.isArray(payload[0][state.game])) return payload[0][state.game];
+    if(Array.isArray(payload)) return payload;
+    return [];
+  }
   function renderList(){
     const rows = state.rows;
     if(!rows.length){ els.matchList.innerHTML = `<div class="empty">${state.adminError ? 'Geen adminrechten bevestigd voor dit scherm. Log opnieuw in via Admin.' : 'Nog geen wedstrijden voor deze sessie of dit spel.'}</div>`; return; }
@@ -238,7 +247,7 @@
     try{
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_match_control_rows`, { method:'POST', headers: rpcHeaders(), body: JSON.stringify({ game_key: state.game, session_token: state.sessionToken || null, admin_session_token: state.adminToken || null, limit_count: 80 }) });
       const data = await parseResponse(res);
-      state.rows = safeArray(data?.[state.game] || data || []);
+      state.rows = safeArray(unwrapMatchRowsPayload(data));
       state.selected = null;
       renderList();
       if(state.adminToken && !state.rows.length){
