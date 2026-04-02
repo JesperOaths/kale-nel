@@ -169,6 +169,15 @@
     .status-word.yes { color: #1f8f52; position: relative; display: inline-block; }
     .status-word.maybe { color: #9b6b08; }
 
+    #drinksStateWord {
+      max-width: 15ch;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 0.98;
+      font-size: clamp(2.05rem, 5.9vw, 3.15rem);
+      text-wrap: balance;
+    }
+
     .ja-party-burst {
       position: absolute;
       inset: 0;
@@ -578,7 +587,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v276';</script><script src="./gejast-config.js?v278"></script>
+  <script>window.GEJAST_PAGE_VERSION='v279';</script><script src="./gejast-config.js?v279"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -665,14 +674,14 @@
       </section>
 
       <h1 style="margin-top:22px;text-align:center;">Wordt er gezopen vanavond?</h1>
-      <div id="drinksStateWord" class="status-word no">Nee</div>
-      <div id="drinksStateCopy" class="status-sub">0 spelers hebben Ja gezegd</div>
+      <div id="drinksStateWord" class="status-word no">triest dispuutsavondje</div>
+      <div id="drinksStateCopy" class="status-sub">Nog niemand heeft bevestigd</div>
 
       <div id="drinksStatusBox" class="status"></div>
 
       <div class="vote-row">
-        <button class="vote-btn can" id="drinksYesBtn" type="button">Ik kan</button>
-        <button class="vote-btn cant" id="drinksNoBtn" type="button">Ik kan niet</button>
+        <button class="vote-btn can" id="drinksYesBtn" type="button">Ik ga drinken</button>
+        <button class="vote-btn cant" id="drinksNoBtn" type="button">Nee :(</button>
       </div>
 
       <div class="lists-grid">
@@ -691,7 +700,7 @@
         <span id="drinksNoCount">0</span>
         <span id="drinksYesCountPanel">0</span>
         <span id="drinksNoCountPanel">0</span>
-        <span id="drinksStateWordInline">Nee</span>
+        <span id="drinksStateWordInline">triest dispuutsavondje</span>
       </div>
 
       <h1 style="margin-top:22px;text-align:center;">Wordt er gejast donderdag?</h1>
@@ -1021,7 +1030,7 @@ function renderExtraPollState(data) {
   const legends = data.legends || data.yes_names || [];
   const losers = data.losers || data.no_names || [];
   const canCount = Number(data.can_count ?? data.yes_count ?? legends.length ?? 0);
-  const state = computeStateLabel(canCount);
+  const state = computeDrinksPollState(canCount);
   const word = document.getElementById('drinksStateWord');
   if (word) { word.textContent = state.label; word.className = `status-word ${state.key}`; }
   const copy = document.getElementById('drinksStateCopy'); if (copy) copy.textContent = state.copy;
@@ -1032,12 +1041,14 @@ function renderExtraPollState(data) {
   const inline = document.getElementById('drinksStateWordInline'); if (inline) inline.textContent = state.label;
   renderExtraNames('drinksLegendsList', legends, 'Nog niemand', 'legends');
   renderExtraNames('drinksLosersList', losers, 'Nog niemand', 'losers');
-  if (state.key === 'yes' && !hasPlayedExtraJaCelebration) {
-    hasPlayedExtraJaCelebration = true;
-    window.requestAnimationFrame(() => playJaCelebration('drinksStateWord'));
+  if (state.key === 'yes' && !hasPlayedDrinksCelebration) {
+    hasPlayedDrinksCelebration = true;
+    window.requestAnimationFrame(() => playDrinksCelebration(canCount));
   } else if (state.key !== 'yes') {
-    hasPlayedExtraJaCelebration = false;
-    clearJaCelebration('drinksStateWord');
+    hasPlayedDrinksCelebration = false;
+    clearJaCelebration('#drinksStateWord');
+  } else {
+    hasPlayedDrinksCelebration = true;
   }
   currentDrinksPollState = { ...(data || {}), computed_key: state.key, status_key: state.key };
 }
@@ -1054,22 +1065,62 @@ async function castExtraPollVote(desired_status) {
       if (canCount === 1) return '1 speler heeft Ja gezegd';
       return `${canCount} spelers hebben Ja gezegd`;
     }
+    function drinksYesCopy(canCount) {
+      if (canCount <= 0) return 'Nog niemand heeft bevestigd';
+      if (canCount === 1) return '1 persoon heeft bevestigd';
+      return `${canCount} mensen hebben bevestigd`;
+    }
     function computeStateLabel(canCount) {
       if (canCount >= 4) return { key: 'yes', label: 'Ja', copy: yesSaidCopy(canCount) };
       if (canCount === 3) return { key: 'maybe', label: 'Wie maakt ons los?', copy: yesSaidCopy(canCount) };
       if (canCount === 2) return { key: 'maybe', label: 'Bijna', copy: yesSaidCopy(canCount) };
       return { key: 'no', label: 'Nee', copy: yesSaidCopy(canCount) };
     }
+    function computeDrinksPollState(canCount) {
+      const labels = [
+        'triest dispuutsavondje',
+        'lachend bij',
+        'Dit wordt synchroon drinken',
+        'Klein clubje, grote dorst',
+        'Dit kan nog wel eens wat worden',
+        'Dit begint verdacht gezellig te worden',
+        'Paar van die biertjes?',
+        'Hoop dat de pisangs de ijskast gevuld hebben!!!',
+        'Potje stress pong?',
+        'Zet die kratten maar koud!',
+        'Gargamel is jaloers op het aantal smurfen dat vandaag gaat sneuvelen',
+        'Meerderheid dispuut! Dat wordt kanker hard zuipen'
+      ];
+      const idx = Math.max(0, Math.min(labels.length - 1, Number(canCount) || 0));
+      const key = canCount >= 4 ? 'yes' : (canCount >= 1 ? 'maybe' : 'no');
+      return { key, label: labels[idx], copy: drinksYesCopy(canCount) };
+    }
     let hasPlayedJaCelebration = false;
-    let hasPlayedExtraJaCelebration = false;
-    function clearJaCelebration(targetId = 'stateWord') {
-      const existing = document.querySelector(`#${targetId} .ja-party-burst`);
+    let hasPlayedDrinksCelebration = false;
+    function clearJaCelebration(targetSelector = '#stateWord') {
+      const existing = document.querySelector(`${targetSelector} .ja-party-burst`);
       if (existing) existing.remove();
     }
-    function playJaCelebration(targetId = 'stateWord') {
-      const word = document.getElementById(targetId);
+    function buildBurstPieces(specs, burst) {
+      specs.forEach((spec) => {
+        const piece = document.createElement('span');
+        piece.className = `ja-party-piece ${spec.kind}`;
+        piece.style.setProperty('--tx', spec.tx);
+        piece.style.setProperty('--ty', spec.ty);
+        piece.style.setProperty('--rot', spec.rot);
+        if (spec.bg) piece.style.background = spec.bg;
+        if (spec.card) {
+          piece.dataset.card = spec.card;
+          piece.textContent = spec.card;
+        }
+        piece.style.animationDelay = spec.delay;
+        burst.appendChild(piece);
+      });
+    }
+    function playJaCelebration() {
+      const word = document.getElementById('stateWord');
       if (!word) return;
-      clearJaCelebration(targetId);
+      clearJaCelebration('#stateWord');
       const burst = document.createElement('span');
       burst.className = 'ja-party-burst';
       const specs = [
@@ -1109,22 +1160,63 @@ async function castExtraPollVote(desired_status) {
         { kind:'card', tx:'212px', ty:'-110px', rot:'280deg', delay:'120ms', card:'A♥' },
         { kind:'card', tx:'-10px', ty:'-320px', rot:'160deg', delay:'140ms', card:'K♣' }
       ];
-      specs.forEach((spec) => {
-        const piece = document.createElement('span');
-        piece.className = `ja-party-piece ${spec.kind}`;
-        piece.style.setProperty('--tx', spec.tx);
-        piece.style.setProperty('--ty', spec.ty);
-        piece.style.setProperty('--rot', spec.rot);
-        if (spec.bg) piece.style.background = spec.bg;
-        if (spec.card) {
-          piece.dataset.card = spec.card;
-          piece.textContent = spec.card;
-        }
-        piece.style.animationDelay = spec.delay;
-        burst.appendChild(piece);
-      });
+      buildBurstPieces(specs, burst);
       word.appendChild(burst);
       window.setTimeout(() => { if (burst.isConnected) burst.remove(); }, 2500);
+    }
+    function scalePx(value, factor) {
+      const m = String(value || '').match(/(-?\d+(?:\.\d+)?)px/);
+      if (!m) return value;
+      return `${Math.round(Number(m[1]) * factor)}px`;
+    }
+    function playDrinksCelebration(canCount) {
+      const word = document.getElementById('drinksStateWord');
+      if (!word) return;
+      clearJaCelebration('#drinksStateWord');
+      const burst = document.createElement('span');
+      burst.className = 'ja-party-burst';
+      const factor = 1 + Math.max(0, (Number(canCount) || 4) - 4) * 0.16;
+      const specs = [
+        { kind:'balloon', tx:'-170px', ty:'-232px', rot:'-18deg', bg:'#c8932e', delay:'0ms' },
+        { kind:'balloon', tx:'176px', ty:'-224px', rot:'18deg', bg:'#2f241c', delay:'30ms' },
+        { kind:'balloon', tx:'6px', ty:'-274px', rot:'4deg', bg:'#d7b062', delay:'60ms' },
+        { kind:'balloon', tx:'-72px', ty:'-206px', rot:'-8deg', bg:'#845f24', delay:'90ms' },
+        { kind:'balloon', tx:'88px', ty:'-210px', rot:'10deg', bg:'#f0d68a', delay:'120ms' },
+        { kind:'streamer', tx:'-222px', ty:'-56px', rot:'-160deg', bg:'#2f241c', delay:'10ms' },
+        { kind:'streamer', tx:'224px', ty:'-44px', rot:'168deg', bg:'#c8932e', delay:'20ms' },
+        { kind:'streamer', tx:'-150px', ty:'-224px', rot:'-96deg', bg:'#8f6b2f', delay:'30ms' },
+        { kind:'streamer', tx:'150px', ty:'-234px', rot:'102deg', bg:'#d7b062', delay:'40ms' },
+        { kind:'confetti', tx:'-148px', ty:'-150px', rot:'-230deg', bg:'#d4a63d', delay:'10ms' },
+        { kind:'confetti', tx:'-118px', ty:'-208px', rot:'-150deg', bg:'#7c5c24', delay:'15ms' },
+        { kind:'confetti', tx:'-82px', ty:'-176px', rot:'-85deg', bg:'#f0d68a', delay:'20ms' },
+        { kind:'confetti', tx:'-40px', ty:'-224px', rot:'-120deg', bg:'#2f241c', delay:'25ms' },
+        { kind:'confetti', tx:'-8px', ty:'-170px', rot:'180deg', bg:'#d8b45a', delay:'30ms' },
+        { kind:'confetti', tx:'26px', ty:'-248px', rot:'-40deg', bg:'#9b722c', delay:'35ms' },
+        { kind:'confetti', tx:'58px', ty:'-194px', rot:'110deg', bg:'#2f241c', delay:'40ms' },
+        { kind:'confetti', tx:'94px', ty:'-156px', rot:'160deg', bg:'#d8b45a', delay:'45ms' },
+        { kind:'confetti', tx:'128px', ty:'-214px', rot:'220deg', bg:'#845f24', delay:'50ms' },
+        { kind:'confetti', tx:'164px', ty:'-170px', rot:'250deg', bg:'#f0d68a', delay:'55ms' },
+        { kind:'confetti', tx:'196px', ty:'-126px', rot:'280deg', bg:'#2f241c', delay:'60ms' },
+        { kind:'card', tx:'-206px', ty:'-116px', rot:'-300deg', delay:'20ms', card:'🍺' },
+        { kind:'card', tx:'-132px', ty:'-236px', rot:'-238deg', delay:'40ms', card:'🍻' },
+        { kind:'card', tx:'-46px', ty:'-258px', rot:'-176deg', delay:'60ms', card:'🍺' },
+        { kind:'card', tx:'36px', ty:'-258px', rot:'188deg', delay:'80ms', card:'🍻' },
+        { kind:'card', tx:'122px', ty:'-244px', rot:'228deg', delay:'100ms', card:'🍺' },
+        { kind:'card', tx:'206px', ty:'-108px', rot:'278deg', delay:'120ms', card:'🍻' },
+        { kind:'card', tx:'-8px', ty:'-310px', rot:'160deg', delay:'140ms', card:'🍺' }
+      ].map((spec) => ({ ...spec, tx: scalePx(spec.tx, factor), ty: scalePx(spec.ty, factor) }));
+      const extras = Math.max(0, (Number(canCount) || 4) - 4);
+      for (let i = 0; i < extras; i += 1) {
+        const swing = (i % 2 === 0 ? 1 : -1);
+        specs.push(
+          { kind:'confetti', tx: `${Math.round((150 + i * 18) * swing)}px`, ty: `${Math.round((-210 - i * 16) * factor)}px`, rot: `${180 + i * 24}deg`, bg: i % 2 === 0 ? '#d8b45a' : '#2f241c', delay: `${90 + i * 18}ms` },
+          { kind:'balloon', tx: `${Math.round((110 + i * 26) * swing)}px`, ty: `${Math.round((-260 - i * 20) * factor)}px`, rot: `${swing * (12 + i * 4)}deg`, bg: i % 2 === 0 ? '#c8932e' : '#845f24', delay: `${100 + i * 18}ms` },
+          { kind:'card', tx: `${Math.round((44 + i * 22) * swing)}px`, ty: `${Math.round((-320 - i * 12) * factor)}px`, rot: `${swing * (170 + i * 10)}deg`, delay: `${120 + i * 18}ms`, card: i % 2 === 0 ? '🍺' : '🍻' }
+        );
+      }
+      buildBurstPieces(specs, burst);
+      word.appendChild(burst);
+      window.setTimeout(() => { if (burst.isConnected) burst.remove(); }, 2900);
     }
     function renderState(data) {
       currentHomepageState = data || null;
@@ -1152,10 +1244,10 @@ async function castExtraPollVote(desired_status) {
       if (data.my_name && document.getElementById('sessionHint')) document.getElementById('sessionHint').textContent = `Ingelogd als ${data.my_name}.`;
       if (state.key === 'yes' && !hasPlayedJaCelebration) {
         hasPlayedJaCelebration = true;
-        window.requestAnimationFrame(() => playJaCelebration('stateWord'));
+        window.requestAnimationFrame(() => playJaCelebration());
       } else if (state.key !== 'yes') {
         hasPlayedJaCelebration = false;
-        clearJaCelebration('stateWord');
+        clearJaCelebration();
       }
       currentHomepageState = { ...(data || {}), computed_key: state.key, status_key: state.key };
     }
@@ -1199,7 +1291,7 @@ async function castExtraPollVote(desired_status) {
       if (!getSessionToken()) { goToLoginWithIntent(status, EXTRA_POLL_KEY); return; }
       try {
         const data = await castExtraPollVote(status); renderExtraPollState(data);
-        setExtraPollStatus(`Opgeslagen: ${status === 'ja' ? 'ik kan' : 'ik kan niet'}.`, 'ok');
+        setExtraPollStatus(`Opgeslagen: ${status === 'ja' ? 'ik ga drinken' : 'nee :('}.`, 'ok');
       } catch (error) {
         const msg = error?.message || 'Onbekende fout';
         if (/sessie|token|login|ingelogd/i.test(msg)) { clearSessionToken(); goToLoginWithIntent(status, EXTRA_POLL_KEY); return; }
