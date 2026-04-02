@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION: 'v273',
+    VERSION: 'v274',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -10,7 +10,7 @@
     GOLD_HOVER: '#8a7338',
     PLAYER_SESSION_KEYS: ['jas_session_token_v11','jas_session_token_v10'],
     PLAYER_LAST_ACTIVITY_KEY: 'jas_last_activity_at_v1',
-    PLAYER_SESSION_IDLE_MS: 6 * 60 * 60 * 1000
+    PLAYER_SESSION_IDLE_MS: 24 * 60 * 60 * 1000
   };
 
   function detectScriptVersion(){
@@ -74,11 +74,6 @@
       sessionStorage.setItem(PLAYER_SESSION_CYCLE_KEY, cycle);
     }
   }
-  function lastPlayerActivity(){
-    const raw = localStorage.getItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY) || sessionStorage.getItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY) || '';
-    const n = Number(raw || 0);
-    return Number.isFinite(n) ? n : 0;
-  }
   function getPlayerSessionExpiryAt(){
     const raw = localStorage.getItem(PLAYER_SESSION_CYCLE_KEY) || sessionStorage.getItem(PLAYER_SESSION_CYCLE_KEY) || '';
     const cycleStart = Number(raw || currentCycleStart());
@@ -91,12 +86,15 @@
   function isPlayerSessionExpired(){
     const token = getPlayerSessionToken();
     if (!token) return true;
-    const expiryAt = getPlayerSessionExpiryAt();
-    return Date.now() >= expiryAt;
+    return Date.now() >= getPlayerSessionExpiryAt();
   }
   function shouldSuppressVerifyFloat(){
     const path = String((window.location && window.location.pathname) || '').toLowerCase();
-    return ['drinks_add.html','drinks_speed.html','scorer.html','boerenbridge.html','beerpong.html','match_control.html','admin_match_control.html'].some((name)=>path.endsWith('/'+name) || path.endsWith(name));
+    return [
+      'login.html','request.html','activate.html',
+      'scorer.html','boerenbridge.html','beerpong.html',
+      'match_control.html','admin_match_control.html'
+    ].some((name)=>path.endsWith('/'+name) || path.endsWith(name)) || /\/admin[^/]*\.html$/.test(path);
   }
   function buildLoginUrl(returnTo){
     const url = new URL('./login.html', window.location.href);
@@ -117,31 +115,41 @@
     const suppressLogout = !!options.suppressLogout;
     const logoutSelectors = options.logoutSelectors || ['#playerSessionCornerLogout','.player-session-corner-btn.logout','[data-player-logout]'];
     const touch = ()=> touchPlayerActivity();
-    ['pointerdown','keydown','scroll','touchstart','mousemove'].forEach((eventName)=>{
-      window.addEventListener(eventName, touch, { passive:true });
-    });
+    ['pointerdown','keydown','scroll','touchstart','mousemove'].forEach((eventName)=>{ window.addEventListener(eventName, touch, { passive:true }); });
     document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) touch(); });
     window.addEventListener('focus', touch);
     touch();
     if (suppressLogout){
       logoutSelectors.forEach((selector)=>{
-        document.querySelectorAll(selector).forEach((el)=>{
-          el.style.display = 'none';
-          el.setAttribute('aria-hidden','true');
-          el.disabled = true;
-        });
+        document.querySelectorAll(selector).forEach((el)=>{ el.style.display = 'none'; el.setAttribute('aria-hidden','true'); el.disabled = true; });
       });
     }
   }
   function requireMatchEntrySession(returnTo){
     const ok = ensurePlayerSessionOrRedirect(returnTo);
     if (!ok) return false;
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', ()=>installActivityKeepalive({ suppressLogout:true }), { once:true });
-    } else {
-      installActivityKeepalive({ suppressLogout:true });
-    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ()=>installActivityKeepalive({ suppressLogout:true }), { once:true });
+    else installActivityKeepalive({ suppressLogout:true });
     return true;
+  }
+  function isEntryLikePage(){
+    const path = String((window.location && window.location.pathname) || '').toLowerCase();
+    return ['scorer.html','boerenbridge.html','beerpong.html'].some((name)=>path.endsWith('/'+name) || path.endsWith(name));
+  }
+  function applyWatermarkOpacityBehavior(){
+    const nodes = Array.from(document.querySelectorAll('.site-credit-watermark,[data-version-watermark],#versionWatermark,.version-tag,.watermark')).filter((el)=>el && /made by bruis/i.test(el.textContent||''));
+    if (!nodes.length) return;
+    const entryLike = isEntryLikePage();
+    const update = ()=>{
+      const doc = document.documentElement;
+      const maxScroll = Math.max(1, (doc.scrollHeight || 0) - window.innerHeight);
+      const ratio = Math.max(0, Math.min(1, (window.scrollY || doc.scrollTop || 0) / maxScroll));
+      const opacity = entryLike ? 0.25 : (1 - (0.75 * ratio));
+      nodes.forEach((node)=>{ node.style.opacity = String(Math.max(0.25, Math.min(1, opacity)).toFixed(3)); });
+    };
+    update();
+    window.addEventListener('scroll', update, { passive:true });
+    window.addEventListener('resize', update);
   }
 
   window.GEJAST_CONFIG = Object.assign({}, window.GEJAST_CONFIG || {}, CONFIG, {
@@ -159,9 +167,12 @@
     shouldSuppressVerifyFloat,
     getPlayerSessionExpiryAt,
     currentCycleStart,
-    currentCycleEnd
+    currentCycleEnd,
+    applyWatermarkOpacityBehavior,
+    isEntryLikePage
   });
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyVersionLabel, { once: true });
-  else applyVersionLabel();
+  function bootChrome(){ applyVersionLabel(); applyWatermarkOpacityBehavior(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootChrome, { once: true });
+  else bootChrome();
 })();

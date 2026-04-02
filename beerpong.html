@@ -6,7 +6,7 @@
   <title>Beerpong Scoreformulier</title>
   <link rel="stylesheet" href="./site-shell.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>window.GEJAST_PAGE_VERSION='v262';</script><script src="./gejast-config.js?v262"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('beerpong');</script>
+  <script>window.GEJAST_PAGE_VERSION='v274';</script><script src="./gejast-config.js?v274"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('beerpong');</script>
   <style>
     :root{--gold:#9a8241;--gold-dark:#8a7338;--black:#111;--card-bg:rgba(249,247,242,.95);--line:rgba(17,17,17,.08);--muted:#6f675b;}
     *{box-sizing:border-box} html,body{min-height:100%}
@@ -46,7 +46,7 @@
     .pill{display:inline-flex;align-items:center;gap:8px;background:rgba(154,130,65,.12);border:1px solid rgba(154,130,65,.35);padding:6px 10px;border-radius:999px;font-size:.85rem;font-weight:800;color:#6f5700}
     .watermark{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:4;background:#221f1a;color:#f4dd95;border:2px solid rgba(154,130,65,.35);padding:8px 16px;border-radius:999px;font-weight:900;letter-spacing:.02em;box-shadow:0 12px 24px rgba(0,0,0,.18)}
     @media (max-width: 900px){.grid{grid-template-columns:1fr}.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media (max-width: 640px){body{padding:18px 10px}.shell{padding:18px;border-radius:22px}.form-grid,.stats-grid{grid-template-columns:1fr}.leader{grid-template-columns:auto 1fr}.rating{text-align:left}.watermark{font-size:.9rem}}
+    @media (max-width: 640px){body{padding:10px 8px}.shell{padding:14px;border-radius:22px}.top{gap:12px}.form-grid,.stats-grid{grid-template-columns:1fr}.field.full textarea{min-height:82px}.actions{display:grid;grid-template-columns:1fr 1fr}.actions button{width:100%}.leader{grid-template-columns:auto 1fr}.rating{text-align:left}.watermark{font-size:.9rem}}
   </style>
 </head>
 <body>
@@ -77,8 +77,8 @@
               <div id="resultInfo" style="padding:12px 14px;border:1px dashed rgba(17,17,17,0.18);border-radius:16px;background:#fffbef;color:#554e43;font-weight:700;line-height:1.35">Team met <strong>10 bekers raak</strong> wint automatisch.</div>
             </div>
             <div class="field"><label for="teamA1">Team A · Speler 1</label><select id="teamA1"></select></div>
-            <div class="field"><label for="teamB1">Team B · Speler 1</label><select id="teamB1"></select></div>
             <div class="field duo"><label for="teamA2">Team A · Speler 2</label><select id="teamA2"></select></div>
+            <div class="field"><label for="teamB1">Team B · Speler 1</label><select id="teamB1"></select></div>
             <div class="field duo"><label for="teamB2">Team B · Speler 2</label><select id="teamB2"></select></div>
             <div class="field"><label for="cupsA">Bekers raak team A</label><input id="cupsA" type="number" min="0" max="10" step="1" value="0" /></div>
             <div class="field"><label for="cupsB">Bekers raak team B</label><input id="cupsB" type="number" min="0" max="10" step="1" value="0" /></div>

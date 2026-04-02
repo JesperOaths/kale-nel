@@ -27,46 +27,40 @@
   async function parse(res){ const t = await res.text(); let d = null; try { d = t ? JSON.parse(t) : null; } catch { throw new Error(t || `HTTP ${res.status}`); } if (!res.ok) throw new Error(d?.message || d?.error || `HTTP ${res.status}`); return d; }
 
   function ensureGeoButton(){
-    let btn = document.getElementById('globalGeoStateButton');
-    if (btn) return btn;
-    btn = document.createElement('button');
-    btn.id = 'globalGeoStateButton';
-    btn.type = 'button';
-    btn.setAttribute('aria-label','Geolocatie opnieuw proberen');
-    btn.title = 'Geolocatie opnieuw proberen';
-    btn.innerHTML = '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6v8M32 50v8M6 32h8M50 32h8"/><circle cx="32" cy="32" r="20"/><circle cx="32" cy="32" r="9" fill="currentColor" stroke="none"/></svg>';
-    const style = document.createElement('style');
-    style.textContent = '#globalGeoStateButton{position:fixed;left:14px;bottom:78px;z-index:9998;width:64px;height:64px;border-radius:999px;border:1px solid rgba(0,0,0,.1);background:#d9cfc1;color:#7a6557;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 14px 26px rgba(0,0,0,.12);cursor:pointer;transition:transform .12s ease,background .2s ease,color .2s ease,border-color .2s ease}#globalGeoStateButton svg{width:42px;height:42px;display:block;stroke:currentColor;stroke-width:6;stroke-linecap:round;stroke-linejoin:round}#globalGeoStateButton.is-ready{background:#d5ddd2;color:#58704f;border-color:rgba(88,112,79,.24)}#globalGeoStateButton.is-bad{background:#ded2cb;color:#8a665e;border-color:rgba(138,102,94,.22)}#globalGeoStateButton:active{transform:translateY(1px)}@media(max-width:640px){#globalGeoStateButton{left:10px;bottom:92px;width:60px;height:60px}#globalGeoStateButton svg{width:40px;height:40px}}';
-    document.body.appendChild(style);
-    document.body.appendChild(btn);
-    btn.addEventListener('click', async()=>{
-      const helper = window.GEJAST_GEO;
-      if (!helper) return;
-      try {
-        const pos = await helper.request(true);
-        helper.startMonitor({ intervalMs: HIDDEN_POLL_MS });
-        setGeoButtonState(!!pos);
-        maybeAskNotificationPermission();
-        await poll();
-      } catch (_) {
-        setGeoButtonState(false);
-      }
-    });
-    return btn;
+    return (window.GEJAST_GEO && window.GEJAST_GEO.ensureCornerTools && window.GEJAST_GEO.ensureCornerTools()) || null;
   }
 
   function setGeoButtonState(ready){
-    const btn = ensureGeoButton();
-    btn.classList.toggle('is-ready', !!ready);
-    btn.classList.toggle('is-bad', !ready);
-    btn.title = ready ? 'Geolocatie actief' : 'Geolocatie opnieuw proberen';
+    try { window.GEJAST_GEO && window.GEJAST_GEO.setButtonState && window.GEJAST_GEO.setButtonState(!!ready); } catch(_){}
+  }
+
+  function shouldPromptNotifications(){
+    try {
+      if (!('Notification' in window) || Notification.permission !== "default") return false;
+      const key = "gejast_notification_prompt_visits_v1";
+      const count = Number(localStorage.getItem(key) || "0") + 1;
+      localStorage.setItem(key, String(count));
+      return count === 1 || count % 5 === 0;
+    } catch(_) { return false; }
+  }
+
+  function ensureNotificationPrompt(){
+    let el = document.getElementById('gejastNotificationPrompt');
+    if (el || !shouldPromptNotifications()) return el;
+    el = document.createElement('div');
+    el.id = "gejastNotificationPrompt";
+    el.innerHTML = '<div class="gnp-card"><strong>Meldingen voor verificaties</strong><div class="gnp-copy">Wil je meldingen aanzetten? Dan kunnen we je sneller vragen om drankjes en speedruns te bevestigen wanneer jij daarvoor in aanmerking komt.</div><div class="gnp-actions"><button id="gnpEnable" class="gnp-btn">Toestaan</button><button id="gnpLater" class="gnp-btn alt">Later</button></div></div>';
+    const style = document.createElement('style');
+    style.textContent = '#gejastNotificationPrompt{position:fixed;right:14px;bottom:14px;z-index:9997;max-width:340px}#gejastNotificationPrompt .gnp-card{background:rgba(255,251,245,.97);border:1px solid rgba(0,0,0,.08);border-radius:18px;padding:14px;box-shadow:0 18px 40px rgba(0,0,0,.12);color:#201b16}.gnp-copy{font-size:13px;line-height:1.45;color:#5f564b;margin-top:6px}.gnp-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.gnp-btn{border:0;border-radius:999px;padding:9px 12px;font:inherit;font-weight:800;background:#9a8241;color:#111;cursor:pointer}.gnp-btn.alt{background:#111;color:#fff}@media(max-width:640px){#gejastNotificationPrompt{left:10px;right:10px;max-width:none;bottom:12px}}';
+    document.body.appendChild(style);
+    document.body.appendChild(el);
+    document.getElementById('gnpEnable').onclick = async()=>{ try { await Notification.requestPermission(); } catch(_){} el.remove(); };
+    document.getElementById('gnpLater').onclick = ()=> el.remove();
+    return el;
   }
 
   async function maybeAskNotificationPermission(){
-    try {
-      if (!('Notification' in window)) return;
-      if (Notification.permission === 'default') await Notification.requestPermission();
-    } catch(_){}
+    ensureNotificationPrompt();
   }
 
   function notifyIfNeeded(item){
@@ -307,6 +301,7 @@
   function init(){
     ensureGeoButton();
     setGeoButtonState(!!(window.GEJAST_GEO && window.GEJAST_GEO.cached()));
+    ensureNotificationPrompt();
     try { window.GEJAST_GEO && window.GEJAST_GEO.startMonitor && window.GEJAST_GEO.startMonitor({ intervalMs: HIDDEN_POLL_MS }); } catch(_){}
     window.addEventListener('gejast:geo-update', (ev)=>{ setGeoButtonState(!!(ev && ev.detail)); });
     window.addEventListener('gejast:geo-error', ()=>{ if (!(window.GEJAST_GEO && window.GEJAST_GEO.cached())) setGeoButtonState(false); });

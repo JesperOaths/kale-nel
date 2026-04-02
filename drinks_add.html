@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alcohol toevoegen</title>
-  <script>window.GEJAST_PAGE_VERSION='v273';</script><script src="./gejast-config.js?v273"></script>
+  <script>window.GEJAST_PAGE_VERSION='v274';</script><script src="./gejast-config.js?v274"></script>
   <style>
     :root{
       --line:rgba(0,0,0,.09);
@@ -56,7 +56,7 @@
       padding:14px;
       box-shadow:0 20px 50px rgba(0,0,0,.08);
     }
-    .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:nowrap}.topbar .top-actions{display:flex;align-items:center;gap:8px;flex-wrap:nowrap}.topbar .top-actions:first-child{flex:1 1 auto;min-width:0}.topbar .top-actions.right{margin-left:0}
     .top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .top-actions.right{margin-left:auto;gap:10px}
     .btn,.geo-btn{
@@ -143,8 +143,8 @@
           <a class="btn alt" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</a>
           <a class="btn alt" href="./drinks.html">Overzicht</a>
         </div>
-        <div class="top-actions right">
-          <button class="geo-btn" id="geoStateBtn" type="button" aria-label="Geolocatie opnieuw proberen" title="Geolocatie opnieuw proberen">
+        <div class="top-actions right gejast-corner-tools">
+          <button class="geo-btn gejast-geo-button is-bad" data-gejast-geo-button="1" id="geoStateBtn" type="button" aria-label="Geolocatie opnieuw proberen" title="Geolocatie opnieuw proberen">
             <svg viewBox="0 0 64 64" aria-hidden="true">
               <path d="M32 6v8"></path>
               <path d="M32 50v8"></path>
@@ -154,7 +154,7 @@
               <circle cx="32" cy="32" r="9" fill="currentColor" stroke="none"></circle>
             </svg>
           </button>
-          <a href="./index.html"><img class="logo" src="./logo.png" alt="Logo" /></a>
+          <a href="./index.html" class="gejast-logo-chip"><img class="logo" src="./logo.png" alt="Logo" /></a>
         </div>
       </div>
 
@@ -197,7 +197,7 @@
 
   <div class="site-credit-watermark" data-version-watermark>v273 · Made by Bruis</div>
 
-  <script src="./gejast-geo.js?v273"></script>
+  <script src="./gejast-geo.js?v274"></script><script src="./drinks-verify-float.js?v274"></script>
   <script>
   (function(){
     const cfg=window.GEJAST_CONFIG||{};
