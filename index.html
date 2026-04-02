@@ -578,7 +578,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v262';</script><script src="./gejast-config.js?v262"></script>
+  <script>window.GEJAST_PAGE_VERSION='v272';</script><script src="./gejast-config.js?v272"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -742,18 +742,44 @@
       return payload || {};
     }
 
+    let homepageGhostNamesPromise = null;
+    async function getHomepageGhostNames(){
+      if (homepageGhostNamesPromise) return homepageGhostNamesPromise;
+      homepageGhostNamesPromise = (async()=>{
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_ghost_filter`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({}) });
+          const data = await parseResponse(res);
+          const payload = data?.get_public_ghost_filter || (Array.isArray(data) ? data[0]?.get_public_ghost_filter || data[0] : data) || {};
+          return new Set((Array.isArray(payload?.hidden_names) ? payload.hidden_names : []).map((name)=>String(name || '').trim().toLowerCase()).filter(Boolean));
+        } catch (_) {
+          return new Set();
+        }
+      })();
+      return homepageGhostNamesPromise;
+    }
+
+    function filterHomepageRows(rows, hiddenNames){
+      const list = Array.isArray(rows) ? rows : [];
+      if (!hiddenNames || !hiddenNames.size) return list;
+      return list.filter((row)=>{
+        const raw = String(row?.player_name || row?.display_name || '').trim().toLowerCase();
+        return raw ? !hiddenNames.has(raw) : true;
+      });
+    }
+
     function playerHref(name, game=''){ const qs = new URLSearchParams(); if (name) qs.set('player', name); if (game) qs.set('game', game); return `./player.html?${qs.toString()}`; }
-    function renderHomepageLadders(payload) {
+    async function renderHomepageLadders(payload) {
       const root = document.getElementById('ladderGrid');
       if (!root) return;
       const source = unwrapHomepageLadderPayload(payload);
+      const hiddenNames = await getHomepageGhostNames();
       const groups = [
         { key:'klaverjas', label:'Klaverjassen', rows: source?.klaverjas || [] },
         { key:'boerenbridge', label:'Boerenbridge', rows: source?.boerenbridge || [] },
         { key:'beerpong', label:'Beerpong', rows: source?.beerpong || [] }
       ];
       root.innerHTML = groups.map((group) => {
-        const rows = Array.isArray(group.rows) ? group.rows : [];
+        const rows = filterHomepageRows(group.rows, hiddenNames);
         const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><a class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800" href="${playerHref(String(row.player_name || row.display_name || ''), group.key)}" onclick="event.stopPropagation()">${String(row.player_name || row.display_name || 'Onbekend')}</a><div class="ladder-elo" style="color:var(--gold);font-weight:900">${Math.round(Number(row.elo_rating || row.rating || 1000))}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen ladderdata.</div>';
         return `<article class="ladder-card" role="link" tabindex="0" data-route="${HOMEPAGE_LADDER_ROUTES[group.key]}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none">Top 5</span></div>${body}</article>`;
       }).join('');
@@ -781,13 +807,13 @@
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_homepage_ladders_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({}) });
         const data = await parseResponse(res);
-        renderHomepageLadders(data || {});
+        await renderHomepageLadders(data || {});
         setHomepageLiveState('live', 'Live');
       } catch (err) {
         console.warn('Homepage ladders primary RPC failed, trying fallback', err);
         try {
           const fallback = await fetchHomepageLadderFallback();
-          renderHomepageLadders(fallback || {});
+          await renderHomepageLadders(fallback || {});
           setHomepageLiveState('live', 'Live');
         } catch (fallbackErr) {
           console.warn('Homepage ladders offline', fallbackErr);
@@ -1078,16 +1104,24 @@
         const sessionRows = normaliseUnitRows(payload.session_top5 || []);
         const allTimeRows = normaliseUnitRows(payload.all_time_top5 || []);
 
-        const rawSpeedGroups = Array.isArray(payload.speed_top5_by_type) && payload.speed_top5_by_type.length ? payload.speed_top5_by_type : [];
-        const speedGroups = rawSpeedGroups
-          .filter((g)=>String(g?.key||g?.speed_type_key||'').toLowerCase() !== 'shot')
-          .map((g)=>({
-            key:g.key || g.speed_type_key,
-            label:g.label || g.speed_type_label || '1 Bak',
-            rows:normaliseSpeedRows(Array.isArray(g.rows)?g.rows:[])
-          }))
-          .filter((g)=>g.rows.length);
-        const currentSpeedGroup = speedGroups.length ? speedGroups[(window.__gejastSpeedRotateIdx = ((window.__gejastSpeedRotateIdx||-1) + 1) % speedGroups.length)] : { key:'bier', label:'1 Bak', rows:[] };
+        const rawSpeedGroups = Array.isArray(payload.speed_top5_by_type) ? payload.speed_top5_by_type : [];
+        const speedMap = new Map(rawSpeedGroups.map((g)=>[String(g?.key||g?.speed_type_key||'').toLowerCase(), g]));
+        const preferredSpeedGroups = [
+          { key:'bier', label:'1 Bak' },
+          { key:'2bakken', label:'2 Bakken' },
+          { key:'ice', label:'Ice' },
+          { key:'liter_bier', label:'Liter Bier' },
+          { key:'wijnfles', label:'Fles Wijn' }
+        ];
+        const speedGroups = preferredSpeedGroups.map((fallback)=>{
+          const source = speedMap.get(fallback.key) || {};
+          return {
+            key: fallback.key,
+            label: source.label || source.speed_type_label || fallback.label,
+            rows: normaliseSpeedRows(Array.isArray(source.rows) ? source.rows : [])
+          };
+        });
+        const currentSpeedGroup = speedGroups[(window.__gejastSpeedRotateIdx = ((window.__gejastSpeedRotateIdx||-1) + 1) % speedGroups.length)] || { key:'bier', label:'1 Bak', rows:[] };
 
         const groups = [
           { label: dayTitle, key:'./drinks.html', mode:'units', rows: sessionRows },

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alcohol toevoegen</title>
-  <script>window.GEJAST_PAGE_VERSION='v271';</script><script src="./gejast-config.js?v271"></script>
+  <script>window.GEJAST_PAGE_VERSION='v272';</script><script src="./gejast-config.js?v272"></script>
   <style>
     :root{
       --line:rgba(0,0,0,.09);
@@ -18,9 +18,9 @@
       --ink:#16120e;
       --ink-soft:#2b241d;
       --good:#587d4d;
-      --good-bg:#dbe8d2;
-      --bad:#9c5647;
-      --bad-bg:#ead4cf;
+      --good-bg:#d8e3d3;
+      --bad:#8d5f54;
+      --bad-bg:#e6d6d1;
       --pending-bg:#f1e4bb;
       --pending-border:#b39147;
       --pending-text:#5f4615;
@@ -30,6 +30,15 @@
       --recent-bg:#dbe4eb;
       --recent-border:#6b8293;
       --recent-text:#314351;
+      --pending-item-bg:#6f4f14;
+      --pending-item-border:#b39147;
+      --pending-item-text:#fff7df;
+      --verify-item-bg:#476047;
+      --verify-item-border:#7fa06e;
+      --verify-item-text:#f4fbef;
+      --recent-item-bg:#455b68;
+      --recent-item-border:#8ba3b5;
+      --recent-item-text:#f6fbff;
     }
     *{box-sizing:border-box}
     body{
@@ -49,6 +58,7 @@
     }
     .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
     .top-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .top-actions.right{margin-left:auto;gap:10px}
     .btn,.geo-btn{
       display:inline-flex;align-items:center;justify-content:center;gap:8px;
       min-height:44px;padding:10px 14px;border-radius:999px;border:1px solid rgba(0,0,0,.08);
@@ -58,13 +68,14 @@
     .btn.alt{background:#f3efe6;color:#111}
     .logo{width:52px;height:52px;object-fit:contain;flex:0 0 auto}
     .geo-btn{
-      min-width:44px;padding:10px 12px;background:var(--bad-bg);color:var(--bad);border-color:rgba(156,86,71,.28);
-      transition:background .18s ease,color .18s ease,border-color .18s ease,transform .1s ease;
+      min-width:56px;min-height:56px;padding:0;background:var(--bad-bg);color:var(--bad);border-color:rgba(141,95,84,.22);
+      box-shadow:0 8px 18px rgba(0,0,0,.05);margin-right:10px;
+      transition:background .18s ease,color .18s ease,border-color .18s ease,transform .1s ease,box-shadow .18s ease;
     }
-    .geo-btn svg{width:16px;height:16px;display:block}
-    .geo-btn.is-ready{background:var(--good-bg);color:var(--good);border-color:rgba(88,125,77,.28)}
+    .geo-btn svg{width:24px;height:24px;display:block}
+    .geo-btn.is-ready{background:var(--good-bg);color:var(--good);border-color:rgba(88,125,77,.22)}
     .geo-btn:active,.drink-btn:active,.action-btn:active{transform:translateY(1px)}
-    .drink-types{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px}
+    .drink-types{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(3,auto);grid-auto-flow:column;gap:10px;margin-bottom:14px}
     .drink-btn{
       display:grid;gap:4px;padding:16px 14px;border-radius:22px;border:1px solid var(--line-strong);
       cursor:pointer;text-align:left;font:inherit;min-height:92px;align-content:center;
@@ -80,9 +91,15 @@
     .panel.pending{background:var(--pending-bg);border-color:var(--pending-border);color:var(--pending-text)}
     .panel.verify{background:var(--verify-bg);border-color:var(--verify-border);color:var(--verify-text)}
     .panel.recent{background:var(--recent-bg);border-color:var(--recent-border);color:var(--recent-text)}
-    .panel .muted,.panel .meta,.panel .verify-distance{color:inherit;opacity:.88}
+    .panel .muted,.panel .meta,.panel .verify-distance{color:inherit;opacity:.9}
     .list{display:grid;gap:10px}
-    .row,.verify-card{background:rgba(255,255,255,.72);border:1px solid rgba(0,0,0,.10);border-radius:18px;padding:12px 13px}
+    .row,.verify-card{border-radius:18px;padding:12px 13px}
+    .panel.pending .row{background:var(--pending-item-bg);border:1px solid var(--pending-item-border);color:var(--pending-item-text)}
+    .panel.verify .verify-card{background:var(--verify-item-bg);border:1px solid var(--verify-item-border);color:var(--verify-item-text)}
+    .panel.recent .row{background:var(--recent-item-bg);border:1px solid var(--recent-item-border);color:var(--recent-item-text)}
+    .panel .pill{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.28);color:inherit}
+    .panel .action-btn.cancel{background:#fff2d4;color:#24180d}
+    .panel .action-btn.verify{background:#eef8e7;color:#22351d}
     .row-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
     .row-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
     .action-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:14px;border:0;font:800 .95rem/1 Inter,system-ui,sans-serif;cursor:pointer}
@@ -95,19 +112,21 @@
     .bottom-block{display:grid;gap:12px;margin-top:14px}
     .stats-card,.geo-card{background:#f9f5ee;border:1px solid var(--line);border-radius:18px;padding:13px 14px}
     .stats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-    .metric{background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px 11px}
-    .metric .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:800;margin-bottom:6px}
-    .metric .value{font-size:1rem;font-weight:900;line-height:1}
-    .metric .meta{margin-top:3px;font-size:.76rem;color:var(--muted)}
+    .metric{background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px 11px;min-height:84px;display:flex;flex-direction:column;justify-content:space-between}
+    .metric .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:800;margin-bottom:10px}
+    .metric .value{font-size:1.22rem;font-weight:900;line-height:1;margin-top:auto}
+    .metric .meta{display:none}
     .geo-copy{display:grid;gap:4px;font-size:.88rem;color:var(--muted)}
     .geo-copy strong{color:var(--ink)}
+    .geo-copy.compact strong{font-size:.95rem}
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;z-index:9999;padding:7px 12px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 12px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,.18)}
     @media (max-width:700px){
       body{padding:8px}
       .card{padding:12px}
       .topbar{margin-bottom:8px}
       .top-actions{gap:7px}
-      .btn,.geo-btn{min-height:42px;padding:10px 12px;font-size:.95rem}
+      .btn{min-height:42px;padding:10px 12px;font-size:.95rem}
+      .geo-btn{min-width:52px;min-height:52px;padding:0}
       .drink-types{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
       .drink-btn{min-height:88px;padding:15px 12px}
       .stats-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -124,15 +143,14 @@
           <a class="btn alt" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</a>
           <a class="btn alt" href="./drinks.html">Overzicht</a>
         </div>
-        <div class="top-actions">
+        <div class="top-actions right">
           <button class="geo-btn" id="geoStateBtn" type="button" aria-label="Geolocatie opnieuw proberen" title="Geolocatie opnieuw proberen">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M12 3v3"></path>
-              <path d="M12 18v3"></path>
-              <path d="M3 12h3"></path>
-              <path d="M18 12h3"></path>
-              <circle cx="12" cy="12" r="3.5"></circle>
-              <circle cx="12" cy="12" r="8.5"></circle>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 2.75v3"></path>
+              <path d="M12 18.25v3"></path>
+              <path d="M2.75 12h3"></path>
+              <path d="M18.25 12h3"></path>
+              <circle cx="12" cy="12" r="8.25"></circle>
             </svg>
           </button>
           <a href="./index.html"><img class="logo" src="./logo.png" alt="Logo" /></a>
@@ -166,19 +184,19 @@
         </section>
 
         <section class="geo-card">
-          <div class="geo-copy">
+          <div class="geo-copy compact">
             <strong>Locatie en verificatie</strong>
-            <div id="geoMetaLine">Geolocatie nog niet actief.</div>
-            <div id="geoAddressLine">Locatie is nodig voor verificaties en afstandschecks. Je kunt open aanvragen wel blijven annuleren zodra ze geladen zijn.</div>
+            <div id="geoMetaLine">Locatie niet actief.</div>
+            <div id="geoAddressLine">Verifiëren en afstandschecks werken pas met locatie. Open aanvragen kun je wel annuleren zodra ze geladen zijn.</div>
           </div>
         </section>
       </div>
     </div>
   </div>
 
-  <div class="site-credit-watermark" data-version-watermark>v271 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v272 · Made by Bruis</div>
 
-  <script src="./gejast-geo.js?v271"></script>
+  <script src="./gejast-geo.js?v272"></script>
   <script>
   (function(){
     const cfg=window.GEJAST_CONFIG||{};
@@ -189,6 +207,7 @@
     const statusLine=document.getElementById('statusLine');
     const geoStateBtn=document.getElementById('geoStateBtn');
     const AUTO_GEO_KEY='gejast_auto_geo_prompt_v1';
+    const DRINK_LAYOUT_ORDER=['bier','2bakken','liter_bier','shot','ice','wijnfles'];
     function token(){ for(const k of SESSION_KEYS){ const v=localStorage.getItem(k)||sessionStorage.getItem(k); if(v) return v; } return ''; }
     function headers(){ return {'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${KEY}`,Accept:'application/json'}; }
     async function parse(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch{ throw new Error(t||`HTTP ${res.status}`); } if(!res.ok) throw new Error(d?.message||d?.error||`HTTP ${res.status}`); return d; }
@@ -201,8 +220,8 @@
       const geo=window.GEJAST_GEO;
       if(!pos){
         setGeoButtonState(false);
-        metaEl.textContent='Geolocatie nog niet actief.';
-        addrEl.textContent='Locatie is nodig voor verificaties en afstandschecks. Je kunt open aanvragen wel blijven annuleren zodra ze geladen zijn.';
+        metaEl.textContent='Locatie niet actief.';
+        addrEl.textContent='Verifiëren en afstandschecks werken pas met locatie. Open aanvragen kun je wel annuleren zodra ze geladen zijn.';
         return;
       }
       setGeoButtonState(true);
@@ -214,18 +233,17 @@
     function drinkCopy(key){ const map={bier:'1 Bak', '2bakken':'2 Bakken', shot:'Shot', wijnfles:'Fles Wijn', ice:'Ice', liter_bier:'Liter Bier'}; return map[key]||key; }
     function renderButtons(types){
       const wrap=document.getElementById('drinkButtons');
-      const preferred=['bier','2bakken','shot','ice','wijnfles','liter_bier'];
-      const rows=[...(types||[])].sort((a,b)=>{ const ai=preferred.indexOf(a.key); const bi=preferred.indexOf(b.key); return (ai===-1?999:ai)-(bi===-1?999:bi) || String(drinkCopy(a.key)||a.label||a.key).localeCompare(String(drinkCopy(b.key)||b.label||b.key),'nl'); });
-      wrap.innerHTML=rows.length ? rows.map((t,index)=>`<button class="drink-btn ${index%2===0?'gold':'dark'}" data-drink-type="${t.key}"><strong>+ ${drinkCopy(t.key)||t.label||t.key}</strong><small>${Number(t.unit_value||0).toFixed(1)} units per stuk</small></button>`).join('') : '<div class="muted">Geen drinktypes gevonden.</div>';
+      const rows=[...(types||[])].sort((a,b)=>{ const ai=DRINK_LAYOUT_ORDER.indexOf(a.key); const bi=DRINK_LAYOUT_ORDER.indexOf(b.key); return (ai===-1?999:ai)-(bi===-1?999:bi) || String(drinkCopy(a.key)||a.label||a.key).localeCompare(String(drinkCopy(b.key)||b.label||b.key),'nl'); });
+      wrap.innerHTML=rows.length ? rows.map((t,index)=>`<button class="drink-btn ${(index%2===0)?'gold':'dark'}" data-drink-type="${t.key}"><strong>+ ${drinkCopy(t.key)||t.label||t.key}</strong><small>${Number(t.unit_value||0).toFixed(1)} units per stuk</small></button>`).join('') : '<div class="muted">Geen drinktypes gevonden.</div>';
       wrap.querySelectorAll('[data-drink-type]').forEach(btn=>btn.addEventListener('click',()=>submitDrink(btn.getAttribute('data-drink-type'))));
     }
     function renderSession(data){
       const totals=data.totals||{};
       const pending=(data.my_pending_events||[]).length;
       document.getElementById('sessionGrid').innerHTML=`
-        <div class="metric"><div class="label">Vandaag</div><div class="value">${Number(totals.today_units||0).toFixed(1)}</div><div class="meta">${totals.today_events||0} drankjes</div></div>
-        <div class="metric"><div class="label">Open aanvragen</div><div class="value">${pending}</div><div class="meta">Wacht op bevestiging</div></div>
-        <div class="metric"><div class="label">All-time</div><div class="value">${Number(totals.all_units||0).toFixed(1)}</div><div class="meta">${totals.all_events||0} drankjes</div></div>`;
+        <div class="metric"><div class="label">Vandaag</div><div class="value">${Number(totals.today_units||0).toFixed(1)}</div></div>
+        <div class="metric"><div class="label">Open aanvragen</div><div class="value">${pending}</div></div>
+        <div class="metric"><div class="label">All-time</div><div class="value">${Number(totals.all_units||0).toFixed(1)}</div></div>`;
     }
     function renderPending(rows){ const wrap=document.getElementById('pendingList'); wrap.innerHTML=(rows||[]).length ? (rows||[]).map(r=>`<div class="row"><div class="row-top"><div><strong>${r.event_type_label}</strong><div class="meta">${new Date(r.created_at).toLocaleString('nl-NL')} · ${Number(r.total_units||0).toFixed(1)} units</div></div><span class="pill">${r.status}</span></div><div class="row-actions"><button class="action-btn cancel" data-cancel-id="${r.id}">Annuleren</button></div></div>`).join('') : '<div class="muted">Nog geen open aanvragen.</div>'; wrap.querySelectorAll('[data-cancel-id]').forEach(btn=>btn.addEventListener('click',()=>cancelDrink(btn.getAttribute('data-cancel-id')))); }
     function renderVerify(rows){ const wrap=document.getElementById('verifyQueue'); wrap.innerHTML=(rows||[]).length ? (rows||[]).map(r=>`<div class="verify-card"><div class="row-top"><div><strong>${r.player_name} · ${r.event_type_label}</strong><div class="verify-distance">${Number(r.total_units||0).toFixed(1)} units${r.distance_m!=null ? ` · ${Math.round(r.distance_m)}m afstand` : ''}</div></div><span class="pill">check</span></div><div class="row-actions"><button class="action-btn verify" data-verify-id="${r.id}">Bevestigen</button></div></div>`).join('') : '<div class="muted">Nog geen verificaties in de buurt.</div>'; wrap.querySelectorAll('[data-verify-id]').forEach(btn=>btn.addEventListener('click',()=>verifyDrink(btn.getAttribute('data-verify-id')))); }
