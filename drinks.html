@@ -4,150 +4,216 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drinks overzicht</title>
-  <script>window.GEJAST_PAGE_VERSION='v274';</script><script src="./gejast-config.js?v274"></script>
+  <script>window.GEJAST_PAGE_VERSION='v275';</script><script src="./gejast-config.js?v275"></script>
   <style>
-    :root{--line:rgba(0,0,0,.08);--muted:#6b6257;--ok:#1f8f52;--bad:#b53a30;--card:#fff}
-    *{box-sizing:border-box}body{margin:0;padding:24px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(244,240,232,.9),rgba(244,240,232,.92)),url('./site-bg-desktop.webp') center/cover fixed;color:#201b16}
-    .wrap{max-width:1280px;margin:0 auto}.card{position:relative;background:rgba(255,251,245,.72);border:1px solid rgba(255,255,255,.65);border-radius:28px;padding:28px;box-shadow:0 20px 50px rgba(0,0,0,.08);backdrop-filter:blur(5px)}
-    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:none;cursor:pointer}.btn.alt{background:#f3efe6;color:#111;border:1px solid rgba(0,0,0,.08)}.logo{width:64px;height:64px;object-fit:contain}.hero-copy{max-width:760px}.muted{color:var(--muted)}
-    .status-line{min-height:20px;margin:10px 0 0;font-weight:700}.status-line.bad{color:var(--bad)}.status-line.ok{color:var(--ok)}
-    .session-grid,.split,.stats-grid,.metrics-grid{display:grid;gap:14px}.session-grid{grid-template-columns:repeat(5,minmax(0,1fr));margin-top:18px}.split{grid-template-columns:1.1fr .9fr;margin-top:18px}.stats-grid{grid-template-columns:1fr 1fr;margin-top:18px}.metrics-grid{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:18px}
-    .metric,.panel,.tile-link{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px}.metric .label,.mini-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:800;margin-bottom:8px}.metric .value{font-size:1.55rem;font-weight:900}.metric .meta{margin-top:4px;color:var(--muted)}
-    a.metric-link,a.tile-link{text-decoration:none;color:#201b16;display:block}.tile-link.dark{background:#111;color:#fff}.tile-link.dark .mini-label,.tile-link.dark .muted{color:rgba(255,255,255,.82)}.panel h2{margin:0 0 12px}.list{display:grid;gap:10px}.row,.verify-card{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:#fff;align-items:flex-start}.row-main{display:grid;gap:4px}.pill{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.pill.pending{background:#f3efe6;color:#7a6441}.pill.verified{background:#e8f6ec;color:#1f8f52}
-    .tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.tab{padding:9px 12px;border-radius:999px;border:1px solid var(--line);background:#f8f5ee;font-weight:800;cursor:pointer}.tab.active{background:#111;color:#fff}
-    .row-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.avatar{width:34px;height:34px;border-radius:999px;object-fit:cover;background:#f3efe6;border:1px solid var(--line)}
-    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
-    @media(max-width:1100px){.session-grid,.metrics-grid,.stats-grid,.split{grid-template-columns:1fr 1fr}}
-    @media(max-width:760px){body{padding:12px}.card{padding:16px}.session-grid,.metrics-grid,.stats-grid,.split{grid-template-columns:1fr}.metric .value{font-size:1.25rem}}
+    :root{
+      --bg:#ece7dc;--card:rgba(255,251,245,.94);--paper:#fffdfa;--line:rgba(54,40,20,.08);--line-strong:rgba(54,40,20,.14);
+      --ink:#201b16;--muted:#6b6257;--gold:#9a8241;--gold-soft:#eadcb0;--gold-warm:#c2a45f;--olive:#7b8763;--sage:#dbe3d2;
+      --blue:#6b8293;--sky:#dbe4eb;--shadow:0 18px 46px rgba(0,0,0,.08);
+    }
+    *{box-sizing:border-box} html{scroll-behavior:smooth}
+    body{margin:0;padding:22px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,231,220,.9),rgba(236,231,220,.94)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
+    .wrap{max-width:1440px;margin:0 auto}.shell{position:relative;background:var(--card);border:1px solid rgba(255,255,255,.7);border-radius:34px;padding:28px;box-shadow:var(--shadow);backdrop-filter:blur(4px)}
+    .hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:start}.hero-actions,.hero-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .hero-tools{justify-content:flex-end}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 16px;border-radius:999px;border:1px solid var(--line-strong);background:#111;color:#fff;text-decoration:none;font-weight:800;cursor:pointer}
+    .btn.alt{background:var(--paper);color:var(--ink)} .btn.gold{background:var(--gold-soft);color:#2c2417}
+    .hero h1{margin:12px 0 8px;font-size:clamp(2rem,4vw,3.6rem);line-height:1.02}.sub{color:var(--muted);max-width:780px;font-size:1.02rem}
+    .brand{display:flex;align-items:center;gap:10px}.brand img{width:68px;height:68px;object-fit:contain}.status-line{margin-top:10px;min-height:20px;font-weight:700}.status-line.bad{color:#8f443f}.status-line.ok{color:#46604a}
+    .metric-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-top:22px}.metric{display:grid;gap:8px;padding:18px;border-radius:24px;background:var(--paper);border:1px solid var(--line);min-height:128px;align-content:space-between;text-decoration:none;color:inherit}
+    .metric.gold{background:linear-gradient(180deg,#f5ecce,#efe1b3)} .metric.ink{background:#1a1714;color:#fff}.metric.ink .metric-label,.metric.ink .metric-note{color:rgba(255,255,255,.72)}
+    .metric-label{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#87724a;font-weight:800}.metric-value{font-size:2rem;font-weight:900;line-height:1}.metric-note{color:var(--muted);font-size:.95rem}
+    .grid{display:grid;gap:18px;margin-top:22px}.grid.two{grid-template-columns:minmax(0,1.08fr) minmax(320px,.92fr)}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.grid.quad{grid-template-columns:repeat(4,minmax(0,1fr))}
+    .panel{background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:20px;box-shadow:0 8px 16px rgba(0,0,0,.02)} .panel.tinted-gold{background:linear-gradient(180deg,#fbf6e8,#f5edd4)} .panel.tinted-sage{background:linear-gradient(180deg,#eff4eb,#e2ead9)} .panel.tinted-sky{background:linear-gradient(180deg,#eef4f8,#e4edf3)}
+    .panel-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-end;margin-bottom:14px}.panel-head h2{margin:0;font-size:1.45rem}.panel-head p{margin:4px 0 0;color:var(--muted)}
+    .list{display:grid;gap:10px}.item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 15px;border-radius:20px;border:1px solid var(--line);background:#fff}
+    .item.rich{align-items:flex-start}.item-left{display:flex;align-items:center;gap:12px;min-width:0}.item-main{display:grid;gap:4px;min-width:0}.item-title{font-weight:900;font-size:1.02rem}.item-sub{color:var(--muted);font-size:.93rem}.item-value{font-weight:900;font-size:1.08rem;white-space:nowrap;color:#2d2518}
+    .avatar{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:#f2ede2;display:grid;place-items:center;font-size:1.1rem;font-weight:900;color:#5d4820;overflow:hidden;flex:0 0 auto}.avatar img{width:100%;height:100%;object-fit:cover}
+    .pill{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.pill.gold{background:#f0e2b3;color:#6b5425}.pill.sage{background:#dde8d5;color:#3e5a35}.pill.sky{background:#dbe8f3;color:#425b6c}
+    .ladder-tabs{display:flex;flex-wrap:wrap;gap:8px}.tab{padding:9px 12px;border-radius:999px;border:1px solid var(--line);background:#faf6ed;font-weight:800;cursor:pointer}.tab.active{background:#111;color:#fff}
+    .hero-chart{display:grid;gap:14px}.bars{display:grid;gap:10px}.bar-row{display:grid;grid-template-columns:minmax(150px,1fr) minmax(0,2.5fr) auto;gap:12px;align-items:center}.bar-label{font-weight:800}.bar-track{height:14px;border-radius:999px;background:rgba(154,130,65,.12);overflow:hidden}.bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#8e7538,#c9ae6b)}.bar-fill.sage{background:linear-gradient(90deg,#657451,#98aa81)}.bar-fill.sky{background:linear-gradient(90deg,#577387,#96b0c1)}.bar-value{font-weight:800;color:#6b6257}
+    .mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.spotlight{padding:16px;border-radius:22px;border:1px solid var(--line);background:rgba(255,255,255,.72)} .spotlight h3{margin:0 0 4px;font-size:1rem}.spotlight .big{font-size:1.7rem;font-weight:900}
+    .chart-card{padding:18px;border:1px solid var(--line);border-radius:24px;background:linear-gradient(180deg,#fffdfa,#faf6ef)} .chart-card svg{display:block;width:100%;height:auto}
+    .section-stack{display:grid;gap:18px}.site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,.18)}
+    a.clean{color:inherit;text-decoration:none}.note{font-size:.92rem;color:var(--muted)}
+    @media(max-width:1180px){.metric-strip,.grid.quad{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.two,.grid.three{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.hero-tools{justify-content:flex-start}}
+    @media(max-width:760px){body{padding:12px}.shell{padding:18px;border-radius:24px}.metric-strip,.grid.quad,.mini-grid{grid-template-columns:1fr}.bar-row{grid-template-columns:1fr}.item{padding:12px}.metric{min-height:auto}.hero-actions,.hero-tools{width:100%}}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="card">
-      <div class="top">
-        <div class="hero-copy">
-          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+    <div class="shell">
+      <div class="hero">
+        <div>
+          <div class="hero-actions">
             <a class="btn alt" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</a>
+            <a class="btn alt" href="./drinks_add.html">Toevoegen</a>
             <a class="btn alt" href="./drinks_speed.html">Snelheid</a>
-            <button id="retryGeoBtn" class="btn alt" type="button">Geolocatie opnieuw proberen</button>
           </div>
-          <h1 style="margin:0 0 8px;font-size:42px">Drinks</h1>
-          <div class="muted">Gecombineerd overzicht voor ladders, statistieken en verificaties. Nieuwe drankjes voeg je alleen toe via de aparte mobiele invoerpagina.</div>
+          <h1>Drinks dashboard</h1>
+          <div class="sub">Een rustiger, rijker overzicht van wie het meest, het snelst en het hardst heeft gedronken. Alles wat op deze pagina staat is gericht op units, tempo, nachten, verificatie en type drank.</div>
           <div id="statusLine" class="status-line" aria-live="polite"></div>
         </div>
-        <a href="./index.html" aria-label="Home via logo"><img class="logo" src="./logo.png" alt="Logo" /></a>
+        <div class="hero-tools">
+          <button id="retryGeoBtn" class="btn gold" type="button">Geolocatie verversen</button>
+          <a class="brand" href="./index.html" aria-label="Home via logo"><img src="./logo.png" alt="Logo"/></a>
+        </div>
       </div>
 
-      <div id="sessionGrid" class="session-grid">
-        <div class="metric"><div class="label">Mijn sessie</div><div class="value">—</div><div class="meta">—</div></div>
-        <a class="metric metric-link" href="#ladderPanel"><div class="label">Vandaag</div><div class="value">—</div><div class="meta">—</div></a>
-        <a class="metric metric-link" href="#verifyPanel"><div class="label">Open verificaties</div><div class="value">—</div><div class="meta">—</div></a>
-        <a class="metric metric-link" href="#ladderPanel"><div class="label">All-time</div><div class="value">—</div><div class="meta">—</div></a>
-        <a class="tile-link" href="./drinks_add.html"><div class="mini-label">Actie</div><div style="font-size:1.15rem;font-weight:900">Drinks toevoegen</div><div class="muted" style="margin-top:6px">Mobiele invoer</div></a>
-      </div>
-      <div class="muted" id="geoMetaLine" style="margin-top:10px"></div>
-      <div class="muted" id="geoAddressLine" style="margin-top:4px"></div>
+      <div id="sessionGrid" class="metric-strip"></div>
+      <div class="note" id="geoMetaLine"></div>
+      <div class="note" id="geoAddressLine"></div>
 
-      <div class="split">
-        <div style="display:grid;gap:18px">
-          <section class="panel" id="ladderPanel">
-            <h2>Ladders</h2>
-            <div class="tabs">
+      <div class="grid two">
+        <div class="section-stack">
+          <section class="panel tinted-gold">
+            <div class="panel-head"><div><h2>Toplijsten</h2><p>Switch tussen dag, all-time en aantallen.</p></div></div>
+            <div class="ladder-tabs">
               <button class="tab active" data-ladder-key="today_units">Vandaag · units</button>
-                            <button class="tab" data-ladder-key="all_units">All-time · units</button>
-              <button class="tab" data-ladder-key="all_count">All-time · aantal</button>
+              <button class="tab" data-ladder-key="all_units">All-time · units</button>
+              <button class="tab" data-ladder-key="all_count">All-time · drankjes</button>
             </div>
-            <div id="ladderList" class="list"></div>
+            <div id="ladderList" class="list" style="margin-top:14px"></div>
           </section>
-          <section class="panel">
-            <h2>Recent bevestigd</h2>
-            <div id="recentList" class="list"><div class="muted">Nog geen bevestigde drankjes.</div></div>
+
+          <section class="panel tinted-sage" id="verifyPanel">
+            <div class="panel-head"><div><h2>Verificaties in de buurt</h2><p>Direct overzicht van wat je nu kunt beoordelen.</p></div><span class="pill sage">Live</span></div>
+            <div id="verifyQueue" class="list"><div class="note">Nog geen verificaties in de buurt.</div></div>
+          </section>
+
+          <section class="panel tinted-sky">
+            <div class="panel-head"><div><h2>Recent bevestigd</h2><p>Laatste geverifieerde drankjes met verifiers.</p></div></div>
+            <div id="recentList" class="list"><div class="note">Nog geen bevestigde drankjes.</div></div>
           </section>
         </div>
-        <div style="display:grid;gap:18px">
-          <section class="panel" id="verifyPanel">
-            <h2>Pending verificaties</h2>
-            <div id="verifyQueue" class="list"><div class="muted">Nog geen verificaties in de buurt.</div></div>
-          </section>
+
+        <div class="section-stack">
           <section class="panel">
-            <h2>Eerlijkheid & misbruik</h2>
-            <div id="fairnessList" class="list"><div class="muted">Nog geen fairness-data.</div></div>
+            <div class="panel-head"><div><h2>Snelheid per dranktype</h2><p>Verified speed records per categorie.</p></div><a class="clean" href="./drinks_speed.html"><span class="pill sky">Volledig overzicht</span></a></div>
+            <div id="speedHighlights" class="mini-grid"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><div><h2>Verdeling per drankje</h2><p>Welke dranktypes domineren het totaal?</p></div></div>
+            <div id="typeBars" class="hero-chart"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><div><h2>Grote nachten</h2><p>Hoogste dagtotaal per speler.</p></div></div>
+            <div id="bigNights" class="list"></div>
           </section>
         </div>
       </div>
 
-      <div id="statsMetrics" class="metrics-grid"></div>
-      <div class="stats-grid">
-        <section class="panel"><h2>Top op units</h2><div id="topUnits" class="list"></div></section>
-        <section class="panel"><h2>Top op aantal</h2><div id="topCount" class="list"></div></section>
+      <div class="grid three">
+        <section class="panel">
+          <div class="panel-head"><div><h2>Most units</h2><p>Wie heeft het meeste volume gepakt?</p></div></div>
+          <div id="topUnits" class="list"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><div><h2>Most drinks</h2><p>Wie tikt het vaakst een verzoek weg?</p></div></div>
+          <div id="topCount" class="list"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><div><h2>Top verifiers</h2><p>Wie houdt de data schoon?</p></div></div>
+          <div id="topVerifiers" class="list"></div>
+        </section>
       </div>
-      <div class="stats-grid">
-        <section class="panel"><h2>Per dranktype</h2><div id="byType" class="list"></div></section>
-        <section class="panel"><h2>Grootste avonden</h2><div id="bigNights" class="list"></div></section>
-      </div>
-      <div class="stats-grid">
-        <section class="panel"><h2>Top verifiers</h2><div id="topVerifiers" class="list"></div></section>
-        <section class="panel"><h2>Snelheid Top 5</h2><div id="speedTop5" class="list"></div></section>
+
+      <div class="grid two">
+        <section class="panel">
+          <div class="panel-head"><div><h2>Site-brede metrics</h2><p>Compacte samenvatting van drinkdrukte.</p></div></div>
+          <div id="statsMetrics" class="grid quad"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><div><h2>Fairness & balans</h2><p>Gezond genoeg om nog een ranglijst van te maken.</p></div></div>
+          <div id="fairnessList" class="list"></div>
+        </section>
       </div>
     </div>
   </div>
   <div class="site-credit-watermark" data-version-watermark></div>
-  <script src="./gejast-geo.js?v274"></script><script src="./drinks-verify-float.js?v274"></script>
+
   <script>
   (()=>{
-    const cfg=window.GEJAST_CONFIG||{};
-    const SUPABASE_URL=cfg.SUPABASE_URL||'';
-    const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
-    const SESSION_KEYS=['jas_session_token_v11','jas_session_token_v10'];
-    const AUTO_GEO_KEY='gejast_auto_geo_prompt_v1';
-    let latestPageData=null, latestTop5Data=null, latestStatsData=null, currentLadderKey='today_units', lastPosition=null;
-    function token(){ for(const k of SESSION_KEYS){ const v=localStorage.getItem(k)||sessionStorage.getItem(k); if(v) return v; } return ''; }
-    function headers(){ return {'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${KEY}`,Accept:'application/json'}; }
-    async function parse(res){ const t=await res.text(); let d=null; try{d=t?JSON.parse(t):null;}catch{throw new Error(t||`HTTP ${res.status}`);} if(!res.ok) throw new Error(d?.message||d?.error||d?.hint||`HTTP ${res.status}`); return d; }
-    function setStatus(msg='',tone=''){ const el=document.getElementById('statusLine'); el.textContent=msg; el.className=`status-line ${tone}`.trim(); }
-    async function getPosition(forceFresh=false,userInitiated=false){ const geo=window.GEJAST_GEO; if(!geo) throw new Error('Geolocatie helper ontbreekt.'); const pos=await geo.ensure(forceFresh,{silent:!userInitiated&&!forceFresh}); if(pos) geo.startWatch(); return pos; }
-    async function updateGeoInfo(pos){ const metaEl=document.getElementById('geoMetaLine'); const addrEl=document.getElementById('geoAddressLine'); const geo=window.GEJAST_GEO; if(!pos){ metaEl.textContent='Geolocatie nog niet actief.'; addrEl.textContent='Gebruik Geolocatie opnieuw proberen of een verificatie-actie om je locatie op te halen.'; return; } metaEl.textContent=`Jouw locatie: ${geo && geo.formatCoords ? geo.formatCoords(pos) : `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`}`; addrEl.textContent='Adres laden...'; const address=geo && geo.reverseGeocode ? await geo.reverseGeocode(pos.coords.latitude,pos.coords.longitude) : ''; addrEl.textContent=address ? `Adres: ${address}` : 'Adres onbekend'; }
-    function avatar(r){ const src=r.avatar_url||r.photo_url||''; return src?`<img class="avatar" src="${src}" alt="">`:`<div class="avatar"></div>`; }
-    function renderList(el,rows,fmt,empty='Nog geen data.'){ el.innerHTML=(rows&&rows.length)?rows.map(fmt).join(''):`<div class="muted">${empty}</div>`; }
-    function renderSession(data){ const s=data.session||{}; const totals=data.totals||{}; const pending=(data.verify_queue||[]).length || (data.my_pending_events||[]).length || 0; document.getElementById('sessionGrid').innerHTML=`
-      <div class="metric"><div class="label">Dagsessie</div><div class="value">${Number((s.units??totals.today_units)||0).toFixed(1)}</div><div class="meta">${(s.events??totals.today_events)||0} drankjes</div></div>
-      <a class="metric metric-link" href="#ladderPanel"><div class="label">Vandaag</div><div class="value">${Number(totals.today_units||0).toFixed(1)}</div><div class="meta">${totals.today_events||0} drankjes</div></a>
-      <a class="metric metric-link" href="#verifyPanel"><div class="label">Open verificaties</div><div class="value">${pending}</div><div class="meta">Bekijk pending verzoeken</div></a>
-      <a class="metric metric-link" href="#ladderPanel"><div class="label">All-time</div><div class="value">${Number(totals.all_units||0).toFixed(1)}</div><div class="meta">${totals.all_events||0} drankjes</div></a>
-      <a class="tile-link dark" href="./drinks_add.html"><div class="mini-label">Actie</div><div style="font-size:1.15rem;font-weight:900">Drinks toevoegen</div><div class="muted" style="margin-top:6px">Mobiele invoer</div></a>`; }
-    function renderLadder(){ const ladders=latestPageData?.ladders||{}; let rows=ladders[currentLadderKey]||[]; if((!rows||!rows.length) && latestTop5Data){ if(currentLadderKey==='today_units') rows=latestTop5Data.session_top5||[]; else if(currentLadderKey==='all_units') rows=latestTop5Data.all_time_top5||[]; } if((!rows||!rows.length) && latestStatsData && currentLadderKey==='all_count') rows=latestStatsData.top_count||[]; renderList(document.getElementById('ladderList'),rows,(r,i)=>`<div class="row"><div style="display:flex;gap:10px">${avatar(r)}<div class="row-main"><strong><a href="./player.html?player=${encodeURIComponent(r.display_name||r.player_name||'')}" style="text-decoration:none;color:#111">${r.display_name||r.player_name||'Speler'}</a></strong><div class="muted">#${i+1}</div></div></div><div><strong>${currentLadderKey.includes('count')?(r.event_count??r.events??0):Number(r.total_units??r.units??0).toFixed(1)}</strong></div></div>`); document.querySelectorAll('[data-ladder-key]').forEach(b=>b.classList.toggle('active',b.dataset.ladderKey===currentLadderKey)); }
-    function renderRecent(rows){ renderList(document.getElementById('recentList'),rows,(r)=>`<div class="row"><div style="display:flex;gap:10px">${avatar(r)}<div class="row-main"><strong>${r.player_name||r.display_name||'Speler'} · ${r.event_type_label||r.event_type_key||'Drankje'}</strong><div class="muted">${new Date(r.verified_at||r.created_at).toLocaleString('nl-NL')} · ${Number(r.total_units||0).toFixed(1)} units</div><div class="muted">Bevestigd door ${Array.isArray(r.verifier_names)&&r.verifier_names.length?r.verifier_names.join(', '):'—'}</div></div></div><span class="pill verified">ok</span></div>`,'Nog geen bevestigde drankjes.'); }
-    function renderVerify(rows){ renderList(document.getElementById('verifyQueue'),rows,(r)=>`<div class="verify-card"><div class="row-main"><strong>${r.player_name||'Speler'} · ${r.event_type_label||r.event_type_key||'Drankje'}</strong><div class="muted">${Number(r.total_units||0).toFixed(1)} units${r.distance_m!=null?` · ${Math.round(r.distance_m)}m afstand`:''}</div>${r.location_text?`<div class="muted">${r.location_text}</div>`:''}<div class="row-actions"><button class="btn" data-verify-id="${r.id}">Bevestigen</button></div></div><span class="pill pending">check</span></div>`,'Nog geen verificaties in de buurt.'); document.querySelectorAll('[data-verify-id]').forEach(btn=>btn.onclick=()=>verifyDrink(btn.dataset.verifyId)); }
-    function renderFairness(rows){ renderList(document.getElementById('fairnessList'),rows,(r)=>`<div class="row"><div class="row-main"><strong>${r.label||'Fairness'}</strong><div class="muted">${r.description||''}</div></div><strong>${r.value||''}</strong></div>`,'Nog geen fairness-data.'); }
-    function renderStats(data){ const totals=data.totals||{}; document.getElementById('statsMetrics').innerHTML=`<div class="metric"><div class="label">All-time drankjes</div><div class="value">${totals.all_events||0}</div></div><div class="metric"><div class="label">All-time units</div><div class="value">${Number(totals.all_units||0).toFixed(1)}</div></div><div class="metric"><div class="label">Deze maand</div><div class="value">${totals.month_events||0}</div></div><div class="metric"><div class="label">Open verificaties</div><div class="value">${totals.pending_events||0}</div></div>`;
-      renderList(document.getElementById('topUnits'),data.top_units,(r)=>`<div class="row"><div style="display:flex;gap:10px">${avatar(r)}<div class="row-main"><strong><a href="./player.html?player=${encodeURIComponent(r.player_name||r.display_name||'')}" style="text-decoration:none;color:#111">${r.player_name||r.display_name||'Speler'}</a></strong><div class="muted">${r.events||0} drankjes</div></div></div><strong>${Number(r.units||0).toFixed(1)}</strong></div>`);
-      renderList(document.getElementById('topCount'),data.top_count,(r)=>`<div class="row"><div style="display:flex;gap:10px">${avatar(r)}<div class="row-main"><strong><a href="./player.html?player=${encodeURIComponent(r.player_name||r.display_name||'')}" style="text-decoration:none;color:#111">${r.player_name||r.display_name||'Speler'}</a></strong><div class="muted">${Number(r.units||0).toFixed(1)} units</div></div></div><strong>${r.events||0}</strong></div>`);
-      renderList(document.getElementById('byType'),data.by_type,(r)=>`<div class="row"><div class="row-main"><strong>${r.label||r.key||'Type'}</strong><div class="muted">${r.events||0} drankjes</div></div><strong>${Number(r.units||0).toFixed(1)}</strong></div>`);
-      renderList(document.getElementById('bigNights'),data.big_nights,(r)=>`<div class="row"><div class="row-main"><strong><a href="./player.html?player=${encodeURIComponent(r.player_name||'')}" style="text-decoration:none;color:#111">${r.player_name||'Speler'}</a></strong><div class="muted">${r.night_at?new Date(r.night_at).toLocaleDateString('nl-NL'):''}</div></div><strong>${Number(r.units||0).toFixed(1)}</strong></div>`);
-      renderList(document.getElementById('topVerifiers'),data.top_verifiers,(r)=>`<div class="row"><div style="display:flex;gap:10px">${avatar(r)}<div class="row-main"><strong>${r.player_name||r.display_name||'Speler'}</strong></div></div><strong>${r.verifications||0}</strong></div>`);
+    const cfg=window.GEJAST_CONFIG||{}; const SUPABASE_URL=cfg.SUPABASE_URL||''; const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
+    let latestPageData=null, latestStatsData=null, latestTop5Data=null, currentLadderKey='today_units', lastPosition=null;
+    function token(){ return cfg.getPlayerSessionToken ? cfg.getPlayerSessionToken() : ''; }
+    function headers(){ return { apikey:KEY, Authorization:`Bearer ${KEY}`, 'Content-Type':'application/json', Accept:'application/json' }; }
+    async function parse(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch(_){ throw new Error(t||`HTTP ${res.status}`); } if(!res.ok) throw new Error(d?.message||d?.error||`HTTP ${res.status}`); return d; }
+    const fmt=(n,d=1)=>Number(n||0).toFixed(d);
+    const esc=(s)=>String(s??'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    function setStatus(msg='',kind=''){ const el=document.getElementById('statusLine'); el.textContent=msg||''; el.className=`status-line${kind?` ${kind}`:''}`; }
+    function avatar(row,name){ const src=row?.avatar_url||row?.photo_url||row?.profile_picture_url||''; const label=String(name||row?.display_name||row?.player_name||'Speler'); return src?`<div class="avatar"><img src="${esc(src)}" alt="${esc(label)}"></div>`:`<div class="avatar">${esc(label.slice(0,1).toUpperCase())}</div>`; }
+    function playerLink(name){ const v=String(name||'Speler'); return `<a class="clean" href="./player.html?player=${encodeURIComponent(v)}">${esc(v)}</a>`; }
+    function itemHtml(row,{title,sub,value,pill='',nameField='display_name'}){ const name=row?.[nameField]||row?.player_name||row?.display_name||''; return `<div class="item"><div class="item-left">${avatar(row,name)}<div class="item-main"><div class="item-title">${title(row,name)}</div><div class="item-sub">${sub?sub(row,name):''}</div></div></div><div style="display:grid;justify-items:end;gap:8px"><div class="item-value">${value(row,name)}</div>${pill||''}</div></div>`; }
+    function renderList(el, rows, factory, empty='Nog geen data.'){ rows=Array.isArray(rows)?rows:[]; el.innerHTML=rows.length?rows.map(factory).join(''):`<div class="note">${empty}</div>`; }
+    async function getPosition(force=false,userInitiated=false){
+      const geo=window.GEJAST_GEO; if(geo&&geo.requestPosition){ try{return await geo.requestPosition({forceFresh:!!force,userInitiated:!!userInitiated,timeoutMs:10000});}catch(_){ return null; } }
+      if(!navigator.geolocation) return null;
+      return new Promise((resolve)=>navigator.geolocation.getCurrentPosition(resolve,()=>resolve(null),{enableHighAccuracy:false,maximumAge:force?0:120000,timeout:10000}));
     }
-    async function loadStats(){ try{ const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_stats_public`,{method:'POST',headers:headers(),body:'{}'}); const raw=await parse(res); const data=raw?.get_drinks_stats_public||raw||{}; latestStatsData=data; renderStats(data);}catch(err){ console.warn('stats load failed',err); } try{ const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_top5_public`,{method:'POST',headers:headers(),body:'{}'}); const raw=await parse(res); const data=raw?.get_drinks_homepage_top5_public||raw||{}; latestTop5Data=data; renderList(document.getElementById('speedTop5'),data.speed_top5,(r)=>`<div class="row"><div style="display:flex;gap:10px">${avatar(r)}<div class="row-main"><strong><a href="./player.html?player=${encodeURIComponent(r.display_name||r.player_name||'')}" style="text-decoration:none;color:#111">${r.display_name||r.player_name||'Speler'}</a></strong></div></div><strong>${Number(r.duration_seconds||0).toFixed(1)}s</strong></div>`,'Nog geen speed-data.'); renderLadder(); }catch(err){ document.getElementById('speedTop5').innerHTML='<div class="muted">Nog geen speed-data.</div>'; } }
-    async function loadPage(forceGeo=false,userInitiated=false){ try{ const pos=(forceGeo||!lastPosition)?await getPosition(forceGeo,userInitiated):lastPosition; if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); const usePos=lastPosition||pos; const payload={session_token:token(),viewer_lat:usePos?usePos.coords.latitude:null,viewer_lng:usePos?usePos.coords.longitude:null}; const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:headers(),body:JSON.stringify(payload)}); const raw=await parse(res); const data=raw?.get_drinks_page_public||raw||{}; latestPageData=data; renderSession(data); renderRecent(data.recent_verified||[]); renderVerify(data.verify_queue||[]); renderFairness(data.fairness_cards||[]); renderLadder(); setStatus(usePos ? '' : 'Geolocatie nog niet actief. Overzicht is geladen; verificeren en afstandschecks werken pas met locatie.'); }catch(err){ setStatus(err.message||String(err),'bad'); } await loadStats(); }
-    async function verifyDrink(id){ try{ const pos=await getPosition(true,true); if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); const usePos=lastPosition||pos; if(!usePos) throw new Error('Geolocatie is nodig om een drankje te bevestigen.'); const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy,approve:true})}); await parse(res); setStatus('Drankje bevestigd.','ok'); await loadPage(false,false); }catch(err){ setStatus(err.message||String(err),'bad'); } }
-    async function tryAutoPrompt(){
+    async function updateGeoInfo(pos){
+      const meta=document.getElementById('geoMetaLine'); const addr=document.getElementById('geoAddressLine');
+      if(!pos){ meta.textContent='Geen actieve locatie. Ladders en statistieken laden wel, maar afstandschecks en verificaties blijven strenger.'; addr.textContent=''; return; }
+      const acc=Number(pos.coords?.accuracy||0); meta.textContent=`Locatie actief · nauwkeurigheid ${Math.round(acc||0)}m`; addr.textContent='';
+    }
+    function renderSession(data){
+      const s=data.session||{}; const totals=data.totals||{}; const pending=(data.verify_queue||[]).length || (data.my_pending_events||[]).length || 0;
+      document.getElementById('sessionGrid').innerHTML=`
+        <div class="metric gold"><div class="metric-label">Mijn tempo vandaag</div><div class="metric-value">${fmt(s.units??totals.today_units,1)}</div><div class="metric-note">${s.events??totals.today_events||0} drankjes</div></div>
+        <a class="metric" href="#verifyPanel"><div class="metric-label">Open verificaties</div><div class="metric-value">${pending}</div><div class="metric-note">Direct beoordelen</div></a>
+        <div class="metric"><div class="metric-label">Vandaag sitebreed</div><div class="metric-value">${fmt(totals.today_units,1)}</div><div class="metric-note">${totals.today_events||0} drankjes</div></div>
+        <div class="metric"><div class="metric-label">All-time units</div><div class="metric-value">${fmt(totals.all_units,1)}</div><div class="metric-note">${totals.all_events||0} drankjes</div></div>
+        <a class="metric ink" href="./drinks_add.html"><div class="metric-label">Actie</div><div class="metric-value">+</div><div class="metric-note">Drinks toevoegen</div></a>`;
+    }
+    function renderLadder(){
+      const ladders=latestPageData?.ladders||{}; let rows=ladders[currentLadderKey]||[];
+      if((!rows||!rows.length)&&latestTop5Data){ if(currentLadderKey==='today_units') rows=latestTop5Data.session_top5||[]; else if(currentLadderKey==='all_units') rows=latestTop5Data.all_time_top5||[]; }
+      if((!rows||!rows.length)&&latestStatsData&&currentLadderKey==='all_count') rows=latestStatsData.top_count||[];
+      renderList(document.getElementById('ladderList'),rows,(r,i)=>itemHtml(r,{title:(_,name)=>`${i+1}. ${playerLink(name)}`,sub:()=>currentLadderKey.includes('count')?`${fmt(r.units||r.total_units,1)} units`:`${r.event_count??r.events??0} drankjes`,value:()=>currentLadderKey.includes('count')?`${r.event_count??r.events??0}`:`${fmt(r.total_units??r.units,1)}`}),'Nog geen ladderdata.');
+      document.querySelectorAll('[data-ladder-key]').forEach(b=>b.classList.toggle('active',b.dataset.ladderKey===currentLadderKey));
+    }
+    function renderRecent(rows){ renderList(document.getElementById('recentList'),rows,(r)=>itemHtml(r,{title:(_,name)=>`${playerLink(name)} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}`,sub:()=>`${new Date(r.verified_at||r.created_at).toLocaleString('nl-NL')} · bevestigd door ${Array.isArray(r.verifier_names)&&r.verifier_names.length?esc(r.verifier_names.join(', ')):'—'}`,value:()=>`${fmt(r.total_units,1)}u`,pill:'<span class="pill sky">ok</span>'}),'Nog geen bevestigde drankjes.'); }
+    function renderVerify(rows){ renderList(document.getElementById('verifyQueue'),rows,(r)=>`<div class="item rich"><div class="item-left">${avatar(r,r.player_name)}<div class="item-main"><div class="item-title">${playerLink(r.player_name||'Speler')} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}</div><div class="item-sub">${fmt(r.total_units,1)} units${r.distance_m!=null?` · ${Math.round(r.distance_m)}m afstand`:''}</div>${r.location_text?`<div class="item-sub">${esc(r.location_text)}</div>`:''}<div style="margin-top:8px"><button class="btn" data-verify-id="${Number(r.id)}">Bevestigen</button></div></div></div><span class="pill sage">check</span></div>`,'Nog geen verificaties in de buurt.'); document.querySelectorAll('[data-verify-id]').forEach(btn=>btn.onclick=()=>verifyDrink(btn.dataset.verifyId)); }
+    function renderFairness(rows){ renderList(document.getElementById('fairnessList'),rows,(r)=>`<div class="item"><div class="item-main"><div class="item-title">${esc(r.label||'Fairness')}</div><div class="item-sub">${esc(r.description||'')}</div></div><div class="item-value">${esc(r.value||'')}</div></div>`,'Nog geen fairness-data.'); }
+    function renderBars(el, rows, valueKey, palette=''){ rows=Array.isArray(rows)?rows:[]; const max=Math.max(1,...rows.map(r=>Number(r?.[valueKey]??r?.units??r?.duration_seconds??0)||0)); el.innerHTML=rows.length?`<div class="bars">${rows.map(r=>{ const value=Number(r?.[valueKey]??r?.units??r?.duration_seconds??0)||0; const width=Math.max(7,(value/max)*100); return `<div class="bar-row"><div class="bar-label">${esc(r.label||r.key||r.player_name||r.display_name||'Onbekend')}</div><div class="bar-track"><div class="bar-fill ${palette}" style="width:${width}%"></div></div><div class="bar-value">${valueKey==='duration_seconds'?`${fmt(value,1)}s`:fmt(value,1)}</div></div>`; }).join('')}</div>`:'<div class="note">Nog geen data.</div>`; }
+    function renderSpeedHighlights(groups){ const el=document.getElementById('speedHighlights'); groups=Array.isArray(groups)?groups:[]; const usable=groups.filter(g=>String(g?.key||g?.speed_type_key||'').toLowerCase()!=='shot'); el.innerHTML=usable.length?usable.map((g,idx)=>{ const rows=Array.isArray(g.rows)?g.rows:[]; const best=rows[0]||{}; const name=best.display_name||best.player_name||'—'; return `<div class="spotlight"><h3>${esc(g.label||g.speed_type_label||'Drank')}</h3><div class="big">${rows.length?fmt(best.duration_seconds,1)+'s':'—'}</div><div class="note" style="margin-top:6px">${rows.length?playerLink(name):'Nog geen verified tijd.'}</div></div>`; }).join(''):'<div class="note">Nog geen speed-data.</div>'; }
+    function renderStats(data){
+      const totals=data.totals||{};
+      document.getElementById('statsMetrics').innerHTML=`
+        <div class="metric"><div class="metric-label">All-time drankjes</div><div class="metric-value">${totals.all_events||0}</div><div class="metric-note">Alle confirmed entries</div></div>
+        <div class="metric"><div class="metric-label">All-time units</div><div class="metric-value">${fmt(totals.all_units,1)}</div><div class="metric-note">Totale consumptie</div></div>
+        <div class="metric"><div class="metric-label">Deze maand</div><div class="metric-value">${totals.month_events||0}</div><div class="metric-note">Drankjes</div></div>
+        <div class="metric"><div class="metric-label">Pending</div><div class="metric-value">${totals.pending_events||0}</div><div class="metric-note">Wacht op check</div></div>`;
+      renderList(document.getElementById('topUnits'),data.top_units,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.events||0} drankjes`,value:()=>`${fmt(r.units,1)}u`}), 'Nog geen data.');
+      renderList(document.getElementById('topCount'),data.top_count,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${fmt(r.units,1)} units`,value:()=>`${r.events||0}`}), 'Nog geen data.');
+      renderList(document.getElementById('topVerifiers'),data.top_verifiers,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`Bevestigingen`,value:()=>`${r.verifications||0}`}), 'Nog geen data.');
+      renderList(document.getElementById('bigNights'),data.big_nights,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.night_at?new Date(r.night_at).toLocaleDateString('nl-NL'):''}`,value:()=>`${fmt(r.units,1)}u`}), 'Nog geen grote nachten.');
+      renderBars(document.getElementById('typeBars'), (data.by_type||[]).slice(0,8), 'units', 'sage');
+      renderFairness(data.fairness_cards||[]);
+    }
+    async function loadStats(){
+      try{ const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_stats_public`,{method:'POST',headers:headers(),body:'{}'}); const raw=await parse(res); latestStatsData=raw?.get_drinks_stats_public||raw||{}; renderStats(latestStatsData); }
+      catch(err){ console.warn('stats load failed',err); }
+      try{ const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_top5_public`,{method:'POST',headers:headers(),body:'{}'}); const raw=await parse(res); latestTop5Data=raw?.get_drinks_homepage_top5_public||raw||{}; renderSpeedHighlights(latestTop5Data.speed_top5_by_type||[]); renderLadder(); }
+      catch(err){ document.getElementById('speedHighlights').innerHTML='<div class="note">Nog geen speed-data.</div>'; }
+    }
+    async function loadPage(forceGeo=false,userInitiated=false){
       try{
-        const geo=window.GEJAST_GEO;
-        if(!geo) return;
-        if(lastPosition || geo.cached()) return;
-        if(sessionStorage.getItem(AUTO_GEO_KEY)==='1') return;
-        sessionStorage.setItem(AUTO_GEO_KEY,'1');
-        setStatus('Wachten op browserlocatie…');
-        const pos=await geo.request(true);
-        if(pos){ lastPosition=pos; geo.startWatch(); await updateGeoInfo(pos); await loadPage(false,false); }
-      }catch(_){
-        setStatus('');
-      }
+        const pos=(forceGeo||!lastPosition)?await getPosition(forceGeo,userInitiated):lastPosition; if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null);
+        const usePos=lastPosition||pos; const payload={session_token:token(),viewer_lat:usePos?usePos.coords.latitude:null,viewer_lng:usePos?usePos.coords.longitude:null};
+        const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:headers(),body:JSON.stringify(payload)}); const raw=await parse(res); latestPageData=raw?.get_drinks_page_public||raw||{};
+        renderSession(latestPageData); renderRecent(latestPageData.recent_verified||[]); renderVerify(latestPageData.verify_queue||[]); renderFairness(latestPageData.fairness_cards||[]); renderLadder(); setStatus(usePos?'':'Geolocatie nog niet actief. Overzicht werkt wel; verificaties blijven strikter zonder locatie.');
+      }catch(err){ setStatus(err.message||String(err),'bad'); }
+      await loadStats();
     }
-    document.querySelectorAll('[data-ladder-key]').forEach(btn=>btn.addEventListener('click',()=>{currentLadderKey=btn.dataset.ladderKey; renderLadder();}));
-    document.getElementById('retryGeoBtn').addEventListener('click',()=>{ lastPosition=null; loadPage(true,true); });
-    loadPage(false,false); tryAutoPrompt(); setInterval(()=>loadPage(false,false),15000); document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') loadPage(false,false); }); window.addEventListener('focus',()=>loadPage(false,false));
+    async function verifyDrink(id){ try{ const pos=await getPosition(true,true); if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); const usePos=lastPosition||pos; if(!usePos) throw new Error('Geolocatie is nodig om een drankje te bevestigen.'); const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy,approve:true})}); await parse(res); setStatus('Drankje bevestigd.','ok'); await loadPage(false,false);}catch(err){ setStatus(err.message||String(err),'bad'); } }
+    document.querySelectorAll('[data-ladder-key]').forEach(b=>b.onclick=()=>{ currentLadderKey=b.dataset.ladderKey; renderLadder(); });
+    document.getElementById('retryGeoBtn').onclick=()=>loadPage(true,true);
+    loadPage(false,false);
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <script src="./drinks-verify-float.js?v201"></script>
 </body>
 </html>
