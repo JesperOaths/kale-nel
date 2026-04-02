@@ -498,6 +498,19 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       return await parseResponse(res);
     }
 
+    async function validateOutboundEmailJob(jobId, options = {}) {
+      if (!jobId) return { ok:false, reasons:['missing_job_id'], message:'Mailjob-id ontbreekt.' };
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_validate_outbound_email_job`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), job_id_input: Number(jobId), mark_failed_input: options.markFailed !== false })
+      });
+      return await parseResponse(res);
+    }
+    function formatMailPreflight(validation) {
+      const reasons = Array.isArray(validation?.reasons) ? validation.reasons.filter(Boolean) : [];
+      return `Mailjob niet naar Make gestuurd: ${reasons.length ? reasons.join(', ') : (validation?.message || 'onvolledige mailpayload')}`;
+    }
+
     async function triggerMakeScenario(meta = {}) {
       if (!MAKE_WEBHOOK_URL) throw new Error('MAKE_WEBHOOK_URL ontbreekt in admin.js');
       const payload = buildMakeWebhookMeta('admin.js', meta);
@@ -552,10 +565,15 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     }
     async function sendActivationEmail(requestId) {
       const queued = await queueActivationEmail(requestId);
+      const jobId = queued?.job_id ?? queued?.id ?? null;
+      const validation = await validateOutboundEmailJob(jobId, { markFailed:true });
+      if (!validation?.ok) throw new Error(formatMailPreflight(validation));
       await triggerMakeScenario({
         reason: 'activation_email_queued',
         request_id: requestId,
-        job_id: queued?.job_id ?? queued?.id ?? null
+        job_id: jobId,
+        subject: queued?.subject ?? ((window.GEJAST_CONFIG && window.GEJAST_CONFIG.EMAIL_SUBJECT) || 'Activeer je account voor de Kale Nel'),
+        email_subject: queued?.email_subject ?? queued?.subject ?? ((window.GEJAST_CONFIG && window.GEJAST_CONFIG.EMAIL_SUBJECT) || 'Activeer je account voor de Kale Nel')
       });
       return queued;
     }

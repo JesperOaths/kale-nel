@@ -114,7 +114,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v262';</script><script src="./gejast-config.js?v262"></script>
+  <script>window.GEJAST_PAGE_VERSION='v288';</script><script src="./gejast-config.js?v288"></script>
   <script src="./admin-session-sync.js?v262"></script>
   <script src="./admin-topnav.js?v262"></script>
 </head>
@@ -504,16 +504,21 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
             if (decision === 'approved') {
               const prepared = await approveAndSendActivation(requestId, decisionReason || null);
               showActivationPanel(requestId, prepared);
+              const preparedJobId = prepared?.job_id ?? prepared?.queue_job_id ?? prepared?.id ?? null;
+              const preparedValidation = await validateOutboundEmailJob(preparedJobId, { markFailed:true });
+              if (!preparedValidation?.ok) throw new Error(formatMailPreflight(preparedValidation));
               const wake = await triggerMakeScenario({
                 reason: 'activation_email_queued',
                 request_id: requestId,
-                job_id: prepared?.job_id ?? prepared?.queue_job_id ?? prepared?.id ?? null,
+                job_id: preparedJobId,
                 player_id: prepared?.player_id ?? requestRow?.player_id ?? null,
                 display_name: prepared?.display_name ?? displayNameOf(requestRow),
                 email: prepared?.requester_email ?? requestRow?.requester_email ?? null,
                 activation_url: prepared?.activation_url ?? null,
                 expires_at: prepared?.expires_at ?? null,
-                created_at: requestRow?.created_at ?? null
+                created_at: requestRow?.created_at ?? null,
+                subject: prepared?.subject ?? ACTIVATION_EMAIL_SUBJECT,
+                email_subject: prepared?.email_subject ?? prepared?.subject ?? ACTIVATION_EMAIL_SUBJECT
               });
               if (msg) { msg.textContent = (prepared?.message || 'Wacht op activatie. Nieuwe activatielink en mail zijn klaargezet.') + ' — ' + formatMailDiagnostics(prepared, wake); msg.className = 'inline-msg ok'; }
               window.alert('Aanvraag goedgekeurd. Er is een nieuwe activatielink klaargezet, de verificatiemail is in de wachtrij gezet en Make is gepingd. De naam hoort nu onder wacht op activatie te staan tot de link echt is gebruikt.');
@@ -658,7 +663,10 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
             if (msg) { msg.textContent = 'Opnieuw klaarzetten...'; msg.className = 'inline-msg'; }
             const result = await requeueExpiredActivation(requestId);
             const item = (lastHistory || []).find((row) => Number(row.id) === Number(requestId)) || (lastRequests || []).find((row) => Number(row.id) === Number(requestId));
-            const wake = await triggerMakeScenario({ reason: 'expired_requeue_mail', request_id: requestId, job_id: result?.job_id ?? result?.queue_job_id ?? null, player_id: result?.player_id ?? item?.player_id ?? null, display_name: result?.display_name ?? displayNameOf(item), email: result?.requester_email ?? item?.requester_email ?? null, activation_url: result?.activation_url ?? null, expires_at: result?.expires_at ?? item?.expires_at ?? null, created_at: item?.created_at ?? null });
+            const resultJobId = result?.job_id ?? result?.queue_job_id ?? null;
+            const resultValidation = await validateOutboundEmailJob(resultJobId, { markFailed:true });
+            if (!resultValidation?.ok) throw new Error(formatMailPreflight(resultValidation));
+            const wake = await triggerMakeScenario({ reason: 'expired_requeue_mail', request_id: requestId, job_id: resultJobId, player_id: result?.player_id ?? item?.player_id ?? null, display_name: result?.display_name ?? displayNameOf(item), email: result?.requester_email ?? item?.requester_email ?? null, activation_url: result?.activation_url ?? null, expires_at: result?.expires_at ?? item?.expires_at ?? null, created_at: item?.created_at ?? null, subject: result?.subject ?? ACTIVATION_EMAIL_SUBJECT, email_subject: result?.email_subject ?? result?.subject ?? ACTIVATION_EMAIL_SUBJECT });
             await refreshAdminLists();
             if (msg) { msg.textContent = (result?.message || 'Nieuwe activatielink en mail zijn opnieuw klaargezet.') + ' — ' + formatMailDiagnostics(result, wake); msg.className = 'inline-msg ok'; }
             window.alert('De verlopen activatie is opnieuw klaargezet. Er is een nieuwe activatielink gemaakt, de mailjob is gequeued en Make is gepingd. De naam hoort nu weer onder Wacht op activatie te staan.');
@@ -993,7 +1001,10 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       try { await updateActivationEmailSubject(requestId); } catch {}
       const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
       const panel = document.getElementById(`activation-tools-${requestId}`);
-      await triggerMakeScenario({ reason: 'activation_email_queued', request_id: requestId, job_id: data?.job_id ?? data?.queue_job_id ?? data?.id ?? null, player_id: data?.player_id ?? req?.player_id ?? null, display_name: data?.display_name ?? displayNameOf(req), email: data?.requester_email ?? req?.requester_email ?? null, activation_url: data?.activation_url ?? panel?.dataset?.url ?? null, expires_at: data?.expires_at ?? panel?.dataset?.expiresAt ?? null, created_at: req?.created_at ?? null });
+      const dataJobId = data?.job_id ?? data?.queue_job_id ?? data?.id ?? null;
+      const dataValidation = await validateOutboundEmailJob(dataJobId, { markFailed:true });
+      if (!dataValidation?.ok) throw new Error(formatMailPreflight(dataValidation));
+      await triggerMakeScenario({ reason: 'activation_email_queued', request_id: requestId, job_id: dataJobId, player_id: data?.player_id ?? req?.player_id ?? null, display_name: data?.display_name ?? displayNameOf(req), email: data?.requester_email ?? req?.requester_email ?? null, activation_url: data?.activation_url ?? panel?.dataset?.url ?? null, expires_at: data?.expires_at ?? panel?.dataset?.expiresAt ?? null, created_at: req?.created_at ?? null, subject: data?.subject ?? ACTIVATION_EMAIL_SUBJECT, email_subject: data?.email_subject ?? data?.subject ?? ACTIVATION_EMAIL_SUBJECT });
       return data;
     }
     async function returnNameToClaimable(requestId, reason) {
@@ -1028,6 +1039,24 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       if (payload.expires_at && !payload.expires_at_local) payload.expires_at_local = formatDateTime(payload.expires_at);
       if (payload.created_at && !payload.created_at_local) payload.created_at_local = formatDateTime(payload.created_at);
       return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined && value !== null && value !== ''));
+    }
+
+    async function validateOutboundEmailJob(jobId, options = {}) {
+      if (!jobId) return { ok:false, reasons:['missing_job_id'], message:'Mailjob-id ontbreekt.' };
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_validate_outbound_email_job`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({
+          admin_session_token: getAdminSessionToken(),
+          job_id_input: Number(jobId),
+          mark_failed_input: options.markFailed !== false
+        })
+      });
+      return await parseResponse(res);
+    }
+
+    function formatMailPreflight(validation) {
+      const reasons = Array.isArray(validation?.reasons) ? validation.reasons.filter(Boolean) : [];
+      return `Mailjob niet naar Make gestuurd: ${reasons.length ? reasons.join(', ') : (validation?.message || 'onvolledige mailpayload')}`;
     }
 
     function formatMailDiagnostics(result, wake) {
@@ -1105,16 +1134,25 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const activationLink = panel?.dataset.url || '';
       const queued = await queueActivationEmail(requestId);
       try { await updateActivationEmailSubject(requestId); } catch {}
+      const jobId = queued?.job_id ?? queued?.id ?? null;
+      const validation = await validateOutboundEmailJob(jobId, { markFailed:true });
+      if (!validation?.ok) {
+        const err = new Error(formatMailPreflight(validation));
+        err.validation = validation;
+        throw err;
+      }
       await triggerMakeScenario({
         reason: 'activation_email_queued',
         request_id: requestId,
-        job_id: queued?.job_id ?? queued?.id ?? null,
+        job_id: jobId,
         player_id: queued?.player_id ?? req?.player_id ?? null,
         display_name: queued?.display_name ?? recipientName ?? displayNameOf(req),
         email: queued?.requester_email ?? recipientEmail,
         activation_url: queued?.activation_url ?? activationLink,
         expires_at: queued?.expires_at ?? panel?.dataset?.expiresAt ?? null,
-        created_at: req?.created_at ?? null
+        created_at: req?.created_at ?? null,
+        subject: queued?.subject ?? ACTIVATION_EMAIL_SUBJECT,
+        email_subject: queued?.email_subject ?? queued?.subject ?? ACTIVATION_EMAIL_SUBJECT
       });
       return queued;
     }
