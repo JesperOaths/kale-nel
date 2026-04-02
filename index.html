@@ -578,7 +578,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v276';</script><script src="./gejast-config.js?v277"></script>
+  <script>window.GEJAST_PAGE_VERSION='v276';</script><script src="./gejast-config.js?v278"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -1021,9 +1021,7 @@ function renderExtraPollState(data) {
   const legends = data.legends || data.yes_names || [];
   const losers = data.losers || data.no_names || [];
   const canCount = Number(data.can_count ?? data.yes_count ?? legends.length ?? 0);
-  const state = data.status_label
-    ? { key: data.status_key || 'no', label: data.status_label, copy: yesSaidCopy(canCount) }
-    : computeStateLabel(canCount);
+  const state = computeStateLabel(canCount);
   const word = document.getElementById('drinksStateWord');
   if (word) { word.textContent = state.label; word.className = `status-word ${state.key}`; }
   const copy = document.getElementById('drinksStateCopy'); if (copy) copy.textContent = state.copy;
@@ -1034,6 +1032,13 @@ function renderExtraPollState(data) {
   const inline = document.getElementById('drinksStateWordInline'); if (inline) inline.textContent = state.label;
   renderExtraNames('drinksLegendsList', legends, 'Nog niemand', 'legends');
   renderExtraNames('drinksLosersList', losers, 'Nog niemand', 'losers');
+  if (state.key === 'yes' && !hasPlayedExtraJaCelebration) {
+    hasPlayedExtraJaCelebration = true;
+    window.requestAnimationFrame(() => playJaCelebration('drinksStateWord'));
+  } else if (state.key !== 'yes') {
+    hasPlayedExtraJaCelebration = false;
+    clearJaCelebration('drinksStateWord');
+  }
   currentDrinksPollState = { ...(data || {}), computed_key: state.key, status_key: state.key };
 }
 async function getExtraPollState() {
@@ -1056,14 +1061,15 @@ async function castExtraPollVote(desired_status) {
       return { key: 'no', label: 'Nee', copy: yesSaidCopy(canCount) };
     }
     let hasPlayedJaCelebration = false;
-    function clearJaCelebration() {
-      const existing = document.querySelector('#stateWord .ja-party-burst');
+    let hasPlayedExtraJaCelebration = false;
+    function clearJaCelebration(targetId = 'stateWord') {
+      const existing = document.querySelector(`#${targetId} .ja-party-burst`);
       if (existing) existing.remove();
     }
-    function playJaCelebration() {
-      const word = document.getElementById('stateWord');
+    function playJaCelebration(targetId = 'stateWord') {
+      const word = document.getElementById(targetId);
       if (!word) return;
-      clearJaCelebration();
+      clearJaCelebration(targetId);
       const burst = document.createElement('span');
       burst.className = 'ja-party-burst';
       const specs = [
@@ -1146,10 +1152,10 @@ async function castExtraPollVote(desired_status) {
       if (data.my_name && document.getElementById('sessionHint')) document.getElementById('sessionHint').textContent = `Ingelogd als ${data.my_name}.`;
       if (state.key === 'yes' && !hasPlayedJaCelebration) {
         hasPlayedJaCelebration = true;
-        window.requestAnimationFrame(() => playJaCelebration());
+        window.requestAnimationFrame(() => playJaCelebration('stateWord'));
       } else if (state.key !== 'yes') {
         hasPlayedJaCelebration = false;
-        clearJaCelebration();
+        clearJaCelebration('stateWord');
       }
       currentHomepageState = { ...(data || {}), computed_key: state.key, status_key: state.key };
     }
