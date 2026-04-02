@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wedstrijden beheren</title>
-  <script>window.GEJAST_PAGE_VERSION='v262';</script>
-  <script src="./gejast-config.js?v262"></script>
-  <script src="./admin-session-sync.js?v262"></script>
+  <script>window.GEJAST_PAGE_VERSION='v265';</script>
+  <script src="./gejast-config.js?v265"></script>
+  <script src="./admin-session-sync.js?v265"></script>
   <style>
     :root{
       --bg:#e8e4d9;
@@ -20,7 +20,7 @@
     }
     *{box-sizing:border-box}
     body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:linear-gradient(rgba(232,228,217,.9),rgba(232,228,217,.92)),url('./wordtergejast.png') center/cover fixed}
-    .page{max-width:1180px;margin:0 auto;padding:24px 18px 64px}
+    .page{max-width:1180px;margin:0 auto;padding:54px 18px 64px}
     .hero,.panel,.row-card{background:rgba(246,243,234,.94);border:1px solid rgba(255,255,255,.45);border-radius:var(--radius);box-shadow:var(--shadow)}
     .hero{padding:24px 24px 18px;display:grid;gap:14px}
     .hero-top{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap}
@@ -62,7 +62,7 @@
     .section-title{margin:0 0 12px;font-size:20px}
     @media (max-width:920px){.layout{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}textarea{min-height:320px}}
   </style>
-  <script src="./admin-topnav.js?v262"></script>
+  <script src="./admin-topnav.js?v265"></script>
 
   <style id="page-floating-logo-style">
     .page-floating-logo{position:fixed;top:18px;right:18px;z-index:9998;display:inline-flex;width:64px;height:64px;border-radius:50%;background:rgba(255,251,245,.72);border:1px solid rgba(255,255,255,.65);box-shadow:0 14px 32px rgba(0,0,0,.10);align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
@@ -76,7 +76,7 @@
     <section class="hero">
       <div class="hero-top">
         <div>
-          <div class="pill">v262 · Made by Bruis</div>
+          <div class="pill">v265 · Made by Bruis</div>
           <h1>Wedstrijden beheren</h1>
           <p class="muted">Bewerk of verwijder je eigen inzendingen binnen 5 minuten. Met een adminsessie kun je alles beheren en rebuilds starten.</p>
         </div>
@@ -223,6 +223,11 @@
       state.rows = safeArray(data?.[state.game] || data || []);
       state.selected = null;
       renderList();
+      if(state.adminToken && !state.rows.length){
+        setStatus('Geen recente wedstrijden gevonden voor dit spel. Deze lijst toont nu ook oudere matches zonder client_match_id zodra v265 SQL live staat.', 'error');
+      } else {
+        setStatus('');
+      }
     }catch(err){
       els.matchList.innerHTML = `<div class="empty">${String(err.message || err)}</div>`;
       setStatus(String(err.message || err), 'error');
