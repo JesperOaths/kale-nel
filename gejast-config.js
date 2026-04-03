@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION: 'v289',
+    VERSION: 'v290',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -48,13 +48,32 @@
     localStorage.removeItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY);
     sessionStorage.removeItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY);
   }
-  function touchPlayerActivity(){
-    if (!getPlayerSessionToken()) return;
-    const ts = String(Date.now());
-    localStorage.setItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY, ts);
-    sessionStorage.setItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY, ts);
+  
+let lastTouchWriteAt = 0;
+let pendingTouchTimer = null;
+function writePlayerActivity(ts){
+  const value = String(ts || Date.now());
+  localStorage.setItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY, value);
+  sessionStorage.setItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY, value);
+  lastTouchWriteAt = Number(value) || Date.now();
+}
+function touchPlayerActivity(force=false){
+  if (!getPlayerSessionToken()) return;
+  const now = Date.now();
+  const throttleMs = 15000;
+  if (force || !lastTouchWriteAt || (now - lastTouchWriteAt) >= throttleMs){
+    if (pendingTouchTimer){ clearTimeout(pendingTouchTimer); pendingTouchTimer = null; }
+    writePlayerActivity(now);
+    return;
   }
-  function lastPlayerActivity(){
+  if (pendingTouchTimer) return;
+  pendingTouchTimer = window.setTimeout(()=>{
+    pendingTouchTimer = null;
+    if (getPlayerSessionToken()) writePlayerActivity(Date.now());
+  }, Math.max(250, throttleMs - (now - lastTouchWriteAt)));
+}
+function lastPlayerActivity(){
+
     const raw = localStorage.getItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY) || sessionStorage.getItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY) || '';
     const n = Number(raw || 0);
     return Number.isFinite(n) ? n : 0;
@@ -85,12 +104,12 @@
     const suppressLogout = !!options.suppressLogout;
     const logoutSelectors = options.logoutSelectors || ['#playerSessionCornerLogout','.player-session-corner-btn.logout','[data-player-logout]'];
     const touch = ()=> touchPlayerActivity();
-    ['pointerdown','keydown','scroll','touchstart','mousemove'].forEach((eventName)=>{
+    ['pointerdown','keydown','scroll','touchstart'].forEach((eventName)=>{
       window.addEventListener(eventName, touch, { passive:true });
     });
     document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) touch(); });
     window.addEventListener('focus', touch);
-    touch();
+    touch(true);
     if (suppressLogout){
       logoutSelectors.forEach((selector)=>{
         document.querySelectorAll(selector).forEach((el)=>{

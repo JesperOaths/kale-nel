@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inloggen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v288';</script>
+  <script>window.GEJAST_PAGE_VERSION='v290';</script>
   <style>
     :root { --gold: #9a8241; --dark-bg: #111; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.08); }
     * { box-sizing: border-box; }
@@ -45,7 +45,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/login.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v288"></script>
+  <script src="./gejast-config.js?v290"></script>
 </head>
 <body>
   <div class="site-scene">
@@ -199,6 +199,31 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return new URL('./activate.html', window.location.href).toString();
     }
     const ACTIVATION_EMAIL_SUBJECT = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.EMAIL_SUBJECT) || 'Activeer je account voor de Kale Nel';
+    
+function isValidEmail(value){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value||'').trim()); }
+function isLikelyHttpUrl(value){ return /^https?:\/\//i.test(String(value||'').trim()); }
+function hasUsefulMailContent(value){ return String(value||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().length >= 3; }
+function validateMakePayloadLocally(meta = {}) {
+  const reasons = [];
+  const email = String(meta.email || meta.recipient_email || '').trim();
+  const subject = String(meta.email_subject || meta.subject || '').trim();
+  const activationUrl = String(meta.activation_url || meta.reset_url || meta.url || '').trim();
+  const trigger = String(meta.trigger || 'activation_email_queued').trim();
+  if (!email) reasons.push('missing_email');
+  else if (!isValidEmail(email)) reasons.push('invalid_email');
+  if (!subject) reasons.push('missing_subject');
+  else if (!hasUsefulMailContent(subject)) reasons.push('blank_subject');
+  if (/activation|reset|reactivat/i.test(trigger) || activationUrl) {
+    if (!activationUrl) reasons.push('missing_activation_url');
+    else if (!isLikelyHttpUrl(activationUrl)) reasons.push('invalid_activation_url');
+  }
+  return {
+    ok: reasons.length === 0,
+    reasons,
+    message: reasons.length ? `Mailjob niet naar Make gestuurd: ${reasons.join(', ')}` : 'ok'
+  };
+}
+
     function buildMakeWebhookMeta(source, meta = {}) {
       const payload = { trigger: 'activation_email_queued', source, ts: new Date().toISOString(), ...meta };
       payload.subject = payload.subject || payload.email_subject || ACTIVATION_EMAIL_SUBJECT;
@@ -224,6 +249,8 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     async function triggerMakeScenario(meta = {}) {
       if (!MAKE_WEBHOOK_URL) return { via: 'disabled' };
       const payload = buildMakeWebhookMeta('login.html#pin-reset', meta);
+      const localValidation = validateMakePayloadLocally(payload);
+      if (!localValidation.ok) throw new Error(localValidation.message);
       const res = await fetch(MAKE_WEBHOOK_URL, {
         method: 'POST',
         mode: 'cors',
@@ -425,7 +452,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     load();
   </script>
 
-  <div class="site-credit-watermark" data-version-watermark>v288 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v290 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}

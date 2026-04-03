@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drinks overzicht</title>
-  <script>window.GEJAST_PAGE_VERSION='v281';</script><script src="./gejast-config.js?v281"></script>
+  <script>window.GEJAST_PAGE_VERSION='v290';</script><script src="./gejast-config.js?v290"></script>
   <style>
     :root{
       --bg:#ece7dc;--card:rgba(255,251,245,.94);--paper:#fffdfa;--line:rgba(54,40,20,.08);--line-strong:rgba(54,40,20,.14);
@@ -177,25 +177,97 @@
     function renderFairness(rows){ renderList(document.getElementById('fairnessList'),rows,(r)=>`<div class="item"><div class="item-main"><div class="item-title">${esc(r.label||'Fairness')}</div><div class="item-sub">${esc(r.description||'')}</div></div><div class="item-value">${esc(r.value||'')}</div></div>`,'Nog geen fairness-data.'); }
     function renderBars(el, rows, valueKey, palette=''){ rows=Array.isArray(rows)?rows:[]; const max=Math.max(1,...rows.map(r=>Number(r?.[valueKey]??r?.units??r?.duration_seconds??0)||0)); el.innerHTML=rows.length?`<div class="bars">${rows.map(r=>{ const value=Number(r?.[valueKey]??r?.units??r?.duration_seconds??0)||0; const width=Math.max(7,(value/max)*100); return `<div class="bar-row"><div class="bar-label">${esc(r.label||r.key||r.player_name||r.display_name||'Onbekend')}</div><div class="bar-track"><div class="bar-fill ${palette}" style="width:${width}%"></div></div><div class="bar-value">${valueKey==='duration_seconds'?`${fmt(value,1)}s`:fmt(value,1)}</div></div>`; }).join('')}</div>`:'<div class="note">Nog geen data.</div>`; }
     function renderSpeedHighlights(groups){ latestDashboardData=latestDashboardData||{}; latestDashboardData.speed_leaderboards=Array.isArray(groups)?groups:[]; const tabs=document.getElementById('speedTypeTabs'); const el=document.getElementById('speedHighlights'); const sets=latestDashboardData.speed_leaderboards||[]; if(!sets.length){ tabs.innerHTML=''; el.innerHTML='<div class="note">Nog geen speed-data.</div>'; return; } if(!currentSpeedType || !sets.some(s=>String(s.key||s.speed_type_key||'')===currentSpeedType)){ currentSpeedType=String(sets[0].key||sets[0].speed_type_key||''); } tabs.innerHTML=sets.map(s=>{ const key=String(s.key||s.speed_type_key||''); const label=esc(s.label||s.speed_type_label||key); return `<button class="tab ${key===currentSpeedType?'active':''}" data-speed-type="${esc(key)}">${label}</button>`; }).join(''); tabs.querySelectorAll('[data-speed-type]').forEach(btn=>btn.onclick=()=>{ currentSpeedType=btn.getAttribute('data-speed-type'); renderSpeedHighlights(sets); }); const active=sets.find(s=>String(s.key||s.speed_type_key||'')===currentSpeedType)||sets[0]; const rows=Array.isArray(active.rows)?active.rows:[]; renderList(el,rows,(r,i)=>itemHtml(r,{title:(_,name)=>`${i+1}. ${playerLink(name)}`,sub:()=>`${esc(active.label||active.speed_type_label||'Drank')} · beste tijd`,value:()=>`${fmt(r.duration_seconds,1)}s`}), 'Nog geen verified tijden voor dit dranktype.'); }
-    function renderStats(data){
-      const totals=data.totals||{};
-      document.getElementById('statsMetrics').innerHTML=`
-        <div class="metric"><div class="metric-label">All-time drankjes</div><div class="metric-value">${totals.all_events||0}</div><div class="metric-note">Alle confirmed entries</div></div>
-        <div class="metric"><div class="metric-label">All-time units</div><div class="metric-value">${fmt(totals.all_units,1)}</div><div class="metric-note">Totale consumptie</div></div>
-        <div class="metric"><div class="metric-label">Deze maand</div><div class="metric-value">${totals.month_events||0}</div><div class="metric-note">Drankjes</div></div>
-        <div class="metric"><div class="metric-label">Deze week</div><div class="metric-value">${totals.week_events||0}</div><div class="metric-note">Drankjes</div></div>`;
-      renderList(document.getElementById('topUnits'),data.top_units,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.events||0} drankjes · piek ${r.peak_at?new Date(r.peak_at).toLocaleDateString('nl-NL'):''}`,value:()=>`${fmt(r.units,1)}u`}), 'Nog geen data.');
-      renderList(document.getElementById('topCount'),data.top_count_all,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${fmt(r.units,1)} units totaal`,value:()=>`${r.events||0}`}), 'Nog geen data.');
-      renderList(document.getElementById('topCountNow'),[...(data.top_count_month||[]).slice(0,3),...(data.top_count_week||[]).slice(0,3)],(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.window_label||''} · ${fmt(r.units,1)} units`,value:()=>`${r.events||0}`}), 'Nog geen data.');
-      renderList(document.getElementById('bigNights'),data.big_nights,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.night_at?new Date(r.night_at).toLocaleDateString('nl-NL'):''} · hoogste avond`,value:()=>`${fmt(r.units,1)}u`}), 'Nog geen grote nachten.');
-      renderBars(document.getElementById('typeBars'), (data.by_type||[]).slice(0,8), 'units', 'sage');
-      renderFairness(data.fairness_cards||[]);
-      renderSpeedHighlights(data.speed_leaderboards||[]);
+
+function mapStatsPayload(raw){
+  const data = raw && typeof raw === 'object' ? raw : {};
+  const totals = data.totals || {};
+  const normalizedTopUnits = Array.isArray(data.top_units) ? data.top_units.map((r)=>({ ...r, units:Number(r.units ?? r.total_units ?? 0), events:Number(r.events ?? r.event_count ?? 0) })) : [];
+  const normalizedTopCount = Array.isArray(data.top_count_all) ? data.top_count_all : (Array.isArray(data.top_count) ? data.top_count : normalizedTopUnits.map((r)=>({ ...r, events:Number(r.events ?? r.event_count ?? 0), units:Number(r.units ?? r.total_units ?? 0) })).sort((a,b)=>Number(b.events||0)-Number(a.events||0) || Number(b.units||0)-Number(a.units||0)).slice(0,5));
+  return {
+    totals: {
+      all_events: Number(totals.all_events || totals.total_events || 0),
+      all_units: Number(totals.all_units || totals.total_units || 0),
+      month_events: Number(totals.month_events || 0),
+      week_events: Number(totals.week_events || 0),
+      today_events: Number(totals.today_events || 0),
+      today_units: Number(totals.today_units || 0)
+    },
+    top_units: normalizedTopUnits,
+    top_count_all: normalizedTopCount,
+    top_count_week: Array.isArray(data.top_count_week) ? data.top_count_week : [],
+    top_count_month: Array.isArray(data.top_count_month) ? data.top_count_month : [],
+    big_nights: Array.isArray(data.big_nights) ? data.big_nights : [],
+    by_type: Array.isArray(data.by_type) ? data.by_type : [],
+    fairness_cards: Array.isArray(data.fairness_cards) ? data.fairness_cards : [],
+    speed_leaderboards: Array.isArray(data.speed_leaderboards) ? data.speed_leaderboards : []
+  };
+}
+function deriveStatsFromPageData(pageData){
+  const recent = Array.isArray(pageData?.recent_verified) ? pageData.recent_verified : [];
+  const totals = pageData?.totals || {};
+  const grouped = new Map();
+  const typeMap = new Map();
+  for (const row of recent){
+    const name = String(row?.display_name || row?.player_name || 'Onbekend');
+    const units = Number(row?.total_units || 0) || 0;
+    const group = grouped.get(name) || { player_name:name, display_name:name, units:0, events:0, peak_at:row?.verified_at || row?.created_at || null };
+    group.units += units;
+    group.events += 1;
+    if (!group.peak_at || new Date(row?.verified_at || row?.created_at || 0) > new Date(group.peak_at || 0)) group.peak_at = row?.verified_at || row?.created_at || group.peak_at;
+    grouped.set(name, group);
+    const typeLabel = String(row?.event_type_label || row?.event_type_key || 'Drankje');
+    typeMap.set(typeLabel, (typeMap.get(typeLabel) || 0) + units);
+  }
+  const topUnits = Array.from(grouped.values()).sort((a,b)=>b.units-a.units || a.player_name.localeCompare(b.player_name)).slice(0,5);
+  const topCount = Array.from(grouped.values()).sort((a,b)=>b.events-a.events || b.units-a.units || a.player_name.localeCompare(b.player_name)).slice(0,5);
+  return {
+    totals: {
+      all_events: Number(totals.all_events || recent.length || 0),
+      all_units: Number(totals.all_units || recent.reduce((sum,row)=>sum + (Number(row?.total_units || 0) || 0), 0)),
+      month_events: Number(totals.month_events || 0),
+      week_events: Number(totals.week_events || 0),
+      today_events: Number(totals.today_events || 0),
+      today_units: Number(totals.today_units || 0)
+    },
+    top_units: topUnits,
+    top_count_all: topCount,
+    top_count_week: [],
+    top_count_month: [],
+    big_nights: Array.isArray(pageData?.verify_queue) ? pageData.verify_queue : [],
+    by_type: Array.from(typeMap.entries()).map(([label, units])=>({ label, units })).sort((a,b)=>b.units-a.units).slice(0,8),
+    fairness_cards: Array.isArray(pageData?.fairness_cards) ? pageData.fairness_cards : [],
+    speed_leaderboards: []
+  };
+}
+
+async function loadStats(){
+  let stats = null;
+  try{
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_dashboard_public`,{method:'POST',headers:headers(),body:'{}'});
+    const raw=await parse(res);
+    stats = mapStatsPayload(raw?.get_drinks_dashboard_public||raw||{});
+  }catch(err){
+    console.warn('dashboard load failed, trying fallbacks',err);
+  }
+  if((!stats || (!stats.top_units?.length && !stats.top_count_all?.length))){
+    try{
+      const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_stats_public`,{method:'POST',headers:headers(),body:'{}'});
+      const raw=await parse(res);
+      const fallback = mapStatsPayload(raw?.get_drinks_stats_public||raw||{});
+      stats = Object.assign({ totals:{}, top_count_all:[], top_count_week:[], top_count_month:[], big_nights:[], by_type:[], fairness_cards:[], speed_leaderboards:[] }, stats||{}, fallback);
+    }catch(err){
+      console.warn('stats fallback failed', err);
     }
-    async function loadStats(){
-      try{ const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_dashboard_public`,{method:'POST',headers:headers(),body:'{}'}); const raw=await parse(res); latestStatsData=raw?.get_drinks_dashboard_public||raw||{}; latestDashboardData=latestStatsData; renderStats(latestStatsData); renderLadder(); }
-      catch(err){ console.warn('dashboard load failed',err); document.getElementById('speedHighlights').innerHTML='<div class="note">Nog geen speed-data.</div>'; }
-    }
+  }
+  if((!stats || (!stats.top_units?.length && !stats.top_count_all?.length)) && latestPageData){
+    stats = deriveStatsFromPageData(latestPageData);
+  }
+  latestStatsData = stats || { totals:{}, top_units:[], top_count_all:[], top_count_week:[], top_count_month:[], big_nights:[], by_type:[], fairness_cards:[], speed_leaderboards:[] };
+  latestDashboardData = latestStatsData;
+  renderStats(latestStatsData);
+  renderLadder();
+}
+
     async function loadPage(forceGeo=false,userInitiated=false){
       try{
         const pos=(forceGeo||!lastPosition)?await getPosition(forceGeo,userInitiated):lastPosition; if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null);
@@ -212,6 +284,6 @@
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./drinks-verify-float.js?v281"></script>
+  <script src="./drinks-verify-float.js?v290"></script>
 </body>
 </html>

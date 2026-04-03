@@ -514,6 +514,8 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     async function triggerMakeScenario(meta = {}) {
       if (!MAKE_WEBHOOK_URL) throw new Error('MAKE_WEBHOOK_URL ontbreekt in admin.js');
       const payload = buildMakeWebhookMeta('admin.js', meta);
+      const localValidation = validateMakePayloadLocally(payload);
+      if (!localValidation.ok) throw new Error(localValidation.message);
       const payloadText = JSON.stringify(payload);
       const url = new URL(MAKE_WEBHOOK_URL);
       Object.entries(payload).forEach(([key, value]) => { if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value)); });
