@@ -34,45 +34,33 @@
     try { window.GEJAST_GEO && window.GEJAST_GEO.setButtonState && window.GEJAST_GEO.setButtonState(!!ready); } catch(_){}
   }
 
-  function shouldPromptNotifications(){
-    try {
-      if (!('Notification' in window) || Notification.permission !== "default") return false;
-      const key = "gejast_notification_prompt_visits_v1";
-      const count = Number(localStorage.getItem(key) || "0") + 1;
-      localStorage.setItem(key, String(count));
-      return count === 1 || count % 5 === 0;
-    } catch(_) { return false; }
-  }
+  function shouldPromptNotifications(){ return false; }
 
-  function ensureNotificationPrompt(){
-    let el = document.getElementById('gejastNotificationPrompt');
-    if (el || !shouldPromptNotifications()) return el;
-    el = document.createElement('div');
-    el.id = "gejastNotificationPrompt";
-    el.innerHTML = '<div class="gnp-card"><strong>Meldingen voor verificaties</strong><div class="gnp-copy">Wil je meldingen aanzetten? Dan kunnen we je sneller vragen om drankjes en speedruns te bevestigen wanneer jij daarvoor in aanmerking komt.</div><div class="gnp-actions"><button id="gnpEnable" class="gnp-btn">Toestaan</button><button id="gnpLater" class="gnp-btn alt">Later</button></div></div>';
-    const style = document.createElement('style');
-    style.textContent = '#gejastNotificationPrompt{position:fixed;right:14px;bottom:14px;z-index:9997;max-width:340px}#gejastNotificationPrompt .gnp-card{background:rgba(255,251,245,.97);border:1px solid rgba(0,0,0,.08);border-radius:18px;padding:14px;box-shadow:0 18px 40px rgba(0,0,0,.12);color:#201b16}.gnp-copy{font-size:13px;line-height:1.45;color:#5f564b;margin-top:6px}.gnp-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.gnp-btn{border:0;border-radius:999px;padding:9px 12px;font:inherit;font-weight:800;background:#9a8241;color:#111;cursor:pointer}.gnp-btn.alt{background:#111;color:#fff}@media(max-width:640px){#gejastNotificationPrompt{left:10px;right:10px;max-width:none;bottom:12px}}';
-    document.body.appendChild(style);
-    document.body.appendChild(el);
-    document.getElementById('gnpEnable').onclick = async()=>{ try { await Notification.requestPermission(); } catch(_){} el.remove(); };
-    document.getElementById('gnpLater').onclick = ()=> el.remove();
-    return el;
-  }
+  function ensureNotificationPrompt(){ return null; }
 
-  async function maybeAskNotificationPermission(){
-    ensureNotificationPrompt();
-  }
+  async function maybeAskNotificationPermission(){ return null; }
 
-  function notifyIfNeeded(item){
-    if (!item || !('Notification' in window) || Notification.permission !== 'granted' || document.visibilityState !== 'hidden') return;
+  async function notifyIfNeeded(item){
+    if (!item || document.visibilityState !== 'hidden') return;
     const id = `${item.kind||'drink'}:${item.id}`;
     if (id === lastNotificationId) return;
     lastNotificationId = id;
     try {
-      new Notification(item.kind === 'speed' ? 'Snelheid te verifiëren' : 'Drankje te verifiëren', {
-        body: `${item.player_name||'Speler'} · ${item.event_type_label || item.speed_type_label || ''}`.trim(),
-        silent: false
-      });
+      if (window.GEJAST_GEO && window.GEJAST_GEO.showNotificationFromServiceWorker) {
+        const ok = await window.GEJAST_GEO.showNotificationFromServiceWorker(item.kind === 'speed' ? 'Snelheid te verifiëren' : 'Drankje te verifiëren', {
+          body: `${item.player_name||'Speler'} · ${item.event_type_label || item.speed_type_label || ''}`.trim(),
+          tag: id,
+          data: { url: item.kind === 'speed' ? './drinks_speed.html' : './drinks.html#verifyPanel', itemId: item.id, kind: item.kind || 'drink' },
+          renotify: true
+        });
+        if (ok) return;
+      }
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(item.kind === 'speed' ? 'Snelheid te verifiëren' : 'Drankje te verifiëren', {
+          body: `${item.player_name||'Speler'} · ${item.event_type_label || item.speed_type_label || ''}`.trim(),
+          silent: false
+        });
+      }
     } catch(_){}
   }
 
@@ -100,6 +88,7 @@
       if (!payload || Date.now() - payload.at > 15000) return;
       activePromptId = '__approved__';
       const box = ensureBox();
+    const notifyPermission = window.GEJAST_GEO && window.GEJAST_GEO.notificationPermission ? window.GEJAST_GEO.notificationPermission() : 'unsupported';
       document.getElementById('gdfBody').innerHTML = `<strong>Verificatie goedgekeurd</strong><div class="gdf-meta">${payload.text || 'Je bevestiging is gebruikt.'}</div>`;
       document.getElementById('gdfVerifyBtn').style.display = 'none';
       document.getElementById('gdfRejectBtn').style.display = 'none';
@@ -228,6 +217,7 @@
     activePromptGraceUntil = Math.max(activePromptGraceUntil, Date.now() + 180000);
     maybeVibrate(item);
     const box = ensureBox();
+    const notifyPermission = window.GEJAST_GEO && window.GEJAST_GEO.notificationPermission ? window.GEJAST_GEO.notificationPermission() : 'unsupported';
     const locationBits = [];
     if (item.location_text) locationBits.push(item.location_text);
     if (item.distance_m != null) locationBits.push(`${Math.round(item.distance_m)}m afstand`);
@@ -237,7 +227,7 @@
     const promptLabel = item.kind==='speed' ? `${item.event_type_label || item.speed_type_label} · ${Number(item.duration_seconds||0).toFixed(1)}s` : `${item.event_type_label}`;
     document.getElementById('gdfTitle').textContent = item.kind==='speed' ? 'Snelheid verificatie' : 'Drinks verificatie';
     document.getElementById('gdfOpenBtn').textContent = item.kind==='speed' ? 'Open snelheid' : 'Open drinks';
-    document.getElementById('gdfBody').innerHTML = `<strong>${item.player_name} · ${promptLabel}</strong><div class="gdf-meta">${Number(item.total_units||0).toFixed(1)} units${item.kind==='speed' ? ` · ${Number(item.duration_seconds||0).toFixed(1)}s` : ''}${locationBits.length ? ' · ' + locationBits.join(' · ') : ''}</div><div class="gdf-meta">${Number(item.approve_votes||0)} voor · ${Number(item.reject_votes||0)} tegen${countdownText(item)?` · ${countdownText(item)}`:''}</div><div class="gdf-meta">${item.kind==='speed' ? 'Open snelheid om alle verificaties en status te zien.' : 'Open drinks om alle verificaties en status te zien.'}</div>`;
+    document.getElementById('gdfBody').innerHTML = `<strong>${item.player_name} · ${promptLabel}</strong><div class="gdf-meta">${Number(item.total_units||0).toFixed(1)} units${item.kind==='speed' ? ` · ${Number(item.duration_seconds||0).toFixed(1)}s` : ''}${locationBits.length ? ' · ' + locationBits.join(' · ') : ''}</div><div class="gdf-meta">${Number(item.approve_votes||0)} voor · ${Number(item.reject_votes||0)} tegen${countdownText(item)?` · ${countdownText(item)}`:''}</div><div class="gdf-meta">${item.kind==='speed' ? 'Open snelheid om alle verificaties en status te zien.' : 'Open drinks om alle verificaties en status te zien.'}</div>${notifyPermission !== 'granted' ? '<div class="gdf-meta">Tip: zet meldingen aan met de belknop naast je locatieknop.</div>' : ''}`;
     document.getElementById('gdfVerifyBtn').onclick = async () => { const body = document.getElementById('gdfBody'); body.querySelectorAll('.gdf-meta.error').forEach((n)=>n.remove()); try { await (item.kind==='speed' ? verifySpeedEvent(item, true) : verifyDrinkEvent(item, true)); } catch (err) { body.insertAdjacentHTML('beforeend', `<div class="gdf-meta error">${(err && err.message) || 'Bevestigen mislukt.'}</div>`); } };
     document.getElementById('gdfRejectBtn').onclick = async () => { const body = document.getElementById('gdfBody'); body.querySelectorAll('.gdf-meta.error').forEach((n)=>n.remove()); try { await (item.kind==='speed' ? verifySpeedEvent(item, false) : verifyDrinkEvent(item, false)); } catch (err) { body.insertAdjacentHTML('beforeend', `<div class="gdf-meta error">${(err && err.message) || 'Afkeuren mislukt.'}</div>`); } };
     document.getElementById('gdfOpenBtn').onclick = () => { location.href = item.kind==='speed' ? './drinks_speed.html' : './drinks.html#verifyPanel'; };
@@ -279,6 +269,7 @@
         const withinGrace = activePromptItem && activePromptId && activePromptId !== '__approved__' && Date.now() < activePromptGraceUntil;
         if (withinGrace) {
           const box = ensureBox();
+    const notifyPermission = window.GEJAST_GEO && window.GEJAST_GEO.notificationPermission ? window.GEJAST_GEO.notificationPermission() : 'unsupported';
           document.getElementById('gdfVerifyBtn').style.display = 'none';
       document.getElementById('gdfRejectBtn').style.display = 'none';
           document.getElementById('gdfTitle').textContent = activePromptItem.kind==='speed' ? 'Snelheid verificatie' : 'Drinks verificatie';
@@ -291,7 +282,7 @@
         pollBusy = false;
         return;
       }
-      notifyIfNeeded(item);
+      void notifyIfNeeded(item);
       if (document.visibilityState === 'hidden') { pollBusy = false; return; }
       renderPrompt(item);
     } catch {}
@@ -301,7 +292,7 @@
   function init(){
     ensureGeoButton();
     setGeoButtonState(!!(window.GEJAST_GEO && window.GEJAST_GEO.cached()));
-    ensureNotificationPrompt();
+    // native notification permission is now driven by the explicit bell button
     try { window.GEJAST_GEO && window.GEJAST_GEO.startMonitor && window.GEJAST_GEO.startMonitor({ intervalMs: HIDDEN_POLL_MS }); } catch(_){}
     window.addEventListener('gejast:geo-update', (ev)=>{ setGeoButtonState(!!(ev && ev.detail)); });
     window.addEventListener('gejast:geo-error', ()=>{ if (!(window.GEJAST_GEO && window.GEJAST_GEO.cached())) setGeoButtonState(false); });

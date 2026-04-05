@@ -1,11 +1,13 @@
 (function(){
   const CACHE_KEY = 'gejast_geo_cache_v5';
   const ADDRESS_KEY = 'gejast_geo_address_cache_v1';
+  const NOTIFY_LAST_KEY = 'gejast_notify_last_seen_v1';
   let watchId = null;
   let lastPos = null;
   let lastError = null;
   let monitorId = null;
   let visibilityBound = false;
+  let notifyStateCache = null;
 
   function normalize(pos, source='live'){
     if (!pos || !pos.coords) return null;
@@ -46,16 +48,154 @@
   async function reverseGeocode(lat,lng){ const key=coordsKey(lat,lng); try { const map=JSON.parse(localStorage.getItem(ADDRESS_KEY)||'{}'); if (map[key] && (Date.now()-map[key].at)<86400000) return map[key].address; } catch(_){} try { const res=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`,{headers:{Accept:'application/json'}}); const data=await res.json(); const address=data?.display_name||''; if (address) { try { const map=JSON.parse(localStorage.getItem(ADDRESS_KEY)||'{}'); map[key]={address,at:Date.now()}; localStorage.setItem(ADDRESS_KEY, JSON.stringify(map)); } catch(_){} } return address; } catch(_) { return ''; } }
   function formatCoords(pos){ if (!pos || !pos.coords) return ''; return `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)} · nauwkeurigheid ${Math.round(pos.coords.accuracy || 0)}m`; }
   function getLastError(){ return lastError; }
-  function ensureChromeStyle(){ if (document.getElementById('gejast-geo-chrome-style')) return; const style=document.createElement('style'); style.id='gejast-geo-chrome-style'; style.textContent=`.gejast-corner-tools{display:flex;align-items:center;gap:10px;flex:0 0 auto}.gejast-geo-button{display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:999px;border:1px solid rgba(0,0,0,.08);background:#ddd3cd;color:#7d6659;box-shadow:0 10px 24px rgba(0,0,0,.08);cursor:pointer;transition:background .18s ease,color .18s ease,border-color .18s ease,transform .12s ease}.gejast-geo-button svg{width:42px;height:42px;display:block;stroke:currentColor;stroke-width:6;stroke-linecap:round;stroke-linejoin:round}.gejast-geo-button:active{transform:translateY(1px)}.gejast-geo-button.is-ready{background:#d7dfd3;color:#627c57;border-color:rgba(98,124,87,.22)}.gejast-geo-button.is-bad{background:#ddd3cd;color:#8b6b61;border-color:rgba(139,107,97,.22)}.gejast-logo-chip{display:inline-flex;width:54px;height:54px;border-radius:999px;align-items:center;justify-content:center;background:rgba(255,251,245,.82);border:1px solid rgba(0,0,0,.08);box-shadow:0 10px 22px rgba(0,0,0,.08)}.gejast-logo-chip img{width:48px;height:48px;display:block;object-fit:contain}.gejast-top-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:nowrap}.gejast-top-row>:first-child{min-width:0}@media(max-width:640px){.gejast-corner-tools{gap:8px}.gejast-geo-button{width:58px;height:58px}.gejast-geo-button svg{width:38px;height:38px}.gejast-logo-chip{width:48px;height:48px}.gejast-logo-chip img{width:42px;height:42px}}`; document.head.appendChild(style); }
+
+  function ensureChromeStyle(){
+    if (document.getElementById('gejast-geo-chrome-style')) return;
+    const style=document.createElement('style'); style.id='gejast-geo-chrome-style'; style.textContent=`.gejast-corner-tools{display:flex;align-items:center;gap:10px;flex:0 0 auto}.gejast-geo-button,.gejast-notify-button{display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:999px;border:1px solid rgba(0,0,0,.08);background:#ddd3cd;color:#7d6659;box-shadow:0 10px 24px rgba(0,0,0,.08);cursor:pointer;transition:background .18s ease,color .18s ease,border-color .18s ease,transform .12s ease}.gejast-geo-button svg,.gejast-notify-button svg{width:42px;height:42px;display:block;stroke:currentColor;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}.gejast-geo-button:active,.gejast-notify-button:active{transform:translateY(1px)}.gejast-geo-button.is-ready,.gejast-notify-button.is-ready{background:#d7dfd3;color:#627c57;border-color:rgba(98,124,87,.22)}.gejast-geo-button.is-bad,.gejast-notify-button.is-bad{background:#ddd3cd;color:#8b6b61;border-color:rgba(139,107,97,.22)}.gejast-notify-button.is-pending{background:#f0e5bb;color:#7c6421;border-color:rgba(124,100,33,.26)}.gejast-notify-button.is-denied{background:#ead0cf;color:#934d4a;border-color:rgba(147,77,74,.26)}.gejast-logo-chip{display:inline-flex;width:54px;height:54px;border-radius:999px;align-items:center;justify-content:center;background:rgba(255,251,245,.82);border:1px solid rgba(0,0,0,.08);box-shadow:0 10px 22px rgba(0,0,0,.08)}.gejast-logo-chip img{width:48px;height:48px;display:block;object-fit:contain}.gejast-top-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:nowrap}.gejast-top-row>:first-child{min-width:0}.gejast-diagnostics-toast{position:fixed;right:14px;bottom:14px;z-index:10005;max-width:360px;background:rgba(17,17,17,.95);color:#fff;border-radius:18px;border:1px solid rgba(212,175,55,.34);padding:14px;box-shadow:0 16px 44px rgba(0,0,0,.34)}.gejast-diagnostics-toast strong{display:block;margin-bottom:8px}.gejast-diagnostics-toast .row{font-size:13px;line-height:1.45;color:rgba(255,255,255,.9)}.gejast-diagnostics-toast .muted{color:rgba(255,255,255,.7)}.gejast-diagnostics-toast .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.gejast-diagnostics-toast button{appearance:none;border:0;border-radius:999px;padding:8px 12px;font:inherit;font-weight:800;background:#9a8241;color:#111;cursor:pointer}.gejast-diagnostics-toast button.alt{background:rgba(255,255,255,.12);color:#fff}@media(max-width:640px){.gejast-corner-tools{gap:8px}.gejast-geo-button,.gejast-notify-button{width:58px;height:58px}.gejast-geo-button svg,.gejast-notify-button svg{width:38px;height:38px}.gejast-logo-chip{width:48px;height:48px}.gejast-logo-chip img{width:42px;height:42px}.gejast-diagnostics-toast{left:10px;right:10px;max-width:none;bottom:12px}}`;
+    document.head.appendChild(style);
+  }
+  function dismissDiagnostics(){ const el=document.getElementById('gejastDiagnosticsToast'); if (el) el.remove(); }
+  function showDiagnostics(title, rows, actions=[]){
+    dismissDiagnostics();
+    const box=document.createElement('div'); box.id='gejastDiagnosticsToast'; box.className='gejast-diagnostics-toast';
+    box.innerHTML=`<strong>${title}</strong>${rows.map((r)=>`<div class="row">${r}</div>`).join('')}<div class="actions"></div>`;
+    const host=box.querySelector('.actions');
+    actions.forEach((a)=>{ const btn=document.createElement('button'); btn.type='button'; btn.textContent=a.label; if (a.alt) btn.classList.add('alt'); btn.addEventListener('click', ()=>{ try{ a.onClick && a.onClick(); } finally { if (!a.keepOpen) dismissDiagnostics(); } }); host.appendChild(btn); });
+    if (!actions.length){ const btn=document.createElement('button'); btn.type='button'; btn.textContent='Sluiten'; btn.classList.add('alt'); btn.addEventListener('click', dismissDiagnostics); host.appendChild(btn); }
+    document.body.appendChild(box);
+    window.setTimeout(()=>{ const el=document.getElementById('gejastDiagnosticsToast'); if (el) el.remove(); }, 12000);
+  }
+
+  function notificationSupported(){ return !!(window.isSecureContext && 'Notification' in window && 'serviceWorker' in navigator); }
+  function notificationPermission(){ try { return notificationSupported() ? Notification.permission : 'unsupported'; } catch(_) { return 'unsupported'; } }
+  async function registerNotificationWorker(){
+    if (!notificationSupported()) return null;
+    try {
+      const reg = await navigator.serviceWorker.register('./gejast-sw.js?v292', { scope:'./' });
+      return await navigator.serviceWorker.ready.catch(()=>reg);
+    } catch(_) { return null; }
+  }
+  function urlBase64ToUint8Array(base64String){
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(base64); const output = new Uint8Array(raw.length);
+    for (let i=0;i<raw.length;i++) output[i] = raw.charCodeAt(i);
+    return output;
+  }
+  async function ensurePushSubscription(){
+    const cfg = window.GEJAST_CONFIG || {};
+    const vapid = String(cfg.WEB_PUSH_PUBLIC_KEY || '').trim();
+    if (!vapid || !('PushManager' in window)) return { supported: false, reason: vapid ? 'push-unavailable' : 'no-vapid-key', subscription: null };
+    const reg = await registerNotificationWorker();
+    if (!reg || !reg.pushManager) return { supported: false, reason:'sw-unavailable', subscription:null };
+    try {
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlBase64ToUint8Array(vapid) });
+      return { supported:true, reason:'ok', subscription:sub };
+    } catch(err) {
+      return { supported:false, reason:(err && err.message) || 'subscribe-failed', subscription:null };
+    }
+  }
+  async function getNotificationDiagnostics(){
+    const supported = notificationSupported();
+    const permission = notificationPermission();
+    let workerReady = false;
+    let pushSupported = false;
+    let subscribed = false;
+    let pushReason = '';
+    try {
+      if (supported) {
+        const reg = await registerNotificationWorker();
+        workerReady = !!reg;
+        pushSupported = !!(reg && reg.pushManager && 'PushManager' in window);
+        if (pushSupported) {
+          const sub = await reg.pushManager.getSubscription();
+          subscribed = !!sub;
+        }
+      }
+    } catch(err) { pushReason = (err && err.message) || ''; }
+    const state = { supported, permission, workerReady, pushSupported, subscribed, secure: !!window.isSecureContext, visibility: document.visibilityState, userAgent: navigator.userAgent || '', pushReason };
+    notifyStateCache = state;
+    announce('gejast:notification-state', state);
+    return state;
+  }
+  function setNotificationButtonState(permission, extras={}){
+    document.querySelectorAll('[data-gejast-notify-button]').forEach((btn)=>{
+      const p = permission || 'unsupported';
+      btn.classList.toggle('is-ready', p === 'granted');
+      btn.classList.toggle('is-pending', p === 'default');
+      btn.classList.toggle('is-denied', p === 'denied' || p === 'unsupported');
+      btn.classList.toggle('is-bad', p === 'denied' || p === 'unsupported');
+      let title = 'Meldingen instellen';
+      if (p === 'granted') title = extras.subscribed ? 'Meldingen actief' : 'Meldingen toegestaan';
+      else if (p === 'default') title = 'Meldingen inschakelen';
+      else if (p === 'denied') title = 'Meldingen geblokkeerd';
+      else if (p === 'unsupported') title = 'Meldingen niet ondersteund';
+      btn.title = title;
+      btn.setAttribute('aria-label', title);
+      btn.setAttribute('aria-pressed', p === 'granted' ? 'true' : 'false');
+    });
+  }
+  async function refreshNotificationButton(){
+    const state = await getNotificationDiagnostics();
+    setNotificationButtonState(state.permission, state);
+    return state;
+  }
+  async function requestNotificationAccess(){
+    if (!notificationSupported()) {
+      const rows = [
+        `<span class="muted">Deze browser ondersteunt webmeldingen hier niet goed of de site draait niet via https.</span>`,
+        `Secure context: ${window.isSecureContext ? 'ja' : 'nee'}`
+      ];
+      showDiagnostics('Meldingen niet beschikbaar', rows);
+      return { granted:false, reason:'unsupported' };
+    }
+    await registerNotificationWorker();
+    let permission = notificationPermission();
+    if (permission === 'default') {
+      try { permission = await Notification.requestPermission(); } catch(_) {}
+    }
+    const state = await refreshNotificationButton();
+    if (permission === 'granted') {
+      const sub = await ensurePushSubscription();
+      const updated = await refreshNotificationButton();
+      showDiagnostics('Meldingen ingesteld', [
+        `Browsertoestemming: ${updated.permission}`,
+        `Service worker: ${updated.workerReady ? 'klaar' : 'niet klaar'}`,
+        `Push-abonnement: ${sub.subscription ? 'actief' : (sub.reason === 'no-vapid-key' ? 'nog niet geconfigureerd op de server' : 'niet actief')}`
+      ], [{ label:'Sluiten', alt:true }]);
+      return { granted:true, state:updated, subscription:sub };
+    }
+    const actions=[];
+    if (permission === 'denied') actions.push({ label:'Instellingen uitleg', onClick:()=>showDiagnostics('Meldingen geblokkeerd', ['Zet meldingen voor deze site handmatig weer aan in je browser/site-instellingen.'], [{label:'Sluiten', alt:true}]), keepOpen:false });
+    showDiagnostics('Meldingen niet aangezet', [
+      `Browsertoestemming: ${permission}`,
+      permission === 'denied' ? 'De browser heeft meldingen voor deze site geblokkeerd.' : 'Je hebt de melding nog niet aangezet.'
+    ], [{ label:'Sluiten', alt:true }, ...actions]);
+    return { granted:false, reason:permission, state };
+  }
+  async function showNotificationFromServiceWorker(title, options={}){
+    if (!notificationSupported()) return false;
+    try {
+      const reg = await registerNotificationWorker();
+      if (!reg || notificationPermission() !== 'granted') return false;
+      await reg.showNotification(title || 'Gejast', Object.assign({ tag:'gejast-generic', badge:'./logo.png', icon:'./logo.png' }, options || {}));
+      try { localStorage.setItem(NOTIFY_LAST_KEY, String(Date.now())); } catch(_){}
+      return true;
+    } catch(_) { return false; }
+  }
   function bindGeoButton(btn){ if (!btn || btn.dataset.geoBound==='1') return; btn.dataset.geoBound='1'; btn.addEventListener('click', async()=>{ try { const pos = await request(true); if (pos) startMonitor(); setButtonState(!!pos); } catch(_) { setButtonState(false); } }); }
+  function bindNotifyButton(btn){ if (!btn || btn.dataset.notifyBound==='1') return; btn.dataset.notifyBound='1'; btn.addEventListener('click', async()=>{ await requestNotificationAccess(); }); }
   function createButton(){ const btn=document.createElement('button'); btn.type='button'; btn.className='gejast-geo-button is-bad'; btn.setAttribute('data-gejast-geo-button','1'); btn.setAttribute('aria-label','Geolocatie opnieuw proberen'); btn.title='Geolocatie opnieuw proberen'; btn.innerHTML='<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6v8M32 50v8M6 32h8M50 32h8"/><circle cx="32" cy="32" r="20" fill="none"/><circle cx="32" cy="32" r="9" fill="currentColor" stroke="none"/></svg>'; bindGeoButton(btn); return btn; }
+  function createNotifyButton(){ const btn=document.createElement('button'); btn.type='button'; btn.className='gejast-notify-button is-pending'; btn.setAttribute('data-gejast-notify-button','1'); btn.setAttribute('aria-label','Meldingen inschakelen'); btn.title='Meldingen inschakelen'; btn.innerHTML='<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 46h28"/><path d="M24 46V28c0-10 16-10 16 0v18"/><path d="M20 46c2-2 4-6 4-10"/><path d="M44 46c-2-2-4-6-4-10"/><path d="M28 52c1 3 3 4 4 4s3-1 4-4"/></svg>'; bindNotifyButton(btn); return btn; }
   function ensureCornerTools(){
     if (shouldExclude()) return null;
     ensureChromeStyle();
     let existing=document.querySelector('.gejast-corner-tools');
-    if (existing){ existing.querySelectorAll('[data-gejast-geo-button]').forEach(bindGeoButton); return existing; }
+    if (existing){ existing.querySelectorAll('[data-gejast-geo-button]').forEach(bindGeoButton); existing.querySelectorAll('[data-gejast-notify-button]').forEach(bindNotifyButton); return existing; }
     const row=document.querySelector('.topbar,.top,.hero-head,.page-head,.header-row,.page-header,.header-shell');
     existing=document.createElement('div'); existing.className='gejast-corner-tools'; existing.appendChild(createButton());
+    if ((window.GEJAST_CONFIG||{}).NOTIFICATION_BUTTON_ENABLED !== false) existing.appendChild(createNotifyButton());
     if (row){
       row.classList.add('gejast-top-row');
       let logoLink = row.querySelector('.gejast-logo-chip, a.brand, a.brand-link, a[href="./index.html"] img[src*="logo"], a[aria-label*="Home"] img[src*="logo"]');
@@ -73,7 +213,7 @@
     if (!host) return null; if (getComputedStyle(host).position==='static') host.style.position='relative'; existing.style.position='absolute'; existing.style.top='18px'; existing.style.right='18px'; host.appendChild(existing); return existing;
   }
   function setButtonState(ready){ document.querySelectorAll('[data-gejast-geo-button]').forEach((btn)=>{ btn.classList.toggle('is-ready',!!ready); btn.classList.toggle('is-bad',!ready); btn.title = ready ? 'Geolocatie actief' : 'Geolocatie opnieuw proberen'; btn.setAttribute('aria-pressed', ready ? 'true' : 'false'); }); }
-  window.GEJAST_GEO = { cached, ensure, request, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError, setButtonState, ensureCornerTools };
-  function init(){ if (!shouldExclude()) ensureCornerTools(); setButtonState(!!cached()); }
+  window.GEJAST_GEO = { cached, ensure, request, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError, setButtonState, ensureCornerTools, notificationSupported, notificationPermission, registerNotificationWorker, ensurePushSubscription, getNotificationDiagnostics, refreshNotificationButton, requestNotificationAccess, showNotificationFromServiceWorker, setNotificationButtonState, showDiagnostics };
+  function init(){ if (!shouldExclude()) ensureCornerTools(); setButtonState(!!cached()); refreshNotificationButton().catch(()=>{}); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once:true }); else init();
 })();
