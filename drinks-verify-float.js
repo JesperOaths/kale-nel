@@ -6,7 +6,7 @@
   const SESSION_KEYS = ['jas_session_token_v11','jas_session_token_v10'];
   const COOLDOWN_MS = 5 * 60 * 1000;
   const POLL_MS = 15000;
-  const HIDDEN_POLL_MS = 45000;
+  const HIDDEN_POLL_MS = 20000;
   const DISMISS_KEY = 'gejast_verify_float_dismiss';
   const APPROVED_KEY = 'gejast_verify_float_last_approved';
   const LAST_ALERT_KEY = 'gejast_verify_float_last_alert';
@@ -23,6 +23,7 @@
   let lastNotificationId = '';
 
   function token(){ for (const key of SESSION_KEYS){ const value = localStorage.getItem(key) || sessionStorage.getItem(key); if (value) return value; } return ''; }
+  function isSecretKingLike(item){ const raw=String(item?.event_type_key||item?.event_type_label||item?.label||item?.request_kind||'').toLowerCase(); return raw.includes('koning')||raw.includes('king')||raw.includes('balzaal')||raw.includes('ballroom'); }
   function headers(){ return {'Content-Type':'application/json', apikey:KEY, Authorization:`Bearer ${KEY}`, Accept:'application/json'}; }
   async function parse(res){ const t = await res.text(); let d = null; try { d = t ? JSON.parse(t) : null; } catch { throw new Error(t || `HTTP ${res.status}`); } if (!res.ok) throw new Error(d?.message || d?.error || `HTTP ${res.status}`); return d; }
 
@@ -156,9 +157,9 @@
         body: JSON.stringify({
           session_token: token(),
           drink_event_id: Number(item.id),
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          accuracy: pos.coords.accuracy,
+          lat: isSecretKingLike(item)?null:pos.coords.latitude,
+          lng: isSecretKingLike(item)?null:pos.coords.longitude,
+          accuracy: isSecretKingLike(item)?null:pos.coords.accuracy,
           approve: !!approve
         })
       });
@@ -242,12 +243,11 @@
     try {
       if (document.visibilityState === 'hidden') lastHiddenPollAt = Date.now();
       const pos = await getGeoForPolling(false);
-      if (!pos) { pollBusy = false; return; }
       let item = null;
       try {
         const speedRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_speed_page_public`, {
           method:'POST', headers: headers(),
-          body: JSON.stringify({session_token: token(), viewer_lat: pos.coords.latitude, viewer_lng: pos.coords.longitude})
+          body: JSON.stringify({session_token: token(), viewer_lat: pos?.coords?.latitude ?? null, viewer_lng: pos?.coords?.longitude ?? null})
         });
         const speedRaw = await parse(speedRes);
         const speedData = speedRaw?.get_drink_speed_page_public || speedRaw || {};
@@ -255,10 +255,23 @@
         if (speedItem && canShowFor(`speed:${speedItem.id}`)) { speedItem.kind = 'speed'; item = speedItem; }
       } catch (_) {}
       if (!item) {
+        try{
+          const allRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_all_pending_drink_event_verifications_public`, {
+            method:'POST',
+            headers: headers(),
+            body: JSON.stringify({session_token: token()})
+          });
+          const allRaw = await parse(allRes);
+          const allRows = allRaw?.get_all_pending_drink_event_verifications_public || allRaw || {};
+          const drinkItem = Array.isArray(allRows) ? allRows[0] : null;
+          if (drinkItem && canShowFor(`drink:${drinkItem.id}`)) { drinkItem.kind = 'drink'; item = drinkItem; }
+        }catch(_){}
+      }
+      if (!item) {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_event_vote_queue_public`, {
           method:'POST',
           headers: headers(),
-          body: JSON.stringify({session_token: token(), viewer_lat: pos.coords.latitude, viewer_lng: pos.coords.longitude})
+          body: JSON.stringify({session_token: token(), viewer_lat: pos?.coords?.latitude ?? null, viewer_lng: pos?.coords?.longitude ?? null})
         });
         const raw = await parse(res);
         const data = raw?.get_drink_event_vote_queue_public || raw || {};
