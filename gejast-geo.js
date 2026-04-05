@@ -93,6 +93,56 @@
   }
 
 
+
+  function browserLabel(){
+    const ua = navigator.userAgent || '';
+    if (isIOS()) return 'Safari';
+    if (/Chrome/i.test(ua)) return 'Chrome';
+    if (/Firefox/i.test(ua)) return 'Firefox';
+    if (/SamsungBrowser/i.test(ua)) return 'Samsung Internet';
+    return 'browser';
+  }
+  function openNotificationHelpSheet(state){
+    const rows = [
+      `Platform: ${platformName()} · ${browserLabel()}`,
+      state === 'denied' ? 'Meldingen staan nu geblokkeerd voor deze site.' : 'De browser heeft de meldingen-popup niet vrijgegeven.',
+      ...mobilePermissionHelp('notification', state),
+      isIOS() ? 'Safari/iPhone: open de browser-/site-instellingen voor deze website en zet meldingen weer aan. Open daarna de site opnieuw en druk weer op de bel.' : 'Android: open site-instellingen of browser-appinstellingen voor deze website en zet meldingen weer aan. Open daarna de site opnieuw en druk weer op de bel.'
+    ];
+    showDiagnostics('Hoe zet ik meldingen weer aan?', rows, [{ label:'Sluiten', alt:true }]);
+  }
+  async function openLocationHelpSheet(){
+    const state = await permissionState();
+    const rows = [
+      `Platform: ${platformName()} · ${browserLabel()}`,
+      state === 'denied' ? 'Locatie staat nu geblokkeerd voor deze site.' : 'De browser heeft de locatie-popup niet vrijgegeven.',
+      ...mobilePermissionHelp('location', state),
+      isIOS() ? 'Safari/iPhone: open de browser-/site-instellingen voor deze website en zet locatie weer aan. Open daarna de site opnieuw en druk weer op het vizier.' : 'Android: open site-instellingen of browser-appinstellingen voor deze website en zet locatie weer aan. Open daarna de site opnieuw en druk weer op het vizier.'
+    ];
+    showDiagnostics('Hoe zet ik locatie weer aan?', rows, [{ label:'Sluiten', alt:true }]);
+  }
+  function openNotificationPermissionSheet(){
+    const state = notificationPermission();
+    showDiagnostics('Meldingen opnieuw aanvragen', [
+      `Platform: ${platformName()} · ${browserLabel()}`,
+      'Druk hieronder op “Vraag opnieuw” om de browser nogmaals om meldingstoestemming te laten vragen.',
+      ...mobilePermissionHelp('notification', state)
+    ], [
+      { label:'Vraag opnieuw', onClick:()=>requestNotificationAccess() },
+      { label:'Hoe zet ik het weer aan?', onClick:()=>openNotificationHelpSheet(state) },
+      { label:'Sluiten', alt:true }
+    ]);
+  }
+  function openLocationPermissionSheet(){
+    showDiagnostics('Locatie opnieuw aanvragen', [
+      `Platform: ${platformName()} · ${browserLabel()}`,
+      'Druk hieronder op “Vraag opnieuw” om de browser nogmaals om locatietoestemming te laten vragen.'
+    ], [
+      { label:'Vraag opnieuw', onClick:()=>requestGeoAccess() },
+      { label:'Hoe zet ik het weer aan?', onClick:()=>openLocationHelpSheet() },
+      { label:'Sluiten', alt:true }
+    ]);
+  }
   function playerToken(){ for (const key of SESSION_KEYS){ const value = localStorage.getItem(key) || sessionStorage.getItem(key); if (value) return value; } return ''; }
   function rpcHeaders(key=''){ return { 'Content-Type':'application/json', apikey:key, Authorization:`Bearer ${key}`, Accept:'application/json' }; }
   async function parseJson(res){ const t = await res.text(); let d = null; try { d = t ? JSON.parse(t) : null; } catch(_) { throw new Error(t || `HTTP ${res.status}`); } if (!res.ok) throw new Error(d?.message || d?.error || `HTTP ${res.status}`); return d; }
@@ -285,8 +335,8 @@
       return true;
     } catch(_) { return false; }
   }
-  function bindGeoButton(btn){ if (!btn || btn.dataset.geoBound==='1') return; btn.dataset.geoBound='1'; btn.addEventListener('click', async()=>{ await requestGeoAccess(); }); }
-  function bindNotifyButton(btn){ if (!btn || btn.dataset.notifyBound==='1') return; btn.dataset.notifyBound='1'; btn.addEventListener('click', async()=>{ await requestNotificationAccess(); }); }
+  function bindGeoButton(btn){ if (!btn || btn.dataset.geoBound==='1') return; btn.dataset.geoBound='1'; btn.addEventListener('click', ()=>{ openLocationPermissionSheet(); }); }
+  function bindNotifyButton(btn){ if (!btn || btn.dataset.notifyBound==='1') return; btn.dataset.notifyBound='1'; btn.addEventListener('click', ()=>{ openNotificationPermissionSheet(); }); }
   function createButton(){ const btn=document.createElement('button'); btn.type='button'; btn.className='gejast-geo-button is-bad'; btn.setAttribute('data-gejast-geo-button','1'); btn.setAttribute('aria-label','Geolocatie opnieuw proberen'); btn.title='Geolocatie opnieuw proberen'; btn.innerHTML='<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6v8M32 50v8M6 32h8M50 32h8"/><circle cx="32" cy="32" r="20" fill="none"/><circle cx="32" cy="32" r="9" fill="currentColor" stroke="none"/></svg>'; bindGeoButton(btn); return btn; }
   function createNotifyButton(){ const btn=document.createElement('button'); btn.type='button'; btn.className='gejast-notify-button is-pending'; btn.setAttribute('data-gejast-notify-button','1'); btn.setAttribute('aria-label','Meldingen inschakelen'); btn.title='Meldingen inschakelen'; btn.innerHTML='<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 46h28"/><path d="M24 46V28c0-10 16-10 16 0v18"/><path d="M20 46c2-2 4-6 4-10"/><path d="M44 46c-2-2-4-6-4-10"/><path d="M28 52c1 3 3 4 4 4s3-1 4-4"/></svg>'; bindNotifyButton(btn); return btn; }
   function ensureCornerTools(){
