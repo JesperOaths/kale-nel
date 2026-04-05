@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drinks overzicht</title>
-  <script>window.GEJAST_PAGE_VERSION='v305';</script><script src="./gejast-config.js?v305"></script>
+  <script>window.GEJAST_PAGE_VERSION='v306';</script><script src="./gejast-config.js?v306"></script>
   <style>
     :root{
       --bg:#ece7dc;--card:rgba(255,251,245,.94);--paper:#fffdfa;--line:rgba(54,40,20,.08);--line-strong:rgba(54,40,20,.14);
@@ -228,10 +228,14 @@
     }
     async function loadStats(){
       try{
-        const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_dashboard_public`,{method:'POST',headers:headers(),body:'{}'}); const raw=await parse(res); latestStatsData=raw?.get_drinks_dashboard_public||raw||{}; latestDashboardData=latestStatsData;
+        const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_dashboard_fallback_public`,{method:'POST',headers:headers(),body:'{}'}); const raw=await parse(res); latestStatsData=raw?.get_drinks_dashboard_fallback_public||raw||{}; latestDashboardData=latestStatsData;
       }catch(err){
-        console.warn('dashboard load failed',err);
-        latestStatsData=latestStatsData||{};
+        try{
+          const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_dashboard_public`,{method:'POST',headers:headers(),body:'{}'}); const raw=await parse(res); latestStatsData=raw?.get_drinks_dashboard_public||raw||{}; latestDashboardData=latestStatsData;
+        }catch(err2){
+          console.warn('dashboard load failed',err2||err);
+          latestStatsData=latestStatsData||{};
+        }
       }
       let historyRows=[];
       try{
@@ -288,6 +292,6 @@
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./gejast-geo.js?v305"></script><script src="./drinks-verify-float.js?v305"></script>
+  <script src="./gejast-geo.js?v306"></script><script src="./drinks-verify-float.js?v306"></script>
 </body>
 </html>

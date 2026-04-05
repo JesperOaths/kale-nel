@@ -153,7 +153,7 @@
   async function registerNotificationWorker(){
     if (!notificationSupported()) return null;
     try {
-      const reg = await navigator.serviceWorker.register('./gejast-sw.js?v305', { scope:'./' });
+      const reg = await navigator.serviceWorker.register('./gejast-sw.js?v306', { scope:'./' });
       return await navigator.serviceWorker.ready.catch(()=>reg);
     } catch(_) { return null; }
   }
@@ -347,13 +347,13 @@
     if (!existing){
       existing=document.createElement('div');
       existing.className='gejast-corner-tools';
-      existing.appendChild(createButton());
-      if ((window.GEJAST_CONFIG||{}).NOTIFICATION_BUTTON_ENABLED !== false) existing.appendChild(createNotifyButton());
       const mount = document.getElementById('gejastTopRightToolsMount');
       (mount || document.body || document.documentElement).appendChild(existing);
     }
+    if (!existing.querySelector('[data-gejast-geo-button]')) existing.insertBefore(createButton(), existing.firstChild || null);
+    if ((window.GEJAST_CONFIG||{}).NOTIFICATION_BUTTON_ENABLED !== false && !existing.querySelector('[data-gejast-notify-button]')) existing.insertBefore(createNotifyButton(), existing.querySelector('.gejast-logo-chip') || existing.firstChild || null);
     existing.style.position='fixed';
-    if (window.innerWidth <= 640){ existing.style.top='auto'; existing.style.left='auto'; existing.style.right='12px'; existing.style.bottom='108px'; existing.style.flexDirection='column'; } else { existing.style.top='14px'; existing.style.left='14px'; existing.style.right='auto'; existing.style.bottom='auto'; existing.style.flexDirection='row'; }
+    if (window.innerWidth <= 640){ existing.style.top='auto'; existing.style.left='auto'; existing.style.right='12px'; existing.style.bottom='108px'; existing.style.flexDirection='column'; } else { existing.style.top='78px'; existing.style.left='14px'; existing.style.right='auto'; existing.style.bottom='auto'; existing.style.flexDirection='row'; }
     existing.style.zIndex='10020';
     existing.style.display='flex';
     existing.style.pointerEvents='auto';
