@@ -13,6 +13,7 @@
     PLAYER_SESSION_IDLE_MS: 12 * 60 * 60 * 1000,
     WEB_PUSH_PUBLIC_KEY: '',
     NOTIFICATION_BUTTON_ENABLED: true,
+    WEB_PUSH_TEST_RPC: 'queue_test_web_push',
   };
 
   function detectScriptVersion(){

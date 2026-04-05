@@ -88,6 +88,21 @@
     for (let i=0;i<raw.length;i++) output[i] = raw.charCodeAt(i);
     return output;
   }
+
+  async function queueBackendTestPush(){
+    const cfg = window.GEJAST_CONFIG || {};
+    const token = playerToken();
+    if (!cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY || !token) return { queued:false, reason:'missing-context' };
+    try {
+      const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${cfg.WEB_PUSH_TEST_RPC || 'queue_test_web_push'}`, {
+        method:'POST', headers: rpcHeaders(cfg.SUPABASE_PUBLISHABLE_KEY), body: JSON.stringify({ session_token: token })
+      });
+      return { queued:true, payload: await parseJson(res) };
+    } catch(err) {
+      return { queued:false, reason:(err && err.message) || 'queue-failed' };
+    }
+  }
+
   async function syncPushSubscriptionToBackend(subscription, extras={}){
     const cfg = window.GEJAST_CONFIG || {};
     const token = playerToken();
@@ -189,12 +204,14 @@
     if (permission === 'granted') {
       const sub = await ensurePushSubscription();
       const updated = await refreshNotificationButton();
+      const queuedTest = sub.subscription ? await queueBackendTestPush() : { queued:false, reason:'no-subscription' };
       showDiagnostics('Meldingen ingesteld', [
         `Browsertoestemming: ${updated.permission}`,
         `Service worker: ${updated.workerReady ? 'klaar' : 'niet klaar'}`,
-        `Push-abonnement: ${sub.subscription ? 'actief' : (sub.reason === 'no-vapid-key' ? 'nog niet geconfigureerd op de server' : 'niet actief')}`
+        `Push-abonnement: ${sub.subscription ? 'actief' : (sub.reason === 'no-vapid-key' ? 'nog niet geconfigureerd op de server' : 'niet actief')}`,
+        `Backend test-queue: ${queuedTest.queued ? 'klaargezet' : (queuedTest.reason || 'niet klaar')}`
       ], [{ label:'Sluiten', alt:true }]);
-      return { granted:true, state:updated, subscription:sub };
+      return { granted:true, state:updated, subscription:sub, queuedTest };
     }
     const actions=[];
     if (permission === 'denied') actions.push({ label:'Instellingen uitleg', onClick:()=>showDiagnostics('Meldingen geblokkeerd', ['Zet meldingen voor deze site handmatig weer aan in je browser/site-instellingen.'], [{label:'Sluiten', alt:true}]), keepOpen:false });
@@ -242,7 +259,7 @@
     return existing;
   }
   function setButtonState(ready){ document.querySelectorAll('[data-gejast-geo-button]').forEach((btn)=>{ btn.classList.toggle('is-ready',!!ready); btn.classList.toggle('is-bad',!ready); btn.title = ready ? 'Geolocatie actief' : 'Geolocatie opnieuw proberen'; btn.setAttribute('aria-pressed', ready ? 'true' : 'false'); }); }
-  window.GEJAST_GEO = { cached, ensure, request, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError, setButtonState, ensureCornerTools, notificationSupported, notificationPermission, registerNotificationWorker, ensurePushSubscription, syncPushSubscriptionToBackend, getNotificationDiagnostics, refreshNotificationButton, requestNotificationAccess, showNotificationFromServiceWorker, setNotificationButtonState, showDiagnostics };
+  window.GEJAST_GEO = { cached, ensure, request, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError, setButtonState, ensureCornerTools, notificationSupported, notificationPermission, registerNotificationWorker, ensurePushSubscription, syncPushSubscriptionToBackend, queueBackendTestPush, getNotificationDiagnostics, refreshNotificationButton, requestNotificationAccess, showNotificationFromServiceWorker, setNotificationButtonState, showDiagnostics };
   function init(){ if (!shouldExclude()) ensureCornerTools(); setButtonState(!!cached()); refreshNotificationButton().catch(()=>{}); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once:true }); else init();
   window.addEventListener('load', ()=>{ try { ensureCornerTools(); refreshNotificationButton().catch(()=>{}); } catch(_){} });
