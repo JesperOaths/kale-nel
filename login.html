@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inloggen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v291';</script>
+  <script>window.GEJAST_PAGE_VERSION='v296';</script>
   <style>
     :root { --gold: #9a8241; --dark-bg: #111; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.08); }
     * { box-sizing: border-box; }
@@ -45,7 +45,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/login.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v291"></script>
+  <script src="./gejast-config.js?v296"></script>
 </head>
 <body>
   <div class="site-scene">
@@ -65,8 +65,7 @@
         <option value="">Kies je naam</option>
       </select>
     <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-      <input id="pinInput" name="current-password" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="Pincode" autocomplete="current-password" style="margin:0;">
-      <button id="pinOpenBtn" type="button" class="primary-btn" style="flex: 0 0 auto; width: auto; padding: 0 15px;">Toetsen</button>
+      <input id="pinInput" name="current-password" type="password" inputmode="text" maxlength="4" placeholder="Pincode" autocomplete="current-password" autocorrect="off" autocapitalize="off" spellcheck="false" style="margin:0;">
     </div>
     <div class="btn-row">
       <button id="logoutBtn" type="button" class="secondary-btn">Uitloggen</button>
@@ -79,17 +78,6 @@
     </div>
     <div id="statusBox" class="status"></div>
   </main>
-  <div id="pinModal" class="modal">
-    <div class="modal-panel">
-      <div id="pinPreview" style="font-size: 24px; letter-spacing: 10px; margin-bottom: 20px; font-weight: bold;"></div>
-      <div class="pin-grid">
-        <button class="pin-key" data-digit="1" type="button">1</button><button class="pin-key" data-digit="2" type="button">2</button><button class="pin-key" data-digit="3" type="button">3</button>
-        <button class="pin-key" data-digit="4" type="button">4</button><button class="pin-key" data-digit="5" type="button">5</button><button class="pin-key" data-digit="6" type="button">6</button>
-        <button class="pin-key" data-digit="7" type="button">7</button><button class="pin-key" data-digit="8" type="button">8</button><button class="pin-key" data-digit="9" type="button">9</button>
-        <button class="pin-key" data-action="clear" type="button">C</button><button class="pin-key" data-digit="0" type="button">0</button><button class="pin-key" data-action="done" type="button">OK</button>
-      </div>
-    </div>
-  </div>
   <div id="forgotPinModal" class="modal" aria-hidden="true">
     <div class="modal-panel">
       <h2>Pincode resetten</h2>
@@ -110,6 +98,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const MAKE_WEBHOOK_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.MAKE_WEBHOOK_URL) || "";
     const SESSION_KEY = "jas_session_token_v11";
+    window.localValidation = window.localValidation || function(){ return true; };
 
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json", Accept: "application/json" }; }
     async function parseResponse(res) {
@@ -199,79 +188,17 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return new URL('./activate.html', window.location.href).toString();
     }
     const ACTIVATION_EMAIL_SUBJECT = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.EMAIL_SUBJECT) || 'Activeer je account voor de Kale Nel';
-    
+    function buildMakeWebhookMeta(source, meta = {}) {
+      const payload = { trigger: 'activation_email_queued', source, ts: new Date().toISOString(), ...meta };
+      payload.subject = payload.subject || payload.email_subject || ACTIVATION_EMAIL_SUBJECT;
+      payload.email_subject = payload.email_subject || payload.subject || ACTIVATION_EMAIL_SUBJECT;
+      payload.ts_local = payload.ts_local || formatDateTime(payload.ts);
+      if (payload.expires_at && !payload.expires_at_local) payload.expires_at_local = formatDateTime(payload.expires_at);
+      if (payload.created_at && !payload.created_at_local) payload.created_at_local = formatDateTime(payload.created_at);
+      return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined && value !== null && value !== ''));
+    }
 
-function isValidEmail(value){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value||'').trim()); }
-function isLikelyHttpUrl(value){ return /^https?:\/\//i.test(String(value||'').trim()); }
-function hasUsefulMailContent(value){ return String(value||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().length >= 3; }
-function normalizeMakeWebhookPayload(payload = {}, fallback = {}) {
-  const raw = (payload && typeof payload === 'object') ? payload : {};
-  const nested = (raw.mail_job && typeof raw.mail_job === 'object') ? raw.mail_job : {};
-  const payloadData = (raw.payload && typeof raw.payload === 'object') ? raw.payload : {};
-  const fallbackData = (fallback && typeof fallback === 'object') ? fallback : {};
-  const email = String(raw.to || raw.email || raw.recipient_email || nested.to || nested.email || nested.recipient_email || payloadData.to || payloadData.email || payloadData.recipient_email || payloadData.requester_email || fallbackData.to || fallbackData.email || fallbackData.recipient_email || '').trim().toLowerCase();
-  const subject = String(raw.subject || raw.email_subject || nested.subject || nested.email_subject || payloadData.subject || payloadData.email_subject || fallbackData.subject || fallbackData.email_subject || (window.GEJAST_CONFIG && window.GEJAST_CONFIG.EMAIL_SUBJECT) || 'Activeer je account voor de Kale Nel').trim();
-  const activationUrl = String(raw.activation_url || raw.reset_url || raw.url || nested.activation_url || nested.reset_url || nested.url || payloadData.activation_url || payloadData.reset_url || payloadData.url || fallbackData.activation_url || fallbackData.reset_url || fallbackData.url || '').trim();
-  const trigger = String(raw.trigger || nested.trigger || fallbackData.trigger || 'activation_email_queued').trim();
-  const html = raw.html || nested.html || payloadData.html || fallbackData.html || null;
-  const text = raw.text || nested.text || payloadData.text || fallbackData.text || null;
-  const body = raw.body || nested.body || payloadData.body || fallbackData.body || null;
-  const template = raw.template || nested.template || payloadData.template || fallbackData.template || null;
-  const merged = {
-    trigger,
-    source: raw.source || fallbackData.source || location.pathname.split('/').pop() || 'site',
-    ts: raw.ts || fallbackData.ts || new Date().toISOString(),
-    job_id: raw.job_id ?? nested.job_id ?? fallbackData.job_id ?? null,
-    request_id: raw.request_id ?? nested.request_id ?? payloadData.request_id ?? fallbackData.request_id ?? null,
-    player_id: raw.player_id ?? nested.player_id ?? payloadData.player_id ?? fallbackData.player_id ?? null,
-    display_name: raw.display_name || nested.display_name || payloadData.display_name || fallbackData.display_name || null,
-    to: email || null,
-    email: email || null,
-    recipient_email: email || null,
-    recipient_name: raw.recipient_name || nested.recipient_name || payloadData.recipient_name || fallbackData.recipient_name || null,
-    subject,
-    email_subject: subject,
-    activation_url: activationUrl || null,
-    reset_url: activationUrl || null,
-    url: activationUrl || null,
-    html,
-    text,
-    body,
-    template,
-    expires_at: raw.expires_at || nested.expires_at || payloadData.expires_at || fallbackData.expires_at || null,
-    created_at: raw.created_at || nested.created_at || payloadData.created_at || fallbackData.created_at || null,
-    payload: Object.keys(payloadData).length ? payloadData : undefined,
-    mail_job: Object.keys(nested).length ? nested : undefined
-  };
-  if (merged.ts && !merged.ts_local && typeof formatDateTime === 'function') merged.ts_local = formatDateTime(merged.ts);
-  if (merged.expires_at && !merged.expires_at_local && typeof formatDateTime === 'function') merged.expires_at_local = formatDateTime(merged.expires_at);
-  if (merged.created_at && !merged.created_at_local && typeof formatDateTime === 'function') merged.created_at_local = formatDateTime(merged.created_at);
-  return Object.fromEntries(Object.entries(merged).filter(([, value]) => value !== undefined && value !== null && value !== ''));
-}
-function validateMakePayloadLocally(meta = {}) {
-  const payload = normalizeMakeWebhookPayload(meta);
-  const reasons = [];
-  const email = String(payload.to || payload.email || payload.recipient_email || '').trim();
-  const subject = String(payload.email_subject || payload.subject || '').trim();
-  const activationUrl = String(payload.activation_url || payload.reset_url || payload.url || '').trim();
-  const trigger = String(payload.trigger || 'activation_email_queued').trim();
-  const hasContent = !!(payload.template || hasUsefulMailContent(payload.html) || hasUsefulMailContent(payload.text) || hasUsefulMailContent(payload.body));
-  if (!email) reasons.push('missing_email');
-  else if (!isValidEmail(email)) reasons.push('invalid_email');
-  if (!subject) reasons.push('missing_subject');
-  else if (!hasUsefulMailContent(subject)) reasons.push('blank_subject');
-  if (!hasContent) reasons.push('missing_template_or_body');
-  if (/activation|reset|reactivat/i.test(trigger) || activationUrl) {
-    if (!activationUrl) reasons.push('missing_activation_url');
-    else if (!isLikelyHttpUrl(activationUrl)) reasons.push('invalid_activation_url');
-  }
-  return { ok: reasons.length === 0, reasons, payload, message: reasons.length ? `Mailjob niet naar Make gestuurd: ${reasons.join(', ')}` : 'ok' };
-}
-
-    function buildMakeWebhookMeta(source, meta = {}) { return normalizeMakeWebhookPayload({ source, ...meta }, { source }); }
-    async function fetchOutboundEmailWebhookPayload(jobId, fallbackMeta = {}) { if (!jobId) return normalizeMakeWebhookPayload(fallbackMeta, fallbackMeta); const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_outbound_email_job_webhook_payload_public`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ job_id_input: Number(jobId) }) }); const data = await parseResponse(res); return normalizeMakeWebhookPayload(data?.payload || data?.make_payload || data || {}, fallbackMeta); }
-
-async function validatePublicOutboundEmailJob(jobId, options = {}) {
+    async function validatePublicOutboundEmailJob(jobId, options = {}) {
       if (!jobId) return { ok:false, reasons:['missing_job_id'], message:'Mailjob-id ontbreekt.' };
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/validate_outbound_email_job_public`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
@@ -286,15 +213,13 @@ async function validatePublicOutboundEmailJob(jobId, options = {}) {
     async function triggerMakeScenario(meta = {}) {
       if (!MAKE_WEBHOOK_URL) return { via: 'disabled' };
       const payload = buildMakeWebhookMeta('login.html#pin-reset', meta);
-      const localValidation = validateMakePayloadLocally(payload);
-      if (!localValidation.ok) throw new Error(localValidation.message);
       const res = await fetch(MAKE_WEBHOOK_URL, {
         method: 'POST',
         mode: 'cors',
         cache: 'no-store',
         keepalive: true,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(localValidation.payload)
+        body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error(`Webhook gaf HTTP ${res.status}`);
       return { via: 'raw-json', status: res.status };
@@ -331,7 +256,7 @@ async function validatePublicOutboundEmailJob(jobId, options = {}) {
       let lastErr = null;
       for (const payload of payloads) {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/login_player`, {
-          method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(localValidation.payload)
+          method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(payload)
         });
         try {
           return await parseResponse(res);
@@ -412,28 +337,8 @@ async function validatePublicOutboundEmailJob(jobId, options = {}) {
       }
     });
     document.getElementById('logoutBtn').addEventListener('click', () => { clearSessionToken(); setStatus('Browser-sessie gewist.', 'ok'); });
-    document.getElementById('pinInput').addEventListener('input', (e) => { clampFourDigits(e.target); syncPinPreview(); });
-    document.getElementById('pinInput').addEventListener('paste', () => { requestAnimationFrame(() => { clampFourDigits(document.getElementById('pinInput')); syncPinPreview(); }); });
-
-    const pinModal = document.getElementById("pinModal");
-    const forgotPinModal = document.getElementById('forgotPinModal');
-    const pinPreview = document.getElementById("pinPreview");
-    function openPinModal() { pinModal.classList.add("show"); pinModal.setAttribute("aria-hidden", "false"); syncPinPreview(); }
-    function closePinModal() { pinModal.classList.remove("show"); pinModal.setAttribute("aria-hidden", "true"); }
-    function syncPinPreview() { pinPreview.textContent = (document.getElementById('pinInput').value || '').replace(/./g, '•'); }
-    document.getElementById('pinOpenBtn').addEventListener('click', openPinModal);
-    document.getElementById('pinInput').addEventListener('focus', openPinModal);
-    pinModal.addEventListener('click', (e) => { if (e.target === pinModal) closePinModal(); });
-    document.querySelectorAll('#pinModal .pin-key').forEach((btn) => btn.addEventListener('click', () => {
-      const input = document.getElementById('pinInput');
-      const digit = btn.dataset.digit;
-      const action = btn.dataset.action;
-      if (digit && input.value.length < 4) input.value += digit;
-      if (action === 'clear') input.value = input.value.slice(0, -1);
-      if (action === 'done') closePinModal();
-      clampFourDigits(input);
-      syncPinPreview();
-    }));
+    document.getElementById('pinInput').addEventListener('input', (e) => { clampFourDigits(e.target); });
+    document.getElementById('pinInput').addEventListener('paste', () => { requestAnimationFrame(() => { clampFourDigits(document.getElementById('pinInput')); }); });
 
     function openForgotPinModal() {
       document.getElementById('resetNameInput').value = document.getElementById('playerNameInput').value || '';
@@ -460,7 +365,7 @@ async function validatePublicOutboundEmailJob(jobId, options = {}) {
         setStatus('Pincode resetten en nieuwe activatiemail klaarzetten...');
         const result = await requestPinReset();
         try {
-          const makePayload = await fetchOutboundEmailWebhookPayload(result?.job_id ?? null, {
+          await triggerMakeScenario({
             reason: 'pin_reset_reactivation',
             request_id: result?.request_id ?? null,
             job_id: result?.job_id ?? null,
@@ -471,7 +376,6 @@ async function validatePublicOutboundEmailJob(jobId, options = {}) {
             expires_at: result?.expires_at ?? null,
             created_at: result?.created_at ?? null
           });
-          await triggerMakeScenario(makePayload);
         } catch (wakeErr) {
           console.warn('Make webhook wake-up mislukt', wakeErr);
         }
@@ -490,7 +394,7 @@ async function validatePublicOutboundEmailJob(jobId, options = {}) {
     load();
   </script>
 
-  <div class="site-credit-watermark" data-version-watermark>v291 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v288 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
