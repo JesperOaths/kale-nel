@@ -89,6 +89,29 @@
     return output;
   }
 
+
+  async function requestGeoAccess(){
+    try {
+      const pos = await request(true);
+      if (pos) startMonitor();
+      setButtonState(!!pos);
+      showDiagnostics('Locatie actief', [
+        `Toestemming: granted`,
+        formatCoords(pos) || 'Locatie opgeslagen.'
+      ], [{ label:'Sluiten', alt:true }]);
+      return { granted:true, position:pos };
+    } catch (err) {
+      const perm = await permissionState();
+      setButtonState(!!cached());
+      showDiagnostics('Locatie niet vrijgegeven', [
+        `Toestemming: ${perm}`,
+        (err && err.message) || 'Locatie ophalen mislukt.',
+        perm === 'denied' ? 'De browser toont meestal geen nieuwe native locatie-popup zolang deze site op geblokkeerd staat. Zet locatie voor deze site weer aan in je browser/site-instellingen en druk daarna opnieuw op de locatieknop.' : 'Druk opnieuw op de locatieknop om het nog een keer te proberen.'
+      ], [{ label:'Sluiten', alt:true }]);
+      return { granted:false, reason:(err && err.message) || 'geo-failed', permission:perm };
+    }
+  }
+
   async function queueBackendTestPush(){
     const cfg = window.GEJAST_CONFIG || {};
     const token = playerToken();
@@ -208,8 +231,8 @@
       showDiagnostics('Meldingen ingesteld', [
         `Browsertoestemming: ${updated.permission}`,
         `Service worker: ${updated.workerReady ? 'klaar' : 'niet klaar'}`,
-        `Push-abonnement: ${sub.subscription ? 'actief' : (sub.reason === 'no-vapid-key' ? 'nog niet geconfigureerd op de server' : 'niet actief')}`,
-        `Backend test-queue: ${queuedTest.queued ? 'klaargezet' : (queuedTest.reason || 'niet klaar')}`
+        `Push-abonnement: ${sub.subscription ? 'actief' : (sub.reason === 'no-vapid-key' ? 'mist publieke VAPID-sleutel in gejast-config.js' : 'niet actief')}`,
+        `Backend test-queue: ${queuedTest.queued ? 'klaargezet' : (queuedTest.reason === 'no-subscription' ? 'geen push-abonnement opgeslagen' : (queuedTest.reason || 'niet klaar'))}`
       ], [{ label:'Sluiten', alt:true }]);
       return { granted:true, state:updated, subscription:sub, queuedTest };
     }
@@ -231,7 +254,7 @@
       return true;
     } catch(_) { return false; }
   }
-  function bindGeoButton(btn){ if (!btn || btn.dataset.geoBound==='1') return; btn.dataset.geoBound='1'; btn.addEventListener('click', async()=>{ try { const pos = await request(true); if (pos) startMonitor(); setButtonState(!!pos); } catch(_) { setButtonState(false); } }); }
+  function bindGeoButton(btn){ if (!btn || btn.dataset.geoBound==='1') return; btn.dataset.geoBound='1'; btn.addEventListener('click', async()=>{ await requestGeoAccess(); }); }
   function bindNotifyButton(btn){ if (!btn || btn.dataset.notifyBound==='1') return; btn.dataset.notifyBound='1'; btn.addEventListener('click', async()=>{ await requestNotificationAccess(); }); }
   function createButton(){ const btn=document.createElement('button'); btn.type='button'; btn.className='gejast-geo-button is-bad'; btn.setAttribute('data-gejast-geo-button','1'); btn.setAttribute('aria-label','Geolocatie opnieuw proberen'); btn.title='Geolocatie opnieuw proberen'; btn.innerHTML='<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 6v8M32 50v8M6 32h8M50 32h8"/><circle cx="32" cy="32" r="20" fill="none"/><circle cx="32" cy="32" r="9" fill="currentColor" stroke="none"/></svg>'; bindGeoButton(btn); return btn; }
   function createNotifyButton(){ const btn=document.createElement('button'); btn.type='button'; btn.className='gejast-notify-button is-pending'; btn.setAttribute('data-gejast-notify-button','1'); btn.setAttribute('aria-label','Meldingen inschakelen'); btn.title='Meldingen inschakelen'; btn.innerHTML='<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 46h28"/><path d="M24 46V28c0-10 16-10 16 0v18"/><path d="M20 46c2-2 4-6 4-10"/><path d="M44 46c-2-2-4-6-4-10"/><path d="M28 52c1 3 3 4 4 4s3-1 4-4"/></svg>'; bindNotifyButton(btn); return btn; }
@@ -259,7 +282,7 @@
     return existing;
   }
   function setButtonState(ready){ document.querySelectorAll('[data-gejast-geo-button]').forEach((btn)=>{ btn.classList.toggle('is-ready',!!ready); btn.classList.toggle('is-bad',!ready); btn.title = ready ? 'Geolocatie actief' : 'Geolocatie opnieuw proberen'; btn.setAttribute('aria-pressed', ready ? 'true' : 'false'); }); }
-  window.GEJAST_GEO = { cached, ensure, request, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError, setButtonState, ensureCornerTools, notificationSupported, notificationPermission, registerNotificationWorker, ensurePushSubscription, syncPushSubscriptionToBackend, queueBackendTestPush, getNotificationDiagnostics, refreshNotificationButton, requestNotificationAccess, showNotificationFromServiceWorker, setNotificationButtonState, showDiagnostics };
+  window.GEJAST_GEO = { cached, ensure, request, requestGeoAccess, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError, setButtonState, ensureCornerTools, notificationSupported, notificationPermission, registerNotificationWorker, ensurePushSubscription, syncPushSubscriptionToBackend, queueBackendTestPush, getNotificationDiagnostics, refreshNotificationButton, requestNotificationAccess, showNotificationFromServiceWorker, setNotificationButtonState, showDiagnostics };
   function init(){ if (!shouldExclude()) ensureCornerTools(); setButtonState(!!cached()); refreshNotificationButton().catch(()=>{}); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once:true }); else init();
   window.addEventListener('load', ()=>{ try { ensureCornerTools(); refreshNotificationButton().catch(()=>{}); } catch(_){} });
