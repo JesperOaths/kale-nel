@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drinks overzicht</title>
-  <script>window.GEJAST_PAGE_VERSION='v304';</script><script src="./gejast-config.js?v304"></script>
+  <script>window.GEJAST_PAGE_VERSION='v305';</script><script src="./gejast-config.js?v305"></script>
   <style>
     :root{
       --bg:#ece7dc;--card:rgba(255,251,245,.94);--paper:#fffdfa;--line:rgba(54,40,20,.08);--line-strong:rgba(54,40,20,.14);
@@ -54,7 +54,6 @@
           <div id="statusLine" class="status-line" aria-live="polite"></div>
         </div>
         <div class="hero-tools">
-          <button id="retryGeoBtn" class="btn gold" type="button">Geolocatie verversen</button>
           <a class="brand" href="./index.html" aria-label="Home via logo"><img src="./logo.png" alt="Logo"/></a>
         </div>
       </div>
@@ -285,11 +284,10 @@
     }
     async function verifyDrink(id){ try{ const pos=await getPosition(true,true); if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); const usePos=lastPosition||pos; if(!usePos) throw new Error('Geolocatie is nodig om een drankje te bevestigen.'); const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy,approve:true})}); await parse(res); setStatus('Drankje bevestigd.','ok'); await loadPage(false,false);}catch(err){ setStatus(err.message||String(err),'bad'); } }
     document.querySelectorAll('[data-ladder-key]').forEach(b=>b.onclick=()=>{ currentLadderKey=b.dataset.ladderKey; renderLadder(); });
-    document.getElementById('retryGeoBtn').onclick=()=>loadPage(true,true);
     loadPage(false,false);
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./gejast-geo.js?v304"></script><script src="./drinks-verify-float.js?v304"></script>
+  <script src="./gejast-geo.js?v305"></script><script src="./drinks-verify-float.js?v305"></script>
 </body>
 </html>

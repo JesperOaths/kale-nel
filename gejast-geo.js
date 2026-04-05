@@ -153,7 +153,7 @@
   async function registerNotificationWorker(){
     if (!notificationSupported()) return null;
     try {
-      const reg = await navigator.serviceWorker.register('./gejast-sw.js?v304', { scope:'./' });
+      const reg = await navigator.serviceWorker.register('./gejast-sw.js?v305', { scope:'./' });
       return await navigator.serviceWorker.ready.catch(()=>reg);
     } catch(_) { return null; }
   }
