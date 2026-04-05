@@ -10,6 +10,31 @@
   let visibilityBound = false;
   let notifyStateCache = null;
 
+  function isIOS(){ const ua = navigator.userAgent || ''; return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+  function isAndroid(){ return /Android/i.test(navigator.userAgent || ''); }
+  function isStandalone(){ try { return window.matchMedia && window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; } catch(_) { return false; } }
+  function platformName(){ if (isIOS()) return 'iPhone/iPad'; if (isAndroid()) return 'Android'; return 'browser'; }
+  function mobilePermissionHelp(kind, state){
+    const rows = [];
+    if (kind === 'notification') {
+      if (isIOS() && !isStandalone()) {
+        rows.push('Op iPhone/iPad werkt de native meldingen-popup vaak alleen goed vanuit de Safari-thuisscherm-app. Voeg de site toe aan je beginscherm, open hem vanaf daar en druk daarna opnieuw op de bel.');
+      }
+      if (state === 'denied') {
+        rows.push(isIOS() ? 'Zet meldingen voor deze site weer aan via Safari/website-instellingen of in de iPhone-instellingen en druk daarna opnieuw op de bel.' : 'Zet meldingen voor deze site weer aan via browser-site-instellingen of app-instellingen en druk daarna opnieuw op de bel.');
+      } else if (state === 'default') {
+        rows.push('De site heeft opnieuw om meldingstoestemming gevraagd. Krijg je geen native popup, controleer dan of de browser de vraag heeft onderdrukt.');
+      }
+    } else if (kind === 'location') {
+      if (state === 'denied') {
+        rows.push(isIOS() ? 'Zet locatie voor deze site weer aan via Safari/website-instellingen of in de iPhone-instellingen en druk daarna opnieuw op het vizier.' : 'Zet locatie voor deze site weer aan via browser-site-instellingen of app-instellingen en druk daarna opnieuw op het vizier.');
+      } else {
+        rows.push('De site heeft opnieuw om locatietoestemming gevraagd. Krijg je geen native popup, controleer dan of de browser de vraag heeft onderdrukt.');
+      }
+    }
+    return rows;
+  }
+
   function normalize(pos, source='live'){
     if (!pos || !pos.coords) return null;
     return { source, coords: { latitude: Number(pos.coords.latitude), longitude: Number(pos.coords.longitude), accuracy: pos.coords.accuracy == null ? null : Number(pos.coords.accuracy) }, timestamp: pos.timestamp || Date.now() };
@@ -103,10 +128,12 @@
     } catch (err) {
       const perm = await permissionState();
       setButtonState(!!cached());
-      showDiagnostics('Locatie niet vrijgegeven', [
+      showDiagnostics('Locatie opnieuw gevraagd', [
+        `Platform: ${platformName()}`,
         `Toestemming: ${perm}`,
         (err && err.message) || 'Locatie ophalen mislukt.',
-        perm === 'denied' ? 'De browser toont meestal geen nieuwe native locatie-popup zolang deze site op geblokkeerd staat. Zet locatie voor deze site weer aan in je browser/site-instellingen en druk daarna opnieuw op de locatieknop.' : 'Druk opnieuw op de locatieknop om het nog een keer te proberen.'
+        ...mobilePermissionHelp('location', perm),
+        perm === 'granted' ? 'Locatie staat aan; probeer het nog eens als gps of netwerk tijdelijk geen positie gaf.' : 'Druk opnieuw op de locatieknop om het nog een keer te proberen.'
       ], [{ label:'Sluiten', alt:true }]);
       return { granted:false, reason:(err && err.message) || 'geo-failed', permission:perm };
     }
@@ -228,19 +255,23 @@
       const sub = await ensurePushSubscription();
       const updated = await refreshNotificationButton();
       const queuedTest = sub.subscription ? await queueBackendTestPush() : { queued:false, reason:'no-subscription' };
-      showDiagnostics('Meldingen ingesteld', [
+      showDiagnostics('Meldingen opnieuw gevraagd', [
+        `Platform: ${platformName()}`,
         `Browsertoestemming: ${updated.permission}`,
         `Service worker: ${updated.workerReady ? 'klaar' : 'niet klaar'}`,
         `Push-abonnement: ${sub.subscription ? 'actief' : (sub.reason === 'no-vapid-key' ? 'mist publieke VAPID-sleutel in gejast-config.js' : 'niet actief')}`,
-        `Backend test-queue: ${queuedTest.queued ? 'klaargezet' : (queuedTest.reason === 'no-subscription' ? 'geen push-abonnement opgeslagen' : (queuedTest.reason || 'niet klaar'))}`
+        `Backend test-queue: ${queuedTest.queued ? 'klaargezet' : (queuedTest.reason === 'no-subscription' ? 'geen push-abonnement opgeslagen' : (queuedTest.reason || 'niet klaar'))}`,
+        ...mobilePermissionHelp('notification', updated.permission)
       ], [{ label:'Sluiten', alt:true }]);
       return { granted:true, state:updated, subscription:sub, queuedTest };
     }
     const actions=[];
     if (permission === 'denied') actions.push({ label:'Instellingen uitleg', onClick:()=>showDiagnostics('Meldingen geblokkeerd', ['De browser laat geen nieuwe native prompt meer zien zolang meldingen voor deze site op geblokkeerd staan. Zet het handmatig weer aan in je browser/site-instellingen en druk daarna opnieuw op de belknop.'], [{label:'Sluiten', alt:true}]), keepOpen:false });
     showDiagnostics('Meldingen opnieuw gevraagd', [
+      `Platform: ${platformName()}`,
       `Browsertoestemming: ${permission}`,
-      permission === 'denied' ? 'De browser heeft meldingen voor deze site geblokkeerd en toont daarom geen nieuwe native popup.' : 'De browser heeft de toestemmingsvraag niet vrijgegeven.'
+      permission === 'denied' ? 'De browser heeft meldingen voor deze site geblokkeerd en toont daarom geen nieuwe native popup.' : 'De browser heeft de toestemmingsvraag niet vrijgegeven.',
+      ...mobilePermissionHelp('notification', permission)
     ], [{ label:'Sluiten', alt:true }, ...actions]);
     return { granted:false, reason:permission, state };
   }
