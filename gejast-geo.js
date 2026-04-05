@@ -197,9 +197,9 @@
     }
     await registerNotificationWorker();
     let permission = notificationPermission();
-    if (permission === 'default') {
-      try { permission = await Notification.requestPermission(); } catch(_) {}
-    }
+    try {
+      permission = await Notification.requestPermission();
+    } catch(_) {}
     const state = await refreshNotificationButton();
     if (permission === 'granted') {
       const sub = await ensurePushSubscription();
@@ -214,10 +214,10 @@
       return { granted:true, state:updated, subscription:sub, queuedTest };
     }
     const actions=[];
-    if (permission === 'denied') actions.push({ label:'Instellingen uitleg', onClick:()=>showDiagnostics('Meldingen geblokkeerd', ['Zet meldingen voor deze site handmatig weer aan in je browser/site-instellingen.'], [{label:'Sluiten', alt:true}]), keepOpen:false });
-    showDiagnostics('Meldingen niet aangezet', [
+    if (permission === 'denied') actions.push({ label:'Instellingen uitleg', onClick:()=>showDiagnostics('Meldingen geblokkeerd', ['De browser laat geen nieuwe native prompt meer zien zolang meldingen voor deze site op geblokkeerd staan. Zet het handmatig weer aan in je browser/site-instellingen en druk daarna opnieuw op de belknop.'], [{label:'Sluiten', alt:true}]), keepOpen:false });
+    showDiagnostics('Meldingen opnieuw gevraagd', [
       `Browsertoestemming: ${permission}`,
-      permission === 'denied' ? 'De browser heeft meldingen voor deze site geblokkeerd.' : 'Je hebt de melding nog niet aangezet.'
+      permission === 'denied' ? 'De browser heeft meldingen voor deze site geblokkeerd en toont daarom geen nieuwe native popup.' : 'De browser heeft de toestemmingsvraag niet vrijgegeven.'
     ], [{ label:'Sluiten', alt:true }, ...actions]);
     return { granted:false, reason:permission, state };
   }
