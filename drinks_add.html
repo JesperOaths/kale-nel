@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alcohol toevoegen</title>
-  <script>window.GEJAST_PAGE_VERSION='v306';</script><script src="./gejast-config.js?v306"></script>
+  <script>window.GEJAST_PAGE_VERSION='v307';</script><script src="./gejast-config.js?v307"></script>
   <style>
     :root{
       --line:rgba(0,0,0,.09);
@@ -97,6 +97,8 @@
     .panel.pending .row{background:var(--pending-item-bg);border:1px solid var(--pending-item-border);color:var(--pending-item-text)}
     .panel.verify .verify-card{background:var(--verify-item-bg);border:1px solid var(--verify-item-border);color:var(--verify-item-text)}
     .panel.recent .row{background:var(--recent-item-bg);border:1px solid var(--recent-item-border);color:var(--recent-item-text)}
+    .panel.recent .row.clean,.panel.recent .row.clean *{color:inherit !important;text-decoration:none !important}
+    .panel.recent .row.clean{display:block}
     .panel .pill{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.28);color:inherit}
     .panel .action-btn.cancel{background:#fff2d4;color:#24180d}
     .panel .action-btn.verify{background:#eef8e7;color:#22351d}
@@ -187,7 +189,7 @@
 
   <div class="site-credit-watermark" data-version-watermark>v273 · Made by Bruis</div>
 
-  <script src="./gejast-geo.js?v306"></script><script src="./drinks-verify-float.js?v306"></script>
+  <script src="./gejast-geo.js?v307"></script><script src="./drinks-verify-float.js?v307"></script>
   <script>
   (function(){
     const cfg=window.GEJAST_CONFIG||{};
@@ -231,7 +233,7 @@
           if((row.location_label||row.location_text) || row.lat==null || row.lng==null) continue;
           const address=await geo.reverseGeocode(row.lat,row.lng);
           if(!address) continue;
-          await fetch(`${SUPABASE_URL}/rest/v1/rpc/set_latest_drink_event_location_label`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(row.id),location_label_input:address})}).then(parse).catch(()=>null);
+          await fetch(`${SUPABASE_URL}/rest/v1/rpc/set_drink_event_location_label`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(row.id),location_label_input:address})}).then(parse).catch(()=>null);
         }
       }catch(_){}
     }
