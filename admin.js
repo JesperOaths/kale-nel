@@ -2,7 +2,7 @@
 const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY;
-    const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6";
+    const MAKE_WEBHOOK_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.MAKE_WEBHOOK_URL) || "";
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
     let lastRequests = [];
     let lastHistory = [];
@@ -498,6 +498,93 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       return await parseResponse(res);
     }
 
+
+function isValidEmail(value){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value||'').trim()); }
+function isLikelyHttpUrl(value){ return /^https?:\/\//i.test(String(value||'').trim()); }
+function hasUsefulMailContent(value){ return String(value||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().length >= 3; }
+function normalizeMakeWebhookPayload(payload = {}, fallback = {}) {
+  const raw = (payload && typeof payload === 'object') ? payload : {};
+  const nested = (raw.mail_job && typeof raw.mail_job === 'object') ? raw.mail_job : {};
+  const payloadData = (raw.payload && typeof raw.payload === 'object') ? raw.payload : {};
+  const fallbackData = (fallback && typeof fallback === 'object') ? fallback : {};
+  const email = String(raw.to || raw.email || raw.recipient_email || nested.to || nested.email || nested.recipient_email || payloadData.to || payloadData.email || payloadData.recipient_email || payloadData.requester_email || fallbackData.to || fallbackData.email || fallbackData.recipient_email || '').trim().toLowerCase();
+  const subject = String(raw.subject || raw.email_subject || nested.subject || nested.email_subject || payloadData.subject || payloadData.email_subject || fallbackData.subject || fallbackData.email_subject || (window.GEJAST_CONFIG && window.GEJAST_CONFIG.EMAIL_SUBJECT) || 'Activeer je account voor de Kale Nel').trim();
+  const activationUrl = String(raw.activation_url || raw.reset_url || raw.url || nested.activation_url || nested.reset_url || nested.url || payloadData.activation_url || payloadData.reset_url || payloadData.url || fallbackData.activation_url || fallbackData.reset_url || fallbackData.url || '').trim();
+  const trigger = String(raw.trigger || nested.trigger || fallbackData.trigger || 'activation_email_queued').trim();
+  const html = raw.html || nested.html || payloadData.html || fallbackData.html || null;
+  const text = raw.text || nested.text || payloadData.text || fallbackData.text || null;
+  const body = raw.body || nested.body || payloadData.body || fallbackData.body || null;
+  const template = raw.template || nested.template || payloadData.template || fallbackData.template || null;
+  const merged = {
+    trigger,
+    source: raw.source || fallbackData.source || location.pathname.split('/').pop() || 'site',
+    ts: raw.ts || fallbackData.ts || new Date().toISOString(),
+    job_id: raw.job_id ?? nested.job_id ?? fallbackData.job_id ?? null,
+    request_id: raw.request_id ?? nested.request_id ?? payloadData.request_id ?? fallbackData.request_id ?? null,
+    player_id: raw.player_id ?? nested.player_id ?? payloadData.player_id ?? fallbackData.player_id ?? null,
+    display_name: raw.display_name || nested.display_name || payloadData.display_name || fallbackData.display_name || null,
+    to: email || null,
+    email: email || null,
+    recipient_email: email || null,
+    recipient_name: raw.recipient_name || nested.recipient_name || payloadData.recipient_name || fallbackData.recipient_name || null,
+    subject,
+    email_subject: subject,
+    activation_url: activationUrl || null,
+    reset_url: activationUrl || null,
+    url: activationUrl || null,
+    html,
+    text,
+    body,
+    template,
+    expires_at: raw.expires_at || nested.expires_at || payloadData.expires_at || fallbackData.expires_at || null,
+    created_at: raw.created_at || nested.created_at || payloadData.created_at || fallbackData.created_at || null,
+    payload: Object.keys(payloadData).length ? payloadData : undefined,
+    mail_job: Object.keys(nested).length ? nested : undefined
+  };
+  if (merged.ts && !merged.ts_local && typeof formatDateTime === 'function') merged.ts_local = formatDateTime(merged.ts);
+  if (merged.expires_at && !merged.expires_at_local && typeof formatDateTime === 'function') merged.expires_at_local = formatDateTime(merged.expires_at);
+  if (merged.created_at && !merged.created_at_local && typeof formatDateTime === 'function') merged.created_at_local = formatDateTime(merged.created_at);
+  return Object.fromEntries(Object.entries(merged).filter(([, value]) => value !== undefined && value !== null && value !== ''));
+}
+function validateMakePayloadLocally(meta = {}) {
+  const payload = normalizeMakeWebhookPayload(meta);
+  const reasons = [];
+  const email = String(payload.to || payload.email || payload.recipient_email || '').trim();
+  const subject = String(payload.email_subject || payload.subject || '').trim();
+  const activationUrl = String(payload.activation_url || payload.reset_url || payload.url || '').trim();
+  const trigger = String(payload.trigger || 'activation_email_queued').trim();
+  const hasContent = !!(payload.template || hasUsefulMailContent(payload.html) || hasUsefulMailContent(payload.text) || hasUsefulMailContent(payload.body));
+  if (!email) reasons.push('missing_email');
+  else if (!isValidEmail(email)) reasons.push('invalid_email');
+  if (!subject) reasons.push('missing_subject');
+  else if (!hasUsefulMailContent(subject)) reasons.push('blank_subject');
+  if (!hasContent) reasons.push('missing_template_or_body');
+  if (/activation|reset|reactivat/i.test(trigger) || activationUrl) {
+    if (!activationUrl) reasons.push('missing_activation_url');
+    else if (!isLikelyHttpUrl(activationUrl)) reasons.push('invalid_activation_url');
+  }
+  return { ok: reasons.length === 0, reasons, payload, message: reasons.length ? `Mailjob niet naar Make gestuurd: ${reasons.join(', ')}` : 'ok' };
+}
+
+    function buildMakeWebhookMeta(source, meta = {}) { return normalizeMakeWebhookPayload({ source, ...meta }, { source }); }
+    async function fetchOutboundEmailWebhookPayload(jobId, fallbackMeta = {}) {
+      if (!jobId) return normalizeMakeWebhookPayload(fallbackMeta, fallbackMeta);
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_outbound_email_job_webhook_payload`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), job_id_input: Number(jobId) })
+      });
+      const data = await parseResponse(res);
+      return normalizeMakeWebhookPayload(data?.payload || data?.make_payload || data || {}, fallbackMeta);
+    }
+    async function fetchLatestQueuedWebhookPayload() {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_latest_valid_outbound_email_job_webhook_payload`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+        body: JSON.stringify({ admin_session_token: getAdminSessionToken() })
+      });
+      const data = await parseResponse(res);
+      return normalizeMakeWebhookPayload(data?.payload || data?.make_payload || data || {});
+    }
+
     async function validateOutboundEmailJob(jobId, options = {}) {
       if (!jobId) return { ok:false, reasons:['missing_job_id'], message:'Mailjob-id ontbreekt.' };
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_validate_outbound_email_job`, {
@@ -516,24 +603,13 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       const payload = buildMakeWebhookMeta('admin.js', meta);
       const localValidation = validateMakePayloadLocally(payload);
       if (!localValidation.ok) throw new Error(localValidation.message);
-      const payloadText = JSON.stringify(payload);
-      const url = new URL(MAKE_WEBHOOK_URL);
-      Object.entries(payload).forEach(([key, value]) => { if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, String(value)); });
-      url.searchParams.set('payload_json', payloadText);
-      try {
-        await fetch(url.toString(), {
-          method:'POST', mode:'no-cors', cache:'no-store', keepalive:true,
-          headers:{ 'Content-Type':'text/plain;charset=UTF-8' }, body: payloadText
-        });
-        return { ok:true, via:'post-query-plus-body', payload };
-      } catch (fetchErr) {
-        if (navigator.sendBeacon) {
-          const blob = new Blob([payloadText], { type: 'text/plain;charset=UTF-8' });
-          if (navigator.sendBeacon(url.toString(), blob)) return { ok:true, via:'sendBeacon-query-plus-body', payload };
-        }
-        await new Promise((resolve) => { try { const img = new Image(); img.onload = img.onerror = () => resolve(); img.src = url.toString(); setTimeout(resolve, 1500); } catch(_) { resolve(); } });
-        return { ok:true, via:'img-query-fallback', payload };
-      }
+      const res = await fetch(MAKE_WEBHOOK_URL, {
+        method:'POST', mode:'cors', cache:'no-store', keepalive:true,
+        headers:{ 'Content-Type':'application/json', 'Accept':'application/json' },
+        body: JSON.stringify(localValidation.payload)
+      });
+      if (!res.ok) throw new Error(`Make webhook pingen mislukt (HTTP ${res.status})`);
+      return { ok:true, via:'fetch-json', payload: localValidation.payload, status: res.status };
     }
 
     async function revokePlayerAccess(requestId, reason) {
@@ -570,13 +646,16 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       const jobId = queued?.job_id ?? queued?.id ?? null;
       const validation = await validateOutboundEmailJob(jobId, { markFailed:true });
       if (!validation?.ok) throw new Error(formatMailPreflight(validation));
-      await triggerMakeScenario({
+      const makePayload = await fetchOutboundEmailWebhookPayload(jobId, {
         reason: 'activation_email_queued',
         request_id: requestId,
         job_id: jobId,
+        email: queued?.requester_email ?? queued?.recipient_email ?? null,
+        activation_url: queued?.activation_url ?? null,
         subject: queued?.subject ?? ((window.GEJAST_CONFIG && window.GEJAST_CONFIG.EMAIL_SUBJECT) || 'Activeer je account voor de Kale Nel'),
         email_subject: queued?.email_subject ?? queued?.subject ?? ((window.GEJAST_CONFIG && window.GEJAST_CONFIG.EMAIL_SUBJECT) || 'Activeer je account voor de Kale Nel')
       });
+      await triggerMakeScenario(makePayload);
       return queued;
     }
     async function refreshAdminLists() {
@@ -689,8 +768,11 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     document.getElementById('kickMakeBtn').addEventListener('click', async ()=> {
       try {
         setStatus('Make handmatig pingen...');
-        await triggerMakeScenario({ reason: 'manual_admin_kick' });
-        setStatus('Make handmatig gepingd. Goedkeuren doet dit normaal al automatisch; dit is alleen een fallback.');
+        const makePayload = await fetchLatestQueuedWebhookPayload();
+        const localValidation = validateMakePayloadLocally(makePayload);
+        if (!localValidation.ok) throw new Error('Geen geldige queued mailjob gevonden om Make veilig te wekken.');
+        await triggerMakeScenario(makePayload);
+        setStatus('Make veilig gepingd met de nieuwste geldige queued mailjob.');
       } catch (err) {
         setStatus(err instanceof Error ? err.message : 'Make webhook pingen mislukt');
       }
