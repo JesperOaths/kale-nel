@@ -6,6 +6,21 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (_) {}
+  const title = data.title || 'Gejast';
+  const options = {
+    body: data.body || 'Er staat iets voor je klaar.',
+    tag: data.tag || 'gejast-push',
+    icon: './logo.png',
+    badge: './logo.png',
+    data: { url: data.url || './drinks.html#verifyPanel' },
+    renotify: true
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
 self.addEventListener('notificationclick', (event) => {
   const target = (event.notification && event.notification.data && event.notification.data.url) || './drinks.html#verifyPanel';
   event.notification && event.notification.close();

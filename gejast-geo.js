@@ -2,6 +2,7 @@
   const CACHE_KEY = 'gejast_geo_cache_v5';
   const ADDRESS_KEY = 'gejast_geo_address_cache_v1';
   const NOTIFY_LAST_KEY = 'gejast_notify_last_seen_v1';
+  const SESSION_KEYS = ['jas_session_token_v11','jas_session_token_v10'];
   let watchId = null;
   let lastPos = null;
   let lastError = null;
@@ -66,6 +67,11 @@
     window.setTimeout(()=>{ const el=document.getElementById('gejastDiagnosticsToast'); if (el) el.remove(); }, 12000);
   }
 
+
+  function playerToken(){ for (const key of SESSION_KEYS){ const value = localStorage.getItem(key) || sessionStorage.getItem(key); if (value) return value; } return ''; }
+  function rpcHeaders(key=''){ return { 'Content-Type':'application/json', apikey:key, Authorization:`Bearer ${key}`, Accept:'application/json' }; }
+  async function parseJson(res){ const t = await res.text(); let d = null; try { d = t ? JSON.parse(t) : null; } catch(_) { throw new Error(t || `HTTP ${res.status}`); } if (!res.ok) throw new Error(d?.message || d?.error || `HTTP ${res.status}`); return d; }
+
   function notificationSupported(){ return !!(window.isSecureContext && 'Notification' in window && 'serviceWorker' in navigator); }
   function notificationPermission(){ try { return notificationSupported() ? Notification.permission : 'unsupported'; } catch(_) { return 'unsupported'; } }
   async function registerNotificationWorker(){
@@ -82,6 +88,29 @@
     for (let i=0;i<raw.length;i++) output[i] = raw.charCodeAt(i);
     return output;
   }
+  async function syncPushSubscriptionToBackend(subscription, extras={}){
+    const cfg = window.GEJAST_CONFIG || {};
+    const token = playerToken();
+    if (!subscription || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY || !token) return { synced:false, reason:'missing-context' };
+    try {
+      const json = subscription.toJSON ? subscription.toJSON() : subscription;
+      const out = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/register_web_push_subscription`, {
+        method:'POST', headers: rpcHeaders(cfg.SUPABASE_PUBLISHABLE_KEY),
+        body: JSON.stringify({
+          session_token: token,
+          endpoint_input: json.endpoint || subscription.endpoint || '',
+          p256dh_input: json.keys?.p256dh || extras.p256dh || '',
+          auth_input: json.keys?.auth || extras.auth || '',
+          user_agent_input: navigator.userAgent || '',
+          permission_input: notificationPermission()
+        })
+      });
+      return { synced:true, payload: await parseJson(out) };
+    } catch(err) {
+      return { synced:false, reason:(err && err.message) || 'sync-failed' };
+    }
+  }
+
   async function ensurePushSubscription(){
     const cfg = window.GEJAST_CONFIG || {};
     const vapid = String(cfg.WEB_PUSH_PUBLIC_KEY || '').trim();
@@ -91,7 +120,8 @@
     try {
       let sub = await reg.pushManager.getSubscription();
       if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlBase64ToUint8Array(vapid) });
-      return { supported:true, reason:'ok', subscription:sub };
+      const sync = await syncPushSubscriptionToBackend(sub);
+      return { supported:true, reason:'ok', subscription:sub, backendSync:sync };
     } catch(err) {
       return { supported:false, reason:(err && err.message) || 'subscribe-failed', subscription:null };
     }
@@ -193,27 +223,13 @@
     ensureChromeStyle();
     let existing=document.querySelector('.gejast-corner-tools');
     if (existing){ existing.querySelectorAll('[data-gejast-geo-button]').forEach(bindGeoButton); existing.querySelectorAll('[data-gejast-notify-button]').forEach(bindNotifyButton); return existing; }
-    const row=document.querySelector('.topbar,.top,.hero-head,.page-head,.header-row,.page-header,.header-shell');
-    existing=document.createElement('div'); existing.className='gejast-corner-tools'; existing.appendChild(createButton());
+    existing=document.createElement('div'); existing.className='gejast-corner-tools'; existing.style.position='fixed'; existing.style.top='14px'; existing.style.right='14px'; existing.style.zIndex='10020'; existing.appendChild(createButton());
     if ((window.GEJAST_CONFIG||{}).NOTIFICATION_BUTTON_ENABLED !== false) existing.appendChild(createNotifyButton());
-    if (row){
-      row.classList.add('gejast-top-row');
-      let logoLink = row.querySelector('.gejast-logo-chip, a.brand, a.brand-link, a[href="./index.html"] img[src*="logo"], a[aria-label*="Home"] img[src*="logo"]');
-      if (logoLink && logoLink.tagName === 'IMG') logoLink = logoLink.closest('a');
-      if (logoLink && logoLink.tagName === 'A') {
-        logoLink.classList.add('gejast-logo-chip');
-        existing.appendChild(logoLink);
-      } else {
-        const logo=document.createElement('a'); logo.className='gejast-logo-chip'; logo.href='./index.html'; logo.setAttribute('aria-label','Home'); logo.innerHTML='<img src="./logo.png" alt="Despinoza logo" />'; existing.appendChild(logo);
-      }
-      row.appendChild(existing); return existing;
-    }
-    const logo=document.createElement('a'); logo.className='gejast-logo-chip'; logo.href='./index.html'; logo.setAttribute('aria-label','Home'); logo.innerHTML='<img src="./logo.png" alt="Despinoza logo" />'; existing.appendChild(logo);
-    const host=document.querySelector('.shell,.sheet,.card,.hero-card,.page-shell,.panel,.wrap>.card,.wrap>.sheet');
-    if (!host) return null; if (getComputedStyle(host).position==='static') host.style.position='relative'; existing.style.position='absolute'; existing.style.top='18px'; existing.style.right='18px'; host.appendChild(existing); return existing;
+    document.body.appendChild(existing);
+    return existing;
   }
   function setButtonState(ready){ document.querySelectorAll('[data-gejast-geo-button]').forEach((btn)=>{ btn.classList.toggle('is-ready',!!ready); btn.classList.toggle('is-bad',!ready); btn.title = ready ? 'Geolocatie actief' : 'Geolocatie opnieuw proberen'; btn.setAttribute('aria-pressed', ready ? 'true' : 'false'); }); }
-  window.GEJAST_GEO = { cached, ensure, request, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError, setButtonState, ensureCornerTools, notificationSupported, notificationPermission, registerNotificationWorker, ensurePushSubscription, getNotificationDiagnostics, refreshNotificationButton, requestNotificationAccess, showNotificationFromServiceWorker, setNotificationButtonState, showDiagnostics };
+  window.GEJAST_GEO = { cached, ensure, request, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError, setButtonState, ensureCornerTools, notificationSupported, notificationPermission, registerNotificationWorker, ensurePushSubscription, syncPushSubscriptionToBackend, getNotificationDiagnostics, refreshNotificationButton, requestNotificationAccess, showNotificationFromServiceWorker, setNotificationButtonState, showDiagnostics };
   function init(){ if (!shouldExclude()) ensureCornerTools(); setButtonState(!!cached()); refreshNotificationButton().catch(()=>{}); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once:true }); else init();
 })();

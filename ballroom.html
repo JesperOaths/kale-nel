@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Balzaal</title>
-  <script>window.GEJAST_PAGE_VERSION='v292';</script>
-  <script src="./gejast-config.js?v292"></script>
+  <script>window.GEJAST_PAGE_VERSION='v293';</script>
+  <script src="./gejast-config.js?v293"></script>
   <style>
     :root{
       --gold:#b78e43; --gold-deep:#89642a; --wine:#88162a; --wine-deep:#5c0c18; --cream:#f6efe3; --ink:#181310; --muted:#706557;
@@ -301,7 +301,22 @@
     }
 
     function render(state){ latest = state || {}; renderThrone(latest); renderMembers(latest); renderSuccession(latest); renderQueue(latest); renderIntro(latest); }
-    async function load(){ try{ const state = await rpc('get_ballroom_state', { session_token: token() || null }); render(state); } catch(err){ setStatus(err.message || String(err), true); } }
+    async function callBallroomState(){
+      const tries = [
+        () => rpc('get_ballroom_state', { session_token: token() || null }),
+        () => rpc('get_ballroom_state', { session_token_input: token() || null }),
+        () => rpc('get_ballroom_state', {}),
+        () => rpc('get_ballroom_public_state', { session_token: token() || null }),
+        () => rpc('get_ballroom_public_state', { session_token_input: token() || null }),
+        () => rpc('get_ballroom_public_state', {})
+      ];
+      let lastErr = null;
+      for (const run of tries){
+        try { const out = await run(); if (out) return out; } catch (err) { lastErr = err; }
+      }
+      throw lastErr || new Error('Balzaalstatus kon niet geladen worden.');
+    }
+    async function load(){ try{ const state = await callBallroomState(); render(state); } catch(err){ setStatus(err.message || String(err), true); } }
 
     document.getElementById('claimBtn').addEventListener('click', async()=>{
       if(!token()){ window.location.href = cfg.buildLoginUrl ? cfg.buildLoginUrl('ballroom.html') : './login.html?return_to=ballroom.html'; return; }
@@ -319,6 +334,6 @@
     setInterval(load, 20000);
   })();
   </script>
-  <script src="./drinks-verify-float.js?v292"></script>
+  <script src="./gejast-geo.js?v293"></script><script src="./drinks-verify-float.js?v293"></script>
 </body>
 </html>
