@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drinks overzicht</title>
-  <script>window.GEJAST_PAGE_VERSION='v302';</script><script src="./gejast-config.js?v302"></script>
+  <script>window.GEJAST_PAGE_VERSION='v303';</script><script src="./gejast-config.js?v303"></script>
   <style>
     :root{
       --bg:#ece7dc;--card:rgba(255,251,245,.94);--paper:#fffdfa;--line:rgba(54,40,20,.08);--line-strong:rgba(54,40,20,.14);
@@ -23,7 +23,7 @@
     .metric.gold{background:linear-gradient(180deg,#f5ecce,#efe1b3)} .metric.ink{background:#1a1714;color:#fff}.metric.ink .metric-label,.metric.ink .metric-note{color:rgba(255,255,255,.72)}
     .metric-label{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#87724a;font-weight:800}.metric-value{font-size:2rem;font-weight:900;line-height:1}.metric-note{color:var(--muted);font-size:.95rem}
     .grid{display:grid;gap:18px;margin-top:22px}.grid.two{grid-template-columns:minmax(0,1.08fr) minmax(320px,.92fr)}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.grid.quad{grid-template-columns:repeat(4,minmax(0,1fr))}
-    .panel{background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:20px;box-shadow:0 8px 16px rgba(0,0,0,.02)} .panel.tinted-gold{background:linear-gradient(180deg,#fbf6e8,#f5edd4)} .panel.tinted-sage{background:linear-gradient(180deg,#eff4eb,#e2ead9)} .panel.tinted-sky{background:linear-gradient(180deg,#eef4f8,#e4edf3)}
+    .panel{content-visibility:auto;contain-intrinsic-size:400px;background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:20px;box-shadow:0 8px 16px rgba(0,0,0,.02)} .panel.tinted-gold{background:linear-gradient(180deg,#fbf6e8,#f5edd4)} .panel.tinted-sage{background:linear-gradient(180deg,#eff4eb,#e2ead9)} .panel.tinted-sky{background:linear-gradient(180deg,#eef4f8,#e4edf3)}
     .panel-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-end;margin-bottom:14px}.panel-head h2{margin:0;font-size:1.45rem}.panel-head p{margin:4px 0 0;color:var(--muted)}
     .list{display:grid;gap:10px}.item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 15px;border-radius:20px;border:1px solid var(--line);background:#fff}
     .item.rich{align-items:flex-start}.item-left{display:flex;align-items:center;gap:12px;min-width:0}.item-main{display:grid;gap:4px;min-width:0}.item-title{font-weight:900;font-size:1.02rem}.item-sub{color:var(--muted);font-size:.93rem}.item-value{font-weight:900;font-size:1.08rem;white-space:nowrap;color:#2d2518}
@@ -124,8 +124,8 @@
           <div id="statsMetrics" class="grid quad"></div>
         </section>
         <section class="panel">
-          <div class="panel-head"><div><h2>Fairness & balans</h2><p>Gezond genoeg om nog een ranglijst van te maken.</p></div></div>
-          <div id="fairnessList" class="list"></div>
+          <div class="panel-head"><div><h2>Per locatie</h2><p>Waar werden de units precies gedronken?</p></div></div>
+          <div id="locationList" class="list"></div>
         </section>
       </div>
     </div>
@@ -135,7 +135,7 @@
   <script>
   (()=>{
     const cfg=window.GEJAST_CONFIG||{}; const SUPABASE_URL=cfg.SUPABASE_URL||''; const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
-    let latestPageData=null, latestStatsData=null, latestTop5Data=null, latestDashboardData=null, currentLadderKey='today_units', currentSpeedType='', lastPosition=null;
+    let latestPageData=null, latestStatsData=null, latestTop5Data=null, latestDashboardData=null, currentLadderKey='today_units', currentSpeedType='', lastPosition=null, loadToken=0;
     function token(){ return cfg.getPlayerSessionToken ? cfg.getPlayerSessionToken() : ''; }
     function headers(){ return { apikey:KEY, Authorization:`Bearer ${KEY}`, 'Content-Type':'application/json', Accept:'application/json' }; }
     async function parse(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch(_){ throw new Error(t||`HTTP ${res.status}`); } if(!res.ok) throw new Error(d?.message||d?.error||`HTTP ${res.status}`); return d; }
@@ -174,7 +174,8 @@
     }
     function renderRecent(rows){ renderList(document.getElementById('recentList'),rows,(r)=>itemHtml(r,{title:(_,name)=>`${playerLink(name)} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}`,sub:()=>`${new Date(r.verified_at||r.created_at).toLocaleString('nl-NL')} · bevestigd door ${Array.isArray(r.verifier_names)&&r.verifier_names.length?esc(r.verifier_names.join(', ')):'—'}`,value:()=>`${fmt(r.total_units,1)}u`,pill:'<span class="pill sky">ok</span>'}),'Nog geen bevestigde drankjes.'); }
     function renderVerify(rows){ renderList(document.getElementById('verifyQueue'),rows,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.night_at?new Date(r.night_at).toLocaleDateString('nl-NL'):''} · hoogste avond`,value:()=>`${fmt(r.units,1)}u`}), 'Nog geen pieknachten.'); }
-    function renderFairness(rows){ renderList(document.getElementById('fairnessList'),rows,(r)=>`<div class="item"><div class="item-main"><div class="item-title">${esc(r.label||'Fairness')}</div><div class="item-sub">${esc(r.description||'')}</div></div><div class="item-value">${esc(r.value||'')}</div></div>`,'Nog geen fairness-data.'); }
+    function renderFairness(rows){ const host=document.getElementById('fairnessList'); if(host) renderList(host,rows,(r)=>`<div class="item"><div class="item-main"><div class="item-title">${esc(r.label||'Fairness')}</div><div class="item-sub">${esc(r.description||'')}</div></div><div class="item-value">${esc(r.value||'')}</div></div>`,'Nog geen fairness-data.'); }
+    function renderLocations(rows){ renderList(document.getElementById('locationList'),rows,(r)=>itemHtml(r,{title:()=>esc(r.location_label||r.location||'Locatie onbekend'),sub:()=>`${r.events||0} drankjes`,value:()=>`${fmt(r.units,1)}u`}), 'Nog geen locatie-data.'); }
     function renderBars(el, rows, valueKey, palette=''){ rows=Array.isArray(rows)?rows:[]; const max=Math.max(1,...rows.map(r=>Number(r?.[valueKey]??r?.units??r?.duration_seconds??0)||0)); el.innerHTML=rows.length?`<div class="bars">${rows.map(r=>{ const value=Number(r?.[valueKey]??r?.units??r?.duration_seconds??0)||0; const width=Math.max(7,(value/max)*100); return `<div class="bar-row"><div class="bar-label">${esc(r.label||r.key||r.player_name||r.display_name||'Onbekend')}</div><div class="bar-track"><div class="bar-fill ${palette}" style="width:${width}%"></div></div><div class="bar-value">${valueKey==='duration_seconds'?`${fmt(value,1)}s`:fmt(value,1)}</div></div>`; }).join('')}</div>`:'<div class="note">Nog geen data.</div>`; }
     function renderSpeedHighlights(groups){ latestDashboardData=latestDashboardData||{}; latestDashboardData.speed_leaderboards=Array.isArray(groups)?groups:[]; const tabs=document.getElementById('speedTypeTabs'); const el=document.getElementById('speedHighlights'); const sets=latestDashboardData.speed_leaderboards||[]; if(!sets.length){ tabs.innerHTML=''; el.innerHTML='<div class="note">Nog geen speed-data.</div>'; return; } if(!currentSpeedType || !sets.some(s=>String(s.key||s.speed_type_key||'')===currentSpeedType)){ currentSpeedType=String(sets[0].key||sets[0].speed_type_key||''); } tabs.innerHTML=sets.map(s=>{ const key=String(s.key||s.speed_type_key||''); const label=esc(s.label||s.speed_type_label||key); return `<button class="tab ${key===currentSpeedType?'active':''}" data-speed-type="${esc(key)}">${label}</button>`; }).join(''); tabs.querySelectorAll('[data-speed-type]').forEach(btn=>btn.onclick=()=>{ currentSpeedType=btn.getAttribute('data-speed-type'); renderSpeedHighlights(sets); }); const active=sets.find(s=>String(s.key||s.speed_type_key||'')===currentSpeedType)||sets[0]; const rows=Array.isArray(active.rows)?active.rows:[]; renderList(el,rows,(r,i)=>itemHtml(r,{title:(_,name)=>`${i+1}. ${playerLink(name)}`,sub:()=>`${esc(active.label||active.speed_type_label||'Drank')} · beste tijd`,value:()=>`${fmt(r.duration_seconds,1)}s`}), 'Nog geen verified tijden voor dit dranktype.'); }
     function renderStats(data){
@@ -189,19 +190,47 @@
       renderList(document.getElementById('topCountNow'),[...(data.top_count_month||[]).slice(0,3),...(data.top_count_week||[]).slice(0,3)],(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.window_label||''} · ${fmt(r.units,1)} units`,value:()=>`${r.events||0}`}), 'Nog geen data.');
       renderList(document.getElementById('bigNights'),data.big_nights,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.night_at?new Date(r.night_at).toLocaleDateString('nl-NL'):''} · hoogste avond`,value:()=>`${fmt(r.units,1)}u`}), 'Nog geen grote nachten.');
       renderBars(document.getElementById('typeBars'), (data.by_type||[]).slice(0,8), 'units', 'sage');
-      renderFairness(data.fairness_cards||[]);
+      renderFairness(data.fairness_cards||[]); renderLocations(data.by_location||[]);
       renderSpeedHighlights(data.speed_leaderboards||[]);
     }
     async function loadStats(){
-      try{ const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_dashboard_public`,{method:'POST',headers:headers(),body:'{}'}); const raw=await parse(res); latestStatsData=raw?.get_drinks_dashboard_public||raw||{}; latestDashboardData=latestStatsData; renderStats(latestStatsData); renderLadder(); }
-      catch(err){ console.warn('dashboard load failed',err); document.getElementById('speedHighlights').innerHTML='<div class="note">Nog geen speed-data.</div>'; }
+      try{
+        const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_dashboard_public`,{method:'POST',headers:headers(),body:'{}'}); const raw=await parse(res); latestStatsData=raw?.get_drinks_dashboard_public||raw||{}; latestDashboardData=latestStatsData;
+      }catch(err){
+        console.warn('dashboard load failed',err);
+        latestStatsData=latestStatsData||{};
+      }
+      try{
+        const locRes=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_locations_public`,{method:'POST',headers:headers(),body:'{}'}); const locRaw=await parse(locRes); latestStatsData.by_location=locRaw?.get_drink_locations_public||locRaw||[];
+      }catch(_){}
+      renderStats(latestStatsData||{}); renderLadder();
     }
     async function loadPage(forceGeo=false,userInitiated=false){
+      const myLoad=++loadToken;
       try{
         const pos=(forceGeo||!lastPosition)?await getPosition(forceGeo,userInitiated):lastPosition; if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null);
         const usePos=lastPosition||pos; const payload={session_token:token(),viewer_lat:usePos?usePos.coords.latitude:null,viewer_lng:usePos?usePos.coords.longitude:null};
-        const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:headers(),body:JSON.stringify(payload)}); const raw=await parse(res); latestPageData=raw?.get_drinks_page_public||raw||{};
-        renderSession(latestPageData); renderRecent(latestPageData.recent_verified||[]); renderVerify(latestPageData.verify_queue||[]); renderFairness(latestPageData.fairness_cards||[]); renderLadder(); setStatus(usePos?'':'Geolocatie nog niet actief. Overzicht werkt wel; verificaties blijven strikter zonder locatie.');
+        const [pageResult] = await Promise.allSettled([
+          fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:headers(),body:JSON.stringify(payload)}).then(parse)
+        ]);
+        if(myLoad!==loadToken) return;
+        if(pageResult.status==='fulfilled'){
+          const raw=pageResult.value;
+          latestPageData=raw?.get_drinks_page_public||raw||{};
+        }else{
+          latestPageData=latestPageData||{};
+          setStatus(pageResult.reason?.message||String(pageResult.reason||'Laden mislukt'),'bad');
+        }
+        renderSession(latestPageData||{});
+        const recent = latestPageData.recent_verified||latestPageData.recent_events||[];
+        const peaks = latestPageData.big_nights||latestStatsData?.big_nights||[];
+        const locationRows = latestPageData.by_location||latestStatsData?.by_location||[];
+        renderRecent(recent);
+        renderVerify(peaks);
+        renderFairness(latestPageData.fairness_cards||[]);
+        renderLocations(locationRows);
+        renderLadder();
+        if(!document.getElementById('statusLine').textContent){ setStatus(usePos?'':'Geolocatie nog niet actief. Overzicht werkt wel; verificaties blijven strikter zonder locatie.'); }
       }catch(err){ setStatus(err.message||String(err),'bad'); }
       await loadStats();
     }
@@ -212,6 +241,6 @@
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./gejast-geo.js?v302"></script><script src="./drinks-verify-float.js?v302"></script>
+  <script src="./gejast-geo.js?v303"></script><script src="./drinks-verify-float.js?v303"></script>
 </body>
 </html>

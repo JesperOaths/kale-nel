@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alcohol toevoegen</title>
-  <script>window.GEJAST_PAGE_VERSION='v302';</script><script src="./gejast-config.js?v302"></script>
+  <script>window.GEJAST_PAGE_VERSION='v303';</script><script src="./gejast-config.js?v303"></script>
   <style>
     :root{
       --line:rgba(0,0,0,.09);
@@ -144,16 +144,6 @@
           <a class="btn alt" href="./drinks.html">Overzicht</a>
         </div>
         <div class="top-actions right gejast-corner-tools">
-          <button class="geo-btn gejast-geo-button is-bad" data-gejast-geo-button="1" id="geoStateBtn" type="button" aria-label="Geolocatie opnieuw proberen" title="Geolocatie opnieuw proberen">
-            <svg viewBox="0 0 64 64" aria-hidden="true">
-              <path d="M32 6v8"></path>
-              <path d="M32 50v8"></path>
-              <path d="M6 32h8"></path>
-              <path d="M50 32h8"></path>
-              <circle cx="32" cy="32" r="20"></circle>
-              <circle cx="32" cy="32" r="9" fill="currentColor" stroke="none"></circle>
-            </svg>
-          </button>
           <a href="./index.html" class="gejast-logo-chip"><img class="logo" src="./logo.png" alt="Logo" /></a>
         </div>
       </div>
@@ -174,7 +164,7 @@
         </section>
 
         <section class="panel recent">
-          <h2>Recent bevestigd</h2>
+          <div class="row-top" style="margin-bottom:8px"><h2 style="margin:0">Recent bevestigd</h2><a class="action-btn verify" href="./drinks_history.html">Alles</a></div>
           <div class="list" id="recentList"></div>
         </section>
       </div>
@@ -197,7 +187,7 @@
 
   <div class="site-credit-watermark" data-version-watermark>v273 · Made by Bruis</div>
 
-  <script src="./gejast-geo.js?v302"></script><script src="./drinks-verify-float.js?v302"></script>
+  <script src="./gejast-geo.js?v303"></script><script src="./drinks-verify-float.js?v303"></script>
   <script>
   (function(){
     const cfg=window.GEJAST_CONFIG||{};
@@ -206,14 +196,13 @@
     const SESSION_KEYS=['jas_session_token_v11','jas_session_token_v10'];
     let latestData=null; let lastPosition=null;
     const statusLine=document.getElementById('statusLine');
-    const geoStateBtn=document.getElementById('geoStateBtn');
     const AUTO_GEO_KEY='gejast_auto_geo_prompt_v1';
     const DRINK_LAYOUT_ORDER=['bier','2bakken','liter_bier','shot','ice','wijnfles'];
     function token(){ for(const k of SESSION_KEYS){ const v=localStorage.getItem(k)||sessionStorage.getItem(k); if(v) return v; } return ''; }
     function headers(){ return {'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${KEY}`,Accept:'application/json'}; }
     async function parse(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch{ throw new Error(t||`HTTP ${res.status}`); } if(!res.ok) throw new Error(d?.message||d?.error||`HTTP ${res.status}`); return d; }
     function setStatus(msg='',tone=''){ statusLine.textContent=msg; statusLine.className=`status ${tone}`.trim(); }
-    function setGeoButtonState(ready){ geoStateBtn.classList.toggle('is-ready', !!ready); geoStateBtn.setAttribute('aria-pressed', ready ? 'true' : 'false'); geoStateBtn.title = ready ? 'Geolocatie actief' : 'Geolocatie opnieuw proberen'; }
+    function setGeoButtonState(ready){ try{ window.GEJAST_GEO && window.GEJAST_GEO.setButtonState && window.GEJAST_GEO.setButtonState(!!ready); }catch(_){} }
     async function getPosition(forceFresh=false,userInitiated=false){ const geo = window.GEJAST_GEO; if(!geo) throw new Error('Geolocatie helper ontbreekt.'); const pos = await geo.ensure(forceFresh,{silent:!userInitiated&&!forceFresh}); if(pos) geo.startWatch(); return pos; }
     async function updateGeoInfo(pos){
       const metaEl=document.getElementById('geoMetaLine');
@@ -232,6 +221,47 @@
       addrEl.textContent=address ? address : 'Adres onbekend';
     }
     function drinkCopy(key){ const map={bier:'1 Bak', '2bakken':'2 Bakken', shot:'Shot', wijnfles:'Fles Wijn', ice:'Ice', liter_bier:'Liter Bier'}; return map[key]||key; }
+    function isSecretKingLike(item){ const raw=String(item?.event_type_key||item?.event_type_label||item?.label||item?.request_kind||'').toLowerCase(); return raw.includes('koning')||raw.includes('king')||raw.includes('balzaal')||raw.includes('ballroom'); }
+    function locationLabel(r){ return r?.location_label || r?.location_text || (r?.lat!=null&&r?.lng!=null?`${Number(r.lat).toFixed(3)}, ${Number(r.lng).toFixed(3)}`:'Locatie onbekend'); }
+    function mergePendingData(data){ const mine=(data?.my_pending_events||[]).map(r=>({...r,__kind:'mine'})); const verify=(data?.verify_queue||[]).map(r=>({...r,__kind:'verify'})); const seen=new Set(); const out=[]; [...mine,...verify].forEach(r=>{ const key=`${r.__kind}:${r.id}`; if(!seen.has(key)){ seen.add(key); out.push(r); } }); return out; }
+    function maybeCelebrateVerified(data){
+      try{
+        const mine=(data?.my_pending_events||[]).map(r=>Number(r.id)).filter(Boolean);
+        const recent=(data?.recent_verified||[]).filter(r=>Number(r.id));
+        const trackerKey='gejast_verified_party_seen_v1';
+        const seen=JSON.parse(localStorage.getItem(trackerKey)||'[]');
+        const lastPending=JSON.parse(sessionStorage.getItem('gejast_last_pending_ids_v1')||'[]');
+        const fresh=recent.find(r=>!seen.includes(Number(r.id)) && (lastPending.includes(Number(r.id)) || mine.includes(Number(r.id))===false));
+        sessionStorage.setItem('gejast_last_pending_ids_v1', JSON.stringify(mine.slice(0,20)));
+        if(!fresh) return;
+        seen.push(Number(fresh.id));
+        localStorage.setItem(trackerKey, JSON.stringify(seen.slice(-100)));
+        const box=document.createElement('div');
+        box.style.cssText='position:fixed;inset:0;z-index:10030;display:grid;place-items:center;pointer-events:none;';
+        box.innerHTML=`<div style="max-width:420px;background:rgba(17,17,17,.92);border:1px solid rgba(212,175,55,.35);color:#fff;border-radius:24px;padding:18px 18px 22px;box-shadow:0 20px 60px rgba(0,0,0,.35);text-align:center">
+            <div style="font-size:2.4rem;line-height:1">🍻✨🎉</div>
+            <div style="font-weight:900;font-size:1.35rem;margin-top:8px">Je drankverzoek is bevestigd!</div>
+            <div style="margin-top:6px;color:rgba(255,255,255,.86)">${fresh.event_type_label||'Drankje'} · ${Number(fresh.total_units||0).toFixed(1)} units</div>
+          </div>
+          <div id="gPartyBurst" style="position:fixed;inset:0;overflow:hidden"></div>`;
+        document.body.appendChild(box);
+        const burst=box.querySelector('#gPartyBurst');
+        const icons=['🍺','🍻','✨','🎉','🥳','🍾'];
+        for(let i=0;i<26;i++){
+          const s=document.createElement('div');
+          const left=(Math.random()*100).toFixed(1);
+          const dur=(1300+Math.random()*1200)|0;
+          s.textContent=icons[i%icons.length];
+          s.style.cssText=`position:absolute;left:${left}vw;top:${30+Math.random()*40}vh;font-size:${22+Math.random()*18}px;animation:gparty ${dur}ms ease-out forwards;`;
+          burst.appendChild(s);
+        }
+        if(navigator.vibrate){ try{ navigator.vibrate([180,70,220,70,320]); }catch(_){} }
+        if(!document.getElementById('gparty-style')){
+          const st=document.createElement('style'); st.id='gparty-style'; st.textContent='@keyframes gparty{0%{transform:translateY(0) scale(.7);opacity:0}10%{opacity:1}100%{transform:translateY(-180px) rotate(22deg) scale(1.2);opacity:0}}'; document.head.appendChild(st);
+        }
+        setTimeout(()=>box.remove(), 2800);
+      }catch(_){}
+    }
     function renderButtons(types){
       const wrap=document.getElementById('drinkButtons');
       const rows=[...(types||[])].sort((a,b)=>{ const ai=DRINK_LAYOUT_ORDER.indexOf(a.key); const bi=DRINK_LAYOUT_ORDER.indexOf(b.key); return (ai===-1?999:ai)-(bi===-1?999:bi) || String(drinkCopy(a.key)||a.label||a.key).localeCompare(String(drinkCopy(b.key)||b.label||b.key),'nl'); });
@@ -246,12 +276,12 @@
         <div class="metric"><div class="label">Open aanvragen</div><div class="value">${pending}</div></div>
         <div class="metric"><div class="label">All-time</div><div class="value">${Number(totals.all_units||0).toFixed(1)}</div></div>`;
     }
-    function renderPending(rows){ const wrap=document.getElementById('pendingList'); wrap.innerHTML=(rows||[]).length ? (rows||[]).map(r=>`<div class="row"><div class="row-top"><div><strong>${r.event_type_label}</strong><div class="meta">${new Date(r.created_at).toLocaleString('nl-NL')} · ${Number(r.total_units||0).toFixed(1)} units</div></div><span class="pill">${r.status}</span></div><div class="row-actions"><button class="action-btn cancel" data-cancel-id="${r.id}">Annuleren</button></div></div>`).join('') : '<div class="muted">Nog geen open aanvragen.</div>'; wrap.querySelectorAll('[data-cancel-id]').forEach(btn=>btn.addEventListener('click',()=>cancelDrink(btn.getAttribute('data-cancel-id')))); }
-    function renderVerify(rows){ const wrap=document.getElementById('verifyQueue'); wrap.innerHTML=(rows||[]).length ? (rows||[]).map(r=>`<div class="verify-card"><div class="row-top"><div><strong>${r.player_name} · ${r.event_type_label}</strong><div class="verify-distance">${Number(r.total_units||0).toFixed(1)} units${r.distance_m!=null ? ` · ${Math.round(r.distance_m)}m afstand` : ''}</div></div><span class="pill">check</span></div><div class="row-actions"><button class="action-btn verify" data-verify-id="${r.id}">Bevestigen</button></div></div>`).join('') : '<div class="muted">Nog geen verificaties in de buurt.</div>'; wrap.querySelectorAll('[data-verify-id]').forEach(btn=>btn.addEventListener('click',()=>verifyDrink(btn.getAttribute('data-verify-id')))); }
-    function renderRecent(rows){ const wrap=document.getElementById('recentList'); wrap.innerHTML=(rows||[]).length ? (rows||[]).map(r=>`<div class="row"><div class="row-top"><div><strong>${r.player_name} · ${r.event_type_label}</strong><div class="meta">${new Date(r.verified_at||r.created_at).toLocaleString('nl-NL')} · ${Number(r.total_units||0).toFixed(1)} units</div><div class="meta">Bevestigd door ${r.verifier_names?.join(', ')||'—'}</div></div><span class="pill">ok</span></div></div>`).join('') : '<div class="muted">Nog geen bevestigde drankjes.</div>'; }
-    async function loadPage(forceFresh=false,userInitiated=false){ try{ if(window.GEJAST_CONFIG && !window.GEJAST_CONFIG.ensurePlayerSessionOrRedirect('drinks_add')) return; const pos=(forceFresh||!lastPosition)?await getPosition(forceFresh,userInitiated):lastPosition; if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); const usePos=lastPosition||pos; const payload={session_token:token(),viewer_lat:usePos?usePos.coords.latitude:null,viewer_lng:usePos?usePos.coords.longitude:null}; const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:headers(),body:JSON.stringify(payload)}); const raw=await parse(res); const data=raw?.get_drinks_page_public||raw||{}; latestData=data; renderButtons(data.event_types||[]); renderSession(data); renderPending(data.my_pending_events||[]); renderVerify(data.verify_queue||[]); renderRecent(data.recent_verified||[]); setStatus(''); }catch(err){ setStatus(err.message||String(err),'bad'); if(!lastPosition) setGeoButtonState(false); } }
+    function renderPending(rows){ const wrap=document.getElementById('pendingList'); wrap.innerHTML=(rows||[]).length ? (rows||[]).map(r=>`<div class="row"><div class="row-top"><div><strong>${r.player_name ? `${r.player_name} · ` : ''}${r.event_type_label||r.event_type_key||'Drankje'}</strong><div class="meta">${new Date(r.created_at||Date.now()).toLocaleString('nl-NL')} · ${Number(r.total_units||0).toFixed(1)} units</div><div class="meta">${locationLabel(r)}</div></div><span class="pill">${r.__kind==='verify'?'check':(r.status||'pending')}</span></div><div class="row-actions">${r.__kind==='verify' ? `<button class="action-btn verify" data-verify-id="${r.id}">Bevestigen</button>` : `<button class="action-btn cancel" data-cancel-id="${r.id}">Annuleren</button>`}</div></div>`).join('') : '<div class="muted">Nog geen open aanvragen of checks.</div>'; wrap.querySelectorAll('[data-cancel-id]').forEach(btn=>btn.addEventListener('click',()=>cancelDrink(btn.getAttribute('data-cancel-id')))); wrap.querySelectorAll('[data-verify-id]').forEach(btn=>btn.addEventListener('click',()=>verifyDrink(btn.getAttribute('data-verify-id')))); }
+    function renderVerify(rows){ const wrap=document.getElementById('verifyQueue'); wrap.innerHTML=(rows||[]).length ? (rows||[]).map(r=>`<div class="verify-card"><div class="row-top"><div><strong>${r.player_name} · ${r.event_type_label}</strong><div class="verify-distance">${Number(r.total_units||0).toFixed(1)} units${isSecretKingLike(r)?'':(r.distance_m!=null ? ` · ${Math.round(r.distance_m)}m afstand` : '')}</div><div class="meta">${locationLabel(r)}</div></div><span class="pill">check</span></div><div class="row-actions"><button class="action-btn verify" data-verify-id="${r.id}">Bevestigen</button></div></div>`).join('') : '<div class="muted">Nog geen verificaties in de buurt.</div>'; wrap.querySelectorAll('[data-verify-id]').forEach(btn=>btn.addEventListener('click',()=>verifyDrink(btn.getAttribute('data-verify-id')))); }
+    function renderRecent(rows){ const wrap=document.getElementById('recentList'); const items=(rows||[]).slice(0,5); wrap.innerHTML=items.length ? items.map(r=>`<a class="row clean" href="./drinks_history.html"><div class="row-top"><div><strong>${r.player_name} · ${r.event_type_label}</strong><div class="meta">${new Date(r.verified_at||r.created_at).toLocaleString('nl-NL')} · ${Number(r.total_units||0).toFixed(1)} units</div><div class="meta">${locationLabel(r)}</div><div class="meta">Bevestigd door ${r.verifier_names?.join(', ')||'—'}</div></div><span class="pill">ok</span></div></a>`).join('') : '<div class="muted">Nog geen bevestigde drankjes.</div>'; }
+    async function loadPage(forceFresh=false,userInitiated=false){ try{ if(window.GEJAST_CONFIG && !window.GEJAST_CONFIG.ensurePlayerSessionOrRedirect('drinks_add')) return; const pos=(forceFresh||!lastPosition)?await getPosition(forceFresh,userInitiated):lastPosition; if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); const usePos=lastPosition||pos; const payload={session_token:token(),viewer_lat:usePos?usePos.coords.latitude:null,viewer_lng:usePos?usePos.coords.longitude:null}; const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:headers(),body:JSON.stringify(payload)}); const raw=await parse(res); const data=raw?.get_drinks_page_public||raw||{}; latestData=data; renderButtons(data.event_types||[]); renderSession(data); const mergedPending=mergePendingData(data); renderPending(mergedPending); renderVerify(data.verify_queue||[]); renderRecent(data.recent_verified||[]); maybeCelebrateVerified(data); setStatus(''); }catch(err){ setStatus(err.message||String(err),'bad'); if(!lastPosition) setGeoButtonState(false); } }
     async function submitDrink(typeKey){ try{ const pos=await getPosition(true,true); if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); const usePos=lastPosition||pos; if(!usePos) throw new Error('Geolocatie is nodig om een drankje in te dienen.'); const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),event_type_key:typeKey,quantity:1,lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy})}); await parse(res); setStatus(`${drinkCopy(typeKey)} wacht op bevestiging.`, 'ok'); await loadPage(false,false); }catch(err){ setStatus(err.message||String(err),'bad'); } }
-    async function verifyDrink(id){ try{ const pos=await getPosition(true,true); if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); const usePos=lastPosition||pos; if(!usePos) throw new Error('Geolocatie is nodig om een drankje te bevestigen.'); const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy,approve:true})}); await parse(res); setStatus('Drankje bevestigd.', 'ok'); await loadPage(false,false); }catch(err){ setStatus(err.message||String(err),'bad'); } }
+    async function verifyDrink(id){ try{ const row=((latestData&&latestData.verify_queue)||[]).find(r=>String(r.id)===String(id))||{}; const locationSensitive=!isSecretKingLike(row); let usePos=null; if(locationSensitive){ const pos=await getPosition(true,true); if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); usePos=lastPosition||pos; if(!usePos) throw new Error('Geolocatie is nodig om een drankje te bevestigen.'); } const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),lat:usePos?usePos.coords.latitude:null,lng:usePos?usePos.coords.longitude:null,accuracy:usePos?usePos.coords.accuracy:null,approve:true})}); await parse(res); setStatus('Drankje bevestigd.', 'ok'); await loadPage(false,false); }catch(err){ setStatus(err.message||String(err),'bad'); } }
     async function cancelDrink(id){ try{ const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_my_pending_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id)})}); await parse(res); setStatus('Aanvraag geannuleerd.', 'ok'); await loadPage(false,false); }catch(err){ setStatus(err.message||String(err),'bad'); } }
     async function tryAutoPrompt(){
       try{
@@ -266,7 +296,6 @@
         setGeoButtonState(false);
       }
     }
-    geoStateBtn?.addEventListener('click',()=>{ lastPosition=null; loadPage(true,true); });
     setGeoButtonState(false);
     loadPage(false,false);
     tryAutoPrompt();

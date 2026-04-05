@@ -9,6 +9,7 @@
   let monitorId = null;
   let visibilityBound = false;
   let notifyStateCache = null;
+  let buttonsReadyState = false;
 
   function isIOS(){ const ua = navigator.userAgent || ''; return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
   function isAndroid(){ return /Android/i.test(navigator.userAgent || ''); }
@@ -152,7 +153,7 @@
   async function registerNotificationWorker(){
     if (!notificationSupported()) return null;
     try {
-      const reg = await navigator.serviceWorker.register('./gejast-sw.js?v292', { scope:'./' });
+      const reg = await navigator.serviceWorker.register('./gejast-sw.js?v303', { scope:'./' });
       return await navigator.serviceWorker.ready.catch(()=>reg);
     } catch(_) { return null; }
   }
@@ -362,7 +363,7 @@
     existing.querySelectorAll('[data-gejast-notify-button]').forEach(bindNotifyButton);
     return existing;
   }
-  function setButtonState(ready){ document.querySelectorAll('[data-gejast-geo-button]').forEach((btn)=>{ btn.classList.toggle('is-ready',!!ready); btn.classList.toggle('is-bad',!ready); btn.title = ready ? 'Geolocatie actief' : 'Geolocatie opnieuw proberen'; btn.setAttribute('aria-pressed', ready ? 'true' : 'false'); }); }
+  function setButtonState(ready){ buttonsReadyState = !!ready; document.querySelectorAll('[data-gejast-geo-button]').forEach((btn)=>{ btn.classList.toggle('is-ready',!!ready); btn.classList.toggle('is-bad',!ready); btn.title = ready ? 'Geolocatie actief' : 'Geolocatie opnieuw proberen'; btn.setAttribute('aria-pressed', ready ? 'true' : 'false'); }); }
   window.GEJAST_GEO = { cached, ensure, request, requestGeoAccess, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError, setButtonState, ensureCornerTools, notificationSupported, notificationPermission, registerNotificationWorker, ensurePushSubscription, syncPushSubscriptionToBackend, queueBackendTestPush, getNotificationDiagnostics, refreshNotificationButton, requestNotificationAccess, showNotificationFromServiceWorker, setNotificationButtonState, showDiagnostics };
   function init(){ if (!shouldExclude()) ensureCornerTools(); setButtonState(!!cached()); refreshNotificationButton().catch(()=>{}); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once:true }); else init();

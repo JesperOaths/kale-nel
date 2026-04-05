@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drinks historie</title>
+  <script>window.GEJAST_PAGE_VERSION='v303';</script><script src="./gejast-config.js?v303"></script>
+  <style>
+    :root{--bg:#ece7dc;--card:rgba(255,251,245,.95);--paper:#fffdfa;--line:rgba(54,40,20,.08);--ink:#201b16;--muted:#6b6257;--gold:#9a8241}
+    *{box-sizing:border-box}body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,231,220,.92),rgba(236,231,220,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
+    .wrap{max-width:1100px;margin:0 auto}.shell{background:var(--card);border:1px solid rgba(255,255,255,.7);border-radius:28px;padding:22px;box-shadow:0 18px 44px rgba(0,0,0,.08)}
+    .top{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:flex-start}.btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:#111;color:#fff;text-decoration:none;font-weight:800}.btn.alt{background:#fff;color:#111}
+    h1{margin:10px 0 6px;font-size:clamp(1.8rem,4vw,3rem)}.sub{color:var(--muted)}
+    .list{display:grid;gap:10px;margin-top:18px}.row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:14px 15px;border-radius:20px;border:1px solid var(--line);background:#fff}
+    .main{display:grid;gap:4px}.title{font-weight:900}.meta{font-size:.93rem;color:var(--muted)}.pill{display:inline-flex;padding:4px 9px;border-radius:999px;background:#dbe8f3;color:#425b6c;font-size:11px;font-weight:800;text-transform:uppercase}
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,.18)}
+  </style>
+</head>
+<body>
+<div class="wrap"><div class="shell">
+  <div class="top">
+    <div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn alt" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./drinks_add.html';}">Terug</a><a class="btn alt" href="./drinks_add.html">Drinks toevoegen</a></div>
+      <h1>Drinks historie</h1>
+      <div class="sub">Volledige geschiedenis van alle bevestigde drankjes.</div>
+      <div id="statusLine" class="sub" style="margin-top:8px"></div>
+    </div>
+    <a href="./index.html"><img src="./logo.png" alt="Logo" style="width:68px;height:68px;object-fit:contain"></a>
+  </div>
+  <div id="historyList" class="list"><div class="meta">Laden…</div></div>
+</div></div>
+<div class="site-credit-watermark" data-version-watermark></div>
+<script src="./gejast-geo.js?v303"></script><script src="./drinks-verify-float.js?v303"></script>
+<script>
+(()=> {
+  const cfg=window.GEJAST_CONFIG||{};
+  const SUPABASE_URL=cfg.SUPABASE_URL||'';
+  const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
+  function headers(){ return {'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${KEY}`,Accept:'application/json'}; }
+  async function parse(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch{ throw new Error(t||`HTTP ${res.status}`); } if(!res.ok) throw new Error(d?.message||d?.error||`HTTP ${res.status}`); return d; }
+  function esc(v){ return String(v==null?'':v).replace(/[&<>"]/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+  async function load(){
+    try{
+      const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_verified_drinks_history_public`,{method:'POST',headers:headers(),body:JSON.stringify({limit_count:null})});
+      const raw=await parse(res);
+      const rows=raw?.get_verified_drinks_history_public||raw||[];
+      document.getElementById('historyList').innerHTML=(rows||[]).length ? rows.map(r=>`<div class="row"><div class="main"><div class="title">${esc(r.player_name||'Speler')} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}</div><div class="meta">${new Date(r.verified_at||r.created_at).toLocaleString('nl-NL')} · ${Number(r.total_units||0).toFixed(1)} units</div><div class="meta">${esc(r.location_label||'Locatie onbekend')}</div><div class="meta">Bevestigd door ${Array.isArray(r.verifier_names)&&r.verifier_names.length?esc(r.verifier_names.join(', ')):'—'}</div></div><span class="pill">ok</span></div>`).join('') : '<div class="meta">Nog geen bevestigde drankjes.</div>';
+      document.getElementById('statusLine').textContent='';
+    }catch(err){
+      document.getElementById('statusLine').textContent=err.message||String(err);
+      document.getElementById('historyList').innerHTML='<div class="meta">Laden mislukt.</div>';
+    }
+  }
+  load();
+})();
+</script>
+<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+</body></html>
