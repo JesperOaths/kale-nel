@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Balzaal</title>
-  <script>window.GEJAST_PAGE_VERSION='v306';</script>
-  <script src="./gejast-config.js?v306"></script>
+  <script>window.GEJAST_PAGE_VERSION='v309';</script>
+  <script src="./gejast-config.js?v309"></script>
   <style>
     :root{
       --gold:#b78e43; --gold-deep:#89642a; --wine:#88162a; --wine-deep:#5c0c18; --cream:#f6efe3; --ink:#181310; --muted:#706557;
@@ -302,17 +302,26 @@
 
     function render(state){ latest = state || {}; renderThrone(latest); renderMembers(latest); renderSuccession(latest); renderQueue(latest); renderIntro(latest); }
     async function callBallroomState(){
+      const sessionToken = token() || null;
       const tries = [
-        () => rpc('get_ballroom_state', { session_token: token() || null }),
-        () => rpc('get_ballroom_state', { session_token_input: token() || null }),
-        () => rpc('get_ballroom_state', {}),
-        () => rpc('get_ballroom_public_state', { session_token: token() || null }),
-        () => rpc('get_ballroom_public_state', { session_token_input: token() || null }),
-        () => rpc('get_ballroom_public_state', {})
+        () => rpc('get_ballroom_public_state', { session_token_input: sessionToken }),
+        () => rpc('get_ballroom_public_state', { session_token: sessionToken }),
+        () => rpc('get_ballroom_state', { session_token_input: sessionToken }),
+        () => rpc('get_ballroom_state', { session_token: sessionToken })
       ];
       let lastErr = null;
       for (const run of tries){
-        try { const out = await run(); if (out) return out; } catch (err) { lastErr = err; }
+        try {
+          const out = await run();
+          if (out) return out;
+        } catch (err) {
+          const msg = String(err && err.message || err || '');
+          if (/without parameters in the schema cache/i.test(msg)) {
+            lastErr = err;
+            continue;
+          }
+          lastErr = err;
+        }
       }
       throw lastErr || new Error('Balzaalstatus kon niet geladen worden.');
     }
@@ -334,6 +343,6 @@
     setInterval(load, 20000);
   })();
   </script>
-  <script src="./gejast-geo.js?v306"></script><script src="./drinks-verify-float.js?v306"></script>
+  <script src="./gejast-geo.js?v309"></script><script src="./drinks-verify-float.js?v309"></script>
 </body>
 </html>

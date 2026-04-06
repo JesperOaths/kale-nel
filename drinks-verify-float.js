@@ -51,7 +51,7 @@
         const ok = await window.GEJAST_GEO.showNotificationFromServiceWorker(item.kind === 'speed' ? 'Snelheid te verifiëren' : 'Drankje te verifiëren', {
           body: `${item.player_name||'Speler'} · ${item.event_type_label || item.speed_type_label || ''}`.trim(),
           tag: id,
-          data: { url: item.kind === 'speed' ? './drinks_speed.html' : './drinks.html#verifyPanel', itemId: item.id, kind: item.kind || 'drink' },
+          data: { url: item.kind === 'speed' ? './drinks_speed.html' : './drinks_pending.html', itemId: item.id, kind: item.kind || 'drink' },
           renotify: true
         });
         if (ok) return;
@@ -70,7 +70,7 @@
     if (box) return box;
     box = document.createElement('div');
     box.id = 'globalDrinksVerifyFloat';
-    box.innerHTML = '<div class="gdf-card"><div class="gdf-title" id="gdfTitle">Verificatie</div><div id="gdfBody" class="gdf-body"></div><div class="gdf-actions"><button id="gdfVerifyBtn" class="gdf-btn">Bevestigen</button><button id="gdfRejectBtn" class="gdf-btn alt">Afkeuren</button><button id="gdfOpenBtn" class="gdf-btn alt">Open pagina</button><button id="gdfDismissBtn" class="gdf-btn alt">Later</button></div></div>';
+    box.innerHTML = '<div class="gdf-card"><div class="gdf-title" id="gdfTitle">Verificatie</div><div id="gdfBody" class="gdf-body"></div><div class="gdf-actions"><button id="gdfVerifyBtn" class="gdf-btn">Bevestigen</button><button id="gdfRejectBtn" class="gdf-btn alt">Afkeuren</button><button id="gdfOpenBtn" class="gdf-btn alt">Open pending</button><button id="gdfDismissBtn" class="gdf-btn alt">Later</button></div></div>';
     const style = document.createElement('style');
     style.textContent = '#globalDrinksVerifyFloat{position:fixed;right:14px;bottom:74px;z-index:10000;max-width:340px;opacity:0;transform:translate3d(160%,48px,0) scale(.92);pointer-events:none}#globalDrinksVerifyFloat.show{opacity:1;transform:translate3d(0,0,0) scale(1);pointer-events:auto;animation:gdf-in .52s cubic-bezier(.2,.9,.2,1)}@keyframes gdf-in{0%{opacity:0;transform:translate3d(160%,58px,0) scale(.88)}65%{opacity:1;transform:translate3d(-10px,-4px,0) scale(1.02)}100%{opacity:1;transform:translate3d(0,0,0) scale(1)}}.gdf-card{background:rgba(17,17,17,.95);color:#fff;border:1px solid rgba(212,175,55,.34);border-radius:18px;padding:14px;box-shadow:0 16px 44px rgba(0,0,0,.34);backdrop-filter:blur(8px)}.gdf-title{font-weight:900;margin-bottom:8px}.gdf-body{font-size:14px;line-height:1.4;color:rgba(255,255,255,.92)}.gdf-meta{font-size:12px;color:rgba(255,255,255,.72);margin-top:6px}.gdf-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.gdf-btn{appearance:none;border:0;border-radius:999px;padding:9px 12px;font:inherit;font-weight:800;background:#9a8241;color:#111;cursor:pointer}.gdf-btn[disabled]{opacity:.6;cursor:wait}.gdf-btn.alt{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.12)}@media(max-width:640px){#globalDrinksVerifyFloat{left:10px;right:10px;bottom:88px;max-width:none}}';
     document.body.appendChild(style);
@@ -227,11 +227,11 @@
     document.getElementById('gdfRejectBtn').style.display = 'inline-flex';
     const promptLabel = item.kind==='speed' ? `${item.event_type_label || item.speed_type_label} · ${Number(item.duration_seconds||0).toFixed(1)}s` : `${item.event_type_label}`;
     document.getElementById('gdfTitle').textContent = item.kind==='speed' ? 'Snelheid verificatie' : 'Drinks verificatie';
-    document.getElementById('gdfOpenBtn').textContent = item.kind==='speed' ? 'Open snelheid' : 'Open drinks';
+    document.getElementById('gdfOpenBtn').textContent = item.kind==='speed' ? 'Open snelheid' : 'Open pending';
     document.getElementById('gdfBody').innerHTML = `<strong>${item.player_name} · ${promptLabel}</strong><div class="gdf-meta">${Number(item.total_units||0).toFixed(1)} units${item.kind==='speed' ? ` · ${Number(item.duration_seconds||0).toFixed(1)}s` : ''}${locationBits.length ? ' · ' + locationBits.join(' · ') : ''}</div><div class="gdf-meta">${Number(item.approve_votes||0)} voor · ${Number(item.reject_votes||0)} tegen${countdownText(item)?` · ${countdownText(item)}`:''}</div><div class="gdf-meta">${item.kind==='speed' ? 'Open snelheid om alle verificaties en status te zien.' : 'Open drinks om alle verificaties en status te zien.'}</div>${notifyPermission !== 'granted' ? '<div class="gdf-meta">Tip: zet meldingen aan met de belknop naast je locatieknop.</div>' : ''}`;
     document.getElementById('gdfVerifyBtn').onclick = async () => { const body = document.getElementById('gdfBody'); body.querySelectorAll('.gdf-meta.error').forEach((n)=>n.remove()); try { await (item.kind==='speed' ? verifySpeedEvent(item, true) : verifyDrinkEvent(item, true)); } catch (err) { body.insertAdjacentHTML('beforeend', `<div class="gdf-meta error">${(err && err.message) || 'Bevestigen mislukt.'}</div>`); } };
     document.getElementById('gdfRejectBtn').onclick = async () => { const body = document.getElementById('gdfBody'); body.querySelectorAll('.gdf-meta.error').forEach((n)=>n.remove()); try { await (item.kind==='speed' ? verifySpeedEvent(item, false) : verifyDrinkEvent(item, false)); } catch (err) { body.insertAdjacentHTML('beforeend', `<div class="gdf-meta error">${(err && err.message) || 'Afkeuren mislukt.'}</div>`); } };
-    document.getElementById('gdfOpenBtn').onclick = () => { location.href = item.kind==='speed' ? './drinks_speed.html' : './drinks.html#verifyPanel'; };
+    document.getElementById('gdfOpenBtn').onclick = () => { location.href = item.kind==='speed' ? './drinks_speed.html' : './drinks_pending.html'; };
     document.getElementById('gdfDismissBtn').onclick = () => dismissEvent(`${item.kind||'drink'}:${item.id}`);
     showBox();
   }
@@ -286,9 +286,9 @@
           document.getElementById('gdfVerifyBtn').style.display = 'none';
       document.getElementById('gdfRejectBtn').style.display = 'none';
           document.getElementById('gdfTitle').textContent = activePromptItem.kind==='speed' ? 'Snelheid verificatie' : 'Drinks verificatie';
-          document.getElementById('gdfOpenBtn').textContent = activePromptItem.kind==='speed' ? 'Open snelheid' : 'Open drinks';
+          document.getElementById('gdfOpenBtn').textContent = activePromptItem.kind==='speed' ? 'Open snelheid' : 'Open pending';
           document.getElementById('gdfBody').innerHTML = `<strong>${activePromptItem.player_name} · ${activePromptItem.event_type_label || activePromptItem.speed_type_label}</strong><div class="gdf-meta">Deze verificatie blijft nog even open zodat meerdere mensen kunnen stemmen voordat het oordeel wordt vastgezet.</div><div class="gdf-meta">${Number(activePromptItem.approve_votes||0)} voor · ${Number(activePromptItem.reject_votes||0)} tegen${countdownText(activePromptItem)?` · ${countdownText(activePromptItem)}`:''}</div><div class="gdf-meta">${activePromptItem.kind==='speed' ? 'Open snelheid om de actuele status en extra stemmen te zien.' : 'Open drinks om de actuele status en extra stemmen te zien.'}</div>`;
-          document.getElementById('gdfOpenBtn').onclick = () => { location.href = activePromptItem.kind==='speed' ? './drinks_speed.html' : './drinks.html#verifyPanel'; };
+          document.getElementById('gdfOpenBtn').onclick = () => { location.href = activePromptItem.kind==='speed' ? './drinks_speed.html' : './drinks_pending.html'; };
           document.getElementById('gdfDismissBtn').onclick = () => dismissEvent(`${activePromptItem.kind||'drink'}:${activePromptItem.id}`);
           showBox();
         } else if (activePromptId && activePromptId !== '__approved__') hideBox();

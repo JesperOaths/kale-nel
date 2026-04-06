@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drinks overzicht</title>
-  <script>window.GEJAST_PAGE_VERSION='v308';</script><script src="./gejast-config.js?v308"></script>
+  <script>window.GEJAST_PAGE_VERSION='v309';</script><script src="./gejast-config.js?v309"></script>
   <style>
     :root{
       --bg:#ece7dc;--card:rgba(255,251,245,.94);--paper:#fffdfa;--line:rgba(54,40,20,.08);--line-strong:rgba(54,40,20,.14);
@@ -21,7 +21,7 @@
     .brand{display:flex;align-items:center;gap:10px}.brand img{width:68px;height:68px;object-fit:contain}.status-line{margin-top:10px;min-height:20px;font-weight:700}.status-line.bad{color:#8f443f}.status-line.ok{color:#46604a}
     .metric-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin-top:22px}.metric{display:grid;gap:8px;padding:18px;border-radius:24px;background:var(--paper);border:1px solid var(--line);min-height:128px;align-content:space-between;text-decoration:none;color:inherit}
     .metric.gold{background:linear-gradient(180deg,#f5ecce,#efe1b3)} .metric.ink{background:#1a1714;color:#fff}.metric.ink .metric-label,.metric.ink .metric-note{color:rgba(255,255,255,.72)}
-    .metric-label{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#87724a;font-weight:800}.metric-value{font-size:2rem;font-weight:900;line-height:1}.metric-note{color:var(--muted);font-size:.95rem}
+    .metric-label{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#87724a;font-weight:800}.metric-value{font-size:2rem;font-weight:900;line-height:1}.metric-note{color:var(--muted);font-size:.95rem}.metric.alt-action{background:#fff;color:#111;border:1px solid rgba(0,0,0,.08)}.metric.alt-action .metric-label,.metric.alt-action .metric-note{color:#111}
     .grid{display:grid;gap:18px;margin-top:22px}.grid.two{grid-template-columns:minmax(0,1.08fr) minmax(320px,.92fr)}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.grid.quad{grid-template-columns:repeat(4,minmax(0,1fr))}
     .panel{content-visibility:auto;contain-intrinsic-size:400px;background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:20px;box-shadow:0 8px 16px rgba(0,0,0,.02)} .panel.tinted-gold{background:linear-gradient(180deg,#fbf6e8,#f5edd4)} .panel.tinted-sage{background:linear-gradient(180deg,#eff4eb,#e2ead9)} .panel.tinted-sky{background:linear-gradient(180deg,#eef4f8,#e4edf3)}
     .panel-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-end;margin-bottom:14px}.panel-head h2{margin:0;font-size:1.45rem}.panel-head p{margin:4px 0 0;color:var(--muted)}
@@ -156,13 +156,24 @@
       const acc=Number(pos.coords?.accuracy||0); meta.textContent=`Locatie actief · nauwkeurigheid ${Math.round(acc||0)}m`; addr.textContent='';
     }
     function renderSession(data){
-      const s=data.session||{}; const totals=data.totals||{}; const pending=(data.verify_queue||[]).length || (data.my_pending_events||[]).length || 0;
+      const s=data.session||{}; const totals=data.totals||{}; const pending=Math.max((data.verify_queue||[]).length || 0, (data.my_pending_events||[]).length || 0);
       document.getElementById('sessionGrid').innerHTML=`
         <div class="metric gold"><div class="metric-label">Mijn tempo vandaag</div><div class="metric-value">${fmt((s.units ?? totals.today_units ?? 0),1)}</div><div class="metric-note">${(s.events ?? totals.today_events ?? 0)} drankjes</div></div>
-        <a class="metric" href="#verifyPanel"><div class="metric-label">Open verificaties</div><div class="metric-value">${pending}</div><div class="metric-note">Direct beoordelen</div></a>
+        <a class="metric" href="./drinks_pending.html"><div class="metric-label">Open pending</div><div class="metric-value">${pending}</div><div class="metric-note">Alles in één lijst</div></a>
         <div class="metric"><div class="metric-label">Vandaag sitebreed</div><div class="metric-value">${fmt(totals.today_units,1)}</div><div class="metric-note">${totals.today_events||0} drankjes</div></div>
-        <div class="metric"><div class="metric-label">All-time units</div><div class="metric-value">${fmt(totals.all_units,1)}</div><div class="metric-note">${totals.all_events||0} drankjes</div></div>
+        <a class="metric alt-action" href="./drinks_pending.html"><div class="metric-label">Pending verificaties</div><div class="metric-value">+</div><div class="metric-note">Open pending</div></a>
         <a class="metric ink" href="./drinks_add.html"><div class="metric-label">Actie</div><div class="metric-value">+</div><div class="metric-note">Drinks toevoegen</div></a>`;
+    }
+    function saveCachedState(){
+      try{ if(latestPageData) sessionStorage.setItem(PAGE_CACHE_KEY, JSON.stringify(latestPageData)); }catch(_){ }
+      try{ if(latestStatsData) sessionStorage.setItem(STATS_CACHE_KEY, JSON.stringify(latestStatsData)); }catch(_){ }
+    }
+    function hydrateFromCache(){
+      try{ const raw=sessionStorage.getItem(PAGE_CACHE_KEY); if(raw){ latestPageData=JSON.parse(raw)||latestPageData; } }catch(_){ }
+      try{ const raw=sessionStorage.getItem(STATS_CACHE_KEY); if(raw){ latestStatsData=JSON.parse(raw)||latestStatsData; latestDashboardData=latestStatsData; } }catch(_){ }
+      if(latestPageData){ renderSession(latestPageData||{}); renderRecent((latestPageData.recent_verified||latestPageData.recent_events||[])); renderVerify(latestPageData.big_nights||latestStatsData?.big_nights||[]); renderFairness(latestPageData.fairness_cards||[]); renderLocations(latestPageData.by_location||latestStatsData?.by_location||[]); }
+      if(latestStatsData){ renderStats(latestStatsData||{}); }
+      renderLadder();
     }
     function renderLadder(){
       const ladders=latestPageData?.ladders||{}; let rows=ladders[currentLadderKey]||[];
@@ -307,22 +318,28 @@
         latestStatsData.top_units = synthesizeDashboardFromHistory(historyRows).top_units;
         renderStats(latestStatsData||{});
       }
+      saveCachedState();
     }
     async function loadPage(forceGeo=false,userInitiated=false){
       const myLoad=++loadToken;
+      hydrateFromCache();
       try{
-        const pos=(forceGeo||!lastPosition)?await getPosition(forceGeo,userInitiated):lastPosition; if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null);
-        const usePos=lastPosition||pos; const payload={session_token:token(),viewer_lat:usePos?usePos.coords.latitude:null,viewer_lng:usePos?usePos.coords.longitude:null};
-        const [pageResult] = await Promise.allSettled([
-          fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:headers(),body:JSON.stringify(payload)}).then(parse)
-        ]);
+        const pos=(forceGeo||!lastPosition)?await getPosition(forceGeo,userInitiated):lastPosition;
+        if(pos) lastPosition=pos;
+        await updateGeoInfo(lastPosition||pos||null);
+        const usePos=lastPosition||pos;
+        const payload={session_token:token(),viewer_lat:usePos?usePos.coords.latitude:null,viewer_lng:usePos?usePos.coords.longitude:null};
+        const pagePromise = fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:headers(),body:JSON.stringify(payload)}).then(parse);
+        const statsPromise = loadStats();
+        const pageResult = await Promise.allSettled([pagePromise]);
         if(myLoad!==loadToken) return;
-        if(pageResult.status==='fulfilled'){
-          const raw=pageResult.value;
+        if(pageResult[0].status==='fulfilled'){
+          const raw=pageResult[0].value;
           latestPageData=raw?.get_drinks_page_public||raw||{};
+          saveCachedState();
         }else{
           latestPageData=latestPageData||{};
-          setStatus(pageResult.reason?.message||String(pageResult.reason||'Laden mislukt'),'bad');
+          setStatus(pageResult[0].reason?.message||String(pageResult[0].reason||'Laden mislukt'),'bad');
         }
         renderSession(latestPageData||{});
         const recent = latestPageData.recent_verified||latestPageData.recent_events||[];
@@ -334,15 +351,17 @@
         renderLocations(locationRows);
         renderLadder();
         if(!document.getElementById('statusLine').textContent){ setStatus(usePos?'':'Geolocatie nog niet actief. Overzicht werkt wel; verificaties blijven strikter zonder locatie.'); }
+        await statsPromise;
       }catch(err){ setStatus(err.message||String(err),'bad'); }
-      await loadStats();
     }
-    async function verifyDrink(id){ try{ const pos=await getPosition(true,true); if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); const usePos=lastPosition||pos; if(!usePos) throw new Error('Geolocatie is nodig om een drankje te bevestigen.'); const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy,approve:true})}); await parse(res); setStatus('Drankje bevestigd.','ok'); await loadPage(false,false);}catch(err){ setStatus(err.message||String(err),'bad'); } }
+    async function verifyDrink(id){ try{ const pos=await getPosition(true,true); if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); const usePos=lastPosition||pos; if(!usePos) throw new Error('Geolocatie is nodig om een drankje te bevestigen.'); const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy,approve:true})}); await parse(res); setStatus('Drankje bevestigd.','ok'); await hydrateFromCache();
+    loadPage(false,false);}catch(err){ setStatus(err.message||String(err),'bad'); } }
     document.querySelectorAll('[data-ladder-key]').forEach(b=>b.onclick=()=>{ currentLadderKey=b.dataset.ladderKey; renderLadder(); });
+    hydrateFromCache();
     loadPage(false,false);
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./gejast-geo.js?v308"></script><script src="./drinks-verify-float.js?v308"></script>
+  <script src="./gejast-geo.js?v309"></script><script src="./drinks-verify-float.js?v309"></script>
 </body>
 </html>

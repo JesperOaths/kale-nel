@@ -15,14 +15,14 @@ self.addEventListener('push', (event) => {
     tag: data.tag || 'gejast-push',
     icon: './logo.png',
     badge: './logo.png',
-    data: { url: data.url || './drinks.html#verifyPanel' },
+    data: { url: data.url || './drinks_pending.html' },
     renotify: true
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', (event) => {
-  const target = (event.notification && event.notification.data && event.notification.data.url) || './drinks.html#verifyPanel';
+  const target = (event.notification && event.notification.data && event.notification.data.url) || './drinks_pending.html';
   event.notification && event.notification.close();
   event.waitUntil((async () => {
     const allClients = await self.clients.matchAll({ type:'window', includeUncontrolled:true });
