@@ -647,7 +647,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v315';</script><script src="./gejast-config.js?v315"></script><script src="./gejast-scope.js?v315"></script>
+  <script>window.GEJAST_PAGE_VERSION='v316';</script><script src="./gejast-config.js?v316"></script><script src="./gejast-scope.js?v316"></script>
 </head>
 <body><div id="gejastTopRightToolsMount"></div>
   <div class="site-scene" aria-hidden="true">
@@ -863,6 +863,10 @@
     }
 
         function displayPlayerName(row){ return String(row?.chosen_username || row?.public_display_name || row?.nickname || row?.display_name || row?.player_name || 'Onbekend'); }
+
+    const HOMEPAGE_BLOCKED_NAMES = new Set(['anna','spookinoza 2','evi','fons','caro','daan','bram']);
+    function isHomepageBlockedName(name){ return HOMEPAGE_BLOCKED_NAMES.has(String(name||'').trim().toLowerCase()); }
+
     function avatarMarkup(row){ const name = displayPlayerName(row); const src = String(row?.avatar_url || row?.photo_url || row?.profile_picture_url || '').trim(); return src ? `<div class="biggest-player-avatar"><img src="${src.replace(/"/g,'&quot;')}" alt="${name.replace(/"/g,'&quot;')}"></div>` : `<div class="biggest-player-avatar">${(name||'O').slice(0,1).toUpperCase()}</div>`; }
     function renderHomepageLadders(payload) {
       const root = document.getElementById('ladderGrid');
@@ -875,7 +879,7 @@
       ].filter((group)=>!(CURRENT_SCOPE==='family' && group.key==='beerpong'));
       root.innerHTML = groups.map((group) => {
         const rawRows = Array.isArray(group.rows) ? group.rows : [];
-        const rows = window.GEJAST_SCOPE_UTILS ? window.GEJAST_SCOPE_UTILS.filterPlayers(rawRows, CURRENT_SCOPE) : rawRows;
+        const rows = (window.GEJAST_SCOPE_UTILS ? window.GEJAST_SCOPE_UTILS.filterPlayers(rawRows, CURRENT_SCOPE) : rawRows).filter((row)=>!isHomepageBlockedName(displayPlayerName(row)));
         const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => {
           const playerName = displayPlayerName(row);
           return `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><a class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800" href="${playerHref(playerName, group.key)}" onclick="event.stopPropagation()">${playerName || 'Onbekend'}</a><div class="ladder-elo" style="color:var(--gold);font-weight:900">${Math.round(Number(row.elo_rating || row.rating || 1000))}</div></div>`;
@@ -1660,5 +1664,5 @@ async function castExtraPollVote(desired_status) {
 
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v315"></script><script src="./gejast-geo.js?v315"></script></body>
+<script src="./drinks-verify-float.js?v316"></script><script src="./gejast-geo.js?v316"></script></body>
 </html>
