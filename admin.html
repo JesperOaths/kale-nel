@@ -42,7 +42,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v322';</script><script src="./gejast-config.js?v322"></script>
+  <script>window.GEJAST_PAGE_VERSION='v324';</script><script src="./gejast-config.js?v324"></script>
   <script src="./admin-session-sync.js?v322"></script>
   <script src="./admin-topnav.js?v322"></script>
 <script src="./gejast-scope.js?v322"></script></head>
@@ -286,10 +286,21 @@ function isExpiredByTimestamp(out) {
       const history = normalizeAdminRows(historyRes.history || historyRes.items || []);
       const expiredItems = Array.isArray(expiredRes?.items) ? expiredRes.items : [];
       const expiredItemsNormalized = normalizeAdminRows(expiredItems);
-      const awaitingItems = history.filter((item) => item.state_bucket === 'awaiting' && !isExpiredByTimestamp(item));
+      const rowKey = (item) => [
+        item?.claim_request_id,
+        item?.request_id,
+        item?.id,
+        String(item?.display_name || item?.desired_name || item?.requested_name || '').trim().toLowerCase(),
+        String(item?.email || item?.requester_email || '').trim().toLowerCase()
+      ].filter(Boolean).join('::');
+      const expiredKeys = new Set([
+        ...expiredItemsNormalized.map(rowKey),
+        ...history.filter((item) => item.state_bucket === 'expired' || isExpiredByTimestamp(item)).map(rowKey)
+      ].filter(Boolean));
+      const awaitingItems = history.filter((item) => item.state_bucket === 'awaiting' && !isExpiredByTimestamp(item) && !expiredKeys.has(rowKey(item)));
       const active = history.filter((item) => item.state_bucket === 'active').length;
       const rejected = history.filter((item) => item.state_bucket === 'rejected').length;
-      const expiredHistory = history.filter((item) => item.state_bucket === 'expired').length;
+      const expiredHistory = history.filter((item) => item.state_bucket === 'expired' || isExpiredByTimestamp(item)).length;
       const awaiting = awaitingItems.length;
       document.getElementById('statPending').textContent = String(requests.length);
       document.getElementById('statAwaiting').textContent = String(awaiting);

@@ -5,7 +5,7 @@
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inloggen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v322';</script>
+  <script>window.GEJAST_PAGE_VERSION='v324';</script>
   <style>
     :root { --gold: #9a8241; --dark-bg: #111; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.08); }
     * { box-sizing: border-box; }
@@ -46,8 +46,8 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/login.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v322"></script>
-  <script src="./gejast-scope.js?v322"></script>
+  <script src="./gejast-config.js?v324"></script>
+  <script src="./gejast-scope.js?v324"></script>
 </head>
 <body>
   <div class="site-scene">
@@ -156,6 +156,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       if (/failed to fetch/i.test(raw)) return 'Netwerk/CORS-fout bij contact met Supabase.';
       if (/sessions_player_id_key/i.test(raw)) return 'Er stond nog een oude spelsessie open voor deze gebruiker. Probeer opnieuw; de v84 loginpatch vervangt zo\'n oude sessie nu automatisch.';
       if (/cycle_key/i.test(raw)) return 'De weekstatus kon niet worden geladen door een databasefout in de stemcyclus. De namenlijst hoort wel zichtbaar te blijven na de v84 bundle + SQL-patch.';
+      if (/player activation links claim request id key|duplicate key value violates unique constraint/i.test(raw)) return 'Er stond nog een oude activatielink vast voor deze gebruiker. Draai de nieuwe SQL-fix en probeer daarna opnieuw.';
       return raw;
     }
     async function getPublicState() {
@@ -251,14 +252,27 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       if (!desiredName) throw new Error('Kies eerst je naam');
       if (!/^\d{4}$/.test(enteredPin)) throw new Error('Voer je 4-cijferige pincode in');
 
-      const payloads = [
-        { input_username: desiredName, entered_pin: enteredPin },
-        { desired_name: desiredName, entered_pin: enteredPin },
-        { input_username: desiredName, input_pin: enteredPin },
-        { input_display_name: desiredName, input_pin: enteredPin },
-        { display_name: desiredName, pin: enteredPin },
-        { input_name: desiredName, input_pin: enteredPin }
-      ];
+      const nameVariants = [...new Set([
+        desiredName,
+        normalizeDisplayName(desiredName),
+        String(desiredName || '').trim(),
+        String(desiredName || '').trim().toLowerCase(),
+        String(desiredName || '').trim().replace(/\s+/g, ' ')
+      ].filter(Boolean))];
+      const payloads = [];
+      nameVariants.forEach((nameValue) => {
+        payloads.push(
+          { input_username: nameValue, entered_pin: enteredPin },
+          { desired_name: nameValue, entered_pin: enteredPin },
+          { input_username: nameValue, input_pin: enteredPin },
+          { input_display_name: nameValue, input_pin: enteredPin },
+          { display_name: nameValue, pin: enteredPin },
+          { input_name: nameValue, input_pin: enteredPin },
+          { player_name: nameValue, entered_pin: enteredPin },
+          { username: nameValue, entered_pin: enteredPin },
+          { name: nameValue, pin: enteredPin }
+        );
+      });
 
       let lastErr = null;
       for (const payload of payloads) {
