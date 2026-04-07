@@ -534,6 +534,10 @@
     .live-pill.live::before { background:#d82c2c; animation:livePulse 1.2s infinite; }
     .live-pill.standby { color:#665d4f; background:rgba(255,248,234,.95); }
     .live-pill.standby::before { background:#c7a34b; }
+
+    .page-link-live-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .page-link-live-row .live-pill{padding:6px 10px;font-size:11px;line-height:1}
+    .page-link-live-hint{font-size:13px;color:#5d5549;font-weight:700}
     @keyframes livePulse { 0% { box-shadow:0 0 0 0 rgba(216,44,44,.65);} 70% { box-shadow:0 0 0 8px rgba(216,44,44,0);} 100% { box-shadow:0 0 0 0 rgba(216,44,44,0);} }
     .ladder-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
 .drinks-top-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
@@ -648,8 +652,8 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v318';</script><script src="./gejast-config.js?v318"></script><script src="./gejast-scope.js?v318"></script>
-  <script src="./gejast-home-gate.js?v318"></script>
+  <script>window.GEJAST_PAGE_VERSION='v320';</script><script src="./gejast-config.js?v320"></script><script src="./gejast-scope.js?v320"></script>
+  <script src="./gejast-home-gate.js?v320"></script>
 </head>
 <body><div id="gejastTopRightToolsMount"></div>
   <div class="site-scene" aria-hidden="true">
@@ -709,13 +713,13 @@
         </div>
 
         <div class="public-links-grid">
-          <a class="page-link-card scorer-link" href="./scorer.html">
-            <div class="page-link-label">Klaverjas Invoeren</div>
-            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
+          <a id="klaverjasEntryCard" class="page-link-card scorer-link" href="./scorer.html">
+            <div class="page-link-label" data-entry-label>Klaverjas Invoeren</div>
+            <div class="page-link-copy plus-copy" data-entry-copy><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
           </a>
-          <a class="page-link-card scorer-link" href="./boerenbridge.html">
-            <div class="page-link-label">Boerenbridge Invoeren</div>
-            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
+          <a id="boerenbridgeEntryCard" class="page-link-card scorer-link" href="./boerenbridge.html">
+            <div class="page-link-label" data-entry-label>Boerenbridge Invoeren</div>
+            <div class="page-link-copy plus-copy" data-entry-copy><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
           </a>
         </div>
 
@@ -903,6 +907,71 @@
       return out;
     }
 
+
+function entryCardConfig(game){
+  const map = {
+    klaverjas: { card: document.getElementById('klaverjasEntryCard'), defaultHref: './scorer.html', baseLabel: 'Klaverjas', defaultLabel: 'Klaverjas Invoeren', livePage: './klaverjas_live.html' },
+    boerenbridge: { card: document.getElementById('boerenbridgeEntryCard'), defaultHref: './boerenbridge.html', baseLabel: 'Boerenbridge', defaultLabel: 'Boerenbridge Invoeren', livePage: './boerenbridge_live.html' }
+  };
+  return map[String(game||'').toLowerCase()] || null;
+}
+function normalizeLiveName(name){ return String(name||'').trim().toLowerCase(); }
+function getLiveParticipants(match){
+  const direct = Array.isArray(match?.participants) ? match.participants : [];
+  const p1 = Array.isArray(match?.summary_payload?.participants) ? match.summary_payload.participants : [];
+  const p2 = Array.isArray(match?.summary_payload?.players) ? match.summary_payload.players : [];
+  return [...new Set([].concat(direct, p1, p2).map((v)=>String(v||'').trim()).filter(Boolean))];
+}
+function getLiveSubmitterName(match){ return String(match?.summary_payload?.submitter_meta?.submitted_by_name || match?.submitter_name || '').trim(); }
+function buildScopedLiveHref(base, clientMatchId){
+  const u = new URL(base, window.location.href);
+  if (clientMatchId) u.searchParams.set('client_match_id', clientMatchId);
+  if (CURRENT_SCOPE==='family') u.searchParams.set('scope', 'family');
+  return u.pathname.split('/').pop() + u.search;
+}
+function resetEntryCard(game){
+  const cfg = entryCardConfig(game);
+  if (!cfg || !cfg.card) return;
+  const label = cfg.card.querySelector('[data-entry-label]');
+  const copy = cfg.card.querySelector('[data-entry-copy]');
+  cfg.card.setAttribute('href', scopedHref(cfg.defaultHref));
+  if (label) label.textContent = cfg.defaultLabel;
+  if (copy) copy.innerHTML = '<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />';
+}
+function applyLiveEntryCard(game, match){
+  const cfg = entryCardConfig(game);
+  if (!cfg || !cfg.card) return;
+  const label = cfg.card.querySelector('[data-entry-label]');
+  const copy = cfg.card.querySelector('[data-entry-copy]');
+  cfg.card.setAttribute('href', buildScopedLiveHref(cfg.livePage, match?.client_match_id));
+  if (label) label.textContent = cfg.baseLabel;
+  if (copy) copy.innerHTML = '<span class="page-link-live-row"><span class="live-pill live">LIVE</span><span class="page-link-live-hint">Bekijk scoreformulier</span></span>';
+}
+async function fetchLiveMatchForPlayer(gameKey, myName){
+  const session_token = getSessionToken();
+  if (!session_token || !myName) return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_live_match_summaries_scoped`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token, game_type_input: gameKey, site_scope_input: CURRENT_SCOPE }) });
+    const raw = await parseResponse(res);
+    const payload = raw?.get_live_match_summaries_scoped || raw || {};
+    const matches = Array.isArray(payload?.matches) ? payload.matches : (Array.isArray(payload) ? payload : []);
+    return matches.find((match)=>{
+      const participants = getLiveParticipants(match).map(normalizeLiveName);
+      const host = normalizeLiveName(getLiveSubmitterName(match));
+      return participants.includes(normalizeLiveName(myName)) && (!host || host !== normalizeLiveName(myName));
+    }) || null;
+  } catch (_) { return null; }
+}
+async function refreshLiveEntryCards(){
+  resetEntryCard('klaverjas');
+  resetEntryCard('boerenbridge');
+  const myName = currentHomepageState?.my_name || (document.getElementById('playerSessionCornerName')||{}).textContent || '';
+  if (!getSessionToken() || !myName) return;
+  const [klaverjasLive, boerenbridgeLive] = await Promise.all([fetchLiveMatchForPlayer('klaverjas', myName), fetchLiveMatchForPlayer('boerenbridge', myName)]);
+  if (klaverjasLive) applyLiveEntryCard('klaverjas', klaverjasLive);
+  if (boerenbridgeLive) applyLiveEntryCard('boerenbridge', boerenbridgeLive);
+}
+
     async function loadHomepageLadders() {
       try {
         const scoped = await fetchHomepageLadderFallback();
@@ -1011,7 +1080,29 @@
       });
     }
 
-const EXTRA_POLL_KEY = 'gezopen_vanavond';
+
+const EXTRA_POLL_KEY_BASE = 'gezopen_vanavond';
+function amsterdamDateKey(obj){
+  const y = String(obj.year||0).padStart(4,'0');
+  const m = String(obj.month||0).padStart(2,'0');
+  const d = String(obj.day||0).padStart(2,'0');
+  return `${y}${m}${d}`;
+}
+function amsterdamFridayCycleStart(now = new Date()){
+  const marker = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+  const fmt = new Intl.DateTimeFormat('en-CA', { timeZone:'Europe/Amsterdam', year:'numeric', month:'2-digit', day:'2-digit', weekday:'short' });
+  const parts = Object.fromEntries(fmt.formatToParts(marker).map((p)=>[p.type,p.value]));
+  const weekdayMap = { sun:0, mon:1, tue:2, wed:3, thu:4, fri:5, sat:6 };
+  const dow = weekdayMap[String(parts.weekday||'').toLowerCase()] ?? 0;
+  const diff = (dow - 5 + 7) % 7;
+  const anchor = new Date(marker.getTime() - diff * 24 * 60 * 60 * 1000);
+  const ap = Object.fromEntries(fmt.formatToParts(anchor).map((p)=>[p.type,p.value]));
+  return { year:Number(ap.year||0), month:Number(ap.month||0), day:Number(ap.day||0) };
+}
+function getExtraPollKey(){
+  return `${EXTRA_POLL_KEY_BASE}_${amsterdamDateKey(amsterdamFridayCycleStart(new Date()))}_0600`;
+}
+const EXTRA_POLL_KEY = getExtraPollKey();
 let currentDrinksPollState = null;
 let removingExtraVote = false;
 let removingExtraAdminVote = false;
@@ -1560,6 +1651,7 @@ async function castExtraPollVote(desired_status) {
         const [homeState, extraState] = await Promise.all([getHomepageState(), getExtraPollState()]);
         renderState(homeState);
         renderExtraPollState(extraState);
+        await refreshLiveEntryCards();
         setStatus('');
         setExtraPollStatus('');
       }
@@ -1657,5 +1749,5 @@ async function castExtraPollVote(desired_status) {
 
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v318"></script><script src="./gejast-geo.js?v318"></script></body>
+<script src="./drinks-verify-float.js?v320"></script><script src="./gejast-geo.js?v320"></script></body>
 </html>

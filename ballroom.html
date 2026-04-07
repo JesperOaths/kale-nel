@@ -2,10 +2,12 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
+  <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Balzaal</title>
-  <script>window.GEJAST_PAGE_VERSION='v309';</script>
-  <script src="./gejast-config.js?v309"></script>
+  <script>window.GEJAST_PAGE_VERSION='v320';</script>
+  <script src="./gejast-config.js?v320"></script>
+  <script defer src="./gejast-home-gate.js"></script>
   <style>
     :root{
       --gold:#b78e43; --gold-deep:#89642a; --wine:#88162a; --wine-deep:#5c0c18; --cream:#f6efe3; --ink:#181310; --muted:#706557;
@@ -226,6 +228,7 @@
     function escapeHtml(v){ return String(v ?? '').replace(/[&<>"]/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m])); }
     async function parse(res){ const txt = await res.text(); let data=null; try{ data = txt ? JSON.parse(txt) : null; } catch(err){ throw new Error(txt || `HTTP ${res.status}`); } if(!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }
     async function rpc(name, body){ const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', headers:headers(), body:JSON.stringify(body||{}) }); const raw = await parse(res); return raw?.[name] || raw; }
+    async function callWrite(preferred, fallback, body){ try{ return await rpc(preferred, body); }catch(err){ if(!fallback) throw err; return await rpc(fallback, body); } }
     function setStatus(msg, isError=false){ const el = document.getElementById('statusMsg'); el.textContent = msg || ''; el.style.color = isError ? '#8a091b' : '#7a1023'; }
 
     function renderThrone(state){
@@ -266,7 +269,7 @@
       if(!queue.length){ list.innerHTML = '<div class="muted" style="padding-top:10px">Nog geen open verzoeken.</div>'; return; }
       list.innerHTML = queue.map((row)=>`<div class="queue-row"><div class="queue-main">${avatarMarkup(row.avatar_url,row.display_name,true)}<div><div class="queue-name">${escapeHtml(row.display_name)}</div><div class="queue-meta">Aangemeld ${new Date(row.requested_at).toLocaleString('nl-NL')}</div></div></div><div class="actions">${latest?.viewer?.is_king ? `<button class="small-btn secondary" data-resolve="reject" data-id="${row.id}">Afwijzen</button><button class="small-btn" data-resolve="approve" data-id="${row.id}">Toelaten</button>` : '<span class="queue-meta">Wacht op oordeel</span>'}</div></div>`).join('');
       list.querySelectorAll('[data-resolve]').forEach((btn)=>btn.addEventListener('click', async()=>{
-        try{ btn.disabled = true; await rpc('ballroom_resolve_request', { session_token: token(), request_id_input: Number(btn.dataset.id), approve_input: btn.dataset.resolve === 'approve' }); setStatus(btn.dataset.resolve === 'approve' ? 'De gast mag naar binnen.' : 'Het verzoek is afgewezen.'); await load(); } catch(err){ setStatus(err.message || String(err), true); btn.disabled = false; }
+        try{ btn.disabled = true; await callWrite('ballroom_resolve_request_safe','ballroom_resolve_request', { session_token: token(), request_id_input: Number(btn.dataset.id), approve_input: btn.dataset.resolve === 'approve' }); setStatus(btn.dataset.resolve === 'approve' ? 'De gast mag naar binnen.' : 'Het verzoek is afgewezen.'); await load(); } catch(err){ setStatus(err.message || String(err), true); btn.disabled = false; }
       }));
     }
 
@@ -302,26 +305,19 @@
 
     function render(state){ latest = state || {}; renderThrone(latest); renderMembers(latest); renderSuccession(latest); renderQueue(latest); renderIntro(latest); }
     async function callBallroomState(){
-      const sessionToken = token() || null;
       const tries = [
-        () => rpc('get_ballroom_public_state', { session_token_input: sessionToken }),
-        () => rpc('get_ballroom_public_state', { session_token: sessionToken }),
-        () => rpc('get_ballroom_state', { session_token_input: sessionToken }),
-        () => rpc('get_ballroom_state', { session_token: sessionToken })
+        () => rpc('get_ballroom_state_safe', { session_token: token() || null }),
+        () => rpc('get_ballroom_state', { session_token: token() || null }),
+        () => rpc('get_ballroom_state', { session_token_input: token() || null }),
+        () => rpc('get_ballroom_state', {}),
+        () => rpc('get_ballroom_public_state_safe', { session_token: token() || null }),
+        () => rpc('get_ballroom_public_state', { session_token: token() || null }),
+        () => rpc('get_ballroom_public_state', { session_token_input: token() || null }),
+        () => rpc('get_ballroom_public_state', {})
       ];
       let lastErr = null;
       for (const run of tries){
-        try {
-          const out = await run();
-          if (out) return out;
-        } catch (err) {
-          const msg = String(err && err.message || err || '');
-          if (/without parameters in the schema cache/i.test(msg)) {
-            lastErr = err;
-            continue;
-          }
-          lastErr = err;
-        }
+        try { const out = await run(); if (out) return out; } catch (err) { lastErr = err; }
       }
       throw lastErr || new Error('Balzaalstatus kon niet geladen worden.');
     }
@@ -329,20 +325,20 @@
 
     document.getElementById('claimBtn').addEventListener('click', async()=>{
       if(!token()){ window.location.href = cfg.buildLoginUrl ? cfg.buildLoginUrl('ballroom.html') : './login.html?return_to=ballroom.html'; return; }
-      try{ await rpc('ballroom_claim_king', { session_token: token() }); setStatus('De kroon is van jou.'); await load(); } catch(err){ setStatus(err.message || String(err), true); }
+      try{ await callWrite('ballroom_claim_king_safe','ballroom_claim_king', { session_token: token() }); setStatus('De kroon is van jou.'); await load(); } catch(err){ setStatus(err.message || String(err), true); }
     });
     document.getElementById('joinBtn').addEventListener('click', async()=>{
       if(!token()){ window.location.href = cfg.buildLoginUrl ? cfg.buildLoginUrl('ballroom.html') : './login.html?return_to=ballroom.html'; return; }
-      try{ await rpc('ballroom_request_entry', { session_token: token() }); setStatus('Je entreeverzoek ligt nu bij de koning.'); await load(); } catch(err){ setStatus(err.message || String(err), true); }
+      try{ await callWrite('ballroom_request_entry_safe','ballroom_request_entry', { session_token: token() }); setStatus('Je entreeverzoek ligt nu bij de koning.'); await load(); } catch(err){ setStatus(err.message || String(err), true); }
     });
     document.getElementById('abdicateBtn').addEventListener('click', async()=>{
-      try{ await rpc('ballroom_abdicate', { session_token: token() }); setStatus('De kroon is doorgeschoven.'); await load(); } catch(err){ setStatus(err.message || String(err), true); }
+      try{ await callWrite('ballroom_abdicate_safe','ballroom_abdicate', { session_token: token() }); setStatus('De kroon is doorgeschoven.'); await load(); } catch(err){ setStatus(err.message || String(err), true); }
     });
 
     load();
     setInterval(load, 20000);
   })();
   </script>
-  <script src="./gejast-geo.js?v309"></script><script src="./drinks-verify-float.js?v309"></script>
+  <script src="./gejast-geo.js?v320"></script><script src="./drinks-verify-float.js?v320"></script>
 </body>
 </html>
