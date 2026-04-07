@@ -42,10 +42,10 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v311';</script><script src="./gejast-config.js?v311"></script>
-  <script src="./admin-session-sync.js?v311"></script>
-  <script src="./admin-topnav.js?v311"></script>
-</head>
+  <script>window.GEJAST_PAGE_VERSION='v312';</script><script src="./gejast-config.js?v312"></script>
+  <script src="./admin-session-sync.js?v312"></script>
+  <script src="./admin-topnav.js?v312"></script>
+<script src="./gejast-scope.js?v312"></script></head>
 <body>
   <main class="main-card">
     <a href="./index.html" aria-label="Terug naar home"><img src="./logo.png" class="logo" alt="logo" /></a>
@@ -123,6 +123,10 @@
     const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
+
+    const ADMIN_SCOPE_KEY = 'jas_admin_scope_v1';
+    function getAdminScope(){ const q=new URLSearchParams(location.search).get('scope'); return (q||localStorage.getItem(ADMIN_SCOPE_KEY)||'friends').toLowerCase()==='family' ? 'family' : 'friends'; }
+    function applyAdminScope(){ const scope=getAdminScope(); const sel=document.getElementById('adminScopeSelect'); if(sel) sel.value=scope; document.querySelectorAll('a[href^="./"]').forEach((a)=>{ try{ const url=new URL(a.getAttribute('href'), location.href); url.searchParams.set('scope', scope); a.setAttribute('href', url.pathname.split('/').pop() + url.search + url.hash); if(scope==='family' && (/drinks|beerpong/i.test(a.getAttribute('href')) || /drinks|beerpong/i.test(a.textContent||''))) a.style.display='none'; }catch(_){}}); }
 
     const ADMIN_DEVICE_KEY = "jas_admin_device_v1";
     const ADMIN_USER_KEY = "jas_admin_user_v1";
@@ -275,6 +279,8 @@
       document.getElementById('statActive').textContent = String(active);
       document.getElementById('statRejected').textContent = String(rejected);
     }
+    document.addEventListener('DOMContentLoaded', ()=>{ const sel=document.getElementById('adminScopeSelect'); if(sel){ sel.value=getAdminScope(); sel.addEventListener('change', ()=>{ localStorage.setItem(ADMIN_SCOPE_KEY, sel.value); applyAdminScope(); }); } applyAdminScope(); });
+
     async function boot() {
       const token = getAdminSessionToken();
       if (!token) { showLoggedOut(); return; }

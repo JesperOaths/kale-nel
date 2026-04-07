@@ -268,7 +268,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/scorer.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v306';</script><script src="./gejast-config.js?v306"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('scorer');</script>
+  <script>window.GEJAST_PAGE_VERSION='v312';</script><script src="./gejast-config.js?v312"></script><script src="./gejast-scope.js?v312"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('scorer');</script>
 
   <style id="page-floating-logo-style">
     .page-floating-logo{position:fixed;top:18px;right:18px;z-index:9998;display:inline-flex;width:64px;height:64px;border-radius:50%;background:rgba(255,251,245,.72);border:1px solid rgba(255,255,255,.65);box-shadow:0 14px 32px rgba(0,0,0,.10);align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
@@ -285,7 +285,7 @@
       <div class="topbar-actions"><button id="undoBtn" class="icon-btn" type="button" onclick="undoLastAction()">↶</button><button id="redoBtn" class="icon-btn" type="button" onclick="redoLastAction()">↷</button></div>
     </header>
 
-    <div id="appMenu" class="overlay"><div class="modal"><h2>Klaverjas menu</h2><div class="modal-footer" style="display:grid;grid-template-columns:1fr;"><button class="btn-light" type="button" onclick="openSetupModal()">Teams kiezen</button><button class="btn-light" type="button" onclick="undoRound()">Hele ronde undo</button><button class="btn-light" type="button" onclick="newGame()">Nieuw spel</button><button class="btn-dark" type="button" onclick="window.location.href='./index.html'">Terug naar site</button></div></div></div>
+    <div id="appMenu" class="overlay"><div class="modal"><h2>Klaverjas menu</h2><div class="modal-footer" style="display:grid;grid-template-columns:1fr;"><button class="btn-light" type="button" onclick="openSetupModal()">Teams kiezen</button><button class="btn-light" type="button" onclick="undoRound()">Hele ronde undo</button><button class="btn-light" type="button" onclick="newGame()">Nieuw spel</button><button class="btn-dark" type="button" onclick="window.location.href=((window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope())==='family'?'./familie/index.html':'./index.html')">Terug naar site</button></div></div></div>
 
     <div class="wrap">
       <section class="sheet">
@@ -519,7 +519,7 @@
           const data = txt ? JSON.parse(txt) : {};
           if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
           const names = normalizeSitePlayerNames(data);
-          if (names.length) return names;
+          if (names.length) return window.GEJAST_SCOPE_UTILS ? window.GEJAST_SCOPE_UTILS.filterNames(names) : names;
         } catch {}
       }
       return DEFAULT_NAMES.slice();
