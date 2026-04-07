@@ -2,10 +2,10 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet" />
   <title>Drinks overzicht</title>
-  <script>window.GEJAST_PAGE_VERSION='v308';</script><script src="./gejast-config.js?v308"></script>
+  <script>window.GEJAST_PAGE_VERSION='v321';</script><script src="./gejast-config.js?v321"></script>
   <style>
     :root{
       --bg:#ece7dc;--card:rgba(255,251,245,.94);--paper:#fffdfa;--line:rgba(54,40,20,.08);--line-strong:rgba(54,40,20,.14);
@@ -39,7 +39,7 @@
     @media(max-width:1180px){.metric-strip,.grid.quad{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.two,.grid.three{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.hero-tools{justify-content:flex-start}}
     @media(max-width:760px){body{padding:12px}.shell{padding:18px;border-radius:24px}.metric-strip,.grid.quad,.mini-grid{grid-template-columns:1fr}.bar-row{grid-template-columns:1fr}.item{padding:12px}.metric{min-height:auto}.hero-actions,.hero-tools{width:100%}}
   </style>
-  <script src="./gejast-home-gate.js?v318"></script>
+  <script src="./gejast-home-gate.js?v321"></script>
 </head>
 <body>
   <div class="wrap">
@@ -50,6 +50,8 @@
             <a class="btn alt" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</a>
             <a class="btn alt" href="./drinks_add.html">Toevoegen</a>
             <a class="btn alt" href="./drinks_speed.html">Snelheid</a>
+            <a class="btn alt" href="./drinks_pending.html">Verifiëren</a>
+            <a class="btn alt" href="./drinks_speed_stats.html">Speed stats</a>
           </div>
           <h1>Drinks dashboard</h1>
           <div class="sub">Een rustiger, rijker overzicht van wie het meest, het snelst en het hardst heeft gedronken. Alles wat op deze pagina staat is gericht op units, tempo, nachten, piekmomenten en type drank.</div>
@@ -174,15 +176,10 @@
       document.querySelectorAll('[data-ladder-key]').forEach(b=>b.classList.toggle('active',b.dataset.ladderKey===currentLadderKey));
     }
     function renderRecent(rows){ renderList(document.getElementById('recentList'),rows,(r)=>itemHtml(r,{title:(_,name)=>`${playerLink(name)} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}`,sub:()=>`${new Date(r.verified_at||r.created_at).toLocaleString('nl-NL')} · bevestigd door ${Array.isArray(r.verifier_names)&&r.verifier_names.length?esc(r.verifier_names.join(', ')):'—'}`,value:()=>`${fmt(r.total_units,1)}u`,pill:'<span class="pill sky">ok</span>'}),'Nog geen bevestigde drankjes.'); }
-    function renderVerify(rows){ renderList(document.getElementById('verifyQueue'),rows,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.night_at?new Date(r.night_at).toLocaleDateString('nl-NL'):''} · hoogste avond`,value:()=>`${fmt(r.units,1)}u`}), 'Nog geen pieknachten.'); }
+    function renderVerify(rows){ renderList(document.getElementById('verifyQueue'),rows,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.night_at?nlDayDate(r.night_at):''} · hoogste avond`,value:()=>`${fmt(r.units,1)}u`}), 'Nog geen pieknachten.'); }
     function renderFairness(rows){ const host=document.getElementById('fairnessList'); if(host) renderList(host,rows,(r)=>`<div class="item"><div class="item-main"><div class="item-title">${esc(r.label||'Fairness')}</div><div class="item-sub">${esc(r.description||'')}</div></div><div class="item-value">${esc(r.value||'')}</div></div>`,'Nog geen fairness-data.'); }
     function renderLocations(rows){ renderList(document.getElementById('locationList'),rows,(r)=>itemHtml(r,{title:()=>esc(r.location_label||r.location||'Locatie onbekend'),sub:()=>`${r.events||0} drankjes`,value:()=>`${fmt(r.units,1)}u`}), 'Nog geen locatie-data.'); }
     function renderBars(el, rows, valueKey, palette=''){ rows=Array.isArray(rows)?rows:[]; const max=Math.max(1,...rows.map(r=>Number(r?.[valueKey]??r?.units??r?.duration_seconds??0)||0)); el.innerHTML=rows.length?`<div class="bars">${rows.map(r=>{ const value=Number(r?.[valueKey]??r?.units??r?.duration_seconds??0)||0; const width=Math.max(7,(value/max)*100); return `<div class="bar-row"><div class="bar-label">${esc(r.label||r.key||r.player_name||r.display_name||'Onbekend')}</div><div class="bar-track"><div class="bar-fill ${palette}" style="width:${width}%"></div></div><div class="bar-value">${valueKey==='duration_seconds'?`${fmt(value,1)}s`:fmt(value,1)}</div></div>`; }).join('')}</div>`:'<div class="note">Nog geen data.</div>'; }
-    function scheduleStatsLoad(){
-      const runner=()=>loadStats().catch((err)=>{ const msg=err?.message||String(err||''); if(msg) setStatus(msg,'bad'); });
-      if('requestIdleCallback' in window){ window.requestIdleCallback(runner,{timeout:900}); return; }
-      window.setTimeout(runner, 30);
-    }
 
 
     function mapHomepageTop5(payload){
@@ -250,7 +247,7 @@
       renderList(document.getElementById('topUnits'),data.top_units,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.events||0} drankjes · piek ${r.peak_at?new Date(r.peak_at).toLocaleDateString('nl-NL'):''}`,value:()=>`${fmt(r.units,1)}u`}), 'Nog geen data.');
       renderList(document.getElementById('topCount'),data.top_count_all,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${fmt(r.units,1)} units totaal`,value:()=>`${r.events||0}`}), 'Nog geen data.');
       renderList(document.getElementById('topCountNow'),[...(data.top_count_month||[]).slice(0,3),...(data.top_count_week||[]).slice(0,3)],(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.window_label||''} · ${fmt(r.units,1)} units`,value:()=>`${r.events||0}`}), 'Nog geen data.');
-      renderList(document.getElementById('bigNights'),data.big_nights,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.night_at?new Date(r.night_at).toLocaleDateString('nl-NL'):''} · hoogste avond`,value:()=>`${fmt(r.units,1)}u`}), 'Nog geen grote nachten.');
+      renderList(document.getElementById('bigNights'),data.big_nights,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.night_at?nlDayDate(r.night_at):''} · hoogste avond`,value:()=>`${fmt(r.units,1)}u`}), 'Nog geen grote nachten.');
       renderBars(document.getElementById('typeBars'), (data.by_type||[]).slice(0,8), 'units', 'sage');
       renderFairness(data.fairness_cards||[]); renderLocations(data.by_location||[]);
       renderSpeedHighlights(data.speed_leaderboards||[]);
@@ -259,7 +256,7 @@
       let historyRows=[], homePayload={}, top5Payload={}, fallbackData={};
       const requests = await Promise.allSettled([
         fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_dashboard_fallback_public`,{method:'POST',headers:headers(),body:'{}'}).then(parse),
-        fetch(`${SUPABASE_URL}/rest/v1/rpc/get_verified_drinks_history_public`,{method:'POST',headers:headers(),body:JSON.stringify({limit_count:180})}).then(parse),
+        fetch(`${SUPABASE_URL}/rest/v1/rpc/get_verified_drinks_history_public`,{method:'POST',headers:headers(),body:JSON.stringify({limit_count:600})}).then(parse),
         fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_locations_public`,{method:'POST',headers:headers(),body:'{}'}).then(parse),
         fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_public`,{method:'POST',headers:headers(),body:'{}'}).then(parse),
         fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_top5_public`,{method:'POST',headers:headers(),body:'{}'}).then(parse)
@@ -317,47 +314,32 @@
     }
     async function loadPage(forceGeo=false,userInitiated=false){
       const myLoad=++loadToken;
-      const initialPos=lastPosition||null;
-      await updateGeoInfo(initialPos);
-      const payload={session_token:token(),viewer_lat:initialPos?initialPos.coords.latitude:null,viewer_lng:initialPos?initialPos.coords.longitude:null};
       try{
-        const pageResult = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:headers(),body:JSON.stringify(payload)}).then(parse);
+        const pos=(forceGeo||!lastPosition)?await getPosition(forceGeo,userInitiated):lastPosition; if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null);
+        const usePos=lastPosition||pos; const payload={session_token:token(),viewer_lat:usePos?usePos.coords.latitude:null,viewer_lng:usePos?usePos.coords.longitude:null};
+        const [pageResult] = await Promise.allSettled([
+          fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:headers(),body:JSON.stringify(payload)}).then(parse)
+        ]);
         if(myLoad!==loadToken) return;
-        latestPageData=pageResult?.get_drinks_page_public||pageResult||{};
-      }catch(err){
-        latestPageData=latestPageData||{};
-        setStatus(err.message||String(err||'Laden mislukt'),'bad');
-      }
-      renderSession(latestPageData||{});
-      const recent = latestPageData.recent_verified||latestPageData.recent_events||[];
-      const peaks = latestPageData.big_nights||latestStatsData?.big_nights||[];
-      const locationRows = latestPageData.by_location||latestStatsData?.by_location||[];
-      renderRecent(recent);
-      renderVerify(peaks);
-      renderFairness(latestPageData.fairness_cards||[]);
-      renderLocations(locationRows);
-      renderLadder();
-      if(!document.getElementById('statusLine').textContent){ setStatus(initialPos?'':'Overzicht direct geladen. Locatie verfijnen we op de achtergrond.'); }
-      if(forceGeo || !lastPosition){
-        getPosition(forceGeo,userInitiated).then(async(pos)=>{
-          if(!pos || myLoad!==loadToken) return;
-          lastPosition=pos;
-          await updateGeoInfo(pos);
-          if(!initialPos){
-            const hydrated = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),viewer_lat:pos.coords.latitude,viewer_lng:pos.coords.longitude})}).then(parse).catch(()=>null);
-            if(hydrated && myLoad===loadToken){
-              latestPageData=hydrated?.get_drinks_page_public||hydrated||latestPageData||{};
-              renderSession(latestPageData||{});
-              renderRecent(latestPageData.recent_verified||latestPageData.recent_events||[]);
-              renderVerify(latestPageData.big_nights||latestStatsData?.big_nights||[]);
-              renderFairness(latestPageData.fairness_cards||[]);
-              renderLocations(latestPageData.by_location||latestStatsData?.by_location||[]);
-              renderLadder();
-            }
-          }
-        }).catch(()=>{});
-      }
-      scheduleStatsLoad();
+        if(pageResult.status==='fulfilled'){
+          const raw=pageResult.value;
+          latestPageData=raw?.get_drinks_page_public||raw||{};
+        }else{
+          latestPageData=latestPageData||{};
+          setStatus(pageResult.reason?.message||String(pageResult.reason||'Laden mislukt'),'bad');
+        }
+        renderSession(latestPageData||{});
+        const recent = latestPageData.recent_verified||latestPageData.recent_events||[];
+        const peaks = latestPageData.big_nights||latestStatsData?.big_nights||[];
+        const locationRows = latestPageData.by_location||latestStatsData?.by_location||[];
+        renderRecent(recent);
+        renderVerify(peaks);
+        renderFairness(latestPageData.fairness_cards||[]);
+        renderLocations(locationRows);
+        renderLadder();
+        if(!document.getElementById('statusLine').textContent){ setStatus(usePos?'':'Geolocatie nog niet actief. Overzicht werkt wel; verificaties blijven strikter zonder locatie.'); }
+      }catch(err){ setStatus(err.message||String(err),'bad'); }
+      await loadStats();
     }
     async function verifyDrink(id){ try{ const pos=await getPosition(true,true); if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); const usePos=lastPosition||pos; if(!usePos) throw new Error('Geolocatie is nodig om een drankje te bevestigen.'); const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy,approve:true})}); await parse(res); setStatus('Drankje bevestigd.','ok'); await loadPage(false,false);}catch(err){ setStatus(err.message||String(err),'bad'); } }
     document.querySelectorAll('[data-ladder-key]').forEach(b=>b.onclick=()=>{ currentLadderKey=b.dataset.ladderKey; renderLadder(); });
@@ -365,6 +347,7 @@
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./gejast-geo.js?v309"></script><script src="./drinks-verify-float.js?v309"></script>
+  <script src="./gejast-geo.js?v321"></script><script src="./drinks-verify-float.js?v321"></script>
+  <script src="./gejast-session-corner.js?v321"></script>
 </body>
 </html>

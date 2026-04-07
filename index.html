@@ -693,7 +693,7 @@
           <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">—</div></a>
           <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">—</div></a>
           <a class="drinks-mini gold" href="./drinks.html"><div class="drinks-mini-label">Snelheids poging</div><div class="drinks-mini-value">+</div></a>
-          <a class="drinks-mini dark" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div></a>
+          <a class="drinks-mini dark" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">Open</div></a>
         </div>
         
       </section>
@@ -1558,9 +1558,9 @@ async function castExtraPollVote(desired_status) {
         const totals = payload.totals || {};
         grid.innerHTML = `
           <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">${Number(totals.today_events||0)}</div></a>
-          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">${Number(totals.all_events||0)}</div></a>
-          <a class="drinks-mini gold" href="./drinks_speed.html"><div class="drinks-mini-label">Snelheids poging</div><div class="drinks-mini-value">+</div></a>
-          <a class="drinks-mini dark" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div></a>`;
+          <a class="drinks-mini" style="background:#fff;color:#111;border:1px solid rgba(0,0,0,.12)" href="./drinks_pending.html"><div class="drinks-mini-label">Verifiëren</div><div class="drinks-mini-value">${Number(totals.pending_events||payload.verify_queue_count||0)}</div></a>
+          <a class="drinks-mini gold" href="./drinks_speed.html"><div class="drinks-mini-label">Snelheidspoging</div><div class="drinks-mini-value">Indienen</div></a>
+          <a class="drinks-mini dark" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">Open</div></a>`;
       } catch(_){ }
     }
 
@@ -1571,6 +1571,7 @@ async function castExtraPollVote(desired_status) {
       const state=__gejastDrinksTop5State;
       const speedGroups=Array.isArray(state.speedGroups)&&state.speedGroups.length?state.speedGroups:[{key:'bak',label:'1 Bak',rows:[]}];
       const currentSpeedGroup=speedGroups[state.speedIdx % speedGroups.length] || {key:'bak',label:'1 Bak',rows:[]};
+      const verifyCountBox = 0;
       const unitValue=(row)=>{ const n=Number(row?.total_units ?? row?.units ?? row?.unit_total ?? row?.value ?? 0); return Number.isFinite(n) ? n : 0; };
       const secondValue=(row)=>{ const n=Number(row?.duration_seconds ?? row?.seconds ?? row?.duration ?? row?.value ?? 0); return Number.isFinite(n) ? n : 0; };
       const biggestPlayer = state.biggestPlayer || (Array.isArray(state.allTimeRows) && state.allTimeRows[0]) || null;

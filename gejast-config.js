@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v320',
+    VERSION:'v321',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -69,8 +69,8 @@
     if (!last) return false;
     return (Date.now() - last) > CONFIG.PLAYER_SESSION_IDLE_MS;
   }
-  function buildLoginUrl(returnTo){
-    const url = new URL('./login.html', window.location.href);
+  function buildHomeUrl(returnTo){
+    const url = new URL('./home.html', window.location.href);
     if (returnTo) url.searchParams.set('return_to', returnTo);
     return url.toString();
   }
@@ -78,7 +78,7 @@
     if (isPlayerSessionExpired()) clearPlayerSessionTokens();
     const token = getPlayerSessionToken();
     if (!token){
-      window.location.href = buildLoginUrl(returnTo || (location.pathname.split('/').pop() || 'index.html'));
+      window.location.href = buildHomeUrl(returnTo || (location.pathname.split('/').pop() || 'index.html'));
       return false;
     }
     touchPlayerActivity();
@@ -126,7 +126,7 @@
     ensurePlayerSessionOrRedirect,
     installActivityKeepalive,
     requireMatchEntrySession,
-    buildLoginUrl
+    buildHomeUrl
   });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyVersionLabel, { once: true });

@@ -153,7 +153,7 @@
   async function registerNotificationWorker(){
     if (!notificationSupported()) return null;
     try {
-      const reg = await navigator.serviceWorker.register('./gejast-sw.js?v308', { scope:'./' });
+      const reg = await navigator.serviceWorker.register('./gejast-sw.js?v321', { scope:'./' });
       return await navigator.serviceWorker.ready.catch(()=>reg);
     } catch(_) { return null; }
   }
@@ -287,13 +287,6 @@
     setNotificationButtonState(state.permission, state);
     return state;
   }
-
-  function isIosWebPushPromptContext(){
-    if (!isIOS()) return true;
-    if (!notificationSupported()) return false;
-    return isStandalone();
-  }
-
   async function requestNotificationAccess(){
     if (!notificationSupported()) {
       const rows = [
@@ -302,19 +295,6 @@
       ];
       showDiagnostics('Meldingen niet beschikbaar', rows);
       return { granted:false, reason:'unsupported' };
-    }
-    if (isIOS() && !isStandalone()) {
-      const rows = [
-        `Platform: ${platformName()} · Safari`,
-        'iPhone/iPad laat de native meldingen-popup voor websites alleen zien vanuit de Safari-thuisscherm-app.',
-        'Open eerst Delen in Safari, kies Zet op beginscherm, open daarna precies die thuisscherm-app en druk daar opnieuw op de bel.',
-        'Zonder die stap verschijnt er geen iPhone-popup, ook al werkt de belknop zelf goed.'
-      ];
-      showDiagnostics('Open eerst de thuisscherm-app', rows, [
-        { label:'Vraag opnieuw vanuit app', onClick:()=>{ try{ window.location.reload(); }catch(_){} }, keepOpen:false },
-        { label:'Sluiten', alt:true }
-      ]);
-      return { granted:false, reason:'ios-home-screen-required' };
     }
     await registerNotificationWorker();
     let permission = notificationPermission();
@@ -325,13 +305,16 @@
     if (permission === 'granted') {
       const sub = await ensurePushSubscription();
       const updated = await refreshNotificationButton();
+      const localShown = await showNotificationFromServiceWorker('Gejast meldingstest', { body:'Lokale service-worker test vanaf dit toestel.', tag:'gejast-local-test', requireInteraction:false, data:{ url:'./index.html' } });
       const queuedTest = sub.subscription ? await queueBackendTestPush() : { queued:false, reason:'no-subscription' };
       showDiagnostics('Meldingen opnieuw gevraagd', [
         `Platform: ${platformName()}`,
         `Browsertoestemming: ${updated.permission}`,
         `Service worker: ${updated.workerReady ? 'klaar' : 'niet klaar'}`,
         `Push-abonnement: ${sub.subscription ? 'actief' : (sub.reason === 'no-vapid-key' ? 'mist publieke VAPID-sleutel in gejast-config.js' : 'niet actief')}`,
+        `Lokale service-worker test: ${localShown ? 'getoond op dit toestel' : 'niet getoond'}`,
         `Backend test-queue: ${queuedTest.queued ? 'klaargezet' : (queuedTest.reason === 'no-subscription' ? 'geen push-abonnement opgeslagen' : (queuedTest.reason || 'niet klaar'))}`,
+        'Android standby/lockscreen vraagt daarnaast om correcte browser-machtiging, een actieve service worker en geen batterij-optimalisatie die de browser wegdrukt.',
         ...mobilePermissionHelp('notification', updated.permission)
       ], [{ label:'Sluiten', alt:true }]);
       return { granted:true, state:updated, subscription:sub, queuedTest };
@@ -351,7 +334,7 @@
     try {
       const reg = await registerNotificationWorker();
       if (!reg || notificationPermission() !== 'granted') return false;
-      await reg.showNotification(title || 'Gejast', Object.assign({ tag:'gejast-generic', badge:'./logo.png', icon:'./logo.png' }, options || {}));
+      await reg.showNotification(title || 'Gejast', Object.assign({ tag:'gejast-generic', badge:'./logo.png', icon:'./logo.png', renotify:true, requireInteraction:false, silent:false, timestamp:Date.now(), vibrate:[180,80,180], data:{ url:'./index.html' } }, options || {}));
       try { localStorage.setItem(NOTIFY_LAST_KEY, String(Date.now())); } catch(_){}
       return true;
     } catch(_) { return false; }
