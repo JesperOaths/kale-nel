@@ -1,5 +1,5 @@
 (function(){
-  const FAMILY_NAMES = ['Jesper','Emil','Anouk','Lilian','Sierk','Gunnar'];
+  const FAMILY_NAMES = ['Jesper','Emil','Anouk','Lilian','Sierk','Gunnar','Evi','Anna','Caro'];
   function norm(v){ return String(v||'').trim().toLowerCase(); }
   function getScope(){
     try{
@@ -21,6 +21,8 @@
   }
   function filterPlayers(rows, scope=getScope()){
     return (Array.isArray(rows)?rows:[]).filter((row)=>{
+      const rowScope = String(row?.site_scope || '').trim().toLowerCase();
+      if (rowScope === 'family' || rowScope === 'friends') return rowScope === scope;
       const name = row?.player_name || row?.display_name || row?.chosen_username || row?.public_display_name || row?.nickname || row?.real_name || row?.given_name || '';
       return isAllowedName(name, scope);
     });
@@ -35,12 +37,18 @@
   }
   function filterMatches(rows, scope=getScope()){
     return (Array.isArray(rows)?rows:[]).filter((row)=>{
+      const rowScope = String(row?.site_scope || '').trim().toLowerCase();
+      if (rowScope === 'family' || rowScope === 'friends') return rowScope === scope;
       const names = allNamesFromMatch(row);
       return names.length ? names.every((n)=>isAllowedName(n, scope)) : true;
     });
   }
   function filterPairRows(rows, scope=getScope()){
-    return (Array.isArray(rows)?rows:[]).filter((row)=>isAllowedName(row?.player_a, scope) && isAllowedName(row?.player_b, scope));
+    return (Array.isArray(rows)?rows:[]).filter((row)=>{
+      const rowScope = String(row?.site_scope || '').trim().toLowerCase();
+      if (rowScope === 'family' || rowScope === 'friends') return rowScope === scope;
+      return isAllowedName(row?.player_a, scope) && isAllowedName(row?.player_b, scope);
+    });
   }
   function defaultHome(scope=getScope()){
     return scope === 'family' ? './familie/index.html' : './index.html';
