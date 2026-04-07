@@ -43,8 +43,8 @@
   <link rel="canonical" href="https://kalenel.nl/admin.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
   <script>window.GEJAST_PAGE_VERSION='v311';</script><script src="./gejast-config.js?v311"></script>
-  <script src="./admin-session-sync.js?v262"></script>
-  <script src="./admin-topnav.js?v262"></script>
+  <script src="./admin-session-sync.js?v311"></script>
+  <script src="./admin-topnav.js?v311"></script>
 </head>
 <body>
   <main class="main-card">
@@ -85,7 +85,6 @@
             <a class="hub-link" href="./admin_claims.html#view=expired"><strong>Verlopen activaties</strong><small>Verlopen gevallen direct in dezelfde beheerflow.</small></a>
             <a class="hub-link" href="./admin_reserved_names.html"><strong>Claimbare namen</strong><small>Bron voor aanvraagbare namen en handmatige reserveringen.</small></a>
             <a class="hub-link" href="./admin_mail_audit.html"><strong>Maildiagnostiek</strong><small>Make-webhook, mail-RPC en laatste mailjobstatus.</small></a>
-            <a class="hub-link" href="./admin_push.html"><strong>Live pushmeldingen</strong><small>Stuur een melding naar spelers die nu actief op de site zijn.</small></a>
           </div>
         </section>
 
@@ -124,6 +123,7 @@
     const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
+
     const ADMIN_DEVICE_KEY = "jas_admin_device_v1";
     const ADMIN_USER_KEY = "jas_admin_user_v1";
     const ADMIN_DEADLINE_KEY = "jas_admin_deadline_v1";

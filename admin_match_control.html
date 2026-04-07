@@ -29,7 +29,7 @@
     <div class="panel">
       <div class="top">
         <div>
-          <div class="chips"><span class="chip">Admin</span><span class="chip">v262 · Made by Bruis</span></div>
+          <div class="chips"><span class="chip">Admin</span><span class="chip">v311 · Made by Bruis</span></div>
           <h1>Wedstrijden beheren</h1>
           <div class="muted">Één plek om fout ingevoerde wedstrijden aan te passen, te verwijderen en recente speler-edits te controleren.</div>
         </div>
@@ -62,6 +62,15 @@
                 <input id="editGame" disabled />
                 <input id="editClientId" disabled />
               </div>
+              <div class="card" style="margin-bottom:10px;background:#fbfaf6">
+                <h4 style="margin:0 0 10px">Speler vervangen in payload</h4>
+                <div class="controls" style="grid-template-columns:1fr 1fr auto;">
+                  <select id="replaceOldPlayer"><option value="">Oude speler</option></select>
+                  <select id="replaceNewPlayer"><option value="">Nieuwe speler</option></select>
+                  <button class="btn ghost" id="replacePlayerBtn" type="button">Vervang</button>
+                </div>
+                <div class="muted" style="margin-top:8px;font-size:13px">Werkt direct op de JSON voor klaverjas, boerenbridge en beerpong. Controleer daarna de payload en sla op.</div>
+              </div>
               <textarea id="editPayload" rows="16" spellcheck="false"></textarea>
               <div class="row-actions" style="margin-top:10px"><button class="btn" type="submit">Opslaan</button><button class="mini" id="deleteBtn" type="button">Verwijderen</button></div>
             </form>
@@ -90,11 +99,47 @@
     function filteredRows(){const g=(document.getElementById('gameFilter').value||'').toLowerCase(); const p=(document.getElementById('playerFilter').value||'').trim().toLowerCase(); const f=document.getElementById('fromFilter').value||''; const t=document.getElementById('toFilter').value||''; return state.rows.filter(row=>{const d=String((row.finished_at||row.created_at||'')).slice(0,10); if(g && row.game_type!==g) return false; if(p && !(row.participant_names||[]).some(n=>String(n).toLowerCase().includes(p))) return false; if(f && d < f) return false; if(t && d > t) return false; return true;})}
     function render(){const rows=filteredRows(); const body=document.getElementById('matchRows'); body.innerHTML=rows.length?rows.map(row=>`<tr><td>${esc(String(row.finished_at||row.created_at||'').replace('T',' ').slice(0,16))}</td><td>${esc(row.game_type)}</td><td>${esc((row.participant_names||[]).join(' · '))}</td><td>${row.player_editable_until ? 'Speler-editvenster open' : 'Alleen admin'}</td><td><div class="row-actions"><button class="mini" type="button" data-pick="${esc(row.game_type)}::${esc(row.client_match_id)}">Open</button></div></td></tr>`).join(''):`<tr><td colspan="5" class="muted">Geen wedstrijden gevonden.</td></tr>`; body.querySelectorAll('[data-pick]').forEach(btn=>btn.onclick=()=>pick(btn.dataset.pick));}
     function pick(key){const row=state.rows.find(r=>`${r.game_type}::${r.client_match_id}`===key); if(!row) return; state.selected=row; document.getElementById('selectionEmpty').classList.add('hidden'); document.getElementById('editForm').classList.remove('hidden'); document.getElementById('editGame').value=row.game_type; document.getElementById('editClientId').value=row.client_match_id; document.getElementById('editPayload').value=JSON.stringify(row.summary_payload||row.payload||{},null,2)}
+
+    async function loadPlayerOptions(){
+      try{
+        const data=await callRpc('get_login_names',{});
+        const rows=Array.isArray(data)?data:(Array.isArray(data?.names)?data.names:(Array.isArray(data?.data)?data.data:[]));
+        const items=rows.map(r=>typeof r==='string'?{value:r,label:r}:{value:String(r.player_id??r.id??r.value??r.display_name??''),label:String(r.display_name??r.name??r.label??r.desired_name??'')}).filter(r=>r.value&&r.label);
+        const opts=['<option value="">Kies speler</option>'].concat(items.map(o=>`<option value="${esc(o.value)}" data-label="${esc(o.label)}">${esc(o.label)}</option>`));
+        document.getElementById('replaceOldPlayer').innerHTML=opts.join('');
+        document.getElementById('replaceNewPlayer').innerHTML=opts.join('');
+      }catch(_){ }
+    }
+    function replacePlayerInPayload(payload, oldName, newName, oldId, newId){
+      const nameKeys=new Set(['name','player_name','display_name','desired_name']);
+      const nameArrayKeys=new Set(['players','participant_names','winner_names','loser_names','team_a_player_names','team_b_player_names','team_a_names','team_b_names']);
+      const idArrayKeys=new Set(['team_a_player_ids','team_b_player_ids','player_ids','participant_ids']);
+      function walk(value, key=''){
+        if(Array.isArray(value)){
+          if(nameArrayKeys.has(key)) return value.map(v=>String(v)===oldName?newName:walk(v,key));
+          if(idArrayKeys.has(key)) return value.map(v=>String(v)===String(oldId)?newId:walk(v,key));
+          return value.map(v=>walk(v,key));
+        }
+        if(value && typeof value==='object'){
+          const out={};
+          for(const [k,v] of Object.entries(value)) out[k]=walk(v,k);
+          return out;
+        }
+        if(typeof value==='string'){
+          if(nameKeys.has(key) && value===oldName) return newName;
+          return value;
+        }
+        if((typeof value==='number' || typeof value==='bigint') && String(value)===String(oldId) && idArrayKeys.has(key)) return newId;
+        return value;
+      }
+      return walk(payload);
+    }
     async function load(){try{const data=await callRpc('admin_get_match_edit_state_action',{admin_session_token:adminToken()}); state.rows=(data&&data.matches)||[]; render();}catch(e){document.getElementById('matchRows').innerHTML=`<tr><td colspan="5" class="muted">${esc(e.message||'Kon wedstrijden niet laden.')}</td></tr>`;}}
     document.getElementById('refreshBtn').onclick=load; ['gameFilter','playerFilter','fromFilter','toFilter'].forEach(id=>document.getElementById(id).addEventListener('input',render));
     document.getElementById('editForm').addEventListener('submit', async (e)=>{e.preventDefault(); if(!state.selected) return; try{const payload=JSON.parse(document.getElementById('editPayload').value||'{}'); await callRpc('admin_update_match_payload_action',{admin_session_token:adminToken(), game_type_input:state.selected.game_type, client_match_id_input:state.selected.client_match_id, replacement_payload:payload}); setStatus('Wedstrijd bijgewerkt. Laat daarna de ratings opnieuw opbouwen voor dit spel.'); await load();}catch(err){setStatus(err.message||'Opslaan mislukt.')}})
+    document.getElementById('replacePlayerBtn').onclick=()=>{try{const oldSel=document.getElementById('replaceOldPlayer'); const newSel=document.getElementById('replaceNewPlayer'); const oldId=oldSel.value||''; const newId=newSel.value||''; const oldName=oldSel.options[oldSel.selectedIndex]?.dataset?.label||oldSel.options[oldSel.selectedIndex]?.textContent||''; const newName=newSel.options[newSel.selectedIndex]?.dataset?.label||newSel.options[newSel.selectedIndex]?.textContent||''; if(!oldId||!newId||!oldName||!newName) return setStatus('Kies eerst oude en nieuwe speler.'); const payload=JSON.parse(document.getElementById('editPayload').value||'{}'); document.getElementById('editPayload').value=JSON.stringify(replacePlayerInPayload(payload, oldName, newName, oldId, newId), null, 2); setStatus(`Payload bijgewerkt: ${oldName} → ${newName}. Controleer en sla daarna op.`);}catch(err){setStatus(err.message||'Speler vervangen mislukt.')}};
     document.getElementById('deleteBtn').onclick=async()=>{if(!state.selected) return; if(!confirm('Wedstrijd verwijderen?')) return; try{await callRpc('admin_delete_match_action',{admin_session_token:adminToken(), game_type_input:state.selected.game_type, client_match_id_input:state.selected.client_match_id}); setStatus('Wedstrijd verwijderd. Laat daarna de ratings opnieuw opbouwen voor dit spel.'); document.getElementById('editForm').classList.add('hidden'); document.getElementById('selectionEmpty').classList.remove('hidden'); await load();}catch(err){setStatus(err.message||'Verwijderen mislukt.')}};
-    load();
+    load(); loadPlayerOptions();
   </script>
 </body>
 </html>

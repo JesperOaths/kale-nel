@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Naam claimen</title>
-  <script>window.GEJAST_PAGE_VERSION='v306';</script>
+  <script>window.GEJAST_PAGE_VERSION='v311';</script>
   <style>
     :root { --gold: #9a8241; --black: #111; --bg: #f0ede4; }
     * { box-sizing: border-box; }
@@ -31,7 +31,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/request.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v306"></script>
+  <script src="./gejast-config.js?v311"></script>
 </head>
 <body>
   <div class="scene">
@@ -42,13 +42,13 @@
   <main class="main-card">
     <a href="./index.html" aria-label="Terug naar home"><img src="./logo.png" class="logo-top" /></a>
     <h1>Claim je naam</h1>
-    <p class="intro">Kies je naam uit de lijst en vul je e-mailadres in.</p>
+    <p class="intro">Kies je naam uit de lijst en vul je e-mailadres in. Een notitie is niet verplicht.</p>
     <label>Gewenste naam</label>
     <select id="requestNameSelect"></select>
     <label>E-mailadres</label>
     <input id="requestEmailInput" name="email" type="email" placeholder="jouw@email.com" autocomplete="email" autocapitalize="none" spellcheck="false">
-    <label>Notitie</label>
-    <textarea id="requestNoteInput" placeholder="Waarom wil je meedoen?" autocomplete="off"></textarea>
+    <label>Notitie <span style="font-weight:600;color:#b2a58a">(optioneel)</span></label>
+    <textarea id="requestNoteInput" placeholder="Eventuele toelichting (optioneel)" autocomplete="off"></textarea>
     <div class="btn-row">
       <a href="./index.html" class="ghost-link">Terug</a>
       <button id="requestBtn" class="primary-btn">Aanvraag versturen</button>
@@ -185,7 +185,6 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
 
       if (!desiredName) throw new Error("Kies eerst een naam");
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requesterEmail)) throw new Error("Vul een geldig e-mailadres in");
-      if (!requesterNote) throw new Error("Geef kort een reden op");
 
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/request_claim_action`, {
         method: "POST",
@@ -194,7 +193,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         headers: rpcHeaders(),
         body: JSON.stringify({
           desired_name: desiredName,
-          requester_note: requesterNote,
+          requester_note: requesterNote || null,
           requester_email: requesterEmail,
           requester_meta: collectVisitorMeta()
         })
