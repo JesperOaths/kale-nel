@@ -14,10 +14,42 @@ if (!url || !key || !vapidPublic || !vapidPrivate) {
 webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate);
 const supabase = createClient(url, key, { auth: { persistSession: false } });
 
-async function run(){
+async function claimCoreJobs(){
   const { data, error } = await supabase.rpc('claim_web_push_jobs', { max_jobs: 25 });
   if (error) throw error;
   const items = Array.isArray(data?.items) ? data.items : [];
+  return items.map((item)=>Object.assign({ __source: 'core' }, item));
+}
+
+async function claimAdminJobs(){
+  const { data, error } = await supabase.rpc('claim_admin_web_push_jobs', { max_jobs: 25 });
+  if (error) throw error;
+  const items = Array.isArray(data?.items) ? data.items : [];
+  return items.map((item)=>Object.assign({ __source: 'admin' }, item));
+}
+
+async function markSent(item){
+  if (item.__source === 'admin') {
+    const { error } = await supabase.rpc('mark_admin_web_push_job_sent', { job_id_input: item.job_id });
+    if (error) throw error;
+    return;
+  }
+  const { error } = await supabase.rpc('mark_web_push_job_sent', { job_id_input: item.job_id });
+  if (error) throw error;
+}
+
+async function markFailed(item, errorText){
+  if (item.__source === 'admin') {
+    const { error } = await supabase.rpc('mark_admin_web_push_job_failed', { job_id_input: item.job_id, error_input: errorText });
+    if (error) throw error;
+    return;
+  }
+  const { error } = await supabase.rpc('mark_web_push_job_failed', { job_id_input: item.job_id, error_input: errorText });
+  if (error) throw error;
+}
+
+async function run(){
+  const items = [...await claimCoreJobs(), ...await claimAdminJobs()];
   for (const item of items){
     try {
       await webpush.sendNotification({
@@ -29,11 +61,12 @@ async function run(){
         url: item.target_url || './drinks_pending.html',
         tag: `job-${item.job_id}`
       }));
-      await supabase.rpc('mark_web_push_job_sent', { job_id_input: item.job_id });
-      console.log('sent', item.job_id);
+      await markSent(item);
+      console.log('sent', item.__source, item.job_id);
     } catch (err) {
-      await supabase.rpc('mark_web_push_job_failed', { job_id_input: item.job_id, error_input: String(err && err.message || err) });
-      console.error('failed', item.job_id, err && err.message || err);
+      const reason = String(err && err.message || err);
+      try { await markFailed(item, reason); } catch (markErr) { console.error('mark-failed-error', item.job_id, markErr && markErr.message || markErr); }
+      console.error('failed', item.__source, item.job_id, reason);
     }
   }
 }

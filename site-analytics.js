@@ -180,6 +180,40 @@
     }).catch(() => {});
   }
 
+
+  async function getExistingPushSubscription(){
+    try {
+      if (!window.isSecureContext || !('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+      const version = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.VERSION) || 'v311';
+      const reg = await navigator.serviceWorker.register(`./gejast-sw.js?${version}`, { scope:'./' });
+      if (!reg || !reg.pushManager) return null;
+      return await reg.pushManager.getSubscription();
+    } catch (_) { return null; }
+  }
+  async function touchActivePushPresence(profile){
+    try {
+      const cfg = window.GEJAST_CONFIG || {};
+      const token = getStorageValue(PLAYER_SESSION_KEYS, [sessionStorage, localStorage]);
+      if (!token || !(profile && profile.is_logged_in) || Notification.permission !== 'granted') return;
+      const sub = await getExistingPushSubscription();
+      if (!sub) return;
+      const json = sub.toJSON ? sub.toJSON() : sub;
+      await fetch(`${SUPABASE_URL}/rest/v1/rpc/${cfg.ACTIVE_PUSH_TOUCH_RPC || 'touch_active_web_push_presence'}`, {
+        method:'POST', mode:'cors', cache:'no-store', keepalive:true,
+        headers: rpcHeaders(),
+        body: JSON.stringify({
+          session_token: token,
+          endpoint_input: json.endpoint || sub.endpoint || '',
+          p256dh_input: (json.keys && json.keys.p256dh) || '',
+          auth_input: (json.keys && json.keys.auth) || '',
+          page_path_input: path,
+          permission_input: Notification.permission || '',
+          standalone_input: !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true)
+        })
+      }).catch(()=>{});
+    } catch (_) {}
+  }
+
   resolveProfile().then((profile) => {
     const enriched = Object.assign({}, basePayload, profile || {});
     if (sessionStorage.getItem(TRACKED_KEY) !== trackKey) {
@@ -215,6 +249,8 @@
 
     document.addEventListener('click', trackClick, true);
     document.addEventListener('submit', trackForm, true);
+    touchActivePushPresence(profile);
+    setInterval(() => { if (!document.hidden) touchActivePushPresence(profile); }, 60000);
   }).catch(() => {
     if (sessionStorage.getItem(TRACKED_KEY) !== trackKey) {
       sessionStorage.setItem(TRACKED_KEY, trackKey);
