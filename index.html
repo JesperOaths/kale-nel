@@ -2,6 +2,7 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
+  <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wordt er gejast donderdag?</title>
   <link rel="stylesheet" href="./site-shell.css" />
@@ -647,7 +648,8 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v316';</script><script src="./gejast-config.js?v316"></script><script src="./gejast-scope.js?v316"></script>
+  <script>window.GEJAST_PAGE_VERSION='v318';</script><script src="./gejast-config.js?v318"></script><script src="./gejast-scope.js?v318"></script>
+  <script src="./gejast-home-gate.js?v318"></script>
 </head>
 <body><div id="gejastTopRightToolsMount"></div>
   <div class="site-scene" aria-hidden="true">
@@ -703,14 +705,7 @@
 
       <section class="public-links" aria-label="Sitepagina's">
         <div class="public-links-grid">
-          <a class="page-link-card request-link" href="./request.html">
-            <div class="page-link-label">Account Aanmaken</div>
-            <div class="page-link-copy">Vraag een account aan.</div>
-          </a>
-          <a class="page-link-card login-link" href="./login.html">
-            <div class="page-link-label">Login</div>
-            <div class="page-link-copy">Open je spelersessie.</div>
-          </a>
+          
         </div>
 
         <div class="public-links-grid">
@@ -1558,7 +1553,6 @@ async function castExtraPollVote(desired_status) {
     }
 
     function getPlayerSessionToken(){ return localStorage.getItem('jas_session_token_v11') || sessionStorage.getItem('jas_session_token_v11') || localStorage.getItem('jas_session_token_v10') || sessionStorage.getItem('jas_session_token_v10') || ''; }
-    function wireProtectedDrinksLinks(){ if (CURRENT_SCOPE==='family') return; document.querySelectorAll('a[href="./drinks_add.html"]').forEach((link)=>{ if(link.dataset.bound==='1') return; link.dataset.bound='1'; link.addEventListener('click',(ev)=>{ if(getPlayerSessionToken()) return; ev.preventDefault(); window.location.href = './login.html?return_to=drinks_add'; }); }); }
 
     async function load() {
       try {
@@ -1582,7 +1576,6 @@ async function castExtraPollVote(desired_status) {
     document.getElementById('drinksNoBtn').addEventListener('click', () => handleExtraPollVote('nee'));
     document.getElementById('yesBtn').addEventListener('click', () => handleVote('ja'));
     document.getElementById('noBtn').addEventListener('click', () => handleVote('nee'));
-    wireProtectedDrinksLinks();
     load();
     loadDrinksHome();
     loadDrinksHomeTop5(); setInterval(loadDrinksHomeTop5, 5000);
@@ -1664,5 +1657,5 @@ async function castExtraPollVote(desired_status) {
 
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v316"></script><script src="./gejast-geo.js?v316"></script></body>
+<script src="./drinks-verify-float.js?v318"></script><script src="./gejast-geo.js?v318"></script></body>
 </html>

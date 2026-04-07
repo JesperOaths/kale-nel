@@ -2,9 +2,10 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
+  <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inloggen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v313';</script>
+  <script>window.GEJAST_PAGE_VERSION='v318';</script>
   <style>
     :root { --gold: #9a8241; --dark-bg: #111; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.08); }
     * { box-sizing: border-box; }
@@ -45,8 +46,8 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/login.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v313"></script>
-  <script src="./gejast-scope.js?v313"></script>
+  <script src="./gejast-config.js?v318"></script>
+  <script src="./gejast-scope.js?v318"></script>
 </head>
 <body>
   <div class="site-scene">
@@ -471,5 +472,17 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
   <script src="./site-analytics.js"></script>
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+
+  <script>
+    function gejastLandingRedirectIfLoggedIn(){
+      try{
+        const family = new URLSearchParams(location.search).get('scope') === 'family';
+        const keys=['jas_session_token_v11','jas_session_token_v10'];
+        const token = keys.map((k)=>localStorage.getItem(k)||sessionStorage.getItem(k)).find(Boolean);
+        if(token) location.replace(family ? './index.html?scope=family' : './index.html');
+      }catch(_){}
+    }
+    gejastLandingRedirectIfLoggedIn();
+  </script>
 </body>
 </html>
