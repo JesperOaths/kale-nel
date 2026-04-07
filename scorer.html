@@ -268,7 +268,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/scorer.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v312';</script><script src="./gejast-config.js?v312"></script><script src="./gejast-scope.js?v312"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('scorer');</script>
+  <script>window.GEJAST_PAGE_VERSION='v313';</script><script src="./gejast-config.js?v313"></script><script src="./gejast-scope.js?v313"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('scorer');</script>
 
   <style id="page-floating-logo-style">
     .page-floating-logo{position:fixed;top:18px;right:18px;z-index:9998;display:inline-flex;width:64px;height:64px;border-radius:50%;background:rgba(255,251,245,.72);border:1px solid rgba(255,255,255,.65);box-shadow:0 14px 32px rgba(0,0,0,.10);align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
@@ -510,10 +510,10 @@
     }
 
     async function getSitePlayers() {
-      for (const endpoint of ['get_login_names']) {
+      for (const endpoint of [((window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope())==='family'?'get_login_names_scoped':'get_login_names_scoped'),'get_login_names']) {
         try {
           const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${endpoint}`, {
-            method:'POST', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify({})
+            method:'POST', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify(endpoint==='get_login_names_scoped'?{ site_scope_input: (window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope())||'friends' }: {})
           });
           const txt = await res.text();
           const data = txt ? JSON.parse(txt) : {};

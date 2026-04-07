@@ -23,13 +23,13 @@
     .hidden{display:none}.status{margin-top:12px;padding:12px 14px;border-radius:14px;background:rgba(17,17,17,.05)}
     @media (max-width: 900px){.grid{grid-template-columns:1fr}.controls{grid-template-columns:1fr 1fr}}
   </style>
-<script src="./gejast-scope.js?v312"></script></head>
+<script src="./gejast-scope.js?v313"></script></head>
 <body>
   <div class="wrap">
     <div class="panel">
       <div class="top">
         <div>
-          <div class="chips"><span class="chip">Admin</span><span class="chip">v312 · Made by Bruis</span></div>
+          <div class="chips"><span class="chip">Admin</span><span class="chip">v313 · Made by Bruis</span></div>
           <h1>Wedstrijden beheren</h1>
           <div class="muted">Één plek om fout ingevoerde wedstrijden aan te passen, te verwijderen en recente speler-edits te controleren.</div>
         </div>
@@ -102,7 +102,7 @@
 
     async function loadPlayerOptions(){
       try{
-        const data=await callRpc('get_login_names',{});
+        const scope=activeScope(); let data; try{ data=await callRpc('get_login_names_scoped',{site_scope_input:scope}); }catch(_){ data=await callRpc('get_login_names',{}); }
         const rows=Array.isArray(data)?data:(Array.isArray(data?.names)?data.names:(Array.isArray(data?.data)?data.data:[]));
         const items=rows.map(r=>typeof r==='string'?{value:r,label:r}:{value:String(r.player_id??r.id??r.value??r.display_name??''),label:String(r.display_name??r.name??r.label??r.desired_name??'')}).filter(r=>r.value&&r.label);
         const opts=['<option value="">Kies speler</option>'].concat(items.map(o=>`<option value="${esc(o.value)}" data-label="${esc(o.label)}">${esc(o.label)}</option>`));
