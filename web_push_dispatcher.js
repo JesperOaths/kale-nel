@@ -26,7 +26,7 @@ async function run(){
       }, JSON.stringify({
         title: item.title,
         body: item.body,
-        url: item.target_url || './drinks.html#verifyPanel',
+        url: item.target_url || './drinks_pending.html',
         tag: `job-${item.job_id}`
       }));
       await supabase.rpc('mark_web_push_job_sent', { job_id_input: item.job_id });
