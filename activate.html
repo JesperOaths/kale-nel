@@ -155,10 +155,8 @@
     }
 
     .pin-trigger,
-    .pin-open,
     .submit-btn,
-    .secondary-link,
-    .pin-key {
+    .secondary-link {
       font: inherit;
     }
 
@@ -180,24 +178,6 @@
       box-shadow: 0 0 0 4px rgba(212,175,55,0.14);
     }
 
-    .pin-open {
-      flex: 0 0 auto;
-      min-width: 104px;
-      border: none;
-      border-radius: 12px;
-      background: rgba(17,17,17,0.07);
-      color: var(--black);
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .pin-open:disabled,
-    .submit-btn:disabled,
-    .pin-key:disabled {
-      cursor: wait;
-      opacity: 0.68;
-    }
-
     .submit-btn {
       width: 100%;
       margin-top: 18px;
@@ -211,18 +191,6 @@
       cursor: pointer;
       box-shadow: 0 10px 18px rgba(17,17,17,0.08);
       transition: transform 0.1s ease, filter 0.15s ease;
-    }
-
-    .submit-btn:hover,
-    .pin-open:hover,
-    .pin-key:hover {
-      filter: brightness(0.99);
-    }
-
-    .submit-btn:active,
-    .pin-open:active,
-    .pin-key:active {
-      transform: scale(0.99);
     }
 
     .status {
@@ -392,10 +360,6 @@
         margin-top: 14px;
       }
 
-      .pin-open {
-        min-width: 94px;
-      }
-
       .site-credit-watermark {
         bottom: 10px;
         font-size: 12px;
@@ -435,46 +399,22 @@
     <label for="pinInput">Kies je 4-cijferige pincode</label>
     <div class="pin-shell">
       <input id="pinInput" class="pin-trigger" type="password" placeholder="4 cijfers" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" enterkeyhint="next" name="new_pin" />
-      <button id="pinOpenBtn" class="pin-open" type="button">Toetsen</button>
+      
     </div>
 
     <label for="pinConfirmInput">Bevestig je pincode</label>
     <div class="pin-shell">
       <input id="pinConfirmInput" class="pin-trigger" type="password" placeholder="Nogmaals 4 cijfers" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" enterkeyhint="done" name="new_pin_confirm" />
-      <button id="pinConfirmOpenBtn" class="pin-open" type="button">Toetsen</button>
+      
     </div>
 
     <button id="activateBtn" class="submit-btn" type="button">Account activeren</button>
     <div id="status" class="status"></div>
     <p class="fineprint">Werkt deze link niet meer of zie je een melding dat de link al gebruikt is? Vraag dan de beheerder om een nieuwe activatielink.</p>
   </main>
-
-  <div id="pinModal" class="modal" aria-hidden="true">
-    <div class="modal-panel">
-      <div class="modal-title">Voer je pincode in</div>
-      <div id="pinPreview" class="pin-preview" aria-live="polite"></div>
-      <div class="pin-grid">
-        <button class="pin-key" data-digit="1" type="button">1</button>
-        <button class="pin-key" data-digit="2" type="button">2</button>
-        <button class="pin-key" data-digit="3" type="button">3</button>
-        <button class="pin-key" data-digit="4" type="button">4</button>
-        <button class="pin-key" data-digit="5" type="button">5</button>
-        <button class="pin-key" data-digit="6" type="button">6</button>
-        <button class="pin-key" data-digit="7" type="button">7</button>
-        <button class="pin-key" data-digit="8" type="button">8</button>
-        <button class="pin-key" data-digit="9" type="button">9</button>
-        <button id="pinClearBtn" class="pin-key" type="button">Wis</button>
-        <button class="pin-key" data-digit="0" type="button">0</button>
-        <button id="pinBackBtn" class="pin-key" type="button">⌫</button>
-      </div>
-      <div class="pin-footer">
-        <button id="pinCancelBtn" class="pin-key" type="button" style="flex:1;">Sluiten</button>
-        <button id="pinDoneBtn" class="pin-key primary" type="button" style="flex:1;">Klaar</button>
-      </div>
-    </div>
   </div>
 
-  <div id="versionWatermark" class="site-credit-watermark" data-version-watermark>v262 · Made by Bruis</div>
+  <div id="versionWatermark" class="site-credit-watermark" data-version-watermark>v309 · Made by Bruis</div>
 
   <script>
     const CONFIG = window.GEJAST_CONFIG || {};
@@ -573,17 +513,10 @@
 
     let activationContext = null;
     let activationBusy = false;
-    let activePinTarget = 'pinInput';
-    const pinModal = document.getElementById('pinModal');
     const actionControls = [
       document.getElementById('activateBtn'),
-      document.getElementById('pinOpenBtn'),
-      document.getElementById('pinConfirmOpenBtn'),
-      document.getElementById('pinClearBtn'),
-      document.getElementById('pinBackBtn'),
-      document.getElementById('pinCancelBtn'),
-      document.getElementById('pinDoneBtn'),
-      ...Array.from(document.querySelectorAll('[data-digit]'))
+      document.getElementById('pinInput'),
+      document.getElementById('pinConfirmInput')
     ];
 
     function setBusyState(isBusy) {
@@ -637,78 +570,23 @@
       document.getElementById('approvedEmail').textContent = activationContext?.requester_email || 'Onbekend';
     }
 
-    function currentTarget() {
-      return document.getElementById(activePinTarget);
-    }
-
     function clampFourDigits(el) {
       el.value = String(el.value || '').replace(/\D/g, '').slice(0, 4);
       return el.value;
     }
 
-    function syncPinPreview() {
-      const value = currentTarget().value.slice(0, 4).split('');
-      document.getElementById('pinPreview').innerHTML = Array.from({ length: 4 }, (_, index) => {
-        const filled = index < value.length;
-        return `<span class="pin-slot${filled ? '' : ' empty'}">${filled ? '•' : '—'}</span>`;
-      }).join('');
-    }
-
-    function openPinModal(targetId) {
-      if (activationBusy) return;
-      activePinTarget = targetId;
-      pinModal.classList.add('show');
-      pinModal.setAttribute('aria-hidden', 'false');
-      syncPinPreview();
-    }
-
-    function closePinModal() {
-      pinModal.classList.remove('show');
-      pinModal.setAttribute('aria-hidden', 'true');
-    }
-
-    function addPinDigit(digit) {
-      if (activationBusy) return;
-      const input = currentTarget();
-      input.value = (input.value + digit);
-      clampFourDigits(input);
-      syncPinPreview();
-    }
-
-    document.querySelectorAll('[data-digit]').forEach((btn) => btn.addEventListener('click', () => addPinDigit(btn.dataset.digit)));
-    document.getElementById('pinClearBtn').addEventListener('click', () => {
-      if (activationBusy) return;
-      currentTarget().value = '';
-      syncPinPreview();
-    });
-    document.getElementById('pinBackBtn').addEventListener('click', () => {
-      if (activationBusy) return;
-      const input = currentTarget();
-      input.value = input.value.slice(0, -1);
-      syncPinPreview();
-    });
-    document.getElementById('pinCancelBtn').addEventListener('click', closePinModal);
-    document.getElementById('pinDoneBtn').addEventListener('click', closePinModal);
-    document.getElementById('pinOpenBtn').addEventListener('click', () => openPinModal('pinInput'));
-    document.getElementById('pinConfirmOpenBtn').addEventListener('click', () => openPinModal('pinConfirmInput'));
-    document.getElementById('pinInput').addEventListener('click', () => openPinModal('pinInput'));
-    document.getElementById('pinConfirmInput').addEventListener('click', () => openPinModal('pinConfirmInput'));
     document.getElementById('pinInput').addEventListener('input', () => {
       const el = document.getElementById('pinInput');
       clampFourDigits(el);
-      syncPinPreview();
       if (el.value.length === 4) document.getElementById('pinConfirmInput').focus();
     });
     document.getElementById('pinConfirmInput').addEventListener('input', () => {
-      const el = document.getElementById('pinConfirmInput');
-      clampFourDigits(el);
-      syncPinPreview();
+      clampFourDigits(document.getElementById('pinConfirmInput'));
     });
     ['pinInput','pinConfirmInput'].forEach((id) => {
       document.getElementById(id).addEventListener('paste', () => {
         requestAnimationFrame(() => {
           clampFourDigits(document.getElementById(id));
-          syncPinPreview();
         });
       });
     });
@@ -723,19 +601,6 @@
         event.preventDefault();
         document.getElementById('activateBtn').focus();
       }
-    });
-    pinModal.addEventListener('click', (event) => {
-      if (event.target === pinModal) closePinModal();
-    });
-    document.addEventListener('keydown', (event) => {
-      if (!pinModal.classList.contains('show')) return;
-      if (/^[0-9]$/.test(event.key)) addPinDigit(event.key);
-      if (event.key === 'Backspace') {
-        const input = currentTarget();
-        input.value = input.value.slice(0, -1);
-        syncPinPreview();
-      }
-      if (event.key === 'Escape' || event.key === 'Enter') closePinModal();
     });
 
     document.getElementById('activateBtn').addEventListener('click', async () => {

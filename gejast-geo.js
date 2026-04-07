@@ -19,7 +19,7 @@
     const rows = [];
     if (kind === 'notification') {
       if (isIOS() && !isStandalone()) {
-        rows.push('Op iPhone/iPad werkt de native meldingen-popup vaak alleen goed vanuit de Safari-thuisscherm-app. Voeg de site toe aan je beginscherm, open hem vanaf daar en druk daarna opnieuw op de bel. Open daarna pending direct vanuit de melding.');
+        rows.push('Op iPhone/iPad werkt de native meldingen-popup vaak alleen goed vanuit de Safari-thuisscherm-app. Voeg de site toe aan je beginscherm, open hem vanaf daar en druk daarna opnieuw op de bel.');
       }
       if (state === 'denied') {
         rows.push(isIOS() ? 'Zet meldingen voor deze site weer aan via Safari/website-instellingen of in de iPhone-instellingen en druk daarna opnieuw op de bel.' : 'Zet meldingen voor deze site weer aan via browser-site-instellingen of app-instellingen en druk daarna opnieuw op de bel.');
@@ -153,7 +153,7 @@
   async function registerNotificationWorker(){
     if (!notificationSupported()) return null;
     try {
-      const reg = await navigator.serviceWorker.register('./gejast-sw.js?v309', { scope:'./' });
+      const reg = await navigator.serviceWorker.register('./gejast-sw.js?v308', { scope:'./' });
       return await navigator.serviceWorker.ready.catch(()=>reg);
     } catch(_) { return null; }
   }
@@ -287,6 +287,13 @@
     setNotificationButtonState(state.permission, state);
     return state;
   }
+
+  function isIosWebPushPromptContext(){
+    if (!isIOS()) return true;
+    if (!notificationSupported()) return false;
+    return isStandalone();
+  }
+
   async function requestNotificationAccess(){
     if (!notificationSupported()) {
       const rows = [
@@ -295,6 +302,19 @@
       ];
       showDiagnostics('Meldingen niet beschikbaar', rows);
       return { granted:false, reason:'unsupported' };
+    }
+    if (isIOS() && !isStandalone()) {
+      const rows = [
+        `Platform: ${platformName()} · Safari`,
+        'iPhone/iPad laat de native meldingen-popup voor websites alleen zien vanuit de Safari-thuisscherm-app.',
+        'Open eerst Delen in Safari, kies Zet op beginscherm, open daarna precies die thuisscherm-app en druk daar opnieuw op de bel.',
+        'Zonder die stap verschijnt er geen iPhone-popup, ook al werkt de belknop zelf goed.'
+      ];
+      showDiagnostics('Open eerst de thuisscherm-app', rows, [
+        { label:'Vraag opnieuw vanuit app', onClick:()=>{ try{ window.location.reload(); }catch(_){} }, keepOpen:false },
+        { label:'Sluiten', alt:true }
+      ]);
+      return { granted:false, reason:'ios-home-screen-required' };
     }
     await registerNotificationWorker();
     let permission = notificationPermission();
@@ -310,7 +330,7 @@
         `Platform: ${platformName()}`,
         `Browsertoestemming: ${updated.permission}`,
         `Service worker: ${updated.workerReady ? 'klaar' : 'niet klaar'}`,
-        `Push-abonnement: ${sub.subscription ? 'actief' : (sub.reason === 'no-vapid-key' ? 'mist publieke VAPID-sleutel in gejast-config.js; native webpush kan daardoor nog niet echt aan' : 'niet actief')}`,
+        `Push-abonnement: ${sub.subscription ? 'actief' : (sub.reason === 'no-vapid-key' ? 'mist publieke VAPID-sleutel in gejast-config.js' : 'niet actief')}`,
         `Backend test-queue: ${queuedTest.queued ? 'klaargezet' : (queuedTest.reason === 'no-subscription' ? 'geen push-abonnement opgeslagen' : (queuedTest.reason || 'niet klaar'))}`,
         ...mobilePermissionHelp('notification', updated.permission)
       ], [{ label:'Sluiten', alt:true }]);
