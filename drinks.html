@@ -26,7 +26,7 @@
     .grid{display:grid;gap:18px;margin-top:22px}.grid.two{grid-template-columns:minmax(0,1.08fr) minmax(320px,.92fr)}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.grid.quad{grid-template-columns:repeat(4,minmax(0,1fr))}
     .panel{content-visibility:auto;contain-intrinsic-size:400px;background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:20px;box-shadow:0 8px 16px rgba(0,0,0,.02)} .panel.tinted-gold{background:linear-gradient(180deg,#fbf6e8,#f5edd4)} .panel.tinted-sage{background:linear-gradient(180deg,#eff4eb,#e2ead9)} .panel.tinted-sky{background:linear-gradient(180deg,#eef4f8,#e4edf3)}
     .panel-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-end;margin-bottom:14px}.panel-head h2{margin:0;font-size:1.45rem}.panel-head p{margin:4px 0 0;color:var(--muted)}
-    .list{display:grid;gap:10px}.item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 15px;border-radius:20px;border:1px solid var(--line);background:#fff}
+    .list{display:grid;gap:10px}.list.is-loading{opacity:.72}.panel{min-height:220px}.item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 15px;border-radius:20px;border:1px solid var(--line);background:#fff}
     .item.rich{align-items:flex-start}.item-left{display:flex;align-items:center;gap:12px;min-width:0}.item-main{display:grid;gap:4px;min-width:0}.item-title{font-weight:900;font-size:1.02rem}.item-sub{color:var(--muted);font-size:.93rem}.item-value{font-weight:900;font-size:1.08rem;white-space:nowrap;color:#2d2518}
     .avatar{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:#f2ede2;display:grid;place-items:center;font-size:1.1rem;font-weight:900;color:#5d4820;overflow:hidden;flex:0 0 auto}.avatar img{width:100%;height:100%;object-fit:cover}
     .pill{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.pill.gold{background:#f0e2b3;color:#6b5425}.pill.sage{background:#dde8d5;color:#3e5a35}.pill.sky{background:#dbe8f3;color:#425b6c}
@@ -252,11 +252,21 @@
       renderFairness(data.fairness_cards||[]); renderLocations(data.by_location||[]);
       renderSpeedHighlights(data.speed_leaderboards||[]);
     }
-    async function loadStats(){
+
+function queueStatsLoad(force=false){
+  const now=Date.now();
+  if(!force && lastStatsLoadedAt && (now-lastStatsLoadedAt)<25000 && latestStatsData){ renderStats(latestStatsData||{}); renderLadder(); return Promise.resolve(); }
+  if (statsLoadPromise) return statsLoadPromise;
+  const runner=()=>loadStats().finally(()=>{ statsLoadPromise=null; statsLoadScheduled=false; lastStatsLoadedAt=Date.now(); });
+  statsLoadScheduled=true;
+  statsLoadPromise = ('requestIdleCallback' in window) ? new Promise((resolve)=>requestIdleCallback(()=>resolve(runner()),{timeout:900})) : new Promise((resolve)=>setTimeout(()=>resolve(runner()),120));
+  return statsLoadPromise;
+}
+async function loadStats(){
       let historyRows=[], homePayload={}, top5Payload={}, fallbackData={};
       const requests = await Promise.allSettled([
         fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_dashboard_fallback_public`,{method:'POST',headers:headers(),body:'{}'}).then(parse),
-        fetch(`${SUPABASE_URL}/rest/v1/rpc/get_verified_drinks_history_public`,{method:'POST',headers:headers(),body:JSON.stringify({limit_count:600})}).then(parse),
+        fetch(`${SUPABASE_URL}/rest/v1/rpc/get_verified_drinks_history_public`,{method:'POST',headers:headers(),body:JSON.stringify({limit_count:220})}).then(parse),
         fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_locations_public`,{method:'POST',headers:headers(),body:'{}'}).then(parse),
         fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_public`,{method:'POST',headers:headers(),body:'{}'}).then(parse),
         fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_top5_public`,{method:'POST',headers:headers(),body:'{}'}).then(parse)
@@ -313,7 +323,7 @@
       }
     }
     async function loadPage(forceGeo=false,userInitiated=false){
-      const myLoad=++loadToken;
+      const myLoad=++loadToken; ['recentList','verifyQueue','typeBars','bigNights','topUnitsList','topCountList','countRowsList','locationList','speedHighlights'].forEach(id=>document.getElementById(id)?.classList.add('is-loading')); 
       try{
         const pos=(forceGeo||!lastPosition)?await getPosition(forceGeo,userInitiated):lastPosition; if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null);
         const usePos=lastPosition||pos; const payload={session_token:token(),viewer_lat:usePos?usePos.coords.latitude:null,viewer_lng:usePos?usePos.coords.longitude:null};
@@ -337,9 +347,10 @@
         renderFairness(latestPageData.fairness_cards||[]);
         renderLocations(locationRows);
         renderLadder();
+        ['recentList','verifyQueue','typeBars','bigNights','topUnitsList','topCountList','countRowsList','locationList','speedHighlights'].forEach(id=>document.getElementById(id)?.classList.remove('is-loading'));
         if(!document.getElementById('statusLine').textContent){ setStatus(usePos?'':'Geolocatie nog niet actief. Overzicht werkt wel; verificaties blijven strikter zonder locatie.'); }
       }catch(err){ setStatus(err.message||String(err),'bad'); }
-      await loadStats();
+      queueStatsLoad(false);
     }
     async function verifyDrink(id){ try{ const pos=await getPosition(true,true); if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); const usePos=lastPosition||pos; if(!usePos) throw new Error('Geolocatie is nodig om een drankje te bevestigen.'); const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy,approve:true})}); await parse(res); setStatus('Drankje bevestigd.','ok'); await loadPage(false,false);}catch(err){ setStatus(err.message||String(err),'bad'); } }
     document.querySelectorAll('[data-ladder-key]').forEach(b=>b.onclick=()=>{ currentLadderKey=b.dataset.ladderKey; renderLadder(); });
