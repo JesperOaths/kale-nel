@@ -19,6 +19,9 @@
     .drinks-home-top5-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
     .drinks-home-top5-head h2{margin:0;font-size:1.1rem}
     .drinks-home-top5-grid,.drinks-top5-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    body.friends-scope .drinks-top-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    body.friends-scope .drinks-top-grid .ladder-card{min-height:210px;}
+
     .drinks-home-top5-card{display:block;text-decoration:none;color:#161616;background:#fff;border:1px solid rgba(0,0,0,.06);border-radius:20px;padding:16px;box-shadow:0 12px 24px rgba(0,0,0,.04)}
     .drinks-home-top5-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
     .drinks-home-top5-card-head strong{font-size:16px}
@@ -652,8 +655,8 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v320';</script><script src="./gejast-config.js?v320"></script><script src="./gejast-scope.js?v320"></script>
-  <script src="./gejast-home-gate.js?v320"></script>
+  <script>window.GEJAST_PAGE_VERSION='v322';</script><script src="./gejast-config.js?v322"></script><script src="./gejast-scope.js?v322"></script>
+  <script src="./gejast-home-gate.js?v322"></script>
 </head>
 <body><div id="gejastTopRightToolsMount"></div>
   <div class="site-scene" aria-hidden="true">
@@ -845,7 +848,7 @@
     function scopedHref(base){ try{ const u=new URL(base, location.href); if(CURRENT_SCOPE==='family') u.searchParams.set('scope','family'); return u.pathname.split('/').pop()+u.search; }catch(_){ return base; } }
     function homepageLadderRoute(game){ return scopedHref(`./ladder.html?game=${encodeURIComponent(game)}`); }
     function playerHref(name, game=''){ const qs = new URLSearchParams(); if (name) qs.set('player', name); if (game) qs.set('game', game); if (CURRENT_SCOPE==='family') qs.set('scope','family'); return `./player.html?${qs.toString()}`; }
-    function applyScopeChrome(){ if(CURRENT_SCOPE!=='family') return; try{ document.querySelector('.admin-badge')?.setAttribute('href', scopedHref('./admin.html')); document.querySelector('.card-top-right a')?.setAttribute('href', './familie/index.html'); }catch(_){} try{ document.querySelectorAll('a[href="./request.html"],a[href="./login.html"],a[href="./profiles.html"],a[href="./scorer.html"],a[href="./boerenbridge.html"],a[href="./admin.html"]').forEach((a)=>{ const href=a.getAttribute('href'); if(!href) return; a.setAttribute('href', scopedHref(href)); }); }catch(_){} try{ document.querySelectorAll('a[href="./beerpong.html"],a[href^="./drinks"]').forEach((a)=>{ a.style.display='none'; }); const drinksSections=[...document.querySelectorAll('.drinks-home-section,.drinks-home-top5-section')]; drinksSections.forEach((el)=>el.style.display='none'); document.querySelectorAll('.page-link-card').forEach((card)=>{ const txt=(card.textContent||'').toLowerCase(); if(txt.includes('beerpong')||txt.includes('drinks')) card.style.display='none'; }); }catch(_){} }
+    function applyScopeChrome(){ document.body.classList.toggle('friends-scope', CURRENT_SCOPE!=='family'); if(CURRENT_SCOPE!=='family') return; try{ document.querySelector('.admin-badge')?.setAttribute('href', scopedHref('./admin.html')); document.querySelector('.card-top-right a')?.setAttribute('href', './familie/index.html'); }catch(_){} try{ document.querySelectorAll('a[href="./request.html"],a[href="./login.html"],a[href="./profiles.html"],a[href="./scorer.html"],a[href="./boerenbridge.html"],a[href="./admin.html"]').forEach((a)=>{ const href=a.getAttribute('href'); if(!href) return; a.setAttribute('href', scopedHref(href)); }); }catch(_){} try{ document.querySelectorAll('a[href="./beerpong.html"],a[href^="./drinks"]').forEach((a)=>{ a.style.display='none'; }); const drinksSections=[...document.querySelectorAll('.drinks-home-section,.drinks-home-top5-section')]; drinksSections.forEach((el)=>el.style.display='none'); document.querySelectorAll('.page-link-card').forEach((card)=>{ const txt=(card.textContent||'').toLowerCase(); if(txt.includes('beerpong')||txt.includes('drinks')) card.style.display='none'; }); }catch(_){} }
 
     function setHomepageLiveState(state='standby', text='Stand-by') {
       const pill = document.getElementById('homeLivePill');
@@ -944,7 +947,7 @@ function applyLiveEntryCard(game, match){
   const label = cfg.card.querySelector('[data-entry-label]');
   const copy = cfg.card.querySelector('[data-entry-copy]');
   cfg.card.setAttribute('href', buildScopedLiveHref(cfg.livePage, match?.client_match_id));
-  if (label) label.textContent = cfg.baseLabel;
+  if (label) label.textContent = `${cfg.baseLabel} LIVE`; 
   if (copy) copy.innerHTML = '<span class="page-link-live-row"><span class="live-pill live">LIVE</span><span class="page-link-live-hint">Bekijk scoreformulier</span></span>';
 }
 async function fetchLiveMatchForPlayer(gameKey, myName){
@@ -962,10 +965,23 @@ async function fetchLiveMatchForPlayer(gameKey, myName){
     }) || null;
   } catch (_) { return null; }
 }
+
+async function resolveLiveViewerName(){
+  const direct = currentHomepageState?.my_name || (document.getElementById('playerSessionCornerName')||{}).textContent || '';
+  if (direct) return direct.trim();
+  const session_token = getSessionToken();
+  if (!session_token) return '';
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token }) });
+    const raw = await parseResponse(res);
+    return String(raw?.my_name || raw?.display_name || raw?.player_name || '').trim();
+  } catch (_) { return ''; }
+}
+
 async function refreshLiveEntryCards(){
   resetEntryCard('klaverjas');
   resetEntryCard('boerenbridge');
-  const myName = currentHomepageState?.my_name || (document.getElementById('playerSessionCornerName')||{}).textContent || '';
+  const myName = await resolveLiveViewerName();
   if (!getSessionToken() || !myName) return;
   const [klaverjasLive, boerenbridgeLive] = await Promise.all([fetchLiveMatchForPlayer('klaverjas', myName), fetchLiveMatchForPlayer('boerenbridge', myName)]);
   if (klaverjasLive) applyLiveEntryCard('klaverjas', klaverjasLive);
@@ -1670,6 +1686,7 @@ async function castExtraPollVote(desired_status) {
     document.getElementById('yesBtn').addEventListener('click', () => handleVote('ja'));
     document.getElementById('noBtn').addEventListener('click', () => handleVote('nee'));
     load();
+    setInterval(()=>{ try{ refreshLiveEntryCards(); }catch(_){ } }, 4000);
     loadDrinksHome();
     loadDrinksHomeTop5(); setInterval(loadDrinksHomeTop5, 5000);
   </script>
@@ -1750,5 +1767,5 @@ async function castExtraPollVote(desired_status) {
 
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v320"></script><script src="./gejast-geo.js?v320"></script></body>
+<script src="./drinks-verify-float.js?v322"></script><script src="./gejast-geo.js?v322"></script></body>
 </html>
