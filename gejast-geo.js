@@ -154,7 +154,7 @@
   async function registerNotificationWorker(){
     if (!notificationSupported()) return null;
     try {
-      const reg = await navigator.serviceWorker.register(`./gejast-sw.js?${encodeURIComponent(window.GEJAST_PAGE_VERSION || 'v312')}`, { scope:'./' });
+      const reg = await navigator.serviceWorker.register(`./gejast-sw.js?${encodeURIComponent(window.GEJAST_PAGE_VERSION || 'v326')}`, { scope:'./' });
       return await navigator.serviceWorker.ready.catch(()=>reg);
     } catch(_) { return null; }
   }
@@ -186,9 +186,11 @@
         method:'POST', headers: rpcHeaders(cfg.SUPABASE_PUBLISHABLE_KEY), body: JSON.stringify({
           session_token: token,
           endpoint_input: json?.endpoint || sub?.endpoint || '',
+          p256dh_input: (json?.keys && json.keys.p256dh) || '',
+          auth_input: (json?.keys && json.keys.auth) || '',
+          page_path_input: window.location.pathname || '',
           permission_input: notificationPermission(),
-          user_agent_input: navigator.userAgent || '',
-          platform_input: platformName()
+          standalone_input: !!((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true)
         })
       });
       await parseJson(res);

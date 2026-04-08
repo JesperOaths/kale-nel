@@ -24,7 +24,7 @@
     .hidden{display:none}.status{margin-top:12px;padding:12px 14px;border-radius:14px;background:rgba(17,17,17,.05)}.participant-picks{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}.participant-chip{padding:8px 10px;border-radius:999px;border:1px solid rgba(17,17,17,.12);background:#fff;cursor:pointer;font:inherit;font-weight:700}.participant-chip.active{background:#161616;color:#fff;border-color:#161616}.participant-chip.inline{padding:4px 8px;font-size:12px}
     @media (max-width: 900px){.grid{grid-template-columns:1fr}.controls{grid-template-columns:1fr 1fr}}
   </style>
-<script src="./gejast-scope.js?v325"></script></head>
+<script src="./gejast-scope.js?v326"></script></head>
 <body>
   <div class="wrap">
     <div class="panel">
@@ -221,7 +221,7 @@
       }
       return walk(payload);
     }
-    async function load(){try{const data=await callRpc('admin_get_match_edit_state_action',{admin_session_token:adminToken()}); state.rows=(data&&data.matches)||[]; render();}catch(e){document.getElementById('matchRows').innerHTML=`<tr><td colspan="5" class="muted">${esc(e.message||'Kon wedstrijden niet laden.')}</td></tr>`;}}
+    async function load(){if(!ensureAdminSessionOrRedirect()) return; try{const data=await callRpc('admin_get_match_edit_state_action',{admin_session_token:adminToken()}); state.rows=(data&&data.matches)||[]; render();}catch(e){document.getElementById('matchRows').innerHTML=`<tr><td colspan="5" class="muted">${esc(e.message||'Kon wedstrijden niet laden.')}</td></tr>`;}}
     document.getElementById('refreshBtn').onclick=load; ['gameFilter','playerFilter','fromFilter','toFilter'].forEach(id=>document.getElementById(id).addEventListener('input',render));
     const scopeSel=document.getElementById('scopeFilter');
     if(scopeSel){ scopeSel.value=activeScope(); scopeSel.addEventListener('change',()=>{ localStorage.setItem(ADMIN_SCOPE_KEY, activeScope()); loadPlayerOptions(); render(); }); }

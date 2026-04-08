@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet" />
   <title>Drinks overzicht</title>
-  <script>window.GEJAST_PAGE_VERSION='v321';</script><script src="./gejast-config.js?v325"></script>
+  <script>window.GEJAST_PAGE_VERSION='v321';</script><script src="./gejast-config.js?v326"></script>
   <style>
     :root{
       --bg:#ece7dc;--card:rgba(255,251,245,.94);--paper:#fffdfa;--line:rgba(54,40,20,.08);--line-strong:rgba(54,40,20,.14);
@@ -39,7 +39,7 @@
     @media(max-width:1180px){.metric-strip,.grid.quad{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.two,.grid.three{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.hero-tools{justify-content:flex-start}}
     @media(max-width:760px){body{padding:12px}.shell{padding:18px;border-radius:24px}.metric-strip,.grid.quad,.mini-grid{grid-template-columns:1fr}.bar-row{grid-template-columns:1fr}.item{padding:12px}.metric{min-height:auto}.hero-actions,.hero-tools{width:100%}}
   </style>
-  <script src="./gejast-home-gate.js?v325"></script>
+  <script src="./gejast-home-gate.js?v326"></script>
 </head>
 <body>
   <div class="wrap">
@@ -87,7 +87,7 @@
 
         <div class="section-stack">
           <section class="panel">
-            <div class="panel-head"><div><h2>Snelheid per dranktype</h2><p>Kies een dranktype en bekijk meteen de volledige ranglijst met beste tijden.</p></div></div><div id="speedTypeTabs" class="ladder-tabs"></div><div id="speedHighlights" class="list" style="margin-top:14px"></div>
+            <div class="panel-head"><div><h2>Snelheid per dranktype</h2><p>Kies een dranktype en bekijk meteen de volledige ranglijst met beste tijden.</p></div></div><select id="speedTypeSelect" class="select-field" aria-label="Kies dranktype" style="margin-top:8px"></select><div id="speedHighlights" class="list" style="margin-top:14px"></div>
           </section>
 
           <section class="panel">
@@ -104,11 +104,11 @@
 
       <div class="grid three">
         <section class="panel">
-          <div class="panel-head"><div><h2>Most units</h2><p>Wie heeft het meeste volume gepakt?</p></div></div>
+          <div class="panel-head"><div><h2>Meeste units</h2><p>Wie heeft het meeste volume gepakt?</p></div></div>
           <div id="topUnits" class="list"></div>
         </section>
         <section class="panel">
-          <div class="panel-head"><div><h2>Wie tikt het vaakst een pilsje weg?</h2><p>All-time op basis van alle verified drankjes samen.</p></div></div>
+          <div class="panel-head"><div><h2>Wie tikt het vaakst een pilsje weg?</h2><p>All-time op basis van alle bevestigde drankjes samen.</p></div></div>
           <div id="topCount" class="list"></div>
         </section>
         <section class="panel">
@@ -119,7 +119,7 @@
 
       <div class="grid two">
         <section class="panel">
-          <div class="panel-head"><div><h2>Site-brede metrics</h2><p>Compacte samenvatting van drinkdrukte.</p></div></div>
+          <div class="panel-head"><div><h2>Sitebrede statistieken</h2><p>Compacte samenvatting van de drinkdrukte.</p></div></div>
           <div id="statsMetrics" class="grid quad"></div>
         </section>
         <section class="panel">
@@ -225,7 +225,28 @@ function mapHomepageTop5(payload){
       };
     }
 
-    function renderSpeedHighlights(groups){ latestDashboardData=latestDashboardData||{}; latestDashboardData.speed_leaderboards=Array.isArray(groups)?groups:[]; const tabs=document.getElementById('speedTypeTabs'); const el=document.getElementById('speedHighlights'); const sets=latestDashboardData.speed_leaderboards||[]; if(!sets.length){ tabs.innerHTML=''; el.innerHTML='<div class="note">Nog geen speed-data.</div>'; return; } if(!currentSpeedType || !sets.some(s=>String(s.key||s.speed_type_key||'')===currentSpeedType)){ currentSpeedType=String(sets[0].key||sets[0].speed_type_key||''); } tabs.innerHTML=sets.map(s=>{ const key=String(s.key||s.speed_type_key||''); const label=esc(s.label||s.speed_type_label||key); return `<button class="tab ${key===currentSpeedType?'active':''}" data-speed-type="${esc(key)}">${label}</button>`; }).join(''); tabs.querySelectorAll('[data-speed-type]').forEach(btn=>btn.onclick=()=>{ currentSpeedType=btn.getAttribute('data-speed-type'); renderSpeedHighlights(sets); }); const active=sets.find(s=>String(s.key||s.speed_type_key||'')===currentSpeedType)||sets[0]; const rows=Array.isArray(active.rows)?active.rows:[]; renderList(el,rows,(r,i)=>itemHtml(r,{title:(_,name)=>`${i+1}. ${playerLink(name)}`,sub:()=>`${esc(active.label||active.speed_type_label||'Drank')} · beste tijd`,value:()=>`${fmt(r.duration_seconds,1)}s`}), 'Nog geen bevestigde tijden voor dit dranktype.'); }
+    function renderVerify(rows){
+      const el=document.getElementById('verifyQueue');
+      const list=Array.isArray(rows)?rows:[];
+      renderList(el,list,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.night_at?nlDayDate(r.night_at):''} · hoogste avond`,value:()=>`${fmt(r.units,1)}u`}), 'Nog geen pieknachten.');
+    }
+
+    function renderSpeedHighlights(groups){
+      latestDashboardData=latestDashboardData||{};
+      latestDashboardData.speed_leaderboards=Array.isArray(groups)?groups:[];
+      const select=document.getElementById('speedTypeSelect');
+      const el=document.getElementById('speedHighlights');
+      const sets=latestDashboardData.speed_leaderboards||[];
+      if(!sets.length){ if(select) select.innerHTML='<option value="">Geen dranktypes</option>'; el.innerHTML='<div class="note">Nog geen speed-data.</div>'; return; }
+      if(!currentSpeedType || !sets.some(s=>String(s.key||s.speed_type_key||'')===currentSpeedType)){ currentSpeedType=String(sets[0].key||sets[0].speed_type_key||''); }
+      if(select){
+        select.innerHTML=sets.map(s=>{ const key=String(s.key||s.speed_type_key||''); const label=esc(s.label||s.speed_type_label||key); return `<option value="${esc(key)}" ${key===currentSpeedType?'selected':''}>${label}</option>`; }).join('');
+        select.onchange=()=>{ currentSpeedType=select.value||''; renderSpeedHighlights(sets); };
+      }
+      const active=sets.find(s=>String(s.key||s.speed_type_key||'')===currentSpeedType)||sets[0];
+      const rows=Array.isArray(active.rows)?active.rows:[];
+      renderList(el,rows,(r,i)=>itemHtml(r,{title:(_,name)=>`${i+1}. ${playerLink(name)}`,sub:()=>`${esc(active.label||active.speed_type_label||'Drank')} · beste tijd`,value:()=>`${fmt(r.duration_seconds,1)}s`}), 'Nog geen bevestigde tijden voor dit dranktype.');
+    }
     function renderStats(data){
       const totals=data.totals||{};
       document.getElementById('statsMetrics').innerHTML=`
@@ -244,59 +265,50 @@ function mapHomepageTop5(payload){
 
 function queueStatsLoad(force=false){
   const now=Date.now();
-  if(!force && lastStatsLoadedAt && (now-lastStatsLoadedAt)<25000 && latestStatsData){ renderStats(latestStatsData||{}); renderLadder(); return Promise.resolve(); }
+  if(!force && lastStatsLoadedAt && (now-lastStatsLoadedAt)<45000 && latestStatsData){ renderStats(latestStatsData||{}); renderLadder(); return Promise.resolve(); }
   if (statsLoadPromise) return statsLoadPromise;
   const runner=()=>loadStats().finally(()=>{ statsLoadPromise=null; statsLoadScheduled=false; lastStatsLoadedAt=Date.now(); });
   statsLoadScheduled=true;
-  statsLoadPromise = ('requestIdleCallback' in window) ? new Promise((resolve)=>requestIdleCallback(()=>resolve(runner()),{timeout:900})) : new Promise((resolve)=>setTimeout(()=>resolve(runner()),120));
+  statsLoadPromise = ('requestIdleCallback' in window) ? new Promise((resolve)=>requestIdleCallback(()=>resolve(runner()),{timeout:1400})) : new Promise((resolve)=>setTimeout(()=>resolve(runner()),220));
   return statsLoadPromise;
 }
 async function loadStats(){
-      let historyRows=[], homePayload={}, top5Payload={}, fallbackData={};
+      let historyRows=[], fallbackData={};
       const requests = await Promise.allSettled([
         fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_dashboard_fallback_public`,{method:'POST',headers:headers(),body:'{}'}).then(parse),
-        fetch(`${SUPABASE_URL}/rest/v1/rpc/get_verified_drinks_history_public`,{method:'POST',headers:headers(),body:JSON.stringify({limit_count:90})}).then(parse),
-        fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_speed_page_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token()})}).then(parse),
-        fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_locations_public`,{method:'POST',headers:headers(),body:'{}'}).then(parse),
-        fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_public`,{method:'POST',headers:headers(),body:'{}'}).then(parse),
-        fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_top5_public`,{method:'POST',headers:headers(),body:'{}'}).then(parse)
+        fetch(`${SUPABASE_URL}/rest/v1/rpc/get_verified_drinks_history_public`,{method:'POST',headers:headers(),body:JSON.stringify({limit_count:25})}).then(parse),
+        fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_speed_page_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token()})}).then(parse)
       ]);
       if(requests[0].status==='fulfilled'){ fallbackData = requests[0].value?.get_drinks_dashboard_fallback_public || requests[0].value || {}; }
       if(requests[1].status==='fulfilled'){ historyRows = requests[1].value?.get_verified_drinks_history_public || requests[1].value || []; }
       let speedPagePayload={};
       if(requests[2].status==='fulfilled'){ speedPagePayload = requests[2].value?.get_drink_speed_page_public || requests[2].value || {}; }
-      const locationRows = requests[3].status==='fulfilled' ? (requests[3].value?.get_drink_locations_public || requests[3].value || []) : [];
-      if(requests[4].status==='fulfilled'){ homePayload = requests[4].value?.get_drinks_homepage_public || requests[4].value || {}; }
-      if(requests[5].status==='fulfilled'){ top5Payload = requests[5].value?.get_drinks_homepage_top5_public || requests[5].value || {}; }
 
       const derived = synthesizeDashboardFromHistory(historyRows);
-      const homeTop5 = mapHomepageTop5(top5Payload);
 
       latestStatsData = Object.assign({}, fallbackData || {});
       latestDashboardData = latestStatsData;
 
       const totals = latestStatsData.totals || {};
-      const homeTotals = homePayload.totals || {};
       latestStatsData.totals = {
-        all_events: Number(totals.all_events ?? homeTotals.all_events ?? historyRows.length ?? 0) || 0,
-        all_units: Number(totals.all_units ?? homeTotals.all_units ?? 0) || 0,
+        all_events: Number(totals.all_events ?? historyRows.length ?? 0) || 0,
+        all_units: Number(totals.all_units ?? derived.top_units.reduce((sum,row)=>sum+Number(row.units||0),0) ?? 0) || 0,
         month_events: Number(totals.month_events ?? 0) || 0,
         week_events: Number(totals.week_events ?? 0) || 0
       };
 
       const choose = (current, firstFallback, secondFallback=[]) => (Array.isArray(current) && current.length) ? current : ((Array.isArray(firstFallback) && firstFallback.length) ? firstFallback : secondFallback);
-      latestStatsData.top_units = choose(latestStatsData.top_units, derived.top_units, homeTop5.top_units);
-      latestStatsData.top_count_all = choose(latestStatsData.top_count_all, derived.top_count_all, homeTop5.top_count_all);
+      latestStatsData.top_units = choose(latestStatsData.top_units, derived.top_units, []);
+      latestStatsData.top_count_all = choose(latestStatsData.top_count_all, derived.top_count_all, []);
       latestStatsData.top_count_month = choose(latestStatsData.top_count_month, derived.top_count_month, []);
       latestStatsData.top_count_week = choose(latestStatsData.top_count_week, derived.top_count_week, []);
-      latestStatsData.big_nights = choose(latestStatsData.big_nights, derived.big_nights, homeTop5.big_nights);
-      latestStatsData.by_type = choose(latestStatsData.by_type, derived.by_type, homeTop5.by_type);
-      latestStatsData.by_location = choose(locationRows, derived.by_location, homeTop5.by_location);
-      latestStatsData.speed_leaderboards = (Array.isArray(latestStatsData.speed_leaderboards) && latestStatsData.speed_leaderboards.length) ? latestStatsData.speed_leaderboards : ((Array.isArray(speedPagePayload.leaderboards) && speedPagePayload.leaderboards.length) ? speedPagePayload.leaderboards : choose(latestStatsData.speed_leaderboards, homeTop5.speed_leaderboards, []));
+      latestStatsData.big_nights = choose(latestStatsData.big_nights, derived.big_nights, []);
+      latestStatsData.by_type = choose(latestStatsData.by_type, derived.by_type, []);
+      latestStatsData.by_location = choose(latestStatsData.by_location, derived.by_location, []);
+      latestStatsData.speed_leaderboards = (Array.isArray(latestStatsData.speed_leaderboards) && latestStatsData.speed_leaderboards.length) ? latestStatsData.speed_leaderboards : ((Array.isArray(speedPagePayload.leaderboards) && speedPagePayload.leaderboards.length) ? speedPagePayload.leaderboards : []);
 
       latestTop5Data = latestTop5Data || {};
-      latestTop5Data.session_top5 = (Array.isArray(homeTop5.session_top5) && homeTop5.session_top5.length) ? homeTop5.session_top5 : (latestTop5Data.session_top5 || []);
-      latestTop5Data.all_time_top5 = (Array.isArray(homeTop5.all_time_top5) && homeTop5.all_time_top5.length) ? homeTop5.all_time_top5 : (latestTop5Data.all_time_top5 || []);
+
 
       if((!latestPageData||!latestPageData.recent_verified||!latestPageData.recent_verified.length) && historyRows.length){
         latestPageData = latestPageData || {};
@@ -314,7 +326,7 @@ async function loadStats(){
       }
     }
     async function loadPage(forceGeo=false,userInitiated=false){
-      const myLoad=++loadToken; ['verifyQueue','typeBars','bigNights','topUnitsList','topCountList','countRowsList','locationList','speedHighlights'].forEach(id=>document.getElementById(id)?.classList.add('is-loading')); 
+      const myLoad=++loadToken; ['verifyQueue','typeBars','bigNights','topUnits','topCount','topCountNow','locationList','speedHighlights'].forEach(id=>document.getElementById(id)?.classList.add('is-loading')); 
       try{
         const pos=(forceGeo||!lastPosition)?await getPosition(forceGeo,userInitiated):lastPosition; if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null);
         const usePos=lastPosition||pos; const payload={session_token:token(),viewer_lat:usePos?usePos.coords.latitude:null,viewer_lng:usePos?usePos.coords.longitude:null};
@@ -337,10 +349,10 @@ async function loadStats(){
         renderFairness(latestPageData.fairness_cards||[]);
         renderLocations(locationRows);
         renderLadder();
-        ['verifyQueue','typeBars','bigNights','topUnitsList','topCountList','countRowsList','locationList','speedHighlights'].forEach(id=>document.getElementById(id)?.classList.remove('is-loading'));
+        ['verifyQueue','typeBars','bigNights','topUnits','topCount','topCountNow','locationList','speedHighlights'].forEach(id=>document.getElementById(id)?.classList.remove('is-loading'));
         if(!document.getElementById('statusLine').textContent){ setStatus(usePos?'':'Geolocatie nog niet actief. Overzicht werkt wel; verificaties blijven strikter zonder locatie.'); }
       }catch(err){ setStatus(err.message||String(err),'bad'); }
-      queueStatsLoad(false);
+      setTimeout(()=>queueStatsLoad(false), 800);
     }
     async function verifyDrink(id){ try{ const pos=await getPosition(true,true); if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); const usePos=lastPosition||pos; if(!usePos) throw new Error('Geolocatie is nodig om een drankje te bevestigen.'); const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy,approve:true})}); await parse(res); setStatus('Drankje bevestigd.','ok'); await loadPage(false,false);}catch(err){ setStatus(err.message||String(err),'bad'); } }
     document.querySelectorAll('[data-ladder-key]').forEach(b=>b.onclick=()=>{ currentLadderKey=b.dataset.ladderKey; renderLadder(); });
@@ -348,7 +360,7 @@ async function loadStats(){
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./gejast-geo.js?v325"></script><script src="./drinks-verify-float.js?v325"></script>
-  <script src="./gejast-session-corner.js?v325"></script>
+  <script src="./gejast-geo.js?v326"></script><script src="./drinks-verify-float.js?v326"></script>
+  <script src="./gejast-session-corner.js?v326"></script>
 </body>
 </html>

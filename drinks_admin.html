@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Drankcontrole</title>
-  <script src="./gejast-config.js?v325"></script>
-  <script src="./admin-session-sync.js?v325"></script>
+  <script src="./gejast-config.js?v326"></script>
+  <script src="./admin-session-sync.js?v326"></script>
   <style>
     :root{--bg:#ece7dc;--card:#f8f2e7;--line:#d7c7a7;--ink:#1d1a17;--muted:#736758;--good:#dfead7;--bad:#f1dfd7}
     *{box-sizing:border-box} body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,231,220,.94),rgba(236,231,220,.97)),url('./site-bg-mobile.webp') center/cover no-repeat fixed;color:var(--ink)}
@@ -29,8 +29,8 @@
   </section>
 </div>
 <script>
-const {SUPABASE_URL,SUPABASE_ANON_KEY}=window.GEJAST_CONFIG||{};
-const headers=()=>({'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':`Bearer ${SUPABASE_ANON_KEY}`});
+const {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY}=window.GEJAST_CONFIG||{};
+const headers=()=>({'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':`Bearer ${SUPABASE_PUBLISHABLE_KEY}`});
 const adminToken=()=>localStorage.getItem('gejast_admin_session_token')||localStorage.getItem('admin_session_token')||'';
 function setStatus(msg,bad){const el=document.getElementById('status'); el.textContent=msg||''; el.style.color=bad?'#8b2f2f':'#6b6257';}
 async function parse(res){const txt=await res.text(); let data={}; try{data=txt?JSON.parse(txt):{};}catch{data={raw:txt};} if(!res.ok) throw new Error(data?.message||data?.error||txt||`HTTP ${res.status}`); return data;}
