@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v333',
+    VERSION:'v336',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -75,22 +75,35 @@
     const value = String(raw || '').trim();
     if (!value) return String(fallback || '').trim();
     if (/^(?:[a-z]+:)?\/\//i.test(value)) return String(fallback || '').trim();
-    if (value.includes('..') || value.includes('\\')) return String(fallback || '').trim();
+    if (value.includes('..') || value.includes('\')) return String(fallback || '').trim();
     const normalized = value.replace(/^\.\//,'').replace(/^\/+/, '');
     return normalized || String(fallback || '').trim();
   }
+  function currentReturnTarget(fallback='index.html'){
+    try {
+      const path = (location.pathname || '').split('/').pop() || fallback || 'index.html';
+      const query = location.search || '';
+      const hash = location.hash || '';
+      return sanitizeReturnTarget(`${path}${query}${hash}`, fallback || 'index.html');
+    } catch (_) {
+      return sanitizeReturnTarget(fallback || 'index.html', 'index.html');
+    }
+  }
   function buildHomeUrl(returnTo){
-    const url = new URL(inferRuntimeScope()==='family' ? './familie/index.html' : './home.html', window.location.href);
+    const url = new URL('./home.html', window.location.href);
+    if (inferRuntimeScope()==='family') url.searchParams.set('scope', 'family');
     const target = sanitizeReturnTarget(returnTo);
     if (target) url.searchParams.set('return_to', target);
     return url.toString();
   }
   function buildLoginUrl(returnTo){
-    const url = new URL(inferRuntimeScope()==='family' ? './familie/login.html' : './login.html', window.location.href);
+    const url = new URL('./login.html', window.location.href);
+    if (inferRuntimeScope()==='family') url.searchParams.set('scope', 'family');
     const target = sanitizeReturnTarget(returnTo);
     if (target) url.searchParams.set('return_to', target);
     return url.toString();
   }
+
   function buildAdminUrl(reason='', returnTo=''){
     const url = new URL('./admin.html', window.location.href);
     if (reason) url.searchParams.set('reason', String(reason));
@@ -154,7 +167,8 @@
     buildHomeUrl,
     buildLoginUrl,
     buildAdminUrl,
-    sanitizeReturnTarget
+    sanitizeReturnTarget,
+    currentReturnTarget
   });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyVersionLabel, { once: true });

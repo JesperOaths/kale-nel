@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <title>GEJAST Home</title>
-  <script>window.GEJAST_PAGE_VERSION='v333';</script><script src="./gejast-config.js?v333"></script>
+  <script>window.GEJAST_PAGE_VERSION='v336';</script><script src="./gejast-config.js?v336"></script>
   <style>
     :root{--gold:#9a8241;--paper:rgba(255,251,245,.86);--line:rgba(0,0,0,.08);--ink:#1a1a1a;--muted:#6b6257}
     *{box-sizing:border-box} body{margin:0;min-height:100vh;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(rgba(244,240,232,.78),rgba(244,240,232,.78)), url('./site-bg-desktop.webp') center/cover no-repeat fixed;color:var(--ink);display:flex;align-items:center;justify-content:center;padding:20px}
@@ -34,7 +34,9 @@
   <div class="site-credit-watermark" data-version-watermark>v322 · Made by Bruis</div>
   <script>
     (function(){
-      const family = new URLSearchParams(location.search).get('scope') === 'family';
+      const params = new URLSearchParams(location.search);
+      const family = params.get('scope') === 'family';
+      const returnTo = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.sanitizeReturnTarget) ? window.GEJAST_CONFIG.sanitizeReturnTarget(params.get('return_to') || '', 'index.html') : (params.get('return_to') || 'index.html');
       const req = document.getElementById('requestLink');
       const log = document.getElementById('loginLink');
       const badge = document.getElementById('scopeBadge');
@@ -43,8 +45,8 @@
         const badge=document.getElementById('scopeBadge');
         badge.textContent='Familiesite';
         badge.href='./home.html';
-        req.href = './request.html?scope=family';
-        log.href = './login.html?scope=family';
+        req.href = './request.html?scope=family' + (returnTo ? `&return_to=${encodeURIComponent(returnTo)}` : '');
+        log.href = './login.html?scope=family' + (returnTo ? `&return_to=${encodeURIComponent(returnTo)}` : '');
       }
       const cfg = window.GEJAST_CONFIG || {};
       const keys = cfg.PLAYER_SESSION_KEYS || ['jas_session_token_v11','jas_session_token_v10'];
@@ -54,7 +56,14 @@
       function last(){ const raw = localStorage.getItem(activityKey) || sessionStorage.getItem(activityKey) || ''; const n = Number(raw||0); return Number.isFinite(n)?n:0; }
       function clear(){ for(const k of keys){ localStorage.removeItem(k); sessionStorage.removeItem(k);} localStorage.removeItem(activityKey); sessionStorage.removeItem(activityKey); }
       const token = getToken(); const l = last(); if(token && l && (Date.now()-l)>idleMs) clear();
-      if(getToken()) location.replace(family ? './index.html?scope=family' : './index.html');
+      if(!family){
+        req.href = './request.html' + (returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : '');
+        log.href = './login.html' + (returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : '');
+      }
+      if(getToken()){
+        const target = returnTo || (family ? 'index.html?scope=family' : 'index.html');
+        location.replace(target.startsWith('./') ? target : `./${target}`);
+      }
     })();
   </script>
 </body>
