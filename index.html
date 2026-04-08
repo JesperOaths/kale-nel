@@ -663,9 +663,9 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v358';</script><script src="./gejast-config.js?v358"></script><script src="./gejast-scope.js?v358"></script><script src="./gejast-home-gate.js?v358"></script>
-  <script src="./gejast-live-summary.js?v358"></script><script src="./gejast-scoped-rpc.js?v358"></script><script src="./gejast-combined-readers.js?v358"></script><script src="./gejast-heavy-page-runtime.js?v358"></script><script src="./gejast-scoped-rpc.js?v358"></script><script src="./gejast-combined-readers.js?v358"></script><script src="./gejast-heavy-page-runtime.js?v358"></script>
-<script src="./gejast-fairness.js?v358"></script></head>
+  <script>window.GEJAST_PAGE_VERSION='v359';</script><script src="./gejast-config.js?v359"></script><script src="./gejast-public-page-gate.js?v359"></script><script src="./gejast-player-session-ui.js?v359"></script><script src="./gejast-clickable-cards.js?v359"></script><script src="./gejast-scope.js?v359"></script><script src="./gejast-home-gate.js?v359"></script>
+  <script src="./gejast-live-summary.js?v359"></script>
+<script src="./gejast-fairness.js?v359"></script></head>
 <body class="boot-pending homepage-ready"><div id="gejastTopRightToolsMount"></div>
   <div class="site-scene" aria-hidden="true">
     <div class="left-hand"><img src="./kale9goed.png" alt="" style="width:100%;display:block;" /></div>
@@ -917,7 +917,7 @@
 
     async function loadHomepageLadders() {
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_homepage_ladders_public_scoped`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({}) });
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_homepage_ladders_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({}) });
         const data = await parseResponse(res);
         renderHomepageLadders(data || {});
         setHomepageLiveState('live', 'Live');
@@ -1481,7 +1481,7 @@ async function castExtraPollVote(desired_status) {
 
     async function loadDrinksHome(){
       try{
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_public_scoped`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
         const data = await parseResponse(res);
         const payload = data?.get_drinks_homepage_public || data || {};
         const grid = document.getElementById('drinksHomeGrid');
@@ -1537,7 +1537,7 @@ async function castExtraPollVote(desired_status) {
       try{
         const dayNames = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
         __gejastDrinksTop5State.dayTitle = `${dayNames[new Date().getDay()]||'Vandaag'}`;
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_top5_public_scoped`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_top5_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
         const data = await parseResponse(res);
         const payload = data?.get_drinks_homepage_top5_public || data || {};
         const unitValue = (row) => { const n = Number(row?.total_units ?? row?.units ?? row?.unit_total ?? row?.value ?? 0); return Number.isFinite(n) ? n : 0; };
@@ -1574,7 +1574,7 @@ async function castExtraPollVote(desired_status) {
       }
     }
 
-    function getPlayerSessionToken(){ return localStorage.getItem('jas_session_token_v11') || sessionStorage.getItem('jas_session_token_v11') || localStorage.getItem('jas_session_token_v10') || sessionStorage.getItem('jas_session_token_v10') || ''; }
+    function getPlayerSessionToken(){ return (window.GEJAST_CONFIG && window.GEJAST_CONFIG.getPlayerSessionToken ? window.GEJAST_CONFIG.getPlayerSessionToken() : ''); }
     function wireProtectedDrinksLinks(){ document.querySelectorAll('a[href="./drinks_add.html"]').forEach((link)=>{ if(link.dataset.bound==='1') return; link.dataset.bound='1'; link.addEventListener('click',(ev)=>{ if(getPlayerSessionToken()) return; ev.preventDefault(); const cfg = window.GEJAST_CONFIG || {}; window.location.href = cfg.buildHomeUrl ? cfg.buildHomeUrl('drinks_add.html', CURRENT_SCOPE) : './home.html?return_to=drinks_add.html'; }); }); }
 
     const homeEntryDefaults = {
@@ -1607,10 +1607,9 @@ async function castExtraPollVote(desired_status) {
       try {
         Object.keys(homeEntryDefaults).forEach(setHomeEntryDefault);
         const live = window.GEJAST_LIVE_SUMMARY;
-        const liveState = live && typeof live.loadHomepageEntries === 'function'
-          ? await live.loadHomepageEntries({ siteScope: CURRENT_SCOPE })
-          : { entries:{} };
-        const entries = liveState.entries || {};
+        const entries = live && typeof live.loadHomepageState === 'function'
+          ? await live.loadHomepageState(getPlayerSessionToken(), CURRENT_SCOPE)
+          : {};
         setHomeEntryLive('klaverjas', entries.klaverjas || null);
         setHomeEntryLive('boerenbridge', entries.boerenbridge || null);
       } catch(_) {
@@ -1656,78 +1655,23 @@ async function castExtraPollVote(desired_status) {
 
   <div class="site-credit-watermark" data-version-watermark></div>
 
-<style>
-  .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;}
-  .player-session-corner.is-visible{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
-  .player-session-corner-label{font-size:11px;line-height:1.15;color:#5f5b53;text-align:right}
-  .player-session-corner-name{font-size:13px;line-height:1.1;font-weight:800;color:#111;text-align:right;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .player-session-corner-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}.player-session-corner-btn{appearance:none;border:0;border-radius:999px;background:#111;color:#fff;font:inherit;font-weight:800;font-size:11px;line-height:1;padding:8px 11px;cursor:pointer;box-shadow:none;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.player-session-corner-btn.alt{background:#f3efe6;color:#111;border:1px solid rgba(0,0,0,.08)}
-  .player-session-corner-btn:hover{opacity:.92}
-  @media (max-width:640px){.player-session-corner{top:10px;right:10px;padding:7px 9px;min-width:100px}.player-session-corner-name{max-width:120px}}
 
-    .drinks-home-top5-name{display:block;color:#161616;text-decoration:none;font-weight:800;line-height:1.15}
-    @media (max-width: 980px){.drinks-home-top5-grid{grid-template-columns:1fr}.drinks-home-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media (max-width: 560px){.drinks-home-top5-row{grid-template-columns:24px 1fr auto;padding:8px 10px}.drinks-home-top5-name{font-size:14px}.drinks-home-top5-meta{font-size:11px}.drinks-mini{min-height:96px;padding:12px}.drinks-mini-label{min-height:24px}.drinks-home-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-
-  </style>
-<div id="playerSessionCorner" class="player-session-corner" aria-live="polite">
-  <div class="player-session-corner-label">Ingelogd als</div>
-  <div id="playerSessionCornerName" class="player-session-corner-name"></div>
-  <div class="player-session-corner-actions"><a id="playerSessionCornerProfile" href="./my_profile.html" class="player-session-corner-btn alt">Mijn profiel</a><button id="playerSessionCornerLogout" type="button" class="player-session-corner-btn">Log out</button></div>
-</div>
 <script>
 (function(){
-  const CONFIG = window.GEJAST_CONFIG || {};
-  const SUPABASE_URL = CONFIG.SUPABASE_URL || '';
-  const SUPABASE_KEY = CONFIG.SUPABASE_PUBLISHABLE_KEY || '';
-  const SESSION_KEYS = ['jas_session_token_v11','jas_session_token_v10'];
-  const box = document.getElementById('playerSessionCorner');
-  const nameEl = document.getElementById('playerSessionCornerName');
-  const btn = document.getElementById('playerSessionCornerLogout');
-  if (!box || !nameEl || !btn) return;
-  function getToken(){
-    for (const key of SESSION_KEYS){
-      const value = localStorage.getItem(key) || sessionStorage.getItem(key);
-      if (value) return value;
-    }
-    return '';
+  const scope = (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) || 'friends';
+  if (window.GEJAST_PLAYER_SESSION_UI && window.GEJAST_PLAYER_SESSION_UI.init) {
+    window.GEJAST_PLAYER_SESSION_UI.init({ scope, profileHref: scope === 'family' ? './my_profile.html?scope=family' : './my_profile.html' });
   }
-  function clearTokens(){
-    for (const key of SESSION_KEYS){
-      localStorage.removeItem(key);
-      sessionStorage.removeItem(key);
-    }
+  if (window.GEJAST_PUBLIC_PAGE_GATE && window.GEJAST_PUBLIC_PAGE_GATE.bindProtectedLinks) {
+    window.GEJAST_PUBLIC_PAGE_GATE.bindProtectedLinks('a[href^="./drinks"], a[href="./profiles.html"], a[href="./my_profile.html"], a[href="./ballroom.html"]', { scope });
   }
-  function rpcHeaders(){
-    return { 'Content-Type':'application/json', apikey: SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}` };
+  if (window.GEJAST_CLICKABLE_CARDS) {
+    window.GEJAST_CLICKABLE_CARDS.bind(document);
+    window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);
+    window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);
   }
-  async function fetchMyName(token){
-    if (!token || !SUPABASE_URL || !SUPABASE_KEY) return '';
-    const payload = JSON.stringify({ session_token: token });
-    for (const rpc of ['get_public_state','get_gejast_homepage_state','get_jas_app_state']){
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpc}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: payload });
-        const data = await res.json().catch(()=>null);
-        if (!res.ok) continue;
-        const name = data?.my_name || data?.display_name || data?.player_name || '';
-        if (name) return name;
-      } catch {}
-    }
-    return '';
-  }
-  function show(name){ nameEl.textContent = name; box.classList.add('is-visible'); }
-  function hide(){ box.classList.remove('is-visible'); nameEl.textContent = ''; }
-  btn.addEventListener('click', function(){ clearTokens(); hide(); window.location.reload(); });
-  document.addEventListener('DOMContentLoaded', async function(){
-    const token = getToken();
-    if (!token) return hide();
-    const name = await fetchMyName(token);
-    if (name) show(name); else hide();
-  });
 })();
 </script>
-
-
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v358"></script><script src="./gejast-geo.js?v358"></script></body>
+<script src="./drinks-verify-float.js?v359"></script><script src="./gejast-geo.js?v359"></script></body>
 </html>

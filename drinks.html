@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <title>Drinks overzicht</title>
-  <script>window.GEJAST_PAGE_VERSION='v358';</script><script src="./gejast-config.js?v358"></script>
+  <script>window.GEJAST_PAGE_VERSION='v359';</script><script src="./gejast-config.js?v359"></script><script src="./gejast-public-page-gate.js?v359"></script><script src="./gejast-clickable-cards.js?v359"></script>
   <style>
     :root{
       --bg:#ece7dc;--card:rgba(255,251,245,.94);--paper:#fffdfa;--line:rgba(54,40,20,.08);--line-strong:rgba(54,40,20,.14);
@@ -41,15 +41,15 @@
     @media(max-width:1180px){.metric-strip,.grid.quad{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.two,.grid.three{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.hero-tools{justify-content:flex-start}}
     @media(max-width:760px){body{padding:12px}.shell{padding:18px;border-radius:24px}.metric-strip,.grid.quad,.mini-grid{grid-template-columns:1fr}.bar-row{grid-template-columns:1fr}.item{padding:12px}.metric{min-height:auto}.hero-actions,.hero-tools{width:100%}}
   </style>
-  <script src="./gejast-home-gate.js?v358"></script>
-<script src="./gejast-fairness.js?v358"></script></head>
+  <script src="./gejast-home-gate.js?v359"></script>
+<script src="./gejast-fairness.js?v359"></script></head>
 <body>
   <div class="wrap">
     <div class="shell">
       <div class="hero">
         <div>
           <div class="hero-actions">
-            <a class="btn alt" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</a>
+            <button class="btn alt" type="button" data-back-link data-fallback="./index.html">Terug</button>
             <a class="btn alt" href="./drinks_add.html">Toevoegen</a>
             <a class="btn alt" href="./drinks_speed.html">Snelheid</a>
             <a class="btn alt" href="./drinks_pending.html">Verifiëren</a>
@@ -134,7 +134,6 @@
   <div class="site-credit-watermark" data-version-watermark></div>
 
   <script>
-  if(window.GEJAST_SCOPED_RPC){ window.GEJAST_SCOPED_RPC.enforcePageScope(['friends']); }
   (()=>{
     const cfg=window.GEJAST_CONFIG||{}; const SUPABASE_URL=cfg.SUPABASE_URL||''; const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
     let latestPageData=null, latestStatsData=null, latestTop5Data=null, latestDashboardData=null, currentLadderKey='today_units', currentSpeedType='', lastPosition=null, loadToken=0;
@@ -305,8 +304,8 @@ async function loadStats(){
         fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_dashboard_fallback_public`,{method:'POST',headers:headers(),body:'{}'}).then(parse),
         workflow ? workflow.load({ session_token: token(), history_limit: 60 }) : Promise.reject(new Error('no-workflow')),
         analytics ? analytics.getGlobalStats(160) : Promise.reject(new Error('no-analytics')),
-        fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_public_scoped`,{method:'POST',headers:headers(),body:'{}'}).then(parse),
-        fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_top5_public_scoped`,{method:'POST',headers:headers(),body:'{}'}).then(parse)
+        fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_public`,{method:'POST',headers:headers(),body:'{}'}).then(parse),
+        fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_top5_public`,{method:'POST',headers:headers(),body:'{}'}).then(parse)
       ]);
       if(requests[0].status==='fulfilled'){ fallbackData = requests[0].value?.get_drinks_dashboard_fallback_public || requests[0].value || {}; }
       let workflowData=null;
@@ -407,10 +406,11 @@ async function loadStats(){
     loadPage(false,false);
   })();
   </script>
-  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./gejast-scoped-rpc.js?v358"></script><script src="./gejast-combined-readers.js?v358"></script><script src="./gejast-heavy-page-runtime.js?v358"></script><script src="./gejast-geo.js?v358"></script><script src="./drinks-verify-float.js?v358"></script>
-  <script src="./gejast-drinks-workflow.js?v358"></script>
-  <script src="./gejast-drinks-analytics.js?v358"></script>
-  <script src="./gejast-session-corner.js?v358"></script>
+  <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script>
+<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <script src="./gejast-geo.js?v359"></script><script src="./drinks-verify-float.js?v359"></script>
+  <script src="./gejast-drinks-workflow.js?v359"></script>
+  <script src="./gejast-drinks-analytics.js?v359"></script>
+  <script src="./gejast-session-corner.js?v359"></script>
 </body>
 </html>

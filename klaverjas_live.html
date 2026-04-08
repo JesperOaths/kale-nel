@@ -7,9 +7,9 @@
 <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Klaverjas live</title>
-  <script>window.GEJAST_PAGE_VERSION='v357';</script>
-  <script src="./gejast-config.js?v357"></script>
-  <script src="./gejast-live-summary.js?v357"></script>
+  <script>window.GEJAST_PAGE_VERSION='v359';</script>
+  <script src="./gejast-config.js?v359"></script><script src="./gejast-clickable-cards.js?v359"></script>
+  <script src="./gejast-live-summary.js?v359"></script>
   <style>
     :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241}
     *{box-sizing:border-box}
@@ -27,7 +27,7 @@
     <div class="card">
       <div class="top">
         <div>
-          <a class="btn" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</a>
+          <button class="btn" type="button" data-back-link data-fallback="./index.html">Terug</button>
           <h1 style="margin:16px 0 6px">Klaverjas live</h1>
           <div id="meta" class="muted">Live scoreblad wordt geladen…</div>
         </div>
@@ -67,12 +67,13 @@
     async function load(){
       const identity = live.matchIdentityFromUrl ? live.matchIdentityFromUrl() : { clientMatchId:'', matchRef:'' };
       if(!identity.clientMatchId && !identity.matchRef){ document.getElementById('meta').textContent='Geen client_match_id of match_ref meegegeven.'; return; }
-      try{ const bundle = await live.loadMatch({ gameType:'klaverjas', clientMatchId:identity.matchRef || identity.clientMatchId, siteScope:(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope&&window.GEJAST_SCOPE_UTILS.getScope())||'friends' }); render(bundle.match || bundle.item || {}); }catch(err){ document.getElementById('meta').textContent=err.message||'Laden mislukt.'; }
+      try{ render(await live.loadPublicSummary('klaverjas', identity)); }catch(err){ document.getElementById('meta').textContent=err.message||'Laden mislukt.'; }
     }
     load();
     pollId = setInterval(load,5000);
   })();
   </script>
-  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script>
+<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>

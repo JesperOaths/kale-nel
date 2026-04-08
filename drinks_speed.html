@@ -7,9 +7,8 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Snelheid</title>
-  <script>if(window.GEJAST_SCOPED_RPC){ window.GEJAST_SCOPED_RPC.enforcePageScope(['friends']); }
-<script>window.GEJAST_PAGE_VERSION='v358';</script>
-  <script src="./gejast-config.js?v358"></script>
+  <script>window.GEJAST_PAGE_VERSION='v359';</script>
+  <script src="./gejast-config.js?v359"></script><script src="./gejast-clickable-cards.js?v359"></script>
   <style>
     :root{
       --line:rgba(0,0,0,.09);
@@ -103,13 +102,13 @@
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;z-index:9999;padding:7px 12px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 12px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,.18)}
     @media (max-width:700px){body{padding:8px}.card{padding:12px}.topbar{gap:8px}.topbar .top-actions{gap:6px}.btn{min-height:42px;padding:10px 12px;font-size:.92rem;min-width:0}.geo-btn{min-width:64px;min-height:64px;padding:0}.stats-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.metric .value{font-size:.96rem}}
   </style>
-<script src="./gejast-scoped-rpc.js?v358"></script></head>
+</head>
 <body>
   <div class="wrap">
     <div class="card">
       <div class="topbar">
         <div class="top-actions">
-          <a class="btn alt" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./drinks.html';}">Terug</a>
+          <button class="btn alt" type="button" data-back-link data-fallback="./drinks.html">Terug</button>
           <a class="btn alt" href="./drinks.html">Overzicht</a>
         </div>
         <div class="top-actions right gejast-corner-tools">
@@ -142,8 +141,8 @@
       </div>
     </div>
   </div>
-  <div class="site-credit-watermark" data-version-watermark>v358 · Made by Bruis</div>
-  <script src="./gejast-geo.js?v358"></script><script src="./drinks-verify-float.js?v358"></script><script src="./gejast-drinks-workflow.js?v358"></script>
+  <div class="site-credit-watermark" data-version-watermark>v359 · Made by Bruis</div>
+  <script src="./gejast-geo.js?v359"></script><script src="./drinks-verify-float.js?v359"></script><script src="./gejast-drinks-workflow.js?v359"></script>
   <script>
   if(window.GEJAST_CONFIG && !window.GEJAST_CONFIG.requireMatchEntrySession('drinks_speed')){}
   (function(){
@@ -190,6 +189,7 @@
     load(false,false);
   })();
   </script>
-  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script>
+<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>

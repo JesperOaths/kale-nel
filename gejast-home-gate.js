@@ -1,20 +1,11 @@
 (function(){
-  var cfg = window.GEJAST_CONFIG || {};
-  function getToken(){ return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; }
-  function clearTokens(){ try{ cfg.clearPlayerSessionTokens && cfg.clearPlayerSessionTokens(); }catch(_){} }
-  function expired(){ try{ return cfg.isPlayerSessionExpired ? cfg.isPlayerSessionExpired() : !getToken(); }catch(_){ return !getToken(); } }
-  function currentTarget(){
-    try{ return cfg.currentReturnTarget ? cfg.currentReturnTarget('index.html') : 'index.html'; }catch(_){ return 'index.html'; }
-  }
-  function homeUrl(){
-    var target = currentTarget();
-    try{ return cfg.buildHomeUrl ? cfg.buildHomeUrl(target) : './home.html'; }catch(_){ return './home.html'; }
-  }
-  if(expired()) clearTokens();
-  if(!getToken()){
-    try{ document.documentElement.style.display='none'; }catch(_){ }
-    location.replace(homeUrl());
-  } else {
-    try{ cfg.touchPlayerActivity && cfg.touchPlayerActivity(); }catch(_){ }
+  const gate = window.GEJAST_PUBLIC_PAGE_GATE;
+  const cfg = window.GEJAST_CONFIG || {};
+  const scope = (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) || 'friends';
+  const returnTo = cfg.currentReturnTarget ? cfg.currentReturnTarget('index.html') : 'index.html';
+  if (gate && typeof gate.requirePrivatePage === 'function') {
+    gate.requirePrivatePage({ returnTo, scope, hideBeforeAuth: true });
+  } else if (cfg.ensurePlayerSessionOrRedirect) {
+    cfg.ensurePlayerSessionOrRedirect(returnTo);
   }
 })();

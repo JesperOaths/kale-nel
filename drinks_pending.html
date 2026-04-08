@@ -6,10 +6,10 @@
   <meta http-equiv="Pragma" content="no-cache" />
 <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Drankverificatie</title><script>window.GEJAST_PAGE_VERSION='v354';</script>
-  <script src="./gejast-config.js?v354"></script><script src="./drink_type_normalization.js?v354"></script><script src="./drinks_workflow_helper.js?v354"></script><script src="./gejast-scope-context.js?v354"></script><script src="./gejast-rpc-contract.js?v354"></script><script src="./drink_type_normalization.js?v354"></script><script src="./drinks_workflow_helper.js?v354"></script>
-  <script src="./gejast-push-contract.js?v354"></script><script src="./gejast-push-contract.js?v354"></script><script src="./gejast-geo.js?v354"></script>
-  <script src="./drink_type_normalization.js?v354"></script><script src="./drinks_workflow_helper.js?v354"></script><script src="./gejast-drinks-workflow.js?v354"></script>
+  <title>Drankverificatie</title><script>window.GEJAST_PAGE_VERSION='v359';</script>
+  <script src="./gejast-config.js?v359"></script>
+  <script src="./gejast-geo.js?v359"></script>
+  <script src="./gejast-drinks-workflow.js?v359"></script>
   <style>
     :root{--bg:#ece7dc;--card:#f8f2e7;--line:#d7c7a7;--ink:#1d1a17;--muted:#736758;--gold:#b79b56;--good:#dfead7;--bad:#f1dfd7}
     *{box-sizing:border-box} body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,231,220,.94),rgba(236,231,220,.97)),url('./site-bg-mobile.webp') center/cover no-repeat fixed;color:var(--ink)}
@@ -36,7 +36,7 @@
   </div>
 <script>
 const {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY}=window.GEJAST_CONFIG||{};
-const token=()=> (window.GEJAST_CONFIG && window.GEJAST_CONFIG.getPlayerSessionToken ? window.GEJAST_CONFIG.getPlayerSessionToken() : (localStorage.getItem('jas_session_token_v11')||sessionStorage.getItem('jas_session_token_v11')||localStorage.getItem('jas_session_token_v10')||sessionStorage.getItem('jas_session_token_v10')||''));
+const token=()=> (window.GEJAST_CONFIG && window.GEJAST_CONFIG.getPlayerSessionToken ? window.GEJAST_CONFIG.getPlayerSessionToken() : '');
 const headers=()=>({'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':`Bearer ${SUPABASE_PUBLISHABLE_KEY}`});
 function setStatus(msg,bad){const el=document.getElementById('status'); el.textContent=msg||''; el.style.color=bad?'#8b2f2f':'#6b6257';}
 async function parse(res){const txt=await res.text(); let data={}; try{data=txt?JSON.parse(txt):{};}catch{data={raw:txt};} if(!res.ok) throw new Error(data?.message||data?.error||txt||`HTTP ${res.status}`); return data;}
@@ -45,18 +45,18 @@ function fmtDate(v){if(!v) return '—'; try{return new Date(v).toLocaleString('
 function units(v){return Number(v||0).toFixed(1);}
 function renderList(el, rows, map, empty){el.innerHTML=(rows||[]).length?(rows||[]).map(map).join(''):`<div class="muted">${empty}</div>`;}
 function canVoteNearby(r){ if(r && (r.secret_king || r.is_secret_king)) return true; const d=Number(r&&r.distance_m); if(!Number.isFinite(d)) return true; return d <= 500; }
-async function verifyItem(id, approved){return approved ? window.DRINKS_WORKFLOW.approveDrink({requestKind:'drink',requestId:Number(id)}) : window.DRINKS_WORKFLOW.rejectDrink({requestKind:'drink',requestId:Number(id)});}
-async function cancelMine(id){return window.DRINKS_WORKFLOW.cancelDrink({requestKind:'drink',requestId:Number(id)});}
+async function verifyItem(id, approved){await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),approved:!!approved})}).then(parse);}
+async function cancelMine(id){await fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_my_pending_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id)})}).then(parse);}
 async function load(){
   try{
     setStatus('Laden…');
     const workflow = window.GEJAST_DRINKS_WORKFLOW;
-    const pendingBundle = window.DRINKS_WORKFLOW ? await window.DRINKS_WORKFLOW.loadPending({ requestKind:'drink' }) : null;
-    const history = window.DRINKS_WORKFLOW ? await window.DRINKS_WORKFLOW.loadHistory({ requestKind:'drink', limit:40 }) : [];
-    const verify = Array.isArray(pendingBundle?.verification_queue) ? pendingBundle.verification_queue : [];
-    const mine = Array.isArray(pendingBundle?.my_pending) ? pendingBundle.my_pending : [];
-    const rejected = Array.isArray(pendingBundle?.recent_rejected) ? pendingBundle.recent_rejected : [];
-    const page = {};
+    const data = workflow ? await workflow.forPending({ session_token: token(), history_limit: 40 }) : null;
+    const verify = Array.isArray(data?.verifyQueue) ? data.verifyQueue : [];
+    const mine = Array.isArray(data?.myPendingEvents) ? data.myPendingEvents : [];
+    const history = Array.isArray(data?.verifiedHistory) ? data.verifiedHistory : [];
+    const page = data?.page || {};
+    const rejected = (Array.isArray(data?.recentRejected) ? data.recentRejected : []).length ? data.recentRejected : ((Array.isArray(page?.recent_events) ? page.recent_events.filter(r=>String(r.status||'').toLowerCase()==='rejected') : []));
     renderList(document.getElementById('verifyQueue'),verify,r=>`<div class="row"><div class="row-top"><div><strong>${esc(r.player_name||'Onbekend')} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${units(r.total_units)} units${r.distance_m!=null?` · ${Math.round(r.distance_m)}m afstand`:''}</div><div class="meta">${fmtDate(r.created_at)}</div></div><span class="pill">check</span></div><div class="actions">${!r.viewer_vote_state ? (canVoteNearby(r) ? `<button class="action good" data-verify="${r.id}">Bevestigen</button><button class="action bad" data-reject="${r.id}">Afkeuren</button>` : `<span class="meta">Te ver weg om te stemmen.</span>`) : `<span class="meta">Jij stemde al: ${r.viewer_vote_state==='approved'?'voor':'tegen'}</span>`}</div></div>`,'Nog geen user requests.');
     renderList(document.getElementById('pendingList'),mine.filter((r)=>String(r.status||'pending')==='pending'),r=>`<div class="row"><div class="row-top"><div><strong>${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${fmtDate(r.created_at)} · ${units(r.total_units)} units</div></div><span class="pill">${esc(r.status||'pending')}</span></div><div class="actions"><button class="action bad" data-cancel="${r.id}">Annuleren</button></div></div>`,'Nog geen open aanvragen.');
     renderList(document.getElementById('verifiedList'),history.slice(0,20),r=>`<div class="row"><div class="row-top"><div><strong>${esc(r.player_name||'Onbekend')} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${fmtDate(r.verified_at||r.created_at)} · ${units(r.total_units)} units</div><div class="meta">Bevestigd door ${esc((r.verifier_names||[]).join(', ')||'—')}</div></div><span class="pill">ok</span></div></div>`,'Nog geen bevestigde drankjes.');

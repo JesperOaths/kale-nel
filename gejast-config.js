@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v355',
+    VERSION:'v359',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -13,12 +13,7 @@
     PLAYER_SESSION_IDLE_MS: 12 * 60 * 60 * 1000,
     WEB_PUSH_PUBLIC_KEY: 'BPqY04jDOB_8RlhNxURgWFl6cMge64Mr7DkrWtgMfG4ARWLJ6S-r6c6JeQJ6o4kysWT0WeR9oVpahP85L8GLl_4',
     NOTIFICATION_BUTTON_ENABLED: true,
-    WEB_PUSH_TEST_RPC: 'queue_test_web_push_v2',
-    WEB_PUSH_SUBSCRIPTION_RPC: 'register_web_push_subscription_v2',
-    WEB_PUSH_PRESENCE_RPC: 'touch_active_web_push_presence_v2',
-    WEB_PUSH_SELF_DIAGNOSTICS_RPC: 'get_web_push_self_diagnostics_v2',
-    ADMIN_PUSH_DIAGNOSTICS_RPC: 'admin_get_web_push_diagnostics_v2',
-    ADMIN_ACTIVE_PUSH_RPC: 'admin_queue_active_web_push_v2',
+    WEB_PUSH_TEST_RPC: 'queue_test_web_push',
   };
 
   function detectScriptVersion(){
@@ -111,6 +106,32 @@
     return url.toString();
   }
 
+
+  function setPlayerSessionToken(token, storage){
+    const value = String(token || '').trim();
+    if (!value) return '';
+    const primaryKey = CONFIG.PLAYER_SESSION_KEYS[0] || 'jas_session_token_v11';
+    const target = storage === 'session' ? sessionStorage : localStorage;
+    target.setItem(primaryKey, value);
+    const other = target === localStorage ? sessionStorage : localStorage;
+    other.removeItem(primaryKey);
+    touchPlayerActivity();
+    return value;
+  }
+  function normalizeScope(input){
+    return String(input || '').trim().toLowerCase() === 'family' ? 'family' : 'friends';
+  }
+
+
+  function buildRequestUrl(returnTo, scope){
+    const normalizedScope = normalizeScope(scope || inferRuntimeScope());
+    const url = new URL('./request.html', window.location.href);
+    const safeTarget = sanitizeReturnTarget(returnTo || '', normalizedScope === 'family' ? 'index.html?scope=family' : 'index.html');
+    if (safeTarget) url.searchParams.set('return_to', safeTarget);
+    if (normalizedScope === 'family') url.searchParams.set('scope', 'family');
+    return `${url.pathname}${url.search}${url.hash}`;
+  }
+
   function buildAdminUrl(reason='', returnTo=''){
     const url = new URL('./admin.html', window.location.href);
     if (reason) url.searchParams.set('reason', String(reason));
@@ -174,6 +195,9 @@
     buildHomeUrl,
     buildLoginUrl,
     buildAdminUrl,
+    setPlayerSessionToken,
+    buildRequestUrl,
+    normalizeScope,
     sanitizeReturnTarget,
     currentReturnTarget
   });

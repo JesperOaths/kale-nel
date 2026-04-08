@@ -7,8 +7,8 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Balzaal</title>
-  <script>window.GEJAST_PAGE_VERSION='v354';</script>
-  <script src="./gejast-config.js?v354"></script>
+  <script>window.GEJAST_PAGE_VERSION='v359';</script>
+  <script src="./gejast-config.js?v359"></script><script src="./gejast-clickable-cards.js?v359"></script>
   <style>
     :root{
       --gold:#b78e43; --gold-deep:#89642a; --wine:#88162a; --wine-deep:#5c0c18; --cream:#f6efe3; --ink:#181310; --muted:#706557;
@@ -134,7 +134,7 @@
       <div class="topbar">
         <div class="nav-left">
           <a class="pill secondary" href="./index.html">Overzicht</a>
-          <a class="pill secondary" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</a>
+          <button class="pill secondary" type="button" data-back-link data-fallback="./index.html">Terug</button>
         </div>
         <div class="nav-right">
           <a class="brand" href="./index.html"><img src="./logo.png" alt="Logo" /></a>
@@ -337,6 +337,8 @@
     setInterval(load, 20000);
   })();
   </script>
-  <script src="./gejast-push-contract.js?v354"></script><script src="./gejast-push-contract.js?v354"></script><script src="./gejast-geo.js?v354"></script><script src="./drinks-verify-float.js?v354"></script>
+  <script src="./gejast-geo.js?v359"></script><script src="./drinks-verify-float.js?v359"></script>
 </body>
 </html>
+
+<script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script>

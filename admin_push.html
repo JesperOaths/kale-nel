@@ -7,9 +7,9 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Live pushmeldingen - Wordt er gejast?</title>
-  <script src="./gejast-admin-rpc.js?v356"></script><script src="./gejast-admin-source.js?v356"></script><script>window.GEJAST_PAGE_VERSION='v356';</script><script src="./gejast-config.js?v356"></script>
-  <script src="./admin-session-sync.js?v356"></script>
-  <script src="./admin-topnav.js?v356"></script>
+  <script>window.GEJAST_PAGE_VERSION='v359';</script><script src="./gejast-config.js?v359"></script>
+  <script src="./admin-session-sync.js?v359"></script>
+  <script src="./admin-topnav.js?v359"></script>
   <style>
     :root { --gold:#9a8241; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#6b655b; --ok:#2b5b37; --warn:#8b3a30; }
     *{box-sizing:border-box} body{margin:0;padding:20px;font-family:Inter,sans-serif;background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed;min-height:100vh}
@@ -74,7 +74,7 @@
     async function parseResponse(res){const text=await res.text(); let data=null; try{data=text?JSON.parse(text):null}catch{throw new Error(text||`HTTP ${res.status}`)} if(!res.ok) throw new Error(data?.message||data?.error||data?.details||data?.hint||`HTTP ${res.status}`); return data;}
     function token(){return (window.GEJAST_ADMIN_SESSION && window.GEJAST_ADMIN_SESSION.getToken && window.GEJAST_ADMIN_SESSION.getToken()) || sessionStorage.getItem(ADMIN_SESSION_KEY)||localStorage.getItem(ADMIN_SESSION_KEY)}
     function setStatus(msg='',tone=''){const el=document.getElementById('statusBox'); el.textContent=msg; el.className=`status ${tone}`.trim();}
-    async function ensureGate(){ if(window.GEJAST_ADMIN_SESSION && typeof window.GEJAST_ADMIN_SESSION.requirePage==='function'){ return await window.GEJAST_ADMIN_SESSION.requirePage('admin_push.html'); } if(!token()){ location.href='./admin.html?return_to=admin_push.html'; return false; } try { await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`,{method:'POST',mode:'cors',cache:'no-store',headers:rpcHeaders(),body:JSON.stringify({admin_session_token:token()})}).then(parseResponse); return true; } catch(err){ location.href='./admin.html?return_to=admin_push.html'; return false; } }
+    async function ensureGate(){ if(window.GEJAST_ADMIN_SESSION && typeof window.GEJAST_ADMIN_SESSION.requirePage==='function'){ return await window.GEJAST_ADMIN_SESSION.requirePage('admin_push.html'); } location.href='./admin.html?reason=session_required&return_to=admin_push.html'; return false; }
     function escapeHtml(v){ return String(v==null?'':v).replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
         let activeRows = [];
     function activeMinutes(){ return Math.max(1, Math.min(60, Number(document.getElementById('minutesInput').value || 5))); }
@@ -116,24 +116,30 @@
       document.getElementById('diagBox').innerHTML = lines.join('<br>');
     }
     async function loadActive(){
-      const data = await window.GEJAST_ADMIN_SOURCE.loadPushDiagnostics({ activeMinutes: activeMinutes(), scope: adminScope() });
+      const [data, runtimeDiag] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/rpc/${LIST_RPC}`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: token(), active_minutes: activeMinutes(), site_scope_input: adminScope() }) }).then(parseResponse),
+        fetch(`${SUPABASE_URL}/rest/v1/rpc/${DIAG_RPC}`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: token(), site_scope_input: adminScope() }) }).then(parseResponse).catch(()=>null)
+      ]);
       const rows = Array.isArray(data?.rows) ? data.rows : [];
       activeRows = rows;
       document.getElementById('summaryChips').innerHTML = [`<span class="chip">Actieve endpoints: ${data?.active_endpoints ?? rows.length}</span>`,`<span class="chip">Unieke spelers: ${data?.unique_players ?? 0}</span>`,`<span class="chip">Backend sync: ${data?.registered_subscriptions ?? 0}</span>`,`<span class="chip">Venster: ${activeMinutes()} min</span>`].join('');
       renderRecipientPreview(rows);
-      renderDiagnostics(data, rows, null);
+      renderDiagnostics(data, rows, runtimeDiag);
       document.getElementById('listBox').innerHTML = rows.length ? `<table><thead><tr><th>Speler</th><th>Scope</th><th>Endpoint</th><th>Pagina</th><th>Laatst gezien</th><th>Platform</th><th>Toestemming</th><th>App-modus</th><th>Backend</th><th>Laatste push</th></tr></thead><tbody>${rows.map((row)=>`<tr><td>${escapeHtml(row.player_name || 'Onbekend')}</td><td>${escapeHtml(row.site_scope || adminScope())}</td><td><span class="small">${escapeHtml(endpointShort(row))}</span></td><td>${escapeHtml(row.page_path || '—')}</td><td>${escapeHtml(formatDateTime(row.last_seen_at))}</td><td>${escapeHtml(row.platform_label || row.user_agent_label || row.user_agent || '—')}</td><td>${escapeHtml(row.permission_state || '—')}</td><td>${row.standalone ? 'app' : 'browser'}</td><td>${row.backend_registered ? 'gekoppeld' : 'mist sync'}</td><td>${escapeHtml(row.last_job_status ? `${row.last_job_status}${row.last_job_at ? ' · '+formatDateTime(row.last_job_at) : ''}` : '—')}</td></tr>`).join('')}</tbody></table>` : '<div class="muted">Geen actieve pushgebruikers gezien in dit venster.</div>';
       setStatus(`Actieve pushgebruikers geladen (${rows.length}).`, 'ok');
     }
     async function sendPush(){
-      const out = await window.GEJAST_ADMIN_SOURCE.queueActivePush(
-        document.getElementById('titleInput').value.trim(),
-        document.getElementById('bodyInput').value.trim(),
-        document.getElementById('urlInput').value.trim(),
-        activeMinutes(),
-        adminScope()
-      );
-      setStatus(`Push klaargezet voor ${out?.result?.queued_count ?? out?.queued_count ?? 0} actieve gebruiker(s).`, 'ok');
+      const payload = {
+        admin_session_token: token(),
+        title_input: document.getElementById('titleInput').value.trim(),
+        body_input: document.getElementById('bodyInput').value.trim(),
+        target_url_input: document.getElementById('urlInput').value.trim(),
+        active_minutes: activeMinutes(),
+        site_scope_input: adminScope()
+      };
+      const out = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${QUEUE_RPC}`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify(payload) }).then(parseResponse);
+      const recipientNames = Array.isArray(out?.recipient_names) ? out.recipient_names : [...new Set(activeRows.map((row)=>String(row.player_name||'').trim()).filter(Boolean))];
+      setStatus(`Push klaargezet voor ${out?.queued_count ?? 0} endpoint(s) · ${recipientNames.length} speler(s): ${recipientNames.join(', ') || 'niemand'}.`, 'ok');
       await loadActive();
     }
     document.getElementById('refreshBtn').addEventListener('click',()=>loadActive().catch((err)=>setStatus(err?.message||'Laden mislukt.','warn')));
@@ -147,7 +153,7 @@
     document.addEventListener('visibilitychange',()=>{ if(!document.hidden) loadActive().catch(()=>{}); });
     (async()=>{ const sel=document.getElementById('pushScopeSelect'); if(sel) sel.value=adminScope(); if(await ensureGate()) loadActive().catch((err)=>setStatus(err?.message||'Laden mislukt.','warn')); })();
   </script>
-  <div class="site-credit-watermark" data-version-watermark>v356 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v359 · Made by Bruis</div>
   <script src="./site-analytics.js"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
