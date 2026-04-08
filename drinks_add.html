@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Alcohol toevoegen</title>
-  <script>window.GEJAST_PAGE_VERSION='v312';</script><script src="./gejast-config.js?v312"></script>
+  <title>Drank toevoegen</title>
+  <script>window.GEJAST_PAGE_VERSION='v312';</script><script src="./gejast-config.js?v325"></script>
   <style>
     :root{
       --line:rgba(0,0,0,.09);
@@ -163,7 +163,7 @@
         </section>
 
         <section class="panel verify">
-          <h2>Pending verificaties in de buurt</h2>
+          <h2>Verificaties in de buurt</h2>
           <div class="list" id="verifyQueue"></div>
         </section>
 
@@ -191,7 +191,7 @@
 
   <div class="site-credit-watermark" data-version-watermark>v312 · Made by Bruis</div>
 
-  <script src="./gejast-geo.js?v312"></script><script src="./drinks-verify-float.js?v312"></script>
+  <script src="./gejast-geo.js?v325"></script><script src="./drinks-verify-float.js?v325"></script>
   <script>
   (function(){
     const cfg=window.GEJAST_CONFIG||{};
@@ -306,7 +306,7 @@
       document.getElementById('sessionGrid').innerHTML=`
         <div class="metric"><div class="label">Vandaag</div><div class="value">${Number(totals.today_units||0).toFixed(1)}</div></div>
         <div class="metric"><div class="label">Open aanvragen</div><div class="value">${pending}</div></div>
-        <div class="metric"><div class="label">All-time</div><div class="value">${Number(totals.all_units||0).toFixed(1)}</div></div>`;
+        <div class="metric"><div class="label">Totaal</div><div class="value">${Number(totals.all_units||0).toFixed(1)}</div></div>`;
     }
     function renderPending(rows){ const wrap=document.getElementById('pendingList'); wrap.innerHTML=(rows||[]).length ? (rows||[]).map(r=>`<div class="row"><div class="row-top"><div><strong>${r.player_name ? `${r.player_name} · ` : ''}${r.event_type_label||r.event_type_key||'Drankje'}</strong><div class="meta">${new Date(r.created_at||Date.now()).toLocaleString('nl-NL')} · ${Number(r.total_units||0).toFixed(1)} units</div><div class="meta">${locationLabel(r)}</div>${r.__kind!=='verify' ? `<div class="meta">Voor: ${(r.approver_names||[]).join(', ')||'—'} · Tegen: ${(r.rejector_names||[]).join(', ')||'—'}</div>` : ''}</div><span class="pill">${r.__kind==='verify'?'check':(r.status||'pending')}</span></div><div class="row-actions">${r.__kind==='verify' ? `${!r.viewer_vote_state?`<button class="action-btn verify" data-verify-id="${r.id}">Bevestigen</button><button class="action-btn cancel" data-reject-id="${r.id}">Afkeuren</button>`:`<span class="meta">Jij stemde al: ${r.viewer_vote_state==='approved'?'voor':'tegen'}</span>`}` : `<button class="action-btn cancel" data-cancel-id="${r.id}">Annuleren</button>`}</div></div>`).join('') : '<div class="muted">Nog geen open aanvragen of checks.</div>'; wrap.querySelectorAll('[data-cancel-id]').forEach(btn=>btn.addEventListener('click',()=>cancelDrink(btn.getAttribute('data-cancel-id')))); wrap.querySelectorAll('[data-verify-id]').forEach(btn=>btn.addEventListener('click',()=>verifyDrink(btn.getAttribute('data-verify-id'), true))); wrap.querySelectorAll('[data-reject-id]').forEach(btn=>btn.addEventListener('click',()=>verifyDrink(btn.getAttribute('data-reject-id'), false))); }
     function renderVerify(rows){ const wrap=document.getElementById('verifyQueue'); wrap.innerHTML=(rows||[]).length ? (rows||[]).map(r=>`<div class="verify-card"><div class="row-top"><div><strong>${r.player_name} · ${r.event_type_label}</strong><div class="verify-distance">${Number(r.total_units||0).toFixed(1)} units${isSecretKingLike(r)?'':(r.distance_m!=null ? ` · ${Math.round(r.distance_m)}m afstand` : '')}</div><div class="meta">${locationLabel(r)}</div><div class="meta">Voor: ${(r.approver_names||[]).join(', ')||'—'} · Tegen: ${(r.rejector_names||[]).join(', ')||'—'}</div></div><span class="pill">check</span></div><div class="row-actions">${!r.viewer_vote_state?`<button class="action-btn verify" data-verify-id="${r.id}">Bevestigen</button><button class="action-btn cancel" data-reject-id="${r.id}">Afkeuren</button>`:`<span class="meta">Jij stemde al: ${r.viewer_vote_state==='approved'?'voor':'tegen'}</span>`}</div></div>`).join('') : '<div class="muted">Nog geen verificaties in de buurt.</div>'; wrap.querySelectorAll('[data-verify-id]').forEach(btn=>btn.addEventListener('click',()=>verifyDrink(btn.getAttribute('data-verify-id'), true))); wrap.querySelectorAll('[data-reject-id]').forEach(btn=>btn.addEventListener('click',()=>verifyDrink(btn.getAttribute('data-reject-id'), false))); }

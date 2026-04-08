@@ -1,34 +1,72 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet" />
-  <title>Drinks pending</title>
-  <script>window.GEJAST_PAGE_VERSION='v324';</script><script src="./gejast-config.js?v324"></script>
-  <script src="./gejast-home-gate.js?v324"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Drankverificatie</title>
+  <script src="./gejast-config.js?v325"></script>
+  <script src="./gejast-geo.js?v325"></script>
   <style>
-    :root{--line:rgba(0,0,0,.09);--line-strong:rgba(0,0,0,.14);--paper:rgba(255,251,245,.84);--pending-bg:#f1e4bb;--pending-border:#b39147;--pending-text:#5f4615;--verify-bg:#d9e5d4;--verify-border:#6f8a63;--verify-text:#33482d;--recent-bg:#dbe4eb;--recent-border:#6b8293;--recent-text:#314351;--pending-item-bg:#6f4f14;--pending-item-border:#b39147;--pending-item-text:#fff7df;--verify-item-bg:#476047;--verify-item-border:#7fa06e;--verify-item-text:#f4fbef;--ink:#16120e;--muted:#6b6257}
-    *{box-sizing:border-box} body{margin:0;padding:10px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(244,240,232,.92),rgba(244,240,232,.94)),url('./site-bg-mobile.webp') center/cover fixed;color:var(--ink)} .wrap{max-width:760px;margin:0 auto}.card{background:var(--paper);border:1px solid rgba(255,255,255,.72);border-radius:26px;padding:14px;box-shadow:0 20px 50px rgba(0,0,0,.08)} .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.top-actions{display:flex;gap:8px;align-items:center}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 14px;border-radius:999px;border:1px solid rgba(0,0,0,.08);font:800 1rem/1 Inter,system-ui,sans-serif;text-decoration:none;cursor:pointer;background:#f3efe6;color:#111}.logo{width:52px;height:52px;object-fit:contain}.stack{display:grid;gap:12px}.panel{border-radius:20px;padding:14px 14px 12px;border:1px solid var(--line-strong);box-shadow:0 10px 24px rgba(0,0,0,.04)}.panel.pending{background:var(--pending-bg);border-color:var(--pending-border);color:var(--pending-text)}.panel.verify{background:var(--verify-bg);border-color:var(--verify-border);color:var(--verify-text)}.list{display:grid;gap:10px}.row,.verify-card{border-radius:18px;padding:12px 13px}.panel.pending .row{background:var(--pending-item-bg);border:1px solid var(--pending-item-border);color:var(--pending-item-text)}.panel.verify .verify-card{background:var(--verify-item-bg);border:1px solid var(--verify-item-border);color:var(--verify-item-text)}.row-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.row-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.action-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:14px;border:0;font:800 .95rem/1 Inter,system-ui,sans-serif;cursor:pointer}.action-btn.cancel{background:#201915;color:#fff}.action-btn.verify{background:#eef8e7;color:#22351d}.pill{display:inline-flex;align-items:center;justify-content:center;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);color:inherit}.status{min-height:20px;margin:2px 2px 0;font-weight:800;font-size:.95rem}.status.bad{color:#8d5f54}.status.ok{color:#587d4d}.meta{opacity:.92}.site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;z-index:9999;padding:7px 12px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 12px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,.18)}
+    :root{--bg:#ece7dc;--card:#f8f2e7;--line:#d7c7a7;--ink:#1d1a17;--muted:#736758;--gold:#b79b56;--good:#dfead7;--bad:#f1dfd7}
+    *{box-sizing:border-box} body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,231,220,.94),rgba(236,231,220,.97)),url('./site-bg-mobile.webp') center/cover no-repeat fixed;color:var(--ink)}
+    .wrap{max-width:1120px;margin:0 auto;display:grid;gap:16px}.top{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:#111;color:#fff;text-decoration:none;font-weight:800}.btn.alt{background:#fff;color:var(--ink)}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.panel{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:18px;display:grid;gap:12px;align-content:start;min-height:220px}.panel h2{margin:0;font-size:1.05rem}.muted{color:var(--muted)}
+    .list{display:grid;gap:10px}.row{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;display:grid;gap:10px}.row-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.meta{color:var(--muted);font-size:.92rem}.pill{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;background:#efe3be;color:#5b4a20}.pill.bad{background:#ecd6d0;color:#6a352f}.actions{display:flex;gap:8px;flex-wrap:wrap}.action{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 12px;font-weight:800;cursor:pointer}.action.good{background:var(--good)}.action.bad{background:var(--bad)}
+    .status{min-height:20px;color:var(--muted);font-weight:700}
+    @media (max-width:860px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
-<div class="wrap"><div class="card">
-  <div class="topbar"><div class="top-actions"><a class="btn" href="./drinks.html">Overzicht</a><a class="btn" href="./drinks_add.html">Drinks toevoegen</a><a class="btn" href="./drinks_speed.html">Snelheid</a></div><div class="top-actions"><a href="./index.html"><img class="logo" src="./logo.png" alt="Logo"/></a></div></div>
-  <div class="status" id="statusLine"></div>
-  <div class="stack"><section class="panel verify"><h2>Pending verificaties in de buurt</h2><div id="verifyQueue" class="list"></div></section><section class="panel pending"><h2>Mijn pending aanvragen</h2><div id="pendingList" class="list"></div></section></div>
-</div></div>
-<div class="site-credit-watermark" data-version-watermark>v321 · Made by Bruis</div>
-<script src="./gejast-geo.js?v321"></script>
+  <div class="wrap">
+    <div class="top">
+      <div><h1 style="margin:0">Drankverificatie</h1><div class="muted">Beoordeel aanvragen en bekijk bevestigde of afgekeurde drankjes.</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn alt" href="./drinks_add.html">Drank toevoegen</a><a class="btn" href="./drinks.html">Drankoverzicht</a></div>
+    </div>
+    <div id="status" class="status"></div>
+    <div class="grid">
+      <section class="panel"><h2>Verificaties in de buurt</h2><div id="verifyQueue" class="list"><div class="muted">Laden…</div></div></section>
+      <section class="panel"><h2>Mijn open aanvragen</h2><div id="pendingList" class="list"><div class="muted">Laden…</div></div></section>
+      <section class="panel"><h2>Bevestigde drankjes</h2><div id="verifiedList" class="list"><div class="muted">Laden…</div></div></section>
+      <section class="panel"><h2>Afgekeurde drankjes</h2><div id="rejectedList" class="list"><div class="muted">Laden…</div></div></section>
+    </div>
+  </div>
 <script>
-(function(){
- const CONFIG=window.GEJAST_CONFIG||{}; const SUPABASE_URL=CONFIG.SUPABASE_URL||''; const SUPABASE_KEY=CONFIG.SUPABASE_PUBLISHABLE_KEY||''; let lastPosition=null; function token(){return CONFIG.getPlayerSessionToken?CONFIG.getPlayerSessionToken():'';} function headers(){return {'Content-Type':'application/json',apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`,Accept:'application/json'};} async function parse(res){const t=await res.text(); let d=null; try{d=t?JSON.parse(t):null;}catch(_){throw new Error(t||`HTTP ${res.status}`);} if(!res.ok) throw new Error(d?.message||d?.error||`HTTP ${res.status}`); return d;} function setStatus(msg='',tone=''){const el=document.getElementById('statusLine'); el.textContent=msg; el.className=`status ${tone}`.trim();}
- function renderList(el, rows, make, empty){el.innerHTML=(rows||[]).length?(rows||[]).map(make).join(''):`<div class="meta">${empty}</div>`;}
- async function load(){try{ if(CONFIG.ensurePlayerSessionOrRedirect && !CONFIG.ensurePlayerSessionOrRedirect('drinks_pending')) return; const geo=window.GEJAST_GEO; const pos=geo&&geo.cached?geo.cached():null; if(pos) lastPosition=pos; const payload={session_token:token(),viewer_lat:lastPosition?lastPosition.coords.latitude:null,viewer_lng:lastPosition?lastPosition.coords.longitude:null}; const [verifyRaw,mineRaw]=await Promise.all([fetch(`${SUPABASE_URL}/rest/v1/rpc/get_all_pending_drink_event_verifications_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token()})}).then(parse),fetch(`${SUPABASE_URL}/rest/v1/rpc/get_my_pending_drink_requests_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token()})}).then(parse)]); const verify=verifyRaw?.get_all_pending_drink_event_verifications_public||verifyRaw||[]; const mine=mineRaw?.get_my_pending_drink_requests_public||mineRaw||[]; renderList(document.getElementById('verifyQueue'),verify,(r)=>`<div class="verify-card"><div class="row-top"><div><strong>${r.player_name||'Onbekend'} · ${r.event_type_label||r.event_type_key||'Drankje'}</strong><div class="meta">${Number(r.total_units||0).toFixed(1)} units${r.distance_m!=null?` · ${Math.round(r.distance_m)}m afstand`:''}</div></div><span class="pill">check</span></div><div class="row-actions">${!r.viewer_vote_state?`<button class="action-btn verify" data-verify-id="${r.id}">Bevestigen</button><button class="action-btn cancel" data-reject-id="${r.id}">Afkeuren</button>`:`<span class="meta">Jij stemde al: ${r.viewer_vote_state==='approved'?'voor':'tegen'}</span>`}</div></div>`,'Nog geen verificaties in de buurt.'); renderList(document.getElementById('pendingList'),mine,(r)=>`<div class="row"><div class="row-top"><div><strong>${r.event_type_label||r.event_type_key||'Drankje'}</strong><div class="meta">${new Date(r.created_at||Date.now()).toLocaleString('nl-NL')} · ${Number(r.total_units||0).toFixed(1)} units</div></div><span class="pill">${r.status||'pending'}</span></div><div class="row-actions"><button class="action-btn cancel" data-cancel-id="${r.id}">Annuleren</button></div></div>`,'Nog geen pending aanvragen.'); document.querySelectorAll('[data-cancel-id]').forEach(btn=>btn.onclick=()=>cancelMine(btn.getAttribute('data-cancel-id'))); document.querySelectorAll('[data-verify-id]').forEach(btn=>btn.onclick=()=>verify(btn.getAttribute('data-verify-id'),true)); document.querySelectorAll('[data-reject-id]').forEach(btn=>btn.onclick=()=>verify(btn.getAttribute('data-reject-id'),false)); setStatus(''); }catch(err){setStatus(err.message||String(err),'bad');}}
- async function verify(id,approve){try{ const geo=window.GEJAST_GEO; const pos=geo?await geo.request(true):null; if(pos) lastPosition=pos; const usePos=lastPosition||pos; if(!usePos) throw new Error('Geolocatie is nodig om te bevestigen.'); await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy,approve:!!approve})}).then(parse); setStatus(approve?'Drankje bevestigd.':'Drankje afgekeurd.','ok'); await load(); }catch(err){setStatus(err.message||String(err),'bad');}}
- async function cancelMine(id){try{ await fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_my_pending_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id)})}).then(parse); setStatus('Aanvraag geannuleerd.','ok'); await load(); }catch(err){setStatus(err.message||String(err),'bad');}}
- load();
-})();
+const {SUPABASE_URL,SUPABASE_ANON_KEY}=window.GEJAST_CONFIG||{};
+const token=()=>localStorage.getItem('gejast_session_token')||'';
+const headers=()=>({'Content-Type':'application/json','apikey':SUPABASE_ANON_KEY,'Authorization':`Bearer ${SUPABASE_ANON_KEY}`});
+function setStatus(msg,bad){const el=document.getElementById('status'); el.textContent=msg||''; el.style.color=bad?'#8b2f2f':'#6b6257';}
+async function parse(res){const txt=await res.text(); let data={}; try{data=txt?JSON.parse(txt):{};}catch{data={raw:txt};} if(!res.ok) throw new Error(data?.message||data?.error||txt||`HTTP ${res.status}`); return data;}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function fmtDate(v){if(!v) return '—'; try{return new Date(v).toLocaleString('nl-NL');}catch{return '—';}}
+function units(v){return Number(v||0).toFixed(1);}
+function renderList(el, rows, map, empty){el.innerHTML=(rows||[]).length?(rows||[]).map(map).join(''):`<div class="muted">${empty}</div>`;}
+async function verifyItem(id, approved){await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),approved:!!approved})}).then(parse);}
+async function cancelMine(id){await fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_my_pending_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id)})}).then(parse);}
+async function load(){
+  try{
+    setStatus('Laden…');
+    const [verifyRaw,mineRaw,historyRaw,pageRaw]=await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/rpc/get_all_pending_drink_event_verifications_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token()})}).then(parse),
+      fetch(`${SUPABASE_URL}/rest/v1/rpc/get_my_pending_drink_requests_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token()})}).then(parse),
+      fetch(`${SUPABASE_URL}/rest/v1/rpc/get_verified_drinks_history_public`,{method:'POST',headers:headers(),body:JSON.stringify({limit_count:40})}).then(parse),
+      fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token()})}).then(parse)
+    ]);
+    const verify=verifyRaw?.get_all_pending_drink_event_verifications_public||verifyRaw||[];
+    const mine=mineRaw?.get_my_pending_drink_requests_public||mineRaw||[];
+    const history=historyRaw?.get_verified_drinks_history_public||historyRaw||[];
+    const page=pageRaw?.get_drinks_page_public||pageRaw||{};
+    const rejected=(Array.isArray(page?.recent_rejected)?page.recent_rejected:[]).length ? page.recent_rejected : (Array.isArray(page?.recent_events)?page.recent_events.filter(r=>String(r.status||'').toLowerCase()==='rejected'):[]);
+    renderList(document.getElementById('verifyQueue'),verify,r=>`<div class="row"><div class="row-top"><div><strong>${esc(r.player_name||'Onbekend')} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${units(r.total_units)} units${r.distance_m!=null?` · ${Math.round(r.distance_m)}m afstand`:''}</div><div class="meta">${fmtDate(r.created_at)}</div></div><span class="pill">check</span></div><div class="actions">${!r.viewer_vote_state?`<button class="action good" data-verify="${r.id}">Bevestigen</button><button class="action bad" data-reject="${r.id}">Afkeuren</button>`:`<span class="meta">Jij stemde al: ${r.viewer_vote_state==='approved'?'voor':'tegen'}</span>`}</div></div>`,'Nog geen verificaties in de buurt.');
+    renderList(document.getElementById('pendingList'),mine,r=>`<div class="row"><div class="row-top"><div><strong>${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${fmtDate(r.created_at)} · ${units(r.total_units)} units</div></div><span class="pill">${esc(r.status||'open')}</span></div><div class="actions"><button class="action bad" data-cancel="${r.id}">Annuleren</button></div></div>`,'Nog geen open aanvragen.');
+    renderList(document.getElementById('verifiedList'),history.slice(0,20),r=>`<div class="row"><div class="row-top"><div><strong>${esc(r.player_name||'Onbekend')} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${fmtDate(r.verified_at||r.created_at)} · ${units(r.total_units)} units</div><div class="meta">Bevestigd door ${esc((r.verifier_names||[]).join(', ')||'—')}</div></div><span class="pill">ok</span></div></div>`,'Nog geen bevestigde drankjes.');
+    renderList(document.getElementById('rejectedList'),(rejected||[]).slice(0,20),r=>`<div class="row"><div class="row-top"><div><strong>${esc(r.player_name||'Onbekend')} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${fmtDate(r.updated_at||r.created_at)} · ${units(r.total_units)} units</div></div><span class="pill bad">afgekeurd</span></div></div>`,'Nog geen afgekeurde drankjes.');
+    document.querySelectorAll('[data-verify]').forEach(b=>b.onclick=async()=>{try{await verifyItem(b.dataset.verify,true); setStatus('Drankje bevestigd.'); await load();}catch(err){setStatus(err.message||String(err),true);}});
+    document.querySelectorAll('[data-reject]').forEach(b=>b.onclick=async()=>{try{await verifyItem(b.dataset.reject,false); setStatus('Drankje afgekeurd.'); await load();}catch(err){setStatus(err.message||String(err),true);}});
+    document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=async()=>{try{await cancelMine(b.dataset.cancel); setStatus('Aanvraag geannuleerd.'); await load();}catch(err){setStatus(err.message||String(err),true);}});
+    setStatus('Gegevens geladen.');
+  }catch(err){ setStatus(err.message||String(err), true); }
+}
+load();
 </script>
-<script src="./gejast-session-corner.js?v324"></script>
-</body></html>
+</body>
+</html>

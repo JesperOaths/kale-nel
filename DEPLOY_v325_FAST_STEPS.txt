@@ -1,0 +1,20 @@
+GEJAST v325 herstelbundel
+
+1. Upload alle bestanden uit de zip naar de site-root en overschrijf de bestaande bestanden.
+2. Run daarna gejast_v325_repair_bundle.sql volledig in Supabase.
+3. Vernieuw de site hard (cache legen / Ctrl+F5).
+4. Test daarna in deze volgorde:
+   - home/login-privacygate
+   - index live-knoppen voor deelnemers
+   - admin hub + admin claims categorisatie
+   - profielen / spelerpagina
+   - poll stemmen
+   - bezoekers/admin analytics
+   - drinks overzicht / toevoegen / verificatie / drankcontrole
+   - family routing en family homepage
+   - boerenbridge scope scheiding / Jesper vervanging
+
+Belangrijk:
+- Deze SQL vervangt specifieke publieke profiel-, poll-, analytics- en live-summary functies.
+- De SQL markeert oude poll-stemmen uit eerdere cycli als verwijderd zodat oude polls niet meer terugkomen.
+- De SQL voert een best-effort scoped rebuild uit voor de kern-ELO-tabellen als de rebuild-functie aanwezig is.

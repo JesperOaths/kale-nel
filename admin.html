@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Adminhub - Wordt er gejast?</title>
+  <title>Beheerhub - Wordt er gejast?</title>
   <style>
     :root { --gold:#9a8241; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#6b655b; --ok:#2b5b37; --warn:#8b3a30; }
     * { box-sizing:border-box; }
@@ -42,14 +42,14 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v312';</script><script src="./gejast-config.js?v312"></script>
-  <script src="./admin-session-sync.js?v262"></script>
-  <script src="./admin-topnav.js?v262"></script>
-</head>
+  <script>window.GEJAST_PAGE_VERSION='v322';</script><script src="./gejast-config.js?v325"></script>
+  <script src="./admin-session-sync.js?v325"></script>
+  <script src="./admin-topnav.js?v325"></script>
+<script src="./gejast-scope.js?v325"></script></head>
 <body>
   <main class="main-card">
     <a href="./index.html" aria-label="Terug naar home"><img src="./logo.png" class="logo" alt="logo" /></a>
-    <h1>Adminhub</h1>
+    <h1>Beheerhub</h1>
     <p class="sub">Eén rustige ingang voor accounts, speldata, kluizen en omgeving. Bestaande sessies worden hergebruikt zodat je niet steeds opnieuw hoeft in te loggen.</p>
 
     <form id="loginView">
@@ -65,6 +65,7 @@
 
     <section id="hubView" class="hidden">
       <div class="top-actions">
+        <label class="ghost" style="display:inline-flex;align-items:center;gap:10px;padding:14px 16px;border-radius:14px"><span style="font-weight:800">Groep</span><select id="adminScopeSelect" style="border:none;background:transparent;font:inherit;font-weight:800"><option value="friends">Vrienden</option><option value="family">Familie</option></select></label>
         <button id="refreshBtn" class="btn ghost" type="button">Ververs</button>
         <button id="logoutBtn" class="btn dark" type="button">Uitloggen</button>
       </div>
@@ -85,6 +86,7 @@
             <a class="hub-link" href="./admin_claims.html#view=expired"><strong>Verlopen activaties</strong><small>Verlopen gevallen direct in dezelfde beheerflow.</small></a>
             <a class="hub-link" href="./admin_reserved_names.html"><strong>Claimbare namen</strong><small>Bron voor aanvraagbare namen en handmatige reserveringen.</small></a>
             <a class="hub-link" href="./admin_mail_audit.html"><strong>Maildiagnostiek</strong><small>Make-webhook, mail-RPC en laatste mailjobstatus.</small></a>
+            <a class="hub-link" href="./admin_push.html"><strong>Notificaties / push</strong><small>Recente actieve gebruikers, test-push en admin push-flow.</small></a>
           </div>
         </section>
 
@@ -123,6 +125,11 @@
     const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
+
+    const ADMIN_SCOPE_KEY = 'jas_admin_scope_v1';
+    function getAdminScope(){ const q=new URLSearchParams(location.search).get('scope'); return (q||localStorage.getItem(ADMIN_SCOPE_KEY)||'friends').toLowerCase()==='family' ? 'family' : 'friends'; }
+    function applyAdminScope(){ const scope=getAdminScope(); const sel=document.getElementById('adminScopeSelect'); if(sel) sel.value=scope; document.querySelectorAll('a[href^="./"]').forEach((a)=>{ try{ const url=new URL(a.getAttribute('href'), location.href); url.searchParams.set('scope', scope); a.setAttribute('href', url.pathname.split('/').pop() + url.search + url.hash); if(scope==='family' && (/drinks|beerpong/i.test(a.getAttribute('href')) || /drinks|beerpong/i.test(a.textContent||''))) a.style.display='none'; }catch(_){}}); }
+
     const ADMIN_DEVICE_KEY = "jas_admin_device_v1";
     const ADMIN_USER_KEY = "jas_admin_user_v1";
     const ADMIN_DEADLINE_KEY = "jas_admin_deadline_v1";
@@ -228,6 +235,20 @@
         false
       );
     }
+
+function parseMaybeDate(value) {
+  if (!value) return 0;
+  const n = Date.parse(String(value));
+  return Number.isFinite(n) ? n : 0;
+}
+function isExpiredByTimestamp(out) {
+  const now = Date.now();
+  const candidates = [out.expires_at, out.activation_expires_at, out.link_expires_at, out.player_activation_expires_at, out.expired_at]
+    .map(parseMaybeDate)
+    .filter(Boolean);
+  return candidates.some((ts) => ts <= now) && !hasActivationEvidence(out);
+}
+
     function deriveAdminBucket(out) {
       const states = [out.state_bucket, out.status, out.request_status]
         .map((value) => String(value || '').toLowerCase())
@@ -235,6 +256,7 @@
       const decision = String(out.decision || '').toLowerCase();
       const hasPin = hasActivationEvidence(out);
       if (states.some((raw) => raw.includes('expired'))) return 'expired';
+      if (isExpiredByTimestamp(out)) return 'expired';
       if (states.some((raw) => raw.includes('returned_to_claimable') || raw.includes('claimable_again') || raw.includes('claimable'))) return 'rejected';
       if (states.some((raw) => raw.includes('revok') || raw.includes('reject') || raw.includes('denied'))) return 'rejected';
       if (states.some((raw) => raw.includes('active') || raw.includes('activated'))) return 'active';
@@ -263,17 +285,20 @@
       const requests = normalizeAdminRows(requestsRes.requests || requestsRes.items || []);
       const history = normalizeAdminRows(historyRes.history || historyRes.items || []);
       const expiredItems = Array.isArray(expiredRes?.items) ? expiredRes.items : [];
-      const awaitingItems = history.filter((item) => item.state_bucket === 'awaiting');
+      const expiredItemsNormalized = normalizeAdminRows(expiredItems);
+      const awaitingItems = history.filter((item) => item.state_bucket === 'awaiting' && !isExpiredByTimestamp(item));
       const active = history.filter((item) => item.state_bucket === 'active').length;
       const rejected = history.filter((item) => item.state_bucket === 'rejected').length;
       const expiredHistory = history.filter((item) => item.state_bucket === 'expired').length;
       const awaiting = awaitingItems.length;
       document.getElementById('statPending').textContent = String(requests.length);
       document.getElementById('statAwaiting').textContent = String(awaiting);
-      document.getElementById('statExpired').textContent = String(Math.max(expiredItems.length, expiredHistory));
+      document.getElementById('statExpired').textContent = String(Math.max(expiredItemsNormalized.length, expiredHistory));
       document.getElementById('statActive').textContent = String(active);
       document.getElementById('statRejected').textContent = String(rejected);
     }
+    document.addEventListener('DOMContentLoaded', ()=>{ const sel=document.getElementById('adminScopeSelect'); if(sel){ sel.value=getAdminScope(); sel.addEventListener('change', ()=>{ localStorage.setItem(ADMIN_SCOPE_KEY, sel.value); applyAdminScope(); }); } applyAdminScope(); });
+
     async function boot() {
       const token = getAdminSessionToken();
       if (!token) { showLoggedOut(); return; }
@@ -283,7 +308,7 @@
         await loadCounts();
         if (maybeReturnAfterLogin()) return;
         if (maybeReturnAfterLogin()) return;
-        setStatus('Adminhub geladen.', 'ok');
+        setStatus('Beheerhub geladen.', 'ok');
       } catch (error) {
         clearAdminSessionToken();
         showLoggedOut();

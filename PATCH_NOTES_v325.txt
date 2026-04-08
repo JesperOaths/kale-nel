@@ -1,0 +1,22 @@
+GEJAST v325 herstelnotities
+
+Frontend:
+- index.html teruggezet naar de recentere stabiele lijn met scope/home-gate/live-entry gedrag
+- drank-topkaarten op homepage over 2 rijen en groter gemaakt
+- admin.html hersteld met scope-selector, push-link en betere claimoverzichten
+- admin_analytics.html taal opgeschoond
+- drinks.html lichter gemaakt, snelle selector hersteld, ongewenste boxes verwijderd
+- drinks_add.html taal opgeschoond en recent bevestigd beperkt tot 5
+- drinks_pending.html uitgebreid met bevestigde + afgekeurde boxen
+- drinks_admin.html opnieuw opgebouwd met bulk-acties
+- nieuw match_swap.html toegevoegd
+- gejast-config.js versie naar v325
+
+SQL:
+- site_scope_name_overrides en scope-backfills aangescherpt
+- family/friends-lek in boerenbridge gecorrigeerd
+- expliciete Bruis -> Jesper correctie voor family-boerenbridge lijn
+- polls gefixt met display_name_norm + huidige cycle_day + soft-removal van oude stemmen
+- analytics RPC herschreven zodat sessies/visitors ook meetellen als events dun zijn
+- publieke profiel/speler RPC's herschreven zonder niet-bestaande rating-kolom
+- live spectator RPC's opnieuw neergezet op basis van game_match_summaries
