@@ -1,0 +1,5 @@
+1. Upload the changed files from the v354 patch zip.
+2. Run gejast_v354_master_contract_badges_and_canonical_drinks.sql in Supabase.
+3. Hard refresh drinks pages and homepage.
+4. Test create, approve, reject, cancel for both normal drinks and speed attempts.
+5. Test drinks history, player drinks block, homepage drinks top lists, and verify float behavior.

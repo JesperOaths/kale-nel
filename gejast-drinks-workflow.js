@@ -13,6 +13,15 @@
   function token() { return CTX.getPlayerSessionToken(); }
   function headers() { return RPC.rpcHeaders(); }
 
+  function canonicalAvailable(){ return !!(global.DRINKS_WORKFLOW && typeof global.DRINKS_WORKFLOW.loadStats === 'function'); }
+  function mapCanonicalPending(pending){
+    return {
+      verifyQueue: Array.isArray(pending?.verification_queue) ? pending.verification_queue : [],
+      myPendingEvents: Array.isArray(pending?.my_pending) ? pending.my_pending : [],
+      recentRejected: Array.isArray(pending?.recent_rejected) ? pending.recent_rejected : []
+    };
+  }
+
   function normalizeSpeedKey(value) {
     const key = String(value || '').trim().toLowerCase();
     if (key === '2bakken') return '2_bakken';
@@ -76,6 +85,36 @@
   }
 
   async function readDashboard({ viewerLat = null, viewerLng = null, historyLimit = 40 } = {}) {
+    if (canonicalAvailable()) {
+      const [stats, history] = await Promise.all([
+        global.DRINKS_WORKFLOW.loadStats({ viewerLat, viewerLng }),
+        global.DRINKS_WORKFLOW.loadHistory({ requestKind: null, limit: historyLimit })
+      ]);
+      const pending = mapCanonicalPending(stats.pending || {});
+      const speedStats = stats.speed || {};
+      const verifiedRecent = Array.isArray(history) ? history : [];
+      return {
+        context: { site_scope: CTX.getScope(), viewer_name: null },
+        dashboard: {
+          session: {},
+          totals: stats.homepage?.totals || {},
+          event_types: (stats.visibleTypes || []).map((x)=>({ event_type_key:x.key, event_type_label:x.label })),
+          verify_queue: pending.verifyQueue,
+          my_pending_events: pending.myPendingEvents,
+          verified_recent: verifiedRecent,
+          recent_rejected: pending.recentRejected,
+          all_pending_verifications: pending.verifyQueue
+        },
+        speed: {
+          speed_types: mergeSpeedTypes((stats.visibleTypes || []).map((x)=>({ key:x.key, label:x.label })), speedStats.top_attempts || [], speedStats.my_attempts || [], speedStats.verify_queue || []),
+          top_attempts: speedStats.top_attempts || [],
+          my_attempts: speedStats.my_attempts || [],
+          verify_queue: speedStats.verify_queue || []
+        },
+        homepage: stats.homepage || {},
+        verified: stats.verified || []
+      };
+    }
     const payload = {
       session_token: CTX.getPlayerSessionToken(),
       viewer_lat: viewerLat,
@@ -122,6 +161,22 @@
   }
 
   async function write(action, payload = {}) {
+    if (canonicalAvailable()) {
+      switch (action) {
+        case 'create_event':
+          return global.DRINKS_WORKFLOW.createDrinkRequest({ requestKind:'drink', eventTypeKey: payload.event_type_key, quantity: payload.quantity || 1, lat: payload.lat, lng: payload.lng, accuracy: payload.accuracy });
+        case 'cancel_event':
+          return global.DRINKS_WORKFLOW.cancelDrink({ requestKind:'drink', requestId: payload.drink_event_id || payload.request_id });
+        case 'verify_event':
+          return (payload.approve === false ? global.DRINKS_WORKFLOW.rejectDrink : global.DRINKS_WORKFLOW.approveDrink)({ requestKind:'drink', requestId: payload.drink_event_id || payload.request_id, lat: payload.lat, lng: payload.lng, accuracy: payload.accuracy, reason: payload.reason || null });
+        case 'create_speed_attempt':
+          return global.DRINKS_WORKFLOW.createDrinkRequest({ requestKind:'speed', eventTypeKey: payload.event_type_key, quantity: payload.quantity || 1, durationSeconds: payload.duration_seconds, lat: payload.lat, lng: payload.lng, accuracy: payload.accuracy });
+        case 'cancel_speed_attempt':
+          return global.DRINKS_WORKFLOW.cancelDrink({ requestKind:'speed', requestId: payload.attempt_id || payload.request_id });
+        case 'verify_speed_attempt':
+          return global.DRINKS_WORKFLOW.approveDrink({ requestKind:'speed', requestId: payload.attempt_id || payload.request_id, lat: payload.lat, lng: payload.lng, accuracy: payload.accuracy });
+      }
+    }
     const body = {
       session_token: CTX.getPlayerSessionToken(),
       action,

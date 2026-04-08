@@ -1,0 +1,11 @@
+GEJAST v354
+
+Implements the canonical drinks verified-data lifecycle handoff on top of v353.
+
+Included work:
+- added drink_type_normalization.js
+- added drinks_workflow_helper.js
+- bridged gejast-drinks-workflow.js into the canonical helper layer with backward-compatible page shapes
+- migrated drinks_pending, drinks_add, drinks_speed, drinks verify float, drinks home top5, and key drinks overview paths toward canonical helper calls
+- created combined SQL with badges + backend contracts + canonical drinks lifecycle
+- bumped visible version to v354

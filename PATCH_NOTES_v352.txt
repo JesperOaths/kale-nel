@@ -1,4 +1,4 @@
-GEJAST v353
+GEJAST v354
 
 - replaced the old placeholder badge system with the supplied registry-driven badge system
 - copied the supplied badge assets into ./assets/badges/
@@ -6,5 +6,5 @@ GEJAST v353
 - player.html now loads badge facts RPC data and shows visible name, original name, primary nickname, mini badges and a full badge gallery
 - profiles.html now shows compact nickname + mini badge summaries instead of relying on the old single badge pill
 - my_profile.html now links more directly to the public profile view
-- included v353 SQL file carrying the live/comeback badge facts layer
-- bumped visible version line from v353 to v353 across the repo
+- included v354 SQL file carrying the live/comeback badge facts layer
+- bumped visible version line from v354 to v354 across the repo

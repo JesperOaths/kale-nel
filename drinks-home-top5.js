@@ -76,11 +76,14 @@
   }
 
   async function fetchDrinksTop5(){
-    if (!window.supabase || !window.supabaseClient) return;
     try{
-      const { data, error } = await window.supabaseClient.rpc('get_drinks_homepage_top5_public');
+      const data = window.DRINKS_WORKFLOW ? await window.DRINKS_WORKFLOW.loadHomepageHighlights() : null;
+      const payload = data && (data.top5 || data.home_top5 || data);
+      if (payload) return renderDrinkTop5(payload || {});
+      if (!window.supabase || !window.supabaseClient) return;
+      const { data: legacy, error } = await window.supabaseClient.rpc('get_drinks_homepage_top5_public');
       if(error) throw error;
-      renderDrinkTop5(data || {});
+      renderDrinkTop5(legacy || {});
     } catch (err){
       console.error('drinks top5 load failed', err);
     }

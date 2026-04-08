@@ -1,4 +1,4 @@
-GEJAST v353
+GEJAST v354
 
 Implements the master AI handoff v352 instructions on top of the v352 badge patch.
 
@@ -9,4 +9,4 @@ Included work:
 - profile source helper added and wired into profiles/player reads
 - push contract helper added and wired into admin push + geo presence/subscription flow
 - combined SQL created with badge facts layer + backend contract wrapper layer
-- visible version bumped to v353 across the repo
+- visible version bumped to v354 across the repo

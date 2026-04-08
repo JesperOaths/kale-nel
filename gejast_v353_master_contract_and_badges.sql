@@ -1,7 +1,7 @@
--- GEJAST v353 combined badge + backend contract unification
+-- GEJAST v354 combined badge + backend contract unification
 
--- GEJAST v353 badge system SQL
--- Carries forward the v331 live/comeback badge facts layer as the canonical badge-facts backend for the v353 badge UI rollout.
+-- GEJAST v354 badge system SQL
+-- Carries forward the v331 live/comeback badge facts layer as the canonical badge-facts backend for the v354 badge UI rollout.
 
 -- GEJAST v331 - live participation + comeback badge facts
 -- Requires the scope helpers from v313+ to be present.
