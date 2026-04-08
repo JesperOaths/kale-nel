@@ -1,0 +1,18 @@
+GEJAST v355 - push pipeline repair implementation
+
+Implemented from gejast_push_pipeline_repair_v352 handoff bundle:
+- added gejast-push-runtime.js shared runtime helper
+- added gejast-push-admin-source.js shared admin diagnostics/broadcast helper
+- upgraded gejast-config.js to v2 push RPC names
+- refactored gejast-geo.js push actions to delegate to GEJAST_PUSH_RUNTIME
+- upgraded gejast-sw.js to include jobId/traceId/kind and resubscribe client broadcast on pushsubscriptionchange
+- upgraded admin_push.html to use canonical admin push source and render richer diagnostics columns
+- upgraded geo_diagnostics.html to use GEJAST_PUSH_RUNTIME and show push diagnostics panel
+- replaced web_push_dispatcher.js with repaired token-based dispatcher
+- replaced workflow with repaired 3-minute dispatcher workflow
+- bumped visible version to v355 across touched repo pages/files
+
+Important truth boundary:
+- the frontend/runtime/dispatcher changes are implemented in the repo patch
+- the repaired backend queue/claim/send/mark path only becomes active after running gejast_v355_push_pipeline_repair.sql
+- because your live Supabase schema has already shown drift on earlier migrations, this push SQL should be treated as a new backend patch to test directly in your environment rather than assumed-perfect from the handoff alone

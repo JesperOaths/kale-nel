@@ -1,0 +1,30 @@
+GEJAST v355 fast steps
+
+1. Upload these files to the repo root:
+   - gejast-config.js
+   - gejast-geo.js
+   - gejast-sw.js
+   - admin_push.html
+   - geo_diagnostics.html
+   - gejast-push-runtime.js
+   - gejast-push-admin-source.js
+   - web_push_dispatcher.js
+
+2. Replace workflow file:
+   - web-push-dispatcher.yml -> /.github/workflows/web-push-dispatcher.yml
+
+3. Run Supabase SQL:
+   - gejast_v355_push_pipeline_repair.sql
+
+4. Hard refresh the site / service worker clients
+
+5. Test geo_diagnostics.html on a real device:
+   - verify user_facing_state moves toward ready
+   - queue self test
+
+6. Test admin_push.html:
+   - diagnostics loads
+   - scope filter works
+   - admin broadcast queues rows
+
+7. Let GitHub Actions run dispatcher and confirm job rows move queued -> claimed -> sent/failed

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const crypto = require('crypto');
 const webpush = require('web-push');
 const { createClient } = require('@supabase/supabase-js');
 
@@ -6,85 +7,111 @@ const url = process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const vapidPublic = process.env.WEB_PUSH_VAPID_PUBLIC_KEY;
 const vapidPrivate = process.env.WEB_PUSH_VAPID_PRIVATE_KEY;
-const vapidSubject = process.env.WEB_PUSH_VAPID_SUBJECT || 'mailto:admin@example.com';
+const vapidSubject = process.env.WEB_PUSH_VAPID_SUBJECT || 'https://kalenel.nl';
+const workerId = process.env.WEB_PUSH_WORKER_ID || `dispatcher-${process.pid}`;
+
 if (!url || !key || !vapidPublic || !vapidPrivate) {
-  console.error('Missing env vars for web push dispatcher');
+  console.error('Missing env vars for repaired web push dispatcher');
   process.exit(1);
 }
+
 webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate);
 const supabase = createClient(url, key, { auth: { persistSession: false } });
 
-async function claimCoreJobs(){
-  const { data, error } = await supabase.rpc('claim_web_push_jobs', { max_jobs: 25 });
+function claimToken() {
+  return crypto.randomUUID();
+}
+
+async function reclaimStaleClaims() {
+  const { error } = await supabase.rpc('requeue_stale_web_push_claims_v2', { stale_minutes: 15 });
+  if (error) throw error;
+}
+
+async function claimJobs(maxJobs = 25) {
+  const token = claimToken();
+  const { data, error } = await supabase.rpc('claim_web_push_jobs_v2', {
+    max_jobs: maxJobs,
+    worker_id_input: workerId,
+    claim_token_input: token
+  });
   if (error) throw error;
   const items = Array.isArray(data?.items) ? data.items : [];
-  return items.map((item)=>Object.assign({ __source: 'core' }, item));
+  return { token, items };
 }
 
-async function claimAdminJobs(){
-  const { data, error } = await supabase.rpc('claim_admin_web_push_jobs', { max_jobs: 25 });
-  if (error) throw error;
-  const items = Array.isArray(data?.items) ? data.items : [];
-  return items.map((item)=>Object.assign({ __source: 'admin' }, item));
-}
-
-async function markSent(item){
-  if (item.__source === 'admin') {
-    const { error } = await supabase.rpc('mark_admin_web_push_job_sent', { job_id_input: item.job_id });
-    if (error) throw error;
-    return;
-  }
-  const { error } = await supabase.rpc('mark_web_push_job_sent', { job_id_input: item.job_id });
+async function markSent(jobId, token, providerMessageId) {
+  const { error } = await supabase.rpc('mark_web_push_job_sent_v2', {
+    job_id_input: jobId,
+    claim_token_input: token,
+    worker_id_input: workerId,
+    provider_message_id_input: providerMessageId || null
+  });
   if (error) throw error;
 }
 
-async function markFailed(item, errorText){
-  if (item.__source === 'admin') {
-    const { error } = await supabase.rpc('mark_admin_web_push_job_failed', { job_id_input: item.job_id, error_input: errorText });
-    if (error) throw error;
-    return;
-  }
-  const { error } = await supabase.rpc('mark_web_push_job_failed', { job_id_input: item.job_id, error_input: errorText });
+async function markFailed(jobId, token, stage, code, reason, shouldDisable) {
+  const { error } = await supabase.rpc('mark_web_push_job_failed_v2', {
+    job_id_input: jobId,
+    claim_token_input: token,
+    worker_id_input: workerId,
+    error_stage_input: stage,
+    error_code_input: code || 'SEND_FAILED',
+    error_text_input: String(reason || '').slice(0, 2000),
+    disable_subscription_input: !!shouldDisable
+  });
   if (error) throw error;
 }
 
-async function run(){
-  const claimedCore = await claimCoreJobs();
-  const claimedAdmin = await claimAdminJobs();
-  const items = [...claimedCore, ...claimedAdmin];
-  if (!items.length) {
-    console.log('no-web-push-jobs', JSON.stringify({ core: claimedCore.length, admin: claimedAdmin.length, at: new Date().toISOString() }));
-    return;
+async function sendOne(job, token) {
+  const payload = JSON.stringify({
+    title: job.title,
+    body: job.body,
+    url: job.target_url || './drinks_pending.html',
+    tag: job.notification_tag || `job-${job.job_id}`,
+    requireInteraction: !!job.require_interaction,
+    vibrate: Array.isArray(job.vibrate_pattern) ? job.vibrate_pattern : [180, 80, 180],
+    jobId: job.job_id,
+    traceId: job.trace_id,
+    kind: job.trigger_kind || 'runtime'
+  });
+
+  try {
+    const response = await webpush.sendNotification({
+      endpoint: job.endpoint,
+      keys: {
+        p256dh: job.p256dh_key,
+        auth: job.auth_key
+      }
+    }, payload);
+    await markSent(job.job_id, token, response?.headers?.location || response?.statusCode || 'sent');
+    console.log(`sent job=${job.job_id} scope=${job.target_scope} trigger=${job.trigger_kind}`);
+  } catch (error) {
+    const text = String(error && (error.body || error.message) || error);
+    const statusCode = Number(error && error.statusCode || 0);
+    const disable = statusCode === 404 || statusCode === 410 || /gone|unsubscribed|expired/i.test(text);
+    await markFailed(job.job_id, token, 'send', String(statusCode || 'SEND_FAILED'), text, disable);
+    console.error(`failed job=${job.job_id} code=${statusCode || 'SEND_FAILED'} ${text}`);
   }
-  let sentCount = 0;
-  let failedCount = 0;
-  for (const item of items){
+}
+
+async function run() {
+  await reclaimStaleClaims();
+  const { token, items } = await claimJobs(50);
+  for (const item of items) {
     try {
-      const payload = {
-        title: item.title,
-        body: item.body,
-        url: item.target_url || './drinks_pending.html',
-        tag: item.tag || `job-${item.job_id}`,
-        renotify: true,
-        vibrate: [180,80,180],
-        icon: './logo.png',
-        badge: './logo.png',
-        requireInteraction: false
-      };
-      await webpush.sendNotification({
-        endpoint: item.endpoint,
-        keys: { p256dh: item.p256dh_key, auth: item.auth_key }
-      }, JSON.stringify(payload));
-      await markSent(item);
-      sentCount += 1;
-      console.log('sent', item.__source, item.job_id, item.target_url || './drinks_pending.html');
-    } catch (err) {
-      const reason = String((err && (err.body || err.message)) || err);
-      try { await markFailed(item, reason); } catch (markErr) { console.error('mark-failed-error', item.job_id, markErr && markErr.message || markErr); }
-      failedCount += 1;
-      console.error('failed', item.__source, item.job_id, reason);
+      await sendOne(item, token);
+    } catch (error) {
+      const text = String(error && error.message || error);
+      try {
+        await markFailed(item.job_id, token, 'mark', 'MARK_FAILED', text, false);
+      } catch (markError) {
+        console.error(`mark-failed-error job=${item.job_id} ${String(markError && markError.message || markError)}`);
+      }
     }
   }
-  console.log('web-push-run-complete', JSON.stringify({ total: items.length, sent: sentCount, failed: failedCount, at: new Date().toISOString() }));
 }
-run().catch((err)=>{ console.error(err); process.exit(1); });
+
+run().catch((error) => {
+  console.error(String(error && error.stack || error));
+  process.exit(1);
+});

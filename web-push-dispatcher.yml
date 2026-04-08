@@ -1,26 +1,31 @@
-name: Web Push Dispatcher
+name: Web Push Dispatcher v352
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/3 * * * *'
 
 jobs:
   dispatch:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    concurrency:
+      group: web-push-dispatcher
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
       - name: Install dispatcher deps
         run: npm install web-push @supabase/supabase-js
-      - name: Run dispatcher
+      - name: Run repaired dispatcher
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           WEB_PUSH_VAPID_PUBLIC_KEY: ${{ secrets.WEB_PUSH_VAPID_PUBLIC_KEY }}
           WEB_PUSH_VAPID_PRIVATE_KEY: ${{ secrets.WEB_PUSH_VAPID_PRIVATE_KEY }}
           WEB_PUSH_VAPID_SUBJECT: ${{ secrets.WEB_PUSH_VAPID_SUBJECT }}
+          WEB_PUSH_WORKER_ID: github-actions-dispatcher
         run: node web_push_dispatcher.js

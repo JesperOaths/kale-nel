@@ -154,7 +154,7 @@
   async function registerNotificationWorker(){
     if (!notificationSupported()) return null;
     try {
-      const reg = await navigator.serviceWorker.register(`./gejast-sw.js?${encodeURIComponent(window.GEJAST_PAGE_VERSION || 'v333')}`, { scope:'./' });
+      const reg = await navigator.serviceWorker.register(`./gejast-sw.js?${encodeURIComponent(window.GEJAST_PAGE_VERSION || 'v355')}`, { scope:'./' });
       return await navigator.serviceWorker.ready.catch(()=>reg);
     } catch(_) { return null; }
   }
@@ -169,28 +169,22 @@
 
 
   async function touchActivePushPresence(subscription=null, force=false){
-    const token = playerToken();
-    if (!token) return { touched:false, reason:'missing-context' };
-    const now = Date.now();
-    const last = Number(localStorage.getItem(ACTIVE_PUSH_TOUCH_KEY) || '0');
-    if (!force && last && (now - last) < 60000) return { touched:false, reason:'throttled' };
-    let sub = subscription;
     try {
-      if (!sub && notificationSupported()) {
-        const reg = await registerNotificationWorker();
-        if (reg && reg.pushManager) sub = await reg.pushManager.getSubscription();
+      const runtime = window.GEJAST_PUSH_RUNTIME;
+      if (!runtime || typeof runtime.syncSubscriptionAndPresence !== 'function') return { touched:false, reason:'missing-push-runtime' };
+      if (!force) {
+        const now = Date.now();
+        const last = Number(localStorage.getItem(ACTIVE_PUSH_TOUCH_KEY) || '0');
+        if (last && (now - last) < 60000) return { touched:false, reason:'throttled' };
       }
-      const json = sub && (sub.toJSON ? sub.toJSON() : sub);
-      const out = window.GEJAST_PUSH_CONTRACT ? await window.GEJAST_PUSH_CONTRACT.syncPresence({
-        endpoint: json?.endpoint || sub?.endpoint || '',
-        p256dh: (json?.keys && json.keys.p256dh) || '',
-        auth: (json?.keys && json.keys.auth) || '',
-        pagePath: `${window.location.pathname || ''}${window.location.search || ''}${window.location.hash || ''}`,
-        permission: notificationPermission(),
-        standalone: !!((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true)
-      }) : { touched:false, reason:'missing-push-contract' };
-      try { localStorage.setItem(ACTIVE_PUSH_TOUCH_KEY, String(now)); } catch(_){}
-      return Object.assign({ touched:true }, out||{});
+      const out = await runtime.syncSubscriptionAndPresence({
+        lat: lastPos?.coords?.latitude || null,
+        lng: lastPos?.coords?.longitude || null,
+        accuracy: lastPos?.coords?.accuracy || null,
+        pagePath: `${window.location.pathname || ''}${window.location.search || ''}${window.location.hash || ''}`
+      });
+      try { localStorage.setItem(ACTIVE_PUSH_TOUCH_KEY, String(Date.now())); } catch(_){}
+      return Object.assign({ touched:!!out?.ok }, out || {});
     } catch(err) {
       return { touched:false, reason:(err && err.message) || 'touch-failed' };
     }
@@ -232,78 +226,85 @@
 
   async function queueBackendTestPush(){
     try {
-      if (window.GEJAST_PUSH_CONTRACT && window.GEJAST_PUSH_CONTRACT.queueSelfTest) {
-        const payload = await window.GEJAST_PUSH_CONTRACT.queueSelfTest();
-        return { queued:true, payload };
-      }
-      return { queued:false, reason:'missing-push-contract' };
+      const runtime = window.GEJAST_PUSH_RUNTIME;
+      if (!runtime || typeof runtime.queueSelfTest !== 'function') return { queued:false, reason:'missing-push-runtime' };
+      const payload = await runtime.queueSelfTest();
+      return Object.assign({ queued: !!payload?.ok }, payload || {});
     } catch(err) {
       return { queued:false, reason:(err && err.message) || 'queue-failed' };
     }
   }
 
   async function syncPushSubscriptionToBackend(subscription, extras={}){
-    const token = playerToken();
-    if (!subscription || !token) return { synced:false, reason:'missing-context' };
     try {
-      const json = subscription.toJSON ? subscription.toJSON() : subscription;
-      const payload = window.GEJAST_PUSH_CONTRACT ? await window.GEJAST_PUSH_CONTRACT.syncPresence({
-        endpoint: json.endpoint || subscription.endpoint || '',
-        p256dh: json.keys?.p256dh || extras.p256dh || '',
-        auth: json.keys?.auth || extras.auth || '',
-        pagePath: `${window.location.pathname || ''}${window.location.search || ''}${window.location.hash || ''}`,
-        permission: notificationPermission(),
-        standalone: isStandalone()
-      }) : null;
-      return { synced:!!payload, payload: payload || null };
+      const runtime = window.GEJAST_PUSH_RUNTIME;
+      if (!runtime || typeof runtime.syncSubscriptionAndPresence !== 'function') return { synced:false, reason:'missing-push-runtime' };
+      const out = await runtime.syncSubscriptionAndPresence({
+        lat: extras.lat ?? lastPos?.coords?.latitude ?? null,
+        lng: extras.lng ?? lastPos?.coords?.longitude ?? null,
+        accuracy: extras.accuracy ?? lastPos?.coords?.accuracy ?? null,
+        pagePath: `${window.location.pathname || ''}${window.location.search || ''}${window.location.hash || ''}`
+      });
+      return { synced: !!out?.ok, payload: out || null, reason: out?.code || '' };
     } catch(err) {
       return { synced:false, reason:(err && err.message) || 'sync-failed' };
     }
   }
 
   async function ensurePushSubscription(){
-    const cfg = window.GEJAST_CONFIG || {};
-    const vapid = String(cfg.WEB_PUSH_PUBLIC_KEY || '').trim();
-    if (!vapid || !('PushManager' in window)) return { supported: false, reason: vapid ? 'push-unavailable' : 'no-vapid-key', subscription: null };
-    const reg = await registerNotificationWorker();
-    if (!reg || !reg.pushManager) return { supported: false, reason:'sw-unavailable', subscription:null };
     try {
-      let sub = await reg.pushManager.getSubscription();
-      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlBase64ToUint8Array(vapid) });
-      const sync = await syncPushSubscriptionToBackend(sub);
-      await touchActivePushPresence(sub, true);
+      const runtime = window.GEJAST_PUSH_RUNTIME;
+      if (!runtime || typeof runtime.syncSubscriptionAndPresence !== 'function') return { supported:false, reason:'missing-push-runtime', subscription:null };
+      const out = await runtime.syncSubscriptionAndPresence({
+        lat: lastPos?.coords?.latitude || null,
+        lng: lastPos?.coords?.longitude || null,
+        accuracy: lastPos?.coords?.accuracy || null,
+        pagePath: `${window.location.pathname || ''}${window.location.search || ''}${window.location.hash || ''}`
+      });
       ensureActivePushPresenceHeartbeat();
-      return { supported:true, reason:'ok', subscription:sub, backendSync:sync };
+      return { supported: true, reason: out?.code || 'ok', subscription: out?.subscription || null, backendSync:{ synced: !!out?.ok, payload: out || null } };
     } catch(err) {
       return { supported:false, reason:(err && err.message) || 'subscribe-failed', subscription:null };
     }
   }
   async function getNotificationDiagnostics(){
-    const supported = notificationSupported();
-    const permission = notificationPermission();
-    let workerReady = false;
-    let pushSupported = false;
-    let subscribed = false;
-    let pushReason = '';
     try {
-      if (supported) {
-        const reg = await registerNotificationWorker();
-        workerReady = !!reg;
-        pushSupported = !!(reg && reg.pushManager && 'PushManager' in window);
-        if (pushSupported) {
-          const sub = await reg.pushManager.getSubscription();
-          subscribed = !!sub;
-        }
+      const runtime = window.GEJAST_PUSH_RUNTIME;
+      if (!runtime || typeof runtime.getDiagnostics !== 'function') {
+        const fallback = { supported:notificationSupported(), permission:notificationPermission(), workerReady:false, pushSupported:false, subscribed:false, secure:!!window.isSecureContext, visibility:document.visibilityState, userAgent:navigator.userAgent || '', pushReason:'missing-push-runtime', backendSync:{synced:false, reason:'missing-push-runtime'}, backendTest:{queued:false, reason:'missing-push-runtime'}, presenceTouch:{touched:false, reason:'missing-push-runtime'}, standalone:isStandalone() };
+        fallback.setupState = notificationSetupState(fallback);
+        notifyStateCache = fallback;
+        announce('gejast:notification-state', fallback);
+        return fallback;
       }
-    } catch(err) { pushReason = (err && err.message) || ''; }
-    const backendSync = (supported && permission==='granted' && subscribed) ? await (async()=>{ try{ const reg=await registerNotificationWorker(); const sub=reg&&reg.pushManager?await reg.pushManager.getSubscription():null; return sub ? await syncPushSubscriptionToBackend(sub) : {synced:false, reason:'no-subscription'}; }catch(err){ return {synced:false, reason:(err&&err.message)||'backend-sync-failed'}; } })() : {synced:false, reason:'not-ready'};
-    const backendTest = (supported && permission==='granted' && subscribed) ? await queueBackendTestPush().catch((err)=>({queued:false, reason:(err&&err.message)||'queue-failed'})) : {queued:false, reason:'not-ready'};
-    const presenceTouch = (supported && permission==='granted' && subscribed) ? await touchActivePushPresence(null, true).catch((err)=>({touched:false, reason:(err&&err.message)||'touch-failed'})) : {touched:false, reason:'not-ready'};
-    const state = { supported, permission, workerReady, pushSupported, subscribed, secure: !!window.isSecureContext, visibility: document.visibilityState, userAgent: navigator.userAgent || '', pushReason, backendSync, backendTest, presenceTouch, standalone: !!((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true) };
-    state.setupState = notificationSetupState(state);
-    notifyStateCache = state;
-    announce('gejast:notification-state', state);
-    return state;
+      const diag = await runtime.getDiagnostics();
+      const state = {
+        supported: !!diag.notifications_supported,
+        permission: diag.permission_state || notificationPermission(),
+        workerReady: !!diag.service_worker_ready,
+        pushSupported: !!diag.notifications_supported,
+        subscribed: !!diag.subscription_exists,
+        secure: !!diag.secure_context,
+        visibility: document.visibilityState,
+        userAgent: navigator.userAgent || '',
+        pushReason: '',
+        backendSync: { synced: !!diag.subscription_synced, payload: diag.backend || null, reason: diag.subscription_synced ? '' : 'backend-sync-missing' },
+        backendTest: { queued:false, reason:'not-run' },
+        presenceTouch: { touched: !!diag.presence_ok, payload: diag.backend || null, reason: diag.presence_ok ? '' : 'presence-missing' },
+        standalone: !!diag.installed,
+        runtimeDiagnostics: diag
+      };
+      state.setupState = notificationSetupState(state);
+      notifyStateCache = state;
+      announce('gejast:notification-state', state);
+      return state;
+    } catch (err) {
+      const failed = { supported:notificationSupported(), permission:notificationPermission(), workerReady:false, pushSupported:false, subscribed:false, secure:!!window.isSecureContext, visibility:document.visibilityState, userAgent:navigator.userAgent || '', pushReason:(err && err.message) || 'diagnostics-failed', backendSync:{synced:false, reason:(err && err.message) || 'diagnostics-failed'}, backendTest:{queued:false, reason:'not-run'}, presenceTouch:{touched:false, reason:'diagnostics-failed'}, standalone:isStandalone() };
+      failed.setupState = notificationSetupState(failed);
+      notifyStateCache = failed;
+      announce('gejast:notification-state', failed);
+      return failed;
+    }
   }
 
   function notificationSetupState(state){
@@ -345,50 +346,53 @@
     return state;
   }
   async function requestNotificationAccess(){
-    if (!notificationSupported()) {
-      const rows = [
-        `<span class="muted">Deze browser ondersteunt webmeldingen hier niet goed of de site draait niet via https.</span>`,
-        `Secure context: ${window.isSecureContext ? 'ja' : 'nee'}`
-      ];
-      showDiagnostics('Meldingen niet beschikbaar', rows);
-      return { granted:false, reason:'unsupported' };
-    }
-    await registerNotificationWorker();
-    let permission = notificationPermission();
     try {
-      permission = await Notification.requestPermission();
-    } catch(_) {}
-    const state = await refreshNotificationButton();
-    if (permission === 'granted') {
-      const sub = await ensurePushSubscription();
+      const runtime = window.GEJAST_PUSH_RUNTIME;
+      if (!runtime || typeof runtime.requestPermissionAndSync !== 'function') {
+        showDiagnostics('Meldingen niet beschikbaar', ['gejast-push-runtime.js ontbreekt of is niet geladen.']);
+        return { granted:false, reason:'missing-push-runtime' };
+      }
+      const out = await runtime.requestPermissionAndSync({
+        lat: lastPos?.coords?.latitude || null,
+        lng: lastPos?.coords?.longitude || null,
+        accuracy: lastPos?.coords?.accuracy || null
+      });
       const updated = await refreshNotificationButton();
-      const queuedTest = sub.subscription ? await queueBackendTestPush() : { queued:false, reason:'no-subscription' };
-      await touchActivePushPresence(sub.subscription || null, true);
-      ensureActivePushPresenceHeartbeat();
+      const queuedTest = out?.ok ? await queueBackendTestPush() : { queued:false, reason:'not-ready' };
+      if (out?.ok) ensureActivePushPresenceHeartbeat();
+      const diag = updated.runtimeDiagnostics || null;
+      if (out?.ok) {
+        showDiagnostics('Meldingen opnieuw gevraagd', [
+          `Platform: ${platformName()}`,
+          `App-modus: ${updated.standalone ? 'thuisscherm-app' : 'browser-tab'}`,
+          `Setup-status: ${updated.setupState ? updated.setupState.label : 'onbekend'}`,
+          `Browsertoestemming: ${updated.permission}`,
+          `Service worker: ${updated.workerReady ? 'klaar' : 'niet klaar'}`,
+          `Push-abonnement: ${updated.subscribed ? 'actief' : 'niet actief'}`,
+          `Backend registratie: ${updated.backendSync && updated.backendSync.synced ? 'gelukt' : ((updated.backendSync && updated.backendSync.reason) || 'niet klaar')}`,
+          `Actieve doelgroep-heartbeat: ${updated.presenceTouch && updated.presenceTouch.touched ? 'verstuurd' : ((updated.presenceTouch && updated.presenceTouch.reason) || 'niet klaar')}`,
+          `Backend test-queue: ${queuedTest.queued ? 'klaargezet' : (queuedTest.reason || queuedTest.code || 'niet klaar')}`,
+          diag && diag.user_facing_state ? `Frontend pushstatus: ${diag.user_facing_state}` : '',
+          ...mobilePermissionHelp('notification', updated.permission)
+        ].filter(Boolean), [{ label:'Sluiten', alt:true }]);
+        return { granted:true, state:updated, subscription:{ subscription: out?.subscription || null, backendSync:updated.backendSync }, queuedTest, runtime:out };
+      }
+      const permission = out?.code === 'PERMISSION_DENIED' ? 'denied' : (out?.code === 'PERMISSION_DISMISSED' ? 'default' : updated.permission);
+      const actions=[];
+      if (permission === 'denied') actions.push({ label:'Instellingen uitleg', onClick:()=>showDiagnostics('Meldingen geblokkeerd', ['De browser laat geen nieuwe native prompt meer zien zolang meldingen voor deze site op geblokkeerd staan. Zet het handmatig weer aan in je browser/site-instellingen en druk daarna opnieuw op de belknop.'], [{label:'Sluiten', alt:true}]), keepOpen:false });
       showDiagnostics('Meldingen opnieuw gevraagd', [
         `Platform: ${platformName()}`,
-        `App-modus: ${updated.standalone ? 'thuisscherm-app' : 'browser-tab'}`,
-        `Setup-status: ${updated.setupState ? updated.setupState.label : 'onbekend'}`,
-        `Browsertoestemming: ${updated.permission}`,
-        `Service worker: ${updated.workerReady ? 'klaar' : 'niet klaar'}`,
-        `Push-abonnement: ${sub.subscription ? 'actief' : (sub.reason === 'no-vapid-key' ? 'mist publieke VAPID-sleutel in gejast-config.js' : 'niet actief')}`,
-        `Backend registratie: ${sub.backendSync && sub.backendSync.synced ? 'gelukt' : ((sub.backendSync && sub.backendSync.reason) || (updated.backendSync && updated.backendSync.reason) || 'niet klaar')}`,
-        `Actieve doelgroep-heartbeat: ${sub.subscription ? 'verstuurd' : 'geen abonnement actief'}`,
-        `Backend test-queue: ${queuedTest.queued ? 'klaargezet' : (queuedTest.reason === 'no-subscription' ? 'geen push-abonnement opgeslagen' : (queuedTest.reason || 'niet klaar'))}`,
-        ...mobilePermissionHelp('notification', updated.permission)
-      ], [{ label:'Sluiten', alt:true }]);
-      return { granted:true, state:updated, subscription:sub, queuedTest };
+        `Browsertoestemming: ${permission}`,
+        out?.code || 'toestemming niet verleend',
+        ...mobilePermissionHelp('notification', permission)
+      ], [{ label:'Sluiten', alt:true }, ...actions]);
+      return { granted:false, reason:out?.code || permission, state:updated, runtime:out };
+    } catch(err) {
+      showDiagnostics('Meldingen opnieuw gevraagd', [String((err && err.message) || err || 'Onbekende fout')], [{ label:'Sluiten', alt:true }]);
+      return { granted:false, reason:(err && err.message) || 'notification-failed' };
     }
-    const actions=[];
-    if (permission === 'denied') actions.push({ label:'Instellingen uitleg', onClick:()=>showDiagnostics('Meldingen geblokkeerd', ['De browser laat geen nieuwe native prompt meer zien zolang meldingen voor deze site op geblokkeerd staan. Zet het handmatig weer aan in je browser/site-instellingen en druk daarna opnieuw op de belknop.'], [{label:'Sluiten', alt:true}]), keepOpen:false });
-    showDiagnostics('Meldingen opnieuw gevraagd', [
-      `Platform: ${platformName()}`,
-      `Browsertoestemming: ${permission}`,
-      permission === 'denied' ? 'De browser heeft meldingen voor deze site geblokkeerd en toont daarom geen nieuwe native popup.' : 'De browser heeft de toestemmingsvraag niet vrijgegeven.',
-      ...mobilePermissionHelp('notification', permission)
-    ], [{ label:'Sluiten', alt:true }, ...actions]);
-    return { granted:false, reason:permission, state };
   }
+  
   async function showNotificationFromServiceWorker(title, options={}){
     if (!notificationSupported()) return false;
     try {
@@ -429,6 +433,15 @@
   function setButtonState(ready){ buttonsReadyState = !!ready; document.querySelectorAll('[data-gejast-geo-button]').forEach((btn)=>{ btn.classList.toggle('is-ready',!!ready); btn.classList.toggle('is-bad',!ready); btn.title = ready ? 'Geolocatie actief' : 'Geolocatie opnieuw proberen'; btn.setAttribute('aria-pressed', ready ? 'true' : 'false'); }); }
   ensureActivePushPresenceHeartbeat();
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', ()=>{ startActivePushPresenceHeartbeat(false); }, { once:true }); } else { startActivePushPresenceHeartbeat(false); }
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event)=>{
+      if (event?.data?.type === 'gejast-push-subscription-changed') {
+        syncPushSubscriptionToBackend(null, {}).catch(()=>{});
+        touchActivePushPresence(null, true).catch(()=>{});
+      }
+    });
+  }
+
   window.GEJAST_GEO = { cached, ensure, request, requestGeoAccess, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError, setButtonState, ensureCornerTools, notificationSupported, notificationPermission, registerNotificationWorker, ensurePushSubscription, syncPushSubscriptionToBackend, queueBackendTestPush, getNotificationDiagnostics, refreshNotificationButton, requestNotificationAccess, showNotificationFromServiceWorker, setNotificationButtonState, showDiagnostics, touchActivePushPresence, startActivePushPresenceHeartbeat, notificationSetupState };
   function init(){ if (!shouldExclude()) ensureCornerTools(); setButtonState(!!cached()); refreshNotificationButton().catch(()=>{}); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once:true }); else init();

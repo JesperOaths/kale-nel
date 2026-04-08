@@ -20,7 +20,7 @@ self.addEventListener('push', (event) => {
     tag: data.tag || 'gejast-push',
     icon: './logo.png',
     badge: './logo.png',
-    data: { url: target },
+    data: { url: target, jobId: data.jobId || null, traceId: data.traceId || null, kind: data.kind || 'runtime' },
     renotify: true,
     requireInteraction: !!data.requireInteraction,
     silent: false,
@@ -60,6 +60,8 @@ self.addEventListener('pushsubscriptionchange', (event) => {
       const appKey = GEJAST_VAPID_KEY ? urlBase64ToUint8Array(GEJAST_VAPID_KEY) : null;
       if (!self.registration.pushManager) return;
       await self.registration.pushManager.subscribe(appKey ? { userVisibleOnly:true, applicationServerKey: appKey } : { userVisibleOnly:true });
+      const clients = await self.clients.matchAll({ type:'window', includeUncontrolled:true });
+      await Promise.all(clients.map((client)=>client.postMessage({ type:'gejast-push-subscription-changed' })));
     } catch (_) {}
   })());
 });
