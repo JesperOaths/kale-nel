@@ -1,0 +1,8 @@
+GEJAST v352 fast steps
+
+1. Upload the changed web files from the v352 patch zip to the repo root.
+2. Make sure the new badge assets land under ./assets/badges/.
+3. Run gejast_v352_badge_system.sql in Supabase.
+4. Refresh the site and hard-refresh player/profiles pages.
+5. Test one player page and the profiles overview in both friends and family scope.
+6. Verify get_player_badge_facts_scoped returns data for at least one known player.

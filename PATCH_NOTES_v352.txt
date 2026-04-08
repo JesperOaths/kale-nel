@@ -1,0 +1,10 @@
+GEJAST v352
+
+- replaced the old placeholder badge system with the supplied registry-driven badge system
+- copied the supplied badge assets into ./assets/badges/
+- upgraded gejast-badges.js to use the supplied names, nicknames, rarity order, images and legacy label mapping
+- player.html now loads badge facts RPC data and shows visible name, original name, primary nickname, mini badges and a full badge gallery
+- profiles.html now shows compact nickname + mini badge summaries instead of relying on the old single badge pill
+- my_profile.html now links more directly to the public profile view
+- included v352 SQL file carrying the live/comeback badge facts layer
+- bumped visible version line from v352 to v352 across the repo
