@@ -66,6 +66,12 @@
       overflow-x: hidden;
     }
 
+
+    body.friends-scope .drinks-top-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    body.friends-scope .drinks-top-grid .ladder-card{min-height:210px;}
+    .page-link-live-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .page-link-live-row .live-pill{padding:6px 10px;font-size:11px;line-height:1}
+    .page-link-live-hint{font-size:13px;color:#5d5549;font-weight:700}
     body.boot-pending .main-card { opacity:0; transform:translateY(8px); pointer-events:none; }
     body.homepage-ready .main-card { transition:opacity .18s ease, transform .18s ease; }
 
@@ -657,7 +663,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v331';</script><script src="./gejast-config.js?v331"></script>
+  <script>window.GEJAST_PAGE_VERSION='v332';</script><script src="./gejast-config.js?v332"></script><script src="./gejast-scope.js?v332"></script><script src="./gejast-home-gate.js?v332"></script>
 </head>
 <body class="boot-pending homepage-ready"><div id="gejastTopRightToolsMount"></div>
   <div class="site-scene" aria-hidden="true">
@@ -852,7 +858,17 @@
       return isAdminViewer;
     }
     let currentHomepageState = null;
-    const HOMEPAGE_LADDER_ROUTES = { klaverjas:'./ladder.html?game=klaverjas', boerenbridge:'./ladder.html?game=boerenbridge', beerpong:'./ladder.html?game=beerpong' };
+    const CURRENT_SCOPE = (window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope()) || 'friends';
+    function scopedHref(base){ try{ const u=new URL(base, location.href); if(CURRENT_SCOPE==='family') u.searchParams.set('scope','family'); return u.pathname.split('/').pop()+u.search; }catch(_){ return base; } }
+    function homepageLadderRoute(game){ return scopedHref(`./ladder.html?game=${encodeURIComponent(game)}`); }
+    function applyScopeChrome(){
+      document.body.classList.toggle('friends-scope', CURRENT_SCOPE!=='family');
+      if(CURRENT_SCOPE!=='family') return;
+      try{ document.querySelector('.admin-badge')?.setAttribute('href', scopedHref('./admin.html')); }catch(_){}
+      try{ document.querySelector('.card-top-right a')?.setAttribute('href','./familie/index.html'); }catch(_){}
+      try{ document.querySelectorAll('a[href="./request.html"],a[href="./login.html"],a[href="./profiles.html"],a[href="./scorer.html"],a[href="./boerenbridge.html"],a[href="./admin.html"]').forEach((a)=>{ const href=a.getAttribute('href'); if(href) a.setAttribute('href', scopedHref(href)); }); }catch(_){}
+      try{ document.querySelectorAll('a[href="./beerpong.html"],a[href^="./drinks"]').forEach((a)=>{ a.style.display='none'; }); const drinksSections=[...document.querySelectorAll('.drinks-home-section,.drinks-home-top5-section')]; drinksSections.forEach((el)=>el.style.display='none'); document.querySelectorAll('.page-link-card').forEach((card)=>{ const txt=(card.textContent||'').toLowerCase(); if(txt.includes('beerpong')||txt.includes('drinks')) card.style.display='none'; }); }catch(_){}
+    }
 
     function setHomepageLiveState(state='standby', text='Stand-by') {
       const pill = document.getElementById('homeLivePill');
@@ -868,8 +884,10 @@
       return payload || {};
     }
 
-    function playerHref(name, game=''){ const qs = new URLSearchParams(); if (name) qs.set('player', name); if (game) qs.set('game', game); return `./player.html?${qs.toString()}`; }
+    function playerHref(name, game=''){ const qs = new URLSearchParams(); if (name) qs.set('player', name); if (game) qs.set('game', game); if (CURRENT_SCOPE==='family') qs.set('scope','family'); return `./player.html?${qs.toString()}`; }
     function displayPlayerName(row){ return String(row?.chosen_username || row?.public_display_name || row?.nickname || row?.display_name || row?.player_name || 'Onbekend'); }
+    const HOMEPAGE_BLOCKED_NAMES = new Set(['anna','spookinoza 2','evi','fons','caro','daan','bram']);
+    function isHomepageBlockedName(name){ return HOMEPAGE_BLOCKED_NAMES.has(String(name||'').trim().toLowerCase()); }
     function avatarMarkup(row){ const name = displayPlayerName(row); const src = String(row?.avatar_url || row?.photo_url || row?.profile_picture_url || '').trim(); return src ? `<div class="biggest-player-avatar"><img src="${src.replace(/"/g,'&quot;')}" alt="${name.replace(/"/g,'&quot;')}"></div>` : `<div class="biggest-player-avatar">${(name||'O').slice(0,1).toUpperCase()}</div>`; }
     function renderHomepageLadders(payload) {
       const root = document.getElementById('ladderGrid');
@@ -879,11 +897,11 @@
         { key:'klaverjas', label:'Klaverjassen', rows: source?.klaverjas || [] },
         { key:'boerenbridge', label:'Boerenbridge', rows: source?.boerenbridge || [] },
         { key:'beerpong', label:'Beerpong', rows: source?.beerpong || [] }
-      ];
+      ].filter((group)=>!(CURRENT_SCOPE==='family' && group.key==='beerpong'));
       root.innerHTML = groups.map((group) => {
         const rows = Array.isArray(group.rows) ? group.rows : [];
         const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><a class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800" href="${playerHref(String(row.player_name || row.display_name || ''), group.key)}" onclick="event.stopPropagation()">${String(row.player_name || row.display_name || 'Onbekend')}</a><div class="ladder-elo" style="color:var(--gold);font-weight:900">${Math.round(Number(row.elo_rating || row.rating || 1000))}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen ladderdata.</div>';
-        return `<article class="ladder-card" role="link" tabindex="0" data-route="${HOMEPAGE_LADDER_ROUTES[group.key]}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none">Top 5</span></div>${body}</article>`;
+        return `<article class="ladder-card" role="link" tabindex="0" data-route="${homepageLadderRoute(group.key)}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none">Top 5</span></div>${body}</article>`;
       }).join('');
       root.querySelectorAll('.ladder-card[data-route]').forEach((card)=>{
         const route = card.getAttribute('data-route');
@@ -893,14 +911,16 @@
     }
 
     async function fetchHomepageLadderFallback() {
-      const games = ['klaverjas','boerenbridge','beerpong'];
+      const games = CURRENT_SCOPE==='family' ? ['klaverjas','boerenbridge'] : ['klaverjas','boerenbridge','beerpong'];
       const out = {};
       for (const game of games) {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_ladder_page`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ game_key: game }) });
+        const endpoint = game==='beerpong' ? 'get_public_ladder_page' : 'get_public_ladder_page_scoped';
+        const body = game==='beerpong' ? { game_key: game } : { game_key: game, site_scope_input: CURRENT_SCOPE };
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${endpoint}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(body) });
         const data = await parseResponse(res);
         const payload = (Array.isArray(data) ? data[0] : data) || {};
-        const source = payload.get_public_ladder_page || payload;
-        out[game] = Array.isArray(source?.ladder) ? source.ladder.slice(0,5) : [];
+        const source = payload.get_public_ladder_page_scoped || payload.get_public_ladder_page || payload;
+        out[game] = Array.isArray(source?.ladder) ? source.ladder.filter((row)=>!isHomepageBlockedName(row.player_name||row.display_name||'')).slice(0,5) : [];
       }
       return out;
     }
@@ -1634,6 +1654,7 @@ async function castExtraPollVote(desired_status) {
     document.getElementById('drinksNoBtn').addEventListener('click', () => handleExtraPollVote('nee'));
     document.getElementById('yesBtn').addEventListener('click', () => handleVote('ja'));
     document.getElementById('noBtn').addEventListener('click', () => handleVote('nee'));
+    applyScopeChrome();
     wireProtectedDrinksLinks();
     bootHomepage();
     setInterval(loadDrinksHomeTop5, 5000);
@@ -1714,5 +1735,5 @@ async function castExtraPollVote(desired_status) {
 
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v331"></script><script src="./gejast-geo.js?v331"></script></body>
+<script src="./drinks-verify-float.js?v332"></script><script src="./gejast-geo.js?v332"></script></body>
 </html>
