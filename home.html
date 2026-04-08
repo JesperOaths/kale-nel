@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <title>GEJAST Home</title>
-  <script>window.GEJAST_PAGE_VERSION='v341';</script><script src="./gejast-config.js?v341"></script>
+  <script>window.GEJAST_PAGE_VERSION='v342';</script><script src="./gejast-config.js?v342"></script>
   <style>
     :root{--gold:#9a8241;--paper:rgba(255,251,245,.86);--line:rgba(0,0,0,.08);--ink:#1a1a1a;--muted:#6b6257}
     *{box-sizing:border-box} body{margin:0;min-height:100vh;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(rgba(244,240,232,.78),rgba(244,240,232,.78)), url('./site-bg-desktop.webp') center/cover no-repeat fixed;color:var(--ink);display:flex;align-items:center;justify-content:center;padding:20px}
@@ -32,63 +32,30 @@
       <a class="action primary" id="loginLink" href="./login.html"><strong>Login</strong><span>Open je spelersessie en ga direct door naar het beschermde deel van de site.</span></a>
     </div>
   </main>
-  <div class="site-credit-watermark" data-version-watermark>v341 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v342 · Made by Bruis</div>
   <script>
     (function(){
+      const cfg = window.GEJAST_CONFIG || {};
       const params = new URLSearchParams(location.search);
       const family = params.get('scope') === 'family';
-      const returnTo = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.sanitizeReturnTarget) ? window.GEJAST_CONFIG.sanitizeReturnTarget(params.get('return_to') || '', 'index.html') : (params.get('return_to') || 'index.html');
+      const returnTo = cfg.sanitizeReturnTarget ? cfg.sanitizeReturnTarget(params.get('return_to') || '', family ? 'index.html?scope=family' : 'index.html') : (params.get('return_to') || (family ? 'index.html?scope=family' : 'index.html'));
       const req = document.getElementById('requestLink');
       const log = document.getElementById('loginLink');
       const badge = document.getElementById('scopeBadge');
-      if (!family) badge.href='./home.html?scope=family';
       if (family){
-        const badge=document.getElementById('scopeBadge');
         badge.textContent='Familiesite';
         badge.href='./home.html';
-        req.href = './request.html?scope=family' + (returnTo ? `&return_to=${encodeURIComponent(returnTo)}` : '');
-        log.href = './login.html?scope=family' + (returnTo ? `&return_to=${encodeURIComponent(returnTo)}` : '');
+      } else {
+        badge.href='./home.html?scope=family';
       }
-      const cfg = window.GEJAST_CONFIG || {};
-      const keys = cfg.PLAYER_SESSION_KEYS || ['jas_session_token_v11','jas_session_token_v10'];
-      const activityKey = cfg.PLAYER_LAST_ACTIVITY_KEY || 'jas_last_activity_at_v1';
-      const idleMs = cfg.PLAYER_SESSION_IDLE_MS || (12*60*60*1000);
-      function getToken(){ for(const k of keys){ const v = localStorage.getItem(k) || sessionStorage.getItem(k); if(v) return v; } return ''; }
-      function last(){ const raw = localStorage.getItem(activityKey) || sessionStorage.getItem(activityKey) || ''; const n = Number(raw||0); return Number.isFinite(n)?n:0; }
-      function clear(){ for(const k of keys){ localStorage.removeItem(k); sessionStorage.removeItem(k);} localStorage.removeItem(activityKey); sessionStorage.removeItem(activityKey); }
-      const token = getToken(); const l = last(); if(token && l && (Date.now()-l)>idleMs) clear();
-      if(!family){
-        req.href = './request.html' + (returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : '');
-        log.href = './login.html' + (returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : '');
+      req.href = family ? `./request.html?scope=family&return_to=${encodeURIComponent(returnTo)}` : `./request.html?return_to=${encodeURIComponent(returnTo)}`;
+      log.href = family ? `./login.html?scope=family&return_to=${encodeURIComponent(returnTo)}` : `./login.html?return_to=${encodeURIComponent(returnTo)}`;
+      if (cfg.isPlayerSessionExpired && cfg.isPlayerSessionExpired()) cfg.clearPlayerSessionTokens && cfg.clearPlayerSessionTokens();
+      const token = cfg.getPlayerSessionToken ? cfg.getPlayerSessionToken() : '';
+      if (token){
+        cfg.touchPlayerActivity && cfg.touchPlayerActivity();
+        location.replace(returnTo.startsWith('./') ? returnTo : `./${returnTo}`);
       }
-      async function validateSessionNote(){
-        const note = document.getElementById('sessionStateNote');
-        const activeToken = getToken();
-        if(!activeToken || !note) return;
-        try{
-          const cfg = window.GEJAST_CONFIG || {};
-          const url = cfg.SUPABASE_URL || '';
-          const key = cfg.SUPABASE_PUBLISHABLE_KEY || '';
-          if(!url || !key) return;
-          const headers = { 'Content-Type':'application/json', apikey:key, Authorization:`Bearer ${key}`, Accept:'application/json' };
-          const res = await fetch(`${url}/rest/v1/rpc/get_public_state`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify({ session_token: activeToken }) });
-          if(!res.ok){ clear(); return; }
-          const data = await res.json().catch(()=>null);
-          if(data && (data.my_name || data.display_name || data.player_name)){
-            const target = returnTo || (family ? 'index.html?scope=family' : 'index.html');
-            note.style.display='block';
-            note.textContent = `Je bent al ingelogd als ${data.my_name || data.display_name || data.player_name}. Gebruik Login om veilig verder te gaan.`;
-            log.href = target.startsWith('./') ? target : `./${target}`;
-            log.querySelector('strong').textContent = 'Ga verder';
-            log.querySelector('span').textContent = 'Open direct het beschermde deel van de site met je huidige sessie.';
-          } else {
-            clear();
-          }
-        }catch(_){
-          clear();
-        }
-      }
-      validateSessionNote();
     })();
   </script>
 </body>

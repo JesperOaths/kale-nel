@@ -663,7 +663,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v338';</script><script src="./gejast-config.js?v338"></script><script src="./gejast-scope.js?v338"></script><script src="./gejast-home-gate.js?v338"></script>
+  <script>window.GEJAST_PAGE_VERSION='v342';</script><script src="./gejast-config.js?v342"></script><script src="./gejast-scope.js?v342"></script><script src="./gejast-home-gate.js?v342"></script>
 </head>
 <body class="boot-pending homepage-ready"><div id="gejastTopRightToolsMount"></div>
   <div class="site-scene" aria-hidden="true">
@@ -1443,8 +1443,9 @@ async function castExtraPollVote(desired_status) {
       return await parseResponse(res);
     }
     function goToLoginWithIntent(status, pollKey = 'gejast_donderdag') {
-      const url = new URL('./login.html', window.location.href);
-      url.searchParams.set('next', './index.html');
+      const cfg = window.GEJAST_CONFIG || {};
+      const target = cfg.buildLoginUrl ? cfg.buildLoginUrl(CURRENT_SCOPE==='family' ? 'index.html?scope=family' : 'index.html', CURRENT_SCOPE) : './login.html';
+      const url = new URL(target, window.location.href);
       url.searchParams.set('vote', status);
       url.searchParams.set('vote_poll', pollKey);
       window.location.href = url.toString();
@@ -1573,7 +1574,7 @@ async function castExtraPollVote(desired_status) {
     }
 
     function getPlayerSessionToken(){ return localStorage.getItem('jas_session_token_v11') || sessionStorage.getItem('jas_session_token_v11') || localStorage.getItem('jas_session_token_v10') || sessionStorage.getItem('jas_session_token_v10') || ''; }
-    function wireProtectedDrinksLinks(){ document.querySelectorAll('a[href="./drinks_add.html"]').forEach((link)=>{ if(link.dataset.bound==='1') return; link.dataset.bound='1'; link.addEventListener('click',(ev)=>{ if(getPlayerSessionToken()) return; ev.preventDefault(); window.location.href = './login.html?return_to=drinks_add'; }); }); }
+    function wireProtectedDrinksLinks(){ document.querySelectorAll('a[href="./drinks_add.html"]').forEach((link)=>{ if(link.dataset.bound==='1') return; link.dataset.bound='1'; link.addEventListener('click',(ev)=>{ if(getPlayerSessionToken()) return; ev.preventDefault(); const cfg = window.GEJAST_CONFIG || {}; window.location.href = cfg.buildHomeUrl ? cfg.buildHomeUrl('drinks_add.html', CURRENT_SCOPE) : './home.html?return_to=drinks_add.html'; }); }); }
 
     const homeEntryDefaults = {
       klaverjas:{ entryId:'homeKlaverjasEntry', labelId:'homeKlaverjasLabel', copyId:'homeKlaverjasCopy', href:'./scorer.html', label:'Klaverjas Invoeren', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' },
@@ -1725,5 +1726,5 @@ async function castExtraPollVote(desired_status) {
 
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v338"></script><script src="./gejast-geo.js?v338"></script></body>
+<script src="./drinks-verify-float.js?v342"></script><script src="./gejast-geo.js?v342"></script></body>
 </html>

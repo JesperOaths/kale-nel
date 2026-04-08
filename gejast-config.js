@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v341',
+    VERSION:'v342',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -75,7 +75,7 @@
     const value = String(raw || '').trim();
     if (!value) return String(fallback || '').trim();
     if (/^(?:[a-z]+:)?\/\//i.test(value)) return String(fallback || '').trim();
-    if (value.includes('..') || value.includes('\')) return String(fallback || '').trim();
+    if (value.includes('..') || value.includes('\\')) return String(fallback || '').trim();
     const normalized = value.replace(/^\.\//,'').replace(/^\/+/, '');
     return normalized || String(fallback || '').trim();
   }
@@ -89,17 +89,19 @@
       return sanitizeReturnTarget(fallback || 'index.html', 'index.html');
     }
   }
-  function buildHomeUrl(returnTo){
+  function buildHomeUrl(returnTo, scope){
+    const useScope = scope || inferRuntimeScope();
     const url = new URL('./home.html', window.location.href);
-    if (inferRuntimeScope()==='family') url.searchParams.set('scope', 'family');
-    const target = sanitizeReturnTarget(returnTo);
+    if (useScope==='family') url.searchParams.set('scope', 'family');
+    const target = sanitizeReturnTarget(returnTo, 'index.html');
     if (target) url.searchParams.set('return_to', target);
     return url.toString();
   }
-  function buildLoginUrl(returnTo){
+  function buildLoginUrl(returnTo, scope){
+    const useScope = scope || inferRuntimeScope();
     const url = new URL('./login.html', window.location.href);
-    if (inferRuntimeScope()==='family') url.searchParams.set('scope', 'family');
-    const target = sanitizeReturnTarget(returnTo);
+    if (useScope==='family') url.searchParams.set('scope', 'family');
+    const target = sanitizeReturnTarget(returnTo, 'index.html');
     if (target) url.searchParams.set('return_to', target);
     return url.toString();
   }

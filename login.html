@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inloggen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v341';</script>
+  <script>window.GEJAST_PAGE_VERSION='v342';</script>
   <style>
     :root { --gold: #9a8241; --dark-bg: #111; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.08); }
     * { box-sizing: border-box; }
@@ -48,7 +48,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/login.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v341"></script>
+  <script src="./gejast-config.js?v342"></script>
 </head>
 <body>
   <div class="site-scene">
@@ -101,6 +101,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const MAKE_WEBHOOK_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.MAKE_WEBHOOK_URL) || "";
     const SESSION_KEY = "jas_session_token_v11";
+    const SESSION_KEYS = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.PLAYER_SESSION_KEYS) || ["jas_session_token_v11","jas_session_token_v10"];
     window.localValidation = window.localValidation || function(){ return true; };
 
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json", Accept: "application/json" }; }
@@ -111,9 +112,9 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`);
       return data;
     }
-    function getSessionToken() { return localStorage.getItem(SESSION_KEY); }
-    function setSessionToken(token) { localStorage.setItem(SESSION_KEY, token); }
-    function clearSessionToken() { localStorage.removeItem(SESSION_KEY); }
+    function getSessionToken() { if(window.GEJAST_CONFIG && window.GEJAST_CONFIG.getPlayerSessionToken) return window.GEJAST_CONFIG.getPlayerSessionToken(); for (const key of SESSION_KEYS){ const v=localStorage.getItem(key)||sessionStorage.getItem(key); if(v) return v; } return ""; }
+    function setSessionToken(token) { for (const key of SESSION_KEYS){ localStorage.removeItem(key); sessionStorage.removeItem(key); } localStorage.setItem(SESSION_KEY, token); sessionStorage.setItem(SESSION_KEY, token); }
+    function clearSessionToken() { if(window.GEJAST_CONFIG && window.GEJAST_CONFIG.clearPlayerSessionTokens) return window.GEJAST_CONFIG.clearPlayerSessionTokens(); for (const key of SESSION_KEYS){ localStorage.removeItem(key); sessionStorage.removeItem(key); } }
     function setStatus(message = '', tone = 'info') {
       const box = document.getElementById('statusBox');
       if (!message) { box.className = 'status'; box.textContent = ''; return; }
@@ -149,7 +150,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       input.value = cleanNames.includes(current) ? current : '';
       if (resetInput) resetInput.value = cleanNames.includes(resetCurrent) ? resetCurrent : (cleanNames.includes(input.value) ? input.value : '');
     }
-    function nextUrl() { const params = new URLSearchParams(window.location.search); const cfg = window.GEJAST_CONFIG || {}; const raw = params.get('return_to') || params.get('next') || './index.html'; const clean = cfg.sanitizeReturnTarget ? cfg.sanitizeReturnTarget(raw, 'index.html') : raw; return clean.startsWith('./') ? clean : `./${clean}`; }
+    function targetUrl() { const params = new URLSearchParams(window.location.search); const cfg = window.GEJAST_CONFIG || {}; const raw = params.get('return_to') || params.get('next') || (params.get('scope')==='family' ? 'index.html?scope=family' : 'index.html'); const clean = cfg.sanitizeReturnTarget ? cfg.sanitizeReturnTarget(raw, params.get('scope')==='family' ? 'index.html?scope=family' : 'index.html') : raw; return clean.startsWith('./') ? clean : `./${clean}`; }
     function pendingVote() { return new URLSearchParams(window.location.search).get('vote') || ''; }
     function friendlyMessage(msg) {
       const raw = String(msg || '');
@@ -334,7 +335,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         setSessionToken(data.session_token);
         try{ window.GEJAST_CONFIG && window.GEJAST_CONFIG.touchPlayerActivity && window.GEJAST_CONFIG.touchPlayerActivity(); }catch(_){ }
         if (pendingVote()) await castVote(pendingVote());
-        window.location.href = nextUrl();
+        window.location.href = targetUrl();
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Er ging iets mis';
         setStatus(friendlyMessage(msg), 'warn');
@@ -398,7 +399,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     load();
   </script>
 
-  <div class="site-credit-watermark" data-version-watermark>v341 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v342 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
