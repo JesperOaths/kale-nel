@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v342',
+    VERSION:'v343',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -92,16 +92,16 @@
   function buildHomeUrl(returnTo, scope){
     const useScope = scope || inferRuntimeScope();
     const url = new URL('./home.html', window.location.href);
-    if (useScope==='family') url.searchParams.set('scope', 'family');
-    const target = sanitizeReturnTarget(returnTo, 'index.html');
+    if (useScope === 'family') url.searchParams.set('scope', 'family');
+    const target = sanitizeReturnTarget(returnTo, useScope === 'family' ? 'index.html?scope=family' : 'index.html');
     if (target) url.searchParams.set('return_to', target);
     return url.toString();
   }
   function buildLoginUrl(returnTo, scope){
     const useScope = scope || inferRuntimeScope();
     const url = new URL('./login.html', window.location.href);
-    if (useScope==='family') url.searchParams.set('scope', 'family');
-    const target = sanitizeReturnTarget(returnTo, 'index.html');
+    if (useScope === 'family') url.searchParams.set('scope', 'family');
+    const target = sanitizeReturnTarget(returnTo, useScope === 'family' ? 'index.html?scope=family' : 'index.html');
     if (target) url.searchParams.set('return_to', target);
     return url.toString();
   }

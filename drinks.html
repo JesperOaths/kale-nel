@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <title>Drinks overzicht</title>
-  <script>window.GEJAST_PAGE_VERSION='v338';</script><script src="./gejast-config.js?v338"></script>
+  <script>window.GEJAST_PAGE_VERSION='v343';</script><script src="./gejast-config.js?v343"></script>
   <style>
     :root{
       --bg:#ece7dc;--card:rgba(255,251,245,.94);--paper:#fffdfa;--line:rgba(54,40,20,.08);--line-strong:rgba(54,40,20,.14);
@@ -41,8 +41,8 @@
     @media(max-width:1180px){.metric-strip,.grid.quad{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.two,.grid.three{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.hero-tools{justify-content:flex-start}}
     @media(max-width:760px){body{padding:12px}.shell{padding:18px;border-radius:24px}.metric-strip,.grid.quad,.mini-grid{grid-template-columns:1fr}.bar-row{grid-template-columns:1fr}.item{padding:12px}.metric{min-height:auto}.hero-actions,.hero-tools{width:100%}}
   </style>
-  <script src="./gejast-home-gate.js?v338"></script>
-</head>
+  <script src="./gejast-home-gate.js?v343"></script>
+<script src="./gejast-fairness.js?v343"></script></head>
 <body>
   <div class="wrap">
     <div class="shell">
@@ -234,6 +234,20 @@ function mapHomepageTop5(payload){
       };
     }
 
+    const CANONICAL_SPEED_TYPES = [
+      { key:'bier', label:'1 Bak' },
+      { key:'2bakken', label:'2 Bakken' },
+      { key:'liter_bier', label:'Liter Bier' },
+      { key:'ice', label:'Ice' },
+      { key:'wijnfles', label:'Fles Wijn' }
+    ];
+    function mergeCanonicalSpeedSets(sets){
+      const existing = Array.isArray(sets) ? sets.filter((s)=>String(s.key||s.speed_type_key||'').toLowerCase()!=='shot') : [];
+      const byKey = new Map(existing.map((s)=>[String(s.key||s.speed_type_key||''), { key:String(s.key||s.speed_type_key||''), label:s.label||s.speed_type_label||String(s.key||s.speed_type_key||''), rows:Array.isArray(s.rows)?s.rows:[] }]));
+      CANONICAL_SPEED_TYPES.forEach((entry)=>{ if(!byKey.has(entry.key)) byKey.set(entry.key,{ key:entry.key, label:entry.label, rows:[] }); });
+      return CANONICAL_SPEED_TYPES.map((entry)=>byKey.get(entry.key)).filter(Boolean);
+    }
+
     function renderVerify(rows){
       const el=document.getElementById('verifyQueue');
       const list=Array.isArray(rows)?rows:[];
@@ -245,7 +259,7 @@ function mapHomepageTop5(payload){
       latestDashboardData.speed_leaderboards=Array.isArray(groups)?groups:[];
       const select=document.getElementById('speedTypeSelect');
       const el=document.getElementById('speedHighlights');
-      const sets=latestDashboardData.speed_leaderboards||[];
+      const sets=mergeCanonicalSpeedSets(latestDashboardData.speed_leaderboards||[]);
       if(!sets.length){ if(select) select.innerHTML='<option value="">Geen dranktypes</option>'; el.innerHTML='<div class="note">Nog geen speed-data.</div>'; return; }
       if(!currentSpeedType || !sets.some(s=>String(s.key||s.speed_type_key||'')===currentSpeedType)){ currentSpeedType=String(sets[0].key||sets[0].speed_type_key||''); }
       if(select){
@@ -390,7 +404,7 @@ async function loadStats(){
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./gejast-geo.js?v338"></script><script src="./drinks-verify-float.js?v338"></script>
-  <script src="./gejast-session-corner.js?v338"></script>
+  <script src="./gejast-geo.js?v343"></script><script src="./drinks-verify-float.js?v343"></script>
+  <script src="./gejast-session-corner.js?v343"></script>
 </body>
 </html>
