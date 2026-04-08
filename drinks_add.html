@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet" />
   <title>Alcohol toevoegen</title>
-  <script>window.GEJAST_PAGE_VERSION='v324';</script><script src="./gejast-config.js?v324"></script>
+  <script>window.GEJAST_PAGE_VERSION='v312';</script><script src="./gejast-config.js?v312"></script>
   <style>
     :root{
       --line:rgba(0,0,0,.09);
@@ -114,6 +113,8 @@
     .status.ok{color:var(--good)}
     .bottom-block{display:grid;gap:12px;margin-top:14px}
     .stats-card,.geo-card{background:#f9f5ee;border:1px solid var(--line);border-radius:18px;padding:13px 14px}
+    .geo-card.linklike{cursor:pointer;transition:transform .12s ease, box-shadow .12s ease,border-color .12s ease}
+    .geo-card.linklike:hover,.geo-card.linklike:focus-visible{transform:translateY(-1px);box-shadow:0 10px 24px rgba(0,0,0,.06);border-color:rgba(111,138,99,.5);outline:none}
     .stats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
     .metric{background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px 11px;min-height:84px;display:flex;flex-direction:column;justify-content:space-between}
     .metric .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:800;margin-bottom:10px}
@@ -137,7 +138,6 @@
       .metric .value{font-size:.96rem}
     }
   </style>
-  <script src="./gejast-home-gate.js?v324"></script>
 </head>
 <body>
   <div class="wrap">
@@ -146,7 +146,6 @@
         <div class="top-actions">
           <a class="btn alt" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</a>
           <a class="btn alt" href="./drinks.html">Overzicht</a>
-          <a class="btn alt" href="./drinks_pending.html">Verifiëren</a>
         </div>
         <div class="top-actions right gejast-corner-tools">
           <a href="./index.html" class="gejast-logo-chip"><img class="logo" src="./logo.png" alt="Logo" /></a>
@@ -169,7 +168,7 @@
         </section>
 
         <section class="panel recent">
-          <div class="row-top" style="margin-bottom:8px"><h2 style="margin:0">Recent bevestigd</h2><a class="action-btn verify" href="./drinks.html">Alles</a></div>
+          <div class="row-top" style="margin-bottom:8px"><h2 style="margin:0">Recent bevestigd</h2><a class="action-btn verify" href="./drinks_history.html">Alles</a></div>
           <div class="list" id="recentList"></div>
         </section>
       </div>
@@ -179,7 +178,7 @@
           <div class="stats-grid" id="sessionGrid"></div>
         </section>
 
-        <section class="geo-card">
+        <section class="geo-card linklike" id="verifyGeoCard" role="link" tabindex="0" aria-label="Open verificatiepagina">
           <div class="geo-copy compact">
             <strong>Locatie en verificatie</strong>
             <div id="geoMetaLine">Locatie niet actief.</div>
@@ -190,9 +189,9 @@
     </div>
   </div>
 
-  <div class="site-credit-watermark" data-version-watermark>v321 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v312 · Made by Bruis</div>
 
-  <script src="./gejast-geo.js?v321"></script><script src="./drinks-verify-float.js?v321"></script>
+  <script src="./gejast-geo.js?v312"></script><script src="./drinks-verify-float.js?v312"></script>
   <script>
   (function(){
     const cfg=window.GEJAST_CONFIG||{};
@@ -205,8 +204,14 @@
     const DRINK_LAYOUT_ORDER=['bier','2bakken','liter_bier','shot','ice','wijnfles'];
     function token(){ for(const k of SESSION_KEYS){ const v=localStorage.getItem(k)||sessionStorage.getItem(k); if(v) return v; } return ''; }
     function headers(){ return {'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${KEY}`,Accept:'application/json'}; }
+
+    const verifyGeoCard=document.getElementById('verifyGeoCard');
+    if(verifyGeoCard){
+      const goVerify=()=>{ window.location.href='./drinks.html#verifyPanel'; };
+      verifyGeoCard.addEventListener('click', goVerify);
+      verifyGeoCard.addEventListener('keydown',(ev)=>{ if(ev.key==='Enter' || ev.key===' '){ ev.preventDefault(); goVerify(); } });
+    }
     async function parse(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch{ throw new Error(t||`HTTP ${res.status}`); } if(!res.ok) throw new Error(d?.message||d?.error||`HTTP ${res.status}`); return d; }
-    function goVerifyPage(){ window.location.href='./drinks_pending.html'; }
     function setStatus(msg='',tone=''){ statusLine.textContent=msg; statusLine.className=`status ${tone}`.trim(); }
     function setGeoButtonState(ready){ try{ window.GEJAST_GEO && window.GEJAST_GEO.setButtonState && window.GEJAST_GEO.setButtonState(!!ready); }catch(_){} }
     async function getPosition(forceFresh=false,userInitiated=false){ const geo = window.GEJAST_GEO; if(!geo) throw new Error('Geolocatie helper ontbreekt.'); const pos = await geo.ensure(forceFresh,{silent:!userInitiated&&!forceFresh}); if(pos) geo.startWatch(); return pos; }
@@ -303,9 +308,9 @@
         <div class="metric"><div class="label">Open aanvragen</div><div class="value">${pending}</div></div>
         <div class="metric"><div class="label">All-time</div><div class="value">${Number(totals.all_units||0).toFixed(1)}</div></div>`;
     }
-    function renderPending(rows){ const wrap=document.getElementById('pendingList'); wrap.innerHTML=(rows||[]).length ? (rows||[]).map(r=>`<div class="row"><div class="row-top"><div><strong>${r.player_name ? `${r.player_name} · ` : ''}${r.event_type_label||r.event_type_key||'Drankje'}</strong><div class="meta">${new Date(r.created_at||Date.now()).toLocaleString('nl-NL')} · ${Number(r.total_units||0).toFixed(1)} units</div><div class="meta">${locationLabel(r)}</div>${r.__kind!=='verify' ? `<div class="meta">Voor: ${(r.approver_names||[]).join(', ')||'—'} · Tegen: ${(r.rejector_names||[]).join(', ')||'—'}</div>` : ''}</div><span class="pill">${r.__kind==='verify'?'check':(r.status||'pending')}</span></div><div class="row-actions">${r.__kind==='verify' ? `${!r.viewer_vote_state?`<button class="action-btn verify" data-verify-id="${r.id}">Bevestigen</button><button class="action-btn cancel" data-reject-id="${r.id}">Afkeuren</button>`:`<span class="meta">Jij stemde al: ${r.viewer_vote_state==='approved'?'voor':'tegen'}</span>`}` : `<button class="action-btn cancel" data-cancel-id="${r.id}">Annuleren</button>`}</div></div>`).join('') : '<div class="muted">Nog geen open aanvragen of checks.</div>'; wrap.querySelectorAll('[data-cancel-id]').forEach(btn=>btn.addEventListener('click',()=>cancelDrink(btn.getAttribute('data-cancel-id')))); wrap.querySelectorAll('[data-verify-id]').forEach(btn=>btn.addEventListener('click',()=>verifyDrink(btn.getAttribute('data-verify-id'), true))); wrap.querySelectorAll('[data-reject-id]').forEach(btn=>btn.addEventListener('click',()=>verifyDrink(btn.getAttribute('data-reject-id'), false))); wrap.onclick=(!(rows||[]).length)?goVerifyPage:null; }
-    function renderVerify(rows){ const wrap=document.getElementById('verifyQueue'); wrap.innerHTML=(rows||[]).length ? (rows||[]).map(r=>`<div class="verify-card"><div class="row-top"><div><strong>${r.player_name} · ${r.event_type_label}</strong><div class="verify-distance">${Number(r.total_units||0).toFixed(1)} units${isSecretKingLike(r)?'':(r.distance_m!=null ? ` · ${Math.round(r.distance_m)}m afstand` : '')}</div><div class="meta">${locationLabel(r)}</div><div class="meta">Voor: ${(r.approver_names||[]).join(', ')||'—'} · Tegen: ${(r.rejector_names||[]).join(', ')||'—'}</div></div><span class="pill">check</span></div><div class="row-actions">${!r.viewer_vote_state?`<button class="action-btn verify" data-verify-id="${r.id}">Bevestigen</button><button class="action-btn cancel" data-reject-id="${r.id}">Afkeuren</button>`:`<span class="meta">Jij stemde al: ${r.viewer_vote_state==='approved'?'voor':'tegen'}</span>`}</div></div>`).join('') : '<div class="muted">Nog geen verificaties in de buurt.</div>'; wrap.querySelectorAll('[data-verify-id]').forEach(btn=>btn.addEventListener('click',()=>verifyDrink(btn.getAttribute('data-verify-id'), true))); wrap.querySelectorAll('[data-reject-id]').forEach(btn=>btn.addEventListener('click',()=>verifyDrink(btn.getAttribute('data-reject-id'), false))); wrap.onclick=(!(rows||[]).length)?goVerifyPage:null; }
-    function renderRecent(rows){ const wrap=document.getElementById('recentList'); const items=(rows||[]).slice(0,5); wrap.innerHTML=items.length ? items.map(r=>`<a class="row clean" href="./drinks.html"><div class="row-top"><div><strong>${r.player_name} · ${r.event_type_label}</strong><div class="meta">${new Date(r.verified_at||r.created_at).toLocaleString('nl-NL')} · ${Number(r.total_units||0).toFixed(1)} units</div><div class="meta">${locationLabel(r)}</div><div class="meta">Bevestigd door ${r.verifier_names?.join(', ')||'—'}</div></div><span class="pill">ok</span></div></a>`).join('') : '<div class="muted">Nog geen bevestigde drankjes.</div>'; }
+    function renderPending(rows){ const wrap=document.getElementById('pendingList'); wrap.innerHTML=(rows||[]).length ? (rows||[]).map(r=>`<div class="row"><div class="row-top"><div><strong>${r.player_name ? `${r.player_name} · ` : ''}${r.event_type_label||r.event_type_key||'Drankje'}</strong><div class="meta">${new Date(r.created_at||Date.now()).toLocaleString('nl-NL')} · ${Number(r.total_units||0).toFixed(1)} units</div><div class="meta">${locationLabel(r)}</div>${r.__kind!=='verify' ? `<div class="meta">Voor: ${(r.approver_names||[]).join(', ')||'—'} · Tegen: ${(r.rejector_names||[]).join(', ')||'—'}</div>` : ''}</div><span class="pill">${r.__kind==='verify'?'check':(r.status||'pending')}</span></div><div class="row-actions">${r.__kind==='verify' ? `${!r.viewer_vote_state?`<button class="action-btn verify" data-verify-id="${r.id}">Bevestigen</button><button class="action-btn cancel" data-reject-id="${r.id}">Afkeuren</button>`:`<span class="meta">Jij stemde al: ${r.viewer_vote_state==='approved'?'voor':'tegen'}</span>`}` : `<button class="action-btn cancel" data-cancel-id="${r.id}">Annuleren</button>`}</div></div>`).join('') : '<div class="muted">Nog geen open aanvragen of checks.</div>'; wrap.querySelectorAll('[data-cancel-id]').forEach(btn=>btn.addEventListener('click',()=>cancelDrink(btn.getAttribute('data-cancel-id')))); wrap.querySelectorAll('[data-verify-id]').forEach(btn=>btn.addEventListener('click',()=>verifyDrink(btn.getAttribute('data-verify-id'), true))); wrap.querySelectorAll('[data-reject-id]').forEach(btn=>btn.addEventListener('click',()=>verifyDrink(btn.getAttribute('data-reject-id'), false))); }
+    function renderVerify(rows){ const wrap=document.getElementById('verifyQueue'); wrap.innerHTML=(rows||[]).length ? (rows||[]).map(r=>`<div class="verify-card"><div class="row-top"><div><strong>${r.player_name} · ${r.event_type_label}</strong><div class="verify-distance">${Number(r.total_units||0).toFixed(1)} units${isSecretKingLike(r)?'':(r.distance_m!=null ? ` · ${Math.round(r.distance_m)}m afstand` : '')}</div><div class="meta">${locationLabel(r)}</div><div class="meta">Voor: ${(r.approver_names||[]).join(', ')||'—'} · Tegen: ${(r.rejector_names||[]).join(', ')||'—'}</div></div><span class="pill">check</span></div><div class="row-actions">${!r.viewer_vote_state?`<button class="action-btn verify" data-verify-id="${r.id}">Bevestigen</button><button class="action-btn cancel" data-reject-id="${r.id}">Afkeuren</button>`:`<span class="meta">Jij stemde al: ${r.viewer_vote_state==='approved'?'voor':'tegen'}</span>`}</div></div>`).join('') : '<div class="muted">Nog geen verificaties in de buurt.</div>'; wrap.querySelectorAll('[data-verify-id]').forEach(btn=>btn.addEventListener('click',()=>verifyDrink(btn.getAttribute('data-verify-id'), true))); wrap.querySelectorAll('[data-reject-id]').forEach(btn=>btn.addEventListener('click',()=>verifyDrink(btn.getAttribute('data-reject-id'), false))); }
+    function renderRecent(rows){ const wrap=document.getElementById('recentList'); const items=(rows||[]).slice(0,5); wrap.innerHTML=items.length ? items.map(r=>`<a class="row clean" href="./drinks_history.html"><div class="row-top"><div><strong>${r.player_name} · ${r.event_type_label}</strong><div class="meta">${new Date(r.verified_at||r.created_at).toLocaleString('nl-NL')} · ${Number(r.total_units||0).toFixed(1)} units</div><div class="meta">${locationLabel(r)}</div><div class="meta">Bevestigd door ${r.verifier_names?.join(', ')||'—'}</div></div><span class="pill">ok</span></div></a>`).join('') : '<div class="muted">Nog geen bevestigde drankjes.</div>'; }
     async function loadPage(forceFresh=false,userInitiated=false){ try{ if(window.GEJAST_CONFIG && !window.GEJAST_CONFIG.ensurePlayerSessionOrRedirect('drinks_add')) return; const pos=(forceFresh||!lastPosition)?await getPosition(forceFresh,userInitiated):lastPosition; if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); const usePos=lastPosition||pos; const payload={session_token:token(),viewer_lat:usePos?usePos.coords.latitude:null,viewer_lng:usePos?usePos.coords.longitude:null}; const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:headers(),body:JSON.stringify(payload)}); const raw=await parse(res); const data=raw?.get_drinks_page_public||raw||{};
         try{
           const extraRes=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_all_pending_drink_event_verifications_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token()})});
@@ -376,6 +381,5 @@
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./gejast-session-corner.js?v324"></script>
 </body>
 </html>

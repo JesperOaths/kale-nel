@@ -1,21 +1,80 @@
-<!DOCTYPE html><html lang='nl'><head><meta charset='UTF-8'/><meta name='robots' content='noindex,nofollow'/><meta name='viewport' content='width=device-width, initial-scale=1.0'/><title>Klaverjas LIVE</title><script>window.GEJAST_PAGE_VERSION='v322';</script><script src='./gejast-config.js?v322'></script><script defer src='./gejast-home-gate.js'></script><style>
-    :root{--bg:#f6f2ea;--paper:rgba(255,255,255,.95);--ink:#17130f;--muted:#6d665b;--line:rgba(0,0,0,.08);--gold:#9a8241;--red:#d82c2c;}
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Klaverjas live</title>
+  <script>window.GEJAST_PAGE_VERSION='v312';</script>
+  <script src="./gejast-config.js?v312"></script>
+  <style>
+    :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241}
     *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--ink);background:linear-gradient(rgba(247,244,238,.86),rgba(247,244,238,.86)),url('./wordtergejast.png') center/cover fixed no-repeat;}
-    .page{max-width:1100px;margin:0 auto;padding:18px 14px 90px}
-    .shell{background:rgba(255,251,245,.88);border:1px solid var(--line);border-radius:28px;padding:18px;box-shadow:0 18px 40px rgba(0,0,0,.10)}
-    .topbar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
-    .nav{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .pill,.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;text-decoration:none;border:1px solid rgba(0,0,0,.08);background:#fff;color:#111;padding:10px 14px;font-weight:800}
-    .live-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.08em;border:1px solid rgba(216,44,44,.28);background:rgba(255,236,236,.95);color:#7e1111}
-    .live-pill::before{content:'';width:9px;height:9px;border-radius:50%;background:#d82c2c;animation:livePulse 1.2s infinite}
-    @keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(216,44,44,.35)}70%{box-shadow:0 0 0 10px rgba(216,44,44,0)}100%{box-shadow:0 0 0 0 rgba(216,44,44,0)}}
-    .muted{color:var(--muted)} .grid{display:grid;gap:14px} .cards{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
-    .card{background:var(--paper);border:1px solid var(--line);border-radius:22px;padding:16px;box-shadow:0 8px 20px rgba(0,0,0,.05)} .card h3{margin:0 0 8px;font-size:18px}
-    .meta{font-size:13px;color:var(--muted);line-height:1.5} .table-wrap{overflow:auto;background:var(--paper);border:1px solid var(--line);border-radius:22px;padding:10px}
-    table{width:100%;border-collapse:collapse;min-width:760px} th,td{padding:10px 12px;border-bottom:1px solid rgba(0,0,0,.06);text-align:left;vertical-align:top}
-    th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)} tr:last-child td{border-bottom:0}
-    .hero h1{margin:0;font-size:clamp(1.8rem,4vw,2.8rem);letter-spacing:-.04em} .score-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:14px}
-    .score-box{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px} .score-box .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800} .score-box .value{margin-top:6px;font-size:28px;font-weight:900}
-    .list-link{display:block;margin-top:12px;color:inherit;text-decoration:none;font-weight:800}
-</style></head><body><main class='page'><section class='shell hero'><div class='topbar'><div class='nav'><a class='pill' id='backHome' href='./index.html'>← Home</a><a class='pill' href='./scorer.html'>Klaverjas invoeren</a></div><div class='live-pill'>LIVE</div></div><h1>Klaverjas LIVE</h1><p class='muted'>Lees live mee met lopende scoreformulieren. Deze pagina is alleen lezen en verstuurt geen invoer terug.</p><div id='status' class='meta' style='margin-top:10px'></div></section><section class='shell' style='margin-top:14px'><div id='content' class='grid'></div></section></main><div class='site-credit-watermark' data-version-watermark></div><script>(function(){const cfg=window.GEJAST_CONFIG||{};const SUPABASE_URL=cfg.SUPABASE_URL||'';const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';const qs=new URLSearchParams(location.search);const scope=qs.get('scope')==='family'||(location.pathname||'').includes('/familie/')?'family':'friends';const clientMatchId=qs.get('client_match_id')||'';const statusEl=document.getElementById('status');const content=document.getElementById('content');if(scope==='family')document.getElementById('backHome').href='./index.html?scope=family';function headers(){return{apikey:KEY,Authorization:`Bearer ${KEY}`,'Content-Type':'application/json',Accept:'application/json'}}function token(){return cfg.getPlayerSessionToken?cfg.getPlayerSessionToken():''}function esc(v){return String(v??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}function norm(v){return String(v||'').trim().toLowerCase()}function currentPlayerName(){return String((document.getElementById('playerSessionCornerName')||{}).textContent||'').trim()}async function parseResponse(res){const txt=await res.text();let data=null;try{data=txt?JSON.parse(txt):null}catch(_){throw new Error(txt||`HTTP ${res.status}`)}if(!res.ok)throw new Error(data?.message||data?.error||`HTTP ${res.status}`);return data}async function loadMatches(){const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_live_match_summaries_scoped`,{method:'POST',mode:'cors',cache:'no-store',headers:headers(),body:JSON.stringify({session_token:token(),game_type_input:'klaverjas',site_scope_input:scope,client_match_id_input:clientMatchId||null})});const raw=await parseResponse(res);const payload=raw?.get_live_match_summaries_scoped||raw||{};return { viewer_name:String(payload?.viewer_name||''), matches:Array.isArray(payload?.matches)?payload.matches:(Array.isArray(payload)?payload:[]) }}function participantNames(match){const p=match?.participants||match?.summary_payload?.participants||match?.summary_payload?.players||[];return Array.isArray(p)?p.map(x=>String(x||'').trim()).filter(Boolean):[]}function hostName(match){return String(match?.summary_payload?.submitter_meta?.submitted_by_name||'').trim()}function buildMatchLink(id){const u=new URL('./klaverjas_live.html',location.href);u.searchParams.set('client_match_id',id);if(scope==='family')u.searchParams.set('scope','family');return u.pathname.split('/').pop()+u.search}function renderList(matches){if(!matches.length){content.innerHTML='<div class="card"><h3>Geen live klaverjaspotjes</h3><div class="meta">Zodra een lopend scoreformulier rondes opslaat, verschijnt het hier automatisch.</div></div>';return}content.innerHTML=`<div class="grid cards">${matches.map(match=>`<article class="card"><h3>${esc((participantNames(match).join(' · '))||'Lopend potje')}</h3><div class="meta">Match: ${esc(match.client_match_id||'—')}<br>Host: ${esc(hostName(match)||'onbekend')}<br>Laatst bijgewerkt: ${esc(match.updated_at||match.created_at||'—')}</div><a class="list-link" href="${buildMatchLink(match.client_match_id)}">Bekijk live scoreformulier →</a></article>`).join('')}</div>`}function renderMatch(match){const payload=match?.summary_payload||{};const live=payload.live_state||{};const players=Array.isArray(live.players)?live.players:participantNames(match);const rounds=Array.isArray(live.rounds)?live.rounds:(Array.isArray(payload.rounds)?payload.rounds:[]);const totals=payload.totals||{wij:live.w||0,zij:live.z||0};const rows=rounds.length?rounds.map((round,idx)=>`<tr><td>${esc(round.round||round.index||idx+1)}</td><td>${esc(round.contractLabel||round.specialType||round.suit||'—')}</td><td>${esc(round.team||'—')}</td><td>${esc(round.fw??'—')} / ${esc(round.fz??'—')}</td><td>${esc(round.rw??'—')} / ${esc(round.rz??'—')}</td><td>${esc(round.dealer||'—')}</td></tr>`).join(''):'<tr><td colspan="6">Nog geen gespeelde rondes.</td></tr>';content.innerHTML=`<div class="card"><h3>${esc(players.join(' · ')||'Klaverjas LIVE')}</h3><div class="meta">Match: ${esc(match.client_match_id||'—')} · Host: ${esc(hostName(match)||'onbekend')} · Laatste update: ${esc(match.updated_at||match.created_at||'—')}</div><div class="score-grid"><div class="score-box"><div class="label">Wij</div><div class="value">${esc(totals.wij??0)}</div></div><div class="score-box"><div class="label">Zij</div><div class="value">${esc(totals.zij??0)}</div></div><div class="score-box"><div class="label">Rondes</div><div class="value">${esc(rounds.length)}</div></div><div class="score-box"><div class="label">Deler nu</div><div class="value">${esc(rounds.length?(rounds[rounds.length-1].dealer||'—'):'—')}</div></div></div></div><div class="table-wrap"><table><thead><tr><th>Ronde</th><th>Contract</th><th>Ploeg</th><th>Tricks</th><th>Roem</th><th>Deler</th></tr></thead><tbody>${rows}</tbody></table></div>`}async function load(){try{const payload=await loadMatches();const matches=payload.matches||[];const myName=String(payload.viewer_name||'').trim()||currentPlayerName();if(!clientMatchId&&myName){const mine=matches.find(match=>participantNames(match).map(norm).includes(norm(myName))&&norm(hostName(match))!==norm(myName));if(mine?.client_match_id){location.replace(buildMatchLink(mine.client_match_id));return}}statusEl.textContent=`${matches.length} live klaverjaspot${matches.length===1?'':'jes'} gevonden.`;if(clientMatchId){const match=matches.find(m=>String(m.client_match_id||'')===clientMatchId);if(match||matches[0])renderMatch(match||matches[0]);else content.innerHTML='<div class="card"><h3>Potje niet gevonden</h3><div class="meta">Dit live scoreformulier is niet meer actief.</div></div>'}else renderList(matches)}catch(err){statusEl.textContent=err.message||'Kon live scoreformulier niet laden.';content.innerHTML='<div class="card"><h3>Live laden mislukt</h3><div class="meta">Probeer het zo nog eens.</div></div>'}}load();setInterval(load,6000)})();</script><script id='gejast-version-sync-inline'>(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel()}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true})}else{sync()}})();</script></body></html>
+    body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
+    .wrap{max-width:980px;margin:0 auto}.card{background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.7);border-radius:28px;padding:22px;box-shadow:0 20px 40px rgba(0,0,0,.08)}
+    .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800}
+    .muted{color:var(--muted)}.score{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:20px 0}.scorebox{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px}.scorebox span{display:block;font-size:12px;color:#8a7a55;text-transform:uppercase;letter-spacing:.08em}.scorebox strong{display:block;margin-top:8px;font-size:42px}
+    .panel{margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px}.round{padding:12px 0;border-top:1px solid rgba(0,0,0,.06)}.round:first-child{border-top:none}.teams{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}
+    @media(max-width:720px){body{padding:12px}.score,.teams{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="top">
+        <div>
+          <a class="btn" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</a>
+          <h1 style="margin:16px 0 6px">Klaverjas live</h1>
+          <div id="meta" class="muted">Live scoreblad wordt geladen…</div>
+        </div>
+        <a class="btn" href="./index.html">Home</a>
+      </div>
+      <div class="teams">
+        <div class="panel"><div class="muted">Wij</div><strong id="teamWij">—</strong></div>
+        <div class="panel"><div class="muted">Zij</div><strong id="teamZij">—</strong></div>
+      </div>
+      <div class="score">
+        <div class="scorebox"><span>Wij</span><strong id="scoreWij">0</strong></div>
+        <div class="scorebox"><span>Zij</span><strong id="scoreZij">0</strong></div>
+      </div>
+      <div class="panel"><h2 style="margin:0 0 8px">Samenvatting</h2><div id="recap" class="muted">Nog geen tekst.</div></div>
+      <div class="panel"><h2 style="margin:0 0 8px">Rondes</h2><div id="rounds" class="muted">Nog geen rondes geregistreerd.</div></div>
+    </div>
+  </div>
+  <div class="site-credit-watermark" data-version-watermark></div>
+  <script>
+  (()=>{
+    const cfg=window.GEJAST_CONFIG||{};
+    const url=cfg.SUPABASE_URL||'';
+    const key=cfg.SUPABASE_PUBLISHABLE_KEY||'';
+    const matchRef=new URLSearchParams(location.search).get('match_ref')||'';
+    function headers(){return{apikey:key,Authorization:`Bearer ${key}`,'Content-Type':'application/json',Accept:'application/json'}}
+    async function parse(res){const t=await res.text(); let d=null; try{d=t?JSON.parse(t):null}catch{throw new Error(t||`HTTP ${res.status}`)} if(!res.ok) throw new Error(d?.message||d?.error||`HTTP ${res.status}`); return d}
+    function esc(v){return String(v??'').replace(/[&<>"]/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
+    function render(data){
+      const item=data?.item||data||{};
+      const summary=item.summary||item.summary_payload||{};
+      const teams=summary.teams||{};
+      const rounds=Array.isArray(summary.rounds)?summary.rounds:[];
+      document.getElementById('meta').textContent=item.finished_at?`Afgerond op ${new Date(item.finished_at).toLocaleString('nl-NL')}`:`Live bijgewerkt om ${new Date(item.updated_at||Date.now()).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`;
+      document.getElementById('teamWij').textContent=(teams.wij||[]).join(' · ')||'—';
+      document.getElementById('teamZij').textContent=(teams.zij||[]).join(' · ')||'—';
+      document.getElementById('scoreWij').textContent=Number(summary.totals?.wij||0);
+      document.getElementById('scoreZij').textContent=Number(summary.totals?.zij||0);
+      document.getElementById('recap').textContent=summary.recap_text||'Nog geen samenvatting.';
+      document.getElementById('rounds').innerHTML=rounds.length?rounds.map((r,idx)=>`<div class="round"><strong>Ronde ${esc(r.round||idx+1)}</strong><div class="muted">${esc(r.contract?.team||'')} ${esc(r.contract?.bid||'')} ${esc(r.contract?.suit||'')}</div><div>Wij: ${Number(r.fw||0)} · Zij: ${Number(r.fz||0)}</div></div>`).join(''):'Nog geen rondes geregistreerd.';
+    }
+    async function load(){
+      if(!matchRef){ document.getElementById('meta').textContent='Geen match_ref meegegeven.'; return; }
+      try{
+        const res=await fetch(`${url}/rest/v1/rpc/get_live_match_summary_public`,{method:'POST',headers:headers(),body:JSON.stringify({game_type_input:'klaverjas',match_ref_input:matchRef})});
+        render(await parse(res));
+      }catch(err){ document.getElementById('meta').textContent=err.message||'Laden mislukt.'; }
+    }
+    load();
+    setInterval(load,5000);
+  })();
+  </script>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+</body>
+</html>

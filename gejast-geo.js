@@ -2,6 +2,7 @@
   const CACHE_KEY = 'gejast_geo_cache_v5';
   const ADDRESS_KEY = 'gejast_geo_address_cache_v1';
   const NOTIFY_LAST_KEY = 'gejast_notify_last_seen_v1';
+  const ACTIVE_PUSH_TOUCH_KEY = 'gejast_active_push_presence_touch_v1';
   const SESSION_KEYS = ['jas_session_token_v11','jas_session_token_v10'];
   let watchId = null;
   let lastPos = null;
@@ -153,7 +154,7 @@
   async function registerNotificationWorker(){
     if (!notificationSupported()) return null;
     try {
-      const reg = await navigator.serviceWorker.register('./gejast-sw.js?v321', { scope:'./' });
+      const reg = await navigator.serviceWorker.register(`./gejast-sw.js?${encodeURIComponent(window.GEJAST_PAGE_VERSION || 'v312')}`, { scope:'./' });
       return await navigator.serviceWorker.ready.catch(()=>reg);
     } catch(_) { return null; }
   }
@@ -165,6 +166,48 @@
     return output;
   }
 
+
+
+  async function touchActivePushPresence(subscription=null, force=false){
+    const cfg = window.GEJAST_CONFIG || {};
+    const token = playerToken();
+    if (!token || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY) return { touched:false, reason:'missing-context' };
+    const now = Date.now();
+    const last = Number(localStorage.getItem(ACTIVE_PUSH_TOUCH_KEY) || '0');
+    if (!force && last && (now - last) < 60000) return { touched:false, reason:'throttled' };
+    let sub = subscription;
+    try {
+      if (!sub && notificationSupported()) {
+        const reg = await registerNotificationWorker();
+        if (reg && reg.pushManager) sub = await reg.pushManager.getSubscription();
+      }
+      const json = sub && (sub.toJSON ? sub.toJSON() : sub);
+      const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/touch_active_web_push_presence`, {
+        method:'POST', headers: rpcHeaders(cfg.SUPABASE_PUBLISHABLE_KEY), body: JSON.stringify({
+          session_token: token,
+          endpoint_input: json?.endpoint || sub?.endpoint || '',
+          permission_input: notificationPermission(),
+          user_agent_input: navigator.userAgent || '',
+          platform_input: platformName()
+        })
+      });
+      await parseJson(res);
+      try { localStorage.setItem(ACTIVE_PUSH_TOUCH_KEY, String(now)); } catch(_){}
+      return { touched:true };
+    } catch(err) {
+      return { touched:false, reason:(err && err.message) || 'touch-failed' };
+    }
+  }
+  async function startActivePushPresenceHeartbeat(force=false){
+    try { await touchActivePushPresence(null, force); } catch(_){}
+  }
+  let activePushHeartbeatId = null;
+  function ensureActivePushPresenceHeartbeat(){
+    if (activePushHeartbeatId !== null) return;
+    activePushHeartbeatId = window.setInterval(()=>{ if (document.visibilityState === 'visible') startActivePushPresenceHeartbeat(false); }, 120000);
+    document.addEventListener('visibilitychange', ()=>{ if (document.visibilityState === 'visible') startActivePushPresenceHeartbeat(true); });
+    window.addEventListener('focus', ()=> startActivePushPresenceHeartbeat(true));
+  }
 
   async function requestGeoAccess(){
     try {
@@ -237,6 +280,8 @@
       let sub = await reg.pushManager.getSubscription();
       if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlBase64ToUint8Array(vapid) });
       const sync = await syncPushSubscriptionToBackend(sub);
+      await touchActivePushPresence(sub, true);
+      ensureActivePushPresenceHeartbeat();
       return { supported:true, reason:'ok', subscription:sub, backendSync:sync };
     } catch(err) {
       return { supported:false, reason:(err && err.message) || 'subscribe-failed', subscription:null };
@@ -305,16 +350,15 @@
     if (permission === 'granted') {
       const sub = await ensurePushSubscription();
       const updated = await refreshNotificationButton();
-      const localShown = await showNotificationFromServiceWorker('Gejast meldingstest', { body:'Lokale service-worker test vanaf dit toestel.', tag:'gejast-local-test', requireInteraction:false, data:{ url:'./index.html' } });
       const queuedTest = sub.subscription ? await queueBackendTestPush() : { queued:false, reason:'no-subscription' };
+      await touchActivePushPresence(sub.subscription || null, true);
+      ensureActivePushPresenceHeartbeat();
       showDiagnostics('Meldingen opnieuw gevraagd', [
         `Platform: ${platformName()}`,
         `Browsertoestemming: ${updated.permission}`,
         `Service worker: ${updated.workerReady ? 'klaar' : 'niet klaar'}`,
         `Push-abonnement: ${sub.subscription ? 'actief' : (sub.reason === 'no-vapid-key' ? 'mist publieke VAPID-sleutel in gejast-config.js' : 'niet actief')}`,
-        `Lokale service-worker test: ${localShown ? 'getoond op dit toestel' : 'niet getoond'}`,
         `Backend test-queue: ${queuedTest.queued ? 'klaargezet' : (queuedTest.reason === 'no-subscription' ? 'geen push-abonnement opgeslagen' : (queuedTest.reason || 'niet klaar'))}`,
-        'Android standby/lockscreen vraagt daarnaast om correcte browser-machtiging, een actieve service worker en geen batterij-optimalisatie die de browser wegdrukt.',
         ...mobilePermissionHelp('notification', updated.permission)
       ], [{ label:'Sluiten', alt:true }]);
       return { granted:true, state:updated, subscription:sub, queuedTest };
@@ -334,7 +378,7 @@
     try {
       const reg = await registerNotificationWorker();
       if (!reg || notificationPermission() !== 'granted') return false;
-      await reg.showNotification(title || 'Gejast', Object.assign({ tag:'gejast-generic', badge:'./logo.png', icon:'./logo.png', renotify:true, requireInteraction:false, silent:false, timestamp:Date.now(), vibrate:[180,80,180], data:{ url:'./index.html' } }, options || {}));
+      await reg.showNotification(title || 'Gejast', Object.assign({ tag:'gejast-generic', badge:'./logo.png', icon:'./logo.png' }, options || {}));
       try { localStorage.setItem(NOTIFY_LAST_KEY, String(Date.now())); } catch(_){}
       return true;
     } catch(_) { return false; }
@@ -367,7 +411,9 @@
     return existing;
   }
   function setButtonState(ready){ buttonsReadyState = !!ready; document.querySelectorAll('[data-gejast-geo-button]').forEach((btn)=>{ btn.classList.toggle('is-ready',!!ready); btn.classList.toggle('is-bad',!ready); btn.title = ready ? 'Geolocatie actief' : 'Geolocatie opnieuw proberen'; btn.setAttribute('aria-pressed', ready ? 'true' : 'false'); }); }
-  window.GEJAST_GEO = { cached, ensure, request, requestGeoAccess, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError, setButtonState, ensureCornerTools, notificationSupported, notificationPermission, registerNotificationWorker, ensurePushSubscription, syncPushSubscriptionToBackend, queueBackendTestPush, getNotificationDiagnostics, refreshNotificationButton, requestNotificationAccess, showNotificationFromServiceWorker, setNotificationButtonState, showDiagnostics };
+  ensureActivePushPresenceHeartbeat();
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', ()=>{ startActivePushPresenceHeartbeat(false); }, { once:true }); } else { startActivePushPresenceHeartbeat(false); }
+  window.GEJAST_GEO = { cached, ensure, request, requestGeoAccess, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError, setButtonState, ensureCornerTools, notificationSupported, notificationPermission, registerNotificationWorker, ensurePushSubscription, syncPushSubscriptionToBackend, queueBackendTestPush, getNotificationDiagnostics, refreshNotificationButton, requestNotificationAccess, showNotificationFromServiceWorker, setNotificationButtonState, showDiagnostics, touchActivePushPresence, startActivePushPresenceHeartbeat };
   function init(){ if (!shouldExclude()) ensureCornerTools(); setButtonState(!!cached()); refreshNotificationButton().catch(()=>{}); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once:true }); else init();
   window.addEventListener('load', ()=>{ try { ensureCornerTools(); refreshNotificationButton().catch(()=>{}); } catch(_){} });

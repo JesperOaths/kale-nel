@@ -1,0 +1,29 @@
+GEJAST v312 full fixpack
+
+FILES IN THIS FLAT ZIP
+- upload/replace all HTML/JS files at repo/web root
+- run gejast_v312_full_fixpack.sql in Supabase SQL editor
+- place web-push-dispatcher.yml into .github/workflows/web-push-dispatcher.yml in GitHub
+- keep existing live WEB_PUSH_PUBLIC_KEY value in gejast-config.js untouched if your live site already has it configured
+
+MAIN FIXES
+- masked PIN login field hardening
+- request note field truly optional
+- homepage live spectator entry routing for klaverjas + boerenbridge
+- homepage boot/flicker reduction
+- drinks page mobile performance cleanup
+- drinks add bottom card redirects to verify panel
+- live summary save/read path for klaverjas + boerenbridge
+- new live spectator pages
+- active web-push presence heartbeat + admin target backend layer
+- site poll display_name not-null repair
+- public profile/player RPC rebuild using canonical summaries to avoid ambiguous player_name paths and ghost counts
+- sitewide visible version sync bumped to v312 on touched/legacy pages included here
+
+MANUAL FOLLOW-UP
+- GitHub Actions secrets required for push workflow:
+  SUPABASE_URL
+  SUPABASE_SERVICE_ROLE_KEY
+  WEB_PUSH_VAPID_PUBLIC_KEY
+  WEB_PUSH_VAPID_PRIVATE_KEY
+  WEB_PUSH_VAPID_SUBJECT

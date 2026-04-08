@@ -1,0 +1,18 @@
+GEJAST v312 fast steps
+
+1. Upload the changed frontend files.
+2. Put web-push-dispatcher.yml into .github/workflows/ in the repo.
+3. Run gejast_v312_full_fixpack.sql in Supabase.
+4. Hard refresh the site on mobile and desktop.
+5. Test:
+   - login PIN masked
+   - account request without note
+   - index live buttons for participant accounts
+   - klaverjas spectator page
+   - boerenbridge spectator page
+   - drinks page scrolling on phone
+   - drinks add bottom card opens verify section
+   - profile pages no longer throw player_name ambiguous
+   - first drinks poll no longer throws site_poll_votes display_name null
+   - push subscription + active audience after re-enabling notifications
+6. In GitHub Actions, run the Web Push Dispatcher workflow once manually and inspect logs.

@@ -2,7 +2,6 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
-<meta name="robots" content="noindex,nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Klaverjas Scoreformulier</title>
   <meta name="description" content="Mobiele klaverjas scorer met takken, biedingen en roem." />
@@ -269,14 +268,13 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/scorer.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v322';</script><script src="./gejast-config.js?v322"></script><script src="./gejast-scope.js?v322"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('scorer');</script>
+  <script>window.GEJAST_PAGE_VERSION='v312';</script><script src="./gejast-config.js?v312"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('scorer');</script>
 
   <style id="page-floating-logo-style">
     .page-floating-logo{position:fixed;top:18px;right:18px;z-index:9998;display:inline-flex;width:64px;height:64px;border-radius:50%;background:rgba(255,251,245,.72);border:1px solid rgba(255,255,255,.65);box-shadow:0 14px 32px rgba(0,0,0,.10);align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
     .page-floating-logo img{width:52px;height:52px;display:block}
     @media(max-width:640px){.page-floating-logo{top:12px;right:12px;width:58px;height:58px}.page-floating-logo img{width:46px;height:46px}}
   </style>
-  <script src="./gejast-home-gate.js?v322"></script>
 </head>
 <body>
   <a class="page-floating-logo" href="./index.html" aria-label="Terug naar home"><img src="./logo.png" alt="Logo"></a>
@@ -287,7 +285,7 @@
       <div class="topbar-actions"><button id="undoBtn" class="icon-btn" type="button" onclick="undoLastAction()">↶</button><button id="redoBtn" class="icon-btn" type="button" onclick="redoLastAction()">↷</button></div>
     </header>
 
-    <div id="appMenu" class="overlay"><div class="modal"><h2>Klaverjas menu</h2><div class="modal-footer" style="display:grid;grid-template-columns:1fr;"><button class="btn-light" type="button" onclick="openSetupModal()">Teams kiezen</button><button class="btn-light" type="button" onclick="undoRound()">Hele ronde undo</button><button class="btn-light" type="button" onclick="newGame()">Nieuw spel</button><button class="btn-dark" type="button" onclick="window.location.href=((window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope())==='family'?'./familie/index.html':'./index.html')">Terug naar site</button></div></div></div>
+    <div id="appMenu" class="overlay"><div class="modal"><h2>Klaverjas menu</h2><div class="modal-footer" style="display:grid;grid-template-columns:1fr;"><button class="btn-light" type="button" onclick="openSetupModal()">Teams kiezen</button><button class="btn-light" type="button" onclick="undoRound()">Hele ronde undo</button><button class="btn-light" type="button" onclick="newGame()">Nieuw spel</button><button class="btn-dark" type="button" onclick="window.location.href='./index.html'">Terug naar site</button></div></div></div>
 
     <div class="wrap">
       <section class="sheet">
@@ -512,16 +510,16 @@
     }
 
     async function getSitePlayers() {
-      for (const endpoint of [((window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope())==='family'?'get_login_names_scoped':'get_login_names_scoped'),'get_login_names']) {
+      for (const endpoint of ['get_login_names']) {
         try {
           const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${endpoint}`, {
-            method:'POST', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify(endpoint==='get_login_names_scoped'?{ site_scope_input: (window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope())||'friends' }: {})
+            method:'POST', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify({})
           });
           const txt = await res.text();
           const data = txt ? JSON.parse(txt) : {};
           if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
           const names = normalizeSitePlayerNames(data);
-          if (names.length) return window.GEJAST_SCOPE_UTILS ? window.GEJAST_SCOPE_UTILS.filterNames(names) : names;
+          if (names.length) return names;
         } catch {}
       }
       return DEFAULT_NAMES.slice();
@@ -1347,7 +1345,7 @@
     function toggleAppMenu(force){ const el=document.getElementById('appMenu'); const should = typeof force === 'boolean' ? force : !el.classList.contains('show'); el.classList.toggle('show', should); }
     initPage();
   </script>
-  <div class="site-credit-watermark" data-version-watermark>v322 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v312 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
@@ -1418,84 +1416,98 @@
   
 <script>
 (function(){
+  let liveSummaryTimer = null;
+  let liveSummaryIntervalId = null;
+  let lastSummaryFingerprint = '';
+  let liveSyncBound = false;
+
   function winnerSide(){ return game.w===game.z ? 'Gelijk' : (game.w>game.z ? 'Wij' : 'Zij'); }
-  function winnerNames(){ return winnerSide()==='Wij' ? teamNames('W') : winnerSide()==='Zij' ? teamNames('Z') : `${teamNames('W')} / ${teamNames('Z')}`; }
-  function buildRecap(){ const diff=Math.abs((game.w||0)-(game.z||0)); const specials=game.rounds.filter(r=>r.nat||r.pit||r.verzaaktBy).length; const lines=[]; lines.push(`${winnerNames()} wint met ${game.w||0} tegen ${game.z||0}.`); if(diff>=30) lines.push('Het verschil liep stevig op.'); else if(diff<=10) lines.push('Het bleef lang spannend.'); if(specials) lines.push(`${specials} ronde${specials===1?'':'s'} met nat, pit of verzaakt.`); const best=(game.rounds||[]).slice().sort((a,b)=>Math.max(b.fw,b.fz)-Math.max(a.fw,a.fz))[0]; if(best) lines.push(`Hoogste klap: ${Math.max(best.fw,best.fz)} punten in ronde ${best.round}.`); return lines.join(' '); }
+  function teamMembers(side){ const p=Array.isArray(game.players)?game.players:[]; return (side==='W' ? [p[0],p[2]] : [p[1],p[3]]).map(v=>String(v||'').trim()).filter(Boolean); }
+  function participantNames(){ return (Array.isArray(game.players)?game.players:[]).map(v=>String(v||'').trim()).filter(Boolean); }
+  function winnerNamesArray(){ return winnerSide()==='Wij' ? teamMembers('W') : winnerSide()==='Zij' ? teamMembers('Z') : [...teamMembers('W'), ...teamMembers('Z')]; }
+  function winnerNames(){ return winnerNamesArray().join(' · ') || `${teamNames('W')} / ${teamNames('Z')}`; }
+  function buildRecap(){ const diff=Math.abs((game.w||0)-(game.z||0)); const specials=(game.rounds||[]).filter(r=>r.nat||r.pit||r.verzaaktBy).length; const lines=[]; lines.push(`${winnerNames()} wint met ${game.w||0} tegen ${game.z||0}.`); if(diff>=30) lines.push('Het verschil liep stevig op.'); else if(diff<=10) lines.push('Het bleef lang spannend.'); if(specials) lines.push(`${specials} ronde${specials===1?'':'s'} met nat, pit of verzaakt.`); const best=(game.rounds||[]).slice().sort((a,b)=>Math.max(b.fw||0,b.fz||0)-Math.max(a.fw||0,a.fz||0))[0]; if(best) lines.push(`Hoogste klap: ${Math.max(best.fw||0,best.fz||0)} punten in ronde ${best.round||'?'}.`); return lines.join(' '); }
   function getMatchSubmitterMeta(){ const token=(window.GEJAST_CONFIG&&window.GEJAST_CONFIG.getPlayerSessionToken?window.GEJAST_CONFIG.getPlayerSessionToken():''); const name=(document.getElementById('playerSessionCornerName')||{}).textContent||''; return { submitted_by_name:name||null, submitted_via:'klaverjas_form', submitted_at:new Date().toISOString(), session_present:!!token }; }
-  function summaryPayload(){ return { game_type:'klaverjas', client_match_id:String(game.id||Date.now()), summary:{ created_at:game.createdAt||new Date().toISOString(), finished_at:new Date().toISOString(), players:game.players, totals:{ wij:game.w||0, zij:game.z||0 }, winner_side:winnerSide(), winner_names:winnerNames(), rounds:game.rounds||[], recap_text:buildRecap(), submitter_meta:getMatchSubmitterMeta() } }; }
+  function summaryPayload(isFinished=false){
+    const createdAt = game.createdAt || new Date().toISOString();
+    const rounds = Array.isArray(game.rounds) ? game.rounds : [];
+    const liveState = {
+      status: isFinished ? 'finished' : 'live',
+      rounds_played: rounds.length,
+      current_round: rounds.length ? Number(rounds[rounds.length-1]?.round || rounds.length) : 0,
+      updated_at: new Date().toISOString()
+    };
+    return {
+      game_type:'klaverjas',
+      client_match_id:String(game.id||Date.now()),
+      summary:{
+        match_ref:String(game.id||Date.now()),
+        created_at:createdAt,
+        finished_at:isFinished ? new Date().toISOString() : null,
+        participants: participantNames(),
+        players: participantNames(),
+        teams:{ wij:teamMembers('W'), zij:teamMembers('Z') },
+        totals:{ wij:game.w||0, zij:game.z||0 },
+        scoreboard:{ wij:game.w||0, zij:game.z||0 },
+        winner_side:winnerSide(),
+        winner_names:winnerNamesArray(),
+        winner_names_label:winnerNames(),
+        rounds:rounds,
+        recap_text:buildRecap(),
+        live_state:liveState,
+        submitter_meta:getMatchSubmitterMeta()
+      }
+    };
+  }
+  function summaryFingerprint(payload){
+    try {
+      const summary = payload?.summary || payload || {};
+      return JSON.stringify({
+        ref: payload?.client_match_id || summary.match_ref || '',
+        fin: summary.finished_at || null,
+        totals: summary.totals || summary.scoreboard || {},
+        rounds: Array.isArray(summary.rounds) ? summary.rounds.length : 0,
+        players: summary.participants || summary.players || []
+      });
+    } catch(_) { return String(Date.now()); }
+  }
   window.closeMatchSummary=function(){ document.getElementById('matchSummaryOverlay').classList.remove('show'); };
   window.copyMatchRecapText=async function(){ const text=buildRecap(); try{ await navigator.clipboard.writeText(text); setMessage('Samenvatting gekopieerd.'); }catch(_){ setMessage(text);} };
-  window.downloadMatchSummaryImage=function(){ const payload=summaryPayload().summary; const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=630; const ctx=canvas.getContext('2d'); const grad=ctx.createLinearGradient(0,0,1200,630); grad.addColorStop(0,'#1b1711'); grad.addColorStop(1,'#5d4820'); ctx.fillStyle=grad; ctx.fillRect(0,0,1200,630); ctx.fillStyle='#f6f0e5'; ctx.fillRect(46,46,1108,538); ctx.fillStyle='#111'; ctx.font='900 52px Inter, sans-serif'; ctx.fillText('Klaverjas',84,132); ctx.font='800 34px Inter, sans-serif'; ctx.fillText(`${payload.winner_names}`,84,194); ctx.font='700 72px Inter, sans-serif'; ctx.fillText(`${payload.totals.wij} - ${payload.totals.zij}`,84,292); ctx.font='600 28px Inter, sans-serif'; wrap(ctx,payload.recap_text,84,360,1000,38); ctx.font='700 24px Inter, sans-serif'; ctx.fillText('v322 · Made by Bruis',84,560); const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download='klaverjas-uitslag.png'; a.click(); function wrap(ctx,text,x,y,maxWidth,lineHeight){ const words=String(text||'').split(/\s+/); let line=''; let yy=y; for(const w of words){ const test=line?line+' '+w:w; if(ctx.measureText(test).width>maxWidth && line){ ctx.fillText(line,x,yy); line=w; yy+=lineHeight; } else line=test; } if(line) ctx.fillText(line,x,yy); } };
-  async function saveSummary(){ const token=(localStorage.getItem('jas_session_token_v11')||localStorage.getItem('jas_session_token_v10')||''); if(!(window.GEJAST_CONFIG||{}).SUPABASE_URL) return; try{ await fetch(`${window.GEJAST_CONFIG.SUPABASE_URL}/rest/v1/rpc/save_game_match_summary`,{method:'POST',mode:'cors',cache:'no-store',headers:{apikey:window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY}`,'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({session_token:token, game_type:'klaverjas', client_match_id:String(game.id||Date.now()), summary_payload:summaryPayload().summary})}); }catch(_){} }
-  window.openMatchSummary=function(){ const payload=summaryPayload().summary; document.getElementById('matchSummaryCard').innerHTML=`<div class="dealer-card"><span>Winnaar</span><strong>${payload.winner_names}</strong></div><div class="dealer-banner"><div class="dealer-card"><span>Wij</span><strong>${payload.totals.wij}</strong></div><div class="dealer-card"><span>Zij</span><strong>${payload.totals.zij}</strong></div></div><div class="contract-card"><div class="eyebrow">Samenvatting</div><strong style="font-size:18px;line-height:1.3">${payload.recap_text}</strong></div>`; document.getElementById('matchSummaryOverlay').classList.add('show'); saveSummary(); };
-  const oldFinish=window.finishGame; window.finishGame=function(){ if(oldFinish) oldFinish(); openMatchSummary(); };
-})();
-</script>
-
-<script>
-(function(){
-  const cfg = window.GEJAST_CONFIG || {};
-  const SUPABASE_URL = cfg.SUPABASE_URL || '';
-  const KEY = cfg.SUPABASE_PUBLISHABLE_KEY || '';
-  const CURRENT_SCOPE = (()=>{ try{ const qs = new URLSearchParams(location.search); if (qs.get('scope')==='family') return 'family'; }catch(_){} return (location.pathname||'').includes('/familie/') ? 'family' : 'friends'; })();
-  function headers(){ return { apikey: KEY, Authorization:`Bearer ${KEY}`, 'Content-Type':'application/json', Accept:'application/json' }; }
-  function token(){ return (cfg.getPlayerSessionToken ? cfg.getPlayerSessionToken() : '') || ''; }
-  function normalize(name){ return String(name||'').trim().toLowerCase(); }
-  function currentPlayerName(){ return String((document.getElementById('playerSessionCornerName')||{}).textContent || '').trim(); }
-  async function fetchViewerName(){
-    const liveName = currentPlayerName();
-    if (liveName) return liveName;
-    if (!token() || !SUPABASE_URL || !KEY) return '';
-    for (const rpcName of ['get_public_state','get_gejast_homepage_state','get_jas_app_state']){
-      try{
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpcName}`, { method:'POST', mode:'cors', cache:'no-store', headers: headers(), body: JSON.stringify({ session_token: token() }) });
-        const data = await parseResponse2(res);
-        const name = String(data?.my_name || data?.display_name || data?.player_name || '').trim();
-        if (name) return name;
-      }catch(_){ }
-    }
-    return '';
-  }
-  function buildLiveHref(clientMatchId){ const u = new URL('./klaverjas_live.html', window.location.href); if (clientMatchId) u.searchParams.set('client_match_id', clientMatchId); if (CURRENT_SCOPE==='family') u.searchParams.set('scope','family'); return u.toString(); }
-  async function parseResponse2(res){ const txt = await res.text(); let data = null; try{ data = txt ? JSON.parse(txt) : null; }catch(_){ throw new Error(txt || `HTTP ${res.status}`); } if(!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }
-  async function fetchLiveMatches(){
-    if (!token() || !SUPABASE_URL || !KEY) return [];
+  window.downloadMatchSummaryImage=function(){ const payload=summaryPayload(true).summary; const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=630; const ctx=canvas.getContext('2d'); const grad=ctx.createLinearGradient(0,0,1200,630); grad.addColorStop(0,'#1b1711'); grad.addColorStop(1,'#5d4820'); ctx.fillStyle=grad; ctx.fillRect(0,0,1200,630); ctx.fillStyle='#f6f0e5'; ctx.fillRect(46,46,1108,538); ctx.fillStyle='#111'; ctx.font='900 52px Inter, sans-serif'; ctx.fillText('Klaverjas',84,132); ctx.font='800 34px Inter, sans-serif'; ctx.fillText(`${payload.winner_names_label || payload.winner_names?.join(' · ') || ''}`,84,194); ctx.font='700 72px Inter, sans-serif'; ctx.fillText(`${payload.totals.wij} - ${payload.totals.zij}`,84,292); ctx.font='600 28px Inter, sans-serif'; wrap(ctx,payload.recap_text,84,360,1000,38); ctx.font='700 24px Inter, sans-serif'; ctx.fillText('v312 · Made by Bruis',84,560); const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download='klaverjas-uitslag.png'; a.click(); function wrap(ctx,text,x,y,maxWidth,lineHeight){ const words=String(text||'').split(/\s+/); let line=''; let yy=y; for(const w of words){ const test=line?line+' '+w:w; if(ctx.measureText(test).width>maxWidth && line){ ctx.fillText(line,x,yy); line=w; yy+=lineHeight; } else line=test; } if(line) ctx.fillText(line,x,yy); } };
+  async function pushSummary(isFinished=false, force=false){
+    const token=(localStorage.getItem('jas_session_token_v11')||localStorage.getItem('jas_session_token_v10')||'');
+    if(!(window.GEJAST_CONFIG||{}).SUPABASE_URL) return;
+    const payload = summaryPayload(isFinished);
+    const fingerprint = summaryFingerprint(payload);
+    if(!force && !isFinished && fingerprint === lastSummaryFingerprint) return;
     try{
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_live_match_summaries_scoped`, { method:'POST', mode:'cors', cache:'no-store', headers: headers(), body: JSON.stringify({ session_token: token(), game_type_input: 'klaverjas', site_scope_input: CURRENT_SCOPE }) });
-      const raw = await parseResponse2(res);
-      const payload = raw?.get_live_match_summaries_scoped || raw || {};
-      return Array.isArray(payload?.matches) ? payload.matches : (Array.isArray(payload) ? payload : []);
-    }catch(_){ return []; }
+      await fetch(`${window.GEJAST_CONFIG.SUPABASE_URL}/rest/v1/rpc/save_game_match_summary`,{method:'POST',mode:'cors',cache:'no-store',headers:{apikey:window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY}`,'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({session_token:token, game_type:'klaverjas', client_match_id:String(payload.client_match_id), summary_payload:payload.summary})});
+      lastSummaryFingerprint = fingerprint;
+    }catch(_){ }
   }
-  function participantsOf(match){ const p = match?.participants || match?.summary_payload?.participants || match?.summary_payload?.players || []; return Array.isArray(p) ? p.map((x)=>String(x||'').trim()).filter(Boolean) : []; }
-  function hostOf(match){ return String(match?.summary_payload?.submitter_meta?.submitted_by_name || '').trim(); }
-  async function maybeRedirectToLive(){
-    const myName = await fetchViewerName();
-    if (!myName) return;
-    const matches = await fetchLiveMatches();
-    const mine = matches.find((match)=> participantsOf(match).map(normalize).includes(normalize(myName)) && normalize(hostOf(match)) !== normalize(myName));
-    if (mine && mine.client_match_id) location.replace(buildLiveHref(mine.client_match_id));
+  function scheduleLiveSummarySync(force=false){
+    if (liveSummaryTimer) window.clearTimeout(liveSummaryTimer);
+    liveSummaryTimer = window.setTimeout(()=>{ pushSummary(false, force); }, force ? 120 : 900);
   }
-  function buildLiveSummaryPayload(finalized){
-    const players = Array.isArray(game?.players) ? game.players.filter(Boolean) : [];
-    return { created_at: game?.createdAt || new Date().toISOString(), finished_at: finalized ? new Date().toISOString() : null, players, participants: players, totals: { wij: Number(game?.w||0), zij: Number(game?.z||0) }, winner_side: finalized ? winnerSide() : null, winner_names: finalized ? winnerNames() : null, rounds: Array.isArray(game?.rounds) ? game.rounds : [], recap_text: finalized ? buildRecap() : 'Live scoreformulier', submitter_meta: getMatchSubmitterMeta(), live_state: JSON.parse(JSON.stringify(game || {})), is_live: !finalized };
+  function ensureLiveSummaryBinding(){
+    if (liveSyncBound) return;
+    liveSyncBound = true;
+    const originalSaveGame = typeof window.saveGame === 'function' ? window.saveGame : null;
+    if (originalSaveGame) {
+      window.saveGame = function(){ const out = originalSaveGame.apply(this, arguments); scheduleLiveSummarySync(false); return out; };
+      try { saveGame = window.saveGame; } catch(_){}
+    }
+    document.addEventListener('visibilitychange', ()=>{ if (document.visibilityState === 'hidden') pushSummary(false, true); else scheduleLiveSummarySync(true); });
+    window.addEventListener('beforeunload', ()=>{ try { pushSummary(false, true); } catch(_){} });
+    liveSummaryIntervalId = window.setInterval(()=>{ if (document.visibilityState === 'visible') pushSummary(false, false); }, 15000);
+    scheduleLiveSummarySync(true);
   }
-  async function persistLiveSummary(finalized){
-    if (!token() || !SUPABASE_URL || !KEY) return;
-    const players = Array.isArray(game?.players) ? game.players.filter(Boolean) : [];
-    if (players.length < 4) return;
-    if (!finalized && !(Array.isArray(game?.rounds) && game.rounds.length)) return;
-    try{ await fetch(`${SUPABASE_URL}/rest/v1/rpc/save_game_match_summary`, { method:'POST', mode:'cors', cache:'no-store', headers: headers(), body: JSON.stringify({ session_token: token(), game_type:'klaverjas', client_match_id: String(game?.id||Date.now()), summary_payload: buildLiveSummaryPayload(!!finalized) }) }); }catch(_){ }
-  }
-  let liveTimer = null;
-  function startLiveAutosave(){ if (liveTimer) clearInterval(liveTimer); liveTimer = setInterval(()=>{ persistLiveSummary(false); }, 7000); }
-  document.addEventListener('DOMContentLoaded', ()=>{ maybeRedirectToLive(); startLiveAutosave(); window.addEventListener('beforeunload', ()=>{ persistLiveSummary(false); }); });
-  const prevFinish = window.finishGame;
-  window.finishGame = function(){ const out = prevFinish ? prevFinish.apply(this, arguments) : undefined; setTimeout(()=>persistLiveSummary(true), 120); return out; };
+  window.openMatchSummary=function(){ const payload=summaryPayload(true).summary; document.getElementById('matchSummaryCard').innerHTML=`<div class="dealer-card"><span>Winnaar</span><strong>${payload.winner_names_label || payload.winner_names.join(' · ')}</strong></div><div class="dealer-banner"><div class="dealer-card"><span>Wij</span><strong>${payload.totals.wij}</strong></div><div class="dealer-card"><span>Zij</span><strong>${payload.totals.zij}</strong></div></div><div class="contract-card"><div class="eyebrow">Samenvatting</div><strong style="font-size:18px;line-height:1.3">${payload.recap_text}</strong></div>`; document.getElementById('matchSummaryOverlay').classList.add('show'); pushSummary(true, true); };
+  const oldFinish=window.finishGame; window.finishGame=function(){ if(oldFinish) oldFinish(); openMatchSummary(); };
+  ensureLiveSummaryBinding();
 })();
 </script>
 <script src="./site-analytics.js"></script>
-
 
 <style id="match-control-chip-style">
   .manage-match-chip{position:fixed;right:18px;bottom:18px;z-index:40;display:inline-flex;align-items:center;gap:8px;padding:12px 16px;border-radius:999px;background:rgba(35,31,26,.92);color:#fff;text-decoration:none;font-weight:800;box-shadow:0 14px 32px rgba(0,0,0,.22)}

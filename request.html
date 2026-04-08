@@ -2,10 +2,9 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Naam claimen</title>
-  <script>window.GEJAST_PAGE_VERSION='v318';</script>
+  <script>window.GEJAST_PAGE_VERSION='v312';</script>
   <style>
     :root { --gold: #9a8241; --black: #111; --bg: #f0ede4; }
     * { box-sizing: border-box; }
@@ -32,8 +31,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/request.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v318"></script>
-  <script src="./gejast-scope.js?v318"></script>
+  <script src="./gejast-config.js?v312"></script>
 </head>
 <body>
   <div class="scene">
@@ -42,15 +40,15 @@
     <div class="playing-card-accent"><img src="./playingcard-accent1-trimmed.png" width="100%"></div>
   </div>
   <main class="main-card">
-    <a href="./index.html" id="homeLogoLink" aria-label="Terug naar home"><img src="./logo.png" class="logo-top" /></a>
+    <a href="./index.html" aria-label="Terug naar home"><img src="./logo.png" class="logo-top" /></a>
     <h1>Claim je naam</h1>
-    <p class="intro">Kies je naam uit de lijst en vul je e-mailadres in. Een notitie is niet verplicht.</p>
+    <p class="intro">Kies je naam uit de lijst en vul je e-mailadres in.</p>
     <label>Gewenste naam</label>
     <select id="requestNameSelect"></select>
     <label>E-mailadres</label>
     <input id="requestEmailInput" name="email" type="email" placeholder="jouw@email.com" autocomplete="email" autocapitalize="none" spellcheck="false">
-    <label>Notitie <span style="font-weight:600;color:#b2a58a">(optioneel)</span></label>
-    <textarea id="requestNoteInput" placeholder="Eventuele toelichting (optioneel)" autocomplete="off"></textarea>
+    <label>Notitie</label>
+    <textarea id="requestNoteInput" placeholder="Waarom wil je meedoen?" autocomplete="off"></textarea>
     <div class="btn-row">
       <a href="./index.html" class="ghost-link">Terug</a>
       <button id="requestBtn" class="primary-btn">Aanvraag versturen</button>
@@ -155,11 +153,9 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     async function getRequestableNames() {
       const attempts = [];
       try {
-        const scope = window.GEJAST_SCOPE_UTILS ? window.GEJAST_SCOPE_UTILS.getScope() : 'friends';
-        let res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names_scoped`, {
-          method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(), body: JSON.stringify({ site_scope_input: scope })
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names`, {
+          method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(), body: JSON.stringify({})
         });
-        if (!res.ok) res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names`, { method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(), body: JSON.stringify({}) });
         const data = await parseResponse(res);
         const names = uniqueNames(normalizeRequestableNamesPayload(data));
         if (names.length) return names;
@@ -189,7 +185,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
 
       if (!desiredName) throw new Error("Kies eerst een naam");
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requesterEmail)) throw new Error("Vul een geldig e-mailadres in");
-
+      
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/request_claim_action`, {
         method: "POST",
         mode: "cors",
@@ -199,18 +195,15 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
           desired_name: desiredName,
           requester_note: requesterNote || null,
           requester_email: requesterEmail,
-          requester_meta: Object.assign({}, collectVisitorMeta(), { site_scope: window.GEJAST_SCOPE_UTILS ? window.GEJAST_SCOPE_UTILS.getScope() : 'friends' })
+          requester_meta: collectVisitorMeta()
         })
       });
       return await parseResponse(res);
     }
 
-    function applyScopeUi(){ try{ const scope=window.GEJAST_SCOPE_UTILS?.getScope?.()||'friends'; if(scope==='family'){ const title=document.querySelector('h1'); if(title) title.textContent='Claim je familienaam'; const intro=document.querySelector('.intro'); if(intro) intro.textContent='Kies je familienaam uit de lijst en vul je e-mailadres in. Een notitie is niet verplicht.'; const link=document.getElementById('homeLogoLink'); if(link) link.href='./familie/index.html'; } }catch(_){} }
-
     async function load() {
       try {
-        const rawNames = await getRequestableNames();
-        const names = window.GEJAST_SCOPE_UTILS ? window.GEJAST_SCOPE_UTILS.filterNames(rawNames) : rawNames;
+        const names = await getRequestableNames();
         fillNameSelect(names);
         if (!names.length) setStatus('Er staan nog geen beheerde namen klaar in de kieslijst.', 'warn');
         else setStatus();
@@ -219,8 +212,6 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         setStatus(rawMessage === "Failed to fetch" ? "Netwerk/CORS-fout bij contact met Supabase." : rawMessage, "warn");
       }
     }
-
-    applyScopeUi();
 
     document.getElementById("requestBtn").addEventListener("click", async () => {
       try {
@@ -269,7 +260,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     load();
   </script>
 
-  <div class="site-credit-watermark" data-version-watermark>v262 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v312 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
@@ -340,17 +331,5 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
   <script src="./site-analytics.js"></script>
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-
-  <script>
-    function gejastLandingRedirectIfLoggedIn(){
-      try{
-        const family = new URLSearchParams(location.search).get('scope') === 'family';
-        const keys=['jas_session_token_v11','jas_session_token_v10'];
-        const token = keys.map((k)=>localStorage.getItem(k)||sessionStorage.getItem(k)).find(Boolean);
-        if(token) location.replace(family ? './index.html?scope=family' : './index.html');
-      }catch(_){}
-    }
-    gejastLandingRedirectIfLoggedIn();
-  </script>
 </body>
 </html>

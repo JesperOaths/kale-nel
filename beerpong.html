@@ -6,7 +6,7 @@
   <title>Beerpong Scoreformulier</title>
   <link rel="stylesheet" href="./site-shell.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>window.GEJAST_PAGE_VERSION='v306';</script><script src="./gejast-config.js?v306"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('beerpong');</script>
+  <script>window.GEJAST_PAGE_VERSION='v312';</script><script src="./gejast-config.js?v312"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('beerpong');</script>
   <style>
     :root{--gold:#9a8241;--gold-dark:#8a7338;--black:#111;--card-bg:rgba(249,247,242,.95);--line:rgba(17,17,17,.08);--muted:#6f675b;}
     *{box-sizing:border-box} html,body{min-height:100%}
@@ -52,10 +52,10 @@
 <body>
   <main class="page">
     <section class="shell">
-      <div class="top" style="align-items:flex-start">
-        <div style="flex:1 1 auto">
+      <div class="top">
+        <div>
           <h1>Beerpong Scoreformulier</h1>
-          <div class="sub">Maak snel een wedstrijd aan zonder extra ruis op deze pagina.</div>
+          <div class="sub">Maak een wedstrijd aan en bekijk de openbare ELO-ranglijst.</div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"><a href="./beerpong_vault.html" style="font-weight:800;color:#554e43;text-decoration:none">Beerpong Kluis</a><a href="./index.html" style="font-weight:800;color:#554e43;text-decoration:none">Home</a></div>
         </div>
         <img src="./logo.png" alt="Logo" class="logo" />
       </div>
@@ -82,13 +82,6 @@
             <div class="field duo"><label for="teamB2">Team B · Speler 2</label><select id="teamB2"></select></div>
             <div class="field"><label for="cupsA">Bekers raak team A</label><input id="cupsA" type="number" min="0" max="10" step="1" value="0" /></div>
             <div class="field"><label for="cupsB">Bekers raak team B</label><input id="cupsB" type="number" min="0" max="10" step="1" value="0" /></div>
-            <div class="field full">
-              <label>Pussycup?</label>
-              <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
-                <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:#fffaf0;font-weight:800"><input id="pussycupA" type="checkbox" /> Team A had pussycup</label>
-                <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:#fffaf0;font-weight:800"><input id="pussycupB" type="checkbox" /> Team B had pussycup</label>
-              </div>
-            </div>
             <div class="field full"><label for="notesInput">Notitie</label><textarea id="notesInput" placeholder="Korte notitie"></textarea></div>
           </div>
           <div class="actions">
@@ -99,17 +92,21 @@
         </section>
 
         <section class="card">
-          <h2>Snelle regels</h2>
-          <div class="detail-grid">
-            <div class="mini"><strong>Pussycup</strong><span>Vink aan als de middelste cup als allereerste rake cup van dat team viel.</span></div>
-            <div class="mini"><strong>Winst</strong><span>Een team wint zodra exact alle cups voor die pot geraakt zijn.</span></div>
-            <div class="mini"><strong>Stats</strong><span>Pussycup wordt opgeslagen in de match-payload en kan op spelersprofielen getoond worden.</span></div>
+          <h2>Openbare ranglijst</h2>
+          <div class="stats-grid">
+            <div class="stat"><div class="stat-k">Spelers</div><div class="stat-v" id="playersCount">0</div></div>
+            <div class="stat"><div class="stat-k">Wedstrijden</div><div class="stat-v" id="matchesCount">0</div></div>
+            <div class="stat"><div class="stat-k">Gem. ELO</div><div class="stat-v" id="avgElo">0</div></div>
+            <div class="stat"><div class="stat-k">Laatste update</div><div class="stat-v" id="lastUpdate" style="font-size:1rem">—</div></div>
           </div>
+          <div class="leader-list" id="leaderboard"></div>
+          <h2 style="margin-top:18px">Recente uitslagen</h2>
+          <div class="recent-list" id="recentMatches"></div>
         </section>
       </div>
     </section>
   </main>
-  <div class="watermark" data-version-watermark>v311 · Made by Bruis</div>
+  <div class="watermark" data-version-watermark>v262 · Made by Bruis</div>
 
   <script>
     const CFG = window.GEJAST_CONFIG || {};
@@ -122,8 +119,8 @@
       formatInput: document.getElementById('formatInput'),
       teamA1: document.getElementById('teamA1'), teamA2: document.getElementById('teamA2'), teamB1: document.getElementById('teamB1'), teamB2: document.getElementById('teamB2'),
       cupsA: document.getElementById('cupsA'), cupsB: document.getElementById('cupsB'), notesInput: document.getElementById('notesInput'), saveBtn: document.getElementById('saveBtn'), resetBtn: document.getElementById('resetBtn'),
-      formStatus: document.getElementById('formStatus'), sessionPill: document.getElementById('sessionPill'),
-      pussycupA: document.getElementById('pussycupA'), pussycupB: document.getElementById('pussycupB')
+      formStatus: document.getElementById('formStatus'), sessionPill: document.getElementById('sessionPill'), leaderboard: document.getElementById('leaderboard'), recentMatches: document.getElementById('recentMatches'),
+      playersCount: document.getElementById('playersCount'), matchesCount: document.getElementById('matchesCount'), avgElo: document.getElementById('avgElo'), lastUpdate: document.getElementById('lastUpdate')
     };
     function getSessionToken(){ return localStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY_FALLBACK) || ''; }
     function getSubmitterMeta(){ return { submitted_via:'beerpong_form', submitted_at:new Date().toISOString(), session_present:!!getSessionToken() }; }
@@ -199,8 +196,6 @@
         cups_left_team_b: Math.max(0, max - cupsHitA),
         cups_hit_team_a: cupsHitA,
         cups_hit_team_b: cupsHitB,
-        team_a_pussycup: !!els.pussycupA.checked,
-        team_b_pussycup: !!els.pussycupB.checked,
         notes: els.notesInput.value.trim(),
         finished_at: new Date().toISOString()
       };
@@ -209,15 +204,30 @@
       const { data, error } = await sb.rpc('save_beerpong_match', { session_token: getSessionToken() || null, client_match_id: clientMatchId, payload });
       if(error) return setStatus(error.message || 'Opslaan mislukt.');
       setStatus('Wedstrijd opgeslagen.', false);
+      await loadLeaderboard();
+    }
+    async function loadLeaderboard(){
+      const { data, error } = await sb.rpc('get_beerpong_leaderboard_public');
+      if(error){ els.leaderboard.innerHTML='<div class="recent">Ranglijst laden mislukt.</div>'; return; }
+      const board = data?.leaderboard || data?.players || [];
+      const recent = data?.recent_matches || [];
+      els.playersCount.textContent = String(board.length || 0);
+      els.matchesCount.textContent = String(data?.matches_count || recent.length || 0);
+      const avg = board.length ? Math.round(board.reduce((s,x)=> s + Number(x.rating || 0),0) / board.length) : 0;
+      els.avgElo.textContent = String(avg || 0);
+      els.lastUpdate.textContent = new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+      els.leaderboard.innerHTML = board.length ? board.map((p,i)=>`<div class="leader"><div class="rank">${i+1}</div><div><div class="name">${p.display_name || p.nickname || 'Onbekend'}</div><div class="meta">${p.matches_played || 0} potjes · ${p.wins || 0} winst · ${p.losses || 0} verlies</div></div><div class="rating">${Math.round(Number(p.rating||1000))}<div class="meta">ELO</div></div></div>`).join('') : '<div class="recent">Nog geen uitslagen.</div>';
+      els.recentMatches.innerHTML = recent.length ? recent.map((m)=>`<div class="recent"><strong>${(m.winner_names||[]).join(' + ') || 'Onbekend'}</strong> won van ${(m.loser_names||[]).join(' + ') || 'Onbekend'}<div class="meta">${m.finished_at_local || m.finished_at || ''}</div></div>`).join('') : '<div class="recent">Nog geen gespeelde potjes.</div>';
     }
     function updateSessionPill(){ els.sessionPill.textContent = getSessionToken() ? 'Spelersessie gevonden' : 'Niet ingelogd'; }
-    function resetForm(){ [els.teamA1, els.teamA2, els.teamB1, els.teamB2].forEach(x=>x.value=''); els.cupsA.value='0'; els.cupsB.value='0'; els.pussycupA.checked=false; els.pussycupB.checked=false; els.notesInput.value=''; setStatus(''); }
+    function resetForm(){ [els.teamA1, els.teamA2, els.teamB1, els.teamB2].forEach(x=>x.value=''); els.cupsA.value='0'; els.cupsB.value='0'; els.notesInput.value=''; setStatus(''); }
     els.formatInput.addEventListener('change', applyFormat);
     [els.teamA1, els.teamA2, els.teamB1, els.teamB2].forEach((sel)=>sel.addEventListener('change', syncPlayerAvailability));
     els.saveBtn.addEventListener('click', saveMatch);
     els.resetBtn.addEventListener('click', ()=>{ resetForm(); syncPlayerAvailability(); syncCupsUI(); });
     applyFormat(); updateSessionPill(); syncCupsUI();
     loadNames().then(syncPlayerAvailability).catch(err=> setStatus(err.message || 'Spelers laden mislukt.'));
+    loadLeaderboard();
   </script>
 
 <style id="match-control-chip-style">
