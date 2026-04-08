@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet" />
   <title>Drinks overzicht</title>
-  <script>window.GEJAST_PAGE_VERSION='v321';</script><script src="./gejast-config.js?v327"></script>
+  <script>window.GEJAST_PAGE_VERSION='v321';</script><script src="./gejast-config.js?v328"></script>
   <style>
     :root{
       --bg:#ece7dc;--card:rgba(255,251,245,.94);--paper:#fffdfa;--line:rgba(54,40,20,.08);--line-strong:rgba(54,40,20,.14);
@@ -39,7 +39,7 @@
     @media(max-width:1180px){.metric-strip,.grid.quad{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.two,.grid.three{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.hero-tools{justify-content:flex-start}}
     @media(max-width:760px){body{padding:12px}.shell{padding:18px;border-radius:24px}.metric-strip,.grid.quad,.mini-grid{grid-template-columns:1fr}.bar-row{grid-template-columns:1fr}.item{padding:12px}.metric{min-height:auto}.hero-actions,.hero-tools{width:100%}}
   </style>
-  <script src="./gejast-home-gate.js?v327"></script>
+  <script src="./gejast-home-gate.js?v328"></script>
 </head>
 <body>
   <div class="wrap">
@@ -71,8 +71,8 @@
           <section class="panel tinted-gold">
             <div class="panel-head"><div><h2>Toplijsten</h2><p>Switch tussen dag, all-time en aantallen.</p></div></div>
             <div class="ladder-tabs">
-              <button class="tab active" data-ladder-key="today_units">Vandaag · units</button>
-              <button class="tab" data-ladder-key="all_units">Totaal · units</button>
+              <button class="tab active" data-ladder-key="today_units">Vandaag · eenheden</button>
+              <button class="tab" data-ladder-key="all_units">Totaal · eenheden</button>
               <button class="tab" data-ladder-key="all_count">Totaal · drankjes</button>
             </div>
             <div id="ladderList" class="list" style="margin-top:14px"></div>
@@ -104,7 +104,7 @@
 
       <div class="grid three">
         <section class="panel">
-          <div class="panel-head"><div><h2>Meeste units</h2><p>Wie heeft het meeste volume gepakt?</p></div></div>
+          <div class="panel-head"><div><h2>Meeste eenheden</h2><p>Wie heeft het meeste volume gepakt?</p></div></div>
           <div id="topUnits" class="list"></div>
         </section>
         <section class="panel">
@@ -228,7 +228,7 @@ function mapHomepageTop5(payload){
     function renderVerify(rows){
       const el=document.getElementById('verifyQueue');
       const list=Array.isArray(rows)?rows:[];
-      renderList(el,list,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.night_at?nlDayDate(r.night_at):''} · hoogste avond`,value:()=>`${fmt(r.units,1)}u`}), 'Nog geen pieknachten.');
+      renderList(el,list,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.night_at?nlDayDate(r.night_at):''} · zwaarste avond`,value:()=>`${fmt(r.units,1)}u`}), 'Nog geen pieknachten.');
     }
 
     function renderSpeedHighlights(groups){
@@ -245,7 +245,7 @@ function mapHomepageTop5(payload){
       }
       const active=sets.find(s=>String(s.key||s.speed_type_key||'')===currentSpeedType)||sets[0];
       const rows=Array.isArray(active.rows)?active.rows:[];
-      renderList(el,rows,(r,i)=>itemHtml(r,{title:(_,name)=>`${i+1}. ${playerLink(name)}`,sub:()=>`${esc(active.label||active.speed_type_label||'Drank')} · beste tijd`,value:()=>`${fmt(r.duration_seconds,1)}s`}), 'Nog geen bevestigde tijden voor dit dranktype.');
+      renderList(el,rows,(r,i)=>itemHtml(r,{title:(_,name)=>`${i+1}. ${playerLink(name)}`,sub:()=>`${esc(active.label||active.speed_type_label||'Drank')} · snelste bevestigde tijd`,value:()=>`${fmt(r.duration_seconds,1)}s`}), 'Nog geen bevestigde tijden voor dit dranktype.');
     }
     function renderStats(data){
       const totals=data.totals||{};
@@ -255,9 +255,9 @@ function mapHomepageTop5(payload){
         <div class="metric"><div class="metric-label">Deze maand</div><div class="metric-value">${totals.month_events||0}</div><div class="metric-note">Drankjes</div></div>
         <div class="metric"><div class="metric-label">Deze week</div><div class="metric-value">${totals.week_events||0}</div><div class="metric-note">Drankjes</div></div>`;
       renderList(document.getElementById('topUnits'),data.top_units,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.events||0} drankjes · piek ${r.peak_at?new Date(r.peak_at).toLocaleDateString('nl-NL'):''}`,value:()=>`${fmt(r.units,1)}u`}), 'Nog geen data.');
-      renderList(document.getElementById('topCount'),data.top_count_all,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${fmt(r.units,1)} units totaal`,value:()=>`${r.events||0}`}), 'Nog geen data.');
+      renderList(document.getElementById('topCount'),data.top_count_all,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${fmt(r.units,1)} eenheden totaal`,value:()=>`${r.events||0}`}), 'Nog geen data.');
       renderList(document.getElementById('topCountNow'),[...(data.top_count_month||[]).slice(0,3),...(data.top_count_week||[]).slice(0,3)],(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.window_label||''} · ${fmt(r.units,1)} units`,value:()=>`${r.events||0}`}), 'Nog geen data.');
-      renderList(document.getElementById('bigNights'),data.big_nights,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.night_at?nlDayDate(r.night_at):''} · hoogste avond`,value:()=>`${fmt(r.units,1)}u`}), 'Nog geen grote nachten.');
+      renderList(document.getElementById('bigNights'),data.big_nights,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.night_at?nlDayDate(r.night_at):''} · zwaarste avond`,value:()=>`${fmt(r.units,1)}u`}), 'Nog geen grote nachten.');
       renderBars(document.getElementById('typeBars'), (data.by_type||[]).slice(0,8), 'units', 'sage');
       renderFairness(data.fairness_cards||[]); renderLocations(data.by_location||[]);
       renderSpeedHighlights(data.speed_leaderboards||[]);
@@ -360,7 +360,7 @@ async function loadStats(){
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./gejast-geo.js?v327"></script><script src="./drinks-verify-float.js?v327"></script>
-  <script src="./gejast-session-corner.js?v327"></script>
+  <script src="./gejast-geo.js?v328"></script><script src="./drinks-verify-float.js?v328"></script>
+  <script src="./gejast-session-corner.js?v328"></script>
 </body>
 </html>

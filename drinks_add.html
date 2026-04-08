@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drank toevoegen</title>
-  <script>window.GEJAST_PAGE_VERSION='v312';</script><script src="./gejast-config.js?v327"></script>
+  <script>window.GEJAST_PAGE_VERSION='v312';</script><script src="./gejast-config.js?v328"></script>
   <style>
     :root{
       --line:rgba(0,0,0,.09);
@@ -157,7 +157,7 @@
       <div class="status" id="statusLine"></div>
 
       <div class="stack">
-        <section class="panel pending" data-route="./drinks_pending.html" style="cursor:pointer">
+        <section class="panel pending" data-route="./drinks_pending.html" role="link" tabindex="0" aria-label="Ga naar verificaties" style="cursor:pointer">
           <h2>Wacht op bevestiging</h2>
           <div class="list" id="pendingList"></div>
         </section>
@@ -167,7 +167,7 @@
           <div class="list" id="verifyQueue"></div>
         </section>
 
-        <section class="panel recent" data-route="./drinks_pending.html" style="cursor:pointer">
+        <section class="panel recent" data-route="./drinks_pending.html" role="link" tabindex="0" aria-label="Ga naar verificaties" style="cursor:pointer">
           <div class="row-top" style="margin-bottom:8px"><h2 style="margin:0">Recent bevestigd</h2><a class="action-btn verify" href="./drinks_history.html">Alles</a></div>
           <div class="list" id="recentList"></div>
         </section>
@@ -191,7 +191,7 @@
 
   <div class="site-credit-watermark" data-version-watermark>v312 · Made by Bruis</div>
 
-  <script src="./gejast-geo.js?v327"></script><script src="./drinks-verify-float.js?v327"></script>
+  <script src="./gejast-geo.js?v328"></script><script src="./drinks-verify-float.js?v328"></script>
   <script>
   (function(){
     const cfg=window.GEJAST_CONFIG||{};
