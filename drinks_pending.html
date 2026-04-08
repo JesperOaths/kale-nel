@@ -1,74 +1,630 @@
 <!doctype html>
 <html lang="nl">
 <head>
-    <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
-<meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Drankverificatie</title><script>window.GEJAST_PAGE_VERSION='v361';</script>
-  <script src="./gejast-config.js?v361"></script>
-  <script src="./gejast-geo.js?v361"></script>
-  <script src="./gejast-drinks-workflow.js?v361"></script>
+  <title>Drankverificatie</title>
+  <script>window.GEJAST_PAGE_VERSION='v360-fixpack';</script>
+  <script src="./gejast-config.js?v360"></script>
+  <script src="./gejast-geo.js?v360"></script>
+  <script src="./gejast-drinks-workflow.js?v360"></script>
   <style>
-    :root{--bg:#ece7dc;--card:#f8f2e7;--line:#d7c7a7;--ink:#1d1a17;--muted:#736758;--gold:#b79b56;--good:#dfead7;--bad:#f1dfd7}
-    *{box-sizing:border-box} body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,231,220,.94),rgba(236,231,220,.97)),url('./site-bg-mobile.webp') center/cover no-repeat fixed;color:var(--ink)}
-    .wrap{max-width:1120px;margin:0 auto;display:grid;gap:16px}.top{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:#111;color:#fff;text-decoration:none;font-weight:800}.btn.alt{background:#fff;color:var(--ink)}
-    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.panel{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:18px;display:grid;gap:12px;align-content:start;min-height:220px}.panel h2{margin:0;font-size:1.05rem}.muted{color:var(--muted)}
-    .list{display:grid;gap:10px}.row{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;display:grid;gap:10px}.row-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.meta{color:var(--muted);font-size:.92rem}.pill{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;background:#efe3be;color:#5b4a20}.pill.bad{background:#ecd6d0;color:#6a352f}.actions{display:flex;gap:8px;flex-wrap:wrap}.action{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 12px;font-weight:800;cursor:pointer}.action.good{background:var(--good)}.action.bad{background:var(--bad)}
-    .status{min-height:20px;color:var(--muted);font-weight:700}
-    @media (max-width:860px){.grid{grid-template-columns:1fr}}
+    :root{
+      --bg:#ece7dc;
+      --shell:rgba(255,251,245,.94);
+      --panel:#fffdf9;
+      --line:rgba(45,35,20,.12);
+      --line-strong:rgba(45,35,20,.18);
+      --ink:#1f1a15;
+      --muted:#6d6257;
+      --gold:#9a8241;
+      --gold-soft:#eadcb0;
+      --good:#4b6945;
+      --good-soft:#dce9d7;
+      --bad:#8c544a;
+      --bad-soft:#edd9d4;
+      --shadow:0 20px 48px rgba(0,0,0,.08);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      padding:18px;
+      font-family:Inter,system-ui,sans-serif;
+      background:linear-gradient(rgba(236,231,220,.94),rgba(236,231,220,.97)),url('./site-bg-mobile.webp') center/cover no-repeat fixed;
+      color:var(--ink);
+    }
+    .wrap{max-width:1180px;margin:0 auto}
+    .shell{
+      background:var(--shell);
+      border:1px solid rgba(255,255,255,.72);
+      border-radius:32px;
+      padding:24px;
+      box-shadow:var(--shadow);
+    }
+    .hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:start}
+    .hero-actions,.hero-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .hero-tools{justify-content:flex-end}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;
+      padding:11px 16px;border-radius:999px;border:1px solid var(--line-strong);
+      background:#111;color:#fff;text-decoration:none;font-weight:800;cursor:pointer;
+    }
+    .btn.alt{background:var(--panel);color:var(--ink)}
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand img{width:58px;height:58px;object-fit:contain}
+    h1{margin:10px 0 8px;font-size:clamp(2rem,4vw,3rem);line-height:1.02}
+    .sub{max-width:760px;color:var(--muted);font-size:1rem}
+    .status-line{min-height:22px;margin-top:12px;font-weight:800}
+    .status-line.ok{color:var(--good)}
+    .status-line.bad{color:var(--bad)}
+    .meta-strip{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:12px;
+      margin-top:22px;
+    }
+    .meta-card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:22px;
+      padding:16px;
+      min-height:108px;
+      display:grid;
+      gap:8px;
+      align-content:space-between;
+    }
+    .meta-card .label{
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.09em;
+      color:#836f47;
+      font-weight:800;
+    }
+    .meta-card .value{
+      font-size:1.9rem;
+      line-height:1;
+      font-weight:900;
+    }
+    .meta-card .note{color:var(--muted);font-size:.95rem}
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:16px;
+      margin-top:22px;
+    }
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:26px;
+      padding:18px;
+      display:grid;
+      gap:12px;
+      min-height:260px;
+      align-content:start;
+    }
+    .panel-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-end}
+    .panel-head h2{margin:0;font-size:1.18rem}
+    .panel-head p{margin:4px 0 0;color:var(--muted);font-size:.94rem}
+    .list{display:grid;gap:10px}
+    .row{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:20px;
+      padding:14px;
+      display:grid;
+      gap:10px;
+    }
+    .row-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .row-title{font-weight:900;font-size:1rem}
+    .row-sub,.row-meta{color:var(--muted);font-size:.92rem}
+    .row-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .action{
+      display:inline-flex;align-items:center;justify-content:center;
+      padding:10px 13px;border-radius:999px;border:1px solid var(--line-strong);
+      background:#fff;color:var(--ink);font-weight:800;cursor:pointer;
+    }
+    .action.good{background:var(--good-soft);color:#21361d}
+    .action.bad{background:var(--bad-soft);color:#5d2b22}
+    .pill{
+      display:inline-flex;align-items:center;justify-content:center;
+      padding:5px 9px;border-radius:999px;font-size:11px;font-weight:800;
+      text-transform:uppercase;letter-spacing:.06em;background:var(--gold-soft);color:#5d4a1e;
+      white-space:nowrap;
+    }
+    .pill.bad{background:var(--bad-soft);color:#6a352f}
+    .empty{color:var(--muted)}
+    .site-credit-watermark{
+      position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;
+      padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);
+      border:1px solid rgba(154,130,65,.35);color:#f3e0ad;
+      font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;
+      pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,.18);
+    }
+    @media (max-width:980px){
+      .grid,.meta-strip{grid-template-columns:1fr}
+      .hero{grid-template-columns:1fr}
+      .hero-tools{justify-content:flex-start}
+    }
+    @media (max-width:720px){
+      body{padding:12px}
+      .shell{padding:18px;border-radius:24px}
+      .row-top{display:grid}
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="top">
-      <div><h1 style="margin:0">Drankverificatie</h1><div class="muted">Bekijk alle user requests. Je kunt alleen stemmen op aanvragen die dicht genoeg bij jou in de buurt zijn.</div></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><a class="btn alt" href="./drinks_add.html">Drank toevoegen</a><a class="btn" href="./drinks.html">Drankoverzicht</a><a href="./index.html" aria-label="Home via logo" style="display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:999px;background:rgba(255,255,255,.9);border:1px solid var(--line)"><img src="./logo.png" alt="Logo" style="width:34px;height:34px;object-fit:contain"></a></div>
-    </div>
-    <div id="status" class="status"></div>
-    <div class="grid">
-      <section class="panel"><h2>Alle user requests</h2><div id="verifyQueue" class="list"><div class="muted">Laden…</div></div></section>
-      <section class="panel"><h2>Mijn open aanvragen</h2><div id="pendingList" class="list"><div class="muted">Laden…</div></div></section>
-      <section class="panel"><h2>Bevestigde drankjes</h2><div id="verifiedList" class="list"><div class="muted">Laden…</div></div></section>
-      <section class="panel"><h2>Afgekeurde drankjes</h2><div id="rejectedList" class="list"><div class="muted">Laden…</div></div></section>
+    <div class="shell">
+      <div class="hero">
+        <div>
+          <div class="hero-actions">
+            <a class="btn alt" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./drinks.html';}">Terug</a>
+            <a class="btn alt" href="./drinks_add.html">Drank toevoegen</a>
+            <a class="btn alt" href="./drinks.html">Drankoverzicht</a>
+          </div>
+          <h1>Drankverificatie</h1>
+          <div class="sub">Deze pagina toont alle open aanvragen, je eigen nog niet afgeronde requests, recent bevestigde drankjes en recente afkeuringen. De write-acties lopen via het gedeelde workflowpad zodra dat in de repo beschikbaar is, met een veilige fallback voor oudere mirrors.</div>
+          <div id="statusLine" class="status-line" aria-live="polite"></div>
+        </div>
+        <div class="hero-tools">
+          <a class="brand" href="./index.html" aria-label="Home via logo"><img src="./logo.png" alt="Logo"></a>
+        </div>
+      </div>
+
+      <div class="meta-strip">
+        <section class="meta-card">
+          <div class="label">Open checks</div>
+          <div class="value" id="verifyCount">0</div>
+          <div class="note">Aanvragen waarop je nog kunt stemmen.</div>
+        </section>
+        <section class="meta-card">
+          <div class="label">Mijn open aanvragen</div>
+          <div class="value" id="mineCount">0</div>
+          <div class="note">Alleen zolang de status nog pending is.</div>
+        </section>
+        <section class="meta-card">
+          <div class="label">Recent bevestigd</div>
+          <div class="value" id="verifiedCount">0</div>
+          <div class="note" id="geoMetaLine">Locatie wordt gebruikt voor afstandschecks wanneer die nodig zijn.</div>
+        </section>
+      </div>
+
+      <div class="grid">
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Alle user requests</h2>
+              <p>Open aanvragen waarop nog gestemd kan worden.</p>
+            </div>
+          </div>
+          <div id="verifyQueue" class="list"><div class="empty">Laden...</div></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Mijn open aanvragen</h2>
+              <p>Alleen pending aanvragen kun je nog annuleren.</p>
+            </div>
+          </div>
+          <div id="pendingList" class="list"><div class="empty">Laden...</div></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Bevestigde drankjes</h2>
+              <p>Recente bevestigingen uit dezelfde lifecycle.</p>
+            </div>
+          </div>
+          <div id="verifiedList" class="list"><div class="empty">Laden...</div></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Afgekeurde drankjes</h2>
+              <p>Recente afkeuringen zodat reviewgedrag zichtbaar blijft.</p>
+            </div>
+          </div>
+          <div id="rejectedList" class="list"><div class="empty">Laden...</div></div>
+        </section>
+      </div>
     </div>
   </div>
-<script>
-const {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY}=window.GEJAST_CONFIG||{};
-const token=()=> (window.GEJAST_CONFIG && window.GEJAST_CONFIG.getPlayerSessionToken ? window.GEJAST_CONFIG.getPlayerSessionToken() : '');
-const headers=()=>({'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':`Bearer ${SUPABASE_PUBLISHABLE_KEY}`});
-function setStatus(msg,bad){const el=document.getElementById('status'); el.textContent=msg||''; el.style.color=bad?'#8b2f2f':'#6b6257';}
-async function parse(res){const txt=await res.text(); let data={}; try{data=txt?JSON.parse(txt):{};}catch{data={raw:txt};} if(!res.ok) throw new Error(data?.message||data?.error||txt||`HTTP ${res.status}`); return data;}
-function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
-function fmtDate(v){if(!v) return '—'; try{return new Date(v).toLocaleString('nl-NL');}catch{return '—';}}
-function units(v){return Number(v||0).toFixed(1);}
-function renderList(el, rows, map, empty){el.innerHTML=(rows||[]).length?(rows||[]).map(map).join(''):`<div class="muted">${empty}</div>`;}
-function canVoteNearby(r){ if(r && (r.secret_king || r.is_secret_king)) return true; const d=Number(r&&r.distance_m); if(!Number.isFinite(d)) return true; return d <= 500; }
-async function verifyItem(id, approved){await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),approved:!!approved})}).then(parse);}
-async function cancelMine(id){await fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_my_pending_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id)})}).then(parse);}
-async function load(){
-  try{
-    setStatus('Laden…');
-    const workflow = window.GEJAST_DRINKS_WORKFLOW;
-    const data = workflow ? await workflow.forPending({ session_token: token(), history_limit: 40 }) : null;
-    const verify = Array.isArray(data?.verifyQueue) ? data.verifyQueue : [];
-    const mine = Array.isArray(data?.myPendingEvents) ? data.myPendingEvents : [];
-    const history = Array.isArray(data?.verifiedHistory) ? data.verifiedHistory : [];
-    const page = data?.page || {};
-    const rejected = (Array.isArray(data?.recentRejected) ? data.recentRejected : []).length ? data.recentRejected : ((Array.isArray(page?.recent_events) ? page.recent_events.filter(r=>String(r.status||'').toLowerCase()==='rejected') : []));
-    renderList(document.getElementById('verifyQueue'),verify,r=>`<div class="row"><div class="row-top"><div><strong>${esc(r.player_name||'Onbekend')} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${units(r.total_units)} units${r.distance_m!=null?` · ${Math.round(r.distance_m)}m afstand`:''}</div><div class="meta">${fmtDate(r.created_at)}</div></div><span class="pill">check</span></div><div class="actions">${!r.viewer_vote_state ? (canVoteNearby(r) ? `<button class="action good" data-verify="${r.id}">Bevestigen</button><button class="action bad" data-reject="${r.id}">Afkeuren</button>` : `<span class="meta">Te ver weg om te stemmen.</span>`) : `<span class="meta">Jij stemde al: ${r.viewer_vote_state==='approved'?'voor':'tegen'}</span>`}</div></div>`,'Nog geen user requests.');
-    renderList(document.getElementById('pendingList'),mine.filter((r)=>String(r.status||'pending')==='pending'),r=>`<div class="row"><div class="row-top"><div><strong>${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${fmtDate(r.created_at)} · ${units(r.total_units)} units</div></div><span class="pill">${esc(r.status||'pending')}</span></div><div class="actions"><button class="action bad" data-cancel="${r.id}">Annuleren</button></div></div>`,'Nog geen open aanvragen.');
-    renderList(document.getElementById('verifiedList'),history.slice(0,20),r=>`<div class="row"><div class="row-top"><div><strong>${esc(r.player_name||'Onbekend')} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${fmtDate(r.verified_at||r.created_at)} · ${units(r.total_units)} units</div><div class="meta">Bevestigd door ${esc((r.verifier_names||[]).join(', ')||'—')}</div></div><span class="pill">ok</span></div></div>`,'Nog geen bevestigde drankjes.');
-    renderList(document.getElementById('rejectedList'),(rejected||[]).slice(0,20),r=>`<div class="row"><div class="row-top"><div><strong>${esc(r.player_name||'Onbekend')} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${fmtDate(r.updated_at||r.created_at)} · ${units(r.total_units)} units</div></div><span class="pill bad">afgekeurd</span></div></div>`,'Nog geen afgekeurde drankjes.');
-    document.querySelectorAll('[data-verify]').forEach(b=>b.onclick=async()=>{try{await verifyItem(b.dataset.verify,true); setStatus('Drankje bevestigd.'); await load();}catch(err){setStatus(err.message||String(err),true);}});
-    document.querySelectorAll('[data-reject]').forEach(b=>b.onclick=async()=>{try{await verifyItem(b.dataset.reject,false); setStatus('Drankje afgekeurd.'); await load();}catch(err){setStatus(err.message||String(err),true);}});
-    document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=async()=>{try{await cancelMine(b.dataset.cancel); setStatus('Aanvraag geannuleerd.'); await load();}catch(err){setStatus(err.message||String(err),true);}});
-    setStatus('Gegevens geladen.');
-  }catch(err){ setStatus(err.message||String(err), true); }
-}
-load();
-</script>
-<div class="site-credit-watermark" data-version-watermark style="position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)"></div>
+
+  <div class="site-credit-watermark" data-version-watermark>v360 fixpack</div>
+
+  <script>
+  (function(){
+    const cfg = window.GEJAST_CONFIG || {};
+    const SUPABASE_URL = cfg.SUPABASE_URL || '';
+    const KEY = cfg.SUPABASE_PUBLISHABLE_KEY || '';
+    const SESSION_KEYS = ['jas_session_token_v11','jas_session_token_v10','gejast_session_token'];
+    let lastBundle = null;
+
+    function getToken(){
+      if (cfg.getPlayerSessionToken) return cfg.getPlayerSessionToken() || '';
+      for (const key of SESSION_KEYS){
+        const value = localStorage.getItem(key) || sessionStorage.getItem(key);
+        if (value) return value;
+      }
+      return '';
+    }
+
+    function headers(){
+      return {
+        'Content-Type':'application/json',
+        apikey: KEY,
+        Authorization: `Bearer ${KEY}`,
+        Accept:'application/json'
+      };
+    }
+
+    async function parse(res){
+      const text = await res.text();
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch (_) { throw new Error(text || `HTTP ${res.status}`); }
+      if (!res.ok) throw new Error(data?.message || data?.error || text || `HTTP ${res.status}`);
+      return data;
+    }
+
+    async function rpc(name, payload){
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+        method:'POST',
+        headers: headers(),
+        body: JSON.stringify(payload || {})
+      });
+      return parse(res);
+    }
+
+    function esc(value){
+      return String(value ?? '').replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+
+    function fmtDate(value){
+      if (!value) return '-';
+      try { return new Date(value).toLocaleString('nl-NL'); } catch (_) { return '-'; }
+    }
+
+    function units(value){
+      return Number(value || 0).toFixed(1);
+    }
+
+    function setStatus(message, tone){
+      const el = document.getElementById('statusLine');
+      el.textContent = message || '';
+      el.className = `status-line${tone ? ` ${tone}` : ''}`;
+    }
+
+    function setCounts(bundle){
+      document.getElementById('verifyCount').textContent = String((bundle.verify || []).length);
+      document.getElementById('mineCount').textContent = String((bundle.mine || []).length);
+      document.getElementById('verifiedCount').textContent = String((bundle.history || []).length);
+    }
+
+    function renderList(el, rows, mapper, emptyText){
+      el.innerHTML = Array.isArray(rows) && rows.length ? rows.map(mapper).join('') : `<div class="empty">${emptyText}</div>`;
+    }
+
+    function isSecretLike(row){
+      const raw = String(row?.event_type_key || row?.event_type_label || row?.label || '').toLowerCase();
+      return raw.includes('koning') || raw.includes('king') || raw.includes('ballroom') || raw.includes('balzaal');
+    }
+
+    function canVoteNearby(row){
+      if (isSecretLike(row)) return true;
+      const distance = Number(row?.distance_m);
+      if (!Number.isFinite(distance)) return true;
+      return distance <= 500;
+    }
+
+    async function getVerifyPosition(){
+      const geo = window.GEJAST_GEO;
+      if (!geo || typeof geo.ensure !== 'function') return null;
+      const pos = await geo.ensure(true, { silent:false });
+      try {
+        document.getElementById('geoMetaLine').textContent = pos && geo.formatCoords
+          ? `Locatie actief - ${geo.formatCoords(pos)}`
+          : 'Locatie actief voor afstandschecks.';
+      } catch (_) {}
+      return pos || null;
+    }
+
+    function normalizeWorkflowBundle(raw){
+      const pending = raw?.pending || raw?.dashboard || raw || {};
+      return {
+        verify: raw?.verify_queue || raw?.all_pending_verifications || raw?.verification_queue || pending?.verification_queue || pending?.verify_queue || [],
+        mine: raw?.my_pending_events || raw?.my_pending || pending?.my_pending || pending?.my_pending_events || [],
+        history: raw?.verified_recent || raw?.history || pending?.verified_recent || pending?.history || [],
+        rejected: raw?.recent_rejected || pending?.recent_rejected || []
+      };
+    }
+
+    async function loadViaWorkflow(){
+      const workflow = window.GEJAST_DRINKS_WORKFLOW;
+      if (!workflow) return null;
+      const geo = window.GEJAST_GEO;
+      const pos = geo && typeof geo.cached === 'function' ? geo.cached() : null;
+      try {
+        if (typeof workflow.forPending === 'function') {
+          return normalizeWorkflowBundle(await workflow.forPending({
+            viewerLat: pos?.coords?.latitude ?? null,
+            viewerLng: pos?.coords?.longitude ?? null,
+            historyLimit: 40
+          }));
+        }
+        if (typeof workflow.readDashboard === 'function') {
+          return normalizeWorkflowBundle(await workflow.readDashboard({
+            viewerLat: pos?.coords?.latitude ?? null,
+            viewerLng: pos?.coords?.longitude ?? null,
+            historyLimit: 40
+          }));
+        }
+        if (typeof workflow.loadPending === 'function') {
+          const pending = await workflow.loadPending({
+            requestKind: 'drink',
+            viewerLat: pos?.coords?.latitude ?? null,
+            viewerLng: pos?.coords?.longitude ?? null
+          });
+          const history = typeof workflow.loadHistory === 'function'
+            ? await workflow.loadHistory({ requestKind:'drink', limit:40 })
+            : [];
+          return normalizeWorkflowBundle({ pending, history });
+        }
+      } catch (_) {
+        return null;
+      }
+      return null;
+    }
+
+    async function loadViaLegacyRpc(){
+      const geo = window.GEJAST_GEO;
+      const pos = geo && typeof geo.cached === 'function' ? geo.cached() : null;
+      const token = getToken();
+      const [verifyRaw, mineRaw, historyRaw, pageRaw] = await Promise.all([
+        rpc('get_all_pending_drink_event_verifications_public', { session_token: token }),
+        rpc('get_my_pending_drink_requests_public', { session_token: token }),
+        rpc('get_verified_drinks_history_public', { limit_count: 40 }),
+        rpc('get_drinks_page_public', {
+          session_token: token,
+          viewer_lat: pos?.coords?.latitude ?? null,
+          viewer_lng: pos?.coords?.longitude ?? null
+        })
+      ]);
+
+      const verify = verifyRaw?.get_all_pending_drink_event_verifications_public || verifyRaw || [];
+      const mine = mineRaw?.get_my_pending_drink_requests_public || mineRaw || [];
+      const history = historyRaw?.get_verified_drinks_history_public || historyRaw || [];
+      const page = pageRaw?.get_drinks_page_public || pageRaw || {};
+      const rejected = Array.isArray(page?.recent_rejected) && page.recent_rejected.length
+        ? page.recent_rejected
+        : (Array.isArray(page?.recent_events) ? page.recent_events.filter((row) => String(row?.status || '').toLowerCase() === 'rejected') : []);
+
+      return { verify, mine, history, rejected };
+    }
+
+    async function loadBundle(){
+      const workflowBundle = await loadViaWorkflow();
+      return workflowBundle || await loadViaLegacyRpc();
+    }
+
+    async function verifyViaWorkflow(id, approved, pos){
+      const workflow = window.GEJAST_DRINKS_WORKFLOW;
+      if (!workflow) return false;
+      const payload = {
+        request_id: Number(id),
+        drink_event_id: Number(id),
+        approve: !!approved,
+        approved: !!approved,
+        lat: pos?.coords?.latitude ?? null,
+        lng: pos?.coords?.longitude ?? null,
+        accuracy: pos?.coords?.accuracy ?? null
+      };
+      try {
+        if (typeof workflow.write === 'function') {
+          await workflow.write('verify_event', payload);
+          return true;
+        }
+        if (typeof workflow.approveDrink === 'function' && approved) {
+          await workflow.approveDrink({ requestKind:'drink', requestId:Number(id), lat:payload.lat, lng:payload.lng, accuracy:payload.accuracy });
+          return true;
+        }
+        if (typeof workflow.rejectDrink === 'function' && !approved) {
+          await workflow.rejectDrink({ requestKind:'drink', requestId:Number(id), lat:payload.lat, lng:payload.lng, accuracy:payload.accuracy });
+          return true;
+        }
+      } catch (_) {
+        return false;
+      }
+      return false;
+    }
+
+    async function verifyViaRpc(id, approved, pos){
+      const base = {
+        session_token: getToken(),
+        drink_event_id: Number(id),
+        approve: !!approved,
+        approved: !!approved,
+        lat: pos?.coords?.latitude ?? null,
+        lng: pos?.coords?.longitude ?? null,
+        accuracy: pos?.coords?.accuracy ?? null
+      };
+      try {
+        await rpc('verify_drink_event', base);
+        return true;
+      } catch (_) {}
+      await rpc('verify_drink_event_public', base);
+      return true;
+    }
+
+    async function cancelViaWorkflow(id){
+      const workflow = window.GEJAST_DRINKS_WORKFLOW;
+      if (!workflow) return false;
+      try {
+        if (typeof workflow.write === 'function') {
+          await workflow.write('cancel_event', { request_id:Number(id), drink_event_id:Number(id) });
+          return true;
+        }
+        if (typeof workflow.cancelDrink === 'function') {
+          await workflow.cancelDrink({ requestKind:'drink', requestId:Number(id) });
+          return true;
+        }
+      } catch (_) {
+        return false;
+      }
+      return false;
+    }
+
+    async function cancelViaRpc(id){
+      await rpc('cancel_my_pending_drink_event', {
+        session_token: getToken(),
+        drink_event_id: Number(id)
+      });
+      return true;
+    }
+
+    async function verifyItem(id, approved){
+      const row = (lastBundle?.verify || []).find((item) => String(item?.id ?? item?.request_id) === String(id)) || {};
+      if (row.viewer_vote_state) throw new Error('Je hebt al gestemd op deze aanvraag.');
+      if (!canVoteNearby(row)) throw new Error('Je bent te ver weg om op deze aanvraag te stemmen.');
+
+      const pos = await getVerifyPosition();
+      const handled = await verifyViaWorkflow(id, approved, pos);
+      if (!handled) await verifyViaRpc(id, approved, pos);
+    }
+
+    async function cancelMine(id){
+      const handled = await cancelViaWorkflow(id);
+      if (!handled) await cancelViaRpc(id);
+    }
+
+    function attachRowActions(){
+      document.querySelectorAll('[data-verify]').forEach((btn) => {
+        btn.onclick = async () => {
+          try {
+            await verifyItem(btn.dataset.verify, true);
+            setStatus('Drankje bevestigd.', 'ok');
+            await load();
+          } catch (err) {
+            setStatus(err.message || String(err), 'bad');
+          }
+        };
+      });
+
+      document.querySelectorAll('[data-reject]').forEach((btn) => {
+        btn.onclick = async () => {
+          try {
+            await verifyItem(btn.dataset.reject, false);
+            setStatus('Drankje afgekeurd.', 'ok');
+            await load();
+          } catch (err) {
+            setStatus(err.message || String(err), 'bad');
+          }
+        };
+      });
+
+      document.querySelectorAll('[data-cancel]').forEach((btn) => {
+        btn.onclick = async () => {
+          try {
+            await cancelMine(btn.dataset.cancel);
+            setStatus('Aanvraag geannuleerd.', 'ok');
+            await load();
+          } catch (err) {
+            setStatus(err.message || String(err), 'bad');
+          }
+        };
+      });
+    }
+
+    function render(bundle){
+      lastBundle = bundle;
+      setCounts(bundle);
+
+      renderList(document.getElementById('verifyQueue'), bundle.verify, (row) => {
+        const canVote = !row.viewer_vote_state && canVoteNearby(row);
+        return `
+          <div class="row">
+            <div class="row-top">
+              <div>
+                <div class="row-title">${esc(row.player_name || 'Onbekend')} · ${esc(row.event_type_label || row.event_type_key || 'Drankje')}</div>
+                <div class="row-sub">${units(row.total_units)} units${row.distance_m != null ? ` · ${Math.round(Number(row.distance_m) || 0)}m afstand` : ''}</div>
+                <div class="row-meta">${fmtDate(row.created_at)}</div>
+              </div>
+              <span class="pill">check</span>
+            </div>
+            <div class="row-actions">
+              ${row.viewer_vote_state
+                ? `<span class="row-meta">Jij stemde al: ${row.viewer_vote_state === 'approved' ? 'voor' : 'tegen'}</span>`
+                : canVote
+                  ? `<button class="action good" data-verify="${row.id ?? row.request_id}">Bevestigen</button><button class="action bad" data-reject="${row.id ?? row.request_id}">Afkeuren</button>`
+                  : `<span class="row-meta">Te ver weg om te stemmen.</span>`}
+            </div>
+          </div>`;
+      }, 'Nog geen user requests.');
+
+      renderList(document.getElementById('pendingList'), bundle.mine, (row) => `
+        <div class="row">
+          <div class="row-top">
+            <div>
+              <div class="row-title">${esc(row.event_type_label || row.event_type_key || 'Drankje')}</div>
+              <div class="row-sub">${fmtDate(row.created_at)}</div>
+              <div class="row-meta">${units(row.total_units)} units</div>
+            </div>
+            <span class="pill">${esc(row.status || 'pending')}</span>
+          </div>
+          <div class="row-actions">
+            <button class="action bad" data-cancel="${row.id ?? row.request_id}">Annuleren</button>
+          </div>
+        </div>
+      `, 'Nog geen open aanvragen.');
+
+      renderList(document.getElementById('verifiedList'), (bundle.history || []).slice(0, 20), (row) => `
+        <div class="row">
+          <div class="row-top">
+            <div>
+              <div class="row-title">${esc(row.player_name || 'Onbekend')} · ${esc(row.event_type_label || row.event_type_key || 'Drankje')}</div>
+              <div class="row-sub">${fmtDate(row.verified_at || row.created_at)}</div>
+              <div class="row-meta">${units(row.total_units)} units</div>
+            </div>
+            <span class="pill">ok</span>
+          </div>
+        </div>
+      `, 'Nog geen bevestigde drankjes.');
+
+      renderList(document.getElementById('rejectedList'), (bundle.rejected || []).slice(0, 20), (row) => `
+        <div class="row">
+          <div class="row-top">
+            <div>
+              <div class="row-title">${esc(row.player_name || 'Onbekend')} · ${esc(row.event_type_label || row.event_type_key || 'Drankje')}</div>
+              <div class="row-sub">${fmtDate(row.updated_at || row.created_at)}</div>
+              <div class="row-meta">${units(row.total_units)} units</div>
+            </div>
+            <span class="pill bad">afgekeurd</span>
+          </div>
+        </div>
+      `, 'Nog geen afgekeurde drankjes.');
+
+      attachRowActions();
+    }
+
+    async function load(){
+      try {
+        if (cfg.ensurePlayerSessionOrRedirect && !cfg.ensurePlayerSessionOrRedirect('drinks_pending')) return;
+        setStatus('Laden...');
+        const bundle = await loadBundle();
+        render(bundle);
+        setStatus('Gegevens geladen.', 'ok');
+      } catch (err) {
+        setStatus(err.message || String(err), 'bad');
+      }
+    }
+
+    load();
+  })();
+  </script>
 </body>
 </html>
