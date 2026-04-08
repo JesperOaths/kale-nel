@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <title>GEJAST Home</title>
-  <script>window.GEJAST_PAGE_VERSION='v336';</script><script src="./gejast-config.js?v336"></script>
+  <script>window.GEJAST_PAGE_VERSION='v337';</script><script src="./gejast-config.js?v337"></script>
   <style>
     :root{--gold:#9a8241;--paper:rgba(255,251,245,.86);--line:rgba(0,0,0,.08);--ink:#1a1a1a;--muted:#6b6257}
     *{box-sizing:border-box} body{margin:0;min-height:100vh;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(rgba(244,240,232,.78),rgba(244,240,232,.78)), url('./site-bg-desktop.webp') center/cover no-repeat fixed;color:var(--ink);display:flex;align-items:center;justify-content:center;padding:20px}
@@ -60,10 +60,29 @@
         req.href = './request.html' + (returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : '');
         log.href = './login.html' + (returnTo ? `?return_to=${encodeURIComponent(returnTo)}` : '');
       }
-      if(getToken()){
-        const target = returnTo || (family ? 'index.html?scope=family' : 'index.html');
-        location.replace(target.startsWith('./') ? target : `./${target}`);
+      async function validateAndContinue(){
+        const activeToken = getToken();
+        if(!activeToken) return;
+        try{
+          const cfg = window.GEJAST_CONFIG || {};
+          const url = cfg.SUPABASE_URL || '';
+          const key = cfg.SUPABASE_PUBLISHABLE_KEY || '';
+          if(!url || !key) return;
+          const headers = { 'Content-Type':'application/json', apikey:key, Authorization:`Bearer ${key}`, Accept:'application/json' };
+          const res = await fetch(`${url}/rest/v1/rpc/get_public_state`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify({ session_token: activeToken }) });
+          if(!res.ok){ clear(); return; }
+          const data = await res.json().catch(()=>null);
+          if(data && (data.my_name || data.display_name || data.player_name)){
+            const target = returnTo || (family ? 'index.html?scope=family' : 'index.html');
+            location.replace(target.startsWith('./') ? target : `./${target}`);
+          } else {
+            clear();
+          }
+        }catch(_){
+          clear();
+        }
       }
+      validateAndContinue();
     })();
   </script>
 </body>
