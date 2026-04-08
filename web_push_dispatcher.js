@@ -52,19 +52,25 @@ async function run(){
   const items = [...await claimCoreJobs(), ...await claimAdminJobs()];
   for (const item of items){
     try {
-      await webpush.sendNotification({
-        endpoint: item.endpoint,
-        keys: { p256dh: item.p256dh_key, auth: item.auth_key }
-      }, JSON.stringify({
+      const payload = {
         title: item.title,
         body: item.body,
         url: item.target_url || './drinks_pending.html',
-        tag: `job-${item.job_id}`
-      }));
+        tag: item.tag || `job-${item.job_id}`,
+        renotify: true,
+        vibrate: [180,80,180],
+        icon: './logo.png',
+        badge: './logo.png',
+        requireInteraction: false
+      };
+      await webpush.sendNotification({
+        endpoint: item.endpoint,
+        keys: { p256dh: item.p256dh_key, auth: item.auth_key }
+      }, JSON.stringify(payload));
       await markSent(item);
-      console.log('sent', item.__source, item.job_id);
+      console.log('sent', item.__source, item.job_id, item.target_url || './drinks_pending.html');
     } catch (err) {
-      const reason = String(err && err.message || err);
+      const reason = String((err && (err.body || err.message)) || err);
       try { await markFailed(item, reason); } catch (markErr) { console.error('mark-failed-error', item.job_id, markErr && markErr.message || markErr); }
       console.error('failed', item.__source, item.job_id, reason);
     }
