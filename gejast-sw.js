@@ -1,4 +1,13 @@
 
+const GEJAST_VAPID_KEY = 'BPqY04jDOB_8RlhNxURgWFl6cMge64Mr7DkrWtgMfG4ARWLJ6S-r6c6JeQJ6o4kysWT0WeR9oVpahP85L8GLl_4';
+function urlBase64ToUint8Array(base64String){
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64); const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+
 self.addEventListener('install', (event) => { self.skipWaiting(); });
 self.addEventListener('activate', (event) => { event.waitUntil(self.clients.claim()); });
 self.addEventListener('push', (event) => {
@@ -48,7 +57,7 @@ self.addEventListener('notificationclick', (event) => {
 self.addEventListener('pushsubscriptionchange', (event) => {
   event.waitUntil((async () => {
     try {
-      const appKey = self.GEJAST_VAPID_KEY || null;
+      const appKey = GEJAST_VAPID_KEY ? urlBase64ToUint8Array(GEJAST_VAPID_KEY) : null;
       if (!self.registration.pushManager) return;
       await self.registration.pushManager.subscribe(appKey ? { userVisibleOnly:true, applicationServerKey: appKey } : { userVisibleOnly:true });
     } catch (_) {}

@@ -51,7 +51,7 @@
         const ok = await window.GEJAST_GEO.showNotificationFromServiceWorker(item.kind === 'speed' ? 'Snelheid te verifiëren' : 'Drankje te verifiëren', {
           body: `${item.player_name||'Speler'} · ${item.event_type_label || item.speed_type_label || ''}`.trim(),
           tag: id,
-          data: { url: item.kind === 'speed' ? './drinks_speed.html' : './drinks.html#verifyPanel', itemId: item.id, kind: item.kind || 'drink' },
+          data: { url: item.kind === 'speed' ? './drinks_speed.html' : './drinks_pending.html', itemId: item.id, kind: item.kind || 'drink' },
           renotify: true
         });
         if (ok) return;
@@ -231,7 +231,7 @@
     document.getElementById('gdfBody').innerHTML = `<strong>${item.player_name} · ${promptLabel}</strong><div class="gdf-meta">${Number(item.total_units||0).toFixed(1)} units${item.kind==='speed' ? ` · ${Number(item.duration_seconds||0).toFixed(1)}s` : ''}${locationBits.length ? ' · ' + locationBits.join(' · ') : ''}</div><div class="gdf-meta">${Number(item.approve_votes||0)} voor · ${Number(item.reject_votes||0)} tegen${countdownText(item)?` · ${countdownText(item)}`:''}</div><div class="gdf-meta">${item.kind==='speed' ? 'Open snelheid om alle verificaties en status te zien.' : 'Open drinks om alle verificaties en status te zien.'}</div>${notifyPermission !== 'granted' ? '<div class="gdf-meta">Tip: zet meldingen aan met de belknop naast je locatieknop.</div>' : ''}`;
     document.getElementById('gdfVerifyBtn').onclick = async () => { const body = document.getElementById('gdfBody'); body.querySelectorAll('.gdf-meta.error').forEach((n)=>n.remove()); try { await (item.kind==='speed' ? verifySpeedEvent(item, true) : verifyDrinkEvent(item, true)); } catch (err) { body.insertAdjacentHTML('beforeend', `<div class="gdf-meta error">${(err && err.message) || 'Bevestigen mislukt.'}</div>`); } };
     document.getElementById('gdfRejectBtn').onclick = async () => { const body = document.getElementById('gdfBody'); body.querySelectorAll('.gdf-meta.error').forEach((n)=>n.remove()); try { await (item.kind==='speed' ? verifySpeedEvent(item, false) : verifyDrinkEvent(item, false)); } catch (err) { body.insertAdjacentHTML('beforeend', `<div class="gdf-meta error">${(err && err.message) || 'Afkeuren mislukt.'}</div>`); } };
-    document.getElementById('gdfOpenBtn').onclick = () => { location.href = item.kind==='speed' ? './drinks_speed.html' : './drinks.html#verifyPanel'; };
+    document.getElementById('gdfOpenBtn').onclick = () => { location.href = item.kind==='speed' ? './drinks_speed.html' : './drinks_pending.html'; };
     document.getElementById('gdfDismissBtn').onclick = () => dismissEvent(`${item.kind||'drink'}:${item.id}`);
     showBox();
   }
@@ -288,7 +288,7 @@
           document.getElementById('gdfTitle').textContent = activePromptItem.kind==='speed' ? 'Snelheid verificatie' : 'Drinks verificatie';
           document.getElementById('gdfOpenBtn').textContent = activePromptItem.kind==='speed' ? 'Open snelheid' : 'Open drinks';
           document.getElementById('gdfBody').innerHTML = `<strong>${activePromptItem.player_name} · ${activePromptItem.event_type_label || activePromptItem.speed_type_label}</strong><div class="gdf-meta">Deze verificatie blijft nog even open zodat meerdere mensen kunnen stemmen voordat het oordeel wordt vastgezet.</div><div class="gdf-meta">${Number(activePromptItem.approve_votes||0)} voor · ${Number(activePromptItem.reject_votes||0)} tegen${countdownText(activePromptItem)?` · ${countdownText(activePromptItem)}`:''}</div><div class="gdf-meta">${activePromptItem.kind==='speed' ? 'Open snelheid om de actuele status en extra stemmen te zien.' : 'Open drinks om de actuele status en extra stemmen te zien.'}</div>`;
-          document.getElementById('gdfOpenBtn').onclick = () => { location.href = activePromptItem.kind==='speed' ? './drinks_speed.html' : './drinks.html#verifyPanel'; };
+          document.getElementById('gdfOpenBtn').onclick = () => { location.href = activePromptItem.kind==='speed' ? './drinks_speed.html' : './drinks_pending.html'; };
           document.getElementById('gdfDismissBtn').onclick = () => dismissEvent(`${activePromptItem.kind||'drink'}:${activePromptItem.id}`);
           showBox();
         } else if (activePromptId && activePromptId !== '__approved__') hideBox();
