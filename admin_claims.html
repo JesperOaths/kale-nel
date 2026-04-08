@@ -116,9 +116,10 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v346';</script><script src="./gejast-config.js?v346"></script>
-  <script src="./admin-session-sync.js?v346"></script>
-  <script src="./admin-topnav.js?v346"></script>
+  <script>window.GEJAST_PAGE_VERSION='v347';</script><script src="./gejast-config.js?v347"></script>
+  <script src="./admin-session-sync.js?v347"></script>
+  <script src="./admin-topnav.js?v347"></script>
+  <script src="./gejast-admin-claims-buckets.js?v347"></script>
 </head>
 <body>
   <div class="main-card">
@@ -363,30 +364,10 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         (String(req.state_bucket || '').toLowerCase() === 'active')
       );
     }
-    function stateBucket(req) {
-      const states = [req?.state_bucket, req?.status, req?.request_status]
-        .map((value) => String(value || '').toLowerCase())
-        .filter(Boolean);
-      const decision = String(req?.decision || '').toLowerCase();
-      if (states.some((raw) => raw.includes('expired'))) return 'expired';
-      if (states.some((raw) => raw.includes('returned_to_claimable') || raw.includes('claimable_again') || raw.includes('claimable'))) return 'rejected';
-      if (states.some((raw) => raw.includes('revok') || raw.includes('reject') || raw.includes('denied'))) return 'rejected';
-      if (states.some((raw) => raw.includes('active') || raw.includes('activated'))) return 'active';
-      if (
-        states.some((raw) =>
-          raw.includes('approved') ||
-          raw.includes('await') ||
-          raw.includes('pending_activation') ||
-          raw.includes('pending activation') ||
-          raw.includes('awaiting_activation') ||
-          raw.includes('awaiting activation') ||
-          raw.includes('waiting')
-        )
-      ) return hasPin(req) ? 'active' : 'awaiting';
-      if (decision === 'rejected' || decision === 'revoked') return 'rejected';
-      if (hasPin(req)) return 'active';
-      return 'pending';
-    }
+    const AdminBuckets = window.GEJAST_ADMIN_BUCKETS || {};
+    const stateBucket = (req)=> (AdminBuckets.deriveBucket ? AdminBuckets.deriveBucket(req) : 'pending');
+    const normalizeExpiredRows = (rows)=> (AdminBuckets.normalizeExpiredRows ? AdminBuckets.normalizeExpiredRows(rows) : (rows||[]));
+    const mergeHistoryWithExpired = (historyRows, expiredRows)=> (AdminBuckets.mergeHistoryWithExpired ? AdminBuckets.mergeHistoryWithExpired(historyRows, expiredRows) : ([...(historyRows||[]), ...(expiredRows||[])]));
     function statusMeta(req, includeDecision = false) {
       const bucket = stateBucket(req);
       if (bucket === 'active' || hasPin(req)) return { cls: 'state-activated', label: 'Actief' };
@@ -951,39 +932,6 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     async function getRequests() { const data = await callFirstRpc(['admin_get_claim_requests','admin_list_claim_requests_action'], { admin_session_token: getAdminSessionToken() }); return Array.isArray(data) ? data : (data?.requests || data?.items || []); }
     async function getHistory() { const data = await callFirstRpc(['admin_get_claim_history','admin_list_claim_history_action'], { admin_session_token: getAdminSessionToken() }); return Array.isArray(data) ? data : (data?.history || data?.items || []); }
     async function getExpiredQueue() { const data = await callFirstRpc(['admin_get_expired_activation_queue','admin_list_expired_activation_queue_action'], { admin_session_token: getAdminSessionToken() }).catch(() => ({ items: [] })); return Array.isArray(data) ? data : (data?.items || []); }
-    function normalizeExpiredRows(rows) {
-      return normalizeAdminRows(rows).map((row) => ({
-        ...row,
-        state_bucket: 'expired',
-        request_status: row.request_status || row.status || 'activation_expired',
-        status: row.status || row.request_status || 'activation_expired'
-      }));
-    }
-    function isLikelyExpired(row){ try { const bucket = stateBucket(row); if (bucket !== 'awaiting') return false; const exp = row?.expires_at ? new Date(row.expires_at) : null; if (exp && !isNaN(exp) && exp.getTime() < Date.now()) return true; const approvedAt = new Date(row?.approved_at || row?.decision_at || row?.updated_at || row?.requested_at || row?.created_at || ''); if (!isNaN(approvedAt)) return (Date.now() - approvedAt.getTime()) > (24*60*60*1000); } catch(_){} return false; }
-    function mergeHistoryWithExpired(historyRows, expiredRows) {
-      const byId = new Map();
-      (historyRows || []).forEach((row) => {
-        const key = requestIdOf(row);
-        if (key !== null && key !== undefined) byId.set(String(key), row);
-      });
-      (expiredRows || []).forEach((row) => {
-        const key = requestIdOf(row);
-        if (key === null || key === undefined) return;
-        const existing = byId.get(String(key)) || {};
-        byId.set(String(key), { ...existing, ...row, state_bucket: 'expired', request_status: row.request_status || existing.request_status || 'activation_expired', status: row.status || existing.status || 'activation_expired' });
-      });
-      return Array.from(byId.values()).map((row)=> isLikelyExpired(row) ? { ...row, state_bucket:'expired', request_status:'activation_expired', status:'activation_expired' } : row);
-    }
-    async function decideRequest(requestId, decision, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision, decision_reason_input: decisionReason }) }); return await parseResponse(res); }
-    async function approveAndSendActivation(requestId, decisionReason) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_approve_and_send_activation_action`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: decisionReason || null, base_url: getActivationBaseUrl() })
-      });
-      const data = await parseResponse(res);
-      try { await updateActivationEmailSubject(requestId); } catch {}
-      return data;
-    }
     async function requeueExpiredActivation(requestId) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_requeue_expired_activation_action`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),

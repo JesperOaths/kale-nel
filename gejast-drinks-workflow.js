@@ -44,6 +44,35 @@
       recent_rejected: Array.isArray(page.recent_rejected) ? page.recent_rejected : (Array.isArray(page.recent_events) ? page.recent_events.filter((r)=>String(r.status||'').toLowerCase()==='rejected') : [])
     };
   }
+  function shapePendingView(data){
+    const page = data?.page || {};
+    return {
+      page,
+      verifyQueue: Array.isArray(data?.verify_queue) ? data.verify_queue : [],
+      myPendingEvents: Array.isArray(data?.my_pending_events) ? data.my_pending_events : [],
+      verifiedHistory: Array.isArray(data?.verified_history) ? data.verified_history : [],
+      recentRejected: Array.isArray(data?.recent_rejected) ? data.recent_rejected : [],
+      recentVerified: Array.isArray(data?.recent_verified) ? data.recent_verified : []
+    };
+  }
+  function shapeAddView(data){
+    const page = data?.page || {};
+    return {
+      page,
+      eventTypes: Array.isArray(data?.event_types) ? data.event_types : [],
+      verifyQueue: Array.isArray(data?.verify_queue) ? data.verify_queue : [],
+      myPendingEvents: Array.isArray(data?.my_pending_events) ? data.my_pending_events : [],
+      recentVerified: Array.isArray(data?.recent_verified) ? data.recent_verified : [],
+      recentRejected: Array.isArray(data?.recent_rejected) ? data.recent_rejected : []
+    };
+  }
+  function shapeSpeedView(data){
+    return {
+      speedPage: data?.speed_page || {},
+      eventTypes: Array.isArray(data?.event_types) ? data.event_types : [],
+      speedLeaderboards: canonicalSpeedSets(data?.speed_leaderboards || data?.speed_page?.leaderboards || [])
+    };
+  }
   async function load(opts={}){
     const session_token = opts.session_token || token();
     try{
@@ -63,5 +92,8 @@
       return fallback(opts);
     }
   }
-  window.GEJAST_DRINKS_WORKFLOW = { CANONICAL_SPEED_TYPES, canonicalSpeedSets, load, fallback, token, headers };
+  async function forPending(opts={}){ return shapePendingView(await load(opts)); }
+  async function forAdd(opts={}){ return shapeAddView(await load(opts)); }
+  async function forSpeed(opts={}){ return shapeSpeedView(await load(opts)); }
+  window.GEJAST_DRINKS_WORKFLOW = { CANONICAL_SPEED_TYPES, canonicalSpeedSets, load, fallback, token, headers, forPending, forAdd, forSpeed };
 })();

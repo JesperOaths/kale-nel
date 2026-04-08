@@ -6,10 +6,10 @@
   <meta http-equiv="Pragma" content="no-cache" />
 <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Drankverificatie</title><script>window.GEJAST_PAGE_VERSION='v346';</script>
-  <script src="./gejast-config.js?v346"></script>
-  <script src="./gejast-geo.js?v346"></script>
-  <script src="./gejast-drinks-workflow.js?v346"></script>
+  <title>Drankverificatie</title><script>window.GEJAST_PAGE_VERSION='v347';</script>
+  <script src="./gejast-config.js?v347"></script>
+  <script src="./gejast-geo.js?v347"></script>
+  <script src="./gejast-drinks-workflow.js?v347"></script>
   <style>
     :root{--bg:#ece7dc;--card:#f8f2e7;--line:#d7c7a7;--ink:#1d1a17;--muted:#736758;--gold:#b79b56;--good:#dfead7;--bad:#f1dfd7}
     *{box-sizing:border-box} body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,231,220,.94),rgba(236,231,220,.97)),url('./site-bg-mobile.webp') center/cover no-repeat fixed;color:var(--ink)}
@@ -51,12 +51,12 @@ async function load(){
   try{
     setStatus('Laden…');
     const workflow = window.GEJAST_DRINKS_WORKFLOW;
-    const data = workflow ? await workflow.load({ session_token: token(), history_limit: 40 }) : null;
-    const verify = Array.isArray(data?.verify_queue) ? data.verify_queue : [];
-    const mine = Array.isArray(data?.my_pending_events) ? data.my_pending_events : [];
-    const history = Array.isArray(data?.verified_history) ? data.verified_history : [];
+    const data = workflow ? await workflow.forPending({ session_token: token(), history_limit: 40 }) : null;
+    const verify = Array.isArray(data?.verifyQueue) ? data.verifyQueue : [];
+    const mine = Array.isArray(data?.myPendingEvents) ? data.myPendingEvents : [];
+    const history = Array.isArray(data?.verifiedHistory) ? data.verifiedHistory : [];
     const page = data?.page || {};
-    const rejected = (Array.isArray(data?.recent_rejected) ? data.recent_rejected : []).length ? data.recent_rejected : ((Array.isArray(page?.recent_events) ? page.recent_events.filter(r=>String(r.status||'').toLowerCase()==='rejected') : []));
+    const rejected = (Array.isArray(data?.recentRejected) ? data.recentRejected : []).length ? data.recentRejected : ((Array.isArray(page?.recent_events) ? page.recent_events.filter(r=>String(r.status||'').toLowerCase()==='rejected') : []));
     renderList(document.getElementById('verifyQueue'),verify,r=>`<div class="row"><div class="row-top"><div><strong>${esc(r.player_name||'Onbekend')} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${units(r.total_units)} units${r.distance_m!=null?` · ${Math.round(r.distance_m)}m afstand`:''}</div><div class="meta">${fmtDate(r.created_at)}</div></div><span class="pill">check</span></div><div class="actions">${!r.viewer_vote_state ? (canVoteNearby(r) ? `<button class="action good" data-verify="${r.id}">Bevestigen</button><button class="action bad" data-reject="${r.id}">Afkeuren</button>` : `<span class="meta">Te ver weg om te stemmen.</span>`) : `<span class="meta">Jij stemde al: ${r.viewer_vote_state==='approved'?'voor':'tegen'}</span>`}</div></div>`,'Nog geen user requests.');
     renderList(document.getElementById('pendingList'),mine.filter((r)=>String(r.status||'pending')==='pending'),r=>`<div class="row"><div class="row-top"><div><strong>${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${fmtDate(r.created_at)} · ${units(r.total_units)} units</div></div><span class="pill">${esc(r.status||'pending')}</span></div><div class="actions"><button class="action bad" data-cancel="${r.id}">Annuleren</button></div></div>`,'Nog geen open aanvragen.');
     renderList(document.getElementById('verifiedList'),history.slice(0,20),r=>`<div class="row"><div class="row-top"><div><strong>${esc(r.player_name||'Onbekend')} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${fmtDate(r.verified_at||r.created_at)} · ${units(r.total_units)} units</div><div class="meta">Bevestigd door ${esc((r.verifier_names||[]).join(', ')||'—')}</div></div><span class="pill">ok</span></div></div>`,'Nog geen bevestigde drankjes.');

@@ -49,7 +49,15 @@ async function markFailed(item, errorText){
 }
 
 async function run(){
-  const items = [...await claimCoreJobs(), ...await claimAdminJobs()];
+  const claimedCore = await claimCoreJobs();
+  const claimedAdmin = await claimAdminJobs();
+  const items = [...claimedCore, ...claimedAdmin];
+  if (!items.length) {
+    console.log('no-web-push-jobs', JSON.stringify({ core: claimedCore.length, admin: claimedAdmin.length, at: new Date().toISOString() }));
+    return;
+  }
+  let sentCount = 0;
+  let failedCount = 0;
   for (const item of items){
     try {
       const payload = {
@@ -68,12 +76,15 @@ async function run(){
         keys: { p256dh: item.p256dh_key, auth: item.auth_key }
       }, JSON.stringify(payload));
       await markSent(item);
+      sentCount += 1;
       console.log('sent', item.__source, item.job_id, item.target_url || './drinks_pending.html');
     } catch (err) {
       const reason = String((err && (err.body || err.message)) || err);
       try { await markFailed(item, reason); } catch (markErr) { console.error('mark-failed-error', item.job_id, markErr && markErr.message || markErr); }
+      failedCount += 1;
       console.error('failed', item.__source, item.job_id, reason);
     }
   }
+  console.log('web-push-run-complete', JSON.stringify({ total: items.length, sent: sentCount, failed: failedCount, at: new Date().toISOString() }));
 }
 run().catch((err)=>{ console.error(err); process.exit(1); });
