@@ -7,8 +7,8 @@
 <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Drankcontrole</title>
-  <script src="./gejast-config.js?v334"></script>
-  <script src="./admin-session-sync.js?v334"></script>
+  <script src="./gejast-config.js?v338"></script>
+  <script src="./admin-session-sync.js?v338"></script>
   <style>
     :root{--bg:#ece7dc;--card:#f8f2e7;--line:#d7c7a7;--ink:#1d1a17;--muted:#736758;--good:#dfead7;--bad:#f1dfd7}
     *{box-sizing:border-box} body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,231,220,.94),rgba(236,231,220,.97)),url('./site-bg-mobile.webp') center/cover no-repeat fixed;color:var(--ink)}
@@ -68,5 +68,6 @@ function render(){
 async function load(){ try{ setStatus('Laden…'); let data; try{ data=await call('get_drinks_admin_console_light',{admin_session_token:adminToken(), limit_rows:60}); }catch(_){ data=await call('get_drinks_admin_console',{admin_session_token:adminToken()}); } consoleData=data?.get_drinks_admin_console_light||data?.get_drinks_admin_console||data||{}; render(); setStatus('Gegevens geladen.'); }catch(err){ setStatus(err.message||String(err), true); } }
 bindBulk('events', id=>updateEvent(id,'verified'), id=>updateEvent(id,'rejected'), deleteEvent); bindBulk('speed', id=>updateSpeed(id,'verified'), id=>updateSpeed(id,'rejected'), deleteSpeed); load();
 </script>
+<div class="site-credit-watermark" data-version-watermark style="position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)"></div>
 </body>
 </html>
