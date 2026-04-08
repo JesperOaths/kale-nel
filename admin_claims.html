@@ -116,10 +116,11 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v350';</script><script src="./gejast-config.js?v350"></script>
-  <script src="./admin-session-sync.js?v350"></script>
-  <script src="./admin-topnav.js?v350"></script>
-  <script src="./gejast-admin-claims-buckets.js?v350"></script>
+  <script>window.GEJAST_PAGE_VERSION='v351';</script><script src="./gejast-config.js?v351"></script>
+  <script src="./admin-session-sync.js?v351"></script>
+  <script src="./admin-topnav.js?v351"></script>
+  <script src="./gejast-admin-claims-buckets.js?v351"></script>
+  <script src="./gejast-admin-claims-source.js?v351"></script>
 </head>
 <body>
   <div class="main-card">
@@ -929,9 +930,21 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       if (data.admin_session_token) setAdminSessionToken(data.admin_session_token);
       return data;
     }
-    async function getRequests() { const data = await callFirstRpc(['admin_get_claim_requests','admin_list_claim_requests_action'], { admin_session_token: getAdminSessionToken() }); return Array.isArray(data) ? data : (data?.requests || data?.items || []); }
-    async function getHistory() { const data = await callFirstRpc(['admin_get_claim_history','admin_list_claim_history_action'], { admin_session_token: getAdminSessionToken() }); return Array.isArray(data) ? data : (data?.history || data?.items || []); }
-    async function getExpiredQueue() { const data = await callFirstRpc(['admin_get_expired_activation_queue','admin_list_expired_activation_queue_action'], { admin_session_token: getAdminSessionToken() }).catch(() => ({ items: [] })); return Array.isArray(data) ? data : (data?.items || []); }
+    async function getClaimsBundle(force = false) {
+      const source = window.GEJAST_ADMIN_CLAIMS_SOURCE;
+      if (source && typeof source.load === 'function') return source.load(getAdminSessionToken(), { force });
+      const requestsRaw = await callFirstRpc(['admin_get_claim_requests','admin_list_claim_requests_action'], { admin_session_token: getAdminSessionToken() });
+      const historyRaw = await callFirstRpc(['admin_get_claim_history','admin_list_claim_history_action'], { admin_session_token: getAdminSessionToken() });
+      const expiredRaw = await callFirstRpc(['admin_get_expired_activation_queue','admin_list_expired_activation_queue_action'], { admin_session_token: getAdminSessionToken() }).catch(() => ({ items: [] }));
+      return {
+        requests: Array.isArray(requestsRaw) ? requestsRaw : (requestsRaw?.requests || requestsRaw?.items || []),
+        history: Array.isArray(historyRaw) ? historyRaw : (historyRaw?.history || historyRaw?.items || []),
+        expiredQueue: Array.isArray(expiredRaw) ? expiredRaw : (expiredRaw?.items || [])
+      };
+    }
+    async function getRequests() { return (await getClaimsBundle()).requests || []; }
+    async function getHistory() { return (await getClaimsBundle()).history || []; }
+    async function getExpiredQueue() { return (await getClaimsBundle()).expiredQueue || []; }
     async function requeueExpiredActivation(requestId) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_requeue_expired_activation_action`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),

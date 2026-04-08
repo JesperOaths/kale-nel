@@ -44,11 +44,12 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v350';</script><script src="./gejast-config.js?v350"></script>
-  <script src="./admin-session-sync.js?v350"></script>
-  <script src="./admin-topnav.js?v350"></script>
-  <script src="./gejast-admin-claims-buckets.js?v350"></script>
-<script src="./gejast-scope.js?v350"></script></head>
+  <script>window.GEJAST_PAGE_VERSION='v351';</script><script src="./gejast-config.js?v351"></script>
+  <script src="./admin-session-sync.js?v351"></script>
+  <script src="./admin-topnav.js?v351"></script>
+  <script src="./gejast-admin-claims-buckets.js?v351"></script>
+  <script src="./gejast-admin-claims-source.js?v351"></script>
+<script src="./gejast-scope.js?v351"></script></head>
 <body>
   <main class="main-card">
     <a href="./index.html" aria-label="Terug naar home"><img src="./logo.png" class="logo" alt="logo" /></a>
@@ -246,17 +247,27 @@ const AdminBuckets = window.GEJAST_ADMIN_BUCKETS || {};
     const normalizeExpiredRows = (rows)=> (AdminBuckets.normalizeExpiredRows ? AdminBuckets.normalizeExpiredRows(rows) : (rows||[]));
     const mergeHistoryWithExpired = (historyRows, expiredRows)=> (AdminBuckets.mergeHistoryWithExpired ? AdminBuckets.mergeHistoryWithExpired(historyRows, expiredRows) : ([...(historyRows||[]), ...(expiredRows||[])]));
 
-    async function loadCounts() {
-      const tokenPayload = { admin_session_token: getAdminSessionToken() };
-      const [requestsRes, historyRes, expiredRes] = await Promise.all([
-        callFirstRpc(['admin_get_claim_requests','admin_list_claim_requests_action'], tokenPayload),
-        callFirstRpc(['admin_get_claim_history','admin_list_claim_history_action'], tokenPayload),
-        callFirstRpc(['admin_get_expired_activation_queue','admin_list_expired_activation_queue_action'], tokenPayload).catch(() => ({ items: [] }))
-      ]);
-      const requests = normalizeAdminRows(requestsRes.requests || requestsRes.items || []);
-      const history = normalizeAdminRows(historyRes.history || historyRes.items || []);
-      const expiredItems = Array.isArray(expiredRes?.items) ? expiredRes.items : [];
-      const expiredItemsNormalized = normalizeExpiredRows(expiredItems);
+    async function loadCounts(force = false) {
+      const source = window.GEJAST_ADMIN_CLAIMS_SOURCE;
+      const tokenValue = getAdminSessionToken();
+      const bundle = source && typeof source.load === 'function'
+        ? await source.load(tokenValue, { force })
+        : await (async()=>{
+            const tokenPayload = { admin_session_token: tokenValue };
+            const [requestsRes, historyRes, expiredRes] = await Promise.all([
+              callFirstRpc(['admin_get_claim_requests','admin_list_claim_requests_action'], tokenPayload),
+              callFirstRpc(['admin_get_claim_history','admin_list_claim_history_action'], tokenPayload),
+              callFirstRpc(['admin_get_expired_activation_queue','admin_list_expired_activation_queue_action'], tokenPayload).catch(() => ({ items: [] }))
+            ]);
+            return {
+              requests: requestsRes.requests || requestsRes.items || [],
+              history: historyRes.history || historyRes.items || [],
+              expiredQueue: Array.isArray(expiredRes?.items) ? expiredRes.items : []
+            };
+          })();
+      const requests = normalizeAdminRows(bundle.requests || []);
+      const history = normalizeAdminRows(bundle.history || []);
+      const expiredItemsNormalized = normalizeExpiredRows(bundle.expiredQueue || []);
       const mergedHistory = mergeHistoryWithExpired(history, expiredItemsNormalized);
       const awaitingItems = mergedHistory.filter((item) => item.state_bucket === 'awaiting');
       const active = mergedHistory.filter((item) => item.state_bucket === 'active').length;
