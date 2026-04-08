@@ -165,7 +165,7 @@
           <div class="list" id="pendingList"></div>
         </section>
 
-        <section class="panel verify">
+        <section class="panel verify" data-route="./drinks_pending.html" role="link" tabindex="0" aria-label="Ga naar verificaties" style="cursor:pointer">
           <h2>Verificaties in de buurt</h2>
           <div class="list" id="verifyQueue"></div>
         </section>
@@ -194,7 +194,7 @@
 
   <div class="site-credit-watermark" data-version-watermark>v312 · Made by Bruis</div>
 
-  <script src="./gejast-geo.js?v333"></script><script src="./drinks-verify-float.js?v333"></script>
+  <script src="./gejast-geo.js?v334"></script><script src="./drinks-verify-float.js?v334"></script>
   <script>
   (function(){
     const cfg=window.GEJAST_CONFIG||{};
@@ -214,6 +214,12 @@
       verifyGeoCard.addEventListener('click', goVerify);
       verifyGeoCard.addEventListener('keydown',(ev)=>{ if(ev.key==='Enter' || ev.key===' '){ ev.preventDefault(); goVerify(); } });
     }
+
+    document.querySelectorAll('.panel[data-route]').forEach((panel)=>{
+      const go=()=>{ window.location.href = panel.getAttribute('data-route') || './drinks_pending.html'; };
+      panel.addEventListener('click',(ev)=>{ if(ev.target && ev.target.closest('a,button,input,label,select,textarea')) return; go(); });
+      panel.addEventListener('keydown',(ev)=>{ if(ev.key==='Enter' || ev.key===' '){ ev.preventDefault(); go(); } });
+    });
     async function parse(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch{ throw new Error(t||`HTTP ${res.status}`); } if(!res.ok) throw new Error(d?.message||d?.error||`HTTP ${res.status}`); return d; }
     function setStatus(msg='',tone=''){ statusLine.textContent=msg; statusLine.className=`status ${tone}`.trim(); }
     function setGeoButtonState(ready){ try{ window.GEJAST_GEO && window.GEJAST_GEO.setButtonState && window.GEJAST_GEO.setButtonState(!!ready); }catch(_){} }

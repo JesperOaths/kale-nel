@@ -7,9 +7,9 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wedstrijden beheren</title>
-  <script>window.GEJAST_PAGE_VERSION='v330';</script>
-  <script src="./gejast-config.js?v330"></script>
-  <script src="./admin-session-sync.js?v330"></script>
+  <script>window.GEJAST_PAGE_VERSION='v334';</script>
+  <script src="./gejast-config.js?v334"></script>
+  <script src="./admin-session-sync.js?v334"></script>
   <style>
     :root{
       --bg:#e8e4d9;
@@ -72,7 +72,7 @@
     .page-floating-logo img{width:52px;height:52px;display:block}
     @media(max-width:640px){.page-floating-logo{top:12px;right:12px;width:58px;height:58px}.page-floating-logo img{width:46px;height:46px}}
   </style>
-</head>
+<script src="./gejast-scope.js?v334"></script></head>
 <body>
   <a class="page-floating-logo" href="./index.html" aria-label="Terug naar home"><img src="./logo.png" alt="Logo"></a>
   <div class="page">
@@ -139,6 +139,7 @@
   const SESSION_KEYS = ['jas_session_token_v11','jas_session_token_v10'];
   const GAME_ENTRY = { klaverjas:'./scorer.html', boerenbridge:'./boerenbridge.html', beerpong:'./beerpong.html' };
   const params = new URLSearchParams(location.search);
+  const CURRENT_SCOPE = (window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope()) || ((params.get('scope')||'friends').toLowerCase()==='family' ? 'family' : 'friends');
   const state = { game: (params.get('game') || 'klaverjas').toLowerCase(), rows: [], selected: null, adminToken: '', sessionToken: '', adminError: '' };
 
   const els = {
@@ -250,7 +251,7 @@
     try{
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_match_control_rows`, { method:'POST', headers: rpcHeaders(), body: JSON.stringify({ game_key: state.game, session_token: state.sessionToken || null, admin_session_token: state.adminToken || null, limit_count: 80 }) });
       const data = await parseResponse(res);
-      state.rows = safeArray(unwrapMatchRowsPayload(data));
+      state.rows = safeArray(unwrapMatchRowsPayload(data)).filter((row)=>{ const s=String(row?.site_scope||'').toLowerCase(); return !s || s===CURRENT_SCOPE; });
       state.selected = null;
       renderList();
       if(state.adminToken && !state.rows.length){

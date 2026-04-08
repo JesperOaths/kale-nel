@@ -663,7 +663,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v333';</script><script src="./gejast-config.js?v333"></script><script src="./gejast-scope.js?v333"></script><script src="./gejast-home-gate.js?v333"></script>
+  <script>window.GEJAST_PAGE_VERSION='v334';</script><script src="./gejast-config.js?v334"></script><script src="./gejast-scope.js?v334"></script><script src="./gejast-home-gate.js?v334"></script>
 </head>
 <body class="boot-pending homepage-ready"><div id="gejastTopRightToolsMount"></div>
   <div class="site-scene" aria-hidden="true">
@@ -701,7 +701,7 @@
         </div>
         <div id="drinksHomeGrid" class="drinks-home-grid">
           <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">—</div></a>
-          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">—</div></a>
+          <a class="drinks-mini" style="background:#fff;color:#111;border:1px solid rgba(0,0,0,.12)" href="./drinks_pending.html"><div class="drinks-mini-label">Verifiëren</div><div class="drinks-mini-value" style="color:var(--gold)">+</div></a>
           <a class="drinks-mini gold" href="./drinks.html"><div class="drinks-mini-label">Snelheids poging</div><div class="drinks-mini-value">+</div></a>
           <a class="drinks-mini dark" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div></a>
         </div>
@@ -718,17 +718,6 @@
       </section>
 
       <section class="public-links" aria-label="Sitepagina's">
-        <div class="public-links-grid">
-          <a class="page-link-card request-link" href="./request.html">
-            <div class="page-link-label">Account Aanmaken</div>
-            <div class="page-link-copy">Vraag een account aan.</div>
-          </a>
-          <a class="page-link-card login-link" href="./login.html">
-            <div class="page-link-label">Login</div>
-            <div class="page-link-copy">Open je spelersessie.</div>
-          </a>
-        </div>
-
         <div class="public-links-grid">
           <a id="homeKlaverjasEntry" class="page-link-card scorer-link" href="./scorer.html" data-default-href="./scorer.html">
             <div id="homeKlaverjasLabel" class="page-link-label">Klaverjas Invoeren</div>
@@ -1463,7 +1452,8 @@ async function castExtraPollVote(desired_status) {
     async function handleVote(status) {
       if (!getSessionToken()) { goToLoginWithIntent(status, 'gejast_donderdag'); return; }
       try {
-        const data = await castVote(status); renderState(data);
+        await castVote(status);
+        renderState(await getHomepageState());
         setStatus(`Opgeslagen: ${status === 'ja' ? 'ik kan' : 'ik kan niet'}.`, 'ok');
       } catch (error) {
         const msg = error?.message || 'Onbekende fout';
@@ -1497,7 +1487,7 @@ async function castExtraPollVote(desired_status) {
         const totals = payload.totals || {};
         grid.innerHTML = `
           <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">${Number(totals.today_events||0)}</div></a>
-          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">${Number(totals.all_events||0)}</div></a>
+          <a class="drinks-mini" style="background:#fff;color:#111;border:1px solid rgba(0,0,0,.12)" href="./drinks_pending.html"><div class="drinks-mini-label">Verifiëren</div><div class="drinks-mini-value" style="color:var(--gold)">+</div></a>
           <a class="drinks-mini gold" href="./drinks_speed.html"><div class="drinks-mini-label">Snelheids poging</div><div class="drinks-mini-value">+</div></a>
           <a class="drinks-mini dark" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div></a>`;
       } catch(_){ }
@@ -1735,5 +1725,5 @@ async function castExtraPollVote(desired_status) {
 
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v333"></script><script src="./gejast-geo.js?v333"></script></body>
+<script src="./drinks-verify-float.js?v334"></script><script src="./gejast-geo.js?v334"></script></body>
 </html>
