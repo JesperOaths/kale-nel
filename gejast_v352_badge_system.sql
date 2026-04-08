@@ -1,5 +1,5 @@
--- GEJAST v352 badge system SQL
--- Carries forward the v331 live/comeback badge facts layer as the canonical badge-facts backend for the v352 badge UI rollout.
+-- GEJAST v353 badge system SQL
+-- Carries forward the v331 live/comeback badge facts layer as the canonical badge-facts backend for the v353 badge UI rollout.
 
 -- GEJAST v331 - live participation + comeback badge facts
 -- Requires the scope helpers from v313+ to be present.

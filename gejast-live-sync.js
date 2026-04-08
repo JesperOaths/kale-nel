@@ -1,8 +1,8 @@
-(function(){
-  const fingerprints = new Map();
-  function cfg(){ return window.GEJAST_CONFIG || {}; }
-  function headers(){ const c=cfg(); return { apikey:c.SUPABASE_PUBLISHABLE_KEY||'', Authorization:`Bearer ${c.SUPABASE_PUBLISHABLE_KEY||''}`, 'Content-Type':'application/json', Accept:'application/json' }; }
-  async function parse(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch{ throw new Error(t||`HTTP ${res.status}`); } if(!res.ok) throw new Error(d?.message||d?.error||`HTTP ${res.status}`); return d; }
+(function (global) {
+  const RPC = global.GEJAST_RPC_CONTRACT;
+  const CTX = global.GEJAST_SCOPE_CONTEXT;
+  const LAST_WRITE = new Map();
+
   function normalizeName(value){ return String(value||'').trim(); }
   function normalizeParticipants(list){ return [...new Set((Array.isArray(list)?list:[]).map(normalizeName).filter(Boolean))]; }
   function normalizeSummary(summary){
@@ -18,30 +18,21 @@
   }
   function fingerprint(summary){
     const s = normalizeSummary(summary);
-    return JSON.stringify({
-      ref: s.match_ref || '',
-      fin: s.finished_at || null,
-      host: s.submitter_meta?.submitted_by_name || '',
-      parts: s.participants || [],
-      totals: s.totals || s.scoreboard || {},
-      rounds: Array.isArray(s.rounds) ? s.rounds.length : 0,
-      live: s.live_state?.status || 'live'
-    });
+    return JSON.stringify({ ref: s.match_ref || '', fin: s.finished_at || null, host: s.submitter_meta?.submitted_by_name || '', parts: s.participants || [], totals: s.totals || s.scoreboard || {}, rounds: Array.isArray(s.rounds) ? s.rounds.length : 0, live: s.live_state?.status || 'live' });
   }
-  async function save(gameType, clientMatchId, summary, opts={}){
-    const c = cfg();
-    const token = (c.getPlayerSessionToken && c.getPlayerSessionToken()) || '';
-    if (!c.SUPABASE_URL || !c.SUPABASE_PUBLISHABLE_KEY || !token) return { skipped:true, reason:'missing-config-or-token' };
-    const normalized = normalizeSummary(summary);
-    const key = opts.stateKey || `${String(gameType||'')}:${String(clientMatchId||normalized.match_ref||'')}`;
-    const fp = fingerprint(normalized);
-    if (!opts.force && fingerprints.get(key) === fp) return { skipped:true, reason:'unchanged' };
-    await fetch(`${c.SUPABASE_URL}/rest/v1/rpc/save_game_match_summary`, {
-      method:'POST', mode:'cors', cache:'no-store', headers:headers(),
-      body: JSON.stringify({ session_token: token, game_type: String(gameType||''), client_match_id: String(clientMatchId || normalized.match_ref || ''), summary_payload: normalized })
-    }).then(parse);
-    fingerprints.set(key, fp);
-    return { skipped:false, fingerprint:fp };
+  async function legacyWrite({ gameType, clientMatchId, summaryPayload }) {
+    return RPC.callRpc('save_game_match_summary', { session_token: CTX.getPlayerSessionToken(), game_type: gameType, client_match_id: String(clientMatchId), summary_payload: summaryPayload });
   }
-  window.GEJAST_LIVE_SYNC = { normalizeSummary, fingerprint, save };
-})();
+  async function writeSummary({ gameType, clientMatchId, summaryPayload, minIntervalMs = 2500, force = false }) {
+    const key = `${gameType}:${clientMatchId}`;
+    const now = Date.now();
+    const last = LAST_WRITE.get(key) || 0;
+    if (!force && now - last < minIntervalMs) return { skipped: true, reason: 'throttled' };
+    const payload = { session_token: CTX.getPlayerSessionToken(), game_type: gameType, client_match_id: String(clientMatchId), summary_payload: normalizeSummary(summaryPayload), site_scope_input: CTX.getScope() };
+    const out = await RPC.callContractWriter('contract_live_write_v1', payload, () => legacyWrite({ gameType, clientMatchId, summaryPayload: payload.summary_payload }));
+    LAST_WRITE.set(key, now);
+    return out;
+  }
+  async function save(gameType, clientMatchId, summary, opts={}){ return writeSummary({ gameType, clientMatchId, summaryPayload: summary, force: !!opts.force, minIntervalMs: opts.minIntervalMs || 2500 }); }
+  global.GEJAST_LIVE_SYNC = { normalizeSummary, fingerprint, save, writeSummary };
+})(window);

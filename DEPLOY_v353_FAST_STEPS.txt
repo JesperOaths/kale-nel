@@ -1,0 +1,5 @@
+1. Upload the changed files from the v353 patch zip.
+2. Run gejast_v353_master_contract_and_badges.sql in Supabase.
+3. Refresh the site and hard refresh critical pages.
+4. Test drinks pages, homepage/live pages, player/profiles, admin claims, and admin push.
+5. Verify web push subscription sync and active presence from a logged-in device.

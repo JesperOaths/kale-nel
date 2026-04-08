@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" /><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Spelersprofielen</title>
-  <script>window.GEJAST_PAGE_VERSION='v352';</script><script src="./gejast-config.js?v352"></script>
+  <script>window.GEJAST_PAGE_VERSION='v353';</script><script src="./gejast-config.js?v353"></script><script src="./gejast-scope-context.js?v353"></script><script src="./gejast-rpc-contract.js?v353"></script>
   <style>
     :root{--gold:#d4af37;--ink:#1b1711;--paper:rgba(255,250,243,.92);--line:#e0d6c6;--muted:#6f665e;}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:linear-gradient(rgba(247,244,238,.84),rgba(247,244,238,.84)),url('./wordtergejast.png') center/cover fixed}
@@ -26,8 +26,8 @@
     .bio{font-size:14px;line-height:1.45}.section-title{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:800}
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}
   </style>
-<script src="./gejast-scope.js?v352"></script>  <script src="./gejast-home-gate.js?v352"></script>
-<script src="./gejast-badges.js?v352"></script></head>
+<script src="./gejast-scope.js?v353"></script>  <script src="./gejast-home-gate.js?v353"></script>
+<script src="./gejast-badges.js?v353"></script><script src="./gejast-profile-source.js?v353"></script></head>
 <body>
   <main class="page"><section class="sheet"><div class="top"><div><h1>Spelers</h1><p>Profielen van alle spelers op de site</p></div><a class="back" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</a></div><div id="status" class="status"></div><div id="grid" class="grid"></div></section></main>
   <div class="site-credit-watermark" data-version-watermark></div>
@@ -77,9 +77,9 @@
       }).join('');
       const old=document.getElementById('badgeGalleryPanel'); if(old) old.remove();
     }
-    async function boot(){const status=document.getElementById('status'); try{const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_all_site_players_public_scoped`,{method:'POST',mode:'cors',cache:'no-store',headers:rpcHeaders(),body:JSON.stringify({site_scope_input:(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope())||'friends'})}); const raw=await parseResponse(res); const data=(raw&&raw.get_all_site_players_public_scoped)?raw.get_all_site_players_public_scoped:(Array.isArray(raw)&&raw[0]&&raw[0].get_all_site_players_public_scoped)?raw[0].get_all_site_players_public_scoped:raw; const players=data?.players||data||[]; render(players); status.textContent=`${players.length} spelers geladen.`}catch(err){status.textContent=err.message||'Profielen laden mislukt.'}}
+    async function boot(){const status=document.getElementById('status'); try{const raw=await window.GEJAST_PROFILE_SOURCE.loadProfilesList(); const data=(raw&&raw.get_all_site_players_public_scoped)?raw.get_all_site_players_public_scoped:(Array.isArray(raw)&&raw[0]&&raw[0].get_all_site_players_public_scoped)?raw[0].get_all_site_players_public_scoped:raw; const players=data?.players||data||[]; render(players); status.textContent=`${players.length} spelers geladen.`}catch(err){status.textContent=err.message||'Profielen laden mislukt.'}}
     boot();
   </script>
   <script src="./site-analytics.js"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./gejast-geo.js?v352"></script><script src="./drinks-verify-float.js?v352"></script></body></html>
+<script src="./gejast-push-contract.js?v353"></script><script src="./gejast-push-contract.js?v353"></script><script src="./gejast-geo.js?v353"></script><script src="./drinks-verify-float.js?v353"></script></body></html>
