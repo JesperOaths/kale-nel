@@ -154,7 +154,7 @@
   async function registerNotificationWorker(){
     if (!notificationSupported()) return null;
     try {
-      const reg = await navigator.serviceWorker.register(`./gejast-sw.js?${encodeURIComponent(window.GEJAST_PAGE_VERSION || 'v327')}`, { scope:'./' });
+      const reg = await navigator.serviceWorker.register(`./gejast-sw.js?${encodeURIComponent(window.GEJAST_PAGE_VERSION || 'v331')}`, { scope:'./' });
       return await navigator.serviceWorker.ready.catch(()=>reg);
     } catch(_) { return null; }
   }
@@ -188,7 +188,7 @@
           endpoint_input: json?.endpoint || sub?.endpoint || '',
           p256dh_input: (json?.keys && json.keys.p256dh) || '',
           auth_input: (json?.keys && json.keys.auth) || '',
-          page_path_input: window.location.pathname || '',
+          page_path_input: `${window.location.pathname || ''}${window.location.search || ''}${window.location.hash || ''}`,
           permission_input: notificationPermission(),
           standalone_input: !!((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true)
         })
@@ -308,7 +308,9 @@
       }
     } catch(err) { pushReason = (err && err.message) || ''; }
     const backendSync = (supported && permission==='granted' && subscribed) ? await (async()=>{ try{ const reg=await registerNotificationWorker(); const sub=reg&&reg.pushManager?await reg.pushManager.getSubscription():null; return sub ? await syncPushSubscriptionToBackend(sub) : {synced:false, reason:'no-subscription'}; }catch(err){ return {synced:false, reason:(err&&err.message)||'backend-sync-failed'}; } })() : {synced:false, reason:'not-ready'};
-    const state = { supported, permission, workerReady, pushSupported, subscribed, secure: !!window.isSecureContext, visibility: document.visibilityState, userAgent: navigator.userAgent || '', pushReason, backendSync };
+    const backendTest = (supported && permission==='granted' && subscribed) ? await queueBackendTestPush().catch((err)=>({queued:false, reason:(err&&err.message)||'queue-failed'})) : {queued:false, reason:'not-ready'};
+    const presenceTouch = (supported && permission==='granted' && subscribed) ? await touchActivePushPresence(null, true).catch((err)=>({touched:false, reason:(err&&err.message)||'touch-failed'})) : {touched:false, reason:'not-ready'};
+    const state = { supported, permission, workerReady, pushSupported, subscribed, secure: !!window.isSecureContext, visibility: document.visibilityState, userAgent: navigator.userAgent || '', pushReason, backendSync, backendTest, presenceTouch, standalone: !!((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true) };
     notifyStateCache = state;
     announce('gejast:notification-state', state);
     return state;
@@ -362,8 +364,8 @@
         `Service worker: ${updated.workerReady ? 'klaar' : 'niet klaar'}`,
         `Push-abonnement: ${sub.subscription ? 'actief' : (sub.reason === 'no-vapid-key' ? 'mist publieke VAPID-sleutel in gejast-config.js' : 'niet actief')}`,
         `Backend registratie: ${sub.backendSync && sub.backendSync.synced ? 'gelukt' : ((sub.backendSync && sub.backendSync.reason) || (updated.backendSync && updated.backendSync.reason) || 'niet klaar')}`,
+        `Actieve doelgroep-heartbeat: ${sub.subscription ? 'verstuurd' : 'geen abonnement actief'}`,
         `Backend test-queue: ${queuedTest.queued ? 'klaargezet' : (queuedTest.reason === 'no-subscription' ? 'geen push-abonnement opgeslagen' : (queuedTest.reason || 'niet klaar'))}`,
-        `Actieve doelgroep-heartbeat: poging verstuurd`,
         ...mobilePermissionHelp('notification', updated.permission)
       ], [{ label:'Sluiten', alt:true }]);
       return { granted:true, state:updated, subscription:sub, queuedTest };

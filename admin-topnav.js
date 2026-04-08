@@ -3,7 +3,7 @@
     { href:'./admin.html', label:'Adminhub' },
     { href:'./admin_claims.html', label:'Claims' },
     { href:'./match_control.html', label:'Wedstrijden' },
-    { href:'./match_swap.html', label:'Spelers wisselen' },
+    { href:'./match_swap.html', label:'Speler vervangen' },
     { href:'./admin_push.html', label:'Notificaties' },
     { href:'./leaderboard.html', label:'Klaverjas' },
     { href:'./boerenbridge_vault.html', label:'Boerenbridge' },

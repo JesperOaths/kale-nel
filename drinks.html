@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <title>Drinks overzicht</title>
-  <script>window.GEJAST_PAGE_VERSION='v330';</script><script src="./gejast-config.js?v330"></script>
+  <script>window.GEJAST_PAGE_VERSION='v331';</script><script src="./gejast-config.js?v331"></script>
   <style>
     :root{
       --bg:#ece7dc;--card:rgba(255,251,245,.94);--paper:#fffdfa;--line:rgba(54,40,20,.08);--line-strong:rgba(54,40,20,.14);
@@ -137,12 +137,19 @@
   (()=>{
     const cfg=window.GEJAST_CONFIG||{}; const SUPABASE_URL=cfg.SUPABASE_URL||''; const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
     let latestPageData=null, latestStatsData=null, latestTop5Data=null, latestDashboardData=null, currentLadderKey='today_units', currentSpeedType='', lastPosition=null, loadToken=0;
+    const PAGE_CACHE_KEY='gejast_drinks_page_cache_v331';
+    const STATS_CACHE_KEY='gejast_drinks_stats_cache_v331';
+    const PAGE_CACHE_TTL=30000;
+    const STATS_CACHE_TTL=45000;
+    let geoHydrationStarted=false;
     function token(){ return cfg.getPlayerSessionToken ? cfg.getPlayerSessionToken() : ''; }
     function headers(){ return { apikey:KEY, Authorization:`Bearer ${KEY}`, 'Content-Type':'application/json', Accept:'application/json' }; }
     async function parse(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch(_){ throw new Error(t||`HTTP ${res.status}`); } if(!res.ok) throw new Error(d?.message||d?.error||`HTTP ${res.status}`); return d; }
     const fmt=(n,d=1)=>Number(n||0).toFixed(d);
     const esc=(s)=>String(s??'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
     function setStatus(msg='',kind=''){ const el=document.getElementById('statusLine'); el.textContent=msg||''; el.className=`status-line${kind?` ${kind}`:''}`; }
+    function readCache(key, ttl){ try{ const raw=sessionStorage.getItem(key)||''; if(!raw) return null; const parsed=JSON.parse(raw); if(!parsed||!parsed.saved_at) return null; if((Date.now()-Number(parsed.saved_at||0))>ttl) return null; return parsed.data||null; }catch(_){ return null; } }
+    function writeCache(key, data){ try{ sessionStorage.setItem(key, JSON.stringify({ saved_at: Date.now(), data })); }catch(_){} }
     function avatar(row,name){ const src=row?.avatar_url||row?.photo_url||row?.profile_picture_url||''; const label=String(name||row?.display_name||row?.player_name||'Speler'); return src?`<div class="avatar"><img src="${esc(src)}" alt="${esc(label)}"></div>`:`<div class="avatar">${esc(label.slice(0,1).toUpperCase())}</div>`; }
     function playerLink(name){ const v=String(name||'Speler'); return `<a class="clean" href="./player.html?player=${encodeURIComponent(v)}">${esc(v)}</a>`; }
     function itemHtml(row,{title,sub,value,pill='',nameField='display_name'}){ const name=row?.[nameField]||row?.player_name||row?.display_name||''; return `<div class="item"><div class="item-left">${avatar(row,name)}<div class="item-main"><div class="item-title">${title(row,name)}</div><div class="item-sub">${sub?sub(row,name):''}</div></div></div><div style="display:grid;justify-items:end;gap:8px"><div class="item-value">${value(row,name)}</div>${pill||''}</div></div>`; }
@@ -267,6 +274,7 @@ function mapHomepageTop5(payload){
 
 function queueStatsLoad(force=false){
   const now=Date.now();
+  if(!force && !latestStatsData){ const cached=readCache(STATS_CACHE_KEY, STATS_CACHE_TTL); if(cached){ latestStatsData=cached; latestDashboardData=cached; renderStats(cached||{}); renderLadder(); } }
   if(!force && lastStatsLoadedAt && (now-lastStatsLoadedAt)<45000 && latestStatsData){ renderStats(latestStatsData||{}); renderLadder(); return Promise.resolve(); }
   if (statsLoadPromise) return statsLoadPromise;
   const runner=()=>loadStats().finally(()=>{ statsLoadPromise=null; statsLoadScheduled=false; lastStatsLoadedAt=Date.now(); });
@@ -278,7 +286,7 @@ async function loadStats(){
       let historyRows=[], fallbackData={};
       const requests = await Promise.allSettled([
         fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_dashboard_fallback_public`,{method:'POST',headers:headers(),body:'{}'}).then(parse),
-        fetch(`${SUPABASE_URL}/rest/v1/rpc/get_verified_drinks_history_public`,{method:'POST',headers:headers(),body:JSON.stringify({limit_count:25})}).then(parse),
+        fetch(`${SUPABASE_URL}/rest/v1/rpc/get_verified_drinks_history_public`,{method:'POST',headers:headers(),body:JSON.stringify({limit_count:15})}).then(parse),
         fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_speed_page_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token()})}).then(parse)
       ]);
       if(requests[0].status==='fulfilled'){ fallbackData = requests[0].value?.get_drinks_dashboard_fallback_public || requests[0].value || {}; }
@@ -320,6 +328,7 @@ async function loadStats(){
         latestStatsData.top_units = latestTop5Data.all_time_top5.map(r=>({player_name:r.player_name||r.display_name||'Onbekend', units:Number(r.total_units??r.units??0)||0, events:Number(r.event_count??r.events??0)||0}));
       }
 
+      writeCache(STATS_CACHE_KEY, latestStatsData||{});
       renderStats(latestStatsData||{});
       renderLadder();
       if((!latestStatsData.top_units || !latestStatsData.top_units.length) && Array.isArray(historyRows) && historyRows.length){
@@ -328,23 +337,23 @@ async function loadStats(){
       }
     }
     async function loadPage(forceGeo=false,userInitiated=false){
-      const myLoad=++loadToken; ['verifyQueue','typeBars','bigNights','topUnits','topCount','topCountNow','locationList','speedHighlights'].forEach(id=>document.getElementById(id)?.classList.add('is-loading')); 
+      const myLoad=++loadToken; ['verifyQueue','typeBars','bigNights','topUnits','topCount','topCountNow','locationList','speedHighlights'].forEach(id=>document.getElementById(id)?.classList.add('is-loading'));
+      const cachedPage = (!forceGeo && !userInitiated) ? readCache(PAGE_CACHE_KEY, PAGE_CACHE_TTL) : null;
+      if(cachedPage && !latestPageData){ latestPageData=cachedPage; renderSession(latestPageData||{}); renderVerify((latestPageData.big_nights||latestStatsData?.big_nights||[])); renderFairness(latestPageData.fairness_cards||[]); renderLocations(latestPageData.by_location||latestStatsData?.by_location||[]); renderLadder(); }
       try{
-        const pos=(forceGeo||!lastPosition)?await getPosition(forceGeo,userInitiated):lastPosition; if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null);
-        const usePos=lastPosition||pos; const payload={session_token:token(),viewer_lat:usePos?usePos.coords.latitude:null,viewer_lng:usePos?usePos.coords.longitude:null};
-        const [pageResult] = await Promise.allSettled([
-          fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:headers(),body:JSON.stringify(payload)}).then(parse)
-        ]);
-        if(myLoad!==loadToken) return;
-        if(pageResult.status==='fulfilled'){
-          const raw=pageResult.value;
-          latestPageData=raw?.get_drinks_page_public||raw||{};
-        }else{
-          latestPageData=latestPageData||{};
-          setStatus(pageResult.reason?.message||String(pageResult.reason||'Laden mislukt'),'bad');
+        const usePos = lastPosition || null;
+        if ((forceGeo || userInitiated || !lastPosition) && !geoHydrationStarted){
+          geoHydrationStarted=true;
+          getPosition(forceGeo,userInitiated).then(async(pos)=>{ if(pos){ lastPosition=pos; await updateGeoInfo(pos); if(!usePos && myLoad===loadToken) loadPage(false,false); } }).catch(()=>{}).finally(()=>{ geoHydrationStarted=false; });
+        } else if (usePos) {
+          updateGeoInfo(usePos).catch(()=>{});
         }
+        const payload={session_token:token(),viewer_lat:usePos?usePos.coords.latitude:null,viewer_lng:usePos?usePos.coords.longitude:null};
+        const raw = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_page_public`,{method:'POST',headers:headers(),body:JSON.stringify(payload)}).then(parse);
+        if(myLoad!==loadToken) return;
+        latestPageData=raw?.get_drinks_page_public||raw||{};
+        writeCache(PAGE_CACHE_KEY, latestPageData||{});
         renderSession(latestPageData||{});
-        const recent = latestPageData.recent_verified||latestPageData.recent_events||[];
         const peaks = latestPageData.big_nights||latestStatsData?.big_nights||[];
         const locationRows = latestPageData.by_location||latestStatsData?.by_location||[];
         renderVerify(peaks);
@@ -353,8 +362,18 @@ async function loadStats(){
         renderLadder();
         ['verifyQueue','typeBars','bigNights','topUnits','topCount','topCountNow','locationList','speedHighlights'].forEach(id=>document.getElementById(id)?.classList.remove('is-loading'));
         if(!document.getElementById('statusLine').textContent){ setStatus(usePos?'':'Geolocatie nog niet actief. Overzicht werkt wel; verificaties blijven strikter zonder locatie.'); }
-      }catch(err){ setStatus(err.message||String(err),'bad'); }
-      setTimeout(()=>queueStatsLoad(false), 800);
+      }catch(err){
+        if(cachedPage){
+          latestPageData = cachedPage;
+          renderSession(latestPageData||{});
+          renderVerify((latestPageData.big_nights||latestStatsData?.big_nights||[]));
+          renderFairness(latestPageData.fairness_cards||[]);
+          renderLocations(latestPageData.by_location||latestStatsData?.by_location||[]);
+          renderLadder();
+        }
+        setStatus(err.message||String(err),'bad');
+      }
+      setTimeout(()=>queueStatsLoad(false), 180);
     }
     async function verifyDrink(id){ try{ const pos=await getPosition(true,true); if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); const usePos=lastPosition||pos; if(!usePos) throw new Error('Geolocatie is nodig om een drankje te bevestigen.'); const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy,approve:true})}); await parse(res); setStatus('Drankje bevestigd.','ok'); await loadPage(false,false);}catch(err){ setStatus(err.message||String(err),'bad'); } }
     document.querySelectorAll('[data-ladder-key]').forEach(b=>b.onclick=()=>{ currentLadderKey=b.dataset.ladderKey; renderLadder(); });
@@ -362,7 +381,7 @@ async function loadStats(){
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./gejast-geo.js?v330"></script><script src="./drinks-verify-float.js?v330"></script>
-  <script src="./gejast-session-corner.js?v330"></script>
+  <script src="./gejast-geo.js?v331"></script><script src="./drinks-verify-float.js?v331"></script>
+  <script src="./gejast-session-corner.js?v331"></script>
 </body>
 </html>
