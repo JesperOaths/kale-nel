@@ -7,8 +7,9 @@
 <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Klaverjas live</title>
-  <script>window.GEJAST_PAGE_VERSION='v347';</script>
-  <script src="./gejast-config.js?v347"></script>
+  <script>window.GEJAST_PAGE_VERSION='v348';</script>
+  <script src="./gejast-config.js?v348"></script>
+  <script src="./gejast-live-summary.js?v348"></script>
   <style>
     :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241}
     *{box-sizing:border-box}
@@ -45,37 +46,31 @@
     </div>
   </div>
   <div class="site-credit-watermark" data-version-watermark></div>
-  <script>
+    <script>
   (()=>{
-    const cfg=window.GEJAST_CONFIG||{};
-    const url=cfg.SUPABASE_URL||'';
-    const key=cfg.SUPABASE_PUBLISHABLE_KEY||'';
-    const matchRef=new URLSearchParams(location.search).get('match_ref')||'';
-    function headers(){return{apikey:key,Authorization:`Bearer ${key}`,'Content-Type':'application/json',Accept:'application/json'}}
-    async function parse(res){const t=await res.text(); let d=null; try{d=t?JSON.parse(t):null}catch{throw new Error(t||`HTTP ${res.status}`)} if(!res.ok) throw new Error(d?.message||d?.error||`HTTP ${res.status}`); return d}
+    const live = window.GEJAST_LIVE_SUMMARY || {};
+    let pollId = null;
     function esc(v){return String(v??'').replace(/[&<>"]/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
-    function render(data){
-      const item=data?.item||data||{};
-      const summary=item.summary||item.summary_payload||{};
+    function render(item){
+      const summary=(live.summaryFromItem?live.summaryFromItem(item):((item&&item.summary_payload)||{}))||{};
       const teams=summary.teams||{};
       const rounds=Array.isArray(summary.rounds)?summary.rounds:[];
-      document.getElementById('meta').textContent=item.finished_at?`Afgerond op ${new Date(item.finished_at).toLocaleString('nl-NL')}`:`Live bijgewerkt om ${new Date(item.updated_at||Date.now()).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`;
+      document.getElementById('meta').textContent=live.metaText?live.metaText(item):'Live scoreblad';
       document.getElementById('teamWij').textContent=(teams.wij||[]).join(' · ')||'—';
       document.getElementById('teamZij').textContent=(teams.zij||[]).join(' · ')||'—';
       document.getElementById('scoreWij').textContent=Number(summary.totals?.wij||0);
       document.getElementById('scoreZij').textContent=Number(summary.totals?.zij||0);
       document.getElementById('recap').textContent=summary.recap_text||'Nog geen samenvatting.';
       document.getElementById('rounds').innerHTML=rounds.length?rounds.map((r,idx)=>`<div class="round"><strong>Ronde ${esc(r.round||idx+1)}</strong><div class="muted">${esc(r.contract?.team||'')} ${esc(r.contract?.bid||'')} ${esc(r.contract?.suit||'')}</div><div>Wij: ${Number(r.fw||0)} · Zij: ${Number(r.fz||0)}</div></div>`).join(''):'Nog geen rondes geregistreerd.';
+      if (live.isFinished && live.isFinished(item) && pollId) { clearInterval(pollId); pollId = null; }
     }
     async function load(){
-      if(!matchRef){ document.getElementById('meta').textContent='Geen match_ref meegegeven.'; return; }
-      try{
-        const res=await fetch(`${url}/rest/v1/rpc/get_live_match_summary_public`,{method:'POST',headers:headers(),body:JSON.stringify({game_type_input:'klaverjas',match_ref_input:matchRef})});
-        render(await parse(res));
-      }catch(err){ document.getElementById('meta').textContent=err.message||'Laden mislukt.'; }
+      const identity = live.matchIdentityFromUrl ? live.matchIdentityFromUrl() : { clientMatchId:'', matchRef:'' };
+      if(!identity.clientMatchId && !identity.matchRef){ document.getElementById('meta').textContent='Geen client_match_id of match_ref meegegeven.'; return; }
+      try{ render(await live.loadPublicSummary('klaverjas', identity)); }catch(err){ document.getElementById('meta').textContent=err.message||'Laden mislukt.'; }
     }
     load();
-    setInterval(load,5000);
+    pollId = setInterval(load,5000);
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
