@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-    <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
-<meta charset="UTF-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drinks historie</title>
-  <script>window.GEJAST_PAGE_VERSION='v348';</script><script src="./gejast-config.js?v348"></script>
+  <script>window.GEJAST_PAGE_VERSION='v350';</script><script src="./gejast-config.js?v350"></script><script src="./gejast-home-gate.js?v350"></script><script src="./gejast-drinks-analytics.js?v350"></script>
   <style>
     :root{--bg:#ece7dc;--card:rgba(255,251,245,.95);--paper:#fffdfa;--line:rgba(54,40,20,.08);--ink:#201b16;--muted:#6b6257;--gold:#9a8241}
     *{box-sizing:border-box}body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,231,220,.92),rgba(236,231,220,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
@@ -23,9 +23,9 @@
 <div class="wrap"><div class="shell">
   <div class="top">
     <div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn alt" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./drinks_add.html';}">Terug</a><a class="btn alt" href="./drinks_add.html">Drinks toevoegen</a></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn alt" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./drinks_add.html';}">Terug</a><a class="btn alt" href="./drinks_add.html">Drinks toevoegen</a><a class="btn alt" href="./drinks_stats.html">Statistieken</a></div>
       <h1>Drinks historie</h1>
-      <div class="sub">Volledige geschiedenis van alle bevestigde drankjes.</div>
+      <div class="sub">Volledige geschiedenis van bevestigde drankjes uit de canonieke statslaag.</div>
       <div id="statusLine" class="sub" style="margin-top:8px"></div>
     </div>
     <a href="./index.html"><img src="./logo.png" alt="Logo" style="width:68px;height:68px;object-fit:contain"></a>
@@ -33,25 +33,24 @@
   <div id="historyList" class="list"><div class="meta">Laden…</div></div>
 </div></div>
 <div class="site-credit-watermark" data-version-watermark></div>
-<script src="./gejast-geo.js?v348"></script><script src="./drinks-verify-float.js?v348"></script>
+<script src="./gejast-geo.js?v350"></script><script src="./drinks-verify-float.js?v350"></script>
 <script>
 (()=> {
-  const cfg=window.GEJAST_CONFIG||{};
-  const SUPABASE_URL=cfg.SUPABASE_URL||'';
-  const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
-  function headers(){ return {'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${KEY}`,Accept:'application/json'}; }
-  async function parse(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch{ throw new Error(t||`HTTP ${res.status}`); } if(!res.ok) throw new Error(d?.message||d?.error||`HTTP ${res.status}`); return d; }
-  function esc(v){ return String(v==null?'':v).replace(/[&<>"]/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
+  const analytics = window.GEJAST_DRINKS_ANALYTICS;
+  function renderRow(r){
+    const verifiedAt = analytics.dateLabel(r.verified_at || r.created_at);
+    const verifiers = Array.isArray(r.verifier_names) && r.verifier_names.length ? r.verifier_names.join(', ') : '—';
+    return `<div class="row"><div class="main"><div class="title">${analytics.esc(r.player_name||'Speler')} · ${analytics.esc(r.event_type_label||r.event_type_key||'Drankje')}</div><div class="meta">${analytics.esc(verifiedAt)} · ${analytics.fmtUnits(r.total_units||0)} units</div><div class="meta">${analytics.esc(r.location_label||'Locatie onbekend')}</div><div class="meta">Bevestigd door ${analytics.esc(verifiers)}</div></div><span class="pill">ok</span></div>`;
+  }
   async function load(){
     try{
-      const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_verified_drinks_history_public`,{method:'POST',headers:headers(),body:JSON.stringify({limit_count:null})});
-      const raw=await parse(res);
-      const rows=raw?.get_verified_drinks_history_public||raw||[];
-      document.getElementById('historyList').innerHTML=(rows||[]).length ? rows.map(r=>`<div class="row"><div class="main"><div class="title">${esc(r.player_name||'Speler')} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}</div><div class="meta">${new Date(r.verified_at||r.created_at).toLocaleString('nl-NL')} · ${Number(r.total_units||0).toFixed(1)} units</div><div class="meta">${esc(r.location_label||'Locatie onbekend')}</div><div class="meta">Bevestigd door ${Array.isArray(r.verifier_names)&&r.verifier_names.length?esc(r.verifier_names.join(', ')):'—'}</div></div><span class="pill">ok</span></div>`).join('') : '<div class="meta">Nog geen bevestigde drankjes.</div>';
-      document.getElementById('statusLine').textContent='';
+      const data = await analytics.getGlobalStats(240);
+      const rows = Array.isArray(data.history) ? data.history : [];
+      document.getElementById('historyList').innerHTML = rows.length ? rows.map(renderRow).join('') : '<div class="meta">Nog geen bevestigde drankjes.</div>';
+      document.getElementById('statusLine').textContent = rows.length ? `${rows.length} bevestigde drankjes geladen.` : '';
     }catch(err){
-      document.getElementById('statusLine').textContent=err.message||String(err);
-      document.getElementById('historyList').innerHTML='<div class="meta">Laden mislukt.</div>';
+      document.getElementById('statusLine').textContent = err.message || String(err);
+      document.getElementById('historyList').innerHTML = '<div class="meta">Laden mislukt.</div>';
     }
   }
   load();

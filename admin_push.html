@@ -7,9 +7,9 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Live pushmeldingen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v348';</script><script src="./gejast-config.js?v348"></script>
-  <script src="./admin-session-sync.js?v348"></script>
-  <script src="./admin-topnav.js?v348"></script>
+  <script>window.GEJAST_PAGE_VERSION='v350';</script><script src="./gejast-config.js?v350"></script>
+  <script src="./admin-session-sync.js?v350"></script>
+  <script src="./admin-topnav.js?v350"></script>
   <style>
     :root { --gold:#9a8241; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#6b655b; --ok:#2b5b37; --warn:#8b3a30; }
     *{box-sizing:border-box} body{margin:0;padding:20px;font-family:Inter,sans-serif;background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed;min-height:100vh}
@@ -105,6 +105,14 @@
         const items = runtimeDiag.recent_job_rows.slice(0,4).map((row)=>`<li>${escapeHtml(row.display_name || 'Onbekend')} · ${escapeHtml(row.status || 'onbekend')}${row.error_text ? ` · ${escapeHtml(row.error_text)}` : ''}</li>`).join('');
         lines.push(`Laatste jobstatussen:<ul style="margin:8px 0 0 18px">${items}</ul>`);
       }
+      if (runtimeDiag && Array.isArray(runtimeDiag.recent_failed_rows) && runtimeDiag.recent_failed_rows.length) {
+        const items = runtimeDiag.recent_failed_rows.slice(0,4).map((row)=>`<li>${escapeHtml(row.display_name || 'Onbekend')} · ${escapeHtml(row.error_text || 'onbekende fout')}</li>`).join('');
+        lines.push(`Recente bezorgfouten:<ul style="margin:8px 0 0 18px">${items}</ul>`);
+      }
+      if (runtimeDiag && Array.isArray(runtimeDiag.recent_claim_rows) && runtimeDiag.recent_claim_rows.length) {
+        const items = runtimeDiag.recent_claim_rows.slice(0,4).map((row)=>`<li>${escapeHtml(row.display_name || 'Onbekend')} · ${escapeHtml(formatDateTime(row.claimed_at) || 'claim onbekend')}</li>`).join('');
+        lines.push(`Recent geclaimd:<ul style="margin:8px 0 0 18px">${items}</ul>`);
+      }
       document.getElementById('diagBox').innerHTML = lines.join('<br>');
     }
     async function loadActive(){
@@ -145,7 +153,7 @@
     document.addEventListener('visibilitychange',()=>{ if(!document.hidden) loadActive().catch(()=>{}); });
     (async()=>{ const sel=document.getElementById('pushScopeSelect'); if(sel) sel.value=adminScope(); if(await ensureGate()) loadActive().catch((err)=>setStatus(err?.message||'Laden mislukt.','warn')); })();
   </script>
-  <div class="site-credit-watermark" data-version-watermark>v348 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v350 · Made by Bruis</div>
   <script src="./site-analytics.js"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
