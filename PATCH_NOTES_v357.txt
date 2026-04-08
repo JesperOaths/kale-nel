@@ -1,0 +1,19 @@
+GEJAST v357 patch notes
+
+Implemented the live/spectator completion and backend-badge improvements from the uploaded gejast_live_badges_completion_v352 bundle on top of the available v356 working tree.
+
+Included:
+- gejast-live-sync.js replaced with canonical write helper and compatibility alias
+- gejast-live-summary.js replaced with canonical read helper and compatibility shims
+- scorer.html and boerenbridge.html switched to writeSummary(...)
+- index.html switched to loadHomepageEntries(...)
+- klaverjas_live.html and boerenbridge_live.html switched to loadMatch(...)
+- match_control.html now supports match_ref deep-link selection
+- badge-registry.js and gejast-badge-source.js added
+- assets/badges copied into the repo
+- player.html, profiles.html and my_profile.html enhanced with backend badge bundle/card reads
+- touched files moved to v357
+
+Truth boundary:
+- the SQL files are included from the uploaded bundle as instructed
+- they were not schema-drift patched against the live Supabase database in this pass

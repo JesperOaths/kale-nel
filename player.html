@@ -2,149 +2,107 @@
 <html lang="nl"><head><meta charset="UTF-8"/>
 <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
-  <meta http-equiv="Pragma" content="no-cache" /><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Speler</title><script>window.GEJAST_PAGE_VERSION='v354';</script><script src="./gejast-config.js?v354"></script><script src="./drink_type_normalization.js?v354"></script><script src="./drinks_workflow_helper.js?v354"></script><script src="./gejast-scope-context.js?v354"></script><script src="./gejast-rpc-contract.js?v354"></script><script src="./drink_type_normalization.js?v354"></script><script src="./drinks_workflow_helper.js?v354"></script><style>:root{--card:#f8f5ee;--line:rgba(0,0,0,.08);--muted:#6b6257;--gold:#d4af37}*{box-sizing:border-box}body{margin:0;padding:24px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(232,228,217,.9),rgba(232,228,217,.92)),url('./wordtergejast.png') center/cover fixed;color:#201b16}.wrap{max-width:1100px;margin:0 auto}.card{position:relative;background:rgba(248,245,238,.96);border-radius:28px;padding:24px;box-shadow:0 20px 44px rgba(0,0,0,.08)}h1{margin:18px 0 0;font-size:42px}.muted{color:var(--muted)}.hero{position:relative;min-height:74px}.back-btn{position:absolute;left:0;top:0;display:inline-flex;padding:10px 14px;border-radius:999px;background:#201b16;color:#fff;text-decoration:none;font-weight:800}.brand-link{position:absolute;right:0;top:0;display:inline-flex;align-items:center;justify-content:center}.brand-link img{width:64px;height:64px;object-fit:contain;filter:drop-shadow(0 4px 12px rgba(0,0,0,.08));cursor:pointer}.game-tabs{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}.tab{border:none;border-radius:999px;padding:10px 14px;background:#fff;border:1px solid var(--line);font:800 14px/1 Inter,system-ui,sans-serif;cursor:pointer}.tab.active{background:#201b16;color:#fff}.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:16px 0}.stat{background:#fff;border-radius:18px;border:1px solid var(--line);padding:14px}.stat span{display:block;font-size:12px;color:#8a7a55;text-transform:uppercase;letter-spacing:.08em}.stat strong{display:block;margin-top:8px;font-size:26px}.panel{background:#fff;border-radius:22px;padding:18px;border:1px solid var(--line);margin-top:16px}.badge{display:inline-flex;padding:5px 10px;border-radius:999px;background:rgba(212,175,55,.18);font-size:12px;font-weight:800}.name-link{color:#201b16;text-decoration:none;font-weight:700}.name-link:hover{text-decoration:none}.accordion{border:1px solid var(--line);border-radius:18px;background:#fff;margin-top:10px}.accordion summary{list-style:none;cursor:pointer;padding:14px 16px;font-weight:800;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.accordion summary::-webkit-details-marker{display:none}.accordion .detail{padding:0 16px 16px}.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:10px}.mini{background:#fbfaf6;border:1px solid var(--line);border-radius:14px;padding:10px}.mini strong{display:block;font-size:.92rem}.mini span{display:block;color:var(--muted);font-size:.85rem;margin-top:4px}.site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);border:1px solid rgba(212,175,55,0.35);color:#f3e3a6;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}@media(max-width:920px){.grid{grid-template-columns:repeat(2,1fr)}body{padding:16px}}</style><script src="./gejast-scope.js?v354"></script>  <script src="./gejast-home-gate.js?v354"></script>
-<script src="./gejast-badges.js?v354"></script><script src="./gejast-profile-source.js?v354"></script></head><body><div class="wrap"><div class="card"><div class="hero"><a class="back-btn" id="backLink" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href=((window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope())==='family'?'./familie/index.html':'./profiles.html');}">Terug</a><a class="brand-link" id="playerHomeLink" href="./index.html" aria-label="Home via logo"><img src="./logo.png" alt="Logo"/></a></div><div><div class="badge" id="badgeBox">Badge</div><h1 id="title">Speler</h1><div class="muted" id="subtitle">Profiel en wedstrijdgeschiedenis.</div></div><div class="game-tabs" id="gameTabs"></div><div class="grid" id="statsGrid"><div class="stat"><span>Laden</span><strong>…</strong></div></div><section class="panel"><h2 style="margin:0 0 12px">Extra stats</h2><div id="extraStatsWrap" class="muted">Laden…</div></section><section class="panel"><h2 style="margin:0 0 12px">Spelspecifieke inzichten</h2><div id="gameInsightsWrap" class="muted">Laden…</div></section><section class="panel"><h2 style="margin:0 0 12px">Drinks stats</h2><div id="drinksStatsWrap" class="muted">Laden…</div></section><section class="panel"><h2 style="margin:0 0 12px">Wedstrijden</h2><div id="matchesWrap" class="muted">Laden…</div></section></div></div><div class="site-credit-watermark" data-version-watermark></div><script>(()=>{const cfg=window.GEJAST_CONFIG||{};const SUPABASE_URL=cfg.SUPABASE_URL||'';const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';const params=new URLSearchParams(location.search); try{ if(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope()==='family'){ const h=document.getElementById('playerHomeLink'); if(h) h.href='./familie/index.html'; } }catch(_){}const initialGame=(params.get('game')||'klaverjas').toLowerCase();const player=params.get('player')||'';const titles={klaverjas:'Klaverjassen',boerenbridge:'Boerenbridge',beerpong:'Beerpong',drankstand:'Drankstand'};let unified=null;let currentGame=initialGame;let latestDrinkData=null;let sharedStatsCache={};let gameInsightsCache={};let badgeFactsCache={};let profileBundleCache=null;function headers(){return{apikey:KEY,Authorization:`Bearer ${KEY}`,'Content-Type':'application/json',Accept:'application/json'}}async function parse(res){const t=await res.text();let d=null;try{d=t?JSON.parse(t):null}catch{throw new Error(t||`HTTP ${res.status}`)}if(!res.ok)throw new Error(d?.message||d?.error||`HTTP ${res.status}`);return d}function unwrap(payload){if(payload&&payload.get_public_player_unified)return payload.get_public_player_unified;if(Array.isArray(payload)&&payload[0]&&payload[0].get_public_player_unified)return payload[0].get_public_player_unified;if(Array.isArray(payload)&&payload[0])return payload[0];return payload||{}}function dateFmt(v){const d=new Date(v);return isNaN(d)?String(v||'–'):d.toLocaleString('nl-NL')}function linkName(name, game=currentGame){const scope=(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope())||'friends';return `<a class="name-link" href="./player.html?player=${encodeURIComponent(name||'')}&game=${encodeURIComponent(game)}&scope=${encodeURIComponent(scope)}">${name||'Onbekend'}</a>`}function nameList(names, game=currentGame){return (Array.isArray(names)?names:[]).map((n)=>linkName(n, game)).join(' · ')||'—'}function metricValue(v){return Number.isFinite(Number(v))?Math.round(Number(v)):0}function gameData(game){return unified?.games?.[game]||{player_name:player,summary:{},matches:[],badge:'Starter'}}async function loadDrinkStats(){try{const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_player_public`,{method:'POST',headers:headers(),body:JSON.stringify({player_name:player})});const raw=await parse(res);const data=raw?.get_drink_player_public||raw||{};latestDrinkData=data;const s=data.summary||{};document.getElementById('drinksStatsWrap').innerHTML=`<div class="detail-grid"><div class="mini"><strong>Drankjes</strong><span>${s.events||0}</span></div><div class="mini"><strong>Units</strong><span>${Number(s.units||0).toFixed(1)}</span></div><div class="mini"><strong>Gemiddeld / nacht</strong><span>${Number(s.avg_night_units||0).toFixed(1)}</span></div><div class="mini"><strong>Favoriet</strong><span>${s.favorite_type||'—'}</span></div></div>`;if(currentGame==='drankstand') render();}catch(_){document.getElementById('drinksStatsWrap').textContent='Nog geen drinks-data.';}}async function loadSharedPlayer(){if(profileBundleCache&&profileBundleCache.shared_stats&&currentGame!=='drankstand'){const cached=sharedStatsCache[currentGame]||profileBundleCache.shared_stats||{};sharedStatsCache[currentGame]=cached;return cached;}try{const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_shared_player_stats_scoped`,{method:'POST',headers:headers(),body:JSON.stringify({game_key:currentGame,player_name:player,site_scope_input:(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope())||'friends'})});const raw=await parse(res);const out=raw?.get_public_shared_player_stats||raw||{};sharedStatsCache[currentGame]=out;return out;}catch(_){return {};}}async function loadGameInsights(){if(profileBundleCache&&profileBundleCache.game_insights&&currentGame!=='drankstand'){const cached=gameInsightsCache[currentGame]||profileBundleCache.game_insights||{};gameInsightsCache[currentGame]=cached;return cached;}try{const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_player_game_insights_scoped`,{method:'POST',headers:headers(),body:JSON.stringify({game_key:currentGame,player_name:player,site_scope_input:(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope())||'friends'})});const raw=await parse(res);const out=raw?.get_public_player_game_insights||raw||{};gameInsightsCache[currentGame]=out;return out;}catch(_){return {cards:[]};}}function renderTabs(){const wrap=document.getElementById('gameTabs');const scope=(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope())||'friends'; const entries=scope==='family'?['klaverjas','boerenbridge']:['klaverjas','boerenbridge','beerpong','drankstand'];wrap.innerHTML=entries.map((g)=>`<button class="tab ${g===currentGame?'active':''}" data-game="${g}">${titles[g]}</button>`).join('');wrap.querySelectorAll('[data-game]').forEach((btn)=>btn.addEventListener('click',()=>{currentGame=btn.getAttribute('data-game');render();}));}function detailCards(match){const details=(Array.isArray(match.details)?match.details:[]).filter(Boolean); if(!details.length) return '<div class="muted">Geen extra details.</div>'; return `<div class="detail-grid">${details.map(d=>`<div class="mini"><strong>${linkName(d.player_name||'', currentGame)}</strong><span>${d.result_label||d.result||''}</span>${d.points!==undefined?`<span>Punten: ${d.points}</span>`:''}${d.points_against!==undefined?`<span>Tegen: ${d.points_against}</span>`:''}${d.rank!==undefined?`<span>Plek: ${d.rank}</span>`:''}${d.exact_bids!==undefined?`<span>Exact: ${d.exact_bids}</span>`:''}${d.slagen!==undefined?`<span>Slagen: ${d.slagen}</span>`:''}${d.team?`<span>Team: ${d.team}</span>`:''}</div>`).join('')}</div>`;}function render(){const overview=unified?.overview||{};document.getElementById('title').textContent=unified?.player_name||player||'Speler';if(currentGame==='drankstand'){const s=latestDrinkData?.summary||{};document.getElementById('badgeBox').textContent='Drankstand';document.getElementById('subtitle').textContent='Drinks stats, snelheid en favoriete drankjes.';renderTabs();document.getElementById('statsGrid').innerHTML=`<div class="stat"><span>Drankjes</span><strong>${s.events||0}</strong></div><div class="stat"><span>Units</span><strong>${Number(s.units||0).toFixed(1)}</strong></div><div class="stat"><span>Gem. / nacht</span><strong>${Number(s.avg_night_units||0).toFixed(1)}</strong></div><div class="stat"><span>Favoriet</span><strong>${s.favorite_type||'—'}</strong></div><div class="stat"><span>Snelste tijd</span><strong>${latestDrinkData?.speed_best_seconds!=null?Number(latestDrinkData.speed_best_seconds).toFixed(1)+'s':'—'}</strong></div>`;document.getElementById('extraStatsWrap').innerHTML=(latestDrinkData?.top_types||[]).length?`<div class="detail-grid">${latestDrinkData.top_types.map(r=>`<div class="mini"><strong>${r.label||r.key||'Drankje'}</strong><span>${r.events||0} drankjes</span><span>${Number(r.units||0).toFixed(1)} units</span></div>`).join('')}</div>`:'Nog geen dranktype-stats.';document.getElementById('gameInsightsWrap').innerHTML=(latestDrinkData?.speed_records||[]).length?`<div class="detail-grid">${latestDrinkData.speed_records.map(r=>`<div class="mini"><strong>${r.label||'Snelheid'}</strong><span>${Number(r.seconds||0).toFixed(1)}s</span></div>`).join('')}</div>`:'Nog geen snelheidsstats.';document.getElementById('matchesWrap').innerHTML=(latestDrinkData?.recent||[]).length?latestDrinkData.recent.map(r=>`<details class="accordion"><summary><span>${r.event_type_label||r.label||'Drankje'} · ${Number(r.total_units||0).toFixed(1)} units</span><span class="muted" style="font-size:12px">${dateFmt(r.verified_at||r.created_at)}</span></summary><div class="detail"><div class="muted">${r.verifier_names&&r.verifier_names.length?'Bevestigd door '+r.verifier_names.join(', '):'Geen verifier-info'}</div></div></details>`).join(''):'Nog geen drankjes in geschiedenis.';return;}const gd=gameData(currentGame);document.getElementById('badgeBox').textContent=gd.badge||overview.best_badge||'Starter';document.getElementById('subtitle').textContent=`Profiel en ${titles[currentGame].toLowerCase()}-geschiedenis.`;renderTabs();const s=gd.summary||{};document.getElementById('statsGrid').innerHTML=`<div class="stat"><span>ELO</span><strong>${metricValue(s.elo_rating||1000)}</strong></div><div class="stat"><span>Gespeeld</span><strong>${metricValue(s.games_played||s.matches_played||0)}</strong></div><div class="stat"><span>Win%</span><strong>${Number(s.win_pct||0).toFixed(0)}%</strong></div><div class="stat"><span>Winst / verlies</span><strong>${metricValue(s.wins||0)} / ${metricValue(s.losses||0)}</strong></div><div class="stat"><span>Totaal site</span><strong>${metricValue(overview.total_matches||0)}</strong></div>`;const matches=Array.isArray(gd.matches)?gd.matches:[];loadSharedPlayer().then((shared)=>{document.getElementById('extraStatsWrap').innerHTML=`<div class=\"detail-grid\"><div class=\"mini\"><strong>Vorm 5</strong><span>${shared.recent_form||'—'}</span></div><div class=\"mini\"><strong>Actief 30d</strong><span>${shared.activity_30d||0}</span></div><div class=\"mini\"><strong>Grootste stijging</strong><span>${Math.round(Number(shared.biggest_gain||0))}</span></div><div class=\"mini\"><strong>Grootste daling</strong><span>${Math.round(Number(shared.biggest_drop||0))}</span></div><div class=\"mini\"><strong>Volatiliteit</strong><span>${Math.round(Number(shared.volatility||0))}</span></div></div>`;});loadGameInsights().then((ins)=>{document.getElementById('gameInsightsWrap').innerHTML=(ins.cards||[]).length?`<div class=\"detail-grid\">${ins.cards.map(c=>`<div class=\"mini\"><strong>${c.label||'Inzicht'}</strong><span>${c.value||'—'}</span>${c.sub?`<span>${c.sub}</span>`:''}</div>`).join('')}</div>`:'Nog geen spelspecifieke inzichten.';});document.getElementById('matchesWrap').innerHTML=matches.length?matches.map((m)=>{const delta=Number(m.elo_delta||0); const deltaLabel=`${delta>0?'+':''}${Math.round(delta)}`; const outcome=(m.player_result==='win'?'Winst':(m.player_result==='draw'?'Gelijk':'Verlies')); return `<details class="accordion"><summary><span>${outcome} · Winnaars: ${nameList(m.winner_names||[], currentGame)}${m.scoreline?` · ${m.scoreline}`:''} · ELO ${deltaLabel}</span><span class="muted" style="font-size:12px">${dateFmt(m.finished_at)}</span></summary><div class="detail"><div class="muted">Deelnemers: ${nameList(m.participants||[], currentGame)}</div>${m.recap_text?`<div class="muted" style="margin-top:6px">${m.recap_text}</div>`:''}${detailCards(m)}</div></details>`;}).join(''):'Nog geen wedstrijden voor dit spel.';}async function load(){try{profileBundleCache=await window.GEJAST_PROFILE_SOURCE.loadPlayerBundle({playerName:player,gameKey:currentGame});unified=profileBundleCache.unified||{};latestDrinkData=profileBundleCache.drinks||{summary:{},top_types:[],speed_records:[],recent:[]};sharedStatsCache[currentGame]=profileBundleCache.shared_stats||{};gameInsightsCache[currentGame]=profileBundleCache.game_insights||{};badgeFactsCache=profileBundleCache.badge_facts||{};render();}catch(err){try{await loadDrinkStats();const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_player_unified_scoped`,{method:'POST',headers:headers(),body:JSON.stringify({player_name:player,site_scope_input:(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope())||'friends'})});unified=unwrap(await parse(res));render();}catch(innerErr){document.getElementById('statsGrid').innerHTML=`<div class="stat"><span>Fout</span><strong>${(innerErr&&innerErr.message)||err.message||String(err)}</strong></div>`;document.getElementById('matchesWrap').textContent='Laden mislukt.';}}}load();})();</script><script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script><script src="./gejast-push-contract.js?v354"></script><script src="./gejast-push-contract.js?v354"></script><script src="./gejast-geo.js?v354"></script><script src="./drinks-verify-float.js?v354"></script>
+  <meta http-equiv="Pragma" content="no-cache" /><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Speler</title><script>window.GEJAST_PAGE_VERSION='v357';</script><script src="./gejast-config.js?v357"></script><style>:root{--card:#f8f5ee;--line:rgba(0,0,0,.08);--muted:#6b6257;--gold:#d4af37}*{box-sizing:border-box}body{margin:0;padding:24px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(232,228,217,.9),rgba(232,228,217,.92)),url('./wordtergejast.png') center/cover fixed;color:#201b16}.wrap{max-width:1100px;margin:0 auto}.card{position:relative;background:rgba(248,245,238,.96);border-radius:28px;padding:24px;box-shadow:0 20px 44px rgba(0,0,0,.08)}h1{margin:18px 0 0;font-size:42px}.muted{color:var(--muted)}.hero{position:relative;min-height:74px}.back-btn{position:absolute;left:0;top:0;display:inline-flex;padding:10px 14px;border-radius:999px;background:#201b16;color:#fff;text-decoration:none;font-weight:800}.brand-link{position:absolute;right:0;top:0;display:inline-flex;align-items:center;justify-content:center}.brand-link img{width:64px;height:64px;object-fit:contain;filter:drop-shadow(0 4px 12px rgba(0,0,0,.08));cursor:pointer}.game-tabs{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}.tab{border:none;border-radius:999px;padding:10px 14px;background:#fff;border:1px solid var(--line);font:800 14px/1 Inter,system-ui,sans-serif;cursor:pointer}.tab.active{background:#201b16;color:#fff}.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:16px 0}.stat{background:#fff;border-radius:18px;border:1px solid var(--line);padding:14px}.stat span{display:block;font-size:12px;color:#8a7a55;text-transform:uppercase;letter-spacing:.08em}.stat strong{display:block;margin-top:8px;font-size:26px}.panel{background:#fff;border-radius:22px;padding:18px;border:1px solid var(--line);margin-top:16px}.badge{display:inline-flex;padding:5px 10px;border-radius:999px;background:rgba(212,175,55,.18);font-size:12px;font-weight:800}.name-link{color:#201b16;text-decoration:none;font-weight:700}.name-link:hover{text-decoration:none}.accordion{border:1px solid var(--line);border-radius:18px;background:#fff;margin-top:10px}.accordion summary{list-style:none;cursor:pointer;padding:14px 16px;font-weight:800;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.accordion summary::-webkit-details-marker{display:none}.accordion .detail{padding:0 16px 16px}.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:10px}.mini{background:#fbfaf6;border:1px solid var(--line);border-radius:14px;padding:10px}.mini strong{display:block;font-size:.92rem}.mini span{display:block;color:var(--muted);font-size:.85rem;margin-top:4px}.site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);border:1px solid rgba(212,175,55,0.35);color:#f3e3a6;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}@media(max-width:920px){.grid{grid-template-columns:repeat(2,1fr)}body{padding:16px}}</style><script src="./gejast-scope.js?v357"></script>  <script src="./gejast-home-gate.js?v357"></script>
+<script src="./gejast-badges.js?v357"></script><script src="./badge-registry.js?v357"></script><script src="./gejast-badge-source.js?v357"></script></head><body><div class="wrap"><div class="card"><div class="hero"><a class="back-btn" id="backLink" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href=((window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope())==='family'?'./familie/index.html':'./profiles.html');}">Terug</a><a class="brand-link" id="playerHomeLink" href="./index.html" aria-label="Home via logo"><img src="./logo.png" alt="Logo"/></a></div><div><div class="badge" id="badgeBox">Badge</div><h1 id="title">Speler</h1><div class="muted" id="subtitle">Profiel en wedstrijdgeschiedenis.</div></div><div class="game-tabs" id="gameTabs"></div><div class="grid" id="statsGrid"><div class="stat"><span>Laden</span><strong>…</strong></div></div><section class="panel"><h2 style="margin:0 0 12px">Extra stats</h2><div id="extraStatsWrap" class="muted">Laden…</div></section><section class="panel"><h2 style="margin:0 0 12px">Spelspecifieke inzichten</h2><div id="gameInsightsWrap" class="muted">Laden…</div></section><section class="panel"><h2 style="margin:0 0 12px">Drinks stats</h2><div id="drinksStatsWrap" class="muted">Laden…</div></section><section class="panel"><h2 style="margin:0 0 12px">Wedstrijden</h2><div id="matchesWrap" class="muted">Laden…</div></section></div></div><div class="site-credit-watermark" data-version-watermark></div><script>(()=>{const cfg=window.GEJAST_CONFIG||{};const SUPABASE_URL=cfg.SUPABASE_URL||'';const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';const params=new URLSearchParams(location.search); try{ if(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope()==='family'){ const h=document.getElementById('playerHomeLink'); if(h) h.href='./familie/index.html'; } }catch(_){}const initialGame=(params.get('game')||'klaverjas').toLowerCase();const player=params.get('player')||'';const titles={klaverjas:'Klaverjassen',boerenbridge:'Boerenbridge',beerpong:'Beerpong',drankstand:'Drankstand'};let unified=null;let currentGame=initialGame;let latestDrinkData=null;function headers(){return{apikey:KEY,Authorization:`Bearer ${KEY}`,'Content-Type':'application/json',Accept:'application/json'}}async function parse(res){const t=await res.text();let d=null;try{d=t?JSON.parse(t):null}catch{throw new Error(t||`HTTP ${res.status}`)}if(!res.ok)throw new Error(d?.message||d?.error||`HTTP ${res.status}`);return d}function unwrap(payload){if(payload&&payload.get_public_player_unified)return payload.get_public_player_unified;if(Array.isArray(payload)&&payload[0]&&payload[0].get_public_player_unified)return payload[0].get_public_player_unified;if(Array.isArray(payload)&&payload[0])return payload[0];return payload||{}}function dateFmt(v){const d=new Date(v);return isNaN(d)?String(v||'–'):d.toLocaleString('nl-NL')}function linkName(name, game=currentGame){const scope=(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope())||'friends';return `<a class="name-link" href="./player.html?player=${encodeURIComponent(name||'')}&game=${encodeURIComponent(game)}&scope=${encodeURIComponent(scope)}">${name||'Onbekend'}</a>`}function nameList(names, game=currentGame){return (Array.isArray(names)?names:[]).map((n)=>linkName(n, game)).join(' · ')||'—'}function metricValue(v){return Number.isFinite(Number(v))?Math.round(Number(v)):0}function gameData(game){return unified?.games?.[game]||{player_name:player,summary:{},matches:[],badge:'Starter'}}async function loadDrinkStats(){try{const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_player_public`,{method:'POST',headers:headers(),body:JSON.stringify({player_name:player})});const raw=await parse(res);const data=raw?.get_drink_player_public||raw||{};latestDrinkData=data;const s=data.summary||{};document.getElementById('drinksStatsWrap').innerHTML=`<div class="detail-grid"><div class="mini"><strong>Drankjes</strong><span>${s.events||0}</span></div><div class="mini"><strong>Units</strong><span>${Number(s.units||0).toFixed(1)}</span></div><div class="mini"><strong>Gemiddeld / nacht</strong><span>${Number(s.avg_night_units||0).toFixed(1)}</span></div><div class="mini"><strong>Favoriet</strong><span>${s.favorite_type||'—'}</span></div></div>`;if(currentGame==='drankstand') render();}catch(_){document.getElementById('drinksStatsWrap').textContent='Nog geen drinks-data.';}}async function loadSharedPlayer(){try{const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_shared_player_stats_scoped`,{method:'POST',headers:headers(),body:JSON.stringify({game_key:currentGame,player_name:player,site_scope_input:(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope())||'friends'})});const raw=await parse(res);return raw?.get_public_shared_player_stats||raw||{};}catch(_){return {};}}async function loadGameInsights(){try{const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_player_game_insights_scoped`,{method:'POST',headers:headers(),body:JSON.stringify({game_key:currentGame,player_name:player,site_scope_input:(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope())||'friends'})});const raw=await parse(res);return raw?.get_public_player_game_insights||raw||{};}catch(_){return {cards:[]};}}function renderTabs(){const wrap=document.getElementById('gameTabs');const scope=(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope())||'friends'; const entries=scope==='family'?['klaverjas','boerenbridge']:['klaverjas','boerenbridge','beerpong','drankstand'];wrap.innerHTML=entries.map((g)=>`<button class="tab ${g===currentGame?'active':''}" data-game="${g}">${titles[g]}</button>`).join('');wrap.querySelectorAll('[data-game]').forEach((btn)=>btn.addEventListener('click',()=>{currentGame=btn.getAttribute('data-game');render();}));}function detailCards(match){const details=(Array.isArray(match.details)?match.details:[]).filter(Boolean); if(!details.length) return '<div class="muted">Geen extra details.</div>'; return `<div class="detail-grid">${details.map(d=>`<div class="mini"><strong>${linkName(d.player_name||'', currentGame)}</strong><span>${d.result_label||d.result||''}</span>${d.points!==undefined?`<span>Punten: ${d.points}</span>`:''}${d.points_against!==undefined?`<span>Tegen: ${d.points_against}</span>`:''}${d.rank!==undefined?`<span>Plek: ${d.rank}</span>`:''}${d.exact_bids!==undefined?`<span>Exact: ${d.exact_bids}</span>`:''}${d.slagen!==undefined?`<span>Slagen: ${d.slagen}</span>`:''}${d.team?`<span>Team: ${d.team}</span>`:''}</div>`).join('')}</div>`;}function render(){const overview=unified?.overview||{};document.getElementById('title').textContent=unified?.player_name||player||'Speler';if(currentGame==='drankstand'){const s=latestDrinkData?.summary||{};document.getElementById('badgeBox').textContent='Drankstand';document.getElementById('subtitle').textContent='Drinks stats, snelheid en favoriete drankjes.';renderTabs();document.getElementById('statsGrid').innerHTML=`<div class="stat"><span>Drankjes</span><strong>${s.events||0}</strong></div><div class="stat"><span>Units</span><strong>${Number(s.units||0).toFixed(1)}</strong></div><div class="stat"><span>Gem. / nacht</span><strong>${Number(s.avg_night_units||0).toFixed(1)}</strong></div><div class="stat"><span>Favoriet</span><strong>${s.favorite_type||'—'}</strong></div><div class="stat"><span>Snelste tijd</span><strong>${latestDrinkData?.speed_best_seconds!=null?Number(latestDrinkData.speed_best_seconds).toFixed(1)+'s':'—'}</strong></div>`;document.getElementById('extraStatsWrap').innerHTML=(latestDrinkData?.top_types||[]).length?`<div class="detail-grid">${latestDrinkData.top_types.map(r=>`<div class="mini"><strong>${r.label||r.key||'Drankje'}</strong><span>${r.events||0} drankjes</span><span>${Number(r.units||0).toFixed(1)} units</span></div>`).join('')}</div>`:'Nog geen dranktype-stats.';document.getElementById('gameInsightsWrap').innerHTML=(latestDrinkData?.speed_records||[]).length?`<div class="detail-grid">${latestDrinkData.speed_records.map(r=>`<div class="mini"><strong>${r.label||'Snelheid'}</strong><span>${Number(r.seconds||0).toFixed(1)}s</span></div>`).join('')}</div>`:'Nog geen snelheidsstats.';document.getElementById('matchesWrap').innerHTML=(latestDrinkData?.recent||[]).length?latestDrinkData.recent.map(r=>`<details class="accordion"><summary><span>${r.event_type_label||r.label||'Drankje'} · ${Number(r.total_units||0).toFixed(1)} units</span><span class="muted" style="font-size:12px">${dateFmt(r.verified_at||r.created_at)}</span></summary><div class="detail"><div class="muted">${r.verifier_names&&r.verifier_names.length?'Bevestigd door '+r.verifier_names.join(', '):'Geen verifier-info'}</div></div></details>`).join(''):'Nog geen drankjes in geschiedenis.';return;}const gd=gameData(currentGame);document.getElementById('badgeBox').textContent=gd.badge||overview.best_badge||'Starter';document.getElementById('subtitle').textContent=`Profiel en ${titles[currentGame].toLowerCase()}-geschiedenis.`;renderTabs();const s=gd.summary||{};document.getElementById('statsGrid').innerHTML=`<div class="stat"><span>ELO</span><strong>${metricValue(s.elo_rating||1000)}</strong></div><div class="stat"><span>Gespeeld</span><strong>${metricValue(s.games_played||s.matches_played||0)}</strong></div><div class="stat"><span>Win%</span><strong>${Number(s.win_pct||0).toFixed(0)}%</strong></div><div class="stat"><span>Winst / verlies</span><strong>${metricValue(s.wins||0)} / ${metricValue(s.losses||0)}</strong></div><div class="stat"><span>Totaal site</span><strong>${metricValue(overview.total_matches||0)}</strong></div>`;const matches=Array.isArray(gd.matches)?gd.matches:[];loadSharedPlayer().then((shared)=>{document.getElementById('extraStatsWrap').innerHTML=`<div class=\"detail-grid\"><div class=\"mini\"><strong>Vorm 5</strong><span>${shared.recent_form||'—'}</span></div><div class=\"mini\"><strong>Actief 30d</strong><span>${shared.activity_30d||0}</span></div><div class=\"mini\"><strong>Grootste stijging</strong><span>${Math.round(Number(shared.biggest_gain||0))}</span></div><div class=\"mini\"><strong>Grootste daling</strong><span>${Math.round(Number(shared.biggest_drop||0))}</span></div><div class=\"mini\"><strong>Volatiliteit</strong><span>${Math.round(Number(shared.volatility||0))}</span></div></div>`;});loadGameInsights().then((ins)=>{document.getElementById('gameInsightsWrap').innerHTML=(ins.cards||[]).length?`<div class=\"detail-grid\">${ins.cards.map(c=>`<div class=\"mini\"><strong>${c.label||'Inzicht'}</strong><span>${c.value||'—'}</span>${c.sub?`<span>${c.sub}</span>`:''}</div>`).join('')}</div>`:'Nog geen spelspecifieke inzichten.';});document.getElementById('matchesWrap').innerHTML=matches.length?matches.map((m)=>{const delta=Number(m.elo_delta||0); const deltaLabel=`${delta>0?'+':''}${Math.round(delta)}`; const outcome=(m.player_result==='win'?'Winst':(m.player_result==='draw'?'Gelijk':'Verlies')); return `<details class="accordion"><summary><span>${outcome} · Winnaars: ${nameList(m.winner_names||[], currentGame)}${m.scoreline?` · ${m.scoreline}`:''} · ELO ${deltaLabel}</span><span class="muted" style="font-size:12px">${dateFmt(m.finished_at)}</span></summary><div class="detail"><div class="muted">Deelnemers: ${nameList(m.participants||[], currentGame)}</div>${m.recap_text?`<div class="muted" style="margin-top:6px">${m.recap_text}</div>`:''}${detailCards(m)}</div></details>`;}).join(''):'Nog geen wedstrijden voor dit spel.';}async function load(){loadDrinkStats();try{const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_player_unified_scoped`,{method:'POST',headers:headers(),body:JSON.stringify({player_name:player,site_scope_input:(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope())||'friends'})});unified=unwrap(await parse(res));render();}catch(err){document.getElementById('statsGrid').innerHTML=`<div class="stat"><span>Fout</span><strong>${err.message||String(err)}</strong></div>`;document.getElementById('matchesWrap').textContent='Laden mislukt.';}}load();})();</script><script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script><script src="./gejast-geo.js?v357"></script><script src="./drinks-verify-float.js?v357"></script>
 <script>
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
-  const scope = (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope()) || 'friends';
+  const scope = (window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope()) || 'friends';
   const params = new URLSearchParams(location.search);
   const player = params.get('player') || '';
-  const headers = () => ({
-    apikey: cfg.SUPABASE_PUBLISHABLE_KEY,
-    Authorization: `Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY}`,
-    'Content-Type': 'application/json',
-    Accept: 'application/json'
-  });
-
-  async function parse(res) {
-    const text = await res.text();
-    let data = null;
-    try { data = text ? JSON.parse(text) : null; } catch (_) { throw new Error(text || `HTTP ${res.status}`); }
-    if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
-    return data;
-  }
-
-  async function callRpc(name, body) {
-    const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
-      method: 'POST',
-      headers: headers(),
-      body: JSON.stringify(body || {})
-    });
-    const raw = await parse(res);
-    if (raw && raw[name]) return raw[name];
-    return raw || {};
-  }
-
-  async function collectPlayerSnapshot() {
-    const snapshot = { player_name: player, shownName: '', originalName: '' };
-    try {
-      snapshot.unified = await callRpc('get_public_player_unified_scoped', { player_name: player, site_scope_input: scope });
-    } catch (_) {
-      snapshot.unified = {};
-    }
-    try {
-      snapshot.drinksData = await callRpc('get_drink_player_public', { player_name: player });
-    } catch (_) {
-      snapshot.drinksData = {};
-    }
-    try {
-      snapshot.badgeFacts = await callRpc('get_player_badge_facts_scoped', { player_name: player, site_scope_input: scope });
-    } catch (_) {
-      snapshot.badgeFacts = {};
-    }
-    try {
-      snapshot.pussy = await callRpc('get_beerpong_player_pussycup_public', { player_name: player });
-    } catch (_) {
-      snapshot.pussy = {};
-    }
-    return snapshot;
-  }
-
-  function ensureRowAfter(anchor, id, className) {
-    if (!anchor) return null;
-    let node = document.getElementById(id);
-    if (!node) {
-      node = document.createElement('div');
-      node.id = id;
-      if (className) node.className = className;
-      anchor.insertAdjacentElement('afterend', node);
-    }
-    return node;
-  }
-
-  function renderHero(snapshot, attained) {
-    const badges = window.GEJAST_BADGES;
-    const normalized = badges.normalizePlayerSnapshot(snapshot);
-    const shownName = normalized.shownName || player || 'Speler';
-    const originalName = normalized.originalName || player || '';
+  const headers = ()=>({apikey:cfg.SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY}`,'Content-Type':'application/json',Accept:'application/json'});
+  async function parse(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch{ throw new Error(t||`HTTP ${res.status}`); } if(!res.ok) throw new Error(d?.message||d?.error||`HTTP ${res.status}`); return d; }
+  async function enhance(){
+    if(!(window.GEJAST_BADGES&&player&&cfg.SUPABASE_URL&&cfg.SUPABASE_PUBLISHABLE_KEY)) return;
+    window.GEJAST_BADGES.injectStyles();
+    let unified = null, drinks = null, pussy = null;
+    try{ const res=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/get_public_player_unified_scoped`,{method:'POST',headers:headers(),body:JSON.stringify({player_name:player,site_scope_input:scope})}); const raw=await parse(res); unified=(raw&&raw.get_public_player_unified_scoped)||raw&&raw.get_public_player_unified||raw||{}; }catch(_){}
+    try{ const res=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/get_drink_player_public`,{method:'POST',headers:headers(),body:JSON.stringify({player_name:player})}); const raw=await parse(res); drinks=raw?.get_drink_player_public||raw||{}; }catch(_){}
+    try{ const res=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/get_beerpong_player_pussycup_public`,{method:'POST',headers:headers(),body:JSON.stringify({player_name:player})}); const raw=await parse(res); pussy=raw?.get_beerpong_player_pussycup_public||raw||{}; }catch(_){}
+    const overview = unified?.overview || {};
+    const originalName = (unified?.original_player_name || unified?.canonical_player_name || player || '').trim();
+    const shownName = (unified?.player_name || player || 'Speler').trim();
+    const stats = {
+      total_matches:Number(overview.total_matches||0),
+      total_wins:Number(overview.total_wins||0),
+      best_rating:Number(overview.best_rating||1000),
+      klaverjas_matches:Number(overview.klaverjas_matches||0),
+      boerenbridge_matches:Number(overview.boerenbridge_matches||0),
+      beerpong_matches:Number(overview.beerpong_matches||0),
+      drink_units:Number(drinks?.summary?.units||0),
+      speed_best_seconds:Number(drinks?.speed_best_seconds||0),
+      pussycup_pct:Number(pussy?.summary?.pussycup_pct||0)
+    };
+    const attained = window.GEJAST_BADGES.getAttained(stats);
+    const rarest = window.GEJAST_BADGES.getRarest(attained);
     const title = document.getElementById('title');
-    if (title) title.textContent = shownName;
-    const originalRow = ensureRowAfter(title, 'badgeOriginalName', 'original-name');
-    const nicknameRow = ensureRowAfter(originalRow || title, 'badgeNickname', 'nickname-line');
-    const miniRowHost = ensureRowAfter(nicknameRow || originalRow || title, 'badgeMiniHeroRow', 'badge-mini-row');
-    const primaryBadge = badges.pickPrimaryBadge(attained) || badges.getBadgeByLegacyLabel(normalized.bestBadge) || badges.getBadgeByKey('starter');
-    if (originalRow) {
-      originalRow.textContent = originalName && originalName !== shownName ? `"${originalName}"` : '';
-      originalRow.style.display = originalRow.textContent ? '' : 'none';
-    }
-    if (nicknameRow) {
-      nicknameRow.textContent = primaryBadge && primaryBadge.nickname ? primaryBadge.nickname : 'Nog geen bijnaam vrijgespeeld';
-    }
-    if (miniRowHost) {
-      miniRowHost.outerHTML = badges.renderMiniBadgeRow(attained, { size: '48', limit: 6 }).replace('<div class="badge-mini-row"', '<div id="badgeMiniHeroRow" class="badge-mini-row"');
+    if(title){
+      let nick = document.getElementById('badgeNickname');
+      if(!nick){ nick=document.createElement('div'); nick.id='badgeNickname'; nick.className='muted'; nick.style.marginTop='6px'; title.insertAdjacentElement('afterend', nick); }
+      const bits=[];
+      if(rarest&&rarest.nickname) bits.push(`Bijnaam: ${rarest.nickname}`);
+      if(originalName && originalName !== shownName) bits.push(`Originele naam: \"${originalName}\"`);
+      nick.textContent = bits.join(' · ');
     }
     const badgeBox = document.getElementById('badgeBox');
-    if (badgeBox) badgeBox.textContent = (primaryBadge && primaryBadge.title) || 'Starter';
-  }
-
-  function renderGallery(attained) {
-    const badges = window.GEJAST_BADGES;
-    let panel = document.getElementById('badgeGalleryPanel');
-    if (!panel) {
-      panel = document.createElement('section');
-      panel.className = 'panel';
-      panel.id = 'badgeGalleryPanel';
-      const card = document.querySelector('.card');
-      if (card) card.appendChild(panel);
+    if(badgeBox && rarest) badgeBox.textContent = rarest.name;
+    const statsWrap = document.getElementById('extraStatsWrap');
+    if(statsWrap){
+      const mini = `<div class="badge-mini-row">${window.GEJAST_BADGES.renderMiniBadges(attained)}</div>`;
+      statsWrap.insertAdjacentHTML('afterbegin', mini);
     }
-    panel.innerHTML = `<h2 style="margin:0 0 6px">Alle badges</h2><p class="muted" style="margin:0 0 14px">De volledige badgecollectie van deze speler, inclusief nog vergrendelde badges.</p>${badges.renderBadgeGallery(attained)}`;
-  }
-
-  function patchSharedStatsPanel(attained) {
-    const badges = window.GEJAST_BADGES;
-    const host = document.getElementById('extraStatsWrap');
-    if (!host) return;
-    const existing = host.querySelector('.badge-mini-row');
-    if (existing) existing.remove();
-    host.insertAdjacentHTML('afterbegin', badges.renderMiniBadgeRow(attained, { size: '48', limit: 8 }));
-  }
-
-  async function enhance() {
-    if (!(window.GEJAST_BADGES && player && cfg.SUPABASE_URL && cfg.SUPABASE_PUBLISHABLE_KEY)) return;
-    const badges = window.GEJAST_BADGES;
-    badges.injectStyles();
-    const snapshot = await collectPlayerSnapshot();
-    snapshot.shownName = snapshot.unified?.player_name || snapshot.unified?.chosen_username || player;
-    snapshot.originalName = snapshot.unified?.original_player_name || snapshot.unified?.canonical_player_name || player;
-    snapshot.pussycup_pct = snapshot.pussy?.summary?.pussycup_pct;
-    const attained = badges.evaluateAttainedBadges(snapshot);
-    renderHero(snapshot, attained);
-    patchSharedStatsPanel(attained);
-    renderGallery(attained);
-
-    const observerTarget = document.querySelector('.card');
-    if (observerTarget && !observerTarget.__gejastBadgeObserver) {
-      const observer = new MutationObserver(() => {
-        try { renderHero(snapshot, attained); patchSharedStatsPanel(attained); } catch (_) {}
-      });
-      observer.observe(observerTarget, { childList: true, subtree: true });
-      observerTarget.__gejastBadgeObserver = observer;
+    if(!document.getElementById('badgeGalleryPanel')){
+      const panel=document.createElement('section'); panel.className='panel'; panel.id='badgeGalleryPanel';
+      panel.innerHTML=`<h2 style="margin:0 0 12px">Badgegalerij</h2>${window.GEJAST_BADGES.renderGallery(attained.map((b)=>b.key))}`;
+      const card=document.querySelector('.card'); if(card) card.appendChild(panel);
     }
   }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', enhance, {once:true}); else enhance();
+})();
+</script>
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', enhance, { once: true });
-  else enhance();
+<script>
+(function(){
+  function ensureSection(id, title){
+    let panel = document.getElementById(id);
+    if(panel) return panel;
+    panel = document.createElement('section');
+    panel.className = 'panel';
+    panel.id = id;
+    panel.innerHTML = `<h2 style="margin:0 0 12px">${title}</h2><div class="muted">Laden…</div>`;
+    const card = document.querySelector('.card');
+    if(card) card.appendChild(panel);
+    return panel;
+  }
+  async function enhancePlayer(){
+    const params=new URLSearchParams(location.search);
+    const playerName=params.get('player')||'';
+    if(!(window.GEJAST_BADGE_SOURCE&&playerName)) return;
+    try{
+      const scope=(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope&&window.GEJAST_SCOPE_UTILS.getScope())||'friends';
+      const badgeBundle = await window.GEJAST_BADGE_SOURCE.loadPlayerBadgeBundle({ playerName, siteScope: scope });
+      const title = document.getElementById('title');
+      const badgeBox = document.getElementById('badgeBox');
+      if(title && (badgeBundle.display_name || badgeBundle.original_name)) title.textContent = badgeBundle.display_name || badgeBundle.original_name;
+      if(badgeBox) badgeBox.textContent = (badgeBundle.primary_badge && badgeBundle.primary_badge.title) || badgeBundle.primary_nickname || badgeBox.textContent;
+      let nick = document.getElementById('badgeNickname');
+      if(!nick && title){ nick=document.createElement('div'); nick.id='badgeNickname'; nick.className='muted'; nick.style.marginTop='6px'; title.insertAdjacentElement('afterend', nick); }
+      if(nick){
+        const bits=[];
+        if(badgeBundle.primary_nickname) bits.push(`Bijnaam: ${badgeBundle.primary_nickname}`);
+        if(badgeBundle.original_name && badgeBundle.display_name && badgeBundle.original_name !== badgeBundle.display_name) bits.push(`Originele naam: "${badgeBundle.original_name}"`);
+        nick.textContent = bits.join(' · ');
+      }
+      const extra = document.getElementById('extraStatsWrap');
+      if(extra){
+        const row = window.GEJAST_BADGE_SOURCE.renderMiniBadgeRow(badgeBundle.mini_badges_64 || badgeBundle.attained_badges || [], '64');
+        if(row) extra.insertAdjacentHTML('afterbegin', `<div class="badge-mini-row" style="margin-bottom:12px">${row}</div>`);
+      }
+      const gallery = ensureSection('canonicalBadgeGallery', 'Badgegalerij');
+      gallery.innerHTML = `<h2 style="margin:0 0 12px">Badgegalerij</h2><div class="detail-grid">${(Array.isArray(badgeBundle.all_badges)?badgeBundle.all_badges:[]).map((badge)=>`<div class="mini"><strong>${badge.title||'Badge'}</strong><span>${badge.nickname||badge.rarityLabel||''}</span>${badge.imageFull?`<img src="${badge.imageFull}" alt="${badge.title||'Badge'}" style="width:100%;margin-top:10px;border-radius:14px;border:1px solid rgba(0,0,0,.06)">`:''}<span>${badge.description||badge.requirementsText||''}</span></div>`).join('')}</div>`;
+    }catch(_){ }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', enhancePlayer, {once:true}); else enhancePlayer();
 })();
 </script>
 </body></html>

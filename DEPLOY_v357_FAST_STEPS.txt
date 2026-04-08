@@ -1,0 +1,9 @@
+GEJAST v357 fast steps
+
+1. Upload the patch zip.
+2. Run gejast_v357_live_spectator_edge_completion.sql.
+3. Run gejast_v357_backend_canonical_badges.sql.
+4. Refresh the site.
+5. Test scorer and boerenbridge live saves.
+6. Test homepage live entries and live spectator pages with match_ref.
+7. Test player, profiles, and my_profile badge surfaces.

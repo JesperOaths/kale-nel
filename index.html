@@ -663,9 +663,9 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v354';</script><script src="./gejast-config.js?v354"></script><script src="./drink_type_normalization.js?v354"></script><script src="./drinks_workflow_helper.js?v354"></script><script src="./gejast-scope-context.js?v354"></script><script src="./gejast-rpc-contract.js?v354"></script><script src="./drink_type_normalization.js?v354"></script><script src="./drinks_workflow_helper.js?v354"></script><script src="./gejast-scope.js?v354"></script><script src="./gejast-home-gate.js?v354"></script>
-  <script src="./gejast-live-summary.js?v354"></script>
-<script src="./gejast-fairness.js?v354"></script></head>
+  <script>window.GEJAST_PAGE_VERSION='v357';</script><script src="./gejast-config.js?v357"></script><script src="./gejast-scope.js?v357"></script><script src="./gejast-home-gate.js?v357"></script>
+  <script src="./gejast-live-summary.js?v357"></script>
+<script src="./gejast-fairness.js?v357"></script></head>
 <body class="boot-pending homepage-ready"><div id="gejastTopRightToolsMount"></div>
   <div class="site-scene" aria-hidden="true">
     <div class="left-hand"><img src="./kale9goed.png" alt="" style="width:100%;display:block;" /></div>
@@ -1607,9 +1607,10 @@ async function castExtraPollVote(desired_status) {
       try {
         Object.keys(homeEntryDefaults).forEach(setHomeEntryDefault);
         const live = window.GEJAST_LIVE_SUMMARY;
-        const entries = live && typeof live.loadHomepageState === 'function'
-          ? await live.loadHomepageState(getPlayerSessionToken(), CURRENT_SCOPE)
-          : {};
+        const liveState = live && typeof live.loadHomepageEntries === 'function'
+          ? await live.loadHomepageEntries({ siteScope: CURRENT_SCOPE })
+          : { entries:{} };
+        const entries = liveState.entries || {};
         setHomeEntryLive('klaverjas', entries.klaverjas || null);
         setHomeEntryLive('boerenbridge', entries.boerenbridge || null);
       } catch(_) {
@@ -1728,5 +1729,5 @@ async function castExtraPollVote(desired_status) {
 
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v354"></script><script src="./gejast-push-contract.js?v354"></script><script src="./gejast-push-contract.js?v354"></script><script src="./gejast-geo.js?v354"></script></body>
+<script src="./drinks-verify-float.js?v357"></script><script src="./gejast-geo.js?v357"></script></body>
 </html>
