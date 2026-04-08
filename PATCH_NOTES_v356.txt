@@ -1,0 +1,24 @@
+GEJAST v356 - admin hardening and completeness pass
+
+Implemented from gejast_admin_hardening_v352 bundle:
+- added shared admin helper layer:
+  - gejast-admin-rpc.js
+  - gejast-admin-buckets.js
+  - gejast-admin-source.js
+- upgraded admin overview to load claim counts via shared claims bundle helper
+- upgraded admin claims page so main claim actions route through GEJAST_ADMIN_SOURCE wrappers
+- upgraded expired admin flow to shared claims wrapper paths
+- upgraded reserved names flow toward shared reserved-name and ghost helpers
+- upgraded push admin to shared diagnostics/queue wrapper usage
+- upgraded mail diagnostics to shared mail helper usage
+- upgraded analytics to shared analytics helper usage
+- upgraded match control and match swap to shared match edit/update/replace/delete helpers
+- upgraded drinks admin moderation helpers to shared drinks admin source
+- reduced admin-gate-v105.js to a thin compatibility shim over the shared admin session flow
+- blocked admin-dev.html on non-local hosts
+- bumped touched admin pages/helpers to v356
+
+Important truth boundary:
+- this is a real implementation pass on the uploaded kale-nel-main baseline available in the uploads
+- because the live repo state from the earlier v352-v355 patch line was not itself re-uploaded as a source tree in this turn, this patch is applied against the latest uploaded repo baseline rather than against the exact prior generated patch bundle filesystem
+- the SQL wrapper layer must be run before the new secure read/write helper path will work

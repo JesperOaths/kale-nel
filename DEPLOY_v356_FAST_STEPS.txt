@@ -1,0 +1,34 @@
+GEJAST v356 fast steps
+
+1. Upload these files to repo root:
+   - gejast-admin-rpc.js
+   - gejast-admin-buckets.js
+   - gejast-admin-source.js
+   - admin.html
+   - admin_claims.html
+   - admin_expired.html
+   - admin_reserved_names.html
+   - admin_push.html
+   - admin_mail_audit.html
+   - admin_analytics.html
+   - admin_match_control.html
+   - match_swap.html
+   - drinks_admin.html
+   - admin-gate-v105.js
+   - admin-dev.html
+
+2. Run Supabase SQL:
+   - gejast_v356_admin_hardening_and_completeness.sql
+
+3. Hard refresh admin pages
+
+4. Verify:
+   - admin overview counts load
+   - claims approve/reject/requeue/resend/revoke/remove still work
+   - reserved names reserve/remove/ghost still work
+   - push admin diagnostics and queue still work
+   - mail diagnostics loads
+   - analytics loads
+   - match edit/replace/delete still work
+   - drinks admin moderation still works
+   - admin-dev is blocked on production hosts

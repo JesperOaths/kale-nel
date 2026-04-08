@@ -6,9 +6,9 @@
   <meta http-equiv="Pragma" content="no-cache" />
 <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Drankcontrole</title><script>window.GEJAST_PAGE_VERSION='v354';</script>
-  <script src="./gejast-config.js?v354"></script>
-  <script src="./admin-session-sync.js?v354"></script>
+  <title>Drankcontrole</title><script src="./gejast-admin-rpc.js?v356"></script><script src="./gejast-admin-source.js?v356"></script><script>window.GEJAST_PAGE_VERSION='v356';</script>
+  <script src="./gejast-config.js?v356"></script>
+  <script src="./admin-session-sync.js?v356"></script>
   <style>
     :root{--bg:#ece7dc;--card:#f8f2e7;--line:#d7c7a7;--ink:#1d1a17;--muted:#736758;--good:#dfead7;--bad:#f1dfd7}
     *{box-sizing:border-box} body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,231,220,.94),rgba(236,231,220,.97)),url('./site-bg-mobile.webp') center/cover no-repeat fixed;color:var(--ink)}
@@ -49,10 +49,10 @@ function bindBulk(kind, approveFn, rejectFn, deleteFn){
   document.getElementById(`bulkDelete${kind==='events'?'Events':'Speed'}`).onclick=async()=>bulkAction(kind, selectedIds(kind), deleteFn,'verwijderd');
 }
 async function bulkAction(kind, ids, fn, label){ if(!ids.length){ setStatus('Selecteer eerst één of meer regels.', true); return; } try{ for(const id of ids){ await fn(id); } setStatus(`${ids.length} ${kind==='events'?'drankjes':'records'} ${label}.`); await load(); }catch(err){ setStatus(err.message||String(err), true); }}
-async function updateEvent(id,status){ return call('admin_update_drink_event_entry',{admin_session_token:adminToken(),drink_event_id:Number(id),next_status:status}); }
-async function deleteEvent(id){ return call('admin_delete_drink_event_entry',{admin_session_token:adminToken(),drink_event_id:Number(id)}); }
-async function updateSpeed(id,status){ return call('admin_update_drink_speed_attempt_entry',{admin_session_token:adminToken(),attempt_id:Number(id),next_status:status}); }
-async function deleteSpeed(id){ return call('admin_delete_drink_speed_attempt_entry',{admin_session_token:adminToken(),attempt_id:Number(id)}); }
+async function updateEvent(id,status){ return window.GEJAST_ADMIN_SOURCE.updateDrinkEventEntry(id, status); }
+async function deleteEvent(id){ return window.GEJAST_ADMIN_SOURCE.deleteDrinkEventEntry(id); }
+async function updateSpeed(id,status){ return window.GEJAST_ADMIN_SOURCE.updateDrinkSpeedAttemptEntry(id, status); }
+async function deleteSpeed(id){ return window.GEJAST_ADMIN_SOURCE.deleteDrinkSpeedAttemptEntry(id); }
 function render(){
   const events=(consoleData.recent_drink_events||consoleData.drink_events||[]); const speeds=(consoleData.recent_speed_attempts||consoleData.speed_attempts||[]);
   document.getElementById('eventCount').textContent=`(${events.length})`; document.getElementById('speedCount').textContent=`(${speeds.length})`;
@@ -65,7 +65,7 @@ function render(){
   document.querySelectorAll('[data-speed-reject]').forEach(b=>b.onclick=async()=>{try{await updateSpeed(b.dataset.speedReject,'rejected'); await load();}catch(err){setStatus(err.message||String(err),true);}});
   document.querySelectorAll('[data-speed-delete]').forEach(b=>b.onclick=async()=>{try{await deleteSpeed(b.dataset.speedDelete); await load();}catch(err){setStatus(err.message||String(err),true);}});
 }
-async function load(){ try{ setStatus('Laden…'); let data; try{ data=await call('get_drinks_admin_console_light',{admin_session_token:adminToken(), limit_rows:60}); }catch(_){ data=await call('get_drinks_admin_console',{admin_session_token:adminToken()}); } consoleData=data?.get_drinks_admin_console_light||data?.get_drinks_admin_console||data||{}; render(); setStatus('Gegevens geladen.'); }catch(err){ setStatus(err.message||String(err), true); } }
+async function load(){ try{ setStatus('Laden…'); const data = await window.GEJAST_ADMIN_SOURCE.loadDrinksConsole(); consoleData=data||{}; render(); setStatus('Gegevens geladen.'); }catch(err){ setStatus(err.message||String(err), true); } }
 bindBulk('events', id=>updateEvent(id,'verified'), id=>updateEvent(id,'rejected'), deleteEvent); bindBulk('speed', id=>updateSpeed(id,'verified'), id=>updateSpeed(id,'rejected'), deleteSpeed); load();
 </script>
 <div class="site-credit-watermark" data-version-watermark style="position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)"></div>

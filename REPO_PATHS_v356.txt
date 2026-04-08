@@ -1,0 +1,16 @@
+gejast-admin-rpc.js -> /gejast-admin-rpc.js
+gejast-admin-buckets.js -> /gejast-admin-buckets.js
+gejast-admin-source.js -> /gejast-admin-source.js
+admin.html -> /admin.html
+admin_claims.html -> /admin_claims.html
+admin_expired.html -> /admin_expired.html
+admin_reserved_names.html -> /admin_reserved_names.html
+admin_push.html -> /admin_push.html
+admin_mail_audit.html -> /admin_mail_audit.html
+admin_analytics.html -> /admin_analytics.html
+admin_match_control.html -> /admin_match_control.html
+match_swap.html -> /match_swap.html
+drinks_admin.html -> /drinks_admin.html
+admin-gate-v105.js -> /admin-gate-v105.js
+admin-dev.html -> /admin-dev.html
+gejast_v356_admin_hardening_and_completeness.sql -> run in Supabase SQL editor

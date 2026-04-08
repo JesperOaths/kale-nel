@@ -116,11 +116,11 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v354';</script><script src="./gejast-config.js?v354"></script><script src="./gejast-scope-context.js?v354"></script><script src="./gejast-rpc-contract.js?v354"></script>
-  <script src="./admin-session-sync.js?v354"></script>
-  <script src="./admin-topnav.js?v354"></script>
-  <script src="./gejast-admin-claims-buckets.js?v354"></script>
-  <script src="./gejast-admin-claims-source.js?v354"></script>
+  <script src="./gejast-admin-buckets.js?v356"></script><script src="./gejast-admin-rpc.js?v356"></script><script src="./gejast-admin-source.js?v356"></script><script>window.GEJAST_PAGE_VERSION='v356';</script><script src="./gejast-config.js?v356"></script>
+  <script src="./admin-session-sync.js?v356"></script>
+  <script src="./admin-topnav.js?v356"></script>
+  <script src="./gejast-admin-claims-buckets.js?v356"></script>
+  <script src="./gejast-admin-claims-source.js?v356"></script>
 </head>
 <body>
   <div class="main-card">
@@ -945,54 +945,25 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     async function getRequests() { return (await getClaimsBundle()).requests || []; }
     async function getHistory() { return (await getClaimsBundle()).history || []; }
     async function getExpiredQueue() { return (await getClaimsBundle()).expiredQueue || []; }
+    async function decideRequest(requestId, decisionReason, decisionReasonInput) {
+      return window.GEJAST_ADMIN_SOURCE.decideClaim(requestId, decisionReason, decisionReasonInput);
+    }
+    async function approveAndSendActivation(requestId, decisionReason) {
+      return window.GEJAST_ADMIN_SOURCE.approveAndSendActivation(requestId, decisionReason);
+    }
     async function requeueExpiredActivation(requestId) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_requeue_expired_activation_action`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), base_url: getActivationBaseUrl() })
-      });
-      const data = await parseResponse(res);
-      try { await updateActivationEmailSubject(requestId); } catch {}
-      return data;
+      return window.GEJAST_ADMIN_SOURCE.requeueExpiredActivation(requestId);
     }
 
     async function resendPendingActivation(requestId) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_resend_pending_activation_action`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), base_url: getActivationBaseUrl() })
-      });
-      const data = await parseResponse(res);
-      try { await updateActivationEmailSubject(requestId); } catch {}
-      const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
-      const panel = document.getElementById(`activation-tools-${requestId}`);
-      const dataJobId = data?.job_id ?? data?.queue_job_id ?? data?.id ?? null;
-      const dataValidation = await validateOutboundEmailJob(dataJobId, { markFailed:true });
-      if (!dataValidation?.ok) throw new Error(formatMailPreflight(dataValidation));
-      await triggerMakeScenario({ reason: 'activation_email_queued', request_id: requestId, job_id: dataJobId, player_id: data?.player_id ?? req?.player_id ?? null, display_name: data?.display_name ?? displayNameOf(req), email: data?.requester_email ?? req?.requester_email ?? null, activation_url: data?.activation_url ?? panel?.dataset?.url ?? null, expires_at: data?.expires_at ?? panel?.dataset?.expiresAt ?? null, created_at: req?.created_at ?? null, subject: data?.subject ?? ACTIVATION_EMAIL_SUBJECT, email_subject: data?.email_subject ?? data?.subject ?? ACTIVATION_EMAIL_SUBJECT });
-      return data;
+      return window.GEJAST_ADMIN_SOURCE.resendPendingActivation(requestId);
     }
     async function returnNameToClaimable(requestId, reason) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_return_name_to_claimable_action`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: reason || null })
-      });
-      return await parseResponse(res);
+      return window.GEJAST_ADMIN_SOURCE.returnNameToClaimable(requestId, reason);
     }
 
     async function createActivationLink(requestId) {
-      const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
-      if (req && hasPin(req) && stateBucket(req) !== 'active') throw new Error('Deze aanvraag staat nog op wacht op activatie, maar de speler heeft al een pincode. Draai eerst de v84 activatie-resetpatch of trek de toegang in.');
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_player_activation_link_action`, {
-        method:'POST',
-        mode:'cors',
-        cache:'no-store',
-        headers: rpcHeaders(),
-        body: JSON.stringify({
-          admin_session_token: getAdminSessionToken(),
-          request_id_input: String(requestId),
-          base_url: getActivationBaseUrl()
-        })
-      });
-      return await parseResponse(res);
+      return window.GEJAST_ADMIN_SOURCE.createActivationLink(requestId);
     }
     function buildMakeWebhookMeta(source, meta = {}) {
       const payload = { trigger: 'activation_email_queued', source, ts: new Date().toISOString(), ...meta };
@@ -1005,16 +976,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     }
 
     async function validateOutboundEmailJob(jobId, options = {}) {
-      if (!jobId) return { ok:false, reasons:['missing_job_id'], message:'Mailjob-id ontbreekt.' };
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_validate_outbound_email_job`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({
-          admin_session_token: getAdminSessionToken(),
-          job_id_input: Number(jobId),
-          mark_failed_input: options.markFailed !== false
-        })
-      });
-      return await parseResponse(res);
+      return window.GEJAST_ADMIN_SOURCE.validateOutboundEmailJob(jobId, options.markFailed !== false);
     }
 
     function formatMailPreflight(validation) {
@@ -1046,18 +1008,10 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     }
 
     async function revokePlayerAccess(requestId, reason) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_revoke_player_access_action`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: reason || null })
-      });
-      return await parseResponse(res);
+      return window.GEJAST_ADMIN_SOURCE.revokePlayerAccess(requestId, reason);
     }
     async function removePlayer(requestId, reason) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_remove_player_action`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: reason || null })
-      });
-      return await parseResponse(res);
+      return window.GEJAST_ADMIN_SOURCE.removePlayer(requestId, reason);
     }
     async function queueActivationEmail(requestId) {
       const panel = document.getElementById(`activation-tools-${requestId}`);
@@ -1068,26 +1022,10 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
       if (req && hasPin(req) && stateBucket(req) !== 'active') throw new Error('Deze speler heeft al een pincode in de database. Reset eerst de activatie voordat je opnieuw een mail verstuurt.');
       const playerId = req?.player_id ?? null;
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_queue_activation_email`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({
-          admin_session_token: getAdminSessionToken(),
-          request_id_input: String(requestId),
-          base_url: getActivationBaseUrl(),
-          recipient_email_input: recipientEmail,
-          recipient_name_input: recipientName || null,
-          activation_link_input: activationLink,
-          player_id_input: playerId
-        })
-      });
-      return await parseResponse(res);
+      return window.GEJAST_ADMIN_SOURCE.queueActivationEmail(requestId, recipientEmail, recipientName, activationLink, playerId);
     }
     async function updateActivationEmailSubject(requestId) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_set_activation_email_subject_action`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), desired_subject: ACTIVATION_EMAIL_SUBJECT })
-      });
-      return await parseResponse(res);
+      return window.GEJAST_ADMIN_SOURCE.updateActivationEmailSubject(requestId, ACTIVATION_EMAIL_SUBJECT);
     }
     async function sendActivationEmail(requestId) {
       const panel = document.getElementById(`activation-tools-${requestId}`);
@@ -1120,30 +1058,20 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return queued;
     }
     async function createManualName() {
-      const displayName = document.getElementById('manualNameInput').value.trim();
-      const email = document.getElementById('manualEmailInput').value.trim().toLowerCase();
-      const note = document.getElementById('manualNoteInput').value.trim() || null;
-      const msg = document.getElementById('manualCreateMsg');
-      if (!displayName) throw new Error('Vul een naam in voor de kieslijst');
-      if (msg) { msg.textContent = 'Naam toevoegen aan kieslijst...'; msg.className = 'inline-msg'; }
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_reserve_allowed_username`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), display_name_input: displayName, reserved_for_email_input: email || null, reserved_for_person_note_input: note })
-      });
-      const data = await parseResponse(res);
-      if (msg) { msg.textContent = `${displayName} staat nu in de kieslijst.`; msg.className = 'inline-msg ok'; }
-      document.getElementById('manualNameInput').value=''; document.getElementById('manualEmailInput').value=''; document.getElementById('manualNoteInput').value='';
-      return data;
+      return window.GEJAST_ADMIN_SOURCE.reserveAllowedUsername(
+        document.getElementById('manualNameInput').value.trim(),
+        document.getElementById('manualEmailInput').value.trim().toLowerCase() || null,
+        document.getElementById('manualNoteInput').value.trim() || null
+      );
     }
 
     async function refreshAdminLists() {
-      const [requests, history, expired] = await Promise.all([getRequests(), getHistory(), getExpiredQueue()]);
-      lastRequests = normalizeAdminRows(Array.isArray(requests) ? requests : (requests?.items || []));
-      const normalizedHistory = normalizeAdminRows(Array.isArray(history) ? history : (history?.items || []));
-      lastExpired = normalizeExpiredRows(Array.isArray(expired) ? expired : (expired?.items || []));
-      lastHistory = mergeHistoryWithExpired(normalizedHistory, lastExpired);
-      renderStats(lastRequests, lastHistory);
-      switchAdminView(currentAdminView);
+      const bundle = await window.GEJAST_ADMIN_SOURCE.loadClaimsBundle({ scope: getAdminScope() });
+      lastRequests = bundle.requests || [];
+      lastHistory = bundle.merged_history || [];
+      lastExpired = bundle.expired_queue || [];
+      renderStats(bundle.counts || {});
+      renderActiveView();
     }
 
     const activationPanelsOpen = new Set();
