@@ -1,0 +1,4 @@
+GEJAST v330 bevat geen SQL-migratie.
+
+Deze ronde hardt de statische repo, crawl-suppressie, redirectlogica en deploy/edge-configuratie aan.
+Echte edge-auth en host-split moeten op hosting/CDN-niveau worden ingesteld volgens `SECURITY_EDGE_SETUP_v330.md`.

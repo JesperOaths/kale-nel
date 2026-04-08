@@ -1,0 +1,19 @@
+GEJAST v330 — privacy / crawl suppression / URL-hardening
+=========================================================
+
+Frontend / repo:
+- `gejast-config.js` -> v330, met veilige `return_to` sanitization en centrale builders voor home/login/admin
+- `gejast-home-gate.js` -> gebruikt veilige return-targets
+- `admin-gate-v105.js` -> `return_to` hardened tegen off-site / traversal targets
+- `admin-session-sync.js` -> idem voor admin redirectflow
+- private/admin/familie HTML's -> striktere robots/no-store meta-tags
+- `robots.txt` toegevoegd
+- `sitemap.xml` beperkt tot publieke home-routes
+- `_headers` toegevoegd voor noindex/no-store/header-hardening op private/admin-routes
+- `DEPLOY_ALLOWLIST_v330.txt` toegevoegd om publieke deploy-oppervlakte te beperken
+- `SECURITY_EDGE_SETUP_v330.md` toegevoegd met edge-host split en Cloudflare Access-richting
+
+Belangrijke eerlijkheidsgrens:
+- deze patch hardt de statische repo, redirectlogica en crawler-signalen echt aan
+- deze patch alleen maakt private/admin HTML nog niet volledig onopvraagbaar op een publieke static host
+- voor echte afsluiting is edge/hosting-configuratie nog nodig

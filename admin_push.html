@@ -2,12 +2,14 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="robots" content="noindex,nofollow" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Live pushmeldingen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v328';</script><script src="./gejast-config.js?v328"></script>
-  <script src="./admin-session-sync.js?v262"></script>
-  <script src="./admin-topnav.js?v262"></script>
+  <script>window.GEJAST_PAGE_VERSION='v330';</script><script src="./gejast-config.js?v330"></script>
+  <script src="./admin-session-sync.js?v330"></script>
+  <script src="./admin-topnav.js?v330"></script>
   <style>
     :root { --gold:#9a8241; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#6b655b; --ok:#2b5b37; --warn:#8b3a30; }
     *{box-sizing:border-box} body{margin:0;padding:20px;font-family:Inter,sans-serif;background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed;min-height:100vh}
@@ -28,6 +30,10 @@
         <div class="form-grid">
           <div><label for="titleInput">Titel</label><input id="titleInput" type="text" maxlength="80" value="Gejast update"></div>
           <div><label for="minutesInput">Actief binnen laatste minuten</label><input id="minutesInput" type="number" min="1" max="60" value="5"></div>
+        </div>
+        <div class="form-grid" style="margin-top:12px">
+          <div><label for="pushScopeSelect">Scope</label><select id="pushScopeSelect"><option value="friends">Friends</option><option value="family">Family</option></select></div>
+          <div><label>&nbsp;</label><div class="muted small">De lijst en admin-push richten zich alleen op de gekozen scope.</div></div>
         </div>
         <div style="margin-top:12px"><label for="bodyInput">Bericht</label><textarea id="bodyInput">Er staat iets nieuws voor je klaar.</textarea></div>
         <div class="form-grid" style="margin-top:12px">
@@ -55,6 +61,8 @@
     const LIST_RPC = cfg.ADMIN_ACTIVE_PUSH_LIST_RPC || 'admin_get_active_web_push_presence';
     const QUEUE_RPC = cfg.ADMIN_ACTIVE_PUSH_RPC || 'admin_queue_active_web_push';
     const DATE_TIME_24H = new Intl.DateTimeFormat('nl-NL', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
+    const ADMIN_SCOPE_KEY='jas_admin_scope_v1';
+    function adminScope(){ const q=new URLSearchParams(location.search).get('scope'); const value=(q||localStorage.getItem(ADMIN_SCOPE_KEY)||document.getElementById('pushScopeSelect')?.value||'friends').toLowerCase(); return value==='family' ? 'family' : 'friends'; }
     function formatDateTime(value){ if(!value) return ''; const date = value instanceof Date ? value : new Date(value); return Number.isNaN(date.getTime()) ? String(value) : DATE_TIME_24H.format(date).replace(',', ''); }
     function rpcHeaders(){return {apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,'Content-Type':'application/json',Accept:'application/json'}}
     async function parseResponse(res){const text=await res.text(); let data=null; try{data=text?JSON.parse(text):null}catch{throw new Error(text||`HTTP ${res.status}`)} if(!res.ok) throw new Error(data?.message||data?.error||data?.details||data?.hint||`HTTP ${res.status}`); return data;}
@@ -64,7 +72,8 @@
     function escapeHtml(v){ return String(v==null?'':v).replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
     function activeMinutes(){ return Math.max(1, Math.min(60, Number(document.getElementById('minutesInput').value || 5))); }
     async function loadActive(){
-      const data = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${LIST_RPC}`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: token(), active_minutes: activeMinutes() }) }).then(parseResponse);
+      const data = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${LIST_RPC}`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: token(), active_minutes: activeMinutes(),
+        site_scope_input: adminScope(), site_scope_input: adminScope() }) }).then(parseResponse);
       const rows = Array.isArray(data?.rows) ? data.rows : [];
       document.getElementById('summaryChips').innerHTML = [`<span class="chip">Actieve endpoints: ${data?.active_endpoints ?? rows.length}</span>`,`<span class="chip">Unieke spelers: ${data?.unique_players ?? 0}</span>`,`<span class="chip">Venster: ${activeMinutes()} min</span>`].join('');
       document.getElementById('listBox').innerHTML = rows.length ? `<table><thead><tr><th>Speler</th><th>Pagina</th><th>Laatst gezien</th><th>Platform</th></tr></thead><tbody>${rows.map((row)=>`<tr><td>${escapeHtml(row.player_name || 'Onbekend')}</td><td>${escapeHtml(row.page_path || '—')}</td><td>${escapeHtml(formatDateTime(row.last_seen_at))}</td><td>${escapeHtml(row.user_agent_label || row.user_agent || '—')}</td></tr>`).join('')}</tbody></table>` : '<div class="muted">Geen actieve pushgebruikers gezien in dit venster.</div>';
@@ -76,7 +85,8 @@
         title_input: document.getElementById('titleInput').value.trim(),
         body_input: document.getElementById('bodyInput').value.trim(),
         target_url_input: document.getElementById('urlInput').value.trim(),
-        active_minutes: activeMinutes()
+        active_minutes: activeMinutes(),
+        site_scope_input: adminScope()
       };
       const out = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${QUEUE_RPC}`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify(payload) }).then(parseResponse);
       setStatus(`Push klaargezet voor ${out?.queued_count ?? 0} actieve gebruiker(s).`, 'ok');
@@ -88,11 +98,12 @@
     document.getElementById('fillPendingBtn').addEventListener('click',()=>{ document.getElementById('titleInput').value='Gejast drinks'; document.getElementById('bodyInput').value='Er staan pending verificaties voor je klaar.'; document.getElementById('urlInput').value='./drinks_pending.html'; });
     document.getElementById('fillBallroomBtn').addEventListener('click',()=>{ document.getElementById('titleInput').value='Gejast ballroom'; document.getElementById('bodyInput').value='Er is nieuws in de ballroom.'; document.getElementById('urlInput').value='./ballroom.html'; });
     document.getElementById('minutesInput').addEventListener('change',()=>loadActive().catch(()=>{}));
+    document.getElementById('pushScopeSelect').addEventListener('change',(e)=>{ localStorage.setItem(ADMIN_SCOPE_KEY, e.target.value); loadActive().catch(()=>{}); });
     setInterval(()=>{ if(!document.hidden) loadActive().catch(()=>{}); },30000);
     document.addEventListener('visibilitychange',()=>{ if(!document.hidden) loadActive().catch(()=>{}); });
-    (async()=>{ if(await ensureGate()) loadActive().catch((err)=>setStatus(err?.message||'Laden mislukt.','warn')); })();
+    (async()=>{ const sel=document.getElementById('pushScopeSelect'); if(sel) sel.value=adminScope(); if(await ensureGate()) loadActive().catch((err)=>setStatus(err?.message||'Laden mislukt.','warn')); })();
   </script>
-  <div class="site-credit-watermark" data-version-watermark>v328 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v329 · Made by Bruis</div>
   <script src="./site-analytics.js"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>

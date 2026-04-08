@@ -1,0 +1,49 @@
+Runtime-bestanden om publiek te deployen
+====================================
+
+Alleen runtime-bestanden deployen. Niet deployen:
+- *_orig.html
+- admin-dev.html als die niet actief gebruikt wordt
+- mnt/data/*
+- *.md handoff/plannen/notities
+- *.txt interne notities/manifests
+- oude patchnotities en handoffbestanden
+- losse back-ups en restore-notes
+
+Minimale publieke runtime:
+- home.html
+- login.html
+- request.html
+- activate.html
+- CNAME
+- robots.txt
+- sitemap.xml
+- _headers (voor Cloudflare Pages / Netlify-achtige hosting)
+- gedeelde JS/CSS/assets die door bovenstaande pagina's nodig zijn
+
+Private gebruikerspagina's alleen deployen achter edge-bescherming of op afgeschermde host:
+- index.html
+- profiles.html
+- player.html
+- my_profile.html
+- ladder.html
+- leaderboard.html
+- vault.html
+- score.html
+- scorer.html
+- ballroom.html
+- beerpong*.html
+- boerenbridge*.html
+- drinks*.html
+- klaverjas_live.html
+- invite.html
+- geo_diagnostics.html
+- familie/*
+
+Admin alleen deployen achter admin-host / edge-bescherming:
+- admin*.html
+- match_control.html
+- match_swap.html
+- admin-gate-v105.js
+- admin-session-sync.js
+- admin-topnav.js

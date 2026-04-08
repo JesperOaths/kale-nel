@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v328',
+    VERSION:'v330',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -69,16 +69,41 @@
     if (!last) return false;
     return (Date.now() - last) > CONFIG.PLAYER_SESSION_IDLE_MS;
   }
+  function inferRuntimeScope(){ try { const qs = new URLSearchParams(location.search); if (qs.get('scope')==='family') return 'family'; if ((location.pathname||'').includes('/familie/')) return 'family'; } catch(_){} return 'friends'; }
+
+  function sanitizeReturnTarget(raw, fallback=''){
+    const value = String(raw || '').trim();
+    if (!value) return String(fallback || '').trim();
+    if (/^(?:[a-z]+:)?\/\//i.test(value)) return String(fallback || '').trim();
+    if (value.includes('..') || value.includes('\\')) return String(fallback || '').trim();
+    const normalized = value.replace(/^\.\//,'').replace(/^\/+/, '');
+    return normalized || String(fallback || '').trim();
+  }
   function buildHomeUrl(returnTo){
-    const url = new URL('./home.html', window.location.href);
-    if (returnTo) url.searchParams.set('return_to', returnTo);
+    const url = new URL(inferRuntimeScope()==='family' ? './familie/index.html' : './home.html', window.location.href);
+    const target = sanitizeReturnTarget(returnTo);
+    if (target) url.searchParams.set('return_to', target);
+    return url.toString();
+  }
+  function buildLoginUrl(returnTo){
+    const url = new URL(inferRuntimeScope()==='family' ? './familie/login.html' : './login.html', window.location.href);
+    const target = sanitizeReturnTarget(returnTo);
+    if (target) url.searchParams.set('return_to', target);
+    return url.toString();
+  }
+  function buildAdminUrl(reason='', returnTo=''){
+    const url = new URL('./admin.html', window.location.href);
+    if (reason) url.searchParams.set('reason', String(reason));
+    const target = sanitizeReturnTarget(returnTo);
+    if (target) url.searchParams.set('return_to', target);
     return url.toString();
   }
   function ensurePlayerSessionOrRedirect(returnTo){
     if (isPlayerSessionExpired()) clearPlayerSessionTokens();
     const token = getPlayerSessionToken();
     if (!token){
-      window.location.href = buildHomeUrl(returnTo || (location.pathname.split('/').pop() || 'index.html'));
+      const target = sanitizeReturnTarget(returnTo || (location.pathname.split('/').pop() || 'index.html'), 'index.html');
+      window.location.href = buildHomeUrl(target);
       return false;
     }
     touchPlayerActivity();
@@ -126,7 +151,10 @@
     ensurePlayerSessionOrRedirect,
     installActivityKeepalive,
     requireMatchEntrySession,
-    buildHomeUrl
+    buildHomeUrl,
+    buildLoginUrl,
+    buildAdminUrl,
+    sanitizeReturnTarget
   });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyVersionLabel, { once: true });

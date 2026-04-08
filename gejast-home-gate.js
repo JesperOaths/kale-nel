@@ -26,6 +26,7 @@
     if(!last) return false;
     return (Date.now()-last)>IDLE_MS;
   }
+  var cfg = window.GEJAST_CONFIG || {};
   function isFamily(){
     try{
       var qs=new URLSearchParams(location.search);
@@ -34,6 +35,9 @@
     return (location.pathname||'').indexOf('/familie/')!==-1;
   }
   function homeUrl(){
+    var target = (location.pathname.split('/').pop() || 'index.html');
+    if(cfg && typeof cfg.sanitizeReturnTarget==='function') target = cfg.sanitizeReturnTarget(target, 'index.html');
+    if(cfg && typeof cfg.buildHomeUrl==='function') return cfg.buildHomeUrl(target);
     var family=isFamily();
     var path=(location.pathname||'');
     var home=path.indexOf('/familie/')!==-1 ? '../home.html' : './home.html';

@@ -1,0 +1,17 @@
+GEJAST v330 — privacy- en URL-hardening
+=======================================
+
+1. Upload de bestanden uit de v330-flat-zip.
+2. Zorg dat je host `_headers` ondersteunt; zo niet, zet dezelfde headers handmatig in je hosting/CDN-regels.
+3. Controleer `robots.txt` en `sitemap.xml` live op de site.
+4. Deploy alleen runtime-bestanden volgens `DEPLOY_ALLOWLIST_v330.txt`.
+5. Test anoniem:
+   - admin-urls hebben noindex/no-store headers
+   - private urls hebben noindex/no-store headers
+   - `robots.txt` disallowt private/admin-routes
+6. Test ingelogd:
+   - spelerpagina's redirecten nog correct via home/login zonder open redirect
+   - admin return_to werkt alleen same-site/safe
+
+Belangrijk:
+Deze patch maakt de repo en statische output privacy-strakker, maar verplaatst private/admin HTML nog niet automatisch naar edge-beschermde hosts. Daarvoor gebruik je `SECURITY_EDGE_SETUP_v330.md`.

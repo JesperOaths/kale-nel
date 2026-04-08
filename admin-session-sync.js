@@ -15,6 +15,7 @@
   function setBundle(token, username='', persist=true, deviceToken=''){ if(token){ sessionStorage.setItem(ADMIN_SESSION_KEY, token); if(persist) localStorage.setItem(ADMIN_SESSION_KEY, token); } if(username){ sessionStorage.setItem(ADMIN_USER_KEY, username); localStorage.setItem(ADMIN_USER_KEY, username); } if(deviceToken){ localStorage.setItem(ADMIN_DEVICE_KEY, deviceToken); } const until = Date.now() + 8*60*60*1000; sessionStorage.setItem(ADMIN_DEADLINE_KEY, String(until)); localStorage.setItem(ADMIN_DEADLINE_KEY, String(until)); }
   function clearBundle(){ [ADMIN_SESSION_KEY,ADMIN_DEVICE_KEY,ADMIN_USER_KEY,ADMIN_DEADLINE_KEY].forEach((k)=>{ sessionStorage.removeItem(k); localStorage.removeItem(k); }); }
   function fingerprint(){ const p=[navigator.userAgent||'', navigator.language||'', Intl.DateTimeFormat().resolvedOptions().timeZone||'', String(screen?.width||0), String(screen?.height||0), navigator.platform||'']; return p.join('|').slice(0,500); }
+  function safeReturnTarget(raw){ const value=String(raw||'').trim(); if(!value) return ''; if(/^(?:[a-z]+:)?\/\//i.test(value)) return ''; if(value.includes('..')||value.includes('\\')) return ''; return value.replace(/^\.\//,'').replace(/^\/+/, ''); }
   async function validate(){
     const token=getToken();
     if(!token) throw new Error('Geen adminsessie gevonden.');
@@ -32,6 +33,6 @@
     if(nextToken){ setBundle(nextToken, nextUser, true, nextDevice); }
     return Object.assign({ ok:true, admin_session_token: nextToken, admin_username: nextUser }, data || {});
   }
-  async function requirePage(returnTo=''){ try{ await validate(); return true; } catch(err){ const here = returnTo || (window.location.pathname.split('/').pop() + window.location.search + window.location.hash); window.location.href = `./admin.html?reason=${encodeURIComponent((err&&err.message)||'session_invalid')}&return_to=${encodeURIComponent(here)}`; return false; } }
+  async function requirePage(returnTo=''){ try{ await validate(); return true; } catch(err){ const raw = returnTo || (window.location.pathname.split('/').pop() + window.location.search + window.location.hash); const here = safeReturnTarget(raw) || 'admin.html'; window.location.href = `./admin.html?reason=${encodeURIComponent((err&&err.message)||'session_invalid')}&return_to=${encodeURIComponent(here)}`; return false; } }
   window.GEJAST_ADMIN_SESSION = { getToken, getUsername, getDevice, getDeadline, setBundle, clearBundle, validate, requirePage, fingerprint };
 })();
