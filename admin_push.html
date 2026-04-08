@@ -7,9 +7,9 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Live pushmeldingen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v344';</script><script src="./gejast-config.js?v344"></script>
-  <script src="./admin-session-sync.js?v344"></script>
-  <script src="./admin-topnav.js?v344"></script>
+  <script>window.GEJAST_PAGE_VERSION='v346';</script><script src="./gejast-config.js?v346"></script>
+  <script src="./admin-session-sync.js?v346"></script>
+  <script src="./admin-topnav.js?v346"></script>
   <style>
     :root { --gold:#9a8241; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#6b655b; --ok:#2b5b37; --warn:#8b3a30; }
     *{box-sizing:border-box} body{margin:0;padding:20px;font-family:Inter,sans-serif;background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed;min-height:100vh}
@@ -65,6 +65,7 @@
     const SUPABASE_PUBLISHABLE_KEY=cfg.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
     const LIST_RPC = cfg.ADMIN_ACTIVE_PUSH_LIST_RPC || 'admin_get_active_web_push_presence';
     const QUEUE_RPC = cfg.ADMIN_ACTIVE_PUSH_RPC || 'admin_queue_active_web_push';
+    const DIAG_RPC = cfg.ADMIN_PUSH_DIAGNOSTICS_RPC || 'admin_get_web_push_runtime_diagnostics';
     const DATE_TIME_24H = new Intl.DateTimeFormat('nl-NL', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
     const ADMIN_SCOPE_KEY='jas_admin_scope_v1';
     function adminScope(){ const q=new URLSearchParams(location.search).get('scope'); const value=(q||localStorage.getItem(ADMIN_SCOPE_KEY)||document.getElementById('pushScopeSelect')?.value||'friends').toLowerCase(); return value==='family' ? 'family' : 'friends'; }
@@ -84,7 +85,7 @@
       const html = names.length ? `<strong>Ontvangers (${names.length})</strong><br>${names.map(escapeHtml).join(', ')}` : 'Geen ontvangers in deze scope en dit tijdvenster.';
       document.getElementById('recipientPreview').innerHTML = html;
     }
-    function renderDiagnostics(data, rows){
+    function renderDiagnostics(data, rows, runtimeDiag){
       const lastFailures = Array.isArray(data?.recent_failures) ? data.recent_failures : [];
       const lines = [
         `Scope: <strong>${escapeHtml(adminScope())}</strong>`,
@@ -93,19 +94,29 @@
         `Backend-registraties: <strong>${escapeHtml(String(data?.registered_subscriptions ?? 0))}</strong>`,
         `Recente queuejobs: <strong>${escapeHtml(String(data?.recent_jobs ?? 0))}</strong>`
       ];
+      if (runtimeDiag) {
+        lines.push(`Queue nu: pending <strong>${escapeHtml(String(runtimeDiag.pending_jobs ?? 0))}</strong> · claimed <strong>${escapeHtml(String(runtimeDiag.claimed_jobs ?? 0))}</strong> · sent <strong>${escapeHtml(String(runtimeDiag.sent_jobs_24h ?? 0))}</strong> · failed <strong>${escapeHtml(String(runtimeDiag.failed_jobs_24h ?? 0))}</strong>`);
+      }
       if (lastFailures.length) {
         const items = lastFailures.slice(0,4).map((row)=>`<li>${escapeHtml(row.player_name || 'Onbekend')} · ${escapeHtml(row.last_error || row.job_status || 'fout onbekend')}</li>`).join('');
         lines.push(`Laatste fouten:<ul style="margin:8px 0 0 18px">${items}</ul>`);
       }
+      if (runtimeDiag && Array.isArray(runtimeDiag.recent_job_rows) && runtimeDiag.recent_job_rows.length) {
+        const items = runtimeDiag.recent_job_rows.slice(0,4).map((row)=>`<li>${escapeHtml(row.display_name || 'Onbekend')} · ${escapeHtml(row.status || 'onbekend')}${row.error_text ? ` · ${escapeHtml(row.error_text)}` : ''}</li>`).join('');
+        lines.push(`Laatste jobstatussen:<ul style="margin:8px 0 0 18px">${items}</ul>`);
+      }
       document.getElementById('diagBox').innerHTML = lines.join('<br>');
     }
     async function loadActive(){
-      const data = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${LIST_RPC}`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: token(), active_minutes: activeMinutes(), site_scope_input: adminScope() }) }).then(parseResponse);
+      const [data, runtimeDiag] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/rpc/${LIST_RPC}`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: token(), active_minutes: activeMinutes(), site_scope_input: adminScope() }) }).then(parseResponse),
+        fetch(`${SUPABASE_URL}/rest/v1/rpc/${DIAG_RPC}`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify({ admin_session_token: token(), site_scope_input: adminScope() }) }).then(parseResponse).catch(()=>null)
+      ]);
       const rows = Array.isArray(data?.rows) ? data.rows : [];
       activeRows = rows;
       document.getElementById('summaryChips').innerHTML = [`<span class="chip">Actieve endpoints: ${data?.active_endpoints ?? rows.length}</span>`,`<span class="chip">Unieke spelers: ${data?.unique_players ?? 0}</span>`,`<span class="chip">Backend sync: ${data?.registered_subscriptions ?? 0}</span>`,`<span class="chip">Venster: ${activeMinutes()} min</span>`].join('');
       renderRecipientPreview(rows);
-      renderDiagnostics(data, rows);
+      renderDiagnostics(data, rows, runtimeDiag);
       document.getElementById('listBox').innerHTML = rows.length ? `<table><thead><tr><th>Speler</th><th>Scope</th><th>Endpoint</th><th>Pagina</th><th>Laatst gezien</th><th>Platform</th><th>Toestemming</th><th>App-modus</th><th>Backend</th><th>Laatste push</th></tr></thead><tbody>${rows.map((row)=>`<tr><td>${escapeHtml(row.player_name || 'Onbekend')}</td><td>${escapeHtml(row.site_scope || adminScope())}</td><td><span class="small">${escapeHtml(endpointShort(row))}</span></td><td>${escapeHtml(row.page_path || '—')}</td><td>${escapeHtml(formatDateTime(row.last_seen_at))}</td><td>${escapeHtml(row.platform_label || row.user_agent_label || row.user_agent || '—')}</td><td>${escapeHtml(row.permission_state || '—')}</td><td>${row.standalone ? 'app' : 'browser'}</td><td>${row.backend_registered ? 'gekoppeld' : 'mist sync'}</td><td>${escapeHtml(row.last_job_status ? `${row.last_job_status}${row.last_job_at ? ' · '+formatDateTime(row.last_job_at) : ''}` : '—')}</td></tr>`).join('')}</tbody></table>` : '<div class="muted">Geen actieve pushgebruikers gezien in dit venster.</div>';
       setStatus(`Actieve pushgebruikers geladen (${rows.length}).`, 'ok');
     }
@@ -134,7 +145,7 @@
     document.addEventListener('visibilitychange',()=>{ if(!document.hidden) loadActive().catch(()=>{}); });
     (async()=>{ const sel=document.getElementById('pushScopeSelect'); if(sel) sel.value=adminScope(); if(await ensureGate()) loadActive().catch((err)=>setStatus(err?.message||'Laden mislukt.','warn')); })();
   </script>
-  <div class="site-credit-watermark" data-version-watermark>v333 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v346 · Made by Bruis</div>
   <script src="./site-analytics.js"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>

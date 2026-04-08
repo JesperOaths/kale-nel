@@ -311,25 +311,43 @@
     const backendTest = (supported && permission==='granted' && subscribed) ? await queueBackendTestPush().catch((err)=>({queued:false, reason:(err&&err.message)||'queue-failed'})) : {queued:false, reason:'not-ready'};
     const presenceTouch = (supported && permission==='granted' && subscribed) ? await touchActivePushPresence(null, true).catch((err)=>({touched:false, reason:(err&&err.message)||'touch-failed'})) : {touched:false, reason:'not-ready'};
     const state = { supported, permission, workerReady, pushSupported, subscribed, secure: !!window.isSecureContext, visibility: document.visibilityState, userAgent: navigator.userAgent || '', pushReason, backendSync, backendTest, presenceTouch, standalone: !!((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true) };
+    state.setupState = notificationSetupState(state);
     notifyStateCache = state;
     announce('gejast:notification-state', state);
     return state;
   }
+
+  function notificationSetupState(state){
+    const s = state || {};
+    if (!s.supported || !s.secure) return { key:'unsupported', label:'niet ondersteund' };
+    if (isIOS() && !s.standalone) return { key:'not_installed', label:'niet als app geopend' };
+    if (s.permission !== 'granted') return { key:'installed_but_permission_missing', label:'toestemming ontbreekt' };
+    if (!s.subscribed) return { key:'permission_granted_but_not_subscribed', label:'geen push-abonnement' };
+    if (!(s.backendSync && s.backendSync.synced)) return { key:'subscribed_but_not_synced', label:'backend-sync ontbreekt' };
+    return { key:'fully_active', label:'volledig actief' };
+  }
   function setNotificationButtonState(permission, extras={}){
     document.querySelectorAll('[data-gejast-notify-button]').forEach((btn)=>{
       const p = permission || 'unsupported';
-      btn.classList.toggle('is-ready', p === 'granted');
-      btn.classList.toggle('is-pending', p === 'default');
-      btn.classList.toggle('is-denied', p === 'denied' || p === 'unsupported');
-      btn.classList.toggle('is-bad', p === 'denied' || p === 'unsupported');
+      const setup = extras.setupState || notificationSetupState({ supported:p!=='unsupported', secure:!!window.isSecureContext, permission:p, subscribed:!!extras.subscribed, backendSync:extras.backendSync, standalone:extras.standalone });
+      const fullyActive = setup.key === 'fully_active';
+      btn.classList.toggle('is-ready', fullyActive);
+      btn.classList.toggle('is-pending', setup.key === 'permission_granted_but_not_subscribed' || setup.key === 'subscribed_but_not_synced' || p === 'default');
+      btn.classList.toggle('is-denied', p === 'denied' || p === 'unsupported' || setup.key === 'not_installed');
+      btn.classList.toggle('is-bad', p === 'denied' || p === 'unsupported' || setup.key === 'not_installed');
       let title = 'Meldingen instellen';
-      if (p === 'granted') title = extras.subscribed ? 'Meldingen actief' : 'Meldingen toegestaan';
+      if (setup.key === 'fully_active') title = 'Meldingen actief';
+      else if (setup.key === 'not_installed') title = 'Open de site als thuisscherm-app';
+      else if (setup.key === 'installed_but_permission_missing') title = 'Meldingstoestemming ontbreekt';
+      else if (setup.key === 'permission_granted_but_not_subscribed') title = 'Geen push-abonnement actief';
+      else if (setup.key === 'subscribed_but_not_synced') title = 'Backend-sync ontbreekt';
       else if (p === 'default') title = 'Meldingen inschakelen';
       else if (p === 'denied') title = 'Meldingen geblokkeerd';
       else if (p === 'unsupported') title = 'Meldingen niet ondersteund';
-      btn.title = title;
-      btn.setAttribute('aria-label', title);
-      btn.setAttribute('aria-pressed', p === 'granted' ? 'true' : 'false');
+      btn.title = `${title} · ${setup.label}`;
+      btn.setAttribute('aria-label', `${title} · ${setup.label}`);
+      btn.setAttribute('aria-pressed', fullyActive ? 'true' : 'false');
+      btn.dataset.setupState = setup.key;
     });
   }
   async function refreshNotificationButton(){
@@ -360,6 +378,8 @@
       ensureActivePushPresenceHeartbeat();
       showDiagnostics('Meldingen opnieuw gevraagd', [
         `Platform: ${platformName()}`,
+        `App-modus: ${updated.standalone ? 'thuisscherm-app' : 'browser-tab'}`,
+        `Setup-status: ${updated.setupState ? updated.setupState.label : 'onbekend'}`,
         `Browsertoestemming: ${updated.permission}`,
         `Service worker: ${updated.workerReady ? 'klaar' : 'niet klaar'}`,
         `Push-abonnement: ${sub.subscription ? 'actief' : (sub.reason === 'no-vapid-key' ? 'mist publieke VAPID-sleutel in gejast-config.js' : 'niet actief')}`,
@@ -420,7 +440,7 @@
   function setButtonState(ready){ buttonsReadyState = !!ready; document.querySelectorAll('[data-gejast-geo-button]').forEach((btn)=>{ btn.classList.toggle('is-ready',!!ready); btn.classList.toggle('is-bad',!ready); btn.title = ready ? 'Geolocatie actief' : 'Geolocatie opnieuw proberen'; btn.setAttribute('aria-pressed', ready ? 'true' : 'false'); }); }
   ensureActivePushPresenceHeartbeat();
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', ()=>{ startActivePushPresenceHeartbeat(false); }, { once:true }); } else { startActivePushPresenceHeartbeat(false); }
-  window.GEJAST_GEO = { cached, ensure, request, requestGeoAccess, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError, setButtonState, ensureCornerTools, notificationSupported, notificationPermission, registerNotificationWorker, ensurePushSubscription, syncPushSubscriptionToBackend, queueBackendTestPush, getNotificationDiagnostics, refreshNotificationButton, requestNotificationAccess, showNotificationFromServiceWorker, setNotificationButtonState, showDiagnostics, touchActivePushPresence, startActivePushPresenceHeartbeat };
+  window.GEJAST_GEO = { cached, ensure, request, requestGeoAccess, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError, setButtonState, ensureCornerTools, notificationSupported, notificationPermission, registerNotificationWorker, ensurePushSubscription, syncPushSubscriptionToBackend, queueBackendTestPush, getNotificationDiagnostics, refreshNotificationButton, requestNotificationAccess, showNotificationFromServiceWorker, setNotificationButtonState, showDiagnostics, touchActivePushPresence, startActivePushPresenceHeartbeat, notificationSetupState };
   function init(){ if (!shouldExclude()) ensureCornerTools(); setButtonState(!!cached()); refreshNotificationButton().catch(()=>{}); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once:true }); else init();
   window.addEventListener('load', ()=>{ try { ensureCornerTools(); refreshNotificationButton().catch(()=>{}); } catch(_){} });

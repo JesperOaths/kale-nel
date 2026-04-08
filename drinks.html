@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <title>Drinks overzicht</title>
-  <script>window.GEJAST_PAGE_VERSION='v344';</script><script src="./gejast-config.js?v344"></script>
+  <script>window.GEJAST_PAGE_VERSION='v346';</script><script src="./gejast-config.js?v346"></script>
   <style>
     :root{
       --bg:#ece7dc;--card:rgba(255,251,245,.94);--paper:#fffdfa;--line:rgba(54,40,20,.08);--line-strong:rgba(54,40,20,.14);
@@ -41,8 +41,8 @@
     @media(max-width:1180px){.metric-strip,.grid.quad{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.two,.grid.three{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.hero-tools{justify-content:flex-start}}
     @media(max-width:760px){body{padding:12px}.shell{padding:18px;border-radius:24px}.metric-strip,.grid.quad,.mini-grid{grid-template-columns:1fr}.bar-row{grid-template-columns:1fr}.item{padding:12px}.metric{min-height:auto}.hero-actions,.hero-tools{width:100%}}
   </style>
-  <script src="./gejast-home-gate.js?v344"></script>
-<script src="./gejast-fairness.js?v344"></script></head>
+  <script src="./gejast-home-gate.js?v346"></script>
+<script src="./gejast-fairness.js?v346"></script></head>
 <body>
   <div class="wrap">
     <div class="shell">
@@ -298,21 +298,23 @@ function queueStatsLoad(force=false){
 }
 async function loadStats(){
       let historyRows=[], fallbackData={}, homePayload={}, top5Payload={}, locationRows=[];
+      const workflow = window.GEJAST_DRINKS_WORKFLOW;
       const requests = await Promise.allSettled([
         fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_dashboard_fallback_public`,{method:'POST',headers:headers(),body:'{}'}).then(parse),
-        fetch(`${SUPABASE_URL}/rest/v1/rpc/get_verified_drinks_history_public`,{method:'POST',headers:headers(),body:JSON.stringify({limit_count:60})}).then(parse),
+        workflow ? workflow.load({ session_token: token(), history_limit: 60 }) : Promise.reject(new Error('no-workflow')),
         fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_locations_public`,{method:'POST',headers:headers(),body:'{}'}).then(parse),
         fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_public`,{method:'POST',headers:headers(),body:'{}'}).then(parse),
         fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_top5_public`,{method:'POST',headers:headers(),body:'{}'}).then(parse),
-        fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_speed_page_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token()})}).then(parse)
+        Promise.resolve({ get_drink_speed_page_public: {} })
       ]);
       if(requests[0].status==='fulfilled'){ fallbackData = requests[0].value?.get_drinks_dashboard_fallback_public || requests[0].value || {}; }
-      if(requests[1].status==='fulfilled'){ historyRows = requests[1].value?.get_verified_drinks_history_public || requests[1].value || []; }
+      let workflowData=null;
+      if(requests[1].status==='fulfilled'){ workflowData = requests[1].value || null; historyRows = workflowData?.verified_history || []; }
       if(requests[2].status==='fulfilled'){ locationRows = requests[2].value?.get_drink_locations_public || requests[2].value || []; }
       if(requests[3].status==='fulfilled'){ homePayload = requests[3].value?.get_drinks_homepage_public || requests[3].value || {}; }
       if(requests[4].status==='fulfilled'){ top5Payload = requests[4].value?.get_drinks_homepage_top5_public || requests[4].value || {}; }
       let speedPagePayload={};
-      if(requests[5].status==='fulfilled'){ speedPagePayload = requests[5].value?.get_drink_speed_page_public || requests[5].value || {}; }
+      if(workflowData && workflowData.speed_page){ speedPagePayload = workflowData.speed_page || {}; } else if(requests[5].status==='fulfilled'){ speedPagePayload = requests[5].value?.get_drink_speed_page_public || requests[5].value || {}; }
 
       const derived = synthesizeDashboardFromHistory(historyRows);
       const homeTop5 = mapHomepageTop5(top5Payload);
@@ -337,7 +339,7 @@ async function loadStats(){
       latestStatsData.big_nights = choose(latestStatsData.big_nights, derived.big_nights, homeTop5.big_nights || []);
       latestStatsData.by_type = choose(latestStatsData.by_type, derived.by_type, homeTop5.by_type || []);
       latestStatsData.by_location = choose(locationRows, derived.by_location, homeTop5.by_location || []);
-      latestStatsData.speed_leaderboards = (Array.isArray(latestStatsData.speed_leaderboards) && latestStatsData.speed_leaderboards.length) ? latestStatsData.speed_leaderboards : ((Array.isArray(homeTop5.speed_leaderboards) && homeTop5.speed_leaderboards.length) ? homeTop5.speed_leaderboards : ((Array.isArray(speedPagePayload.leaderboards) && speedPagePayload.leaderboards.length) ? speedPagePayload.leaderboards : []));
+      latestStatsData.speed_leaderboards = (Array.isArray(latestStatsData.speed_leaderboards) && latestStatsData.speed_leaderboards.length) ? latestStatsData.speed_leaderboards : ((workflowData && Array.isArray(workflowData.speed_leaderboards) && workflowData.speed_leaderboards.length) ? workflowData.speed_leaderboards : ((Array.isArray(homeTop5.speed_leaderboards) && homeTop5.speed_leaderboards.length) ? homeTop5.speed_leaderboards : ((Array.isArray(speedPagePayload.leaderboards) && speedPagePayload.leaderboards.length) ? speedPagePayload.leaderboards : [])));
 
       latestTop5Data = latestTop5Data || {};
       latestTop5Data.session_top5 = (Array.isArray(homeTop5.session_top5) && homeTop5.session_top5.length) ? homeTop5.session_top5 : (latestTop5Data.session_top5 || []);
@@ -345,7 +347,7 @@ async function loadStats(){
 
       if((!latestPageData||!latestPageData.recent_verified||!latestPageData.recent_verified.length) && historyRows.length){
         latestPageData = latestPageData || {};
-        latestPageData.recent_verified = historyRows.slice(0,8);
+        latestPageData.recent_verified = (workflowData && Array.isArray(workflowData.recent_verified) && workflowData.recent_verified.length) ? workflowData.recent_verified.slice(0,8) : historyRows.slice(0,8);
       }
       if((!latestStatsData.top_units||!latestStatsData.top_units.length) && Array.isArray(latestTop5Data.all_time_top5) && latestTop5Data.all_time_top5.length){
         latestStatsData.top_units = latestTop5Data.all_time_top5.map(r=>({player_name:r.player_name||r.display_name||'Onbekend', units:Number(r.total_units??r.units??0)||0, events:Number(r.event_count??r.events??0)||0}));
@@ -404,7 +406,8 @@ async function loadStats(){
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./gejast-geo.js?v344"></script><script src="./drinks-verify-float.js?v344"></script>
-  <script src="./gejast-session-corner.js?v344"></script>
+  <script src="./gejast-geo.js?v346"></script><script src="./drinks-verify-float.js?v346"></script>
+  <script src="./gejast-drinks-workflow.js?v346"></script>
+  <script src="./gejast-session-corner.js?v346"></script>
 </body>
 </html>
