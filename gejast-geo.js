@@ -154,7 +154,7 @@
   async function registerNotificationWorker(){
     if (!notificationSupported()) return null;
     try {
-      const reg = await navigator.serviceWorker.register(`./gejast-sw.js?${encodeURIComponent(window.GEJAST_PAGE_VERSION || 'v331')}`, { scope:'./' });
+      const reg = await navigator.serviceWorker.register(`./gejast-sw.js?${encodeURIComponent(window.GEJAST_PAGE_VERSION || 'v333')}`, { scope:'./' });
       return await navigator.serviceWorker.ready.catch(()=>reg);
     } catch(_) { return null; }
   }
