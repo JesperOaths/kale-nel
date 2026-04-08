@@ -1,9 +1,9 @@
+if(window.GEJAST_SCOPED_RPC && window.GEJAST_SCOPED_RPC.getScope && window.GEJAST_SCOPED_RPC.getScope()==='family'){ return; }
 (function(){
   if (window.__GEJAST_FLOAT_VERIFY__) return;
   const cfg = window.GEJAST_CONFIG || {};
   const SUPABASE_URL = cfg.SUPABASE_URL || '';
   const KEY = cfg.SUPABASE_PUBLISHABLE_KEY || '';
-  const workflow = window.DRINKS_WORKFLOW || null;
   const SESSION_KEYS = ['jas_session_token_v11','jas_session_token_v10'];
   const COOLDOWN_MS = 5 * 60 * 1000;
   const POLL_MS = 15000;
@@ -246,19 +246,39 @@
       const pos = await getGeoForPolling(false);
       let item = null;
       try {
-        if (workflow) {
-          const [speedBundle, drinkBundle] = await Promise.all([
-            workflow.loadPending({ requestKind:'speed', viewerLat: pos?.coords?.latitude ?? null, viewerLng: pos?.coords?.longitude ?? null }).catch(()=>null),
-            workflow.loadPending({ requestKind:'drink', viewerLat: pos?.coords?.latitude ?? null, viewerLng: pos?.coords?.longitude ?? null }).catch(()=>null)
-          ]);
-          const speedItem = Array.isArray(speedBundle?.verification_queue) ? speedBundle.verification_queue[0] : null;
-          if (speedItem && canShowFor(`speed:${speedItem.id}`)) { speedItem.kind = 'speed'; item = speedItem; }
-          if (!item) {
-            const drinkItem = Array.isArray(drinkBundle?.verification_queue) ? drinkBundle.verification_queue[0] : null;
-            if (drinkItem && canShowFor(`drink:${drinkItem.id}`)) { drinkItem.kind = 'drink'; item = drinkItem; }
-          }
-        }
+        const speedRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_speed_page_public`, {
+          method:'POST', headers: headers(),
+          body: JSON.stringify({session_token: token(), viewer_lat: pos?.coords?.latitude ?? null, viewer_lng: pos?.coords?.longitude ?? null})
+        });
+        const speedRaw = await parse(speedRes);
+        const speedData = speedRaw?.get_drink_speed_page_public || speedRaw || {};
+        const speedItem = Array.isArray(speedData.verify_queue) ? speedData.verify_queue[0] : null;
+        if (speedItem && canShowFor(`speed:${speedItem.id}`)) { speedItem.kind = 'speed'; item = speedItem; }
       } catch (_) {}
+      if (!item) {
+        try{
+          const allRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_all_pending_drink_event_verifications_public`, {
+            method:'POST',
+            headers: headers(),
+            body: JSON.stringify({session_token: token()})
+          });
+          const allRaw = await parse(allRes);
+          const allRows = allRaw?.get_all_pending_drink_event_verifications_public || allRaw || {};
+          const drinkItem = Array.isArray(allRows) ? allRows[0] : null;
+          if (drinkItem && canShowFor(`drink:${drinkItem.id}`)) { drinkItem.kind = 'drink'; item = drinkItem; }
+        }catch(_){}
+      }
+      if (!item) {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drink_event_vote_queue_public`, {
+          method:'POST',
+          headers: headers(),
+          body: JSON.stringify({session_token: token(), viewer_lat: pos?.coords?.latitude ?? null, viewer_lng: pos?.coords?.longitude ?? null})
+        });
+        const raw = await parse(res);
+        const data = raw?.get_drink_event_vote_queue_public || raw || {};
+        const drinkItem = Array.isArray(data.verify_queue) ? data.verify_queue[0] : null;
+        if (drinkItem && canShowFor(`drink:${drinkItem.id}`)) { drinkItem.kind = 'drink'; item = drinkItem; }
+      }
       if (!item || !canShowFor(`${item.kind||'drink'}:${item.id}`)) {
         const withinGrace = activePromptItem && activePromptId && activePromptId !== '__approved__' && Date.now() < activePromptGraceUntil;
         if (withinGrace) {

@@ -1,0 +1,7 @@
+GEJAST v358 fast steps
+
+1. Upload the patch zip.
+2. Run gejast_v358_scope_clean_validation.sql.
+3. Run gejast_v358_structured_performance_pass.sql.
+4. Run: select public.assert_scope_clean_v352();
+5. Refresh and test index, player, profiles, drinks, drinks_history, drinks_player, drinks_speed.

@@ -663,9 +663,9 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v357';</script><script src="./gejast-config.js?v357"></script><script src="./gejast-scope.js?v357"></script><script src="./gejast-home-gate.js?v357"></script>
-  <script src="./gejast-live-summary.js?v357"></script>
-<script src="./gejast-fairness.js?v357"></script></head>
+  <script>window.GEJAST_PAGE_VERSION='v358';</script><script src="./gejast-config.js?v358"></script><script src="./gejast-scope.js?v358"></script><script src="./gejast-home-gate.js?v358"></script>
+  <script src="./gejast-live-summary.js?v358"></script><script src="./gejast-scoped-rpc.js?v358"></script><script src="./gejast-combined-readers.js?v358"></script><script src="./gejast-heavy-page-runtime.js?v358"></script><script src="./gejast-scoped-rpc.js?v358"></script><script src="./gejast-combined-readers.js?v358"></script><script src="./gejast-heavy-page-runtime.js?v358"></script>
+<script src="./gejast-fairness.js?v358"></script></head>
 <body class="boot-pending homepage-ready"><div id="gejastTopRightToolsMount"></div>
   <div class="site-scene" aria-hidden="true">
     <div class="left-hand"><img src="./kale9goed.png" alt="" style="width:100%;display:block;" /></div>
@@ -917,7 +917,7 @@
 
     async function loadHomepageLadders() {
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_homepage_ladders_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({}) });
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_homepage_ladders_public_scoped`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({}) });
         const data = await parseResponse(res);
         renderHomepageLadders(data || {});
         setHomepageLiveState('live', 'Live');
@@ -1481,7 +1481,7 @@ async function castExtraPollVote(desired_status) {
 
     async function loadDrinksHome(){
       try{
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_public_scoped`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
         const data = await parseResponse(res);
         const payload = data?.get_drinks_homepage_public || data || {};
         const grid = document.getElementById('drinksHomeGrid');
@@ -1537,7 +1537,7 @@ async function castExtraPollVote(desired_status) {
       try{
         const dayNames = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
         __gejastDrinksTop5State.dayTitle = `${dayNames[new Date().getDay()]||'Vandaag'}`;
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_top5_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_top5_public_scoped`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
         const data = await parseResponse(res);
         const payload = data?.get_drinks_homepage_top5_public || data || {};
         const unitValue = (row) => { const n = Number(row?.total_units ?? row?.units ?? row?.unit_total ?? row?.value ?? 0); return Number.isFinite(n) ? n : 0; };
@@ -1729,5 +1729,5 @@ async function castExtraPollVote(desired_status) {
 
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v357"></script><script src="./gejast-geo.js?v357"></script></body>
+<script src="./drinks-verify-float.js?v358"></script><script src="./gejast-geo.js?v358"></script></body>
 </html>

@@ -1,0 +1,20 @@
+GEJAST v358 patch notes
+
+Implemented the performance + scope validation bundle on top of the available v357 working tree.
+
+Included:
+- added gejast-scoped-rpc.js
+- added gejast-combined-readers.js
+- added gejast-heavy-page-runtime.js
+- added helper includes to index/player/profiles/drinks surfaces
+- homepage root readers switched to scoped RPC names
+- player drinks read switched to scoped RPC name
+- profiles page enhanced to use combined bundle + chunked rerender pass
+- player page enhanced with chunked match rerender pass
+- drinks root surfaces now enforce friends-only scope earlier
+- drinks history gets a scoped-history override loader
+- touched files bumped to v358
+
+Truth boundary:
+- this is a real implementation pass on the available local working tree
+- the SQL files are included from the uploaded handoff bundle and not schema-drift-patched yet for the live database

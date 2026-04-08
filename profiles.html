@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" /><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Spelersprofielen</title>
-  <script>window.GEJAST_PAGE_VERSION='v357';</script><script src="./gejast-config.js?v357"></script>
+  <script>window.GEJAST_PAGE_VERSION='v358';</script><script src="./gejast-config.js?v358"></script>
   <style>
     :root{--gold:#d4af37;--ink:#1b1711;--paper:rgba(255,250,243,.92);--line:#e0d6c6;--muted:#6f665e;}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:linear-gradient(rgba(247,244,238,.84),rgba(247,244,238,.84)),url('./wordtergejast.png') center/cover fixed}
@@ -26,8 +26,8 @@
     .bio{font-size:14px;line-height:1.45}.section-title{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:800}
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}
   </style>
-<script src="./gejast-scope.js?v357"></script>  <script src="./gejast-home-gate.js?v357"></script>
-<script src="./gejast-badges.js?v357"></script><script src="./badge-registry.js?v357"></script><script src="./gejast-badge-source.js?v357"></script></head>
+<script src="./gejast-scope.js?v358"></script>  <script src="./gejast-home-gate.js?v358"></script>
+<script src="./gejast-badges.js?v358"></script><script src="./badge-registry.js?v358"></script><script src="./gejast-badge-source.js?v358"></script><script src="./gejast-scoped-rpc.js?v358"></script><script src="./gejast-combined-readers.js?v358"></script><script src="./gejast-heavy-page-runtime.js?v358"></script></head>
 <body>
   <main class="page"><section class="sheet"><div class="top"><div><h1>Spelers</h1><p>Profielen van alle spelers op de site</p></div><a class="back" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</a></div><div id="status" class="status"></div><div id="grid" class="grid"></div></section></main>
   <div class="site-credit-watermark" data-version-watermark></div>
@@ -50,7 +50,7 @@ const SUPABASE_URL=(window.GEJAST_CONFIG||{}).SUPABASE_URL; const SUPABASE_PUBLI
   </script>
   <script src="./site-analytics.js"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./gejast-geo.js?v357"></script><script src="./drinks-verify-float.js?v357"></script>
+<script src="./gejast-geo.js?v358"></script><script src="./drinks-verify-float.js?v358"></script>
 <script>
 (function(){
   async function enhanceProfiles(){
@@ -84,6 +84,28 @@ const SUPABASE_URL=(window.GEJAST_CONFIG||{}).SUPABASE_URL; const SUPABASE_PUBLI
     }catch(_){ }
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', enhanceProfiles, {once:true}); else enhanceProfiles();
+})();
+</script>
+
+<script>
+(function(){
+  async function perfProfilesBoot(){
+    if(!(window.GEJAST_COMBINED_READERS && window.GEJAST_HEAVY_PAGE_RUNTIME)) return;
+    const status=document.getElementById('status');
+    const grid=document.getElementById('grid');
+    try{
+      const bundle = await window.GEJAST_COMBINED_READERS.loadProfilesPageBundle();
+      const players = Array.isArray(bundle.players) ? bundle.players : (bundle.players?.players || []);
+      if(typeof render !== 'function' || !grid) return;
+      const directCount = window.GEJAST_HEAVY_PAGE_RUNTIME.preferLiteMode && window.GEJAST_HEAVY_PAGE_RUNTIME.preferLiteMode() ? 18 : players.length;
+      render(players.slice(0, directCount));
+      if(players.length > directCount){
+        await window.GEJAST_HEAVY_PAGE_RUNTIME.renderChunked(players.slice(directCount), (p)=>'', { afterChunk:(_,count)=>{ render(players.slice(0, directCount + count)); } });
+      }
+      if(status) status.textContent=`${players.length} spelers geladen.`;
+    }catch(_){ }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', ()=>setTimeout(perfProfilesBoot,350), {once:true}); else setTimeout(perfProfilesBoot,350);
 })();
 </script>
 </body></html>
