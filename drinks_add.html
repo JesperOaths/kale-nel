@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drank toevoegen</title>
-  <script>window.GEJAST_PAGE_VERSION='v378';</script><script src="./gejast-config.js?v378"></script><script src="./gejast-home-gate.js?v378"></script><script src="./gejast-push-runtime.js?v378"></script><script src="./gejast-clickable-cards.js?v378"></script><script src="./gejast-scope-context.js?v378"></script>
+  <script>window.GEJAST_PAGE_VERSION='v379';</script><script src="./gejast-config.js?v379"></script><script src="./gejast-home-gate.js?v379"></script><script src="./gejast-push-runtime.js?v379"></script><script src="./gejast-clickable-cards.js?v379"></script><script src="./gejast-scope-context.js?v379"></script>
   <style>
     :root{
       --line:rgba(0,0,0,.09);
@@ -193,9 +193,9 @@
     </div>
   </div>
 
-  <div class="site-credit-watermark" data-version-watermark>v378 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v379 · Made by Bruis</div>
 
-  <script src="./gejast-geo.js?v378"></script><script src="./drinks-verify-float.js?v378"></script><script src="./gejast-drinks-workflow.js?v378"></script>
+  <script src="./gejast-geo.js?v379"></script><script src="./drinks-verify-float.js?v379"></script><script src="./gejast-drinks-workflow.js?v379"></script>
   <script>
   (function(){
     const cfg=window.GEJAST_CONFIG||{};
@@ -242,6 +242,7 @@
       const msg=String(err?.message||err||'Onbekende fout');
       if(/record "new" has no field/i.test(msg)) return 'De drankpagina gebruikt veilige standaardweergave.';
       if(/could not choose the best candidate function/i.test(msg)) return 'Drank toevoegen botst nog met dubbele backend-functies.';
+      if(/client_event_id/i.test(msg)) return 'Drank toevoegen mist nog een client_event_id backend-fix.';
       if(/getPlayerSessionToken/i.test(msg) && /CTX is undefined/i.test(msg)) return 'De sessiehelper ontbrak tijdelijk.';
       return msg;
     }
@@ -458,6 +459,6 @@
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./site-analytics.js?v378"></script>
+<script src="./site-analytics.js?v379"></script>
 </body>
 </html>
