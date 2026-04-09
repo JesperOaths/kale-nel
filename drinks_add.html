@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drank toevoegen</title>
-  <script>window.GEJAST_PAGE_VERSION='v379';</script><script src="./gejast-config.js?v379"></script><script src="./gejast-home-gate.js?v379"></script><script src="./gejast-push-runtime.js?v379"></script><script src="./gejast-clickable-cards.js?v379"></script><script src="./gejast-scope-context.js?v379"></script>
+  <script>window.GEJAST_PAGE_VERSION='v381';</script><script src="./gejast-config.js?v381"></script><script src="./gejast-home-gate.js?v381"></script><script src="./gejast-push-runtime.js?v381"></script><script src="./gejast-clickable-cards.js?v381"></script><script src="./gejast-scope-context.js?v381"></script>
   <style>
     :root{
       --line:rgba(0,0,0,.09);
@@ -193,9 +193,9 @@
     </div>
   </div>
 
-  <div class="site-credit-watermark" data-version-watermark>v379 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v381 · Made by Bruis</div>
 
-  <script src="./gejast-geo.js?v379"></script><script src="./drinks-verify-float.js?v379"></script><script src="./gejast-drinks-workflow.js?v379"></script>
+  <script src="./gejast-geo.js?v381"></script><script src="./drinks-verify-float.js?v381"></script><script src="./gejast-drinks-workflow.js?v381"></script>
   <script>
   (function(){
     const cfg=window.GEJAST_CONFIG||{};
@@ -240,9 +240,9 @@
     function setStatus(msg='',tone=''){ statusLine.textContent=msg; statusLine.className=`status ${tone}`.trim(); }
     function humanizeError(err){
       const msg=String(err?.message||err||'Onbekende fout');
-      if(/record "new" has no field/i.test(msg)) return 'De drankpagina gebruikt veilige standaardweergave.';
+      if(/record "new" has no field/i.test(msg)) return '';
       if(/could not choose the best candidate function/i.test(msg)) return 'Drank toevoegen botst nog met dubbele backend-functies.';
-      if(/client_event_id/i.test(msg)) return 'Drank toevoegen mist nog een client_event_id backend-fix.';
+      if(/client_event_id/i.test(msg)) return 'Drank toevoegen mist nog verplichte backend type/id-velden.';
       if(/getPlayerSessionToken/i.test(msg) && /CTX is undefined/i.test(msg)) return 'De sessiehelper ontbrak tijdelijk.';
       return msg;
     }
@@ -459,6 +459,6 @@
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./site-analytics.js?v379"></script>
+<script src="./site-analytics.js?v381"></script>
 </body>
 </html>
