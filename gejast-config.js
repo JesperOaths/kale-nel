@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v361',
+    VERSION:'v330',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -79,59 +79,18 @@
     const normalized = value.replace(/^\.\//,'').replace(/^\/+/, '');
     return normalized || String(fallback || '').trim();
   }
-  function currentReturnTarget(fallback='index.html'){
-    try {
-      const path = (location.pathname || '').split('/').pop() || fallback || 'index.html';
-      const query = location.search || '';
-      const hash = location.hash || '';
-      return sanitizeReturnTarget(`${path}${query}${hash}`, fallback || 'index.html');
-    } catch (_) {
-      return sanitizeReturnTarget(fallback || 'index.html', 'index.html');
-    }
-  }
-  function buildHomeUrl(returnTo, scope){
-    const useScope = scope || inferRuntimeScope();
-    const url = new URL('./home.html', window.location.href);
-    if (useScope === 'family') url.searchParams.set('scope', 'family');
-    const target = sanitizeReturnTarget(returnTo, useScope === 'family' ? 'index.html?scope=family' : 'index.html');
+  function buildHomeUrl(returnTo){
+    const url = new URL(inferRuntimeScope()==='family' ? './familie/index.html' : './home.html', window.location.href);
+    const target = sanitizeReturnTarget(returnTo);
     if (target) url.searchParams.set('return_to', target);
     return url.toString();
   }
-  function buildLoginUrl(returnTo, scope){
-    const useScope = scope || inferRuntimeScope();
-    const url = new URL('./login.html', window.location.href);
-    if (useScope === 'family') url.searchParams.set('scope', 'family');
-    const target = sanitizeReturnTarget(returnTo, useScope === 'family' ? 'index.html?scope=family' : 'index.html');
+  function buildLoginUrl(returnTo){
+    const url = new URL(inferRuntimeScope()==='family' ? './familie/login.html' : './login.html', window.location.href);
+    const target = sanitizeReturnTarget(returnTo);
     if (target) url.searchParams.set('return_to', target);
     return url.toString();
   }
-
-
-  function setPlayerSessionToken(token, storage){
-    const value = String(token || '').trim();
-    if (!value) return '';
-    const primaryKey = CONFIG.PLAYER_SESSION_KEYS[0] || 'jas_session_token_v11';
-    const target = storage === 'session' ? sessionStorage : localStorage;
-    target.setItem(primaryKey, value);
-    const other = target === localStorage ? sessionStorage : localStorage;
-    other.removeItem(primaryKey);
-    touchPlayerActivity();
-    return value;
-  }
-  function normalizeScope(input){
-    return String(input || '').trim().toLowerCase() === 'family' ? 'family' : 'friends';
-  }
-
-
-  function buildRequestUrl(returnTo, scope){
-    const normalizedScope = normalizeScope(scope || inferRuntimeScope());
-    const url = new URL('./request.html', window.location.href);
-    const safeTarget = sanitizeReturnTarget(returnTo || '', normalizedScope === 'family' ? 'index.html?scope=family' : 'index.html');
-    if (safeTarget) url.searchParams.set('return_to', safeTarget);
-    if (normalizedScope === 'family') url.searchParams.set('scope', 'family');
-    return `${url.pathname}${url.search}${url.hash}`;
-  }
-
   function buildAdminUrl(reason='', returnTo=''){
     const url = new URL('./admin.html', window.location.href);
     if (reason) url.searchParams.set('reason', String(reason));
@@ -195,11 +154,7 @@
     buildHomeUrl,
     buildLoginUrl,
     buildAdminUrl,
-    setPlayerSessionToken,
-    buildRequestUrl,
-    normalizeScope,
-    sanitizeReturnTarget,
-    currentReturnTarget
+    sanitizeReturnTarget
   });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyVersionLabel, { once: true });
