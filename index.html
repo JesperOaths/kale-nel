@@ -676,17 +676,6 @@
         <a href="./index.html" aria-label="Home via logo"><img src="./logo.png" alt="Logo" class="card-logo" style="cursor:pointer;filter:drop-shadow(0 4px 10px rgba(0,0,0,.08));width:66px;height:66px;object-fit:contain" /></a>
       </div>
 
-            <section class="ladder-section" aria-label="Live ladders">
-        <div class="ladder-head">
-          <div id="homeLivePill" class="live-pill standby">Stand-by</div>
-        </div>
-        <div id="ladderGrid" class="ladder-grid">
-          <div class="ladder-card"><div class="ladder-title"><strong>Klaverjassen</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
-          <div class="ladder-card"><div class="ladder-title"><strong>Boerenbridge</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
-          <div class="ladder-card"><div class="ladder-title"><strong>Beerpong</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
-        </div>
-      </section>
-
       <section class="drinks-home-section" style="margin-top:16px" aria-label="Drinkstand">
         <div class="drinks-home-head">
           <div>
@@ -907,6 +896,7 @@
     }
 
     async function loadHomepageLadders() {
+      if (!document.getElementById('ladderGrid')) return;
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_homepage_ladders_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({}) });
         const data = await parseResponse(res);
@@ -1620,7 +1610,7 @@ async function castExtraPollVote(desired_status) {
     async function bootHomepage(){
       document.body.classList.add('boot-pending');
       try {
-        await Promise.allSettled([load(), loadHomepageLadders(), loadDrinksHome(), loadDrinksHomeTop5(), loadHomepageLiveEntries()]);
+        await Promise.allSettled([load(), loadDrinksHome(), loadDrinksHomeTop5(), loadHomepageLiveEntries()]);
       } finally {
         document.body.classList.remove('boot-pending');
       }
