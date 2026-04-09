@@ -114,17 +114,16 @@
   }
 async function createDrinkEvent(opts={}){
   const session_token = opts.session_token || token();
-  const base = {
-    session_token,
-    event_type_key: opts.event_type_key,
-    quantity: opts.quantity ?? 1,
-    lat: opts.lat ?? null,
-    lng: opts.lng ?? null,
-    accuracy: opts.accuracy ?? null
-  };
+  const event_type_key = opts.event_type_key || opts.speed_type_key || '';
+  const quantity = opts.quantity ?? 1;
+  const lat = opts.lat ?? null;
+  const lng = opts.lng ?? null;
+  const accuracy = opts.accuracy ?? null;
   return rpcFirst([
-    ['create_drink_event', base],
-    ['create_drink_event', { session_token_input: session_token, event_type_key_input: opts.event_type_key, quantity_input: opts.quantity ?? 1, lat_input: opts.lat ?? null, lng_input: opts.lng ?? null, accuracy_input: opts.accuracy ?? null }]
+    ['create_drink_event', { session_token, event_type_key, quantity, lat, lng, accuracy }],
+    ['create_drink_event', { session_token, speed_type_key: event_type_key, quantity, lat, lng, accuracy }],
+    ['create_drink_event', { session_token_input: session_token, event_type_key_input: event_type_key, quantity_input: quantity, lat_input: lat, lng_input: lng, accuracy_input: accuracy }],
+    ['create_drink_event', { session_token_input: session_token, speed_type_key_input: event_type_key, quantity_input: quantity, lat_input: lat, lng_input: lng, accuracy_input: accuracy }]
   ]);
 }
 async function verifyDrinkEvent(opts={}){
@@ -143,10 +142,21 @@ async function cancelDrinkEvent(opts={}){
 async function createSpeedAttempt(opts={}){
   const session_token = opts.session_token || token();
   const client_attempt_id = opts.client_attempt_id || randomClientId();
+  const event_type_key = opts.event_type_key || opts.speed_type_key || '';
+  const quantity = opts.quantity ?? 1;
+  const duration_seconds = opts.duration_seconds;
+  const lat = opts.lat ?? null;
+  const lng = opts.lng ?? null;
+  const accuracy = opts.accuracy ?? null;
   return rpcFirst([
-    ['create_combined_drink_speed_attempt', { session_token, client_attempt_id, event_type_key: opts.event_type_key, quantity: opts.quantity ?? 1, duration_seconds: opts.duration_seconds, lat: opts.lat ?? null, lng: opts.lng ?? null, accuracy: opts.accuracy ?? null }],
-    ['create_combined_drink_speed_attempt', { session_token, event_type_key: opts.event_type_key, quantity: opts.quantity ?? 1, duration_seconds: opts.duration_seconds, lat: opts.lat ?? null, lng: opts.lng ?? null, accuracy: opts.accuracy ?? null }],
-    ['create_drink_speed_attempt', { session_token, client_attempt_id, event_type_key: opts.event_type_key, quantity: opts.quantity ?? 1, duration_seconds: opts.duration_seconds, lat: opts.lat ?? null, lng: opts.lng ?? null, accuracy: opts.accuracy ?? null }]
+    ['create_combined_drink_speed_attempt', { session_token, client_attempt_id, event_type_key, quantity, duration_seconds, lat, lng, accuracy }],
+    ['create_combined_drink_speed_attempt', { session_token, event_type_key, quantity, duration_seconds, lat, lng, accuracy }],
+    ['create_combined_drink_speed_attempt', { session_token, client_attempt_id, speed_type_key: event_type_key, quantity, duration_seconds, lat, lng, accuracy }],
+    ['create_combined_drink_speed_attempt', { session_token, speed_type_key: event_type_key, quantity, duration_seconds, lat, lng, accuracy }],
+    ['create_drink_speed_attempt', { session_token, client_attempt_id, event_type_key, quantity, duration_seconds, lat, lng, accuracy }],
+    ['create_drink_speed_attempt', { session_token, client_attempt_id, speed_type_key: event_type_key, quantity, duration_seconds, lat, lng, accuracy }],
+    ['create_drink_speed_attempt', { session_token_input: session_token, client_attempt_id_input: client_attempt_id, event_type_key_input: event_type_key, quantity_input: quantity, duration_seconds_input: duration_seconds, lat_input: lat, lng_input: lng, accuracy_input: accuracy }],
+    ['create_drink_speed_attempt', { session_token_input: session_token, client_attempt_id_input: client_attempt_id, speed_type_key_input: event_type_key, quantity_input: quantity, duration_seconds_input: duration_seconds, lat_input: lat, lng_input: lng, accuracy_input: accuracy }]
   ]);
 }
 async function verifySpeedAttempt(opts={}){
@@ -169,5 +179,5 @@ async function cancelSpeedAttempt(opts={}){
   async function forPending(opts={}){ return shapePendingView(await load(opts)); }
   async function forAdd(opts={}){ return shapeAddView(await load(opts)); }
   async function forSpeed(opts={}){ return shapeSpeedView(await load(opts)); }
-  window.GEJAST_DRINKS_WORKFLOW = { CANONICAL_DRINK_TYPES, CANONICAL_SPEED_TYPES, canonicalDrinkTypes, canonicalSpeedSets, load, fallback, token, headers, forPending, forAdd, forSpeed, createDrinkEvent, verifyDrinkEvent, cancelDrinkEvent, createSpeedAttempt, verifySpeedAttempt, cancelSpeedAttempt };
+  window.GEJAST_DRINKS_WORKFLOW = { CANONICAL_DRINK_TYPES, CANONICAL_SPEED_TYPES, canonicalDrinkTypes, canonicalSpeedSets, load, fallback, token, headers, forPending, forAdd, forSpeed, createDrinkEvent, verifyDrinkEvent, cancelDrinkEvent, createSpeedAttempt, verifySpeedAttempt, cancelSpeedAttempt, rpcFirst };
 })();
