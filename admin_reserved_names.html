@@ -103,7 +103,7 @@
     @media (max-width:900px){.toolbar{grid-template-columns:1fr 1fr}.toolbar .toolbar-card:first-child{grid-column:1 / -1}}
     @media (max-width:640px){.page-shell{padding:14px 12px 88px}.topbar{padding:18px}.hero h1{font-size:28px}.summary-grid,.toolbar,.meta-grid,.form-actions,.list-root{grid-template-columns:1fr}.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
 </style>
-  <script src="./gejast-admin-rpc.js?v356"></script><script src="./gejast-admin-source.js?v356"></script><script>window.GEJAST_PAGE_VERSION='v356';</script><script src="./gejast-config.js?v356"></script>
+  <script>window.GEJAST_PAGE_VERSION='v371';</script><script src="./gejast-config.js?v371"></script>
   <script>
     (function globalAdminLogout(){
       const btn=document.createElement('button');
@@ -114,8 +114,8 @@
       document.addEventListener('DOMContentLoaded',()=>document.body.appendChild(btn));
     })();
   </script>
-  <script src="./admin-session-sync.js?v356"></script>
-  <script src="./admin-topnav.js?v356"></script>
+  <script src="./admin-session-sync.js?v371"></script>
+  <script src="./admin-topnav.js?v371"></script>
 </head>
 <body>
   <a class="page-floating-logo" href="./index.html" aria-label="Terug naar home"><img src="./logo.png" alt="Logo"></a>
@@ -229,7 +229,7 @@
     </div>
   </div>
 
-  <div class="site-credit-watermark" data-version-watermark>v356 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v371 · Made by Bruis</div>
 
   <script>
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
@@ -425,7 +425,72 @@
       clearTimeout(searchTimer);
       searchTimer = setTimeout(renderAll, 30);
     }
-    async function loadNames(){ state.rows = await window.GEJAST_ADMIN_SOURCE.loadReservedNames({ includeArchive: true, scope: 'friends' }); renderAll(); }
+    async function loadNames(){
+      try {
+        setStatus('Laden...');
+        const data = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_allowed_usernames`, {
+          method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(),
+          body:JSON.stringify({ admin_session_token: getToken() })
+        }).then(parseResponse);
+        state.rows = Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : []);
+        renderAll();
+        setStatus('Kieslijst en archief geladen.', 'ok');
+      } catch (error) {
+        const message = escapeHtml(error?.message || 'Laden mislukt.');
+        document.getElementById('listRoot').innerHTML = `<div class="empty"><strong>De naambron kon niet laden.</strong><div style="margin-top:8px;overflow-wrap:anywhere">${message}</div><div style="margin-top:8px">Run de nieuwste full SQL opnieuw en herlaad daarna deze pagina.</div></div>`;
+        updateSummary([]);
+        document.getElementById('resultCount').textContent = '0 resultaten zichtbaar.';
+        setStatus(error?.message || 'Laden mislukt.', 'warn');
+      }
+    }
+    async function callRemoveAllowedUsername(id){
+      const payloads = [
+        { admin_session_token: getToken(), allowed_username_id_input: Number(id) },
+        { admin_session_token: getToken(), allowed_username_id: Number(id) },
+        { admin_session_token: getToken(), input_allowed_username_id: Number(id) },
+        { admin_session_token: getToken(), reserved_name_id_input: Number(id) },
+        { admin_session_token: getToken(), reserved_name_id: Number(id) },
+        { admin_session_token: getToken(), id_input: Number(id) },
+        { admin_session_token: getToken(), id: Number(id) }
+      ];
+      let lastError = null;
+      for (const payload of payloads) {
+        try {
+          return await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_remove_allowed_username`, {
+            method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify(payload)
+          }).then(parseResponse);
+        } catch (error) {
+          lastError = error;
+          const message = String(error?.message || '');
+          if (!/schema cache|function|parameter|argument|missing/i.test(message)) throw error;
+        }
+      }
+      throw lastError || new Error('Verwijderen mislukt.');
+    }
+    async function setGhostStatus(playerId, ghosted){
+      return fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_set_player_ghost_status`, {
+        method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(),
+        body:JSON.stringify({
+          admin_session_token: getToken(),
+          target_player_id: Number(playerId),
+          ghosted: Boolean(ghosted),
+          reason_input: ghosted ? 'admin reserved names ghost action' : 'admin reserved names unghost action'
+        })
+      }).then(parseResponse);
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', loadNames);
+    document.getElementById('reloadListBtn').addEventListener('click', loadNames);
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      document.getElementById('newNameInput').value = '';
+      document.getElementById('newEmailInput').value = '';
+      document.getElementById('newNoteInput').value = '';
+    });
+    document.getElementById('toggleArchiveBtn').addEventListener('click', () => {
+      const box = document.getElementById('showArchiveToggle');
+      box.checked = !box.checked;
+      renderAll();
+    });
     document.getElementById('resetFiltersBtn').addEventListener('click', () => {
       document.getElementById('searchInput').value = '';
       document.getElementById('statusFilter').value = 'all';

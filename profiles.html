@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" /><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Spelersprofielen</title>
-  <script>window.GEJAST_PAGE_VERSION='v370';</script><script src="./gejast-config.js?v370"></script><script src="./gejast-clickable-cards.js?v370"></script><script src="./gejast-scope-context.js?v370"></script>
+  <script>window.GEJAST_PAGE_VERSION='v371';</script><script src="./gejast-config.js?v371"></script><script src="./gejast-clickable-cards.js?v371"></script><script src="./gejast-scope-context.js?v371"></script>
   <style>
     :root{--gold:#d4af37;--ink:#1b1711;--paper:rgba(255,250,243,.92);--line:#e0d6c6;--muted:#6f665e;}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:linear-gradient(rgba(247,244,238,.84),rgba(247,244,238,.84)),url('./wordtergejast.png') center/cover fixed}
@@ -27,8 +27,8 @@
     .badge-gallery-wrap{padding:18px;display:grid;gap:16px}.badge-rarity-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.rarity-col{background:#fff;border:1px solid rgba(17,17,17,.08);border-radius:20px;padding:16px;display:grid;gap:12px;align-content:start}.rarity-col h3{margin:0;font-size:18px}.rarity-col p{margin:0;color:var(--muted);font-size:13px}.rarity-list{display:grid;gap:10px}.rarity-badge{display:grid;grid-template-columns:52px minmax(0,1fr);gap:10px;align-items:center;padding:10px;border-radius:16px;background:#fbf7ef;border:1px solid rgba(17,17,17,.06)}.rarity-badge strong{display:block;font-size:14px}.rarity-badge small{display:block;font-size:12px;color:var(--muted);line-height:1.35}.rarity-pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;background:#f5efe0;color:#70571b;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;width:max-content}.legendary .rarity-pill{background:#efe2ad;color:#6f4d00}.rare .rarity-pill{background:#eadfd8;color:#7b4831}.common .rarity-pill{background:#ece8e0;color:#5f564b}
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}@media (max-width:900px){.badge-rarity-grid{grid-template-columns:1fr}}@media (max-width:720px){.page{padding:14px 12px 90px}.top{align-items:flex-start}.back{padding:10px 12px}.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
   </style>
-<script src="./gejast-scope.js?v370"></script>  <script src="./gejast-home-gate.js?v370"></script>
-<script src="./gejast-badges.js?v370"></script></head>
+<script src="./gejast-scope.js?v371"></script>  <script src="./gejast-home-gate.js?v371"></script>
+<script src="./gejast-badges.js?v371"></script></head>
 <body>
   <main class="page"><section class="sheet"><div class="top"><div><h1>Spelers</h1><p>Profielen van alle spelers op de site</p></div><button class="back" type="button" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</button></div><div id="status" class="status"></div><div id="grid" class="grid"></div></section></main>
   <div class="site-credit-watermark" data-version-watermark></div>
@@ -67,6 +67,6 @@ const SUPABASE_URL=(window.GEJAST_CONFIG||{}).SUPABASE_URL; const SUPABASE_PUBLI
     async function boot(){const status=document.getElementById('status'); try{const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_all_site_players_public_scoped`,{method:'POST',mode:'cors',cache:'no-store',headers:rpcHeaders(),body:JSON.stringify({site_scope_input:((window.GEJAST_SCOPE_CONTEXT&&window.GEJAST_SCOPE_CONTEXT.getScope())?window.GEJAST_SCOPE_CONTEXT.getScope():'friends')})}); const raw=await parseResponse(res); const data=(raw&&raw.get_all_site_players_public_scoped)?raw.get_all_site_players_public_scoped:(Array.isArray(raw)&&raw[0]&&raw[0].get_all_site_players_public_scoped)?raw[0].get_all_site_players_public_scoped:raw; const players=data?.players||data||[]; render(players); status.textContent=`${players.length} spelers geladen.`}catch(err){status.textContent=err.message||'Profielen laden mislukt.'}}
     boot();
   </script>
-  <script src="./site-analytics.js?v370"></script>
+  <script src="./site-analytics.js?v371"></script>
   <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script><script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./gejast-geo.js?v370"></script><script src="./drinks-verify-float.js?v370"></script></body></html>
+<script src="./gejast-geo.js?v371"></script><script src="./drinks-verify-float.js?v371"></script></body></html>

@@ -7,7 +7,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drinks historie</title>
-  <script>window.GEJAST_PAGE_VERSION='v361';</script><script src="./gejast-config.js?v361"></script><script src="./gejast-public-page-gate.js?v361"></script><script src="./gejast-clickable-cards.js?v361"></script><script src="./gejast-home-gate.js?v361"></script><script src="./gejast-drinks-analytics.js?v361"></script>
+  <script>window.GEJAST_PAGE_VERSION='v371';</script><script src="./gejast-config.js?v371"></script><script src="./gejast-home-gate.js?v371"></script><script src="./gejast-drinks-analytics.js?v371"></script>
   <style>
     :root{--bg:#ece7dc;--card:rgba(255,251,245,.95);--paper:#fffdfa;--line:rgba(54,40,20,.08);--ink:#201b16;--muted:#6b6257;--gold:#9a8241}
     *{box-sizing:border-box}body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,231,220,.92),rgba(236,231,220,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
@@ -23,7 +23,7 @@
 <div class="wrap"><div class="shell">
   <div class="top">
     <div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn alt" type="button" data-back-link data-fallback="./drinks_add.html">Terug</button><a class="btn alt" href="./drinks_add.html">Drinks toevoegen</a><a class="btn alt" href="./drinks_stats.html">Statistieken</a></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn alt" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./drinks_add.html';}">Terug</a><a class="btn alt" href="./drinks_add.html">Drinks toevoegen</a><a class="btn alt" href="./drinks_stats.html">Statistieken</a></div>
       <h1>Drinks historie</h1>
       <div class="sub">Volledige geschiedenis van bevestigde drankjes uit de canonieke statslaag.</div>
       <div id="statusLine" class="sub" style="margin-top:8px"></div>
@@ -33,7 +33,7 @@
   <div id="historyList" class="list"><div class="meta">Laden…</div></div>
 </div></div>
 <div class="site-credit-watermark" data-version-watermark></div>
-<script src="./gejast-geo.js?v361"></script><script src="./drinks-verify-float.js?v361"></script>
+<script src="./gejast-geo.js?v371"></script><script src="./drinks-verify-float.js?v371"></script>
 <script>
 (()=> {
   const analytics = window.GEJAST_DRINKS_ANALYTICS;
@@ -56,6 +56,5 @@
   load();
 })();
 </script>
-<script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script>
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body></html>

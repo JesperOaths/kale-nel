@@ -19,6 +19,8 @@
   function headers(){ const c=cfg(); return {'Content-Type':'application/json',apikey:c.SUPABASE_PUBLISHABLE_KEY||'',Authorization:`Bearer ${c.SUPABASE_PUBLISHABLE_KEY||''}`,Accept:'application/json'}; }
   async function parse(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch{ throw new Error(t||`HTTP ${res.status}`);} if(!res.ok) throw new Error(d?.message||d?.error||d?.hint||`HTTP ${res.status}`); return d; }
   async function rpc(name, body){ const c=cfg(); return fetch(`${c.SUPABASE_URL}/rest/v1/rpc/${name}`,{method:'POST',headers:headers(),body:JSON.stringify(body||{})}).then(parse); }
+  function randomClientId(){ try{ const raw=new Uint8Array(8); crypto.getRandomValues(raw); return 'spd_' + Array.from(raw).map((v)=>v.toString(16).padStart(2,'0')).join(''); }catch(_){ return 'spd_' + Math.random().toString(36).slice(2) + Date.now().toString(36); } }
+  async function rpcFirst(candidates){ let lastErr=null; for(const [name,payload] of candidates){ try{ return await rpc(name,payload); }catch(err){ lastErr=err; const msg=String(err&&err.message||err||''); if(/does not exist|schema cache|could not find the function/i.test(msg)) continue; throw err; } } throw lastErr || new Error('Geen passende drinks-RPC gevonden.'); }
   function canonicalDrinkTypes(types){
     const existing = Array.isArray(types) ? types : [];
     const byKey = new Map(existing.map((s)=>[String(s.key||s.event_type_key||'').trim(), { key:String(s.key||s.event_type_key||'').trim(), label:s.label||s.event_type_label||String(s.key||s.event_type_key||''), unit_value:Number(s.unit_value ?? s.units ?? s.quantity ?? 0) || 0 }]));
@@ -111,14 +113,19 @@
     }
   }
 async function createDrinkEvent(opts={}){
-  return rpc('create_drink_event', {
-    session_token: opts.session_token || token(),
+  const session_token = opts.session_token || token();
+  const base = {
+    session_token,
     event_type_key: opts.event_type_key,
     quantity: opts.quantity ?? 1,
     lat: opts.lat ?? null,
     lng: opts.lng ?? null,
     accuracy: opts.accuracy ?? null
-  });
+  };
+  return rpcFirst([
+    ['create_drink_event', base],
+    ['create_drink_event', { session_token_input: session_token, event_type_key_input: opts.event_type_key, quantity_input: opts.quantity ?? 1, lat_input: opts.lat ?? null, lng_input: opts.lng ?? null, accuracy_input: opts.accuracy ?? null }]
+  ]);
 }
 async function verifyDrinkEvent(opts={}){
   return rpc('verify_drink_event_public', {
@@ -134,15 +141,13 @@ async function cancelDrinkEvent(opts={}){
   });
 }
 async function createSpeedAttempt(opts={}){
-  return rpc('create_combined_drink_speed_attempt', {
-    session_token: opts.session_token || token(),
-    event_type_key: opts.event_type_key,
-    quantity: opts.quantity ?? 1,
-    duration_seconds: opts.duration_seconds,
-    lat: opts.lat ?? null,
-    lng: opts.lng ?? null,
-    accuracy: opts.accuracy ?? null
-  });
+  const session_token = opts.session_token || token();
+  const client_attempt_id = opts.client_attempt_id || randomClientId();
+  return rpcFirst([
+    ['create_combined_drink_speed_attempt', { session_token, client_attempt_id, event_type_key: opts.event_type_key, quantity: opts.quantity ?? 1, duration_seconds: opts.duration_seconds, lat: opts.lat ?? null, lng: opts.lng ?? null, accuracy: opts.accuracy ?? null }],
+    ['create_combined_drink_speed_attempt', { session_token, event_type_key: opts.event_type_key, quantity: opts.quantity ?? 1, duration_seconds: opts.duration_seconds, lat: opts.lat ?? null, lng: opts.lng ?? null, accuracy: opts.accuracy ?? null }],
+    ['create_drink_speed_attempt', { session_token, client_attempt_id, event_type_key: opts.event_type_key, quantity: opts.quantity ?? 1, duration_seconds: opts.duration_seconds, lat: opts.lat ?? null, lng: opts.lng ?? null, accuracy: opts.accuracy ?? null }]
+  ]);
 }
 async function verifySpeedAttempt(opts={}){
   return rpc('verify_drink_speed_attempt', {

@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wedstrijden beheren</title>
+  <title>Wedstrijden beheren</title><script>window.GEJAST_PAGE_VERSION='v371';</script>
   <link rel="stylesheet" href="./site-shell.css" />
   <script defer src="./gejast-config.js"></script>
   <script defer src="./admin-gate-v105.js"></script>
@@ -26,13 +26,13 @@
     .hidden{display:none}.status{margin-top:12px;padding:12px 14px;border-radius:14px;background:rgba(17,17,17,.05)}.participant-picks{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}.participant-chip{padding:8px 10px;border-radius:999px;border:1px solid rgba(17,17,17,.12);background:#fff;cursor:pointer;font:inherit;font-weight:700}.participant-chip.active{background:#161616;color:#fff;border-color:#161616}.participant-chip.inline{padding:4px 8px;font-size:12px}
     @media (max-width: 900px){.grid{grid-template-columns:1fr}.controls{grid-template-columns:1fr 1fr}}
   </style>
-<script src="./gejast-scope.js?v330"></script></head>
+<script src="./gejast-scope.js?v371"></script></head>
 <body>
   <div class="wrap">
     <div class="panel">
       <div class="top">
         <div>
-          <div class="chips"><span class="chip">Admin</span><span class="chip">v319 · Made by Bruis</span></div>
+          <div class="chips"><span class="chip">Admin</span><span class="chip">v371 · Made by Bruis</span></div>
           <h1>Wedstrijden beheren</h1>
           <div class="muted">Één plek om fout ingevoerde wedstrijden aan te passen, te verwijderen en recente speler-edits te controleren.</div>
         </div>
@@ -228,47 +228,10 @@
     const scopeSel=document.getElementById('scopeFilter');
     if(scopeSel){ scopeSel.value=activeScope(); scopeSel.addEventListener('change',()=>{ localStorage.setItem(ADMIN_SCOPE_KEY, activeScope()); loadPlayerOptions(); render(); }); }
     document.getElementById('editForm').addEventListener('submit', async (e)=>{e.preventDefault(); if(!state.selected) return; try{const payload=JSON.parse(document.getElementById('editPayload').value||'{}'); await callRpc('admin_update_match_payload_action',{admin_session_token:adminToken(), game_type_input:state.selected.game_type, client_match_id_input:state.selected.client_match_id, replacement_payload:payload}); setStatus('Wedstrijd bijgewerkt. Laat daarna de ratings opnieuw opbouwen voor dit spel.'); await load();}catch(err){setStatus(err.message||'Opslaan mislukt.')}})
-    document.getElementById('replacePlayerBtn').onclick=async()=>{
-      try{
-        const oldSel=document.getElementById('replaceOldPlayer');
-        const newSel=document.getElementById('replaceNewPlayer');
-        const oldId=oldSel.value||'';
-        const newId=newSel.value||'';
-        const oldName=oldSel.options[oldSel.selectedIndex]?.dataset?.label||oldSel.options[oldSel.selectedIndex]?.textContent||'';
-        const newName=newSel.options[newSel.selectedIndex]?.dataset?.label||newSel.options[newSel.selectedIndex]?.textContent||'';
-        if(!state.selected) return setStatus('Open eerst een wedstrijd.');
-        if(!oldId||!newId||!oldName||!newName) return setStatus('Kies eerst oude en nieuwe speler.');
-        try{
-          await callRpc('admin_replace_match_player_everywhere_action',{
-            admin_session_token:adminToken(),
-            game_type_input:state.selected.game_type,
-            client_match_id_input:state.selected.client_match_id,
-            old_player_name_input:oldName,
-            new_player_name_input:newName,
-            old_player_id_input:oldId?Number(oldId):null,
-            new_player_id_input:newId?Number(newId):null,
-            site_scope_input:activeScope()
-          });
-          setStatus(`Speler overal vervangen: ${oldName} → ${newName}.`, 'ok');
-          await load();
-          return;
-        }catch(_){
-          const payload=JSON.parse(document.getElementById('editPayload').value||'{}');
-          const replaced=replacePlayerInPayload(payload, oldName, newName, oldId, newId);
-          document.getElementById('editPayload').value=JSON.stringify(replaced, null, 2);
-          await callRpc('admin_update_match_payload_action',{
-            admin_session_token:adminToken(),
-            game_type_input:state.selected.game_type,
-            client_match_id_input:state.selected.client_match_id,
-            replacement_payload:replaced
-          });
-          setStatus(`Fallback: payload opgeslagen voor ${oldName} → ${newName}.`, 'ok');
-          await load();
-        }
-      }catch(err){setStatus(err.message||'Speler vervangen mislukt.')}
-    };
+    document.getElementById('replacePlayerBtn').onclick=async()=>{try{const oldSel=document.getElementById('replaceOldPlayer'); const newSel=document.getElementById('replaceNewPlayer'); const oldId=oldSel.value||''; const newId=newSel.value||''; const oldName=oldSel.options[oldSel.selectedIndex]?.dataset?.label||oldSel.options[oldSel.selectedIndex]?.textContent||''; const newName=newSel.options[newSel.selectedIndex]?.dataset?.label||newSel.options[newSel.selectedIndex]?.textContent||''; if(!state.selected) return setStatus('Open eerst een wedstrijd.'); if(!oldId||!newId||!oldName||!newName) return setStatus('Kies eerst oude en nieuwe speler.'); try{ await callRpc('admin_replace_match_player_everywhere_action',{admin_session_token:adminToken(),game_type_input:state.selected.game_type,client_match_id_input:state.selected.client_match_id,old_player_name_input:oldName,new_player_name_input:newName,old_player_id_input:oldId?Number(oldId):null,new_player_id_input:newId?Number(newId):null,site_scope_input:activeScope()}); setStatus(`Speler overal vervangen: ${oldName} → ${newName}.`, 'ok'); await load(); return; }catch(_){ const payload=JSON.parse(document.getElementById('editPayload').value||'{}'); document.getElementById('editPayload').value=JSON.stringify(replacePlayerInPayload(payload, oldName, newName, oldId, newId), null, 2); setStatus(`Fallback: payload bijgewerkt voor ${oldName} → ${newName}. Controleer en sla daarna op.`);} }catch(err){setStatus(err.message||'Speler vervangen mislukt.')}};
     document.getElementById('deleteBtn').onclick=async()=>{if(!state.selected) return; if(!confirm('Wedstrijd verwijderen?')) return; try{await callRpc('admin_delete_match_action',{admin_session_token:adminToken(), game_type_input:state.selected.game_type, client_match_id_input:state.selected.client_match_id}); setStatus('Wedstrijd verwijderd. Laat daarna de ratings opnieuw opbouwen voor dit spel.'); document.getElementById('editForm').classList.add('hidden'); document.getElementById('selectionEmpty').classList.remove('hidden'); await load();}catch(err){setStatus(err.message||'Verwijderen mislukt.')}};
     load(); loadPlayerOptions();
   </script>
+<div class="site-credit-watermark" data-version-watermark style="position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)"></div>
 </body>
 </html>

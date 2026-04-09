@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drank toevoegen</title>
-  <script>window.GEJAST_PAGE_VERSION='v370';</script><script src="./gejast-config.js?v370"></script><script src="./gejast-push-runtime.js?v370"></script><script src="./gejast-clickable-cards.js?v370"></script><script src="./gejast-scope-context.js?v370"></script>
+  <script>window.GEJAST_PAGE_VERSION='v371';</script><script src="./gejast-config.js?v371"></script><script src="./gejast-home-gate.js?v371"></script><script src="./gejast-push-runtime.js?v371"></script><script src="./gejast-clickable-cards.js?v371"></script><script src="./gejast-scope-context.js?v371"></script>
   <style>
     :root{
       --line:rgba(0,0,0,.09);
@@ -193,9 +193,9 @@
     </div>
   </div>
 
-  <div class="site-credit-watermark" data-version-watermark>v370 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v371 · Made by Bruis</div>
 
-  <script src="./gejast-geo.js?v370"></script><script src="./drinks-verify-float.js?v370"></script><script src="./gejast-drinks-workflow.js?v370"></script>
+  <script src="./gejast-geo.js?v371"></script><script src="./drinks-verify-float.js?v371"></script><script src="./gejast-drinks-workflow.js?v371"></script>
   <script>
   (function(){
     const cfg=window.GEJAST_CONFIG||{};
@@ -353,8 +353,10 @@
         try{ address=geo&&geo.reverseGeocode ? await geo.reverseGeocode(usePos.coords.latitude,usePos.coords.longitude) : ''; }catch(_){}
         const fallbackLabel = `${Number(usePos.coords.latitude).toFixed(3)}, ${Number(usePos.coords.longitude).toFixed(3)}`;
         const wantedLabel = address || fallbackLabel;
-        const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),event_type_key:typeKey,quantity:1,lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy})});
-        const created=await parse(res);
+        const workflow=window.GEJAST_DRINKS_WORKFLOW;
+        const created=workflow && workflow.createDrinkEvent
+          ? await workflow.createDrinkEvent({ session_token:token(), event_type_key:typeKey, quantity:1, lat:usePos.coords.latitude, lng:usePos.coords.longitude, accuracy:usePos.coords.accuracy })
+          : await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),event_type_key:typeKey,quantity:1,lat:usePos.coords.latitude,lng:usePos.coords.longitude,accuracy:usePos.coords.accuracy})}).then(parse);
         const eventId = Number(created?.drink_event_id || created?.event_id || created?.id || 0) || null;
         if(wantedLabel){
           const saveById = async()=> fetch(`${SUPABASE_URL}/rest/v1/rpc/set_drink_event_location_label`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:eventId,location_label_input:wantedLabel})}).then(parse).catch(()=>null);
@@ -389,6 +391,6 @@
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./site-analytics.js?v370"></script>
+<script src="./site-analytics.js?v371"></script>
 </body>
 </html>

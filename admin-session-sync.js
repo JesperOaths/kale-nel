@@ -33,6 +33,23 @@
     if(nextToken){ setBundle(nextToken, nextUser, true, nextDevice); }
     return Object.assign({ ok:true, admin_session_token: nextToken, admin_username: nextUser }, data || {});
   }
-  async function requirePage(returnTo=''){ try{ await validate(); return true; } catch(err){ const raw = returnTo || (window.location.pathname.split('/').pop() + window.location.search + window.location.hash); const here = safeReturnTarget(raw) || 'admin.html'; window.location.href = `./admin.html?reason=${encodeURIComponent((err&&err.message)||'session_invalid')}&return_to=${encodeURIComponent(here)}`; return false; } }
-  window.GEJAST_ADMIN_SESSION = { getToken, getUsername, getDevice, getDeadline, setBundle, clearBundle, validate, requirePage, fingerprint };
+  function hasUsableLocalSession(){
+    const token = getToken();
+    if (!token) return false;
+    const deadline = getDeadline();
+    if (deadline && Date.now() > deadline) { clearBundle(); return false; }
+    return true;
+  }
+  async function backgroundValidate(){
+    if (!hasUsableLocalSession()) return false;
+    try { await validate(); return true; } catch (_) { return false; }
+  }
+  async function requirePage(returnTo=''){
+    if (hasUsableLocalSession()) {
+      setTimeout(()=>{ backgroundValidate().catch(()=>{}); }, 0);
+      return true;
+    }
+    try{ await validate(); return true; } catch(err){ const raw = returnTo || (window.location.pathname.split('/').pop() + window.location.search + window.location.hash); const here = safeReturnTarget(raw) || 'admin.html'; window.location.href = `./admin.html?reason=${encodeURIComponent((err&&err.message)||'session_invalid')}&return_to=${encodeURIComponent(here)}`; return false; }
+  }
+  window.GEJAST_ADMIN_SESSION = { getToken, getUsername, getDevice, getDeadline, setBundle, clearBundle, validate, backgroundValidate, hasUsableLocalSession, requirePage, fingerprint };
 })();
