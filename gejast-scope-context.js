@@ -1,47 +1,32 @@
 (function(global){
-  const PLAYER_SESSION_KEYS = ['jas_session_token_v11', 'jas_session_token_v10'];
-  const ADMIN_SESSION_KEYS = ['jas_admin_session_v8', 'gejast_admin_session_token', 'admin_session_token'];
-
-  function readFirst(keys){
-    for (const key of keys) {
-      const fromLocal = global.localStorage ? global.localStorage.getItem(key) : '';
-      const fromSession = global.sessionStorage ? global.sessionStorage.getItem(key) : '';
-      if (fromLocal) return fromLocal;
-      if (fromSession) return fromSession;
+  const cfg = global.GEJAST_CONFIG || {};
+  function getPlayerSessionToken(){
+    if (cfg.getPlayerSessionToken) return String(cfg.getPlayerSessionToken() || '');
+    const keys = ['jas_session_token_v11','jas_session_token_v10'];
+    for (const key of keys){
+      const value = global.localStorage.getItem(key) || global.sessionStorage.getItem(key);
+      if (value) return value;
     }
     return '';
   }
-
-  function getPlayerSessionToken(){
-    if (global.GEJAST_CONFIG && typeof global.GEJAST_CONFIG.getPlayerSessionToken === 'function') {
-      return global.GEJAST_CONFIG.getPlayerSessionToken() || '';
-    }
-    return readFirst(PLAYER_SESSION_KEYS);
-  }
-
   function getAdminSessionToken(){
-    if (global.GEJAST_ADMIN_SESSION && typeof global.GEJAST_ADMIN_SESSION.getToken === 'function') {
-      return global.GEJAST_ADMIN_SESSION.getToken() || '';
+    const keys = ['jas_admin_session_v8'];
+    for (const key of keys){
+      const value = global.sessionStorage.getItem(key) || global.localStorage.getItem(key);
+      if (value) return value;
     }
-    return readFirst(ADMIN_SESSION_KEYS);
+    return '';
   }
-
   function getScope(){
-    if (global.GEJAST_SCOPE_UTILS && typeof global.GEJAST_SCOPE_UTILS.getScope === 'function') {
-      return global.GEJAST_SCOPE_UTILS.getScope();
-    }
-    return (global.location && /\/familie\//i.test(global.location.pathname || '')) ? 'family' : 'friends';
+    try {
+      if (global.GEJAST_SCOPE_UTILS && global.GEJAST_SCOPE_UTILS.getScope) return global.GEJAST_SCOPE_UTILS.getScope();
+      const qs = new URLSearchParams(global.location.search);
+      return qs.get('scope') === 'family' || (global.location.pathname || '').includes('/familie/') ? 'family' : 'friends';
+    } catch (_) { return 'friends'; }
   }
-
   function pagePath(){
-    const loc = global.location || {};
-    return `${loc.pathname || ''}${loc.search || ''}${loc.hash || ''}`;
+    try { return (global.location.pathname || '').split('/').pop() || 'index.html'; }
+    catch (_) { return 'index.html'; }
   }
-
-  global.GEJAST_SCOPE_CONTEXT = global.GEJAST_SCOPE_CONTEXT || {
-    getPlayerSessionToken,
-    getAdminSessionToken,
-    getScope,
-    pagePath
-  };
+  global.GEJAST_SCOPE_CONTEXT = { getPlayerSessionToken, getAdminSessionToken, getScope, pagePath };
 })(window);

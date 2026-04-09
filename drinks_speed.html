@@ -7,8 +7,8 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Snelheid</title>
-  <script>window.GEJAST_PAGE_VERSION='v361';</script>
-  <script src="./gejast-config.js?v361"></script><script src="./gejast-clickable-cards.js?v361"></script>
+  <script>window.GEJAST_PAGE_VERSION='v364';</script>
+  <script src="./gejast-config.js?v364"></script><script src="./gejast-clickable-cards.js?v364"></script><script src="./gejast-scope-context.js?v364"></script>
   <style>
     :root{
       --line:rgba(0,0,0,.09);
@@ -108,7 +108,7 @@
     <div class="card">
       <div class="topbar">
         <div class="top-actions">
-          <button class="btn alt" type="button" data-back-link data-fallback="./drinks.html">Terug</button>
+          <a class="btn alt" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./drinks.html';}">Terug</a>
           <a class="btn alt" href="./drinks.html">Overzicht</a>
         </div>
         <div class="top-actions right gejast-corner-tools">
@@ -141,23 +141,22 @@
       </div>
     </div>
   </div>
-  <div class="site-credit-watermark" data-version-watermark>v361 · Made by Bruis</div>
-  <script src="./gejast-geo.js?v361"></script><script src="./drinks-verify-float.js?v361"></script><script src="./gejast-drinks-workflow.js?v361"></script>
+  <div class="site-credit-watermark" data-version-watermark>v364 · Made by Bruis</div>
+  <script src="./gejast-geo.js?v364"></script><script src="./drinks-verify-float.js?v364"></script><script src="./gejast-drinks-workflow.js?v364"></script>
   <script>
   if(window.GEJAST_CONFIG && !window.GEJAST_CONFIG.requireMatchEntrySession('drinks_speed')){}
   (function(){
     const cfg=window.GEJAST_CONFIG||{};
     const SUPABASE_URL=cfg.SUPABASE_URL||'';
     const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
-    const SESSION_KEYS=['jas_session_token_v11','jas_session_token_v10'];
-    let lastPos=null;
+        let lastPos=null;
     let currentType='bier';
     let latestSpeedCombined=null;
     const FALLBACK_TYPES=(window.GEJAST_DRINKS_WORKFLOW&&window.GEJAST_DRINKS_WORKFLOW.CANONICAL_SPEED_TYPES)||[
       {key:'bier',label:'1 Bak'},{key:'2bakken',label:'2 Bakken'},{key:'liter_bier',label:'Liter Bier'},{key:'ice',label:'Ice'},{key:'wijnfles',label:'Fles Wijn'}
     ];
     const ORDER=['bier','2bakken','liter_bier','ice','wijnfles'];
-    function token(){ for(const k of SESSION_KEYS){ const v=localStorage.getItem(k)||sessionStorage.getItem(k); if(v) return v; } return ''; }
+    function token(){ return scopeCtx.getPlayerSessionToken(); }
     function h(){ return {'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${KEY}`,Accept:'application/json'}; }
     async function p(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch{ throw new Error(t||`HTTP ${res.status}`);} if(!res.ok) throw new Error(d?.message||d?.error||d?.hint||`HTTP ${res.status}`); return d; }
     function setStatus(msg='',tone=''){ const el=document.getElementById('speedStatus'); el.textContent=msg; el.className=`status ${tone}`.trim(); }
@@ -189,7 +188,6 @@
     load(false,false);
   })();
   </script>
-  <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script>
-<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>

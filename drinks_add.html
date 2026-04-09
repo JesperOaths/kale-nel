@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drank toevoegen</title>
-  <script>window.GEJAST_PAGE_VERSION='v361';</script><script src="./gejast-config.js?v361"></script><script src="./gejast-clickable-cards.js?v361"></script>
+  <script>window.GEJAST_PAGE_VERSION='v364';</script><script src="./gejast-config.js?v364"></script><script src="./gejast-clickable-cards.js?v364"></script><script src="./gejast-scope-context.js?v364"></script>
   <style>
     :root{
       --line:rgba(0,0,0,.09);
@@ -147,7 +147,7 @@
     <div class="card">
       <div class="topbar">
         <div class="top-actions">
-          <button class="btn alt" type="button" data-back-link data-fallback="./index.html">Terug</button>
+          <a class="btn alt" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</a>
           <a class="btn alt" href="./drinks.html">Overzicht</a>
         </div>
         <div class="top-actions right gejast-corner-tools">
@@ -192,20 +192,19 @@
     </div>
   </div>
 
-  <div class="site-credit-watermark" data-version-watermark>v361 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v364 · Made by Bruis</div>
 
-  <script src="./gejast-geo.js?v361"></script><script src="./drinks-verify-float.js?v361"></script><script src="./gejast-drinks-workflow.js?v361"></script>
+  <script src="./gejast-geo.js?v364"></script><script src="./drinks-verify-float.js?v364"></script><script src="./gejast-drinks-workflow.js?v364"></script>
   <script>
   (function(){
     const cfg=window.GEJAST_CONFIG||{};
     const SUPABASE_URL=cfg.SUPABASE_URL||'';
     const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
-    const SESSION_KEYS=['jas_session_token_v11','jas_session_token_v10'];
-    let latestData=null; let lastPosition=null;
+        let latestData=null; let lastPosition=null;
     const statusLine=document.getElementById('statusLine');
     const AUTO_GEO_KEY='gejast_auto_geo_prompt_v1';
     const DRINK_LAYOUT_ORDER=['bier','2bakken','liter_bier','shot','ice','wijnfles'];
-    function token(){ for(const k of SESSION_KEYS){ const v=localStorage.getItem(k)||sessionStorage.getItem(k); if(v) return v; } return ''; }
+    function token(){ return scopeCtx.getPlayerSessionToken(); }
     function headers(){ return {'Content-Type':'application/json',apikey:KEY,Authorization:`Bearer ${KEY}`,Accept:'application/json'}; }
 
     const verifyGeoCard=document.getElementById('verifyGeoCard');
@@ -384,7 +383,6 @@
     tryAutoPrompt();
   })();
   </script>
-  <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script>
-<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>

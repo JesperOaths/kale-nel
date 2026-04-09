@@ -6,10 +6,10 @@
   <meta http-equiv="Pragma" content="no-cache" />
 <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Drankverificatie</title><script>window.GEJAST_PAGE_VERSION='v361';</script>
-  <script src="./gejast-config.js?v361"></script>
-  <script src="./gejast-geo.js?v361"></script>
-  <script src="./gejast-drinks-workflow.js?v361"></script>
+  <title>Drankverificatie</title><script>window.GEJAST_PAGE_VERSION='v364';</script>
+  <script src="./gejast-config.js?v364"></script><script src="./gejast-clickable-cards.js?v364"></script><script src="./gejast-scope-context.js?v364"></script>
+  <script src="./gejast-geo.js?v364"></script>
+  <script src="./gejast-drinks-workflow.js?v364"></script>
   <style>
     :root{--bg:#ece7dc;--card:#f8f2e7;--line:#d7c7a7;--ink:#1d1a17;--muted:#736758;--gold:#b79b56;--good:#dfead7;--bad:#f1dfd7}
     *{box-sizing:border-box} body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,231,220,.94),rgba(236,231,220,.97)),url('./site-bg-mobile.webp') center/cover no-repeat fixed;color:var(--ink)}
@@ -36,7 +36,7 @@
   </div>
 <script>
 const {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY}=window.GEJAST_CONFIG||{};
-const token=()=> (window.GEJAST_CONFIG && window.GEJAST_CONFIG.getPlayerSessionToken ? window.GEJAST_CONFIG.getPlayerSessionToken() : '');
+const token=()=> scopeCtx.getPlayerSessionToken();
 const headers=()=>({'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':`Bearer ${SUPABASE_PUBLISHABLE_KEY}`});
 function setStatus(msg,bad){const el=document.getElementById('status'); el.textContent=msg||''; el.style.color=bad?'#8b2f2f':'#6b6257';}
 async function parse(res){const txt=await res.text(); let data={}; try{data=txt?JSON.parse(txt):{};}catch{data={raw:txt};} if(!res.ok) throw new Error(data?.message||data?.error||txt||`HTTP ${res.status}`); return data;}

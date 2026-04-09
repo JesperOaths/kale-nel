@@ -148,34 +148,13 @@
   function playerToken(){ for (const key of SESSION_KEYS){ const value = localStorage.getItem(key) || sessionStorage.getItem(key); if (value) return value; } return ''; }
   function rpcHeaders(key=''){ return { 'Content-Type':'application/json', apikey:key, Authorization:`Bearer ${key}`, Accept:'application/json' }; }
   async function parseJson(res){ const t = await res.text(); let d = null; try { d = t ? JSON.parse(t) : null; } catch(_) { throw new Error(t || `HTTP ${res.status}`); } if (!res.ok) throw new Error(d?.message || d?.error || `HTTP ${res.status}`); return d; }
-  async function callPushRpc(names, payload, options = {}){
-    const cfg = window.GEJAST_CONFIG || {};
-    const list = Array.isArray(names) ? names : [names];
-    let lastError = null;
-    for (const name of list){
-      try {
-        const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
-          method:'POST',
-          mode:'cors',
-          cache:'no-store',
-          keepalive: !!options.keepalive,
-          headers: rpcHeaders(cfg.SUPABASE_PUBLISHABLE_KEY),
-          body: JSON.stringify(payload)
-        });
-        return await parseJson(res);
-      } catch(err) {
-        lastError = err;
-      }
-    }
-    throw lastError || new Error('Push-RPC mislukt');
-  }
 
   function notificationSupported(){ return !!(window.isSecureContext && 'Notification' in window && 'serviceWorker' in navigator); }
   function notificationPermission(){ try { return notificationSupported() ? Notification.permission : 'unsupported'; } catch(_) { return 'unsupported'; } }
   async function registerNotificationWorker(){
     if (!notificationSupported()) return null;
     try {
-      const reg = await navigator.serviceWorker.register(`./gejast-sw.js?${encodeURIComponent(window.GEJAST_PAGE_VERSION || 'v327')}`, { scope:'./' });
+      const reg = await navigator.serviceWorker.register(`./gejast-sw.js?${encodeURIComponent(window.GEJAST_PAGE_VERSION || 'v333')}`, { scope:'./' });
       return await navigator.serviceWorker.ready.catch(()=>reg);
     } catch(_) { return null; }
   }
@@ -198,39 +177,23 @@
     if (!force && last && (now - last) < 60000) return { touched:false, reason:'throttled' };
     let sub = subscription;
     try {
-      if (window.GEJAST_PUSH_RUNTIME && typeof window.GEJAST_PUSH_RUNTIME.syncSubscriptionAndPresence === 'function') {
-        const runtime = await window.GEJAST_PUSH_RUNTIME.syncSubscriptionAndPresence({
-          forceTouch: force,
-          pagePath: window.location.pathname || '',
-          lat: lastPos?.coords?.latitude ?? null,
-          lng: lastPos?.coords?.longitude ?? null,
-          accuracy: lastPos?.coords?.accuracy ?? null
-        });
-        if (runtime && runtime.ok) {
-          try { localStorage.setItem(ACTIVE_PUSH_TOUCH_KEY, String(now)); } catch(_){}
-          return { touched:true, payload:runtime };
-        }
-      }
       if (!sub && notificationSupported()) {
         const reg = await registerNotificationWorker();
         if (reg && reg.pushManager) sub = await reg.pushManager.getSubscription();
       }
       const json = sub && (sub.toJSON ? sub.toJSON() : sub);
-      await callPushRpc(['touch_active_web_push_presence_v2', cfg.ACTIVE_PUSH_TOUCH_RPC || 'touch_active_web_push_presence'], {
-        session_token: token,
-        endpoint_input: json?.endpoint || sub?.endpoint || '',
-        p256dh_input: (json?.keys && json.keys.p256dh) || '',
-        auth_input: (json?.keys && json.keys.auth) || '',
-        page_path_input: window.location.pathname || '',
-        permission_input: notificationPermission(),
-        standalone_input: !!((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true),
-        site_scope_input: (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) || 'friends',
-        platform_input: platformName(),
-        installation_mode_input: isStandalone() ? (isIOS() ? 'ios_home_screen' : (isAndroid() ? 'android_pwa' : 'standalone')) : (isIOS() ? 'ios_browser' : (isAndroid() ? 'android_browser' : 'browser')),
-        lat_input: lastPos?.coords?.latitude ?? null,
-        lng_input: lastPos?.coords?.longitude ?? null,
-        accuracy_input: lastPos?.coords?.accuracy ?? null
-      }, { keepalive:true });
+      const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/touch_active_web_push_presence`, {
+        method:'POST', headers: rpcHeaders(cfg.SUPABASE_PUBLISHABLE_KEY), body: JSON.stringify({
+          session_token: token,
+          endpoint_input: json?.endpoint || sub?.endpoint || '',
+          p256dh_input: (json?.keys && json.keys.p256dh) || '',
+          auth_input: (json?.keys && json.keys.auth) || '',
+          page_path_input: `${window.location.pathname || ''}${window.location.search || ''}${window.location.hash || ''}`,
+          permission_input: notificationPermission(),
+          standalone_input: !!((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true)
+        })
+      });
+      await parseJson(res);
       try { localStorage.setItem(ACTIVE_PUSH_TOUCH_KEY, String(now)); } catch(_){}
       return { touched:true };
     } catch(err) {
@@ -277,11 +240,10 @@
     const token = playerToken();
     if (!cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY || !token) return { queued:false, reason:'missing-context' };
     try {
-      const payload = await callPushRpc(['queue_test_web_push_v2', cfg.WEB_PUSH_TEST_RPC || 'queue_test_web_push'], {
-        session_token: token,
-        site_scope_input: (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) || 'friends'
+      const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${cfg.WEB_PUSH_TEST_RPC || 'queue_test_web_push'}`, {
+        method:'POST', headers: rpcHeaders(cfg.SUPABASE_PUBLISHABLE_KEY), body: JSON.stringify({ session_token: token })
       });
-      return { queued:true, payload };
+      return { queued:true, payload: await parseJson(res) };
     } catch(err) {
       return { queued:false, reason:(err && err.message) || 'queue-failed' };
     }
@@ -292,33 +254,19 @@
     const token = playerToken();
     if (!subscription || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY || !token) return { synced:false, reason:'missing-context' };
     try {
-      if (window.GEJAST_PUSH_RUNTIME && typeof window.GEJAST_PUSH_RUNTIME.syncSubscriptionAndPresence === 'function') {
-        const runtime = await window.GEJAST_PUSH_RUNTIME.syncSubscriptionAndPresence({
-          pagePath: window.location.pathname + window.location.search + window.location.hash,
-          lat: extras.lat ?? lastPos?.coords?.latitude ?? null,
-          lng: extras.lng ?? lastPos?.coords?.longitude ?? null,
-          accuracy: extras.accuracy ?? lastPos?.coords?.accuracy ?? null
-        });
-        if (runtime && runtime.syncResult) return { synced: !!runtime.ok, payload: runtime.syncResult, presence: runtime.presenceResult };
-      }
       const json = subscription.toJSON ? subscription.toJSON() : subscription;
-      const payload = await callPushRpc(['register_web_push_subscription_v2', 'register_web_push_subscription'], {
-        session_token: token,
-        endpoint_input: json.endpoint || subscription.endpoint || '',
-        p256dh_input: json.keys?.p256dh || extras.p256dh || '',
-        auth_input: json.keys?.auth || extras.auth || '',
-        user_agent_input: navigator.userAgent || '',
-        permission_input: notificationPermission(),
-        page_path_input: window.location.pathname + window.location.search + window.location.hash,
-        standalone_input: isStandalone(),
-        site_scope_input: (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) || 'friends',
-        platform_input: platformName(),
-        installation_mode_input: isStandalone() ? (isIOS() ? 'ios_home_screen' : (isAndroid() ? 'android_pwa' : 'standalone')) : (isIOS() ? 'ios_browser' : (isAndroid() ? 'android_browser' : 'browser')),
-        lat_input: extras.lat ?? lastPos?.coords?.latitude ?? null,
-        lng_input: extras.lng ?? lastPos?.coords?.longitude ?? null,
-        accuracy_input: extras.accuracy ?? lastPos?.coords?.accuracy ?? null
+      const out = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/register_web_push_subscription`, {
+        method:'POST', headers: rpcHeaders(cfg.SUPABASE_PUBLISHABLE_KEY),
+        body: JSON.stringify({
+          session_token: token,
+          endpoint_input: json.endpoint || subscription.endpoint || '',
+          p256dh_input: json.keys?.p256dh || extras.p256dh || '',
+          auth_input: json.keys?.auth || extras.auth || '',
+          user_agent_input: navigator.userAgent || '',
+          permission_input: notificationPermission()
+        })
       });
-      return { synced:true, payload };
+      return { synced:true, payload: await parseJson(out) };
     } catch(err) {
       return { synced:false, reason:(err && err.message) || 'sync-failed' };
     }
@@ -342,14 +290,6 @@
     }
   }
   async function getNotificationDiagnostics(){
-    if (window.GEJAST_PUSH_RUNTIME && typeof window.GEJAST_PUSH_RUNTIME.getDiagnostics === 'function') {
-      try {
-        const state = await window.GEJAST_PUSH_RUNTIME.getDiagnostics();
-        notifyStateCache = state;
-        announce('gejast:notification-state', state);
-        return state;
-      } catch(_) {}
-    }
     const supported = notificationSupported();
     const permission = notificationPermission();
     let workerReady = false;
@@ -368,26 +308,46 @@
       }
     } catch(err) { pushReason = (err && err.message) || ''; }
     const backendSync = (supported && permission==='granted' && subscribed) ? await (async()=>{ try{ const reg=await registerNotificationWorker(); const sub=reg&&reg.pushManager?await reg.pushManager.getSubscription():null; return sub ? await syncPushSubscriptionToBackend(sub) : {synced:false, reason:'no-subscription'}; }catch(err){ return {synced:false, reason:(err&&err.message)||'backend-sync-failed'}; } })() : {synced:false, reason:'not-ready'};
-    const state = { supported, permission, workerReady, pushSupported, subscribed, secure: !!window.isSecureContext, visibility: document.visibilityState, userAgent: navigator.userAgent || '', pushReason, backendSync };
+    const backendTest = (supported && permission==='granted' && subscribed) ? await queueBackendTestPush().catch((err)=>({queued:false, reason:(err&&err.message)||'queue-failed'})) : {queued:false, reason:'not-ready'};
+    const presenceTouch = (supported && permission==='granted' && subscribed) ? await touchActivePushPresence(null, true).catch((err)=>({touched:false, reason:(err&&err.message)||'touch-failed'})) : {touched:false, reason:'not-ready'};
+    const state = { supported, permission, workerReady, pushSupported, subscribed, secure: !!window.isSecureContext, visibility: document.visibilityState, userAgent: navigator.userAgent || '', pushReason, backendSync, backendTest, presenceTouch, standalone: !!((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true) };
+    state.setupState = notificationSetupState(state);
     notifyStateCache = state;
     announce('gejast:notification-state', state);
     return state;
   }
+
+  function notificationSetupState(state){
+    const s = state || {};
+    if (!s.supported || !s.secure) return { key:'unsupported', label:'niet ondersteund' };
+    if (isIOS() && !s.standalone) return { key:'not_installed', label:'niet als app geopend' };
+    if (s.permission !== 'granted') return { key:'installed_but_permission_missing', label:'toestemming ontbreekt' };
+    if (!s.subscribed) return { key:'permission_granted_but_not_subscribed', label:'geen push-abonnement' };
+    if (!(s.backendSync && s.backendSync.synced)) return { key:'subscribed_but_not_synced', label:'backend-sync ontbreekt' };
+    return { key:'fully_active', label:'volledig actief' };
+  }
   function setNotificationButtonState(permission, extras={}){
     document.querySelectorAll('[data-gejast-notify-button]').forEach((btn)=>{
       const p = permission || 'unsupported';
-      btn.classList.toggle('is-ready', p === 'granted');
-      btn.classList.toggle('is-pending', p === 'default');
-      btn.classList.toggle('is-denied', p === 'denied' || p === 'unsupported');
-      btn.classList.toggle('is-bad', p === 'denied' || p === 'unsupported');
+      const setup = extras.setupState || notificationSetupState({ supported:p!=='unsupported', secure:!!window.isSecureContext, permission:p, subscribed:!!extras.subscribed, backendSync:extras.backendSync, standalone:extras.standalone });
+      const fullyActive = setup.key === 'fully_active';
+      btn.classList.toggle('is-ready', fullyActive);
+      btn.classList.toggle('is-pending', setup.key === 'permission_granted_but_not_subscribed' || setup.key === 'subscribed_but_not_synced' || p === 'default');
+      btn.classList.toggle('is-denied', p === 'denied' || p === 'unsupported' || setup.key === 'not_installed');
+      btn.classList.toggle('is-bad', p === 'denied' || p === 'unsupported' || setup.key === 'not_installed');
       let title = 'Meldingen instellen';
-      if (p === 'granted') title = extras.subscribed ? 'Meldingen actief' : 'Meldingen toegestaan';
+      if (setup.key === 'fully_active') title = 'Meldingen actief';
+      else if (setup.key === 'not_installed') title = 'Open de site als thuisscherm-app';
+      else if (setup.key === 'installed_but_permission_missing') title = 'Meldingstoestemming ontbreekt';
+      else if (setup.key === 'permission_granted_but_not_subscribed') title = 'Geen push-abonnement actief';
+      else if (setup.key === 'subscribed_but_not_synced') title = 'Backend-sync ontbreekt';
       else if (p === 'default') title = 'Meldingen inschakelen';
       else if (p === 'denied') title = 'Meldingen geblokkeerd';
       else if (p === 'unsupported') title = 'Meldingen niet ondersteund';
-      btn.title = title;
-      btn.setAttribute('aria-label', title);
-      btn.setAttribute('aria-pressed', p === 'granted' ? 'true' : 'false');
+      btn.title = `${title} · ${setup.label}`;
+      btn.setAttribute('aria-label', `${title} · ${setup.label}`);
+      btn.setAttribute('aria-pressed', fullyActive ? 'true' : 'false');
+      btn.dataset.setupState = setup.key;
     });
   }
   async function refreshNotificationButton(){
@@ -396,24 +356,6 @@
     return state;
   }
   async function requestNotificationAccess(){
-    if (window.GEJAST_PUSH_RUNTIME && typeof window.GEJAST_PUSH_RUNTIME.requestPermissionAndSync === 'function') {
-      try {
-        const result = await window.GEJAST_PUSH_RUNTIME.requestPermissionAndSync();
-        const updated = await refreshNotificationButton();
-        const queuedTest = result?.ok ? await queueBackendTestPush() : { queued:false, reason:result?.code || 'sync-failed' };
-        showDiagnostics('Meldingen opnieuw gevraagd', [
-          `Platform: ${platformName()}`,
-          `Browsertoestemming: ${updated.permission || notificationPermission()}`,
-          `Service worker: ${updated.service_worker_ready || updated.workerReady ? 'klaar' : 'niet klaar'}`,
-          `Push-abonnement: ${(updated.subscription_exists || updated.subscribed) ? 'actief' : 'niet actief'}`,
-          `Backend registratie: ${(updated.subscription_synced || updated.backend?.subscription?.ok) ? 'gelukt' : ((result?.code) || 'niet klaar')}`,
-          `Backend test-queue: ${queuedTest.queued ? 'klaargezet' : (queuedTest.reason || 'niet klaar')}`,
-          `Actieve doelgroep-heartbeat: poging verstuurd`,
-          ...mobilePermissionHelp('notification', updated.permission || notificationPermission())
-        ], [{ label:'Sluiten', alt:true }]);
-        return { granted: !!result?.ok, state:updated, subscription:result, queuedTest };
-      } catch(_) {}
-    }
     if (!notificationSupported()) {
       const rows = [
         `<span class="muted">Deze browser ondersteunt webmeldingen hier niet goed of de site draait niet via https.</span>`,
@@ -436,12 +378,14 @@
       ensureActivePushPresenceHeartbeat();
       showDiagnostics('Meldingen opnieuw gevraagd', [
         `Platform: ${platformName()}`,
+        `App-modus: ${updated.standalone ? 'thuisscherm-app' : 'browser-tab'}`,
+        `Setup-status: ${updated.setupState ? updated.setupState.label : 'onbekend'}`,
         `Browsertoestemming: ${updated.permission}`,
         `Service worker: ${updated.workerReady ? 'klaar' : 'niet klaar'}`,
         `Push-abonnement: ${sub.subscription ? 'actief' : (sub.reason === 'no-vapid-key' ? 'mist publieke VAPID-sleutel in gejast-config.js' : 'niet actief')}`,
         `Backend registratie: ${sub.backendSync && sub.backendSync.synced ? 'gelukt' : ((sub.backendSync && sub.backendSync.reason) || (updated.backendSync && updated.backendSync.reason) || 'niet klaar')}`,
+        `Actieve doelgroep-heartbeat: ${sub.subscription ? 'verstuurd' : 'geen abonnement actief'}`,
         `Backend test-queue: ${queuedTest.queued ? 'klaargezet' : (queuedTest.reason === 'no-subscription' ? 'geen push-abonnement opgeslagen' : (queuedTest.reason || 'niet klaar'))}`,
-        `Actieve doelgroep-heartbeat: poging verstuurd`,
         ...mobilePermissionHelp('notification', updated.permission)
       ], [{ label:'Sluiten', alt:true }]);
       return { granted:true, state:updated, subscription:sub, queuedTest };
@@ -496,7 +440,7 @@
   function setButtonState(ready){ buttonsReadyState = !!ready; document.querySelectorAll('[data-gejast-geo-button]').forEach((btn)=>{ btn.classList.toggle('is-ready',!!ready); btn.classList.toggle('is-bad',!ready); btn.title = ready ? 'Geolocatie actief' : 'Geolocatie opnieuw proberen'; btn.setAttribute('aria-pressed', ready ? 'true' : 'false'); }); }
   ensureActivePushPresenceHeartbeat();
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', ()=>{ startActivePushPresenceHeartbeat(false); }, { once:true }); } else { startActivePushPresenceHeartbeat(false); }
-  window.GEJAST_GEO = { cached, ensure, request, requestGeoAccess, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError, setButtonState, ensureCornerTools, notificationSupported, notificationPermission, registerNotificationWorker, ensurePushSubscription, syncPushSubscriptionToBackend, queueBackendTestPush, getNotificationDiagnostics, refreshNotificationButton, requestNotificationAccess, showNotificationFromServiceWorker, setNotificationButtonState, showDiagnostics, touchActivePushPresence, startActivePushPresenceHeartbeat };
+  window.GEJAST_GEO = { cached, ensure, request, requestGeoAccess, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError, setButtonState, ensureCornerTools, notificationSupported, notificationPermission, registerNotificationWorker, ensurePushSubscription, syncPushSubscriptionToBackend, queueBackendTestPush, getNotificationDiagnostics, refreshNotificationButton, requestNotificationAccess, showNotificationFromServiceWorker, setNotificationButtonState, showDiagnostics, touchActivePushPresence, startActivePushPresenceHeartbeat, notificationSetupState };
   function init(){ if (!shouldExclude()) ensureCornerTools(); setButtonState(!!cached()); refreshNotificationButton().catch(()=>{}); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once:true }); else init();
   window.addEventListener('load', ()=>{ try { ensureCornerTools(); refreshNotificationButton().catch(()=>{}); } catch(_){} });
