@@ -29,4 +29,5 @@
     catch (_) { return 'index.html'; }
   }
   global.GEJAST_SCOPE_CONTEXT = { getPlayerSessionToken, getAdminSessionToken, getScope, pagePath };
+  if (!global.CTX) global.CTX = global.GEJAST_SCOPE_CONTEXT;
 })(window);

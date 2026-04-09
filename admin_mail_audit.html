@@ -7,16 +7,16 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Maildiagnostiek - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v371';</script><script src="./gejast-config.js?v371"></script>
-  <script src="./admin-session-sync.js?v371"></script>
+  <script>window.GEJAST_PAGE_VERSION='v374';</script><script src="./gejast-config.js?v374"></script><script src="./gejast-scope-context.js?v374"></script>
+  <script src="./admin-session-sync.js?v374"></script>
   <style>
     :root { --gold:#9a8241; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#6b655b; --ok:#2b5b37; --warn:#8b3a30; }
     *{box-sizing:border-box} body{margin:0;padding:20px;font-family:Inter,sans-serif;background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed;min-height:100vh}
     .main{max-width:980px;margin:0 auto;background:var(--card);border-radius:26px;padding:28px;box-shadow:0 20px 50px rgba(0,0,0,0.08);position:relative}
     .logo{position:absolute;top:24px;right:24px;width:42px}.top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.row{display:flex;gap:10px;flex-wrap:wrap}.btn{border:none;border-radius:12px;padding:12px 14px;font:inherit;font-weight:800;cursor:pointer;text-decoration:none}.ghost{background:#fff;border:1px solid rgba(0,0,0,0.08);color:#222}.primary{background:var(--gold);color:#111}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}.card{background:#fff;border:1px solid rgba(0,0,0,0.06);border-radius:18px;padding:16px}.muted{color:var(--muted)} code,pre{white-space:pre-wrap;word-break:break-word} .status{min-height:20px;margin:14px 0}.status.ok{color:var(--ok)}.status.warn{color:var(--warn)} table{width:100%;border-collapse:collapse;font-size:14px} th,td{text-align:left;padding:8px;border-bottom:1px solid rgba(0,0,0,0.06)} @media(max-width:800px){.grid{grid-template-columns:1fr}} .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
   </style>
-  <script src="./admin-topnav.js?v371"></script>
-<script src="./gejast-home-gate.js?v373"></script></head>
+  <script src="./admin-topnav.js?v374"></script>
+</head>
 <body>
   <main class="main">
     <a href="./admin.html" aria-label="Terug naar admin-overzicht"><img src="./logo.png" class="logo" alt="logo"></a>
@@ -47,8 +47,8 @@
     document.addEventListener('visibilitychange',()=>{ if(!document.hidden) loadDiagnostics().catch(()=>{}); });
     (async()=>{ if(await ensureGate()) loadDiagnostics().catch((err)=>setStatus(err?.message||'Laden mislukt.','warn')); })();
   </script>
-  <div class="site-credit-watermark" data-version-watermark>v371 · Made by Bruis</div>
-  <script src="./site-analytics.js?v371"></script>
+  <div class="site-credit-watermark" data-version-watermark>v374 · Made by Bruis</div>
+  <script src="./site-analytics.js?v374"></script>
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
