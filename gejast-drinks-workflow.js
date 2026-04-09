@@ -1,4 +1,12 @@
 (function(){
+  const CANONICAL_DRINK_TYPES = [
+    { key:'bier', label:'1 Bak', unit_value:1 },
+    { key:'2bakken', label:'2 Bakken', unit_value:2 },
+    { key:'liter_bier', label:'Liter Bier', unit_value:2.5 },
+    { key:'shot', label:'Shot', unit_value:0.5 },
+    { key:'ice', label:'Ice', unit_value:1 },
+    { key:'wijnfles', label:'Fles Wijn', unit_value:5 }
+  ];
   const CANONICAL_SPEED_TYPES = [
     { key:'bier', label:'1 Bak' },
     { key:'2bakken', label:'2 Bakken' },
@@ -11,6 +19,16 @@
   function headers(){ const c=cfg(); return {'Content-Type':'application/json',apikey:c.SUPABASE_PUBLISHABLE_KEY||'',Authorization:`Bearer ${c.SUPABASE_PUBLISHABLE_KEY||''}`,Accept:'application/json'}; }
   async function parse(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch{ throw new Error(t||`HTTP ${res.status}`);} if(!res.ok) throw new Error(d?.message||d?.error||d?.hint||`HTTP ${res.status}`); return d; }
   async function rpc(name, body){ const c=cfg(); return fetch(`${c.SUPABASE_URL}/rest/v1/rpc/${name}`,{method:'POST',headers:headers(),body:JSON.stringify(body||{})}).then(parse); }
+  function canonicalDrinkTypes(types){
+    const existing = Array.isArray(types) ? types : [];
+    const byKey = new Map(existing.map((s)=>[String(s.key||s.event_type_key||'').trim(), { key:String(s.key||s.event_type_key||'').trim(), label:s.label||s.event_type_label||String(s.key||s.event_type_key||''), unit_value:Number(s.unit_value ?? s.units ?? s.quantity ?? 0) || 0 }]));
+    CANONICAL_DRINK_TYPES.forEach((entry)=>{ if(!byKey.has(entry.key)) byKey.set(entry.key,{ key:entry.key, label:entry.label, unit_value:entry.unit_value }); });
+    return Array.from(byKey.values()).filter((row)=>row && row.key).sort((a,b)=>{
+      const ai = CANONICAL_DRINK_TYPES.findIndex((row)=>row.key===a.key);
+      const bi = CANONICAL_DRINK_TYPES.findIndex((row)=>row.key===b.key);
+      return (ai===-1?999:ai) - (bi===-1?999:bi) || String(a.label||a.key).localeCompare(String(b.label||b.key),'nl');
+    });
+  }
   function canonicalSpeedSets(sets){
     const existing = Array.isArray(sets) ? sets.filter((s)=>String(s.key||s.speed_type_key||'').toLowerCase()!=='shot') : [];
     const byKey = new Map(existing.map((s)=>[String(s.key||s.speed_type_key||''), { key:String(s.key||s.speed_type_key||''), label:s.label||s.speed_type_label||String(s.key||s.speed_type_key||''), rows:Array.isArray(s.rows)?s.rows:[] }]));
@@ -38,7 +56,7 @@
       my_pending_events,
       verified_history,
       speed_page,
-      event_types: Array.isArray(page.event_types) ? page.event_types : [],
+      event_types: canonicalDrinkTypes(Array.isArray(page.event_types) ? page.event_types : []),
       speed_leaderboards: canonicalSpeedSets(speed_page.leaderboards||page.speed_leaderboards||[]),
       recent_verified: Array.isArray(page.recent_verified) ? page.recent_verified : verified_history.slice(0,8),
       recent_rejected: Array.isArray(page.recent_rejected) ? page.recent_rejected : (Array.isArray(page.recent_events) ? page.recent_events.filter((r)=>String(r.status||'').toLowerCase()==='rejected') : [])
@@ -59,7 +77,7 @@
     const page = data?.page || {};
     return {
       page,
-      eventTypes: Array.isArray(data?.event_types) ? data.event_types : [],
+      eventTypes: canonicalDrinkTypes(Array.isArray(data?.event_types) ? data.event_types : []),
       verifyQueue: Array.isArray(data?.verify_queue) ? data.verify_queue : [],
       myPendingEvents: Array.isArray(data?.my_pending_events) ? data.my_pending_events : [],
       recentVerified: Array.isArray(data?.recent_verified) ? data.recent_verified : [],
@@ -69,7 +87,7 @@
   function shapeSpeedView(data){
     return {
       speedPage: data?.speed_page || {},
-      eventTypes: Array.isArray(data?.event_types) ? data.event_types : [],
+      eventTypes: canonicalDrinkTypes(Array.isArray(data?.event_types) ? data.event_types : []),
       speedLeaderboards: canonicalSpeedSets(data?.speed_leaderboards || data?.speed_page?.leaderboards || [])
     };
   }
@@ -84,7 +102,7 @@
       data.verified_history = Array.isArray(data.verified_history) ? data.verified_history : [];
       data.speed_page = data.speed_page || {};
       data.speed_leaderboards = canonicalSpeedSets(data.speed_leaderboards || data.speed_page.leaderboards || []);
-      data.event_types = Array.isArray(data.event_types) ? data.event_types : (Array.isArray(data.page.event_types) ? data.page.event_types : []);
+      data.event_types = canonicalDrinkTypes(Array.isArray(data.event_types) ? data.event_types : (Array.isArray(data.page.event_types) ? data.page.event_types : []));
       data.recent_verified = Array.isArray(data.recent_verified) ? data.recent_verified : (Array.isArray(data.page.recent_verified) ? data.page.recent_verified : data.verified_history.slice(0,8));
       data.recent_rejected = Array.isArray(data.recent_rejected) ? data.recent_rejected : (Array.isArray(data.page.recent_rejected) ? data.page.recent_rejected : []);
       return data;
@@ -146,5 +164,5 @@ async function cancelSpeedAttempt(opts={}){
   async function forPending(opts={}){ return shapePendingView(await load(opts)); }
   async function forAdd(opts={}){ return shapeAddView(await load(opts)); }
   async function forSpeed(opts={}){ return shapeSpeedView(await load(opts)); }
-  window.GEJAST_DRINKS_WORKFLOW = { CANONICAL_SPEED_TYPES, canonicalSpeedSets, load, fallback, token, headers, forPending, forAdd, forSpeed, createDrinkEvent, verifyDrinkEvent, cancelDrinkEvent, createSpeedAttempt, verifySpeedAttempt, cancelSpeedAttempt };
+  window.GEJAST_DRINKS_WORKFLOW = { CANONICAL_DRINK_TYPES, CANONICAL_SPEED_TYPES, canonicalDrinkTypes, canonicalSpeedSets, load, fallback, token, headers, forPending, forAdd, forSpeed, createDrinkEvent, verifyDrinkEvent, cancelDrinkEvent, createSpeedAttempt, verifySpeedAttempt, cancelSpeedAttempt };
 })();

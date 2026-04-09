@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drank toevoegen</title>
-  <script>window.GEJAST_PAGE_VERSION='v369';</script><script src="./gejast-config.js?v369"></script><script src="./gejast-push-runtime.js?v369"></script><script src="./gejast-clickable-cards.js?v369"></script><script src="./gejast-scope-context.js?v369"></script>
+  <script>window.GEJAST_PAGE_VERSION='v370';</script><script src="./gejast-config.js?v370"></script><script src="./gejast-push-runtime.js?v370"></script><script src="./gejast-clickable-cards.js?v370"></script><script src="./gejast-scope-context.js?v370"></script>
   <style>
     :root{
       --line:rgba(0,0,0,.09);
@@ -193,9 +193,9 @@
     </div>
   </div>
 
-  <div class="site-credit-watermark" data-version-watermark>v369 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v370 · Made by Bruis</div>
 
-  <script src="./gejast-geo.js?v369"></script><script src="./drinks-verify-float.js?v369"></script><script src="./gejast-drinks-workflow.js?v369"></script>
+  <script src="./gejast-geo.js?v370"></script><script src="./drinks-verify-float.js?v370"></script><script src="./gejast-drinks-workflow.js?v370"></script>
   <script>
   (function(){
     const cfg=window.GEJAST_CONFIG||{};
@@ -306,7 +306,10 @@
     }
     function renderButtons(types){
       const wrap=document.getElementById('drinkButtons');
-      const rows=[...(types||[])].sort((a,b)=>{ const ai=DRINK_LAYOUT_ORDER.indexOf(a.key); const bi=DRINK_LAYOUT_ORDER.indexOf(b.key); return (ai===-1?999:ai)-(bi===-1?999:bi) || String(drinkCopy(a.key)||a.label||a.key).localeCompare(String(drinkCopy(b.key)||b.label||b.key),'nl'); });
+      const runtimeTypes = window.GEJAST_DRINKS_WORKFLOW && typeof window.GEJAST_DRINKS_WORKFLOW.canonicalDrinkTypes === 'function'
+        ? window.GEJAST_DRINKS_WORKFLOW.canonicalDrinkTypes(types || [])
+        : (types || []);
+      const rows=[...runtimeTypes].sort((a,b)=>{ const ai=DRINK_LAYOUT_ORDER.indexOf(a.key); const bi=DRINK_LAYOUT_ORDER.indexOf(b.key); return (ai===-1?999:ai)-(bi===-1?999:bi) || String(drinkCopy(a.key)||a.label||a.key).localeCompare(String(drinkCopy(b.key)||b.label||b.key),'nl'); });
       wrap.innerHTML=rows.length ? rows.map((t,index)=>`<button class="drink-btn ${(index%2===0)?'gold':'dark'}" data-drink-type="${t.key}"><strong>+ ${drinkCopy(t.key)||t.label||t.key}</strong><small>${Number(t.unit_value||0).toFixed(1)} units per stuk</small></button>`).join('') : '<div class="muted">Geen drinktypes gevonden.</div>';
       wrap.querySelectorAll('[data-drink-type]').forEach(btn=>btn.addEventListener('click',()=>submitDrink(btn.getAttribute('data-drink-type'))));
     }
@@ -386,5 +389,6 @@
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+<script src="./site-analytics.js?v370"></script>
 </body>
 </html>

@@ -44,10 +44,12 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v330';</script><script src="./gejast-config.js?v330"></script>
-  <script src="./admin-session-sync.js?v330"></script>
-  <script src="./admin-topnav.js?v330"></script>
-<script src="./gejast-scope.js?v330"></script></head>
+  <script>window.GEJAST_PAGE_VERSION='v364';</script><script src="./gejast-config.js?v364"></script>
+  <script src="./admin-session-sync.js?v364"></script>
+  <script src="./admin-topnav.js?v364"></script>
+  <script src="./gejast-admin-claims-buckets.js?v364"></script>
+  <script src="./gejast-admin-claims-source.js?v364"></script>
+<script src="./gejast-scope.js?v364"></script></head>
 <body>
   <main class="main-card">
     <a href="./index.html" aria-label="Terug naar home"><img src="./logo.png" class="logo" alt="logo" /></a>
@@ -103,7 +105,7 @@
             <a class="hub-link" href="./boerenbridge_vault.html"><strong>Boerenbridge kluis</strong><small>Adminoverzicht voor Boerenbridge-historie en profielen.</small></a>
             <a class="hub-link" href="./beerpong_vault.html"><strong>Beerpong kluis</strong><small>Admintoegang tot ELO, grafieken en wedstrijdstats.</small></a>
             <a class="hub-link" href="./match_control.html"><strong>Wedstrijden beheren</strong><small>Centraal beheer voor bewerken, verwijderen en rebuilds.</small></a>
-            <a class="hub-link" href="./match_swap.html"><strong>Spelers wisselen</strong><small>Wissel spelers binnen hetzelfde domein en werk ranglijsten daarna bij.</small></a>
+            <a class="hub-link" href="./match_swap.html"><strong>Speler vervangen / matchcorrectie</strong><small>Vervang een verkeerd ingevoerde speler in wedstrijdhistorie en werk ranglijsten daarna bij.</small></a>
             <a class="hub-link" href="./drinks_admin.html"><strong>Drankcontrole</strong><small>Flags, verificaties en moderatie voor drinks en snelheidspogingen.</small></a>
           </div>
         </section>
@@ -209,22 +211,6 @@
       }
       throw lastError || new Error('RPC mislukt');
     }
-    function rowsFromAdminPayload(data, preferredKeys = []) {
-      if (Array.isArray(data)) return data;
-      if (!data || typeof data !== 'object') return [];
-      for (const key of preferredKeys) {
-        if (Array.isArray(data[key])) return data[key];
-      }
-      for (const key of ['rows','items','requests','history','data']) {
-        if (Array.isArray(data[key])) return data[key];
-      }
-      if (data.result && typeof data.result === 'object') {
-        for (const key of preferredKeys.concat(['rows','items','requests','history','data'])) {
-          if (Array.isArray(data.result[key])) return data.result[key];
-        }
-      }
-      return [];
-    }
 
     async function checkSession() {
       const data = window.GEJAST_ADMIN_SESSION ? await window.GEJAST_ADMIN_SESSION.validate() : await (async()=>{ const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); })();
@@ -255,71 +241,33 @@
       );
     }
 
-function parseMaybeDate(value) {
-  if (!value) return 0;
-  const n = Date.parse(String(value));
-  return Number.isFinite(n) ? n : 0;
-}
-function isExpiredByTimestamp(out) {
-  const now = Date.now();
-  const candidates = [out.expires_at, out.activation_expires_at, out.link_expires_at, out.player_activation_expires_at, out.expired_at]
-    .map(parseMaybeDate)
-    .filter(Boolean);
-  return candidates.some((ts) => ts <= now) && !hasActivationEvidence(out);
-}
+const AdminBuckets = window.GEJAST_ADMIN_BUCKETS || {};
+    const deriveAdminBucket = (row)=> (AdminBuckets.deriveBucket ? AdminBuckets.deriveBucket(row) : 'pending');
+    const normalizeAdminRows = (rows)=> (AdminBuckets.normalizeRows ? AdminBuckets.normalizeRows(rows) : (rows||[]));
+    const normalizeExpiredRows = (rows)=> (AdminBuckets.normalizeExpiredRows ? AdminBuckets.normalizeExpiredRows(rows) : (rows||[]));
+    const mergeHistoryWithExpired = (historyRows, expiredRows)=> (AdminBuckets.mergeHistoryWithExpired ? AdminBuckets.mergeHistoryWithExpired(historyRows, expiredRows) : ([...(historyRows||[]), ...(expiredRows||[])]));
 
-    function deriveAdminBucket(out) {
-      const states = [out.state_bucket, out.status, out.request_status]
-        .map((value) => String(value || '').toLowerCase())
-        .filter(Boolean);
-      const decision = String(out.decision || '').toLowerCase();
-      const hasPin = hasActivationEvidence(out);
-      if (states.some((raw) => raw.includes('expired'))) return 'expired';
-      if (isExpiredByTimestamp(out)) return 'expired';
-      if (states.some((raw) => raw.includes('returned_to_claimable') || raw.includes('claimable_again') || raw.includes('claimable'))) return 'rejected';
-      if (states.some((raw) => raw.includes('revok') || raw.includes('reject') || raw.includes('denied'))) return 'rejected';
-      if (states.some((raw) => raw.includes('active') || raw.includes('activated'))) return 'active';
-      if (states.some((raw) => raw.includes('approved') || raw.includes('await') || raw.includes('pending_activation') || raw.includes('pending activation') || raw.includes('awaiting_activation') || raw.includes('awaiting activation') || raw.includes('waiting'))) return hasPin ? 'active' : 'awaiting';
-      if (decision === 'rejected' || decision === 'revoked') return 'rejected';
-      if (hasPin) return 'active';
-      return 'pending';
-    }
-    function normalizeAdminRows(rows) {
-      return (rows || []).map((row) => {
-        const out = row && typeof row === 'object' ? { ...row } : { value: row };
-        const decision = String(out.decision || '').toLowerCase();
-        const hasPin = hasActivationEvidence(out);
-        const state_bucket = deriveAdminBucket({ ...out, decision, hasPin });
-        return { ...out, decision, hasPin, state_bucket };
-      });
-    }
-
-    function normalizeExpiredRows(rows) {
-      return (rows || []).map((row) => normalizeAdminRows([row])[0]);
-    }
-    function isLikelyExpired(row){ try { const bucket = deriveAdminBucket(row); if (bucket !== 'awaiting') return false; const exp = row?.expires_at ? new Date(row.expires_at) : null; if (exp && !isNaN(exp) && exp.getTime() < Date.now()) return true; const approvedAt = new Date(row?.approved_at || row?.decision_at || row?.updated_at || row?.requested_at || row?.created_at || ''); if (!isNaN(approvedAt)) return (Date.now() - approvedAt.getTime()) > (24*60*60*1000); } catch(_){} return false; }
-    function mergeHistoryWithExpired(historyRows, expiredRows) {
-      const byId = new Map();
-      [...(historyRows || []), ...(expiredRows || [])].forEach((row) => {
-        const key = row?.request_id || row?.id || `${row?.display_name||''}|${row?.requester_email||''}|${row?.created_at||''}`;
-        if (!key) return;
-        const existing = byId.get(key) || {};
-        byId.set(key, { ...existing, ...row });
-      });
-      return Array.from(byId.values()).map((row)=> isLikelyExpired(row) ? { ...row, state_bucket:'expired', request_status:'activation_expired', status:'activation_expired' } : row);
-    }
-
-    async function loadCounts() {
-      const tokenPayload = { admin_session_token: getAdminSessionToken() };
-      const [requestsRes, historyRes, expiredRes] = await Promise.all([
-        callFirstRpc(['admin_get_claim_requests','admin_list_claim_requests_action'], tokenPayload),
-        callFirstRpc(['admin_get_claim_history','admin_list_claim_history_action'], tokenPayload),
-        callFirstRpc(['admin_get_expired_activation_queue','admin_list_expired_activation_queue_action'], tokenPayload).catch(() => ({ items: [] }))
-      ]);
-      const requests = normalizeAdminRows(rowsFromAdminPayload(requestsRes, ['requests','items']));
-      const history = normalizeAdminRows(rowsFromAdminPayload(historyRes, ['history','items']));
-      const expiredItems = rowsFromAdminPayload(expiredRes, ['items','rows']);
-      const expiredItemsNormalized = normalizeExpiredRows(expiredItems);
+    async function loadCounts(force = false) {
+      const source = window.GEJAST_ADMIN_CLAIMS_SOURCE;
+      const tokenValue = getAdminSessionToken();
+      const bundle = source && typeof source.load === 'function'
+        ? await source.load(tokenValue, { force })
+        : await (async()=>{
+            const tokenPayload = { admin_session_token: tokenValue };
+            const [requestsRes, historyRes, expiredRes] = await Promise.all([
+              callFirstRpc(['admin_get_claim_requests','admin_list_claim_requests_action'], tokenPayload),
+              callFirstRpc(['admin_get_claim_history','admin_list_claim_history_action'], tokenPayload),
+              callFirstRpc(['admin_get_expired_activation_queue','admin_list_expired_activation_queue_action'], tokenPayload).catch(() => ({ items: [] }))
+            ]);
+            return {
+              requests: requestsRes.requests || requestsRes.items || [],
+              history: historyRes.history || historyRes.items || [],
+              expiredQueue: Array.isArray(expiredRes?.items) ? expiredRes.items : []
+            };
+          })();
+      const requests = normalizeAdminRows(bundle.requests || []);
+      const history = normalizeAdminRows(bundle.history || []);
+      const expiredItemsNormalized = normalizeExpiredRows(bundle.expiredQueue || []);
       const mergedHistory = mergeHistoryWithExpired(history, expiredItemsNormalized);
       const awaitingItems = mergedHistory.filter((item) => item.state_bucket === 'awaiting');
       const active = mergedHistory.filter((item) => item.state_bucket === 'active').length;
@@ -391,7 +339,7 @@ function isExpiredByTimestamp(out) {
   </script>
 
   <div class="site-credit-watermark" data-version-watermark></div>
-  <script src="./site-analytics.js"></script>
+  <script src="./site-analytics.js?v370"></script>
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>

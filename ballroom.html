@@ -7,8 +7,8 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Balzaal</title>
-  <script>window.GEJAST_PAGE_VERSION='v368';</script>
-  <script src="./gejast-config.js?v368"></script>
+  <script>window.GEJAST_PAGE_VERSION='v370';</script>
+  <script src="./gejast-config.js?v370"></script>
   <style>
     :root{
       --gold:#b78e43; --gold-deep:#89642a; --wine:#88162a; --wine-deep:#5c0c18; --cream:#f6efe3; --ink:#181310; --muted:#706557;
@@ -327,6 +327,10 @@
     function render(state){ latest = state || {}; renderThrone(latest); renderMembers(latest); renderSuccession(latest); renderQueue(latest); renderIntro(latest); }
     async function callBallroomState(){
       const tries = [
+        () => rpc('get_ballroom_state_safe', { session_token: token() || null, session_token_input: token() || null }),
+        () => rpc('get_ballroom_state_safe', { session_token_input: token() || null }),
+        () => rpc('get_ballroom_public_state_safe', { session_token: token() || null, session_token_input: token() || null }),
+        () => rpc('get_ballroom_public_state_safe', { session_token_input: token() || null }),
         () => rpc('get_ballroom_state', { session_token: token() || null }),
         () => rpc('get_ballroom_state', { session_token_input: token() || null }),
         () => rpc('get_ballroom_state', {}),
@@ -358,6 +362,7 @@
     setInterval(load, 20000);
   })();
   </script>
-  <script src="./gejast-player-session-ui.js?v368"></script><script src="./gejast-geo.js?v368"></script><script src="./drinks-verify-float.js?v368"></script>
+  <script src="./gejast-player-session-ui.js?v370"></script><script src="./gejast-geo.js?v370"></script><script src="./drinks-verify-float.js?v370"></script>
+  <script src="./site-analytics.js?v370"></script>
 </body>
 </html>
