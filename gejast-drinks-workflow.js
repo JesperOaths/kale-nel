@@ -120,6 +120,7 @@ async function createDrinkEvent(opts={}){
   const lng = opts.lng ?? null;
   const accuracy = opts.accuracy ?? null;
   return rpcFirst([
+    ['create_drink_event_v382', { session_token, event_type_key, quantity, lat, lng, accuracy }],
     ['create_drink_event', { session_token, event_type_key, quantity, lat, lng, accuracy }],
     ['create_drink_event', { session_token, speed_type_key: event_type_key, quantity, lat, lng, accuracy }],
     ['create_drink_event', { session_token_input: session_token, event_type_key_input: event_type_key, quantity_input: quantity, lat_input: lat, lng_input: lng, accuracy_input: accuracy }],
@@ -149,6 +150,7 @@ async function createSpeedAttempt(opts={}){
   const lng = opts.lng ?? null;
   const accuracy = opts.accuracy ?? null;
   return rpcFirst([
+    ['create_drink_speed_attempt_v382', { session_token, client_attempt_id, event_type_key, quantity, duration_seconds, lat, lng, accuracy }],
     ['create_combined_drink_speed_attempt', { session_token, client_attempt_id, event_type_key, quantity, duration_seconds, lat, lng, accuracy }],
     ['create_combined_drink_speed_attempt', { session_token, event_type_key, quantity, duration_seconds, lat, lng, accuracy }],
     ['create_combined_drink_speed_attempt', { session_token, client_attempt_id, speed_type_key: event_type_key, quantity, duration_seconds, lat, lng, accuracy }],
