@@ -7,8 +7,8 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Snelheid</title>
-  <script>window.GEJAST_PAGE_VERSION='v379';</script>
-  <script src="./gejast-config.js?v379"></script><script src="./gejast-home-gate.js?v379"></script><script src="./gejast-push-runtime.js?v379"></script><script src="./gejast-clickable-cards.js?v379"></script><script src="./gejast-scope-context.js?v379"></script>
+  <script>window.GEJAST_PAGE_VERSION='v380';</script>
+  <script src="./gejast-config.js?v380"></script><script src="./gejast-home-gate.js?v380"></script><script src="./gejast-push-runtime.js?v380"></script><script src="./gejast-clickable-cards.js?v380"></script><script src="./gejast-scope-context.js?v380"></script>
   <style>
     :root{
       --line:rgba(0,0,0,.09);
@@ -143,8 +143,8 @@
       </div>
     </div>
   </div>
-  <div class="site-credit-watermark" data-version-watermark>v379 · Made by Bruis</div>
-  <script src="./gejast-geo.js?v379"></script><script src="./drinks-verify-float.js?v379"></script><script src="./gejast-drinks-workflow.js?v379"></script>
+  <div class="site-credit-watermark" data-version-watermark>v380 · Made by Bruis</div>
+  <script src="./gejast-geo.js?v380"></script><script src="./drinks-verify-float.js?v380"></script><script src="./gejast-drinks-workflow.js?v380"></script>
   <script>
   if(window.GEJAST_CONFIG && !window.GEJAST_CONFIG.requireMatchEntrySession('drinks_speed')){}
   (function(){
@@ -182,7 +182,7 @@
     function setFormStatus(msg='',tone=''){ const el=document.getElementById('speedFormStatus'); el.textContent=msg; el.className=`status ${tone}`.trim(); }
     function humanizeError(err){
       const msg=String(err?.message||err||'Onbekende fout');
-      if(/record "new" has no field/i.test(msg)) return 'Snelheidspoging botst nog met oude backend-triggers.';
+      if(/record "new" has no field/i.test(msg)) return 'Snelheidspoging mist nog verplichte backend type/id-velden of oude trigger-fix.';
       if(/could not choose the best candidate function/i.test(msg)) return 'Snelheidspoging botst nog met dubbele backend-functies.';
       if(/getPlayerSessionToken/i.test(msg) && /CTX is undefined/i.test(msg)) return 'De sessiehelper ontbrak tijdelijk.';
       return msg;
@@ -247,6 +247,6 @@
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./site-analytics.js?v379"></script>
+<script src="./site-analytics.js?v380"></script>
 </body>
 </html>
