@@ -35,11 +35,45 @@
     try { window.GEJAST_GEO && window.GEJAST_GEO.setButtonState && window.GEJAST_GEO.setButtonState(!!ready); } catch(_){}
   }
 
-  function shouldPromptNotifications(){ return false; }
+  function shouldPromptNotifications(){
+    const runtime = window.GEJAST_PUSH_RUNTIME;
+    const readiness = runtime && runtime.__lastDiagnostics && runtime.__lastDiagnostics.readiness;
+    if (readiness) return !String(readiness).startsWith('ready_');
+    return !!(window.GEJAST_GEO && window.GEJAST_GEO.notificationPermission && window.GEJAST_GEO.notificationPermission() !== 'granted');
+  }
 
-  function ensureNotificationPrompt(){ return null; }
+  function ensureNotificationPrompt(){
+    const box = ensureBox();
+    let chip = document.getElementById('gdfEnableNotificationsBtn');
+    if (!chip){
+      chip = document.createElement('button');
+      chip.type = 'button';
+      chip.id = 'gdfEnableNotificationsBtn';
+      chip.className = 'gdf-btn alt';
+      chip.textContent = 'Meldingen aanzetten';
+      chip.addEventListener('click', ()=>{ void maybeAskNotificationPermission(); });
+      const actions = box.querySelector('.gdf-actions');
+      if (actions) actions.insertBefore(chip, actions.firstChild);
+    }
+    chip.style.display = shouldPromptNotifications() ? '' : 'none';
+    return chip;
+  }
 
-  async function maybeAskNotificationPermission(){ return null; }
+  async function maybeAskNotificationPermission(){
+    const runtime = window.GEJAST_PUSH_RUNTIME;
+    if (runtime && runtime.requestPermissionAndSync){
+      try {
+        const result = await runtime.requestPermissionAndSync({ interactive:true, scope: runtime.inferScope ? runtime.inferScope() : undefined });
+        runtime.__lastDiagnostics = result || runtime.__lastDiagnostics || {};
+        ensureNotificationPrompt();
+        return result;
+      } catch(err){
+        return { ok:false, reason:(err && err.message) || 'notification-sync-failed' };
+      }
+    }
+    if (window.GEJAST_GEO && window.GEJAST_GEO.requestNotificationAccess) return window.GEJAST_GEO.requestNotificationAccess();
+    return { ok:false, reason:'runtime-missing' };
+  }
 
   async function notifyIfNeeded(item){
     if (!item || document.visibilityState !== 'hidden') return;
@@ -302,7 +336,7 @@
   function init(){
     ensureGeoButton();
     setGeoButtonState(!!(window.GEJAST_GEO && window.GEJAST_GEO.cached()));
-    // native notification permission is now driven by the explicit bell button
+    if (shouldPromptNotifications()) ensureNotificationPrompt();
     try { window.GEJAST_GEO && window.GEJAST_GEO.startMonitor && window.GEJAST_GEO.startMonitor({ intervalMs: HIDDEN_POLL_MS }); } catch(_){}
     window.addEventListener('gejast:geo-update', (ev)=>{ setGeoButtonState(!!(ev && ev.detail)); });
     window.addEventListener('gejast:geo-error', ()=>{ if (!(window.GEJAST_GEO && window.GEJAST_GEO.cached())) setGeoButtonState(false); });

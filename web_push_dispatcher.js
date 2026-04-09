@@ -13,106 +13,89 @@ if (!url || !key || !vapidPublic || !vapidPrivate) {
 }
 webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate);
 const supabase = createClient(url, key, { auth: { persistSession: false } });
-const workerId = process.env.WEB_PUSH_WORKER_ID || 'dispatcher-v362';
 
-function rpcErrorMessage(error) {
-  return String((error && (error.message || error.details || error.hint)) || error || 'unknown error');
-}
-
-function shouldDisableSubscription(error) {
-  const code = Number(error && (error.statusCode || error.status || error.code));
-  const message = String(error && (error.body || error.message || error) || '').toLowerCase();
-  return code === 404 || code === 410 || message.includes('410') || message.includes('404') || message.includes('expired') || message.includes('no longer valid');
-}
-
-async function claimCoreJobs(){
-  const claimToken = crypto.randomUUID();
-  const { data, error } = await supabase.rpc('claim_web_push_jobs_v2', {
-    max_jobs: 25,
-    worker_id_input: workerId,
-    claim_token_input: claimToken
-  });
-  if (!error) {
-    const items = Array.isArray(data?.items) ? data.items : [];
-    return items.map((item)=>Object.assign({ __source: 'core', __claim_token: data?.claim_token || claimToken }, item));
-  }
-  const fallback = await supabase.rpc('claim_web_push_jobs', { max_jobs: 25 });
-  if (fallback.error) throw fallback.error;
-  const items = Array.isArray(fallback.data?.items) ? fallback.data.items : [];
-  return items.map((item)=>Object.assign({ __source: 'core' }, item));
-}
-
-async function claimAdminJobs(){
-  const { data, error } = await supabase.rpc('claim_admin_web_push_jobs', { max_jobs: 25 });
-  if (error) throw error;
-  const items = Array.isArray(data?.items) ? data.items : [];
-  return items.map((item)=>Object.assign({ __source: 'admin' }, item));
-}
-
-async function markSent(item){
-  if (item.__source === 'core' && item.__claim_token) {
-    const { error } = await supabase.rpc('mark_web_push_job_sent_v2', {
-      job_id_input: item.job_id,
-      claim_token_input: item.__claim_token,
-      worker_id_input: workerId,
-      provider_message_id_input: null
-    });
-    if (!error) return;
-  }
-  if (item.__source === 'admin') {
-    const { error } = await supabase.rpc('mark_admin_web_push_job_sent', { job_id_input: item.job_id });
-    if (error) throw error;
-    return;
-  }
-  const { error } = await supabase.rpc('mark_web_push_job_sent', { job_id_input: item.job_id });
-  if (error) throw error;
-}
-
-async function markFailed(item, errorText){
-  if (item.__source === 'core' && item.__claim_token) {
-    const { error } = await supabase.rpc('mark_web_push_job_failed_v2', {
-      job_id_input: item.job_id,
-      claim_token_input: item.__claim_token,
-      worker_id_input: workerId,
-      error_stage_input: 'send',
-      error_code_input: shouldDisableSubscription(errorText) ? 'subscription_invalid' : 'send_failed',
-      error_text_input: String(errorText || ''),
-      disable_subscription_input: shouldDisableSubscription(errorText)
-    });
-    if (!error) return;
-  }
-  if (item.__source === 'admin') {
-    const { error } = await supabase.rpc('mark_admin_web_push_job_failed', { job_id_input: item.job_id, error_input: errorText });
-    if (error) throw error;
-    return;
-  }
-  const { error } = await supabase.rpc('mark_web_push_job_failed', { job_id_input: item.job_id, error_input: errorText });
-  if (error) throw error;
-}
-
-async function run(){
-  try {
-    await supabase.rpc('requeue_stale_web_push_claims_v2', { max_age_minutes: 30 });
-  } catch (_) {}
-  const items = [...await claimCoreJobs(), ...await claimAdminJobs()];
-  for (const item of items){
+async function rpcFirst(names, args){
+  let lastErr = null;
+  for (const name of names){
     try {
-      await webpush.sendNotification({
-        endpoint: item.endpoint,
-        keys: { p256dh: item.p256dh_key, auth: item.auth_key }
-      }, JSON.stringify({
+      const { data, error } = await supabase.rpc(name, args || {});
+      if (error) throw error;
+      return data;
+    } catch (err) { lastErr = err; }
+  }
+  if (lastErr) throw lastErr;
+  throw new Error('RPC unavailable');
+}
+async function requeueStaleClaims(){ try { await rpcFirst(['requeue_stale_web_push_claims_v3'], { stale_minutes_input: 5 }); } catch (_) {} }
+async function claimCoreJobs(){ const data = await rpcFirst(['claim_web_push_jobs_v3','claim_web_push_jobs'], { max_jobs: 25 }); const items = Array.isArray(data?.items) ? data.items : []; return items.map((item)=>Object.assign({ __source:'core' }, item)); }
+async function claimAdminJobs(){ try { const data = await rpcFirst(['claim_admin_web_push_jobs'], { max_jobs: 25 }); const items = Array.isArray(data?.items) ? data.items : []; return items.map((item)=>Object.assign({ __source:'admin' }, item)); } catch (_) { return []; } }
+async function markSent(item){ if (item.__source === 'admin') return rpcFirst(['mark_admin_web_push_job_sent'], { job_id_input: item.job_id }); return rpcFirst(['mark_web_push_job_sent_v3','mark_web_push_job_sent'], { job_id_input: item.job_id }); }
+async function markFailed(item, errorText){ if (item.__source === 'admin') return rpcFirst(['mark_admin_web_push_job_failed'], { job_id_input: item.job_id, error_input: errorText }); return rpcFirst(['mark_web_push_job_failed_v3','mark_web_push_job_failed'], { job_id_input: item.job_id, error_input: errorText }); }
+async function ensureActionTokens(item){
+  if (!item || item.__source === 'admin') return item;
+  if (item.verifyActionToken || item.rejectActionToken) return item;
+  if (!item.requestKind || !item.requestId) return item;
+  try {
+    const minted = await rpcFirst(['mint_web_push_action_tokens_v3'], {
+      request_kind_input: item.requestKind,
+      request_id_input: Number(item.requestId),
+      target_player_id_input: item.target_player_id || null,
+      trace_id_input: item.traceId || null,
+      scope_input: item.site_scope || null,
+      job_id_input: item.job_id || null,
+      session_token_input: item.session_token || null,
+      expires_in_seconds_input: 900
+    });
+    return Object.assign({}, item, {
+      verifyActionToken: minted?.verify_action_token || null,
+      rejectActionToken: minted?.reject_action_token || null,
+      expiresAt: minted?.expires_at || null
+    });
+  } catch (_) { return item; }
+}
+async function run(){
+  await requeueStaleClaims();
+  const claimedCore = await claimCoreJobs();
+  const claimedAdmin = await claimAdminJobs();
+  const items = [...claimedCore, ...claimedAdmin];
+  if (!items.length) {
+    console.log('no-web-push-jobs', JSON.stringify({ core: claimedCore.length, admin: claimedAdmin.length, at: new Date().toISOString() }));
+    return;
+  }
+  let sentCount = 0;
+  let failedCount = 0;
+  for (let item of items){
+    try {
+      item = await ensureActionTokens(item);
+      const wantsActions = !!(item.verifyActionToken || item.rejectActionToken);
+      const payload = {
         title: item.title,
         body: item.body,
         url: item.target_url || './drinks_pending.html',
-        tag: `job-${item.job_id}`
-      }));
+        tag: item.tag || `job-${item.job_id}`,
+        traceId: item.traceId || item.trace_id || null,
+        jobId: item.job_id,
+        kind: item.kind || item.requestKind || 'push',
+        requestKind: item.requestKind || item.request_kind || null,
+        requestId: item.requestId || item.request_id || null,
+        requireInteraction: !!wantsActions,
+        verifyActionToken: item.verifyActionToken || null,
+        rejectActionToken: item.rejectActionToken || null,
+        expiresAt: item.expiresAt || null,
+        actions: wantsActions ? [{ action:'open', title:'Openen' },{ action:'verify', title:'Bevestigen' },{ action:'reject', title:'Afkeuren' }] : [{ action:'open', title:'Openen' }]
+      };
+      if (!payload.title || !payload.body || !item.endpoint) throw new Error('payload_invalid');
+      await webpush.sendNotification({ endpoint: item.endpoint, keys: { p256dh: item.p256dh_key, auth: item.auth_key } }, JSON.stringify(payload));
       await markSent(item);
-      console.log('sent', item.__source, item.job_id);
+      sentCount += 1;
+      console.log('sent', item.__source, item.job_id, payload.requestKind || payload.kind || 'generic');
     } catch (err) {
-      const reason = rpcErrorMessage(err);
+      const reason = String((err && (err.body || err.message)) || err);
       try { await markFailed(item, reason); } catch (markErr) { console.error('mark-failed-error', item.job_id, markErr && markErr.message || markErr); }
+      failedCount += 1;
       console.error('failed', item.__source, item.job_id, reason);
     }
   }
+  console.log('web-push-run-complete', JSON.stringify({ total: items.length, sent: sentCount, failed: failedCount, at: new Date().toISOString() }));
 }
 run().catch((err)=>{ console.error(err); process.exit(1); });

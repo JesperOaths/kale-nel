@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Naam claimen</title>
-  <script>window.GEJAST_PAGE_VERSION='v361';</script>
+  <script>window.GEJAST_PAGE_VERSION='v369';</script>
   <style>
     :root { --gold: #9a8241; --black: #111; --bg: #f0ede4; }
     * { box-sizing: border-box; }
@@ -34,7 +34,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/request.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v361"></script><script src="./gejast-public-page-gate.js?v361"></script><script src="./gejast-player-session-ui.js?v361"></script>
+  <script src="./gejast-config.js?v369"></script>
 </head>
 <body>
   <div class="scene">
@@ -50,7 +50,7 @@
     <select id="requestNameSelect"></select>
     <label>E-mailadres</label>
     <input id="requestEmailInput" name="email" type="email" placeholder="jouw@email.com" autocomplete="email" autocapitalize="none" spellcheck="false">
-    <label>Notitie</label>
+    <label>Notitie (optioneel)</label>
     <textarea id="requestNoteInput" placeholder="Waarom wil je meedoen?" autocomplete="off"></textarea>
     <div class="btn-row">
       <a href="./index.html" class="ghost-link">Terug</a>
@@ -196,7 +196,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         headers: rpcHeaders(),
         body: JSON.stringify({
           desired_name: desiredName,
-          requester_note: requesterNote || null,
+          requester_note: requesterNote || "",
           requester_email: requesterEmail,
           requester_meta: collectVisitorMeta()
         })
@@ -263,7 +263,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     load();
   </script>
 
-  <div class="site-credit-watermark" data-version-watermark>v361 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v364 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
@@ -274,22 +274,65 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
   .player-session-corner-btn:hover{opacity:.92}
   @media (max-width:640px){.player-session-corner{top:10px;right:10px;padding:7px 9px;min-width:100px}.player-session-corner-name{max-width:120px}}
 </style>
-<script src="./site-analytics.js"></script>
-
-
+<div id="playerSessionCorner" class="player-session-corner" aria-live="polite">
+  <div class="player-session-corner-label">Ingelogd als</div>
+  <div id="playerSessionCornerName" class="player-session-corner-name"></div>
+  <button id="playerSessionCornerLogout" type="button" class="player-session-corner-btn">Log out</button>
+</div>
 <script>
 (function(){
-  const gate = window.GEJAST_PUBLIC_PAGE_GATE;
-  const params = new URLSearchParams(location.search);
-  const scope = params.get('scope') === 'family' ? 'family' : 'friends';
-  if (window.GEJAST_PLAYER_SESSION_UI && window.GEJAST_PLAYER_SESSION_UI.init) {
-    window.GEJAST_PLAYER_SESSION_UI.init({ scope, profileHref: scope === 'family' ? './my_profile.html?scope=family' : './my_profile.html' });
+  const CONFIG = window.GEJAST_CONFIG || {};
+  const SUPABASE_URL = CONFIG.SUPABASE_URL || '';
+  const SUPABASE_KEY = CONFIG.SUPABASE_PUBLISHABLE_KEY || '';
+  const SESSION_KEYS = ['jas_session_token_v11','jas_session_token_v10'];
+  const box = document.getElementById('playerSessionCorner');
+  const nameEl = document.getElementById('playerSessionCornerName');
+  const btn = document.getElementById('playerSessionCornerLogout');
+  if (!box || !nameEl || !btn) return;
+  function getToken(){
+    for (const key of SESSION_KEYS){
+      const value = localStorage.getItem(key) || sessionStorage.getItem(key);
+      if (value) return value;
+    }
+    return '';
   }
-  if (gate && typeof gate.bootPublicEntryPage === 'function') {
-    gate.bootPublicEntryPage({ scope, returnTo: params.get('return_to') || '', redirectIfLoggedIn: false });
+  function clearTokens(){
+    for (const key of SESSION_KEYS){
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    }
   }
+  function rpcHeaders(){
+    return { 'Content-Type':'application/json', apikey: SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}` };
+  }
+  async function fetchMyName(token){
+    if (!token || !SUPABASE_URL || !SUPABASE_KEY) return '';
+    const payload = JSON.stringify({ session_token: token });
+    for (const rpc of ['get_public_state','get_gejast_homepage_state','get_jas_app_state']){
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpc}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: payload });
+        const data = await res.json().catch(()=>null);
+        if (!res.ok) continue;
+        const name = data?.my_name || data?.display_name || data?.player_name || '';
+        if (name) return name;
+      } catch {}
+    }
+    return '';
+  }
+  function show(name){ nameEl.textContent = name; box.classList.add('is-visible'); }
+  function hide(){ box.classList.remove('is-visible'); nameEl.textContent = ''; }
+  btn.addEventListener('click', function(){ clearTokens(); hide(); window.location.reload(); });
+  document.addEventListener('DOMContentLoaded', async function(){
+    const token = getToken();
+    if (!token) return hide();
+    const name = await fetchMyName(token);
+    if (name) show(name); else hide();
+  });
 })();
 </script>
+
+  <script src="./site-analytics.js"></script>
+
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>

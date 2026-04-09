@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v368',
+    VERSION:'v369',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -14,6 +14,13 @@
     WEB_PUSH_PUBLIC_KEY: 'BPqY04jDOB_8RlhNxURgWFl6cMge64Mr7DkrWtgMfG4ARWLJ6S-r6c6JeQJ6o4kysWT0WeR9oVpahP85L8GLl_4',
     NOTIFICATION_BUTTON_ENABLED: true,
     WEB_PUSH_TEST_RPC: 'queue_test_web_push',
+    WEB_PUSH_REGISTER_RPC_V3: 'register_web_push_subscription_v3',
+    ACTIVE_PUSH_TOUCH_RPC_V3: 'touch_active_web_push_presence_v3',
+    WEB_PUSH_SELF_DIAGNOSTICS_RPC_V3: 'get_web_push_self_diagnostics_v3',
+    WEB_PUSH_QUEUE_NEARBY_RPC_V3: 'queue_nearby_verification_pushes_v3',
+    WEB_PUSH_CONSUME_ACTION_RPC_V3: 'consume_web_push_action_v3',
+    ADMIN_ACTIVE_PUSH_RPC_V3: 'admin_queue_active_web_push_v3',
+    ADMIN_PUSH_DIAGNOSTICS_RPC_V3: 'admin_get_web_push_diagnostics_v3',
   };
 
   function detectScriptVersion(){

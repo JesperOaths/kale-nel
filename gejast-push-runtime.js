@@ -1,275 +1,48 @@
-(function (root, factory) {
-  const api = factory(root);
-  if (typeof module !== 'undefined' && module.exports) module.exports = api;
-  root.GEJAST_PUSH_RUNTIME = api;
-})(typeof window !== 'undefined' ? window : globalThis, function (root) {
-  const SESSION_KEYS = ['jas_session_token_v11', 'jas_session_token_v10'];
-
-  function cfg() {
-    const config = root.GEJAST_CONFIG || {};
-    if (!config.SUPABASE_URL || !config.SUPABASE_PUBLISHABLE_KEY) {
-      throw new Error('GEJAST_CONFIG ontbreekt of mist Supabase-config.');
-    }
-    return config;
-  }
-
-  function sessionToken() {
-    if (root.GEJAST_CONFIG && typeof root.GEJAST_CONFIG.getPlayerSessionToken === 'function') {
-      return root.GEJAST_CONFIG.getPlayerSessionToken() || '';
-    }
-    for (const key of SESSION_KEYS) {
-      const value = root.localStorage.getItem(key) || root.sessionStorage.getItem(key);
-      if (value) return value;
-    }
+(function(){
+  if (window.GEJAST_PUSH_RUNTIME) return;
+  const cfg = window.GEJAST_CONFIG || {};
+  const SUPABASE_URL = cfg.SUPABASE_URL || '';
+  const KEY = cfg.SUPABASE_PUBLISHABLE_KEY || '';
+  const VAPID = String(cfg.WEB_PUSH_PUBLIC_KEY || '').trim();
+  const PLAYER_KEYS = Array.isArray(cfg.PLAYER_SESSION_KEYS) && cfg.PLAYER_SESSION_KEYS.length ? cfg.PLAYER_SESSION_KEYS : ['jas_session_token_v11','jas_session_token_v10'];
+  const RPC = {
+    registerV3: cfg.WEB_PUSH_REGISTER_RPC_V3 || 'register_web_push_subscription_v3',
+    register: cfg.WEB_PUSH_REGISTER_RPC || 'register_web_push_subscription',
+    touchV3: cfg.ACTIVE_PUSH_TOUCH_RPC_V3 || 'touch_active_web_push_presence_v3',
+    touch: cfg.ACTIVE_PUSH_TOUCH_RPC || 'touch_active_web_push_presence',
+    selfDiagV3: cfg.WEB_PUSH_SELF_DIAGNOSTICS_RPC_V3 || 'get_web_push_self_diagnostics_v3',
+    queueNearbyV3: cfg.WEB_PUSH_QUEUE_NEARBY_RPC_V3 || 'queue_nearby_verification_pushes_v3',
+    consumeV3: cfg.WEB_PUSH_CONSUME_ACTION_RPC_V3 || 'consume_web_push_action_v3',
+    testQueue: cfg.WEB_PUSH_TEST_RPC || 'queue_test_web_push'
+  };
+  function getToken(){
+    if (cfg.getPlayerSessionToken) return String(cfg.getPlayerSessionToken() || '').trim();
+    for (const key of PLAYER_KEYS){ const value = localStorage.getItem(key) || sessionStorage.getItem(key); if (value) return String(value).trim(); }
     return '';
   }
-
-  function isIOS() {
-    const ua = navigator.userAgent || '';
-    return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  }
-
-  function isAndroid() {
-    return /Android/i.test(navigator.userAgent || '');
-  }
-
-  function isStandalone() {
-    try {
-      return !!((root.matchMedia && root.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true);
-    } catch (_) {
-      return false;
-    }
-  }
-
-  function installationMode() {
-    if (isIOS()) return isStandalone() ? 'ios_home_screen' : 'ios_browser';
-    if (isAndroid()) return isStandalone() ? 'android_pwa' : 'android_browser';
-    return isStandalone() ? 'standalone' : 'browser';
-  }
-
-  function platformLabel() {
-    if (isIOS()) return 'iPhone/iPad';
-    if (isAndroid()) return 'Android';
-    return 'Browser';
-  }
-
-  function notificationsSupported() {
-    return !!(root.isSecureContext && 'Notification' in root && 'serviceWorker' in navigator && 'PushManager' in root);
-  }
-
-  function permission() {
-    try {
-      return notificationsSupported() ? Notification.permission : 'unsupported';
-    } catch (_) {
-      return 'unsupported';
-    }
-  }
-
-  function rpcHeaders() {
-    const c = cfg();
-    return {
-      apikey: c.SUPABASE_PUBLISHABLE_KEY,
-      Authorization: `Bearer ${c.SUPABASE_PUBLISHABLE_KEY}`,
-      'Content-Type': 'application/json',
-      Accept: 'application/json'
-    };
-  }
-
-  async function parseJson(response) {
-    const text = await response.text();
-    let data = null;
-    try {
-      data = text ? JSON.parse(text) : null;
-    } catch (_) {
-      throw new Error(text || `HTTP ${response.status}`);
-    }
-    if (!response.ok) throw new Error(data?.message || data?.error || text || `HTTP ${response.status}`);
-    return data;
-  }
-
-  async function rpc(name, payload) {
-    const c = cfg();
-    const res = await fetch(`${c.SUPABASE_URL}/rest/v1/rpc/${name}`, {
-      method: 'POST',
-      mode: 'cors',
-      cache: 'no-store',
-      headers: rpcHeaders(),
-      body: JSON.stringify(payload || {})
-    });
-    return parseJson(res);
-  }
-
-  function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const raw = atob(base64);
-    const out = new Uint8Array(raw.length);
-    for (let i = 0; i < raw.length; i += 1) out[i] = raw.charCodeAt(i);
-    return out;
-  }
-
-  async function registerWorker() {
-    if (!notificationsSupported()) return null;
-    const c = cfg();
-    const reg = await navigator.serviceWorker.register(`./gejast-sw.js?${encodeURIComponent(root.GEJAST_PAGE_VERSION || c.VERSION || 'v352')}`, { scope: './' });
-    return navigator.serviceWorker.ready.catch(() => reg);
-  }
-
-  async function getSubscription() {
-    const reg = await registerWorker();
-    if (!reg || !reg.pushManager) return null;
-    return reg.pushManager.getSubscription();
-  }
-
-  async function ensureSubscription() {
-    const c = cfg();
-    const key = String(c.WEB_PUSH_PUBLIC_KEY || '').trim();
-    if (!key) return { ok: false, code: 'MISSING_VAPID_PUBLIC_KEY', subscription: null };
-    const reg = await registerWorker();
-    if (!reg || !reg.pushManager) return { ok: false, code: 'WORKER_UNAVAILABLE', subscription: null };
-    let sub = await reg.pushManager.getSubscription();
-    if (!sub) {
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(key)
-      });
-    }
-    return { ok: true, code: 'SUBSCRIBED', subscription: sub };
-  }
-
-  function subscriptionSnapshot(subscription) {
-    if (!subscription) return null;
-    const json = subscription.toJSON ? subscription.toJSON() : subscription;
-    const endpoint = json?.endpoint || subscription.endpoint || '';
-    return {
-      endpoint,
-      p256dh: json?.keys?.p256dh || '',
-      auth: json?.keys?.auth || ''
-    };
-  }
-
-  async function syncSubscriptionAndPresence(options) {
-    const opts = Object.assign({ forceTouch: true, pagePath: root.location.pathname + root.location.search + root.location.hash, lat: null, lng: null, accuracy: null }, options || {});
-    const token = sessionToken();
-    if (!token) return { ok: false, code: 'MISSING_SESSION' };
-    const subResult = await ensureSubscription();
-    if (!subResult.ok || !subResult.subscription) return subResult;
-    const snap = subscriptionSnapshot(subResult.subscription);
-    const payload = {
-      session_token: token,
-      endpoint_input: snap.endpoint,
-      p256dh_input: snap.p256dh,
-      auth_input: snap.auth,
-      page_path_input: opts.pagePath,
-      permission_input: permission(),
-      standalone_input: isStandalone(),
-      site_scope_input: (root.GEJAST_SCOPE_UTILS && root.GEJAST_SCOPE_UTILS.getScope && root.GEJAST_SCOPE_UTILS.getScope()) || 'friends',
-      platform_input: platformLabel(),
-      installation_mode_input: installationMode(),
-      lat_input: opts.lat == null ? null : Number(opts.lat),
-      lng_input: opts.lng == null ? null : Number(opts.lng),
-      accuracy_input: opts.accuracy == null ? null : Number(opts.accuracy)
-    };
-    const syncResult = await rpc('register_web_push_subscription_v2', payload);
-    const presenceResult = await rpc('touch_active_web_push_presence_v2', payload);
-    return {
-      ok: !!(syncResult?.ok && presenceResult?.ok),
-      code: syncResult?.ok && presenceResult?.ok ? 'SYNCED' : 'SYNC_FAILED',
-      subscription: snap,
-      syncResult,
-      presenceResult
-    };
-  }
-
-  function computeUserFacingState(diag) {
-    if (!diag.secure_context) return 'insecure_context';
-    if (!diag.notifications_supported) return 'unsupported';
-    if (diag.platform_family === 'ios' && !diag.installed) return 'ios_not_installed';
-    if (diag.permission_state !== 'granted') return 'permission_required';
-    if (!diag.service_worker_ready) return 'worker_missing';
-    if (!diag.subscription_exists) return 'subscription_missing';
-    if (!diag.subscription_synced) return 'backend_sync_missing';
-    if (!diag.presence_ok) return 'presence_missing';
-    return 'ready';
-  }
-
-  async function getDiagnostics() {
-    const token = sessionToken();
-    let serviceWorkerReady = false;
-    let subscription = null;
-    try {
-      const reg = notificationsSupported() ? await registerWorker() : null;
-      serviceWorkerReady = !!reg;
-      subscription = reg && reg.pushManager ? await reg.pushManager.getSubscription() : null;
-    } catch (_) {}
-
-    let backend = null;
-    if (token) {
-      try {
-        backend = await rpc('get_web_push_self_diagnostics_v2', {
-          session_token: token,
-          page_path_input: root.location.pathname + root.location.search + root.location.hash,
-          site_scope_input: (root.GEJAST_SCOPE_UTILS && root.GEJAST_SCOPE_UTILS.getScope && root.GEJAST_SCOPE_UTILS.getScope()) || 'friends'
-        });
-      } catch (error) {
-        backend = { ok: false, error: String(error && error.message || error) };
-      }
-    }
-
-    const diag = {
-      platform_family: isIOS() ? 'ios' : (isAndroid() ? 'android' : 'browser'),
-      platform_label: platformLabel(),
-      installed: isStandalone(),
-      installation_mode: installationMode(),
-      secure_context: !!root.isSecureContext,
-      notifications_supported: notificationsSupported(),
-      permission_state: permission(),
-      service_worker_ready: serviceWorkerReady,
-      subscription_exists: !!subscription,
-      subscription_endpoint: subscriptionSnapshot(subscription)?.endpoint || '',
-      subscription_synced: !!backend?.subscription?.ok,
-      presence_ok: !!backend?.presence?.ok,
-      backend: backend || null
-    };
-    diag.user_facing_state = computeUserFacingState(diag);
-    return diag;
-  }
-
-  async function requestPermissionAndSync() {
-    if (!notificationsSupported()) return { ok: false, code: 'UNSUPPORTED' };
-    await registerWorker();
-    const perm = await Notification.requestPermission();
-    if (perm !== 'granted') {
-      return { ok: false, code: perm === 'denied' ? 'PERMISSION_DENIED' : 'PERMISSION_DISMISSED' };
-    }
-    return syncSubscriptionAndPresence({});
-  }
-
-  async function queueSelfTest() {
-    const token = sessionToken();
-    if (!token) return { ok: false, code: 'MISSING_SESSION' };
-    return rpc('queue_test_web_push_v2', {
-      session_token: token,
-      site_scope_input: (root.GEJAST_SCOPE_UTILS && root.GEJAST_SCOPE_UTILS.getScope && root.GEJAST_SCOPE_UTILS.getScope()) || 'friends'
-    });
-  }
-
-  return {
-    isIOS,
-    isAndroid,
-    isStandalone,
-    installationMode,
-    platformLabel,
-    notificationsSupported,
-    permission,
-    registerWorker,
-    getSubscription,
-    ensureSubscription,
-    subscriptionSnapshot,
-    syncSubscriptionAndPresence,
-    getDiagnostics,
-    requestPermissionAndSync,
-    queueSelfTest,
-    computeUserFacingState
-  };
-});
+  function headers(){ return { 'Content-Type':'application/json', apikey:KEY, Authorization:`Bearer ${KEY}`, Accept:'application/json' }; }
+  async function parse(res){ const txt = await res.text(); let data = null; try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`); return data; }
+  async function rpcFirst(names, body){ let lastErr = null; for (const name of names){ try { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers:headers(), body:JSON.stringify(body || {}) }); const raw = await parse(res); return raw?.[name] || raw; } catch (err) { lastErr = err; } } if (lastErr) throw lastErr; throw new Error('RPC niet beschikbaar.'); }
+  function platformName(){ const ua = navigator.userAgent || ''; if (/iphone|ipad|ipod/i.test(ua)) return 'ios'; if (/android/i.test(ua)) return 'android'; return 'desktop'; }
+  function isIOS(){ return platformName() === 'ios'; }
+  function isStandalone(){ return !!((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true); }
+  function notificationSupported(){ return !!(window.isSecureContext && 'Notification' in window && 'serviceWorker' in navigator); }
+  function notificationPermission(){ return 'Notification' in window ? Notification.permission : 'unsupported'; }
+  function notificationActionsSupported(){ try { return Number(Notification.maxActions || 0) > 0; } catch (_) { return platformName() === 'android'; } }
+  function directActionSupported(){ return notificationActionsSupported() && (!isIOS() || isStandalone()); }
+  function inferScope(){ try { const qs = new URLSearchParams(location.search || ''); return (cfg.normalizeScope ? cfg.normalizeScope(qs.get('scope')) : ((qs.get('scope') || '').toLowerCase() === 'family' ? 'family' : 'friends')); } catch (_) { return 'friends'; } }
+  function pagePath(){ return `${window.location.pathname || ''}${window.location.search || ''}${window.location.hash || ''}`; }
+  function urlBase64ToUint8Array(base64String){ const padding = '='.repeat((4 - base64String.length % 4) % 4); const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/'); const raw = atob(base64); const out = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i); return out; }
+  async function registerWorker(){ if (!notificationSupported()) return null; const version = (cfg.VERSION || window.GEJAST_PAGE_VERSION || 'v369'); return navigator.serviceWorker.register(`./gejast-sw.js?${version}`, { scope:'./' }); }
+  async function getSubscription(){ const reg = await registerWorker(); if (!reg || !reg.pushManager) return null; return reg.pushManager.getSubscription(); }
+  async function ensureSubscription(){ const reg = await registerWorker(); if (!reg || !reg.pushManager || !VAPID) return null; let sub = await reg.pushManager.getSubscription(); if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlBase64ToUint8Array(VAPID) }); return sub; }
+  async function syncSubscription(subscription, options={}){ const token = getToken(); if (!token || !subscription) return { synced:false, reason:'missing-context' }; const json = subscription.toJSON ? subscription.toJSON() : subscription; const payload = { session_token_input: token, session_token: token, endpoint_input: json.endpoint || subscription.endpoint || '', p256dh_input: json.keys?.p256dh || '', auth_input: json.keys?.auth || '', user_agent_input: navigator.userAgent || '', permission_input: notificationPermission(), site_scope_input: options.scope || inferScope(), page_path_input: options.pagePath || pagePath() }; try { const result = await rpcFirst([RPC.registerV3, RPC.register], payload); return { synced:true, payload:result }; } catch (err) { return { synced:false, reason:(err && err.message) || 'register-failed' }; } }
+  async function touchPresence(input=null){ const token = getToken(); if (!token) return { touched:false, reason:'missing-session' }; let sub = input; let options = {}; if (input && !input.endpoint && !input.toJSON && (input.subscription || input.force || input.pagePath || input.scope)) { options = input; sub = input.subscription || null; } try { if (!sub) sub = await getSubscription(); const json = sub && (sub.toJSON ? sub.toJSON() : sub); const payload = { session_token_input: token, session_token: token, endpoint_input: json?.endpoint || sub?.endpoint || null, p256dh_input: json?.keys?.p256dh || null, auth_input: json?.keys?.auth || null, page_path_input: options.pagePath || pagePath(), permission_input: notificationPermission(), standalone_input: isStandalone(), site_scope_input: options.scope || inferScope() }; const result = await rpcFirst([RPC.touchV3, RPC.touch], payload); return { touched:true, payload:result }; } catch (err) { return { touched:false, reason:(err && err.message) || 'touch-failed' }; } }
+  async function queueTest(){ const token = getToken(); if (!token) return { queued:false, reason:'missing-session' }; try { const result = await rpcFirst([RPC.testQueue], { session_token: token, session_token_input: token }); return { queued:true, payload:result }; } catch (err) { return { queued:false, reason:(err && err.message) || 'queue-failed' }; } }
+  function computeReadiness(diag){ if (!notificationSupported()) return { key:'unsupported', label:'niet ondersteund' }; if (!window.isSecureContext) return { key:'insecure_context', label:'geen veilige context' }; if (isIOS() && !isStandalone()) return { key:'ios_not_installed', label:'iPhone niet als app geopend' }; if (notificationPermission() !== 'granted') return { key:'permission_required', label:'toestemming ontbreekt' }; if (!diag.workerReady) return { key:'worker_missing', label:'service worker ontbreekt' }; if (!diag.subscription) return { key:'subscription_missing', label:'abonnement ontbreekt' }; if (!(diag.backendSync && diag.backendSync.synced)) return { key:'backend_sync_missing', label:'backend-sync ontbreekt' }; if (!(diag.presenceTouch && diag.presenceTouch.touched)) return { key:'presence_missing', label:'presence ontbreekt' }; return { key:directActionSupported() ? 'ready_actionable' : 'ready_passive', label:directActionSupported() ? 'actionable' : 'passief klaar' }; }
+  async function getSelfDiagnostics(options={}){ let workerReady = false; let subscription = null; try { const reg = await registerWorker(); workerReady = !!reg; if (reg && reg.pushManager) subscription = await reg.pushManager.getSubscription(); } catch (_) {} const local = { platform: platformName(), standalone: isStandalone(), actionsSupported: notificationActionsSupported(), directActionSupported: directActionSupported(), permission: notificationPermission(), workerReady, subscription: !!subscription }; let backend = null; const token = getToken(); if (token) { try { backend = await rpcFirst([RPC.selfDiagV3], { session_token_input: token, page_path_input: options.pagePath || pagePath(), site_scope_input: options.scope || inferScope() }); } catch (_) {} } const backendSync = subscription ? await syncSubscription(subscription, options) : { synced:false, reason:'no-subscription' }; const presenceTouch = subscription ? await touchPresence({ subscription, pagePath: options.pagePath, scope: options.scope }) : { touched:false, reason:'no-subscription' }; const backendTest = options.queueTest ? await queueTest() : null; const diag = Object.assign({}, local, { backend, backendSync, presenceTouch, backendTest }); diag.readiness = computeReadiness(diag); window.GEJAST_PUSH_RUNTIME.__lastDiagnostics = diag; return diag; }
+  async function requestPermissionAndSync(options={}){ if (!notificationSupported()) return { granted:false, reason:'unsupported', diagnostics: await getSelfDiagnostics(options) }; try { await registerWorker(); } catch (_) {} let permission = notificationPermission(); if (permission !== 'granted') { try { permission = await Notification.requestPermission(); } catch (_) {} } if (permission !== 'granted') return { granted:false, reason:permission, diagnostics: await getSelfDiagnostics(options) }; const subscription = await ensureSubscription(); const backendSync = subscription ? await syncSubscription(subscription, options) : { synced:false, reason:'subscription-failed' }; const presenceTouch = subscription ? await touchPresence({ subscription, pagePath: options.pagePath, scope: options.scope }) : { touched:false, reason:'subscription-failed' }; const diagnostics = await getSelfDiagnostics(options); const result = { granted:true, subscription, backendSync, presenceTouch, diagnostics, readiness: diagnostics && diagnostics.readiness && diagnostics.readiness.key || '' }; window.GEJAST_PUSH_RUNTIME.__lastDiagnostics = result; return result; }
+  async function consumeActionToken(actionToken){ if (!actionToken) return { ok:false, reason:'missing-token' }; try { const result = await rpcFirst([RPC.consumeV3], { action_token_input: actionToken }); return Object.assign({ ok:true }, result || {}); } catch (err) { return { ok:false, reason:(err && err.message) || 'consume-failed' }; } }
+  async function queueNearbyVerificationPushes(payload){ try { return await rpcFirst([RPC.queueNearbyV3], payload || {}); } catch (err) { return { ok:false, reason:(err && err.message) || 'queue-nearby-failed' }; } }
+  window.GEJAST_PUSH_RUNTIME = { notificationSupported, notificationPermission, notificationActionsSupported, directActionSupported, isStandalone, isIOS, platformName, registerWorker, getSubscription, ensureSubscription, syncSubscription, touchPresence, queueTest, getSelfDiagnostics, requestPermissionAndSync, consumeActionToken, queueNearbyVerificationPushes, inferScope, pagePath };
+})();

@@ -192,9 +192,14 @@
   }
   async function touchActivePushPresence(profile){
     try {
+      const runtime = window.GEJAST_PUSH_RUNTIME;
       const cfg = window.GEJAST_CONFIG || {};
       const token = getStorageValue(PLAYER_SESSION_KEYS, [sessionStorage, localStorage]);
       if (!token || !(profile && profile.is_logged_in) || Notification.permission !== 'granted') return;
+      if (runtime && typeof runtime.touchPresence === 'function') {
+        await runtime.touchPresence({ force:true, pagePath:path, scope:(profile && profile.site_scope) || undefined }).catch(()=>{});
+        return;
+      }
       const sub = await getExistingPushSubscription();
       if (!sub) return;
       const json = sub.toJSON ? sub.toJSON() : sub;

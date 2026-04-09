@@ -116,9 +116,11 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v330';</script><script src="./gejast-config.js?v330"></script>
-  <script src="./admin-session-sync.js?v330"></script>
-  <script src="./admin-topnav.js?v330"></script>
+  <script>window.GEJAST_PAGE_VERSION='v369';</script><script src="./gejast-config.js?v369"></script>
+  <script src="./admin-session-sync.js?v369"></script>
+  <script src="./admin-topnav.js?v369"></script>
+  <script src="./gejast-admin-claims-buckets.js?v364"></script>
+  <script src="./gejast-admin-claims-source.js?v364"></script>
 </head>
 <body>
   <div class="main-card">
@@ -291,7 +293,22 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
 
 
     function displayNameOf(req) {
-      return req?.display_name || req?.requester_meta?.display_name || req?.requester_meta?.name || `Aanvraag #${req?.id ?? '?'}`;
+      const candidates = [
+        req?.display_name,
+        req?.public_display_name,
+        req?.chosen_username,
+        req?.desired_name,
+        req?.player_name,
+        req?.reserved_display_name,
+        req?.reserved_name,
+        req?.requester_name,
+        req?.name,
+        req?.requester_meta?.display_name,
+        req?.requester_meta?.player_name,
+        req?.requester_meta?.name,
+        req?.requester_email ? String(req.requester_email).split('@')[0] : ''
+      ].map((value) => String(value || '').trim()).filter(Boolean);
+      return candidates[0] || `Aanvraag #${req?.id ?? '?'}`;
     }
 
     function parseMaybeJson(value) {
@@ -316,6 +333,9 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         row = row.row && typeof row.row === 'object' ? { ...row.row, ...row } : row;
         row = row.item && typeof row.item === 'object' ? { ...row.item, ...row } : row;
       }
+      if (row && typeof row === 'object' && !row.display_name) {
+        row = { ...row, display_name: row.public_display_name || row.chosen_username || row.desired_name || row.player_name || row.reserved_display_name || row.reserved_name || row.requester_name || row.name || '' };
+      }
       if (!row || typeof row !== 'object') return { id: extractIdLike(row), requester_meta: {} };
       const out = { ...row };
       out.requester_meta = parseMaybeJson(out.requester_meta) || {};
@@ -333,51 +353,8 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return out;
     }
 
-    function parseMaybeDate(value) {
-      if (!value) return 0;
-      const ts = Date.parse(String(value));
-      return Number.isFinite(ts) ? ts : 0;
-    }
-
-    function isExpiredByTimestamp(req) {
-      const nowTs = Date.now();
-      const candidates = [req?.expires_at, req?.activation_expires_at, req?.link_expires_at, req?.player_activation_expires_at, req?.expired_at]
-        .map(parseMaybeDate)
-        .filter(Boolean);
-      return candidates.some((ts) => ts <= nowTs) && !hasPin(req);
-    }
-
-    function deriveAdminBucket(req) {
-      const states = [req?.state_bucket, req?.status, req?.request_status]
-        .map((value) => String(value || '').toLowerCase())
-        .filter(Boolean);
-      const decision = String(req?.decision || '').toLowerCase();
-      if (states.some((raw) => raw.includes('expired'))) return 'expired';
-      if (isExpiredByTimestamp(req)) return 'expired';
-      if (states.some((raw) => raw.includes('returned_to_claimable') || raw.includes('claimable_again') || raw.includes('claimable'))) return 'rejected';
-      if (states.some((raw) => raw.includes('revok') || raw.includes('reject') || raw.includes('denied'))) return 'rejected';
-      if (states.some((raw) => raw.includes('active') || raw.includes('activated'))) return 'active';
-      if (
-        states.some((raw) =>
-          raw.includes('approved') ||
-          raw.includes('await') ||
-          raw.includes('pending_activation') ||
-          raw.includes('pending activation') ||
-          raw.includes('awaiting_activation') ||
-          raw.includes('awaiting activation') ||
-          raw.includes('waiting')
-        )
-      ) return hasPin(req) ? 'active' : 'awaiting';
-      if (decision === 'rejected' || decision === 'revoked') return 'rejected';
-      if (hasPin(req)) return 'active';
-      return 'pending';
-    }
-
     function normalizeAdminRows(rows) {
-      return (rows || []).map(normalizeAdminRow).filter((row) => row && row.id !== null).map((row) => ({
-        ...row,
-        state_bucket: deriveAdminBucket(row)
-      }));
+      return (rows || []).map(normalizeAdminRow).filter((row) => row && row.id !== null);
     }
 
     function requestIdOf(item) {
@@ -406,9 +383,10 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         (String(req.state_bucket || '').toLowerCase() === 'active')
       );
     }
-    function stateBucket(req) {
-      return deriveAdminBucket(req || {});
-    }
+    const AdminBuckets = window.GEJAST_ADMIN_BUCKETS || {};
+    const stateBucket = (req)=> (AdminBuckets.deriveBucket ? AdminBuckets.deriveBucket(req) : 'pending');
+    const normalizeExpiredRows = (rows)=> (AdminBuckets.normalizeExpiredRows ? AdminBuckets.normalizeExpiredRows(rows) : (rows||[]));
+    const mergeHistoryWithExpired = (historyRows, expiredRows)=> (AdminBuckets.mergeHistoryWithExpired ? AdminBuckets.mergeHistoryWithExpired(historyRows, expiredRows) : ([...(historyRows||[]), ...(expiredRows||[])]));
     function statusMeta(req, includeDecision = false) {
       const bucket = stateBucket(req);
       if (bucket === 'active' || hasPin(req)) return { cls: 'state-activated', label: 'Actief' };
@@ -964,64 +942,27 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       }
       throw lastError || new Error('RPC mislukt');
     }
-    function rowsFromAdminPayload(data, preferredKeys = []) {
-      if (Array.isArray(data)) return data;
-      if (!data || typeof data !== 'object') return [];
-      for (const key of preferredKeys) {
-        if (Array.isArray(data[key])) return data[key];
-      }
-      for (const key of ['rows','items','requests','history','data']) {
-        if (Array.isArray(data[key])) return data[key];
-      }
-      if (data.result && typeof data.result === 'object') {
-        for (const key of preferredKeys.concat(['rows','items','requests','history','data'])) {
-          if (Array.isArray(data.result[key])) return data.result[key];
-        }
-      }
-      return [];
-    }
 
     async function checkSession() {
       const data = window.GEJAST_ADMIN_SESSION ? await window.GEJAST_ADMIN_SESSION.validate() : await (async()=>{ const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); })();
       if (data.admin_session_token) setAdminSessionToken(data.admin_session_token);
       return data;
     }
-    async function getRequests() { const data = await callFirstRpc(['admin_get_claim_requests','admin_list_claim_requests_action'], { admin_session_token: getAdminSessionToken() }); return rowsFromAdminPayload(data, ['requests','items']); }
-    async function getHistory() { const data = await callFirstRpc(['admin_get_claim_history','admin_list_claim_history_action'], { admin_session_token: getAdminSessionToken() }); return rowsFromAdminPayload(data, ['history','items']); }
-    async function getExpiredQueue() { const data = await callFirstRpc(['admin_get_expired_activation_queue','admin_list_expired_activation_queue_action'], { admin_session_token: getAdminSessionToken() }).catch(() => ({ items: [] })); return rowsFromAdminPayload(data, ['items','rows']); }
-    function normalizeExpiredRows(rows) {
-      return normalizeAdminRows(rows).map((row) => ({
-        ...row,
-        state_bucket: 'expired',
-        request_status: row.request_status || row.status || 'activation_expired',
-        status: row.status || row.request_status || 'activation_expired'
-      }));
+    async function getClaimsBundle(force = false) {
+      const source = window.GEJAST_ADMIN_CLAIMS_SOURCE;
+      if (source && typeof source.load === 'function') return source.load(getAdminSessionToken(), { force });
+      const requestsRaw = await callFirstRpc(['admin_get_claim_requests','admin_list_claim_requests_action'], { admin_session_token: getAdminSessionToken() });
+      const historyRaw = await callFirstRpc(['admin_get_claim_history','admin_list_claim_history_action'], { admin_session_token: getAdminSessionToken() });
+      const expiredRaw = await callFirstRpc(['admin_get_expired_activation_queue','admin_list_expired_activation_queue_action'], { admin_session_token: getAdminSessionToken() }).catch(() => ({ items: [] }));
+      return {
+        requests: Array.isArray(requestsRaw) ? requestsRaw : (requestsRaw?.requests || requestsRaw?.items || []),
+        history: Array.isArray(historyRaw) ? historyRaw : (historyRaw?.history || historyRaw?.items || []),
+        expiredQueue: Array.isArray(expiredRaw) ? expiredRaw : (expiredRaw?.items || [])
+      };
     }
-    function isLikelyExpired(row){ try { const bucket = stateBucket(row); if (bucket !== 'awaiting') return false; const exp = row?.expires_at ? new Date(row.expires_at) : null; if (exp && !isNaN(exp) && exp.getTime() < Date.now()) return true; const approvedAt = new Date(row?.approved_at || row?.decision_at || row?.updated_at || row?.requested_at || row?.created_at || ''); if (!isNaN(approvedAt)) return (Date.now() - approvedAt.getTime()) > (24*60*60*1000); } catch(_){} return false; }
-    function mergeHistoryWithExpired(historyRows, expiredRows) {
-      const byId = new Map();
-      (historyRows || []).forEach((row) => {
-        const key = requestIdOf(row);
-        if (key !== null && key !== undefined) byId.set(String(key), row);
-      });
-      (expiredRows || []).forEach((row) => {
-        const key = requestIdOf(row);
-        if (key === null || key === undefined) return;
-        const existing = byId.get(String(key)) || {};
-        byId.set(String(key), { ...existing, ...row, state_bucket: 'expired', request_status: row.request_status || existing.request_status || 'activation_expired', status: row.status || existing.status || 'activation_expired' });
-      });
-      return Array.from(byId.values()).map((row)=> isLikelyExpired(row) ? { ...row, state_bucket:'expired', request_status:'activation_expired', status:'activation_expired' } : row);
-    }
-    async function decideRequest(requestId, decision, decisionReason) { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_decide_claim_request_action`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision, decision_reason_input: decisionReason }) }); return await parseResponse(res); }
-    async function approveAndSendActivation(requestId, decisionReason) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_approve_and_send_activation_action`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: decisionReason || null, base_url: getActivationBaseUrl() })
-      });
-      const data = await parseResponse(res);
-      try { await updateActivationEmailSubject(requestId); } catch {}
-      return data;
-    }
+    async function getRequests() { return (await getClaimsBundle()).requests || []; }
+    async function getHistory() { return (await getClaimsBundle()).history || []; }
+    async function getExpiredQueue() { return (await getClaimsBundle()).expiredQueue || []; }
     async function requeueExpiredActivation(requestId) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_requeue_expired_activation_action`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
@@ -1215,9 +1156,9 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
 
     async function refreshAdminLists() {
       const [requests, history, expired] = await Promise.all([getRequests(), getHistory(), getExpiredQueue()]);
-      lastRequests = normalizeAdminRows(rowsFromAdminPayload(requests, ['requests','items']));
-      const normalizedHistory = normalizeAdminRows(rowsFromAdminPayload(history, ['history','items']));
-      lastExpired = normalizeExpiredRows(rowsFromAdminPayload(expired, ['items','rows']));
+      lastRequests = normalizeAdminRows(Array.isArray(requests) ? requests : (requests?.items || []));
+      const normalizedHistory = normalizeAdminRows(Array.isArray(history) ? history : (history?.items || []));
+      lastExpired = normalizeExpiredRows(Array.isArray(expired) ? expired : (expired?.items || []));
       lastHistory = mergeHistoryWithExpired(normalizedHistory, lastExpired);
       renderStats(lastRequests, lastHistory);
       switchAdminView(currentAdminView);

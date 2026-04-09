@@ -154,7 +154,7 @@
   async function registerNotificationWorker(){
     if (!notificationSupported()) return null;
     try {
-      const reg = await navigator.serviceWorker.register(`./gejast-sw.js?${encodeURIComponent(window.GEJAST_PAGE_VERSION || 'v333')}`, { scope:'./' });
+      const reg = await navigator.serviceWorker.register(`./gejast-sw.js?${encodeURIComponent((window.GEJAST_CONFIG && window.GEJAST_CONFIG.VERSION) || window.GEJAST_PAGE_VERSION || 'v369')}`, { scope:'./' });
       return await navigator.serviceWorker.ready.catch(()=>reg);
     } catch(_) { return null; }
   }
@@ -169,6 +169,14 @@
 
 
   async function touchActivePushPresence(subscription=null, force=false){
+    const runtime = window.GEJAST_PUSH_RUNTIME;
+    if (runtime && typeof runtime.touchPresence === 'function') {
+      try {
+        return await runtime.touchPresence({ subscription, force, scope: runtime.inferScope ? runtime.inferScope() : undefined });
+      } catch(err) {
+        return { touched:false, reason:(err && err.message) || 'touch-failed' };
+      }
+    }
     const cfg = window.GEJAST_CONFIG || {};
     const token = playerToken();
     if (!token || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY) return { touched:false, reason:'missing-context' };
@@ -194,7 +202,7 @@
         })
       });
       await parseJson(res);
-      try { localStorage.setItem(ACTIVE_PUSH_TOUCH_KEY, String(now)); } catch(_){}
+      try { localStorage.setItem(ACTIVE_PUSH_TOUCH_KEY, String(now)); } catch(_ ){}
       return { touched:true };
     } catch(err) {
       return { touched:false, reason:(err && err.message) || 'touch-failed' };
@@ -250,6 +258,17 @@
   }
 
   async function syncPushSubscriptionToBackend(subscription, extras={}){
+    const runtime = window.GEJAST_PUSH_RUNTIME;
+    if (runtime && typeof runtime.syncSubscription === 'function') {
+      try {
+        return await runtime.syncSubscription(subscription, {
+          scope:(extras && extras.scope) || (runtime.inferScope && runtime.inferScope()) || undefined,
+          pagePath:`${window.location.pathname || ''}${window.location.search || ''}${window.location.hash || ''}`
+        });
+      } catch(err) {
+        return { synced:false, reason:(err && err.message) || 'sync-failed' };
+      }
+    }
     const cfg = window.GEJAST_CONFIG || {};
     const token = playerToken();
     if (!subscription || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY || !token) return { synced:false, reason:'missing-context' };
@@ -310,6 +329,15 @@
         }
       }
     } catch(err) { pushReason = (err && err.message) || ''; }
+    const runtime = window.GEJAST_PUSH_RUNTIME;
+    if (runtime && runtime.getSelfDiagnostics) {
+      try {
+        const state = await runtime.getSelfDiagnostics({ queueTest:true, touchPresence:true });
+        notifyStateCache = state;
+        announce('gejast:notification-state', state);
+        return state;
+      } catch(_){}
+    }
     const backendSync = (supported && permission==='granted' && subscribed) ? await (async()=>{ try{ const reg=await registerNotificationWorker(); const sub=reg&&reg.pushManager?await reg.pushManager.getSubscription():null; return sub ? await syncPushSubscriptionToBackend(sub) : {synced:false, reason:'no-subscription'}; }catch(err){ return {synced:false, reason:(err&&err.message)||'backend-sync-failed'}; } })() : {synced:false, reason:'not-ready'};
     const backendTest = (supported && permission==='granted' && subscribed) ? await queueBackendTestPush().catch((err)=>({queued:false, reason:(err&&err.message)||'queue-failed'})) : {queued:false, reason:'not-ready'};
     const presenceTouch = (supported && permission==='granted' && subscribed) ? await touchActivePushPresence(null, true).catch((err)=>({touched:false, reason:(err&&err.message)||'touch-failed'})) : {touched:false, reason:'not-ready'};
@@ -443,6 +471,7 @@
   function setButtonState(ready){ buttonsReadyState = !!ready; document.querySelectorAll('[data-gejast-geo-button]').forEach((btn)=>{ btn.classList.toggle('is-ready',!!ready); btn.classList.toggle('is-bad',!ready); btn.title = ready ? 'Geolocatie actief' : 'Geolocatie opnieuw proberen'; btn.setAttribute('aria-pressed', ready ? 'true' : 'false'); }); }
   ensureActivePushPresenceHeartbeat();
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', ()=>{ startActivePushPresenceHeartbeat(false); }, { once:true }); } else { startActivePushPresenceHeartbeat(false); }
+  if (navigator.serviceWorker && navigator.serviceWorker.addEventListener) { navigator.serviceWorker.addEventListener('message', (event)=>{ const type = event && event.data && event.data.type; if (type === 'gejast-pushsubscriptionchange') { requestNotificationAccess({ quiet:true }).catch(()=>{}); } }); }
   window.GEJAST_GEO = { cached, ensure, request, requestGeoAccess, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError, setButtonState, ensureCornerTools, notificationSupported, notificationPermission, registerNotificationWorker, ensurePushSubscription, syncPushSubscriptionToBackend, queueBackendTestPush, getNotificationDiagnostics, refreshNotificationButton, requestNotificationAccess, showNotificationFromServiceWorker, setNotificationButtonState, showDiagnostics, touchActivePushPresence, startActivePushPresenceHeartbeat, notificationSetupState };
   function init(){ if (!shouldExclude()) ensureCornerTools(); setButtonState(!!cached()); refreshNotificationButton().catch(()=>{}); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once:true }); else init();

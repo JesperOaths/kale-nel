@@ -6,10 +6,10 @@
   <meta http-equiv="Pragma" content="no-cache" />
 <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Drankverificatie</title><script>window.GEJAST_PAGE_VERSION='v365';</script>
-  <script src="./gejast-config.js?v365"></script><script src="./gejast-clickable-cards.js?v365"></script><script src="./gejast-scope-context.js?v365"></script>
-  <script src="./gejast-geo.js?v365"></script>
-  <script src="./gejast-drinks-workflow.js?v365"></script>
+  <title>Drankverificatie</title><script>window.GEJAST_PAGE_VERSION='v369';</script>
+  <script src="./gejast-config.js?v369"></script><script src="./gejast-push-runtime.js?v369"></script><script src="./gejast-clickable-cards.js?v369"></script><script src="./gejast-scope-context.js?v369"></script>
+  <script src="./gejast-geo.js?v369"></script>
+  <script src="./gejast-drinks-workflow.js?v369"></script>
   <style>
     :root{--bg:#ece7dc;--card:#f8f2e7;--line:#d7c7a7;--ink:#1d1a17;--muted:#736758;--gold:#b79b56;--good:#dfead7;--bad:#f1dfd7}
     *{box-sizing:border-box} body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,231,220,.94),rgba(236,231,220,.97)),url('./site-bg-mobile.webp') center/cover no-repeat fixed;color:var(--ink)}
@@ -19,6 +19,7 @@
     .status{min-height:20px;color:var(--muted);font-weight:700}
     @media (max-width:860px){.grid{grid-template-columns:1fr}}
   </style>
+<script>(function(){if(window.GEJAST_SCOPE_CONTEXT) return; window.GEJAST_SCOPE_CONTEXT={getPlayerSessionToken:function(){return (window.GEJAST_CONFIG&&window.GEJAST_CONFIG.getPlayerSessionToken&&window.GEJAST_CONFIG.getPlayerSessionToken())||'';},getScope:function(){return (window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope&&window.GEJAST_SCOPE_UTILS.getScope())||'friends';},pagePath:function(){return (location.pathname||'').split('/').pop()||'index.html';}};})();</script>
 </head>
 <body>
   <div class="wrap">
@@ -26,7 +27,7 @@
       <div><h1 style="margin:0">Drankverificatie</h1><div class="muted">Bekijk alle user requests. Je kunt alleen stemmen op aanvragen die dicht genoeg bij jou in de buurt zijn.</div></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><a class="btn alt" href="./drinks_add.html">Drank toevoegen</a><a class="btn" href="./drinks.html">Drankoverzicht</a><a href="./index.html" aria-label="Home via logo" style="display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:999px;background:rgba(255,255,255,.9);border:1px solid var(--line)"><img src="./logo.png" alt="Logo" style="width:34px;height:34px;object-fit:contain"></a></div>
     </div>
-    <div id="status" class="status"></div>
+    <div id="status" class="status"></div><div id="landingStatus" class="status"></div>
     <div class="grid">
       <section class="panel"><h2>Alle user requests</h2><div id="verifyQueue" class="list"><div class="muted">Laden…</div></div></section>
       <section class="panel"><h2>Mijn open aanvragen</h2><div id="pendingList" class="list"><div class="muted">Laden…</div></div></section>
@@ -46,6 +47,32 @@ function fmtDate(v){if(!v) return '—'; try{return new Date(v).toLocaleString('
 function units(v){return Number(v||0).toFixed(1);}
 function renderList(el, rows, map, empty){el.innerHTML=(rows||[]).length?(rows||[]).map(map).join(''):`<div class="muted">${empty}</div>`;}
 function canVoteNearby(r){ if(r && (r.secret_king || r.is_secret_king)) return true; const d=Number(r&&r.distance_m); if(!Number.isFinite(d)) return true; return d <= 500; }
+
+function getLandingState(){
+  const q = new URLSearchParams(location.search || '');
+  return {
+    requestId: String(q.get('request_id') || '').trim(),
+    requestKind: String(q.get('request_kind') || '').trim(),
+    actionStatus: String(q.get('action_status') || '').trim(),
+    traceId: String(q.get('trace_id') || '').trim(),
+    actionReason: String(q.get('action_reason') || '').trim()
+  };
+}
+function applyLandingState(){
+  const state = getLandingState();
+  const el = document.getElementById('landingStatus');
+  if (!el || !state.requestId) return;
+  let msg = '';
+  if (state.actionStatus === 'verified') msg = 'Verificatie is via de melding verwerkt.';
+  else if (state.actionStatus === 'rejected') msg = 'Afkeuring is via de melding verwerkt.';
+  else if (state.actionStatus === 'failed') msg = `Directe actie lukte niet${state.actionReason ? ` (${state.actionReason})` : ''}. Je kunt het handmatig afronden als het verzoek nog open staat.`;
+  else msg = 'Geopend vanuit een melding.';
+  if (state.traceId) msg += ` Trace: ${state.traceId}.`;
+  el.textContent = msg;
+  const row = document.querySelector(`[data-request-id="${CSS.escape(state.requestId)}"]`);
+  if (row){ row.style.outline = '3px solid rgba(183,155,86,.85)'; row.style.outlineOffset = '2px'; row.scrollIntoView({behavior:'smooth', block:'center'}); }
+}
+
 async function verifyItem(id, approved){ const workflow=window.GEJAST_DRINKS_WORKFLOW; if(workflow && workflow.verifyDrinkEvent) return workflow.verifyDrinkEvent({ session_token:token(), drink_event_id:Number(id), approved:!!approved }); return fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),approved:!!approved})}).then(parse); }
 async function cancelMine(id){ const workflow=window.GEJAST_DRINKS_WORKFLOW; if(workflow && workflow.cancelDrinkEvent) return workflow.cancelDrinkEvent({ session_token:token(), drink_event_id:Number(id) }); return fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_my_pending_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id)})}).then(parse); }
 async function load(){
@@ -58,10 +85,10 @@ async function load(){
     const history = Array.isArray(data?.verifiedHistory) ? data.verifiedHistory : [];
     const page = data?.page || {};
     const rejected = (Array.isArray(data?.recentRejected) ? data.recentRejected : []).length ? data.recentRejected : ((Array.isArray(page?.recent_events) ? page.recent_events.filter(r=>String(r.status||'').toLowerCase()==='rejected') : []));
-    renderList(document.getElementById('verifyQueue'),verify,r=>`<div class="row"><div class="row-top"><div><strong>${esc(r.player_name||'Onbekend')} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${units(r.total_units)} units${r.distance_m!=null?` · ${Math.round(r.distance_m)}m afstand`:''}</div><div class="meta">${fmtDate(r.created_at)}</div></div><span class="pill">check</span></div><div class="actions">${!r.viewer_vote_state ? (canVoteNearby(r) ? `<button class="action good" data-verify="${r.id}">Bevestigen</button><button class="action bad" data-reject="${r.id}">Afkeuren</button>` : `<span class="meta">Te ver weg om te stemmen.</span>`) : `<span class="meta">Jij stemde al: ${r.viewer_vote_state==='approved'?'voor':'tegen'}</span>`}</div></div>`,'Nog geen user requests.');
+    renderList(document.getElementById('verifyQueue'),verify,r=>`<div class="row" data-request-id="${esc(r.id)}"><div class="row-top"><div><strong>${esc(r.player_name||'Onbekend')} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${units(r.total_units)} units${r.distance_m!=null?` · ${Math.round(r.distance_m)}m afstand`:''}</div><div class="meta">${fmtDate(r.created_at)}</div></div><span class="pill">check</span></div><div class="actions">${!r.viewer_vote_state ? (canVoteNearby(r) ? `<button class="action good" data-verify="${r.id}">Bevestigen</button><button class="action bad" data-reject="${r.id}">Afkeuren</button>` : `<span class="meta">Te ver weg om te stemmen.</span>`) : `<span class="meta">Jij stemde al: ${r.viewer_vote_state==='approved'?'voor':'tegen'}</span>`}</div></div>`,'Nog geen user requests.');
     renderList(document.getElementById('pendingList'),mine.filter((r)=>String(r.status||'pending')==='pending'),r=>`<div class="row"><div class="row-top"><div><strong>${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${fmtDate(r.created_at)} · ${units(r.total_units)} units</div></div><span class="pill">${esc(r.status||'pending')}</span></div><div class="actions"><button class="action bad" data-cancel="${r.id}">Annuleren</button></div></div>`,'Nog geen open aanvragen.');
-    renderList(document.getElementById('verifiedList'),history.slice(0,20),r=>`<div class="row"><div class="row-top"><div><strong>${esc(r.player_name||'Onbekend')} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${fmtDate(r.verified_at||r.created_at)} · ${units(r.total_units)} units</div><div class="meta">Bevestigd door ${esc((r.verifier_names||[]).join(', ')||'—')}</div></div><span class="pill">ok</span></div></div>`,'Nog geen bevestigde drankjes.');
-    renderList(document.getElementById('rejectedList'),(rejected||[]).slice(0,20),r=>`<div class="row"><div class="row-top"><div><strong>${esc(r.player_name||'Onbekend')} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${fmtDate(r.updated_at||r.created_at)} · ${units(r.total_units)} units</div></div><span class="pill bad">afgekeurd</span></div></div>`,'Nog geen afgekeurde drankjes.');
+    renderList(document.getElementById('verifiedList'),history.slice(0,20),r=>`<div class="row" data-request-id="${esc(r.id)}"><div class="row-top"><div><strong>${esc(r.player_name||'Onbekend')} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${fmtDate(r.verified_at||r.created_at)} · ${units(r.total_units)} units</div><div class="meta">Bevestigd door ${esc((r.verifier_names||[]).join(', ')||'—')}</div></div><span class="pill">ok</span></div></div>`,'Nog geen bevestigde drankjes.');
+    renderList(document.getElementById('rejectedList'),(rejected||[]).slice(0,20),r=>`<div class="row" data-request-id="${esc(r.id)}"><div class="row-top"><div><strong>${esc(r.player_name||'Onbekend')} · ${esc(r.event_type_label||r.event_type_key||'Drankje')}</strong><div class="meta">${fmtDate(r.updated_at||r.created_at)} · ${units(r.total_units)} units</div></div><span class="pill bad">afgekeurd</span></div></div>`,'Nog geen afgekeurde drankjes.');
     document.querySelectorAll('[data-verify]').forEach(b=>b.onclick=async()=>{try{await verifyItem(b.dataset.verify,true); setStatus('Drankje bevestigd.'); await load();}catch(err){setStatus(err.message||String(err),true);}});
     document.querySelectorAll('[data-reject]').forEach(b=>b.onclick=async()=>{try{await verifyItem(b.dataset.reject,false); setStatus('Drankje afgekeurd.'); await load();}catch(err){setStatus(err.message||String(err),true);}});
     document.querySelectorAll('[data-cancel]').forEach(b=>b.onclick=async()=>{try{await cancelMine(b.dataset.cancel); setStatus('Aanvraag geannuleerd.'); await load();}catch(err){setStatus(err.message||String(err),true);}});

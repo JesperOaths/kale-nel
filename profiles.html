@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" /><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Spelersprofielen</title>
-  <script>window.GEJAST_PAGE_VERSION='v364';</script><script src="./gejast-config.js?v364"></script><script src="./gejast-clickable-cards.js?v364"></script><script src="./gejast-scope-context.js?v364"></script>
+  <script>window.GEJAST_PAGE_VERSION='v369';</script><script src="./gejast-config.js?v369"></script><script src="./gejast-clickable-cards.js?v369"></script><script src="./gejast-scope-context.js?v369"></script>
   <style>
     :root{--gold:#d4af37;--ink:#1b1711;--paper:rgba(255,250,243,.92);--line:#e0d6c6;--muted:#6f665e;}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:linear-gradient(rgba(247,244,238,.84),rgba(247,244,238,.84)),url('./wordtergejast.png') center/cover fixed}
@@ -16,20 +16,20 @@
     .top h1{margin:0;font-size:clamp(28px,5vw,40px)} .top p{margin:4px 0 0;color:var(--muted)}
     .back{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800}
     .status{padding:0 20px;color:var(--muted)}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;padding:18px}
-    .card{background:#fff;border:1px solid rgba(17,17,17,.07);border-radius:22px;padding:16px;display:grid;gap:12px;box-shadow:0 10px 20px rgba(0,0,0,.05);text-decoration:none;color:inherit}
-    .head{display:grid;grid-template-columns:64px 1fr;gap:12px;align-items:center}.avatar{width:64px;height:64px;border-radius:50%;object-fit:cover;background:#efe7d7;border:2px solid rgba(212,175,55,.45)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;padding:18px;align-items:stretch}
+    .card{background:#fff;border:1px solid rgba(17,17,17,.07);border-radius:22px;padding:18px;display:grid;gap:14px;box-shadow:0 10px 20px rgba(0,0,0,.05);text-decoration:none;color:inherit;grid-template-rows:auto auto auto 1fr;min-height:100%}
+    .head{display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;align-items:center}.avatar{width:64px;height:64px;border-radius:50%;object-fit:cover;background:#efe7d7;border:2px solid rgba(212,175,55,.45)}
     .initials{display:grid;place-items:center;font-weight:900;font-size:24px;color:#5d4820}
-    .name{font-size:22px;font-weight:900;line-height:1}.meta{color:var(--muted);font-size:13px}
-    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{background:#fbf7ef;border:1px solid rgba(17,17,17,.06);border-radius:16px;padding:10px;text-align:center}.stat strong{display:block;font-size:22px}.stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-    .badges{display:flex;flex-wrap:wrap;gap:8px}.badge{padding:7px 10px;border-radius:999px;background:#111;color:#fff;font-size:12px;font-weight:800}.badge.gold{background:#b88f14}.badge.soft{background:#f4efe4;color:#3d3429;border:1px solid rgba(17,17,17,.08)}
+    .name{font-size:22px;font-weight:900;line-height:1.05;word-break:break-word}.meta{color:var(--muted);font-size:13px;line-height:1.35;word-break:break-word}
+    .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.stat{background:#fbf7ef;border:1px solid rgba(17,17,17,.06);border-radius:16px;padding:10px;text-align:center;min-width:0}.stat strong{display:block;font-size:22px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+    .badges{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}.badge{padding:7px 10px;border-radius:999px;background:#111;color:#fff;font-size:12px;font-weight:800;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.badge.gold{background:#b88f14}.badge.soft{background:#f4efe4;color:#3d3429;border:1px solid rgba(17,17,17,.08)}
     .bio{font-size:14px;line-height:1.45}.section-title{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:800}
-    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}@media (max-width:720px){.page{padding:14px 12px 90px}.top{align-items:flex-start}.back{padding:10px 12px}.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
   </style>
-<script src="./gejast-scope.js?v364"></script>  <script src="./gejast-home-gate.js?v364"></script>
-<script src="./gejast-badges.js?v364"></script></head>
+<script src="./gejast-scope.js?v369"></script>  <script src="./gejast-home-gate.js?v369"></script>
+<script src="./gejast-badges.js?v369"></script></head>
 <body>
-  <main class="page"><section class="sheet"><div class="top"><div><h1>Spelers</h1><p>Profielen van alle spelers op de site</p></div><a class="back" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</a></div><div id="status" class="status"></div><div id="grid" class="grid"></div></section></main>
+  <main class="page"><section class="sheet"><div class="top"><div><h1>Spelers</h1><p>Profielen van alle spelers op de site</p></div><button class="back" type="button" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</button></div><div id="status" class="status"></div><div id="grid" class="grid"></div></section></main>
   <div class="site-credit-watermark" data-version-watermark></div>
   <script>
     try{ if(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope()==='family'){ const l=document.getElementById('profilesHomeLink'); if(l) l.href='./familie/index.html'; } }catch(_){}
@@ -50,4 +50,4 @@ const SUPABASE_URL=(window.GEJAST_CONFIG||{}).SUPABASE_URL; const SUPABASE_PUBLI
   </script>
   <script src="./site-analytics.js"></script>
   <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script><script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./gejast-geo.js?v364"></script><script src="./drinks-verify-float.js?v364"></script></body></html>
+<script src="./gejast-geo.js?v369"></script><script src="./drinks-verify-float.js?v369"></script></body></html>
