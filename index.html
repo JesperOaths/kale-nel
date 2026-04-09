@@ -657,7 +657,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v362';</script><script src="./gejast-config.js?v362"></script>
+  <script>window.GEJAST_PAGE_VERSION='v363';</script><script src="./gejast-config.js?v363"></script>
   <script src="./gejast-live-summary.js?v362"></script>
 </head>
 <body class="boot-pending homepage-ready"><div id="gejastTopRightToolsMount"></div>
@@ -676,33 +676,8 @@
         <a href="./index.html" aria-label="Home via logo"><img src="./logo.png" alt="Logo" class="card-logo" style="cursor:pointer;filter:drop-shadow(0 4px 10px rgba(0,0,0,.08));width:66px;height:66px;object-fit:contain" /></a>
       </div>
 
-      <section class="drinks-home-section" style="margin-top:16px" aria-label="Drinkstand">
-        <div class="drinks-home-head">
-          <div>
-            <h2>Drankstand</h2>
-          </div>
-          
-        </div>
-        <div id="drinksHomeGrid" class="drinks-home-grid">
-          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">—</div></a>
-          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">All-time</div><div class="drinks-mini-value">—</div></a>
-          <a class="drinks-mini gold" href="./drinks.html"><div class="drinks-mini-label">Snelheids poging</div><div class="drinks-mini-value">+</div></a>
-          <a class="drinks-mini dark" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div></a>
-        </div>
-        
-      </section>
-
-      <section class="drinks-home-top5-section" style="margin-top:16px" aria-label="Drinks top 5">
-        <div id="drinksTop5Grid" class="ladder-grid drinks-top-grid">
-          <div class="ladder-card"><div class="ladder-title"><strong id="drinksDayTop5Title">Vandaag</strong><span>Units</span></div><div class="ladder-empty">Nog geen data.</div></div>
-          <div class="ladder-card"><div class="ladder-title"><strong>All-time</strong><span>Units</span></div><div class="ladder-empty">Nog geen data.</div></div>
-          <div class="ladder-card"><div class="ladder-title"><strong id="drinksSpeedTop5Title">1 Bak</strong><span>Seconden</span></div><div class="ladder-empty">Nog geen data.</div></div>
-          <div class="ladder-card"><div class="ladder-title"><strong>Grootste Speler</strong><span>All-time</span></div><div class="ladder-empty">Nog geen data.</div></div>
-        </div>
-      </section>
-
       <section class="public-links" aria-label="Sitepagina's">
-        <div class="public-links-grid">
+        <div id="guestLinksRow" class="public-links-grid">
           <a class="page-link-card request-link" href="./request.html">
             <div class="page-link-label">Account Aanmaken</div>
             <div class="page-link-copy">Vraag een account aan.</div>
@@ -845,6 +820,12 @@
     function playerHref(name, game=''){ const qs = new URLSearchParams(); if (name) qs.set('player', name); if (game) qs.set('game', game); return `./player.html?${qs.toString()}`; }
     function displayPlayerName(row){ return String(row?.chosen_username || row?.public_display_name || row?.nickname || row?.display_name || row?.player_name || 'Onbekend'); }
     function avatarMarkup(row){ const name = displayPlayerName(row); const src = String(row?.avatar_url || row?.photo_url || row?.profile_picture_url || '').trim(); return src ? `<div class="biggest-player-avatar"><img src="${src.replace(/"/g,'&quot;')}" alt="${name.replace(/"/g,'&quot;')}"></div>` : `<div class="biggest-player-avatar">${(name||'O').slice(0,1).toUpperCase()}</div>`; }
+    function updateHomepageAccessCards(data){
+      const guestRow = document.getElementById('guestLinksRow');
+      if (!guestRow) return;
+      const loggedIn = !!(getSessionToken() || data?.my_name);
+      guestRow.style.display = loggedIn ? 'none' : '';
+    }
 
     let removingVote = false;
     let removingAdminVote = false;
@@ -1328,6 +1309,7 @@ async function castExtraPollVote(desired_status) {
 
       renderNames('legendsList', legends, 'Nog niemand', 'legends');
       renderNames('losersList', losers, 'Nog niemand', 'losers');
+      updateHomepageAccessCards(data);
       if (data.my_name && document.getElementById('sessionHint')) document.getElementById('sessionHint').textContent = `Ingelogd als ${data.my_name}.`;
       const shouldCelebrate = state.key === 'yes' && canCount >= 4 && canCount > previousCount;
       if (shouldCelebrate) {
@@ -1541,7 +1523,7 @@ async function castExtraPollVote(desired_status) {
     async function bootHomepage(){
       document.body.classList.add('boot-pending');
       try {
-        await Promise.allSettled([load(), loadDrinksHome(), loadDrinksHomeTop5(), loadHomepageLiveEntries()]);
+        await Promise.allSettled([load(), loadHomepageLiveEntries()]);
       } finally {
         document.body.classList.remove('boot-pending');
       }
@@ -1572,7 +1554,7 @@ async function castExtraPollVote(desired_status) {
     wireProtectedDrinksLinks();
     bootHomepage();
     startHomepageLiveRefresh();
-    setInterval(loadDrinksHomeTop5, 5000);
+    updateHomepageAccessCards(null);
   </script>
 
   <div class="site-credit-watermark" data-version-watermark></div>
@@ -1650,5 +1632,5 @@ async function castExtraPollVote(desired_status) {
 
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v362"></script><script src="./gejast-geo.js?v362"></script></body>
+<script src="./drinks-verify-float.js?v363"></script><script src="./gejast-geo.js?v363"></script></body>
 </html>
