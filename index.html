@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wordt er gejast donderdag?</title>
   <link rel="stylesheet" href="./site-shell.css" />
-  <style>body{background:linear-gradient(rgba(244,240,232,.56),rgba(244,240,232,.56)), url('./site-bg-desktop.webp') 50% -120px/115% auto no-repeat !important;}.drinks-home-section{margin:18px 0 8px;display:grid;gap:12px}
+  <style>body{background:linear-gradient(rgba(244,240,232,.82),rgba(244,240,232,.82)), url('./site-bg-desktop.webp') center/cover no-repeat fixed !important;}.drinks-home-section{margin:18px 0 8px;display:grid;gap:12px}
     .drinks-home-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
     .drinks-home-head h2{margin:0;font-size:1.1rem}
     .drinks-home-link{display:inline-flex;padding:9px 12px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800}
@@ -69,44 +69,7 @@
     body.boot-pending .main-card { opacity:0; transform:translateY(8px); pointer-events:none; }
     body.homepage-ready .main-card { transition:opacity .18s ease, transform .18s ease; }
 
-    .site-scene {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-    }
-
-    .site-scene .left-hand,
-    .site-scene .right-card,
-    .site-scene .spinoza-shadow {
-      position: absolute;
-      pointer-events: none;
-    }
-
-    .site-scene .left-hand {
-      left: -2%;
-      bottom: -1%;
-      width: min(31vw, 470px);
-      opacity: .98;
-      filter: saturate(1.24) contrast(1.1) brightness(1.14) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.18));
-    }
-
-    .site-scene .right-card {
-      right: 1%;
-      bottom: 7%;
-      width: min(24vw, 320px);
-      opacity: .98;
-      filter: contrast(1.14) brightness(1.16) saturate(1.08) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.18));
-    }
-
-    .site-scene .spinoza-shadow {
-      right: 50%;
-      bottom: 8%;
-      transform: translateX(50%);
-      width: min(30vw, 380px);
-      opacity: 0.02;
-      filter: grayscale(1) contrast(1.6) brightness(0.72);
-    }
+    .site-scene { display:none; }
 
     .page {
       position: relative;
@@ -120,7 +83,7 @@
     .topbar { display: none; }
 
     .main-card {
-      background: rgba(255, 251, 245, 0.58);
+      background: rgba(249, 247, 242, 0.94);
       border: 1px solid rgba(255, 255, 255, 0.65);
       border-radius: 24px;
       padding: 40px;
@@ -128,7 +91,7 @@
       box-shadow: 0 20px 50px rgba(0,0,0,0.08);
       position: relative;
       text-align: center;
-      
+      backdrop-filter: blur(6px);
     }
 
     .card-top-right { position:absolute; top:25px; right:25px; display:flex; align-items:center; gap:14px; }
@@ -425,7 +388,7 @@
       cursor: wait;
     }
 
-    .site-scene { display: block; }
+    .site-scene { display: none; }
 
     .public-links {
       margin-top: 22px;
@@ -586,10 +549,10 @@
       .main-card {
         padding: 28px 18px 20px;
         width: min(700px, 94vw);
-        background: rgba(255,255,255,0.02);
-        border: 2px solid rgba(154,130,65,0.35);
+        background: rgba(249,247,242,0.94);
+        border: 1px solid rgba(255,255,255,0.65);
         box-shadow: 0 18px 40px rgba(0,0,0,0.06);
-        backdrop-filter: blur(0px);
+        backdrop-filter: blur(6px);
       }
       .card-top-right { position:absolute; top:16px; right:16px; margin:0; }
       .card-top-left { position:absolute; top:16px; left:16px; margin:0; }
@@ -610,23 +573,6 @@
       .plus-copy{position:relative}.plus-copy::after{content:"+";position:absolute;left:50%;top:50%;transform:translate(-50%,-52%);font-size:36px;line-height:1;color:var(--gold);font-weight:900;pointer-events:none;text-shadow:0 1px 0 rgba(255,255,255,.35)} .page-link-plus {opacity:0;filter:grayscale(1); width:12px; height:12px; }
       .ladder-grid { grid-template-columns:1fr; }
       .drinks-top-grid { grid-template-columns:1fr; }
-      .site-scene .left-hand {
-        width: min(48vw, 260px);
-        left: 7%;
-        bottom: 11%;
-        opacity: 1;
-      }
-      .site-scene .right-card {
-        width: min(42vw, 230px);
-        right: 8%;
-        bottom: 13%;
-        opacity: 1;
-      }
-      .site-scene .spinoza-shadow {
-        width: min(26vw, 110px);
-        bottom: 20%;
-        opacity: 0.015;
-      }
     }
 
     @media (max-width: 460px) {
