@@ -144,5 +144,3 @@
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 
-
-(function(global){ if(global.GEJAST_LIVE_SYNC && !global.GEJAST_LIVE_SYNC.save){ global.GEJAST_LIVE_SYNC.save=function(gameType, clientMatchId, summary, opts){ opts=opts||{}; return global.GEJAST_LIVE_SYNC.writeSummary({ gameType: gameType, clientMatchId: clientMatchId, summaryPayload: summary, siteScope: opts.siteScope || null, force: !!opts.force, throttleMs: opts.throttleMs, keepalive: !!opts.keepalive }); }; } })(typeof window !== 'undefined' ? window : globalThis);

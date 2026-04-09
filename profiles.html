@@ -1,150 +1,238 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
-  <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Spelersprofielen</title>
-  <script>window.GEJAST_PAGE_VERSION='v360-fixpack';</script>
-  <script src="./gejast-config.js?v360-fixpack"></script>
-  <script src="./gejast-scope.js?v360-fixpack"></script>
-  <script src="./gejast-public-page-gate.js?v360-fixpack"></script>
-  <script src="./gejast-clickable-cards.js?v360-fixpack"></script>
-  <script src="./badge-registry.js?v360-fixpack"></script>
-  <script src="./gejast-badge-source.js?v360-fixpack"></script>
-  <script src="./gejast-scoped-rpc.js?v360-fixpack"></script>
-  <script src="./gejast-combined-readers.js?v360-fixpack"></script>
-  <script src="./gejast-heavy-page-runtime.js?v360-fixpack"></script>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none">
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spelers</title>
+  <script>window.GEJAST_PAGE_VERSION='v361';</script>
+  <script src="./gejast-config.js?v361"></script>
+  <script src="./gejast-scope.js?v361"></script>
+  <script src="./gejast-home-gate.js?v361"></script>
   <style>
     :root{
       --gold:#d4af37;
+      --gold-deep:#a88419;
       --ink:#1b1711;
-      --paper:rgba(255,250,243,.93);
+      --paper:rgba(255,250,243,.94);
       --line:#e0d6c6;
       --muted:#6f665e;
-      --card:#fff;
-      --chip:#fbf7ef;
-      --shadow:0 20px 40px rgba(0,0,0,.09);
+      --card:#fffdf9;
+      --shadow:0 16px 36px rgba(0,0,0,.08);
     }
     *{box-sizing:border-box}
     body{
       margin:0;
       font-family:Inter,system-ui,sans-serif;
       color:var(--ink);
-      background:linear-gradient(rgba(247,244,238,.84),rgba(247,244,238,.84)),url('./wordtergejast.png') center/cover fixed;
+      background:
+        linear-gradient(rgba(247,244,238,.86),rgba(247,244,238,.86)),
+        url('./wordtergejast.png') center/cover fixed;
     }
-    .page{width:min(1160px,100%);margin:0 auto;padding:20px 14px 90px}
-    .sheet{
+    .page{
+      width:min(1180px,100%);
+      margin:0 auto;
+      padding:22px 14px 90px;
+    }
+    .shell{
       background:var(--paper);
       border:1px solid rgba(17,17,17,.08);
-      border-radius:28px;
-      box-shadow:var(--shadow);
+      border-radius:30px;
       overflow:hidden;
+      box-shadow:0 24px 48px rgba(0,0,0,.09);
     }
-    .top{
+    .hero{
       display:flex;
       justify-content:space-between;
-      align-items:center;
-      gap:12px;
-      padding:18px 20px;
+      align-items:flex-start;
+      gap:16px;
+      padding:22px 22px 18px;
       border-bottom:1px solid var(--line);
+      flex-wrap:wrap;
     }
-    .top-copy h1{margin:0;font-size:clamp(28px,5vw,40px)}
-    .top-copy p{margin:6px 0 0;color:var(--muted)}
-    .top-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .back,.home{
+    .hero h1{
+      margin:0;
+      font-size:clamp(2rem,5vw,3rem);
+      letter-spacing:-.05em;
+      line-height:1;
+    }
+    .hero p{
+      margin:8px 0 0;
+      color:var(--muted);
+      max-width:58ch;
+    }
+    .back{
       display:inline-flex;
       align-items:center;
       justify-content:center;
-      min-height:42px;
-      padding:10px 14px;
+      padding:11px 15px;
       border-radius:999px;
+      background:#111;
+      color:#fff;
       text-decoration:none;
       font-weight:800;
-      border:1px solid rgba(17,17,17,.08);
-      background:#fff;
-      color:#111;
-      cursor:pointer;
+      white-space:nowrap;
     }
-    .home.dark{background:#111;color:#fff}
     .status{
-      padding:14px 20px 0;
+      padding:16px 22px 0;
+      min-height:20px;
       color:var(--muted);
-      font-weight:700;
-      min-height:22px;
+      font-size:14px;
     }
-    .status.bad{color:#8b2f2f}
+    .toolbar{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      padding:14px 22px 0;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .toolbar-note{
+      color:var(--muted);
+      font-size:13px;
+    }
     .grid{
       display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+      grid-template-columns:repeat(auto-fit,minmax(290px,1fr));
       gap:16px;
-      padding:18px;
+      padding:18px 22px 22px;
+      align-items:stretch;
     }
     .card{
-      display:grid;
+      display:flex;
+      flex-direction:column;
       gap:14px;
-      padding:16px;
-      border-radius:22px;
+      min-height:100%;
       background:var(--card);
       border:1px solid rgba(17,17,17,.07);
-      box-shadow:0 10px 20px rgba(0,0,0,.05);
+      border-radius:24px;
+      padding:18px;
+      box-shadow:var(--shadow);
       color:inherit;
       text-decoration:none;
+      transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
     }
-    .card:hover{transform:translateY(-1px);box-shadow:0 14px 26px rgba(0,0,0,.07)}
-    .head{
+    .card:hover{
+      transform:translateY(-2px);
+      box-shadow:0 20px 40px rgba(0,0,0,.1);
+      border-color:rgba(212,175,55,.35);
+    }
+    .card-head{
       display:grid;
       grid-template-columns:64px 1fr;
       gap:12px;
       align-items:center;
-      min-width:0;
     }
     .avatar{
       width:64px;
       height:64px;
       border-radius:50%;
-      object-fit:cover;
-      background:#efe7d7;
-      border:2px solid rgba(212,175,55,.45);
+      overflow:hidden;
       display:grid;
       place-items:center;
-      overflow:hidden;
+      background:#efe7d7;
+      border:2px solid rgba(212,175,55,.4);
+      color:#5d4820;
       font-weight:900;
       font-size:24px;
-      color:#5d4820;
+      flex:0 0 auto;
     }
-    .name-block{min-width:0}
-    .name{font-size:22px;font-weight:900;line-height:1.05;word-break:break-word}
-    .meta{color:var(--muted);font-size:13px;line-height:1.45;margin-top:4px}
-    .nickname{font-weight:800;color:#5f4d24}
-    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .avatar img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+    }
+    .name{
+      font-size:1.32rem;
+      line-height:1.05;
+      font-weight:900;
+      letter-spacing:-.03em;
+    }
+    .meta{
+      margin-top:6px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.4;
+    }
+    .nick{
+      display:inline-flex;
+      align-items:center;
+      align-self:flex-start;
+      padding:7px 10px;
+      border-radius:999px;
+      background:#111;
+      color:#fff;
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.02em;
+    }
+    .nick.soft{
+      background:#f4efe4;
+      color:#3d3429;
+      border:1px solid rgba(17,17,17,.08);
+    }
+    .stats{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:8px;
+    }
     .stat{
-      background:var(--chip);
       border:1px solid rgba(17,17,17,.06);
       border-radius:16px;
-      padding:10px;
+      background:#fbf7ef;
+      padding:10px 8px;
       text-align:center;
     }
-    .stat strong{display:block;font-size:21px}
-    .stat span{display:block;margin-top:4px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-    .badge-label{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:800}
-    .badge-mini-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-    .badge-mini{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:14px;background:#fff7e4;border:1px solid rgba(17,17,17,.08);padding:4px;box-shadow:0 8px 18px rgba(0,0,0,.06)}
-    .badge-mini img{width:100%;height:100%;object-fit:contain}
-    .badge-fallback{
+    .stat strong{
+      display:block;
+      font-size:1.22rem;
+      line-height:1.05;
+      margin-bottom:3px;
+    }
+    .stat span{
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+    }
+    .badge-row{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .badge{
       display:inline-flex;
       align-items:center;
       padding:7px 10px;
       border-radius:999px;
-      background:#f4efe4;
-      color:#3d3429;
-      border:1px solid rgba(17,17,17,.08);
       font-size:12px;
       font-weight:800;
+      border:1px solid rgba(17,17,17,.08);
+      background:#f4efe4;
+      color:#3d3429;
     }
-    .summary{font-size:14px;line-height:1.45;color:#4b433a}
+    .badge.gold{
+      background:linear-gradient(180deg,#e6c66f,#b88f14);
+      border-color:rgba(122,90,8,.26);
+      color:#241a07;
+    }
+    .card-foot{
+      margin-top:auto;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.45;
+    }
+    .empty{
+      grid-column:1 / -1;
+      padding:22px;
+      border:1px dashed rgba(17,17,17,.14);
+      border-radius:22px;
+      background:rgba(255,255,255,.55);
+      color:var(--muted);
+      text-align:center;
+    }
     .site-credit-watermark{
       position:fixed;
       left:50%;
@@ -159,245 +247,192 @@
       font:700 13px/1.2 Inter,sans-serif;
       letter-spacing:.03em;
       pointer-events:none;
-      user-select:none;
-      box-shadow:0 12px 24px rgba(0,0,0,.18);
     }
     @media (max-width:720px){
-      .top{align-items:flex-start;flex-direction:column}
-      .top-actions{width:100%}
+      .page{padding:14px 10px 90px}
+      .hero,.status,.toolbar,.grid{padding-left:14px;padding-right:14px}
+      .grid{grid-template-columns:1fr}
     }
   </style>
 </head>
 <body>
   <main class="page">
-    <section class="sheet">
-      <div class="top">
-        <div class="top-copy">
+    <section class="shell">
+      <div class="hero">
+        <div>
           <h1>Spelers</h1>
-          <p>Profielen van alle spelers op de site, zonder dubbele renderpasses of losse badge-overschrijvingen.</p>
+          <p>Publieke profielen, badges en sitebrede statistieken per speler.</p>
         </div>
-        <div class="top-actions">
-          <button class="back" id="backLink" type="button" data-back-link>Terug</button>
-          <a class="home dark" id="homeLink" href="./index.html">Home</a>
-        </div>
+        <a class="back" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</a>
       </div>
-      <div id="status" class="status">Spelers laden…</div>
+      <div id="status" class="status">Spelers laden...</div>
+      <div class="toolbar">
+        <div id="toolbarNote" class="toolbar-note">Even geduld, de kaarten worden opgebouwd.</div>
+      </div>
       <div id="grid" class="grid"></div>
     </section>
   </main>
   <div class="site-credit-watermark" data-version-watermark></div>
   <script>
-    (function(){
-      const cfg = window.GEJAST_CONFIG || {};
-      const readers = window.GEJAST_COMBINED_READERS || {};
-      const runtime = window.GEJAST_HEAVY_PAGE_RUNTIME || {};
-      const badgeSource = window.GEJAST_BADGE_SOURCE || {};
-      const scopedRpc = window.GEJAST_SCOPED_RPC || {};
-      const statusEl = document.getElementById('status');
-      const gridEl = document.getElementById('grid');
+    const SUPABASE_URL = (window.GEJAST_CONFIG || {}).SUPABASE_URL || '';
+    const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG || {}).SUPABASE_PUBLISHABLE_KEY || '';
 
-      function currentScope(){
-        return (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) || 'friends';
+    function rpcHeaders(){
+      return {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      };
+    }
+
+    async function parseResponse(res){
+      const text = await res.text();
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch (_) { throw new Error(text || `HTTP ${res.status}`); }
+      if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
+      return data;
+    }
+
+    function esc(value){
+      return String(value ?? '').replace(/[&<>"]/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m]));
+    }
+
+    function scopeValue(){
+      return (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) || 'friends';
+    }
+
+    function initials(name){
+      return String(name || '')
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part)=>part[0])
+        .join('')
+        .toUpperCase() || '?';
+    }
+
+    function publicName(player){
+      return player.chosen_username || player.public_display_name || player.nickname || player.display_name || player.player_name || 'Speler';
+    }
+
+    function originalName(player){
+      return player.player_name || player.display_name || player.real_name || player.given_name || '';
+    }
+
+    function primaryBadge(player){
+      return player.best_badge || player.badge || 'Starter';
+    }
+
+    function primaryBadgeClass(label){
+      return /legend|diamond|gold/i.test(label || '') ? 'gold' : '';
+    }
+
+    function playerHref(player){
+      const shown = publicName(player);
+      const orig = originalName(player);
+      const target = orig || shown;
+      return `./player.html?player=${encodeURIComponent(target)}&scope=${encodeURIComponent(scopeValue())}`;
+    }
+
+    function avatarMarkup(player){
+      const src = player.avatar_url || player.profile_picture_url || '';
+      return src
+        ? `<div class="avatar"><img src="${esc(src)}" alt="${esc(publicName(player))}"></div>`
+        : `<div class="avatar">${esc(initials(publicName(player)))}</div>`;
+    }
+
+    function summaryLine(player){
+      const game = player.favorite_game || 'Nog geen favoriete spelsoort';
+      const orig = originalName(player);
+      const shown = publicName(player);
+      if (orig && orig !== shown) return `"${esc(orig)}" - ${esc(game)}`;
+      return esc(game);
+    }
+
+    function sortPlayers(players){
+      return [...players].sort((a, b)=>publicName(a).localeCompare(publicName(b), 'nl'));
+    }
+
+    function render(players){
+      const grid = document.getElementById('grid');
+      const toolbarNote = document.getElementById('toolbarNote');
+      const scoped = (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.filterPlayers)
+        ? window.GEJAST_SCOPE_UTILS.filterPlayers(players)
+        : players;
+      const rows = sortPlayers(scoped || []);
+      toolbarNote.textContent = rows.length
+        ? `${rows.length} speler${rows.length === 1 ? '' : 's'} in ${scopeValue() === 'family' ? 'familie' : 'vrienden'}-scope.`
+        : 'Geen spelers gevonden in deze scope.';
+      if (!rows.length){
+        grid.innerHTML = '<div class="empty">Er zijn nog geen publieke spelersprofielen gevonden.</div>';
+        return;
       }
-
-      function homeHref(){
-        return currentScope() === 'family' ? './familie/index.html' : './index.html';
-      }
-
-      function fallbackBackHref(){
-        return homeHref();
-      }
-
-      function rpcHeaders(){
-        return {
-          apikey: cfg.SUPABASE_PUBLISHABLE_KEY || '',
-          Authorization: `Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY || ''}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/json'
-        };
-      }
-
-      async function parseResponse(res){
-        const text = await res.text();
-        let data = null;
-        try { data = text ? JSON.parse(text) : null; } catch (_) { throw new Error(text || `HTTP ${res.status}`); }
-        if (!res.ok) throw new Error(data?.message || data?.error || text || `HTTP ${res.status}`);
-        return data;
-      }
-
-      async function rpc(name, payload){
-        const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
-          method:'POST',
-          mode:'cors',
-          cache:'no-store',
-          headers:rpcHeaders(),
-          body:JSON.stringify(payload || {})
-        });
-        return parseResponse(res);
-      }
-
-      function esc(value){
-        return String(value == null ? '' : value).replace(/[&<>"']/g, (m)=>({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m] || m));
-      }
-
-      function initials(name){
-        return String(name || '').split(/\s+/).filter(Boolean).slice(0,2).map((part)=>part[0]).join('').toUpperCase() || '?';
-      }
-
-      function publicName(player, card){
-        return (card && (card.display_name || card.player_name)) ||
-          player.chosen_username || player.public_display_name || player.nickname || player.display_name || player.player_name || 'Speler';
-      }
-
-      function originalName(player, card){
-        return (card && (card.original_name || card.player_name)) || player.player_name || player.real_name || player.given_name || '';
-      }
-
-      function avatarMarkup(player, card){
-        const src = (card && (card.avatar_url || card.profile_picture_url)) || player.avatar_url || player.profile_picture_url || '';
-        if (src) return `<div class="avatar"><img src="${esc(src)}" alt="${esc(publicName(player, card))}" style="width:100%;height:100%;object-fit:cover"></div>`;
-        return `<div class="avatar">${esc(initials(publicName(player, card)))}</div>`;
-      }
-
-      function statNumber(value){
-        const numeric = Number(value || 0);
-        return Number.isFinite(numeric) ? Math.round(numeric) : 0;
-      }
-
-      function badgeRowHtml(card){
-        const badges = Array.isArray(card?.mini_badges_48) ? card.mini_badges_48 : (Array.isArray(card?.mini_badges) ? card.mini_badges : []);
-        const html = badgeSource.renderMiniBadgeRow ? badgeSource.renderMiniBadgeRow(badges, '48') : '';
-        return html || `<span class="badge-fallback">${esc(card?.primary_badge?.title || card?.primary_nickname || 'Nog geen badges')}</span>`;
-      }
-
-      function buildBadgeMap(cards){
-        const map = new Map();
-        (Array.isArray(cards) ? cards : []).forEach((card) => {
-          const keys = [
-            String(card?.original_name || '').trim().toLowerCase(),
-            String(card?.player_name || '').trim().toLowerCase(),
-            String(card?.display_name || '').trim().toLowerCase()
-          ].filter(Boolean);
-          keys.forEach((key) => { if (!map.has(key)) map.set(key, card); });
-        });
-        return map;
-      }
-
-      function playerHref(name){
-        return `./player.html?player=${encodeURIComponent(name || '')}&scope=${encodeURIComponent(currentScope())}`;
-      }
-
-      function cardModel(player, badgeMap){
-        const card = badgeMap.get(String(player.player_name || '').trim().toLowerCase()) ||
-          badgeMap.get(String(player.display_name || '').trim().toLowerCase()) ||
-          badgeMap.get(String(player.nickname || '').trim().toLowerCase()) ||
-          null;
-        const shown = publicName(player, card);
-        const original = originalName(player, card);
-        const nickname = card?.primary_nickname || card?.primary_badge?.title || player.best_badge || '';
-        return {
-          shown,
-          original,
-          nickname,
-          badgeCount: Number(card?.badge_count || 0),
-          badgesHtml: badgeRowHtml(card),
-          href: playerHref(original || shown),
-          avatarHtml: avatarMarkup(player, card),
-          totalMatches: statNumber(player.total_matches),
-          totalWins: statNumber(player.total_wins),
-          bestRating: statNumber(player.best_rating || player.elo_rating || 1000),
-          klaverjasMatches: statNumber(player.klaverjas_matches),
-          boerenbridgeMatches: statNumber(player.boerenbridge_matches),
-          beerpongMatches: statNumber(player.beerpong_matches)
-        };
-      }
-
-      function renderCard(model){
-        const originalLine = model.original && model.original !== model.shown ? `Oorspronkelijke naam: "${esc(model.original)}"` : '';
-        const metaBits = [originalLine, model.nickname ? `<span class="nickname">${esc(model.nickname)}</span>` : ''].filter(Boolean);
+      grid.innerHTML = rows.map((player)=>{
+        const shown = publicName(player);
+        const orig = originalName(player);
+        const badge = primaryBadge(player);
+        const badgeClass = primaryBadgeClass(badge);
+        const titleBadge = player.badge_nickname || player.primary_nickname || '';
         return `
-          <a class="card" href="${esc(model.href)}">
-            <div class="head">
-              ${model.avatarHtml}
-              <div class="name-block">
-                <div class="name">${esc(model.shown)}</div>
-                <div class="meta">${metaBits.join(' · ') || 'Profieloverzicht'}</div>
+          <a class="card" href="${playerHref(player)}">
+            <div class="card-head">
+              ${avatarMarkup(player)}
+              <div>
+                <div class="name">${esc(shown)}</div>
+                <div class="meta">${summaryLine(player)}</div>
               </div>
             </div>
+            ${titleBadge ? `<div class="nick">${esc(titleBadge)}</div>` : `<div class="nick soft">Nog geen badge-eretitel</div>`}
             <div class="stats">
-              <div class="stat"><strong>${model.totalMatches}</strong><span>Potjes</span></div>
-              <div class="stat"><strong>${model.totalWins}</strong><span>Winst</span></div>
-              <div class="stat"><strong>${model.bestRating}</strong><span>Beste ELO</span></div>
-              <div class="stat"><strong>${model.klaverjasMatches}</strong><span>Klaverjas</span></div>
-              <div class="stat"><strong>${model.boerenbridgeMatches}</strong><span>Boerenbridge</span></div>
-              <div class="stat"><strong>${model.beerpongMatches}</strong><span>Beerpong</span></div>
+              <div class="stat"><strong>${Number(player.total_matches || 0)}</strong><span>Potjes</span></div>
+              <div class="stat"><strong>${Number(player.total_wins || player.wins || 0)}</strong><span>Winst</span></div>
+              <div class="stat"><strong>${Math.round(Number(player.best_rating || player.max_elo || 1000))}</strong><span>Beste ELO</span></div>
+              <div class="stat"><strong>${Number(player.klaverjas_matches || 0)}</strong><span>Klaverjas</span></div>
+              <div class="stat"><strong>${Number(player.boerenbridge_matches || 0)}</strong><span>Boerenbridge</span></div>
+              <div class="stat"><strong>${Number(player.beerpong_matches || 0)}</strong><span>Beerpong</span></div>
             </div>
-            <div>
-              <div class="badge-label">Badges</div>
-              <div class="badge-mini-row">${model.badgesHtml}</div>
+            <div class="badge-row">
+              <span class="badge ${badgeClass}">${esc(badge)}</span>
+              ${orig && orig !== shown ? `<span class="badge">Account: "${esc(orig)}"</span>` : ''}
             </div>
-            <div class="summary">
-              ${model.totalMatches ? `Sitebreed ${model.totalMatches} wedstrijd(en) geregistreerd.` : 'Nog geen geregistreerde speldata voor deze speler.'}
-              ${model.badgeCount ? ` ${model.badgeCount} badge(s) behaald.` : ''}
+            <div class="card-foot">
+              ${player.total_matches
+                ? `Sitebreed ${Number(player.total_matches)} wedstrijd(en) geregistreerd.`
+                : 'Nog geen geregistreerde speldata voor deze speler.'}
             </div>
           </a>
         `;
+      }).join('');
+    }
+
+    async function boot(){
+      const status = document.getElementById('status');
+      try{
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_all_site_players_public_scoped`, {
+          method: 'POST',
+          mode: 'cors',
+          cache: 'no-store',
+          headers: rpcHeaders(),
+          body: JSON.stringify({ site_scope_input: scopeValue() })
+        });
+        const raw = await parseResponse(res);
+        const data = raw?.get_all_site_players_public_scoped || raw;
+        const players = Array.isArray(data?.players) ? data.players : (Array.isArray(data) ? data : []);
+        render(players);
+        status.textContent = `${players.length} speler${players.length === 1 ? '' : 's'} geladen.`;
+      }catch(err){
+        document.getElementById('toolbarNote').textContent = 'Profielen laden mislukt.';
+        document.getElementById('grid').innerHTML = `<div class="empty">${esc(err.message || 'Profielen laden mislukt.')}</div>`;
+        status.textContent = err.message || 'Profielen laden mislukt.';
       }
+    }
 
-      async function loadBundle(){
-        if (readers.loadProfilesPageBundle) return readers.loadProfilesPageBundle();
-        const rawPlayers = await rpc('get_all_site_players_public_scoped', { site_scope_input: currentScope() });
-        const rawCards = await rpc('get_site_player_badge_cards_scoped', { site_scope_input: currentScope() }).catch(() => ({ cards: [] }));
-        return {
-          players: rawPlayers?.players || rawPlayers || [],
-          badge_cards: rawCards?.cards || rawCards || []
-        };
-      }
-
-      async function renderModels(models){
-        if (runtime.renderChunked && models.length > 24) {
-          await runtime.renderChunked(models, renderCard, {
-            batchSize: runtime.preferLiteMode && runtime.preferLiteMode() ? 12 : 24,
-            afterChunk: (html) => { gridEl.innerHTML = html; }
-          });
-          return;
-        }
-        gridEl.innerHTML = models.map(renderCard).join('');
-      }
-
-      async function boot(){
-        try{
-          const bundle = await loadBundle();
-          const players = Array.isArray(bundle.players?.players) ? bundle.players.players : (Array.isArray(bundle.players) ? bundle.players : []);
-          let badgeCards = Array.isArray(bundle.badge_cards?.cards) ? bundle.badge_cards.cards : (Array.isArray(bundle.badge_cards) ? bundle.badge_cards : []);
-          if (!badgeCards.length && badgeSource.loadSiteBadgeCards) {
-            badgeCards = await badgeSource.loadSiteBadgeCards({ siteScope: currentScope() }).catch(() => []);
-          }
-          const badgeMap = buildBadgeMap(badgeCards);
-          const models = players.map((player) => cardModel(player, badgeMap));
-          await renderModels(models);
-          statusEl.textContent = `${models.length} spelers geladen.`;
-          statusEl.className = 'status';
-        }catch(err){
-          gridEl.innerHTML = '';
-          statusEl.textContent = err.message || 'Profielen laden mislukt.';
-          statusEl.className = 'status bad';
-        }
-      }
-
-      document.getElementById('homeLink').setAttribute('href', homeHref());
-      document.getElementById('backLink').setAttribute('data-fallback', fallbackBackHref());
-
-      if (window.GEJAST_CLICKABLE_CARDS) {
-        window.GEJAST_CLICKABLE_CARDS.bind(document);
-        window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);
-        window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);
-      }
-
-      boot();
-    })();
+    boot();
   </script>
   <script src="./site-analytics.js"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <script src="./gejast-geo.js?v361"></script>
+  <script src="./drinks-verify-float.js?v361"></script>
 </body>
 </html>

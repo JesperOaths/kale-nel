@@ -148,13 +148,34 @@
   function playerToken(){ for (const key of SESSION_KEYS){ const value = localStorage.getItem(key) || sessionStorage.getItem(key); if (value) return value; } return ''; }
   function rpcHeaders(key=''){ return { 'Content-Type':'application/json', apikey:key, Authorization:`Bearer ${key}`, Accept:'application/json' }; }
   async function parseJson(res){ const t = await res.text(); let d = null; try { d = t ? JSON.parse(t) : null; } catch(_) { throw new Error(t || `HTTP ${res.status}`); } if (!res.ok) throw new Error(d?.message || d?.error || `HTTP ${res.status}`); return d; }
+  async function callPushRpc(names, payload, options = {}){
+    const cfg = window.GEJAST_CONFIG || {};
+    const list = Array.isArray(names) ? names : [names];
+    let lastError = null;
+    for (const name of list){
+      try {
+        const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
+          method:'POST',
+          mode:'cors',
+          cache:'no-store',
+          keepalive: !!options.keepalive,
+          headers: rpcHeaders(cfg.SUPABASE_PUBLISHABLE_KEY),
+          body: JSON.stringify(payload)
+        });
+        return await parseJson(res);
+      } catch(err) {
+        lastError = err;
+      }
+    }
+    throw lastError || new Error('Push-RPC mislukt');
+  }
 
   function notificationSupported(){ return !!(window.isSecureContext && 'Notification' in window && 'serviceWorker' in navigator); }
   function notificationPermission(){ try { return notificationSupported() ? Notification.permission : 'unsupported'; } catch(_) { return 'unsupported'; } }
   async function registerNotificationWorker(){
     if (!notificationSupported()) return null;
     try {
-      const reg = await navigator.serviceWorker.register(`./gejast-sw.js?${encodeURIComponent(window.GEJAST_PAGE_VERSION || 'v355')}`, { scope:'./' });
+      const reg = await navigator.serviceWorker.register(`./gejast-sw.js?${encodeURIComponent(window.GEJAST_PAGE_VERSION || 'v327')}`, { scope:'./' });
       return await navigator.serviceWorker.ready.catch(()=>reg);
     } catch(_) { return null; }
   }
@@ -169,22 +190,49 @@
 
 
   async function touchActivePushPresence(subscription=null, force=false){
+    const cfg = window.GEJAST_CONFIG || {};
+    const token = playerToken();
+    if (!token || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY) return { touched:false, reason:'missing-context' };
+    const now = Date.now();
+    const last = Number(localStorage.getItem(ACTIVE_PUSH_TOUCH_KEY) || '0');
+    if (!force && last && (now - last) < 60000) return { touched:false, reason:'throttled' };
+    let sub = subscription;
     try {
-      const runtime = window.GEJAST_PUSH_RUNTIME;
-      if (!runtime || typeof runtime.syncSubscriptionAndPresence !== 'function') return { touched:false, reason:'missing-push-runtime' };
-      if (!force) {
-        const now = Date.now();
-        const last = Number(localStorage.getItem(ACTIVE_PUSH_TOUCH_KEY) || '0');
-        if (last && (now - last) < 60000) return { touched:false, reason:'throttled' };
+      if (window.GEJAST_PUSH_RUNTIME && typeof window.GEJAST_PUSH_RUNTIME.syncSubscriptionAndPresence === 'function') {
+        const runtime = await window.GEJAST_PUSH_RUNTIME.syncSubscriptionAndPresence({
+          forceTouch: force,
+          pagePath: window.location.pathname || '',
+          lat: lastPos?.coords?.latitude ?? null,
+          lng: lastPos?.coords?.longitude ?? null,
+          accuracy: lastPos?.coords?.accuracy ?? null
+        });
+        if (runtime && runtime.ok) {
+          try { localStorage.setItem(ACTIVE_PUSH_TOUCH_KEY, String(now)); } catch(_){}
+          return { touched:true, payload:runtime };
+        }
       }
-      const out = await runtime.syncSubscriptionAndPresence({
-        lat: lastPos?.coords?.latitude || null,
-        lng: lastPos?.coords?.longitude || null,
-        accuracy: lastPos?.coords?.accuracy || null,
-        pagePath: `${window.location.pathname || ''}${window.location.search || ''}${window.location.hash || ''}`
-      });
-      try { localStorage.setItem(ACTIVE_PUSH_TOUCH_KEY, String(Date.now())); } catch(_){}
-      return Object.assign({ touched:!!out?.ok }, out || {});
+      if (!sub && notificationSupported()) {
+        const reg = await registerNotificationWorker();
+        if (reg && reg.pushManager) sub = await reg.pushManager.getSubscription();
+      }
+      const json = sub && (sub.toJSON ? sub.toJSON() : sub);
+      await callPushRpc(['touch_active_web_push_presence_v2', cfg.ACTIVE_PUSH_TOUCH_RPC || 'touch_active_web_push_presence'], {
+        session_token: token,
+        endpoint_input: json?.endpoint || sub?.endpoint || '',
+        p256dh_input: (json?.keys && json.keys.p256dh) || '',
+        auth_input: (json?.keys && json.keys.auth) || '',
+        page_path_input: window.location.pathname || '',
+        permission_input: notificationPermission(),
+        standalone_input: !!((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true),
+        site_scope_input: (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) || 'friends',
+        platform_input: platformName(),
+        installation_mode_input: isStandalone() ? (isIOS() ? 'ios_home_screen' : (isAndroid() ? 'android_pwa' : 'standalone')) : (isIOS() ? 'ios_browser' : (isAndroid() ? 'android_browser' : 'browser')),
+        lat_input: lastPos?.coords?.latitude ?? null,
+        lng_input: lastPos?.coords?.longitude ?? null,
+        accuracy_input: lastPos?.coords?.accuracy ?? null
+      }, { keepalive:true });
+      try { localStorage.setItem(ACTIVE_PUSH_TOUCH_KEY, String(now)); } catch(_){}
+      return { touched:true };
     } catch(err) {
       return { touched:false, reason:(err && err.message) || 'touch-failed' };
     }
@@ -225,119 +273,121 @@
   }
 
   async function queueBackendTestPush(){
+    const cfg = window.GEJAST_CONFIG || {};
+    const token = playerToken();
+    if (!cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY || !token) return { queued:false, reason:'missing-context' };
     try {
-      const runtime = window.GEJAST_PUSH_RUNTIME;
-      if (!runtime || typeof runtime.queueSelfTest !== 'function') return { queued:false, reason:'missing-push-runtime' };
-      const payload = await runtime.queueSelfTest();
-      return Object.assign({ queued: !!payload?.ok }, payload || {});
+      const payload = await callPushRpc(['queue_test_web_push_v2', cfg.WEB_PUSH_TEST_RPC || 'queue_test_web_push'], {
+        session_token: token,
+        site_scope_input: (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) || 'friends'
+      });
+      return { queued:true, payload };
     } catch(err) {
       return { queued:false, reason:(err && err.message) || 'queue-failed' };
     }
   }
 
   async function syncPushSubscriptionToBackend(subscription, extras={}){
+    const cfg = window.GEJAST_CONFIG || {};
+    const token = playerToken();
+    if (!subscription || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY || !token) return { synced:false, reason:'missing-context' };
     try {
-      const runtime = window.GEJAST_PUSH_RUNTIME;
-      if (!runtime || typeof runtime.syncSubscriptionAndPresence !== 'function') return { synced:false, reason:'missing-push-runtime' };
-      const out = await runtime.syncSubscriptionAndPresence({
-        lat: extras.lat ?? lastPos?.coords?.latitude ?? null,
-        lng: extras.lng ?? lastPos?.coords?.longitude ?? null,
-        accuracy: extras.accuracy ?? lastPos?.coords?.accuracy ?? null,
-        pagePath: `${window.location.pathname || ''}${window.location.search || ''}${window.location.hash || ''}`
+      if (window.GEJAST_PUSH_RUNTIME && typeof window.GEJAST_PUSH_RUNTIME.syncSubscriptionAndPresence === 'function') {
+        const runtime = await window.GEJAST_PUSH_RUNTIME.syncSubscriptionAndPresence({
+          pagePath: window.location.pathname + window.location.search + window.location.hash,
+          lat: extras.lat ?? lastPos?.coords?.latitude ?? null,
+          lng: extras.lng ?? lastPos?.coords?.longitude ?? null,
+          accuracy: extras.accuracy ?? lastPos?.coords?.accuracy ?? null
+        });
+        if (runtime && runtime.syncResult) return { synced: !!runtime.ok, payload: runtime.syncResult, presence: runtime.presenceResult };
+      }
+      const json = subscription.toJSON ? subscription.toJSON() : subscription;
+      const payload = await callPushRpc(['register_web_push_subscription_v2', 'register_web_push_subscription'], {
+        session_token: token,
+        endpoint_input: json.endpoint || subscription.endpoint || '',
+        p256dh_input: json.keys?.p256dh || extras.p256dh || '',
+        auth_input: json.keys?.auth || extras.auth || '',
+        user_agent_input: navigator.userAgent || '',
+        permission_input: notificationPermission(),
+        page_path_input: window.location.pathname + window.location.search + window.location.hash,
+        standalone_input: isStandalone(),
+        site_scope_input: (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) || 'friends',
+        platform_input: platformName(),
+        installation_mode_input: isStandalone() ? (isIOS() ? 'ios_home_screen' : (isAndroid() ? 'android_pwa' : 'standalone')) : (isIOS() ? 'ios_browser' : (isAndroid() ? 'android_browser' : 'browser')),
+        lat_input: extras.lat ?? lastPos?.coords?.latitude ?? null,
+        lng_input: extras.lng ?? lastPos?.coords?.longitude ?? null,
+        accuracy_input: extras.accuracy ?? lastPos?.coords?.accuracy ?? null
       });
-      return { synced: !!out?.ok, payload: out || null, reason: out?.code || '' };
+      return { synced:true, payload };
     } catch(err) {
       return { synced:false, reason:(err && err.message) || 'sync-failed' };
     }
   }
 
   async function ensurePushSubscription(){
+    const cfg = window.GEJAST_CONFIG || {};
+    const vapid = String(cfg.WEB_PUSH_PUBLIC_KEY || '').trim();
+    if (!vapid || !('PushManager' in window)) return { supported: false, reason: vapid ? 'push-unavailable' : 'no-vapid-key', subscription: null };
+    const reg = await registerNotificationWorker();
+    if (!reg || !reg.pushManager) return { supported: false, reason:'sw-unavailable', subscription:null };
     try {
-      const runtime = window.GEJAST_PUSH_RUNTIME;
-      if (!runtime || typeof runtime.syncSubscriptionAndPresence !== 'function') return { supported:false, reason:'missing-push-runtime', subscription:null };
-      const out = await runtime.syncSubscriptionAndPresence({
-        lat: lastPos?.coords?.latitude || null,
-        lng: lastPos?.coords?.longitude || null,
-        accuracy: lastPos?.coords?.accuracy || null,
-        pagePath: `${window.location.pathname || ''}${window.location.search || ''}${window.location.hash || ''}`
-      });
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlBase64ToUint8Array(vapid) });
+      const sync = await syncPushSubscriptionToBackend(sub);
+      await touchActivePushPresence(sub, true);
       ensureActivePushPresenceHeartbeat();
-      return { supported: true, reason: out?.code || 'ok', subscription: out?.subscription || null, backendSync:{ synced: !!out?.ok, payload: out || null } };
+      return { supported:true, reason:'ok', subscription:sub, backendSync:sync };
     } catch(err) {
       return { supported:false, reason:(err && err.message) || 'subscribe-failed', subscription:null };
     }
   }
   async function getNotificationDiagnostics(){
-    try {
-      const runtime = window.GEJAST_PUSH_RUNTIME;
-      if (!runtime || typeof runtime.getDiagnostics !== 'function') {
-        const fallback = { supported:notificationSupported(), permission:notificationPermission(), workerReady:false, pushSupported:false, subscribed:false, secure:!!window.isSecureContext, visibility:document.visibilityState, userAgent:navigator.userAgent || '', pushReason:'missing-push-runtime', backendSync:{synced:false, reason:'missing-push-runtime'}, backendTest:{queued:false, reason:'missing-push-runtime'}, presenceTouch:{touched:false, reason:'missing-push-runtime'}, standalone:isStandalone() };
-        fallback.setupState = notificationSetupState(fallback);
-        notifyStateCache = fallback;
-        announce('gejast:notification-state', fallback);
-        return fallback;
-      }
-      const diag = await runtime.getDiagnostics();
-      const state = {
-        supported: !!diag.notifications_supported,
-        permission: diag.permission_state || notificationPermission(),
-        workerReady: !!diag.service_worker_ready,
-        pushSupported: !!diag.notifications_supported,
-        subscribed: !!diag.subscription_exists,
-        secure: !!diag.secure_context,
-        visibility: document.visibilityState,
-        userAgent: navigator.userAgent || '',
-        pushReason: '',
-        backendSync: { synced: !!diag.subscription_synced, payload: diag.backend || null, reason: diag.subscription_synced ? '' : 'backend-sync-missing' },
-        backendTest: { queued:false, reason:'not-run' },
-        presenceTouch: { touched: !!diag.presence_ok, payload: diag.backend || null, reason: diag.presence_ok ? '' : 'presence-missing' },
-        standalone: !!diag.installed,
-        runtimeDiagnostics: diag
-      };
-      state.setupState = notificationSetupState(state);
-      notifyStateCache = state;
-      announce('gejast:notification-state', state);
-      return state;
-    } catch (err) {
-      const failed = { supported:notificationSupported(), permission:notificationPermission(), workerReady:false, pushSupported:false, subscribed:false, secure:!!window.isSecureContext, visibility:document.visibilityState, userAgent:navigator.userAgent || '', pushReason:(err && err.message) || 'diagnostics-failed', backendSync:{synced:false, reason:(err && err.message) || 'diagnostics-failed'}, backendTest:{queued:false, reason:'not-run'}, presenceTouch:{touched:false, reason:'diagnostics-failed'}, standalone:isStandalone() };
-      failed.setupState = notificationSetupState(failed);
-      notifyStateCache = failed;
-      announce('gejast:notification-state', failed);
-      return failed;
+    if (window.GEJAST_PUSH_RUNTIME && typeof window.GEJAST_PUSH_RUNTIME.getDiagnostics === 'function') {
+      try {
+        const state = await window.GEJAST_PUSH_RUNTIME.getDiagnostics();
+        notifyStateCache = state;
+        announce('gejast:notification-state', state);
+        return state;
+      } catch(_) {}
     }
-  }
-
-  function notificationSetupState(state){
-    const s = state || {};
-    if (!s.supported || !s.secure) return { key:'unsupported', label:'niet ondersteund' };
-    if (isIOS() && !s.standalone) return { key:'not_installed', label:'niet als app geopend' };
-    if (s.permission !== 'granted') return { key:'installed_but_permission_missing', label:'toestemming ontbreekt' };
-    if (!s.subscribed) return { key:'permission_granted_but_not_subscribed', label:'geen push-abonnement' };
-    if (!(s.backendSync && s.backendSync.synced)) return { key:'subscribed_but_not_synced', label:'backend-sync ontbreekt' };
-    return { key:'fully_active', label:'volledig actief' };
+    const supported = notificationSupported();
+    const permission = notificationPermission();
+    let workerReady = false;
+    let pushSupported = false;
+    let subscribed = false;
+    let pushReason = '';
+    try {
+      if (supported) {
+        const reg = await registerNotificationWorker();
+        workerReady = !!reg;
+        pushSupported = !!(reg && reg.pushManager && 'PushManager' in window);
+        if (pushSupported) {
+          const sub = await reg.pushManager.getSubscription();
+          subscribed = !!sub;
+        }
+      }
+    } catch(err) { pushReason = (err && err.message) || ''; }
+    const backendSync = (supported && permission==='granted' && subscribed) ? await (async()=>{ try{ const reg=await registerNotificationWorker(); const sub=reg&&reg.pushManager?await reg.pushManager.getSubscription():null; return sub ? await syncPushSubscriptionToBackend(sub) : {synced:false, reason:'no-subscription'}; }catch(err){ return {synced:false, reason:(err&&err.message)||'backend-sync-failed'}; } })() : {synced:false, reason:'not-ready'};
+    const state = { supported, permission, workerReady, pushSupported, subscribed, secure: !!window.isSecureContext, visibility: document.visibilityState, userAgent: navigator.userAgent || '', pushReason, backendSync };
+    notifyStateCache = state;
+    announce('gejast:notification-state', state);
+    return state;
   }
   function setNotificationButtonState(permission, extras={}){
     document.querySelectorAll('[data-gejast-notify-button]').forEach((btn)=>{
       const p = permission || 'unsupported';
-      const setup = extras.setupState || notificationSetupState({ supported:p!=='unsupported', secure:!!window.isSecureContext, permission:p, subscribed:!!extras.subscribed, backendSync:extras.backendSync, standalone:extras.standalone });
-      const fullyActive = setup.key === 'fully_active';
-      btn.classList.toggle('is-ready', fullyActive);
-      btn.classList.toggle('is-pending', setup.key === 'permission_granted_but_not_subscribed' || setup.key === 'subscribed_but_not_synced' || p === 'default');
-      btn.classList.toggle('is-denied', p === 'denied' || p === 'unsupported' || setup.key === 'not_installed');
-      btn.classList.toggle('is-bad', p === 'denied' || p === 'unsupported' || setup.key === 'not_installed');
+      btn.classList.toggle('is-ready', p === 'granted');
+      btn.classList.toggle('is-pending', p === 'default');
+      btn.classList.toggle('is-denied', p === 'denied' || p === 'unsupported');
+      btn.classList.toggle('is-bad', p === 'denied' || p === 'unsupported');
       let title = 'Meldingen instellen';
-      if (setup.key === 'fully_active') title = 'Meldingen actief';
-      else if (setup.key === 'not_installed') title = 'Open de site als thuisscherm-app';
-      else if (setup.key === 'installed_but_permission_missing') title = 'Meldingstoestemming ontbreekt';
-      else if (setup.key === 'permission_granted_but_not_subscribed') title = 'Geen push-abonnement actief';
-      else if (setup.key === 'subscribed_but_not_synced') title = 'Backend-sync ontbreekt';
+      if (p === 'granted') title = extras.subscribed ? 'Meldingen actief' : 'Meldingen toegestaan';
       else if (p === 'default') title = 'Meldingen inschakelen';
       else if (p === 'denied') title = 'Meldingen geblokkeerd';
       else if (p === 'unsupported') title = 'Meldingen niet ondersteund';
-      btn.title = `${title} · ${setup.label}`;
-      btn.setAttribute('aria-label', `${title} · ${setup.label}`);
-      btn.setAttribute('aria-pressed', fullyActive ? 'true' : 'false');
-      btn.dataset.setupState = setup.key;
+      btn.title = title;
+      btn.setAttribute('aria-label', title);
+      btn.setAttribute('aria-pressed', p === 'granted' ? 'true' : 'false');
     });
   }
   async function refreshNotificationButton(){
@@ -346,53 +396,66 @@
     return state;
   }
   async function requestNotificationAccess(){
-    try {
-      const runtime = window.GEJAST_PUSH_RUNTIME;
-      if (!runtime || typeof runtime.requestPermissionAndSync !== 'function') {
-        showDiagnostics('Meldingen niet beschikbaar', ['gejast-push-runtime.js ontbreekt of is niet geladen.']);
-        return { granted:false, reason:'missing-push-runtime' };
-      }
-      const out = await runtime.requestPermissionAndSync({
-        lat: lastPos?.coords?.latitude || null,
-        lng: lastPos?.coords?.longitude || null,
-        accuracy: lastPos?.coords?.accuracy || null
-      });
-      const updated = await refreshNotificationButton();
-      const queuedTest = out?.ok ? await queueBackendTestPush() : { queued:false, reason:'not-ready' };
-      if (out?.ok) ensureActivePushPresenceHeartbeat();
-      const diag = updated.runtimeDiagnostics || null;
-      if (out?.ok) {
+    if (window.GEJAST_PUSH_RUNTIME && typeof window.GEJAST_PUSH_RUNTIME.requestPermissionAndSync === 'function') {
+      try {
+        const result = await window.GEJAST_PUSH_RUNTIME.requestPermissionAndSync();
+        const updated = await refreshNotificationButton();
+        const queuedTest = result?.ok ? await queueBackendTestPush() : { queued:false, reason:result?.code || 'sync-failed' };
         showDiagnostics('Meldingen opnieuw gevraagd', [
           `Platform: ${platformName()}`,
-          `App-modus: ${updated.standalone ? 'thuisscherm-app' : 'browser-tab'}`,
-          `Setup-status: ${updated.setupState ? updated.setupState.label : 'onbekend'}`,
-          `Browsertoestemming: ${updated.permission}`,
-          `Service worker: ${updated.workerReady ? 'klaar' : 'niet klaar'}`,
-          `Push-abonnement: ${updated.subscribed ? 'actief' : 'niet actief'}`,
-          `Backend registratie: ${updated.backendSync && updated.backendSync.synced ? 'gelukt' : ((updated.backendSync && updated.backendSync.reason) || 'niet klaar')}`,
-          `Actieve doelgroep-heartbeat: ${updated.presenceTouch && updated.presenceTouch.touched ? 'verstuurd' : ((updated.presenceTouch && updated.presenceTouch.reason) || 'niet klaar')}`,
-          `Backend test-queue: ${queuedTest.queued ? 'klaargezet' : (queuedTest.reason || queuedTest.code || 'niet klaar')}`,
-          diag && diag.user_facing_state ? `Frontend pushstatus: ${diag.user_facing_state}` : '',
-          ...mobilePermissionHelp('notification', updated.permission)
-        ].filter(Boolean), [{ label:'Sluiten', alt:true }]);
-        return { granted:true, state:updated, subscription:{ subscription: out?.subscription || null, backendSync:updated.backendSync }, queuedTest, runtime:out };
-      }
-      const permission = out?.code === 'PERMISSION_DENIED' ? 'denied' : (out?.code === 'PERMISSION_DISMISSED' ? 'default' : updated.permission);
-      const actions=[];
-      if (permission === 'denied') actions.push({ label:'Instellingen uitleg', onClick:()=>showDiagnostics('Meldingen geblokkeerd', ['De browser laat geen nieuwe native prompt meer zien zolang meldingen voor deze site op geblokkeerd staan. Zet het handmatig weer aan in je browser/site-instellingen en druk daarna opnieuw op de belknop.'], [{label:'Sluiten', alt:true}]), keepOpen:false });
+          `Browsertoestemming: ${updated.permission || notificationPermission()}`,
+          `Service worker: ${updated.service_worker_ready || updated.workerReady ? 'klaar' : 'niet klaar'}`,
+          `Push-abonnement: ${(updated.subscription_exists || updated.subscribed) ? 'actief' : 'niet actief'}`,
+          `Backend registratie: ${(updated.subscription_synced || updated.backend?.subscription?.ok) ? 'gelukt' : ((result?.code) || 'niet klaar')}`,
+          `Backend test-queue: ${queuedTest.queued ? 'klaargezet' : (queuedTest.reason || 'niet klaar')}`,
+          `Actieve doelgroep-heartbeat: poging verstuurd`,
+          ...mobilePermissionHelp('notification', updated.permission || notificationPermission())
+        ], [{ label:'Sluiten', alt:true }]);
+        return { granted: !!result?.ok, state:updated, subscription:result, queuedTest };
+      } catch(_) {}
+    }
+    if (!notificationSupported()) {
+      const rows = [
+        `<span class="muted">Deze browser ondersteunt webmeldingen hier niet goed of de site draait niet via https.</span>`,
+        `Secure context: ${window.isSecureContext ? 'ja' : 'nee'}`
+      ];
+      showDiagnostics('Meldingen niet beschikbaar', rows);
+      return { granted:false, reason:'unsupported' };
+    }
+    await registerNotificationWorker();
+    let permission = notificationPermission();
+    try {
+      permission = await Notification.requestPermission();
+    } catch(_) {}
+    const state = await refreshNotificationButton();
+    if (permission === 'granted') {
+      const sub = await ensurePushSubscription();
+      const updated = await refreshNotificationButton();
+      const queuedTest = sub.subscription ? await queueBackendTestPush() : { queued:false, reason:'no-subscription' };
+      await touchActivePushPresence(sub.subscription || null, true);
+      ensureActivePushPresenceHeartbeat();
       showDiagnostics('Meldingen opnieuw gevraagd', [
         `Platform: ${platformName()}`,
-        `Browsertoestemming: ${permission}`,
-        out?.code || 'toestemming niet verleend',
-        ...mobilePermissionHelp('notification', permission)
-      ], [{ label:'Sluiten', alt:true }, ...actions]);
-      return { granted:false, reason:out?.code || permission, state:updated, runtime:out };
-    } catch(err) {
-      showDiagnostics('Meldingen opnieuw gevraagd', [String((err && err.message) || err || 'Onbekende fout')], [{ label:'Sluiten', alt:true }]);
-      return { granted:false, reason:(err && err.message) || 'notification-failed' };
+        `Browsertoestemming: ${updated.permission}`,
+        `Service worker: ${updated.workerReady ? 'klaar' : 'niet klaar'}`,
+        `Push-abonnement: ${sub.subscription ? 'actief' : (sub.reason === 'no-vapid-key' ? 'mist publieke VAPID-sleutel in gejast-config.js' : 'niet actief')}`,
+        `Backend registratie: ${sub.backendSync && sub.backendSync.synced ? 'gelukt' : ((sub.backendSync && sub.backendSync.reason) || (updated.backendSync && updated.backendSync.reason) || 'niet klaar')}`,
+        `Backend test-queue: ${queuedTest.queued ? 'klaargezet' : (queuedTest.reason === 'no-subscription' ? 'geen push-abonnement opgeslagen' : (queuedTest.reason || 'niet klaar'))}`,
+        `Actieve doelgroep-heartbeat: poging verstuurd`,
+        ...mobilePermissionHelp('notification', updated.permission)
+      ], [{ label:'Sluiten', alt:true }]);
+      return { granted:true, state:updated, subscription:sub, queuedTest };
     }
+    const actions=[];
+    if (permission === 'denied') actions.push({ label:'Instellingen uitleg', onClick:()=>showDiagnostics('Meldingen geblokkeerd', ['De browser laat geen nieuwe native prompt meer zien zolang meldingen voor deze site op geblokkeerd staan. Zet het handmatig weer aan in je browser/site-instellingen en druk daarna opnieuw op de belknop.'], [{label:'Sluiten', alt:true}]), keepOpen:false });
+    showDiagnostics('Meldingen opnieuw gevraagd', [
+      `Platform: ${platformName()}`,
+      `Browsertoestemming: ${permission}`,
+      permission === 'denied' ? 'De browser heeft meldingen voor deze site geblokkeerd en toont daarom geen nieuwe native popup.' : 'De browser heeft de toestemmingsvraag niet vrijgegeven.',
+      ...mobilePermissionHelp('notification', permission)
+    ], [{ label:'Sluiten', alt:true }, ...actions]);
+    return { granted:false, reason:permission, state };
   }
-  
   async function showNotificationFromServiceWorker(title, options={}){
     if (!notificationSupported()) return false;
     try {
@@ -433,16 +496,7 @@
   function setButtonState(ready){ buttonsReadyState = !!ready; document.querySelectorAll('[data-gejast-geo-button]').forEach((btn)=>{ btn.classList.toggle('is-ready',!!ready); btn.classList.toggle('is-bad',!ready); btn.title = ready ? 'Geolocatie actief' : 'Geolocatie opnieuw proberen'; btn.setAttribute('aria-pressed', ready ? 'true' : 'false'); }); }
   ensureActivePushPresenceHeartbeat();
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', ()=>{ startActivePushPresenceHeartbeat(false); }, { once:true }); } else { startActivePushPresenceHeartbeat(false); }
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('message', (event)=>{
-      if (event?.data?.type === 'gejast-push-subscription-changed') {
-        syncPushSubscriptionToBackend(null, {}).catch(()=>{});
-        touchActivePushPresence(null, true).catch(()=>{});
-      }
-    });
-  }
-
-  window.GEJAST_GEO = { cached, ensure, request, requestGeoAccess, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError, setButtonState, ensureCornerTools, notificationSupported, notificationPermission, registerNotificationWorker, ensurePushSubscription, syncPushSubscriptionToBackend, queueBackendTestPush, getNotificationDiagnostics, refreshNotificationButton, requestNotificationAccess, showNotificationFromServiceWorker, setNotificationButtonState, showDiagnostics, touchActivePushPresence, startActivePushPresenceHeartbeat, notificationSetupState };
+  window.GEJAST_GEO = { cached, ensure, request, requestGeoAccess, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError, setButtonState, ensureCornerTools, notificationSupported, notificationPermission, registerNotificationWorker, ensurePushSubscription, syncPushSubscriptionToBackend, queueBackendTestPush, getNotificationDiagnostics, refreshNotificationButton, requestNotificationAccess, showNotificationFromServiceWorker, setNotificationButtonState, showDiagnostics, touchActivePushPresence, startActivePushPresenceHeartbeat };
   function init(){ if (!shouldExclude()) ensureCornerTools(); setButtonState(!!cached()); refreshNotificationButton().catch(()=>{}); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once:true }); else init();
   window.addEventListener('load', ()=>{ try { ensureCornerTools(); refreshNotificationButton().catch(()=>{}); } catch(_){} });

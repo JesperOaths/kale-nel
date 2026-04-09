@@ -165,19 +165,60 @@
     }
   };
 
+  function buildRpcPayload(payload){
+    const input = payload || {};
+    const extra = Object.assign({}, input.extra || {}, {
+      page_url: input.page_url || fullUrl,
+      player_name: input.player_name || null,
+      is_logged_in: !!input.is_logged_in,
+      is_admin: !!input.is_admin
+    });
+    return {
+      event_name: input.event_name || 'page_view',
+      page_path: input.page_path || path,
+      page_title: input.page_title || document.title || '',
+      referrer_url: input.referrer_url || document.referrer || '',
+      visitor_id: input.visitor_id || visitorId,
+      session_id: input.session_id || sessionMeta.id,
+      device_type: input.device_type || detectDeviceType(),
+      browser_name: input.browser_name || detectBrowser(),
+      os_name: input.os_name || detectOS(),
+      viewport_width: input.viewport_width == null ? (window.innerWidth || null) : input.viewport_width,
+      viewport_height: input.viewport_height == null ? (window.innerHeight || null) : input.viewport_height,
+      language_code: input.language_code || navigator.language || null,
+      time_zone: input.time_zone || ((Intl.DateTimeFormat().resolvedOptions() || {}).timeZone || null),
+      user_agent: input.user_agent || navigator.userAgent || null,
+      extra
+    };
+  }
+
   function sendEvent(payload){
-    const body = JSON.stringify(payload);
-    if (navigator.sendBeacon) {
-      try {
-        const blob = new Blob([body], { type: 'application/json' });
-        const ok = navigator.sendBeacon(`${SUPABASE_URL}/rest/v1/rpc/track_site_event`, blob);
-        if (ok) return Promise.resolve();
-      } catch (_) {}
-    }
+    const body = JSON.stringify(buildRpcPayload(payload));
     return fetch(`${SUPABASE_URL}/rest/v1/rpc/track_site_event`, {
       method: 'POST', mode: 'cors', keepalive: true,
       headers: rpcHeaders(), body
     }).catch(() => {});
+  }
+
+  async function callPushRpc(names, payload){
+    const list = Array.isArray(names) ? names : [names];
+    let lastError = null;
+    for (const name of list) {
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+          method:'POST',
+          mode:'cors',
+          cache:'no-store',
+          keepalive:true,
+          headers: rpcHeaders(),
+          body: JSON.stringify(payload || {})
+        });
+        return await parseResponse(res);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError || new Error('Push RPC mislukt');
   }
 
 
@@ -195,21 +236,24 @@
       const cfg = window.GEJAST_CONFIG || {};
       const token = getStorageValue(PLAYER_SESSION_KEYS, [sessionStorage, localStorage]);
       if (!token || !(profile && profile.is_logged_in) || Notification.permission !== 'granted') return;
+      if (window.GEJAST_PUSH_RUNTIME && typeof window.GEJAST_PUSH_RUNTIME.syncSubscriptionAndPresence === 'function') {
+        await window.GEJAST_PUSH_RUNTIME.syncSubscriptionAndPresence({
+          pagePath: path
+        });
+        return;
+      }
       const sub = await getExistingPushSubscription();
       if (!sub) return;
       const json = sub.toJSON ? sub.toJSON() : sub;
-      await fetch(`${SUPABASE_URL}/rest/v1/rpc/${cfg.ACTIVE_PUSH_TOUCH_RPC || 'touch_active_web_push_presence'}`, {
-        method:'POST', mode:'cors', cache:'no-store', keepalive:true,
-        headers: rpcHeaders(),
-        body: JSON.stringify({
-          session_token: token,
-          endpoint_input: json.endpoint || sub.endpoint || '',
-          p256dh_input: (json.keys && json.keys.p256dh) || '',
-          auth_input: (json.keys && json.keys.auth) || '',
-          page_path_input: path,
-          permission_input: Notification.permission || '',
-          standalone_input: !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true)
-        })
+      await callPushRpc(['touch_active_web_push_presence_v2', cfg.ACTIVE_PUSH_TOUCH_RPC || 'touch_active_web_push_presence'], {
+        session_token: token,
+        endpoint_input: json.endpoint || sub.endpoint || '',
+        p256dh_input: (json.keys && json.keys.p256dh) || '',
+        auth_input: (json.keys && json.keys.auth) || '',
+        page_path_input: path,
+        permission_input: Notification.permission || '',
+        standalone_input: !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true),
+        site_scope_input: (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) || 'friends'
       }).catch(()=>{});
     } catch (_) {}
   }

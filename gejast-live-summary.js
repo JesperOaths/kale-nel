@@ -184,26 +184,3 @@
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 
-
-
-(function(global){
-  const api = global.GEJAST_LIVE_SUMMARY || {};
-  function currentScope(){
-    try{ return (global.GEJAST_SCOPE_UTILS && typeof global.GEJAST_SCOPE_UTILS.getScope==='function' && global.GEJAST_SCOPE_UTILS.getScope()) || ((new URLSearchParams(global.location.search).get('scope')||'friends').toLowerCase()==='family'?'family':'friends'); }catch(_){ return 'friends'; }
-  }
-  function currentSessionToken(){
-    try{ return (global.GEJAST_CONFIG && typeof global.GEJAST_CONFIG.getPlayerSessionToken==='function' && global.GEJAST_CONFIG.getPlayerSessionToken()) || ''; }catch(_){ return ''; }
-  }
-  function matchIdentityFromUrl(){ try{ const p=new URLSearchParams(global.location.search); return { clientMatchId:p.get('client_match_id')||'', matchRef:p.get('match_ref')||'' }; }catch(_){ return { clientMatchId:'', matchRef:''}; } }
-  function itemFromPayload(data){ return data && (data.item || data.match) ? (data.item || data.match) : (data || {}); }
-  function summaryFromItem(item){ const row=itemFromPayload(item); return row.summary_payload || row.summary || {}; }
-  function participants(item){ const row=itemFromPayload(item), s=summaryFromItem(row); const vals=[].concat(Array.isArray(row.participants)?row.participants:[], Array.isArray(s.participants)?s.participants:[], Array.isArray(s.players)?s.players:[]); return [...new Set(vals.map(v=>String(v||'').trim()).filter(Boolean))]; }
-  function hostName(item){ const row=itemFromPayload(item), s=summaryFromItem(row); return String(row.submitter_name || s.submitter_name || (s.submitter_meta && s.submitter_meta.submitted_by_name) || '').trim(); }
-  function isFinished(item){ const row=itemFromPayload(item), s=summaryFromItem(row); return !!(row.finished_at || s.finished_at || String((s.live_state && s.live_state.status) || '').toLowerCase()==='finished'); }
-  function metaText(item){ const row=itemFromPayload(item), s=summaryFromItem(row); if(isFinished(row)){ const when=row.finished_at || s.finished_at; return when ? `Afgerond op ${new Date(when).toLocaleString('nl-NL')}` : 'Wedstrijd afgerond.'; } const updated=row.updated_at || (s.live_state && s.live_state.updated_at) || row.created_at || null; return updated ? `Live bijgewerkt om ${new Date(updated).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}` : 'Live scoreblad'; }
-  function buildScopedHref(base, item, scope){ try{ const url=new URL(base, global.location.href); const row=itemFromPayload(item), s=summaryFromItem(row); const clientMatchId=row.client_match_id || row.match_ref || s.match_ref || ''; const matchRef=row.match_ref || row.client_match_id || s.match_ref || ''; if(clientMatchId) url.searchParams.set('client_match_id', clientMatchId); if(matchRef) url.searchParams.set('match_ref', matchRef); if((scope||currentScope())==='family') url.searchParams.set('scope', 'family'); return url.pathname.split('/').pop()+url.search; }catch(_){ return base; } }
-  async function loadPublicSummary(gameType, opts){ const identity = Object.assign({}, opts||{}); const bundle = await api.loadMatch({ gameType: gameType, clientMatchId: identity.clientMatchId || identity.matchRef || '', siteScope: identity.siteScope || currentScope() }); return bundle.match || bundle.item || {}; }
-  async function loadHomepageState(sessionToken, scope){ const result = await api.loadHomepageEntries({ siteScope: scope || currentScope() }); return result.entries || {}; }
-  Object.assign(api, { currentScope, currentSessionToken, matchIdentityFromUrl, itemFromPayload, summaryFromItem, participants, hostName, isFinished, metaText, buildScopedHref, loadPublicSummary, loadHomepageState });
-  global.GEJAST_LIVE_SUMMARY = api;
-})(typeof window !== 'undefined' ? window : globalThis);

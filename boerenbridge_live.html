@@ -7,9 +7,9 @@
 <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Boerenbridge live</title>
-  <script>window.GEJAST_PAGE_VERSION='v361';</script>
-  <script src="./gejast-config.js?v361"></script><script src="./gejast-clickable-cards.js?v361"></script>
-  <script src="./gejast-live-summary.js?v361"></script>
+  <script>window.GEJAST_PAGE_VERSION='v330';</script>
+  <script src="./gejast-config.js?v330"></script>
+  <script src="./gejast-live-summary.js?v362"></script>
   <style>
     :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16}
     *{box-sizing:border-box}
@@ -26,7 +26,7 @@
     <div class="card">
       <div class="top">
         <div>
-          <button class="btn" type="button" data-back-link data-fallback="./index.html">Terug</button>
+          <a class="btn" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</a>
           <h1 style="margin:16px 0 6px">Boerenbridge live</h1>
           <div id="meta" class="muted">Live scoreblad wordt geladen…</div>
         </div>
@@ -38,31 +38,41 @@
     </div>
   </div>
   <div class="site-credit-watermark" data-version-watermark></div>
-    <script>
+  <script>
   (()=>{
-    const live = window.GEJAST_LIVE_SUMMARY || {};
-    let pollId = null;
+    const cfg=window.GEJAST_CONFIG||{};
+    const url=cfg.SUPABASE_URL||'';
+    const key=cfg.SUPABASE_PUBLISHABLE_KEY||'';
+    const matchRef=new URLSearchParams(location.search).get('match_ref')||'';
+    function headers(){return{apikey:key,Authorization:`Bearer ${key}`,'Content-Type':'application/json',Accept:'application/json'}}
+    async function parse(res){const t=await res.text(); let d=null; try{d=t?JSON.parse(t):null}catch{throw new Error(t||`HTTP ${res.status}`)} if(!res.ok) throw new Error(d?.message||d?.error||`HTTP ${res.status}`); return d}
     function esc(v){return String(v??'').replace(/[&<>"]/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
-    function render(item){
-      const summary=(live.summaryFromItem?live.summaryFromItem(item):((item&&item.summary_payload)||{}))||{};
+    function render(data){
+      const item=data?.item||data||{};
+      const summary=item.summary||item.summary_payload||{};
       const rounds=Array.isArray(summary.rounds)?summary.rounds:[];
       const totals=Array.isArray(summary.totals)?summary.totals:[];
-      document.getElementById('meta').textContent=live.metaText?live.metaText(item):'Live scoreblad';
+      document.getElementById('meta').textContent=item.finished_at?`Afgerond op ${new Date(item.finished_at).toLocaleString('nl-NL')}`:`Live bijgewerkt om ${new Date(item.updated_at||Date.now()).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`;
       document.getElementById('recap').textContent=summary.recap_text||'Nog geen samenvatting.';
       document.getElementById('totals').innerHTML=totals.length?totals.map((r)=>`<div class="row"><strong>${esc(r.name)}</strong><span>${Number(r.final_total_points||0)} ptn</span><span>${Number(r.total_slagen||0)} slagen</span><span>${Number(r.exact_bid_count||0)} exact</span></div>`).join(''):'Nog geen spelers.';
       document.getElementById('rounds').innerHTML=rounds.length?rounds.map((r,idx)=>`<div class="round"><strong>Ronde ${esc(r.round_no||r.round||idx+1)}</strong><div class="muted">${Array.isArray(r.players)?r.players.map((p)=>`${esc(p.name)} ${Number(p.running_total||0)} totaal`).join(' · '):''}</div></div>`).join(''):'Nog geen rondes geregistreerd.';
-      if (live.isFinished && live.isFinished(item) && pollId) { clearInterval(pollId); pollId = null; }
     }
     async function load(){
-      const identity = live.matchIdentityFromUrl ? live.matchIdentityFromUrl() : { clientMatchId:'', matchRef:'' };
-      if(!identity.clientMatchId && !identity.matchRef){ document.getElementById('meta').textContent='Geen client_match_id of match_ref meegegeven.'; return; }
-      try{ render(await live.loadPublicSummary('boerenbridge', identity)); }catch(err){ document.getElementById('meta').textContent=err.message||'Laden mislukt.'; }
+      if(!matchRef){ document.getElementById('meta').textContent='Geen match_ref meegegeven.'; return; }
+      try{
+        if (window.GEJAST_LIVE_SUMMARY && typeof window.GEJAST_LIVE_SUMMARY.loadMatch === 'function') {
+          const data = await window.GEJAST_LIVE_SUMMARY.loadMatch({ gameType:'boerenbridge', clientMatchId:matchRef });
+          render(data);
+        } else {
+          const res=await fetch(`${url}/rest/v1/rpc/get_live_match_summary_public`,{method:'POST',headers:headers(),body:JSON.stringify({game_type_input:'boerenbridge',match_ref_input:matchRef})});
+          render(await parse(res));
+        }
+      }catch(err){ document.getElementById('meta').textContent=err.message||'Laden mislukt.'; }
     }
     load();
-    pollId = setInterval(load,5000);
+    setInterval(load,5000);
   })();
   </script>
-  <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script>
-<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>

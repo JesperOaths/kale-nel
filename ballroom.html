@@ -7,8 +7,8 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Balzaal</title>
-  <script>window.GEJAST_PAGE_VERSION='v361';</script>
-  <script src="./gejast-config.js?v361"></script><script src="./gejast-clickable-cards.js?v361"></script>
+  <script>window.GEJAST_PAGE_VERSION='v330';</script>
+  <script src="./gejast-config.js?v330"></script>
   <style>
     :root{
       --gold:#b78e43; --gold-deep:#89642a; --wine:#88162a; --wine-deep:#5c0c18; --cream:#f6efe3; --ink:#181310; --muted:#706557;
@@ -71,9 +71,9 @@
 
     .dais{position:absolute;left:50%;bottom:190px;transform:translateX(-50%);width:min(520px,62vw);height:122px;border-radius:50% 50% 18px 18px / 44% 44% 18px 18px;background:linear-gradient(180deg,#d7b061,#8a6328);box-shadow:0 18px 34px rgba(0,0,0,.18), inset 0 8px 18px rgba(255,255,255,.12)}
     .dais::before{content:'';position:absolute;inset:14px 18px 22px;border-radius:50% 50% 14px 14px / 42% 42% 14px 14px;border:2px solid rgba(255,245,216,.18)}
-    .rope-zone{position:absolute;left:8%;right:8%;bottom:118px;height:154px;pointer-events:none;z-index:5}
+    .rope-zone{position:absolute;left:9%;right:9%;bottom:152px;height:148px;pointer-events:none;z-index:5}
     .rope-back,.rope-front{position:absolute;left:0;right:0;display:flex;align-items:flex-start;justify-content:space-between;padding:0 22px}
-    .rope-back{top:30px;opacity:.55;transform:scale(.94)} .rope-front{bottom:0}
+    .rope-back{top:20px;opacity:.6;transform:scale(.96)} .rope-front{bottom:0}
     .rope-post{position:relative;width:18px;height:102px;border-radius:999px;background:linear-gradient(180deg,#d4b169,#8f682b);box-shadow:inset 0 0 0 2px rgba(255,255,255,.16),0 8px 18px rgba(0,0,0,.18)}
     .rope-post::before{content:'';position:absolute;left:50%;top:-10px;transform:translateX(-50%);width:34px;height:18px;border-radius:999px;background:linear-gradient(180deg,#f3d995,#b58534)}
     .rope-line{flex:1;height:16px;margin:18px 12px 0;border-radius:999px;background:linear-gradient(180deg,#9c182b,#6c0c18 62%,#aa2133);box-shadow:inset 0 2px 0 rgba(255,255,255,.18),0 8px 18px rgba(108,12,24,.24)}
@@ -95,7 +95,7 @@
     .avatar.small{width:64px;height:64px;font-size:1.3rem;border-width:2px}
     .king-name{padding:8px 14px;border-radius:999px;background:rgba(255,249,236,.94);border:1px solid rgba(212,175,95,.5);font-weight:900}
 
-    .member-layer{position:absolute;left:0;right:0;bottom:182px;height:282px;pointer-events:none;z-index:4}
+    .member-layer{position:absolute;left:0;right:0;bottom:170px;height:250px;pointer-events:none;z-index:4}
     .member-dot{position:absolute;display:flex;flex-direction:column;align-items:center;gap:6px;transform:translateX(-50%);transition:transform .2s ease, opacity .2s ease}
     .member-dot .avatar{box-shadow:0 10px 22px rgba(0,0,0,.16)}
     .member-dot .name{font-size:12px;font-weight:800;color:#fff3db;text-shadow:0 2px 8px rgba(0,0,0,.28);max-width:96px;text-align:center;line-height:1.15}
@@ -134,7 +134,7 @@
       <div class="topbar">
         <div class="nav-left">
           <a class="pill secondary" href="./index.html">Overzicht</a>
-          <button class="pill secondary" type="button" data-back-link data-fallback="./index.html">Terug</button>
+          <a class="pill secondary" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</a>
         </div>
         <div class="nav-right">
           <a class="brand" href="./index.html"><img src="./logo.png" alt="Logo" /></a>
@@ -229,6 +229,18 @@
     function escapeHtml(v){ return String(v ?? '').replace(/[&<>"]/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m])); }
     async function parse(res){ const txt = await res.text(); let data=null; try{ data = txt ? JSON.parse(txt) : null; } catch(err){ throw new Error(txt || `HTTP ${res.status}`); } if(!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }
     async function rpc(name, body){ const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', headers:headers(), body:JSON.stringify(body||{}) }); const raw = await parse(res); return raw?.[name] || raw; }
+    function shouldFallbackLegacy(err){
+      const text = String(err?.message || err || '').toLowerCase();
+      return text.includes('function') || text.includes('rpc') || text.includes('not found') || text.includes('does not exist');
+    }
+    async function ballroomWrite(safeName, safeBody, legacyName, legacyBody){
+      try {
+        return await rpc(safeName, safeBody);
+      } catch (err) {
+        if (!shouldFallbackLegacy(err) || !legacyName) throw err;
+        return await rpc(legacyName, legacyBody);
+      }
+    }
     function setStatus(msg, isError=false){ const el = document.getElementById('statusMsg'); el.textContent = msg || ''; el.style.color = isError ? '#8a091b' : '#7a1023'; }
 
     function renderThrone(state){
@@ -269,7 +281,7 @@
       if(!queue.length){ list.innerHTML = '<div class="muted" style="padding-top:10px">Nog geen open verzoeken.</div>'; return; }
       list.innerHTML = queue.map((row)=>`<div class="queue-row"><div class="queue-main">${avatarMarkup(row.avatar_url,row.display_name,true)}<div><div class="queue-name">${escapeHtml(row.display_name)}</div><div class="queue-meta">Aangemeld ${new Date(row.requested_at).toLocaleString('nl-NL')}</div></div></div><div class="actions">${latest?.viewer?.is_king ? `<button class="small-btn secondary" data-resolve="reject" data-id="${row.id}">Afwijzen</button><button class="small-btn" data-resolve="approve" data-id="${row.id}">Toelaten</button>` : '<span class="queue-meta">Wacht op oordeel</span>'}</div></div>`).join('');
       list.querySelectorAll('[data-resolve]').forEach((btn)=>btn.addEventListener('click', async()=>{
-        try{ btn.disabled = true; await callBallroomWrite('ballroom_resolve_request_safe','ballroom_resolve_request',{ request_id_input: Number(btn.dataset.id), approve_input: btn.dataset.resolve === 'approve' }); setStatus(btn.dataset.resolve === 'approve' ? 'De gast mag naar binnen.' : 'Het verzoek is afgewezen.'); await load(); } catch(err){ setStatus(err.message || String(err), true); btn.disabled = false; }
+        try{ btn.disabled = true; await ballroomWrite('ballroom_resolve_request_safe', { session_token: token(), session_token_input: token(), request_id_input: Number(btn.dataset.id), approve_input: btn.dataset.resolve === 'approve' }, 'ballroom_resolve_request', { session_token: token(), request_id_input: Number(btn.dataset.id), approve_input: btn.dataset.resolve === 'approve' }); setStatus(btn.dataset.resolve === 'approve' ? 'De gast mag naar binnen.' : 'Het verzoek is afgewezen.'); await load(); } catch(err){ setStatus(err.message || String(err), true); btn.disabled = false; }
       }));
     }
 
@@ -323,22 +335,20 @@
 
     document.getElementById('claimBtn').addEventListener('click', async()=>{
       if(!token()){ window.location.href = cfg.buildLoginUrl ? cfg.buildLoginUrl('ballroom.html') : './login.html?return_to=ballroom.html'; return; }
-      try{ await callBallroomWrite('ballroom_claim_king_safe','ballroom_claim_king',{}); setStatus('De kroon is van jou.'); await load(); } catch(err){ setStatus(err.message || String(err), true); }
+      try{ await ballroomWrite('ballroom_claim_king_safe', { session_token: token(), session_token_input: token() }, 'ballroom_claim_king', { session_token: token() }); setStatus('De kroon is van jou.'); await load(); } catch(err){ setStatus(err.message || String(err), true); }
     });
     document.getElementById('joinBtn').addEventListener('click', async()=>{
       if(!token()){ window.location.href = cfg.buildLoginUrl ? cfg.buildLoginUrl('ballroom.html') : './login.html?return_to=ballroom.html'; return; }
-      try{ await callBallroomWrite('ballroom_request_entry_safe','ballroom_request_entry',{}); setStatus('Je entreeverzoek ligt nu bij de koning.'); await load(); } catch(err){ setStatus(err.message || String(err), true); }
+      try{ await ballroomWrite('ballroom_request_entry_safe', { session_token: token(), session_token_input: token() }, 'ballroom_request_entry', { session_token: token() }); setStatus('Je entreeverzoek ligt nu bij de koning.'); await load(); } catch(err){ setStatus(err.message || String(err), true); }
     });
     document.getElementById('abdicateBtn').addEventListener('click', async()=>{
-      try{ await callBallroomWrite('ballroom_abdicate_safe','ballroom_abdicate',{}); setStatus('De kroon is doorgeschoven.'); await load(); } catch(err){ setStatus(err.message || String(err), true); }
+      try{ await ballroomWrite('ballroom_abdicate_safe', { session_token: token(), session_token_input: token() }, 'ballroom_abdicate', { session_token: token() }); setStatus('De kroon is doorgeschoven.'); await load(); } catch(err){ setStatus(err.message || String(err), true); }
     });
 
     load();
     setInterval(load, 20000);
   })();
   </script>
-  <script src="./gejast-geo.js?v361"></script><script src="./drinks-verify-float.js?v361"></script>
+  <script src="./gejast-geo.js?v330"></script><script src="./drinks-verify-float.js?v330"></script>
 </body>
 </html>
-
-<script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script>
