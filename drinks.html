@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <title>Drinks overzicht</title>
-  <script>window.GEJAST_PAGE_VERSION='v373';</script><script src="./gejast-config.js?v373"></script><script src="./gejast-clickable-cards.js?v373"></script><script src="./gejast-scope-context.js?v373"></script>
+  <script>window.GEJAST_PAGE_VERSION='v372';</script><script src="./gejast-config.js?v372"></script><script src="./gejast-clickable-cards.js?v372"></script><script src="./gejast-scope-context.js?v372"></script>
   <style>
     :root{
       --bg:#ece7dc;--card:rgba(255,251,245,.94);--paper:#fffdfa;--line:rgba(54,40,20,.08);--line-strong:rgba(54,40,20,.14);
@@ -41,8 +41,8 @@
     @media(max-width:1180px){.metric-strip,.grid.quad{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.two,.grid.three{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.hero-tools{justify-content:flex-start}}
     @media(max-width:760px){body{padding:12px}.shell{padding:18px;border-radius:24px}.metric-strip,.grid.quad,.mini-grid{grid-template-columns:1fr}.bar-row{grid-template-columns:1fr}.item{padding:12px}.metric{min-height:auto}.hero-actions,.hero-tools{width:100%}}
   </style>
-  <script src="./gejast-home-gate.js?v373"></script>
-<script src="./gejast-fairness.js?v373"></script></head>
+  <script src="./gejast-home-gate.js?v372"></script>
+<script src="./gejast-fairness.js?v372"></script></head>
 <body>
   <div class="wrap">
     <div class="shell">
@@ -254,6 +254,17 @@ function mapHomepageTop5(payload){
       renderList(el,list,(r)=>itemHtml(r,{title:(_,name)=>playerLink(name),sub:()=>`${r.night_at?nlDayDate(r.night_at):''} · zwaarste avond`,value:()=>`${fmt(r.units,1)}u`}), 'Nog geen pieknachten.');
     }
 
+    function renderLocations(rows){
+      const el=document.getElementById('locationList');
+      if(!el) return;
+      renderList(el, (Array.isArray(rows)?rows:[]).slice(0,8), (row)=>itemHtml(row,{
+        title:()=>esc(row.location_label || row.location_text || 'Locatie onbekend'),
+        sub:()=>`${Number(row.events || row.event_count || 0)} drankjes`,
+        value:()=>`${fmt(row.units || row.total_units || 0,1)}u`,
+        nameField:'location_label'
+      }), 'Nog geen locatiedata.');
+    }
+
 
     function renderFairness(rows){
       const shared = window.renderFairness || window.GEJAST_RENDER_FAIRNESS;
@@ -420,10 +431,10 @@ async function loadStats(){
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./gejast-geo.js?v373"></script><script src="./drinks-verify-float.js?v373"></script>
-  <script src="./gejast-drinks-workflow.js?v373"></script>
-  <script src="./gejast-drinks-analytics.js?v373"></script>
-  <script src="./gejast-session-corner.js?v373"></script>
-<script src="./site-analytics.js?v373"></script>
+  <script src="./gejast-geo.js?v372"></script><script src="./drinks-verify-float.js?v372"></script>
+  <script src="./gejast-drinks-workflow.js?v372"></script>
+  <script src="./gejast-drinks-analytics.js?v372"></script>
+  <script src="./gejast-session-corner.js?v372"></script>
+<script src="./site-analytics.js?v372"></script>
 </body>
 </html>
