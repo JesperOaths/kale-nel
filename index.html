@@ -663,7 +663,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v364';</script><script src="./gejast-config.js?v364"></script><script src="./gejast-clickable-cards.js?v364"></script><script src="./gejast-scope-context.js?v364"></script><script src="./gejast-scope.js?v364"></script><script src="./gejast-home-gate.js?v364"></script>
+  <script>window.GEJAST_PAGE_VERSION='v368';</script><script src="./gejast-config.js?v368"></script><script src="./gejast-clickable-cards.js?v364"></script><script src="./gejast-scope-context.js?v364"></script><script src="./gejast-scope.js?v364"></script><script src="./gejast-home-gate.js?v364"></script>
   <script src="./gejast-live-summary.js?v364"></script>
 <script src="./gejast-fairness.js?v364"></script></head>
 <body class="boot-pending homepage-ready"><div id="gejastTopRightToolsMount"></div>
@@ -1655,78 +1655,9 @@ async function castExtraPollVote(desired_status) {
 
   <div class="site-credit-watermark" data-version-watermark></div>
 
-<style>
-  .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;}
-  .player-session-corner.is-visible{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
-  .player-session-corner-label{font-size:11px;line-height:1.15;color:#5f5b53;text-align:right}
-  .player-session-corner-name{font-size:13px;line-height:1.1;font-weight:800;color:#111;text-align:right;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .player-session-corner-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}.player-session-corner-btn{appearance:none;border:0;border-radius:999px;background:#111;color:#fff;font:inherit;font-weight:800;font-size:11px;line-height:1;padding:8px 11px;cursor:pointer;box-shadow:none;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.player-session-corner-btn.alt{background:#f3efe6;color:#111;border:1px solid rgba(0,0,0,.08)}
-  .player-session-corner-btn:hover{opacity:.92}
-  @media (max-width:640px){.player-session-corner{top:10px;right:10px;padding:7px 9px;min-width:100px}.player-session-corner-name{max-width:120px}}
-
-    .drinks-home-top5-name{display:block;color:#161616;text-decoration:none;font-weight:800;line-height:1.15}
-    @media (max-width: 980px){.drinks-home-top5-grid{grid-template-columns:1fr}.drinks-home-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media (max-width: 560px){.drinks-home-top5-row{grid-template-columns:24px 1fr auto;padding:8px 10px}.drinks-home-top5-name{font-size:14px}.drinks-home-top5-meta{font-size:11px}.drinks-mini{min-height:96px;padding:12px}.drinks-mini-label{min-height:24px}.drinks-home-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-
-  </style>
-<div id="playerSessionCorner" class="player-session-corner" aria-live="polite">
-  <div class="player-session-corner-label">Ingelogd als</div>
-  <div id="playerSessionCornerName" class="player-session-corner-name"></div>
-  <div class="player-session-corner-actions"><a id="playerSessionCornerProfile" href="./my_profile.html" class="player-session-corner-btn alt">Mijn profiel</a><button id="playerSessionCornerLogout" type="button" class="player-session-corner-btn">Log out</button></div>
-</div>
-<script>
-(function(){
-  const CONFIG = window.GEJAST_CONFIG || {};
-  const SUPABASE_URL = CONFIG.SUPABASE_URL || '';
-  const SUPABASE_KEY = CONFIG.SUPABASE_PUBLISHABLE_KEY || '';
-  const SESSION_KEYS = ['jas_session_token_v11','jas_session_token_v10'];
-  const box = document.getElementById('playerSessionCorner');
-  const nameEl = document.getElementById('playerSessionCornerName');
-  const btn = document.getElementById('playerSessionCornerLogout');
-  if (!box || !nameEl || !btn) return;
-  function getToken(){
-    for (const key of SESSION_KEYS){
-      const value = localStorage.getItem(key) || sessionStorage.getItem(key);
-      if (value) return value;
-    }
-    return '';
-  }
-  function clearTokens(){
-    for (const key of SESSION_KEYS){
-      localStorage.removeItem(key);
-      sessionStorage.removeItem(key);
-    }
-  }
-  function rpcHeaders(){
-    return { 'Content-Type':'application/json', apikey: SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}` };
-  }
-  async function fetchMyName(token){
-    if (!token || !SUPABASE_URL || !SUPABASE_KEY) return '';
-    const payload = JSON.stringify({ session_token: token });
-    for (const rpc of ['get_public_state','get_gejast_homepage_state','get_jas_app_state']){
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpc}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: payload });
-        const data = await res.json().catch(()=>null);
-        if (!res.ok) continue;
-        const name = data?.my_name || data?.display_name || data?.player_name || '';
-        if (name) return name;
-      } catch {}
-    }
-    return '';
-  }
-  function show(name){ nameEl.textContent = name; box.classList.add('is-visible'); }
-  function hide(){ box.classList.remove('is-visible'); nameEl.textContent = ''; }
-  btn.addEventListener('click', function(){ clearTokens(); hide(); window.location.reload(); });
-  document.addEventListener('DOMContentLoaded', async function(){
-    const token = getToken();
-    if (!token) return hide();
-    const name = await fetchMyName(token);
-    if (name) show(name); else hide();
-  });
-})();
-</script>
+<script src="./gejast-player-session-ui.js?v368"></script>
 
 
 <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script><script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v364"></script><script src="./gejast-geo.js?v364"></script></body>
+<script src="./drinks-verify-float.js?v368"></script><script src="./gejast-geo.js?v368"></script></body>
 </html>

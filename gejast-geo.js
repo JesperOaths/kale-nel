@@ -255,6 +255,7 @@
     if (!subscription || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY || !token) return { synced:false, reason:'missing-context' };
     try {
       const json = subscription.toJSON ? subscription.toJSON() : subscription;
+      const scopeValue = cfg.normalizeScope ? cfg.normalizeScope((extras && extras.scope) || (new URLSearchParams(window.location.search || '').get('scope')) || '') : (((new URLSearchParams(window.location.search || '').get('scope')) || '').toLowerCase() === 'family' ? 'family' : 'friends');
       const out = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/register_web_push_subscription`, {
         method:'POST', headers: rpcHeaders(cfg.SUPABASE_PUBLISHABLE_KEY),
         body: JSON.stringify({
@@ -263,7 +264,9 @@
           p256dh_input: json.keys?.p256dh || extras.p256dh || '',
           auth_input: json.keys?.auth || extras.auth || '',
           user_agent_input: navigator.userAgent || '',
-          permission_input: notificationPermission()
+          permission_input: notificationPermission(),
+          site_scope_input: scopeValue,
+          page_path_input: `${window.location.pathname || ''}${window.location.search || ''}${window.location.hash || ''}`
         })
       });
       return { synced:true, payload: await parseJson(out) };
