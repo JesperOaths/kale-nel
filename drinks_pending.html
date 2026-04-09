@@ -6,10 +6,10 @@
   <meta http-equiv="Pragma" content="no-cache" />
 <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Drankverificatie</title><script>window.GEJAST_PAGE_VERSION='v364';</script>
-  <script src="./gejast-config.js?v364"></script><script src="./gejast-clickable-cards.js?v364"></script><script src="./gejast-scope-context.js?v364"></script>
-  <script src="./gejast-geo.js?v364"></script>
-  <script src="./gejast-drinks-workflow.js?v364"></script>
+  <title>Drankverificatie</title><script>window.GEJAST_PAGE_VERSION='v365';</script>
+  <script src="./gejast-config.js?v365"></script><script src="./gejast-clickable-cards.js?v365"></script><script src="./gejast-scope-context.js?v365"></script>
+  <script src="./gejast-geo.js?v365"></script>
+  <script src="./gejast-drinks-workflow.js?v365"></script>
   <style>
     :root{--bg:#ece7dc;--card:#f8f2e7;--line:#d7c7a7;--ink:#1d1a17;--muted:#736758;--gold:#b79b56;--good:#dfead7;--bad:#f1dfd7}
     *{box-sizing:border-box} body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,231,220,.94),rgba(236,231,220,.97)),url('./site-bg-mobile.webp') center/cover no-repeat fixed;color:var(--ink)}
@@ -36,6 +36,7 @@
   </div>
 <script>
 const {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY}=window.GEJAST_CONFIG||{};
+const scopeCtx = window.GEJAST_SCOPE_CONTEXT || { getPlayerSessionToken: ()=>((window.GEJAST_CONFIG&&window.GEJAST_CONFIG.getPlayerSessionToken&&window.GEJAST_CONFIG.getPlayerSessionToken())||''), getScope: ()=>((window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope&&window.GEJAST_SCOPE_UTILS.getScope())||'friends'), pagePath: ()=>((location.pathname||'').split('/').pop()||'index.html') };
 const token=()=> scopeCtx.getPlayerSessionToken();
 const headers=()=>({'Content-Type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,'Authorization':`Bearer ${SUPABASE_PUBLISHABLE_KEY}`});
 function setStatus(msg,bad){const el=document.getElementById('status'); el.textContent=msg||''; el.style.color=bad?'#8b2f2f':'#6b6257';}
@@ -45,8 +46,8 @@ function fmtDate(v){if(!v) return '—'; try{return new Date(v).toLocaleString('
 function units(v){return Number(v||0).toFixed(1);}
 function renderList(el, rows, map, empty){el.innerHTML=(rows||[]).length?(rows||[]).map(map).join(''):`<div class="muted">${empty}</div>`;}
 function canVoteNearby(r){ if(r && (r.secret_king || r.is_secret_king)) return true; const d=Number(r&&r.distance_m); if(!Number.isFinite(d)) return true; return d <= 500; }
-async function verifyItem(id, approved){await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),approved:!!approved})}).then(parse);}
-async function cancelMine(id){await fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_my_pending_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id)})}).then(parse);}
+async function verifyItem(id, approved){ const workflow=window.GEJAST_DRINKS_WORKFLOW; if(workflow && workflow.verifyDrinkEvent) return workflow.verifyDrinkEvent({ session_token:token(), drink_event_id:Number(id), approved:!!approved }); return fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),approved:!!approved})}).then(parse); }
+async function cancelMine(id){ const workflow=window.GEJAST_DRINKS_WORKFLOW; if(workflow && workflow.cancelDrinkEvent) return workflow.cancelDrinkEvent({ session_token:token(), drink_event_id:Number(id) }); return fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_my_pending_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id)})}).then(parse); }
 async function load(){
   try{
     setStatus('Laden…');

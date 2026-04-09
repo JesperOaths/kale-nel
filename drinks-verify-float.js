@@ -1,4 +1,3 @@
-if(window.GEJAST_SCOPED_RPC && window.GEJAST_SCOPED_RPC.getScope && window.GEJAST_SCOPED_RPC.getScope()==='family'){ return; }
 (function(){
   if (window.__GEJAST_FLOAT_VERIFY__) return;
   const cfg = window.GEJAST_CONFIG || {};
@@ -188,10 +187,7 @@ if(window.GEJAST_SCOPED_RPC && window.GEJAST_SCOPED_RPC.getScope && window.GEJAS
       let pos;
       try { pos = await helper.request(true); } catch (err) { pos = helper.cached(60*60*1000); if (!pos) throw err; }
       helper.startWatch();
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_speed_attempt`, {
-        method:'POST', headers: headers(), body: JSON.stringify({ session_token: token(), attempt_id: Number(item.id), lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy, approve: !!approve })
-      });
-      await parse(res);
+      const workflow = window.GEJAST_DRINKS_WORKFLOW; if (workflow && workflow.verifySpeedAttempt) { await workflow.verifySpeedAttempt({ session_token: token(), attempt_id: Number(item.id), lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy, approve: !!approve }); } else { const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_speed_attempt`, { method:'POST', headers: headers(), body: JSON.stringify({ session_token: token(), attempt_id: Number(item.id), lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy, approve: !!approve }) }); await parse(res); }
       localStorage.removeItem(APPROVED_KEY);
       dismissEvent(`speed:${item.id}`);
       hideBox();

@@ -1,226 +1,150 @@
-(function (global) {
-  const RPC = global.GEJAST_RPC_CONTRACT;
-  const CTX = global.GEJAST_SCOPE_CONTEXT;
-
+(function(){
   const CANONICAL_SPEED_TYPES = [
-    { key: 'bier', label: 'Bier' },
-    { key: '2_bakken', label: '2 bakken' },
-    { key: 'liter_bier', label: 'Liter bier' },
-    { key: 'ice', label: 'Ice' },
-    { key: 'fles_wijn', label: 'Fles wijn' }
+    { key:'bier', label:'1 Bak' },
+    { key:'2bakken', label:'2 Bakken' },
+    { key:'liter_bier', label:'Liter Bier' },
+    { key:'ice', label:'Ice' },
+    { key:'wijnfles', label:'Fles Wijn' }
   ];
-
-  function token() { return CTX.getPlayerSessionToken(); }
-  function headers() { return RPC.rpcHeaders(); }
-
-  function canonicalAvailable(){ return !!(global.DRINKS_WORKFLOW && typeof global.DRINKS_WORKFLOW.loadStats === 'function'); }
-  function mapCanonicalPending(pending){
-    return {
-      verifyQueue: Array.isArray(pending?.verification_queue) ? pending.verification_queue : [],
-      myPendingEvents: Array.isArray(pending?.my_pending) ? pending.my_pending : [],
-      recentRejected: Array.isArray(pending?.recent_rejected) ? pending.recent_rejected : []
-    };
+  function cfg(){ return window.GEJAST_CONFIG || {}; }
+  function token(){ try{ return cfg().getPlayerSessionToken ? cfg().getPlayerSessionToken() : ''; }catch(_){ return ''; } }
+  function headers(){ const c=cfg(); return {'Content-Type':'application/json',apikey:c.SUPABASE_PUBLISHABLE_KEY||'',Authorization:`Bearer ${c.SUPABASE_PUBLISHABLE_KEY||''}`,Accept:'application/json'}; }
+  async function parse(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch{ throw new Error(t||`HTTP ${res.status}`);} if(!res.ok) throw new Error(d?.message||d?.error||d?.hint||`HTTP ${res.status}`); return d; }
+  async function rpc(name, body){ const c=cfg(); return fetch(`${c.SUPABASE_URL}/rest/v1/rpc/${name}`,{method:'POST',headers:headers(),body:JSON.stringify(body||{})}).then(parse); }
+  function canonicalSpeedSets(sets){
+    const existing = Array.isArray(sets) ? sets.filter((s)=>String(s.key||s.speed_type_key||'').toLowerCase()!=='shot') : [];
+    const byKey = new Map(existing.map((s)=>[String(s.key||s.speed_type_key||''), { key:String(s.key||s.speed_type_key||''), label:s.label||s.speed_type_label||String(s.key||s.speed_type_key||''), rows:Array.isArray(s.rows)?s.rows:[] }]));
+    CANONICAL_SPEED_TYPES.forEach((entry)=>{ if(!byKey.has(entry.key)) byKey.set(entry.key,{ key:entry.key, label:entry.label, rows:[] }); });
+    return CANONICAL_SPEED_TYPES.map((entry)=>byKey.get(entry.key)).filter(Boolean);
   }
-
-  function normalizeSpeedKey(value) {
-    const key = String(value || '').trim().toLowerCase();
-    if (key === '2bakken') return '2_bakken';
-    if (key === 'wijnfles') return 'fles_wijn';
-    return key;
-  }
-
-  function mergeSpeedTypes(...sources) {
-    const map = new Map(CANONICAL_SPEED_TYPES.map((x) => [x.key, { key: x.key, label: x.label, rows: [] }]));
-    sources.flat().forEach((item) => {
-      const key = normalizeSpeedKey(item?.speed_type_key || item?.event_type_key || item?.key || '');
-      if (!key || key === 'shot' || key === 'shots') return;
-      const prev = map.get(key) || { key, label: key, rows: [] };
-      map.set(key, {
-        key,
-        label: item?.speed_type_label || item?.event_type_label || item?.label || prev.label || key,
-        rows: Array.isArray(item?.rows) ? item.rows : prev.rows || []
-      });
-    });
-    return Array.from(map.values()).sort((a, b) => String(a.label || '').localeCompare(String(b.label || ''), 'nl'));
-  }
-
-  function canonicalSpeedSets(sets) {
-    return mergeSpeedTypes(Array.isArray(sets) ? sets : []);
-  }
-
-  async function legacyRead(payload) {
-    const sessionToken = CTX.getPlayerSessionToken();
-    const [pageRaw, pendingRaw, mineRaw, historyRaw, speedRaw] = await Promise.allSettled([
-      RPC.callRpc('get_drinks_page_public', payload),
-      RPC.callRpc('get_all_pending_drink_event_verifications_public', { session_token: sessionToken }),
-      RPC.callRpc('get_my_pending_drink_requests_public', { session_token: sessionToken }),
-      RPC.callRpc('get_verified_drinks_history_public', { limit_count: payload.history_limit || 40 }),
-      RPC.callRpc('get_drink_speed_page_public', payload)
+  async function fallback(opts={}){
+    const session_token = opts.session_token || token();
+    const payload = { session_token, viewer_lat: opts.viewer_lat ?? null, viewer_lng: opts.viewer_lng ?? null };
+    const [pageRaw, verifyRaw, mineRaw, historyRaw, speedRaw] = await Promise.allSettled([
+      rpc('get_drinks_page_public', payload),
+      rpc('get_all_pending_drink_event_verifications_public', { session_token }),
+      rpc('get_my_pending_drink_requests_public', { session_token }),
+      rpc('get_verified_drinks_history_public', { limit_count: opts.history_limit ?? 40 }),
+      rpc('get_drink_speed_page_public', payload)
     ]);
-
-    const page = pageRaw.status === 'fulfilled' ? (pageRaw.value || {}) : {};
-    const verifyQueue = pendingRaw.status === 'fulfilled' ? (pendingRaw.value || []) : (page.verify_queue || []);
-    const myPending = mineRaw.status === 'fulfilled' ? (mineRaw.value || []) : (page.my_pending_events || []);
-    const history = historyRaw.status === 'fulfilled' ? (historyRaw.value || []) : [];
-    const speed = speedRaw.status === 'fulfilled' ? (speedRaw.value || {}) : {};
-
+    const page = pageRaw.status==='fulfilled' ? (pageRaw.value?.get_drinks_page_public||pageRaw.value||{}) : {};
+    const verify_queue = verifyRaw.status==='fulfilled' ? (verifyRaw.value?.get_all_pending_drink_event_verifications_public||verifyRaw.value||[]) : (page.verify_queue||[]);
+    const my_pending_events = mineRaw.status==='fulfilled' ? (mineRaw.value?.get_my_pending_drink_requests_public||mineRaw.value||[]) : (page.my_pending_events||[]);
+    const verified_history = historyRaw.status==='fulfilled' ? (historyRaw.value?.get_verified_drinks_history_public||historyRaw.value||[]) : (page.recent_verified||[]);
+    const speed_page = speedRaw.status==='fulfilled' ? (speedRaw.value?.get_drink_speed_page_public||speedRaw.value||{}) : {};
     return {
-      context: { site_scope: CTX.getScope(), viewer_name: null },
-      dashboard: {
-        session: page.session || {},
-        totals: page.totals || {},
-        event_types: page.event_types || [],
-        verify_queue: verifyQueue,
-        my_pending_events: myPending,
-        verified_recent: history,
-        all_pending_verifications: verifyQueue
-      },
-      speed: {
-        speed_types: mergeSpeedTypes(page.event_types || [], speed.speed_types || [], speed.top_attempts || [], speed.my_attempts || [], speed.verify_queue || []),
-        top_attempts: speed.top_attempts || [],
-        my_attempts: speed.my_attempts || [],
-        verify_queue: speed.verify_queue || []
-      }
+      page,
+      verify_queue,
+      my_pending_events,
+      verified_history,
+      speed_page,
+      event_types: Array.isArray(page.event_types) ? page.event_types : [],
+      speed_leaderboards: canonicalSpeedSets(speed_page.leaderboards||page.speed_leaderboards||[]),
+      recent_verified: Array.isArray(page.recent_verified) ? page.recent_verified : verified_history.slice(0,8),
+      recent_rejected: Array.isArray(page.recent_rejected) ? page.recent_rejected : (Array.isArray(page.recent_events) ? page.recent_events.filter((r)=>String(r.status||'').toLowerCase()==='rejected') : [])
     };
   }
-
-  async function readDashboard({ viewerLat = null, viewerLng = null, historyLimit = 40 } = {}) {
-    if (canonicalAvailable()) {
-      const [stats, history] = await Promise.all([
-        global.DRINKS_WORKFLOW.loadStats({ viewerLat, viewerLng }),
-        global.DRINKS_WORKFLOW.loadHistory({ requestKind: null, limit: historyLimit })
-      ]);
-      const pending = mapCanonicalPending(stats.pending || {});
-      const speedStats = stats.speed || {};
-      const verifiedRecent = Array.isArray(history) ? history : [];
-      return {
-        context: { site_scope: CTX.getScope(), viewer_name: null },
-        dashboard: {
-          session: {},
-          totals: stats.homepage?.totals || {},
-          event_types: (stats.visibleTypes || []).map((x)=>({ event_type_key:x.key, event_type_label:x.label })),
-          verify_queue: pending.verifyQueue,
-          my_pending_events: pending.myPendingEvents,
-          verified_recent: verifiedRecent,
-          recent_rejected: pending.recentRejected,
-          all_pending_verifications: pending.verifyQueue
-        },
-        speed: {
-          speed_types: mergeSpeedTypes((stats.visibleTypes || []).map((x)=>({ key:x.key, label:x.label })), speedStats.top_attempts || [], speedStats.my_attempts || [], speedStats.verify_queue || []),
-          top_attempts: speedStats.top_attempts || [],
-          my_attempts: speedStats.my_attempts || [],
-          verify_queue: speedStats.verify_queue || []
-        },
-        homepage: stats.homepage || {},
-        verified: stats.verified || []
-      };
-    }
-    const payload = {
-      session_token: CTX.getPlayerSessionToken(),
-      viewer_lat: viewerLat,
-      viewer_lng: viewerLng,
-      site_scope_input: CTX.getScope(),
-      history_limit: historyLimit
-    };
-    const data = await RPC.callContract('contract_drinks_read_v1', payload, () => legacyRead(payload));
-    data.context = data.context || { site_scope: CTX.getScope(), viewer_name: null };
-    data.dashboard = data.dashboard || {};
-    data.speed = data.speed || {};
-    data.dashboard.verify_queue = Array.isArray(data.dashboard.verify_queue) ? data.dashboard.verify_queue : [];
-    data.dashboard.my_pending_events = Array.isArray(data.dashboard.my_pending_events) ? data.dashboard.my_pending_events : [];
-    data.dashboard.verified_recent = Array.isArray(data.dashboard.verified_recent) ? data.dashboard.verified_recent : [];
-    data.dashboard.all_pending_verifications = Array.isArray(data.dashboard.all_pending_verifications)
-      ? data.dashboard.all_pending_verifications : data.dashboard.verify_queue;
-    data.speed.speed_types = mergeSpeedTypes(
-      data.dashboard?.event_types || [],
-      data.speed?.speed_types || [],
-      data.speed?.top_attempts || [],
-      data.speed?.my_attempts || [],
-      data.speed?.verify_queue || []
-    );
-    return data;
-  }
-
-  async function legacyWrite(action, payload) {
-    switch (action) {
-      case 'create_event':
-        return RPC.callRpc('create_drink_event', payload);
-      case 'cancel_event':
-        return RPC.callRpc('cancel_my_pending_drink_event', payload);
-      case 'verify_event':
-        return RPC.callRpc('verify_drink_event_public', payload).catch(() => RPC.callRpc('verify_drink_event', payload));
-      case 'create_speed_attempt':
-        return RPC.callRpc('create_combined_drink_speed_attempt', payload);
-      case 'cancel_speed_attempt':
-        return RPC.callRpc('cancel_my_speed_attempt', payload);
-      case 'verify_speed_attempt':
-        return RPC.callRpc('verify_drink_speed_attempt', payload);
-      default:
-        throw new Error('Onbekende drinks-actie.');
-    }
-  }
-
-  async function write(action, payload = {}) {
-    if (canonicalAvailable()) {
-      switch (action) {
-        case 'create_event':
-          return global.DRINKS_WORKFLOW.createDrinkRequest({ requestKind:'drink', eventTypeKey: payload.event_type_key, quantity: payload.quantity || 1, lat: payload.lat, lng: payload.lng, accuracy: payload.accuracy });
-        case 'cancel_event':
-          return global.DRINKS_WORKFLOW.cancelDrink({ requestKind:'drink', requestId: payload.drink_event_id || payload.request_id });
-        case 'verify_event':
-          return (payload.approve === false ? global.DRINKS_WORKFLOW.rejectDrink : global.DRINKS_WORKFLOW.approveDrink)({ requestKind:'drink', requestId: payload.drink_event_id || payload.request_id, lat: payload.lat, lng: payload.lng, accuracy: payload.accuracy, reason: payload.reason || null });
-        case 'create_speed_attempt':
-          return global.DRINKS_WORKFLOW.createDrinkRequest({ requestKind:'speed', eventTypeKey: payload.event_type_key, quantity: payload.quantity || 1, durationSeconds: payload.duration_seconds, lat: payload.lat, lng: payload.lng, accuracy: payload.accuracy });
-        case 'cancel_speed_attempt':
-          return global.DRINKS_WORKFLOW.cancelDrink({ requestKind:'speed', requestId: payload.attempt_id || payload.request_id });
-        case 'verify_speed_attempt':
-          return global.DRINKS_WORKFLOW.approveDrink({ requestKind:'speed', requestId: payload.attempt_id || payload.request_id, lat: payload.lat, lng: payload.lng, accuracy: payload.accuracy });
-      }
-    }
-    const body = {
-      session_token: CTX.getPlayerSessionToken(),
-      action,
-      payload,
-      site_scope_input: CTX.getScope()
-    };
-    return RPC.callContractWriter('contract_drinks_write_v1', body, () => legacyWrite(action, Object.assign({ session_token: CTX.getPlayerSessionToken() }, payload)));
-  }
-
-  async function load(opts = {}) {
-    const data = await readDashboard({ viewerLat: opts.viewer_lat ?? opts.viewerLat ?? null, viewerLng: opts.viewer_lng ?? opts.viewerLng ?? null, historyLimit: opts.history_limit ?? opts.historyLimit ?? 40 });
+  function shapePendingView(data){
+    const page = data?.page || {};
     return {
-      page: {
-        session: data.dashboard?.session || {},
-        totals: data.dashboard?.totals || {},
-        event_types: data.dashboard?.event_types || [],
-        verify_queue: data.dashboard?.verify_queue || [],
-        my_pending_events: data.dashboard?.my_pending_events || [],
-        recent_verified: data.dashboard?.verified_recent || [],
-        all_pending_verifications: data.dashboard?.all_pending_verifications || data.dashboard?.verify_queue || []
-      },
-      verify_queue: data.dashboard?.verify_queue || [],
-      my_pending_events: data.dashboard?.my_pending_events || [],
-      verified_history: data.dashboard?.verified_recent || [],
-      recent_verified: data.dashboard?.verified_recent || [],
-      recent_rejected: data.dashboard?.recent_rejected || [],
-      event_types: data.dashboard?.event_types || [],
-      speed_page: {
-        top_attempts: data.speed?.top_attempts || [],
-        my_attempts: data.speed?.my_attempts || [],
-        verify_queue: data.speed?.verify_queue || [],
-        speed_types: data.speed?.speed_types || []
-      },
-      speed_leaderboards: canonicalSpeedSets(data.speed?.speed_types || []),
-      context: data.context || {}
+      page,
+      verifyQueue: Array.isArray(data?.verify_queue) ? data.verify_queue : [],
+      myPendingEvents: Array.isArray(data?.my_pending_events) ? data.my_pending_events : [],
+      verifiedHistory: Array.isArray(data?.verified_history) ? data.verified_history : [],
+      recentRejected: Array.isArray(data?.recent_rejected) ? data.recent_rejected : [],
+      recentVerified: Array.isArray(data?.recent_verified) ? data.recent_verified : []
     };
   }
-
-  async function fallback(opts = {}) {
-    return load(opts);
+  function shapeAddView(data){
+    const page = data?.page || {};
+    return {
+      page,
+      eventTypes: Array.isArray(data?.event_types) ? data.event_types : [],
+      verifyQueue: Array.isArray(data?.verify_queue) ? data.verify_queue : [],
+      myPendingEvents: Array.isArray(data?.my_pending_events) ? data.my_pending_events : [],
+      recentVerified: Array.isArray(data?.recent_verified) ? data.recent_verified : [],
+      recentRejected: Array.isArray(data?.recent_rejected) ? data.recent_rejected : []
+    };
   }
-  async function forPending(opts = {}) { return load(opts); }
-  async function forAdd(opts = {}) { return load(opts); }
-  async function forSpeed(opts = {}) { return load(opts); }
+  function shapeSpeedView(data){
+    return {
+      speedPage: data?.speed_page || {},
+      eventTypes: Array.isArray(data?.event_types) ? data.event_types : [],
+      speedLeaderboards: canonicalSpeedSets(data?.speed_leaderboards || data?.speed_page?.leaderboards || [])
+    };
+  }
+  async function load(opts={}){
+    const session_token = opts.session_token || token();
+    try{
+      const raw = await rpc('get_drinks_workflow_public', { session_token, viewer_lat: opts.viewer_lat ?? null, viewer_lng: opts.viewer_lng ?? null, history_limit: opts.history_limit ?? 40 });
+      const data = raw?.get_drinks_workflow_public || raw || {};
+      data.page = data.page || {};
+      data.verify_queue = Array.isArray(data.verify_queue) ? data.verify_queue : [];
+      data.my_pending_events = Array.isArray(data.my_pending_events) ? data.my_pending_events : [];
+      data.verified_history = Array.isArray(data.verified_history) ? data.verified_history : [];
+      data.speed_page = data.speed_page || {};
+      data.speed_leaderboards = canonicalSpeedSets(data.speed_leaderboards || data.speed_page.leaderboards || []);
+      data.event_types = Array.isArray(data.event_types) ? data.event_types : (Array.isArray(data.page.event_types) ? data.page.event_types : []);
+      data.recent_verified = Array.isArray(data.recent_verified) ? data.recent_verified : (Array.isArray(data.page.recent_verified) ? data.page.recent_verified : data.verified_history.slice(0,8));
+      data.recent_rejected = Array.isArray(data.recent_rejected) ? data.recent_rejected : (Array.isArray(data.page.recent_rejected) ? data.page.recent_rejected : []);
+      return data;
+    }catch(err){
+      return fallback(opts);
+    }
+  }
+async function createDrinkEvent(opts={}){
+  return rpc('create_drink_event', {
+    session_token: opts.session_token || token(),
+    event_type_key: opts.event_type_key,
+    quantity: opts.quantity ?? 1,
+    lat: opts.lat ?? null,
+    lng: opts.lng ?? null,
+    accuracy: opts.accuracy ?? null
+  });
+}
+async function verifyDrinkEvent(opts={}){
+  return rpc('verify_drink_event_public', {
+    session_token: opts.session_token || token(),
+    drink_event_id: Number(opts.drink_event_id || opts.id || 0),
+    approved: opts.approved !== false
+  });
+}
+async function cancelDrinkEvent(opts={}){
+  return rpc('cancel_my_pending_drink_event', {
+    session_token: opts.session_token || token(),
+    drink_event_id: Number(opts.drink_event_id || opts.id || 0)
+  });
+}
+async function createSpeedAttempt(opts={}){
+  return rpc('create_combined_drink_speed_attempt', {
+    session_token: opts.session_token || token(),
+    event_type_key: opts.event_type_key,
+    quantity: opts.quantity ?? 1,
+    duration_seconds: opts.duration_seconds,
+    lat: opts.lat ?? null,
+    lng: opts.lng ?? null,
+    accuracy: opts.accuracy ?? null
+  });
+}
+async function verifySpeedAttempt(opts={}){
+  return rpc('verify_drink_speed_attempt', {
+    session_token: opts.session_token || token(),
+    attempt_id: Number(opts.attempt_id || opts.id || 0),
+    lat: opts.lat ?? null,
+    lng: opts.lng ?? null,
+    accuracy: opts.accuracy ?? null,
+    approve: opts.approve !== false
+  });
+}
+async function cancelSpeedAttempt(opts={}){
+  return rpc('cancel_my_speed_attempt', {
+    session_token: opts.session_token || token(),
+    attempt_id: Number(opts.attempt_id || opts.id || 0)
+  });
+}
 
-  global.GEJAST_DRINKS_WORKFLOW = { CANONICAL_SPEED_TYPES, canonicalSpeedSets, mergeSpeedTypes, load, fallback, token, headers, forPending, forAdd, forSpeed, readDashboard, write };
-})(window);
+  async function forPending(opts={}){ return shapePendingView(await load(opts)); }
+  async function forAdd(opts={}){ return shapeAddView(await load(opts)); }
+  async function forSpeed(opts={}){ return shapeSpeedView(await load(opts)); }
+  window.GEJAST_DRINKS_WORKFLOW = { CANONICAL_SPEED_TYPES, canonicalSpeedSets, load, fallback, token, headers, forPending, forAdd, forSpeed, createDrinkEvent, verifyDrinkEvent, cancelDrinkEvent, createSpeedAttempt, verifySpeedAttempt, cancelSpeedAttempt };
+})();

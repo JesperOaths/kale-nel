@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drank toevoegen</title>
-  <script>window.GEJAST_PAGE_VERSION='v364';</script><script src="./gejast-config.js?v364"></script><script src="./gejast-clickable-cards.js?v364"></script><script src="./gejast-scope-context.js?v364"></script>
+  <script>window.GEJAST_PAGE_VERSION='v365';</script><script src="./gejast-config.js?v365"></script><script src="./gejast-clickable-cards.js?v365"></script><script src="./gejast-scope-context.js?v365"></script>
   <style>
     :root{
       --line:rgba(0,0,0,.09);
@@ -192,15 +192,16 @@
     </div>
   </div>
 
-  <div class="site-credit-watermark" data-version-watermark>v364 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v365 · Made by Bruis</div>
 
-  <script src="./gejast-geo.js?v364"></script><script src="./drinks-verify-float.js?v364"></script><script src="./gejast-drinks-workflow.js?v364"></script>
+  <script src="./gejast-geo.js?v365"></script><script src="./drinks-verify-float.js?v365"></script><script src="./gejast-drinks-workflow.js?v365"></script>
   <script>
   (function(){
     const cfg=window.GEJAST_CONFIG||{};
+    const scopeCtx = window.GEJAST_SCOPE_CONTEXT || { getPlayerSessionToken: ()=>((window.GEJAST_CONFIG&&window.GEJAST_CONFIG.getPlayerSessionToken&&window.GEJAST_CONFIG.getPlayerSessionToken())||''), getScope: ()=>((window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope&&window.GEJAST_SCOPE_UTILS.getScope())||'friends'), pagePath: ()=>((location.pathname||'').split('/').pop()||'index.html') };
     const SUPABASE_URL=cfg.SUPABASE_URL||'';
     const KEY=cfg.SUPABASE_PUBLISHABLE_KEY||'';
-        let latestData=null; let lastPosition=null;
+    let latestData=null; let lastPosition=null;
     const statusLine=document.getElementById('statusLine');
     const AUTO_GEO_KEY='gejast_auto_geo_prompt_v1';
     const DRINK_LAYOUT_ORDER=['bier','2bakken','liter_bier','shot','ice','wijnfles'];
@@ -364,7 +365,7 @@
       }catch(err){ setStatus(err.message||String(err),'bad'); }
     }
     async function verifyDrink(id, approve=true){ try{ const pool=((latestData&&((latestData.all_pending_verifications||latestData.verify_queue)||[]))||[]); const row=pool.find(r=>String(r.id)===String(id))||{}; if(row.viewer_vote_state) throw new Error('Je hebt al gestemd op deze aanvraag.'); const locationSensitive=!isSecretKingLike(row); let usePos=null; if(locationSensitive){ const pos=await getPosition(true,true); if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); usePos=lastPosition||pos; if(!usePos) throw new Error('Geolocatie is nodig om een drankje te bevestigen.'); } const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),lat:usePos?usePos.coords.latitude:null,lng:usePos?usePos.coords.longitude:null,accuracy:usePos?usePos.coords.accuracy:null,approve:!!approve})}); await parse(res); setStatus(approve?'Drankje bevestigd.':'Drankje afgekeurd.', 'ok'); await loadPage(false,false); }catch(err){ setStatus(err.message||String(err),'bad'); } }
-    async function cancelDrink(id){ try{ const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_my_pending_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id)})}); await parse(res); setStatus('Aanvraag geannuleerd.', 'ok'); await loadPage(false,false); }catch(err){ setStatus(err.message||String(err),'bad'); } }
+    async function cancelDrink(id){ try{ const workflow=window.GEJAST_DRINKS_WORKFLOW; if(workflow && workflow.cancelDrinkEvent){ await workflow.cancelDrinkEvent({ session_token:token(), drink_event_id:Number(id) }); } else { const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_my_pending_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id)})}); await parse(res); } setStatus('Aanvraag geannuleerd.', 'ok'); await loadPage(false,false); }catch(err){ setStatus(err.message||String(err),'bad'); } }
     async function tryAutoPrompt(){
       try{
         const geo=window.GEJAST_GEO;
