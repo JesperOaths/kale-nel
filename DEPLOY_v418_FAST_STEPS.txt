@@ -1,0 +1,14 @@
+GEJAST v418 fast steps
+
+1. Upload changed frontend file:
+   - gejast-config.js
+
+2. Run in Supabase SQL editor:
+   - gejast_v418_paardenrace_list_rooms_dynamic.sql
+
+3. Hard refresh paardenrace.html and several other pages.
+
+4. Confirm:
+   - version watermark shows v418 everywhere that loads gejast-config.js
+   - logged-out access on protected pages redirects to home.html
+   - Kamer kiezen no longer fails on missing r.status

@@ -1,0 +1,6 @@
+GEJAST v418 - dynamic room list fix + stricter sitewide auth gate + sitewide version sync
+
+Included:
+- fixes paardenrace_list_joinable_rooms_scoped so it no longer assumes r.status exists
+- strengthens gejast-config.js so the visible version watermark is always sourced from CONFIG.VERSION and kept in sync with a MutationObserver
+- adds a strict shared logged-out redirect guard that sends unauthenticated users to home.html on protected pages, while leaving request/login/activation/home public
