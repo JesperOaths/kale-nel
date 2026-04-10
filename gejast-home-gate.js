@@ -31,6 +31,10 @@
     return '';
   }
   async function fetchAllowedNames(scope){
+    try{
+      var helper=cfg&&typeof cfg.fetchScopedActivePlayerNames==='function'?cfg.fetchScopedActivePlayerNames:null;
+      if(helper){ var active=await helper(scope); if(active&&active.length) return active; }
+    }catch(_){ }
     var raw=null;
     try{
       var scoped=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/get_login_names_scoped`,{method:'POST',mode:'cors',cache:'no-store',headers:headers(),body:JSON.stringify({site_scope_input:scope})});

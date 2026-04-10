@@ -29,6 +29,10 @@
   function normalizeName(value){ return String(value || '').replace(/\s+/g, ' ').trim(); }
   function uniqueNames(values){ const seen = new Set(); return (Array.isArray(values)?values:[]).map(normalizeName).filter((name)=>{ const key=name.toLowerCase(); if(!name||seen.has(key)) return false; seen.add(key); return true; }); }
   async function fetchAllowedNames(scope){
+    const helper = CONFIG && typeof CONFIG.fetchScopedActivePlayerNames === 'function' ? CONFIG.fetchScopedActivePlayerNames : null;
+    if (helper) {
+      try { const names = await helper(scope); if (names.length) return names; } catch (_) {}
+    }
     let raw = null;
     try {
       const scoped = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_login_names_scoped`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ site_scope_input: scope }) });

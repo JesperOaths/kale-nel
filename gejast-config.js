@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v402',
+    VERSION:'v403',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -94,6 +94,57 @@
     if (/^(public\/)?avatars?\//i.test(raw) && base) return `${base}/storage/v1/object/public/${raw.replace(/^(public\/)?/, '').replace(/^\/+/, '')}`;
     if (base && /^[A-Za-z0-9._-]+\/.+/.test(raw)) return `${base}/storage/v1/object/public/${raw.replace(/^\/+/, '')}`;
     return raw;
+  }
+
+
+  function normalizePersonName(value){
+    return String(value || '').replace(/\s+/g, ' ').trim();
+  }
+  function uniquePersonNames(values){
+    const seen = new Set();
+    return (Array.isArray(values) ? values : []).map(normalizePersonName).filter((name)=>{
+      const key = name.toLowerCase();
+      if (!name || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+  async function fetchScopedActivePlayerNames(scope){
+    const resolvedScope = normalizeScope(scope || inferRuntimeScope());
+    const headers = { 'Content-Type':'application/json', apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '', Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}` };
+    async function callRpc(name, payload){
+      const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify(payload || {}) });
+      const txt = await res.text();
+      let data = null;
+      try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || `HTTP ${res.status}`); }
+      if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
+      return data && data[name] !== undefined ? data[name] : data;
+    }
+    function toNames(raw){
+      const rows = Array.isArray(raw)
+        ? raw
+        : (Array.isArray(raw?.players) ? raw.players : (Array.isArray(raw?.profiles) ? raw.profiles : (Array.isArray(raw?.names) ? raw.names : (Array.isArray(raw?.data) ? raw.data : []))));
+      let names = uniquePersonNames(rows.map((row)=>{
+        if (typeof row === 'string') return row;
+        return row?.public_display_name || row?.chosen_username || row?.nickname || row?.display_name || row?.player_name || row?.name || row?.label || row?.desired_name || row?.slug || '';
+      }));
+      if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, resolvedScope);
+      return names;
+    }
+    const attempts = [
+      ['get_all_site_players_public_scoped', { site_scope_input: resolvedScope }],
+      ['get_profiles_page_bundle_scoped', { site_scope_input: resolvedScope }],
+      ['get_login_names_scoped', { site_scope_input: resolvedScope }],
+      ['get_login_names', {}]
+    ];
+    for (const [name, payload] of attempts){
+      try {
+        const raw = await callRpc(name, payload);
+        const names = toNames(raw);
+        if (names.length) return names;
+      } catch (_) {}
+    }
+    return [];
   }
 
   function getPlayerSessionToken(){
@@ -243,6 +294,7 @@ function buildRequestUrl(returnTo, scope){
     ensureVersionWatermark,
     applyVersionLabel,
     normalizeProfileImageUrl,
+    fetchScopedActivePlayerNames,
     getPlayerSessionToken,
     clearPlayerSessionTokens,
     touchPlayerActivity,

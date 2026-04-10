@@ -9,7 +9,7 @@
   <title>Beerpong Scoreformulier</title>
   <link rel="stylesheet" href="./site-shell.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>window.GEJAST_PAGE_VERSION='v402';</script><script src="./gejast-config.js?v402"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-home-gate.js?v371"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('beerpong');</script>
+  <script>window.GEJAST_PAGE_VERSION='v403';</script><script src="./gejast-config.js?v403"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-home-gate.js?v371"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('beerpong');</script>
   <style>
     :root{--gold:#9a8241;--gold-dark:#8a7338;--black:#111;--card-bg:rgba(249,247,242,.95);--line:rgba(17,17,17,.08);--muted:#6f675b;}
     *{box-sizing:border-box} html,body{min-height:100%}
@@ -142,14 +142,21 @@
     }
     async function loadNames(){
       const scope = window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.getScope === 'function' ? window.GEJAST_SCOPE_UTILS.getScope() : 'friends';
-      let data = null; let error = null;
-      ({ data, error } = await sb.rpc('get_login_names_scoped', { site_scope_input: scope }));
-      if(error){ ({ data, error } = await sb.rpc('get_login_names')); }
-      if(error) throw error;
-      let normalized = normalizeNames(data);
-      if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') {
-        const allowed = new Set(window.GEJAST_SCOPE_UTILS.filterNames(normalized.map((row)=>row.label), scope).map((v)=>String(v)));
-        normalized = normalized.filter((row)=>allowed.has(String(row.label)));
+      let normalized = [];
+      try {
+        const helper = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedActivePlayerNames === 'function' ? window.GEJAST_CONFIG.fetchScopedActivePlayerNames : null;
+        if (helper) normalized = (await helper(scope)).map((name)=>({ value:String(name), label:String(name) }));
+      } catch (_) {}
+      if (!normalized.length) {
+        let data = null; let error = null;
+        ({ data, error } = await sb.rpc('get_login_names_scoped', { site_scope_input: scope }));
+        if(error){ ({ data, error } = await sb.rpc('get_login_names')); }
+        if(error) throw error;
+        normalized = normalizeNames(data);
+        if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') {
+          const allowed = new Set(window.GEJAST_SCOPE_UTILS.filterNames(normalized.map((row)=>row.label), scope).map((v)=>String(v)));
+          normalized = normalized.filter((row)=>allowed.has(String(row.label)));
+        }
       }
       const options = uniqByValue(normalized.length ? normalized : DEFAULT_DUMMY_PLAYERS);
       [els.teamA1, els.teamA2, els.teamB1, els.teamB2].forEach((sel)=>{

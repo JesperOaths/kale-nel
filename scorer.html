@@ -271,7 +271,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/scorer.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v402';</script><script src="./gejast-config.js?v402"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-home-gate.js?v371"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('scorer');</script>
+  <script>window.GEJAST_PAGE_VERSION='v403';</script><script src="./gejast-config.js?v403"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-home-gate.js?v371"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('scorer');</script>
 
   <style id="page-floating-logo-style">
     .page-floating-logo{position:fixed;top:18px;right:18px;z-index:9998;display:inline-flex;width:64px;height:64px;border-radius:50%;background:rgba(255,251,245,.72);border:1px solid rgba(255,255,255,.65);box-shadow:0 14px 32px rgba(0,0,0,.10);align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
@@ -514,6 +514,13 @@
 
     async function getSitePlayers() {
       const scope = window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.getScope === 'function' ? window.GEJAST_SCOPE_UTILS.getScope() : 'friends';
+      try {
+        const helper = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedActivePlayerNames === 'function' ? window.GEJAST_CONFIG.fetchScopedActivePlayerNames : null;
+        if (helper) {
+          const names = await helper(scope);
+          if (names.length) return names;
+        }
+      } catch {}
       for (const [endpoint, body] of [['get_login_names_scoped', { site_scope_input: scope }], ['get_login_names', {}]]) {
         try {
           const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${endpoint}`, {
