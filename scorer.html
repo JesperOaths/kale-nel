@@ -513,19 +513,23 @@
     }
 
     async function getSitePlayers() {
-      for (const endpoint of ['get_login_names']) {
+      const scope = window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.getScope === 'function' ? window.GEJAST_SCOPE_UTILS.getScope() : 'friends';
+      for (const [endpoint, body] of [['get_login_names_scoped', { site_scope_input: scope }], ['get_login_names', {}]]) {
         try {
           const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${endpoint}`, {
-            method:'POST', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify({})
+            method:'POST', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }, body: JSON.stringify(body)
           });
           const txt = await res.text();
           const data = txt ? JSON.parse(txt) : {};
           if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
-          const names = normalizeSitePlayerNames(data);
+          let names = normalizeSitePlayerNames(data);
+          if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, scope);
           if (names.length) return names;
         } catch {}
       }
-      return DEFAULT_NAMES.slice();
+      let fallback = DEFAULT_NAMES.slice();
+      if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') fallback = window.GEJAST_SCOPE_UTILS.filterNames(fallback, scope);
+      return fallback;
     }
 
     let knownPlayersCache = DEFAULT_NAMES.slice();

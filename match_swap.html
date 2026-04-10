@@ -192,7 +192,8 @@
       try{
         const scope=activeScope(); let data; try{ data=await callRpc('get_login_names_scoped',{site_scope_input:scope}); }catch(_){ data=await callRpc('get_login_names',{}); }
         const rows=Array.isArray(data)?data:(Array.isArray(data?.names)?data.names:(Array.isArray(data?.data)?data.data:[]));
-        const items=rows.map(r=>typeof r==='string'?{value:r,label:r}:{value:String(r.player_id??r.id??r.value??r.display_name??''),label:String(r.display_name??r.name??r.label??r.desired_name??'')}).filter(r=>r.value&&r.label);
+        let items=rows.map(r=>typeof r==='string'?{value:r,label:r}:{value:String(r.player_id??r.id??r.value??r.display_name??''),label:String(r.display_name??r.name??r.label??r.desired_name??'')}).filter(r=>r.value&&r.label);
+        if(window.GEJAST_SCOPE_UTILS&&typeof window.GEJAST_SCOPE_UTILS.filterNames==='function'){ const allowed=new Set(window.GEJAST_SCOPE_UTILS.filterNames(items.map(o=>o.label), scope)); items=items.filter(o=>allowed.has(o.label)); }
         const opts=['<option value="">Kies speler</option>'].concat(items.map(o=>`<option value="${esc(o.value)}" data-label="${esc(o.label)}">${esc(o.label)}</option>`));
         document.getElementById('replaceOldPlayer').innerHTML=opts.join('');
         document.getElementById('replaceNewPlayer').innerHTML=opts.join('');

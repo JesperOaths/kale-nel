@@ -141,9 +141,16 @@
       return rows.map((r)=> typeof r==='string'? {player_id:r,display_name:r}: r).map(r=>({ value:String(r.player_id ?? r.id ?? r.value ?? r.display_name ?? ''), label:String(r.display_name ?? r.name ?? r.label ?? r.desired_name ?? '') })).filter(r=>r.value&&r.label);
     }
     async function loadNames(){
-      const { data, error } = await sb.rpc('get_login_names');
+      const scope = window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.getScope === 'function' ? window.GEJAST_SCOPE_UTILS.getScope() : 'friends';
+      let data = null; let error = null;
+      ({ data, error } = await sb.rpc('get_login_names_scoped', { site_scope_input: scope }));
+      if(error){ ({ data, error } = await sb.rpc('get_login_names')); }
       if(error) throw error;
-      const normalized = normalizeNames(data);
+      let normalized = normalizeNames(data);
+      if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') {
+        const allowed = new Set(window.GEJAST_SCOPE_UTILS.filterNames(normalized.map((row)=>row.label), scope).map((v)=>String(v)));
+        normalized = normalized.filter((row)=>allowed.has(String(row.label)));
+      }
       const options = uniqByValue(normalized.length ? normalized : DEFAULT_DUMMY_PLAYERS);
       [els.teamA1, els.teamA2, els.teamB1, els.teamB2].forEach((sel)=>{
         const prev=sel.value; sel.innerHTML='<option value="">Kies speler</option>' + options.map(o=>`<option value="${o.value}">${o.label}</option>`).join(''); if(prev) sel.value=prev;

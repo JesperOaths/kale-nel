@@ -25,6 +25,25 @@
       return String(qs.get('scope') || '').trim().toLowerCase() === 'family' ? 'family' : 'friends';
     } catch (_) { return 'friends'; }
   }
+
+  function normalizeName(value){ return String(value || '').replace(/\s+/g, ' ').trim(); }
+  function uniqueNames(values){ const seen = new Set(); return (Array.isArray(values)?values:[]).map(normalizeName).filter((name)=>{ const key=name.toLowerCase(); if(!name||seen.has(key)) return false; seen.add(key); return true; }); }
+  async function fetchAllowedNames(scope){
+    let raw = null;
+    try {
+      const scoped = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_login_names_scoped`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ site_scope_input: scope }) });
+      raw = await parseJson(scoped);
+    } catch (_) {
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_login_names`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({}) });
+        raw = await parseJson(res);
+      } catch (_2) { raw = { names: [] }; }
+    }
+    const rows = Array.isArray(raw) ? raw : (Array.isArray(raw?.names) ? raw.names : (Array.isArray(raw?.data) ? raw.data : []));
+    let names = uniqueNames(rows.map((row)=> typeof row === 'string' ? row : (row?.display_name || row?.name || row?.desired_name || row?.slug || row?.player_name || '')));
+    if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, scope);
+    return names;
+  }
   async function fetchViewer(token){
     if (!token || !SUPABASE_URL || !SUPABASE_KEY) return null;
     const payloads = [
@@ -155,6 +174,16 @@
     if (!token) return hide(shell);
     const viewer = await fetchViewer(token);
     if (!viewer || !viewer.name) return hide(shell);
+    try {
+      const allowed = await fetchAllowedNames(inferScope());
+      if (allowed.length && !allowed.includes(normalizeName(viewer.name))) {
+        clearTokens();
+        hide(shell);
+        const target = CONFIG.buildHomeUrl ? CONFIG.buildHomeUrl(CONFIG.currentReturnTarget ? CONFIG.currentReturnTarget('index.html') : 'index.html', inferScope()) : './home.html';
+        window.location.href = target;
+        return;
+      }
+    } catch (_) {}
     apply(shell, viewer);
     const toggle = shell.querySelector('#gejastSessionToggle');
     const close = shell.querySelector('#gejastSessionClose');

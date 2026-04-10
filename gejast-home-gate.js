@@ -6,9 +6,51 @@
   function currentTarget(){
     try{ return cfg.currentReturnTarget ? cfg.currentReturnTarget('index.html') : 'index.html'; }catch(_){ return 'index.html'; }
   }
+  function currentScope(){
+    try{ if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.getScope === 'function') return window.GEJAST_SCOPE_UTILS.getScope(); }catch(_){}
+    try{ return new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'; }catch(_){ return 'friends'; }
+  }
   function homeUrl(){
     var target = currentTarget();
-    try{ return cfg.buildHomeUrl ? cfg.buildHomeUrl(target) : './home.html'; }catch(_){ return './home.html'; }
+    try{ return cfg.buildHomeUrl ? cfg.buildHomeUrl(target, currentScope()) : './home.html'; }catch(_){ return './home.html'; }
+  }
+  function headers(){ return { 'Content-Type':'application/json', apikey:(cfg.SUPABASE_PUBLISHABLE_KEY||''), Authorization:`Bearer ${(cfg.SUPABASE_PUBLISHABLE_KEY||'')}` }; }
+  async function parse(res){ var txt=await res.text(); var data=null; try{ data=txt?JSON.parse(txt):null; }catch(_){ throw new Error(txt||('HTTP '+res.status)); } if(!res.ok) throw new Error(data&& (data.message||data.error) || ('HTTP '+res.status)); return data; }
+  function normalizeName(v){ return String(v||'').replace(/\s+/g,' ').trim(); }
+  function uniqueNames(list){ var seen=new Set(); return (Array.isArray(list)?list:[]).map(normalizeName).filter(function(name){ var k=name.toLowerCase(); if(!name||seen.has(k)) return false; seen.add(k); return true; }); }
+  async function fetchViewerName(token){
+    var rpcList=[['get_public_state',{session_token:token}],['get_gejast_homepage_state',{session_token:token}],['get_jas_app_state',{session_token:token}],['get_public_state',{session_token_input:token}],['get_gejast_homepage_state',{session_token_input:token}],['get_jas_app_state',{session_token_input:token}]];
+    for (const entry of rpcList){
+      try{
+        var res=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${entry[0]}`,{method:'POST',mode:'cors',cache:'no-store',headers:headers(),body:JSON.stringify(entry[1])});
+        var data=await parse(res);
+        var name=normalizeName(data&& (data.my_name || data.display_name || data.player_name || (data.viewer&&data.viewer.display_name) || ''));
+        if(name) return name;
+      }catch(_){ }
+    }
+    return '';
+  }
+  async function fetchAllowedNames(scope){
+    var raw=null;
+    try{
+      var scoped=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/get_login_names_scoped`,{method:'POST',mode:'cors',cache:'no-store',headers:headers(),body:JSON.stringify({site_scope_input:scope})});
+      raw=await parse(scoped);
+    }catch(_){
+      try{
+        var res=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/get_login_names`,{method:'POST',mode:'cors',cache:'no-store',headers:headers(),body:JSON.stringify({})});
+        raw=await parse(res);
+      }catch(_2){ raw={ names:[] }; }
+    }
+    var rows=Array.isArray(raw)?raw:(Array.isArray(raw&&raw.names)?raw.names:(Array.isArray(raw&&raw.data)?raw.data:[]));
+    var names=uniqueNames(rows.map(function(row){ return typeof row==='string' ? row : (row&& (row.display_name||row.name||row.desired_name||row.slug||row.player_name) || ''); }));
+    try{ if(window.GEJAST_SCOPE_UTILS&&typeof window.GEJAST_SCOPE_UTILS.filterNames==='function') names=window.GEJAST_SCOPE_UTILS.filterNames(names, scope); }catch(_){ }
+    return names;
+  }
+  async function verifyScope(){
+    var token=getToken(); if(!token || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY) return true;
+    var name=await fetchViewerName(token); if(!name) return true;
+    var allowed=await fetchAllowedNames(currentScope());
+    return !allowed.length || allowed.indexOf(name)!==-1;
   }
   if(expired()) clearTokens();
   if(!getToken()){
@@ -16,5 +58,6 @@
     location.replace(homeUrl());
   } else {
     try{ cfg.touchPlayerActivity && cfg.touchPlayerActivity(); }catch(_){ }
+    verifyScope().then(function(ok){ if(ok) return; clearTokens(); location.replace(homeUrl()); }).catch(function(){});
   }
 })();
