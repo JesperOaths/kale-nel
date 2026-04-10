@@ -1,0 +1,7 @@
+GEJAST v421a SQL-free asset follow-up
+
+Included:
+- adds /favicon.ico at the site root
+- derived from the existing repo logo so browsers stop requesting a missing root favicon and showing a 404 for favicon.ico
+
+No frontend version bump in this follow-up because this is an asset-only fix.
