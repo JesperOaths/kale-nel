@@ -13,6 +13,27 @@
     return Array.isArray(value) ? value : [];
   }
 
+
+  function normalizeName(value) {
+    return String(value || '').trim().toLowerCase();
+  }
+
+  function preferredPlayerName(player, fallbackName) {
+    return String(
+      player?.nickname ||
+      player?.chosen_username ||
+      player?.public_display_name ||
+      player?.display_name ||
+      player?.player_name ||
+      fallbackName ||
+      ''
+    ).trim();
+  }
+
+  function canonicalPlayerName(player, fallbackName) {
+    return String(player?.player_name || player?.display_name || fallbackName || '').trim();
+  }
+
   function parseTime(value) {
     const ts = Date.parse(value || '');
     return Number.isFinite(ts) ? ts : null;
@@ -117,14 +138,84 @@ function writeProfilesCache(value) {
     return next;
   }
 
-  async function loadSafeBase(playerName, scope) {
-    const [unified, drinks] = await Promise.all([
-      RPC.callRpc('get_public_player_unified_scoped', { player_name: playerName, site_scope_input: scope }),
-      RPC.callRpc('get_drink_player_public_scoped', { player_name: playerName, site_scope_input: scope })
-        .catch(() => RPC.callRpc('get_drink_player_public', { player_name: playerName }).catch(() => ({ })))
-    ]);
+  function buildUnifiedFromPlayerRow(player, fallbackName) {
+    const shown = preferredPlayerName(player, fallbackName);
+    const original = canonicalPlayerName(player, fallbackName) || shown;
+    const totalMatches = num(player?.total_matches);
+    const totalWins = num(player?.total_wins);
+    const bestRating = num(player?.best_rating) || 1000;
+    const klMatches = num(player?.klaverjas_matches);
+    const bbMatches = num(player?.boerenbridge_matches);
+    const bpMatches = num(player?.beerpong_matches);
+    function gameSummary(matches) {
+      const played = num(matches);
+      const proportionalWins = totalMatches > 0 ? Math.round((totalWins * played) / totalMatches) : 0;
+      return {
+        games_played: played,
+        matches_played: played,
+        wins: proportionalWins,
+        losses: Math.max(0, played - proportionalWins),
+        win_pct: played > 0 ? Math.round((100 * proportionalWins) / played) : 0,
+        elo_rating: bestRating
+      };
+    }
     return {
-      unified: unified || {},
+      player_name: shown,
+      canonical_player_name: original,
+      overview: {
+        total_matches: totalMatches,
+        total_wins: totalWins,
+        best_rating: bestRating,
+        best_badge: player?.best_badge || '',
+        profile_picture_url: player?.profile_picture_url || '',
+        favorite_game: player?.favorite_game || '',
+        bio: player?.bio || '',
+        klaverjas_matches: klMatches,
+        boerenbridge_matches: bbMatches,
+        beerpong_matches: bpMatches
+      },
+      games: {
+        klaverjas: { player_name: shown, badge: player?.best_badge || 'Starter', summary: gameSummary(klMatches), matches: [] },
+        boerenbridge: { player_name: shown, badge: player?.best_badge || 'Starter', summary: gameSummary(bbMatches), matches: [] },
+        beerpong: { player_name: shown, badge: player?.best_badge || 'Starter', summary: gameSummary(bpMatches), matches: [] }
+      }
+    };
+  }
+
+  function findPlayerInBundle(bundle, playerName) {
+    const target = normalizeName(playerName);
+    const players = safeArray(bundle?.players);
+    return players.find((player) => {
+      return [
+        player?.player_name,
+        player?.display_name,
+        player?.public_display_name,
+        player?.nickname,
+        player?.chosen_username
+      ].map(normalizeName).includes(target);
+    }) || null;
+  }
+
+  async function loadSafeBase(playerName, scope) {
+    const drinks = await RPC.callRpc('get_drink_player_public_scoped', { player_name: playerName, site_scope_input: scope })
+      .catch(() => RPC.callRpc('get_drink_player_public', { player_name: playerName }).catch(() => ({ })));
+
+    const unified = await RPC.callRpc('get_public_player_unified_scoped', { player_name: playerName, site_scope_input: scope }).catch(() => null);
+    if (unified) {
+      return {
+        unified: unified || {},
+        drinks: drinks || {},
+        badge_facts: {}
+      };
+    }
+
+    const fallbackBundle = await loadProfilesPageBundle().catch(async () => {
+      const players = await loadProfilesList().catch(() => ({ players: [] }));
+      return { players: players?.players || [] };
+    });
+    const playerRow = findPlayerInBundle(fallbackBundle, playerName);
+    return {
+      unified: buildUnifiedFromPlayerRow(playerRow, playerName),
       drinks: drinks || {},
       badge_facts: {}
     };
