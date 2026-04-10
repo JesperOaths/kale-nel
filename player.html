@@ -7,8 +7,8 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Speler</title>
-  <script>window.GEJAST_PAGE_VERSION='v393';</script>
-  <script src="./gejast-config.js?v393"></script>
+  <script>window.GEJAST_PAGE_VERSION='v395';</script>
+  <script src="./gejast-config.js?v395"></script>
   <script src="./gejast-clickable-cards.js?v391"></script>
   <script src="./gejast-scope-context.js?v391"></script><script src="./gejast-family-rollout.js?v393"></script>
   <style>
@@ -62,7 +62,7 @@
   <script src="./gejast-badges.js?v391"></script>
   <script src="./gejast-badge-progress.js?v391"></script>
   <script src="./gejast-rpc-contract.js?v391"></script>
-  <script src="./gejast-profile-source.js?v391"></script>
+  <script src="./gejast-profile-source.js?v395"></script>
 </head>
 <body>
   <div class="wrap">
@@ -273,10 +273,7 @@
           const profileSource = window.GEJAST_PROFILE_SOURCE || null;
           const panels = profileSource && typeof profileSource.loadPlayerGamePanels === 'function'
             ? await profileSource.loadPlayerGamePanels({ playerName: player, gameKey: currentGame }).catch(() => ({}))
-            : await callRpc('get_player_page_bundle_scoped', { player_name: player, game_key: currentGame, site_scope_input: scope }).catch(() => ({})).then((bundle) => ({
-                shared_stats: bundle?.shared_stats || {},
-                game_insights: bundle?.game_insights || { cards: [] }
-              }));
+            : { shared_stats: {}, game_insights: { cards: [] } };
           playerBundle.shared_stats = panels.shared_stats || {};
           playerBundle.game_insights = panels.game_insights || { cards: [] };
         } catch (_) {}
@@ -348,7 +345,7 @@
           const [bundle, pussy] = await Promise.all([
             profileSource && typeof profileSource.loadPlayerBundle === 'function'
               ? profileSource.loadPlayerBundle({ playerName: player, gameKey: currentGame })
-              : callRpc('get_player_page_bundle_scoped', { player_name: player, game_key: currentGame, site_scope_input: scope }),
+              : Promise.resolve({ unified: {}, drinks: {}, badge_facts: {}, shared_stats: {}, game_insights: { cards: [] } }),
             callRpc('get_beerpong_player_pussycup_public', { player_name: player }).catch(() => ({}))
           ]);
           playerBundle = bundle || {};
