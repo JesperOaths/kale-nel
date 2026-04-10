@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Boerenbridge Scoreformulier</title>
-  <script>window.GEJAST_PAGE_VERSION='v406';</script><script src="./gejast-config.js?v406"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-home-gate.js?v372"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('boerenbridge');</script>
+  <script>window.GEJAST_PAGE_VERSION='v407';</script><script src="./gejast-config.js?v407"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-home-gate.js?v372"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('boerenbridge');</script>
   <style>
     :root {
       --gold:#9a8241; --gold-dark:#8a7338; --ink:#121212; --muted:#666056; --panel:rgba(255,250,242,.88); --panel-line:rgba(17,17,17,.08);
@@ -46,13 +46,14 @@
     .summary-card{display:flex;gap:10px;flex-wrap:wrap;padding:0 16px 16px}
     .stat-box{background:rgba(255,255,255,.86);border:1px solid var(--panel-line);border-radius:18px;padding:12px 14px;min-width:130px}.stat-box .eyebrow{font-size:11px;color:#7a7266;text-transform:uppercase;letter-spacing:.08em}.stat-box strong{display:block;font-size:22px;margin-top:3px}
     .sticky-head-wrap{display:none}
-    .floating-head-wrap{position:fixed;top:8px;left:0;right:0;z-index:10020;display:none;pointer-events:none;padding:0 10px}
+    .floating-head-wrap{position:fixed;top:0;left:0;right:0;z-index:10050;display:none;pointer-events:none;padding:0 10px}
     .floating-head-wrap.show{display:block}
-    .floating-head-viewport{max-width:1100px;margin:0 auto;overflow:hidden;border:1px solid var(--panel-line);border-radius:18px;background:rgba(248,245,238,.98);box-shadow:0 12px 24px rgba(0,0,0,.10)}
-    .sticky-head-grid{display:grid;min-width:760px;will-change:transform}
-    .sticky-head-cell{padding:12px 10px;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#6b6458;font-weight:900;text-align:center;border-right:1px solid rgba(17,17,17,.06)}
-    .sticky-head-cell:first-child{text-align:left}
-    .sticky-head-cell:last-child{border-right:0}
+    .floating-head-viewport{max-width:1100px;margin:0 auto;overflow:hidden;border:1px solid var(--panel-line);border-radius:0 0 18px 18px;background:rgba(248,245,238,.99);box-shadow:0 12px 24px rgba(0,0,0,.14)}
+    .sticky-head-grid{min-width:760px;will-change:transform}
+    .sticky-head-grid table{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed}
+    .sticky-head-grid thead th{position:static;background:rgba(248,245,238,.99);font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#6b6458;padding:12px 10px;text-align:center;border-right:1px solid rgba(17,17,17,.06)}
+    .sticky-head-grid thead th:first-child{text-align:left}
+    .sticky-head-grid thead th:last-child{border-right:0}
     .overlay{position:fixed;inset:0;background:rgba(18,22,28,.56);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}.overlay.show{display:flex}
     .modal{width:min(760px,100%);max-height:88vh;overflow:auto;background:#fffdf9;border-radius:28px;padding:18px;box-shadow:0 28px 70px rgba(0,0,0,.28)}
     .modal h2{margin:0 0 8px;font-size:28px;letter-spacing:-.04em}.modal p{margin:0 0 14px;color:#5c564d;line-height:1.45}
@@ -82,7 +83,7 @@
   <div class="overlay" id="bidOverlay"><div class="modal"><h2 id="bidModalTitle">Biedingen</h2><p id="bidModalCopy">Vul de biedingen in. De deler biedt als laatste en mag het totaal niet exact op het aantal slagen laten uitkomen.</p><div class="hint" id="bidModalHint"></div><div class="round-grid" id="bidPlayerCards"></div><div class="modal-footer"><button class="ghost-btn" id="bidCancelBtn" type="button">Sluiten</button><button class="gold-btn" id="bidSaveBtn" type="button">Biedingen opslaan</button></div></div></div>
   <div class="overlay" id="wonOverlay"><div class="modal"><h2 id="wonModalTitle">Gewonnen slagen invullen</h2><p id="wonModalCopy">Na het spelen vul je per speler in hoeveel slagen echt gewonnen zijn.</p><div class="hint" id="wonModalHint"></div><div class="round-grid" id="wonPlayerCards"></div><div class="modal-footer"><button class="ghost-btn" id="wonCancelBtn" type="button">Sluiten</button><button class="gold-btn" id="wonSaveBtn" type="button">Ronde opslaan</button></div></div></div>
   <div class="overlay" id="rulesOverlay"><div class="modal"><h2>Regels</h2><p>Deze uitleg komt rechtstreeks uit het meegeleverde Boerenbridge-regelbestand.</p><div class="rules-copy" id="rulesCopy"></div><div class="modal-footer"><button class="dark-btn" id="rulesCloseBtn" type="button">Sluiten</button></div></div></div>
-  <div class="site-credit-watermark" data-version-watermark id="watermark" data-version-watermark>v406 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark id="watermark" data-version-watermark>v407 · Made by Bruis</div>
   <script>
     const APP_VERSION = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.VERSION) || 'v107';
     const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || '';
@@ -149,9 +150,9 @@ Per speler per ronde zichtbaar houden:
     const state = { availableNames: [], draft: null, roundEditorIndex: null };
     const emptyMatch = () => ({ client_match_id: `bb_${new Date().toISOString().replace(/[-:.]/g,'').replace('T','_').slice(0,15)}_${Math.random().toString(36).slice(2,8)}`, app_version: APP_VERSION, rules_version: BOERENBRIDGE_RULES_VERSION, created_at: new Date().toISOString(), finished_at: null, player_count: 4, players: [], dealer_index: 0, special_choices: [null,null,null,null], rounds: [], pending_round: null, saved_to_vault: false, remote_saved: false, remote_match_id: null, remote_draft_saved_at: null });
     const byId=id=>document.getElementById(id);
-    function renderStickyHeader(){ const wrap=byId('stickyHeadWrap'); const grid=byId('stickyHeadGrid'); const match=state.draft||emptyMatch(); const players=Array.isArray(match.players)?match.players.filter(Boolean):[]; if(!wrap||!grid){ return; } if(!players.length){ wrap.classList.remove('show'); grid.innerHTML=''; return; } grid.style.gridTemplateColumns=`17% repeat(${players.length}, minmax(120px, 1fr))`; grid.innerHTML=['<div class="sticky-head-cell">Ronde</div>'].concat(players.map((name)=>`<div class="sticky-head-cell">${name}</div>`)).join(''); updateStickyHeaderVisibility(); syncStickyHeader(); }
+    function renderStickyHeader(){ const shell=byId('stickyHeadWrap'); const grid=byId('stickyHeadGrid'); const tableWrap=byId('tableWrap'); const table=tableWrap&&tableWrap.querySelector('table'); if(!shell||!grid||!table){ return; } const colgroup=table.querySelector('colgroup'); const thead=table.querySelector('thead'); const hasPlayers=thead&&thead.querySelectorAll('th').length>1; if(!hasPlayers){ shell.classList.remove('show'); grid.innerHTML=''; return; } const width=Math.max(table.scrollWidth||0, table.getBoundingClientRect().width||0, 760); grid.style.width=`${width}px`; grid.innerHTML=`<table>${colgroup?colgroup.outerHTML:''}${thead?thead.outerHTML:''}</table>`; shell.classList.add('show'); syncStickyHeader(); }
     function syncStickyHeader(){ const tableWrap=byId('tableWrap'); const grid=byId('stickyHeadGrid'); if(!tableWrap||!grid) return; grid.style.transform=`translateX(${-tableWrap.scrollLeft}px)`; }
-    function updateStickyHeaderVisibility(){ const shell=byId('stickyHeadWrap'); const tableWrap=byId('tableWrap'); const grid=byId('stickyHeadGrid'); if(!shell||!tableWrap||!grid) return; const players=(state.draft&&Array.isArray(state.draft.players)?state.draft.players.filter(Boolean):[]); if(!players.length){ shell.classList.remove('show'); return; } shell.classList.add('show'); syncStickyHeader(); }
+    function updateStickyHeaderVisibility(){ const shell=byId('stickyHeadWrap'); const tableWrap=byId('tableWrap'); if(!shell||!tableWrap) return; const table=tableWrap.querySelector('table'); const hasPlayers=!!(table&&table.querySelectorAll('thead th').length>1); shell.classList.toggle('show', hasPlayers); if(hasPlayers) syncStickyHeader(); }
     function setStatus(msg='', tone=''){ const box=byId('statusBox'); box.textContent=msg; box.className='status'+(tone?` ${tone}`:''); }
     function getSessionToken(){ for (const k of SESSION_KEYS){ const v=localStorage.getItem(k); if(v) return v; } return ''; }
     function getSubmitterMeta(){ return { submitted_by_name:(window.GEJAST_CONFIG&&window.GEJAST_CONFIG.getPlayerSessionToken&&window.GEJAST_CONFIG.getPlayerSessionToken())?null:null, submitted_via:'boerenbridge_form', submitted_at:new Date().toISOString(), session_present:!!getSessionToken() }; }
@@ -248,7 +249,7 @@ Per speler per ronde zichtbaar houden:
   }
   function openBbSummary(){ const s=getBbSummary(true); if(!s) return; const totals=(s.payload.totals||[]).map(r=>`<div class="player-card"><h3>${r.name}</h3><div class="field"><label>Punten</label><input type="text" disabled value="${r.final_total_points||0}"></div></div>`).join(''); document.getElementById('bbSummaryCard').innerHTML=`<div class="hint">${s.recap}</div><div class="round-grid">${totals}</div>`; openOverlay('bbSummaryOverlay'); }
   async function copyBbRecap(){ const s=getBbSummary(true); if(!s) return; try{ await navigator.clipboard.writeText(s.recap); setStatus('Samenvatting gekopieerd.','ok'); }catch(_){ setStatus(s.recap,'ok'); } }
-  function downloadBbImage(){ const s=getBbSummary(true); if(!s) return; const c=document.createElement('canvas'); c.width=1200; c.height=630; const x=c.getContext('2d'); const g=x.createLinearGradient(0,0,1200,630); g.addColorStop(0,'#1b1711'); g.addColorStop(1,'#5d4820'); x.fillStyle=g; x.fillRect(0,0,1200,630); x.fillStyle='#f6f0e5'; x.fillRect(46,46,1108,538); x.fillStyle='#111'; x.font='900 50px Inter, sans-serif'; x.fillText('Boerenbridge',84,132); x.font='800 30px Inter, sans-serif'; x.fillText(s.recap,84,194,980); let y=280; x.font='700 34px Inter, sans-serif'; (s.payload.totals||[]).forEach(r=>{ x.fillText(`${r.name}: ${r.final_total_points||0}`,84,y); y+=54; }); x.font='700 24px Inter, sans-serif'; x.fillText('v406 · Made by Bruis',84,560); const a=document.createElement('a'); a.href=c.toDataURL('image/png'); a.download='boerenbridge-uitslag.png'; a.click(); }
+  function downloadBbImage(){ const s=getBbSummary(true); if(!s) return; const c=document.createElement('canvas'); c.width=1200; c.height=630; const x=c.getContext('2d'); const g=x.createLinearGradient(0,0,1200,630); g.addColorStop(0,'#1b1711'); g.addColorStop(1,'#5d4820'); x.fillStyle=g; x.fillRect(0,0,1200,630); x.fillStyle='#f6f0e5'; x.fillRect(46,46,1108,538); x.fillStyle='#111'; x.font='900 50px Inter, sans-serif'; x.fillText('Boerenbridge',84,132); x.font='800 30px Inter, sans-serif'; x.fillText(s.recap,84,194,980); let y=280; x.font='700 34px Inter, sans-serif'; (s.payload.totals||[]).forEach(r=>{ x.fillText(`${r.name}: ${r.final_total_points||0}`,84,y); y+=54; }); x.font='700 24px Inter, sans-serif'; x.fillText('v407 · Made by Bruis',84,560); const a=document.createElement('a'); a.href=c.toDataURL('image/png'); a.download='boerenbridge-uitslag.png'; a.click(); }
   const oldFinishPersist=window.finishAndPersist; window.finishAndPersist=async function(){ const out=await oldFinishPersist.apply(this,arguments); setTimeout(openBbSummary,100); try{ await syncDraftSummary(true); }catch(_){} return out; };
   window.setInterval(()=>{ if(document.visibilityState === "visible") { try { syncDraftSummary(false); } catch(_){} } }, 15000);
   document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "hidden") { try { syncDraftSummary(false); } catch(_){} } else { try { syncDraftSummary(false); } catch(_){} } });
@@ -262,7 +263,7 @@ Per speler per ronde zichtbaar houden:
 </style>
 <a class="manage-match-chip" href="./match_control.html?game=boerenbridge">✎ <span>Beheer wedstrijden<br><small>Eigen inzendingen / admin</small></span></a>
 
-<script src="./gejast-live-sync.js?v406"></script>
+<script src="./gejast-live-sync.js?v407"></script>
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>
