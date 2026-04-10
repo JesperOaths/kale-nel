@@ -1,0 +1,7 @@
+GEJAST v422a index-only restore
+
+Use this when login.html and home.html load, but index.html alone is the broken entry page.
+
+Included:
+- index.html restored from the concrete repo artifact baseline
+- only the shared config reference/page version refreshed to v422
