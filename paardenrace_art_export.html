@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <title>Paardenrace Art Export</title>
+  <style>
+    :root{
+      --paper:#f8f3e8;
+      --paper-warm:#efe4cf;
+      --gold:#9a8241;
+      --ink:#17120e;
+      --muted:#6d6254;
+    }
+    html,body{
+      margin:0;
+      padding:0;
+      background:transparent;
+      overflow:hidden;
+    }
+    body{
+      display:grid;
+      place-items:start;
+      font-family:Inter,system-ui,sans-serif;
+    }
+    canvas{
+      display:block;
+      margin:0;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="exportCanvas" width="1400" height="980" aria-label="Paardenrace export"></canvas>
+
+  <script src="./gejast-paardenrace-canvas-art.js?v412"></script>
+  <script>
+    (function(){
+      const art = window.GEJAST_PAARDENRACE_ART;
+      const canvas = document.getElementById('exportCanvas');
+      const ctx = canvas.getContext('2d');
+      if (!art || !ctx) return;
+
+      const params = new URLSearchParams(window.location.search);
+      const type = (params.get('type') || 'track').toLowerCase();
+      const needsMonogram = type === 'cards' || type === 'back' || type === 'cardback' || type === 'card_back';
+
+      function resize(width, height) {
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+      }
+
+      function roundedRect(ctx, x, y, w, h, r) {
+        const radius = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.arcTo(x + w, y, x + w, y + h, radius);
+        ctx.arcTo(x + w, y + h, x, y + h, radius);
+        ctx.arcTo(x, y + h, x, y, radius);
+        ctx.arcTo(x, y, x + w, y, radius);
+        ctx.closePath();
+      }
+
+      function fillRounded(ctx, x, y, w, h, r, fill, stroke) {
+        roundedRect(ctx, x, y, w, h, r);
+        if (fill) {
+          ctx.fillStyle = fill;
+          ctx.fill();
+        }
+        if (stroke) {
+          ctx.lineWidth = 1.2;
+          ctx.strokeStyle = stroke;
+          ctx.stroke();
+        }
+      }
+
+      function sheetBase(width, height, title, subtitle) {
+        resize(width, height);
+        const bg = ctx.createLinearGradient(0, 0, width, height);
+        bg.addColorStop(0, '#f9f5eb');
+        bg.addColorStop(0.45, '#f1e8d7');
+        bg.addColorStop(1, '#ebe1cc');
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, width, height);
+
+        const vignette = ctx.createRadialGradient(width * 0.5, height * 0.35, 40, width * 0.5, height * 0.35, width * 0.8);
+        vignette.addColorStop(0, 'rgba(255,255,255,0.32)');
+        vignette.addColorStop(1, 'rgba(90,70,40,0.12)');
+        ctx.fillStyle = vignette;
+        ctx.fillRect(0, 0, width, height);
+
+        fillRounded(ctx, 28, 28, width - 56, height - 56, 34, 'rgba(255,251,245,0.86)', 'rgba(23,18,14,0.08)');
+
+        ctx.fillStyle = '#17120e';
+        ctx.font = '800 46px Georgia, serif';
+        ctx.fillText(title, 72, 102);
+
+        ctx.fillStyle = '#6d6254';
+        ctx.font = '500 20px Inter, system-ui, sans-serif';
+        ctx.fillText(subtitle, 74, 136);
+      }
+
+      function drawBadges() {
+        sheetBase(1400, 720, 'Paardenrace Suits', 'Parchment suit stamps for lanes, selection, and winner states');
+        const keys = art.suitOrder;
+        keys.forEach(function(key, index){
+          const x = 80 + (index % 2) * 640;
+          const y = 190 + Math.floor(index / 2) * 230;
+          fillRounded(ctx, x, y, 600, 180, 28, 'rgba(255,255,255,0.68)', 'rgba(23,18,14,0.08)');
+          const stamp = art.drawSuitStamp(null, key, { width: 140, height: 140 });
+          ctx.drawImage(stamp, x + 22, y + 20, 140, 140);
+          ctx.fillStyle = '#17120e';
+          ctx.font = '700 34px Georgia, serif';
+          ctx.fillText(art.suits[key].label, x + 192, y + 74);
+          ctx.fillStyle = '#6d6254';
+          ctx.font = '500 20px Inter, system-ui, sans-serif';
+          ctx.fillText('Selectiechip / winnaarstempel / lane marker', x + 192, y + 112);
+        });
+      }
+
+      function drawHorses() {
+        sheetBase(1400, 760, 'Paardenrace Horses', 'Suit-matched race tokens with the same muted site palette');
+        art.suitOrder.forEach(function(key, index){
+          const x = 68 + index * 316;
+          const y = 194;
+          fillRounded(ctx, x, y, 284, 470, 30, 'rgba(255,255,255,0.7)', 'rgba(23,18,14,0.08)');
+          const token = art.drawHorseToken(null, key, { width: 230, height: 180 });
+          ctx.drawImage(token, x + 28, y + 50, 228, 176);
+          const badge = art.drawSuitStamp(null, key, { width: 74, height: 74 });
+          ctx.drawImage(badge, x + 105, y + 240, 74, 74);
+          ctx.fillStyle = '#17120e';
+          ctx.font = '700 30px Georgia, serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(art.suits[key].label, x + 142, y + 362);
+          ctx.fillStyle = '#6d6254';
+          ctx.font = '500 18px Inter, system-ui, sans-serif';
+          ctx.fillText('Horse marker / lobby preview', x + 142, y + 398);
+          ctx.textAlign = 'left';
+        });
+      }
+
+      function drawCards() {
+        sheetBase(1550, 620, 'Paardenrace Cards', 'Ace horses and the dark card back for gates and the draw deck');
+        art.suitOrder.forEach(function(key, index){
+          const card = art.drawCard(null, { rank: 'A', suit: key, horse: true, width: 230, height: 322 });
+          ctx.drawImage(card, 66 + index * 286, 178, 230, 322);
+        });
+        const back = art.drawCard(null, { faceDown: true, suit: 'spades', width: 230, height: 322 });
+        ctx.drawImage(back, 66 + art.suitOrder.length * 286, 178, 230, 322);
+      }
+
+      function drawTrack() {
+        resize(1400, 980);
+        art.drawTrack(canvas, { width: 1400, height: 980 });
+      }
+
+      function drawBack() {
+        resize(420, 600);
+        art.drawCard(canvas, { faceDown: true, suit: 'clubs', width: 420, height: 600 });
+      }
+
+      const ready = needsMonogram && art.preload ? art.preload() : Promise.resolve(true);
+      ready.then(() => {
+        try {
+          if (type === 'suits') drawBadges();
+          else if (type === 'horses') drawHorses();
+          else if (type === 'cards') drawCards();
+          else if (type === 'back' || type === 'cardback' || type === 'card_back') drawBack();
+          else drawTrack();
+        } catch (error) {
+          const pre = document.createElement('pre');
+          pre.style.position = 'fixed';
+          pre.style.left = '16px';
+          pre.style.top = '16px';
+          pre.style.maxWidth = 'calc(100vw - 32px)';
+          pre.style.padding = '12px 14px';
+          pre.style.borderRadius = '14px';
+          pre.style.background = 'rgba(23,18,14,0.9)';
+          pre.style.color = '#fff';
+          pre.style.font = '14px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+          pre.style.whiteSpace = 'pre-wrap';
+          pre.textContent = String(error && error.stack ? error.stack : error);
+          document.body.appendChild(pre);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

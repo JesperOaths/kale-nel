@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <title>Paardenrace Art Preview (Supplied Cards)</title>
+  <script>window.GEJAST_PAGE_VERSION='v412';</script>
+  <script src="./gejast-config.js?v412"></script>
+  <link rel="stylesheet" href="./site-shell.css" />
+  <style>
+    :root{
+      --ink:#17120e;
+      --muted:#6d6254;
+      --line:rgba(17,17,17,.08);
+      --panel:rgba(255,251,245,.82);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      color:var(--ink);
+      background:
+        linear-gradient(rgba(244,240,232,.72),rgba(244,240,232,.76)),
+        url('./site-bg-desktop.webp') center/cover fixed;
+      font-family: Inter, system-ui, sans-serif;
+    }
+    .page{max-width:1460px;margin:0 auto;padding:24px 18px 46px}
+    .hero,.panel{
+      background:var(--panel);
+      border:1px solid rgba(255,255,255,.72);
+      border-radius:32px;
+      box-shadow:0 20px 44px rgba(0,0,0,.08);
+      backdrop-filter:blur(10px);
+    }
+    .hero{padding:28px 30px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:start}
+    .hero h1{margin:0;font-size:clamp(2.4rem,5vw,4rem);line-height:.96;letter-spacing:-.05em}
+    .hero p{margin:10px 0 0;max-width:62ch;color:var(--muted);font-size:1.02rem}
+    .links{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;
+      min-height:44px;padding:10px 14px;border-radius:999px;
+      background:#111;color:#fff;text-decoration:none;font-weight:800
+    }
+    .btn.alt{background:#fff;color:#111;border:1px solid var(--line)}
+    .stack{display:grid;gap:18px;margin-top:18px}
+    .panel{padding:22px}
+    .panel h2{margin:0 0 6px;font-size:1.35rem}
+    .panel p{margin:0 0 16px;color:var(--muted)}
+    .tile{
+      background:rgba(255,255,255,.62);
+      border:1px solid var(--line);
+      border-radius:24px;
+      padding:16px;
+      overflow:hidden;
+    }
+    .tile img{
+      display:block;
+      width:100%;
+      height:auto;
+      border-radius:16px;
+    }
+    @media (max-width:1100px){
+      .hero{grid-template-columns:1fr}
+      .links{justify-content:flex-start}
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div>
+        <h1>Paardenrace Art</h1>
+        <p>
+          This preview is intentionally focused on the user-supplied card sheet and the track layout that slices
+          those cards as a sprite. The supplied cards are used exactly (not redrawn).
+        </p>
+      </div>
+      <div class="links">
+        <a class="btn alt" href="./index.html">Home</a>
+        <a class="btn alt" href="./paardenrace_cards_supplied_exact.html">Cards (Exact)</a>
+        <a class="btn" href="./paardenrace_track_supplied_cards.html">Track (Exact)</a>
+      </div>
+    </section>
+
+    <div class="stack">
+      <section class="panel">
+        <h2>Supplied Card Sheet (Exact)</h2>
+        <p>Canonical source. Do not edit, redraw, or re-encode.</p>
+        <div class="tile">
+          <img src="./assets/paardenrace/paardenrace-cards-supplied.webp" alt="Paardenrace cards supplied (exact)" />
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Track Layout (Sprite Sliced)</h2>
+        <p>Reference board geometry: 4 lanes, start box, 10 race boxes, finish box, and a 10-card gate row.</p>
+        <div class="tile">
+          <img src="./assets/paardenrace/paardenrace-track-supplied-cards.png" alt="Paardenrace track preview" />
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

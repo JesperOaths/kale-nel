@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <title>Paardenrace Track Exact Cards</title>
+  <style>
+    :root{
+      --paper:#e8e0d0;
+      --paper-soft:#f5f0e4;
+      --ink:#2a1a0a;
+      --muted:#5a4a35;
+      --line:#d8ccb8;
+      --gold:#c9a227;
+      --gold-deep:#8a6a2a;
+      --heart:#8b1a1a;
+      --diamond:#ba6a52;
+      --club:#6a7b5d;
+      --spade:#5f6876;
+      --cell:80px;
+      --gap:10px;
+      --cell-h:104px;
+      --gate-h:84px;
+      --label:154px;
+      --track-gap:16px;
+      --row-gap:16px;
+      --pr-back-img: url("./assets/paardenrace/paardenrace-card-back.png");
+      --pr-cards-sheet: url("./assets/paardenrace/paardenrace-cards-supplied.webp");
+      --pr-cards-sheet-w: 1024px;
+      --pr-cards-sheet-h: 278px;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      overflow: hidden;
+      font-family: Georgia, 'Times New Roman', serif;
+    }
+
+    body {
+      display: grid;
+      place-items: start;
+    }
+
+    .arena {
+      width: 1400px;
+      height: 980px;
+      box-sizing: border-box;
+      padding: 28px;
+      background:
+        radial-gradient(circle at 50% 22%, rgba(255,255,255,0.3), rgba(255,255,255,0) 52%),
+        linear-gradient(180deg, #f4eddf 0%, #ece2cf 58%, #e8dfcc 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .frame {
+      position: absolute;
+      inset: 28px;
+      border-radius: 34px;
+      background: rgba(255,251,245,0.82);
+      border: 1px solid rgba(42,26,10,0.08);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.3);
+    }
+
+    .header {
+      position: absolute;
+      left: 56px;
+      right: 56px;
+      top: 58px;
+      height: 84px;
+      border-radius: 28px;
+      background: rgba(255,255,255,0.58);
+      border: 1px solid rgba(42,26,10,0.08);
+      display: flex;
+      align-items: center;
+      padding: 0 28px;
+      gap: 22px;
+      box-sizing: border-box;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 36px;
+      line-height: 1;
+      color: #23160a;
+    }
+
+    .header p {
+      margin: 7px 0 0;
+      font-size: 15px;
+      color: var(--muted);
+    }
+
+    .board-shell {
+      position: absolute;
+      left: 56px;
+      right: 56px;
+      top: 144px;
+      bottom: 0px;
+      border-radius: 34px;
+      background: rgba(255,255,255,0.34);
+      border: 1px solid rgba(42,26,10,0.08);
+      box-sizing: border-box;
+      padding: 22px 22px 30px 22px;
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 18px;
+    }
+
+    .board-meta{
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 18px;
+      padding: 0 6px;
+    }
+
+    .board-meta strong{
+      display: block;
+      font-size: 14px;
+      font-weight: 800;
+      color: #23160a;
+      line-height: 1.1;
+      letter-spacing: 0.01em;
+    }
+
+    .board-meta span{
+      display: block;
+      margin-top: 5px;
+      font-size: 12px;
+      font-weight: 700;
+      color: rgba(90,74,53,0.9);
+    }
+
+    .board-meta .chips{
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .board-chip{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 28px;
+      padding: 0 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.07em;
+      color: rgba(42,26,10,0.84);
+      background: rgba(255,251,245,0.76);
+      border: 1px solid rgba(42,26,10,0.08);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.62);
+    }
+
+    .gate-area{
+      display: grid;
+      grid-template-columns: var(--label) auto;
+      column-gap: var(--track-gap);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .gate-row {
+      display: grid;
+      grid-template-columns: repeat(12, var(--cell));
+      gap: var(--gap);
+      align-items: center;
+    }
+
+    .gate-slot {
+      height: var(--gate-h);
+      border-radius: 18px;
+      border: 1px solid rgba(42,26,10,0.08);
+      background: rgba(255,251,245,0.76);
+      position: relative;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+
+    .gate-spacer{
+      height: var(--gate-h);
+    }
+
+    .track-cell,
+    .finish-cell,
+    .start-cell {
+      height: var(--cell-h);
+      border-radius: 18px;
+      border: 1px solid rgba(42,26,10,0.08);
+      background: rgba(255,251,245,0.66);
+      position: relative;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+
+    .track {
+      display: grid;
+      grid-template-columns: var(--label) auto;
+      column-gap: var(--track-gap);
+      row-gap: var(--row-gap);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .lane-label {
+      height: var(--cell-h);
+      border-radius: 24px;
+      border: 1px solid rgba(42,26,10,0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,0.76), rgba(255,251,245,0.55));
+      position: relative;
+      padding: 18px 16px;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .lane-label::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius:24px;
+      background: var(--lane-tint, rgba(0,0,0,0.04));
+      opacity: 0.36;
+      pointer-events: none;
+    }
+
+    .lane-chip {
+      position: relative;
+      z-index: 1;
+      min-width: 56px;
+      height: 22px;
+      padding: 0 10px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: #2a1a0a;
+      background: linear-gradient(180deg, rgba(255,255,255,0.54), rgba(0,0,0,0.06)), var(--lane-solid, #ddd);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.52);
+    }
+
+    .lane-copy {
+      position: relative;
+      z-index: 1;
+    }
+
+    .lane-copy strong {
+      display: block;
+      font-size: 17px;
+      color: #23160a;
+      line-height: 1.1;
+    }
+
+    .lane-copy span {
+      display: block;
+      margin-top: 5px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .lane-grid {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(12, var(--cell));
+      gap: var(--gap);
+      align-items: center;
+    }
+
+    .lane-grid::before,
+    .lane-grid::after{
+      content:"";
+      position:absolute;
+      top:-8px;
+      bottom:-8px;
+      width: var(--gap);
+      background:
+        repeating-linear-gradient(
+          180deg,
+          rgba(35,22,10,0.66) 0 6px,
+          rgba(255,255,255,0.82) 6px 12px
+        );
+      border-left: 1px solid rgba(42,26,10,0.08);
+      border-right: 1px solid rgba(42,26,10,0.08);
+    }
+
+    .lane-grid::before {
+      left: calc(var(--cell));
+    }
+
+    .lane-grid::after {
+      left: calc((var(--cell) + var(--gap)) * 11 - var(--gap));
+    }
+
+    .track-cell {
+      background: linear-gradient(180deg, rgba(255,255,255,0.74), rgba(241,234,221,0.84));
+    }
+
+    .finish-cell {
+      background: linear-gradient(180deg, rgba(242,228,193,0.82), rgba(234,221,189,0.96));
+    }
+
+    .board-card-wrap {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      position: relative;
+      --pr-card-scale: 1;
+    }
+
+    .board-card-wrap.small {
+      --pr-card-scale: 0.58;
+    }
+
+    .board-card-wrap.gate {
+      --pr-card-scale: 0.49;
+    }
+
+    /* Card sprite slices from the supplied card sheet (do not redraw). */
+    .pr-card {
+      background-image: var(--pr-cards-sheet);
+      background-size: var(--pr-cards-sheet-w) var(--pr-cards-sheet-h);
+      background-repeat: no-repeat;
+      display: block;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%) scale(var(--pr-card-scale));
+      transform-origin: center;
+    }
+
+    /* Crop boxes (x,y,w,h) from paardenrace-cards-supplied.webp (1024x278). */
+    .pr-card[data-kind="heart"]   { width: 118px; height: 168px; background-position: -193px -86px; }
+    .pr-card[data-kind="club"]    { width: 117px; height: 168px; background-position: -325px -86px; }
+    .pr-card[data-kind="diamond"] { width: 118px; height: 168px; background-position: -456px -86px; }
+    .pr-card[data-kind="spade"]   { width: 117px; height: 168px; background-position: -588px -86px; }
+    .pr-card[data-kind="back"]    {
+      width: 119px;
+      height: 170px;
+      background-image: var(--pr-back-img);
+      background-size: cover;
+      background-position: center;
+    }
+
+    .title-lines {
+      display: flex;
+      flex-direction: column;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="arena">
+    <div class="frame"></div>
+
+    <div class="header">
+      <div class="title-lines">
+        <h1>Paardenrace</h1>
+      </div>
+      <p>4 lanes - startbox - 10 vakken - finishbox - poortkaarten</p>
+    </div>
+
+    <div class="board-shell">
+      <div class="board-meta">
+        <div class="copy">
+          <strong>Poortkaarten</strong>
+          <span>Draai om zodra alle paarden deze stap hebben gehaald</span>
+        </div>
+        <div class="chips">
+          <span class="board-chip">START</span>
+          <span class="board-chip">FINISH</span>
+        </div>
+      </div>
+
+      <div class="gate-area">
+        <div></div>
+        <div class="gate-row" id="gateRow"></div>
+      </div>
+
+      <div class="track" id="trackRows"></div>
+    </div>
+  </div>
+
+  <template id="tpl-heart">
+    <div class="card">
+      <div class="corner-top">
+        <span class="rank red">A</span>
+        <span class="suit-sm red">♥</span>
+      </div>
+      <div class="horse-area">
+        <svg viewBox="0 0 80 60" width="80" height="60" xmlns="http://www.w3.org/2000/svg">
+          <g transform="translate(4,2)">
+            <path fill="#1a1208" d="M8,48 Q6,42 8,36 Q4,32 5,26 Q8,20 14,18 Q12,14 14,10 Q18,6 22,8 Q24,4 28,5 Q32,4 34,8 Q38,6 40,10 Q44,10 46,14 Q50,14 52,18 Q54,22 52,26 Q56,28 58,32 Q60,38 58,44 Q54,48 50,48 Q46,50 42,48 Q38,50 34,48 Q28,50 24,48 Q18,50 14,48 Z" opacity="0"/>
+            <path fill="#1a1208" d="M10,50 Q8,44 10,38 L8,30 Q10,22 16,20 Q14,14 16,10 Q20,6 24,8 Q22,4 26,4 Q30,3 32,7 Q36,5 38,10 Q42,9 44,14 Q48,14 50,18 Q52,22 50,26 Q54,28 56,34 Q57,40 54,46 Q50,50 46,50 Q42,52 38,50 L32,52 L26,50 Q20,52 16,50 Z" opacity="0"/>
+            <g transform="translate(0, 5)">
+              <ellipse cx="30" cy="42" rx="22" ry="3" fill="#1a1208" opacity="0.18"/>
+              <path fill="#1a1208" d="M5,38 Q4,32 6,28 Q5,22 8,18 L12,14 Q14,10 18,9 Q16,6 18,4 Q21,1 24,3 L26,5 Q29,2 32,3 Q35,2 37,5 L39,8 Q43,8 45,12 Q49,12 51,16 Q53,20 51,24 Q55,26 56,31 Q57,36 55,40 Q52,44 48,44 L44,46 Q40,47 36,45 Q32,47 28,45 Q23,47 19,45 Q13,46 10,42 Z"/>
+              <path fill="#2a1f0f" d="M18,9 Q16,6 18,4 Q21,1 24,3 L24,10 Z M26,5 Q29,2 32,3 L33,10 L26,10 Z"/>
+              <path fill="#2a1f0f" d="M5,38 Q4,32 6,28 L4,28 Q2,33 3,39 Z"/>
+              <path fill="#2a1f0f" d="M55,40 Q57,36 56,31 L58,32 Q59,37 57,41 Z"/>
+              <rect x="8" y="38" width="4" height="8" rx="2" fill="#1a1208"/>
+              <rect x="16" y="40" width="4" height="8" rx="2" fill="#1a1208"/>
+              <rect x="44" y="40" width="4" height="8" rx="2" fill="#1a1208"/>
+              <rect x="52" y="38" width="4" height="8" rx="2" fill="#1a1208"/>
+            </g>
+          </g>
+        </svg>
+      </div>
+      <div class="corner-bot">
+        <span class="rank red">A</span>
+        <span class="suit-sm red">♥</span>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-club">
+    <div class="card">
+      <div class="corner-top">
+        <span class="rank black">A</span>
+        <span class="suit-sm black">♣</span>
+      </div>
+      <div class="horse-area">
+        <svg viewBox="0 0 80 60" width="80" height="60" xmlns="http://www.w3.org/2000/svg">
+          <g transform="translate(4,7)">
+            <ellipse cx="30" cy="42" rx="22" ry="3" fill="#1a1208" opacity="0.18"/>
+            <path fill="#1a1208" d="M5,38 Q4,32 6,28 Q5,22 8,18 L12,14 Q14,10 18,9 Q16,6 18,4 Q21,1 24,3 L26,5 Q29,2 32,3 Q35,2 37,5 L39,8 Q43,8 45,12 Q49,12 51,16 Q53,20 51,24 Q55,26 56,31 Q57,36 55,40 Q52,44 48,44 L44,46 Q40,47 36,45 Q32,47 28,45 Q23,47 19,45 Q13,46 10,42 Z"/>
+            <path fill="#2a1f0f" d="M18,9 Q16,6 18,4 Q21,1 24,3 L24,10 Z M26,5 Q29,2 32,3 L33,10 L26,10 Z"/>
+            <path fill="#2a1f0f" d="M5,38 Q4,32 6,28 L4,28 Q2,33 3,39 Z"/>
+            <path fill="#2a1f0f" d="M55,40 Q57,36 56,31 L58,32 Q59,37 57,41 Z"/>
+            <rect x="8" y="38" width="4" height="8" rx="2" fill="#1a1208"/>
+            <rect x="16" y="40" width="4" height="8" rx="2" fill="#1a1208"/>
+            <rect x="44" y="40" width="4" height="8" rx="2" fill="#1a1208"/>
+            <rect x="52" y="38" width="4" height="8" rx="2" fill="#1a1208"/>
+          </g>
+        </svg>
+      </div>
+      <div class="corner-bot">
+        <span class="rank black">A</span>
+        <span class="suit-sm black">♣</span>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-diamond">
+    <div class="card">
+      <div class="corner-top">
+        <span class="rank red">A</span>
+        <span class="suit-sm red">♦</span>
+      </div>
+      <div class="horse-area">
+        <svg viewBox="0 0 80 60" width="80" height="60" xmlns="http://www.w3.org/2000/svg">
+          <g transform="translate(4,7)">
+            <ellipse cx="30" cy="42" rx="22" ry="3" fill="#1a1208" opacity="0.18"/>
+            <path fill="#1a1208" d="M3,35 Q2,28 5,23 Q7,17 12,14 Q14,10 18,9 Q16,6 18,4 Q21,1 24,3 L26,5 Q29,2 32,3 Q35,2 37,5 L39,8 Q43,8 45,12 Q49,12 51,16 Q53,20 51,24 Q55,26 56,31 Q57,36 55,40 Q52,44 48,44 L44,46 Q40,47 36,45 Q32,47 28,45 Q23,47 19,45 Q13,46 9,43 Q4,40 3,35 Z"/>
+            <path fill="#2a1f0f" d="M18,9 Q16,6 18,4 Q21,1 24,3 L24,10 Z M26,5 Q29,2 32,3 L33,10 L26,10 Z"/>
+            <path fill="#2a1f0f" d="M3,35 Q2,28 5,23 L1,25 Q-1,31 0,36 Z"/>
+            <path fill="#2a1f0f" d="M55,40 Q57,36 56,31 L58,32 Q59,37 57,41 Z"/>
+            <rect x="6" y="38" width="4" height="8" rx="2" fill="#1a1208"/>
+            <rect x="14" y="40" width="4" height="8" rx="2" fill="#1a1208"/>
+            <rect x="44" y="40" width="4" height="8" rx="2" fill="#1a1208"/>
+            <rect x="52" y="38" width="4" height="8" rx="2" fill="#1a1208"/>
+          </g>
+        </svg>
+      </div>
+      <div class="corner-bot">
+        <span class="rank red">A</span>
+        <span class="suit-sm red">♦</span>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-spade">
+    <div class="card">
+      <div class="corner-top">
+        <span class="rank black">A</span>
+        <span class="suit-sm black">♠</span>
+      </div>
+      <div class="horse-area">
+        <svg viewBox="0 0 80 60" width="80" height="60" xmlns="http://www.w3.org/2000/svg">
+          <g transform="translate(4,5)">
+            <ellipse cx="33" cy="44" rx="18" ry="2.5" fill="#1a1208" opacity="0.18"/>
+            <path fill="#1a1208" d="M10,44 Q8,38 10,32 Q9,25 13,20 Q16,15 21,13 Q19,8 22,5 Q25,1 29,3 Q31,1 34,2 Q37,1 39,4 Q42,5 43,10 Q47,11 49,15 Q51,20 50,25 L52,30 Q53,37 50,42 Q46,46 42,45 Q40,47 38,44 Q36,47 34,44 Q30,47 26,44 Q22,47 18,45 Q12,46 10,44 Z"/>
+            <path fill="#2a1f0f" d="M22,5 Q25,1 29,3 L28,12 Z M31,1 Q34,2 37,4 L36,12 L29,12 Z"/>
+            <path fill="#2a1f0f" d="M10,44 Q8,38 10,32 L8,32 Q6,38 8,44 Z"/>
+            <path fill="#2a1f0f" d="M52,30 Q53,37 50,42 L54,40 Q56,35 54,30 Z"/>
+            <rect x="11" y="42" width="4" height="7" rx="2" fill="#1a1208"/>
+            <rect x="19" y="44" width="4" height="7" rx="2" fill="#1a1208"/>
+            <rect x="45" y="43" width="4" height="7" rx="2" fill="#1a1208"/>
+            <rect x="50" y="41" width="4" height="8" rx="2" fill="#1a1208"/>
+          </g>
+        </svg>
+      </div>
+      <div class="corner-bot">
+        <span class="rank black">A</span>
+        <span class="suit-sm black">♠</span>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-back">
+    <div class="card-back">
+      <div class="card-back-inner">
+        <svg viewBox="0 0 70 100" width="70" height="100" xmlns="http://www.w3.org/2000/svg">
+          <text x="35" y="62" text-anchor="middle" font-family="Georgia, serif" font-size="44" font-weight="700" fill="#c9a227" letter-spacing="-2">ᗡC</text>
+          <text x="35" y="62" text-anchor="middle" font-family="Georgia, serif" font-size="44" font-weight="700" fill="none" stroke="#8a6a2a" stroke-width="1" letter-spacing="-2">ᗡC</text>
+        </svg>
+      </div>
+    </div>
+  </template>
+
+  <script>
+    (function () {
+      const gateRow = document.getElementById('gateRow');
+      const trackRows = document.getElementById('trackRows');
+
+      const suits = [
+        { key: 'heart', label: 'Harten', chip: 'Har', tint: 'rgba(139,26,26,0.14)', solid: '#d4a299', icon: '♥' },
+        { key: 'diamond', label: 'Ruiten', chip: 'Rui', tint: 'rgba(186,106,82,0.16)', solid: '#ddb29d', icon: '♦' },
+        { key: 'club', label: 'Klaveren', chip: 'Kla', tint: 'rgba(106,123,93,0.16)', solid: '#a6b59b', icon: '♣' },
+        { key: 'spade', label: 'Schoppen', chip: 'Sch', tint: 'rgba(95,104,118,0.16)', solid: '#aab3c1', icon: '♠' }
+      ];
+
+      function createCard(kind) {
+        const el = document.createElement('div');
+        el.className = 'pr-card';
+        el.dataset.kind = kind;
+        return el;
+      }
+
+      for (let i = 0; i < 10; i += 1) {
+        const slot = document.createElement('div');
+        slot.className = 'gate-slot';
+        const wrap = document.createElement('div');
+        wrap.className = 'board-card-wrap gate';
+        wrap.appendChild(createCard('back'));
+        slot.appendChild(wrap);
+        gateRow.appendChild(slot);
+      }
+
+      const gateStartSpacer = document.createElement('div');
+      gateStartSpacer.className = 'gate-spacer';
+      gateRow.insertBefore(gateStartSpacer, gateRow.firstChild);
+      const gateEndSpacer = document.createElement('div');
+      gateEndSpacer.className = 'gate-spacer';
+      gateRow.appendChild(gateEndSpacer);
+
+      suits.forEach((suit) => {
+        const label = document.createElement('div');
+        label.className = 'lane-label';
+        label.style.setProperty('--lane-tint', suit.tint);
+        label.style.setProperty('--lane-solid', suit.solid);
+        label.innerHTML =
+          '<div class="lane-chip">' + suit.chip + '</div>' +
+          '<div class="lane-copy"><strong>' + suit.label + '</strong><span>lane</span></div>';
+        trackRows.appendChild(label);
+
+        const laneGrid = document.createElement('div');
+        laneGrid.className = 'lane-grid';
+
+        const startCell = document.createElement('div');
+        startCell.className = 'start-cell';
+        const startWrap = document.createElement('div');
+        startWrap.className = 'board-card-wrap small';
+        startWrap.appendChild(createCard(suit.key));
+        startCell.appendChild(startWrap);
+        laneGrid.appendChild(startCell);
+
+        for (let step = 1; step <= 10; step += 1) {
+          const cell = document.createElement('div');
+          cell.className = 'track-cell';
+          cell.dataset.step = String(step);
+          laneGrid.appendChild(cell);
+        }
+
+        const finishCell = document.createElement('div');
+        finishCell.className = 'finish-cell';
+        laneGrid.appendChild(finishCell);
+
+        trackRows.appendChild(laneGrid);
+      });
+    })();
+  </script>
+</body>
+</html>
