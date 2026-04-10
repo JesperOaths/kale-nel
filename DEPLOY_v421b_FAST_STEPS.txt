@@ -1,0 +1,10 @@
+GEJAST v421b emergency root restore fast steps
+
+1. Upload:
+   - index.html
+   - home.html
+   - gejast-config.js
+
+2. Hard refresh kalenel.nl.
+
+3. Confirm the root page renders again.

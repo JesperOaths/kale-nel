@@ -1,0 +1,9 @@
+GEJAST v421b emergency root restore
+
+What this restores:
+- index.html back to the concrete repo artifact baseline, with only the shared config reference refreshed to v421
+- home.html back to the concrete repo artifact baseline, with only the shared config reference refreshed to v421
+- gejast-config.js kept on the safer v421 recovery path: version sync on, aggressive auto-redirect off
+
+Why this patch exists:
+- the blank root page strongly suggests the root entry line needs to be restored cleanly from the known-good concrete repo artifact instead of continuing on the mass-swept entry files
