@@ -1,0 +1,13 @@
+GEJAST v416 fast steps
+
+1. Upload changed frontend file:
+   - gejast-config.js
+
+2. Run in Supabase SQL editor:
+   - gejast_v416_paardenrace_update_selection_scoped.sql
+
+3. Hard refresh paardenrace.html and one or two other pages.
+
+4. Confirm the visible watermark now shows v416 and stays v416 even after late page rendering.
+
+5. Test Nieuwe room maken again.

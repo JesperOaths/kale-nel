@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v415',
+    VERSION:'v416',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -80,6 +80,16 @@
     nodes.forEach((node)=>{ node.textContent = label; watermarkStyles(node); });
     const re = /v\d+\s*[·.-]?\s*Made by Bruis/i;
     document.querySelectorAll('body *').forEach((node)=>{ if (node.children.length) return; const txt=(node.textContent||'').trim(); if (re.test(txt)) { node.textContent = label; watermarkStyles(node); } });
+  }
+
+  let versionObserverStarted = false;
+  function ensureVersionObserver(){
+    if (versionObserverStarted || typeof MutationObserver !== 'function' || !document.documentElement) return;
+    versionObserverStarted = true;
+    const observer = new MutationObserver(()=>{
+      try { applyVersionLabel(); } catch (_) {}
+    });
+    observer.observe(document.documentElement, { childList:true, subtree:true });
   }
 
 
