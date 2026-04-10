@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inloggen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v393';</script>
+  <script>window.GEJAST_PAGE_VERSION='v394';</script>
   <style>
     :root { --gold: #9a8241; --dark-bg: #111; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.08); }
     * { box-sizing: border-box; }
@@ -48,7 +48,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/login.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v393"></script><script src="./gejast-family-rollout.js?v393"></script>
+  <script src="./gejast-config.js?v394"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-account-scope.js?v394"></script>
 </head>
 <body>
   <div class="site-scene">
@@ -161,12 +161,20 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return raw;
     }
     async function getPublicState() {
+      if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
+        return await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_public_state', { session_token: getSessionToken() });
+      }
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token: getSessionToken() })
       });
       return await parseResponse(res);
     }
     async function getLoginNames() {
+      try {
+        if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
+          return await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_login_names', {});
+        }
+      } catch (_) {}
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_login_names`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({})
       });
@@ -176,6 +184,9 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     async function touchSession() {
       const token = getSessionToken();
       if (!token) return null;
+      if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
+        return await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('player_touch_session', { input_token: token });
+      }
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/player_touch_session`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ input_token: token })
       });
@@ -233,6 +244,9 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const email = String(document.getElementById('resetEmailInput').value || '').trim().toLowerCase();
       if (!desiredName) throw new Error('Vul de gebruikersnaam in waarvoor je de pincode wilt resetten.');
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Vul het gekoppelde e-mailadres in.');
+      if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
+        return await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('request_pin_reset_reactivation_action', { input_display_name: desiredName, input_email: email, base_url: activationBaseUrl() });
+      }
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/request_pin_reset_reactivation_action`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
         body: JSON.stringify({ input_display_name: desiredName, input_email: email, base_url: activationBaseUrl() })
@@ -256,6 +270,10 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         { display_name: desiredName, pin: enteredPin },
         { input_name: desiredName, input_pin: enteredPin }
       ];
+
+      if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
+        return await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('login_player', payloads);
+      }
 
       let lastErr = null;
       for (const payload of payloads) {

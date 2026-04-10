@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Naam claimen</title>
-  <script>window.GEJAST_PAGE_VERSION='v393';</script>
+  <script>window.GEJAST_PAGE_VERSION='v394';</script>
   <style>
     :root { --gold: #9a8241; --black: #111; --bg: #f0ede4; }
     * { box-sizing: border-box; }
@@ -34,7 +34,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/request.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v393"></script><script src="./gejast-family-rollout.js?v393"></script>
+  <script src="./gejast-config.js?v394"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-account-scope.js?v394"></script>
 </head>
 <body>
   <div class="scene">
@@ -155,12 +155,15 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
 
     async function getRequestableNames() {
       const attempts = [];
+      const scope = window.GEJAST_ACCOUNT_SCOPE && window.GEJAST_ACCOUNT_SCOPE.currentScope ? window.GEJAST_ACCOUNT_SCOPE.currentScope() : 'friends';
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names`, {
-          method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(), body: JSON.stringify({})
-        });
-        const data = await parseResponse(res);
-        const names = uniqueNames(normalizeRequestableNamesPayload(data));
+        const data = window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function'
+          ? await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_requestable_names', {})
+          : await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names`, {
+              method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(), body: JSON.stringify({})
+            }).then(parseResponse);
+        let names = uniqueNames(normalizeRequestableNamesPayload(data));
+        if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, scope);
         if (names.length) return names;
         attempts.push('rpc-empty');
       } catch (err) {
@@ -168,10 +171,13 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       }
 
       try {
-        const url = `${SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status&status=eq.available&order=display_name.asc`;
+        const url = `${SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope&status=eq.available&order=display_name.asc`;
         const res = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-store', headers: rpcHeaders() });
         const data = await parseResponse(res);
-        const names = uniqueNames(normalizeRequestableNamesPayload(data));
+        let rows = Array.isArray(data) ? data : [];
+        rows = rows.filter((row) => !row?.site_scope || String(row.site_scope).toLowerCase() === scope);
+        let names = uniqueNames(normalizeRequestableNamesPayload(rows));
+        if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, scope);
         if (names.length) return names;
         attempts.push('rest-empty');
       } catch (err) {
@@ -189,6 +195,14 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       if (!desiredName) throw new Error("Kies eerst een naam");
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requesterEmail)) throw new Error("Vul een geldig e-mailadres in");
       
+      if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
+        return await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('request_claim_action', {
+          desired_name: desiredName,
+          requester_note: requesterNote || "",
+          requester_email: requesterEmail,
+          requester_meta: collectVisitorMeta()
+        });
+      }
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/request_claim_action`, {
         method: "POST",
         mode: "cors",
