@@ -663,10 +663,12 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v386';</script><script src="./gejast-config.js?v386"></script><script src="./gejast-clickable-cards.js?v371"></script><script src="./gejast-scope-context.js?v371"></script><script src="./gejast-scope.js?v371"></script><script src="./gejast-home-gate.js?v371"></script>
-  <script src="./gejast-live-summary.js?v371"></script>
-<script src="./gejast-push-runtime.js?v371"></script>
-<script src="./gejast-fairness.js?v371"></script></head>
+  <script>window.GEJAST_PAGE_VERSION='v389';</script><script src="./gejast-config.js?v389"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script src="./gejast-live-summary.js?v389"></script>
+  <script src="./gejast-scoped-rpc.js?v389"></script>
+  <script src="./gejast-combined-readers.js?v389"></script>
+<script src="./gejast-push-runtime.js?v389"></script>
+<script src="./gejast-fairness.js?v389"></script></head>
 <body class="boot-pending homepage-ready"><div id="gejastTopRightToolsMount"></div>
   <div class="site-scene" aria-hidden="true">
     <div class="left-hand"><img src="./kale9goed.png" alt="" style="width:100%;display:block;" /></div>
@@ -867,10 +869,41 @@
       pill.className = `live-pill ${state}`;
       pill.textContent = text;
     }
+const HOMEPAGE_BOOT_CACHE_KEY = 'gejast_homepage_boot_v389';
+const HOMEPAGE_BOOT_CACHE_TTL = 15 * 1000;
+
+function readHomepageBootCache() {
+  try {
+    const raw = sessionStorage.getItem(HOMEPAGE_BOOT_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.at || (Date.now() - Number(parsed.at)) > HOMEPAGE_BOOT_CACHE_TTL) return null;
+    return parsed.value || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeHomepageBootCache(value) {
+  try {
+    sessionStorage.setItem(HOMEPAGE_BOOT_CACHE_KEY, JSON.stringify({ at: Date.now(), value }));
+  } catch (_) {}
+  return value;
+}
+
+function applyAdminViewerRefresh() {
+  try {
+    if (currentHomepageState) renderState(currentHomepageState);
+    if (currentDrinksPollState) renderExtraPollState(currentDrinksPollState);
+  } catch (_) {}
+}
+
 
     function unwrapHomepageLadderPayload(payload){
       if (payload && payload.get_homepage_ladders_public) return payload.get_homepage_ladders_public;
+      if (payload && payload.get_homepage_ladders_public_scoped) return payload.get_homepage_ladders_public_scoped;
       if (Array.isArray(payload) && payload[0] && payload[0].get_homepage_ladders_public) return payload[0].get_homepage_ladders_public;
+      if (Array.isArray(payload) && payload[0] && payload[0].get_homepage_ladders_public_scoped) return payload[0].get_homepage_ladders_public_scoped;
       if (Array.isArray(payload) && payload[0]) return payload[0];
       return payload || {};
     }
@@ -922,15 +955,18 @@
         const data = await parseResponse(res);
         renderHomepageLadders(data || {});
         setHomepageLiveState('live', 'Live');
+        return data || {};
       } catch (err) {
         console.warn('Homepage ladders primary RPC failed, trying fallback', err);
         try {
           const fallback = await fetchHomepageLadderFallback();
           renderHomepageLadders(fallback || {});
           setHomepageLiveState('live', 'Live');
+          return fallback || {};
         } catch (fallbackErr) {
           console.warn('Homepage ladders offline', fallbackErr);
           setHomepageLiveState('standby', 'Offline');
+          return null;
         }
       }
     }
@@ -1480,20 +1516,25 @@ async function castExtraPollVote(desired_status) {
       }
     }
 
+    function applyDrinksHomePayload(data){
+      const payload = data?.get_drinks_homepage_public || data || {};
+      const grid = document.getElementById('drinksHomeGrid');
+      if(!grid) return;
+      const totals = payload.totals || {};
+      grid.innerHTML = `
+        <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">${Number(totals.today_events||0)}</div></a>
+        <a class="drinks-mini" style="background:#fff;color:#111;border:1px solid rgba(0,0,0,.12)" href="./drinks_pending.html"><div class="drinks-mini-label">Verifiëren</div><div class="drinks-mini-value" style="color:var(--gold)">+</div></a>
+        <a class="drinks-mini gold" href="./drinks_speed.html"><div class="drinks-mini-label">Snelheids poging</div><div class="drinks-mini-value">+</div></a>
+        <a class="drinks-mini dark" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div></a>`;
+    }
+
     async function loadDrinksHome(){
       try{
         const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
         const data = await parseResponse(res);
-        const payload = data?.get_drinks_homepage_public || data || {};
-        const grid = document.getElementById('drinksHomeGrid');
-        if(!grid) return;
-        const totals = payload.totals || {};
-        grid.innerHTML = `
-          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">${Number(totals.today_events||0)}</div></a>
-          <a class="drinks-mini" style="background:#fff;color:#111;border:1px solid rgba(0,0,0,.12)" href="./drinks_pending.html"><div class="drinks-mini-label">Verifiëren</div><div class="drinks-mini-value" style="color:var(--gold)">+</div></a>
-          <a class="drinks-mini gold" href="./drinks_speed.html"><div class="drinks-mini-label">Snelheids poging</div><div class="drinks-mini-value">+</div></a>
-          <a class="drinks-mini dark" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div></a>`;
-      } catch(_){ }
+        applyDrinksHomePayload(data);
+        return data;
+      } catch(_){ return null; }
     }
 
     const __gejastDrinksTop5State={dayTitle:'Vandaag',sessionRows:[],allTimeRows:[],speedGroups:[{key:'bak',label:'1 Bak',rows:[]},{key:'2bak',label:'2 Bakken',rows:[]},{key:'ice',label:'Ice',rows:[]},{key:'liter',label:'Liter Bier',rows:[]},{key:'wijn',label:'Fles Wijn',rows:[]}],biggestPlayer:null,speedIdx:0,rotationTimer:null};
@@ -1534,44 +1575,50 @@ async function castExtraPollVote(desired_status) {
         renderDrinksHomeTop5();
       }, 7000);
     }
+    function applyDrinksTop5Payload(data){
+      const payload = data?.get_drinks_homepage_top5_public || data || {};
+      const dayNames = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
+      __gejastDrinksTop5State.dayTitle = `${dayNames[new Date().getDay()]||'Vandaag'}`;
+      const unitValue = (row) => { const n = Number(row?.total_units ?? row?.units ?? row?.unit_total ?? row?.value ?? 0); return Number.isFinite(n) ? n : 0; };
+      const secondValue = (row) => { const n = Number(row?.duration_seconds ?? row?.seconds ?? row?.duration ?? row?.value ?? 0); return Number.isFinite(n) ? n : 0; };
+      const normaliseUnitRows = (rows) => (Array.isArray(rows) ? rows : []).filter((r)=>unitValue(r) > 0).slice(0,5).map((row)=>({ ...row, total_units: unitValue(row) }));
+      const normaliseSpeedRows = (rows) => (Array.isArray(rows) ? rows : []).filter((r)=>secondValue(r) > 0).slice(0,5).map((row)=>({ ...row, duration_seconds: secondValue(row) }));
+      __gejastDrinksTop5State.sessionRows = normaliseUnitRows(payload.session_top5 || []);
+      __gejastDrinksTop5State.allTimeRows = normaliseUnitRows(payload.all_time_top5 || []);
+      __gejastDrinksTop5State.biggestPlayer = __gejastDrinksTop5State.allTimeRows[0] || null;
+      const defaults=[
+        {key:'bak',label:'1 Bak',rows:[]},
+        {key:'2bak',label:'2 Bakken',rows:[]},
+        {key:'ice',label:'Ice',rows:[]},
+        {key:'liter',label:'Liter Bier',rows:[]},
+        {key:'wijn',label:'Fles Wijn',rows:[]}
+      ];
+      const byKey=new Map(defaults.map((g)=>[g.key,g]));
+      const rawSpeedGroups = Array.isArray(payload.speed_top5_by_type) ? payload.speed_top5_by_type : [];
+      rawSpeedGroups.forEach((g)=>{
+        const rawKey=String(g?.key || g?.speed_type_key || '').toLowerCase();
+        if(rawKey==='shot') return;
+        const key = rawKey || 'bak';
+        const normalized = { key, label:g.label || g.speed_type_label || byKey.get(key)?.label || '1 Bak', rows:normaliseSpeedRows(Array.isArray(g.rows)?g.rows:[]) };
+        byKey.set(key, normalized);
+      });
+      __gejastDrinksTop5State.speedGroups = Array.from(byKey.values());
+      if(__gejastDrinksTop5State.speedIdx >= __gejastDrinksTop5State.speedGroups.length) __gejastDrinksTop5State.speedIdx = 0;
+      renderDrinksHomeTop5();
+      startDrinksHomeTop5Rotation();
+    }
+
     async function loadDrinksHomeTop5(){
       try{
-        const dayNames = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
-        __gejastDrinksTop5State.dayTitle = `${dayNames[new Date().getDay()]||'Vandaag'}`;
         const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_top5_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
         const data = await parseResponse(res);
-        const payload = data?.get_drinks_homepage_top5_public || data || {};
-        const unitValue = (row) => { const n = Number(row?.total_units ?? row?.units ?? row?.unit_total ?? row?.value ?? 0); return Number.isFinite(n) ? n : 0; };
-        const secondValue = (row) => { const n = Number(row?.duration_seconds ?? row?.seconds ?? row?.duration ?? row?.value ?? 0); return Number.isFinite(n) ? n : 0; };
-        const normaliseUnitRows = (rows) => (Array.isArray(rows) ? rows : []).filter((r)=>unitValue(r) > 0).slice(0,5).map((row)=>({ ...row, total_units: unitValue(row) }));
-        const normaliseSpeedRows = (rows) => (Array.isArray(rows) ? rows : []).filter((r)=>secondValue(r) > 0).slice(0,5).map((row)=>({ ...row, duration_seconds: secondValue(row) }));
-        __gejastDrinksTop5State.sessionRows = normaliseUnitRows(payload.session_top5 || []);
-        __gejastDrinksTop5State.allTimeRows = normaliseUnitRows(payload.all_time_top5 || []);
-        __gejastDrinksTop5State.biggestPlayer = __gejastDrinksTop5State.allTimeRows[0] || null;
-        const defaults=[
-          {key:'bak',label:'1 Bak',rows:[]},
-          {key:'2bak',label:'2 Bakken',rows:[]},
-          {key:'ice',label:'Ice',rows:[]},
-          {key:'liter',label:'Liter Bier',rows:[]},
-          {key:'wijn',label:'Fles Wijn',rows:[]}
-        ];
-        const byKey=new Map(defaults.map((g)=>[g.key,g]));
-        const rawSpeedGroups = Array.isArray(payload.speed_top5_by_type) ? payload.speed_top5_by_type : [];
-        rawSpeedGroups.forEach((g)=>{
-          const rawKey=String(g?.key || g?.speed_type_key || '').toLowerCase();
-          if(rawKey==='shot') return;
-          const key = rawKey || 'bak';
-          const normalized = { key, label:g.label || g.speed_type_label || byKey.get(key)?.label || '1 Bak', rows:normaliseSpeedRows(Array.isArray(g.rows)?g.rows:[]) };
-          byKey.set(key, normalized);
-        });
-        __gejastDrinksTop5State.speedGroups = Array.from(byKey.values());
-        if(__gejastDrinksTop5State.speedIdx >= __gejastDrinksTop5State.speedGroups.length) __gejastDrinksTop5State.speedIdx = 0;
-        renderDrinksHomeTop5();
-        startDrinksHomeTop5Rotation();
+        applyDrinksTop5Payload(data);
+        return data;
       } catch(err){
         console.warn('Drinks homepage top 5 load failed', err);
         renderDrinksHomeTop5();
         startDrinksHomeTop5Rotation();
+        return null;
       }
     }
 
@@ -1604,23 +1651,75 @@ async function castExtraPollVote(desired_status) {
       copy.className = 'page-link-copy';
       copy.textContent = item.copy || 'Open live scoreblad van jouw huidige potje.';
     }
+    function applyHomepageLiveEntries(entries){
+      Object.keys(homeEntryDefaults).forEach(setHomeEntryDefault);
+      const source = entries || {};
+      setHomeEntryLive('klaverjas', source.klaverjas || null);
+      setHomeEntryLive('boerenbridge', source.boerenbridge || null);
+    }
+
     async function loadHomepageLiveEntries(){
       try {
-        Object.keys(homeEntryDefaults).forEach(setHomeEntryDefault);
+        applyHomepageLiveEntries({});
         const live = window.GEJAST_LIVE_SUMMARY;
         const entries = live && typeof live.loadHomepageState === 'function'
           ? await live.loadHomepageState(getPlayerSessionToken(), CURRENT_SCOPE)
           : {};
-        setHomeEntryLive('klaverjas', entries.klaverjas || null);
-        setHomeEntryLive('boerenbridge', entries.boerenbridge || null);
+        applyHomepageLiveEntries(entries);
+        return entries;
       } catch(_) {
-        Object.keys(homeEntryDefaults).forEach(setHomeEntryDefault);
+        applyHomepageLiveEntries({});
+        return null;
       }
     }
+    function applyHomepageBootBundle(bundle, fromCache = false){
+      if (!bundle || typeof bundle !== 'object') return;
+      if (bundle.homepage_state) {
+        renderState(bundle.homepage_state);
+        setStatus('');
+      }
+      if (bundle.extra_poll_state) {
+        renderExtraPollState(bundle.extra_poll_state);
+        setExtraPollStatus('');
+      }
+      if (bundle.ladders) {
+        renderHomepageLadders(bundle.ladders);
+        setHomepageLiveState('live', 'Live');
+      }
+      if (bundle.drinks_home) applyDrinksHomePayload(bundle.drinks_home);
+      if (bundle.drinks_top5) applyDrinksTop5Payload(bundle.drinks_top5);
+      if (bundle.live_entries) applyHomepageLiveEntries(bundle.live_entries);
+      if (fromCache) document.body.classList.remove('boot-pending');
+    }
+
     async function bootHomepage(){
       document.body.classList.add('boot-pending');
+      const cached = readHomepageBootCache();
+      if (cached) applyHomepageBootBundle(cached, true);
+      ensureAdminViewer().then(applyAdminViewerRefresh).catch(() => {});
       try {
-        await Promise.allSettled([load(), loadHomepageLadders(), loadDrinksHome(), loadDrinksHomeTop5(), loadHomepageLiveEntries()]);
+        const readers = window.GEJAST_COMBINED_READERS;
+        if (readers && typeof readers.loadHomepageBootBundle === 'function') {
+          const bundle = await readers.loadHomepageBootBundle();
+          applyHomepageBootBundle(bundle || {}, false);
+          writeHomepageBootCache(bundle || {});
+        } else {
+          const [core, ladders, drinksHome, drinksTop5, liveEntries] = await Promise.all([
+            load(),
+            loadHomepageLadders(),
+            loadDrinksHome(),
+            loadDrinksHomeTop5(),
+            loadHomepageLiveEntries()
+          ]);
+          writeHomepageBootCache({
+            homepage_state: core?.homeState || currentHomepageState || {},
+            extra_poll_state: core?.extraState || currentDrinksPollState || {},
+            ladders: ladders || null,
+            drinks_home: drinksHome || null,
+            drinks_top5: drinksTop5 || null,
+            live_entries: liveEntries || null
+          });
+        }
       } finally {
         document.body.classList.remove('boot-pending');
       }
@@ -1628,20 +1727,22 @@ async function castExtraPollVote(desired_status) {
 
     async function load() {
       try {
-        await ensureAdminViewer();
+        ensureAdminViewer().then(applyAdminViewerRefresh).catch(() => {});
         const [homeState, extraState] = await Promise.all([getHomepageState(), getExtraPollState()]);
         renderState(homeState);
         renderExtraPollState(extraState);
         setStatus('');
         setExtraPollStatus('');
+        return { homeState, extraState };
       }
       catch (error) {
         const msg = error?.message || 'Onbekende fout';
         if (/cycle_key/i.test(msg)) {
           setStatus('De stemfunctie heeft nog een databasefout in de weekcyclus. Draai de v84 SQL-patch en vernieuw daarna de pagina hard.', 'warn');
-          return;
+          return null;
         }
         setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
+        return null;
       }
     }
     document.getElementById('drinksYesBtn').addEventListener('click', () => handleExtraPollVote('ja'));
@@ -1656,10 +1757,10 @@ async function castExtraPollVote(desired_status) {
 
   <div class="site-credit-watermark" data-version-watermark></div>
 
-<script src="./gejast-player-session-ui.js?v371"></script>
+<script src="./gejast-player-session-ui.js?v389"></script>
 
 
 <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script><script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v371"></script><script src="./gejast-geo.js?v371"></script><script src="./site-analytics.js?v371"></script>
+<script src="./drinks-verify-float.js?v389"></script><script src="./gejast-geo.js?v389"></script><script src="./site-analytics.js?v389"></script>
 </body>
 </html>
