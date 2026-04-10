@@ -5,14 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace</title>
-  <script>window.GEJAST_PAGE_VERSION='v415';</script>
-  <script src="./gejast-config.js?v415"></script>
+  <script>window.GEJAST_PAGE_VERSION='v417';</script>
+  <script src="./gejast-config.js?v417"></script>
   <script src="./gejast-scope-context.js?v391"></script>
   <script src="./gejast-family-rollout.js?v393"></script>
   <script src="./gejast-scope.js?v386"></script>
-  <script src="./gejast-scoped-rpc.js?v415"></script>
   <style>
-    :root{--ink:#17120e;--muted:#6d6254;--line:rgba(23,18,14,.08);--panel:rgba(255,251,245,.84);--soft:#f5efe3;--gold:#9a8241;--shadow:0 20px 44px rgba(0,0,0,.08)}
+    :root{--ink:#17120e;--muted:#6d6254;--line:rgba(23,18,14,.08);--panel:rgba(255,251,245,.84);--soft:#f5efe3;--shadow:0 20px 44px rgba(0,0,0,.08)}
     *{box-sizing:border-box} body{margin:0;color:var(--ink);font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(244,240,232,.76),rgba(244,240,232,.8)),url('./site-bg-desktop.webp') center/cover fixed}
     .page{max-width:1460px;margin:0 auto;padding:24px 18px 46px}.hero,.panel{background:var(--panel);border:1px solid rgba(255,255,255,.72);border-radius:32px;box-shadow:var(--shadow);backdrop-filter:blur(10px)}
     .hero{padding:28px 30px;display:flex;justify-content:space-between;gap:18px;align-items:start}.hero h1{margin:0;font-size:clamp(2.4rem,5vw,4rem);line-height:.96;letter-spacing:-.05em;font-family:Georgia,'Times New Roman',serif}.hero p{margin:10px 0 0;max-width:70ch;color:var(--muted);font-size:1.02rem}
@@ -21,7 +20,7 @@
     .room-meta{display:grid;gap:12px}.chip{display:inline-flex;align-items:center;justify-content:center;height:30px;padding:0 12px;border-radius:999px;font-size:12px;font-weight:800;letter-spacing:.06em;color:rgba(42,26,10,.84);background:rgba(255,251,245,.76);border:1px solid var(--line)}
     .kicker{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}.players{display:grid;gap:10px}.player-row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 14px;border-radius:18px;background:#fff;border:1px solid var(--line)}
     .suit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.suit-btn,.room-item{padding:12px 14px;border-radius:18px;border:1px solid var(--line);background:#fff;font-weight:800;cursor:pointer}.suit-btn.active,.room-item.active{background:#111;color:#fff}.actions{display:flex;gap:10px;flex-wrap:wrap}.muted{color:var(--muted)}
-    dialog{border:none;border-radius:28px;padding:0;box-shadow:0 30px 70px rgba(0,0,0,.18);max-width:min(94vw,640px);width:100%}dialog::backdrop{background:rgba(0,0,0,.34);backdrop-filter:blur(4px)}
+    dialog{border:none;border-radius:28px;padding:0;box-shadow:0 30px 70px rgba(0,0,0,.18);max-width:min(94vw,680px);width:100%}dialog::backdrop{background:rgba(0,0,0,.34);backdrop-filter:blur(4px)}
     .dialog-card{padding:28px;background:#fff}.dialog-card h2{margin:0 0 10px;font-size:24px}.dialog-card p{margin:0 0 18px;color:var(--muted);line-height:1.5}.step-grid{display:grid;gap:12px}.choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.choice-card{padding:18px;border-radius:22px;border:1px solid var(--line);background:var(--soft);cursor:pointer;text-align:left}.choice-card strong{display:block;font-size:18px;margin-bottom:6px}
     .field{display:grid;gap:6px}.field label{font-weight:800;letter-spacing:.05em;text-transform:uppercase;font-size:12px;color:var(--muted)}.field input{height:48px;border:1px solid var(--line);border-radius:16px;padding:0 14px;font-size:18px;width:100%}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}.room-list{display:grid;gap:10px;max-height:260px;overflow:auto;padding-right:2px}.error{color:#9a1c1c;font-weight:700;min-height:22px}.success{color:#245d2f;font-weight:700}.hidden{display:none}
     @media (max-width:980px){.layout{grid-template-columns:1fr}.hero{flex-direction:column}.choice-grid,.two{grid-template-columns:1fr}}
@@ -32,14 +31,13 @@
     <section class="hero">
       <div>
         <h1>Paardenrace</h1>
-        <p>Live multiplayer paardenrace met gedeelde room-state, server-authoritative draws en een setupflow die eerst laat kiezen tussen kamer maken of kamer kiezen.</p>
+        <p>Live multiplayer paardenrace met gedeelde room-state. De start-popup opent direct bij binnenkomst en het track-beeld bevat geen losse zijkant-knoppen meer.</p>
       </div>
       <div class="actions">
         <a class="btn alt" href="./index.html">Home</a>
         <button class="btn" type="button" id="prOpenSetup">Room starten / joinen</button>
       </div>
     </section>
-
     <div class="stack">
       <section class="layout">
         <aside class="sidebar">
@@ -58,7 +56,7 @@
           </section>
         </aside>
         <section class="panel board">
-          <img src="./assets/paardenrace/paardenrace-track-supplied-cards.png" alt="Paardenrace track">
+          <img src="./assets/paardenrace/paardenrace-track-supplied-cards.png" alt="Paardenrace track zonder losse zij-knoppen">
         </section>
       </section>
     </div>
@@ -66,7 +64,7 @@
   <dialog id="prSetupDialog">
     <div class="dialog-card">
       <div id="prStepChoose" class="step-grid">
-        <h2>Start of join Paardenrace</h2>
+        <h2>Paardenrace starten</h2>
         <p>Kies eerst of je een nieuwe kamer wilt maken of een bestaande kamer wilt kiezen.</p>
         <div class="choice-grid">
           <button class="choice-card" type="button" data-choice="create"><strong>Kamer maken</strong><span>Maak een nieuwe room aan en bevestig daarna je inzet en suit.</span></button>
@@ -104,6 +102,6 @@
     </div>
   </dialog>
   <div class="site-credit-watermark" data-version-watermark></div>
-  <script src="./gejast-paardenrace.js?v415"></script>
+  <script src="./gejast-paardenrace.js?v417"></script>
 </body>
 </html>

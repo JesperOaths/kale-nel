@@ -1,0 +1,7 @@
+GEJAST v417 - paardenrace first-open modal + dynamic room-player column fix
+
+Included:
+- opens the kamer maken / kamer kiezen popup immediately when paardenrace.html first loads
+- removes the side lane boxes/buttons from the track view by using the clean supplied track image only
+- creates a dynamic paardenrace_update_selection_scoped SQL function that no longer hardcodes player_name on paardenrace_room_players
+- keeps the sitewide visible version sourced from shared gejast-config.js (v417)

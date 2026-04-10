@@ -1,0 +1,16 @@
+GEJAST v417 fast steps
+
+1. Upload frontend files:
+   - gejast-config.js
+   - paardenrace.html
+   - gejast-paardenrace.js
+
+2. Run in Supabase SQL editor:
+   - gejast_v417_paardenrace_dynamic_selection_fix.sql
+
+3. Hard refresh paardenrace.html.
+
+4. Confirm:
+   - the start popup opens automatically on first load
+   - the track no longer shows the extra side boxes/buttons
+   - Nieuwe room maken no longer fails on missing player_name column
