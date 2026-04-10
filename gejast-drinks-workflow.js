@@ -20,6 +20,20 @@
   async function parse(res){ const t=await res.text(); let d=null; try{ d=t?JSON.parse(t):null; }catch{ throw new Error(t||`HTTP ${res.status}`);} if(!res.ok) throw new Error(d?.message||d?.error||d?.hint||`HTTP ${res.status}`); return d; }
   async function rpc(name, body){ const c=cfg(); return fetch(`${c.SUPABASE_URL}/rest/v1/rpc/${name}`,{method:'POST',headers:headers(),body:JSON.stringify(body||{})}).then(parse); }
   function randomClientId(){ try{ const raw=new Uint8Array(8); crypto.getRandomValues(raw); return 'spd_' + Array.from(raw).map((v)=>v.toString(16).padStart(2,'0')).join(''); }catch(_){ return 'spd_' + Math.random().toString(36).slice(2) + Date.now().toString(36); } }
+  function inferScope(){ try{ const qs=new URLSearchParams(location.search||''); return cfg().normalizeScope ? cfg().normalizeScope(qs.get('scope')) : ((String(qs.get('scope')||'').toLowerCase()==='family') ? 'family' : 'friends'); }catch(_){ return 'friends'; } }
+  async function contractWrite(action, payload){
+    const base = { session_token: payload?.session_token || token(), action, payload: payload || {}, site_scope_input: inferScope() };
+    const attempts = ['contract_drinks_write_v386','contract_drinks_write_v1'];
+    let lastErr = null;
+    for (const name of attempts){
+      try {
+        const raw = await rpc(name, base);
+        if (raw && typeof raw.ok === 'boolean') { if (!raw.ok) throw new Error(raw?.error?.message || raw?.message || 'Contract write mislukt.'); return raw.data || {}; }
+        return raw || {};
+      } catch (err) { lastErr = err; }
+    }
+    throw lastErr || new Error('Contract write mislukt.');
+  }
   async function rpcFirst(candidates){ let lastErr=null; for(const [name,payload] of candidates){ try{ return await rpc(name,payload); }catch(err){ lastErr=err; const msg=String(err&&err.message||err||''); if(/does not exist|schema cache|could not find the function|could not choose the best candidate function/i.test(msg)) continue; throw err; } } throw lastErr || new Error('Geen passende drinks-RPC gevonden.'); }
   function canonicalDrinkTypes(types){
     const existing = Array.isArray(types) ? types : [];
@@ -119,6 +133,9 @@ async function createDrinkEvent(opts={}){
   const lat = opts.lat ?? null;
   const lng = opts.lng ?? null;
   const accuracy = opts.accuracy ?? null;
+  try {
+    return await contractWrite('create_event', { session_token, event_type_key, quantity, lat, lng, accuracy });
+  } catch (_) {}
   return rpcFirst([
     ['create_drink_event_v382', { session_token, event_type_key, quantity, lat, lng, accuracy }],
     ['create_drink_event', { session_token, event_type_key, quantity, lat, lng, accuracy }],
@@ -128,17 +145,33 @@ async function createDrinkEvent(opts={}){
   ]);
 }
 async function verifyDrinkEvent(opts={}){
-  return rpc('verify_drink_event_public', {
+  const payload = {
     session_token: opts.session_token || token(),
     drink_event_id: Number(opts.drink_event_id || opts.id || 0),
-    approved: opts.approved !== false
+    approve: opts.approved !== false,
+    approved: opts.approved !== false,
+    lat: opts.lat ?? null,
+    lng: opts.lng ?? null,
+    accuracy: opts.accuracy ?? null
+  };
+  try {
+    return await contractWrite('verify_event', payload);
+  } catch (_) {}
+  return rpc('verify_drink_event_public', {
+    session_token: payload.session_token,
+    drink_event_id: payload.drink_event_id,
+    approved: payload.approve
   });
 }
 async function cancelDrinkEvent(opts={}){
-  return rpc('cancel_my_pending_drink_event', {
+  const payload = {
     session_token: opts.session_token || token(),
     drink_event_id: Number(opts.drink_event_id || opts.id || 0)
-  });
+  };
+  try {
+    return await contractWrite('cancel_event', payload);
+  } catch (_) {}
+  return rpc('cancel_my_pending_drink_event', payload);
 }
 async function createSpeedAttempt(opts={}){
   const session_token = opts.session_token || token();
@@ -149,6 +182,9 @@ async function createSpeedAttempt(opts={}){
   const lat = opts.lat ?? null;
   const lng = opts.lng ?? null;
   const accuracy = opts.accuracy ?? null;
+  try {
+    return await contractWrite('create_speed_attempt', { session_token, client_attempt_id, event_type_key, quantity, duration_seconds, lat, lng, accuracy });
+  } catch (_) {}
   return rpcFirst([
     ['create_drink_speed_attempt_v382', { session_token, client_attempt_id, event_type_key, quantity, duration_seconds, lat, lng, accuracy }],
     ['create_combined_drink_speed_attempt', { session_token, client_attempt_id, event_type_key, quantity, duration_seconds, lat, lng, accuracy }],
@@ -162,20 +198,28 @@ async function createSpeedAttempt(opts={}){
   ]);
 }
 async function verifySpeedAttempt(opts={}){
-  return rpc('verify_drink_speed_attempt', {
+  const payload = {
     session_token: opts.session_token || token(),
     attempt_id: Number(opts.attempt_id || opts.id || 0),
     lat: opts.lat ?? null,
     lng: opts.lng ?? null,
     accuracy: opts.accuracy ?? null,
     approve: opts.approve !== false
-  });
+  };
+  try {
+    return await contractWrite('verify_speed_attempt', payload);
+  } catch (_) {}
+  return rpc('verify_drink_speed_attempt', payload);
 }
 async function cancelSpeedAttempt(opts={}){
-  return rpc('cancel_my_speed_attempt', {
+  const payload = {
     session_token: opts.session_token || token(),
     attempt_id: Number(opts.attempt_id || opts.id || 0)
-  });
+  };
+  try {
+    return await contractWrite('cancel_speed_attempt', payload);
+  } catch (_) {}
+  return rpc('cancel_my_speed_attempt', payload);
 }
 
   async function forPending(opts={}){ return shapePendingView(await load(opts)); }

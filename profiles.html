@@ -7,10 +7,10 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Spelersprofielen</title>
-  <script>window.GEJAST_PAGE_VERSION='v384';</script>
-  <script src="./gejast-config.js?v384"></script>
-  <script src="./gejast-clickable-cards.js?v384"></script>
-  <script src="./gejast-scope-context.js?v384"></script>
+  <script>window.GEJAST_PAGE_VERSION='v386';</script>
+  <script src="./gejast-config.js?v386"></script>
+  <script src="./gejast-clickable-cards.js?v386"></script>
+  <script src="./gejast-scope-context.js?v386"></script>
   <style>
     :root{--gold:#d4af37;--ink:#1b1711;--paper:rgba(255,250,243,.92);--line:#e0d6c6;--muted:#6f665e;--soft:#fbf7ef}
     *{box-sizing:border-box}
@@ -54,14 +54,16 @@
     .rarity-badge{display:grid;grid-template-columns:56px minmax(0,1fr);gap:10px;align-items:start;padding:10px;border-radius:16px;background:var(--soft);border:1px solid rgba(17,17,17,.06)}
     .rarity-badge img{width:56px;height:56px;object-fit:contain;border-radius:14px;background:#fffaf1;border:1px solid rgba(17,17,17,.08);padding:6px}
     .rarity-badge strong{display:block;font-size:14px}
-    .rarity-badge small{display:block;font-size:12px;color:var(--muted);line-height:1.4;margin-top:3px}
+    .rarity-badge small{display:block;font-size:12px;color:var(--muted);line-height:1.4;margin-top:3px}.rarity-requirement{display:block;font-size:12px;color:#3d3429;line-height:1.45;margin-top:6px}
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}
     @media (max-width:760px){.page{padding:14px 12px 90px}.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.head{grid-template-columns:64px minmax(0,1fr)}.avatar{width:64px;height:64px}}
   </style>
-  <script src="./gejast-scope.js?v384"></script>
-  <script src="./gejast-home-gate.js?v384"></script>
-  <script src="./gejast-badges.js?v384"></script>
-  <script src="./gejast-badge-progress.js?v384"></script>
+  <script src="./gejast-scope.js?v386"></script>
+  <script src="./gejast-home-gate.js?v386"></script>
+  <script src="./gejast-badges.js?v386"></script>
+  <script src="./gejast-badge-progress.js?v386"></script>
+  <script src="./gejast-rpc-contract.js?v386"></script>
+  <script src="./gejast-profile-source.js?v386"></script>
 </head>
 <body>
   <main class="page">
@@ -235,11 +237,11 @@
       }
 
       function renderBadgeGallery(){
-        const groups = window.GEJAST_BADGE_PROGRESS.groupRegistryByRarity();
+        const groups = window.GEJAST_BADGE_PROGRESS.groupRegistryByRarityAsc ? window.GEJAST_BADGE_PROGRESS.groupRegistryByRarityAsc() : window.GEJAST_BADGE_PROGRESS.groupRegistryByRarity().slice().reverse();
         galleryNode.innerHTML = `<div class="badge-gallery-wrap">
           <div>
             <h2 style="margin:0 0 8px">Badgegalerij</h2>
-            <p style="margin:0;color:var(--muted)">Gesorteerd op zeldzaamheid, daarna alfabetisch. Elke badge toont de beschrijving er direct onder.</p>
+            <p style="margin:0;color:var(--muted)">Gesorteerd van minst zeldzaam / makkelijkst naar meest zeldzaam / moeilijkst, daarna alfabetisch. Elke badge toont de betekenis en onderaan wat je moet doen om hem te behalen.</p>
           </div>
           <div class="rarity-grid">
             ${groups.map((group) => `
@@ -257,6 +259,7 @@
                         <strong>${badge.title}</strong>
                         ${badge.nickname ? `<small>${badge.nickname}</small>` : ''}
                         <small>${badge.description}</small>
+                        <small class="rarity-requirement"><strong>Te behalen door:</strong> ${badge.requirementsText || 'Zie badge-omschrijving.'}</small>
                       </div>
                     </div>`).join('')}
                 </div>
@@ -267,9 +270,14 @@
 
       async function boot(){
         try {
+          const profileSource = window.GEJAST_PROFILE_SOURCE || null;
           const [bundleRaw, allPlayersRaw] = await Promise.allSettled([
-            callRpc('get_profiles_page_bundle_scoped', { site_scope_input: scope }),
-            callRpc('get_all_site_players_public_scoped', { site_scope_input: scope })
+            profileSource && typeof profileSource.loadProfilesPageBundle === 'function'
+              ? profileSource.loadProfilesPageBundle()
+              : callRpc('get_profiles_page_bundle_scoped', { site_scope_input: scope }),
+            profileSource && typeof profileSource.loadProfilesList === 'function'
+              ? profileSource.loadProfilesList()
+              : callRpc('get_all_site_players_public_scoped', { site_scope_input: scope })
           ]);
           const bundle = bundleRaw.status === 'fulfilled' ? bundleRaw.value : {};
           const allPlayers = allPlayersRaw.status === 'fulfilled' ? ((allPlayersRaw.value && allPlayersRaw.value.players) || []) : [];
@@ -288,10 +296,10 @@
       boot();
     })();
   </script>
-  <script src="./site-analytics.js?v384"></script>
+  <script src="./site-analytics.js?v386"></script>
   <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./gejast-geo.js?v384"></script>
-  <script src="./drinks-verify-float.js?v384"></script>
+  <script src="./gejast-geo.js?v386"></script>
+  <script src="./drinks-verify-float.js?v386"></script>
 </body>
 </html>

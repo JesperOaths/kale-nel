@@ -10,11 +10,39 @@
   function headers(){ return { apikey:KEY, Authorization:`Bearer ${KEY}`, 'Content-Type':'application/json', Accept:'application/json' }; }
   async function parse(res){ const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch(_) { throw new Error(text || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || data?.details || data?.hint || `HTTP ${res.status}`); return data; }
   async function rpc(name, body){ return fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers:headers(), body:JSON.stringify(body || {}) }).then(parse); }
+  function normalizeDiagnostics(raw){
+    const data = raw && typeof raw.ok === 'boolean' ? (raw.data || {}) : (raw || {});
+    if (Array.isArray(data.rows)) return { rows:data.rows, summary:data.summary || {} };
+    if (data.active && Array.isArray(data.active.rows)) return { rows:data.active.rows, summary:data.active.summary || data.summary || {} };
+    if (Array.isArray(data.active)) return { rows:data.active, summary:data.summary || {} };
+    return { rows:Array.isArray(data.rows) ? data.rows : [], summary:data.summary || data.active || data || {} };
+  }
   async function loadDiagnostics({ activeMinutes=5, scope='friends' }={}){
-    return rpc(LIST_RPC, { admin_session_token: token(), active_minutes_input: activeMinutes, site_scope_input: scope });
+    const payloads = [
+      [LIST_RPC, { admin_session_token: token(), active_minutes_input: activeMinutes, site_scope_input: scope }],
+      ['contract_push_admin_read_v1', { admin_session_token: token(), active_minutes: activeMinutes, site_scope_input: scope }],
+      ['admin_get_active_web_push_presence', { admin_session_token: token(), active_minutes: activeMinutes, site_scope_input: scope }]
+    ];
+    let lastErr = null;
+    for (const [name, body] of payloads) {
+      try { return normalizeDiagnostics(await rpc(name, body)); } catch (err) { lastErr = err; }
+    }
+    throw lastErr || new Error('Pushdiagnostiek laden mislukt.');
   }
   async function queueActive({ title, body, targetUrl, activeMinutes=5, scope='friends' }={}){
-    return rpc(QUEUE_RPC, { admin_session_token: token(), title_input:title || '', body_input:body || '', target_url_input:targetUrl || './index.html', active_minutes_input: activeMinutes, site_scope_input: scope });
+    const payloads = [
+      [QUEUE_RPC, { admin_session_token: token(), title_input:title || '', body_input:body || '', target_url_input:targetUrl || './index.html', active_minutes_input: activeMinutes, site_scope_input: scope }],
+      ['contract_push_admin_write_v1', { admin_session_token: token(), title_input:title || '', body_input:body || '', target_url_input:targetUrl || './index.html', active_minutes: activeMinutes, site_scope_input: scope }],
+      ['admin_queue_active_web_push', { admin_session_token: token(), title_input:title || '', body_input:body || '', target_url_input:targetUrl || './index.html', active_minutes: activeMinutes, site_scope_input: scope }]
+    ];
+    let lastErr = null;
+    for (const [name, bodyPayload] of payloads) {
+      try {
+        const raw = await rpc(name, bodyPayload);
+        return raw && typeof raw.ok === 'boolean' ? (raw.data || {}) : (raw || {});
+      } catch (err) { lastErr = err; }
+    }
+    throw lastErr || new Error('Admin-push queue mislukt.');
   }
   window.GEJAST_PUSH_ADMIN_SOURCE = { loadDiagnostics, queueActive, token };
 })();

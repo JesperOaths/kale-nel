@@ -7,10 +7,10 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Speler</title>
-  <script>window.GEJAST_PAGE_VERSION='v384';</script>
-  <script src="./gejast-config.js?v384"></script>
-  <script src="./gejast-clickable-cards.js?v384"></script>
-  <script src="./gejast-scope-context.js?v384"></script>
+  <script>window.GEJAST_PAGE_VERSION='v386';</script>
+  <script src="./gejast-config.js?v386"></script>
+  <script src="./gejast-clickable-cards.js?v386"></script>
+  <script src="./gejast-scope-context.js?v386"></script>
   <style>
     :root{--card:#f8f5ee;--line:rgba(0,0,0,.08);--muted:#6b6257;--gold:#d4af37;--soft:#fbfaf6}
     *{box-sizing:border-box}
@@ -57,10 +57,12 @@
     @media(max-width:920px){.grid{grid-template-columns:repeat(2,1fr)}body{padding:16px}}
     @media(max-width:620px){.grid{grid-template-columns:1fr}}
   </style>
-  <script src="./gejast-scope.js?v384"></script>
-  <script src="./gejast-home-gate.js?v384"></script>
-  <script src="./gejast-badges.js?v384"></script>
-  <script src="./gejast-badge-progress.js?v384"></script>
+  <script src="./gejast-scope.js?v386"></script>
+  <script src="./gejast-home-gate.js?v386"></script>
+  <script src="./gejast-badges.js?v386"></script>
+  <script src="./gejast-badge-progress.js?v386"></script>
+  <script src="./gejast-rpc-contract.js?v386"></script>
+  <script src="./gejast-profile-source.js?v386"></script>
 </head>
 <body>
   <div class="wrap">
@@ -268,12 +270,15 @@
       async function refreshGamePanels(){
         if (currentGame === 'drankstand') return;
         try {
-          const [sharedStats, insights] = await Promise.all([
-            callRpc('get_public_shared_player_stats_scoped', { game_key: currentGame, player_name: player, site_scope_input: scope }).catch(() => ({})),
-            callRpc('get_public_player_game_insights_scoped', { game_key: currentGame, player_name: player, site_scope_input: scope }).catch(() => ({ cards: [] }))
-          ]);
-          playerBundle.shared_stats = sharedStats || {};
-          playerBundle.game_insights = insights || { cards: [] };
+          const profileSource = window.GEJAST_PROFILE_SOURCE || null;
+          const panels = profileSource && typeof profileSource.loadPlayerGamePanels === 'function'
+            ? await profileSource.loadPlayerGamePanels({ playerName: player, gameKey: currentGame }).catch(() => ({}))
+            : await Promise.all([
+                callRpc('get_public_shared_player_stats_scoped', { game_key: currentGame, player_name: player, site_scope_input: scope }).catch(() => ({})),
+                callRpc('get_public_player_game_insights_scoped', { game_key: currentGame, player_name: player, site_scope_input: scope }).catch(() => ({ cards: [] }))
+              ]).then(([sharedStats, insights]) => ({ shared_stats: sharedStats || {}, game_insights: insights || { cards: [] } }));
+          playerBundle.shared_stats = panels.shared_stats || {};
+          playerBundle.game_insights = panels.game_insights || { cards: [] };
         } catch (_) {}
       }
 
@@ -339,8 +344,11 @@
             const homeLink = document.getElementById('playerHomeLink');
             if (homeLink) homeLink.href = './familie/index.html';
           }
+          const profileSource = window.GEJAST_PROFILE_SOURCE || null;
           const [bundle, pussy] = await Promise.all([
-            callRpc('get_player_page_bundle_scoped', { player_name: player, game_key: currentGame, site_scope_input: scope }),
+            profileSource && typeof profileSource.loadPlayerBundle === 'function'
+              ? profileSource.loadPlayerBundle({ playerName: player, gameKey: currentGame })
+              : callRpc('get_player_page_bundle_scoped', { player_name: player, game_key: currentGame, site_scope_input: scope }),
             callRpc('get_beerpong_player_pussycup_public', { player_name: player }).catch(() => ({}))
           ]);
           playerBundle = bundle || {};
@@ -362,8 +370,8 @@
   </script>
   <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./gejast-geo.js?v384"></script>
-  <script src="./drinks-verify-float.js?v384"></script>
-  <script src="./site-analytics.js?v384"></script>
+  <script src="./gejast-geo.js?v386"></script>
+  <script src="./drinks-verify-float.js?v386"></script>
+  <script src="./site-analytics.js?v386"></script>
 </body>
 </html>

@@ -28,7 +28,29 @@
       player_name: playerName,
       game_key: gameKey,
       site_scope_input: CTX.getScope()
-    }, () => legacyLoadPlayerBundle({ playerName, gameKey }));
+    }, () => RPC.callRpc('get_player_page_bundle_scoped', {
+      player_name: playerName,
+      game_key: gameKey,
+      site_scope_input: CTX.getScope()
+    }).catch(() => legacyLoadPlayerBundle({ playerName, gameKey })));
+  }
+
+  async function loadPlayerGamePanels({ playerName, gameKey = 'klaverjas' }) {
+    const scope = CTX.getScope();
+    const [sharedStats, gameInsights] = await Promise.all([
+      RPC.callRpc('get_public_shared_player_stats_scoped', { game_key: gameKey, player_name: playerName, site_scope_input: scope }).catch(() => ({})),
+      RPC.callRpc('get_public_player_game_insights_scoped', { game_key: gameKey, player_name: playerName, site_scope_input: scope }).catch(() => ({ cards: [] }))
+    ]);
+    return { shared_stats: sharedStats || {}, game_insights: gameInsights || { cards: [] } };
+  }
+
+  async function loadProfilesPageBundle() {
+    const scope = CTX.getScope();
+    const raw = await RPC.callRpc('get_profiles_page_bundle_scoped', { site_scope_input: scope }).catch(async () => {
+      const players = await loadProfilesList().catch(() => ({ players: [] }));
+      return { site_scope: scope, players: players?.players || [], badge_cards: [] };
+    });
+    return raw || { site_scope: scope, players: [], badge_cards: [] };
   }
 
   async function loadProfilesList() {
@@ -37,6 +59,8 @@
 
   global.GEJAST_PROFILE_SOURCE = {
     loadPlayerBundle,
+    loadPlayerGamePanels,
+    loadProfilesPageBundle,
     loadProfilesList
   };
 })(window);
