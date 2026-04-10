@@ -1,6 +1,8 @@
 (function (global) {
   const RPC = global.GEJAST_RPC_CONTRACT;
   const CTX = global.GEJAST_SCOPE_CONTEXT;
+  const PROFILES_BUNDLE_CACHE_KEY = 'gejast_profiles_bundle_v391';
+  const PROFILES_BUNDLE_CACHE_TTL = 10 * 1000;
 
   function num(value) {
     const n = Number(value);
@@ -79,6 +81,26 @@
     }
     return { cards };
   }
+
+
+function readProfilesCache() {
+  try {
+    const raw = sessionStorage.getItem(PROFILES_BUNDLE_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.at || (Date.now() - Number(parsed.at)) > PROFILES_BUNDLE_CACHE_TTL) return null;
+    return parsed.value || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeProfilesCache(value) {
+  try {
+    sessionStorage.setItem(PROFILES_BUNDLE_CACHE_KEY, JSON.stringify({ at: Date.now(), value }));
+  } catch (_) {}
+  return value;
+}
 
   function normalizeBundle(bundle, playerName, scope, gameKey) {
     const next = {

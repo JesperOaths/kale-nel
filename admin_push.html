@@ -7,9 +7,10 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Live pushmeldingen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v386';</script><script src="./gejast-config.js?v386"></script><script src="./gejast-scope-context.js?v386"></script>
-  <script src="./admin-session-sync.js?v386"></script>
-  <script src="./admin-topnav.js?v386"></script><script src="./gejast-push-runtime.js?v386"></script><script src="./gejast-push-admin-source.js?v386"></script>
+  <script>window.GEJAST_PAGE_VERSION='v391';</script><script src="./gejast-config.js?v391"></script><script src="./gejast-scope-context.js?v391"></script>
+  <script src="./gejast-admin-rpc.js?v391"></script>
+  <script src="./admin-session-sync.js?v391"></script>
+  <script src="./admin-topnav.js?v391"></script><script src="./gejast-push-runtime.js?v391"></script><script src="./gejast-push-admin-source.js?v391"></script>
   <style>
     :root { --gold:#9a8241; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#6b655b; --ok:#2b5b37; --warn:#8b3a30; }
     *{box-sizing:border-box} body{margin:0;padding:20px;font-family:Inter,sans-serif;background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed;min-height:100vh}
@@ -72,7 +73,7 @@
     async function rpcFirst(names, body){ let lastErr=null; for (const name of names){ try { return await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(), body:JSON.stringify(body||{}) }).then(parseResponse); } catch(err){ lastErr=err; } } throw lastErr || new Error('RPC mislukt'); }
     function token(){return (window.GEJAST_ADMIN_SESSION && window.GEJAST_ADMIN_SESSION.getToken && window.GEJAST_ADMIN_SESSION.getToken()) || sessionStorage.getItem(ADMIN_SESSION_KEY)||localStorage.getItem(ADMIN_SESSION_KEY)}
     function setStatus(msg='',tone=''){const el=document.getElementById('statusBox'); el.textContent=msg; el.className=`status ${tone}`.trim();}
-    async function ensureGate(){ if(window.GEJAST_ADMIN_SESSION && typeof window.GEJAST_ADMIN_SESSION.requirePage==='function'){ return await window.GEJAST_ADMIN_SESSION.requirePage('admin_push.html'); } if(!token()){ location.href='./admin.html?return_to=admin_push.html'; return false; } try { await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`,{method:'POST',mode:'cors',cache:'no-store',headers:rpcHeaders(),body:JSON.stringify({admin_session_token:token()})}).then(parseResponse); return true; } catch(err){ location.href='./admin.html?return_to=admin_push.html'; return false; } }
+    async function ensureGate(){ if(window.GEJAST_ADMIN_RPC && typeof window.GEJAST_ADMIN_RPC.requirePage==='function'){ return await window.GEJAST_ADMIN_RPC.requirePage('admin_push.html'); } if(window.GEJAST_ADMIN_SESSION && typeof window.GEJAST_ADMIN_SESSION.requirePage==='function'){ return await window.GEJAST_ADMIN_SESSION.requirePage('admin_push.html'); } if(!token()){ location.href='./admin.html?return_to=admin_push.html'; return false; } try { await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`,{method:'POST',mode:'cors',cache:'no-store',headers:rpcHeaders(),body:JSON.stringify({admin_session_token:token()})}).then(parseResponse); return true; } catch(err){ location.href='./admin.html?return_to=admin_push.html'; return false; } }
     function escapeHtml(v){ return String(v==null?'':v).replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
         let activeRows = [];
     function activeMinutes(){ return Math.max(1, Math.min(60, Number(document.getElementById('minutesInput').value || 5))); }

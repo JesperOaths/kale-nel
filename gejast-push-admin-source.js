@@ -19,8 +19,9 @@
   }
   async function loadDiagnostics({ activeMinutes=5, scope='friends' }={}){
     const payloads = [
-      [LIST_RPC, { admin_session_token: token(), active_minutes_input: activeMinutes, site_scope_input: scope }],
+      ['contract_push_admin_read_v391', { admin_session_token: token(), active_minutes: activeMinutes, site_scope_input: scope }],
       ['contract_push_admin_read_v1', { admin_session_token: token(), active_minutes: activeMinutes, site_scope_input: scope }],
+      [LIST_RPC, { admin_session_token: token(), active_minutes_input: activeMinutes, site_scope_input: scope }],
       ['admin_get_active_web_push_presence', { admin_session_token: token(), active_minutes: activeMinutes, site_scope_input: scope }]
     ];
     let lastErr = null;
@@ -31,8 +32,9 @@
   }
   async function queueActive({ title, body, targetUrl, activeMinutes=5, scope='friends' }={}){
     const payloads = [
-      [QUEUE_RPC, { admin_session_token: token(), title_input:title || '', body_input:body || '', target_url_input:targetUrl || './index.html', active_minutes_input: activeMinutes, site_scope_input: scope }],
+      ['contract_push_admin_write_v391', { admin_session_token: token(), title_input:title || '', body_input:body || '', target_url_input:targetUrl || './index.html', active_minutes: activeMinutes, site_scope_input: scope }],
       ['contract_push_admin_write_v1', { admin_session_token: token(), title_input:title || '', body_input:body || '', target_url_input:targetUrl || './index.html', active_minutes: activeMinutes, site_scope_input: scope }],
+      [QUEUE_RPC, { admin_session_token: token(), title_input:title || '', body_input:body || '', target_url_input:targetUrl || './index.html', active_minutes_input: activeMinutes, site_scope_input: scope }],
       ['admin_queue_active_web_push', { admin_session_token: token(), title_input:title || '', body_input:body || '', target_url_input:targetUrl || './index.html', active_minutes: activeMinutes, site_scope_input: scope }]
     ];
     let lastErr = null;

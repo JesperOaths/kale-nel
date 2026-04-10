@@ -1,5 +1,5 @@
 (function (global) {
-  const CACHE_KEY = 'gejast_admin_claims_bundle_v3';
+  const CACHE_KEY = 'gejast_admin_claims_bundle_v4';
   const CACHE_TTL = 8 * 1000;
 
   function resolveCtx() {

@@ -23,7 +23,7 @@
   function inferScope(){ try{ const qs=new URLSearchParams(location.search||''); return cfg().normalizeScope ? cfg().normalizeScope(qs.get('scope')) : ((String(qs.get('scope')||'').toLowerCase()==='family') ? 'family' : 'friends'); }catch(_){ return 'friends'; } }
   async function contractWrite(action, payload){
     const base = { session_token: payload?.session_token || token(), action, payload: payload || {}, site_scope_input: inferScope() };
-    const attempts = ['contract_drinks_write_v386','contract_drinks_write_v1'];
+    const attempts = ['contract_drinks_write_v391','contract_drinks_write_v386','contract_drinks_write_v1'];
     let lastErr = null;
     for (const name of attempts){
       try {
@@ -107,24 +107,41 @@
       speedLeaderboards: canonicalSpeedSets(data?.speed_leaderboards || data?.speed_page?.leaderboards || [])
     };
   }
+    function normalizeLoadedData(raw){
+    const data = raw && typeof raw.ok === 'boolean' ? (raw.data || {}) : (raw || {});
+    data.page = data.page || data.bundle || {};
+    data.verify_queue = Array.isArray(data.verify_queue) ? data.verify_queue : [];
+    data.my_pending_events = Array.isArray(data.my_pending_events) ? data.my_pending_events : [];
+    data.verified_history = Array.isArray(data.verified_history) ? data.verified_history : [];
+    data.speed_page = data.speed_page || {};
+    data.speed_leaderboards = canonicalSpeedSets(data.speed_leaderboards || data.speed_page.leaderboards || []);
+    data.event_types = canonicalDrinkTypes(Array.isArray(data.event_types) ? data.event_types : (Array.isArray(data.page.event_types) ? data.page.event_types : []));
+    data.recent_verified = Array.isArray(data.recent_verified) ? data.recent_verified : (Array.isArray(data.page.recent_verified) ? data.page.recent_verified : data.verified_history.slice(0,8));
+    data.recent_rejected = Array.isArray(data.recent_rejected) ? data.recent_rejected : (Array.isArray(data.page.recent_rejected) ? data.page.recent_rejected : []);
+    return data;
+  }
   async function load(opts={}){
     const session_token = opts.session_token || token();
-    try{
-      const raw = await rpc('get_drinks_workflow_public', { session_token, viewer_lat: opts.viewer_lat ?? null, viewer_lng: opts.viewer_lng ?? null, history_limit: opts.history_limit ?? 40 });
-      const data = raw?.get_drinks_workflow_public || raw || {};
-      data.page = data.page || {};
-      data.verify_queue = Array.isArray(data.verify_queue) ? data.verify_queue : [];
-      data.my_pending_events = Array.isArray(data.my_pending_events) ? data.my_pending_events : [];
-      data.verified_history = Array.isArray(data.verified_history) ? data.verified_history : [];
-      data.speed_page = data.speed_page || {};
-      data.speed_leaderboards = canonicalSpeedSets(data.speed_leaderboards || data.speed_page.leaderboards || []);
-      data.event_types = canonicalDrinkTypes(Array.isArray(data.event_types) ? data.event_types : (Array.isArray(data.page.event_types) ? data.page.event_types : []));
-      data.recent_verified = Array.isArray(data.recent_verified) ? data.recent_verified : (Array.isArray(data.page.recent_verified) ? data.page.recent_verified : data.verified_history.slice(0,8));
-      data.recent_rejected = Array.isArray(data.recent_rejected) ? data.recent_rejected : (Array.isArray(data.page.recent_rejected) ? data.page.recent_rejected : []);
-      return data;
-    }catch(err){
-      return fallback(opts);
+    const viewer_lat = opts.viewer_lat ?? null;
+    const viewer_lng = opts.viewer_lng ?? null;
+    const history_limit = opts.history_limit ?? 40;
+    const site_scope_input = inferScope();
+    const attempts = [
+      ['contract_drinks_read_v391', { session_token, viewer_lat, viewer_lng, history_limit, site_scope_input }],
+      ['contract_drinks_read_v386', { session_token, viewer_lat, viewer_lng, history_limit, site_scope_input }],
+      ['contract_drinks_read_v1', { session_token, viewer_lat, viewer_lng, history_limit, site_scope_input }],
+      ['get_drinks_page_bundle_public_scoped', { session_token, viewer_lat, viewer_lng, history_limit, site_scope_input }],
+      ['get_drinks_workflow_public', { session_token, viewer_lat, viewer_lng, history_limit }]
+    ];
+    let lastErr = null;
+    for (const [name, payload] of attempts){
+      try {
+        return normalizeLoadedData(await rpc(name, payload));
+      } catch (err) {
+        lastErr = err;
+      }
     }
+    return fallback(opts).catch(() => { throw lastErr || new Error('Drinks workflow laden mislukt.'); });
   }
 async function createDrinkEvent(opts={}){
   const session_token = opts.session_token || token();
