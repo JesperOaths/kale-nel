@@ -1,0 +1,9 @@
+GEJAST v420 - sitewide shared version source sweep
+
+Included:
+- bumps shared gejast-config.js to v420
+- updates every HTML page in the concrete repo artifact to point at the same shared gejast-config.js?v420
+- injects gejast-config.js into the two pages that were still missing it (familie.html and familie_admin.html)
+- normalizes page-local GEJAST_PAGE_VERSION tags to v420 so visible drift stops instead of pages competing with different values
+
+This is a careful sweep intended to centralize version ownership in gejast-config.js without changing page features or page-specific business logic.

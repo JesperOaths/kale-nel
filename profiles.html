@@ -7,8 +7,8 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Spelersprofielen</title>
-  <script>window.GEJAST_PAGE_VERSION='v413';</script>
-  <script src="./gejast-config.js?v413"></script>
+  <script>window.GEJAST_PAGE_VERSION='v420';</script>
+  <script src="./gejast-config.js?v420"></script>
   <script src="./gejast-clickable-cards.js?v386"></script>
   <script src="./gejast-scope-context.js?v391"></script><script src="./gejast-family-rollout.js?v393"></script>
   <style>
@@ -56,33 +56,14 @@
     .rarity-badge strong{display:block;font-size:14px}
     .rarity-badge small{display:block;font-size:12px;color:var(--muted);line-height:1.4;margin-top:3px}.rarity-requirement{display:block;font-size:12px;color:#3d3429;line-height:1.45;margin-top:6px}
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}
-
-    .profiles-list{display:grid;gap:18px;padding:18px}
-    .profile-sheet{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:18px;padding:18px;background:#fff;border:1px solid rgba(17,17,17,.07);border-radius:26px;box-shadow:0 10px 20px rgba(0,0,0,.05);text-decoration:none;color:inherit}
-    .profile-main{display:grid;gap:16px}
-    .profile-head{display:grid;grid-template-columns:58px minmax(0,1fr);gap:16px;align-items:center}
-    .profile-avatar{width:58px;height:58px;border-radius:50%;object-fit:cover;background:#efe7d7;border:2px solid rgba(212,175,55,.45);overflow:hidden;display:block}
-    .profile-initials{display:grid;place-items:center;font-weight:900;font-size:18px;color:#5d4820}
-    .profile-name{font-size:22px;font-weight:900;line-height:1.05;word-break:break-word}
-    .profile-rank{color:var(--muted);font-size:14px}
-    .profile-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-    .profile-stats.secondary{grid-template-columns:repeat(4,minmax(0,1fr))}
-    .profile-stat{background:var(--soft);border:1px solid rgba(17,17,17,.06);border-radius:16px;padding:12px 10px;text-align:center;min-width:0}
-    .profile-stat strong{display:block;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .profile-stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-    .profile-side{background:#fbfaf7;border:1px solid rgba(17,17,17,.06);border-radius:22px;padding:18px;display:grid;align-content:start;gap:14px}
-    .profile-side h3{margin:0;font-size:16px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
-    .badge-empty-pill{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:16px;background:#f5efe0;color:#8a6a16;font-weight:800;width:max-content;max-width:100%}
-    .badge-copy{color:#3d3429;line-height:1.5}
-    @media (max-width:980px){.profile-sheet{grid-template-columns:1fr}.profile-side{order:2}}
-    @media (max-width:760px){.page{padding:14px 12px 90px}.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.head{grid-template-columns:64px minmax(0,1fr)}.avatar{width:64px;height:64px}.profile-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-stats.secondary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:760px){.page{padding:14px 12px 90px}.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.head{grid-template-columns:64px minmax(0,1fr)}.avatar{width:64px;height:64px}}
   </style>
   <script src="./gejast-scope.js?v386"></script>
   <script src="./gejast-home-gate.js?v386"></script>
   <script src="./gejast-badges.js?v386"></script>
   <script src="./gejast-badge-progress.js?v386"></script>
   <script src="./gejast-rpc-contract.js?v391"></script>
-  <script src="./gejast-profile-source.js?v413"></script>
+  <script src="./gejast-profile-source.js?v402"></script>
 </head>
 <body>
   <main class="page">
@@ -90,12 +71,12 @@
       <div class="top">
         <div>
           <h1>Spelers</h1>
-          <p>Profielen van alle spelers op de site</p>
+          <p>Alle actieve spelers met profiel, badge-status en kernstats.</p>
         </div>
         <button class="back" type="button" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</button>
       </div>
       <div id="status" class="status">Laden…</div>
-      <div id="grid" class="profiles-list"></div>
+      <div id="grid" class="grid"></div>
     </section>
     <section id="badgeGalleryPanel" class="sheet gallery-sheet"></section>
   </main>
@@ -224,7 +205,7 @@
           return displayName(a).localeCompare(displayName(b), 'nl');
         });
         if (!rows.length) {
-          gridNode.innerHTML = '<article class="profile-sheet"><div class="bio">Nog geen actieve spelers gevonden voor deze scope.</div></article>';
+          gridNode.innerHTML = '<article class="card"><div class="bio">Nog geen actieve spelers gevonden voor deze scope.</div></article>';
           return;
         }
         gridNode.innerHTML = rows.map((player) => {
@@ -232,41 +213,30 @@
           const original = originalName(player);
           const attained = normalizedAttained(player);
           const rarest = attained[0] || player.primary_badge || null;
-          const rarestTitle = rarest ? (rarest.title || rarest.name || 'Starter') : 'Nog geen badges behaald';
+          const rarestTitle = rarest ? (rarest.title || rarest.name || 'Starter') : 'Nog geen badge';
           const rarestNick = rarest && rarest.nickname ? rarest.nickname : '';
           const profileTarget = original || shown;
-          const roleLabel = rarestNick || rarestTitle || 'Starter';
-          const paardenraceMatches = Number(player.paardenrace_matches || 0);
-          const avatarMarkup = avatarHtml(player)
-            .replace(/class="avatar/g,'class="profile-avatar')
-            .replace(/class="profile-avatar initials"|class="avatar initials"/g,'class="profile-avatar profile-initials"');
-          return `<a class="profile-sheet" href="./player.html?player=${encodeURIComponent(profileTarget)}&scope=${encodeURIComponent(scope)}">
-            <section class="profile-main">
-              <div class="profile-head">
-                ${avatarMarkup}
-                <div>
-                  <div class="profile-name">${shown}</div>
-                  <div class="profile-rank">${roleLabel}</div>
-                </div>
+          return `<a class="card" href="./player.html?player=${encodeURIComponent(profileTarget)}&scope=${encodeURIComponent(scope)}">
+            <div class="head">
+              ${avatarHtml(player)}
+              <div>
+                <div class="name">${shown}</div>
+                <div class="meta">${original && original !== shown ? `Originele naam: \"${original}\"` : 'Geen alternatieve naam ingesteld.'}</div>
+                <div class="submeta"><strong>Meest zeldzame badge:</strong> ${rarestTitle}${rarestNick ? ` · ${rarestNick}` : ''}</div>
               </div>
-              <div class="profile-stats">
-                <div class="profile-stat"><strong>${player.total_matches || 0}</strong><span>Potjes</span></div>
-                <div class="profile-stat"><strong>${player.total_wins || 0}</strong><span>Winst</span></div>
-                <div class="profile-stat"><strong>${Math.round(Number(player.best_rating || 1000))}</strong><span>Beste ELO</span></div>
-              </div>
-              <div class="profile-stats secondary">
-                <div class="profile-stat"><strong>${Number(player.klaverjas_matches || 0)}</strong><span>Klaverjas</span></div>
-                <div class="profile-stat"><strong>${Number(player.boerenbridge_matches || 0)}</strong><span>Boerenbridge</span></div>
-                <div class="profile-stat"><strong>${paardenraceMatches}</strong><span>Paardenrace</span></div>
-                <div class="profile-stat"><strong>${Number(player.beerpong_matches || 0)}</strong><span>Beerpong</span></div>
-              </div>
-            </section>
-            <aside class="profile-side">
-              <h3>Badges</h3>
-              <div class="badge-note">${rarest ? `<span class="badge-pill">${rarest.imageMini48 || rarest.image ? `<img src="${rarest.imageMini48 || rarest.image}" alt="${rarestTitle}">` : ''}<span>${rarestTitle}${rarestNick ? ` · ${rarestNick}` : ''}</span></span>` : '<span class="badge-empty-pill">Nog geen badges behaald</span>'}</div>
-              <div class="badge-copy">${attained.length ? `Deze speler heeft ${attained.length} badge(s) behaald.` : 'Nog geen geregistreerde speldata voor deze speler.'}</div>
-              ${attained.length ? toMiniBadgeRow(attained) : ''}
-            </aside>
+            </div>
+            <div class="stats">
+              <div class="stat"><strong>${player.total_matches || 0}</strong><span>Potjes</span></div>
+              <div class="stat"><strong>${winPct(player)}%</strong><span>Win%</span></div>
+              <div class="stat"><strong>${Math.round(Number(player.best_rating || 1000))}</strong><span>Beste ELO</span></div>
+              <div class="stat"><strong>${player.badge_count || attained.length || 0}</strong><span>Badges</span></div>
+            </div>
+            <div class="badge-strip">
+              <div class="badge-kicker">Badge-overzicht</div>
+              <div class="badge-note">${rarest ? `<span class="badge-pill">${rarest.imageMini48 || rarest.image ? `<img src="${rarest.imageMini48 || rarest.image}" alt="${rarestTitle}">` : ''}<span>${rarestTitle}</span></span>` : '<span class="submeta">Nog geen behaalde badges.</span>'}</div>
+              ${toMiniBadgeRow(attained)}
+            </div>
+            <div class="bio">${player.favorite_game ? `Favoriete spelvorm: ${player.favorite_game}. ` : ''}${player.bio ? player.bio : `${player.total_matches || 0} geregistreerde potjes, ${player.total_wins || 0} overwinningen en ${player.badge_count || attained.length || 0} badge(s).`}</div>
           </a>`;
         }).join('');
       }

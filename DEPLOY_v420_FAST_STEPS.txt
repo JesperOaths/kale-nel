@@ -1,0 +1,12 @@
+GEJAST v420 fast steps
+
+1. Upload gejast-config.js.
+2. Upload every changed .html file from this bundle.
+3. Hard refresh a representative spread of pages:
+   - home.html
+   - index.html
+   - profiles.html
+   - paardenrace.html if present in your live line
+   - admin.html
+   - familie.html
+4. Confirm the visible watermark shows v420 everywhere.
