@@ -1,0 +1,15 @@
+GEJAST v415 fast steps
+
+1. Upload changed frontend files:
+   - gejast-config.js
+   - gejast-scoped-rpc.js
+   - paardenrace.html
+   - gejast-paardenrace.js
+
+2. Hard refresh paardenrace.html.
+
+3. Test Nieuwe room maken again.
+
+4. Confirm the visible watermark shows v415.
+
+5. If the backend still errors after the compat retry, copy the new exact error text.
