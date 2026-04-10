@@ -1,0 +1,17 @@
+GEJAST v414 fast steps
+
+1. Upload changed frontend files:
+   - gejast-config.js
+   - paardenrace.html
+   - gejast-paardenrace.js
+
+2. Run in Supabase SQL editor:
+   - gejast_v414_paardenrace_join_fallback.sql
+
+3. Hard refresh paardenrace.html and one or two other site pages.
+
+4. Confirm the visible watermark now shows v414 everywhere that loads gejast-config.js.
+
+5. Test paardenrace:
+   - Kamer maken should no longer fail on missing paardenrace_join_room_scoped
+   - Kamer kiezen should try join_room when present, but not die immediately if the function is still absent

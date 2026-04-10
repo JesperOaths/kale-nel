@@ -24,6 +24,10 @@
     if (!RPC || typeof RPC.callRpc !== 'function') return Promise.reject(new Error('GEJAST_SCOPED_RPC ontbreekt.'));
     return RPC.callRpc(name, payload || {});
   }
+  function isMissingFunctionError(error){
+    const msg = String((error && error.message) || error || '').toLowerCase();
+    return msg.includes('could not find the function') || msg.includes('does not exist') || msg.includes('schema cache');
+  }
   function asInt(value){ const n = Number(value); return Number.isFinite(n) && n > 0 ? Math.round(n) : 0; }
   function setStep(id){
     ['prStepChoose','prStepCreate','prStepJoinWager','prStepJoinRoom'].forEach((key) => {
@@ -108,11 +112,6 @@
       });
       const roomCode = created && (created.room_code || created.code || (created.room && created.room.code));
       if (!roomCode) throw new Error('Geen room_code teruggekregen van create_room.');
-      const joined = await rpc('paardenrace_join_room_scoped', {
-        room_code: roomCode,
-        session_token: sessionToken(),
-        site_scope_input: scope()
-      });
       const selection = await rpc('paardenrace_update_selection_scoped', {
         room_code: roomCode,
         selected_suit: state.createSuit,
@@ -120,7 +119,7 @@
         session_token: sessionToken(),
         site_scope_input: scope()
       });
-      const nextState = selection || joined || created;
+      const nextState = selection || created;
       applyState(nextState);
       q('#prSetupDialog').close();
       await maybeCreateWagerObligation(nextState, wager, state.createSuit);
@@ -172,11 +171,16 @@
       return;
     }
     try {
-      const joined = await rpc('paardenrace_join_room_scoped', {
-        room_code: state.selectedRoom,
-        session_token: sessionToken(),
-        site_scope_input: scope()
-      });
+      let joined = null;
+      try {
+        joined = await rpc('paardenrace_join_room_scoped', {
+          room_code: state.selectedRoom,
+          session_token: sessionToken(),
+          site_scope_input: scope()
+        });
+      } catch (error) {
+        if (!isMissingFunctionError(error)) throw error;
+      }
       const selection = await rpc('paardenrace_update_selection_scoped', {
         room_code: state.selectedRoom,
         selected_suit: state.joinSuit,

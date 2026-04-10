@@ -1,0 +1,11 @@
+GEJAST v414 - paardenrace join fallback + sitewide version drift fix
+
+What this patch fixes:
+- paardenrace create-room flow no longer hard-requires paardenrace_join_room_scoped after create_room
+- paardenrace join flow now tolerates a missing join_room RPC and falls back to update_selection_scoped instead of dying immediately
+- adds a best-effort SQL compatibility wrapper for paardenrace_join_room_scoped
+- fixes visible version drift sitewide by sourcing the watermark/version label from shared gejast-config.js CONFIG.VERSION instead of page-local/script-local candidates
+
+Important note:
+- this is a real follow-up to the live runtime error shown in chat
+- if the backend requires stricter explicit membership insertion before update_selection_scoped, one more SQL follow-up may still be needed after live testing
