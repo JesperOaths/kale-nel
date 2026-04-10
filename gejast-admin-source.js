@@ -102,8 +102,12 @@
     ]);
   }
 
+  function extractMailJobId(result) {
+    return result?.job_id ?? result?.queue_job_id ?? result?.email_job_id ?? result?.outbound_email_job_id ?? result?.id ?? null;
+  }
+
   async function requeueExpiredActivation(requestId) {
-    return firstOf([
+    const primary = await firstOf([
       () => RPC.secureWrite('claims', 'requeue_expired_activation', {
         request_id_input: String(requestId),
         base_url: activationBaseUrl()
@@ -113,6 +117,12 @@
         base_url: activationBaseUrl()
       }))
     ]);
+    if (extractMailJobId(primary)) return primary;
+    const resend = await resendPendingActivation(requestId);
+    return Object.assign({}, primary || {}, resend || {}, {
+      requeued_without_job: true,
+      requeue_message: primary?.message || null
+    });
   }
 
   async function resendPendingActivation(requestId) {
