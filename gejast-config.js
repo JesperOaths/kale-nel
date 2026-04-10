@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v412',
+    VERSION:'v413',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -37,11 +37,114 @@
   const label = `${effectiveVersion} · Made by Bruis`;
   window.GEJAST_PAGE_VERSION = effectiveVersion;
 
+  function watermarkStyles(node){
+    if (!node || !node.style) return;
+    const compact = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+    Object.assign(node.style, {
+      position: 'fixed',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      bottom: compact ? '10px' : '14px',
+      zIndex: '9999',
+      padding: compact ? '7px 11px' : '8px 14px',
+      borderRadius: '999px',
+      background: 'rgba(17,17,17,0.88)',
+      border: '1px solid rgba(212,175,55,0.35)',
+      color: '#f3e3a6',
+      font: compact ? '700 12px/1.2 Inter,system-ui,sans-serif' : '700 13px/1.2 Inter,system-ui,sans-serif',
+      letterSpacing: '.03em',
+      pointerEvents: 'none',
+      userSelect: 'none',
+      boxShadow: '0 12px 24px rgba(0,0,0,0.18)',
+      textAlign: 'center',
+      maxWidth: compact ? 'calc(100vw - 24px)' : '',
+      backdropFilter: 'blur(6px)',
+      WebkitBackdropFilter: 'blur(6px)'
+    });
+  }
+  function ensureVersionWatermark(){
+    if (!document.body) return [];
+    const selectors = ['[data-version-watermark]','.site-credit-watermark','#versionWatermark','.version-tag','.watermark'];
+    let nodes = selectors.flatMap((selector)=>Array.from(document.querySelectorAll(selector))).filter(Boolean);
+    if (!nodes.length) {
+      const node = document.createElement('div');
+      node.setAttribute('data-version-watermark','');
+      node.setAttribute('data-version-watermark-source','gejast-config');
+      document.body.appendChild(node);
+      nodes = [node];
+    }
+    const seen = new Set();
+    return nodes.filter((node)=>{ if (seen.has(node)) return false; seen.add(node); return true; });
+  }
   function applyVersionLabel(){
-    const selectors = ['.site-credit-watermark','#versionWatermark','.version-tag','.watermark','[data-version-watermark]'];
-    selectors.forEach((selector)=>{ document.querySelectorAll(selector).forEach((node)=>{ node.textContent = label; }); });
+    const nodes = ensureVersionWatermark();
+    nodes.forEach((node)=>{ node.textContent = label; watermarkStyles(node); });
     const re = /v\d+\s*[·.-]?\s*Made by Bruis/i;
-    document.querySelectorAll('body *').forEach((node)=>{ if (node.children.length) return; const txt=(node.textContent||'').trim(); if (re.test(txt)) node.textContent = label; });
+    document.querySelectorAll('body *').forEach((node)=>{ if (node.children.length) return; const txt=(node.textContent||'').trim(); if (re.test(txt)) { node.textContent = label; watermarkStyles(node); } });
+  }
+
+
+  function normalizeProfileImageUrl(value){
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
+    if (raw.startsWith('/')) return raw;
+    const base = String(CONFIG.SUPABASE_URL || '').trim();
+    if (/^storage\/v1\/object\/public\//i.test(raw) && base) return `${base}/${raw.replace(/^\/+/, '')}`;
+    if (/^(public\/)?avatars?\//i.test(raw) && base) return `${base}/storage/v1/object/public/${raw.replace(/^(public\/)?/, '').replace(/^\/+/, '')}`;
+    if (base && /^[A-Za-z0-9._-]+\/.+/.test(raw)) return `${base}/storage/v1/object/public/${raw.replace(/^\/+/, '')}`;
+    return raw;
+  }
+
+
+  function normalizePersonName(value){
+    return String(value || '').replace(/\s+/g, ' ').trim();
+  }
+  function uniquePersonNames(values){
+    const seen = new Set();
+    return (Array.isArray(values) ? values : []).map(normalizePersonName).filter((name)=>{
+      const key = name.toLowerCase();
+      if (!name || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+  async function fetchScopedActivePlayerNames(scope){
+    const resolvedScope = normalizeScope(scope || inferRuntimeScope());
+    const headers = { 'Content-Type':'application/json', apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '', Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}` };
+    async function callRpc(name, payload){
+      const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify(payload || {}) });
+      const txt = await res.text();
+      let data = null;
+      try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || `HTTP ${res.status}`); }
+      if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
+      return data && data[name] !== undefined ? data[name] : data;
+    }
+    function toNames(raw){
+      const rows = Array.isArray(raw)
+        ? raw
+        : (Array.isArray(raw?.players) ? raw.players : (Array.isArray(raw?.profiles) ? raw.profiles : (Array.isArray(raw?.names) ? raw.names : (Array.isArray(raw?.data) ? raw.data : []))));
+      let names = uniquePersonNames(rows.map((row)=>{
+        if (typeof row === 'string') return row;
+        return row?.public_display_name || row?.chosen_username || row?.nickname || row?.display_name || row?.player_name || row?.name || row?.label || row?.desired_name || row?.slug || '';
+      }));
+      if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, resolvedScope);
+      return names;
+    }
+    const attempts = [
+      ['get_all_site_players_public_scoped', { site_scope_input: resolvedScope }],
+      ['get_profiles_page_bundle_scoped', { site_scope_input: resolvedScope }],
+      ['get_login_names_scoped', { site_scope_input: resolvedScope }],
+      ['get_login_names', {}]
+    ];
+    for (const [name, payload] of attempts){
+      try {
+        const raw = await callRpc(name, payload);
+        const names = toNames(raw);
+        if (names.length) return names;
+      } catch (_) {}
+    }
+    return [];
   }
 
   function getPlayerSessionToken(){
@@ -188,7 +291,10 @@ function buildRequestUrl(returnTo, scope){
   window.GEJAST_CONFIG = Object.assign({}, window.GEJAST_CONFIG || {}, CONFIG, {
     VERSION: effectiveVersion,
     VERSION_LABEL: label,
+    ensureVersionWatermark,
     applyVersionLabel,
+    normalizeProfileImageUrl,
+    fetchScopedActivePlayerNames,
     getPlayerSessionToken,
     clearPlayerSessionTokens,
     touchPlayerActivity,

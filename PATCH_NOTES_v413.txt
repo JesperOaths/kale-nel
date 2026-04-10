@@ -1,0 +1,18 @@
+GEJAST v413 - paardenrace roomflow hardening + profiles rollback pass
+
+Included in this patch:
+- fixes the live paardenrace SQL error by providing a compatible gen_random_bytes(integer) fallback
+- adds paardenrace_list_joinable_rooms_scoped for the new room-picker UI
+- adds paardenrace.html and gejast-paardenrace.js with a split flow:
+  1. choose Kamer maken or Kamer kiezen first
+  2. if Kamer maken: choose wager + suit, then create room
+  3. if Kamer kiezen: choose wager + suit first, then select from joinable rooms
+  4. only after a real create/join succeeds does the frontend try to send the wager obligation into the request pipeline
+- restores profiles.html to a larger two-column player card layout closer to the earlier visual shown in chat
+- extends profile fallback data to include paardenrace_matches
+- bumps visible version label to v413 on touched pages via gejast-config.js
+
+Important honesty note:
+- this patch is grounded on the uploaded concrete repo plus the uploaded paardenrace guide/assets
+- the SQL follow-up assumes the generated v412/v412a paardenrace tables/RPC line already exists live
+- if the live project uses different paardenrace table names than the implementation brief, the list-room RPC may need one more SQL-only follow-up
