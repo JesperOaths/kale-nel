@@ -1,0 +1,7 @@
+GEJAST v422 config recovery fast steps
+
+1. Upload gejast-config.js only.
+2. Hard refresh the site.
+3. Test index.html and home.html again.
+
+This is intended specifically to stop the main-thread slowdown / blank-page behavior.
