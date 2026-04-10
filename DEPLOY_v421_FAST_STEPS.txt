@@ -1,0 +1,8 @@
+GEJAST v421 emergency fast steps
+
+1. Upload gejast-config.js only.
+2. Hard refresh the site.
+3. Confirm pages load again.
+
+This is an emergency recovery step.
+The strict redirect guard is no longer auto-running globally.

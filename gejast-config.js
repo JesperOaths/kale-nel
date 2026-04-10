@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v420',
+    VERSION:'v421',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -344,7 +344,6 @@ function buildRequestUrl(returnTo, scope){
   function bootSharedGuards(){
     applyVersionLabel();
     ensureVersionObserver();
-    enforceStrictLoggedOutRedirect();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootSharedGuards, { once: true });
   else bootSharedGuards();
