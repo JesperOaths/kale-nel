@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v401',
+    VERSION:'v402',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -81,6 +81,19 @@
     nodes.forEach((node)=>{ node.textContent = label; watermarkStyles(node); });
     const re = /v\d+\s*[·.-]?\s*Made by Bruis/i;
     document.querySelectorAll('body *').forEach((node)=>{ if (node.children.length) return; const txt=(node.textContent||'').trim(); if (re.test(txt)) { node.textContent = label; watermarkStyles(node); } });
+  }
+
+
+  function normalizeProfileImageUrl(value){
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
+    if (raw.startsWith('/')) return raw;
+    const base = String(CONFIG.SUPABASE_URL || '').trim();
+    if (/^storage\/v1\/object\/public\//i.test(raw) && base) return `${base}/${raw.replace(/^\/+/, '')}`;
+    if (/^(public\/)?avatars?\//i.test(raw) && base) return `${base}/storage/v1/object/public/${raw.replace(/^(public\/)?/, '').replace(/^\/+/, '')}`;
+    if (base && /^[A-Za-z0-9._-]+\/.+/.test(raw)) return `${base}/storage/v1/object/public/${raw.replace(/^\/+/, '')}`;
+    return raw;
   }
 
   function getPlayerSessionToken(){
@@ -229,6 +242,7 @@ function buildRequestUrl(returnTo, scope){
     VERSION_LABEL: label,
     ensureVersionWatermark,
     applyVersionLabel,
+    normalizeProfileImageUrl,
     getPlayerSessionToken,
     clearPlayerSessionTokens,
     touchPlayerActivity,

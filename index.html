@@ -663,7 +663,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v393';</script><script src="./gejast-config.js?v393"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v402';</script><script src="./gejast-config.js?v402"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
   <script src="./gejast-live-summary.js?v389"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
   <script src="./gejast-combined-readers.js?v389"></script>
@@ -912,7 +912,7 @@ function applyAdminViewerRefresh() {
     function displayPlayerName(row){ return String(row?.chosen_username || row?.public_display_name || row?.nickname || row?.display_name || row?.player_name || 'Onbekend'); }
     const HOMEPAGE_BLOCKED_NAMES = new Set(['anna','spookinoza 2','evi','fons','caro','daan','bram']);
     function isHomepageBlockedName(name){ return HOMEPAGE_BLOCKED_NAMES.has(String(name||'').trim().toLowerCase()); }
-    function avatarMarkup(row){ const name = displayPlayerName(row); const src = String(row?.avatar_url || row?.photo_url || row?.profile_picture_url || '').trim(); return src ? `<div class="biggest-player-avatar"><img src="${src.replace(/"/g,'&quot;')}" alt="${name.replace(/"/g,'&quot;')}"></div>` : `<div class="biggest-player-avatar">${(name||'O').slice(0,1).toUpperCase()}</div>`; }
+    function avatarMarkup(row){ const name = displayPlayerName(row); const helper=(window.GEJAST_CONFIG&&typeof window.GEJAST_CONFIG.normalizeProfileImageUrl==='function')?window.GEJAST_CONFIG.normalizeProfileImageUrl:(v)=>String(v||'').trim(); const src = helper(row?.avatar_url || row?.photo_url || row?.profile_picture_url || ''); return src ? `<div class="biggest-player-avatar"><img src="${src.replace(/"/g,'&quot;')}" alt="${name.replace(/"/g,'&quot;')}" referrerpolicy="no-referrer"></div>` : `<div class="biggest-player-avatar">${(name||'O').slice(0,1).toUpperCase()}</div>`; }
     function renderHomepageLadders(payload) {
       const root = document.getElementById('ladderGrid');
       if (!root) return;

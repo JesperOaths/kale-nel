@@ -7,8 +7,8 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Balzaal</title>
-  <script>window.GEJAST_PAGE_VERSION='v386';</script>
-  <script src="./gejast-config.js?v386"></script><script src="./gejast-home-gate.js?v371"></script>
+  <script>window.GEJAST_PAGE_VERSION='v402';</script>
+  <script src="./gejast-config.js?v402"></script><script src="./gejast-home-gate.js?v371"></script>
   <style>
     :root{
       --gold:#b78e43; --gold-deep:#89642a; --wine:#88162a; --wine-deep:#5c0c18; --cream:#f6efe3; --ink:#181310; --muted:#706557;
@@ -224,7 +224,9 @@
 
     function avatarMarkup(src,name,small=false){
       const initial = String(name||'?').trim().slice(0,1).toUpperCase() || '?';
-      return src ? `<div class="avatar ${small?'small':''}"><img src="${escapeHtml(src)}" alt="${escapeHtml(name||'Avatar')}"></div>` : `<div class="avatar ${small?'small':''}">${escapeHtml(initial)}</div>`;
+      const helper=(window.GEJAST_CONFIG&&typeof window.GEJAST_CONFIG.normalizeProfileImageUrl==='function')?window.GEJAST_CONFIG.normalizeProfileImageUrl:(v)=>String(v||'').trim();
+      const normalized=helper(src);
+      return normalized ? `<div class="avatar ${small?'small':''}"><img src="${escapeHtml(normalized)}" alt="${escapeHtml(name||'Avatar')}" referrerpolicy="no-referrer"></div>` : `<div class="avatar ${small?'small':''}">${escapeHtml(initial)}</div>`;
     }
     function escapeHtml(v){ return String(v ?? '').replace(/[&<>"]/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m])); }
     async function parse(res){ const txt = await res.text(); let data=null; try{ data = txt ? JSON.parse(txt) : null; } catch(err){ throw new Error(txt || `HTTP ${res.status}`); } if(!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }

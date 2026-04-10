@@ -7,8 +7,8 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Speler</title>
-  <script>window.GEJAST_PAGE_VERSION='v400';</script>
-  <script src="./gejast-config.js?v400"></script>
+  <script>window.GEJAST_PAGE_VERSION='v402';</script>
+  <script src="./gejast-config.js?v402"></script>
   <script src="./gejast-clickable-cards.js?v391"></script>
   <script src="./gejast-scope-context.js?v391"></script><script src="./gejast-family-rollout.js?v393"></script>
   <style>
@@ -65,7 +65,7 @@
   <script src="./gejast-badges.js?v391"></script>
   <script src="./gejast-badge-progress.js?v391"></script>
   <script src="./gejast-rpc-contract.js?v391"></script>
-  <script src="./gejast-profile-source.js?v400"></script>
+  <script src="./gejast-profile-source.js?v402"></script>
 </head>
 <body>
   <div class="wrap">
@@ -268,9 +268,11 @@
         if (!wrap) return;
         const helper = window.GEJAST_PROFILE_SOURCE && typeof window.GEJAST_PROFILE_SOURCE.profileImageUrl === 'function'
           ? window.GEJAST_PROFILE_SOURCE.profileImageUrl
-          : (value) => String(value || '').trim();
+          : (window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.normalizeProfileImageUrl === 'function'
+            ? window.GEJAST_CONFIG.normalizeProfileImageUrl
+            : (value) => String(value || '').trim());
         const shownName = (playerBundle?.unified?.player_name || player || 'Speler').trim();
-        const src = helper(playerBundle?.unified?.overview?.profile_picture_url || playerBundle?.profile_picture_url || '');
+        const src = helper(playerBundle?.unified?.overview?.profile_picture_url || playerBundle?.unified?.overview?.avatar_url || playerBundle?.profile_picture_url || playerBundle?.avatar_url || '');
         const initial = (shownName || 'S').slice(0,1).toUpperCase();
         wrap.innerHTML = src
           ? `<img class="player-avatar" src="${src}" alt="${shownName}" referrerpolicy="no-referrer" onerror="this.outerHTML='&lt;div class=&quot;player-avatar-fallback&quot;&gt;${initial}&lt;/div&gt;'">`

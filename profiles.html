@@ -7,8 +7,8 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Spelersprofielen</title>
-  <script>window.GEJAST_PAGE_VERSION='v400';</script>
-  <script src="./gejast-config.js?v400"></script>
+  <script>window.GEJAST_PAGE_VERSION='v402';</script>
+  <script src="./gejast-config.js?v402"></script>
   <script src="./gejast-clickable-cards.js?v386"></script>
   <script src="./gejast-scope-context.js?v391"></script><script src="./gejast-family-rollout.js?v393"></script>
   <style>
@@ -63,7 +63,7 @@
   <script src="./gejast-badges.js?v386"></script>
   <script src="./gejast-badge-progress.js?v386"></script>
   <script src="./gejast-rpc-contract.js?v391"></script>
-  <script src="./gejast-profile-source.js?v400"></script>
+  <script src="./gejast-profile-source.js?v402"></script>
 </head>
 <body>
   <main class="page">
@@ -127,8 +127,12 @@
       }
 
       function avatarHtml(player){
-        const helper = window.GEJAST_PROFILE_SOURCE && typeof window.GEJAST_PROFILE_SOURCE.profileImageUrl === 'function' ? window.GEJAST_PROFILE_SOURCE.profileImageUrl : (value) => String(value || '').trim();
-        const src = helper(player.profile_picture_url || player.avatar_url || '');
+        const helper = (window.GEJAST_PROFILE_SOURCE && typeof window.GEJAST_PROFILE_SOURCE.profileImageUrl === 'function'
+          ? window.GEJAST_PROFILE_SOURCE.profileImageUrl
+          : (window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.normalizeProfileImageUrl === 'function'
+            ? window.GEJAST_CONFIG.normalizeProfileImageUrl
+            : (value) => String(value || '').trim()));
+        const src = helper(player.profile_picture_url || player.avatar_url || player.photo_url || '');
         const label = displayName(player);
         return src ? `<img class="avatar" src="${src}" alt="${label}" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML='&lt;div class=&quot;avatar initials&quot;&gt;${initials(label)}&lt;/div&gt;'">` : `<div class="avatar initials">${initials(label)}</div>`;
       }

@@ -41,6 +41,10 @@
 
 
   function profileImageUrl(value) {
+    const helper = global.GEJAST_CONFIG && typeof global.GEJAST_CONFIG.normalizeProfileImageUrl === 'function'
+      ? global.GEJAST_CONFIG.normalizeProfileImageUrl
+      : null;
+    if (helper) return helper(value);
     const raw = String(value || '').trim();
     if (!raw) return '';
     if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
@@ -179,7 +183,7 @@ function writeProfilesCache(value) {
         total_wins: totalWins,
         best_rating: bestRating,
         best_badge: player?.best_badge || '',
-        profile_picture_url: player?.profile_picture_url || '',
+        profile_picture_url: player?.profile_picture_url || player?.avatar_url || player?.photo_url || '',
         favorite_game: player?.favorite_game || '',
         bio: player?.bio || '',
         klaverjas_matches: klMatches,

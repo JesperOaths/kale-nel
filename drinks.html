@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <title>Drinks overzicht</title>
-  <script>window.GEJAST_PAGE_VERSION='v393';</script><script src="./gejast-config.js?v393"></script><script src="./gejast-clickable-cards.js?v375"></script><script src="./gejast-scope-context.js?v375"></script><script src="./gejast-family-rollout.js?v393"></script>
+  <script>window.GEJAST_PAGE_VERSION='v402';</script><script src="./gejast-config.js?v402"></script><script src="./gejast-clickable-cards.js?v375"></script><script src="./gejast-scope-context.js?v375"></script><script src="./gejast-family-rollout.js?v393"></script>
   <style>
     :root{
       --bg:#ece7dc;--card:rgba(255,251,245,.94);--paper:#fffdfa;--line:rgba(54,40,20,.08);--line-strong:rgba(54,40,20,.14);
@@ -150,7 +150,7 @@
     function setStatus(msg='',kind=''){ const el=document.getElementById('statusLine'); el.textContent=msg||''; el.className=`status-line${kind?` ${kind}`:''}`; }
     function readCache(key, ttl){ try{ const raw=sessionStorage.getItem(key)||''; if(!raw) return null; const parsed=JSON.parse(raw); if(!parsed||!parsed.saved_at) return null; if((Date.now()-Number(parsed.saved_at||0))>ttl) return null; return parsed.data||null; }catch(_){ return null; } }
     function writeCache(key, data){ try{ sessionStorage.setItem(key, JSON.stringify({ saved_at: Date.now(), data })); }catch(_){} }
-    function avatar(row,name){ const src=row?.avatar_url||row?.photo_url||row?.profile_picture_url||''; const label=String(name||row?.display_name||row?.player_name||'Speler'); return src?`<div class="avatar"><img src="${esc(src)}" alt="${esc(label)}"></div>`:`<div class="avatar">${esc(label.slice(0,1).toUpperCase())}</div>`; }
+    function avatar(row,name){ const helper=(window.GEJAST_CONFIG&&typeof window.GEJAST_CONFIG.normalizeProfileImageUrl==='function')?window.GEJAST_CONFIG.normalizeProfileImageUrl:(v)=>String(v||'').trim(); const src=helper(row?.avatar_url||row?.photo_url||row?.profile_picture_url||''); const label=String(name||row?.display_name||row?.player_name||'Speler'); return src?`<div class="avatar"><img src="${esc(src)}" alt="${esc(label)}" referrerpolicy="no-referrer"></div>`:`<div class="avatar">${esc(label.slice(0,1).toUpperCase())}</div>`; }
     function playerLink(name){ const v=String(name||'Speler'); return `<a class="clean" href="./player.html?player=${encodeURIComponent(v)}">${esc(v)}</a>`; }
     function itemHtml(row,{title,sub,value,pill='',nameField='display_name'}){ const name=row?.[nameField]||row?.player_name||row?.display_name||''; return `<div class="item"><div class="item-left">${avatar(row,name)}<div class="item-main"><div class="item-title">${title(row,name)}</div><div class="item-sub">${sub?sub(row,name):''}</div></div></div><div style="display:grid;justify-items:end;gap:8px"><div class="item-value">${value(row,name)}</div>${pill||''}</div></div>`; }
     function renderList(el, rows, factory, empty='Nog geen data.'){ rows=Array.isArray(rows)?rows:[]; el.innerHTML=rows.length?rows.map(factory).join(''):`<div class="note">${empty}</div>`; }
