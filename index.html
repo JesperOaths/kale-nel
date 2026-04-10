@@ -663,7 +663,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v405';</script><script src="./gejast-config.js?v405"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v406';</script><script src="./gejast-config.js?v406"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
   <script src="./gejast-live-summary.js?v389"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
   <script src="./gejast-combined-readers.js?v389"></script>
@@ -1692,24 +1692,31 @@ async function castExtraPollVote(desired_status) {
       if (fromCache) document.body.classList.remove('boot-pending');
     }
 
+    function isMobileHomepage(){
+      try { return !!(window.matchMedia && window.matchMedia('(max-width: 760px)').matches); } catch (_) { return false; }
+    }
+
     async function bootHomepage(){
       document.body.classList.add('boot-pending');
       const cached = readHomepageBootCache();
       if (cached) applyHomepageBootBundle(cached, true);
       ensureAdminViewer().then(applyAdminViewerRefresh).catch(() => {});
-      try {
-        const readers = window.GEJAST_COMBINED_READERS;
-        if (readers && typeof readers.loadHomepageBootBundle === 'function') {
-          const bundle = await readers.loadHomepageBootBundle();
-          applyHomepageBootBundle(bundle || {}, false);
-          writeHomepageBootCache(bundle || {});
-        } else {
-          const [core, ladders, drinksHome, drinksTop5, liveEntries] = await Promise.all([
-            load(),
-            loadHomepageLadders(),
-            loadDrinksHome(),
-            loadDrinksHomeTop5(),
-            loadHomepageLiveEntries()
+      const core = await load();
+      document.body.classList.remove('boot-pending');
+      const finishNonCritical = async () => {
+        try {
+          const readers = window.GEJAST_COMBINED_READERS;
+          if (readers && typeof readers.loadHomepageBootBundle === 'function' && !isMobileHomepage()) {
+            const bundle = await readers.loadHomepageBootBundle();
+            applyHomepageBootBundle(bundle || {}, false);
+            writeHomepageBootCache(bundle || {});
+            return;
+          }
+          const [ladders, drinksHome, drinksTop5, liveEntries] = await Promise.all([
+            loadHomepageLadders().catch(()=>null),
+            loadDrinksHome().catch(()=>null),
+            loadDrinksHomeTop5().catch(()=>null),
+            loadHomepageLiveEntries().catch(()=>null)
           ]);
           writeHomepageBootCache({
             homepage_state: core?.homeState || currentHomepageState || {},
@@ -1719,15 +1726,17 @@ async function castExtraPollVote(desired_status) {
             drinks_top5: drinksTop5 || null,
             live_entries: liveEntries || null
           });
-        }
-      } finally {
-        document.body.classList.remove('boot-pending');
+        } catch (_) {}
+      };
+      if (window.requestAnimationFrame) {
+        window.requestAnimationFrame(() => setTimeout(finishNonCritical, 0));
+      } else {
+        setTimeout(finishNonCritical, 0);
       }
     }
 
     async function load() {
       try {
-        ensureAdminViewer().then(applyAdminViewerRefresh).catch(() => {});
         const [homeState, extraState] = await Promise.all([getHomepageState(), getExtraPollState()]);
         renderState(homeState);
         renderExtraPollState(extraState);
@@ -1752,7 +1761,7 @@ async function castExtraPollVote(desired_status) {
     applyScopeChrome();
     wireProtectedDrinksLinks();
     bootHomepage();
-    setInterval(loadDrinksHomeTop5, 5000);
+    setInterval(loadDrinksHomeTop5, 15000);
   </script>
 
   <div class="site-credit-watermark" data-version-watermark></div>
