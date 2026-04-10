@@ -45,7 +45,12 @@
   }
 
   function activationBaseUrl() {
+    if (root.GEJAST_ACCOUNT_LINKS && typeof root.GEJAST_ACCOUNT_LINKS.activationBaseUrl === 'function') {
+      return root.GEJAST_ACCOUNT_LINKS.activationBaseUrl();
+    }
     const url = new URL('./activate.html', root.location.href);
+    const scope = RPC && typeof RPC.getScope === 'function' ? String(RPC.getScope() || '').toLowerCase() : 'friends';
+    if (scope === 'family') url.searchParams.set('scope', 'family');
     if (url.protocol === 'http:' && !/^(localhost|127\.0\.0\.1)$/i.test(url.hostname)) url.protocol = 'https:';
     return url.toString();
   }

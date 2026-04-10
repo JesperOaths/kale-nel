@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Naam claimen</title>
-  <script>window.GEJAST_PAGE_VERSION='v394';</script>
+  <script>window.GEJAST_PAGE_VERSION='v399';</script>
   <style>
     :root { --gold: #9a8241; --black: #111; --bg: #f0ede4; }
     * { box-sizing: border-box; }
@@ -34,7 +34,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/request.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v394"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-account-scope.js?v394"></script>
+  <script src="./gejast-config.js?v399"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-account-scope.js?v394"></script><script src="./gejast-account-links.js?v399"></script>
 </head>
 <body>
   <div class="scene">
@@ -58,6 +58,15 @@
     </div>
     <div id="status" class="status"></div>
   </main>
+  <script>
+    (function(){
+      try {
+        if (window.GEJAST_ACCOUNT_LINKS && typeof window.GEJAST_ACCOUNT_LINKS.applyLinks === 'function') {
+          window.GEJAST_ACCOUNT_LINKS.applyLinks(document);
+        }
+      } catch (_) {}
+    })();
+  </script>
   <script>
 const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
