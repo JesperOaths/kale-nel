@@ -103,7 +103,7 @@
     @media (max-width:900px){.toolbar{grid-template-columns:1fr 1fr}.toolbar .toolbar-card:first-child{grid-column:1 / -1}}
     @media (max-width:640px){.page-shell{padding:14px 12px 88px}.topbar{padding:18px}.hero h1{font-size:28px}.summary-grid,.toolbar,.meta-grid,.form-actions,.list-root{grid-template-columns:1fr}.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
 </style>
-  <script>window.GEJAST_PAGE_VERSION='v386';</script><script src="./gejast-config.js?v386"></script><script src="./gejast-scope-context.js?v374"></script>
+  <script>window.GEJAST_PAGE_VERSION='v392';</script><script src="./gejast-config.js?v392"></script><script src="./gejast-scope-context.js?v392"></script>
   <script>
     (function globalAdminLogout(){
       const btn=document.createElement('button');
@@ -114,8 +114,10 @@
       document.addEventListener('DOMContentLoaded',()=>document.body.appendChild(btn));
     })();
   </script>
-  <script src="./admin-session-sync.js?v374"></script>
-  <script src="./admin-topnav.js?v374"></script>
+  <script src="./admin-session-sync.js?v392"></script>
+  <script src="./admin-topnav.js?v392"></script>
+  <script src="./gejast-admin-rpc.js?v392"></script>
+  <script src="./gejast-admin-source.js?v392"></script>
 </head>
 <body>
   <a class="page-floating-logo" href="./index.html" aria-label="Terug naar home"><img src="./logo.png" alt="Logo"></a>
@@ -239,6 +241,7 @@
     const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
 
     const state = { rows: [], filtered: [] };
+    const ADMIN_SOURCE = window.GEJAST_ADMIN_SOURCE || null;
 
     function rpcHeaders() {
       return {
@@ -283,6 +286,9 @@
       box.textContent = message;
     }
     async function ensureGate(){
+      if (window.GEJAST_ADMIN_RPC && typeof window.GEJAST_ADMIN_RPC.requirePage === 'function') {
+        return await window.GEJAST_ADMIN_RPC.requirePage('admin_reserved_names.html');
+      }
       const token = getToken();
       if (!token) {
         clearAdminSessionToken();
@@ -428,10 +434,12 @@
     async function loadNames(){
       try {
         setStatus('Laden...');
-        const data = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_allowed_usernames`, {
-          method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(),
-          body:JSON.stringify({ admin_session_token: getToken() })
-        }).then(parseResponse);
+        const data = ADMIN_SOURCE && typeof ADMIN_SOURCE.loadReservedNames === 'function'
+          ? await ADMIN_SOURCE.loadReservedNames({ includeArchive: true, scope: window.GEJAST_ADMIN_RPC ? window.GEJAST_ADMIN_RPC.getScope() : 'friends' })
+          : await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_allowed_usernames`, {
+              method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(),
+              body:JSON.stringify({ admin_session_token: getToken() })
+            }).then(parseResponse);
         state.rows = Array.isArray(data?.items) ? data.items : (Array.isArray(data) ? data : []);
         renderAll();
         setStatus('Kieslijst en archief geladen.', 'ok');
@@ -444,6 +452,7 @@
       }
     }
     async function callRemoveAllowedUsername(id){
+      if (ADMIN_SOURCE && typeof ADMIN_SOURCE.removeAllowedUsername === 'function') return await ADMIN_SOURCE.removeAllowedUsername(id);
       const payloads = [
         { admin_session_token: getToken(), allowed_username_id_input: Number(id) },
         { admin_session_token: getToken(), allowed_username_id: Number(id) },
@@ -468,6 +477,7 @@
       throw lastError || new Error('Verwijderen mislukt.');
     }
     async function setGhostStatus(playerId, ghosted){
+      if (ADMIN_SOURCE && typeof ADMIN_SOURCE.setPlayerGhostStatus === 'function') return await ADMIN_SOURCE.setPlayerGhostStatus(playerId, ghosted, ghosted ? 'admin reserved names ghost action' : 'admin reserved names unghost action');
       return fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_set_player_ghost_status`, {
         method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(),
         body:JSON.stringify({
@@ -516,15 +526,22 @@
     document.getElementById('createBtn').addEventListener('click', async () => {
       try {
         setStatus('Naam toevoegen...');
-        await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_reserve_allowed_username`, {
-          method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(),
-          body:JSON.stringify({
-            admin_session_token: getToken(),
-            display_name_input: document.getElementById('newNameInput').value.trim(),
-            reserved_for_email_input: document.getElementById('newEmailInput').value.trim().toLowerCase() || null,
-            reserved_for_person_note_input: document.getElementById('newNoteInput').value.trim() || null
-          })
-        }).then(parseResponse);
+        const displayName = document.getElementById('newNameInput').value.trim();
+        const email = document.getElementById('newEmailInput').value.trim().toLowerCase() || null;
+        const note = document.getElementById('newNoteInput').value.trim() || null;
+        if (ADMIN_SOURCE && typeof ADMIN_SOURCE.reserveAllowedUsername === 'function') {
+          await ADMIN_SOURCE.reserveAllowedUsername(displayName, email, note);
+        } else {
+          await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_reserve_allowed_username`, {
+            method:'POST', mode:'cors', cache:'no-store', headers:rpcHeaders(),
+            body:JSON.stringify({
+              admin_session_token: getToken(),
+              display_name_input: displayName,
+              reserved_for_email_input: email,
+              reserved_for_person_note_input: note
+            })
+          }).then(parseResponse);
+        }
         document.getElementById('newNameInput').value = '';
         document.getElementById('newEmailInput').value = '';
         document.getElementById('newNoteInput').value = '';

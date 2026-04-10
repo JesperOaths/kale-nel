@@ -4,7 +4,45 @@
   root.GEJAST_ADMIN_SOURCE = api;
 })(typeof window !== 'undefined' ? window : globalThis, function (root) {
   const RPC = root.GEJAST_ADMIN_RPC;
-  const BUCKETS = root.GEJAST_ADMIN_BUCKETS;
+  const BUCKETS = root.GEJAST_ADMIN_BUCKETS || {
+    normalizeRows(rows) { return Array.isArray(rows) ? rows : []; },
+    mergeHistoryWithExpired(history, expired) { return [...(Array.isArray(history) ? history : []), ...(Array.isArray(expired) ? expired : [])]; },
+    countBuckets(requests, history, expired) {
+      const rows = [...(Array.isArray(requests) ? requests : []), ...(Array.isArray(history) ? history : []), ...(Array.isArray(expired) ? expired : [])];
+      const counts = { pending: 0, awaiting: 0, expired: 0, active: 0, rejected: 0 };
+      rows.forEach((row) => {
+        const state = String(row?.bucket || row?.status_bucket || row?.state_bucket || row?.state || row?.request_state || row?.status || '').toLowerCase();
+        const key = state === 'approved_pending_activation' || state === 'pending_activation' ? 'awaiting' : state;
+        if (counts[key] !== undefined) counts[key] += 1;
+      });
+      return counts;
+    }
+  };
+
+  function directRpc(name, payload) {
+    if (!RPC || typeof RPC.rpc !== 'function') throw new Error('GEJAST_ADMIN_RPC ontbreekt.');
+    return RPC.rpc(name, payload || {});
+  }
+
+  function directPayload(payload) {
+    return {
+      admin_session_token: RPC.getSessionToken(),
+      ...(payload || {}),
+      site_scope_input: payload?.site_scope_input || RPC.getScope()
+    };
+  }
+
+  async function firstOf(attempts) {
+    let lastError = null;
+    for (const attempt of attempts) {
+      try {
+        return await attempt();
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError || new Error('Geen bruikbare admin-RPC beschikbaar.');
+  }
 
   function activationBaseUrl() {
     const url = new URL('./activate.html', root.location.href);
@@ -30,116 +68,223 @@
   }
 
   async function decideClaim(requestId, decision, reason) {
-    return RPC.secureWrite('claims', 'decide', {
-      request_id_input: String(requestId),
-      decision,
-      decision_reason_input: reason || null
-    });
+    return firstOf([
+      () => RPC.secureWrite('claims', 'decide', {
+        request_id_input: String(requestId),
+        decision,
+        decision_reason_input: reason || null
+      }),
+      () => directRpc('admin_claim_request_decide', directPayload({
+        request_id_input: String(requestId),
+        decision,
+        decision_reason_input: reason || null
+      }))
+    ]);
   }
 
   async function approveAndSendActivation(requestId, reason) {
-    return RPC.secureWrite('claims', 'approve_and_send_activation', {
-      request_id_input: String(requestId),
-      decision_reason_input: reason || null,
-      base_url: activationBaseUrl()
-    });
+    return firstOf([
+      () => RPC.secureWrite('claims', 'approve_and_send_activation', {
+        request_id_input: String(requestId),
+        decision_reason_input: reason || null,
+        base_url: activationBaseUrl()
+      }),
+      () => directRpc('admin_approve_and_send_activation_action', directPayload({
+        request_id_input: String(requestId),
+        decision_reason_input: reason || null,
+        base_url: activationBaseUrl()
+      }))
+    ]);
   }
 
   async function requeueExpiredActivation(requestId) {
-    return RPC.secureWrite('claims', 'requeue_expired_activation', {
-      request_id_input: String(requestId),
-      base_url: activationBaseUrl()
-    });
+    return firstOf([
+      () => RPC.secureWrite('claims', 'requeue_expired_activation', {
+        request_id_input: String(requestId),
+        base_url: activationBaseUrl()
+      }),
+      () => directRpc('admin_requeue_expired_activation_action', directPayload({
+        request_id_input: String(requestId),
+        base_url: activationBaseUrl()
+      }))
+    ]);
   }
 
   async function resendPendingActivation(requestId) {
-    return RPC.secureWrite('claims', 'resend_pending_activation', {
-      request_id_input: String(requestId),
-      base_url: activationBaseUrl()
-    });
+    return firstOf([
+      () => RPC.secureWrite('claims', 'resend_pending_activation', {
+        request_id_input: String(requestId),
+        base_url: activationBaseUrl()
+      }),
+      () => directRpc('admin_resend_pending_activation_action', directPayload({
+        request_id_input: String(requestId),
+        base_url: activationBaseUrl()
+      })),
+      () => directRpc('admin_resend_expired_activation_action', directPayload({
+        request_id_input: String(requestId),
+        base_url: activationBaseUrl()
+      }))
+    ]);
   }
 
   async function returnNameToClaimable(requestId, reason) {
-    return RPC.secureWrite('claims', 'return_name_to_claimable', {
-      request_id_input: String(requestId),
-      decision_reason_input: reason || null
-    });
+    return firstOf([
+      () => RPC.secureWrite('claims', 'return_name_to_claimable', {
+        request_id_input: String(requestId),
+        decision_reason_input: reason || null
+      }),
+      () => directRpc('admin_return_name_to_claimable_action', directPayload({
+        request_id_input: String(requestId),
+        decision_reason_input: reason || null
+      }))
+    ]);
   }
 
   async function createActivationLink(requestId) {
-    return RPC.secureWrite('claims', 'create_activation_link', {
-      request_id_input: String(requestId),
-      base_url: activationBaseUrl()
-    });
+    return firstOf([
+      () => RPC.secureWrite('claims', 'create_activation_link', {
+        request_id_input: String(requestId),
+        base_url: activationBaseUrl()
+      }),
+      () => directRpc('create_player_activation_link_action', directPayload({
+        request_id_input: String(requestId),
+        base_url: activationBaseUrl()
+      }))
+    ]);
   }
 
   async function validateOutboundEmailJob(jobId, markFailed) {
-    return RPC.secureWrite('claims', 'validate_outbound_email_job', {
-      job_id_input: Number(jobId),
-      mark_failed_input: markFailed !== false
-    });
+    return firstOf([
+      () => RPC.secureWrite('claims', 'validate_outbound_email_job', {
+        job_id_input: Number(jobId),
+        mark_failed_input: markFailed !== false
+      }),
+      () => directRpc('admin_validate_outbound_email_job', directPayload({
+        job_id_input: Number(jobId),
+        mark_failed_input: markFailed !== false
+      }))
+    ]);
   }
 
   async function revokePlayerAccess(requestId, reason) {
-    return RPC.secureWrite('claims', 'revoke_player_access', {
-      request_id_input: String(requestId),
-      decision_reason_input: reason || null
-    });
+    return firstOf([
+      () => RPC.secureWrite('claims', 'revoke_player_access', {
+        request_id_input: String(requestId),
+        decision_reason_input: reason || null
+      }),
+      () => directRpc('admin_revoke_player_access_action', directPayload({
+        request_id_input: String(requestId),
+        decision_reason_input: reason || null
+      }))
+    ]);
   }
 
   async function removePlayer(requestId, reason) {
-    return RPC.secureWrite('claims', 'remove_player', {
-      request_id_input: String(requestId),
-      decision_reason_input: reason || null
-    });
+    return firstOf([
+      () => RPC.secureWrite('claims', 'remove_player', {
+        request_id_input: String(requestId),
+        decision_reason_input: reason || null
+      }),
+      () => directRpc('admin_remove_player_action', directPayload({
+        request_id_input: String(requestId),
+        decision_reason_input: reason || null
+      }))
+    ]);
   }
 
   async function queueActivationEmail(requestId, recipientEmail, recipientName, activationLink, playerId) {
-    return RPC.secureWrite('claims', 'queue_activation_email', {
-      request_id_input: String(requestId),
-      base_url: activationBaseUrl(),
-      recipient_email_input: recipientEmail,
-      recipient_name_input: recipientName || null,
-      activation_link_input: activationLink,
-      player_id_input: playerId == null ? null : Number(playerId)
-    });
+    return firstOf([
+      () => RPC.secureWrite('claims', 'queue_activation_email', {
+        request_id_input: String(requestId),
+        base_url: activationBaseUrl(),
+        recipient_email_input: recipientEmail,
+        recipient_name_input: recipientName || null,
+        activation_link_input: activationLink,
+        player_id_input: playerId == null ? null : Number(playerId)
+      }),
+      () => directRpc('admin_queue_activation_email', directPayload({
+        request_id_input: String(requestId),
+        base_url: activationBaseUrl(),
+        recipient_email_input: recipientEmail,
+        recipient_name_input: recipientName || null,
+        activation_link_input: activationLink,
+        player_id_input: playerId == null ? null : Number(playerId)
+      }))
+    ]);
   }
 
   async function updateActivationEmailSubject(requestId, desiredSubject) {
-    return RPC.secureWrite('claims', 'set_activation_email_subject', {
-      request_id_input: String(requestId),
-      desired_subject: desiredSubject
-    });
+    return firstOf([
+      () => RPC.secureWrite('claims', 'set_activation_email_subject', {
+        request_id_input: String(requestId),
+        desired_subject: desiredSubject
+      }),
+      () => directRpc('admin_set_activation_email_subject_action', directPayload({
+        request_id_input: String(requestId),
+        desired_subject: desiredSubject
+      }))
+    ]);
   }
 
   async function reserveAllowedUsername(displayName, email, note) {
-    return RPC.secureWrite('reserved_names', 'reserve', {
-      display_name_input: displayName,
-      reserved_for_email_input: email || null,
-      reserved_for_person_note_input: note || null
-    });
+    return firstOf([
+      () => RPC.secureWrite('reserved_names', 'reserve', {
+        display_name_input: displayName,
+        reserved_for_email_input: email || null,
+        reserved_for_person_note_input: note || null
+      }),
+      () => directRpc('admin_reserve_allowed_username', directPayload({
+        display_name_input: displayName,
+        reserved_for_email_input: email || null,
+        reserved_for_person_note_input: note || null
+      }))
+    ]);
   }
 
   async function removeAllowedUsername(id) {
-    return RPC.secureWrite('reserved_names', 'remove', {
-      allowed_username_id_input: Number(id)
-    });
+    return firstOf([
+      () => RPC.secureWrite('reserved_names', 'remove', {
+        allowed_username_id_input: Number(id)
+      }),
+      () => directRpc('admin_remove_allowed_username', directPayload({
+        allowed_username_id_input: Number(id)
+      })),
+      () => directRpc('admin_remove_allowed_username', directPayload({
+        allowed_username_id: Number(id)
+      })),
+      () => directRpc('admin_remove_allowed_username', directPayload({
+        id_input: Number(id)
+      }))
+    ]);
   }
 
   async function setPlayerGhostStatus(playerId, ghosted, reason) {
-    return RPC.secureWrite('reserved_names', 'set_ghost', {
-      target_player_id: Number(playerId),
-      ghosted: Boolean(ghosted),
-      reason_input: reason || null
-    });
+    return firstOf([
+      () => RPC.secureWrite('reserved_names', 'set_ghost', {
+        target_player_id: Number(playerId),
+        ghosted: Boolean(ghosted),
+        reason_input: reason || null
+      }),
+      () => directRpc('admin_set_player_ghost_status', directPayload({
+        target_player_id: Number(playerId),
+        ghosted: Boolean(ghosted),
+        reason_input: reason || null
+      }))
+    ]);
   }
 
   async function loadReservedNames(options) {
-    const out = await RPC.secureRead('reserved_names', {
-      include_archive: options?.includeArchive !== false,
-      site_scope_input: options?.scope || RPC.getScope()
-    });
-    return Array.isArray(out?.items) ? out.items : [];
+    const out = await firstOf([
+      () => RPC.secureRead('reserved_names', {
+        include_archive: options?.includeArchive !== false,
+        site_scope_input: options?.scope || RPC.getScope()
+      }),
+      () => directRpc('admin_get_allowed_usernames', directPayload({
+        include_archive: options?.includeArchive !== false,
+        site_scope_input: options?.scope || RPC.getScope()
+      }))
+    ]);
+    return Array.isArray(out?.items) ? out.items : (Array.isArray(out) ? out : []);
   }
 
   async function loadPushDiagnostics(options) {
@@ -160,7 +305,10 @@
   }
 
   async function loadMailDiagnostics() {
-    return RPC.secureRead('mail', {});
+    return firstOf([
+      () => RPC.secureRead('mail', {}),
+      () => directRpc('admin_get_mail_diagnostics', directPayload({}))
+    ]);
   }
 
   async function loadAnalytics(rangeDays, recentLimit) {

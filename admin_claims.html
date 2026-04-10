@@ -116,13 +116,14 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v391';</script><script src="./gejast-config.js?v391"></script><script src="./gejast-scope-context.js?v391"></script>
-  <script src="./gejast-rpc-contract.js?v391"></script>
-  <script src="./gejast-admin-rpc.js?v391"></script>
-  <script src="./admin-session-sync.js?v391"></script>
-  <script src="./admin-topnav.js?v391"></script>
-  <script src="./gejast-admin-claims-buckets.js?v391"></script>
-  <script src="./gejast-admin-claims-source.js?v391"></script>
+  <script>window.GEJAST_PAGE_VERSION='v392';</script><script src="./gejast-config.js?v392"></script><script src="./gejast-scope-context.js?v392"></script>
+  <script src="./gejast-rpc-contract.js?v392"></script>
+  <script src="./gejast-admin-rpc.js?v392"></script>
+  <script src="./admin-session-sync.js?v392"></script>
+  <script src="./admin-topnav.js?v392"></script>
+  <script src="./gejast-admin-claims-buckets.js?v392"></script>
+  <script src="./gejast-admin-claims-source.js?v392"></script>
+  <script src="./gejast-admin-source.js?v392"></script>
 </head>
 <body>
   <div class="main-card">
@@ -220,6 +221,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY;
     const MAKE_WEBHOOK_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.MAKE_WEBHOOK_URL) || "https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6";
     const ACTIVATION_EMAIL_SUBJECT = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.EMAIL_SUBJECT) || 'Activeer je account voor de Kale Nel';
+    const ADMIN_SOURCE = window.GEJAST_ADMIN_SOURCE || null;
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
     const ADMIN_USER_KEY = "jas_admin_user_v1";
     const ADMIN_DEADLINE_KEY = "jas_admin_deadline_v1";
@@ -985,21 +987,23 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     async function getHistory(force = false) { return (await getClaimsBundle(force)).history || []; }
     async function getExpiredQueue(force = false) { return (await getClaimsBundle(force)).expiredQueue || []; }
     async function requeueExpiredActivation(requestId) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_requeue_expired_activation_action`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), base_url: getActivationBaseUrl() })
-      });
-      const data = await parseResponse(res);
+      const data = ADMIN_SOURCE && typeof ADMIN_SOURCE.requeueExpiredActivation === 'function'
+        ? await ADMIN_SOURCE.requeueExpiredActivation(requestId)
+        : await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_requeue_expired_activation_action`, {
+            method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+            body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), base_url: getActivationBaseUrl() })
+          }).then(parseResponse);
       try { await updateActivationEmailSubject(requestId); } catch {}
       return data;
     }
 
     async function resendPendingActivation(requestId) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_resend_pending_activation_action`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), base_url: getActivationBaseUrl() })
-      });
-      const data = await parseResponse(res);
+      const data = ADMIN_SOURCE && typeof ADMIN_SOURCE.resendPendingActivation === 'function'
+        ? await ADMIN_SOURCE.resendPendingActivation(requestId)
+        : await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_resend_pending_activation_action`, {
+            method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+            body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), base_url: getActivationBaseUrl() })
+          }).then(parseResponse);
       try { await updateActivationEmailSubject(requestId); } catch {}
       const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
       const panel = document.getElementById(`activation-tools-${requestId}`);
@@ -1010,6 +1014,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return data;
     }
     async function returnNameToClaimable(requestId, reason) {
+      if (ADMIN_SOURCE && typeof ADMIN_SOURCE.returnNameToClaimable === 'function') return await ADMIN_SOURCE.returnNameToClaimable(requestId, reason);
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_return_name_to_claimable_action`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
         body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: reason || null })
@@ -1020,6 +1025,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     async function createActivationLink(requestId) {
       const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
       if (req && hasPin(req) && stateBucket(req) !== 'active') throw new Error('Deze aanvraag staat nog op wacht op activatie, maar de speler heeft al een pincode. Draai eerst de v84 activatie-resetpatch of trek de toegang in.');
+      if (ADMIN_SOURCE && typeof ADMIN_SOURCE.createActivationLink === 'function') return await ADMIN_SOURCE.createActivationLink(requestId);
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_player_activation_link_action`, {
         method:'POST',
         mode:'cors',
@@ -1045,6 +1051,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
 
     async function validateOutboundEmailJob(jobId, options = {}) {
       if (!jobId) return { ok:false, reasons:['missing_job_id'], message:'Mailjob-id ontbreekt.' };
+      if (ADMIN_SOURCE && typeof ADMIN_SOURCE.validateOutboundEmailJob === 'function') return await ADMIN_SOURCE.validateOutboundEmailJob(jobId, options.markFailed !== false);
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_validate_outbound_email_job`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
         body: JSON.stringify({
@@ -1085,6 +1092,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     }
 
     async function revokePlayerAccess(requestId, reason) {
+      if (ADMIN_SOURCE && typeof ADMIN_SOURCE.revokePlayerAccess === 'function') return await ADMIN_SOURCE.revokePlayerAccess(requestId, reason);
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_revoke_player_access_action`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
         body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: reason || null })
@@ -1092,6 +1100,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return await parseResponse(res);
     }
     async function removePlayer(requestId, reason) {
+      if (ADMIN_SOURCE && typeof ADMIN_SOURCE.removePlayer === 'function') return await ADMIN_SOURCE.removePlayer(requestId, reason);
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_remove_player_action`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
         body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: reason || null })
@@ -1107,6 +1116,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
       if (req && hasPin(req) && stateBucket(req) !== 'active') throw new Error('Deze speler heeft al een pincode in de database. Reset eerst de activatie voordat je opnieuw een mail verstuurt.');
       const playerId = req?.player_id ?? null;
+      if (ADMIN_SOURCE && typeof ADMIN_SOURCE.queueActivationEmail === 'function') return await ADMIN_SOURCE.queueActivationEmail(requestId, recipientEmail, recipientName, activationLink, playerId);
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_queue_activation_email`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
         body: JSON.stringify({
@@ -1122,6 +1132,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return await parseResponse(res);
     }
     async function updateActivationEmailSubject(requestId) {
+      if (ADMIN_SOURCE && typeof ADMIN_SOURCE.updateActivationEmailSubject === 'function') return await ADMIN_SOURCE.updateActivationEmailSubject(requestId, ACTIVATION_EMAIL_SUBJECT);
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_set_activation_email_subject_action`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
         body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), desired_subject: ACTIVATION_EMAIL_SUBJECT })
@@ -1165,11 +1176,12 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const msg = document.getElementById('manualCreateMsg');
       if (!displayName) throw new Error('Vul een naam in voor de kieslijst');
       if (msg) { msg.textContent = 'Naam toevoegen aan kieslijst...'; msg.className = 'inline-msg'; }
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_reserve_allowed_username`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ admin_session_token: getAdminSessionToken(), display_name_input: displayName, reserved_for_email_input: email || null, reserved_for_person_note_input: note })
-      });
-      const data = await parseResponse(res);
+      const data = ADMIN_SOURCE && typeof ADMIN_SOURCE.reserveAllowedUsername === 'function'
+        ? await ADMIN_SOURCE.reserveAllowedUsername(displayName, email || null, note)
+        : await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_reserve_allowed_username`, {
+            method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+            body: JSON.stringify({ admin_session_token: getAdminSessionToken(), display_name_input: displayName, reserved_for_email_input: email || null, reserved_for_person_note_input: note })
+          }).then(parseResponse);
       if (msg) { msg.textContent = `${displayName} staat nu in de kieslijst.`; msg.className = 'inline-msg ok'; }
       document.getElementById('manualNameInput').value=''; document.getElementById('manualEmailInput').value=''; document.getElementById('manualNoteInput').value='';
       return data;
