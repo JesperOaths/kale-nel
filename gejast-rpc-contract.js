@@ -1,4 +1,15 @@
 (function (global) {
+  const COMPATIBLE_PARAM_RENAMES = {
+    get_public_shared_player_stats_scoped: {
+      game_key: 'game_key_input',
+      player_name: 'player_name_input'
+    },
+    get_public_player_game_insights_scoped: {
+      game_key: 'game_key_input',
+      player_name: 'player_name_input'
+    }
+  };
+
   function cfg() {
     return global.GEJAST_CONFIG || {};
   }
@@ -25,7 +36,27 @@
     return data;
   }
 
-  async function callRpc(name, payload) {
+  function buildCompatPayload(name, payload) {
+    const renameMap = COMPATIBLE_PARAM_RENAMES[name];
+    if (!renameMap || !payload || typeof payload !== 'object') return null;
+    let changed = false;
+    const next = { ...payload };
+    for (const [oldKey, newKey] of Object.entries(renameMap)) {
+      if (next[oldKey] !== undefined && next[newKey] === undefined) {
+        next[newKey] = next[oldKey];
+        delete next[oldKey];
+        changed = true;
+      }
+    }
+    return changed ? next : null;
+  }
+
+  function isCompatRetryable(error) {
+    const message = String(error?.message || error || '').toLowerCase();
+    return message.includes('schema cache') || message.includes('could not find the function');
+  }
+
+  async function fetchRpc(name, payload) {
     const c = cfg();
     const raw = await fetch(`${c.SUPABASE_URL}/rest/v1/rpc/${name}`, {
       method: 'POST',
@@ -35,6 +66,18 @@
       body: JSON.stringify(payload || {})
     }).then(parseJson);
     return raw?.[name] || raw;
+  }
+
+  async function callRpc(name, payload) {
+    try {
+      return await fetchRpc(name, payload);
+    } catch (error) {
+      const compatPayload = buildCompatPayload(name, payload);
+      if (compatPayload && isCompatRetryable(error)) {
+        return await fetchRpc(name, compatPayload);
+      }
+      throw error;
+    }
   }
 
   function normalizeContractError(errorLike) {
@@ -83,6 +126,8 @@
     callContract,
     callContractWriter,
     normalizeContractError,
-    cfg
+    cfg,
+    buildCompatPayload,
+    isCompatRetryable
   };
 })(window);

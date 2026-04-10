@@ -36,12 +36,11 @@
   }
 
   async function loadPlayerGamePanels({ playerName, gameKey = 'klaverjas' }) {
-    const scope = CTX.getScope();
-    const [sharedStats, gameInsights] = await Promise.all([
-      RPC.callRpc('get_public_shared_player_stats_scoped', { game_key: gameKey, player_name: playerName, site_scope_input: scope }).catch(() => ({})),
-      RPC.callRpc('get_public_player_game_insights_scoped', { game_key: gameKey, player_name: playerName, site_scope_input: scope }).catch(() => ({ cards: [] }))
-    ]);
-    return { shared_stats: sharedStats || {}, game_insights: gameInsights || { cards: [] } };
+    const bundle = await loadPlayerBundle({ playerName, gameKey }).catch(() => ({}));
+    return {
+      shared_stats: bundle?.shared_stats || {},
+      game_insights: bundle?.game_insights || { cards: [] }
+    };
   }
 
   async function loadProfilesPageBundle() {

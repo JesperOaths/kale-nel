@@ -1,5 +1,9 @@
 (function (global) {
   const SESSION_KEYS = ['jas_session_token_v11', 'jas_session_token_v10'];
+  const COMPATIBLE_PARAM_RENAMES = {
+    get_public_shared_player_stats_scoped: { game_key: 'game_key_input', player_name: 'player_name_input' },
+    get_public_player_game_insights_scoped: { game_key: 'game_key_input', player_name: 'player_name_input' }
+  };
   const SCOPE_REQUIRED_RPCS = new Set([
     'get_all_site_players_public_scoped',
     'get_public_ladder_page_scoped',
@@ -78,10 +82,29 @@
     return next;
   }
 
-  async function callRpc(name, payload, options) {
+  function buildCompatPayload(name, payload) {
+    const renameMap = COMPATIBLE_PARAM_RENAMES[name];
+    if (!renameMap || !payload || typeof payload !== 'object') return null;
+    let changed = false;
+    const next = Object.assign({}, payload);
+    for (const [oldKey, newKey] of Object.entries(renameMap)) {
+      if (next[oldKey] !== undefined && next[newKey] === undefined) {
+        next[newKey] = next[oldKey];
+        delete next[oldKey];
+        changed = true;
+      }
+    }
+    return changed ? next : null;
+  }
+
+  function isCompatRetryable(error) {
+    const message = String(error?.message || error || '').toLowerCase();
+    return message.includes('schema cache') || message.includes('could not find the function');
+  }
+
+  async function fetchRpc(name, body, options) {
     const cfg = getConfig();
     const opts = Object.assign({ unwrapKey: null }, options || {});
-    const body = withScopePayload(name, payload);
     const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
       method: 'POST',
       mode: 'cors',
@@ -93,6 +116,19 @@
     if (opts.unwrapKey && raw && raw[opts.unwrapKey] !== undefined) return raw[opts.unwrapKey];
     if (raw && raw[name] !== undefined) return raw[name];
     return raw;
+  }
+
+  async function callRpc(name, payload, options) {
+    const body = withScopePayload(name, payload);
+    try {
+      return await fetchRpc(name, body, options);
+    } catch (error) {
+      const compatPayload = buildCompatPayload(name, body);
+      if (compatPayload && isCompatRetryable(error)) {
+        return await fetchRpc(name, compatPayload, options);
+      }
+      throw error;
+    }
   }
 
   function collectNamesFromMatch(row) {
