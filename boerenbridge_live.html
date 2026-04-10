@@ -1,24 +1,54 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-    <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <meta charset="UTF-8"/>
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
-<meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Boerenbridge live</title>
-  <script>window.GEJAST_PAGE_VERSION='v386';</script>
-  <script src="./gejast-config.js?v386"></script><script src="./gejast-home-gate.js?v371"></script>
-  <script src="./gejast-live-summary.js?v371"></script>
+  <title>Boerenbridge spectator</title>
+  <script>window.GEJAST_PAGE_VERSION='v388';</script>
+  <script src="./gejast-config.js?v388"></script>
+  <script src="./gejast-scope.js?v388"></script>
+  <script src="./gejast-live-summary.js?v388"></script>
+  <script src="./gejast-spectator-pages.js?v388"></script>
   <style>
-    :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16}
+    :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241;--soft:#f7f3ec;--live:#123a1f;--livebg:#eaf7ee}
     *{box-sizing:border-box}
     body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
-    .wrap{max-width:1020px;margin:0 auto}.card{background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.7);border-radius:28px;padding:22px;box-shadow:0 20px 40px rgba(0,0,0,.08)}
-    .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800}
-    .muted{color:var(--muted)}.panel{margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px}.totals{display:grid;gap:10px}.row{display:grid;grid-template-columns:minmax(0,1fr) repeat(3,auto);gap:12px;align-items:center;padding:12px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.06)}.round{padding:12px 0;border-top:1px solid rgba(0,0,0,.06)}.round:first-child{border-top:none}
+    .wrap{max-width:1220px;margin:0 auto}
+    .card{background:rgba(255,251,245,.95);border:1px solid rgba(255,255,255,.7);border-radius:30px;padding:24px;box-shadow:0 20px 40px rgba(0,0,0,.08)}
+    .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:none;cursor:pointer}
+    .brand-link img{width:64px;height:64px;object-fit:contain}
+    .eyebrow-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+    .chip{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:#efe7cf;color:#6b5220;font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+    .chip.live{background:var(--livebg);color:var(--live)}
+    h1{margin:0;font-size:40px;letter-spacing:-.04em}
+    .muted{color:var(--muted)}
+    .meta-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-top:20px}
+    .meta-card,.panel,.standing-row,.round-card{background:#fff;border:1px solid var(--line);border-radius:22px}
+    .meta-card{padding:14px 16px}.meta-card span{display:block;font-size:11px;color:#8a7a55;text-transform:uppercase;letter-spacing:.08em}.meta-card strong{display:block;margin-top:8px;font-size:17px;line-height:1.35}
+    .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:16px;margin-top:18px}
+    .panel{padding:18px}
+    .panel h2{margin:0 0 10px;font-size:26px;letter-spacing:-.03em}
+    .standings{display:grid;gap:10px}
+    .standing-row{padding:14px 16px;display:grid;grid-template-columns:44px minmax(0,1fr) repeat(3,auto);gap:14px;align-items:center}
+    .rank{width:44px;height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:#f5edd9;color:#72581f;font-weight:900}
+    .player-copy strong{display:block;font-size:18px}.player-copy span{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+    .metric{display:grid;justify-items:end}.metric span{font-size:11px;color:#8a7a55;text-transform:uppercase;letter-spacing:.08em}.metric strong{display:block;margin-top:6px;font-size:18px}
+    .detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+    .detail{padding:12px;border-radius:16px;background:var(--soft);border:1px solid rgba(0,0,0,.05)}
+    .detail span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55}.detail strong{display:block;margin-top:6px;font-size:16px;line-height:1.35}
+    .rounds{display:grid;gap:12px}
+    .round-card{padding:16px}
+    .round-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+    .round-title{font-size:20px;font-weight:900;letter-spacing:-.03em}.round-sub{margin-top:4px;color:var(--muted);font-size:14px}
+    .pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.pill{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:#f5edd9;color:#72581f;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+    table{width:100%;border-collapse:collapse;margin-top:12px}th,td{text-align:left;padding:8px 0;border-top:1px solid rgba(0,0,0,.06)}th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55}tbody tr:first-child td{border-top:1px solid rgba(0,0,0,.08)}
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}
-    @media(max-width:720px){body{padding:12px}.row{grid-template-columns:1fr 1fr}}
+    @media(max-width:1040px){.meta-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.hero-grid{grid-template-columns:1fr}.standing-row{grid-template-columns:44px minmax(0,1fr) 1fr 1fr}}
+    @media(max-width:640px){body{padding:12px}.meta-grid{grid-template-columns:repeat(2,minmax(0,1fr))}h1{font-size:32px}.standing-row{grid-template-columns:44px minmax(0,1fr);align-items:start}.metric{justify-items:start}}
   </style>
 </head>
 <body>
@@ -26,43 +56,120 @@
     <div class="card">
       <div class="top">
         <div>
-          <a class="btn" href="javascript:void(0)" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</a>
-          <h1 style="margin:16px 0 6px">Boerenbridge live</h1>
-          <div id="meta" class="muted">Live scoreblad wordt geladen…</div>
+          <div class="eyebrow-row">
+            <span class="chip" id="spectatorPageChip">Boerenbridge spectator</span>
+            <span class="chip" id="scopeChip">Vrienden</span>
+            <span class="chip live" id="statusChip">Laden</span>
+          </div>
+          <button class="btn" id="backLink" type="button">Terug</button>
+          <h1 style="margin-top:16px">Boerenbridge live</h1>
+          <div id="metaText" class="muted" style="margin-top:8px">Spectator-weergave wordt geladen…</div>
         </div>
-        <a class="btn" href="./index.html">Home</a>
+        <a class="brand-link" id="brandHomeLink" href="./index.html" aria-label="Home via logo"><img src="./logo.png" alt="Logo"/></a>
       </div>
-      <div class="panel"><h2 style="margin:0 0 8px">Samenvatting</h2><div id="recap" class="muted">Nog geen tekst.</div></div>
-      <div class="panel"><h2 style="margin:0 0 8px">Totaalstand</h2><div id="totals" class="totals">Nog geen spelers.</div></div>
-      <div class="panel"><h2 style="margin:0 0 8px">Rondes</h2><div id="rounds" class="muted">Nog geen rondes geregistreerd.</div></div>
+
+      <div class="meta-grid">
+        <div class="meta-card"><span>Spelleider</span><strong id="hostValue">—</strong></div>
+        <div class="meta-card"><span>Spelers</span><strong id="playersValue">—</strong></div>
+        <div class="meta-card"><span>Rondes</span><strong id="roundsValue">—</strong></div>
+        <div class="meta-card"><span>Winnaar / leider</span><strong id="winnerValue">—</strong></div>
+        <div class="meta-card"><span>Laatst bijgewerkt</span><strong id="updatedValue">—</strong></div>
+        <div class="meta-card"><span>Matchref</span><strong id="refValue">—</strong></div>
+      </div>
+
+      <div class="hero-grid">
+        <section class="panel">
+          <h2>Samenvatting</h2>
+          <div id="recap" class="muted">Nog geen samenvatting.</div>
+          <div id="latestRoundWrap" style="margin-top:14px" class="muted">Nog geen ronde geregistreerd.</div>
+        </section>
+        <section class="panel">
+          <h2>Tussenstand</h2>
+          <div id="standingsWrap" class="standings">Nog geen spelers.</div>
+        </section>
+      </div>
+
+      <section class="panel" style="margin-top:18px">
+        <h2>Rondes</h2>
+        <div id="roundsWrap" class="rounds">Nog geen rondes geregistreerd.</div>
+      </section>
+
+      <div style="margin-top:18px"><a class="btn" id="homeLink" href="./index.html">Home</a></div>
     </div>
   </div>
+
   <div class="site-credit-watermark" data-version-watermark></div>
-    <script>
-  (()=>{
-    const live = window.GEJAST_LIVE_SUMMARY || {};
-    let pollId = null;
-    function esc(v){return String(v??'').replace(/[&<>"]/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]))}
-    function render(item){
-      const summary=(live.summaryFromItem?live.summaryFromItem(item):((item&&item.summary_payload)||{}))||{};
-      const rounds=Array.isArray(summary.rounds)?summary.rounds:[];
-      const totals=Array.isArray(summary.totals)?summary.totals:[];
-      document.getElementById('meta').textContent=live.metaText?live.metaText(item):'Live scoreblad';
-      document.getElementById('recap').textContent=summary.recap_text||'Nog geen samenvatting.';
-      document.getElementById('totals').innerHTML=totals.length?totals.map((r)=>`<div class="row"><strong>${esc(r.name)}</strong><span>${Number(r.final_total_points||0)} ptn</span><span>${Number(r.total_slagen||0)} slagen</span><span>${Number(r.exact_bid_count||0)} exact</span></div>`).join(''):'Nog geen spelers.';
-      document.getElementById('rounds').innerHTML=rounds.length?rounds.map((r,idx)=>`<div class="round"><strong>Ronde ${esc(r.round_no||r.round||idx+1)}</strong><div class="muted">${Array.isArray(r.players)?r.players.map((p)=>`${esc(p.name)} ${Number(p.running_total||0)} totaal`).join(' · '):''}</div></div>`).join(''):'Nog geen rondes geregistreerd.';
-      if (live.isFinished && live.isFinished(item) && pollId) { clearInterval(pollId); pollId = null; }
-    }
-    async function load(){
-      const identity = live.matchIdentityFromUrl ? live.matchIdentityFromUrl() : { clientMatchId:'', matchRef:'' };
-      if(!identity.clientMatchId && !identity.matchRef){ document.getElementById('meta').textContent='Geen client_match_id of match_ref meegegeven.'; return; }
-      try{ render(await live.loadPublicSummary('boerenbridge', identity)); }catch(err){ document.getElementById('meta').textContent=err.message||'Laden mislukt.'; }
-    }
-    load();
-    pollId = setInterval(load,5000);
-  })();
+  <script>
+    (function(){
+      const spectator = window.GEJAST_SPECTATOR_PAGES || {};
+      function latestRoundMarkup(round){
+        if (!round) return 'Nog geen ronde geregistreerd.';
+        const players = Array.isArray(round.players) ? round.players : [];
+        return `<div class="detail-grid">
+          <div class="detail"><span>Ronde</span><strong>${spectator.esc(round.round_no || round.round || '—')}</strong></div>
+          <div class="detail"><span>Label</span><strong>${spectator.esc(round.label || '—')}</strong></div>
+          <div class="detail"><span>Slagen te halen</span><strong>${spectator.num(round.trick_count)}</strong></div>
+          <div class="detail"><span>Spelers</span><strong>${players.length}</strong></div>
+        </div>
+        ${round.special ? `<div class="pill-row"><span class="pill">${spectator.esc(round.special)}</span></div>` : ''}`;
+      }
+      function standingsMarkup(totals){
+        if (!totals.length) return 'Nog geen spelers.';
+        const rows = totals.slice().sort((a,b)=>spectator.num(b.final_total_points)-spectator.num(a.final_total_points) || String(a.name||'').localeCompare(String(b.name||''), 'nl'));
+        return rows.map((row, idx)=>`<div class="standing-row">
+          <div class="rank">${idx+1}</div>
+          <div class="player-copy"><strong>${spectator.esc(row.name || 'Speler')}</strong><span>${idx===0 ? 'Bovenaan op dit moment' : 'Tussenstand'}</span></div>
+          <div class="metric"><span>Punten</span><strong>${spectator.num(row.final_total_points)}</strong></div>
+          <div class="metric"><span>Slagen</span><strong>${spectator.num(row.total_slagen)}</strong></div>
+          <div class="metric"><span>Exact</span><strong>${spectator.num(row.exact_bid_count)}</strong></div>
+        </div>`).join('');
+      }
+      function roundTable(round){
+        const players = Array.isArray(round.players) ? round.players : [];
+        if (!players.length) return '<div class="muted">Nog geen spelerdetails.</div>';
+        return `<table><thead><tr><th>Speler</th><th>Bod</th><th>Gewonnen</th><th>Punten</th><th>Totaal</th></tr></thead><tbody>${players.map((player)=>`<tr><td>${spectator.esc(player.name || 'Speler')}</td><td>${spectator.num(player.bid)}</td><td>${spectator.num(player.won)}</td><td>${spectator.num(player.points)}</td><td>${spectator.num(player.running_total)}</td></tr>`).join('')}</tbody></table>`;
+      }
+      function roundsMarkup(rounds){
+        if (!rounds.length) return 'Nog geen rondes geregistreerd.';
+        return rounds.slice().reverse().map((round, idx)=>`<article class="round-card">
+          <div class="round-head">
+            <div>
+              <div class="round-title">Ronde ${spectator.esc(round.round_no || round.round || (rounds.length - idx))}</div>
+              <div class="round-sub">${spectator.esc(round.label || 'Ronde')} · ${spectator.num(round.trick_count)} slagen</div>
+            </div>
+            ${round.special ? `<div class="pill-row"><span class="pill">${spectator.esc(round.special)}</span></div>` : ''}
+          </div>
+          ${roundTable(round)}
+        </article>`).join('');
+      }
+
+      spectator.mount({
+        gameType: 'boerenbridge',
+        emptyMessage: 'Geen actieve boerenbridgewedstrijd gevonden.',
+        render(meta){
+          const summary = meta.summary || {};
+          const totals = Array.isArray(summary.totals) ? summary.totals : [];
+          const rounds = Array.isArray(summary.rounds) ? summary.rounds : [];
+          const latest = rounds.length ? rounds[rounds.length - 1] : null;
+          document.getElementById('recap').textContent = summary.recap_text || 'Nog geen samenvatting.';
+          document.getElementById('latestRoundWrap').innerHTML = latestRoundMarkup(latest);
+          document.getElementById('standingsWrap').innerHTML = standingsMarkup(totals);
+          document.getElementById('roundsWrap').innerHTML = roundsMarkup(rounds);
+          if (!meta.finished && totals.length) {
+            const leader = totals.slice().sort((a,b)=>spectator.num(b.final_total_points)-spectator.num(a.final_total_points))[0];
+            document.getElementById('winnerValue').textContent = `${leader.name || 'Speler'} leidt`;
+          }
+        },
+        renderEmpty(){
+          document.getElementById('recap').textContent = 'Er is nu geen actieve boerenbridgewedstrijd om te volgen.';
+          document.getElementById('latestRoundWrap').textContent = 'Nog geen ronde geregistreerd.';
+          document.getElementById('standingsWrap').textContent = 'Nog geen spelers.';
+          document.getElementById('roundsWrap').textContent = 'Nog geen rondes geregistreerd.';
+        }
+      });
+    })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./site-analytics.js?v371"></script>
+  <script src="./site-analytics.js?v388"></script>
 </body>
 </html>
