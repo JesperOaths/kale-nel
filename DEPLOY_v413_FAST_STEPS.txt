@@ -1,0 +1,28 @@
+GEJAST v413 fast steps
+
+1. Upload the changed frontend files:
+   - gejast-config.js
+   - gejast-profile-source.js
+   - profiles.html
+   - paardenrace.html
+   - gejast-paardenrace.js
+   - assets/paardenrace/paardenrace-card-back.png
+   - assets/paardenrace/paardenrace-cards-supplied.webp
+   - assets/paardenrace/paardenrace-track.png
+   - assets/paardenrace/paardenrace-track-supplied-cards.png
+
+2. Run in Supabase SQL editor:
+   - gejast_v413_paardenrace_roomflow_hardening.sql
+
+3. Hard refresh the site so old cached scripts do not win.
+
+4. Open profiles.html and confirm the player cards are back in the larger left-stats / right-badges layout.
+
+5. Open paardenrace.html and test:
+   - choose Kamer maken -> choose wager + suit -> create room
+   - choose Kamer kiezen -> choose wager + suit -> load rooms -> join selected room
+
+6. In browser network tab confirm:
+   - paardenrace_create_room_scoped no longer fails on gen_random_bytes(integer)
+   - paardenrace_list_joinable_rooms_scoped returns room rows
+   - wager obligation is only attempted after successful create/join + selection update
