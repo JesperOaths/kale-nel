@@ -7,9 +7,9 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Live pushmeldingen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v374';</script><script src="./gejast-config.js?v374"></script><script src="./gejast-scope-context.js?v374"></script>
-  <script src="./admin-session-sync.js?v374"></script>
-  <script src="./admin-topnav.js?v374"></script><script src="./gejast-push-runtime.js?v374"></script>
+  <script>window.GEJAST_PAGE_VERSION='v383';</script><script src="./gejast-config.js?v383"></script><script src="./gejast-scope-context.js?v383"></script>
+  <script src="./admin-session-sync.js?v383"></script>
+  <script src="./admin-topnav.js?v383"></script><script src="./gejast-push-runtime.js?v383"></script><script src="./gejast-push-admin-source.js?v383"></script>
   <style>
     :root { --gold:#9a8241; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#6b655b; --ok:#2b5b37; --warn:#8b3a30; }
     *{box-sizing:border-box} body{margin:0;padding:20px;font-family:Inter,sans-serif;background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed;min-height:100vh}
@@ -63,13 +63,7 @@
     const cfg = window.GEJAST_CONFIG || {};
     const SUPABASE_URL=cfg.SUPABASE_URL || 'https://uiqntazgnrxwliaidkmy.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY=cfg.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
-    const LIST_RPC = cfg.ADMIN_ACTIVE_PUSH_LIST_RPC || 'admin_get_active_web_push_presence';
-    const LIST_RPC_V3 = cfg.ADMIN_PUSH_DIAGNOSTICS_RPC_V3 || 'admin_get_web_push_diagnostics_v3';
-    const QUEUE_RPC = cfg.ADMIN_ACTIVE_PUSH_RPC || 'admin_queue_active_web_push';
-    const QUEUE_RPC_V3 = cfg.ADMIN_ACTIVE_PUSH_RPC_V3 || 'admin_queue_active_web_push_v3';
-    const DIAG_RPC = cfg.ADMIN_PUSH_DIAGNOSTICS_RPC || 'admin_get_web_push_runtime_diagnostics';
-    const DIAG_RPC_V3 = cfg.ADMIN_PUSH_DIAGNOSTICS_RPC_V3 || 'admin_get_web_push_diagnostics_v3';
-    const DATE_TIME_24H = new Intl.DateTimeFormat('nl-NL', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
+        const DATE_TIME_24H = new Intl.DateTimeFormat('nl-NL', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
     const ADMIN_SCOPE_KEY='jas_admin_scope_v1';
     function adminScope(){ const q=new URLSearchParams(location.search).get('scope'); const value=(q||localStorage.getItem(ADMIN_SCOPE_KEY)||document.getElementById('pushScopeSelect')?.value||'friends').toLowerCase(); return value==='family' ? 'family' : 'friends'; }
     function formatDateTime(value){ if(!value) return ''; const date = value instanceof Date ? value : new Date(value); return Number.isNaN(date.getTime()) ? String(value) : DATE_TIME_24H.format(date).replace(',', ''); }
@@ -120,28 +114,27 @@
       document.getElementById('diagBox').innerHTML = lines.join('<br>');
     }
     async function loadActive(){
-      const [data, runtimeDiag] = await Promise.all([
-        rpcFirst([LIST_RPC_V3, LIST_RPC], { admin_session_token: token(), active_minutes: activeMinutes(), site_scope_input: adminScope() }),
-        rpcFirst([DIAG_RPC_V3, DIAG_RPC], { admin_session_token: token(), site_scope_input: adminScope() }).catch(()=>null)
-      ]);
+      const source = window.GEJAST_PUSH_ADMIN_SOURCE;
+      if (!source || !source.loadDiagnostics) throw new Error('Push-admin-source ontbreekt.');
+      const data = await source.loadDiagnostics({ activeMinutes: activeMinutes(), scope: adminScope() });
       const rows = Array.isArray(data?.rows) ? data.rows : [];
       activeRows = rows;
-      document.getElementById('summaryChips').innerHTML = [`<span class="chip">Actieve endpoints: ${data?.active_endpoints ?? rows.length}</span>`,`<span class="chip">Unieke spelers: ${data?.unique_players ?? 0}</span>`,`<span class="chip">Backend sync: ${data?.registered_subscriptions ?? 0}</span>`,`<span class="chip">Venster: ${activeMinutes()} min</span>`].join('');
+      document.getElementById('summaryChips').innerHTML = [`<span class="chip">Actieve endpoints: ${data?.summary?.active_endpoints ?? rows.length}</span>`,`<span class="chip">Unieke spelers: ${data?.summary?.unique_players ?? 0}</span>`,`<span class="chip">Backend-registraties: ${data?.summary?.registered_subscriptions ?? 0}</span>`,`<span class="chip">Venster: ${activeMinutes()} min</span>`].join('');
       renderRecipientPreview(rows);
-      renderDiagnostics(data, rows, runtimeDiag);
-      document.getElementById('listBox').innerHTML = rows.length ? `<table><thead><tr><th>Speler</th><th>Scope</th><th>Endpoint</th><th>Pagina</th><th>Laatst gezien</th><th>Platform</th><th>Toestemming</th><th>App-modus</th><th>Backend</th><th>Laatste push</th><th>Laatste actie</th><th>Ineligible</th></tr></thead><tbody>${rows.map((row)=>`<tr><td>${escapeHtml(row.player_name || 'Onbekend')}</td><td>${escapeHtml(row.site_scope || adminScope())}</td><td><span class="small">${escapeHtml(endpointShort(row))}</span></td><td>${escapeHtml(row.page_path || '—')}</td><td>${escapeHtml(formatDateTime(row.last_seen_at))}</td><td>${escapeHtml(row.platform_label || row.user_agent_label || row.user_agent || '—')}</td><td>${escapeHtml(row.permission_state || '—')}</td><td>${row.standalone ? 'app' : 'browser'}</td><td>${row.backend_registered ? 'gekoppeld' : 'mist sync'}</td><td>${escapeHtml(row.last_job_status ? `${row.last_job_status}${row.last_job_at ? ' · '+formatDateTime(row.last_job_at) : ''}` : '—')}</td><td>${escapeHtml(row.last_action_result || row.last_action_consume_result || '—')}</td><td>${escapeHtml(row.ineligible_reason || row.eligible_reason || '—')}</td></tr>`).join('')}</tbody></table>` : '<div class="muted">Geen actieve pushgebruikers gezien in dit venster.</div>';
+      renderDiagnostics(data?.summary || data, rows, data?.summary || data);
+      document.getElementById('listBox').innerHTML = rows.length ? `<table><thead><tr><th>Speler</th><th>Scope</th><th>Endpoint</th><th>Pagina</th><th>Laatst gezien</th><th>Platform</th><th>Toestemming</th><th>App-modus</th><th>Backend</th><th>Laatste push</th><th>Laatste actie</th><th>Ineligible</th></tr></thead><tbody>${rows.map((row)=>`<tr><td>${escapeHtml(row.player_name || 'Onbekend')}</td><td>${escapeHtml(row.site_scope || adminScope())}</td><td><span class="small">${escapeHtml(endpointShort(row))}</span></td><td>${escapeHtml(row.page_path || '—')}</td><td>${escapeHtml(formatDateTime(row.last_seen_at))}</td><td>${escapeHtml(row.platform_label || row.platform || row.user_agent_label || row.user_agent || '—')}</td><td>${escapeHtml(row.permission_state || '—')}</td><td>${escapeHtml(row.installation_mode || (row.standalone ? 'app' : 'browser'))}</td><td>${row.backend_registered ? 'gekoppeld' : 'mist sync'}</td><td>${escapeHtml(row.last_job_status ? `${row.last_job_status}${row.last_job_at ? ' · '+formatDateTime(row.last_job_at) : ''}` : '—')}</td><td>${escapeHtml(row.last_action_result || row.last_action_consume_result || '—')}</td><td>${escapeHtml(row.ineligible_reason || row.eligible_reason || '—')}</td></tr>`).join('')}</tbody></table>` : '<div class="muted">Geen actieve pushgebruikers gezien in dit venster.</div>';
       setStatus(`Actieve pushgebruikers geladen (${rows.length}).`, 'ok');
     }
     async function sendPush(){
-      const payload = {
-        admin_session_token: token(),
-        title_input: document.getElementById('titleInput').value.trim(),
-        body_input: document.getElementById('bodyInput').value.trim(),
-        target_url_input: document.getElementById('urlInput').value.trim(),
-        active_minutes: activeMinutes(),
-        site_scope_input: adminScope()
-      };
-      const out = await rpcFirst([QUEUE_RPC_V3, QUEUE_RPC], payload);
+      const source = window.GEJAST_PUSH_ADMIN_SOURCE;
+      if (!source || !source.queueActive) throw new Error('Push-admin-source ontbreekt.');
+      const out = await source.queueActive({
+        title: document.getElementById('titleInput').value.trim(),
+        body: document.getElementById('bodyInput').value.trim(),
+        targetUrl: document.getElementById('urlInput').value.trim(),
+        activeMinutes: activeMinutes(),
+        scope: adminScope()
+      });
       const recipientNames = Array.isArray(out?.recipient_names) ? out.recipient_names : [...new Set(activeRows.map((row)=>String(row.player_name||'').trim()).filter(Boolean))];
       setStatus(`Push klaargezet voor ${out?.queued_count ?? 0} endpoint(s) · ${recipientNames.length} speler(s): ${recipientNames.join(', ') || 'niemand'}.`, 'ok');
       await loadActive();
@@ -158,7 +151,7 @@
     (async()=>{ const sel=document.getElementById('pushScopeSelect'); if(sel) sel.value=adminScope(); if(await ensureGate()) loadActive().catch((err)=>setStatus(err?.message||'Laden mislukt.','warn')); })();
   </script>
   <div class="site-credit-watermark" data-version-watermark>v374 · Made by Bruis</div>
-  <script src="./site-analytics.js?v374"></script>
+  <script src="./site-analytics.js?v383"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>

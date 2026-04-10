@@ -172,41 +172,14 @@
     const runtime = window.GEJAST_PUSH_RUNTIME;
     if (runtime && typeof runtime.touchPresence === 'function') {
       try {
-        return await runtime.touchPresence({ subscription, force, scope: runtime.inferScope ? runtime.inferScope() : undefined });
+        const cachedPos = cached();
+        const location = cachedPos ? { lat: cachedPos.coords.latitude, lng: cachedPos.coords.longitude, accuracy: cachedPos.coords.accuracy } : null;
+        return await runtime.touchPresence({ subscription, force, scope: runtime.inferScope ? runtime.inferScope() : undefined, location });
       } catch(err) {
         return { touched:false, reason:(err && err.message) || 'touch-failed' };
       }
     }
-    const cfg = window.GEJAST_CONFIG || {};
-    const token = playerToken();
-    if (!token || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY) return { touched:false, reason:'missing-context' };
-    const now = Date.now();
-    const last = Number(localStorage.getItem(ACTIVE_PUSH_TOUCH_KEY) || '0');
-    if (!force && last && (now - last) < 60000) return { touched:false, reason:'throttled' };
-    let sub = subscription;
-    try {
-      if (!sub && notificationSupported()) {
-        const reg = await registerNotificationWorker();
-        if (reg && reg.pushManager) sub = await reg.pushManager.getSubscription();
-      }
-      const json = sub && (sub.toJSON ? sub.toJSON() : sub);
-      const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/touch_active_web_push_presence`, {
-        method:'POST', headers: rpcHeaders(cfg.SUPABASE_PUBLISHABLE_KEY), body: JSON.stringify({
-          session_token: token,
-          endpoint_input: json?.endpoint || sub?.endpoint || '',
-          p256dh_input: (json?.keys && json.keys.p256dh) || '',
-          auth_input: (json?.keys && json.keys.auth) || '',
-          page_path_input: `${window.location.pathname || ''}${window.location.search || ''}${window.location.hash || ''}`,
-          permission_input: notificationPermission(),
-          standalone_input: !!((window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true)
-        })
-      });
-      await parseJson(res);
-      try { localStorage.setItem(ACTIVE_PUSH_TOUCH_KEY, String(now)); } catch(_ ){}
-      return { touched:true };
-    } catch(err) {
-      return { touched:false, reason:(err && err.message) || 'touch-failed' };
-    }
+    return { touched:false, reason:'runtime-missing' };
   }
   async function startActivePushPresenceHeartbeat(force=false){
     try { await touchActivePushPresence(null, force); } catch(_){}
@@ -244,17 +217,11 @@
   }
 
   async function queueBackendTestPush(){
-    const cfg = window.GEJAST_CONFIG || {};
-    const token = playerToken();
-    if (!cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY || !token) return { queued:false, reason:'missing-context' };
-    try {
-      const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${cfg.WEB_PUSH_TEST_RPC || 'queue_test_web_push'}`, {
-        method:'POST', headers: rpcHeaders(cfg.SUPABASE_PUBLISHABLE_KEY), body: JSON.stringify({ session_token: token })
-      });
-      return { queued:true, payload: await parseJson(res) };
-    } catch(err) {
-      return { queued:false, reason:(err && err.message) || 'queue-failed' };
+    const runtime = window.GEJAST_PUSH_RUNTIME;
+    if (runtime && typeof runtime.queueTest === 'function') {
+      try { return await runtime.queueTest(); } catch(err) { return { queued:false, reason:(err && err.message) || 'queue-failed' }; }
     }
+    return { queued:false, reason:'runtime-missing' };
   }
 
   async function syncPushSubscriptionToBackend(subscription, extras={}){
@@ -269,29 +236,7 @@
         return { synced:false, reason:(err && err.message) || 'sync-failed' };
       }
     }
-    const cfg = window.GEJAST_CONFIG || {};
-    const token = playerToken();
-    if (!subscription || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY || !token) return { synced:false, reason:'missing-context' };
-    try {
-      const json = subscription.toJSON ? subscription.toJSON() : subscription;
-      const scopeValue = cfg.normalizeScope ? cfg.normalizeScope((extras && extras.scope) || (new URLSearchParams(window.location.search || '').get('scope')) || '') : (((new URLSearchParams(window.location.search || '').get('scope')) || '').toLowerCase() === 'family' ? 'family' : 'friends');
-      const out = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/register_web_push_subscription`, {
-        method:'POST', headers: rpcHeaders(cfg.SUPABASE_PUBLISHABLE_KEY),
-        body: JSON.stringify({
-          session_token: token,
-          endpoint_input: json.endpoint || subscription.endpoint || '',
-          p256dh_input: json.keys?.p256dh || extras.p256dh || '',
-          auth_input: json.keys?.auth || extras.auth || '',
-          user_agent_input: navigator.userAgent || '',
-          permission_input: notificationPermission(),
-          site_scope_input: scopeValue,
-          page_path_input: `${window.location.pathname || ''}${window.location.search || ''}${window.location.hash || ''}`
-        })
-      });
-      return { synced:true, payload: await parseJson(out) };
-    } catch(err) {
-      return { synced:false, reason:(err && err.message) || 'sync-failed' };
-    }
+    return { synced:false, reason:'runtime-missing' };
   }
 
   async function ensurePushSubscription(){
@@ -471,7 +416,7 @@
   function setButtonState(ready){ buttonsReadyState = !!ready; document.querySelectorAll('[data-gejast-geo-button]').forEach((btn)=>{ btn.classList.toggle('is-ready',!!ready); btn.classList.toggle('is-bad',!ready); btn.title = ready ? 'Geolocatie actief' : 'Geolocatie opnieuw proberen'; btn.setAttribute('aria-pressed', ready ? 'true' : 'false'); }); }
   ensureActivePushPresenceHeartbeat();
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', ()=>{ startActivePushPresenceHeartbeat(false); }, { once:true }); } else { startActivePushPresenceHeartbeat(false); }
-  if (navigator.serviceWorker && navigator.serviceWorker.addEventListener) { navigator.serviceWorker.addEventListener('message', (event)=>{ const type = event && event.data && event.data.type; if (type === 'gejast-pushsubscriptionchange') { requestNotificationAccess({ quiet:true }).catch(()=>{}); } }); }
+  if (navigator.serviceWorker && navigator.serviceWorker.addEventListener) { navigator.serviceWorker.addEventListener('message', (event)=>{ const type = event && event.data && event.data.type; if (type === 'gejast-pushsubscriptionchange') { const runtime = window.GEJAST_PUSH_RUNTIME; if (runtime && runtime.requestPermissionAndSync) runtime.requestPermissionAndSync({ quiet:true, pagePath:`${window.location.pathname || ''}${window.location.search || ''}${window.location.hash || ''}` }).catch(()=>{}); else requestNotificationAccess({ quiet:true }).catch(()=>{}); } }); }
   window.GEJAST_GEO = { cached, ensure, request, requestGeoAccess, startWatch, stopWatch, startMonitor, stopMonitor, permissionState, message, reverseGeocode, formatCoords, getLastError, setButtonState, ensureCornerTools, notificationSupported, notificationPermission, registerNotificationWorker, ensurePushSubscription, syncPushSubscriptionToBackend, queueBackendTestPush, getNotificationDiagnostics, refreshNotificationButton, requestNotificationAccess, showNotificationFromServiceWorker, setNotificationButtonState, showDiagnostics, touchActivePushPresence, startActivePushPresenceHeartbeat, notificationSetupState };
   function init(){ if (!shouldExclude()) ensureCornerTools(); setButtonState(!!cached()); refreshNotificationButton().catch(()=>{}); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once:true }); else init();

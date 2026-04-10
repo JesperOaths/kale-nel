@@ -38,8 +38,9 @@
   function shouldPromptNotifications(){
     const runtime = window.GEJAST_PUSH_RUNTIME;
     const readiness = runtime && runtime.__lastDiagnostics && runtime.__lastDiagnostics.readiness;
-    if (readiness) return !String(readiness).startsWith('ready_');
-    return !!(window.GEJAST_GEO && window.GEJAST_GEO.notificationPermission && window.GEJAST_GEO.notificationPermission() !== 'granted');
+    const key = readiness && readiness.key ? readiness.key : String(readiness || '');
+    if (key) return !String(key).startsWith('ready_');
+    return true;
   }
 
   function ensureNotificationPrompt(){
@@ -81,22 +82,11 @@
     if (id === lastNotificationId) return;
     lastNotificationId = id;
     try {
-      if (window.GEJAST_GEO && window.GEJAST_GEO.showNotificationFromServiceWorker) {
-        const ok = await window.GEJAST_GEO.showNotificationFromServiceWorker(item.kind === 'speed' ? 'Snelheid te verifiëren' : 'Drankje te verifiëren', {
-          body: `${item.player_name||'Speler'} · ${item.event_type_label || item.speed_type_label || ''}`.trim(),
-          tag: id,
-          data: { url: item.kind === 'speed' ? './drinks_speed.html' : './drinks_pending.html', itemId: item.id, kind: item.kind || 'drink' },
-          renotify: true
-        });
-        if (ok) return;
+      const runtime = window.GEJAST_PUSH_RUNTIME;
+      if (runtime && runtime.requestPermissionAndSync && shouldPromptNotifications()) {
+        await runtime.requestPermissionAndSync({ interactive:false, scope: runtime.inferScope ? runtime.inferScope() : undefined }).catch(()=>null);
       }
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(item.kind === 'speed' ? 'Snelheid te verifiëren' : 'Drankje te verifiëren', {
-          body: `${item.player_name||'Speler'} · ${item.event_type_label || item.speed_type_label || ''}`.trim(),
-          silent: false
-        });
-      }
-    } catch(_){}
+    } catch(_){ }
   }
 
   function ensureBox(){
@@ -114,6 +104,27 @@
 
   function showBox(){ const box = ensureBox(); box.classList.remove('show'); void box.offsetWidth; requestAnimationFrame(()=> box.classList.add('show')); }
   function hideBox(){ const box = document.getElementById('globalDrinksVerifyFloat'); if (box) box.classList.remove('show'); activePromptId = null; activePromptKind = null; activePromptItem = null; activePromptSeenAt = 0; activePromptGraceUntil = 0; }
+
+  function showLandingToast(){
+    try {
+      const q = new URLSearchParams(location.search||'');
+      const actionStatus = String(q.get('action_status')||'').trim();
+      const requestKind = String(q.get('request_kind')||'').trim();
+      const requestId = String(q.get('request_id')||'').trim();
+      const actionReason = String(q.get('action_reason')||'').trim();
+      if (!actionStatus) return;
+      const box = ensureBox();
+      const title = actionStatus === 'verified' ? 'Verificatie bevestigd' : (actionStatus === 'rejected' ? 'Verificatie afgekeurd' : (actionStatus === 'failed' ? 'Actie niet voltooid' : 'Verificatie geopend'));
+      const detail = requestId ? `${requestKind || 'request'} #${requestId}` : (requestKind || 'verificatie');
+      document.getElementById('gdfBody').innerHTML = `<strong>${title}</strong><div class="gdf-meta">${detail}${actionReason ? ` · ${actionReason}` : ''}</div>`;
+      document.getElementById('gdfVerifyBtn').style.display = 'none';
+      document.getElementById('gdfRejectBtn').style.display = 'none';
+      document.getElementById('gdfOpenBtn').onclick = () => { hideBox(); };
+      document.getElementById('gdfDismissBtn').onclick = () => { hideBox(); };
+      showBox();
+      setTimeout(()=>hideBox(), 5000);
+    } catch(_){ }
+  }
 
   function showApprovedToast(){
     const raw = localStorage.getItem(APPROVED_KEY);

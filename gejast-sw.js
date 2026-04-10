@@ -50,7 +50,7 @@ self.addEventListener('activate', (event) => { event.waitUntil(self.clients.clai
 self.addEventListener('push', (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch (_) {}
-  const target = data.url || './drinks_pending.html';
+  const target = data.url || (data.requestKind === 'speed' ? './drinks_speed.html' : './drinks_pending.html');
   const payloadActions = Array.isArray(data.actions) ? data.actions : [];
   const actions = payloadActions.length ? payloadActions : [
     { action: 'open', title: 'Openen' },
@@ -66,7 +66,7 @@ self.addEventListener('push', (event) => {
     requireInteraction: !!data.requireInteraction,
     silent: false,
     timestamp: Date.now(),
-    vibrate: Array.isArray(data.vibrate) ? data.vibrate : [180, 80, 180],
+    vibrate: Array.isArray(data.vibratePattern) ? data.vibratePattern : (Array.isArray(data.vibrate) ? data.vibrate : [180, 80, 180]),
     actions,
     data: {
       url: target,
@@ -92,15 +92,32 @@ self.addEventListener('notificationclick', (event) => {
       const actionToken = action === 'verify' ? data.verifyActionToken : data.rejectActionToken;
       const result = await consumeActionToken(actionToken);
       if (result && result.ok) {
-        const successUrl = withStatusUrl(fallbackTarget, { request_kind: data.requestKind || '', request_id: data.requestId || '', action_status: action === 'verify' ? 'verified' : 'rejected', trace_id: data.traceId || '' });
+        const successUrl = withStatusUrl(fallbackTarget, {
+          request_kind: data.requestKind || '',
+          request_id: data.requestId || '',
+          action_status: action === 'verify' ? 'verified' : 'rejected',
+          trace_id: data.traceId || ''
+        });
         await focusOrOpen(successUrl);
         return;
       }
-      const degradedUrl = withStatusUrl(fallbackTarget, { request_kind: data.requestKind || '', request_id: data.requestId || '', action_status: 'failed', trace_id: data.traceId || '', action_reason: result && result.reason || 'consume_failed' });
+      const degradedUrl = withStatusUrl(fallbackTarget, {
+        request_kind: data.requestKind || '',
+        request_id: data.requestId || '',
+        action_status: 'failed',
+        trace_id: data.traceId || '',
+        action_reason: result && result.reason || 'consume_failed'
+      });
       await focusOrOpen(degradedUrl);
       return;
     }
-    await focusOrOpen(fallbackTarget);
+    const openUrl = withStatusUrl(fallbackTarget, {
+      request_kind: data.requestKind || '',
+      request_id: data.requestId || '',
+      action_status: 'opened',
+      trace_id: data.traceId || ''
+    });
+    await focusOrOpen(openUrl);
   })());
 });
 self.addEventListener('pushsubscriptionchange', (event) => {

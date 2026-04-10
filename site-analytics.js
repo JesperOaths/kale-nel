@@ -193,29 +193,9 @@
   async function touchActivePushPresence(profile){
     try {
       const runtime = window.GEJAST_PUSH_RUNTIME;
-      const cfg = window.GEJAST_CONFIG || {};
-      const token = getStorageValue(PLAYER_SESSION_KEYS, [sessionStorage, localStorage]);
-      if (!token || !(profile && profile.is_logged_in) || Notification.permission !== 'granted') return;
-      if (runtime && typeof runtime.touchPresence === 'function') {
-        await runtime.touchPresence({ force:true, pagePath:path, scope:(profile && profile.site_scope) || undefined }).catch(()=>{});
-        return;
-      }
-      const sub = await getExistingPushSubscription();
-      if (!sub) return;
-      const json = sub.toJSON ? sub.toJSON() : sub;
-      await fetch(`${SUPABASE_URL}/rest/v1/rpc/${cfg.ACTIVE_PUSH_TOUCH_RPC || 'touch_active_web_push_presence'}`, {
-        method:'POST', mode:'cors', cache:'no-store', keepalive:true,
-        headers: rpcHeaders(),
-        body: JSON.stringify({
-          session_token: token,
-          endpoint_input: json.endpoint || sub.endpoint || '',
-          p256dh_input: (json.keys && json.keys.p256dh) || '',
-          auth_input: (json.keys && json.keys.auth) || '',
-          page_path_input: path,
-          permission_input: Notification.permission || '',
-          standalone_input: !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true)
-        })
-      }).catch(()=>{});
+      if (!runtime || typeof runtime.touchPresence !== 'function') return;
+      if (!(profile && profile.is_logged_in) || Notification.permission !== 'granted') return;
+      await runtime.touchPresence({ force:true, pagePath:path, scope:(profile && profile.site_scope) || undefined }).catch(()=>{});
     } catch (_) {}
   }
 
