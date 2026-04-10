@@ -7,8 +7,8 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Speler</title>
-  <script>window.GEJAST_PAGE_VERSION='v396';</script>
-  <script src="./gejast-config.js?v396"></script>
+  <script>window.GEJAST_PAGE_VERSION='v400';</script>
+  <script src="./gejast-config.js?v400"></script>
   <script src="./gejast-clickable-cards.js?v391"></script>
   <script src="./gejast-scope-context.js?v391"></script><script src="./gejast-family-rollout.js?v393"></script>
   <style>
@@ -17,7 +17,10 @@
     body{margin:0;padding:24px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(232,228,217,.9),rgba(232,228,217,.92)),url('./wordtergejast.png') center/cover fixed;color:#201b16}
     .wrap{max-width:1180px;margin:0 auto}
     .card{position:relative;background:rgba(248,245,238,.96);border-radius:28px;padding:24px;box-shadow:0 20px 44px rgba(0,0,0,.08)}
-    h1{margin:18px 0 0;font-size:42px}
+    h1{margin:0;font-size:42px}
+    .player-identity{display:grid;grid-template-columns:96px minmax(0,1fr);gap:16px;align-items:center;margin-top:10px}
+    .player-avatar,.player-avatar-fallback{width:96px;height:96px;border-radius:50%;border:2px solid rgba(212,175,55,.45);background:#efe7d7;display:block;object-fit:cover;overflow:hidden}
+    .player-avatar-fallback{display:grid;place-items:center;font-size:34px;font-weight:900;color:#5d4820}
     .muted{color:var(--muted)}
     .hero{position:relative;min-height:74px}
     .back-btn{position:absolute;left:0;top:0;display:inline-flex;padding:10px 14px;border-radius:999px;background:#201b16;color:#fff;text-decoration:none;font-weight:800;border:none;cursor:pointer}
@@ -62,7 +65,7 @@
   <script src="./gejast-badges.js?v391"></script>
   <script src="./gejast-badge-progress.js?v391"></script>
   <script src="./gejast-rpc-contract.js?v391"></script>
-  <script src="./gejast-profile-source.js?v396"></script>
+  <script src="./gejast-profile-source.js?v400"></script>
 </head>
 <body>
   <div class="wrap">
@@ -71,10 +74,13 @@
         <button class="back-btn" id="backLink" type="button" data-back-link data-fallback="./profiles.html">Terug</button>
         <a class="brand-link" id="playerHomeLink" href="./index.html" aria-label="Home via logo"><img src="./logo.png" alt="Logo"/></a>
       </div>
-      <div>
-        <div class="badge" id="badgeBox">Badge</div>
-        <h1 id="title">Speler</h1>
-        <div class="muted" id="subtitle">Profiel en wedstrijdgeschiedenis.</div>
+      <div class="player-identity">
+        <div id="playerAvatarWrap"><div class="player-avatar-fallback">?</div></div>
+        <div>
+          <div class="badge" id="badgeBox">Badge</div>
+          <h1 id="title">Speler</h1>
+          <div class="muted" id="subtitle">Profiel en wedstrijdgeschiedenis.</div>
+        </div>
       </div>
       <div class="game-tabs" id="gameTabs"></div>
       <div class="grid" id="statsGrid"><div class="stat"><span>Laden</span><strong>…</strong></div></div>
@@ -252,7 +258,23 @@
         const originalName = (playerBundle?.unified?.canonical_player_name || player || '').trim();
         document.getElementById('badgeBox').textContent = rarest ? rarest.title : (playerBundle?.unified?.overview?.best_badge || 'Starter');
         titleNode.textContent = shownName;
+        renderPlayerAvatar();
         document.getElementById('subtitle').textContent = `${rarest && rarest.nickname ? rarest.nickname + ' · ' : ''}${originalName && originalName !== shownName ? `Originele naam: \"${originalName}\" · ` : ''}Profiel en wedstrijdgeschiedenis.`;
+      }
+
+
+      function renderPlayerAvatar(){
+        const wrap = document.getElementById('playerAvatarWrap');
+        if (!wrap) return;
+        const helper = window.GEJAST_PROFILE_SOURCE && typeof window.GEJAST_PROFILE_SOURCE.profileImageUrl === 'function'
+          ? window.GEJAST_PROFILE_SOURCE.profileImageUrl
+          : (value) => String(value || '').trim();
+        const shownName = (playerBundle?.unified?.player_name || player || 'Speler').trim();
+        const src = helper(playerBundle?.unified?.overview?.profile_picture_url || playerBundle?.profile_picture_url || '');
+        const initial = (shownName || 'S').slice(0,1).toUpperCase();
+        wrap.innerHTML = src
+          ? `<img class="player-avatar" src="${src}" alt="${shownName}" referrerpolicy="no-referrer" onerror="this.outerHTML='&lt;div class=&quot;player-avatar-fallback&quot;&gt;${initial}&lt;/div&gt;'">`
+          : `<div class="player-avatar-fallback">${initial}</div>`;
       }
 
       function renderDrinkPanel(){

@@ -39,6 +39,18 @@
     return Number.isFinite(ts) ? ts : null;
   }
 
+
+  function profileImageUrl(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
+    if (raw.startsWith('/')) return raw;
+    const base = String((global && global.GEJAST_CONFIG && global.GEJAST_CONFIG.SUPABASE_URL) || '').trim();
+    if (/^storage\/v1\/object\/public\//i.test(raw) && base) return `${base}/${raw.replace(/^\/+/, '')}`;
+    if (base && /^[A-Za-z0-9._-]+\/.+/.test(raw)) return `${base}/storage/v1/object/public/${raw.replace(/^\/+/, '')}`;
+    return raw;
+  }
+
   function detectResult(match, playerName) {
     const explicit = String(match?.player_result || '').toLowerCase();
     if (explicit === 'win') return 'W';
@@ -254,6 +266,7 @@ function writeProfilesCache(value) {
     loadProfilesPageBundle,
     loadProfilesList,
     deriveSharedStats,
-    deriveGameInsights
+    deriveGameInsights,
+    profileImageUrl
   };
 })(window);

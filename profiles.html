@@ -7,8 +7,8 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Spelersprofielen</title>
-  <script>window.GEJAST_PAGE_VERSION='v398';</script>
-  <script src="./gejast-config.js?v398"></script>
+  <script>window.GEJAST_PAGE_VERSION='v400';</script>
+  <script src="./gejast-config.js?v400"></script>
   <script src="./gejast-clickable-cards.js?v386"></script>
   <script src="./gejast-scope-context.js?v391"></script><script src="./gejast-family-rollout.js?v393"></script>
   <style>
@@ -25,7 +25,7 @@
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;padding:18px;align-items:stretch}
     .card{background:#fff;border:1px solid rgba(17,17,17,.07);border-radius:22px;padding:18px;display:grid;gap:14px;box-shadow:0 10px 20px rgba(0,0,0,.05);text-decoration:none;color:inherit;grid-template-rows:auto auto auto auto;min-height:100%}
     .head{display:grid;grid-template-columns:72px minmax(0,1fr);gap:14px;align-items:center}
-    .avatar{width:72px;height:72px;border-radius:50%;object-fit:cover;background:#efe7d7;border:2px solid rgba(212,175,55,.45)}
+    .avatar{width:72px;height:72px;border-radius:50%;object-fit:cover;background:#efe7d7;border:2px solid rgba(212,175,55,.45);overflow:hidden;display:block}
     .initials{display:grid;place-items:center;font-weight:900;font-size:24px;color:#5d4820}
     .name{font-size:23px;font-weight:900;line-height:1.05;word-break:break-word}
     .meta,.submeta{color:var(--muted);font-size:13px;line-height:1.45;word-break:break-word}
@@ -63,7 +63,7 @@
   <script src="./gejast-badges.js?v386"></script>
   <script src="./gejast-badge-progress.js?v386"></script>
   <script src="./gejast-rpc-contract.js?v391"></script>
-  <script src="./gejast-profile-source.js?v391"></script>
+  <script src="./gejast-profile-source.js?v400"></script>
 </head>
 <body>
   <main class="page">
@@ -127,9 +127,10 @@
       }
 
       function avatarHtml(player){
-        const src = player.profile_picture_url || player.avatar_url || '';
+        const helper = window.GEJAST_PROFILE_SOURCE && typeof window.GEJAST_PROFILE_SOURCE.profileImageUrl === 'function' ? window.GEJAST_PROFILE_SOURCE.profileImageUrl : (value) => String(value || '').trim();
+        const src = helper(player.profile_picture_url || player.avatar_url || '');
         const label = displayName(player);
-        return src ? `<img class="avatar" src="${src}" alt="${label}">` : `<div class="avatar initials">${initials(label)}</div>`;
+        return src ? `<img class="avatar" src="${src}" alt="${label}" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML='&lt;div class=&quot;avatar initials&quot;&gt;${initials(label)}&lt;/div&gt;'">` : `<div class="avatar initials">${initials(label)}</div>`;
       }
 
       function displayName(player){
