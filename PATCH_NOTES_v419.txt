@@ -1,0 +1,7 @@
+GEJAST v419 - player_id-aware room join + stale lobby cleanup + custom lobby names
+
+Included:
+- fixes null player_id errors by resolving and writing player_id when paardenrace_room_players requires it
+- deletes stale open lobbies with 0 or 1 player after 2 minutes whenever the joinable-room list is read
+- lets creators set a custom lobbynaam and lets joiners filter by lobbynaam/code
+- bumps shared visible version to v419

@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace</title>
-  <script>window.GEJAST_PAGE_VERSION='v417';</script>
-  <script src="./gejast-config.js?v417"></script>
+  <script>window.GEJAST_PAGE_VERSION='v419';</script>
+  <script src="./gejast-config.js?v419"></script>
   <script src="./gejast-scope-context.js?v391"></script>
   <script src="./gejast-family-rollout.js?v393"></script>
   <script src="./gejast-scope.js?v386"></script>
@@ -31,7 +31,7 @@
     <section class="hero">
       <div>
         <h1>Paardenrace</h1>
-        <p>Live multiplayer paardenrace met gedeelde room-state. De start-popup opent direct bij binnenkomst en het track-beeld bevat geen losse zijkant-knoppen meer.</p>
+        <p>Live multiplayer paardenrace met gedeelde room-state. Je kunt nu een eigen lobbynaam opgeven bij het maken en filteren op lobbynaam bij het joinen.</p>
       </div>
       <div class="actions">
         <a class="btn alt" href="./index.html">Home</a>
@@ -77,6 +77,7 @@
         <p>Kies je inzet en één paard. Na succesvolle room-creation bevestigen we pas je eigen wager-obligation.</p>
         <div class="two">
           <div class="field"><label for="prCreateWager">Inzet (Bakken)</label><input id="prCreateWager" type="number" min="1" step="1" value="5"></div>
+          <div class="field"><label for="prCreateRoomName">Lobbynaam</label><input id="prCreateRoomName" type="text" maxlength="20" placeholder="Bijv. TEAMBRUIS"></div>
           <div class="field"><label>Gekozen paard</label><div id="prCreateSuitGrid" class="suit-grid"></div></div>
         </div>
         <div id="prCreateError" class="error"></div>
@@ -95,13 +96,13 @@
       <div id="prStepJoinRoom" class="step-grid hidden">
         <h2>Selecteer een room</h2>
         <p>Pas nadat je een echte room kiest en de join succesvol is, wordt je eigen bakken-inzet naar de request pipeline doorgezet.</p>
-        <div id="prRooms" class="room-list"></div>
+        <div class="field"><label for="prJoinFilter">Zoek lobbynaam</label><input id="prJoinFilter" type="text" placeholder="Typ om te filteren"></div><div id="prRooms" class="room-list"></div>
         <div id="prRoomsError" class="error"></div>
         <div class="actions"><button class="btn alt" type="button" data-back-join>Terug</button><button class="btn" type="button" id="prJoinSubmit">Geselecteerde room joinen</button></div>
       </div>
     </div>
   </dialog>
   <div class="site-credit-watermark" data-version-watermark></div>
-  <script src="./gejast-paardenrace.js?v417"></script>
+  <script src="./gejast-paardenrace.js?v419"></script>
 </body>
 </html>
