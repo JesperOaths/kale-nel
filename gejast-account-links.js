@@ -34,6 +34,12 @@
   function scopedHref(input) {
     const url = scopedUrl(input);
     const isSameOrigin = url.origin === root.location.origin;
+    if (isSameOrigin) {
+      const file = (url.pathname.split('/').pop() || '').toLowerCase();
+      if (['index.html','home.html','login.html','request.html','activate.html'].includes(file)) {
+        url.searchParams.set('__bust', (root.GEJAST_CONFIG && root.GEJAST_CONFIG.VERSION) || 'v435');
+      }
+    }
     return isSameOrigin ? `${url.pathname.split('/').pop()}${url.search}${url.hash}` : url.toString();
   }
 
