@@ -25,8 +25,10 @@
     try{
       document.documentElement.style.visibility='';
       document.documentElement.style.opacity='';
-      document.body && (document.body.style.visibility='');
-      document.body && (document.body.style.opacity='');
+      if (document.body){
+        document.body.style.visibility='';
+        document.body.style.opacity='';
+      }
     }catch(_){}
   }
 
@@ -51,7 +53,7 @@
     return false;
   }
 
-  function getToken(){ return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; }
+  function getToken(){ return String((cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || '').trim(); }
   function clearTokens(){ try{ cfg.clearPlayerSessionTokens && cfg.clearPlayerSessionTokens(); }catch(_){} }
   function expired(){ try{ return cfg.isPlayerSessionExpired ? cfg.isPlayerSessionExpired() : !getToken(); }catch(_){ return !getToken(); } }
   function currentTarget(){
@@ -65,74 +67,130 @@
     var target = currentTarget();
     try{ return cfg.buildHomeUrl ? cfg.buildHomeUrl(target, currentScope()) : './home.html'; }catch(_){ return './home.html'; }
   }
-  function headers(){ return { 'Content-Type':'application/json', apikey:(cfg.SUPABASE_PUBLISHABLE_KEY||''), Authorization:`Bearer ${(cfg.SUPABASE_PUBLISHABLE_KEY||'')}` }; }
-  async function parse(res){ var txt=await res.text(); var data=null; try{ data=txt?JSON.parse(txt):null; }catch(_){ throw new Error(txt||('HTTP '+res.status)); } if(!res.ok) throw new Error(data&& (data.message||data.error) || ('HTTP '+res.status)); return data; }
+  function headers(){
+    return {
+      'Content-Type':'application/json',
+      apikey:(cfg.SUPABASE_PUBLISHABLE_KEY||''),
+      Authorization:`Bearer ${(cfg.SUPABASE_PUBLISHABLE_KEY||'')}`,
+      Accept:'application/json'
+    };
+  }
+  async function parse(res){
+    var txt = await res.text();
+    var data = null;
+    try{ data = txt ? JSON.parse(txt) : null; }catch(_){ throw new Error(txt || ('HTTP ' + res.status)); }
+    if(!res.ok) throw new Error((data && (data.message || data.error || data.hint)) || ('HTTP ' + res.status));
+    return data;
+  }
   function normalizeName(v){ return String(v||'').replace(/\s+/g,' ').trim(); }
   function uniqueNames(list){ var seen=new Set(); return (Array.isArray(list)?list:[]).map(normalizeName).filter(function(name){ var k=name.toLowerCase(); if(!name||seen.has(k)) return false; seen.add(k); return true; }); }
 
-  async function fetchViewerName(token){
-    var rpcList=[['get_public_state',{session_token:token}],['get_gejast_homepage_state',{session_token:token}],['get_jas_app_state',{session_token:token}],['get_public_state',{session_token_input:token}],['get_gejast_homepage_state',{session_token_input:token}],['get_jas_app_state',{session_token_input:token}]];
-    for (const entry of rpcList){
+  async function callViewerRpc(rpcName, payload){
+    var res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${rpcName}`, {
+      method:'POST',
+      mode:'cors',
+      cache:'no-store',
+      headers:headers(),
+      body:JSON.stringify(payload)
+    });
+    var data = await parse(res);
+    return data && data[rpcName] ? data[rpcName] : data;
+  }
+
+  async function fetchViewerState(token){
+    if (!token || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY) return { ok:false, reason:'missing-config-or-token' };
+    var attempts = [
+      ['get_public_state', { session_token: token }],
+      ['get_gejast_homepage_state', { session_token: token }],
+      ['get_jas_app_state', { session_token: token }],
+      ['get_public_state', { session_token_input: token }],
+      ['get_gejast_homepage_state', { session_token_input: token }],
+      ['get_jas_app_state', { session_token_input: token }]
+    ];
+    var lastError = '';
+    for (const entry of attempts){
       try{
-        var res=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${entry[0]}`,{method:'POST',mode:'cors',cache:'no-store',headers:headers(),body:JSON.stringify(entry[1])});
-        var data=await parse(res);
-        var name=normalizeName(data&& (data.my_name || data.display_name || data.player_name || (data.viewer&&data.viewer.display_name) || ''));
-        if(name) return name;
-      }catch(_){ }
+        var data = await callViewerRpc(entry[0], entry[1]);
+        var name = normalizeName(data && (data.my_name || data.display_name || data.player_name || (data.viewer && data.viewer.display_name) || ''));
+        var isLoggedIn = !!(data && (
+          data.is_logged_in === true ||
+          data.logged_in === true ||
+          data.session_valid === true ||
+          data.viewer_logged_in === true ||
+          (data.viewer && (data.viewer.is_logged_in === true || data.viewer.session_valid === true))
+        ));
+        if (name || isLoggedIn){
+          return { ok:true, state:data, viewerName:name, loggedIn:true };
+        }
+        if (data && typeof data === 'object'){
+          return { ok:false, reason:'viewer-not-logged-in', state:data };
+        }
+      }catch(err){
+        lastError = (err && err.message) || String(err || '');
+      }
     }
-    return '';
+    return { ok:false, reason:lastError || 'viewer-rpcs-unavailable' };
   }
 
   async function fetchAllowedNames(scope){
     try{
-      var helper=cfg&&typeof cfg.fetchScopedActivePlayerNames==='function'?cfg.fetchScopedActivePlayerNames:null;
-      if(helper){ var active=await helper(scope); if(active&&active.length) return active; }
-    }catch(_){ }
-    var raw=null;
+      var helper = cfg && typeof cfg.fetchScopedActivePlayerNames === 'function' ? cfg.fetchScopedActivePlayerNames : null;
+      if(helper){
+        var active = await helper(scope);
+        if(active && active.length) return active;
+      }
+    }catch(_){}
+    var raw = null;
     try{
-      var scoped=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/get_login_names_scoped`,{method:'POST',mode:'cors',cache:'no-store',headers:headers(),body:JSON.stringify({site_scope_input:scope})});
-      raw=await parse(scoped);
+      raw = await callViewerRpc('get_login_names_scoped', { site_scope_input: scope });
     }catch(_){
       try{
-        var res=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/get_login_names`,{method:'POST',mode:'cors',cache:'no-store',headers:headers(),body:JSON.stringify({})});
-        raw=await parse(res);
-      }catch(_2){ raw={ names:[] }; }
+        raw = await callViewerRpc('get_login_names', {});
+      }catch(_2){
+        raw = { names:[] };
+      }
     }
-    var rows=Array.isArray(raw)?raw:(Array.isArray(raw&&raw.names)?raw.names:(Array.isArray(raw&&raw.data)?raw.data:[]));
-    var names=uniqueNames(rows.map(function(row){ return typeof row==='string' ? row : (row&& (row.display_name||row.name||row.desired_name||row.slug||row.player_name) || ''); }));
-    try{ if(window.GEJAST_SCOPE_UTILS&&typeof window.GEJAST_SCOPE_UTILS.filterNames==='function') names=window.GEJAST_SCOPE_UTILS.filterNames(names, scope); }catch(_){ }
+    var rows = Array.isArray(raw) ? raw : (Array.isArray(raw && raw.names) ? raw.names : (Array.isArray(raw && raw.data) ? raw.data : []));
+    var names = uniqueNames(rows.map(function(row){
+      return typeof row === 'string' ? row : (row && (row.display_name || row.name || row.desired_name || row.slug || row.player_name) || '');
+    }));
+    try{
+      if(window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function'){
+        names = window.GEJAST_SCOPE_UTILS.filterNames(names, scope);
+      }
+    }catch(_){}
     return names;
   }
 
-  async function verifyScope(){
-    var token=getToken(); if(!token || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY) return true;
-    var name=await fetchViewerName(token); if(!name) return true;
-    var allowed=await fetchAllowedNames(currentScope());
-    return !allowed.length || allowed.indexOf(name)!==-1;
+  async function verifyPrivateAccess(){
+    var token = getToken();
+    if (!token) return { ok:false, reason:'missing-token' };
+
+    var viewer = await fetchViewerState(token);
+    if (!viewer.ok) return viewer;
+
+    var allowed = await fetchAllowedNames(currentScope());
+    if (allowed.length && allowed.indexOf(viewer.viewerName) === -1){
+      return { ok:false, reason:'scope-mismatch', viewerName:viewer.viewerName };
+    }
+
+    return { ok:true, viewerName:viewer.viewerName, state:viewer.state };
   }
 
   async function boot(){
-    if(expired()) clearTokens();
-    if(!getToken()) return redirect(homeUrl());
+    if (expired()) clearTokens();
+    if (!getToken()) return redirect(homeUrl());
 
-    try{
-      if (cfg.ensurePlayerSessionOrRedirect && !cfg.ensurePlayerSessionOrRedirect(currentTarget(), currentScope())) {
-        return redirect(homeUrl());
-      }
-    }catch(_){
+    var access = await verifyPrivateAccess().catch(function(err){
+      return { ok:false, reason:(err && err.message) || 'private-gate-failed' };
+    });
+
+    if (!access.ok){
+      clearTokens();
       return redirect(homeUrl());
     }
 
     try{ cfg.touchPlayerActivity && cfg.touchPlayerActivity(); }catch(_){}
-
-    try{
-      var ok = await verifyScope();
-      if(!ok){
-        clearTokens();
-        return redirect(homeUrl());
-      }
-    }catch(_){}
-
     removeBlocker();
   }
 
