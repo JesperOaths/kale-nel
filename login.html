@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inloggen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v437';</script>
+  <script>window.GEJAST_PAGE_VERSION='v438';</script>
   <style>
     :root { --gold: #9a8241; --dark-bg: #111; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.08); }
     * { box-sizing: border-box; }
@@ -53,8 +53,8 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/login.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script id="gejast-cache-bust">(function(){try{var want='v437';var u=new URL(location.href);if(u.searchParams.get('__bust')!==want){u.searchParams.set('__bust',want);location.replace(u.toString());}}catch(_){}})();</script>
-  <script defer src="./gejast-config.js?v437"></script><script defer src="./gejast-family-rollout-v437.js"></script><script defer src="./gejast-account-scope-v437.js"></script><script defer src="./gejast-account-links-v437.js"></script>
+  <script id="gejast-cache-bust">(function(){try{var want='v438';var u=new URL(location.href);if(u.searchParams.get('__bust')!==want){u.searchParams.set('__bust',want);location.replace(u.toString());}}catch(_){}})();</script>
+  <script defer src="./gejast-config.js?v438"></script>
 </head>
 <body>
   <div class="site-scene">
@@ -102,15 +102,6 @@
       <div class="muted-note">Dit is voor bestaande accounts. Er wordt geen pincode getoond; er gaat een nieuwe activatielink naar hetzelfde e-mailadres.</div>
     </div>
   </div>
-  <script>
-    (function(){
-      try {
-        if (window.GEJAST_ACCOUNT_LINKS && typeof window.GEJAST_ACCOUNT_LINKS.applyLinks === 'function') {
-          window.GEJAST_ACCOUNT_LINKS.applyLinks(document);
-        }
-      } catch (_) {}
-    })();
-  </script>
   <script>
 const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
@@ -181,44 +172,50 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       if (/cycle_key/i.test(raw)) return 'De weekstatus kon niet worden geladen door een databasefout in de stemcyclus. De namenlijst hoort wel zichtbaar te blijven na de v84 bundle + SQL-patch.';
       return raw;
     }
-    async function getPublicState() {
-      if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
-        return await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_public_state', { session_token: getSessionToken() });
+    async function postRpc(name, payloads) {
+      const attempts = Array.isArray(payloads) ? payloads : [payloads || {}];
+      let lastError = null;
+      for (const payload of attempts) {
+        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        const timer = controller ? setTimeout(() => controller.abort(), 2500) : null;
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+            method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(payload || {}), signal: controller ? controller.signal : undefined
+          });
+          if (!res.ok) {
+            lastError = new Error(`HTTP ${res.status}`);
+            continue;
+          }
+          return await parseResponse(res);
+        } catch (err) {
+          lastError = err;
+        } finally {
+          if (timer) clearTimeout(timer);
+        }
       }
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token: getSessionToken() })
-      });
-      return await parseResponse(res);
+      if (lastError) throw lastError;
+      return null;
+    }
+    async function getPublicState() {
+      const token = getSessionToken();
+      if (!token) return null;
+      return await postRpc('get_public_state', [{ session_token: token }, { session_token_input: token }]);
     }
     async function getLoginNames() {
+      const scope = new URLSearchParams(window.location.search).get('scope') === 'family' ? 'family' : 'friends';
       try {
-        const scope = new URLSearchParams(window.location.search).get('scope') === 'family' ? 'family' : 'friends';
-        const helper = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedActivePlayerNames === 'function'
-          ? window.GEJAST_CONFIG.fetchScopedActivePlayerNames
-          : null;
-        if (helper) return { names: await helper(scope) };
+        const scoped = await postRpc('get_login_names_scoped', [{ site_scope_input: scope }, { scope_input: scope }, { site_scope: scope }, {}]);
+        if (scoped) return scoped;
       } catch (_) {}
       try {
-        if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
-          return await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_login_names', {});
-        }
-      } catch (_) {}
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_login_names`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({})
-      });
-      if (!res.ok) return null;
-      return await parseResponse(res);
+        return await postRpc('get_login_names', {});
+      } catch (_) { return null; }
     }
     async function touchSession() {
       const token = getSessionToken();
       if (!token) return null;
-      if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
-        return await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('player_touch_session', { input_token: token });
-      }
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/player_touch_session`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ input_token: token })
-      });
-      return await parseResponse(res);
+      try { return await postRpc('player_touch_session', [{ input_token: token }, { session_token: token }]); }
+      catch (_) { return null; }
     }
 
     function formatDateTime(value) {
@@ -454,7 +451,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     document.addEventListener('DOMContentLoaded', function(){ requestAnimationFrame(function(){ load().catch(function(err){ const msg = err instanceof Error ? err.message : 'Er ging iets mis'; setStatus(friendlyMessage(msg), 'warn'); }); }); }, { once:true });
   </script>
 
-  <div class="site-credit-watermark" data-version-watermark>v437 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v438 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
@@ -522,8 +519,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
 })();
 </script>
 
-  <script src="./site-analytics.js?v437"></script>
-
+<script>(function(){try{var family=new URLSearchParams(location.search).get('scope')==='family';var add=function(el,base){if(!el)return;var href=base+(family?(base.indexOf('?')===-1?'?':'&')+'scope=family':'');el.setAttribute('href',href);};add(document.querySelector('a[href="./index.html"]'),'./index.html');add(document.querySelector('a[href="./request.html"]'),'./request.html');}catch(_){}})();</script>
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>
