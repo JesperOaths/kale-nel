@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <title>GEJAST Probe</title>
+  <style>
+    html, body { margin:0; padding:0; min-height:100vh; font-family:system-ui, sans-serif; background:#f2efe7; color:#111; }
+    body { display:grid; place-items:center; }
+    .card { width:min(420px, 92vw); background:#fff; border:1px solid #ddd; border-radius:16px; padding:24px; box-shadow:0 12px 30px rgba(0,0,0,.08); }
+    input, button { width:100%; padding:14px; font-size:16px; margin-top:12px; border-radius:10px; border:1px solid #ccc; }
+    button { background:#111; color:#fff; border:0; cursor:pointer; }
+    #out { margin-top:14px; min-height:24px; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1 style="margin:0 0 8px 0; font-size:2rem;">Probe</h1>
+    <p style="margin:0; color:#555;">Als deze pagina ook niet klikbaar is, dan zit het probleem niet meer in de login-code.</p>
+    <input id="probeInput" placeholder="Typ hier iets" />
+    <button id="probeBtn" type="button">Klik mij</button>
+    <div id="out"></div>
+  </main>
+  <script>
+    const input = document.getElementById('probeInput');
+    const btn = document.getElementById('probeBtn');
+    const out = document.getElementById('out');
+    btn.addEventListener('click', () => {
+      out.textContent = 'Klik werkte. Waarde: ' + (input.value || '(leeg)');
+    });
+  </script>
+</body>
+</html>
