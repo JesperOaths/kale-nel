@@ -3,9 +3,7 @@
   function getToken(){ return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; }
   function clearTokens(){ try{ cfg.clearPlayerSessionTokens && cfg.clearPlayerSessionTokens(); }catch(_){} }
   function expired(){ try{ return cfg.isPlayerSessionExpired ? cfg.isPlayerSessionExpired() : !getToken(); }catch(_){ return !getToken(); } }
-  function currentTarget(){
-    try{ return cfg.currentReturnTarget ? cfg.currentReturnTarget('index.html') : 'index.html'; }catch(_){ return 'index.html'; }
-  }
+  function currentTarget(){ try{ return cfg.currentReturnTarget ? cfg.currentReturnTarget('index.html') : 'index.html'; }catch(_){ return 'index.html'; } }
   function currentScope(){
     try{ if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.getScope === 'function') return window.GEJAST_SCOPE_UTILS.getScope(); }catch(_){}
     try{ return new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'; }catch(_){ return 'friends'; }
@@ -18,9 +16,7 @@
   async function parse(res){ var txt=await res.text(); var data=null; try{ data=txt?JSON.parse(txt):null; }catch(_){ throw new Error(txt||('HTTP '+res.status)); } if(!res.ok) throw new Error(data&& (data.message||data.error) || ('HTTP '+res.status)); return data; }
   function normalizeName(v){ return String(v||'').replace(/\s+/g,' ').trim(); }
   function uniqueNames(list){ var seen=new Set(); return (Array.isArray(list)?list:[]).map(normalizeName).filter(function(name){ var k=name.toLowerCase(); if(!name||seen.has(k)) return false; seen.add(k); return true; }); }
-  function hideDocument(){ try{ document.documentElement.style.visibility='hidden'; }catch(_){} }
-  function revealDocument(){ try{ document.documentElement.style.visibility=''; document.documentElement.style.display=''; }catch(_){} }
-  function redirectHome(){ hideDocument(); location.replace(homeUrl()); }
+  function redirectHome(){ location.replace(homeUrl()); }
   async function fetchViewerState(token){
     var rpcList=[['get_public_state',{session_token:token}],['get_gejast_homepage_state',{session_token:token}],['get_jas_app_state',{session_token:token}],['get_public_state',{session_token_input:token}],['get_gejast_homepage_state',{session_token_input:token}],['get_jas_app_state',{session_token_input:token}]];
     for (const entry of rpcList){
@@ -57,20 +53,25 @@
   async function verifyScopeAndSession(){
     var token=getToken();
     if(!token || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY) return false;
-    var viewer=await fetchViewerState(token);
+    var viewer=await Promise.race([
+      fetchViewerState(token),
+      new Promise(function(resolve){ setTimeout(function(){ resolve({ ok:false, name:'', data:null }); }, 2500); })
+    ]);
     if(!viewer.ok) return false;
     if(!viewer.name) return true;
-    var allowed=await fetchAllowedNames(currentScope());
+    var allowed=await Promise.race([
+      fetchAllowedNames(currentScope()),
+      new Promise(function(resolve){ setTimeout(function(){ resolve([]); }, 2500); })
+    ]);
     return !allowed.length || allowed.indexOf(viewer.name)!==-1;
   }
   if(expired()) clearTokens();
   if(!getToken()){
     redirectHome();
   } else {
-    hideDocument();
     try{ cfg.touchPlayerActivity && cfg.touchPlayerActivity(); }catch(_){ }
     verifyScopeAndSession().then(function(ok){
-      if(ok){ revealDocument(); return; }
+      if(ok) return;
       clearTokens();
       redirectHome();
     }).catch(function(){
