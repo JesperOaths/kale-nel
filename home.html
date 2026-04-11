@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <title>GEJAST Home</title>
-  <script>window.GEJAST_PAGE_VERSION='v420';</script><script src="./gejast-config.js?v420"></script>
+  <script>window.GEJAST_PAGE_VERSION='v424';</script><script src="./gejast-config.js?v424"></script>
   <style>
     :root{--gold:#9a8241;--paper:rgba(255,251,245,.86);--line:rgba(0,0,0,.08);--ink:#1a1a1a;--muted:#6b6257}
     *{box-sizing:border-box} body{margin:0;min-height:100vh;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(rgba(244,240,232,.78),rgba(244,240,232,.78)), url('./site-bg-desktop.webp') center/cover no-repeat fixed;color:var(--ink);display:flex;align-items:center;justify-content:center;padding:20px}
@@ -43,6 +43,54 @@
       const req = document.getElementById('requestLink');
       const log = document.getElementById('loginLink');
       const badge = document.getElementById('scopeBadge');
+      const note = document.getElementById('sessionStateNote');
+
+      function headers(){
+        return {
+          'Content-Type':'application/json',
+          apikey:(cfg.SUPABASE_PUBLISHABLE_KEY||''),
+          Authorization:`Bearer ${(cfg.SUPABASE_PUBLISHABLE_KEY||'')}`,
+          Accept:'application/json'
+        };
+      }
+      async function parse(res){
+        const txt = await res.text();
+        let data = null;
+        try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || ('HTTP ' + res.status)); }
+        if (!res.ok) throw new Error((data && (data.message || data.error || data.hint)) || ('HTTP ' + res.status));
+        return data;
+      }
+      async function validateViewer(token){
+        if (!token || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY) return false;
+        const attempts = [
+          ['get_public_state', { session_token: token }],
+          ['get_gejast_homepage_state', { session_token: token }],
+          ['get_jas_app_state', { session_token: token }],
+          ['get_public_state', { session_token_input: token }],
+          ['get_gejast_homepage_state', { session_token_input: token }],
+          ['get_jas_app_state', { session_token_input: token }]
+        ];
+        for (const [rpcName, payload] of attempts){
+          try{
+            const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${rpcName}`, {
+              method:'POST', mode:'cors', cache:'no-store', headers:headers(), body:JSON.stringify(payload)
+            });
+            const raw = await parse(res);
+            const data = raw && raw[rpcName] ? raw[rpcName] : raw;
+            const viewerName = String(data && (data.my_name || data.display_name || data.player_name || (data.viewer && data.viewer.display_name) || '') || '').trim();
+            const loggedIn = !!(data && (
+              data.is_logged_in === true ||
+              data.logged_in === true ||
+              data.session_valid === true ||
+              data.viewer_logged_in === true ||
+              (data.viewer && (data.viewer.is_logged_in === true || data.viewer.session_valid === true))
+            ));
+            if (viewerName || loggedIn) return true;
+          } catch (_) {}
+        }
+        return false;
+      }
+
       if (family){
         badge.textContent='Familiesite';
         badge.href='./home.html';
@@ -51,12 +99,28 @@
       }
       req.href = family ? `./request.html?scope=family&return_to=${encodeURIComponent(returnTo)}` : `./request.html?return_to=${encodeURIComponent(returnTo)}`;
       log.href = family ? `./login.html?scope=family&return_to=${encodeURIComponent(returnTo)}` : `./login.html?return_to=${encodeURIComponent(returnTo)}`;
-      if (cfg.isPlayerSessionExpired && cfg.isPlayerSessionExpired()) cfg.clearPlayerSessionTokens && cfg.clearPlayerSessionTokens();
+
+      if (cfg.isPlayerSessionExpired && cfg.isPlayerSessionExpired()) {
+        cfg.clearPlayerSessionTokens && cfg.clearPlayerSessionTokens();
+      }
+
       const token = cfg.getPlayerSessionToken ? cfg.getPlayerSessionToken() : '';
-      if (token){
+      if (!token) return;
+
+      validateViewer(String(token)).then((ok)=>{
+        if (!ok){
+          cfg.clearPlayerSessionTokens && cfg.clearPlayerSessionTokens();
+          if (note){
+            note.style.display = 'block';
+            note.textContent = 'Je oude sessie was niet meer geldig. Log opnieuw in om verder te gaan.';
+          }
+          return;
+        }
         cfg.touchPlayerActivity && cfg.touchPlayerActivity();
         location.replace(returnTo.startsWith('./') ? returnTo : `./${returnTo}`);
-      }
+      }).catch(()=>{
+        cfg.clearPlayerSessionTokens && cfg.clearPlayerSessionTokens();
+      });
     })();
   </script>
 <script src="./site-analytics.js?v371"></script>
