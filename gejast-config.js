@@ -245,10 +245,7 @@ function buildRequestUrl(returnTo, scope){
   const safeTarget = sanitizeReturnTarget(returnTo || '', normalizedScope === 'family' ? 'index.html?scope=family' : 'index.html');
   if (safeTarget) url.searchParams.set('return_to', safeTarget);
   if (normalizedScope === 'family') url.searchParams.set('scope', 'family');
-  url.searchParams.set('__bust', effectiveVersion);
-    url.searchParams.set('__bust', effectiveVersion);
-    url.searchParams.set('__bust', effectiveVersion);
-    return `${url.pathname}${url.search}${url.hash}`;
+  return `${url.pathname}${url.search}${url.hash}`;
 }
 
   function buildAdminUrl(reason='', returnTo=''){
