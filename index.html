@@ -72,7 +72,7 @@
     .page-link-live-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
     .page-link-live-row .live-pill{padding:6px 10px;font-size:11px;line-height:1}
     .page-link-live-hint{font-size:13px;color:#5d5549;font-weight:700}
-    body.boot-pending .main-card { opacity:0; transform:translateY(8px); pointer-events:none; }
+    body.boot-pending .main-card, body.auth-pending .main-card { opacity:0; transform:translateY(8px); pointer-events:none; }
     body.homepage-ready .main-card { transition:opacity .18s ease, transform .18s ease; }
 
     .site-scene {
@@ -663,13 +663,57 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v429';</script><script id="gejast-index-auth-preflight">(function(){try{var params=new URLSearchParams(location.search);var scope=params.get('scope')==='family'?'family':'friends';var keys=['jas_session_token_v11','jas_session_token_v10'];var activityKey='jas_last_activity_at_v1';var token='';for(var i=0;i<keys.length;i++){token=localStorage.getItem(keys[i])||sessionStorage.getItem(keys[i])||'';if(token)break;}var rawLast=localStorage.getItem(activityKey)||sessionStorage.getItem(activityKey)||'';var last=Number(rawLast||0);var expired=!!token&&Number.isFinite(last)&&last>0&&((Date.now()-last)>(12*60*60*1000));if(expired){keys.forEach(function(k){try{localStorage.removeItem(k);sessionStorage.removeItem(k);}catch(_){}});try{localStorage.removeItem(activityKey);sessionStorage.removeItem(activityKey);}catch(_){} token='';}if(!token){var target='index.html'+(scope==='family'?'?scope=family':'');var home='./home.html?return_to='+encodeURIComponent(target)+(scope==='family'?'&scope=family':'');location.replace(home);}}catch(_){}})();</script><script src="./gejast-config.js?v429"></script><script src="./gejast-clickable-cards.js?v429"></script><script src="./gejast-scope-context.js?v429"></script><script src="./gejast-family-rollout.js?v429"></script><script src="./gejast-scope.js?v429"></script>
-  <script src="./gejast-live-summary.js?v429"></script>
-  <script src="./gejast-scoped-rpc.js?v429"></script>
-  <script src="./gejast-combined-readers.js?v429"></script>
-<script src="./gejast-push-runtime.js?v429"></script>
-<script src="./gejast-fairness.js?v429"></script></head>
-<body class="homepage-ready"><div id="gejastTopRightToolsMount"></div>
+  <script>window.GEJAST_PAGE_VERSION='v430';</script><script id="gejast-index-auth-preflight">(function(){
+  var params=new URLSearchParams(location.search);
+  var scope=params.get('scope')==='family'?'family':'friends';
+  var keys=['jas_session_token_v11','jas_session_token_v10'];
+  var activityKey='jas_last_activity_at_v1';
+  var authResolve=function(){};
+  window.__GEJAST_INDEX_AUTH__=new Promise(function(resolve){ authResolve=resolve; });
+  function readToken(){ for(var i=0;i<keys.length;i++){ var value=localStorage.getItem(keys[i])||sessionStorage.getItem(keys[i])||''; if(value) return value; } return ''; }
+  function clearToken(){ try{ keys.forEach(function(k){ localStorage.removeItem(k); sessionStorage.removeItem(k); }); localStorage.removeItem(activityKey); sessionStorage.removeItem(activityKey); }catch(_){} }
+  function homeUrl(){ var target='index.html'+(scope==='family'?'?scope=family':''); return './home.html?return_to='+encodeURIComponent(target)+(scope==='family'?'&scope=family':''); }
+  function reveal(){ try{ if(document.body) document.body.classList.remove('auth-pending'); }catch(_){} authResolve(true); }
+  function redirect(){ try{ if(document.body) document.body.classList.add('auth-pending'); }catch(_){} authResolve(false); location.replace(homeUrl()); }
+  var token=readToken();
+  var rawLast=localStorage.getItem(activityKey)||sessionStorage.getItem(activityKey)||'';
+  var last=Number(rawLast||0);
+  var expired=!!token&&Number.isFinite(last)&&last>0&&((Date.now()-last)>(12*60*60*1000));
+  if(expired){ clearToken(); token=''; }
+  if(!token){ redirect(); return; }
+  async function parse(res){ var txt=await res.text(); var data=null; try{ data=txt?JSON.parse(txt):null; }catch(_){ throw new Error(txt||('HTTP '+res.status)); } if(!res.ok) throw new Error(data&&(data.message||data.error)||('HTTP '+res.status)); return data; }
+  async function validate(){
+    var cfg=window.GEJAST_CONFIG||{};
+    var url=(cfg.SUPABASE_URL||'').trim();
+    var key=(cfg.SUPABASE_PUBLISHABLE_KEY||'').trim();
+    if(!url||!key) return false;
+    var headers={ 'Content-Type':'application/json', apikey:key, Authorization:'Bearer '+key };
+    var attempts=[['get_public_state',{session_token:token}],['get_gejast_homepage_state',{session_token:token}],['get_public_state',{session_token_input:token}],['get_gejast_homepage_state',{session_token_input:token}]];
+    for(const entry of attempts){
+      try{
+        var res=await fetch(url+'/rest/v1/rpc/'+entry[0],{method:'POST',mode:'cors',cache:'no-store',headers:headers,body:JSON.stringify(entry[1])});
+        var data=await parse(res);
+        var name=String(data&&(data.my_name||data.display_name||data.player_name||(data.viewer&&data.viewer.display_name)||'')).trim();
+        if(name) return true;
+        if(data&&(data.viewer||data.player||data.session_valid===true||data.is_logged_in===true)) return true;
+      }catch(_){ }
+    }
+    return false;
+  }
+  window.addEventListener('DOMContentLoaded', function(){
+    Promise.race([validate(), new Promise(function(resolve){ setTimeout(function(){ resolve(false); }, 2500); })]).then(function(ok){
+      if(ok){ reveal(); return; }
+      clearToken();
+      redirect();
+    }).catch(function(){ clearToken(); redirect(); });
+  }, { once:true });
+})();</script><script src="./gejast-config.js?v430"></script><script src="./gejast-clickable-cards.js?v430"></script><script src="./gejast-scope-context.js?v430"></script><script src="./gejast-family-rollout.js?v430"></script><script src="./gejast-scope.js?v430"></script>
+  <script src="./gejast-live-summary.js?v430"></script>
+  <script src="./gejast-scoped-rpc.js?v430"></script>
+  <script src="./gejast-combined-readers.js?v430"></script>
+<script src="./gejast-push-runtime.js?v430"></script>
+<script src="./gejast-fairness.js?v430"></script></head>
+<body class="homepage-ready auth-pending"><div id="gejastTopRightToolsMount"></div>
   <div class="site-scene" aria-hidden="true">
     <div class="left-hand"><img src="./kale9goed.png" alt="" style="width:100%;display:block;" /></div>
     <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" style="width:100%;display:block;" /></div>
@@ -1708,6 +1752,14 @@ async function castExtraPollVote(desired_status) {
     }
 
     async function bootHomepage(){
+      try {
+        if (window.__GEJAST_INDEX_AUTH__) {
+          const ok = await window.__GEJAST_INDEX_AUTH__;
+          if (!ok) return;
+        }
+      } catch (_) {
+        return;
+      }
       document.body.classList.add('boot-pending');
       const cached = readHomepageBootCache();
       if (cached) applyHomepageBootBundle(cached, true);
@@ -1784,11 +1836,11 @@ async function castExtraPollVote(desired_status) {
 
   <div class="site-credit-watermark" data-version-watermark></div>
 
-<script src="./gejast-player-session-ui.js?v429"></script>
+<script src="./gejast-player-session-ui.js?v430"></script>
 
 
 <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script><script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v429"></script><script src="./gejast-geo.js?v429"></script><script src="./site-analytics.js?v429"></script>
+<script src="./drinks-verify-float.js?v430"></script><script src="./gejast-geo.js?v430"></script><script src="./site-analytics.js?v430"></script>
 <script>(function(){
   function reveal(){ try{ document.documentElement.style.visibility=''; document.documentElement.style.display=''; if(document.body) document.body.classList.remove('boot-pending'); }catch(_){} }
   function schedule(){ setTimeout(reveal, 250); setTimeout(reveal, 900); setTimeout(reveal, 1800); }

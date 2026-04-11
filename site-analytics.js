@@ -5,6 +5,9 @@
   const SUPABASE_PUBLISHABLE_KEY = cfg.SUPABASE_PUBLISHABLE_KEY;
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) return;
 
+  const currentFile = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+  if (['home.html','login.html','request.html','activate.html','activation.html','forgot.html','reset.html'].includes(currentFile)) return;
+
   const VISITOR_KEY = 'gejast_visitor_id_v2';
   const SESSION_KEY = 'gejast_visit_session_id_v2';
   const TRACKED_KEY = 'gejast_last_tracked_path_v2';
