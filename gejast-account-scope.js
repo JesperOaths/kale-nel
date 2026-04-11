@@ -59,14 +59,24 @@
 
   async function postRpc(name, payload){
     const url = `${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`;
-    const res = await global.fetch(url, {
-      method: 'POST',
-      mode: 'cors',
-      cache: 'no-store',
-      headers: headers(),
-      body: JSON.stringify(payload || {})
-    });
-    return parseResponse(res);
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeout = controller ? global.setTimeout(() => { try { controller.abort(); } catch (_) {} }, 2500) : null;
+    try {
+      const res = await global.fetch(url, {
+        method: 'POST',
+        mode: 'cors',
+        cache: 'no-store',
+        headers: headers(),
+        body: JSON.stringify(payload || {}),
+        signal: controller ? controller.signal : undefined
+      });
+      return parseResponse(res);
+    } catch (error) {
+      const msg = String(error && error.name === 'AbortError' ? 'RPC timeout' : (error && error.message) || error || '');
+      throw new Error(msg || 'RPC timeout');
+    } finally {
+      if (timeout) global.clearTimeout(timeout);
+    }
   }
 
   async function callRpcCompat(name, payloadOrPayloads){
