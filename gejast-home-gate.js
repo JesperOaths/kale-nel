@@ -1,5 +1,56 @@
 (function(){
   var cfg = window.GEJAST_CONFIG || {};
+  var blockerId = 'gejast-private-gate-blocker';
+  var redirecting = false;
+
+  installBlocker();
+
+  function installBlocker(){
+    try{
+      if (document.getElementById(blockerId)) return;
+      var style = document.createElement('style');
+      style.id = blockerId;
+      style.textContent = 'html{visibility:hidden !important;opacity:0 !important;background:#efe9dc !important;}body{visibility:hidden !important;opacity:0 !important;}';
+      (document.head || document.documentElement || document).appendChild(style);
+    }catch(_){
+      try{ document.documentElement.style.visibility='hidden'; document.documentElement.style.opacity='0'; }catch(__){}
+    }
+  }
+
+  function removeBlocker(){
+    try{
+      var style = document.getElementById(blockerId);
+      if (style && style.parentNode) style.parentNode.removeChild(style);
+    }catch(_){}
+    try{
+      document.documentElement.style.visibility='';
+      document.documentElement.style.opacity='';
+      document.body && (document.body.style.visibility='');
+      document.body && (document.body.style.opacity='');
+    }catch(_){}
+  }
+
+  function scrubDocument(){
+    try{
+      document.documentElement.style.visibility='hidden';
+      document.documentElement.style.opacity='0';
+      if (document.body){
+        document.body.innerHTML = '';
+        document.body.style.visibility='hidden';
+        document.body.style.opacity='0';
+      }
+    }catch(_){}
+  }
+
+  function redirect(url){
+    if (redirecting) return false;
+    redirecting = true;
+    scrubDocument();
+    try{ window.stop && window.stop(); }catch(_){}
+    try{ location.replace(url); }catch(_){ location.href = url; }
+    return false;
+  }
+
   function getToken(){ return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; }
   function clearTokens(){ try{ cfg.clearPlayerSessionTokens && cfg.clearPlayerSessionTokens(); }catch(_){} }
   function expired(){ try{ return cfg.isPlayerSessionExpired ? cfg.isPlayerSessionExpired() : !getToken(); }catch(_){ return !getToken(); } }
@@ -18,6 +69,7 @@
   async function parse(res){ var txt=await res.text(); var data=null; try{ data=txt?JSON.parse(txt):null; }catch(_){ throw new Error(txt||('HTTP '+res.status)); } if(!res.ok) throw new Error(data&& (data.message||data.error) || ('HTTP '+res.status)); return data; }
   function normalizeName(v){ return String(v||'').replace(/\s+/g,' ').trim(); }
   function uniqueNames(list){ var seen=new Set(); return (Array.isArray(list)?list:[]).map(normalizeName).filter(function(name){ var k=name.toLowerCase(); if(!name||seen.has(k)) return false; seen.add(k); return true; }); }
+
   async function fetchViewerName(token){
     var rpcList=[['get_public_state',{session_token:token}],['get_gejast_homepage_state',{session_token:token}],['get_jas_app_state',{session_token:token}],['get_public_state',{session_token_input:token}],['get_gejast_homepage_state',{session_token_input:token}],['get_jas_app_state',{session_token_input:token}]];
     for (const entry of rpcList){
@@ -30,6 +82,7 @@
     }
     return '';
   }
+
   async function fetchAllowedNames(scope){
     try{
       var helper=cfg&&typeof cfg.fetchScopedActivePlayerNames==='function'?cfg.fetchScopedActivePlayerNames:null;
@@ -50,18 +103,49 @@
     try{ if(window.GEJAST_SCOPE_UTILS&&typeof window.GEJAST_SCOPE_UTILS.filterNames==='function') names=window.GEJAST_SCOPE_UTILS.filterNames(names, scope); }catch(_){ }
     return names;
   }
+
   async function verifyScope(){
     var token=getToken(); if(!token || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY) return true;
     var name=await fetchViewerName(token); if(!name) return true;
     var allowed=await fetchAllowedNames(currentScope());
     return !allowed.length || allowed.indexOf(name)!==-1;
   }
-  if(expired()) clearTokens();
-  if(!getToken()){
-    try{ document.documentElement.style.display='none'; }catch(_){ }
-    location.replace(homeUrl());
-  } else {
-    try{ cfg.touchPlayerActivity && cfg.touchPlayerActivity(); }catch(_){ }
-    verifyScope().then(function(ok){ if(ok) return; clearTokens(); location.replace(homeUrl()); }).catch(function(){});
+
+  async function boot(){
+    if(expired()) clearTokens();
+    if(!getToken()) return redirect(homeUrl());
+
+    try{
+      if (cfg.ensurePlayerSessionOrRedirect && !cfg.ensurePlayerSessionOrRedirect(currentTarget(), currentScope())) {
+        return redirect(homeUrl());
+      }
+    }catch(_){
+      return redirect(homeUrl());
+    }
+
+    try{ cfg.touchPlayerActivity && cfg.touchPlayerActivity(); }catch(_){}
+
+    try{
+      var ok = await verifyScope();
+      if(!ok){
+        clearTokens();
+        return redirect(homeUrl());
+      }
+    }catch(_){}
+
+    removeBlocker();
   }
+
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', function(){
+      if (!redirecting) scrubDocument();
+    }, { once:true });
+  } else {
+    scrubDocument();
+  }
+
+  boot().catch(function(){
+    clearTokens();
+    redirect(homeUrl());
+  });
 })();
