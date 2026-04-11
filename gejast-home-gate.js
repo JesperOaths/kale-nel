@@ -13,7 +13,10 @@
       style.textContent = 'html{visibility:hidden !important;opacity:0 !important;background:#efe9dc !important;}body{visibility:hidden !important;opacity:0 !important;}';
       (document.head || document.documentElement || document).appendChild(style);
     }catch(_){
-      try{ document.documentElement.style.visibility='hidden'; document.documentElement.style.opacity='0'; }catch(__){}
+      try{
+        document.documentElement.style.visibility='hidden';
+        document.documentElement.style.opacity='0';
+      }catch(__){}
     }
   }
 
@@ -32,7 +35,7 @@
     }catch(_){}
   }
 
-  function scrubDocument(){
+  function scrubDocumentForRedirect(){
     try{
       document.documentElement.style.visibility='hidden';
       document.documentElement.style.opacity='0';
@@ -47,7 +50,7 @@
   function redirect(url){
     if (redirecting) return false;
     redirecting = true;
-    scrubDocument();
+    scrubDocumentForRedirect();
     try{ window.stop && window.stop(); }catch(_){}
     try{ location.replace(url); }catch(_){ location.href = url; }
     return false;
@@ -192,14 +195,6 @@
 
     try{ cfg.touchPlayerActivity && cfg.touchPlayerActivity(); }catch(_){}
     removeBlocker();
-  }
-
-  if (document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', function(){
-      if (!redirecting) scrubDocument();
-    }, { once:true });
-  } else {
-    scrubDocument();
   }
 
   boot().catch(function(){
