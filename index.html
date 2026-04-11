@@ -663,13 +663,13 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v425';</script><script src="./gejast-config.js?v425"></script><script src="./gejast-clickable-cards.js?v425"></script><script src="./gejast-scope-context.js?v425"></script><script src="./gejast-family-rollout.js?v425"></script><script src="./gejast-scope.js?v425"></script><script src="./gejast-home-gate.js?v425"></script>
-  <script src="./gejast-live-summary.js?v425"></script>
-  <script src="./gejast-scoped-rpc.js?v425"></script>
-  <script src="./gejast-combined-readers.js?v425"></script>
-<script src="./gejast-push-runtime.js?v425"></script>
-<script src="./gejast-fairness.js?v425"></script></head>
-<body class="boot-pending homepage-ready"><div id="gejastTopRightToolsMount"></div>
+  <script>window.GEJAST_PAGE_VERSION='v426';</script><script src="./gejast-config.js?v426"></script><script src="./gejast-clickable-cards.js?v426"></script><script src="./gejast-scope-context.js?v426"></script><script src="./gejast-family-rollout.js?v426"></script><script src="./gejast-scope.js?v426"></script><script src="./gejast-home-gate.js?v426"></script>
+  <script src="./gejast-live-summary.js?v426"></script>
+  <script src="./gejast-scoped-rpc.js?v426"></script>
+  <script src="./gejast-combined-readers.js?v426"></script>
+<script src="./gejast-push-runtime.js?v426"></script>
+<script src="./gejast-fairness.js?v426"></script></head>
+<body class="homepage-ready"><div id="gejastTopRightToolsMount"></div>
   <div class="site-scene" aria-hidden="true">
     <div class="left-hand"><img src="./kale9goed.png" alt="" style="width:100%;display:block;" /></div>
     <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" style="width:100%;display:block;" /></div>
@@ -1712,8 +1712,15 @@ async function castExtraPollVote(desired_status) {
       const cached = readHomepageBootCache();
       if (cached) applyHomepageBootBundle(cached, true);
       ensureAdminViewer().then(applyAdminViewerRefresh).catch(() => {});
-      const core = await load();
-      document.body.classList.remove('boot-pending');
+      let core = null;
+      try {
+        core = await Promise.race([
+          load(),
+          new Promise((resolve) => setTimeout(() => resolve(null), 1800))
+        ]);
+      } finally {
+        document.body.classList.remove('boot-pending');
+      }
       const finishNonCritical = async () => {
         try {
           const readers = window.GEJAST_COMBINED_READERS;
@@ -1777,15 +1784,16 @@ async function castExtraPollVote(desired_status) {
 
   <div class="site-credit-watermark" data-version-watermark></div>
 
-<script src="./gejast-player-session-ui.js?v425"></script>
+<script src="./gejast-player-session-ui.js?v426"></script>
 
 
 <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script><script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v425"></script><script src="./gejast-geo.js?v425"></script><script src="./site-analytics.js?v425"></script>
+<script src="./drinks-verify-float.js?v426"></script><script src="./gejast-geo.js?v426"></script><script src="./site-analytics.js?v426"></script>
 <script>(function(){
-  function reveal(){ try{ document.documentElement.style.visibility=''; document.documentElement.style.display=''; document.body && document.body.classList.remove('boot-pending'); }catch(_){} }
-  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', function(){ setTimeout(reveal, 1200); }, {once:true}); }
-  else { setTimeout(reveal, 1200); }
+  function reveal(){ try{ document.documentElement.style.visibility=''; document.documentElement.style.display=''; if(document.body) document.body.classList.remove('boot-pending'); }catch(_){} }
+  function schedule(){ setTimeout(reveal, 250); setTimeout(reveal, 900); setTimeout(reveal, 1800); }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', schedule, {once:true}); }
+  else { schedule(); }
 })();</script>
 </body>
 </html>
