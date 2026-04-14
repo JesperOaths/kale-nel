@@ -663,7 +663,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v432';</script><script src="./gejast-config.js?v432"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v433';</script><script src="./gejast-config.js?v433"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
   <script src="./gejast-live-summary.js?v389"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
   <script src="./gejast-combined-readers.js?v426"></script>
@@ -1164,8 +1164,8 @@ function renderExtraNames(id, items, emptyText, listKey) {
 function renderExtraPollState(data) {
   const previousCount = Number(currentDrinksPollState?.can_count ?? currentDrinksPollState?.yes_count ?? currentDrinksPollState?.legends?.length ?? currentDrinksPollState?.yes_names?.length ?? 0);
   currentDrinksPollState = data || null;
-  const legends = data.legends || data.yes_names || data.can_names || [];
-  const losers = data.losers || data.no_names || data.cant_names || data.cannot_names || [];
+  const legends = data.legends || data.yes_names || [];
+  const losers = data.losers || data.no_names || [];
   const canCount = Number(data.can_count ?? data.yes_count ?? legends.length ?? 0);
   const state = computeDrinksPollState(canCount);
   const word = document.getElementById('drinksStateWord');
@@ -1433,8 +1433,8 @@ async function castExtraPollVote(desired_status) {
 
       const previousCount = Number(currentHomepageState?.can_count ?? currentHomepageState?.yes_count ?? currentHomepageState?.legends?.length ?? currentHomepageState?.yes_names?.length ?? 0);
       currentHomepageState = data || null;
-      const legends = data.legends || data.yes_names || data.can_names || [];
-      const losers = data.losers || data.no_names || data.cant_names || data.cannot_names || [];
+      const legends = data.legends || data.yes_names || [];
+      const losers = data.losers || data.no_names || [];
       const canCount = Number(data.can_count ?? data.yes_count ?? legends.length ?? 0);
       const state = data.status_label
         ? { key: data.status_key || 'no', label: data.status_label, copy: yesSaidCopy(canCount) }
@@ -1493,7 +1493,6 @@ async function castExtraPollVote(desired_status) {
       try {
         await castVote(status);
         renderState(await getHomepageState());
-        setTimeout(async () => { try { renderState(await getHomepageState()); } catch (_) {} }, 500);
         setStatus(`Opgeslagen: ${status === 'ja' ? 'ik kan' : 'ik kan niet'}.`, 'ok');
       } catch (error) {
         const msg = error?.message || 'Onbekende fout';
@@ -1508,14 +1507,8 @@ async function castExtraPollVote(desired_status) {
     async function handleExtraPollVote(status) {
       if (!getSessionToken()) { goToLoginWithIntent(status, EXTRA_POLL_KEY); return; }
       try {
-        const data = await castExtraPollVote(status);
-        const returnedPollKey = String(data?.poll_key || '').trim().toLowerCase();
-        const expectedPollKey = String(EXTRA_POLL_KEY || '').trim().toLowerCase();
-        if (returnedPollKey && expectedPollKey && returnedPollKey !== expectedPollKey) {
-          renderExtraPollState(await getExtraPollState());
-        } else {
-          renderExtraPollState(data);
-        }
+        await castExtraPollVote(status);
+        renderExtraPollState(await getExtraPollState());
         setExtraPollStatus(`Opgeslagen: ${status === 'ja' ? 'ik ga drinken' : 'nee :('}.`, 'ok');
       } catch (error) {
         const msg = error?.message || 'Onbekende fout';
@@ -1682,11 +1675,11 @@ async function castExtraPollVote(desired_status) {
     }
     function applyHomepageBootBundle(bundle, fromCache = false){
       if (!bundle || typeof bundle !== 'object') return;
-      if (bundle.homepage_state && (fromCache || !currentHomepageState)) {
+      if (bundle.homepage_state) {
         renderState(bundle.homepage_state);
         setStatus('');
       }
-      if (bundle.extra_poll_state && (fromCache || !currentDrinksPollState)) {
+      if (bundle.extra_poll_state) {
         const pollKey = String(bundle.extra_poll_state.poll_key || '').trim().toLowerCase();
         const expectedPollKey = String(EXTRA_POLL_KEY || '').trim().toLowerCase();
         if (!pollKey || !expectedPollKey || pollKey === expectedPollKey) {

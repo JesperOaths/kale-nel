@@ -1,13 +1,20 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
-  const STORAGE_KEY = 'gejast_paardenrace_room_code_v432';
+  const STORAGE_KEY = 'gejast_paardenrace_room_code_v433';
   function sessionToken(){ return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; }
+  const SESSIONLESS_RPC = new Set([
+    'get_paardenrace_open_rooms_public',
+    'verify_paardenrace_wager_safe',
+    'verify_paardenrace_obligation_safe',
+    'get_paardenrace_pending_drink_verifications_safe'
+  ]);
   async function rpc(fn, args={}){
     const token = sessionToken();
-    const body = Object.assign({}, args, {
-      session_token: token || null,
-      session_token_input: token || null
-    });
+    const body = Object.assign({}, args);
+    if (!SESSIONLESS_RPC.has(String(fn||''))) {
+      if (!Object.prototype.hasOwnProperty.call(body, 'session_token')) body.session_token = token || null;
+      if (!Object.prototype.hasOwnProperty.call(body, 'session_token_input')) body.session_token_input = token || null;
+    }
     const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${fn}`, {
       method:'POST',
       headers:{
@@ -28,17 +35,6 @@
       throw new Error(msg);
     }
     return data;
-  }
-
-  async function rpcFallback(primaryFn, primaryArgs, fallbackFn, fallbackArgs){
-    try { return await rpc(primaryFn, primaryArgs || {}); }
-    catch (error) {
-      const msg = String(error && error.message || '');
-      if (/schema cache|could not find the function|bestaat niet|does not exist/i.test(msg)) {
-        return await rpc(fallbackFn, fallbackArgs || primaryArgs || {});
-      }
-      throw error;
-    }
   }
   function getStoredRoomCode(){ return localStorage.getItem(STORAGE_KEY) || ''; }
   function setStoredRoomCode(code){ if(code) localStorage.setItem(STORAGE_KEY, String(code).trim().toUpperCase()); }
@@ -61,5 +57,5 @@
     return `<div><div class="small" style="margin-bottom:8px">Laatste kaarten: ${draws.slice(-5).join(', ') || 'nog geen'}</div>${gates}${rows}</div>`;
   }
   function gotoLive(room){ window.location.href = `./paardenrace_live.html?room=${encodeURIComponent(room)}`; }
-  window.GEJAST_PAARDENRACE = { rpc, rpcFallback, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode, suitLabel, renderBoard, gotoLive };
+  window.GEJAST_PAARDENRACE = { rpc, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode, suitLabel, renderBoard, gotoLive };
 })();
