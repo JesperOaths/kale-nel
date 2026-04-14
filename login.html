@@ -7,14 +7,14 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inloggen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v413';</script>
+  <script>window.GEJAST_PAGE_VERSION='v414';</script>
   <style>
     :root { --gold: #9a8241; --dark-bg: #111; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.08); }
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(rgba(232,228,217,0.90), rgba(232,228,217,0.90)), url('./wordtergejast.png') center/cover no-repeat fixed; }
-    .site-scene { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
-    .brand-watermark { position: absolute; top: 5%; left: 5%; opacity: 0.1; width: 400px; }
-    .spinoza-shadow { position: absolute; bottom: 0; right: 0; opacity: 0.15; width: 600px; }
+    body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./site-bg-desktop.webp') center/cover no-repeat; }
+    .site-scene { display:none; }
+    .brand-watermark { display:none; }
+    .spinoza-shadow { display:none; }
     .main-card { background: var(--card-bg); border-radius: 24px; padding: 40px; width: 90%; max-width: 500px; box-shadow: 0 20px 50px rgba(0,0,0,0.08); position: relative; text-align: center; }
     .card-logo { position: absolute; top: 25px; right: 25px; width: 50px; }
     h1 { font-size: 32px; margin: 0 0 20px 0; letter-spacing: -1px; }
@@ -48,13 +48,9 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/login.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v413"></script><script src="./gejast-account-scope.js?v394"></script><script src="./gejast-account-links.js?v399"></script>
+  <script src="./gejast-config.js?v414"></script><script src="./gejast-account-scope.js?v394"></script><script src="./gejast-account-links.js?v399"></script>
 </head>
 <body>
-  <div class="site-scene">
-    <div class="brand-watermark" data-version-watermark><img src="./dubbeleD-goud.png" width="100%"></div>
-    
-  </div>
 
   <main class="main-card">
     <a href="./index.html" aria-label="Terug naar home"><img src="./logo.png" class="card-logo" /></a>

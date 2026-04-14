@@ -1,11 +1,21 @@
-GEJAST v414 - paardenrace join fallback + sitewide version drift fix
+GEJAST patch v414
 
-What this patch fixes:
-- paardenrace create-room flow no longer hard-requires paardenrace_join_room_scoped after create_room
-- paardenrace join flow now tolerates a missing join_room RPC and falls back to update_selection_scoped instead of dying immediately
-- adds a best-effort SQL compatibility wrapper for paardenrace_join_room_scoped
-- fixes visible version drift sitewide by sourcing the watermark/version label from shared gejast-config.js CONFIG.VERSION instead of page-local/script-local candidates
+Files included
+- login.html
+- gejast-config.js
 
-Important note:
-- this is a real follow-up to the live runtime error shown in chat
-- if the backend requires stricter explicit membership insertion before update_selection_scoped, one more SQL follow-up may still be needed after live testing
+What changed
+- Keeps the v412 and v413 login fixes.
+- Simplifies the login entry page visual layer further.
+- Removes the heavy decorative scene from login.html.
+- Replaces the login background image with the lighter shared site background.
+- Removes the fixed background attachment from login.html.
+- Bumps the shared visible version from v413 to v414.
+
+Why this patch exists
+- The reported symptom changed from a hard boot break to: "I can click once on the login page but then it freezes."
+- That pattern is consistent with a fragile entry page render path on interaction/focus, especially on mobile browsers.
+- This patch strips the login page down further so the public entry surface behaves more like the simpler working home page.
+
+SQL
+- None required.
