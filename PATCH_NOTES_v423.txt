@@ -1,0 +1,16 @@
+GEJAST paardenrace patch v423
+
+GitHub zip files:
+- paardenrace.html
+- gejast-config.js
+- PATCH_NOTES_v423.txt
+
+Separate SQL:
+- gejast_v423_paardenrace.sql
+
+Changes:
+- room membership is now keyed by session token hash instead of only player name
+- different logged-in players should now appear as separate lobby members reliably
+- lobby/open-room summaries show player wager text more clearly
+- host-provided room codes are preserved
+- ready gating now requires wager verification for every player
