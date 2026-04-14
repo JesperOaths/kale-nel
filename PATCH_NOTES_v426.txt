@@ -1,0 +1,14 @@
+GEJAST patch v426
+
+Changed files:
+- index.html
+- gejast-combined-readers.js
+- gejast-config.js
+
+Fixes:
+- aligns the homepage drinks poll with the correct poll key (gezopen_vanavond)
+- stops cached or boot-bundle data for the wrong poll from overwriting the Legends/Losers lists
+- refreshes the Legends/Losers state from the authoritative poll after a click when needed
+- bumps the visible shared version to v426
+
+No SQL included.

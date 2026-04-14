@@ -15,7 +15,7 @@
     } catch (_) {
       const [homepageState, extraPoll, ladders, drinksHome, drinksTop5, liveEntries] = await Promise.allSettled([
         RPC.callRpc('get_gejast_homepage_state', { session_token: sessionToken }).catch(() => RPC.callRpc('get_public_state', { session_token: sessionToken })),
-        RPC.callRpc('get_site_poll_state', { poll_key_input: 'gejast_drinks_donderdag', session_token: sessionToken }),
+        RPC.callRpc('get_site_poll_state', { poll_key_input: 'gezopen_vanavond', session_token: sessionToken }),
         RPC.callRpc('get_homepage_ladders_public_scoped', {}),
         RPC.callRpc('get_drinks_homepage_public_scoped', {}),
         RPC.callRpc('get_drinks_homepage_top5_public_scoped', {}),
