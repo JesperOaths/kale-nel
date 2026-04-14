@@ -1,12 +1,1 @@
-GEJAST v415 - paardenrace update_selection schema-cache compatibility
-
-What this patch fixes:
-- adds a shared GEJAST_SCOPED_RPC compatibility rename for paardenrace_update_selection_scoped
-- retries the RPC using legacy parameter names:
-  room_code_input, selected_suit_input, session_token_input, wager_bakken_input
-- bumps the visible frontend version to v415
-- keeps the watermark sourced from shared gejast-config.js
-
-Why this is the right owner path:
-- the live error is a schema-cache/signature drift issue on a shared RPC contract
-- that belongs in the shared RPC helper, not as another page-local hack
+GEJAST patch v415 reupload\n\nFiles included\n- gejast-config.js\n- gejast-paardenrace.js\n- paardenrace.html\n- paardenrace_live.html\n- paardenrace_stats.html\n- gejast_v415_paardenrace.sql\n
