@@ -1,15 +1,13 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
-  const STORAGE_KEY = 'gejast_paardenrace_room_code_v433';
+  const STORAGE_KEY = 'gejast_paardenrace_room_code_v434';
   function sessionToken(){ return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; }
   const SESSIONLESS_RPC = new Set([
-    'get_paardenrace_open_rooms_public',
-    'verify_paardenrace_wager_safe',
-    'verify_paardenrace_obligation_safe',
-    'get_paardenrace_pending_drink_verifications_safe'
+    'get_paardenrace_open_rooms_public'
   ]);
   async function rpc(fn, args={}){
     const token = sessionToken();
+    if (cfg.touchPlayerActivity && token) { try { cfg.touchPlayerActivity(); } catch(_){} }
     const body = Object.assign({}, args);
     if (!SESSIONLESS_RPC.has(String(fn||''))) {
       if (!Object.prototype.hasOwnProperty.call(body, 'session_token')) body.session_token = token || null;

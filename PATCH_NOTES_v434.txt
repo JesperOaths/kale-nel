@@ -1,0 +1,15 @@
+GEJAST paardenrace patch v434
+
+Included in GitHub zip:
+- paardenrace.html
+- paardenrace_live.html
+- gejast-paardenrace.js
+- gejast-config.js
+
+Separate SQL:
+- gejast_v434_paardenrace.sql
+
+Fixes:
+- Host wager verification now sends the logged-in player session token again.
+- Added host 'Weiger + kick' action for pending wagers.
+- Bumped paardenrace files and visible version to v434.
