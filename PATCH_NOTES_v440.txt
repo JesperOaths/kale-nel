@@ -1,0 +1,13 @@
+GEJAST patch v440
+
+What changed
+- paardenrace live page now uses the paardenrace track PNG as the main live board
+- live match now visibly uses the paardenrace card assets:
+  - paardenrace-card-back.png for the draw pile / closed gates
+  - paardenrace-cards-sheet.png as live race art
+  - paardenrace-horses-sheet.png in the winner overlay
+- added a host-only "Sluit match" button on paardenrace_live.html
+- closing the match disbands the room and returns the host to the lobby
+- bumped shared visible version to v440
+
+No SQL needed for this patch.
