@@ -1,0 +1,26 @@
+GEJAST patch v441
+
+Files:
+- paardenrace.html
+- paardenrace_live.html
+- gejast-paardenrace.js
+- index.html
+- gejast-config.js
+- paardenrace-track-supplied-cards.png
+- paardenrace-cards-supplied.webp
+- paardenrace-card-back.png
+- paardenrace-ace-hearts.png
+- paardenrace-ace-diamonds.png
+- paardenrace-ace-clubs.png
+- paardenrace-ace-spades.png
+
+Changes:
+- live paardenrace now uses the supplied arena track PNG as the actual board
+- moving horses are now ace horse cards cropped from the supplied paardenrace card image
+- face-down cards use the supplied dark card back image
+- lane labels use suit symbols instead of the old Har/Rui/Kla/Sch pill treatment
+- normal paardenrace lobby page no longer handles live board rendering
+- room-name input is no longer overwritten by live polling while typing
+- started rooms redirect viewers to room-specific paardenrace_live pages
+- Thursday Legends/Losers on index now load/store through the site poll RPC so lists persist on refresh
+- Paardenrace and Pikken homepage boxes are present
