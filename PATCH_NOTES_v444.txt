@@ -1,0 +1,16 @@
+GEJAST v444 patch notes
+
+Files changed:
+- paardenrace.html
+- gejast-paardenrace.js
+- gejast-config.js
+
+What changed:
+- bumped shared visible version to v444
+- stopped the room code/name field from being overwritten by the 1.2s poll while typing
+- hardened the create-room button flow with a real busy state and clearer status handling
+- create-room now reads directly from the current room-code field and preserves the typed value until the backend returns
+- after successful creation, the returned room code is stored and applied without the poll clobbering it
+
+Why:
+- the lobby poll was still fighting the room-code input, which made the create interaction brittle and could look like nothing happened when clicking the button
