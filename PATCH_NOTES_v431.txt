@@ -1,0 +1,6 @@
+GEJAST paardenrace v431
+
+Frontend-only fix.
+- Fixed paardenrace lobby save call to stop sending wager_drink_event_id_input to save_paardenrace_choice_safe.
+- This removes the schema-cache mismatch that caused saving suit+wager to fail.
+- Bumped paardenrace frontend files to v431.
