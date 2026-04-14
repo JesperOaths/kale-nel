@@ -1,0 +1,11 @@
+GEJAST paardenrace patch v430
+
+Frontend:
+- paardenrace host verification now writes wagers directly into drinks/statistieken copy
+- live page now exposes a host drink verification panel for pending nomination obligations
+- paardenrace pages/config bumped to v430
+
+SQL:
+- adds direct verified drink-event write path for paardenrace host verification
+- wager verification no longer depends on the normal drinks request flow
+- adds pending obligation verification path for post-race nominations
