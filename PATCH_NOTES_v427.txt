@@ -1,0 +1,11 @@
+GEJAST patch v427
+
+Changed files:
+- index.html
+- pikken.html
+- gejast-config.js
+
+Fixes:
+- reinstates the Paardenrace homepage box
+- adds a Pikken box to the right of Paardenrace
+- bumps the visible shared version to v427
