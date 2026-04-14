@@ -1,6 +1,6 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
-  const STORAGE_KEY = 'gejast_paardenrace_room_code_v444';
+  const STORAGE_KEY = 'gejast_paardenrace_room_code_v445';
   function sessionToken(){ return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; }
   async function rpc(fn, args={}){
     const token = sessionToken();

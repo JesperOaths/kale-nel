@@ -1,0 +1,6 @@
+GEJAST paardenrace v445
+
+- Restored host self-verify behavior in lobby verify UI
+- Added fallback pending verification rendering from live player rows
+- Added optimistic verify-state update after host clicks Verifieer
+- Bumped paardenrace frontend version to v445
