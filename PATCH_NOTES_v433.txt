@@ -1,0 +1,15 @@
+GEJAST paardenrace/index patch v433
+
+Included in GitHub zip only:
+- paardenrace.html
+- paardenrace_live.html
+- gejast-paardenrace.js
+- index.html
+- gejast-config.js
+
+Changes:
+- fixed paardenrace lobby save path to use the current update_paardenrace_room_choice_safe flow with a safer RPC helper
+- stopped 1.2s polling from wiping the suit/wager fields while a user is editing them
+- restored host wager verification rendering by falling back to pending players from live lobby state
+- bumped paardenrace and index frontend files to v433
+- made the second index Legends/Losers question always re-fetch authoritative state after voting so names land in the correct list
