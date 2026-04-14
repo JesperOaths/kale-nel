@@ -1,7 +1,21 @@
-GEJAST v417 - paardenrace first-open modal + dynamic room-player column fix
+GEJAST paardenrace patch v417
 
-Included:
-- opens the kamer maken / kamer kiezen popup immediately when paardenrace.html first loads
-- removes the side lane boxes/buttons from the track view by using the clean supplied track image only
-- creates a dynamic paardenrace_update_selection_scoped SQL function that no longer hardcodes player_name on paardenrace_room_players
-- keeps the sitewide visible version sourced from shared gejast-config.js (v417)
+GitHub zip files:
+- paardenrace.html
+- gejast-config.js
+- gejast-paardenrace.js
+- paardenrace_live.html
+- paardenrace_stats.html
+
+Separate SQL:
+- gejast_v417_paardenrace.sql
+
+Changes:
+- bumped visible version to v417
+- improved lobby usability and visibility
+- added leave room button
+- added disband room button for host
+- visible open room list now shows players, ready count and total stakes
+- lobby summary now shows total Bakken at stake and ready count
+- player rows show each player's wager clearly
+- room state remains stored after refresh
