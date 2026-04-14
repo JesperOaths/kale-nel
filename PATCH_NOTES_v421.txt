@@ -1,11 +1,16 @@
-GEJAST v421 emergency recovery
+GEJAST paardenrace patch v421
 
-What changed:
-- disables the global auto-run strict logged-out redirect from gejast-config.js
-- keeps the shared version sync and MutationObserver
-- intended to restore site loading after the v420 sitewide sweep started forcing every page through the shared config boot path
+GitHub zip files:
+- paardenrace.html
+- gejast-config.js
+- PATCH_NOTES_v421.txt
 
-Likely cause of the outage:
-- v420 pointed every page to shared gejast-config.js
-- the strict redirect guard inside gejast-config.js then auto-ran everywhere
-- that global boot-time redirect was too aggressive for the live site state
+Separate SQL:
+- gejast_v421_paardenrace.sql
+
+Changes:
+- frontend now polls automatically every ~1.2s for lobby/open-room updates
+- if a room disappears, the page clears the stale lobby view automatically
+- create room now always uses a fresh random room code
+- stale/null room-player rows are normalized or deleted server-side
+- create/join/leave room functions were rebuilt to stop the 'Room niet gevonden' create bug

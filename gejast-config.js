@@ -1,9 +1,8 @@
 (function(){
   const CONFIG = {
-    VERSION:'v420',
+    VERSION:'v421',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
-    MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
     PLAYER_SESSION_KEYS: ['jas_session_token_v11','jas_session_token_v10'],
     PLAYER_LAST_ACTIVITY_KEY: 'jas_last_activity_at_v1',
     PLAYER_SESSION_IDLE_MS: 12 * 60 * 60 * 1000
@@ -15,9 +14,6 @@
   function watermarkStyles(node){ if (!node || !node.style) return; Object.assign(node.style,{position:'fixed',left:'50%',transform:'translateX(-50%)',bottom:'14px',zIndex:'9999',padding:'8px 14px',borderRadius:'999px',background:'rgba(17,17,17,0.88)',border:'1px solid rgba(212,175,55,0.35)',color:'#f3e3a6',font:'700 13px/1.2 Inter,system-ui,sans-serif',letterSpacing:'.03em',pointerEvents:'none',userSelect:'none'}); }
   function applyVersionLabel(){ document.querySelectorAll('[data-version-watermark],.site-credit-watermark').forEach((node)=>{ node.textContent = label; watermarkStyles(node); }); }
   function getPlayerSessionToken(){ for(const key of CONFIG.PLAYER_SESSION_KEYS){ const value = localStorage.getItem(key) || sessionStorage.getItem(key); if (value) return value; } return ''; }
-  function clearPlayerSessionTokens(){ for(const key of CONFIG.PLAYER_SESSION_KEYS){ localStorage.removeItem(key); sessionStorage.removeItem(key); } localStorage.removeItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY); sessionStorage.removeItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY); }
-  function touchPlayerActivity(){ if (!getPlayerSessionToken()) return; const ts = String(Date.now()); localStorage.setItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY, ts); sessionStorage.setItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY, ts); }
-  function normalizeProfileImageUrl(value){ return String(value||'').trim(); }
-  window.GEJAST_CONFIG = Object.assign(window.GEJAST_CONFIG||{}, CONFIG, { applyVersionLabel, getPlayerSessionToken, clearPlayerSessionTokens, touchPlayerActivity, normalizeProfileImageUrl });
+  window.GEJAST_CONFIG = Object.assign(window.GEJAST_CONFIG||{}, CONFIG, { applyVersionLabel, getPlayerSessionToken });
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', applyVersionLabel, { once:true }); else applyVersionLabel();
 })();
