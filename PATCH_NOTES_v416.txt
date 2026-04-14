@@ -1,10 +1,15 @@
-GEJAST v416 - missing paardenrace_update_selection_scoped + sitewide version observer
+GEJAST paardenrace patch v416
 
 Included:
-- creates the missing paardenrace_update_selection_scoped(room_code_input, selected_suit_input, session_token_input, site_scope_input, wager_bakken_input)
-- upserts the viewer into paardenrace_room_players using _gejast_name_for_session(session_token_input)
-- returns room state after updating selection
-- hardens gejast-config.js with a MutationObserver so the shared version watermark keeps re-applying sitewide instead of drifting when pages rewrite DOM late
+- paardenrace.html
+- gejast-config.js
+- gejast_v416_paardenrace.sql
 
-Important note:
-- this SQL assumes the paardenrace tables use the repo-brief names paardenrace_rooms(id, room_code, site_scope, status/stage) and paardenrace_room_players(room_id, player_name, selected_suit, wager_bakken, ready, joined_at, updated_at)
+Changes:
+- bumped visible version to v416
+- added visible open room list on paardenrace lobby page
+- made joining easier by allowing direct click-to-join from visible room cards
+- kept room code persistence after refresh
+- added RPC to list joinable paardenrace rooms
+
+Run SQL first, then upload frontend files.
