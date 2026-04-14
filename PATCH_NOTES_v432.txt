@@ -1,0 +1,10 @@
+GEJAST v432 patch notes
+
+Frontend:
+- paardenrace.html bumped to v432 and now preserves local suit/wager input while the 1.2s live polling continues
+- paardenrace save uses a compatibility fallback between update_paardenrace_room_choice_safe and save_paardenrace_choice_safe so older/newer DB variants both work
+- paardenrace verification rows and player rows show Bakken more prominently again
+- paardenrace_live.html now points at the current v432 shared version
+- index.html no longer lets a late homepage boot bundle overwrite a fresher Thursday vote result
+- index.html accepts additional legends/losers key variants and does a second refresh after voting on the Thursday question
+- gejast-config.js bumped to v432
