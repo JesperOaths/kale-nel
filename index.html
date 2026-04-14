@@ -663,7 +663,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v435';</script><script src="./gejast-config.js?v435"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v436';</script><script src="./gejast-config.js?v436"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
   <script src="./gejast-live-summary.js?v389"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
   <script src="./gejast-combined-readers.js?v426"></script>
@@ -1492,13 +1492,41 @@ async function castVote(desired_status) {
       url.searchParams.set('vote_poll', pollKey);
       window.location.href = url.toString();
     }
-    async function handleVote(status) {
+    
+    function reconcileHomepageVoteState(data, desiredStatus) {
+      const out = { ...(data || {}) };
+      const myName = String(out.my_name || currentHomepageState?.my_name || '').trim();
+      if (!myName) return out;
+      const legends = Array.isArray(out.legends) ? [...out.legends] : (Array.isArray(out.yes_names) ? [...out.yes_names] : []);
+      const losers = Array.isArray(out.losers) ? [...out.losers] : (Array.isArray(out.no_names) ? [...out.no_names] : []);
+      const norm = (v) => String(v || '').trim().toLowerCase();
+      const scrub = (arr) => arr.filter((name, idx) => norm(name) && arr.findIndex((x)=>norm(x)===norm(name))===idx && norm(name)!==norm(myName));
+      const nextLegends = scrub(legends);
+      const nextLosers = scrub(losers);
+      if (desiredStatus === 'ja') nextLegends.unshift(myName);
+      else if (desiredStatus === 'nee') nextLosers.unshift(myName);
+      out.legends = nextLegends;
+      out.losers = nextLosers;
+      out.yes_names = nextLegends;
+      out.no_names = nextLosers;
+      out.can_names = nextLegends;
+      out.cant_names = nextLosers;
+      out.can_count = nextLegends.length;
+      out.yes_count = nextLegends.length;
+      out.no_count = nextLosers.length;
+      out.my_status = desiredStatus;
+      return out;
+    }
+
+async function handleVote(status) {
       if (!getSessionToken()) { goToLoginWithIntent(status, 'gejast_donderdag'); return; }
       try {
         await castVote(status);
-        renderState(await getHomepageState());
-        setTimeout(async () => { try { renderState(await getHomepageState()); } catch (_) {} }, 300);
-        setTimeout(async () => { try { renderState(await getHomepageState()); } catch (_) {} }, 1200);
+        const fresh = await getHomepageState();
+        renderState(reconcileHomepageVoteState(fresh, status));
+        setTimeout(async () => { try { renderState(reconcileHomepageVoteState(await getHomepageState(), status)); } catch (_) {} }, 300);
+        setTimeout(async () => { try { renderState(reconcileHomepageVoteState(await getHomepageState(), status)); } catch (_) {} }, 1200);
+        setTimeout(async () => { try { renderState(await getHomepageState()); } catch (_) {} }, 2400);
         setStatus(`Opgeslagen: ${status === 'ja' ? 'ik kan' : 'ik kan niet'}.`, 'ok');
       } catch (error) {
         const msg = error?.message || 'Onbekende fout';

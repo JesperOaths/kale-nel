@@ -1,0 +1,12 @@
+GEJAST patch v436
+
+Included in GitHub zip:
+- index.html
+- paardenrace.html
+- paardenrace_live.html
+- gejast-config.js
+
+Fixes:
+- Homepage donderdag Legends/Losers vote now reconciles the viewer into the correct list immediately after a click, then re-fetches authoritative state again.
+- Bumps visible version to v436 and aligns index/paardenrace pages to the shared config version.
+- Separate SQL v436 fixes paardenrace host wager verification so it no longer attempts a forbidden direct write to drink_verified_records without the canonical sync context.
