@@ -1,0 +1,14 @@
+GEJAST paardenrace frontend correction v429
+
+Changed files:
+- paardenrace.html
+- paardenrace_live.html
+- gejast-paardenrace.js
+- gejast-config.js
+- paardenrace-track.png
+
+Fixes:
+- paardenrace pages now match the current shared version v429
+- saving a wager no longer calls the failing drinks request path that was throwing NEW.lat errors
+- suit/wager inputs stay protected from the 1.2s polling refresh while typing
+- host wager verification box stays available in the lobby

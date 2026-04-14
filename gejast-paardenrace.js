@@ -1,6 +1,6 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
-  const STORAGE_KEY = 'gejast_paardenrace_room_code_v428';
+  const STORAGE_KEY = 'gejast_paardenrace_room_code_v429';
   const POLL_MS = 1200;
   const LANE_META = {
     hearts:{label:'♥ Harten', color:'#b21f35', icon:'♥'},

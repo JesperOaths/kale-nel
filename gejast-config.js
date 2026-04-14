@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v428',
+    VERSION:'v429',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     PLAYER_SESSION_KEYS: ['jas_session_token_v11','jas_session_token_v10'],
