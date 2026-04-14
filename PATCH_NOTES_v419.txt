@@ -1,7 +1,17 @@
-GEJAST v419 - player_id-aware room join + stale lobby cleanup + custom lobby names
+GEJAST paardenrace patch v419
 
-Included:
-- fixes null player_id errors by resolving and writing player_id when paardenrace_room_players requires it
-- deletes stale open lobbies with 0 or 1 player after 2 minutes whenever the joinable-room list is read
-- lets creators set a custom lobbynaam and lets joiners filter by lobbynaam/code
-- bumps shared visible version to v419
+GitHub zip files:
+- paardenrace.html
+- gejast-config.js
+- PATCH_NOTES_v419.txt
+
+Separate SQL:
+- gejast_v419_paardenrace.sql
+
+Changes:
+- bumped visible version to v419
+- empty rooms are cleaned up automatically
+- host/admin role is reassigned if the recorded host is no longer present
+- when a player joins a room that has no active host present, that player becomes host
+- wagers are now locked per player per lobby once set
+- a player can ready/unready with the same wager but cannot change the amount afterward
