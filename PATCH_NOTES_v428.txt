@@ -1,0 +1,13 @@
+GEJAST paardenrace frontend correction v428
+
+Changed files:
+- paardenrace.html
+- paardenrace_live.html
+- gejast-paardenrace.js
+- gejast-config.js
+- paardenrace-track.png
+
+Fixes:
+- paardenrace pages now match the current shared version v428
+- suit/wager inputs are protected from the 1.2s live polling refresh while typing
+- host wager verification box is restored in the lobby
