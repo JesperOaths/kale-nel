@@ -1,1 +1,131 @@
-<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" /><title>Paardenrace Lobby</title><script>window.GEJAST_PAGE_VERSION='v416';</script><script src="./gejast-config.js?v416"></script><script src="./gejast-paardenrace.js?v416"></script><style>:root{--gold:#9a8241;--paper:#fffaf3;--ink:#17130f;--muted:#6d6256;--line:rgba(0,0,0,.08);--bg:#f3ede4}*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink)}.page{max-width:1120px;margin:0 auto;padding:22px 16px 40px}.shell{background:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.8);border-radius:28px;padding:20px;box-shadow:0 18px 40px rgba(0,0,0,.06)}.top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center}.btn,a.btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:16px;border:1px solid var(--line);background:#111;color:#fff;text-decoration:none;font-weight:800;cursor:pointer}.btn.secondary,a.btn.secondary{background:#fff;color:#111}.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;margin-top:16px}.panel{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:18px}.title{font-size:clamp(2rem,4vw,3rem);letter-spacing:-.05em;margin:10px 0}.muted{color:var(--muted)} .status{min-height:1.4em;margin-top:10px;font-weight:700;color:#6d1021}label{display:block;font-weight:800;font-size:13px;margin:10px 0 6px} input,select{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:#fff;font:inherit}.players{display:grid;gap:10px;margin-top:12px}.player{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px;border-radius:18px;background:#fff;border:1px solid var(--line)} .badge{display:inline-flex;padding:6px 10px;border-radius:999px;background:rgba(154,130,65,.12);font-weight:800;font-size:12px}.room-code{font-size:2rem;font-weight:900;letter-spacing:.16em}.small{font-size:12px;color:var(--muted)} .rules{line-height:1.55}.rules ol{margin:0;padding-left:18px}.site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}@media(max-width:860px){.grid{grid-template-columns:1fr}}</style></head><body><div class="page"><div class="shell"><div class="top"><div><div class="small">Live multiplayer</div><h1 class="title">Paardenrace</h1><div class="muted">Maak of join een room, kies een paard, zet je Bakken-inzet en ready up.</div></div><div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn secondary" href="./home.html">Home</a><a class="btn secondary" id="openLiveLink" href="./paardenrace_live.html">Live scherm</a></div></div><div class="grid"><section class="panel"><h2>Room / lobby</h2><div class="small">Jouw roomcode blijft lokaal opgeslagen zodat je na refresh terug kunt naar dezelfde room.</div><label>Roomcode</label><input id="roomCodeInput" maxlength="8" placeholder="Bijv. PAARD1" /><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"><button class="btn" id="createBtn" type="button">Nieuwe room</button><button class="btn secondary" id="joinBtn" type="button">Join room</button><button class="btn secondary" id="refreshBtn" type="button">Refresh state</button></div><div class="status" id="statusBox">Nog geen actie uitgevoerd.</div><div id="openRoomsBox" class="players" style="margin-top:14px"></div><hr style="border:none;border-top:1px solid var(--line);margin:16px 0"><div id="roomShell" style="display:none"><div class="room-code" id="roomCodeLabel">—</div><div class="small" id="roomMeta">Nog geen room geladen.</div><label>Jouw paard</label><select id="suitInput"><option value="">Kies een suit</option><option value="hearts">♥ Harten</option><option value="diamonds">♦ Ruiten</option><option value="clubs">♣ Klaveren</option><option value="spades">♠ Schoppen</option></select><label>Jouw inzet in Bakken</label><input id="wagerInput" type="number" min="1" step="1" placeholder="Bijv. 2" /><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"><button class="btn" id="saveBtn" type="button">Opslaan + ready</button><button class="btn secondary" id="unreadyBtn" type="button">Unready</button><button class="btn secondary" id="startBtn" type="button">Start race</button></div><div class="players" id="playersBox"></div></div></section><section class="panel"><h2>Snelle regels</h2><div class="rules"><ol><li>Iedereen kiest één suit/paard en zet een inzet in Bakken.</li><li>Als iedereen ready is, start de host de race.</li><li>Elke getrokken kaart zet het bijbehorende paard één vak vooruit.</li><li>Als alle vier paarden langs een gate zijn, draait die gate open en duwt één suit terug.</li><li>De race stopt niet bij de eerste crossing als niemand dat paard gekozen had.</li><li>Winnaars verdelen daarna extra Bakken over andere spelers.</li><li>Je totaal is je eigen inzet plus eventuele nominaties op jouw naam.</li></ol></div><div id="previewBox" style="margin-top:16px"></div></section></div></div></div><div class="site-credit-watermark" data-version-watermark>v415 · Made by Bruis</div><script>(()=>{ const api = window.GEJAST_PAARDENRACE; const $=(id)=>document.getElementById(id); let latest=null; function setStatus(msg='', isError=false){ const box=$('statusBox'); box.textContent = msg || ''; box.style.color = isError ? '#8a1022' : '#315b2c'; } function renderOpenRooms(rows){ const list = Array.isArray(rows)?rows:[]; const box=$('openRoomsBox'); if(!list.length){ box.innerHTML='<div class="muted">Nog geen zichtbare open rooms. Maak er één aan of refresh zo weer.</div>'; return; } box.innerHTML = '<div class="small" style="margin-bottom:4px">Open rooms om direct te joinen</div>' + list.map((r)=>`<button type="button" class="player" data-room-code="${r.room_code}" style="width:100%;text-align:left;cursor:pointer"><div><strong>${r.room_code}</strong><div class="small">Host: ${r.host_name||'—'} · ${r.player_count||0} spelers · fase: ${r.stage_label||r.stage||'lobby'}</div></div><div class="badge">Join</div></button>`).join(''); box.querySelectorAll('[data-room-code]').forEach((btn)=>btn.addEventListener('click', async()=>{ $('roomCodeInput').value = btn.getAttribute('data-room-code') || ''; try{ setStatus('Room joinen...'); const state = await api.rpc('join_paardenrace_room_safe', { room_code_input: roomCode() }); applyState(state); setStatus('Room geladen.'); }catch(err){ setStatus(err.message || 'Join mislukt.', true); } })); } async function loadOpenRooms(){ try{ const rows = await api.rpc('get_paardenrace_open_rooms_public', {}); renderOpenRooms(rows); }catch(err){ renderOpenRooms([]); setStatus(err.message || 'Kon open rooms niet laden.', true); } } function roomCode(){ return String($('roomCodeInput').value || api.getStoredRoomCode() || '').trim().toUpperCase(); } function applyState(state){ latest=state||null; const room=state?.room||null; const match=state?.match||null; const players=Array.isArray(state?.players)?state.players:[]; $('roomShell').style.display = room ? '' : 'none'; $('previewBox').innerHTML = match ? api.renderBoard(match) : '<div class="muted">Nog geen actieve race.</div>'; if(!room) return; $('roomCodeInput').value = room.room_code || ''; api.setStoredRoomCode(room.room_code || ''); $('openLiveLink').href = `./paardenrace_live.html?room=${encodeURIComponent(room.room_code)}`; $('roomCodeLabel').textContent = room.room_code || '—'; $('roomMeta').textContent = `Fase: ${room.stage_label || room.stage || 'lobby'} · Host: ${room.host_name || '—'}${room.countdown_remaining_seconds ? ` · Countdown: ${room.countdown_remaining_seconds}s` : ''}`; const me=state.viewer||{}; $('suitInput').value = me.selected_suit || ''; $('wagerInput').value = me.wager_bakken || ''; $('startBtn').disabled = !room.can_start; $('playersBox').innerHTML = players.map((p)=>`<div class="player"><div><strong>${p.player_name}</strong><div class="small">${api.suitLabel(p.selected_suit)} · ${p.wager_bakken||0} Bakken</div></div><div style="display:flex;gap:8px;align-items:center">${p.is_host?'<span class="badge">Host</span>':''}<span class="badge">${p.is_ready?'Ready':'Nog niet klaar'}</span></div></div>`).join('') || '<div class="muted">Nog geen spelers.</div>'; if(match) $('previewBox').innerHTML = api.renderBoard(match); } async function load(){ const code=roomCode(); if(!code) return; try{ applyState(await api.rpc('get_paardenrace_room_state_safe',{ room_code_input: code })); }catch(err){ setStatus(err.message || 'Kon room niet laden.', true); }} $('createBtn').addEventListener('click', async()=>{ try{ setStatus('Room aanmaken...'); const state = await api.rpc('create_paardenrace_room_safe', { room_code_input: roomCode() || null }); applyState(state); setStatus('Room aangemaakt.'); }catch(err){ setStatus(err.message || 'Aanmaken mislukt.', true); }}); $('joinBtn').addEventListener('click', async()=>{ try{ setStatus('Room joinen...'); const state = await api.rpc('join_paardenrace_room_safe', { room_code_input: roomCode() }); applyState(state); setStatus('Room geladen.'); }catch(err){ setStatus(err.message || 'Join mislukt.', true); }}); $('refreshBtn').addEventListener('click', load); $('saveBtn').addEventListener('click', async()=>{ try{ const code = roomCode(); setStatus('Opslaan...'); const state = await api.rpc('update_paardenrace_room_choice_safe', { room_code_input: code, selected_suit_input: $('suitInput').value || null, wager_bakken_input: Number($('wagerInput').value || 0), ready_input: true }); applyState(state); setStatus('Je keuze is opgeslagen en je staat ready.'); }catch(err){ setStatus(err.message || 'Opslaan mislukt.', true); }}); $('unreadyBtn').addEventListener('click', async()=>{ try{ const state = await api.rpc('update_paardenrace_room_choice_safe', { room_code_input: roomCode(), selected_suit_input: $('suitInput').value || null, wager_bakken_input: Number($('wagerInput').value || 0), ready_input: false }); applyState(state); setStatus('Je bent weer unready.'); }catch(err){ setStatus(err.message || 'Unready mislukt.', true); }}); $('startBtn').addEventListener('click', async()=>{ try{ const state = await api.rpc('start_paardenrace_countdown_safe', { room_code_input: roomCode() }); applyState(state); setStatus('Countdown gestart. Open het live scherm.'); api.gotoLive(roomCode()); }catch(err){ setStatus(err.message || 'Start mislukt.', true); }}); if(!api.sessionToken()){ setStatus('Log eerst in als speler voordat je een paardenrace-room kunt maken of joinen.', true); } const seeded = api.getStoredRoomCode(); if(seeded){ $('roomCodeInput').value = seeded; load(); } loadOpenRooms(); setInterval(()=>{ if(roomCode()) load(); loadOpenRooms(); }, 3000); })();</script></body></html>
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <title>Paardenrace Lobby</title>
+  <script>window.GEJAST_PAGE_VERSION='v418';</script>
+  <script src="./gejast-config.js?v418"></script>
+  <script src="./gejast-paardenrace.js?v418"></script>
+  <style>
+    :root{--gold:#9a8241;--paper:#fffaf3;--ink:#17130f;--muted:#6d6256;--line:rgba(0,0,0,.08);--bg:#f3ede4}
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+    .page{max-width:1120px;margin:0 auto;padding:22px 16px 40px}.shell{background:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.8);border-radius:28px;padding:20px;box-shadow:0 18px 40px rgba(0,0,0,.06)}
+    .top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center}.btn,a.btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:16px;border:1px solid var(--line);background:#111;color:#fff;text-decoration:none;font-weight:800;cursor:pointer}
+    .btn.secondary,a.btn.secondary{background:#fff;color:#111}.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;margin-top:16px}.panel{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:18px}.title{font-size:clamp(2rem,4vw,3rem);letter-spacing:-.05em;margin:10px 0}
+    .muted{color:var(--muted)} .status{min-height:1.4em;margin-top:10px;font-weight:700;color:#6d1021}label{display:block;font-weight:800;font-size:13px;margin:10px 0 6px}
+    input,select{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:#fff;font:inherit}.players{display:grid;gap:10px;margin-top:12px}.player{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px;border-radius:18px;background:#fff;border:1px solid var(--line)}
+    .badge{display:inline-flex;padding:6px 10px;border-radius:999px;background:rgba(154,130,65,.12);font-weight:800;font-size:12px}.room-code{font-size:2rem;font-weight:900;letter-spacing:.16em}.small{font-size:12px;color:var(--muted)} .rules{line-height:1.55}.rules ol{margin:0;padding-left:18px}
+    .action-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}.summary{margin-top:12px;padding:12px 14px;border-radius:16px;background:#fff;border:1px solid var(--line);font-weight:700}
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}
+    @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="page"><div class="shell">
+    <div class="top">
+      <div><div class="small">Live multiplayer</div><h1 class="title">Paardenrace</h1><div class="muted">Maak of join een room, kies een paard, zet je Bakken-inzet en ready up.</div></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn secondary" href="./home.html">Home</a><a class="btn secondary" id="openLiveLink" href="./paardenrace_live.html">Live scherm</a></div>
+    </div>
+    <div class="grid">
+      <section class="panel">
+        <h2>Room / lobby</h2>
+        <div class="small">Jouw roomcode blijft lokaal opgeslagen zodat je na refresh terug kunt naar dezelfde room.</div>
+        <label>Roomcode</label>
+        <input id="roomCodeInput" maxlength="8" placeholder="Bijv. PAARD1" />
+        <div class="action-row">
+          <button class="btn" id="createBtn" type="button">Nieuwe room</button>
+          <button class="btn secondary" id="joinBtn" type="button">Join room</button>
+          <button class="btn secondary" id="refreshBtn" type="button">Refresh state</button>
+        </div>
+        <div class="status" id="statusBox">Nog geen actie uitgevoerd.</div>
+        <div id="openRoomsBox" class="players"></div>
+        <hr style="border:none;border-top:1px solid var(--line);margin:16px 0">
+        <div id="roomShell" style="display:none">
+          <div class="room-code" id="roomCodeLabel">—</div>
+          <div class="small" id="roomMeta">Nog geen room geladen.</div>
+          <div class="summary" id="lobbySummaryBox">Nog geen lobby info.</div>
+          <label>Jouw paard</label>
+          <select id="suitInput">
+            <option value="">Kies een suit</option>
+            <option value="hearts">♥ Harten</option>
+            <option value="diamonds">♦ Ruiten</option>
+            <option value="clubs">♣ Klaveren</option>
+            <option value="spades">♠ Schoppen</option>
+          </select>
+          <label>Jouw inzet in Bakken</label>
+          <input id="wagerInput" type="number" min="1" step="1" placeholder="Bijv. 2" />
+          <div class="action-row">
+            <button class="btn" id="saveBtn" type="button">Opslaan + ready</button>
+            <button class="btn secondary" id="unreadyBtn" type="button">Unready</button>
+            <button class="btn secondary" id="leaveBtn" type="button">Verlaat room</button>
+            <button class="btn secondary" id="disbandBtn" type="button">Hef room op</button>
+            <button class="btn secondary" id="startBtn" type="button">Start race</button>
+          </div>
+          <div class="players" id="playersBox"></div>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Snelle regels</h2>
+        <div class="rules"><ol>
+          <li>Iedereen kiest één suit/paard en zet een inzet in Bakken.</li>
+          <li>Als iedereen ready is, start de host de race.</li>
+          <li>Elke getrokken kaart zet het bijbehorende paard één vak vooruit.</li>
+          <li>Als alle vier paarden langs een gate zijn, draait die gate open en duwt één suit terug.</li>
+          <li>De race stopt niet bij de eerste crossing als niemand dat paard gekozen had.</li>
+          <li>Winnaars verdelen daarna extra Bakken over andere spelers.</li>
+          <li>Je totaal is je eigen inzet plus eventuele nominaties op jouw naam.</li>
+        </ol></div>
+        <div id="previewBox" style="margin-top:16px"></div>
+      </section>
+    </div>
+  </div></div>
+  <div class="site-credit-watermark" data-version-watermark>v418 · Made by Bruis</div>
+  <script>
+  (()=>{
+    const api = window.GEJAST_PAARDENRACE;
+    const $ = (id)=>document.getElementById(id);
+    function setStatus(msg='', isError=false){ const box=$('statusBox'); box.textContent = msg || ''; box.style.color = isError ? '#8a1022' : '#315b2c'; }
+    function roomCode(){ return String($('roomCodeInput').value || api.getStoredRoomCode() || '').trim().toUpperCase(); }
+    function clearLobbyView(){ $('roomShell').style.display='none'; $('roomCodeLabel').textContent='—'; $('roomMeta').textContent='Nog geen room geladen.'; $('playersBox').innerHTML=''; $('lobbySummaryBox').textContent='Nog geen lobby info.'; $('previewBox').innerHTML='<div class="muted">Nog geen actieve race.</div>'; api.clearStoredRoomCode(); }
+    function renderOpenRooms(rows){
+      const list = Array.isArray(rows)?rows:[]; const box=$('openRoomsBox');
+      if(!list.length){ box.innerHTML='<div class="muted">Nog geen zichtbare open rooms. Maak er één aan of refresh zo weer.</div>'; return; }
+      box.innerHTML = '<div class="small" style="margin-bottom:4px">Open rooms om direct te joinen</div>' + list.map((r)=>`<button type="button" class="player" data-room-code="${r.room_code}" style="width:100%;text-align:left;cursor:pointer"><div><strong>${r.room_code}</strong><div class="small">Host: ${r.host_name||'—'} · ${r.player_count||0} spelers (${r.ready_count||0} ready) · pot: ${r.total_wager_bakken||0} Bakken · fase: ${r.stage_label||r.stage||'lobby'}</div></div><div class="badge">Join</div></button>`).join('');
+      box.querySelectorAll('[data-room-code]').forEach((btn)=>btn.addEventListener('click', async()=>{
+        $('roomCodeInput').value = btn.getAttribute('data-room-code') || '';
+        try{ setStatus('Room joinen...'); const state = await api.rpc('join_paardenrace_room_safe', { room_code_input: roomCode() }); applyState(state); setStatus('Room geladen.'); }
+        catch(err){ setStatus(err.message || 'Join mislukt.', true); }
+      }));
+    }
+    async function loadOpenRooms(){
+      try{ renderOpenRooms(await api.rpc('get_paardenrace_open_rooms_public', {})); }
+      catch(err){ renderOpenRooms([]); setStatus(err.message || 'Kon open rooms niet laden.', true); }
+    }
+    function applyState(state){
+      const room=state?.room||null; const match=state?.match||null; const players=Array.isArray(state?.players)?state.players:[]; const me=state?.viewer||{};
+      $('roomShell').style.display = room ? '' : 'none'; $('previewBox').innerHTML = match ? api.renderBoard(match) : '<div class="muted">Nog geen actieve race.</div>'; if(!room) return;
+      $('roomCodeInput').value = room.room_code || ''; api.setStoredRoomCode(room.room_code || ''); $('openLiveLink').href = `./paardenrace_live.html?room=${encodeURIComponent(room.room_code)}`;
+      $('roomCodeLabel').textContent = room.room_code || '—'; $('roomMeta').textContent = `Fase: ${room.stage_label || room.stage || 'lobby'} · Host: ${room.host_name || '—'}${room.countdown_remaining_seconds ? ` · Countdown: ${room.countdown_remaining_seconds}s` : ''}`;
+      const totalWager = players.reduce((sum,p)=>sum + Number(p.wager_bakken||0),0); const readyCount = players.filter((p)=>p.is_ready).length;
+      $('lobbySummaryBox').textContent = `Spelers: ${players.length} · Ready: ${readyCount}/${players.length||0} · Totale inzet: ${totalWager} Bakken`;
+      $('suitInput').value = me.selected_suit || ''; $('wagerInput').value = me.wager_bakken || ''; $('startBtn').disabled = !room.can_start; $('disbandBtn').style.display = me.is_host ? '' : 'none';
+      $('playersBox').innerHTML = players.map((p)=>`<div class="player"><div><strong>${p.player_name}</strong><div class="small">${api.suitLabel(p.selected_suit)} · inzet ${p.wager_bakken||0} Bakken</div></div><div style="display:flex;gap:8px;align-items:center">${p.is_host?'<span class="badge">Host</span>':''}<span class="badge">${p.is_ready?'Ready':'Nog niet klaar'}</span></div></div>`).join('') || '<div class="muted">Nog geen spelers.</div>';
+    }
+    async function load(){ const code=roomCode(); if(!code) return; try{ applyState(await api.rpc('get_paardenrace_room_state_safe',{ room_code_input: code })); }catch(err){ setStatus(err.message || 'Kon room niet laden.', true); } }
+    $('createBtn').addEventListener('click', async()=>{ try{ setStatus('Room aanmaken...'); applyState(await api.rpc('create_paardenrace_room_safe', { room_code_input: roomCode() || null })); setStatus('Room aangemaakt.'); loadOpenRooms(); }catch(err){ setStatus(err.message || 'Aanmaken mislukt.', true); }});
+    $('joinBtn').addEventListener('click', async()=>{ try{ setStatus('Room joinen...'); applyState(await api.rpc('join_paardenrace_room_safe', { room_code_input: roomCode() })); setStatus('Room geladen.'); }catch(err){ setStatus(err.message || 'Join mislukt.', true); }});
+    $('refreshBtn').addEventListener('click', async()=>{ await load(); await loadOpenRooms(); });
+    $('saveBtn').addEventListener('click', async()=>{ try{ setStatus('Opslaan...'); applyState(await api.rpc('update_paardenrace_room_choice_safe', { room_code_input: roomCode(), selected_suit_input: $('suitInput').value || null, wager_bakken_input: Number($('wagerInput').value || 0), ready_input: true })); setStatus('Je keuze is opgeslagen en je staat ready.'); loadOpenRooms(); }catch(err){ setStatus(err.message || 'Opslaan mislukt.', true); }});
+    $('unreadyBtn').addEventListener('click', async()=>{ try{ applyState(await api.rpc('update_paardenrace_room_choice_safe', { room_code_input: roomCode(), selected_suit_input: $('suitInput').value || null, wager_bakken_input: Number($('wagerInput').value || 0), ready_input: false })); setStatus('Je bent weer unready.'); loadOpenRooms(); }catch(err){ setStatus(err.message || 'Unready mislukt.', true); }});
+    $('leaveBtn').addEventListener('click', async()=>{ try{ const res = await api.rpc('leave_paardenrace_room_safe', { room_code_input: roomCode() }); clearLobbyView(); $('roomCodeInput').value=''; setStatus(res?.disbanded ? 'Room verlaten en room gesloten omdat jij de laatste speler was.' : 'Je hebt de room verlaten.'); loadOpenRooms(); }catch(err){ setStatus(err.message || 'Verlaten mislukt.', true); }});
+    $('disbandBtn').addEventListener('click', async()=>{ try{ await api.rpc('disband_paardenrace_room_safe', { room_code_input: roomCode() }); clearLobbyView(); $('roomCodeInput').value=''; setStatus('Room is opgeheven.'); loadOpenRooms(); }catch(err){ setStatus(err.message || 'Opheffen mislukt.', true); }});
+    $('startBtn').addEventListener('click', async()=>{ try{ applyState(await api.rpc('start_paardenrace_countdown_safe', { room_code_input: roomCode() })); setStatus('Countdown gestart. Open het live scherm.'); api.gotoLive(roomCode()); }catch(err){ setStatus(err.message || 'Start mislukt.', true); }});
+    if(!api.sessionToken()){ setStatus('Log eerst in als speler voordat je een paardenrace-room kunt maken of joinen.', true); }
+    const seeded = api.getStoredRoomCode(); if(seeded){ $('roomCodeInput').value = seeded; load(); }
+    loadOpenRooms(); setInterval(()=>{ if(roomCode()) load(); loadOpenRooms(); }, 3000);
+  })();
+  </script>
+</body>
+</html>

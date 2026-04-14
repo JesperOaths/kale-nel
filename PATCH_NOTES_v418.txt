@@ -1,6 +1,18 @@
-GEJAST v418 - dynamic room list fix + stricter sitewide auth gate + sitewide version sync
+GEJAST paardenrace patch v418
 
-Included:
-- fixes paardenrace_list_joinable_rooms_scoped so it no longer assumes r.status exists
-- strengthens gejast-config.js so the visible version watermark is always sourced from CONFIG.VERSION and kept in sync with a MutationObserver
-- adds a strict shared logged-out redirect guard that sends unauthenticated users to home.html on protected pages, while leaving request/login/activation/home public
+This corrects the broken v417 frontend bundle.
+
+GitHub zip files:
+- paardenrace.html
+- gejast-config.js
+- PATCH_NOTES_v418.txt
+
+SQL:
+- reuse gejast_v417_paardenrace.sql if already applied
+
+Changes:
+- visible version is now v418
+- leave room button is present
+- disband room button is present for host
+- lobby summary shows total stakes and ready count
+- visible open room cards show player count, ready count and pot
