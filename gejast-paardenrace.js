@@ -1,6 +1,6 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
-  const STORAGE_KEY = 'gejast_paardenrace_room_code_v434';
+  const STORAGE_KEY = 'gejast_paardenrace_room_code_v435';
   function sessionToken(){ return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; }
   const SESSIONLESS_RPC = new Set([
     'get_paardenrace_open_rooms_public'

@@ -1,0 +1,9 @@
+GEJAST v435 patch
+
+Included frontend fixes:
+- index.html Thursday Legends/Losers now uses get_site_poll_state/cast_site_poll_vote on poll key gejast_donderdag
+- prevented stale homepage boot bundle from overwriting the Thursday poll lists
+- paardenrace frontend bumped to v435
+
+Included SQL fix:
+- verify_paardenrace_wager_safe now uses a safer direct verified-record write path to avoid malformed array literal errors during host verification
