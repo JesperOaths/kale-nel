@@ -1,0 +1,8 @@
+v446 patch
+- paardenrace lobby now redirects to room-specific live page when a match starts
+- regels moved into popup on lobby and live pages
+- lobby no longer renders live race preview
+- paardenrace live page rebuilt around supplied arena PNG and ace horse cards
+- live board now uses supplied dark card back for face-down gates
+- room code input preserved during live polling
+- index page keeps paardenrace/pikken/rad/despimarkt boxes and stores donderdag legends/losers snapshot across refresh
