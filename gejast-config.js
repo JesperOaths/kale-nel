@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v420',
+    VERSION:'v412',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -32,7 +32,8 @@
     } catch (_) { return null; }
   }
   function parseVersion(v){ const m=String(v||'').match(/v?(\d+)/i); return m?Number(m[1]):0; }
-  const effectiveVersion = CONFIG.VERSION;
+  const candidates = [detectScriptVersion(), window.GEJAST_PAGE_VERSION, CONFIG.VERSION].filter(Boolean);
+  const effectiveVersion = candidates.sort((a,b)=>parseVersion(b)-parseVersion(a))[0] || CONFIG.VERSION;
   const label = `${effectiveVersion} · Made by Bruis`;
   window.GEJAST_PAGE_VERSION = effectiveVersion;
 
@@ -80,16 +81,6 @@
     nodes.forEach((node)=>{ node.textContent = label; watermarkStyles(node); });
     const re = /v\d+\s*[·.-]?\s*Made by Bruis/i;
     document.querySelectorAll('body *').forEach((node)=>{ if (node.children.length) return; const txt=(node.textContent||'').trim(); if (re.test(txt)) { node.textContent = label; watermarkStyles(node); } });
-  }
-
-  let versionObserverStarted = false;
-  function ensureVersionObserver(){
-    if (versionObserverStarted || typeof MutationObserver !== 'function' || !document.documentElement) return;
-    versionObserverStarted = true;
-    const observer = new MutationObserver(()=>{
-      try { applyVersionLabel(); } catch (_) {}
-    });
-    observer.observe(document.documentElement, { childList:true, subtree:true });
   }
 
 
@@ -297,25 +288,6 @@ function buildRequestUrl(returnTo, scope){
     return true;
   }
 
-
-  function isPublicUnauthedPath(pathname){
-    const file = String((pathname || '').split('/').pop() || 'index.html').toLowerCase();
-    return [
-      '', 'index.html', 'home.html', 'request.html', 'login.html', 'activate.html', 'activation.html', 'reset.html', 'forgot.html', 'privacy.html', 'terms.html'
-    ].includes(file);
-  }
-  function enforceStrictLoggedOutRedirect(){
-    try {
-      if (isPlayerSessionExpired()) clearPlayerSessionTokens();
-      if (isPublicUnauthedPath(location.pathname)) return false;
-      if (getPlayerSessionToken()) { touchPlayerActivity(); return false; }
-      const target = currentReturnTarget('index.html');
-      const url = buildHomeUrl(target, inferRuntimeScope());
-      if (location.href !== url) location.replace(url);
-      return true;
-    } catch (_) { return false; }
-  }
-
   window.GEJAST_CONFIG = Object.assign({}, window.GEJAST_CONFIG || {}, CONFIG, {
     VERSION: effectiveVersion,
     VERSION_LABEL: label,
@@ -337,15 +309,9 @@ function buildRequestUrl(returnTo, scope){
     buildRequestUrl,
     normalizeScope,
     sanitizeReturnTarget,
-    currentReturnTarget,
-    enforceStrictLoggedOutRedirect
+    currentReturnTarget
   });
 
-  function bootSharedGuards(){
-    applyVersionLabel();
-    ensureVersionObserver();
-    enforceStrictLoggedOutRedirect();
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootSharedGuards, { once: true });
-  else bootSharedGuards();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyVersionLabel, { once: true });
+  else applyVersionLabel();
 })();
