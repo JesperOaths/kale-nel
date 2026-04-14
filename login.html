@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inloggen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v412';</script>
+  <script>window.GEJAST_PAGE_VERSION='v413';</script>
   <style>
     :root { --gold: #9a8241; --dark-bg: #111; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.08); }
     * { box-sizing: border-box; }
@@ -48,7 +48,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/login.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v412"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-account-scope.js?v394"></script><script src="./gejast-account-links.js?v399"></script>
+  <script src="./gejast-config.js?v413"></script><script src="./gejast-account-scope.js?v394"></script><script src="./gejast-account-links.js?v399"></script>
 </head>
 <body>
   <div class="site-scene">
@@ -146,16 +146,26 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const cleanNames = uniqueNames(names);
       const current = selected && cleanNames.includes(selected) ? selected : input.value;
       const resetCurrent = resetInput ? resetInput.value : '';
-      const markup = '<option value="">Kies je naam</option>';
-      input.innerHTML = markup;
-      if (resetInput) resetInput.innerHTML = markup;
+
+      const primaryFrag = document.createDocumentFragment();
+      const defaultOption = document.createElement('option');
+      defaultOption.value = '';
+      defaultOption.textContent = 'Kies je naam';
+      primaryFrag.appendChild(defaultOption);
+
+      const resetFrag = resetInput ? document.createDocumentFragment() : null;
+      if (resetFrag) resetFrag.appendChild(defaultOption.cloneNode(true));
+
       cleanNames.forEach((name) => {
         const option = document.createElement('option');
         option.value = name;
         option.textContent = name;
-        input.appendChild(option);
-        if (resetInput) resetInput.appendChild(option.cloneNode(true));
+        primaryFrag.appendChild(option);
+        if (resetFrag) resetFrag.appendChild(option.cloneNode(true));
       });
+
+      input.replaceChildren(primaryFrag);
+      if (resetInput && resetFrag) resetInput.replaceChildren(resetFrag);
       input.value = cleanNames.includes(current) ? current : '';
       if (resetInput) resetInput.value = cleanNames.includes(resetCurrent) ? resetCurrent : (cleanNames.includes(input.value) ? input.value : '');
     }

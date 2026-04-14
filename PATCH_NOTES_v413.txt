@@ -1,18 +1,20 @@
-GEJAST v413 - paardenrace roomflow hardening + profiles rollback pass
+GEJAST patch v413
 
-Included in this patch:
-- fixes the live paardenrace SQL error by providing a compatible gen_random_bytes(integer) fallback
-- adds paardenrace_list_joinable_rooms_scoped for the new room-picker UI
-- adds paardenrace.html and gejast-paardenrace.js with a split flow:
-  1. choose Kamer maken or Kamer kiezen first
-  2. if Kamer maken: choose wager + suit, then create room
-  3. if Kamer kiezen: choose wager + suit first, then select from joinable rooms
-  4. only after a real create/join succeeds does the frontend try to send the wager obligation into the request pipeline
-- restores profiles.html to a larger two-column player card layout closer to the earlier visual shown in chat
-- extends profile fallback data to include paardenrace_matches
-- bumps visible version label to v413 on touched pages via gejast-config.js
+Files included
+- login.html
+- gejast-config.js
 
-Important honesty note:
-- this patch is grounded on the uploaded concrete repo plus the uploaded paardenrace guide/assets
-- the SQL follow-up assumes the generated v412/v412a paardenrace tables/RPC line already exists live
-- if the live project uses different paardenrace table names than the implementation brief, the list-room RPC may need one more SQL-only follow-up
+What changed
+- Keeps the v412 forgotPinModal crash fix.
+- Removes gejast-family-rollout.js from login.html so the login entry page no longer depends on the family rollout MutationObserver boot path.
+- Rewrites fillNames() to build the player-name option lists in document fragments and swap them into the DOM once, instead of appending one option at a time.
+- Bumps shared config version from v412 to v413.
+- Bumps login.html to load gejast-config.js?v413.
+
+Why this stronger patch exists
+- If the live page still felt frozen after the v412 fix, the remaining likely entry-page problem is the heavy public-page boot path on login.html itself.
+- login.html dynamically injects many <option> nodes; the old login boot path combined badly with the extra family-rollout observer-style script.
+- home.html stays responsive because it is much lighter and does not do the same option-list boot work.
+
+SQL
+- None required.
