@@ -1,0 +1,4 @@
+Paardenrace v439
+- Roomcode input no longer gets overwritten by the 1.2s polling while typing.
+- Active race preview/render now uses marker overlays on top of paardenrace-track.png instead of the old numeric field list.
+- Live race page aligned to v439 and uses the same track overlay renderer.
