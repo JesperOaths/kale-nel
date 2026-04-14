@@ -663,10 +663,10 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v436';</script><script src="./gejast-config.js?v436"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v437';</script><script src="./gejast-config.js?v437"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
   <script src="./gejast-live-summary.js?v389"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
-  <script src="./gejast-combined-readers.js?v426"></script>
+  <script src="./gejast-combined-readers.js?v437"></script>
 <script src="./gejast-push-runtime.js?v389"></script>
 <script src="./gejast-fairness.js?v389"></script></head>
 <body class="boot-pending homepage-ready"><div id="gejastTopRightToolsMount"></div>
@@ -741,6 +741,17 @@
           <a class="page-link-card login-link" href="./profiles.html">
             <div class="page-link-label">Spelers</div>
             <div class="page-link-copy">Bekijk spelers en profielen.</div>
+          </a>
+        </div>
+
+        <div class="public-links-grid">
+          <a class="page-link-card scorer-link" href="./paardenrace.html">
+            <div class="page-link-label">Paardenrace</div>
+            <div class="page-link-copy">Open lobby en live race.</div>
+          </a>
+          <a class="page-link-card scorer-link" href="./pikken.html">
+            <div class="page-link-label">Pikken</div>
+            <div class="page-link-copy">Open de Pikken spelpagina.</div>
           </a>
         </div>
 
@@ -1068,7 +1079,6 @@ function applyAdminViewerRefresh() {
       });
     }
 
-const MAIN_POLL_KEY = 'gejast_donderdag';
 const EXTRA_POLL_KEY = 'gezopen_vanavond';
 let currentDrinksPollState = null;
 let removingExtraVote = false;
@@ -1165,8 +1175,8 @@ function renderExtraNames(id, items, emptyText, listKey) {
 function renderExtraPollState(data) {
   const previousCount = Number(currentDrinksPollState?.can_count ?? currentDrinksPollState?.yes_count ?? currentDrinksPollState?.legends?.length ?? currentDrinksPollState?.yes_names?.length ?? 0);
   currentDrinksPollState = data || null;
-  const legends = data.legends || data.yes_names || data.can_names || [];
-  const losers = data.losers || data.no_names || data.cant_names || data.cannot_names || [];
+  const legends = data.legends || data.yes_names || [];
+  const losers = data.losers || data.no_names || [];
   const canCount = Number(data.can_count ?? data.yes_count ?? legends.length ?? 0);
   const state = computeDrinksPollState(canCount);
   const word = document.getElementById('drinksStateWord');
@@ -1434,8 +1444,8 @@ async function castExtraPollVote(desired_status) {
 
       const previousCount = Number(currentHomepageState?.can_count ?? currentHomepageState?.yes_count ?? currentHomepageState?.legends?.length ?? currentHomepageState?.yes_names?.length ?? 0);
       currentHomepageState = data || null;
-      const legends = data.legends || data.yes_names || data.can_names || [];
-      const losers = data.losers || data.no_names || data.cant_names || data.cannot_names || [];
+      const legends = data.legends || data.yes_names || [];
+      const losers = data.losers || data.no_names || [];
       const canCount = Number(data.can_count ?? data.yes_count ?? legends.length ?? 0);
       const state = data.status_label
         ? { key: data.status_key || 'no', label: data.status_label, copy: yesSaidCopy(canCount) }
@@ -1467,21 +1477,18 @@ async function castExtraPollVote(desired_status) {
       }
       currentHomepageState = { ...(data || {}), computed_key: state.key, status_key: state.key };
     }
-    
-async function getHomepageState() {
+    async function getHomepageState() {
       const session_token = getSessionToken();
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_site_poll_state`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ poll_key_input: MAIN_POLL_KEY, session_token })
-      });
-      return await parseResponse(res);
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_gejast_homepage_state`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token }) });
+        return await parseResponse(res);
+      } catch {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token }) });
+        return await parseResponse(res);
+      }
     }
-    
-async function castVote(desired_status) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cast_site_poll_vote`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ poll_key_input: MAIN_POLL_KEY, session_token: getSessionToken(), desired_status })
-      });
+    async function castVote(desired_status) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cast_vote`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token: getSessionToken(), desired_status }) });
       return await parseResponse(res);
     }
     function goToLoginWithIntent(status, pollKey = 'gejast_donderdag') {
@@ -1492,41 +1499,41 @@ async function castVote(desired_status) {
       url.searchParams.set('vote_poll', pollKey);
       window.location.href = url.toString();
     }
-    
-    function reconcileHomepageVoteState(data, desiredStatus) {
-      const out = { ...(data || {}) };
-      const myName = String(out.my_name || currentHomepageState?.my_name || '').trim();
-      if (!myName) return out;
-      const legends = Array.isArray(out.legends) ? [...out.legends] : (Array.isArray(out.yes_names) ? [...out.yes_names] : []);
-      const losers = Array.isArray(out.losers) ? [...out.losers] : (Array.isArray(out.no_names) ? [...out.no_names] : []);
-      const norm = (v) => String(v || '').trim().toLowerCase();
-      const scrub = (arr) => arr.filter((name, idx) => norm(name) && arr.findIndex((x)=>norm(x)===norm(name))===idx && norm(name)!==norm(myName));
-      const nextLegends = scrub(legends);
-      const nextLosers = scrub(losers);
-      if (desiredStatus === 'ja') nextLegends.unshift(myName);
-      else if (desiredStatus === 'nee') nextLosers.unshift(myName);
-      out.legends = nextLegends;
-      out.losers = nextLosers;
-      out.yes_names = nextLegends;
-      out.no_names = nextLosers;
-      out.can_names = nextLegends;
-      out.cant_names = nextLosers;
-      out.can_count = nextLegends.length;
-      out.yes_count = nextLegends.length;
-      out.no_count = nextLosers.length;
-      out.my_status = desiredStatus;
-      return out;
+    function reconcileOwnVoteIntoState(data, status) {
+      const state = Object.assign({}, data || {});
+      const myName = String(state.my_name || '').trim();
+      const legends = Array.isArray(state.legends) ? state.legends.slice() : (Array.isArray(state.yes_names) ? state.yes_names.slice() : []);
+      const losers = Array.isArray(state.losers) ? state.losers.slice() : (Array.isArray(state.no_names) ? state.no_names.slice() : []);
+      if (!myName) {
+        state.legends = legends;
+        state.losers = losers;
+        state.yes_names = legends;
+        state.no_names = losers;
+        state.can_count = legends.length;
+        return state;
+      }
+      const without = (arr) => arr.filter((name) => String(name || '').trim().toLowerCase() !== myName.toLowerCase());
+      const nextLegends = without(legends);
+      const nextLosers = without(losers);
+      if (status === 'ja') nextLegends.unshift(myName);
+      else nextLosers.unshift(myName);
+      state.legends = nextLegends;
+      state.losers = nextLosers;
+      state.yes_names = nextLegends;
+      state.no_names = nextLosers;
+      state.can_count = nextLegends.length;
+      state.yes_count = nextLegends.length;
+      return state;
     }
-
-async function handleVote(status) {
+    async function handleVote(status) {
       if (!getSessionToken()) { goToLoginWithIntent(status, 'gejast_donderdag'); return; }
       try {
         await castVote(status);
-        const fresh = await getHomepageState();
-        renderState(reconcileHomepageVoteState(fresh, status));
-        setTimeout(async () => { try { renderState(reconcileHomepageVoteState(await getHomepageState(), status)); } catch (_) {} }, 300);
-        setTimeout(async () => { try { renderState(reconcileHomepageVoteState(await getHomepageState(), status)); } catch (_) {} }, 1200);
-        setTimeout(async () => { try { renderState(await getHomepageState()); } catch (_) {} }, 2400);
+        const freshState = await getHomepageState();
+        renderState(reconcileOwnVoteIntoState(freshState, status));
+        window.setTimeout(async () => {
+          try { renderState(reconcileOwnVoteIntoState(await getHomepageState(), status)); } catch (_) {}
+        }, 250);
         setStatus(`Opgeslagen: ${status === 'ja' ? 'ik kan' : 'ik kan niet'}.`, 'ok');
       } catch (error) {
         const msg = error?.message || 'Onbekende fout';
@@ -1715,14 +1722,11 @@ async function handleVote(status) {
     }
     function applyHomepageBootBundle(bundle, fromCache = false){
       if (!bundle || typeof bundle !== 'object') return;
-      if (bundle.homepage_state && (fromCache || !currentHomepageState)) {
-        const pollKey = String(bundle.homepage_state.poll_key || '').trim().toLowerCase();
-        if (pollKey === MAIN_POLL_KEY) {
-          renderState(bundle.homepage_state);
-          setStatus('');
-        }
+      if (bundle.homepage_state) {
+        renderState(bundle.homepage_state);
+        setStatus('');
       }
-      if (bundle.extra_poll_state && (fromCache || !currentDrinksPollState)) {
+      if (bundle.extra_poll_state) {
         const pollKey = String(bundle.extra_poll_state.poll_key || '').trim().toLowerCase();
         const expectedPollKey = String(EXTRA_POLL_KEY || '').trim().toLowerCase();
         if (!pollKey || !expectedPollKey || pollKey === expectedPollKey) {

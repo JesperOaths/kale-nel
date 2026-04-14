@@ -1,0 +1,16 @@
+GEJAST patch v437
+
+Included:
+- index.html
+- paardenrace.html
+- paardenrace_live.html
+- gejast-config.js
+
+Changes:
+- restored the Paardenrace and Pikken boxes on index.html
+- hardened the Thursday vote UI so the clicked user is reconciled into the correct Legends/Losers list immediately after voting
+- protected the paardenrace room-code input from the 1.2s live poll while typing
+- protected the suit and wager inputs from the 1.2s live poll while editing
+- made wager verification visibly update the lobby immediately and then refresh authoritative room state
+- made pending wager verification fall back to unverified players with Bakken > 0 so the host verify panel does not look empty when the pending array is stale
+- bumped the shared visible version to v437
