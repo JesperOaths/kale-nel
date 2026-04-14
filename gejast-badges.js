@@ -125,7 +125,7 @@
       rarityLabel: 'Rare',
       pack: 'core',
       description: 'Voor spelers die snelheid niet alleen proberen, maar waarmaken.',
-      requirementsText: '3 geverifieerde snelheidsrecords onder de drempel van hun drankje.',
+      requirementsText: '3 geverifieerde snelheidsrecords: een tijd die je in de top 5 van dat dranktype zet (bij gelijke tijd blijft de eerdere plek).',
       imageFull: assetPath('core', 'snelheidsduivel'),
       imageMini48: miniPath('48', 'snelheidsduivel'),
       imageMini64: miniPath('64', 'snelheidsduivel')
@@ -167,10 +167,10 @@
       plaqueTitle: 'Verifieermeester',
       nickname: 'De Getuige',
       rarityRank: 11,
-      rarityLabel: 'Epic',
+      rarityLabel: 'Rare',
       pack: 'core',
       description: 'Voor de betrouwbare controleur die het systeem draaiend houdt.',
-      requirementsText: '50 geaccepteerde verificatiestemmen op andermans requests.',
+      requirementsText: '20 geaccepteerde verificatiestemmen op andermans requests.',
       imageFull: assetPath('core', 'verifieermeester'),
       imageMini48: miniPath('48', 'verifieermeester'),
       imageMini64: miniPath('64', 'verifieermeester')
@@ -182,10 +182,10 @@
       plaqueTitle: 'Pussycup-prins',
       nickname: 'Fluwelen Pols',
       rarityRank: 12,
-      rarityLabel: 'Epic',
+      rarityLabel: 'Rare',
       pack: 'core',
       description: 'Voor de beerponger met opvallend hoge pussycup-frequentie.',
-      requirementsText: 'Minstens 12 beerpongpotjes en pussycup-percentage van minstens 75%.',
+      requirementsText: 'Minstens 10 beerpongpotjes en pussycup-percentage van minstens 25%.',
       imageFull: assetPath('core', 'pussycup_prins'),
       imageMini48: miniPath('48', 'pussycup_prins'),
       imageMini64: miniPath('64', 'pussycup_prins')
@@ -230,7 +230,7 @@
       rarityLabel: 'Epic',
       pack: 'expansion',
       description: 'Voor spelers die niet in één speltype te vangen zijn.',
-      requirementsText: 'Minstens 10 geregistreerde potjes in klaverjas, boerenbridge en beerpong.',
+      requirementsText: 'Minstens 10 geregistreerde potjes in 3 verschillende spellen (klaverjas, boerenbridge, beerpong, paardenrace, pikken).',
       imageFull: assetPath('expansion', 'alleskunner'),
       imageMini48: miniPath('48', 'alleskunner'),
       imageMini64: miniPath('64', 'alleskunner')
@@ -281,12 +281,42 @@
       imageMini64: miniPath('64', 'literlegende')
     },
     {
+      key: 'pikken',
+      legacyLabels: [],
+      title: 'Pikmeester',
+      plaqueTitle: 'Pikmeester',
+      nickname: 'De Dobbelbaas',
+      rarityRank: 19,
+      rarityLabel: 'Uncommon',
+      pack: 'expansion',
+      description: 'Voor wie de dobbelstenen van Pikken naar z\'n hand zet.',
+      requirementsText: '10 pikkenpotjes of 5 pikkenzeges.',
+      imageFull: assetPath('expansion', 'pikken'),
+      imageMini48: miniPath('48', 'pikken'),
+      imageMini64: miniPath('64', 'pikken')
+    },
+    {
+      key: 'paardenrace',
+      legacyLabels: [],
+      title: 'Derbykoning',
+      plaqueTitle: 'Derbykoning',
+      nickname: 'De Stalmeester',
+      rarityRank: 20,
+      rarityLabel: 'Uncommon',
+      pack: 'expansion',
+      description: 'Voor wie Paardenrace niet speelt, maar domineert.',
+      requirementsText: '10 paardenracepotjes of 5 paardenracezeges.',
+      imageFull: assetPath('expansion', 'paardenrace'),
+      imageMini48: miniPath('48', 'paardenrace'),
+      imageMini64: miniPath('64', 'paardenrace')
+    },
+    {
       key: 'bekerbeul',
       legacyLabels: [],
       title: 'Bekerbeul',
       plaqueTitle: 'Bekerbeul',
       nickname: 'De Pingbeul',
-      rarityRank: 19,
+      rarityRank: 21,
       rarityLabel: 'Rare',
       pack: 'expansion',
       description: 'Voor de beerponger die bekers laat verdwijnen.',
@@ -301,11 +331,11 @@
       title: 'Trouwe Wachter',
       plaqueTitle: 'Trouwe Wachter',
       nickname: 'De Portier',
-      rarityRank: 20,
-      rarityLabel: 'Rare',
+      rarityRank: 22,
+      rarityLabel: 'Uncommon',
       pack: 'expansion',
       description: 'Voor de waakzame verificator die altijd op tijd is.',
-      requirementsText: '20 geaccepteerde verificatiestemmen op requests van anderen.',
+      requirementsText: '10 geaccepteerde verificatiestemmen op requests van anderen.',
       imageFull: assetPath('expansion', 'trouwewachter'),
       imageMini48: miniPath('48', 'trouwewachter'),
       imageMini64: miniPath('64', 'trouwewachter')
@@ -316,7 +346,7 @@
       title: 'Salonleeuw',
       plaqueTitle: 'Salonleeuw',
       nickname: 'De Fluwelen Gast',
-      rarityRank: 21,
+      rarityRank: 23,
       rarityLabel: 'Rare',
       pack: 'expansion',
       description: 'Voor wie de ballroom niet alleen betreedt, maar beheerst.',
@@ -331,7 +361,7 @@
       title: 'IJzeren Maag',
       plaqueTitle: 'IJzeren Maag',
       nickname: 'De Betonmaag',
-      rarityRank: 22,
+      rarityRank: 24,
       rarityLabel: 'Epic',
       pack: 'expansion',
       description: 'Voor de speler die zware avonden blijft overleven.',
@@ -346,14 +376,209 @@
       title: 'Laatste Ronde',
       plaqueTitle: 'Laatste Ronde',
       nickname: 'De Nachtdienst',
-      rarityRank: 23,
-      rarityLabel: 'Legendary',
+      rarityRank: 25,
+      rarityLabel: 'Rare',
       pack: 'expansion',
       description: 'Voor de echte nachtspelers die doorgaan waar anderen afhaken.',
-      requirementsText: '5 geverifieerde acties na 04:00 in de nacht.',
+      requirementsText: '5 geverifieerde drank- of snelheidsacties tussen 01:00 en 05:00.',
       imageFull: assetPath('expansion', 'laatsteronde'),
       imageMini48: miniPath('48', 'laatsteronde'),
       imageMini64: miniPath('64', 'laatsteronde')
+    },
+    {
+      key: 'pikken_eersteprik',
+      legacyLabels: [],
+      title: 'Eerste Prik',
+      plaqueTitle: 'Eerste Prik',
+      nickname: 'De Opener',
+      rarityRank: 26,
+      rarityLabel: 'Common',
+      pack: 'expansion',
+      description: 'Voor wie Pikken voor het eerst echt aanraakt.',
+      requirementsText: '1 pikkenpotje.',
+      imageFull: assetPath('expansion', 'pikken_eersteprik'),
+      imageMini48: miniPath('48', 'pikken_eersteprik'),
+      imageMini64: miniPath('64', 'pikken_eersteprik')
+    },
+    {
+      key: 'paardenrace_startschot',
+      legacyLabels: [],
+      title: 'Startschot',
+      plaqueTitle: 'Startschot',
+      nickname: 'De Starter',
+      rarityRank: 27,
+      rarityLabel: 'Common',
+      pack: 'expansion',
+      description: 'Voor de eerste stap op de baan.',
+      requirementsText: '1 paardenracepotje.',
+      imageFull: assetPath('expansion', 'paardenrace_startschot'),
+      imageMini48: miniPath('48', 'paardenrace_startschot'),
+      imageMini64: miniPath('64', 'paardenrace_startschot')
+    },
+    {
+      key: 'pikken_zesjesregen',
+      legacyLabels: [],
+      title: 'Zesjesregen',
+      plaqueTitle: 'Zesjesregen',
+      nickname: 'De Geluksvogel',
+      rarityRank: 28,
+      rarityLabel: 'Common',
+      pack: 'expansion',
+      description: 'Voor wie de zessen blijven vallen.',
+      requirementsText: '6 pikkenpotjes.',
+      imageFull: assetPath('expansion', 'pikken_zesjesregen'),
+      imageMini48: miniPath('48', 'pikken_zesjesregen'),
+      imageMini64: miniPath('64', 'pikken_zesjesregen')
+    },
+    {
+      key: 'paardenrace_hoefijzerheld',
+      legacyLabels: [],
+      title: 'Hoefijzerheld',
+      plaqueTitle: 'Hoefijzerheld',
+      nickname: 'De Hoefheld',
+      rarityRank: 29,
+      rarityLabel: 'Uncommon',
+      pack: 'expansion',
+      description: 'Voor wie met geluk en lef over de baan dendert.',
+      requirementsText: '1 paardenracezege.',
+      imageFull: assetPath('expansion', 'paardenrace_hoefijzerheld'),
+      imageMini48: miniPath('48', 'paardenrace_hoefijzerheld'),
+      imageMini64: miniPath('64', 'paardenrace_hoefijzerheld')
+    },
+    {
+      key: 'pikken_dubbelzes',
+      legacyLabels: [],
+      title: 'Dubbel Zes',
+      plaqueTitle: 'Dubbel Zes',
+      nickname: 'De Kansmachine',
+      rarityRank: 30,
+      rarityLabel: 'Uncommon',
+      pack: 'expansion',
+      description: 'Voor wie kans in klasse verandert.',
+      requirementsText: 'Minstens 10 pikkenpotjes en minstens 25% winrate in Pikken.',
+      imageFull: assetPath('expansion', 'pikken_dubbelzes'),
+      imageMini48: miniPath('48', 'pikken_dubbelzes'),
+      imageMini64: miniPath('64', 'pikken_dubbelzes')
+    },
+    {
+      key: 'paardenrace_fotofinish',
+      legacyLabels: [],
+      title: 'Fotofinish',
+      plaqueTitle: 'Fotofinish',
+      nickname: 'De Nek-aan-nek',
+      rarityRank: 31,
+      rarityLabel: 'Rare',
+      pack: 'expansion',
+      description: 'Voor wie wint op een neuslengte.',
+      requirementsText: '2 fotofinish-zeges in Paardenrace.',
+      imageFull: assetPath('expansion', 'paardenrace_fotofinish'),
+      imageMini48: miniPath('48', 'paardenrace_fotofinish'),
+      imageMini64: miniPath('64', 'paardenrace_fotofinish')
+    },
+    {
+      key: 'pikken_waaghalspas',
+      legacyLabels: [],
+      title: 'Waaghalspas',
+      plaqueTitle: 'Waaghalspas',
+      nickname: 'De All-in',
+      rarityRank: 32,
+      rarityLabel: 'Rare',
+      pack: 'expansion',
+      description: 'Voor spelers die blijven durven, ook als het schuurt.',
+      requirementsText: '25 pikkenpotjes.',
+      imageFull: assetPath('expansion', 'pikken_waaghalspas'),
+      imageMini48: miniPath('48', 'pikken_waaghalspas'),
+      imageMini64: miniPath('64', 'pikken_waaghalspas')
+    },
+    {
+      key: 'paardenrace_snelheidspaard',
+      legacyLabels: [],
+      title: 'Snelheidspaard',
+      plaqueTitle: 'Snelheidspaard',
+      nickname: 'De Sprinter',
+      rarityRank: 33,
+      rarityLabel: 'Rare',
+      pack: 'expansion',
+      description: 'Voor wie twee keer achter elkaar de finish pakt.',
+      requirementsText: '2 paardenracezeges op rij.',
+      imageFull: assetPath('expansion', 'paardenrace_snelheidspaard'),
+      imageMini48: miniPath('48', 'paardenrace_snelheidspaard'),
+      imageMini64: miniPath('64', 'paardenrace_snelheidspaard')
+    },
+    {
+      key: 'pikken_prikoprij',
+      legacyLabels: [],
+      title: 'Prik op Rij',
+      plaqueTitle: 'Prik op Rij',
+      nickname: 'De Reeks',
+      rarityRank: 34,
+      rarityLabel: 'Rare',
+      pack: 'expansion',
+      description: 'Voor wie de reeks bewaakt en niet knippert.',
+      requirementsText: '3 pikkenzeges op rij.',
+      imageFull: assetPath('expansion', 'pikken_prikoprij'),
+      imageMini48: miniPath('48', 'pikken_prikoprij'),
+      imageMini64: miniPath('64', 'pikken_prikoprij')
+    },
+    {
+      key: 'paardenrace_jockeyjubileum',
+      legacyLabels: [],
+      title: 'Jockeyjubileum',
+      plaqueTitle: 'Jockeyjubileum',
+      nickname: 'De Ruiter',
+      rarityRank: 35,
+      rarityLabel: 'Rare',
+      pack: 'expansion',
+      description: 'Voor trouw aan het zadel en de baan.',
+      requirementsText: '25 paardenracepotjes.',
+      imageFull: assetPath('expansion', 'paardenrace_jockeyjubileum'),
+      imageMini48: miniPath('48', 'paardenrace_jockeyjubileum'),
+      imageMini64: miniPath('64', 'paardenrace_jockeyjubileum')
+    },
+    {
+      key: 'pikken_dobbelbaron',
+      legacyLabels: [],
+      title: 'Pechbaron',
+      plaqueTitle: 'Pechbaron',
+      nickname: 'De Pechmagnaat',
+      rarityRank: 36,
+      rarityLabel: 'Uncommon',
+      pack: 'expansion',
+      description: 'Voor wie door blijft spelen terwijl de dobbelsteen je verraadt.',
+      requirementsText: '10 pikkenverliezen.',
+      imageFull: assetPath('expansion', 'pikken_dobbelbaron'),
+      imageMini48: miniPath('48', 'pikken_dobbelbaron'),
+      imageMini64: miniPath('64', 'pikken_dobbelbaron')
+    },
+    {
+      key: 'paardenrace_baanbaas',
+      legacyLabels: [],
+      title: 'Modderhapper',
+      plaqueTitle: 'Modderhapper',
+      nickname: 'De Doorzetter',
+      rarityRank: 37,
+      rarityLabel: 'Uncommon',
+      pack: 'expansion',
+      description: 'Voor wie vaker achteraan eindigt, maar altijd weer op de baan staat.',
+      requirementsText: '10 paardenraceverliezen.',
+      imageFull: assetPath('expansion', 'paardenrace_baanbaas'),
+      imageMini48: miniPath('48', 'paardenrace_baanbaas'),
+      imageMini64: miniPath('64', 'paardenrace_baanbaas')
+    },
+    {
+      key: 'paardenrace_stalfluisteraar',
+      legacyLabels: [],
+      title: 'Stalfluisteraar',
+      plaqueTitle: 'Stalfluisteraar',
+      nickname: 'De Fluisteraar',
+      rarityRank: 38,
+      rarityLabel: 'Epic',
+      pack: 'expansion',
+      description: 'Voor wie de paarden leest alsof ze praten.',
+      requirementsText: 'Minstens 10 paardenracepotjes en minstens 30% winrate in Paardenrace.',
+      imageFull: assetPath('expansion', 'paardenrace_stalfluisteraar'),
+      imageMini48: miniPath('48', 'paardenrace_stalfluisteraar'),
+      imageMini64: miniPath('64', 'paardenrace_stalfluisteraar')
     },
     {
       key: 'fluwelenvorst',
@@ -361,7 +586,7 @@
       title: 'Fluwelen Vorst',
       plaqueTitle: 'Fluwelen Vorst',
       nickname: 'De Rode Baron',
-      rarityRank: 24,
+      rarityRank: 39,
       rarityLabel: 'Legendary',
       pack: 'prestige',
       description: 'Voor langdurige heerschappij over de ballroom.',
@@ -376,11 +601,11 @@
       title: 'Rozenkoning',
       plaqueTitle: 'Rozenkoning',
       nickname: 'De Charmeur',
-      rarityRank: 25,
+      rarityRank: 40,
       rarityLabel: 'Legendary',
       pack: 'prestige',
       description: 'Voor de speler die speciale avonden naar zich toe trekt.',
-      requirementsText: '15 verschillende geverifieerde overwinningen op speciale dagen of avonden met minstens 3 deelnemers.',
+      requirementsText: '15 verschillende win-dagen (elke kalenderdag max. 1x) in matches met minstens 3 deelnemers. Speciale dagen = weekend (vr/za/zo) of na 18:00.',
       imageFull: assetPath('prestige', 'rozenkoning'),
       imageMini48: miniPath('48', 'rozenkoning'),
       imageMini64: miniPath('64', 'rozenkoning')
@@ -391,11 +616,11 @@
       title: 'Vuurproef',
       plaqueTitle: 'Vuurproef',
       nickname: 'De Vlam',
-      rarityRank: 26,
+      rarityRank: 41,
       rarityLabel: 'Epic',
       pack: 'prestige',
       description: 'Voor spelers die meerdere dagen achter elkaar leveren.',
-      requirementsText: '7 geverifieerde snelheids- of drankrecords in 7 opeenvolgende actieve dagen.',
+      requirementsText: '7 geverifieerde snelheids- of drankrecords in 7 opeenvolgende actieve dagen. (Snelheidsrecord = top 5 tijd per dranktype; bij gelijke tijd blijft de eerdere plek.)',
       imageFull: assetPath('prestige', 'vuurproef'),
       imageMini48: miniPath('48', 'vuurproef'),
       imageMini64: miniPath('64', 'vuurproef')
@@ -406,7 +631,7 @@
       title: 'Sleuteldrager',
       plaqueTitle: 'Sleuteldrager',
       nickname: 'De Binnenste Kring',
-      rarityRank: 27,
+      rarityRank: 42,
       rarityLabel: 'Epic',
       pack: 'prestige',
       description: 'Voor de speler die overal sporen achterlaat.',
@@ -421,7 +646,7 @@
       title: 'Dobbel of Niets',
       plaqueTitle: 'Dobbel of Niets',
       nickname: 'De Waaghals',
-      rarityRank: 28,
+      rarityRank: 43,
       rarityLabel: 'Rare',
       pack: 'prestige',
       description: 'Voor de speler die terugkomt uit kansarme posities.',
@@ -436,7 +661,7 @@
       title: 'Kaartopera',
       plaqueTitle: 'Kaartopera',
       nickname: 'De Dirigent',
-      rarityRank: 29,
+      rarityRank: 44,
       rarityLabel: 'Epic',
       pack: 'prestige',
       description: 'Voor een speler die kaarten en live-spel elegant samenbrengt.',
@@ -451,11 +676,11 @@
       title: 'Avondster',
       plaqueTitle: 'Avondster',
       nickname: 'De Laatste Gloed',
-      rarityRank: 30,
+      rarityRank: 45,
       rarityLabel: 'Mythic',
       pack: 'prestige',
       description: 'Voor de absolute allesdrager van de site.',
-      requirementsText: 'Uiterst zeldzaam: 50 potjes, 50 geverifieerde drankacties, 25 geaccepteerde verificaties, minstens 2 speedrecords en activiteit in ballroom en live spectator-games.',
+      requirementsText: 'Uiterst zeldzaam: 50 potjes, 50 geverifieerde drankacties, 25 geaccepteerde verificaties, minstens 2 snelheidsrecords (top 5 per dranktype) en activiteit in ballroom en live spectator-games.',
       imageFull: assetPath('prestige', 'avondster'),
       imageMini48: miniPath('48', 'avondster'),
       imageMini64: miniPath('64', 'avondster')
@@ -549,6 +774,35 @@
     return '';
   }
 
+  function countTopFiveSpeedRecords(records) {
+    const seen = new Set();
+    let count = 0;
+    for (const row of toArray(records)) {
+      const rank = Number(
+        row?.rank ??
+        row?.position ??
+        row?.place ??
+        row?.spot ??
+        row?.leaderboard_rank ??
+        row?.leaderboardRank
+      );
+      if (!Number.isFinite(rank) || rank <= 0 || rank > 5) continue;
+      const type = firstNonEmpty(
+        row?.canonical_type_key,
+        row?.canonicalTypeKey,
+        row?.event_type_key,
+        row?.eventTypeKey,
+        row?.key,
+        row?.label
+      );
+      const key = String(type || '').trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      count += 1;
+    }
+    return count;
+  }
+
   function normalizePlayerSnapshot(input) {
     const root = input || {};
     const unified = root.unified || {};
@@ -566,6 +820,8 @@
     const klaverjasSummary = games.klaverjas && games.klaverjas.summary || {};
     const boerenbridgeSummary = games.boerenbridge && games.boerenbridge.summary || {};
     const beerpongSummary = games.beerpong && games.beerpong.summary || {};
+    const paardenraceSummary = games.paardenrace && games.paardenrace.summary || {};
+    const pikkenSummary = games.pikken && games.pikken.summary || {};
     const totalMatches = toNumber(
       root.total_matches,
       overview.total_matches,
@@ -583,11 +839,27 @@
       drinks.verification_votes_accepted,
       profile.verification_votes_accepted
     );
-    const speedCount = toNumber(
-      root.speed_record_count,
-      drinks.speed_record_count,
-      speedRecords.length
+    const hasExplicitTop5SpeedCount =
+      Number.isFinite(Number(root.speed_record_top5_count)) ||
+      Number.isFinite(Number(root.speed_top5_count)) ||
+      Number.isFinite(Number(drinks.speed_record_top5_count)) ||
+      Number.isFinite(Number(drinks.speed_top5_count));
+    const explicitTop5SpeedCount = toNumber(
+      root.speed_record_top5_count,
+      root.speed_top5_count,
+      drinks.speed_record_top5_count,
+      drinks.speed_top5_count
     );
+    const speedTop5FromRows = countTopFiveSpeedRecords(speedRecords);
+    const speedCount = hasExplicitTop5SpeedCount
+      ? explicitTop5SpeedCount
+      : (speedTop5FromRows > 0
+        ? speedTop5FromRows
+        : toNumber(
+          root.speed_record_count,
+          drinks.speed_record_count,
+          speedRecords.length
+        ));
     const iceBestSeconds = toNumber(
       root.ice_best_seconds,
       drinks.ice_best_seconds,
@@ -607,7 +879,10 @@
     const activeDayStreak = toNumber(root.active_day_streak, drinks.active_day_streak, sharedStats.active_day_streak);
     const ballroomEntries = toNumber(root.ballroom_entries_approved, profile.ballroom_entries_approved, sharedStats.ballroom_entries_approved);
     const ballroomKingCount = toNumber(root.ballroom_king_count, profile.ballroom_king_count, sharedStats.ballroom_king_count);
-    const specialWins = toNumber(root.special_event_wins, profile.special_event_wins, sharedStats.special_event_wins);
+    const specialWins = Math.max(
+      toNumber(root.evening_weekend_win_dates, badgeFacts.evening_weekend_win_dates),
+      toNumber(root.special_event_wins, profile.special_event_wins, sharedStats.special_event_wins, badgeFacts.special_event_wins)
+    );
     const liveParticipationsTotal = toNumber(root.live_participations_total, badgeFacts.live_participations_total);
     const liveParticipationsKlaverjas = toNumber(root.live_participations_klaverjas, badgeFacts.live_participations_klaverjas);
     const liveParticipationsBoerenbridge = toNumber(root.live_participations_boerenbridge, badgeFacts.live_participations_boerenbridge);
@@ -618,19 +893,42 @@
     const allMatches = {
       klaverjas: toNumber(root.klaverjas_matches, overview.klaverjas_matches, klaverjasSummary.games_played, klaverjasSummary.matches_played),
       boerenbridge: toNumber(root.boerenbridge_matches, overview.boerenbridge_matches, boerenbridgeSummary.games_played, boerenbridgeSummary.matches_played),
-      beerpong: toNumber(root.beerpong_matches, overview.beerpong_matches, beerpongSummary.games_played, beerpongSummary.matches_played)
+      beerpong: toNumber(root.beerpong_matches, overview.beerpong_matches, beerpongSummary.games_played, beerpongSummary.matches_played),
+      paardenrace: toNumber(root.paardenrace_matches, overview.paardenrace_matches, paardenraceSummary.games_played, paardenraceSummary.matches_played),
+      pikken: toNumber(root.pikken_matches, overview.pikken_matches, pikkenSummary.games_played, pikkenSummary.matches_played)
     };
     const allWins = {
       klaverjas: toNumber(root.klaverjas_wins, klaverjasSummary.wins),
       boerenbridge: toNumber(root.boerenbridge_wins, boerenbridgeSummary.wins),
-      beerpong: toNumber(root.beerpong_wins, beerpongSummary.wins)
+      beerpong: toNumber(root.beerpong_wins, beerpongSummary.wins),
+      paardenrace: toNumber(root.paardenrace_wins, paardenraceSummary.wins),
+      pikken: toNumber(root.pikken_wins, pikkenSummary.wins)
     };
     const winRateByGame = {
       klaverjas: toNumber(root.klaverjas_win_pct, klaverjasSummary.win_pct),
       boerenbridge: toNumber(root.boerenbridge_win_pct, boerenbridgeSummary.win_pct),
-      beerpong: toNumber(root.beerpong_win_pct, beerpongSummary.win_pct)
+      beerpong: toNumber(root.beerpong_win_pct, beerpongSummary.win_pct),
+      paardenrace: toNumber(root.paardenrace_win_pct, paardenraceSummary.win_pct),
+      pikken: toNumber(root.pikken_win_pct, pikkenSummary.win_pct)
     };
-    const bestWinRate = Math.max(winRateByGame.klaverjas || 0, winRateByGame.boerenbridge || 0, winRateByGame.beerpong || 0, toNumber(root.best_win_pct, overview.best_win_pct));
+    const pikkenWinStreak = toNumber(root.pikken_win_streak, gameInsights.pikken_win_streak, sharedStats.pikken_win_streak);
+    const paardenraceWinStreak = toNumber(root.paardenrace_win_streak, gameInsights.paardenrace_win_streak, sharedStats.paardenrace_win_streak);
+    const paardenracePhotoFinishWins = toNumber(
+      root.paardenrace_fotofinish_wins,
+      root.paardenrace_photo_finish_wins,
+      paardenraceSummary.fotofinish_wins,
+      paardenraceSummary.photo_finish_wins,
+      gameInsights.paardenrace_fotofinish_wins,
+      sharedStats.paardenrace_fotofinish_wins
+    );
+    const bestWinRate = Math.max(
+      winRateByGame.klaverjas || 0,
+      winRateByGame.boerenbridge || 0,
+      winRateByGame.beerpong || 0,
+      winRateByGame.paardenrace || 0,
+      winRateByGame.pikken || 0,
+      toNumber(root.best_win_pct, overview.best_win_pct)
+    );
     const activeGameCount = Object.values(allMatches).filter((n) => Number(n) > 0).length;
     const activeSitePartCount = [
       totalMatches > 0,
@@ -650,9 +948,18 @@
       klaverjasMatches: allMatches.klaverjas,
       boerenbridgeMatches: allMatches.boerenbridge,
       beerpongMatches: allMatches.beerpong,
+      paardenraceMatches: allMatches.paardenrace,
+      pikkenMatches: allMatches.pikken,
       klaverjasWins: allWins.klaverjas,
       boerenbridgeWins: allWins.boerenbridge,
       beerpongWins: allWins.beerpong,
+      paardenraceWins: allWins.paardenrace,
+      pikkenWins: allWins.pikken,
+      paardenraceWinPct: winRateByGame.paardenrace,
+      pikkenWinPct: winRateByGame.pikken,
+      paardenraceWinStreak,
+      pikkenWinStreak,
+      paardenracePhotoFinishWins,
       pussycupPct: toNumber(root.pussycup_pct, beerpongSummary.pussycup_pct, sharedStats.pussycup_pct),
       drinkEvents,
       drinkUnits,
@@ -691,19 +998,40 @@
     snelheidsduivel: (s) => s.speedCount >= 3,
     ijskoud: (s) => s.iceBestSeconds > 0 && s.iceBestSeconds < 25,
     kurkentrekker: (s) => s.wineEvents >= 5,
-    verifieermeester: (s) => s.verificationVotes >= 50,
-    pussycup_prins: (s) => s.beerpongMatches >= 12 && s.pussycupPct >= 75,
+    verifieermeester: (s) => s.verificationVotes >= 20,
+    pussycup_prins: (s) => s.beerpongMatches >= 10 && s.pussycupPct >= 25,
     onbreekbaar: (s) => s.winStreak >= 10,
     spinozageest: (s) => s.totalMatches >= 25 && s.drinkEvents >= 20 && s.verificationVotes >= 10 && s.activeGameCount >= 2,
-    alleskunner: (s) => s.klaverjasMatches >= 10 && s.boerenbridgeMatches >= 10 && s.beerpongMatches >= 10,
+    alleskunner: (s) => [
+      s.klaverjasMatches,
+      s.boerenbridgeMatches,
+      s.beerpongMatches,
+      s.paardenraceMatches,
+      s.pikkenMatches
+    ].filter((n) => Number(n) >= 10).length >= 3,
     nachtburgemeester: (s) => s.nightActions >= 12,
     dorstmachine: (s) => s.drinkUnits >= 40,
     literlegende: (s) => s.literSub90Count >= 3,
+    pikken: (s) => s.pikkenMatches >= 10 || s.pikkenWins >= 5,
+    paardenrace: (s) => s.paardenraceMatches >= 10 || s.paardenraceWins >= 5,
+    pikken_eersteprik: (s) => s.pikkenMatches >= 1,
+    paardenrace_startschot: (s) => s.paardenraceMatches >= 1,
+    pikken_zesjesregen: (s) => s.pikkenMatches >= 6,
+    paardenrace_hoefijzerheld: (s) => s.paardenraceWins >= 1,
+    pikken_dubbelzes: (s) => s.pikkenMatches >= 10 && s.pikkenWinPct >= 25,
+    paardenrace_fotofinish: (s) => s.paardenracePhotoFinishWins >= 2,
+    pikken_waaghalspas: (s) => s.pikkenMatches >= 25,
+    paardenrace_snelheidspaard: (s) => s.paardenraceWinStreak >= 2,
+    pikken_prikoprij: (s) => s.pikkenWinStreak >= 3,
+    paardenrace_jockeyjubileum: (s) => s.paardenraceMatches >= 25,
+    pikken_dobbelbaron: (s) => (s.pikkenMatches - s.pikkenWins) >= 10,
+    paardenrace_baanbaas: (s) => (s.paardenraceMatches - s.paardenraceWins) >= 10,
+    paardenrace_stalfluisteraar: (s) => s.paardenraceMatches >= 10 && s.paardenraceWinPct >= 30,
     bekerbeul: (s) => s.beerpongWins >= 20,
-    trouwewachter: (s) => s.verificationVotes >= 20,
+    trouwewachter: (s) => s.verificationVotes >= 10,
     salonleeuw: (s) => s.ballroomEntries >= 10 || s.ballroomKingCount >= 5,
     ijzerenmaag: (s) => s.tenUnitNights >= 5,
-    laatsteronde: (s) => s.afterFourActions >= 5,
+    laatsteronde: (s) => s.nightActions >= 5,
     fluwelenvorst: (s) => s.ballroomKingCount >= 10 || s.ballroomEntries >= 25,
     rozenkoning: (s) => s.specialWins >= 15,
     vuurproef: (s) => s.activeDayStreak >= 7 && (s.speedCount + s.drinkEvents) >= 7,

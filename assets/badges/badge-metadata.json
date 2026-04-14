@@ -84,7 +84,7 @@
         "nickname":  "De Bliksem",
         "attainability_rank":  8,
         "rarity":  "Rare",
-        "requirement":  "3 geverifieerde snelheidsrecords onder de drempel van hun drankje.",
+        "requirement":  "3 geverifieerde snelheidsrecords: een tijd die je in de top 5 van dat dranktype zet (bij gelijke tijd blijft de eerdere plek).",
         "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\badge-snelheidsduivel.png"
     },
     {
@@ -116,8 +116,8 @@
         "title":  "Verifieermeester",
         "nickname":  "De Getuige",
         "attainability_rank":  11,
-        "rarity":  "Epic",
-        "requirement":  "50 geaccepteerde verificatiestemmen op andermans requests.",
+        "rarity":  "Rare",
+        "requirement":  "20 geaccepteerde verificatiestemmen op andermans requests.",
         "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\badge-verifieermeester.png"
     },
     {
@@ -127,8 +127,8 @@
         "title":  "Pussycup-prins",
         "nickname":  "Fluwelen Pols",
         "attainability_rank":  12,
-        "rarity":  "Epic",
-        "requirement":  "Minstens 12 beerpongpotjes en pussycup-percentage van minstens 75%.",
+        "rarity":  "Rare",
+        "requirement":  "Minstens 10 beerpongpotjes en pussycup-percentage van minstens 25%.",
         "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\badge-pussycup_prins.png"
     },
     {
@@ -161,7 +161,7 @@
         "nickname":  "De Veelvraat",
         "attainability_rank":  15,
         "rarity":  "Epic",
-        "requirement":  "Minstens 10 geregistreerde potjes in klaverjas, boerenbridge en beerpong.",
+        "requirement":  "Minstens 10 geregistreerde potjes in 3 verschillende spellen (klaverjas, boerenbridge, beerpong, paardenrace, pikken).",
         "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-alleskunner.png"
     },
     {
@@ -199,11 +199,33 @@
     },
     {
         "pack":  "expansion",
+        "key":  "pikken",
+        "legacy_label":  "",
+        "title":  "Pikmeester",
+        "nickname":  "De Dobbelbaas",
+        "attainability_rank":  19,
+        "rarity":  "Uncommon",
+        "requirement":  "10 pikkenpotjes of 5 pikkenzeges.",
+        "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-pikken.png"
+    },
+    {
+        "pack":  "expansion",
+        "key":  "paardenrace",
+        "legacy_label":  "",
+        "title":  "Derbykoning",
+        "nickname":  "De Stalmeester",
+        "attainability_rank":  20,
+        "rarity":  "Uncommon",
+        "requirement":  "10 paardenracepotjes of 5 paardenracezeges.",
+        "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-paardenrace.png"
+    },
+    {
+        "pack":  "expansion",
         "key":  "bekerbeul",
         "legacy_label":  "",
         "title":  "Bekerbeul",
         "nickname":  "De Pingbeul",
-        "attainability_rank":  19,
+        "attainability_rank":  21,
         "rarity":  "Rare",
         "requirement":  "20 beerpongzeges.",
         "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-bekerbeul.png"
@@ -214,9 +236,9 @@
         "legacy_label":  "",
         "title":  "Trouwe Wachter",
         "nickname":  "De Portier",
-        "attainability_rank":  20,
-        "rarity":  "Rare",
-        "requirement":  "20 geaccepteerde verificatiestemmen op requests van anderen.",
+        "attainability_rank":  22,
+        "rarity":  "Uncommon",
+        "requirement":  "10 geaccepteerde verificatiestemmen op requests van anderen.",
         "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-trouwewachter.png"
     },
     {
@@ -225,7 +247,7 @@
         "legacy_label":  "",
         "title":  "Salonleeuw",
         "nickname":  "De Fluwelen Gast",
-        "attainability_rank":  21,
+        "attainability_rank":  23,
         "rarity":  "Rare",
         "requirement":  "10 goedgekeurde ballroom-entrees of 5 keer als koning in de ballroom.",
         "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-salonleeuw.png"
@@ -236,7 +258,7 @@
         "legacy_label":  "",
         "title":  "IJzeren Maag",
         "nickname":  "De Betonmaag",
-        "attainability_rank":  22,
+        "attainability_rank":  24,
         "rarity":  "Epic",
         "requirement":  "5 geverifieerde avonden met minstens 10 drinkunits.",
         "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-ijzerenmaag.png"
@@ -247,10 +269,153 @@
         "legacy_label":  "",
         "title":  "Laatste Ronde",
         "nickname":  "De Nachtdienst",
-        "attainability_rank":  23,
-        "rarity":  "Legendary",
-        "requirement":  "5 geverifieerde acties na 04:00 in de nacht.",
+        "attainability_rank":  25,
+        "rarity":  "Rare",
+        "requirement":  "5 geverifieerde drank- of snelheidsacties tussen 01:00 en 05:00.",
         "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-laatsteronde.png"
+    },
+    {
+        "pack":  "expansion",
+        "key":  "pikken_eersteprik",
+        "legacy_label":  "",
+        "title":  "Eerste Prik",
+        "nickname":  "De Opener",
+        "attainability_rank":  26,
+        "rarity":  "Common",
+        "requirement":  "1 pikkenpotje.",
+        "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-pikken_eersteprik.png"
+    },
+    {
+        "pack":  "expansion",
+        "key":  "paardenrace_startschot",
+        "legacy_label":  "",
+        "title":  "Startschot",
+        "nickname":  "De Starter",
+        "attainability_rank":  27,
+        "rarity":  "Common",
+        "requirement":  "1 paardenracepotje.",
+        "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-paardenrace_startschot.png"
+    },
+    {
+        "pack":  "expansion",
+        "key":  "pikken_zesjesregen",
+        "legacy_label":  "",
+        "title":  "Zesjesregen",
+        "nickname":  "De Geluksvogel",
+        "attainability_rank":  28,
+        "rarity":  "Common",
+        "requirement":  "6 pikkenpotjes.",
+        "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-pikken_zesjesregen.png"
+    },
+    {
+        "pack":  "expansion",
+        "key":  "paardenrace_hoefijzerheld",
+        "legacy_label":  "",
+        "title":  "Hoefijzerheld",
+        "nickname":  "De Hoefheld",
+        "attainability_rank":  29,
+        "rarity":  "Uncommon",
+        "requirement":  "1 paardenracezege.",
+        "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-paardenrace_hoefijzerheld.png"
+    },
+    {
+        "pack":  "expansion",
+        "key":  "pikken_dubbelzes",
+        "legacy_label":  "",
+        "title":  "Dubbel Zes",
+        "nickname":  "De Kansmachine",
+        "attainability_rank":  30,
+        "rarity":  "Uncommon",
+        "requirement":  "Minstens 10 pikkenpotjes en minstens 25% winrate in Pikken.",
+        "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-pikken_dubbelzes.png"
+    },
+    {
+        "pack":  "expansion",
+        "key":  "paardenrace_fotofinish",
+        "legacy_label":  "",
+        "title":  "Fotofinish",
+        "nickname":  "De Nek-aan-nek",
+        "attainability_rank":  31,
+        "rarity":  "Rare",
+        "requirement":  "2 fotofinish-zeges in Paardenrace.",
+        "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-paardenrace_fotofinish.png"
+    },
+    {
+        "pack":  "expansion",
+        "key":  "pikken_waaghalspas",
+        "legacy_label":  "",
+        "title":  "Waaghalspas",
+        "nickname":  "De All-in",
+        "attainability_rank":  32,
+        "rarity":  "Rare",
+        "requirement":  "25 pikkenpotjes.",
+        "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-pikken_waaghalspas.png"
+    },
+    {
+        "pack":  "expansion",
+        "key":  "paardenrace_snelheidspaard",
+        "legacy_label":  "",
+        "title":  "Snelheidspaard",
+        "nickname":  "De Sprinter",
+        "attainability_rank":  33,
+        "rarity":  "Rare",
+        "requirement":  "2 paardenracezeges op rij.",
+        "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-paardenrace_snelheidspaard.png"
+    },
+    {
+        "pack":  "expansion",
+        "key":  "pikken_prikoprij",
+        "legacy_label":  "",
+        "title":  "Prik op Rij",
+        "nickname":  "De Reeks",
+        "attainability_rank":  34,
+        "rarity":  "Rare",
+        "requirement":  "3 pikkenzeges op rij.",
+        "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-pikken_prikoprij.png"
+    },
+    {
+        "pack":  "expansion",
+        "key":  "paardenrace_jockeyjubileum",
+        "legacy_label":  "",
+        "title":  "Jockeyjubileum",
+        "nickname":  "De Ruiter",
+        "attainability_rank":  35,
+        "rarity":  "Rare",
+        "requirement":  "25 paardenracepotjes.",
+        "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-paardenrace_jockeyjubileum.png"
+    },
+    {
+        "pack":  "expansion",
+        "key":  "pikken_dobbelbaron",
+        "legacy_label":  "",
+        "title":  "Pechbaron",
+        "nickname":  "De Pechmagnaat",
+        "attainability_rank":  36,
+        "rarity":  "Uncommon",
+        "requirement":  "10 pikkenverliezen.",
+        "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-pikken_dobbelbaron.png"
+    },
+    {
+        "pack":  "expansion",
+        "key":  "paardenrace_baanbaas",
+        "legacy_label":  "",
+        "title":  "Modderhapper",
+        "nickname":  "De Doorzetter",
+        "attainability_rank":  37,
+        "rarity":  "Uncommon",
+        "requirement":  "10 paardenraceverliezen.",
+        "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-paardenrace_baanbaas.png"
+    },
+    {
+        "pack":  "expansion",
+        "key":  "paardenrace_stalfluisteraar",
+        "legacy_label":  "",
+        "title":  "Stalfluisteraar",
+        "nickname":  "De Fluisteraar",
+        "attainability_rank":  38,
+        "rarity":  "Epic",
+        "requirement":  "Minstens 10 paardenracepotjes en minstens 30% winrate in Paardenrace.",
+        "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\expansion\\badge-paardenrace_stalfluisteraar.png"
     },
     {
         "pack":  "prestige",
@@ -258,7 +423,7 @@
         "legacy_label":  "",
         "title":  "Fluwelen Vorst",
         "nickname":  "De Rode Baron",
-        "attainability_rank":  24,
+        "attainability_rank":  39,
         "rarity":  "Legendary",
         "requirement":  "10 keer ballroom-koning of 25 goedgekeurde ballroom-entrees.",
         "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\prestige\\badge-fluwelenvorst.png"
@@ -269,9 +434,9 @@
         "legacy_label":  "",
         "title":  "Rozenkoning",
         "nickname":  "De Charmeur",
-        "attainability_rank":  25,
+        "attainability_rank":  40,
         "rarity":  "Legendary",
-        "requirement":  "15 verschillende geverifieerde overwinningen op speciale dagen of avonden met minstens 3 deelnemers.",
+        "requirement":  "15 verschillende win-dagen (elke kalenderdag max. 1x) in matches met minstens 3 deelnemers. Speciale dagen = weekend (vr/za/zo) of na 18:00.",
         "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\prestige\\badge-rozenkoning.png"
     },
     {
@@ -280,9 +445,9 @@
         "legacy_label":  "",
         "title":  "Vuurproef",
         "nickname":  "De Vlam",
-        "attainability_rank":  26,
+        "attainability_rank":  41,
         "rarity":  "Epic",
-        "requirement":  "7 geverifieerde snelheids- of drankrecords in 7 opeenvolgende actieve dagen.",
+        "requirement":  "7 geverifieerde snelheids- of drankrecords in 7 opeenvolgende actieve dagen. (Snelheidsrecord = top 5 tijd per dranktype; bij gelijke tijd blijft de eerdere plek.)",
         "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\prestige\\badge-vuurproef.png"
     },
     {
@@ -291,7 +456,7 @@
         "legacy_label":  "",
         "title":  "Sleuteldrager",
         "nickname":  "De Binnenste Kring",
-        "attainability_rank":  27,
+        "attainability_rank":  42,
         "rarity":  "Epic",
         "requirement":  "Minstens 100 potjes totaal en activiteit in minstens 4 grote siteonderdelen.",
         "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\prestige\\badge-sleuteldrager.png"
@@ -302,7 +467,7 @@
         "legacy_label":  "",
         "title":  "Dobbel of Niets",
         "nickname":  "De Waaghals",
-        "attainability_rank":  28,
+        "attainability_rank":  43,
         "rarity":  "Rare",
         "requirement":  "12 onverwachte comebacks of 12 geverifieerde overwinningen na achterstand.",
         "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\prestige\\badge-dobbelofniets.png"
@@ -313,7 +478,7 @@
         "legacy_label":  "",
         "title":  "Kaartopera",
         "nickname":  "De Dirigent",
-        "attainability_rank":  29,
+        "attainability_rank":  44,
         "rarity":  "Epic",
         "requirement":  "20 klaverjas- en 20 boerenbridgezeges, plus minstens 5 live spectator-wedstrijden als deelnemer.",
         "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\prestige\\badge-kaartopera.png"
@@ -324,9 +489,9 @@
         "legacy_label":  "",
         "title":  "Avondster",
         "nickname":  "De Laatste Gloed",
-        "attainability_rank":  30,
+        "attainability_rank":  45,
         "rarity":  "Mythic",
-        "requirement":  "Uiterst zeldzaam: 50 potjes, 50 geverifieerde drankacties, 25 geaccepteerde verificaties, minstens 2 speedrecords en activiteit in ballroom en live spectator-games.",
+        "requirement":  "Uiterst zeldzaam: 50 potjes, 50 geverifieerde drankacties, 25 geaccepteerde verificaties, minstens 2 snelheidsrecords (top 5 per dranktype) en activiteit in ballroom en live spectator-games.",
         "file":  "C:\\Users\\jespe\\Documents\\wordt-er-gejast\\badge_pack\\output\\prestige\\badge-avondster.png"
     }
 ]
