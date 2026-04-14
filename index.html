@@ -514,6 +514,17 @@
       border-color: rgba(154,130,65,0.38);
     }
 
+    .page-link-card.placeholder-link {
+      cursor: default;
+      opacity: .88;
+      background: rgba(245, 241, 233, 0.9);
+    }
+    .page-link-card.placeholder-link:hover {
+      transform: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+      border-color: var(--card-line);
+    }
+
     .page-link-label {
       font-size: 16px;
       font-weight: 800;
@@ -663,7 +674,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v441';</script><script src="./gejast-config.js?v441"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v443';</script><script src="./gejast-config.js?v443"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
   <script src="./gejast-live-summary.js?v389"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
   <script src="./gejast-combined-readers.js?v426"></script>
@@ -693,18 +704,7 @@
           <div class="ladder-card"><div class="ladder-title"><strong>Klaverjassen</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
           <div class="ladder-card"><div class="ladder-title"><strong>Boerenbridge</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
           <div class="ladder-card"><div class="ladder-title"><strong>Beerpong</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
-        
-        <div class="public-links-grid" style="margin-top:16px;">
-          <a class="page-link-card scorer-link" href="./paardenrace.html">
-            <div class="page-link-label">Paardenrace</div>
-            <div class="page-link-copy">Maak of join een lobby.</div>
-          </a>
-          <a class="page-link-card scorer-link" href="./pikken.html">
-            <div class="page-link-label">Pikken</div>
-            <div class="page-link-copy">Nieuwe live game.</div>
-          </a>
         </div>
-</div>
       </section>
 
       <section class="drinks-home-section" style="margin-top:16px" aria-label="Drinkstand">
@@ -753,6 +753,28 @@
             <div class="page-link-label">Spelers</div>
             <div class="page-link-copy">Bekijk spelers en profielen.</div>
           </a>
+        </div>
+
+        <div class="public-links-grid">
+          <a class="page-link-card login-link" href="./paardenrace.html">
+            <div class="page-link-label">Paardenrace</div>
+            <div class="page-link-copy">Maak of join een lobby en speel live paardenrace.</div>
+          </a>
+          <a class="page-link-card login-link" href="./pikken.html">
+            <div class="page-link-label">Pikken</div>
+            <div class="page-link-copy">Open de pikken-pagina.</div>
+          </a>
+        </div>
+
+        <div class="public-links-grid">
+          <div class="page-link-card login-link placeholder-link" aria-disabled="true">
+            <div class="page-link-label">Rad</div>
+            <div class="page-link-copy">Placeholder — volgt later.</div>
+          </div>
+          <div class="page-link-card login-link placeholder-link" aria-disabled="true">
+            <div class="page-link-label">Despimarkt</div>
+            <div class="page-link-copy">Placeholder — volgt later.</div>
+          </div>
         </div>
 
         <div class="public-links-grid centered-single">
@@ -1080,6 +1102,7 @@ function applyAdminViewerRefresh() {
     }
 
 const EXTRA_POLL_KEY = 'gezopen_vanavond';
+const THURSDAY_POLL_KEY = 'gejast_donderdag';
 let currentDrinksPollState = null;
 let removingExtraVote = false;
 let removingExtraAdminVote = false;
@@ -1477,52 +1500,20 @@ async function castExtraPollVote(desired_status) {
       }
       currentHomepageState = { ...(data || {}), computed_key: state.key, status_key: state.key };
     }
-    
-    async function getThursdayPollState() {
-      const session_token = getSessionToken();
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_site_poll_state`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ poll_key_input: 'gejast_donderdag', session_token }) });
-      return await parseResponse(res);
-    }
-    async function castThursdayPollVote(desired_status) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cast_site_poll_vote`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ poll_key_input: 'gejast_donderdag', session_token: getSessionToken(), desired_status }) });
-      return await parseResponse(res);
-    }
-    function mergeThursdayState(homeState, pollState){
-      const merged = Object.assign({}, homeState || {});
-      const legends = Array.isArray(pollState?.legends) ? pollState.legends : (pollState?.yes_names || []);
-      const losers = Array.isArray(pollState?.losers) ? pollState.losers : (pollState?.no_names || []);
-      merged.legends = legends;
-      merged.losers = losers;
-      merged.yes_names = legends;
-      merged.no_names = losers;
-      merged.can_count = legends.length;
-      merged.yes_count = legends.length;
-      merged.my_name = pollState?.my_name || merged.my_name;
-      merged.my_status = pollState?.my_status || merged.my_status;
-      merged.status_key = legends.length >= 4 ? 'yes' : 'no';
-      merged.status_label = legends.length >= 4 ? 'Ja' : 'Nee';
-      return merged;
-    }
     async function getHomepageState() {
       const session_token = getSessionToken();
-      let home = {};
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_gejast_homepage_state`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token }) });
-        home = await parseResponse(res);
-      } catch {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token }) });
-        home = await parseResponse(res);
-      }
-      try {
-        const poll = await getThursdayPollState();
-        return mergeThursdayState(home, poll);
-      } catch (_) {
-        return home;
-      }
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_site_poll_state`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ poll_key_input: THURSDAY_POLL_KEY, session_token }) });
+      return await parseResponse(res);
     }
     async function castVote(desired_status) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cast_vote`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token: getSessionToken(), desired_status }) });
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cast_site_poll_vote`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ poll_key_input: THURSDAY_POLL_KEY, session_token: getSessionToken(), desired_status }) });
       return await parseResponse(res);
+    }
+    function isThursdayHomepagePayload(data) {
+      if (!data || typeof data !== 'object') return false;
+      const pollKey = String(data.poll_key || '').trim().toLowerCase();
+      if (pollKey) return pollKey === String(THURSDAY_POLL_KEY).toLowerCase();
+      return Array.isArray(data.legends) || Array.isArray(data.losers) || Array.isArray(data.yes_names) || Array.isArray(data.no_names) || typeof data.can_count !== 'undefined' || typeof data.yes_count !== 'undefined';
     }
     function goToLoginWithIntent(status, pollKey = 'gejast_donderdag') {
       const cfg = window.GEJAST_CONFIG || {};
@@ -1532,12 +1523,12 @@ async function castExtraPollVote(desired_status) {
       url.searchParams.set('vote_poll', pollKey);
       window.location.href = url.toString();
     }
-    
     async function handleVote(status) {
       if (!getSessionToken()) { goToLoginWithIntent(status, 'gejast_donderdag'); return; }
       try {
-        await castThursdayPollVote(status);
-        renderState(await getHomepageState());
+        await castVote(status);
+        const freshState = await getHomepageState();
+        renderState(freshState);
         setStatus(`Opgeslagen: ${status === 'ja' ? 'ik kan' : 'ik kan niet'}.`, 'ok');
       } catch (error) {
         const msg = error?.message || 'Onbekende fout';
@@ -1726,7 +1717,7 @@ async function castExtraPollVote(desired_status) {
     }
     function applyHomepageBootBundle(bundle, fromCache = false){
       if (!bundle || typeof bundle !== 'object') return;
-      if (bundle.homepage_state) {
+      if (bundle.homepage_state && isThursdayHomepagePayload(bundle.homepage_state)) {
         renderState(bundle.homepage_state);
         setStatus('');
       }

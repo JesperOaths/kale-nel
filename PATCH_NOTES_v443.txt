@@ -1,0 +1,15 @@
+GEJAST v443 patch
+
+Included files:
+- index.html
+- gejast-config.js
+
+What changed:
+- restored Paardenrace and Pikken boxes on the homepage
+- added placeholder boxes for Rad and Despimarkt in a row below Paardenrace/Pikken and above Balzaal
+- switched the Thursday homepage vote to the site-poll RPC path for gejast_donderdag so Legends/Losers persist across refreshes
+- prevented stale homepage boot bundle data from overwriting the Thursday poll lists with mismatched data
+- bumped visible shared version to v443
+
+SQL:
+- none
