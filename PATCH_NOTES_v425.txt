@@ -1,0 +1,16 @@
+GEJAST paardenrace patch v425
+
+Frontend:
+- added separate save-selection and ready buttons
+- locked suit+wager UI after first save
+- added admin wager verification box in lobby
+- improved live polling and room/player refresh behavior
+- clearer player rows with wager, verification, and ready state
+- added standalone gejast-paardenrace.js helper runtime
+
+SQL:
+- cleaned and recreated paardenrace lobby RPCs
+- fixed verify_paardenrace_wager_safe conflict by dropping exact signature first
+- added separate set_paardenrace_ready_safe
+- added start_paardenrace_countdown_safe
+- added server-side wager verification queue table
