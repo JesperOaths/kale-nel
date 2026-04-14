@@ -1,11 +1,16 @@
-GEJAST v422 config recovery
+GEJAST paardenrace patch v422
 
-Root cause fixed:
-- the shared gejast-config.js MutationObserver approach can self-trigger endlessly because applyVersionLabel mutates DOM/styles, which re-triggers the observer on the whole document
-- that can cause Firefox to warn that the page is slowing down or hang on a blank screen even when network requests already finished
+GitHub zip files:
+- paardenrace.html
+- gejast-config.js
+- PATCH_NOTES_v422.txt
 
-This recovery file:
-- removes the observer-style behavior entirely
-- keeps version ownership centralized in gejast-config.js
-- applies the visible version label once on boot only
-- does not auto-run the strict logged-out redirect globally
+Separate SQL:
+- gejast_v422_paardenrace.sql
+
+Changes:
+- room creation now respects the host-provided room code if entered
+- open room list now includes a clearer wager summary for players in the room
+- lobby player list shows each player's wager and verification status more clearly
+- wagers must be verified before a player can become ready
+- host can verify wagers from the lobby UI
