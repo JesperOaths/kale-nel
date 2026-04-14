@@ -1,0 +1,3 @@
+v442
+- fixed index.html syntax error that stopped homepage from loading
+- restored Thursday Legends/Losers logic and paardenrace/pikken boxes

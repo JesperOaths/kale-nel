@@ -663,7 +663,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v426';</script><script src="./gejast-config.js?v426"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v441';</script><script src="./gejast-config.js?v441"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
   <script src="./gejast-live-summary.js?v389"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
   <script src="./gejast-combined-readers.js?v426"></script>
@@ -1519,10 +1519,6 @@ async function castExtraPollVote(desired_status) {
       } catch (_) {
         return home;
       }
-    } catch {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token }) });
-        return await parseResponse(res);
-      }
     }
     async function castVote(desired_status) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cast_vote`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token: getSessionToken(), desired_status }) });
@@ -1544,11 +1540,6 @@ async function castExtraPollVote(desired_status) {
         renderState(await getHomepageState());
         setStatus(`Opgeslagen: ${status === 'ja' ? 'ik kan' : 'ik kan niet'}.`, 'ok');
       } catch (error) {
-        const msg = error?.message || 'Onbekende fout';
-        if (/sessie|token|login|ingelogd/i.test(msg)) { clearSessionToken(); goToLoginWithIntent(status, 'gejast_donderdag'); return; }
-        setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
-      }
-    } catch (error) {
         const msg = error?.message || 'Onbekende fout';
         if (/sessie|token|login|ingelogd/i.test(msg)) { clearSessionToken(); goToLoginWithIntent(status, 'gejast_donderdag'); return; }
         if (/cycle_key/i.test(msg)) {
