@@ -1,0 +1,5 @@
+GEJAST patch v438
+- restored and hardened host wager verification UI in paardenrace lobby
+- room code field no longer gets overwritten by live polling while typing
+- save choice now uses update_paardenrace_room_choice_safe again
+- optimistic lobby update makes the verify card appear immediately after save
