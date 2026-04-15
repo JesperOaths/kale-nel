@@ -28,18 +28,18 @@
     .pr-live-arena{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover}
     .pr-overlay,.pr-animation-layer{position:absolute;inset:0}
     .pr-animation-layer{pointer-events:none;z-index:25}
-    .pr-horse-slot,.pr-gate-slot,.pr-deck-slot,.pr-discard-slot,.pr-float-card,.pr-start-cover-slot{position:absolute;transform:translate(-50%,-50%)}
-    .pr-start-cover-slot{width:5.15%;z-index:7;display:flex;align-items:center;justify-content:center}
-    .pr-horse-slot{width:5.15%;z-index:8;display:flex;align-items:center;justify-content:center}
-    .pr-deck-slot{width:5.4%;height:12.5%;z-index:4}
-    .pr-discard-slot{width:6%;min-height:12.5%;z-index:5;display:flex;align-items:center;justify-content:center}.pr-discard-slot.is-landing{animation:discardLand .52s cubic-bezier(.2,.84,.24,1)}
-    .pr-gate-slot{width:4.86%;z-index:6;display:flex;align-items:center;justify-content:center;transform-style:preserve-3d}
-    .pr-gate-slot.is-revealed.pr-just-revealed{animation:gateReveal .84s cubic-bezier(.2,.84,.24,1.05)}.pr-horse-slot.is-just-moved{animation:horsePulse .5s cubic-bezier(.24,.84,.24,1)}
+    .pr-horse-slot,.pr-gate-slot,.pr-deck-slot,.pr-discard-slot,.pr-float-card,.pr-start-cover-slot,.pr-celebrate-piece,.pr-trail{position:absolute;transform:translate(-50%,-50%)}
+    .pr-start-cover-slot{width:4.55%;z-index:7;display:flex;align-items:center;justify-content:center;aspect-ratio:311/410}
+    .pr-horse-slot{width:4.35%;z-index:8;display:flex;align-items:center;justify-content:center;aspect-ratio:311/410}
+    .pr-deck-slot{width:5.85%;height:13.2%;z-index:4}
+    .pr-discard-slot{width:5.55%;min-height:12.5%;z-index:5;display:flex;align-items:center;justify-content:center}
+    .pr-gate-slot{width:4.28%;z-index:6;display:flex;align-items:center;justify-content:center;transform-style:preserve-3d;aspect-ratio:311/410}
+    .pr-gate-slot.is-revealed.pr-just-revealed{animation:gateReveal .72s cubic-bezier(.2,.84,.24,1.05)}
     .pr-stack-card{position:absolute;inset:0}
-    .pr-card-back,.pr-ace-card,.pr-start-marker{display:block;width:100%;height:auto;min-width:0;background:transparent}
-    .pr-card-back{filter:drop-shadow(0 10px 20px rgba(0,0,0,.18))}
-    .pr-ace-card{filter:drop-shadow(0 10px 18px rgba(0,0,0,.20)); user-select:none; pointer-events:none}
-    .pr-start-marker{filter:drop-shadow(0 4px 10px rgba(0,0,0,.10));opacity:.985}.pr-horse-mask{position:absolute;inset:2.5% 2%;border-radius:18px;background:linear-gradient(180deg,rgba(255,251,244,.98) 0%, rgba(244,235,220,.96) 100%);border:1px solid rgba(77,57,31,.16);box-shadow:0 4px 10px rgba(0,0,0,.10);z-index:0}.pr-horse-slot .pr-ace-card{position:relative;z-index:1}
+    .pr-card-back,.pr-ace-card,.pr-start-cover{display:block;width:100%;height:auto;min-width:0;background:transparent}
+    .pr-card-back{filter:drop-shadow(0 10px 20px rgba(0,0,0,.18));width:100%;height:100%;object-fit:cover}
+    .pr-ace-card{filter:drop-shadow(0 10px 18px rgba(0,0,0,.20)); user-select:none; pointer-events:none;width:92%;height:92%;object-fit:cover;clip-path:inset(2.5% 2.5% 2.5% 2.5% round 16px)}
+    .pr-start-cover{filter:drop-shadow(0 3px 8px rgba(0,0,0,.10));opacity:.99;width:96%;height:96%}
     .pr-open-card{position:relative;width:100%;aspect-ratio:311/410;border-radius:16px;background:linear-gradient(180deg,#fdf9f0 0%,#f5eedf 100%);border:1px solid rgba(77,57,31,.28);box-shadow:0 10px 22px rgba(0,0,0,.18);overflow:hidden;color:#1f1b1a}
     .pr-open-card.red{color:#a11f35}
     .pr-open-card-corner{position:absolute;display:grid;gap:1px;font-weight:900;font-size:clamp(11px,.95vw,16px);line-height:1;text-align:center}
@@ -62,7 +62,15 @@
     .pr-float-card{z-index:28;pointer-events:none;will-change:left,top,transform,opacity}
     .pr-float-card .pr-card-back,.pr-float-card .pr-open-card{width:100%;height:auto}
     @keyframes gateReveal{0%{transform:translate(-50%,-50%) rotateY(0deg) scale(.92)}45%{transform:translate(-50%,-50%) rotateY(90deg) scale(1.04)}65%{transform:translate(-50%,-50%) rotateY(0deg) scale(1.06)}100%{transform:translate(-50%,-50%) rotateY(0deg) scale(1)}}
-    @keyframes drawPulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.03)}}@keyframes horsePulse{0%{transform:translate(-50%,-50%) scale(.94)}55%{transform:translate(-50%,-50%) scale(1.07)}100%{transform:translate(-50%,-50%) scale(1)}}@keyframes discardLand{0%{transform:translate(-50%,-50%) scale(.96)}60%{transform:translate(-50%,-50%) scale(1.05)}100%{transform:translate(-50%,-50%) scale(1)}}
+    @keyframes drawPulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.03)}}
+
+    .section-title.has-plus::before{content:'+';display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin-right:9px;border-radius:999px;background:linear-gradient(180deg,#c8aa54 0%,#9a8241 100%);color:#fffaf0;font-weight:900;box-shadow:0 4px 10px rgba(154,130,65,.24)}
+    .nom-trigger{display:none}
+    .pr-celebrate-piece{z-index:34;pointer-events:none;will-change:left,top,transform,opacity}
+    .pr-trail{z-index:33;pointer-events:none;border-radius:999px;background:radial-gradient(circle, rgba(255,242,186,.92) 0%, rgba(233,199,98,.52) 35%, rgba(233,199,98,0) 75%);filter:blur(.4px)}
+    .pr-suit-badge{display:flex;align-items:center;justify-content:center;border-radius:999px;background:rgba(255,250,243,.96);border:2px solid rgba(154,130,65,.35);font-size:28px;font-weight:900;box-shadow:0 8px 18px rgba(0,0,0,.14)}
+    .pr-victory-flash{position:absolute;left:50%;top:50%;width:28px;height:28px;border-radius:999px;pointer-events:none;z-index:32;background:radial-gradient(circle, rgba(255,250,231,1) 0%, rgba(239,215,121,.86) 35%, rgba(239,215,121,0) 76%)}
+
     @media(max-width:900px){
       .page{padding:10px 8px 40px}.shell{padding:10px}.board-panel{padding:8px}
       .pr-horse-slot{width:7.1%}.pr-gate-slot{width:6.45%}.pr-deck-slot{width:7.1%}.pr-discard-slot{width:7.6%}
@@ -95,10 +103,10 @@
 
   <div class="info-stack">
     <section class="panel">
-      <h2 class="section-title">Race bediening</h2>
+      <h2 class="section-title has-plus">Race bediening</h2>
       <div class="action-row" style="margin-bottom:12px"><button class="btn" id="drawBtn" type="button">Trek volgende kaart</button><button class="btn secondary" id="tickBtn" type="button">Tick countdown</button><button class="btn secondary" id="resetBtn" type="button">Nieuwe ronde resetten</button></div>
       <div id="phaseBox" class="log"></div>
-      <div id="nomBox" style="margin-top:14px;display:none"><button class="btn" id="openNomBtn" type="button">Open nominatie-popup</button><div class="small" style="margin-top:8px">Nominaties gebeuren in een popup, niet onderaan de pagina.</div></div>
+      <div id="nomBox" class="nom-trigger small">Nominaties worden als pop-up geopend zodra de winnaar gevierd is.</div>
     </section>
     <section class="panel">
       <h2 class="section-title">Deelnemers / inzetten</h2>
@@ -107,14 +115,13 @@
   </div>
 </div></div>
 <dialog id="rulesDialog"><div class="modal-card"><div class="modal-top"><h2 style="margin:0">Paardenrace regels</h2><button class="btn secondary" id="closeRulesBtn" type="button">Sluiten</button></div><ol style="display:grid;gap:10px;line-height:1.5"><li>Iedereen kiest één suit/paard en zet één vaste inzet in Bakken.</li><li>De host verifieert die inzet in de lobby; pas dan kan een speler ready drukken.</li><li>Bij start gaat iedereen naar dit room-specifieke live scherm.</li><li>Elke getrokken kaart zet het bijbehorende paard één vak vooruit.</li><li>Als alle vier de paarden een gate hebben gehaald, draait die gate open en duwt één paard terug.</li><li>De eerste crossing telt alleen als minstens één speler op dat paard had ingezet.</li><li>Daarna verdelen winnaars hun nominaties.</li></ol></div></dialog>
-
-<dialog id="nomDialog"><div class="modal-card"><div class="modal-top"><h2 style="margin:0">Verdeel jouw nominaties</h2><button class="btn secondary" id="closeNomBtn" type="button">Sluiten</button></div><div class="small">Je moet exact je volledige budget verdelen over andere spelers. Niet over jezelf.</div><div id="allocRows" style="margin-top:12px"></div><div class="status" id="nomStatus" style="margin-top:8px"></div><div class="action-row" style="margin-top:12px"><button class="btn" id="submitNomBtn" type="button">Nominaties opslaan</button></div></div></dialog>
+<dialog id="nomDialog"><div class="modal-card"><div class="modal-top"><h2 style="margin:0">Verdeel jouw nominaties</h2><button class="btn secondary" id="closeNomBtn" type="button">Sluiten</button></div><div class="small" style="margin-top:8px">Je moet exact je volledige budget verdelen over andere spelers. Niet over jezelf.</div><div id="allocRows" style="margin-top:12px"></div><div class="status" id="nomStatus" style="margin-top:10px"></div><button class="btn" id="submitNomBtn" type="button" style="margin-top:12px">Nominaties opslaan</button></div></dialog>
 <div class="site-credit-watermark" data-version-watermark>v450 · Made by Bruis</div>
 <script>
 (()=>{
   const api = window.GEJAST_PAARDENRACE; const $=(id)=>document.getElementById(id);
   let currentState = null;
-  const anim = { dealtMatchRef:null, drawing:false, busy:false, polling:false, shownNominationForMatch:'' };
+  const anim = { dealtMatchRef:null, drawing:false, busy:false, polling:false };
   function qRoom(){ const params = new URLSearchParams(location.search); return params.get('room') || params.get('live') || api.getStoredRoomCode() || ''; }
   function setStatus(msg=''){ $('statusBox').textContent = msg || ''; }
   function isActiveStage(stage){ return ['countdown','race','nominations','finished'].includes(String(stage||'')); }
@@ -124,118 +131,176 @@
   function getStage(){ return document.querySelector('[data-stage-root]'); }
   function getCenterBox(el){ const stage = getStage(); if(!el || !stage) return null; const sr=stage.getBoundingClientRect(); const r=el.getBoundingClientRect(); return { x:r.left - sr.left + (r.width/2), y:r.top - sr.top + (r.height/2), w:r.width, h:r.height }; }
   function wait(ms){ return new Promise((resolve)=> setTimeout(resolve, ms)); }
+  function setDrawButtonMode(mode){
+    const btn = $('drawBtn'); if(!btn) return;
+    if(mode==='deal'){ btn.textContent='Gate kaarten delen…'; btn.disabled=true; return; }
+    if(mode==='reveal'){ btn.textContent='Laat gate kaart zien'; btn.disabled=true; return; }
+    btn.textContent='Trek volgende kaart';
+    const room = currentState?.room || {};
+    btn.disabled = !(room.can_draw && room.stage==='race');
+  }
   async function flyCard(fromEl, toEl, html, opts={}){
     const stage = getStage(); const layer = getLayer();
     if(!stage || !layer || !fromEl || !toEl) return;
     const from = getCenterBox(fromEl); const to = getCenterBox(toEl); if(!from || !to) return;
+    const duration = opts.duration || 760;
     const el = document.createElement('div');
     el.className = 'pr-float-card';
     el.style.left = `${from.x}px`; el.style.top = `${from.y}px`; el.style.width = `${opts.width || from.w || 72}px`; el.style.opacity = '1';
-    el.style.transform = 'translate(-50%,-50%) scale(.98) rotate(0deg)';
+    el.style.transform = `translate(-50%,-50%) scale(${opts.startScale || 1}) rotate(${opts.startRotate || 0}deg)`;
     el.innerHTML = html;
     layer.appendChild(el);
-    const mid = opts.mid || { x:(from.x + to.x) / 2, y:Math.min(from.y, to.y) - Math.max(44, Math.abs(to.x - from.x) * 0.08) };
-    const duration = opts.duration || 720;
-    await wait(16);
-    const animHandle = el.animate([
-      { left:`${from.x}px`, top:`${from.y}px`, transform:'translate(-50%,-50%) scale(.98) rotate(0deg)', opacity:1 },
-      { offset:0.58, left:`${mid.x}px`, top:`${mid.y}px`, transform:`translate(-50%,-50%) scale(${opts.midScale || 1.05}) rotate(${opts.midRotate || -10}deg)`, opacity:1 },
-      { left:`${to.x}px`, top:`${to.y}px`, transform:`translate(-50%,-50%) scale(${opts.scaleTo || 1}) rotate(${opts.rotate || 0}deg)`, opacity:1 }
-    ], { duration, easing:'cubic-bezier(.2,.84,.24,1)', fill:'forwards' });
+    const cp = { x: from.x + ((to.x - from.x) * 0.55) + (opts.curveX || 0), y: Math.min(from.y, to.y) - Math.max(24, Math.abs(to.x - from.x) * (opts.arc || 0.16)) + (opts.curveY || 0) };
+    const animObj = el.animate([
+      { left:`${from.x}px`, top:`${from.y}px`, transform:`translate(-50%,-50%) scale(${opts.startScale || 1}) rotate(${opts.startRotate || 0}deg)`, opacity:1, offset:0 },
+      { left:`${cp.x}px`, top:`${cp.y}px`, transform:`translate(-50%,-50%) scale(${opts.peakScale || 1.05}) rotate(${(opts.midRotate ?? ((opts.rotate||0)+8))}deg)`, opacity:1, offset:0.56 },
+      { left:`${to.x}px`, top:`${to.y}px`, transform:`translate(-50%,-50%) scale(${opts.scaleTo || 1}) rotate(${opts.rotate || 0}deg)`, opacity:1, offset:1 }
+    ], { duration, easing:'cubic-bezier(.18,.86,.24,1)', fill:'forwards' });
     if (opts.flipAt && opts.faceUpHtml) {
       setTimeout(()=>{ if(el.isConnected) el.innerHTML = opts.faceUpHtml; }, Math.max(120, Math.round(duration * opts.flipAt)));
     }
-    try { await animHandle.finished; } catch(_){}
-    if (opts.fadeOut !== false) {
-      el.animate([{ opacity:1 },{ opacity:0 }], { duration:180, fill:'forwards', easing:'ease' });
-      await wait(180);
+    await animObj.finished.catch(()=>null);
+    if(opts.fadeOut !== false){
+      const fade = el.animate([{opacity:1},{opacity:0}], {duration:180, fill:'forwards', easing:'ease-out'});
+      await fade.finished.catch(()=>null);
     }
     el.remove();
   }
+  function revealGateCard(slot, cardCode){ if(slot) slot.innerHTML = api.renderFaceUpCard(cardCode || '', 'pr-gate-face'); }
+  async function pulseHorse(slot){
+    if(!slot) return;
+    await slot.animate([
+      { transform:'translate(-50%,-50%) scale(1)' },
+      { transform:'translate(-52%,-50%) scale(1.06)' },
+      { transform:'translate(-50%,-50%) scale(1)' }
+    ], { duration:520, easing:'cubic-bezier(.22,.88,.24,1)' }).finished.catch(()=>null);
+  }
   async function animateDeal(match){
     const matchRef = String(match?.match_ref || '');
-    if(!matchRef || anim.dealtMatchRef === matchRef || Number(match?.draw_index || 0) !== 0) return;
+    if(!matchRef || anim.dealing || anim.dealtMatchRef === matchRef || Number(match?.draw_index || 0) !== 0) return;
     const deck = document.querySelector('[data-deck-slot]');
     if(!deck) return;
+    anim.dealing = true;
     anim.dealtMatchRef = matchRef;
+    setDrawButtonMode('deal');
+    const slots = [...document.querySelectorAll('.pr-gate-slot')];
+    slots.forEach((gate)=> gate.innerHTML = '');
+    await wait(180);
     for(let i=1;i<=10;i+=1){
       const gate = document.querySelector(`[data-gate-no="${i}"]`);
       if(!gate) continue;
-      flyCard(deck, gate, api.renderCardBack('pr-gate-back'), { duration:420 + (i*14), width:gate.getBoundingClientRect().width, scaleTo:1, rotate:(i%2===0?-8:8) });
-      await wait(48);
+      await flyCard(deck, gate, api.renderCardBack('pr-gate-back'), { duration:620 + (i*20), width:gate.getBoundingClientRect().width || 78, scaleTo:1, peakScale:1.08, rotate:(i%2===0?-7:7), curveY:-22 });
+      gate.innerHTML = api.renderCardBack('pr-gate-back');
+      await wait(50);
     }
-    await wait(420);
+    anim.dealing = false;
+    setDrawButtonMode('draw');
   }
   async function animateDraw(cardCode){
     const deck = document.querySelector('[data-deck-slot]');
     const discard = document.querySelector('[data-discard-slot]');
     if(!deck || !discard || !cardCode) return;
-    const discardRect = discard.getBoundingClientRect();
-    const stage = document.querySelector('[data-stage-root]');
-    if(!stage) return;
-    const stageRect = stage.getBoundingClientRect();
-    const deckBox = getCenterBox(deck); const discardBox = getCenterBox(discard);
-    const mid = { x:(deckBox.x + discardBox.x) / 2, y:Math.max(stageRect.height * 0.12, Math.min(deckBox.y, discardBox.y) - stageRect.height * 0.06) };
-    await flyCard(deck, discard, api.renderCardBack('pr-deck-back'), { duration:760, width:discardRect.width || 88, rotate:0, mid, midRotate:-14, flipAt:0.72, faceUpHtml: api.renderFaceUpCard(cardCode, 'pr-discard-face'), scaleTo:1.02, fadeOut:true });
-    discard.classList.remove('is-landing');
-    void discard.offsetWidth;
-    discard.classList.add('is-landing');
-    setTimeout(()=> discard.classList.remove('is-landing'), 520);
+    await flyCard(deck, discard, api.renderCardBack('pr-deck-back'), { duration:900, width:Math.max(discard.getBoundingClientRect().width || 88, 82), rotate:-5, peakScale:1.08, curveX:-26, curveY:-16, arc:0.19, flipAt:0.66, faceUpHtml: api.renderFaceUpCard(cardCode, 'pr-discard-face') });
   }
-
-  async function animateHorseAdvance(prevMatch, match){
-    const prevPos = prevMatch?.horse_positions || {};
-    const nextPos = match?.horse_positions || {};
-    const changed = Object.keys(nextPos).filter((suit)=> Number(nextPos[suit] || 0) !== Number(prevPos[suit] || 0));
-    for(const suit of changed){
-      const slot = document.querySelector(`.pr-horse-slot[data-suit="${suit}"]`);
-      if(!slot) continue;
-      slot.classList.remove('is-just-moved');
-      void slot.offsetWidth;
-      slot.classList.add('is-just-moved');
-    }
-    if(changed.length) await wait(220);
-  }
-  function closeNominationDialog(){ const dlg=$('nomDialog'); if(dlg && dlg.open) dlg.close(); }
-
   async function animateGateReveal(match, gateNos){
+    if(!gateNos.length) return;
+    setDrawButtonMode('reveal');
     for(const gateNo of gateNos){
       const slot = document.querySelector(`[data-gate-no="${gateNo}"]`);
+      const cardCode = Array.isArray(match?.gate_cards) ? (match.gate_cards[gateNo - 1] || '') : '';
       if(!slot) continue;
       slot.classList.remove('pr-just-revealed');
+      slot.innerHTML = api.renderCardBack('pr-gate-back');
+      await wait(160);
       void slot.offsetWidth;
       slot.classList.add('pr-just-revealed');
-      await wait(110);
+      revealGateCard(slot, cardCode);
+      await wait(520);
+      const parsed = api.parseCard(cardCode);
+      if(parsed?.suitKey){
+        const horse = document.querySelector(`.pr-horse-slot[data-suit="${parsed.suitKey}"]`);
+        await pulseHorse(horse);
+      }
+      await wait(120);
     }
+    setDrawButtonMode('draw');
   }
   async function animateReshuffle(){
     const deck = document.querySelector('[data-deck-slot]');
     const discard = document.querySelector('[data-discard-slot]');
     if(!deck || !discard) return;
-    const deckBox = getCenterBox(deck); const discardBox = getCenterBox(discard);
-    for(let i=0;i<6;i+=1){
-      flyCard(discard, deck, api.renderCardBack('pr-deck-back'), { duration:420 + i*50, width:deck.getBoundingClientRect().width || 80, rotate:(i%2===0?-8:8), mid:{ x:(discardBox.x + deckBox.x) / 2, y:Math.min(discardBox.y, deckBox.y) - 26 - (i*4) }, midRotate:(i%2===0?-18:18) });
-      await wait(60);
+    for(let i=0;i<5;i+=1){
+      await flyCard(discard, deck, api.renderCardBack('pr-deck-back'), { duration:520 + i*40, width:deck.getBoundingClientRect().width || 80, rotate:(i%2===0?-11:11), curveX:(i%2===0?-24:24), curveY:-18, peakScale:1.05 });
+      await wait(36);
     }
-    await wait(560);
+  }
+  function createTrail(layer, x, y, size){
+    const t = document.createElement('div');
+    t.className = 'pr-trail';
+    t.style.left = `${x}px`; t.style.top = `${y}px`; t.style.width = `${size}px`; t.style.height = `${size}px`;
+    layer.appendChild(t);
+    t.animate([{opacity:.85, transform:'translate(-50%,-50%) scale(1)'},{opacity:0, transform:'translate(-50%,-50%) scale(2.4)'}], {duration:540, easing:'ease-out', fill:'forwards'}).finished.finally(()=>t.remove());
+  }
+  async function animateVictory(winnerSuit){
+    const layer = getLayer();
+    const horse = document.querySelector(`.pr-horse-slot[data-suit="${winnerSuit}"]`);
+    const stage = getStage();
+    if(!layer || !horse || !stage) return;
+    anim.victoryPlaying = true;
+    const origin = getCenterBox(horse);
+    const flash = document.createElement('div');
+    flash.className = 'pr-victory-flash'; flash.style.left = `${origin.x}px`; flash.style.top = `${origin.y}px`;
+    layer.appendChild(flash);
+    flash.animate([{opacity:0, transform:'translate(-50%,-50%) scale(.2)'},{opacity:1, transform:'translate(-50%,-50%) scale(9)'},{opacity:0, transform:'translate(-50%,-50%) scale(16)'}], {duration:760, easing:'ease-out', fill:'forwards'}).finished.finally(()=>flash.remove());
+    const bounds = stage.getBoundingClientRect();
+    const pieces = [];
+    for(let i=0;i<18;i+=1){
+      const piece = document.createElement('div');
+      piece.className = 'pr-celebrate-piece';
+      piece.style.left = `${origin.x}px`; piece.style.top = `${origin.y}px`; piece.style.width = `${i % 3 === 0 ? 58 : 42}px`;
+      piece.innerHTML = i % 3 === 0 ? api.aceHorseCard(winnerSuit) : (i % 2 === 0 ? api.renderFaceUpCard(['AH','AD','AC','AS'][['hearts','diamonds','clubs','spades'].indexOf(winnerSuit)] || 'AH') : `<div class="pr-suit-badge" style="width:42px;height:42px;color:${api.suitColor(winnerSuit)}">${api.suitSymbol(winnerSuit)}</div>`);
+      layer.appendChild(piece);
+      pieces.append(piece);
+      const ang = (Math.PI * 2 * i) / 18;
+      const radius = 120 + Math.random() * 220;
+      const dest = { x: origin.x + Math.cos(ang) * radius, y: origin.y + Math.sin(ang) * radius * 0.65 };
+      piece.animate([
+        { left:`${origin.x}px`, top:`${origin.y}px`, transform:'translate(-50%,-50%) scale(.4) rotate(0deg)', opacity:0 },
+        { left:`${dest.x}px`, top:`${dest.y}px`, transform:`translate(-50%,-50%) scale(1.05) rotate(${(Math.random()*100)-50}deg)`, opacity:1 },
+        { left:`${dest.x + (Math.random()*220-110)}px`, top:`${dest.y + (Math.random()*120-60)}px`, transform:`translate(-50%,-50%) scale(.92) rotate(${(Math.random()*200)-100}deg)`, opacity:1 }
+      ], { duration:1200 + Math.random()*380, easing:'cubic-bezier(.2,.9,.22,1)', fill:'forwards' });
+      setTimeout(()=>createTrail(layer, dest.x, dest.y, 32), 280 + i*20);
+    }
+    await wait(980);
+    for(const piece of pieces){
+      const destX = 80 + Math.random() * (bounds.width - 160);
+      const destY = 70 + Math.random() * (bounds.height - 140);
+      piece.animate([
+        { offset:0, left:piece.style.left || `${origin.x}px`, top:piece.style.top || `${origin.y}px`, transform:'translate(-50%,-50%) scale(1) rotate(0deg)', opacity:1 },
+        { offset:.34, left:`${destX}px`, top:`${Math.max(44, destY - 90)}px`, transform:`translate(-50%,-50%) scale(.96) rotate(${(Math.random()*220)-110}deg)`, opacity:1 },
+        { offset:.68, left:`${destX + (Math.random()*120-60)}px`, top:`${destY}px`, transform:`translate(-50%,-50%) scale(1.02) rotate(${(Math.random()*360)-180}deg)`, opacity:1 },
+        { offset:1, left:`${destX + (Math.random()*40-20)}px`, top:`${Math.min(bounds.height-30, destY + 8)}px`, transform:`translate(-50%,-50%) scale(.98) rotate(${(Math.random()*480)-240}deg)`, opacity:.94 }
+      ], { duration:1450 + Math.random()*500, easing:'cubic-bezier(.18,.88,.24,1)', fill:'forwards' });
+      setTimeout(()=>createTrail(layer, destX, destY, 28), 220);
+      setTimeout(()=>createTrail(layer, destX + 10, destY + 10, 22), 720);
+      setTimeout(()=>piece.remove(), 2200);
+    }
+    await wait(2050);
+    anim.victoryPlaying = false;
+    if(anim.pendingNominationOpen && $('nomDialog') && !$('nomDialog').open){ $('nomDialog').showModal(); anim.pendingNominationOpen = false; }
   }
   async function apply(state, options={}){
     const prevState = currentState; const prevMatch = prevState?.match || null;
     currentState = state || null;
     const room = state?.room || {}; const match = state?.match || {}; const players = state?.players || []; const viewer = state?.viewer || {};
     $('metaBox').textContent = `${room.room_code || '—'} · stage ${room.stage || 'lobby'}${room.countdown_remaining_seconds?` · Countdown ${room.countdown_remaining_seconds}s`:''}`;
-    $('boardBox').innerHTML = api.renderLiveBoard(match);
-    $('drawBtn').disabled = !(room.can_draw && room.stage==='race'); $('tickBtn').disabled = room.stage !== 'countdown'; $('resetBtn').disabled = !(room.stage==='finished' && viewer.is_host); $('closeBtn').style.display = viewer.is_host ? '' : 'none';
+    const shouldHideGates = room.stage === 'race' && String(match?.match_ref || '') && String(prevMatch?.match_ref || '') !== String(match?.match_ref || '') && Number(match?.draw_index || 0) === 0;
+    $('boardBox').innerHTML = api.renderLiveBoard(match, { hideGates: shouldHideGates });
+    setDrawButtonMode('draw'); $('tickBtn').disabled = room.stage !== 'countdown'; $('resetBtn').disabled = !(room.stage==='finished' && viewer.is_host); $('closeBtn').style.display = viewer.is_host ? '' : 'none';
     $('playersBox').innerHTML = renderBettors(players); $('phaseBox').innerHTML = renderPhase(room, match);
+    const winnerJustResolved = !!(match?.winner_suit && match?.winner_suit !== prevMatch?.winner_suit && anim.victoryForMatch !== String((match?.match_ref || '') || match?.winner_suit));
     const myBudget = Number(viewer.nomination_budget_bakken || 0); const canNom = room.stage==='nominations' && viewer.can_nominate; $('nomBox').style.display = canNom ? '' : 'none';
-    if(canNom){
-      const others = players.filter((p)=>String(p.player_name||'').toLowerCase() !== String(viewer.player_name||'').toLowerCase());
-      $('allocRows').innerHTML = `<div class="small">Jouw budget: ${myBudget} Bakken</div>` + others.map((p)=>`<div class="alloc-row"><div>${p.player_name}</div><input type="number" min="0" step="1" value="0" data-target="${encodeURIComponent(p.player_name)}"></div>`).join('');
-      $('nomStatus').textContent='';
-      if(String(match?.match_ref || '') && anim.shownNominationForMatch !== String(match.match_ref)){ $('nomDialog').showModal(); anim.shownNominationForMatch = String(match.match_ref); }
-    } else {
-      closeNominationDialog();
-    }
+    if(canNom){ const others = players.filter((p)=>String(p.player_name||'').toLowerCase() !== String(viewer.player_name||'').toLowerCase()); $('allocRows').innerHTML = `<div class="small">Jouw budget: ${myBudget} Bakken</div>` + others.map((p)=>`<div class="alloc-row"><div>${p.player_name}</div><input type="number" min="0" step="1" value="0" data-target="${encodeURIComponent(p.player_name)}"></div>`).join(''); $('nomStatus').textContent=''; if(winnerJustResolved || anim.victoryPlaying) anim.pendingNominationOpen = true; else if(!$('nomDialog').open) $('nomDialog').showModal(); } else if($('nomDialog').open){ $('nomDialog').close(); }
     if(!isActiveStage(room.stage) && room.room_code){ window.location.replace(`./paardenrace.html?room=${encodeURIComponent(room.room_code)}`); return; }
 
     if(options.animated !== false){
@@ -243,10 +308,10 @@
       if(matchRef && room.stage === 'race' && String(prevMatch?.match_ref || '') !== matchRef && Number(match?.draw_index || 0) === 0){ await animateDeal(match); }
       const prevIndex = Number(prevMatch?.draw_index || 0); const nextIndex = Number(match?.draw_index || 0);
       if(nextIndex > prevIndex && match?.last_draw_card){ await animateDraw(match.last_draw_card); }
-      await animateHorseAdvance(prevMatch || {}, match || {});
       const before = api.resolvedGateSet(prevMatch || {}); const after = api.resolvedGateSet(match || {});
       const newGates = [...after].filter((n)=> !before.has(n)).sort((a,b)=>a-b);
       if(newGates.length) await animateGateReveal(match, newGates);
+      if(match?.winner_suit && match?.winner_suit !== prevMatch?.winner_suit && anim.victoryForMatch !== String(matchRef || match?.winner_suit)){ anim.victoryForMatch = String(matchRef || match?.winner_suit); await animateVictory(match.winner_suit); }
     }
   }
   async function load(opts={}){ const code=qRoom(); if(!code || anim.polling) return; anim.polling=true; try{ await apply(await api.rpc('tick_paardenrace_room_safe',{ room_code_input: code }), opts); }catch(err){ setStatus(err.message || 'Kon state niet laden.'); } finally { anim.polling=false; } }
@@ -272,10 +337,9 @@
   });
   $('resetBtn').addEventListener('click', async()=>{ try{ anim.dealtMatchRef = null; await apply(await api.rpc('reset_paardenrace_room_safe',{ room_code_input: qRoom() }), { animated:false }); setStatus('Room is gereset voor een nieuwe ronde.'); }catch(err){ setStatus(err.message || 'Reset mislukt.'); }});
   $('closeBtn').addEventListener('click', async()=>{ try{ await api.rpc('disband_paardenrace_room_safe',{ room_code_input: qRoom() }); api.clearStoredRoomCode(); window.location.href='./paardenrace.html'; }catch(err){ setStatus(err.message || 'Sluiten mislukt.'); }});
-  $('submitNomBtn').addEventListener('click', async()=>{ try{ const allocations = Array.from(document.querySelectorAll('#allocRows input[data-target]')).map((node)=>({ target_player_name: decodeURIComponent(node.dataset.target||''), bakken: Number(node.value||0) })).filter((row)=>row.bakken>0); await apply(await api.rpc('submit_paardenrace_nominations_safe',{ room_code_input: qRoom(), allocations_input: allocations }), { animated:false }); $('nomStatus').textContent='Nominaties opgeslagen.'; closeNominationDialog(); }catch(err){ $('nomStatus').textContent = err.message || 'Nomineren mislukt.'; } });
-  $('openNomBtn').addEventListener('click', ()=> $('nomDialog').showModal()); $('closeNomBtn').addEventListener('click', closeNominationDialog); $('nomDialog').addEventListener('click', (e)=>{ if(e.target === $('nomDialog')) closeNominationDialog(); });
-  $('rulesBtn').addEventListener('click', ()=> $('rulesDialog').showModal()); $('closeRulesBtn').addEventListener('click', ()=> $('rulesDialog').close()); $('rulesDialog').addEventListener('click', (e)=>{ if(e.target === $('rulesDialog')) $('rulesDialog').close(); });
-  load({ animated:false }); setInterval(()=> load({ animated:false }), 1200);
+  $('submitNomBtn').addEventListener('click', async()=>{ try{ const allocations = Array.from(document.querySelectorAll('#allocRows input[data-target]')).map((node)=>({ target_player_name: decodeURIComponent(node.dataset.target||''), bakken: Number(node.value||0) })).filter((row)=>row.bakken>0); await apply(await api.rpc('submit_paardenrace_nominations_safe',{ room_code_input: qRoom(), allocations_input: allocations }), { animated:false }); $('nomStatus').textContent='Nominaties opgeslagen.'; }catch(err){ $('nomStatus').textContent = err.message || 'Nomineren mislukt.'; } });
+  $('rulesBtn').addEventListener('click', ()=> $('rulesDialog').showModal()); $('closeRulesBtn').addEventListener('click', ()=> $('rulesDialog').close()); $('rulesDialog').addEventListener('click', (e)=>{ if(e.target === $('rulesDialog')) $('rulesDialog').close(); }); $('closeNomBtn').addEventListener('click', ()=> $('nomDialog').close()); $('nomDialog').addEventListener('click', (e)=>{ if(e.target === $('nomDialog')) $('nomDialog').close(); });
+  load({ animated:true }); setInterval(()=> load({ animated:false }), 1200);
 })();
 </script>
 </body>

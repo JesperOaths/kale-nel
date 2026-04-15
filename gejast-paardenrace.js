@@ -14,33 +14,25 @@
   };
   const SUITS = ['spades','hearts','clubs','diamonds'];
   const SUIT_META = {
-    hearts: { label:'♥ Harten', symbol:'♥', color:'#a11f35', fill:'#f6e5e8' },
-    diamonds: { label:'♦ Ruiten', symbol:'♦', color:'#a11f35', fill:'#f8e9e0' },
-    clubs: { label:'♣ Klaveren', symbol:'♣', color:'#1f1b1a', fill:'#ece9de' },
-    spades: { label:'♠ Schoppen', symbol:'♠', color:'#1f1b1a', fill:'#ece8e0' }
+    hearts: { label:'♥ Harten', symbol:'♥', color:'#a11f35' },
+    diamonds: { label:'♦ Ruiten', symbol:'♦', color:'#a11f35' },
+    clubs: { label:'♣ Klaveren', symbol:'♣', color:'#1f1b1a' },
+    spades: { label:'♠ Schoppen', symbol:'♠', color:'#1f1b1a' }
   };
-  const TRACK_X = [14.18, 21.18, 27.28, 33.36, 39.56, 45.72, 51.87, 58.03, 64.18, 70.35, 76.50, 84.86];
-  const GATE_X = [19.07, 25.14, 31.20, 37.31, 43.44, 49.55, 55.66, 61.76, 67.91, 74.02];
-  const LANE_Y = { spades: 40.86, hearts: 55.59, clubs: 70.24, diamonds: 84.90 };
-
-  const BOARD_GEOMETRY = {
-    cardPct: {
-      horse: 5.15,
-      gate: 4.86,
-      deck: 5.4,
-      discard: 6.0
-    },
-    deck: { x: 8.35, y: 25.55, widthPct: 5.4 },
-    discard: { x: 90.55, y: 24.85, widthPct: 6.0 },
-    gateSlots: GATE_X.map((x, idx)=>({ gateNo: idx + 1, x, y: 22.36, widthPct: 4.86 })),
-    horseSlots: Object.fromEntries(SUITS.map((suit)=>[
-      suit,
-      TRACK_X.map((x, idx)=>({ pos: idx, x, y: LANE_Y[suit], widthPct: 5.15 }))
-    ])),
-    startMarkers: Object.fromEntries(SUITS.map((suit)=>[
-      suit,
-      { x: TRACK_X[0], y: LANE_Y[suit], widthPct: 5.15 }
-    ]))
+  const BOARD_POINTS = {
+    trackX: [14.23, 20.96, 27.15, 33.46, 39.91, 46.32, 52.70, 59.11, 65.56, 71.98, 78.39, 86.72],
+    gateX: [20.96, 27.15, 33.46, 39.91, 46.32, 52.70, 59.11, 65.56, 71.98, 78.39],
+    laneY: { spades: 39.75, hearts: 53.52, clubs: 67.38, diamonds: 80.27 },
+    deckX: 8.05,
+    deckY: 19.15,
+    discardX: 89.55,
+    discardY: 23.45,
+    gateY: 24.18,
+    horseWidthPct: 4.35,
+    gateWidthPct: 4.28,
+    deckWidthPct: 5.85,
+    discardWidthPct: 5.55,
+    startWidthPct: 4.55
   };
 
   function sessionToken(){ return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; }
@@ -104,25 +96,24 @@
     const src = ASSETS.horses[suit] || ASSETS.horses.hearts;
     return `<img src="${src}" alt="${suitLabel(suit)} aas" class="pr-ace-card" draggable="false">`;
   }
-  function renderStartMarker(suit){
-    const meta = SUIT_META[suit] || SUIT_META.hearts;
-    const symbol = meta.symbol || '•';
-    const color = meta.color || '#1f1b1a';
-    const fill = meta.fill || '#f0ebe2';
-    return `
-      <svg class="pr-start-marker" viewBox="0 0 311 410" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <defs>
-          <linearGradient id="startGrad-${suit}" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#fffdf9"/>
-            <stop offset="100%" stop-color="${fill}"/>
-          </linearGradient>
-        </defs>
-        <rect x="8" y="8" width="295" height="394" rx="26" fill="url(#startGrad-${suit})" stroke="rgba(77,57,31,.16)" stroke-width="4"/>
-        <circle cx="155.5" cy="185" r="74" fill="rgba(255,255,255,.84)" stroke="${color}" stroke-opacity=".24" stroke-width="10"/>
-        <text x="155.5" y="202" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="86" font-weight="900" fill="${color}">${symbol}</text>
-        <text x="155.5" y="300" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="30" font-weight="800" letter-spacing="4" fill="rgba(77,57,31,.72)">START</text>
-      </svg>
-    `;
+  function renderStartCover(suit){
+    const symbol = suitSymbol(suit);
+    const color = suitColor(suit);
+    return `<svg class="pr-start-cover" viewBox="0 0 311 410" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <linearGradient id="strawBg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#f7efe0"/>
+          <stop offset="100%" stop-color="#ead9b4"/>
+        </linearGradient>
+      </defs>
+      <rect x="1.5" y="1.5" width="308" height="407" rx="24" fill="url(#strawBg)" stroke="rgba(77,57,31,.20)" stroke-width="3"/>
+      <g opacity="0.95" stroke="#d7b85e" stroke-width="7" stroke-linecap="round">
+        <path d="M38 240 L118 126"/><path d="M62 256 L152 112"/><path d="M90 268 L182 124"/><path d="M142 278 L230 136"/><path d="M80 182 L236 280"/><path d="M56 204 L208 304"/><path d="M100 154 L250 252"/><path d="M54 312 L210 212"/><path d="M116 316 L268 212"/>
+      </g>
+      <circle cx="156" cy="120" r="52" fill="rgba(255,255,255,.76)" stroke="rgba(154,130,65,.52)" stroke-width="6"/>
+      <text x="156" y="133" text-anchor="middle" font-size="54" font-weight="900" fill="${color}">${symbol}</text>
+      <text x="156" y="326" text-anchor="middle" font-size="36" font-weight="900" fill="#7a6130">STAL</text>
+    </svg>`;
   }
   function getDrawRemaining(match){
     const deck = Array.isArray(match?.draw_deck) ? match.draw_deck : [];
@@ -130,7 +121,7 @@
     return Math.max(0, deck.length - idx);
   }
   function resolvedGateSet(match){ return new Set(Array.isArray(match?.resolved_gates) ? match.resolved_gates.map(Number) : []); }
-  function renderLiveBoard(match){
+  function renderLiveBoard(match, options={}){
     if(!match || !match.horse_positions){
       return '<div class="pr-live-placeholder">Wachten op countdown of race-start.</div>';
     }
@@ -139,28 +130,32 @@
     const resolved = resolvedGateSet(match);
     const remaining = getDrawRemaining(match);
     const discardCard = match.last_draw_card || '';
+    const hideGates = !!options.hideGates;
+    const hideHorses = !!options.hideHorses;
 
     const deckLayers = remaining > 0
       ? [0,1,2].map((i)=>`<div class="pr-stack-card" style="transform:translate(${i * -4}px, ${i * 4}px)">${renderCardBack('pr-deck-back')}</div>`).join('')
       : '';
 
-    const gateHtml = BOARD_GEOMETRY.gateSlots.map((slot, idx)=>{
-      const gateNo = slot.gateNo;
+    const gateHtml = BOARD_POINTS.gateX.map((x, idx)=>{
+      const gateNo = idx + 1;
       const isResolved = resolved.has(gateNo);
-      const inner = isResolved ? renderFaceUpCard(gates[idx] || '', 'pr-gate-face') : renderCardBack('pr-gate-back');
-      return `<div class="pr-gate-slot ${isResolved ? 'is-revealed' : 'is-facedown'}" data-gate-no="${gateNo}" style="left:${slot.x}%;top:${slot.y}%">${inner}</div>`;
+      const inner = hideGates ? '' : (isResolved ? renderFaceUpCard(gates[idx] || '', 'pr-gate-face') : renderCardBack('pr-gate-back')); 
+      return `<div class="pr-gate-slot ${isResolved ? 'is-revealed' : 'is-facedown'}" data-gate-no="${gateNo}" style="left:${x}%;top:${BOARD_POINTS.gateY}%">${inner}</div>`;
     }).join('');
 
-    const startMarkerHtml = SUITS.map((suit)=>{
-      const slot = BOARD_GEOMETRY.startMarkers[suit];
-      return `<div class="pr-start-cover-slot" data-start-cover="${suit}" style="left:${slot.x}%;top:${slot.y}%">${renderStartMarker(suit)}</div>`;
+    const startCoverHtml = SUITS.map((suit)=>{
+      const x = BOARD_POINTS.trackX[0];
+      const y = BOARD_POINTS.laneY[suit];
+      return `<div class="pr-start-cover-slot" data-start-cover="${suit}" style="left:${x}%;top:${y}%">${renderStartCover(suit)}</div>`;
     }).join('');
 
     const horseHtml = SUITS.map((suit)=>{
       const raw = Number(pos[suit] || 0);
       const idx = Math.max(0, Math.min(11, raw));
-      const slot = BOARD_GEOMETRY.horseSlots[suit][idx];
-      return `<div class="pr-horse-slot" data-suit="${suit}" data-pos="${idx}" style="left:${slot.x}%;top:${slot.y}%"><span class="pr-horse-mask" aria-hidden="true"></span>${aceHorseCard(suit)}</div>`;
+      const x = BOARD_POINTS.trackX[idx];
+      const y = BOARD_POINTS.laneY[suit];
+      return `<div class="pr-horse-slot" data-suit="${suit}" data-pos="${idx}" style="left:${x}%;top:${y}%">${hideHorses ? '' : aceHorseCard(suit)}</div>`;
     }).join('');
 
     return `
@@ -168,10 +163,10 @@
         <div class="pr-live-stage" data-stage-root>
           <img src="${ASSETS.arena}" alt="Paardenrace bord" class="pr-live-arena">
           <div class="pr-overlay">
-            <div class="pr-deck-slot" data-deck-slot style="left:${BOARD_GEOMETRY.deck.x}%;top:${BOARD_GEOMETRY.deck.y}%">${deckLayers}</div>
-            <div class="pr-discard-slot ${discardCard ? 'has-card' : ''}" data-discard-slot style="left:${BOARD_GEOMETRY.discard.x}%;top:${BOARD_GEOMETRY.discard.y}%">${discardCard ? renderFaceUpCard(discardCard, 'pr-discard-face') : ''}</div>
+            <div class="pr-deck-slot" data-deck-slot style="left:${BOARD_POINTS.deckX}%;top:${BOARD_POINTS.deckY}%">${deckLayers}</div>
+            <div class="pr-discard-slot ${discardCard ? 'has-card' : ''}" data-discard-slot style="left:${BOARD_POINTS.discardX}%;top:${BOARD_POINTS.discardY}%">${discardCard ? renderFaceUpCard(discardCard, 'pr-discard-face') : ''}</div>
             ${gateHtml}
-            ${startMarkerHtml}
+            ${startCoverHtml}
             ${horseHtml}
             <div class="pr-animation-layer" data-animation-layer></div>
           </div>
@@ -181,7 +176,7 @@
   }
   window.GEJAST_PAARDENRACE = {
     rpc, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode,
-    suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack, renderLiveBoard,
-    gotoLive, liveHref, getDrawRemaining, resolvedGateSet, getBoardGeometry: ()=> JSON.parse(JSON.stringify(BOARD_GEOMETRY))
+    suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack, renderLiveBoard, renderStartCover, aceHorseCard,
+    gotoLive, liveHref, getDrawRemaining, resolvedGateSet, getBoardPoints: ()=> JSON.parse(JSON.stringify(BOARD_POINTS))
   };
 })();
