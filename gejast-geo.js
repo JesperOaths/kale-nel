@@ -61,7 +61,7 @@
   async function ensure(forceFresh=false, opts={}){ if (!forceFresh) { const c = cached(); if (c) return c; } if (opts.silent) return null; try { return await request(forceFresh); } catch (err) { const c = cached(60*60*1000); if (c) return c; throw err; } }
   function stopWatch(){ if (watchId === null || !navigator.geolocation) return; try { navigator.geolocation.clearWatch(watchId); } catch(_){} watchId = null; }
   function startWatch(){ if (!navigator.geolocation || watchId !== null) return; watchId = navigator.geolocation.watchPosition((pos)=>save(pos,'watch'), async(err)=>{ lastError = { code: err&&err.code, raw:String(err&&err.message||''), permission_state: await permissionState() }; announce('gejast:geo-error', lastError); }, { enableHighAccuracy:false, maximumAge:90*1000, timeout:12000 }); }
-  function shouldExclude(){ const path = String((window.location && window.location.pathname) || '').toLowerCase(); return ['login.html','request.html','activate.html','scorer.html','boerenbridge.html','beerpong.html'].some((name)=>path.endsWith('/'+name) || path.endsWith(name)) || /\/admin[^/]*\.html$/.test(path); }
+  function shouldExclude(){ const path = String((window.location && window.location.pathname) || '').toLowerCase(); return ['login.html','request.html','activate.html','scorer.html','boerenbridge.html','beerpong.html','paardenrace.html','paardenrace_live.html','pikken.html','pikken_live.html'].some((name)=>path.endsWith('/'+name) || path.endsWith(name)) || /\/admin[^/]*\.html$/.test(path); }
   function syncWatch(){ if (shouldExclude()) return stopWatch(); if (document.visibilityState === 'visible') startWatch(); else stopWatch(); }
   function startMonitor(options={}){
     if (shouldExclude()) return;

@@ -506,7 +506,7 @@
     .page-link-card.is-live{background:linear-gradient(180deg,rgba(104,13,21,.96),rgba(48,8,13,.98));color:#fff;border-color:rgba(255,194,194,.22);box-shadow:0 18px 34px rgba(80,10,17,.26)}
     .page-link-card.is-live .page-link-copy,.page-link-card.is-live .page-link-label{color:#fff}
     .page-link-card.is-live .page-link-copy{opacity:.92}
-    .page-link-card.is-live::after{content:'LIVE';display:inline-flex;align-items:center;justify-content:center;margin-top:10px;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);font-size:11px;font-weight:900;letter-spacing:.12em}
+    .page-link-card.is-live::after{content:'LIVE';display:inline-flex;align-items:center;justify-content:center;margin-top:10px;padding:5px 10px;border-radius:999px;background:rgba(255,236,236,.95);color:#7e1111;border:1px solid rgba(216,44,44,.28);font-size:11px;font-weight:900;letter-spacing:.12em;animation:livePulse 1.2s infinite}
 
     .page-link-card:hover {
       transform: translateY(-1px);
@@ -674,7 +674,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v462';</script><script src="./gejast-config.js?v462"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v479';</script><script src="./gejast-config.js?v479"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
   <script src="./gejast-live-summary.js?v389"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
   <script src="./gejast-combined-readers.js?v426"></script>
@@ -760,9 +760,9 @@
             <div class="page-link-label">Paardenrace</div>
             <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
           </a>
-          <a class="page-link-card login-link" href="./pikken.html">
-            <div class="page-link-label">Pikken</div>
-            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
+          <a id="homePikkenEntry" class="page-link-card login-link" href="./pikken.html" data-default-href="./pikken.html">
+            <div id="homePikkenLabel" class="page-link-label">Pikken</div>
+            <div id="homePikkenCopy" class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
           </a>
         </div>
 
@@ -1701,8 +1701,9 @@ async function castExtraPollVote(desired_status) {
     function wireProtectedDrinksLinks(){ document.querySelectorAll('a[href="./drinks_add.html"]').forEach((link)=>{ if(link.dataset.bound==='1') return; link.dataset.bound='1'; link.addEventListener('click',(ev)=>{ if(getPlayerSessionToken()) return; ev.preventDefault(); const cfg = window.GEJAST_CONFIG || {}; window.location.href = cfg.buildHomeUrl ? cfg.buildHomeUrl('drinks_add.html', CURRENT_SCOPE) : './home.html?return_to=drinks_add.html'; }); }); }
 
     const homeEntryDefaults = {
-      klaverjas:{ entryId:'homeKlaverjasEntry', labelId:'homeKlaverjasLabel', copyId:'homeKlaverjasCopy', href:'./scorer.html', label:'Klaverjas', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' },
-      boerenbridge:{ entryId:'homeBoerenbridgeEntry', labelId:'homeBoerenbridgeLabel', copyId:'homeBoerenbridgeCopy', href:'./boerenbridge.html', label:'Boerenbridge', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' }
+      klaverjas:{ entryId:'homeKlaverjasEntry', labelId:'homeKlaverjasLabel', copyId:'homeKlaverjasCopy', href:'./scorer.html', label:'Klaverjas', liveLabel:'Klaverjassen Kijken', liveCopy:'Open live scoreblad van jouw huidige potje.', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' },
+      boerenbridge:{ entryId:'homeBoerenbridgeEntry', labelId:'homeBoerenbridgeLabel', copyId:'homeBoerenbridgeCopy', href:'./boerenbridge.html', label:'Boerenbridge', liveLabel:'Boerenbridge Begluren', liveCopy:'Open live scoreblad van jouw huidige potje.', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' },
+      pikken:{ entryId:'homePikkenEntry', labelId:'homePikkenLabel', copyId:'homePikkenCopy', href:'./pikken.html', label:'Pikken', liveLabel:'Pikken Begluren', liveCopy:'Open live scoreblad van jouw huidige potje.', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' }
     };
     function setHomeEntryDefault(key){
       const cfg = homeEntryDefaults[key];
@@ -1722,17 +1723,35 @@ async function castExtraPollVote(desired_status) {
       if(!entry || !label || !copy || !item || !item.href) { setHomeEntryDefault(key); return; }
       entry.classList.add('is-live');
       entry.href = item.href;
-      label.textContent = item.label || (key === 'klaverjas' ? 'KLAVERJAS LIVE' : 'BOERENBRIDGE LIVE');
+      label.textContent = item.label || cfg.liveLabel || cfg.label;
       copy.className = 'page-link-copy';
-      copy.textContent = item.copy || 'Open live scoreblad van jouw huidige potje.';
+      copy.textContent = item.copy || cfg.liveCopy || 'Open live scoreblad van jouw huidige potje.';
     }
     function applyHomepageLiveEntries(entries){
       Object.keys(homeEntryDefaults).forEach(setHomeEntryDefault);
       const source = entries || {};
       setHomeEntryLive('klaverjas', source.klaverjas || null);
       setHomeEntryLive('boerenbridge', source.boerenbridge || null);
+      setHomeEntryLive('pikken', source.pikken || null);
     }
 
+
+    function maybeRedirectToLiveEntry(entries){
+      try {
+        const source = entries || {};
+        const items = ['klaverjas','boerenbridge','pikken'].map((key)=>source[key]).filter((item)=>item && item.href);
+        if (items.length !== 1) return;
+        const item = items[0];
+        const shouldAuto = !!(item.viewer_is_participant || item.viewer_is_spectator || item.auto_redirect || item.redirect_now || item.is_live_for_viewer);
+        if (!shouldAuto) return;
+        const target = String(item.href || '').trim();
+        if (!target) return;
+        const key = `gejast_live_redirect_once:${target}`;
+        if (sessionStorage.getItem(key) === '1') return;
+        sessionStorage.setItem(key, '1');
+        window.location.href = target;
+      } catch(_) {}
+    }
     async function loadHomepageLiveEntries(){
       try {
         applyHomepageLiveEntries({});
@@ -1741,6 +1760,7 @@ async function castExtraPollVote(desired_status) {
           ? await live.loadHomepageState(getPlayerSessionToken(), CURRENT_SCOPE)
           : {};
         applyHomepageLiveEntries(entries);
+        maybeRedirectToLiveEntry(entries);
         return entries;
       } catch(_) {
         applyHomepageLiveEntries({});
