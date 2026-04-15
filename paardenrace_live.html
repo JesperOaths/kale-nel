@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="nl">
 <head>
@@ -6,57 +5,97 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace live</title>
-  <script>window.GEJAST_PAGE_VERSION='v446';</script>
-  <script src="./gejast-config.js?v446"></script>
-  <script src="./gejast-paardenrace.js?v446"></script>
+  <script>window.GEJAST_PAGE_VERSION='v447';</script>
+  <script src="./gejast-config.js?v447"></script>
+  <script src="./gejast-paardenrace.js?v447"></script>
   <style>
-    :root{--gold:#9a8241;--paper:#fffaf3;--ink:#17130f;--muted:#6d6256;--line:rgba(0,0,0,.08);--bg:#f3ede4;--soft:#f7f1e7;--red:#8a1022;--red-bg:#fff4f2}
-    *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink)}
-    .page{max-width:1560px;margin:0 auto;padding:22px 16px 44px}.shell{background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.8);border-radius:28px;padding:20px;box-shadow:0 18px 40px rgba(0,0,0,.06)}
-    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}.title{font-size:clamp(2.2rem,4vw,3.6rem);letter-spacing:-.05em;margin:8px 0 0}
-    .btn,a.btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:16px;border:1px solid var(--line);background:#17130f;color:#fff;text-decoration:none;font-weight:800;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.06)}
-    .btn.secondary,a.btn.secondary{background:#fff;color:#17130f;border-color:rgba(0,0,0,.16)} .btn.warn{background:var(--red-bg);color:var(--red);border-color:rgba(138,16,34,.18)} .btn:disabled{opacity:.55;cursor:not-allowed}
-    .board-panel{margin-top:18px;background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:18px}
-    .board-shell{display:grid;gap:18px}.board-box{border:1px solid var(--line);border-radius:24px;padding:14px;background:linear-gradient(180deg,#fff,#f7f0e5)}
-    .pr-live-wrap{display:grid;gap:18px}.pr-live-stage{position:relative;aspect-ratio:1397/970;border-radius:22px;overflow:hidden;background:#f4ede2;border:1px solid rgba(0,0,0,.06)}
-    .pr-live-arena{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover}.pr-overlay{position:absolute;inset:0}
-    .pr-gate-slot,.pr-horse-slot,.pr-lane-symbol{position:absolute;transform:translate(-50%,-50%)}.pr-gate-slot{top:22.6%;z-index:4}.pr-gate-open{min-width:74px;padding:8px 10px;border-radius:16px;background:rgba(255,250,243,.96);border:1px solid rgba(0,0,0,.08);font-weight:900;font-size:12px;text-align:center;box-shadow:0 8px 18px rgba(0,0,0,.12)}
-    .pr-card-back{display:block;filter:drop-shadow(0 8px 18px rgba(0,0,0,.18))}.pr-gate{width:74px;height:108px;border-radius:14px}.pr-ace-card{width:82px;height:116px;display:block;object-fit:cover;border-radius:16px;box-shadow:0 12px 26px rgba(0,0,0,.26)}
-    .pr-horse-slot{z-index:5}.pr-lane-symbol{font-size:34px;font-weight:900;text-shadow:0 2px 6px rgba(255,255,255,.85)}
-    .pr-live-meta{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}.pr-meta-block{padding:14px;border-radius:18px;background:#fff;border:1px solid var(--line)}.pr-meta-title{font-size:13px;font-weight:900;margin-bottom:8px}.pr-mini-row{display:flex;flex-wrap:wrap;gap:8px}.pr-mini-card,.pr-mini-empty{padding:8px 10px;border-radius:12px;background:var(--soft);border:1px solid var(--line);font-weight:900;font-size:12px}.pr-gate-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}.pr-gate-state{padding:10px;border-radius:14px;background:var(--soft);border:1px solid var(--line);display:grid;gap:4px;font-size:12px;font-weight:800}.pr-gate-state.open{background:rgba(154,130,65,.12)}
-    .lower-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px}.panel{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:18px}.log{display:grid;gap:8px}.log-item{padding:10px 12px;border-radius:16px;background:#fff;border:1px solid var(--line)}.player-row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px;border-radius:16px;background:#fff;border:1px solid var(--line)}.chip{display:inline-flex;padding:6px 10px;border-radius:999px;background:rgba(154,130,65,.12);font-size:12px;font-weight:800}.small{font-size:12px;color:var(--muted)}.status{min-height:1.4em;font-weight:700;color:#6d1021}
-    .action-row{display:flex;gap:10px;flex-wrap:wrap}.alloc-row{display:grid;grid-template-columns:1fr 110px;gap:10px;align-items:center;padding:8px 0} input{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--line)}
+    :root{--gold:#9a8241;--paper:#fffaf3;--ink:#17130f;--muted:#6d6256;--line:rgba(0,0,0,.08);--bg:#efe6d7;--soft:#f7f1e7;--red:#8a1022;--red-bg:#fff4f2}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,sans-serif;background:linear-gradient(180deg,#efe4d3 0%,#eadfcf 100%);color:var(--ink)}
+    .page{max-width:1600px;margin:0 auto;padding:16px 14px 44px}
+    .shell{background:rgba(255,255,255,.44);border:1px solid rgba(255,255,255,.6);border-radius:30px;padding:18px;box-shadow:0 18px 40px rgba(0,0,0,.05)}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+    .top-left{display:grid;gap:4px}.title{font-size:clamp(2rem,4vw,3rem);letter-spacing:-.05em;margin:0}.small{font-size:12px;color:var(--muted)}
+    .btn,a.btn{display:inline-flex;align-items:center;justify-content:center;padding:11px 15px;border-radius:15px;border:1px solid var(--line);background:#17130f;color:#fff;text-decoration:none;font-weight:800;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.06)}
+    .btn.secondary,a.btn.secondary{background:#fff;color:#17130f;border-color:rgba(0,0,0,.16)}
+    .btn.warn{background:var(--red-bg);color:var(--red);border-color:rgba(138,16,34,.18)}
+    .btn:disabled{opacity:.55;cursor:not-allowed}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap}
+    .board-panel{background:rgba(255,250,243,.82);border:1px solid rgba(0,0,0,.06);border-radius:28px;padding:14px}
+    .board-shell{display:grid;gap:10px}
+    .pr-live-wrap{display:grid;gap:10px}
+    .pr-live-stage{position:relative;aspect-ratio:1536/1024;border-radius:24px;overflow:hidden;background:#ede2d1;border:1px solid rgba(0,0,0,.06)}
+    .pr-live-arena{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover}
+    .pr-overlay{position:absolute;inset:0}
+    .pr-horse-slot,.pr-horse-mask,.pr-gate-reveal-slot{position:absolute;transform:translate(-50%,-50%)}
+    .pr-horse-slot{width:6.2%;z-index:5}
+    .pr-gate-reveal-slot{width:4.45%;z-index:4}
+    .pr-horse-mask{width:5.2%;height:11.5%;border-radius:18px;background:linear-gradient(180deg,#f7f2ea 0%,#ede6db 100%);border:1px solid rgba(178,164,143,.45);box-shadow:0 2px 10px rgba(0,0,0,.05);z-index:2}
+    .pr-ace-card{display:block;width:100%;height:auto;min-width:0;border-radius:18px;box-shadow:0 12px 28px rgba(0,0,0,.24)}
+    .pr-open-card{position:relative;width:100%;aspect-ratio:389/528;border-radius:14px;background:linear-gradient(180deg,#fdf9f0 0%,#f5eedf 100%);border:1px solid rgba(77,57,31,.28);box-shadow:0 10px 22px rgba(0,0,0,.18);overflow:hidden;color:#1f1b1a}
+    .pr-open-card.red{color:#a11f35}
+    .pr-open-card-corner{position:absolute;display:grid;gap:1px;font-weight:900;font-size:clamp(11px,.95vw,16px);line-height:1;text-align:center}
+    .pr-open-card-corner.top{top:8px;left:8px}
+    .pr-open-card-corner.bottom{right:8px;bottom:8px;transform:rotate(180deg)}
+    .pr-open-card-corner span{font-size:1.05em}
+    .pr-open-card-center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:clamp(24px,2.2vw,36px);font-weight:900;opacity:.92}
     .pr-live-placeholder{padding:28px;border-radius:18px;background:#fff;border:1px dashed var(--line);font-weight:700;color:var(--muted)}
-    dialog{border:none;border-radius:24px;padding:0;max-width:760px;width:min(92vw,760px);background:#fffaf3;box-shadow:0 22px 60px rgba(0,0,0,.25)} dialog::backdrop{background:rgba(0,0,0,.35)} .modal-card{padding:20px 22px}.modal-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
-    @media(max-width:1100px){.pr-live-meta,.lower-grid{grid-template-columns:1fr}.pr-gate{width:58px;height:86px}.pr-ace-card{width:64px;height:92px}.pr-lane-symbol{font-size:28px}}
+    .status-row{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:0 4px}.status{min-height:1.4em;font-weight:700;color:#6d1021}
+    .info-stack{display:grid;gap:12px;margin-top:14px}
+    .panel{background:rgba(255,250,243,.88);border:1px solid var(--line);border-radius:22px;padding:16px}
+    .section-title{margin:0 0 10px;font-size:1.1rem}.action-row{display:flex;gap:10px;flex-wrap:wrap}.log{display:grid;gap:8px}.log-item{padding:10px 12px;border-radius:16px;background:#fff;border:1px solid var(--line)}
+    .player-row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px;border-radius:16px;background:#fff;border:1px solid var(--line)}
+    .chip{display:inline-flex;padding:6px 10px;border-radius:999px;background:rgba(154,130,65,.12);font-size:12px;font-weight:800}
+    .alloc-row{display:grid;grid-template-columns:1fr 110px;gap:10px;align-items:center;padding:8px 0}
+    input{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--line)}
+    dialog{border:none;border-radius:24px;padding:0;max-width:760px;width:min(92vw,760px);background:#fffaf3;box-shadow:0 22px 60px rgba(0,0,0,.25)}
+    dialog::backdrop{background:rgba(0,0,0,.35)}
+    .modal-card{padding:20px 22px}.modal-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
+    @media(max-width:900px){
+      .page{padding:10px 8px 40px}.shell{padding:10px}.board-panel{padding:8px}
+      .pr-horse-mask{border-radius:12px}.pr-horse-slot{width:8.8%}.pr-gate-reveal-slot{width:6.1%}.pr-ace-card{border-radius:13px}
+    }
   </style>
 </head>
 <body>
 <div class="page"><div class="shell">
   <div class="top">
-    <div><div class="small">Room-specifieke live race</div><h1 class="title">Paardenrace live</h1><div class="small">Elke room heeft zijn eigen live scherm via de roomcode in de URL. Daardoor kunnen meerdere paardenraces tegelijk bestaan zonder elkaar te vervangen.</div></div>
-    <div class="action-row"><button class="btn secondary" id="rulesBtn" type="button">Regels</button><a class="btn secondary" href="./paardenrace.html">Lobby</a><button class="btn secondary" id="refreshBtn" type="button">Refresh</button><button class="btn warn" id="closeBtn" type="button">Sluit match</button></div>
+    <div class="top-left">
+      <div class="small">Room-specifieke live race</div>
+      <h1 class="title">Paardenrace live</h1>
+      <div class="small" id="metaBox">Wachten op room...</div>
+    </div>
+    <div class="toolbar">
+      <button class="btn secondary" id="rulesBtn" type="button">Regels</button>
+      <a class="btn secondary" href="./paardenrace.html">Lobby</a>
+      <button class="btn secondary" id="refreshBtn" type="button">Refresh</button>
+      <button class="btn warn" id="closeBtn" type="button">Sluit match</button>
+    </div>
   </div>
+
   <section class="board-panel">
-    <div class="small" id="metaBox">Wachten op room...</div>
     <div id="boardBox" class="board-shell"></div>
-    <div class="status" id="statusBox"></div>
+    <div class="status-row">
+      <div class="small">Top links = trekstapel. Midden boven = 10 gate-kaarten. De 4 aas-paarden bewegen server-authoritative over het bord.</div>
+      <div class="status" id="statusBox"></div>
+    </div>
   </section>
-  <div class="lower-grid">
+
+  <div class="info-stack">
     <section class="panel">
-      <h2 style="margin-top:0">Race / nominaties</h2>
+      <h2 class="section-title">Race bediening</h2>
       <div class="action-row" style="margin-bottom:12px"><button class="btn" id="drawBtn" type="button">Trek volgende kaart</button><button class="btn secondary" id="tickBtn" type="button">Tick countdown</button><button class="btn secondary" id="resetBtn" type="button">Nieuwe ronde resetten</button></div>
       <div id="phaseBox" class="log"></div>
       <div id="nomBox" style="margin-top:14px;display:none"><h3 style="margin:0 0 8px">Verdeel jouw nominaties</h3><div class="small">Je moet exact je volledige budget verdelen over andere spelers. Niet over jezelf.</div><div id="allocRows" style="margin-top:10px"></div><div class="status" id="nomStatus"></div><button class="btn" id="submitNomBtn" type="button" style="margin-top:10px">Nominaties opslaan</button></div>
     </section>
     <section class="panel">
-      <h2 style="margin-top:0">Inzetten / deelnemers</h2>
+      <h2 class="section-title">Deelnemers / inzetten</h2>
       <div id="playersBox" class="log"></div>
     </section>
   </div>
 </div></div>
 <dialog id="rulesDialog"><div class="modal-card"><div class="modal-top"><h2 style="margin:0">Paardenrace regels</h2><button class="btn secondary" id="closeRulesBtn" type="button">Sluiten</button></div><ol style="display:grid;gap:10px;line-height:1.5"><li>Iedereen kiest één suit/paard en zet één vaste inzet in Bakken.</li><li>De host verifieert die inzet in de lobby; pas dan kan een speler ready drukken.</li><li>Bij start gaat iedereen naar dit room-specifieke live scherm.</li><li>Elke getrokken kaart zet het bijbehorende paard één vak vooruit.</li><li>Als alle vier de paarden een gate hebben gehaald, draait die gate open en duwt één paard terug.</li><li>De eerste crossing telt alleen als minstens één speler op dat paard had ingezet.</li><li>Daarna verdelen winnaars hun nominaties.</li></ol></div></dialog>
-<div class="site-credit-watermark" data-version-watermark>v446 · Made by Bruis</div>
+<div class="site-credit-watermark" data-version-watermark>v447 · Made by Bruis</div>
 <script>
 (()=>{
   const api = window.GEJAST_PAARDENRACE; const $=(id)=>document.getElementById(id);
