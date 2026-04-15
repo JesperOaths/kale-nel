@@ -7,8 +7,8 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Balzaal</title>
-  <script>window.GEJAST_PAGE_VERSION='v483';</script>
-  <script src="./gejast-config.js?v483"></script><script src="./gejast-home-gate.js?v371"></script>
+  <script>window.GEJAST_PAGE_VERSION='v484';</script>
+  <script src="./gejast-config.js?v484"></script><script src="./gejast-home-gate.js?v371"></script>
   <style>
     :root{
       --gold:#b78e43; --gold-deep:#89642a; --wine:#88162a; --wine-deep:#5c0c18; --cream:#f6efe3; --ink:#181310; --muted:#706557;
@@ -56,21 +56,21 @@
       linear-gradient(180deg,#96b6cb 0%,#cfe1ef 26%,#b7d0cb 26.5%,#6e845d 58%,#32412f 100%);overflow:hidden}
     .window-view::before{content:'';position:absolute;left:-8%;right:-8%;bottom:18%;height:34%;background:linear-gradient(180deg,rgba(58,81,46,.12),rgba(36,50,31,.82));clip-path:polygon(0 100%,8% 40%,16% 54%,24% 30%,32% 60%,40% 38%,48% 56%,56% 28%,64% 52%,72% 34%,80% 56%,88% 40%,100% 100%)}
     .window-view::after{content:'';position:absolute;left:10%;right:10%;bottom:8%;height:18%;background:linear-gradient(180deg,#6f7d55,#405232);border-radius:50% 50% 0 0/90% 90% 0 0;box-shadow:0 -18px 26px rgba(255,255,255,.12) inset}
-    .guard{position:absolute;bottom:124px;width:104px;height:232px;z-index:7;pointer-events:none}
-    .guard.left{left:12%}.guard.right{right:12%;transform:scaleX(-1)}
-    .guard .hat{position:absolute;left:50%;top:0;transform:translateX(-50%);width:62px;height:34px;border-radius:18px 18px 8px 8px;background:linear-gradient(180deg,#2e2e35,#101018)}
+    .guard{position:absolute;bottom:98px;width:122px;height:250px;z-index:7;pointer-events:none}
+    .guard.left{left:10%}.guard.right{right:10%;transform:scaleX(-1)}
+    .guard .hat{position:absolute;left:50%;top:4px;transform:translateX(-50%);width:72px;height:22px;border-radius:10px;background:linear-gradient(180deg,#5c1f2a,#8b3145)}
     .guard .head{position:absolute;left:50%;top:22px;transform:translateX(-50%);width:34px;height:42px;border-radius:18px;background:#efd9bc;border:2px solid rgba(0,0,0,.08)}
-    .guard .body{position:absolute;left:50%;top:58px;transform:translateX(-50%);width:64px;height:100px;border-radius:18px;background:linear-gradient(180deg,#254c79 0%,#d4b154 32%,#a42134 33%,#a42134 66%,#d4b154 67%,#254c79 100%);border:2px solid rgba(255,255,255,.12)}
-    .guard .body::before{content:'';position:absolute;left:50%;top:0;bottom:0;width:6px;transform:translateX(-50%);background:linear-gradient(180deg,#f2e1a3,#7f5b20)}
-    .guard .arm{position:absolute;top:78px;width:12px;height:88px;border-radius:999px;background:#203040}.guard .arm.left{left:14px;transform:rotate(9deg)}.guard .arm.right{right:14px;transform:rotate(-9deg)}
-    .guard .leg{position:absolute;bottom:0;width:14px;height:82px;border-radius:999px;background:#18222d}.guard .leg.left{left:32px}.guard .leg.right{right:32px}
-    .guard .spear{position:absolute;left:50%;top:24px;bottom:-6px;width:5px;transform:translateX(-50%);background:linear-gradient(180deg,#f6dd98,#927036)}
-    .guard .spear::before{content:'';position:absolute;left:50%;top:-14px;transform:translateX(-50%);width:16px;height:20px;clip-path:polygon(50% 0,100% 100%,0 100%);background:linear-gradient(180deg,#f7e5b1,#b88833)}
+    .guard .body{position:absolute;left:50%;top:58px;transform:translateX(-50%);width:72px;height:108px;border-radius:18px;background:linear-gradient(180deg,#254c79 0%,#d4b154 28%,#a42134 29%,#a42134 62%,#d4b154 63%,#254c79 100%);border:2px solid rgba(255,255,255,.12)}
+    .guard .body::before{content:'';position:absolute;left:50%;top:10px;transform:translateX(-50%);width:52px;height:44px;border-radius:16px;background:linear-gradient(180deg,#c8ced8,#8995a3);box-shadow:inset 0 0 0 2px rgba(255,255,255,.25),0 6px 10px rgba(0,0,0,.12)}
+    .guard .arm{position:absolute;top:88px;width:12px;height:92px;border-radius:999px;background:#203040}.guard .arm.left{left:10px;transform:rotate(6deg)}.guard .arm.right{right:10px;transform:rotate(-6deg)}
+    .guard .leg{position:absolute;bottom:0;width:14px;height:82px;border-radius:999px;background:#18222d}.guard .leg.left{left:38px}.guard .leg.right{right:38px}
+    .guard .spear{position:absolute;left:50%;top:-6px;bottom:-14px;width:5px;transform:translateX(-50%);background:linear-gradient(180deg,#f6dd98,#927036)}
+    .guard .spear::before{content:'';position:absolute;left:50%;top:-18px;transform:translateX(-50%);width:18px;height:28px;clip-path:polygon(50% 0,100% 64%,72% 64%,72% 100%,28% 100%,28% 64%,0 64%);background:linear-gradient(180deg,#f7e5b1,#b88833)}
     .seating-row{position:absolute;left:10%;right:10%;bottom:82px;display:flex;justify-content:space-between;gap:18px;z-index:4;pointer-events:none}
 
-    .bear-rug{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);width:min(540px,68%);height:120px;background:radial-gradient(circle at 50% 38%, #8b6a46 0%, #6b4c31 48%, #4d3423 72%, transparent 74%);filter:drop-shadow(0 16px 20px rgba(0,0,0,.25));opacity:.9;z-index:2}
-    .bear-rug::before,.bear-rug::after{content:'';position:absolute;top:42px;width:72px;height:58px;border-radius:50%;background:radial-gradient(circle at 50% 40%, #7d5b3b 0%, #503522 70%, transparent 72%)}
-    .bear-rug::before{left:-20px}.bear-rug::after{right:-20px}
+    .bear-rug{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);width:min(620px,74%);height:176px;filter:drop-shadow(0 16px 20px rgba(0,0,0,.25));opacity:.96;z-index:2;background:radial-gradient(circle at 50% 40%, #8b6a46 0%, #715031 38%, #5a3b24 58%, transparent 60%)}
+    .bear-rug::before,.bear-rug::after{content:'';position:absolute;top:62px;width:86px;height:68px;border-radius:50%;background:radial-gradient(circle at 50% 40%, #7d5b3b 0%, #503522 70%, transparent 72%)}
+    .bear-rug::before{left:-8px}.bear-rug::after{right:-8px}.bear-rug .bear-head{position:absolute;left:50%;top:-12px;transform:translateX(-50%);width:118px;height:86px;border-radius:50% 50% 45% 45%;background:radial-gradient(circle at 50% 38%, #8b6a46 0%, #6b4c31 58%, #4d3423 82%)}.bear-rug .bear-head::before,.bear-rug .bear-head::after{content:'';position:absolute;top:-14px;width:34px;height:34px;border-radius:50%;background:#6b4c31}.bear-rug .bear-head::before{left:12px}.bear-rug .bear-head::after{right:12px}.bear-rug .snout{position:absolute;left:50%;top:26px;transform:translateX(-50%);width:44px;height:28px;border-radius:50%;background:#b69366}.bear-rug .paw{position:absolute;bottom:12px;width:84px;height:54px;border-radius:50%;background:radial-gradient(circle at 50% 40%, #7d5b3b 0%, #503522 70%, transparent 72%)}.bear-rug .paw.left-front{left:88px}.bear-rug .paw.right-front{right:88px}.bear-rug .paw.left-back{left:24px;bottom:34px}.bear-rug .paw.right-back{right:24px;bottom:34px}
     .wall-armament{position:absolute;top:180px;width:110px;height:110px;opacity:.78;z-index:3}
     .wall-armament.left{left:20%}.wall-armament.right{right:20%}
     .wall-armament::before,.wall-armament::after{content:'';position:absolute;left:50%;top:50%;width:10px;height:100px;border-radius:999px;background:linear-gradient(180deg,#c8ab68,#6a5635);transform-origin:center}
@@ -106,7 +106,7 @@
 
     .dais{position:absolute;left:50%;bottom:190px;transform:translateX(-50%);width:min(520px,62vw);height:122px;border-radius:50% 50% 18px 18px / 44% 44% 18px 18px;background:linear-gradient(180deg,#d7b061,#8a6328);box-shadow:0 18px 34px rgba(0,0,0,.18), inset 0 8px 18px rgba(255,255,255,.12)}
     .dais::before{content:'';position:absolute;inset:14px 18px 22px;border-radius:50% 50% 14px 14px / 42% 42% 14px 14px;border:2px solid rgba(255,245,216,.18)}
-    .rope-zone{position:absolute;left:8%;right:8%;bottom:118px;height:154px;pointer-events:none;z-index:5}
+    .rope-zone{position:absolute;left:5%;right:5%;bottom:86px;height:170px;pointer-events:none;z-index:5}
     .rope-back,.rope-front{position:absolute;left:0;right:0;display:flex;align-items:flex-start;justify-content:space-between;padding:0 22px}
     .rope-back{top:30px;opacity:.55;transform:scale(.94)} .rope-front{bottom:0}
     .rope-post{position:relative;width:18px;height:102px;border-radius:999px;background:linear-gradient(180deg,#d4b169,#8f682b);box-shadow:inset 0 0 0 2px rgba(255,255,255,.16),0 8px 18px rgba(0,0,0,.18)}
@@ -206,7 +206,7 @@
           <div class="arm a1"></div><div class="arm a2"></div><div class="arm a3"></div><div class="arm a4"></div>
           <span class="gem g1"></span><span class="gem g2"></span><span class="gem g3"></span><span class="gem g4"></span><span class="gem g5"></span>
         </div>
-        <div class="wall-armament left"><span></span></div><div class="wall-armament right"><span></span></div><div class="despinoza-crest left"></div><div class="despinoza-crest right"></div><div class="dais"></div><div class="bear-rug"></div>
+        <div class="wall-armament left"><span></span></div><div class="wall-armament right"><span></span></div><div class="despinoza-crest left"><img src="./logo.png" alt="Despinoza logo"></div><div class="despinoza-crest right"><img src="./logo.png" alt="Despinoza logo"></div><div class="dais"></div><div class="bear-rug"><div class="bear-head"><div class="snout"></div></div><div class="paw left-front"></div><div class="paw right-front"></div><div class="paw left-back"></div><div class="paw right-back"></div></div>
         <div class="guard left"><div class="spear"></div><div class="hat"></div><div class="head"></div><div class="body"></div><div class="arm left"></div><div class="arm right"></div><div class="leg left"></div><div class="leg right"></div></div>
         <div class="guard right"><div class="spear"></div><div class="hat"></div><div class="head"></div><div class="body"></div><div class="arm left"></div><div class="arm right"></div><div class="leg left"></div><div class="leg right"></div></div>
         <div class="seating-row"><span class="chair"></span><span class="chair"></span><span class="chair"></span><span class="chair"></span><span class="chair"></span></div>
@@ -307,8 +307,9 @@
       const layer = document.getElementById('memberLayer');
       const list = document.getElementById('memberList');
       const rawMembers = Array.isArray(state?.approved_members) ? state.approved_members : [];
+      const kingKey = String(state?.king?.display_name || '').trim().toLowerCase();
       const seen = new Set();
-      const members = rawMembers.filter((m)=>{ const key=String(m?.display_name||'').trim().toLowerCase(); if(!key || seen.has(key)) return false; seen.add(key); return true; });
+      const members = rawMembers.filter((m)=>{ const key=String(m?.display_name||'').trim().toLowerCase(); if(!key || key===kingKey || seen.has(key)) return false; seen.add(key); return true; });
       const slots = [
         {left:22,bottom:54,depth:'back'},{left:34,bottom:68,depth:'back'},{left:46,bottom:76,depth:'mid'},
         {left:58,bottom:76,depth:'mid'},{left:70,bottom:68,depth:'back'},{left:82,bottom:54,depth:'back'},

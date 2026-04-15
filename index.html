@@ -674,7 +674,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v483';</script><script src="./gejast-config.js?v483"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v484';</script><script src="./gejast-config.js?v484"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
   <script src="./gejast-live-summary.js?v389"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
   <script src="./gejast-combined-readers.js?v426"></script>
@@ -1237,8 +1237,8 @@ async function removeMyExtraVote() {
   removingExtraVote = true;
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/remove_my_site_poll_vote`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ poll_key_input: EXTRA_POLL_KEY, session_token: getSessionToken() }) });
-    const data = await parseResponse(res);
-    renderExtraPollState(data);
+    await parseResponse(res);
+    renderExtraPollState(await getExtraPollState());
     setExtraPollStatus('Je stem is verwijderd.', 'ok');
   } catch (error) {
     const msg = error?.message || 'Onbekende fout';
@@ -1643,14 +1643,8 @@ async function castExtraPollVote(desired_status) {
     async function handleExtraPollVote(status) {
       if (!getSessionToken()) { goToLoginWithIntent(status, EXTRA_POLL_KEY); return; }
       try {
-        const data = await castExtraPollVote(status);
-        const returnedPollKey = String(data?.poll_key || '').trim().toLowerCase();
-        const expectedPollKey = String(EXTRA_POLL_KEY || '').trim().toLowerCase();
-        if (returnedPollKey && expectedPollKey && returnedPollKey !== expectedPollKey) {
-          renderExtraPollState(await getExtraPollState());
-        } else {
-          renderExtraPollState(data);
-        }
+        await castExtraPollVote(status);
+        renderExtraPollState(await getExtraPollState());
         setExtraPollStatus(`Opgeslagen: ${status === 'ja' ? 'ik ga drinken' : 'nee :('}.`, 'ok');
       } catch (error) {
         const msg = error?.message || 'Onbekende fout';
@@ -1789,16 +1783,18 @@ async function castExtraPollVote(desired_status) {
       const cfg = homeEntryDefaults[key];
       if(!cfg) return;
       const entry=document.getElementById(cfg.entryId), label=document.getElementById(cfg.labelId), copy=document.getElementById(cfg.copyId);
-      const looksLive = !!(item && (item.is_live || item.live || item.match_ref || item.matchRef || item.client_match_id || item.clientMatchId));
+      const looksLive = !!(item && (item.is_live || item.live || item.match_ref || item.matchRef || item.client_match_id || item.clientMatchId || item.participant_token || item.viewer_token || item.live_token || item.token || item.room_code || item.roomCode));
       if(!entry || !label || !copy || !item || !looksLive) { setHomeEntryDefault(key); return; }
       const matchRef = item.match_ref || item.matchRef || '';
       const clientMatchId = item.client_match_id || item.clientMatchId || '';
+      const roomCode = item.room_code || item.roomCode || '';
       let href = item.href || '';
       if(!href){
         const baseMap = { klaverjas:'./klaverjas_live.html', boerenbridge:'./boerenbridge_live.html', paardenrace:'./paardenrace_live.html', pikken:'./pikken_live.html' };
         const qs = new URLSearchParams();
         if(clientMatchId || matchRef) qs.set('client_match_id', clientMatchId || matchRef);
         if(matchRef) qs.set('match_ref', matchRef);
+        if(roomCode) qs.set('room', roomCode);
         if(CURRENT_SCOPE==='family') qs.set('scope','family');
         href = `${baseMap[key] || cfg.href}${qs.toString() ? `?${qs.toString()}` : ''}`;
       }
@@ -1807,14 +1803,26 @@ async function castExtraPollVote(desired_status) {
       label.textContent = item.label || cfg.liveLabel || cfg.label;
       copy.className = 'page-link-copy';
       copy.textContent = item.copy || 'Open live scoreblad van jouw huidige potje.';
+      try { if ((item.participant_token || item.viewer_token || item.live_token || item.token) && window.localStorage) localStorage.setItem(`gejast_live_participant_${key}`, JSON.stringify({ href, at: Date.now(), room_code: roomCode || '', match_ref: matchRef || clientMatchId || '' })); } catch(_) {}
     }
     function applyHomepageLiveEntries(entries){
       Object.keys(homeEntryDefaults).forEach(setHomeEntryDefault);
       const source = entries || {};
-      setHomeEntryLive('klaverjas', source.klaverjas || null);
-      setHomeEntryLive('boerenbridge', source.boerenbridge || null);
-      setHomeEntryLive('paardenrace', source.paardenrace || null);
-      setHomeEntryLive('pikken', source.pikken || null);
+      ['klaverjas','boerenbridge','paardenrace','pikken'].forEach((game)=>{
+        let item = source[game] || null;
+        if(!item){
+          try {
+            const raw = localStorage.getItem(`gejast_live_participant_${game}`);
+            if(raw){
+              const cached = JSON.parse(raw);
+              if(cached && cached.href && (Date.now() - Number(cached.at||0) < 1000*60*60*8)){
+                item = { live:true, href:cached.href, label: homeEntryDefaults[game]?.liveLabel || homeEntryDefaults[game]?.label, copy:'Open live scoreblad van jouw huidige potje.' };
+              }
+            }
+          } catch(_){}
+        }
+        setHomeEntryLive(game, item);
+      });
     }
 
     async function loadHomepageLiveEntries(){
