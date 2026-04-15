@@ -7,6 +7,156 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken live</title>
+  <script>window.GEJAST_PAGE_VERSION='v524b';</script>
+  <script src="./gejast-config.js?v524b"></script>
+  <script src="./gejast-home-gate.js?v524b"></script>
+  <style>
+    :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--shadow:0 18px 44px rgba(0,0,0,.08)}
+    *{box-sizing:border-box}
+    body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
+    .wrap{max-width:1020px;margin:0 auto}
+    .card{background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.7);border-radius:28px;padding:22px;box-shadow:var(--shadow)}
+    .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+    .top-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .btn,.soft-btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;font-weight:800;text-decoration:none;border:1px solid rgba(0,0,0,.08);cursor:pointer}
+    .btn{background:#111;color:#fff}
+    .soft-btn{background:#fff;color:#111}
+    .muted{color:var(--muted)}
+    .panel{margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px}
+    .row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.06)}
+    .row.dead{opacity:.55}
+    .row.turn{outline:2px solid rgba(154,130,65,.38)}
+    .pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-weight:900;font-size:12px;border:1px solid rgba(0,0,0,.1)}
+    .pill.ok{background:rgba(59,130,96,.12);border-color:rgba(59,130,96,.32);color:#1f5d45}
+    .pill.bad{background:rgba(127,47,29,.10);border-color:rgba(127,47,29,.28);color:#7f2f1d}
+    .pill.wait{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.12);color:#6b6257}
+    img.die{width:44px;height:44px}
+    img.die.pik{filter:saturate(1.05)}
+    .dice-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+    .grid{display:grid;gap:10px}
+    .controls{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .field{display:grid;gap:6px}
+    .label{font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#9a8241}
+    select,input{width:100%;height:42px;border-radius:14px;border:1px solid rgba(0,0,0,.12);background:#fff;padding:0 12px;font:inherit}
+    .hidden{display:none!important}
+    .error{color:#7f2f1d}
+    @media (max-width: 720px){ .controls{grid-template-columns:1fr} }
+
+    .hero{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;margin-top:16px}
+    .status-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}
+    .metric{padding:12px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.06)}
+    .metric .k{font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#9a8241}
+    .metric .v{margin-top:4px;font-weight:800}
+    .table-layout{display:grid;grid-template-columns:1fr .9fr;gap:16px;margin-top:16px}
+    .player-card{padding:14px;border-radius:18px;border:1px solid rgba(0,0,0,.08);background:#fff}
+    .player-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+    .player-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+    .history-list,.vote-list,.reveal-list{display:grid;gap:8px}
+    .history-item,.vote-item,.reveal-item{padding:10px 12px;border-radius:14px;background:#fbfaf6;border:1px solid rgba(0,0,0,.06)}
+    .empty{color:#6b6257}
+    @media (max-width: 960px){ .hero,.table-layout{grid-template-columns:1fr} .status-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="top">
+        <div>
+          <div class="top-actions" style="margin-bottom:14px">
+            <a class="btn" href="./index.html">Home</a>
+            <a id="backLobbyBtn" class="soft-btn" href="./pikken.html">Lobby</a>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin:0 0 6px">
+            <img src="./assets/pikken/pikken-icon.svg" alt="Pikken" style="width:48px;height:48px;border-radius:14px;background:#fff;padding:8px;border:1px solid rgba(0,0,0,.08)">
+            <h1 style="margin:0">Pikken live</h1>
+          </div>
+          <div id="meta" class="muted">Laden…</div>
+          <div id="statusText" class="muted" style="margin-top:6px"></div>
+        </div>
+      </div>
+
+      <div class="hero">
+        <div class="panel">
+          <h2 style="margin:0 0 8px">Status</h2>
+          <div class="status-grid">
+            <div class="metric"><div class="k">Fase</div><div class="v"><span id="phasePill" class="pill wait">—</span></div></div>
+            <div class="metric"><div class="k">Ronde</div><div class="v" id="roundNo">0</div></div>
+            <div class="metric"><div class="k">Beurt</div><div class="v" id="turnName">—</div></div>
+            <div class="metric"><div class="k">Lobby</div><div class="v" id="lobbyCode">—</div></div>
+            <div class="metric"><div class="k">Variant</div><div class="v" id="penaltyMode">—</div></div>
+            <div class="metric"><div class="k">Bod</div><div class="v"><span id="currentBid">—</span> <span id="bidBy" class="muted" style="font-size:12px"></span></div></div>
+            <div class="metric"><div class="k">Nu in spel</div><div class="v"><span id="totalCurrentDice">0</span> / <span id="totalStartDice">0</span></div></div>
+            <div class="metric"><div class="k">Kwijt</div><div class="v" id="totalLostDice">0</div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2 style="margin:0 0 8px">Jouw dobbelstenen</h2>
+          <div id="viewerMeta" class="muted">Alleen zichtbaar voor deelnemers in deze lobby.</div>
+          <div id="myDice" class="dice-row" style="margin-top:10px"></div>
+        </div>
+      </div>
+
+      <div class="table-layout">
+        <div>
+          <div class="panel">
+            <h2 style="margin:0 0 8px">Spelers</h2>
+            <div id="playersList" class="grid muted">—</div>
+          </div>
+
+          <div id="bidPanel" class="panel hidden">
+            <h2 style="margin:0 0 8px">Jouw beurt: bied of keur af</h2>
+            <div class="controls">
+              <div class="field">
+                <label class="label" for="bidCount">Aantal</label>
+                <select id="bidCount"></select>
+              </div>
+              <div class="field">
+                <label class="label" for="bidFace">Waarde</label>
+                <select id="bidFace">
+                  <option value="1">pik</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                </select>
+              </div>
+            </div>
+            <div class="top-actions" style="margin-top:12px">
+              <button id="placeBidBtn" class="btn" type="button">Bod plaatsen</button>
+              <button id="rejectBidBtn" class="soft-btn" type="button">Afkeuren</button>
+            </div>
+          </div>
+
+          <div id="votePanel" class="panel hidden">
+            <h2 style="margin:0 0 8px">Jouw stem</h2>
+            <div class="top-actions">
+              <button id="voteApproveBtn" class="btn" type="button">Geloof bod</button>
+              <button id="voteRejectBtn" class="soft-btn" type="button">Geloof niet</button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="panel">
+            <h2 style="margin:0 0 8px">Biedgeschiedenis</h2>
+            <div id="bidHistory" class="history-list"><div class="empty">Nog geen eerdere biedingen zichtbaar.</div></div>
+          </div>
+
+          <div class="panel">
+            <h2 style="margin:0 0 8px">Stemstatus</h2>
+            <div id="voteStatusList" class="vote-list"><div class="empty">Nog geen stemronde actief.</div></div>
+          </div>
+
+          <div class="panel">
+            <h2 style="margin:0 0 8px">Laatste reveal</h2>
+            <div id="revealBody" class="muted">Nog geen reveal.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
   <script>
     (()=>{
       const cfg = window.GEJAST_CONFIG || {};
@@ -15,44 +165,130 @@
       function esc(v){ const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(v??'').replace(/[&<>"']/g,(m)=>map[m]); }
       function qs(sel){ return document.querySelector(sel); }
       function qsParam(name){ try { return new URLSearchParams(window.location.search).get(name) || ''; } catch(_) { return ''; } }
-      function currentScope(){ try { return (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) || (qsParam('scope') === 'family' ? 'family' : 'friends'); } catch(_) { return 'friends'; } }
+      function currentScope(){
+        try {
+          return (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope())
+            || (qsParam('scope') === 'family' ? 'family' : 'friends');
+        } catch(_) { return 'friends'; }
+      }
       function sessionToken(){ try { return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; } catch(_) { return ''; } }
-      function headers(){ return {'Content-Type':'application/json',apikey: cfg.SUPABASE_PUBLISHABLE_KEY || '',Authorization: `Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY || ''}`,Accept:'application/json'}; }
-      async function parse(res){ const txt = await res.text(); let data=null; try{ data = txt ? JSON.parse(txt) : null; } catch(_){ throw new Error(txt || `HTTP ${res.status}`); } if(!res.ok) throw new Error(data?.message || data?.error || txt || `HTTP ${res.status}`); return data; }
-      async function rpc(name,payload){ const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {method:'POST', mode:'cors', cache:'no-store', headers:headers(), body:JSON.stringify(payload||{})}); const data = await parse(res); return data && data[name] !== undefined ? data[name] : data; }
-      function setStatus(text,isError){ const el=qs('#statusText'); if(!el) return; el.textContent=text||''; el.className=isError?'error':'muted'; }
+      function headers(){
+        return {
+          'Content-Type':'application/json',
+          apikey: cfg.SUPABASE_PUBLISHABLE_KEY || '',
+          Authorization: `Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY || ''}`,
+          Accept:'application/json'
+        };
+      }
+      async function parse(res){
+        const txt = await res.text();
+        let data = null;
+        try { data = txt ? JSON.parse(txt) : null; } catch(_) { throw new Error(txt || `HTTP ${res.status}`); }
+        if(!res.ok) throw new Error(data?.message || data?.error || txt || `HTTP ${res.status}`);
+        return data;
+      }
+      async function rpc(name, payload){
+        const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
+          method:'POST', mode:'cors', cache:'no-store', headers: headers(), body: JSON.stringify(payload || {})
+        });
+        const data = await parse(res);
+        return data && data[name] !== undefined ? data[name] : data;
+      }
+      function setStatus(text, isError){
+        const el = qs('#statusText');
+        if(!el) return;
+        el.textContent = text || '';
+        el.className = isError ? 'error' : 'muted';
+      }
 
       const UI_MAP = Object.freeze({
         phase: Object.freeze({
-          lobby:{ cls:'pill wait', label:'Lobby', title:'Wachten in de lobby' },
-          bidding:{ cls:'pill ok', label:'Bieden', title:'Plaats het volgende bod' },
-          voting:{ cls:'pill wait', label:'Stemmen', title:'Geloof of verwerp het bod' },
-          finished:{ cls:'pill bad', label:'Afgerond', title:'Spel afgerond' }
+          lobby:    { cls: 'pill wait', label: 'Lobby' },
+          bidding:  { cls: 'pill ok',   label: 'Bieden' },
+          voting:   { cls: 'pill wait', label: 'Stemmen' },
+          finished: { cls: 'pill bad',  label: 'Afgerond' }
         }),
         voteStatus: Object.freeze({
-          approved:{ cls:'pill ok', label:'goedgekeurd' },
-          rejected:{ cls:'pill bad', label:'afgekeurd' },
-          waiting:{ cls:'pill wait', label:'wacht' }
+          approved: { cls: 'pill ok',   label: 'goedgekeurd' },
+          rejected: { cls: 'pill bad',  label: 'afgekeurd' },
+          waiting:  { cls: 'pill wait', label: 'wacht' }
         }),
         penaltyMode: Object.freeze({
-          wrong_loses:{ label:'Normal (fout verliest)' },
-          right_loses:{ label:'Fair (goed verliest)' }
+          wrong_loses: { label: 'Normal (fout verliest)' },
+          right_loses: { label: 'Fair (goed verliest)' }
         })
       });
 
-      function normalizePhase(raw){ const v=String(raw||'').trim().toLowerCase(); return (v==='lobby'||v==='bidding'||v==='voting'||v==='finished') ? v : 'bidding'; }
-      function normalizeVoteStatus(raw){ const v=String(raw||'').trim().toLowerCase(); if(['approved','goedgekeurd','believe','true'].includes(v)) return 'approved'; if(['rejected','afgekeurd','reject','false'].includes(v)) return 'rejected'; return 'waiting'; }
-      function phaseSpec(state){ const status=String(state?.status||'').toLowerCase(); const phase=(status==='finished')?'finished':normalizePhase(state?.phase); return UI_MAP.phase[phase] || UI_MAP.phase.bidding; }
-      function votePillSpec(status){ const key=normalizeVoteStatus(status); return UI_MAP.voteStatus[key] || UI_MAP.voteStatus.waiting; }
-      function dieClass(value){ return Number(value)===1 ? 'die pik' : 'die'; }
-      function bidText(bid){ const count=Number(bid?.count || bid?.bid_count || 0); const face=Number(bid?.face || bid?.bid_face || 0); if(!count || !face) return '—'; return face===1 ? `${count} × pik` : `${count} × ${face}`; }
-      function penaltyModeLabel(raw){ const key=String(raw||'').trim().toLowerCase(); return (UI_MAP.penaltyMode[key]&&UI_MAP.penaltyMode[key].label) ? UI_MAP.penaltyMode[key].label : UI_MAP.penaltyMode.wrong_loses.label; }
-      function findNameBySeat(players, seat){ const s=Number(seat||0); if(!s) return '—'; const p=(Array.isArray(players)?players:[]).find(x=>Number(x?.seat||0)===s); return p?.name || '—'; }
-      function metaText(state){ const updated=state?.game?.updated_at || Date.now(); return `Live bijgewerkt om ${new Date(updated).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`; }
-      function buildBidCountOptions(max=24){ const sel=qs('#bidCount'); sel.innerHTML = Array.from({length:max},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join(''); }
-      function bidHistoryFromState(st){ const arr=[]; const raw = Array.isArray(st?.bid_history)?st.bid_history:(Array.isArray(st?.history?.bids)?st.history.bids:[]); raw.forEach((b,idx)=>arr.push({index:idx+1,bidder_name:b.bidder_name||b.name||'',count:b.count||b.bid_count,face:b.face||b.bid_face,current:false})); if(st?.bid) arr.push({index:arr.length+1,bidder_name:st.bid.bidder_name||'',count:st.bid.count||st.bid.bid_count,face:st.bid.face||st.bid.bid_face,current:true}); return arr; }
-      function renderBidHistory(st){ const wrap=qs('#bidHistory'); const items=bidHistoryFromState(st); if(!items.length){ wrap.innerHTML='<div class="empty">Nog geen eerdere biedingen zichtbaar.</div>'; return; } wrap.innerHTML = items.slice(-8).reverse().map((b)=>`<div class="history-item"><strong>${esc(b.bidder_name||'Onbekend')}</strong><div class="subtle">${b.current?'Huidig bod':'Eerder bod'} · ${esc(bidText(b))}</div></div>`).join(''); }
-      function renderVoteStatus(votes){ const wrap=qs('#voteStatusList'); const list=Array.isArray(votes)?votes:[]; if(!list.length){ wrap.innerHTML='<div class="empty">Nog geen stemronde actief.</div>'; return; } wrap.innerHTML = list.map((v)=>{ const pill=votePillSpec(v.status); return `<div class="vote-item row"><div><strong>${esc(v.name||'Speler')}</strong> <span class="muted">#${Number(v.seat||0)}</span></div><span class="${pill.cls}">${pill.label}</span></div>`; }).join(''); }
+      function normalizePhase(raw){
+        const v = String(raw || '').trim().toLowerCase();
+        return (v === 'lobby' || v === 'bidding' || v === 'voting' || v === 'finished') ? v : 'bidding';
+      }
+      function normalizeVoteStatus(raw){
+        const v = String(raw || '').trim().toLowerCase();
+        if (v === 'approved' || v === 'goedgekeurd' || v === 'believe' || v === 'true') return 'approved';
+        if (v === 'rejected' || v === 'afgekeurd' || v === 'reject' || v === 'false') return 'rejected';
+        return 'waiting';
+      }
+      function phasePillSpec(state){
+        const status = String(state?.status || '').toLowerCase();
+        const phase = (status === 'finished') ? 'finished' : normalizePhase(state?.phase);
+        return UI_MAP.phase[phase] || UI_MAP.phase.bidding;
+      }
+      function votePillSpec(status){
+        const key = normalizeVoteStatus(status);
+        return UI_MAP.voteStatus[key] || UI_MAP.voteStatus.waiting;
+      }
+      function dieClass(value){ return Number(value) === 1 ? 'die pik' : 'die'; }
+      function bidText(bid){
+        const count = Number(bid?.count || bid?.bid_count || 0);
+        const face = Number(bid?.face || bid?.bid_face || 0);
+        if (!count || !face) return '—';
+        return face === 1 ? `${count} × pik` : `${count} × ${face}`;
+      }
+      function penaltyModeLabel(raw){
+        const key = String(raw || '').trim().toLowerCase();
+        return (UI_MAP.penaltyMode[key] && UI_MAP.penaltyMode[key].label) ? UI_MAP.penaltyMode[key].label : UI_MAP.penaltyMode.wrong_loses.label;
+      }
+      function findNameBySeat(players, seat){
+        const s = Number(seat || 0);
+        if (!s) return '—';
+        const p = (Array.isArray(players) ? players : []).find(x => Number(x?.seat || 0) === s);
+        return p?.name || '—';
+      }
+      function metaText(state){
+        const updated = state?.game?.updated_at || Date.now();
+        return `Live bijgewerkt om ${new Date(updated).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`;
+      }
+
+      function bidHistoryFromState(st){
+        const arr = [];
+        const raw = Array.isArray(st?.bid_history) ? st.bid_history : (Array.isArray(st?.history?.bids) ? st.history.bids : []);
+        raw.forEach((b, idx)=> arr.push({ index: idx + 1, bidder_name: b.bidder_name || b.name || '', count: b.count || b.bid_count, face: b.face || b.bid_face, current:false }));
+        if (st?.bid) arr.push({ index: arr.length + 1, bidder_name: st.bid.bidder_name || '', count: st.bid.count || st.bid.bid_count, face: st.bid.face || st.bid.bid_face, current:true });
+        return arr;
+      }
+      function renderBidHistory(st){
+        const wrap = qs('#bidHistory');
+        const items = bidHistoryFromState(st);
+        if(!wrap) return;
+        if(!items.length){ wrap.innerHTML = '<div class="empty">Nog geen eerdere biedingen zichtbaar.</div>'; return; }
+        wrap.innerHTML = items.slice(-8).reverse().map((b)=>`<div class="history-item"><strong>${esc(b.bidder_name||'Onbekend')}</strong><div class="subtle">${b.current ? 'Huidig bod' : 'Eerder bod'} · ${esc(bidText(b))}</div></div>`).join('');
+      }
+      function renderVoteStatus(votes){
+        const wrap = qs('#voteStatusList');
+        const list = Array.isArray(votes) ? votes : [];
+        if(!wrap) return;
+        if(!list.length){ wrap.innerHTML = '<div class="empty">Nog geen stemronde actief.</div>'; return; }
+        wrap.innerHTML = list.map((v)=>{
+          const pill = votePillSpec(v.status);
+          return `<div class="vote-item row"><div><strong>${esc(v.name||'Speler')}</strong> <span class="muted">#${Number(v.seat||0)}</span></div><span class="${pill.cls}">${pill.label}</span></div>`;
+        }).join('');
+      }
+
+      function buildBidCountOptions(max=24){
+        const sel = qs('#bidCount');
+        sel.innerHTML = Array.from({length:max}, (_,i)=>`<option value="${i+1}">${i+1}</option>`).join('');
+      }
 
       function render(state){
         UI.state = state || {};
@@ -64,46 +300,60 @@
         const myHand = Array.isArray(state?.my_hand)?state.my_hand:[];
         const phase = String(st.phase||game.status||'');
         const bid = st.bid && st.bid !== null ? st.bid : null;
-        const aliveSeats = players.filter((p)=>p&&p.alive).map((p)=>Number(p.seat||0)).filter(Boolean);
+        const aliveSeats = players.filter((p)=>p && p.alive).map((p)=>Number(p.seat||0)).filter(Boolean);
         const defaultAliveSeat = aliveSeats.length ? Math.min(...aliveSeats) : 0;
-        const turnSeat = (phase==='voting' ? Number(st.vote_turn_seat||0) : Number(st.turn_seat||0)) || Number(bid?.bidder_seat||0) || defaultAliveSeat;
+        const derivedTurnSeat = phase === 'voting'
+          ? Number(st.vote_turn_seat||0)
+          : Number(st.turn_seat||0);
+        const fallbackBidderSeat = Number(bid?.bidder_seat || 0);
+        const turnSeat = derivedTurnSeat || fallbackBidderSeat || defaultAliveSeat;
 
         qs('#meta').textContent = metaText(state);
-        const ps = phaseSpec({ phase: st.phase, status: game.status });
-        const phaseEl=qs('#phasePill'); phaseEl.className=ps.cls; phaseEl.textContent=ps.label;
-        qs('#phaseTitle').textContent = ps.title;
+        const phaseSpec = phasePillSpec({ phase: st.phase, status: game.status });
+        const phaseEl = qs('#phasePill');
+        phaseEl.className = phaseSpec.cls;
+        phaseEl.textContent = phaseSpec.label;
         qs('#roundNo').textContent = String(Number(st.round_no||0));
         qs('#penaltyMode').textContent = penaltyModeLabel(game?.config?.penalty_mode);
         qs('#lobbyCode').textContent = String(game.lobby_code || UI.lobbyCode || '—');
         qs('#currentBid').textContent = bidText(bid);
         qs('#bidBy').textContent = bid && bid.bidder_name ? `door ${bid.bidder_name}` : '';
+
         const dt = state?.dice_totals || {};
         qs('#totalStartDice').textContent = String(Number(dt.start_total||0));
         qs('#totalCurrentDice').textContent = String(Number(dt.current_total||0));
         qs('#totalLostDice').textContent = String(Number(dt.lost_total||0));
-        qs('#playerCount').textContent = String(players.length);
         qs('#turnName').textContent = findNameBySeat(players, turnSeat);
 
-        qs('#playersList').innerHTML = players.length ? players.map((p)=>{
+        const playersWrap = qs('#playersList');
+        playersWrap.className='grid';
+        playersWrap.innerHTML = players.length ? players.map((p)=>{
           const voteRow = votes.find(v=>Number(v.seat||0)===Number(p.seat||0));
-          const voteBadge = voteRow ? `<span class="${votePillSpec(voteRow.status).cls}">${votePillSpec(voteRow.status).label}</span>` : '';
-          const isTurn = Number(p.seat||0)===Number(turnSeat||0) && (phase==='bidding' || phase==='voting');
+          const pill = votePillSpec(voteRow ? voteRow.status : 'waiting');
+          const isTurn = Number(p.seat||0) === Number(turnSeat||0) && (phase === 'bidding' || phase === 'voting');
           const rowCls = `player-card ${p.alive?'':'dead'} ${isTurn?'turn':''}`.trim();
-          const hostMark = p.is_host || (viewer && Number(viewer.seat||0)===Number(p.seat||0) && viewer.is_host);
-          return `<div class="${rowCls}"><div class="player-head"><div><strong>${esc(p.name||'Speler')}</strong> <span class="muted">#${Number(p.seat||0)}</span> ${hostMark?'<span class="pill wait">host</span>':''}</div>${isTurn?'<span class="pill ok">beurt</span>':''}</div><div class="player-meta"><span class="pill ${p.alive?'ok':'bad'}">${p.alive?'levend':'dood'}</span><span class="pill wait">${Number(p.dice_count||0)} dobbelstenen</span>${p.ready!==undefined?`<span class="pill ${p.ready?'ok':'wait'}">${p.ready?'ready':'niet ready'}</span>`:''}${voteBadge}</div></div>`;
+          const hostMark = viewer && Number(viewer.seat||0) === Number(p.seat||0) && viewer.is_host;
+          return `<div class="${rowCls}"><div class="player-head"><div><strong>${esc(p.name||'Speler')}</strong> <span class="muted">#${Number(p.seat||0)}</span> ${hostMark?'<span class="pill wait">host</span>':''}</div>${isTurn?'<span class="pill ok">beurt</span>':''}</div><div class="player-meta"><span class="pill ${p.alive?'ok':'bad'}">${p.alive?'Levend':'Dood'}</span><span class="pill wait">${Number(p.dice_count||0)} dobbelstenen</span>${p.ready!==undefined ? `<span class="pill ${p.ready?'ok':'wait'}">${p.ready?'ready':'niet ready'}</span>`:''}${phase==='voting'?`<span class="${pill.cls}">${pill.label}</span>`:''}</div></div>`;
         }).join('') : '<div class="empty">—</div>';
 
-        const myDice=qs('#myDice'); const viewerMeta=qs('#viewerMeta'); myDice.innerHTML='';
-        if(viewer && myHand.length){ viewerMeta.textContent=`${viewer.name || 'Jij'} · stoel ${Number(viewer.seat||0)} · ${viewer.alive?'levend':'dood'} · ${Number(viewer.dice_count||0)} dobbelstenen`; myHand.forEach((face)=>myDice.insertAdjacentHTML('beforeend', `<img class="${dieClass(face)}" src="./assets/pikken/dice-${Number(face)}.svg" alt="die ${Number(face)}">`)); }
-        else if(viewer){ viewerMeta.textContent=`${viewer.name || 'Jij'} · stoel ${Number(viewer.seat||0)} · ${viewer.alive?'levend':'dood'} · ${Number(viewer.dice_count||0)} dobbelstenen`; }
-        else { viewerMeta.textContent='Alleen zichtbaar voor deelnemers in deze lobby.'; }
+        const myDice = qs('#myDice');
+        const viewerMeta = qs('#viewerMeta');
+        myDice.innerHTML = '';
+        if(viewer && myHand.length){
+          viewerMeta.textContent = `${viewer.name || 'Jij'} · stoel ${Number(viewer.seat||0)} · ${viewer.alive?'levend':'dood'} · ${Number(viewer.dice_count||0)} dobbelstenen`;
+          myHand.forEach((face)=>{ myDice.insertAdjacentHTML('beforeend', `<img class="${dieClass(face)}" src="./assets/pikken/dice-${Number(face)}.svg" alt="die ${Number(face)}">`); });
+        } else if(viewer){
+          viewerMeta.textContent = `${viewer.name || 'Jij'} · stoel ${Number(viewer.seat||0)} · ${viewer.alive?'levend':'dood'} · ${Number(viewer.dice_count||0)} dobbelstenen`;
+        } else {
+          viewerMeta.textContent = 'Alleen zichtbaar voor deelnemers in deze lobby.';
+        }
 
         const canAct = !!viewer && !!viewer.alive;
         const viewerSeat = Number(viewer?.seat||0);
-        const missingBidTurn = phase==='bidding' && !Number(st.turn_seat||0);
-        const missingVoteTurn = phase==='voting' && !Number(st.vote_turn_seat||0);
-        const myTurn = canAct && phase==='bidding' && (viewerSeat===turnSeat || (missingBidTurn && viewerSeat>0));
-        const myVoteTurn = canAct && phase==='voting' && (viewerSeat===turnSeat || (missingVoteTurn && viewerSeat>0));
+        const missingBidTurn = phase === 'bidding' && !Number(st.turn_seat||0);
+        const missingVoteTurn = phase === 'voting' && !Number(st.vote_turn_seat||0);
+        const myTurn = canAct && phase === 'bidding' && (viewerSeat === turnSeat || (missingBidTurn && viewerSeat > 0));
+        const myVoteTurn = canAct && phase === 'voting' && (viewerSeat === turnSeat || (missingVoteTurn && viewerSeat > 0));
         qs('#bidPanel').classList.toggle('hidden', !myTurn);
         qs('#votePanel').classList.toggle('hidden', !myVoteTurn);
         qs('#rejectBidBtn').disabled = !myTurn || !bid || UI.actionBusy;
@@ -111,10 +361,18 @@
         qs('#voteApproveBtn').disabled = !myVoteTurn || UI.actionBusy;
         qs('#voteRejectBtn').disabled = !myVoteTurn || UI.actionBusy;
 
+        const bidHint = qs('#statusText');
         if (!UI.actionBusy && canAct) {
-          if (phase==='bidding' && missingBidTurn && myTurn) setStatus('Beurtinformatie ontbreekt in de backend-state; biedpaneel is daarom toch zichtbaar gemaakt.', false);
-          else if (phase==='voting' && missingVoteTurn && myVoteTurn) setStatus('Stembeurtinformatie ontbreekt in de backend-state; stempaneel is daarom toch zichtbaar gemaakt.', false);
-          else if (qs('#statusText').textContent && /beurtinformatie ontbreekt/i.test(qs('#statusText').textContent)) setStatus('', false);
+          if (phase === 'bidding' && missingBidTurn && myTurn) {
+            bidHint.textContent = 'Beurtinformatie ontbreekt in de backend-state; biedpaneel is daarom toch zichtbaar gemaakt.';
+            bidHint.className = 'muted';
+          } else if (phase === 'voting' && missingVoteTurn && myVoteTurn) {
+            bidHint.textContent = 'Stembeurtinformatie ontbreekt in de backend-state; stempaneel is daarom toch zichtbaar gemaakt.';
+            bidHint.className = 'muted';
+          } else if (bidHint.textContent && /beurtinformatie ontbreekt/i.test(bidHint.textContent)) {
+            bidHint.textContent = '';
+            bidHint.className = 'muted';
+          }
         }
 
         renderBidHistory(st);
@@ -122,40 +380,102 @@
 
         const lr = st.last_reveal || game?.last_reveal || null;
         const revealWrap = qs('#revealBody');
-        if(!lr){ revealWrap.innerHTML='<div class="empty">Nog geen reveal.</div>'; return; }
+        if(!lr){ revealWrap.textContent='Nog geen reveal.'; return; }
         const hands = Array.isArray(lr.hands)?lr.hands:[];
         const lrBid = lr.bid || null;
         const lrVotes = Array.isArray(lr.votes) ? lr.votes : [];
         const firstLoser = findNameBySeat(players, lr.first_loser_seat);
         const nextStarter = findNameBySeat(players, lr.next_starter_seat);
 
-        revealWrap.innerHTML = `<div class="reveal-item"><strong>R${Number(lr.round_no||0)}</strong> · ${lr.bid_true?'gehaald':'niet gehaald'} · bod ${esc(bidText(lrBid))} · geteld ${Number(lr.counted_total||0)}</div>` +
-          `<div class="reveal-item subtle">Verliezers: ${esc(lr.losing_kind||'')} · starter: ${esc(firstLoser)} → ${esc(nextStarter)}</div>` +
-          (lrVotes.length ? `<div class="reveal-list" style="margin-top:10px">${lrVotes.map((v)=>{ const pill=votePillSpec(v.vote===true?'approved':'rejected'); return `<div class="vote-item row"><div><strong>${esc(v.name||'Speler')}</strong> <span class="muted">#${Number(v.seat||0)}</span></div><span class="${pill.cls}">${pill.label}</span></div>`; }).join('')}</div>` : '') +
-          (hands.length ? `<div class="reveal-list" style="margin-top:10px">${hands.map((h)=>`<div class="reveal-item"><strong>${esc(h.name||'Speler')}</strong> <span class="muted">#${Number(h.seat||0)}</span><div class="dice-row">${(Array.isArray(h.dice)?h.dice:[]).map((d)=>`<img class="${dieClass(d)}" src="./assets/pikken/dice-${Number(d)}.svg" alt="die ${Number(d)}">`).join('')}</div></div>`).join('')}</div>` : '');
+        revealWrap.innerHTML =
+          `<div><strong>R${Number(lr.round_no||0)}</strong> · ${lr.bid_true?'gehaald':'niet gehaald'} · bod ${esc(bidText(lrBid))} · geteld ${Number(lr.counted_total||0)}</div>` +
+          `<div class="muted" style="margin-top:6px">Verliezers: ${esc(lr.losing_kind||'')} · starter: ${esc(firstLoser)} → ${esc(nextStarter)}</div>` +
+          (lrVotes.length ? `<div style="margin-top:10px;display:grid;gap:8px">${lrVotes.map(v=>{
+            const pill = votePillSpec(v.vote === true ? 'approved' : 'rejected');
+            return `<div class="row"><div><strong>${esc(v.name||'Speler')}</strong> <span class="muted">#${Number(v.seat||0)}</span></div><span class="${pill.cls}">${pill.label}</span></div>`;
+          }).join('')}</div>` : '') +
+          (hands.length ? `<div style="margin-top:10px;display:grid;gap:10px">${hands.map(h=>`<div class="row"><div><strong>${esc(h.name||'Speler')}</strong> <span class="muted">#${Number(h.seat||0)}</span><div class="dice-row">${(Array.isArray(h.dice)?h.dice:[]).map(d=>`<img class="${dieClass(d)}" src="./assets/pikken/dice-${Number(d)}.svg" alt="die ${Number(d)}">`).join('')}</div></div></div>`).join('')}</div>` : '');
       }
 
-      async function loadParticipantState(){ const token=sessionToken(); if(!token || !UI.gameId) return null; return rpc('pikken_get_state_scoped', { session_token: token, game_id_input: UI.gameId }); }
-      async function loadPublicState(){ return rpc('pikken_get_live_state_public', { game_id_input: UI.gameId || null, lobby_code_input: UI.lobbyCode || null, site_scope_input: UI.scope }); }
-      async function load(){ try{ let state=null; try{ state = await loadParticipantState(); }catch(_){} if(!state) state = await loadPublicState(); render(state||{}); if(!/beurtinformatie ontbreekt/i.test(qs('#statusText').textContent||'')) setStatus('', false); }catch(err){ setStatus(err.message || 'Laden mislukt.', true); } }
-      async function withAction(label, fn){ if(UI.actionBusy) return; UI.actionBusy=true; setStatus(label, false); try { const out=await fn(); if(out && typeof out==='object' && out.game){ render(out); } await load(); } catch(err){ setStatus(err.message || `${label} mislukt.`, true); } finally { UI.actionBusy=false; } }
-      async function placeBid(){ const count=Number(qs('#bidCount').value || 0); const face=Number(qs('#bidFace').value || 0); if(!count || !face) return setStatus('Kies een geldig bod.', true); return withAction('Bieden…', ()=>rpc('pikken_place_bid_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId, bid_count_input: count, bid_face_input: face })); }
-      async function rejectBid(){ return withAction('Afkeuren…', ()=>rpc('pikken_reject_bid_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId })); }
-      async function vote(v){ return withAction('Stemmen…', ()=>rpc('pikken_cast_vote_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId, vote_input: !!v })); }
-
+      async function loadParticipantState(){
+        const token = sessionToken();
+        if(!token || !UI.gameId) return null;
+        return rpc('pikken_get_state_scoped', { session_token: token, game_id_input: UI.gameId });
+      }
+      async function loadPublicState(){
+        return rpc('pikken_get_live_state_public', {
+          game_id_input: UI.gameId || null,
+          lobby_code_input: UI.lobbyCode || null,
+          site_scope_input: UI.scope
+        });
+      }
+      async function load(){
+        try{
+          let state = null;
+          try { state = await loadParticipantState(); } catch(_) {}
+          if(!state) state = await loadPublicState();
+          render(state || {});
+          setStatus('', false);
+        }catch(err){
+          setStatus(err.message || 'Laden mislukt.', true);
+        }
+      }
+      async function withAction(label, fn){
+        if(UI.actionBusy) return;
+        UI.actionBusy = true;
+        setStatus(label, false);
+        try {
+          const out = await fn();
+          if(out && typeof out === 'object' && out.game){ render(out); }
+          await load();
+        } catch(err) {
+          setStatus(err.message || `${label} mislukt.`, true);
+        } finally {
+          UI.actionBusy = false;
+        }
+      }
+      async function placeBid(){
+        const count = Number(qs('#bidCount').value || 0);
+        const face = Number(qs('#bidFace').value || 0);
+        if(!count || !face) return setStatus('Kies een geldig bod.', true);
+        return withAction('Bieden…', ()=>rpc('pikken_place_bid_scoped', {
+          session_token: sessionToken() || null,
+          game_id_input: UI.gameId,
+          bid_count_input: count,
+          bid_face_input: face
+        }));
+      }
+      async function rejectBid(){
+        return withAction('Afkeuren…', ()=>rpc('pikken_reject_bid_scoped', {
+          session_token: sessionToken() || null,
+          game_id_input: UI.gameId
+        }));
+      }
+      async function vote(v){
+        return withAction('Stemmen…', ()=>rpc('pikken_cast_vote_scoped', {
+          session_token: sessionToken() || null,
+          game_id_input: UI.gameId,
+          vote_input: !!v
+        }));
+      }
       function boot(){
-        UI.scope=currentScope();
-        const rawClientMatchId=qsParam('client_match_id');
-        const rawMatchRef=qsParam('match_ref');
+        UI.scope = currentScope();
+        const rawClientMatchId = qsParam('client_match_id');
+        const rawMatchRef = qsParam('match_ref');
         UI.gameId = rawClientMatchId && /^[0-9a-f-]{36}$/i.test(rawClientMatchId) ? rawClientMatchId : '';
         UI.lobbyCode = rawMatchRef || (!UI.gameId ? rawClientMatchId : '') || '';
-        if(!UI.gameId && !UI.lobbyCode){ setStatus('Geen geldige game_id of roomcode in URL.', true); return; }
+        if(!UI.gameId && !UI.lobbyCode){
+          setStatus('Geen geldige game_id of roomcode in URL.', true);
+          return;
+        }
         buildBidCountOptions(24);
         qs('#placeBidBtn').addEventListener('click', placeBid);
         qs('#rejectBidBtn').addEventListener('click', rejectBid);
         qs('#voteApproveBtn').addEventListener('click', ()=>vote(true));
         qs('#voteRejectBtn').addEventListener('click', ()=>vote(false));
-        const lobbyHref = UI.gameId ? `./pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(UI.scope)}` : `./pikken.html?scope=${encodeURIComponent(UI.scope)}`;
+        const lobbyHref = UI.gameId
+          ? `./pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(UI.scope)}`
+          : `./pikken.html?scope=${encodeURIComponent(UI.scope)}`;
         qs('#backLobbyBtn').href = lobbyHref;
         load();
         UI.pollId = setInterval(()=>{ if(!document.hidden) load(); }, 1200);
@@ -163,7 +483,6 @@
       boot();
     })();
   </script>
-
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
   <div class="site-credit-watermark" data-version-watermark></div>
 </body>
