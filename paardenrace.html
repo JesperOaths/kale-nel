@@ -6,9 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace Lobby</title>
-  <script>window.GEJAST_PAGE_VERSION='v456';</script>
-  <script src="./gejast-config.js?v456"></script>
-  <script src="./gejast-paardenrace.js?v456"></script>
+  <script>window.GEJAST_PAGE_VERSION='v457';</script>
+  <script src="./gejast-config.js?v457"></script>
+  <script src="./gejast-paardenrace.js?v457"></script>
   <style>
     :root{--gold:#9a8241;--gold-ink:#5e4d1d;--paper:#fffaf3;--ink:#17130f;--muted:#6d6256;--line:rgba(0,0,0,.10);--bg:#f3ede4;--soft:#f7f1e7;--green:#2f6d3c;--green-bg:#edf8f0;--red:#8a1022;--red-bg:#fff4f2;--amber:#8f6f1e;--amber-bg:#fff8e6}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink)}
@@ -16,7 +16,7 @@
     .top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}.title{font-size:clamp(2rem,4vw,3rem);letter-spacing:-.05em;margin:10px 0}
     .btn,a.btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:16px;border:1px solid var(--line);background:#17130f;color:#fff;text-decoration:none;font-weight:800;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.06)}
     .btn.secondary,a.btn.secondary{background:#fff;color:#17130f;border-color:rgba(0,0,0,.16)} .btn.soft{background:var(--soft);color:var(--gold-ink);border-color:rgba(154,130,65,.35)} .btn.warn{background:var(--red-bg);color:var(--red);border-color:rgba(138,16,34,.18)} .btn:disabled{opacity:.55;cursor:not-allowed}
-    .layout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(320px,.9fr);gap:18px;margin-top:18px}.panel{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:18px}
+    .layout{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;margin-top:18px}.panel{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:18px}
     .status{min-height:1.4em;margin-top:10px;font-weight:700;color:#6d1021}.small{font-size:12px;color:var(--muted)}label{display:block;font-weight:800;font-size:13px;margin:10px 0 6px}
     input,select{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:#fff;font:inherit}.stack,.players{display:grid;gap:10px;margin-top:12px}.player,.room-card{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;border-radius:18px;background:#fff;border:1px solid var(--line)}
     .badge{display:inline-flex;padding:6px 10px;border-radius:999px;background:rgba(154,130,65,.12);font-weight:800;font-size:12px}.badge.good{background:var(--green-bg);color:var(--green)}.badge.warn{background:var(--amber-bg);color:var(--amber)}.badge.bad{background:var(--red-bg);color:var(--red)}
@@ -63,19 +63,10 @@
         <div class="players" id="playersBox"></div>
       </div>
     </section>
-    <section class="panel">
-      <h2 style="display:none">Wat gebeurt hier?</h2>
-      <div class="small">Alle match-logica, kaarten en paarden lopen alleen op het live scherm per room. Deze pagina blijft een zuivere lobby voor meerdere gelijktijdige paardenraces.</div>
-      <div style="margin-top:14px;display:grid;gap:10px">
-        <div class="summary"><strong>1. Maak of join een room</strong><span class="small">Gebruik de roomcode die jij wilt. Roomcodes blijven gescheiden per live match via de room-query in de URL.</span></div>
-        <div class="summary"><strong>2. Save, verify, ready</strong><span class="small">Iedere speler kiest exact één suit en één inzet. De host verifieert die inzet, daarna kan de speler ready worden.</span></div>
-        <div class="summary"><strong>3. Start = redirect naar live</strong><span class="small">Zodra de host start, redirecten host en spelers automatisch naar het live racetrack-scherm van die room.</span></div>
-      </div>
-    </section>
   </div>
 </div></div>
 <dialog id="rulesDialog"><div class="modal-card"><div class="modal-top"><h2 style="margin:0">Paardenrace regels</h2><button class="btn secondary" id="closeRulesBtn" type="button">Sluiten</button></div><ol class="rules-list"><li>Iedereen kiest één suit/paard en zet één vaste inzet in Bakken.</li><li>De host verifieert de inzet in de lobby. Pas daarna kan een speler op ready drukken.</li><li>Als iedereen ready is, start de host de race en gaat iedereen automatisch naar het live racetrack-scherm van die room.</li><li>Elke getrokken kaart zet het bijbehorende paard één vak vooruit.</li><li>Als alle vier paarden langs een gate zijn, draait die gate open en duwt één suit terug.</li><li>De eerste crossing telt pas als minstens één speler op dat paard heeft ingezet.</li><li>Winnaars verdelen daarna extra Bakken over andere spelers.</li></ol></div></dialog>
-<div class="site-credit-watermark" data-version-watermark>v456 · Made by Bruis</div>
+<div class="site-credit-watermark" data-version-watermark>v457 · Made by Bruis</div>
 <script>
 (()=>{
  const api=window.GEJAST_PAARDENRACE; const $=(id)=>document.getElementById(id); let latestState=null; let pollHandle=null; let polling=false; let roomCodeDirty=false; let roomCodeTouchedAt=0; let createBusy=false;

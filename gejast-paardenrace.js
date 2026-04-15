@@ -1,6 +1,6 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
-  const STORAGE_KEY = 'gejast_paardenrace_room_code_v456';
+  const STORAGE_KEY = 'gejast_paardenrace_room_code_v457';
   const LIVE_QUERY_KEY = 'live';
   const ASSETS = {
     arena: './paardenrace-live-board-v447.png',
@@ -20,18 +20,22 @@
     spades: { label:'♠ Schoppen', symbol:'♠', color:'#1f1b1a' }
   };
   const BOARD_POINTS = {
-    trackX: [14.95, 20.96, 27.21, 33.56, 39.91, 46.26, 52.64, 58.92, 65.35, 71.81, 78.29, 86.65],
-    gateX: [20.96, 27.21, 33.56, 39.91, 46.26, 52.64, 58.92, 65.35, 71.81, 78.29],
-    laneY: { spades: 39.08, hearts: 53.80, clubs: 67.62, diamonds: 80.74 },
-    deckX: 9.90,
-    deckY: 20.85,
-    discardX: 89.55,
-    discardY: 23.85,
-    gateY: 22.05,
-    horseWidthPct: 3.95,
-    gateWidthPct: 4.15,
-    deckWidthPct: 4.85,
-    discardWidthPct: 4.85
+    trackX: [16.15, 22.85, 29.38, 35.90, 42.44, 48.96, 55.48, 62.02, 68.53, 75.04, 81.53, 88.55],
+    gateX: [22.85, 29.38, 35.90, 42.44, 48.96, 55.48, 62.02, 68.53, 75.04, 81.53],
+    laneY: { spades: 41.25, hearts: 55.55, clubs: 69.85, diamonds: 84.10 },
+    deckX: 9.65,
+    deckY: 20.05,
+    discardX: 91.10,
+    discardY: 23.10,
+    gateY: 22.85,
+    horseWidthPct: 3.55,
+    gateWidthPct: 4.25,
+    deckWidthPct: 4.95,
+    discardWidthPct: 4.85,
+    startColumnLeft: 12.20,
+    startColumnTop: 34.95,
+    startColumnWidth: 7.25,
+    startColumnHeight: 53.35
   };
 
   function sessionToken(){ return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; }
@@ -138,6 +142,7 @@
         <div class="pr-live-stage" data-stage-root>
           <img src="${ASSETS.arena}" alt="Paardenrace bord" class="pr-live-arena">
           <div class="pr-overlay">
+            <div class="pr-start-column" aria-hidden="true" style="left:${BOARD_POINTS.startColumnLeft}%;top:${BOARD_POINTS.startColumnTop}%;width:${BOARD_POINTS.startColumnWidth}%;height:${BOARD_POINTS.startColumnHeight}%"></div>
             <div class="pr-deck-slot" data-deck-slot style="left:${BOARD_POINTS.deckX}%;top:${BOARD_POINTS.deckY}%">${deckLayers}</div>
             <div class="pr-discard-slot ${discardCard ? 'has-card' : ''}" data-discard-slot style="left:${BOARD_POINTS.discardX}%;top:${BOARD_POINTS.discardY}%">${discardCard ? renderFaceUpCard(discardCard, 'pr-discard-face') : ''}</div>
             ${gateHtml}
