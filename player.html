@@ -7,8 +7,8 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Speler</title>
-  <script>window.GEJAST_PAGE_VERSION='v460';</script>
-  <script src="./gejast-config.js?v460"></script>
+  <script>window.GEJAST_PAGE_VERSION='v461';</script>
+  <script src="./gejast-config.js?v461"></script>
   <script src="./gejast-clickable-cards.js?v391"></script>
   <script src="./gejast-scope-context.js?v391"></script><script src="./gejast-family-rollout.js?v393"></script>
   <style>
@@ -256,7 +256,7 @@
         const titleNode = document.getElementById('title');
         const shownName = (playerBundle?.unified?.player_name || player || 'Speler').trim();
         const originalName = (playerBundle?.unified?.canonical_player_name || player || '').trim();
-        document.getElementById('badgeBox').textContent = rarest ? rarest.title : (playerBundle?.unified?.overview?.best_badge || 'Nog geen badge');
+        document.getElementById('badgeBox').textContent = rarest ? rarest.title : 'Nog geen badge';
         titleNode.textContent = shownName;
         renderPlayerAvatar();
         document.getElementById('subtitle').textContent = `${rarest && rarest.nickname ? rarest.nickname + ' · ' : ''}${originalName && originalName !== shownName ? `Originele naam: \"${originalName}\" · ` : ''}Profiel en wedstrijdgeschiedenis.`;
