@@ -1,6 +1,6 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
-  const STORAGE_KEY = 'gejast_paardenrace_room_code_v460';
+  const STORAGE_KEY = 'gejast_paardenrace_room_code_v478';
   const LIVE_QUERY_KEY = 'live';
   const ASSETS = {
     arena: './paardenrace-live-board-v447.png',
@@ -19,14 +19,26 @@
     clubs: { label:'♣ Klaveren', symbol:'♣', color:'#1f1b1a' },
     spades: { label:'♠ Schoppen', symbol:'♠', color:'#1f1b1a' }
   };
-  const BOARD_GRID = {
-    raceLeftPct: 18.0,
-    raceTopPct: 34.7,
-    raceWidthPct: 63.35,
-    raceHeightPct: 50.55,
-    startColumnWidthCells: 2,
-    finishColumnWidthCells: 2,
-    gateRowHeightFactor: 1.4
+  const BOARD_CALIBRATION = {
+    imageWidth: 1536,
+    imageHeight: 1024,
+    gateLeftPct: 18.23,
+    gateTopPct: 17.09,
+    gateWidthPct: 63.48,
+    gateHeightPct: 17.68,
+    trackLeftPct: 8.72,
+    trackTopPct: 34.77,
+    trackWidthPct: 82.50,
+    trackHeightPct: 50.49,
+    trackColumns: '1.5fr repeat(10, minmax(0, 1fr)) 1.5fr',
+    horseCardWidthPct: 74,
+    gateCardWidthPct: 72,
+    deckLeftPct: 5.55,
+    deckTopPct: 8.75,
+    deckWidthPct: 7.7,
+    discardRightPct: 9.25,
+    discardTopPct: 16.2,
+    discardWidthPct: 5.7
   };
 
   function sessionToken(){ return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; }
@@ -86,12 +98,10 @@
   function renderCardBack(extraClass=''){
     return `<img src="${ASSETS.cardBack}" alt="Kaart achterkant" class="pr-card-back${extraClass ? ` ${extraClass}` : ''}">`;
   }
+  function horseAsset(suit){ return ASSETS.horses[suit] || ASSETS.horses.hearts; }
   function aceHorseCard(suit){
-    const src = ASSETS.horses[suit] || ASSETS.horses.hearts;
+    const src = horseAsset(suit);
     return `<img src="${src}" alt="${suitLabel(suit)} aas" class="pr-ace-card" draggable="false">`;
-  }
-  function renderStartCover(){
-    return '<svg class="pr-start-cover" viewBox="0 0 311 410" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="1.5" y="1.5" width="308" height="407" rx="24" fill="#f8f2e6" stroke="rgba(77,57,31,.20)" stroke-width="3"/></svg>';
   }
   function getDrawRemaining(match){
     const deck = Array.isArray(match?.draw_deck) ? match.draw_deck : [];
@@ -99,6 +109,11 @@
     return Math.max(0, deck.length - idx);
   }
   function resolvedGateSet(match){ return new Set(Array.isArray(match?.resolved_gates) ? match.resolved_gates.map(Number) : []); }
+  function getGridColumnForProgress(progress){
+    if (progress <= 0) return 0;
+    if (progress >= 11) return 11;
+    return progress;
+  }
   function renderLiveBoard(match){
     if(!match || !match.horse_positions){
       return '<div class="pr-live-placeholder">Wachten op countdown of race-start.</div>';
@@ -108,48 +123,40 @@
     const resolved = resolvedGateSet(match);
     const remaining = getDrawRemaining(match);
     const discardCard = match.last_draw_card || '';
-
     const deckLayers = remaining > 0
-      ? [0,1,2].map((i)=>`<div class="pr-stack-card" style="transform:translate(${i * -4}px, ${i * 4}px)">${renderCardBack('pr-deck-back')}</div>`).join('')
+      ? [0,1,2].map((i)=>`<div class="pr-stack-card" style="transform:translate(${i * -3}px, ${i * 3}px)">${renderCardBack('pr-deck-back')}</div>`).join('')
       : '';
 
     const gateHtml = Array.from({length:10}, (_, idx)=>{
       const gateNo = idx + 1;
       const isResolved = resolved.has(gateNo);
       const inner = isResolved ? renderFaceUpCard(gates[idx] || '', 'pr-gate-face') : renderCardBack('pr-gate-back');
-      return `<div class="pr-gate-slot ${isResolved ? 'is-revealed' : 'is-facedown'}" data-gate-no="${gateNo}" style="grid-column:${gateNo}">${inner}</div>`;
+      return `<div class="pr-gate-slot ${isResolved ? 'is-revealed' : 'is-facedown'}" data-gate-no="${gateNo}" data-resolved="${isResolved}">${inner}</div>`;
     }).join('');
 
-    const laneRow = { spades:1, hearts:2, clubs:3, diamonds:4 };
-    const horseSlot = (suit, column, position)=>`<div class="pr-horse-slot" data-suit="${suit}" data-pos="${position}" style="grid-column:${column};grid-row:${laneRow[suit]}">${aceHorseCard(suit)}</div>`;
-    const startHorseHtml = SUITS.map((suit)=>{
+    const laneHtml = SUITS.map((suit)=>{
       const raw = Number(pos[suit] || 0);
       const idx = Math.max(0, Math.min(11, raw));
-      return idx === 0 ? horseSlot(suit, 1, idx) : '';
-    }).join('');
-    const raceHorseHtml = SUITS.map((suit)=>{
-      const raw = Number(pos[suit] || 0);
-      const idx = Math.max(0, Math.min(11, raw));
-      return idx >= 1 && idx <= 10 ? horseSlot(suit, idx, idx) : '';
-    }).join('');
-    const finishHorseHtml = SUITS.map((suit)=>{
-      const raw = Number(pos[suit] || 0);
-      const idx = Math.max(0, Math.min(11, raw));
-      return idx >= 11 ? horseSlot(suit, 1, idx) : '';
+      const cells = Array.from({length:12}, (_, col)=>{
+        const classes = ['pr-track-cell'];
+        if(col === 0) classes.push('is-start');
+        if(col === 11) classes.push('is-finish');
+        const horse = col === idx ? `<div class="pr-horse-slot" data-suit="${suit}" data-progress="${idx}">${aceHorseCard(suit)}</div>` : '';
+        return `<div class="${classes.join(' ')}" data-col="${col}" data-progress-cell="${col}">${horse}</div>`;
+      }).join('');
+      return `<div class="pr-lane-grid" data-lane="${suit}">${cells}</div>`;
     }).join('');
 
     return `
       <div class="pr-live-wrap" data-match-ref="${String(match.match_ref || '')}" data-draw-index="${Number(match.draw_index || 0)}">
         <div class="pr-live-stage" data-stage-root>
           <img src="${ASSETS.arena}" alt="Paardenrace bord" class="pr-live-arena">
-          <div class="pr-overlay">
+          <div class="pr-overlay" style="--gate-left:${BOARD_CALIBRATION.gateLeftPct}%;--gate-top:${BOARD_CALIBRATION.gateTopPct}%;--gate-width:${BOARD_CALIBRATION.gateWidthPct}%;--gate-height:${BOARD_CALIBRATION.gateHeightPct}%;--track-left:${BOARD_CALIBRATION.trackLeftPct}%;--track-top:${BOARD_CALIBRATION.trackTopPct}%;--track-width:${BOARD_CALIBRATION.trackWidthPct}%;--track-height:${BOARD_CALIBRATION.trackHeightPct}%;--deck-left:${BOARD_CALIBRATION.deckLeftPct}%;--deck-top:${BOARD_CALIBRATION.deckTopPct}%;--deck-width:${BOARD_CALIBRATION.deckWidthPct}%;--discard-right:${BOARD_CALIBRATION.discardRightPct}%;--discard-top:${BOARD_CALIBRATION.discardTopPct}%;--discard-width:${BOARD_CALIBRATION.discardWidthPct}%">
             <canvas class="pr-fx-canvas" data-fx-canvas></canvas>
             <div class="pr-deck-zone"><div class="pr-deck-slot" data-deck-slot>${deckLayers}</div></div>
             <div class="pr-discard-zone"><div class="pr-discard-slot ${discardCard ? 'has-card' : ''}" data-discard-slot>${discardCard ? renderFaceUpCard(discardCard, 'pr-discard-face') : ''}</div></div>
             <div class="pr-gate-grid">${gateHtml}</div>
-            <div class="pr-start-grid">${startHorseHtml}</div>
-            <div class="pr-race-grid">${raceHorseHtml}</div>
-            <div class="pr-finish-grid">${finishHorseHtml}</div>
+            <div class="pr-track-lanes">${laneHtml}</div>
             <div class="pr-animation-layer" data-animation-layer></div>
           </div>
         </div>
@@ -159,7 +166,7 @@
   window.GEJAST_PAARDENRACE = {
     rpc, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode,
     suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack, renderLiveBoard,
-    gotoLive, liveHref, getDrawRemaining, resolvedGateSet, getBoardPoints: ()=> JSON.parse(JSON.stringify(BOARD_GRID)),
-    horseAsset: (suit)=> ASSETS.horses[suit] || ASSETS.horses.hearts
+    gotoLive, liveHref, getDrawRemaining, resolvedGateSet, getGridColumnForProgress,
+    getBoardPoints: ()=> JSON.parse(JSON.stringify(BOARD_CALIBRATION)), horseAsset, aceHorseCard, ASSETS
   };
 })();
