@@ -38,6 +38,13 @@
 
   function qs(sel, root){ return (root||document).querySelector(sel); }
   function esc(s){ const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(s??'').replace(/[&<>"']/g,m=>map[m]); }
+  function normalizeError(err){
+    const msg = String(err && err.message || err || 'Onbekende fout');
+    if(/game_type\s+ongeldig/i.test(msg)){
+      return 'Pikken live-samenvatting staat backend nog niet open voor dit spel. Draai de v487a SQL-fix en probeer opnieuw.';
+    }
+    return msg;
+  }
 
   function setParticipantToken(gameId, active){ try{ if(active && gameId){ localStorage.setItem(PIKKEN_PARTICIPANT_KEY, JSON.stringify({game_id:String(gameId), at:Date.now()})); } else { localStorage.removeItem(PIKKEN_PARTICIPANT_KEY); } }catch(_){ } }
 
@@ -169,7 +176,7 @@
       }
       setStatus('', false);
     }catch(err){
-      setStatus(err.message || 'Laden mislukt.', true);
+      setStatus(normalizeError(err) || 'Laden mislukt.', true);
     }
   }
 
@@ -247,16 +254,16 @@
     const params = new URLSearchParams(location.search);
     UI.gameId = params.get('game_id') || '';
 
-    qs('#pkCreateLobbyBtn').addEventListener('click', ()=>createLobby().catch(e=>setStatus(e.message||'Maken mislukt.',true)));
-    qs('#pkJoinLobbyBtn').addEventListener('click', ()=>joinLobby().catch(e=>setStatus(e.message||'Join mislukt.',true)));
-    qs('#pkReadyBtn').addEventListener('click', ()=>setReady(true).catch(e=>setStatus(e.message||'Ready mislukt.',true)));
-    qs('#pkUnreadyBtn').addEventListener('click', ()=>setReady(false).catch(e=>setStatus(e.message||'Unready mislukt.',true)));
-    qs('#pkStartBtn').addEventListener('click', ()=>startGame().catch(e=>setStatus(e.message||'Start mislukt.',true)));
+    qs('#pkCreateLobbyBtn').addEventListener('click', ()=>createLobby().catch(e=>setStatus(normalizeError(e)||'Maken mislukt.',true)));
+    qs('#pkJoinLobbyBtn').addEventListener('click', ()=>joinLobby().catch(e=>setStatus(normalizeError(e)||'Join mislukt.',true)));
+    qs('#pkReadyBtn').addEventListener('click', ()=>setReady(true).catch(e=>setStatus(normalizeError(e)||'Ready mislukt.',true)));
+    qs('#pkUnreadyBtn').addEventListener('click', ()=>setReady(false).catch(e=>setStatus(normalizeError(e)||'Unready mislukt.',true)));
+    qs('#pkStartBtn').addEventListener('click', ()=>startGame().catch(e=>setStatus(normalizeError(e)||'Start mislukt.',true)));
 
-    qs('#pkPlaceBidBtn').addEventListener('click', ()=>placeBid().catch(e=>setStatus(e.message||'Bieden mislukt.',true)));
-    qs('#pkRejectBtn').addEventListener('click', ()=>rejectBid().catch(e=>setStatus(e.message||'Afkeuren mislukt.',true)));
-    qs('#pkVoteApproveBtn').addEventListener('click', ()=>vote(true).catch(e=>setStatus(e.message||'Stem mislukt.',true)));
-    qs('#pkVoteRejectBtn').addEventListener('click', ()=>vote(false).catch(e=>setStatus(e.message||'Stem mislukt.',true)));
+    qs('#pkPlaceBidBtn').addEventListener('click', ()=>placeBid().catch(e=>setStatus(normalizeError(e)||'Bieden mislukt.',true)));
+    qs('#pkRejectBtn').addEventListener('click', ()=>rejectBid().catch(e=>setStatus(normalizeError(e)||'Afkeuren mislukt.',true)));
+    qs('#pkVoteApproveBtn').addEventListener('click', ()=>vote(true).catch(e=>setStatus(normalizeError(e)||'Stem mislukt.',true)));
+    qs('#pkVoteRejectBtn').addEventListener('click', ()=>vote(false).catch(e=>setStatus(normalizeError(e)||'Stem mislukt.',true)));
 
     if(UI.gameId){ setParticipantToken(UI.gameId, true); startPolling(); }
   }
