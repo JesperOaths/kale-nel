@@ -7,10 +7,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken live</title>
-  <script>window.GEJAST_PAGE_VERSION='v489';</script>
-  <script src="./gejast-config.js?v489"></script>
+  <script>window.GEJAST_PAGE_VERSION='v491';</script>
+  <script src="./gejast-config.js?v491"></script>
   <script src="./gejast-home-gate.js?v487"></script>
-  <script src="./gejast-live-summary.js?v489"></script>
+  <script src="./gejast-live-summary.js?v486"></script>
   <style>
     :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--shadow:0 18px 44px rgba(0,0,0,.08)}
     *{box-sizing:border-box}
@@ -29,7 +29,6 @@
     img.die.pik{filter:saturate(1.05)}
     .dice-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
     .grid{display:grid;gap:10px}
-    .emergency-banner{display:none;margin-top:10px;padding:12px 14px;border-radius:16px;background:rgba(127,47,29,.08);border:1px solid rgba(127,47,29,.18);color:#7f2f1d;font-weight:800}
   </style>
 </head>
 <body>
@@ -41,10 +40,9 @@
           <div style="display:flex;align-items:center;gap:12px;margin:14px 0 6px"><img src="./assets/pikken/pikken-icon.svg" alt="Pikken" style="width:48px;height:48px;border-radius:14px;background:#fff;padding:8px;border:1px solid rgba(0,0,0,.08)"><h1 style="margin:0">Pikken live</h1></div>
           <div id="meta" class="muted">Laden…</div>
         </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn" href="./pikken.html">Spelen</a><button class="btn" id="pkLiveBrakeBtn" type="button">Noodrem</button><button class="btn" id="pkLiveReleaseBtn" type="button">Opheffen</button></div>
+        <a class="btn" href="./pikken.html">Spelen</a>
       </div>
 
-      <div class="emergency-banner" id="pkLiveEmergencyBanner">Noodrem actief. Live polling staat stil op dit apparaat.</div>
       <div class="panel">
         <h2 style="margin:0 0 8px">Status</h2>
         <div class="muted">Fase: <span id="phasePill" class="pill wait">—</span> · Ronde: <strong id="roundNo">0</strong> · Beurt: <strong id="turnName">—</strong></div>
@@ -69,11 +67,6 @@
     (()=>{
       const live = window.GEJAST_LIVE_SUMMARY || {};
       let pollId = null;
-      const EMERGENCY_KEY = 'gejast_pikken_live_emergency_brake_v488';
-      function liveEmergencyKey(identity){ return `${EMERGENCY_KEY}:${identity?.clientMatchId || identity?.matchRef || 'global'}`; }
-      function isEmergency(identity){ try{ return localStorage.getItem(liveEmergencyKey(identity)) === '1'; }catch(_){ return false; } }
-      function setEmergency(identity, active){ try{ if(active) localStorage.setItem(liveEmergencyKey(identity), '1'); else localStorage.removeItem(liveEmergencyKey(identity)); }catch(_){ } syncEmergency(identity); }
-      function syncEmergency(identity){ const active = isEmergency(identity); const banner=document.getElementById('pkLiveEmergencyBanner'); if(banner) banner.style.display=active?'block':'none'; const b=document.getElementById('pkLiveBrakeBtn'); const r=document.getElementById('pkLiveReleaseBtn'); if(b) b.disabled=active; if(r) r.disabled=!active; if(active && pollId){ clearInterval(pollId); pollId=null; } }
       function esc(v){ const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(v??'').replace(/[&<>"']/g,(m)=>map[m]); }
 
       // Deterministic class decision tables (matches CSS above)
@@ -208,8 +201,6 @@
           document.getElementById('meta').textContent='Geen match_ref of client_match_id in URL.';
           return;
         }
-        syncEmergency(identity);
-        if(isEmergency(identity)){ document.getElementById('meta').textContent='Noodrem actief.'; return; }
         try{
           const item = await live.loadPublicSummary('pikken', identity);
           render(item);
@@ -218,11 +209,8 @@
         }
       }
 
-      const initialIdentity = live.matchIdentityFromUrl ? live.matchIdentityFromUrl() : { clientMatchId:'', matchRef:'' };
-      const brakeBtn = document.getElementById('pkLiveBrakeBtn'); if(brakeBtn) brakeBtn.addEventListener('click', ()=>{ setEmergency(initialIdentity, true); document.getElementById('meta').textContent='Noodrem actief.'; });
-      const releaseBtn = document.getElementById('pkLiveReleaseBtn'); if(releaseBtn) releaseBtn.addEventListener('click', ()=>{ setEmergency(initialIdentity, false); load(); if(!pollId) pollId = setInterval(load, 5000); });
       load();
-      if(!isEmergency(initialIdentity)) pollId = setInterval(load, 5000);
+      pollId = setInterval(load, 5000);
     })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
