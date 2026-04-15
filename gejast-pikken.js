@@ -48,7 +48,7 @@
       return 'Oude pikken-lobby losgekoppeld. Je kunt hieronder meteen een nieuwe lobby maken of joinen.';
     }
     if(/live_match_summaries/i.test(msg)){
-      return 'Deze pikken-lobby gebruikte nog een oude live-samenvatting-koppeling. De pagina is teruggezet naar een schone lobby.';
+      return '';
     }
     if(/(game|match).*(not found|niet gevonden|does not exist)|no rows returned/i.test(msg)){
       return 'Deze pikken-lobby bestaat niet meer. De pagina is teruggezet naar een lege lobby.';
