@@ -20,7 +20,7 @@
       rarityLabel: 'Common',
       pack: 'core',
       description: 'Voor de eerste echte stap op de site.',
-      requirementsText: '1 geverifieerde site-actie: een potje, drankje of speedpoging.',
+      requirementsText: '1 gespeeld potje.',
       imageFull: assetPath('core', 'starter'),
       imageMini48: miniPath('48', 'starter'),
       imageMini64: miniPath('64', 'starter')
