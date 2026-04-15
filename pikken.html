@@ -7,10 +7,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken</title>
-  <script>window.GEJAST_PAGE_VERSION='v513';</script>
-  <script src="./gejast-config.js?v513"></script>
-  <script src="./gejast-home-gate.js?v513"></script>
-  <script src="./gejast-scope-context.js?v513"></script>
+  <script>window.GEJAST_PAGE_VERSION='v511';</script>
+  <script src="./gejast-config.js?v511"></script>
+  <script src="./gejast-home-gate.js?v511"></script>
+  <script src="./gejast-scope-context.js?v511"></script>
   <style>
     :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241;--shadow:0 18px 44px rgba(0,0,0,.08)}
     *{box-sizing:border-box}
@@ -37,7 +37,7 @@
         <div>
           <a class="btn alt" href="./index.html">Home</a>
           <div style="display:flex;align-items:center;gap:12px;margin:14px 0 6px"><img src="./assets/pikken/pikken-icon.svg" alt="Pikken" style="width:52px;height:52px;border-radius:14px;background:#fff;padding:8px;border:1px solid rgba(0,0,0,.08)"><h1 style="margin:0">Pikken</h1></div>
-          <div class="muted">Lobby + live dobbelspel. De lobby werkt nu meer als paardenrace: maak een room, word automatisch host, en andere spelers kunnen direct joinen via één klik op de open roomlijst.</div>
+          <div class="muted">Lobby + live dobbelspel. De lobby werkt nu als paardenrace: maak een room, word automatisch host, andere spelers kunnen direct joinen, en gestarte rooms schuiven naar de actieve lijst.</div>
           <div id="pkStatus" class="muted" style="margin-top:8px;min-height:20px"></div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
@@ -69,7 +69,7 @@
             <button class="btn alt" id="pkRefreshRoomsBtn">Nu verversen</button>
           </div>
 
-          <div class="small-text muted" style="margin-top:16px">Actieve pikkenkamers</div>
+          <div class="small-text muted" style="margin-top:16px">Actieve games</div>
           <div id="pkLiveRoomsBox"></div>
 
           <div class="small-text muted" style="margin-top:16px">Open rooms om direct te joinen</div>
@@ -79,7 +79,7 @@
             <div class="room-code" id="pkLobbyCode">—</div>
             <div class="muted small-text" id="pkLobbyMeta">Nog geen room geladen.</div>
             <div class="summary-box" id="pkLobbySummary">Nog geen lobby info.</div>
-            <div class="action-row"><button class="btn alt" id="pkReadyBtn">Ready</button><button class="btn alt" id="pkUnreadyBtn">Unready</button><button class="btn" id="pkStartBtn">Start</button></div>
+            <div class="action-row"><button class="btn alt" id="pkReadyBtn">Ready</button><button class="btn alt" id="pkUnreadyBtn">Unready</button><button class="btn alt" id="pkLeaveBtn">Verlaat room</button><button class="btn alt" id="pkDestroyBtn" style="display:none">Hef room op</button><button class="btn" id="pkStartBtn" style="display:none">Start</button></div>
           </div>
 
           <details class="accordion">
@@ -139,8 +139,8 @@
     </div>
   </div>
 
-  <script src="./pikken-dice-canvas.js?v513"></script>
-  <script src="./gejast-pikken.js?v513"></script>
+  <script src="./pikken-dice-canvas.js?v511"></script>
+  <script src="./gejast-pikken.js?v511"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 <div class="site-credit-watermark" data-version-watermark></div>
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
