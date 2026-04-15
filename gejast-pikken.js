@@ -39,6 +39,10 @@
   function qs(sel, root){ return (root||document).querySelector(sel); }
   function esc(s){ const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(s??'').replace(/[&<>"']/g,m=>map[m]); }
 
+  function setParticipantToken(gameId, active){ try{ if(active && gameId){ localStorage.setItem(PIKKEN_PARTICIPANT_KEY, JSON.stringify({game_id:String(gameId), at:Date.now()})); } else { localStorage.removeItem(PIKKEN_PARTICIPANT_KEY); } }catch(_){ } }
+
+  function liveHref(gameId){ return `./pikken_live.html?client_match_id=${encodeURIComponent(String(gameId||''))}`; }
+
   function setStatus(text, isError){
     const el = qs('#pkStatus');
     if(!el) return;
@@ -68,12 +72,14 @@
     const votes = Array.isArray(state?.votes) ? state.votes : [];
     const myHand = Array.isArray(state?.my_hand) ? state.my_hand : [];
     const phase = String(game?.state?.phase || 'lobby');
+    setParticipantToken(game?.id || UI.gameId, phase && phase !== 'finished');
     const bid = game?.state?.bid && game.state.bid !== null ? game.state.bid : null;
     const turnSeat = Number(game?.state?.current_turn_seat || 0);
     const voteTurnSeat = Number(game?.state?.vote_turn_seat || 0);
     const lastReveal = game?.state?.last_reveal || null;
 
     qs('#pkLobbyCode').textContent = game?.lobby_code || '—';
+    const liveLink = qs('#pkLiveLink'); if(liveLink){ liveLink.href = liveHref(game?.id || UI.gameId); liveLink.style.display = (game?.id || UI.gameId) ? '' : 'none'; }
     qs('#pkPhase').textContent = phase;
     qs('#pkRoundNo').textContent = String(Number(game?.state?.round_no || 0) || 0);
 
@@ -185,6 +191,7 @@
       config_input: { penalty_mode: mode }
     });
     UI.gameId = out.game_id;
+    setParticipantToken(UI.gameId, true);
     history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(getScope())}`);
     startPolling();
   }
@@ -199,6 +206,7 @@
       lobby_code_input: code
     });
     UI.gameId = out.game_id;
+    setParticipantToken(UI.gameId, true);
     history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(getScope())}`);
     startPolling();
   }
@@ -250,7 +258,7 @@
     qs('#pkVoteApproveBtn').addEventListener('click', ()=>vote(true).catch(e=>setStatus(e.message||'Stem mislukt.',true)));
     qs('#pkVoteRejectBtn').addEventListener('click', ()=>vote(false).catch(e=>setStatus(e.message||'Stem mislukt.',true)));
 
-    if(UI.gameId) startPolling();
+    if(UI.gameId){ setParticipantToken(UI.gameId, true); startPolling(); }
   }
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot, { once:true });

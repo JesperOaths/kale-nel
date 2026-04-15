@@ -7,10 +7,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken stats</title>
-  <script>window.GEJAST_PAGE_VERSION='v485';</script>
-  <script src="./gejast-config.js?v485"></script>
-  <script src="./gejast-home-gate.js?v485"></script>
-  <script src="./gejast-scope-context.js?v485"></script>
+  <script>window.GEJAST_PAGE_VERSION='v486';</script>
+  <script src="./gejast-config.js?v486"></script>
+  <script src="./gejast-home-gate.js?v486"></script>
+  <script src="./gejast-scope-context.js?v486"></script>
   <style>
     :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--shadow:0 18px 44px rgba(0,0,0,.08)}
     *{box-sizing:border-box}
@@ -31,7 +31,7 @@
       <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
         <div>
           <a class="btn" href="./pikken.html">Terug</a>
-          <h1 style="margin:14px 0 6px">Pikken stats</h1>
+          <div style="display:flex;align-items:center;gap:12px;margin:14px 0 6px"><img src="./assets/pikken/pikken-icon.svg" alt="Pikken" style="width:48px;height:48px;border-radius:14px;background:#fff;padding:8px;border:1px solid rgba(0,0,0,.08)"><h1 style="margin:0">Pikken stats</h1></div>
           <div id="meta" class="muted">Laden…</div>
         </div>
         <a class="btn" href="./index.html">Home</a>
@@ -52,7 +52,13 @@
         const data=await parse(res);
         document.getElementById('meta').textContent = `Scope: ${scope}`;
         const cards=Array.isArray(data?.cards)?data.cards:[];
-        document.getElementById('grid').innerHTML = cards.map(c=>`<div class="stat"><div class="k">${c.k||''}</div><div class="v">${c.v||''}</div><div class="muted">${c.sub||''}</div></div>`).join('') || '<div class="muted">Nog geen pikken-stats.</div>';
+        const raw=data?.summary||data?.totals||{};
+        const extras=[];
+        if(raw.bluff_callout_rate!=null) extras.push({k:'Bluff call-out %', v:`${Math.round(Number(raw.bluff_callout_rate)*100)}%`, sub:'Hoe vaak een gewaagde leugen op tijd werd doorzien.'});
+        if(raw.correct_reject_rate!=null) extras.push({k:'Correct reject %', v:`${Math.round(Number(raw.correct_reject_rate)*100)}%`, sub:'Hoe vaak afkeuren uiteindelijk het juiste oordeel was.'});
+        if(raw.pik_bid_rate!=null) extras.push({k:'Pik bod %', v:`${Math.round(Number(raw.pik_bid_rate)*100)}%`, sub:'Aandeel van alle biedingen dat op pik ging.'});
+        const merged=[...extras,...cards];
+        document.getElementById('grid').innerHTML = merged.map(c=>`<div class="stat"><div class="k">${c.k||''}</div><div class="v">${c.v||''}</div><div class="muted">${c.sub||''}</div></div>`).join('') || '<div class="muted">Nog geen pikken-stats.</div>';
       }
       load().catch(err=>{document.getElementById('meta').textContent=err.message||'Laden mislukt.';});
     })();
