@@ -7,9 +7,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken live</title>
-  <script>window.GEJAST_PAGE_VERSION='v522';</script>
-  <script src="./gejast-config.js?v522"></script>
-  <script src="./gejast-home-gate.js?v522"></script>
+  <script>window.GEJAST_PAGE_VERSION='v523';</script>
+  <script src="./gejast-config.js?v523"></script>
+  <script src="./gejast-home-gate.js?v523"></script>
   <style>
     :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--shadow:0 18px 44px rgba(0,0,0,.08)}
     *{box-sizing:border-box}
@@ -237,7 +237,13 @@
         const myHand = Array.isArray(state?.my_hand)?state.my_hand:[];
         const phase = String(st.phase||game.status||'');
         const bid = st.bid && st.bid !== null ? st.bid : null;
-        const turnSeat = phase === 'voting' ? Number(st.vote_turn_seat||0) : Number(st.turn_seat||0);
+        const aliveSeats = players.filter((p)=>p && p.alive).map((p)=>Number(p.seat||0)).filter(Boolean);
+        const defaultAliveSeat = aliveSeats.length ? Math.min(...aliveSeats) : 0;
+        const derivedTurnSeat = phase === 'voting'
+          ? Number(st.vote_turn_seat||0)
+          : Number(st.turn_seat||0);
+        const fallbackBidderSeat = Number(bid?.bidder_seat || 0);
+        const turnSeat = derivedTurnSeat || fallbackBidderSeat || defaultAliveSeat;
 
         qs('#meta').textContent = metaText(state);
         const phaseSpec = phasePillSpec({ phase: st.phase, status: game.status });
@@ -280,14 +286,31 @@
         }
 
         const canAct = !!viewer && !!viewer.alive;
-        const myTurn = canAct && phase === 'bidding' && Number(viewer.seat||0) === Number(st.turn_seat||0);
-        const myVoteTurn = canAct && phase === 'voting' && Number(viewer.seat||0) === Number(st.vote_turn_seat||0);
+        const viewerSeat = Number(viewer?.seat||0);
+        const missingBidTurn = phase === 'bidding' && !Number(st.turn_seat||0);
+        const missingVoteTurn = phase === 'voting' && !Number(st.vote_turn_seat||0);
+        const myTurn = canAct && phase === 'bidding' && (viewerSeat === turnSeat || (missingBidTurn && viewerSeat > 0));
+        const myVoteTurn = canAct && phase === 'voting' && (viewerSeat === turnSeat || (missingVoteTurn && viewerSeat > 0));
         qs('#bidPanel').classList.toggle('hidden', !myTurn);
         qs('#votePanel').classList.toggle('hidden', !myVoteTurn);
         qs('#rejectBidBtn').disabled = !myTurn || !bid || UI.actionBusy;
         qs('#placeBidBtn').disabled = !myTurn || UI.actionBusy;
         qs('#voteApproveBtn').disabled = !myVoteTurn || UI.actionBusy;
         qs('#voteRejectBtn').disabled = !myVoteTurn || UI.actionBusy;
+
+        const bidHint = qs('#statusText');
+        if (!UI.actionBusy && canAct) {
+          if (phase === 'bidding' && missingBidTurn && myTurn) {
+            bidHint.textContent = 'Beurtinformatie ontbreekt in de backend-state; biedpaneel is daarom toch zichtbaar gemaakt.';
+            bidHint.className = 'muted';
+          } else if (phase === 'voting' && missingVoteTurn && myVoteTurn) {
+            bidHint.textContent = 'Stembeurtinformatie ontbreekt in de backend-state; stempaneel is daarom toch zichtbaar gemaakt.';
+            bidHint.className = 'muted';
+          } else if (bidHint.textContent && /beurtinformatie ontbreekt/i.test(bidHint.textContent)) {
+            bidHint.textContent = '';
+            bidHint.className = 'muted';
+          }
+        }
 
         const lr = st.last_reveal || game?.last_reveal || null;
         const revealWrap = qs('#revealBody');
