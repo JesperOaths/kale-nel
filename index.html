@@ -674,7 +674,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v450';</script><script src="./gejast-config.js?v450"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v460';</script><script src="./gejast-config.js?v460"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
   <script src="./gejast-live-summary.js?v389"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
   <script src="./gejast-combined-readers.js?v426"></script>
@@ -735,18 +735,18 @@
       <section class="public-links" aria-label="Sitepagina's">
         <div class="public-links-grid">
           <a id="homeKlaverjasEntry" class="page-link-card scorer-link" href="./scorer.html" data-default-href="./scorer.html">
-            <div id="homeKlaverjasLabel" class="page-link-label">Klaverjas Invoeren</div>
+            <div id="homeKlaverjasLabel" class="page-link-label">Klaverjas</div>
             <div id="homeKlaverjasCopy" class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
           </a>
           <a id="homeBoerenbridgeEntry" class="page-link-card scorer-link" href="./boerenbridge.html" data-default-href="./boerenbridge.html">
-            <div id="homeBoerenbridgeLabel" class="page-link-label">Boerenbridge Invoeren</div>
+            <div id="homeBoerenbridgeLabel" class="page-link-label">Boerenbridge</div>
             <div id="homeBoerenbridgeCopy" class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
           </a>
         </div>
 
         <div class="public-links-grid">
           <a class="page-link-card scorer-link" href="./beerpong.html">
-            <div class="page-link-label">Beerpong Invoeren</div>
+            <div class="page-link-label">Beerpong</div>
             <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
           </a>
           <a class="page-link-card login-link" href="./profiles.html">
@@ -769,11 +769,11 @@
         <div class="public-links-grid">
           <div class="page-link-card login-link placeholder-link" aria-disabled="true">
             <div class="page-link-label">Rad</div>
-            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
+            <div class="page-link-copy">Placeholder — volgt later.</div>
           </div>
           <div class="page-link-card login-link placeholder-link" aria-disabled="true">
-            <div class="page-link-label">Despimarkt</div>
-            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
+            <div class="page-link-label">Beurs d'Espinoza</div>
+            <div class="page-link-copy">Placeholder — volgt later.</div>
           </div>
         </div>
 
@@ -1223,6 +1223,7 @@ function renderExtraNames(id, items, emptyText, listKey) {
 function persistExtraPollSnapshot(legends, losers){ try{ localStorage.setItem(EXTRA_POLL_STORAGE_KEY, JSON.stringify({ legends:Array.isArray(legends)?legends:[], losers:Array.isArray(losers)?losers:[] })); }catch(_){ } }
 function hydrateExtraPollSnapshot(){ try{ const raw = localStorage.getItem(EXTRA_POLL_STORAGE_KEY); return raw ? JSON.parse(raw) : null; }catch(_){ return null; } }
 function renderExtraPollState(data) {
+  data = mergeSnapshotNames(data, hydrateExtraPollSnapshot());
   const previousCount = Number(currentDrinksPollState?.can_count ?? currentDrinksPollState?.yes_count ?? currentDrinksPollState?.legends?.length ?? currentDrinksPollState?.yes_names?.length ?? 0);
   currentDrinksPollState = data || null;
   const legends = data.legends || data.yes_names || [];
@@ -1493,6 +1494,7 @@ async function castExtraPollVote(desired_status) {
       window.setTimeout(() => { if (burst.isConnected) burst.remove(); }, 3600);
     }
     function renderState(data) {
+      data = mergeSnapshotNames(data, hydrateHomepagePollSnapshot());
 
       const previousCount = Number(currentHomepageState?.can_count ?? currentHomepageState?.yes_count ?? currentHomepageState?.legends?.length ?? currentHomepageState?.yes_names?.length ?? 0);
       currentHomepageState = data || null;
@@ -1699,8 +1701,8 @@ async function castExtraPollVote(desired_status) {
     function wireProtectedDrinksLinks(){ document.querySelectorAll('a[href="./drinks_add.html"]').forEach((link)=>{ if(link.dataset.bound==='1') return; link.dataset.bound='1'; link.addEventListener('click',(ev)=>{ if(getPlayerSessionToken()) return; ev.preventDefault(); const cfg = window.GEJAST_CONFIG || {}; window.location.href = cfg.buildHomeUrl ? cfg.buildHomeUrl('drinks_add.html', CURRENT_SCOPE) : './home.html?return_to=drinks_add.html'; }); }); }
 
     const homeEntryDefaults = {
-      klaverjas:{ entryId:'homeKlaverjasEntry', labelId:'homeKlaverjasLabel', copyId:'homeKlaverjasCopy', href:'./scorer.html', label:'Klaverjas Invoeren', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' },
-      boerenbridge:{ entryId:'homeBoerenbridgeEntry', labelId:'homeBoerenbridgeLabel', copyId:'homeBoerenbridgeCopy', href:'./boerenbridge.html', label:'Boerenbridge Invoeren', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' }
+      klaverjas:{ entryId:'homeKlaverjasEntry', labelId:'homeKlaverjasLabel', copyId:'homeKlaverjasCopy', href:'./scorer.html', label:'Klaverjas', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' },
+      boerenbridge:{ entryId:'homeBoerenbridgeEntry', labelId:'homeBoerenbridgeLabel', copyId:'homeBoerenbridgeCopy', href:'./boerenbridge.html', label:'Boerenbridge', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' }
     };
     function setHomeEntryDefault(key){
       const cfg = homeEntryDefaults[key];

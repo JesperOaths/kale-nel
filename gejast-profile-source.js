@@ -193,10 +193,10 @@ function writeProfilesCache(value) {
         paardenrace_matches: prMatches
       },
       games: {
-        klaverjas: { player_name: shown, badge: player?.best_badge || 'Starter', summary: gameSummary(klMatches), matches: [] },
-        boerenbridge: { player_name: shown, badge: player?.best_badge || 'Starter', summary: gameSummary(bbMatches), matches: [] },
-        paardenrace: { player_name: shown, badge: player?.best_badge || 'Starter', summary: gameSummary(prMatches), matches: [] },
-        beerpong: { player_name: shown, badge: player?.best_badge || 'Starter', summary: gameSummary(bpMatches), matches: [] }
+        klaverjas: { player_name: shown, badge: player?.best_badge || '', summary: gameSummary(klMatches), matches: [] },
+        boerenbridge: { player_name: shown, badge: player?.best_badge || '', summary: gameSummary(bbMatches), matches: [] },
+        paardenrace: { player_name: shown, badge: player?.best_badge || '', summary: gameSummary(prMatches), matches: [] },
+        beerpong: { player_name: shown, badge: player?.best_badge || '', summary: gameSummary(bpMatches), matches: [] }
       }
     };
   }
