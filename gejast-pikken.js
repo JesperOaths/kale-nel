@@ -6,7 +6,7 @@
 
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
-  const PIKKEN_PARTICIPANT_KEY = 'gejast_pikken_participant_v489';
+  const PIKKEN_PARTICIPANT_KEY = 'gejast_pikken_participant_v494';
 
   function getScope(){
     try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
@@ -48,7 +48,7 @@
       return 'Oude pikken-lobby losgekoppeld. Je kunt hieronder meteen een nieuwe lobby maken of joinen.';
     }
     if(/live_match_summaries/i.test(msg)){
-      return '';
+      return 'De pikken-backend kan public.live_match_summaries nog niet lezen. Draai de nieuwe v494 SQL-repair en vernieuw daarna hard.';
     }
     if(/(game|match).*(not found|niet gevonden|does not exist)|no rows returned/i.test(msg)){
       return 'Deze pikken-lobby bestaat niet meer. De pagina is teruggezet naar een lege lobby.';
@@ -114,7 +114,7 @@
     return img;
   }
 
-  const EMERGENCY_BRAKE_KEY = 'gejast_pikken_emergency_brake_v488';
+  const EMERGENCY_BRAKE_KEY = 'gejast_pikken_emergency_brake_v494';
   function looksLikeUuid(value){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value||'').trim()); }
   function emergencyScopeKey(){ return `${EMERGENCY_BRAKE_KEY}:${String(UI.gameId||'global')}`; }
   function isEmergencyBrakeActive(){ try{ return localStorage.getItem(emergencyScopeKey()) === '1'; }catch(_){ return false; } }
@@ -326,8 +326,8 @@
     const params = new URLSearchParams(location.search);
     UI.gameId = params.get('game_id') || '';
 
-    qs('#pkCreateLobbyBtn').addEventListener('click', ()=>createLobby().catch(e=>setStatus(normalizeError(e)||'Maken mislukt.',true)));
-    qs('#pkJoinLobbyBtn').addEventListener('click', ()=>joinLobby().catch(e=>setStatus(normalizeError(e)||'Join mislukt.',true)));
+    qs('#pkCreateLobbyBtn').addEventListener('click', ()=>createLobby().catch(e=>setStatus(normalizeError(e)||'Maken mislukt. Backend gaf geen leesbare fout terug.',true)));
+    qs('#pkJoinLobbyBtn').addEventListener('click', ()=>joinLobby().catch(e=>setStatus(normalizeError(e)||'Join mislukt. Backend gaf geen leesbare fout terug.',true)));
     qs('#pkReadyBtn').addEventListener('click', ()=>setReady(true).catch(e=>setStatus(normalizeError(e)||'Ready mislukt.',true)));
     qs('#pkUnreadyBtn').addEventListener('click', ()=>setReady(false).catch(e=>setStatus(normalizeError(e)||'Unready mislukt.',true)));
     qs('#pkStartBtn').addEventListener('click', ()=>startGame().catch(e=>setStatus(normalizeError(e)||'Start mislukt.',true)));
