@@ -63,7 +63,7 @@ set threshold_seconds = excluded.threshold_seconds,
 
 insert into public.badge_definitions(key, pack, title, nickname, rarity_rank, rarity_label, requirement_text, image_full, image_mini_48, image_mini_64, legacy_labels)
 values
-  ('starter','core','Starter','',1,'Common','1 geverifieerde site-actie: een potje, drankje of speedpoging.','./assets/badges/core/badge-starter.png','./assets/badges/mini-48/badge-starter.png','./assets/badges/mini-64/badge-starter.png','["Starter"]'::jsonb),
+  ('starter','core','Starter','',1,'Common','1 gespeeld potje.','./assets/badges/core/badge-starter.png','./assets/badges/mini-48/badge-starter.png','./assets/badges/mini-64/badge-starter.png','["Starter"]'::jsonb),
   ('groeier','core','Groeier','',2,'Common','5 geverifieerde potjes of 10 geverifieerde drankacties.','./assets/badges/core/badge-groeier.png','./assets/badges/mini-48/badge-groeier.png','./assets/badges/mini-64/badge-groeier.png','["Groeier"]'::jsonb),
   ('actief','core','Actief','De Huisvriend',3,'Uncommon','15 potjes totaal of 25 geverifieerde drankacties.','./assets/badges/core/badge-actief.png','./assets/badges/mini-48/badge-actief.png','./assets/badges/mini-64/badge-actief.png','["Actief"]'::jsonb),
   ('gold','core','Gouden Hand','De Gouden',4,'Rare','Minstens 30 potjes totaal en minstens 55% winrate over je beste spel.','./assets/badges/core/badge-gold.png','./assets/badges/mini-48/badge-gold.png','./assets/badges/mini-64/badge-gold.png','["Gold","Gouden Hand"]'::jsonb),
@@ -660,7 +660,7 @@ begin
     (case when v_live_participations > 0 then 1 else 0 end) +
     (case when (v_ballroom_approved_entries > 0 or v_ballroom_king_claims > 0) then 1 else 0 end);
 
-  if v_total_site_actions >= 1 then v_attained := array_append(v_attained, 'starter'); end if;
+  if v_total_matches >= 1 then v_attained := array_append(v_attained, 'starter'); end if;
   if v_total_matches >= 5 or v_verified_drink_actions >= 10 then v_attained := array_append(v_attained, 'groeier'); end if;
   if v_total_matches >= 15 or v_verified_drink_actions >= 25 then v_attained := array_append(v_attained, 'actief'); end if;
   if v_total_matches >= 30 and v_best_game_win_pct >= 55 then v_attained := array_append(v_attained, 'gold'); end if;
