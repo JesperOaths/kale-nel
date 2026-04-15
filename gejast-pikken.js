@@ -41,11 +41,10 @@
   function normalizeError(err){
     const msg = String(err && err.message || err || 'Onbekende fout');
     if(/game_type\s+ongeldig/i.test(msg)){
-      return 'Pikken live-samenvatting staat backend nog niet open voor dit spel. Draai de v499 SQL-compat-fix en probeer opnieuw.';
+      return 'Pikken live-compat mist nog een speltype-vertaling in de backend. Backend zei: ' + msg;
     }
-
     if(/column reference "game_type" is ambiguous/i.test(msg)){
-      return 'Pikken live-compat gebruikt nog een oudere game_type-lookup die botst. Draai de v499 SQL-compat-fix en vernieuw daarna hard.';
+      return 'Pikken live-compat raakt nog een oudere game_type-lookup. Backend zei: ' + msg;
     }
     return msg;
   }
