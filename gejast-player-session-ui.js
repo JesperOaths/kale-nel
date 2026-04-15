@@ -174,7 +174,7 @@
     shell.querySelector('#gejastSessionToggleName').textContent = viewer.name || 'Speler';
     shell.querySelector('#gejastSessionPanelName').textContent = viewer.name || 'Speler';
     const coinsNode = shell.querySelector('#gejastSessionCoins');
-    if (coinsNode) coinsNode.textContent = (CONFIG.formatCauteCoins ? CONFIG.formatCauteCoins(viewer.coins || 0) : `₵ ${Math.round(Number(viewer.coins||0)||0)} caute coins`);
+    if (coinsNode) { const coinText=(CONFIG.formatCauteCoins ? CONFIG.formatCauteCoins(viewer.coins || 0) : `₵ ${Math.round(Number(viewer.coins||0)||0)} caute coins`); coinsNode.textContent = coinText; coinsNode.title = coinText; }
     shell.querySelector('#gejastSessionToggleAvatar').innerHTML = buildAvatar(viewer.name, viewer.avatar);
     shell.querySelector('#gejastSessionPanelAvatar').innerHTML = buildAvatar(viewer.name, viewer.avatar);
     shell.classList.add('is-visible');

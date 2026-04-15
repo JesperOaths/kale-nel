@@ -43,7 +43,7 @@
     btn.addEventListener('click', function(){ clearTokens(); box.classList.remove('is-visible'); window.location.href='./home.html'; });
     const token=getToken(); if(!token) return;
     const viewer=await fetchViewer(token);
-    if(viewer && viewer.name){ nameEl.textContent=viewer.name; if (coinsEl) coinsEl.textContent=(CONFIG.formatCauteCoins?CONFIG.formatCauteCoins(viewer.coins||0):`₵ ${Math.round(Number(viewer.coins||0)||0)} caute coins`); box.classList.add('is-visible'); }
+    if(viewer && viewer.name){ nameEl.textContent=viewer.name; if (coinsEl) { const coinText=(CONFIG.formatCauteCoins?CONFIG.formatCauteCoins(viewer.coins||0):`₵ ${Math.round(Number(viewer.coins||0)||0)} caute coins`); coinsEl.textContent=coinText; coinsEl.title=coinText; } box.classList.add('is-visible'); }
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init, {once:true}); else init();
 })();

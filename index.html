@@ -766,13 +766,13 @@
         </div>
 
         <div class="public-links-grid">
-          <a class="page-link-card login-link" href="./paardenrace.html">
-            <div class="page-link-label">Paardenrace</div>
-            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
+          <a id="homePaardenraceEntry" class="page-link-card login-link" href="./paardenrace.html" data-default-href="./paardenrace.html">
+            <div id="homePaardenraceLabel" class="page-link-label">Paardenrace</div>
+            <div id="homePaardenraceCopy" class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
           </a>
-          <a class="page-link-card login-link" href="./pikken.html">
-            <div class="page-link-label">Pikken</div>
-            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
+          <a id="homePikkenEntry" class="page-link-card login-link" href="./pikken.html" data-default-href="./pikken.html">
+            <div id="homePikkenLabel" class="page-link-label">Pikken</div>
+            <div id="homePikkenCopy" class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
           </a>
         </div>
 
@@ -783,7 +783,7 @@
           </a>
           <div class="page-link-card login-link placeholder-link" aria-disabled="true">
             <div class="page-link-label">Beurs d'Espinoza</div>
-            <div class="page-link-copy">Binnenkort live.</div>
+            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
           </div>
         </div>
 
@@ -1765,8 +1765,10 @@ async function castExtraPollVote(desired_status) {
     function wireProtectedDrinksLinks(){ document.querySelectorAll('a[href="./drinks_add.html"]').forEach((link)=>{ if(link.dataset.bound==='1') return; link.dataset.bound='1'; link.addEventListener('click',(ev)=>{ if(getPlayerSessionToken()) return; ev.preventDefault(); const cfg = window.GEJAST_CONFIG || {}; window.location.href = cfg.buildHomeUrl ? cfg.buildHomeUrl('drinks_add.html', CURRENT_SCOPE) : './home.html?return_to=drinks_add.html'; }); }); }
 
     const homeEntryDefaults = {
-      klaverjas:{ entryId:'homeKlaverjasEntry', labelId:'homeKlaverjasLabel', copyId:'homeKlaverjasCopy', href:'./scorer.html', label:'Klaverjas', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' },
-      boerenbridge:{ entryId:'homeBoerenbridgeEntry', labelId:'homeBoerenbridgeLabel', copyId:'homeBoerenbridgeCopy', href:'./boerenbridge.html', label:'Boerenbridge', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' }
+      klaverjas:{ entryId:'homeKlaverjasEntry', labelId:'homeKlaverjasLabel', copyId:'homeKlaverjasCopy', href:'./scorer.html', label:'Klaverjas', liveLabel:'Klaverjassen Kijken', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' },
+      boerenbridge:{ entryId:'homeBoerenbridgeEntry', labelId:'homeBoerenbridgeLabel', copyId:'homeBoerenbridgeCopy', href:'./boerenbridge.html', label:'Boerenbridge', liveLabel:'Boerenbridge Begluren', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' },
+      paardenrace:{ entryId:'homePaardenraceEntry', labelId:'homePaardenraceLabel', copyId:'homePaardenraceCopy', href:'./paardenrace.html', label:'Paardenrace', liveLabel:'Paardenrace Live', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' },
+      pikken:{ entryId:'homePikkenEntry', labelId:'homePikkenLabel', copyId:'homePikkenCopy', href:'./pikken.html', label:'Pikken', liveLabel:'Pikken Begluren', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' }
     };
     function setHomeEntryDefault(key){
       const cfg = homeEntryDefaults[key];
@@ -1786,15 +1788,17 @@ async function castExtraPollVote(desired_status) {
       if(!entry || !label || !copy || !item || !item.href) { setHomeEntryDefault(key); return; }
       entry.classList.add('is-live');
       entry.href = item.href;
-      label.textContent = item.label || (key === 'klaverjas' ? 'KLAVERJAS LIVE' : 'BOERENBRIDGE LIVE');
+      label.textContent = item.label || cfg.liveLabel || cfg.label;
       copy.className = 'page-link-copy';
-      copy.textContent = item.copy || 'Open live scoreblad van jouw huidige potje.';
+      copy.textContent = item.copy || 'Open live scoreblad van jouw huidige potje.'; if(item.live){ entry.classList.add('is-live'); }
     }
     function applyHomepageLiveEntries(entries){
       Object.keys(homeEntryDefaults).forEach(setHomeEntryDefault);
       const source = entries || {};
       setHomeEntryLive('klaverjas', source.klaverjas || null);
       setHomeEntryLive('boerenbridge', source.boerenbridge || null);
+      setHomeEntryLive('paardenrace', source.paardenrace || null);
+      setHomeEntryLive('pikken', source.pikken || null);
     }
 
     async function loadHomepageLiveEntries(){
