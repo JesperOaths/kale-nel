@@ -1,8 +1,8 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
-  const STORAGE_KEY = 'gejast_pikken_lobby_code_v514';
-  const PIKKEN_PARTICIPANT_KEY = 'gejast_pikken_participant_v514';
+  const STORAGE_KEY = 'gejast_pikken_lobby_code_v517';
+  const PIKKEN_PARTICIPANT_KEY = 'gejast_pikken_participant_v517';
 
   function getScope(){
     try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
@@ -125,6 +125,13 @@
   function shouldPreserveRoomCodeInput(){ const el = qs('#pkRoomCodeInput'); return !!(el && (document.activeElement === el || UI.roomCodeDirty || Date.now() - UI.roomCodeTouchedAt < 2500)); }
   function setRoomCodeInputValue(value){ const el = qs('#pkRoomCodeInput'); if(!el) return; if(shouldPreserveRoomCodeInput()) return; el.value = value || ''; UI.roomCodeDirty = false; }
   function roomCode(){ return String(((qs('#pkRoomCodeInput') && qs('#pkRoomCodeInput').value) || getStoredLobbyCode() || '')).trim().toUpperCase(); }
+  function currentLobbyCode(){
+    const shown = String(qs('#pkLobbyCode')?.textContent || '').trim();
+    if (shown && shown !== '—') return shown.toUpperCase();
+    const typed = String(qs('#pkRoomCodeInput')?.value || '').trim();
+    if (typed) return typed.toUpperCase();
+    return String(getStoredLobbyCode() || '').trim().toUpperCase();
+  }
 
   function clearLobbyView(){
     UI.gameId = '';
