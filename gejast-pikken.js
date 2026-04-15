@@ -48,7 +48,7 @@
       return 'Oude pikken-lobby losgekoppeld. Je kunt hieronder meteen een nieuwe lobby maken of joinen.';
     }
     if(/live_match_summaries/i.test(msg)){
-      return 'De pikken-backend kan public.live_match_summaries nog niet lezen. Draai de nieuwe v495 SQL-repair en vernieuw daarna hard.';
+      return `Pikken compat-laag meldt nog een live_match_summaries-fout. Backend zei: ${msg}`;
     }
     if(/(game|match).*(not found|niet gevonden|does not exist)|no rows returned/i.test(msg)){
       return 'Deze pikken-lobby bestaat niet meer. De pagina is teruggezet naar een lege lobby.';
