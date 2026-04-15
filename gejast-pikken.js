@@ -1,8 +1,8 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
-  const STORAGE_KEY = 'gejast_pikken_lobby_code_v510';
-  const PIKKEN_PARTICIPANT_KEY = 'gejast_pikken_participant_v510';
+  const STORAGE_KEY = 'gejast_pikken_lobby_code_v514';
+  const PIKKEN_PARTICIPANT_KEY = 'gejast_pikken_participant_v514';
 
   function getScope(){
     try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
@@ -33,6 +33,26 @@
     return parse(res);
   }
 
+  async function rpcWithTimeout(name, payload, timeoutMs){
+    const controller = new AbortController();
+    const timer = setTimeout(()=>controller.abort(), Math.max(1, Number(timeoutMs)||3500));
+    try{
+      const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
+        method:'POST', headers:headers(), body: JSON.stringify(payload || {}), cache:'no-store', signal: controller.signal
+      });
+      return await parse(res);
+    }catch(err){
+      if(err && (err.name === 'AbortError' || /aborted|abort/i.test(String(err)))){
+        const e = new Error('start-timeout');
+        e.code = 'START_TIMEOUT';
+        throw e;
+      }
+      throw err;
+    }finally{
+      clearTimeout(timer);
+    }
+  }
+
   function qs(sel, root){ return (root||document).querySelector(sel); }
   function esc(s){ const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(s??'').replace(/[&<>"']/g,m=>map[m]); }
   function normalizeError(err){
@@ -47,6 +67,20 @@
       return 'Pikken backend raakt nog een dubbelzinnige game_type-verwijzing buiten de huidige compat-laag. Ruwe fout: ' + msg;
     }
     return msg;
+  }
+
+  function isKnownNonfatalRoundNoError(err){
+    const msg = String(err && err.message || err || '');
+    return /column reference\s+"?round_no"?\s+is ambiguous/i.test(msg);
+  }
+
+  function clearKnownNonfatalStatus(){
+    const el = qs('#pkStatus');
+    if(!el) return;
+    const txt = String(el.textContent || '');
+    if(/round_no/i.test(txt) && /ambiguous|dubbelzinnige/i.test(txt)){
+      setStatus('', false);
+    }
   }
 
   function setParticipantToken(gameId, active){ try{ if(active && gameId){ localStorage.setItem(PIKKEN_PARTICIPANT_KEY, JSON.stringify({game_id:String(gameId), at:Date.now()})); } else { localStorage.removeItem(PIKKEN_PARTICIPANT_KEY); } }catch(_){ } }
@@ -82,9 +116,7 @@
   };
 
   function markRoomCodeDirty(){ UI.roomCodeDirty = true; UI.roomCodeTouchedAt = Date.now(); }
-  function shouldPreserveInput(el){ return !!(el && (document.activeElement === el || UI.roomCodeDirty || Date.now() - UI.roomCodeTouchedAt < 2500)); }
-  function shouldPreserveRoomCodeInput(){ const el = qs('#pkRoomCodeInput'); return shouldPreserveInput(el); }
-  function shouldPreservePenaltyInput(){ const el = qs('#pkPenaltyMode'); return shouldPreserveInput(el); }
+  function shouldPreserveRoomCodeInput(){ const el = qs('#pkRoomCodeInput'); return !!(el && (document.activeElement === el || UI.roomCodeDirty || Date.now() - UI.roomCodeTouchedAt < 2500)); }
   function setRoomCodeInputValue(value){ const el = qs('#pkRoomCodeInput'); if(!el) return; if(shouldPreserveRoomCodeInput()) return; el.value = value || ''; UI.roomCodeDirty = false; }
   function roomCode(){ return String(((qs('#pkRoomCodeInput') && qs('#pkRoomCodeInput').value) || getStoredLobbyCode() || '')).trim().toUpperCase(); }
 
@@ -94,8 +126,6 @@
     clearStoredLobbyCode();
     setParticipantToken('', false);
     if(qs('#pkLobbyShell')) qs('#pkLobbyShell').style.display = 'none';
-    if(qs('#pkStartBtn')) qs('#pkStartBtn').style.display = 'none';
-    if(qs('#pkDestroyBtn')) qs('#pkDestroyBtn').style.display = 'none';
     if(qs('#pkLobbyCode')) qs('#pkLobbyCode').textContent = '—';
     if(qs('#pkLobbyMeta')) qs('#pkLobbyMeta').textContent = 'Nog geen room geladen.';
     if(qs('#pkLobbySummary')) qs('#pkLobbySummary').textContent = 'Nog geen lobby info.';
@@ -168,6 +198,7 @@
       const open = list.filter((r)=>String(r.stage || '').toLowerCase() === 'lobby');
       renderRoomsInto(qs('#pkLiveRoomsBox'), live, 'Nog geen actieve pikkenkamers.');
       renderRoomsInto(qs('#pkOpenRoomsBox'), open, 'Nog geen open kamers. Maak er één aan of ververs zo weer.');
+      clearKnownNonfatalStatus();
     } catch(err){
       renderRoomsInto(qs('#pkLiveRoomsBox'), [], 'Kon actieve kamers niet laden.');
       renderRoomsInto(qs('#pkOpenRoomsBox'), [], 'Kon open kamers niet laden.');
@@ -244,12 +275,7 @@
     qs('#pkBidPanel').style.display = myTurn ? 'block' : 'none';
     qs('#pkVotePanel').style.display = myVoteTurn ? 'block' : 'none';
     qs('#pkRejectBtn').disabled = !myTurn || !bid;
-    const canStart = !!viewer.is_host && phase === 'lobby' && status !== 'finished';
-    if(qs('#pkStartBtn')){
-      qs('#pkStartBtn').style.display = canStart ? '' : 'none';
-      qs('#pkStartBtn').disabled = !canStart || players.length < 2 || players.some((p)=>!p.ready);
-    }
-    if(qs('#pkDestroyBtn')) qs('#pkDestroyBtn').style.display = viewer.is_host ? '' : 'none';
+    qs('#pkStartBtn').disabled = !viewer.is_host || players.length < 2 || status === 'finished';
 
     const revealWrap = qs('#pkReveal');
     if(!lastReveal){
@@ -293,9 +319,13 @@
         UI.lastStateVersion = version;
         render(state);
       }
-      await loadOpenRooms();
       setStatus('', false);
     }catch(err){
+      if(isKnownNonfatalRoundNoError(err)){
+        clearLobbyView();
+        clearKnownNonfatalStatus();
+        return;
+      }
       setStatus(normalizeError(err) || 'Laden mislukt.', true);
     }
   }
@@ -347,24 +377,6 @@
     startPolling();
   }
 
-  async function leaveLobby(){
-    if(!UI.gameId) return clearLobbyView();
-    setStatus('Room verlaten…', false);
-    await rpc('pikken_leave_lobby_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId });
-    clearLobbyView();
-    history.replaceState(null,'',`pikken.html?scope=${encodeURIComponent(getScope())}`);
-    await poll();
-  }
-
-  async function destroyLobby(){
-    if(!UI.gameId) return clearLobbyView();
-    setStatus('Room opheffen…', false);
-    await rpc('pikken_destroy_lobby_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId });
-    clearLobbyView();
-    history.replaceState(null,'',`pikken.html?scope=${encodeURIComponent(getScope())}`);
-    await poll();
-  }
-
   async function setReady(ready){
     setStatus(ready?'Ready…':'Unready…', false);
     await rpc('pikken_set_ready_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId, ready_input: !!ready });
@@ -373,27 +385,28 @@
 
   async function startGame(){
     setStatus('Starten…', false);
+    let timedOut = false;
     try {
-      await rpc('pikken_start_game_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId });
-    } catch(err){
-      const msg = normalizeError(err) || '';
-      if(/round_no\s+is\s+ambiguous/i.test(msg) || /column reference "round_no" is ambiguous/i.test(msg)){
-        try {
-          const state = await rpc('pikken_get_state_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId });
-          const phase = String(state?.game?.state?.phase || '').toLowerCase();
-          const status = String(state?.game?.status || '').toLowerCase();
-          if(phase && phase !== 'lobby' || (status && status !== 'lobby')){
-            render(state);
-            await loadOpenRooms();
-            setStatus('', false);
-            return;
-          }
-        } catch(_) {}
+      await rpcWithTimeout('pikken_start_game_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId }, 3500);
+    } catch(err) {
+      if(err && err.code === 'START_TIMEOUT'){
+        timedOut = true;
+      } else if(!isKnownNonfatalRoundNoError(err)) {
+        throw err;
       }
-      throw err;
     }
-    await loadAndRender();
-    await loadOpenRooms();
+    try { await loadAndRender(); } catch(_) { }
+    try { await loadOpenRooms(); } catch(_) { }
+    clearKnownNonfatalStatus();
+    const phase = String((((UI.state||{}).game||{}).state||{}).phase || (((UI.state||{}).game||{}).status || '')).toLowerCase();
+    if(phase && phase !== 'lobby'){
+      setStatus('', false);
+      return;
+    }
+    if(timedOut){
+      setStatus('Start duurde te lang. Ververs zo nodig één keer.', true);
+      return;
+    }
     setStatus('', false);
   }
 
@@ -426,8 +439,6 @@
     qs('#pkRefreshRoomsBtn').addEventListener('click', ()=>poll().catch(e=>setStatus(normalizeError(e)||'Verversen mislukt.',true)));
     qs('#pkReadyBtn').addEventListener('click', ()=>setReady(true).catch(e=>setStatus(normalizeError(e)||'Ready mislukt.',true)));
     qs('#pkUnreadyBtn').addEventListener('click', ()=>setReady(false).catch(e=>setStatus(normalizeError(e)||'Unready mislukt.',true)));
-    qs('#pkLeaveBtn').addEventListener('click', ()=>leaveLobby().catch(e=>setStatus(normalizeError(e)||'Verlaten mislukt.',true)));
-    qs('#pkDestroyBtn').addEventListener('click', ()=>destroyLobby().catch(e=>setStatus(normalizeError(e)||'Opheffen mislukt.',true)));
     qs('#pkStartBtn').addEventListener('click', ()=>startGame().catch(e=>setStatus(normalizeError(e)||'Start mislukt.',true)));
 
     qs('#pkPlaceBidBtn').addEventListener('click', ()=>placeBid().catch(e=>setStatus(normalizeError(e)||'Bieden mislukt.',true)));
@@ -440,12 +451,6 @@
       roomEl.addEventListener('input', markRoomCodeDirty);
       roomEl.addEventListener('focus', markRoomCodeDirty);
       roomEl.addEventListener('blur', ()=>{ UI.roomCodeTouchedAt = Date.now(); });
-    }
-    const modeEl = qs('#pkPenaltyMode');
-    if(modeEl){
-      modeEl.addEventListener('focus', markRoomCodeDirty);
-      modeEl.addEventListener('change', ()=>{ UI.roomCodeTouchedAt = Date.now(); UI.roomCodeDirty = false; });
-      modeEl.addEventListener('blur', ()=>{ UI.roomCodeTouchedAt = Date.now(); });
     }
 
     const seeded = getStoredLobbyCode();
