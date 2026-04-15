@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace live</title>
-  <script>window.GEJAST_PAGE_VERSION='v457';</script>
-  <script src="./gejast-config.js?v457"></script>
-  <script src="./gejast-paardenrace.js?v457"></script>
+  <script>window.GEJAST_PAGE_VERSION='v458';</script>
+  <script src="./gejast-config.js?v458"></script>
+  <script src="./gejast-paardenrace.js?v458"></script>
   <style>
     :root{--gold:#9a8241;--paper:#fffaf3;--ink:#17130f;--muted:#6d6256;--line:rgba(0,0,0,.08);--bg:#efe6d7;--soft:#f7f1e7;--red:#8a1022;--red-bg:#fff4f2}
     *{box-sizing:border-box}
     body{margin:0;font-family:Inter,system-ui,sans-serif;background:linear-gradient(180deg,#efe4d3 0%,#eadfcf 100%);color:var(--ink)}
-    .page{max-width:1760px;margin:0 auto;padding:10px 8px 40px}
-    .shell{background:rgba(255,255,255,.44);border:1px solid rgba(255,255,255,.6);border-radius:30px;padding:10px;box-shadow:0 18px 40px rgba(0,0,0,.05)}
+    .page{max-width:1620px;margin:0 auto;padding:16px 14px 44px}
+    .shell{background:rgba(255,255,255,.44);border:1px solid rgba(255,255,255,.6);border-radius:30px;padding:18px;box-shadow:0 18px 40px rgba(0,0,0,.05)}
     .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
     .top-left{display:grid;gap:4px}.title{font-size:clamp(2rem,4vw,3rem);letter-spacing:-.05em;margin:0}.small{font-size:12px;color:var(--muted)}
     .btn,a.btn{display:inline-flex;align-items:center;justify-content:center;padding:11px 15px;border-radius:15px;border:1px solid var(--line);background:#17130f;color:#fff;text-decoration:none;font-weight:800;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.06)}
@@ -21,24 +21,33 @@
     .btn.warn{background:var(--red-bg);color:var(--red);border-color:rgba(138,16,34,.18)}
     .btn:disabled{opacity:.55;cursor:not-allowed}
     .toolbar{display:flex;gap:10px;flex-wrap:wrap}
-    .board-panel{background:rgba(255,250,243,.82);border:1px solid rgba(0,0,0,.06);border-radius:28px;padding:6px}
+    .board-panel{background:rgba(255,250,243,.82);border:1px solid rgba(0,0,0,.06);border-radius:28px;padding:14px}
     .board-shell{display:grid;gap:10px}
     .pr-live-wrap{display:grid;gap:10px}
     .pr-live-stage{position:relative;aspect-ratio:1536/1024;border-radius:24px;overflow:hidden;background:#ede2d1;border:1px solid rgba(0,0,0,.06)}
     .pr-live-arena{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover}
     .pr-overlay,.pr-animation-layer{position:absolute;inset:0}
     .pr-animation-layer{pointer-events:none;z-index:25}
-    .pr-horse-slot,.pr-gate-slot,.pr-deck-slot,.pr-discard-slot,.pr-float-card{position:absolute;transform:translate(-50%,-50%)}
-        .pr-horse-slot{width:4.6%;z-index:8;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 8px 12px rgba(0,0,0,.18))}
-    .pr-deck-slot{width:5.4%;height:12.5%;z-index:4}
-    .pr-discard-slot{width:5.6%;min-height:12.5%;z-index:5;display:flex;align-items:center;justify-content:center}
-    .pr-gate-slot{width:4.22%;z-index:6;display:flex;align-items:center;justify-content:center;transform-style:preserve-3d}
+    .pr-board-grid{position:absolute;inset:17.9% 4.8% 10.8% 4.4%;display:grid;grid-template-columns:minmax(78px,1.18fr) repeat(10,minmax(0,1fr)) minmax(96px,1.28fr);grid-template-rows:minmax(78px,.82fr) repeat(4,minmax(0,1fr));column-gap:1.05%;row-gap:7.25%;align-items:center;z-index:2}
+    .pr-gate-grid{grid-column:2 / span 10;grid-row:1;display:grid;grid-template-columns:repeat(10,minmax(0,1fr));column-gap:1.05%;align-items:center;justify-items:center}
+    .pr-track-grid{grid-column:1 / span 12;grid-row:2 / span 4;display:grid;grid-template-columns:minmax(78px,1.18fr) repeat(10,minmax(0,1fr)) minmax(96px,1.28fr);grid-template-rows:repeat(4,minmax(0,1fr));column-gap:1.05%;row-gap:7.25%;align-items:center;justify-items:center}
+    .pr-deck-zone{grid-column:1;grid-row:1;display:flex;align-items:center;justify-content:center}
+    .pr-discard-zone{grid-column:12;grid-row:1;display:flex;align-items:center;justify-content:center}
+    .pr-start-column{grid-column:1;grid-row:2 / span 4;align-self:stretch;justify-self:center;width:74%;border-radius:26px;z-index:1;background:
+      linear-gradient(180deg, rgba(241,200,110,.86), rgba(232,190,100,.84)),
+      repeating-linear-gradient(18deg, rgba(130,92,26,.18) 0 2px, transparent 2px 22px),
+      repeating-linear-gradient(103deg, rgba(130,92,26,.14) 0 2px, transparent 2px 24px);
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,.42), 0 8px 18px rgba(0,0,0,.06);opacity:.92;}
+    .pr-horse-slot,.pr-gate-slot,.pr-deck-slot,.pr-discard-slot{position:relative;place-self:center;display:flex;align-items:center;justify-content:center}
+    .pr-horse-slot{width:76%;max-width:86px;z-index:8;filter:drop-shadow(0 8px 12px rgba(0,0,0,.18))}
+    .pr-deck-slot{width:74%;max-width:112px;z-index:4;aspect-ratio:311/410}
+    .pr-discard-slot{width:74%;max-width:112px;min-height:0;z-index:5;aspect-ratio:311/410}
+    .pr-gate-slot{width:72%;max-width:82px;z-index:6;transform-style:preserve-3d}
     .pr-gate-slot.is-revealed.pr-just-revealed{animation:gateReveal .72s cubic-bezier(.2,.84,.24,1.05)}
     .pr-stack-card{position:absolute;inset:0}
-    .pr-card-back,.pr-ace-card,.pr-start-cover{display:block;width:100%;height:auto;min-width:0;background:transparent}
+    .pr-card-back,.pr-ace-card{display:block;width:100%;height:auto;min-width:0;background:transparent}
     .pr-card-back{filter:drop-shadow(0 10px 20px rgba(0,0,0,.18))}
     .pr-ace-card{filter:drop-shadow(0 10px 18px rgba(0,0,0,.20)); user-select:none; pointer-events:none}
-    .pr-start-cover{filter:drop-shadow(0 3px 8px rgba(0,0,0,.10));opacity:.985}
     .pr-open-card{position:relative;width:100%;aspect-ratio:311/410;border-radius:16px;background:linear-gradient(180deg,#fdf9f0 0%,#f5eedf 100%);border:1px solid rgba(77,57,31,.28);box-shadow:0 10px 22px rgba(0,0,0,.18);overflow:hidden;color:#1f1b1a}
     .pr-open-card.red{color:#a11f35}
     .pr-open-card-corner{position:absolute;display:grid;gap:1px;font-weight:900;font-size:clamp(11px,.95vw,16px);line-height:1;text-align:center}
@@ -58,31 +67,15 @@
     dialog{border:none;border-radius:24px;padding:0;max-width:760px;width:min(92vw,760px);background:#fffaf3;box-shadow:0 22px 60px rgba(0,0,0,.25)}
     dialog::backdrop{background:rgba(0,0,0,.35)}
     .modal-card{padding:20px 22px}.modal-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
-    .pr-float-card{z-index:28;pointer-events:none;will-change:left,top,transform,opacity}
+    .pr-float-card{position:absolute;transform:translate(-50%,-50%);z-index:28;pointer-events:none;will-change:left,top,transform,opacity}
     .pr-float-card .pr-card-back,.pr-float-card .pr-open-card{width:100%;height:auto}
-    @keyframes gateReveal{0%{transform:translate(-50%,-50%) rotateY(0deg) scale(.78)}35%{transform:translate(-50%,-50%) rotateY(90deg) scale(1.08)}62%{transform:translate(-50%,-50%) rotateY(0deg) scale(1.18)}100%{transform:translate(-50%,-50%) rotateY(0deg) scale(1)}}
-
-    .pr-start-column{position:absolute;border-radius:18px;z-index:2;transform:translate(-50%,-50%);background:
-      linear-gradient(90deg, rgba(222,182,95,.92), rgba(244,211,133,.92) 40%, rgba(226,184,91,.92)),
-      repeating-linear-gradient(20deg, rgba(143,102,28,.18) 0 2px, transparent 2px 20px),
-      repeating-linear-gradient(110deg, rgba(143,102,28,.16) 0 2px, transparent 2px 24px);
-      box-shadow: inset 0 0 0 2px rgba(255,255,255,.45), 0 10px 24px rgba(0,0,0,.08);
-      opacity:.96;}
-    .pr-effect-overlay{position:absolute;inset:0;pointer-events:none;z-index:30;overflow:hidden}
-    .pr-tendril{position:absolute;height:6px;transform-origin:left center;border-radius:999px;background:linear-gradient(90deg, rgba(28,20,18,.06), rgba(28,20,18,.72), rgba(28,20,18,.08)); filter:blur(.4px); box-shadow:0 0 16px rgba(38,28,26,.28); animation:tendrilFade 820ms ease forwards}
-    .pr-effect-burst{position:absolute;transform:translate(-50%,-50%);border-radius:999px;animation:effectBurst 720ms ease-out forwards;mix-blend-mode:multiply}
-    .pr-effect-lightning{position:absolute;width:14px;background:linear-gradient(180deg, rgba(255,255,255,.0), rgba(234,246,255,.98), rgba(98,166,255,.0)); transform:translate(-50%,-50%) skewX(-14deg); filter:drop-shadow(0 0 10px rgba(122,186,255,.85)); animation:lightningZap 760ms ease-out forwards}
-    .pr-effect-shove{animation:horseShove 620ms cubic-bezier(.18,.9,.2,1) 1}
-    .icon-btn{width:44px;height:44px;padding:0;font-size:18px}
-    @keyframes tendrilFade{0%{opacity:0;transform:translate(-50%,-50%) scaleX(.4)}18%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scaleX(1)}}
-    @keyframes effectBurst{0%{opacity:.9;width:16px;height:16px}100%{opacity:0;width:160px;height:160px}}
-    @keyframes lightningZap{0%{opacity:0;height:10px}12%{opacity:1;height:120px}55%{opacity:.95;height:165px}100%{opacity:0;height:40px}}
-    @keyframes horseShove{0%{transform:translate(-50%,-50%) scale(1)}35%{transform:translate(-64%,-50%) scale(1.08)}100%{transform:translate(-50%,-50%) scale(1)}}
-
+    @keyframes gateReveal{0%{transform:translate(-50%,-50%) rotateY(0deg) scale(.92)}45%{transform:translate(-50%,-50%) rotateY(90deg) scale(1.04)}65%{transform:translate(-50%,-50%) rotateY(0deg) scale(1.06)}100%{transform:translate(-50%,-50%) rotateY(0deg) scale(1)}}
     @keyframes drawPulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.03)}}
     @media(max-width:900px){
       .page{padding:10px 8px 40px}.shell{padding:10px}.board-panel{padding:8px}
-      .pr-horse-slot{width:7.1%}.pr-gate-slot{width:6.45%}.pr-deck-slot{width:7.1%}.pr-discard-slot{width:7.6%}
+      .pr-board-grid{inset:17.2% 3.6% 10.4% 3.3%;grid-template-columns:minmax(52px,.9fr) repeat(10,minmax(0,1fr)) minmax(62px,1fr);row-gap:6.4%;}
+      .pr-track-grid{grid-template-columns:minmax(52px,.9fr) repeat(10,minmax(0,1fr)) minmax(62px,1fr);row-gap:6.4%;}
+      .pr-horse-slot{width:80%}.pr-gate-slot{width:78%}.pr-deck-slot{width:80%}.pr-discard-slot{width:80%}
     }
   </style>
 </head>
@@ -113,7 +106,7 @@
   <div class="info-stack">
     <section class="panel">
       <h2 class="section-title">Race bediening</h2>
-      <div class="action-row" style="margin-bottom:12px"><button class="btn" id="drawBtn" type="button">Trek volgende kaart</button><button class="btn secondary icon-btn" id="autoPlayBtn" type="button" aria-label="Autoplay starten">▶</button><button class="btn secondary icon-btn" id="autoPauseBtn" type="button" aria-label="Autoplay pauzeren">⏸</button><button class="btn secondary" id="tickBtn" type="button">Tick countdown</button><button class="btn secondary" id="resetBtn" type="button">Nieuwe ronde resetten</button></div>
+      <div class="action-row" style="margin-bottom:12px"><button class="btn" id="drawBtn" type="button">Trek volgende kaart</button><button class="btn secondary" id="tickBtn" type="button">Tick countdown</button><button class="btn secondary" id="resetBtn" type="button">Nieuwe ronde resetten</button></div>
       <div id="phaseBox" class="log"></div>
       <div id="nomBox" style="margin-top:14px;display:none"><h3 style="margin:0 0 8px">Verdeel jouw nominaties</h3><div class="small">Je moet exact je volledige budget verdelen over andere spelers. Niet over jezelf.</div><div id="allocRows" style="margin-top:10px"></div><div class="status" id="nomStatus"></div><button class="btn" id="submitNomBtn" type="button" style="margin-top:10px">Nominaties opslaan</button></div>
     </section>
@@ -124,12 +117,12 @@
   </div>
 </div></div>
 <dialog id="rulesDialog"><div class="modal-card"><div class="modal-top"><h2 style="margin:0">Paardenrace regels</h2><button class="btn secondary" id="closeRulesBtn" type="button">Sluiten</button></div><ol style="display:grid;gap:10px;line-height:1.5"><li>Iedereen kiest één suit/paard en zet één vaste inzet in Bakken.</li><li>De host verifieert die inzet in de lobby; pas dan kan een speler ready drukken.</li><li>Bij start gaat iedereen naar dit room-specifieke live scherm.</li><li>Elke getrokken kaart zet het bijbehorende paard één vak vooruit.</li><li>Als alle vier de paarden een gate hebben gehaald, draait die gate open en duwt één paard terug.</li><li>De eerste crossing telt alleen als minstens één speler op dat paard had ingezet.</li><li>Daarna verdelen winnaars hun nominaties.</li></ol></div></dialog>
-<div class="site-credit-watermark" data-version-watermark>v457 · Made by Bruis</div>
+<div class="site-credit-watermark" data-version-watermark>v458 · Made by Bruis</div>
 <script>
 (()=>{
   const api = window.GEJAST_PAARDENRACE; const $=(id)=>document.getElementById(id);
   let currentState = null;
-  const anim = { dealtMatchRef:null, drawing:false, polling:false, autoTimer:null, autoEnabled:false };
+  const anim = { dealtMatchRef:null, drawing:false, busy:false, polling:false };
   function qRoom(){ const params = new URLSearchParams(location.search); return params.get('room') || params.get('live') || api.getStoredRoomCode() || ''; }
   function setStatus(msg=''){ $('statusBox').textContent = msg || ''; }
   function isActiveStage(stage){ return ['countdown','race','nominations','finished'].includes(String(stage||'')); }
@@ -137,11 +130,8 @@
   function renderPhase(room, match){ const phase=[]; if(match){ phase.push(`<div class="log-item">Laatste trek: <strong>${match.last_draw_card || '—'}</strong></div>`); if(Array.isArray(match.revealed_draw_cards) && match.revealed_draw_cards.length) phase.push(`<div class="log-item">Getrokken kaarten: ${match.revealed_draw_cards.join(', ')}</div>`); if(Array.isArray(match.gate_events) && match.gate_events.length) phase.push(...match.gate_events.map((e)=>`<div class="log-item">Gate ${e.gate_no}: ${api.suitLabel(e.suit)} ging -1</div>`)); if(match.first_finish_suit) phase.push(`<div class="log-item">Eerste crossing ooit: ${api.suitLabel(match.first_finish_suit)}</div>`); if(match.winner_suit) phase.push(`<div class="log-item">Winnaar suit: <strong>${api.suitLabel(match.winner_suit)}</strong></div>`); const remaining = api.getDrawRemaining(match); phase.push(`<div class="log-item">Kaarten over in trekstapel: ${remaining}</div>`); } phase.push(`<div class="log-item">Stage: <strong>${room.stage || 'lobby'}</strong></div>`); return phase.join(''); }
   function getLayer(){ return document.querySelector('[data-animation-layer]'); }
   function getStage(){ return document.querySelector('[data-stage-root]'); }
-  function getOverlay(){ return document.querySelector('.pr-overlay'); }
   function getCenterBox(el){ const stage = getStage(); if(!el || !stage) return null; const sr=stage.getBoundingClientRect(); const r=el.getBoundingClientRect(); return { x:r.left - sr.left + (r.width/2), y:r.top - sr.top + (r.height/2), w:r.width, h:r.height }; }
   function wait(ms){ return new Promise((resolve)=> setTimeout(resolve, ms)); }
-  function pseudoRect(x,y,w,h){ return { getBoundingClientRect:()=>({ left:x-(w/2), top:y-(h/2), width:w, height:h }) }; }
-  function ensureEffectOverlay(){ const stage=getStage(); if(!stage) return null; let layer=stage.querySelector('.pr-effect-overlay'); if(!layer){ layer=document.createElement('div'); layer.className='pr-effect-overlay'; stage.appendChild(layer);} return layer; }
   async function flyCard(fromEl, toEl, html, opts={}){
     const stage = getStage(); const layer = getLayer();
     if(!stage || !layer || !fromEl || !toEl) return;
@@ -149,111 +139,112 @@
     const el = document.createElement('div');
     el.className = 'pr-float-card';
     el.style.left = `${from.x}px`; el.style.top = `${from.y}px`; el.style.width = `${opts.width || from.w || 72}px`; el.style.opacity = '1';
-    el.style.transform = 'translate(-50%,-50%) scale(1)';
     el.innerHTML = html;
     layer.appendChild(el);
-    const peakX = opts.peakX != null ? opts.peakX : (from.x + to.x) / 2;
-    const peakY = opts.peakY != null ? opts.peakY : Math.min(from.y, to.y) - (opts.arcHeight || 72);
     await wait(20);
-    const half = Math.max(160, Math.round((opts.duration||760) * 0.52));
-    el.style.transition = `left ${half}ms cubic-bezier(.22,.8,.25,1), top ${half}ms cubic-bezier(.22,.8,.25,1), transform ${half}ms cubic-bezier(.22,.8,.25,1), opacity 220ms ease`;
-    el.style.left = `${peakX}px`; el.style.top = `${peakY}px`; el.style.transform = `translate(-50%,-50%) scale(${opts.midScale || 1.06}) rotate(${opts.midRotate || 6}deg)`;
-    await wait(half);
-    el.style.transition = `left ${half}ms cubic-bezier(.18,.84,.24,1), top ${half}ms cubic-bezier(.18,.84,.24,1), transform ${half}ms cubic-bezier(.18,.84,.24,1), opacity 220ms ease`;
+    el.style.transition = `left ${opts.duration||680}ms cubic-bezier(.2,.84,.24,1), top ${opts.duration||680}ms cubic-bezier(.2,.84,.24,1), transform ${opts.duration||680}ms cubic-bezier(.2,.84,.24,1), opacity 220ms ease`;
     el.style.left = `${to.x}px`; el.style.top = `${to.y}px`; el.style.transform = `translate(-50%,-50%) scale(${opts.scaleTo || 1}) rotate(${opts.rotate || 0}deg)`;
-    if (opts.flipAt && opts.faceUpHtml) { setTimeout(()=>{ if(el.isConnected) el.innerHTML = opts.faceUpHtml; }, Math.max(120, Math.round((opts.duration||760) * opts.flipAt))); }
-    await wait(half + 30);
-    if (opts.fadeOut !== false) { el.style.opacity = '0'; await wait(180); }
+    if (opts.flipAt && opts.faceUpHtml) {
+      setTimeout(()=>{ if(el.isConnected) el.innerHTML = opts.faceUpHtml; }, Math.max(120, Math.round((opts.duration||680) * opts.flipAt)));
+    }
+    await wait((opts.duration||680) + 30);
+    if (opts.fadeOut !== false) {
+      el.style.opacity = '0';
+      await wait(180);
+    }
     el.remove();
   }
   async function animateDeal(match){
     const matchRef = String(match?.match_ref || '');
     if(!matchRef || anim.dealtMatchRef === matchRef || Number(match?.draw_index || 0) !== 0) return;
-    const deck = document.querySelector('[data-deck-slot]'); if(!deck) return;
+    const deck = document.querySelector('[data-deck-slot]');
+    if(!deck) return;
     anim.dealtMatchRef = matchRef;
     for(let i=1;i<=10;i+=1){
-      const gate = document.querySelector(`[data-gate-no="${i}"]`); if(!gate) continue;
-      await flyCard(deck, gate, api.renderCardBack('pr-gate-back'), { duration:620, width:gate.getBoundingClientRect().width, scaleTo:1, rotate:(i%2===0?-4:4), arcHeight:82, midRotate:(i%2===0?-10:10), fadeOut:false });
-      await wait(90);
+      const gate = document.querySelector(`[data-gate-no="${i}"]`);
+      if(!gate) continue;
+      flyCard(deck, gate, api.renderCardBack('pr-gate-back'), { duration:420 + (i*14), width:gate.getBoundingClientRect().width, scaleTo:1, rotate:(i%2===0?-8:8) });
+      await wait(48);
     }
+    await wait(420);
   }
   async function animateDraw(cardCode){
-    const deck = document.querySelector('[data-deck-slot]'); const discard = document.querySelector('[data-discard-slot]'); if(!deck || !discard || !cardCode) return;
-    const stage = getStage(); const sr=stage.getBoundingClientRect();
-    const peakX = sr.width * 0.47; const peakY = sr.height * 0.13;
-    await flyCard(deck, discard, api.renderCardBack('pr-deck-back'), { duration:900, width:discard.getBoundingClientRect().width || 86, rotate:0, flipAt:0.62, faceUpHtml: api.renderFaceUpCard(cardCode, 'pr-discard-face'), scaleTo:1.02, arcHeight:sr.height*0.18, peakX, peakY });
+    const deck = document.querySelector('[data-deck-slot]');
+    const discard = document.querySelector('[data-discard-slot]');
+    if(!deck || !discard || !cardCode) return;
+    const deckRect = deck.getBoundingClientRect();
+    const discardRect = discard.getBoundingClientRect();
+    const stage = document.querySelector('[data-stage-root]');
+    if(!stage) return;
+    const stageRect = stage.getBoundingClientRect();
+    const mid = { x: Math.max(stageRect.left + (stageRect.width * 0.79), (deckRect.left + discardRect.left) / 2), y: stageRect.top + (stageRect.height * 0.18) };
+    await flyCard(deck, { getBoundingClientRect:()=>({ left:mid.x-10, top:mid.y-10, width:20, height:20 }) }, api.renderCardBack('pr-deck-back'), { duration:360, width:discardRect.width || 88, rotate:8, fadeOut:false, scaleTo:1.03 });
+    await flyCard({ getBoundingClientRect:()=>({ left:mid.x-10, top:mid.y-10, width:20, height:20 }) }, discard, api.renderCardBack('pr-deck-back'), { duration:440, width:discardRect.width || 88, rotate:2, flipAt:0.42, faceUpHtml: api.renderFaceUpCard(cardCode, 'pr-discard-face'), scaleTo:1.04 });
   }
-  async function animateHorseMove(prevMatch, nextMatch){
-    const prev = prevMatch?.horse_positions || {}; const next = nextMatch?.horse_positions || {}; const overlay = ensureEffectOverlay();
-    if(!overlay) return;
-    const moved = Object.keys(next).map((suit)=>({ suit, from:Number(prev[suit]||0), to:Number(next[suit]||0) })).filter((r)=>r.to!==r.from);
-    for(const move of moved){
-      const fromEl = document.querySelector(`.pr-live-wrap [data-suit="${move.suit}"][data-pos="${Math.max(0,Math.min(11,move.from))}"]`);
-      const toEl = pseudoRect(...(()=>{ const pts=api.getBoardPoints(); const stage=getStage().getBoundingClientRect(); const x=stage.width*((pts.trackX[Math.max(0,Math.min(11,move.to))])/100); const y=stage.height*((pts.laneY[move.suit])/100); return [x,y,(stage.width*(pts.horseWidthPct/100)),(stage.width*(pts.horseWidthPct/100))*1.43]; })());
-      const from = fromEl ? getCenterBox(fromEl) : null; const to = getCenterBox(toEl);
-      if(from && to){
-        const dx=to.x-from.x, dy=to.y-from.y; const len=Math.sqrt(dx*dx+dy*dy); const angle=Math.atan2(dy,dx)*180/Math.PI;
-        const tend=document.createElement('div'); tend.className='pr-tendril'; tend.style.left=`${(from.x+to.x)/2}px`; tend.style.top=`${(from.y+to.y)/2}px`; tend.style.width=`${Math.max(30,len)}px`; tend.style.transform=`translate(-50%,-50%) rotate(${angle}deg)`; overlay.appendChild(tend); setTimeout(()=>tend.remove(),850);
-      }
-      const tmp=document.createElement('div'); tmp.className='pr-float-card'; tmp.style.width='4.6%'; tmp.style.left=`${from?from.x:to.x}px`; tmp.style.top=`${from?from.y:to.y}px`; tmp.innerHTML=`<img src="./paardenrace-ace-${move.suit}-v449.png" alt="" class="pr-ace-card">`; getLayer().appendChild(tmp);
-      tmp.style.transition='left 560ms cubic-bezier(.18,.84,.24,1), top 560ms cubic-bezier(.18,.84,.24,1), transform 560ms cubic-bezier(.18,.84,.24,1), filter 560ms ease';
-      await wait(30); tmp.style.left=`${to.x}px`; tmp.style.top=`${to.y}px`; tmp.style.transform='translate(-50%,-50%) scale(1.08)';
-      await wait(580); tmp.remove();
-    }
-  }
-  function randomGateEffect(){ const effects=['lightning','burst','pulse','shock','ember','smoke','shove']; return effects[Math.floor(Math.random()*effects.length)]; }
-  async function animateGateReveal(prevMatch, nextMatch, gateNos){
-    const overlay=ensureEffectOverlay();
+  async function animateGateReveal(match, gateNos){
     for(const gateNo of gateNos){
-      const slot = document.querySelector(`[data-gate-no="${gateNo}"]`); if(!slot) continue;
-      $('drawBtn').textContent='Laat gate kaart zien';
-      slot.classList.remove('pr-just-revealed'); void slot.offsetWidth; slot.classList.add('pr-just-revealed');
-      await wait(760);
-      const event = (Array.isArray(nextMatch?.gate_events)?nextMatch.gate_events:[]).find((e)=>Number(e.gate_no)===Number(gateNo));
-      const suit = event?.suit || api.parseCard((nextMatch?.gate_cards||[])[gateNo-1]||'').suitKey;
-      const horse = suit ? document.querySelector(`.pr-live-wrap [data-suit="${suit}"]`) : null;
-      const c = horse ? getCenterBox(horse) : null;
-      if(c){
-        const kind=randomGateEffect();
-        if(kind==='lightning' || kind==='shock'){ const bolt=document.createElement('div'); bolt.className='pr-effect-lightning'; bolt.style.left=`${c.x}px`; bolt.style.top=`${Math.max(40,c.y-120)}px`; overlay.appendChild(bolt); setTimeout(()=>bolt.remove(),760); }
-        const burst=document.createElement('div'); burst.className='pr-effect-burst'; burst.style.left=`${c.x}px`; burst.style.top=`${c.y}px`; burst.style.background=(suit==='hearts'||suit==='diamonds')?'rgba(170,33,58,.28)':'rgba(33,31,29,.24)'; overlay.appendChild(burst); setTimeout(()=>burst.remove(),740);
-        if(horse){ horse.classList.add('pr-effect-shove'); setTimeout(()=>horse.classList.remove('pr-effect-shove'),640); }
-      }
-      await wait(820);
-      $('drawBtn').textContent='Trek volgende kaart';
+      const slot = document.querySelector(`[data-gate-no="${gateNo}"]`);
+      if(!slot) continue;
+      slot.classList.remove('pr-just-revealed');
+      void slot.offsetWidth;
+      slot.classList.add('pr-just-revealed');
+      await wait(110);
     }
   }
-  async function animateReshuffle(){ const deck = document.querySelector('[data-deck-slot]'); const discard = document.querySelector('[data-discard-slot]'); if(!deck || !discard) return; for(let i=0;i<5;i+=1){ await flyCard(discard, deck, api.renderCardBack('pr-deck-back'), { duration:520 + i*40, width:deck.getBoundingClientRect().width || 80, rotate:(i%2===0?-8:8), arcHeight:50 }); await wait(60);} }
-  async function animateTransition(prevState, nextState){
-    const prevMatch = prevState?.match || null; const nextMatch = nextState?.match || null;
-    const prevIndex = Number(prevMatch?.draw_index || 0); const nextIndex = Number(nextMatch?.draw_index || 0);
-    const before = api.resolvedGateSet(prevMatch || {}); const after = api.resolvedGateSet(nextMatch || {});
-    const newGates = [...after].filter((n)=> !before.has(n)).sort((a,b)=>a-b);
-    if(nextIndex > prevIndex && nextMatch?.last_draw_card){ await animateDraw(nextMatch.last_draw_card); await animateHorseMove(prevMatch, nextMatch); }
-    if(newGates.length){ await animateGateReveal(prevMatch, nextMatch, newGates); }
+  async function animateReshuffle(){
+    const deck = document.querySelector('[data-deck-slot]');
+    const discard = document.querySelector('[data-discard-slot]');
+    if(!deck || !discard) return;
+    for(let i=0;i<5;i+=1){
+      flyCard(discard, deck, api.renderCardBack('pr-deck-back'), { duration:420 + i*55, width:deck.getBoundingClientRect().width || 80, rotate:(i%2===0?-10:10) });
+      await wait(55);
+    }
+    await wait(520);
   }
-  function updateButtons(room, viewer){ $('drawBtn').disabled = !(room.can_draw && room.stage==='race') || anim.drawing; $('tickBtn').disabled = room.stage !== 'countdown'; $('resetBtn').disabled = !(room.stage==='finished' && viewer.is_host); $('closeBtn').style.display = viewer.is_host ? '' : 'none'; $('autoPlayBtn').disabled = room.stage!=='race'; $('autoPauseBtn').disabled = !anim.autoEnabled; }
   async function apply(state, options={}){
-    const prevState = currentState; currentState = state || null;
+    const prevState = currentState; const prevMatch = prevState?.match || null;
+    currentState = state || null;
     const room = state?.room || {}; const match = state?.match || {}; const players = state?.players || []; const viewer = state?.viewer || {};
     $('metaBox').textContent = `${room.room_code || '—'} · stage ${room.stage || 'lobby'}${room.countdown_remaining_seconds?` · Countdown ${room.countdown_remaining_seconds}s`:''}`;
+    $('boardBox').innerHTML = api.renderLiveBoard(match);
+    $('drawBtn').disabled = !(room.can_draw && room.stage==='race'); $('tickBtn').disabled = room.stage !== 'countdown'; $('resetBtn').disabled = !(room.stage==='finished' && viewer.is_host); $('closeBtn').style.display = viewer.is_host ? '' : 'none';
     $('playersBox').innerHTML = renderBettors(players); $('phaseBox').innerHTML = renderPhase(room, match);
     const myBudget = Number(viewer.nomination_budget_bakken || 0); const canNom = room.stage==='nominations' && viewer.can_nominate; $('nomBox').style.display = canNom ? '' : 'none';
     if(canNom){ const others = players.filter((p)=>String(p.player_name||'').toLowerCase() !== String(viewer.player_name||'').toLowerCase()); $('allocRows').innerHTML = `<div class="small">Jouw budget: ${myBudget} Bakken</div>` + others.map((p)=>`<div class="alloc-row"><div>${p.player_name}</div><input type="number" min="0" step="1" value="0" data-target="${encodeURIComponent(p.player_name)}"></div>`).join(''); $('nomStatus').textContent=''; }
     if(!isActiveStage(room.stage) && room.room_code){ window.location.replace(`./paardenrace.html?room=${encodeURIComponent(room.room_code)}`); return; }
-    if(options.animated !== false && prevState?.match && state?.match){ $('boardBox').innerHTML = api.renderLiveBoard(prevState.match); await animateTransition(prevState, state); }
-    $('boardBox').innerHTML = api.renderLiveBoard(match);
-    updateButtons(room, viewer);
-    const matchRef = String(match?.match_ref || ''); if(matchRef && room.stage==='race' && String(prevState?.match?.match_ref||'')!==matchRef && Number(match?.draw_index||0)===0){ await animateDeal(match); }
+
+    if(options.animated !== false){
+      const matchRef = String(match?.match_ref || '');
+      if(matchRef && room.stage === 'race' && String(prevMatch?.match_ref || '') !== matchRef && Number(match?.draw_index || 0) === 0){ await animateDeal(match); }
+      const prevIndex = Number(prevMatch?.draw_index || 0); const nextIndex = Number(match?.draw_index || 0);
+      if(nextIndex > prevIndex && match?.last_draw_card){ await animateDraw(match.last_draw_card); }
+      const before = api.resolvedGateSet(prevMatch || {}); const after = api.resolvedGateSet(match || {});
+      const newGates = [...after].filter((n)=> !before.has(n)).sort((a,b)=>a-b);
+      if(newGates.length) await animateGateReveal(match, newGates);
+    }
   }
-  async function load(opts={}){ const code=qRoom(); if(!code || anim.polling || anim.drawing) return; anim.polling=true; try{ await apply(await api.rpc('tick_paardenrace_room_safe',{ room_code_input: code }), opts); }catch(err){ setStatus(err.message || 'Kon state niet laden.'); } finally { anim.polling=false; } }
-  async function doDraw(){ if(anim.drawing) return; anim.drawing=true; updateButtons(currentState?.room||{}, currentState?.viewer||{}); try{ await apply(await api.rpc('draw_paardenrace_card_safe',{ room_code_input: qRoom() })); setStatus('Kaart getrokken.'); } catch(err){ const msg = err?.message || 'Trekken mislukt.'; if(/trekstapel is leeg/i.test(msg)){ try{ setStatus('Trekstapel leeg — kaarten worden opnieuw geschud...'); await animateReshuffle(); await apply(await api.rpc('reshuffle_paardenrace_draw_pile_safe',{ room_code_input: qRoom() }), { animated:false }); await apply(await api.rpc('draw_paardenrace_card_safe',{ room_code_input: qRoom() })); setStatus('Trekstapel opnieuw geschud en nieuwe kaart getrokken.'); }catch(inner){ setStatus(inner?.message || 'Opnieuw schudden mislukt.'); anim.autoEnabled=false; } } else { setStatus(msg); anim.autoEnabled=false; } } finally { anim.drawing=false; updateButtons(currentState?.room||{}, currentState?.viewer||{}); if(anim.autoEnabled){ clearTimeout(anim.autoTimer); anim.autoTimer=setTimeout(()=>{ if(anim.autoEnabled && currentState?.room?.stage==='race' && currentState?.room?.can_draw) doDraw(); }, 1750); } } }
+  async function load(opts={}){ const code=qRoom(); if(!code || anim.polling) return; anim.polling=true; try{ await apply(await api.rpc('tick_paardenrace_room_safe',{ room_code_input: code }), opts); }catch(err){ setStatus(err.message || 'Kon state niet laden.'); } finally { anim.polling=false; } }
   $('refreshBtn').addEventListener('click', ()=> load({ animated:false }));
   $('tickBtn').addEventListener('click', async()=>{ try{ await apply(await api.rpc('tick_paardenrace_room_safe',{ room_code_input: qRoom() })); setStatus('Countdown/state geüpdatet.'); }catch(err){ setStatus(err.message || 'Tick mislukt.'); }});
-  $('drawBtn').addEventListener('click', doDraw);
-  $('autoPlayBtn').addEventListener('click', ()=>{ anim.autoEnabled=true; updateButtons(currentState?.room||{}, currentState?.viewer||{}); if(!anim.drawing) doDraw(); });
-  $('autoPauseBtn').addEventListener('click', ()=>{ anim.autoEnabled=false; clearTimeout(anim.autoTimer); updateButtons(currentState?.room||{}, currentState?.viewer||{}); setStatus('Autoplay gepauzeerd.'); });
-  $('resetBtn').addEventListener('click', async()=>{ try{ anim.dealtMatchRef = null; anim.autoEnabled=false; clearTimeout(anim.autoTimer); await apply(await api.rpc('reset_paardenrace_room_safe',{ room_code_input: qRoom() }), { animated:false }); setStatus('Room is gereset voor een nieuwe ronde.'); }catch(err){ setStatus(err.message || 'Reset mislukt.'); }});
+  $('drawBtn').addEventListener('click', async()=>{
+    if(anim.drawing) return; anim.drawing=true;
+    try{ await apply(await api.rpc('draw_paardenrace_card_safe',{ room_code_input: qRoom() })); setStatus('Kaart getrokken.'); }
+    catch(err){
+      const msg = err?.message || 'Trekken mislukt.';
+      if(/trekstapel is leeg/i.test(msg)){
+        try{
+          setStatus('Trekstapel leeg — kaarten worden opnieuw geschud...');
+          await animateReshuffle();
+          await apply(await api.rpc('reshuffle_paardenrace_draw_pile_safe',{ room_code_input: qRoom() }), { animated:false });
+          await apply(await api.rpc('draw_paardenrace_card_safe',{ room_code_input: qRoom() }));
+          setStatus('Trekstapel opnieuw geschud en nieuwe kaart getrokken.');
+        }catch(inner){ setStatus(inner?.message || 'Opnieuw schudden mislukt.'); }
+      } else {
+        setStatus(msg);
+      }
+    } finally { anim.drawing=false; }
+  });
+  $('resetBtn').addEventListener('click', async()=>{ try{ anim.dealtMatchRef = null; await apply(await api.rpc('reset_paardenrace_room_safe',{ room_code_input: qRoom() }), { animated:false }); setStatus('Room is gereset voor een nieuwe ronde.'); }catch(err){ setStatus(err.message || 'Reset mislukt.'); }});
   $('closeBtn').addEventListener('click', async()=>{ try{ await api.rpc('disband_paardenrace_room_safe',{ room_code_input: qRoom() }); api.clearStoredRoomCode(); window.location.href='./paardenrace.html'; }catch(err){ setStatus(err.message || 'Sluiten mislukt.'); }});
   $('submitNomBtn').addEventListener('click', async()=>{ try{ const allocations = Array.from(document.querySelectorAll('#allocRows input[data-target]')).map((node)=>({ target_player_name: decodeURIComponent(node.dataset.target||''), bakken: Number(node.value||0) })).filter((row)=>row.bakken>0); await apply(await api.rpc('submit_paardenrace_nominations_safe',{ room_code_input: qRoom(), allocations_input: allocations }), { animated:false }); $('nomStatus').textContent='Nominaties opgeslagen.'; }catch(err){ $('nomStatus').textContent = err.message || 'Nomineren mislukt.'; } });
   $('rulesBtn').addEventListener('click', ()=> $('rulesDialog').showModal()); $('closeRulesBtn').addEventListener('click', ()=> $('rulesDialog').close()); $('rulesDialog').addEventListener('click', (e)=>{ if(e.target === $('rulesDialog')) $('rulesDialog').close(); });
