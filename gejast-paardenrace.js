@@ -1,6 +1,6 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
-  const STORAGE_KEY = 'gejast_paardenrace_room_code_v449';
+  const STORAGE_KEY = 'gejast_paardenrace_room_code_v450';
   const LIVE_QUERY_KEY = 'live';
   const ASSETS = {
     arena: './paardenrace-live-board-v447.png',
@@ -14,40 +14,33 @@
   };
   const SUITS = ['spades','hearts','clubs','diamonds'];
   const SUIT_META = {
-    hearts: { label:'♥ Harten', symbol:'♥', color:'#a11f35' },
-    diamonds: { label:'♦ Ruiten', symbol:'♦', color:'#a11f35' },
-    clubs: { label:'♣ Klaveren', symbol:'♣', color:'#1f1b1a' },
-    spades: { label:'♠ Schoppen', symbol:'♠', color:'#1f1b1a' }
+    hearts: { label:'♥ Harten', symbol:'♥', color:'#a11f35', fill:'#f6e5e8' },
+    diamonds: { label:'♦ Ruiten', symbol:'♦', color:'#a11f35', fill:'#f8e9e0' },
+    clubs: { label:'♣ Klaveren', symbol:'♣', color:'#1f1b1a', fill:'#ece9de' },
+    spades: { label:'♠ Schoppen', symbol:'♠', color:'#1f1b1a', fill:'#ece8e0' }
   };
+  const TRACK_X = [14.18, 21.18, 27.28, 33.36, 39.56, 45.72, 51.87, 58.03, 64.18, 70.35, 76.50, 84.86];
+  const GATE_X = [19.07, 25.14, 31.20, 37.31, 43.44, 49.55, 55.66, 61.76, 67.91, 74.02];
+  const LANE_Y = { spades: 40.86, hearts: 55.59, clubs: 70.24, diamonds: 84.90 };
+
   const BOARD_GEOMETRY = {
-    designWidth: 1536,
-    designHeight: 1024,
-    deck: { x: 10.25, y: 15.35, widthPct: 8.0 },
-    discard: { x: 86.72, y: 24.07, widthPct: 5.9 },
-    gates: {
-      y: 24.07,
-      widthPct: 4.88,
-      slots: [21.00, 27.25, 33.56, 39.91, 46.29, 52.64, 58.95, 65.36, 71.84, 78.35]
+    cardPct: {
+      horse: 5.15,
+      gate: 4.86,
+      deck: 5.4,
+      discard: 6.0
     },
-    horses: {
-      widthPct: 5.93,
-      trackX: [14.42, 20.90, 27.15, 33.50, 39.91, 46.35, 52.73, 59.15, 65.59, 72.01, 78.35, 86.72],
-      laneY: { spades: 39.84, hearts: 53.91, clubs: 67.38, diamonds: 80.71 }
-    }
-  };
-  const BOARD_POINTS = {
-    trackX: BOARD_GEOMETRY.horses.trackX,
-    gateX: BOARD_GEOMETRY.gates.slots,
-    laneY: BOARD_GEOMETRY.horses.laneY,
-    deckX: BOARD_GEOMETRY.deck.x,
-    deckY: BOARD_GEOMETRY.deck.y,
-    discardX: BOARD_GEOMETRY.discard.x,
-    discardY: BOARD_GEOMETRY.discard.y,
-    gateY: BOARD_GEOMETRY.gates.y,
-    horseWidthPct: BOARD_GEOMETRY.horses.widthPct,
-    gateWidthPct: BOARD_GEOMETRY.gates.widthPct,
-    deckWidthPct: BOARD_GEOMETRY.deck.widthPct,
-    discardWidthPct: BOARD_GEOMETRY.discard.widthPct
+    deck: { x: 8.35, y: 25.55, widthPct: 5.4 },
+    discard: { x: 90.55, y: 24.85, widthPct: 6.0 },
+    gateSlots: GATE_X.map((x, idx)=>({ gateNo: idx + 1, x, y: 22.36, widthPct: 4.86 })),
+    horseSlots: Object.fromEntries(SUITS.map((suit)=>[
+      suit,
+      TRACK_X.map((x, idx)=>({ pos: idx, x, y: LANE_Y[suit], widthPct: 5.15 }))
+    ])),
+    startMarkers: Object.fromEntries(SUITS.map((suit)=>[
+      suit,
+      { x: TRACK_X[0], y: LANE_Y[suit], widthPct: 5.15 }
+    ]))
   };
 
   function sessionToken(){ return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; }
@@ -111,9 +104,25 @@
     const src = ASSETS.horses[suit] || ASSETS.horses.hearts;
     return `<img src="${src}" alt="${suitLabel(suit)} aas" class="pr-ace-card" draggable="false">`;
   }
-  function renderHorseMask(posIdx){
-    const toneClass = posIdx <= 0 ? 'start' : (posIdx >= 11 ? 'finish' : 'track');
-    return `<span class="pr-horse-mask ${toneClass}" aria-hidden="true"></span>`;
+  function renderStartMarker(suit){
+    const meta = SUIT_META[suit] || SUIT_META.hearts;
+    const symbol = meta.symbol || '•';
+    const color = meta.color || '#1f1b1a';
+    const fill = meta.fill || '#f0ebe2';
+    return `
+      <svg class="pr-start-marker" viewBox="0 0 311 410" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <linearGradient id="startGrad-${suit}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#fffdf9"/>
+            <stop offset="100%" stop-color="${fill}"/>
+          </linearGradient>
+        </defs>
+        <rect x="8" y="8" width="295" height="394" rx="26" fill="url(#startGrad-${suit})" stroke="rgba(77,57,31,.16)" stroke-width="4"/>
+        <circle cx="155.5" cy="185" r="74" fill="rgba(255,255,255,.84)" stroke="${color}" stroke-opacity=".24" stroke-width="10"/>
+        <text x="155.5" y="202" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="86" font-weight="900" fill="${color}">${symbol}</text>
+        <text x="155.5" y="300" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="30" font-weight="800" letter-spacing="4" fill="rgba(77,57,31,.72)">START</text>
+      </svg>
+    `;
   }
   function getDrawRemaining(match){
     const deck = Array.isArray(match?.draw_deck) ? match.draw_deck : [];
@@ -135,20 +144,23 @@
       ? [0,1,2].map((i)=>`<div class="pr-stack-card" style="transform:translate(${i * -4}px, ${i * 4}px)">${renderCardBack('pr-deck-back')}</div>`).join('')
       : '';
 
-    const gateHtml = BOARD_POINTS.gateX.map((x, idx)=>{
-      const gateNo = idx + 1;
+    const gateHtml = BOARD_GEOMETRY.gateSlots.map((slot, idx)=>{
+      const gateNo = slot.gateNo;
       const isResolved = resolved.has(gateNo);
       const inner = isResolved ? renderFaceUpCard(gates[idx] || '', 'pr-gate-face') : renderCardBack('pr-gate-back');
-      return `<div class="pr-gate-slot ${isResolved ? 'is-revealed' : 'is-facedown'}" data-gate-no="${gateNo}" style="left:${x}%;top:${BOARD_POINTS.gateY}%">${inner}</div>`;
+      return `<div class="pr-gate-slot ${isResolved ? 'is-revealed' : 'is-facedown'}" data-gate-no="${gateNo}" style="left:${slot.x}%;top:${slot.y}%">${inner}</div>`;
     }).join('');
 
+    const startMarkerHtml = SUITS.map((suit)=>{
+      const slot = BOARD_GEOMETRY.startMarkers[suit];
+      return `<div class="pr-start-cover-slot" data-start-cover="${suit}" style="left:${slot.x}%;top:${slot.y}%">${renderStartMarker(suit)}</div>`;
+    }).join('');
 
     const horseHtml = SUITS.map((suit)=>{
       const raw = Number(pos[suit] || 0);
       const idx = Math.max(0, Math.min(11, raw));
-      const x = BOARD_POINTS.trackX[idx];
-      const y = BOARD_POINTS.laneY[suit];
-      return `<div class="pr-horse-slot" data-suit="${suit}" data-pos="${idx}" style="left:${x}%;top:${y}%">${renderHorseMask(idx)}${aceHorseCard(suit)}</div>`;
+      const slot = BOARD_GEOMETRY.horseSlots[suit][idx];
+      return `<div class="pr-horse-slot" data-suit="${suit}" data-pos="${idx}" style="left:${slot.x}%;top:${slot.y}%"><span class="pr-horse-mask" aria-hidden="true"></span>${aceHorseCard(suit)}</div>`;
     }).join('');
 
     return `
@@ -156,9 +168,10 @@
         <div class="pr-live-stage" data-stage-root>
           <img src="${ASSETS.arena}" alt="Paardenrace bord" class="pr-live-arena">
           <div class="pr-overlay">
-            <div class="pr-deck-slot" data-deck-slot style="left:${BOARD_POINTS.deckX}%;top:${BOARD_POINTS.deckY}%">${deckLayers}</div>
-            <div class="pr-discard-slot ${discardCard ? 'has-card' : ''}" data-discard-slot style="left:${BOARD_POINTS.discardX}%;top:${BOARD_POINTS.discardY}%">${discardCard ? renderFaceUpCard(discardCard, 'pr-discard-face') : ''}</div>
+            <div class="pr-deck-slot" data-deck-slot style="left:${BOARD_GEOMETRY.deck.x}%;top:${BOARD_GEOMETRY.deck.y}%">${deckLayers}</div>
+            <div class="pr-discard-slot ${discardCard ? 'has-card' : ''}" data-discard-slot style="left:${BOARD_GEOMETRY.discard.x}%;top:${BOARD_GEOMETRY.discard.y}%">${discardCard ? renderFaceUpCard(discardCard, 'pr-discard-face') : ''}</div>
             ${gateHtml}
+            ${startMarkerHtml}
             ${horseHtml}
             <div class="pr-animation-layer" data-animation-layer></div>
           </div>
@@ -169,6 +182,6 @@
   window.GEJAST_PAARDENRACE = {
     rpc, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode,
     suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack, renderLiveBoard,
-    gotoLive, liveHref, getDrawRemaining, resolvedGateSet, getBoardPoints: ()=> JSON.parse(JSON.stringify(BOARD_POINTS)), getBoardGeometry: ()=> JSON.parse(JSON.stringify(BOARD_GEOMETRY))
+    gotoLive, liveHref, getDrawRemaining, resolvedGateSet, getBoardGeometry: ()=> JSON.parse(JSON.stringify(BOARD_GEOMETRY))
   };
 })();

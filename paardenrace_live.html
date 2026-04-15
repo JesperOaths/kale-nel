@@ -28,20 +28,18 @@
     .pr-live-arena{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover}
     .pr-overlay,.pr-animation-layer{position:absolute;inset:0}
     .pr-animation-layer{pointer-events:none;z-index:25}
-    .pr-horse-slot,.pr-gate-slot,.pr-deck-slot,.pr-discard-slot,.pr-float-card{position:absolute;transform:translate(-50%,-50%)}
-    .pr-horse-slot{width:5.93%;z-index:8;display:flex;align-items:center;justify-content:center}
-    .pr-deck-slot{width:8%;height:15.5%;z-index:4}
-    .pr-discard-slot{width:5.9%;min-height:12.5%;z-index:5;display:flex;align-items:center;justify-content:center}
-    .pr-gate-slot{width:4.88%;z-index:6;display:flex;align-items:center;justify-content:center;transform-style:preserve-3d}
-    .pr-gate-slot.is-revealed.pr-just-revealed{animation:gateReveal .72s cubic-bezier(.2,.84,.24,1.05)}
+    .pr-horse-slot,.pr-gate-slot,.pr-deck-slot,.pr-discard-slot,.pr-float-card,.pr-start-cover-slot{position:absolute;transform:translate(-50%,-50%)}
+    .pr-start-cover-slot{width:5.15%;z-index:7;display:flex;align-items:center;justify-content:center}
+    .pr-horse-slot{width:5.15%;z-index:8;display:flex;align-items:center;justify-content:center}
+    .pr-deck-slot{width:5.4%;height:12.5%;z-index:4}
+    .pr-discard-slot{width:6%;min-height:12.5%;z-index:5;display:flex;align-items:center;justify-content:center}.pr-discard-slot.is-landing{animation:discardLand .52s cubic-bezier(.2,.84,.24,1)}
+    .pr-gate-slot{width:4.86%;z-index:6;display:flex;align-items:center;justify-content:center;transform-style:preserve-3d}
+    .pr-gate-slot.is-revealed.pr-just-revealed{animation:gateReveal .84s cubic-bezier(.2,.84,.24,1.05)}.pr-horse-slot.is-just-moved{animation:horsePulse .5s cubic-bezier(.24,.84,.24,1)}
     .pr-stack-card{position:absolute;inset:0}
-    .pr-card-back,.pr-ace-card{display:block;width:100%;height:auto;min-width:0;background:transparent}
+    .pr-card-back,.pr-ace-card,.pr-start-marker{display:block;width:100%;height:auto;min-width:0;background:transparent}
     .pr-card-back{filter:drop-shadow(0 10px 20px rgba(0,0,0,.18))}
-    .pr-horse-slot{position:absolute}
-    .pr-horse-mask{position:absolute;left:50%;top:50%;width:100%;aspect-ratio:311/410;transform:translate(-50%,-50%);border-radius:8%;z-index:0;pointer-events:none}
-    .pr-horse-mask.track,.pr-horse-mask.start{background:linear-gradient(180deg, rgba(255,253,248,.98), rgba(240,233,222,.98));box-shadow:0 0 0 1px rgba(77,57,31,.12)}
-    .pr-horse-mask.finish{background:linear-gradient(180deg, rgba(239,221,176,.98), rgba(230,210,163,.98));box-shadow:0 0 0 1px rgba(126,96,33,.14)}
-    .pr-ace-card{position:relative;z-index:1;filter:drop-shadow(0 10px 18px rgba(0,0,0,.20)); user-select:none; pointer-events:none}
+    .pr-ace-card{filter:drop-shadow(0 10px 18px rgba(0,0,0,.20)); user-select:none; pointer-events:none}
+    .pr-start-marker{filter:drop-shadow(0 4px 10px rgba(0,0,0,.10));opacity:.985}.pr-horse-mask{position:absolute;inset:2.5% 2%;border-radius:18px;background:linear-gradient(180deg,rgba(255,251,244,.98) 0%, rgba(244,235,220,.96) 100%);border:1px solid rgba(77,57,31,.16);box-shadow:0 4px 10px rgba(0,0,0,.10);z-index:0}.pr-horse-slot .pr-ace-card{position:relative;z-index:1}
     .pr-open-card{position:relative;width:100%;aspect-ratio:311/410;border-radius:16px;background:linear-gradient(180deg,#fdf9f0 0%,#f5eedf 100%);border:1px solid rgba(77,57,31,.28);box-shadow:0 10px 22px rgba(0,0,0,.18);overflow:hidden;color:#1f1b1a}
     .pr-open-card.red{color:#a11f35}
     .pr-open-card-corner{position:absolute;display:grid;gap:1px;font-weight:900;font-size:clamp(11px,.95vw,16px);line-height:1;text-align:center}
@@ -64,10 +62,10 @@
     .pr-float-card{z-index:28;pointer-events:none;will-change:left,top,transform,opacity}
     .pr-float-card .pr-card-back,.pr-float-card .pr-open-card{width:100%;height:auto}
     @keyframes gateReveal{0%{transform:translate(-50%,-50%) rotateY(0deg) scale(.92)}45%{transform:translate(-50%,-50%) rotateY(90deg) scale(1.04)}65%{transform:translate(-50%,-50%) rotateY(0deg) scale(1.06)}100%{transform:translate(-50%,-50%) rotateY(0deg) scale(1)}}
-    @keyframes drawPulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.03)}}
+    @keyframes drawPulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.03)}}@keyframes horsePulse{0%{transform:translate(-50%,-50%) scale(.94)}55%{transform:translate(-50%,-50%) scale(1.07)}100%{transform:translate(-50%,-50%) scale(1)}}@keyframes discardLand{0%{transform:translate(-50%,-50%) scale(.96)}60%{transform:translate(-50%,-50%) scale(1.05)}100%{transform:translate(-50%,-50%) scale(1)}}
     @media(max-width:900px){
       .page{padding:10px 8px 40px}.shell{padding:10px}.board-panel{padding:8px}
-      .pr-horse-slot{width:8.15%}.pr-gate-slot{width:6.45%}.pr-deck-slot{width:10.25%}.pr-discard-slot{width:8.1%}
+      .pr-horse-slot{width:7.1%}.pr-gate-slot{width:6.45%}.pr-deck-slot{width:7.1%}.pr-discard-slot{width:7.6%}
     }
   </style>
 </head>
@@ -100,7 +98,7 @@
       <h2 class="section-title">Race bediening</h2>
       <div class="action-row" style="margin-bottom:12px"><button class="btn" id="drawBtn" type="button">Trek volgende kaart</button><button class="btn secondary" id="tickBtn" type="button">Tick countdown</button><button class="btn secondary" id="resetBtn" type="button">Nieuwe ronde resetten</button></div>
       <div id="phaseBox" class="log"></div>
-      <div id="nomBox" style="margin-top:14px;display:none"><h3 style="margin:0 0 8px">Verdeel jouw nominaties</h3><div class="small">Je moet exact je volledige budget verdelen over andere spelers. Niet over jezelf.</div><div id="allocRows" style="margin-top:10px"></div><div class="status" id="nomStatus"></div><button class="btn" id="submitNomBtn" type="button" style="margin-top:10px">Nominaties opslaan</button></div>
+      <div id="nomBox" style="margin-top:14px;display:none"><button class="btn" id="openNomBtn" type="button">Open nominatie-popup</button><div class="small" style="margin-top:8px">Nominaties gebeuren in een popup, niet onderaan de pagina.</div></div>
     </section>
     <section class="panel">
       <h2 class="section-title">Deelnemers / inzetten</h2>
@@ -109,12 +107,14 @@
   </div>
 </div></div>
 <dialog id="rulesDialog"><div class="modal-card"><div class="modal-top"><h2 style="margin:0">Paardenrace regels</h2><button class="btn secondary" id="closeRulesBtn" type="button">Sluiten</button></div><ol style="display:grid;gap:10px;line-height:1.5"><li>Iedereen kiest één suit/paard en zet één vaste inzet in Bakken.</li><li>De host verifieert die inzet in de lobby; pas dan kan een speler ready drukken.</li><li>Bij start gaat iedereen naar dit room-specifieke live scherm.</li><li>Elke getrokken kaart zet het bijbehorende paard één vak vooruit.</li><li>Als alle vier de paarden een gate hebben gehaald, draait die gate open en duwt één paard terug.</li><li>De eerste crossing telt alleen als minstens één speler op dat paard had ingezet.</li><li>Daarna verdelen winnaars hun nominaties.</li></ol></div></dialog>
+
+<dialog id="nomDialog"><div class="modal-card"><div class="modal-top"><h2 style="margin:0">Verdeel jouw nominaties</h2><button class="btn secondary" id="closeNomBtn" type="button">Sluiten</button></div><div class="small">Je moet exact je volledige budget verdelen over andere spelers. Niet over jezelf.</div><div id="allocRows" style="margin-top:12px"></div><div class="status" id="nomStatus" style="margin-top:8px"></div><div class="action-row" style="margin-top:12px"><button class="btn" id="submitNomBtn" type="button">Nominaties opslaan</button></div></div></dialog>
 <div class="site-credit-watermark" data-version-watermark>v450 · Made by Bruis</div>
 <script>
 (()=>{
   const api = window.GEJAST_PAARDENRACE; const $=(id)=>document.getElementById(id);
   let currentState = null;
-  const anim = { dealtMatchRef:null, drawing:false, busy:false, polling:false };
+  const anim = { dealtMatchRef:null, drawing:false, busy:false, polling:false, shownNominationForMatch:'' };
   function qRoom(){ const params = new URLSearchParams(location.search); return params.get('room') || params.get('live') || api.getStoredRoomCode() || ''; }
   function setStatus(msg=''){ $('statusBox').textContent = msg || ''; }
   function isActiveStage(stage){ return ['countdown','race','nominations','finished'].includes(String(stage||'')); }
@@ -131,17 +131,23 @@
     const el = document.createElement('div');
     el.className = 'pr-float-card';
     el.style.left = `${from.x}px`; el.style.top = `${from.y}px`; el.style.width = `${opts.width || from.w || 72}px`; el.style.opacity = '1';
+    el.style.transform = 'translate(-50%,-50%) scale(.98) rotate(0deg)';
     el.innerHTML = html;
     layer.appendChild(el);
-    await wait(20);
-    el.style.transition = `left ${opts.duration||680}ms cubic-bezier(.2,.84,.24,1), top ${opts.duration||680}ms cubic-bezier(.2,.84,.24,1), transform ${opts.duration||680}ms cubic-bezier(.2,.84,.24,1), opacity 220ms ease`;
-    el.style.left = `${to.x}px`; el.style.top = `${to.y}px`; el.style.transform = `translate(-50%,-50%) scale(${opts.scaleTo || 1}) rotate(${opts.rotate || 0}deg)`;
+    const mid = opts.mid || { x:(from.x + to.x) / 2, y:Math.min(from.y, to.y) - Math.max(44, Math.abs(to.x - from.x) * 0.08) };
+    const duration = opts.duration || 720;
+    await wait(16);
+    const animHandle = el.animate([
+      { left:`${from.x}px`, top:`${from.y}px`, transform:'translate(-50%,-50%) scale(.98) rotate(0deg)', opacity:1 },
+      { offset:0.58, left:`${mid.x}px`, top:`${mid.y}px`, transform:`translate(-50%,-50%) scale(${opts.midScale || 1.05}) rotate(${opts.midRotate || -10}deg)`, opacity:1 },
+      { left:`${to.x}px`, top:`${to.y}px`, transform:`translate(-50%,-50%) scale(${opts.scaleTo || 1}) rotate(${opts.rotate || 0}deg)`, opacity:1 }
+    ], { duration, easing:'cubic-bezier(.2,.84,.24,1)', fill:'forwards' });
     if (opts.flipAt && opts.faceUpHtml) {
-      setTimeout(()=>{ if(el.isConnected) el.innerHTML = opts.faceUpHtml; }, Math.max(120, Math.round((opts.duration||680) * opts.flipAt)));
+      setTimeout(()=>{ if(el.isConnected) el.innerHTML = opts.faceUpHtml; }, Math.max(120, Math.round(duration * opts.flipAt)));
     }
-    await wait((opts.duration||680) + 30);
+    try { await animHandle.finished; } catch(_){}
     if (opts.fadeOut !== false) {
-      el.style.opacity = '0';
+      el.animate([{ opacity:1 },{ opacity:0 }], { duration:180, fill:'forwards', easing:'ease' });
       await wait(180);
     }
     el.remove();
@@ -164,15 +170,34 @@
     const deck = document.querySelector('[data-deck-slot]');
     const discard = document.querySelector('[data-discard-slot]');
     if(!deck || !discard || !cardCode) return;
-    const deckRect = deck.getBoundingClientRect();
     const discardRect = discard.getBoundingClientRect();
     const stage = document.querySelector('[data-stage-root]');
     if(!stage) return;
     const stageRect = stage.getBoundingClientRect();
-    const mid = { x: Math.max(stageRect.left + (stageRect.width * 0.79), (deckRect.left + discardRect.left) / 2), y: stageRect.top + (stageRect.height * 0.18) };
-    await flyCard(deck, { getBoundingClientRect:()=>({ left:mid.x-10, top:mid.y-10, width:20, height:20 }) }, api.renderCardBack('pr-deck-back'), { duration:360, width:discardRect.width || 88, rotate:8, fadeOut:false, scaleTo:1.03 });
-    await flyCard({ getBoundingClientRect:()=>({ left:mid.x-10, top:mid.y-10, width:20, height:20 }) }, discard, api.renderCardBack('pr-deck-back'), { duration:440, width:discardRect.width || 88, rotate:2, flipAt:0.42, faceUpHtml: api.renderFaceUpCard(cardCode, 'pr-discard-face'), scaleTo:1.04 });
+    const deckBox = getCenterBox(deck); const discardBox = getCenterBox(discard);
+    const mid = { x:(deckBox.x + discardBox.x) / 2, y:Math.max(stageRect.height * 0.12, Math.min(deckBox.y, discardBox.y) - stageRect.height * 0.06) };
+    await flyCard(deck, discard, api.renderCardBack('pr-deck-back'), { duration:760, width:discardRect.width || 88, rotate:0, mid, midRotate:-14, flipAt:0.72, faceUpHtml: api.renderFaceUpCard(cardCode, 'pr-discard-face'), scaleTo:1.02, fadeOut:true });
+    discard.classList.remove('is-landing');
+    void discard.offsetWidth;
+    discard.classList.add('is-landing');
+    setTimeout(()=> discard.classList.remove('is-landing'), 520);
   }
+
+  async function animateHorseAdvance(prevMatch, match){
+    const prevPos = prevMatch?.horse_positions || {};
+    const nextPos = match?.horse_positions || {};
+    const changed = Object.keys(nextPos).filter((suit)=> Number(nextPos[suit] || 0) !== Number(prevPos[suit] || 0));
+    for(const suit of changed){
+      const slot = document.querySelector(`.pr-horse-slot[data-suit="${suit}"]`);
+      if(!slot) continue;
+      slot.classList.remove('is-just-moved');
+      void slot.offsetWidth;
+      slot.classList.add('is-just-moved');
+    }
+    if(changed.length) await wait(220);
+  }
+  function closeNominationDialog(){ const dlg=$('nomDialog'); if(dlg && dlg.open) dlg.close(); }
+
   async function animateGateReveal(match, gateNos){
     for(const gateNo of gateNos){
       const slot = document.querySelector(`[data-gate-no="${gateNo}"]`);
@@ -187,11 +212,12 @@
     const deck = document.querySelector('[data-deck-slot]');
     const discard = document.querySelector('[data-discard-slot]');
     if(!deck || !discard) return;
-    for(let i=0;i<5;i+=1){
-      flyCard(discard, deck, api.renderCardBack('pr-deck-back'), { duration:420 + i*55, width:deck.getBoundingClientRect().width || 80, rotate:(i%2===0?-10:10) });
-      await wait(55);
+    const deckBox = getCenterBox(deck); const discardBox = getCenterBox(discard);
+    for(let i=0;i<6;i+=1){
+      flyCard(discard, deck, api.renderCardBack('pr-deck-back'), { duration:420 + i*50, width:deck.getBoundingClientRect().width || 80, rotate:(i%2===0?-8:8), mid:{ x:(discardBox.x + deckBox.x) / 2, y:Math.min(discardBox.y, deckBox.y) - 26 - (i*4) }, midRotate:(i%2===0?-18:18) });
+      await wait(60);
     }
-    await wait(520);
+    await wait(560);
   }
   async function apply(state, options={}){
     const prevState = currentState; const prevMatch = prevState?.match || null;
@@ -202,7 +228,14 @@
     $('drawBtn').disabled = !(room.can_draw && room.stage==='race'); $('tickBtn').disabled = room.stage !== 'countdown'; $('resetBtn').disabled = !(room.stage==='finished' && viewer.is_host); $('closeBtn').style.display = viewer.is_host ? '' : 'none';
     $('playersBox').innerHTML = renderBettors(players); $('phaseBox').innerHTML = renderPhase(room, match);
     const myBudget = Number(viewer.nomination_budget_bakken || 0); const canNom = room.stage==='nominations' && viewer.can_nominate; $('nomBox').style.display = canNom ? '' : 'none';
-    if(canNom){ const others = players.filter((p)=>String(p.player_name||'').toLowerCase() !== String(viewer.player_name||'').toLowerCase()); $('allocRows').innerHTML = `<div class="small">Jouw budget: ${myBudget} Bakken</div>` + others.map((p)=>`<div class="alloc-row"><div>${p.player_name}</div><input type="number" min="0" step="1" value="0" data-target="${encodeURIComponent(p.player_name)}"></div>`).join(''); $('nomStatus').textContent=''; }
+    if(canNom){
+      const others = players.filter((p)=>String(p.player_name||'').toLowerCase() !== String(viewer.player_name||'').toLowerCase());
+      $('allocRows').innerHTML = `<div class="small">Jouw budget: ${myBudget} Bakken</div>` + others.map((p)=>`<div class="alloc-row"><div>${p.player_name}</div><input type="number" min="0" step="1" value="0" data-target="${encodeURIComponent(p.player_name)}"></div>`).join('');
+      $('nomStatus').textContent='';
+      if(String(match?.match_ref || '') && anim.shownNominationForMatch !== String(match.match_ref)){ $('nomDialog').showModal(); anim.shownNominationForMatch = String(match.match_ref); }
+    } else {
+      closeNominationDialog();
+    }
     if(!isActiveStage(room.stage) && room.room_code){ window.location.replace(`./paardenrace.html?room=${encodeURIComponent(room.room_code)}`); return; }
 
     if(options.animated !== false){
@@ -210,6 +243,7 @@
       if(matchRef && room.stage === 'race' && String(prevMatch?.match_ref || '') !== matchRef && Number(match?.draw_index || 0) === 0){ await animateDeal(match); }
       const prevIndex = Number(prevMatch?.draw_index || 0); const nextIndex = Number(match?.draw_index || 0);
       if(nextIndex > prevIndex && match?.last_draw_card){ await animateDraw(match.last_draw_card); }
+      await animateHorseAdvance(prevMatch || {}, match || {});
       const before = api.resolvedGateSet(prevMatch || {}); const after = api.resolvedGateSet(match || {});
       const newGates = [...after].filter((n)=> !before.has(n)).sort((a,b)=>a-b);
       if(newGates.length) await animateGateReveal(match, newGates);
@@ -238,7 +272,8 @@
   });
   $('resetBtn').addEventListener('click', async()=>{ try{ anim.dealtMatchRef = null; await apply(await api.rpc('reset_paardenrace_room_safe',{ room_code_input: qRoom() }), { animated:false }); setStatus('Room is gereset voor een nieuwe ronde.'); }catch(err){ setStatus(err.message || 'Reset mislukt.'); }});
   $('closeBtn').addEventListener('click', async()=>{ try{ await api.rpc('disband_paardenrace_room_safe',{ room_code_input: qRoom() }); api.clearStoredRoomCode(); window.location.href='./paardenrace.html'; }catch(err){ setStatus(err.message || 'Sluiten mislukt.'); }});
-  $('submitNomBtn').addEventListener('click', async()=>{ try{ const allocations = Array.from(document.querySelectorAll('#allocRows input[data-target]')).map((node)=>({ target_player_name: decodeURIComponent(node.dataset.target||''), bakken: Number(node.value||0) })).filter((row)=>row.bakken>0); await apply(await api.rpc('submit_paardenrace_nominations_safe',{ room_code_input: qRoom(), allocations_input: allocations }), { animated:false }); $('nomStatus').textContent='Nominaties opgeslagen.'; }catch(err){ $('nomStatus').textContent = err.message || 'Nomineren mislukt.'; } });
+  $('submitNomBtn').addEventListener('click', async()=>{ try{ const allocations = Array.from(document.querySelectorAll('#allocRows input[data-target]')).map((node)=>({ target_player_name: decodeURIComponent(node.dataset.target||''), bakken: Number(node.value||0) })).filter((row)=>row.bakken>0); await apply(await api.rpc('submit_paardenrace_nominations_safe',{ room_code_input: qRoom(), allocations_input: allocations }), { animated:false }); $('nomStatus').textContent='Nominaties opgeslagen.'; closeNominationDialog(); }catch(err){ $('nomStatus').textContent = err.message || 'Nomineren mislukt.'; } });
+  $('openNomBtn').addEventListener('click', ()=> $('nomDialog').showModal()); $('closeNomBtn').addEventListener('click', closeNominationDialog); $('nomDialog').addEventListener('click', (e)=>{ if(e.target === $('nomDialog')) closeNominationDialog(); });
   $('rulesBtn').addEventListener('click', ()=> $('rulesDialog').showModal()); $('closeRulesBtn').addEventListener('click', ()=> $('rulesDialog').close()); $('rulesDialog').addEventListener('click', (e)=>{ if(e.target === $('rulesDialog')) $('rulesDialog').close(); });
   load({ animated:false }); setInterval(()=> load({ animated:false }), 1200);
 })();
