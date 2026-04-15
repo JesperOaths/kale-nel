@@ -7,10 +7,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken live</title>
-  <script>window.GEJAST_PAGE_VERSION='v519';</script>
-  <script src="./gejast-config.js?v519"></script>
-  <script src="./gejast-home-gate.js?v519"></script>
-  <script src="./gejast-live-summary.js?v519"></script>
+  <script>window.GEJAST_PAGE_VERSION='v521';</script>
+  <script src="./gejast-config.js?v521"></script>
+  <script src="./gejast-home-gate.js?v521"></script>
   <style>
     :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--shadow:0 18px 44px rgba(0,0,0,.08)}
     *{box-sizing:border-box}
@@ -65,11 +64,40 @@
 
   <script>
     (()=>{
-      const live = window.GEJAST_LIVE_SUMMARY || {};
+      const cfg = window.GEJAST_CONFIG || {};
       let pollId = null;
-      function esc(v){ const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(v??'').replace(/[&<>"']/g,(m)=>map[m]); }
 
-      // Deterministic class decision tables (matches CSS above)
+      function esc(v){ const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(v??'').replace(/[&<>"']/g,(m)=>map[m]); }
+      function qsParam(name){ try { return new URLSearchParams(window.location.search).get(name) || ''; } catch(_) { return ''; } }
+      function currentScope(){
+        try {
+          return (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope())
+            || (qsParam('scope') === 'family' ? 'family' : 'friends');
+        } catch(_) { return 'friends'; }
+      }
+      function headers(){
+        return {
+          'Content-Type':'application/json',
+          apikey: cfg.SUPABASE_PUBLISHABLE_KEY || '',
+          Authorization: `Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY || ''}`,
+          Accept:'application/json'
+        };
+      }
+      async function parse(res){
+        const txt = await res.text();
+        let data = null;
+        try { data = txt ? JSON.parse(txt) : null; } catch(_) { throw new Error(txt || `HTTP ${res.status}`); }
+        if(!res.ok) throw new Error(data?.message || data?.error || txt || `HTTP ${res.status}`);
+        return data;
+      }
+      async function rpc(name, payload){
+        const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
+          method:'POST', mode:'cors', cache:'no-store', headers: headers(), body: JSON.stringify(payload || {})
+        });
+        const data = await parse(res);
+        return data && data[name] !== undefined ? data[name] : data;
+      }
+
       const UI_MAP = Object.freeze({
         phase: Object.freeze({
           lobby:    { cls: 'pill wait', label: 'Lobby' },
@@ -92,89 +120,85 @@
         const v = String(raw || '').trim().toLowerCase();
         return (v === 'lobby' || v === 'bidding' || v === 'voting' || v === 'finished') ? v : 'bidding';
       }
-
       function normalizeVoteStatus(raw){
         const v = String(raw || '').trim().toLowerCase();
         if (v === 'approved' || v === 'goedgekeurd' || v === 'believe' || v === 'true') return 'approved';
         if (v === 'rejected' || v === 'afgekeurd' || v === 'reject' || v === 'false') return 'rejected';
         return 'waiting';
       }
-
-      function phasePillSpec(liveState){
-        const status = String(liveState?.status || '').toLowerCase();
-        const phase = (status === 'finished') ? 'finished' : normalizePhase(liveState?.phase);
+      function phasePillSpec(state){
+        const status = String(state?.status || '').toLowerCase();
+        const phase = (status === 'finished') ? 'finished' : normalizePhase(state?.phase);
         return UI_MAP.phase[phase] || UI_MAP.phase.bidding;
       }
-
       function votePillSpec(status){
         const key = normalizeVoteStatus(status);
         return UI_MAP.voteStatus[key] || UI_MAP.voteStatus.waiting;
       }
-
       function dieClass(value){
-        const n = Number(value);
-        return n === 1 ? 'die pik' : 'die';
+        return Number(value) === 1 ? 'die pik' : 'die';
       }
-
       function bidText(bid){
         const count = Number(bid?.count || bid?.bid_count || 0);
         const face = Number(bid?.face || bid?.bid_face || 0);
         if (!count || !face) return '—';
         return face === 1 ? `${count} × pik` : `${count} × ${face}`;
       }
-
       function penaltyModeLabel(raw){
         const key = String(raw || '').trim().toLowerCase();
         return (UI_MAP.penaltyMode[key] && UI_MAP.penaltyMode[key].label) ? UI_MAP.penaltyMode[key].label : UI_MAP.penaltyMode.wrong_loses.label;
       }
-
       function findNameBySeat(players, seat){
         const s = Number(seat || 0);
         if (!s) return '—';
         const p = (Array.isArray(players) ? players : []).find(x => Number(x?.seat || 0) === s);
         return p?.name || '—';
       }
+      function metaText(state){
+        const updated = state?.game?.updated_at || Date.now();
+        return `Live bijgewerkt om ${new Date(updated).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`;
+      }
 
-      function render(item){
-        const summary = (live.summaryFromItem?live.summaryFromItem(item):(item?.summary_payload||{})) || {};
-        const st = summary.live_state || summary || {};
-        document.getElementById('meta').textContent = live.metaText ? live.metaText(item) : 'Live';
+      function render(state){
+        const game = state?.game || {};
+        const st = game?.state || {};
+        document.getElementById('meta').textContent = metaText(state);
 
-        const phaseSpec = phasePillSpec(st);
+        const phaseSpec = phasePillSpec({ phase: st.phase, status: game.status });
         const phaseEl = document.getElementById('phasePill');
         phaseEl.className = phaseSpec.cls;
         phaseEl.textContent = phaseSpec.label;
 
         document.getElementById('roundNo').textContent = String(Number(st.round_no||0));
-        document.getElementById('penaltyMode').textContent = penaltyModeLabel(st.penalty_mode);
-        document.getElementById('lobbyCode').textContent = String(st.lobby_code || '—');
+        document.getElementById('penaltyMode').textContent = penaltyModeLabel(game?.config?.penalty_mode);
+        document.getElementById('lobbyCode').textContent = String(game.lobby_code || '—');
 
         const bid = st.bid && st.bid !== null ? st.bid : null;
         document.getElementById('currentBid').textContent = bidText(bid);
         document.getElementById('bidBy').textContent = bid && bid.bidder_name ? `door ${bid.bidder_name}` : '';
 
-        const dt = st.dice_totals || {};
+        const dt = state?.dice_totals || {};
         document.getElementById('totalStartDice').textContent = String(Number(dt.start_total||0));
         document.getElementById('totalCurrentDice').textContent = String(Number(dt.current_total||0));
         document.getElementById('totalLostDice').textContent = String(Number(dt.lost_total||0));
 
-        const players = Array.isArray(st.players)?st.players:[];
-        const votes = Array.isArray(st.votes)?st.votes:[];
-        const phase = String(st.phase||'');
+        const players = Array.isArray(state?.players)?state.players:[];
+        const votes = Array.isArray(state?.votes)?state.votes:[];
+        const phase = String(st.phase||game.status||'');
         const turnSeat = phase === 'voting' ? Number(st.vote_turn_seat||0) : Number(st.turn_seat||0);
         document.getElementById('turnName').textContent = findNameBySeat(players, turnSeat);
 
         const playersWrap = document.getElementById('playersList');
         playersWrap.className='grid';
-        playersWrap.innerHTML = players.map((p)=>{
+        playersWrap.innerHTML = players.length ? players.map((p)=>{
           const voteRow = votes.find(v=>Number(v.seat||0)===Number(p.seat||0));
           const pill = votePillSpec(voteRow ? voteRow.status : 'waiting');
           const isTurn = Number(p.seat||0) === Number(turnSeat||0) && (phase === 'bidding' || phase === 'voting');
           const rowCls = `row ${p.alive?'':'dead'} ${isTurn?'turn':''}`.trim();
           return `<div class="${rowCls}"><div><strong>${esc(p.name||'Speler')}</strong> <span class="muted">#${Number(p.seat||0)}</span><div class="muted">${p.alive?'Levend':'Dood'} · ${Number(p.dice_count||0)} dobbelstenen</div></div>${phase==='voting'?`<span class="${pill.cls}">${pill.label}</span>`:''}</div>`;
-        }).join('');
+        }).join('') : '<div class="muted">—</div>';
 
-        const lr = st.last_reveal || null;
+        const lr = st.last_reveal || game?.last_reveal || null;
         const revealWrap = document.getElementById('revealBody');
         if(!lr){ revealWrap.textContent='Nog geen reveal.'; return; }
         const hands = Array.isArray(lr.hands)?lr.hands:[];
@@ -191,27 +215,33 @@
             return `<div class="row"><div><strong>${esc(v.name||'Speler')}</strong> <span class="muted">#${Number(v.seat||0)}</span></div><span class="${pill.cls}">${pill.label}</span></div>`;
           }).join('')}</div>` : '') +
           (hands.length ? `<div style="margin-top:10px;display:grid;gap:10px">${hands.map(h=>`<div class="row"><div><strong>${esc(h.name||'Speler')}</strong> <span class="muted">#${Number(h.seat||0)}</span><div class="dice-row">${(Array.isArray(h.dice)?h.dice:[]).map(d=>`<img class="${dieClass(d)}" src="./assets/pikken/dice-${Number(d)}.svg" alt="die ${Number(d)}">`).join('')}</div></div></div>`).join('')}</div>` : '');
-
-        if (live.isFinished && live.isFinished(item) && pollId) { clearInterval(pollId); pollId = null; }
       }
 
       async function load(){
-        const identity = live.matchIdentityFromUrl ? live.matchIdentityFromUrl() : { clientMatchId:'', matchRef:'' };
-        if(!identity.clientMatchId && !identity.matchRef){
-          document.getElementById('meta').textContent='Geen match_ref of client_match_id in URL.';
+        const rawClientMatchId = qsParam('client_match_id');
+        const rawMatchRef = qsParam('match_ref');
+        const gameId = rawClientMatchId && /^[0-9a-f-]{36}$/i.test(rawClientMatchId) ? rawClientMatchId : null;
+        const lobbyCode = rawMatchRef || (!gameId ? rawClientMatchId : '') || '';
+        if(!gameId && !lobbyCode){
+          document.getElementById('meta').textContent='Geen geldige game_id of roomcode in URL.';
           return;
         }
         try{
-          const item = await live.loadPublicSummary('pikken', identity);
-          render(item);
+          const state = await rpc('pikken_get_live_state_public', {
+            game_id_input: gameId,
+            lobby_code_input: lobbyCode || null,
+            site_scope_input: currentScope()
+          });
+          render(state || {});
         }catch(err){
           document.getElementById('meta').textContent = err.message || 'Laden mislukt.';
         }
       }
 
       load();
-      pollId = setInterval(load, 5000);
+      pollId = setInterval(load, 1200);
     })();
+  </script>
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 <div class="site-credit-watermark" data-version-watermark></div>
