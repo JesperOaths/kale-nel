@@ -105,7 +105,7 @@
   function progressForBadge(snapshotInput, badgeKey) {
     const s = snapshotFrom(snapshotInput);
     switch (badgeKey) {
-      case 'starter': return scalarProgress((s.totalMatches || 0) + (s.drinkEvents || 0) + (s.speedCount || 0), 1, 'site-acties');
+      case 'starter': return scalarProgress((s.totalMatches || 0), 1, 'wedstrijden');
       case 'groeier': return choiceProgress([
         scalarProgress(s.totalMatches || 0, 5, 'potjes'),
         scalarProgress(s.drinkEvents || 0, 10, 'drankacties')

@@ -7,8 +7,8 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Spelersprofielen</title>
-  <script>window.GEJAST_PAGE_VERSION='v460';</script>
-  <script src="./gejast-config.js?v460"></script>
+  <script>window.GEJAST_PAGE_VERSION='v463';</script>
+  <script src="./gejast-config.js?v449"></script>
   <script src="./gejast-clickable-cards.js?v386"></script>
   <script src="./gejast-scope-context.js?v391"></script><script src="./gejast-family-rollout.js?v393"></script>
   <style>
@@ -153,7 +153,7 @@
 
       function toMiniBadgeRow(attainedBadges){
         const items = (Array.isArray(attainedBadges) ? attainedBadges : []).slice(0, 8);
-        if (!items.length) return '';
+        if (!items.length) return '<div class="submeta">Nog geen badges behaald.</div>';
         return `<div class="badge-mini-row">${items.map((badge)=>`<span class="mini-chip" title="${badge.title || badge.name}"><img src="${badge.imageMini48 || badge.image || ''}" alt="${badge.title || badge.name}"></span>`).join('')}</div>`;
       }
 
@@ -213,7 +213,7 @@
           const original = originalName(player);
           const attained = normalizedAttained(player);
           const rarest = attained[0] || player.primary_badge || null;
-          const rarestTitle = rarest ? (rarest.title || rarest.name || 'Starter') : 'Nog geen badge';
+          const rarestTitle = rarest ? (rarest.title || rarest.name || 'Nog geen badge') : 'Nog geen badge';
           const rarestNick = rarest && rarest.nickname ? rarest.nickname : '';
           const profileTarget = original || shown;
           return `<a class="card" href="./player.html?player=${encodeURIComponent(profileTarget)}&scope=${encodeURIComponent(scope)}">
@@ -232,6 +232,7 @@
               <div class="stat"><strong>${player.badge_count || attained.length || 0}</strong><span>Badges</span></div>
             </div>
             <div class="badge-strip">
+              <div class="badge-kicker">Badge-overzicht</div>
               <div class="badge-note">${rarest ? `<span class="badge-pill">${rarest.imageMini48 || rarest.image ? `<img src="${rarest.imageMini48 || rarest.image}" alt="${rarestTitle}">` : ''}<span>${rarestTitle}</span></span>` : '<span class="submeta">Nog geen behaalde badges.</span>'}</div>
               ${toMiniBadgeRow(attained)}
             </div>

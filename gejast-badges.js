@@ -988,7 +988,7 @@
   }
 
   const BADGE_RULES = {
-    starter: (s) => (s.totalMatches + s.drinkEvents + s.speedCount) >= 1,
+    starter: (s) => (s.totalMatches || 0) >= 1,
     groeier: (s) => s.totalMatches >= 5 || s.drinkEvents >= 10,
     actief: (s) => s.totalMatches >= 15 || s.drinkEvents >= 25,
     gold: (s) => s.totalMatches >= 30 && s.bestWinRate >= 55,
