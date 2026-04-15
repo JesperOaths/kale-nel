@@ -205,6 +205,16 @@
       renderRoomsInto(qs('#pkLiveRoomsBox'), live, 'Nog geen actieve pikkenkamers.');
       renderRoomsInto(qs('#pkOpenRoomsBox'), open, 'Nog geen open kamers. Maak er één aan of ververs zo weer.');
       clearKnownNonfatalStatus();
+
+      const currentCode = currentLobbyCode();
+      if (UI.gameId && currentCode && !/pikken_live\.html/i.test(window.location.pathname)) {
+        const matchedLive = live.find((r)=>String(r.lobby_code || '').trim().toUpperCase() === currentCode);
+        if (matchedLive) {
+          setStatus('', false);
+          goLive(UI.gameId);
+          return;
+        }
+      }
     } catch(err){
       renderRoomsInto(qs('#pkLiveRoomsBox'), [], 'Kon actieve kamers niet laden.');
       renderRoomsInto(qs('#pkOpenRoomsBox'), [], 'Kon open kamers niet laden.');
