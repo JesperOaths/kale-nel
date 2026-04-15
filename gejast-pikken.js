@@ -89,6 +89,12 @@
   function clearStoredLobbyCode(){ try { localStorage.removeItem(STORAGE_KEY); } catch(_){ } }
 
   function liveHref(gameId){ return `./pikken_live.html?client_match_id=${encodeURIComponent(String(gameId||''))}`; }
+  function goLive(gameId){
+    const id = String(gameId || UI.gameId || '').trim();
+    if(!id) return false;
+    window.location.href = liveHref(id);
+    return true;
+  }
 
   function setStatus(text, isError){
     const el = qs('#pkStatus');
@@ -232,6 +238,9 @@
 
     qs('#pkPhase').textContent = phase;
     qs('#pkRoundNo').textContent = String(Number(game?.state?.round_no || 0) || 0);
+    if ((viewer?.is_host || viewer?.seat) && String(phase).toLowerCase() !== 'lobby' && !/pikken_live\.html/i.test(window.location.pathname)) {
+      setTimeout(()=>{ try { goLive(game?.id || UI.gameId); } catch(_){} }, 150);
+    }
 
     const totals = state?.dice_totals || {};
     qs('#pkDiceStart').textContent = String(Number(totals.start_total||0));
@@ -398,9 +407,11 @@
     try { await loadAndRender(); } catch(_) { }
     try { await loadOpenRooms(); } catch(_) { }
     clearKnownNonfatalStatus();
-    const phase = String((((UI.state||{}).game||{}).state||{}).phase || (((UI.state||{}).game||{}).status || '')).toLowerCase();
+    const game = ((UI.state||{}).game||{});
+    const phase = String((game.state||{}).phase || game.status || '').toLowerCase();
     if(phase && phase !== 'lobby'){
       setStatus('', false);
+      goLive(game.id || UI.gameId);
       return;
     }
     if(timedOut){
