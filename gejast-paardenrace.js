@@ -1,6 +1,6 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
-  const STORAGE_KEY = 'gejast_paardenrace_room_code_v459';
+  const STORAGE_KEY = 'gejast_paardenrace_room_code_v460';
   const LIVE_QUERY_KEY = 'live';
   const ASSETS = {
     arena: './paardenrace-live-board-v447.png',
@@ -19,19 +19,14 @@
     clubs: { label:'♣ Klaveren', symbol:'♣', color:'#1f1b1a' },
     spades: { label:'♠ Schoppen', symbol:'♠', color:'#1f1b1a' }
   };
-  const BOARD_POINTS = {
-    trackX: [14.18, 21.18, 27.28, 33.36, 39.56, 45.72, 51.87, 58.03, 64.18, 70.35, 76.50, 84.86],
-    gateX: [19.07, 25.14, 31.20, 37.31, 43.44, 49.55, 55.66, 61.76, 67.91, 74.02],
-    laneY: { spades: 40.86, hearts: 55.59, clubs: 70.24, diamonds: 84.90 },
-    deckX: 8.35,
-    deckY: 25.55,
-    discardX: 90.55,
-    discardY: 24.85,
-    gateY: 22.36,
-    horseWidthPct: 5.15,
-    gateWidthPct: 4.86,
-    deckWidthPct: 5.4,
-    discardWidthPct: 6.0
+  const BOARD_GRID = {
+    raceLeftPct: 18.0,
+    raceTopPct: 34.7,
+    raceWidthPct: 63.35,
+    raceHeightPct: 50.55,
+    startColumnWidthCells: 2,
+    finishColumnWidthCells: 2,
+    gateRowHeightFactor: 1.4
   };
 
   function sessionToken(){ return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; }
@@ -126,10 +121,21 @@
     }).join('');
 
     const laneRow = { spades:1, hearts:2, clubs:3, diamonds:4 };
-    const horseHtml = SUITS.map((suit)=>{
+    const horseSlot = (suit, column, position)=>`<div class="pr-horse-slot" data-suit="${suit}" data-pos="${position}" style="grid-column:${column};grid-row:${laneRow[suit]}">${aceHorseCard(suit)}</div>`;
+    const startHorseHtml = SUITS.map((suit)=>{
       const raw = Number(pos[suit] || 0);
       const idx = Math.max(0, Math.min(11, raw));
-      return `<div class="pr-horse-slot" data-suit="${suit}" data-pos="${idx}" style="grid-column:${idx + 1};grid-row:${laneRow[suit]}">${aceHorseCard(suit)}</div>`;
+      return idx === 0 ? horseSlot(suit, 1, idx) : '';
+    }).join('');
+    const raceHorseHtml = SUITS.map((suit)=>{
+      const raw = Number(pos[suit] || 0);
+      const idx = Math.max(0, Math.min(11, raw));
+      return idx >= 1 && idx <= 10 ? horseSlot(suit, idx, idx) : '';
+    }).join('');
+    const finishHorseHtml = SUITS.map((suit)=>{
+      const raw = Number(pos[suit] || 0);
+      const idx = Math.max(0, Math.min(11, raw));
+      return idx >= 11 ? horseSlot(suit, 1, idx) : '';
     }).join('');
 
     return `
@@ -137,13 +143,13 @@
         <div class="pr-live-stage" data-stage-root>
           <img src="${ASSETS.arena}" alt="Paardenrace bord" class="pr-live-arena">
           <div class="pr-overlay">
-            <div class="pr-board-grid">
-              <div class="pr-deck-zone"><div class="pr-deck-slot" data-deck-slot>${deckLayers}</div></div>
-              <div class="pr-discard-zone"><div class="pr-discard-slot ${discardCard ? 'has-card' : ''}" data-discard-slot>${discardCard ? renderFaceUpCard(discardCard, 'pr-discard-face') : ''}</div></div>
-              <div class="pr-start-column" aria-hidden="true"></div>
-              <div class="pr-gate-grid">${gateHtml}</div>
-              <div class="pr-track-grid">${horseHtml}</div>
-            </div>
+            <canvas class="pr-fx-canvas" data-fx-canvas></canvas>
+            <div class="pr-deck-zone"><div class="pr-deck-slot" data-deck-slot>${deckLayers}</div></div>
+            <div class="pr-discard-zone"><div class="pr-discard-slot ${discardCard ? 'has-card' : ''}" data-discard-slot>${discardCard ? renderFaceUpCard(discardCard, 'pr-discard-face') : ''}</div></div>
+            <div class="pr-gate-grid">${gateHtml}</div>
+            <div class="pr-start-grid">${startHorseHtml}</div>
+            <div class="pr-race-grid">${raceHorseHtml}</div>
+            <div class="pr-finish-grid">${finishHorseHtml}</div>
             <div class="pr-animation-layer" data-animation-layer></div>
           </div>
         </div>
@@ -153,6 +159,7 @@
   window.GEJAST_PAARDENRACE = {
     rpc, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode,
     suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack, renderLiveBoard,
-    gotoLive, liveHref, getDrawRemaining, resolvedGateSet, getBoardPoints: ()=> JSON.parse(JSON.stringify(BOARD_POINTS))
+    gotoLive, liveHref, getDrawRemaining, resolvedGateSet, getBoardPoints: ()=> JSON.parse(JSON.stringify(BOARD_GRID)),
+    horseAsset: (suit)=> ASSETS.horses[suit] || ASSETS.horses.hearts
   };
 })();
