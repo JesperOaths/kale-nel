@@ -42,13 +42,13 @@
   function normalizeError(err){
     const msg = String(err && err.message || err || 'Onbekende fout');
     if(/game_type\s+ongeldig/i.test(msg)){
-      return 'Pikken live-samenvatting staat backend nog niet open voor dit spel. Draai de v488 SQL-compat-fix en probeer opnieuw.';
+      return 'Deze pikken-lobby is losgekoppeld van een oude live-samenvatting. De pagina is teruggezet naar een schone lobby.';
     }
     if(/invalid input syntax for type uuid/i.test(msg)){
       return 'Oude pikken-lobby losgekoppeld. Je kunt hieronder meteen een nieuwe lobby maken of joinen.';
     }
     if(/live_match_summaries/i.test(msg)){
-      return 'De pikken backend mist nog de live-summary compatibiliteitslaag. Draai de v488 SQL-compat-fix en vernieuw daarna hard.';
+      return 'Deze pikken-lobby gebruikte nog een oude live-samenvatting-koppeling. De pagina is teruggezet naar een schone lobby.';
     }
     if(/(game|match).*(not found|niet gevonden|does not exist)|no rows returned/i.test(msg)){
       return 'Deze pikken-lobby bestaat niet meer. De pagina is teruggezet naar een lege lobby.';
@@ -91,7 +91,11 @@
 
   function shouldDropBrokenGameContext(err){
     const msg = String(err && err.message || err || '');
-    return /invalid input syntax for type uuid/i.test(msg) || /(game|match).*(not found|niet gevonden|does not exist)/i.test(msg) || /no rows returned/i.test(msg);
+    return /invalid input syntax for type uuid/i.test(msg)
+      || /(game|match).*(not found|niet gevonden|does not exist)/i.test(msg)
+      || /no rows returned/i.test(msg)
+      || /game_type\s+ongeldig/i.test(msg)
+      || /live_match_summaries/i.test(msg);
   }
 
   function setStatus(text, isError){
