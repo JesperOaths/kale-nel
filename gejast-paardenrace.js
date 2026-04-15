@@ -19,19 +19,35 @@
     clubs: { label:'♣ Klaveren', symbol:'♣', color:'#1f1b1a' },
     spades: { label:'♠ Schoppen', symbol:'♠', color:'#1f1b1a' }
   };
+  const BOARD_GEOMETRY = {
+    designWidth: 1536,
+    designHeight: 1024,
+    deck: { x: 10.25, y: 15.35, widthPct: 8.0 },
+    discard: { x: 86.72, y: 24.07, widthPct: 5.9 },
+    gates: {
+      y: 24.07,
+      widthPct: 4.88,
+      slots: [21.00, 27.25, 33.56, 39.91, 46.29, 52.64, 58.95, 65.36, 71.84, 78.35]
+    },
+    horses: {
+      widthPct: 5.93,
+      trackX: [14.42, 20.90, 27.15, 33.50, 39.91, 46.35, 52.73, 59.15, 65.59, 72.01, 78.35, 86.72],
+      laneY: { spades: 39.84, hearts: 53.91, clubs: 67.38, diamonds: 80.71 }
+    }
+  };
   const BOARD_POINTS = {
-    trackX: [14.18, 21.18, 27.28, 33.36, 39.56, 45.72, 51.87, 58.03, 64.18, 70.35, 76.50, 84.86],
-    gateX: [19.07, 25.14, 31.20, 37.31, 43.44, 49.55, 55.66, 61.76, 67.91, 74.02],
-    laneY: { spades: 40.86, hearts: 55.59, clubs: 70.24, diamonds: 84.90 },
-    deckX: 8.35,
-    deckY: 25.55,
-    discardX: 90.55,
-    discardY: 24.85,
-    gateY: 22.36,
-    horseWidthPct: 5.15,
-    gateWidthPct: 4.86,
-    deckWidthPct: 5.4,
-    discardWidthPct: 6.0
+    trackX: BOARD_GEOMETRY.horses.trackX,
+    gateX: BOARD_GEOMETRY.gates.slots,
+    laneY: BOARD_GEOMETRY.horses.laneY,
+    deckX: BOARD_GEOMETRY.deck.x,
+    deckY: BOARD_GEOMETRY.deck.y,
+    discardX: BOARD_GEOMETRY.discard.x,
+    discardY: BOARD_GEOMETRY.discard.y,
+    gateY: BOARD_GEOMETRY.gates.y,
+    horseWidthPct: BOARD_GEOMETRY.horses.widthPct,
+    gateWidthPct: BOARD_GEOMETRY.gates.widthPct,
+    deckWidthPct: BOARD_GEOMETRY.deck.widthPct,
+    discardWidthPct: BOARD_GEOMETRY.discard.widthPct
   };
 
   function sessionToken(){ return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; }
@@ -95,8 +111,9 @@
     const src = ASSETS.horses[suit] || ASSETS.horses.hearts;
     return `<img src="${src}" alt="${suitLabel(suit)} aas" class="pr-ace-card" draggable="false">`;
   }
-  function renderStartCover(){
-    return '<svg class="pr-start-cover" viewBox="0 0 311 410" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="1.5" y="1.5" width="308" height="407" rx="24" fill="#f8f2e6" stroke="rgba(77,57,31,.20)" stroke-width="3"/></svg>';
+  function renderHorseMask(posIdx){
+    const toneClass = posIdx <= 0 ? 'start' : (posIdx >= 11 ? 'finish' : 'track');
+    return `<span class="pr-horse-mask ${toneClass}" aria-hidden="true"></span>`;
   }
   function getDrawRemaining(match){
     const deck = Array.isArray(match?.draw_deck) ? match.draw_deck : [];
@@ -125,18 +142,13 @@
       return `<div class="pr-gate-slot ${isResolved ? 'is-revealed' : 'is-facedown'}" data-gate-no="${gateNo}" style="left:${x}%;top:${BOARD_POINTS.gateY}%">${inner}</div>`;
     }).join('');
 
-    const startCoverHtml = SUITS.map((suit)=>{
-      const x = BOARD_POINTS.trackX[0];
-      const y = BOARD_POINTS.laneY[suit];
-      return `<div class="pr-start-cover-slot" data-start-cover="${suit}" style="left:${x}%;top:${y}%">${renderStartCover()}</div>`;
-    }).join('');
 
     const horseHtml = SUITS.map((suit)=>{
       const raw = Number(pos[suit] || 0);
       const idx = Math.max(0, Math.min(11, raw));
       const x = BOARD_POINTS.trackX[idx];
       const y = BOARD_POINTS.laneY[suit];
-      return `<div class="pr-horse-slot" data-suit="${suit}" data-pos="${idx}" style="left:${x}%;top:${y}%">${aceHorseCard(suit)}</div>`;
+      return `<div class="pr-horse-slot" data-suit="${suit}" data-pos="${idx}" style="left:${x}%;top:${y}%">${renderHorseMask(idx)}${aceHorseCard(suit)}</div>`;
     }).join('');
 
     return `
@@ -147,7 +159,6 @@
             <div class="pr-deck-slot" data-deck-slot style="left:${BOARD_POINTS.deckX}%;top:${BOARD_POINTS.deckY}%">${deckLayers}</div>
             <div class="pr-discard-slot ${discardCard ? 'has-card' : ''}" data-discard-slot style="left:${BOARD_POINTS.discardX}%;top:${BOARD_POINTS.discardY}%">${discardCard ? renderFaceUpCard(discardCard, 'pr-discard-face') : ''}</div>
             ${gateHtml}
-            ${startCoverHtml}
             ${horseHtml}
             <div class="pr-animation-layer" data-animation-layer></div>
           </div>
@@ -158,6 +169,6 @@
   window.GEJAST_PAARDENRACE = {
     rpc, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode,
     suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack, renderLiveBoard,
-    gotoLive, liveHref, getDrawRemaining, resolvedGateSet, getBoardPoints: ()=> JSON.parse(JSON.stringify(BOARD_POINTS))
+    gotoLive, liveHref, getDrawRemaining, resolvedGateSet, getBoardPoints: ()=> JSON.parse(JSON.stringify(BOARD_POINTS)), getBoardGeometry: ()=> JSON.parse(JSON.stringify(BOARD_GEOMETRY))
   };
 })();
