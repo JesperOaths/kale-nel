@@ -7,8 +7,8 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Balzaal</title>
-  <script>window.GEJAST_PAGE_VERSION='v481';</script>
-  <script src="./gejast-config.js?v481"></script><script src="./gejast-home-gate.js?v371"></script>
+  <script>window.GEJAST_PAGE_VERSION='v483';</script>
+  <script src="./gejast-config.js?v483"></script><script src="./gejast-home-gate.js?v371"></script>
   <style>
     :root{
       --gold:#b78e43; --gold-deep:#89642a; --wine:#88162a; --wine-deep:#5c0c18; --cream:#f6efe3; --ink:#181310; --muted:#706557;
@@ -16,8 +16,8 @@
     }
     *{box-sizing:border-box}
     body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:
-      radial-gradient(circle at 50% -10%, rgba(255,225,164,.24), transparent 40%),
-      linear-gradient(180deg,#611124 0%,#3a0a14 30%,#231510 100%);min-height:100vh}
+      radial-gradient(circle at 50% -10%, rgba(255,225,164,.20), transparent 40%),
+      linear-gradient(180deg,#46352a 0%,#2e241d 32%,#18120e 100%);min-height:100vh}
     .page{max-width:1220px;margin:0 auto;padding:20px 16px 34px}
     .shell{position:relative;background:linear-gradient(180deg, rgba(255,251,246,.96), rgba(245,236,224,.94));border:1px solid rgba(255,255,255,.55);border-radius:36px;padding:24px;box-shadow:0 28px 60px rgba(0,0,0,.2);overflow:hidden}
     .shell::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% -8%, rgba(255,221,149,.34), transparent 42%);pointer-events:none}
@@ -41,7 +41,7 @@
     .ceiling-glow{position:absolute;left:12%;right:12%;top:36px;height:36px;border-radius:999px;background:linear-gradient(180deg,#d8b061,#8c652a);box-shadow:0 12px 24px rgba(0,0,0,.16), inset 0 2px 0 rgba(255,255,255,.18)}
     .back-wall{position:absolute;left:10%;right:10%;top:86px;bottom:230px;border-radius:34px 34px 0 0;background:
       linear-gradient(90deg, rgba(255,255,255,.06) 0 1px, transparent 1px 18%),
-      linear-gradient(90deg,#6d1326 0%,#7d172d 20%,#611123 50%,#7f172f 80%,#6b1226 100%);
+      linear-gradient(90deg,#6a5242 0%,#8b6f58 20%,#5a4437 50%,#8a6b53 80%,#644d3d 100%);
       box-shadow:inset 0 18px 30px rgba(255,255,255,.06), inset 0 -28px 60px rgba(0,0,0,.2)}
     .wall-panel{position:absolute;top:0;bottom:0;width:25%;background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(0,0,0,.04));border-left:1px solid rgba(255,231,198,.09);border-right:1px solid rgba(0,0,0,.07)}
     .wall-panel.p1{left:8%}.wall-panel.p2{left:37.5%}.wall-panel.p3{right:8%}
@@ -56,17 +56,31 @@
       linear-gradient(180deg,#96b6cb 0%,#cfe1ef 26%,#b7d0cb 26.5%,#6e845d 58%,#32412f 100%);overflow:hidden}
     .window-view::before{content:'';position:absolute;left:-8%;right:-8%;bottom:18%;height:34%;background:linear-gradient(180deg,rgba(58,81,46,.12),rgba(36,50,31,.82));clip-path:polygon(0 100%,8% 40%,16% 54%,24% 30%,32% 60%,40% 38%,48% 56%,56% 28%,64% 52%,72% 34%,80% 56%,88% 40%,100% 100%)}
     .window-view::after{content:'';position:absolute;left:10%;right:10%;bottom:8%;height:18%;background:linear-gradient(180deg,#6f7d55,#405232);border-radius:50% 50% 0 0/90% 90% 0 0;box-shadow:0 -18px 26px rgba(255,255,255,.12) inset}
-    .guard{position:absolute;bottom:140px;width:92px;height:210px;z-index:7;pointer-events:none}
-    .guard.left{left:17%}.guard.right{right:17%;transform:scaleX(-1)}
-    .guard .hat{position:absolute;left:50%;top:0;transform:translateX(-50%);width:54px;height:32px;border-radius:12px 12px 6px 6px;background:linear-gradient(180deg,#181310,#43352a)}
+    .guard{position:absolute;bottom:124px;width:104px;height:232px;z-index:7;pointer-events:none}
+    .guard.left{left:12%}.guard.right{right:12%;transform:scaleX(-1)}
+    .guard .hat{position:absolute;left:50%;top:0;transform:translateX(-50%);width:62px;height:34px;border-radius:18px 18px 8px 8px;background:linear-gradient(180deg,#2e2e35,#101018)}
     .guard .head{position:absolute;left:50%;top:22px;transform:translateX(-50%);width:34px;height:42px;border-radius:18px;background:#efd9bc;border:2px solid rgba(0,0,0,.08)}
-    .guard .body{position:absolute;left:50%;top:58px;transform:translateX(-50%);width:58px;height:88px;border-radius:18px;background:linear-gradient(180deg,#202a33,#111920);border:2px solid rgba(255,255,255,.08)}
-    .guard .body::before{content:'';position:absolute;left:50%;top:0;bottom:0;width:6px;transform:translateX(-50%);background:linear-gradient(180deg,#d9b567,#7f5b20)}
-    .guard .arm{position:absolute;top:74px;width:12px;height:84px;border-radius:999px;background:#1f2730}.guard .arm.left{left:16px;transform:rotate(7deg)}.guard .arm.right{right:16px;transform:rotate(-7deg)}
-    .guard .leg{position:absolute;bottom:0;width:14px;height:78px;border-radius:999px;background:#111920}.guard .leg.left{left:29px}.guard .leg.right{right:29px}
+    .guard .body{position:absolute;left:50%;top:58px;transform:translateX(-50%);width:64px;height:100px;border-radius:18px;background:linear-gradient(180deg,#254c79 0%,#d4b154 32%,#a42134 33%,#a42134 66%,#d4b154 67%,#254c79 100%);border:2px solid rgba(255,255,255,.12)}
+    .guard .body::before{content:'';position:absolute;left:50%;top:0;bottom:0;width:6px;transform:translateX(-50%);background:linear-gradient(180deg,#f2e1a3,#7f5b20)}
+    .guard .arm{position:absolute;top:78px;width:12px;height:88px;border-radius:999px;background:#203040}.guard .arm.left{left:14px;transform:rotate(9deg)}.guard .arm.right{right:14px;transform:rotate(-9deg)}
+    .guard .leg{position:absolute;bottom:0;width:14px;height:82px;border-radius:999px;background:#18222d}.guard .leg.left{left:32px}.guard .leg.right{right:32px}
     .guard .spear{position:absolute;left:50%;top:24px;bottom:-6px;width:5px;transform:translateX(-50%);background:linear-gradient(180deg,#f6dd98,#927036)}
     .guard .spear::before{content:'';position:absolute;left:50%;top:-14px;transform:translateX(-50%);width:16px;height:20px;clip-path:polygon(50% 0,100% 100%,0 100%);background:linear-gradient(180deg,#f7e5b1,#b88833)}
     .seating-row{position:absolute;left:10%;right:10%;bottom:82px;display:flex;justify-content:space-between;gap:18px;z-index:4;pointer-events:none}
+
+    .bear-rug{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);width:min(540px,68%);height:120px;background:radial-gradient(circle at 50% 38%, #8b6a46 0%, #6b4c31 48%, #4d3423 72%, transparent 74%);filter:drop-shadow(0 16px 20px rgba(0,0,0,.25));opacity:.9;z-index:2}
+    .bear-rug::before,.bear-rug::after{content:'';position:absolute;top:42px;width:72px;height:58px;border-radius:50%;background:radial-gradient(circle at 50% 40%, #7d5b3b 0%, #503522 70%, transparent 72%)}
+    .bear-rug::before{left:-20px}.bear-rug::after{right:-20px}
+    .wall-armament{position:absolute;top:180px;width:110px;height:110px;opacity:.78;z-index:3}
+    .wall-armament.left{left:20%}.wall-armament.right{right:20%}
+    .wall-armament::before,.wall-armament::after{content:'';position:absolute;left:50%;top:50%;width:10px;height:100px;border-radius:999px;background:linear-gradient(180deg,#c8ab68,#6a5635);transform-origin:center}
+    .wall-armament::before{transform:translate(-50%,-50%) rotate(35deg)}
+    .wall-armament::after{transform:translate(-50%,-50%) rotate(-35deg)}
+    .wall-armament span{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:26px;height:26px;border-radius:50%;background:linear-gradient(180deg,#f1d991,#9a6c2b);border:2px solid rgba(0,0,0,.15)}
+    .despinoza-crest{position:absolute;top:132px;width:92px;height:92px;border-radius:50%;background:radial-gradient(circle at 40% 36%, #f3dfaa, #aa7c35 62%, #66481f 100%);box-shadow:0 10px 18px rgba(0,0,0,.18);z-index:3}
+    .despinoza-crest.left{left:12%}.despinoza-crest.right{right:12%}
+    .despinoza-crest::after{content:'dE';position:absolute;inset:0;display:grid;place-items:center;color:#4f3415;font:900 30px/1 Georgia,serif;letter-spacing:-.04em}
+
     .chair{width:86px;height:86px;position:relative;opacity:.94}.chair::before{content:'';position:absolute;left:18px;right:18px;top:0;height:34px;border-radius:18px 18px 8px 8px;background:linear-gradient(180deg,#d9c5a6,#a8895e)}.chair::after{content:'';position:absolute;left:12px;right:12px;bottom:0;height:44px;border-radius:12px;background:linear-gradient(180deg,#7c5327,#4e3216)}
     .ballroom-banner{margin:0 0 14px;padding:12px 16px;border-radius:18px;background:linear-gradient(180deg,rgba(183,142,67,.16),rgba(136,22,42,.10));border:1px solid rgba(183,142,67,.22);font-weight:800;color:#533f1b;display:none}
     .ballroom-banner.is-live{display:block}
@@ -146,7 +160,7 @@
     .succession-plain{display:grid;gap:4px;font-size:14px;color:#43372f}
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}
     @media (max-width:980px){.info-grid{grid-template-columns:1fr}.arch-window.left{left:14%}.arch-window.right{right:14%}.column.c2{left:24%}.column.c3{right:24%}}
-    @media (max-width:760px){.shell{padding:18px}.hero h1{font-size:2.2rem}.ballroom-scene{min-height:600px}.arch-window{width:118px;height:206px;top:108px}.column{display:none}.curtain{width:23%}.curtain-tie.left{left:12%}.curtain-tie.right{right:12%}.rope-zone{left:3%;right:3%;bottom:140px}.king-throne{width:84vw;bottom:176px}.member-layer{bottom:158px;height:220px}.queue-row{align-items:flex-start;flex-direction:column}.actions{width:100%}.btn,.small-btn{width:100%}}
+    @media (max-width:760px){.shell{padding:18px}.hero h1{font-size:2.2rem}.ballroom-scene{min-height:600px}.arch-window{width:118px;height:206px;top:108px}.column{display:none}.curtain{width:23%}.curtain-tie.left{left:12%}.curtain-tie.right{right:12%}.rope-zone{left:3%;right:3%;bottom:110px}.king-throne{width:84vw;bottom:176px}.member-layer{bottom:158px;height:220px}.queue-row{align-items:flex-start;flex-direction:column}.actions{width:100%}.btn,.small-btn{width:100%}}
   </style>
 </head>
 <body>
@@ -192,7 +206,7 @@
           <div class="arm a1"></div><div class="arm a2"></div><div class="arm a3"></div><div class="arm a4"></div>
           <span class="gem g1"></span><span class="gem g2"></span><span class="gem g3"></span><span class="gem g4"></span><span class="gem g5"></span>
         </div>
-        <div class="dais"></div>
+        <div class="wall-armament left"><span></span></div><div class="wall-armament right"><span></span></div><div class="despinoza-crest left"></div><div class="despinoza-crest right"></div><div class="dais"></div><div class="bear-rug"></div>
         <div class="guard left"><div class="spear"></div><div class="hat"></div><div class="head"></div><div class="body"></div><div class="arm left"></div><div class="arm right"></div><div class="leg left"></div><div class="leg right"></div></div>
         <div class="guard right"><div class="spear"></div><div class="hat"></div><div class="head"></div><div class="body"></div><div class="arm left"></div><div class="arm right"></div><div class="leg left"></div><div class="leg right"></div></div>
         <div class="seating-row"><span class="chair"></span><span class="chair"></span><span class="chair"></span><span class="chair"></span><span class="chair"></span></div>
@@ -292,7 +306,9 @@
     function renderMembers(state){
       const layer = document.getElementById('memberLayer');
       const list = document.getElementById('memberList');
-      const members = Array.isArray(state?.approved_members) ? state.approved_members : [];
+      const rawMembers = Array.isArray(state?.approved_members) ? state.approved_members : [];
+      const seen = new Set();
+      const members = rawMembers.filter((m)=>{ const key=String(m?.display_name||'').trim().toLowerCase(); if(!key || seen.has(key)) return false; seen.add(key); return true; });
       const slots = [
         {left:22,bottom:54,depth:'back'},{left:34,bottom:68,depth:'back'},{left:46,bottom:76,depth:'mid'},
         {left:58,bottom:76,depth:'mid'},{left:70,bottom:68,depth:'back'},{left:82,bottom:54,depth:'back'},

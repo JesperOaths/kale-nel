@@ -674,7 +674,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v481';</script><script src="./gejast-config.js?v481"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v483';</script><script src="./gejast-config.js?v483"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
   <script src="./gejast-live-summary.js?v389"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
   <script src="./gejast-combined-readers.js?v426"></script>
@@ -709,7 +709,7 @@
 
 
       <section class="ladder-section" style="margin-top:16px" aria-label="Extra ladders">
-        <div class="ladder-head"><div class="small">Nieuwe ladders</div></div>
+        
         <div id="extraLadderGrid" class="ladder-grid">
           <div class="ladder-card"><div class="ladder-title"><strong>Paardenrace</strong><span>Top 5 ELO</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
           <div class="ladder-card"><div class="ladder-title"><strong>Pikken</strong><span>Top 5 ELO</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
@@ -940,14 +940,18 @@ function hydrateHomepagePollSnapshot(){ try{ const raw = localStorage.getItem(HO
 function mergeSnapshotNames(payload, snapshot){
   const next = (payload && typeof payload === 'object') ? { ...payload } : {};
   const saved = (snapshot && typeof snapshot === 'object') ? snapshot : {};
+  const hasExplicitLegends = Object.prototype.hasOwnProperty.call(next, 'legends') || Object.prototype.hasOwnProperty.call(next, 'yes_names');
+  const hasExplicitLosers = Object.prototype.hasOwnProperty.call(next, 'losers') || Object.prototype.hasOwnProperty.call(next, 'no_names');
+  const hasExplicitCounts = Object.prototype.hasOwnProperty.call(next, 'can_count') || Object.prototype.hasOwnProperty.call(next, 'yes_count') || Object.prototype.hasOwnProperty.call(next, 'no_count');
   const legends = Array.isArray(next.legends) ? next.legends : (Array.isArray(next.yes_names) ? next.yes_names : []);
   const losers = Array.isArray(next.losers) ? next.losers : (Array.isArray(next.no_names) ? next.no_names : []);
-  if (!legends.length && Array.isArray(saved.legends) && saved.legends.length) {
+  const shouldHydrateFromSnapshot = !hasExplicitLegends && !hasExplicitLosers && !hasExplicitCounts;
+  if (shouldHydrateFromSnapshot && !legends.length && Array.isArray(saved.legends) && saved.legends.length) {
     next.legends = [...saved.legends];
     next.yes_names = [...saved.legends];
     if (typeof next.can_count === 'undefined' && typeof next.yes_count === 'undefined') next.can_count = saved.legends.length;
   }
-  if (!losers.length && Array.isArray(saved.losers) && saved.losers.length) {
+  if (shouldHydrateFromSnapshot && !losers.length && Array.isArray(saved.losers) && saved.losers.length) {
     next.losers = [...saved.losers];
     next.no_names = [...saved.losers];
   }
@@ -1005,8 +1009,8 @@ function applyAdminViewerRefresh() {
       const root = document.getElementById('extraLadderGrid');
       if (!root) return;
       const groups = [
-        { key:'paardenrace', label:'Paardenrace', rows: bundle?.paardenrace || [], route: homepageLadderRoute('paardenrace'), suffix:'Top 5 ELO' },
-        { key:'pikken', label:'Pikken', rows: bundle?.pikken || [], route: homepageLadderRoute('pikken'), suffix:'Top 5 ELO' },
+        { key:'paardenrace', label:'Paardenrace', rows: bundle?.paardenrace || [], route: homepageLadderRoute('paardenrace'), suffix:'Top 5' },
+        { key:'pikken', label:'Pikken', rows: bundle?.pikken || [], route: homepageLadderRoute('pikken'), suffix:'Top 5' },
         { key:'caute_coins', label:'Caute coins', rows: bundle?.caute_coins || [], route: scopedHref('./profiles.html'), suffix:'Top 5' }
       ];
       root.innerHTML = groups.map((group)=>{
@@ -1785,12 +1789,24 @@ async function castExtraPollVote(desired_status) {
       const cfg = homeEntryDefaults[key];
       if(!cfg) return;
       const entry=document.getElementById(cfg.entryId), label=document.getElementById(cfg.labelId), copy=document.getElementById(cfg.copyId);
-      if(!entry || !label || !copy || !item || !item.href) { setHomeEntryDefault(key); return; }
+      const looksLive = !!(item && (item.is_live || item.live || item.match_ref || item.matchRef || item.client_match_id || item.clientMatchId));
+      if(!entry || !label || !copy || !item || !looksLive) { setHomeEntryDefault(key); return; }
+      const matchRef = item.match_ref || item.matchRef || '';
+      const clientMatchId = item.client_match_id || item.clientMatchId || '';
+      let href = item.href || '';
+      if(!href){
+        const baseMap = { klaverjas:'./klaverjas_live.html', boerenbridge:'./boerenbridge_live.html', paardenrace:'./paardenrace_live.html', pikken:'./pikken_live.html' };
+        const qs = new URLSearchParams();
+        if(clientMatchId || matchRef) qs.set('client_match_id', clientMatchId || matchRef);
+        if(matchRef) qs.set('match_ref', matchRef);
+        if(CURRENT_SCOPE==='family') qs.set('scope','family');
+        href = `${baseMap[key] || cfg.href}${qs.toString() ? `?${qs.toString()}` : ''}`;
+      }
       entry.classList.add('is-live');
-      entry.href = item.href;
+      entry.href = href;
       label.textContent = item.label || cfg.liveLabel || cfg.label;
       copy.className = 'page-link-copy';
-      copy.textContent = item.copy || 'Open live scoreblad van jouw huidige potje.'; if(item.live){ entry.classList.add('is-live'); }
+      copy.textContent = item.copy || 'Open live scoreblad van jouw huidige potje.';
     }
     function applyHomepageLiveEntries(entries){
       Object.keys(homeEntryDefaults).forEach(setHomeEntryDefault);
