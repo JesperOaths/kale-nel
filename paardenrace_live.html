@@ -5,96 +5,381 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace live</title>
-  <script>window.GEJAST_PAGE_VERSION='v459';</script>
-  <script src="./gejast-config.js?v459"></script>
-  <script src="./gejast-paardenrace.js?v459"></script>
+  <script>window.GEJAST_PAGE_VERSION='v477';</script>
+  <script src="./gejast-config.js?v477"></script>
+  <script src="./gejast-paardenrace.js?v477"></script>
   <style>
-    :root{--gold:#9a8241;--paper:#fffaf3;--ink:#17130f;--muted:#6d6256;--line:rgba(0,0,0,.08);--bg:#efe6d7;--soft:#f7f1e7;--red:#8a1022;--red-bg:#fff4f2}
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,system-ui,sans-serif;background:linear-gradient(180deg,#efe4d3 0%,#eadfcf 100%);color:var(--ink)}
-    .page{max-width:1620px;margin:0 auto;padding:16px 14px 44px}
-    .shell{background:rgba(255,255,255,.44);border:1px solid rgba(255,255,255,.6);border-radius:30px;padding:18px;box-shadow:0 18px 40px rgba(0,0,0,.05)}
-    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
-    .top-left{display:grid;gap:4px}.title{font-size:clamp(2rem,4vw,3rem);letter-spacing:-.05em;margin:0}.small{font-size:12px;color:var(--muted)}
-    .btn,a.btn{display:inline-flex;align-items:center;justify-content:center;padding:11px 15px;border-radius:15px;border:1px solid var(--line);background:#17130f;color:#fff;text-decoration:none;font-weight:800;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.06)}
-    .btn.secondary,a.btn.secondary{background:#fff;color:#17130f;border-color:rgba(0,0,0,.16)}
-    .btn.warn{background:var(--red-bg);color:var(--red);border-color:rgba(138,16,34,.18)}
-    .btn.icon{width:46px;min-width:46px;padding:11px 0;font-size:18px;line-height:1}
-    .btn:disabled{opacity:.55;cursor:not-allowed}
-    .toolbar{display:flex;gap:10px;flex-wrap:wrap}
-    .board-panel{background:rgba(255,250,243,.82);border:1px solid rgba(0,0,0,.06);border-radius:28px;padding:14px}
-    .board-shell{display:grid;gap:10px}
-    .pr-live-wrap{display:grid;gap:10px}
-    .pr-live-stage{position:relative;aspect-ratio:1536/1024;border-radius:24px;overflow:hidden;background:#ede2d1;border:1px solid rgba(0,0,0,.06)}
-    .pr-live-arena{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover}
-    .pr-overlay,.pr-animation-layer,.pr-fx-canvas{position:absolute;inset:0}
-    .pr-animation-layer{pointer-events:none;z-index:25}
-    .pr-fx-canvas{pointer-events:none;z-index:18;width:100%;height:100%;}
-    .pr-board-grid{position:absolute;inset:17.9% 4.8% 10.8% 4.4%;display:grid;grid-template-columns:minmax(78px,1.18fr) repeat(10,minmax(0,1fr)) minmax(96px,1.28fr);grid-template-rows:minmax(78px,.82fr) repeat(4,minmax(0,1fr));column-gap:1.05%;row-gap:7.25%;align-items:center;z-index:2}
-    .pr-gate-grid{grid-column:2 / span 10;grid-row:1;display:grid;grid-template-columns:repeat(10,minmax(0,1fr));column-gap:1.05%;align-items:center;justify-items:center}
-    .pr-track-grid{grid-column:1 / span 12;grid-row:2 / span 4;display:grid;grid-template-columns:minmax(78px,1.18fr) repeat(10,minmax(0,1fr)) minmax(96px,1.28fr);grid-template-rows:repeat(4,minmax(0,1fr));column-gap:1.05%;row-gap:7.25%;align-items:center;justify-items:center}
-    .pr-deck-zone{grid-column:1;grid-row:1;display:flex;align-items:center;justify-content:center}
-    .pr-discard-zone{grid-column:12;grid-row:1;display:flex;align-items:center;justify-content:center}
-    .pr-start-column{grid-column:1;grid-row:2 / span 4;align-self:stretch;justify-self:center;width:88%;border-radius:30px;z-index:1;background:
-      linear-gradient(180deg, rgba(246,211,128,.96), rgba(230,188,98,.92)),
-      repeating-linear-gradient(16deg, rgba(129,90,25,.20) 0 2px, transparent 2px 18px),
-      repeating-linear-gradient(98deg, rgba(129,90,25,.14) 0 2px, transparent 2px 22px),
-      radial-gradient(circle at 30% 18%, rgba(255,240,200,.55), transparent 34%),
-      radial-gradient(circle at 74% 78%, rgba(181,122,40,.18), transparent 26%);
-      box-shadow: inset 0 0 0 2px rgba(255,255,255,.48), 0 10px 24px rgba(0,0,0,.07);opacity:.98;}
-    .pr-horse-slot,.pr-gate-slot,.pr-deck-slot,.pr-discard-slot{position:relative;place-self:center;display:flex;align-items:center;justify-content:center}
-    .pr-horse-slot{width:82%;max-width:94px;z-index:8;filter:drop-shadow(0 10px 16px rgba(0,0,0,.18));will-change:transform,filter,opacity}
-    .pr-deck-slot{width:68%;max-width:102px;z-index:4;aspect-ratio:311/410}
-    .pr-discard-slot{width:68%;max-width:102px;min-height:0;z-index:5;aspect-ratio:311/410}
-    .pr-gate-slot{width:74%;max-width:86px;z-index:6;transform-style:preserve-3d;will-change:transform,filter}
-    .pr-gate-slot.is-revealed.pr-just-revealed{animation:gateReveal .72s cubic-bezier(.2,.84,.24,1.05)}
-    .pr-stack-card{position:absolute;inset:0}
-    .pr-card-back,.pr-ace-card{display:block;width:100%;height:auto;min-width:0;background:transparent}
-    .pr-card-back{filter:drop-shadow(0 10px 20px rgba(0,0,0,.18))}
-    .pr-ace-card{filter:drop-shadow(0 10px 18px rgba(0,0,0,.20)); user-select:none; pointer-events:none}
-    .pr-open-card{position:relative;width:100%;aspect-ratio:311/410;border-radius:16px;background:linear-gradient(180deg,#fdf9f0 0%,#f5eedf 100%);border:1px solid rgba(77,57,31,.28);box-shadow:0 10px 22px rgba(0,0,0,.18);overflow:hidden;color:#1f1b1a}
-    .pr-open-card.red{color:#a11f35}
-    .pr-open-card-corner{position:absolute;display:grid;gap:1px;font-weight:900;font-size:clamp(11px,.95vw,16px);line-height:1;text-align:center}
-    .pr-open-card-corner.top{top:8px;left:8px}
-    .pr-open-card-corner.bottom{right:8px;bottom:8px;transform:rotate(180deg)}
-    .pr-open-card-corner span{font-size:1.05em}
-    .pr-open-card-center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:clamp(24px,2.2vw,36px);font-weight:900;opacity:.92}
-    .pr-live-placeholder{padding:28px;border-radius:18px;background:#fff;border:1px dashed var(--line);font-weight:700;color:var(--muted)}
-    .status-row{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding:0 4px}.status{min-height:1.4em;font-weight:700;color:#6d1021}
-    .info-stack{display:grid;gap:12px;margin-top:14px}
-    .panel{background:rgba(255,250,243,.88);border:1px solid var(--line);border-radius:22px;padding:16px}
-    .section-title{margin:0 0 10px;font-size:1.1rem}.action-row{display:flex;gap:10px;flex-wrap:wrap}.log{display:grid;gap:8px}.log-item{padding:10px 12px;border-radius:16px;background:#fff;border:1px solid var(--line)}
-    .player-row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px;border-radius:16px;background:#fff;border:1px solid var(--line)}
-    .chip{display:inline-flex;padding:6px 10px;border-radius:999px;background:rgba(154,130,65,.12);font-size:12px;font-weight:800}
-    .alloc-row{display:grid;grid-template-columns:1fr 110px;gap:10px;align-items:center;padding:8px 0}
-    input{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--line)}
-    dialog{border:none;border-radius:24px;padding:0;max-width:760px;width:min(92vw,760px);background:#fffaf3;box-shadow:0 22px 60px rgba(0,0,0,.25)}
-    dialog::backdrop{background:rgba(0,0,0,.35)}
-    .modal-card{padding:20px 22px}.modal-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
-    .pr-float-card{position:absolute;transform:translate(-50%,-50%);z-index:28;pointer-events:none;will-change:left,top,transform,opacity}
-    .pr-float-card .pr-card-back,.pr-float-card .pr-open-card{width:100%;height:auto}
-    @keyframes gateReveal{0%{transform:translate(-50%,-50%) rotateY(0deg) scale(.92)}45%{transform:translate(-50%,-50%) rotateY(90deg) scale(1.04)}65%{transform:translate(-50%,-50%) rotateY(0deg) scale(1.06)}100%{transform:translate(-50%,-50%) rotateY(0deg) scale(1)}}
-    @keyframes drawPulse{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-50%,-50%) scale(1.03)}}
-    @keyframes horseShake{0%,100%{transform:translate(0,0) scale(1)}20%{transform:translate(-3px,1px) scale(.98)}40%{transform:translate(3px,-1px) scale(1.02)}60%{transform:translate(-2px,1px) scale(.99)}80%{transform:translate(2px,-1px) scale(1.01)}}
-    @keyframes lightningFlash{0%,100%{box-shadow:none}20%{box-shadow:0 0 0 4px rgba(255,255,255,.45),0 0 26px rgba(120,180,255,.75)}40%{box-shadow:0 0 0 8px rgba(255,255,255,.2),0 0 42px rgba(120,180,255,.55)}}
-    @keyframes vortexSpin{0%{transform:rotate(0) scale(1)}50%{transform:rotate(-16deg) scale(.92)}100%{transform:rotate(0) scale(1)}}
-    @keyframes lassoPull{0%{transform:translateX(0)}35%{transform:translateX(8px)}100%{transform:translateX(0)}}
-    @keyframes quakeSlam{0%{transform:translateY(0) scale(1)}35%{transform:translateY(10px) scale(.96)}60%{transform:translateY(-4px) scale(1.03)}100%{transform:translateY(0) scale(1)}}
-    @keyframes hexPulse{0%,100%{filter:drop-shadow(0 10px 16px rgba(0,0,0,.18))}40%{filter:drop-shadow(0 0 20px rgba(153,70,176,.75))}70%{filter:drop-shadow(0 0 12px rgba(153,70,176,.55))}}
-    @keyframes doomSwell{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
-    @keyframes whipSnap{0%{transform:translateX(0)}30%{transform:translateX(-8px) rotate(-6deg)}60%{transform:translateX(6px) rotate(4deg)}100%{transform:translateX(0) rotate(0)}}
-    .pr-horse-slot.effect-lightning{animation:horseShake .58s ease, lightningFlash .62s ease}
-    .pr-horse-slot.effect-vortex{animation:horseShake .56s ease, vortexSpin .62s ease}
-    .pr-horse-slot.effect-lasso{animation:horseShake .52s ease, lassoPull .62s ease}
-    .pr-horse-slot.effect-earthshaker{animation:horseShake .56s ease, quakeSlam .66s ease}
-    .pr-horse-slot.effect-hex{animation:horseShake .56s ease, hexPulse .82s ease}
-    .pr-horse-slot.effect-doom{animation:horseShake .52s ease, doomSwell .64s ease}
-    .pr-horse-slot.effect-whip{animation:horseShake .52s ease, whipSnap .52s ease}
-    @media(max-width:900px){
-      .page{padding:10px 8px 40px}.shell{padding:10px}.board-panel{padding:8px}
-      .pr-board-grid{inset:17.2% 3.6% 10.4% 3.3%;grid-template-columns:minmax(52px,.9fr) repeat(10,minmax(0,1fr)) minmax(62px,1fr);row-gap:6.4%;}
-      .pr-track-grid{grid-template-columns:minmax(52px,.9fr) repeat(10,minmax(0,1fr)) minmax(62px,1fr);row-gap:6.4%;}
-      .pr-horse-slot{width:80%}.pr-gate-slot{width:78%}.pr-deck-slot{width:80%}.pr-discard-slot{width:80%}
+    :root {
+      --gold: #9a8241;
+      --paper: #fffaf3;
+      --ink: #17130f;
+      --muted: #6d6256;
+      --line: rgba(0,0,0,.08);
+      --bg: #efe6d7;
+      --soft: #f7f1e7;
+      --red: #8a1022;
+      --red-bg: #fff4f2;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, sans-serif;
+      background: linear-gradient(180deg, #efe4d3 0%, #eadfcf 100%);
+      color: var(--ink);
+    }
+    .page { max-width: 1620px; margin: 0 auto; padding: 16px 14px 44px; }
+    .shell {
+      background: rgba(255,255,255,.44);
+      border: 1px solid rgba(255,255,255,.6);
+      border-radius: 30px;
+      padding: 18px;
+      box-shadow: 0 18px 40px rgba(0,0,0,.05);
+    }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .top-left { display: grid; gap: 4px; }
+    .title {
+      font-size: clamp(2rem, 4vw, 3rem);
+      letter-spacing: -.05em;
+      margin: 0;
+    }
+    .small { font-size: 12px; color: var(--muted); }
+    .btn, a.btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 11px 15px;
+      border-radius: 15px;
+      border: 1px solid var(--line);
+      background: #17130f;
+      color: #fff;
+      text-decoration: none;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 2px 0 rgba(0,0,0,.06);
+    }
+    .btn.secondary, a.btn.secondary {
+      background: #fff;
+      color: #17130f;
+      border-color: rgba(0,0,0,.16);
+    }
+    .btn.warn {
+      background: var(--red-bg);
+      color: var(--red);
+      border-color: rgba(138,16,34,.18);
+    }
+    .btn.icon { width: 46px; min-width: 46px; padding: 11px 0; font-size: 18px; line-height: 1; }
+    .btn:disabled { opacity: .55; cursor: not-allowed; }
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; }
+    .board-panel {
+      background: rgba(255,250,243,.82);
+      border: 1px solid rgba(0,0,0,.06);
+      border-radius: 28px;
+      padding: 14px;
+    }
+    .board-shell { display: grid; gap: 10px; }
+    
+    /* ============ MAIN GRID SYSTEM ============ */
+    .pr-live-wrap { display: grid; gap: 10px; }
+    .pr-live-stage {
+      position: relative;
+      aspect-ratio: 1536/1024;
+      border-radius: 24px;
+      overflow: hidden;
+      background: #ede2d1;
+      border: 1px solid rgba(0,0,0,.06);
+    }
+    .pr-live-arena {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      z-index: 1;
+    }
+    
+    /* Overlay container */
+    .pr-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* === TOP ROW: Gates (1.4x height of track row) === */
+    .pr-gate-grid {
+      position: relative;
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 2%;
+      padding: 0 8%;
+      height: 18%;
+      margin-top: 6%;
+      z-index: 10;
+    }
+    
+    /* === TRACK GRID: 4 rows x 12 columns (col0=start, col1-10=track, col11=finish) === */
+    .pr-track-grid {
+      position: relative;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1.2fr repeat(10, 1fr) 1.2fr;
+      grid-template-rows: repeat(4, 1fr);
+      height: 45%;
+      margin-top: 2%;
+      padding: 0 6%;
+      z-index: 10;
+    }
+    
+    /* Grid cell styling */
+    .pr-gate-slot {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transform-style: preserve-3d;
+      transition: transform 0.3s ease;
+    }
+    
+    .pr-track-cell {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .pr-horse-slot {
+      width: 85%;
+      max-width: 100px;
+      filter: drop-shadow(0 10px 16px rgba(0,0,0,.18));
+      transition: all 0.4s cubic-bezier(0.2, 0.84, 0.24, 1);
+      z-index: 20;
+    }
+    
+    /* Deck and discard zones */
+    .pr-deck-zone {
+      position: absolute;
+      left: 3%;
+      top: 8%;
+      width: 8%;
+      height: 12%;
+      z-index: 15;
+      cursor: pointer;
+    }
+    .pr-discard-zone {
+      position: absolute;
+      right: 3%;
+      top: 12%;
+      width: 7%;
+      height: 10%;
+      z-index: 15;
+    }
+    .pr-deck-slot, .pr-discard-slot {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    
+    /* Card styles */
+    .pr-card-back, .pr-ace-card {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,.2);
+    }
+    .pr-ace-card { filter: drop-shadow(0 10px 18px rgba(0,0,0,.20)); user-select: none; pointer-events: none; }
+    
+    .pr-open-card {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 311/410;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #fdf9f0 0%, #f5eedf 100%);
+      border: 1px solid rgba(77,57,31,.28);
+      box-shadow: 0 10px 22px rgba(0,0,0,.18);
+      overflow: hidden;
+      color: #1f1b1a;
+    }
+    .pr-open-card.red { color: #a11f35; }
+    .pr-open-card-corner {
+      position: absolute;
+      font-weight: 900;
+      font-size: clamp(11px, .95vw, 16px);
+      line-height: 1;
+    }
+    .pr-open-card-corner.top { top: 8px; left: 8px; }
+    .pr-open-card-corner.bottom { right: 8px; bottom: 8px; transform: rotate(180deg); }
+    .pr-open-card-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(24px, 2.2vw, 36px);
+      font-weight: 900;
+    }
+    
+    .pr-stack-card { position: absolute; inset: 0; }
+    
+    /* Animation effects */
+    @keyframes gateReveal {
+      0% { transform: rotateY(0deg) scale(0.95); opacity: 0.7; }
+      50% { transform: rotateY(180deg) scale(1.08); opacity: 1; }
+      100% { transform: rotateY(0deg) scale(1); opacity: 1; }
+    }
+    @keyframes horseShake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+    @keyframes horsePullBack {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-15px); }
+    }
+    @keyframes cardFlip {
+      0% { transform: rotateY(0); }
+      100% { transform: rotateY(180deg); }
+    }
+    
+    .pr-gate-slot.revealing {
+      animation: gateReveal 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .pr-horse-slot.pulling-back {
+      animation: horsePullBack 0.3s ease-in-out forwards;
+    }
+    .pr-horse-slot.shaking {
+      animation: horseShake 0.3s ease-in-out;
+    }
+    
+    /* Victory canvas */
+    .pr-victory-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 9997;
+      pointer-events: none;
+    }
+    .pr-victory-banner {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      z-index: 9998;
+      transform: translate(-50%, -50%) scale(0.9);
+      padding: 20px 32px;
+      border-radius: 28px;
+      background: rgba(255,250,243,.96);
+      border: 2px solid var(--gold);
+      box-shadow: 0 24px 70px rgba(0,0,0,.3);
+      font: 900 clamp(1.6rem, 5vw, 3.5rem)/1.2 Georgia, serif;
+      color: #2b1b0d;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+      z-index: 9999;
+    }
+    .pr-victory-banner.is-live {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    
+    /* Status and panels */
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      padding: 0 4px;
+      margin-top: 12px;
+    }
+    .status { min-height: 1.4em; font-weight: 700; color: #6d1021; }
+    .info-stack { display: grid; gap: 12px; margin-top: 14px; }
+    .panel {
+      background: rgba(255,250,243,.88);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 16px;
+    }
+    .section-title { margin: 0 0 10px; font-size: 1.1rem; }
+    .action-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .log { display: grid; gap: 8px; }
+    .log-item {
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+    .player-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      border-radius: 16px;
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+    .chip {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(154,130,65,.12);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .alloc-row {
+      display: grid;
+      grid-template-columns: 1fr 110px;
+      gap: 10px;
+      align-items: center;
+      padding: 8px 0;
+    }
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      font-size: 14px;
+    }
+    dialog {
+      border: none;
+      border-radius: 24px;
+      padding: 0;
+      max-width: 760px;
+      width: min(92vw, 760px);
+      background: #fffaf3;
+      box-shadow: 0 22px 60px rgba(0,0,0,.25);
+    }
+    dialog::backdrop { background: rgba(0,0,0,.35); }
+    .modal-card { padding: 20px 22px; }
+    .modal-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    
+    @media (max-width: 900px) {
+      .page { padding: 10px 8px 40px; }
+      .shell { padding: 10px; }
+      .board-panel { padding: 8px; }
+      .pr-horse-slot { width: 80%; }
+      .pr-gate-slot { width: 85%; }
     }
   </style>
 </head>
@@ -117,7 +402,7 @@
   <section class="board-panel">
     <div id="boardBox" class="board-shell"></div>
     <div class="status-row">
-      <div class="small">Top links = trekstapel. Midden boven = 10 gate-kaarten. Rechts bij FINISH zie je de getrokken kaart open terug voor verificatie.</div>
+      <div class="small">Klik op een gate kaart om te openen | Trek kaarten van de stapel</div>
       <div class="status" id="statusBox"></div>
     </div>
   </section>
@@ -125,7 +410,13 @@
   <div class="info-stack">
     <section class="panel">
       <h2 class="section-title">Race bediening</h2>
-      <div class="action-row" style="margin-bottom:12px"><button class="btn" id="drawBtn" type="button">Trek volgende kaart</button><button class="btn secondary icon" id="playBtn" type="button" aria-label="Autoplay starten">▶</button><button class="btn secondary icon" id="pauseBtn" type="button" aria-label="Autoplay pauzeren">⏸</button><button class="btn secondary" id="tickBtn" type="button">Tick countdown</button><button class="btn secondary" id="resetBtn" type="button">Nieuwe ronde resetten</button></div>
+      <div class="action-row" style="margin-bottom:12px">
+        <button class="btn" id="drawBtn" type="button">Trek volgende kaart</button>
+        <button class="btn secondary icon" id="playBtn" type="button" aria-label="Autoplay starten">▶</button>
+        <button class="btn secondary icon" id="pauseBtn" type="button" aria-label="Autoplay pauzeren">⏸</button>
+        <button class="btn secondary" id="tickBtn" type="button">Tick countdown</button>
+        <button class="btn secondary" id="resetBtn" type="button">Nieuwe ronde resetten</button>
+      </div>
       <div id="phaseBox" class="log"></div>
       <div class="small" id="autoStatus" style="margin-top:10px">Autoplay staat uit.</div>
     </section>
@@ -135,100 +426,662 @@
     </section>
   </div>
 </div></div>
-<dialog id="rulesDialog"><div class="modal-card"><div class="modal-top"><h2 style="margin:0">Paardenrace regels</h2><button class="btn secondary" id="closeRulesBtn" type="button">Sluiten</button></div><ol style="display:grid;gap:10px;line-height:1.5"><li>Iedereen kiest één suit/paard en zet één vaste inzet in Bakken.</li><li>De host verifieert die inzet in de lobby; pas dan kan een speler ready drukken.</li><li>Bij start gaat iedereen naar dit room-specifieke live scherm.</li><li>Elke getrokken kaart zet het bijbehorende paard één vak vooruit.</li><li>Als alle vier de paarden een gate hebben gehaald, draait die gate open en duwt één paard terug.</li><li>De eerste crossing telt alleen als minstens één speler op dat paard had ingezet.</li><li>Daarna verdelen winnaars hun nominaties.</li></ol></div></dialog>
-<dialog id="nomDialog"><div class="modal-card"><div class="modal-top"><h2 style="margin:0">Verdeel jouw nominaties</h2><button class="btn secondary" id="closeNomBtn" type="button">Sluiten</button></div><div class="small">Je moet exact je volledige budget verdelen over andere spelers. Niet over jezelf.</div><div id="allocRows" style="margin-top:10px"></div><div class="status" id="nomStatus"></div><button class="btn" id="submitNomBtn" type="button" style="margin-top:10px">Nominaties opslaan</button></div></dialog>
-<div class="site-credit-watermark" data-version-watermark>v459 · Made by Bruis</div>
+
+<dialog id="rulesDialog">
+  <div class="modal-card">
+    <div class="modal-top">
+      <h2 style="margin:0">Paardenrace regels</h2>
+      <button class="btn secondary" id="closeRulesBtn" type="button">Sluiten</button>
+    </div>
+    <ol style="display:grid;gap:10px;line-height:1.5">
+      <li>Iedereen kiest één suit/paard en zet één vaste inzet in Bakken.</li>
+      <li>De host verifieert die inzet in de lobby; pas dan kan een speler ready drukken.</li>
+      <li>Bij start gaat iedereen naar dit room-specifieke live scherm.</li>
+      <li>Elke getrokken kaart zet het bijbehorende paard één vak vooruit.</li>
+      <li>Als alle vier de paarden een gate hebben gehaald, draait die gate open en duwt één paard terug.</li>
+      <li>De eerste crossing telt alleen als minstens één speler op dat paard had ingezet.</li>
+      <li>Daarna verdelen winnaars hun nominaties.</li>
+    </ol>
+  </div>
+</dialog>
+
+<dialog id="nomDialog">
+  <div class="modal-card">
+    <div class="modal-top">
+      <h2 style="margin:0">Verdeel jouw nominaties</h2>
+      <button class="btn secondary" id="closeNomBtn" type="button">Sluiten</button>
+    </div>
+    <div class="small">Je moet exact je volledige budget verdelen over andere spelers. Niet over jezelf.</div>
+    <div id="allocRows" style="margin-top:10px"></div>
+    <div class="status" id="nomStatus"></div>
+    <button class="btn" id="submitNomBtn" type="button" style="margin-top:10px">Nominaties opslaan</button>
+  </div>
+</dialog>
+
 <script>
 (()=>{
-  const api = window.GEJAST_PAARDENRACE; const $=(id)=>document.getElementById(id);
+  const api = window.GEJAST_PAARDENRACE;
+  const $ = (id) => document.getElementById(id);
   let currentState = null;
-  const anim = { dealtMatchRef:null, drawing:false, polling:false, autoplay:false, autoplayTimer:null, nomSnapshot:{} };
-  const gateEffects = ['effect-lightning','effect-vortex','effect-lasso','effect-earthshaker','effect-hex','effect-doom','effect-whip'];
-  const fx = { trails:[], raf:0, victory:[], victoryActive:false };
-  function qRoom(){ const params = new URLSearchParams(location.search); return params.get('room') || params.get('live') || api.getStoredRoomCode() || ''; }
-  function setStatus(msg=''){ $('statusBox').textContent = msg || ''; }
-  function isActiveStage(stage){ return ['countdown','race','nominations','finished'].includes(String(stage||'')); }
-  function renderBettors(players){ return players.map((p)=>`<div class="player-row"><div><strong>${p.player_name}</strong><div class="small">${api.suitLabel(p.selected_suit)} · inzet ${p.wager_bakken||0} Bakken · totaal ${p.total_bakken_owed||0} Bakken</div></div><div>${p.is_host?'<span class="chip">Host</span>':''}${p.is_winner?'<span class="chip">Winner</span>':''}${p.is_ready?'<span class="chip">Ready</span>':'<span class="chip">Niet ready</span>'}</div></div>`).join('') || '<div class="small">Nog geen spelers.</div>'; }
-  function renderPhase(room, match){ const phase=[]; if(match){ phase.push(`<div class="log-item">Laatste trek: <strong>${match.last_draw_card || '—'}</strong></div>`); if(Array.isArray(match.revealed_draw_cards) && match.revealed_draw_cards.length) phase.push(`<div class="log-item">Getrokken kaarten: ${match.revealed_draw_cards.join(', ')}</div>`); if(Array.isArray(match.gate_events) && match.gate_events.length) phase.push(...match.gate_events.map((e)=>`<div class="log-item">Gate ${e.gate_no}: ${api.suitLabel(e.suit)} ging -1</div>`)); if(match.first_finish_suit) phase.push(`<div class="log-item">Eerste crossing ooit: ${api.suitLabel(match.first_finish_suit)}</div>`); if(match.winner_suit) phase.push(`<div class="log-item">Winnaar suit: <strong>${api.suitLabel(match.winner_suit)}</strong></div>`); const remaining = api.getDrawRemaining(match); phase.push(`<div class="log-item">Kaarten over in trekstapel: ${remaining}</div>`); } phase.push(`<div class="log-item">Stage: <strong>${room.stage || 'lobby'}</strong></div>`); return phase.join(''); }
-  function getLayer(){ return document.querySelector('[data-animation-layer]'); }
-  function getStage(){ return document.querySelector('[data-stage-root]'); }
-  function getCanvas(){ return document.querySelector('[data-fx-canvas]'); }
-  function getCenterBox(el){ const stage = getStage(); if(!el || !stage) return null; const sr=stage.getBoundingClientRect(); const r=el.getBoundingClientRect(); return { x:r.left - sr.left + (r.width/2), y:r.top - sr.top + (r.height/2), w:r.width, h:r.height }; }
-  function wait(ms){ return new Promise((resolve)=> setTimeout(resolve, ms)); }
-  function recordHorseBoxes(){ const map={}; document.querySelectorAll('.pr-horse-slot[data-suit]').forEach((el)=>{ const box=getCenterBox(el); if(box) map[el.dataset.suit]=box; }); return map; }
-  function ensureCanvasSize(){ const canvas=getCanvas(); const stage=getStage(); if(!canvas || !stage) return null; const rect=stage.getBoundingClientRect(); const dpr=window.devicePixelRatio||1; canvas.width=Math.round(rect.width*dpr); canvas.height=Math.round(rect.height*dpr); canvas.style.width=`${rect.width}px`; canvas.style.height=`${rect.height}px`; const ctx=canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); return { canvas, ctx, rect }; }
-  function drawSuitChip(ctx, x, y, suit, size, alpha){ ctx.save(); ctx.globalAlpha=alpha; ctx.fillStyle = api.suitColor(suit); ctx.font = `700 ${size}px Georgia, serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(api.suitSymbol(suit), x, y); ctx.restore(); }
-  function addTrail(from, to, suit){ fx.trails.push({ from, to, suit, born: performance.now(), life: 3800 }); if(!fx.raf) fx.raf=requestAnimationFrame(renderFx); }
-  function startVictory(suit){ const stage=getStage(); if(!stage || fx.victoryActive) return; const rect=stage.getBoundingClientRect(); const center={ x: rect.width*0.52, y: rect.height*0.48 }; fx.victoryActive=true; fx.victory=[]; for(let i=0;i<34;i+=1){ const ang=(Math.PI*2*i)/34; const speed=120 + Math.random()*180; fx.victory.push({ suit, x:center.x, y:center.y, vx:Math.cos(ang)*speed, vy:Math.sin(ang)*speed - 90, size:16 + Math.random()*22, born:performance.now(), stamp:false }); } if(!fx.raf) fx.raf=requestAnimationFrame(renderFx); setTimeout(()=>{ fx.victoryActive=false; }, 3600); }
-  function renderFx(){ const sized=ensureCanvasSize(); if(!sized){ fx.raf=0; return; } const { ctx, rect } = sized; ctx.clearRect(0,0,rect.width,rect.height); const now=performance.now(); fx.trails = fx.trails.filter((t)=> now - t.born < t.life); for(const t of fx.trails){ const p=(now - t.born)/t.life; const alpha=(1-p)*0.42; ctx.save(); ctx.globalAlpha=alpha; ctx.strokeStyle='rgba(24,19,25,0.85)'; ctx.lineWidth=12; ctx.lineCap='round'; ctx.filter='blur(8px)'; ctx.beginPath(); ctx.moveTo(t.from.x, t.from.y); const cx=(t.from.x+t.to.x)/2; const cy=Math.min(t.from.y,t.to.y)-18; ctx.quadraticCurveTo(cx, cy, t.to.x, t.to.y); ctx.stroke(); ctx.filter='none'; drawSuitChip(ctx, t.from.x, t.from.y, t.suit, 18, alpha*.8); ctx.restore(); }
-    if(fx.victory.length){ for(const p of fx.victory){ const age=(now-p.born)/1000; p.x += p.vx/60; p.y += p.vy/60; p.vy += 12; if(p.y > rect.height-40){ p.y = rect.height-40; p.vy *= -0.82; } ctx.save(); ctx.globalAlpha = Math.max(0, 1 - age/3.2); drawSuitChip(ctx, p.x, p.y, p.suit, p.size, Math.max(0, 1 - age/3.2)); ctx.restore(); } fx.victory = fx.victory.filter((p)=> now-p.born < 3200); }
-    if(fx.trails.length || fx.victory.length){ fx.raf=requestAnimationFrame(renderFx); } else { fx.raf=0; }
+  let animating = false;
+  let animationQueue = [];
+  let autoplay = false;
+  let autoplayTimer = null;
+  let nominationSnapshot = {};
+  let victoryActive = false;
+  
+  const SUIT_ROW = { spades: 0, hearts: 1, clubs: 2, diamonds: 3 };
+  const SUIT_LIST = ['spades', 'hearts', 'clubs', 'diamonds'];
+  
+  function qRoom() {
+    const params = new URLSearchParams(location.search);
+    return params.get('room') || params.get('live') || api.getStoredRoomCode() || '';
   }
-  async function flyCard(fromEl, toEl, html, opts={}){
-    const stage = getStage(); const layer = getLayer();
-    if(!stage || !layer || !fromEl || !toEl) return;
-    const from = getCenterBox(fromEl); const to = getCenterBox(toEl); if(!from || !to) return;
-    const el = document.createElement('div');
-    el.className = 'pr-float-card';
-    el.style.left = `${from.x}px`; el.style.top = `${from.y}px`; el.style.width = `${opts.width || from.w || 72}px`; el.style.opacity = '1';
-    el.style.transform = 'translate(-50%,-50%) scale(.98)';
-    el.innerHTML = html;
-    layer.appendChild(el);
-    await wait(20);
-    const duration = opts.duration || 680;
-    const cx = opts.curveX ?? ((from.x + to.x)/2);
-    const cy = opts.curveY ?? (Math.min(from.y,to.y) - 42);
-    el.animate([{ left:`${from.x}px`, top:`${from.y}px`, transform:'translate(-50%,-50%) scale(.98) rotate(0deg)' },{ left:`${cx}px`, top:`${cy}px`, transform:`translate(-50%,-50%) scale(${opts.midScale || 1.05}) rotate(${opts.rotate || 0}deg)` },{ left:`${to.x}px`, top:`${to.y}px`, transform:`translate(-50%,-50%) scale(${opts.scaleTo || 1}) rotate(${(opts.rotate || 0)/3}deg)` }], { duration, easing:'cubic-bezier(.2,.84,.24,1)', fill:'forwards' });
-    if (opts.flipAt && opts.faceUpHtml) { setTimeout(()=>{ if(el.isConnected) el.innerHTML = opts.faceUpHtml; }, Math.max(120, Math.round(duration * opts.flipAt))); }
-    await wait(duration + 30);
-    if (opts.fadeOut !== false) { el.style.transition = 'opacity 220ms ease'; el.style.opacity = '0'; await wait(180); }
-    el.remove();
+  
+  function setStatus(msg) { if($('statusBox')) $('statusBox').textContent = msg || ''; }
+  
+  function getGridColumnForProgress(progress) {
+    // progress: 0 = start (col 0), 1-10 = track (col 1-10), 11+ = finish (col 11)
+    if (progress <= 0) return 0;
+    if (progress >= 11) return 11;
+    return progress;
   }
-  async function animateDeal(match){
-    const matchRef = String(match?.match_ref || '');
-    if(!matchRef || anim.dealtMatchRef === matchRef || Number(match?.draw_index || 0) !== 0) return;
-    const deck = document.querySelector('[data-deck-slot]'); if(!deck) return;
-    anim.dealtMatchRef = matchRef;
-    for(let i=1;i<=10;i+=1){ const gate = document.querySelector(`[data-gate-no="${i}"]`); if(!gate) continue; await flyCard(deck, gate, api.renderCardBack('pr-gate-back'), { duration:520, width:gate.getBoundingClientRect().width, scaleTo:1, rotate:(i%2===0?-5:5), curveY:getCenterBox(gate).y-90 }); await wait(55); }
+  
+  function renderBoard(match) {
+    if (!match || !match.horse_positions) {
+      return '<div class="pr-live-placeholder">Wachten op countdown of race-start.</div>';
+    }
+    
+    const positions = match.horse_positions || {};
+    const gates = Array.isArray(match.gate_cards) ? match.gate_cards : [];
+    const resolvedSet = new Set(Array.isArray(match.resolved_gates) ? match.resolved_gates.map(Number) : []);
+    const remaining = Math.max(0, (match.draw_deck?.length || 0) - (match.draw_index || 0));
+    const discardCard = match.last_draw_card || '';
+    
+    // Render gate cards
+    const gateHtml = Array.from({length: 10}, (_, idx) => {
+      const gateNo = idx + 1;
+      const isResolved = resolvedSet.has(gateNo);
+      const inner = isResolved ? api.renderFaceUpCard(gates[idx] || '', 'pr-gate-face') : api.renderCardBack('pr-gate-back');
+      return `<div class="pr-gate-slot" data-gate-no="${gateNo}" data-resolved="${isResolved}">${inner}</div>`;
+    }).join('');
+    
+    // Render horses on track
+    let horseHtml = '';
+    for (const suit of SUIT_LIST) {
+      const progress = Number(positions[suit] || 0);
+      const col = getGridColumnForProgress(progress);
+      const row = SUIT_ROW[suit];
+      horseHtml += `<div class="pr-track-cell" style="grid-column: ${col + 1}; grid-row: ${row + 1};">
+        <div class="pr-horse-slot" data-suit="${suit}" data-progress="${progress}">
+          ${api.horseAsset ? `<img src="${api.horseAsset(suit)}" alt="${suit}" class="pr-ace-card" draggable="false">` : ''}
+        </div>
+      </div>`;
+    }
+    
+    // Deck layers
+    const deckLayers = remaining > 0
+      ? [0,1,2].map(i => `<div class="pr-stack-card" style="transform:translate(${i * -3}px, ${i * 3}px)">${api.renderCardBack('pr-deck-back')}</div>`).join('')
+      : '';
+    
+    return `
+      <div class="pr-live-wrap" data-match-ref="${match.match_ref || ''}">
+        <div class="pr-live-stage">
+          <img src="${api.ASSETS?.arena || './paardenrace-live-board-v447.png'}" alt="Paardenrace bord" class="pr-live-arena">
+          <div class="pr-overlay">
+            <div class="pr-deck-zone" data-deck-zone>
+              <div class="pr-deck-slot" data-deck-slot>${deckLayers}</div>
+            </div>
+            <div class="pr-discard-zone">
+              <div class="pr-discard-slot" data-discard-slot>
+                ${discardCard ? api.renderFaceUpCard(discardCard, 'pr-discard-face') : ''}
+              </div>
+            </div>
+            <div class="pr-gate-grid">
+              ${gateHtml}
+            </div>
+            <div class="pr-track-grid">
+              ${horseHtml}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
   }
-  async function animateDraw(cardCode){
-    const deck = document.querySelector('[data-deck-slot]'); const discard = document.querySelector('[data-discard-slot]');
-    if(!deck || !discard || !cardCode) return; const deckRect = deck.getBoundingClientRect(); const discardRect = discard.getBoundingClientRect(); const stage = document.querySelector('[data-stage-root]'); if(!stage) return;
-    const stageRect = stage.getBoundingClientRect(); const mid = { x: Math.max(stageRect.width * 0.56, (deckRect.left + discardRect.left) / 2 - stageRect.left), y: stageRect.height * 0.16 };
-    await flyCard(deck, { getBoundingClientRect:()=>({ left:stageRect.left + mid.x-10, top:stageRect.top + mid.y-10, width:20, height:20 }) }, api.renderCardBack('pr-deck-back'), { duration:420, width:discardRect.width || 88, rotate:8, fadeOut:false, scaleTo:1.03 });
-    await flyCard({ getBoundingClientRect:()=>({ left:stageRect.left + mid.x-10, top:stageRect.top + mid.y-10, width:20, height:20 }) }, discard, api.renderCardBack('pr-deck-back'), { duration:540, width:discardRect.width || 88, rotate:2, flipAt:0.52, faceUpHtml: api.renderFaceUpCard(cardCode, 'pr-discard-face'), scaleTo:1.02, curveY:stageRect.height*0.14 });
+  
+  async function animateHorseMove(suit, fromProgress, toProgress) {
+    const horseEl = document.querySelector(`.pr-horse-slot[data-suit="${suit}"]`);
+    if (!horseEl) return;
+    
+    const parentCell = horseEl.closest('.pr-track-cell');
+    if (!parentCell) return;
+    
+    const newCol = getGridColumnForProgress(toProgress);
+    const newRow = SUIT_ROW[suit];
+    
+    // Apply shake effect
+    horseEl.classList.add('shaking');
+    setTimeout(() => horseEl.classList.remove('shaking'), 300);
+    
+    // Update grid position
+    parentCell.style.gridColumn = `${newCol + 1}`;
+    parentCell.style.gridRow = `${newRow + 1}`;
+    horseEl.dataset.progress = toProgress;
+    
+    await new Promise(r => setTimeout(r, 350));
   }
-  function pulseHorseEffect(suit, effectClass){ const el=document.querySelector(`.pr-horse-slot[data-suit="${suit}"]`); if(!el) return; el.classList.remove(...gateEffects); void el.offsetWidth; el.classList.add(effectClass); setTimeout(()=> el.classList.remove(effectClass), 900); }
-  async function animateGateReveal(match, gateNos){ const events = Array.isArray(match?.gate_events) ? match.gate_events : [];
-    for(const gateNo of gateNos){ const slot = document.querySelector(`[data-gate-no="${gateNo}"]`); if(!slot) continue; slot.classList.remove('pr-just-revealed'); void slot.offsetWidth; slot.classList.add('pr-just-revealed'); const gateEvent = events.find((e)=> Number(e.gate_no) === Number(gateNo)); const effect = gateEffects[Math.floor(Math.random()*gateEffects.length)]; await wait(160); if(gateEvent?.suit) pulseHorseEffect(gateEvent.suit, effect); await wait(520); } }
-  async function animateReshuffle(){ const deck = document.querySelector('[data-deck-slot]'); const discard = document.querySelector('[data-discard-slot]'); if(!deck || !discard) return; for(let i=0;i<5;i+=1){ flyCard(discard, deck, api.renderCardBack('pr-deck-back'), { duration:420 + i*55, width:deck.getBoundingClientRect().width || 80, rotate:(i%2===0?-10:10), curveY:getCenterBox(deck).y-70 }); await wait(55); } await wait(520); }
-  function restoreNomSnapshot(){ document.querySelectorAll('#allocRows input[data-target]').forEach((node)=>{ const key=node.dataset.target||''; if(Object.prototype.hasOwnProperty.call(anim.nomSnapshot,key)) node.value = anim.nomSnapshot[key]; node.oninput = ()=>{ anim.nomSnapshot[key] = node.value; }; }); }
-  function syncNomDialog(room, players, viewer){ const myBudget = Number(viewer.nomination_budget_bakken || 0); const canNom = room.stage==='nominations' && viewer.can_nominate; const dialog=$('nomDialog'); if(!canNom){ if(dialog.open) dialog.close(); return; } const others = players.filter((p)=>String(p.player_name||'').toLowerCase() !== String(viewer.player_name||'').toLowerCase()); $('allocRows').innerHTML = `<div class="small">Jouw budget: ${myBudget} Bakken</div>` + others.map((p)=>`<div class="alloc-row"><div>${p.player_name}</div><input type="number" min="0" step="1" value="0" data-target="${encodeURIComponent(p.player_name)}"></div>`).join(''); restoreNomSnapshot(); $('nomStatus').textContent=''; if(!dialog.open) dialog.showModal(); }
-  async function animateHorseMoves(prevBoxes, prevMatch, nextMatch){ const prevPos = prevMatch?.horse_positions || {}; const nextPos = nextMatch?.horse_positions || {}; for(const suit of Object.keys(nextPos)){ const oldP = Number(prevPos[suit] ?? 0); const newP = Number(nextPos[suit] ?? 0); if(oldP === newP) continue; const el=document.querySelector(`.pr-horse-slot[data-suit="${suit}"]`); const newBox=getCenterBox(el); const oldBox=prevBoxes[suit]; if(!el || !newBox || !oldBox) continue; addTrail(oldBox, newBox, suit); const dx = oldBox.x - newBox.x; const dy = oldBox.y - newBox.y; el.style.transition='none'; el.style.transform=`translate(${dx}px,${dy}px) scale(1)`; el.style.opacity='0.98'; void el.offsetWidth; el.style.transition='transform 620ms cubic-bezier(.2,.84,.24,1), opacity 220ms ease'; el.style.transform='translate(0,0) scale(1)'; await wait(40); } await wait(640); }
-  async function apply(state, options={}){
-    const prevState = currentState; const prevMatch = prevState?.match || null; const prevRoom = prevState?.room || {}; const prevBoxes = recordHorseBoxes();
-    const room = state?.room || {}; const match = state?.match || {}; const players = state?.players || []; const viewer = state?.viewer || {};
-    $('metaBox').textContent = `${room.room_code || '—'} · stage ${room.stage || 'lobby'}${room.countdown_remaining_seconds?` · Countdown ${room.countdown_remaining_seconds}s`:''}`;
-    $('boardBox').innerHTML = api.renderLiveBoard(match);
-    $('drawBtn').disabled = !(room.can_draw && room.stage==='race') || anim.autoplay; $('tickBtn').disabled = room.stage !== 'countdown'; $('resetBtn').disabled = !(room.stage==='finished' && viewer.is_host); $('closeBtn').style.display = viewer.is_host ? '' : 'none'; $('playBtn').disabled = !(room.can_draw && room.stage==='race') || anim.autoplay; $('pauseBtn').disabled = !anim.autoplay; $('autoStatus').textContent = anim.autoplay ? 'Autoplay loopt langzaam door.' : 'Autoplay staat uit.';
-    $('playersBox').innerHTML = renderBettors(players); $('phaseBox').innerHTML = renderPhase(room, match); syncNomDialog(room, players, viewer);
-    if(!isActiveStage(room.stage) && room.room_code){ window.location.replace(`./paardenrace.html?room=${encodeURIComponent(room.room_code)}`); return; }
-    currentState = state || null;
-    if(options.animated !== false){ const matchRef = String(match?.match_ref || ''); if(matchRef && room.stage === 'race' && String(prevMatch?.match_ref || '') !== matchRef && Number(match?.draw_index || 0) === 0){ await animateDeal(match); } const prevIndex = Number(prevMatch?.draw_index || 0); const nextIndex = Number(match?.draw_index || 0); const before = api.resolvedGateSet(prevMatch || {}); const after = api.resolvedGateSet(match || {}); const newGates = [...after].filter((n)=> !before.has(n)).sort((a,b)=>a-b); if(nextIndex > prevIndex && match?.last_draw_card){ await animateDraw(match.last_draw_card); } if(prevMatch && match && prevIndex !== nextIndex){ await animateHorseMoves(prevBoxes, prevMatch, match); } if(newGates.length) await animateGateReveal(match, newGates); if(match?.winner_suit && match?.winner_suit !== prevMatch?.winner_suit){ startVictory(match.winner_suit); } } }
-  async function load(opts={}){ const code=qRoom(); if(!code || anim.polling) return; anim.polling=true; try{ await apply(await api.rpc('tick_paardenrace_room_safe',{ room_code_input: code }), opts); }catch(err){ setStatus(err.message || 'Kon state niet laden.'); } finally { anim.polling=false; } }
-  async function drawNext(){ if(anim.drawing) return; anim.drawing=true; try{ await apply(await api.rpc('draw_paardenrace_card_safe',{ room_code_input: qRoom() })); setStatus('Kaart getrokken.'); } catch(err){ const msg = err?.message || 'Trekken mislukt.'; if(/trekstapel is leeg/i.test(msg)){ try{ setStatus('Trekstapel leeg — kaarten worden opnieuw geschud...'); await animateReshuffle(); await apply(await api.rpc('reshuffle_paardenrace_draw_pile_safe',{ room_code_input: qRoom() }), { animated:false }); await apply(await api.rpc('draw_paardenrace_card_safe',{ room_code_input: qRoom() })); setStatus('Trekstapel opnieuw geschud en nieuwe kaart getrokken.'); }catch(inner){ setStatus(inner?.message || 'Opnieuw schudden mislukt.'); } } else { setStatus(msg); } } finally { anim.drawing=false; if(anim.autoplay && currentState?.room?.can_draw && currentState?.room?.stage==='race'){ anim.autoplayTimer=setTimeout(drawNext, 1650); } } }
-  function stopAutoplay(){ anim.autoplay=false; if(anim.autoplayTimer) clearTimeout(anim.autoplayTimer); anim.autoplayTimer=null; $('autoStatus').textContent='Autoplay staat uit.'; $('playBtn').disabled = !(currentState?.room?.can_draw && currentState?.room?.stage==='race'); $('pauseBtn').disabled = true; $('drawBtn').disabled = !(currentState?.room?.can_draw && currentState?.room?.stage==='race'); }
-  function startAutoplay(){ if(anim.autoplay || !(currentState?.room?.can_draw && currentState?.room?.stage==='race')) return; anim.autoplay=true; $('autoStatus').textContent='Autoplay loopt langzaam door.'; $('playBtn').disabled = true; $('pauseBtn').disabled = false; $('drawBtn').disabled = true; drawNext(); }
-  $('refreshBtn').addEventListener('click', ()=> load({ animated:false }));
-  $('tickBtn').addEventListener('click', async()=>{ try{ await apply(await api.rpc('tick_paardenrace_room_safe',{ room_code_input: qRoom() })); setStatus('Countdown/state geüpdatet.'); }catch(err){ setStatus(err.message || 'Tick mislukt.'); }});
-  $('drawBtn').addEventListener('click', drawNext); $('playBtn').addEventListener('click', startAutoplay); $('pauseBtn').addEventListener('click', stopAutoplay);
-  $('resetBtn').addEventListener('click', async()=>{ try{ stopAutoplay(); anim.dealtMatchRef = null; await apply(await api.rpc('reset_paardenrace_room_safe',{ room_code_input: qRoom() }), { animated:false }); setStatus('Room is gereset voor een nieuwe ronde.'); }catch(err){ setStatus(err.message || 'Reset mislukt.'); }});
-  $('closeBtn').addEventListener('click', async()=>{ try{ stopAutoplay(); await api.rpc('disband_paardenrace_room_safe',{ room_code_input: qRoom() }); api.clearStoredRoomCode(); window.location.href='./paardenrace.html'; }catch(err){ setStatus(err.message || 'Sluiten mislukt.'); }});
-  $('submitNomBtn').addEventListener('click', async()=>{ try{ const allocations = Array.from(document.querySelectorAll('#allocRows input[data-target]')).map((node)=>({ target_player_name: decodeURIComponent(node.dataset.target||''), bakken: Number(node.value||0) })).filter((row)=>row.bakken>0); await apply(await api.rpc('submit_paardenrace_nominations_safe',{ room_code_input: qRoom(), allocations_input: allocations }), { animated:false }); $('nomStatus').textContent='Nominaties opgeslagen.'; $('nomDialog').close(); }catch(err){ $('nomStatus').textContent = err.message || 'Nomineren mislukt.'; } });
-  $('rulesBtn').addEventListener('click', ()=> $('rulesDialog').showModal()); $('closeRulesBtn').addEventListener('click', ()=> $('rulesDialog').close()); $('rulesDialog').addEventListener('click', (e)=>{ if(e.target === $('rulesDialog')) $('rulesDialog').close(); }); $('closeNomBtn').addEventListener('click', ()=> $('nomDialog').close()); $('nomDialog').addEventListener('click', (e)=>{ if(e.target === $('nomDialog')) $('nomDialog').close(); });
-  window.addEventListener('resize', ()=>{ if(fx.raf) ensureCanvasSize(); });
-  load({ animated:false }); setInterval(()=> load({ animated:false }), 1200);
+  
+  async function animateHorsePullBack(suit) {
+    const horseEl = document.querySelector(`.pr-horse-slot[data-suit="${suit}"]`);
+    if (!horseEl) return;
+    
+    horseEl.classList.add('pulling-back');
+    await new Promise(r => setTimeout(r, 300));
+    horseEl.classList.remove('pulling-back');
+  }
+  
+  async function revealGate(gateNo, suitToPull) {
+    const gateEl = document.querySelector(`.pr-gate-slot[data-gate-no="${gateNo}"]`);
+    if (!gateEl) return;
+    
+    // Flip animation
+    gateEl.classList.add('revealing');
+    await new Promise(r => setTimeout(r, 600));
+    gateEl.classList.remove('revealing');
+    
+    // Pull back the horse
+    if (suitToPull) {
+      await animateHorsePullBack(suitToPull);
+    }
+  }
+  
+  async function animateDrawAndUpdate(prevMatch, nextMatch) {
+    if (!prevMatch || !nextMatch) return;
+    
+    const prevPos = prevMatch.horse_positions || {};
+    const nextPos = nextMatch.horse_positions || {};
+    const drawCard = nextMatch.last_draw_card;
+    const prevResolved = new Set(prevMatch.resolved_gates || []);
+    const nextResolved = new Set(nextMatch.resolved_gates || []);
+    
+    // 1. Animate card draw
+    if (drawCard && drawCard !== prevMatch.last_draw_card) {
+      const deckZone = document.querySelector('[data-deck-zone]');
+      const discardSlot = document.querySelector('[data-discard-slot]');
+      if (deckZone && discardSlot) {
+        // Flash effect on draw
+        const flashEl = document.createElement('div');
+        flashEl.style.cssText = 'position:absolute; inset:0; background:white; opacity:0.6; pointer-events:none; border-radius:12px;';
+        discardSlot.appendChild(flashEl);
+        setTimeout(() => flashEl.remove(), 200);
+      }
+      await new Promise(r => setTimeout(r, 300));
+    }
+    
+    // 2. Apply forward moves first
+    for (const suit of SUIT_LIST) {
+      const oldP = prevPos[suit] || 0;
+      const newP = nextPos[suit] || 0;
+      if (newP > oldP) {
+        await animateHorseMove(suit, oldP, newP);
+      }
+    }
+    
+    // 3. Find newly resolved gates
+    const newResolved = [];
+    for (const gate of nextResolved) {
+      if (!prevResolved.has(gate)) {
+        newResolved.push(gate);
+      }
+    }
+    
+    // 4. Animate gate reveals and pullbacks
+    for (const gateNo of newResolved) {
+      const gateEvent = (nextMatch.gate_events || []).find(e => Number(e.gate_no) === gateNo);
+      await revealGate(gateNo, gateEvent?.suit);
+      
+      // Update horse position after pullback
+      if (gateEvent?.suit) {
+        const pulledPos = nextPos[gateEvent.suit];
+        await animateHorseMove(gateEvent.suit, prevPos[gateEvent.suit] || 0, pulledPos);
+      }
+    }
+    
+    // 5. Final render
+    renderBoardFrame(nextMatch);
+  }
+  
+  function renderBoardFrame(match) {
+    const boardBox = $('boardBox');
+    if (boardBox) {
+      boardBox.innerHTML = renderBoard(match);
+    }
+  }
+  
+  async function startVictoryCelebration(winnerSuit) {
+    if (victoryActive) return;
+    victoryActive = true;
+    
+    const canvas = document.createElement('canvas');
+    canvas.className = 'pr-victory-canvas';
+    const banner = document.createElement('div');
+    banner.className = 'pr-victory-banner';
+    banner.innerHTML = `${api.suitSymbol(winnerSuit)} ${api.suitLabel(winnerSuit)} WINDT! 🏆`;
+    document.body.appendChild(canvas);
+    document.body.appendChild(banner);
+    
+    requestAnimationFrame(() => banner.classList.add('is-live'));
+    
+    const ctx = canvas.getContext('2d');
+    const horseImg = await loadImage(api.horseAsset?.(winnerSuit) || '');
+    const suitSymbol = api.suitSymbol(winnerSuit);
+    const suitColor = api.suitColor(winnerSuit);
+    
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    
+    // Particle explosion
+    const particles = [];
+    const center = { x: window.innerWidth / 2, y: window.innerHeight / 2.5 };
+    
+    for (let i = 0; i < 120; i++) {
+      const angle = (Math.PI * 2 * i) / 120;
+      const speed = 6 + Math.random() * 18;
+      particles.push({
+        type: Math.random() < 0.33 ? 'horse' : (Math.random() < 0.5 ? 'card' : 'suit'),
+        x: center.x,
+        y: center.y,
+        vx: Math.cos(angle) * speed * (0.5 + Math.random()),
+        vy: Math.sin(angle) * speed * (0.5 + Math.random()) - 6,
+        size: 20 + Math.random() * 40,
+        rotation: Math.random() * Math.PI * 2,
+        spin: (Math.random() - 0.5) * 0.3,
+        suit: winnerSuit
+      });
+    }
+    
+    const stamps = [];
+    let frame = 0;
+    
+    function drawSuit(ctx, x, y, size, alpha) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = suitColor;
+      ctx.font = `900 ${size}px Georgia, serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(suitSymbol, x, y);
+      ctx.restore();
+    }
+    
+    function drawCard(ctx, x, y, w, h, rot, alpha) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rot);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#fffaf3';
+      ctx.strokeStyle = 'rgba(64,42,22,.35)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(-w/2, -h/2, w, h, Math.min(8, w*0.12));
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = suitColor;
+      ctx.font = `900 ${Math.max(12, w*0.28)}px Georgia, serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(suitSymbol, 0, 0);
+      ctx.restore();
+    }
+    
+    function drawHorse(ctx, img, x, y, w, rot, alpha) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rot);
+      ctx.globalAlpha = alpha;
+      if (img) {
+        ctx.drawImage(img, -w/2, -w*0.7/2, w, w*0.7);
+      } else {
+        drawSuit(ctx, 0, 0, w*0.6, alpha);
+      }
+      ctx.restore();
+    }
+    
+    // Helper for rounded rect
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+      CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+        if (w < 2 * r) r = w / 2;
+        if (h < 2 * r) r = h / 2;
+        this.moveTo(x+r, y);
+        this.lineTo(x+w-r, y);
+        this.quadraticCurveTo(x+w, y, x+w, y+r);
+        this.lineTo(x+w, y+h-r);
+        this.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+        this.lineTo(x+r, y+h);
+        this.quadraticCurveTo(x, y+h, x, y+h-r);
+        this.lineTo(x, y+r);
+        this.quadraticCurveTo(x, y, x+r, y);
+        return this;
+      };
+    }
+    
+    function animateVictory() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Update and draw particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.4;
+        p.rotation += p.spin;
+        
+        const alpha = Math.max(0, 1 - frame / 180);
+        
+        if (p.type === 'horse') {
+          drawHorse(ctx, horseImg, p.x, p.y, p.size, p.rotation, alpha);
+        } else if (p.type === 'card') {
+          drawCard(ctx, p.x, p.y, p.size * 0.7, p.size * 0.95, p.rotation, alpha);
+        } else {
+          drawSuit(ctx, p.x, p.y, p.size * 0.8, alpha);
+        }
+        
+        // Create trail stamps
+        if (frame > 30 && Math.random() < 0.08) {
+          stamps.push({
+            ...p,
+            x: p.x,
+            y: p.y,
+            life: 120
+          });
+        }
+      }
+      
+      // Draw stamps (trails)
+      for (let i = stamps.length - 1; i >= 0; i--) {
+        const s = stamps[i];
+        s.life--;
+        const alpha = Math.min(0.7, s.life / 80);
+        
+        if (s.type === 'horse') {
+          drawHorse(ctx, horseImg, s.x, s.y, s.size * 0.8, s.rotation, alpha * 0.5);
+        } else if (s.type === 'card') {
+          drawCard(ctx, s.x, s.y, s.size * 0.6, s.size * 0.85, s.rotation, alpha * 0.5);
+        } else {
+          drawSuit(ctx, s.x, s.y, s.size * 0.7, alpha * 0.5);
+        }
+        
+        if (s.life <= 0) stamps.splice(i, 1);
+      }
+      
+      frame++;
+      
+      // Calculate coverage (approx 70% screen filled)
+      const coverage = Math.min(1, stamps.length / 300);
+      
+      if (frame < 300 && coverage < 0.7) {
+        requestAnimationFrame(animateVictory);
+      } else {
+        // Victory complete, show nomination dialog
+        cleanup();
+        showNominationDialog();
+      }
+    }
+    
+    function cleanup() {
+      window.removeEventListener('resize', resizeCanvas);
+      banner.classList.remove('is-live');
+      canvas.style.transition = 'opacity 0.5s ease';
+      canvas.style.opacity = '0';
+      setTimeout(() => {
+        canvas.remove();
+        banner.remove();
+        victoryActive = false;
+      }, 500);
+    }
+    
+    function showNominationDialog() {
+      // Trigger nomination UI refresh
+      if (currentState) {
+        syncNomDialog(currentState.room, currentState.players, currentState.viewer);
+      }
+    }
+    
+    requestAnimationFrame(animateVictory);
+  }
+  
+  function loadImage(src) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+  }
+  
+  function renderChrome(room, match, players, viewer) {
+    if($('metaBox')) $('metaBox').textContent = `${room.room_code || '—'} · stage ${room.stage || 'lobby'}${room.countdown_remaining_seconds ? ` · Countdown ${room.countdown_remaining_seconds}s` : ''}`;
+    if($('drawBtn')) $('drawBtn').disabled = !(room.can_draw && room.stage === 'race') || autoplay;
+    if($('tickBtn')) $('tickBtn').disabled = room.stage !== 'countdown';
+    if($('resetBtn')) $('resetBtn').disabled = !(room.stage === 'finished' && viewer?.is_host);
+    if($('closeBtn')) $('closeBtn').style.display = viewer?.is_host ? '' : 'none';
+    if($('playBtn')) $('playBtn').disabled = !(room.can_draw && room.stage === 'race') || autoplay;
+    if($('pauseBtn')) $('pauseBtn').disabled = !autoplay;
+    if($('autoStatus')) $('autoStatus').textContent = autoplay ? 'Autoplay loopt langzaam door.' : 'Autoplay staat uit.';
+    
+    if($('playersBox')) {
+      $('playersBox').innerHTML = players.map(p => `
+        <div class="player-row">
+          <div><strong>${p.player_name}</strong><div class="small">${api.suitLabel(p.selected_suit)} · inzet ${p.wager_bakken || 0} Bakken · totaal ${p.total_bakken_owed || 0} Bakken</div></div>
+          <div>${p.is_host ? '<span class="chip">Host</span>' : ''}${p.is_winner ? '<span class="chip">Winner</span>' : ''}${p.is_ready ? '<span class="chip">Ready</span>' : '<span class="chip">Niet ready</span>'}</div>
+        </div>
+      `).join('') || '<div class="small">Nog geen spelers.</div>';
+    }
+    
+    if($('phaseBox')) {
+      const phase = [];
+      if(match) {
+        phase.push(`<div class="log-item">Laatste trek: <strong>${match.last_draw_card || '—'}</strong></div>`);
+        if(match.winner_suit) phase.push(`<div class="log-item">Winnaar: <strong>${api.suitLabel(match.winner_suit)}</strong></div>`);
+        const remaining = Math.max(0, (match.draw_deck?.length || 0) - (match.draw_index || 0));
+        phase.push(`<div class="log-item">Kaarten over: ${remaining}</div>`);
+      }
+      phase.push(`<div class="log-item">Stage: <strong>${room.stage || 'lobby'}</strong></div>`);
+      $('phaseBox').innerHTML = phase.join('');
+    }
+  }
+  
+  function syncNomDialog(room, players, viewer) {
+    if (!room || room.stage !== 'nominations' || !viewer?.can_nominate) {
+      const dialog = $('nomDialog');
+      if (dialog && dialog.open) dialog.close();
+      return;
+    }
+    
+    const myBudget = Number(viewer.nomination_budget_bakken || 0);
+    const others = players.filter(p => String(p.player_name).toLowerCase() !== String(viewer.player_name).toLowerCase());
+    
+    const allocRows = $('allocRows');
+    if (allocRows) {
+      allocRows.innerHTML = `<div class="small">Jouw budget: ${myBudget} Bakken</div>` +
+        others.map(p => `<div class="alloc-row">
+          <div>${p.player_name}</div>
+          <input type="number" min="0" step="1" value="${nominationSnapshot[p.player_name] || 0}" data-target="${encodeURIComponent(p.player_name)}">
+        </div>`).join('');
+      
+      // Restore values
+      allocRows.querySelectorAll('input[data-target]').forEach(input => {
+        const name = decodeURIComponent(input.dataset.target);
+        input.oninput = () => { nominationSnapshot[name] = input.value; };
+      });
+    }
+    
+    const dialog = $('nomDialog');
+    if (dialog && !dialog.open) dialog.showModal();
+  }
+  
+  async function applyState(state, options = {}) {
+    const prevState = currentState;
+    const prevMatch = prevState?.match;
+    const room = state?.room || {};
+    const match = state?.match || {};
+    const players = state?.players || [];
+    const viewer = state?.viewer || {};
+    
+    renderChrome(room, match, players, viewer);
+    
+    const drawAdvanced = prevMatch && match && String(prevMatch.match_ref) === String(match.match_ref) && 
+                         (match.draw_index || 0) > (prevMatch.draw_index || 0);
+    
+    if (drawAdvanced && !options.noAnimation) {
+      await animateDrawAndUpdate(prevMatch, match);
+    } else {
+      renderBoardFrame(match);
+    }
+    
+    currentState = state;
+    
+    // Check for winner
+    if (match?.winner_suit && match.winner_suit !== prevMatch?.winner_suit && !victoryActive) {
+      await startVictoryCelebration(match.winner_suit);
+    }
+    
+    syncNomDialog(room, players, viewer);
+  }
+  
+  async function loadState(opts = {}) {
+    const code = qRoom();
+    if (!code) return;
+    try {
+      const state = await api.rpc('tick_paardenrace_room_safe', { room_code_input: code });
+      await applyState(state, opts);
+    } catch (err) {
+      setStatus(err.message || 'Kon state niet laden.');
+    }
+  }
+  
+  async function drawNext() {
+    if (animating) return;
+    animating = true;
+    try {
+      await applyState(await api.rpc('draw_paardenrace_card_safe', { room_code_input: qRoom() }));
+      setStatus('Kaart getrokken.');
+    } catch (err) {
+      const msg = err?.message || 'Trekken mislukt.';
+      if (/trekstapel is leeg/i.test(msg)) {
+        try {
+          setStatus('Trekstapel leeg — kaarten worden opnieuw geschud...');
+          await applyState(await api.rpc('reshuffle_paardenrace_draw_pile_safe', { room_code_input: qRoom() }), { noAnimation: true });
+          await applyState(await api.rpc('draw_paardenrace_card_safe', { room_code_input: qRoom() }));
+          setStatus('Nieuwe kaart getrokken.');
+        } catch (inner) {
+          setStatus(inner?.message || 'Opnieuw schudden mislukt.');
+        }
+      } else {
+        setStatus(msg);
+      }
+    } finally {
+      animating = false;
+      if (autoplay && currentState?.room?.can_draw && currentState?.room?.stage === 'race') {
+        autoplayTimer = setTimeout(drawNext, 1800);
+      }
+    }
+  }
+  
+  function startAutoplay() {
+    if (autoplay || !(currentState?.room?.can_draw && currentState?.room?.stage === 'race')) return;
+    autoplay = true;
+    if($('autoStatus')) $('autoStatus').textContent = 'Autoplay loopt langzaam door.';
+    if($('playBtn')) $('playBtn').disabled = true;
+    if($('pauseBtn')) $('pauseBtn').disabled = false;
+    if($('drawBtn')) $('drawBtn').disabled = true;
+    drawNext();
+  }
+  
+  function stopAutoplay() {
+    autoplay = false;
+    if (autoplayTimer) clearTimeout(autoplayTimer);
+    autoplayTimer = null;
+    if($('autoStatus')) $('autoStatus').textContent = 'Autoplay staat uit.';
+    if($('playBtn')) $('playBtn').disabled = !(currentState?.room?.can_draw && currentState?.room?.stage === 'race');
+    if($('pauseBtn')) $('pauseBtn').disabled = true;
+    if($('drawBtn')) $('drawBtn').disabled = !(currentState?.room?.can_draw && currentState?.room?.stage === 'race');
+  }
+  
+  // Event listeners
+  if($('refreshBtn')) $('refreshBtn').addEventListener('click', () => loadState({ noAnimation: true }));
+  if($('tickBtn')) $('tickBtn').addEventListener('click', async () => { try { await loadState(); setStatus('State geüpdatet.'); } catch(e) { setStatus(e.message); } });
+  if($('drawBtn')) $('drawBtn').addEventListener('click', drawNext);
+  if($('playBtn')) $('playBtn').addEventListener('click', startAutoplay);
+  if($('pauseBtn')) $('pauseBtn').addEventListener('click', stopAutoplay);
+  if($('resetBtn')) $('resetBtn').addEventListener('click', async () => {
+    try {
+      stopAutoplay();
+      await applyState(await api.rpc('reset_paardenrace_room_safe', { room_code_input: qRoom() }), { noAnimation: true });
+      setStatus('Room is gereset voor een nieuwe ronde.');
+    } catch(e) { setStatus(e.message || 'Reset mislukt.'); }
+  });
+  if($('closeBtn')) $('closeBtn').addEventListener('click', async () => {
+    try {
+      stopAutoplay();
+      await api.rpc('disband_paardenrace_room_safe', { room_code_input: qRoom() });
+      api.clearStoredRoomCode();
+      window.location.href = './paardenrace.html';
+    } catch(e) { setStatus(e.message || 'Sluiten mislukt.'); }
+  });
+  if($('submitNomBtn')) $('submitNomBtn').addEventListener('click', async () => {
+    try {
+      const allocations = Array.from(document.querySelectorAll('#allocRows input[data-target]')).map(input => ({
+        target_player_name: decodeURIComponent(input.dataset.target),
+        bakken: Number(input.value || 0)
+      })).filter(a => a.bakken > 0);
+      await applyState(await api.rpc('submit_paardenrace_nominations_safe', {
+        room_code_input: qRoom(),
+        allocations_input: allocations
+      }), { noAnimation: true });
+      if($('nomStatus')) $('nomStatus').textContent = 'Nominaties opgeslagen.';
+      setTimeout(() => { if($('nomDialog')) $('nomDialog').close(); }, 1000);
+    } catch(e) {
+      if($('nomStatus')) $('nomStatus').textContent = e.message || 'Nomineren mislukt.';
+    }
+  });
+  if($('rulesBtn')) $('rulesBtn').addEventListener('click', () => { if($('rulesDialog')) $('rulesDialog').showModal(); });
+  if($('closeRulesBtn')) $('closeRulesBtn').addEventListener('click', () => { if($('rulesDialog')) $('rulesDialog').close(); });
+  if($('closeNomBtn')) $('closeNomBtn').addEventListener('click', () => { if($('nomDialog')) $('nomDialog').close(); });
+  
+  // Gate click handler
+  document.addEventListener('click', async (e) => {
+    const gateSlot = e.target.closest('.pr-gate-slot');
+    if (gateSlot && gateSlot.dataset.resolved === 'false') {
+      const gateNo = gateSlot.dataset.gateNo;
+      if (gateNo && currentState?.room?.stage === 'race') {
+        try {
+          await applyState(await api.rpc('reveal_paardenrace_gate_safe', {
+            room_code_input: qRoom(),
+            gate_no_input: parseInt(gateNo)
+          }));
+          setStatus(`Gate ${gateNo} geopend!`);
+        } catch(err) {
+          setStatus(err.message || 'Gate openen mislukt.');
+        }
+      }
+    }
+  });
+  
+  // Initial load and polling (1.2s, but skip during victory/nomination)
+  loadState({ noAnimation: true });
+  setInterval(() => {
+    if (!victoryActive && currentState?.room?.stage !== 'nominations') {
+      loadState({ noAnimation: true });
+    }
+  }, 1200);
 })();
-</script></script>
+</script>
 </body>
 </html>
