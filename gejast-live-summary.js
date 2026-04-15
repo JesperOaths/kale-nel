@@ -38,15 +38,22 @@
   async function loadPublicSummary(gameType, opts={}){
     const c=cfg();
     const scope = opts.siteScope || currentScope();
-    const clientMatchId = opts.clientMatchId || '';
-    const matchRef = opts.matchRef || '';
+    const clientMatchId = String(opts.clientMatchId || '').trim();
+    const matchRef = String(opts.matchRef || '').trim();
     try {
       const raw = await fetch(`${c.SUPABASE_URL}/rest/v1/rpc/get_live_match_summary_public_scoped`, { method:'POST', headers:headers(), body: JSON.stringify({ game_type_input: gameType, match_ref_input: matchRef || null, client_match_id_input: clientMatchId || null, site_scope_input: scope }) }).then(parse);
       return itemFromPayload(raw);
     } catch(err) {
       const legacyRef = matchRef || clientMatchId;
-      const raw = await fetch(`${c.SUPABASE_URL}/rest/v1/rpc/get_live_match_summary_public`, { method:'POST', headers:headers(), body: JSON.stringify({ game_type_input: gameType, match_ref_input: legacyRef }) }).then(parse);
-      return itemFromPayload(raw);
+      try {
+        const raw = await fetch(`${c.SUPABASE_URL}/rest/v1/rpc/get_live_match_summary_public`, { method:'POST', headers:headers(), body: JSON.stringify({ game_type_input: gameType, match_ref_input: legacyRef || null, client_match_id_input: clientMatchId || null }) }).then(parse);
+        return itemFromPayload(raw);
+      } catch(inner) {
+        if(/live_match_summaries/i.test(String(inner?.message || inner || ''))){
+          throw new Error('Live samenvatting is nog niet beschikbaar op deze database. Draai eerst de v488 compat SQL.');
+        }
+        throw inner;
+      }
     }
   }
   async function loadHomepageState(sessionToken='', scope){

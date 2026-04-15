@@ -7,8 +7,8 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Balzaal</title>
-  <script>window.GEJAST_PAGE_VERSION='v487';</script>
-  <script src="./gejast-config.js?v487"></script><script src="./gejast-home-gate.js?v487"></script>
+  <script>window.GEJAST_PAGE_VERSION='v488';</script>
+  <script src="./gejast-config.js?v488"></script><script src="./gejast-home-gate.js?v487"></script>
   <style>
     :root{
       --gold:#c7a85a; --gold-deep:#8c6d31; --royal:#23476a; --royal-deep:#17324e; --cream:#f6efe3; --ink:#181310; --muted:#706557;
@@ -100,14 +100,18 @@
     .wall-shield{position:absolute;top:152px;width:94px;height:94px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f5dfaa,#b98835 70%,#7f5b20 100%);box-shadow:0 12px 24px rgba(0,0,0,.18), inset 0 2px 0 rgba(255,255,255,.35);z-index:3}
     .wall-shield::after{content:"";position:absolute;inset:14px;background:url(./assets/ballroom/despinoza-shield-black-circle.png) center/contain no-repeat;border-radius:50%;}
     .wall-shield.left{left:31%}.wall-shield.right{right:31%}
-    .guard{position:absolute;bottom:104px;width:88px;height:220px;z-index:8;filter:drop-shadow(0 16px 24px rgba(0,0,0,.22));}
+    .wall-banner{position:absolute;top:164px;width:148px;height:112px;background:url(./despinoza-wall-blueyellow.png) center/contain no-repeat;filter:drop-shadow(0 14px 22px rgba(0,0,0,.2));opacity:.96;z-index:3;}
+    .wall-banner.left{left:12%;transform:perspective(600px) rotateY(24deg) rotateZ(-2deg);transform-origin:left center;}
+    .wall-banner.right{right:12%;transform:perspective(600px) rotateY(-24deg) rotateZ(2deg);transform-origin:right center;}
+    .guard{position:absolute;bottom:176px;width:88px;height:220px;z-index:8;filter:drop-shadow(0 16px 24px rgba(0,0,0,.22));}
     .guard.left{left:16%}.guard.right{right:16%;transform:scaleX(-1)}
     .guard .halberd{position:absolute;left:8px;top:-18px;width:10px;height:228px;background:linear-gradient(180deg,#5e4524,#2f2212 55%,#7f6540);border-radius:999px;}
     .guard .halberd::before{content:"";position:absolute;left:50%;top:-18px;transform:translateX(-50%);width:28px;height:42px;background:linear-gradient(180deg,#f2f4f8,#a9b3c1);clip-path:polygon(50% 0,100% 40%,66% 100%,50% 78%,34% 100%,0 40%);}
     .guard .body{position:absolute;left:24px;bottom:44px;width:46px;height:80px;border-radius:18px 18px 12px 12px;background:linear-gradient(180deg,#d7dde8,#96a5b7);border:2px solid rgba(255,255,255,.45);}
     .guard .body::before{content:"";position:absolute;inset:8px;border-radius:12px;background:repeating-linear-gradient(90deg,#214d76 0 10px,#e9c96a 10px 20px,#2d5a86 20px 30px,#d19c4f 30px 40px);opacity:.9;}
-    .guard .head{position:absolute;left:34px;bottom:120px;width:28px;height:30px;border-radius:50% 50% 46% 46%;background:#f0d8b6;border:2px solid rgba(0,0,0,.08);}
-    .guard .hat{position:absolute;left:28px;bottom:140px;width:40px;height:18px;border-radius:12px 12px 2px 2px;background:linear-gradient(180deg,#6c7b8d,#364556);}
+    .guard .head{position:absolute;left:32px;bottom:126px;width:30px;height:32px;border-radius:50% 50% 46% 46%;background:#f0d8b6;border:2px solid rgba(0,0,0,.08);}
+    .guard .hat{position:absolute;left:24px;bottom:144px;width:46px;height:24px;border-radius:18px 18px 6px 6px;background:linear-gradient(180deg,#6c7b8d,#364556);box-shadow:inset 0 2px 0 rgba(255,255,255,.18);}
+    .guard .hat::after{content:'';position:absolute;left:50%;top:-10px;transform:translateX(-50%);width:24px;height:18px;border-radius:10px 10px 4px 4px;background:linear-gradient(180deg,#7c8da1,#465669);}
     .guard .arm{position:absolute;bottom:96px;width:14px;height:54px;border-radius:999px;background:linear-gradient(180deg,#d7dde8,#96a5b7);}
     .guard .arm.left-arm{left:22px;transform:rotate(16deg)} .guard .arm.right-arm{left:58px;transform:rotate(-16deg)}
     .guard .leg{position:absolute;bottom:0;width:14px;height:72px;border-radius:999px;background:linear-gradient(180deg,#f0f3f7,#a6b0bc);}
@@ -135,6 +139,19 @@
     .member-dot[data-depth="back"]{opacity:.84;transform:translateX(-50%) scale(.84)}
     .member-dot[data-depth="mid"]{opacity:.92;transform:translateX(-50%) scale(.94)}
     .member-dot[data-depth="front"]{transform:translateX(-50%) scale(1.02)}
+    .lackey{position:absolute;bottom:186px;width:116px;height:210px;z-index:7;pointer-events:none;filter:drop-shadow(0 16px 24px rgba(0,0,0,.2));}
+    .lackey.left{left:28%}.lackey.right{right:28%;transform:scaleX(-1)}
+    .lackey .wig{position:absolute;left:18px;top:22px;width:82px;height:74px;border-radius:48px 48px 34px 34px;background:radial-gradient(circle at 50% 34%,#f9f6f0,#d8d0c1 72%,#b8ab99 100%);box-shadow:0 10px 20px rgba(0,0,0,.14);}
+    .lackey .wig::before,.lackey .wig::after{content:'';position:absolute;top:18px;width:18px;height:52px;border-radius:999px;background:linear-gradient(180deg,#f6f2ea,#cfc4b2);}
+    .lackey .wig::before{left:-8px}.lackey .wig::after{right:-8px}
+    .lackey .face-slot{position:absolute;left:28px;top:42px;width:60px;height:60px;border-radius:50%;border:3px dashed rgba(105,82,43,.45);background:radial-gradient(circle at 50% 34%,rgba(255,255,255,.85),rgba(232,220,200,.92));display:grid;place-items:center;color:#7c694f;font-weight:900;font-size:11px;text-transform:uppercase;letter-spacing:.08em;}
+    .lackey .face-slot::before{content:'profiel';}
+    .lackey .body{position:absolute;left:26px;bottom:30px;width:62px;height:102px;border-radius:24px 24px 14px 14px;background:linear-gradient(180deg,#294d74,#1d3550);border:2px solid rgba(255,255,255,.18);}
+    .lackey .body::before{content:'';position:absolute;left:50%;top:0;bottom:0;transform:translateX(-50%);width:14px;background:linear-gradient(180deg,#f3d58b,#b88b3c);}
+    .lackey .arm{position:absolute;bottom:92px;width:14px;height:60px;border-radius:999px;background:linear-gradient(180deg,#264666,#19314a);}
+    .lackey .arm.left-arm{left:16px;transform:rotate(18deg)} .lackey .arm.right-arm{right:16px;transform:rotate(-18deg)}
+    .lackey .leg{position:absolute;bottom:0;width:16px;height:62px;border-radius:999px;background:linear-gradient(180deg,#f8f5ef,#d7d0c7);}
+    .lackey .leg.left-leg{left:38px}.lackey .leg.right-leg{left:60px}
 
     .info-grid{display:grid;grid-template-columns:1.06fr .94fr;gap:16px;margin-top:18px}
     .panel{background:rgba(255,251,246,.95);border:1px solid var(--line);border-radius:24px;padding:18px;box-shadow:0 12px 24px rgba(0,0,0,.05)}
@@ -212,6 +229,8 @@
           <span class="gem g1"></span><span class="gem g2"></span><span class="gem g3"></span><span class="gem g4"></span><span class="gem g5"></span>
         </div>
         <div class="dais"></div>
+        <div class="lackey left"><span class="wig"></span><span class="face-slot"></span><span class="body"></span><span class="arm left-arm"></span><span class="arm right-arm"></span><span class="leg left-leg"></span><span class="leg right-leg"></span></div>
+        <div class="lackey right"><span class="wig"></span><span class="face-slot"></span><span class="body"></span><span class="arm left-arm"></span><span class="arm right-arm"></span><span class="leg left-leg"></span><span class="leg right-leg"></span></div>
         <div class="member-layer" id="memberLayer"></div>
         <div class="king-throne" id="kingThrone"></div>
         <div class="rope-zone">

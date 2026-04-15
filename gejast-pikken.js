@@ -41,7 +41,13 @@
   function normalizeError(err){
     const msg = String(err && err.message || err || 'Onbekende fout');
     if(/game_type\s+ongeldig/i.test(msg)){
-      return 'Pikken live-samenvatting staat backend nog niet open voor dit spel. Draai de v487a SQL-fix en probeer opnieuw.';
+      return 'Pikken live-samenvatting staat backend nog niet open voor dit spel. Draai de v488 SQL-compat-fix en probeer opnieuw.';
+    }
+    if(/invalid input syntax for type uuid/i.test(msg)){
+      return 'Deze pikken-lobby probeerde te laden met een ongeldige game-id. Maak of join een lobby opnieuw.';
+    }
+    if(/live_match_summaries/i.test(msg)){
+      return 'De pikken backend mist nog de live-summary compatibiliteitslaag. Draai de v488 SQL-compat-fix en vernieuw daarna hard.';
     }
     return msg;
   }
@@ -64,6 +70,25 @@
     img.alt = n ? `die ${n}` : 'die';
     img.src = n ? `./assets/pikken/dice-${n}.svg` : './assets/pikken/dice-hidden.svg';
     return img;
+  }
+
+  const EMERGENCY_BRAKE_KEY = 'gejast_pikken_emergency_brake_v488';
+  function looksLikeUuid(value){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value||'').trim()); }
+  function emergencyScopeKey(){ return `${EMERGENCY_BRAKE_KEY}:${String(UI.gameId||'global')}`; }
+  function isEmergencyBrakeActive(){ try{ return localStorage.getItem(emergencyScopeKey()) === '1'; }catch(_){ return false; } }
+  function setEmergencyBrake(active){ try{ if(active) localStorage.setItem(emergencyScopeKey(), '1'); else localStorage.removeItem(emergencyScopeKey()); }catch(_){ } syncEmergencyBrakeUi(); }
+  function syncEmergencyBrakeUi(){
+    const active = isEmergencyBrakeActive();
+    ['pkCreateLobbyBtn','pkJoinLobbyBtn','pkReadyBtn','pkUnreadyBtn','pkStartBtn','pkPlaceBidBtn','pkRejectBtn','pkVoteApproveBtn','pkVoteRejectBtn'].forEach((id)=>{
+      const el = qs(`#${id}`);
+      if(!el) return;
+      if(!el.dataset.baseDisabled) el.dataset.baseDisabled = el.disabled ? '1' : '0';
+      el.disabled = active ? true : el.dataset.baseDisabled === '1';
+    });
+    const onBtn = qs('#pkEmergencyBrakeBtn'); if(onBtn) onBtn.disabled = active;
+    const offBtn = qs('#pkEmergencyReleaseBtn'); if(offBtn) offBtn.disabled = !active;
+    const box = qs('#pkEmergencyBanner'); if(box) box.style.display = active ? 'block' : 'none';
+    if(active) stopPolling(); else if(UI.gameId && looksLikeUuid(UI.gameId) && !UI.pollTimer) startPolling();
   }
 
   const UI = {
@@ -166,7 +191,7 @@
   }
 
   async function loadAndRender(){
-    if(!UI.gameId) return;
+    if(!UI.gameId || !looksLikeUuid(UI.gameId) || isEmergencyBrakeActive()) return;
     try{
       const state = await rpc('pikken_get_state_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId });
       const version = Number(state?.game?.state_version || -1);
@@ -181,8 +206,9 @@
   }
 
   function startPolling(){
+    if(!UI.gameId || !looksLikeUuid(UI.gameId) || isEmergencyBrakeActive()) return;
     stopPolling();
-    UI.pollTimer = setInterval(()=>{ if(!document.hidden) loadAndRender(); }, 900);
+    UI.pollTimer = setInterval(()=>{ if(!document.hidden && !isEmergencyBrakeActive()) loadAndRender(); }, 900);
     loadAndRender();
   }
   function stopPolling(){
@@ -265,6 +291,10 @@
     qs('#pkVoteApproveBtn').addEventListener('click', ()=>vote(true).catch(e=>setStatus(normalizeError(e)||'Stem mislukt.',true)));
     qs('#pkVoteRejectBtn').addEventListener('click', ()=>vote(false).catch(e=>setStatus(normalizeError(e)||'Stem mislukt.',true)));
 
+    if(!looksLikeUuid(UI.gameId)) UI.gameId = '';
+    const emergencyBtn = qs('#pkEmergencyBrakeBtn'); if(emergencyBtn) emergencyBtn.addEventListener('click', ()=>{ stopPolling(); setEmergencyBrake(true); setStatus('Noodrem actief. Pikken staat lokaal stil tot je hem opheft of herlaadt.', true); });
+    const releaseBtn = qs('#pkEmergencyReleaseBtn'); if(releaseBtn) releaseBtn.addEventListener('click', ()=>{ setEmergencyBrake(false); setStatus('Noodrem opgeheven.', false); });
+    syncEmergencyBrakeUi();
     if(UI.gameId){ setParticipantToken(UI.gameId, true); startPolling(); }
   }
 

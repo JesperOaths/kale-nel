@@ -674,8 +674,8 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v487';</script><script src="./gejast-config.js?v487"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
-  <script src="./gejast-live-summary.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v488';</script><script src="./gejast-config.js?v488"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script src="./gejast-live-summary.js?v488"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
   <script src="./gejast-combined-readers.js?v426"></script>
 <script src="./gejast-push-runtime.js?v389"></script>
@@ -711,7 +711,7 @@
         <div id="extraLadderGrid" class="ladder-grid">
           <div class="ladder-card"><div class="ladder-title"><strong>Paardenrace</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
           <div class="ladder-card"><div class="ladder-title"><strong>Pikken</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
-          <div class="ladder-card"><div class="ladder-title"><strong>Caute Coins</strong><span>₵ Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
+          <div class="ladder-card"><div class="ladder-title"><strong>Caute Coins</strong><span>₵</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
         </div>
       </section>
 
@@ -837,8 +837,8 @@
       <div id="statusBox" class="status"></div>
 
       <div class="vote-row">
-        <button class="vote-btn can" id="yesBtn" type="button">Ik kan</button>
-        <button class="vote-btn cant" id="noBtn" type="button">Ik kan niet</button>
+        <button class="vote-btn can" id="yesBtn" type="button">Legends</button>
+        <button class="vote-btn cant" id="noBtn" type="button">Losers</button>
       </div>
 
       <div class="lists-grid">
@@ -989,7 +989,7 @@ function applyAdminViewerRefresh() {
         target.innerHTML = groups.map((group) => {
           const rows = Array.isArray(group.rows) ? group.rows : [];
           const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><a class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800" href="${playerHref(String(row.player_name || row.display_name || ''), group.key)}" onclick="event.stopPropagation()">${String(row.player_name || row.display_name || row.public_display_name || 'Onbekend')}</a><div class="ladder-elo" style="color:var(--gold);font-weight:900">${Math.round(Number(row.coins || row.caute_coins || row.balance || row.elo_rating || row.rating || 1000))}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen ladderdata.</div>';
-          return `<article class="ladder-card" role="link" tabindex="0" data-route="${homepageLadderRoute(group.key)}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none">Top 5</span></div>${body}</article>`;
+          const suffix = group.key === 'caute-coins' ? '₵' : 'Top 5'; return `<article class="ladder-card" role="link" tabindex="0" data-route="${homepageLadderRoute(group.key)}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none">${suffix}</span></div>${body}</article>`;
         }).join('');
         target.querySelectorAll('.ladder-card[data-route]').forEach((card)=>{
           const route = card.getAttribute('data-route');
@@ -1583,7 +1583,7 @@ async function castExtraPollVote(desired_status) {
       try {
         await castVote(status);
         renderState(await getHomepageState());
-        setStatus(`Opgeslagen: ${status === 'ja' ? 'ik kan' : 'ik kan niet'}.`, 'ok');
+        setStatus(`Opgeslagen: ${status === 'ja' ? 'Legends' : 'Losers'}. Je blijft hier staan tot je jezelf verwijdert, een admin je verwijdert, of de vrijdag-reset om 06:00 loopt.`, 'ok');
       } catch (error) {
         const msg = error?.message || 'Onbekende fout';
         if (/sessie|token|login|ingelogd/i.test(msg)) { clearSessionToken(); goToLoginWithIntent(status, 'gejast_donderdag'); return; }

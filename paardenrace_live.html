@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace live</title>
-  <script>window.GEJAST_PAGE_VERSION='v480';</script>
-  <script src="./gejast-config.js?v480"></script>
-  <script src="./gejast-paardenrace.js?v480"></script>
+  <script>window.GEJAST_PAGE_VERSION='v488';</script>
+  <script src="./gejast-config.js?v488"></script>
+  <script src="./gejast-paardenrace.js?v488"></script>
   <style>
     :root {
       --gold: #9a8241;
@@ -469,6 +469,24 @@
   let autoplayTimer = null;
   let nominationSnapshot = {};
   let victoryActive = false;
+  let pendingGateQueue = [];
+  let statePollTimer = null;
+  const PANIC_KEY = 'gejast_paardenrace_emergency_brake_v488';
+  function panicStorageKey(){ return `${PANIC_KEY}:${qRoom() || 'global'}`; }
+  function isPanicActive(){ try{ return localStorage.getItem(panicStorageKey()) === '1'; }catch(_){ return false; } }
+  function setPanicActive(active){ try{ if(active) localStorage.setItem(panicStorageKey(),'1'); else localStorage.removeItem(panicStorageKey()); }catch(_){ } syncPanicUi(); }
+  function syncPanicUi(){
+    const active = isPanicActive();
+    ['drawBtn','tickBtn','resetBtn','playBtn','pauseBtn','submitNomBtn','closeBtn'].forEach((id)=>{
+      const el=$(id);
+      if(!el) return;
+      if(!el.dataset.baseDisabled) el.dataset.baseDisabled = el.disabled ? '1' : '0';
+      el.disabled = active ? true : el.dataset.baseDisabled === '1';
+    });
+    if($('panicBtn')) $('panicBtn').disabled = active;
+    if($('panicReleaseBtn')) $('panicReleaseBtn').disabled = !active;
+    if(active) setStatus('Noodrem actief. Paardenrace staat stil op dit apparaat.');
+  }
   
   const SUIT_ROW = { spades: 0, hearts: 1, clubs: 2, diamonds: 3 };
   const SUIT_LIST = ['spades', 'hearts', 'clubs', 'diamonds'];
@@ -988,7 +1006,7 @@
   
   async function loadState(opts = {}) {
     const code = qRoom();
-    if (!code) return;
+    if (!code || isPanicActive()) return;
     try {
       const state = await api.rpc('tick_paardenrace_room_safe', { room_code_input: code });
       await applyState(state, opts);
@@ -998,7 +1016,7 @@
   }
   
   async function drawNext() {
-    if (animating) return;
+    if (animating || isPanicActive()) return;
     if (pendingGateQueue.length > 0) {
       animating = true;
       try {
@@ -1039,7 +1057,7 @@
   }
 
   function startAutoplay() {
-    if (autoplay || !(pendingGateQueue.length > 0 || (currentState?.room?.can_draw && currentState?.room?.stage === 'race'))) return;
+    if (isPanicActive() || autoplay || !(pendingGateQueue.length > 0 || (currentState?.room?.can_draw && currentState?.room?.stage === 'race'))) return;
     autoplay = true;
     if($('autoStatus')) $('autoStatus').textContent = 'Autoplay loopt langzaam door.';
     if($('playBtn')) $('playBtn').disabled = true;
@@ -1060,6 +1078,8 @@
   
   // Event listeners
   if($('refreshBtn')) $('refreshBtn').addEventListener('click', () => loadState({ noAnimation: true }));
+  if($('panicBtn')) $('panicBtn').addEventListener('click', ()=>{ stopAutoplay(); if(statePollTimer){ clearInterval(statePollTimer); statePollTimer = null; } setPanicActive(true); });
+  if($('panicReleaseBtn')) $('panicReleaseBtn').addEventListener('click', ()=>{ setPanicActive(false); loadState({ noAnimation: true }); if(!statePollTimer){ statePollTimer = setInterval(() => { if (!victoryActive && currentState?.room?.stage !== 'nominations' && !isPanicActive()) { loadState({ noAnimation: true }); } }, 1200); } });
   if($('tickBtn')) $('tickBtn').addEventListener('click', async () => { try { await loadState(); setStatus('State geüpdatet.'); } catch(e) { setStatus(e.message); } });
   if($('drawBtn')) $('drawBtn').addEventListener('click', drawNext);
   if($('playBtn')) $('playBtn').addEventListener('click', startAutoplay);
@@ -1100,9 +1120,10 @@
   if($('closeNomBtn')) $('closeNomBtn').addEventListener('click', () => { if($('nomDialog')) $('nomDialog').close(); });
   
   // Initial load and polling (1.2s, but skip during victory/nomination/pending local nomination input)
+  syncPanicUi();
   loadState({ noAnimation: true });
-  setInterval(() => {
-    if (!victoryActive && currentState?.room?.stage !== 'nominations') {
+  statePollTimer = setInterval(() => {
+    if (!victoryActive && currentState?.room?.stage !== 'nominations' && !isPanicActive()) {
       loadState({ noAnimation: true });
     }
   }, 1200);
