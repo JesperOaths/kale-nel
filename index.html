@@ -674,7 +674,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v446';</script><script src="./gejast-config.js?v446"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v448';</script><script src="./gejast-config.js?v448"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
   <script src="./gejast-live-summary.js?v389"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
   <script src="./gejast-combined-readers.js?v426"></script>
@@ -904,6 +904,7 @@
     }
 const HOMEPAGE_BOOT_CACHE_KEY = 'gejast_homepage_boot_v389';
 const HOMEPAGE_BOOT_CACHE_TTL = 15 * 1000;
+const HOMEPAGE_POLL_STORAGE_KEY = 'gejast_homepage_poll_lists_v448';
 
 function readHomepageBootCache() {
   try {
@@ -924,8 +925,13 @@ function writeHomepageBootCache(value) {
   return value;
 }
 
+function persistHomepagePollSnapshot(legends, losers){ try{ localStorage.setItem(HOMEPAGE_POLL_STORAGE_KEY, JSON.stringify({ legends:Array.isArray(legends)?legends:[], losers:Array.isArray(losers)?losers:[] })); }catch(_){ } }
+function hydrateHomepagePollSnapshot(){ try{ const raw = localStorage.getItem(HOMEPAGE_POLL_STORAGE_KEY); return raw ? JSON.parse(raw) : null; }catch(_){ return null; } }
+
 function applyAdminViewerRefresh() {
   try {
+    const savedHomepagePoll = hydrateHomepagePollSnapshot();
+    if (savedHomepagePoll) renderState(savedHomepagePoll);
     if (currentHomepageState) renderState(currentHomepageState);
     const savedExtraPoll = hydrateExtraPollSnapshot();
     if (savedExtraPoll) renderExtraPollState(savedExtraPoll);
@@ -1103,8 +1109,8 @@ function applyAdminViewerRefresh() {
       });
     }
 
-const EXTRA_POLL_KEY = 'gejast_donderdag';
-const EXTRA_POLL_STORAGE_KEY = 'gejast_donderdag_lists_v446';
+const EXTRA_POLL_KEY = 'gejast_drinks_donderdag';
+const EXTRA_POLL_STORAGE_KEY = 'gejast_drinks_donderdag_lists_v448';
 const THURSDAY_POLL_KEY = 'gejast_donderdag';
 let currentDrinksPollState = null;
 let removingExtraVote = false;
@@ -1493,6 +1499,7 @@ async function castExtraPollVote(desired_status) {
 
       renderNames('legendsList', legends, 'Nog niemand', 'legends');
       renderNames('losersList', losers, 'Nog niemand', 'losers');
+      persistHomepagePollSnapshot(legends, losers);
       if (data.my_name && document.getElementById('sessionHint')) document.getElementById('sessionHint').textContent = `Ingelogd als ${data.my_name}.`;
       const shouldCelebrate = state.key === 'yes' && canCount >= 4 && canCount > previousCount;
       if (shouldCelebrate) {

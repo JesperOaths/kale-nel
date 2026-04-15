@@ -1,37 +1,37 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
-  const STORAGE_KEY = 'gejast_paardenrace_room_code_v447';
+  const STORAGE_KEY = 'gejast_paardenrace_room_code_v448';
   const LIVE_QUERY_KEY = 'live';
   const ASSETS = {
     arena: './paardenrace-live-board-v447.png',
     cardBack: './paardenrace-card-back.png',
     horses: {
-      hearts: './paardenrace-ace-hearts-v447.png',
-      diamonds: './paardenrace-ace-diamonds-v447.png',
-      clubs: './paardenrace-ace-clubs-v447.png',
-      spades: './paardenrace-ace-spades-v447.png'
+      hearts: './paardenrace-ace-hearts-v448.png',
+      diamonds: './paardenrace-ace-diamonds-v448.png',
+      clubs: './paardenrace-ace-clubs-v448.png',
+      spades: './paardenrace-ace-spades-v448.png'
     }
   };
   const SUITS = ['spades','hearts','clubs','diamonds'];
   const SUIT_META = {
     hearts: { label:'♥ Harten', symbol:'♥', color:'#a11f35' },
-    diamonds: { label:'♦ Ruiten', symbol:'♦', color:'#b06c00' },
-    clubs: { label:'♣ Klaveren', symbol:'♣', color:'#245b2a' },
+    diamonds: { label:'♦ Ruiten', symbol:'♦', color:'#a11f35' },
+    clubs: { label:'♣ Klaveren', symbol:'♣', color:'#1f1b1a' },
     spades: { label:'♠ Schoppen', symbol:'♠', color:'#1f1b1a' }
   };
   const BOARD_POINTS = {
-    trackX: [14.55, 21.15, 27.22, 33.30, 39.52, 45.73, 51.89, 58.06, 64.21, 70.43, 76.51, 86.20],
-    gateX: [18.92, 24.97, 31.05, 37.17, 43.35, 49.42, 55.56, 61.72, 67.90, 74.03],
-    laneY: { spades: 40.90, hearts: 55.57, clubs: 70.24, diamonds: 84.88 },
-    startMaskX: 14.55,
-    gateY: 22.35,
-    gateMaskY: 22.35,
-    cardWidthPct: 4.55,
-    gateWidthPct: 3.78,
-    horseMaskWidthPct: 5.20,
-    horseMaskHeightPct: 11.50,
-    gateMaskWidthPct: 4.42,
-    gateMaskHeightPct: 10.90
+    trackX: [15.42, 21.18, 27.28, 33.36, 39.56, 45.72, 51.87, 58.03, 64.18, 70.35, 76.50, 84.86],
+    gateX: [19.07, 25.14, 31.20, 37.31, 43.44, 49.55, 55.66, 61.76, 67.91, 74.02],
+    laneY: { spades: 40.86, hearts: 55.59, clubs: 70.24, diamonds: 84.90 },
+    deckX: 8.35,
+    deckY: 25.55,
+    discardX: 89.85,
+    discardY: 25.40,
+    gateY: 22.36,
+    horseWidthPct: 5.15,
+    gateWidthPct: 4.86,
+    deckWidthPct: 5.4,
+    discardWidthPct: 6.0
   };
 
   function sessionToken(){ return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; }
@@ -66,22 +66,12 @@
   function suitSymbol(s){ return (SUIT_META[String(s||'').toLowerCase()] || {}).symbol || '•'; }
   function suitColor(s){ return (SUIT_META[String(s||'').toLowerCase()] || {}).color || '#333'; }
   function liveHref(room){ const code = encodeURIComponent(String(room||'').trim().toUpperCase()); return `./paardenrace_live.html?room=${code}&${LIVE_QUERY_KEY}=${code}`; }
-  function gotoLive(room, options={}){
-    const href = liveHref(room);
-    if(options.replace) window.location.replace(href); else window.location.href = href;
-  }
-  function cardBack(size='gate'){ return `<img src="${ASSETS.cardBack}" alt="Kaart achterkant" class="pr-card-back pr-${size}">`; }
-  function aceHorseCard(suit){
-    const src = ASSETS.horses[suit] || ASSETS.horses.hearts;
-    return `<img src="${src}" alt="${suitLabel(suit)} aas" class="pr-ace-card">`;
-  }
+  function gotoLive(room, options={}){ const href = liveHref(room); if(options.replace) window.location.replace(href); else window.location.href = href; }
   function parseCard(cardCode=''){
     const raw = String(cardCode || '').trim().toUpperCase();
-    const match = raw.match(/^(10|[2-9JQKAK])([HDCS])$/);
-    if(!match){
-      return { rank: raw || '—', suitKey: '', symbol: '•', isRed: false, raw };
-    }
-    const rank = match[1] === '1' ? '10' : match[1];
+    const match = raw.match(/^(10|[2-9JQKA])([HDCS])$/);
+    if(!match){ return { rank: raw || '—', suitKey: '', symbol: '•', isRed: false, raw }; }
+    const rank = match[1];
     const suitKey = ({ H:'hearts', D:'diamonds', C:'clubs', S:'spades' })[match[2]] || '';
     const symbol = suitSymbol(suitKey);
     const isRed = suitKey === 'hearts' || suitKey === 'diamonds';
@@ -98,23 +88,38 @@
       </div>
     `;
   }
+  function renderCardBack(extraClass=''){
+    return `<img src="${ASSETS.cardBack}" alt="Kaart achterkant" class="pr-card-back${extraClass ? ` ${extraClass}` : ''}">`;
+  }
+  function aceHorseCard(suit){
+    const src = ASSETS.horses[suit] || ASSETS.horses.hearts;
+    return `<img src="${src}" alt="${suitLabel(suit)} aas" class="pr-ace-card" draggable="false">`;
+  }
+  function getDrawRemaining(match){
+    const deck = Array.isArray(match?.draw_deck) ? match.draw_deck : [];
+    const idx = Number(match?.draw_index || 0);
+    return Math.max(0, deck.length - idx);
+  }
+  function resolvedGateSet(match){ return new Set(Array.isArray(match?.resolved_gates) ? match.resolved_gates.map(Number) : []); }
   function renderLiveBoard(match){
     if(!match || !match.horse_positions){
       return '<div class="pr-live-placeholder">Wachten op countdown of race-start.</div>';
     }
     const pos = match.horse_positions || {};
     const gates = Array.isArray(match.gate_cards) ? match.gate_cards : [];
-    const resolvedSet = new Set(Array.isArray(match.resolved_gates) ? match.resolved_gates.map(Number) : []);
+    const resolved = resolvedGateSet(match);
+    const remaining = getDrawRemaining(match);
+    const discardCard = match.last_draw_card || '';
 
-    const maskHtml = SUITS.map((suit)=>`
-      <div class="pr-horse-mask" style="left:${BOARD_POINTS.startMaskX}%;top:${BOARD_POINTS.laneY[suit]}%"></div>
-    `).join('');
+    const deckLayers = remaining > 0
+      ? [0,1,2].map((i)=>`<div class="pr-stack-card" style="transform:translate(${i * -4}px, ${i * 4}px)">${renderCardBack('pr-deck-back')}</div>`).join('')
+      : '';
 
     const gateHtml = BOARD_POINTS.gateX.map((x, idx)=>{
       const gateNo = idx + 1;
-      if(!resolvedSet.has(gateNo)) return '';
-      const cardCode = gates[idx] || '';
-      return `<div class="pr-gate-reveal-slot" style="left:${x}%;top:${BOARD_POINTS.gateY}%">${renderFaceUpCard(cardCode, 'pr-gate-face')}</div>`;
+      const isResolved = resolved.has(gateNo);
+      const inner = isResolved ? renderFaceUpCard(gates[idx] || '', 'pr-gate-face') : renderCardBack('pr-gate-back');
+      return `<div class="pr-gate-slot ${isResolved ? 'is-revealed' : 'is-facedown'}" data-gate-no="${gateNo}" style="left:${x}%;top:${BOARD_POINTS.gateY}%">${inner}</div>`;
     }).join('');
 
     const horseHtml = SUITS.map((suit)=>{
@@ -122,17 +127,27 @@
       const idx = Math.max(0, Math.min(11, raw));
       const x = BOARD_POINTS.trackX[idx];
       const y = BOARD_POINTS.laneY[suit];
-      return `<div class="pr-horse-slot" style="left:${x}%;top:${y}%">${aceHorseCard(suit)}</div>`;
+      return `<div class="pr-horse-slot" data-suit="${suit}" data-pos="${idx}" style="left:${x}%;top:${y}%">${aceHorseCard(suit)}</div>`;
     }).join('');
 
     return `
-      <div class="pr-live-wrap">
-        <div class="pr-live-stage">
+      <div class="pr-live-wrap" data-match-ref="${String(match.match_ref || '')}" data-draw-index="${Number(match.draw_index || 0)}">
+        <div class="pr-live-stage" data-stage-root>
           <img src="${ASSETS.arena}" alt="Paardenrace bord" class="pr-live-arena">
-          <div class="pr-overlay">${maskHtml}${gateHtml}${horseHtml}</div>
+          <div class="pr-overlay">
+            <div class="pr-deck-slot" data-deck-slot style="left:${BOARD_POINTS.deckX}%;top:${BOARD_POINTS.deckY}%">${deckLayers}</div>
+            <div class="pr-discard-slot ${discardCard ? 'has-card' : ''}" data-discard-slot style="left:${BOARD_POINTS.discardX}%;top:${BOARD_POINTS.discardY}%">${discardCard ? renderFaceUpCard(discardCard, 'pr-discard-face') : ''}</div>
+            ${gateHtml}
+            ${horseHtml}
+            <div class="pr-animation-layer" data-animation-layer></div>
+          </div>
         </div>
       </div>
     `;
   }
-  window.GEJAST_PAARDENRACE = { rpc, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode, suitLabel, suitSymbol, suitColor, renderFaceUpCard, renderLiveBoard, gotoLive, liveHref };
+  window.GEJAST_PAARDENRACE = {
+    rpc, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode,
+    suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack, renderLiveBoard,
+    gotoLive, liveHref, getDrawRemaining, resolvedGateSet, getBoardPoints: ()=> JSON.parse(JSON.stringify(BOARD_POINTS))
+  };
 })();
