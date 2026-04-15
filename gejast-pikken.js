@@ -1,8 +1,8 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
-  const STORAGE_KEY = 'gejast_pikken_lobby_code_v512';
-  const PIKKEN_PARTICIPANT_KEY = 'gejast_pikken_participant_v512';
+  const STORAGE_KEY = 'gejast_pikken_lobby_code_v513';
+  const PIKKEN_PARTICIPANT_KEY = 'gejast_pikken_participant_v513';
 
   function getScope(){
     try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
@@ -46,15 +46,21 @@
     if(/column reference "?game_type"? is ambiguous/i.test(msg)){
       return 'Pikken backend raakt nog een dubbelzinnige game_type-verwijzing buiten de huidige compat-laag. Ruwe fout: ' + msg;
     }
-    if(/column reference "?round_no"? is ambiguous/i.test(msg)){
-      return 'Pikken backend raakt nog een dubbelzinnige round_no-verwijzing buiten de huidige compat-laag. Ruwe fout: ' + msg;
-    }
     return msg;
   }
 
-  function isNonfatalPostStartError(err){
+  function isKnownNonfatalRoundNoError(err){
     const msg = String(err && err.message || err || '');
-    return /column reference "?round_no"? is ambiguous/i.test(msg) || /column reference "?game_type"? is ambiguous/i.test(msg);
+    return /column reference\s+"?round_no"?\s+is ambiguous/i.test(msg);
+  }
+
+  function clearKnownNonfatalStatus(){
+    const el = qs('#pkStatus');
+    if(!el) return;
+    const txt = String(el.textContent || '');
+    if(/round_no/i.test(txt) && /ambiguous|dubbelzinnige/i.test(txt)){
+      setStatus('', false);
+    }
   }
 
   function setParticipantToken(gameId, active){ try{ if(active && gameId){ localStorage.setItem(PIKKEN_PARTICIPANT_KEY, JSON.stringify({game_id:String(gameId), at:Date.now()})); } else { localStorage.removeItem(PIKKEN_PARTICIPANT_KEY); } }catch(_){ } }
@@ -172,6 +178,7 @@
       const open = list.filter((r)=>String(r.stage || '').toLowerCase() === 'lobby');
       renderRoomsInto(qs('#pkLiveRoomsBox'), live, 'Nog geen actieve pikkenkamers.');
       renderRoomsInto(qs('#pkOpenRoomsBox'), open, 'Nog geen open kamers. Maak er één aan of ververs zo weer.');
+      clearKnownNonfatalStatus();
     } catch(err){
       renderRoomsInto(qs('#pkLiveRoomsBox'), [], 'Kon actieve kamers niet laden.');
       renderRoomsInto(qs('#pkOpenRoomsBox'), [], 'Kon open kamers niet laden.');
@@ -248,11 +255,7 @@
     qs('#pkBidPanel').style.display = myTurn ? 'block' : 'none';
     qs('#pkVotePanel').style.display = myVoteTurn ? 'block' : 'none';
     qs('#pkRejectBtn').disabled = !myTurn || !bid;
-        const startBtn = qs('#pkStartBtn');
-    if(startBtn){
-      startBtn.disabled = !viewer.is_host || players.length < 2 || status === 'finished';
-      startBtn.style.display = viewer.is_host ? '' : 'none';
-    }
+    qs('#pkStartBtn').disabled = !viewer.is_host || players.length < 2 || status === 'finished';
 
     const revealWrap = qs('#pkReveal');
     if(!lastReveal){
@@ -298,6 +301,11 @@
       }
       setStatus('', false);
     }catch(err){
+      if(isKnownNonfatalRoundNoError(err)){
+        clearLobbyView();
+        clearKnownNonfatalStatus();
+        return;
+      }
       setStatus(normalizeError(err) || 'Laden mislukt.', true);
     }
   }
@@ -359,26 +367,12 @@
     setStatus('Starten…', false);
     try {
       await rpc('pikken_start_game_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId });
-      await loadAndRender();
-      await loadOpenRooms();
-      return;
     } catch(err) {
-      if(!isNonfatalPostStartError(err)) throw err;
-      try {
-        await loadAndRender();
-        await loadOpenRooms();
-        const phase = String(((qs('#pkPhase') && qs('#pkPhase').textContent) || '')).trim().toLowerCase();
-        const bidPanel = qs('#pkBidPanel');
-        const votePanel = qs('#pkVotePanel');
-        const started = phase && phase !== 'lobby';
-        if(started || (bidPanel && bidPanel.style.display !== 'none') || (votePanel && votePanel.style.display !== 'none')) {
-          setStatus('', false);
-          return;
-        }
-      } catch(_) {
-      }
-      throw err;
+      if(!isKnownNonfatalRoundNoError(err)) throw err;
     }
+    try { await loadAndRender(); } catch(_) { }
+    try { await loadOpenRooms(); } catch(_) { }
+    clearKnownNonfatalStatus();
   }
 
   async function placeBid(){
