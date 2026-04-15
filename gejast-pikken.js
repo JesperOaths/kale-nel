@@ -41,16 +41,10 @@
   function normalizeError(err){
     const msg = String(err && err.message || err || 'Onbekende fout');
     if(/column "?submitter_name"? of relation "?live_match_summaries"? does not exist/i.test(msg)){
-      return 'Pikken live-summary compat mist submitter_name nog op de backend. Ruwe fout: ' + msg;
-    }
-    if(/column "?winner_names"? is of type jsonb but expression is of type text\[\]/i.test(msg)){
-      return 'Pikken live-summary compat verwacht winner_names nog als text[]. Ruwe fout: ' + msg;
-    }
-    if(/column "?participants"? is of type jsonb but expression is of type text\[\]/i.test(msg)){
-      return 'Pikken live-summary compat verwacht participants nog als text[]. Ruwe fout: ' + msg;
+      return 'Pikken backend raakt nog een oudere live-summary contractlaag buiten de huidige repo-patch. Ruwe fout: ' + msg;
     }
     if(/game_type\s+ongeldig/i.test(msg)){
-      return 'Pikken live-summary compat raakt nog een oudere game_type-lookup. Ruwe fout: ' + msg;
+      return 'Pikken backend raakt nog een oudere game_type-lookup buiten de huidige repo-patch. Ruwe fout: ' + msg;
     }
     if(/column reference "?game_type"? is ambiguous/i.test(msg)){
       return 'Pikken backend raakt nog een dubbelzinnige game_type-verwijzing buiten de huidige compat-laag. Ruwe fout: ' + msg;
@@ -83,6 +77,24 @@
     lastStateVersion: -1,
     pollTimer: null
   };
+
+
+
+  function applyCreateFallback(out){
+    const gameId = String(out?.game_id || out?.client_match_id || '').trim();
+    const lobbyCode = String(out?.lobby_code || out?.code || out?.join_code || '').trim();
+    if(gameId){
+      UI.gameId = gameId;
+      setParticipantToken(gameId, true);
+      history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(gameId)}&scope=${encodeURIComponent(getScope())}`);
+    }
+    const lobbyNode = qs('#pkLobbyCode');
+    if(lobbyNode && lobbyCode) lobbyNode.textContent = lobbyCode;
+    const liveLink = qs('#pkLiveLink');
+    if(liveLink && gameId){ liveLink.href = liveHref(gameId); liveLink.style.display = ''; }
+    const phase = qs('#pkPhase'); if(phase) phase.textContent = 'lobby';
+    const round = qs('#pkRoundNo'); if(round) round.textContent = '0';
+  }
 
   function render(state){
     const game = state?.game || {};
@@ -177,16 +189,6 @@
     }
   }
 
-  function isLegacyLiveSummaryCompatError(err){
-    const msg = String(err && err.message || err || '');
-    return /live_match_summaries/i.test(msg)
-      || /column reference "?game_type"? is ambiguous/i.test(msg)
-      || /game_type\s+ongeldig/i.test(msg)
-      || /submitter_name/i.test(msg)
-      || /winner_names/i.test(msg)
-      || /participants/i.test(msg);
-  }
-
   async function loadAndRender(){
     if(!UI.gameId) return;
     try{
@@ -198,10 +200,6 @@
       }
       setStatus('', false);
     }catch(err){
-      if(isLegacyLiveSummaryCompatError(err)){
-        setStatus('Pikken lobby is aangemaakt, maar de oude live-summary compat-laag geeft nog backendruis. Kernspel blijft bruikbaar; ruwe fout: ' + String(err && err.message || err || 'Onbekende fout'), true);
-        return;
-      }
       setStatus(normalizeError(err) || 'Laden mislukt.', true);
     }
   }
@@ -223,9 +221,7 @@
       site_scope_input: getScope(),
       config_input: { penalty_mode: mode }
     });
-    UI.gameId = out.game_id;
-    setParticipantToken(UI.gameId, true);
-    history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(getScope())}`);
+    applyCreateFallback(out || {});
     startPolling();
   }
 
@@ -238,9 +234,7 @@
       site_scope_input: getScope(),
       lobby_code_input: code
     });
-    UI.gameId = out.game_id;
-    setParticipantToken(UI.gameId, true);
-    history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(getScope())}`);
+    applyCreateFallback(Object.assign({}, out || {}, { lobby_code: code }));
     startPolling();
   }
 
