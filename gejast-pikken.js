@@ -40,11 +40,11 @@
   function esc(s){ const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(s??'').replace(/[&<>"']/g,m=>map[m]); }
   function normalizeError(err){
     const msg = String(err && err.message || err || 'Onbekende fout');
-    if(/game_type\s+ongeldig/i.test(msg)){
-      return 'Pikken live-compat mist nog een speltype-vertaling in de backend. Backend zei: ' + msg;
+    if(/column reference\s+"?game_type"?\s+is ambiguous/i.test(msg)){
+      return 'Pikken backend gebruikt nog een oude live-summary lookup met een dubbelzinnige game_type-verwijzing.';
     }
-    if(/column reference "game_type" is ambiguous/i.test(msg)){
-      return 'Pikken live-compat raakt nog een oudere game_type-lookup. Backend zei: ' + msg;
+    if(/game_type\s+ongeldig/i.test(msg)){
+      return 'Pikken backend gebruikt nog een oudere live-summary compat-laag die dit spel nog afwijst.';
     }
     return msg;
   }
