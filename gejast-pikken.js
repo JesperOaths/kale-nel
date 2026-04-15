@@ -25,6 +25,12 @@
 
   const UI = { gameId:'', lastStateVersion:-1, pollTimer:null, roomCodeDirty:false, roomCodeTouchedAt:0 };
 
+  function syncLobbyUrl(){
+    const scope = encodeURIComponent(getScope());
+    const href = UI.gameId ? `pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${scope}` : `pikken.html?scope=${scope}`;
+    history.replaceState(null,'',href);
+  }
+
   function markRoomCodeDirty(){ UI.roomCodeDirty = true; UI.roomCodeTouchedAt = Date.now(); }
   function shouldPreserveRoomCodeInput(){ const el = qs('#pkRoomCode'); return !!(el && (document.activeElement===el || UI.roomCodeDirty || Date.now()-UI.roomCodeTouchedAt < 2500)); }
   function roomCode(){ return String((qs('#pkRoomCode') && qs('#pkRoomCode').value) || qs('#pkLobbyCode')?.textContent || '').trim().toUpperCase(); }
@@ -33,14 +39,18 @@
   function setStatus(text, isError){ const el = qs('#pkStatus'); if(!el) return; el.textContent = text || ''; el.style.color = isError ? '#8a1022' : '#2f6d3c'; }
   function updateLiveLink(gameId){ const liveLink = qs('#pkLiveLink'); if(!liveLink) return; if(gameId){ liveLink.href = liveHref(gameId); liveLink.style.display = ''; } else { liveLink.href = './pikken_live.html'; liveLink.style.display = 'none'; } }
   function clearLobbyView(){
+    stopPolling();
     qs('#pkRoomShell').style.display = 'none';
     qs('#pkLobbyCode').textContent = '—';
     qs('#pkRoomMeta').textContent = 'Nog geen room geladen.';
     qs('#pkLobbySummaryBox').textContent = 'Nog geen lobby info.';
     qs('#pkLobbyPlayers').innerHTML = '';
+    qs('#pkPlayers').innerHTML = '';
     updateLiveLink('');
     setParticipantToken(UI.gameId, false);
     UI.gameId=''; UI.lastStateVersion=-1;
+    const destroyBtn = qs('#pkDestroyBtn'); if(destroyBtn) destroyBtn.style.display = 'none';
+    syncLobbyUrl();
   }
 
   function dieImg(face, cls){ const n=Number(face||0); const img=document.createElement('img'); img.className=cls||''; img.alt=n?`die ${n}`:'die'; img.src=n?`./assets/pikken/dice-${n}.svg`:'./assets/pikken/dice-hidden.svg'; return img; }
@@ -60,7 +70,7 @@
     if(gameId){
       UI.gameId = gameId;
       setParticipantToken(gameId, true);
-      history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(gameId)}&scope=${encodeURIComponent(getScope())}`);
+      syncLobbyUrl();
     }
     if(lobbyCode){ qs('#pkLobbyCode').textContent = lobbyCode; setRoomCodeInputValue(lobbyCode); }
     updateLiveLink(gameId);
@@ -136,7 +146,8 @@
     qs('#pkBidPanel').style.display = myTurn ? 'block' : 'none';
     qs('#pkVotePanel').style.display = myVoteTurn ? 'block' : 'none';
     qs('#pkRejectBtn').disabled = !myTurn || !bid;
-    qs('#pkStartBtn').disabled = !(viewer?.is_host && phase === 'lobby' && players.length > 0);
+    qs('#pkStartBtn').disabled = !(viewer?.is_host && phase === 'lobby' && players.length > 1);
+    const destroyBtn = qs('#pkDestroyBtn'); if(destroyBtn) destroyBtn.style.display = viewer?.is_host ? '' : 'none';
 
     const revealWrap = qs('#pkReveal');
     if(!lastReveal){ revealWrap.style.display='none'; revealWrap.innerHTML=''; }
@@ -147,12 +158,28 @@
     }
   }
 
-  async function loadAndRender(){ if(!UI.gameId) return; try{ const state = await rpc('pikken_get_state_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId }); const version = Number(state?.game?.state_version || -1); if(version !== UI.lastStateVersion){ UI.lastStateVersion = version; render(state); } setStatus('Lobby geladen.', false); } catch(err){ setStatus(normalizeError(err) || 'Laden mislukt.', true); } }
+  async function loadAndRender(){
+    if(!UI.gameId) return;
+    try{
+      const state = await rpc('pikken_get_state_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId });
+      const version = Number(state?.game?.state_version || -1);
+      if(version !== UI.lastStateVersion){ UI.lastStateVersion = version; render(state); }
+      setStatus('Lobby geladen.', false);
+    } catch(err){
+      const msg = normalizeError(err) || 'Laden mislukt.';
+      if(/game niet gevonden|je zit niet in deze lobby/i.test(String(msg))){
+        clearLobbyView();
+        setStatus('Room bestaat niet meer of je zit er niet meer in.', false);
+        return;
+      }
+      setStatus(msg, true);
+    }
+  }
   function startPolling(){ stopPolling(); UI.pollTimer = setInterval(()=>{ if(!document.hidden) loadAndRender(); }, 1200); loadAndRender(); }
   function stopPolling(){ if(UI.pollTimer){ clearInterval(UI.pollTimer); UI.pollTimer=null; } }
 
   async function createLobby(){
-    const mode = qs('#pkPenaltyMode').value || 'wrong_loses';
+    const mode = qs('#pkPenaltyMode')?.value || 'wrong_loses';
     const desiredCode = roomCode();
     setStatus('Lobby maken…', false);
     const out = await rpc('pikken_create_lobby_scoped', { session_token: sessionToken() || null, site_scope_input: getScope(), config_input: { penalty_mode: mode, preferred_lobby_code: desiredCode || null } });
@@ -160,6 +187,20 @@
     startPolling();
   }
   async function joinLobby(){ const code = roomCode(); if(!code) return setStatus('Vul een roomcode in.', true); setStatus('Lobby joinen…', false); const out = await rpc('pikken_join_lobby_scoped', { session_token: sessionToken() || null, site_scope_input: getScope(), lobby_code_input: code }); applyCreateFallback(Object.assign({}, out || {}, { lobby_code: code })); startPolling(); }
+  async function leaveLobby(){
+    if(!UI.gameId) return setStatus('Geen actieve room.', true);
+    setStatus('Room verlaten…', false);
+    const out = await rpc('pikken_leave_lobby_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId });
+    clearLobbyView();
+    setStatus(out?.disbanded ? 'Room is automatisch verwijderd omdat er niemand meer in zat.' : 'Je hebt de room verlaten.', false);
+  }
+  async function destroyLobby(){
+    if(!UI.gameId) return setStatus('Geen actieve room.', true);
+    setStatus('Room opheffen…', false);
+    await rpc('pikken_destroy_lobby_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId });
+    clearLobbyView();
+    setStatus('Room is opgeheven.', false);
+  }
   async function setReady(ready){ setStatus(ready?'Ready…':'Unready…', false); await rpc('pikken_set_ready_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId, ready_input: !!ready }); await loadAndRender(); }
   async function startGame(){ setStatus('Starten…', false); await rpc('pikken_start_game_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId }); await loadAndRender(); }
   async function placeBid(){ const count = Number(qs('#pkBidCount').value||0); const face = Number(qs('#pkBidFace').value||0); setStatus('Bieden…', false); const state = await rpc('pikken_place_bid_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId, bid_count_input: count, bid_face_input: face }); render(state); setStatus('Bod geplaatst.', false); }
@@ -173,6 +214,8 @@
     qs('#pkJoinLobbyBtn').addEventListener('click', ()=>joinLobby().catch(e=>setStatus(normalizeError(e)||'Join mislukt.',true)));
     qs('#pkRefreshBtn').addEventListener('click', ()=>loadAndRender().catch(e=>setStatus(normalizeError(e)||'Verversen mislukt.',true)));
     qs('#pkReadyBtn').addEventListener('click', ()=>setReady(true).catch(e=>setStatus(normalizeError(e)||'Ready mislukt.',true)));
+    qs('#pkLeaveBtn').addEventListener('click', ()=>leaveLobby().catch(e=>setStatus(normalizeError(e)||'Verlaten mislukt.',true)));
+    qs('#pkDestroyBtn').addEventListener('click', ()=>destroyLobby().catch(e=>setStatus(normalizeError(e)||'Opheffen mislukt.',true)));
     qs('#pkUnreadyBtn').addEventListener('click', ()=>setReady(false).catch(e=>setStatus(normalizeError(e)||'Unready mislukt.',true)));
     qs('#pkStartBtn').addEventListener('click', ()=>startGame().catch(e=>setStatus(normalizeError(e)||'Start mislukt.',true)));
     qs('#pkPlaceBidBtn').addEventListener('click', ()=>placeBid().catch(e=>setStatus(normalizeError(e)||'Bieden mislukt.',true)));
