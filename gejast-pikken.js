@@ -6,7 +6,7 @@
 
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
-  const PIKKEN_PARTICIPANT_KEY = 'gejast_pikken_participant_v495';
+  const PIKKEN_PARTICIPANT_KEY = 'gejast_pikken_participant_v497';
 
   function getScope(){
     try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
@@ -47,8 +47,8 @@
     if(/invalid input syntax for type uuid/i.test(msg)){
       return 'Oude pikken-lobby losgekoppeld. Je kunt hieronder meteen een nieuwe lobby maken of joinen.';
     }
-    if(/live_match_summaries/i.test(msg)){
-      return `Pikken compat-laag meldt nog een live_match_summaries-fout. Backend zei: ${msg}`;
+    if(/submitter_meta/i.test(msg) || /live_match_summaries/i.test(msg)){
+      return `Pikken compat-laag ziet nog een oud live-summary contractprobleem. Backend zei: ${msg}`;
     }
     if(/(game|match).*(not found|niet gevonden|does not exist)|no rows returned/i.test(msg)){
       return 'Deze pikken-lobby bestaat niet meer. De pagina is teruggezet naar een lege lobby.';
@@ -114,7 +114,7 @@
     return img;
   }
 
-  const EMERGENCY_BRAKE_KEY = 'gejast_pikken_emergency_brake_v495';
+  const EMERGENCY_BRAKE_KEY = 'gejast_pikken_emergency_brake_v497';
   function looksLikeUuid(value){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value||'').trim()); }
   function emergencyScopeKey(){ return `${EMERGENCY_BRAKE_KEY}:${String(UI.gameId||'global')}`; }
   function isEmergencyBrakeActive(){ try{ return localStorage.getItem(emergencyScopeKey()) === '1'; }catch(_){ return false; } }
