@@ -6,7 +6,6 @@
 
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
-  const PIKKEN_PARTICIPANT_KEY = 'gejast_pikken_participant_v497';
 
   function getScope(){
     try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
@@ -42,16 +41,13 @@
   function normalizeError(err){
     const msg = String(err && err.message || err || 'Onbekende fout');
     if(/game_type\s+ongeldig/i.test(msg)){
-      return 'Deze pikken-lobby is losgekoppeld van een oude live-samenvatting. De pagina is teruggezet naar een schone lobby.';
+      return 'Pikken live-samenvatting staat backend nog niet open voor dit spel. Draai de v487a SQL-fix en probeer opnieuw.';
     }
-    if(/invalid input syntax for type uuid/i.test(msg)){
-      return 'Oude pikken-lobby losgekoppeld. Je kunt hieronder meteen een nieuwe lobby maken of joinen.';
+    if(/column\s+"?participants"?\s+is\s+of\s+type\s+jsonb\s+but\s+expression\s+is\s+of\s+type\s+text\[\]/i.test(msg)){
+      return 'Pikken compat-laag botste op een oud participants-contract. Draai de v498 SQL-compat-fix en vernieuw daarna hard.';
     }
-    if(/submitter_meta/i.test(msg) || /live_match_summaries/i.test(msg)){
-      return `Pikken compat-laag ziet nog een oud live-summary contractprobleem. Backend zei: ${msg}`;
-    }
-    if(/(game|match).*(not found|niet gevonden|does not exist)|no rows returned/i.test(msg)){
-      return 'Deze pikken-lobby bestaat niet meer. De pagina is teruggezet naar een lege lobby.';
+    if(/submitter_meta/i.test(msg) && /live_match_summaries/i.test(msg)){
+      return 'Pikken compat-laag mist nog submitter_meta in live_match_summaries. Draai de v497/v498 SQL-compat-fix en vernieuw daarna hard.';
     }
     return msg;
   }
@@ -59,44 +55,6 @@
   function setParticipantToken(gameId, active){ try{ if(active && gameId){ localStorage.setItem(PIKKEN_PARTICIPANT_KEY, JSON.stringify({game_id:String(gameId), at:Date.now()})); } else { localStorage.removeItem(PIKKEN_PARTICIPANT_KEY); } }catch(_){ } }
 
   function liveHref(gameId){ return `./pikken_live.html?client_match_id=${encodeURIComponent(String(gameId||''))}`; }
-
-  function resetRenderedMatch(){
-    const map = {
-      '#pkLobbyCode':'—', '#pkPhase':'lobby', '#pkRoundNo':'0', '#pkDiceStart':'0', '#pkDiceCurrent':'0', '#pkDiceLost':'0', '#pkBidText':'—', '#pkBidBy':''
-    };
-    Object.entries(map).forEach(([sel,val])=>{ const el = qs(sel); if(el) el.textContent = val; });
-    const liveLink = qs('#pkLiveLink'); if(liveLink){ liveLink.href = liveHref(''); liveLink.style.display = 'none'; }
-    const players = qs('#pkPlayers'); if(players) players.innerHTML = '';
-    const myDice = qs('#pkMyDice'); if(myDice) myDice.innerHTML = '';
-    const bidPanel = qs('#pkBidPanel'); if(bidPanel) bidPanel.style.display = 'none';
-    const votePanel = qs('#pkVotePanel'); if(votePanel) votePanel.style.display = 'none';
-    const reveal = qs('#pkReveal'); if(reveal){ reveal.style.display = 'none'; reveal.innerHTML = ''; }
-  }
-
-  function clearActiveGameContext(notice, isError){
-    stopPolling();
-    UI.gameId = '';
-    UI.lastStateVersion = -1;
-    setParticipantToken('', false);
-    try{
-      const params = new URLSearchParams(location.search);
-      params.delete('game_id');
-      const next = `pikken.html${params.toString() ? `?${params.toString()}` : ''}`;
-      history.replaceState(null, '', next);
-    }catch(_){ }
-    resetRenderedMatch();
-    setStatus(notice || '', !!isError);
-    syncEmergencyBrakeUi();
-  }
-
-  function shouldDropBrokenGameContext(err){
-    const msg = String(err && err.message || err || '');
-    return /invalid input syntax for type uuid/i.test(msg)
-      || /(game|match).*(not found|niet gevonden|does not exist)/i.test(msg)
-      || /no rows returned/i.test(msg)
-      || /game_type\s+ongeldig/i.test(msg)
-      || /live_match_summaries/i.test(msg);
-  }
 
   function setStatus(text, isError){
     const el = qs('#pkStatus');
@@ -112,25 +70,6 @@
     img.alt = n ? `die ${n}` : 'die';
     img.src = n ? `./assets/pikken/dice-${n}.svg` : './assets/pikken/dice-hidden.svg';
     return img;
-  }
-
-  const EMERGENCY_BRAKE_KEY = 'gejast_pikken_emergency_brake_v497';
-  function looksLikeUuid(value){ return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value||'').trim()); }
-  function emergencyScopeKey(){ return `${EMERGENCY_BRAKE_KEY}:${String(UI.gameId||'global')}`; }
-  function isEmergencyBrakeActive(){ try{ return localStorage.getItem(emergencyScopeKey()) === '1'; }catch(_){ return false; } }
-  function setEmergencyBrake(active){ try{ if(active) localStorage.setItem(emergencyScopeKey(), '1'); else localStorage.removeItem(emergencyScopeKey()); }catch(_){ } syncEmergencyBrakeUi(); }
-  function syncEmergencyBrakeUi(){
-    const active = isEmergencyBrakeActive();
-    ['pkCreateLobbyBtn','pkJoinLobbyBtn','pkReadyBtn','pkUnreadyBtn','pkStartBtn','pkPlaceBidBtn','pkRejectBtn','pkVoteApproveBtn','pkVoteRejectBtn'].forEach((id)=>{
-      const el = qs(`#${id}`);
-      if(!el) return;
-      if(!el.dataset.baseDisabled) el.dataset.baseDisabled = el.disabled ? '1' : '0';
-      el.disabled = active ? true : el.dataset.baseDisabled === '1';
-    });
-    const onBtn = qs('#pkEmergencyBrakeBtn'); if(onBtn) onBtn.disabled = active;
-    const offBtn = qs('#pkEmergencyReleaseBtn'); if(offBtn) offBtn.disabled = !active;
-    const box = qs('#pkEmergencyBanner'); if(box) box.style.display = active ? 'block' : 'none';
-    if(active) stopPolling(); else if(UI.gameId && looksLikeUuid(UI.gameId) && !UI.pollTimer) startPolling();
   }
 
   const UI = {
@@ -233,7 +172,7 @@
   }
 
   async function loadAndRender(){
-    if(!UI.gameId || !looksLikeUuid(UI.gameId) || isEmergencyBrakeActive()) return;
+    if(!UI.gameId) return;
     try{
       const state = await rpc('pikken_get_state_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId });
       const version = Number(state?.game?.state_version || -1);
@@ -243,18 +182,13 @@
       }
       setStatus('', false);
     }catch(err){
-      if(shouldDropBrokenGameContext(err)){
-        clearActiveGameContext('', false);
-        return;
-      }
       setStatus(normalizeError(err) || 'Laden mislukt.', true);
     }
   }
 
   function startPolling(){
-    if(!UI.gameId || !looksLikeUuid(UI.gameId) || isEmergencyBrakeActive()) return;
     stopPolling();
-    UI.pollTimer = setInterval(()=>{ if(!document.hidden && !isEmergencyBrakeActive()) loadAndRender(); }, 900);
+    UI.pollTimer = setInterval(()=>{ if(!document.hidden) loadAndRender(); }, 900);
     loadAndRender();
   }
   function stopPolling(){
@@ -326,8 +260,8 @@
     const params = new URLSearchParams(location.search);
     UI.gameId = params.get('game_id') || '';
 
-    qs('#pkCreateLobbyBtn').addEventListener('click', ()=>createLobby().catch(e=>setStatus(normalizeError(e)||'Maken mislukt. Backend gaf geen leesbare fout terug.',true)));
-    qs('#pkJoinLobbyBtn').addEventListener('click', ()=>joinLobby().catch(e=>setStatus(normalizeError(e)||'Join mislukt. Backend gaf geen leesbare fout terug.',true)));
+    qs('#pkCreateLobbyBtn').addEventListener('click', ()=>createLobby().catch(e=>setStatus(normalizeError(e)||'Maken mislukt.',true)));
+    qs('#pkJoinLobbyBtn').addEventListener('click', ()=>joinLobby().catch(e=>setStatus(normalizeError(e)||'Join mislukt.',true)));
     qs('#pkReadyBtn').addEventListener('click', ()=>setReady(true).catch(e=>setStatus(normalizeError(e)||'Ready mislukt.',true)));
     qs('#pkUnreadyBtn').addEventListener('click', ()=>setReady(false).catch(e=>setStatus(normalizeError(e)||'Unready mislukt.',true)));
     qs('#pkStartBtn').addEventListener('click', ()=>startGame().catch(e=>setStatus(normalizeError(e)||'Start mislukt.',true)));
@@ -337,14 +271,7 @@
     qs('#pkVoteApproveBtn').addEventListener('click', ()=>vote(true).catch(e=>setStatus(normalizeError(e)||'Stem mislukt.',true)));
     qs('#pkVoteRejectBtn').addEventListener('click', ()=>vote(false).catch(e=>setStatus(normalizeError(e)||'Stem mislukt.',true)));
 
-    if(UI.gameId && !looksLikeUuid(UI.gameId)){
-      clearActiveGameContext('', false);
-    }
-    const emergencyBtn = qs('#pkEmergencyBrakeBtn'); if(emergencyBtn) emergencyBtn.addEventListener('click', ()=>{ stopPolling(); setEmergencyBrake(true); setStatus('Noodrem actief. Pikken staat lokaal stil tot je hem opheft of herlaadt.', true); });
-    const releaseBtn = qs('#pkEmergencyReleaseBtn'); if(releaseBtn) releaseBtn.addEventListener('click', ()=>{ setEmergencyBrake(false); setStatus('Noodrem opgeheven.', false); });
-    syncEmergencyBrakeUi();
     if(UI.gameId){ setParticipantToken(UI.gameId, true); startPolling(); }
-    else { resetRenderedMatch(); }
   }
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot, { once:true });
