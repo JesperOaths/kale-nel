@@ -1,15 +1,15 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
-  const STORAGE_KEY = 'gejast_paardenrace_room_code_v448';
+  const STORAGE_KEY = 'gejast_paardenrace_room_code_v449';
   const LIVE_QUERY_KEY = 'live';
   const ASSETS = {
     arena: './paardenrace-live-board-v447.png',
     cardBack: './paardenrace-card-back.png',
     horses: {
-      hearts: './paardenrace-ace-hearts-v448.png',
-      diamonds: './paardenrace-ace-diamonds-v448.png',
-      clubs: './paardenrace-ace-clubs-v448.png',
-      spades: './paardenrace-ace-spades-v448.png'
+      hearts: './paardenrace-ace-hearts-v449.png',
+      diamonds: './paardenrace-ace-diamonds-v449.png',
+      clubs: './paardenrace-ace-clubs-v449.png',
+      spades: './paardenrace-ace-spades-v449.png'
     }
   };
   const SUITS = ['spades','hearts','clubs','diamonds'];
@@ -20,13 +20,13 @@
     spades: { label:'♠ Schoppen', symbol:'♠', color:'#1f1b1a' }
   };
   const BOARD_POINTS = {
-    trackX: [15.42, 21.18, 27.28, 33.36, 39.56, 45.72, 51.87, 58.03, 64.18, 70.35, 76.50, 84.86],
+    trackX: [14.18, 21.18, 27.28, 33.36, 39.56, 45.72, 51.87, 58.03, 64.18, 70.35, 76.50, 84.86],
     gateX: [19.07, 25.14, 31.20, 37.31, 43.44, 49.55, 55.66, 61.76, 67.91, 74.02],
     laneY: { spades: 40.86, hearts: 55.59, clubs: 70.24, diamonds: 84.90 },
     deckX: 8.35,
     deckY: 25.55,
-    discardX: 89.85,
-    discardY: 25.40,
+    discardX: 90.55,
+    discardY: 24.85,
     gateY: 22.36,
     horseWidthPct: 5.15,
     gateWidthPct: 4.86,
@@ -95,6 +95,9 @@
     const src = ASSETS.horses[suit] || ASSETS.horses.hearts;
     return `<img src="${src}" alt="${suitLabel(suit)} aas" class="pr-ace-card" draggable="false">`;
   }
+  function renderStartCover(){
+    return '<svg class="pr-start-cover" viewBox="0 0 311 410" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="1.5" y="1.5" width="308" height="407" rx="24" fill="#f8f2e6" stroke="rgba(77,57,31,.20)" stroke-width="3"/></svg>';
+  }
   function getDrawRemaining(match){
     const deck = Array.isArray(match?.draw_deck) ? match.draw_deck : [];
     const idx = Number(match?.draw_index || 0);
@@ -122,6 +125,12 @@
       return `<div class="pr-gate-slot ${isResolved ? 'is-revealed' : 'is-facedown'}" data-gate-no="${gateNo}" style="left:${x}%;top:${BOARD_POINTS.gateY}%">${inner}</div>`;
     }).join('');
 
+    const startCoverHtml = SUITS.map((suit)=>{
+      const x = BOARD_POINTS.trackX[0];
+      const y = BOARD_POINTS.laneY[suit];
+      return `<div class="pr-start-cover-slot" data-start-cover="${suit}" style="left:${x}%;top:${y}%">${renderStartCover()}</div>`;
+    }).join('');
+
     const horseHtml = SUITS.map((suit)=>{
       const raw = Number(pos[suit] || 0);
       const idx = Math.max(0, Math.min(11, raw));
@@ -138,6 +147,7 @@
             <div class="pr-deck-slot" data-deck-slot style="left:${BOARD_POINTS.deckX}%;top:${BOARD_POINTS.deckY}%">${deckLayers}</div>
             <div class="pr-discard-slot ${discardCard ? 'has-card' : ''}" data-discard-slot style="left:${BOARD_POINTS.discardX}%;top:${BOARD_POINTS.discardY}%">${discardCard ? renderFaceUpCard(discardCard, 'pr-discard-face') : ''}</div>
             ${gateHtml}
+            ${startCoverHtml}
             ${horseHtml}
             <div class="pr-animation-layer" data-animation-layer></div>
           </div>

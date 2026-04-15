@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace live</title>
-  <script>window.GEJAST_PAGE_VERSION='v448';</script>
-  <script src="./gejast-config.js?v448"></script>
-  <script src="./gejast-paardenrace.js?v448"></script>
+  <script>window.GEJAST_PAGE_VERSION='v449';</script>
+  <script src="./gejast-config.js?v449"></script>
+  <script src="./gejast-paardenrace.js?v449"></script>
   <style>
     :root{--gold:#9a8241;--paper:#fffaf3;--ink:#17130f;--muted:#6d6256;--line:rgba(0,0,0,.08);--bg:#efe6d7;--soft:#f7f1e7;--red:#8a1022;--red-bg:#fff4f2}
     *{box-sizing:border-box}
@@ -28,16 +28,18 @@
     .pr-live-arena{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover}
     .pr-overlay,.pr-animation-layer{position:absolute;inset:0}
     .pr-animation-layer{pointer-events:none;z-index:25}
-    .pr-horse-slot,.pr-gate-slot,.pr-deck-slot,.pr-discard-slot,.pr-float-card{position:absolute;transform:translate(-50%,-50%)}
+    .pr-horse-slot,.pr-gate-slot,.pr-deck-slot,.pr-discard-slot,.pr-float-card,.pr-start-cover-slot{position:absolute;transform:translate(-50%,-50%)}
+    .pr-start-cover-slot{width:5.15%;z-index:7;display:flex;align-items:center;justify-content:center}
     .pr-horse-slot{width:5.15%;z-index:8;display:flex;align-items:center;justify-content:center}
     .pr-deck-slot{width:5.4%;height:12.5%;z-index:4}
     .pr-discard-slot{width:6%;min-height:12.5%;z-index:5;display:flex;align-items:center;justify-content:center}
     .pr-gate-slot{width:4.86%;z-index:6;display:flex;align-items:center;justify-content:center;transform-style:preserve-3d}
     .pr-gate-slot.is-revealed.pr-just-revealed{animation:gateReveal .72s cubic-bezier(.2,.84,.24,1.05)}
     .pr-stack-card{position:absolute;inset:0}
-    .pr-card-back,.pr-ace-card{display:block;width:100%;height:auto;min-width:0;background:transparent}
+    .pr-card-back,.pr-ace-card,.pr-start-cover{display:block;width:100%;height:auto;min-width:0;background:transparent}
     .pr-card-back{filter:drop-shadow(0 10px 20px rgba(0,0,0,.18))}
-    .pr-ace-card{filter:drop-shadow(0 12px 24px rgba(0,0,0,.22)); user-select:none; pointer-events:none}
+    .pr-ace-card{filter:drop-shadow(0 10px 18px rgba(0,0,0,.20)); user-select:none; pointer-events:none}
+    .pr-start-cover{filter:drop-shadow(0 3px 8px rgba(0,0,0,.10));opacity:.985}
     .pr-open-card{position:relative;width:100%;aspect-ratio:311/410;border-radius:16px;background:linear-gradient(180deg,#fdf9f0 0%,#f5eedf 100%);border:1px solid rgba(77,57,31,.28);box-shadow:0 10px 22px rgba(0,0,0,.18);overflow:hidden;color:#1f1b1a}
     .pr-open-card.red{color:#a11f35}
     .pr-open-card-corner{position:absolute;display:grid;gap:1px;font-weight:900;font-size:clamp(11px,.95vw,16px);line-height:1;text-align:center}
@@ -86,7 +88,7 @@
   <section class="board-panel">
     <div id="boardBox" class="board-shell"></div>
     <div class="status-row">
-      <div class="small">Top links = trekstapel. Midden boven = 10 gate-kaarten. Rechts bij FINISH zie je de getrokken kaart terug voor verificatie.</div>
+      <div class="small">Top links = trekstapel. Midden boven = 10 gate-kaarten. Rechts bij FINISH zie je de getrokken kaart open terug voor verificatie.</div>
       <div class="status" id="statusBox"></div>
     </div>
   </section>
@@ -105,7 +107,7 @@
   </div>
 </div></div>
 <dialog id="rulesDialog"><div class="modal-card"><div class="modal-top"><h2 style="margin:0">Paardenrace regels</h2><button class="btn secondary" id="closeRulesBtn" type="button">Sluiten</button></div><ol style="display:grid;gap:10px;line-height:1.5"><li>Iedereen kiest één suit/paard en zet één vaste inzet in Bakken.</li><li>De host verifieert die inzet in de lobby; pas dan kan een speler ready drukken.</li><li>Bij start gaat iedereen naar dit room-specifieke live scherm.</li><li>Elke getrokken kaart zet het bijbehorende paard één vak vooruit.</li><li>Als alle vier de paarden een gate hebben gehaald, draait die gate open en duwt één paard terug.</li><li>De eerste crossing telt alleen als minstens één speler op dat paard had ingezet.</li><li>Daarna verdelen winnaars hun nominaties.</li></ol></div></dialog>
-<div class="site-credit-watermark" data-version-watermark>v448 · Made by Bruis</div>
+<div class="site-credit-watermark" data-version-watermark>v449 · Made by Bruis</div>
 <script>
 (()=>{
   const api = window.GEJAST_PAARDENRACE; const $=(id)=>document.getElementById(id);
@@ -160,7 +162,14 @@
     const deck = document.querySelector('[data-deck-slot]');
     const discard = document.querySelector('[data-discard-slot]');
     if(!deck || !discard || !cardCode) return;
-    await flyCard(deck, discard, api.renderCardBack('pr-deck-back'), { duration:760, width:discard.getBoundingClientRect().width || 88, rotate:4, flipAt:0.56, faceUpHtml: api.renderFaceUpCard(cardCode, 'pr-discard-face') });
+    const deckRect = deck.getBoundingClientRect();
+    const discardRect = discard.getBoundingClientRect();
+    const stage = document.querySelector('[data-stage-root]');
+    if(!stage) return;
+    const stageRect = stage.getBoundingClientRect();
+    const mid = { x: Math.max(stageRect.left + (stageRect.width * 0.79), (deckRect.left + discardRect.left) / 2), y: stageRect.top + (stageRect.height * 0.18) };
+    await flyCard(deck, { getBoundingClientRect:()=>({ left:mid.x-10, top:mid.y-10, width:20, height:20 }) }, api.renderCardBack('pr-deck-back'), { duration:360, width:discardRect.width || 88, rotate:8, fadeOut:false, scaleTo:1.03 });
+    await flyCard({ getBoundingClientRect:()=>({ left:mid.x-10, top:mid.y-10, width:20, height:20 }) }, discard, api.renderCardBack('pr-deck-back'), { duration:440, width:discardRect.width || 88, rotate:2, flipAt:0.42, faceUpHtml: api.renderFaceUpCard(cardCode, 'pr-discard-face'), scaleTo:1.04 });
   }
   async function animateGateReveal(match, gateNos){
     for(const gateNo of gateNos){

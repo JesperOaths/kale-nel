@@ -674,7 +674,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v448';</script><script src="./gejast-config.js?v448"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v449';</script><script src="./gejast-config.js?v449"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
   <script src="./gejast-live-summary.js?v389"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
   <script src="./gejast-combined-readers.js?v426"></script>
@@ -927,6 +927,22 @@ function writeHomepageBootCache(value) {
 
 function persistHomepagePollSnapshot(legends, losers){ try{ localStorage.setItem(HOMEPAGE_POLL_STORAGE_KEY, JSON.stringify({ legends:Array.isArray(legends)?legends:[], losers:Array.isArray(losers)?losers:[] })); }catch(_){ } }
 function hydrateHomepagePollSnapshot(){ try{ const raw = localStorage.getItem(HOMEPAGE_POLL_STORAGE_KEY); return raw ? JSON.parse(raw) : null; }catch(_){ return null; } }
+function mergeSnapshotNames(payload, snapshot){
+  const next = (payload && typeof payload === 'object') ? { ...payload } : {};
+  const saved = (snapshot && typeof snapshot === 'object') ? snapshot : {};
+  const legends = Array.isArray(next.legends) ? next.legends : (Array.isArray(next.yes_names) ? next.yes_names : []);
+  const losers = Array.isArray(next.losers) ? next.losers : (Array.isArray(next.no_names) ? next.no_names : []);
+  if (!legends.length && Array.isArray(saved.legends) && saved.legends.length) {
+    next.legends = [...saved.legends];
+    next.yes_names = [...saved.legends];
+    if (typeof next.can_count === 'undefined' && typeof next.yes_count === 'undefined') next.can_count = saved.legends.length;
+  }
+  if (!losers.length && Array.isArray(saved.losers) && saved.losers.length) {
+    next.losers = [...saved.losers];
+    next.no_names = [...saved.losers];
+  }
+  return next;
+}
 
 function applyAdminViewerRefresh() {
   try {
@@ -1239,7 +1255,8 @@ function renderExtraPollState(data) {
 async function getExtraPollState() {
   const session_token = getSessionToken();
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_site_poll_state`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ poll_key_input: EXTRA_POLL_KEY, session_token }) });
-  return await parseResponse(res);
+  const data = await parseResponse(res);
+  return mergeSnapshotNames(data, hydrateExtraPollSnapshot());
 }
 async function castExtraPollVote(desired_status) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cast_site_poll_vote`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ poll_key_input: EXTRA_POLL_KEY, session_token: getSessionToken(), desired_status }) });
@@ -1738,7 +1755,7 @@ async function castExtraPollVote(desired_status) {
         const pollKey = String(bundle.extra_poll_state.poll_key || '').trim().toLowerCase();
         const expectedPollKey = String(EXTRA_POLL_KEY || '').trim().toLowerCase();
         if (!pollKey || !expectedPollKey || pollKey === expectedPollKey) {
-          renderExtraPollState(bundle.extra_poll_state);
+          renderExtraPollState(mergeSnapshotNames(bundle.extra_poll_state, hydrateExtraPollSnapshot()));
           setExtraPollStatus('');
         }
       }
@@ -1758,6 +1775,10 @@ async function castExtraPollVote(desired_status) {
 
     async function bootHomepage(){
       document.body.classList.add('boot-pending');
+      const savedHomepagePoll = hydrateHomepagePollSnapshot();
+      const savedExtraPoll = hydrateExtraPollSnapshot();
+      if (savedHomepagePoll) renderState(savedHomepagePoll);
+      if (savedExtraPoll) renderExtraPollState(savedExtraPoll);
       const cached = readHomepageBootCache();
       if (cached) applyHomepageBootBundle(cached, true);
       ensureAdminViewer().then(applyAdminViewerRefresh).catch(() => {});
