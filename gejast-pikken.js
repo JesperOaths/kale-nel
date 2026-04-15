@@ -40,11 +40,14 @@
   function esc(s){ const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(s??'').replace(/[&<>"']/g,m=>map[m]); }
   function normalizeError(err){
     const msg = String(err && err.message || err || 'Onbekende fout');
+    if(/column "?submitter_name"? of relation "?live_match_summaries"? does not exist/i.test(msg)){
+      return 'Pikken live-compat mist nog de oudere submitter_name-kolom op live_match_summaries. Gebruik de v503 SQL-compat-fix en vernieuw daarna hard.';
+    }
     if(/game_type\s+ongeldig/i.test(msg)){
-      return 'Pikken live-compat raakt nog een oudere game_type-lookup. Gebruik de v502 SQL-compat-fix en vernieuw daarna hard.';
+      return 'Pikken live-compat raakt nog een oudere game_type-lookup. Gebruik de v503 SQL-compat-fix en vernieuw daarna hard.';
     }
     if(/column reference "?game_type"? is ambiguous/i.test(msg)){
-      return 'Pikken backend gebruikt nog een oude live-summary lookup met een dubbelzinnige game_type-verwijzing. Gebruik de v502 SQL-compat-fix en vernieuw daarna hard.';
+      return 'Pikken backend gebruikt nog een oude live-summary lookup met een dubbelzinnige game_type-verwijzing. Gebruik de v503 SQL-compat-fix en vernieuw daarna hard.';
     }
     return msg;
   }
