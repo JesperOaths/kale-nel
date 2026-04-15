@@ -244,7 +244,7 @@
       setStatus('', false);
     }catch(err){
       if(shouldDropBrokenGameContext(err)){
-        clearActiveGameContext(normalizeError(err), false);
+        clearActiveGameContext('', false);
         return;
       }
       setStatus(normalizeError(err) || 'Laden mislukt.', true);

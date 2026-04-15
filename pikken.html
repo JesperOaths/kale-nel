@@ -7,8 +7,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken</title>
-  <script>window.GEJAST_PAGE_VERSION='v491';</script>
-  <script src="./gejast-config.js?v491"></script>
+  <script>window.GEJAST_PAGE_VERSION='v489';</script>
+  <script src="./gejast-config.js?v492"></script>
   <script src="./gejast-home-gate.js?v487"></script>
   <script src="./gejast-scope-context.js?v486"></script>
   <style>
@@ -40,6 +40,8 @@
     .accordion summary{list-style:none;cursor:pointer;padding:16px;font-weight:900;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
     .accordion summary::-webkit-details-marker{display:none}
     .detail{padding:0 16px 16px}
+    .emergency-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    .emergency-banner{display:none;margin-top:10px;padding:12px 14px;border-radius:16px;background:rgba(127,47,29,.08);border:1px solid rgba(127,47,29,.18);color:#7f2f1d;font-weight:800}
     .reveal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px}
     .reveal-card{border:1px solid var(--line);border-radius:18px;background:#fbfaf6;padding:12px}
     @media(max-width:900px){.grid{grid-template-columns:1fr}}
@@ -88,6 +90,11 @@
             <button class="btn alt" id="pkUnreadyBtn">Unready</button>
             <button class="btn" id="pkStartBtn">Start</button>
           </div>
+          <div class="emergency-row">
+            <button class="btn alt" id="pkEmergencyBrakeBtn" type="button">Noodrem</button>
+            <button class="btn alt" id="pkEmergencyReleaseBtn" type="button">Noodrem opheffen</button>
+          </div>
+          <div class="emergency-banner" id="pkEmergencyBanner">Noodrem actief. Polling en spelacties staan stil op dit apparaat.</div>
 
           <details class="accordion">
             <summary><span>Regels (kort)</span><span class="muted">open</span></summary>
@@ -146,24 +153,11 @@
     </div>
   </div>
 
-  <script src="./pikken-dice-canvas.js?v491"></script>
-  <script src="./gejast-pikken.js?v491"></script>
+  <script src="./pikken-dice-canvas.js?v489"></script>
+  <script src="./gejast-pikken.js?v492"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 <div class="site-credit-watermark" data-version-watermark></div>
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-
-  <script>
-    window.PIKKEN_V491_BOOT_GUARD = true;
-    document.addEventListener('DOMContentLoaded', function(){
-      var el = document.getElementById('pkStatus');
-      if (!el) return;
-      var txt = String(el.textContent || '');
-      if (/live-summary compatibiliteitslaag|v488 SQL-compat-fix/i.test(txt)) {
-        el.textContent = '';
-      }
-    }, { once:true });
-  </script>
-
 </body>
 </html>
 
