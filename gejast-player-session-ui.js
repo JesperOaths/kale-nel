@@ -67,6 +67,7 @@
           return {
             name,
             avatar: data?.my_avatar_url || data?.avatar_url || data?.viewer?.avatar_url || '',
+            coins: Number(data?.caute_coins ?? data?.coin_balance ?? data?.viewer?.caute_coins ?? data?.viewer?.coin_balance ?? 0) || 0,
             profileHref: './my_profile.html'
           };
         }
@@ -74,6 +75,16 @@
     }
     return null;
   }
+
+  async function fetchCoins(token){
+    if (!token || !SUPABASE_URL || !SUPABASE_KEY) return 0;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_my_caute_coins_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token: token, session_token_input: token }) });
+      const data = await parseJson(res);
+      return Number(data?.balance ?? data?.caute_coins ?? data?.viewer_balance ?? 0) || 0;
+    } catch (_) { return 0; }
+  }
+
   function ensureStyles(){
     if (document.getElementById('gejast-player-session-ui-style')) return;
     const style = document.createElement('style');
@@ -141,6 +152,7 @@
           <div class="gejast-session-meta">
             <div class="gejast-session-label">Jouw spelersessie</div>
             <div class="gejast-session-fullname" id="gejastSessionPanelName"></div>
+            <div class="gejast-session-label" id="gejastSessionCoins"></div>
           </div>
         </div>
         <div class="gejast-session-actions">
@@ -161,6 +173,8 @@
   function apply(shell, viewer){
     shell.querySelector('#gejastSessionToggleName').textContent = viewer.name || 'Speler';
     shell.querySelector('#gejastSessionPanelName').textContent = viewer.name || 'Speler';
+    const coinsNode = shell.querySelector('#gejastSessionCoins');
+    if (coinsNode) coinsNode.textContent = (CONFIG.formatCauteCoins ? CONFIG.formatCauteCoins(viewer.coins || 0) : `₵ ${Math.round(Number(viewer.coins||0)||0)} caute coins`);
     shell.querySelector('#gejastSessionToggleAvatar').innerHTML = buildAvatar(viewer.name, viewer.avatar);
     shell.querySelector('#gejastSessionPanelAvatar').innerHTML = buildAvatar(viewer.name, viewer.avatar);
     shell.classList.add('is-visible');
@@ -178,6 +192,7 @@
     if (!token) return hide(shell);
     const viewer = await fetchViewer(token);
     if (!viewer || !viewer.name) return hide(shell);
+    if (!Number.isFinite(Number(viewer.coins))) viewer.coins = await fetchCoins(token);
     try {
       const allowed = await fetchAllowedNames(inferScope());
       if (allowed.length && !allowed.includes(normalizeName(viewer.name))) {
