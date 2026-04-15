@@ -118,7 +118,8 @@
     pollTimer: null,
     polling: false,
     roomCodeDirty: false,
-    roomCodeTouchedAt: 0
+    roomCodeTouchedAt: 0,
+    state: null
   };
 
   function markRoomCodeDirty(){ UI.roomCodeDirty = true; UI.roomCodeTouchedAt = Date.now(); }
@@ -132,6 +133,20 @@
     if (typed) return typed.toUpperCase();
     return String(getStoredLobbyCode() || '').trim().toUpperCase();
   }
+
+  function findMatchingLiveRoom(list){
+    const currentCode = currentLobbyCode();
+    const currentGameId = String(UI.gameId || '').trim();
+    const rooms = Array.isArray(list) ? list : [];
+    return rooms.find((r)=>{
+      const stage = String(r.stage || '').toLowerCase();
+      if(stage === 'lobby') return false;
+      const roomCode = String(r.lobby_code || '').trim().toUpperCase();
+      const gameId = String(r.game_id || '').trim();
+      return (currentCode && roomCode === currentCode) || (currentGameId && gameId === currentGameId);
+    }) || null;
+  }
+
 
   function clearLobbyView(){
     UI.gameId = '';
@@ -177,9 +192,20 @@
     (scope || document).querySelectorAll('[data-pk-room-code]').forEach((btn)=>{
       btn.addEventListener('click', async()=>{
         const code = String(btn.getAttribute('data-pk-room-code') || '').trim().toUpperCase();
+        const stage = String(btn.getAttribute('data-pk-room-stage') || '').trim().toLowerCase();
+        const gameId = String(btn.getAttribute('data-pk-room-game-id') || '').trim();
         if(!code) return;
         const el = qs('#pkRoomCodeInput');
         if(el) el.value = code;
+        if(stage && stage !== 'lobby'){
+          if(gameId){
+            UI.gameId = gameId;
+            setParticipantToken(gameId, true);
+            history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(gameId)}&scope=${encodeURIComponent(getScope())}`);
+            goLive(gameId);
+            return;
+          }
+        }
         await joinLobby(code);
       });
     });
@@ -191,15 +217,24 @@
       box.innerHTML = `<div class="muted small-text">${empty}</div>`;
       return;
     }
-    box.innerHTML = list.map((r)=>`
-      <button type="button" class="room-card" data-pk-room-code="${esc(r.lobby_code || '')}">
+    box.innerHTML = list.map((r)=>{
+      const stage = String(r.stage || '').toLowerCase();
+      const isLobby = stage === 'lobby';
+      return `
+      <button
+        type="button"
+        class="room-card"
+        data-pk-room-code="${esc(r.lobby_code || '')}"
+        data-pk-room-stage="${esc(stage)}"
+        data-pk-room-game-id="${esc(r.game_id || '')}"
+      >
         <div>
           <strong>${esc(r.lobby_code || '—')}</strong>
           <div class="muted small-text">Host: ${esc(r.host_name || '—')} · ${Number(r.player_count || 0)} spelers (${Number(r.ready_count || 0)} ready) · fase: ${esc(r.stage_label || r.stage || 'lobby')}</div>
         </div>
-        <div class="room-pill ${String(r.stage || '').toLowerCase()==='lobby' ? '' : 'busy'}">${String(r.stage || '').toLowerCase()==='lobby' ? 'Join' : 'Live'}</div>
+        <div class="room-pill ${isLobby ? '' : 'busy'}">${isLobby ? 'Join' : 'Live'}</div>
       </button>
-    `).join('');
+    `;}).join('');
     bindRoomButtons(box);
   }
 
@@ -213,18 +248,23 @@
       renderRoomsInto(qs('#pkOpenRoomsBox'), open, 'Nog geen open kamers. Maak er één aan of ververs zo weer.');
       clearKnownNonfatalStatus();
 
-      const currentCode = currentLobbyCode();
-      if (UI.gameId && currentCode && !/pikken_live\.html/i.test(window.location.pathname)) {
-        const matchedLive = live.find((r)=>String(r.lobby_code || '').trim().toUpperCase() === currentCode);
-        if (matchedLive) {
-          setStatus('', false);
-          goLive(UI.gameId);
-          return;
+      const matchedLive = findMatchingLiveRoom(list);
+      if (matchedLive && !/pikken_live\.html/i.test(window.location.pathname)) {
+        const gameId = String(matchedLive.game_id || UI.gameId || '').trim();
+        if (gameId) {
+          UI.gameId = gameId;
+          setParticipantToken(gameId, true);
+          setStoredLobbyCode(String(matchedLive.lobby_code || '').trim().toUpperCase());
+          history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(gameId)}&scope=${encodeURIComponent(getScope())}`);
+          goLive(gameId);
+          return list;
         }
       }
+      return list;
     } catch(err){
       renderRoomsInto(qs('#pkLiveRoomsBox'), [], 'Kon actieve kamers niet laden.');
       renderRoomsInto(qs('#pkOpenRoomsBox'), [], 'Kon open kamers niet laden.');
+      throw err;
     }
   }
 
@@ -337,22 +377,30 @@
   }
 
   async function loadAndRender(){
-    if(!UI.gameId) return;
+    if(!UI.gameId) return null;
     try{
       const state = await rpc('pikken_get_state_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId });
+      UI.state = state || null;
       const version = Number(state?.game?.state_version || -1);
       if(version !== UI.lastStateVersion){
         UI.lastStateVersion = version;
         render(state);
       }
+      const phase = String(state?.game?.state?.phase || state?.game?.status || 'lobby').toLowerCase();
       setStatus('', false);
+      if(phase && phase !== 'lobby' && !/pikken_live\.html/i.test(window.location.pathname)){
+        goLive(state?.game?.id || UI.gameId);
+        return state;
+      }
+      return state;
     }catch(err){
       if(isKnownNonfatalRoundNoError(err)){
         clearLobbyView();
         clearKnownNonfatalStatus();
-        return;
+        return null;
       }
       setStatus(normalizeError(err) || 'Laden mislukt.', true);
+      throw err;
     }
   }
 
@@ -385,6 +433,7 @@
       config_input: { penalty_mode: mode }
     });
     applyCreateFallback(out || {});
+    try { await loadAndRender(); } catch(_) {}
     await loadOpenRooms();
     startPolling();
   }
@@ -399,6 +448,7 @@
       lobby_code_input: code
     });
     applyCreateFallback(Object.assign({}, out || {}, { lobby_code: code }));
+    try { await loadAndRender(); } catch(_) {}
     await loadOpenRooms();
     startPolling();
   }
@@ -411,9 +461,14 @@
 
   async function startGame(){
     setStatus('Starten…', false);
+    let startState = null;
     let timedOut = false;
     try {
-      await rpcWithTimeout('pikken_start_game_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId }, 3500);
+      startState = await rpcWithTimeout('pikken_start_game_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId }, 5000);
+      if(startState && typeof startState === 'object'){
+        UI.state = startState;
+        try { render(startState); } catch(_) {}
+      }
     } catch(err) {
       if(err && err.code === 'START_TIMEOUT'){
         timedOut = true;
@@ -421,21 +476,35 @@
         throw err;
       }
     }
-    try { await loadAndRender(); } catch(_) { }
-    try { await loadOpenRooms(); } catch(_) { }
-    clearKnownNonfatalStatus();
-    const game = ((UI.state||{}).game||{});
-    const phase = String((game.state||{}).phase || game.status || '').toLowerCase();
+    let loadedState = null;
+    try { loadedState = await loadAndRender(); } catch(_) { }
+    let rooms = null;
+    try { rooms = await loadOpenRooms(); } catch(_) { }
+
+    const stateToUse = loadedState || startState || UI.state || null;
+    const phase = String(stateToUse?.game?.state?.phase || stateToUse?.game?.status || '').toLowerCase();
     if(phase && phase !== 'lobby'){
       setStatus('', false);
-      goLive(game.id || UI.gameId);
+      goLive(stateToUse?.game?.id || UI.gameId);
       return;
     }
+
+    const matchedLive = findMatchingLiveRoom(rooms || []);
+    if(matchedLive){
+      setStatus('', false);
+      const gameId = String(matchedLive.game_id || UI.gameId || '').trim();
+      if(gameId){
+        UI.gameId = gameId;
+        goLive(gameId);
+        return;
+      }
+    }
+
     if(timedOut){
       setStatus('Start duurde te lang. Ververs zo nodig één keer.', true);
       return;
     }
-    setStatus('', false);
+    setStatus('Start leverde geen live spel op. Backend startpad lijkt nog vast te lopen.', true);
   }
 
   async function placeBid(){
