@@ -1,8 +1,8 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
-  const STORAGE_KEY = 'gejast_pikken_lobby_code_v510';
-  const PIKKEN_PARTICIPANT_KEY = 'gejast_pikken_participant_v510';
+  const STORAGE_KEY = 'gejast_pikken_lobby_code_v512';
+  const PIKKEN_PARTICIPANT_KEY = 'gejast_pikken_participant_v512';
 
   function getScope(){
     try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
@@ -46,7 +46,15 @@
     if(/column reference "?game_type"? is ambiguous/i.test(msg)){
       return 'Pikken backend raakt nog een dubbelzinnige game_type-verwijzing buiten de huidige compat-laag. Ruwe fout: ' + msg;
     }
+    if(/column reference "?round_no"? is ambiguous/i.test(msg)){
+      return 'Pikken backend raakt nog een dubbelzinnige round_no-verwijzing buiten de huidige compat-laag. Ruwe fout: ' + msg;
+    }
     return msg;
+  }
+
+  function isNonfatalPostStartError(err){
+    const msg = String(err && err.message || err || '');
+    return /column reference "?round_no"? is ambiguous/i.test(msg) || /column reference "?game_type"? is ambiguous/i.test(msg);
   }
 
   function setParticipantToken(gameId, active){ try{ if(active && gameId){ localStorage.setItem(PIKKEN_PARTICIPANT_KEY, JSON.stringify({game_id:String(gameId), at:Date.now()})); } else { localStorage.removeItem(PIKKEN_PARTICIPANT_KEY); } }catch(_){ } }
@@ -82,9 +90,7 @@
   };
 
   function markRoomCodeDirty(){ UI.roomCodeDirty = true; UI.roomCodeTouchedAt = Date.now(); }
-  function shouldPreserveInput(el){ return !!(el && (document.activeElement === el || UI.roomCodeDirty || Date.now() - UI.roomCodeTouchedAt < 2500)); }
-  function shouldPreserveRoomCodeInput(){ const el = qs('#pkRoomCodeInput'); return shouldPreserveInput(el); }
-  function shouldPreservePenaltyInput(){ const el = qs('#pkPenaltyMode'); return shouldPreserveInput(el); }
+  function shouldPreserveRoomCodeInput(){ const el = qs('#pkRoomCodeInput'); return !!(el && (document.activeElement === el || UI.roomCodeDirty || Date.now() - UI.roomCodeTouchedAt < 2500)); }
   function setRoomCodeInputValue(value){ const el = qs('#pkRoomCodeInput'); if(!el) return; if(shouldPreserveRoomCodeInput()) return; el.value = value || ''; UI.roomCodeDirty = false; }
   function roomCode(){ return String(((qs('#pkRoomCodeInput') && qs('#pkRoomCodeInput').value) || getStoredLobbyCode() || '')).trim().toUpperCase(); }
 
@@ -94,8 +100,6 @@
     clearStoredLobbyCode();
     setParticipantToken('', false);
     if(qs('#pkLobbyShell')) qs('#pkLobbyShell').style.display = 'none';
-    if(qs('#pkStartBtn')) qs('#pkStartBtn').style.display = 'none';
-    if(qs('#pkDestroyBtn')) qs('#pkDestroyBtn').style.display = 'none';
     if(qs('#pkLobbyCode')) qs('#pkLobbyCode').textContent = '—';
     if(qs('#pkLobbyMeta')) qs('#pkLobbyMeta').textContent = 'Nog geen room geladen.';
     if(qs('#pkLobbySummary')) qs('#pkLobbySummary').textContent = 'Nog geen lobby info.';
@@ -244,12 +248,11 @@
     qs('#pkBidPanel').style.display = myTurn ? 'block' : 'none';
     qs('#pkVotePanel').style.display = myVoteTurn ? 'block' : 'none';
     qs('#pkRejectBtn').disabled = !myTurn || !bid;
-    const canStart = !!viewer.is_host && phase === 'lobby' && status !== 'finished';
-    if(qs('#pkStartBtn')){
-      qs('#pkStartBtn').style.display = canStart ? '' : 'none';
-      qs('#pkStartBtn').disabled = !canStart || players.length < 2 || players.some((p)=>!p.ready);
+        const startBtn = qs('#pkStartBtn');
+    if(startBtn){
+      startBtn.disabled = !viewer.is_host || players.length < 2 || status === 'finished';
+      startBtn.style.display = viewer.is_host ? '' : 'none';
     }
-    if(qs('#pkDestroyBtn')) qs('#pkDestroyBtn').style.display = viewer.is_host ? '' : 'none';
 
     const revealWrap = qs('#pkReveal');
     if(!lastReveal){
@@ -293,7 +296,6 @@
         UI.lastStateVersion = version;
         render(state);
       }
-      await loadOpenRooms();
       setStatus('', false);
     }catch(err){
       setStatus(normalizeError(err) || 'Laden mislukt.', true);
@@ -347,24 +349,6 @@
     startPolling();
   }
 
-  async function leaveLobby(){
-    if(!UI.gameId) return clearLobbyView();
-    setStatus('Room verlaten…', false);
-    await rpc('pikken_leave_lobby_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId });
-    clearLobbyView();
-    history.replaceState(null,'',`pikken.html?scope=${encodeURIComponent(getScope())}`);
-    await poll();
-  }
-
-  async function destroyLobby(){
-    if(!UI.gameId) return clearLobbyView();
-    setStatus('Room opheffen…', false);
-    await rpc('pikken_destroy_lobby_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId });
-    clearLobbyView();
-    history.replaceState(null,'',`pikken.html?scope=${encodeURIComponent(getScope())}`);
-    await poll();
-  }
-
   async function setReady(ready){
     setStatus(ready?'Ready…':'Unready…', false);
     await rpc('pikken_set_ready_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId, ready_input: !!ready });
@@ -375,26 +359,26 @@
     setStatus('Starten…', false);
     try {
       await rpc('pikken_start_game_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId });
-    } catch(err){
-      const msg = normalizeError(err) || '';
-      if(/round_no\s+is\s+ambiguous/i.test(msg) || /column reference "round_no" is ambiguous/i.test(msg)){
-        try {
-          const state = await rpc('pikken_get_state_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId });
-          const phase = String(state?.game?.state?.phase || '').toLowerCase();
-          const status = String(state?.game?.status || '').toLowerCase();
-          if(phase && phase !== 'lobby' || (status && status !== 'lobby')){
-            render(state);
-            await loadOpenRooms();
-            setStatus('', false);
-            return;
-          }
-        } catch(_) {}
+      await loadAndRender();
+      await loadOpenRooms();
+      return;
+    } catch(err) {
+      if(!isNonfatalPostStartError(err)) throw err;
+      try {
+        await loadAndRender();
+        await loadOpenRooms();
+        const phase = String(((qs('#pkPhase') && qs('#pkPhase').textContent) || '')).trim().toLowerCase();
+        const bidPanel = qs('#pkBidPanel');
+        const votePanel = qs('#pkVotePanel');
+        const started = phase && phase !== 'lobby';
+        if(started || (bidPanel && bidPanel.style.display !== 'none') || (votePanel && votePanel.style.display !== 'none')) {
+          setStatus('', false);
+          return;
+        }
+      } catch(_) {
       }
       throw err;
     }
-    await loadAndRender();
-    await loadOpenRooms();
-    setStatus('', false);
   }
 
   async function placeBid(){
@@ -426,8 +410,6 @@
     qs('#pkRefreshRoomsBtn').addEventListener('click', ()=>poll().catch(e=>setStatus(normalizeError(e)||'Verversen mislukt.',true)));
     qs('#pkReadyBtn').addEventListener('click', ()=>setReady(true).catch(e=>setStatus(normalizeError(e)||'Ready mislukt.',true)));
     qs('#pkUnreadyBtn').addEventListener('click', ()=>setReady(false).catch(e=>setStatus(normalizeError(e)||'Unready mislukt.',true)));
-    qs('#pkLeaveBtn').addEventListener('click', ()=>leaveLobby().catch(e=>setStatus(normalizeError(e)||'Verlaten mislukt.',true)));
-    qs('#pkDestroyBtn').addEventListener('click', ()=>destroyLobby().catch(e=>setStatus(normalizeError(e)||'Opheffen mislukt.',true)));
     qs('#pkStartBtn').addEventListener('click', ()=>startGame().catch(e=>setStatus(normalizeError(e)||'Start mislukt.',true)));
 
     qs('#pkPlaceBidBtn').addEventListener('click', ()=>placeBid().catch(e=>setStatus(normalizeError(e)||'Bieden mislukt.',true)));
@@ -440,12 +422,6 @@
       roomEl.addEventListener('input', markRoomCodeDirty);
       roomEl.addEventListener('focus', markRoomCodeDirty);
       roomEl.addEventListener('blur', ()=>{ UI.roomCodeTouchedAt = Date.now(); });
-    }
-    const modeEl = qs('#pkPenaltyMode');
-    if(modeEl){
-      modeEl.addEventListener('focus', markRoomCodeDirty);
-      modeEl.addEventListener('change', ()=>{ UI.roomCodeTouchedAt = Date.now(); UI.roomCodeDirty = false; });
-      modeEl.addEventListener('blur', ()=>{ UI.roomCodeTouchedAt = Date.now(); });
     }
 
     const seeded = getStoredLobbyCode();
