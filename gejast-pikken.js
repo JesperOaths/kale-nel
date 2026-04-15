@@ -41,13 +41,11 @@
   function normalizeError(err){
     const msg = String(err && err.message || err || 'Onbekende fout');
     if(/game_type\s+ongeldig/i.test(msg)){
-      return 'Pikken live-samenvatting staat backend nog niet open voor dit spel. Draai de v487a SQL-fix en probeer opnieuw.';
+      return 'Pikken live-samenvatting staat backend nog niet open voor dit spel. Draai de v499 SQL-compat-fix en probeer opnieuw.';
     }
-    if(/column\s+"?participants"?\s+is\s+of\s+type\s+jsonb\s+but\s+expression\s+is\s+of\s+type\s+text\[\]/i.test(msg)){
-      return 'Pikken compat-laag botste op een oud participants-contract. Draai de v498 SQL-compat-fix en vernieuw daarna hard.';
-    }
-    if(/submitter_meta/i.test(msg) && /live_match_summaries/i.test(msg)){
-      return 'Pikken compat-laag mist nog submitter_meta in live_match_summaries. Draai de v497/v498 SQL-compat-fix en vernieuw daarna hard.';
+
+    if(/column reference "game_type" is ambiguous/i.test(msg)){
+      return 'Pikken live-compat gebruikt nog een oudere game_type-lookup die botst. Draai de v499 SQL-compat-fix en vernieuw daarna hard.';
     }
     return msg;
   }
