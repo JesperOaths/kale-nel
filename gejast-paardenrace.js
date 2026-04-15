@@ -1,6 +1,6 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
-  const STORAGE_KEY = 'gejast_paardenrace_room_code_v450';
+  const STORAGE_KEY = 'gejast_paardenrace_room_code_v452';
   const LIVE_QUERY_KEY = 'live';
   const ASSETS = {
     arena: './paardenrace-live-board-v447.png',
@@ -20,19 +20,20 @@
     spades: { label:'♠ Schoppen', symbol:'♠', color:'#1f1b1a' }
   };
   const BOARD_POINTS = {
-    trackX: [14.23, 20.96, 27.15, 33.46, 39.91, 46.32, 52.70, 59.11, 65.56, 71.98, 78.39, 86.72],
-    gateX: [20.96, 27.15, 33.46, 39.91, 46.32, 52.70, 59.11, 65.56, 71.98, 78.39],
-    laneY: { spades: 39.75, hearts: 53.52, clubs: 67.38, diamonds: 80.27 },
-    deckX: 8.05,
-    deckY: 19.15,
-    discardX: 89.55,
-    discardY: 23.45,
-    gateY: 24.18,
-    horseWidthPct: 4.35,
-    gateWidthPct: 4.28,
-    deckWidthPct: 5.85,
-    discardWidthPct: 5.55,
-    startWidthPct: 4.55
+    // Measured against paardenrace-live-board-v447.png so cards sit on the printed cell centers.
+    trackX: [13.61, 20.18, 26.95, 33.33, 39.78, 46.22, 52.60, 58.98, 65.43, 71.88, 78.19, 87.76],
+    gateX: [20.18, 26.95, 33.33, 39.78, 46.22, 52.60, 58.98, 65.43, 71.88, 78.19],
+    laneY: { spades: 39.60, hearts: 53.42, clubs: 67.24, diamonds: 81.04 },
+    deckX: 9.38,
+    deckY: 18.25,
+    discardX: 88.95,
+    discardY: 23.08,
+    gateY: 24.22,
+    horseWidthPct: 3.78,
+    gateWidthPct: 3.74,
+    deckWidthPct: 5.10,
+    discardWidthPct: 4.90,
+    startWidthPct: 3.58
   };
 
   function sessionToken(){ return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; }
