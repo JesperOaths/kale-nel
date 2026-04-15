@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Verborgen dobbelsteen">
+  <defs>
+    <linearGradient id="g" x1="18" y1="16" x2="112" y2="118" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#f3eee4"/>
+    </linearGradient>
+    <pattern id="stripe" patternUnits="userSpaceOnUse" width="10" height="10" patternTransform="rotate(35)">
+      <rect width="10" height="10" fill="transparent"/>
+      <path d="M0 0H10" stroke="#e4dccb" stroke-width="4"/>
+    </pattern>
+  </defs>
+  <rect x="10" y="10" width="108" height="108" rx="26" fill="url(#g)" stroke="rgba(0,0,0,.12)" stroke-width="2"/>
+  <rect x="14" y="14" width="100" height="100" rx="24" fill="url(#stripe)" opacity=".9"/>
+  <rect x="14" y="14" width="100" height="100" rx="24" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="2"/>
+  <circle cx="64" cy="64" r="18" fill="rgba(17,17,17,.08)"/>
+  <path d="M57 56c0-6 4-10 9-10 6 0 9 4 9 9 0 7-7 8-9 13" fill="none" stroke="#201b16" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="66" cy="84" r="4.5" fill="#201b16"/>
+</svg>
+

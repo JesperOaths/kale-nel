@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v482',
+    VERSION:'v485',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -76,13 +76,6 @@
     const seen = new Set();
     return nodes.filter((node)=>{ if (seen.has(node)) return false; seen.add(node); return true; });
   }
-
-  function formatCauteCoins(value){
-    const n = Number(value || 0);
-    if (!Number.isFinite(n)) return '₵ 0 caute coins';
-    return `₵ ${Math.round(n)} caute coins`;
-  }
-
   function applyVersionLabel(){
     const nodes = ensureVersionWatermark();
     nodes.forEach((node)=>{ node.textContent = label; watermarkStyles(node); });
@@ -301,7 +294,6 @@ function buildRequestUrl(returnTo, scope){
     ensureVersionWatermark,
     applyVersionLabel,
     normalizeProfileImageUrl,
-    formatCauteCoins,
     fetchScopedActivePlayerNames,
     getPlayerSessionToken,
     clearPlayerSessionTokens,

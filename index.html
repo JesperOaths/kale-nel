@@ -674,7 +674,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v484';</script><script src="./gejast-config.js?v484"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v485';</script><script src="./gejast-config.js?v485"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
   <script src="./gejast-live-summary.js?v389"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
   <script src="./gejast-combined-readers.js?v426"></script>
@@ -704,16 +704,6 @@
           <div class="ladder-card"><div class="ladder-title"><strong>Klaverjassen</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
           <div class="ladder-card"><div class="ladder-title"><strong>Boerenbridge</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
           <div class="ladder-card"><div class="ladder-title"><strong>Beerpong</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
-        </div>
-      </section>
-
-
-      <section class="ladder-section" style="margin-top:16px" aria-label="Extra ladders">
-        
-        <div id="extraLadderGrid" class="ladder-grid">
-          <div class="ladder-card"><div class="ladder-title"><strong>Paardenrace</strong><span>Top 5 ELO</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
-          <div class="ladder-card"><div class="ladder-title"><strong>Pikken</strong><span>Top 5 ELO</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
-          <div class="ladder-card"><div class="ladder-title"><strong>Caute coins</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen data.</div></div>
         </div>
       </section>
 
@@ -759,32 +749,32 @@
             <div class="page-link-label">Beerpong</div>
             <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
           </a>
-          <a class="page-link-card login-link" href="./profiles.html">
-            <div class="page-link-label">Spelers</div>
-            <div class="page-link-copy">Bekijk spelers en profielen.</div>
-          </a>
-        </div>
-
-        <div class="public-links-grid">
-          <a id="homePaardenraceEntry" class="page-link-card login-link" href="./paardenrace.html" data-default-href="./paardenrace.html">
-            <div id="homePaardenraceLabel" class="page-link-label">Paardenrace</div>
-            <div id="homePaardenraceCopy" class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
-          </a>
-          <a id="homePikkenEntry" class="page-link-card login-link" href="./pikken.html" data-default-href="./pikken.html">
-            <div id="homePikkenLabel" class="page-link-label">Pikken</div>
-            <div id="homePikkenCopy" class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
-          </a>
-        </div>
-
-        <div class="public-links-grid">
           <a class="page-link-card login-link" href="./rad.html">
             <div class="page-link-label">Rad</div>
             <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
           </a>
+        </div>
+
+        <div class="public-links-grid">
+          <a class="page-link-card login-link" href="./paardenrace.html">
+            <div class="page-link-label">Paardenrace</div>
+            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
+          </a>
+          <a class="page-link-card login-link" href="./pikken.html">
+            <div class="page-link-label">Pikken</div>
+            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
+          </a>
+        </div>
+
+        <div class="public-links-grid">
           <div class="page-link-card login-link placeholder-link" aria-disabled="true">
             <div class="page-link-label">Beurs d'Espinoza</div>
-            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
+            <div class="page-link-copy">Placeholder — volgt later.</div>
           </div>
+          <a class="page-link-card login-link" href="./profiles.html">
+            <div class="page-link-label">Spelers</div>
+            <div class="page-link-copy">Bekijk spelers en profielen.</div>
+          </a>
         </div>
 
         <div class="public-links-grid centered-single">
@@ -940,20 +930,19 @@ function hydrateHomepagePollSnapshot(){ try{ const raw = localStorage.getItem(HO
 function mergeSnapshotNames(payload, snapshot){
   const next = (payload && typeof payload === 'object') ? { ...payload } : {};
   const saved = (snapshot && typeof snapshot === 'object') ? snapshot : {};
-  const hasExplicitLegends = Object.prototype.hasOwnProperty.call(next, 'legends') || Object.prototype.hasOwnProperty.call(next, 'yes_names');
-  const hasExplicitLosers = Object.prototype.hasOwnProperty.call(next, 'losers') || Object.prototype.hasOwnProperty.call(next, 'no_names');
-  const hasExplicitCounts = Object.prototype.hasOwnProperty.call(next, 'can_count') || Object.prototype.hasOwnProperty.call(next, 'yes_count') || Object.prototype.hasOwnProperty.call(next, 'no_count');
+  const hasLegendsField = Object.prototype.hasOwnProperty.call(next, 'legends') || Object.prototype.hasOwnProperty.call(next, 'yes_names') || Object.prototype.hasOwnProperty.call(next, 'can_count') || Object.prototype.hasOwnProperty.call(next, 'yes_count');
+  const hasLosersField = Object.prototype.hasOwnProperty.call(next, 'losers') || Object.prototype.hasOwnProperty.call(next, 'no_names') || Object.prototype.hasOwnProperty.call(next, 'no_count');
   const legends = Array.isArray(next.legends) ? next.legends : (Array.isArray(next.yes_names) ? next.yes_names : []);
   const losers = Array.isArray(next.losers) ? next.losers : (Array.isArray(next.no_names) ? next.no_names : []);
-  const shouldHydrateFromSnapshot = !hasExplicitLegends && !hasExplicitLosers && !hasExplicitCounts;
-  if (shouldHydrateFromSnapshot && !legends.length && Array.isArray(saved.legends) && saved.legends.length) {
+  if (!hasLegendsField && Array.isArray(saved.legends) && saved.legends.length) {
     next.legends = [...saved.legends];
     next.yes_names = [...saved.legends];
     if (typeof next.can_count === 'undefined' && typeof next.yes_count === 'undefined') next.can_count = saved.legends.length;
   }
-  if (shouldHydrateFromSnapshot && !losers.length && Array.isArray(saved.losers) && saved.losers.length) {
+  if (!hasLosersField && Array.isArray(saved.losers) && saved.losers.length) {
     next.losers = [...saved.losers];
     next.no_names = [...saved.losers];
+    if (typeof next.no_count === 'undefined') next.no_count = saved.losers.length;
   }
   return next;
 }
@@ -1004,60 +993,6 @@ function applyAdminViewerRefresh() {
         card.addEventListener('keydown', (ev)=>{ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); window.location.href = route; } });
       });
     }
-
-    function renderExtraLadders(bundle) {
-      const root = document.getElementById('extraLadderGrid');
-      if (!root) return;
-      const groups = [
-        { key:'paardenrace', label:'Paardenrace', rows: bundle?.paardenrace || [], route: homepageLadderRoute('paardenrace'), suffix:'Top 5' },
-        { key:'pikken', label:'Pikken', rows: bundle?.pikken || [], route: homepageLadderRoute('pikken'), suffix:'Top 5' },
-        { key:'caute_coins', label:'Caute coins', rows: bundle?.caute_coins || [], route: scopedHref('./profiles.html'), suffix:'Top 5' }
-      ];
-      root.innerHTML = groups.map((group)=>{
-        const rows = Array.isArray(group.rows) ? group.rows : [];
-        const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx)=>`<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><a class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800" href="${playerHref(String(row.player_name || row.display_name || row.public_display_name || ''), group.key==='caute_coins' ? '' : group.key)}" onclick="event.stopPropagation()">${String(row.player_name || row.display_name || row.public_display_name || 'Onbekend')}</a><div class="ladder-elo" style="color:var(--gold);font-weight:900">${group.key==='caute_coins' ? Math.round(Number(row.balance || row.caute_coins || 0)) : Math.round(Number(row.elo_rating || row.rating || 1000))}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen data.</div>';
-        return `<article class="ladder-card" role="link" tabindex="0" data-route="${group.route}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none">${group.suffix}</span></div>${body}</article>`;
-      }).join('');
-      root.querySelectorAll('.ladder-card[data-route]').forEach((card)=>{ const route = card.getAttribute('data-route'); card.addEventListener('click', ()=>{ if(route) window.location.href = route; }); card.addEventListener('keydown',(ev)=>{ if((ev.key==='Enter'||ev.key===' ')&&route){ ev.preventDefault(); window.location.href = route; } }); });
-    }
-
-    async function fetchExtraLadders() {
-      const games = ['paardenrace','pikken'];
-      const out = { paardenrace:[], pikken:[], caute_coins:[] };
-      for (const game of games) {
-        try {
-          const endpoint = 'get_public_ladder_page_scoped';
-          const body = { game_key: game, site_scope_input: CURRENT_SCOPE };
-          const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${endpoint}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(body) });
-          const data = await parseResponse(res);
-          const payload = (Array.isArray(data) ? data[0] : data) || {};
-          const source = payload.get_public_ladder_page_scoped || payload.get_public_ladder_page || payload;
-          out[game] = Array.isArray(source?.ladder) ? source.ladder.filter((row)=>!isHomepageBlockedName(row.player_name||row.display_name||'')).slice(0,5) : [];
-        } catch (_) {}
-      }
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_caute_coin_top5_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ site_scope_input: CURRENT_SCOPE, limit_count: 5 }) });
-        const data = await parseResponse(res);
-        out.caute_coins = Array.isArray(data) ? data : (Array.isArray(data?.rows) ? data.rows : (Array.isArray(data?.top5) ? data.top5 : []));
-      } catch (_) {}
-      renderExtraLadders(out);
-    }
-
-    async function loadBallroomNotice(){
-      const host = document.querySelector('.card-top-left');
-      if (!host) return;
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_ballroom_public_state_safe`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token: sessionToken() || null, session_token_input: sessionToken() || null }) });
-        const state = await parseResponse(res);
-        const payload = state?.get_ballroom_public_state_safe || state;
-        let box = document.getElementById('ballroomNoticePill');
-        if (!box) { box = document.createElement('div'); box.id='ballroomNoticePill'; box.className='admin-badge'; box.style.marginLeft='8px'; host.appendChild(box); }
-        const king = payload?.king?.display_name || payload?.king_name || '';
-        const isMember = !!payload?.viewer?.is_member;
-        box.textContent = king ? `Balzaal: ${king}${isMember ? ' · welkom achter het fluweel' : ''}` : 'Balzaal: kroon vrij';
-      } catch (_) {}
-    }
-
 
     async function fetchHomepageLadderFallback() {
       const games = CURRENT_SCOPE==='family' ? ['klaverjas','boerenbridge'] : ['klaverjas','boerenbridge','beerpong'];
@@ -1141,8 +1076,8 @@ function applyAdminViewerRefresh() {
       removingVote = true;
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/remove_my_site_poll_vote`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ poll_key_input: THURSDAY_POLL_KEY, session_token: getSessionToken() }) });
-        const data = await parseResponse(res);
-        renderState(data);
+        await parseResponse(res);
+        renderState(await getHomepageState());
         setStatus('Je stem is verwijderd.', 'ok');
       } catch (error) {
         const msg = error?.message || 'Onbekende fout';
@@ -1627,8 +1562,7 @@ async function castExtraPollVote(desired_status) {
       if (!getSessionToken()) { goToLoginWithIntent(status, 'gejast_donderdag'); return; }
       try {
         await castVote(status);
-        const freshState = await getHomepageState();
-        renderState(freshState);
+        renderState(await getHomepageState());
         setStatus(`Opgeslagen: ${status === 'ja' ? 'ik kan' : 'ik kan niet'}.`, 'ok');
       } catch (error) {
         const msg = error?.message || 'Onbekende fout';
@@ -1763,10 +1697,8 @@ async function castExtraPollVote(desired_status) {
     function wireProtectedDrinksLinks(){ document.querySelectorAll('a[href="./drinks_add.html"]').forEach((link)=>{ if(link.dataset.bound==='1') return; link.dataset.bound='1'; link.addEventListener('click',(ev)=>{ if(getPlayerSessionToken()) return; ev.preventDefault(); const cfg = window.GEJAST_CONFIG || {}; window.location.href = cfg.buildHomeUrl ? cfg.buildHomeUrl('drinks_add.html', CURRENT_SCOPE) : './home.html?return_to=drinks_add.html'; }); }); }
 
     const homeEntryDefaults = {
-      klaverjas:{ entryId:'homeKlaverjasEntry', labelId:'homeKlaverjasLabel', copyId:'homeKlaverjasCopy', href:'./scorer.html', label:'Klaverjas', liveLabel:'Klaverjassen Kijken', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' },
-      boerenbridge:{ entryId:'homeBoerenbridgeEntry', labelId:'homeBoerenbridgeLabel', copyId:'homeBoerenbridgeCopy', href:'./boerenbridge.html', label:'Boerenbridge', liveLabel:'Boerenbridge Begluren', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' },
-      paardenrace:{ entryId:'homePaardenraceEntry', labelId:'homePaardenraceLabel', copyId:'homePaardenraceCopy', href:'./paardenrace.html', label:'Paardenrace', liveLabel:'Paardenrace Live', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' },
-      pikken:{ entryId:'homePikkenEntry', labelId:'homePikkenLabel', copyId:'homePikkenCopy', href:'./pikken.html', label:'Pikken', liveLabel:'Pikken Begluren', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' }
+      klaverjas:{ entryId:'homeKlaverjasEntry', labelId:'homeKlaverjasLabel', copyId:'homeKlaverjasCopy', href:'./scorer.html', label:'Klaverjas', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' },
+      boerenbridge:{ entryId:'homeBoerenbridgeEntry', labelId:'homeBoerenbridgeLabel', copyId:'homeBoerenbridgeCopy', href:'./boerenbridge.html', label:'Boerenbridge', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' }
     };
     function setHomeEntryDefault(key){
       const cfg = homeEntryDefaults[key];
@@ -1783,46 +1715,18 @@ async function castExtraPollVote(desired_status) {
       const cfg = homeEntryDefaults[key];
       if(!cfg) return;
       const entry=document.getElementById(cfg.entryId), label=document.getElementById(cfg.labelId), copy=document.getElementById(cfg.copyId);
-      const looksLive = !!(item && (item.is_live || item.live || item.match_ref || item.matchRef || item.client_match_id || item.clientMatchId || item.participant_token || item.viewer_token || item.live_token || item.token || item.room_code || item.roomCode));
-      if(!entry || !label || !copy || !item || !looksLive) { setHomeEntryDefault(key); return; }
-      const matchRef = item.match_ref || item.matchRef || '';
-      const clientMatchId = item.client_match_id || item.clientMatchId || '';
-      const roomCode = item.room_code || item.roomCode || '';
-      let href = item.href || '';
-      if(!href){
-        const baseMap = { klaverjas:'./klaverjas_live.html', boerenbridge:'./boerenbridge_live.html', paardenrace:'./paardenrace_live.html', pikken:'./pikken_live.html' };
-        const qs = new URLSearchParams();
-        if(clientMatchId || matchRef) qs.set('client_match_id', clientMatchId || matchRef);
-        if(matchRef) qs.set('match_ref', matchRef);
-        if(roomCode) qs.set('room', roomCode);
-        if(CURRENT_SCOPE==='family') qs.set('scope','family');
-        href = `${baseMap[key] || cfg.href}${qs.toString() ? `?${qs.toString()}` : ''}`;
-      }
+      if(!entry || !label || !copy || !item || !item.href) { setHomeEntryDefault(key); return; }
       entry.classList.add('is-live');
-      entry.href = href;
-      label.textContent = item.label || cfg.liveLabel || cfg.label;
+      entry.href = item.href;
+      label.textContent = item.label || (key === 'klaverjas' ? 'KLAVERJAS LIVE' : 'BOERENBRIDGE LIVE');
       copy.className = 'page-link-copy';
       copy.textContent = item.copy || 'Open live scoreblad van jouw huidige potje.';
-      try { if ((item.participant_token || item.viewer_token || item.live_token || item.token) && window.localStorage) localStorage.setItem(`gejast_live_participant_${key}`, JSON.stringify({ href, at: Date.now(), room_code: roomCode || '', match_ref: matchRef || clientMatchId || '' })); } catch(_) {}
     }
     function applyHomepageLiveEntries(entries){
       Object.keys(homeEntryDefaults).forEach(setHomeEntryDefault);
       const source = entries || {};
-      ['klaverjas','boerenbridge','paardenrace','pikken'].forEach((game)=>{
-        let item = source[game] || null;
-        if(!item){
-          try {
-            const raw = localStorage.getItem(`gejast_live_participant_${game}`);
-            if(raw){
-              const cached = JSON.parse(raw);
-              if(cached && cached.href && (Date.now() - Number(cached.at||0) < 1000*60*60*8)){
-                item = { live:true, href:cached.href, label: homeEntryDefaults[game]?.liveLabel || homeEntryDefaults[game]?.label, copy:'Open live scoreblad van jouw huidige potje.' };
-              }
-            }
-          } catch(_){}
-        }
-        setHomeEntryLive(game, item);
-      });
+      setHomeEntryLive('klaverjas', source.klaverjas || null);
+      setHomeEntryLive('boerenbridge', source.boerenbridge || null);
     }
 
     async function loadHomepageLiveEntries(){
@@ -1855,8 +1759,6 @@ async function castExtraPollVote(desired_status) {
       }
       if (bundle.ladders) {
         renderHomepageLadders(bundle.ladders);
-        fetchExtraLadders();
-        loadBallroomNotice();
         setHomepageLiveState('live', 'Live');
       }
       if (bundle.drinks_home) applyDrinksHomePayload(bundle.drinks_home);

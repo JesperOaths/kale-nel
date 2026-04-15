@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Dobbelsteen 5">
+  <defs>
+    <linearGradient id="g" x1="18" y1="16" x2="112" y2="118" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#f3eee4"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="108" height="108" rx="26" fill="url(#g)" stroke="rgba(0,0,0,.12)" stroke-width="2"/>
+  <rect x="14" y="14" width="100" height="100" rx="24" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="2"/>
+  <circle cx="42" cy="42" r="8.5" fill="#201b16"/>
+  <circle cx="86" cy="42" r="8.5" fill="#201b16"/>
+  <circle cx="64" cy="64" r="8.5" fill="#201b16"/>
+  <circle cx="42" cy="86" r="8.5" fill="#201b16"/>
+  <circle cx="86" cy="86" r="8.5" fill="#201b16"/>
+</svg>
+

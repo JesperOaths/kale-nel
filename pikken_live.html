@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pikken live</title>
+  <script>window.GEJAST_PAGE_VERSION='v485';</script>
+  <script src="./gejast-config.js?v485"></script>
+  <script src="./gejast-home-gate.js?v485"></script>
+  <script src="./gejast-live-summary.js?v485"></script>
+  <style>
+    :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--shadow:0 18px 44px rgba(0,0,0,.08)}
+    *{box-sizing:border-box}
+    body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
+    .wrap{max-width:1020px;margin:0 auto}.card{background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.7);border-radius:28px;padding:22px;box-shadow:var(--shadow)}
+    .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800}
+    .muted{color:var(--muted)}.panel{margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px}
+    .row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.06)}
+    .row.dead{opacity:.55}
+    .row.turn{outline:2px solid rgba(154,130,65,.38)}
+    .pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-weight:900;font-size:12px;border:1px solid rgba(0,0,0,.1)}
+    .pill.ok{background:rgba(59,130,96,.12);border-color:rgba(59,130,96,.32);color:#1f5d45}
+    .pill.bad{background:rgba(127,47,29,.10);border-color:rgba(127,47,29,.28);color:#7f2f1d}
+    .pill.wait{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.12);color:#6b6257}
+    img.die{width:44px;height:44px}
+    img.die.pik{filter:saturate(1.05)}
+    .dice-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+    .grid{display:grid;gap:10px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="top">
+        <div>
+          <a class="btn" href="./index.html">Home</a>
+          <h1 style="margin:14px 0 6px">Pikken live</h1>
+          <div id="meta" class="muted">Laden…</div>
+        </div>
+        <a class="btn" href="./pikken.html">Spelen</a>
+      </div>
+
+      <div class="panel">
+        <h2 style="margin:0 0 8px">Status</h2>
+        <div class="muted">Fase: <span id="phasePill" class="pill wait">—</span> · Ronde: <strong id="roundNo">0</strong> · Beurt: <strong id="turnName">—</strong></div>
+        <div class="muted" style="margin-top:6px">Variant: <strong id="penaltyMode">—</strong> · Lobby: <strong id="lobbyCode">—</strong></div>
+        <div class="muted" style="margin-top:6px">Bod: <strong id="currentBid">—</strong> <span id="bidBy"></span></div>
+        <div class="muted" style="margin-top:6px">Dice: start <strong id="totalStartDice">0</strong> · nu <strong id="totalCurrentDice">0</strong> · kwijt <strong id="totalLostDice">0</strong></div>
+      </div>
+
+      <div class="panel">
+        <h2 style="margin:0 0 8px">Spelers</h2>
+        <div id="playersList" class="grid muted">—</div>
+      </div>
+
+      <div class="panel">
+        <h2 style="margin:0 0 8px">Laatste reveal</h2>
+        <div id="revealBody" class="muted">Nog geen reveal.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (()=>{
+      const live = window.GEJAST_LIVE_SUMMARY || {};
+      let pollId = null;
+      function esc(v){ const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(v??'').replace(/[&<>"']/g,(m)=>map[m]); }
+
+      // Deterministic class decision tables (matches CSS above)
+      const UI_MAP = Object.freeze({
+        phase: Object.freeze({
+          lobby:    { cls: 'pill wait', label: 'Lobby' },
+          bidding:  { cls: 'pill ok',   label: 'Bieden' },
+          voting:   { cls: 'pill wait', label: 'Stemmen' },
+          finished: { cls: 'pill bad',  label: 'Afgerond' }
+        }),
+        voteStatus: Object.freeze({
+          approved: { cls: 'pill ok',   label: 'goedgekeurd' },
+          rejected: { cls: 'pill bad',  label: 'afgekeurd' },
+          waiting:  { cls: 'pill wait', label: 'wacht' }
+        }),
+        penaltyMode: Object.freeze({
+          wrong_loses: { label: 'Normal (fout verliest)' },
+          right_loses: { label: 'Fair (goed verliest)' }
+        })
+      });
+
+      function normalizePhase(raw){
+        const v = String(raw || '').trim().toLowerCase();
+        return (v === 'lobby' || v === 'bidding' || v === 'voting' || v === 'finished') ? v : 'bidding';
+      }
+
+      function normalizeVoteStatus(raw){
+        const v = String(raw || '').trim().toLowerCase();
+        if (v === 'approved' || v === 'goedgekeurd' || v === 'believe' || v === 'true') return 'approved';
+        if (v === 'rejected' || v === 'afgekeurd' || v === 'reject' || v === 'false') return 'rejected';
+        return 'waiting';
+      }
+
+      function phasePillSpec(liveState){
+        const status = String(liveState?.status || '').toLowerCase();
+        const phase = (status === 'finished') ? 'finished' : normalizePhase(liveState?.phase);
+        return UI_MAP.phase[phase] || UI_MAP.phase.bidding;
+      }
+
+      function votePillSpec(status){
+        const key = normalizeVoteStatus(status);
+        return UI_MAP.voteStatus[key] || UI_MAP.voteStatus.waiting;
+      }
+
+      function dieClass(value){
+        const n = Number(value);
+        return n === 1 ? 'die pik' : 'die';
+      }
+
+      function bidText(bid){
+        const count = Number(bid?.count || bid?.bid_count || 0);
+        const face = Number(bid?.face || bid?.bid_face || 0);
+        if (!count || !face) return '—';
+        return face === 1 ? `${count} × pik` : `${count} × ${face}`;
+      }
+
+      function penaltyModeLabel(raw){
+        const key = String(raw || '').trim().toLowerCase();
+        return (UI_MAP.penaltyMode[key] && UI_MAP.penaltyMode[key].label) ? UI_MAP.penaltyMode[key].label : UI_MAP.penaltyMode.wrong_loses.label;
+      }
+
+      function findNameBySeat(players, seat){
+        const s = Number(seat || 0);
+        if (!s) return '—';
+        const p = (Array.isArray(players) ? players : []).find(x => Number(x?.seat || 0) === s);
+        return p?.name || '—';
+      }
+
+      function render(item){
+        const summary = (live.summaryFromItem?live.summaryFromItem(item):(item?.summary_payload||{})) || {};
+        const st = summary.live_state || summary || {};
+        document.getElementById('meta').textContent = live.metaText ? live.metaText(item) : 'Live';
+
+        const phaseSpec = phasePillSpec(st);
+        const phaseEl = document.getElementById('phasePill');
+        phaseEl.className = phaseSpec.cls;
+        phaseEl.textContent = phaseSpec.label;
+
+        document.getElementById('roundNo').textContent = String(Number(st.round_no||0));
+        document.getElementById('penaltyMode').textContent = penaltyModeLabel(st.penalty_mode);
+        document.getElementById('lobbyCode').textContent = String(st.lobby_code || '—');
+
+        const bid = st.bid && st.bid !== null ? st.bid : null;
+        document.getElementById('currentBid').textContent = bidText(bid);
+        document.getElementById('bidBy').textContent = bid && bid.bidder_name ? `door ${bid.bidder_name}` : '';
+
+        const dt = st.dice_totals || {};
+        document.getElementById('totalStartDice').textContent = String(Number(dt.start_total||0));
+        document.getElementById('totalCurrentDice').textContent = String(Number(dt.current_total||0));
+        document.getElementById('totalLostDice').textContent = String(Number(dt.lost_total||0));
+
+        const players = Array.isArray(st.players)?st.players:[];
+        const votes = Array.isArray(st.votes)?st.votes:[];
+        const phase = String(st.phase||'');
+        const turnSeat = phase === 'voting' ? Number(st.vote_turn_seat||0) : Number(st.turn_seat||0);
+        document.getElementById('turnName').textContent = findNameBySeat(players, turnSeat);
+
+        const playersWrap = document.getElementById('playersList');
+        playersWrap.className='grid';
+        playersWrap.innerHTML = players.map((p)=>{
+          const voteRow = votes.find(v=>Number(v.seat||0)===Number(p.seat||0));
+          const pill = votePillSpec(voteRow ? voteRow.status : 'waiting');
+          const isTurn = Number(p.seat||0) === Number(turnSeat||0) && (phase === 'bidding' || phase === 'voting');
+          const rowCls = `row ${p.alive?'':'dead'} ${isTurn?'turn':''}`.trim();
+          return `<div class="${rowCls}"><div><strong>${esc(p.name||'Speler')}</strong> <span class="muted">#${Number(p.seat||0)}</span><div class="muted">${p.alive?'Levend':'Dood'} · ${Number(p.dice_count||0)} dobbelstenen</div></div>${phase==='voting'?`<span class="${pill.cls}">${pill.label}</span>`:''}</div>`;
+        }).join('');
+
+        const lr = st.last_reveal || null;
+        const revealWrap = document.getElementById('revealBody');
+        if(!lr){ revealWrap.textContent='Nog geen reveal.'; return; }
+        const hands = Array.isArray(lr.hands)?lr.hands:[];
+        const lrBid = lr.bid || null;
+        const lrVotes = Array.isArray(lr.votes) ? lr.votes : [];
+        const firstLoser = findNameBySeat(players, lr.first_loser_seat);
+        const nextStarter = findNameBySeat(players, lr.next_starter_seat);
+
+        revealWrap.innerHTML =
+          `<div><strong>R${Number(lr.round_no||0)}</strong> · ${lr.bid_true?'gehaald':'niet gehaald'} · bod ${esc(bidText(lrBid))} · geteld ${Number(lr.counted_total||0)}</div>` +
+          `<div class="muted" style="margin-top:6px">Verliezers: ${esc(lr.losing_kind||'')} · starter: ${esc(firstLoser)} → ${esc(nextStarter)}</div>` +
+          (lrVotes.length ? `<div style="margin-top:10px;display:grid;gap:8px">${lrVotes.map(v=>{
+            const pill = votePillSpec(v.vote === true ? 'approved' : 'rejected');
+            return `<div class="row"><div><strong>${esc(v.name||'Speler')}</strong> <span class="muted">#${Number(v.seat||0)}</span></div><span class="${pill.cls}">${pill.label}</span></div>`;
+          }).join('')}</div>` : '') +
+          (hands.length ? `<div style="margin-top:10px;display:grid;gap:10px">${hands.map(h=>`<div class="row"><div><strong>${esc(h.name||'Speler')}</strong> <span class="muted">#${Number(h.seat||0)}</span><div class="dice-row">${(Array.isArray(h.dice)?h.dice:[]).map(d=>`<img class="${dieClass(d)}" src="./assets/pikken/dice-${Number(d)}.svg" alt="die ${Number(d)}">`).join('')}</div></div></div>`).join('')}</div>` : '');
+
+        if (live.isFinished && live.isFinished(item) && pollId) { clearInterval(pollId); pollId = null; }
+      }
+
+      async function load(){
+        const identity = live.matchIdentityFromUrl ? live.matchIdentityFromUrl() : { clientMatchId:'', matchRef:'' };
+        if(!identity.clientMatchId && !identity.matchRef){
+          document.getElementById('meta').textContent='Geen match_ref of client_match_id in URL.';
+          return;
+        }
+        try{
+          const item = await live.loadPublicSummary('pikken', identity);
+          render(item);
+        }catch(err){
+          document.getElementById('meta').textContent = err.message || 'Laden mislukt.';
+        }
+      }
+
+      load();
+      pollId = setInterval(load, 5000);
+    })();
+  </script>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+<div class="site-credit-watermark" data-version-watermark></div>
+<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+</body>
+</html>
