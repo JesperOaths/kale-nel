@@ -198,13 +198,17 @@
         const el = qs('#pkRoomCodeInput');
         if(el) el.value = code;
         if(stage && stage !== 'lobby'){
-          if(gameId){
-            UI.gameId = gameId;
-            setParticipantToken(gameId, true);
-            history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(gameId)}&scope=${encodeURIComponent(getScope())}`);
-            goLive(gameId);
+          const resolvedGameId = gameId || String(UI.gameId || '').trim();
+          if(resolvedGameId){
+            UI.gameId = resolvedGameId;
+            setParticipantToken(resolvedGameId, true);
+            setStoredLobbyCode(code);
+            history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(resolvedGameId)}&scope=${encodeURIComponent(getScope())}`);
+            goLive(resolvedGameId);
             return;
           }
+          setStatus('Live room gevonden, maar game-id ontbreekt nog in de roomlijst. Ververs één keer.', true);
+          return;
         }
         await joinLobby(code);
       });
@@ -258,6 +262,9 @@
           history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(gameId)}&scope=${encodeURIComponent(getScope())}`);
           goLive(gameId);
           return list;
+        }
+        if (String(matchedLive.lobby_code || '').trim()) {
+          setStoredLobbyCode(String(matchedLive.lobby_code || '').trim().toUpperCase());
         }
       }
       return list;
@@ -491,13 +498,16 @@
 
     const matchedLive = findMatchingLiveRoom(rooms || []);
     if(matchedLive){
-      setStatus('', false);
       const gameId = String(matchedLive.game_id || UI.gameId || '').trim();
       if(gameId){
+        setStatus('', false);
         UI.gameId = gameId;
+        setStoredLobbyCode(String(matchedLive.lobby_code || currentLobbyCode() || '').trim().toUpperCase());
         goLive(gameId);
         return;
       }
+      setStatus('Room staat live, maar de roomlijst geeft nog geen game-id terug. Ververs één keer of open via Live.', true);
+      return;
     }
 
     if(timedOut){
