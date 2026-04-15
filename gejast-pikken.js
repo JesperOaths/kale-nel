@@ -41,16 +41,19 @@
   function normalizeError(err){
     const msg = String(err && err.message || err || 'Onbekende fout');
     if(/column "?submitter_name"? of relation "?live_match_summaries"? does not exist/i.test(msg)){
-      return 'Pikken live-compat mist nog de oudere submitter_name-kolom op live_match_summaries. Gebruik de v504 SQL-compat-fix en vernieuw daarna hard.';
+      return 'Pikken live-summary compat mist submitter_name nog op de backend. Ruwe fout: ' + msg;
     }
     if(/column "?winner_names"? is of type jsonb but expression is of type text\[\]/i.test(msg)){
-      return 'Pikken live-compat verwacht winner_names nog als text[] in plaats van jsonb. Gebruik de v504 SQL-compat-fix en vernieuw daarna hard.';
+      return 'Pikken live-summary compat verwacht winner_names nog als text[]. Ruwe fout: ' + msg;
+    }
+    if(/column "?participants"? is of type jsonb but expression is of type text\[\]/i.test(msg)){
+      return 'Pikken live-summary compat verwacht participants nog als text[]. Ruwe fout: ' + msg;
     }
     if(/game_type\s+ongeldig/i.test(msg)){
-      return 'Pikken live-compat raakt nog een oudere game_type-lookup. Gebruik de v504 SQL-compat-fix en vernieuw daarna hard.';
+      return 'Pikken live-summary compat raakt nog een oudere game_type-lookup. Ruwe fout: ' + msg;
     }
     if(/column reference "?game_type"? is ambiguous/i.test(msg)){
-      return 'Pikken backend gebruikt nog een oude live-summary lookup met een dubbelzinnige game_type-verwijzing. Gebruik de v504 SQL-compat-fix en vernieuw daarna hard.';
+      return 'Pikken backend raakt nog een dubbelzinnige game_type-verwijzing buiten de huidige compat-laag. Ruwe fout: ' + msg;
     }
     return msg;
   }
@@ -174,6 +177,16 @@
     }
   }
 
+  function isLegacyLiveSummaryCompatError(err){
+    const msg = String(err && err.message || err || '');
+    return /live_match_summaries/i.test(msg)
+      || /column reference "?game_type"? is ambiguous/i.test(msg)
+      || /game_type\s+ongeldig/i.test(msg)
+      || /submitter_name/i.test(msg)
+      || /winner_names/i.test(msg)
+      || /participants/i.test(msg);
+  }
+
   async function loadAndRender(){
     if(!UI.gameId) return;
     try{
@@ -185,6 +198,10 @@
       }
       setStatus('', false);
     }catch(err){
+      if(isLegacyLiveSummaryCompatError(err)){
+        setStatus('Pikken lobby is aangemaakt, maar de oude live-summary compat-laag geeft nog backendruis. Kernspel blijft bruikbaar; ruwe fout: ' + String(err && err.message || err || 'Onbekende fout'), true);
+        return;
+      }
       setStatus(normalizeError(err) || 'Laden mislukt.', true);
     }
   }
