@@ -373,9 +373,28 @@
 
   async function startGame(){
     setStatus('Starten…', false);
-    await rpc('pikken_start_game_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId });
+    try {
+      await rpc('pikken_start_game_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId });
+    } catch(err){
+      const msg = normalizeError(err) || '';
+      if(/round_no\s+is\s+ambiguous/i.test(msg) || /column reference "round_no" is ambiguous/i.test(msg)){
+        try {
+          const state = await rpc('pikken_get_state_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId });
+          const phase = String(state?.game?.state?.phase || '').toLowerCase();
+          const status = String(state?.game?.status || '').toLowerCase();
+          if(phase && phase !== 'lobby' || (status && status !== 'lobby')){
+            render(state);
+            await loadOpenRooms();
+            setStatus('', false);
+            return;
+          }
+        } catch(_) {}
+      }
+      throw err;
+    }
     await loadAndRender();
     await loadOpenRooms();
+    setStatus('', false);
   }
 
   async function placeBid(){
