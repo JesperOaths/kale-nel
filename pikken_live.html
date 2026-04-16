@@ -8,11 +8,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken live</title>
-  <script>window.GEJAST_PAGE_VERSION='v549';</script>
-  <script src="./gejast-config.js?v549"></script>
-  <script src="./gejast-home-gate.js?v538"></script>
-  <script src="./gejast-scope-context.js?v538"></script>
-  <script src="./badge-registry.js"></script>
+  <script>window.GEJAST_PAGE_VERSION='v547';</script>
+  <script src="./gejast-config.js?v547"></script>
+  <script src="./gejast-home-gate.js?v547"></script>
+  <script src="./gejast-scope-context.js?v547"></script>
+  <script src="./badge-registry.js?v548"></script>
   <style>
     :root{
       --felt1:#0f5a44; --felt2:#08372d; --felt3:#0d4a38; --rail:#8a5d1f; --ink:#211913; --muted:#7d705e;
@@ -353,13 +353,11 @@
   (() => {
     const cfg = window.GEJAST_CONFIG || {};
     const UI = { gameId:'', lobbyCode:'', scope:'friends', state:null, actionBusy:false, profiles:new Map(), lastRevealRound:0, matchOutcomes:null, firstLoaded:false, unresolvedParticipantSince:0, viewerIdentity:'', lastSnapshotToastAt:0 };
-    const STORAGE_KEY = 'gejast_pikken_lobby_code_v517';
-    const PARTICIPANT_KEY = 'gejast_pikken_participant_v517';
-    const LEAVE_KEY = 'gejast_pikken_leave_suppress_v540';
-    const VIEWER_HINT_KEY = 'gejast_pikken_viewer_hint_v549';
-    const VIEWER_HINT_LEGACY_KEYS = ['gejast_pikken_viewer_hint_v542','gejast_pikken_viewer_hint_v541'];
-    const STATE_SNAPSHOT_KEY = 'gejast_pikken_state_snapshot_v549';
-    const STATE_SNAPSHOT_LEGACY_KEYS = ['gejast_pikken_state_snapshot_v542','gejast_pikken_state_snapshot_v541'];
+    const STORAGE_KEYS = ['gejast_pikken_lobby_code','gejast_pikken_lobby_code_v517'];
+    const PARTICIPANT_KEYS = ['gejast_pikken_participant','gejast_pikken_participant_v517'];
+    const LEAVE_KEYS = ['gejast_pikken_leave_suppress','gejast_pikken_leave_suppress_v540'];
+    const VIEWER_HINT_KEYS = ['gejast_pikken_viewer_hint','gejast_pikken_viewer_hint_v542','gejast_pikken_viewer_hint_v541'];
+    const STATE_SNAPSHOT_KEYS = ['gejast_pikken_state_snapshot','gejast_pikken_state_snapshot_v542','gejast_pikken_state_snapshot_v541'];
 
     const qs = (s) => document.querySelector(s);
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -377,31 +375,21 @@
       const query = search.toString();
       return query ? `${path}?${query}` : path;
     }
-    function setStoredLobbyCode(value){ try { if(value) localStorage.setItem(STORAGE_KEY, String(value).trim().toUpperCase()); } catch(_){} }
-    function clearStoredLobbyCode(){ try { localStorage.removeItem(STORAGE_KEY); } catch(_){} }
-    function setParticipantToken(gameId, active, lobbyCode){ try { if(active && gameId){ localStorage.setItem(PARTICIPANT_KEY, JSON.stringify({ game_id:String(gameId), lobby_code:String(lobbyCode||'').trim().toUpperCase(), at:Date.now() })); } else { localStorage.removeItem(PARTICIPANT_KEY); } } catch(_){} }
-    function readStoredObject(primaryKey, legacyKeys){
-      const keys = [primaryKey].concat(Array.isArray(legacyKeys) ? legacyKeys : []);
-      for (const key of keys){
-        try {
-          const raw = localStorage.getItem(key) || '';
-          if (!raw) continue;
-          const parsed = JSON.parse(raw);
-          if (parsed && typeof parsed === 'object'){
-            if (key !== primaryKey){ try { localStorage.setItem(primaryKey, JSON.stringify(parsed)); } catch(_){} }
-            return parsed;
-          }
-        } catch(_){}
-      }
-      return null;
-    }
-    function getParticipantToken(){ return readStoredObject(PARTICIPANT_KEY, []); }
-    function setLeaveSuppression(gameId, lobbyCode){ try { localStorage.setItem(LEAVE_KEY, JSON.stringify({ game_id:String(gameId||'').trim(), lobby_code:String(lobbyCode||'').trim().toUpperCase(), at:Date.now() })); } catch(_){} }
-    function clearLeaveSuppression(){ try { localStorage.removeItem(LEAVE_KEY); } catch(_){} }
-    function setViewerHint(hint){ try { if(hint && hint.name){ localStorage.setItem(VIEWER_HINT_KEY, JSON.stringify(Object.assign({}, hint, { at: Date.now() }))); } } catch(_){} }
-    function getViewerHint(){ return readStoredObject(VIEWER_HINT_KEY, VIEWER_HINT_LEGACY_KEYS); }
-    function getStateSnapshot(){ return readStoredObject(STATE_SNAPSHOT_KEY, STATE_SNAPSHOT_LEGACY_KEYS); }
-    function saveStateSnapshot(state){ try { const game = state?.game || {}; const gameId = String(game?.id || UI.gameId || '').trim(); const lobbyCode = String(game?.lobby_code || UI.lobbyCode || '').trim().toUpperCase(); if(!gameId && !lobbyCode) return; localStorage.setItem(STATE_SNAPSHOT_KEY, JSON.stringify({ at: Date.now(), game_id: gameId, lobby_code: lobbyCode, game: { id: gameId, lobby_code: lobbyCode, status: game?.status || '', config: game?.config || {}, state: game?.state || {}, updated_at: game?.updated_at || null, created_by_player_name: game?.created_by_player_name || '' }, players: Array.isArray(state?.players) ? state.players : [], votes: Array.isArray(state?.votes) ? state.votes : [], dice_totals: state?.dice_totals || {} })); } catch(_){} }
+    function readStorage(keys){ try { for (const key of (Array.isArray(keys)?keys:[keys])) { const raw = localStorage.getItem(key) || ''; if (raw) return raw; } } catch(_){} return ''; }
+    function writeStorage(keys, value){ try { for (const key of (Array.isArray(keys)?keys:[keys])) localStorage.setItem(key, value); } catch(_){} }
+    function removeStorage(keys){ try { for (const key of (Array.isArray(keys)?keys:[keys])) localStorage.removeItem(key); } catch(_){} }
+    function readJsonStorage(keys){ try { const raw = readStorage(keys); if(!raw) return null; const parsed = JSON.parse(raw); return parsed && typeof parsed === 'object' ? parsed : null; } catch(_){ return null; } }
+    function setStoredLobbyCode(value){ const code = String(value || '').trim().toUpperCase(); if(!code) return; writeStorage(STORAGE_KEYS, code); }
+    function getStoredLobbyCode(){ return String(readStorage(STORAGE_KEYS) || '').trim().toUpperCase(); }
+    function clearStoredLobbyCode(){ removeStorage(STORAGE_KEYS); }
+    function setParticipantToken(gameId, active, lobbyCode){ try { const id = String(gameId||'').trim(); const code = String(lobbyCode||'').trim().toUpperCase(); if(active && (id || code)){ writeStorage(PARTICIPANT_KEYS, JSON.stringify({ game_id:id, lobby_code:code, at:Date.now() })); } else { removeStorage(PARTICIPANT_KEYS); } } catch(_){} }
+    function getParticipantToken(){ return readJsonStorage(PARTICIPANT_KEYS); }
+    function setLeaveSuppression(gameId, lobbyCode){ writeStorage(LEAVE_KEYS, JSON.stringify({ game_id:String(gameId||'').trim(), lobby_code:String(lobbyCode||'').trim().toUpperCase(), at:Date.now() })); }
+    function clearLeaveSuppression(){ removeStorage(LEAVE_KEYS); }
+    function setViewerHint(hint){ try { if(hint && hint.name){ writeStorage(VIEWER_HINT_KEYS, JSON.stringify(Object.assign({}, hint, { at: Date.now() }))); } } catch(_){} }
+    function getViewerHint(){ return readJsonStorage(VIEWER_HINT_KEYS); }
+    function getStateSnapshot(){ return readJsonStorage(STATE_SNAPSHOT_KEYS); }
+    function saveStateSnapshot(state){ try { const game = state?.game || {}; const gameId = String(game?.id || UI.gameId || '').trim(); const lobbyCode = String(game?.lobby_code || UI.lobbyCode || '').trim().toUpperCase(); if(!gameId && !lobbyCode) return; writeStorage(STATE_SNAPSHOT_KEYS, JSON.stringify({ at: Date.now(), game_id: gameId, lobby_code: lobbyCode, game: { id: gameId, lobby_code: lobbyCode, status: game?.status || '', config: game?.config || {}, state: game?.state || {}, updated_at: game?.updated_at || null, created_by_player_name: game?.created_by_player_name || '' }, players: Array.isArray(state?.players) ? state.players : [], votes: Array.isArray(state?.votes) ? state.votes : [], dice_totals: state?.dice_totals || {} })); } catch(_){} }
     const normalizeName = (v) => String(v || '').replace(/\s+/g,' ').trim().toLowerCase();
     const sortDice = (arr) => (Array.isArray(arr) ? arr : []).map(Number).filter(Boolean).sort((a,b)=>a-b);
     const headers = () => ({'Content-Type':'application/json', apikey: cfg.SUPABASE_PUBLISHABLE_KEY || '', Authorization: `Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY || ''}`, Accept:'application/json'});
@@ -484,6 +472,50 @@
       };
     }
 
+    function tokenMatchesCurrentLobby(token){
+      const tokenCode = String(token?.lobby_code || '').trim().toUpperCase();
+      const tokenId = String(token?.game_id || '').trim();
+      const currentCode = String(UI.lobbyCode || '').trim().toUpperCase();
+      const currentId = String(UI.gameId || '').trim();
+      return (!!tokenCode && !!currentCode && tokenCode === currentCode) || (!!tokenId && !!currentId && tokenId === currentId);
+    }
+
+    function recoverGameIdFromLocalState(){
+      const token = getParticipantToken();
+      if (tokenMatchesCurrentLobby(token) && String(token?.game_id || '').trim()) {
+        UI.gameId = String(token.game_id || '').trim();
+      }
+      const snapshot = getStateSnapshot();
+      const snapId = String(snapshot?.game_id || snapshot?.game?.id || '').trim();
+      const snapCode = String(snapshot?.lobby_code || snapshot?.game?.lobby_code || '').trim().toUpperCase();
+      if (!UI.gameId && snapId && ((!UI.lobbyCode) || (snapCode && snapCode === String(UI.lobbyCode || '').trim().toUpperCase()))) {
+        UI.gameId = snapId;
+      }
+      if (!UI.lobbyCode) {
+        const tokenCode = String(token?.lobby_code || '').trim().toUpperCase();
+        if (tokenCode) UI.lobbyCode = tokenCode;
+        else if (snapCode) UI.lobbyCode = snapCode;
+        else {
+          const stored = getStoredLobbyCode();
+          if (stored) UI.lobbyCode = stored;
+        }
+      }
+    }
+
+    async function ensureCanonicalGameId(){
+      recoverGameIdFromLocalState();
+      if (String(UI.gameId || '').trim()) return UI.gameId;
+      try {
+        const publicState = await loadPublicState();
+        const resolvedId = String(publicState?.game?.id || '').trim();
+        const resolvedCode = String(publicState?.game?.lobby_code || '').trim().toUpperCase();
+        if (resolvedId) UI.gameId = resolvedId;
+        if (resolvedCode) { UI.lobbyCode = resolvedCode; setStoredLobbyCode(resolvedCode); }
+        if (resolvedId || resolvedCode) cacheViewerFromState(publicState || {});
+      } catch(_){}
+      return String(UI.gameId || '').trim();
+    }
+
     function inferViewerFromState(state){
       const viewer = state?.viewer || null;
       if (viewer && (viewer.is_host || Number(viewer.seat || 0) > 0)) return viewer;
@@ -530,23 +562,10 @@
     function buildBidCountOptions(max=24){ const sel = qs('#bidCount'); sel.innerHTML = Array.from({length:max}, (_,i) => `<option value="${i+1}">${i+1}</option>`).join(''); }
     function bidHistoryFromState(st){ const arr = []; const raw = Array.isArray(st?.bid_history) ? st.bid_history : (Array.isArray(st?.history?.bids) ? st.history.bids : []); raw.forEach((b,idx)=>arr.push({index:idx+1,bidder_name:b.bidder_name||b.name||'',count:b.count||b.bid_count,face:b.face||b.bid_face,current:false})); if (st?.bid) arr.push({index:arr.length+1,bidder_name:st.bid.bidder_name||'',count:st.bid.count||st.bid.bid_count,face:st.bid.face||st.bid.bid_face,current:true}); return arr; }
 
-    function resolveKnownGameId(){
-      const tokenId = String(getParticipantToken()?.game_id || '').trim();
-      if (tokenId) return tokenId;
-      const snapId = String(getStateSnapshot()?.game_id || getStateSnapshot()?.game?.id || '').trim();
-      if (snapId) return snapId;
-      const hintId = String(getViewerHint()?.game_id || '').trim();
-      if (hintId) return hintId;
-      return '';
-    }
-
     function writeCanonicalLiveUrl(){
       const code = String(UI.lobbyCode || '').trim().toUpperCase();
       const id = String(UI.gameId || '').trim();
-      const params = {};
-      if (id) params.client_match_id = id;
-      if (code) params.match_ref = code;
-      const next = scopedHref('./pikken_live.html', params);
+      const next = code ? scopedHref('./pikken_live.html', { match_ref: code }) : scopedHref('./pikken_live.html', { client_match_id: id });
       const current = `${window.location.pathname}${window.location.search}`;
       if (next && next !== current) { try { window.history.replaceState(null, '', next); } catch(_){} }
     }
@@ -896,50 +915,36 @@ async function loadMatchOutcomes(){
 
     async function loadParticipantStateFor(gameIdInput){
       const token = sessionToken();
+      recoverGameIdFromLocalState();
       const gameId = String(gameIdInput || UI.gameId || '').trim();
       const lobbyCode = String(UI.lobbyCode || '').trim().toUpperCase();
       if (!token || (!gameId && !lobbyCode)) return null;
       let lastErr = null;
-      const attempts = [];
-      if (gameId){
-        attempts.push(
-          { session_token: token, game_id_input: gameId || null, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
-          { session_token_input: token, game_id_input: gameId || null, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
-          { session_token: token, game_id: gameId || null, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
-          { session_token_input: token, game_id: gameId || null, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
-          { session_token: token, game_id_input: gameId || null },
-          { session_token_input: token, game_id_input: gameId || null }
-        );
-      }
-      if (lobbyCode){
-        attempts.push(
-          { session_token: token, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
-          { session_token_input: token, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
-          { session_token: token, lobby_code_input: lobbyCode || null },
-          { session_token_input: token, lobby_code_input: lobbyCode || null }
-        );
-      }
+      const attempts = [
+        { session_token: token, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
+        { session_token_input: token, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
+        { session_token: token, game_id_input: gameId || null, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
+        { session_token_input: token, game_id_input: gameId || null, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
+        { session_token: token, game_id: gameId || null, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
+        { session_token_input: token, game_id: gameId || null, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
+        { session_token: token, lobby_code_input: lobbyCode || null },
+        { session_token_input: token, lobby_code_input: lobbyCode || null },
+        { session_token: token, game_id_input: gameId || null },
+        { session_token_input: token, game_id_input: gameId || null }
+      ];
       for (const payload of attempts){ try { return await rpcWithTimeout('pikken_get_state_scoped', payload, 4000); } catch(err){ lastErr = err; } }
       throw lastErr || new Error('Laden mislukt.');
     }
     async function loadParticipantState(){ return loadParticipantStateFor(UI.gameId); }
     async function loadPublicState(){
       let lastErr = null;
-      const attempts = [];
-      if (UI.gameId){
-        attempts.push(
-          { game_id_input: UI.gameId || null, lobby_code_input: UI.lobbyCode || null, site_scope_input: UI.scope },
-          { game_id: UI.gameId || null, lobby_code_input: UI.lobbyCode || null, site_scope_input: UI.scope },
-          { game_id_input: UI.gameId || null }
-        );
-      }
-      if (UI.lobbyCode){
-        attempts.push(
-          { lobby_code_input: UI.lobbyCode || null, site_scope_input: UI.scope },
-          { lobby_code_input: UI.lobbyCode || null },
-          { game_id_input: UI.gameId || null, lobby_code_input: UI.lobbyCode || null }
-        );
-      }
+      const attempts = [
+        { lobby_code_input: UI.lobbyCode || null, site_scope_input: UI.scope },
+        { game_id_input: UI.gameId || null, lobby_code_input: UI.lobbyCode || null, site_scope_input: UI.scope },
+        { game_id: UI.gameId || null, lobby_code_input: UI.lobbyCode || null, site_scope_input: UI.scope },
+        { lobby_code_input: UI.lobbyCode || null },
+        { game_id_input: UI.gameId || null, lobby_code_input: UI.lobbyCode || null }
+      ];
       for (const payload of attempts){ try { return await rpcWithTimeout('pikken_get_live_state_public', payload, 4000); } catch(err){ lastErr = err; } }
       throw lastErr || new Error('Laden mislukt.');
     }
@@ -1033,11 +1038,10 @@ async function loadMatchOutcomes(){
     async function leaveTable(){
       if (!window.confirm('Weet je zeker dat je deze tafel wilt verlaten?')) return;
       try{
-        const resolvedGameId = String(UI.gameId || resolveKnownGameId()).trim();
-        if (!resolvedGameId) throw new Error('Geen game-id gevonden om te verlaten.');
-        UI.gameId = resolvedGameId;
-        await rpc('pikken_leave_lobby_scoped', { session_token: sessionToken() || null, game_id_input: resolvedGameId });
-        setLeaveSuppression(UI.gameId, UI.lobbyCode);
+        const canonicalGameId = await ensureCanonicalGameId();
+        if (!canonicalGameId) throw new Error('Geen geldige tafel-id gevonden om te verlaten.');
+        await rpc('pikken_leave_lobby_scoped', { session_token: sessionToken() || null, game_id_input: canonicalGameId });
+        setLeaveSuppression(canonicalGameId, UI.lobbyCode);
         setParticipantToken('', false, '');
         clearStoredLobbyCode();
         window.location.href = `./pikken.html?scope=${encodeURIComponent(UI.scope)}`;
@@ -1048,11 +1052,10 @@ async function loadMatchOutcomes(){
     async function disbandTable(){
       if (!window.confirm('Weet je zeker dat je de hele tafel wilt opheffen?')) return;
       try{
-        const resolvedGameId = String(UI.gameId || resolveKnownGameId()).trim();
-        if (!resolvedGameId) throw new Error('Geen game-id gevonden om op te heffen.');
-        UI.gameId = resolvedGameId;
-        await rpc('pikken_destroy_lobby_scoped', { session_token: sessionToken() || null, game_id_input: resolvedGameId });
-        setLeaveSuppression(UI.gameId, UI.lobbyCode);
+        const canonicalGameId = await ensureCanonicalGameId();
+        if (!canonicalGameId) throw new Error('Geen geldige tafel-id gevonden om op te heffen.');
+        await rpc('pikken_destroy_lobby_scoped', { session_token: sessionToken() || null, game_id_input: canonicalGameId });
+        setLeaveSuppression(canonicalGameId, UI.lobbyCode);
         setParticipantToken('', false, '');
         clearStoredLobbyCode();
         window.location.href = `./pikken.html?scope=${encodeURIComponent(UI.scope)}`;
@@ -1065,10 +1068,9 @@ async function loadMatchOutcomes(){
       UI.scope = currentScope();
       const rawClientMatchId = qsParam('client_match_id');
       const rawMatchRef = qsParam('match_ref');
-      UI.gameId = rawClientMatchId && /^[0-9a-f-]{36}$/i.test(rawClientMatchId) ? rawClientMatchId : '';
+      UI.gameId = rawMatchRef ? '' : (rawClientMatchId && /^[0-9a-f-]{36}$/i.test(rawClientMatchId) ? rawClientMatchId : '');
       UI.lobbyCode = rawMatchRef || (!UI.gameId ? rawClientMatchId : '') || '';
-      if (!UI.gameId) UI.gameId = resolveKnownGameId();
-      if (!UI.lobbyCode) UI.lobbyCode = String((getParticipantToken()?.lobby_code) || (getStateSnapshot()?.lobby_code) || '').trim().toUpperCase();
+      recoverGameIdFromLocalState();
       if (!UI.gameId && !UI.lobbyCode){ setStatus('Geen geldige game_id of roomcode in URL.', true); return; }
       writeCanonicalLiveUrl();
       qs('#placeBidBtn').addEventListener('click', placeBid);

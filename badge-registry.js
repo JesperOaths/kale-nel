@@ -1,12 +1,13 @@
 (function (global) {
   const ASSET_BASE = './assets/badges';
+  const BADGE_ASSET_VERSION = (global.GEJAST_CONFIG && global.GEJAST_CONFIG.VERSION) ? `?${global.GEJAST_CONFIG.VERSION}` : '';
 
   function assetPath(pack, key) {
-    return `${ASSET_BASE}/${pack}/badge-${key}.png`;
+    return `${ASSET_BASE}/${pack}/badge-${key}.png${BADGE_ASSET_VERSION}`;
   }
 
   function miniPath(size, key) {
-    return `${ASSET_BASE}/mini-${size}/badge-${key}.png`;
+    return `${ASSET_BASE}/mini-${size}/badge-${key}.png${BADGE_ASSET_VERSION}`;
   }
 
   const BADGE_REGISTRY = [
@@ -540,11 +541,11 @@
       legacyLabels: [],
       title: 'Pechbaron',
       plaqueTitle: 'Pechbaron',
-      nickname: 'De Pechmagnaat',
+      nickname: 'De Dobbelvloek',
       rarityRank: 36,
       rarityLabel: 'Uncommon',
       pack: 'expansion',
-      description: 'Voor wie door blijft spelen terwijl de dobbelsteen je verraadt.',
+      description: 'Voor wie blijft gooien terwijl de dobbelsteen hem telkens verraadt.',
       requirementsText: '10 pikkenverliezen.',
       imageFull: assetPath('expansion', 'pikken_dobbelbaron'),
       imageMini48: miniPath('48', 'pikken_dobbelbaron'),
@@ -555,11 +556,11 @@
       legacyLabels: [],
       title: 'Modderhapper',
       plaqueTitle: 'Modderhapper',
-      nickname: 'De Doorzetter',
+      nickname: 'De Moddervreter',
       rarityRank: 37,
       rarityLabel: 'Uncommon',
       pack: 'expansion',
-      description: 'Voor wie vaker achteraan eindigt, maar altijd weer op de baan staat.',
+      description: 'Voor wie achteraan eindigt, maar altijd weer de baan op stapt.',
       requirementsText: '10 paardenraceverliezen.',
       imageFull: assetPath('expansion', 'paardenrace_baanbaas'),
       imageMini48: miniPath('48', 'paardenrace_baanbaas'),
@@ -645,12 +646,12 @@
       legacyLabels: [],
       title: 'Marktmeester',
       plaqueTitle: 'Marktmeester',
-      nickname: 'Ik ga Econometrie in Amsterdam studeren',
+      nickname: 'De Koerszetter',
       rarityRank: 43,
       rarityLabel: 'Rare',
       pack: 'expansion',
-      description: 'Voor wie nieuwe vragen durft te noteren.',
-      requirementsText: '3 Despimarkt-markten aangemaakt.',
+      description: 'Voor wie de beurs niet alleen bespeelt, maar ook zelf opent.',
+      requirementsText: '3 markten aangemaakt in Beurs d\'Espinoza.',
       imageFull: assetPath('expansion', 'despimarkt_marktmeester'),
       imageMini48: miniPath('48', 'despimarkt_marktmeester'),
       imageMini64: miniPath('64', 'despimarkt_marktmeester')
@@ -658,13 +659,13 @@
     {
       key: 'despimarkt_orakel',
       legacyLabels: [],
-      title: 'Warren Buffet',
-      plaqueTitle: 'Warren Buffet',
-      nickname: 'De Belegger',
+      title: 'Beursorakel',
+      plaqueTitle: 'Beursorakel',
+      nickname: 'De Kristalkijker',
       rarityRank: 44,
       rarityLabel: 'Epic',
       pack: 'expansion',
-      description: 'Voor wie cautes stapelt alsof het een buffet is.',
+      description: 'Voor wie de markt leest alsof de uitslag al in de bol staat.',
       requirementsText: 'Minstens 10 bets en minstens +250 cautes netto winst.',
       imageFull: assetPath('expansion', 'despimarkt_orakel'),
       imageMini48: miniPath('48', 'despimarkt_orakel'),
