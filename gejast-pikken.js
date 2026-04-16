@@ -143,10 +143,11 @@
   function liveHref(gameId, lobbyCode){
     const id = String(gameId || '').trim();
     const code = String(lobbyCode || '').trim().toUpperCase();
-    return scopedHref('./pikken_live.html', {
-      client_match_id: id,
-      match_ref: code
-    });
+    const params = {};
+    if (code) params.match_ref = code;
+    if (id && !code) params.client_match_id = id;
+    else if (id) params.client_match_id = id;
+    return scopedHref('./pikken_live.html', params);
   }
   function statsHref(){
     return scopedHref('./pikken_stats.html');
@@ -238,10 +239,14 @@
     if(!token || (!gameId && !lobbyCode)) return null;
     let lastErr = null;
     const attempts = [
+      { session_token: token, lobby_code_input: lobbyCode || null, site_scope_input: getScope() },
+      { session_token_input: token, lobby_code_input: lobbyCode || null, site_scope_input: getScope() },
       { session_token: token, game_id_input: gameId, lobby_code_input: lobbyCode || null, site_scope_input: getScope() },
       { session_token_input: token, game_id_input: gameId, lobby_code_input: lobbyCode || null, site_scope_input: getScope() },
       { session_token: token, game_id: gameId, lobby_code_input: lobbyCode || null, site_scope_input: getScope() },
       { session_token_input: token, game_id: gameId, lobby_code_input: lobbyCode || null, site_scope_input: getScope() },
+      { session_token: token, lobby_code_input: lobbyCode || null },
+      { session_token_input: token, lobby_code_input: lobbyCode || null },
       { session_token: token, game_id_input: gameId },
       { session_token_input: token, game_id_input: gameId }
     ];
@@ -410,11 +415,11 @@
           const joinedViewer = joinedState?.viewer && (joinedState.viewer.is_host || Number(joinedState.viewer.seat || 0) > 0);
           const joinedPhase = String(joinedState?.game?.state?.phase || joinedState?.game?.status || '').toLowerCase();
           if (joinedViewer && joinedPhase && joinedPhase !== 'lobby') {
-            UI.gameId = gameId;
-            setParticipantToken(gameId, true, lobbyCode);
-            clearLeaveSuppressionFor(gameId, lobbyCode);
-            history.replaceState(null,'',lobbyHref(gameId));
-            goLive(gameId, lobbyCode);
+            if (gameId) UI.gameId = gameId;
+            setParticipantToken(gameId || UI.gameId || '', true, lobbyCode);
+            clearLeaveSuppressionFor(gameId || UI.gameId || '', lobbyCode);
+            history.replaceState(null,'',lobbyHref(gameId || UI.gameId || ''));
+            goLive('', lobbyCode || currentLobbyCode());
             return list;
           }
         }
@@ -678,7 +683,7 @@
     if(joinedViewer && phase && phase !== 'lobby'){
       UI.pendingLiveEntryUntil = 0;
       setStatus('', false);
-      goLive(stateToUse?.game?.id || UI.gameId, stateToUse?.game?.lobby_code || currentLobbyCode());
+      goLive('', stateToUse?.game?.lobby_code || currentLobbyCode());
       return;
     }
 
@@ -690,7 +695,7 @@
       UI.pendingLiveEntryUntil = 0;
       try { render(confirmedState); } catch(_) {}
       setStatus('', false);
-      goLive(confirmedState?.game?.id || gameIdForWait, confirmedState?.game?.lobby_code || currentLobbyCode());
+      goLive('', confirmedState?.game?.lobby_code || currentLobbyCode());
       return;
     }
 
