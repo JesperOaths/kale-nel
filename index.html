@@ -674,7 +674,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v488';</script><script src="./gejast-config.js?v488"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v491';</script><script src="./gejast-config.js?v491"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
   <script src="./gejast-live-summary.js?v389"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
   <script src="./gejast-combined-readers.js?v426"></script>
@@ -775,10 +775,10 @@
         </div>
 
         <div class="public-links-grid">
-          <div class="page-link-card login-link placeholder-link" aria-disabled="true">
+          <a class="page-link-card login-link" href="./beurs.html">
             <div class="page-link-label">Beurs d'Espinoza</div>
-            <div class="page-link-copy">Placeholder — volgt later.</div>
-          </div>
+            <div class="page-link-copy">Conceptpagina — route staat nu klaar.</div>
+          </a>
           <a class="page-link-card login-link" href="./profiles.html">
             <div class="page-link-label">Spelers</div>
             <div class="page-link-copy">Bekijk spelers en profielen.</div>
@@ -1244,7 +1244,7 @@ function renderExtraNames(id, items, emptyText, listKey) {
 function persistExtraPollSnapshot(legends, losers){ try{ localStorage.setItem(EXTRA_POLL_STORAGE_KEY, JSON.stringify({ legends:Array.isArray(legends)?legends:[], losers:Array.isArray(losers)?losers:[] })); }catch(_){ } }
 function hydrateExtraPollSnapshot(){ try{ const raw = localStorage.getItem(EXTRA_POLL_STORAGE_KEY); return raw ? JSON.parse(raw) : null; }catch(_){ return null; } }
 function renderExtraPollState(data) {
-  data = mergeSnapshotNames((data && typeof data === 'object') ? { ...data } : {}, hydrateExtraPollSnapshot());
+  data = (data && typeof data === 'object') ? { ...data } : {};
   if (!Array.isArray(data.legends) && Array.isArray(data.yes_names)) data.legends = [...data.yes_names];
   if (!Array.isArray(data.losers) && Array.isArray(data.no_names)) data.losers = [...data.no_names];
   const previousCount = Number(currentDrinksPollState?.can_count ?? currentDrinksPollState?.yes_count ?? currentDrinksPollState?.legends?.length ?? currentDrinksPollState?.yes_names?.length ?? 0);
@@ -1796,7 +1796,6 @@ async function castExtraPollVote(desired_status) {
       const savedHomepagePoll = hydrateHomepagePollSnapshot();
       const savedExtraPoll = hydrateExtraPollSnapshot();
       if (savedHomepagePoll) renderState(savedHomepagePoll);
-      if (savedExtraPoll) renderExtraPollState(savedExtraPoll);
       const cached = readHomepageBootCache();
       if (cached) applyHomepageBootBundle(cached, true);
       ensureAdminViewer().then(applyAdminViewerRefresh).catch(() => {});
@@ -1865,10 +1864,10 @@ async function castExtraPollVote(desired_status) {
 
   <div class="site-credit-watermark" data-version-watermark></div>
 
-<script src="./gejast-player-session-ui.js?v487"></script>
+<script src="./gejast-player-session-ui.js?v491"></script>
 
 
 <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script><script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v389"></script><script src="./gejast-geo.js?v487"></script><script src="./site-analytics.js?v389"></script>
+<script src="./drinks-verify-float.js?v389"></script><script src="./gejast-geo.js?v491"></script><script src="./site-analytics.js?v389"></script>
 </body>
 </html>

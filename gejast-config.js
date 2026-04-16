@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v492',
+    VERSION:'v491',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -76,42 +76,11 @@
     const seen = new Set();
     return nodes.filter((node)=>{ if (seen.has(node)) return false; seen.add(node); return true; });
   }
-  function shouldWriteVersionLabel(node){
-    if (!node || !(node instanceof Element)) return false;
-    if (node.matches('.site-credit-watermark, #versionWatermark, .version-tag, .watermark')) return true;
-    if (!node.hasAttribute('data-version-watermark')) return false;
-    const hasMeaningfulChildren = Array.from(node.children || []).some((child)=>{
-      const tag = String(child.tagName || '').toLowerCase();
-      return tag && tag !== 'template';
-    });
-    return !hasMeaningfulChildren;
-  }
   function applyVersionLabel(){
     const nodes = ensureVersionWatermark();
-    let wroteAny = false;
-    nodes.forEach((node)=>{
-      if (!shouldWriteVersionLabel(node)) return;
-      node.textContent = label;
-      watermarkStyles(node);
-      wroteAny = true;
-    });
-    if (!wroteAny && document.body) {
-      const node = document.createElement('div');
-      node.className = 'site-credit-watermark';
-      node.setAttribute('data-version-watermark','');
-      document.body.appendChild(node);
-      node.textContent = label;
-      watermarkStyles(node);
-    }
+    nodes.forEach((node)=>{ node.textContent = label; watermarkStyles(node); });
     const re = /v\d+\s*[·.-]?\s*Made by Bruis/i;
-    document.querySelectorAll('body *').forEach((node)=>{
-      if (node.children.length) return;
-      const txt=(node.textContent||'').trim();
-      if (re.test(txt)) {
-        node.textContent = label;
-        watermarkStyles(node);
-      }
-    });
+    document.querySelectorAll('body *').forEach((node)=>{ if (node.children.length) return; const txt=(node.textContent||'').trim(); if (re.test(txt)) { node.textContent = label; watermarkStyles(node); } });
   }
 
 
