@@ -84,6 +84,30 @@
     </article>`;
   }
 
+  function titleCaseTag(tag){ return String(tag||'').replace(/-/g,' ').replace(/\b\w/g, (m)=>m.toUpperCase()); }
+  function tagChips(tags){
+    const rows = Array.isArray(tags) ? tags.filter(Boolean).slice(0,8) : [];
+    return rows.length ? `<div class="tag-row">${rows.map((tag)=>`<span class="market-tag">#${esc(titleCaseTag(tag))}</span>`).join('')}</div>` : '';
+  }
+  function followButtonHtml(row){
+    const following = !!row?.is_following;
+    return `<button class="btn alt follow-btn" type="button" data-watch-market="${Number(row?.market_id||0)}" data-watch-next="${following?'0':'1'}">${following?'Volgend':'Volgen'}</button>`;
+  }
+  function swingPill(row){
+    const swing = Number(row?.swing_points_a || 0);
+    if (!Number.isFinite(swing) || Math.abs(swing) < 0.1) return '<span class="dm-pill">vlak</span>';
+    return `<span class="dm-pill ${swing>0?'plus':'minus'}">${swing>0?'+':''}${swing.toFixed(1)} pts</span>`;
+  }
+  function recentActivityHtml(rows){
+    rows = normalizeRows(rows);
+    if (!rows.length) return empty('Nog geen live tape.');
+    return rows.map((row)=>`<article class="dm-list-card activity-card"><div><strong>${playerLink(row.player_name || '')}</strong><div class="muted">${esc(row.title || 'Market')} · ${esc(row.outcome_label || row.outcome_key || '')}</div>${tagChips(row.market_tags || [])}</div><div class="dm-stack-right"><div class="dm-pill">${money(row.stake_cautes || 0)}</div><div class="muted">${shortDate(row.created_at)}</div></div></article>`).join('');
+  }
+  function positionSummaryHtml(rows){
+    rows = normalizeRows(rows);
+    if (!rows.length) return empty('Nog geen open posities.');
+    return rows.map((row)=>`<article class="dm-list-card"><div><strong>${esc(row.title || 'Market')}</strong><div class="muted">Kant ${esc(row.outcome_key || '')} · ${row.bet_count || 0} bets</div></div><div class="dm-stack-right"><div class="dm-pill">${money(row.total_stake_cautes || 0)}</div><a class="btn alt" href="${route(`./despimarkt_market.html?market=${encodeURIComponent(row.market_id)}`)}">Open</a></div></article>`).join('');
+  }
   function marketCard(row){
     const total = Number(row.total_pot || 0);
     const a = Number(row.outcome_a_pool || 0);
@@ -91,31 +115,58 @@
     const pa = row.probability_a != null ? Number(row.probability_a) : (total>0 ? (a/total*100) : 0);
     const pb = row.probability_b != null ? Number(row.probability_b) : (total>0 ? (b/total*100) : 0);
     return `<article class="market-card ${esc(String(row.status||'').toLowerCase())}">
-      <div class="market-card-head"><strong>${esc(row.title || 'Market')}</strong><span class="dm-pill">${money(total)}</span></div>
+      <div class="market-card-head"><strong>${esc(row.title || 'Market')}</strong><div class="chip-row"><span class="dm-pill">${money(total)}</span>${swingPill(row)}</div></div>
+      ${tagChips(row.market_tags || [])}
       <div class="muted">${esc(row.description || row.resolution_summary || 'Geen beschrijving')}</div>
+      <div class="market-mini-meta"><span>${row.watcher_count || 0} volgers</span><span>${row.recent_bet_count_24h || 0} bets / 24u</span></div>
       <div class="market-grid-2">
         <a class="outcome-box clean-link" href="${route(`./despimarkt_market.html?market=${encodeURIComponent(row.market_id)}`)}"><span>${esc(row.outcome_a_label || 'A')}</span><strong>${pct(pa)}</strong><small>${money(a)}</small></a>
         <a class="outcome-box clean-link alt" href="${route(`./despimarkt_market.html?market=${encodeURIComponent(row.market_id)}`)}"><span>${esc(row.outcome_b_label || 'B')}</span><strong>${pct(pb)}</strong><small>${money(b)}</small></a>
       </div>
-      <div class="market-card-foot"><span>Sluit: ${shortDate(row.closes_at)}</span><span>${esc(row.status || '')}</span></div>
+      <div class="market-card-foot"><span>Sluit: ${shortDate(row.closes_at)}</span><div class="inline-actions"><span>${esc(row.status || '')}</span>${followButtonHtml(row)}</div></div>
     </article>`;
+  }
+  async function bindWatchButtons(statusId, refreshFn){
+    global.document.querySelectorAll('[data-watch-market]').forEach((btn)=>btn.onclick = async (ev)=>{
+      ev.preventDefault(); ev.stopPropagation();
+      const marketId = Number(btn.dataset.watchMarket || 0);
+      const next = String(btn.dataset.watchNext || '1') === '1';
+      if (!marketId) return;
+      setStatus(statusId || 'hubStatus', next ? 'Market volgen…' : 'Market ontvolgen…');
+      try {
+        await rpc('despimarkt_set_market_watch_state_scoped', { session_token: token(), market_id_input: marketId, is_following_input: next, site_scope_input: scope() });
+        setStatus(statusId || 'hubStatus', next ? 'Market toegevoegd aan je watchlist.' : 'Market uit je watchlist gehaald.', 'ok');
+        if (typeof refreshFn === 'function') await refreshFn();
+      } catch (err) {
+        setStatus(statusId || 'hubStatus', err.message || String(err), 'error');
+      }
+    });
   }
 
   async function loadHubPage(){
     if(!requirePlayer('despimarkt.html')) return;
     setStatus('hubStatus', 'Despimarkt laden…');
-    try {
-      const data = await rpc('despimarkt_get_market_list_scoped', { session_token: token(), site_scope_input: scope() });
-      const wallet = data?.wallet || {};
-      global.document.getElementById('heroMetrics').innerHTML = `<div class="hero-metric"><span>Balans</span><strong>${money(wallet?.balance_cautes || 0)}</strong><small>${data?.restriction?.is_frozen ? 'Dry Dock actief' : 'Vrij om te handelen'}</small></div><div class="hero-metric"><span>Open markten</span><strong>${normalizeRows(data?.active_markets).length}</strong><small>Actuele Beurs d'Espinoza-markten</small></div><div class="hero-metric"><span>Open posities</span><strong>${normalizeRows(data?.my_positions).length}</strong><small>${money(normalizeRows(data?.my_positions).reduce((s,row)=>s+Number(row.total_stake_cautes||0),0))} totaal ingezet</small></div>`;
-      global.document.getElementById('frozenStatus').innerHTML = data?.restriction?.is_frozen ? note(`Dry Dock actief: ${data.restriction.frozen_reason || 'je Despimarkt-schrijfacties zijn tijdelijk geblokkeerd.'}`) : note('Geen actieve Dry Dock-blokkade.');
-      global.document.getElementById('activeMarkets').innerHTML = normalizeRows(data?.active_markets).length ? normalizeRows(data.active_markets).map(marketCard).join('') : empty('Nog geen open markten.');
-      global.document.getElementById('resolvedMarkets').innerHTML = normalizeRows(data?.recently_resolved).length ? normalizeRows(data.recently_resolved).map(marketCard).join('') : empty('Nog geen recente settlements.');
-      global.document.getElementById('myPositions').innerHTML = normalizeRows(data?.my_positions).length ? normalizeRows(data.my_positions).map((row)=>`<article class="dm-list-card"><div><strong>${esc(row.title || row.slug || 'Market')}</strong><div class="muted">${esc(row.outcome_key || '')} · ${row.bet_count || 0} bets</div></div><div class="dm-stack-right"><div class="dm-pill">${money(row.total_stake_cautes)}</div><a class="btn alt" href="${route(`./despimarkt_market.html?market=${encodeURIComponent(row.market_id)}`)}">Open</a></div></article>`).join('') : empty('Je hebt nog geen posities.');
-      setStatus('hubStatus', 'Despimarkt geladen.', 'ok');
-    } catch (err) {
-      setStatus('hubStatus', err.message || String(err), 'error');
+    async function refresh(){
+      try {
+        const data = await rpc('despimarkt_get_market_list_scoped', { session_token: token(), site_scope_input: scope() });
+        const wallet = data?.wallet || {};
+        global.document.getElementById('heroMetrics').innerHTML = `
+          <div class="hero-metric"><span>Balans</span><strong>${money(wallet?.balance_cautes || 0)}</strong><small>${data?.restriction?.is_frozen ? 'Dry Dock actief' : 'Vrij om te handelen'}</small></div>
+          <div class="hero-metric"><span>Open markten</span><strong>${normalizeRows(data?.active_markets).length}</strong><small>${normalizeRows(data?.recent_activity).length} live bewegingen in de tape</small></div>
+          <div class="hero-metric"><span>Watchlist</span><strong>${normalizeRows(data?.watchlist_markets).length}</strong><small>${normalizeRows(data?.watchlist_markets).reduce((sum,row)=>sum+Number(row.watcher_count||0),0)} volgers in je gevolgde markten</small></div>`;
+        global.document.getElementById('frozenStatus').innerHTML = data?.restriction?.is_frozen ? note(`Dry Dock actief: ${data.restriction.frozen_reason || 'je Despimarkt-schrijfacties zijn tijdelijk geblokkeerd.'}`) : note('Geen actieve Dry Dock-blokkade. Volg markten om close-soon en marktbewegingen te zien.');
+        global.document.getElementById('activeMarkets').innerHTML = normalizeRows(data?.active_markets).length ? normalizeRows(data.active_markets).map(marketCard).join('') : empty('Nog geen open markten.');
+        global.document.getElementById('myPositions').innerHTML = positionSummaryHtml(data?.my_positions);
+        if (global.document.getElementById('watchlistMarkets')) global.document.getElementById('watchlistMarkets').innerHTML = normalizeRows(data?.watchlist_markets).length ? normalizeRows(data.watchlist_markets).map(marketCard).join('') : empty('Je volgt nog geen markten.');
+        if (global.document.getElementById('recentActivity')) global.document.getElementById('recentActivity').innerHTML = recentActivityHtml(data?.recent_activity);
+        global.document.getElementById('resolvedMarkets').innerHTML = normalizeRows(data?.recently_resolved).length ? normalizeRows(data.recently_resolved).map(marketCard).join('') : empty('Nog geen recente settlements.');
+        await bindWatchButtons('hubStatus', refresh);
+        setStatus('hubStatus','Despimarkt-hub geladen.','ok');
+      } catch (err) {
+        setStatus('hubStatus', err.message || String(err), 'error');
+      }
     }
+    await refresh();
   }
 
   async function loadWalletPage(){
@@ -211,39 +262,58 @@
     const marketId = Number(q('market') || 0);
     if (!marketId) { setStatus('marketStatus','Geen market-id gevonden.','error'); return; }
     setStatus('marketStatus','Market laden…');
-    try {
-      const data = await rpc('despimarkt_get_market_state_scoped', { market_id_input: marketId, session_token: token(), site_scope_input: scope() });
-      const market = data?.market || {};
-      const total = Number(market.total_pot || 0); const a = Number(market.outcome_a_pool || 0); const b = Number(market.outcome_b_pool || 0);
-      const pa = market.probability_a != null ? Number(market.probability_a) : (total>0 ? (a/total*100) : 0);
-      const pb = market.probability_b != null ? Number(market.probability_b) : (total>0 ? (b/total*100) : 0);
-      global.document.getElementById('marketTitle').textContent = market.title || 'Beurs d\'Espinoza';
-      global.document.getElementById('marketMeta').innerHTML = `${esc(market.description || 'Geen beschrijving')}<br><span class="muted">Resolutie: ${esc(market.resolution_criteria || 'Niet opgegeven')}</span>`;
-      global.document.getElementById('marketWallet').textContent = money(data?.wallet?.balance_cautes || 0);
-      global.document.getElementById('marketHeaderStats').innerHTML = `<div class="hero-metric"><span>Status</span><strong>${esc(market.status || '—')}</strong><small>Sluit ${shortDate(market.closes_at)}</small></div><div class="hero-metric"><span>Totale pot</span><strong>${money(total)}</strong><small>${market.participant_count || 0} spelers</small></div><div class="hero-metric"><span>Jouw posities</span><strong>${normalizeRows(data?.my_positions).length}</strong><small>${money(normalizeRows(data?.my_positions).reduce((s,row)=>s+Number(row.total_stake_cautes||0),0))}</small></div>`;
-      global.document.getElementById('outcomeA').innerHTML = `<span>${esc(market.outcome_a_label || 'A')}</span><strong>${pct(pa)}</strong><small>${money(a)}</small>`;
-      global.document.getElementById('outcomeB').innerHTML = `<span>${esc(market.outcome_b_label || 'B')}</span><strong>${pct(pb)}</strong><small>${money(b)}</small>`;
-      global.document.getElementById('probabilityBars').innerHTML = bar(market.outcome_a_label || 'A', `${pct(pa)} · ${money(a)}`, total || a || 1, 'gold') + bar(market.outcome_b_label || 'B', `${pct(pb)} · ${money(b)}`, total || b || 1, 'sky');
-      global.document.getElementById('recentBets').innerHTML = normalizeRows(data?.recent_bets).length ? normalizeRows(data.recent_bets).map((row)=>`<article class="dm-list-card"><div><strong>${playerLink(row.player_name || '')}</strong><div class="muted">${esc(row.outcome_label || row.outcome_key || '')}</div></div><div class="dm-stack-right"><div class="dm-pill">${money(row.stake_cautes)}</div><div class="muted">${shortDate(row.created_at)}</div></div></article>`).join('') : empty('Nog geen recente bets.');
-      global.document.getElementById('myMarketPositions').innerHTML = normalizeRows(data?.my_positions).length ? normalizeRows(data.my_positions).map((row)=>`<article class="dm-list-card"><div><strong>${esc(row.outcome_key || '')}</strong><div class="muted">${row.bet_count || 0} bets · eerste ${shortDate(row.first_position_at)}</div></div><div class="dm-pill">${money(row.total_stake_cautes)}</div></article>`).join('') : empty('Je hebt nog geen posities in deze markt.');
-      global.document.getElementById('settlementSummary').innerHTML = market.status === 'resolved' ? (normalizeRows(data?.winner_payouts).length ? normalizeRows(data.winner_payouts).map((row)=>`<article class="dm-list-card"><div><strong>${playerLink(row.player_name || '')}</strong><div class="muted">Winnende stake ${money(row.winning_stake_cautes)}</div></div><div class="dm-pill plus">${money(row.payout_cautes)}</div></article>`).join('') : note('Resolved zonder payoutdetails.')) : note('Payouts hieronder zijn pas definitief na admin-resolutie.');
-      const outcomeField = global.document.getElementById('betOutcome');
-      const stakeField = global.document.getElementById('betStake');
-      function refreshPreview(){ const result = estimateReturn(market, outcomeField.value, stakeField.value); global.document.getElementById('betPreview').textContent = `Geschatte uitbetaling: ${money(result)} · nieuwe kans ${pct(outcomeField.value==='A' ? ((a + Number(stakeField.value||0)) / (total + Number(stakeField.value||0) || 1) * 100) : ((b + Number(stakeField.value||0)) / (total + Number(stakeField.value||0) || 1) * 100))}`; }
-      outcomeField.onchange = refreshPreview; stakeField.oninput = refreshPreview; refreshPreview();
-      global.document.getElementById('betForm').onsubmit = async (ev)=>{
-        ev.preventDefault();
-        setStatus('marketStatus','Bet plaatsen…');
-        try {
-          await rpc('despimarkt_place_bet_scoped', { session_token: token(), market_id_input: marketId, outcome_key_input: outcomeField.value, stake_cautes_input: Number(stakeField.value||0), site_scope_input: scope() });
-          setStatus('marketStatus','Bet geplaatst. De getoonde payout bleef een schatting tot settlement.','ok');
-          await loadMarketPage();
-        } catch (err) { setStatus('marketStatus', err.message || String(err), 'error'); }
-      };
-      setStatus('marketStatus','Market geladen.','ok');
-    } catch (err) {
-      setStatus('marketStatus', err.message || String(err), 'error');
+    async function refresh(){
+      try {
+        const data = await rpc('despimarkt_get_market_state_scoped', { market_id_input: marketId, session_token: token(), site_scope_input: scope() });
+        const market = data?.market || {};
+        const total = Number(market.total_pot || 0);
+        const a = Number(market.outcome_a_pool || 0);
+        const b = Number(market.outcome_b_pool || 0);
+        const pa = market.probability_a != null ? Number(market.probability_a) : (total>0 ? (a/total*100) : 0);
+        const pb = market.probability_b != null ? Number(market.probability_b) : (total>0 ? (b/total*100) : 0);
+        const myRows = normalizeRows(data?.my_positions);
+        global.document.getElementById('marketTitle').textContent = market.title || "Beurs d'Espinoza";
+        global.document.getElementById('marketMeta').innerHTML = `${esc(market.description || 'Geen beschrijving')}<br><span class="muted">Resolutie: ${esc(market.resolution_criteria || 'Niet opgegeven')}</span>`;
+        global.document.getElementById('marketWallet').textContent = money(data?.wallet?.balance_cautes || 0);
+        if (global.document.getElementById('marketTagsRow')) global.document.getElementById('marketTagsRow').innerHTML = tagChips(market.market_tags || []);
+        if (global.document.getElementById('marketFollowChip')) global.document.getElementById('marketFollowChip').innerHTML = followButtonHtml(market);
+        global.document.getElementById('marketHeaderStats').innerHTML = `
+          <div class="hero-metric"><span>Status</span><strong>${esc(market.status || '—')}</strong><small>Sluit ${shortDate(market.closes_at)}</small></div>
+          <div class="hero-metric"><span>Totale pot</span><strong>${money(total)}</strong><small>${market.participant_count || 0} spelers · ${market.watcher_count || 0} volgers</small></div>
+          <div class="hero-metric"><span>Prijsbeweging</span><strong>${Number(market.swing_points_a || 0)>0?'+':''}${Number(market.swing_points_a || 0).toFixed(1)} pts</strong><small>Opente op ${pct(market.opening_probability_a || 0)} voor kant A</small></div>`;
+        global.document.getElementById('outcomeA').innerHTML = `<span>${esc(market.outcome_a_label || 'A')}</span><strong>${pct(pa)}</strong><small>${money(a)}</small>`;
+        global.document.getElementById('outcomeB').innerHTML = `<span>${esc(market.outcome_b_label || 'B')}</span><strong>${pct(pb)}</strong><small>${money(b)}</small>`;
+        global.document.getElementById('probabilityBars').innerHTML = `${bar(market.outcome_a_label || 'A', `${pct(pa)} · ${money(a)}`, Math.max(pa,pb,1), 'gold')}${bar(market.outcome_b_label || 'B', `${pct(pb)} · ${money(b)}`, Math.max(pa,pb,1), 'sky')}`;
+        global.document.getElementById('recentBets').innerHTML = normalizeRows(data?.recent_bets).length ? normalizeRows(data.recent_bets).map((row)=>`<article class="dm-list-card"><div><strong>${playerLink(row.player_name || '')}</strong><div class="muted">${esc(row.outcome_label || row.outcome_key || '')} · ${shortDate(row.created_at)}</div></div><div class="dm-stack-right"><div class="dm-pill">${money(row.stake_cautes || 0)}</div><div class="muted">${pct(row.probability_snapshot || 0)}</div></div></article>`).join('') : empty('Nog geen recente bets.');
+        global.document.getElementById('myMarketPositions').innerHTML = myRows.length ? myRows.map((row)=>`<article class="dm-list-card"><div><strong>Kant ${esc(row.outcome_key || '')}</strong><div class="muted">${row.bet_count || 0} bets sinds ${shortDate(row.first_position_at)}</div></div><div class="dm-stack-right"><div class="dm-pill">${money(row.total_stake_cautes || 0)}</div><div class="muted">Laatste ${shortDate(row.last_position_at)}</div></div></article>`).join('') : empty('Nog geen eigen posities in deze market.');
+        global.document.getElementById('settlementSummary').innerHTML = normalizeRows(data?.winner_payouts).length ? normalizeRows(data.winner_payouts).map((row)=>`<article class="dm-list-card"><div><strong>${playerLink(row.player_name || '')}</strong><div class="muted">Winnende stake ${money(row.winning_stake_cautes || 0)}</div></div><div class="dm-pill plus">${money(row.payout_cautes || 0)}</div></article>`).join('') : empty('Nog geen settlementregels.');
+        const stakeField = global.document.getElementById('betStake');
+        const outcomeField = global.document.getElementById('betOutcome');
+        const preview = ()=>{
+          const stake = Number(stakeField.value || 0);
+          const chosen = outcomeField.value === 'B' ? 'B' : 'A';
+          const chosenPool = chosen === 'A' ? a : b;
+          const estimated = stake > 0 ? Math.floor(stake * ((total + stake) / Math.max(1, chosenPool + stake))) : 0;
+          const nextProb = chosen === 'A' ? ((a + stake) / Math.max(1, total + stake)) * 100 : ((b + stake) / Math.max(1, total + stake)) * 100;
+          global.document.getElementById('betPreview').innerHTML = `Indicatieve payout: <strong>${money(estimated)}</strong> · nieuwe ${chosen === 'A' ? esc(market.outcome_a_label || 'A') : esc(market.outcome_b_label || 'B')} kans: <strong>${pct(nextProb)}</strong>`;
+        };
+        stakeField.oninput = preview; outcomeField.onchange = preview; preview();
+        global.document.getElementById('betForm').onsubmit = async (ev)=>{
+          ev.preventDefault();
+          setStatus('marketStatus','Bet plaatsen…');
+          try {
+            await rpc('despimarkt_place_bet_scoped', { session_token: token(), market_id_input: marketId, outcome_key_input: outcomeField.value, stake_cautes_input: Number(stakeField.value||0), site_scope_input: scope() });
+            setStatus('marketStatus','Bet geplaatst.','ok');
+            await refresh();
+          } catch (err) { setStatus('marketStatus', err.message || String(err), 'error'); }
+        };
+        await bindWatchButtons('marketStatus', refresh);
+        setStatus('marketStatus','Market geladen.','ok');
+      } catch (err) {
+        setStatus('marketStatus', err.message || String(err), 'error');
+      }
     }
+    await refresh();
   }
 
   async function loadCreatePage(){
@@ -252,6 +322,8 @@
       ev.preventDefault();
       setStatus('createStatus','Market maken…');
       try {
+        const rawTags = String(global.document.getElementById('marketTagsInput')?.value || '');
+        const tags = rawTags.split(',').map((tag)=>tag.trim()).filter(Boolean);
         const payload = {
           session_token: token(),
           title_input: global.document.getElementById('marketTitleInput').value,
@@ -262,6 +334,7 @@
           closes_at_input: new Date(global.document.getElementById('marketCloseAt').value).toISOString(),
           opening_probability_a_input: Number(global.document.getElementById('marketOpeningA').value || 50),
           seed_cautes_input: Number(global.document.getElementById('marketSeed').value || 0),
+          market_tags_input: tags,
           site_scope_input: scope()
         };
         const data = await rpc('despimarkt_create_market_scoped', payload);
@@ -278,17 +351,24 @@
     const scopeValue = ()=> (global.document.getElementById('adminScopeSelect')?.value || scope());
     async function refresh(){
       try {
-        const [queue, audit, mints, dry] = await Promise.all([
+        const [queue, audit, mints, dry, debts] = await Promise.all([
           adminRpc('admin_get_despimarkt_resolution_queue_action', { admin_session_token: adminToken(), site_scope_input: scopeValue() }),
-          adminRpc('admin_get_despimarkt_audit_action', { admin_session_token: adminToken(), site_scope_input: scopeValue(), limit_count: 120 }),
+          adminRpc('admin_get_despimarkt_audit_action', { admin_session_token: adminToken(), site_scope_input: scopeValue(), limit_count: 100 }),
           adminRpc('admin_get_caute_mint_audit_action', { admin_session_token: adminToken(), site_scope_input: scopeValue(), limit_count: 80 }),
-          rpc('despimarkt_get_wall_of_shame_scoped', { site_scope_input: scopeValue() })
+          rpc('despimarkt_get_wall_of_shame_scoped', { site_scope_input: scopeValue() }),
+          adminRpc('admin_get_despimarkt_debt_queue_action', { admin_session_token: adminToken(), site_scope_input: scopeValue(), limit_count: 80 })
         ]);
-        global.document.getElementById('resolutionQueue').innerHTML = normalizeRows(queue?.queue).length ? normalizeRows(queue.queue).map((row)=>`<article class="market-card"><div class="market-card-head"><strong>${esc(row.title||'Market')}</strong><span class="dm-pill">${money(row.total_pot)}</span></div><div class="muted">${esc(row.outcome_a_label)} vs ${esc(row.outcome_b_label)}</div><div class="admin-actions"><button class="btn" data-preview-market="${row.market_id}" data-preview-side="A">Preview A</button><button class="btn alt" data-preview-market="${row.market_id}" data-preview-side="B">Preview B</button><button class="btn success" data-resolve-market="${row.market_id}" data-resolve-side="A">Resolve A</button><button class="btn success alt" data-resolve-market="${row.market_id}" data-resolve-side="B">Resolve B</button><button class="btn danger" data-cancel-market="${row.market_id}">Refund</button></div></article>`).join('') : empty('Geen markten in de resolutiequeue.');
-        global.document.getElementById('mintAudit').innerHTML = normalizeRows(mints?.rows).length ? normalizeRows(mints.rows).map((row)=>`<article class="dm-list-card"><div><strong>${playerLink(row.requester_player_name || '')}</strong><div class="muted">${esc(row.event_type_key || '')} · ${esc(row.status || '')}</div></div><div class="dm-stack-right"><div class="dm-pill">${money(row.awarded_cautes ?? row.requested_cautes ?? 0)}</div><div class="muted">${shortDate(row.created_at)}</div></div></article>`).join('') : empty('Nog geen mintaudit.');
+
+        global.document.getElementById('resolutionQueue').innerHTML = normalizeRows(queue?.rows).length ? normalizeRows(queue.rows).map((row)=>`<article class="dm-list-card"><div><strong>${esc(row.title || '')}</strong><div class="muted">${money(row.total_pot || 0)} · ${row.participant_count || 0} spelers · sluit ${shortDate(row.closes_at)}</div>${tagChips(row.market_tags || [])}</div><div class="admin-actions"><button class="btn alt" type="button" data-preview-market="${row.market_id}" data-preview-side="A">Preview A</button><button class="btn alt" type="button" data-preview-market="${row.market_id}" data-preview-side="B">Preview B</button><button class="btn success" type="button" data-resolve-market="${row.market_id}" data-resolve-side="A">Resolve A</button><button class="btn success alt" type="button" data-resolve-market="${row.market_id}" data-resolve-side="B">Resolve B</button><button class="btn danger" type="button" data-cancel-market="${row.market_id}">Refund</button></div></article>`).join('') : empty('Geen markten in de resolutiequeue.');
+
+        global.document.getElementById('mintAudit').innerHTML = normalizeRows(mints?.rows).length ? normalizeRows(mints.rows).map((row)=>`<article class="dm-list-card"><div><strong>${playerLink(row.requester_player_name || '')}</strong><div class="muted">#${row.mint_request_id || 0} · ${esc(row.event_type_key || '')} · ${esc(row.status || '')}</div>${row.admin_cap_bypass ? '<div class="dm-pill plus">Bypass actief</div>' : ''}</div><div class="dm-stack-right"><div class="dm-pill">${money(row.awarded_cautes ?? row.requested_cautes ?? 0)}</div><div class="muted">req ${money(row.requested_cautes || 0)}</div><div class="muted">${shortDate(row.created_at)}</div>${(row.status === 'pending_verification' || row.status === 'verified_capped') ? `<button class="btn alt" type="button" data-mint-bypass="${row.mint_request_id}" data-mint-bypass-next="${row.admin_cap_bypass ? '0' : '1'}">${row.admin_cap_bypass ? 'Bypass uit' : 'Bypass aan'}</button>` : ''}</div></article>`).join('') : empty('Nog geen mintaudit.');
+
         global.document.getElementById('auditList').innerHTML = normalizeRows(audit?.rows).length ? normalizeRows(audit.rows).map((row)=>`<article class="dm-list-card"><div><strong>${esc(row.domain || '')} · ${esc(row.action_name || '')}</strong><div class="muted">${esc(row.actor_name || 'systeem')} · ${shortDate(row.created_at)}</div></div><div class="muted">${esc(JSON.stringify(row.payload || {}))}</div></article>`).join('') : empty('Nog geen auditregels.');
+
         const wallRows = normalizeRows(dry?.rows);
-        global.document.getElementById('freezeList').innerHTML = wallRows.length ? wallRows.map((row)=>`<article class="dm-list-card"><div><strong>${playerLink(row.player_name || '')}</strong><div class="muted">Refusals: ${row.refusal_count || 0} · verlies ${money(row.total_penalty_cautes || 0)}</div></div><div class="dm-stack-right">${row.is_frozen?'<div class="dm-pill danger">Frozen</div>':'<div class="dm-pill">Historisch</div>'}${row.is_frozen?`<button class="btn alt" data-unfreeze-player="${esc(row.player_name || '')}">Unfreeze</button>`:''}</div></article>`).join('') : empty('Geen Dry Dock-gevallen.');
+        global.document.getElementById('freezeList').innerHTML = wallRows.length ? wallRows.map((row)=>`<article class="dm-list-card"><div><strong>${playerLink(row.player_name || '')}</strong><div class="muted">Refusals: ${row.refusal_count || 0} · verlies ${money(row.total_penalty_cautes || 0)}</div></div><div class="dm-stack-right">${row.is_frozen?'<div class="dm-pill danger">Frozen</div>':'<div class="dm-pill">Historisch</div>'}${row.is_frozen?`<button class="btn alt" type="button" data-unfreeze-player="${esc(row.player_name || '')}">Unfreeze</button>`:''}</div></article>`).join('') : empty('Geen Dry Dock-gevallen.');
+
+        if (global.document.getElementById('debtQueue')) global.document.getElementById('debtQueue').innerHTML = normalizeRows(debts?.rows).length ? normalizeRows(debts.rows).map((row)=>`<article class="dm-list-card"><div><strong>${playerLink(row.target_player_name || '')}</strong><div class="muted">Door ${playerLink(row.nominator_player_name || '')} · ${esc(row.drink_label || row.drink_type_key || '')} · ${esc(row.status || '')}</div><div class="muted">Deadline ${shortDate(row.expires_at)}</div></div><div class="admin-actions"><button class="btn alt" type="button" data-extend-debt="${row.debt_id}" data-extend-hours="6">+6u</button><button class="btn alt" type="button" data-extend-debt="${row.debt_id}" data-extend-hours="24">+24u</button><button class="btn alt" type="button" data-extend-debt="${row.debt_id}" data-extend-hours="72">+72u</button></div></article>`).join('') : empty('Geen open of pending schulden.');
 
         global.document.querySelectorAll('[data-preview-market]').forEach((btn)=>btn.onclick = async ()=>{
           setStatus('adminStatus','Settlement preview laden…');
@@ -326,11 +406,42 @@
             await refresh();
           } catch (err) { setStatus('adminStatus', err.message || String(err), 'error'); }
         });
+        global.document.querySelectorAll('[data-mint-bypass]').forEach((btn)=>btn.onclick = async ()=>{
+          const next = String(btn.dataset.mintBypassNext || '1') === '1';
+          const reason = global.prompt(next ? 'Reden voor mint-cap bypass:' : 'Reden om bypass weer uit te zetten:', '');
+          if (reason === null) return;
+          setStatus('adminStatus', next ? 'Mint-bypass activeren…' : 'Mint-bypass uitschakelen…');
+          try {
+            await adminRpc('admin_override_despimarkt_mint_cap_action', { admin_session_token: adminToken(), mint_request_id_input: Number(btn.dataset.mintBypass), bypass_enabled_input: next, reason_input: reason, site_scope_input: scopeValue() });
+            setStatus('adminStatus', next ? 'Mint-cap bypass toegepast.' : 'Mint-cap bypass verwijderd.', 'ok');
+            await refresh();
+          } catch (err) { setStatus('adminStatus', err.message || String(err), 'error'); }
+        });
+        global.document.querySelectorAll('[data-extend-debt]').forEach((btn)=>btn.onclick = async ()=>{
+          const hours = Number(btn.dataset.extendHours || 24);
+          const reason = global.prompt(`Reden voor +${hours} uur deadline-extensie:`, '');
+          if (reason === null) return;
+          setStatus('adminStatus','Debt deadline verlengen…');
+          try {
+            await adminRpc('admin_extend_despimarkt_debt_deadline_action', { admin_session_token: adminToken(), debt_id_input: Number(btn.dataset.extendDebt), extend_hours_input: hours, reason_input: reason, site_scope_input: scopeValue() });
+            setStatus('adminStatus', 'Debt deadline verlengd.', 'ok');
+            await refresh();
+          } catch (err) { setStatus('adminStatus', err.message || String(err), 'error'); }
+        });
         setStatus('adminStatus','Adminconsole geladen.','ok');
       } catch (err) { setStatus('adminStatus', err.message || String(err), 'error'); }
     }
 
     global.document.getElementById('adminScopeSelect').onchange = refresh;
+    const runNow = global.document.getElementById('runMaintenanceNow');
+    if (runNow) runNow.onclick = async ()=>{
+      setStatus('adminStatus','Achtergrondonderhoud uitvoeren…');
+      try {
+        const data = await adminRpc('admin_run_despimarkt_maintenance_action', { admin_session_token: adminToken(), site_scope_input: scopeValue() });
+        setStatus('adminStatus', `Onderhoud klaar · ${data?.penalized_count || 0} Dry Dock penalties · ${data?.close_soon_notifications || 0} follow-alerts.`, 'ok');
+        await refresh();
+      } catch (err) { setStatus('adminStatus', err.message || String(err), 'error'); }
+    };
     global.document.getElementById('adjustForm').onsubmit = async (ev)=>{
       ev.preventDefault();
       setStatus('adminStatus','Balans aanpassen…');

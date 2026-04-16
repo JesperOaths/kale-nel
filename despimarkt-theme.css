@@ -103,3 +103,12 @@ textarea{min-height:120px;resize:vertical}
 .footer-note{margin-top:20px;color:var(--dm-muted);font-size:.95rem}
 @media (max-width:980px){.grid.two,.grid.three,.grid.quad,.ladder-split{grid-template-columns:1fr}.hero-metrics{grid-template-columns:1fr 1fr}.market-grid-2,.form-grid{grid-template-columns:1fr}}
 @media (max-width:640px){body{padding:14px}.shell{padding:18px}.hero-metrics{grid-template-columns:1fr}.brand-mark h1{font-size:2rem}.outcome-box strong{font-size:1.5rem}.dm-list-card,.ladder-rank-card{flex-direction:column;align-items:flex-start}.dm-stack-right{justify-items:start;text-align:left;width:100%}.hero-actions{justify-content:flex-start}}
+
+.tag-row{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 2px}
+.market-tag{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:#fff7df;border:1px solid rgba(154,130,65,.16);font-size:12px;font-weight:800;color:#6f5a25}
+.market-mini-meta{display:flex;gap:10px;flex-wrap:wrap;color:var(--dm-muted);font-size:.92rem}
+.inline-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.follow-btn{min-width:94px}
+.activity-card strong{display:block}
+.panel-subgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:18px}
+@media (max-width:980px){.panel-subgrid{grid-template-columns:1fr}}

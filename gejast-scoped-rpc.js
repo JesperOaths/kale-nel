@@ -43,6 +43,7 @@
     'despimarkt_get_market_state_scoped',
     'despimarkt_create_market_scoped',
     'despimarkt_place_bet_scoped',
+    'despimarkt_set_market_watch_state_scoped',
     'despimarkt_close_market_scoped',
     'despimarkt_cancel_market_scoped',
     'get_player_site_announcements_scoped',

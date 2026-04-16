@@ -7,20 +7,20 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <title>Admin Despimarkt</title>
-  <script>window.GEJAST_PAGE_VERSION='v539';</script>
-  <script src="./gejast-config.js?v539"></script>
+  <script>window.GEJAST_PAGE_VERSION='v544';</script>
+  <script src="./gejast-config.js?v544"></script>
   <script src="./gejast-clickable-cards.js?v375"></script>
   <script src="./gejast-scope-context.js?v375"></script>
   <script src="./gejast-family-rollout.js?v393"></script>
-  <script src="./gejast-scoped-rpc.js?v539"></script>
+  <script src="./gejast-scoped-rpc.js?v544"></script>
   
-  <link rel="stylesheet" href="./despimarkt-theme.css?v539" />
+  <link rel="stylesheet" href="./despimarkt-theme.css?v544" />
 </head>
 <body>
   <div class="page-wrap"><div class="shell">
 <div class="brand-row"><div class="brand-mark"><img src="./logo.png" alt="Logo" /><div><div class="eyebrow">Admin · Despimarkt</div><h1>Admin Despimarkt</h1><p>Settlement-queue, cautes-audit, Dry Dock-moderatie en handmatige walletcorrecties.</p></div></div><div class="hero-actions"><a class="btn alt" href="./admin.html">Admin home</a><a class="btn alt" href="./despimarkt.html">Markthub</a></div></div>
 <div id="adminStatus" class="status-line"></div>
-<section class="panel tinted-gold"><div class="panel-head"><div><h2>Scope</h2><p>Alle admin-operaties lopen via server-side admin actions.</p></div></div><div class="form-grid"><div class="field"><label for="adminScopeSelect">Site scope</label><select id="adminScopeSelect"><option value="friends">friends</option><option value="family">family</option></select></div></div></section>
+<section class="panel tinted-gold"><div class="panel-head"><div><h2>Scope & onderhoud</h2><p>Alle admin-operaties lopen via server-side admin actions. Dry Dock-maintenance draait ook automatisch via GitHub Actions.</p></div><button id="runMaintenanceNow" class="btn alt" type="button">Run maintenance now</button></div><div class="form-grid"><div class="field"><label for="adminScopeSelect">Site scope</label><select id="adminScopeSelect"><option value="friends">friends</option><option value="family">family</option></select></div></div></section>
 <div class="grid two">
   <section class="panel"><div class="panel-head"><div><h2>Resolutiequeue</h2><p>Preview server-side payouts voor je resolve A, B of refund kiest.</p></div></div><div id="resolutionQueue" class="list"></div></section>
   <section class="panel tinted-sky"><div class="panel-head"><div><h2>Settlement preview</h2><p>Deterministische payoutverdeling inclusief remainder-logica.</p></div></div><div id="previewPane" class="empty-state">Selecteer eerst een marketpreview.</div></section>
@@ -30,11 +30,14 @@
   <section class="panel"><div class="panel-head"><div><h2>Dry Dock</h2><p>Historische refusals en actieve bevriezingen.</p></div></div><div id="freezeList" class="list"></div></section>
 </div>
 <div class="grid two">
-  <section class="panel"><div class="panel-head"><div><h2>Mintaudit</h2><p>Speciale drink-voor-cautes-verzoeken, inclusief capped en rejected gevallen.</p></div></div><div id="mintAudit" class="list"></div></section>
-  <section class="panel"><div class="panel-head"><div><h2>Auditlog</h2><p>Server-side spoor van resolve-, refund-, penalty- en adjustment-acties.</p></div></div><div id="auditList" class="list"></div></section>
+  <section class="panel"><div class="panel-head"><div><h2>Mintaudit & bypass</h2><p>Speciale drink-voor-cautes-verzoeken, inclusief capped gevallen en admin cap-bypass.</p></div></div><div id="mintAudit" class="list"></div></section>
+  <section class="panel"><div class="panel-head"><div><h2>Debt deadline queue</h2><p>Verleng open of pending drinkschulden zonder de rest van Dry Dock te verstoren.</p></div></div><div id="debtQueue" class="list"></div></section>
+</div>
+<div class="grid two">
+  <section class="panel"><div class="panel-head"><div><h2>Auditlog</h2><p>Server-side spoor van resolve-, refund-, penalty-, maintenance- en adjustment-acties.</p></div></div><div id="auditList" class="list"></div></section>
 </div>
 <script src="./gejast-admin-rpc.js?v356"></script>
-<script src="./gejast-despimarkt.js?v539"></script>
+<script src="./gejast-despimarkt.js?v544"></script>
 <script>document.addEventListener('DOMContentLoaded',()=>window.GEJAST_DESPIMARKT&&window.GEJAST_DESPIMARKT.loadAdminPage());</script>
 </div></div>
   <div class="site-credit-watermark" data-version-watermark></div>

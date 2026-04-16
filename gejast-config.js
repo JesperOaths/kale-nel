@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v543',
+    VERSION:'v544',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -312,6 +312,24 @@ function buildRequestUrl(returnTo, scope){
     currentReturnTarget
   });
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyVersionLabel, { once: true });
-  else applyVersionLabel();
+  function ensureSiteAnnouncementRuntime(){
+    try {
+      const path = String((location && location.pathname) || '').toLowerCase();
+      if (/\/admin/.test(path)) return;
+      if (document.querySelector('script[data-despimarkt-announcements]')) return;
+      const script = document.createElement('script');
+      script.src = `./gejast-site-announcements.js?${effectiveVersion}`;
+      script.async = false;
+      script.setAttribute('data-despimarkt-announcements','1');
+      document.head.appendChild(script);
+    } catch (_) {}
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyVersionLabel, { once: true });
+    document.addEventListener('DOMContentLoaded', ensureSiteAnnouncementRuntime, { once: true });
+  } else {
+    applyVersionLabel();
+    ensureSiteAnnouncementRuntime();
+  }
 })();
