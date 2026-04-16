@@ -116,14 +116,14 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v497';</script><script src="./gejast-config.js?v497"></script><script src="./gejast-scope-context.js?v392"></script><script src="./gejast-family-rollout.js?v393"></script>
+  <script>window.GEJAST_PAGE_VERSION='v498';</script><script src="./gejast-config.js?v498"></script><script src="./gejast-scope-context.js?v392"></script><script src="./gejast-family-rollout.js?v393"></script>
   <script src="./gejast-rpc-contract.js?v392"></script>
   <script src="./gejast-admin-rpc.js?v392"></script>
   <script src="./admin-session-sync.js?v392"></script>
   <script src="./admin-topnav.js?v392"></script>
   <script src="./gejast-admin-claims-buckets.js?v392"></script>
   <script src="./gejast-admin-claims-source.js?v392"></script>
-  <script src="./gejast-admin-source.js?v497"></script><script src="./gejast-account-links.js?v496"></script>
+  <script src="./gejast-admin-source.js?v498"></script><script src="./gejast-account-links.js?v496"></script>
 </head>
 <body>
   <div class="main-card">
@@ -515,16 +515,20 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           try {
             if (msg) { msg.textContent = 'Besluit opslaan...'; msg.className = 'inline-msg'; }
             if (decision === 'approved') {
-              let prepared = normalizeMailResult(await approveAndSendActivation(requestId, decisionReason || null), { request_id: String(requestId), requester_email: requestRow?.requester_email || '' });
-              prepared = await ensureMailJobForRequest(requestId, prepared, { requester_email: prepared?.requester_email ?? requestRow?.requester_email ?? '', activation_url: prepared?.activation_url ?? null, display_name: prepared?.display_name ?? displayNameOf(requestRow) });
+              const preparedBase = normalizeMailResult(await approveAndSendActivation(requestId, decisionReason || null), { request_id: String(requestId), requester_email: requestRow?.requester_email || '' });
+              const preparedContext = await resolveMailDeliveryContext(requestId, preparedBase, { requester_email: preparedBase?.requester_email ?? requestRow?.requester_email ?? '', activation_url: preparedBase?.activation_url ?? null, display_name: preparedBase?.display_name ?? displayNameOf(requestRow), expires_at: preparedBase?.expires_at ?? null, player_id: preparedBase?.player_id ?? requestRow?.player_id ?? null });
+              const prepared = preparedContext.normalized;
               showActivationPanel(requestId, prepared);
-              const preparedJobId = extractMailJobId(prepared);
-              const preparedValidation = await validateOutboundEmailJob(preparedJobId, { markFailed:true });
-              if (!preparedValidation?.ok) throw new Error(formatMailPreflight(preparedValidation));
+              if (preparedContext.jobId) {
+                const preparedValidation = await validateOutboundEmailJob(preparedContext.jobId, { markFailed:true });
+                if (!preparedValidation?.ok) throw new Error(formatMailPreflight(preparedValidation));
+              }
+              if (!preparedContext.webhookPayload) throw new Error('Mailjob niet naar Make gestuurd: missing_job_id');
               const wake = await triggerMakeScenario({
+                ...preparedContext.webhookPayload,
                 reason: 'activation_email_queued',
                 request_id: requestId,
-                job_id: preparedJobId,
+                job_id: preparedContext.jobId ?? preparedContext.webhookPayload.job_id ?? null,
                 player_id: prepared?.player_id ?? requestRow?.player_id ?? null,
                 display_name: prepared?.display_name ?? displayNameOf(requestRow),
                 email: prepared?.requester_email ?? requestRow?.requester_email ?? null,
@@ -675,12 +679,16 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           const msg = document.getElementById(`history-msg-${requestId}`);
           try {
             if (msg) { msg.textContent = 'Opnieuw klaarzetten...'; msg.className = 'inline-msg'; }
-            const result = await requeueExpiredActivation(requestId);
+            const resultBase = await requeueExpiredActivation(requestId);
             const item = (lastHistory || []).find((row) => Number(row.id) === Number(requestId)) || (lastRequests || []).find((row) => Number(row.id) === Number(requestId));
-            const resultJobId = result?.job_id ?? result?.queue_job_id ?? result?.email_job_id ?? result?.outbound_email_job_id ?? null;
-            const resultValidation = await validateOutboundEmailJob(resultJobId, { markFailed:true });
-            if (!resultValidation?.ok) throw new Error(formatMailPreflight(resultValidation));
-            const wake = await triggerMakeScenario({ reason: 'expired_requeue_mail', request_id: requestId, job_id: resultJobId, player_id: result?.player_id ?? item?.player_id ?? null, display_name: result?.display_name ?? displayNameOf(item), email: result?.requester_email ?? item?.requester_email ?? null, activation_url: result?.activation_url ?? null, expires_at: result?.expires_at ?? item?.expires_at ?? null, created_at: item?.created_at ?? null, subject: result?.subject ?? ACTIVATION_EMAIL_SUBJECT, email_subject: result?.email_subject ?? result?.subject ?? ACTIVATION_EMAIL_SUBJECT });
+            const resultContext = await resolveMailDeliveryContext(requestId, resultBase, { requester_email: resultBase?.requester_email ?? item?.requester_email ?? '', activation_url: resultBase?.activation_url ?? null, display_name: resultBase?.display_name ?? displayNameOf(item), expires_at: resultBase?.expires_at ?? item?.expires_at ?? null, player_id: resultBase?.player_id ?? item?.player_id ?? null });
+            const result = resultContext.normalized;
+            if (resultContext.jobId) {
+              const resultValidation = await validateOutboundEmailJob(resultContext.jobId, { markFailed:true });
+              if (!resultValidation?.ok) throw new Error(formatMailPreflight(resultValidation));
+            }
+            if (!resultContext.webhookPayload) throw new Error('Mailjob niet naar Make gestuurd: missing_job_id');
+            const wake = await triggerMakeScenario({ ...resultContext.webhookPayload, reason: 'expired_requeue_mail', request_id: requestId, job_id: resultContext.jobId ?? resultContext.webhookPayload.job_id ?? null, player_id: result?.player_id ?? item?.player_id ?? null, display_name: result?.display_name ?? displayNameOf(item), email: result?.requester_email ?? item?.requester_email ?? null, activation_url: result?.activation_url ?? null, expires_at: result?.expires_at ?? item?.expires_at ?? null, created_at: item?.created_at ?? null, subject: result?.subject ?? ACTIVATION_EMAIL_SUBJECT, email_subject: result?.email_subject ?? result?.subject ?? ACTIVATION_EMAIL_SUBJECT });
             if (item) {
               item.state_bucket = 'awaiting';
               item.status = 'pending_activation';
@@ -708,9 +716,18 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           const msg = document.getElementById(`history-msg-${requestId}`);
           try {
             if (msg) { msg.textContent = 'Nieuwe link + mail voorbereiden...'; msg.className = 'inline-msg'; }
-            const result = await resendPendingActivation(requestId);
+            const resultBase = await resendPendingActivation(requestId);
+            const item = (lastHistory || []).find((row) => Number(row.id) === Number(requestId)) || (lastRequests || []).find((row) => Number(row.id) === Number(requestId));
+            const resultContext = await resolveMailDeliveryContext(requestId, resultBase, { requester_email: resultBase?.requester_email ?? item?.requester_email ?? '', activation_url: resultBase?.activation_url ?? null, display_name: resultBase?.display_name ?? displayNameOf(item), expires_at: resultBase?.expires_at ?? item?.expires_at ?? null, player_id: resultBase?.player_id ?? item?.player_id ?? null });
+            const result = resultContext.normalized;
+            if (resultContext.jobId) {
+              const resultValidation = await validateOutboundEmailJob(resultContext.jobId, { markFailed:true });
+              if (!resultValidation?.ok) throw new Error(formatMailPreflight(resultValidation));
+            }
+            if (!resultContext.webhookPayload) throw new Error('Mailjob niet naar Make gestuurd: missing_job_id');
+            const wake = await triggerMakeScenario({ ...resultContext.webhookPayload, reason: 'activation_email_queued', request_id: requestId, job_id: resultContext.jobId ?? resultContext.webhookPayload.job_id ?? null, player_id: result?.player_id ?? item?.player_id ?? null, display_name: result?.display_name ?? displayNameOf(item), email: result?.requester_email ?? item?.requester_email ?? null, activation_url: result?.activation_url ?? null, expires_at: result?.expires_at ?? item?.expires_at ?? null, created_at: item?.created_at ?? null, subject: result?.subject ?? ACTIVATION_EMAIL_SUBJECT, email_subject: result?.email_subject ?? result?.subject ?? ACTIVATION_EMAIL_SUBJECT });
             setStatus(result?.message || 'Nieuwe activatielink en verificatiemail klaargezet.', 'ok');
-            if (msg) { msg.textContent = (result?.message || 'Nieuwe activatielink en mail klaargezet.') + ' — ' + formatMailDiagnostics(result, {via:'frontend-webhook'}); msg.className = 'inline-msg ok'; }
+            if (msg) { msg.textContent = (result?.message || 'Nieuwe activatielink en mail klaargezet.') + ' — ' + formatMailDiagnostics(result, wake); msg.className = 'inline-msg ok'; }
             window.alert('Nieuwe activatielink en verificatiemail klaargezet. De naam blijft onder wacht op activatie staan totdat de link echt is gebruikt.');
             await refreshAdminLists();
           } catch (err) {
@@ -1172,6 +1189,96 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return bits.join(' · ');
     }
 
+    async function fetchLatestValidWebhookPayload(requestId, recipientEmail, fallback = {}) {
+      try {
+        if (ADMIN_SOURCE && typeof ADMIN_SOURCE.fetchLatestValidOutboundEmailJobWebhookPayload === 'function') {
+          const payload = await ADMIN_SOURCE.fetchLatestValidOutboundEmailJobWebhookPayload(String(requestId), recipientEmail || '');
+          return payload ? buildMakeWebhookMeta('admin_claims.html', { ...fallback, ...payload }) : null;
+        }
+      } catch (_) {}
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_latest_valid_outbound_email_job_webhook_payload`, {
+          method:'POST',
+          mode:'cors',
+          cache:'no-store',
+          headers: rpcHeaders(),
+          body: JSON.stringify({
+            admin_session_token: getAdminSessionToken(),
+            request_id_input: requestId == null || requestId === '' ? null : Number(requestId),
+            recipient_email_input: recipientEmail || null
+          })
+        });
+        const data = await parseResponse(res);
+        return data ? buildMakeWebhookMeta('admin_claims.html', { ...fallback, ...(data?.payload || data?.make_payload || data || {}) }) : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    async function fetchWebhookPayloadByJobId(jobId, fallback = {}) {
+      if (!jobId) return null;
+      try {
+        if (ADMIN_SOURCE && typeof ADMIN_SOURCE.fetchOutboundEmailJobWebhookPayload === 'function') {
+          const payload = await ADMIN_SOURCE.fetchOutboundEmailJobWebhookPayload(Number(jobId));
+          return payload ? buildMakeWebhookMeta('admin_claims.html', { ...fallback, ...payload }) : null;
+        }
+      } catch (_) {}
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_outbound_email_job_webhook_payload`, {
+          method:'POST',
+          mode:'cors',
+          cache:'no-store',
+          headers: rpcHeaders(),
+          body: JSON.stringify({
+            admin_session_token: getAdminSessionToken(),
+            job_id_input: Number(jobId)
+          })
+        });
+        const data = await parseResponse(res);
+        return data ? buildMakeWebhookMeta('admin_claims.html', { ...fallback, ...(data?.payload || data?.make_payload || data || {}) }) : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    async function resolveMailDeliveryContext(requestId, mailResult, fallback = {}) {
+      let normalized = normalizeMailResult(mailResult, { request_id: String(requestId), ...fallback });
+      normalized = await ensureMailJobForRequest(requestId, normalized, fallback);
+      let jobId = extractMailJobId(normalized);
+      let webhookPayload = null;
+      if (jobId) {
+        webhookPayload = await fetchWebhookPayloadByJobId(jobId, {
+          request_id: requestId,
+          job_id: jobId,
+          email: normalized?.requester_email ?? fallback?.requester_email ?? null,
+          activation_url: normalized?.activation_url ?? fallback?.activation_url ?? null,
+          display_name: normalized?.display_name ?? fallback?.display_name ?? null,
+          expires_at: normalized?.expires_at ?? fallback?.expires_at ?? null,
+          subject: normalized?.subject ?? ACTIVATION_EMAIL_SUBJECT,
+          email_subject: normalized?.email_subject ?? normalized?.subject ?? ACTIVATION_EMAIL_SUBJECT
+        });
+      }
+      if ((!jobId || !webhookPayload) && (fallback?.requester_email || normalized?.requester_email)) {
+        const recovered = await fetchLatestValidWebhookPayload(requestId, fallback?.requester_email || normalized?.requester_email || '', {
+          request_id: requestId,
+          email: normalized?.requester_email ?? fallback?.requester_email ?? null,
+          activation_url: normalized?.activation_url ?? fallback?.activation_url ?? null,
+          display_name: normalized?.display_name ?? fallback?.display_name ?? null,
+          expires_at: normalized?.expires_at ?? fallback?.expires_at ?? null,
+          subject: normalized?.subject ?? ACTIVATION_EMAIL_SUBJECT,
+          email_subject: normalized?.email_subject ?? normalized?.subject ?? ACTIVATION_EMAIL_SUBJECT
+        });
+        if (recovered) {
+          webhookPayload = recovered;
+          if (!jobId && recovered.job_id != null && recovered.job_id !== '') {
+            jobId = Number(recovered.job_id);
+            normalized = normalizeMailResult({ ...normalized, job_id: jobId }, { request_id: String(requestId), ...fallback });
+          }
+        }
+      }
+      return { normalized, jobId, webhookPayload };
+    }
+
     async function triggerMakeScenario(meta = {}) {
       if (!MAKE_WEBHOOK_URL) throw new Error('MAKE_WEBHOOK_URL ontbreekt in admin.html');
       const payload = buildMakeWebhookMeta('admin_claims.html', meta);
@@ -1184,7 +1291,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error(`Make webhook pingen mislukt (HTTP ${res.status})`);
-      return { ok:true, via:'fetch-json', status:res.status };
+      return { ok:true, via:'fetch-json', status:res.status, payload };
     }
 
     async function revokePlayerAccess(requestId, reason) {
@@ -1241,20 +1348,24 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const recipientEmail = panel?.dataset.email || req?.requester_email || '';
       const recipientName = panel?.dataset.displayName || displayNameOf(req) || '';
       const activationLink = panel?.dataset.url || '';
-      let queued = normalizeMailResult(await queueActivationEmail(requestId), { request_id: String(requestId), requester_email: recipientEmail, activation_url: activationLink, display_name: recipientName });
-      queued = await ensureMailJobForRequest(requestId, queued, { requester_email: recipientEmail, activation_url: activationLink, display_name: recipientName, player_id: req?.player_id ?? null });
+      const queuedBase = normalizeMailResult(await queueActivationEmail(requestId), { request_id: String(requestId), requester_email: recipientEmail, activation_url: activationLink, display_name: recipientName });
       try { await updateActivationEmailSubject(requestId); } catch {}
-      const jobId = extractMailJobId(queued);
-      const validation = await validateOutboundEmailJob(jobId, { markFailed:true });
-      if (!validation?.ok) {
-        const err = new Error(formatMailPreflight(validation));
-        err.validation = validation;
-        throw err;
+      const queuedContext = await resolveMailDeliveryContext(requestId, queuedBase, { requester_email: recipientEmail, activation_url: activationLink, display_name: recipientName, expires_at: panel?.dataset?.expiresAt ?? null, player_id: req?.player_id ?? null });
+      const queued = queuedContext.normalized;
+      if (queuedContext.jobId) {
+        const validation = await validateOutboundEmailJob(queuedContext.jobId, { markFailed:true });
+        if (!validation?.ok) {
+          const err = new Error(formatMailPreflight(validation));
+          err.validation = validation;
+          throw err;
+        }
       }
+      if (!queuedContext.webhookPayload) throw new Error('Mailjob niet naar Make gestuurd: missing_job_id');
       await triggerMakeScenario({
+        ...queuedContext.webhookPayload,
         reason: 'activation_email_queued',
         request_id: requestId,
-        job_id: jobId,
+        job_id: queuedContext.jobId ?? queuedContext.webhookPayload.job_id ?? null,
         player_id: queued?.player_id ?? req?.player_id ?? null,
         display_name: queued?.display_name ?? recipientName ?? displayNameOf(req),
         email: queued?.requester_email ?? recipientEmail,

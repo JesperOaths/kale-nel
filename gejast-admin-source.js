@@ -502,6 +502,29 @@
     });
   }
 
+
+  async function fetchOutboundEmailJobWebhookPayload(jobId) {
+    if (!jobId) return null;
+    try {
+      return await directRpc('admin_get_outbound_email_job_webhook_payload', directPayload({
+        job_id_input: Number(jobId)
+      }));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function fetchLatestValidOutboundEmailJobWebhookPayload(requestId, recipientEmail) {
+    try {
+      return await directRpc('admin_get_latest_valid_outbound_email_job_webhook_payload', directPayload({
+        request_id_input: requestId == null || requestId === '' ? null : Number(requestId),
+        recipient_email_input: recipientEmail || null
+      }));
+    } catch (_) {
+      return null;
+    }
+  }
+
   return {
     loadClaimsBundle,
     decideClaim,
@@ -519,6 +542,8 @@
     extractMailJobId,
     findRecentActivationMailJob,
     withRecoveredMailJob,
+    fetchOutboundEmailJobWebhookPayload,
+    fetchLatestValidOutboundEmailJobWebhookPayload,
     reserveAllowedUsername,
     removeAllowedUsername,
     setPlayerGhostStatus,
