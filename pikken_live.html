@@ -8,8 +8,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken live</title>
-  <script>window.GEJAST_PAGE_VERSION='v539';</script>
-  <script src="./gejast-config.js?v539"></script>
+  <script>window.GEJAST_PAGE_VERSION='v540';</script>
+  <script src="./gejast-config.js?v540"></script>
   <script src="./gejast-home-gate.js?v538"></script>
   <script src="./gejast-scope-context.js?v538"></script>
   <script src="./badge-registry.js"></script>
@@ -331,7 +331,7 @@
               <div id="myDice" class="hand-dice" style="margin-top:12px"></div>
             </div>
 
-            <div class="self-card" id="bidPanel">
+            <div class="self-card hidden" id="bidPanel">
               <div style="font-weight:950;font-size:22px;margin-bottom:8px">Bied hoger of keur af</div>
               <div class="controls">
                 <div class="field"><label class="label" for="bidCount">Aantal</label><select id="bidCount"></select></div>
@@ -352,10 +352,10 @@
   <script>
   (() => {
     const cfg = window.GEJAST_CONFIG || {};
-    const UI = { gameId:'', lobbyCode:'', scope:'friends', state:null, actionBusy:false, profiles:new Map(), lastRevealRound:0, matchOutcomes:null };
+    const UI = { gameId:'', lobbyCode:'', scope:'friends', state:null, actionBusy:false, profiles:new Map(), lastRevealRound:0, matchOutcomes:null, firstLoaded:false, unresolvedParticipantSince:0 };
     const STORAGE_KEY = 'gejast_pikken_lobby_code_v517';
     const PARTICIPANT_KEY = 'gejast_pikken_participant_v517';
-    const LEAVE_KEY = 'gejast_pikken_leave_suppress_v539';
+    const LEAVE_KEY = 'gejast_pikken_leave_suppress_v540';
 
     const qs = (s) => document.querySelector(s);
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -383,6 +383,20 @@
 
     async function parse(res){ const txt = await res.text(); let data = null; try { data = txt ? JSON.parse(txt) : null; } catch(_) { throw new Error(txt || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || txt || `HTTP ${res.status}`); return data; }
     async function rpc(name, payload){ const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers: headers(), body: JSON.stringify(payload || {}) }); const data = await parse(res); return data && data[name] !== undefined ? data[name] : data; }
+    async function rpcWithTimeout(name, payload, timeoutMs){
+      const controller = new AbortController();
+      const timer = setTimeout(()=>controller.abort(), Math.max(800, Number(timeoutMs)||4500));
+      try{
+        const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers: headers(), body: JSON.stringify(payload || {}), signal: controller.signal });
+        const data = await parse(res);
+        return data && data[name] !== undefined ? data[name] : data;
+      }catch(err){
+        if(err && (err.name === 'AbortError' || /abort/i.test(String(err)))) throw new Error('timeout');
+        throw err;
+      }finally{
+        clearTimeout(timer);
+      }
+    }
 
     function normalizePhase(raw){ const v = String(raw || '').trim().toLowerCase(); return ['lobby','bidding','voting','finished'].includes(v) ? v : 'bidding'; }
     function phaseSpec(state){ const status = String(state?.status || '').toLowerCase(); const phase = status === 'finished' ? 'finished' : normalizePhase(state?.phase); return PHASE[phase] || PHASE.bidding; }
@@ -736,9 +750,9 @@ async function loadMatchOutcomes(){
       refreshBidOptionsFromState(state);
     }
 
-    async function loadParticipantStateFor(gameIdInput){ const token = sessionToken(); const gameId = String(gameIdInput || UI.gameId || '').trim(); if (!token || !gameId) return null; let lastErr = null; const attempts = [{ session_token: token, game_id_input: gameId }, { session_token_input: token, game_id_input: gameId }]; for (const payload of attempts){ try { return await rpc('pikken_get_state_scoped', payload); } catch(err){ lastErr = err; } } throw lastErr || new Error('Laden mislukt.'); }
+    async function loadParticipantStateFor(gameIdInput){ const token = sessionToken(); const gameId = String(gameIdInput || UI.gameId || '').trim(); if (!token || !gameId) return null; let lastErr = null; const attempts = [{ session_token: token, game_id_input: gameId }, { session_token_input: token, game_id_input: gameId }]; for (const payload of attempts){ try { return await rpcWithTimeout('pikken_get_state_scoped', payload, 4000); } catch(err){ lastErr = err; } } throw lastErr || new Error('Laden mislukt.'); }
     async function loadParticipantState(){ return loadParticipantStateFor(UI.gameId); }
-    async function loadPublicState(){ return rpc('pikken_get_live_state_public', { game_id_input: UI.gameId || null, lobby_code_input: UI.lobbyCode || null, site_scope_input: UI.scope }); }
+    async function loadPublicState(){ return rpcWithTimeout('pikken_get_live_state_public', { game_id_input: UI.gameId || null, lobby_code_input: UI.lobbyCode || null, site_scope_input: UI.scope }, 4000); }
     async function load(){
       try {
         let participantState = null;
@@ -755,17 +769,30 @@ async function loadMatchOutcomes(){
             try { const retried = await loadParticipantStateFor(UI.gameId); if (retried) participantState = retried; } catch(_) {}
           }
         }
-        const state = (participantState && participantState?.viewer && (participantState.viewer.is_host || Number(participantState.viewer.seat || 0) > 0)) ? participantState : (publicState || participantState);
+        const joinedParticipant = participantState && participantState?.viewer && (participantState.viewer.is_host || Number(participantState.viewer.seat || 0) > 0);
+        const state = joinedParticipant ? participantState : (publicState || participantState);
         const phase = String(state?.game?.state?.phase || state?.game?.status || '').toLowerCase();
+        const playerCount = Array.isArray(state?.players) ? state.players.length : 0;
+        if (!joinedParticipant && (!state || (!playerCount && (!phase || phase === 'lobby')))) {
+          UI.unresolvedParticipantSince = UI.unresolvedParticipantSince || Date.now();
+          setStatus('Nog bezig met koppelen aan jouw spelerstoel…', false);
+          qs('#bidPanel')?.classList.add('hidden');
+          qs('#votePanel')?.classList.add('hidden');
+          if (UI.wasDisconnected) showToast('Verbinding hersteld');
+          UI.wasDisconnected = false;
+          return;
+        }
+        UI.unresolvedParticipantSince = 0;
         if (phase === 'finished') {
           try { await Promise.all([loadMatchOutcomes(), loadMatchSummary()]); } catch(_){}
         }
         render(state || {});
+        UI.firstLoaded = true;
         if (UI.wasDisconnected) showToast('Verbinding hersteld');
         UI.wasDisconnected = false;
       } catch(err) {
         UI.wasDisconnected = true;
-        setStatus('Verbinding hapert, opnieuw proberen…', true);
+        setStatus(String(err?.message||'').toLowerCase()==='timeout' ? 'Pikken live wacht nog op backend antwoord…' : 'Verbinding hapert, opnieuw proberen…', true);
       }
     }
     async function withAction(label, fn){

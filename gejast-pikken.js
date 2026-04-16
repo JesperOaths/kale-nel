@@ -3,7 +3,7 @@
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
   const STORAGE_KEY = 'gejast_pikken_lobby_code_v517';
   const PIKKEN_PARTICIPANT_KEY = 'gejast_pikken_participant_v517';
-  const PIKKEN_LEAVE_SUPPRESS_KEY = 'gejast_pikken_leave_suppress_v539';
+  const PIKKEN_LEAVE_SUPPRESS_KEY = 'gejast_pikken_leave_suppress_v540';
 
   function getScope(){
     try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
@@ -215,6 +215,29 @@
     throw lastErr || new Error('Pikken state laden mislukt.');
   }
 
+  async function waitForConfirmedLiveSeat(gameIdInput, options){
+    const gameId = String(gameIdInput || UI.gameId || '').trim();
+    const timeoutMs = Math.max(800, Number(options?.timeoutMs || 9000));
+    const intervalMs = Math.max(250, Number(options?.intervalMs || 650));
+    const startedAt = Date.now();
+    let lastState = null;
+    while(Date.now() - startedAt < timeoutMs){
+      try {
+        const state = await loadParticipantState(gameId);
+        if(state){
+          lastState = state;
+          const viewer = state?.viewer || null;
+          const phase = String(state?.game?.state?.phase || state?.game?.status || '').toLowerCase();
+          if(viewer && (viewer.is_host || Number(viewer.seat || 0) > 0) && phase && phase !== 'lobby'){
+            return state;
+          }
+        }
+      } catch(_){ }
+      await new Promise((resolve)=>setTimeout(resolve, intervalMs));
+    }
+    return lastState;
+  }
+
   function findMatchingLiveRoom(list){
     const currentCode = currentLobbyCode();
     const currentGameId = String(UI.gameId || '').trim();
@@ -341,17 +364,22 @@
       if (matchedLive && !/pikken_live\.html/i.test(window.location.pathname) && hasParticipantClaimFor(matchedLive)) {
         const gameId = String(matchedLive.game_id || UI.gameId || '').trim();
         const lobbyCode = String(matchedLive.lobby_code || currentLobbyCode() || '').trim().toUpperCase();
-        if (gameId) {
-          UI.gameId = gameId;
-          setParticipantToken(gameId, true, lobbyCode);
-          clearLeaveSuppressionFor(gameId, lobbyCode);
-          if (lobbyCode) setStoredLobbyCode(lobbyCode);
-          history.replaceState(null,'',lobbyHref(gameId));
-          goLive(gameId, lobbyCode);
-          return list;
-        }
         if (lobbyCode) {
           setStoredLobbyCode(lobbyCode);
+        }
+        if (gameId) {
+          let joinedState = null;
+          try { joinedState = await loadParticipantState(gameId); } catch(_) {}
+          const joinedViewer = joinedState?.viewer && (joinedState.viewer.is_host || Number(joinedState.viewer.seat || 0) > 0);
+          const joinedPhase = String(joinedState?.game?.state?.phase || joinedState?.game?.status || '').toLowerCase();
+          if (joinedViewer && joinedPhase && joinedPhase !== 'lobby') {
+            UI.gameId = gameId;
+            setParticipantToken(gameId, true, lobbyCode);
+            clearLeaveSuppressionFor(gameId, lobbyCode);
+            history.replaceState(null,'',lobbyHref(gameId));
+            goLive(gameId, lobbyCode);
+            return list;
+          }
         }
       }
       return list;
@@ -594,23 +622,35 @@
 
     const stateToUse = loadedState || startState || UI.state || null;
     const phase = String(stateToUse?.game?.state?.phase || stateToUse?.game?.status || '').toLowerCase();
-    if(phase && phase !== 'lobby'){
+    const joinedViewer = stateToUse?.viewer && (stateToUse.viewer.is_host || Number(stateToUse.viewer.seat || 0) > 0);
+    if(joinedViewer && phase && phase !== 'lobby'){
+      UI.pendingLiveEntryUntil = 0;
       setStatus('', false);
       goLive(stateToUse?.game?.id || UI.gameId, stateToUse?.game?.lobby_code || currentLobbyCode());
+      return;
+    }
+
+    const gameIdForWait = String(stateToUse?.game?.id || UI.gameId || '').trim();
+    const confirmedState = gameIdForWait ? await waitForConfirmedLiveSeat(gameIdForWait, { timeoutMs: 9000, intervalMs: 650 }) : null;
+    const confirmedPhase = String(confirmedState?.game?.state?.phase || confirmedState?.game?.status || '').toLowerCase();
+    const confirmedViewer = confirmedState?.viewer && (confirmedState.viewer.is_host || Number(confirmedState.viewer.seat || 0) > 0);
+    if(confirmedViewer && confirmedPhase && confirmedPhase !== 'lobby'){
+      UI.pendingLiveEntryUntil = 0;
+      try { render(confirmedState); } catch(_) {}
+      setStatus('', false);
+      goLive(confirmedState?.game?.id || gameIdForWait, confirmedState?.game?.lobby_code || currentLobbyCode());
       return;
     }
 
     const matchedLive = findMatchingLiveRoom(rooms || []);
     if(matchedLive){
       const gameId = String(matchedLive.game_id || UI.gameId || '').trim();
-      if(gameId){
-        setStatus('', false);
-        UI.gameId = gameId;
-        setStoredLobbyCode(String(matchedLive.lobby_code || currentLobbyCode() || '').trim().toUpperCase());
-        goLive(gameId, String(matchedLive.lobby_code || currentLobbyCode() || '').trim().toUpperCase());
-        return;
+      const lobbyCode = String(matchedLive.lobby_code || currentLobbyCode() || '').trim().toUpperCase();
+      if(gameId) {
+        setStoredLobbyCode(lobbyCode);
       }
-      setStatus('Room staat live, maar de roomlijst geeft nog geen game-id terug. Ververs één keer of open via Live.', true);
+      UI.pendingLiveEntryUntil = 0;
+      setStatus('Spel lijkt live te zijn, maar jouw spelerstoel is nog niet bevestigd. Blijf op de lobbypagina en ververs één keer als dit zo blijft.', true);
       return;
     }
 
@@ -620,7 +660,7 @@
       return;
     }
     UI.pendingLiveEntryUntil = 0;
-    setStatus('Start leverde geen live spel op. Backend startpad lijkt nog vast te lopen.', true);
+    setStatus('Start leverde nog geen bevestigde spelersstoel op. Blijf op de lobbypagina en ververs één keer als dit zo blijft.', true);
   }
 
   async function placeBid(){
@@ -705,7 +745,6 @@
     const seeded = getStoredLobbyCode();
     if(seeded) setRoomCodeInputValue(seeded);
 
-    if(UI.gameId){ setParticipantToken(UI.gameId, true, getStoredLobbyCode()); }
     startPolling();
   }
 
