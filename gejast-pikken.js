@@ -3,6 +3,7 @@
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
   const STORAGE_KEY = 'gejast_pikken_lobby_code_v517';
   const PIKKEN_PARTICIPANT_KEY = 'gejast_pikken_participant_v517';
+  const PIKKEN_LEAVE_SUPPRESS_KEY = 'gejast_pikken_leave_suppress_v539';
 
   function getScope(){
     try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
@@ -83,7 +84,14 @@
     }
   }
 
-  function setParticipantToken(gameId, active){ try{ if(active && gameId){ localStorage.setItem(PIKKEN_PARTICIPANT_KEY, JSON.stringify({game_id:String(gameId), at:Date.now()})); } else { localStorage.removeItem(PIKKEN_PARTICIPANT_KEY); } }catch(_){ } }
+  function setParticipantToken(gameId, active, lobbyCode){ try{ if(active && gameId){ localStorage.setItem(PIKKEN_PARTICIPANT_KEY, JSON.stringify({game_id:String(gameId), lobby_code:String(lobbyCode||'').trim().toUpperCase(), at:Date.now()})); } else { localStorage.removeItem(PIKKEN_PARTICIPANT_KEY); } }catch(_){ } }
+  function getParticipantToken(){ try { const raw = localStorage.getItem(PIKKEN_PARTICIPANT_KEY) || ''; if(!raw) return null; const parsed = JSON.parse(raw); return parsed && typeof parsed === 'object' ? parsed : null; } catch(_){ return null; } }
+  function setLeaveSuppression(gameId, lobbyCode){ try { localStorage.setItem(PIKKEN_LEAVE_SUPPRESS_KEY, JSON.stringify({ game_id:String(gameId||'').trim(), lobby_code:String(lobbyCode||'').trim().toUpperCase(), at:Date.now() })); } catch(_){ } }
+  function getLeaveSuppression(){ try { const raw = localStorage.getItem(PIKKEN_LEAVE_SUPPRESS_KEY) || ''; if(!raw) return null; const parsed = JSON.parse(raw); return parsed && typeof parsed === 'object' ? parsed : null; } catch(_){ return null; } }
+  function clearLeaveSuppression(){ try { localStorage.removeItem(PIKKEN_LEAVE_SUPPRESS_KEY); } catch(_){ } }
+  function markerMatches(marker, gameId, lobbyCode){ const markerGameId = String(marker?.game_id || '').trim(); const markerLobbyCode = String(marker?.lobby_code || '').trim().toUpperCase(); const id = String(gameId || '').trim(); const code = String(lobbyCode || '').trim().toUpperCase(); return (!!markerGameId && !!id && markerGameId === id) || (!!markerLobbyCode && !!code && markerLobbyCode === code); }
+  function isRoomLeaveSuppressed(gameId, lobbyCode){ const marker = getLeaveSuppression(); if(!marker) return false; const age = Date.now() - Number(marker.at || 0); if(age > 45000){ clearLeaveSuppression(); return false; } return markerMatches(marker, gameId, lobbyCode); }
+  function clearLeaveSuppressionFor(gameId, lobbyCode){ if(markerMatches(getLeaveSuppression(), gameId, lobbyCode)) clearLeaveSuppression(); }
   function getStoredLobbyCode(){ try { return localStorage.getItem(STORAGE_KEY) || ''; } catch(_){ return ''; } }
   function setStoredLobbyCode(code){ try { if(code) localStorage.setItem(STORAGE_KEY, String(code).trim().toUpperCase()); } catch(_){ } }
   function clearStoredLobbyCode(){ try { localStorage.removeItem(STORAGE_KEY); } catch(_){ } }
@@ -105,7 +113,7 @@
     const code = String(lobbyCode || '').trim().toUpperCase();
     return scopedHref('./pikken_live.html', {
       client_match_id: id,
-      match_ref: id ? '' : code
+      match_ref: code
     });
   }
   function statsHref(){
@@ -179,6 +187,34 @@
     if (liveLink) liveLink.href = liveHref(UI.gameId || '', currentLobbyCode());
   }
 
+  function hasParticipantClaimFor(room){
+    const gameId = String(room?.game_id || '').trim();
+    const lobbyCode = String(room?.lobby_code || '').trim().toUpperCase();
+    if (isRoomLeaveSuppressed(gameId, lobbyCode)) return false;
+    if (UI.pendingLiveEntryUntil && Date.now() < UI.pendingLiveEntryUntil) return true;
+    const token = getParticipantToken();
+    if (markerMatches(token, gameId, lobbyCode)) return true;
+    const viewer = UI.state?.viewer || {};
+    if ((viewer.is_host || Number(viewer.seat || 0) > 0) && markerMatches({ game_id: UI.gameId, lobby_code: currentLobbyCode() }, gameId, lobbyCode)) return true;
+    return false;
+  }
+
+  async function loadParticipantState(gameIdInput){
+    const token = sessionToken() || null;
+    const gameId = String(gameIdInput || UI.gameId || '').trim();
+    if(!token || !gameId) return null;
+    let lastErr = null;
+    const attempts = [
+      { session_token: token, game_id_input: gameId },
+      { session_token_input: token, game_id_input: gameId }
+    ];
+    for (const payload of attempts){
+      try { return await rpc('pikken_get_state_scoped', payload); }
+      catch(err){ lastErr = err; }
+    }
+    throw lastErr || new Error('Pikken state laden mislukt.');
+  }
+
   function findMatchingLiveRoom(list){
     const currentCode = currentLobbyCode();
     const currentGameId = String(UI.gameId || '').trim();
@@ -221,7 +257,8 @@
     const lobbyCode = String(out?.lobby_code || out?.code || out?.join_code || '').trim();
     if(gameId){
       UI.gameId = gameId;
-      setParticipantToken(gameId, true);
+      setParticipantToken(gameId, true, lobbyCode);
+      clearLeaveSuppressionFor(gameId, lobbyCode);
       history.replaceState(null,'',lobbyHref(gameId));
     }
     if(lobbyCode){
@@ -248,7 +285,8 @@
           const resolvedGameId = gameId || String(UI.gameId || '').trim();
           if(resolvedGameId){
             UI.gameId = resolvedGameId;
-            setParticipantToken(resolvedGameId, true);
+            setParticipantToken(resolvedGameId, true, code);
+            clearLeaveSuppressionFor(resolvedGameId, code);
             setStoredLobbyCode(code);
             history.replaceState(null,'',lobbyHref(resolvedGameId));
             goLive(resolvedGameId, code);
@@ -300,18 +338,20 @@
       clearKnownNonfatalStatus();
 
       const matchedLive = findMatchingLiveRoom(list);
-      if (matchedLive && !/pikken_live\.html/i.test(window.location.pathname)) {
+      if (matchedLive && !/pikken_live\.html/i.test(window.location.pathname) && hasParticipantClaimFor(matchedLive)) {
         const gameId = String(matchedLive.game_id || UI.gameId || '').trim();
+        const lobbyCode = String(matchedLive.lobby_code || currentLobbyCode() || '').trim().toUpperCase();
         if (gameId) {
           UI.gameId = gameId;
-          setParticipantToken(gameId, true);
-          setStoredLobbyCode(String(matchedLive.lobby_code || '').trim().toUpperCase());
+          setParticipantToken(gameId, true, lobbyCode);
+          clearLeaveSuppressionFor(gameId, lobbyCode);
+          if (lobbyCode) setStoredLobbyCode(lobbyCode);
           history.replaceState(null,'',lobbyHref(gameId));
-          goLive(gameId, String(matchedLive.lobby_code || currentLobbyCode() || '').trim().toUpperCase());
+          goLive(gameId, lobbyCode);
           return list;
         }
-        if (String(matchedLive.lobby_code || '').trim()) {
-          setStoredLobbyCode(String(matchedLive.lobby_code || '').trim().toUpperCase());
+        if (lobbyCode) {
+          setStoredLobbyCode(lobbyCode);
         }
       }
       return list;
@@ -330,7 +370,11 @@
     const myHand = Array.isArray(state?.my_hand) ? state.my_hand : [];
     const phase = String(game?.state?.phase || 'lobby');
     const status = String(game?.status || phase || 'lobby').toLowerCase();
-    setParticipantToken(game?.id || UI.gameId, phase && phase !== 'finished');
+    if (game?.id) UI.gameId = String(game.id);
+    if (game?.lobby_code) setStoredLobbyCode(game.lobby_code);
+    const joinedViewer = !!viewer && (viewer.is_host || Number(viewer.seat || 0) > 0);
+    setParticipantToken(game?.id || UI.gameId, joinedViewer && phase && phase !== 'finished', game?.lobby_code || currentLobbyCode());
+    if (joinedViewer) clearLeaveSuppressionFor(game?.id || UI.gameId, game?.lobby_code || currentLobbyCode());
     const bid = game?.state?.bid && game.state.bid !== null ? game.state.bid : null;
     const turnSeat = Number(game?.state?.current_turn_seat || game?.state?.turn_seat || 0);
     const voteTurnSeat = Number(game?.state?.vote_turn_seat || game?.state?.turn_seat || 0);
@@ -395,7 +439,11 @@
     qs('#pkBidPanel').style.display = myTurn ? 'block' : 'none';
     qs('#pkVotePanel').style.display = myVoteTurn ? 'block' : 'none';
     qs('#pkRejectBtn').disabled = !myTurn || !bid;
-    qs('#pkStartBtn').disabled = !viewer.is_host || players.length < 2 || status === 'finished';
+    const startBtn = qs('#pkStartBtn');
+    if(startBtn){
+      startBtn.disabled = !viewer.is_host || players.length < 2 || status === 'finished';
+      startBtn.style.display = viewer.is_host ? '' : 'none';
+    }
     const leaveBtn = qs('#pkLeaveBtn'); if(leaveBtn) leaveBtn.style.display = hasJoinedSeat(viewer) ? '' : 'none';
     const disbandBtn = qs('#pkDisbandBtn'); if(disbandBtn) disbandBtn.style.display = viewer.is_host ? '' : 'none';
     syncNavLinks();
@@ -436,7 +484,7 @@
   async function loadAndRender(){
     if(!UI.gameId) return null;
     try{
-      const state = await rpc('pikken_get_state_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId });
+      const state = await loadParticipantState(UI.gameId);
       UI.state = state || null;
       const version = Number(state?.game?.state_version || -1);
       if(version !== UI.lastStateVersion){
@@ -517,6 +565,12 @@
   }
 
   async function startGame(){
+    const viewer = UI.state?.viewer || {};
+    const players = Array.isArray(UI.state?.players) ? UI.state.players : [];
+    if(!viewer.is_host){ setStatus('Alleen de host kan pikken starten.', true); return; }
+    if(players.length < 2){ setStatus('Pikken kan niet starten met minder dan 2 spelers.', true); return; }
+    clearLeaveSuppression();
+    UI.pendingLiveEntryUntil = Date.now() + 20000;
     setStatus('Starten…', false);
     let startState = null;
     let timedOut = false;
@@ -561,9 +615,11 @@
     }
 
     if(timedOut){
+      UI.pendingLiveEntryUntil = 0;
       setStatus('Start duurde te lang. Ververs zo nodig één keer.', true);
       return;
     }
+    UI.pendingLiveEntryUntil = 0;
     setStatus('Start leverde geen live spel op. Backend startpad lijkt nog vast te lopen.', true);
   }
 
@@ -591,7 +647,10 @@
     if(!UI.gameId) return;
     if(!window.confirm('Weet je zeker dat je deze room wilt verlaten?')) return;
     setStatus('Room verlaten…', false);
+    const leavingGameId = UI.gameId;
+    const leavingLobbyCode = currentLobbyCode();
     await rpc('pikken_leave_lobby_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId });
+    setLeaveSuppression(leavingGameId, leavingLobbyCode);
     clearLobbyView();
     history.replaceState(null,'',lobbyHref(''));
     await loadOpenRooms();
@@ -601,7 +660,10 @@
     if(!UI.gameId) return;
     if(!window.confirm('Weet je zeker dat je deze room wilt verwijderen?')) return;
     setStatus('Room verwijderen…', false);
+    const leavingGameId = UI.gameId;
+    const leavingLobbyCode = currentLobbyCode();
     await rpc('pikken_destroy_lobby_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId });
+    setLeaveSuppression(leavingGameId, leavingLobbyCode);
     clearLobbyView();
     history.replaceState(null,'',lobbyHref(''));
     await loadOpenRooms();
@@ -643,7 +705,7 @@
     const seeded = getStoredLobbyCode();
     if(seeded) setRoomCodeInputValue(seeded);
 
-    if(UI.gameId){ setParticipantToken(UI.gameId, true); }
+    if(UI.gameId){ setParticipantToken(UI.gameId, true, getStoredLobbyCode()); }
     startPolling();
   }
 

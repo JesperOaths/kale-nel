@@ -8,8 +8,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken live</title>
-  <script>window.GEJAST_PAGE_VERSION='v538';</script>
-  <script src="./gejast-config.js?v538"></script>
+  <script>window.GEJAST_PAGE_VERSION='v539';</script>
+  <script src="./gejast-config.js?v539"></script>
   <script src="./gejast-home-gate.js?v538"></script>
   <script src="./gejast-scope-context.js?v538"></script>
   <script src="./badge-registry.js"></script>
@@ -353,12 +353,20 @@
   (() => {
     const cfg = window.GEJAST_CONFIG || {};
     const UI = { gameId:'', lobbyCode:'', scope:'friends', state:null, actionBusy:false, profiles:new Map(), lastRevealRound:0, matchOutcomes:null };
+    const STORAGE_KEY = 'gejast_pikken_lobby_code_v517';
+    const PARTICIPANT_KEY = 'gejast_pikken_participant_v517';
+    const LEAVE_KEY = 'gejast_pikken_leave_suppress_v539';
 
     const qs = (s) => document.querySelector(s);
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
     const qsParam = (name) => { try { return new URLSearchParams(window.location.search).get(name) || ''; } catch(_) { return ''; } };
     const sessionToken = () => { try { return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; } catch(_) { return ''; } };
     const currentScope = () => { try { return (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) || (qsParam('scope') === 'family' ? 'family' : 'friends'); } catch(_) { return 'friends'; } };
+    function setStoredLobbyCode(value){ try { if(value) localStorage.setItem(STORAGE_KEY, String(value).trim().toUpperCase()); } catch(_){} }
+    function clearStoredLobbyCode(){ try { localStorage.removeItem(STORAGE_KEY); } catch(_){} }
+    function setParticipantToken(gameId, active, lobbyCode){ try { if(active && gameId){ localStorage.setItem(PARTICIPANT_KEY, JSON.stringify({ game_id:String(gameId), lobby_code:String(lobbyCode||'').trim().toUpperCase(), at:Date.now() })); } else { localStorage.removeItem(PARTICIPANT_KEY); } } catch(_){} }
+    function setLeaveSuppression(gameId, lobbyCode){ try { localStorage.setItem(LEAVE_KEY, JSON.stringify({ game_id:String(gameId||'').trim(), lobby_code:String(lobbyCode||'').trim().toUpperCase(), at:Date.now() })); } catch(_){} }
+    function clearLeaveSuppression(){ try { localStorage.removeItem(LEAVE_KEY); } catch(_){} }
     const normalizeName = (v) => String(v || '').trim().toLowerCase();
     const sortDice = (arr) => (Array.isArray(arr) ? arr : []).map(Number).filter(Boolean).sort((a,b)=>a-b);
     const headers = () => ({'Content-Type':'application/json', apikey: cfg.SUPABASE_PUBLISHABLE_KEY || '', Authorization: `Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY || ''}`, Accept:'application/json'});
@@ -659,6 +667,8 @@ async function loadMatchOutcomes(){
     function render(state){
       UI.state = state || {};
       const game = state?.game || {};
+      if (game && game.id) UI.gameId = String(game.id);
+      if (game && game.lobby_code) { UI.lobbyCode = String(game.lobby_code).trim().toUpperCase(); setStoredLobbyCode(UI.lobbyCode); }
       const st = game?.state || {};
       const viewer = state?.viewer || null;
       const players = Array.isArray(state?.players) ? state.players : [];
@@ -675,6 +685,10 @@ async function loadMatchOutcomes(){
       qs('#phaseTitle').textContent = ps.title;
       animateNumber(qs('#roundNo'), Number(st.round_no||0));
       qs('#lobbyCode').textContent = String(game.lobby_code || UI.lobbyCode || '—');
+      if (viewer && (viewer.is_host || Number(viewer.seat || 0) > 0)) {
+        clearLeaveSuppression();
+        setParticipantToken(UI.gameId || game.id || '', String(phase) !== 'finished', game.lobby_code || UI.lobbyCode || '');
+      }
       qs('#currentBid').textContent = bidText(bid);
       qs('#bidBy').textContent = bid && bid.bidder_name ? `door ${bid.bidder_name}` : '';
       animateNumber(qs('#totalCurrentDice'), Number((state?.dice_totals||{}).current_total||0));
@@ -722,13 +736,26 @@ async function loadMatchOutcomes(){
       refreshBidOptionsFromState(state);
     }
 
-    async function loadParticipantState(){ const token = sessionToken(); if (!token || !UI.gameId) return null; return rpc('pikken_get_state_scoped', { session_token: token, game_id_input: UI.gameId }); }
+    async function loadParticipantStateFor(gameIdInput){ const token = sessionToken(); const gameId = String(gameIdInput || UI.gameId || '').trim(); if (!token || !gameId) return null; let lastErr = null; const attempts = [{ session_token: token, game_id_input: gameId }, { session_token_input: token, game_id_input: gameId }]; for (const payload of attempts){ try { return await rpc('pikken_get_state_scoped', payload); } catch(err){ lastErr = err; } } throw lastErr || new Error('Laden mislukt.'); }
+    async function loadParticipantState(){ return loadParticipantStateFor(UI.gameId); }
     async function loadPublicState(){ return rpc('pikken_get_live_state_public', { game_id_input: UI.gameId || null, lobby_code_input: UI.lobbyCode || null, site_scope_input: UI.scope }); }
     async function load(){
       try {
-        let state = null;
-        try { state = await loadParticipantState(); } catch(_) {}
-        if (!state) state = await loadPublicState();
+        let participantState = null;
+        try { participantState = await loadParticipantState(); } catch(_) {}
+        let publicState = null;
+        if (!participantState || !(participantState?.viewer && (participantState.viewer.is_host || Number(participantState.viewer.seat || 0) > 0))) {
+          publicState = await loadPublicState();
+          const resolvedGameId = String(publicState?.game?.id || '').trim();
+          const resolvedLobbyCode = String(publicState?.game?.lobby_code || UI.lobbyCode || '').trim().toUpperCase();
+          if (resolvedGameId && resolvedGameId !== UI.gameId) UI.gameId = resolvedGameId;
+          if (resolvedLobbyCode) UI.lobbyCode = resolvedLobbyCode;
+          if (resolvedLobbyCode) setStoredLobbyCode(resolvedLobbyCode);
+          if ((!participantState || !(participantState?.viewer && (participantState.viewer.is_host || Number(participantState.viewer.seat || 0) > 0))) && UI.gameId) {
+            try { const retried = await loadParticipantStateFor(UI.gameId); if (retried) participantState = retried; } catch(_) {}
+          }
+        }
+        const state = (participantState && participantState?.viewer && (participantState.viewer.is_host || Number(participantState.viewer.seat || 0) > 0)) ? participantState : (publicState || participantState);
         const phase = String(state?.game?.state?.phase || state?.game?.status || '').toLowerCase();
         if (phase === 'finished') {
           try { await Promise.all([loadMatchOutcomes(), loadMatchSummary()]); } catch(_){}
@@ -772,6 +799,9 @@ async function loadMatchOutcomes(){
       if (!window.confirm('Weet je zeker dat je deze tafel wilt verlaten?')) return;
       try{
         await rpc('pikken_leave_lobby_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId });
+        setLeaveSuppression(UI.gameId, UI.lobbyCode);
+        setParticipantToken('', false, '');
+        clearStoredLobbyCode();
         window.location.href = `./pikken.html?scope=${encodeURIComponent(UI.scope)}`;
       }catch(err){
         setStatus(err.message || 'Verlaten mislukt.', true);
@@ -781,6 +811,9 @@ async function loadMatchOutcomes(){
       if (!window.confirm('Weet je zeker dat je de hele tafel wilt opheffen?')) return;
       try{
         await rpc('pikken_destroy_lobby_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId });
+        setLeaveSuppression(UI.gameId, UI.lobbyCode);
+        setParticipantToken('', false, '');
+        clearStoredLobbyCode();
         window.location.href = `./pikken.html?scope=${encodeURIComponent(UI.scope)}`;
       }catch(err){
         setStatus(err.message || 'Opheffen mislukt.', true);
@@ -801,7 +834,7 @@ async function loadMatchOutcomes(){
       qs('#compactToggleBtn').addEventListener('click', ()=>setCompactMode(!qs('.shell')?.classList.contains('compact')));
       qs('#leaveTableBtn').addEventListener('click', leaveTable);
       qs('#disbandTableBtn').addEventListener('click', disbandTable);
-      const lobbyHref = UI.gameId ? `./pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(UI.scope)}` : `./pikken.html?scope=${encodeURIComponent(UI.scope)}`;
+      const lobbyHref = `./pikken.html?scope=${encodeURIComponent(UI.scope)}`;
       qs('#backLobbyBtn').href = lobbyHref;
       setCompactMode(readCompactMode());
       loadProfiles().finally(()=>load());
