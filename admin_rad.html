@@ -9,10 +9,8 @@
   <title>Admin 't Rad</title>
   <script>window.GEJAST_PAGE_VERSION='v548';</script>
   <script src="./gejast-config.js?v548"></script>
-  <script src="./gejast-scope-context.js?v548"></script>
+  <script src="./gejast-scope-context.js?v375"></script>
   <script src="./gejast-family-rollout.js?v393"></script>
-  
-  <script src="./gejast-scoped-rpc.js?v548"></script>
   <script src="./gejast-admin-rpc.js?v356"></script>
   <script src="./gejast-game-hq.js?v548"></script>
   <link rel="stylesheet" href="./gejast-game-hq.css?v548" />
@@ -23,24 +21,40 @@
       <div>
         <div class="eyebrow">Admin · 't Rad</div>
         <h1 class="title">Admin 't Rad</h1>
-        <div class="subtitle">Draai-intensiteit, pechreeksen en segment-meta zodat je ziet wat sfeer maakt en wat schade doet.</div>
+        <div class="subtitle">Draai-intensiteit, target-ellende en welke segmenten echt sfeer of schade brengen.</div>
       </div>
-      <div class="actions"><a class="btn alt" href="./admin.html">Terug</a><a class="btn alt" href="./index.html">Home</a><a class="btn alt" href="./rad_stats.html">Publieke stats</a></div>
+      <div class="actions"><a class="btn alt" id="adminRadBackLink" href="./admin.html">Terug</a><a class="btn alt" id="adminRadHomeLink" href="./index.html">Home</a><a class="btn alt" id="adminRadStatsLink" href="./rad_stats.html">Publieke stats</a></div>
     </div>
     <div id="pageStatus" class="status"></div>
     <div class="stack">
       <section class="panel"><h2>Admin-operatieblik</h2><p>Levende druk op deze game, zodat je sneller ziet waar beheer of follow-up nodig is.</p><div id="opsGrid" class="grid overview"></div></section>
-      <section class="panel"><h2>Overzicht</h2><p>De kerncijfers die je meteen vertellen hoe deze game of feature leeft.</p><div id="overviewGrid" class="grid overview"></div></section>
-      <section class="panel"><h2>Verhalen in de cijfers</h2><p>Quirky, braggy en nuttige haakjes waar spelers echt iets aan hebben.</p><div id="storyGrid" class="grid story"></div></section>
-      <section class="panel"><h2>Leaderboards & patronen</h2><p>Ranglijsten die je door kunt klikken naar persoonlijke carrièrekaarten.</p><div id="leaderboardsMount"></div></section>
+      <section class="panel"><h2>Overzicht</h2><p>Snelle cijfers die meteen laten zien hoe deze feature leeft.</p><div id="overviewGrid" class="grid overview"></div></section>
+      <section class="panel"><h2>Verhalen in de cijfers</h2><p>Quirky, braggy en nuttige haakjes die spelers echt iets vertellen.</p><div id="storyGrid" class="grid story"></div></section>
+      <section class="panel"><h2>Leaderboards & patronen</h2><p>Welke spelers, tags of segmenten de feature trekken.</p><div id="leaderboardsMount"></div></section>
       <section class="panel"><h2>Recente activiteit</h2><p>De laatste momenten die de sfeer van de game laten zien.</p><div id="recentMount"></div></section>
-      <section class="panel"><h2>Momentum & vorm</h2><p>Tijdreeksen die laten zien wanneer druk opbouwt en welke spelers of patronen momentum pakken.</p><div id="trendMount"></div></section>
-      <section id="careerPanel" class="panel" style="display:none"><div id="careerMount"></div></section>
       <div id="tablesMount"></div>
     </div>
   </div></div>
   <div class="site-credit-watermark" data-version-watermark></div>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <script>
+    (() => {
+      function scopedHref(path){
+        const url = new URL(path, window.location.href);
+        if (new URLSearchParams(window.location.search).get('scope') === 'family') url.searchParams.set('scope', 'family');
+        return `${url.pathname.split('/').pop()}${url.search}`;
+      }
+      const links = {
+        adminRadBackLink: './admin.html',
+        adminRadHomeLink: './index.html',
+        adminRadStatsLink: './rad_stats.html'
+      };
+      Object.entries(links).forEach(([id, path]) => {
+        const el = document.getElementById(id);
+        if (el) el.href = scopedHref(path);
+      });
+    })();
+  </script>
   <script>document.addEventListener('DOMContentLoaded',()=>window.GEJAST_GAME_HQ&&window.GEJAST_GAME_HQ.loadAdminPage('rad'));</script>
 </body>
 </html>

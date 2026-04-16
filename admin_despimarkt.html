@@ -7,18 +7,17 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <title>Admin Beurs d&apos;Espinoza</title>
-  <script>window.GEJAST_PAGE_VERSION='v548';</script>
-  <script src="./gejast-config.js?v548"></script>
+  <script>window.GEJAST_PAGE_VERSION='v547';</script>
+  <script src="./gejast-config.js?v547"></script>
   <script src="./gejast-clickable-cards.js?v375"></script>
   <script src="./gejast-scope-context.js?v375"></script>
   <script src="./gejast-family-rollout.js?v393"></script>
-  <script src="./gejast-scoped-rpc.js?v548"></script>
-  <link rel="stylesheet" href="./despimarkt-theme.css?v548" />
-  <link rel="stylesheet" href="./gejast-game-hq.css?v548" />
+  <script src="./gejast-scoped-rpc.js?v547"></script>
+  <link rel="stylesheet" href="./despimarkt-theme.css?v547" />
 </head>
 <body>
   <div class="page-wrap"><div class="shell">
-<div class="brand-row"><div class="brand-mark"><img src="./logo.png" alt="Logo" /><div><div class="eyebrow">Admin · Beurs d&apos;Espinoza</div><h1>Admin Beurs d&apos;Espinoza</h1><p>Settlement-queue, cautes-audit, Dry Dock-moderatie, promotionele wallet en promotionele markten.</p></div></div><div class="hero-actions"><a class="btn alt" href="./admin.html">Admin home</a><a class="btn alt" href="./despimarkt.html">Beurs d&apos;Espinoza</a></div></div>
+<div class="brand-row"><div class="brand-mark"><img src="./logo.png" alt="Logo" /><div><div class="eyebrow">Admin · Beurs d&apos;Espinoza</div><h1>Admin Beurs d&apos;Espinoza</h1><p>Settlement-queue, cautes-audit, Dry Dock-moderatie, promotionele wallet en promotionele markten.</p></div></div><div class="hero-actions"><a class="btn alt" id="adminDespimarktHomeLink" href="./admin.html">Admin home</a><a class="btn alt" id="adminDespimarktHubLink" href="./despimarkt.html">Beurs d&apos;Espinoza</a><a class="btn alt" id="adminDespimarktStatsLink" href="./despimarkt_stats.html">Publieke stats</a></div></div>
 <div id="adminStatus" class="status-line"></div>
 <section class="panel tinted-gold"><div class="panel-head"><div><h2>Scope & onderhoud</h2><p>Alle admin-operaties lopen via server-side admin actions. Dry Dock-maintenance draait ook automatisch via GitHub Actions.</p></div><button id="runMaintenanceNow" class="btn alt" type="button">Run maintenance now</button></div><div class="form-grid"><div class="field"><label for="adminScopeSelect">Site scope</label><select id="adminScopeSelect"><option value="friends">friends</option><option value="family">family</option></select></div></div></section>
 
@@ -70,12 +69,28 @@
   <section class="panel"><div class="panel-head"><div><h2>Debt deadline queue</h2><p>Verleng open of pending drinkschulden zonder de rest van Dry Dock te verstoren.</p></div></div><div id="debtQueue" class="list"></div></section>
 </div>
 <div class="grid two">
-  <section class="panel tinted-sky"><div class="panel-head"><div><h2>Marktpuls</h2><p>De mooiste patronen uit volume, tags, watchers en payouts.</p></div></div><div id="despimarktPulseCards" class="grid overview"></div><div id="despimarktPulseLeaders" class="section-list" style="margin-top:14px"></div></section>
   <section class="panel"><div class="panel-head"><div><h2>Auditlog</h2><p>Server-side spoor van resolve-, refund-, penalty-, maintenance-, wallet- en promo-acties.</p></div></div><div id="auditList" class="list"></div></section>
 </div>
 <script src="./gejast-admin-rpc.js?v356"></script>
-<script src="./gejast-game-hq.js?v548"></script>
-<script src="./gejast-despimarkt.js?v548"></script>
+<script src="./gejast-despimarkt.js?v547"></script>
+<script>
+  (() => {
+    function scopedHref(path){
+      const url = new URL(path, window.location.href);
+      if (new URLSearchParams(window.location.search).get('scope') === 'family') url.searchParams.set('scope', 'family');
+      return `${url.pathname.split('/').pop()}${url.search}`;
+    }
+    const links = {
+      adminDespimarktHomeLink: './admin.html',
+      adminDespimarktHubLink: './despimarkt.html',
+      adminDespimarktStatsLink: './despimarkt_stats.html'
+    };
+    Object.entries(links).forEach(([id, path]) => {
+      const el = document.getElementById(id);
+      if (el) el.href = scopedHref(path);
+    });
+  })();
+</script>
 <script>document.addEventListener('DOMContentLoaded',()=>window.GEJAST_DESPIMARKT&&window.GEJAST_DESPIMARKT.loadAdminPage());</script>
 </div></div>
   <div class="site-credit-watermark" data-version-watermark></div>

@@ -40,6 +40,22 @@
     discardTopPct: 16.2,
     discardWidthPct: 5.7
   };
+  function scope(){
+    try {
+      if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.getScope === 'function'){
+        return window.GEJAST_SCOPE_UTILS.getScope();
+      }
+    } catch(_){}
+    try {
+      return new URLSearchParams(window.location.search).get('scope') === 'family' ? 'family' : 'friends';
+    } catch(_){}
+    return 'friends';
+  }
+  function scopedHref(path){
+    const url = new URL(path, window.location.href);
+    if (scope() === 'family') url.searchParams.set('scope', 'family');
+    return `${url.pathname.split('/').pop()}${url.search}`;
+  }
 
   function sessionToken(){ return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; }
   async function rpc(fn, args={}){
@@ -72,7 +88,14 @@
   function suitLabel(s){ return (SUIT_META[String(s||'').toLowerCase()] || {}).label || '—'; }
   function suitSymbol(s){ return (SUIT_META[String(s||'').toLowerCase()] || {}).symbol || '•'; }
   function suitColor(s){ return (SUIT_META[String(s||'').toLowerCase()] || {}).color || '#333'; }
-  function liveHref(room){ const code = encodeURIComponent(String(room||'').trim().toUpperCase()); return `./paardenrace_live.html?room=${code}&${LIVE_QUERY_KEY}=${code}`; }
+  function liveHref(room){
+    const code = encodeURIComponent(String(room||'').trim().toUpperCase());
+    const url = new URL('./paardenrace_live.html', window.location.href);
+    url.searchParams.set('room', code);
+    url.searchParams.set(LIVE_QUERY_KEY, code);
+    if (scope() === 'family') url.searchParams.set('scope', 'family');
+    return `${url.pathname.split('/').pop()}${url.search}`;
+  }
   function gotoLive(room, options={}){ const href = liveHref(room); if(options.replace) window.location.replace(href); else window.location.href = href; }
   function parseCard(cardCode=''){
     const raw = String(cardCode || '').trim().toUpperCase();
@@ -166,7 +189,7 @@
   window.GEJAST_PAARDENRACE = {
     rpc, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode,
     suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack, renderLiveBoard,
-    gotoLive, liveHref, getDrawRemaining, resolvedGateSet, getGridColumnForProgress,
+    gotoLive, liveHref, scopedHref, scope, getDrawRemaining, resolvedGateSet, getGridColumnForProgress,
     getBoardPoints: ()=> JSON.parse(JSON.stringify(BOARD_CALIBRATION)), horseAsset, aceHorseCard, ASSETS
   };
 })();

@@ -9,11 +9,10 @@
   <title>'t Rad stats</title>
   <script>window.GEJAST_PAGE_VERSION='v548';</script>
   <script src="./gejast-config.js?v548"></script>
-  <script src="./gejast-scope-context.js?v548"></script>
-  <script src="./gejast-family-rollout.js?v393"></script>
   <script src="./gejast-home-gate.js?v538"></script>
+  <script src="./gejast-scope-context.js?v538"></script>
+  <script src="./gejast-family-rollout.js?v393"></script>
   <script src="./gejast-scoped-rpc.js?v548"></script>
-  
   <script src="./gejast-game-hq.js?v548"></script>
   <link rel="stylesheet" href="./gejast-game-hq.css?v548" />
 </head>
@@ -23,24 +22,39 @@
       <div>
         <div class="eyebrow">Publieke samenvatting · 't Rad</div>
         <h1 class="title">'t Rad stats</h1>
-        <div class="subtitle">Niet alleen spins: hier zie je segment-meta, pechreeksen en wie het rad echt aanjaagt.</div>
+        <div class="subtitle">Geen lege wheel-vibes meer: deze pagina laat zien wie draait, wie pech heeft en welke segmenten de chaos echt aandrijven.</div>
       </div>
-      <div class="actions"><a class="btn alt" href="./rad.html">Terug</a><a class="btn alt" href="./index.html">Home</a></div>
+      <div class="actions"><a class="btn alt" id="radStatsBackLink" href="./rad.html">Terug</a><a class="btn alt" id="radStatsHomeLink" href="./index.html">Home</a></div>
     </div>
     <div id="pageStatus" class="status"></div>
     <div class="stack">
       
-      <section class="panel"><h2>Overzicht</h2><p>De kerncijfers die je meteen vertellen hoe deze game of feature leeft.</p><div id="overviewGrid" class="grid overview"></div></section>
-      <section class="panel"><h2>Verhalen in de cijfers</h2><p>Quirky, braggy en nuttige haakjes waar spelers echt iets aan hebben.</p><div id="storyGrid" class="grid story"></div></section>
-      <section class="panel"><h2>Leaderboards & patronen</h2><p>Ranglijsten die je door kunt klikken naar persoonlijke carrièrekaarten.</p><div id="leaderboardsMount"></div></section>
+      <section class="panel"><h2>Overzicht</h2><p>Snelle cijfers die meteen laten zien hoe deze feature leeft.</p><div id="overviewGrid" class="grid overview"></div></section>
+      <section class="panel"><h2>Verhalen in de cijfers</h2><p>Quirky, braggy en nuttige haakjes die spelers echt iets vertellen.</p><div id="storyGrid" class="grid story"></div></section>
+      <section class="panel"><h2>Leaderboards & patronen</h2><p>Welke spelers, tags of segmenten de feature trekken.</p><div id="leaderboardsMount"></div></section>
       <section class="panel"><h2>Recente activiteit</h2><p>De laatste momenten die de sfeer van de game laten zien.</p><div id="recentMount"></div></section>
-      <section class="panel"><h2>Momentum & vorm</h2><p>Tijdreeksen die laten zien wanneer druk opbouwt en welke spelers of patronen momentum pakken.</p><div id="trendMount"></div></section>
-      <section id="careerPanel" class="panel" style="display:none"><div id="careerMount"></div></section>
       <div id="tablesMount"></div>
     </div>
   </div></div>
   <div class="site-credit-watermark" data-version-watermark></div>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <script>
+    (() => {
+      function scopedHref(path){
+        const url = new URL(path, window.location.href);
+        if (new URLSearchParams(window.location.search).get('scope') === 'family') url.searchParams.set('scope', 'family');
+        return `${url.pathname.split('/').pop()}${url.search}`;
+      }
+      const links = {
+        radStatsBackLink: './rad.html',
+        radStatsHomeLink: './index.html'
+      };
+      Object.entries(links).forEach(([id, path]) => {
+        const el = document.getElementById(id);
+        if (el) el.href = scopedHref(path);
+      });
+    })();
+  </script>
   <script>document.addEventListener('DOMContentLoaded',()=>window.GEJAST_GAME_HQ&&window.GEJAST_GAME_HQ.loadPublicPage('rad'));</script>
 </body>
 </html>

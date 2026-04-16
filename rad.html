@@ -5,10 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Caute Rad</title>
-  <script>window.GEJAST_PAGE_VERSION='v491';</script>
-  <script src="./gejast-config.js?v491"></script>
-  <script src="./gejast-drinks-workflow.js?v491"></script>
-  <script src="./gejast-player-session-ui.js?v491"></script>
+  <script>window.GEJAST_PAGE_VERSION='v548';</script>
+  <script src="./gejast-config.js?v548"></script>
+  <script src="./gejast-scope-context.js?v550"></script>
+  <script src="./gejast-family-rollout.js?v550"></script>
+  <script src="./gejast-drinks-workflow.js?v484"></script>
+  <script src="./gejast-scoped-rpc.js?v548"></script>
+  <script src="./gejast-player-session-ui.js?v484"></script>
   <style>
     :root{--gold:#9a8241;--ink:#17130f;--muted:#6d6256;--line:rgba(0,0,0,.1);--paper:#fffaf3;--bg:#f3ede4;}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,sans-serif;background:linear-gradient(180deg,#f5efe6,#ece2d2);color:var(--ink)}
@@ -27,7 +30,7 @@
 </head>
 <body>
 <div class="page"><div class="shell">
-  <div class="top"><div><div class="small">Wheel of fortune</div><h1 class="title">Caute Rad</h1><div class="small">Spin het rad. Lichtere straffen hebben een hogere kans. Zwaardere ellende is zeldzamer.</div></div><div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn secondary" href="./index.html">Home</a><a class="btn secondary" href="./beurs.html">Beurs</a><a class="btn secondary" href="./drinks_add.html">Drinks</a></div></div>
+  <div class="top"><div><div class="small">Wheel of fortune</div><h1 class="title">Caute Rad</h1><div class="small">Spin het rad. Lichtere straffen hebben een hogere kans. Zwaardere ellende is zeldzamer.</div></div><div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn secondary" id="homeLink" href="./index.html">Home</a><a class="btn secondary" id="drinksLink" href="./drinks_add.html">Drinks</a><a class="btn secondary" id="radStatsLink" href="./rad_stats.html">Stats</a></div></div>
   <div class="layout">
     <section class="panel wheel-wrap">
       <div class="wheel-box"><div class="pointer"></div><canvas id="wheelCanvas" width="800" height="800"></canvas><button class="spin-center" id="spinBtn" type="button">SPIN</button></div>
@@ -37,24 +40,41 @@
     <section class="panel"><h2 style="margin-top:0">Segmenten</h2><div class="legend" id="legendBox"></div></section>
   </div>
 </div></div>
-<dialog id="nominationDialog"><div class="modal-card"><div class="modal-top"><h2 style="margin:0">Drink uitdelen</h2><button class="btn secondary" id="closeNominationBtn" type="button">Sluiten</button></div><div class="small">Kies één of meer spelers om de opdracht door te geven. Voor zelf-drink segmenten wordt direct een eigen verzoek aangemaakt.</div><label style="display:block;font-weight:800;margin-top:14px">Speler(s)</label><select id="nomineeSelect"></select><div class="small" id="nominationMeta" style="margin-top:10px"></div><div class="small" id="nominationStatus" style="margin-top:8px;min-height:1.2em;color:#7d121f"></div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px"><button class="btn" id="submitNominationBtn" type="button">Opslaan</button><button class="btn secondary" id="cancelNominationBtn" type="button">Annuleer</button></div></div></dialog>
+<dialog id="nominationDialog"><div class="modal-card"><div class="modal-top"><h2 style="margin:0">Drink uitdelen</h2><button class="btn secondary" id="closeNominationBtn" type="button">Sluiten</button></div><div class="small">Kies een speler om de opdracht aan te geven. Voor zelf-drink segmenten wordt direct een eigen verzoek aangemaakt.</div><label style="display:block;font-weight:800;margin-top:14px">Speler</label><select id="nomineeSelect"></select><div class="small" id="nominationMeta" style="margin-top:10px"></div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px"><button class="btn" id="submitNominationBtn" type="button">Opslaan</button><button class="btn secondary" id="cancelNominationBtn" type="button">Annuleer</button></div></div></dialog>
 <div class="site-credit-watermark" data-version-watermark></div>
 <script>
 (()=>{
+  function scopeValue(){
+    try{
+      if(window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope){
+        return window.GEJAST_SCOPE_UTILS.getScope();
+      }
+    }catch(_){}
+    try{
+      return (new URLSearchParams(location.search).get('scope') || 'friends').toLowerCase() === 'family' ? 'family' : 'friends';
+    }catch(_){
+      return 'friends';
+    }
+  }
+  function scopedHref(path){
+    const url = new URL(path, window.location.href);
+    url.searchParams.set('scope', scopeValue());
+    return `${url.pathname.split('/').pop()}${url.search}`;
+  }
   const SEGMENTS = [
     { label:'Snowboard adt', chance:8, type:'self', drinks:[['bier',1]], copy:'Chug een volle bak op je knieën.' },
     { label:'Shotje', chance:7, type:'self', drinks:[['shot',2]], copy:'Neem 2 shots + 1 upside down.' },
     { label:'Riet adt', chance:8, type:'self', drinks:[['bier',1]], copy:'Drink een volle 33cl met rietje.' },
     { label:'Jagerbomb adt', chance:5, type:'self', drinks:[['shot',2]], copy:'Doe een jagerbomb + extra shot.' },
-    { label:'Riet adt uitdelen', chance:6, type:'target', target_count:1, drinks:[['bier',1]], copy:'Kies iemand voor een riet adt.' },
+    { label:'Riet adt uitdelen', chance:6, type:'target', copy:'Kies iemand voor een riet adt.' },
     { label:'Helm adt', chance:5, type:'self', drinks:[['bier',1]], copy:'Drink ondersteboven met helm/bak.' },
     { label:'Dubbel adt', chance:4, type:'self', drinks:[['bier',2]], copy:'Herhaal je vorige spin of 4 shots.' },
     { label:'Vleermuis adt', chance:4, type:'self', drinks:[['bier',1]], copy:'Drink een volle bak compleet ondersteboven.' },
     { label:'Draai adt', chance:5, type:'self', drinks:[['shot',4]], copy:'Draai 8 keer en ad of neem 4 shots.' },
-    { label:'Shot uitdelen', chance:7, type:'target', target_count:1, drinks:[['shot',5]], copy:'Deel 5 shots uit.' },
+    { label:'Shot uitdelen', chance:7, type:'target', copy:'Deel 5 shots uit.' },
     { label:'Groep adt', chance:7, type:'social', copy:'Iedereen in de cirkel neemt 2 slokken.' },
-    { label:'Jager uitdelen', chance:5, type:'target', target_count:3, drinks:[['shot',1]], copy:'Kies 3 mensen voor een jager-style straf.' },
-    { label:'Helm adt uitdelen', chance:4, type:'target', target_count:1, drinks:[['bier',1]], copy:'Kies één slachtoffer voor een helm/vleermuis adt.' },
+    { label:'Jager uitdelen', chance:5, type:'target', copy:'Kies 3 mensen voor een jager-style straf.' },
+    { label:'Helm adt uitdelen', chance:4, type:'target', copy:'Kies één slachtoffer voor een helm/vleermuis adt.' },
     { label:'Like de recentste foto van je ex', chance:4, type:'social', copy:'Proof of 4 shots.' },
     { label:'Like een random foto op ex-profiel', chance:3, type:'social', copy:'Screenshot of 5 shots.' },
     { label:'Text “I miss you”', chance:3, type:'social', copy:'Stuur de app of drink 4 shots.' },
@@ -66,7 +86,15 @@
   ];
   const colors=['#efe2c6','#d9c39b','#c79d63','#b47a3f','#8f5925','#f5e8ce','#e5d5b1','#d7bc83'];
   const canvas=document.getElementById('wheelCanvas'); const ctx=canvas.getContext('2d'); const spinBtn=document.getElementById('spinBtn'); const resultBox=document.getElementById('resultBox'); const statusBox=document.getElementById('statusBox');
-  const nomDlg=document.getElementById('nominationDialog'); const nomineeSelect=document.getElementById('nomineeSelect'); const nominationStatus=document.getElementById('nominationStatus'); let currentAngle=-Math.PI/2, spinning=false, selectedSegment=null, highlightedIndex=-1, audioCtx=null, lastTickAt=0; let wheelVelocity=0;
+  const nomDlg=document.getElementById('nominationDialog'); const nomineeSelect=document.getElementById('nomineeSelect'); let currentAngle=-Math.PI/2, spinning=false, selectedSegment=null, highlightedIndex=-1, audioCtx=null, lastTickAt=0;
+  document.getElementById('homeLink').href = scopedHref('./index.html');
+  document.getElementById('drinksLink').href = scopedHref('./drinks_add.html');
+  document.getElementById('radStatsLink').href = scopedHref('./rad_stats.html');
+  function playerToken(){ try{return window.GEJAST_CONFIG&&window.GEJAST_CONFIG.getPlayerSessionToken?window.GEJAST_CONFIG.getPlayerSessionToken():'';}catch(_){return '';}}
+  function segmentKey(seg){ return String(seg&&seg.label||'rad').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,''); }
+  async function logSpinEvent(seg){ try{ if(!playerToken() || !window.GEJAST_SCOPED_RPC) return null; return await window.GEJAST_SCOPED_RPC.callRpc('rad_log_spin_scoped',{ session_token: playerToken(), segment_key_input: segmentKey(seg), segment_label_input: seg.label, segment_type_input: seg.type, chance_input: Number(seg.chance||0), copy_text_input: seg.copy, drinks_input: seg.drinks||[], meta_input:{ source:'rad.html' }, site_scope_input: scopeValue() }); }catch(err){ console.warn('Rad spin log mislukt', err); return null; } }
+  async function logTargetEvent(spinId, seg, target){ try{ if(!playerToken() || !window.GEJAST_SCOPED_RPC || !target) return null; return await window.GEJAST_SCOPED_RPC.callRpc('rad_log_target_nomination_scoped',{ session_token: playerToken(), spin_id_input: spinId||null, segment_key_input: segmentKey(seg), segment_label_input: seg.label, target_player_name_input: target, meta_input:{ source:'rad.html' }, site_scope_input: scopeValue() }); }catch(err){ console.warn('Rad target log mislukt', err); return null; } }
+  let lastLoggedSpinId=null; let wheelVelocity=0;
   function totalChance(){ return SEGMENTS.reduce((s,x)=>s+x.chance,0); }
   function syncLegendHighlight(){ document.querySelectorAll('#legendBox .legend-row').forEach((row)=>{ const hot = highlightedIndex >= 0 && row.dataset.seg === SEGMENTS[highlightedIndex].label; row.classList.toggle('is-hot', !!hot); }); }
   function draw(){ const total=totalChance(); const cx=400, cy=400, r=370; ctx.clearRect(0,0,800,800); let start=currentAngle; SEGMENTS.forEach((seg,idx)=>{ const arc=(seg.chance/total)*Math.PI*2; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,start+arc); ctx.closePath(); const isHot = idx===highlightedIndex; ctx.fillStyle=isHot ? '#f6e7b2' : colors[idx%colors.length]; ctx.fill(); ctx.lineWidth=isHot ? 10 : 4; ctx.strokeStyle=isHot ? 'rgba(125,18,31,.85)' : 'rgba(23,19,15,.18)'; ctx.stroke(); if(isHot){ ctx.save(); ctx.shadowColor='rgba(243,227,166,.95)'; ctx.shadowBlur=30; ctx.stroke(); ctx.restore(); } ctx.save(); ctx.translate(cx,cy); const mid=start+arc/2; ctx.rotate(mid); ctx.textAlign='right'; ctx.fillStyle='#2c2117'; ctx.font=isHot ? '800 20px Inter, system-ui, sans-serif' : '700 19px Inter, system-ui, sans-serif'; wrapText(seg.label+` (${seg.chance}%)`, r-26, 0, 200, 22); ctx.restore(); start+=arc; });
@@ -82,66 +110,25 @@
   function pointerIndex(){ const total=totalChance(); let start=currentAngle; const pointer=-Math.PI/2; for(let idx=0; idx<SEGMENTS.length; idx++){ const arc=(SEGMENTS[idx].chance/total)*Math.PI*2; let s=((start%(Math.PI*2))+Math.PI*2)%(Math.PI*2); let e=(((start+arc)%(Math.PI*2))+Math.PI*2)%(Math.PI*2); let p=((pointer%(Math.PI*2))+Math.PI*2)%(Math.PI*2); const inside = s<e ? (p>=s && p<e) : (p>=s || p<e); if(inside) return idx; start+=arc; } return -1; }
 
   async function spin(){ if(spinning) return; if(ensureAudio() && audioCtx.state==='suspended'){ try{ await audioCtx.resume(); }catch(_){} } spinning=true; highlightedIndex=-1; statusBox.textContent='Het rad draait...'; selectedSegment=weightedPick(); const total=totalChance(); let prefix=0; let arc=0; let targetIndex=0; for(let i=0;i<SEGMENTS.length;i++){ const seg=SEGMENTS[i]; arc=(seg.chance/total)*Math.PI*2; if(seg===selectedSegment){ targetIndex=i; break; } prefix+=arc; } const pointer=-Math.PI/2; const normalizedTarget = pointer - (prefix + arc/2); const startAngle=currentAngle; let finalAngle = normalizedTarget; while(finalAngle <= startAngle + Math.PI*10){ finalAngle += Math.PI*2; } finalAngle += Math.PI*4; const startTime=performance.now(); const duration=11800; function easeOutQuint(t){ return 1 - Math.pow(1-t, 5); } function frame(now){ const t=Math.min(1,(now-startTime)/duration); const eased=easeOutQuint(t); currentAngle = startAngle + (finalAngle-startAngle)*eased; const idx=pointerIndex(); if(idx!==highlightedIndex){ highlightedIndex=idx; const dt=now-lastTickAt; if(dt>22){ playTick(t>0.88 || idx===targetIndex); lastTickAt=now; } } draw(); if(t<1){ requestAnimationFrame(frame); } else { currentAngle=finalAngle; highlightedIndex=pointerIndex(); draw(); spinning=false; onLanded(SEGMENTS[highlightedIndex] || selectedSegment); } } requestAnimationFrame(frame); }
-  async function onLanded(seg){ statusBox.textContent='Gelukt.'; resultBox.innerHTML=`<div class="result-card"><strong>${seg.label}</strong><div class="small" style="margin-top:6px">${seg.copy}</div><div class="small" style="margin-top:6px">Kans: ${seg.chance}%</div></div>`; if(seg.type==='self' && window.GEJAST_DRINKS_WORKFLOW && Array.isArray(seg.drinks)){ let created=0; for(const [key,qty] of seg.drinks){ try{ await window.GEJAST_DRINKS_WORKFLOW.createDrinkEvent({ event_type_key:key, quantity:qty }); created += qty; }catch(_){ } } if(created){ statusBox.textContent=`Eigen drinkverzoek aangemaakt voor ${seg.label}.`; } }
+  async function onLanded(seg){ const log=await logSpinEvent(seg); lastLoggedSpinId=log&&log.spin_id?log.spin_id:null; statusBox.textContent=log&&log.spin_id?'Gelukt en opgeslagen.':'Gelukt.'; resultBox.innerHTML=`<div class="result-card"><strong>${seg.label}</strong><div class="small" style="margin-top:6px">${seg.copy}</div><div class="small" style="margin-top:6px">Kans: ${seg.chance}%</div></div>`; if(seg.type==='self' && window.GEJAST_DRINKS_WORKFLOW && Array.isArray(seg.drinks)){ let created=0; for(const [key,qty] of seg.drinks){ try{ await window.GEJAST_DRINKS_WORKFLOW.createDrinkEvent({ event_type_key:key, quantity:qty }); created += qty; }catch(_){ } } if(created){ statusBox.textContent=`Eigen drinkverzoek aangemaakt voor ${seg.label}.`; } }
     if(seg.type==='target'){ openNomination(seg); }
   }
-  function inferScope(){
-    try{
-      const cfg = window.GEJAST_CONFIG || {};
-      const qs = new URLSearchParams(location.search || '');
-      return cfg.normalizeScope ? cfg.normalizeScope(qs.get('scope')) : ((String(qs.get('scope')||'').toLowerCase()==='family') ? 'family' : 'friends');
-    }catch(_){ return 'friends'; }
-  }
-  async function openNomination(seg){
-    selectedSegment=seg;
-    nominationStatus.textContent='';
-    nomineeSelect.innerHTML='';
-    nomineeSelect.multiple = Number(seg?.target_count||1) > 1;
-    nomineeSelect.size = nomineeSelect.multiple ? Math.min(8, Math.max(4, Number(seg?.target_count||1) + 2)) : 1;
-    try{
-      const cfg=window.GEJAST_CONFIG||{};
-      const headers={'Content-Type':'application/json',apikey:cfg.SUPABASE_PUBLISHABLE_KEY||'',Authorization:`Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY||''}`,Accept:'application/json'};
-      const res=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/get_requestable_names_scoped`,{method:'POST',headers,body:JSON.stringify({ site_scope_input: inferScope() })});
-      const data=await res.json().catch(()=>[]);
-      const rows=Array.isArray(data)?data:(Array.isArray(data?.names)?data.names:[]);
-      const names=[...new Set(rows.map((row)=>typeof row==='string'?row:(row.display_name||row.player_name||row.name||'')).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'nl'));
-      nomineeSelect.innerHTML=names.map((n)=>`<option value="${String(n).replace(/"/g,'&quot;')}">${n}</option>`).join('');
-      if(!names.length) nomineeSelect.innerHTML='<option value="">Geen spelers gevonden</option>';
-    }catch(_){ nomineeSelect.innerHTML='<option value="">Geen spelers gevonden</option>'; }
-    const needed = Number(seg?.target_count||1);
-    document.getElementById('nominationMeta').textContent = needed > 1
-      ? `${seg.label} gekozen. Kies ${needed} spelers.`
-      : `${seg.label} gekozen. Kies wie dit moet doen.`;
+  async function openNomination(seg){ selectedSegment=seg; nomineeSelect.innerHTML=''; try{ const cfg=window.GEJAST_CONFIG||{}; const headers={'Content-Type':'application/json',apikey:cfg.SUPABASE_PUBLISHABLE_KEY||'',Authorization:`Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY||''}`,Accept:'application/json'}; const res=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/get_requestable_names_scoped`,{method:'POST',headers,body:JSON.stringify({ site_scope_input:scopeValue() })}); const data=await res.json().catch(()=>[]); const rows=Array.isArray(data)?data:(Array.isArray(data?.names)?data.names:[]); const names=rows.map((row)=>typeof row==='string'?row:(row.display_name||row.player_name||row.name||'')).filter(Boolean); nomineeSelect.innerHTML=names.map((n)=>`<option value="${String(n).replace(/"/g,'&quot;')}">${n}</option>`).join(''); }catch(_){ nomineeSelect.innerHTML='<option value="">Geen spelers gevonden</option>'; }
+    document.getElementById('nominationMeta').textContent = `${seg.label} gekozen. Kies wie dit moet doen.`; if(window.GEJAST_GAME_HQ&&window.GEJAST_GAME_HQ.setStatus) window.GEJAST_GAME_HQ.setStatus('statusBox','Uitdeel-opdracht geopend.');
     nomDlg.showModal();
   }
-  async function submitNomination(){
-    const needed = Number(selectedSegment?.target_count || 1);
-    const picks = Array.from(nomineeSelect.selectedOptions || []).map((opt)=>String(opt.value||'').trim()).filter(Boolean);
-    const targets = nomineeSelect.multiple ? picks : [String(nomineeSelect.value||'').trim()].filter(Boolean);
-    if(!targets.length){ nominationStatus.textContent='Kies eerst een speler.'; return; }
-    if(targets.length < needed){ nominationStatus.textContent = `Kies nog ${needed-targets.length} speler${needed-targets.length===1?'':'s'}.`; return; }
-    const finalTargets = targets.slice(0, needed);
-    const workflow = window.GEJAST_DRINKS_WORKFLOW;
-    const drinks = Array.isArray(selectedSegment?.drinks) ? selectedSegment.drinks : [];
-    let created = 0;
-    if(workflow && typeof workflow.createDrinkEvent === 'function' && drinks.length){
-      for(const target of finalTargets){
-        for(const [eventType, qty] of drinks){
-          try{
-            await workflow.createDrinkEvent({ event_type_key:eventType, quantity:qty, target_display_name:target });
-            created += 1;
-          }catch(_){ }
-        }
-      }
+  document.getElementById('submitNominationBtn').addEventListener('click', async()=>{
+    const target=nomineeSelect.value||'';
+    if(!target){
+      statusBox.textContent = 'Geen speler gekozen.';
+      return;
     }
-    statusBox.textContent = created
-      ? `Uitdeel-opdracht aangemaakt voor ${finalTargets.join(', ')}.`
-      : `Opdracht klaar voor ${finalTargets.join(', ')}.`;
-    nominationStatus.textContent='';
+    statusBox.textContent = 'Uitdeel-opdracht opslaan...';
+    const logged = await logTargetEvent(lastLoggedSpinId, selectedSegment, target);
+    statusBox.textContent = logged ? `Uitdeel-opdracht opgeslagen voor ${target}.` : `Uitdeel-opdracht getoond voor ${target}, maar stats-log mislukt.`;
     nomDlg.close();
-  }
-  document.getElementById('submitNominationBtn').addEventListener('click', submitNomination);
-  document.getElementById('cancelNominationBtn').addEventListener('click', ()=>{ nominationStatus.textContent=''; nomDlg.close(); }); document.getElementById('closeNominationBtn').addEventListener('click', ()=>{ nominationStatus.textContent=''; nomDlg.close(); });
+  });
+  document.getElementById('cancelNominationBtn').addEventListener('click', ()=>nomDlg.close()); document.getElementById('closeNominationBtn').addEventListener('click', ()=>nomDlg.close());
   spinBtn.addEventListener('click', spin);
   const legendRows = [...SEGMENTS].sort((a,b)=>Number(b.chance||0)-Number(a.chance||0));
   document.getElementById('legendBox').innerHTML = legendRows.map((seg)=>`<div class="legend-row" data-seg="${String(seg.label).replace(/"/g,'&quot;')}"><div><strong>${seg.label}</strong><small style="display:block;margin-top:4px">${seg.copy}</small></div><strong>${seg.chance}%</strong></div>`).join('');

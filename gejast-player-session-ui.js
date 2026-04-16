@@ -195,12 +195,11 @@
     if (!Number.isFinite(Number(viewer.coins))) viewer.coins = await fetchCoins(token);
     try {
       const allowed = await fetchAllowedNames(inferScope());
-      if (allowed.length && !allowed.includes(normalizeName(viewer.name))) {
-        clearTokens();
-        hide(shell);
-        const target = CONFIG.buildHomeUrl ? CONFIG.buildHomeUrl(CONFIG.currentReturnTarget ? CONFIG.currentReturnTarget('index.html') : 'index.html', inferScope()) : './home.html';
-        window.location.href = target;
-        return;
+      if (allowed.length) {
+        const overlap = CONFIG.playerSessionNamesOverlap
+          ? CONFIG.playerSessionNamesOverlap([viewer.name], allowed)
+          : allowed.includes(normalizeName(viewer.name));
+        if (!overlap) return hide(shell);
       }
     } catch (_) {}
     apply(shell, viewer);

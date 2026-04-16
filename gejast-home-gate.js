@@ -52,31 +52,59 @@
   }
   async function verifyScopeAndSession(){
     var token=getToken();
-    if(!token || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY) return false;
-    var viewer=await Promise.race([
-      fetchViewerState(token),
-      new Promise(function(resolve){ setTimeout(function(){ resolve({ ok:false, name:'', data:null }); }, 2500); })
-    ]);
-    if(!viewer.ok) return false;
-    if(!viewer.name) return true;
-    var allowed=await Promise.race([
-      fetchAllowedNames(currentScope()),
-      new Promise(function(resolve){ setTimeout(function(){ resolve([]); }, 2500); })
-    ]);
-    return !allowed.length || allowed.indexOf(viewer.name)!==-1;
+    if(!token || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY) return { status:'invalid', reason:'missing_prereq' };
+    var viewer=null;
+    try{
+      viewer=cfg.fetchPlayerSessionSnapshot
+        ? await cfg.fetchPlayerSessionSnapshot(token)
+        : await Promise.race([
+            fetchViewerState(token),
+            new Promise(function(resolve){ setTimeout(function(){ resolve({ ok:false, name:'', data:null }); }, 4000); })
+          ]);
+    }catch(_){ viewer={ status:'unknown', ok:false, name:'', names:[], data:null }; }
+    var viewerOk = !!(viewer && (viewer.ok || viewer.status==='valid'));
+    if(!viewerOk){
+      if(viewer && viewer.status==='unknown') return { status:'unknown', reason:'session_lookup_unavailable' };
+      return { status:'invalid', reason:'session_invalid' };
+    }
+    var viewerNames = [];
+    try{
+      viewerNames = Array.isArray(viewer && viewer.aliases) && viewer.aliases.length
+        ? viewer.aliases
+        : (cfg.playerSessionNamesFromState ? cfg.playerSessionNamesFromState((viewer && viewer.state) || viewer) : uniqueNames([viewer && viewer.name || '']));
+    }catch(_){ viewerNames = uniqueNames([viewer && viewer.name || '']); }
+    if(!viewerNames.length) return { status:'valid', reason:'no_viewer_name' };
+    var allowed=[];
+    try{
+      allowed=await Promise.race([
+        fetchAllowedNames(currentScope()),
+        new Promise(function(resolve){ setTimeout(function(){ resolve([]); }, 4000); })
+      ]);
+    }catch(_){ return { status:'unknown', reason:'scope_lookup_unavailable' }; }
+    if(!allowed.length) return { status:'valid', reason:'scope_open' };
+    try{
+      if(cfg.playerSessionNamesOverlap ? cfg.playerSessionNamesOverlap(viewerNames, allowed) : viewerNames.some(function(name){ return allowed.indexOf(name)!==-1; })){
+        return { status:'valid', reason:'scope_match', names:viewerNames };
+      }
+    }catch(_){ }
+    return { status:'scope_mismatch', reason:'scope_mismatch', names:viewerNames, allowed:allowed };
   }
   if(expired()) clearTokens();
   if(!getToken()){
     redirectHome();
   } else {
-    try{ cfg.touchPlayerActivity && cfg.touchPlayerActivity(); }catch(_){ }
-    verifyScopeAndSession().then(function(ok){
-      if(ok) return;
+    try{ cfg.touchPlayerActivity && cfg.touchPlayerActivity({ force:true }); }catch(_){ }
+    verifyScopeAndSession().then(function(result){
+      var status = result && result.status || 'invalid';
+      if(status==='valid' || status==='unknown') return;
+      if(status==='scope_mismatch'){
+        redirectHome();
+        return;
+      }
       clearTokens();
       redirectHome();
     }).catch(function(){
-      clearTokens();
-      redirectHome();
+      /* transient verification failures should not destroy a still-valid session */
     });
   }
 })();

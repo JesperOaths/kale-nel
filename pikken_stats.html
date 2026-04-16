@@ -1,73 +1,62 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="nl">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken stats</title>
-  <script>window.GEJAST_PAGE_VERSION='v491';</script>
-  <script src="./gejast-config.js?v491"></script>
-  <script src="./gejast-home-gate.js?v491"></script>
-  <script src="./gejast-scope-context.js?v491"></script>
-  <style>
-    :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--shadow:0 18px 44px rgba(0,0,0,.08)}
-    *{box-sizing:border-box}
-    body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
-    .wrap{max-width:980px;margin:0 auto}
-    .card{background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.7);border-radius:28px;padding:22px;box-shadow:var(--shadow)}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:16px}
-    .stat{background:#fff;border:1px solid var(--line);border-radius:22px;padding:16px}
-    .k{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:900}
-    .v{font-size:28px;font-weight:900;margin-top:6px}
-    .muted{color:var(--muted)}
-    .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer}
-  </style>
+  <script>window.GEJAST_PAGE_VERSION='v550';</script>
+  <script src="./gejast-config.js?v550"></script>
+  <script src="./gejast-home-gate.js?v550"></script>
+  <script src="./gejast-scope-context.js?v550"></script>
+  <script src="./gejast-family-rollout.js?v550"></script>
+  <script src="./gejast-scoped-rpc.js?v550"></script>
+  <script src="./gejast-game-hq.js?v550"></script>
+  <link rel="stylesheet" href="./gejast-game-hq.css?v550" />
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
-        <div>
-          <a class="btn" id="backToPikkenBtn" href="./pikken.html">Terug</a>
-          <div style="display:flex;align-items:center;gap:12px;margin:14px 0 6px"><img src="./assets/pikken/pikken-icon.svg" alt="Pikken" style="width:48px;height:48px;border-radius:14px;background:#fff;padding:8px;border:1px solid rgba(0,0,0,.08)"><h1 style="margin:0">Pikken stats</h1></div>
-          <div id="meta" class="muted">Laden…</div>
-        </div>
-        <a class="btn" id="statsHomeBtn" href="./index.html">Home</a>
+  <div class="wrap"><div class="shell">
+    <div class="top">
+      <div>
+        <div class="eyebrow">Publieke samenvatting · Pikken</div>
+        <h1 class="title">Pikken stats</h1>
+        <div class="subtitle">Reject-drift, zesjes, winnaars, tafelgrootte en recente potjes in één bruikbare samenvatting.</div>
       </div>
-
-      <div id="grid" class="grid"></div>
+      <div class="actions">
+        <a class="btn alt" id="pikkenStatsBackLink" href="./pikken.html">Terug</a>
+        <a class="btn alt" id="pikkenStatsHomeLink" href="./index.html">Home</a>
+      </div>
     </div>
-  </div>
-
+    <div id="pageStatus" class="status"></div>
+    <div class="stack">
+      <section class="panel"><h2>Overzicht</h2><p>De cijfers die het snelst laten zien wat voor soort Pikken-metjes hier worden gespeeld.</p><div id="overviewGrid" class="grid overview"></div></section>
+      <section class="panel"><h2>Verhalen in de cijfers</h2><p>Wie wint veel, wie keurt het hardst af en waar de dobbel-chaos echt zit.</p><div id="storyGrid" class="grid story"></div></section>
+      <section class="panel"><h2>Leaderboards & patronen</h2><p>Spelers en trends die deze game kleur geven.</p><div id="leaderboardsMount"></div></section>
+      <section class="panel"><h2>Recente activiteit</h2><p>Laatste afgeronde tafels en opvallende uitslagen.</p><div id="recentMount"></div></section>
+      <div id="tablesMount"></div>
+    </div>
+  </div></div>
+  <div class="site-credit-watermark" data-version-watermark></div>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
   <script>
-    (()=>{
-      const cfg=window.GEJAST_CONFIG||{};
-      const scope=(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope&&window.GEJAST_SCOPE_UTILS.getScope())||((new URLSearchParams(location.search).get('scope')||'friends')==='family'?'family':'friends');
-      const scopedHref=(path)=>`${path}?scope=${encodeURIComponent(scope)}`;
-      document.getElementById('backToPikkenBtn').href = scopedHref('./pikken.html');
-      document.getElementById('statsHomeBtn').href = scopedHref('./index.html');
-      function headers(){return{apikey:cfg.SUPABASE_PUBLISHABLE_KEY||'',Authorization:`Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY||''}`,'Content-Type':'application/json',Accept:'application/json'}}
-      async function parse(res){const t=await res.text();let d=null;try{d=t?JSON.parse(t):null}catch{throw new Error(t||`HTTP ${res.status}`)}if(!res.ok)throw new Error(d?.message||d?.error||`HTTP ${res.status}`);return d}
-      async function load(){
-        const res=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/get_pikken_stats_scoped`,{method:'POST',headers:headers(),body:JSON.stringify({site_scope_input:scope})});
-        const data=await parse(res);
-        document.getElementById('meta').textContent = `Scope: ${scope}`;
-        const cards=Array.isArray(data?.cards)?data.cards:[];
-        const raw=data?.summary||data?.totals||{};
-        const extras=[];
-        if(raw.bluff_callout_rate!=null) extras.push({k:'Bluff call-out %', v:`${Math.round(Number(raw.bluff_callout_rate)*100)}%`, sub:'Hoe vaak een gewaagde leugen op tijd werd doorzien.'});
-        if(raw.correct_reject_rate!=null) extras.push({k:'Correct reject %', v:`${Math.round(Number(raw.correct_reject_rate)*100)}%`, sub:'Hoe vaak afkeuren uiteindelijk het juiste oordeel was.'});
-        if(raw.pik_bid_rate!=null) extras.push({k:'Pik bod %', v:`${Math.round(Number(raw.pik_bid_rate)*100)}%`, sub:'Aandeel van alle biedingen dat op pik ging.'});
-        const merged=[...extras,...cards];
-        document.getElementById('grid').innerHTML = merged.map(c=>`<div class="stat"><div class="k">${c.k||''}</div><div class="v">${c.v||''}</div><div class="muted">${c.sub||''}</div></div>`).join('') || '<div class="muted">Nog geen pikken-stats.</div>';
+    (() => {
+      function scopedHref(path){
+        const url = new URL(path, window.location.href);
+        if (new URLSearchParams(window.location.search).get('scope') === 'family') url.searchParams.set('scope', 'family');
+        return `${url.pathname.split('/').pop()}${url.search}`;
       }
-      load().catch(err=>{document.getElementById('meta').textContent=err.message||'Laden mislukt.';});
+      const links = {
+        pikkenStatsBackLink: './pikken.html',
+        pikkenStatsHomeLink: './index.html'
+      };
+      Object.entries(links).forEach(([id, path]) => {
+        const el = document.getElementById(id);
+        if (el) el.href = scopedHref(path);
+      });
     })();
   </script>
-<div class="site-credit-watermark" data-version-watermark></div>
-<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <script>document.addEventListener('DOMContentLoaded',()=>window.GEJAST_GAME_HQ&&window.GEJAST_GAME_HQ.loadPublicPage('pikken'));</script>
 </body>
 </html>
-
