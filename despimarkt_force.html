@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <title>Despimarkt force</title>
+  <script>window.GEJAST_PAGE_VERSION='v539';</script>
+  <script src="./gejast-config.js?v539"></script>
+  <script src="./gejast-clickable-cards.js?v375"></script>
+  <script src="./gejast-scope-context.js?v375"></script>
+  <script src="./gejast-family-rollout.js?v393"></script>
+  <script src="./gejast-scoped-rpc.js?v539"></script>
+  
+  <link rel="stylesheet" href="./despimarkt-theme.css?v539" />
+</head>
+<body>
+  <div class="page-wrap"><div class="shell">
+<div class="brand-row"><div class="brand-mark"><img src="./logo.png" alt="Logo" /><div><div class="eyebrow">Beurs d&apos;Espinoza</div><h1>Despimarkt force</h1><p>Snelle pagina om alleen nieuwe dranknominaties te plaatsen zonder de rest van de schuldcontrole te verliezen.</p></div></div><div class="hero-actions"><a class="btn alt" href="./index.html">Home</a><a class="btn alt" href="./despimarkt_wallet.html">Wallet</a><a class="btn alt" href="./despimarkt_debts.html">Schulden</a><a class="btn alt" href="./despimarkt_ladder.html">Ladder</a><a class="btn gold" href="./despimarkt_debts.html">Volledige schuldpagina</a></div></div>
+<div id="debtsStatus" class="status-line"></div>
+<div id="debtsHero" class="hero-metrics"></div>
+<div id="dryDockStatus" style="margin-top:14px"></div>
+<div class="grid two">
+  <section class="panel tinted-gold"><div class="panel-head"><div><h2>Nieuwe nominatie</h2><p>Gebruik deze snelle force-pagina voor sociale druk en directe cautes-afschrijving.</p></div></div><form id="nominationForm" class="grid"><div class="form-grid"><div class="field"><label for="nominationTarget">Doelspeler</label><select id="nominationTarget"></select></div><div class="field"><label for="nominationDrink">Dranktype</label><select id="nominationDrink"></select></div></div><div><button class="btn gold" type="submit">Nomineer drank</button></div></form></section>
+  <section class="panel"><div class="panel-head"><div><h2>Mijn uitgaande nominaties</h2><p>Overzicht van alles wat je momenteel hebt uitgezet.</p></div></div><div id="outgoingNominationList" class="list"></div></section>
+</div>
+<div class="grid two">
+  <section class="panel"><div class="panel-head"><div><h2>Mijn open schulden</h2><p>Je kunt hier ook direct een schuld naar verificatie sturen.</p></div></div><div id="openDebtsList" class="list"></div></section>
+  <section class="panel"><div class="panel-head"><div><h2>Wall of Shame</h2><p>Bij gemiste schulden volgt proportional Dry Dock-straf in cautes.</p></div></div><div id="wallOfShameSummary" class="hero-metrics"></div></section>
+</div>
+<script src="./gejast-despimarkt.js?v539"></script>
+<script>document.addEventListener('DOMContentLoaded',()=>window.GEJAST_DESPIMARKT&&window.GEJAST_DESPIMARKT.loadDebtsPage('force'));</script>
+</div></div>
+  <div class="site-credit-watermark" data-version-watermark></div>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+</body>
+</html>

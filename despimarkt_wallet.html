@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <title>Despimarkt wallet</title>
+  <script>window.GEJAST_PAGE_VERSION='v539';</script>
+  <script src="./gejast-config.js?v539"></script>
+  <script src="./gejast-clickable-cards.js?v375"></script>
+  <script src="./gejast-scope-context.js?v375"></script>
+  <script src="./gejast-family-rollout.js?v393"></script>
+  <script src="./gejast-scoped-rpc.js?v539"></script>
+  
+  <link rel="stylesheet" href="./despimarkt-theme.css?v539" />
+</head>
+<body>
+  <div class="page-wrap"><div class="shell">
+<div class="brand-row"><div class="brand-mark"><img src="./logo.png" alt="Logo" /><div><div class="eyebrow">Beurs d&apos;Espinoza</div><h1>Despimarkt wallet</h1><p>Je cautes, mintpipeline, capstatus en complete ledgergeschiedenis.</p></div></div><div class="hero-actions"><a class="btn alt" href="./index.html">Home</a><a class="btn alt" href="./despimarkt_wallet.html">Wallet</a><a class="btn alt" href="./despimarkt_debts.html">Schulden</a><a class="btn alt" href="./despimarkt_ladder.html">Ladder</a><a class="btn gold" href="./despimarkt.html">Markthub</a></div></div>
+<div id="walletStatus" class="status-line"></div>
+<div id="walletHero" class="hero-metrics"></div>
+<div id="walletRestriction" style="margin-top:14px"></div>
+<div class="grid two">
+  <section class="panel tinted-gold"><div class="panel-head"><div><h2>Drink voor cautes</h2><p>Alleen via deze speciale pipeline mint je cautes. Normale drankjes en schuldafbetaling geven 0 ₵.</p></div></div><form id="mintForm" class="grid"><div class="form-grid"><div class="field"><label for="mintDrinkType">Dranktype</label><select id="mintDrinkType"></select></div><div class="field"><label for="mintQuantity">Aantal</label><input id="mintQuantity" type="number" min="1" step="1" value="1" /></div></div><div class="note" id="mintCapSummary">Cap laden…</div><div><button class="btn gold" type="submit">Mintverzoek naar verificatie sturen</button></div></form></section>
+  <section class="panel"><div class="panel-head"><div><h2>Pending mintverzoeken</h2><p>Deze wachten nog op de normale drinks-verificatie.</p></div></div><div id="mintPendingList" class="list"></div></section>
+</div>
+<div class="grid two">
+  <section class="panel"><div class="panel-head"><div><h2>Ledger</h2><p>Elke balanswijziging loopt via een idempotente cautes-ledgerregel.</p></div></div><div id="ledgerList" class="list"></div></section>
+  <section class="panel tinted-sky"><div class="panel-head"><div><h2>Mintgeschiedenis</h2><p>Geverifieerde, capped, afgewezen en geannuleerde mintverzoeken.</p></div></div><div id="mintHistoryList" class="list"></div></section>
+</div>
+<script src="./gejast-despimarkt.js?v539"></script>
+<script>document.addEventListener('DOMContentLoaded',()=>window.GEJAST_DESPIMARKT&&window.GEJAST_DESPIMARKT.loadWalletPage());</script>
+</div></div>
+  <div class="site-credit-watermark" data-version-watermark></div>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+</body>
+</html>

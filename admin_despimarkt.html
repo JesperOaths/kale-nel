@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <title>Admin Despimarkt</title>
+  <script>window.GEJAST_PAGE_VERSION='v539';</script>
+  <script src="./gejast-config.js?v539"></script>
+  <script src="./gejast-clickable-cards.js?v375"></script>
+  <script src="./gejast-scope-context.js?v375"></script>
+  <script src="./gejast-family-rollout.js?v393"></script>
+  <script src="./gejast-scoped-rpc.js?v539"></script>
+  
+  <link rel="stylesheet" href="./despimarkt-theme.css?v539" />
+</head>
+<body>
+  <div class="page-wrap"><div class="shell">
+<div class="brand-row"><div class="brand-mark"><img src="./logo.png" alt="Logo" /><div><div class="eyebrow">Admin · Despimarkt</div><h1>Admin Despimarkt</h1><p>Settlement-queue, cautes-audit, Dry Dock-moderatie en handmatige walletcorrecties.</p></div></div><div class="hero-actions"><a class="btn alt" href="./admin.html">Admin home</a><a class="btn alt" href="./despimarkt.html">Markthub</a></div></div>
+<div id="adminStatus" class="status-line"></div>
+<section class="panel tinted-gold"><div class="panel-head"><div><h2>Scope</h2><p>Alle admin-operaties lopen via server-side admin actions.</p></div></div><div class="form-grid"><div class="field"><label for="adminScopeSelect">Site scope</label><select id="adminScopeSelect"><option value="friends">friends</option><option value="family">family</option></select></div></div></section>
+<div class="grid two">
+  <section class="panel"><div class="panel-head"><div><h2>Resolutiequeue</h2><p>Preview server-side payouts voor je resolve A, B of refund kiest.</p></div></div><div id="resolutionQueue" class="list"></div></section>
+  <section class="panel tinted-sky"><div class="panel-head"><div><h2>Settlement preview</h2><p>Deterministische payoutverdeling inclusief remainder-logica.</p></div></div><div id="previewPane" class="empty-state">Selecteer eerst een marketpreview.</div></section>
+</div>
+<div class="grid two">
+  <section class="panel"><div class="panel-head"><div><h2>Handmatige cautes-adjustment</h2><p>Admin-only correcties schrijven ook naar de cautes-ledger.</p></div></div><form id="adjustForm" class="grid"><div class="form-grid"><div class="field"><label for="adjustPlayerName">Speler</label><input id="adjustPlayerName" type="text" required /></div><div class="field"><label for="adjustDelta">Delta (₵)</label><input id="adjustDelta" type="number" step="1" required /></div></div><div class="field"><label for="adjustReason">Reden</label><textarea id="adjustReason" required></textarea></div><div><button class="btn gold" type="submit">Pas balans aan</button></div></form></section>
+  <section class="panel"><div class="panel-head"><div><h2>Dry Dock</h2><p>Historische refusals en actieve bevriezingen.</p></div></div><div id="freezeList" class="list"></div></section>
+</div>
+<div class="grid two">
+  <section class="panel"><div class="panel-head"><div><h2>Mintaudit</h2><p>Speciale drink-voor-cautes-verzoeken, inclusief capped en rejected gevallen.</p></div></div><div id="mintAudit" class="list"></div></section>
+  <section class="panel"><div class="panel-head"><div><h2>Auditlog</h2><p>Server-side spoor van resolve-, refund-, penalty- en adjustment-acties.</p></div></div><div id="auditList" class="list"></div></section>
+</div>
+<script src="./gejast-admin-rpc.js?v356"></script>
+<script src="./gejast-despimarkt.js?v539"></script>
+<script>document.addEventListener('DOMContentLoaded',()=>window.GEJAST_DESPIMARKT&&window.GEJAST_DESPIMARKT.loadAdminPage());</script>
+</div></div>
+  <div class="site-credit-watermark" data-version-watermark></div>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+</body>
+</html>

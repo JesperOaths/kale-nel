@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <title>Drinks overzicht</title>
-  <script>window.GEJAST_PAGE_VERSION='v488';</script><script src="./gejast-config.js?v488"></script><script src="./gejast-clickable-cards.js?v375"></script><script src="./gejast-scope-context.js?v375"></script><script src="./gejast-family-rollout.js?v393"></script>
+  <script>window.GEJAST_PAGE_VERSION='v539';</script><script src="./gejast-config.js?v539"></script><script src="./gejast-clickable-cards.js?v375"></script><script src="./gejast-scope-context.js?v375"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scoped-rpc.js?v539"></script><script src="./gejast-despimarkt.js?v539"></script>
   <style>
     :root{
       --bg:#ece7dc;--card:rgba(255,251,245,.94);--paper:#fffdfa;--line:rgba(54,40,20,.08);--line-strong:rgba(54,40,20,.14);
@@ -122,7 +122,7 @@
       <div class="grid two">
         <section class="panel">
           <div class="panel-head"><div><h2>Sitebrede statistieken</h2><p>Compacte samenvatting van de drinkdrukte.</p></div></div>
-          <div id="statsMetrics" class="grid quad"></div><div id="fairnessCards" class="list" style="margin-top:14px"></div>
+          <div id="statsMetrics" class="grid quad"></div><div id="fairnessCards" class="list" style="margin-top:14px"></div><div class="panel tinted-gold" style="margin-top:18px"><div class="panel-head"><div><h2>Dry Dock &amp; Wall of Shame</h2><p>Refusal-stats uit Despimarkt, apart van normale drankverificatie.</p></div><a class="btn alt" href="./despimarkt_debts.html">Open schulden &amp; Dry Dock</a></div><div id="despimarktDryDockPanel" class="grid quad"><div class="note">Dry Dock laden…</div></div><div id="despimarktDryDockList" class="list" style="margin-top:14px"></div></div>
         </section>
         <section class="panel">
           <div class="panel-head"><div><h2>Per locatie</h2><p>Waar werden de units precies gedronken?</p></div></div>
@@ -380,10 +380,12 @@ async function loadStats(){
 
       writeCache(STATS_CACHE_KEY, latestStatsData||{});
       renderStats(latestStatsData||{});
+      if(window.GEJAST_DESPIMARKT && typeof window.GEJAST_DESPIMARKT.loadDryDockStatsInto==='function'){ window.GEJAST_DESPIMARKT.loadDryDockStatsInto('despimarktDryDockPanel','despimarktDryDockList'); }
       renderLadder();
       if((!latestStatsData.top_units || !latestStatsData.top_units.length) && Array.isArray(historyRows) && historyRows.length){
         latestStatsData.top_units = synthesizeDashboardFromHistory(historyRows).top_units;
         renderStats(latestStatsData||{});
+        if(window.GEJAST_DESPIMARKT && typeof window.GEJAST_DESPIMARKT.loadDryDockStatsInto==='function'){ window.GEJAST_DESPIMARKT.loadDryDockStatsInto('despimarktDryDockPanel','despimarktDryDockList'); }
       }
     }
     async function loadPage(forceGeo=false,userInitiated=false){
