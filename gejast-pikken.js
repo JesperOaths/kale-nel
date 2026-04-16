@@ -1,36 +1,11 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
-  const STORAGE_KEYS = {
-    lobby: ['gejast_pikken_lobby_code', 'gejast_pikken_lobby_code_v517'],
-    participant: ['gejast_pikken_participant', 'gejast_pikken_participant_v517'],
-    leaveSuppress: ['gejast_pikken_leave_suppress', 'gejast_pikken_leave_suppress_v540'],
-    viewerHint: ['gejast_pikken_viewer_hint', 'gejast_pikken_viewer_hint_v541', 'gejast_pikken_viewer_hint_v542'],
-    stateSnapshot: ['gejast_pikken_state_snapshot', 'gejast_pikken_state_snapshot_v541', 'gejast_pikken_state_snapshot_v542']
-  };
-
-  function storageRead(keys){
-    for (const key of (Array.isArray(keys) ? keys : [keys])){
-      try { const raw = localStorage.getItem(key); if (raw != null && raw !== '') return raw; } catch(_){ }
-    }
-    return '';
-  }
-  function storageWrite(keys, value){
-    const list = Array.isArray(keys) ? keys : [keys];
-    list.forEach((key)=>{ try { localStorage.setItem(key, value); } catch(_){ } });
-  }
-  function storageRemove(keys){
-    const list = Array.isArray(keys) ? keys : [keys];
-    list.forEach((key)=>{ try { localStorage.removeItem(key); } catch(_){ } });
-  }
-  function storageReadJson(keys){
-    const raw = storageRead(keys);
-    if (!raw) return null;
-    try { const parsed = JSON.parse(raw); return parsed && typeof parsed === 'object' ? parsed : null; } catch(_){ return null; }
-  }
-  function storageWriteJson(keys, value){
-    try { storageWrite(keys, JSON.stringify(value)); } catch(_){ }
-  }
+  const STORAGE_KEYS = ['gejast_pikken_lobby_code','gejast_pikken_lobby_code_v517'];
+  const PIKKEN_PARTICIPANT_KEYS = ['gejast_pikken_participant','gejast_pikken_participant_v517'];
+  const PIKKEN_LEAVE_SUPPRESS_KEYS = ['gejast_pikken_leave_suppress','gejast_pikken_leave_suppress_v540'];
+  const PIKKEN_VIEWER_HINT_KEYS = ['gejast_pikken_viewer_hint','gejast_pikken_viewer_hint_v541','gejast_pikken_viewer_hint_v542'];
+  const PIKKEN_STATE_SNAPSHOT_KEYS = ['gejast_pikken_state_snapshot','gejast_pikken_state_snapshot_v541','gejast_pikken_state_snapshot_v542'];
 
   function getScope(){
     try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
@@ -112,19 +87,23 @@
     }
   }
 
-  function setParticipantToken(gameId, active, lobbyCode){ try{ if(active && gameId){ storageWriteJson(STORAGE_KEYS.participant, {game_id:String(gameId), lobby_code:String(lobbyCode||'').trim().toUpperCase(), at:Date.now()}); } else { storageRemove(STORAGE_KEYS.participant); } }catch(_){ } }
-  function getParticipantToken(){ return storageReadJson(STORAGE_KEYS.participant); }
-  function setLeaveSuppression(gameId, lobbyCode){ try { storageWriteJson(STORAGE_KEYS.leaveSuppress, { game_id:String(gameId||'').trim(), lobby_code:String(lobbyCode||'').trim().toUpperCase(), at:Date.now() }); } catch(_){ } }
-  function getLeaveSuppression(){ return storageReadJson(STORAGE_KEYS.leaveSuppress); }
-  function clearLeaveSuppression(){ storageRemove(STORAGE_KEYS.leaveSuppress); }
+  function readStorage(keys){ try { for (const key of (Array.isArray(keys)?keys:[keys])) { const raw = localStorage.getItem(key) || ''; if(raw) return raw; } } catch(_){ } return ''; }
+  function writeStorage(keys, value){ try { for (const key of (Array.isArray(keys)?keys:[keys])) localStorage.setItem(key, value); } catch(_){ } }
+  function removeStorage(keys){ try { for (const key of (Array.isArray(keys)?keys:[keys])) localStorage.removeItem(key); } catch(_){ } }
+  function readJsonStorage(keys){ try { const raw = readStorage(keys); if(!raw) return null; const parsed = JSON.parse(raw); return parsed && typeof parsed === 'object' ? parsed : null; } catch(_){ return null; } }
+  function setParticipantToken(gameId, active, lobbyCode){ try{ const id = String(gameId||'').trim(); const code = String(lobbyCode||'').trim().toUpperCase(); if(active && (id || code)){ writeStorage(PIKKEN_PARTICIPANT_KEYS, JSON.stringify({game_id:id, lobby_code:code, at:Date.now()})); } else { removeStorage(PIKKEN_PARTICIPANT_KEYS); } }catch(_){ } }
+  function getParticipantToken(){ return readJsonStorage(PIKKEN_PARTICIPANT_KEYS); }
+  function setLeaveSuppression(gameId, lobbyCode){ writeStorage(PIKKEN_LEAVE_SUPPRESS_KEYS, JSON.stringify({ game_id:String(gameId||'').trim(), lobby_code:String(lobbyCode||'').trim().toUpperCase(), at:Date.now() })); }
+  function getLeaveSuppression(){ return readJsonStorage(PIKKEN_LEAVE_SUPPRESS_KEYS); }
+  function clearLeaveSuppression(){ removeStorage(PIKKEN_LEAVE_SUPPRESS_KEYS); }
   function markerMatches(marker, gameId, lobbyCode){ const markerGameId = String(marker?.game_id || '').trim(); const markerLobbyCode = String(marker?.lobby_code || '').trim().toUpperCase(); const id = String(gameId || '').trim(); const code = String(lobbyCode || '').trim().toUpperCase(); return (!!markerGameId && !!id && markerGameId === id) || (!!markerLobbyCode && !!code && markerLobbyCode === code); }
   function isRoomLeaveSuppressed(gameId, lobbyCode){ const marker = getLeaveSuppression(); if(!marker) return false; const age = Date.now() - Number(marker.at || 0); if(age > 45000){ clearLeaveSuppression(); return false; } return markerMatches(marker, gameId, lobbyCode); }
   function clearLeaveSuppressionFor(gameId, lobbyCode){ if(markerMatches(getLeaveSuppression(), gameId, lobbyCode)) clearLeaveSuppression(); }
-  function getStoredLobbyCode(){ return storageRead(STORAGE_KEYS.lobby); }
-  function setStoredLobbyCode(code){ try { if(code) storageWrite(STORAGE_KEYS.lobby, String(code).trim().toUpperCase()); } catch(_){ } }
-  function clearStoredLobbyCode(){ storageRemove(STORAGE_KEYS.lobby); }
-  function setViewerHint(hint){ try { if(hint && hint.name){ storageWriteJson(STORAGE_KEYS.viewerHint, Object.assign({}, hint, { at: Date.now() })); } } catch(_){ } }
-  function getViewerHint(){ return storageReadJson(STORAGE_KEYS.viewerHint); }
+  function getStoredLobbyCode(){ return String(readStorage(STORAGE_KEYS) || '').trim().toUpperCase(); }
+  function setStoredLobbyCode(code){ const value = String(code || '').trim().toUpperCase(); if(value) writeStorage(STORAGE_KEYS, value); }
+  function clearStoredLobbyCode(){ removeStorage(STORAGE_KEYS); }
+  function setViewerHint(hint){ try { if(hint && hint.name){ writeStorage(PIKKEN_VIEWER_HINT_KEYS, JSON.stringify(Object.assign({}, hint, { at: Date.now() }))); } } catch(_){ } }
+  function getViewerHint(){ return readJsonStorage(PIKKEN_VIEWER_HINT_KEYS); }
   function saveStateSnapshot(state){
     try {
       const game = state?.game || {};
@@ -132,7 +111,7 @@
       const gameId = String(game?.id || '').trim();
       const lobbyCode = String(game?.lobby_code || '').trim().toUpperCase();
       if(!gameId && !lobbyCode) return;
-      storageWriteJson(STORAGE_KEYS.stateSnapshot, {
+      writeStorage(PIKKEN_STATE_SNAPSHOT_KEYS, JSON.stringify({
         at: Date.now(),
         game_id: gameId,
         lobby_code: lobbyCode,
@@ -149,7 +128,7 @@
         players,
         votes: Array.isArray(state?.votes) ? state.votes : [],
         dice_totals: state?.dice_totals || {}
-      });
+      }));
     } catch(_){ }
   }
 
