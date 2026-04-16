@@ -450,9 +450,10 @@
     const scopeValue = ()=> (global.document.getElementById('adminScopeSelect')?.value || scope());
     async function refresh(){
       try {
-        const [queue, audit, mints, dry, debts, wallets] = await Promise.all([
+        const [queue, audit, insights, mints, dry, debts, wallets] = await Promise.all([
           adminRpc('admin_get_despimarkt_resolution_queue_action', { admin_session_token: adminToken(), site_scope_input: scopeValue() }),
           adminRpc('admin_get_despimarkt_audit_action', { admin_session_token: adminToken(), site_scope_input: scopeValue(), limit_count: 100 }),
+          adminRpc('admin_get_despimarkt_insights_action', { admin_session_token: adminToken(), site_scope_input: scopeValue(), limit_count: 40 }),
           adminRpc('admin_get_caute_mint_audit_action', { admin_session_token: adminToken(), site_scope_input: scopeValue(), limit_count: 80 }),
           rpc('despimarkt_get_wall_of_shame_scoped', { site_scope_input: scopeValue() }),
           adminRpc('admin_get_despimarkt_debt_queue_action', { admin_session_token: adminToken(), site_scope_input: scopeValue(), limit_count: 80 }),
@@ -462,6 +463,16 @@
         global.document.getElementById('houseWalletList').innerHTML = normalizeRows(wallets?.rows).length ? normalizeRows(wallets.rows).map((row)=>`<article class="dm-list-card"><div><strong>${esc(row.display_label || row.wallet_key || '')}</strong><div class="muted">${esc(row.wallet_key || '')} · ${esc(row.site_scope || '')}</div></div><div class="dm-stack-right"><div class="dm-pill plus">${money(row.balance_cautes || 0)}</div><div class="muted">${shortDate(row.updated_at || row.created_at)}</div></div></article>`).join('') : empty('Nog geen promotionele wallets.');
 
         global.document.getElementById('resolutionQueue').innerHTML = normalizeRows(queue?.rows).length ? normalizeRows(queue.rows).map((row)=>`<article class="dm-list-card"><div><strong>${esc(row.title || '')}</strong><div class="muted">${money(row.total_pot || 0)} · ${row.participant_count || 0} spelers · sluit ${shortDate(row.closes_at)}</div>${tagChips(row.market_tags || [])}${promoBadgeHtml(row)}${promoNoteHtml(row)}</div><div class="admin-actions"><button class="btn alt" type="button" data-preview-market="${row.market_id}" data-preview-side="A">Preview A</button><button class="btn alt" type="button" data-preview-market="${row.market_id}" data-preview-side="B">Preview B</button><button class="btn success" type="button" data-resolve-market="${row.market_id}" data-resolve-side="A">Resolve A</button><button class="btn success alt" type="button" data-resolve-market="${row.market_id}" data-resolve-side="B">Resolve B</button><button class="btn danger" type="button" data-cancel-market="${row.market_id}">Refund</button></div></article>`).join('') : empty('Geen markten in de resolutiequeue.');
+
+        if (global.document.getElementById('despimarktPulseCards')) {
+          const pulseCards = Array.isArray(insights?.story_cards) ? insights.story_cards.slice(0,3) : [];
+          const pulseOverview = Array.isArray(insights?.overview_cards) ? insights.overview_cards.slice(0,4) : [];
+          global.document.getElementById('despimarktPulseCards').innerHTML = pulseOverview.concat(pulseCards).map((c)=>`<article class="card"><div class="k">${esc(c.label||'')}</div><div class="v">${esc(c.value||'')}</div><div class="sub">${esc(c.sub||'')}</div></article>`).join('') || '<div class="note">Nog geen pulse-data.</div>';
+        }
+        if (global.document.getElementById('despimarktPulseLeaders')) {
+          const sections = Array.isArray(insights?.leaderboard_sections) ? insights.leaderboard_sections.slice(0,2) : [];
+          global.document.getElementById('despimarktPulseLeaders').innerHTML = sections.map((sec)=>`<article class="section-card"><div><h3>${esc(sec.title||'')}</h3><p>${esc(sec.subtitle||'')}</p></div><div class="bar-list">${Array.isArray(sec.rows)&&sec.rows.length?sec.rows.slice(0,5).map((r)=>`<div class="bar-row"><div class="bar-head"><strong>${esc(r.label||'')}</strong><span>${esc(r.value||'')}</span></div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(6, Math.min(100, Number(r.value||0)))}%"></div></div><div class="bar-sub">${esc(r.sub||'')}</div></div>`).join(''):'<div class="note">Nog geen data.</div>'}</div></article>`).join('') || '<div class="note">Nog geen pulse-data.</div>';
+        }
 
         global.document.getElementById('mintAudit').innerHTML = normalizeRows(mints?.rows).length ? normalizeRows(mints.rows).map((row)=>`<article class="dm-list-card"><div><strong>${playerLink(row.requester_player_name || '')}</strong><div class="muted">#${row.mint_request_id || 0} · ${esc(row.event_type_key || '')} · ${esc(row.status || '')}</div>${row.admin_cap_bypass ? '<div class="dm-pill plus">Bypass actief</div>' : ''}</div><div class="dm-stack-right"><div class="dm-pill">${money(row.awarded_cautes ?? row.requested_cautes ?? 0)}</div><div class="muted">req ${money(row.requested_cautes || 0)}</div><div class="muted">${shortDate(row.created_at)}</div>${(row.status === 'pending_verification' || row.status === 'verified_capped') ? `<button class="btn alt" type="button" data-mint-bypass="${row.mint_request_id}" data-mint-bypass-next="${row.admin_cap_bypass ? '0' : '1'}">${row.admin_cap_bypass ? 'Bypass uit' : 'Bypass aan'}</button>` : ''}</div></article>`).join('') : empty('Nog geen mintaudit.');
 

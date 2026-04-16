@@ -6,14 +6,14 @@
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
-  <title>Pikken stats</title>
+  <title>Admin Paardenrace</title>
   <script>window.GEJAST_PAGE_VERSION='v548';</script>
   <script src="./gejast-config.js?v548"></script>
   <script src="./gejast-scope-context.js?v548"></script>
   <script src="./gejast-family-rollout.js?v393"></script>
-  <script src="./gejast-home-gate.js?v538"></script>
-  <script src="./gejast-scoped-rpc.js?v548"></script>
   
+  <script src="./gejast-scoped-rpc.js?v548"></script>
+  <script src="./gejast-admin-rpc.js?v356"></script>
   <script src="./gejast-game-hq.js?v548"></script>
   <link rel="stylesheet" href="./gejast-game-hq.css?v548" />
 </head>
@@ -21,15 +21,15 @@
   <div class="wrap"><div class="shell">
     <div class="top">
       <div>
-        <div class="eyebrow">Publieke samenvatting · Pikken</div>
-        <h1 class="title">Pikken stats</h1>
-        <div class="subtitle">Niet alleen wins en losses: hier zie je reject-drift, head-to-heads en wie de tafel echt naar zich toe trok.</div>
+        <div class="eyebrow">Admin · Paardenrace</div>
+        <h1 class="title">Admin Paardenrace</h1>
+        <div class="subtitle">Races, rivalen, suit-meta en bakdruk met genoeg context om achteraf echt iets te leren.</div>
       </div>
-      <div class="actions"><a class="btn alt" href="./pikken.html">Terug</a><a class="btn alt" href="./pikken_ladder.html">Ladder</a><a class="btn alt" href="./index.html">Home</a></div>
+      <div class="actions"><a class="btn alt" href="./admin.html">Terug</a><a class="btn alt" href="./index.html">Home</a><a class="btn alt" href="./paardenrace_stats.html">Publieke stats</a></div>
     </div>
     <div id="pageStatus" class="status"></div>
     <div class="stack">
-      
+      <section class="panel"><h2>Admin-operatieblik</h2><p>Levende druk op deze game, zodat je sneller ziet waar beheer of follow-up nodig is.</p><div id="opsGrid" class="grid overview"></div></section>
       <section class="panel"><h2>Overzicht</h2><p>De kerncijfers die je meteen vertellen hoe deze game of feature leeft.</p><div id="overviewGrid" class="grid overview"></div></section>
       <section class="panel"><h2>Verhalen in de cijfers</h2><p>Quirky, braggy en nuttige haakjes waar spelers echt iets aan hebben.</p><div id="storyGrid" class="grid story"></div></section>
       <section class="panel"><h2>Leaderboards & patronen</h2><p>Ranglijsten die je door kunt klikken naar persoonlijke carrièrekaarten.</p><div id="leaderboardsMount"></div></section>
@@ -41,6 +41,6 @@
   </div></div>
   <div class="site-credit-watermark" data-version-watermark></div>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script>document.addEventListener('DOMContentLoaded',()=>window.GEJAST_GAME_HQ&&window.GEJAST_GAME_HQ.loadPublicPage('pikken'));</script>
+  <script>document.addEventListener('DOMContentLoaded',()=>window.GEJAST_GAME_HQ&&window.GEJAST_GAME_HQ.loadAdminPage('paardenrace'));</script>
 </body>
 </html>

@@ -52,6 +52,12 @@
     'get_paardenrace_ladder_public_scoped',
     'get_pikken_ladder_public_scoped',
     'get_despimarkt_ladder_public_scoped',
+    'despimarkt_get_stats_scoped',
+    'get_pikken_stats_scoped',
+    'get_paardenrace_stats_scoped',
+    'get_rad_stats_scoped',
+    'rad_log_spin_scoped',
+    'rad_log_target_nomination_scoped',
     'get_scope_audit_bundle_v352',
     'assert_scope_clean_v352'
   ]);

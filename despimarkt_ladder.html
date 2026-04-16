@@ -7,14 +7,15 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <title>Beurs d'Espinoza-ladder</title>
-  <script>window.GEJAST_PAGE_VERSION='v547';</script>
-  <script src="./gejast-config.js?v547"></script>
+  <script>window.GEJAST_PAGE_VERSION='v548';</script>
+  <script src="./gejast-config.js?v548"></script>
   <script src="./gejast-clickable-cards.js?v375"></script>
   <script src="./gejast-scope-context.js?v375"></script>
   <script src="./gejast-family-rollout.js?v393"></script>
-  <script src="./gejast-scoped-rpc.js?v547"></script>
+  <script src="./gejast-scoped-rpc.js?v548"></script>
   
-  <link rel="stylesheet" href="./despimarkt-theme.css?v547" />
+  <link rel="stylesheet" href="./despimarkt-theme.css?v548" />
+  <link rel="stylesheet" href="./gejast-game-hq.css?v548" />
 </head>
 <body>
   <div class="page-wrap"><div class="shell">
@@ -24,8 +25,15 @@
   <section class="panel tinted-gold"><div class="panel-head"><div><h2 id="ladderTitle">Beurs d'Espinoza-ladder</h2><p id="ladderIntro">Hoogste huidige cautebalansen, plus marktdeelname waar beschikbaar.</p></div></div><div id="ladderRows" class="list"></div></section>
   <section class="panel"><div class="panel-head"><div><h2>Recente historie</h2><p>Laatste relevante ladderbewegingen of rating-historie.</p></div></div><div id="ladderHistory" class="list"></div></section>
 </div>
-<script src="./gejast-despimarkt.js?v547"></script>
-<script>document.addEventListener('DOMContentLoaded',()=>window.GEJAST_DESPIMARKT&&window.GEJAST_DESPIMARKT.loadLadderPage('despimarkt'));</script>
+<section class="panel tinted-sky" style="margin-top:18px"><div class="panel-head"><div><h2>Marktpuls</h2><p>Meer dan alleen balances: hot tags, payouts en recente settlements.</p></div><div class="hero-actions"><a class="btn alt" href="./admin_despimarkt.html">Admin</a></div></div><div id="overviewGrid" class="grid overview"></div><div id="storyGrid" class="grid story" style="margin-top:14px"></div></section>
+<section class="panel" style="margin-top:18px"><div class="panel-head"><div><h2>Beurs-inzichten</h2><p>Welke tags, payouts en spelers de exchange echt trekken.</p></div></div><div id="leaderboardsMount"></div></section>
+<section class="panel" style="margin-top:18px"><div class="panel-head"><div><h2>Recente settlements</h2><p>Afgewikkelde markten en de laatste ritmes van de beurs.</p></div></div><div id="recentMount"></div></section>
+<section class="panel" style="margin-top:18px"><div class="panel-head"><div><h2>Marktmomentum</h2><p>Dagvolume, open/resolved ritme en waar de beurs echt aan het trekken is.</p></div></div><div id="trendMount"></div></section>
+<section id="careerPanel" class="panel" style="margin-top:18px;display:none"><div id="careerMount"></div></section>
+<div id="tablesMount"></div>
+<script src="./gejast-game-hq.js?v548"></script>
+<script src="./gejast-despimarkt.js?v548"></script>
+<script>document.addEventListener('DOMContentLoaded',()=>window.GEJAST_DESPIMARKT&&window.GEJAST_DESPIMARKT.loadLadderPage('despimarkt');window.GEJAST_GAME_HQ&&window.GEJAST_GAME_HQ.loadPublicPage('despimarkt'));</script>
 </div></div>
   <div class="site-credit-watermark" data-version-watermark></div>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
