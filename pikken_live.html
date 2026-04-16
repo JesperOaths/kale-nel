@@ -8,9 +8,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken live</title>
-  <script>window.GEJAST_PAGE_VERSION='v532';</script>
-  <script src="./gejast-config.js?v532"></script>
-  <script src="./gejast-home-gate.js?v532"></script>
+  <script>window.GEJAST_PAGE_VERSION='v535';</script>
+  <script src="./gejast-config.js?v535"></script>
+  <script src="./gejast-home-gate.js?v535"></script>
   <script src="./badge-registry.js"></script>
   <style>
     :root{
@@ -622,8 +622,7 @@ function refreshBidOptionsFromState(state){
       const rules = getBidRules(UI.state || {});
       if (!count || !face) return setStatus('Kies een geldig bod.', true);
       if (count > Number(rules.totalDice || 0)) return setStatus('Je kunt niet boven het totaal aantal dobbelstenen bieden.', true);
-      const allowed = allowedFacesForCount(count, rules);
-      if (!allowed.includes(face)) return setStatus('Dat bod is volgens de huidige stand niet geldig.', true);
+      if (!isHigherBid(count, face, rules)) return setStatus('Dat bod is volgens de huidige stand niet geldig.', true);
       return withAction('Bieden…', ()=>rpc('pikken_place_bid_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId, bid_count_input: count, bid_face_input: face }));
     }
     async function rejectBid(){ return withAction('Afkeuren…', ()=>rpc('pikken_reject_bid_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId })); }
