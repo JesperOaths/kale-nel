@@ -145,7 +145,6 @@
     const code = String(lobbyCode || '').trim().toUpperCase();
     const params = {};
     if (code) params.match_ref = code;
-    if (id && !code) params.client_match_id = id;
     else if (id) params.client_match_id = id;
     return scopedHref('./pikken_live.html', params);
   }

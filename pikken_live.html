@@ -364,6 +364,17 @@
     const qsParam = (name) => { try { return new URLSearchParams(window.location.search).get(name) || ''; } catch(_) { return ''; } };
     const sessionToken = () => { try { return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; } catch(_) { return ''; } };
     const currentScope = () => { try { return (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) || (qsParam('scope') === 'family' ? 'family' : 'friends'); } catch(_) { return 'friends'; } };
+    function scopedHref(path, params){
+      const search = new URLSearchParams();
+      Object.entries(params || {}).forEach(([key, value])=>{
+        const resolved = String(value || '').trim();
+        if (resolved) search.set(key, resolved);
+      });
+      const scope = currentScope();
+      if (scope) search.set('scope', scope);
+      const query = search.toString();
+      return query ? `${path}?${query}` : path;
+    }
     function setStoredLobbyCode(value){ try { if(value) localStorage.setItem(STORAGE_KEY, String(value).trim().toUpperCase()); } catch(_){} }
     function clearStoredLobbyCode(){ try { localStorage.removeItem(STORAGE_KEY); } catch(_){} }
     function setParticipantToken(gameId, active, lobbyCode){ try { if(active && gameId){ localStorage.setItem(PARTICIPANT_KEY, JSON.stringify({ game_id:String(gameId), lobby_code:String(lobbyCode||'').trim().toUpperCase(), at:Date.now() })); } else { localStorage.removeItem(PARTICIPANT_KEY); } } catch(_){} }
@@ -500,6 +511,14 @@
     function penaltyModeLabel(raw){ return String(raw || '').trim().toLowerCase() === 'right_loses' ? 'Fair (goed verliest)' : 'Normal (fout verliest)'; }
     function buildBidCountOptions(max=24){ const sel = qs('#bidCount'); sel.innerHTML = Array.from({length:max}, (_,i) => `<option value="${i+1}">${i+1}</option>`).join(''); }
     function bidHistoryFromState(st){ const arr = []; const raw = Array.isArray(st?.bid_history) ? st.bid_history : (Array.isArray(st?.history?.bids) ? st.history.bids : []); raw.forEach((b,idx)=>arr.push({index:idx+1,bidder_name:b.bidder_name||b.name||'',count:b.count||b.bid_count,face:b.face||b.bid_face,current:false})); if (st?.bid) arr.push({index:arr.length+1,bidder_name:st.bid.bidder_name||'',count:st.bid.count||st.bid.bid_count,face:st.bid.face||st.bid.bid_face,current:true}); return arr; }
+
+    function writeCanonicalLiveUrl(){
+      const code = String(UI.lobbyCode || '').trim().toUpperCase();
+      const id = String(UI.gameId || '').trim();
+      const next = code ? scopedHref('./pikken_live.html', { match_ref: code }) : scopedHref('./pikken_live.html', { client_match_id: id });
+      const current = `${window.location.pathname}${window.location.search}`;
+      if (next && next !== current) { try { window.history.replaceState(null, '', next); } catch(_){} }
+    }
     function latestBidByPlayer(st){ const map = new Map(); for (const item of bidHistoryFromState(st)) if (item.bidder_name) map.set(normalizeName(item.bidder_name), item); return map; }
 
 function getBidRules(state){
@@ -851,10 +870,14 @@ async function loadMatchOutcomes(){
       if (!token || (!gameId && !lobbyCode)) return null;
       let lastErr = null;
       const attempts = [
+        { session_token: token, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
+        { session_token_input: token, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
         { session_token: token, game_id_input: gameId || null, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
         { session_token_input: token, game_id_input: gameId || null, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
         { session_token: token, game_id: gameId || null, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
         { session_token_input: token, game_id: gameId || null, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
+        { session_token: token, lobby_code_input: lobbyCode || null },
+        { session_token_input: token, lobby_code_input: lobbyCode || null },
         { session_token: token, game_id_input: gameId || null },
         { session_token_input: token, game_id_input: gameId || null }
       ];
@@ -865,8 +888,10 @@ async function loadMatchOutcomes(){
     async function loadPublicState(){
       let lastErr = null;
       const attempts = [
+        { lobby_code_input: UI.lobbyCode || null, site_scope_input: UI.scope },
         { game_id_input: UI.gameId || null, lobby_code_input: UI.lobbyCode || null, site_scope_input: UI.scope },
         { game_id: UI.gameId || null, lobby_code_input: UI.lobbyCode || null, site_scope_input: UI.scope },
+        { lobby_code_input: UI.lobbyCode || null },
         { game_id_input: UI.gameId || null, lobby_code_input: UI.lobbyCode || null }
       ];
       for (const payload of attempts){ try { return await rpcWithTimeout('pikken_get_live_state_public', payload, 4000); } catch(err){ lastErr = err; } }
@@ -885,6 +910,7 @@ async function loadMatchOutcomes(){
           if (resolvedGameId && resolvedGameId !== UI.gameId) UI.gameId = resolvedGameId;
           if (resolvedLobbyCode) UI.lobbyCode = resolvedLobbyCode;
           if (resolvedLobbyCode) setStoredLobbyCode(resolvedLobbyCode);
+          if (resolvedGameId || resolvedLobbyCode) writeCanonicalLiveUrl();
           if ((!participantState || !(participantState?.viewer && (participantState.viewer.is_host || Number(participantState.viewer.seat || 0) > 0))) && UI.gameId) {
             try { const retried = await loadParticipantStateFor(UI.gameId); if (retried) participantState = retried; } catch(_) {}
           }
@@ -987,9 +1013,10 @@ async function loadMatchOutcomes(){
       UI.scope = currentScope();
       const rawClientMatchId = qsParam('client_match_id');
       const rawMatchRef = qsParam('match_ref');
-      UI.gameId = rawClientMatchId && /^[0-9a-f-]{36}$/i.test(rawClientMatchId) ? rawClientMatchId : '';
+      UI.gameId = rawMatchRef ? '' : (rawClientMatchId && /^[0-9a-f-]{36}$/i.test(rawClientMatchId) ? rawClientMatchId : '');
       UI.lobbyCode = rawMatchRef || (!UI.gameId ? rawClientMatchId : '') || '';
       if (!UI.gameId && !UI.lobbyCode){ setStatus('Geen geldige game_id of roomcode in URL.', true); return; }
+      writeCanonicalLiveUrl();
       qs('#placeBidBtn').addEventListener('click', placeBid);
       qs('#rejectBidBtn').addEventListener('click', rejectBid);
       qs('#voteApproveBtn').addEventListener('click', ()=>vote(true));
