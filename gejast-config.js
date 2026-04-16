@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v548',
+    VERSION:'v488',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -10,7 +10,7 @@
     GOLD_HOVER: '#8a7338',
     PLAYER_SESSION_KEYS: ['jas_session_token_v11','jas_session_token_v10'],
     PLAYER_LAST_ACTIVITY_KEY: 'jas_last_activity_at_v1',
-    PLAYER_SESSION_IDLE_MS: 12 * 60 * 60 * 1000,
+    PLAYER_SESSION_IDLE_MS: 30 * 24 * 60 * 60 * 1000,
     WEB_PUSH_PUBLIC_KEY: 'BPqY04jDOB_8RlhNxURgWFl6cMge64Mr7DkrWtgMfG4ARWLJ6S-r6c6JeQJ6o4kysWT0WeR9oVpahP85L8GLl_4',
     NOTIFICATION_BUTTON_ENABLED: true,
     WEB_PUSH_TEST_RPC: 'queue_test_web_push',
@@ -220,10 +220,8 @@ function setPlayerSessionToken(token, storage){
   const value = String(token || '').trim();
   if (!value) return '';
   const primaryKey = CONFIG.PLAYER_SESSION_KEYS[0] || 'jas_session_token_v11';
-  const target = storage === 'session' ? sessionStorage : localStorage;
-  target.setItem(primaryKey, value);
-  const other = target === localStorage ? sessionStorage : localStorage;
-  other.removeItem(primaryKey);
+  localStorage.setItem(primaryKey, value);
+  sessionStorage.setItem(primaryKey, value);
   touchPlayerActivity();
   return value;
 }
@@ -312,24 +310,6 @@ function buildRequestUrl(returnTo, scope){
     currentReturnTarget
   });
 
-  function ensureSiteAnnouncementRuntime(){
-    try {
-      const path = String((location && location.pathname) || '').toLowerCase();
-      if (/\/admin/.test(path)) return;
-      if (document.querySelector('script[data-despimarkt-announcements]')) return;
-      const script = document.createElement('script');
-      script.src = `./gejast-site-announcements.js?${effectiveVersion}`;
-      script.async = false;
-      script.setAttribute('data-despimarkt-announcements','1');
-      document.head.appendChild(script);
-    } catch (_) {}
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', applyVersionLabel, { once: true });
-    document.addEventListener('DOMContentLoaded', ensureSiteAnnouncementRuntime, { once: true });
-  } else {
-    applyVersionLabel();
-    ensureSiteAnnouncementRuntime();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyVersionLabel, { once: true });
+  else applyVersionLabel();
 })();
