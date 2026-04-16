@@ -116,7 +116,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v488';</script><script src="./gejast-config.js?v488"></script><script src="./gejast-scope-context.js?v392"></script><script src="./gejast-family-rollout.js?v393"></script>
+  <script>window.GEJAST_PAGE_VERSION='v494';</script><script src="./gejast-config.js?v494"></script><script src="./gejast-scope-context.js?v392"></script><script src="./gejast-family-rollout.js?v393"></script>
   <script src="./gejast-rpc-contract.js?v392"></script>
   <script src="./gejast-admin-rpc.js?v392"></script>
   <script src="./admin-session-sync.js?v392"></script>
@@ -261,7 +261,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return `
         <div class="activation-tools hidden" id="activation-tools-${requestIdOf(req)}">
           <div><strong>Activatielink klaarzetten</strong></div>
-          <div class="muted" style="margin-top:4px;">Genereer, kopieer of queue de activatielink.</div>
+          <div class="muted" style="margin-top:4px;">Genereer, kopieer of verstuur de activatielink via de Make-mailflow.</div>
           <div class="activation-meta">
             ${metaBox('E-mail', req.requester_email || 'Onbekend')}
             <div class="data-box"><span class="label">Activatie verloopt</span><span id="activation-expires-${requestIdOf(req)}">Nog niet gegenereerd</span></div>
@@ -269,7 +269,9 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           <div class="activation-link-box" id="activation-url-${requestIdOf(req)}">Nog geen activatielink gegenereerd.</div>
           <div class="action-row">
             <button class="copy-btn" type="button" data-copy-activation data-id="${requestIdOf(req)}">Kopieer activatielink</button>
-            <button class="mail-btn" type="button" data-mail-activation data-id="${requestIdOf(req)}">Mailconcept</button><button class="mail-btn" type="button" data-hide-activation data-id="${requestIdOf(req)}">Inklappen</button>
+            <button class="approve-btn" type="button" data-send-activation data-id="${requestIdOf(req)}">Verstuur via Make</button>
+            <button class="mail-btn" type="button" data-mail-activation data-id="${requestIdOf(req)}">Mailconcept</button>
+            <button class="mail-btn" type="button" data-hide-activation data-id="${requestIdOf(req)}">Inklappen</button>
           </div>
         </div>
       `;
@@ -1025,6 +1027,29 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: reason || null })
       });
       return await parseResponse(res);
+    }
+
+    async function approveAndSendActivation(requestId, decisionReason) {
+      if (ADMIN_SOURCE && typeof ADMIN_SOURCE.approveAndSendActivation === 'function') {
+        const data = await ADMIN_SOURCE.approveAndSendActivation(requestId, decisionReason || null);
+        try { await updateActivationEmailSubject(requestId); } catch {}
+        return data;
+      }
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_approve_and_send_activation_action`, {
+        method:'POST',
+        mode:'cors',
+        cache:'no-store',
+        headers: rpcHeaders(),
+        body: JSON.stringify({
+          admin_session_token: getAdminSessionToken(),
+          request_id_input: String(requestId),
+          decision_reason_input: decisionReason || null,
+          base_url: getActivationBaseUrl()
+        })
+      });
+      const data = await parseResponse(res);
+      try { await updateActivationEmailSubject(requestId); } catch {}
+      return data;
     }
 
     async function createActivationLink(requestId) {
