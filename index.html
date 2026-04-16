@@ -674,7 +674,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v490';</script><script src="./gejast-config.js?v490"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v491';</script><script src="./gejast-config.js?v491"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
   <script src="./gejast-live-summary.js?v389"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
   <script src="./gejast-combined-readers.js?v426"></script>
@@ -894,7 +894,7 @@
     let currentHomepageState = null;
     const CURRENT_SCOPE = (window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope()) || 'friends';
     function scopedHref(base){ try{ const u=new URL(base, location.href); if(CURRENT_SCOPE==='family') u.searchParams.set('scope','family'); return u.pathname.split('/').pop()+u.search; }catch(_){ return base; } }
-    function homepageLadderRoute(game){ return scopedHref(`./ladder.html?game=${encodeURIComponent(game)}`); }
+    function homepageLadderRoute(game){ const special={ 'paardenrace':'./paardenrace_stats.html', 'pikken':'./pikken_stats.html', 'caute-coins':'./caute_coins_ladder.html' }; return scopedHref(special[game] || `./ladder.html?game=${encodeURIComponent(game)}`); }
     function applyScopeChrome(){
       document.body.classList.toggle('friends-scope', CURRENT_SCOPE!=='family');
       if(CURRENT_SCOPE!=='family') return;

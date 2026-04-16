@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Caute Coins ladder</title>
+  <script>window.GEJAST_PAGE_VERSION='v491';</script>
+  <script src="./gejast-config.js?v491"></script>
+  <script src="./gejast-home-gate.js?v491"></script>
+  <script src="./gejast-ladder-lab.js?v491"></script>
+  <style>
+    :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--shadow:0 18px 44px rgba(0,0,0,.08)}
+    *{box-sizing:border-box}
+    body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
+    .wrap{max-width:1120px;margin:0 auto}
+    .card{background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.7);border-radius:28px;padding:22px;box-shadow:var(--shadow)}
+    .top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer}
+    .btn.alt{background:#fff;color:#111;border:1px solid rgba(0,0,0,.08)}
+    .muted{color:var(--muted)}
+    .stack{display:grid;gap:16px;margin-top:18px}
+    .panel{background:rgba(255,255,255,.58);border:1px solid var(--line);border-radius:24px;padding:18px}
+    .panel h2{margin:0 0 10px}
+    .panel-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px}
+    .accent{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(154,130,65,.14);color:#5f4d1b;font-weight:800;font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="top">
+        <div>
+          <div class="muted">Publieke coinstand</div>
+          <h1 style="margin:8px 0 0;font-size:clamp(2rem,4vw,3rem)">Caute Coins ladder</h1>
+          <div id="meta" class="muted" style="margin-top:10px">Laden…</div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn alt" href="./index.html">Terug naar home</a>
+        </div>
+      </div>
+      <div class="stack">
+        <section class="panel">
+          <div class="panel-head"><div><h2>Snapshot</h2><div class="muted">Eerste publieke coinlaag: top 5, spreiding, concentratie en jouw eigen coinstand als je bent ingelogd.</div></div><div class="accent" id="snapshotAccent">Top 5</div></div>
+          <div id="statsWrap"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><div><h2>Ladder</h2><div class="muted">De huidige publieke top 5 van Caute Coins.</div></div></div>
+          <div id="ladderWrap"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head"><div><h2>Verdeling</h2><div class="muted">Hoeveel van de zichtbare coinvoorraad zit geconcentreerd bij de koplopers?</div></div></div>
+          <div class="lab-two">
+            <div id="barsWrap"></div>
+            <div id="shareWrap"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+  <div class="site-credit-watermark" data-version-watermark></div>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <script>
+    (()=>{
+      const lab = window.GEJAST_LADDER_LAB;
+      document.head.insertAdjacentHTML('beforeend', `<style>${lab.styleBlock()}</style>`);
+      const $ = (id)=>document.getElementById(id);
+      async function load(){
+        const [topRaw, viewerRaw] = await Promise.all([
+          lab.rpc('get_caute_coin_top5_public', {}).catch(()=>({ rows:[] })),
+          lab.sessionToken() ? lab.rpc('get_my_caute_coins_public', { session_token: lab.sessionToken(), session_token_input: lab.sessionToken() }).catch(()=>({})) : Promise.resolve({})
+        ]);
+        const rows = Array.isArray(topRaw?.rows) ? topRaw.rows : (Array.isArray(topRaw) ? topRaw : []);
+        const top5 = rows.slice(0, 5).map((row)=>({ ...row, player_name: lab.playerName(row), balance: Number(row.balance ?? row.coins ?? row.caute_coins ?? 0) || 0 }));
+        const total = top5.reduce((sum, row)=>sum + row.balance, 0);
+        const leader = top5[0] || null;
+        const fifth = top5[top5.length - 1] || null;
+        const viewerBalance = Number(viewerRaw?.balance ?? viewerRaw?.caute_coins ?? viewerRaw?.viewer_balance ?? 0) || 0;
+        const spread = leader && fifth ? leader.balance - fifth.balance : 0;
+        $('meta').textContent = top5.length ? `Publieke top ${top5.length} · samen ${Math.round(total)} coins` : 'Nog geen zichtbare coinladder.';
+        $('snapshotAccent').textContent = `Top ${top5.length || 0}`;
+        $('statsWrap').innerHTML = lab.renderStats([
+          { k:'Koploper', v: leader ? leader.player_name : '—', sub: leader ? `${Math.round(leader.balance)} coins` : 'Nog geen coins zichtbaar.' },
+          { k:'Jouw coins', v: String(Math.round(viewerBalance)), sub: lab.sessionToken() ? 'Op basis van je huidige spelersessie.' : 'Log in om je eigen coinstand mee te tonen.' },
+          { k:'Top 5 samen', v: String(Math.round(total)), sub:'Totale coinmassa in de huidige publieke top 5.' },
+          { k:'Spreiding', v: String(Math.round(spread)), sub:'Verschil tussen #1 en de laatste zichtbare plek.' },
+          { k:'Gemiddelde', v: top5.length ? lab.fmt(total / top5.length, 1) : '0', sub:'Gemiddelde coinstand in de huidige top 5.' },
+          { k:'Leider aandeel', v: total ? `${Math.round((leader ? leader.balance : 0) / total * 100)}%` : '0%', sub:'Hoeveel van de zichtbare top-5 coins bij de leider zit.' }
+        ]);
+        $('ladderWrap').innerHTML = lab.renderLeaderboard(top5, {
+          game:'',
+          rightText:(row)=>`${Math.round(row.balance || 0)} ₵`,
+          metaText:(row, idx)=> idx === 0 ? 'Huidige publieke koppositie.' : `Achterstand op #1: ${Math.max(0, Math.round((leader?.balance || 0) - (row.balance || 0)))} ₵`
+        });
+        $('barsWrap').innerHTML = top5.length ? lab.renderBarChart(top5.map((row)=>({ label:row.player_name, value:row.balance, sub:`${total ? Math.round((row.balance/total)*100) : 0}% van top 5` })), { label:'label', value:'value', sub:'sub', formatValue:(value)=>`${Math.round(value)} ₵` }) : '<div class="lab-empty">Nog geen coinverdeling beschikbaar.</div>';
+        $('shareWrap').innerHTML = top5.length ? lab.renderStats(top5.map((row, idx)=>({ k:`#${idx+1} aandeel`, v:`${total ? Math.round((row.balance/total)*100) : 0}%`, sub:row.player_name })).slice(0, 5)) : '<div class="lab-empty">Nog geen aandeeldata.</div>';
+      }
+      load().catch((err)=>{
+        $('meta').textContent = err.message || 'Laden mislukt.';
+        ['statsWrap','ladderWrap','barsWrap','shareWrap'].forEach((id)=>{ $(id).innerHTML = `<div class="lab-empty">${lab.esc(err.message || 'Laden mislukt.')}</div>`; });
+      });
+    })();
+  </script>
+</body>
+</html>

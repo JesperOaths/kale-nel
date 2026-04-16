@@ -1,1 +1,163 @@
-<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>Paardenrace stats</title><script>window.GEJAST_PAGE_VERSION='v489';</script><script src="./gejast-config.js?v489"></script><script src="./gejast-paardenrace.js?v489"></script><style>:root{--line:rgba(0,0,0,.08);--paper:#fffaf3;--bg:#f3ede4;--muted:#6d6256;--gold:#9a8241}*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:#17130f}.page{max-width:1180px;margin:0 auto;padding:22px 16px 40px}.panel{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:18px;margin-top:14px}.btn,a.btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:16px;border:1px solid var(--line);background:#111;color:#fff;text-decoration:none;font-weight:800;cursor:pointer}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{padding:16px;border:1px solid var(--line);border-radius:18px;background:#fff}.muted{color:var(--muted)}.list{display:grid;gap:10px}.row{padding:12px;border-radius:16px;background:#fff;border:1px solid var(--line)}@media(max-width:860px){.grid{grid-template-columns:1fr 1fr}}@media(max-width:560px){.grid{grid-template-columns:1fr}.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}} .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}</style></head><body><div class="page"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><div class="muted">Publieke samenvatting</div><h1 style="margin:8px 0 0;font-size:clamp(2rem,4vw,3rem);letter-spacing:-.05em">Paardenrace stats</h1></div><a class="btn" href="./paardenrace.html">Terug naar lobby</a></div><section class="panel"><div id="statsBox" class="grid"></div></section><section class="panel"><h2 style="margin-top:0">Leuker dan alleen totalen</h2><div id="funBox" class="grid"></div></section><section class="panel"><h2 style="margin-top:0">Recente races</h2><div id="recentBox" class="list"></div></section></div><div class="site-credit-watermark" data-version-watermark></div><script>(()=>{const api=window.GEJAST_PAARDENRACE; function card(label,value,meta=''){return `<div class="card"><div class="muted">${label}</div><div style="font-size:2rem;font-weight:900;margin-top:8px">${value}</div>${meta?`<div class="muted" style="margin-top:6px">${meta}</div>`:''}</div>`;} async function load(){ const data=await api.rpc('get_paardenrace_stats_public',{}); const o=data?.overview||{}; const rows=Array.isArray(data?.recent_matches)?data.recent_matches:[]; const winners=rows.map(r=>r.winner_suit).filter(Boolean); const counts={}; winners.forEach(w=>counts[w]=(counts[w]||0)+1); const favorite=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0]; const avgPlayers=rows.length? (rows.reduce((s,r)=>s+((r.player_names||[]).length),0)/rows.length).toFixed(1):'0'; const uniquePlayers=new Set(rows.flatMap(r=>r.player_names||[])).size; document.getElementById('statsBox').innerHTML=[ card('Races',o.matches_played||rows.length||0), card('Totaal Bakken',o.total_bakken||0), card('Laatste winnaar',o.last_winner_suit?api.suitLabel(o.last_winner_suit):'—'), card('Unieke spelers',uniquePlayers) ].join(''); document.getElementById('funBox').innerHTML=[ card('Gem. spelers per race',avgPlayers), card('Populairste winnaar',favorite?api.suitLabel(favorite[0]):'—', favorite?`${favorite[1]} keer gewonnen`:''), card('Comeback potentie', rows.filter(r=>r.comeback_win||r.comeback).length, 'Onderhonden die alsnog wonnen'), card('Claimed finishes', rows.filter(r=>r.winner_suit).length, 'Races met echte winnaar') ].join(''); document.getElementById('recentBox').innerHTML=rows.map(r=>`<div class="row"><strong>${r.room_code||'Room'}</strong><div class="muted">Winnaar: ${r.winner_suit?api.suitLabel(r.winner_suit):'—'} · ${(r.player_names||[]).length} spelers</div><div class="muted">Spelers: ${(r.player_names||[]).join(', ')||'—'}</div></div>`).join('')||'<div class="muted">Nog geen afgeronde paardenraces.</div>'; } load().catch(err=>{document.getElementById('recentBox').innerHTML=`<div class="muted">${err.message||'Stats konden niet laden.'}</div>`;});})();</script></body></html>
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Paardenrace ladder</title>
+  <script>window.GEJAST_PAGE_VERSION='v491';</script>
+  <script src="./gejast-config.js?v491"></script>
+  <script src="./gejast-paardenrace.js?v491"></script>
+  <script src="./gejast-ladder-lab.js?v491"></script>
+  <style>
+    :root{--line:rgba(0,0,0,.08);--paper:#fffaf3;--bg:#f3ede4;--muted:#6d6256;--gold:#9a8241}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:#17130f}
+    .page{max-width:1220px;margin:0 auto;padding:22px 16px 40px}
+    .shell{background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.84);border-radius:28px;padding:20px;box-shadow:0 18px 40px rgba(0,0,0,.06)}
+    .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+    .btn,a.btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:16px;border:1px solid var(--line);background:#111;color:#fff;text-decoration:none;font-weight:800;cursor:pointer}
+    .btn.alt{background:#fff;color:#17130f}
+    .panel{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:18px;margin-top:16px}
+    .panel h2{margin:0 0 10px}
+    .muted{color:var(--muted)}
+    .panel-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px}
+    .accent{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(154,130,65,.14);color:#5f4d1b;font-weight:800;font-size:12px}
+    .recent-grid{display:grid;gap:10px}
+    .recent-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="shell">
+      <div class="top">
+        <div>
+          <div class="muted">Ladder · suits · verplichtingen</div>
+          <h1 style="margin:8px 0 0;font-size:clamp(2rem,4vw,3rem);letter-spacing:-.05em">Paardenrace ladder</h1>
+          <div id="meta" class="muted" style="margin-top:10px">Laden…</div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn alt" href="./paardenrace.html">Terug naar lobby</a>
+          <a class="btn" href="./index.html">Home</a>
+        </div>
+      </div>
+
+      <section class="panel">
+        <div class="panel-head"><div><h2>Overzicht</h2><div class="muted">Niet alleen wie won, maar ook waar de bakken en de suits heen bewegen.</div></div><div class="accent" id="summaryAccent">Publiek</div></div>
+        <div id="statsWrap"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><div><h2>Ladder</h2><div class="muted">De algemene ladderlaag voor paardenrace, aangevuld met suit- en obligation-inzichten.</div></div></div>
+        <div id="ladderWrap"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><div><h2>Welke suits winnen?</h2><div class="muted">De winverdeling over de meest recente races.</div></div></div>
+        <div class="lab-two">
+          <div id="suitWrap"></div>
+          <div id="playerWrap"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><div><h2>Race-tempo</h2><div class="muted">Hoeveel bakken worden er per race verdeeld en hoe verandert dat door de tijd?</div></div></div>
+        <div id="timelineWrap"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><div><h2>Recente races</h2><div class="muted">Laatste rooms, winnaarssuits en opvallende spelersdruk.</div></div></div>
+        <div id="recentWrap" class="recent-grid"></div>
+      </section>
+    </div>
+  </div>
+  <div class="site-credit-watermark" data-version-watermark></div>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <script>
+    (()=>{
+      const api = window.GEJAST_PAARDENRACE;
+      const lab = window.GEJAST_LADDER_LAB;
+      document.head.insertAdjacentHTML('beforeend', `<style>${lab.styleBlock()}</style>`);
+      const $ = (id)=>document.getElementById(id);
+
+      function normalizePlayerRows(row){
+        const source = Array.isArray(row?.player_names) ? row.player_names : [];
+        return source.map((entry)=>{
+          if (typeof entry === 'string') return { player_name: entry };
+          return entry || {};
+        });
+      }
+
+      async function load(){
+        const [statsRaw, ladderRaw] = await Promise.all([
+          api.rpc('get_paardenrace_stats_public', {}).catch(()=>({})),
+          lab.rpc('get_public_ladder_page_scoped', { game_key:'paardenrace', site_scope_input:lab.scope() }).catch(()=>({}))
+        ]);
+        const ladderData = lab.normalizeLadderPayload(ladderRaw);
+        const ladder = ladderData.ladder || [];
+        const overview = statsRaw?.overview || {};
+        const recent = Array.isArray(statsRaw?.recent_matches) ? statsRaw.recent_matches : [];
+        const playerRows = recent.flatMap(normalizePlayerRows);
+        const uniquePlayers = lab.dedupeNames(playerRows.map((row)=>row.player_name || row.display_name || '')).length;
+        const suitCounts = recent.reduce((map, row)=>{ const key = String(row?.winner_suit || '').trim(); if (key) map[key] = (map[key] || 0) + 1; return map; }, {});
+        const suitBars = Object.entries(suitCounts).map(([suit, count])=>({ label: api.suitLabel(suit), value: count, sub:`${count} recente zeges` })).sort((a,b)=>b.value-a.value);
+        const playerBakken = {};
+        const playerAppearances = {};
+        let biggestWager = 0;
+        playerRows.forEach((row)=>{
+          const name = String(row.player_name || row.display_name || '').trim();
+          if (!name) return;
+          playerAppearances[name] = (playerAppearances[name] || 0) + 1;
+          playerBakken[name] = (playerBakken[name] || 0) + Number(row.total_bakken_owed || 0);
+          biggestWager = Math.max(biggestWager, Number(row.wager_bakken || 0));
+        });
+        const playerBars = Object.entries(playerBakken).map(([label, value])=>({ label, value, sub:`${playerAppearances[label] || 0} recente races` })).sort((a,b)=>b.value-a.value).slice(0, 8);
+        const avgPlayers = recent.length ? playerRows.length / recent.length : 0;
+        const topSuit = suitBars[0] || null;
+        const topLadder = ladder[0] ? lab.playerName(ladder[0]) : '—';
+        const totalBakken = Number(overview.total_bakken || 0);
+        $('meta').textContent = `Recente sample: ${recent.length} races · zichtbare spelers: ${uniquePlayers}`;
+        $('summaryAccent').textContent = `Recente races: ${recent.length}`;
+        $('statsWrap').innerHTML = lab.renderStats([
+          { k:'Races', v:String(overview.matches_played || recent.length || 0), sub:'Afgeronde paardenraces in de publieke samenvatting.' },
+          { k:'Totaal bakken', v:String(totalBakken), sub:'Opgetelde obligations uit de paardenracegeschiedenis.' },
+          { k:'Unieke spelers', v:String(uniquePlayers), sub:'Verschillende namen in de recente race-sample.' },
+          { k:'Ladderleider', v:topLadder, sub:'Hoogste zichtbare ELO in paardenrace.' },
+          { k:'Gem. spelers / race', v:lab.fmt(avgPlayers, 1), sub:'Hoe vol de racevelden gemiddeld zijn.' },
+          { k:'Top suit', v:topSuit ? topSuit.label : '—', sub: topSuit ? `${topSuit.value} recente zeges` : 'Nog geen suit-zeges.' },
+          { k:'Grootste inzet', v:String(Math.round(biggestWager || 0)), sub:'Hoogste ingezette bak-waarde in de recente sample.' },
+          { k:'Laatste winnaar', v:overview.last_winner_suit ? api.suitLabel(overview.last_winner_suit) : '—', sub:'De meest recent afgeronde winnaarssuit.' }
+        ]);
+
+        $('ladderWrap').innerHTML = lab.renderLeaderboard(ladder, {
+          game:'paardenrace',
+          rightText:(row)=>`${Math.round(Number(row.elo_rating || row.rating || 0))} ELO`,
+          metaText:(row)=>`${Math.round(Number(row.games_played || row.matches_played || 0))} races · ${Math.round((Number(row.win_pct || 0) > 1 ? Number(row.win_pct || 0) : Number(row.win_pct || 0) * 100))}% winrate`
+        });
+        $('suitWrap').innerHTML = suitBars.length ? lab.renderBarChart(suitBars, { label:'label', value:'value', sub:'sub', formatValue:(value)=>`${Math.round(value)} zeges` }) : '<div class="lab-empty">Nog geen winnaarssuits in de recente sample.</div>';
+        $('playerWrap').innerHTML = playerBars.length ? lab.renderBarChart(playerBars, { label:'label', value:'value', sub:'sub', formatValue:(value)=>`${Math.round(value)} bakken` }) : '<div class="lab-empty">Nog geen player-pressure data zichtbaar.</div>';
+
+        const timeline = recent.slice().reverse().map((row, idx)=>({
+          x: row.finished_at || row.created_at || idx,
+          y: normalizePlayerRows(row).reduce((sum, entry)=>sum + Number(entry.total_bakken_owed || 0), 0)
+        }));
+        $('timelineWrap').innerHTML = timeline.length ? lab.renderLineChart([{ name:'Bakken per race', points:timeline }], { labelForIndex:(idx)=> timeline[idx] ? lab.dateLabel(timeline[idx].x) : `${idx+1}` }) : '<div class="lab-empty">Nog geen tijdlijn voor paardenrace.</div>';
+
+        $('recentWrap').innerHTML = recent.length ? recent.slice(0, 12).map((row)=>{
+          const players = normalizePlayerRows(row);
+          const names = players.map((entry)=>entry.player_name || entry.display_name || '').filter(Boolean);
+          const total = players.reduce((sum, entry)=>sum + Number(entry.total_bakken_owed || 0), 0);
+          return `<article class="recent-card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><strong>${lab.esc(row.room_code || 'Room')}</strong><span class="muted">${lab.dateTimeLabel(row.finished_at)}</span></div><div class="muted" style="margin-top:6px">Winnaar: ${lab.esc(row.winner_suit ? api.suitLabel(row.winner_suit) : '—')}</div><div class="muted" style="margin-top:4px">Spelers: ${lab.esc(names.join(', ') || '—')}</div><div class="lab-chip-row" style="margin-top:8px"><span class="lab-chip">${players.length} spelers</span><span class="lab-chip">${Math.round(total)} bakken totaal</span></div></article>`;
+        }).join('') : '<div class="lab-empty">Nog geen afgeronde paardenraces.</div>';
+      }
+
+      load().catch((err)=>{
+        $('meta').textContent = err.message || 'Stats konden niet laden.';
+        ['statsWrap','ladderWrap','suitWrap','playerWrap','timelineWrap','recentWrap'].forEach((id)=>{ $(id).innerHTML = `<div class="lab-empty">${lab.esc(err.message || 'Laden mislukt.')}</div>`; });
+      });
+    })();
+  </script>
+</body>
+</html>
