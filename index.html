@@ -777,7 +777,7 @@
         <div class="public-links-grid">
           <a class="page-link-card login-link" href="./beurs.html">
             <div class="page-link-label">Beurs d'Espinoza</div>
-            <div class="page-link-copy">Caute coins, marktstatus en vervolglaag.</div>
+            <div class="page-link-copy">Conceptpagina — route staat nu klaar.</div>
           </a>
           <a class="page-link-card login-link" href="./profiles.html">
             <div class="page-link-label">Spelers</div>
@@ -894,7 +894,7 @@
     let currentHomepageState = null;
     const CURRENT_SCOPE = (window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope()) || 'friends';
     function scopedHref(base){ try{ const u=new URL(base, location.href); if(CURRENT_SCOPE==='family') u.searchParams.set('scope','family'); return u.pathname.split('/').pop()+u.search; }catch(_){ return base; } }
-    function homepageLadderRoute(game){ const special={ 'paardenrace':'./paardenrace_stats.html', 'pikken':'./pikken_stats.html', 'caute-coins':'./caute_coins_ladder.html' }; return scopedHref(special[game] || `./ladder.html?game=${encodeURIComponent(game)}`); }
+    function homepageLadderRoute(game){ return scopedHref(`./ladder.html?game=${encodeURIComponent(game)}`); }
     function applyScopeChrome(){
       document.body.classList.toggle('friends-scope', CURRENT_SCOPE!=='family');
       if(CURRENT_SCOPE!=='family') return;
@@ -1864,10 +1864,10 @@ async function castExtraPollVote(desired_status) {
 
   <div class="site-credit-watermark" data-version-watermark></div>
 
-<script src="./gejast-player-session-ui.js?v487"></script>
+<script src="./gejast-player-session-ui.js?v491"></script>
 
 
 <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script><script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v389"></script><script src="./gejast-geo.js?v487"></script><script src="./site-analytics.js?v389"></script>
+<script src="./drinks-verify-float.js?v389"></script><script src="./gejast-geo.js?v491"></script><script src="./site-analytics.js?v389"></script>
 </body>
 </html>

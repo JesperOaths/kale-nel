@@ -25,13 +25,15 @@
     dialog{border:none;border-radius:24px;padding:0;max-width:760px;width:min(92vw,760px);background:#fffaf3;box-shadow:0 22px 60px rgba(0,0,0,.25)} dialog::backdrop{background:rgba(0,0,0,.35)}
     .modal-card{padding:20px 22px}.modal-top{display:flex;justify-content:space-between;gap:10px;align-items:center}.room-list-heading{margin-top:16px}
     @media(max-width:980px){.layout{grid-template-columns:1fr}}
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
+    @media(max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
   </style>
 </head>
 <body>
 <div class="page"><div class="shell">
   <div class="top">
     <div><div class="small">Live multiplayer</div><h1 class="title">Paardenrace</h1><div class="small">De lobby is alleen voor rooms, wagers, verify en ready. Zodra de race start, gaat iedereen vanzelf naar het live racetrack-scherm van die specifieke room.</div></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn secondary" href="./home.html">Home</a><a class="btn secondary" href="./paardenrace_stats.html">Ladder & stats</a><button class="btn soft" id="rulesBtn" type="button">Regels</button><a class="btn secondary" id="openLiveLink" href="./paardenrace_live.html">Live scherm</a></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn secondary" href="./home.html">Home</a><button class="btn soft" id="rulesBtn" type="button">Regels</button><a class="btn secondary" id="openLiveLink" href="./paardenrace_live.html">Live scherm</a></div>
   </div>
   <div class="layout">
     <section class="panel">
@@ -68,7 +70,8 @@
   </div>
 </div></div>
 <dialog id="rulesDialog"><div class="modal-card"><div class="modal-top"><h2 style="margin:0">Paardenrace regels</h2><button class="btn secondary" id="closeRulesBtn" type="button">Sluiten</button></div><ol class="rules-list"><li>Iedereen kiest één suit/paard en zet één vaste inzet in Bakken.</li><li>De host verifieert de inzet in de lobby. Pas daarna kan een speler op ready drukken.</li><li>Als iedereen ready is, start de host de race en gaat iedereen automatisch naar het live racetrack-scherm van die room.</li><li>Elke getrokken kaart zet het bijbehorende paard één vak vooruit.</li><li>Als alle vier paarden langs een gate zijn, draait die gate open en duwt één suit terug.</li><li>De eerste crossing telt pas als minstens één speler op dat paard heeft ingezet.</li><li>Winnaars verdelen daarna extra Bakken over andere spelers.</li></ol></div></dialog>
-<div class="site-credit-watermark" data-version-watermark>v491 · Made by Bruis</div>
+<script src="./gejast-player-session-ui.js?v491"></script>
+<div class="site-credit-watermark" data-version-watermark></div>
 <script>
 (()=>{
  const api=window.GEJAST_PAARDENRACE; const $=(id)=>document.getElementById(id); let latestState=null; let pollHandle=null; let polling=false; let roomCodeDirty=false; let roomCodeTouchedAt=0; let createBusy=false;

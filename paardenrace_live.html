@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace live</title>
-  <script>window.GEJAST_PAGE_VERSION='v489';</script>
-  <script src="./gejast-config.js?v489"></script>
-  <script src="./gejast-paardenrace.js?v489"></script>
+  <script>window.GEJAST_PAGE_VERSION='v491';</script>
+  <script src="./gejast-config.js?v491"></script>
+  <script src="./gejast-paardenrace.js?v491"></script>
   <style>
     :root {
       --gold: #9a8241;
@@ -476,7 +476,7 @@
   let victoryActive = false;
   let pendingGateQueue = [];
   let statePollTimer = null;
-  const PANIC_KEY = 'gejast_paardenrace_emergency_brake_v489';
+  const PANIC_KEY = 'gejast_paardenrace_emergency_brake_v491';
   function panicStorageKey(){ return `${PANIC_KEY}:${qRoom() || 'global'}`; }
   function isPanicActive(){ try{ return localStorage.getItem(panicStorageKey()) === '1'; }catch(_){ return false; } }
   function setPanicActive(active){ try{ if(active) localStorage.setItem(panicStorageKey(),'1'); else localStorage.removeItem(panicStorageKey()); }catch(_){ } syncPanicUi(); }

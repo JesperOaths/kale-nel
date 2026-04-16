@@ -6,154 +6,68 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pikken ladder</title>
+  <title>Pikken stats</title>
   <script>window.GEJAST_PAGE_VERSION='v491';</script>
   <script src="./gejast-config.js?v491"></script>
   <script src="./gejast-home-gate.js?v491"></script>
   <script src="./gejast-scope-context.js?v491"></script>
-  <script src="./gejast-ladder-lab.js?v491"></script>
   <style>
     :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--shadow:0 18px 44px rgba(0,0,0,.08)}
     *{box-sizing:border-box}
     body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
-    .wrap{max-width:1180px;margin:0 auto}
+    .wrap{max-width:980px;margin:0 auto}
     .card{background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.7);border-radius:28px;padding:22px;box-shadow:var(--shadow)}
-    .top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:16px}
+    .stat{background:#fff;border:1px solid var(--line);border-radius:22px;padding:16px}
+    .k{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:900}
+    .v{font-size:28px;font-weight:900;margin-top:6px}
     .muted{color:var(--muted)}
     .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer}
-    .btn.alt{background:#fff;color:#111;border:1px solid rgba(0,0,0,.08)}
-    .stack{display:grid;gap:16px;margin-top:18px}
-    .panel{background:rgba(255,255,255,.58);border:1px solid var(--line);border-radius:24px;padding:18px}
-    .panel h2{margin:0 0 10px}
-    .panel-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px}
-    .accent{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:rgba(154,130,65,.14);color:#5f4d1b;font-weight:800;font-size:12px}
-    .recent-grid{display:grid;gap:10px}
-    .recent-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px}
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <div class="top">
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
         <div>
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px"><img src="./assets/pikken/pikken-icon.svg" alt="Pikken" style="width:48px;height:48px;border-radius:14px;background:#fff;padding:8px;border:1px solid rgba(0,0,0,.08)"><div><div class="muted">Ladder · vorm · biedgevoel</div><h1 style="margin:0;font-size:clamp(2rem,4vw,3rem)">Pikken ladder</h1></div></div>
+          <a class="btn" id="backToPikkenBtn" href="./pikken.html">Terug</a>
+          <div style="display:flex;align-items:center;gap:12px;margin:14px 0 6px"><img src="./assets/pikken/pikken-icon.svg" alt="Pikken" style="width:48px;height:48px;border-radius:14px;background:#fff;padding:8px;border:1px solid rgba(0,0,0,.08)"><h1 style="margin:0">Pikken stats</h1></div>
           <div id="meta" class="muted">Laden…</div>
         </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <a class="btn alt" href="./pikken.html">Terug naar lobby</a>
-          <a class="btn" href="./index.html">Home</a>
-        </div>
+        <a class="btn" id="statsHomeBtn" href="./index.html">Home</a>
       </div>
 
-      <div class="stack">
-        <section class="panel">
-          <div class="panel-head"><div><h2>Momentopname</h2><div class="muted">Wie voert aan, hoe scherp zijn reject-calls en hoe vaak gaan biedingen meteen naar pik.</div></div><div class="accent" id="summaryAccent">Scope</div></div>
-          <div id="statsWrap"></div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head"><div><h2>Ladder</h2><div class="muted">ELO, winstpercentage en activiteit in één rij.</div></div></div>
-          <div id="ladderWrap"></div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head"><div><h2>ELO-ontwikkeling</h2><div class="muted">De eerste zes spelers in de ladder worden standaard in de grafiek gezet.</div></div></div>
-          <div id="eloWrap"></div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head"><div><h2>Pikken-leeswerk</h2><div class="muted">Geen kale totalen, maar spel-specifieke signalen voor bluffen, rejecten en risicovol bieden.</div></div></div>
-          <div class="lab-two">
-            <div id="ratesWrap"></div>
-            <div id="insightsWrap"></div>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head"><div><h2>Recente potjes</h2><div class="muted">De laatste afwikkelingen uit de algemene ladderlaag, zolang de backend ze al publiceert.</div></div></div>
-          <div id="recentWrap" class="recent-grid"></div>
-        </section>
-      </div>
+      <div id="grid" class="grid"></div>
     </div>
   </div>
-  <div class="site-credit-watermark" data-version-watermark></div>
-  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+
   <script>
     (()=>{
-      const lab = window.GEJAST_LADDER_LAB;
-      const scope = lab.scope();
-      document.head.insertAdjacentHTML('beforeend', `<style>${lab.styleBlock()}</style>`);
-      const $ = (id)=>document.getElementById(id);
-
-      function asCards(summary, extraCards){
-        const cards = [];
-        cards.push({ k:'Spelers', v:String(extraCards.players || 0), sub:'Bekende spelers in de publieke pikkenladder.' });
-        cards.push({ k:'Leider', v: extraCards.leader || '—', sub: extraCards.leader ? 'Hoogste ELO op dit moment.' : 'Nog geen ladderleider.' });
-        cards.push({ k:'Gem. win%', v: `${Math.round(extraCards.avgWinPct || 0)}%`, sub:'Gemiddelde winrate over alle zichtbare ladderspelers.' });
-        if (summary.bluff_callout_rate != null) cards.push({ k:'Bluff call-out', v: `${Math.round(Number(summary.bluff_callout_rate) * 100)}%`, sub:'Hoe vaak een gewaagde leugen op tijd wordt doorzien.' });
-        if (summary.correct_reject_rate != null) cards.push({ k:'Correct reject', v: `${Math.round(Number(summary.correct_reject_rate) * 100)}%`, sub:'Hoe vaak afkeuren uiteindelijk terecht bleek.' });
-        if (summary.pik_bid_rate != null) cards.push({ k:'Pik-bod aandeel', v: `${Math.round(Number(summary.pik_bid_rate) * 100)}%`, sub:'Aandeel van alle biedingen dat direct op pik gaat.' });
-        return cards.slice(0, 8);
-      }
-
-      function recentMatchRows(matches){
-        return (Array.isArray(matches) ? matches : []).slice(0, 10).map((match)=>{
-          const winners = Array.isArray(match.winner_names) ? match.winner_names.join(', ') : (match.winner_name || '—');
-          const participants = Array.isArray(match.participants) ? match.participants.join(', ') : '—';
-          return `<article class="recent-card"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><strong>${lab.esc(winners)}</strong><span class="muted">${lab.dateTimeLabel(match.finished_at || match.created_at)}</span></div><div class="muted" style="margin-top:6px">Deelnemers: ${lab.esc(participants)}</div>${match.scoreline ? `<div class="muted" style="margin-top:4px">Score: ${lab.esc(match.scoreline)}</div>` : ''}${match.recap_text ? `<div class="muted" style="margin-top:6px">${lab.esc(match.recap_text)}</div>` : ''}</article>`;
-        });
-      }
-
+      const cfg=window.GEJAST_CONFIG||{};
+      const scope=(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope&&window.GEJAST_SCOPE_UTILS.getScope())||((new URLSearchParams(location.search).get('scope')||'friends')==='family'?'family':'friends');
+      const scopedHref=(path)=>`${path}?scope=${encodeURIComponent(scope)}`;
+      document.getElementById('backToPikkenBtn').href = scopedHref('./pikken.html');
+      document.getElementById('statsHomeBtn').href = scopedHref('./index.html');
+      function headers(){return{apikey:cfg.SUPABASE_PUBLISHABLE_KEY||'',Authorization:`Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY||''}`,'Content-Type':'application/json',Accept:'application/json'}}
+      async function parse(res){const t=await res.text();let d=null;try{d=t?JSON.parse(t):null}catch{throw new Error(t||`HTTP ${res.status}`)}if(!res.ok)throw new Error(d?.message||d?.error||`HTTP ${res.status}`);return d}
       async function load(){
-        $('meta').textContent = `Scope: ${scope}`;
-        $('summaryAccent').textContent = `Scope: ${scope}`;
-        const [ladderRaw, statsRaw] = await Promise.all([
-          lab.rpc('get_public_ladder_page_scoped', { game_key:'pikken', site_scope_input:scope }).catch(()=>({})),
-          lab.rpc('get_pikken_stats_scoped', { site_scope_input:scope }).catch(()=>({}))
-        ]);
-        const ladderData = lab.normalizeLadderPayload(ladderRaw);
-        const summary = statsRaw?.summary || statsRaw?.totals || statsRaw?.overview || {};
-        const summaryCards = Array.isArray(statsRaw?.cards) ? statsRaw.cards : [];
-        const ladder = ladderData.ladder || [];
-        const leader = ladder[0] ? lab.playerName(ladder[0]) : '';
-        const avgWinPct = ladder.length ? ladder.reduce((sum, row)=>sum + (Number(row.win_pct || 0) > 1 ? Number(row.win_pct || 0) : Number(row.win_pct || 0) * 100), 0) / ladder.length : 0;
-
-        $('statsWrap').innerHTML = lab.renderStats(asCards(summary, { players:ladder.length, leader, avgWinPct }));
-        $('ladderWrap').innerHTML = lab.renderLeaderboard(ladder, {
-          game:'pikken',
-          rightText:(row)=>`${Math.round(Number(row.elo_rating || row.rating || 0))} ELO`,
-          metaText:(row)=>`${Math.round(Number(row.games_played || row.matches_played || 0))} gespeeld · ${Math.round((Number(row.win_pct || 0) > 1 ? Number(row.win_pct || 0) : Number(row.win_pct || 0) * 100))}% winrate`
-        });
-
-        const grouped = new Map();
-        (ladderData.history_series || []).forEach((point)=>{
-          const name = lab.playerName(point);
-          if (!grouped.has(name)) grouped.set(name, []);
-          grouped.get(name).push({ x: point.created_at, y: Number(point.rating_after || point.elo_after || point.elo_rating || 1000) });
-        });
-        const chosen = ladder.slice(0, 6).map((row)=>lab.playerName(row));
-        const chartSeries = chosen.map((name)=>({ name, points:(grouped.get(name) || []).sort((a,b)=>new Date(a.x)-new Date(b.x)) }));
-        const longest = chartSeries.reduce((best, row)=>row.points.length > best.length ? row.points : best, []);
-        $('eloWrap').innerHTML = lab.renderLineChart(chartSeries, { labelForIndex:(idx)=> longest[idx] ? lab.dateLabel(longest[idx].x) : `${idx+1}` });
-
-        const rateRows = [
-          { label:'Bluff call-out', value: Math.round(Number(summary.bluff_callout_rate || 0) * 100), sub:'Snelle doorprikkers van sterke verhalen.' },
-          { label:'Correct reject', value: Math.round(Number(summary.correct_reject_rate || 0) * 100), sub:'Afkeuren dat achteraf ook echt klopte.' },
-          { label:'Pik-bod aandeel', value: Math.round(Number(summary.pik_bid_rate || 0) * 100), sub:'Hoe graag er meteen groot wordt geopend.' }
-        ].filter((row)=>Number.isFinite(row.value) && row.value > 0);
-        $('ratesWrap').innerHTML = rateRows.length ? lab.renderBarChart(rateRows, { label:'label', value:'value', sub:'sub', formatValue:(value)=>`${Math.round(value)}%` }) : '<div class="lab-empty">Nog geen publieke pikken-ratio’s beschikbaar.</div>';
-        const insightCards = summaryCards.slice(0, 8).map((card)=>({ k:card.k || card.label, v:card.v || card.value, sub:card.sub || '' }));
-        $('insightsWrap').innerHTML = insightCards.length ? lab.renderStats(insightCards) : '<div class="lab-empty">Nog geen extra pikken-inzichten vanuit de backendlaag.</div>';
-
-        const recent = recentMatchRows(ladderData.recent_matches || []);
-        $('recentWrap').innerHTML = recent.length ? recent.join('') : '<div class="lab-empty">Nog geen recente pikken-potjes in de publieke ladderlaag.</div>';
+        const res=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/get_pikken_stats_scoped`,{method:'POST',headers:headers(),body:JSON.stringify({site_scope_input:scope})});
+        const data=await parse(res);
+        document.getElementById('meta').textContent = `Scope: ${scope}`;
+        const cards=Array.isArray(data?.cards)?data.cards:[];
+        const raw=data?.summary||data?.totals||{};
+        const extras=[];
+        if(raw.bluff_callout_rate!=null) extras.push({k:'Bluff call-out %', v:`${Math.round(Number(raw.bluff_callout_rate)*100)}%`, sub:'Hoe vaak een gewaagde leugen op tijd werd doorzien.'});
+        if(raw.correct_reject_rate!=null) extras.push({k:'Correct reject %', v:`${Math.round(Number(raw.correct_reject_rate)*100)}%`, sub:'Hoe vaak afkeuren uiteindelijk het juiste oordeel was.'});
+        if(raw.pik_bid_rate!=null) extras.push({k:'Pik bod %', v:`${Math.round(Number(raw.pik_bid_rate)*100)}%`, sub:'Aandeel van alle biedingen dat op pik ging.'});
+        const merged=[...extras,...cards];
+        document.getElementById('grid').innerHTML = merged.map(c=>`<div class="stat"><div class="k">${c.k||''}</div><div class="v">${c.v||''}</div><div class="muted">${c.sub||''}</div></div>`).join('') || '<div class="muted">Nog geen pikken-stats.</div>';
       }
-
-      load().catch((err)=>{
-        $('meta').textContent = err.message || 'Laden mislukt.';
-        ['statsWrap','ladderWrap','eloWrap','ratesWrap','insightsWrap','recentWrap'].forEach((id)=>{ $(id).innerHTML = `<div class="lab-empty">${lab.esc(err.message || 'Laden mislukt.')}</div>`; });
-      });
+      load().catch(err=>{document.getElementById('meta').textContent=err.message||'Laden mislukt.';});
     })();
   </script>
+<div class="site-credit-watermark" data-version-watermark></div>
+<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>
+

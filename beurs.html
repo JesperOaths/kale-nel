@@ -1,108 +1,71 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="nl">
 <head>
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Beurs d'Espinoza</title>
-  <script>window.GEJAST_PAGE_VERSION='v490';</script>
-  <script src="./gejast-config.js?v490"></script>
-  <script src="./gejast-player-session-ui.js?v484"></script>
+  <script>window.GEJAST_PAGE_VERSION='v491';</script>
+  <script src="./gejast-config.js?v491"></script>
+  <script src="./gejast-home-gate.js?v491"></script>
   <style>
-    :root{--ink:#17130f;--muted:#6f655a;--line:rgba(0,0,0,.1);--paper:#fffaf3;--warn:#7d121f;--gold:#9a8241;}
+    :root{--gold:#9a8241;--gold-ink:#5e4d1d;--paper:#fffaf3;--ink:#17130f;--muted:#6d6256;--line:rgba(0,0,0,.10);--bg:#f3ede4;--soft:#f7f1e7;--shadow:0 18px 40px rgba(0,0,0,.06)}
     *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:linear-gradient(180deg,rgba(243,236,223,.94),rgba(235,224,205,.92)),url('./despinoza-wall-blueyellow.png') center/cover fixed;}
-    .page{max-width:1280px;margin:0 auto;padding:24px 16px 44px}
-    .shell{background:rgba(255,255,255,.74);border:1px solid rgba(255,255,255,.82);border-radius:32px;padding:24px;box-shadow:0 20px 48px rgba(0,0,0,.08);backdrop-filter:blur(6px)}
-    .top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
-    .eyebrow{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
-    h1{margin:6px 0 10px;font-size:clamp(2.3rem,5vw,4rem);line-height:.95;letter-spacing:-.06em}
+    body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:1080px;margin:0 auto;padding:22px 16px 40px}
+    .card{background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.8);border-radius:28px;padding:20px;box-shadow:var(--shadow)}
+    .top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:16px;border:1px solid var(--line);background:#17130f;color:#fff;text-decoration:none;font-weight:800;cursor:pointer}
+    .btn.alt{background:#fff;color:#17130f}
     .muted{color:var(--muted)}
-    .actions{display:flex;gap:10px;flex-wrap:wrap}
-    .btn,.btn:link,.btn:visited{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:16px;border:1px solid var(--line);background:#17130f;color:#fff;text-decoration:none;font-weight:800}
-    .btn.secondary{background:#fff;color:#17130f}
-    .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:20px;margin-top:22px;align-items:start}
-    .panel{background:var(--paper);border:1px solid var(--line);border-radius:26px;padding:20px}
-    .panel h2{margin:0 0 12px;font-size:1.25rem}
-    .hero-copy{max-width:760px}
-    .stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:16px}
-    .stat-card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px}
-    .stat-label{font-size:12px;font-weight:800;color:#8d7b5f;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
-    .stat-value{font-size:1.8rem;font-weight:900}
-    .notice-stack{display:grid;gap:12px}
-    .notice-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px 16px}
-    .notice-card.warn{border-color:rgba(125,18,31,.22);background:linear-gradient(180deg,#fff7f3,#fff)}
-    .notice-card p{margin:8px 0 0;line-height:1.5;color:#443b31}
-    .leader-list{display:grid;gap:10px}
-    .leader-row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px 14px;border-radius:18px;background:#fff;border:1px solid var(--line)}
-    .leader-rank{width:34px;height:34px;border-radius:999px;background:#17130f;color:#fff;display:grid;place-items:center;font-weight:900}
-    .leader-coins{font-weight:900;color:#7a6533}
-    .empty{padding:14px;border-radius:18px;background:#fff;border:1px dashed rgba(0,0,0,.16);color:var(--muted)}
-    .subtools{display:grid;gap:12px}
-    .accent{color:var(--warn);font-weight:900}
-    @media (max-width: 960px){.grid{grid-template-columns:1fr}.stat-grid{grid-template-columns:1fr}}
+    .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:18px;margin-top:18px}
+    .panel{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:18px}
+    .pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:900;background:rgba(154,130,65,.12);color:var(--gold-ink);border:1px solid rgba(154,130,65,.2)}
+    ul{margin:10px 0 0;padding-left:18px;display:grid;gap:10px}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
-  <div class="page">
-    <div class="shell">
+  <div class="wrap">
+    <div class="card">
       <div class="top">
-        <div class="hero-copy">
-          <div class="eyebrow">Caute coins · Beurs d'Espinoza</div>
-          <h1>Beurs d'Espinoza</h1>
-          <div id="beursHeroStatus" class="muted">Status wordt geladen…</div>
+        <div>
+          <div class="pill">Conceptpagina</div>
+          <h1 style="margin:12px 0 8px">Beurs d'Espinoza</h1>
+          <div class="muted">Deze tegel bestond in repo-truth alleen als dode placeholder op de homepage. Er is nu tenminste een echte landingspagina, zonder te doen alsof het spel al volledig gebouwd is.</div>
         </div>
-        <div class="actions">
-          <a class="btn secondary" href="./index.html">Home</a>
-          <a class="btn secondary" href="./player.html">Mijn profiel</a>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn alt" href="./index.html">Home</a>
+          <a class="btn alt" href="./rad.html">Rad</a>
+          <a class="btn alt" href="./ballroom.html">Balzaal</a>
         </div>
       </div>
 
       <div class="grid">
         <section class="panel">
-          <h2>Wat er nu wél staat</h2>
-          <div class="stat-grid">
-            <div class="stat-card">
-              <div class="stat-label">Speler</div>
-              <div id="beursViewerName" class="stat-value">—</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Mijn caute coins</div>
-              <div id="beursViewerCoins" class="stat-value">—</div>
-            </div>
-          </div>
-          <div id="beursMarketStatus" class="notice-stack" style="margin-top:16px"></div>
+          <h2 style="margin-top:0">Huidige status</h2>
+          <p class="muted" style="margin-top:0">Er zat nog geen echte Beurs-subsystem, helper, live page of SQL-owner path in de repo. Daarom heb ik hier geen nep-game overheen geïmproviseerd. Deze pagina maakt de route wel echt, zodat de homepage niet langer naar een dood eind wijst.</p>
+          <ul>
+            <li>Homepage-tegel wijst nu naar een echte pagina in plaats van een niet-klikbare placeholder.</li>
+            <li>Versiewatermerk en gating lopen mee met de rest van de site.</li>
+            <li>Ruimte blijft vrij om later een echte owner path op te bouwen zodra er echte regels, UI en backend-contracten zijn.</li>
+          </ul>
         </section>
 
-        <section class="panel">
-          <h2>Publieke coin-ranglijst</h2>
-          <div id="beursLeaderboard" class="leader-list">
-            <div class="empty">Ranglijst wordt geladen…</div>
-          </div>
-        </section>
-      </div>
-
-      <div class="grid" style="margin-top:20px">
-        <section class="panel">
-          <h2>Correcties en verkeerde marktbiedingen</h2>
-          <div id="beursCorrectionStatus" class="subtools"></div>
-          <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
-            <button id="beursCorrectionBtn" class="btn" type="button">Waarom staat dit nog niet live als admin-fix?</button>
-          </div>
-        </section>
-
-        <section class="panel">
-          <h2>Waar de echte volgende stap zit</h2>
-          <div class="notice-card">
-            <strong>Geen nep-markt bouwen</strong>
-            <p>Deze repo had alleen een homepage-placeholder. De juiste vervolgstap is een echte owner path toevoegen: <span class="accent">beurs page → helper → marktbied-RPC → bied/opslag-SQL</span>. Pas daarna kan een foutieve bid van een specifieke gebruiker veilig worden teruggedraaid.</p>
-          </div>
-        </section>
+        <aside class="panel">
+          <h2 style="margin-top:0">Direct verder</h2>
+          <ul>
+            <li>Gebruik <strong>Rad</strong> voor drink-/chaosacties.</li>
+            <li>Gebruik <strong>Paardenrace</strong> en <strong>Pikken</strong> voor de actieve live spelsystemen.</li>
+            <li>Als je wilt dat Beurs nu echt gebouwd wordt, is de volgende stap een regels/owner-path pass zoals bij paardenrace en pikken.</li>
+          </ul>
+        </aside>
       </div>
     </div>
   </div>
   <div class="site-credit-watermark" data-version-watermark></div>
-  <script src="./gejast-beurs.js?v490"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>
