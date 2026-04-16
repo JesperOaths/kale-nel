@@ -1,11 +1,36 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
-  const STORAGE_KEY = 'gejast_pikken_lobby_code_v517';
-  const PIKKEN_PARTICIPANT_KEY = 'gejast_pikken_participant_v517';
-  const PIKKEN_LEAVE_SUPPRESS_KEY = 'gejast_pikken_leave_suppress_v540';
-  const PIKKEN_VIEWER_HINT_KEY = 'gejast_pikken_viewer_hint_v541';
-  const PIKKEN_STATE_SNAPSHOT_KEY = 'gejast_pikken_state_snapshot_v541';
+  const STORAGE_KEYS = {
+    lobby: ['gejast_pikken_lobby_code', 'gejast_pikken_lobby_code_v517'],
+    participant: ['gejast_pikken_participant', 'gejast_pikken_participant_v517'],
+    leaveSuppress: ['gejast_pikken_leave_suppress', 'gejast_pikken_leave_suppress_v540'],
+    viewerHint: ['gejast_pikken_viewer_hint', 'gejast_pikken_viewer_hint_v541', 'gejast_pikken_viewer_hint_v542'],
+    stateSnapshot: ['gejast_pikken_state_snapshot', 'gejast_pikken_state_snapshot_v541', 'gejast_pikken_state_snapshot_v542']
+  };
+
+  function storageRead(keys){
+    for (const key of (Array.isArray(keys) ? keys : [keys])){
+      try { const raw = localStorage.getItem(key); if (raw != null && raw !== '') return raw; } catch(_){ }
+    }
+    return '';
+  }
+  function storageWrite(keys, value){
+    const list = Array.isArray(keys) ? keys : [keys];
+    list.forEach((key)=>{ try { localStorage.setItem(key, value); } catch(_){ } });
+  }
+  function storageRemove(keys){
+    const list = Array.isArray(keys) ? keys : [keys];
+    list.forEach((key)=>{ try { localStorage.removeItem(key); } catch(_){ } });
+  }
+  function storageReadJson(keys){
+    const raw = storageRead(keys);
+    if (!raw) return null;
+    try { const parsed = JSON.parse(raw); return parsed && typeof parsed === 'object' ? parsed : null; } catch(_){ return null; }
+  }
+  function storageWriteJson(keys, value){
+    try { storageWrite(keys, JSON.stringify(value)); } catch(_){ }
+  }
 
   function getScope(){
     try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
@@ -87,19 +112,19 @@
     }
   }
 
-  function setParticipantToken(gameId, active, lobbyCode){ try{ if(active && gameId){ localStorage.setItem(PIKKEN_PARTICIPANT_KEY, JSON.stringify({game_id:String(gameId), lobby_code:String(lobbyCode||'').trim().toUpperCase(), at:Date.now()})); } else { localStorage.removeItem(PIKKEN_PARTICIPANT_KEY); } }catch(_){ } }
-  function getParticipantToken(){ try { const raw = localStorage.getItem(PIKKEN_PARTICIPANT_KEY) || ''; if(!raw) return null; const parsed = JSON.parse(raw); return parsed && typeof parsed === 'object' ? parsed : null; } catch(_){ return null; } }
-  function setLeaveSuppression(gameId, lobbyCode){ try { localStorage.setItem(PIKKEN_LEAVE_SUPPRESS_KEY, JSON.stringify({ game_id:String(gameId||'').trim(), lobby_code:String(lobbyCode||'').trim().toUpperCase(), at:Date.now() })); } catch(_){ } }
-  function getLeaveSuppression(){ try { const raw = localStorage.getItem(PIKKEN_LEAVE_SUPPRESS_KEY) || ''; if(!raw) return null; const parsed = JSON.parse(raw); return parsed && typeof parsed === 'object' ? parsed : null; } catch(_){ return null; } }
-  function clearLeaveSuppression(){ try { localStorage.removeItem(PIKKEN_LEAVE_SUPPRESS_KEY); } catch(_){ } }
+  function setParticipantToken(gameId, active, lobbyCode){ try{ if(active && gameId){ storageWriteJson(STORAGE_KEYS.participant, {game_id:String(gameId), lobby_code:String(lobbyCode||'').trim().toUpperCase(), at:Date.now()}); } else { storageRemove(STORAGE_KEYS.participant); } }catch(_){ } }
+  function getParticipantToken(){ return storageReadJson(STORAGE_KEYS.participant); }
+  function setLeaveSuppression(gameId, lobbyCode){ try { storageWriteJson(STORAGE_KEYS.leaveSuppress, { game_id:String(gameId||'').trim(), lobby_code:String(lobbyCode||'').trim().toUpperCase(), at:Date.now() }); } catch(_){ } }
+  function getLeaveSuppression(){ return storageReadJson(STORAGE_KEYS.leaveSuppress); }
+  function clearLeaveSuppression(){ storageRemove(STORAGE_KEYS.leaveSuppress); }
   function markerMatches(marker, gameId, lobbyCode){ const markerGameId = String(marker?.game_id || '').trim(); const markerLobbyCode = String(marker?.lobby_code || '').trim().toUpperCase(); const id = String(gameId || '').trim(); const code = String(lobbyCode || '').trim().toUpperCase(); return (!!markerGameId && !!id && markerGameId === id) || (!!markerLobbyCode && !!code && markerLobbyCode === code); }
   function isRoomLeaveSuppressed(gameId, lobbyCode){ const marker = getLeaveSuppression(); if(!marker) return false; const age = Date.now() - Number(marker.at || 0); if(age > 45000){ clearLeaveSuppression(); return false; } return markerMatches(marker, gameId, lobbyCode); }
   function clearLeaveSuppressionFor(gameId, lobbyCode){ if(markerMatches(getLeaveSuppression(), gameId, lobbyCode)) clearLeaveSuppression(); }
-  function getStoredLobbyCode(){ try { return localStorage.getItem(STORAGE_KEY) || ''; } catch(_){ return ''; } }
-  function setStoredLobbyCode(code){ try { if(code) localStorage.setItem(STORAGE_KEY, String(code).trim().toUpperCase()); } catch(_){ } }
-  function clearStoredLobbyCode(){ try { localStorage.removeItem(STORAGE_KEY); } catch(_){ } }
-  function setViewerHint(hint){ try { if(hint && hint.name){ localStorage.setItem(PIKKEN_VIEWER_HINT_KEY, JSON.stringify(Object.assign({}, hint, { at: Date.now() }))); } } catch(_){ } }
-  function getViewerHint(){ try { const raw = localStorage.getItem(PIKKEN_VIEWER_HINT_KEY) || ''; if(!raw) return null; const parsed = JSON.parse(raw); return parsed && typeof parsed === 'object' ? parsed : null; } catch(_){ return null; } }
+  function getStoredLobbyCode(){ return storageRead(STORAGE_KEYS.lobby); }
+  function setStoredLobbyCode(code){ try { if(code) storageWrite(STORAGE_KEYS.lobby, String(code).trim().toUpperCase()); } catch(_){ } }
+  function clearStoredLobbyCode(){ storageRemove(STORAGE_KEYS.lobby); }
+  function setViewerHint(hint){ try { if(hint && hint.name){ storageWriteJson(STORAGE_KEYS.viewerHint, Object.assign({}, hint, { at: Date.now() })); } } catch(_){ } }
+  function getViewerHint(){ return storageReadJson(STORAGE_KEYS.viewerHint); }
   function saveStateSnapshot(state){
     try {
       const game = state?.game || {};
@@ -107,7 +132,7 @@
       const gameId = String(game?.id || '').trim();
       const lobbyCode = String(game?.lobby_code || '').trim().toUpperCase();
       if(!gameId && !lobbyCode) return;
-      localStorage.setItem(PIKKEN_STATE_SNAPSHOT_KEY, JSON.stringify({
+      storageWriteJson(STORAGE_KEYS.stateSnapshot, {
         at: Date.now(),
         game_id: gameId,
         lobby_code: lobbyCode,
@@ -124,7 +149,7 @@
         players,
         votes: Array.isArray(state?.votes) ? state.votes : [],
         dice_totals: state?.dice_totals || {}
-      }));
+      });
     } catch(_){ }
   }
 
