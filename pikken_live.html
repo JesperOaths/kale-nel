@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="nl">
 <head>
@@ -7,118 +8,1110 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken live</title>
-  <script>window.GEJAST_PAGE_VERSION='v500';</script>
-  <script src="./gejast-config.js?v500"></script>
-  <script src="./gejast-home-gate.js?v500"></script>
-  <script src="./gejast-scope-context.js?v500"></script>
+  <script>window.GEJAST_PAGE_VERSION='v554';</script>
+  <script src="./gejast-config.js?v554"></script>
+  <script src="./gejast-home-gate.js?v554"></script>
+  <script src="./gejast-scope-context.js?v554"></script>
+  <script src="./badge-registry.js?v554"></script>
   <style>
-    :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241;--shadow:0 18px 44px rgba(0,0,0,.08)}
+    :root{
+      --felt1:#0f5a44; --felt2:#08372d; --felt3:#0d4a38; --rail:#8a5d1f; --ink:#211913; --muted:#7d705e;
+      --good:#61b389; --bad:#c6765d; --gold:#e2bb6a; --glow:0 0 28px rgba(255,208,102,.12);
+    }
     *{box-sizing:border-box}
-    body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
-    .wrap{max-width:1100px;margin:0 auto}
-    .card{background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.7);border-radius:28px;padding:22px;box-shadow:var(--shadow)}
+    body{
+      margin:0;padding:14px;font-family:Inter,system-ui,sans-serif;color:var(--ink);
+      background:
+        radial-gradient(circle at 50% 18%, rgba(255,255,255,.14), rgba(255,255,255,0) 28%),
+        radial-gradient(circle at 50% 74%, rgba(255,208,120,.06), rgba(255,208,120,0) 34%),
+        linear-gradient(rgba(236,229,219,.92),rgba(236,229,219,.95)),
+        url('./site-bg-desktop.webp') center/cover fixed;
+    }
+    .wrap{max-width:1480px;margin:0 auto}
+    .shell{
+      position:relative;background:rgba(251,246,239,.92);border:1px solid rgba(255,255,255,.72);
+      border-radius:34px;padding:18px;box-shadow:0 22px 54px rgba(0,0,0,.18);overflow:hidden;
+    }
+    .top,.table-stage{position:relative;z-index:1}
     .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
-    .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer}
-    .btn.alt{background:#fff;color:#111;border:1px solid var(--line)}
-    .muted{color:var(--muted)}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
-    .panel{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px}
-    .field{display:grid;gap:6px;margin-top:10px}
-    label{font-size:.78rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#8a7a55}
-    input,select{padding:12px 14px;border-radius:14px;border:1px solid rgba(0,0,0,.12);font:inherit}
-    .player-row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.06);margin-top:10px}
-    .player-row.dead{opacity:.55}
-    .player-row.turn{outline:2px solid rgba(154,130,65,.38)}
-    .left{min-width:0}
-    .right{display:flex;align-items:center}
-    .pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-weight:900;font-size:12px;border:1px solid rgba(0,0,0,.1)}
-    .pill.ok{background:rgba(59,130,96,.12);border-color:rgba(59,130,96,.32);color:#1f5d45}
-    .pill.bad{background:rgba(127,47,29,.10);border-color:rgba(127,47,29,.28);color:#7f2f1d}
-    .pill.wait{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.12);color:#6b6257}
-    .dice-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-    img.die{width:52px;height:52px;display:block}
-    img.die.pik{filter:saturate(1.05)}
-    .accordion{border:1px solid var(--line);border-radius:20px;background:#fff;margin-top:12px}
-    .accordion summary{list-style:none;cursor:pointer;padding:16px;font-weight:900;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-    .accordion summary::-webkit-details-marker{display:none}
-    .detail{padding:0 16px 16px}
-    .reveal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px}
-    .reveal-card{border:1px solid var(--line);border-radius:18px;background:#fbfaf6;padding:12px}
-    @media(max-width:900px){.grid{grid-template-columns:1fr}}
+    .top-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn,.soft-btn{
+      display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border-radius:999px;
+      font-weight:900;text-decoration:none;border:1px solid rgba(0,0,0,.08);cursor:pointer
+    }
+    .btn{background:#111;color:#fff}.soft-btn{background:#fff;color:#111}
+    .muted{color:var(--muted)} .error{color:#8d2d1b}
+    .table-stage{position:relative;min-height:960px;margin-top:10px}
+    .table-felt{
+      position:relative;min-height:910px;border-radius:44px;padding:18px;
+      background:
+        radial-gradient(circle at 50% 42%, rgba(255,255,255,.10), rgba(255,255,255,0) 28%),
+        radial-gradient(circle at 50% 52%, rgba(255,228,150,.05), rgba(255,228,150,0) 42%),
+        linear-gradient(180deg,var(--felt1),var(--felt2) 58%, var(--felt3));
+      border:16px solid var(--rail);
+      box-shadow:
+        inset 0 0 0 2px rgba(255,240,205,.16),
+        inset 0 18px 38px rgba(255,255,255,.03),
+        inset 0 -24px 44px rgba(0,0,0,.22),
+        0 12px 24px rgba(0,0,0,.12),
+        var(--glow);
+      overflow:hidden;
+    }
+    .table-felt::before{
+      content:"";position:absolute;inset:14px;border-radius:34px;border:2px solid rgba(255,226,163,.10);pointer-events:none;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.04), 0 0 42px rgba(255,208,102,.08);
+    }
+    .table-prop,.table-logo{position:absolute;z-index:0;pointer-events:none}
+    .cards-left,.cards-right,.pokerchips,.bottle,.revolver{opacity:.28}
+    .cards-left{left:36px;bottom:140px;width:114px;height:84px}
+    .cards-left::before,.cards-left::after,.cards-right::before,.cards-right::after{
+      content:"";position:absolute;width:58px;height:82px;border-radius:8px;background:linear-gradient(180deg,#efe5d0,#f9f4ea);
+      border:1px solid rgba(79,54,24,.22);box-shadow:0 8px 14px rgba(0,0,0,.12)
+    }
+    .cards-left::before{left:0;top:0;transform:rotate(-18deg)}
+    .cards-left::after{left:32px;top:8px;transform:rotate(11deg)}
+    .cards-right{right:38px;top:116px;width:108px;height:84px}
+    .cards-right::before{right:0;top:0;transform:rotate(16deg)}
+    .cards-right::after{right:34px;top:8px;transform:rotate(-9deg)}
+    .pokerchips{left:76px;top:110px;width:66px;height:66px}
+    .pokerchips::before,.pokerchips::after{
+      content:"";position:absolute;border-radius:50%;box-shadow:0 6px 12px rgba(0,0,0,.12)
+    }
+    .pokerchips::before{width:52px;height:52px;left:0;top:10px;background:radial-gradient(circle,#f6f0e0 0 24%, #9b1f1f 25% 46%, #f6f0e0 47% 56%, #9b1f1f 57% 100%)}
+    .pokerchips::after{width:44px;height:44px;left:24px;top:0;background:radial-gradient(circle,#f6f0e0 0 24%, #173a6b 25% 46%, #f6f0e0 47% 56%, #173a6b 57% 100%)}
+    .bottle{left:46px;bottom:250px;width:46px;height:118px;transform:rotate(-8deg)}
+    .bottle::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg, rgba(46,67,58,.22), rgba(19,33,29,.32));clip-path:polygon(38% 0,62% 0,64% 12%,70% 18%,74% 70%,68% 100%,32% 100%,26% 70%,30% 18%,36% 12%);border-radius:10px}
+    .revolver{right:82px;bottom:136px;width:116px;height:60px;transform:rotate(-14deg)}
+    .revolver::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#514941,#2e2924);clip-path:polygon(0 42%,26% 42%,35% 15%,76% 15%,86% 30%,100% 30%,100% 46%,86% 46%,76% 60%,48% 60%,42% 90%,24% 90%,24% 60%,0 60%);border-radius:8px}
+    .table-logo{
+      font-weight:1000;letter-spacing:.22em;font-size:34px;color:rgba(241,223,180,.12);
+      text-shadow:0 2px 0 rgba(0,0,0,.08);transform-origin:center center;
+    }
+    .table-logo.left{left:74px;top:260px;transform:rotate(-74deg)}
+    .table-logo.right{right:74px;top:260px;transform:rotate(74deg)}
+    .center-ui{
+      position:absolute;left:50%;top:35%;transform:translate(-50%,-50%);
+      width:min(320px,30vw);display:grid;gap:8px;z-index:2;
+    }
+    .center-card{
+      border-radius:20px;padding:10px 12px;background:rgba(255,250,242,.84);
+      border:1px solid rgba(100,72,32,.12);box-shadow:0 10px 22px rgba(0,0,0,.11), 0 0 18px rgba(255,208,102,.07);
+      backdrop-filter:blur(4px);
+    }
+    .phase-line{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+    .phase-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .phase-chip{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-weight:900;font-size:11px;border:1px solid rgba(0,0,0,.08)}
+    .phase-chip.good{background:rgba(99,181,138,.12);color:#235e45;border-color:rgba(99,181,138,.32)}
+    .phase-chip.bad{background:rgba(199,117,93,.12);color:#8d2d1b;border-color:rgba(199,117,93,.32)}
+    .phase-chip.wait{background:rgba(0,0,0,.05);color:#645949;border-color:rgba(0,0,0,.12)}
+    .phase-title{font-size:15px;font-weight:950}
+    .center-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+    .metric{
+      border-radius:14px;padding:8px 8px;background:linear-gradient(180deg, rgba(255,252,247,.95), rgba(243,233,217,.94));
+      border:1px solid rgba(93,70,31,.12);text-align:center;
+    }
+    .metric .k{font-size:9px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#8f6b2b}
+    .metric .v{margin-top:4px;font-size:16px;font-weight:900;line-height:1.05}
+    .seat-layer{position:absolute;inset:0;z-index:1}
+    .seat{
+      position:absolute;transform:translate(-50%,-50%);display:grid;justify-items:center;gap:6px;width:142px;
+      transition:left .28s ease, top .28s ease, opacity .18s ease;
+    }
+    .seat.dead{opacity:.42;filter:grayscale(1)}
+    .turn-arrow{
+      font-size:24px;color:#ffe8a9;text-shadow:0 8px 20px rgba(0,0,0,.42), 0 0 18px rgba(255,208,102,.38);opacity:0;
+      transform:translateY(6px);transition:transform .18s ease, opacity .18s ease;
+    }
+    .seat.turn .turn-arrow{opacity:1;transform:translateY(0)}
+    .bid-bubble,.vote-bubble{
+      position:relative;padding:8px 12px;border-radius:18px;background:linear-gradient(180deg, rgba(255,246,221,.98), rgba(241,223,180,.97));
+      border:1px solid rgba(120,88,31,.22);font-size:13px;font-weight:900;color:#2e2114;min-height:34px;min-width:90px;text-align:center;
+      box-shadow:0 10px 20px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.52), 0 0 18px rgba(255,208,102,.10);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .vote-bubble{min-width:50px;font-size:20px}
+    .bid-bubble::after,.vote-bubble::after{
+      content:"";position:absolute;left:50%;bottom:-7px;transform:translateX(-50%) rotate(45deg);
+      width:14px;height:14px;background:rgba(241,223,180,.97);border-right:1px solid rgba(120,88,31,.18);border-bottom:1px solid rgba(120,88,31,.18);
+    }
+    .bid-bubble.hidden,.vote-bubble.hidden{visibility:hidden}
+    .vote-bubble.approve{box-shadow:0 10px 20px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.52), 0 0 18px rgba(95,181,138,.18)}
+    .vote-bubble.reject{box-shadow:0 10px 20px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.52), 0 0 18px rgba(199,117,93,.18)}
+    .avatar-shell{
+      width:84px;height:84px;border-radius:50%;padding:4px;
+      background:linear-gradient(180deg,#f4d79d,#a67424 58%, #6e4615);
+      box-shadow:0 12px 24px rgba(0,0,0,.28), 0 0 18px rgba(255,208,102,.14);
+    }
+    .avatar{
+      width:100%;height:100%;border-radius:50%;background:#f4ecdd;display:flex;align-items:center;justify-content:center;overflow:hidden;border:3px solid rgba(255,255,255,.82);font-weight:900;font-size:26px;color:#3b2b1a
+    }
+    .avatar img{width:100%;height:100%;object-fit:cover}
+    .player-name{
+      max-width:142px;text-align:center;font-weight:900;color:#fff7e7;text-shadow:0 2px 8px rgba(0,0,0,.38);
+      background:rgba(23,18,13,.48);padding:5px 10px;border-radius:14px;font-size:12px
+    }
+    .player-nick{
+      max-width:142px;text-align:center;font-size:10px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;
+      color:#ffe1a0;background:rgba(23,18,13,.38);padding:4px 8px;border-radius:999px
+    }
+    .tagline{display:flex;flex-wrap:wrap;gap:5px;justify-content:center}
+    .tag{display:inline-flex;align-items:center;justify-content:center;padding:4px 8px;border-radius:999px;font-weight:900;font-size:10px;background:rgba(255,248,237,.92);color:#3a2a1b;border:1px solid rgba(100,73,31,.12)}
+    .tag.good{color:#1d5b42;border-color:rgba(95,181,138,.35);background:rgba(95,181,138,.12)}
+    .tag.bad{color:#8d2d1b;border-color:rgba(199,117,93,.34);background:rgba(199,117,93,.12)}
+    .self-zone{
+      position:absolute;left:50%;bottom:22px;transform:translateX(-50%);z-index:2;
+      width:min(760px,92vw);display:grid;grid-template-columns:1.16fr .84fr;gap:10px;align-items:end;
+    }
+    .self-card{
+      border-radius:20px;padding:12px;background:rgba(255,250,242,.9);
+      border:1px solid rgba(100,72,32,.12);box-shadow:0 10px 22px rgba(0,0,0,.11), 0 0 18px rgba(255,208,102,.07);backdrop-filter:blur(4px);
+    }
+    .self-head{display:flex;gap:12px;align-items:center}
+    .self-head .avatar-shell{width:88px;height:88px}
+    .hand-dice{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:8px;padding:6px 8px;border-radius:16px;background:rgba(32,24,18,.06);scrollbar-width:thin}
+    img.die{width:50px;height:50px;border-radius:11px;background:#fff;box-shadow:0 10px 20px rgba(0,0,0,.18), 0 0 0 2px rgba(28,20,14,.12); filter:contrast(1.22) saturate(1.08) brightness(.98); flex:0 0 auto}
+    .controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .field{display:grid;gap:5px}
+    .label{font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#8f6b2b}
+    select,input{width:100%;height:40px;border-radius:13px;border:1px solid rgba(0,0,0,.12);background:#fff;padding:0 10px;font:inherit}
+    .history-list{display:grid;gap:6px}
+    .history-item{
+      padding:8px 10px;border-radius:13px;background:linear-gradient(180deg, rgba(255,251,244,.95), rgba(243,233,217,.94));
+      border:1px solid rgba(93,70,31,.12);box-shadow: inset 0 1px 0 rgba(255,255,255,.45);
+    }
+    .reveal-banner{
+      position:absolute;left:50%;top:14px;transform:translateX(-50%);
+      z-index:3;padding:10px 16px;border-radius:999px;
+      background:linear-gradient(180deg, rgba(255,246,221,.98), rgba(241,223,180,.97));
+      border:1px solid rgba(120,88,31,.22);font-weight:900;color:#2e2114;
+      box-shadow:0 14px 26px rgba(0,0,0,.18), 0 0 24px rgba(255,208,102,.14);
+    }
+    .reveal-banner.flash{animation:revealPop .9s ease}
+    .seat.loss-flash .avatar-shell{animation:lossFlash 1.2s ease}
+    .seat.winner-glow .avatar-shell{box-shadow:0 12px 24px rgba(0,0,0,.28), 0 0 24px rgba(95,181,138,.28)}
+    .comeback-badge{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;background:linear-gradient(180deg,#f4d79d,#a67424);color:#22170e;font-weight:900}
+    .toast-stack{
+      position:fixed;right:16px;bottom:16px;z-index:50;display:grid;gap:8px;max-width:min(320px,92vw);
+    }
+    .toast{
+      padding:10px 12px;border-radius:14px;background:rgba(25,20,16,.92);color:#fff;box-shadow:0 12px 24px rgba(0,0,0,.22);
+      border:1px solid rgba(255,255,255,.08);animation:toastIn .24s ease;
+    }
+    .shell.compact .center-ui{width:min(290px,28vw)}
+    .shell.compact .center-card,.shell.compact .self-card{padding:10px}
+    .shell.compact .avatar-shell{width:76px;height:76px}
+    .shell.compact .self-head .avatar-shell{width:78px;height:78px}
+    .shell.compact .seat{width:130px}
+    .shell.compact img.die{width:44px;height:44px}
+    .hidden{display:none!important}.empty{color:var(--muted)}
+    @keyframes revealPop{0%{transform:translateX(-50%) scale(.88);opacity:0}40%{transform:translateX(-50%) scale(1.04);opacity:1}100%{transform:translateX(-50%) scale(1);opacity:1}}
+    @keyframes lossFlash{0%,100%{filter:none}25%{filter:drop-shadow(0 0 16px rgba(198,118,93,.7)) brightness(1.04)}50%{filter:drop-shadow(0 0 24px rgba(198,118,93,.8)) brightness(1.08)}75%{filter:drop-shadow(0 0 16px rgba(198,118,93,.7)) brightness(1.04)}}
+    @keyframes toastIn{0%{transform:translateY(8px);opacity:0}100%{transform:translateY(0);opacity:1}}
+    @media (max-width:1020px){
+      .table-stage{min-height:980px}
+      .table-felt{min-height:930px}
+      .center-ui{width:min(380px,82vw);top:30%}
+      .self-zone{grid-template-columns:1fr;bottom:14px;width:min(560px,94vw)}
+      .cards-left{left:20px;bottom:220px}
+      .revolver{right:28px;bottom:220px}
+      .table-logo{font-size:28px;opacity:.7}
+    }
+    @media (max-width:760px){
+      .wrap{max-width:100%}
+      body{padding:8px}
+      .shell{padding:12px;border-radius:24px}
+      .table-stage{min-height:1220px}
+      .table-felt{min-height:1170px;border-radius:28px;padding:14px}
+      .center-ui{position:relative;left:auto;top:auto;transform:none;width:100%;margin-top:260px}
+      .center-metrics{grid-template-columns:1fr 1fr}
+      .seat{width:108px}
+      .avatar-shell{width:68px;height:68px}
+      .player-name{font-size:11px;max-width:102px}
+      .player-nick{display:none}
+      .tagline .tag:nth-child(n+3){display:none}
+      .self-head .avatar-shell{width:72px;height:72px}
+      .controls{grid-template-columns:1fr}
+      .cards-left,.cards-right,.revolver,.bottle,.pokerchips{opacity:.16}
+      .table-logo{font-size:20px;letter-spacing:.12em;opacity:.5}
+      .self-zone{width:min(100%,98vw)}
+      .top-actions{gap:6px}
+      .btn,.soft-btn{padding:8px 10px;font-size:12px}
+    }
   </style>
 </head>
-<body data-pikken-page="live">
+<body>
   <div class="wrap">
-    <div class="card">
+    <div class="shell">
       <div class="top">
         <div>
-          <a class="btn alt" href="./index.html">Home</a>
-          <div style="display:flex;align-items:center;gap:12px;margin:14px 0 6px"><img src="./assets/pikken/pikken-icon.svg" alt="Pikken" style="width:52px;height:52px;border-radius:14px;background:#fff;padding:8px;border:1px solid rgba(0,0,0,.08)"><h1 style="margin:0">Pikken live</h1></div>
-          <div class="muted">Deelnemers spelen hier verder zodra de lobby start. Deze pagina gebruikt de echte Pikken state-reader, niet de oude spectator-samenvatting.</div>
-          <div id="pkLiveMeta" class="muted" style="margin-top:8px"></div>
-          <div id="pkStatus" class="muted" style="margin-top:8px;min-height:20px"></div>
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-          <a class="btn alt" id="pkLobbyLink" href="./pikken.html" style="display:none">Terug naar lobby</a>
-          <a class="btn alt" href="./pikken_stats.html">Stats</a>
+          <div class="top-actions" style="margin-bottom:14px">
+            <a class="btn" href="./index.html">Home</a>
+            <a id="backLobbyBtn" class="soft-btn" href="./pikken.html">Lobby</a>
+            <button id="compactToggleBtn" class="soft-btn" type="button">Compact</button>
+            <button id="leaveTableBtn" class="soft-btn" type="button">Verlaat tafel</button>
+            <button id="disbandTableBtn" class="soft-btn hidden" type="button">Hef tafel op</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin:0 0 6px">
+            <img src="./assets/pikken/pikken-icon.svg" alt="Pikken" style="width:48px;height:48px;border-radius:14px;background:#fff;padding:8px;border:1px solid rgba(0,0,0,.08)">
+            <h1 style="margin:0">Pikken live</h1>
+          </div>
+          <div id="meta" class="muted">Laden…</div>
+          <div id="statusText" class="muted" style="margin-top:6px"></div>
         </div>
       </div>
 
-      <div class="grid">
-        <section class="panel">
-          <h2 style="margin:0 0 10px">Live status</h2>
-          <div class="muted">Code: <strong id="pkLobbyCode">—</strong></div>
-          <div class="muted" style="margin-top:6px">Fase: <strong id="pkPhase">lobby</strong> · Ronde: <strong id="pkRoundNo">0</strong></div>
-          <div class="muted" style="margin-top:6px">Dobbelstenen: start <strong id="pkDiceStart">0</strong> · nu <strong id="pkDiceCurrent">0</strong> · kwijt <strong id="pkDiceLost">0</strong></div>
+      <div class="table-stage">
+        <div class="table-felt">
+          <div class="table-prop cards-left" aria-hidden="true"></div>
+          <div class="table-prop cards-right" aria-hidden="true"></div>
+          <div class="table-prop pokerchips" aria-hidden="true"></div>
+          <div class="table-prop bottle" aria-hidden="true"></div>
+          <div class="table-prop revolver" aria-hidden="true"></div>
+          <div class="table-logo left" aria-hidden="true">DESPINOZA</div>
+          <div class="table-logo right" aria-hidden="true">DESPINOZA</div>
+          <div id="revealBanner" class="reveal-banner hidden"></div>
+          <div id="seatLayer" class="seat-layer"></div>
 
-          <div style="margin-top:12px">
-            <div class="muted">Huidig bod</div>
-            <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
-              <div style="font-size:22px;font-weight:900" id="pkBidText">—</div>
-              <div class="muted" id="pkBidBy"></div>
+          <div class="center-ui">
+            <div class="center-card">
+              <div class="phase-line">
+                <div class="phase-left">
+                  <span id="phasePill" class="phase-chip wait">—</span>
+                  <div class="phase-title" id="phaseTitle">Plaats het volgende bod</div>
+                </div>
+                <div class="muted">Lobby <strong id="lobbyCode">—</strong></div>
+              </div>
+              <div class="center-metrics">
+                <div class="metric"><div class="k">Ronde</div><div class="v" id="roundNo">0</div></div>
+                <div class="metric"><div class="k">Beurt</div><div class="v" id="turnName">—</div></div>
+                <div class="metric"><div class="k">Dice in spel</div><div class="v" id="totalCurrentDice">0</div></div>
+              </div>
+            </div>
+
+            <div class="center-card">
+              <div style="display:flex;justify-content:space-between;gap:12px;align-items:start;flex-wrap:wrap">
+                <div>
+                  <div class="label">Huidig / betwist bod</div>
+                  <div style="font-size:28px;font-weight:950"><span id="currentBid">—</span></div>
+                  <div id="bidBy" class="muted"></div>
+                  <div id="contestedBidLine" class="muted" style="margin-top:6px"></div>
+                </div>
+                <div style="min-width:220px">
+                  <div class="label">Biedlijn naar dit bod</div>
+                  <div id="bidHistory" class="history-list"><div class="empty">Nog geen eerdere biedingen zichtbaar.</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="center-card hidden" id="votePanel">
+              <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
+                <div>
+                  <div style="font-weight:950;font-size:22px">Geloof je het bod?</div>
+                  <div class="muted">Iedereen stemt; daarna worden alle dobbelstenen onthuld.</div>
+                </div>
+                <div class="top-actions">
+                  <button id="voteApproveBtn" class="btn" type="button">Geloof bod</button>
+                  <button id="voteRejectBtn" class="soft-btn" type="button">Geloof niet</button>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div id="pkPlayers"></div>
-        </section>
+          <div id="resultBanner" class="center-card hidden" style="position:absolute;left:50%;top:58%;transform:translateX(-50%);width:min(340px,38vw);z-index:2"></div>
 
-        <section class="panel">
-          <h2 style="margin:0 0 10px">Jouw tafel</h2>
-          <div id="pkBidPanel" style="display:none;margin-top:12px">
-            <div class="muted" style="font-weight:900">Jouw beurt: bod plaatsen of afkeuren</div>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
-              <input id="pkBidCount" type="number" min="1" step="1" value="1" style="width:110px" />
-              <select id="pkBidFace">
-                <option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="1">pik (1)</option>
-              </select>
-              <button class="btn" id="pkPlaceBidBtn">Bied</button>
-              <button class="btn alt" id="pkRejectBtn">Afkeuren</button>
+          <div class="self-zone">
+            <div class="self-card">
+              <div class="self-head">
+                <div class="avatar-shell"><div id="selfAvatar" class="avatar">?</div></div>
+                <div>
+                  <div id="viewerMeta" class="muted">Alleen zichtbaar voor deelnemers in deze lobby.</div>
+                  <div id="selfNick" class="player-nick" style="margin-top:6px;display:inline-flex"> </div>
+                </div>
+              </div>
+              <div id="myDice" class="hand-dice" style="margin-top:12px"></div>
+            </div>
+
+            <div class="self-card hidden" id="bidPanel">
+              <div style="font-weight:950;font-size:22px;margin-bottom:8px">Bied hoger of keur af</div>
+              <div class="controls">
+                <div class="field"><label class="label" for="bidCount">Aantal</label><select id="bidCount"></select></div>
+                <div class="field"><label class="label" for="bidFace">Waarde</label><select id="bidFace"><option value="1">pik</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>
+              </div>
+              <div class="top-actions" style="margin-top:12px">
+                <button id="placeBidBtn" class="btn" type="button">Bied hoger</button>
+                <button id="rejectBidBtn" class="soft-btn" type="button">Afkeuren</button>
+              </div>
             </div>
           </div>
-
-          <div id="pkVotePanel" style="display:none;margin-top:12px">
-            <div class="muted" style="font-weight:900">Stem: bod goedgekeurd of afgekeurd?</div>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
-              <button class="btn" id="pkVoteApproveBtn">Goedgekeurd</button>
-              <button class="btn alt" id="pkVoteRejectBtn">Afgekeurd</button>
-            </div>
-          </div>
-
-          <div style="margin-top:14px">
-            <div class="muted" style="font-weight:900">Jouw dobbelstenen</div>
-            <div class="dice-row" id="pkMyDice"></div>
-          </div>
-
-          <div id="pkReveal" style="margin-top:14px"></div>
-        </section>
+        </div>
       </div>
     </div>
   </div>
+  <div id="toastStack" class="toast-stack"></div>
 
-  <script src="./pikken-dice-canvas.js?v489"></script>
-  <script src="./gejast-pikken.js?v500"></script>
+  <script>
+  (() => {
+    const cfg = window.GEJAST_CONFIG || {};
+    const UI = { gameId:'', lobbyCode:'', scope:'friends', state:null, actionBusy:false, profiles:new Map(), lastRevealRound:0, matchOutcomes:null, firstLoaded:false, unresolvedParticipantSince:0, viewerIdentity:'', lastSnapshotToastAt:0 };
+    const STORAGE_KEYS = ['gejast_pikken_lobby_code','gejast_pikken_lobby_code_v517'];
+    const PARTICIPANT_KEYS = ['gejast_pikken_participant','gejast_pikken_participant_v517'];
+    const LEAVE_KEYS = ['gejast_pikken_leave_suppress','gejast_pikken_leave_suppress_v540'];
+    const VIEWER_HINT_KEYS = ['gejast_pikken_viewer_hint','gejast_pikken_viewer_hint_v542','gejast_pikken_viewer_hint_v541'];
+    const STATE_SNAPSHOT_KEYS = ['gejast_pikken_state_snapshot','gejast_pikken_state_snapshot_v542','gejast_pikken_state_snapshot_v541'];
+
+    const qs = (s) => document.querySelector(s);
+    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    const qsParam = (name) => { try { return new URLSearchParams(window.location.search).get(name) || ''; } catch(_) { return ''; } };
+    const sessionToken = () => { try { return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; } catch(_) { return ''; } };
+    const currentScope = () => { try { return (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) || (qsParam('scope') === 'family' ? 'family' : 'friends'); } catch(_) { return 'friends'; } };
+    function scopedHref(path, params){
+      const search = new URLSearchParams();
+      Object.entries(params || {}).forEach(([key, value])=>{
+        const resolved = String(value || '').trim();
+        if (resolved) search.set(key, resolved);
+      });
+      const scope = currentScope();
+      if (scope) search.set('scope', scope);
+      const query = search.toString();
+      return query ? `${path}?${query}` : path;
+    }
+    function readStorage(keys){ try { for (const key of (Array.isArray(keys)?keys:[keys])) { const raw = localStorage.getItem(key) || ''; if (raw) return raw; } } catch(_){} return ''; }
+    function writeStorage(keys, value){ try { for (const key of (Array.isArray(keys)?keys:[keys])) localStorage.setItem(key, value); } catch(_){} }
+    function removeStorage(keys){ try { for (const key of (Array.isArray(keys)?keys:[keys])) localStorage.removeItem(key); } catch(_){} }
+    function readJsonStorage(keys){ try { const raw = readStorage(keys); if(!raw) return null; const parsed = JSON.parse(raw); return parsed && typeof parsed === 'object' ? parsed : null; } catch(_){ return null; } }
+    function setStoredLobbyCode(value){ const code = String(value || '').trim().toUpperCase(); if(!code) return; writeStorage(STORAGE_KEYS, code); }
+    function getStoredLobbyCode(){ return String(readStorage(STORAGE_KEYS) || '').trim().toUpperCase(); }
+    function clearStoredLobbyCode(){ removeStorage(STORAGE_KEYS); }
+    function setParticipantToken(gameId, active, lobbyCode){ try { const id = String(gameId||'').trim(); const code = String(lobbyCode||'').trim().toUpperCase(); if(active && (id || code)){ writeStorage(PARTICIPANT_KEYS, JSON.stringify({ game_id:id, lobby_code:code, at:Date.now() })); } else { removeStorage(PARTICIPANT_KEYS); } } catch(_){} }
+    function getParticipantToken(){ return readJsonStorage(PARTICIPANT_KEYS); }
+    function setLeaveSuppression(gameId, lobbyCode){ writeStorage(LEAVE_KEYS, JSON.stringify({ game_id:String(gameId||'').trim(), lobby_code:String(lobbyCode||'').trim().toUpperCase(), at:Date.now() })); }
+    function clearLeaveSuppression(){ removeStorage(LEAVE_KEYS); }
+    function setViewerHint(hint){ try { if(hint && hint.name){ writeStorage(VIEWER_HINT_KEYS, JSON.stringify(Object.assign({}, hint, { at: Date.now() }))); } } catch(_){} }
+    function getViewerHint(){ return readJsonStorage(VIEWER_HINT_KEYS); }
+    function getStateSnapshot(){ return readJsonStorage(STATE_SNAPSHOT_KEYS); }
+    function saveStateSnapshot(state){ try { const game = state?.game || {}; const gameId = String(game?.id || UI.gameId || '').trim(); const lobbyCode = String(game?.lobby_code || UI.lobbyCode || '').trim().toUpperCase(); if(!gameId && !lobbyCode) return; writeStorage(STATE_SNAPSHOT_KEYS, JSON.stringify({ at: Date.now(), game_id: gameId, lobby_code: lobbyCode, game: { id: gameId, lobby_code: lobbyCode, status: game?.status || '', config: game?.config || {}, state: game?.state || {}, updated_at: game?.updated_at || null, created_by_player_name: game?.created_by_player_name || '' }, players: Array.isArray(state?.players) ? state.players : [], votes: Array.isArray(state?.votes) ? state.votes : [], dice_totals: state?.dice_totals || {} })); } catch(_){} }
+    const normalizeName = (v) => String(v || '').replace(/\s+/g,' ').trim().toLowerCase();
+    const sortDice = (arr) => (Array.isArray(arr) ? arr : []).map(Number).filter(Boolean).sort((a,b)=>a-b);
+    const headers = () => ({'Content-Type':'application/json', apikey: cfg.SUPABASE_PUBLISHABLE_KEY || '', Authorization: `Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY || ''}`, Accept:'application/json'});
+    const setStatus = (t, err) => { const el = qs('#statusText'); if (!el) return; el.textContent = t || ''; el.className = err ? 'error' : 'muted'; };
+    const dieClass = (v) => Number(v) === 1 ? 'die pik' : 'die';
+    const initials = (name) => (String(name||'?').trim().slice(0,1).toUpperCase() || '?');
+
+    const PHASE = {
+      lobby:{cls:'phase-chip wait', label:'Lobby', title:'Wachten in de lobby'},
+      bidding:{cls:'phase-chip good', label:'Bieden', title:'Plaats het volgende bod'},
+      voting:{cls:'phase-chip wait', label:'Stemmen', title:'Iedereen stemt op het bod'},
+      finished:{cls:'phase-chip bad', label:'Afgerond', title:'Spel afgerond'}
+    };
+
+    async function parse(res){ const txt = await res.text(); let data = null; try { data = txt ? JSON.parse(txt) : null; } catch(_) { throw new Error(txt || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || txt || `HTTP ${res.status}`); return data; }
+    async function rpc(name, payload){ const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers: headers(), body: JSON.stringify(payload || {}) }); const data = await parse(res); return data && data[name] !== undefined ? data[name] : data; }
+    async function rpcWithTimeout(name, payload, timeoutMs){
+      const controller = new AbortController();
+      const timer = setTimeout(()=>controller.abort(), Math.max(800, Number(timeoutMs)||4500));
+      try{
+        const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers: headers(), body: JSON.stringify(payload || {}), signal: controller.signal });
+        const data = await parse(res);
+        return data && data[name] !== undefined ? data[name] : data;
+      }catch(err){
+        if(err && (err.name === 'AbortError' || /abort/i.test(String(err)))) throw new Error('timeout');
+        throw err;
+      }finally{
+        clearTimeout(timer);
+      }
+    }
+
+    async function fetchViewerIdentity(){
+      if (UI.viewerIdentity) return UI.viewerIdentity;
+      const hint = getViewerHint();
+      if (hint?.name){ UI.viewerIdentity = String(hint.name || ''); return UI.viewerIdentity; }
+      const token = sessionToken();
+      if (!token) return '';
+      const attempts = [
+        ['get_public_state', { session_token: token }],
+        ['get_gejast_homepage_state', { session_token: token }],
+        ['get_jas_app_state', { session_token: token }],
+        ['get_public_state', { session_token_input: token }],
+        ['get_gejast_homepage_state', { session_token_input: token }],
+        ['get_jas_app_state', { session_token_input: token }]
+      ];
+      for (const [name, payload] of attempts){
+        try {
+          const data = await rpcWithTimeout(name, payload, 2500);
+          const resolved = String(data?.my_name || data?.display_name || data?.player_name || data?.viewer?.display_name || '').replace(/\s+/g,' ').trim();
+          if (resolved){
+            UI.viewerIdentity = resolved;
+            setViewerHint({ name: resolved, game_id: UI.gameId || '', lobby_code: UI.lobbyCode || '' });
+            return resolved;
+          }
+        } catch(_){}
+      }
+      return '';
+    }
+
+    function matchesCurrentGame(snapshot){
+      if (!snapshot) return false;
+      const snapGameId = String(snapshot.game_id || snapshot?.game?.id || '').trim();
+      const snapLobbyCode = String(snapshot.lobby_code || snapshot?.game?.lobby_code || '').trim().toUpperCase();
+      const currentGameId = String(UI.gameId || '').trim();
+      const currentLobbyCode = String(UI.lobbyCode || '').trim().toUpperCase();
+      return (!!snapGameId && !!currentGameId && snapGameId === currentGameId) || (!!snapLobbyCode && !!currentLobbyCode && snapLobbyCode === currentLobbyCode);
+    }
+
+    function recentSnapshotState(){
+      const snapshot = getStateSnapshot();
+      if (!snapshot || !matchesCurrentGame(snapshot)) return null;
+      const age = Date.now() - Number(snapshot.at || 0);
+      if (age > 120000) return null;
+      return {
+        ok: true,
+        game: snapshot.game || {},
+        players: Array.isArray(snapshot.players) ? snapshot.players : [],
+        votes: Array.isArray(snapshot.votes) ? snapshot.votes : [],
+        dice_totals: snapshot.dice_totals || {}
+      };
+    }
+
+    function tokenMatchesCurrentLobby(token){
+      const tokenCode = String(token?.lobby_code || '').trim().toUpperCase();
+      const tokenId = String(token?.game_id || '').trim();
+      const currentCode = String(UI.lobbyCode || '').trim().toUpperCase();
+      const currentId = String(UI.gameId || '').trim();
+      return (!!tokenCode && !!currentCode && tokenCode === currentCode) || (!!tokenId && !!currentId && tokenId === currentId);
+    }
+
+    function recoverGameIdFromLocalState(){
+      const token = getParticipantToken();
+      if (tokenMatchesCurrentLobby(token) && String(token?.game_id || '').trim()) {
+        UI.gameId = String(token.game_id || '').trim();
+      }
+      const snapshot = getStateSnapshot();
+      const snapId = String(snapshot?.game_id || snapshot?.game?.id || '').trim();
+      const snapCode = String(snapshot?.lobby_code || snapshot?.game?.lobby_code || '').trim().toUpperCase();
+      if (!UI.gameId && snapId && ((!UI.lobbyCode) || (snapCode && snapCode === String(UI.lobbyCode || '').trim().toUpperCase()))) {
+        UI.gameId = snapId;
+      }
+      if (!UI.lobbyCode) {
+        const tokenCode = String(token?.lobby_code || '').trim().toUpperCase();
+        if (tokenCode) UI.lobbyCode = tokenCode;
+        else if (snapCode) UI.lobbyCode = snapCode;
+        else {
+          const stored = getStoredLobbyCode();
+          if (stored) UI.lobbyCode = stored;
+        }
+      }
+    }
+
+    async function ensureCanonicalGameId(){
+      recoverGameIdFromLocalState();
+      if (String(UI.gameId || '').trim()) return UI.gameId;
+      try {
+        const publicState = await loadPublicState();
+        const resolvedId = String(publicState?.game?.id || '').trim();
+        const resolvedCode = String(publicState?.game?.lobby_code || '').trim().toUpperCase();
+        if (resolvedId) UI.gameId = resolvedId;
+        if (resolvedCode) { UI.lobbyCode = resolvedCode; setStoredLobbyCode(resolvedCode); }
+        if (resolvedId || resolvedCode) cacheViewerFromState(publicState || {});
+      } catch(_){}
+      return String(UI.gameId || '').trim();
+    }
+
+    function inferViewerFromState(state){
+      const viewer = state?.viewer || null;
+      if (viewer && (viewer.is_host || Number(viewer.seat || 0) > 0)) return viewer;
+      const players = Array.isArray(state?.players) ? state.players : [];
+      if (!players.length) return null;
+      const hint = getViewerHint();
+      const preferredName = normalizeName(UI.viewerIdentity || hint?.name || '');
+      let match = preferredName ? players.find((p)=>normalizeName(p?.name) === preferredName) : null;
+      if (!match && hint?.seat) match = players.find((p)=>Number(p?.seat || 0) === Number(hint.seat || 0));
+      if (!match) return null;
+      const hostName = normalizeName(state?.game?.created_by_player_name || state?.game?.host_name || '');
+      return {
+        name: match.name || UI.viewerIdentity || hint?.name || '',
+        seat: Number(match.seat || 0) || null,
+        alive: match.alive !== false,
+        dice_count: Number(match.dice_count || 0) || 0,
+        is_host: !!hostName && normalizeName(match.name) === hostName,
+        inferred: true
+      };
+    }
+
+    function augmentStateWithViewer(state){
+      if (!state || typeof state !== 'object') return state;
+      const inferred = inferViewerFromState(state);
+      if (!inferred) return state;
+      return Object.assign({}, state, { viewer: Object.assign({}, state?.viewer || {}, inferred), my_hand: Array.isArray(state?.my_hand) ? state.my_hand : [] });
+    }
+
+    function cacheViewerFromState(state){
+      const viewer = state?.viewer || null;
+      const game = state?.game || {};
+      if (viewer?.name){
+        setViewerHint({ name: viewer.name, seat: Number(viewer.seat || 0) || null, is_host: !!viewer.is_host, game_id: String(game?.id || UI.gameId || '').trim(), lobby_code: String(game?.lobby_code || UI.lobbyCode || '').trim().toUpperCase() });
+      }
+      saveStateSnapshot(state);
+    }
+
+    function normalizePhase(raw){ const v = String(raw || '').trim().toLowerCase(); return ['lobby','bidding','voting','finished'].includes(v) ? v : 'bidding'; }
+    function phaseSpec(state){ const status = String(state?.status || '').toLowerCase(); const phase = status === 'finished' ? 'finished' : normalizePhase(state?.phase); return PHASE[phase] || PHASE.bidding; }
+    function bidText(bid){ const count = Number(bid?.count || bid?.bid_count || 0); const face = Number(bid?.face || bid?.bid_face || 0); if (!count || !face) return '—'; return face === 1 ? `${count} × pik` : `${count} × ${face}`; }
+    function metaText(state){ const updated = state?.game?.updated_at || Date.now(); return `Live bijgewerkt om ${new Date(updated).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`; }
+    function findNameBySeat(players, seat){ const s = Number(seat || 0); const p = (Array.isArray(players)?players:[]).find(x => Number(x?.seat||0) === s); return p?.name || '—'; }
+    function penaltyModeLabel(raw){ return String(raw || '').trim().toLowerCase() === 'right_loses' ? 'Fair (goed verliest)' : 'Normal (fout verliest)'; }
+    function buildBidCountOptions(max=24){ const sel = qs('#bidCount'); sel.innerHTML = Array.from({length:max}, (_,i) => `<option value="${i+1}">${i+1}</option>`).join(''); }
+    function bidHistoryFromState(st){ const arr = []; const raw = Array.isArray(st?.bid_history) ? st.bid_history : (Array.isArray(st?.history?.bids) ? st.history.bids : []); raw.forEach((b,idx)=>arr.push({index:idx+1,bidder_name:b.bidder_name||b.name||'',count:b.count||b.bid_count,face:b.face||b.bid_face,current:false})); if (st?.bid) arr.push({index:arr.length+1,bidder_name:st.bid.bidder_name||'',count:st.bid.count||st.bid.bid_count,face:st.bid.face||st.bid.bid_face,current:true}); return arr; }
+
+    function writeCanonicalLiveUrl(){
+      const code = String(UI.lobbyCode || '').trim().toUpperCase();
+      const id = String(UI.gameId || '').trim();
+      const next = code ? scopedHref('./pikken_live.html', { match_ref: code }) : scopedHref('./pikken_live.html', { client_match_id: id });
+      const current = `${window.location.pathname}${window.location.search}`;
+      if (next && next !== current) { try { window.history.replaceState(null, '', next); } catch(_){} }
+    }
+    function isUuid(value){
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '').trim());
+    }
+    function latestBidByPlayer(st){ const map = new Map(); for (const item of bidHistoryFromState(st)) if (item.bidder_name) map.set(normalizeName(item.bidder_name), item); return map; }
+
+function getBidRules(state){
+  const bid = state?.game?.state?.bid || null;
+  const totalDice = Number(state?.dice_totals?.current_total || 0);
+  const currentCount = Number(bid?.count || bid?.bid_count || 0);
+  const currentFace = Number(bid?.face || bid?.bid_face || 0);
+  return { totalDice, currentCount, currentFace };
+}
+function bidStrengthForPik(faceCount, faceValue){
+  const c = Number(faceCount || 0), f = Number(faceValue || 0);
+  if (!c || !f) return -1;
+  if (f === 1) return (2 * c) - 1;
+  return c;
+}
+function isHigherBid(nextCount, nextFace, rules){
+  const c = Number(nextCount || 0), f = Number(nextFace || 0);
+  if (!c || !f || c > Number(rules.totalDice || 0)) return false;
+
+  const currentCount = Number(rules.currentCount || 0);
+  const currentFace = Number(rules.currentFace || 0);
+
+  if (!currentCount || !currentFace) return true;
+
+  if (currentFace === 1 && f !== 1){
+    return c >= ((2 * currentCount) + 1);
+  }
+  if (currentFace !== 1 && f === 1){
+    return ((2 * c) - 1) > currentCount;
+  }
+  if (currentFace === 1 && f === 1){
+    return c > currentCount;
+  }
+  if (currentFace !== 1 && f !== 1){
+    if (c < currentCount) return false;
+    if (c > currentCount) return true;
+    return f > currentFace;
+  }
+  return false;
+}
+function allowedFacesForCount(selectedCount, rules){
+  const count = Number(selectedCount||0);
+  if (!count || count > Number(rules.totalDice||0)) return [];
+  return [1,2,3,4,5,6].filter((face)=>isHigherBid(count, face, rules));
+}
+function refreshBidOptionsFromState(state){
+  const countSel = qs('#bidCount');
+  const faceSel = qs('#bidFace');
+  const bidBtn = qs('#placeBidBtn');
+  if (!countSel || !faceSel || !bidBtn) return;
+  const rules = getBidRules(state || UI.state || {});
+  const maxCount = Math.max(1, Number(rules.totalDice||0));
+  const prevCount = Number(countSel.value || rules.currentCount || 1);
+  const currentCountChoices = [];
+  for (let c=1; c<=maxCount; c++) {
+    if (allowedFacesForCount(c, rules).length) currentCountChoices.push(c);
+  }
+  countSel.innerHTML = currentCountChoices.map((c)=>`<option value="${c}">${c}</option>`).join('');
+  let selectedCount = prevCount;
+  if (!currentCountChoices.includes(selectedCount)) selectedCount = currentCountChoices[0] || 1;
+  countSel.value = String(selectedCount);
+
+  let allowedFaces = allowedFacesForCount(selectedCount, rules);
+  faceSel.innerHTML = allowedFaces.map((f)=>`<option value="${f}">${f===1?'pik':f}</option>`).join('');
+  if (!allowedFaces.length){
+    bidBtn.disabled = true;
+  } else {
+    const preferred = Number(faceSel.dataset.lastValue || faceSel.value || allowedFaces[0]);
+    faceSel.value = String(allowedFaces.includes(preferred) ? preferred : allowedFaces[0]);
+  }
+  countSel.onchange = () => {
+    faceSel.dataset.lastValue = faceSel.value || '';
+    const faces = allowedFacesForCount(Number(countSel.value||0), rules);
+    faceSel.innerHTML = faces.map((f)=>`<option value="${f}">${f===1?'pik':f}</option>`).join('');
+    bidBtn.disabled = !faces.length || UI.actionBusy;
+    if (faces.length) faceSel.value = String(faces[0]);
+  };
+  faceSel.onchange = () => { faceSel.dataset.lastValue = faceSel.value || ''; };
+  bidBtn.disabled = !allowedFaces.length || UI.actionBusy;
+}
+
+async function loadMatchOutcomes(){
+      if (!UI.gameId) return null;
+      try{
+        const rows = await rpc('pikken_get_match_outcomes_public', { game_id_input: UI.gameId });
+        UI.matchOutcomes = Array.isArray(rows) ? rows : (Array.isArray(rows?.rows) ? rows.rows : []);
+      }catch(_){ UI.matchOutcomes = null; }
+      return UI.matchOutcomes;
+    }
+    async function loadMatchSummary(){
+      if (!UI.gameId) return null;
+      try{
+        const data = await rpc('pikken_get_match_summary_public', { game_id_input: UI.gameId });
+        UI.matchSummary = data || null;
+      }catch(_){ UI.matchSummary = null; }
+      return UI.matchSummary;
+    }
+    function outcomesMap(){
+      const map = new Map();
+      (Array.isArray(UI.matchOutcomes) ? UI.matchOutcomes : []).forEach((r)=>map.set(Number(r.player_id||0), r));
+      return map;
+    }
+    function renderRevealBanner(state){
+      const el = qs('#revealBanner'); if(!el) return;
+      const lr = state?.game?.state?.last_reveal || state?.game?.last_reveal || null;
+      const phase = String(state?.game?.state?.phase || state?.game?.status || '').toLowerCase();
+      if (!lr || phase === 'voting'){
+        el.classList.add('hidden');
+        el.innerHTML = '';
+        return;
+      }
+      const starterName = findNameBySeat(state?.players || [], lr.next_starter_seat);
+      const loserName = findNameBySeat(state?.players || [], lr.first_loser_seat);
+      const currentRound = Number(lr.round_no || 0);
+      const isNew = currentRound && currentRound !== UI.lastRevealRound;
+      UI.lastRevealRound = currentRound || UI.lastRevealRound;
+      el.className = 'reveal-banner' + (isNew ? ' flash' : '');
+      el.classList.remove('hidden');
+      el.innerHTML = `${lr.bid_true ? '✅ Bod gehaald' : '❌ Bod afgekeurd'} · ${Number(lr.counted_total||0)} geteld · eerste verliezer: ${esc(loserName || '—')} · volgende starter: ${esc(starterName || '—')}`;
+    }
+    function renderResultBanner(state){
+      const el = qs('#resultBanner'); if(!el) return;
+      const phase = String(state?.game?.state?.phase || state?.game?.status || '').toLowerCase();
+      if (phase !== 'finished'){
+        el.classList.add('hidden');
+        el.innerHTML = '';
+        return;
+      }
+      const rows = Array.isArray(UI.matchOutcomes) ? UI.matchOutcomes : [];
+      const summary = UI.matchSummary || {};
+      const winners = rows.filter((r)=>r.is_winner);
+      if (!winners.length){
+        el.classList.add('hidden');
+        return;
+      }
+      const winner = winners[0];
+      el.classList.remove('hidden');
+      el.innerHTML = `<div style="display:grid;gap:10px">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap">
+          <div><div class="label">Winnaar</div><div style="font-size:24px;font-weight:950">${esc(winner.player_name || '—')}</div></div>
+          ${winner.is_comeback ? '<span class="comeback-badge">Comeback</span>' : ''}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><div class="label">Laagste bieder</div><div style="font-weight:900">${esc(summary.lowest_bidder_name || '—')}${summary.lowest_bid_avg_count ? ` · ${esc(summary.lowest_bid_avg_count)}` : ''}</div></div>
+          <div><div class="label">Hoogste bieder</div><div style="font-weight:900">${esc(summary.highest_bidder_name || '—')}${summary.highest_bid_avg_count ? ` · ${esc(summary.highest_bid_avg_count)}` : ''}</div></div>
+        </div>
+      </div>`;
+    }
+
+    async function loadProfiles(){
+      try{
+        const rows = await rpc('get_all_site_players_public_scoped', { site_scope_input: UI.scope });
+        const list = Array.isArray(rows?.players) ? rows.players : (Array.isArray(rows) ? rows : []);
+        UI.profiles = new Map(list.map((r) => [normalizeName(r.player_name || r.display_name || r.public_display_name || r.chosen_username), r]));
+      }catch(_){ UI.profiles = new Map(); }
+    }
+
+    function profileForPlayer(name){
+      const row = UI.profiles.get(normalizeName(name)) || {};
+      const helper = (window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.normalizeProfileImageUrl === 'function') ? window.GEJAST_CONFIG.normalizeProfileImageUrl : (v) => String(v || '').trim();
+      const src = helper(row.profile_picture_url || row.avatar_url || row.photo_url || '');
+      let nick = row.nickname || '';
+      const badgeKey = row.best_badge || row.primary_badge_key || row.badge_key || '';
+      if (!nick && badgeKey && window.GEJAST_BADGE_REGISTRY){
+        const badge = window.GEJAST_BADGE_REGISTRY.getBadgeByKey?.(badgeKey) || window.GEJAST_BADGE_REGISTRY.getBadgeByLegacyLabel?.(badgeKey);
+        nick = badge?.nickname || '';
+      }
+      return { src, nick };
+    }
+
+    function seatPositions(count, anchorSeat, players){
+      const orderedPlayers = Array.isArray(players) ? players.slice() : [];
+      const anchor = Number(anchorSeat || 0) || (orderedPlayers.length ? Number(orderedPlayers[0]?.seat || 1) : 1);
+      orderedPlayers.sort((a,b)=>{
+        const as = Number(a?.seat||0), bs = Number(b?.seat||0);
+        const ar = ((as - anchor + 1000) % 1000);
+        const br = ((bs - anchor + 1000) % 1000);
+        return ar - br || as - bs;
+      });
+      let positions;
+      if (count <= 2) positions = [{x:50,y:84},{x:50,y:14}];
+      else if (count === 3) positions = [{x:50,y:84},{x:22,y:24},{x:78,y:24}];
+      else if (count === 4) positions = [{x:50,y:84},{x:18,y:56},{x:50,y:12},{x:82,y:56}];
+      else if (count === 5) positions = [{x:50,y:84},{x:18,y:62},{x:24,y:18},{x:76,y:18},{x:82,y:62}];
+      else if (count === 6) positions = [{x:50,y:84},{x:16,y:66},{x:16,y:28},{x:50,y:10},{x:84,y:28},{x:84,y:66}];
+      else if (count === 7) positions = [{x:50,y:84},{x:14,y:68},{x:12,y:40},{x:28,y:14},{x:72,y:14},{x:88,y:40},{x:86,y:68}];
+      else if (count === 8) positions = [{x:50,y:84},{x:16,y:70},{x:10,y:50},{x:18,y:20},{x:50,y:8},{x:82,y:20},{x:90,y:50},{x:84,y:70}];
+      else if (count === 9) positions = [{x:50,y:84},{x:18,y:72},{x:9,y:54},{x:12,y:28},{x:28,y:10},{x:50,y:6},{x:72,y:10},{x:88,y:28},{x:91,y:54}];
+      else if (count === 10) positions = [{x:50,y:84},{x:22,y:74},{x:10,y:60},{x:8,y:36},{x:20,y:14},{x:50,y:6},{x:80,y:14},{x:92,y:36},{x:90,y:60},{x:78,y:74}];
+      else {
+        positions = [];
+        const rx = count <= 12 ? 42 : 44;
+        const ry = count <= 12 ? 37 : 39;
+        for (let i=0;i<count;i++){
+          const ang = (90 + i*(360/count)) * Math.PI/180;
+          positions.push({x:50 + rx*Math.cos(ang), y:46 + ry*Math.sin(ang)});
+        }
+      }
+      return { orderedPlayers, positions };
+    }
+
+    function renderSeats(state){
+      const layer = qs('#seatLayer'); if (!layer) return;
+      const game = state?.game || {};
+      const st = game?.state || {};
+      const viewer = state?.viewer || null;
+      const players = Array.isArray(state?.players) ? state.players.slice() : [];
+      const bid = st.bid || null;
+      const phase = String(st.phase || game.status || '');
+      const aliveSeats = players.filter((p)=>p && p.alive).map((p)=>Number(p.seat||0)).filter(Boolean);
+      const defaultAliveSeat = aliveSeats.length ? Math.min(...aliveSeats) : 0;
+      const anchorSeat = Number(viewer?.seat || 0) || defaultAliveSeat || (players[0] ? Number(players[0].seat||1) : 1);
+      const turnSeat = (phase === 'voting' ? Number(st.vote_turn_seat||0) : Number(st.turn_seat||0)) || Number(bid?.bidder_seat || 0) || defaultAliveSeat;
+      const latest = latestBidByPlayer(st);
+      const voteMap = new Map((Array.isArray(state?.votes)?state.votes:[]).map((v)=>[Number(v.seat||0), String(v.status||'').toLowerCase()]));
+      const { orderedPlayers, positions } = seatPositions(players.length || 2, anchorSeat, players);
+
+      layer.innerHTML = orderedPlayers.map((p, idx) => {
+        const pos = positions[idx] || {x:50,y:50};
+        const prof = profileForPlayer(p.name);
+        const lastBid = latest.get(normalizeName(p.name));
+        const host = viewer && Number(viewer.seat||0)===Number(p.seat||0) && viewer.is_host;
+        const turn = Number(p.seat||0)===Number(turnSeat||0) && ['bidding','voting'].includes(phase);
+        const dead = !p.alive;
+        const voteStatus = voteMap.get(Number(p.seat||0)) || '';
+        const showVote = phase === 'voting';
+        const voteEmoji = voteStatus === 'approved' ? '👍' : (voteStatus === 'rejected' ? '👎' : '…');
+        const voteCls = voteStatus === 'approved' ? 'approve' : (voteStatus === 'rejected' ? 'reject' : '');
+        return `<div class="seat ${turn?'turn':''} ${dead?'dead':''}" style="left:${pos.x}%;top:${pos.y}%">
+          <div class="turn-arrow">▼</div>
+          ${showVote
+            ? `<div class="vote-bubble ${voteCls}" title="${esc(voteStatus || 'waiting')}">${voteEmoji}</div>`
+            : `<div class="bid-bubble ${lastBid ? '' : 'hidden'}">${lastBid ? esc(bidText(lastBid)) : '&nbsp;'}</div>`}
+          <div class="avatar-shell"><div class="avatar">${prof.src ? `<img src="${esc(prof.src)}" alt="${esc(p.name)}" referrerpolicy="no-referrer" onerror="this.parentNode.innerHTML='${esc(initials(p.name))}'">` : esc(initials(p.name))}</div></div>
+          <div class="player-name">${esc(p.name || 'Speler')}</div>
+          <div class="player-nick">${esc(prof.nick || ' ')}</div>
+          <div class="tagline">
+            ${host ? '<span class="tag">host</span>' : ''}
+            <span class="tag ${p.alive ? 'good' : 'bad'}">${p.alive ? 'levend' : 'dood'}</span>
+            <span class="tag">${Number(p.dice_count||0)} dice</span>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderBidHistory(st){
+      const wrap = qs('#bidHistory'); const items = bidHistoryFromState(st);
+      const lineEl = qs('#contestedBidLine');
+      if (lineEl){
+        const current = items.length ? items[items.length - 1] : null;
+        if (String(st?.phase || '').toLowerCase() === 'voting' && current){
+          lineEl.textContent = `Iedereen stemt nu op ${bidText(current)} van ${current.bidder_name || 'onbekend'}.`;
+        } else if (current){
+          lineEl.textContent = `Laatste bod: ${bidText(current)} van ${current.bidder_name || 'onbekend'}.`;
+        } else {
+          lineEl.textContent = '';
+        }
+      }
+      if (!items.length){
+        wrap.innerHTML = '<div class="empty">Nog geen eerdere biedingen zichtbaar.</div>';
+        return;
+      }
+      const visible = items.slice(-5);
+      wrap.innerHTML = visible.reverse().map((b, idx)=>{
+        const chronologicalIndex = visible.length - idx;
+        const label = b.current
+          ? (String(st?.phase || '').toLowerCase() === 'voting' ? 'Betwist bod' : 'Huidig bod')
+          : `Bod ${visible.length - idx - 1 > 0 ? 'ervoor' : 'Eerder bod'}`;
+        return `<div class="history-item"><strong>${esc(b.bidder_name||'Onbekend')}</strong><div class="muted" style="font-size:12px">${label} · ${esc(bidText(b))}</div></div>`;
+      }).join('');
+    }
+
+    function render(state){
+      UI.state = state || {};
+      const game = state?.game || {};
+      if (game && game.id) UI.gameId = String(game.id);
+      if (game && game.lobby_code) { UI.lobbyCode = String(game.lobby_code).trim().toUpperCase(); setStoredLobbyCode(UI.lobbyCode); }
+      const st = game?.state || {};
+      const viewer = state?.viewer || null;
+      const players = Array.isArray(state?.players) ? state.players : [];
+      const myHand = sortDice(state?.my_hand);
+      const phase = String(st.phase || game.status || '');
+      const bid = st.bid && st.bid !== null ? st.bid : null;
+      const aliveSeats = players.filter((p)=>p && p.alive).map((p)=>Number(p.seat||0)).filter(Boolean);
+      const defaultAliveSeat = aliveSeats.length ? Math.min(...aliveSeats) : 0;
+      const turnSeat = (phase === 'voting' ? Number(st.vote_turn_seat||0) : Number(st.turn_seat||0)) || Number(bid?.bidder_seat || 0) || defaultAliveSeat;
+
+      qs('#meta').textContent = metaText(state);
+      const ps = phaseSpec({ phase: st.phase, status: game.status });
+      const phaseEl = qs('#phasePill'); phaseEl.className = ps.cls; phaseEl.textContent = ps.label;
+      qs('#phaseTitle').textContent = ps.title;
+      animateNumber(qs('#roundNo'), Number(st.round_no||0));
+      qs('#lobbyCode').textContent = String(game.lobby_code || UI.lobbyCode || '—');
+      if (viewer && (viewer.is_host || Number(viewer.seat || 0) > 0)) {
+        clearLeaveSuppression();
+        setParticipantToken(UI.gameId || game.id || '', String(phase) !== 'finished', game.lobby_code || UI.lobbyCode || '');
+      }
+      qs('#currentBid').textContent = bidText(bid);
+      qs('#bidBy').textContent = bid && bid.bidder_name ? `door ${bid.bidder_name}` : '';
+      animateNumber(qs('#totalCurrentDice'), Number((state?.dice_totals||{}).current_total||0));
+      const lostEl = qs('#totalLostDice'); if (lostEl) animateNumber(lostEl, Number((state?.dice_totals||{}).lost_total||0));
+      qs('#turnName').textContent = findNameBySeat(players, turnSeat);
+
+      const myDice = qs('#myDice'); myDice.innerHTML = '';
+      const viewerMeta = qs('#viewerMeta');
+      const selfAvatar = qs('#selfAvatar');
+      const selfNick = qs('#selfNick');
+      if (viewer){
+        const prof = profileForPlayer(viewer.name);
+        selfAvatar.innerHTML = prof.src ? `<img src="${esc(prof.src)}" alt="${esc(viewer.name)}" referrerpolicy="no-referrer" onerror="this.parentNode.textContent='${esc(initials(viewer.name))}'">` : esc(initials(viewer.name));
+        selfNick.textContent = prof.nick || ' ';
+      }
+      if (viewer && myHand.length){
+        viewerMeta.textContent = `${viewer.name || 'Jij'} · stoel ${Number(viewer.seat||0)} · ${viewer.alive ? 'levend' : 'dood'} · ${Number(viewer.dice_count||0)} dobbelstenen`;
+        myHand.forEach((d)=>myDice.insertAdjacentHTML('beforeend', `<img class="${dieClass(d)}" src="./assets/pikken/dice-${Number(d)}.svg" alt="die ${Number(d)}">`));
+      } else if (viewer){
+        viewerMeta.textContent = `${viewer.name || 'Jij'} · stoel ${Number(viewer.seat||0)} · ${viewer.alive ? 'levend' : 'dood'} · ${Number(viewer.dice_count||0)} dobbelstenen${viewer.inferred ? ' · koppeling via lobby' : ''}`;
+      } else {
+        viewerMeta.textContent = 'Alleen zichtbaar voor deelnemers in deze lobby.';
+      }
+
+      const disbandBtn = qs('#disbandTableBtn'); if(disbandBtn) disbandBtn.classList.toggle('hidden', !(viewer && viewer.is_host && String(phase).toLowerCase() === 'lobby'));
+      if (UI.lastHostName && UI.lastHostName !== (state?.game?.created_by_player_name || '')) showToast(`Nieuwe host: ${state?.game?.created_by_player_name || '—'}`);
+      UI.lastHostName = state?.game?.created_by_player_name || '';
+      const canAct = !!viewer && !!viewer.alive;
+      const viewerSeat = Number(viewer?.seat||0);
+      const missingBidTurn = phase === 'bidding' && !Number(st.turn_seat||0);
+      const missingVoteTurn = phase === 'voting' && !Number(st.vote_turn_seat||0);
+      const myTurn = canAct && phase === 'bidding' && (viewerSeat === turnSeat || (missingBidTurn && viewerSeat > 0));
+      const myVoteTurn = canAct && phase === 'voting' && (viewerSeat === turnSeat || (missingVoteTurn && viewerSeat > 0));
+      qs('#bidPanel').classList.toggle('hidden', !myTurn);
+      qs('#votePanel').classList.toggle('hidden', !myVoteTurn);
+      qs('#rejectBidBtn').disabled = !myTurn || !bid || UI.actionBusy;
+      qs('#placeBidBtn').disabled = !myTurn || UI.actionBusy;
+      qs('#voteApproveBtn').disabled = !myVoteTurn || UI.actionBusy;
+      qs('#voteRejectBtn').disabled = !myVoteTurn || UI.actionBusy;
+
+      renderSeats(state);
+      renderBidHistory(st);
+      renderRevealBanner(state);
+      renderResultBanner(state);
+      refreshBidOptionsFromState(state);
+    }
+
+    async function loadParticipantStateFor(gameIdInput){
+      const token = sessionToken();
+      recoverGameIdFromLocalState();
+      const gameId = String(gameIdInput || UI.gameId || '').trim();
+      const lobbyCode = String(UI.lobbyCode || '').trim().toUpperCase();
+      if (!token || (!gameId && !lobbyCode)) return null;
+      let lastErr = null;
+      const attempts = [
+        { session_token: token, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
+        { session_token_input: token, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
+        { session_token: token, game_id_input: gameId || null, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
+        { session_token_input: token, game_id_input: gameId || null, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
+        { session_token: token, game_id: gameId || null, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
+        { session_token_input: token, game_id: gameId || null, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope },
+        { session_token: token, lobby_code_input: lobbyCode || null },
+        { session_token_input: token, lobby_code_input: lobbyCode || null },
+        { session_token: token, game_id_input: gameId || null },
+        { session_token_input: token, game_id_input: gameId || null }
+      ];
+      for (const payload of attempts){ try { return await rpcWithTimeout('pikken_get_state_scoped', payload, 4000); } catch(err){ lastErr = err; } }
+      throw lastErr || new Error('Laden mislukt.');
+    }
+    async function loadParticipantState(){ return loadParticipantStateFor(UI.gameId); }
+    async function loadPublicState(){
+      let lastErr = null;
+      const attempts = [
+        { lobby_code_input: UI.lobbyCode || null, site_scope_input: UI.scope },
+        { game_id_input: UI.gameId || null, lobby_code_input: UI.lobbyCode || null, site_scope_input: UI.scope },
+        { game_id: UI.gameId || null, lobby_code_input: UI.lobbyCode || null, site_scope_input: UI.scope },
+        { lobby_code_input: UI.lobbyCode || null },
+        { game_id_input: UI.gameId || null, lobby_code_input: UI.lobbyCode || null }
+      ];
+      for (const payload of attempts){ try { return await rpcWithTimeout('pikken_get_live_state_public', payload, 4000); } catch(err){ lastErr = err; } }
+      throw lastErr || new Error('Laden mislukt.');
+    }
+    async function load(){
+      try {
+        await fetchViewerIdentity();
+        let participantState = null;
+        try { participantState = await loadParticipantState(); } catch(_) {}
+        let publicState = null;
+        if (!participantState || !(participantState?.viewer && (participantState.viewer.is_host || Number(participantState.viewer.seat || 0) > 0))) {
+          try { publicState = await loadPublicState(); } catch(_) {}
+          const resolvedGameId = String(publicState?.game?.id || '').trim();
+          const resolvedLobbyCode = String(publicState?.game?.lobby_code || UI.lobbyCode || '').trim().toUpperCase();
+          if (resolvedGameId && resolvedGameId !== UI.gameId) UI.gameId = resolvedGameId;
+          if (resolvedLobbyCode) UI.lobbyCode = resolvedLobbyCode;
+          if (resolvedLobbyCode) setStoredLobbyCode(resolvedLobbyCode);
+          if (resolvedGameId || resolvedLobbyCode) writeCanonicalLiveUrl();
+          if ((!participantState || !(participantState?.viewer && (participantState.viewer.is_host || Number(participantState.viewer.seat || 0) > 0))) && UI.gameId) {
+            try { const retried = await loadParticipantStateFor(UI.gameId); if (retried) participantState = retried; } catch(_) {}
+          }
+        }
+        const snapshotState = recentSnapshotState();
+        participantState = augmentStateWithViewer(participantState);
+        publicState = augmentStateWithViewer(publicState);
+        const snapshotAugmented = augmentStateWithViewer(snapshotState);
+        let state = null;
+        let joinedParticipant = !!(participantState?.viewer && (participantState.viewer.is_host || Number(participantState.viewer.seat || 0) > 0));
+        if (joinedParticipant) state = participantState;
+        else if (publicState?.viewer && (publicState.viewer.is_host || Number(publicState.viewer.seat || 0) > 0)) { state = publicState; joinedParticipant = true; }
+        else if (snapshotAugmented?.viewer && (snapshotAugmented.viewer.is_host || Number(snapshotAugmented.viewer.seat || 0) > 0)) { state = snapshotAugmented; joinedParticipant = true; }
+        else state = publicState || participantState || snapshotAugmented;
+        const phase = String(state?.game?.state?.phase || state?.game?.status || '').toLowerCase();
+        const playerCount = Array.isArray(state?.players) ? state.players.length : 0;
+        if (!joinedParticipant && (!state || (!playerCount && (!phase || phase === 'lobby')))) {
+          UI.unresolvedParticipantSince = UI.unresolvedParticipantSince || Date.now();
+          setStatus('Nog bezig met koppelen aan jouw spelerstoel…', false);
+          qs('#bidPanel')?.classList.add('hidden');
+          qs('#votePanel')?.classList.add('hidden');
+          if (UI.wasDisconnected) showToast('Verbinding hersteld');
+          UI.wasDisconnected = false;
+          return;
+        }
+        UI.unresolvedParticipantSince = 0;
+        if (state?.viewer?.inferred){
+          const now = Date.now();
+          if (!UI.lastSnapshotToastAt || (now - UI.lastSnapshotToastAt) > 8000){
+            showToast('Spelerstoel herkend via lobby-koppeling');
+            UI.lastSnapshotToastAt = now;
+          }
+        }
+        if (phase === 'finished') {
+          try { await Promise.all([loadMatchOutcomes(), loadMatchSummary()]); } catch(_){}
+        }
+        cacheViewerFromState(state || {});
+        setStatus('', false);
+        render(state || {});
+        UI.firstLoaded = true;
+        if (UI.wasDisconnected) showToast('Verbinding hersteld');
+        UI.wasDisconnected = false;
+      } catch(err) {
+        UI.wasDisconnected = true;
+        setStatus(String(err?.message||'').toLowerCase()==='timeout' ? 'Pikken live wacht nog op backend antwoord…' : 'Verbinding hapert, opnieuw proberen…', true);
+      }
+    }
+    async function withAction(label, fn){
+      if (UI.actionBusy) return;
+      UI.actionBusy = true;
+      setStatus(label, false);
+      try {
+        const out = await fn();
+        showToast(label.replace('…','') + ' gelukt');
+        if (out && typeof out === 'object' && out.game) render(out);
+        await load();
+      } catch(err) {
+        setStatus(err.message || `${label} mislukt.`, true);
+      } finally {
+        UI.actionBusy = false;
+      }
+    }
+    async function placeBid(){
+      const count = Number(qs('#bidCount').value || 0);
+      const face = Number(qs('#bidFace').value || 0);
+      const rules = getBidRules(UI.state || {});
+      if (!count || !face) return setStatus('Kies een geldig bod.', true);
+      if (count > Number(rules.totalDice || 0)) return setStatus('Je kunt niet boven het totaal aantal dobbelstenen bieden.', true);
+      if (!isHigherBid(count, face, rules)) return setStatus('Dat bod is volgens de huidige stand niet geldig.', true);
+      return withAction('Bieden…', ()=>rpc('pikken_place_bid_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId, bid_count_input: count, bid_face_input: face }));
+    }
+    async function rejectBid(){ return withAction('Afkeuren…', ()=>rpc('pikken_reject_bid_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId })); }
+    async function vote(v){ return withAction('Stemmen…', ()=>rpc('pikken_cast_vote_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId, vote_input: !!v })); }
+
+    function clearLivePresence(gameId, lobbyCode){
+      setLeaveSuppression(gameId || UI.gameId || '', lobbyCode || UI.lobbyCode || '');
+      setParticipantToken('', false, '');
+      clearStoredLobbyCode();
+    }
+    function exitToLobby(gameId, lobbyCode){
+      clearLivePresence(gameId, lobbyCode);
+      window.location.href = scopedHref('./pikken.html');
+    }
+    async function leaveTable(){
+      if (!window.confirm('Weet je zeker dat je deze tafel wilt verlaten?')) return;
+      let canonicalGameId = String(UI.gameId || '').trim();
+      const phase = String(UI.state?.game?.state?.phase || UI.state?.game?.status || '').toLowerCase();
+      try{
+        canonicalGameId = canonicalGameId || await ensureCanonicalGameId();
+        if (phase && phase !== 'lobby'){
+          exitToLobby(canonicalGameId, UI.lobbyCode);
+          return;
+        }
+        if (!canonicalGameId) throw new Error('Geen geldige tafel-id gevonden om te verlaten.');
+        await rpc('pikken_leave_lobby_scoped', { session_token: sessionToken() || null, game_id_input: canonicalGameId });
+        exitToLobby(canonicalGameId, UI.lobbyCode);
+      }catch(err){
+        const msg = String(err && err.message || '');
+        if (/al gestart|niet in deze lobby/i.test(msg)){
+          exitToLobby(canonicalGameId, UI.lobbyCode);
+          return;
+        }
+        setStatus(err.message || 'Verlaten mislukt.', true);
+      }
+    }
+    async function disbandTable(){
+      if (!window.confirm('Weet je zeker dat je de hele tafel wilt opheffen?')) return;
+      try{
+        const phase = String(UI.state?.game?.state?.phase || UI.state?.game?.status || '').toLowerCase();
+        if (phase && phase !== 'lobby') throw new Error('Tafel opheffen kan alleen zolang de lobby nog niet gestart is.');
+        const canonicalGameId = await ensureCanonicalGameId();
+        if (!canonicalGameId) throw new Error('Geen geldige tafel-id gevonden om op te heffen.');
+        await rpc('pikken_destroy_lobby_scoped', { session_token: sessionToken() || null, game_id_input: canonicalGameId });
+        exitToLobby(canonicalGameId, UI.lobbyCode);
+      }catch(err){
+        setStatus(err.message || 'Opheffen mislukt.', true);
+      }
+    }
+
+    function boot(){
+      UI.scope = currentScope();
+      const rawClientMatchId = String(qsParam('client_match_id') || '').trim();
+      const rawMatchRef = String(qsParam('match_ref') || '').trim();
+      UI.gameId = isUuid(rawMatchRef) ? rawMatchRef : (isUuid(rawClientMatchId) ? rawClientMatchId : '');
+      UI.lobbyCode = UI.gameId ? '' : (rawMatchRef || rawClientMatchId || '');
+      recoverGameIdFromLocalState();
+      if (!UI.gameId && !UI.lobbyCode){ setStatus('Geen geldige game_id of roomcode in URL.', true); return; }
+      writeCanonicalLiveUrl();
+      qs('#placeBidBtn').addEventListener('click', placeBid);
+      qs('#rejectBidBtn').addEventListener('click', rejectBid);
+      qs('#voteApproveBtn').addEventListener('click', ()=>vote(true));
+      qs('#voteRejectBtn').addEventListener('click', ()=>vote(false));
+      qs('#compactToggleBtn').addEventListener('click', ()=>setCompactMode(!qs('.shell')?.classList.contains('compact')));
+      qs('#leaveTableBtn').addEventListener('click', leaveTable);
+      qs('#disbandTableBtn').addEventListener('click', disbandTable);
+      const lobbyHref = scopedHref('./pikken.html');
+      qs('#backLobbyBtn').href = lobbyHref;
+      const homeBtn = qs('.top-actions .btn[href="./index.html"]');
+      if (homeBtn) homeBtn.href = scopedHref('./index.html');
+      setCompactMode(readCompactMode());
+      loadProfiles().finally(()=>load());
+      setInterval(() => { if (!document.hidden) load(); }, 1200);
+    }
+    boot();
+  })();
+  </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<div class="site-credit-watermark" data-version-watermark></div>
-<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <div class="site-credit-watermark" data-version-watermark></div>
 </body>
 </html>
