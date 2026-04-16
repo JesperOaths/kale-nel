@@ -4,6 +4,8 @@
   const STORAGE_KEY = 'gejast_pikken_lobby_code_v517';
   const PIKKEN_PARTICIPANT_KEY = 'gejast_pikken_participant_v517';
   const PIKKEN_LEAVE_SUPPRESS_KEY = 'gejast_pikken_leave_suppress_v540';
+  const PIKKEN_VIEWER_HINT_KEY = 'gejast_pikken_viewer_hint_v541';
+  const PIKKEN_STATE_SNAPSHOT_KEY = 'gejast_pikken_state_snapshot_v541';
 
   function getScope(){
     try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
@@ -56,6 +58,7 @@
 
   function qs(sel, root){ return (root||document).querySelector(sel); }
   function esc(s){ const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(s??'').replace(/[&<>"']/g,m=>map[m]); }
+  function normalizeName(value){ return String(value || '').replace(/\s+/g,' ').trim().toLowerCase(); }
   function normalizeError(err){
     const msg = String(err && err.message || err || 'Onbekende fout');
     if(/column "?submitter_name"? of relation "?live_match_summaries"? does not exist/i.test(msg)){
@@ -95,6 +98,35 @@
   function getStoredLobbyCode(){ try { return localStorage.getItem(STORAGE_KEY) || ''; } catch(_){ return ''; } }
   function setStoredLobbyCode(code){ try { if(code) localStorage.setItem(STORAGE_KEY, String(code).trim().toUpperCase()); } catch(_){ } }
   function clearStoredLobbyCode(){ try { localStorage.removeItem(STORAGE_KEY); } catch(_){ } }
+  function setViewerHint(hint){ try { if(hint && hint.name){ localStorage.setItem(PIKKEN_VIEWER_HINT_KEY, JSON.stringify(Object.assign({}, hint, { at: Date.now() }))); } } catch(_){ } }
+  function getViewerHint(){ try { const raw = localStorage.getItem(PIKKEN_VIEWER_HINT_KEY) || ''; if(!raw) return null; const parsed = JSON.parse(raw); return parsed && typeof parsed === 'object' ? parsed : null; } catch(_){ return null; } }
+  function saveStateSnapshot(state){
+    try {
+      const game = state?.game || {};
+      const players = Array.isArray(state?.players) ? state.players : [];
+      const gameId = String(game?.id || '').trim();
+      const lobbyCode = String(game?.lobby_code || '').trim().toUpperCase();
+      if(!gameId && !lobbyCode) return;
+      localStorage.setItem(PIKKEN_STATE_SNAPSHOT_KEY, JSON.stringify({
+        at: Date.now(),
+        game_id: gameId,
+        lobby_code: lobbyCode,
+        game: {
+          id: gameId,
+          lobby_code: lobbyCode,
+          status: game?.status || '',
+          config: game?.config || {},
+          state: game?.state || {},
+          updated_at: game?.updated_at || null,
+          created_by_player_name: game?.created_by_player_name || '',
+          last_reveal: game?.last_reveal || null
+        },
+        players,
+        votes: Array.isArray(state?.votes) ? state.votes : [],
+        dice_totals: state?.dice_totals || {}
+      }));
+    } catch(_){ }
+  }
 
   function scopedHref(path, params){
     const search = new URLSearchParams();
@@ -202,9 +234,14 @@
   async function loadParticipantState(gameIdInput){
     const token = sessionToken() || null;
     const gameId = String(gameIdInput || UI.gameId || '').trim();
-    if(!token || !gameId) return null;
+    const lobbyCode = currentLobbyCode();
+    if(!token || (!gameId && !lobbyCode)) return null;
     let lastErr = null;
     const attempts = [
+      { session_token: token, game_id_input: gameId, lobby_code_input: lobbyCode || null, site_scope_input: getScope() },
+      { session_token_input: token, game_id_input: gameId, lobby_code_input: lobbyCode || null, site_scope_input: getScope() },
+      { session_token: token, game_id: gameId, lobby_code_input: lobbyCode || null, site_scope_input: getScope() },
+      { session_token_input: token, game_id: gameId, lobby_code_input: lobbyCode || null, site_scope_input: getScope() },
       { session_token: token, game_id_input: gameId },
       { session_token_input: token, game_id_input: gameId }
     ];
@@ -401,6 +438,21 @@
     if (game?.id) UI.gameId = String(game.id);
     if (game?.lobby_code) setStoredLobbyCode(game.lobby_code);
     const joinedViewer = !!viewer && (viewer.is_host || Number(viewer.seat || 0) > 0);
+    if (viewer?.name){
+      setViewerHint({
+        name: viewer.name,
+        seat: Number(viewer.seat || 0) || null,
+        is_host: !!viewer.is_host,
+        game_id: String(game?.id || UI.gameId || '').trim(),
+        lobby_code: String(game?.lobby_code || currentLobbyCode() || '').trim().toUpperCase()
+      });
+    } else {
+      const hint = getViewerHint();
+      if (hint?.name && ((game?.id && String(hint.game_id || '') === String(game.id)) || (game?.lobby_code && normalizeName(hint.lobby_code || '') === normalizeName(game.lobby_code)))) {
+        setViewerHint(Object.assign({}, hint, { game_id: String(game?.id || UI.gameId || '').trim(), lobby_code: String(game?.lobby_code || currentLobbyCode() || '').trim().toUpperCase() }));
+      }
+    }
+    saveStateSnapshot(state);
     setParticipantToken(game?.id || UI.gameId, joinedViewer && phase && phase !== 'finished', game?.lobby_code || currentLobbyCode());
     if (joinedViewer) clearLeaveSuppressionFor(game?.id || UI.gameId, game?.lobby_code || currentLobbyCode());
     const bid = game?.state?.bid && game.state.bid !== null ? game.state.bid : null;
