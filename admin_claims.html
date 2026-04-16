@@ -116,14 +116,14 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v494';</script><script src="./gejast-config.js?v494"></script><script src="./gejast-scope-context.js?v392"></script><script src="./gejast-family-rollout.js?v393"></script>
+  <script>window.GEJAST_PAGE_VERSION='v495';</script><script src="./gejast-config.js?v495"></script><script src="./gejast-scope-context.js?v392"></script><script src="./gejast-family-rollout.js?v393"></script>
   <script src="./gejast-rpc-contract.js?v392"></script>
   <script src="./gejast-admin-rpc.js?v392"></script>
   <script src="./admin-session-sync.js?v392"></script>
   <script src="./admin-topnav.js?v392"></script>
   <script src="./gejast-admin-claims-buckets.js?v392"></script>
   <script src="./gejast-admin-claims-source.js?v392"></script>
-  <script src="./gejast-admin-source.js?v399"></script><script src="./gejast-account-links.js?v399"></script>
+  <script src="./gejast-admin-source.js?v495"></script><script src="./gejast-account-links.js?v399"></script>
 </head>
 <body>
   <div class="main-card">
@@ -261,7 +261,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return `
         <div class="activation-tools hidden" id="activation-tools-${requestIdOf(req)}">
           <div><strong>Activatielink klaarzetten</strong></div>
-          <div class="muted" style="margin-top:4px;">Genereer, kopieer of verstuur de activatielink via de Make-mailflow.</div>
+          <div class="muted" style="margin-top:4px;">Genereer, kopieer of verstuur de activatielink via Make.</div>
           <div class="activation-meta">
             ${metaBox('E-mail', req.requester_email || 'Onbekend')}
             <div class="data-box"><span class="label">Activatie verloopt</span><span id="activation-expires-${requestIdOf(req)}">Nog niet gegenereerd</span></div>
@@ -269,9 +269,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           <div class="activation-link-box" id="activation-url-${requestIdOf(req)}">Nog geen activatielink gegenereerd.</div>
           <div class="action-row">
             <button class="copy-btn" type="button" data-copy-activation data-id="${requestIdOf(req)}">Kopieer activatielink</button>
-            <button class="approve-btn" type="button" data-send-activation data-id="${requestIdOf(req)}">Verstuur via Make</button>
-            <button class="mail-btn" type="button" data-mail-activation data-id="${requestIdOf(req)}">Mailconcept</button>
-            <button class="mail-btn" type="button" data-hide-activation data-id="${requestIdOf(req)}">Inklappen</button>
+            <button class="mail-btn" type="button" data-mail-activation data-id="${requestIdOf(req)}">Mailconcept</button><button class="approve-btn" type="button" data-send-activation data-id="${requestIdOf(req)}">Verstuur via Make</button><button class="mail-btn" type="button" data-hide-activation data-id="${requestIdOf(req)}">Inklappen</button>
           </div>
         </div>
       `;
@@ -988,6 +986,59 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     async function getRequests(force = false) { return (await getClaimsBundle(force)).requests || []; }
     async function getHistory(force = false) { return (await getClaimsBundle(force)).history || []; }
     async function getExpiredQueue(force = false) { return (await getClaimsBundle(force)).expiredQueue || []; }
+    function findRequestRow(requestId) {
+      return (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId)) || null;
+    }
+    function extractMailJobId(result) {
+      return result?.job_id ?? result?.queue_job_id ?? result?.email_job_id ?? result?.outbound_email_job_id ?? result?.mail_job_id ?? result?.id ?? null;
+    }
+    async function approveAndSendActivation(requestId, reason) {
+      let data = ADMIN_SOURCE && typeof ADMIN_SOURCE.approveAndSendActivation === 'function'
+        ? await ADMIN_SOURCE.approveAndSendActivation(requestId, reason)
+        : await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_approve_and_send_activation_action`, {
+            method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+            body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: reason || null, base_url: getActivationBaseUrl() })
+          }).then(parseResponse);
+      try { await updateActivationEmailSubject(requestId); } catch {}
+      data = await ensureActivationMailJob(requestId, data);
+      return data;
+    }
+    async function ensureActivationMailJob(requestId, data, options = {}) {
+      let merged = data && typeof data === 'object' ? { ...data } : {};
+      if (extractMailJobId(merged)) return merged;
+      if (ADMIN_SOURCE && typeof ADMIN_SOURCE.ensureActivationMailJob === 'function') {
+        const resolved = await ADMIN_SOURCE.ensureActivationMailJob(requestId, merged);
+        if (resolved && typeof resolved === 'object') merged = { ...merged, ...resolved };
+        if (extractMailJobId(merged)) return merged;
+      }
+      const req = findRequestRow(requestId);
+      const panel = document.getElementById(`activation-tools-${requestId}`);
+      if (!merged.activation_url) {
+        try {
+          const linkData = await createActivationLink(requestId);
+          if (linkData && typeof linkData === 'object') {
+            merged = { ...linkData, ...merged };
+            if (panel) showActivationPanel(requestId, merged);
+          }
+        } catch (_) {}
+      }
+      const recipientEmail = String(options.recipientEmail || merged.requester_email || panel?.dataset?.email || req?.requester_email || '').trim();
+      const recipientName = String(options.recipientName || merged.display_name || panel?.dataset?.displayName || displayNameOf(req) || '').trim();
+      const activationLink = String(options.activationLink || merged.activation_url || panel?.dataset?.url || '').trim();
+      const playerId = options.playerId ?? merged.player_id ?? req?.player_id ?? null;
+      if (!recipientEmail || !activationLink) return merged;
+      const queued = await queueActivationEmail(requestId, { recipientEmail, recipientName, activationLink, playerId });
+      return {
+        ...merged,
+        ...(queued && typeof queued === 'object' ? queued : {}),
+        requester_email: merged.requester_email || recipientEmail,
+        display_name: merged.display_name || recipientName || null,
+        activation_url: merged.activation_url || activationLink,
+        player_id: merged.player_id ?? playerId ?? null,
+        queued_after_missing_job: true,
+        queue_source: merged.queue_source || 'admin_claims_fallback'
+      };
+    }
     async function requeueExpiredActivation(requestId) {
       let data = ADMIN_SOURCE && typeof ADMIN_SOURCE.requeueExpiredActivation === 'function'
         ? await ADMIN_SOURCE.requeueExpiredActivation(requestId)
@@ -996,8 +1047,8 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
             body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), base_url: getActivationBaseUrl() })
           }).then(parseResponse);
       try { await updateActivationEmailSubject(requestId); } catch {}
-      const dataJobId = data?.job_id ?? data?.queue_job_id ?? data?.email_job_id ?? data?.outbound_email_job_id ?? data?.id ?? null;
-      if (!dataJobId) {
+      data = await ensureActivationMailJob(requestId, data);
+      if (!extractMailJobId(data)) {
         const resend = await resendPendingActivation(requestId);
         data = Object.assign({}, data || {}, resend || {}, { requeued_without_job: true, requeue_message: data?.message || null });
       }
@@ -1005,16 +1056,17 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     }
 
     async function resendPendingActivation(requestId) {
-      const data = ADMIN_SOURCE && typeof ADMIN_SOURCE.resendPendingActivation === 'function'
+      let data = ADMIN_SOURCE && typeof ADMIN_SOURCE.resendPendingActivation === 'function'
         ? await ADMIN_SOURCE.resendPendingActivation(requestId)
         : await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_resend_pending_activation_action`, {
             method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
             body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), base_url: getActivationBaseUrl() })
           }).then(parseResponse);
       try { await updateActivationEmailSubject(requestId); } catch {}
-      const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
+      const req = findRequestRow(requestId);
       const panel = document.getElementById(`activation-tools-${requestId}`);
-      const dataJobId = data?.job_id ?? data?.queue_job_id ?? data?.email_job_id ?? data?.outbound_email_job_id ?? data?.id ?? null;
+      data = await ensureActivationMailJob(requestId, data);
+      const dataJobId = extractMailJobId(data);
       const dataValidation = await validateOutboundEmailJob(dataJobId, { markFailed:true });
       if (!dataValidation?.ok) throw new Error(formatMailPreflight(dataValidation));
       await triggerMakeScenario({ reason: 'activation_email_queued', request_id: requestId, job_id: dataJobId, player_id: data?.player_id ?? req?.player_id ?? null, display_name: data?.display_name ?? displayNameOf(req), email: data?.requester_email ?? req?.requester_email ?? null, activation_url: data?.activation_url ?? panel?.dataset?.url ?? null, expires_at: data?.expires_at ?? panel?.dataset?.expiresAt ?? null, created_at: req?.created_at ?? null, subject: data?.subject ?? ACTIVATION_EMAIL_SUBJECT, email_subject: data?.email_subject ?? data?.subject ?? ACTIVATION_EMAIL_SUBJECT });
@@ -1027,29 +1079,6 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: reason || null })
       });
       return await parseResponse(res);
-    }
-
-    async function approveAndSendActivation(requestId, decisionReason) {
-      if (ADMIN_SOURCE && typeof ADMIN_SOURCE.approveAndSendActivation === 'function') {
-        const data = await ADMIN_SOURCE.approveAndSendActivation(requestId, decisionReason || null);
-        try { await updateActivationEmailSubject(requestId); } catch {}
-        return data;
-      }
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_approve_and_send_activation_action`, {
-        method:'POST',
-        mode:'cors',
-        cache:'no-store',
-        headers: rpcHeaders(),
-        body: JSON.stringify({
-          admin_session_token: getAdminSessionToken(),
-          request_id_input: String(requestId),
-          decision_reason_input: decisionReason || null,
-          base_url: getActivationBaseUrl()
-        })
-      });
-      const data = await parseResponse(res);
-      try { await updateActivationEmailSubject(requestId); } catch {}
-      return data;
     }
 
     async function createActivationLink(requestId) {
@@ -1137,15 +1166,15 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       });
       return await parseResponse(res);
     }
-    async function queueActivationEmail(requestId) {
+    async function queueActivationEmail(requestId, overrides = {}) {
       const panel = document.getElementById(`activation-tools-${requestId}`);
-      const recipientEmail = panel?.dataset.email || '';
-      const recipientName = panel?.dataset.displayName || '';
-      const activationLink = panel?.dataset.url || '';
+      const req = findRequestRow(requestId);
+      const recipientEmail = String(overrides.recipientEmail || panel?.dataset.email || req?.requester_email || '').trim();
+      const recipientName = String(overrides.recipientName || panel?.dataset.displayName || displayNameOf(req) || '').trim();
+      const activationLink = String(overrides.activationLink || panel?.dataset.url || '').trim();
       if (!recipientEmail || !activationLink) throw new Error('Maak eerst een activatielink.');
-      const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
       if (req && hasPin(req) && stateBucket(req) !== 'active') throw new Error('Deze speler heeft al een pincode in de database. Reset eerst de activatie voordat je opnieuw een mail verstuurt.');
-      const playerId = req?.player_id ?? null;
+      const playerId = overrides.playerId ?? req?.player_id ?? null;
       if (ADMIN_SOURCE && typeof ADMIN_SOURCE.queueActivationEmail === 'function') return await ADMIN_SOURCE.queueActivationEmail(requestId, recipientEmail, recipientName, activationLink, playerId);
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_queue_activation_email`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
@@ -1177,7 +1206,8 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const activationLink = panel?.dataset.url || '';
       const queued = await queueActivationEmail(requestId);
       try { await updateActivationEmailSubject(requestId); } catch {}
-      const jobId = queued?.job_id ?? queued?.id ?? null;
+      const queuedResolved = await ensureActivationMailJob(requestId, queued);
+      const jobId = extractMailJobId(queuedResolved);
       const validation = await validateOutboundEmailJob(jobId, { markFailed:true });
       if (!validation?.ok) {
         const err = new Error(formatMailPreflight(validation));
@@ -1188,13 +1218,13 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         reason: 'activation_email_queued',
         request_id: requestId,
         job_id: jobId,
-        player_id: queued?.player_id ?? req?.player_id ?? null,
+        player_id: queuedResolved?.player_id ?? req?.player_id ?? null,
         display_name: queued?.display_name ?? recipientName ?? displayNameOf(req),
         email: queued?.requester_email ?? recipientEmail,
-        activation_url: queued?.activation_url ?? activationLink,
+        activation_url: queuedResolved?.activation_url ?? activationLink,
         expires_at: queued?.expires_at ?? panel?.dataset?.expiresAt ?? null,
         created_at: req?.created_at ?? null,
-        subject: queued?.subject ?? ACTIVATION_EMAIL_SUBJECT,
+        subject: queuedResolved?.subject ?? ACTIVATION_EMAIL_SUBJECT,
         email_subject: queued?.email_subject ?? queued?.subject ?? ACTIVATION_EMAIL_SUBJECT
       });
       return queued;

@@ -88,7 +88,7 @@
   }
 
   async function approveAndSendActivation(requestId, reason) {
-    return firstOf([
+    const data = await firstOf([
       () => RPC.secureWrite('claims', 'approve_and_send_activation', {
         request_id_input: String(requestId),
         decision_reason_input: reason || null,
@@ -100,10 +100,62 @@
         base_url: activationBaseUrl()
       }))
     ]);
+    return await ensureActivationMailJob(requestId, data);
   }
 
   function extractMailJobId(result) {
     return result?.job_id ?? result?.queue_job_id ?? result?.email_job_id ?? result?.outbound_email_job_id ?? result?.id ?? null;
+  }
+
+
+  function requestIdOf(row) {
+    return row?.request_id ?? row?.claim_request_id ?? row?.id ?? null;
+  }
+
+  function displayNameOf(row) {
+    return row?.display_name || row?.requested_name || row?.desired_name || row?.name || (row?.requester_email ? String(row.requester_email).split('@')[0] : '') || '';
+  }
+
+  async function findClaimRow(requestId) {
+    try {
+      const bundle = await loadClaimsBundle({ includeExpired: true, scope: RPC.getScope() });
+      const rows = [
+        ...(Array.isArray(bundle?.requests) ? bundle.requests : []),
+        ...(Array.isArray(bundle?.history) ? bundle.history : []),
+        ...(Array.isArray(bundle?.expired_queue) ? bundle.expired_queue : [])
+      ];
+      return rows.find((row) => String(requestIdOf(row)) === String(requestId)) || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function ensureActivationMailJob(requestId, result) {
+    let merged = result && typeof result === 'object' ? { ...result } : {};
+    if (extractMailJobId(merged)) return merged;
+    const row = await findClaimRow(requestId);
+    if (!merged.activation_url) {
+      try {
+        const linkData = await createActivationLink(requestId);
+        if (linkData && typeof linkData === 'object') merged = { ...linkData, ...merged };
+      } catch (_) {}
+    }
+    const recipientEmail = String(merged.requester_email || row?.requester_email || row?.email || '').trim();
+    const recipientName = String(merged.display_name || displayNameOf(row) || '').trim();
+    const activationLink = String(merged.activation_url || merged.activation_link || merged.reset_url || '').trim();
+    const playerId = merged.player_id ?? row?.player_id ?? null;
+    if (!recipientEmail || !activationLink) return merged;
+    const queued = await queueActivationEmail(requestId, recipientEmail, recipientName || null, activationLink, playerId);
+    return {
+      ...merged,
+      ...(queued && typeof queued === 'object' ? queued : {}),
+      requester_email: merged.requester_email || recipientEmail,
+      display_name: merged.display_name || recipientName || null,
+      activation_url: merged.activation_url || activationLink,
+      player_id: merged.player_id ?? playerId ?? null,
+      queued_after_missing_job: true,
+      queue_source: merged.queue_source || 'gejast-admin-source-fallback'
+    };
   }
 
   async function requeueExpiredActivation(requestId) {
@@ -118,15 +170,17 @@
       }))
     ]);
     if (extractMailJobId(primary)) return primary;
+    const ensured = await ensureActivationMailJob(requestId, primary);
+    if (extractMailJobId(ensured)) return ensured;
     const resend = await resendPendingActivation(requestId);
-    return Object.assign({}, primary || {}, resend || {}, {
+    return Object.assign({}, ensured || primary || {}, resend || {}, {
       requeued_without_job: true,
       requeue_message: primary?.message || null
     });
   }
 
   async function resendPendingActivation(requestId) {
-    return firstOf([
+    const data = await firstOf([
       () => RPC.secureWrite('claims', 'resend_pending_activation', {
         request_id_input: String(requestId),
         base_url: activationBaseUrl()
@@ -140,6 +194,7 @@
         base_url: activationBaseUrl()
       }))
     ]);
+    return await ensureActivationMailJob(requestId, data);
   }
 
   async function returnNameToClaimable(requestId, reason) {
@@ -414,6 +469,7 @@
     loadClaimsBundle,
     decideClaim,
     approveAndSendActivation,
+    ensureActivationMailJob,
     requeueExpiredActivation,
     resendPendingActivation,
     returnNameToClaimable,
