@@ -35,14 +35,14 @@
     .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
     .top-actions{display:flex;gap:10px;flex-wrap:wrap}
     .btn,.soft-btn{
-      display:inline-flex;align-items:center;justify-content:center;padding:10px 15px;border-radius:999px;
+      display:inline-flex;align-items:center;justify-content:center;padding:9px 13px;border-radius:999px;
       font-weight:900;text-decoration:none;border:1px solid rgba(0,0,0,.08);cursor:pointer
     }
     .btn{background:#111;color:#fff}.soft-btn{background:#fff;color:#111}
     .muted{color:var(--muted)} .error{color:#8d2d1b}
-    .table-stage{position:relative;min-height:760px;margin-top:18px}
+    .table-stage{position:relative;min-height:700px;margin-top:18px}
     .table-felt{
-      position:relative;min-height:720px;border-radius:34px;padding:18px;
+      position:relative;min-height:650px;border-radius:34px;padding:18px;
       background:
         radial-gradient(circle at 50% 42%, rgba(255,255,255,.10), rgba(255,255,255,0) 28%),
         radial-gradient(circle at 50% 52%, rgba(255,228,150,.05), rgba(255,228,150,0) 42%),
@@ -61,10 +61,10 @@
     }
     .center-ui{
       position:absolute;left:50%;top:40%;transform:translate(-50%,-50%);
-      width:min(420px,50vw);display:grid;gap:10px;z-index:2;
+      width:min(340px,38vw);display:grid;gap:10px;z-index:2;
     }
     .center-card{
-      border-radius:22px;padding:14px 16px;background:rgba(255,250,242,.88);
+      border-radius:22px;padding:11px 13px;background:rgba(255,250,242,.88);
       border:1px solid rgba(100,72,32,.12);box-shadow:0 12px 28px rgba(0,0,0,.12), 0 0 18px rgba(255,208,102,.07);
       backdrop-filter:blur(4px);
     }
@@ -74,7 +74,7 @@
     .phase-chip.good{background:rgba(99,181,138,.12);color:#235e45;border-color:rgba(99,181,138,.32)}
     .phase-chip.bad{background:rgba(199,117,93,.12);color:#8d2d1b;border-color:rgba(199,117,93,.32)}
     .phase-chip.wait{background:rgba(0,0,0,.05);color:#645949;border-color:rgba(0,0,0,.12)}
-    .phase-title{font-size:18px;font-weight:950}
+    .phase-title{font-size:16px;font-weight:950}
     .center-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
     .metric{
       border-radius:16px;padding:10px 12px;background:linear-gradient(180deg, rgba(255,252,247,.95), rgba(243,233,217,.94));
@@ -84,7 +84,7 @@
     .metric .v{margin-top:5px;font-size:18px;font-weight:900;line-height:1.05}
     .seat-layer{position:absolute;inset:0;z-index:1}
     .seat{
-      position:absolute;transform:translate(-50%,-50%);display:grid;justify-items:center;gap:8px;width:174px;
+      position:absolute;transform:translate(-50%,-50%);display:grid;justify-items:center;gap:8px;width:146px;
     }
     .seat.dead{opacity:.42;filter:grayscale(1)}
     .turn-arrow{
@@ -116,7 +116,7 @@
     .vote-bubble.approve{box-shadow:0 10px 20px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.52), 0 0 18px rgba(95,181,138,.18)}
     .vote-bubble.reject{box-shadow:0 10px 20px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.52), 0 0 18px rgba(199,117,93,.18)}
     .avatar-shell{
-      width:102px;height:102px;border-radius:50%;padding:5px;
+      width:86px;height:86px;border-radius:50%;padding:5px;
       background:linear-gradient(180deg,#f4d79d,#a67424 58%, #6e4615);
       box-shadow:0 14px 28px rgba(0,0,0,.28), 0 0 18px rgba(255,208,102,.14);
     }
@@ -125,11 +125,11 @@
     }
     .avatar img{width:100%;height:100%;object-fit:cover}
     .player-name{
-      max-width:170px;text-align:center;font-weight:900;color:#fff7e7;text-shadow:0 2px 8px rgba(0,0,0,.38);
-      background:rgba(23,18,13,.48);padding:7px 12px;border-radius:14px;font-size:15px
+      max-width:142px;text-align:center;font-weight:900;color:#fff7e7;text-shadow:0 2px 8px rgba(0,0,0,.38);
+      background:rgba(23,18,13,.48);padding:7px 12px;border-radius:14px;font-size:13px
     }
     .player-nick{
-      max-width:170px;text-align:center;font-size:11px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;
+      max-width:142px;text-align:center;font-size:11px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;
       color:#ffe1a0;background:rgba(23,18,13,.38);padding:4px 10px;border-radius:999px
     }
     .tagline{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
@@ -138,16 +138,16 @@
     .tag.bad{color:#8d2d1b;border-color:rgba(199,117,93,.34);background:rgba(199,117,93,.12)}
     .self-zone{
       position:absolute;left:50%;bottom:26px;transform:translateX(-50%);z-index:2;
-      width:min(760px,90vw);display:grid;grid-template-columns:1.28fr .92fr;gap:14px;align-items:end;
+      width:min(660px,88vw);display:grid;grid-template-columns:1.28fr .92fr;gap:10px;align-items:end;
     }
     .self-card{
-      border-radius:22px;padding:16px;background:rgba(255,250,242,.9);
+      border-radius:22px;padding:12px;background:rgba(255,250,242,.9);
       border:1px solid rgba(100,72,32,.12);box-shadow:0 12px 28px rgba(0,0,0,.12), 0 0 18px rgba(255,208,102,.07);backdrop-filter:blur(4px);
     }
     .self-head{display:flex;gap:16px;align-items:center}
-    .self-head .avatar-shell{width:112px;height:112px}
-    .hand-dice{display:flex;flex-wrap:wrap;gap:10px;padding:6px 8px;border-radius:16px;background:rgba(32,24,18,.06)}
-    img.die{width:58px;height:58px;border-radius:12px;background:#fff;box-shadow:0 10px 20px rgba(0,0,0,.18), 0 0 0 2px rgba(28,20,14,.12); filter:contrast(1.22) saturate(1.08) brightness(.98)}
+    .self-head .avatar-shell{width:90px;height:90px}
+    .hand-dice{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:8px;padding:6px 8px;border-radius:16px;background:rgba(32,24,18,.06);scrollbar-width:thin}
+    img.die{width:50px;height:50px;border-radius:11px;background:#fff;box-shadow:0 10px 20px rgba(0,0,0,.18), 0 0 0 2px rgba(28,20,14,.12); filter:contrast(1.22) saturate(1.08) brightness(.98); flex:0 0 auto}
     .controls{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .field{display:grid;gap:6px}
     .label{font-size:11px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#8f6b2b}
@@ -256,7 +256,7 @@
             </div>
           </div>
 
-          <div id="resultBanner" class="center-card hidden" style="position:absolute;left:50%;top:58%;transform:translateX(-50%);width:min(420px,50vw);z-index:2"></div>
+          <div id="resultBanner" class="center-card hidden" style="position:absolute;left:50%;top:58%;transform:translateX(-50%);width:min(340px,38vw);z-index:2"></div>
 
           <div class="self-zone">
             <div class="self-card">
@@ -323,6 +323,65 @@
     function buildBidCountOptions(max=24){ const sel = qs('#bidCount'); sel.innerHTML = Array.from({length:max}, (_,i) => `<option value="${i+1}">${i+1}</option>`).join(''); }
     function bidHistoryFromState(st){ const arr = []; const raw = Array.isArray(st?.bid_history) ? st.bid_history : (Array.isArray(st?.history?.bids) ? st.history.bids : []); raw.forEach((b,idx)=>arr.push({index:idx+1,bidder_name:b.bidder_name||b.name||'',count:b.count||b.bid_count,face:b.face||b.bid_face,current:false})); if (st?.bid) arr.push({index:arr.length+1,bidder_name:st.bid.bidder_name||'',count:st.bid.count||st.bid.bid_count,face:st.bid.face||st.bid.bid_face,current:true}); return arr; }
     function latestBidByPlayer(st){ const map = new Map(); for (const item of bidHistoryFromState(st)) if (item.bidder_name) map.set(normalizeName(item.bidder_name), item); return map; }
+
+function getBidRules(state){
+  const bid = state?.game?.state?.bid || null;
+  const totalDice = Number(state?.dice_totals?.current_total || 0);
+  const currentCount = Number(bid?.count || bid?.bid_count || 0);
+  const currentFace = Number(bid?.face || bid?.bid_face || 0);
+  return { totalDice, currentCount, currentFace };
+}
+function allowedFacesForCount(selectedCount, rules){
+  const count = Number(selectedCount||0);
+  if (!count || count > Number(rules.totalDice||0)) return [];
+  if (!rules.currentCount) return [1,2,3,4,5,6];
+  if (count < rules.currentCount) return [];
+  if (count > rules.currentCount) return [1,2,3,4,5,6];
+  return [1,2,3,4,5,6].filter((face)=>face > Number(rules.currentFace||0) && face !== 1);
+}
+function refreshBidOptionsFromState(state){
+  const countSel = qs('#bidCount');
+  const faceSel = qs('#bidFace');
+  const bidBtn = qs('#placeBidBtn');
+  if (!countSel || !faceSel || !bidBtn) return;
+  const rules = getBidRules(state || UI.state || {});
+  const maxCount = Math.max(1, Number(rules.totalDice||0));
+  const minCount = rules.currentCount ? rules.currentCount : 1;
+  const prevCount = Number(countSel.value || minCount || 1);
+  const currentCountChoices = [];
+  for (let c=minCount; c<=maxCount; c++) currentCountChoices.push(c);
+  countSel.innerHTML = currentCountChoices.map((c)=>`<option value="${c}">${c}</option>`).join('');
+  let selectedCount = prevCount;
+  if (!currentCountChoices.includes(selectedCount)) selectedCount = currentCountChoices[0] || 1;
+  countSel.value = String(selectedCount);
+  let allowedFaces = allowedFacesForCount(selectedCount, rules);
+  if (!allowedFaces.length){
+    const nextCount = currentCountChoices.find((c)=>allowedFacesForCount(c, rules).length);
+    if (nextCount){
+      countSel.value = String(nextCount);
+      selectedCount = nextCount;
+      allowedFaces = allowedFacesForCount(selectedCount, rules);
+    }
+  }
+  faceSel.innerHTML = allowedFaces.map((f)=>`<option value="${f}">${f===1?'pik':f}</option>`).join('');
+  if (!allowedFaces.length){
+    bidBtn.disabled = true;
+    if (!UI.actionBusy) setStatus('Geen hoger geldig bod mogelijk vanaf de huidige stand.', false);
+  } else {
+    const preferred = Number(faceSel.dataset.lastValue || faceSel.value || allowedFaces[0]);
+    faceSel.value = String(allowedFaces.includes(preferred) ? preferred : allowedFaces[0]);
+    if (!UI.actionBusy && /Geen hoger geldig bod mogelijk/i.test(qs('#statusText')?.textContent || '')) setStatus('', false);
+  }
+  countSel.onchange = () => {
+    faceSel.dataset.lastValue = faceSel.value || '';
+    const faces = allowedFacesForCount(Number(countSel.value||0), rules);
+    faceSel.innerHTML = faces.map((f)=>`<option value="${f}">${f===1?'pik':f}</option>`).join('');
+    bidBtn.disabled = !faces.length || UI.actionBusy;
+    if (faces.length) faceSel.value = String(faces[0]);
+  };
+  faceSel.onchange = () => { faceSel.dataset.lastValue = faceSel.value || ''; };
+  bidBtn.disabled = !allowedFaces.length || UI.actionBusy;
+}
 
     async function loadMatchOutcomes(){
       if (!UI.gameId) return null;
@@ -394,14 +453,28 @@
       return { src, nick };
     }
 
-    function seatPositions(count){
-      if (count <= 2) return [{x:50,y:14},{x:50,y:82}];
-      if (count <= 5) return [{x:50,y:12},{x:81,y:30},{x:76,y:68},{x:24,y:68},{x:19,y:30}].slice(0,count);
-      const arr = [];
-      const rx = count <= 10 ? 38 : 41;
-      const ry = count <= 10 ? 30 : 34;
-      for (let i=0;i<count;i++){ const ang = (-90 + i*(360/count))*Math.PI/180; arr.push({x:50+rx*Math.cos(ang), y:46+ry*Math.sin(ang)}); }
-      return arr;
+    function seatPositions(count, anchorSeat, players){
+      const orderedPlayers = Array.isArray(players) ? players.slice() : [];
+      const anchor = Number(anchorSeat || 0) || (orderedPlayers.length ? Number(orderedPlayers[0]?.seat || 1) : 1);
+      orderedPlayers.sort((a,b)=>{
+        const as = Number(a?.seat||0), bs = Number(b?.seat||0);
+        const ar = ((as - anchor + 1000) % 1000);
+        const br = ((bs - anchor + 1000) % 1000);
+        return ar - br || as - bs;
+      });
+      let positions;
+      if (count <= 2) positions = [{x:50,y:80},{x:50,y:16}];
+      else if (count <= 5) positions = [{x:50,y:80},{x:22,y:60},{x:22,y:24},{x:78,y:24},{x:78,y:60}].slice(0,count);
+      else {
+        positions = [];
+        const rx = count <= 10 ? 39 : 42;
+        const ry = count <= 10 ? 30 : 33;
+        for (let i=0;i<count;i++){
+          const ang = (90 + i*(360/count)) * Math.PI/180;
+          positions.push({x:50 + rx*Math.cos(ang), y:44 + ry*Math.sin(ang)});
+        }
+      }
+      return { orderedPlayers, positions };
     }
 
     function renderSeats(state){
@@ -409,17 +482,18 @@
       const game = state?.game || {};
       const st = game?.state || {};
       const viewer = state?.viewer || null;
-      const players = Array.isArray(state?.players) ? state.players : [];
+      const players = Array.isArray(state?.players) ? state.players.slice() : [];
       const bid = st.bid || null;
       const phase = String(st.phase || game.status || '');
       const aliveSeats = players.filter((p)=>p && p.alive).map((p)=>Number(p.seat||0)).filter(Boolean);
       const defaultAliveSeat = aliveSeats.length ? Math.min(...aliveSeats) : 0;
+      const anchorSeat = Number(viewer?.seat || 0) || defaultAliveSeat || (players[0] ? Number(players[0].seat||1) : 1);
       const turnSeat = (phase === 'voting' ? Number(st.vote_turn_seat||0) : Number(st.turn_seat||0)) || Number(bid?.bidder_seat || 0) || defaultAliveSeat;
       const latest = latestBidByPlayer(st);
-      const positions = seatPositions(players.length || 2);
       const voteMap = new Map((Array.isArray(state?.votes)?state.votes:[]).map((v)=>[Number(v.seat||0), String(v.status||'').toLowerCase()]));
+      const { orderedPlayers, positions } = seatPositions(players.length || 2, anchorSeat, players);
 
-      layer.innerHTML = players.map((p, idx) => {
+      layer.innerHTML = orderedPlayers.map((p, idx) => {
         const pos = positions[idx] || {x:50,y:50};
         const prof = profileForPlayer(p.name);
         const lastBid = latest.get(normalizeName(p.name));
@@ -433,7 +507,7 @@
         return `<div class="seat ${turn?'turn':''} ${dead?'dead':''}" style="left:${pos.x}%;top:${pos.y}%">
           <div class="turn-arrow">▼</div>
           ${showVote
-            ? `<div class="vote-bubble ${voteCls} ${showVote ? '' : 'hidden'}" title="${esc(voteStatus || 'waiting')}">${voteEmoji}</div>`
+            ? `<div class="vote-bubble ${voteCls}" title="${esc(voteStatus || 'waiting')}">${voteEmoji}</div>`
             : `<div class="bid-bubble ${lastBid ? '' : 'hidden'}">${lastBid ? esc(bidText(lastBid)) : '&nbsp;'}</div>`}
           <div class="avatar-shell"><div class="avatar">${prof.src ? `<img src="${esc(prof.src)}" alt="${esc(p.name)}" referrerpolicy="no-referrer" onerror="this.parentNode.innerHTML='${esc(initials(p.name))}'">` : esc(initials(p.name))}</div></div>
           <div class="player-name">${esc(p.name || 'Speler')}</div>
@@ -535,13 +609,23 @@
       renderBidHistory(st);
       renderRevealBanner(state);
       renderResultBanner(state);
+      refreshBidOptionsFromState(state);
     }
 
     async function loadParticipantState(){ const token = sessionToken(); if (!token || !UI.gameId) return null; return rpc('pikken_get_state_scoped', { session_token: token, game_id_input: UI.gameId }); }
     async function loadPublicState(){ return rpc('pikken_get_live_state_public', { game_id_input: UI.gameId || null, lobby_code_input: UI.lobbyCode || null, site_scope_input: UI.scope }); }
     async function load(){ try { let state = null; try { state = await loadParticipantState(); } catch(_) {} if (!state) state = await loadPublicState(); const phase = String(state?.game?.state?.phase || state?.game?.status || '').toLowerCase(); if (phase === 'finished') { try { await loadMatchOutcomes(); } catch(_){} } render(state || {}); } catch(err) { setStatus(err.message || 'Laden mislukt.', true); } }
     async function withAction(label, fn){ if (UI.actionBusy) return; UI.actionBusy = true; setStatus(label, false); try { const out = await fn(); if (out && typeof out === 'object' && out.game) render(out); await load(); } catch(err) { setStatus(err.message || `${label} mislukt.`, true); } finally { UI.actionBusy = false; } }
-    async function placeBid(){ const count = Number(qs('#bidCount').value || 0); const face = Number(qs('#bidFace').value || 0); if (!count || !face) return setStatus('Kies een geldig bod.', true); return withAction('Bieden…', ()=>rpc('pikken_place_bid_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId, bid_count_input: count, bid_face_input: face })); }
+    async function placeBid(){
+      const count = Number(qs('#bidCount').value || 0);
+      const face = Number(qs('#bidFace').value || 0);
+      const rules = getBidRules(UI.state || {});
+      if (!count || !face) return setStatus('Kies een geldig bod.', true);
+      if (count > Number(rules.totalDice || 0)) return setStatus('Je kunt niet boven het totaal aantal dobbelstenen bieden.', true);
+      const allowed = allowedFacesForCount(count, rules);
+      if (!allowed.includes(face)) return setStatus('Dat bod is volgens de huidige stand niet geldig.', true);
+      return withAction('Bieden…', ()=>rpc('pikken_place_bid_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId, bid_count_input: count, bid_face_input: face }));
+    }
     async function rejectBid(){ return withAction('Afkeuren…', ()=>rpc('pikken_reject_bid_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId })); }
     async function vote(v){ return withAction('Stemmen…', ()=>rpc('pikken_cast_vote_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId, vote_input: !!v })); }
 
@@ -580,7 +664,6 @@
       UI.gameId = rawClientMatchId && /^[0-9a-f-]{36}$/i.test(rawClientMatchId) ? rawClientMatchId : '';
       UI.lobbyCode = rawMatchRef || (!UI.gameId ? rawClientMatchId : '') || '';
       if (!UI.gameId && !UI.lobbyCode){ setStatus('Geen geldige game_id of roomcode in URL.', true); return; }
-      buildBidCountOptions(24);
       qs('#placeBidBtn').addEventListener('click', placeBid);
       qs('#rejectBidBtn').addEventListener('click', rejectBid);
       qs('#voteApproveBtn').addEventListener('click', ()=>vote(true));
