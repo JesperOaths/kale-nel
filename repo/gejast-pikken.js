@@ -8,6 +8,7 @@
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
   const PIKKEN_PARTICIPANT_KEY = 'gejast_pikken_participant_v1';
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
   function currentPath(){
     try { return String((window.location && window.location.pathname) || '').split('/').pop().toLowerCase(); }
@@ -18,9 +19,18 @@
     catch(_){ return currentPath() === 'pikken_live.html'; }
   }
   function isLobbyPage(){ return !isLivePage(); }
+  function isUuid(value){ return UUID_RE.test(String(value || '').trim()); }
+  function scopeFromUrl(){
+    try {
+      const raw = String(new URLSearchParams(location.search).get('scope') || '').trim().toLowerCase();
+      return raw === 'family' ? 'family' : raw === 'friends' ? 'friends' : '';
+    } catch(_){ return ''; }
+  }
 
   function getScope(){
-    try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
+    const urlScope = scopeFromUrl();
+    if (urlScope) return urlScope;
+    try { return (scopeUtils.getScope && scopeUtils.getScope()) || 'friends'; }
     catch(_){ return 'friends'; }
   }
   function sessionToken(){
@@ -57,6 +67,9 @@
     if(/game_type\s+ongeldig/i.test(msg)){
       return 'Pikken live-samenvatting staat backend nog niet open voor dit spel. Draai de v487a SQL-fix en probeer opnieuw.';
     }
+    if(/invalid input syntax for type uuid/i.test(msg)){
+      return 'Deze Pikken-link gebruikt nog een lobbycode in plaats van een game-id. De pagina probeert dat nu zelf te herstellen; ververs anders een keer vanuit de lobby.';
+    }
     if(/geen match_ref of client_match_id/i.test(msg)){
       return 'Open deze live-pagina vanuit de lobby of met een geldige match-link.';
     }
@@ -72,43 +85,79 @@
       if(!raw) return null;
       const parsed = JSON.parse(raw);
       const gameId = String(parsed && parsed.game_id || '').trim();
+      const lobbyCode = String(parsed && (parsed.lobby_code || parsed.lobbyCode) || '').trim().toUpperCase();
       const scope = String(parsed && parsed.scope || '').trim().toLowerCase();
-      if(!gameId) return null;
-      return { gameId, scope: scope === 'family' ? 'family' : 'friends' };
+      if(!gameId && !lobbyCode) return null;
+      return {
+        gameId: isUuid(gameId) ? gameId : '',
+        lobbyCode,
+        scope: scope === 'family' ? 'family' : 'friends'
+      };
     }catch(_){ return null; }
   }
   function storedParticipantGameId(){
     const stored = storedParticipantState();
     if(!stored || !stored.gameId) return '';
-    if(stored.scope && stored.scope !== getScope()) return '';
+    const urlScope = scopeFromUrl();
+    if(urlScope && stored.scope && stored.scope !== urlScope) return '';
     return stored.gameId;
   }
-  function setParticipantToken(gameId, active){
+  function storedParticipantLobbyCode(){
+    const stored = storedParticipantState();
+    if(!stored || !stored.lobbyCode) return '';
+    const urlScope = scopeFromUrl();
+    if(urlScope && stored.scope && stored.scope !== urlScope) return '';
+    return stored.lobbyCode;
+  }
+  function setParticipantToken(gameId, active, options){
     try{
       if(active && gameId){
-        localStorage.setItem(PIKKEN_PARTICIPANT_KEY, JSON.stringify({ game_id:String(gameId), scope:getScope(), at:Date.now() }));
+        localStorage.setItem(PIKKEN_PARTICIPANT_KEY, JSON.stringify({
+          game_id: isUuid(gameId) ? String(gameId) : '',
+          lobby_code: String(options && options.lobbyCode || '').trim().toUpperCase(),
+          scope:getScope(),
+          at:Date.now()
+        }));
       } else {
         localStorage.removeItem(PIKKEN_PARTICIPANT_KEY);
       }
     }catch(_){ }
   }
 
-  function liveHref(gameId){
+  function liveHref(gameId, lobbyCode){
     const url = new URL('./pikken_live.html', window.location.href);
     if (gameId) url.searchParams.set('client_match_id', String(gameId));
+    if (lobbyCode) url.searchParams.set('match_ref', String(lobbyCode).trim().toUpperCase());
     if (getScope() === 'family') url.searchParams.set('scope', 'family');
     return `${url.pathname.split('/').pop()}${url.search}`;
   }
-  function lobbyHref(gameId){
+  function lobbyHref(gameId, lobbyCode){
     const url = new URL('./pikken.html', window.location.href);
     if (gameId) url.searchParams.set('game_id', String(gameId));
+    if (lobbyCode) url.searchParams.set('lobby_code', String(lobbyCode).trim().toUpperCase());
     if (getScope() === 'family') url.searchParams.set('scope', 'family');
     return `${url.pathname.split('/').pop()}${url.search}`;
   }
   function currentUrlGameId(){
     try{
       const params = new URLSearchParams(location.search);
-      return String(params.get('game_id') || params.get('client_match_id') || params.get('match_ref') || '').trim();
+      const gameId = String(params.get('game_id') || '').trim();
+      if (isUuid(gameId)) return gameId;
+      const clientMatchId = String(params.get('client_match_id') || '').trim();
+      if (isUuid(clientMatchId)) return clientMatchId;
+      const matchRef = String(params.get('match_ref') || '').trim();
+      if (isUuid(matchRef)) return matchRef;
+      return '';
+    }catch(_){ return ''; }
+  }
+  function currentUrlLobbyCode(){
+    try{
+      const params = new URLSearchParams(location.search);
+      const lobbyCode = String(params.get('lobby_code') || params.get('match_ref') || '').trim().toUpperCase();
+      if (lobbyCode && !isUuid(lobbyCode)) return lobbyCode;
+      const clientMatchId = String(params.get('client_match_id') || '').trim().toUpperCase();
+      if (clientMatchId && !isUuid(clientMatchId)) return clientMatchId;
+      return '';
     }catch(_){ return ''; }
   }
   function gameStatus(game){
@@ -139,10 +188,42 @@
 
   const UI = {
     gameId: '',
+    lobbyCode: '',
     lastStateVersion: -1,
     pollTimer: null,
     redirecting: false
   };
+
+  async function loadPublicState(){
+    return rpc('pikken_get_live_state_public', {
+      game_id_input: isUuid(UI.gameId) ? UI.gameId : null,
+      lobby_code_input: UI.lobbyCode || null,
+      site_scope_input: getScope()
+    });
+  }
+  function syncKnownGame(state){
+    const game = state?.game || {};
+    const gameId = String(game?.id || UI.gameId || '').trim();
+    const lobbyCode = String(game?.lobby_code || UI.lobbyCode || '').trim().toUpperCase();
+    if (isUuid(gameId)) UI.gameId = gameId;
+    if (lobbyCode) UI.lobbyCode = lobbyCode;
+    return { gameId: UI.gameId, lobbyCode: UI.lobbyCode };
+  }
+  function syncHistory(){
+    const href = isLivePage() ? liveHref(UI.gameId, UI.lobbyCode) : lobbyHref(UI.gameId, UI.lobbyCode);
+    try { history.replaceState(null,'', href); } catch(_){ }
+  }
+  async function ensureResolvedGameId(){
+    if (isUuid(UI.gameId)) return null;
+    if (!UI.lobbyCode) return null;
+    const publicState = await loadPublicState();
+    const known = syncKnownGame(publicState);
+    if (known.gameId) {
+      setParticipantToken(known.gameId, true, { lobbyCode: known.lobbyCode });
+      syncHistory();
+    }
+    return publicState;
+  }
 
   function render(state){
     const game = state?.game || {};
@@ -153,10 +234,12 @@
     const phase = gamePhase(game);
     const status = gameStatus(game);
     const resolvedGameId = String(game?.id || UI.gameId || '').trim();
+    const resolvedLobbyCode = String(game?.lobby_code || UI.lobbyCode || '').trim().toUpperCase();
 
     UI.gameId = resolvedGameId || UI.gameId;
+    UI.lobbyCode = resolvedLobbyCode || UI.lobbyCode;
     if (resolvedGameId){
-      setParticipantToken(resolvedGameId, phase !== 'finished' && status !== 'finished');
+      setParticipantToken(resolvedGameId, phase !== 'finished' && status !== 'finished', { lobbyCode: UI.lobbyCode });
     } else if (phase === 'finished' || status === 'finished') {
       setParticipantToken('', false);
     }
@@ -164,7 +247,7 @@
     if (isLobbyPage() && hasGameStarted(game) && resolvedGameId){
       if (!UI.redirecting){
         UI.redirecting = true;
-        window.location.replace(liveHref(resolvedGameId));
+        window.location.replace(liveHref(resolvedGameId, UI.lobbyCode));
       }
       return;
     }
@@ -174,15 +257,15 @@
     const voteTurnSeat = Number(game?.state?.vote_turn_seat || 0);
     const lastReveal = game?.state?.last_reveal || null;
 
-    setText('#pkLobbyCode', game?.lobby_code || '—');
+    setText('#pkLobbyCode', UI.lobbyCode || game?.lobby_code || '—');
     const liveLink = qs('#pkLiveLink');
     if(liveLink){
-      liveLink.href = liveHref(resolvedGameId || UI.gameId);
+      liveLink.href = liveHref(resolvedGameId || UI.gameId, UI.lobbyCode);
       liveLink.style.display = (resolvedGameId || UI.gameId) ? '' : 'none';
     }
     const lobbyLink = qs('#pkLobbyLink');
     if (lobbyLink){
-      lobbyLink.href = lobbyHref(resolvedGameId || UI.gameId);
+      lobbyLink.href = lobbyHref(resolvedGameId || UI.gameId, UI.lobbyCode);
       lobbyLink.style.display = (resolvedGameId || UI.gameId) ? '' : 'none';
     }
 
@@ -277,12 +360,22 @@
   }
 
   async function loadAndRender(){
+    let publicState = null;
+    if(!UI.gameId && UI.lobbyCode){
+      try { publicState = await ensureResolvedGameId(); } catch(_){ }
+    }
     if(!UI.gameId){
+      if (publicState){
+        render(publicState);
+        setStatus('Publieke lobby geladen, maar deelnemersessie kon nog niet aan deze match worden gekoppeld.', true);
+        return;
+      }
       setStatus(isLivePage() ? 'Geen actieve Pikken-match gekozen. Open deze pagina vanuit de lobby.' : 'Maak of join eerst een lobby.', true);
       return;
     }
     try{
       const state = await rpc('pikken_get_state_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId });
+      syncKnownGame(state);
       const version = Number(state?.game?.state_version || -1);
       if(version !== UI.lastStateVersion){
         UI.lastStateVersion = version;
@@ -295,6 +388,17 @@
       }
       setStatus('', false);
     }catch(err){
+      if (UI.lobbyCode){
+        try{
+          const fallback = publicState || await loadPublicState();
+          syncKnownGame(fallback);
+          if (fallback){
+            render(fallback);
+            setStatus(normalizeError(err) || 'Laden mislukt.', true);
+            return;
+          }
+        }catch(_){ }
+      }
       setStatus(normalizeError(err) || 'Laden mislukt.', true);
     }
   }
@@ -324,8 +428,9 @@
       config_input: { penalty_mode: mode }
     });
     UI.gameId = out.game_id;
-    setParticipantToken(UI.gameId, true);
-    history.replaceState(null,'', lobbyHref(UI.gameId));
+    UI.lobbyCode = String(out.lobby_code || '').trim().toUpperCase();
+    setParticipantToken(UI.gameId, true, { lobbyCode: UI.lobbyCode });
+    history.replaceState(null,'', lobbyHref(UI.gameId, UI.lobbyCode));
     startPolling();
   }
 
@@ -339,8 +444,9 @@
       lobby_code_input: code
     });
     UI.gameId = out.game_id;
-    setParticipantToken(UI.gameId, true);
-    history.replaceState(null,'', lobbyHref(UI.gameId));
+    UI.lobbyCode = String(out.lobby_code || code || '').trim().toUpperCase();
+    setParticipantToken(UI.gameId, true, { lobbyCode: UI.lobbyCode });
+    history.replaceState(null,'', lobbyHref(UI.gameId, UI.lobbyCode));
     startPolling();
   }
 
@@ -354,10 +460,26 @@
     setStatus('Starten…', false);
     await rpc('pikken_start_game_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId });
     if (UI.gameId){
-      window.location.replace(liveHref(UI.gameId));
+      window.location.replace(liveHref(UI.gameId, UI.lobbyCode));
       return;
     }
     await loadAndRender();
+  }
+  async function leaveLobby(){
+    if(!UI.gameId){
+      setParticipantToken('', false);
+      window.location.replace(lobbyHref('', ''));
+      return;
+    }
+    setStatus('Lobby verlaten…', false);
+    await rpc('pikken_leave_lobby_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId });
+    stopPolling();
+    UI.gameId = '';
+    UI.lobbyCode = '';
+    UI.lastStateVersion = -1;
+    UI.redirecting = false;
+    setParticipantToken('', false);
+    window.location.replace(lobbyHref('', ''));
   }
 
   async function placeBid(){
@@ -387,25 +509,27 @@
 
   function boot(){
     UI.gameId = currentUrlGameId() || storedParticipantGameId();
+    UI.lobbyCode = currentUrlLobbyCode() || storedParticipantLobbyCode();
 
     bindClick('#pkCreateLobbyBtn', ()=>createLobby().catch(e=>setStatus(normalizeError(e)||'Maken mislukt.',true)));
     bindClick('#pkJoinLobbyBtn', ()=>joinLobby().catch(e=>setStatus(normalizeError(e)||'Join mislukt.',true)));
     bindClick('#pkReadyBtn', ()=>setReady(true).catch(e=>setStatus(normalizeError(e)||'Ready mislukt.',true)));
     bindClick('#pkUnreadyBtn', ()=>setReady(false).catch(e=>setStatus(normalizeError(e)||'Unready mislukt.',true)));
     bindClick('#pkStartBtn', ()=>startGame().catch(e=>setStatus(normalizeError(e)||'Start mislukt.',true)));
+    bindClick('#pkLeaveBtn', ()=>leaveLobby().catch(e=>setStatus(normalizeError(e)||'Verlaten mislukt.',true)));
 
     bindClick('#pkPlaceBidBtn', ()=>placeBid().catch(e=>setStatus(normalizeError(e)||'Bieden mislukt.',true)));
     bindClick('#pkRejectBtn', ()=>rejectBid().catch(e=>setStatus(normalizeError(e)||'Afkeuren mislukt.',true)));
     bindClick('#pkVoteApproveBtn', ()=>vote(true).catch(e=>setStatus(normalizeError(e)||'Stem mislukt.',true)));
     bindClick('#pkVoteRejectBtn', ()=>vote(false).catch(e=>setStatus(normalizeError(e)||'Stem mislukt.',true)));
 
-    if(UI.gameId){
-      if(!currentUrlGameId()){
+    if(UI.gameId || UI.lobbyCode){
+      if(!currentUrlGameId() || (UI.lobbyCode && !currentUrlLobbyCode())){
         try{
-          history.replaceState(null,'', isLivePage() ? liveHref(UI.gameId) : lobbyHref(UI.gameId));
+          history.replaceState(null,'', isLivePage() ? liveHref(UI.gameId, UI.lobbyCode) : lobbyHref(UI.gameId, UI.lobbyCode));
         }catch(_){ }
       }
-      setParticipantToken(UI.gameId, true);
+      if (UI.gameId) setParticipantToken(UI.gameId, true, { lobbyCode: UI.lobbyCode });
       startPolling();
     } else if (isLivePage()) {
       setStatus('Geen actieve Pikken-match gekozen. Open deze pagina vanuit de lobby.', true);

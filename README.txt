@@ -12,7 +12,8 @@ What this bundle contains:
 - apply_overlay.ps1 -> optional helper script to copy repo\ onto a target repo path
 
 Main focus of this overlay:
-- Pikken lobby-to-live handoff fix: restore active lobby state across pages and treat `status=live` as a real start signal
+- Pikken lobby-to-live handoff fix: restore active lobby state across pages, recover old `match_ref` / lobby-code links into the real game id, and treat `status=live` as a real start signal
+- Pikken lobby cleanup + leave flow: add a clean leave button on the lobby page and ship a SQL patch that prunes currently empty Pikken lobbies when applied
 - Pikken public stats page and scope-safe links
 - Paardenrace public stats page, live/lobby scope-safe links, and room URL handling
 - Rad public/admin stats and fixed target nomination logging
@@ -32,4 +33,5 @@ Suggested apply order:
 
 Notes:
 - This is a curated overlay of my edits only, not a dump of all historical differences in the local workspace.
-- The combined SQL is assembled from the three upstream SQL files included in sql\upstream\.
+- The combined SQL is assembled from the four upstream SQL files included in sql\upstream\.
+- Running the combined SQL now also prunes already-empty Pikken lobbies once, immediately.

@@ -1,9 +1,10 @@
-﻿-- GEJAST V552 CODEX GAMES/STATS BUNDLE
+-- GEJAST V552 CODEX GAMES/STATS BUNDLE
 -- Built: 2026-04-16
--- Order: v521 Pikken live rewrite -> v548 admin/game analytics -> v550a session runtime audit
+-- Order: v521 Pikken live rewrite -> v553 Pikken lobby cleanup/leave -> v548 admin/game analytics -> v550a session runtime audit
 
 -- ===== BEGIN gejast_v521_pikken_live_state_rewrite.sql =====
--- GEJAST v521 â€” dedicated public pikken live state reader
+
+-- GEJAST v521 — dedicated public pikken live state reader
 begin;
 
 create or replace function public.pikken_get_live_state_public(
@@ -132,12 +133,156 @@ commit;
 
 -- ===== END gejast_v521_pikken_live_state_rewrite.sql =====
 
+-- ===== BEGIN gejast_v553_pikken_lobby_cleanup_and_leave.sql =====
+
+-- GEJAST v553 - Pikken lobby cleanup + leave RPC
+begin;
+
+create or replace function public._pikken_prune_empty_lobbies()
+returns integer
+language plpgsql
+security definer
+set search_path to 'public'
+as $fn$
+declare
+  v_deleted integer := 0;
+begin
+  with doomed as (
+    select g.id
+    from public.pikken_games g
+    where lower(coalesce(g.status,'')) = 'lobby'
+      and not exists (
+        select 1
+        from public.pikken_game_players p
+        where p.game_id = g.id
+      )
+  ),
+  deleted as (
+    delete from public.pikken_games g
+    using doomed d
+    where g.id = d.id
+    returning 1
+  )
+  select count(*) into v_deleted from deleted;
+
+  return coalesce(v_deleted, 0);
+end;
+$fn$;
+
+create or replace function public.pikken_leave_lobby_scoped(
+  session_token text,
+  game_id_input uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public'
+as $fn$
+declare
+  p public.players%rowtype;
+  g public.pikken_games%rowtype;
+  v_remaining integer := 0;
+  v_new_host_id bigint := null;
+  v_new_host_name text := null;
+begin
+  select * into p from public._gejast_player_from_session(session_token);
+  if p.id is null then
+    raise exception 'Niet ingelogd.';
+  end if;
+
+  perform public._pikken_prune_empty_lobbies();
+
+  select * into g
+  from public.pikken_games
+  where id = game_id_input
+  for update;
+
+  if g.id is null then
+    return jsonb_build_object('ok', true, 'left', true, 'game_deleted', true, 'deleted_lobbies', 0);
+  end if;
+
+  if lower(coalesce(g.status,'')) <> 'lobby' then
+    raise exception 'Deze lobby is al gestart.';
+  end if;
+
+  delete from public.pikken_game_players
+  where game_id = g.id
+    and player_id = p.id;
+
+  if not found then
+    raise exception 'Je zit niet in deze lobby.';
+  end if;
+
+  select count(*) into v_remaining
+  from public.pikken_game_players
+  where game_id = g.id;
+
+  if v_remaining <= 0 then
+    delete from public.pikken_games where id = g.id;
+    return jsonb_build_object(
+      'ok', true,
+      'left', true,
+      'game_deleted', true,
+      'deleted_lobbies', 1
+    );
+  end if;
+
+  if g.created_by_player_id is distinct from p.id then
+    v_new_host_id := g.created_by_player_id;
+    v_new_host_name := g.created_by_player_name;
+  else
+    select gp.player_id, gp.player_name
+      into v_new_host_id, v_new_host_name
+    from public.pikken_game_players gp
+    where gp.game_id = g.id
+    order by gp.seat_index
+    limit 1;
+  end if;
+
+  update public.pikken_games
+     set created_by_player_id = v_new_host_id,
+         created_by_player_name = v_new_host_name,
+         state_version = state_version + 1,
+         updated_at = now()
+   where id = g.id;
+
+  perform public._pikken_publish_spectator_summary(session_token, g.id);
+
+  return jsonb_build_object(
+    'ok', true,
+    'left', true,
+    'game_deleted', false,
+    'remaining_players', v_remaining,
+    'game_id', g.id,
+    'lobby_code', g.lobby_code,
+    'new_host_player_id', v_new_host_id,
+    'new_host_name', v_new_host_name
+  );
+end;
+$fn$;
+
+grant execute on function public.pikken_leave_lobby_scoped(text, uuid) to anon, authenticated;
+
+do $fn$
+begin
+  perform public._pikken_prune_empty_lobbies();
+end;
+$fn$;
+
+notify pgrst, 'reload schema';
+notify pgrst, 'reload config';
+
+commit;
+
+-- ===== END gejast_v553_pikken_lobby_cleanup_and_leave.sql =====
+
 -- ===== BEGIN gejast_v548_admin_game_analytics.sql =====
+
 
 begin;
 
 -- ============================================================
--- GEJAST v548 â€” admin/game analytics + Rad storage
+-- GEJAST v548 — admin/game analytics + Rad storage
 -- Built against repo version v547.
 -- Adds richer public stats/admin dashboards for:
 -- - Beurs d'Espinoza
@@ -335,14 +480,14 @@ begin
   return jsonb_build_object(
     'overview_cards', jsonb_build_array(
       jsonb_build_object('label','Spins', 'value', coalesce((select count(*) from public.rad_spin_events where site_scope = v_scope),0), 'sub','Opgeslagen Caute Rad-draaien'),
-      jsonb_build_object('label','Unieke draaiers', 'value', coalesce((select count(distinct lower(player_name)) from public.rad_spin_events where site_scope = v_scope),0), 'sub','Spelers met minstens Ã©Ã©n gelogde spin'),
+      jsonb_build_object('label','Unieke draaiers', 'value', coalesce((select count(distinct lower(player_name)) from public.rad_spin_events where site_scope = v_scope),0), 'sub','Spelers met minstens één gelogde spin'),
       jsonb_build_object('label','Uitdeel-spins', 'value', coalesce((select count(*) from public.rad_spin_events where site_scope = v_scope and coalesce(lower(segment_type),'') = 'target'),0), 'sub','Spins waarbij iemand werd aangewezen'),
       jsonb_build_object('label','Aangewezen spelers', 'value', coalesce((select count(*) from public.rad_target_events where site_scope = v_scope),0), 'sub','Opgeslagen target-nominaties')
     ),
     'story_cards', jsonb_build_array(
-      jsonb_build_object('label','Heetste segment', 'value', coalesce((select segment_label from public.rad_spin_events where site_scope = v_scope group by segment_label order by count(*) desc, max(spun_at) desc limit 1),'â€”'), 'sub', coalesce((select count(*)::text || ' keer geraakt' from public.rad_spin_events where site_scope = v_scope and segment_label = (select segment_label from public.rad_spin_events where site_scope = v_scope group by segment_label order by count(*) desc, max(spun_at) desc limit 1)),'Nog geen data')),
-      jsonb_build_object('label','Chaoskapitein', 'value', coalesce((select player_name from public.rad_spin_events where site_scope = v_scope group by player_name order by count(*) desc, max(spun_at) desc limit 1),'â€”'), 'sub', coalesce((select count(*)::text || ' spins' from public.rad_spin_events where site_scope = v_scope and lower(player_name)=lower((select player_name from public.rad_spin_events where site_scope=v_scope group by player_name order by count(*) desc, max(spun_at) desc limit 1))),'Nog geen data')),
-      jsonb_build_object('label','Meest geraakt', 'value', coalesce((select target_player_name from public.rad_target_events where site_scope = v_scope group by target_player_name order by count(*) desc, max(created_at) desc limit 1),'â€”'), 'sub', coalesce((select count(*)::text || ' keer uitgekozen' from public.rad_target_events where site_scope = v_scope and lower(target_player_name)=lower((select target_player_name from public.rad_target_events where site_scope=v_scope group by target_player_name order by count(*) desc, max(created_at) desc limit 1))),'Nog geen data'))
+      jsonb_build_object('label','Heetste segment', 'value', coalesce((select segment_label from public.rad_spin_events where site_scope = v_scope group by segment_label order by count(*) desc, max(spun_at) desc limit 1),'—'), 'sub', coalesce((select count(*)::text || ' keer geraakt' from public.rad_spin_events where site_scope = v_scope and segment_label = (select segment_label from public.rad_spin_events where site_scope = v_scope group by segment_label order by count(*) desc, max(spun_at) desc limit 1)),'Nog geen data')),
+      jsonb_build_object('label','Chaoskapitein', 'value', coalesce((select player_name from public.rad_spin_events where site_scope = v_scope group by player_name order by count(*) desc, max(spun_at) desc limit 1),'—'), 'sub', coalesce((select count(*)::text || ' spins' from public.rad_spin_events where site_scope = v_scope and lower(player_name)=lower((select player_name from public.rad_spin_events where site_scope=v_scope group by player_name order by count(*) desc, max(spun_at) desc limit 1))),'Nog geen data')),
+      jsonb_build_object('label','Meest geraakt', 'value', coalesce((select target_player_name from public.rad_target_events where site_scope = v_scope group by target_player_name order by count(*) desc, max(created_at) desc limit 1),'—'), 'sub', coalesce((select count(*)::text || ' keer uitgekozen' from public.rad_target_events where site_scope = v_scope and lower(target_player_name)=lower((select target_player_name from public.rad_target_events where site_scope=v_scope group by target_player_name order by count(*) desc, max(created_at) desc limit 1))),'Nog geen data'))
     ),
     'leaderboard_sections', jsonb_build_array(
       jsonb_build_object(
@@ -388,7 +533,7 @@ begin
         'subtitle','Laatste opgeslagen uitkomsten van het rad.',
         'columns', jsonb_build_array('Tijd','Speler','Segment','Type'),
         'rows', coalesce((
-          select jsonb_agg(jsonb_build_array(to_char(spun_at at time zone 'Europe/Amsterdam', 'DD-MM HH24:MI'), player_name, segment_label, coalesce(segment_type,'â€”')) order by spun_at desc)
+          select jsonb_agg(jsonb_build_array(to_char(spun_at at time zone 'Europe/Amsterdam', 'DD-MM HH24:MI'), player_name, segment_label, coalesce(segment_type,'—')) order by spun_at desc)
           from (
             select spun_at, player_name, segment_label, segment_type
             from public.rad_spin_events
@@ -472,9 +617,9 @@ begin
       jsonb_build_object('label','Gegooide zesjes','value', coalesce((select count(*)::text from public.pikken_round_hands h join public.pikken_games g on g.id=h.game_id cross join lateral unnest(h.dice_values) die where g.site_scope=v_scope and die=6),'0'), 'sub','Alle gelogde zesjes')
     ),
     'story_cards', jsonb_build_array(
-      jsonb_build_object('label','Tafelkoning','value', coalesce((select payload->>'winner_name' from public.pikken_matches where site_scope = v_scope group by payload->>'winner_name' order by count(*) desc, max(finished_at) desc limit 1),'â€”'), 'sub', coalesce((select count(*)::text || ' winstpotjes' from public.pikken_matches where site_scope=v_scope and lower(coalesce(payload->>'winner_name','')) = lower((select payload->>'winner_name' from public.pikken_matches where site_scope = v_scope group by payload->>'winner_name' order by count(*) desc, max(finished_at) desc limit 1))),'Nog geen winnaar')),
-      jsonb_build_object('label','Afkeur-koning','value', coalesce((select gp.player_name from public.pikken_round_votes v join public.pikken_games g on g.id=v.game_id join public.pikken_game_players gp on gp.game_id=v.game_id and gp.player_id=v.player_id where g.site_scope=v_scope and v.vote=false group by gp.player_name order by count(*) desc, max(v.voted_at) desc limit 1),'â€”'), 'sub', coalesce((select count(*)::text || ' afkeuren' from public.pikken_round_votes v join public.pikken_games g on g.id=v.game_id join public.pikken_game_players gp on gp.game_id=v.game_id and gp.player_id=v.player_id where g.site_scope=v_scope and v.vote=false and lower(gp.player_name)=lower((select gp.player_name from public.pikken_round_votes v join public.pikken_games g on g.id=v.game_id join public.pikken_game_players gp on gp.game_id=v.game_id and gp.player_id=v.player_id where g.site_scope=v_scope and v.vote=false group by gp.player_name order by count(*) desc, max(v.voted_at) desc limit 1))),'Nog geen afkeuren')),
-      jsonb_build_object('label','Zesjesmagneet','value', coalesce((select gp.player_name from public.pikken_round_hands h join public.pikken_games g on g.id=h.game_id join public.pikken_game_players gp on gp.game_id=h.game_id and gp.player_id=h.player_id cross join lateral unnest(h.dice_values) die where g.site_scope=v_scope and die=6 group by gp.player_name order by count(*) desc, max(h.created_at) desc limit 1),'â€”'), 'sub', coalesce((select count(*)::text || ' zesjes' from public.pikken_round_hands h join public.pikken_games g on g.id=h.game_id join public.pikken_game_players gp on gp.game_id=h.game_id and gp.player_id=h.player_id cross join lateral unnest(h.dice_values) die where g.site_scope=v_scope and die=6 and lower(gp.player_name)=lower((select gp.player_name from public.pikken_round_hands h join public.pikken_games g on g.id=h.game_id join public.pikken_game_players gp on gp.game_id=h.game_id and gp.player_id=h.player_id cross join lateral unnest(h.dice_values) die where g.site_scope=v_scope and die=6 group by gp.player_name order by count(*) desc, max(h.created_at) desc limit 1))),'Nog geen zesjes'))
+      jsonb_build_object('label','Tafelkoning','value', coalesce((select payload->>'winner_name' from public.pikken_matches where site_scope = v_scope group by payload->>'winner_name' order by count(*) desc, max(finished_at) desc limit 1),'—'), 'sub', coalesce((select count(*)::text || ' winstpotjes' from public.pikken_matches where site_scope=v_scope and lower(coalesce(payload->>'winner_name','')) = lower((select payload->>'winner_name' from public.pikken_matches where site_scope = v_scope group by payload->>'winner_name' order by count(*) desc, max(finished_at) desc limit 1))),'Nog geen winnaar')),
+      jsonb_build_object('label','Afkeur-koning','value', coalesce((select gp.player_name from public.pikken_round_votes v join public.pikken_games g on g.id=v.game_id join public.pikken_game_players gp on gp.game_id=v.game_id and gp.player_id=v.player_id where g.site_scope=v_scope and v.vote=false group by gp.player_name order by count(*) desc, max(v.voted_at) desc limit 1),'—'), 'sub', coalesce((select count(*)::text || ' afkeuren' from public.pikken_round_votes v join public.pikken_games g on g.id=v.game_id join public.pikken_game_players gp on gp.game_id=v.game_id and gp.player_id=v.player_id where g.site_scope=v_scope and v.vote=false and lower(gp.player_name)=lower((select gp.player_name from public.pikken_round_votes v join public.pikken_games g on g.id=v.game_id join public.pikken_game_players gp on gp.game_id=v.game_id and gp.player_id=v.player_id where g.site_scope=v_scope and v.vote=false group by gp.player_name order by count(*) desc, max(v.voted_at) desc limit 1))),'Nog geen afkeuren')),
+      jsonb_build_object('label','Zesjesmagneet','value', coalesce((select gp.player_name from public.pikken_round_hands h join public.pikken_games g on g.id=h.game_id join public.pikken_game_players gp on gp.game_id=h.game_id and gp.player_id=h.player_id cross join lateral unnest(h.dice_values) die where g.site_scope=v_scope and die=6 group by gp.player_name order by count(*) desc, max(h.created_at) desc limit 1),'—'), 'sub', coalesce((select count(*)::text || ' zesjes' from public.pikken_round_hands h join public.pikken_games g on g.id=h.game_id join public.pikken_game_players gp on gp.game_id=h.game_id and gp.player_id=h.player_id cross join lateral unnest(h.dice_values) die where g.site_scope=v_scope and die=6 and lower(gp.player_name)=lower((select gp.player_name from public.pikken_round_hands h join public.pikken_games g on g.id=h.game_id join public.pikken_game_players gp on gp.game_id=h.game_id and gp.player_id=h.player_id cross join lateral unnest(h.dice_values) die where g.site_scope=v_scope and die=6 group by gp.player_name order by count(*) desc, max(h.created_at) desc limit 1))),'Nog geen zesjes'))
     ),
     'leaderboard_sections', jsonb_build_array(
       jsonb_build_object(
@@ -524,8 +669,8 @@ begin
         'rows', coalesce((
           select jsonb_agg(jsonb_build_array(
             to_char(coalesce(g.finished_at, m.finished_at) at time zone 'Europe/Amsterdam', 'DD-MM HH24:MI'),
-            coalesce(g.lobby_code, m.payload->>'lobby_code', 'â€”'),
-            coalesce(nullif(m.payload->>'winner_name',''),'â€”'),
+            coalesce(g.lobby_code, m.payload->>'lobby_code', '—'),
+            coalesce(nullif(m.payload->>'winner_name',''),'—'),
             coalesce((select count(*)::text from public.pikken_game_players gp where gp.game_id = g.id),'0'),
             coalesce(g.state->>'round_no','0')
           ) order by coalesce(g.finished_at, m.finished_at) desc)
@@ -605,7 +750,7 @@ begin
       jsonb_build_object('label','Unieke jockeys', 'value', coalesce((select count(distinct lower(player_name)) from public.paardenrace_obligations),0), 'sub','Spelers die een bak opbouwden of kregen')
     ),
     'story_cards', jsonb_build_array(
-      jsonb_build_object('label','Favoriete suit', 'value', coalesce((select winner_suit from public.paardenrace_match_history group by winner_suit order by count(*) desc, max(finished_at) desc limit 1),'â€”'), 'sub', coalesce((select count(*)::text || ' wins' from public.paardenrace_match_history where winner_suit = (select winner_suit from public.paardenrace_match_history group by winner_suit order by count(*) desc, max(finished_at) desc limit 1)),'Nog geen races')),
+      jsonb_build_object('label','Favoriete suit', 'value', coalesce((select winner_suit from public.paardenrace_match_history group by winner_suit order by count(*) desc, max(finished_at) desc limit 1),'—'), 'sub', coalesce((select count(*)::text || ' wins' from public.paardenrace_match_history where winner_suit = (select winner_suit from public.paardenrace_match_history group by winner_suit order by count(*) desc, max(finished_at) desc limit 1)),'Nog geen races')),
       jsonb_build_object('label','Topjockey', 'value', coalesce((
         select x.player_name
         from (
@@ -615,7 +760,7 @@ begin
           where coalesce((pp->>'is_winner')::boolean, false) is true
           group by coalesce(pp->>'player_name','')
         ) x order by x.wins desc, x.player_name asc limit 1
-      ),'â€”'), 'sub', coalesce((
+      ),'—'), 'sub', coalesce((
         select x.wins::text || ' winraces'
         from (
           select coalesce(pp->>'player_name','') as player_name, count(*) as wins
@@ -625,7 +770,7 @@ begin
           group by coalesce(pp->>'player_name','')
         ) x order by x.wins desc, x.player_name asc limit 1
       ),'Nog geen races')),
-      jsonb_build_object('label','Bakmagneet', 'value', coalesce((select player_name from public.paardenrace_obligations group by player_name order by sum(amount_bakken) desc, max(created_at) desc limit 1),'â€”'), 'sub', coalesce((select sum(amount_bakken)::text || ' bakken' from public.paardenrace_obligations where lower(player_name)=lower((select player_name from public.paardenrace_obligations group by player_name order by sum(amount_bakken) desc, max(created_at) desc limit 1))),'Nog geen schulden'))
+      jsonb_build_object('label','Bakmagneet', 'value', coalesce((select player_name from public.paardenrace_obligations group by player_name order by sum(amount_bakken) desc, max(created_at) desc limit 1),'—'), 'sub', coalesce((select sum(amount_bakken)::text || ' bakken' from public.paardenrace_obligations where lower(player_name)=lower((select player_name from public.paardenrace_obligations group by player_name order by sum(amount_bakken) desc, max(created_at) desc limit 1))),'Nog geen schulden'))
     ),
     'leaderboard_sections', jsonb_build_array(
       jsonb_build_object(
@@ -678,8 +823,8 @@ begin
         'rows', coalesce((
           select jsonb_agg(jsonb_build_array(
             to_char(finished_at at time zone 'Europe/Amsterdam', 'DD-MM HH24:MI'),
-            coalesce(room_code,'â€”'),
-            coalesce(winner_suit,'â€”'),
+            coalesce(room_code,'—'),
+            coalesce(winner_suit,'—'),
             jsonb_array_length(coalesce(summary_payload->'per_player','[]'::jsonb)),
             coalesce((select sum((pp->>'total_bakken_owed')::int) from jsonb_array_elements(coalesce(summary_payload->'per_player','[]'::jsonb)) pp),0)
           ) order by finished_at desc)
@@ -692,7 +837,7 @@ begin
     'recent_rows', coalesce((
       select jsonb_agg(jsonb_build_object(
         'title', coalesce(room_code,'Room'),
-        'sub', coalesce(winner_suit,'â€”'),
+        'sub', coalesce(winner_suit,'—'),
         'value', jsonb_array_length(coalesce(summary_payload->'per_player','[]'::jsonb))::text || ' spelers',
         'meta', to_char(finished_at at time zone 'Europe/Amsterdam', 'DD-MM HH24:MI')
       ) order by finished_at desc)
@@ -761,10 +906,10 @@ begin
       jsonb_build_object('label','Watchers','value', coalesce((select count(*) from public.despimarkt_market_watchers where site_scope=v_scope),0), 'sub','Volgrelaties over alle markten')
     ),
     'story_cards', jsonb_build_array(
-      jsonb_build_object('label','Grootste payout','value', coalesce((select player_name from public.despimarkt_market_payouts where site_scope=v_scope order by payout_cautes desc, created_at desc limit 1),'â€”'), 'sub', coalesce((select payout_cautes::text || ' â‚µ' from public.despimarkt_market_payouts where site_scope=v_scope order by payout_cautes desc, created_at desc limit 1),'Nog geen settlements')),
-      jsonb_build_object('label','Hotste tag','value', coalesce((select tag from (select unnest(coalesce(market_tags, array[]::text[])) as tag from public.despimarkt_markets where site_scope=v_scope) t group by tag order by count(*) desc, tag asc limit 1),'â€”'), 'sub', coalesce((select count(*)::text || ' markten' from (select unnest(coalesce(market_tags, array[]::text[])) as tag from public.despimarkt_markets where site_scope=v_scope) t where lower(tag)=lower((select tag from (select unnest(coalesce(market_tags, array[]::text[])) as tag from public.despimarkt_markets where site_scope=v_scope) t2 group by tag order by count(*) desc, tag asc limit 1))),'Nog geen tags')),
-      jsonb_build_object('label','Rijkste speler','value', coalesce((select player_name from public.despimarkt_caute_balance_view where site_scope=v_scope order by balance_cautes desc, lower(player_name) asc limit 1),'â€”'), 'sub', coalesce((select balance_cautes::text || ' â‚µ' from public.despimarkt_caute_balance_view where site_scope=v_scope order by balance_cautes desc, lower(player_name) asc limit 1),'Nog geen walletdata')),
-      jsonb_build_object('label','Jouw watchlist','value', case when nullif(trim(coalesce(v_name,'')), '') is null then 'â€”' else coalesce((select count(*)::text from public.despimarkt_market_watchers where site_scope=v_scope and lower(player_name)=lower(v_name)),'0') end, 'sub', case when nullif(trim(coalesce(v_name,'')), '') is null then 'Log in voor persoonlijke watch-data.' else 'Markten die jij volgt' end)
+      jsonb_build_object('label','Grootste payout','value', coalesce((select player_name from public.despimarkt_market_payouts where site_scope=v_scope order by payout_cautes desc, created_at desc limit 1),'—'), 'sub', coalesce((select payout_cautes::text || ' ₵' from public.despimarkt_market_payouts where site_scope=v_scope order by payout_cautes desc, created_at desc limit 1),'Nog geen settlements')),
+      jsonb_build_object('label','Hotste tag','value', coalesce((select tag from (select unnest(coalesce(market_tags, array[]::text[])) as tag from public.despimarkt_markets where site_scope=v_scope) t group by tag order by count(*) desc, tag asc limit 1),'—'), 'sub', coalesce((select count(*)::text || ' markten' from (select unnest(coalesce(market_tags, array[]::text[])) as tag from public.despimarkt_markets where site_scope=v_scope) t where lower(tag)=lower((select tag from (select unnest(coalesce(market_tags, array[]::text[])) as tag from public.despimarkt_markets where site_scope=v_scope) t2 group by tag order by count(*) desc, tag asc limit 1))),'Nog geen tags')),
+      jsonb_build_object('label','Rijkste speler','value', coalesce((select player_name from public.despimarkt_caute_balance_view where site_scope=v_scope order by balance_cautes desc, lower(player_name) asc limit 1),'—'), 'sub', coalesce((select balance_cautes::text || ' ₵' from public.despimarkt_caute_balance_view where site_scope=v_scope order by balance_cautes desc, lower(player_name) asc limit 1),'Nog geen walletdata')),
+      jsonb_build_object('label','Jouw watchlist','value', case when nullif(trim(coalesce(v_name,'')), '') is null then '—' else coalesce((select count(*)::text from public.despimarkt_market_watchers where site_scope=v_scope and lower(player_name)=lower(v_name)),'0') end, 'sub', case when nullif(trim(coalesce(v_name,'')), '') is null then 'Log in voor persoonlijke watch-data.' else 'Markten die jij volgt' end)
     ),
     'leaderboard_sections', jsonb_build_array(
       jsonb_build_object(
@@ -783,7 +928,7 @@ begin
         ), '[]'::jsonb)
       ),
       jsonb_build_object(
-        'title','Populaire tags', 'subtitle','Welke themaâ€™s de hub dragen.',
+        'title','Populaire tags', 'subtitle','Welke thema’s de hub dragen.',
         'rows', coalesce((
           select jsonb_agg(jsonb_build_object('label', tag, 'value', cnt, 'sub', watcher_count::text || ' watchers') order by cnt desc, tag asc)
           from (
@@ -824,7 +969,7 @@ begin
           select jsonb_agg(jsonb_build_array(
             to_char(coalesce(m.resolved_at,m.updated_at) at time zone 'Europe/Amsterdam','DD-MM HH24:MI'),
             m.title,
-            case when m.winning_outcome_key='A' then m.outcome_a_label when m.winning_outcome_key='B' then m.outcome_b_label else 'â€”' end,
+            case when m.winning_outcome_key='A' then m.outcome_a_label when m.winning_outcome_key='B' then m.outcome_b_label else '—' end,
             coalesce((select sum(p.stake_cautes)::bigint from public.despimarkt_positions p where p.market_id=m.market_id),0),
             coalesce((select count(*) from public.despimarkt_market_watchers w where w.market_id=m.market_id),0)
           ) order by coalesce(m.resolved_at,m.updated_at) desc)
@@ -842,7 +987,7 @@ begin
       select jsonb_agg(jsonb_build_object(
         'title', m.title,
         'sub', case when m.status='resolved' then 'Resolved' else initcap(m.status) end,
-        'value', coalesce((select sum(stake_cautes)::bigint from public.despimarkt_positions p where p.market_id=m.market_id),0)::text || ' â‚µ pot',
+        'value', coalesce((select sum(stake_cautes)::bigint from public.despimarkt_positions p where p.market_id=m.market_id),0)::text || ' ₵ pot',
         'meta', to_char(coalesce(m.resolved_at,m.updated_at,m.created_at) at time zone 'Europe/Amsterdam', 'DD-MM HH24:MI')
       ) order by coalesce(m.resolved_at,m.updated_at,m.created_at) desc)
       from (
@@ -891,6 +1036,7 @@ commit;
 -- ===== END gejast_v548_admin_game_analytics.sql =====
 
 -- ===== BEGIN gejast_v550a_session_runtime_audit.sql =====
+
 -- GEJAST session/runtime audit v550a
 -- Read-only inspection script for Supabase SQL editor.
 -- Purpose: verify whether the live database has a server-side session-expiry owner path
@@ -1035,3 +1181,4 @@ order by tablename, policyname;
 rollback;
 
 -- ===== END gejast_v550a_session_runtime_audit.sql =====
+
