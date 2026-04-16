@@ -105,7 +105,7 @@
   function progressForBadge(snapshotInput, badgeKey) {
     const s = snapshotFrom(snapshotInput);
     switch (badgeKey) {
-      case 'starter': return scalarProgress((s.totalMatches || 0), 1, 'wedstrijden');
+      case 'starter': return scalarProgress((s.totalMatches || 0) + (s.drinkEvents || 0) + (s.speedCount || 0), 1, 'site-acties');
       case 'groeier': return choiceProgress([
         scalarProgress(s.totalMatches || 0, 5, 'potjes'),
         scalarProgress(s.drinkEvents || 0, 10, 'drankacties')
@@ -130,10 +130,10 @@
       case 'snelheidsduivel': return scalarProgress(s.speedCount || 0, 3, 'speedrecords');
       case 'ijskoud': return thresholdProgressLowerIsBetter(s.iceBestSeconds || 0, 25, 'Ice');
       case 'kurkentrekker': return scalarProgress(s.wineEvents || 0, 5, 'wijn-acties');
-      case 'verifieermeester': return scalarProgress(s.verificationVotes || 0, 50, 'geaccepteerde verificaties');
+      case 'verifieermeester': return scalarProgress(s.verificationVotes || 0, 20, 'geaccepteerde verificaties');
       case 'pussycup_prins': return compositeProgress([
-        scalarProgress(s.beerpongMatches || 0, 12, 'beerpongpotjes'),
-        scalarProgress(s.pussycupPct || 0, 75, '% pussycup')
+        scalarProgress(s.beerpongMatches || 0, 10, 'beerpongpotjes'),
+        scalarProgress(s.pussycupPct || 0, 25, '% pussycup')
       ]);
       case 'onbreekbaar': return scalarProgress(s.winStreak || 0, 10, 'winstreeks');
       case 'spinozageest': return compositeProgress([
@@ -142,27 +142,37 @@
         scalarProgress(s.verificationVotes || 0, 10, 'verificaties'),
         scalarProgress(s.activeGameCount || 0, 2, 'speltypes')
       ]);
-      case 'alleskunner': return compositeProgress([
-        scalarProgress(s.klaverjasMatches || 0, 10, 'klaverjaspotjes'),
-        scalarProgress(s.boerenbridgeMatches || 0, 10, 'boerenbridge-potjes'),
-        scalarProgress(s.beerpongMatches || 0, 10, 'beerpongpotjes')
-      ]);
+      case 'alleskunner': {
+        const items = [
+          { label: 'klaverjaspotjes', value: s.klaverjasMatches || 0 },
+          { label: 'boerenbridge-potjes', value: s.boerenbridgeMatches || 0 },
+          { label: 'beerpongpotjes', value: s.beerpongMatches || 0 },
+          { label: 'paardenracepotjes', value: s.paardenraceMatches || 0 },
+          { label: 'pikkenpotjes', value: s.pikkenMatches || 0 }
+        ];
+        const met = items.filter((item) => Number(item.value || 0) >= 10).length;
+        return {
+          ratio: clamp(met / 3, 0, 1),
+          summary: `${met} / 3 speltypes`,
+          lines: items.map((item) => `${formatNumber(item.value, 0)} / 10 ${item.label}`)
+        };
+      }
       case 'nachtburgemeester': return scalarProgress(s.nightActions || 0, 12, 'nachtacties');
       case 'dorstmachine': return scalarProgress(s.drinkUnits || 0, 40, 'drinkunits', { digits: 1 });
       case 'literlegende': return scalarProgress(s.literSub90Count || 0, 3, 'liter-records < 90s');
       case 'bekerbeul': return scalarProgress(s.beerpongWins || 0, 20, 'beerpongzeges');
-      case 'trouwewachter': return scalarProgress(s.verificationVotes || 0, 20, 'verificaties');
+      case 'trouwewachter': return scalarProgress(s.verificationVotes || 0, 10, 'verificaties');
       case 'salonleeuw': return choiceProgress([
         scalarProgress(s.ballroomEntries || 0, 10, 'ballroom-entries'),
         scalarProgress(s.ballroomKingCount || 0, 5, 'koningclaims')
       ]);
       case 'ijzerenmaag': return scalarProgress(s.tenUnitNights || 0, 5, 'zware nachten');
-      case 'laatsteronde': return scalarProgress(s.afterFourActions || 0, 5, 'acties na 04:00');
+      case 'laatsteronde': return scalarProgress(s.nightActions || 0, 5, 'nachtacties (01:00-05:00)');
       case 'fluwelenvorst': return choiceProgress([
         scalarProgress(s.ballroomKingCount || 0, 10, 'koningclaims'),
         scalarProgress(s.ballroomEntries || 0, 25, 'ballroom-entries')
       ]);
-      case 'rozenkoning': return scalarProgress(s.specialWins || 0, 15, 'speciale zeges');
+      case 'rozenkoning': return scalarProgress(s.specialWins || 0, 15, 'speciale win-dagen');
       case 'vuurproef': return compositeProgress([
         scalarProgress(s.activeDayStreak || 0, 7, 'actieve dagen'),
         scalarProgress((s.speedCount || 0) + (s.drinkEvents || 0), 7, 'snelheid/drankacties')
@@ -177,6 +187,49 @@
         scalarProgress(s.boerenbridgeWins || 0, 20, 'boerenbridgezeges'),
         scalarProgress(s.liveParticipationsTotal || 0, 5, 'live-deelnames')
       ]);
+      case 'rad': return scalarProgress(s.radSpins || 0, 1, 'Rad-draai');
+      case 'rad_draaikoorts': return scalarProgress(s.radSpins || 0, 10, 'Rad-draaien');
+      case 'rad_katerkompas': return compositeProgress([
+        scalarProgress(s.radSpins || 0, 8, 'Rad-draaien'),
+        scalarProgress(s.radDrinkUnits || 0, 12, 'Rad-drinkunits', { digits: 1 })
+      ]);
+      case 'despimarkt': return choiceProgress([
+        scalarProgress(s.despimarktBets || 0, 1, 'bets'),
+        scalarProgress(s.despimarktMarketsCreated || 0, 1, 'markten')
+      ]);
+      case 'despimarkt_marktmeester': return scalarProgress(s.despimarktMarketsCreated || 0, 3, 'markten');
+      case 'despimarkt_orakel': return compositeProgress([
+        scalarProgress(s.despimarktBets || 0, 10, 'bets'),
+        scalarProgress(Math.max(0, toNumber(s.despimarktPnlCautes, 0)), 250, 'cautes winst', { digits: 0 })
+      ]);
+      case 'tribuneheld': return scalarProgress(s.liveParticipationsTotal || 0, 1, 'live-deelnames');
+      case 'terugvechter': return scalarProgress(s.totalComebackWins || 0, 3, 'comebackzeges');
+      case 'sprintverzamelaar': return scalarProgress(s.speedCount || 0, 3, 'speedrecords (top 5)');
+      case 'tafeltoerist': return compositeProgress([
+        scalarProgress(s.klaverjasMatches || 0, 1, 'klaverjaspotje'),
+        scalarProgress(s.boerenbridgeMatches || 0, 1, 'boerenbridge-potje'),
+        scalarProgress(s.beerpongMatches || 0, 1, 'beerpongpotje'),
+        scalarProgress(s.paardenraceMatches || 0, 1, 'paardenracepotje'),
+        scalarProgress(s.pikkenMatches || 0, 1, 'pikkenpotje')
+      ]);
+      case 'sporenzoeker': return compositeProgress([
+        scalarProgress(s.totalMatches || 0, 1, 'potje'),
+        scalarProgress(s.drinkEvents || 0, 1, 'drankactie'),
+        scalarProgress((Number(s.ballroomEntries || 0) + Number(s.ballroomKingCount || 0)), 1, 'ballroom-actie'),
+        scalarProgress(s.liveParticipationsTotal || 0, 1, 'live-deelname'),
+        scalarProgress(s.radSpins || 0, 1, 'Rad-draai'),
+        choiceProgress([
+          scalarProgress(s.despimarktBets || 0, 1, 'Despimarkt-bet'),
+          scalarProgress(s.despimarktMarketsCreated || 0, 1, 'Despimarkt-markt')
+        ])
+      ]);
+      case 'elosmid': {
+        const baseline = 1000;
+        const goal = 1350;
+        const rating = toNumber(s.bestRating, 0);
+        const delta = Math.max(0, rating - baseline);
+        return scalarProgress(delta, goal - baseline, 'ELO boven 1000');
+      }
       case 'avondster': return compositeProgress([
         scalarProgress(s.totalMatches || 0, 50, 'potjes'),
         scalarProgress(s.drinkEvents || 0, 50, 'drankacties'),

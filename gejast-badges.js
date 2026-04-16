@@ -20,7 +20,7 @@
       rarityLabel: 'Common',
       pack: 'core',
       description: 'Voor de eerste echte stap op de site.',
-      requirementsText: '1 gespeeld potje.',
+      requirementsText: '1 geverifieerde site-actie: een potje, drankje of speedpoging.',
       imageFull: assetPath('core', 'starter'),
       imageMini48: miniPath('48', 'starter'),
       imageMini64: miniPath('64', 'starter')
@@ -581,12 +581,192 @@
       imageMini64: miniPath('64', 'paardenrace_stalfluisteraar')
     },
     {
+      key: 'rad',
+      legacyLabels: [],
+      title: 'Rad-draaier',
+      plaqueTitle: 'Rad-draaier',
+      nickname: 'De Spinner',
+      rarityRank: 39,
+      rarityLabel: 'Common',
+      pack: 'expansion',
+      description: 'Voor wie het Rad niet vreest, maar draait.',
+      requirementsText: '1 draai aan het Rad.',
+      imageFull: assetPath('expansion', 'rad'),
+      imageMini48: miniPath('48', 'rad'),
+      imageMini64: miniPath('64', 'rad')
+    },
+    {
+      key: 'rad_draaikoorts',
+      legacyLabels: [],
+      title: 'Draaikoorts',
+      plaqueTitle: 'Draaikoorts',
+      nickname: 'De Tollende',
+      rarityRank: 40,
+      rarityLabel: 'Uncommon',
+      pack: 'expansion',
+      description: 'Voor wie elke uitkomst nog een keer wil zien.',
+      requirementsText: '10 draaien aan het Rad.',
+      imageFull: assetPath('expansion', 'rad_draaikoorts'),
+      imageMini48: miniPath('48', 'rad_draaikoorts'),
+      imageMini64: miniPath('64', 'rad_draaikoorts')
+    },
+    {
+      key: 'rad_katerkompas',
+      legacyLabels: [],
+      title: 'Katerkompas',
+      plaqueTitle: 'Katerkompas',
+      nickname: 'De Wankele',
+      rarityRank: 41,
+      rarityLabel: 'Rare',
+      pack: 'expansion',
+      description: 'Voor wie het Rad consequent de verkeerde kant op wijst.',
+      requirementsText: 'Minstens 8 draaien en minstens 12 Rad-drinkunits.',
+      imageFull: assetPath('expansion', 'rad_katerkompas'),
+      imageMini48: miniPath('48', 'rad_katerkompas'),
+      imageMini64: miniPath('64', 'rad_katerkompas')
+    },
+    {
+      key: 'despimarkt',
+      legacyLabels: [],
+      title: 'Caute-koopman',
+      plaqueTitle: 'Caute-koopman',
+      nickname: 'De Handelaar',
+      rarityRank: 42,
+      rarityLabel: 'Uncommon',
+      pack: 'expansion',
+      description: 'Voor wie de Beurs d\'Espinoza binnenstapt.',
+      requirementsText: '1 Despimarkt-bet of 1 aangemaakte markt.',
+      imageFull: assetPath('expansion', 'despimarkt'),
+      imageMini48: miniPath('48', 'despimarkt'),
+      imageMini64: miniPath('64', 'despimarkt')
+    },
+    {
+      key: 'despimarkt_marktmeester',
+      legacyLabels: [],
+      title: 'Marktmeester',
+      plaqueTitle: 'Marktmeester',
+      nickname: 'Ik ga Econometrie in Amsterdam studeren',
+      rarityRank: 43,
+      rarityLabel: 'Rare',
+      pack: 'expansion',
+      description: 'Voor wie nieuwe vragen durft te noteren.',
+      requirementsText: '3 Despimarkt-markten aangemaakt.',
+      imageFull: assetPath('expansion', 'despimarkt_marktmeester'),
+      imageMini48: miniPath('48', 'despimarkt_marktmeester'),
+      imageMini64: miniPath('64', 'despimarkt_marktmeester')
+    },
+    {
+      key: 'despimarkt_orakel',
+      legacyLabels: [],
+      title: 'Warren Buffet',
+      plaqueTitle: 'Warren Buffet',
+      nickname: 'De Belegger',
+      rarityRank: 44,
+      rarityLabel: 'Epic',
+      pack: 'expansion',
+      description: 'Voor wie cautes stapelt alsof het een buffet is.',
+      requirementsText: 'Minstens 10 bets en minstens +250 cautes netto winst.',
+      imageFull: assetPath('expansion', 'despimarkt_orakel'),
+      imageMini48: miniPath('48', 'despimarkt_orakel'),
+      imageMini64: miniPath('64', 'despimarkt_orakel')
+    },
+    {
+      key: 'tribuneheld',
+      legacyLabels: [],
+      title: 'Tribuneheld',
+      plaqueTitle: 'Tribuneheld',
+      nickname: 'De Supporter',
+      rarityRank: 45,
+      rarityLabel: 'Common',
+      pack: 'expansion',
+      description: 'Voor wie live speelt en publiek heeft.',
+      requirementsText: '1 live spectator-wedstrijd als deelnemer.',
+      imageFull: assetPath('expansion', 'tribuneheld'),
+      imageMini48: miniPath('48', 'tribuneheld'),
+      imageMini64: miniPath('64', 'tribuneheld')
+    },
+    {
+      key: 'terugvechter',
+      legacyLabels: [],
+      title: 'Terugvechter',
+      plaqueTitle: 'Terugvechter',
+      nickname: 'De Stugge',
+      rarityRank: 46,
+      rarityLabel: 'Uncommon',
+      pack: 'expansion',
+      description: 'Voor wie pas begint als het misgaat.',
+      requirementsText: '3 comebackzeges.',
+      imageFull: assetPath('expansion', 'terugvechter'),
+      imageMini48: miniPath('48', 'terugvechter'),
+      imageMini64: miniPath('64', 'terugvechter')
+    },
+    {
+      key: 'sprintverzamelaar',
+      legacyLabels: [],
+      title: 'Sprintverzamelaar',
+      plaqueTitle: 'Sprintverzamelaar',
+      nickname: 'De Stopwatch',
+      rarityRank: 48,
+      rarityLabel: 'Uncommon',
+      pack: 'expansion',
+      description: 'Voor wie de leaderboard als stickerboek ziet.',
+      requirementsText: 'Snelheidsrecord (top 5) voor minstens 3 verschillende drankjes.',
+      imageFull: assetPath('expansion', 'sprintverzamelaar'),
+      imageMini48: miniPath('48', 'sprintverzamelaar'),
+      imageMini64: miniPath('64', 'sprintverzamelaar')
+    },
+    {
+      key: 'tafeltoerist',
+      legacyLabels: [],
+      title: 'Tafeltoerist',
+      plaqueTitle: 'Tafeltoerist',
+      nickname: 'De Proever',
+      rarityRank: 50,
+      rarityLabel: 'Rare',
+      pack: 'expansion',
+      description: 'Voor wie elke tafel even bezoekt.',
+      requirementsText: 'Speel minstens 1 potje in elk spel: klaverjas, boerenbridge, beerpong, paardenrace en pikken.',
+      imageFull: assetPath('expansion', 'tafeltoerist'),
+      imageMini48: miniPath('48', 'tafeltoerist'),
+      imageMini64: miniPath('64', 'tafeltoerist')
+    },
+    {
+      key: 'sporenzoeker',
+      legacyLabels: [],
+      title: 'Sporenzoeker',
+      plaqueTitle: 'Sporenzoeker',
+      nickname: 'De Rondleider',
+      rarityRank: 51,
+      rarityLabel: 'Rare',
+      pack: 'expansion',
+      description: 'Voor wie overal net genoeg sporen achterlaat om verdacht te zijn.',
+      requirementsText: 'Minstens 1 actie in alle 6 onderdelen: potjes, drankjes, ballroom, live, Rad en Despimarkt.',
+      imageFull: assetPath('expansion', 'sporenzoeker'),
+      imageMini48: miniPath('48', 'sporenzoeker'),
+      imageMini64: miniPath('64', 'sporenzoeker')
+    },
+    {
+      key: 'elosmid',
+      legacyLabels: [],
+      title: 'ELO-smid',
+      plaqueTitle: 'ELO-smid',
+      nickname: 'De Ratingbouwer',
+      rarityRank: 52,
+      rarityLabel: 'Epic',
+      pack: 'expansion',
+      description: 'Voor wie z\'n rating als metaal smeedt.',
+      requirementsText: 'Haal 1350+ ELO in één spel.',
+      imageFull: assetPath('expansion', 'elosmid'),
+      imageMini48: miniPath('48', 'elosmid'),
+      imageMini64: miniPath('64', 'elosmid')
+    },
+    {
       key: 'fluwelenvorst',
       legacyLabels: [],
       title: 'Fluwelen Vorst',
       plaqueTitle: 'Fluwelen Vorst',
       nickname: 'De Rode Baron',
-      rarityRank: 39,
+      rarityRank: 53,
       rarityLabel: 'Legendary',
       pack: 'prestige',
       description: 'Voor langdurige heerschappij over de ballroom.',
@@ -601,7 +781,7 @@
       title: 'Rozenkoning',
       plaqueTitle: 'Rozenkoning',
       nickname: 'De Charmeur',
-      rarityRank: 40,
+      rarityRank: 54,
       rarityLabel: 'Legendary',
       pack: 'prestige',
       description: 'Voor de speler die speciale avonden naar zich toe trekt.',
@@ -616,7 +796,7 @@
       title: 'Vuurproef',
       plaqueTitle: 'Vuurproef',
       nickname: 'De Vlam',
-      rarityRank: 41,
+      rarityRank: 55,
       rarityLabel: 'Epic',
       pack: 'prestige',
       description: 'Voor spelers die meerdere dagen achter elkaar leveren.',
@@ -631,7 +811,7 @@
       title: 'Sleuteldrager',
       plaqueTitle: 'Sleuteldrager',
       nickname: 'De Binnenste Kring',
-      rarityRank: 42,
+      rarityRank: 56,
       rarityLabel: 'Epic',
       pack: 'prestige',
       description: 'Voor de speler die overal sporen achterlaat.',
@@ -646,7 +826,7 @@
       title: 'Dobbel of Niets',
       plaqueTitle: 'Dobbel of Niets',
       nickname: 'De Waaghals',
-      rarityRank: 43,
+      rarityRank: 57,
       rarityLabel: 'Rare',
       pack: 'prestige',
       description: 'Voor de speler die terugkomt uit kansarme posities.',
@@ -661,7 +841,7 @@
       title: 'Kaartopera',
       plaqueTitle: 'Kaartopera',
       nickname: 'De Dirigent',
-      rarityRank: 44,
+      rarityRank: 58,
       rarityLabel: 'Epic',
       pack: 'prestige',
       description: 'Voor een speler die kaarten en live-spel elegant samenbrengt.',
@@ -676,7 +856,7 @@
       title: 'Avondster',
       plaqueTitle: 'Avondster',
       nickname: 'De Laatste Gloed',
-      rarityRank: 45,
+      rarityRank: 59,
       rarityLabel: 'Mythic',
       pack: 'prestige',
       description: 'Voor de absolute allesdrager van de site.',
@@ -803,6 +983,60 @@
     return count;
   }
 
+  function countDistinctSpeedTypes(records) {
+    const seen = new Set();
+    for (const row of toArray(records)) {
+      const seconds = Number(
+        row?.seconds ??
+        row?.best_seconds ??
+        row?.time_seconds ??
+        row?.timeSeconds ??
+        row?.bestSeconds
+      );
+      if (!Number.isFinite(seconds) || seconds <= 0) continue;
+      const type = firstNonEmpty(
+        row?.canonical_type_key,
+        row?.canonicalTypeKey,
+        row?.event_type_key,
+        row?.eventTypeKey,
+        row?.key,
+        row?.label
+      );
+      const key = String(type || '').trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+    }
+    return seen.size;
+  }
+
+  function countDistinctDrinkTypes(rows) {
+    const seen = new Set();
+    for (const row of toArray(rows)) {
+      const events = toNumber(
+        row?.events,
+        row?.event_count,
+        row?.eventCount,
+        row?.count,
+        row?.total,
+        row?.total_events
+      );
+      if (events <= 0) continue;
+      const type = firstNonEmpty(
+        row?.canonical_type_key,
+        row?.canonicalTypeKey,
+        row?.event_type_key,
+        row?.eventTypeKey,
+        row?.key,
+        row?.label,
+        row?.name
+      );
+      const key = String(type || '').trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+    }
+    return seen.size;
+  }
+
   function normalizePlayerSnapshot(input) {
     const root = input || {};
     const unified = root.unified || {};
@@ -889,6 +1123,46 @@
     const totalComebackWins = toNumber(root.total_comeback_wins, badgeFacts.total_comeback_wins);
     const klaverjasComebackWins = toNumber(root.klaverjas_comeback_wins, badgeFacts.klaverjas_comeback_wins);
     const boerenbridgeComebackWins = toNumber(root.boerenbridge_comeback_wins, badgeFacts.boerenbridge_comeback_wins);
+    const speedTypeCount = countDistinctSpeedTypes(speedRecords);
+    const drinkTypeCount = countDistinctDrinkTypes(favorites);
+    const radSpins = toNumber(
+      root.rad_spin_count,
+      root.rad_spins,
+      badgeFacts.rad_spin_count,
+      badgeFacts.rad_spins,
+      sharedStats.rad_spin_count,
+      sharedStats.rad_spins
+    );
+    const radDrinkUnits = toNumber(
+      root.rad_drink_units,
+      root.rad_units,
+      badgeFacts.rad_drink_units,
+      badgeFacts.rad_units,
+      sharedStats.rad_drink_units,
+      sharedStats.rad_units
+    );
+    const despimarktBets = toNumber(
+      root.despimarkt_bets,
+      root.despimarkt_bet_count,
+      root.despimarkt_trade_count,
+      badgeFacts.despimarkt_bets,
+      badgeFacts.despimarkt_trade_count,
+      sharedStats.despimarkt_bets,
+      sharedStats.despimarkt_trade_count
+    );
+    const despimarktMarketsCreated = toNumber(
+      root.despimarkt_markets_created,
+      badgeFacts.despimarkt_markets_created,
+      sharedStats.despimarkt_markets_created
+    );
+    const despimarktPnlCautes = toNumber(
+      root.despimarkt_pnl_cautes,
+      root.despimarkt_profit_cautes,
+      badgeFacts.despimarkt_pnl_cautes,
+      badgeFacts.despimarkt_profit_cautes,
+      sharedStats.despimarkt_pnl_cautes,
+      sharedStats.despimarkt_profit_cautes
+    );
     const bestBadge = firstNonEmpty(root.best_badge, overview.best_badge, profile.best_badge);
     const allMatches = {
       klaverjas: toNumber(root.klaverjas_matches, overview.klaverjas_matches, klaverjasSummary.games_played, klaverjasSummary.matches_played),
@@ -935,7 +1209,9 @@
       drinkEvents > 0,
       verificationVotes > 0,
       ballroomEntries > 0 || ballroomKingCount > 0,
-      liveParticipationsTotal > 0
+      liveParticipationsTotal > 0,
+      radSpins > 0,
+      (despimarktBets + despimarktMarketsCreated) > 0
     ].filter(Boolean).length;
     return {
       shownName: firstNonEmpty(root.shownName, unified.player_name, profile.public_display_name, profile.chosen_username, root.player_name),
@@ -982,13 +1258,20 @@
       totalComebackWins,
       klaverjasComebackWins,
       boerenbridgeComebackWins,
+      speedTypeCount,
+      drinkTypeCount,
+      radSpins,
+      radDrinkUnits,
+      despimarktBets,
+      despimarktMarketsCreated,
+      despimarktPnlCautes,
       activeGameCount,
       activeSitePartCount
     };
   }
 
   const BADGE_RULES = {
-    starter: (s) => (s.totalMatches || 0) >= 1,
+    starter: (s) => (s.totalMatches + s.drinkEvents + s.speedCount) >= 1,
     groeier: (s) => s.totalMatches >= 5 || s.drinkEvents >= 10,
     actief: (s) => s.totalMatches >= 15 || s.drinkEvents >= 25,
     gold: (s) => s.totalMatches >= 30 && s.bestWinRate >= 55,
@@ -1027,6 +1310,24 @@
     pikken_dobbelbaron: (s) => (s.pikkenMatches - s.pikkenWins) >= 10,
     paardenrace_baanbaas: (s) => (s.paardenraceMatches - s.paardenraceWins) >= 10,
     paardenrace_stalfluisteraar: (s) => s.paardenraceMatches >= 10 && s.paardenraceWinPct >= 30,
+    rad: (s) => s.radSpins >= 1,
+    rad_draaikoorts: (s) => s.radSpins >= 10,
+    rad_katerkompas: (s) => s.radSpins >= 8 && s.radDrinkUnits >= 12,
+    despimarkt: (s) => (s.despimarktBets + s.despimarktMarketsCreated) >= 1,
+    despimarkt_marktmeester: (s) => s.despimarktMarketsCreated >= 3,
+    despimarkt_orakel: (s) => s.despimarktBets >= 10 && s.despimarktPnlCautes >= 250,
+    tribuneheld: (s) => s.liveParticipationsTotal >= 1,
+    terugvechter: (s) => s.totalComebackWins >= 3,
+    sprintverzamelaar: (s) => s.speedCount >= 3,
+    tafeltoerist: (s) => s.klaverjasMatches > 0 && s.boerenbridgeMatches > 0 && s.beerpongMatches > 0 && s.paardenraceMatches > 0 && s.pikkenMatches > 0,
+    sporenzoeker: (s) =>
+      s.totalMatches > 0 &&
+      s.drinkEvents > 0 &&
+      (s.ballroomEntries > 0 || s.ballroomKingCount > 0) &&
+      s.liveParticipationsTotal > 0 &&
+      s.radSpins > 0 &&
+      (s.despimarktBets + s.despimarktMarketsCreated) > 0,
+    elosmid: (s) => s.bestRating >= 1350,
     bekerbeul: (s) => s.beerpongWins >= 20,
     trouwewachter: (s) => s.verificationVotes >= 10,
     salonleeuw: (s) => s.ballroomEntries >= 10 || s.ballroomKingCount >= 5,
@@ -1043,7 +1344,7 @@
 
   function evaluateBadgeKeys(snapshotInput) {
     const snapshot = normalizePlayerSnapshot(snapshotInput);
-    const attained = new Set(resolveAttainedBadges([snapshot.bestBadge]).map((badge) => badge.key).filter((key) => key !== 'starter' || (snapshot.totalMatches || 0) >= 1));
+    const attained = new Set(resolveAttainedBadges([snapshot.bestBadge]).map((badge) => badge.key));
     BADGE_REGISTRY.forEach((badge) => {
       const fn = BADGE_RULES[badge.key];
       if (!fn) return;
