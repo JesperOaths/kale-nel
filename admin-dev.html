@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Dev</title><script>window.GEJAST_PAGE_VERSION='v488';</script>
+  <title>Admin Dev</title><script>window.GEJAST_PAGE_VERSION='v492';</script>
   <link rel="stylesheet" href="./site-shell.css" />
   <link rel="stylesheet" href="./theme-v45.css" />
   <style>
@@ -25,7 +25,7 @@
   </style>
   <link rel="stylesheet" href="./premium-v47.css" />
   <link rel="stylesheet" href="./ui-v52.css" />
-  <script src="./gejast-config.js?v488"></script><script src="./gejast-scope-context.js?v374"></script>
+  <script src="./gejast-config.js?v492"></script><script src="./gejast-scope-context.js?v374"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
@@ -57,11 +57,11 @@
       </div>
 
       <div class="row">
-        <input id="usernameInput" type="text" placeholder="Gebruikersnaam" value="1" />
-        <input id="passwordInput" type="password" placeholder="Wachtwoord" value="1" />
+        <input id="usernameInput" type="text" placeholder="Gebruikersnaam" autocomplete="username" autocapitalize="none" spellcheck="false" />
+        <input id="passwordInput" type="password" placeholder="Wachtwoord" autocomplete="current-password" />
         <input id="totpInput" type="text" placeholder="TOTP (6 cijfers)" />
       </div>
-      <input id="devKeyInput" type="password" placeholder="Dev key" value="1" />
+      <input id="devKeyInput" type="password" placeholder="Dev key" autocomplete="off" />
 
       <div class="actions">
         <button class="dev-btn" id="realLoginBtn" type="button">admin_login</button>
@@ -85,8 +85,9 @@
   </div>
 
   <script>
-    const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
+    const cfg = window.GEJAST_CONFIG || {};
+    const SUPABASE_URL = cfg.SUPABASE_URL || "https://uiqntazgnrxwliaidkmy.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = cfg.SUPABASE_PUBLISHABLE_KEY || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type":"application/json", Accept:"application/json" }; }
     async function parseResponse(res) {
