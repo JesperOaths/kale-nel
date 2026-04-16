@@ -113,13 +113,16 @@
       const rowRequestId = Number(row?.related_claim_request_id ?? row?.request_id ?? payload?.request_id ?? NaN);
       const rowEmail = String(row?.recipient_email ?? row?.requester_email ?? payload?.requester_email ?? '').trim().toLowerCase();
       const status = String(row?.job_status ?? row?.status ?? '').trim().toLowerCase();
+      const requestMatch = wantedRequestId != null && Number.isFinite(rowRequestId) && rowRequestId === wantedRequestId;
+      const emailMatch = Boolean(wantedEmail && rowEmail && rowEmail === wantedEmail);
+      if (!requestMatch && !emailMatch) return null;
       let score = 0;
       if (wantedStatuses.has(status)) score += 8;
-      if (wantedRequestId != null && Number.isFinite(rowRequestId) && rowRequestId === wantedRequestId) score += 10;
-      if (wantedEmail && rowEmail && rowEmail === wantedEmail) score += 6;
+      if (requestMatch) score += 10;
+      if (emailMatch) score += 6;
       if (row?.id != null) score += Math.min(Number(row.id) / 1000000, 1);
       return { row, score, status };
-    }).filter((item) => item.score > 0).sort((a, b) => {
+    }).filter(Boolean).sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
       return Number(b.row?.id || 0) - Number(a.row?.id || 0);
     });
