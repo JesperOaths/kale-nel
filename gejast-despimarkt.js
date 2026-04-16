@@ -93,6 +93,90 @@
     const following = !!row?.is_following;
     return `<button class="btn alt follow-btn" type="button" data-watch-market="${Number(row?.market_id||0)}" data-watch-next="${following?'0':'1'}">${following?'Volgend':'Volgen'}</button>`;
   }
+  function marketTypeLabel(key){
+    switch(String(key||'custom_binary')){
+      case 'yes_no': return 'Ja / Nee';
+      case 'will_wont': return 'Wel / niet';
+      case 'over_under': return 'Over / under';
+      case 'higher_lower': return 'Higher / lower';
+      case 'above_below': return 'Above / below';
+      default: return 'Custom binary';
+    }
+  }
+  function promoBadgeHtml(row){
+    if (!row?.is_promotional && !row?.promotional_badge_text) return '';
+    const badge = row?.promotional_badge_text || 'Promotie';
+    return `<span class="dm-pill promo">${esc(badge)}</span>`;
+  }
+  function promoNoteHtml(row){
+    const promo = Number(row?.promo_seed_cautes || 0);
+    if (!(promo > 0)) return '';
+    const label = String(row?.promo_seed_outcome_key || 'A').toUpperCase() === 'B'
+      ? (row?.outcome_b_label || 'Uitkomst B')
+      : (row?.outcome_a_label || 'Uitkomst A');
+    const source = row?.promo_house_wallet_key ? ` · wallet ${esc(row.promo_house_wallet_key)}` : '';
+    return `<div class="promo-note">Promotionele backing: <strong>${money(promo)}</strong> op <strong>${esc(label)}</strong>${source}</div>`;
+  }
+  function buildTemplateDraft(prefix){
+    const get = (id)=> global.document.getElementById(`${prefix}${id}`);
+    const marketType = get('TypeSelect')?.value || 'custom_binary';
+    const titleInput = String(get('TitleInput')?.value || '').trim();
+    const subject = String(get('SubjectInput')?.value || '').trim();
+    const threshold = String(get('ThresholdInput')?.value || '').trim();
+    const unit = String(get('UnitInput')?.value || '').trim();
+    let outcomeA = String(get('OutcomeA')?.value || '').trim();
+    let outcomeB = String(get('OutcomeB')?.value || '').trim();
+    let title = titleInput;
+    const line = [threshold, unit].filter(Boolean).join(' ').trim();
+    const templateMeta = { subject, threshold, unit, line_family: marketType };
+    switch(marketType){
+      case 'yes_no':
+        outcomeA = outcomeA || 'Ja';
+        outcomeB = outcomeB || 'Nee';
+        title = title || `${subject || 'Deze stelling'}?`;
+        break;
+      case 'will_wont':
+        outcomeA = outcomeA || 'Gaat gebeuren';
+        outcomeB = outcomeB || 'Gaat niet gebeuren';
+        title = title || `${subject || 'Deze gebeurtenis'}?`;
+        break;
+      case 'over_under':
+        outcomeA = outcomeA || `Over ${line || threshold || 'de lijn'}`;
+        outcomeB = outcomeB || `Under ${line || threshold || 'de lijn'}`;
+        title = title || `${subject || 'Deze metric'} over/under ${line || threshold || ''}?`.replace(/\s+\?/g,'?');
+        break;
+      case 'higher_lower':
+        outcomeA = outcomeA || `Higher than ${line || threshold || 'de lijn'}`;
+        outcomeB = outcomeB || `Lower than ${line || threshold || 'de lijn'}`;
+        title = title || `${subject || 'Deze metric'} higher/lower dan ${line || threshold || ''}?`.replace(/\s+\?/g,'?');
+        break;
+      case 'above_below':
+        outcomeA = outcomeA || `Above ${line || threshold || 'de lijn'}`;
+        outcomeB = outcomeB || `Below ${line || threshold || 'de lijn'}`;
+        title = title || `${subject || 'Deze metric'} above/below ${line || threshold || ''}?`.replace(/\s+\?/g,'?');
+        break;
+      default:
+        title = title || `${subject || 'Nieuwe market'}${subject && !/[?]$/.test(subject) ? '?' : ''}`;
+        outcomeA = outcomeA || 'Uitkomst A';
+        outcomeB = outcomeB || 'Uitkomst B';
+        break;
+    }
+    return { marketType, title, outcomeA, outcomeB, templateMeta };
+  }
+  function bindTemplateHelpers(prefix){
+    const get = (id)=> global.document.getElementById(`${prefix}${id}`);
+    const previewEl = get('TemplatePreview');
+    const refresh = ()=>{
+      if (!previewEl) return;
+      const draft = buildTemplateDraft(prefix);
+      previewEl.innerHTML = `Type: <strong>${esc(marketTypeLabel(draft.marketType))}</strong><br>Titel: <strong>${esc(draft.title || '—')}</strong><br>A: <strong>${esc(draft.outcomeA || '—')}</strong> · B: <strong>${esc(draft.outcomeB || '—')}</strong>`;
+    };
+    ['TypeSelect','TitleInput','SubjectInput','ThresholdInput','UnitInput','OutcomeA','OutcomeB'].forEach((id)=>{
+      const el = get(id);
+      if (el) { el.oninput = refresh; el.onchange = refresh; }
+    });
+    refresh();
+  }
   function swingPill(row){
     const swing = Number(row?.swing_points_a || 0);
     if (!Number.isFinite(swing) || Math.abs(swing) < 0.1) return '<span class="dm-pill">vlak</span>';
@@ -114,9 +198,12 @@
     const b = Number(row.outcome_b_pool || 0);
     const pa = row.probability_a != null ? Number(row.probability_a) : (total>0 ? (a/total*100) : 0);
     const pb = row.probability_b != null ? Number(row.probability_b) : (total>0 ? (b/total*100) : 0);
-    return `<article class="market-card ${esc(String(row.status||'').toLowerCase())}">
-      <div class="market-card-head"><strong>${esc(row.title || 'Market')}</strong><div class="chip-row"><span class="dm-pill">${money(total)}</span>${swingPill(row)}</div></div>
+    const promo = promoNoteHtml(row);
+    const typeChip = `<span class="dm-pill type">${esc(marketTypeLabel(row.market_type_key))}</span>`;
+    return `<article class="market-card ${esc(String(row.status||'').toLowerCase())} ${row.is_promotional?'promotional-card':''}">
+      <div class="market-card-head"><strong>${esc(row.title || 'Market')}</strong><div class="chip-row"><span class="dm-pill">${money(total)}</span>${typeChip}${promoBadgeHtml(row)}${swingPill(row)}</div></div>
       ${tagChips(row.market_tags || [])}
+      ${promo}
       <div class="muted">${esc(row.description || row.resolution_summary || 'Geen beschrijving')}</div>
       <div class="market-mini-meta"><span>${row.watcher_count || 0} volgers</span><span>${row.recent_bet_count_24h || 0} bets / 24u</span></div>
       <div class="market-grid-2">
@@ -145,23 +232,27 @@
 
   async function loadHubPage(){
     if(!requirePlayer('despimarkt.html')) return;
-    setStatus('hubStatus', 'Despimarkt laden…');
+    setStatus('hubStatus', "Beurs d'Espinoza laden…");
     async function refresh(){
       try {
         const data = await rpc('despimarkt_get_market_list_scoped', { session_token: token(), site_scope_input: scope() });
         const wallet = data?.wallet || {};
+        const active = normalizeRows(data?.active_markets);
+        const promo = active.filter((row)=>row?.is_promotional);
         global.document.getElementById('heroMetrics').innerHTML = `
           <div class="hero-metric"><span>Balans</span><strong>${money(wallet?.balance_cautes || 0)}</strong><small>${data?.restriction?.is_frozen ? 'Dry Dock actief' : 'Vrij om te handelen'}</small></div>
-          <div class="hero-metric"><span>Open markten</span><strong>${normalizeRows(data?.active_markets).length}</strong><small>${normalizeRows(data?.recent_activity).length} live bewegingen in de tape</small></div>
-          <div class="hero-metric"><span>Watchlist</span><strong>${normalizeRows(data?.watchlist_markets).length}</strong><small>${normalizeRows(data?.watchlist_markets).reduce((sum,row)=>sum+Number(row.watcher_count||0),0)} volgers in je gevolgde markten</small></div>`;
-        global.document.getElementById('frozenStatus').innerHTML = data?.restriction?.is_frozen ? note(`Dry Dock actief: ${data.restriction.frozen_reason || 'je Despimarkt-schrijfacties zijn tijdelijk geblokkeerd.'}`) : note('Geen actieve Dry Dock-blokkade. Volg markten om close-soon en marktbewegingen te zien.');
-        global.document.getElementById('activeMarkets').innerHTML = normalizeRows(data?.active_markets).length ? normalizeRows(data.active_markets).map(marketCard).join('') : empty('Nog geen open markten.');
+          <div class="hero-metric"><span>Open markten</span><strong>${active.length}</strong><small>${normalizeRows(data?.recent_activity).length} live bewegingen in de tape</small></div>
+          <div class="hero-metric"><span>Watchlist</span><strong>${normalizeRows(data?.watchlist_markets).length}</strong><small>${normalizeRows(data?.watchlist_markets).reduce((sum,row)=>sum+Number(row.watcher_count||0),0)} volgers in je gevolgde markten</small></div>
+          <div class="hero-metric"><span>Promo / oefen</span><strong>${promo.length}</strong><small>${promo.reduce((sum,row)=>sum+Number(row.promo_seed_cautes||0),0)} ₵ aan officiële backing</small></div>`;
+        global.document.getElementById('frozenStatus').innerHTML = data?.restriction?.is_frozen ? note(`Dry Dock actief: ${data.restriction.frozen_reason || "je schrijfacties voor Beurs d'Espinoza zijn tijdelijk geblokkeerd."}`) : note('Geen actieve Dry Dock-blokkade. Volg markten om close-soon en marktbewegingen te zien.');
+        global.document.getElementById('activeMarkets').innerHTML = active.length ? active.map(marketCard).join('') : empty('Nog geen open markten.');
         global.document.getElementById('myPositions').innerHTML = positionSummaryHtml(data?.my_positions);
         if (global.document.getElementById('watchlistMarkets')) global.document.getElementById('watchlistMarkets').innerHTML = normalizeRows(data?.watchlist_markets).length ? normalizeRows(data.watchlist_markets).map(marketCard).join('') : empty('Je volgt nog geen markten.');
         if (global.document.getElementById('recentActivity')) global.document.getElementById('recentActivity').innerHTML = recentActivityHtml(data?.recent_activity);
+        if (global.document.getElementById('promotionalMarkets')) global.document.getElementById('promotionalMarkets').innerHTML = promo.length ? promo.map(marketCard).join('') : empty('Nog geen actieve promotionele markten.');
         global.document.getElementById('resolvedMarkets').innerHTML = normalizeRows(data?.recently_resolved).length ? normalizeRows(data.recently_resolved).map(marketCard).join('') : empty('Nog geen recente settlements.');
         await bindWatchButtons('hubStatus', refresh);
-        setStatus('hubStatus','Despimarkt-hub geladen.','ok');
+        setStatus('hubStatus',"Beurs d'Espinoza geladen.",'ok');
       } catch (err) {
         setStatus('hubStatus', err.message || String(err), 'error');
       }
@@ -218,7 +309,7 @@
     try {
       const data = await rpc('despimarkt_get_debts_page_scoped', { session_token: token(), site_scope_input: scope(), limit_count: 120 });
       global.document.getElementById('debtsHero').innerHTML = `<div class="hero-metric"><span>Balans</span><strong>${money(data?.wallet?.balance_cautes || 0)}</strong><small>${data?.restriction?.is_frozen?'Dry Dock actief':'Niet bevroren'}</small></div><div class="hero-metric"><span>Open schulden</span><strong>${normalizeRows(data?.my_open_debts).length}</strong><small>Alleen exacte schuld telt</small></div><div class="hero-metric"><span>Uitgaande nominaties</span><strong>${normalizeRows(data?.my_outgoing_nominations).length}</strong><small>Prijs ligt vast bij aankoop</small></div>`;
-      global.document.getElementById('dryDockStatus').innerHTML = data?.restriction?.is_frozen ? note(`Dry Dock actief: ${data.restriction.frozen_reason || 'je kunt tijdelijk geen Despimarkt-acties doen.'}`) : note('Geen actieve Dry Dock-blokkade.');
+      global.document.getElementById('dryDockStatus').innerHTML = data?.restriction?.is_frozen ? note(`Dry Dock actief: ${data.restriction.frozen_reason || "je kunt tijdelijk geen acties in Beurs d'Espinoza doen."}`) : note('Geen actieve Dry Dock-blokkade.');
       if (global.document.getElementById('openDebtsList')) global.document.getElementById('openDebtsList').innerHTML = normalizeRows(data?.my_open_debts).length ? normalizeRows(data.my_open_debts).map((row)=>debtCard(row, true)).join('') : empty('Je hebt geen open schulden.');
       if (global.document.getElementById('pendingDebtList')) global.document.getElementById('pendingDebtList').innerHTML = normalizeRows(data?.my_pending_debt_clear_requests).length ? normalizeRows(data.my_pending_debt_clear_requests).map((row)=>debtCard(row, false)).join('') : empty('Geen lopende afbetaalverzoeken.');
       if (global.document.getElementById('outgoingNominationList')) global.document.getElementById('outgoingNominationList').innerHTML = normalizeRows(data?.my_outgoing_nominations).length ? normalizeRows(data.my_outgoing_nominations).map((row)=>`<article class="dm-list-card"><div><strong>${playerLink(row.target_player_name || '')}</strong><div class="muted">${esc(row.drink_label || '')} · ${esc(row.status || '')}</div></div><div class="dm-stack-right"><div class="dm-pill">${money(row.nomination_cost_cautes)}</div><div class="muted">${shortDate(row.expires_at)}</div></div></article>`).join('') : empty('Nog geen uitgegeven nominaties.');
@@ -272,15 +363,18 @@
         const pa = market.probability_a != null ? Number(market.probability_a) : (total>0 ? (a/total*100) : 0);
         const pb = market.probability_b != null ? Number(market.probability_b) : (total>0 ? (b/total*100) : 0);
         const myRows = normalizeRows(data?.my_positions);
+        const promo = Number(market.promo_seed_cautes || 0);
         global.document.getElementById('marketTitle').textContent = market.title || "Beurs d'Espinoza";
-        global.document.getElementById('marketMeta').innerHTML = `${esc(market.description || 'Geen beschrijving')}<br><span class="muted">Resolutie: ${esc(market.resolution_criteria || 'Niet opgegeven')}</span>`;
+        global.document.getElementById('marketMeta').innerHTML = `${esc(market.description || 'Geen beschrijving')}<br><span class="muted">Resolutie: ${esc(market.resolution_criteria || 'Niet opgegeven')}</span><br><span class="muted">Type: ${esc(marketTypeLabel(market.market_type_key))}</span>`;
         global.document.getElementById('marketWallet').textContent = money(data?.wallet?.balance_cautes || 0);
-        if (global.document.getElementById('marketTagsRow')) global.document.getElementById('marketTagsRow').innerHTML = tagChips(market.market_tags || []);
+        if (global.document.getElementById('marketTagsRow')) global.document.getElementById('marketTagsRow').innerHTML = `${tagChips(market.market_tags || [])}${promoBadgeHtml(market)}`;
         if (global.document.getElementById('marketFollowChip')) global.document.getElementById('marketFollowChip').innerHTML = followButtonHtml(market);
+        if (global.document.getElementById('marketPromoBanner')) global.document.getElementById('marketPromoBanner').innerHTML = promo ? `<div class="promo-banner">${promoBadgeHtml(market)} ${promoNoteHtml(market)}<div class="muted">Deze official backing komt uit de promotionele Beurs d'Espinoza-wallet en niet uit een persoonlijke spelerwallet.</div></div>` : '';
         global.document.getElementById('marketHeaderStats').innerHTML = `
           <div class="hero-metric"><span>Status</span><strong>${esc(market.status || '—')}</strong><small>Sluit ${shortDate(market.closes_at)}</small></div>
           <div class="hero-metric"><span>Totale pot</span><strong>${money(total)}</strong><small>${market.participant_count || 0} spelers · ${market.watcher_count || 0} volgers</small></div>
-          <div class="hero-metric"><span>Prijsbeweging</span><strong>${Number(market.swing_points_a || 0)>0?'+':''}${Number(market.swing_points_a || 0).toFixed(1)} pts</strong><small>Opente op ${pct(market.opening_probability_a || 0)} voor kant A</small></div>`;
+          <div class="hero-metric"><span>Prijsbeweging</span><strong>${Number(market.swing_points_a || 0)>0?'+':''}${Number(market.swing_points_a || 0).toFixed(1)} pts</strong><small>Opende op ${pct(market.opening_probability_a || 0)} voor kant A</small></div>
+          <div class="hero-metric"><span>Promo backing</span><strong>${money(promo)}</strong><small>${promo ? `Official practice/promo liquidity op ${esc(String(market.promo_seed_outcome_key||'A')==='B'?(market.outcome_b_label||'B'):(market.outcome_a_label||'A'))}` : 'Geen promotionele backing'}</small></div>`;
         global.document.getElementById('outcomeA').innerHTML = `<span>${esc(market.outcome_a_label || 'A')}</span><strong>${pct(pa)}</strong><small>${money(a)}</small>`;
         global.document.getElementById('outcomeB').innerHTML = `<span>${esc(market.outcome_b_label || 'B')}</span><strong>${pct(pb)}</strong><small>${money(b)}</small>`;
         global.document.getElementById('probabilityBars').innerHTML = `${bar(market.outcome_a_label || 'A', `${pct(pa)} · ${money(a)}`, Math.max(pa,pb,1), 'gold')}${bar(market.outcome_b_label || 'B', `${pct(pb)} · ${money(b)}`, Math.max(pa,pb,1), 'sky')}`;
@@ -295,7 +389,7 @@
           const chosenPool = chosen === 'A' ? a : b;
           const estimated = stake > 0 ? Math.floor(stake * ((total + stake) / Math.max(1, chosenPool + stake))) : 0;
           const nextProb = chosen === 'A' ? ((a + stake) / Math.max(1, total + stake)) * 100 : ((b + stake) / Math.max(1, total + stake)) * 100;
-          global.document.getElementById('betPreview').innerHTML = `Indicatieve payout: <strong>${money(estimated)}</strong> · nieuwe ${chosen === 'A' ? esc(market.outcome_a_label || 'A') : esc(market.outcome_b_label || 'B')} kans: <strong>${pct(nextProb)}</strong>`;
+          global.document.getElementById('betPreview').innerHTML = `Indicatieve payout: <strong>${money(estimated)}</strong> · nieuwe ${chosen === 'A' ? esc(market.outcome_a_label || 'A') : esc(market.outcome_b_label || 'B')} kans: <strong>${pct(nextProb)}</strong>${promo ? ` · inclusief ${money(promo)} promotionele backing in de pot` : ''}`;
         };
         stakeField.oninput = preview; outcomeField.onchange = preview; preview();
         global.document.getElementById('betForm').onsubmit = async (ev)=>{
@@ -318,23 +412,27 @@
 
   async function loadCreatePage(){
     if(!requirePlayer('despimarkt_create.html')) return;
+    bindTemplateHelpers('market');
     global.document.getElementById('createForm').onsubmit = async (ev)=>{
       ev.preventDefault();
       setStatus('createStatus','Market maken…');
       try {
         const rawTags = String(global.document.getElementById('marketTagsInput')?.value || '');
         const tags = rawTags.split(',').map((tag)=>tag.trim()).filter(Boolean);
+        const draft = buildTemplateDraft('market');
         const payload = {
           session_token: token(),
-          title_input: global.document.getElementById('marketTitleInput').value,
+          title_input: draft.title,
           description_input: global.document.getElementById('marketDescriptionInput').value,
           resolution_criteria_input: global.document.getElementById('marketCriteriaInput').value,
-          outcome_a_label_input: global.document.getElementById('marketOutcomeA').value,
-          outcome_b_label_input: global.document.getElementById('marketOutcomeB').value,
+          outcome_a_label_input: draft.outcomeA,
+          outcome_b_label_input: draft.outcomeB,
           closes_at_input: new Date(global.document.getElementById('marketCloseAt').value).toISOString(),
           opening_probability_a_input: Number(global.document.getElementById('marketOpeningA').value || 50),
           seed_cautes_input: Number(global.document.getElementById('marketSeed').value || 0),
           market_tags_input: tags,
+          market_type_key_input: draft.marketType,
+          market_template_meta_input: draft.templateMeta,
           site_scope_input: scope()
         };
         const data = await rpc('despimarkt_create_market_scoped', payload);
@@ -348,18 +446,22 @@
   async function loadAdminPage(){
     if (!(global.GEJAST_ADMIN_RPC && await global.GEJAST_ADMIN_RPC.requirePage('admin_despimarkt.html'))) return;
     setStatus('adminStatus','Adminconsole laden…');
+    bindTemplateHelpers('promoMarket');
     const scopeValue = ()=> (global.document.getElementById('adminScopeSelect')?.value || scope());
     async function refresh(){
       try {
-        const [queue, audit, mints, dry, debts] = await Promise.all([
+        const [queue, audit, mints, dry, debts, wallets] = await Promise.all([
           adminRpc('admin_get_despimarkt_resolution_queue_action', { admin_session_token: adminToken(), site_scope_input: scopeValue() }),
           adminRpc('admin_get_despimarkt_audit_action', { admin_session_token: adminToken(), site_scope_input: scopeValue(), limit_count: 100 }),
           adminRpc('admin_get_caute_mint_audit_action', { admin_session_token: adminToken(), site_scope_input: scopeValue(), limit_count: 80 }),
           rpc('despimarkt_get_wall_of_shame_scoped', { site_scope_input: scopeValue() }),
-          adminRpc('admin_get_despimarkt_debt_queue_action', { admin_session_token: adminToken(), site_scope_input: scopeValue(), limit_count: 80 })
+          adminRpc('admin_get_despimarkt_debt_queue_action', { admin_session_token: adminToken(), site_scope_input: scopeValue(), limit_count: 80 }),
+          adminRpc('admin_get_despimarkt_house_wallets_action', { admin_session_token: adminToken(), site_scope_input: scopeValue(), limit_count: 20 })
         ]);
 
-        global.document.getElementById('resolutionQueue').innerHTML = normalizeRows(queue?.rows).length ? normalizeRows(queue.rows).map((row)=>`<article class="dm-list-card"><div><strong>${esc(row.title || '')}</strong><div class="muted">${money(row.total_pot || 0)} · ${row.participant_count || 0} spelers · sluit ${shortDate(row.closes_at)}</div>${tagChips(row.market_tags || [])}</div><div class="admin-actions"><button class="btn alt" type="button" data-preview-market="${row.market_id}" data-preview-side="A">Preview A</button><button class="btn alt" type="button" data-preview-market="${row.market_id}" data-preview-side="B">Preview B</button><button class="btn success" type="button" data-resolve-market="${row.market_id}" data-resolve-side="A">Resolve A</button><button class="btn success alt" type="button" data-resolve-market="${row.market_id}" data-resolve-side="B">Resolve B</button><button class="btn danger" type="button" data-cancel-market="${row.market_id}">Refund</button></div></article>`).join('') : empty('Geen markten in de resolutiequeue.');
+        global.document.getElementById('houseWalletList').innerHTML = normalizeRows(wallets?.rows).length ? normalizeRows(wallets.rows).map((row)=>`<article class="dm-list-card"><div><strong>${esc(row.display_label || row.wallet_key || '')}</strong><div class="muted">${esc(row.wallet_key || '')} · ${esc(row.site_scope || '')}</div></div><div class="dm-stack-right"><div class="dm-pill plus">${money(row.balance_cautes || 0)}</div><div class="muted">${shortDate(row.updated_at || row.created_at)}</div></div></article>`).join('') : empty('Nog geen promotionele wallets.');
+
+        global.document.getElementById('resolutionQueue').innerHTML = normalizeRows(queue?.rows).length ? normalizeRows(queue.rows).map((row)=>`<article class="dm-list-card"><div><strong>${esc(row.title || '')}</strong><div class="muted">${money(row.total_pot || 0)} · ${row.participant_count || 0} spelers · sluit ${shortDate(row.closes_at)}</div>${tagChips(row.market_tags || [])}${promoBadgeHtml(row)}${promoNoteHtml(row)}</div><div class="admin-actions"><button class="btn alt" type="button" data-preview-market="${row.market_id}" data-preview-side="A">Preview A</button><button class="btn alt" type="button" data-preview-market="${row.market_id}" data-preview-side="B">Preview B</button><button class="btn success" type="button" data-resolve-market="${row.market_id}" data-resolve-side="A">Resolve A</button><button class="btn success alt" type="button" data-resolve-market="${row.market_id}" data-resolve-side="B">Resolve B</button><button class="btn danger" type="button" data-cancel-market="${row.market_id}">Refund</button></div></article>`).join('') : empty('Geen markten in de resolutiequeue.');
 
         global.document.getElementById('mintAudit').innerHTML = normalizeRows(mints?.rows).length ? normalizeRows(mints.rows).map((row)=>`<article class="dm-list-card"><div><strong>${playerLink(row.requester_player_name || '')}</strong><div class="muted">#${row.mint_request_id || 0} · ${esc(row.event_type_key || '')} · ${esc(row.status || '')}</div>${row.admin_cap_bypass ? '<div class="dm-pill plus">Bypass actief</div>' : ''}</div><div class="dm-stack-right"><div class="dm-pill">${money(row.awarded_cautes ?? row.requested_cautes ?? 0)}</div><div class="muted">req ${money(row.requested_cautes || 0)}</div><div class="muted">${shortDate(row.created_at)}</div>${(row.status === 'pending_verification' || row.status === 'verified_capped') ? `<button class="btn alt" type="button" data-mint-bypass="${row.mint_request_id}" data-mint-bypass-next="${row.admin_cap_bypass ? '0' : '1'}">${row.admin_cap_bypass ? 'Bypass uit' : 'Bypass aan'}</button>` : ''}</div></article>`).join('') : empty('Nog geen mintaudit.');
 
@@ -374,7 +476,7 @@
           setStatus('adminStatus','Settlement preview laden…');
           try {
             const data = await adminRpc('admin_preview_despimarkt_market_settlement_action', { admin_session_token: adminToken(), market_id_input: Number(btn.dataset.previewMarket), winning_outcome_key_input: btn.dataset.previewSide, site_scope_input: scopeValue() });
-            global.document.getElementById('previewPane').innerHTML = `<div class="preview-box"><h3>${esc(data?.market?.title || 'Preview')}</h3><p class="muted">${data?.is_invalid ? 'Deze markt lijkt ongeldig en hoort waarschijnlijk naar refund.' : 'Serverpreview van de settlement.'}</p>${normalizeRows(data?.preview_payouts).length ? normalizeRows(data.preview_payouts).map((row)=>`<div class="dm-list-card"><div><strong>${playerLink(row.player_name || '')}</strong><div class="muted">Winnende stake ${money(row.winning_stake_cautes || 0)}</div></div><div class="dm-pill plus">${money(row.payout_cautes || 0)}</div></div>`).join('') : note('Geen payoutpreview beschikbaar.')}</div>`;
+            global.document.getElementById('previewPane').innerHTML = `<div class="preview-box"><h3>${esc(data?.market?.title || 'Preview')}</h3><p class="muted">${data?.is_invalid ? 'Deze markt lijkt ongeldig en hoort waarschijnlijk naar refund.' : 'Serverpreview van de settlement.'}</p>${promoBadgeHtml(data?.market)}${promoNoteHtml(data?.market)}${normalizeRows(data?.preview_payouts).length ? normalizeRows(data.preview_payouts).map((row)=>`<div class="dm-list-card"><div><strong>${playerLink(row.player_name || '')}</strong><div class="muted">Winnende stake ${money(row.winning_stake_cautes || 0)}</div></div><div class="dm-pill plus">${money(row.payout_cautes || 0)}</div></div>`).join('') : note('Geen payoutpreview beschikbaar.')}</div>`;
             setStatus('adminStatus','Settlement preview geladen.','ok');
           } catch (err) { setStatus('adminStatus', err.message || String(err), 'error'); }
         });
@@ -428,7 +530,7 @@
             await refresh();
           } catch (err) { setStatus('adminStatus', err.message || String(err), 'error'); }
         });
-        setStatus('adminStatus','Adminconsole geladen.','ok');
+        setStatus('adminStatus',"Adminconsole van Beurs d'Espinoza geladen.",'ok');
       } catch (err) { setStatus('adminStatus', err.message || String(err), 'error'); }
     }
 
@@ -450,6 +552,69 @@
         setStatus('adminStatus','Balans aangepast.','ok');
         global.document.getElementById('adjustForm').reset();
         await refresh();
+      } catch (err) { setStatus('adminStatus', err.message || String(err), 'error'); }
+    };
+    const houseForm = global.document.getElementById('houseWalletForm');
+    if (houseForm) houseForm.onsubmit = async (ev)=>{
+      ev.preventDefault();
+      setStatus('adminStatus','Promotionele wallet aanpassen…');
+      try {
+        await adminRpc('admin_adjust_despimarkt_house_wallet_action', {
+          admin_session_token: adminToken(),
+          wallet_key_input: global.document.getElementById('houseWalletKey').value,
+          delta_cautes_input: Number(global.document.getElementById('houseWalletDelta').value || 0),
+          reason_input: global.document.getElementById('houseWalletReason').value,
+          display_label_input: "Beurs d'Espinoza promotionele wallet",
+          site_scope_input: scopeValue()
+        });
+        setStatus('adminStatus','Promotionele wallet bijgewerkt.','ok');
+        houseForm.reset();
+        global.document.getElementById('houseWalletKey').value = 'promo_pool';
+        global.document.getElementById('houseWalletDelta').value = '250';
+        await refresh();
+      } catch (err) { setStatus('adminStatus', err.message || String(err), 'error'); }
+    };
+    const promoForm = global.document.getElementById('promoMarketForm');
+    if (promoForm) promoForm.onsubmit = async (ev)=>{
+      ev.preventDefault();
+      setStatus('adminStatus','Promotionele market maken…');
+      try {
+        const rawTags = String(global.document.getElementById('promoMarketTagsInput')?.value || '');
+        const tags = rawTags.split(',').map((tag)=>tag.trim()).filter(Boolean);
+        const draft = buildTemplateDraft('promoMarket');
+        const data = await adminRpc('admin_create_promotional_market_action', {
+          admin_session_token: adminToken(),
+          title_input: draft.title,
+          description_input: global.document.getElementById('promoMarketDescriptionInput').value,
+          resolution_criteria_input: global.document.getElementById('promoMarketCriteriaInput').value,
+          outcome_a_label_input: draft.outcomeA,
+          outcome_b_label_input: draft.outcomeB,
+          closes_at_input: new Date(global.document.getElementById('promoMarketCloseAt').value).toISOString(),
+          opening_probability_a_input: Number(global.document.getElementById('promoMarketOpeningA').value || 50),
+          promo_backed_outcome_key_input: global.document.getElementById('promoBackedOutcome').value,
+          promo_seed_cautes_input: Number(global.document.getElementById('promoMarketSeed').value || 0),
+          badge_text_input: global.document.getElementById('promoBadgeText').value || 'Promotie',
+          house_wallet_key_input: 'promo_pool',
+          market_tags_input: tags,
+          market_type_key_input: draft.marketType,
+          market_template_meta_input: draft.templateMeta,
+          site_scope_input: scopeValue()
+        });
+        const marketId = data?.market?.market_id || data?.market_id || '';
+        setStatus('adminStatus','Promotionele market aangemaakt.','ok');
+        await refresh();
+        if (marketId) global.location.href = route(`./despimarkt_market.html?market=${encodeURIComponent(marketId)}`);
+      } catch (err) { setStatus('adminStatus', err.message || String(err), 'error'); }
+    };
+    const practiceBtn = global.document.getElementById('quickPracticeMarket');
+    if (practiceBtn) practiceBtn.onclick = async ()=>{
+      setStatus('adminStatus','Oefenmarkt Wolf / April maken…');
+      try {
+        const data = await adminRpc('admin_create_default_practice_market_action', { admin_session_token: adminToken(), site_scope_input: scopeValue() });
+        const marketId = data?.market?.market_id || data?.market_id || '';
+        setStatus('adminStatus', data?.already_exists ? 'Oefenmarkt bestond al en is geopend.' : 'Oefenmarkt aangemaakt.', 'ok');
+        await refresh();
+        if (marketId) global.location.href = route(`./despimarkt_market.html?market=${encodeURIComponent(marketId)}`);
       } catch (err) { setStatus('adminStatus', err.message || String(err), 'error'); }
     };
     await refresh();

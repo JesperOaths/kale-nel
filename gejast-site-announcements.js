@@ -72,7 +72,7 @@
     overlay.className = 'dm-ann-overlay';
     const winners = normalizeRows(row.payload?.winner_payouts || row.payload?.winners).slice(0,8);
     overlay.innerHTML = `
-      <div class="dm-ann-shell" role="dialog" aria-modal="true" aria-label="Despimarkt settlement">
+      <div class="dm-ann-shell" role="dialog" aria-modal="true" aria-label="Beurs d'Espinoza settlement">
         <div class="dm-ann-burst"></div>
         <div class="dm-ann-kicker">Beurs d'Espinoza · Settlement</div>
         <div class="dm-ann-title">${esc(row.payload?.title || 'Markt resolved!')}</div>
@@ -101,8 +101,15 @@
     const title = row.payload?.title || 'Marktupdate';
     const body = kind === 'despimarkt_follow_close_soon'
       ? `Deze gevolgde markt sluit om ${shortDate(row.payload?.closes_at)}.`
-      : `${esc(row.payload?.bettor_name || 'Iemand')} zette ${money(row.payload?.stake_cautes || 0)} op ${esc(row.payload?.outcome_label || row.payload?.outcome_key || 'een kant')}.`;
-    toast.innerHTML = `<div class="kicker">${kind === 'despimarkt_follow_close_soon' ? 'Watchlist · Close soon' : 'Watchlist · Nieuwe bet'}</div><strong>${esc(title)}</strong><p>${body}</p><div class="actions"><a class="btn" href="${routeMarket(row)}">Open markt</a><button class="btn alt" type="button">Sluiten</button></div>`;
+      : kind === 'despimarkt_promotional_market_live'
+        ? `${money(row.payload?.promo_seed_cautes || 0)} officiële backing op ${esc(row.payload?.backed_label || row.payload?.backed_outcome_key || 'een kant')}. Perfect om mee te oefenen.`
+        : `${esc(row.payload?.bettor_name || 'Iemand')} zette ${money(row.payload?.stake_cautes || 0)} op ${esc(row.payload?.outcome_label || row.payload?.outcome_key || 'een kant')}.`;
+    const kicker = kind === 'despimarkt_follow_close_soon'
+      ? 'Watchlist · Sluit bijna'
+      : kind === 'despimarkt_promotional_market_live'
+        ? 'Beurs d\'Espinoza · Nieuwe oefenmarkt'
+        : 'Watchlist · Nieuwe inzet';
+    toast.innerHTML = `<div class="kicker">${kicker}</div><strong>${esc(title)}</strong><p>${body}</p><div class="actions"><a class="btn" href="${routeMarket(row)}">Open markt</a><button class="btn alt" type="button">Sluiten</button></div>`;
     stack.appendChild(toast);
     const done = async ()=>{ await consumeAnnouncement(row); try { toast.remove(); } catch(_){} };
     toast.querySelector('button').onclick = done;
@@ -119,7 +126,7 @@
       const first = rows[0];
       const kind = first.announcement_kind || first.announcement_type || '';
       if (kind === 'despimarkt_market_resolved') await showResolvedOverlay(first);
-      else if (kind === 'despimarkt_follow_bet' || kind === 'despimarkt_follow_close_soon') await showToast(first);
+      else if (kind === 'despimarkt_follow_bet' || kind === 'despimarkt_follow_close_soon' || kind === 'despimarkt_promotional_market_live') await showToast(first);
       else await consumeAnnouncement(first);
     } catch(_){}
   }
