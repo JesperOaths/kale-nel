@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace live</title>
-  <script>window.GEJAST_PAGE_VERSION='v488';</script>
-  <script src="./gejast-config.js?v488"></script>
-  <script src="./gejast-paardenrace.js?v488"></script>
+  <script>window.GEJAST_PAGE_VERSION='v489';</script>
+  <script src="./gejast-config.js?v489"></script>
+  <script src="./gejast-paardenrace.js?v489"></script>
   <style>
     :root {
       --gold: #9a8241;
@@ -380,7 +380,9 @@
       .board-panel { padding: 8px; }
       .pr-horse-slot { width: 80%; }
       .pr-gate-slot { width: 85%; }
+      .site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}
     }
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
   </style>
 </head>
 <body>
@@ -395,6 +397,8 @@
       <button class="btn secondary" id="rulesBtn" type="button">Regels</button>
       <a class="btn secondary" href="./paardenrace.html">Lobby</a>
       <button class="btn secondary" id="refreshBtn" type="button">Refresh</button>
+      <button class="btn warn" id="panicBtn" type="button">Noodrem</button>
+      <button class="btn secondary" id="panicReleaseBtn" type="button">Hervat sync</button>
       <button class="btn warn" id="closeBtn" type="button">Sluit match</button>
     </div>
   </div>
@@ -458,6 +462,7 @@
   </div>
 </dialog>
 
+<div class="site-credit-watermark" data-version-watermark></div>
 <script>
 (()=>{
   const api = window.GEJAST_PAARDENRACE;
@@ -471,20 +476,20 @@
   let victoryActive = false;
   let pendingGateQueue = [];
   let statePollTimer = null;
-  const PANIC_KEY = 'gejast_paardenrace_emergency_brake_v488';
+  const PANIC_KEY = 'gejast_paardenrace_emergency_brake_v489';
   function panicStorageKey(){ return `${PANIC_KEY}:${qRoom() || 'global'}`; }
   function isPanicActive(){ try{ return localStorage.getItem(panicStorageKey()) === '1'; }catch(_){ return false; } }
   function setPanicActive(active){ try{ if(active) localStorage.setItem(panicStorageKey(),'1'); else localStorage.removeItem(panicStorageKey()); }catch(_){ } syncPanicUi(); }
   function syncPanicUi(){
     const active = isPanicActive();
-    ['drawBtn','tickBtn','resetBtn','playBtn','pauseBtn','submitNomBtn','closeBtn'].forEach((id)=>{
+    ['drawBtn','tickBtn','resetBtn','playBtn','pauseBtn','submitNomBtn','closeBtn','panicBtn','panicReleaseBtn'].forEach((id)=>{
       const el=$(id);
       if(!el) return;
       if(!el.dataset.baseDisabled) el.dataset.baseDisabled = el.disabled ? '1' : '0';
+      if(id === 'panicBtn'){ el.disabled = active; return; }
+      if(id === 'panicReleaseBtn'){ el.disabled = !active; return; }
       el.disabled = active ? true : el.dataset.baseDisabled === '1';
     });
-    if($('panicBtn')) $('panicBtn').disabled = active;
-    if($('panicReleaseBtn')) $('panicReleaseBtn').disabled = !active;
     if(active) setStatus('Noodrem actief. Paardenrace staat stil op dit apparaat.');
   }
   
