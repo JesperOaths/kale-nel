@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <title>Paardenrace stats</title>
+  <script>window.GEJAST_PAGE_VERSION='v550';</script>
+  <script src="./gejast-config.js?v550"></script>
+  <script src="./gejast-home-gate.js?v550"></script>
+  <script src="./gejast-scope-context.js?v550"></script>
+  <script src="./gejast-family-rollout.js?v550"></script>
+  <script src="./gejast-scoped-rpc.js?v550"></script>
+  <script src="./gejast-game-hq.js?v550"></script>
+  <link rel="stylesheet" href="./gejast-game-hq.css?v550" />
+</head>
+<body>
+  <div class="wrap"><div class="shell">
+    <div class="top">
+      <div>
+        <div class="eyebrow">Publieke samenvatting · Paardenrace</div>
+        <h1 class="title">Paardenrace stats</h1>
+        <div class="subtitle">Suit-meta, bakken-druk, jockeys, comebacks en recente finishes die echt iets zeggen over de races.</div>
+      </div>
+      <div class="actions">
+        <a class="btn alt" id="paardenraceStatsBackLink" href="./paardenrace.html">Terug</a>
+        <a class="btn alt" id="paardenraceStatsHomeLink" href="./index.html">Home</a>
+      </div>
+    </div>
+    <div id="pageStatus" class="status"></div>
+    <div class="stack">
+      <section class="panel"><h2>Overzicht</h2><p>De cijfers die laten zien hoe vaak er wordt geracet en waar de bakdruk zit.</p><div id="overviewGrid" class="grid overview"></div></section>
+      <section class="panel"><h2>Verhalen in de cijfers</h2><p>Winnaars, bizarre patronen en leuke hooks die spelers echt herkennen.</p><div id="storyGrid" class="grid story"></div></section>
+      <section class="panel"><h2>Leaderboards & patronen</h2><p>Wie de baan domineert en welke suits het vaakst opduiken.</p><div id="leaderboardsMount"></div></section>
+      <section class="panel"><h2>Recente activiteit</h2><p>Laatste races, uitslagen en roomdruk.</p><div id="recentMount"></div></section>
+      <div id="tablesMount"></div>
+    </div>
+  </div></div>
+  <div class="site-credit-watermark" data-version-watermark></div>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <script>
+    (() => {
+      function scopedHref(path){
+        const url = new URL(path, window.location.href);
+        if (new URLSearchParams(window.location.search).get('scope') === 'family') url.searchParams.set('scope', 'family');
+        return `${url.pathname.split('/').pop()}${url.search}`;
+      }
+      const links = {
+        paardenraceStatsBackLink: './paardenrace.html',
+        paardenraceStatsHomeLink: './index.html'
+      };
+      Object.entries(links).forEach(([id, path]) => {
+        const el = document.getElementById(id);
+        if (el) el.href = scopedHref(path);
+      });
+    })();
+  </script>
+  <script>document.addEventListener('DOMContentLoaded',()=>window.GEJAST_GAME_HQ&&window.GEJAST_GAME_HQ.loadPublicPage('paardenrace'));</script>
+</body>
+</html>

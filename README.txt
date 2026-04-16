@@ -1,12 +1,33 @@
-v185 drinks mobile add page + homepage top-5 fix
+GEJAST V552 CODEX REPO OVERLAY
 
-Contents:
-- index.html : homepage now shows two drinks Top 5 cards between the 3 game ladders and the drinks stats block
-- drinks_add.html : dedicated mobile-first add/verify page for drinks
-- gejast_v185_drinks_homepage_top5_fix.sql : fixes the get_drinks_homepage_top5_public() RPC and removes the bad p.name reference
-- gejast-config.js : version bumped to v185
+Baseline:
+- Built against the latest repo zip extracted from:
+  C:\Users\jespe\Documents\wordt-er-gejast\tmp\artifact_review_20260416\kale-nel-main (12)\kale-nel-main
+
+What this bundle contains:
+- repo\  -> overlay files to copy onto the repo root
+- sql\gejast_v552_codex_games_stats_bundle.sql -> one combined SQL handoff file
+- sql\upstream\ -> the original SQL source files used to build the combined SQL
+- docs\overlay_files.txt -> exact overlay file list
+- apply_overlay.ps1 -> optional helper script to copy repo\ onto a target repo path
+
+Main focus of this overlay:
+- Pikken public stats page and scope-safe links
+- Paardenrace public stats page, live/lobby scope-safe links, and room URL handling
+- Rad public/admin stats and fixed target nomination logging
+- Beurs d'Espinoza public/admin stats links and scope-safe navigation
+- Shared game HQ pages plus required session/runtime files
+
+Suggested apply order:
+1. Start from the latest GitHub repo baseline.
+2. Copy everything from repo\ onto the repo root, overwriting files.
+3. Run sql\gejast_v552_codex_games_stats_bundle.sql on the same database.
+4. Smoke-test:
+   - pikken.html / pikken_stats.html
+   - paardenrace.html / paardenrace_live.html / paardenrace_stats.html
+   - rad.html / rad_stats.html / admin_rad.html
+   - despimarkt.html / despimarkt_stats.html / admin_despimarkt.html
 
 Notes:
-- Homepage drinks Top 5 uses weighted alcohol units, not raw beer count
-- The two homepage cards are day-session Top 5 and all-time Top 5
-- Main homepage drinks entry now points to drinks_add.html
+- This is a curated overlay of my edits only, not a dump of all historical differences in the local workspace.
+- The combined SQL is assembled from the three upstream SQL files included in sql\upstream\.

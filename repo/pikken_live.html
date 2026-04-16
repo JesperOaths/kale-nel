@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pikken live</title>
+  <script>window.GEJAST_PAGE_VERSION='v488';</script>
+  <script src="./gejast-config.js?v488"></script>
+  <script src="./gejast-home-gate.js?v488"></script>
+  <script src="./gejast-scope-context.js?v488"></script>
+  <style>
+    :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241;--shadow:0 18px 44px rgba(0,0,0,.08)}
+    *{box-sizing:border-box}
+    body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
+    .wrap{max-width:1100px;margin:0 auto}
+    .card{background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.7);border-radius:28px;padding:22px;box-shadow:var(--shadow)}
+    .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer}
+    .btn.alt{background:#fff;color:#111;border:1px solid var(--line)}
+    .muted{color:var(--muted)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+    .panel{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px}
+    .field{display:grid;gap:6px;margin-top:10px}
+    label{font-size:.78rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#8a7a55}
+    input,select{padding:12px 14px;border-radius:14px;border:1px solid rgba(0,0,0,.12);font:inherit}
+    .player-row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.06);margin-top:10px}
+    .player-row.dead{opacity:.55}
+    .player-row.turn{outline:2px solid rgba(154,130,65,.38)}
+    .left{min-width:0}
+    .right{display:flex;align-items:center}
+    .pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-weight:900;font-size:12px;border:1px solid rgba(0,0,0,.1)}
+    .pill.ok{background:rgba(59,130,96,.12);border-color:rgba(59,130,96,.32);color:#1f5d45}
+    .pill.bad{background:rgba(127,47,29,.10);border-color:rgba(127,47,29,.28);color:#7f2f1d}
+    .pill.wait{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.12);color:#6b6257}
+    .dice-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+    img.die{width:52px;height:52px;display:block}
+    img.die.pik{filter:saturate(1.05)}
+    .accordion{border:1px solid var(--line);border-radius:20px;background:#fff;margin-top:12px}
+    .accordion summary{list-style:none;cursor:pointer;padding:16px;font-weight:900;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .accordion summary::-webkit-details-marker{display:none}
+    .detail{padding:0 16px 16px}
+    .reveal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px}
+    .reveal-card{border:1px solid var(--line);border-radius:18px;background:#fbfaf6;padding:12px}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body data-pikken-page="live">
+  <div class="wrap">
+    <div class="card">
+      <div class="top">
+        <div>
+          <a class="btn alt" id="pkHomeLink" href="./index.html">Home</a>
+          <div style="display:flex;align-items:center;gap:12px;margin:14px 0 6px"><img src="./assets/pikken/pikken-icon.svg" alt="Pikken" style="width:52px;height:52px;border-radius:14px;background:#fff;padding:8px;border:1px solid rgba(0,0,0,.08)"><h1 style="margin:0">Pikken live</h1></div>
+          <div class="muted">Deelnemers spelen hier verder zodra de lobby start. Deze pagina gebruikt de echte Pikken state-reader, niet de oude spectator-samenvatting.</div>
+          <div id="pkLiveMeta" class="muted" style="margin-top:8px"></div>
+          <div id="pkStatus" class="muted" style="margin-top:8px;min-height:20px"></div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <a class="btn alt" id="pkLobbyLink" href="./pikken.html" style="display:none">Terug naar lobby</a>
+          <a class="btn alt" id="pkStatsLink" href="./pikken_stats.html">Stats</a>
+        </div>
+      </div>
+
+      <div class="grid">
+        <section class="panel">
+          <h2 style="margin:0 0 10px">Live status</h2>
+          <div class="muted">Code: <strong id="pkLobbyCode">—</strong></div>
+          <div class="muted" style="margin-top:6px">Fase: <strong id="pkPhase">lobby</strong> · Ronde: <strong id="pkRoundNo">0</strong></div>
+          <div class="muted" style="margin-top:6px">Dobbelstenen: start <strong id="pkDiceStart">0</strong> · nu <strong id="pkDiceCurrent">0</strong> · kwijt <strong id="pkDiceLost">0</strong></div>
+
+          <div style="margin-top:12px">
+            <div class="muted">Huidig bod</div>
+            <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
+              <div style="font-size:22px;font-weight:900" id="pkBidText">—</div>
+              <div class="muted" id="pkBidBy"></div>
+            </div>
+          </div>
+
+          <div id="pkPlayers"></div>
+        </section>
+
+        <section class="panel">
+          <h2 style="margin:0 0 10px">Jouw tafel</h2>
+          <div id="pkBidPanel" style="display:none;margin-top:12px">
+            <div class="muted" style="font-weight:900">Jouw beurt: bod plaatsen of afkeuren</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+              <input id="pkBidCount" type="number" min="1" step="1" value="1" style="width:110px" />
+              <select id="pkBidFace">
+                <option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="1">pik (1)</option>
+              </select>
+              <button class="btn" id="pkPlaceBidBtn">Bied</button>
+              <button class="btn alt" id="pkRejectBtn">Afkeuren</button>
+            </div>
+          </div>
+
+          <div id="pkVotePanel" style="display:none;margin-top:12px">
+            <div class="muted" style="font-weight:900">Stem: bod goedgekeurd of afgekeurd?</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+              <button class="btn" id="pkVoteApproveBtn">Goedgekeurd</button>
+              <button class="btn alt" id="pkVoteRejectBtn">Afgekeurd</button>
+            </div>
+          </div>
+
+          <div style="margin-top:14px">
+            <div class="muted" style="font-weight:900">Jouw dobbelstenen</div>
+            <div class="dice-row" id="pkMyDice"></div>
+          </div>
+
+          <div id="pkReveal" style="margin-top:14px"></div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script src="./pikken-dice-canvas.js?v488"></script>
+<script src="./gejast-pikken.js?v488"></script>
+<script>
+(()=> {
+  function scopedHref(path){
+    const url = new URL(path, window.location.href);
+    if (new URLSearchParams(window.location.search).get('scope') === 'family') url.searchParams.set('scope', 'family');
+    return `${url.pathname.split('/').pop()}${url.search}`;
+  }
+  const links = {
+    pkHomeLink: './index.html',
+    pkStatsLink: './pikken_stats.html'
+  };
+  Object.entries(links).forEach(([id, path]) => {
+    const el = document.getElementById(id);
+    if (el) el.href = scopedHref(path);
+  });
+})();
+</script>
+<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+<div class="site-credit-watermark" data-version-watermark></div>
+</body>
+</html>
