@@ -44,6 +44,96 @@
     throw lastError || new Error('Geen bruikbare admin-RPC beschikbaar.');
   }
 
+  function normalizePlainObject(value) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  }
+
+  function normalizeMailResult(result, fallback = {}) {
+    const raw = normalizePlainObject(result);
+    const nested = normalizePlainObject(raw.mail_job || raw.job || raw.result || raw.data || raw.payload);
+    const payload = normalizePlainObject(raw.payload || nested.payload);
+    const fallbackData = normalizePlainObject(fallback);
+    const activationUrl = String(
+      raw.activation_url || raw.reset_url || raw.url || raw.activation_link || raw.link ||
+      nested.activation_url || nested.reset_url || nested.url || nested.activation_link || nested.link ||
+      payload.activation_url || payload.reset_url || payload.url || payload.activation_link || payload.link ||
+      fallbackData.activation_url || fallbackData.reset_url || fallbackData.url || fallbackData.activation_link || fallbackData.link || ''
+    ).trim();
+    const recipientEmail = String(
+      raw.requester_email || raw.recipient_email || raw.email ||
+      nested.requester_email || nested.recipient_email || nested.email ||
+      payload.requester_email || payload.recipient_email || payload.email ||
+      fallbackData.requester_email || fallbackData.recipient_email || fallbackData.email || ''
+    ).trim().toLowerCase();
+    const displayName = String(
+      raw.display_name || raw.recipient_name || raw.requested_name || raw.name ||
+      nested.display_name || nested.recipient_name || nested.requested_name || nested.name ||
+      payload.display_name || payload.recipient_name || payload.requested_name || payload.name ||
+      fallbackData.display_name || fallbackData.recipient_name || fallbackData.requested_name || fallbackData.name || ''
+    ).trim();
+    const expiresAt = raw.expires_at || raw.activation_expires_at || raw.expires_on ||
+      nested.expires_at || nested.activation_expires_at || nested.expires_on ||
+      payload.expires_at || payload.activation_expires_at || payload.expires_on ||
+      fallbackData.expires_at || fallbackData.activation_expires_at || fallbackData.expires_on || null;
+    const merged = {
+      ...fallbackData,
+      ...raw,
+      ...(Object.keys(nested).length ? nested : {}),
+      activation_url: activationUrl || null,
+      requester_email: recipientEmail || null,
+      recipient_email: recipientEmail || null,
+      email: recipientEmail || null,
+      display_name: displayName || null,
+      recipient_name: displayName || null,
+      expires_at: expiresAt || null
+    };
+    const jobId = merged.job_id ?? merged.queue_job_id ?? merged.email_job_id ?? merged.outbound_email_job_id ?? merged.mail_job_id ?? merged.id ?? nested.job_id ?? nested.id ?? payload.job_id ?? payload.id ?? fallbackData.job_id ?? null;
+    if (jobId != null && jobId !== '') merged.job_id = Number(jobId);
+    return merged;
+  }
+
+  function extractMailJobId(result) {
+    const merged = normalizeMailResult(result);
+    return merged?.job_id ?? merged?.queue_job_id ?? merged?.email_job_id ?? merged?.outbound_email_job_id ?? merged?.mail_job_id ?? merged?.id ?? null;
+  }
+
+  async function findRecentActivationMailJob(requestId, recipientEmail) {
+    let diagnostics = null;
+    try {
+      diagnostics = await loadMailDiagnostics();
+    } catch (_) {
+      diagnostics = null;
+    }
+    const rows = Array.isArray(diagnostics?.jobs) ? diagnostics.jobs : [];
+    const wantedRequestId = requestId == null || requestId === '' ? null : Number(requestId);
+    const wantedEmail = String(recipientEmail || '').trim().toLowerCase();
+    const wantedStatuses = new Set(['queued', 'pending', 'processing']);
+    const scored = rows.map((row) => {
+      const payload = normalizePlainObject(row?.payload);
+      const rowRequestId = Number(row?.related_claim_request_id ?? row?.request_id ?? payload?.request_id ?? NaN);
+      const rowEmail = String(row?.recipient_email ?? row?.requester_email ?? payload?.requester_email ?? '').trim().toLowerCase();
+      const status = String(row?.job_status ?? row?.status ?? '').trim().toLowerCase();
+      let score = 0;
+      if (wantedStatuses.has(status)) score += 8;
+      if (wantedRequestId != null && Number.isFinite(rowRequestId) && rowRequestId === wantedRequestId) score += 10;
+      if (wantedEmail && rowEmail && rowEmail === wantedEmail) score += 6;
+      if (row?.id != null) score += Math.min(Number(row.id) / 1000000, 1);
+      return { row, score, status };
+    }).filter((item) => item.score > 0).sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return Number(b.row?.id || 0) - Number(a.row?.id || 0);
+    });
+    const found = scored[0]?.row;
+    return found ? normalizeMailResult(found, { request_id: requestId, requester_email: recipientEmail }) : null;
+  }
+
+  async function withRecoveredMailJob(result, context = {}) {
+    const merged = normalizeMailResult(result, context);
+    if (extractMailJobId(merged)) return merged;
+    const recovered = await findRecentActivationMailJob(context.request_id ?? merged.request_id ?? null, context.requester_email || merged.requester_email || merged.recipient_email || '');
+    return recovered ? normalizeMailResult({ ...merged, ...recovered }, context) : merged;
+  }
+
   function activationBaseUrl() {
     if (root.GEJAST_ACCOUNT_LINKS && typeof root.GEJAST_ACCOUNT_LINKS.activationBaseUrl === 'function') {
       return root.GEJAST_ACCOUNT_LINKS.activationBaseUrl();
@@ -88,7 +178,7 @@
   }
 
   async function approveAndSendActivation(requestId, reason) {
-    const data = await firstOf([
+    const result = await firstOf([
       () => RPC.secureWrite('claims', 'approve_and_send_activation', {
         request_id_input: String(requestId),
         decision_reason_input: reason || null,
@@ -100,64 +190,8 @@
         base_url: activationBaseUrl()
       }))
     ]);
-    return await ensureActivationMailJob(requestId, data);
+    return withRecoveredMailJob(result, { request_id: String(requestId) });
   }
-
-  function extractMailJobId(result) {
-    return result?.job_id ?? result?.queue_job_id ?? result?.email_job_id ?? result?.outbound_email_job_id ?? result?.id ?? null;
-  }
-
-
-  function requestIdOf(row) {
-    return row?.request_id ?? row?.claim_request_id ?? row?.id ?? null;
-  }
-
-  function displayNameOf(row) {
-    return row?.display_name || row?.requested_name || row?.desired_name || row?.name || (row?.requester_email ? String(row.requester_email).split('@')[0] : '') || '';
-  }
-
-  async function findClaimRow(requestId) {
-    try {
-      const bundle = await loadClaimsBundle({ includeExpired: true, scope: RPC.getScope() });
-      const rows = [
-        ...(Array.isArray(bundle?.requests) ? bundle.requests : []),
-        ...(Array.isArray(bundle?.history) ? bundle.history : []),
-        ...(Array.isArray(bundle?.expired_queue) ? bundle.expired_queue : [])
-      ];
-      return rows.find((row) => String(requestIdOf(row)) === String(requestId)) || null;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  async function ensureActivationMailJob(requestId, result) {
-    let merged = result && typeof result === 'object' ? { ...result } : {};
-    if (extractMailJobId(merged)) return merged;
-    const row = await findClaimRow(requestId);
-    if (!merged.activation_url) {
-      try {
-        const linkData = await createActivationLink(requestId);
-        if (linkData && typeof linkData === 'object') merged = { ...linkData, ...merged };
-      } catch (_) {}
-    }
-    const recipientEmail = String(merged.requester_email || row?.requester_email || row?.email || '').trim();
-    const recipientName = String(merged.display_name || displayNameOf(row) || '').trim();
-    const activationLink = String(merged.activation_url || merged.activation_link || merged.reset_url || '').trim();
-    const playerId = merged.player_id ?? row?.player_id ?? null;
-    if (!recipientEmail || !activationLink) return merged;
-    const queued = await queueActivationEmail(requestId, recipientEmail, recipientName || null, activationLink, playerId);
-    return {
-      ...merged,
-      ...(queued && typeof queued === 'object' ? queued : {}),
-      requester_email: merged.requester_email || recipientEmail,
-      display_name: merged.display_name || recipientName || null,
-      activation_url: merged.activation_url || activationLink,
-      player_id: merged.player_id ?? playerId ?? null,
-      queued_after_missing_job: true,
-      queue_source: merged.queue_source || 'gejast-admin-source-fallback'
-    };
-  }
-
   async function requeueExpiredActivation(requestId) {
     const primary = await firstOf([
       () => RPC.secureWrite('claims', 'requeue_expired_activation', {
@@ -170,17 +204,15 @@
       }))
     ]);
     if (extractMailJobId(primary)) return primary;
-    const ensured = await ensureActivationMailJob(requestId, primary);
-    if (extractMailJobId(ensured)) return ensured;
     const resend = await resendPendingActivation(requestId);
-    return Object.assign({}, ensured || primary || {}, resend || {}, {
+    return Object.assign({}, primary || {}, resend || {}, {
       requeued_without_job: true,
       requeue_message: primary?.message || null
     });
   }
 
   async function resendPendingActivation(requestId) {
-    const data = await firstOf([
+    const result = await firstOf([
       () => RPC.secureWrite('claims', 'resend_pending_activation', {
         request_id_input: String(requestId),
         base_url: activationBaseUrl()
@@ -194,7 +226,7 @@
         base_url: activationBaseUrl()
       }))
     ]);
-    return await ensureActivationMailJob(requestId, data);
+    return withRecoveredMailJob(result, { request_id: String(requestId) });
   }
 
   async function returnNameToClaimable(requestId, reason) {
@@ -211,7 +243,7 @@
   }
 
   async function createActivationLink(requestId) {
-    return firstOf([
+    const result = await firstOf([
       () => RPC.secureWrite('claims', 'create_activation_link', {
         request_id_input: String(requestId),
         base_url: activationBaseUrl()
@@ -221,6 +253,7 @@
         base_url: activationBaseUrl()
       }))
     ]);
+    return normalizeMailResult(result, { request_id: String(requestId) });
   }
 
   async function validateOutboundEmailJob(jobId, markFailed) {
@@ -263,7 +296,7 @@
   }
 
   async function queueActivationEmail(requestId, recipientEmail, recipientName, activationLink, playerId) {
-    return firstOf([
+    const result = await firstOf([
       () => RPC.secureWrite('claims', 'queue_activation_email', {
         request_id_input: String(requestId),
         base_url: activationBaseUrl(),
@@ -281,6 +314,7 @@
         player_id_input: playerId == null ? null : Number(playerId)
       }))
     ]);
+    return withRecoveredMailJob(result, { request_id: String(requestId), requester_email: recipientEmail, activation_url: activationLink, player_id: playerId == null ? null : Number(playerId) });
   }
 
   async function updateActivationEmailSubject(requestId, desiredSubject) {
@@ -469,7 +503,6 @@
     loadClaimsBundle,
     decideClaim,
     approveAndSendActivation,
-    ensureActivationMailJob,
     requeueExpiredActivation,
     resendPendingActivation,
     returnNameToClaimable,
@@ -479,6 +512,10 @@
     removePlayer,
     queueActivationEmail,
     updateActivationEmailSubject,
+    normalizeMailResult,
+    extractMailJobId,
+    findRecentActivationMailJob,
+    withRecoveredMailJob,
     reserveAllowedUsername,
     removeAllowedUsername,
     setPlayerGhostStatus,

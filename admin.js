@@ -28,7 +28,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       return `
         <div class="activation-tools hidden" id="activation-tools-${req.id}">
           <div><strong>Activatielink klaarzetten</strong></div>
-          <div class="muted" style="margin-top:4px;">Genereer, kopieer of queue de activatielink.</div>
+          <div class="muted" style="margin-top:4px;">Genereer, kopieer of verstuur de activatielink via de Make-mailflow.</div>
           <div class="activation-meta">
             ${metaBox('E-mail', req.requester_email || 'Onbekend')}
             <div class="data-box"><span class="label">Activatie verloopt</span><span id="activation-expires-${req.id}">Nog niet gegenereerd</span></div>
@@ -37,6 +37,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
           <div class="action-row">
             <button class="copy-btn" type="button" data-copy-activation data-id="${req.id}">Kopieer activatielink</button>
             <button class="mail-btn" type="button" data-mail-activation data-id="${req.id}">Mailconcept</button>
+            <button class="mail-btn" type="button" data-send-activation data-id="${req.id}">Verstuur via Make</button>
           </div>
         </div>
       `;
@@ -642,16 +643,33 @@ function validateMakePayloadLocally(meta = {}) {
       return await parseResponse(res);
     }
     async function sendActivationEmail(requestId) {
-      const queued = await queueActivationEmail(requestId);
-      const jobId = queued?.job_id ?? queued?.id ?? null;
+      const panel = document.getElementById(`activation-tools-${requestId}`);
+      let queued = normalizeMakeWebhookPayload(await queueActivationEmail(requestId), {
+        request_id: requestId,
+        email: panel?.dataset?.email || null,
+        activation_url: panel?.dataset?.url || null,
+        display_name: panel?.dataset?.displayName || null,
+        expires_at: panel?.dataset?.expiresAt || null,
+        reason: 'activation_email_queued'
+      });
+      let jobId = queued?.job_id ?? null;
+      if (!jobId) {
+        try {
+          const fallbackPayload = await fetchLatestQueuedWebhookPayload();
+          if (fallbackPayload?.job_id) {
+            queued = normalizeMakeWebhookPayload(fallbackPayload, queued);
+            jobId = queued.job_id;
+          }
+        } catch (_) {}
+      }
       const validation = await validateOutboundEmailJob(jobId, { markFailed:true });
       if (!validation?.ok) throw new Error(formatMailPreflight(validation));
       const makePayload = await fetchOutboundEmailWebhookPayload(jobId, {
         reason: 'activation_email_queued',
         request_id: requestId,
         job_id: jobId,
-        email: queued?.requester_email ?? queued?.recipient_email ?? null,
-        activation_url: queued?.activation_url ?? null,
+        email: queued?.requester_email ?? queued?.recipient_email ?? queued?.email ?? null,
+        activation_url: queued?.activation_url ?? panel?.dataset?.url ?? null,
         subject: queued?.subject ?? ((window.GEJAST_CONFIG && window.GEJAST_CONFIG.EMAIL_SUBJECT) || 'Activeer je account voor de Kale Nel'),
         email_subject: queued?.email_subject ?? queued?.subject ?? ((window.GEJAST_CONFIG && window.GEJAST_CONFIG.EMAIL_SUBJECT) || 'Activeer je account voor de Kale Nel')
       });
@@ -670,14 +688,15 @@ function validateMakePayloadLocally(meta = {}) {
       const urlEl = document.getElementById(`activation-url-${requestId}`);
       const expiresEl = document.getElementById(`activation-expires-${requestId}`);
       if (!panel || !urlEl || !expiresEl) return;
+      const normalized = normalizeMakeWebhookPayload(linkData, { email: panel.dataset.email || '', activation_url: panel.dataset.url || '', expires_at: panel.dataset.expiresAt || '' });
       panel.classList.remove('hidden');
-      panel.dataset.url = linkData.activation_url || '';
-      panel.dataset.email = linkData.requester_email || '';
-      panel.dataset.displayName = linkData.display_name || '';
-      panel.dataset.expiresAt = linkData.expires_at || '';
-      urlEl.dataset.url = linkData.activation_url || '';
-      urlEl.textContent = linkData.activation_url || 'Geen link ontvangen van de server.';
-      expiresEl.textContent = formatDateTime(linkData.expires_at);
+      panel.dataset.url = normalized.activation_url || panel.dataset.url || '';
+      panel.dataset.email = normalized.email || normalized.recipient_email || panel.dataset.email || '';
+      panel.dataset.displayName = normalized.display_name || normalized.recipient_name || panel.dataset.displayName || '';
+      panel.dataset.expiresAt = normalized.expires_at || panel.dataset.expiresAt || '';
+      urlEl.dataset.url = panel.dataset.url || '';
+      urlEl.textContent = panel.dataset.url || 'Geen link ontvangen van de server.';
+      expiresEl.textContent = formatDateTime(panel.dataset.expiresAt);
     }
 
     async function loadAdmin() {
