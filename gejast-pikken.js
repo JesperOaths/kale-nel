@@ -432,13 +432,38 @@
     el.textContent = text || '';
     el.style.color = isError ? '#7f2f1d' : '#6b6257';
   }
-
-  async function createLobby(){
+  function resetLobbySurface(){
+    if (!isLobbyPage()) return;
+    setText('#pkLobbyCode', '—');
+    setText('#pkPhase', 'lobby');
+    setText('#pkRoundNo', '0');
+    setText('#pkDiceStart', '0');
+    setText('#pkDiceCurrent', '0');
+    setText('#pkDiceLost', '0');
+    setText('#pkBidText', '—');
+    setText('#pkBidBy', '');
+    const list = qs('#pkPlayers');
+    if (list) list.innerHTML = '';
+    const myDiceWrap = qs('#pkMyDice');
+    if (myDiceWrap) myDiceWrap.innerHTML = '';
+    setDisplay('#pkBidPanel', 'none');
+    setDisplay('#pkVotePanel', 'none');
+  }
+  function clearActiveLobbyContext(){
     invalidateContext();
     stopPolling();
+    UI.gameId = '';
+    UI.lobbyCode = '';
     UI.lastStateVersion = -1;
     UI.redirecting = false;
-    setStatus('Lobby maken...', false);
+    setParticipantToken('', false);
+    try { history.replaceState(null, '', lobbyHref('', '')); } catch(_){ }
+    resetLobbySurface();
+  }
+
+  async function createLobby(){
+    clearActiveLobbyContext();
+    setStatus('Nieuwe lobby maken...', false);
     const mode = (qs('#pkPenaltyMode') && qs('#pkPenaltyMode').value) || 'wrong_loses';
     const out = await rpc('pikken_create_lobby_scoped', {
       session_token: sessionToken() || null,
@@ -455,10 +480,7 @@
   async function joinLobby(){
     const code = String((qs('#pkJoinCode') && qs('#pkJoinCode').value) || '').trim().toUpperCase();
     if(!code) return setStatus('Vul een lobby code in.', true);
-    invalidateContext();
-    stopPolling();
-    UI.lastStateVersion = -1;
-    UI.redirecting = false;
+    clearActiveLobbyContext();
     setStatus('Lobby joinen...', false);
     const out = await rpc('pikken_join_lobby_scoped', {
       session_token: sessionToken() || null,
@@ -491,13 +513,7 @@
 
   async function leaveLobby(){
     const finishLocalLeave = () => {
-      invalidateContext();
-      stopPolling();
-      UI.gameId = '';
-      UI.lobbyCode = '';
-      UI.lastStateVersion = -1;
-      UI.redirecting = false;
-      setParticipantToken('', false);
+      clearActiveLobbyContext();
       window.location.replace(lobbyHref('', ''));
     };
     if(!UI.gameId){
