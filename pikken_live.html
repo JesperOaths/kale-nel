@@ -8,9 +8,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken live</title>
-  <script>window.GEJAST_PAGE_VERSION='v531b';</script>
-  <script src="./gejast-config.js?v531b"></script>
-  <script src="./gejast-home-gate.js?v531b"></script>
+  <script>window.GEJAST_PAGE_VERSION='v532';</script>
+  <script src="./gejast-config.js?v532"></script>
+  <script src="./gejast-home-gate.js?v532"></script>
   <script src="./badge-registry.js"></script>
   <style>
     :root{
@@ -158,6 +158,22 @@
       border:1px solid rgba(93,70,31,.12)
     }
     .hidden{display:none!important}.empty{color:var(--muted)}
+    
+    .reveal-banner{
+      position:absolute;left:50%;top:16px;transform:translateX(-50%);
+      z-index:3;padding:10px 16px;border-radius:999px;
+      background:linear-gradient(180deg, rgba(255,246,221,.98), rgba(241,223,180,.97));
+      border:1px solid rgba(120,88,31,.22);font-weight:900;color:#2e2114;
+      box-shadow:0 14px 26px rgba(0,0,0,.18), 0 0 24px rgba(255,208,102,.14);
+    }
+    .reveal-banner.flash{animation:revealPop .9s ease}
+    .seat.loss-flash .avatar-shell{animation:lossFlash 1.2s ease}
+    .seat.loss-flash .player-name{box-shadow:0 0 0 2px rgba(198,118,93,.4), 0 0 20px rgba(198,118,93,.3)}
+    .seat.winner-glow .avatar-shell{box-shadow:0 14px 28px rgba(0,0,0,.28), 0 0 24px rgba(95,181,138,.28)}
+    .comeback-badge{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;background:linear-gradient(180deg,#f4d79d,#a67424);color:#22170e;font-weight:900}
+    @keyframes revealPop{0%{transform:translateX(-50%) scale(.88);opacity:0}40%{transform:translateX(-50%) scale(1.04);opacity:1}100%{transform:translateX(-50%) scale(1);opacity:1}}
+    @keyframes lossFlash{0%,100%{filter:none}25%{filter:drop-shadow(0 0 16px rgba(198,118,93,.7)) brightness(1.04)}50%{filter:drop-shadow(0 0 24px rgba(198,118,93,.8)) brightness(1.08)}75%{filter:drop-shadow(0 0 16px rgba(198,118,93,.7)) brightness(1.04)}}
+
     @media (max-width:1020px){
       .table-stage{min-height:1040px}.center-ui{width:min(470px,72vw);top:34%}.self-zone{grid-template-columns:1fr;bottom:18px}
     }
@@ -178,6 +194,8 @@
           <div class="top-actions" style="margin-bottom:14px">
             <a class="btn" href="./index.html">Home</a>
             <a id="backLobbyBtn" class="soft-btn" href="./pikken.html">Lobby</a>
+            <button id="leaveTableBtn" class="soft-btn" type="button">Verlaat tafel</button>
+            <button id="disbandTableBtn" class="soft-btn hidden" type="button">Hef tafel op</button>
           </div>
           <div style="display:flex;align-items:center;gap:12px;margin:0 0 6px">
             <img src="./assets/pikken/pikken-icon.svg" alt="Pikken" style="width:48px;height:48px;border-radius:14px;background:#fff;padding:8px;border:1px solid rgba(0,0,0,.08)">
@@ -190,6 +208,7 @@
 
       <div class="table-stage">
         <div class="table-felt">
+          <div id="revealBanner" class="reveal-banner hidden"></div>
           <div id="seatLayer" class="seat-layer"></div>
 
           <div class="center-ui">
@@ -237,6 +256,8 @@
             </div>
           </div>
 
+          <div id="resultBanner" class="center-card hidden" style="position:absolute;left:50%;top:58%;transform:translateX(-50%);width:min(420px,50vw);z-index:2"></div>
+
           <div class="self-zone">
             <div class="self-card">
               <div class="self-head">
@@ -269,7 +290,7 @@
   <script>
   (() => {
     const cfg = window.GEJAST_CONFIG || {};
-    const UI = { gameId:'', lobbyCode:'', scope:'friends', state:null, actionBusy:false, profiles:new Map() };
+    const UI = { gameId:'', lobbyCode:'', scope:'friends', state:null, actionBusy:false, profiles:new Map(), lastRevealRound:0, matchOutcomes:null };
 
     const qs = (s) => document.querySelector(s);
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -302,6 +323,55 @@
     function buildBidCountOptions(max=24){ const sel = qs('#bidCount'); sel.innerHTML = Array.from({length:max}, (_,i) => `<option value="${i+1}">${i+1}</option>`).join(''); }
     function bidHistoryFromState(st){ const arr = []; const raw = Array.isArray(st?.bid_history) ? st.bid_history : (Array.isArray(st?.history?.bids) ? st.history.bids : []); raw.forEach((b,idx)=>arr.push({index:idx+1,bidder_name:b.bidder_name||b.name||'',count:b.count||b.bid_count,face:b.face||b.bid_face,current:false})); if (st?.bid) arr.push({index:arr.length+1,bidder_name:st.bid.bidder_name||'',count:st.bid.count||st.bid.bid_count,face:st.bid.face||st.bid.bid_face,current:true}); return arr; }
     function latestBidByPlayer(st){ const map = new Map(); for (const item of bidHistoryFromState(st)) if (item.bidder_name) map.set(normalizeName(item.bidder_name), item); return map; }
+
+    async function loadMatchOutcomes(){
+      if (!UI.gameId) return null;
+      try{
+        const rows = await rpc('pikken_get_match_outcomes_public', { game_id_input: UI.gameId });
+        UI.matchOutcomes = Array.isArray(rows) ? rows : (Array.isArray(rows?.rows) ? rows.rows : []);
+      }catch(_){ UI.matchOutcomes = null; }
+      return UI.matchOutcomes;
+    }
+    function outcomesMap(){
+      const map = new Map();
+      (Array.isArray(UI.matchOutcomes) ? UI.matchOutcomes : []).forEach((r)=>map.set(Number(r.player_id||0), r));
+      return map;
+    }
+    function renderRevealBanner(state){
+      const el = qs('#revealBanner'); if(!el) return;
+      const lr = state?.game?.state?.last_reveal || state?.game?.last_reveal || null;
+      const phase = String(state?.game?.state?.phase || state?.game?.status || '').toLowerCase();
+      if (!lr || phase === 'voting'){
+        el.classList.add('hidden');
+        el.innerHTML = '';
+        return;
+      }
+      const starterName = findNameBySeat(state?.players || [], lr.next_starter_seat);
+      const loserName = findNameBySeat(state?.players || [], lr.first_loser_seat);
+      const currentRound = Number(lr.round_no || 0);
+      const isNew = currentRound && currentRound !== UI.lastRevealRound;
+      UI.lastRevealRound = currentRound || UI.lastRevealRound;
+      el.className = 'reveal-banner' + (isNew ? ' flash' : '');
+      el.classList.remove('hidden');
+      el.innerHTML = `${lr.bid_true ? '✅ Bod gehaald' : '❌ Bod afgekeurd'} · ${Number(lr.counted_total||0)} geteld · eerste verliezer: ${esc(loserName || '—')} · volgende starter: ${esc(starterName || '—')}`;
+    }
+    function renderResultBanner(state){
+      const el = qs('#resultBanner'); if(!el) return;
+      const phase = String(state?.game?.state?.phase || state?.game?.status || '').toLowerCase();
+      if (phase !== 'finished'){
+        el.classList.add('hidden');
+        el.innerHTML = '';
+        return;
+      }
+      const rows = Array.isArray(UI.matchOutcomes) ? UI.matchOutcomes : [];
+      const winners = rows.filter((r)=>r.is_winner);
+      if (!winners.length){
+        el.classList.add('hidden');
+        return;
+      }
+      el.classList.remove('hidden');
+      el.innerHTML = winners.map((w)=>`<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><div class="label">Winnaar</div><div style="font-size:24px;font-weight:950">${esc(w.player_name || '—')}</div></div>${w.is_comeback ? '<span class="comeback-badge">Comeback</span>' : ''}</div>`).join('');
+    }
 
     async function loadProfiles(){
       try{
@@ -426,6 +496,7 @@
       qs('#currentBid').textContent = bidText(bid);
       qs('#bidBy').textContent = bid && bid.bidder_name ? `door ${bid.bidder_name}` : '';
       qs('#totalCurrentDice').textContent = String(Number((state?.dice_totals||{}).current_total||0));
+      const lostEl = qs('#totalLostDice'); if (lostEl) lostEl.textContent = String(Number((state?.dice_totals||{}).lost_total||0));
       qs('#turnName').textContent = findNameBySeat(players, turnSeat);
 
       const myDice = qs('#myDice'); myDice.innerHTML = '';
@@ -446,6 +517,7 @@
         viewerMeta.textContent = 'Alleen zichtbaar voor deelnemers in deze lobby.';
       }
 
+      const disbandBtn = qs('#disbandTableBtn'); if(disbandBtn) disbandBtn.classList.toggle('hidden', !(viewer && viewer.is_host));
       const canAct = !!viewer && !!viewer.alive;
       const viewerSeat = Number(viewer?.seat||0);
       const missingBidTurn = phase === 'bidding' && !Number(st.turn_seat||0);
@@ -461,11 +533,13 @@
 
       renderSeats(state);
       renderBidHistory(st);
+      renderRevealBanner(state);
+      renderResultBanner(state);
     }
 
     async function loadParticipantState(){ const token = sessionToken(); if (!token || !UI.gameId) return null; return rpc('pikken_get_state_scoped', { session_token: token, game_id_input: UI.gameId }); }
     async function loadPublicState(){ return rpc('pikken_get_live_state_public', { game_id_input: UI.gameId || null, lobby_code_input: UI.lobbyCode || null, site_scope_input: UI.scope }); }
-    async function load(){ try { let state = null; try { state = await loadParticipantState(); } catch(_) {} if (!state) state = await loadPublicState(); render(state || {}); } catch(err) { setStatus(err.message || 'Laden mislukt.', true); } }
+    async function load(){ try { let state = null; try { state = await loadParticipantState(); } catch(_) {} if (!state) state = await loadPublicState(); const phase = String(state?.game?.state?.phase || state?.game?.status || '').toLowerCase(); if (phase === 'finished') { try { await loadMatchOutcomes(); } catch(_){} } render(state || {}); } catch(err) { setStatus(err.message || 'Laden mislukt.', true); } }
     async function withAction(label, fn){ if (UI.actionBusy) return; UI.actionBusy = true; setStatus(label, false); try { const out = await fn(); if (out && typeof out === 'object' && out.game) render(out); await load(); } catch(err) { setStatus(err.message || `${label} mislukt.`, true); } finally { UI.actionBusy = false; } }
     async function placeBid(){ const count = Number(qs('#bidCount').value || 0); const face = Number(qs('#bidFace').value || 0); if (!count || !face) return setStatus('Kies een geldig bod.', true); return withAction('Bieden…', ()=>rpc('pikken_place_bid_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId, bid_count_input: count, bid_face_input: face })); }
     async function rejectBid(){ return withAction('Afkeuren…', ()=>rpc('pikken_reject_bid_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId })); }
@@ -477,6 +551,26 @@
         const list = Array.isArray(rows?.players) ? rows.players : (Array.isArray(rows) ? rows : []);
         UI.profiles = new Map(list.map((r) => [normalizeName(r.player_name || r.display_name || r.public_display_name || r.chosen_username), r]));
       }catch(_){ UI.profiles = new Map(); }
+    }
+
+
+    async function leaveTable(){
+      if (!window.confirm('Weet je zeker dat je deze tafel wilt verlaten?')) return;
+      try{
+        await rpc('pikken_leave_lobby_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId });
+        window.location.href = `./pikken.html?scope=${encodeURIComponent(UI.scope)}`;
+      }catch(err){
+        setStatus(err.message || 'Verlaten mislukt.', true);
+      }
+    }
+    async function disbandTable(){
+      if (!window.confirm('Weet je zeker dat je de hele tafel wilt opheffen?')) return;
+      try{
+        await rpc('pikken_destroy_lobby_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId });
+        window.location.href = `./pikken.html?scope=${encodeURIComponent(UI.scope)}`;
+      }catch(err){
+        setStatus(err.message || 'Opheffen mislukt.', true);
+      }
     }
 
     function boot(){
@@ -491,6 +585,8 @@
       qs('#rejectBidBtn').addEventListener('click', rejectBid);
       qs('#voteApproveBtn').addEventListener('click', ()=>vote(true));
       qs('#voteRejectBtn').addEventListener('click', ()=>vote(false));
+      qs('#leaveTableBtn').addEventListener('click', leaveTable);
+      qs('#disbandTableBtn').addEventListener('click', disbandTable);
       const lobbyHref = UI.gameId ? `./pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(UI.scope)}` : `./pikken.html?scope=${encodeURIComponent(UI.scope)}`;
       qs('#backLobbyBtn').href = lobbyHref;
       loadProfiles().finally(()=>load());
