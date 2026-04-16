@@ -8,9 +8,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken live</title>
-  <script>window.GEJAST_PAGE_VERSION='v537';</script>
-  <script src="./gejast-config.js?v537"></script>
-  <script src="./gejast-home-gate.js?v537"></script>
+  <script>window.GEJAST_PAGE_VERSION='v538';</script>
+  <script src="./gejast-config.js?v538"></script>
+  <script src="./gejast-home-gate.js?v538"></script>
+  <script src="./gejast-scope-context.js?v538"></script>
   <script src="./badge-registry.js"></script>
   <style>
     :root{
@@ -719,7 +720,6 @@ async function loadMatchOutcomes(){
       renderRevealBanner(state);
       renderResultBanner(state);
       refreshBidOptionsFromState(state);
-      refreshBidOptionsFromState(state);
     }
 
     async function loadParticipantState(){ const token = sessionToken(); if (!token || !UI.gameId) return null; return rpc('pikken_get_state_scoped', { session_token: token, game_id_input: UI.gameId }); }
@@ -740,7 +740,7 @@ async function loadMatchOutcomes(){
         UI.wasDisconnected = true;
         setStatus('Verbinding hapert, opnieuw proberen…', true);
       }
-    } catch(_) {} if (!state) state = await loadPublicState(); const phase = String(state?.game?.state?.phase || state?.game?.status || '').toLowerCase(); if (phase === 'finished') { try { await loadMatchOutcomes(); } catch(_){} } render(state || {}); } catch(err) { setStatus(err.message || 'Laden mislukt.', true); } }
+    }
     async function withAction(label, fn){
       if (UI.actionBusy) return;
       UI.actionBusy = true;
@@ -767,15 +767,6 @@ async function loadMatchOutcomes(){
     }
     async function rejectBid(){ return withAction('Afkeuren…', ()=>rpc('pikken_reject_bid_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId })); }
     async function vote(v){ return withAction('Stemmen…', ()=>rpc('pikken_cast_vote_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId, vote_input: !!v })); }
-
-    async function loadProfiles(){
-      try{
-        const rows = await rpc('get_all_site_players_public_scoped', { site_scope_input: UI.scope });
-        const list = Array.isArray(rows?.players) ? rows.players : (Array.isArray(rows) ? rows : []);
-        UI.profiles = new Map(list.map((r) => [normalizeName(r.player_name || r.display_name || r.public_display_name || r.chosen_username), r]));
-      }catch(_){ UI.profiles = new Map(); }
-    }
-
 
     async function leaveTable(){
       if (!window.confirm('Weet je zeker dat je deze tafel wilt verlaten?')) return;

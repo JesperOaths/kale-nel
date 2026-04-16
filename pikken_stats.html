@@ -7,10 +7,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken stats</title>
-  <script>window.GEJAST_PAGE_VERSION='v488';</script>
-  <script src="./gejast-config.js?v488"></script>
-  <script src="./gejast-home-gate.js?v487"></script>
-  <script src="./gejast-scope-context.js?v486"></script>
+  <script>window.GEJAST_PAGE_VERSION='v538';</script>
+  <script src="./gejast-config.js?v538"></script>
+  <script src="./gejast-home-gate.js?v538"></script>
+  <script src="./gejast-scope-context.js?v538"></script>
   <style>
     :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--shadow:0 18px 44px rgba(0,0,0,.08)}
     *{box-sizing:border-box}
@@ -30,11 +30,11 @@
     <div class="card">
       <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
         <div>
-          <a class="btn" href="./pikken.html">Terug</a>
+          <a class="btn" id="backToPikkenBtn" href="./pikken.html">Terug</a>
           <div style="display:flex;align-items:center;gap:12px;margin:14px 0 6px"><img src="./assets/pikken/pikken-icon.svg" alt="Pikken" style="width:48px;height:48px;border-radius:14px;background:#fff;padding:8px;border:1px solid rgba(0,0,0,.08)"><h1 style="margin:0">Pikken stats</h1></div>
           <div id="meta" class="muted">Laden…</div>
         </div>
-        <a class="btn" href="./index.html">Home</a>
+        <a class="btn" id="statsHomeBtn" href="./index.html">Home</a>
       </div>
 
       <div id="grid" class="grid"></div>
@@ -45,6 +45,9 @@
     (()=>{
       const cfg=window.GEJAST_CONFIG||{};
       const scope=(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope&&window.GEJAST_SCOPE_UTILS.getScope())||((new URLSearchParams(location.search).get('scope')||'friends')==='family'?'family':'friends');
+      const scopedHref=(path)=>`${path}?scope=${encodeURIComponent(scope)}`;
+      document.getElementById('backToPikkenBtn').href = scopedHref('./pikken.html');
+      document.getElementById('statsHomeBtn').href = scopedHref('./index.html');
       function headers(){return{apikey:cfg.SUPABASE_PUBLISHABLE_KEY||'',Authorization:`Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY||''}`,'Content-Type':'application/json',Accept:'application/json'}}
       async function parse(res){const t=await res.text();let d=null;try{d=t?JSON.parse(t):null}catch{throw new Error(t||`HTTP ${res.status}`)}if(!res.ok)throw new Error(d?.message||d?.error||`HTTP ${res.status}`);return d}
       async function load(){

@@ -88,11 +88,38 @@
   function setStoredLobbyCode(code){ try { if(code) localStorage.setItem(STORAGE_KEY, String(code).trim().toUpperCase()); } catch(_){ } }
   function clearStoredLobbyCode(){ try { localStorage.removeItem(STORAGE_KEY); } catch(_){ } }
 
-  function liveHref(gameId){ return `./pikken_live.html?client_match_id=${encodeURIComponent(String(gameId||''))}`; }
-  function goLive(gameId){
+  function scopedHref(path, params){
+    const search = new URLSearchParams();
+    const entries = Object.entries(params || {});
+    entries.forEach(([key, value])=>{
+      const resolved = String(value || '').trim();
+      if (resolved) search.set(key, resolved);
+    });
+    const scope = getScope();
+    if (scope) search.set('scope', scope);
+    const query = search.toString();
+    return query ? `${path}?${query}` : path;
+  }
+  function liveHref(gameId, lobbyCode){
+    const id = String(gameId || '').trim();
+    const code = String(lobbyCode || '').trim().toUpperCase();
+    return scopedHref('./pikken_live.html', {
+      client_match_id: id,
+      match_ref: id ? '' : code
+    });
+  }
+  function statsHref(){
+    return scopedHref('./pikken_stats.html');
+  }
+  function lobbyHref(gameId){
     const id = String(gameId || UI.gameId || '').trim();
-    if(!id) return false;
-    window.location.href = liveHref(id);
+    return scopedHref('./pikken.html', { game_id: id });
+  }
+  function goLive(gameId, lobbyCode){
+    const id = String(gameId || UI.gameId || '').trim();
+    const code = String(lobbyCode || currentLobbyCode() || '').trim().toUpperCase();
+    if(!id && !code) return false;
+    window.location.href = liveHref(id, code);
     return true;
   }
 
@@ -134,6 +161,24 @@
     return String(getStoredLobbyCode() || '').trim().toUpperCase();
   }
 
+  function hasJoinedSeat(viewer){
+    return Number(viewer?.seat || 0) > 0;
+  }
+  function roomDisplayable(room){
+    const rawPlayerCount = room?.player_count;
+    const playerCount = rawPlayerCount == null ? null : Number(rawPlayerCount);
+    const stage = String(room?.stage || '').toLowerCase();
+    if (stage === 'finished' || stage === 'closed' || stage === 'ended') return false;
+    if (playerCount != null && Number.isFinite(playerCount) && playerCount <= 0) return false;
+    return true;
+  }
+  function syncNavLinks(){
+    const statsLink = qs('#pkStatsLink');
+    if (statsLink) statsLink.href = statsHref();
+    const liveLink = qs('#pkLiveLink');
+    if (liveLink) liveLink.href = liveHref(UI.gameId || '', currentLobbyCode());
+  }
+
   function findMatchingLiveRoom(list){
     const currentCode = currentLobbyCode();
     const currentGameId = String(UI.gameId || '').trim();
@@ -165,7 +210,8 @@
     if(qs('#pkDiceLost')) qs('#pkDiceLost').textContent = '0';
     if(qs('#pkBidText')) qs('#pkBidText').textContent = '—';
     if(qs('#pkBidBy')) qs('#pkBidBy').textContent = '';
-    if(qs('#pkLiveLink')) qs('#pkLiveLink').style.display = 'none';
+    if(qs('#pkLiveLink')){ qs('#pkLiveLink').href = liveHref('', currentLobbyCode()); qs('#pkLiveLink').style.display = 'none'; }
+    const disbandBtn = qs('#pkDisbandBtn'); if(disbandBtn) disbandBtn.style.display = 'none';
     if(qs('#pkReveal')){ qs('#pkReveal').style.display = 'none'; qs('#pkReveal').innerHTML = ''; }
     if(qs('#pkRoomCodeInput') && !shouldPreserveRoomCodeInput()) qs('#pkRoomCodeInput').value = '';
   }
@@ -176,16 +222,17 @@
     if(gameId){
       UI.gameId = gameId;
       setParticipantToken(gameId, true);
-      history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(gameId)}&scope=${encodeURIComponent(getScope())}`);
+      history.replaceState(null,'',lobbyHref(gameId));
     }
     if(lobbyCode){
       setStoredLobbyCode(lobbyCode);
       setRoomCodeInputValue(lobbyCode);
     }
     const liveLink = qs('#pkLiveLink');
-    if(liveLink && gameId){ liveLink.href = liveHref(gameId); liveLink.style.display = ''; }
+    if(liveLink && (gameId || lobbyCode)){ liveLink.href = liveHref(gameId, lobbyCode); liveLink.style.display = ''; }
     if(qs('#pkPhase')) qs('#pkPhase').textContent = 'lobby';
     if(qs('#pkRoundNo')) qs('#pkRoundNo').textContent = '0';
+    syncNavLinks();
   }
 
   function bindRoomButtons(scope){
@@ -203,11 +250,11 @@
             UI.gameId = resolvedGameId;
             setParticipantToken(resolvedGameId, true);
             setStoredLobbyCode(code);
-            history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(resolvedGameId)}&scope=${encodeURIComponent(getScope())}`);
-            goLive(resolvedGameId);
+            history.replaceState(null,'',lobbyHref(resolvedGameId));
+            goLive(resolvedGameId, code);
             return;
           }
-          setStatus('Live room gevonden, maar game-id ontbreekt nog in de roomlijst. Ververs één keer.', true);
+          goLive('', code);
           return;
         }
         await joinLobby(code);
@@ -234,9 +281,9 @@
       >
         <div>
           <strong>${esc(r.lobby_code || '—')}</strong>
-          <div class="muted small-text">Host: ${esc(r.host_name || '—')} · ${Number(r.player_count || 0)} spelers (${Number(r.ready_count || 0)} ready) · fase: ${esc(r.stage_label || r.stage || 'lobby')}</div>
+          <div class="muted small-text">Host: ${esc(r.host_name || 'geen host')} · ${Number(r.player_count || 0)} spelers (${Number(r.ready_count || 0)} ready) · fase: ${esc(r.stage_label || r.stage || 'lobby')}</div>
         </div>
-        <div class="room-pill ${isLobby ? '' : 'busy'}">${isLobby ? 'Join' : 'Live'}</div>
+        <div class="room-pill ${isLobby ? '' : 'busy'}">${!r.host_name && isLobby ? 'Open' : (isLobby ? 'Join' : 'Live')}</div>
       </button>
     `;}).join('');
     bindRoomButtons(box);
@@ -245,7 +292,7 @@
   async function loadOpenRooms(){
     try {
       const rows = await rpc('get_pikken_open_rooms_public_scoped', { site_scope_input: getScope() });
-      const list = Array.isArray(rows) ? rows : [];
+      const list = (Array.isArray(rows) ? rows : []).filter(roomDisplayable);
       const live = list.filter((r)=>String(r.stage || '').toLowerCase() !== 'lobby');
       const open = list.filter((r)=>String(r.stage || '').toLowerCase() === 'lobby');
       renderRoomsInto(qs('#pkLiveRoomsBox'), live, 'Nog geen actieve pikkenkamers.');
@@ -259,8 +306,8 @@
           UI.gameId = gameId;
           setParticipantToken(gameId, true);
           setStoredLobbyCode(String(matchedLive.lobby_code || '').trim().toUpperCase());
-          history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(gameId)}&scope=${encodeURIComponent(getScope())}`);
-          goLive(gameId);
+          history.replaceState(null,'',lobbyHref(gameId));
+          goLive(gameId, String(matchedLive.lobby_code || currentLobbyCode() || '').trim().toUpperCase());
           return list;
         }
         if (String(matchedLive.lobby_code || '').trim()) {
@@ -285,14 +332,14 @@
     const status = String(game?.status || phase || 'lobby').toLowerCase();
     setParticipantToken(game?.id || UI.gameId, phase && phase !== 'finished');
     const bid = game?.state?.bid && game.state.bid !== null ? game.state.bid : null;
-    const turnSeat = Number(game?.state?.current_turn_seat || 0);
-    const voteTurnSeat = Number(game?.state?.vote_turn_seat || 0);
+    const turnSeat = Number(game?.state?.current_turn_seat || game?.state?.turn_seat || 0);
+    const voteTurnSeat = Number(game?.state?.vote_turn_seat || game?.state?.turn_seat || 0);
     const lastReveal = game?.state?.last_reveal || null;
 
     if(qs('#pkLobbyShell')) qs('#pkLobbyShell').style.display = game?.id ? '' : 'none';
     if(qs('#pkLobbyCode')) qs('#pkLobbyCode').textContent = game?.lobby_code || '—';
     if(game?.lobby_code){ setStoredLobbyCode(game.lobby_code); setRoomCodeInputValue(game.lobby_code); }
-    const liveLink = qs('#pkLiveLink'); if(liveLink){ liveLink.href = liveHref(game?.id || UI.gameId); liveLink.style.display = (game?.id || UI.gameId) ? '' : 'none'; }
+    const liveLink = qs('#pkLiveLink'); if(liveLink){ liveLink.href = liveHref(game?.id || UI.gameId, game?.lobby_code || currentLobbyCode()); liveLink.style.display = (game?.id || UI.gameId || game?.lobby_code || currentLobbyCode()) ? '' : 'none'; }
     if(qs('#pkLobbyMeta')) qs('#pkLobbyMeta').textContent = `Fase: ${phase} · Host: ${viewer?.is_host ? 'jij' : (game?.created_by_player_name || '—')}`;
     if(qs('#pkLobbySummary')){
       const ready = players.filter((p)=>!!p.ready).length;
@@ -303,7 +350,7 @@
     qs('#pkPhase').textContent = phase;
     qs('#pkRoundNo').textContent = String(Number(game?.state?.round_no || 0) || 0);
     if ((viewer?.is_host || viewer?.seat) && String(phase).toLowerCase() !== 'lobby' && !/pikken_live\.html/i.test(window.location.pathname)) {
-      setTimeout(()=>{ try { goLive(game?.id || UI.gameId); } catch(_){} }, 150);
+      setTimeout(()=>{ try { goLive(game?.id || UI.gameId, game?.lobby_code || currentLobbyCode()); } catch(_){} }, 150);
     }
 
     const totals = state?.dice_totals || {};
@@ -349,6 +396,9 @@
     qs('#pkVotePanel').style.display = myVoteTurn ? 'block' : 'none';
     qs('#pkRejectBtn').disabled = !myTurn || !bid;
     qs('#pkStartBtn').disabled = !viewer.is_host || players.length < 2 || status === 'finished';
+    const leaveBtn = qs('#pkLeaveBtn'); if(leaveBtn) leaveBtn.style.display = hasJoinedSeat(viewer) ? '' : 'none';
+    const disbandBtn = qs('#pkDisbandBtn'); if(disbandBtn) disbandBtn.style.display = viewer.is_host ? '' : 'none';
+    syncNavLinks();
 
     const revealWrap = qs('#pkReveal');
     if(!lastReveal){
@@ -396,7 +446,7 @@
       const phase = String(state?.game?.state?.phase || state?.game?.status || 'lobby').toLowerCase();
       setStatus('', false);
       if(phase && phase !== 'lobby' && !/pikken_live\.html/i.test(window.location.pathname)){
-        goLive(state?.game?.id || UI.gameId);
+        goLive(state?.game?.id || UI.gameId, state?.game?.lobby_code || currentLobbyCode());
         return state;
       }
       return state;
@@ -492,7 +542,7 @@
     const phase = String(stateToUse?.game?.state?.phase || stateToUse?.game?.status || '').toLowerCase();
     if(phase && phase !== 'lobby'){
       setStatus('', false);
-      goLive(stateToUse?.game?.id || UI.gameId);
+      goLive(stateToUse?.game?.id || UI.gameId, stateToUse?.game?.lobby_code || currentLobbyCode());
       return;
     }
 
@@ -503,7 +553,7 @@
         setStatus('', false);
         UI.gameId = gameId;
         setStoredLobbyCode(String(matchedLive.lobby_code || currentLobbyCode() || '').trim().toUpperCase());
-        goLive(gameId);
+        goLive(gameId, String(matchedLive.lobby_code || currentLobbyCode() || '').trim().toUpperCase());
         return;
       }
       setStatus('Room staat live, maar de roomlijst geeft nog geen game-id terug. Ververs één keer of open via Live.', true);
@@ -537,9 +587,36 @@
     render(state);
   }
 
+  async function leaveLobby(){
+    if(!UI.gameId) return;
+    if(!window.confirm('Weet je zeker dat je deze room wilt verlaten?')) return;
+    setStatus('Room verlaten…', false);
+    await rpc('pikken_leave_lobby_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId });
+    clearLobbyView();
+    history.replaceState(null,'',lobbyHref(''));
+    await loadOpenRooms();
+  }
+
+  async function disbandLobby(){
+    if(!UI.gameId) return;
+    if(!window.confirm('Weet je zeker dat je deze room wilt verwijderen?')) return;
+    setStatus('Room verwijderen…', false);
+    await rpc('pikken_destroy_lobby_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId });
+    clearLobbyView();
+    history.replaceState(null,'',lobbyHref(''));
+    await loadOpenRooms();
+  }
+
+  function spectateCurrent(){
+    const code = currentLobbyCode();
+    if(goLive(UI.gameId, code)) return;
+    setStatus('Open of join eerst een room om live te kijken.', true);
+  }
+
   function boot(){
     const params = new URLSearchParams(location.search);
     UI.gameId = params.get('game_id') || '';
+    syncNavLinks();
 
     qs('#pkCreateLobbyBtn').addEventListener('click', ()=>createLobby().catch(e=>setStatus(normalizeError(e)||'Maken mislukt.',true)));
     qs('#pkJoinLobbyBtn').addEventListener('click', ()=>joinLobby().catch(e=>setStatus(normalizeError(e)||'Join mislukt.',true)));
@@ -552,6 +629,9 @@
     qs('#pkRejectBtn').addEventListener('click', ()=>rejectBid().catch(e=>setStatus(normalizeError(e)||'Afkeuren mislukt.',true)));
     qs('#pkVoteApproveBtn').addEventListener('click', ()=>vote(true).catch(e=>setStatus(normalizeError(e)||'Stem mislukt.',true)));
     qs('#pkVoteRejectBtn').addEventListener('click', ()=>vote(false).catch(e=>setStatus(normalizeError(e)||'Stem mislukt.',true)));
+    qs('#pkSpectateBtn').addEventListener('click', ()=>spectateCurrent());
+    qs('#pkLeaveBtn').addEventListener('click', ()=>leaveLobby().catch(e=>setStatus(normalizeError(e)||'Verlaten mislukt.',true)));
+    qs('#pkDisbandBtn').addEventListener('click', ()=>disbandLobby().catch(e=>setStatus(normalizeError(e)||'Verwijderen mislukt.',true)));
 
     const roomEl = qs('#pkRoomCodeInput');
     if(roomEl){
