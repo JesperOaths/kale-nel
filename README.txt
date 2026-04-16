@@ -12,18 +12,20 @@ What this bundle contains:
 - apply_overlay.ps1 -> optional helper script to copy repo\ onto a target repo path
 
 Main focus of this overlay:
+- Pikken lobby-to-live handoff fix: restore active lobby state across pages and treat `status=live` as a real start signal
 - Pikken public stats page and scope-safe links
 - Paardenrace public stats page, live/lobby scope-safe links, and room URL handling
 - Rad public/admin stats and fixed target nomination logging
 - Beurs d'Espinoza public/admin stats links and scope-safe navigation
 - Shared game HQ pages plus required session/runtime files
+- Boerenbridge table render cleanup to remove duplicate static/dynamic header ids
 
 Suggested apply order:
 1. Start from the latest GitHub repo baseline.
 2. Copy everything from repo\ onto the repo root, overwriting files.
 3. Run sql\gejast_v552_codex_games_stats_bundle.sql on the same database.
 4. Smoke-test:
-   - pikken.html / pikken_stats.html
+   - pikken.html / pikken_live.html / pikken_stats.html
    - paardenrace.html / paardenrace_live.html / paardenrace_stats.html
    - rad.html / rad_stats.html / admin_rad.html
    - despimarkt.html / despimarkt_stats.html / admin_despimarkt.html

@@ -3,12 +3,14 @@ admin_despimarkt.html
 admin_paardenrace.html
 admin_pikken.html
 admin_rad.html
+boerenbridge.html
 despimarkt.html
 despimarkt_stats.html
 gejast-config.js
 gejast-game-hq.css
 gejast-game-hq.js
 gejast-home-gate.js
+gejast-pikken.js
 gejast-paardenrace.js
 gejast-player-session-ui.js
 gejast_v521_pikken_live_state_rewrite.sql
