@@ -116,14 +116,14 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v551';</script><script src="./gejast-config.js?v551"></script><script src="./gejast-scope-context.js?v551"></script><script src="./gejast-family-rollout.js?v393"></script>
+  <script>window.GEJAST_PAGE_VERSION='v552';</script><script src="./gejast-config.js?v552"></script><script src="./gejast-scope-context.js?v552"></script><script src="./gejast-family-rollout.js?v552"></script>
   <script src="./gejast-rpc-contract.js?v392"></script>
   <script src="./gejast-admin-rpc.js?v392"></script>
   <script src="./admin-session-sync.js?v392"></script>
   <script src="./admin-topnav.js?v392"></script>
   <script src="./gejast-admin-claims-buckets.js?v392"></script>
   <script src="./gejast-admin-claims-source.js?v392"></script>
-  <script src="./gejast-admin-source.js?v500"></script><script src="./gejast-account-links.js?v496"></script>
+  <script src="./gejast-admin-source.js?v552"></script><script src="./gejast-account-links.js?v496"></script>
 </head>
 <body>
   <div class="main-card">
@@ -523,20 +523,17 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
                 const preparedValidation = await validateOutboundEmailJob(preparedContext.jobId, { markFailed:true });
                 if (!preparedValidation?.ok) throw new Error(formatMailPreflight(preparedValidation));
               }
-              if (!preparedContext.webhookPayload) throw new Error('Mailjob niet naar Make gestuurd: missing_job_id');
               const wake = await triggerMakeScenario({
-                ...preparedContext.webhookPayload,
-                reason: 'activation_email_queued',
-                request_id: requestId,
-                job_id: preparedContext.jobId ?? preparedContext.webhookPayload.job_id ?? null,
-                player_id: prepared?.player_id ?? requestRow?.player_id ?? null,
-                display_name: prepared?.display_name ?? displayNameOf(requestRow),
-                email: prepared?.requester_email ?? requestRow?.requester_email ?? null,
-                activation_url: prepared?.activation_url ?? null,
-                expires_at: prepared?.expires_at ?? null,
-                created_at: requestRow?.created_at ?? null,
-                subject: prepared?.subject ?? ACTIVATION_EMAIL_SUBJECT,
-                email_subject: prepared?.email_subject ?? prepared?.subject ?? ACTIVATION_EMAIL_SUBJECT
+                ...(preparedContext.webhookPayload || {}),
+                ...buildQueueWakeMeta('activation_email_queued', requestId, prepared, {
+                  job_id: preparedContext.jobId ?? preparedContext.webhookPayload?.job_id ?? null,
+                  player_id: requestRow?.player_id ?? null,
+                  display_name: displayNameOf(requestRow),
+                  requester_email: requestRow?.requester_email ?? null,
+                  activation_url: prepared?.activation_url ?? null,
+                  expires_at: prepared?.expires_at ?? null,
+                  created_at: requestRow?.created_at ?? null
+                })
               });
               if (msg) { msg.textContent = (prepared?.message || 'Wacht op activatie. Nieuwe activatielink en mail zijn klaargezet.') + ' — ' + formatMailDiagnostics(prepared, wake); msg.className = 'inline-msg ok'; }
               window.alert('Aanvraag goedgekeurd. Er is een nieuwe activatielink klaargezet, de verificatiemail is in de wachtrij gezet en Make is gepingd. De naam hoort nu onder wacht op activatie te staan tot de link echt is gebruikt.');
@@ -687,8 +684,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
               const resultValidation = await validateOutboundEmailJob(resultContext.jobId, { markFailed:true });
               if (!resultValidation?.ok) throw new Error(formatMailPreflight(resultValidation));
             }
-            if (!resultContext.webhookPayload) throw new Error('Mailjob niet naar Make gestuurd: missing_job_id');
-            const wake = await triggerMakeScenario({ ...resultContext.webhookPayload, reason: 'expired_requeue_mail', request_id: requestId, job_id: resultContext.jobId ?? resultContext.webhookPayload.job_id ?? null, player_id: result?.player_id ?? item?.player_id ?? null, display_name: result?.display_name ?? displayNameOf(item), email: result?.requester_email ?? item?.requester_email ?? null, activation_url: result?.activation_url ?? null, expires_at: result?.expires_at ?? item?.expires_at ?? null, created_at: item?.created_at ?? null, subject: result?.subject ?? ACTIVATION_EMAIL_SUBJECT, email_subject: result?.email_subject ?? result?.subject ?? ACTIVATION_EMAIL_SUBJECT });
+            const wake = await triggerMakeScenario({ ...(resultContext.webhookPayload || {}), ...buildQueueWakeMeta('expired_requeue_mail', requestId, result, { job_id: resultContext.jobId ?? resultContext.webhookPayload?.job_id ?? null, player_id: item?.player_id ?? null, display_name: displayNameOf(item), requester_email: item?.requester_email ?? null, activation_url: result?.activation_url ?? null, expires_at: result?.expires_at ?? item?.expires_at ?? null, created_at: item?.created_at ?? null }) });
             if (item) {
               item.state_bucket = 'awaiting';
               item.status = 'pending_activation';
@@ -724,8 +720,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
               const resultValidation = await validateOutboundEmailJob(resultContext.jobId, { markFailed:true });
               if (!resultValidation?.ok) throw new Error(formatMailPreflight(resultValidation));
             }
-            if (!resultContext.webhookPayload) throw new Error('Mailjob niet naar Make gestuurd: missing_job_id');
-            const wake = await triggerMakeScenario({ ...resultContext.webhookPayload, reason: 'activation_email_queued', request_id: requestId, job_id: resultContext.jobId ?? resultContext.webhookPayload.job_id ?? null, player_id: result?.player_id ?? item?.player_id ?? null, display_name: result?.display_name ?? displayNameOf(item), email: result?.requester_email ?? item?.requester_email ?? null, activation_url: result?.activation_url ?? null, expires_at: result?.expires_at ?? item?.expires_at ?? null, created_at: item?.created_at ?? null, subject: result?.subject ?? ACTIVATION_EMAIL_SUBJECT, email_subject: result?.email_subject ?? result?.subject ?? ACTIVATION_EMAIL_SUBJECT });
+            const wake = await triggerMakeScenario({ ...(resultContext.webhookPayload || {}), ...buildQueueWakeMeta('activation_email_queued', requestId, result, { job_id: resultContext.jobId ?? resultContext.webhookPayload?.job_id ?? null, player_id: item?.player_id ?? null, display_name: displayNameOf(item), requester_email: item?.requester_email ?? null, activation_url: result?.activation_url ?? null, expires_at: result?.expires_at ?? item?.expires_at ?? null, created_at: item?.created_at ?? null }) });
             setStatus(result?.message || 'Nieuwe activatielink en verificatiemail klaargezet.', 'ok');
             if (msg) { msg.textContent = (result?.message || 'Nieuwe activatielink en mail klaargezet.') + ' — ' + formatMailDiagnostics(result, wake); msg.className = 'inline-msg ok'; }
             window.alert('Nieuwe activatielink en verificatiemail klaargezet. De naam blijft onder wacht op activatie staan totdat de link echt is gebruikt.');
@@ -1034,7 +1029,10 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
       const panel = document.getElementById(`activation-tools-${requestId}`);
       let dataNormalized = await ensureMailJobForRequest(requestId, data, { requester_email: req?.requester_email ?? panel?.dataset?.email ?? '', activation_url: data?.activation_url ?? panel?.dataset?.url ?? null, display_name: data?.display_name ?? displayNameOf(req) });
-      dataNormalized = await ensureActivationLinkForRequest(requestId, dataNormalized, { requester_email: req?.requester_email ?? panel?.dataset?.email ?? '', activation_url: panel?.dataset?.url ?? null, display_name: dataNormalized?.display_name ?? displayNameOf(req), expires_at: dataNormalized?.expires_at ?? panel?.dataset?.expiresAt ?? null, player_id: dataNormalized?.player_id ?? req?.player_id ?? null });
+      const dataJobId = extractMailJobId(dataNormalized);
+      const dataValidation = await validateOutboundEmailJob(dataJobId, { markFailed:true });
+      if (!dataValidation?.ok) throw new Error(formatMailPreflight(dataValidation));
+      await triggerMakeScenario({ reason: 'activation_email_queued', request_id: requestId, job_id: dataJobId, player_id: dataNormalized?.player_id ?? req?.player_id ?? null, display_name: dataNormalized?.display_name ?? displayNameOf(req), email: dataNormalized?.requester_email ?? req?.requester_email ?? null, activation_url: dataNormalized?.activation_url ?? panel?.dataset?.url ?? null, expires_at: dataNormalized?.expires_at ?? panel?.dataset?.expiresAt ?? null, created_at: req?.created_at ?? null, subject: dataNormalized?.subject ?? ACTIVATION_EMAIL_SUBJECT, email_subject: dataNormalized?.email_subject ?? dataNormalized?.subject ?? ACTIVATION_EMAIL_SUBJECT });
       return dataNormalized;
     }
     async function returnNameToClaimable(requestId, reason) {
@@ -1258,34 +1256,6 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       });
     }
 
-    async function ensureActivationLinkForRequest(requestId, normalized, fallback = {}) {
-      const current = normalizeMailResult(normalized, { request_id: String(requestId), ...fallback });
-      if (current?.activation_url) return current;
-      const panel = document.getElementById(`activation-tools-${requestId}`);
-      const panelUrl = String(panel?.dataset?.url || '').trim();
-      if (panelUrl) return normalizeMailResult({ ...current, activation_url: panelUrl }, { request_id: String(requestId), ...fallback });
-      try {
-        const generated = normalizeMailResult(await createActivationLink(requestId), {
-          request_id: String(requestId),
-          ...fallback,
-          requester_email: current?.requester_email ?? fallback?.requester_email ?? '',
-          display_name: current?.display_name ?? fallback?.display_name ?? null
-        });
-        if (!generated?.activation_url) return current;
-        const merged = normalizeMailResult({
-          ...current,
-          activation_url: generated.activation_url,
-          expires_at: current?.expires_at ?? generated?.expires_at ?? fallback?.expires_at ?? null,
-          requester_email: current?.requester_email ?? generated?.requester_email ?? fallback?.requester_email ?? null,
-          display_name: current?.display_name ?? generated?.display_name ?? fallback?.display_name ?? null
-        }, { request_id: String(requestId), ...fallback });
-        try { showActivationPanel(requestId, merged); } catch (_) {}
-        return merged;
-      } catch (_) {
-        return current;
-      }
-    }
-
     async function resolveMailDeliveryContext(requestId, mailResult, fallback = {}) {
       let normalized = normalizeMailResult(mailResult, { request_id: String(requestId), ...fallback });
       normalized = await ensureMailJobForRequest(requestId, normalized, fallback);
@@ -1321,7 +1291,6 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           }
         }
       }
-      if (!normalized?.activation_url) normalized = await ensureActivationLinkForRequest(requestId, normalized, fallback);
       if (!webhookPayload) webhookPayload = buildDirectActivationWebhookPayload(requestId, normalized, fallback);
       return { normalized, jobId, webhookPayload };
     }
@@ -1339,6 +1308,25 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       });
       if (!res.ok) throw new Error(`Make webhook pingen mislukt (HTTP ${res.status})`);
       return { ok:true, via:'fetch-json', status:res.status, payload };
+    }
+
+    function buildQueueWakeMeta(reason, requestId, normalized, fallback = {}) {
+      const email = normalized?.requester_email ?? normalized?.recipient_email ?? fallback?.requester_email ?? fallback?.recipient_email ?? fallback?.email ?? null;
+      return {
+        reason,
+        request_id: requestId,
+        job_id: normalized?.job_id ?? fallback?.job_id ?? null,
+        player_id: normalized?.player_id ?? fallback?.player_id ?? null,
+        display_name: normalized?.display_name ?? fallback?.display_name ?? null,
+        email,
+        requester_email: email,
+        recipient_email: email,
+        activation_url: normalized?.activation_url ?? fallback?.activation_url ?? null,
+        expires_at: normalized?.expires_at ?? fallback?.expires_at ?? null,
+        created_at: fallback?.created_at ?? null,
+        subject: normalized?.subject ?? fallback?.subject ?? ACTIVATION_EMAIL_SUBJECT,
+        email_subject: normalized?.email_subject ?? normalized?.subject ?? fallback?.email_subject ?? fallback?.subject ?? ACTIVATION_EMAIL_SUBJECT
+      };
     }
 
     async function revokePlayerAccess(requestId, reason) {
@@ -1407,20 +1395,17 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           throw err;
         }
       }
-      if (!queuedContext.webhookPayload) throw new Error('Mailjob niet naar Make gestuurd: missing_job_id');
       await triggerMakeScenario({
-        ...queuedContext.webhookPayload,
-        reason: 'activation_email_queued',
-        request_id: requestId,
-        job_id: queuedContext.jobId ?? queuedContext.webhookPayload.job_id ?? null,
-        player_id: queued?.player_id ?? req?.player_id ?? null,
-        display_name: queued?.display_name ?? recipientName ?? displayNameOf(req),
-        email: queued?.requester_email ?? recipientEmail,
-        activation_url: queued?.activation_url ?? activationLink,
-        expires_at: queued?.expires_at ?? panel?.dataset?.expiresAt ?? null,
-        created_at: req?.created_at ?? null,
-        subject: queued?.subject ?? ACTIVATION_EMAIL_SUBJECT,
-        email_subject: queued?.email_subject ?? queued?.subject ?? ACTIVATION_EMAIL_SUBJECT
+        ...(queuedContext.webhookPayload || {}),
+        ...buildQueueWakeMeta('activation_email_queued', requestId, queued, {
+          job_id: queuedContext.jobId ?? queuedContext.webhookPayload?.job_id ?? null,
+          player_id: req?.player_id ?? null,
+          display_name: recipientName ?? displayNameOf(req),
+          requester_email: recipientEmail,
+          activation_url: activationLink,
+          expires_at: panel?.dataset?.expiresAt ?? null,
+          created_at: req?.created_at ?? null
+        })
       });
       return queued;
     }

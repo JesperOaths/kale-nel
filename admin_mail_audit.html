@@ -7,10 +7,10 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Maildiagnostiek - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v493';</script><script src="./gejast-config.js?v493"></script><script src="./gejast-scope-context.js?v493"></script><script src="./gejast-family-rollout.js?v493"></script>
+  <script>window.GEJAST_PAGE_VERSION='v552';</script><script src="./gejast-config.js?v552"></script><script src="./gejast-scope-context.js?v552"></script><script src="./gejast-family-rollout.js?v552"></script>
   <script src="./admin-session-sync.js?v392"></script>
   <script src="./gejast-admin-rpc.js?v392"></script>
-  <script src="./gejast-admin-source.js?v392"></script>
+  <script src="./gejast-admin-source.js?v552"></script>
   <style>
     :root { --gold:#9a8241; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#6b655b; --ok:#2b5b37; --warn:#8b3a30; }
     *{box-sizing:border-box} body{margin:0;padding:20px;font-family:Inter,sans-serif;background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed;min-height:100vh}
@@ -22,7 +22,7 @@
 <body>
   <main class="main">
     <a href="./admin.html" aria-label="Terug naar admin-overzicht"><img src="./logo.png" class="logo" alt="logo"></a>
-    <div class="top"><div><h1>Maildiagnostiek</h1><p class="muted">Controleer welke Make-webhook actief is, welke mail-RPC gebruikt wordt en wat de laatste mailjobstatus is.</p></div><div class="row"><a class="btn ghost" href="./admin.html">Terug naar hub</a><button id="refreshBtn" class="btn primary" type="button">Ververs</button></div></div>
+    <div class="top"><div><h1>Maildiagnostiek</h1><p class="muted">Controleer welke Make-webhook actief is, welke mail-RPC gebruikt wordt en wat de laatste mailjobstatus is. De webhook is alleen de wake-up; Make hoort daarna pending jobs via claim_email_jobs_http te claimen en pas daarna sent/failed terug te schrijven.</p></div><div class="row"><a class="btn ghost" href="./admin.html">Terug naar hub</a><button id="refreshBtn" class="btn primary" type="button">Ververs</button></div></div>
     <div id="statusBox" class="status"></div>
     <div class="grid">
       <section class="card"><h2>Actieve configuratie</h2><table><tr><th>Make-webhook</th><td id="webhookCell"></td></tr><tr><th>Mail-RPC</th><td id="rpcCell"></td></tr><tr><th>Supabase-project</th><td id="supabaseCell"></td></tr></table></section>
@@ -50,7 +50,7 @@
     document.addEventListener('visibilitychange',()=>{ if(!document.hidden) loadDiagnostics().catch(()=>{}); });
     (async()=>{ if(await ensureGate()) loadDiagnostics().catch((err)=>setStatus(err?.message||'Laden mislukt.','warn')); })();
   </script>
-  <div class="site-credit-watermark" data-version-watermark>v493 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v552 · Made by Bruis</div>
   <script src="./site-analytics.js?v392"></script>
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
