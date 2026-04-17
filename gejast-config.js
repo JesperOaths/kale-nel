@@ -516,51 +516,9 @@ function buildRequestUrl(returnTo, scope){
     } catch (_) {}
   }
 
-
-  function installAdminMailWakeNonBlocking(){
-    try {
-      const file = String((location.pathname || '').split('/').pop() || '').toLowerCase();
-      if (!/^admin_(claims|expired)\.html$/.test(file)) return;
-      let attempts = 0;
-      const apply = () => {
-        const original = window.triggerMakeScenario;
-        if (typeof original !== 'function' || original.__gejastBestEffortWrapped) return false;
-        const wrapped = async function(meta = {}){
-          try {
-            return await original(meta);
-          } catch (error) {
-            const message = String(error?.message || error || '');
-            if ((meta && meta.reason === 'manual_admin_kick') || /http\s+\d+/i.test(message)) {
-              throw error;
-            }
-            if (/failed to fetch|networkerror|load failed|cors|fetch/i.test(message)) {
-              return {
-                ok: false,
-                via: 'best-effort-browser-wake',
-                warning: 'make_webhook_browser_fetch_failed',
-                error: message,
-                payload: meta || {}
-              };
-            }
-            throw error;
-          }
-        };
-        wrapped.__gejastBestEffortWrapped = true;
-        window.triggerMakeScenario = wrapped;
-        return true;
-      };
-      if (apply()) return;
-      const timer = window.setInterval(() => {
-        attempts += 1;
-        if (apply() || attempts > 40) window.clearInterval(timer);
-      }, 250);
-    } catch (_) {}
-  }
-
   function afterDomReady(){
     applyVersionLabel();
     ensureSiteAnnouncementRuntime();
-    installAdminMailWakeNonBlocking();
     if (getPlayerSessionToken() && shouldAutoInstallActivityKeepalive()) installActivityKeepalive();
   }
   if (document.readyState === 'loading') {
