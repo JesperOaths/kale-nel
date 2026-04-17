@@ -9,16 +9,15 @@
   <title>Beurs d&apos;Espinoza schulden</title>
   <script>window.GEJAST_PAGE_VERSION='v550';</script>
   <script src="./gejast-config.js?v550"></script>
-  <script src="./gejast-clickable-cards.js?v375"></script>
-  <script src="./gejast-scope-context.js?v375"></script>
-  <script src="./gejast-family-rollout.js?v393"></script>
+  <script src="./gejast-clickable-cards.js?v550"></script>
+  <script src="./gejast-scope-context.js?v550"></script>
+  <script src="./gejast-family-rollout.js?v550"></script>
   <script src="./gejast-scoped-rpc.js?v550"></script>
-  
   <link rel="stylesheet" href="./despimarkt-theme.css?v550" />
 </head>
 <body>
   <div class="page-wrap"><div class="shell">
-<div class="brand-row"><div class="brand-mark"><img src="./logo.png" alt="Logo" /><div><div class="eyebrow">Beurs d&apos;Espinoza</div><h1>Beurs d&apos;Espinoza schulden</h1><p>Open drinkschulden, afbetaalverzoeken, uitgaande nominaties en Dry Dock-status.</p></div></div><div class="hero-actions"><a class="btn alt" href="./index.html">Home</a><a class="btn alt" href="./despimarkt_wallet.html">Wallet</a><a class="btn alt" href="./despimarkt_debts.html">Schulden</a><a class="btn alt" href="./despimarkt_ladder.html">Ladder</a><a class="btn gold" href="./despimarkt_force.html">Nomineren</a></div></div>
+<div class="brand-row"><div class="brand-mark"><img src="./logo.png" alt="Logo" /><div><div class="eyebrow">Beurs d&apos;Espinoza</div><h1>Beurs d&apos;Espinoza schulden</h1><p>Open drinkschulden, afbetaalverzoeken, uitgaande nominaties en Dry Dock-status.</p></div></div><div class="hero-actions"><a class="btn alt" href="./index.html">Home</a><a class="btn alt" href="./despimarkt_wallet.html">Wallet</a><a class="btn alt" href="./despimarkt_debts.html">Schulden</a><a class="btn alt" href="./despimarkt_ladder.html">Ladder &amp; stats</a><a class="btn gold" href="#nominationForm">Nomineren</a></div></div>
 <div id="debtsStatus" class="status-line"></div>
 <div id="debtsHero" class="hero-metrics"></div>
 <div id="dryDockStatus" style="margin-top:14px"></div>
@@ -35,7 +34,24 @@
   <section class="panel"><div class="panel-head"><div><h2>Wall of Shame</h2><p>Dry Dock treft alleen de gestrafte gebruiker; de rest van het systeem blijft doorlopen.</p></div></div><div id="wallOfShameSummary" class="hero-metrics"></div></section>
 </div>
 <script src="./gejast-despimarkt.js?v550"></script>
-<script>document.addEventListener('DOMContentLoaded',()=>window.GEJAST_DESPIMARKT&&window.GEJAST_DESPIMARKT.loadDebtsPage('full'));</script>
+<script>
+  document.addEventListener('DOMContentLoaded',()=>{
+    if(window.GEJAST_DESPIMARKT) window.GEJAST_DESPIMARKT.loadDebtsPage('full');
+    try {
+      const focus = new URLSearchParams(window.location.search).get('focus');
+      if (focus === 'nomination') {
+        const form = document.getElementById('nominationForm');
+        if (form) {
+          setTimeout(()=>{
+            form.scrollIntoView({behavior:'smooth', block:'center'});
+            form.style.outline = '2px solid rgba(154,130,65,.45)';
+            form.style.borderRadius = '16px';
+          }, 250);
+        }
+      }
+    } catch(_){}
+  });
+</script>
 </div></div>
   <div class="site-credit-watermark" data-version-watermark></div>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>

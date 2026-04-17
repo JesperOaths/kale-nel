@@ -9,54 +9,22 @@
   <title>Beurs d'Espinoza stats</title>
   <script>window.GEJAST_PAGE_VERSION='v550';</script>
   <script src="./gejast-config.js?v550"></script>
-  <script src="./gejast-home-gate.js?v550"></script>
-  <script src="./gejast-scope-context.js?v550"></script>
-  <script src="./gejast-family-rollout.js?v550"></script>
-  <script src="./gejast-scoped-rpc.js?v550"></script>
-  <script src="./gejast-game-hq.js?v550"></script>
-  <link rel="stylesheet" href="./gejast-game-hq.css?v550" />
 </head>
 <body>
-  <div class="wrap"><div class="shell">
-    <div class="top">
-      <div>
-        <div class="eyebrow">Publieke samenvatting · Beurs d'Espinoza</div>
-        <h1 class="title">Beurs d'Espinoza stats</h1>
-        <div class="subtitle">Marktdruk, cautes-flow, promo-backing, hitrate en hot questions die de beurs echt typeren.</div>
-      </div>
-      <div class="actions">
-        <a class="btn alt" id="despimarktStatsBackLink" href="./despimarkt.html">Terug</a>
-        <a class="btn alt" id="despimarktStatsHomeLink" href="./index.html">Home</a>
-      </div>
-    </div>
-    <div id="pageStatus" class="status"></div>
-    <div class="stack">
-      <section class="panel"><h2>Overzicht</h2><p>De beurs in snelle getallen: actieve druk, wallets, promo-activiteit en settlement-volume.</p><div id="overviewGrid" class="grid overview"></div></section>
-      <section class="panel"><h2>Verhalen in de cijfers</h2><p>Welke markets leven, wie vaak wint en waar de leuke spanning zit.</p><div id="storyGrid" class="grid story"></div></section>
-      <section class="panel"><h2>Leaderboards & patronen</h2><p>Topspelers, markten en payout-trends.</p><div id="leaderboardsMount"></div></section>
-      <section class="panel"><h2>Recente activiteit</h2><p>Nieuwste marketbewegingen en settlement-signalen.</p><div id="recentMount"></div></section>
-      <div id="tablesMount"></div>
-    </div>
-  </div></div>
+  <p>Je wordt doorgestuurd naar Beurs d'Espinoza ladder & stats…</p>
+  <p><a id="fallbackLink" href="./despimarkt_ladder.html">Ga naar ladder & stats</a></p>
   <div class="site-credit-watermark" data-version-watermark></div>
-  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
   <script>
-    (() => {
-      function scopedHref(path){
-        const url = new URL(path, window.location.href);
-        if (new URLSearchParams(window.location.search).get('scope') === 'family') url.searchParams.set('scope', 'family');
-        return `${url.pathname.split('/').pop()}${url.search}`;
-      }
-      const links = {
-        despimarktStatsBackLink: './despimarkt.html',
-        despimarktStatsHomeLink: './index.html'
-      };
-      Object.entries(links).forEach(([id, path]) => {
-        const el = document.getElementById(id);
-        if (el) el.href = scopedHref(path);
-      });
+    (function(){
+      var target = new URL('./despimarkt_ladder.html', window.location.href);
+      var current = new URL(window.location.href);
+      current.searchParams.forEach(function(value, key){ target.searchParams.set(key, value); });
+      target.hash = current.hash || '';
+      var fallback = document.getElementById('fallbackLink');
+      if (fallback) fallback.href = target.pathname.split('/').pop() + target.search + target.hash;
+      window.location.replace(target.toString());
     })();
   </script>
-  <script>document.addEventListener('DOMContentLoaded',()=>window.GEJAST_GAME_HQ&&window.GEJAST_GAME_HQ.loadPublicPage('despimarkt'));</script>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>
