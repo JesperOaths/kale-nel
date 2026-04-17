@@ -116,14 +116,14 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v554';</script><script src="./gejast-config.js?v554"></script><script src="./gejast-scope-context.js?v554"></script><script src="./gejast-family-rollout.js?v554"></script>
+  <script>window.GEJAST_PAGE_VERSION='v552';</script><script src="./gejast-config.js?v552"></script><script src="./gejast-scope-context.js?v552"></script><script src="./gejast-family-rollout.js?v552"></script>
   <script src="./gejast-rpc-contract.js?v392"></script>
   <script src="./gejast-admin-rpc.js?v392"></script>
   <script src="./admin-session-sync.js?v392"></script>
   <script src="./admin-topnav.js?v392"></script>
   <script src="./gejast-admin-claims-buckets.js?v392"></script>
   <script src="./gejast-admin-claims-source.js?v392"></script>
-  <script src="./gejast-admin-source.js?v553"></script><script src="./gejast-account-links.js?v496"></script>
+  <script src="./gejast-admin-source.js?v552"></script><script src="./gejast-account-links.js?v496"></script>
 </head>
 <body>
   <div class="main-card">
@@ -1028,31 +1028,12 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       try { await updateActivationEmailSubject(requestId); } catch {}
       const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
       const panel = document.getElementById(`activation-tools-${requestId}`);
-      const resultContext = await resolveMailDeliveryContext(requestId, data, {
-        requester_email: data?.requester_email ?? req?.requester_email ?? panel?.dataset?.email ?? '',
-        activation_url: data?.activation_url ?? panel?.dataset?.url ?? null,
-        display_name: data?.display_name ?? displayNameOf(req),
-        expires_at: data?.expires_at ?? panel?.dataset?.expiresAt ?? null,
-        player_id: data?.player_id ?? req?.player_id ?? null
-      });
-      const result = resultContext.normalized;
-      if (resultContext.jobId) {
-        const validation = await validateOutboundEmailJob(resultContext.jobId, { markFailed:true });
-        if (!validation?.ok) throw new Error(formatMailPreflight(validation));
-      }
-      await triggerMakeScenario({
-        ...(resultContext.webhookPayload || {}),
-        ...buildQueueWakeMeta('activation_email_queued', requestId, result, {
-          job_id: resultContext.jobId ?? resultContext.webhookPayload?.job_id ?? null,
-          player_id: req?.player_id ?? null,
-          display_name: displayNameOf(req),
-          requester_email: req?.requester_email ?? panel?.dataset?.email ?? null,
-          activation_url: result?.activation_url ?? panel?.dataset?.url ?? null,
-          expires_at: result?.expires_at ?? panel?.dataset?.expiresAt ?? null,
-          created_at: req?.created_at ?? null
-        })
-      });
-      return result;
+      let dataNormalized = await ensureMailJobForRequest(requestId, data, { requester_email: req?.requester_email ?? panel?.dataset?.email ?? '', activation_url: data?.activation_url ?? panel?.dataset?.url ?? null, display_name: data?.display_name ?? displayNameOf(req) });
+      const dataJobId = extractMailJobId(dataNormalized);
+      const dataValidation = await validateOutboundEmailJob(dataJobId, { markFailed:true });
+      if (!dataValidation?.ok) throw new Error(formatMailPreflight(dataValidation));
+      await triggerMakeScenario({ reason: 'activation_email_queued', request_id: requestId, job_id: dataJobId, player_id: dataNormalized?.player_id ?? req?.player_id ?? null, display_name: dataNormalized?.display_name ?? displayNameOf(req), email: dataNormalized?.requester_email ?? req?.requester_email ?? null, activation_url: dataNormalized?.activation_url ?? panel?.dataset?.url ?? null, expires_at: dataNormalized?.expires_at ?? panel?.dataset?.expiresAt ?? null, created_at: req?.created_at ?? null, subject: dataNormalized?.subject ?? ACTIVATION_EMAIL_SUBJECT, email_subject: dataNormalized?.email_subject ?? dataNormalized?.subject ?? ACTIVATION_EMAIL_SUBJECT });
+      return dataNormalized;
     }
     async function returnNameToClaimable(requestId, reason) {
       if (ADMIN_SOURCE && typeof ADMIN_SOURCE.returnNameToClaimable === 'function') return await ADMIN_SOURCE.returnNameToClaimable(requestId, reason);
@@ -1275,34 +1256,6 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       });
     }
 
-    async function ensureQueueWakeJobId(requestId, normalized, fallback = {}) {
-      let merged = normalizeMailResult(normalized, { request_id: String(requestId), ...fallback });
-      let jobId = extractMailJobId(merged);
-      if (jobId != null && jobId !== '') return { normalized: merged, jobId: Number(jobId) };
-      const playerId = merged?.player_id ?? fallback?.player_id ?? null;
-      const recipientEmail = String(merged?.requester_email || merged?.recipient_email || fallback?.requester_email || fallback?.recipient_email || fallback?.email || '').trim().toLowerCase();
-      const recipientName = String(merged?.display_name || merged?.recipient_name || fallback?.display_name || fallback?.recipient_name || '').trim();
-      let activationUrl = String(merged?.activation_url || fallback?.activation_url || fallback?.url || '').trim();
-      if (!activationUrl) {
-        try {
-          const linkData = normalizeMailResult(
-            await createActivationLink(requestId),
-            { request_id: String(requestId), requester_email: recipientEmail || null, display_name: recipientName || null, player_id: playerId }
-          );
-          merged = normalizeMailResult({ ...merged, ...linkData }, { request_id: String(requestId), requester_email: recipientEmail || null, display_name: recipientName || null, player_id: playerId });
-          activationUrl = String(merged?.activation_url || '').trim();
-          try { showActivationPanel(requestId, merged); } catch (_) {}
-        } catch (_) {}
-      }
-      if (!recipientEmail || !activationUrl) return { normalized: merged, jobId: extractMailJobId(merged) };
-      try {
-        const forcedQueue = await queueActivationEmailWithContext(requestId, recipientEmail, recipientName || null, activationUrl, playerId);
-        merged = normalizeMailResult({ ...merged, ...forcedQueue }, { request_id: String(requestId), requester_email: recipientEmail, activation_url: activationUrl, display_name: recipientName || null, player_id: playerId });
-        jobId = extractMailJobId(merged);
-      } catch (_) {}
-      return { normalized: merged, jobId: jobId != null && jobId !== '' ? Number(jobId) : null };
-    }
-
     async function resolveMailDeliveryContext(requestId, mailResult, fallback = {}) {
       let normalized = normalizeMailResult(mailResult, { request_id: String(requestId), ...fallback });
       normalized = await ensureMailJobForRequest(requestId, normalized, fallback);
@@ -1336,23 +1289,6 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
             jobId = Number(recovered.job_id);
             normalized = normalizeMailResult({ ...normalized, job_id: jobId }, { request_id: String(requestId), ...fallback });
           }
-        }
-      }
-      if (!jobId) {
-        const forced = await ensureQueueWakeJobId(requestId, normalized, fallback);
-        normalized = forced.normalized;
-        if (forced.jobId != null && forced.jobId !== '') {
-          jobId = Number(forced.jobId);
-          webhookPayload = webhookPayload || await fetchWebhookPayloadByJobId(jobId, {
-            request_id: requestId,
-            job_id: jobId,
-            email: normalized?.requester_email ?? fallback?.requester_email ?? null,
-            activation_url: normalized?.activation_url ?? fallback?.activation_url ?? null,
-            display_name: normalized?.display_name ?? fallback?.display_name ?? null,
-            expires_at: normalized?.expires_at ?? fallback?.expires_at ?? null,
-            subject: normalized?.subject ?? ACTIVATION_EMAIL_SUBJECT,
-            email_subject: normalized?.email_subject ?? normalized?.subject ?? ACTIVATION_EMAIL_SUBJECT
-          });
         }
       }
       if (!webhookPayload) webhookPayload = buildDirectActivationWebhookPayload(requestId, normalized, fallback);
@@ -1409,20 +1345,16 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       });
       return await parseResponse(res);
     }
-    async function queueActivationEmailWithContext(requestId, recipientEmailInput, recipientNameInput, activationLinkInput, playerIdInput) {
-      const recipientEmail = String(recipientEmailInput || '').trim().toLowerCase();
-      const recipientName = String(recipientNameInput || '').trim();
-      const activationLink = String(activationLinkInput || '').trim();
+    async function queueActivationEmail(requestId) {
+      const panel = document.getElementById(`activation-tools-${requestId}`);
+      const recipientEmail = panel?.dataset.email || '';
+      const recipientName = panel?.dataset.displayName || '';
+      const activationLink = panel?.dataset.url || '';
       if (!recipientEmail || !activationLink) throw new Error('Maak eerst een activatielink.');
       const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
       if (req && hasPin(req) && stateBucket(req) !== 'active') throw new Error('Deze speler heeft al een pincode in de database. Reset eerst de activatie voordat je opnieuw een mail verstuurt.');
-      const playerId = playerIdInput ?? req?.player_id ?? null;
-      if (ADMIN_SOURCE && typeof ADMIN_SOURCE.queueActivationEmail === 'function') {
-        return normalizeMailResult(
-          await ADMIN_SOURCE.queueActivationEmail(requestId, recipientEmail, recipientName || null, activationLink, playerId),
-          { request_id: String(requestId), requester_email: recipientEmail, activation_url: activationLink, display_name: recipientName || null, player_id: playerId }
-        );
-      }
+      const playerId = req?.player_id ?? null;
+      if (ADMIN_SOURCE && typeof ADMIN_SOURCE.queueActivationEmail === 'function') return await ADMIN_SOURCE.queueActivationEmail(requestId, recipientEmail, recipientName, activationLink, playerId);
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_queue_activation_email`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
         body: JSON.stringify({
@@ -1435,17 +1367,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           player_id_input: playerId
         })
       });
-      return normalizeMailResult(await parseResponse(res), { request_id: String(requestId), requester_email: recipientEmail, activation_url: activationLink, display_name: recipientName || null, player_id: playerId });
-    }
-    async function queueActivationEmail(requestId) {
-      const panel = document.getElementById(`activation-tools-${requestId}`);
-      return await queueActivationEmailWithContext(
-        requestId,
-        panel?.dataset.email || '',
-        panel?.dataset.displayName || '',
-        panel?.dataset.url || '',
-        null
-      );
+      return await parseResponse(res);
     }
     async function updateActivationEmailSubject(requestId) {
       if (ADMIN_SOURCE && typeof ADMIN_SOURCE.updateActivationEmailSubject === 'function') return await ADMIN_SOURCE.updateActivationEmailSubject(requestId, ACTIVATION_EMAIL_SUBJECT);
