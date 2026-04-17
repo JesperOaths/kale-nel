@@ -4,6 +4,9 @@
   root.GEJAST_ADMIN_SOURCE = api;
 })(typeof window !== 'undefined' ? window : globalThis, function (root) {
   const RPC = root.GEJAST_ADMIN_RPC;
+  const REQUEUE_OVERRIDE_KEY = 'gejast_recent_requeues_v1';
+  const REQUEUE_OVERRIDE_TTL_MS = 15 * 60 * 1000;
+  const CLAIMS_CACHE_KEY = 'gejast_admin_claims_bundle_v4';
   const BUCKETS = root.GEJAST_ADMIN_BUCKETS || {
     normalizeRows(rows) { return Array.isArray(rows) ? rows : []; },
     mergeHistoryWithExpired(history, expired) { return [...(Array.isArray(history) ? history : []), ...(Array.isArray(expired) ? expired : [])]; },
@@ -30,6 +33,70 @@
       ...(payload || {}),
       site_scope_input: payload?.site_scope_input || RPC.getScope()
     };
+  }
+
+  function storage() {
+    try { return root.sessionStorage || null; } catch (_) { return null; }
+  }
+
+  function readRequeueOverrides() {
+    try {
+      const store = storage();
+      if (!store) return {};
+      const raw = store.getItem(REQUEUE_OVERRIDE_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      const now = Date.now();
+      const next = {};
+      Object.entries(parsed || {}).forEach(([key, value]) => {
+        const until = Number(value || 0);
+        if (until > now) next[String(key)] = until;
+      });
+      if (JSON.stringify(parsed || {}) !== JSON.stringify(next)) {
+        if (Object.keys(next).length) store.setItem(REQUEUE_OVERRIDE_KEY, JSON.stringify(next));
+        else store.removeItem(REQUEUE_OVERRIDE_KEY);
+      }
+      return next;
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function writeRequeueOverrides(map) {
+    try {
+      const store = storage();
+      if (!store) return;
+      const next = map && typeof map === 'object' ? map : {};
+      if (Object.keys(next).length) store.setItem(REQUEUE_OVERRIDE_KEY, JSON.stringify(next));
+      else store.removeItem(REQUEUE_OVERRIDE_KEY);
+    } catch (_) {}
+  }
+
+  function markRequestAwaitingAfterRequeue(requestId, ttlMs = REQUEUE_OVERRIDE_TTL_MS) {
+    const id = String(requestId || '').trim();
+    if (!id) return;
+    const overrides = readRequeueOverrides();
+    overrides[id] = Date.now() + Number(ttlMs || REQUEUE_OVERRIDE_TTL_MS);
+    writeRequeueOverrides(overrides);
+    try {
+      const store = storage();
+      if (store) store.removeItem(CLAIMS_CACHE_KEY);
+    } catch (_) {}
+  }
+
+  function clearRequestAwaitingOverride(requestId) {
+    const id = String(requestId || '').trim();
+    if (!id) return;
+    const overrides = readRequeueOverrides();
+    if (!(id in overrides)) return;
+    delete overrides[id];
+    writeRequeueOverrides(overrides);
+  }
+
+  function isRequestAwaitingOverrideActive(requestId) {
+    const id = String(requestId || '').trim();
+    if (!id) return false;
+    const overrides = readRequeueOverrides();
+    return Number(overrides[id] || 0) > Date.now();
   }
 
   async function firstOf(attempts) {
@@ -193,8 +260,10 @@
         base_url: activationBaseUrl()
       }))
     ]);
+    clearRequestAwaitingOverride(requestId);
     return withRecoveredMailJob(result, { request_id: String(requestId) });
   }
+
   async function requeueExpiredActivation(requestId) {
     const primary = await firstOf([
       () => RPC.secureWrite('claims', 'requeue_expired_activation', {
@@ -206,6 +275,7 @@
         base_url: activationBaseUrl()
       }))
     ]);
+    markRequestAwaitingAfterRequeue(requestId);
     if (extractMailJobId(primary)) return primary;
     const resend = await resendPendingActivation(requestId);
     return Object.assign({}, primary || {}, resend || {}, {
@@ -233,6 +303,7 @@
   }
 
   async function returnNameToClaimable(requestId, reason) {
+    clearRequestAwaitingOverride(requestId);
     return firstOf([
       () => RPC.secureWrite('claims', 'return_name_to_claimable', {
         request_id_input: String(requestId),
@@ -273,6 +344,7 @@
   }
 
   async function revokePlayerAccess(requestId, reason) {
+    clearRequestAwaitingOverride(requestId);
     return firstOf([
       () => RPC.secureWrite('claims', 'revoke_player_access', {
         request_id_input: String(requestId),
@@ -286,6 +358,7 @@
   }
 
   async function removePlayer(requestId, reason) {
+    clearRequestAwaitingOverride(requestId);
     return firstOf([
       () => RPC.secureWrite('claims', 'remove_player', {
         request_id_input: String(requestId),
@@ -502,7 +575,6 @@
     });
   }
 
-
   async function fetchOutboundEmailJobWebhookPayload(jobId) {
     if (!jobId) return null;
     try {
@@ -544,6 +616,9 @@
     withRecoveredMailJob,
     fetchOutboundEmailJobWebhookPayload,
     fetchLatestValidOutboundEmailJobWebhookPayload,
+    markRequestAwaitingAfterRequeue,
+    clearRequestAwaitingOverride,
+    isRequestAwaitingOverrideActive,
     reserveAllowedUsername,
     removeAllowedUsername,
     setPlayerGhostStatus,
