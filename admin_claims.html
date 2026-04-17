@@ -116,14 +116,14 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v556';</script><script src="./gejast-config.js?v556"></script><script src="./gejast-scope-context.js?v556"></script><script src="./gejast-family-rollout.js?v556"></script>
+  <script>window.GEJAST_PAGE_VERSION='v557';</script><script src="./gejast-config.js?v557"></script><script src="./gejast-scope-context.js?v557"></script><script src="./gejast-family-rollout.js?v557"></script>
   <script src="./gejast-rpc-contract.js?v392"></script>
   <script src="./gejast-admin-rpc.js?v392"></script>
   <script src="./admin-session-sync.js?v392"></script>
   <script src="./admin-topnav.js?v392"></script>
   <script src="./gejast-admin-claims-buckets.js?v392"></script>
   <script src="./gejast-admin-claims-source.js?v392"></script>
-  <script src="./gejast-admin-source.js?v556"></script><script src="./gejast-account-links.js?v496"></script>
+  <script src="./gejast-admin-source.js?v557"></script><script src="./gejast-account-links.js?v496"></script>
 </head>
 <body>
   <div class="main-card">
@@ -706,11 +706,16 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
               item.activation_expires_at = result?.expires_at ?? item.activation_expires_at ?? null;
               item.email_sent_at = result?.email_sent_at ?? item.email_sent_at ?? null;
             }
+            const updatedAwaitingRow = { ...(item || {}), state_bucket:'awaiting', status:'pending_activation', request_status:'pending_activation', expires_at: result?.expires_at ?? item?.expires_at ?? null, activation_expires_at: result?.expires_at ?? item?.activation_expires_at ?? null, email_sent_at: result?.email_sent_at ?? item?.email_sent_at ?? null };
             lastExpired = (lastExpired || []).filter((row) => Number(row?.id) !== Number(requestId));
-            lastHistory = (lastHistory || []).map((row) => Number(row?.id) === Number(requestId) ? { ...row, ...item, state_bucket:'awaiting', status:'pending_activation', request_status:'pending_activation', expires_at: result?.expires_at ?? row?.expires_at ?? null, activation_expires_at: result?.expires_at ?? row?.activation_expires_at ?? null } : row);
+            if ((lastHistory || []).some((row) => Number(row?.id) === Number(requestId))) {
+              lastHistory = (lastHistory || []).map((row) => Number(row?.id) === Number(requestId) ? { ...row, ...updatedAwaitingRow } : row);
+            } else {
+              lastHistory = [...(lastHistory || []), updatedAwaitingRow];
+            }
             renderStats(lastRequests, lastHistory);
             switchAdminView('awaiting');
-            await refreshAdminLists(true).catch(()=>{});
+            window.setTimeout(() => { refreshAdminLists(true).catch(()=>{}); }, 6000);
             const warningText = mailWarning ? ` — mailwaarschuwing: ${mailWarning}` : '';
             setStatus((result?.message || 'Nieuwe activatielink klaargezet. De aanvraag staat nu weer onder wacht op activatie.') + warningText);
             if (msg) { msg.textContent = (result?.message || 'Nieuwe activatielink en mail zijn opnieuw klaargezet.') + (wake ? ' — ' + formatMailDiagnostics(result, wake) : '') + warningText; msg.className = 'inline-msg ok'; }
