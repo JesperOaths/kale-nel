@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v559',
+    VERSION:'v560',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -514,9 +514,24 @@ function buildRequestUrl(returnTo, scope){
     } catch (_) {}
   }
 
+function ensureAdminUsersPatch(){
+  try {
+    const path = String((location && location.pathname) || '').toLowerCase();
+    if (!/\/admin/i.test(path)) return;
+    if (document.querySelector('script[data-gejast-admin-users-patch]')) return;
+    const script = document.createElement('script');
+    script.src = `./gejast-admin-users-patch.js?${effectiveVersion}`;
+    script.async = false;
+    script.setAttribute('data-gejast-admin-users-patch','1');
+    document.head.appendChild(script);
+  } catch (_) {}
+}
+
+
   function afterDomReady(){
     applyVersionLabel();
     ensureSiteAnnouncementRuntime();
+    ensureAdminUsersPatch();
     if (getPlayerSessionToken() && shouldAutoInstallActivityKeepalive()) installActivityKeepalive();
   }
   if (document.readyState === 'loading') {
