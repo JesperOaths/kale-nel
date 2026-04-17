@@ -317,6 +317,15 @@
     setDisplay('#pkVotePanel', myVoteTurn ? 'block' : 'none');
     const rejectBtn = qs('#pkRejectBtn'); if (rejectBtn) rejectBtn.disabled = !myTurn || !bid;
 
+    const startBtn = qs('#pkStartBtn');
+    if (startBtn) {
+      const viewerIsHost = !!viewer.is_host;
+      const canStart = !!game?.can_start;
+      startBtn.disabled = !viewerIsHost || !canStart;
+      startBtn.textContent = viewerIsHost ? 'Start' : 'Start · alleen host';
+      startBtn.title = viewerIsHost ? '' : 'Alleen de host kan starten';
+    }
+
     const revealWrap = qs('#pkReveal');
     if(revealWrap){
       if(!lastReveal){

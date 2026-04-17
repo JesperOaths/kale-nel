@@ -7,26 +7,33 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken</title>
-  <script>window.GEJAST_PAGE_VERSION='v556';</script>
-  <script src="./gejast-config.js?v556"></script>
-  <script src="./gejast-home-gate.js?v556"></script>
-  <script src="./gejast-scope-context.js?v556"></script>
+  <script>window.GEJAST_PAGE_VERSION='v561';</script>
+  <script src="./gejast-config.js?v561"></script>
+  <script src="./gejast-home-gate.js?v561"></script>
+  <script src="./gejast-scope-context.js?v561"></script>
   <style>
-    :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241;--shadow:0 18px 44px rgba(0,0,0,.08)}
+    :root{--paper:#fffaf3;--line:rgba(0,0,0,.10);--muted:#6d6256;--ink:#17130f;--gold:#9a8241;--gold-ink:#5e4d1d;--soft:#f7f1e7;--green:#2f6d3c;--green-bg:#edf8f0;--red:#8a1022;--red-bg:#fff4f2;--shadow:0 18px 40px rgba(0,0,0,.06)}
     *{box-sizing:border-box}
     body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
-    .wrap{max-width:1100px;margin:0 auto}
-    .card{background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.7);border-radius:28px;padding:22px;box-shadow:var(--shadow)}
+    .wrap{max-width:1120px;margin:0 auto}
+    .card{background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.78);border-radius:28px;padding:22px;box-shadow:var(--shadow)}
     .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
-    .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer}
-    .btn.alt{background:#fff;color:#111;border:1px solid var(--line)}
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:16px;border:1px solid var(--line);background:#17130f;color:#fff;text-decoration:none;font-weight:800;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.06)}
+    .btn.alt{background:#fff;color:#17130f;border-color:rgba(0,0,0,.16)}
+    .btn.soft{background:var(--soft);color:var(--gold-ink);border-color:rgba(154,130,65,.35)}
+    .btn.ok{background:var(--green-bg);color:var(--green);border-color:rgba(47,109,60,.22)}
+    .btn.warn{background:var(--red-bg);color:var(--red);border-color:rgba(138,16,34,.18)}
+    .btn:disabled{opacity:.58;cursor:not-allowed;box-shadow:none}
     .muted{color:var(--muted)}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
-    .panel{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px}
+    .grid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;margin-top:18px}
+    .panel{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:18px}
     .field{display:grid;gap:6px;margin-top:10px}
     label{font-size:.78rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#8a7a55}
-    input,select{padding:12px 14px;border-radius:14px;border:1px solid rgba(0,0,0,.12);font:inherit}
-    .player-row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.06);margin-top:10px}
+    input,select{padding:12px 14px;border-radius:14px;border:1px solid rgba(0,0,0,.12);background:#fff;font:inherit}
+    .action-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    .helper-card{margin-top:14px;padding:14px;border-radius:18px;background:#fff;border:1px solid var(--line)}
+    .helper-card strong{display:block;margin-bottom:4px}
+    .player-row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;border-radius:18px;background:#fff;border:1px solid var(--line);margin-top:10px}
     .player-row.dead{opacity:.55}
     .player-row.turn{outline:2px solid rgba(154,130,65,.38)}
     .pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-weight:900;font-size:12px;border:1px solid rgba(0,0,0,.1)}
@@ -42,7 +49,6 @@
     .detail{padding:0 16px 16px}
     .reveal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px}
     .reveal-card{border:1px solid var(--line);border-radius:18px;background:#fbfaf6;padding:12px}
-    @media(max-width:900px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body data-pikken-page="lobby">
@@ -64,7 +70,7 @@
       <div class="grid">
         <section class="panel">
           <h2 style="margin:0 0 10px">Lobby</h2>
-          <div class="muted">Code: <strong id="pkLobbyCode">—</strong></div>
+          <div class="muted">Code: <strong id="pkLobbyCode">—</strong> · Fase: <strong id="pkPhase">lobby</strong></div>
 
           <div class="field">
             <label>Variant</label>
@@ -74,21 +80,28 @@
             </select>
           </div>
 
-          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
-            <button class="btn" id="pkCreateLobbyBtn">Maak lobby</button>
+          <div class="action-row">
+            <button class="btn soft" id="pkCreateLobbyBtn">Maak lobby</button>
           </div>
 
           <div class="field">
             <label>Join code</label>
             <input id="pkJoinCode" placeholder="ABC123" />
           </div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+          <div class="action-row">
             <button class="btn alt" id="pkJoinLobbyBtn">Join lobby</button>
-            <button class="btn alt" id="pkReadyBtn">Ready</button>
+            <button class="btn ok" id="pkReadyBtn">Ready</button>
             <button class="btn alt" id="pkUnreadyBtn">Unready</button>
-            <button class="btn alt" id="pkLeaveBtn">Verlaat lobby</button>
-            <button class="btn" id="pkStartBtn">Start</button>
+            <button class="btn warn" id="pkLeaveBtn">Verlaat lobby</button>
+            <button class="btn soft" id="pkStartBtn" disabled>Start · alleen host</button>
           </div>
+
+          <div class="helper-card">
+            <strong>Lobby</strong>
+            <div class="muted">Deze pagina is nu alleen de lobby. De match zelf draait op de live tafel zodra de host start. Start blijft zichtbaar, maar alleen de host kan hem gebruiken.</div>
+          </div>
+
+          <div id="pkPlayers"></div>
 
           <details class="accordion">
             <summary><span>Regels (kort)</span><span class="muted">open</span></summary>
@@ -100,55 +113,13 @@
             </div>
           </details>
         </section>
-
-        <section class="panel">
-          <h2 style="margin:0 0 10px">Match</h2>
-          <div class="muted">Fase: <strong id="pkPhase">lobby</strong> · Ronde: <strong id="pkRoundNo">0</strong></div>
-          <div class="muted" style="margin-top:6px">Dobbelstenen: start <strong id="pkDiceStart">0</strong> · nu <strong id="pkDiceCurrent">0</strong> · kwijt <strong id="pkDiceLost">0</strong></div>
-
-          <div style="margin-top:12px">
-            <div class="muted">Huidig bod</div>
-            <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
-              <div style="font-size:22px;font-weight:900" id="pkBidText">—</div>
-              <div class="muted" id="pkBidBy"></div>
-            </div>
-          </div>
-
-          <div id="pkPlayers"></div>
-
-          <div id="pkBidPanel" style="display:none;margin-top:12px">
-            <div class="muted" style="font-weight:900">Jouw beurt: bod plaatsen of afkeuren</div>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
-              <input id="pkBidCount" type="number" min="1" step="1" value="1" style="width:110px" />
-              <select id="pkBidFace">
-                <option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="1">pik (1)</option>
-              </select>
-              <button class="btn" id="pkPlaceBidBtn">Bied</button>
-              <button class="btn alt" id="pkRejectBtn">Afkeuren</button>
-            </div>
-          </div>
-
-          <div id="pkVotePanel" style="display:none;margin-top:12px">
-            <div class="muted" style="font-weight:900">Stem: bod goedgekeurd of afgekeurd?</div>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
-              <button class="btn" id="pkVoteApproveBtn">Goedgekeurd</button>
-              <button class="btn alt" id="pkVoteRejectBtn">Afgekeurd</button>
-            </div>
-          </div>
-
-          <div style="margin-top:14px">
-            <div class="muted" style="font-weight:900">Jouw dobbelstenen</div>
-            <div class="dice-row" id="pkMyDice"></div>
-          </div>
-
-          <div id="pkReveal" style="margin-top:14px"></div>
-        </section>
       </div>
     </div>
   </div>
 
-  <script src="./pikken-dice-canvas.js?v556"></script>
-  <script src="./gejast-pikken.js?v556"></script>
+  <script src="./pikken-dice-canvas.js?v561"></script>
+  <script src="./gejast-pikken.js?v561"></script>
+  <script src="./gejast-player-session-ui.js?v561"></script>
   <script>
     (() => {
       function scopedHref(path){
