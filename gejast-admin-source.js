@@ -7,6 +7,12 @@
   const REQUEUE_OVERRIDE_KEY = 'gejast_recent_requeues_v1';
   const REQUEUE_OVERRIDE_TTL_MS = 15 * 60 * 1000;
   const CLAIMS_CACHE_KEY = 'gejast_admin_claims_bundle_v4';
+  const FORCED_MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/lruedi9n1e22eleu363kyk9ou46vezqy';
+  try {
+    root.GEJAST_CONFIG = Object.assign({}, root.GEJAST_CONFIG || {}, {
+      MAKE_WEBHOOK_URL: FORCED_MAKE_WEBHOOK_URL
+    });
+  } catch (_) {}
   const BUCKETS = root.GEJAST_ADMIN_BUCKETS || {
     normalizeRows(rows) { return Array.isArray(rows) ? rows : []; },
     mergeHistoryWithExpired(history, expired) { return [...(Array.isArray(history) ? history : []), ...(Array.isArray(expired) ? expired : [])]; },
