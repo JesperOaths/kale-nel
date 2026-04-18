@@ -7,8 +7,8 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Balzaal</title>
-  <script>window.GEJAST_PAGE_VERSION='v581';</script>
-  <script src="./gejast-config.js?v581"></script><script src="./gejast-home-gate.js?v492"></script>
+  <script>window.GEJAST_PAGE_VERSION='v582';</script>
+  <script src="./gejast-config.js?v582"></script><script src="./gejast-home-gate.js?v492"></script>
   <style>
     :root{
       --gold:#c7a85a; --gold-deep:#8c6d31; --royal:#23476a; --royal-deep:#17324e; --cream:#f6efe3; --ink:#181310; --muted:#706557;
@@ -159,10 +159,12 @@
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}
     @media (max-width:980px){.info-grid{grid-template-columns:1fr}.arch-window.left{left:14%}.arch-window.right{right:14%}.column.c2{left:24%}.column.c3{right:24%}}
     @media (max-width:760px){.shell{padding:18px}.hero h1{font-size:2.2rem}.ballroom-scene{min-height:600px}.arch-window{width:118px;height:206px;top:108px}.column{display:none}.curtain{width:23%}.curtain-tie.left{left:12%}.curtain-tie.right{right:12%}.rope-zone{left:3%;right:3%;bottom:140px}.king-throne{width:84vw;bottom:176px}.member-layer{bottom:158px;height:220px}.queue-row{align-items:flex-start;flex-direction:column}.actions{width:100%}.btn,.small-btn{width:100%}}
+    .portrait-hint{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(14,14,18,.78);z-index:90}.portrait-hint-card{max-width:420px;background:#fffdf9;border-radius:24px;padding:20px;text-align:center;box-shadow:0 24px 56px rgba(0,0,0,.28)}
+    @media (orientation:landscape) and (max-width:980px){.portrait-hint{display:flex}}
   </style>
 </head>
 <body>
-  <div class="page">
+  <div id="portraitHint" class="portrait-hint"><div class="portrait-hint-card"><h2 style="margin:0 0 8px">Draai je telefoon rechtop</h2><div style="color:#706557;line-height:1.5">De Balzaal is het duidelijkst in portretstand. In normale mobiele browsers kunnen we dit niet hard afdwingen, dus hier krijg je een rotatiehint.</div><button type="button" id="portraitHintClose" class="pill secondary" style="margin-top:14px">Toch horizontaal blijven</button></div></div><div class="page">
     <div class="shell">
       <div class="topbar">
         <div class="nav-left">
@@ -410,5 +412,5 @@
   </script>
   <script src="./gejast-player-session-ui.js?v486"></script><script src="./gejast-geo.js?v486"></script><script src="./drinks-verify-float.js?v486"></script>
   <script src="./site-analytics.js?v486"></script>
-</body>
+<script>(function(){try{if(screen.orientation&&screen.orientation.lock){screen.orientation.lock('portrait').catch(function(){});}}catch(_){}document.getElementById('portraitHintClose')?.addEventListener('click',function(){document.getElementById('portraitHint')?.style.setProperty('display','none');});})();</script></body>
 </html>

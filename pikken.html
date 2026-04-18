@@ -7,8 +7,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Pikken</title>
-  <script>window.GEJAST_PAGE_VERSION='v581';</script>
-  <script src="./gejast-config.js?v581"></script>
+  <script>window.GEJAST_PAGE_VERSION='v582';</script>
+  <script src="./gejast-config.js?v582"></script>
   <script src="./gejast-home-gate.js?v571"></script>
   <script src="./gejast-scope-context.js?v571"></script>
   <style>
@@ -34,12 +34,12 @@
       <div class="top">
         <div>
           <a class="btn alt" id="pkHomeLink" href="./index.html">Home</a>
-          <div class="brand"><img src="./assets/pikken/pikken-icon.svg" alt="Pikken"><div><h1 style="margin:0">Pikken</h1><div class="muted">Lobby en ingang voor de live tafel. Zodra de host start, gaan alleen echte deelnemers door.</div></div></div>
+          <div class="brand"><img src="./assets/pikken/pikken-icon.svg" alt="Pikken"><div><h1 style="margin:0">Pikken</h1><div class="muted">Lobby en ingang voor de live tafel. Zodra de host start, gaan alleen bevestigde deelnemers door.</div></div></div>
           <div id="pkStatus" class="status-line muted"></div>
         </div>
         <div class="top-actions" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <a class="btn alt" id="pkLiveLink" href="./pikken_live.html" style="display:none">Open live tafel</a>
-          <a class="btn alt" id="pkSpectateLink" href="./pikken_live.html">Spectate</a>
+          
           <a class="btn alt" id="pkStatsLink" href="./pikken_stats.html">Stats</a>
         </div>
       </div>
@@ -50,18 +50,18 @@
             <div class="stat"><div class="k">Lobbycode</div><div class="v" id="pkLobbyCode">—</div></div>
             <div class="stat"><div class="k">Fase</div><div class="v" id="pkPhase">lobby</div></div>
             <div class="stat"><div class="k">Spelmodus</div><div class="v" id="pkVariantLabel">Normal</div></div>
-            <div class="stat"><div class="k">Rol</div><div class="v" id="pkRoleLabel">Viewer</div></div>
+            <div class="stat"><div class="k">Status</div><div class="v" id="pkRoleLabel">Nog niet gekoppeld</div></div>
           </div>
 
           <div class="mode-card" style="margin-top:14px">
             <div class="mode-head">
               <div>
                 <div style="font-size:22px;font-weight:900;line-height:1.1" id="pkModeHeading">Klaar om een tafel te maken of te joinen</div>
-                <div class="muted" id="pkModeCopy">Je bent nog niet aan een spelerstoel gekoppeld. Zonder bewezen identiteit blijf je kijker.</div>
+                <div class="muted" id="pkModeCopy">Join een lobby en laat de lobby je stoel koppelen. Zodra dat klopt, kom je vanzelf goed in de tafel.</div>
               </div>
-              <span id="pkModePill" class="pill wait">viewer mode</span>
+              <span id="pkModePill" class="pill wait">status</span>
             </div>
-            <div class="muted" id="pkIdentityCopy">Auto-rejoin gebeurt alleen als match-id en deelnemer-id allebei kloppen.</div>
+            <div class="muted" id="pkIdentityCopy">Terugkomen gebeurt alleen als lobbycode en stoel echt bij elkaar horen. Anders ga je gewoon terug naar de lobby.</div>
           </div>
 
           <div class="field">
@@ -100,7 +100,7 @@
           <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">
             <div>
               <h2 style="margin:0 0 6px">Deelnemers</h2>
-              <div class="muted">Spelers en kijkers krijgen elk hun eigen duidelijke rol. Geen nep-rejoin.</div>
+              <div class="muted">De lobby houdt alleen echte deelnemers vast. Foute of oude koppelingen worden terug naar de lobby gestuurd.</div>
             </div>
             <span id="pkConnectionPill" class="pill wait">verbinding ok</span>
           </div>
@@ -111,7 +111,7 @@
             <div class="notice-list">
               <div class="notice">Bied aantal × face. Pik telt als joker bij 2–6.</div>
               <div class="notice">Afkeuren start een stemronde. Daarna reveal + verlies van één dobbelsteen volgens de gekozen variant.</div>
-              <div class="notice">Leaving moet backend presence en lokale hints in één beweging wissen zodat je niet terug in live wordt geslingerd.</div>
+              <div class="notice">Lobby verlaten wist lokaal en server-side tegelijk zodat je niet terug de tafel in wordt geslingerd.</div>
             </div>
           </div>
         </section>
@@ -120,12 +120,12 @@
   </div>
 
   <script src="./pikken-dice-canvas.js?v571"></script>
-  <script src="./gejast-pikken.js?v580"></script>
+  <script src="./gejast-pikken.js?v582"></script>
   <script src="./gejast-player-session-ui.js?v571"></script>
   <script>
     (() => {
       function scopedHref(path){ const url = new URL(path, window.location.href); if (new URLSearchParams(window.location.search).get('scope') === 'family') url.searchParams.set('scope', 'family'); return `${url.pathname.split('/').pop()}${url.search}`; }
-      const links = { pkHomeLink: './index.html', pkSpectateLink: './pikken_live.html', pkStatsLink: './pikken_stats.html' };
+      const links = { pkHomeLink: './index.html', pkStatsLink: './pikken_stats.html' };
       Object.entries(links).forEach(([id, path]) => { const el = document.getElementById(id); if (el) el.href = scopedHref(path); });
     })();
   </script>

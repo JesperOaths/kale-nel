@@ -7,8 +7,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Pikken live</title>
-  <script>window.GEJAST_PAGE_VERSION='v581';</script>
-  <script src="./gejast-config.js?v581"></script>
+  <script>window.GEJAST_PAGE_VERSION='v582';</script>
+  <script src="./gejast-config.js?v582"></script>
   <script src="./gejast-home-gate.js?v569"></script>
   <script src="./gejast-scope-context.js?v569"></script>
   <script src="./badge-registry.js?v569"></script>
@@ -115,11 +115,11 @@
       <div class="mode-banner">
         <div>
           <div style="font-size:22px;font-weight:950;line-height:1.1" id="phaseTitle">Plaats het volgende bod</div>
-          <div class="muted" id="viewerMeta">Alleen zichtbaar voor deelnemers in deze lobby.</div>
+          <div class="muted" id="viewerMeta">Deze tafel blijft alleen actief zolang de lobby en je stoel koppeling echt bestaan.</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <span id="phasePill" class="pill wait">—</span>
-          <span id="pkLiveModePill" class="pill wait">viewer mode</span>
+          <span id="pkLiveModePill" class="pill wait">status</span>
           <span id="pkConnectionPill" class="pill ok">verbinding ok</span>
         </div>
       </div>
@@ -163,7 +163,7 @@
             <div class="self-head">
               <div class="avatar-shell"><div id="selfAvatar" class="avatar">?</div></div>
               <div>
-                <div id="selfNameLine" style="font-size:22px;font-weight:950;line-height:1.1">Viewer</div>
+                <div id="selfNameLine" style="font-size:22px;font-weight:950;line-height:1.1">Volgen</div>
                 <div id="selfNick" class="player-nick" style="margin-top:6px;display:inline-flex"> </div>
               </div>
             </div>
@@ -189,7 +189,7 @@
   <div id="dock" class="dock">
     <div class="dock-top">
       <div>
-        <div style="font-weight:950;font-size:16px" id="dockTitle">Viewer mode</div>
+        <div style="font-weight:950;font-size:16px" id="dockTitle">Volgen mode</div>
         <div style="font-size:13px;color:#d9ccb6" id="dockCopy">Je kijkt mee. Acties verschijnen alleen als jouw spelersidentiteit bewezen is.</div>
       </div>
       <div class="muted" style="color:#d9ccb6">P2 + T2 mobile</div>
@@ -205,12 +205,12 @@
   <div id="drawerBackdrop" class="drawer-backdrop"></div>
   <div id="playersDrawer" class="drawer"><div class="drawer-head"><div><div style="font-size:22px;font-weight:950">Spelers</div><div class="muted">Volledige tafelstatus zonder de hoofdactie te verdrukken.</div></div><button class="soft-btn" type="button" data-drawer-close>Sluit</button></div><div id="playersDrawerBody" class="drawer-grid"></div></div>
   <div id="historyDrawer" class="drawer"><div class="drawer-head"><div><div style="font-size:22px;font-weight:950">Biedhistorie</div><div class="muted">De laatste belangrijke moves in volgorde.</div></div><button class="soft-btn" type="button" data-drawer-close>Sluit</button></div><div id="historyDrawerBody" class="drawer-grid"></div></div>
-  <div id="stateDrawer" class="drawer"><div class="drawer-head"><div><div style="font-size:22px;font-weight:950">Tafelstatus</div><div class="muted">Wie is speler, wie is viewer, en waarom.</div></div><button class="soft-btn" type="button" data-drawer-close>Sluit</button></div><div id="stateDrawerBody" class="drawer-grid"></div></div>
+  <div id="stateDrawer" class="drawer"><div class="drawer-head"><div><div style="font-size:22px;font-weight:950">Tafelstatus</div><div class="muted">Wie is gekoppeld aan een stoel, en waarom je wel of niet direct mag handelen.</div></div><button class="soft-btn" type="button" data-drawer-close>Sluit</button></div><div id="stateDrawerBody" class="drawer-grid"></div></div>
   <div id="helpDrawer" class="drawer"><div class="drawer-head"><div><div style="font-size:22px;font-weight:950">Pikken hulp</div><div class="muted">Snelle spelregels en wat de app nu doet.</div></div><button class="soft-btn" type="button" data-drawer-close>Sluit</button></div><div id="helpDrawerBody" class="drawer-grid"></div></div>
 
   <div id="toastStack" class="toast-stack"></div>
 
-  <script src="./gejast-pikken.js?v576"></script>
+  <script src="./gejast-pikken.js?v582"></script>
   <script src="./gejast-player-session-ui.js?v569"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
   <div class="site-credit-watermark" data-version-watermark></div>

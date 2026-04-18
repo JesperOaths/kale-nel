@@ -28,7 +28,7 @@
     if (!target) return;
     const anchor = document.createElement('a');
     anchor.className = 'page-link-card login-link';
-    anchor.href = scopedHref('./beurs.html');
+    anchor.href = scopedHref('./despimarkt.html');
     anchor.innerHTML = '<div class="page-link-label">Beurs d\'Espinoza</div><div class="page-link-copy">Open het beurs-overzicht en spring door naar de werkende onderdelen.</div>';
     target.replaceWith(anchor);
   }

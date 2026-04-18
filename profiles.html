@@ -7,8 +7,8 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Spelersprofielen</title>
-  <script>window.GEJAST_PAGE_VERSION='v581';</script>
-  <script src="./gejast-config.js?v581"></script>
+  <script>window.GEJAST_PAGE_VERSION='v582';</script>
+  <script src="./gejast-config.js?v582"></script>
   <script src="./gejast-clickable-cards.js?v386"></script>
   <script src="./gejast-scope-context.js?v391"></script><script src="./gejast-family-rollout.js?v393"></script>
   <style>
@@ -51,8 +51,11 @@
     .rarity-col p{margin:0;color:var(--muted);font-size:13px}
     .rarity-pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;background:#f5efe0;color:#70571b;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;width:max-content}
     .rarity-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-    .rarity-badge{display:grid;grid-template-columns:56px minmax(0,1fr);gap:10px;align-items:start;padding:10px;border-radius:16px;background:var(--soft);border:1px solid rgba(17,17,17,.06)}
-    .rarity-badge img{width:56px;height:56px;object-fit:contain;border-radius:14px;background:#fffaf1;border:1px solid rgba(17,17,17,.08);padding:6px}
+    .rarity-badge{display:grid;grid-template-rows:auto auto;gap:10px;align-items:start;padding:12px;border-radius:16px;background:var(--soft);border:1px solid rgba(17,17,17,.06)}
+    .rarity-badge-visual{display:grid;place-items:center;padding:6px;border-radius:16px;background:#fffaf1;border:1px solid rgba(17,17,17,.08)}
+    .rarity-badge-thumb{appearance:none;border:none;background:none;padding:0;margin:0;cursor:pointer;display:grid;place-items:center;width:100%}
+    .rarity-badge img{width:min(100%,92px);height:92px;object-fit:contain;border-radius:14px;background:#fffaf1;padding:6px}
+    .rarity-badge-copy{display:grid;gap:4px}
     .rarity-badge strong{display:block;font-size:14px}
 
     .rarity-accordion{background:#fff;border:1px solid rgba(17,17,17,.08);border-radius:20px;overflow:hidden}
@@ -65,6 +68,9 @@
     .rarity-summary-count{display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:36px;padding:0 12px;border-radius:999px;background:#111;color:#fff;font-size:13px;font-weight:900}
     .rarity-accordion-body{padding:0 16px 16px}
     .rarity-badge small{display:block;font-size:12px;color:var(--muted);line-height:1.4;margin-top:3px}.rarity-requirement{display:block;font-size:12px;color:#3d3429;line-height:1.45;margin-top:6px}
+    .badge-lightbox{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:90;padding:16px;background:rgba(11,11,11,.62)}
+    .badge-lightbox.show{display:flex}.badge-lightbox-card{width:min(560px,100%);max-height:min(92vh,860px);overflow:auto;background:#fffdf9;border-radius:24px;padding:18px;border:1px solid rgba(17,17,17,.08);box-shadow:0 24px 56px rgba(0,0,0,.24)}
+    .badge-lightbox-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.badge-lightbox-close{border:none;border-radius:999px;background:#111;color:#fff;width:42px;height:42px;font-size:22px;cursor:pointer}.badge-lightbox-body{display:grid;gap:12px;margin-top:14px}.badge-lightbox-visual{display:grid;place-items:center;border-radius:20px;background:#fffaf1;border:1px solid rgba(17,17,17,.08);padding:14px}.badge-lightbox-visual img{width:min(100%,220px);height:220px;object-fit:contain}
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none;max-width:min(calc(100vw - 24px),560px);text-align:center}
     @media (max-width:760px){.page{padding:14px 12px calc(104px + env(safe-area-inset-bottom,0px))}.top{flex-direction:column;align-items:stretch}.back{width:100%}.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.head{grid-template-columns:64px minmax(0,1fr)}.avatar{width:64px;height:64px}.rarity-list{grid-template-columns:1fr}.rarity-accordion{border-radius:18px}.rarity-summary{padding:14px}.rarity-accordion-body{padding:0 14px 14px}}
   </style>
@@ -90,6 +96,7 @@
     </section>
     <section id="badgeGalleryPanel" class="sheet gallery-sheet"></section>
   </main>
+  <div id="badgeLightbox" class="badge-lightbox" aria-hidden="true"><div class="badge-lightbox-card" role="dialog" aria-modal="true" aria-labelledby="badgeLightboxTitle"><div class="badge-lightbox-top"><div><div style="font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#8a7a55">Badge</div><h2 id="badgeLightboxTitle" style="margin:4px 0 0;font-size:1.6rem;line-height:1.08">Badge</h2></div><button type="button" id="badgeLightboxClose" class="badge-lightbox-close" aria-label="Sluit">×</button></div><div class="badge-lightbox-body"><div class="badge-lightbox-visual"><img id="badgeLightboxImg" src="" alt=""></div><div><div id="badgeLightboxNick" class="submeta"></div><p id="badgeLightboxDesc" style="margin:10px 0 0;color:var(--muted);line-height:1.55"></p><p id="badgeLightboxReq" style="margin:12px 0 0;line-height:1.55"></p></div></div></div></div>
   <div class="site-credit-watermark" data-version-watermark></div>
   <script>
     (function(){
@@ -179,6 +186,30 @@
           map.set(key, Object.assign({}, map.get(key) || {}, player));
         });
         return Array.from(map.values()).filter((player) => String(player.player_name || player.display_name || '').trim());
+      }
+
+      async function fetchActivatedPlayersFromAllowedUsernames(){
+        const url = `${cfg.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,status,site_scope&status=eq.active&order=display_name.asc`;
+        const res = await fetch(url, { method:'GET', mode:'cors', cache:'no-store', headers: headers() });
+        const rows = await parseResponse(res);
+        return (Array.isArray(rows) ? rows : []).filter((row)=>{
+          const rowScope = String(row.site_scope || 'friends').toLowerCase();
+          return rowScope === scope;
+        }).map((row)=>({
+          player_name: row.display_name,
+          display_name: row.display_name,
+          public_display_name: row.display_name,
+          total_matches: 0,
+          total_wins: 0,
+          best_rating: 1000,
+          badge_count: 0,
+          source_kind: 'activation'
+        }));
+      }
+
+      function mergeActivatedNames(players, activatedPlayers){
+        const merged = mergePlayers(players, activatedPlayers);
+        return merged.sort((a,b)=>displayName(a).localeCompare(displayName(b), 'nl'));
       }
 
       function normalizedAttained(player){
@@ -327,23 +358,52 @@ function bindBadgeAccordions(){
   if (!opened && accordions[0]) accordions[0].setAttribute('open', 'open');
 }
 
+function bindBadgeLightbox(){
+  const root = document.getElementById('badgeLightbox');
+  if (!root || root.dataset.bound === '1') return;
+  root.dataset.bound = '1';
+  const img = document.getElementById('badgeLightboxImg');
+  const title = document.getElementById('badgeLightboxTitle');
+  const nick = document.getElementById('badgeLightboxNick');
+  const desc = document.getElementById('badgeLightboxDesc');
+  const req = document.getElementById('badgeLightboxReq');
+  const close = ()=>{ root.classList.remove('show'); root.setAttribute('aria-hidden','true'); };
+  document.getElementById('badgeLightboxClose')?.addEventListener('click', close);
+  root.addEventListener('click', (event)=>{ if (event.target === root) close(); });
+  document.addEventListener('click', (event)=>{
+    const btn = event.target.closest('[data-badge-open]');
+    if (!btn) return;
+    img.src = btn.getAttribute('data-badge-image') || '';
+    img.alt = btn.getAttribute('data-badge-title') || 'Badge';
+    title.textContent = btn.getAttribute('data-badge-title') || 'Badge';
+    nick.textContent = btn.getAttribute('data-badge-nick') || '';
+    desc.textContent = btn.getAttribute('data-badge-desc') || '';
+    req.innerHTML = `<strong>Te behalen door:</strong> ${btn.getAttribute('data-badge-req') || 'Zie badge-omschrijving.'}`;
+    root.classList.add('show');
+    root.setAttribute('aria-hidden','false');
+  });
+}
+
 async function boot(){
         try {
           const profileSource = window.GEJAST_PROFILE_SOURCE || null;
-          const [bundleRaw, allPlayersRaw] = await Promise.allSettled([
+          const [bundleRaw, allPlayersRaw, activatedRaw] = await Promise.allSettled([
             profileSource && typeof profileSource.loadProfilesPageBundle === 'function'
               ? profileSource.loadProfilesPageBundle()
               : callRpc('get_profiles_page_bundle_scoped', { site_scope_input: scope }),
             profileSource && typeof profileSource.loadProfilesList === 'function'
               ? profileSource.loadProfilesList()
-              : callRpc('get_all_site_players_public_scoped', { site_scope_input: scope })
+              : callRpc('get_all_site_players_public_scoped', { site_scope_input: scope }),
+            fetchActivatedPlayersFromAllowedUsernames()
           ]);
           const bundle = bundleRaw.status === 'fulfilled' ? bundleRaw.value : {};
           const allPlayers = allPlayersRaw.status === 'fulfilled' ? ((allPlayersRaw.value && allPlayersRaw.value.players) || []) : [];
-          const players = mergePlayers(bundle.players || [], allPlayers);
+          const activatedPlayers = activatedRaw.status === 'fulfilled' ? activatedRaw.value : [];
+          const players = mergeActivatedNames(mergePlayers(bundle.players || [], allPlayers), activatedPlayers);
           renderPlayers(players);
           renderBadgeGallery();
-          statusNode.textContent = `${players.length} actieve speler(s) zichtbaar in de ${scope === 'family' ? 'familie' : 'vrienden'}-scope.`;
+          statusNode.textContent = `${players.length} actieve of geactiveerde speler(s) zichtbaar in de ${scope === 'family' ? 'familie' : 'vrienden'}-scope.`;
+          bindBadgeLightbox();
         } catch (err) {
           statusNode.textContent = err.message || 'Profielen laden mislukt.';
           gridNode.innerHTML = '<article class="card"><div class="bio">Profielen laden mislukt.</div></article>';
@@ -352,6 +412,7 @@ async function boot(){
       }
 
       if (window.GEJAST_BADGES && window.GEJAST_BADGES.injectStyles) window.GEJAST_BADGES.injectStyles();
+      bindBadgeLightbox();
       boot();
       window.addEventListener('resize', bindBadgeAccordions);
     })();

@@ -1,0 +1,48 @@
+KALE NEL v582 LADDER / STATS BLUEPRINT
+
+Pikken ELO direction
+- base rating: 1000
+- result model: placement-aware free-for-all expected score
+- actual score suggestion: 1.00 first, 0.66 second, 0.33 third, 0.00 fourth
+- K-factor: 28 for first 20 tables, then 18
+- host advantage: none
+- bonus telemetry to store later: successful bluffs, approved bids, rejected bids that were correct, survival order, longest alive streak, times left with one die and still won
+
+Paardenrace ELO direction
+- team-vs-team rating on verified/final races only
+- expected score from average team rating
+- team result: 1 win, 0 loss; split equally to team members
+- K-factor: 24 standard, 16 for highly repeated matchups to reduce farming
+- bonus telemetry to store later: horse picked, longshot wins, gate reveals survived, comeback distance, total bakken won/lost, host closes, ready speed
+
+Caute Coins / Beurs ideas
+- keep balance ladder but add bragging cards
+- future telemetry: largest single payout, biggest market swing survived, highest streak of profitable markets, best promo conversion, sharpest closer before settlement
+
+Visible ideas per page
+Pikken
+- tafelbaas
+- meeste herrie (most tables)
+- scherpste bluffer
+- longest survival
+- comeback king
+
+Paardenrace
+- racemeester
+- meeste starts
+- sterkste finish
+- longshot held
+- gate gambler
+
+Caute Coins
+- grootste beursbaas
+- meeste markten
+- beste payout-jager
+- sharpest closer
+- promo shark
+
+Telemetry/code still missing for the full version
+- explicit per-match leaderboard snapshot write for finished Pikken
+- explicit per-race leaderboard snapshot write for finished Paardenrace
+- richer per-player stats tables or JSON rollups for both games
+- public RPC fields for bragging metrics listed above
