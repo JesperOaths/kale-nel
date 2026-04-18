@@ -1,0 +1,93 @@
+PIKKEN + PAARDENRACE + NEW LADDER PLAN v583
+
+PIKKEN mobile direction
+- keep one canonical lobby route and one canonical live route
+- stop relying on ambiguous viewer-mode wording as the main explanation layer
+- hard truth should be: either seat/player identity is proven or the surface stays in a waiting state
+- prevent mobile lockups by avoiding overlapping live-state loads and by falling back out of live when state cannot be proven fast enough
+- leave should clear local runtime hints and backend presence together
+
+What v583 changes in spirit
+- single-flight live polling
+- queued rerun instead of overlapping requests
+- softer copy: not 'kijkmodus', but 'nog niet gekoppeld' / waiting for hard proof
+- more aggressive bounce back to lobby if live state disappears or stalls
+
+Next Pikken backend/data work worth doing later
+- explicit join-claim handshake so a seat cannot look half-owned
+- timestamped seat-claim freshness and server-side stale-claim cleanup
+- clearer lobby/live ownership RPCs for host vs joined player
+- match-history item finalized on completion for bragging/stats pages
+- extra stat capture: highest accepted bid, rejected-bid count, voting drama count, comeback wins, most 1-pips held, fastest winning turn sequence
+
+PIKKEN ladder / ELO ideas
+Base ELO option
+- start everyone at 1000
+- only completed tables count
+- pairwise expected score against all seated opponents
+- K-factor higher for the first N completed games, lower later
+- bonus/malus can be very light for table size and comeback situations
+
+Alternative Pikken ranking views
+- classic ELO ladder
+- winrate with minimum game floor
+- bold-bidder board
+- chaos board: most contested / rejected bid involvement
+- survivor board: average dice left when winning
+
+PAARDENRACE mobile direction
+- do not keep manual tick as a user-facing button
+- state machine / countdown should self-progress safely through code
+- if room disappears or closes, bounce back to lobby instead of hanging the browser
+- keep one shared room truth, but on mobile show focused action and race summary rather than permanent equal-priority full board parsing
+
+What v583 changes in spirit
+- no user-facing Tick countdown button
+- timeout-aware RPC path for live refresh
+- single-flight refresh to avoid stacking requests
+- more decisive return-to-lobby behavior when the room is gone or too stale
+- rename reset flow button to Nieuwe Ronde Nieuwe Kansen
+
+Next Paardenrace backend/data work worth doing later
+- server-driven countdown progression with explicit phase timestamps
+- hard room-closure / room-expiry reason codes returned to client
+- store race summaries on completion for ladder/story pages
+- extra stat capture: most-picked horse, highest total stake, biggest upset, fastest ace, gate pain, nomination burden, host frequency
+
+PAARDENRACE ladder / ELO ideas
+Option A: wager-weighted race ELO
+- baseline rating 1000
+- each player gets race score from finishing success of the horse(s) they backed
+- compare actual result vs expected result of the field
+- only modest wager weighting so whales do not fully dominate rating
+
+Option B: prediction skill rating
+- rating changes based on whether the backed horse outperformed expectation, not only on raw win/loss
+- better if you want the ladder to feel like judgment + reads instead of pure luck
+
+Visible Paardenrace stats worth surfacing
+- meest gekozen paard
+- vaakst winnend paard
+- grootste potjager
+- nominatiekoning / nominatiepech
+- upset-hunter
+- gate survivor
+- host van de chaos
+
+CAUTE COINS / newer ladder pages
+What the newer ladder pages should aim for
+- not just rows of ranks
+- overview cards + story cards + brag cards
+- each game gets its own voice
+- serious enough to feel real, playful enough to feel Kale Nel
+
+Stats that may need new telemetry later
+- longest active streak per subsystem
+- biggest comeback
+- highest single-session swing
+- average finishing position per horse / per bettor
+- most room closures caused / survived
+- peak concurrent table states
+
+Rule of thumb
+- if a stat is fun, legible, and bragworthy, it is allowed even if it is not sacred esports truth

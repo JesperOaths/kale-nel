@@ -7,8 +7,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Caute Coins ladder</title>
-  <script>window.GEJAST_PAGE_VERSION='v582';</script>
-  <script src="./gejast-config.js?v582"></script>
+  <script>window.GEJAST_PAGE_VERSION='v583';</script>
+  <script src="./gejast-config.js?v583"></script>
   <script src="./gejast-home-gate.js?v491"></script>
   <script src="./gejast-ladder-lab.js?v491"></script>
   <style>
@@ -57,6 +57,10 @@
             <div id="shareWrap"></div>
           </div>
         </section>
+        <section class="panel">
+          <div class="panel-head"><div><h2>Coin vibes</h2><div class="muted">Niet alles hoeft bloedserieus te zijn: hier staan de flex-, druk- en toonkaartjes van de huidige coinstand.</div></div></div>
+          <div id="storyWrap"></div>
+        </section>
       </div>
     </div>
   </div>
@@ -96,10 +100,18 @@
         });
         $('barsWrap').innerHTML = top5.length ? lab.renderBarChart(top5.map((row)=>({ label:row.player_name, value:row.balance, sub:`${total ? Math.round((row.balance/total)*100) : 0}% van top 5` })), { label:'label', value:'value', sub:'sub', formatValue:(value)=>`${Math.round(value)} ₵` }) : '<div class="lab-empty">Nog geen coinverdeling beschikbaar.</div>';
         $('shareWrap').innerHTML = top5.length ? lab.renderStats(top5.map((row, idx)=>({ k:`#${idx+1} aandeel`, v:`${total ? Math.round((row.balance/total)*100) : 0}%`, sub:row.player_name })).slice(0, 5)) : '<div class="lab-empty">Nog geen aandeeldata.</div>';
+        const runnerUp = top5[1] || null;
+        const storyCards = top5.length ? [
+          { k:'Flexfactor', v: leader ? leader.player_name : '—', sub: leader ? `${Math.round(leader.balance || 0)} ₵ en dus het dikste stapeltje.` : 'Nog geen leider zichtbaar.' },
+          { k:'Druk op #2', v: leader && runnerUp ? `${Math.max(0, Math.round((leader.balance || 0) - (runnerUp.balance || 0)))} ₵` : '0 ₵', sub:'Hoeveel #1 voorligt op de eerste achtervolger.' },
+          { k:'Coin-dichtheid', v: total ? `${Math.round(((leader ? leader.balance : 0) / total) * 100)}%` : '0%', sub:'Welk stuk van de zichtbare top-5 voorraad al bij de leider zit.' },
+          { k:'Toon van de markt', v: leader ? `${leader.player_name} bepaalt het tempo` : 'Rustig', sub:'Deze regel mag gewoon braggy klinken.' }
+        ] : [];
+        $('storyWrap').innerHTML = storyCards.length ? lab.renderStats(storyCards) : '<div class="lab-empty">Nog geen coin-vibes zichtbaar.</div>';
       }
       load().catch((err)=>{
         $('meta').textContent = err.message || 'Laden mislukt.';
-        ['statsWrap','ladderWrap','barsWrap','shareWrap'].forEach((id)=>{ $(id).innerHTML = `<div class="lab-empty">${lab.esc(err.message || 'Laden mislukt.')}</div>`; });
+        ['statsWrap','ladderWrap','barsWrap','shareWrap','storyWrap'].forEach((id)=>{ $(id).innerHTML = `<div class="lab-empty">${lab.esc(err.message || 'Laden mislukt.')}</div>`; });
       });
     })();
   </script>

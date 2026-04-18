@@ -1,0 +1,29 @@
+v583 mobile deep follow-up patch
+
+Changed files
+- gejast-config.js
+- gejast-mobile-foundation-v583.css
+- gejast-mobile-foundation-v583.js
+- gejast-mobile-route-fixes-v583.js
+- scorer.html
+- boerenbridge.html
+- rad.html
+- beurs.html
+- profiles.html
+- pikken.html
+- pikken_live.html
+- gejast-pikken.js
+- paardenrace.html
+- paardenrace_live.html
+- gejast-paardenrace.js
+- pikken_ladder.html
+- paardenrace_ladder.html
+- caute_coins_ladder.html
+- gejast-despimarkt.js
+- ballroom.html
+
+Support docs
+- README_v583_mobile_deep_followup_apply_order.txt
+- PATCH_MANIFEST_v583_mobile_deep_followup.txt
+- PIKKEN_PAARDENRACE_LADDER_PLAN_v583.txt
+- MOBILE_AUDIT_v583.txt

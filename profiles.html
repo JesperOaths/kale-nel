@@ -7,8 +7,8 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Spelersprofielen</title>
-  <script>window.GEJAST_PAGE_VERSION='v582';</script>
-  <script src="./gejast-config.js?v582"></script>
+  <script>window.GEJAST_PAGE_VERSION='v583';</script>
+  <script src="./gejast-config.js?v583"></script>
   <script src="./gejast-clickable-cards.js?v386"></script>
   <script src="./gejast-scope-context.js?v391"></script><script src="./gejast-family-rollout.js?v393"></script>
   <style>
@@ -189,12 +189,15 @@
       }
 
       async function fetchActivatedPlayersFromAllowedUsernames(){
-        const url = `${cfg.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,status,site_scope&status=eq.active&order=display_name.asc`;
+        const url = `${cfg.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,status,site_scope&order=display_name.asc`;
         const res = await fetch(url, { method:'GET', mode:'cors', cache:'no-store', headers: headers() });
         const rows = await parseResponse(res);
         return (Array.isArray(rows) ? rows : []).filter((row)=>{
-          const rowScope = String(row.site_scope || 'friends').toLowerCase();
-          return rowScope === scope;
+          const status = String(row.status || '').toLowerCase();
+          if (!status || ['available','pending','requested','reserved','blocked','disabled','rejected'].includes(status)) return false;
+          const rawScope = String(row.site_scope || '').toLowerCase();
+          if (!rawScope) return scope === 'friends';
+          return rawScope === scope;
         }).map((row)=>({
           player_name: row.display_name,
           display_name: row.display_name,
@@ -306,8 +309,12 @@
                   <div class="rarity-list">
                     ${group.items.map((badge) => `
                       <div class="rarity-badge">
-                        <img src="${badge.image}" alt="${badge.title}">
-                        <div>
+                        <div class="rarity-badge-visual">
+                          <button type="button" class="rarity-badge-thumb" data-badge-open data-badge-image="${badge.image}" data-badge-title="${String(badge.title || '').replace(/"/g,'&quot;')}" data-badge-nick="${String(badge.nickname || '').replace(/"/g,'&quot;')}" data-badge-desc="${String(badge.description || '').replace(/"/g,'&quot;')}" data-badge-req="${String(badge.requirementsText || 'Zie badge-omschrijving.').replace(/"/g,'&quot;')}">
+                            <img src="${badge.image}" alt="${badge.title}">
+                          </button>
+                        </div>
+                        <div class="rarity-badge-copy">
                           <strong>${badge.title}</strong>
                           ${badge.nickname ? `<small>${badge.nickname}</small>` : ''}
                           <small>${badge.description}</small>

@@ -641,14 +641,89 @@
     try {
       const rpcName = kind === 'paardenrace' ? 'get_paardenrace_ladder_public_scoped' : kind === 'pikken' ? 'get_pikken_ladder_public_scoped' : 'get_despimarkt_ladder_public_scoped';
       const data = await rpc(rpcName, { site_scope_input: scope(), limit_count: 100 });
-      const rows = normalizeRows(data?.rows);
-      const title = kind === 'paardenrace' ? 'Paardenrace-ladder' : kind === 'pikken' ? 'Pikken-ladder' : 'Beurs d\'Espinoza-ladder';
-      global.document.getElementById('ladderTitle').textContent = title;
-      global.document.getElementById('ladderIntro').textContent = kind === 'despimarkt' ? 'Hoogste huidige cautebalansen.' : 'Generieke ELO-infrastructuur op basis van de huidige ratings.';
-      global.document.getElementById('ladderRows').innerHTML = rows.length ? rows.map((row, idx)=>`<article class="ladder-rank-card"><div class="rank-pill">#${idx+1}</div><div><strong>${playerLink(row.player_name || row.display_name || '')}</strong><div class="muted">${kind==='despimarkt' ? `${row.markets_joined || 0} markten · ${row.markets_won || 0} gewonnen` : `${row.games_played || 0} games · ${row.wins || 0} wins`}</div></div><div class="dm-pill ${kind==='despimarkt'?'plus':''}">${kind==='despimarkt'?money(row.balance_cautes || row.caute_coins || 0):Math.round(Number(row.elo_rating || 0))}</div></article>`).join('') : empty('Nog geen ladderdata.');
-      if (global.document.getElementById('ladderHistory')) {
-        const hist = normalizeRows(data?.history);
-        global.document.getElementById('ladderHistory').innerHTML = hist.length ? hist.slice(0,40).map((row)=>`<article class="dm-list-card"><div><strong>${playerLink(row.player_name || '')}</strong><div class="muted">${shortDate(row.event_at)}</div></div><div class="dm-stack-right"><div class="dm-pill">${Math.round(Number(row.rating_after || 0))}</div><div class="muted">Δ ${Number(row.delta || 0).toFixed(2)}</div></div></article>`).join('') : empty('Nog geen geschiedenisregels.');
+      const rawRows = normalizeRows(data?.rows);
+      const rows = rawRows.map((row)=>({
+        ...row,
+        player_name: row.player_name || row.display_name || row.public_display_name || '',
+        elo: Number(row.elo_rating || row.rating || row.best_rating || 0) || 0,
+        games: Number(row.games_played || row.total_matches || row.matches_played || 0) || 0,
+        wins: Number(row.wins || row.total_wins || row.matches_won || 0) || 0,
+        losses: Number(row.losses || Math.max(0, (Number(row.games_played || row.total_matches || 0) || 0) - (Number(row.wins || row.total_wins || 0) || 0))) || 0,
+        balance: Number(row.balance_cautes || row.caute_coins || row.balance || 0) || 0,
+        volume: Number(row.total_wager_bakken || row.total_bakken || row.total_pot_bakken || row.markets_joined || row.games_played || 0) || 0
+      })).sort((a,b)=> kind === 'despimarkt' ? (b.balance - a.balance) : ((b.elo - a.elo) || (b.games - a.games)));
+      const title = kind === 'paardenrace' ? 'Paardenrace-ladder' : kind === 'pikken' ? 'Pikken-ladder' : "Beurs d'Espinoza-ladder";
+      const titleNode = global.document.getElementById('ladderTitle');
+      const introNode = global.document.getElementById('ladderIntro');
+      if (titleNode) titleNode.textContent = title;
+      if (introNode) introNode.textContent = kind === 'despimarkt' ? 'Hoogste huidige cautebalansen, marktdruk en momentum.' : (kind === 'pikken' ? 'Pikken-ladder met rating, lobbyvolume en eerste bragging stats.' : 'Paardenrace-ladder met rating, racevolume, potdruk en finish-bragging.');
+
+      const leader = rows[0] || null;
+      const mostActive = rows.slice().sort((a,b)=>(b.games - a.games) || (b.volume - a.volume))[0] || null;
+      const bestWin = rows.filter((row)=>row.games >= 3).sort((a,b)=>((b.wins/Math.max(1,b.games)) - (a.wins/Math.max(1,a.games))) || (b.games - a.games))[0] || null;
+      const boldest = kind === 'paardenrace'
+        ? rows.slice().sort((a,b)=>(b.volume - a.volume) || (b.wins - a.wins))[0] || null
+        : kind === 'pikken'
+          ? rows.slice().sort((a,b)=>(b.wins - a.wins) || (b.games - a.games))[0] || null
+          : rows.slice().sort((a,b)=>(b.balance - a.balance))[0] || null;
+      const avgElo = rows.length ? Math.round(rows.reduce((sum,row)=>sum + Number(kind === 'despimarkt' ? row.balance : row.elo || 1000), 0) / rows.length) : 0;
+      const overviewCards = kind === 'despimarkt'
+        ? [
+            { label:'Koploper', value: leader ? leader.player_name : '—', sub: leader ? `${money(leader.balance)} in cautes.` : 'Nog geen cautes zichtbaar.' },
+            { label:'Marktbeul', value: mostActive ? mostActive.player_name : '—', sub: mostActive ? `${mostActive.games} markten / trades zichtbaar.` : 'Nog geen marktvolume.' },
+            { label:'Middenveld', value: String(avgElo), sub:'Gemiddelde zichtbare coinstand in deze lijst.' },
+            { label:'Brag-rights', value: boldest ? boldest.player_name : '—', sub: boldest ? `${money(boldest.balance)} klaar om te flexen.` : 'Nog geen flexmoment.' }
+          ]
+        : kind === 'pikken'
+          ? [
+              { label:'Koploper', value: leader ? leader.player_name : '—', sub: leader ? `${Math.round(leader.elo || 1000)} ELO.` : 'Nog geen ladderkop.' },
+              { label:'Tafelvreter', value: mostActive ? mostActive.player_name : '—', sub: mostActive ? `${mostActive.games} potjes zichtbaar.` : 'Nog geen tafelvolume.' },
+              { label:'Scherpste hitrate', value: bestWin ? bestWin.player_name : '—', sub: bestWin ? `${Math.round((bestWin.wins/Math.max(1,bestWin.games))*100)}% winrate.` : 'Meer potjes nodig voor een echte hitrate.' },
+              { label:'Brutaalste bieder', value: boldest ? boldest.player_name : '—', sub: boldest ? `${boldest.wins} wins en ${boldest.games} games.` : 'Nog geen brag-rights.' }
+            ]
+          : [
+              { label:'Koploper', value: leader ? leader.player_name : '—', sub: leader ? `${Math.round(leader.elo || 1000)} ELO.` : 'Nog geen ladderkop.' },
+              { label:'Racemagneet', value: mostActive ? mostActive.player_name : '—', sub: mostActive ? `${mostActive.games} races zichtbaar.` : 'Nog geen racevolume.' },
+              { label:'Zuiverste finish', value: bestWin ? bestWin.player_name : '—', sub: bestWin ? `${Math.round((bestWin.wins/Math.max(1,bestWin.games))*100)}% winrate.` : 'Meer races nodig voor een echte hitrate.' },
+              { label:'Potjager', value: boldest ? boldest.player_name : '—', sub: boldest ? `${boldest.volume} Bakken zichtbaar in inzetvolume.` : 'Nog geen inzetvolume.' }
+            ];
+      const storyCards = kind === 'despimarkt'
+        ? [
+            { label:'Kopgroepdruk', value: leader && rows[1] ? money(Math.max(0, leader.balance - rows[1].balance)) : money(0), sub:'Voorsprong van #1 op #2.' },
+            { label:'Toplijst', value: `${rows.length}`, sub:'Zichtbare accounts met coins in dit snapshot.' },
+            { label:'Markttoon', value: leader ? `${leader.player_name} zet de toon` : 'Rustig', sub:'Deze kopregel mag grappig of opschepperig zijn.' }
+          ]
+        : kind === 'pikken'
+          ? [
+              { label:'Kopdruk', value: leader && rows[1] ? String(Math.max(0, Math.round(leader.elo - rows[1].elo))) : '0', sub:'ELO-gat tussen #1 en #2.' },
+              { label:'Actieve lijst', value: `${rows.length}`, sub:'Spelers met zichtbare Pikken-ladderdata.' },
+              { label:'Tafelsfeer', value: leader ? `${leader.player_name} heeft de grootste mond` : 'Rustig', sub:'Humor mag hier gewoon bestaan.' }
+            ]
+          : [
+              { label:'Kopdruk', value: leader && rows[1] ? String(Math.max(0, Math.round(leader.elo - rows[1].elo))) : '0', sub:'ELO-gat tussen #1 en #2.' },
+              { label:'Actieve lijst', value: `${rows.length}`, sub:'Spelers met zichtbare Paardenrace-ladderdata.' },
+              { label:'Racevibe', value: leader ? `${leader.player_name} rijdt op kop` : 'Rustig', sub:'Een brag-card hoeft niet bloedserieus te zijn.' }
+            ];
+      const overviewNode = global.document.getElementById('ladderOverviewGrid');
+      const storyNode = global.document.getElementById('ladderStoryGrid');
+      const cardsCopy = global.document.getElementById('ladderCardsCopy');
+      if (cardsCopy && kind !== 'despimarkt') cardsCopy.textContent = kind === 'pikken' ? 'Mix van ELO, volume en bragging rights. Waar data nog ontbreekt, blijft dit expres luchtig.' : 'Mix van ELO, racevolume, inzetdruk en bragging rights. Waar data nog ontbreekt, blijft dit expres luchtig.';
+      if (overviewNode) overviewNode.innerHTML = overviewCards.map((c)=>`<article class="hero-metric"><span>${esc(c.label)}</span><strong>${esc(c.value)}</strong><small>${esc(c.sub)}</small></article>`).join('');
+      if (storyNode) storyNode.innerHTML = storyCards.map((c)=>`<article class="hero-metric"><span>${esc(c.label)}</span><strong>${esc(c.value)}</strong><small>${esc(c.sub)}</small></article>`).join('');
+
+      const ladderRows = global.document.getElementById('ladderRows');
+      if (ladderRows) ladderRows.innerHTML = rows.length ? rows.map((row, idx)=>{
+        const meta = kind==='despimarkt'
+          ? `${row.markets_joined || row.games || 0} markten · ${row.markets_won || row.wins || 0} gewonnen`
+          : `${row.games || 0} games · ${row.wins || 0} wins${row.games ? ` · ${Math.round((row.wins/Math.max(1,row.games))*100)}%` : ''}`;
+        const value = kind==='despimarkt' ? money(row.balance || 0) : Math.round(Number(row.elo || 1000));
+        const sub = kind==='paardenrace' && row.volume ? `Potvolume: ${row.volume} Bakken` : kind==='pikken' && row.losses ? `Verliespotten: ${row.losses}` : '';
+        return `<article class="ladder-rank-card"><div class="rank-pill">#${idx+1}</div><div><strong>${playerLink(row.player_name || row.display_name || '')}</strong><div class="muted">${meta}</div>${sub ? `<div class="muted">${esc(sub)}</div>` : ''}</div><div class="dm-pill ${kind==='despimarkt'?'plus':''}">${value}</div></article>`;
+      }).join('') : empty('Nog geen ladderdata.');
+      const historyNode = global.document.getElementById('ladderHistory');
+      if (historyNode) {
+        const hist = normalizeRows(data?.history || data?.history_rows);
+        historyNode.innerHTML = hist.length ? hist.slice(0,40).map((row)=>`<article class="dm-list-card"><div><strong>${playerLink(row.player_name || '')}</strong><div class="muted">${shortDate(row.event_at || row.created_at)}</div></div><div class="dm-stack-right"><div class="dm-pill">${kind==='despimarkt' ? money(row.balance_after || row.balance || 0) : Math.round(Number(row.rating_after || row.elo_after || row.elo_rating || 0))}</div><div class="muted">${esc(row.title || `Δ ${Number(row.delta || row.delta_rating || 0).toFixed ? Number(row.delta || row.delta_rating || 0).toFixed(2) : (row.delta || row.delta_rating || 0)}`)}</div></div></article>`).join('') : empty(kind === 'despimarkt' ? 'Nog geen geschiedenisregels.' : 'Nog geen aparte ladderhistorie zichtbaar. Zodra we rijkere telemetry loggen, komt die hier te staan.');
       }
       setStatus('ladderStatus','Ladder geladen.','ok');
     } catch (err) { setStatus('ladderStatus', err.message || String(err), 'error'); }

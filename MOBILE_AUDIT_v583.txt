@@ -1,0 +1,49 @@
+MOBILE AUDIT v583
+
+What this audit is
+- a repo-wide static/code inspection pass
+- route-by-route review of the major public/game/admin surfaces in source form
+- targeted hardening of the pages and subsystems the user called out
+
+What this audit is not
+- not a true live-browser rendering pass on every page
+- not a replacement for final device validation after deploy
+
+Repo-wide observations
+- 77 root HTML pages were inspected at source level
+- all 77 have a viewport tag
+- 53 still mention fixed-background style patterns somewhere in source
+- iframe wrapper routes still exist for vault/leaderboard style pages
+- game pages are the most sensitive because they combine polling, fixed UI, overlays, and keyboard/input states
+
+Pages/subsystems targeted most directly in v583
+- scorer.html
+- boerenbridge.html
+- rad.html
+- profiles.html
+- pikken.html
+- pikken_live.html
+- gejast-pikken.js
+- paardenrace.html
+- paardenrace_live.html
+- gejast-paardenrace.js
+- pikken_ladder.html
+- paardenrace_ladder.html
+- caute_coins_ladder.html
+- beurs.html
+- ballroom.html
+
+Main risks this patch tries to reduce
+- overlapping live refreshes causing mobile stalls
+- manual tick / refresh controls masking deeper state-machine issues
+- ambiguous seat/actor identity on Pikken live surfaces
+- closed/missing Paardenrace rooms leaving the phone stuck in a broken live page
+- badge/gallery density on Profiles
+- top-heavy Rad layout on narrow screens
+- popup density on Boerenbridge
+
+What still must be checked after deployment
+- real iPhone keyboard reachability on request/login/scorer popups
+- real-world freeze/crash behavior on Pikken live and Paardenrace live
+- actual ladder data richness based on whatever the current backend truly returns
+- whether any remaining pages with fixed backgrounds feel visually heavy on older phones

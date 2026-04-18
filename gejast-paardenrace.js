@@ -1,7 +1,7 @@
 (function(){
   // Wave 5 mobile hardening: shared helpers used by the live presenter remain centralized here.
   const cfg = window.GEJAST_CONFIG || {};
-  const STORAGE_KEY = 'gejast_paardenrace_room_code_v478';
+  const STORAGE_KEY = 'gejast_paardenrace_room_code_v583';
   const LIVE_QUERY_KEY = 'live';
   const ASSETS = {
     arena: './paardenrace-live-board-v447.png',
@@ -60,30 +60,41 @@
   }
 
   function sessionToken(){ return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; }
-  async function rpc(fn, args={}){
+  async function rpc(fn, args={}, options={}){
     const token = sessionToken();
     const body = Object.assign({}, args, { session_token: token || null, session_token_input: token || null });
-    const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${fn}`, {
-      method:'POST',
-      headers:{
-        'apikey': cfg.SUPABASE_PUBLISHABLE_KEY,
-        'Authorization': `Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY}`,
-        'Content-Type':'application/json',
-        'Accept':'application/json',
-        'Cache-Control':'no-store, no-cache, max-age=0',
-        'Pragma':'no-cache'
-      },
-      cache:'no-store',
-      body: JSON.stringify(body)
-    });
-    const text = await res.text();
-    let data = null;
-    try { data = text ? JSON.parse(text) : null; } catch(_) { data = text; }
-    if(!res.ok){
-      const msg = data && typeof data === 'object' ? (data.message || data.error || data.hint || JSON.stringify(data)) : (text || 'Onbekende fout');
-      throw new Error(msg);
+    const controller = new AbortController();
+    const timeoutMs = Math.max(900, Number(options.timeoutMs || 3800));
+    const timer = setTimeout(()=>controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+        method:'POST',
+        headers:{
+          'apikey': cfg.SUPABASE_PUBLISHABLE_KEY,
+          'Authorization': `Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY}`,
+          'Content-Type':'application/json',
+          'Accept':'application/json',
+          'Cache-Control':'no-store, no-cache, max-age=0',
+          'Pragma':'no-cache'
+        },
+        cache:'no-store',
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+      const text = await res.text();
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch(_) { data = text; }
+      if(!res.ok){
+        const msg = data && typeof data === 'object' ? (data.message || data.error || data.hint || JSON.stringify(data)) : (text || 'Onbekende fout');
+        throw new Error(msg);
+      }
+      return data;
+    } catch(err) {
+      if (err && (err.name === 'AbortError' || /abort/i.test(String(err)))) throw new Error('timeout');
+      throw err;
+    } finally {
+      clearTimeout(timer);
     }
-    return data;
   }
   function getStoredRoomCode(){ return localStorage.getItem(STORAGE_KEY) || ''; }
   function setStoredRoomCode(code){ if(code) localStorage.setItem(STORAGE_KEY, String(code).trim().toUpperCase()); }

@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace live</title>
-  <script>window.GEJAST_PAGE_VERSION='v582';</script>
-  <script src="./gejast-config.js?v582"></script>
-  <script src="./gejast-paardenrace.js?v576"></script>
+  <script>window.GEJAST_PAGE_VERSION='v583';</script>
+  <script src="./gejast-config.js?v583"></script>
+  <script src="./gejast-paardenrace.js?v583"></script>
   <style>
     :root{
       --gold:#9a8241;--paper:#fffaf3;--ink:#17130f;--muted:#6d6256;--line:rgba(0,0,0,.08);--bg:#efe6d7;--soft:#f7f1e7;
@@ -178,8 +178,7 @@
         <button class="btn" id="drawBtn" type="button">Trek volgende kaart</button>
         <button class="btn secondary icon" id="playBtn" type="button" aria-label="Autoplay starten">▶</button>
         <button class="btn secondary icon" id="pauseBtn" type="button" aria-label="Autoplay pauzeren">⏸</button>
-        <button class="btn secondary" id="tickBtn" type="button">Tick countdown</button>
-        <button class="btn secondary" id="resetBtn" type="button">Nieuwe ronde resetten</button>
+        <button class="btn secondary" id="resetBtn" type="button">Nieuwe Ronde Nieuwe Kansen</button>
       </div>
       <div class="small" id="autoStatus">Autoplay staat uit.</div>
       <div class="show-mobile" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -364,7 +363,7 @@
 
   function syncPanicUi(){
     const active = isPanicActive();
-    ['drawBtn','tickBtn','resetBtn','playBtn','pauseBtn','submitNomBtn','closeBtn','mobileCloseBtn'].forEach((id)=>{
+    ['drawBtn','resetBtn','playBtn','pauseBtn','submitNomBtn','closeBtn','mobileCloseBtn'].forEach((id)=>{
       const el=$(id);
       if(!el) return;
       if(!el.dataset.baseDisabled) el.dataset.baseDisabled = el.disabled ? '1' : '0';
@@ -422,7 +421,6 @@
     if($('desktopNominationBox')) $('desktopNominationBox').innerHTML = buildNominationSummary(room, players, viewer);
 
     if($('drawBtn')) $('drawBtn').disabled = !(room.can_draw && room.stage === 'race') || autoplay || isPanicActive();
-    if($('tickBtn')) $('tickBtn').disabled = room.stage !== 'countdown' || isPanicActive();
     if($('resetBtn')) $('resetBtn').disabled = !(room.stage === 'finished' && viewer?.is_host) || isPanicActive();
     if($('closeBtn')) $('closeBtn').style.display = viewer?.is_host ? '' : 'none';
     if($('mobileCloseBtn')) $('mobileCloseBtn').style.display = viewer?.is_host ? '' : 'none';
@@ -482,22 +480,40 @@
   async function loadState(opts = {}) {
     const code = qRoom();
     if (!code || isPanicActive()) return;
+    if (loadStateInFlight && !opts.force) { loadStateQueued = true; return; }
+    loadStateInFlight = true;
+    loadStateQueued = false;
     try {
-      const state = await api.rpc('tick_paardenrace_room_safe', { room_code_input: code });
+      const state = await api.rpc('tick_paardenrace_room_safe', { room_code_input: code }, { timeoutMs: opts.timeoutMs || 3600 });
       if (!state || !state.room || String(state.room.stage || '').toLowerCase() === 'closed') {
         bounceToLobby('Deze lobby is gesloten. Je gaat terug naar de lobby.');
         return;
       }
       unresolvedLoads = 0;
+      stateFailureCount = 0;
       await applyState(state, opts);
     } catch (err) {
       const msg = err.message || 'Kon state niet laden.';
       unresolvedLoads += 1;
+      if (/timeout/i.test(msg)) {
+        stateFailureCount += 1;
+        setStatus(stateFailureCount >= 2 ? 'Live race reageert te traag. We halen je terug naar de lobby.' : 'Live race reageert traag. Nieuwe poging...');
+        if (stateFailureCount >= 2) {
+          bounceToLobby('Deze live race reageert niet meer goed op mobiel. Je gaat terug naar de lobby.');
+          return;
+        }
+      }
       if (/gesloten|closed|bestaat niet|not found|unknown room|geen.*room|room.*weg/i.test(msg) || unresolvedLoads >= 4) {
         bounceToLobby('Deze lobby is niet meer actief. Je gaat terug naar de lobby.');
         return;
       }
-      setStatus(msg);
+      if (!/timeout/i.test(msg)) setStatus(msg);
+    } finally {
+      loadStateInFlight = false;
+      if (loadStateQueued && !isPanicActive()) {
+        loadStateQueued = false;
+        window.setTimeout(()=>loadState(Object.assign({}, opts, { force:true })), 90);
+      }
     }
   }
 
@@ -554,7 +570,6 @@
   if($('panicBtn')) $('panicBtn').addEventListener('click', ()=>{ stopAutoplay(); if(statePollTimer){ clearInterval(statePollTimer); statePollTimer = null; } setPanicActive(true); });
   if($('mobilePanicBtn')) $('mobilePanicBtn').addEventListener('click', ()=>{ stopAutoplay(); if(statePollTimer){ clearInterval(statePollTimer); statePollTimer = null; } setPanicActive(true); });
   if($('panicReleaseBtn')) $('panicReleaseBtn').addEventListener('click', ()=>{ setPanicActive(false); loadState({ noAnimation: true }); if(!statePollTimer){ statePollTimer = setInterval(() => { if (!victoryActive && !isPanicActive()) { loadState({ noAnimation: true }); } }, 1200); } });
-  if($('tickBtn')) $('tickBtn').addEventListener('click', async () => { try { await loadState(); setStatus('Countdown één stap verder getikt / state opnieuw opgehaald.'); } catch(e) { setStatus(e.message); } });
   if($('drawBtn')) $('drawBtn').addEventListener('click', drawNext);
   if($('playBtn')) $('playBtn').addEventListener('click', startAutoplay);
   if($('pauseBtn')) $('pauseBtn').addEventListener('click', stopAutoplay);
@@ -562,7 +577,7 @@
     try {
       stopAutoplay();
       await applyState(await api.rpc('reset_paardenrace_room_safe', { room_code_input: qRoom() }), { noAnimation: true });
-      setStatus('Race is teruggezet naar een frisse volgende ronde.');
+      setStatus('Nieuwe ronde klaargezet. Nieuwe ronde, nieuwe kansen.');
     } catch(e) { setStatus(e.message || 'Reset mislukt.'); }
   });
   function closeMatchAction(){

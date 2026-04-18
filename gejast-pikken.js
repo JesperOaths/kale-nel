@@ -6,11 +6,11 @@
   const LEGACY_LEAVE_KEYS = ['gejast_pikken_leave_suppress','gejast_pikken_leave_suppress_v540'];
   const LEGACY_VIEWER_KEYS = ['gejast_pikken_viewer_hint','gejast_pikken_viewer_hint_v542','gejast_pikken_viewer_hint_v541'];
   const LEGACY_SNAPSHOT_KEYS = ['gejast_pikken_state_snapshot','gejast_pikken_state_snapshot_v542','gejast_pikken_state_snapshot_v541'];
-  const CANONICAL_PARTICIPANT_KEY = 'gejast_pikken_identity_v582';
-  const CANONICAL_VIEWER_KEY = 'gejast_pikken_viewer_v582';
-  const CANONICAL_LEAVE_KEY = 'gejast_pikken_leave_v582';
-  const CANONICAL_SNAPSHOT_KEY = 'gejast_pikken_snapshot_v582';
-  const POLL_MS = 1400;
+  const CANONICAL_PARTICIPANT_KEY = 'gejast_pikken_identity_v583';
+  const CANONICAL_VIEWER_KEY = 'gejast_pikken_viewer_v583';
+  const CANONICAL_LEAVE_KEY = 'gejast_pikken_leave_v583';
+  const CANONICAL_SNAPSHOT_KEY = 'gejast_pikken_snapshot_v583';
+  const POLL_MS = 1600;
   const LEAVE_SUPPRESS_MS = 60 * 1000;
   const SNAPSHOT_MAX_MS = 2 * 60 * 1000;
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -32,7 +32,10 @@
     compact: false,
     lastRevealRound: 0,
     lastLoadFailed: false,
-    connectionHint: 'verbinding ok'
+    connectionHint: 'verbinding ok',
+    loadInFlight: false,
+    loadQueued: false,
+    liveFailureCount: 0
   };
 
   function isUuid(value){ return UUID_RE.test(String(value || '').trim()); }
@@ -97,7 +100,7 @@
   }
   function connectionPill(text, cls){ const id = UI.page === 'live' ? '#pkConnectionPill' : '#pkConnectionPill'; const el = qs(id); if (!el) return; el.className = `pill ${cls || 'wait'}`; el.textContent = text; }
   function showToast(text){ const stack = qs('#toastStack'); if (!stack || !text) return; const toast = document.createElement('div'); toast.className = 'toast'; toast.textContent = text; stack.appendChild(toast); setTimeout(()=>{ toast.remove(); }, 2600); }
-  function normalizeError(err){ const msg = String(err && err.message || err || 'Onbekende fout'); if(/invalid input syntax for type uuid/i.test(msg)) return 'Deze link gebruikt nog geen geldige tafel-id. Open de live tafel opnieuw vanuit de lobby.'; if(/not.*participant|geen.*deelnemer|not.*member|geen.*lid/i.test(msg)) return 'Je spelerssessie hoort niet hard genoeg bewezen bij deze tafel. Je blijft daarom viewer of gaat terug naar de lobby.'; if(/timeout/i.test(msg)) return 'Backend antwoordt traag. De tafel probeert zichzelf opnieuw te laden.'; return msg; }
+  function normalizeError(err){ const msg = String(err && err.message || err || 'Onbekende fout'); if(/invalid input syntax for type uuid/i.test(msg)) return 'Deze link gebruikt nog geen geldige tafel-id. Open de live tafel opnieuw vanuit de lobby.'; if(/not.*participant|geen.*deelnemer|not.*member|geen.*lid/i.test(msg)) return 'Je spelerssessie hoort nog niet stevig genoeg bij deze tafel. Daarom ga je terug naar de lobby of wacht je op koppeling.'; if(/timeout/i.test(msg)) return 'Backend antwoordt traag. De tafel probeert zichzelf opnieuw te laden.'; return msg; }
   function profileForPlayer(name){ const row = UI.profiles.get(normalizeName(name)) || {}; const helper = (window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.normalizeProfileImageUrl === 'function') ? window.GEJAST_CONFIG.normalizeProfileImageUrl : (v)=>String(v || '').trim(); const src = helper(row.profile_picture_url || row.avatar_url || row.photo_url || ''); let nick = row.nickname || ''; try { const badgeKey = row.best_badge || row.primary_badge_key || row.badge_key || ''; if (!nick && badgeKey && window.GEJAST_BADGE_REGISTRY) { const badge = window.GEJAST_BADGE_REGISTRY.getBadgeByKey?.(badgeKey) || window.GEJAST_BADGE_REGISTRY.getBadgeByLegacyLabel?.(badgeKey); nick = badge?.nickname || ''; } } catch(_){} return { src, nick }; }
   function nameBySeat(players, seat){ const wanted = Number(seat || 0); const player = (Array.isArray(players) ? players : []).find((row)=>Number(row && row.seat || 0) === wanted); return player ? (player.name || '—') : '—'; }
   function sortDice(arr){ return (Array.isArray(arr) ? arr : []).map(Number).filter(Boolean).sort((a,b)=>a-b); }
@@ -126,7 +129,7 @@
 
   function seatPositions(players, anchorSeat){ const list = Array.isArray(players) ? players.slice() : []; const anchor = Number(anchorSeat || 0) || (list[0] ? Number(list[0].seat || 1) : 1); list.sort((a,b)=>{ const as = Number(a && a.seat || 0), bs = Number(b && b.seat || 0); const ar = ((as - anchor + 1000) % 1000), br = ((bs - anchor + 1000) % 1000); return ar - br || as - bs; }); const count = list.length || 1; let positions; if (count <= 2) positions = [{x:50,y:82},{x:50,y:18}]; else if (count === 3) positions = [{x:50,y:82},{x:22,y:26},{x:78,y:26}]; else if (count === 4) positions = [{x:50,y:84},{x:18,y:56},{x:50,y:14},{x:82,y:56}]; else if (count === 5) positions = [{x:50,y:84},{x:18,y:62},{x:24,y:18},{x:76,y:18},{x:82,y:62}]; else if (count === 6) positions = [{x:50,y:84},{x:16,y:66},{x:16,y:28},{x:50,y:10},{x:84,y:28},{x:84,y:66}]; else { positions = []; const rx = 40, ry = 35; for (let i=0;i<count;i++){ const ang = (90 + i*(360/count)) * Math.PI/180; positions.push({ x:50 + rx*Math.cos(ang), y:46 + ry*Math.sin(ang) }); } } return { players:list, positions }; }
 
-  function renderLobbyRole(state){ const viewer = state && state.viewer || null; const roleLabel = hasActorViewer(viewer) ? (viewer.is_host ? 'Host' : 'Gekoppeld') : 'Nog niet gekoppeld'; const roleEl = qs('#pkRoleLabel'); if (roleEl) roleEl.textContent = roleLabel; const pill = qs('#pkModePill'); const heading = qs('#pkModeHeading'); const copy = qs('#pkModeCopy'); const identity = qs('#pkIdentityCopy'); if (!pill || !heading || !copy || !identity) return; if (viewer && viewer.is_host){ pill.className = 'pill gold'; pill.textContent = 'host'; heading.textContent = `Jij bestuurt deze tafel`; copy.textContent = 'Starten, ready-check en join-flow mogen vanaf hier.'; identity.textContent = `Terugkomen blijft alleen aan zolang stoel ${Number(viewer.seat || 0)} hard aan jouw sessie hangt.`; } else if (hasPlayerIdentity(viewer)){ pill.className = 'pill ok'; pill.textContent = 'gekoppeld'; heading.textContent = `${viewer.name || 'Jij'} zit aan tafel`; copy.textContent = 'Je bent bevestigd als speler. Klaarzetten, starten en live-redirect mogen nu wel.'; identity.textContent = `Auto-rejoin mag alleen zolang match ${UI.lobbyCode || UI.gameId} én stoel ${Number(viewer.seat || 0)} kloppen.`; } else { pill.className = 'pill wait'; pill.textContent = 'status'; heading.textContent = 'Je kijkt mee totdat je identiteit hard bewezen is'; copy.textContent = 'Geen acties die een spelerstoel claimen zonder bevestigde deelnemer-state.'; identity.textContent = 'Geen nep-rejoin: zonder match-id én deelnemer-id blijf je kijker.'; } }
+  function renderLobbyRole(state){ const viewer = state && state.viewer || null; const roleLabel = hasActorViewer(viewer) ? (viewer.is_host ? 'Host' : 'Gekoppeld') : 'Nog niet gekoppeld'; const roleEl = qs('#pkRoleLabel'); if (roleEl) roleEl.textContent = roleLabel; const pill = qs('#pkModePill'); const heading = qs('#pkModeHeading'); const copy = qs('#pkModeCopy'); const identity = qs('#pkIdentityCopy'); if (!pill || !heading || !copy || !identity) return; if (viewer && viewer.is_host){ pill.className = 'pill gold'; pill.textContent = 'host'; heading.textContent = `Jij bestuurt deze tafel`; copy.textContent = 'Starten, ready-check en join-flow mogen vanaf hier.'; identity.textContent = `Terugkomen blijft alleen aan zolang stoel ${Number(viewer.seat || 0)} hard aan jouw sessie hangt.`; } else if (hasPlayerIdentity(viewer)){ pill.className = 'pill ok'; pill.textContent = 'gekoppeld'; heading.textContent = `${viewer.name || 'Jij'} zit aan tafel`; copy.textContent = 'Je bent bevestigd als speler. Klaarzetten, starten en live-redirect mogen nu wel.'; identity.textContent = `Auto-rejoin mag alleen zolang match ${UI.lobbyCode || UI.gameId} én stoel ${Number(viewer.seat || 0)} kloppen.`; } else { pill.className = 'pill wait'; pill.textContent = 'status'; heading.textContent = 'Je wacht op koppeling totdat je identiteit hard bewezen is'; copy.textContent = 'Geen handelingen zonder bevestigde deelnemer-state.'; identity.textContent = 'Geen nep-rejoin: zonder match-id én deelnemer-id blijf je in de lobbyflow.'; } }
 
   function renderLobby(state){
     const game = state && state.game || {}; const st = game.state || {}; const viewer = state && state.viewer || null; const players = Array.isArray(state && state.players) ? state.players : []; const liveLink = qs('#pkLiveLink'); const spectate = qs('#pkSpectateLink'); if (liveLink) { liveLink.href = liveHref(UI.gameId, UI.lobbyCode); liveLink.style.display = UI.gameId ? '' : 'none'; }
@@ -149,13 +152,13 @@
   function renderDrawers(state){
     const game = state && state.game || {}; const st = game.state || {}; const viewer = state && state.viewer || null; const players = Array.isArray(state && state.players) ? state.players : []; const history = bidHistoryFromState(st).slice().reverse(); const latestMove = history[0] ? `${history[0].bidder_name || 'Onbekend'} zei ${bidText(history[0])}` : 'Nog geen move zichtbaar.'; const playersBody = qs('#playersDrawerBody'); if (playersBody) playersBody.innerHTML = players.length ? players.map((player)=>`<div class="player-card"><strong>${esc(player && player.name || 'Speler')}</strong><div class="muted">Stoel ${Number(player && player.seat || 0)} · ${player && player.alive ? 'levend' : 'dood'} · ${Number(player && player.dice_count || 0)} dobbelstenen</div></div>`).join('') : '<div class="player-card muted">Nog geen spelers zichtbaar.</div>';
     const historyBody = qs('#historyDrawerBody'); if (historyBody) historyBody.innerHTML = history.length ? history.map((item, idx)=>`<div class="history-item"><strong>${esc(item.bidder_name || 'Onbekend')}</strong><div class="muted">${idx === 0 ? 'Laatste move' : `Eerder bod ${idx + 1}`} · ${esc(bidText(item))}</div></div>`).join('') : '<div class="history-item muted">Nog geen biedhistorie zichtbaar.</div>';
-    const stateBody = qs('#stateDrawerBody'); if (stateBody) stateBody.innerHTML = `<div class="help-card"><strong>Jouw modus</strong><div class="muted">${hasActorViewer(viewer) ? (viewer.is_host ? 'Host / actor' : `Speler op stoel ${Number(viewer.seat || 0)}`) : 'Viewer fallback'}</div></div><div class="help-card"><strong>Canonical truth</strong><div class="muted">Lobbycode ${esc(UI.lobbyCode || '—')} · game-id ${esc(UI.gameId || '—')} · fase ${esc(gamePhase(game))}</div></div><div class="help-card"><strong>Waarom je wel of niet mag handelen</strong><div class="muted">Actiedock wordt alleen actief als jouw deelnemersidentiteit hard bewezen is. Zonder die koppeling blijf je kijker.</div></div><div class="help-card"><strong>Laatste belangrijke move</strong><div class="muted">${esc(latestMove)}</div></div>`;
+    const stateBody = qs('#stateDrawerBody'); if (stateBody) stateBody.innerHTML = `<div class="help-card"><strong>Jouw modus</strong><div class="muted">${hasActorViewer(viewer) ? (viewer.is_host ? 'Host / actor' : `Speler op stoel ${Number(viewer.seat || 0)}`) : 'Nog niet gekoppeld'}</div></div><div class="help-card"><strong>Canonical truth</strong><div class="muted">Lobbycode ${esc(UI.lobbyCode || '—')} · game-id ${esc(UI.gameId || '—')} · fase ${esc(gamePhase(game))}</div></div><div class="help-card"><strong>Waarom je wel of niet mag handelen</strong><div class="muted">Actiedock wordt alleen actief als jouw deelnemersidentiteit hard bewezen is. Zonder die koppeling blijf je in wachtstand.</div></div><div class="help-card"><strong>Laatste belangrijke move</strong><div class="muted">${esc(latestMove)}</div></div>`;
     const helpBody = qs('#helpDrawerBody'); if (helpBody) helpBody.innerHTML = `<div class="help-card"><strong>Snelle regels</strong><div class="muted">Bied aantal × face. Pik telt als joker bij 2–6. Afkeuren start een stemronde. Daarna reveal + verlies van één dobbelsteen volgens de gekozen variant.</div></div><div class="help-card"><strong>Waarom deze mobiele indeling</strong><div class="muted">De hoofdactie blijft centraal. Historie, spelers en troubleshooting leven in drawers zodat het spel zelf niet dichtslibt.</div></div><div class="help-card"><strong>Veilige lobbykoppeling</strong><div class="muted">Als match-id of stoel niet stevig genoeg is, stuurt de site je gewoon terug naar de lobby in plaats van te doen alsof je al direct mag handelen.</div></div>`;
     syncDrawerUi();
   }
 
   function updateDock(state){
-    const game = state && state.game || {}; const st = game.state || {}; const viewer = state && state.viewer || null; const phase = gamePhase(game); const bid = st.bid || null; const turnSeat = (phase === 'voting' ? Number(st.vote_turn_seat || 0) : Number(st.turn_seat || st.current_turn_seat || 0)) || Number(bid && bid.bidder_seat || 0); const dockTitle = qs('#dockTitle'); const dockCopy = qs('#dockCopy'); const buttons = qsa('.dock-actions .dock-btn'); const bidPanel = qs('#bidPanel'); const votePanel = qs('#votePanel'); const myTurn = hasPlayerIdentity(viewer) && viewer.alive && phase === 'bidding' && Number(viewer.seat || 0) === Number(turnSeat || 0); const myVoteTurn = hasPlayerIdentity(viewer) && viewer.alive && phase === 'voting' && Number(viewer.seat || 0) === Number(turnSeat || 0); if (dockTitle && dockCopy){ if (!hasPlayerIdentity(viewer)){ dockTitle.textContent = 'Nog niet gekoppeld'; dockCopy.textContent = 'Je ziet de tafel, maar handelingen verschijnen pas zodra jouw stoel zeker is gekoppeld.'; } else if (myTurn){ dockTitle.textContent = 'Jij bent aan de beurt'; dockCopy.textContent = 'Bied hoger of keur direct af vanuit het onderste dock.'; } else if (myVoteTurn){ dockTitle.textContent = 'Jouw stem is nodig'; dockCopy.textContent = 'Reageer vanuit het dock en houd de tafel open voor de rest.'; } else { dockTitle.textContent = viewer.is_host ? 'Host' : 'Gekoppeld'; dockCopy.textContent = 'Je zit aan tafel. Niet-jouw-beurt-info blijft compact en de rest zit in drawers.'; } }
+    const game = state && state.game || {}; const st = game.state || {}; const viewer = state && state.viewer || null; const phase = gamePhase(game); const bid = st.bid || null; const turnSeat = (phase === 'voting' ? Number(st.vote_turn_seat || 0) : Number(st.turn_seat || st.current_turn_seat || 0)) || Number(bid && bid.bidder_seat || 0); const dockTitle = qs('#dockTitle'); const dockCopy = qs('#dockCopy'); const buttons = qsa('.dock-actions .dock-btn'); const bidPanel = qs('#bidPanel'); const votePanel = qs('#votePanel'); const myTurn = hasPlayerIdentity(viewer) && viewer.alive && phase === 'bidding' && Number(viewer.seat || 0) === Number(turnSeat || 0); const myVoteTurn = hasPlayerIdentity(viewer) && viewer.alive && phase === 'voting' && Number(viewer.seat || 0) === Number(turnSeat || 0); if (dockTitle && dockCopy){ if (!hasPlayerIdentity(viewer)){ dockTitle.textContent = 'Wacht op koppeling'; dockCopy.textContent = 'De tafel blijft zichtbaar. Handelingen verschijnen vanzelf zodra jouw stoel zeker is gekoppeld.'; } else if (myTurn){ dockTitle.textContent = 'Jij bent aan de beurt'; dockCopy.textContent = 'Bied hoger of keur direct af vanuit het onderste dock.'; } else if (myVoteTurn){ dockTitle.textContent = 'Jouw stem is nodig'; dockCopy.textContent = 'Reageer vanuit het dock en houd de tafel open voor de rest.'; } else { dockTitle.textContent = viewer.is_host ? 'Host' : 'Gekoppeld'; dockCopy.textContent = 'Je zit aan tafel. Niet-jouw-beurt-info blijft compact en de rest zit in drawers.'; } }
     if (bidPanel) bidPanel.classList.toggle('hidden', !myTurn); if (votePanel) votePanel.classList.toggle('hidden', !myVoteTurn);
     const rules = getBidRules(state);
     refreshBidSelectors(rules);
@@ -164,7 +167,7 @@
   }
 
   function renderLive(state){
-    const game = state && state.game || {}; const st = game.state || {}; const viewer = state && state.viewer || null; const phase = gamePhase(game); const bid = st.bid || null; qs('#lobbyCode') && (qs('#lobbyCode').textContent = UI.lobbyCode || '—'); qs('#phaseTitleMetric') && (qs('#phaseTitleMetric').textContent = phase); qs('#phaseTitle') && (qs('#phaseTitle').textContent = phase === 'voting' ? 'Iedereen stemt op het bod' : phase === 'finished' ? 'Potje afgerond' : 'Plaats of volg het volgende bod'); qs('#phasePill') && (qs('#phasePill').className = `pill ${phase === 'bidding' ? 'gold' : phase === 'voting' ? 'wait' : phase === 'finished' ? 'bad' : 'wait'}`); qs('#phasePill') && (qs('#phasePill').textContent = phase); qs('#pkLiveModePill') && (qs('#pkLiveModePill').className = `pill ${hasPlayerIdentity(viewer) ? (viewer.is_host ? 'gold' : 'ok') : 'wait'}`); qs('#pkLiveModePill') && (qs('#pkLiveModePill').textContent = hasPlayerIdentity(viewer) ? (viewer.is_host ? 'host' : 'gekoppeld') : 'status'); qs('#turnName') && (qs('#turnName').textContent = nameBySeat(state && state.players, phase === 'voting' ? st.vote_turn_seat : (st.turn_seat || st.current_turn_seat || (bid && bid.bidder_seat)))); qs('#totalCurrentDice') && (qs('#totalCurrentDice').textContent = String(Number(state && state.dice_totals && state.dice_totals.current_total || 0))); qs('#currentBid') && (qs('#currentBid').textContent = bidText(bid)); qs('#bidBy') && (qs('#bidBy').textContent = bid && bid.bidder_name ? `door ${bid.bidder_name}` : ''); const focusMove = bidHistoryFromState(st).slice(-1)[0]; qs('#focusMoveText') && (qs('#focusMoveText').textContent = focusMove ? `${focusMove.bidder_name || 'Onbekend'} zei ${bidText(focusMove)}` : 'Nog geen move zichtbaar.'); qs('#contestedBidLine') && (qs('#contestedBidLine').textContent = phase === 'voting' && focusMove ? `Iedereen stemt nu op ${bidText(focusMove)} van ${focusMove.bidder_name || 'onbekend'}.` : (focusMove ? `Laatste bod: ${bidText(focusMove)} van ${focusMove.bidder_name || 'onbekend'}.` : '')); qs('#viewerMeta') && (qs('#viewerMeta').textContent = hasPlayerIdentity(viewer) ? `${viewer.name || 'Jij'} · stoel ${Number(viewer.seat || 0)} · ${viewer.alive ? 'levend' : 'dood'} · ${Number(viewer.dice_count || 0)} dobbelstenen${viewer.inferred ? ' · herkend via lobby-koppeling' : ''}` : 'Je stoel is nog niet hard genoeg bevestigd. Daarom kun je hier nog niet direct handelen.'); qs('#selfNameLine') && (qs('#selfNameLine').textContent = hasPlayerIdentity(viewer) ? (viewer.name || 'Jij') : 'Viewer'); const prof = profileForPlayer(viewer && viewer.name); const selfAvatar = qs('#selfAvatar'); if (selfAvatar) selfAvatar.innerHTML = viewer && prof.src ? `<img src="${esc(prof.src)}" alt="${esc(viewer.name || 'Speler')}" referrerpolicy="no-referrer" onerror="this.parentNode.textContent='${esc(initials(viewer && viewer.name))}'">` : esc(initials(viewer && viewer.name)); qs('#selfNick') && (qs('#selfNick').textContent = prof.nick || ' '); const myDice = qs('#myDice'); if (myDice){ myDice.innerHTML = ''; sortDice(state && state.my_hand).forEach((face)=>{ myDice.insertAdjacentHTML('beforeend', `<img class="die ${Number(face) === 1 ? 'pik' : ''}" src="./assets/pikken/dice-${Number(face)}.svg" alt="die ${Number(face)}">`); }); if (!sortDice(state && state.my_hand).length) myDice.innerHTML = '<div class="muted">Geen zichtbare hand zolang je nog niet gekoppeld bent.</div>'; }
+    const game = state && state.game || {}; const st = game.state || {}; const viewer = state && state.viewer || null; const phase = gamePhase(game); const bid = st.bid || null; qs('#lobbyCode') && (qs('#lobbyCode').textContent = UI.lobbyCode || '—'); qs('#phaseTitleMetric') && (qs('#phaseTitleMetric').textContent = phase); qs('#phaseTitle') && (qs('#phaseTitle').textContent = phase === 'voting' ? 'Iedereen stemt op het bod' : phase === 'finished' ? 'Potje afgerond' : 'Plaats of volg het volgende bod'); qs('#phasePill') && (qs('#phasePill').className = `pill ${phase === 'bidding' ? 'gold' : phase === 'voting' ? 'wait' : phase === 'finished' ? 'bad' : 'wait'}`); qs('#phasePill') && (qs('#phasePill').textContent = phase); qs('#pkLiveModePill') && (qs('#pkLiveModePill').className = `pill ${hasPlayerIdentity(viewer) ? (viewer.is_host ? 'gold' : 'ok') : 'wait'}`); qs('#pkLiveModePill') && (qs('#pkLiveModePill').textContent = hasPlayerIdentity(viewer) ? (viewer.is_host ? 'host' : 'gekoppeld') : 'status'); qs('#turnName') && (qs('#turnName').textContent = nameBySeat(state && state.players, phase === 'voting' ? st.vote_turn_seat : (st.turn_seat || st.current_turn_seat || (bid && bid.bidder_seat)))); qs('#totalCurrentDice') && (qs('#totalCurrentDice').textContent = String(Number(state && state.dice_totals && state.dice_totals.current_total || 0))); qs('#currentBid') && (qs('#currentBid').textContent = bidText(bid)); qs('#bidBy') && (qs('#bidBy').textContent = bid && bid.bidder_name ? `door ${bid.bidder_name}` : ''); const focusMove = bidHistoryFromState(st).slice(-1)[0]; qs('#focusMoveText') && (qs('#focusMoveText').textContent = focusMove ? `${focusMove.bidder_name || 'Onbekend'} zei ${bidText(focusMove)}` : 'Nog geen move zichtbaar.'); qs('#contestedBidLine') && (qs('#contestedBidLine').textContent = phase === 'voting' && focusMove ? `Iedereen stemt nu op ${bidText(focusMove)} van ${focusMove.bidder_name || 'onbekend'}.` : (focusMove ? `Laatste bod: ${bidText(focusMove)} van ${focusMove.bidder_name || 'onbekend'}.` : '')); qs('#viewerMeta') && (qs('#viewerMeta').textContent = hasPlayerIdentity(viewer) ? `${viewer.name || 'Jij'} · stoel ${Number(viewer.seat || 0)} · ${viewer.alive ? 'levend' : 'dood'} · ${Number(viewer.dice_count || 0)} dobbelstenen${viewer.inferred ? ' · herkend via lobby-koppeling' : ''}` : 'Je stoel is nog niet hard genoeg bevestigd. Daarom wachten we nog even met directe handelingen.'); qs('#selfNameLine') && (qs('#selfNameLine').textContent = hasPlayerIdentity(viewer) ? (viewer.name || 'Jij') : 'Nog niet gekoppeld'); const prof = profileForPlayer(viewer && viewer.name); const selfAvatar = qs('#selfAvatar'); if (selfAvatar) selfAvatar.innerHTML = viewer && prof.src ? `<img src="${esc(prof.src)}" alt="${esc(viewer.name || 'Speler')}" referrerpolicy="no-referrer" onerror="this.parentNode.textContent='${esc(initials(viewer && viewer.name))}'">` : esc(initials(viewer && viewer.name)); qs('#selfNick') && (qs('#selfNick').textContent = prof.nick || ' '); const myDice = qs('#myDice'); if (myDice){ myDice.innerHTML = ''; sortDice(state && state.my_hand).forEach((face)=>{ myDice.insertAdjacentHTML('beforeend', `<img class="die ${Number(face) === 1 ? 'pik' : ''}" src="./assets/pikken/dice-${Number(face)}.svg" alt="die ${Number(face)}">`); }); if (!sortDice(state && state.my_hand).length) myDice.innerHTML = '<div class="muted">Nog geen zichtbare hand zolang je stoel nog niet gekoppeld is.</div>'; }
     const disbandBtn = qs('#disbandTableBtn'); if (disbandBtn) disbandBtn.classList.toggle('hidden', !(viewer && viewer.is_host && phase === 'lobby'));
     const reveal = st.last_reveal || game.last_reveal || null; const revealEl = qs('#revealBanner'); if (revealEl){ if (!reveal || phase === 'voting'){ revealEl.classList.add('hidden'); revealEl.innerHTML = ''; } else { revealEl.classList.remove('hidden'); revealEl.innerHTML = `${reveal.bid_true ? '✅ Bod gehaald' : '❌ Bod afgekeurd'} · ${Number(reveal.counted_total || 0)} geteld · eerste verliezer: ${esc(nameBySeat(state && state.players, reveal.first_loser_seat) || '—')}`; } }
     renderSeats(state); renderDrawers(state); updateDock(state); const conn = UI.lastLoadFailed ? 'verbinding hapert' : UI.connectionHint; connectionPill(conn, UI.lastLoadFailed ? 'bad' : 'ok'); }
@@ -175,22 +178,49 @@
   function safeViewerFallback(state){ const decorated = decorateState(state); if (decorated && decorated.viewer && !hasPlayerIdentity(decorated.viewer)){ clearParticipantIdentityBits(); } return decorated; }
   function clearParticipantIdentityBits(){ const identity = getParticipantIdentity(); if (!identity) return; setParticipantIdentity({ game_id: identity.game_id || '', lobby_code: identity.lobby_code || '', scope: identity.scope || currentScope(), seat: null, name: identity.name || UI.viewerName || '' }); }
 
-  async function loadWave(){
+  async function loadWave(force){
+    if (UI.loadInFlight && !force) { UI.loadQueued = true; return; }
+    UI.loadInFlight = true;
+    UI.loadQueued = false;
     const fallback = snapshotFallback();
     let participantState = null; let publicState = null;
-    try { if (UI.gameId || UI.lobbyCode) participantState = await loadParticipantState(UI.gameId); } catch(err) { participantState = null; }
-    if (participantState) syncKnownGame(participantState);
-    try { if (!participantState || !hasActorViewer(participantState.viewer)) publicState = await loadPublicState(); } catch(err) { publicState = null; }
-    if (publicState) syncKnownGame(publicState);
-    const state = safeViewerFallback(participantState || publicState || fallback || null);
-    if (!state){ UI.lastLoadFailed = true; UI.connectionHint = 'verbinding hapert'; connectionPill(UI.connectionHint, 'bad'); UI.unresolvedSince = UI.unresolvedSince || Date.now(); const lived = UI.page === 'live'; if (lived && (Date.now() - UI.unresolvedSince) > 3600){ finalizeLocalLeave(); UI.redirecting = true; window.location.replace(lobbyHref(UI.gameId, UI.lobbyCode)); return; } setStatus('Geen actieve tafel gevonden. Open Pikken vanuit de lobby.', true); return; }
-    UI.lastLoadFailed = false; UI.state = state; UI.publicState = publicState || state; syncKnownGame(state);
-    const viewer = state.viewer || null; if (hasPlayerIdentity(viewer)) { setParticipantIdentity({ game_id: UI.gameId, lobby_code: UI.lobbyCode, scope: UI.scope, seat: Number(viewer.seat || 0) || null, name: viewer.name || '' }); clearLeaveSuppression(); }
-    UI.connectionHint = hasPlayerIdentity(viewer) ? 'speler bevestigd' : 'viewer fallback';
-    if (UI.page === 'lobby'){ renderLobby(state); setLobbySurfaceStarted(state); }
-    else { renderLive(state); }
-    setStatus('', false);
-    UI.unresolvedSince = 0;
+    try {
+      try { if (UI.gameId || UI.lobbyCode) participantState = await loadParticipantState(UI.gameId); } catch(err) { participantState = null; }
+      if (participantState) syncKnownGame(participantState);
+      try { if (!participantState || !hasActorViewer(participantState.viewer)) publicState = await loadPublicState(); } catch(err) { publicState = null; }
+      if (publicState) syncKnownGame(publicState);
+      const state = safeViewerFallback(participantState || publicState || fallback || null);
+      if (!state){
+        UI.lastLoadFailed = true;
+        UI.connectionHint = 'verbinding hapert';
+        connectionPill(UI.connectionHint, 'bad');
+        UI.unresolvedSince = UI.unresolvedSince || Date.now();
+        if (UI.page === 'live') UI.liveFailureCount = Number(UI.liveFailureCount || 0) + 1;
+        const lived = UI.page === 'live';
+        if (lived && (UI.liveFailureCount >= 2 || (Date.now() - UI.unresolvedSince) > 2600)){
+          finalizeLocalLeave();
+          UI.redirecting = true;
+          window.location.replace(lobbyHref(UI.gameId, UI.lobbyCode));
+          return;
+        }
+        setStatus('Geen actieve tafel gevonden. Open Pikken vanuit de lobby.', true);
+        return;
+      }
+      UI.liveFailureCount = 0;
+      UI.lastLoadFailed = false; UI.state = state; UI.publicState = publicState || state; syncKnownGame(state);
+      const viewer = state.viewer || null; if (hasPlayerIdentity(viewer)) { setParticipantIdentity({ game_id: UI.gameId, lobby_code: UI.lobbyCode, scope: UI.scope, seat: Number(viewer.seat || 0) || null, name: viewer.name || '' }); clearLeaveSuppression(); }
+      UI.connectionHint = hasPlayerIdentity(viewer) ? 'speler bevestigd' : 'koppeling wacht';
+      if (UI.page === 'lobby'){ renderLobby(state); setLobbySurfaceStarted(state); }
+      else { renderLive(state); }
+      setStatus('', false);
+      UI.unresolvedSince = 0;
+    } finally {
+      UI.loadInFlight = false;
+      if (UI.loadQueued && !UI.redirecting){
+        UI.loadQueued = false;
+        window.setTimeout(()=>loadWave(true), 60);
+      }
+    }
   }
 
   function startPolling(){ stopPolling(); UI.polls = setInterval(()=>{ if (!document.hidden && !UI.redirecting) loadWave(); }, POLL_MS); loadWave(); }
@@ -236,7 +266,7 @@
     if (UI.page === 'live') bindLive(); else bindLobby();
     syncHistoryUrl();
     startPolling();
-    document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) loadWave(); });
+    document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) loadWave(true); });
     window.addEventListener('beforeunload', ()=>{ if (UI.state) saveSnapshot(UI.state); });
   }
 
