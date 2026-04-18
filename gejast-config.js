@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v578',
+    VERSION:'v579',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -34,6 +34,7 @@
   function parseVersion(v){ const m=String(v||'').match(/v?(\d+)/i); return m?Number(m[1]):0; }
   const candidates = [detectScriptVersion(), window.GEJAST_PAGE_VERSION, CONFIG.VERSION].filter(Boolean);
   const effectiveVersion = candidates.sort((a,b)=>parseVersion(b)-parseVersion(a))[0] || CONFIG.VERSION;
+  const effectiveNumber = parseVersion(effectiveVersion) || parseVersion(CONFIG.VERSION) || 579;
   const label = `${effectiveVersion} · Made by Bruis`;
   window.GEJAST_PAGE_VERSION = effectiveVersion;
 
@@ -107,6 +108,20 @@
     });
   }
 
+  function maybeForceFreshShell(){
+    try{
+      const requested = detectScriptVersion();
+      const requestedNum = parseVersion(requested);
+      if (!requestedNum || requestedNum >= effectiveNumber) return;
+      const params = new URLSearchParams(location.search || '');
+      const currentBuster = Number(params.get('__gv') || 0);
+      if (currentBuster >= effectiveNumber) return;
+      params.set('__gv', String(effectiveNumber));
+      const next = `${location.pathname}?${params.toString()}${location.hash || ''}`;
+      location.replace(next);
+    }catch(_){}
+  }
+
   function normalizeProfileImageUrl(value){
     const raw = String(value || '').trim();
     if (!raw) return '';
@@ -117,19 +132,6 @@
     if (/^(public\/)?avatars?\//i.test(raw) && base) return `${base}/storage/v1/object/public/${raw.replace(/^(public\/)?/, '').replace(/^\//, '')}`;
     if (base && /^[A-Za-z0-9._-]+\/.+/.test(raw)) return `${base}/storage/v1/object/public/${raw.replace(/^\//, '')}`;
     return raw;
-  }
-
-  function normalizePersonName(value){
-    return String(value || '').replace(/\s+/g, ' ').trim();
-  }
-  function uniquePersonNames(values){
-    const seen = new Set();
-    return (Array.isArray(values) ? values : []).map(normalizePersonName).filter((name)=>{
-      const key = name.toLowerCase();
-      if (!name || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
   }
 
   function getPlayerSessionToken(){
@@ -287,12 +289,13 @@
       if (path === 'profiles.html') modules.push('./profiles-mobile-art-v578.js');
       if (path === 'pikken.html' || path === 'pikken_live.html' || path === 'pikken_stats.html') modules.push('./pikken-deep-mobile-v578.js');
       if (path === 'paardenrace.html' || path === 'paardenrace_live.html' || path === 'paardenrace_stats.html') modules.push('./paardenrace-deep-mobile-v578.js');
-      modules.forEach((src)=>{
-        if (document.querySelector(`script[data-gejast-module="${src}"]`)) return;
+      modules.forEach((baseSrc)=>{
+        const src = `${baseSrc}?v${effectiveNumber}`;
+        if (document.querySelector(`script[data-gejast-module="${baseSrc}"]`)) return;
         const s = document.createElement('script');
         s.src = src;
         s.defer = true;
-        s.setAttribute('data-gejast-module', src);
+        s.setAttribute('data-gejast-module', baseSrc);
         head.appendChild(s);
       });
     }catch(_){}
@@ -322,6 +325,7 @@
     shouldHideWatermark
   });
 
+  maybeForceFreshShell();
   loadPageModules();
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyVersionLabel, { once: true });
   else applyVersionLabel();
