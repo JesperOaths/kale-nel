@@ -10,7 +10,7 @@
   <style>
     :root { --gold:#9a8241; --card-bg:#f9f7f2; --line:rgba(0,0,0,0.06); --muted:#666; --ok:#2b5b37; --warn:#8b3a30; }
     * { box-sizing:border-box; }
-    body { margin:0; padding:72px 20px 20px; font-family:'Inter', sans-serif; background: linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed; min-height:100vh; }
+    body { margin:0; padding:20px; font-family:'Inter', sans-serif; background: linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed; min-height:100vh; }
     .main-card { background:var(--card-bg); border-radius:24px; padding:30px; max-width:900px; margin:0 auto; box-shadow:0 20px 50px rgba(0,0,0,0.08); position:relative; }
     .card-logo { position:absolute; top:25px; right:25px; width:40px; }
     h1 { font-size:28px; margin-bottom:20px; }
@@ -110,20 +110,52 @@
     @media (max-width:700px){.request-grid,.entry-meta,.hub-grid,.manual-grid{grid-template-columns:1fr}}
   </style>
 
+
+  <style id="admin-mobile-wave2">
+    .activation-tools{margin-top:14px;padding:14px;border-radius:18px;background:#faf7ef;border:1px solid rgba(0,0,0,0.06);display:grid;gap:12px}
+    .pipeline-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .pipeline-card{padding:12px 14px;border-radius:16px;background:#fff;border:1px solid rgba(0,0,0,0.06);display:grid;gap:4px}
+    .pipeline-card .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#85754f;font-weight:800}
+    .pipeline-card .value{font-weight:800;line-height:1.3;word-break:break-word}
+    .activation-link-box{background:#fff;border-radius:16px;border:1px solid rgba(0,0,0,0.08);padding:12px 14px;word-break:break-all;font-size:13px}
+    .request .entry-title{font-size:clamp(20px,4vw,26px)}
+    .request details{background:#fff;border:1px solid rgba(0,0,0,0.06);border-radius:16px;padding:0 12px}
+    .request details summary{padding:12px 0}
+    .request .decision-reason{min-height:92px;border-radius:14px}
+    @media (max-width:760px){
+      body{padding:84px 12px 18px}
+      .main-card{padding:18px;border-radius:20px}
+      .card-logo{top:18px;right:18px;width:38px}
+      .request,.card{padding:16px;border-radius:18px}
+      .entry-top{display:grid;gap:10px}
+      .entry-top > div:last-child{text-align:left !important}
+      .entry-title{font-size:26px;line-height:1.02}
+      .entry-meta,.request-grid,.activation-meta,.manual-grid,.hub-grid,.stats-grid,.pipeline-grid{grid-template-columns:1fr}
+      .action-row,.compact-actions,.panel-actions,.toolbar{flex-direction:column;align-items:stretch}
+      .action-row .btn,.action-row .approve-btn,.action-row .reject-btn,.action-row .link-btn,.action-row .mail-btn,.compact-actions .btn,.compact-actions .link-btn,.compact-actions .reject-btn,.compact-actions .approve-btn,.toolbar .btn{width:100%;justify-content:center}
+      .topbar{position:sticky;top:0;z-index:6;background:linear-gradient(180deg,rgba(249,247,242,.98),rgba(249,247,242,.95));padding-bottom:12px}
+      .toolbar{width:100%}
+      .activation-tools{padding:12px}
+      .request .entry-note{font-size:15px}
+      .state-badge{font-size:12px;padding:6px 10px}
+      .version-tag{padding-bottom:4px}
+    }
+  </style>
+
   <style id="bruis-watermark-style">
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v568';</script><script src="./gejast-config.js?v568"></script><script src="./gejast-scope-context.js?v568"></script><script src="./gejast-family-rollout.js?v568"></script>
+  <script>window.GEJAST_PAGE_VERSION='v573';</script><script src="./gejast-config.js?v573"></script><script src="./gejast-scope-context.js?v392"></script><script src="./gejast-family-rollout.js?v393"></script>
   <script src="./gejast-rpc-contract.js?v392"></script>
   <script src="./gejast-admin-rpc.js?v392"></script>
   <script src="./admin-session-sync.js?v392"></script>
   <script src="./admin-topnav.js?v392"></script>
   <script src="./gejast-admin-claims-buckets.js?v392"></script>
   <script src="./gejast-admin-claims-source.js?v392"></script>
-  <script src="./gejast-admin-source.js?v568"></script><script src="./gejast-account-links.js?v496"></script>
+  <script src="./gejast-admin-source.js?v399"></script><script src="./gejast-account-links.js?v399"></script>
 </head>
 <body>
   <div class="main-card">
@@ -260,16 +292,21 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     function activationPanelHtml(req) {
       return `
         <div class="activation-tools hidden" id="activation-tools-${requestIdOf(req)}">
-          <div><strong>Activatielink klaarzetten</strong></div>
-          <div class="muted" style="margin-top:4px;">Genereer, kopieer of verstuur de activatielink via de Make-mailflow.</div>
-          <div class="activation-meta">
-            ${metaBox('E-mail', req.requester_email || 'Onbekend')}
-            <div class="data-box"><span class="label">Activatie verloopt</span><span id="activation-expires-${requestIdOf(req)}">Nog niet gegenereerd</span></div>
+          <div>
+            <strong>Activatie en mailflow</strong>
+            <div class="muted" style="margin-top:4px;">Leesbare mobiele flow voor link, wachtrij en Make-ping.</div>
+          </div>
+          <div class="pipeline-grid">
+            <div class="pipeline-card"><span class="label">Aangevraagde naam</span><span class="value">${escapeHtml(displayNameOf(req))}</span></div>
+            <div class="pipeline-card"><span class="label">Ontvanger</span><span class="value">${escapeHtml(req.requester_email || 'Onbekend')}</span></div>
+            <div class="pipeline-card"><span class="label">Link verloopt</span><span class="value" id="activation-expires-${requestIdOf(req)}">Nog niet gegenereerd</span></div>
           </div>
           <div class="activation-link-box" id="activation-url-${requestIdOf(req)}">Nog geen activatielink gegenereerd.</div>
           <div class="action-row">
             <button class="copy-btn" type="button" data-copy-activation data-id="${requestIdOf(req)}">Kopieer activatielink</button>
-            <button class="mail-btn" type="button" data-mail-activation data-id="${requestIdOf(req)}">Mailconcept</button><button class="mail-btn" type="button" data-send-activation data-id="${requestIdOf(req)}">Verstuur via Make</button><button class="mail-btn" type="button" data-hide-activation data-id="${requestIdOf(req)}">Inklappen</button>
+            <button class="mail-btn" type="button" data-mail-activation data-id="${requestIdOf(req)}">Mailconcept</button>
+            <button class="mail-btn" type="button" data-send-activation data-id="${requestIdOf(req)}">Verstuur via Make</button>
+            <button class="mail-btn" type="button" data-hide-activation data-id="${requestIdOf(req)}">Inklappen</button>
           </div>
         </div>
       `;
@@ -279,129 +316,47 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return `<div class="data-box"><span class="label">${escapeHtml(label)}</span>${escapeHtml(value || 'Onbekend')}</div>`;
     }
 
-    function readNestedObjects(input, out, depth = 0) {
-      if (!input || depth > 3) return;
-      if (typeof input === 'string') {
-        const parsed = parseMaybeJson(input);
-        if (parsed && parsed !== input) readNestedObjects(parsed, out, depth + 1);
-        return;
-      }
-      if (Array.isArray(input)) {
-        input.forEach((entry) => readNestedObjects(entry, out, depth + 1));
-        return;
-      }
-      if (typeof input === 'object') {
-        out.push(input);
-        ['requester_meta','meta','payload','request','row','item','request_data','request_payload','context','visitor_meta','client_meta'].forEach((key) => {
-          if (Object.prototype.hasOwnProperty.call(input, key)) readNestedObjects(input[key], out, depth + 1);
-        });
-      }
-    }
-
-    function firstMetaValue(objects, keys) {
-      for (const key of keys) {
-        for (const obj of objects) {
-          if (!obj || typeof obj !== 'object') continue;
-          const value = obj[key];
-          if (value === undefined || value === null) continue;
-          if (Array.isArray(value)) {
-            const joined = value.map((entry) => String(entry || '').trim()).filter(Boolean).join(', ');
-            if (joined) return joined;
-            continue;
-          }
-          const text = String(value).trim();
-          if (text) return text;
-        }
-      }
-      return '';
-    }
-
-    function extractMeta(input) {
-      const objects = [];
-      readNestedObjects(input, objects, 0);
-      if (!objects.length && input && typeof input === 'object') objects.push(input);
-      const screenW = firstMetaValue(objects, ['screen_w', 'screen_width', 'width']);
-      const screenH = firstMetaValue(objects, ['screen_h', 'screen_height', 'height']);
-      const viewportW = firstMetaValue(objects, ['viewport_w', 'viewport_width']);
-      const viewportH = firstMetaValue(objects, ['viewport_h', 'viewport_height']);
+    function extractMeta(meta) {
+      const m = meta && typeof meta === 'object' ? meta : {};
       return {
-        language: firstMetaValue(objects, ['language', 'locale', 'lang']) || '',
-        timezone: firstMetaValue(objects, ['timezone', 'time_zone', 'tz']) || '',
-        platform: firstMetaValue(objects, ['platform', 'ua_platform', 'os', 'device_platform']) || '',
-        user_agent: firstMetaValue(objects, ['user_agent', 'ua', 'navigator_user_agent']) || '',
-        screen: firstMetaValue(objects, ['screen', 'screen_size']) || ((screenW && screenH) ? `${screenW}x${screenH}` : ''),
-        viewport: firstMetaValue(objects, ['viewport', 'viewport_size']) || ((viewportW && viewportH) ? `${viewportW}x${viewportH}` : ''),
-        referrer: firstMetaValue(objects, ['referrer', 'referer']) || '',
-        page_url: firstMetaValue(objects, ['page_url', 'page', 'url', 'pathname']) || '',
-        color_scheme: firstMetaValue(objects, ['color_scheme', 'prefers_color_scheme', 'theme']) || '',
-        max_touch_points: firstMetaValue(objects, ['max_touch_points', 'touch_points', 'touchpoints']) || ''
+        language: m.language || (Array.isArray(m.languages) ? m.languages.join(', ') : ''),
+        timezone: m.timezone || '',
+        platform: m.platform || '',
+        user_agent: m.user_agent || '',
+        screen: m.screen || '',
+        viewport: m.viewport || '',
+        referrer: m.referrer || '',
+        page_url: m.page_url || '',
+        color_scheme: m.color_scheme || '',
+        max_touch_points: m.max_touch_points ?? ''
       };
     }
 
 
     function cleanDisplayCandidate(value) {
-      const text = String(value || '').replace(/\s+/g, ' ').trim();
+      const text = String(value || '').trim();
       if (!text) return '';
       if (/^(onbekend|unknown|n\/a|null|undefined|geen)$/i.test(text)) return '';
-      if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(text)) return '';
       return text;
     }
 
-    function collectNameCandidates(value, out, depth = 0) {
-      if (!value || depth > 3) return;
-      if (typeof value === 'string') {
-        const clean = cleanDisplayCandidate(value);
-        if (clean) out.push(clean);
-        return;
-      }
-      if (Array.isArray(value)) {
-        value.forEach((entry) => collectNameCandidates(entry, out, depth + 1));
-        return;
-      }
-      if (typeof value === 'object') {
-        Object.entries(value).forEach(([key, entry]) => {
-          if (!/name|username|display|chosen|desired|public|reserved|requested|canonical|player|label/i.test(String(key))) return;
-          collectNameCandidates(entry, out, depth + 1);
-        });
-      }
-    }
-
-    function requestedNameOf(req) {
-      const candidates = [];
-      [
-        req?.desired_name,
-        req?.requested_name,
-        req?.requested_display_name,
-        req?.requested_username,
-        req?.username,
-        req?.requested_slug,
+    function displayNameOf(req) {
+      const candidates = [
         req?.display_name,
         req?.public_display_name,
         req?.chosen_username,
+        req?.desired_name,
         req?.player_name,
         req?.reserved_display_name,
         req?.reserved_name,
-        req?.allowed_username_display_name,
-        req?.granted_display_name,
-        req?.requester_meta,
-        req?.payload,
-        req?.request,
-        req?.row,
-        req?.item
-      ].forEach((value) => collectNameCandidates(value, candidates, 0));
-      const seen = new Set();
-      for (const candidate of candidates) {
-        const clean = cleanDisplayCandidate(candidate);
-        const key = clean.toLowerCase();
-        if (!clean || seen.has(key)) continue;
-        seen.add(key);
-        return clean;
-      }
-      return '';
-    }
-
-    function displayNameOf(req) {
-      return requestedNameOf(req) || `Aanvraag #${req?.id ?? '?'}`;
+        req?.requester_name,
+        req?.name,
+        req?.requester_meta?.display_name,
+        req?.requester_meta?.player_name,
+        req?.requester_meta?.name,
+        req?.requester_email ? String(req.requester_email).split('@')[0] : ''
+      ].map(cleanDisplayCandidate).filter(Boolean);
+      return candidates[0] || `Aanvraag #${req?.id ?? '?'}`;
     }
 
     function parseMaybeJson(value) {
@@ -537,7 +492,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     function requestHtml(req, includeDecision = false) {
       const noteHtml = req.requester_note ? escapeHtml(req.requester_note).replace(/\n/g, "<br>") : "<span class='muted'>Geen toelichting</span>";
       const reasonHtml = req.decision_reason ? escapeHtml(req.decision_reason).replace(/\n/g, "<br>") : "<span class='muted'>Geen reden opgegeven</span>";
-      const meta = extractMeta(req);
+      const meta = extractMeta(req.requester_meta);
       const status = statusMeta(req, includeDecision);
       return `
         <div class="entry-top">
@@ -584,7 +539,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       }).forEach((req) => {
         const div = document.createElement('div');
         div.className = 'request';
-        div.innerHTML = `${requestHtml(req)}<div style="margin-top:12px;"><textarea class="decision-reason" data-id="${requestIdOf(req)}" placeholder="Reden (optioneel)"></textarea><div class="action-row"><button class="approve-btn" type="button" data-id="${requestIdOf(req)}" data-decision="approved">Goedkeuren</button><button class="reject-btn" type="button" data-id="${requestIdOf(req)}" data-decision="rejected">Afwijzen</button><button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(req)}">Maak activatielink</button></div><div class="inline-msg" id="request-msg-${requestIdOf(req)}">Klaar om te beoordelen.</div>${activationPanelHtml(req)}</div>`;
+        div.innerHTML = `${requestHtml(req)}<div style="margin-top:12px;"><textarea class="decision-reason" data-id="${requestIdOf(req)}" placeholder="Reden (optioneel)"></textarea><div class="action-row"><button class="approve-btn" type="button" data-id="${requestIdOf(req)}" data-decision="approved">Goedkeuren</button><button class="reject-btn" type="button" data-id="${requestIdOf(req)}" data-decision="rejected">Afwijzen</button><button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(req)}">Maak activatielink</button><button class="mail-btn" type="button" data-send-activation data-id="${requestIdOf(req)}">Verstuur via Make</button></div><div class="inline-msg" id="request-msg-${requestIdOf(req)}">Klaar om te beoordelen.</div>${activationPanelHtml(req)}</div>`;
         root.appendChild(div);
       });
       document.querySelectorAll('[data-decision]').forEach((btn) => {
@@ -598,25 +553,23 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           try {
             if (msg) { msg.textContent = 'Besluit opslaan...'; msg.className = 'inline-msg'; }
             if (decision === 'approved') {
-              const preparedBase = normalizeMailResult(await approveAndSendActivation(requestId, decisionReason || null), { request_id: String(requestId), requester_email: requestRow?.requester_email || '' });
-              const preparedContext = await resolveMailDeliveryContext(requestId, preparedBase, { requester_email: preparedBase?.requester_email ?? requestRow?.requester_email ?? '', activation_url: preparedBase?.activation_url ?? null, display_name: preparedBase?.display_name ?? displayNameOf(requestRow), expires_at: preparedBase?.expires_at ?? null, player_id: preparedBase?.player_id ?? requestRow?.player_id ?? null });
-              const prepared = preparedContext.normalized;
+              const prepared = await approveAndSendActivation(requestId, decisionReason || null);
               showActivationPanel(requestId, prepared);
-              if (preparedContext.jobId) {
-                const preparedValidation = await validateOutboundEmailJob(preparedContext.jobId, { markFailed:true });
-                if (!preparedValidation?.ok) throw new Error(formatMailPreflight(preparedValidation));
-              }
+              const preparedJobId = prepared?.job_id ?? prepared?.queue_job_id ?? prepared?.email_job_id ?? prepared?.outbound_email_job_id ?? prepared?.id ?? null;
+              const preparedValidation = await validateOutboundEmailJob(preparedJobId, { markFailed:true });
+              if (!preparedValidation?.ok) throw new Error(formatMailPreflight(preparedValidation));
               const wake = await triggerMakeScenario({
-                ...(preparedContext.webhookPayload || {}),
-                ...buildQueueWakeMeta('activation_email_queued', requestId, prepared, {
-                  job_id: preparedContext.jobId ?? preparedContext.webhookPayload?.job_id ?? null,
-                  player_id: requestRow?.player_id ?? null,
-                  display_name: displayNameOf(requestRow),
-                  requester_email: requestRow?.requester_email ?? null,
-                  activation_url: prepared?.activation_url ?? null,
-                  expires_at: prepared?.expires_at ?? null,
-                  created_at: requestRow?.created_at ?? null
-                })
+                reason: 'activation_email_queued',
+                request_id: requestId,
+                job_id: preparedJobId,
+                player_id: prepared?.player_id ?? requestRow?.player_id ?? null,
+                display_name: prepared?.display_name ?? displayNameOf(requestRow),
+                email: prepared?.requester_email ?? requestRow?.requester_email ?? null,
+                activation_url: prepared?.activation_url ?? null,
+                expires_at: prepared?.expires_at ?? null,
+                created_at: requestRow?.created_at ?? null,
+                subject: prepared?.subject ?? ACTIVATION_EMAIL_SUBJECT,
+                email_subject: prepared?.email_subject ?? prepared?.subject ?? ACTIVATION_EMAIL_SUBJECT
               });
               if (msg) { msg.textContent = (prepared?.message || 'Wacht op activatie. Nieuwe activatielink en mail zijn klaargezet.') + ' — ' + formatMailDiagnostics(prepared, wake); msg.className = 'inline-msg ok'; }
               window.alert('Aanvraag goedgekeurd. Er is een nieuwe activatielink klaargezet, de verificatiemail is in de wachtrij gezet en Make is gepingd. De naam hoort nu onder wacht op activatie te staan tot de link echt is gebruikt.');
@@ -640,7 +593,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           const msg = document.getElementById(`request-msg-${requestId}`) || document.getElementById(`activation-msg-${requestId}`);
           try {
             if (msg) { msg.textContent = 'Activatielink maken...'; msg.className = 'inline-msg'; }
-            const linkData = normalizeMailResult(await createActivationLink(requestId), { request_id: String(requestId) });
+            const linkData = await createActivationLink(requestId);
             showActivationPanel(requestId, linkData);
             if (msg) { msg.textContent = 'Activatielink gemaakt.'; msg.className = 'inline-msg ok'; }
             setStatus('Activatielink gemaakt.');
@@ -733,7 +686,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
               : bucket === 'active'
                 ? `<div class="compact-actions"><button class="reject-btn danger-btn" type="button" data-revoke-access data-id="${requestIdOf(item)}">Toegang intrekken</button><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button></div>`
                 : (canRemove ? `<div class="compact-actions"><button class="btn delete-btn" type="button" data-remove-player data-id="${requestIdOf(item)}">Gebruiker verwijderen</button></div>` : '');
-        div.innerHTML = `${requestHtml(item, true)}<div class="muted" style="margin-top:10px;">${item.decided_at ? formatDateTime(item.decided_at) : ''}</div>${actionHtml}<div class="inline-msg" id="history-msg-${requestIdOf(item)}"></div>`;
+        div.innerHTML = `${requestHtml(item, true)}<div class="muted" style="margin-top:10px;">${item.decided_at ? formatDateTime(item.decided_at) : ''}</div>${actionHtml}<div class="inline-msg" id="history-msg-${requestIdOf(item)}">Geschiedenisitem.</div>`;
         root.appendChild(div);
       });
       const historyPills = document.querySelectorAll('[data-history-filter]'); if (historyPills.length) historyPills.forEach((btn)=>{ btn.classList.toggle('active', btn.dataset.historyFilter===historyFilter); });
@@ -759,28 +712,12 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           const msg = document.getElementById(`history-msg-${requestId}`);
           try {
             if (msg) { msg.textContent = 'Opnieuw klaarzetten...'; msg.className = 'inline-msg'; }
-            const resultBase = await requeueExpiredActivation(requestId);
+            const result = await requeueExpiredActivation(requestId);
             const item = (lastHistory || []).find((row) => Number(row.id) === Number(requestId)) || (lastRequests || []).find((row) => Number(row.id) === Number(requestId));
-            let result = normalizeMailResult(resultBase, {
-              requester_email: resultBase?.requester_email ?? item?.requester_email ?? '',
-              activation_url: resultBase?.activation_url ?? null,
-              display_name: resultBase?.display_name ?? displayNameOf(item),
-              expires_at: resultBase?.expires_at ?? item?.expires_at ?? null,
-              player_id: resultBase?.player_id ?? item?.player_id ?? null
-            });
-            let wake = null;
-            let mailWarning = '';
-            try {
-              const resultContext = await resolveMailDeliveryContext(requestId, resultBase, { requester_email: resultBase?.requester_email ?? item?.requester_email ?? '', activation_url: resultBase?.activation_url ?? null, display_name: resultBase?.display_name ?? displayNameOf(item), expires_at: resultBase?.expires_at ?? item?.expires_at ?? null, player_id: resultBase?.player_id ?? item?.player_id ?? null });
-              result = resultContext.normalized;
-              if (resultContext.jobId) {
-                const resultValidation = await validateOutboundEmailJob(resultContext.jobId, { markFailed:true });
-                if (!resultValidation?.ok) throw new Error(formatMailPreflight(resultValidation));
-              }
-              wake = await triggerMakeScenario({ ...(resultContext.webhookPayload || {}), ...buildQueueWakeMeta('expired_requeue_mail', requestId, result, { job_id: resultContext.jobId ?? resultContext.webhookPayload?.job_id ?? null, player_id: item?.player_id ?? null, display_name: displayNameOf(item), requester_email: item?.requester_email ?? null, activation_url: result?.activation_url ?? null, expires_at: result?.expires_at ?? item?.expires_at ?? null, created_at: item?.created_at ?? null }) });
-            } catch (mailErr) {
-              mailWarning = mailErr instanceof Error ? mailErr.message : 'Mailwaarschuwing tijdens opnieuw klaarzetten';
-            }
+            const resultJobId = result?.job_id ?? result?.queue_job_id ?? result?.email_job_id ?? result?.outbound_email_job_id ?? null;
+            const resultValidation = await validateOutboundEmailJob(resultJobId, { markFailed:true });
+            if (!resultValidation?.ok) throw new Error(formatMailPreflight(resultValidation));
+            const wake = await triggerMakeScenario({ reason: 'expired_requeue_mail', request_id: requestId, job_id: resultJobId, player_id: result?.player_id ?? item?.player_id ?? null, display_name: result?.display_name ?? displayNameOf(item), email: result?.requester_email ?? item?.requester_email ?? null, activation_url: result?.activation_url ?? null, expires_at: result?.expires_at ?? item?.expires_at ?? null, created_at: item?.created_at ?? null, subject: result?.subject ?? ACTIVATION_EMAIL_SUBJECT, email_subject: result?.email_subject ?? result?.subject ?? ACTIVATION_EMAIL_SUBJECT });
             if (item) {
               item.state_bucket = 'awaiting';
               item.status = 'pending_activation';
@@ -789,20 +726,13 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
               item.activation_expires_at = result?.expires_at ?? item.activation_expires_at ?? null;
               item.email_sent_at = result?.email_sent_at ?? item.email_sent_at ?? null;
             }
-            const updatedAwaitingRow = { ...(item || {}), state_bucket:'awaiting', status:'pending_activation', request_status:'pending_activation', expires_at: result?.expires_at ?? item?.expires_at ?? null, activation_expires_at: result?.expires_at ?? item?.activation_expires_at ?? null, email_sent_at: result?.email_sent_at ?? item?.email_sent_at ?? null };
             lastExpired = (lastExpired || []).filter((row) => Number(row?.id) !== Number(requestId));
-            if ((lastHistory || []).some((row) => Number(row?.id) === Number(requestId))) {
-              lastHistory = (lastHistory || []).map((row) => Number(row?.id) === Number(requestId) ? { ...row, ...updatedAwaitingRow } : row);
-            } else {
-              lastHistory = [...(lastHistory || []), updatedAwaitingRow];
-            }
+            lastHistory = (lastHistory || []).map((row) => Number(row?.id) === Number(requestId) ? { ...row, ...item, state_bucket:'awaiting', status:'pending_activation', request_status:'pending_activation', expires_at: result?.expires_at ?? row?.expires_at ?? null, activation_expires_at: result?.expires_at ?? row?.activation_expires_at ?? null } : row);
             renderStats(lastRequests, lastHistory);
             switchAdminView('awaiting');
-            window.setTimeout(() => { refreshAdminLists(true).catch(()=>{}); }, 6000);
-            const warningText = mailWarning ? ` — mailwaarschuwing: ${mailWarning}` : '';
-            setStatus((result?.message || 'Nieuwe activatielink klaargezet. De aanvraag staat nu weer onder wacht op activatie.') + warningText);
-            if (msg) { msg.textContent = (result?.message || 'Nieuwe activatielink en mail zijn opnieuw klaargezet.') + (wake ? ' — ' + formatMailDiagnostics(result, wake) : '') + warningText; msg.className = 'inline-msg ok'; }
-            window.alert(mailWarning ? `De verlopen activatie is opnieuw klaargezet. De naam hoort nu weer onder Wacht op activatie te staan. Mailwaarschuwing: ${mailWarning}` : 'De verlopen activatie is opnieuw klaargezet. Er is een nieuwe activatielink gemaakt, de mailjob is gequeued en Make is gepingd. De naam hoort nu weer onder Wacht op activatie te staan.');
+            await refreshAdminLists(true).catch(()=>{});
+            if (msg) { msg.textContent = (result?.message || 'Nieuwe activatielink en mail zijn opnieuw klaargezet.') + ' — ' + formatMailDiagnostics(result, wake); msg.className = 'inline-msg ok'; }
+            window.alert('De verlopen activatie is opnieuw klaargezet. Er is een nieuwe activatielink gemaakt, de mailjob is gequeued en Make is gepingd. De naam hoort nu weer onder Wacht op activatie te staan.');
           } catch (err) {
             if (msg) { msg.textContent = err instanceof Error ? err.message : 'Opnieuw klaarzetten mislukt'; msg.className = 'inline-msg error'; }
           }
@@ -815,17 +745,9 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           const msg = document.getElementById(`history-msg-${requestId}`);
           try {
             if (msg) { msg.textContent = 'Nieuwe link + mail voorbereiden...'; msg.className = 'inline-msg'; }
-            const resultBase = await resendPendingActivation(requestId);
-            const item = (lastHistory || []).find((row) => Number(row.id) === Number(requestId)) || (lastRequests || []).find((row) => Number(row.id) === Number(requestId));
-            const resultContext = await resolveMailDeliveryContext(requestId, resultBase, { requester_email: resultBase?.requester_email ?? item?.requester_email ?? '', activation_url: resultBase?.activation_url ?? null, display_name: resultBase?.display_name ?? displayNameOf(item), expires_at: resultBase?.expires_at ?? item?.expires_at ?? null, player_id: resultBase?.player_id ?? item?.player_id ?? null });
-            const result = resultContext.normalized;
-            if (resultContext.jobId) {
-              const resultValidation = await validateOutboundEmailJob(resultContext.jobId, { markFailed:true });
-              if (!resultValidation?.ok) throw new Error(formatMailPreflight(resultValidation));
-            }
-            const wake = await triggerMakeScenario({ ...(resultContext.webhookPayload || {}), ...buildQueueWakeMeta('activation_email_queued', requestId, result, { job_id: resultContext.jobId ?? resultContext.webhookPayload?.job_id ?? null, player_id: item?.player_id ?? null, display_name: displayNameOf(item), requester_email: item?.requester_email ?? null, activation_url: result?.activation_url ?? null, expires_at: result?.expires_at ?? item?.expires_at ?? null, created_at: item?.created_at ?? null }) });
+            const result = await resendPendingActivation(requestId);
             setStatus(result?.message || 'Nieuwe activatielink en verificatiemail klaargezet.', 'ok');
-            if (msg) { msg.textContent = (result?.message || 'Nieuwe activatielink en mail klaargezet.') + ' — ' + formatMailDiagnostics(result, wake); msg.className = 'inline-msg ok'; }
+            if (msg) { msg.textContent = (result?.message || 'Nieuwe activatielink en mail klaargezet.') + ' — ' + formatMailDiagnostics(result, {via:'frontend-webhook'}); msg.className = 'inline-msg ok'; }
             window.alert('Nieuwe activatielink en verificatiemail klaargezet. De naam blijft onder wacht op activatie staan totdat de link echt is gebruikt.');
             await refreshAdminLists();
           } catch (err) {
@@ -887,7 +809,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           }
           try {
             if (msg) { msg.textContent = 'Activatielink maken...'; msg.className = 'inline-msg'; }
-            const linkData = normalizeMailResult(await createActivationLink(requestId), { request_id: String(requestId) });
+            const linkData = await createActivationLink(requestId);
             showActivationPanel(requestId, linkData);
             if (msg) { msg.textContent = 'Activatielink gemaakt.'; msg.className = 'inline-msg ok'; }
           } catch (err) {
@@ -951,7 +873,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           const msg = document.getElementById(`approved-msg-${requestId}`);
           try {
             if (msg) { msg.textContent = 'Activatielink maken...'; msg.className = 'inline-msg'; }
-            const linkData = normalizeMailResult(await createActivationLink(requestId), { request_id: String(requestId) });
+            const linkData = await createActivationLink(requestId);
             showActivationPanel(requestId, linkData);
             if (msg) { msg.textContent = 'Nieuwe activatielink klaar.'; msg.className = 'inline-msg ok'; }
           } catch (err) {
@@ -1022,7 +944,6 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
 
     function switchAdminView(view) {
       currentAdminView = view;
-      window.currentAdminView = currentAdminView;
       try { history.replaceState(null, '', `#view=${view}`); } catch {}
       const cfg = getAdminViewConfig()[view] || getAdminViewConfig().pending;
       document.getElementById('currentListTitle').textContent = cfg.title;
@@ -1103,23 +1024,6 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     async function getRequests(force = false) { return (await getClaimsBundle(force)).requests || []; }
     async function getHistory(force = false) { return (await getClaimsBundle(force)).history || []; }
     async function getExpiredQueue(force = false) { return (await getClaimsBundle(force)).expiredQueue || []; }
-    async function approveAndSendActivation(requestId, decisionReason) {
-      const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
-      const result = ADMIN_SOURCE && typeof ADMIN_SOURCE.approveAndSendActivation === 'function'
-        ? await ADMIN_SOURCE.approveAndSendActivation(requestId, decisionReason)
-        : await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_approve_and_send_activation_action`, {
-            method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-            body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: decisionReason || null, base_url: getActivationBaseUrl() })
-          }).then(parseResponse);
-      try { await updateActivationEmailSubject(requestId); } catch (_) {}
-      return normalizeMailResult(result, {
-        request_id: String(requestId),
-        requester_email: req?.requester_email || '',
-        display_name: displayNameOf(req),
-        player_id: req?.player_id || null
-      });
-    }
-
     async function requeueExpiredActivation(requestId) {
       let data = ADMIN_SOURCE && typeof ADMIN_SOURCE.requeueExpiredActivation === 'function'
         ? await ADMIN_SOURCE.requeueExpiredActivation(requestId)
@@ -1128,22 +1032,12 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
             body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), base_url: getActivationBaseUrl() })
           }).then(parseResponse);
       try { await updateActivationEmailSubject(requestId); } catch {}
-      const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
-      const panel = document.getElementById(`activation-tools-${requestId}`);
-      let dataNormalized = normalizeMailResult(data, {
-        request_id: String(requestId),
-        requester_email: req?.requester_email ?? panel?.dataset?.email ?? '',
-        activation_url: normalizeMailResult(data).activation_url ?? panel?.dataset?.url ?? null,
-        display_name: normalizeMailResult(data).display_name ?? displayNameOf(req)
-      });
-      try {
-        dataNormalized = await ensureMailJobForRequest(requestId, dataNormalized, {
-          requester_email: req?.requester_email ?? panel?.dataset?.email ?? '',
-          activation_url: dataNormalized?.activation_url ?? panel?.dataset?.url ?? null,
-          display_name: dataNormalized?.display_name ?? displayNameOf(req)
-        });
-      } catch (_) {}
-      return dataNormalized;
+      const dataJobId = data?.job_id ?? data?.queue_job_id ?? data?.email_job_id ?? data?.outbound_email_job_id ?? data?.id ?? null;
+      if (!dataJobId) {
+        const resend = await resendPendingActivation(requestId);
+        data = Object.assign({}, data || {}, resend || {}, { requeued_without_job: true, requeue_message: data?.message || null });
+      }
+      return data;
     }
 
     async function resendPendingActivation(requestId) {
@@ -1156,31 +1050,11 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       try { await updateActivationEmailSubject(requestId); } catch {}
       const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
       const panel = document.getElementById(`activation-tools-${requestId}`);
-      const resultContext = await resolveMailDeliveryContext(requestId, data, {
-        requester_email: data?.requester_email ?? req?.requester_email ?? panel?.dataset?.email ?? '',
-        activation_url: data?.activation_url ?? panel?.dataset?.url ?? null,
-        display_name: data?.display_name ?? displayNameOf(req),
-        expires_at: data?.expires_at ?? panel?.dataset?.expiresAt ?? null,
-        player_id: data?.player_id ?? req?.player_id ?? null
-      });
-      const result = resultContext.normalized;
-      if (resultContext.jobId) {
-        const validation = await validateOutboundEmailJob(resultContext.jobId, { markFailed:true });
-        if (!validation?.ok) throw new Error(formatMailPreflight(validation));
-      }
-      await triggerMakeScenario({
-        ...(resultContext.webhookPayload || {}),
-        ...buildQueueWakeMeta('activation_email_queued', requestId, result, {
-          job_id: resultContext.jobId ?? resultContext.webhookPayload?.job_id ?? null,
-          player_id: req?.player_id ?? null,
-          display_name: displayNameOf(req),
-          requester_email: req?.requester_email ?? panel?.dataset?.email ?? null,
-          activation_url: result?.activation_url ?? panel?.dataset?.url ?? null,
-          expires_at: result?.expires_at ?? panel?.dataset?.expiresAt ?? null,
-          created_at: req?.created_at ?? null
-        })
-      });
-      return result;
+      const dataJobId = data?.job_id ?? data?.queue_job_id ?? data?.email_job_id ?? data?.outbound_email_job_id ?? data?.id ?? null;
+      const dataValidation = await validateOutboundEmailJob(dataJobId, { markFailed:true });
+      if (!dataValidation?.ok) throw new Error(formatMailPreflight(dataValidation));
+      await triggerMakeScenario({ reason: 'activation_email_queued', request_id: requestId, job_id: dataJobId, player_id: data?.player_id ?? req?.player_id ?? null, display_name: data?.display_name ?? displayNameOf(req), email: data?.requester_email ?? req?.requester_email ?? null, activation_url: data?.activation_url ?? panel?.dataset?.url ?? null, expires_at: data?.expires_at ?? panel?.dataset?.expiresAt ?? null, created_at: req?.created_at ?? null, subject: data?.subject ?? ACTIVATION_EMAIL_SUBJECT, email_subject: data?.email_subject ?? data?.subject ?? ACTIVATION_EMAIL_SUBJECT });
+      return data;
     }
     async function returnNameToClaimable(requestId, reason) {
       if (ADMIN_SOURCE && typeof ADMIN_SOURCE.returnNameToClaimable === 'function') return await ADMIN_SOURCE.returnNameToClaimable(requestId, reason);
@@ -1191,96 +1065,10 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return await parseResponse(res);
     }
 
-    function normalizePlainObject(value) {
-      return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-    }
-
-    function normalizeMailResult(result, fallback = {}) {
-      const raw = normalizePlainObject(result);
-      const nested = normalizePlainObject(raw.mail_job || raw.job || raw.result || raw.data || raw.payload);
-      const payload = normalizePlainObject(raw.payload || nested.payload);
-      const fallbackData = normalizePlainObject(fallback);
-      const activationUrl = String(raw.activation_url || raw.reset_url || raw.url || raw.activation_link || raw.link || nested.activation_url || nested.reset_url || nested.url || nested.activation_link || nested.link || payload.activation_url || payload.reset_url || payload.url || payload.activation_link || payload.link || fallbackData.activation_url || fallbackData.reset_url || fallbackData.url || fallbackData.activation_link || fallbackData.link || '').trim();
-      const recipientEmail = String(raw.requester_email || raw.recipient_email || raw.email || nested.requester_email || nested.recipient_email || nested.email || payload.requester_email || payload.recipient_email || payload.email || fallbackData.requester_email || fallbackData.recipient_email || fallbackData.email || '').trim().toLowerCase();
-      const displayName = String(raw.display_name || raw.recipient_name || raw.requested_name || raw.name || nested.display_name || nested.recipient_name || nested.requested_name || nested.name || payload.display_name || payload.recipient_name || payload.requested_name || payload.name || fallbackData.display_name || fallbackData.recipient_name || fallbackData.requested_name || fallbackData.name || '').trim();
-      const expiresAt = raw.expires_at || raw.activation_expires_at || raw.expires_on || nested.expires_at || nested.activation_expires_at || nested.expires_on || payload.expires_at || payload.activation_expires_at || payload.expires_on || fallbackData.expires_at || fallbackData.activation_expires_at || fallbackData.expires_on || null;
-      const merged = {
-        ...fallbackData,
-        ...raw,
-        ...(Object.keys(nested).length ? nested : {}),
-        activation_url: activationUrl || null,
-        requester_email: recipientEmail || null,
-        recipient_email: recipientEmail || null,
-        email: recipientEmail || null,
-        display_name: displayName || null,
-        recipient_name: displayName || null,
-        expires_at: expiresAt || null
-      };
-      const rawJobId = merged.job_id ?? merged.queue_job_id ?? merged.email_job_id ?? merged.outbound_email_job_id ?? merged.mail_job_id ?? merged.id ?? nested.job_id ?? nested.id ?? payload.job_id ?? payload.id ?? fallbackData.job_id ?? null;
-      if (rawJobId != null && rawJobId !== '') merged.job_id = Number(rawJobId);
-      return merged;
-    }
-
-    function extractMailJobId(result) {
-      const merged = normalizeMailResult(result);
-      return merged?.job_id ?? merged?.queue_job_id ?? merged?.email_job_id ?? merged?.outbound_email_job_id ?? merged?.mail_job_id ?? merged?.id ?? null;
-    }
-
-    async function loadMailDiagnosticsSafe() {
-      if (ADMIN_SOURCE && typeof ADMIN_SOURCE.loadMailDiagnostics === 'function') {
-        try { return await ADMIN_SOURCE.loadMailDiagnostics(); } catch (_) {}
-      }
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_mail_diagnostics`, {
-          method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-          body: JSON.stringify({ admin_session_token: getAdminSessionToken() })
-        });
-        return await parseResponse(res);
-      } catch (_) {
-        return null;
-      }
-    }
-
-    async function recoverRecentMailJob(requestId, recipientEmail) {
-      if (ADMIN_SOURCE && typeof ADMIN_SOURCE.findRecentActivationMailJob === 'function') {
-        try {
-          const found = await ADMIN_SOURCE.findRecentActivationMailJob(String(requestId), recipientEmail || '');
-          if (found) return normalizeMailResult(found, { request_id: String(requestId), requester_email: recipientEmail || '' });
-        } catch (_) {}
-      }
-      const diagnostics = await loadMailDiagnosticsSafe();
-      const rows = Array.isArray(diagnostics?.jobs) ? diagnostics.jobs : [];
-      const wantedRequestId = requestId == null || requestId === '' ? null : Number(requestId);
-      const wantedEmail = String(recipientEmail || '').trim().toLowerCase();
-      const wantedStatuses = new Set(['queued','pending','processing']);
-      const found = rows.map((row) => {
-        const payload = normalizePlainObject(row?.payload);
-        const rowRequestId = Number(row?.related_claim_request_id ?? row?.request_id ?? payload?.request_id ?? NaN);
-        const rowEmail = String(row?.recipient_email ?? row?.requester_email ?? payload?.requester_email ?? '').trim().toLowerCase();
-        const status = String(row?.job_status ?? row?.status ?? '').trim().toLowerCase();
-        const requestMatch = wantedRequestId != null && Number.isFinite(rowRequestId) && rowRequestId === wantedRequestId;
-        const emailMatch = Boolean(wantedEmail && rowEmail && rowEmail === wantedEmail);
-        if (!requestMatch && !emailMatch) return null;
-        let score = 0;
-        if (wantedStatuses.has(status)) score += 8;
-        if (requestMatch) score += 10;
-        if (emailMatch) score += 6;
-        return { row, score };
-      }).filter(Boolean).sort((a,b) => (b.score - a.score) || (Number(b.row?.id || 0) - Number(a.row?.id || 0)))[0]?.row;
-      return found ? normalizeMailResult(found, { request_id: String(requestId), requester_email: recipientEmail || '' }) : null;
-    }
-
-    async function ensureMailJobForRequest(requestId, result, fallback = {}) {
-      const merged = normalizeMailResult(result, { request_id: String(requestId), ...fallback });
-      if (extractMailJobId(merged)) return merged;
-      const recovered = await recoverRecentMailJob(requestId, fallback.requester_email || merged.requester_email || merged.recipient_email || '');
-      return recovered ? normalizeMailResult({ ...merged, ...recovered }, { request_id: String(requestId), ...fallback }) : merged;
-    }
-
     async function createActivationLink(requestId) {
       const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
       if (req && hasPin(req) && stateBucket(req) !== 'active') throw new Error('Deze aanvraag staat nog op wacht op activatie, maar de speler heeft al een pincode. Draai eerst de v84 activatie-resetpatch of trek de toegang in.');
-      if (ADMIN_SOURCE && typeof ADMIN_SOURCE.createActivationLink === 'function') return normalizeMailResult(await ADMIN_SOURCE.createActivationLink(requestId), { request_id: String(requestId), requester_email: req?.requester_email || '' });
+      if (ADMIN_SOURCE && typeof ADMIN_SOURCE.createActivationLink === 'function') return await ADMIN_SOURCE.createActivationLink(requestId);
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_player_activation_link_action`, {
         method:'POST',
         mode:'cors',
@@ -1292,7 +1080,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           base_url: getActivationBaseUrl()
         })
       });
-      return normalizeMailResult(await parseResponse(res), { request_id: String(requestId), requester_email: req?.requester_email || '' });
+      return await parseResponse(res);
     }
     function buildMakeWebhookMeta(source, meta = {}) {
       const payload = { trigger: 'activation_email_queued', source, ts: new Date().toISOString(), ...meta };
@@ -1331,162 +1119,6 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return bits.join(' · ');
     }
 
-    async function fetchLatestValidWebhookPayload(requestId, recipientEmail, fallback = {}) {
-      try {
-        if (ADMIN_SOURCE && typeof ADMIN_SOURCE.fetchLatestValidOutboundEmailJobWebhookPayload === 'function') {
-          const payload = await ADMIN_SOURCE.fetchLatestValidOutboundEmailJobWebhookPayload(String(requestId), recipientEmail || '');
-          return payload ? buildMakeWebhookMeta('admin_claims.html', { ...fallback, ...payload }) : null;
-        }
-      } catch (_) {}
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_latest_valid_outbound_email_job_webhook_payload`, {
-          method:'POST',
-          mode:'cors',
-          cache:'no-store',
-          headers: rpcHeaders(),
-          body: JSON.stringify({
-            admin_session_token: getAdminSessionToken(),
-            request_id_input: requestId == null || requestId === '' ? null : Number(requestId),
-            recipient_email_input: recipientEmail || null
-          })
-        });
-        const data = await parseResponse(res);
-        return data ? buildMakeWebhookMeta('admin_claims.html', { ...fallback, ...(data?.payload || data?.make_payload || data || {}) }) : null;
-      } catch (_) {
-        return null;
-      }
-    }
-
-    async function fetchWebhookPayloadByJobId(jobId, fallback = {}) {
-      if (!jobId) return null;
-      try {
-        if (ADMIN_SOURCE && typeof ADMIN_SOURCE.fetchOutboundEmailJobWebhookPayload === 'function') {
-          const payload = await ADMIN_SOURCE.fetchOutboundEmailJobWebhookPayload(Number(jobId));
-          return payload ? buildMakeWebhookMeta('admin_claims.html', { ...fallback, ...payload }) : null;
-        }
-      } catch (_) {}
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_outbound_email_job_webhook_payload`, {
-          method:'POST',
-          mode:'cors',
-          cache:'no-store',
-          headers: rpcHeaders(),
-          body: JSON.stringify({
-            admin_session_token: getAdminSessionToken(),
-            job_id_input: Number(jobId)
-          })
-        });
-        const data = await parseResponse(res);
-        return data ? buildMakeWebhookMeta('admin_claims.html', { ...fallback, ...(data?.payload || data?.make_payload || data || {}) }) : null;
-      } catch (_) {
-        return null;
-      }
-    }
-
-    function buildDirectActivationWebhookPayload(requestId, normalized, fallback = {}) {
-      const email = normalized?.requester_email ?? normalized?.recipient_email ?? fallback?.requester_email ?? fallback?.recipient_email ?? fallback?.email ?? null;
-      const activationUrl = normalized?.activation_url ?? fallback?.activation_url ?? fallback?.url ?? null;
-      if (!email || !activationUrl) return null;
-      return buildMakeWebhookMeta('admin_claims.html', {
-        request_id: requestId,
-        job_id: normalized?.job_id ?? fallback?.job_id ?? null,
-        player_id: normalized?.player_id ?? fallback?.player_id ?? null,
-        display_name: normalized?.display_name ?? fallback?.display_name ?? null,
-        email,
-        requester_email: email,
-        recipient_email: email,
-        activation_url: activationUrl,
-        expires_at: normalized?.expires_at ?? fallback?.expires_at ?? null,
-        created_at: normalized?.created_at ?? fallback?.created_at ?? null,
-        subject: normalized?.subject ?? fallback?.subject ?? ACTIVATION_EMAIL_SUBJECT,
-        email_subject: normalized?.email_subject ?? normalized?.subject ?? fallback?.email_subject ?? fallback?.subject ?? ACTIVATION_EMAIL_SUBJECT
-      });
-    }
-
-    async function ensureQueueWakeJobId(requestId, normalized, fallback = {}) {
-      let merged = normalizeMailResult(normalized, { request_id: String(requestId), ...fallback });
-      let jobId = extractMailJobId(merged);
-      if (jobId != null && jobId !== '') return { normalized: merged, jobId: Number(jobId) };
-      const playerId = merged?.player_id ?? fallback?.player_id ?? null;
-      const recipientEmail = String(merged?.requester_email || merged?.recipient_email || fallback?.requester_email || fallback?.recipient_email || fallback?.email || '').trim().toLowerCase();
-      const recipientName = String(merged?.display_name || merged?.recipient_name || fallback?.display_name || fallback?.recipient_name || '').trim();
-      let activationUrl = String(merged?.activation_url || fallback?.activation_url || fallback?.url || '').trim();
-      if (!activationUrl) {
-        try {
-          const linkData = normalizeMailResult(
-            await createActivationLink(requestId),
-            { request_id: String(requestId), requester_email: recipientEmail || null, display_name: recipientName || null, player_id: playerId }
-          );
-          merged = normalizeMailResult({ ...merged, ...linkData }, { request_id: String(requestId), requester_email: recipientEmail || null, display_name: recipientName || null, player_id: playerId });
-          activationUrl = String(merged?.activation_url || '').trim();
-          try { showActivationPanel(requestId, merged); } catch (_) {}
-        } catch (_) {}
-      }
-      if (!recipientEmail || !activationUrl) return { normalized: merged, jobId: extractMailJobId(merged) };
-      try {
-        const forcedQueue = await queueActivationEmailWithContext(requestId, recipientEmail, recipientName || null, activationUrl, playerId);
-        merged = normalizeMailResult({ ...merged, ...forcedQueue }, { request_id: String(requestId), requester_email: recipientEmail, activation_url: activationUrl, display_name: recipientName || null, player_id: playerId });
-        jobId = extractMailJobId(merged);
-      } catch (_) {}
-      return { normalized: merged, jobId: jobId != null && jobId !== '' ? Number(jobId) : null };
-    }
-
-    async function resolveMailDeliveryContext(requestId, mailResult, fallback = {}) {
-      let normalized = normalizeMailResult(mailResult, { request_id: String(requestId), ...fallback });
-      normalized = await ensureMailJobForRequest(requestId, normalized, fallback);
-      let jobId = extractMailJobId(normalized);
-      let webhookPayload = null;
-      if (jobId) {
-        webhookPayload = await fetchWebhookPayloadByJobId(jobId, {
-          request_id: requestId,
-          job_id: jobId,
-          email: normalized?.requester_email ?? fallback?.requester_email ?? null,
-          activation_url: normalized?.activation_url ?? fallback?.activation_url ?? null,
-          display_name: normalized?.display_name ?? fallback?.display_name ?? null,
-          expires_at: normalized?.expires_at ?? fallback?.expires_at ?? null,
-          subject: normalized?.subject ?? ACTIVATION_EMAIL_SUBJECT,
-          email_subject: normalized?.email_subject ?? normalized?.subject ?? ACTIVATION_EMAIL_SUBJECT
-        });
-      }
-      if ((!jobId || !webhookPayload) && (fallback?.requester_email || normalized?.requester_email)) {
-        const recovered = await fetchLatestValidWebhookPayload(requestId, fallback?.requester_email || normalized?.requester_email || '', {
-          request_id: requestId,
-          email: normalized?.requester_email ?? fallback?.requester_email ?? null,
-          activation_url: normalized?.activation_url ?? fallback?.activation_url ?? null,
-          display_name: normalized?.display_name ?? fallback?.display_name ?? null,
-          expires_at: normalized?.expires_at ?? fallback?.expires_at ?? null,
-          subject: normalized?.subject ?? ACTIVATION_EMAIL_SUBJECT,
-          email_subject: normalized?.email_subject ?? normalized?.subject ?? ACTIVATION_EMAIL_SUBJECT
-        });
-        if (recovered) {
-          webhookPayload = recovered;
-          if (!jobId && recovered.job_id != null && recovered.job_id !== '') {
-            jobId = Number(recovered.job_id);
-            normalized = normalizeMailResult({ ...normalized, job_id: jobId }, { request_id: String(requestId), ...fallback });
-          }
-        }
-      }
-      if (!jobId) {
-        const forced = await ensureQueueWakeJobId(requestId, normalized, fallback);
-        normalized = forced.normalized;
-        if (forced.jobId != null && forced.jobId !== '') {
-          jobId = Number(forced.jobId);
-          webhookPayload = webhookPayload || await fetchWebhookPayloadByJobId(jobId, {
-            request_id: requestId,
-            job_id: jobId,
-            email: normalized?.requester_email ?? fallback?.requester_email ?? null,
-            activation_url: normalized?.activation_url ?? fallback?.activation_url ?? null,
-            display_name: normalized?.display_name ?? fallback?.display_name ?? null,
-            expires_at: normalized?.expires_at ?? fallback?.expires_at ?? null,
-            subject: normalized?.subject ?? ACTIVATION_EMAIL_SUBJECT,
-            email_subject: normalized?.email_subject ?? normalized?.subject ?? ACTIVATION_EMAIL_SUBJECT
-          });
-        }
-      }
-      if (!webhookPayload) webhookPayload = buildDirectActivationWebhookPayload(requestId, normalized, fallback);
-      return { normalized, jobId, webhookPayload };
-    }
-
     async function triggerMakeScenario(meta = {}) {
       if (!MAKE_WEBHOOK_URL) throw new Error('MAKE_WEBHOOK_URL ontbreekt in admin.html');
       const payload = buildMakeWebhookMeta('admin_claims.html', meta);
@@ -1499,26 +1131,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error(`Make webhook pingen mislukt (HTTP ${res.status})`);
-      return { ok:true, via:'fetch-json', status:res.status, payload };
-    }
-
-    function buildQueueWakeMeta(reason, requestId, normalized, fallback = {}) {
-      const email = normalized?.requester_email ?? normalized?.recipient_email ?? fallback?.requester_email ?? fallback?.recipient_email ?? fallback?.email ?? null;
-      return {
-        reason,
-        request_id: requestId,
-        job_id: normalized?.job_id ?? fallback?.job_id ?? null,
-        player_id: normalized?.player_id ?? fallback?.player_id ?? null,
-        display_name: normalized?.display_name ?? fallback?.display_name ?? null,
-        email,
-        requester_email: email,
-        recipient_email: email,
-        activation_url: normalized?.activation_url ?? fallback?.activation_url ?? null,
-        expires_at: normalized?.expires_at ?? fallback?.expires_at ?? null,
-        created_at: fallback?.created_at ?? null,
-        subject: normalized?.subject ?? fallback?.subject ?? ACTIVATION_EMAIL_SUBJECT,
-        email_subject: normalized?.email_subject ?? normalized?.subject ?? fallback?.email_subject ?? fallback?.subject ?? ACTIVATION_EMAIL_SUBJECT
-      };
+      return { ok:true, via:'fetch-json', status:res.status };
     }
 
     async function revokePlayerAccess(requestId, reason) {
@@ -1537,20 +1150,16 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       });
       return await parseResponse(res);
     }
-    async function queueActivationEmailWithContext(requestId, recipientEmailInput, recipientNameInput, activationLinkInput, playerIdInput) {
-      const recipientEmail = String(recipientEmailInput || '').trim().toLowerCase();
-      const recipientName = String(recipientNameInput || '').trim();
-      const activationLink = String(activationLinkInput || '').trim();
+    async function queueActivationEmail(requestId) {
+      const panel = document.getElementById(`activation-tools-${requestId}`);
+      const recipientEmail = panel?.dataset.email || '';
+      const recipientName = panel?.dataset.displayName || '';
+      const activationLink = panel?.dataset.url || '';
       if (!recipientEmail || !activationLink) throw new Error('Maak eerst een activatielink.');
       const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
       if (req && hasPin(req) && stateBucket(req) !== 'active') throw new Error('Deze speler heeft al een pincode in de database. Reset eerst de activatie voordat je opnieuw een mail verstuurt.');
-      const playerId = playerIdInput ?? req?.player_id ?? null;
-      if (ADMIN_SOURCE && typeof ADMIN_SOURCE.queueActivationEmail === 'function') {
-        return normalizeMailResult(
-          await ADMIN_SOURCE.queueActivationEmail(requestId, recipientEmail, recipientName || null, activationLink, playerId),
-          { request_id: String(requestId), requester_email: recipientEmail, activation_url: activationLink, display_name: recipientName || null, player_id: playerId }
-        );
-      }
+      const playerId = req?.player_id ?? null;
+      if (ADMIN_SOURCE && typeof ADMIN_SOURCE.queueActivationEmail === 'function') return await ADMIN_SOURCE.queueActivationEmail(requestId, recipientEmail, recipientName, activationLink, playerId);
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_queue_activation_email`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
         body: JSON.stringify({
@@ -1563,17 +1172,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
           player_id_input: playerId
         })
       });
-      return normalizeMailResult(await parseResponse(res), { request_id: String(requestId), requester_email: recipientEmail, activation_url: activationLink, display_name: recipientName || null, player_id: playerId });
-    }
-    async function queueActivationEmail(requestId) {
-      const panel = document.getElementById(`activation-tools-${requestId}`);
-      return await queueActivationEmailWithContext(
-        requestId,
-        panel?.dataset.email || '',
-        panel?.dataset.displayName || '',
-        panel?.dataset.url || '',
-        null
-      );
+      return await parseResponse(res);
     }
     async function updateActivationEmailSubject(requestId) {
       if (ADMIN_SOURCE && typeof ADMIN_SOURCE.updateActivationEmailSubject === 'function') return await ADMIN_SOURCE.updateActivationEmailSubject(requestId, ACTIVATION_EMAIL_SUBJECT);
@@ -1589,29 +1188,27 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const recipientEmail = panel?.dataset.email || req?.requester_email || '';
       const recipientName = panel?.dataset.displayName || displayNameOf(req) || '';
       const activationLink = panel?.dataset.url || '';
-      const queuedBase = normalizeMailResult(await queueActivationEmail(requestId), { request_id: String(requestId), requester_email: recipientEmail, activation_url: activationLink, display_name: recipientName });
+      const queued = await queueActivationEmail(requestId);
       try { await updateActivationEmailSubject(requestId); } catch {}
-      const queuedContext = await resolveMailDeliveryContext(requestId, queuedBase, { requester_email: recipientEmail, activation_url: activationLink, display_name: recipientName, expires_at: panel?.dataset?.expiresAt ?? null, player_id: req?.player_id ?? null });
-      const queued = queuedContext.normalized;
-      if (queuedContext.jobId) {
-        const validation = await validateOutboundEmailJob(queuedContext.jobId, { markFailed:true });
-        if (!validation?.ok) {
-          const err = new Error(formatMailPreflight(validation));
-          err.validation = validation;
-          throw err;
-        }
+      const jobId = queued?.job_id ?? queued?.id ?? null;
+      const validation = await validateOutboundEmailJob(jobId, { markFailed:true });
+      if (!validation?.ok) {
+        const err = new Error(formatMailPreflight(validation));
+        err.validation = validation;
+        throw err;
       }
       await triggerMakeScenario({
-        ...(queuedContext.webhookPayload || {}),
-        ...buildQueueWakeMeta('activation_email_queued', requestId, queued, {
-          job_id: queuedContext.jobId ?? queuedContext.webhookPayload?.job_id ?? null,
-          player_id: req?.player_id ?? null,
-          display_name: recipientName ?? displayNameOf(req),
-          requester_email: recipientEmail,
-          activation_url: activationLink,
-          expires_at: panel?.dataset?.expiresAt ?? null,
-          created_at: req?.created_at ?? null
-        })
+        reason: 'activation_email_queued',
+        request_id: requestId,
+        job_id: jobId,
+        player_id: queued?.player_id ?? req?.player_id ?? null,
+        display_name: queued?.display_name ?? recipientName ?? displayNameOf(req),
+        email: queued?.requester_email ?? recipientEmail,
+        activation_url: queued?.activation_url ?? activationLink,
+        expires_at: queued?.expires_at ?? panel?.dataset?.expiresAt ?? null,
+        created_at: req?.created_at ?? null,
+        subject: queued?.subject ?? ACTIVATION_EMAIL_SUBJECT,
+        email_subject: queued?.email_subject ?? queued?.subject ?? ACTIVATION_EMAIL_SUBJECT
       });
       return queued;
     }
@@ -1639,10 +1236,6 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const normalizedHistory = normalizeAdminRows(Array.isArray(history) ? history : (history?.items || []));
       lastExpired = normalizeExpiredRows(Array.isArray(expired) ? expired : (expired?.items || []));
       lastHistory = mergeHistoryWithExpired(normalizedHistory, lastExpired);
-      window.lastRequests = lastRequests;
-      window.lastHistory = lastHistory;
-      window.lastExpired = lastExpired;
-      window.currentAdminView = currentAdminView;
       renderStats(lastRequests, lastHistory);
       switchAdminView(currentAdminView);
     }
@@ -1689,9 +1282,9 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const urlEl = document.getElementById(`activation-url-${requestId}`);
       const expiresEl = document.getElementById(`activation-expires-${requestId}`);
       if (!panel || !urlEl || !expiresEl) return;
+      const normalized = normalizeMailResult(linkData, { requester_email: panel.dataset.email || '', activation_url: panel.dataset.url || '' });
       panel.classList.remove('hidden');
       rememberActivationPanel(requestId, true);
-      const normalized = normalizeMailResult(linkData, { requester_email: panel.dataset.email || '', activation_url: panel.dataset.url || '' });
       panel.dataset.url = normalized.activation_url || panel.dataset.url || '';
       panel.dataset.email = normalized.requester_email || normalized.recipient_email || panel.dataset.email || '';
       panel.dataset.displayName = normalized.display_name || normalized.recipient_name || panel.dataset.displayName || '';

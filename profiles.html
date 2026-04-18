@@ -7,8 +7,8 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Spelersprofielen</title>
-  <script>window.GEJAST_PAGE_VERSION='v492';</script>
-  <script src="./gejast-config.js?v492"></script>
+  <script>window.GEJAST_PAGE_VERSION='v573';</script>
+  <script src="./gejast-config.js?v573"></script>
   <script src="./gejast-clickable-cards.js?v386"></script>
   <script src="./gejast-scope-context.js?v391"></script><script src="./gejast-family-rollout.js?v393"></script>
   <style>
@@ -54,12 +54,22 @@
     .rarity-badge{display:grid;grid-template-columns:56px minmax(0,1fr);gap:10px;align-items:start;padding:10px;border-radius:16px;background:var(--soft);border:1px solid rgba(17,17,17,.06)}
     .rarity-badge img{width:56px;height:56px;object-fit:contain;border-radius:14px;background:#fffaf1;border:1px solid rgba(17,17,17,.08);padding:6px}
     .rarity-badge strong{display:block;font-size:14px}
+
+    .rarity-accordion{background:#fff;border:1px solid rgba(17,17,17,.08);border-radius:20px;overflow:hidden}
+    .rarity-accordion + .rarity-accordion{margin-top:14px}
+    .rarity-summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:16px}
+    .rarity-summary::-webkit-details-marker{display:none}
+    .rarity-summary-main{display:grid;gap:6px}
+    .rarity-summary-main h3{margin:0;font-size:18px}
+    .rarity-summary-main p{margin:0;color:var(--muted);font-size:13px}
+    .rarity-summary-count{display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:36px;padding:0 12px;border-radius:999px;background:#111;color:#fff;font-size:13px;font-weight:900}
+    .rarity-accordion-body{padding:0 16px 16px}
     .rarity-badge small{display:block;font-size:12px;color:var(--muted);line-height:1.4;margin-top:3px}.rarity-requirement{display:block;font-size:12px;color:#3d3429;line-height:1.45;margin-top:6px}
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}
-    @media (max-width:760px){.page{padding:14px 12px 90px}.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.head{grid-template-columns:64px minmax(0,1fr)}.avatar{width:64px;height:64px}}
+    @media (max-width:760px){.page{padding:14px 12px 90px}.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.head{grid-template-columns:64px minmax(0,1fr)}.avatar{width:64px;height:64px}.rarity-list{grid-template-columns:1fr}.rarity-accordion{border-radius:18px}.rarity-summary{padding:14px}.rarity-accordion-body{padding:0 14px 14px}}
   </style>
   <script src="./gejast-scope.js?v386"></script>
-  <script src="./gejast-home-gate.js?v492"></script>
+  <script src="./gejast-home-gate.js?v386"></script>
   <script src="./gejast-badges.js?v386"></script>
   <script src="./gejast-badge-progress.js?v386"></script>
   <script src="./gejast-rpc-contract.js?v391"></script>
@@ -246,31 +256,60 @@
         galleryNode.innerHTML = `<div class="badge-gallery-wrap">
           <div>
             <h2 style="margin:0 0 8px">Badgegalerij</h2>
-            <p style="margin:0;color:var(--muted)">Gesorteerd van minst zeldzaam / makkelijkst naar meest zeldzaam / moeilijkst, daarna alfabetisch. Elke badge toont de betekenis en onderaan wat je moet doen om hem te behalen.</p>
+            <p style="margin:0;color:var(--muted)">Gesorteerd van minst zeldzaam / makkelijkst naar meest zeldzaam / moeilijkst, daarna alfabetisch. Op mobiel wordt dit per rarity een rustige accordion met één kolom brede badgekaarten.</p>
           </div>
           <div class="rarity-grid">
-            ${groups.map((group) => `
-              <section class="rarity-col">
-                <div class="rarity-pill">${group.label}</div>
-                <div>
-                  <h3>${group.label}</h3>
-                  <p>${group.items.length} badge(s) in deze zeldzaamheidsklasse.</p>
+            ${groups.map((group, index) => `
+              <details class="rarity-accordion" data-rarity-accordion ${index === 0 ? 'open' : ''}>
+                <summary class="rarity-summary">
+                  <div class="rarity-summary-main">
+                    <div class="rarity-pill">${group.label}</div>
+                    <div>
+                      <h3>${group.label}</h3>
+                      <p>${group.items.length} badge(s) in deze zeldzaamheidsklasse.</p>
+                    </div>
+                  </div>
+                  <span class="rarity-summary-count">${group.items.length}</span>
+                </summary>
+                <div class="rarity-accordion-body">
+                  <div class="rarity-list">
+                    ${group.items.map((badge) => `
+                      <div class="rarity-badge">
+                        <img src="${badge.image}" alt="${badge.title}">
+                        <div>
+                          <strong>${badge.title}</strong>
+                          ${badge.nickname ? `<small>${badge.nickname}</small>` : ''}
+                          <small>${badge.description}</small>
+                          <small class="rarity-requirement"><strong>Te behalen door:</strong> ${badge.requirementsText || 'Zie badge-omschrijving.'}</small>
+                        </div>
+                      </div>`).join('')}
+                  </div>
                 </div>
-                <div class="rarity-list">
-                  ${group.items.map((badge) => `
-                    <div class="rarity-badge">
-                      <img src="${badge.image}" alt="${badge.title}">
-                      <div>
-                        <strong>${badge.title}</strong>
-                        ${badge.nickname ? `<small>${badge.nickname}</small>` : ''}
-                        <small>${badge.description}</small>
-                        <small class="rarity-requirement"><strong>Te behalen door:</strong> ${badge.requirementsText || 'Zie badge-omschrijving.'}</small>
-                      </div>
-                    </div>`).join('')}
-                </div>
-              </section>`).join('')}
+              </details>`).join('')}
           </div>
         </div>`;
+        bindBadgeAccordions();
+      }
+
+      function bindBadgeAccordions(){
+        const accordions = [...document.querySelectorAll('[data-rarity-accordion]')];
+        if (!accordions.length) return;
+        const mobile = window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
+        if (!mobile) {
+          accordions.forEach((item) => item.setAttribute('open', 'open'));
+          return;
+        }
+        accordions.forEach((item, index) => {
+          if (index !== 0) item.removeAttribute('open');
+          const summary = item.querySelector('summary');
+          if (summary && !summary.dataset.bound) {
+            summary.dataset.bound = '1';
+            summary.addEventListener('click', () => {
+              if (item.hasAttribute('open')) return;
+              accordions.forEach((other) => { if (other !== item) other.removeAttribute('open'); });
+            });
+          }
+        });
       }
 
       async function boot(){
@@ -299,6 +338,7 @@
 
       if (window.GEJAST_BADGES && window.GEJAST_BADGES.injectStyles) window.GEJAST_BADGES.injectStyles();
       boot();
+      window.addEventListener('resize', bindBadgeAccordions);
     })();
   </script>
   <script src="./site-analytics.js?v386"></script>
