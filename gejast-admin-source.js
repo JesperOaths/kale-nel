@@ -497,6 +497,18 @@
     ]);
   }
 
+  async function loadMakeEmailPipeline(options) {
+    const limit = Math.max(20, Math.min(Number(options?.limit || 80) || 80, 200));
+    const missingAfterMinutes = Math.max(1, Math.min(Number(options?.missingAfterMinutes || 10) || 10, 1440));
+    return firstOf([
+      () => directRpc('admin_get_make_email_pipeline', directPayload({
+        limit_input: limit,
+        missing_after_minutes: missingAfterMinutes
+      })),
+      () => loadMailDiagnostics()
+    ]);
+  }
+
   async function loadAnalytics(rangeDays, recentLimit) {
     return RPC.secureRead('analytics', {
       range_days: Number(rangeDays || 7),
@@ -632,6 +644,7 @@
     loadPushDiagnostics,
     queueActivePush,
     loadMailDiagnostics,
+    loadMakeEmailPipeline,
     loadAnalytics,
     loadMatchEditState,
     updateMatchPayload,

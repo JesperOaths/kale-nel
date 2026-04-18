@@ -1,10 +1,13 @@
 (function(){
   const CONFIG = {
-    VERSION:'v565',
+    VERSION:'v567',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
     CLAIM_EMAIL_RPC: 'claim_email_jobs_http',
+    MAKE_SENT_CALLBACK_RPC: 'mark_outbound_email_job_sent_make',
+    MAKE_FAILED_CALLBACK_RPC: 'mark_outbound_email_job_failed_make',
+    MAKE_CALLBACK_MISSING_AFTER_MINUTES: 10,
     EMAIL_SUBJECT: 'Activeer je account voor de Kale Nel',
     GOLD: '#9a8241',
     GOLD_HOVER: '#8a7338',
