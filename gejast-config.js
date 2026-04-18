@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v584',
+    VERSION:'v589',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -34,7 +34,7 @@
   }
   const candidates = [detectScriptVersion(), window.GEJAST_PAGE_VERSION, CONFIG.VERSION].filter(Boolean);
   const effectiveVersion = candidates.sort((a,b)=>parseVersion(b)-parseVersion(a))[0] || CONFIG.VERSION;
-  const effectiveNumber = parseVersion(effectiveVersion) || parseVersion(CONFIG.VERSION) || 580;
+  const effectiveNumber = parseVersion(effectiveVersion) || parseVersion(CONFIG.VERSION) || 589;
   const label = `${effectiveVersion} · Made by Bruis`;
   window.GEJAST_PAGE_VERSION = effectiveVersion;
 
@@ -104,17 +104,17 @@
 
   function purgeStaleClientCaches(){
     const oldSessionKeys = [
-      'gejast_homepage_boot_v389','gejast_homepage_boot_v426','gejast_homepage_boot_v448','gejast_homepage_boot_v579','gejast_homepage_boot_v580','gejast_homepage_boot_v581','gejast_homepage_boot_v582','gejast_homepage_boot_v583'
+      'gejast_homepage_boot_v389','gejast_homepage_boot_v426','gejast_homepage_boot_v448','gejast_homepage_boot_v579','gejast_homepage_boot_v580','gejast_homepage_boot_v581','gejast_homepage_boot_v582','gejast_homepage_boot_v583','gejast_homepage_boot_v584'
     ];
     const oldLocalKeys = [
-      'gejast_homepage_poll_lists_v448','gejast_homepage_poll_lists_v579','gejast_homepage_poll_lists_v580','gejast_homepage_poll_lists_v581','gejast_homepage_poll_lists_v582','gejast_homepage_poll_lists_v583',
-      'gejast_drinks_donderdag_lists_v448','gejast_drinks_donderdag_lists_v579','gejast_drinks_donderdag_lists_v580','gejast_drinks_donderdag_lists_v581','gejast_drinks_donderdag_lists_v582','gejast_drinks_donderdag_lists_v583'
+      'gejast_homepage_poll_lists_v448','gejast_homepage_poll_lists_v579','gejast_homepage_poll_lists_v580','gejast_homepage_poll_lists_v581','gejast_homepage_poll_lists_v582','gejast_homepage_poll_lists_v583','gejast_homepage_poll_lists_v584',
+      'gejast_drinks_donderdag_lists_v448','gejast_drinks_donderdag_lists_v579','gejast_drinks_donderdag_lists_v580','gejast_drinks_donderdag_lists_v581','gejast_drinks_donderdag_lists_v582','gejast_drinks_donderdag_lists_v583','gejast_drinks_donderdag_lists_v584'
     ];
     try {
-      if (sessionStorage.getItem('__gejast_cache_purged_v584') === '1') return;
+      if (sessionStorage.getItem('__gejast_cache_purged_v589') === '1') return;
       oldSessionKeys.forEach((key)=>sessionStorage.removeItem(key));
       oldLocalKeys.forEach((key)=>localStorage.removeItem(key));
-      sessionStorage.setItem('__gejast_cache_purged_v584','1');
+      sessionStorage.setItem('__gejast_cache_purged_v589','1');
     } catch (_) {}
   }
 

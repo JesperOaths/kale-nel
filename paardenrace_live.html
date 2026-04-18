@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace live</title>
-  <script>window.GEJAST_PAGE_VERSION='v583';</script>
-  <script src="./gejast-config.js?v583"></script>
-  <script src="./gejast-paardenrace.js?v583"></script>
+  <script>window.GEJAST_PAGE_VERSION='v589';</script>
+  <script src="./gejast-config.js?v589"></script>
+  <script src="./gejast-paardenrace.js?v589"></script>
   <style>
     :root{
       --gold:#9a8241;--paper:#fffaf3;--ink:#17130f;--muted:#6d6256;--line:rgba(0,0,0,.08);--bg:#efe6d7;--soft:#f7f1e7;
@@ -112,13 +112,8 @@
     .modal-top{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:16px}
     .pr-victory-banner{position:fixed;left:50%;top:50%;z-index:9999;transform:translate(-50%,-50%) scale(.92);padding:18px 28px;border-radius:28px;background:rgba(255,250,243,.96);border:2px solid var(--gold);box-shadow:0 24px 70px rgba(0,0,0,.3);font:900 clamp(1.5rem,5vw,3.2rem)/1.2 Georgia,serif;color:#2b1b0d;opacity:0;pointer-events:none;transition:all .3s ease;white-space:nowrap}
     .pr-victory-banner.is-live{opacity:1;transform:translate(-50%,-50%) scale(1)}
-    @media (max-width: 980px){
-      .hero-grid,.desktop-grid{grid-template-columns:1fr}
-    }
-    @media (max-width: 560px){
-      .mobile-dock{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:calc(100vw - 12px)}
-      .mobile-dock button{width:100%}
-    }
+    @media (max-width: 980px){.hero-grid,.desktop-grid{grid-template-columns:1fr}}
+    @media (max-width: 560px){.mobile-dock{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:calc(100vw - 12px)}.mobile-dock button{width:100%}}
     @media (max-width: 820px){
       .page{padding:10px 8px 104px}
       .site-credit-watermark{bottom:calc(116px + env(safe-area-inset-bottom));font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}
@@ -268,7 +263,13 @@
   let nominationSnapshot = {};
   let victoryActive = false;
   let statePollTimer = null;
-  const PANIC_KEY = 'gejast_paardenrace_emergency_brake_v575';
+  let loadStateInFlight = false;
+  let loadStateQueued = false;
+  let stateFailureCount = 0;
+  let unresolvedLoads = 0;
+  let lastBoardSignature = '';
+  let lastChromeSignature = '';
+  const PANIC_KEY = 'gejast_paardenrace_emergency_brake_v589';
 
   function qRoom() {
     const params = new URLSearchParams(location.search);
@@ -280,6 +281,31 @@
   function setStatus(msg) { if($('statusBox')) $('statusBox').textContent = msg || ''; }
   function renderBoard(match) { return api.renderLiveBoard(match); }
   function totalPot(players){ return (Array.isArray(players)?players:[]).reduce((sum,p)=>sum + Number(p?.wager_bakken || 0), 0); }
+  function boardSignature(match){
+    return JSON.stringify({
+      draw_index:Number(match?.draw_index||0),
+      last_draw:String(match?.last_draw_card||''),
+      winner:String(match?.winner_suit||''),
+      positions:match?.horse_positions||{},
+      gates:Array.isArray(match?.gate_cards)?match.gate_cards:[],
+      resolved:Array.isArray(match?.resolved_gates)?match.resolved_gates:[]
+    });
+  }
+  function chromeSignature(room, match, players, viewer){
+    return JSON.stringify({
+      room_code:String(room?.room_code||''),
+      stage:String(room?.stage||''),
+      stage_label:String(room?.stage_label||''),
+      countdown:Number(room?.countdown_remaining_seconds||0),
+      can_draw:!!room?.can_draw,
+      players:(Array.isArray(players)?players:[]).map((p)=>[
+        p?.player_name||'', p?.selected_suit||'', Number(p?.wager_bakken||0), Number(p?.total_bakken_owed||0), !!p?.is_ready, !!p?.is_host, !!p?.is_winner, !!p?.wager_verified
+      ]),
+      viewer:[viewer?.player_name||'', !!viewer?.is_host, !!viewer?.can_nominate, Number(viewer?.nomination_budget_bakken||0)],
+      last_draw:String(match?.last_draw_card||''),
+      winner:String(match?.winner_suit||'')
+    });
+  }
 
   function buildPlayerRows(players){
     return (Array.isArray(players)?players:[]).map((p)=>`
@@ -386,10 +412,7 @@
     const allocRows = $('allocRows');
     if (allocRows) {
       allocRows.innerHTML = `<div class="small">Jouw budget: ${myBudget} Bakken</div>` +
-        others.map(p => `<div class="alloc-row">
-          <div>${p.player_name}</div>
-          <input class="nom-input" type="number" min="0" step="1" value="${nominationSnapshot[p.player_name] || 0}" data-target="${encodeURIComponent(p.player_name)}">
-        </div>`).join('');
+        others.map(p => `<div class="alloc-row"><div>${p.player_name}</div><input class="nom-input" type="number" min="0" step="1" value="${nominationSnapshot[p.player_name] || 0}" data-target="${encodeURIComponent(p.player_name)}"></div>`).join('');
       allocRows.querySelectorAll('input[data-target]').forEach(input => {
         const name = decodeURIComponent(input.dataset.target);
         input.oninput = () => { nominationSnapshot[name] = input.value; };
@@ -415,11 +438,9 @@
       $('focusChip').className = `chip ${summary.winnerSuit ? 'good' : summary.stage === 'countdown' ? 'warn' : ''}`.trim();
     }
     if($('mobileMinimap')) $('mobileMinimap').innerHTML = api.renderRaceMinimap(match);
-
     if($('playersBox')) $('playersBox').innerHTML = buildPlayerRows(players);
     if($('phaseBox')) $('phaseBox').innerHTML = buildLogItems(room, match);
     if($('desktopNominationBox')) $('desktopNominationBox').innerHTML = buildNominationSummary(room, players, viewer);
-
     if($('drawBtn')) $('drawBtn').disabled = !(room.can_draw && room.stage === 'race') || autoplay || isPanicActive();
     if($('resetBtn')) $('resetBtn').disabled = !(room.stage === 'finished' && viewer?.is_host) || isPanicActive();
     if($('closeBtn')) $('closeBtn').style.display = viewer?.is_host ? '' : 'none';
@@ -461,22 +482,30 @@
     const players = state?.players || [];
     const viewer = state?.viewer || {};
     currentState = state;
-    renderChrome(room, match, players, viewer);
-    renderBoardFrame(match);
+
+    const nextBoardSig = boardSignature(match);
+    const nextChromeSig = chromeSignature(room, match, players, viewer);
+    const boardChanged = nextBoardSig !== lastBoardSignature;
+    const chromeChanged = nextChromeSig !== lastChromeSignature;
+    lastBoardSignature = nextBoardSig;
+    lastChromeSignature = nextChromeSig;
+
+    if (chromeChanged) renderChrome(room, match, players, viewer);
+    if (boardChanged) renderBoardFrame(match);
     if (room?.stage === 'nominations' && prevState?.room?.stage !== 'nominations' && window.matchMedia('(max-width: 820px)').matches) { openDrawer('nominations'); }
     if (match?.winner_suit && match.winner_suit !== prevMatch?.winner_suit && !options.noAnimation) {
       await startVictoryCelebration(match.winner_suit);
     }
   }
 
-  let unresolvedLoads = 0;
   function bounceToLobby(reason='Deze race is gesloten.'){
     try{ stopAutoplay(); if(statePollTimer){ clearInterval(statePollTimer); statePollTimer = null; } }catch(_){ }
     try{ api && api.clearStoredRoomCode && api.clearStoredRoomCode(); }catch(_){ }
     setStatus(reason);
     const target = api && api.scopedHref ? api.scopedHref('./paardenrace.html') : './paardenrace.html';
-    window.setTimeout(()=>{ window.location.replace(target); }, 120);
+    window.setTimeout(()=>{ window.location.replace(target); }, 140);
   }
+
   async function loadState(opts = {}) {
     const code = qRoom();
     if (!code || isPanicActive()) return;
@@ -484,7 +513,7 @@
     loadStateInFlight = true;
     loadStateQueued = false;
     try {
-      const state = await api.rpc('tick_paardenrace_room_safe', { room_code_input: code }, { timeoutMs: opts.timeoutMs || 3600 });
+      const state = await api.rpc('tick_paardenrace_room_safe', { room_code_input: code }, { timeoutMs: opts.timeoutMs || 4200 });
       if (!state || !state.room || String(state.room.stage || '').toLowerCase() === 'closed') {
         bounceToLobby('Deze lobby is gesloten. Je gaat terug naar de lobby.');
         return;
@@ -512,7 +541,7 @@
       loadStateInFlight = false;
       if (loadStateQueued && !isPanicActive()) {
         loadStateQueued = false;
-        window.setTimeout(()=>loadState(Object.assign({}, opts, { force:true })), 90);
+        window.setTimeout(()=>loadState(Object.assign({}, opts, { force:true })), 120);
       }
     }
   }
@@ -538,7 +567,7 @@
       }
     } finally {
       if (autoplay && currentState?.room?.can_draw && currentState?.room?.stage === 'race') {
-        autoplayTimer = setTimeout(drawNext, 1800);
+        autoplayTimer = setTimeout(drawNext, 2000);
       }
     }
   }
@@ -564,12 +593,11 @@
 
   if($('paardenraceLobbyLink') && api && api.scopedHref) $('paardenraceLobbyLink').href = api.scopedHref('./paardenrace.html');
   if($('mobileLobbyLink') && api && api.scopedHref) $('mobileLobbyLink').href = api.scopedHref('./paardenrace.html');
-
-  if($('refreshBtn')) $('refreshBtn').addEventListener('click', () => loadState({ noAnimation: true }));
-  if($('mobileRefreshBtn')) $('mobileRefreshBtn').addEventListener('click', () => loadState({ noAnimation: true }));
+  if($('refreshBtn')) $('refreshBtn').addEventListener('click', () => loadState({ noAnimation: true, force:true }));
+  if($('mobileRefreshBtn')) $('mobileRefreshBtn').addEventListener('click', () => loadState({ noAnimation: true, force:true }));
   if($('panicBtn')) $('panicBtn').addEventListener('click', ()=>{ stopAutoplay(); if(statePollTimer){ clearInterval(statePollTimer); statePollTimer = null; } setPanicActive(true); });
   if($('mobilePanicBtn')) $('mobilePanicBtn').addEventListener('click', ()=>{ stopAutoplay(); if(statePollTimer){ clearInterval(statePollTimer); statePollTimer = null; } setPanicActive(true); });
-  if($('panicReleaseBtn')) $('panicReleaseBtn').addEventListener('click', ()=>{ setPanicActive(false); loadState({ noAnimation: true }); if(!statePollTimer){ statePollTimer = setInterval(() => { if (!victoryActive && !isPanicActive()) { loadState({ noAnimation: true }); } }, 1200); } });
+  if($('panicReleaseBtn')) $('panicReleaseBtn').addEventListener('click', ()=>{ setPanicActive(false); loadState({ noAnimation: true, force:true }); if(!statePollTimer){ statePollTimer = setInterval(() => { if (!victoryActive && !isPanicActive()) { loadState({ noAnimation: true }); } }, 1800); } });
   if($('drawBtn')) $('drawBtn').addEventListener('click', drawNext);
   if($('playBtn')) $('playBtn').addEventListener('click', startAutoplay);
   if($('pauseBtn')) $('pauseBtn').addEventListener('click', stopAutoplay);
@@ -617,10 +645,10 @@
 
   syncPanicUi();
   openDrawer('race');
-  loadState({ noAnimation: true });
+  loadState({ noAnimation: true, force:true });
   statePollTimer = setInterval(() => {
     if (!victoryActive && !isPanicActive()) loadState({ noAnimation: true });
-  }, 1200);
+  }, 1800);
 })();
 </script>
 </body>
