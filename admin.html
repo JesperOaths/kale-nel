@@ -45,13 +45,13 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v567';</script><script src="./gejast-config.js?v567"></script><script src="./gejast-scope-context.js?v391"></script><script src="./gejast-family-rollout.js?v393"></script>
+  <script>window.GEJAST_PAGE_VERSION='v570';</script><script src="./gejast-config.js?v570"></script><script src="./gejast-scope-context.js?v391"></script><script src="./gejast-family-rollout.js?v393"></script>
   <script src="./gejast-rpc-contract.js?v391"></script>
-  <script src="./gejast-admin-rpc.js?v391"></script>
-  <script src="./admin-session-sync.js?v562"></script>
+  <script src="./gejast-admin-rpc.js?v570"></script>
+  <script src="./admin-session-sync.js?v570"></script>
   <script src="./admin-topnav.js?v391"></script>
   <script src="./gejast-admin-claims-buckets.js?v391"></script>
-  <script src="./gejast-admin-claims-source.js?v391"></script>
+  <script src="./gejast-admin-claims-source.js?v570"></script>
 <script src="./gejast-scope.js?v391"></script></head>
 <body>
   <main class="main-card">
@@ -93,7 +93,7 @@
             <a class="hub-link" href="./admin_claims.html"><strong>Aanvragen & activaties</strong><small>Goedkeuren, afwijzen, activatielinks en mailqueue.</small></a>
             <a class="hub-link" href="./admin_claims.html#view=expired"><strong>Verlopen activaties</strong><small>Verlopen gevallen direct in dezelfde beheerflow.</small></a>
             <a class="hub-link" href="./admin_reserved_names.html"><strong>Claimbare namen</strong><small>Bron voor aanvraagbare namen en handmatige reserveringen.</small></a>
-            <a class="hub-link" href="./admin_mail_audit.html"><strong>Make & e-mailpijplijn</strong><small>Bekijk wat wij naar Make uitsturen, welke succes- en foutcallbacks terugkomen en welke aanvragen zonder callback zijn blijven hangen.</small></a>
+            <a class="hub-link" href="./admin_mail_audit.html"><strong>Maildiagnostiek</strong><small>Make-webhook, mail-RPC en laatste mailjobstatus.</small></a>
             <a class="hub-link" href="./admin_push.html"><strong>Notificaties / push</strong><small>Recente actieve gebruikers, test-push en admin push-flow.</small></a>
           </div>
         </section>
@@ -154,6 +154,28 @@
       return data;
     }
 
+    function withTimeout(promise, ms, label='Verzoek') {
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timeout na ${Math.round(ms/1000)}s`)), ms))
+      ]);
+    }
+
+    async function fetchJsonWithTimeout(url, init, timeoutMs, label) {
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timer = controller ? window.setTimeout(() => { try { controller.abort(); } catch (_) {} }, timeoutMs) : null;
+      try {
+        const res = await fetch(url, controller ? { ...(init || {}), signal: controller.signal } : init);
+        return await parseResponse(res);
+      } catch (error) {
+        if (controller && error && error.name === 'AbortError') throw new Error(`${label} timeout na ${Math.round(timeoutMs/1000)}s`);
+        throw error;
+      } finally {
+        if (timer) window.clearTimeout(timer);
+      }
+    }
+
+
     function getAdminSessionToken() { return (window.GEJAST_ADMIN_SESSION && window.GEJAST_ADMIN_SESSION.getToken()) || sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
     function setAdminSessionToken(token, username = "", deviceToken = "") { if (window.GEJAST_ADMIN_SESSION) return window.GEJAST_ADMIN_SESSION.setBundle(token, username, true, deviceToken); sessionStorage.setItem(ADMIN_SESSION_KEY, token); localStorage.setItem(ADMIN_SESSION_KEY, token); }
     function clearAdminSessionToken() { if (window.GEJAST_ADMIN_SESSION) return window.GEJAST_ADMIN_SESSION.clearBundle(); ["jas_admin_session_v8","jas_admin_device_v1","jas_admin_user_v1","jas_admin_deadline_v1","jas_admin_trusted_until_v1"].forEach((key)=>{ sessionStorage.removeItem(key); localStorage.removeItem(key); }); }
@@ -191,11 +213,10 @@
       if (!username) throw new Error('Vul een gebruikersnaam in');
       if (!password) throw new Error('Vul een wachtwoord in');
       if (!/^\d{6}$/.test(totp)) throw new Error('Vul je 6-cijferige Google Authenticator-code in');
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_login`, {
+      let data = await fetchJsonWithTimeout(`${SUPABASE_URL}/rest/v1/rpc/admin_login`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
         body: JSON.stringify({ input_username: username, input_password: password, input_totp_code: totp })
-      });
-      let data = await parseResponse(res);
+      }, 12000, 'Adminlogin');
       if (Array.isArray(data)) data = data[0] || {};
       const token = data.admin_session_token || data.token;
       if (!token) throw new Error('Login gaf geen admin-sessie terug');
@@ -234,34 +255,48 @@
     async function loadCounts(force = false) {
       const source = window.GEJAST_ADMIN_CLAIMS_SOURCE;
       const tokenValue = getAdminSessionToken();
-      const bundle = source && typeof source.load === 'function'
-        ? await source.load(tokenValue, { force })
-        : await (async()=>{
-            const tokenPayload = { admin_session_token: tokenValue };
-            const [requestsRes, historyRes, expiredRes] = await Promise.all([
-              callFirstRpc(['admin_get_claim_requests','admin_list_claim_requests_action'], tokenPayload),
-              callFirstRpc(['admin_get_claim_history','admin_list_claim_history_action'], tokenPayload),
-              callFirstRpc(['admin_get_expired_activation_queue','admin_list_expired_activation_queue_action'], tokenPayload).catch(() => ({ items: [] }))
-            ]);
-            return {
-              requests: requestsRes.requests || requestsRes.items || [],
-              history: historyRes.history || historyRes.items || [],
-              expiredQueue: Array.isArray(expiredRes?.items) ? expiredRes.items : []
-            };
-          })();
-      const requests = normalizeAdminRows(bundle.requests || []);
-      const history = normalizeAdminRows(bundle.history || []);
-      const expiredItemsNormalized = normalizeExpiredRows(bundle.expiredQueue || []);
-      const mergedHistory = mergeHistoryWithExpired(history, expiredItemsNormalized);
-      const awaitingItems = mergedHistory.filter((item) => item.state_bucket === 'awaiting');
-      const active = mergedHistory.filter((item) => item.state_bucket === 'active').length;
-      const rejected = mergedHistory.filter((item) => item.state_bucket === 'rejected').length;
-      const expiredHistory = mergedHistory.filter((item) => item.state_bucket === 'expired').length;
-      document.getElementById('statPending').textContent = String(requests.length);
-      document.getElementById('statAwaiting').textContent = String(awaitingItems.length);
-      document.getElementById('statExpired').textContent = String(expiredHistory);
-      document.getElementById('statActive').textContent = String(active);
-      document.getElementById('statRejected').textContent = String(rejected);
+      const fallbackRender = () => {
+        document.getElementById('statPending').textContent = document.getElementById('statPending').textContent || '0';
+        document.getElementById('statAwaiting').textContent = document.getElementById('statAwaiting').textContent || '0';
+        document.getElementById('statExpired').textContent = document.getElementById('statExpired').textContent || '0';
+        document.getElementById('statActive').textContent = document.getElementById('statActive').textContent || '0';
+        document.getElementById('statRejected').textContent = document.getElementById('statRejected').textContent || '0';
+      };
+      try {
+        const bundlePromise = source && typeof source.load === 'function'
+          ? source.load(tokenValue, { force })
+          : (async()=>{
+              const tokenPayload = { admin_session_token: tokenValue };
+              const [requestsRes, historyRes, expiredRes] = await Promise.all([
+                callFirstRpc(['admin_get_claim_requests','admin_list_claim_requests_action'], tokenPayload),
+                callFirstRpc(['admin_get_claim_history','admin_list_claim_history_action'], tokenPayload),
+                callFirstRpc(['admin_get_expired_activation_queue','admin_list_expired_activation_queue_action'], tokenPayload).catch(() => ({ items: [] }))
+              ]);
+              return {
+                requests: requestsRes.requests || requestsRes.items || [],
+                history: historyRes.history || historyRes.items || [],
+                expiredQueue: Array.isArray(expiredRes?.items) ? expiredRes.items : []
+              };
+            })();
+        const bundle = await withTimeout(bundlePromise, 10000, 'Admin-statistieken laden');
+        const requests = normalizeAdminRows(bundle.requests || []);
+        const history = normalizeAdminRows(bundle.history || []);
+        const expiredItemsNormalized = normalizeExpiredRows(bundle.expiredQueue || []);
+        const mergedHistory = mergeHistoryWithExpired(history, expiredItemsNormalized);
+        const awaitingItems = mergedHistory.filter((item) => item.state_bucket === 'awaiting');
+        const active = mergedHistory.filter((item) => item.state_bucket === 'active').length;
+        const rejected = mergedHistory.filter((item) => item.state_bucket === 'rejected').length;
+        const expiredHistory = mergedHistory.filter((item) => item.state_bucket === 'expired').length;
+        document.getElementById('statPending').textContent = String(requests.length);
+        document.getElementById('statAwaiting').textContent = String(awaitingItems.length);
+        document.getElementById('statExpired').textContent = String(expiredHistory);
+        document.getElementById('statActive').textContent = String(active);
+        document.getElementById('statRejected').textContent = String(rejected);
+        return true;
+      } catch (error) {
+        fallbackRender();
+        throw error;
+      }
     }
     document.addEventListener('DOMContentLoaded', ()=>{ const sel=document.getElementById('adminScopeSelect'); if(sel){ sel.value=getAdminScope(); sel.addEventListener('change', ()=>{ localStorage.setItem(ADMIN_SCOPE_KEY, sel.value); applyAdminScope(); }); } applyAdminScope(); });
 
@@ -270,10 +305,10 @@
       if (!token) { showLoggedOut(); return; }
       try {
         await checkSession();
-        showLoggedIn();
-        await loadCounts();
+        showLoggedIn(session.admin_username || session.username || 'admin');
         if (maybeReturnAfterLogin()) return;
         setStatus('Beheerhub geladen.', 'ok');
+        loadCounts().then(()=>setStatus('Beheerhub geladen.', 'ok')).catch((error)=>{ setStatus((error?.message || 'Hubdata laden mislukt.') + ' — de hub is wel geopend.', 'warn'); });
       } catch (error) {
         clearAdminSessionToken();
         showLoggedOut();
@@ -285,14 +320,19 @@
       event.preventDefault();
       try {
         setStatus('Inloggen...');
-        await adminLogin();
-        showLoggedIn();
-        await loadCounts();
-        setStatus('Inloggen gelukt.', 'ok');
+        const loginResult = await adminLogin();
+        const loginName = loginResult?.admin_username || loginResult?.username || document.getElementById('usernameInput').value.trim();
+        showLoggedIn(loginName);
         if (maybeReturnAfterLogin()) return;
+        setStatus('Inloggen gelukt. Hub wordt geladen...', 'ok');
+        loadCounts().then(()=>setStatus('Inloggen gelukt.', 'ok')).catch((error)=>{ setStatus((error?.message || 'Adminstatistieken laden mislukt.') + ' — de login zelf is wel gelukt.', 'warn'); });
       } catch (error) {
         setStatus(error?.message || 'Inloggen mislukt.', 'warn');
       }
+    });
+    document.getElementById('loginBtn').addEventListener('click', (event) => {
+      if (event) event.preventDefault();
+      document.getElementById('loginView').requestSubmit();
     });
     document.getElementById('refreshBtn').addEventListener('click', async () => {
       try {

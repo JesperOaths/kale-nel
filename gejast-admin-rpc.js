@@ -4,6 +4,7 @@
   root.GEJAST_ADMIN_RPC = api;
 })(typeof window !== 'undefined' ? window : globalThis, function (root) {
   const ADMIN_SCOPE_KEY = 'jas_admin_scope_v1';
+  const RPC_TIMEOUT_MS = 12000;
 
   function cfg() {
     const value = root.GEJAST_CONFIG || {};
@@ -21,6 +22,23 @@
       'Content-Type': 'application/json',
       Accept: 'application/json'
     };
+  }
+
+
+
+  async function fetchWithTimeout(url, init, timeoutMs = RPC_TIMEOUT_MS) {
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer = controller ? root.setTimeout(() => { try { controller.abort(); } catch (_) {} }, timeoutMs) : null;
+    try {
+      return await root.fetch(url, controller ? { ...(init || {}), signal: controller.signal } : init);
+    } catch (error) {
+      if (controller && error && error.name === 'AbortError') {
+        throw new Error(`Admin-RPC timeout na ${Math.round(timeoutMs/1000)}s`);
+      }
+      throw error;
+    } finally {
+      if (timer) root.clearTimeout(timer);
+    }
   }
 
   async function parseResponse(res) {
@@ -65,7 +83,7 @@
 
   async function rpc(name, payload) {
     const value = cfg();
-    const res = await root.fetch(`${value.SUPABASE_URL}/rest/v1/rpc/${name}`, {
+    const res = await fetchWithTimeout(`${value.SUPABASE_URL}/rest/v1/rpc/${name}`, {
       method: 'POST',
       mode: 'cors',
       cache: 'no-store',

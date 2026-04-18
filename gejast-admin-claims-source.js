@@ -1,6 +1,7 @@
 (function (global) {
   const CACHE_KEY = 'gejast_admin_claims_bundle_v4';
   const CACHE_TTL = 8 * 1000;
+  const DIRECT_RPC_TIMEOUT_MS = 10000;
 
   function resolveCtx() {
     return global.GEJAST_SCOPE_CONTEXT || {
@@ -27,6 +28,21 @@
     };
   }
 
+
+
+  async function fetchWithTimeout(url, init, timeoutMs = DIRECT_RPC_TIMEOUT_MS) {
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => { try { controller.abort(); } catch (_) {} }, timeoutMs) : null;
+    try {
+      return await fetch(url, controller ? { ...(init || {}), signal: controller.signal } : init);
+    } catch (error) {
+      if (controller && error && error.name === 'AbortError') throw new Error(`Admin-claims timeout na ${Math.round(timeoutMs/1000)}s`);
+      throw error;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
   async function directParse(res) {
     const text = await res.text();
     let data = null;
@@ -42,7 +58,7 @@
   async function directCallRpc(name, payload) {
     const cfg = global.GEJAST_CONFIG || {};
     if (!cfg.SUPABASE_URL) throw new Error('Supabase-config ontbreekt.');
-    const raw = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
+    const raw = await fetchWithTimeout(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
       method: 'POST',
       mode: 'cors',
       cache: 'no-store',

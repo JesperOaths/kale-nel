@@ -8,6 +8,7 @@
   const ACTIVE_SESSION_MS = 24 * 60 * 60 * 1000;
   const TRUSTED_DEVICE_MS = 30 * 24 * 60 * 60 * 1000;
   const KEEPALIVE_MS = 5 * 60 * 1000;
+  const VALIDATE_TIMEOUT_MS = 12000;
 
   const cfg = window.GEJAST_CONFIG || {};
   const SUPABASE_URL = cfg.SUPABASE_URL || 'https://uiqntazgnrxwliaidkmy.supabase.co';
@@ -20,6 +21,21 @@
       'Content-Type':'application/json',
       Accept:'application/json'
     };
+  }
+
+
+
+  async function fetchWithTimeout(url, init, timeoutMs = VALIDATE_TIMEOUT_MS){
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer = controller ? window.setTimeout(()=>{ try { controller.abort(); } catch(_) {} }, timeoutMs) : null;
+    try {
+      return await fetch(url, controller ? { ...(init || {}), signal: controller.signal } : init);
+    } catch(error){
+      if (controller && error && error.name === 'AbortError') throw new Error(`Adminvalidatie timeout na ${Math.round(timeoutMs/1000)}s`);
+      throw error;
+    } finally {
+      if (timer) window.clearTimeout(timer);
+    }
   }
 
   async function parse(res){
@@ -159,7 +175,7 @@
 
     let data = null;
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpc}`, {
+      const res = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/rpc/${rpc}`, {
         method:'POST',
         mode:'cors',
         cache:'no-store',
