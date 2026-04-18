@@ -112,9 +112,9 @@
   }
 
   function injectLayoutStyles() {
-    if (document.getElementById('gejast-admin-users-layout-v561')) return;
+    if (document.getElementById('gejast-admin-users-layout-v562')) return;
     const style = document.createElement('style');
-    style.id = 'gejast-admin-users-layout-v561';
+    style.id = 'gejast-admin-users-layout-v562';
     style.textContent = `
       #statsGrid {
         display: grid !important;
