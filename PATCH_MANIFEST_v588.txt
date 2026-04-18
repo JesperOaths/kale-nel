@@ -1,0 +1,11 @@
+PATCH MANIFEST v588
+- index.html
+- README_v588_restore_old_drankstand.txt
+
+Source basis
+- user-uploaded previous index.html containing the correct Drankstand boxes and rotating speed Top 5 logic
+
+Expected visible result
+- old Drankstand layout restored on desktop and mobile
+- rotating speed Top 5 box restored
+- homepage Beurs card still links directly to despimarkt.html
