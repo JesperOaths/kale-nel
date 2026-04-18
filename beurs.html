@@ -1,44 +1,53 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
-  <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
-  <meta http-equiv="Pragma" content="no-cache" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Beurs d'Espinoza</title>
-  <script>window.GEJAST_PAGE_VERSION='v550';</script>
-  <script src="./gejast-config.js?v550"></script>
+  <script>window.GEJAST_PAGE_VERSION='v578';</script>
+  <script src="./gejast-config.js?v578"></script>
   <style>
-    :root{--bg:#f3ede4;--paper:#fffaf3;--ink:#17130f;--muted:#6d6256;--line:rgba(0,0,0,.10);--gold:#9a8241}
+    :root{--paper:#fffaf3;--ink:#17130f;--muted:#6d6256;--line:rgba(0,0,0,.08);--gold:#9a8241}
     *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink)}
-    .wrap{max-width:820px;margin:0 auto;padding:32px 16px}
-    .card{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:22px}
-    .btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:16px;border:1px solid var(--line);background:#17130f;color:#fff;text-decoration:none;font-weight:800}
-    .muted{color:var(--muted)}
+    body{margin:0;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(244,240,232,.92),rgba(244,240,232,.94)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
+    .page{max-width:1040px;margin:0 auto;padding:20px 14px 96px}
+    .shell{background:rgba(255,251,245,.9);border:1px solid rgba(255,255,255,.7);border-radius:28px;padding:22px;box-shadow:0 20px 40px rgba(0,0,0,.08)}
+    .top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+    .title{font-size:clamp(2rem,4vw,3rem);letter-spacing:-.05em;margin:0}
+    .sub{color:var(--muted);max-width:60ch;line-height:1.5;margin-top:8px}
+    .btn,a.btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:16px;border:1px solid var(--line);background:#17130f;color:#fff;text-decoration:none;font-weight:800}
+    .btn.alt,a.btn.alt{background:#fff;color:#17130f}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}
+    .card{display:grid;gap:8px;padding:18px;border-radius:22px;background:#fff;border:1px solid var(--line);text-decoration:none;color:inherit;box-shadow:0 12px 24px rgba(0,0,0,.04)}
+    .card strong{font-size:1.1rem}
+    .card span{color:var(--muted);line-height:1.45}
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}
+    @media (max-width:760px){.grid{grid-template-columns:1fr}.page{padding:14px 12px 96px}}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h1 style="margin:0 0 10px">Beurs d'Espinoza</h1>
-      <p class="muted">Je wordt doorgestuurd naar de echte Beurs d'Espinoza-hub.</p>
-      <p><a class="btn" id="fallbackLink" href="./despimarkt.html">Ga naar Beurs d'Espinoza</a></p>
-    </div>
-  </div>
+  <main class="page">
+    <section class="shell">
+      <div class="top">
+        <div>
+          <h1 class="title">Beurs d'Espinoza</h1>
+          <div class="sub">De placeholder is hier vervangen door een echte hub. Van hieruit ga je weer naar de werkende routes die bij de beurs- en hoflaag horen.</div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn alt" href="./index.html">Home</a>
+          <a class="btn" href="./ballroom.html">Balzaal</a>
+        </div>
+      </div>
+      <div class="grid">
+        <a class="card" href="./ballroom.html"><strong>Balzaal</strong><span>De hof- en koninglaag die nu al echt werkt.</span></a>
+        <a class="card" href="./profiles.html"><strong>Spelers</strong><span>Profielen, badges en spelerdetails.</span></a>
+        <a class="card" href="./pikken.html"><strong>Pikken</strong><span>Open de Pikken-lobby en live tafels.</span></a>
+        <a class="card" href="./paardenrace.html"><strong>Paardenrace</strong><span>Open rooms, live matches en racebediening.</span></a>
+      </div>
+    </section>
+  </main>
   <div class="site-credit-watermark" data-version-watermark></div>
-  <script>
-    (function(){
-      var target = new URL('./despimarkt.html', window.location.href);
-      var current = new URL(window.location.href);
-      current.searchParams.forEach(function(value, key){ target.searchParams.set(key, value); });
-      target.hash = current.hash || '';
-      var fallback = document.getElementById('fallbackLink');
-      if (fallback) fallback.href = target.pathname.split('/').pop() + target.search + target.hash;
-      window.location.replace(target.toString());
-    })();
-  </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>

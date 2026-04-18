@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v577',
+    VERSION:'v578',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -37,6 +37,19 @@
   const label = `${effectiveVersion} · Made by Bruis`;
   window.GEJAST_PAGE_VERSION = effectiveVersion;
 
+  function shouldHideWatermark(){
+    try{
+      if (window.GEJAST_HIDE_WATERMARK) return true;
+      const root = document.documentElement;
+      const body = document.body;
+      const path = String(location.pathname || '').toLowerCase();
+      if (root && root.getAttribute('data-hide-version-watermark') === '1') return true;
+      if (body && body.getAttribute('data-hide-version-watermark') === '1') return true;
+      if (/\/(?:pikken|pikken_live|pikken_stats|paardenrace|paardenrace_live|paardenrace_stats)\.html$/i.test(path)) return true;
+    }catch(_){}
+    return false;
+  }
+
   function watermarkStyles(node){
     if (!node || !node.style) return;
     const compact = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
@@ -63,7 +76,7 @@
     });
   }
   function ensureVersionWatermark(){
-    if (!document.body) return [];
+    if (!document.body || shouldHideWatermark()) return [];
     const selectors = ['[data-version-watermark]','.site-credit-watermark','#versionWatermark','.version-tag','.watermark'];
     let nodes = selectors.flatMap((selector)=>Array.from(document.querySelectorAll(selector))).filter(Boolean);
     if (!nodes.length) {
@@ -77,10 +90,21 @@
     return nodes.filter((node)=>{ if (seen.has(node)) return false; seen.add(node); return true; });
   }
   function applyVersionLabel(){
+    if (shouldHideWatermark()){
+      document.querySelectorAll('[data-version-watermark],.site-credit-watermark,#versionWatermark,.version-tag,.watermark').forEach((node)=>{
+        node.style.display = 'none';
+        node.setAttribute('aria-hidden','true');
+      });
+      return;
+    }
     const nodes = ensureVersionWatermark();
     nodes.forEach((node)=>{ node.textContent = label; watermarkStyles(node); });
     const re = /v\d+\s*[·.-]?\s*Made by Bruis/i;
-    document.querySelectorAll('body *').forEach((node)=>{ if (node.children.length) return; const txt=(node.textContent||'').trim(); if (re.test(txt)) { node.textContent = label; watermarkStyles(node); } });
+    document.querySelectorAll('body *').forEach((node)=>{
+      if (node.children.length) return;
+      const txt=(node.textContent||'').trim();
+      if (re.test(txt)) { node.textContent = label; watermarkStyles(node); }
+    });
   }
 
   function normalizeProfileImageUrl(value){
@@ -106,43 +130,6 @@
       seen.add(key);
       return true;
     });
-  }
-  async function fetchScopedActivePlayerNames(scope){
-    const resolvedScope = normalizeScope(scope || inferRuntimeScope());
-    const headers = { 'Content-Type':'application/json', apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '', Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}` };
-    async function callRpc(name, payload){
-      const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify(payload || {}) });
-      const txt = await res.text();
-      let data = null;
-      try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || `HTTP ${res.status}`); }
-      if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
-      return data && data[name] !== undefined ? data[name] : data;
-    }
-    function toNames(raw){
-      const rows = Array.isArray(raw)
-        ? raw
-        : (Array.isArray(raw?.players) ? raw.players : (Array.isArray(raw?.profiles) ? raw.profiles : (Array.isArray(raw?.names) ? raw.names : (Array.isArray(raw?.data) ? raw.data : []))));
-      let names = uniquePersonNames(rows.map((row)=>{
-        if (typeof row === 'string') return row;
-        return row?.public_display_name || row?.chosen_username || row?.nickname || row?.display_name || row?.player_name || row?.name || row?.label || row?.desired_name || row?.slug || '';
-      }));
-      if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, resolvedScope);
-      return names;
-    }
-    const attempts = [
-      ['get_all_site_players_public_scoped', { site_scope_input: resolvedScope }],
-      ['get_profiles_page_bundle_scoped', { site_scope_input: resolvedScope }],
-      ['get_login_names_scoped', { site_scope_input: resolvedScope }],
-      ['get_login_names', {}]
-    ];
-    for (const [name, payload] of attempts){
-      try {
-        const raw = await callRpc(name, payload);
-        const names = toNames(raw);
-        if (names.length) return names;
-      } catch (_) {}
-    }
-    return [];
   }
 
   function getPlayerSessionToken(){
@@ -177,7 +164,14 @@
     if (!last) return false;
     return (Date.now() - last) > CONFIG.PLAYER_SESSION_IDLE_MS;
   }
-  function inferRuntimeScope(){ try { const qs = new URLSearchParams(location.search); if (qs.get('scope')==='family') return 'family'; if ((location.pathname||'').includes('/familie/')) return 'family'; } catch(_){} return 'friends'; }
+  function inferRuntimeScope(){
+    try {
+      const qs = new URLSearchParams(location.search);
+      if (qs.get('scope') === 'family') return 'family';
+      if ((location.pathname || '').includes('/familie/')) return 'family';
+    } catch(_) {}
+    return 'friends';
+  }
 
   function sanitizeReturnTarget(raw, fallback=''){
     const value = String(raw || '').trim();
@@ -197,6 +191,9 @@
       return sanitizeReturnTarget(fallback || 'index.html', 'index.html');
     }
   }
+  function normalizeScope(input){
+    return String(input || '').trim().toLowerCase() === 'family' ? 'family' : 'friends';
+  }
   function buildHomeUrl(returnTo, scope){
     const useScope = scope || inferRuntimeScope();
     const url = new URL('./home.html', window.location.href);
@@ -213,7 +210,21 @@
     if (target) url.searchParams.set('return_to', target);
     return url.toString();
   }
-
+  function buildRequestUrl(returnTo, scope){
+    const normalizedScope = normalizeScope(scope || inferRuntimeScope());
+    const url = new URL('./request.html', window.location.href);
+    const safeTarget = sanitizeReturnTarget(returnTo || '', normalizedScope === 'family' ? 'index.html?scope=family' : 'index.html');
+    if (safeTarget) url.searchParams.set('return_to', safeTarget);
+    if (normalizedScope === 'family') url.searchParams.set('scope', 'family');
+    return `${url.pathname}${url.search}${url.hash}`;
+  }
+  function buildAdminUrl(reason='', returnTo=''){
+    const url = new URL('./admin.html', window.location.href);
+    if (reason) url.searchParams.set('reason', String(reason));
+    const target = sanitizeReturnTarget(returnTo);
+    if (target) url.searchParams.set('return_to', target);
+    return url.toString();
+  }
   function setPlayerSessionToken(token, storage){
     const value = String(token || '').trim();
     if (!value) return '';
@@ -224,25 +235,6 @@
     other.removeItem(primaryKey);
     touchPlayerActivity();
     return value;
-  }
-  function normalizeScope(input){
-    return String(input || '').trim().toLowerCase() === 'family' ? 'family' : 'friends';
-  }
-  function buildRequestUrl(returnTo, scope){
-    const normalizedScope = normalizeScope(scope || inferRuntimeScope());
-    const url = new URL('./request.html', window.location.href);
-    const safeTarget = sanitizeReturnTarget(returnTo || '', normalizedScope === 'family' ? 'index.html?scope=family' : 'index.html');
-    if (safeTarget) url.searchParams.set('return_to', safeTarget);
-    if (normalizedScope === 'family') url.searchParams.set('scope', 'family');
-    return `${url.pathname}${url.search}${url.hash}`;
-  }
-
-  function buildAdminUrl(reason='', returnTo=''){
-    const url = new URL('./admin.html', window.location.href);
-    if (reason) url.searchParams.set('reason', String(reason));
-    const target = sanitizeReturnTarget(returnTo);
-    if (target) url.searchParams.set('return_to', target);
-    return url.toString();
   }
   function ensurePlayerSessionOrRedirect(returnTo){
     if (isPlayerSessionExpired()) clearPlayerSessionTokens();
@@ -286,13 +278,32 @@
     return true;
   }
 
+  function loadPageModules(){
+    try{
+      const path = String(location.pathname || '').toLowerCase().split('/').pop();
+      const head = document.head || document.documentElement;
+      const modules = [];
+      if (path === 'index.html' || path === '') modules.push('./home-deep-links-v578.js');
+      if (path === 'profiles.html') modules.push('./profiles-mobile-art-v578.js');
+      if (path === 'pikken.html' || path === 'pikken_live.html' || path === 'pikken_stats.html') modules.push('./pikken-deep-mobile-v578.js');
+      if (path === 'paardenrace.html' || path === 'paardenrace_live.html' || path === 'paardenrace_stats.html') modules.push('./paardenrace-deep-mobile-v578.js');
+      modules.forEach((src)=>{
+        if (document.querySelector(`script[data-gejast-module="${src}"]`)) return;
+        const s = document.createElement('script');
+        s.src = src;
+        s.defer = true;
+        s.setAttribute('data-gejast-module', src);
+        head.appendChild(s);
+      });
+    }catch(_){}
+  }
+
   window.GEJAST_CONFIG = Object.assign({}, window.GEJAST_CONFIG || {}, CONFIG, {
     VERSION: effectiveVersion,
     VERSION_LABEL: label,
     ensureVersionWatermark,
     applyVersionLabel,
     normalizeProfileImageUrl,
-    fetchScopedActivePlayerNames,
     getPlayerSessionToken,
     clearPlayerSessionTokens,
     touchPlayerActivity,
@@ -307,9 +318,11 @@
     buildRequestUrl,
     normalizeScope,
     sanitizeReturnTarget,
-    currentReturnTarget
+    currentReturnTarget,
+    shouldHideWatermark
   });
 
+  loadPageModules();
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyVersionLabel, { once: true });
   else applyVersionLabel();
 })();
