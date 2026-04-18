@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v580',
+    VERSION:'v581',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -104,17 +104,17 @@
 
   function purgeStaleClientCaches(){
     const oldSessionKeys = [
-      'gejast_homepage_boot_v389','gejast_homepage_boot_v426','gejast_homepage_boot_v448','gejast_homepage_boot_v579'
+      'gejast_homepage_boot_v389','gejast_homepage_boot_v426','gejast_homepage_boot_v448','gejast_homepage_boot_v579','gejast_homepage_boot_v580'
     ];
     const oldLocalKeys = [
-      'gejast_homepage_poll_lists_v448','gejast_homepage_poll_lists_v579',
-      'gejast_drinks_donderdag_lists_v448','gejast_drinks_donderdag_lists_v579'
+      'gejast_homepage_poll_lists_v448','gejast_homepage_poll_lists_v579','gejast_homepage_poll_lists_v580',
+      'gejast_drinks_donderdag_lists_v448','gejast_drinks_donderdag_lists_v579','gejast_drinks_donderdag_lists_v580'
     ];
     try {
-      if (sessionStorage.getItem('__gejast_cache_purged_v580') === '1') return;
+      if (sessionStorage.getItem('__gejast_cache_purged_v581') === '1') return;
       oldSessionKeys.forEach((key)=>sessionStorage.removeItem(key));
       oldLocalKeys.forEach((key)=>localStorage.removeItem(key));
-      sessionStorage.setItem('__gejast_cache_purged_v580','1');
+      sessionStorage.setItem('__gejast_cache_purged_v581','1');
     } catch (_) {}
   }
 
@@ -291,11 +291,21 @@
     try{
       const path = String(location.pathname || '').toLowerCase().split('/').pop();
       const head = document.head || document.documentElement;
-      const modules = [];
+      const styles = ['./gejast-mobile-foundation-v581.css'];
+      const modules = ['./gejast-mobile-foundation-v581.js','./gejast-mobile-route-fixes-v581.js'];
       if (path === 'index.html' || path === '') modules.push('./home-deep-links-v578.js');
       if (path === 'profiles.html') modules.push('./profiles-mobile-art-v578.js');
       if (path === 'pikken.html' || path === 'pikken_live.html' || path === 'pikken_stats.html') modules.push('./pikken-deep-mobile-v578.js');
       if (path === 'paardenrace.html' || path === 'paardenrace_live.html' || path === 'paardenrace_stats.html') modules.push('./paardenrace-deep-mobile-v578.js');
+      styles.forEach((baseHref)=>{
+        const href = `${baseHref}?v${effectiveNumber}`;
+        if (document.querySelector(`link[data-gejast-style="${baseHref}"]`)) return;
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = href;
+        link.setAttribute('data-gejast-style', baseHref);
+        head.appendChild(link);
+      });
       modules.forEach((baseSrc)=>{
         const src = `${baseSrc}?v${effectiveNumber}`;
         if (document.querySelector(`script[data-gejast-module="${baseSrc}"]`)) return;
