@@ -72,7 +72,7 @@
     .page-link-live-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
     .page-link-live-row .live-pill{padding:6px 10px;font-size:11px;line-height:1}
     .page-link-live-hint{font-size:13px;color:#5d5549;font-weight:700}
-    body.boot-pending .main-card { opacity:.42; transform:translateY(8px); pointer-events:none; }
+    body.boot-pending .main-card { opacity:0; transform:translateY(8px); pointer-events:none; }
     body.homepage-ready .main-card { transition:opacity .18s ease, transform .18s ease; }
 
     .site-scene {
@@ -599,6 +599,25 @@
     }
 
     @media (max-width: 760px) {
+      .card-top-left { display:none !important; }
+      .card-top-right { top:14px; right:14px; gap:10px; }
+      .card-top-right .card-logo { width:58px !important; height:58px !important; }
+      .main-card { padding-top:94px; }
+      .public-links-grid { grid-template-columns:1fr; }
+      .public-links-grid.centered-single { grid-template-columns:1fr; }
+      .page-link-card { min-height:104px; }
+    }
+
+    @media (max-width: 560px) {
+      .page { padding: 18px 12px; }
+      .main-card { padding: 88px 14px 18px; width:min(700px, 96vw); }
+      h1 { padding: 0; margin-top: 4px; }
+      .card-top-right { top:12px; right:12px; }
+      .card-top-right .card-logo { width:52px !important; height:52px !important; }
+      .drinks-home-grid { grid-template-columns:1fr; }
+    }
+
+    @media (max-width: 760px) {
       .page { padding: 24px 14px; }
       .main-card {
         padding: 28px 18px 20px;
@@ -611,7 +630,7 @@
       .card-top-right { position:absolute; top:16px; right:16px; margin:0; }
       .card-top-left { position:absolute; top:16px; left:16px; margin:0; }
       h1 {
-        padding: 8px 44px 0;
+        padding: 0;
         font-size: clamp(1.7rem, 8vw, 2.1rem);
       }
       .status-word { font-size: clamp(1.55rem, 7vw, 1.95rem); }
@@ -621,7 +640,8 @@
       .list-box { min-height: 138px; padding: 16px 12px; }
       .list-box h2 { margin-bottom: 10px; font-size: 17px; }
       .name-list li { font-size: 13px; }
-      .lists-grid, .public-links-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .lists-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .public-links-grid { grid-template-columns:1fr; gap: 10px; }
       .page-link-card { min-height: 116px; padding: 14px 12px; justify-content:center; }
       .page-link-card.login-link, .page-link-card.request-link, .page-link-card.scorer-link { text-align:center; align-items:center; width:100%; }
       .plus-copy{position:relative}.plus-copy::after{content:"+";position:absolute;left:50%;top:50%;transform:translate(-50%,-52%);font-size:36px;line-height:1;color:var(--gold);font-weight:900;pointer-events:none;text-shadow:0 1px 0 rgba(255,255,255,.35)} .page-link-plus {opacity:0;filter:grayscale(1); width:12px; height:12px; }
@@ -647,7 +667,7 @@
     }
 
     @media (max-width: 460px) {
-      .public-links-grid { grid-template-columns:1fr 1fr; gap:8px; }
+      .public-links-grid { grid-template-columns:1fr; gap:8px; }
       .page-link-card { min-height:108px; padding:12px 10px; }
       .page-link-label { font-size:15px; }
       .page-link-copy { font-size:12px; }
@@ -674,7 +694,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v565';</script><script src="./gejast-config.js?v565"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v572';</script><script src="./gejast-config.js?v572"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
   <script src="./gejast-live-summary.js?v389"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
   <script src="./gejast-combined-readers.js?v426"></script>
@@ -711,7 +731,7 @@
         <div id="extraLadderGrid" class="ladder-grid">
           <div class="ladder-card"><div class="ladder-title"><strong>Paardenrace</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
           <div class="ladder-card"><div class="ladder-title"><strong>Pikken</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
-          <div class="ladder-card"><div class="ladder-title"><strong>Beurs d'Espinoza</strong><span>₵ Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
+          <div class="ladder-card"><div class="ladder-title"><strong>Caute Coins</strong><span>₵ Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
         </div>
       </section>
 
@@ -775,10 +795,10 @@
         </div>
 
         <div class="public-links-grid">
-          <a class="page-link-card login-link" href="./despimarkt.html">
+          <div class="page-link-card login-link placeholder-link" aria-disabled="true">
             <div class="page-link-label">Beurs d'Espinoza</div>
-            <div class="page-link-copy">Open de echte markthub van Despimarkt.</div>
-          </a>
+            <div class="page-link-copy">Placeholder — volgt later.</div>
+          </div>
           <a class="page-link-card login-link" href="./profiles.html">
             <div class="page-link-label">Spelers</div>
             <div class="page-link-copy">Bekijk spelers en profielen.</div>
@@ -988,9 +1008,8 @@ function applyAdminViewerRefresh() {
         if(!target) return;
         target.innerHTML = groups.map((group) => {
           const rows = Array.isArray(group.rows) ? group.rows : [];
-          const route = group.route || homepageLadderRoute(group.key);
           const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><a class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800" href="${playerHref(String(row.player_name || row.display_name || ''), group.key)}" onclick="event.stopPropagation()">${String(row.player_name || row.display_name || row.public_display_name || 'Onbekend')}</a><div class="ladder-elo" style="color:var(--gold);font-weight:900">${Math.round(Number(row.coins || row.caute_coins || row.balance || row.elo_rating || row.rating || 1000))}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen ladderdata.</div>';
-          return `<article class="ladder-card" role="link" tabindex="0" data-route="${route}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none">Top 5</span></div>${body}</article>`;
+          return `<article class="ladder-card" role="link" tabindex="0" data-route="${homepageLadderRoute(group.key)}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none">Top 5</span></div>${body}</article>`;
         }).join('');
         target.querySelectorAll('.ladder-card[data-route]').forEach((card)=>{
           const route = card.getAttribute('data-route');
@@ -1006,7 +1025,7 @@ function applyAdminViewerRefresh() {
       const extraGroups = [
         { key:'paardenrace', label:'Paardenrace', rows: source?.paardenrace || [] },
         { key:'pikken', label:'Pikken', rows: source?.pikken || [] },
-        { key:'caute-coins', label:"Beurs d'Espinoza", route: scopedHref('./despimarkt_ladder.html'), rows: source?.caute_coins || source?.coins || source?.cauteCoins || [] }
+        { key:'caute-coins', label:'Caute Coins', rows: source?.caute_coins || source?.coins || source?.cauteCoins || [] }
       ];
       renderGroupSet(root, groups);
       renderGroupSet(extraRoot, extraGroups);
@@ -1245,7 +1264,7 @@ function renderExtraNames(id, items, emptyText, listKey) {
 function persistExtraPollSnapshot(legends, losers){ try{ localStorage.setItem(EXTRA_POLL_STORAGE_KEY, JSON.stringify({ legends:Array.isArray(legends)?legends:[], losers:Array.isArray(losers)?losers:[] })); }catch(_){ } }
 function hydrateExtraPollSnapshot(){ try{ const raw = localStorage.getItem(EXTRA_POLL_STORAGE_KEY); return raw ? JSON.parse(raw) : null; }catch(_){ return null; } }
 function renderExtraPollState(data) {
-  data = mergeSnapshotNames((data && typeof data === 'object') ? { ...data } : {}, hydrateExtraPollSnapshot());
+  data = (data && typeof data === 'object') ? { ...data } : {};
   if (!Array.isArray(data.legends) && Array.isArray(data.yes_names)) data.legends = [...data.yes_names];
   if (!Array.isArray(data.losers) && Array.isArray(data.no_names)) data.losers = [...data.no_names];
   const previousCount = Number(currentDrinksPollState?.can_count ?? currentDrinksPollState?.yes_count ?? currentDrinksPollState?.legends?.length ?? currentDrinksPollState?.yes_names?.length ?? 0);
@@ -1792,61 +1811,45 @@ async function castExtraPollVote(desired_status) {
       try { return !!(window.matchMedia && window.matchMedia('(max-width: 760px)').matches); } catch (_) { return false; }
     }
 
-    function releaseHomepageBootPending(){
-      try { document.body.classList.remove('boot-pending'); } catch (_) {}
-    }
-
     async function bootHomepage(){
-      let bootGuard = null;
       document.body.classList.add('boot-pending');
-      try {
-        bootGuard = window.setTimeout(releaseHomepageBootPending, 1600);
-        const savedHomepagePoll = hydrateHomepagePollSnapshot();
-        const savedExtraPoll = hydrateExtraPollSnapshot();
-        if (savedHomepagePoll) renderState(savedHomepagePoll);
-        if (savedExtraPoll) renderExtraPollState(savedExtraPoll);
-        const cached = readHomepageBootCache();
-        if (cached) applyHomepageBootBundle(cached, true);
-        ensureAdminViewer().then(applyAdminViewerRefresh).catch(() => {});
-        const core = await load();
-        releaseHomepageBootPending();
-        const finishNonCritical = async () => {
-          try {
-            const readers = window.GEJAST_COMBINED_READERS;
-            if (readers && typeof readers.loadHomepageBootBundle === 'function' && !isMobileHomepage()) {
-              const bundle = await readers.loadHomepageBootBundle();
-              applyHomepageBootBundle(bundle || {}, false);
-              writeHomepageBootCache(bundle || {});
-              return;
-            }
-            const [ladders, drinksHome, drinksTop5, liveEntries] = await Promise.all([
-              loadHomepageLadders().catch(()=>null),
-              loadDrinksHome().catch(()=>null),
-              loadDrinksHomeTop5().catch(()=>null),
-              loadHomepageLiveEntries().catch(()=>null)
-            ]);
-            writeHomepageBootCache({
-              homepage_state: core?.homeState || currentHomepageState || {},
-              extra_poll_state: core?.extraState || currentDrinksPollState || {},
-              ladders: ladders || null,
-              drinks_home: drinksHome || null,
-              drinks_top5: drinksTop5 || null,
-              live_entries: liveEntries || null
-            });
-          } catch (_) {}
-        };
-        if (window.requestAnimationFrame) {
-          window.requestAnimationFrame(() => setTimeout(finishNonCritical, 0));
-        } else {
-          setTimeout(finishNonCritical, 0);
-        }
-      } catch (error) {
-        console.error('Homepage boot failed', error);
-        releaseHomepageBootPending();
-        setStatus('Homepage laden hapert, laatste bekende weergave wordt getoond.', 'warn');
-        setExtraPollStatus('Homepage laden hapert, laatste bekende weergave wordt getoond.', 'warn');
-      } finally {
-        if (bootGuard) window.clearTimeout(bootGuard);
+      const savedHomepagePoll = hydrateHomepagePollSnapshot();
+      const savedExtraPoll = hydrateExtraPollSnapshot();
+      if (savedHomepagePoll) renderState(savedHomepagePoll);
+      const cached = readHomepageBootCache();
+      if (cached) applyHomepageBootBundle(cached, true);
+      ensureAdminViewer().then(applyAdminViewerRefresh).catch(() => {});
+      const core = await load();
+      document.body.classList.remove('boot-pending');
+      const finishNonCritical = async () => {
+        try {
+          const readers = window.GEJAST_COMBINED_READERS;
+          if (readers && typeof readers.loadHomepageBootBundle === 'function' && !isMobileHomepage()) {
+            const bundle = await readers.loadHomepageBootBundle();
+            applyHomepageBootBundle(bundle || {}, false);
+            writeHomepageBootCache(bundle || {});
+            return;
+          }
+          const [ladders, drinksHome, drinksTop5, liveEntries] = await Promise.all([
+            loadHomepageLadders().catch(()=>null),
+            loadDrinksHome().catch(()=>null),
+            loadDrinksHomeTop5().catch(()=>null),
+            loadHomepageLiveEntries().catch(()=>null)
+          ]);
+          writeHomepageBootCache({
+            homepage_state: core?.homeState || currentHomepageState || {},
+            extra_poll_state: core?.extraState || currentDrinksPollState || {},
+            ladders: ladders || null,
+            drinks_home: drinksHome || null,
+            drinks_top5: drinksTop5 || null,
+            live_entries: liveEntries || null
+          });
+        } catch (_) {}
+      };
+      if (window.requestAnimationFrame) {
+        window.requestAnimationFrame(() => setTimeout(finishNonCritical, 0));
+      } else {
+        setTimeout(finishNonCritical, 0);
       }
     }
 
@@ -1875,16 +1878,16 @@ async function castExtraPollVote(desired_status) {
     document.getElementById('noBtn').addEventListener('click', () => handleVote('nee'));
     applyScopeChrome();
     wireProtectedDrinksLinks();
-    Promise.resolve(bootHomepage()).catch((error) => { console.error('Homepage boot promise failed', error); releaseHomepageBootPending(); });
+    bootHomepage();
     setInterval(loadDrinksHomeTop5, 15000);
   </script>
 
   <div class="site-credit-watermark" data-version-watermark></div>
 
-<script src="./gejast-player-session-ui.js?v491"></script>
+<script src="./gejast-player-session-ui.js?v487"></script>
 
 
 <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script><script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v389"></script><script src="./gejast-geo.js?v491"></script><script src="./site-analytics.js?v389"></script>
+<script src="./drinks-verify-float.js?v389"></script><script src="./gejast-geo.js?v487"></script><script src="./site-analytics.js?v389"></script>
 </body>
 </html>
