@@ -1,0 +1,10 @@
+PATCH_MANIFEST_v584_ladder_elo_telemetry.txt
+v584 ladder / elo / telemetry patch manifest
+
+- gejast-config.js (16133 bytes)
+- gejast-despimarkt.js (67318 bytes)
+- despimarkt-theme.css (11878 bytes)
+- pikken_ladder.html (3897 bytes)
+- paardenrace_ladder.html (3929 bytes)
+- caute_coins_ladder.html (10701 bytes)
+- README_v584_ladder_elo_telemetry_apply_order.txt (1325 bytes)
