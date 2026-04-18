@@ -1,4 +1,5 @@
 (function(){
+  // Wave 5 mobile hardening: drawer state, safe viewer handling, and leave hygiene.
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
   const LEGACY_PARTICIPANT_KEYS = ['gejast_pikken_participant_v1','gejast_pikken_participant','gejast_pikken_participant_v517'];
@@ -150,6 +151,7 @@
     const historyBody = qs('#historyDrawerBody'); if (historyBody) historyBody.innerHTML = history.length ? history.map((item, idx)=>`<div class="history-item"><strong>${esc(item.bidder_name || 'Onbekend')}</strong><div class="muted">${idx === 0 ? 'Laatste move' : `Eerder bod ${idx + 1}`} · ${esc(bidText(item))}</div></div>`).join('') : '<div class="history-item muted">Nog geen biedhistorie zichtbaar.</div>';
     const stateBody = qs('#stateDrawerBody'); if (stateBody) stateBody.innerHTML = `<div class="help-card"><strong>Jouw modus</strong><div class="muted">${hasActorViewer(viewer) ? (viewer.is_host ? 'Host / actor' : `Speler op stoel ${Number(viewer.seat || 0)}`) : 'Viewer fallback'}</div></div><div class="help-card"><strong>Canonical truth</strong><div class="muted">Lobbycode ${esc(UI.lobbyCode || '—')} · game-id ${esc(UI.gameId || '—')} · fase ${esc(gamePhase(game))}</div></div><div class="help-card"><strong>Waarom je wel of niet mag handelen</strong><div class="muted">Actiedock wordt alleen actief als jouw deelnemersidentiteit hard bewezen is. Zonder die koppeling blijf je kijker.</div></div><div class="help-card"><strong>Laatste belangrijke move</strong><div class="muted">${esc(latestMove)}</div></div>`;
     const helpBody = qs('#helpDrawerBody'); if (helpBody) helpBody.innerHTML = `<div class="help-card"><strong>Snelle regels</strong><div class="muted">Bied aantal × face. Pik telt als joker bij 2–6. Afkeuren start een stemronde. Daarna reveal + verlies van één dobbelsteen volgens de gekozen variant.</div></div><div class="help-card"><strong>Waarom deze mobiele indeling</strong><div class="muted">De hoofdactie blijft centraal. Historie, spelers en troubleshooting leven in drawers zodat het spel zelf niet dichtslibt.</div></div><div class="help-card"><strong>Veilige viewer fallback</strong><div class="muted">Als match-id of speleridentiteit niet stevig genoeg is, wordt er niet gedaan alsof jij een actor bent. Dan krijg je alleen de kijkerslaag.</div></div>`;
+    syncDrawerUi();
   }
 
   function updateDock(state){
@@ -194,8 +196,18 @@
   function startPolling(){ stopPolling(); UI.polls = setInterval(()=>{ if (!document.hidden && !UI.redirecting) loadWave(); }, POLL_MS); loadWave(); }
   function stopPolling(){ if (UI.polls){ clearInterval(UI.polls); UI.polls = null; } }
 
-  function openDrawer(name){ UI.openDrawer = name; qsa('.drawer').forEach((drawer)=>drawer.classList.remove('show')); qsa('.drawer-backdrop').forEach((el)=>el.classList.add('show')); const drawer = qs(`#${name}Drawer`); if (drawer) drawer.classList.add('show'); }
-  function closeDrawers(){ UI.openDrawer = ''; qsa('.drawer').forEach((drawer)=>drawer.classList.remove('show')); qsa('.drawer-backdrop').forEach((el)=>el.classList.remove('show')); }
+  function syncDrawerUi(){
+    qsa('.drawer').forEach((drawer)=>drawer.classList.remove('show'));
+    qsa('.drawer-backdrop').forEach((el)=>el.classList.toggle('show', !!UI.openDrawer));
+    document.body.classList.toggle('drawer-open', !!UI.openDrawer);
+    qsa('[data-drawer-open]').forEach((btn)=>btn.classList.toggle('active', btn.getAttribute('data-drawer-open') === UI.openDrawer));
+    if (UI.openDrawer){
+      const drawer = qs(`#${UI.openDrawer}Drawer`);
+      if (drawer) drawer.classList.add('show');
+    }
+  }
+  function openDrawer(name){ UI.openDrawer = name || ''; syncDrawerUi(); }
+  function closeDrawers(){ UI.openDrawer = ''; syncDrawerUi(); }
 
   async function withAction(label, fn){ if (UI.actionBusy) return; UI.actionBusy = true; setStatus(label, false); try { const out = await fn(); if (out && typeof out === 'object') { const state = decorateState(out); UI.state = state; syncKnownGame(state); if (UI.page === 'lobby') renderLobby(state); else renderLive(state); } showToast(label.replace('…','') + ' gelukt'); await loadWave(); } catch(err){ setStatus(normalizeError(err) || `${label} mislukt.`, true); showToast(normalizeError(err) || `${label} mislukt.`); } finally { UI.actionBusy = false; } }
 
@@ -203,7 +215,7 @@
   async function joinLobby(){ const code = String(qs('#pkJoinCode') && qs('#pkJoinCode').value || '').trim().toUpperCase(); if (!code) return setStatus('Vul een lobbycode in.', true); clearRuntimeHints(); clearLeaveSuppression(); return withAction('Lobby joinen…', async()=>{ const out = await rpc('pikken_join_lobby_scoped', { session_token: playerToken() || null, site_scope_input: UI.scope, lobby_code_input: code }); UI.gameId = String(out && out.game_id || '').trim(); UI.lobbyCode = String(out && (out.lobby_code || code) || '').trim().toUpperCase(); setParticipantIdentity({ game_id: UI.gameId, lobby_code: UI.lobbyCode, scope: UI.scope, seat: null, name: UI.viewerName || '' }); syncHistoryUrl(); return await loadParticipantState(UI.gameId); }); }
   async function setReady(ready){ if (!UI.gameId) return; return withAction(ready ? 'Ready zetten…' : 'Unready zetten…', ()=>rpc('pikken_set_ready_scoped', { session_token: playerToken() || null, game_id_input: UI.gameId, ready_input: !!ready })); }
   async function startGame(){ if (!UI.gameId) return; clearLeaveSuppression(); return withAction('Tafel starten…', async()=>{ await rpc('pikken_start_game_scoped', { session_token: playerToken() || null, game_id_input: UI.gameId }); const nextState = await loadParticipantState(UI.gameId); if (nextState && hasStarted(nextState.game) && hasActorViewer(nextState.viewer)) { UI.redirecting = true; window.location.replace(liveHref(UI.gameId, UI.lobbyCode)); } return nextState; }); }
-  function finalizeLocalLeave(){ setLeaveSuppression(UI.gameId, UI.lobbyCode); clearRuntimeHints(); stopPolling(); const target = lobbyHref('', ''); window.location.replace(target); }
+  function finalizeLocalLeave(){ closeDrawers(); setLeaveSuppression(UI.gameId, UI.lobbyCode); clearRuntimeHints(); stopPolling(); const target = lobbyHref('', ''); window.location.replace(target); }
   async function leaveLobbyOrTable(){ if (!window.confirm(UI.page === 'live' ? 'Weet je zeker dat je deze tafel wilt verlaten?' : 'Weet je zeker dat je deze lobby wilt verlaten?')) return; const canonicalGameId = await ensureCanonicalGameId().catch(()=>String(UI.gameId || '').trim()); if (!canonicalGameId){ finalizeLocalLeave(); return; } try { await rpc('pikken_leave_lobby_scoped', { session_token: playerToken() || null, game_id_input: canonicalGameId }); } catch(err){ const msg = String(err && err.message || ''); if (!/niet in deze lobby|niet in dit spel|geen deelnemer|not.*participant/i.test(msg)) throw err; } finalizeLocalLeave(); }
   async function disbandTable(){ if (!window.confirm('Weet je zeker dat je de hele tafel wilt opheffen?')) return; const canonicalGameId = await ensureCanonicalGameId(); if (!canonicalGameId) return setStatus('Geen geldige tafel-id gevonden om op te heffen.', true); return withAction('Tafel opheffen…', async()=>{ await rpc('pikken_destroy_lobby_scoped', { session_token: playerToken() || null, game_id_input: canonicalGameId }); finalizeLocalLeave(); return null; }); }
   async function placeBid(){ const count = Number(qs('#bidCount') && qs('#bidCount').value || 0); const face = Number(qs('#bidFace') && qs('#bidFace').value || 0); const rules = getBidRules(UI.state); if (!count || !face) return setStatus('Kies een geldig bod.', true); if (!isHigherBid(count, face, rules)) return setStatus('Dat bod is volgens de huidige stand niet geldig.', true); return withAction('Bieden…', ()=>rpc('pikken_place_bid_scoped', { session_token: playerToken() || null, game_id_input: UI.gameId, bid_count_input: count, bid_face_input: face })); }

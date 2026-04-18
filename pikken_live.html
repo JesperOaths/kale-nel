@@ -7,8 +7,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken live</title>
-  <script>window.GEJAST_PAGE_VERSION='v574';</script>
-  <script src="./gejast-config.js?v574"></script>
+  <script>window.GEJAST_PAGE_VERSION='v576';</script>
+  <script src="./gejast-config.js?v576"></script>
   <script src="./gejast-home-gate.js?v569"></script>
   <script src="./gejast-scope-context.js?v569"></script>
   <script src="./badge-registry.js?v569"></script>
@@ -20,6 +20,7 @@
     }
     *{box-sizing:border-box}
     body{margin:0;padding:8px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,229,219,.92),rgba(236,229,219,.95)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
+    body.drawer-open{overflow:hidden}
     .wrap{max-width:1240px;margin:0 auto}
     .shell{position:relative;background:rgba(251,246,239,.92);border:1px solid rgba(255,255,255,.72);border-radius:28px;padding:14px 14px 118px;box-shadow:0 22px 54px rgba(0,0,0,.16);overflow:hidden}
     .top-strip{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
@@ -64,12 +65,13 @@
     .self-head{display:flex;gap:12px;align-items:center}.self-head .avatar-shell{width:84px;height:84px}
     .hand-dice{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:8px;padding:6px 8px;border-radius:16px;background:rgba(32,24,18,.06);scrollbar-width:thin}
     img.die{width:48px;height:48px;border-radius:11px;background:#fff;box-shadow:0 10px 20px rgba(0,0,0,.18);flex:0 0 auto}
-    .dock{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:30;width:min(940px,calc(100vw - 16px));padding:10px;border-radius:22px;background:rgba(17,17,17,.92);border:1px solid rgba(255,255,255,.08);box-shadow:0 18px 36px rgba(0,0,0,.28);backdrop-filter:blur(10px);display:grid;gap:10px}
+    .dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom));z-index:30;width:min(940px,calc(100vw - 16px));padding:10px 10px calc(10px + env(safe-area-inset-bottom));border-radius:22px;background:rgba(17,17,17,.92);border:1px solid rgba(255,255,255,.08);box-shadow:0 18px 36px rgba(0,0,0,.28);backdrop-filter:blur(10px);display:grid;gap:10px}
     .dock-top{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;color:#f8eedc}
     .dock-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
     .dock-btn{padding:12px 10px;border-radius:16px;background:#fff;color:#111;font-size:13px;min-height:52px;text-align:center}
     .dock-btn.primary{background:#e8c571;color:#2f2414;border-color:rgba(232,197,113,.3)}
     .dock-btn.viewer{background:rgba(255,255,255,.12);color:#f8eedc;border-color:rgba(255,255,255,.14)}
+    .dock-btn.active{background:#e8c571;color:#2f2414;border-color:rgba(232,197,113,.3)}
     .dock-btn.warn{background:#3b1a1f;color:#f5cdd3;border-color:rgba(255,120,140,.18)}
     .action-panel{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
     .field{display:grid;gap:6px}.label{font-size:10px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#8f6b2b} select,input{width:100%;height:42px;border-radius:13px;border:1px solid rgba(0,0,0,.12);background:#fff;padding:0 10px;font:inherit}
@@ -82,9 +84,9 @@
     .toast-stack{position:fixed;right:16px;bottom:118px;z-index:50;display:grid;gap:8px;max-width:min(320px,92vw)}
     .toast{padding:10px 12px;border-radius:14px;background:rgba(25,20,16,.92);color:#fff;box-shadow:0 12px 24px rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.08)}
     .hidden{display:none!important}
-    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:88px;z-index:29;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,.18)}
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(88px + env(safe-area-inset-bottom));z-index:29;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,.18)}
     @media (max-width:980px){.context-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.self-zone{grid-template-columns:1fr}}
-    @media (max-width:760px){.shell{padding:12px 12px 128px}.top-strip{grid-template-columns:1fr}.top-actions{justify-content:flex-start}.context-strip{grid-template-columns:1fr 1fr}.table-zone{min-height:700px;border-width:10px;padding:12px}.table-center{position:relative;left:auto;top:auto;transform:none;width:100%;margin-top:250px}.seat{width:104px}.avatar-shell{width:66px;height:66px}.player-name{max-width:98px;font-size:11px}.player-nick{display:none}.self-zone{width:min(100%,96vw)}.dock{bottom:10px;width:calc(100vw - 12px)}.dock-actions{grid-template-columns:1fr 1fr}.action-panel{grid-template-columns:1fr}.site-credit-watermark{bottom:132px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
+    @media (max-width:760px){.shell{padding:12px 12px 128px}.top-strip{grid-template-columns:1fr}.top-actions{justify-content:flex-start}.context-strip{grid-template-columns:1fr 1fr}.table-zone{min-height:700px;border-width:10px;padding:12px}.table-center{position:relative;left:auto;top:auto;transform:none;width:100%;margin-top:250px}.seat{width:104px}.avatar-shell{width:66px;height:66px}.player-name{max-width:98px;font-size:11px}.player-nick{display:none}.self-zone{width:min(100%,96vw)}.dock{bottom:calc(10px + env(safe-area-inset-bottom));width:calc(100vw - 12px)}.dock-actions{grid-template-columns:1fr 1fr}.action-panel{grid-template-columns:1fr}.site-credit-watermark{bottom:calc(132px + env(safe-area-inset-bottom));font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
     @media (max-width:520px){.context-strip{grid-template-columns:1fr}.dock-actions{grid-template-columns:1fr 1fr}.top-actions{display:grid;grid-template-columns:1fr 1fr;width:100%}}
   </style>
 </head>
@@ -208,7 +210,7 @@
 
   <div id="toastStack" class="toast-stack"></div>
 
-  <script src="./gejast-pikken.js?v574"></script>
+  <script src="./gejast-pikken.js?v576"></script>
   <script src="./gejast-player-session-ui.js?v569"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
   <div class="site-credit-watermark" data-version-watermark></div>

@@ -1,4 +1,5 @@
 (function(){
+  // Wave 5 mobile hardening: shared helpers used by the live presenter remain centralized here.
   const cfg = window.GEJAST_CONFIG || {};
   const STORAGE_KEY = 'gejast_paardenrace_room_code_v478';
   const LIVE_QUERY_KEY = 'live';
