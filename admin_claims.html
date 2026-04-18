@@ -116,14 +116,14 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v557';</script><script src="./gejast-config.js?v557"></script><script src="./gejast-scope-context.js?v557"></script><script src="./gejast-family-rollout.js?v557"></script>
+  <script>window.GEJAST_PAGE_VERSION='v568';</script><script src="./gejast-config.js?v568"></script><script src="./gejast-scope-context.js?v568"></script><script src="./gejast-family-rollout.js?v568"></script>
   <script src="./gejast-rpc-contract.js?v392"></script>
   <script src="./gejast-admin-rpc.js?v392"></script>
   <script src="./admin-session-sync.js?v392"></script>
   <script src="./admin-topnav.js?v392"></script>
   <script src="./gejast-admin-claims-buckets.js?v392"></script>
   <script src="./gejast-admin-claims-source.js?v392"></script>
-  <script src="./gejast-admin-source.js?v557"></script><script src="./gejast-account-links.js?v496"></script>
+  <script src="./gejast-admin-source.js?v568"></script><script src="./gejast-account-links.js?v496"></script>
 </head>
 <body>
   <div class="main-card">
@@ -279,47 +279,129 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return `<div class="data-box"><span class="label">${escapeHtml(label)}</span>${escapeHtml(value || 'Onbekend')}</div>`;
     }
 
-    function extractMeta(meta) {
-      const m = meta && typeof meta === 'object' ? meta : {};
+    function readNestedObjects(input, out, depth = 0) {
+      if (!input || depth > 3) return;
+      if (typeof input === 'string') {
+        const parsed = parseMaybeJson(input);
+        if (parsed && parsed !== input) readNestedObjects(parsed, out, depth + 1);
+        return;
+      }
+      if (Array.isArray(input)) {
+        input.forEach((entry) => readNestedObjects(entry, out, depth + 1));
+        return;
+      }
+      if (typeof input === 'object') {
+        out.push(input);
+        ['requester_meta','meta','payload','request','row','item','request_data','request_payload','context','visitor_meta','client_meta'].forEach((key) => {
+          if (Object.prototype.hasOwnProperty.call(input, key)) readNestedObjects(input[key], out, depth + 1);
+        });
+      }
+    }
+
+    function firstMetaValue(objects, keys) {
+      for (const key of keys) {
+        for (const obj of objects) {
+          if (!obj || typeof obj !== 'object') continue;
+          const value = obj[key];
+          if (value === undefined || value === null) continue;
+          if (Array.isArray(value)) {
+            const joined = value.map((entry) => String(entry || '').trim()).filter(Boolean).join(', ');
+            if (joined) return joined;
+            continue;
+          }
+          const text = String(value).trim();
+          if (text) return text;
+        }
+      }
+      return '';
+    }
+
+    function extractMeta(input) {
+      const objects = [];
+      readNestedObjects(input, objects, 0);
+      if (!objects.length && input && typeof input === 'object') objects.push(input);
+      const screenW = firstMetaValue(objects, ['screen_w', 'screen_width', 'width']);
+      const screenH = firstMetaValue(objects, ['screen_h', 'screen_height', 'height']);
+      const viewportW = firstMetaValue(objects, ['viewport_w', 'viewport_width']);
+      const viewportH = firstMetaValue(objects, ['viewport_h', 'viewport_height']);
       return {
-        language: m.language || (Array.isArray(m.languages) ? m.languages.join(', ') : ''),
-        timezone: m.timezone || '',
-        platform: m.platform || '',
-        user_agent: m.user_agent || '',
-        screen: m.screen || '',
-        viewport: m.viewport || '',
-        referrer: m.referrer || '',
-        page_url: m.page_url || '',
-        color_scheme: m.color_scheme || '',
-        max_touch_points: m.max_touch_points ?? ''
+        language: firstMetaValue(objects, ['language', 'locale', 'lang']) || '',
+        timezone: firstMetaValue(objects, ['timezone', 'time_zone', 'tz']) || '',
+        platform: firstMetaValue(objects, ['platform', 'ua_platform', 'os', 'device_platform']) || '',
+        user_agent: firstMetaValue(objects, ['user_agent', 'ua', 'navigator_user_agent']) || '',
+        screen: firstMetaValue(objects, ['screen', 'screen_size']) || ((screenW && screenH) ? `${screenW}x${screenH}` : ''),
+        viewport: firstMetaValue(objects, ['viewport', 'viewport_size']) || ((viewportW && viewportH) ? `${viewportW}x${viewportH}` : ''),
+        referrer: firstMetaValue(objects, ['referrer', 'referer']) || '',
+        page_url: firstMetaValue(objects, ['page_url', 'page', 'url', 'pathname']) || '',
+        color_scheme: firstMetaValue(objects, ['color_scheme', 'prefers_color_scheme', 'theme']) || '',
+        max_touch_points: firstMetaValue(objects, ['max_touch_points', 'touch_points', 'touchpoints']) || ''
       };
     }
 
 
     function cleanDisplayCandidate(value) {
-      const text = String(value || '').trim();
+      const text = String(value || '').replace(/\s+/g, ' ').trim();
       if (!text) return '';
       if (/^(onbekend|unknown|n\/a|null|undefined|geen)$/i.test(text)) return '';
+      if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(text)) return '';
       return text;
     }
 
-    function displayNameOf(req) {
-      const candidates = [
+    function collectNameCandidates(value, out, depth = 0) {
+      if (!value || depth > 3) return;
+      if (typeof value === 'string') {
+        const clean = cleanDisplayCandidate(value);
+        if (clean) out.push(clean);
+        return;
+      }
+      if (Array.isArray(value)) {
+        value.forEach((entry) => collectNameCandidates(entry, out, depth + 1));
+        return;
+      }
+      if (typeof value === 'object') {
+        Object.entries(value).forEach(([key, entry]) => {
+          if (!/name|username|display|chosen|desired|public|reserved|requested|canonical|player|label/i.test(String(key))) return;
+          collectNameCandidates(entry, out, depth + 1);
+        });
+      }
+    }
+
+    function requestedNameOf(req) {
+      const candidates = [];
+      [
+        req?.desired_name,
+        req?.requested_name,
+        req?.requested_display_name,
+        req?.requested_username,
+        req?.username,
+        req?.requested_slug,
         req?.display_name,
         req?.public_display_name,
         req?.chosen_username,
-        req?.desired_name,
         req?.player_name,
         req?.reserved_display_name,
         req?.reserved_name,
-        req?.requester_name,
-        req?.name,
-        req?.requester_meta?.display_name,
-        req?.requester_meta?.player_name,
-        req?.requester_meta?.name,
-        req?.requester_email ? String(req.requester_email).split('@')[0] : ''
-      ].map(cleanDisplayCandidate).filter(Boolean);
-      return candidates[0] || `Aanvraag #${req?.id ?? '?'}`;
+        req?.allowed_username_display_name,
+        req?.granted_display_name,
+        req?.requester_meta,
+        req?.payload,
+        req?.request,
+        req?.row,
+        req?.item
+      ].forEach((value) => collectNameCandidates(value, candidates, 0));
+      const seen = new Set();
+      for (const candidate of candidates) {
+        const clean = cleanDisplayCandidate(candidate);
+        const key = clean.toLowerCase();
+        if (!clean || seen.has(key)) continue;
+        seen.add(key);
+        return clean;
+      }
+      return '';
+    }
+
+    function displayNameOf(req) {
+      return requestedNameOf(req) || `Aanvraag #${req?.id ?? '?'}`;
     }
 
     function parseMaybeJson(value) {
@@ -455,7 +537,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     function requestHtml(req, includeDecision = false) {
       const noteHtml = req.requester_note ? escapeHtml(req.requester_note).replace(/\n/g, "<br>") : "<span class='muted'>Geen toelichting</span>";
       const reasonHtml = req.decision_reason ? escapeHtml(req.decision_reason).replace(/\n/g, "<br>") : "<span class='muted'>Geen reden opgegeven</span>";
-      const meta = extractMeta(req.requester_meta);
+      const meta = extractMeta(req);
       const status = statusMeta(req, includeDecision);
       return `
         <div class="entry-top">
@@ -468,6 +550,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         </div>
         <div class="entry-note">${noteHtml}</div>
         <div class="entry-meta">
+          ${metaBox('Aangevraagde naam', requestedNameOf(req) || 'Onbekend')}
           ${metaBox('Tijdzone', meta.timezone || 'Onbekend')}
           ${metaBox('Platform', meta.platform || 'Onbekend')}
           ${metaBox('Referrer', meta.referrer || 'Direct')}
@@ -939,6 +1022,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
 
     function switchAdminView(view) {
       currentAdminView = view;
+      window.currentAdminView = currentAdminView;
       try { history.replaceState(null, '', `#view=${view}`); } catch {}
       const cfg = getAdminViewConfig()[view] || getAdminViewConfig().pending;
       document.getElementById('currentListTitle').textContent = cfg.title;
@@ -1019,6 +1103,23 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     async function getRequests(force = false) { return (await getClaimsBundle(force)).requests || []; }
     async function getHistory(force = false) { return (await getClaimsBundle(force)).history || []; }
     async function getExpiredQueue(force = false) { return (await getClaimsBundle(force)).expiredQueue || []; }
+    async function approveAndSendActivation(requestId, decisionReason) {
+      const req = (lastRequests || []).find((item) => Number(item.id) === Number(requestId)) || (lastHistory || []).find((item) => Number(item.id) === Number(requestId));
+      const result = ADMIN_SOURCE && typeof ADMIN_SOURCE.approveAndSendActivation === 'function'
+        ? await ADMIN_SOURCE.approveAndSendActivation(requestId, decisionReason)
+        : await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_approve_and_send_activation_action`, {
+            method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
+            body: JSON.stringify({ admin_session_token: getAdminSessionToken(), request_id_input: String(requestId), decision_reason_input: decisionReason || null, base_url: getActivationBaseUrl() })
+          }).then(parseResponse);
+      try { await updateActivationEmailSubject(requestId); } catch (_) {}
+      return normalizeMailResult(result, {
+        request_id: String(requestId),
+        requester_email: req?.requester_email || '',
+        display_name: displayNameOf(req),
+        player_id: req?.player_id || null
+      });
+    }
+
     async function requeueExpiredActivation(requestId) {
       let data = ADMIN_SOURCE && typeof ADMIN_SOURCE.requeueExpiredActivation === 'function'
         ? await ADMIN_SOURCE.requeueExpiredActivation(requestId)
@@ -1538,6 +1639,10 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const normalizedHistory = normalizeAdminRows(Array.isArray(history) ? history : (history?.items || []));
       lastExpired = normalizeExpiredRows(Array.isArray(expired) ? expired : (expired?.items || []));
       lastHistory = mergeHistoryWithExpired(normalizedHistory, lastExpired);
+      window.lastRequests = lastRequests;
+      window.lastHistory = lastHistory;
+      window.lastExpired = lastExpired;
+      window.currentAdminView = currentAdminView;
       renderStats(lastRequests, lastHistory);
       switchAdminView(currentAdminView);
     }

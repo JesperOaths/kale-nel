@@ -138,19 +138,37 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       return [];
     }
 
-    function collectVisitorMeta() {
+    function inferPlatform() {
+      const ua = navigator.userAgent || '';
+      const raw = navigator.userAgentData?.platform || navigator.platform || '';
+      if (String(raw || '').trim()) return String(raw).trim();
+      if (/android/i.test(ua)) return 'Android';
+      if (/iphone|ipad|ipod/i.test(ua)) return 'iPhone/iPad';
+      if (/windows/i.test(ua)) return 'Windows';
+      if (/mac os x|macintosh/i.test(ua)) return 'Mac';
+      if (/linux/i.test(ua)) return 'Linux';
+      return '';
+    }
+
+    function collectVisitorMeta(desiredName = '', requesterEmail = '') {
       return {
         user_agent: navigator.userAgent || "",
         language: navigator.language || "",
         languages: Array.isArray(navigator.languages) ? navigator.languages : [],
-        platform: navigator.userAgentData?.platform || navigator.platform || "",
+        platform: inferPlatform(),
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "",
         screen: `${window.screen?.width || 0}x${window.screen?.height || 0}`,
         viewport: `${window.innerWidth}x${window.innerHeight}`,
         referrer: document.referrer || "",
         page_url: location.href,
+        page_path: location.pathname || "",
         max_touch_points: navigator.maxTouchPoints || 0,
         color_scheme: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
+        desired_name: desiredName || "",
+        requested_name: desiredName || "",
+        requested_display_name: desiredName || "",
+        requester_email: requesterEmail || "",
+        submitted_at: new Date().toISOString()
       };
     }
 
@@ -209,7 +227,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
           desired_name: desiredName,
           requester_note: requesterNote || "",
           requester_email: requesterEmail,
-          requester_meta: collectVisitorMeta()
+          requester_meta: collectVisitorMeta(desiredName, requesterEmail)
         });
       }
       const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/request_claim_action`, {
@@ -221,7 +239,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
           desired_name: desiredName,
           requester_note: requesterNote || "",
           requester_email: requesterEmail,
-          requester_meta: collectVisitorMeta()
+          requester_meta: collectVisitorMeta(desiredName, requesterEmail)
         })
       });
       return await parseResponse(res);
