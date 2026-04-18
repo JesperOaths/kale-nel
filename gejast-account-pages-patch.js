@@ -53,24 +53,48 @@
 
   function patchRequestPage() {
     const note = document.getElementById('requestNoteInput');
-    if (note) note.required = false;
+    if (note) {
+      note.required = false;
+      note.removeAttribute('required');
+      note.setAttribute('aria-required', 'false');
+      note.dataset.optionalHardcoded = '1';
+    }
+    const button = document.getElementById('requestBtn');
+    if (button) button.dataset.optionalNoteHardcoded = '1';
     const labels = Array.from(document.querySelectorAll('label'));
     labels.forEach((label) => {
       if (/notitie/i.test(String(label.textContent || ''))) label.textContent = 'Notitie (optioneel)';
     });
+    if (typeof requestClaim === 'function' && !requestClaim.__optionalNoteWrapped) {
+      const originalRequestClaim = requestClaim;
+      const optionalPlaceholder = 'Geen notitie opgegeven';
+      requestClaim = async function() {
+        const noteEl = document.getElementById('requestNoteInput');
+        const hadBlank = !!noteEl && !String(noteEl.value || '').trim();
+        const previous = noteEl ? noteEl.value : '';
+        if (noteEl && hadBlank) noteEl.value = optionalPlaceholder;
+        try {
+          return await originalRequestClaim();
+        } finally {
+          if (noteEl && hadBlank && String(noteEl.value || '').trim() === optionalPlaceholder) noteEl.value = previous;
+        }
+      };
+      requestClaim.__optionalNoteWrapped = true;
+    }
     if (typeof getRequestableNames !== 'function') return;
     const original = getRequestableNames;
     getRequestableNames = async function() {
       const scope = currentScope();
-      const names = [];
       try {
-        names.push(...await fetchAllowedUsernamesScoped(scope));
+        const scoped = await fetchAllowedUsernamesScoped(scope);
+        if (scoped.length) return scoped;
       } catch (_) {}
       try {
         const payload = await original();
-        names.push(...(Array.isArray(payload) ? payload : []));
-      } catch (_) {}
-      return uniqueNames(names);
+        return uniqueNames(Array.isArray(payload) ? payload : []);
+      } catch (_) {
+        return [];
+      }
     };
   }
 
@@ -92,6 +116,9 @@
       try {
         const payload = await original();
         names.push(...extractNamesFromRows(Array.isArray(payload) ? payload : payload?.names));
+      } catch (_) {}
+      try {
+        names.push(...await fetchAllowedUsernamesScoped(currentScope()));
       } catch (_) {}
       return { names: uniqueNames(names) };
     };

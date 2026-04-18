@@ -39,6 +39,16 @@
   function improvedDisplayName(req) {
     const row = req || {};
     const candidates = [];
+    const relatedRows = []
+      .concat(Array.isArray(window.lastRequests) ? window.lastRequests : [])
+      .concat(Array.isArray(window.lastHistory) ? window.lastHistory : [])
+      .filter((peer) => {
+        if (!peer || typeof peer !== 'object' || peer === row) return false;
+        const samePlayer = playerIdOf(row) && String(playerIdOf(peer) || '') === String(playerIdOf(row) || '');
+        const sameEmail = emailOf(row) && emailOf(peer) === emailOf(row);
+        const sameRequest = requestIdOfItem(row) && String(requestIdOfItem(peer) || '') === String(requestIdOfItem(row) || '');
+        return samePlayer || sameEmail || sameRequest;
+      });
     [
       row.display_name,
       row.requested_name,
@@ -51,14 +61,36 @@
       row.requester_name,
       row.canonical_name,
       row.full_name,
-      row.name,
       row.allowed_username_display_name,
       row.granted_display_name,
+      row.name,
       row.requester_meta,
       row.player,
       row.viewer,
       row.payload
     ].forEach((value) => collectNameCandidates(value, candidates, 0));
+    relatedRows.forEach((peer) => {
+      [
+        peer.display_name,
+        peer.requested_name,
+        peer.public_display_name,
+        peer.chosen_username,
+        peer.desired_name,
+        peer.player_name,
+        peer.reserved_display_name,
+        peer.reserved_name,
+        peer.requester_name,
+        peer.canonical_name,
+        peer.full_name,
+        peer.allowed_username_display_name,
+        peer.granted_display_name,
+        peer.name,
+        peer.requester_meta,
+        peer.player,
+        peer.viewer,
+        peer.payload
+      ].forEach((value) => collectNameCandidates(value, candidates, 0));
+    });
     const seen = new Set();
     for (const candidate of candidates) {
       const clean = cleanName(candidate);
@@ -159,12 +191,62 @@
     topbar.appendChild(wrap);
   }
 
+  function patchNonBlockingAutomaticMakeWake() {
+    if (!isClaimsPage()) return;
+    try {
+      if (typeof window.triggerMakeScenario !== 'function' || window.triggerMakeScenario.__nonBlockingWrapped) return;
+      const original = window.triggerMakeScenario;
+      window.triggerMakeScenario = async function(meta = {}) {
+        try {
+          return await original(meta);
+        } catch (error) {
+          const reason = String(meta?.reason || '').trim().toLowerCase();
+          const source = String(meta?.source || '').trim().toLowerCase();
+          const isManual = reason === 'manual_admin_kick' || /manual_admin_kick/.test(source);
+          if (isManual) throw error;
+          console.warn('Niet-blokkerende Make wake-fout onderdrukt', error);
+          return {
+            ok: false,
+            via: 'non-blocking-browser-wake-fallback',
+            warning: String(error?.message || error || 'Failed to fetch')
+          };
+        }
+      };
+      window.triggerMakeScenario.__nonBlockingWrapped = true;
+    } catch (_) {}
+  }
+
+  function patchInlineFailedToFetchCopy() {
+    if (!isClaimsPage()) return;
+    const rewrite = () => {
+      try {
+        document.querySelectorAll('.inline-msg').forEach((node) => {
+          const text = String(node.textContent || '').trim();
+          if (text === 'Failed to fetch') {
+            node.textContent = 'Automatische Make-wake vanuit de browser kon niet worden bevestigd. De admin-actie zelf is wel doorgezet.';
+            if (!/error|warn/i.test(String(node.className || ''))) node.classList.add('ok');
+          }
+        });
+      } catch (_) {}
+    };
+    rewrite();
+    if (window.__GEJAST_FAILED_FETCH_COPY_PATCHED) return;
+    window.__GEJAST_FAILED_FETCH_COPY_PATCHED = true;
+    const observer = new MutationObserver(() => rewrite());
+    const start = () => {
+      try { observer.observe(document.body, { childList: true, subtree: true, characterData: true }); } catch (_) {}
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+    else start();
+    window.setTimeout(() => { try { observer.disconnect(); } catch (_) {} }, 120000);
+  }
+
   function injectStyles() {
     if (document.getElementById('gejast-admin-users-enhance-style')) return;
     const style = document.createElement('style');
     style.id = 'gejast-admin-users-enhance-style';
     style.textContent = `
-      #statsGrid, #adminTabs {
+      #statsGrid, #adminTabs, .stats {
         display: grid !important;
         grid-auto-flow: column;
         grid-auto-columns: minmax(155px, 1fr);
@@ -173,9 +255,9 @@
         padding-bottom: 4px;
         scrollbar-width: thin;
       }
-      #statsGrid::-webkit-scrollbar, #adminTabs::-webkit-scrollbar { height: 8px; }
-      #statsGrid::-webkit-scrollbar-thumb, #adminTabs::-webkit-scrollbar-thumb { background: rgba(0,0,0,.14); border-radius: 999px; }
-      #statsGrid .stat-card, #adminTabs .tab-btn {
+      #statsGrid::-webkit-scrollbar, #adminTabs::-webkit-scrollbar, .stats::-webkit-scrollbar { height: 8px; }
+      #statsGrid::-webkit-scrollbar-thumb, #adminTabs::-webkit-scrollbar-thumb, .stats::-webkit-scrollbar-thumb { background: rgba(0,0,0,.14); border-radius: 999px; }
+      #statsGrid .stat-card, #adminTabs .tab-btn, .stats .stat {
         min-width: 155px;
       }
       #adminTabs .tab-btn {
@@ -184,7 +266,7 @@
         justify-content: space-between;
         padding: 12px 14px;
       }
-      #statsGrid .stat-card .value { font-size: 26px; }
+      #statsGrid .stat-card .value, .stats .stat strong { font-size: 26px; }
       .admin-scope-switcher {
         display: flex;
         flex-direction: column;
@@ -478,6 +560,55 @@
     if (value) value.textContent = String(count);
   }
 
+
+  async function ensureHubUsersStatCard(force) {
+    const grid = document.querySelector('.stats');
+    if (!grid || !window.GEJAST_ADMIN_CLAIMS_SOURCE || typeof window.GEJAST_ADMIN_CLAIMS_SOURCE.load !== 'function') return;
+    let count = 0;
+    try {
+      await syncPublicPlayerNames(force);
+      const bundle = await window.GEJAST_ADMIN_CLAIMS_SOURCE.load(
+        window.GEJAST_SCOPE_CONTEXT && typeof window.GEJAST_SCOPE_CONTEXT.getAdminSessionToken === 'function'
+          ? window.GEJAST_SCOPE_CONTEXT.getAdminSessionToken()
+          : '',
+        { force: !!force, scope: currentScope() }
+      );
+      const requests = Array.isArray(bundle?.requests) ? bundle.requests : [];
+      const history = []
+        .concat(Array.isArray(bundle?.history) ? bundle.history : [])
+        .concat(Array.isArray(bundle?.expired_queue) ? bundle.expired_queue : [])
+        .concat(Array.isArray(bundle?.expiredQueue) ? bundle.expiredQueue : []);
+      const map = new Map();
+      history.concat(requests).forEach((row) => {
+        if (!row || typeof row !== 'object') return;
+        map.set(inventoryKey(row), mergeInventoryRows(map.get(inventoryKey(row)), row));
+      });
+      const knownNames = new Set(Array.from(map.values()).map((row) => improvedDisplayName(row).toLowerCase()));
+      (Array.isArray(publicPlayerNames) ? publicPlayerNames : []).forEach((name) => {
+        const clean = cleanName(name);
+        if (!clean) return;
+        const lower = clean.toLowerCase();
+        if (knownNames.has(lower)) return;
+        map.set(`known:${lower}`, { display_name: clean, state_bucket: 'known_player', status: 'known_player', request_status: 'known_player' });
+        knownNames.add(lower);
+      });
+      count = map.size;
+    } catch (_) {}
+    let card = grid.querySelector('[data-users-hub-card]');
+    if (!card) {
+      const link = document.createElement('a');
+      link.className = 'stat stat-link';
+      link.dataset.usersHubCard = '1';
+      const href = scopeHref(currentScope(), 'admin_claims.html');
+      link.href = href.includes('#') ? href : `${href}#view=users`;
+      link.innerHTML = `<span>Gebruikers</span><strong id="statUsersHub">${count}</strong>`;
+      grid.appendChild(link);
+      card = link;
+    }
+    const value = card.querySelector('strong');
+    if (value) value.textContent = String(count);
+  }
+
   function patchTabRendering() {
     try {
       if (typeof renderAdminTabs === 'function') {
@@ -595,7 +726,20 @@
   function install() {
     injectStyles();
     injectAdminScopeSwitcher();
+    patchNonBlockingAutomaticMakeWake();
+    patchInlineFailedToFetchCopy();
     installClaimsEnhancements();
+    if (/admin\.html/i.test(pageName())) {
+      try { ensureHubUsersStatCard(true); } catch (_) {}
+      const refreshBtn = document.getElementById('refreshBtn');
+      if (refreshBtn && !refreshBtn.dataset.boundUsersHubRefresh) {
+        refreshBtn.dataset.boundUsersHubRefresh = '1';
+        refreshBtn.addEventListener('click', () => { window.setTimeout(() => { try { ensureHubUsersStatCard(true); } catch (_) {} }, 120); });
+      }
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) { try { ensureHubUsersStatCard(false); } catch (_) {} }
+      });
+    }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install, { once: true });
