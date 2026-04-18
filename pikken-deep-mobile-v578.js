@@ -1,7 +1,7 @@
 (function(){
   const path = String(location.pathname || '').toLowerCase().split('/').pop();
   if (!/^pikken(?:_live|_stats)?\.html$/.test(path)) return;
-  window.GEJAST_PAGE_VERSION = 'v589';
+  window.GEJAST_PAGE_VERSION = 'v591';
   window.GEJAST_HIDE_WATERMARK = true;
 
   function onReady(fn){ if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once:true }); else fn(); }
@@ -32,18 +32,40 @@
   }
 
   function injectScrollUnlock(){
-    if (document.getElementById('pkV589ScrollFix')) return;
-    const style = document.createElement('style');
-    style.id = 'pkV589ScrollFix';
-    style.textContent = `
-      html, body { height:auto !important; min-height:100% !important; overflow-y:auto !important; overflow-x:hidden !important; -webkit-overflow-scrolling:touch !important; }
-      body[data-pikken-page="lobby"] { touch-action:pan-y !important; overscroll-behavior-y:auto !important; }
-      body[data-pikken-page="lobby"] .wrap,
-      body[data-pikken-page="lobby"] .shell { overflow:visible !important; max-height:none !important; }
-      @media (max-width:760px){ body[data-pikken-page="lobby"] { padding-bottom:24px !important; } }
-    `;
-    document.head.appendChild(style);
-  }
+  if (document.getElementById('pkV591ScrollFix')) return;
+  const style = document.createElement('style');
+  style.id = 'pkV591ScrollFix';
+  style.textContent = `
+    html, body { height:auto !important; min-height:100% !important; overflow-y:auto !important; overflow-x:hidden !important; -webkit-overflow-scrolling:touch !important; }
+    body[data-pikken-page="lobby"] { touch-action:pan-y !important; overscroll-behavior-y:auto !important; }
+    body[data-pikken-page="lobby"] .wrap,
+    body[data-pikken-page="lobby"] .shell { overflow:visible !important; max-height:none !important; }
+    body[data-pikken-page="lobby"] .pk-room-shell{display:grid;gap:14px}
+    body[data-pikken-page="lobby"] .pk-room-rail{display:none;gap:10px;margin-top:14px}
+    body[data-pikken-page="lobby"] .pk-room-rail-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    body[data-pikken-page="lobby"] .pk-rail-chip{background:#fff;border:1px solid rgba(0,0,0,.10);border-radius:18px;padding:12px 14px;display:grid;gap:4px}
+    body[data-pikken-page="lobby"] .pk-rail-chip .k{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8a7a55;font-weight:900}
+    body[data-pikken-page="lobby"] .pk-rail-chip .v{font-size:18px;font-weight:900}
+    body[data-pikken-page="lobby"] .pk-summary{margin-top:12px;padding:12px 14px;border-radius:16px;background:#fff;border:1px solid rgba(0,0,0,.10);font-weight:700}
+    body[data-pikken-page="lobby"] .pk-room-stack{display:grid;gap:10px;margin-top:12px}
+    body[data-pikken-page="lobby"] .pk-room-card{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;border-radius:18px;background:#fff;border:1px solid rgba(0,0,0,.10);width:100%;text-align:left;cursor:pointer}
+    body[data-pikken-page="lobby"] .pk-room-card .meta{font-size:12px;color:#6d6256;margin-top:4px}
+    body[data-pikken-page="lobby"] .pk-room-card .badge{display:inline-flex;padding:6px 10px;border-radius:999px;background:rgba(154,130,65,.12);font-weight:800;font-size:12px}
+    body[data-pikken-page="lobby"] .pk-room-card .badge.live{background:rgba(138,16,34,.10);color:#8a1022}
+    body[data-pikken-page="lobby"] .pk-lobby-note{font-size:12px;color:#6d6256;margin-top:6px}
+    @media (max-width:900px){ body[data-pikken-page="lobby"] .pk-room-rail-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
+    @media (max-width:760px){
+      body[data-pikken-page="lobby"] { padding-bottom:24px !important; }
+      body[data-pikken-page="lobby"] .pk-room-rail-grid{grid-template-columns:1fr 1fr}
+      body[data-pikken-page="lobby"] .pk-room-card{align-items:flex-start}
+    }
+    @media (max-width:520px){
+      body[data-pikken-page="lobby"] .pk-room-rail-grid{grid-template-columns:1fr}
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 
   function patchConnectionCopy(){
     document.querySelectorAll('#pkConnectionPill').forEach((pill)=>{
@@ -69,69 +91,101 @@
     if (dockCopy && hasSession) dockCopy.textContent = 'Je bent ingelogd. Gebruik de lobby of open lobbies hieronder om je tafel snel terug te vinden.';
   }
 
-  function injectLobbyPanel(){
-    if (path !== 'pikken.html') return null;
-    if (document.getElementById('pkOpenLobbyPanel')) return document.getElementById('pkOpenLobbyPanel');
-    const joinField = document.getElementById('pkJoinCode');
-    if (!joinField) return null;
-    const field = joinField.closest('.field');
-    if (!field) return null;
-    const panel = document.createElement('section');
-    panel.id = 'pkOpenLobbyPanel';
-    panel.className = 'helper-card';
-    panel.innerHTML = '<strong>Actieve / open lobbies</strong><div class="muted" style="margin-top:4px">Direct zichtbaar voor mobiel testen. Tik op een room om hem meteen te joinen of te openen.</div><div id="pkOpenLobbyList" class="players-list" style="margin-top:10px"><div class="player-row"><div class="muted">Lobbies laden…</div></div></div>';
-    field.insertAdjacentElement('afterend', panel);
-    return panel;
-  }
+  function isLiveStage(stage){
+  return /bidding|voting|finished|live|started|race|countdown/i.test(String(stage || ''));
+}
 
-  function liveHrefForCode(code){
-    const safe = encodeURIComponent(String(code || '').trim().toUpperCase());
-    const params = new URLSearchParams();
-    if (safe) {
-      params.set('lobby_code', decodeURIComponent(safe));
-      params.set('match_ref', decodeURIComponent(safe));
-    }
-    if (scope() === 'family') params.set('scope', 'family');
-    return `./pikken_live.html?${params.toString()}`;
-  }
+function ensureLobbyCollections(){
+  if (path !== 'pikken.html') return {};
+  return {
+    liveBox: document.getElementById('pkLiveLobbiesBox'),
+    openBox: document.getElementById('pkOpenLobbiesBox'),
+    roomRail: document.getElementById('pkRoomRail'),
+    railCode: document.getElementById('pkRailLobbyCode'),
+    railStage: document.getElementById('pkRailStage'),
+    railPlayers: document.getElementById('pkRailPlayers'),
+    railHeadline: document.getElementById('pkRoomHeadline'),
+    railVariant: document.getElementById('pkRailVariant'),
+    syncNote: document.getElementById('pkLobbySyncNote')
+  };
+}
 
-  function renderLobbyRows(rows){
-    const root = document.getElementById('pkOpenLobbyList');
-    if (!root) return;
-    if (!rows.length) {
-      root.innerHTML = '<div class="player-row"><div class="muted">Nog geen open Pikken-lobbies zichtbaar.</div></div>';
+function renderRoomRows(root, rows, emptyText){
+  if (!root) return;
+  if (!rows.length){
+    root.innerHTML = `<div class="player-row"><div class="muted">${emptyText}</div></div>`;
+    return;
+  }
+  root.innerHTML = rows.map((row)=>`
+    <button type="button" class="pk-room-card" data-pk-open="${row.lobby_code}" data-pk-stage="${row.stage || ''}">
+      <div>
+        <strong>${row.lobby_code}</strong>
+        <div class="meta">${row.host_name || 'Onbekende host'} · ${row.player_count || 0} speler(s) · ${row.stage || 'lobby'}</div>
+      </div>
+      <div class="badge ${isLiveStage(row.stage) ? 'live' : ''}">${isLiveStage(row.stage) ? 'LIVE' : 'Join'}</div>
+    </button>
+  `).join('');
+  root.querySelectorAll('[data-pk-open]').forEach((btn)=>btn.addEventListener('click', ()=>{
+    const code = btn.getAttribute('data-pk-open') || '';
+    const stage = btn.getAttribute('data-pk-stage') || '';
+    const input = document.getElementById('pkJoinCode');
+    if (input) input.value = code;
+    if (isLiveStage(stage)) {
+      location.href = liveHrefForCode(code);
       return;
     }
-    root.innerHTML = rows.map((row)=>`<div class="player-row"><div><strong>${row.lobby_code}</strong><div class="muted">${row.host_name || 'Onbekende host'} · ${row.player_count || 0} speler(s) · ${row.stage || 'lobby'}</div></div><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="btn alt" type="button" data-pk-open="${row.lobby_code}">${row.can_join ? 'Join lobby' : 'Open live'}</button></div></div>`).join('');
-    root.querySelectorAll('[data-pk-open]').forEach((btn)=>btn.addEventListener('click', ()=>{
-      const code = btn.getAttribute('data-pk-open') || '';
-      const input = document.getElementById('pkJoinCode');
-      if (input) input.value = code;
-      const joinBtn = document.getElementById('pkJoinLobbyBtn');
-      if (joinBtn && !joinBtn.disabled) joinBtn.click();
-      else location.href = liveHrefForCode(code);
-    }));
-  }
+    const joinBtn = document.getElementById('pkJoinLobbyBtn');
+    if (joinBtn && !joinBtn.disabled) joinBtn.click();
+  }));
+}
 
-  let lobbyRefreshInFlight = false;
-  async function refreshOpenLobbies(){
-    if (path !== 'pikken.html' || lobbyRefreshInFlight) return;
-    lobbyRefreshInFlight = true;
-    injectLobbyPanel();
-    try {
-      const rows = normalizeRows(await firstRpc([
-        'get_pikken_open_lobbies_public_scoped',
-        'get_pikken_open_lobbies_public',
-        'list_pikken_open_lobbies_public_scoped',
-        'list_pikken_open_lobbies_public'
-      ], { site_scope_input: scope(), session_token: session() || null }));
-      renderLobbyRows(rows);
-    } catch (_) {
-      renderLobbyRows([]);
-    } finally {
-      lobbyRefreshInFlight = false;
-    }
+function syncLobbyRail(){
+  if (path !== 'pikken.html') return;
+  const refs = ensureLobbyCollections();
+  const code = String(document.getElementById('pkLobbyCode')?.textContent || '').trim();
+  const phase = String(document.getElementById('pkPhase')?.textContent || '').trim();
+  const variant = String(document.getElementById('pkVariantLabel')?.textContent || '').trim();
+  const playerRows = Array.from(document.querySelectorAll('#pkPlayers .player-row'));
+  const readyCount = playerRows.filter((row)=>/ready/i.test(String(row.textContent || '')) && !/wacht/i.test(String(row.textContent || ''))).length;
+  if (refs.syncNote) refs.syncNote.textContent = `Live sync open lobbies elke 10 seconden · lobbystatus loopt mee met de tafel.`;
+  if (!refs.roomRail) return;
+  if (code && code !== '—') refs.roomRail.style.display = 'grid';
+  else refs.roomRail.style.display = 'none';
+  if (refs.railCode) refs.railCode.textContent = code || '—';
+  if (refs.railStage) refs.railStage.textContent = phase || 'lobby';
+  if (refs.railPlayers) refs.railPlayers.textContent = `${playerRows.length} / ${readyCount}`;
+  if (refs.railVariant) refs.railVariant.textContent = variant || 'Normal';
+  if (refs.railHeadline) {
+    const heading = document.getElementById('pkModeHeading')?.textContent || 'Nog geen actieve lobby.';
+    const copy = document.getElementById('pkModeCopy')?.textContent || '';
+    refs.railHeadline.textContent = code && code !== '—' ? `${heading} · ${copy}` : 'Nog geen actieve lobby.';
   }
+}
+
+let lobbyRefreshInFlight = false;
+async function refreshOpenLobbies(){
+  if (path !== 'pikken.html' || lobbyRefreshInFlight) return;
+  lobbyRefreshInFlight = true;
+  try {
+    const rows = normalizeRows(await firstRpc([
+      'get_pikken_open_lobbies_public_scoped',
+      'get_pikken_open_lobbies_public',
+      'list_pikken_open_lobbies_public_scoped',
+      'list_pikken_open_lobbies_public'
+    ], { site_scope_input: scope(), session_token: session() || null }));
+    const refs = ensureLobbyCollections();
+    renderRoomRows(refs.liveBox, rows.filter((row)=>isLiveStage(row.stage)), 'Nog geen live Pikken-tafels.');
+    renderRoomRows(refs.openBox, rows.filter((row)=>!isLiveStage(row.stage)), 'Nog geen open Pikken-lobbies zichtbaar.');
+    syncLobbyRail();
+  } catch (_) {
+    const refs = ensureLobbyCollections();
+    renderRoomRows(refs.liveBox, [], 'Nog geen live Pikken-tafels.');
+    renderRoomRows(refs.openBox, [], 'Nog geen open Pikken-lobbies zichtbaar.');
+  } finally {
+    lobbyRefreshInFlight = false;
+  }
+}
+
 
   function addClaimHintButton(){
     if (path !== 'pikken_live.html') return;
@@ -162,7 +216,7 @@
       }
     };
     pump();
-    window.setInterval(pump, path === 'pikken.html' ? 2500 : 1800);
+    window.setInterval(()=>{ pump(); if (path === 'pikken.html') syncLobbyRail(); }, path === 'pikken.html' ? 2500 : 1800);
     document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) pump(); });
   }
 
@@ -174,6 +228,9 @@
     installLightUiRefresh();
     if (path === 'pikken.html') {
       refreshOpenLobbies().catch(()=>{});
+      syncLobbyRail();
+      const refreshBtn = document.getElementById('pkRefreshRoomsBtn');
+      if (refreshBtn) refreshBtn.addEventListener('click', ()=>refreshOpenLobbies().catch(()=>{}));
       window.setInterval(()=>{ if (!document.hidden) refreshOpenLobbies().catch(()=>{}); }, 10000);
     }
   });

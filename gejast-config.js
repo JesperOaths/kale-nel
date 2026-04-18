@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v589',
+    VERSION:'v591',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -104,17 +104,17 @@
 
   function purgeStaleClientCaches(){
     const oldSessionKeys = [
-      'gejast_homepage_boot_v389','gejast_homepage_boot_v426','gejast_homepage_boot_v448','gejast_homepage_boot_v579','gejast_homepage_boot_v580','gejast_homepage_boot_v581','gejast_homepage_boot_v582','gejast_homepage_boot_v583','gejast_homepage_boot_v584'
+      'gejast_homepage_boot_v389','gejast_homepage_boot_v426','gejast_homepage_boot_v448','gejast_homepage_boot_v579','gejast_homepage_boot_v580','gejast_homepage_boot_v581','gejast_homepage_boot_v582','gejast_homepage_boot_v583','gejast_homepage_boot_v584','gejast_homepage_boot_v585','gejast_homepage_boot_v586','gejast_homepage_boot_v587','gejast_homepage_boot_v588','gejast_homepage_boot_v589','gejast_homepage_boot_v590','gejast_homepage_boot_v584'
     ];
     const oldLocalKeys = [
       'gejast_homepage_poll_lists_v448','gejast_homepage_poll_lists_v579','gejast_homepage_poll_lists_v580','gejast_homepage_poll_lists_v581','gejast_homepage_poll_lists_v582','gejast_homepage_poll_lists_v583','gejast_homepage_poll_lists_v584',
       'gejast_drinks_donderdag_lists_v448','gejast_drinks_donderdag_lists_v579','gejast_drinks_donderdag_lists_v580','gejast_drinks_donderdag_lists_v581','gejast_drinks_donderdag_lists_v582','gejast_drinks_donderdag_lists_v583','gejast_drinks_donderdag_lists_v584'
     ];
     try {
-      if (sessionStorage.getItem('__gejast_cache_purged_v589') === '1') return;
+      if (sessionStorage.getItem('__gejast_cache_purged_v591') === '1') return;
       oldSessionKeys.forEach((key)=>sessionStorage.removeItem(key));
       oldLocalKeys.forEach((key)=>localStorage.removeItem(key));
-      sessionStorage.setItem('__gejast_cache_purged_v589','1');
+      sessionStorage.setItem('__gejast_cache_purged_v591','1');
     } catch (_) {}
   }
 

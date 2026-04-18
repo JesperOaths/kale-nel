@@ -7,8 +7,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Pikken</title>
-  <script>window.GEJAST_PAGE_VERSION='v589';</script>
-  <script src="./gejast-config.js?v589"></script>
+  <script>window.GEJAST_PAGE_VERSION='v591';</script>
+  <script src="./gejast-config.js?v591"></script>
   <script src="./gejast-home-gate.js?v571"></script>
   <script src="./gejast-scope-context.js?v571"></script>
   <style>
@@ -43,83 +43,116 @@
         </div>
       </div>
 
-      <div class="grid">
-        <section class="panel">
-          <div class="strip">
-            <div class="stat"><div class="k">Lobbycode</div><div class="v" id="pkLobbyCode">—</div></div>
-            <div class="stat"><div class="k">Fase</div><div class="v" id="pkPhase">lobby</div></div>
-            <div class="stat"><div class="k">Spelmodus</div><div class="v" id="pkVariantLabel">Normal</div></div>
-            <div class="stat"><div class="k">Status</div><div class="v" id="pkRoleLabel">Nog niet gekoppeld</div></div>
-          </div>
+<div id="pkRoomRail" class="pk-room-rail">
+  <div class="pk-room-rail-grid">
+    <div class="pk-rail-chip"><div class="k">Lobby</div><div id="pkRailLobbyCode" class="v">—</div></div>
+    <div class="pk-rail-chip"><div class="k">Fase</div><div id="pkRailStage" class="v">lobby</div></div>
+    <div class="pk-rail-chip"><div class="k">Spelers / ready</div><div id="pkRailPlayers" class="v">0 / 0</div></div>
+    <div class="pk-rail-chip"><div class="k">Variant</div><div id="pkRailVariant" class="v">Normal</div></div>
+  </div>
+  <div id="pkRoomHeadline" class="pk-summary">Nog geen actieve lobby.</div>
+</div>
 
-          <div class="mode-card" style="margin-top:14px">
-            <div class="mode-head">
-              <div>
-                <div style="font-size:22px;font-weight:900;line-height:1.1" id="pkModeHeading">Klaar om een tafel te maken of te joinen</div>
-                <div class="muted" id="pkModeCopy">Join een lobby en laat de lobby je stoel koppelen. Zodra dat klopt, kom je vanzelf goed in de tafel.</div>
-              </div>
-              <span id="pkModePill" class="pill wait">status</span>
-            </div>
-            <div class="muted" id="pkIdentityCopy">Terugkomen gebeurt alleen als lobbycode en stoel echt bij elkaar horen. Anders ga je gewoon terug naar de lobby.</div>
-          </div>
+<div class="grid">
+  <section class="panel pk-room-shell">
+    <div class="strip">
+      <div class="stat"><div class="k">Lobbycode</div><div class="v" id="pkLobbyCode">—</div></div>
+      <div class="stat"><div class="k">Fase</div><div class="v" id="pkPhase">lobby</div></div>
+      <div class="stat"><div class="k">Spelmodus</div><div class="v" id="pkVariantLabel">Normal</div></div>
+      <div class="stat"><div class="k">Status</div><div class="v" id="pkRoleLabel">Nog niet gekoppeld</div></div>
+    </div>
 
-          <div class="field">
-            <label>Variant</label>
-            <select id="pkPenaltyMode">
-              <option value="wrong_loses">Normal (fout verliest)</option>
-              <option value="right_loses">Fair (goed verliest)</option>
-            </select>
-          </div>
-          <div class="action-row"><button class="btn soft" id="pkCreateLobbyBtn">Maak lobby</button></div>
-
-          <div class="field">
-            <label>Join code</label>
-            <input id="pkJoinCode" placeholder="ABC123" />
-          </div>
-          <div class="action-row">
-            <button class="btn alt" id="pkJoinLobbyBtn">Join lobby</button>
-            <button class="btn ok" id="pkReadyBtn">Ready</button>
-            <button class="btn alt" id="pkUnreadyBtn">Unready</button>
-            <button class="btn warn" id="pkLeaveBtn">Verlaat lobby</button>
-            <button class="btn soft" id="pkStartBtn" disabled>Start · alleen host</button>
-          </div>
-
-          <div class="helper-card">
-            <strong>Wat deze pagina nu doet</strong>
-            <div class="muted">Deze pagina blijft de enige plek voor maken, joinen, readyen en starten. Live spelinformatie blijft in de live tafel. De lobby mag je alleen doorsturen naar live als jouw spelersessie echt bewezen is.</div>
-          </div>
-
-          <div class="accordion">
-            <summary><span>Laatste biedlijn in deze tafel</span><span class="muted">open</span></summary>
-            <div class="detail"><div id="pkHistoryLine" class="history-list"><div class="history-item muted">Nog geen actieve biedingen zichtbaar.</div></div></div>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">
-            <div>
-              <h2 style="margin:0 0 6px">Deelnemers</h2>
-              <div class="muted">De lobby houdt alleen echte deelnemers vast. Foute of oude koppelingen worden terug naar de lobby gestuurd.</div>
-            </div>
-            <span id="pkConnectionPill" class="pill wait">verbinding ok</span>
-          </div>
-          <div id="pkPlayers" class="players-list"></div>
-
-          <div class="helper-card">
-            <strong>Korte regels</strong>
-            <div class="notice-list">
-              <div class="notice">Bied aantal × face. Pik telt als joker bij 2–6.</div>
-              <div class="notice">Afkeuren start een stemronde. Daarna reveal + verlies van één dobbelsteen volgens de gekozen variant.</div>
-              <div class="notice">Lobby verlaten wist lokaal en server-side tegelijk zodat je niet terug de tafel in wordt geslingerd.</div>
-            </div>
-          </div>
-        </section>
+    <div class="mode-card" style="margin-top:14px">
+      <div class="mode-head">
+        <div>
+          <div style="font-size:22px;font-weight:900;line-height:1.1" id="pkModeHeading">Klaar om een tafel te maken of te joinen</div>
+          <div class="muted" id="pkModeCopy">Maak of join een lobby. Zodra de host start, gaan alleen stevig gekoppelde deelnemers door naar live.</div>
+        </div>
+        <span id="pkModePill" class="pill wait">status</span>
       </div>
+      <div class="muted" id="pkIdentityCopy">Terugkomen gebeurt alleen als lobbycode en stoel echt bij elkaar horen. Anders ga je gewoon terug naar de lobby.</div>
+    </div>
+
+    <div class="field">
+      <label>Variant</label>
+      <select id="pkPenaltyMode">
+        <option value="wrong_loses">Normal (fout verliest)</option>
+        <option value="right_loses">Fair (goed verliest)</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Lobbycode om te maken of te joinen</label>
+      <input id="pkJoinCode" placeholder="Bijv. ABC123" />
+    </div>
+
+    <div class="action-row">
+      <button class="btn soft" id="pkCreateLobbyBtn">Nieuwe lobby met deze code</button>
+      <button class="btn alt" id="pkJoinLobbyBtn">Join ingevoerde lobby</button>
+      <button class="btn alt" id="pkRefreshRoomsBtn" type="button">Nu verversen</button>
+    </div>
+
+    <div id="pkLobbySyncNote" class="pk-lobby-note">Live sync open lobbies elke 10 seconden.</div>
+
+    <div class="helper-card">
+      <strong>Open / live tafels</strong>
+      <div class="muted">Net als bij Paardenrace zie je hier direct welke lobbies openstaan en welke tafels al live zijn.</div>
+    </div>
+
+    <div class="small" style="margin-top:2px">Currently live lobbies</div>
+    <div id="pkLiveLobbiesBox" class="pk-room-stack"><div class="player-row"><div class="muted">Lobbies laden…</div></div></div>
+
+    <div class="small" style="margin-top:2px">Open lobbies om direct te joinen</div>
+    <div id="pkOpenLobbiesBox" class="pk-room-stack"><div class="player-row"><div class="muted">Lobbies laden…</div></div></div>
+
+    <div class="helper-card">
+      <strong>Acties in deze lobby</strong>
+      <div class="muted">Ready, unready, verlaten en starten blijven hieronder op dezelfde plek zitten zodra je in een lobby zit.</div>
+    </div>
+
+    <div class="action-row">
+      <button class="btn ok" id="pkReadyBtn">Ready</button>
+      <button class="btn alt" id="pkUnreadyBtn">Unready</button>
+      <button class="btn warn" id="pkLeaveBtn">Verlaat lobby</button>
+      <button class="btn soft" id="pkStartBtn" disabled>Start · alleen host</button>
+    </div>
+
+    <div class="helper-card">
+      <strong>Wat deze pagina nu doet</strong>
+      <div class="muted">Deze pagina blijft de enige plek voor maken, joinen, readyen en starten. Live spelinformatie blijft in de live tafel. De lobby mag je alleen doorsturen naar live als jouw spelersessie echt bewezen is.</div>
+    </div>
+
+    <div class="accordion">
+      <summary><span>Laatste biedlijn in deze tafel</span><span class="muted">open</span></summary>
+      <div class="detail"><div id="pkHistoryLine" class="history-list"><div class="history-item muted">Nog geen actieve biedingen zichtbaar.</div></div></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">
+      <div>
+        <h2 style="margin:0 0 6px">Deelnemers</h2>
+        <div class="muted">De lobby houdt alleen echte deelnemers vast. Foute of oude koppelingen worden terug naar de lobby gestuurd.</div>
+      </div>
+      <span id="pkConnectionPill" class="pill wait">verbinding ok</span>
+    </div>
+    <div id="pkPlayers" class="players-list"></div>
+
+    <div class="helper-card">
+      <strong>Korte regels</strong>
+      <div class="notice-list">
+        <div class="notice">Bied aantal × face. Pik telt als joker bij 2–6.</div>
+        <div class="notice">Afkeuren start een stemronde. Daarna reveal + verlies van één dobbelsteen volgens de gekozen variant.</div>
+        <div class="notice">Lobby verlaten wist lokaal en server-side tegelijk zodat je niet terug de tafel in wordt geslingerd.</div>
+      </div>
+    </div>
+  </section>
+</div>
     </div>
   </div>
 
   <script src="./pikken-dice-canvas.js?v571"></script>
-  <script src="./gejast-pikken.js?v583"></script>
+  <script src="./gejast-pikken.js?v591"></script>
   <script src="./gejast-player-session-ui.js?v571"></script>
   <script>
     (() => {
