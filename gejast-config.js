@@ -86,7 +86,6 @@
     document.querySelectorAll('body *').forEach((node)=>{ if (node.children.length) return; const txt=(node.textContent||'').trim(); if (re.test(txt)) { node.textContent = label; watermarkStyles(node); } });
   }
 
-
   function normalizeProfileImageUrl(value){
     const raw = String(value || '').trim();
     if (!raw) return '';
@@ -98,7 +97,6 @@
     if (base && /^[A-Za-z0-9._-]+\/.+/.test(raw)) return `${base}/storage/v1/object/public/${raw.replace(/^\/+/, '')}`;
     return raw;
   }
-
 
   function normalizePersonName(value){
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -516,9 +514,24 @@ function buildRequestUrl(returnTo, scope){
     } catch (_) {}
   }
 
+function ensureAdminUsersPatch(){
+  try {
+    const path = String((location && location.pathname) || '').toLowerCase();
+    if (!/\/admin/i.test(path)) return;
+    if (document.querySelector('script[data-gejast-admin-users-patch]')) return;
+    const script = document.createElement('script');
+    script.src = `./gejast-admin-users-patch.js?${effectiveVersion}`;
+    script.async = false;
+    script.setAttribute('data-gejast-admin-users-patch','1');
+    document.head.appendChild(script);
+  } catch (_) {}
+}
+
+
   function afterDomReady(){
     applyVersionLabel();
     ensureSiteAnnouncementRuntime();
+    ensureAdminUsersPatch();
     if (getPlayerSessionToken() && shouldAutoInstallActivityKeepalive()) installActivityKeepalive();
   }
   if (document.readyState === 'loading') {

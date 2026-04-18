@@ -1,15 +1,11 @@
 (function(){
   const PAGE_MATCH = /admin_claims\.html/i;
-  if (!PAGE_MATCH.test(String(location && location.pathname || ''))) return;
+  if (!PAGE_MATCH.test(String((location && location.pathname) || ''))) return;
 
   let publicPlayerNames = [];
 
   function readValue(name, fallback) {
-    try {
-      return eval(name);
-    } catch (_) {
-      return fallback;
-    }
+    try { return eval(name); } catch (_) { return fallback; }
   }
 
   function writeCurrentView(value) {
@@ -28,24 +24,70 @@
     return text;
   }
 
-  function improvedDisplayName(req) {
-    const row = req || {};
-    const candidates = [
-      row.display_name,
-      row.requested_name,
-      row.public_display_name,
-      row.chosen_username,
-      row.desired_name,
-      row.player_name,
-      row.reserved_display_name,
-      row.reserved_name,
-      row.requester_name,
-      row.name,
-      row.requester_meta && row.requester_meta.display_name,
-      row.requester_meta && row.requester_meta.player_name,
-      row.requester_meta && row.requester_meta.name
+  function rowEmail(row) {
+    return String(row?.requester_email || row?.recipient_email || row?.email || '').trim().toLowerCase();
+  }
+
+  function rowRequestId(row) {
+    return row?.request_id ?? row?.claim_request_id ?? row?.id ?? null;
+  }
+
+  function rowPlayerId(row) {
+    return row?.player_id ?? row?.related_player_id ?? null;
+  }
+
+  function directNameCandidates(row) {
+    const item = row || {};
+    return [
+      item.display_name,
+      item.public_display_name,
+      item.chosen_username,
+      item.requested_name,
+      item.desired_name,
+      item.player_name,
+      item.reserved_display_name,
+      item.reserved_name,
+      item.requester_name,
+      item.name,
+      item.profile_name,
+      item.allowed_username,
+      item.allowed_username_name,
+      item.username,
+      item.nickname,
+      item.requester_meta && item.requester_meta.display_name,
+      item.requester_meta && item.requester_meta.player_name,
+      item.requester_meta && item.requester_meta.public_display_name,
+      item.requester_meta && item.requester_meta.chosen_username,
+      item.requester_meta && item.requester_meta.requested_name,
+      item.requester_meta && item.requester_meta.name
     ].map(cleanName).filter(Boolean);
-    return candidates[0] || `Gebruiker #${row?.id ?? row?.request_id ?? '?'}`;
+  }
+
+  function relatedCanonicalName(row) {
+    const email = rowEmail(row);
+    const requestId = rowRequestId(row);
+    const playerId = rowPlayerId(row);
+    const pools = []
+      .concat(Array.isArray(readValue('lastRequests', [])) ? readValue('lastRequests', []) : [])
+      .concat(Array.isArray(readValue('lastHistory', [])) ? readValue('lastHistory', []) : []);
+    for (const candidate of pools) {
+      if (!candidate || typeof candidate !== 'object') continue;
+      const samePlayer = playerId != null && rowPlayerId(candidate) != null && String(rowPlayerId(candidate)) === String(playerId);
+      const sameRequest = requestId != null && rowRequestId(candidate) != null && String(rowRequestId(candidate)) === String(requestId);
+      const sameEmail = email && rowEmail(candidate) && rowEmail(candidate) === email;
+      if (!samePlayer && !sameRequest && !sameEmail) continue;
+      const names = directNameCandidates(candidate);
+      if (names.length) return names[0];
+    }
+    return '';
+  }
+
+  function improvedDisplayName(req) {
+    const direct = directNameCandidates(req);
+    if (direct.length) return direct[0];
+    const related = relatedCanonicalName(req);
+    if (related) return related;
+    return 'Onbekende naam';
   }
 
   function patchNameResolvers() {
@@ -61,12 +103,73 @@
           const row = oldNormalize(input);
           if (row && typeof row === 'object') {
             const betterName = improvedDisplayName(row);
-            if (betterName && !/^Gebruiker #/.test(betterName)) row.display_name = betterName;
+            if (betterName && betterName !== 'Onbekende naam') row.display_name = betterName;
           }
           return row;
         };
       }
     } catch (_) {}
+  }
+
+  function injectLayoutStyles() {
+    if (document.getElementById('gejast-admin-users-layout-v561')) return;
+    const style = document.createElement('style');
+    style.id = 'gejast-admin-users-layout-v561';
+    style.textContent = `
+      #statsGrid {
+        display: grid !important;
+        grid-template-columns: repeat(6, minmax(118px, 1fr)) !important;
+        gap: 10px !important;
+        overflow-x: auto;
+        padding-bottom: 2px;
+      }
+      #statsGrid .stat-card {
+        min-width: 118px;
+        padding: 14px 12px;
+        border-radius: 16px;
+      }
+      #statsGrid .stat-card .label {
+        font-size: 11px;
+        line-height: 1.15;
+        min-height: 28px;
+        display: block;
+      }
+      #statsGrid .stat-card .value {
+        font-size: 28px;
+        margin-top: 4px;
+      }
+      #adminTabs {
+        display: grid !important;
+        grid-template-columns: repeat(6, minmax(110px, 1fr)) !important;
+        gap: 8px !important;
+        align-items: stretch;
+      }
+      #adminTabs .tab-btn {
+        width: 100%;
+        min-width: 0;
+        justify-content: space-between;
+        padding: 9px 10px;
+        border-radius: 14px;
+        gap: 8px;
+      }
+      #adminTabs .tab-btn span:first-child {
+        white-space: normal;
+        line-height: 1.1;
+        text-align: left;
+      }
+      #adminTabs .tab-count {
+        flex: 0 0 auto;
+      }
+      @media (max-width: 980px) {
+        #statsGrid, #adminTabs {
+          overflow-x: auto;
+          grid-auto-flow: column;
+          grid-auto-columns: minmax(132px, 1fr);
+          grid-template-columns: none !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   function ensureUsersCard() {
@@ -80,7 +183,7 @@
       card.innerHTML = `
         <div class="panel-head">
           <h2 id="usersTitle">Gebruikers</h2>
-          <div class="toolbar-note">Brede inventaris van bekende gebruikers: actief, wacht op activatie, verlopen, afgewezen en bekende spelersnamen.</div>
+          <div class="toolbar-note">Brede inventaris van bekende gebruikers: actief, wacht op activatie, verlopen, afgewezen, open aanvragen en bekende spelernamen.</div>
         </div>
         <input id="usersSearch" class="search-input" type="search" placeholder="Zoek gebruiker op naam of e-mail" />
         <div id="usersList"></div>
@@ -95,11 +198,29 @@
     return card;
   }
 
+  function ensureUsersStatCard() {
+    const statsGrid = document.getElementById('statsGrid');
+    if (!statsGrid) return null;
+    let card = document.getElementById('statUsersCard');
+    if (!card) {
+      card = document.createElement('div');
+      card.id = 'statUsersCard';
+      card.className = 'stat-card clickable';
+      card.setAttribute('data-admin-view-card', 'users');
+      card.innerHTML = `<div class="label">Gebruikers</div><div id="statUsers" class="value">0</div>`;
+      statsGrid.appendChild(card);
+      card.addEventListener('click', () => {
+        if (typeof switchAdminView === 'function') switchAdminView('users');
+      });
+    }
+    return card;
+  }
+
   function inventoryKey(item) {
     const row = item || {};
-    const playerId = row.player_id ?? row.related_player_id ?? null;
-    const email = String(row.requester_email || row.recipient_email || row.email || '').trim().toLowerCase();
-    const requestId = row.request_id ?? row.claim_request_id ?? row.id ?? null;
+    const playerId = rowPlayerId(row);
+    const email = rowEmail(row);
+    const requestId = rowRequestId(row);
     const name = improvedDisplayName(row).toLowerCase();
     if (playerId != null && playerId !== '') return `player:${playerId}`;
     if (email) return `email:${email}`;
@@ -134,7 +255,8 @@
       next.status = source.status || next.status;
       next.request_status = source.request_status || next.request_status;
     }
-    next.display_name = improvedDisplayName(next);
+    const betterName = improvedDisplayName(next);
+    if (betterName && betterName !== 'Onbekende naam') next.display_name = betterName;
     return next;
   }
 
@@ -197,16 +319,24 @@
     return 'Bekend record';
   }
 
+  function yesNoLabel(value) {
+    return value ? 'Ja' : 'Nee';
+  }
+
   function inventoryHtml(item) {
     const email = String(item?.requester_email || item?.recipient_email || item?.email || '').trim();
     const decidedAt = item?.decided_at ? formatDateTime(item.decided_at) : '';
     const createdAt = item?.created_at ? formatDateTime(item.created_at) : '';
-    const requestId = item?.request_id ?? item?.claim_request_id ?? item?.id ?? null;
+    const activatedAt = item?.activated_at || item?.activated_on || item?.player_activation_used_at || item?.activation_used_at || item?.link_used_at || item?.used_at || '';
+    const requestId = rowRequestId(item);
+    const bucket = String((typeof stateBucket === 'function' ? stateBucket(item) : item?.state_bucket) || 'pending');
+    const badgeClass = bucket === 'active' ? 'state-activated' : bucket === 'awaiting' ? 'state-approved' : bucket === 'expired' ? 'state-expired' : bucket === 'rejected' ? 'state-rejected' : 'state-pending';
+    const hasPin = Boolean(item?.hasPin || item?.has_pin || item?.pin_is_set || item?.player_has_pin || item?.pin_set || item?.pin_hash_set || item?.pin_hash_present || item?.player_pin_hash_set || item?.pin_hash || item?.player_pin_hash);
     return `
       <div class="request">
         <div class="entry-top">
           <div>
-            <div class="state-badge ${String((typeof stateBucket === 'function' ? stateBucket(item) : item?.state_bucket) || 'pending') === 'active' ? 'state-activated' : String((typeof stateBucket === 'function' ? stateBucket(item) : item?.state_bucket) || 'pending') === 'awaiting' ? 'state-approved' : String((typeof stateBucket === 'function' ? stateBucket(item) : item?.state_bucket) || 'pending') === 'expired' ? 'state-expired' : String((typeof stateBucket === 'function' ? stateBucket(item) : item?.state_bucket) || 'pending') === 'rejected' ? 'state-rejected' : 'state-pending'}">${inventoryStatusLabel(item)}</div>
+            <div class="state-badge ${badgeClass}">${inventoryStatusLabel(item)}</div>
             <div class="entry-title">${escapeHtml(improvedDisplayName(item))}</div>
             <div class="muted">${email ? escapeHtml(email) : 'Geen e-mailadres in admindata'}${requestId != null ? ` · verzoek #${escapeHtml(requestId)}` : ''}</div>
           </div>
@@ -217,6 +347,8 @@
           ${metaBox('Status', inventoryStatusLabel(item))}
           ${metaBox('Speler-ID', item?.player_id ?? 'Onbekend')}
           ${metaBox('E-mail', email || 'Geen e-mailadres')}
+          ${metaBox('Pincode ingesteld', yesNoLabel(hasPin))}
+          ${metaBox('Activatielink gebruikt', activatedAt ? formatDateTime(activatedAt) : 'Nee / onbekend')}
         </div>
       </div>
     `;
@@ -227,13 +359,16 @@
     const root = document.getElementById('usersList');
     if (!root) return;
     const q = String(document.getElementById('usersSearch')?.value || '').trim().toLowerCase();
-    const items = buildUsersInventory().filter((item) => {
+    const allItems = buildUsersInventory();
+    const items = allItems.filter((item) => {
       if (!q) return true;
       return [improvedDisplayName(item), item?.requester_email, item?.recipient_email, item?.email]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(q));
     });
     root.innerHTML = items.length ? items.map(inventoryHtml).join('') : '<div class="empty-state">Geen gebruikers gevonden.</div>';
+    const statUsers = document.getElementById('statUsers');
+    if (statUsers) statUsers.textContent = String(allItems.length);
   }
 
   function patchViewConfig() {
@@ -256,6 +391,8 @@
         renderAdminTabs = function() {
           oldRenderAdminTabs();
           ensureUsersCard();
+          injectLayoutStyles();
+          ensureUsersStatCard();
           const root = document.getElementById('adminTabs');
           if (!root) return;
           const count = buildUsersInventory().length;
@@ -270,6 +407,24 @@
           const countNode = btn.querySelector('.tab-count');
           if (countNode) countNode.textContent = String(count);
           btn.classList.toggle('active', getCurrentView() === 'users');
+          const statValue = document.getElementById('statUsers');
+          if (statValue) statValue.textContent = String(count);
+        };
+      }
+    } catch (_) {}
+  }
+
+  function patchRenderStats() {
+    try {
+      if (typeof renderStats === 'function') {
+        const oldRenderStats = renderStats;
+        renderStats = function(requests, history) {
+          const result = oldRenderStats(requests, history);
+          injectLayoutStyles();
+          ensureUsersStatCard();
+          const statUsers = document.getElementById('statUsers');
+          if (statUsers) statUsers.textContent = String(buildUsersInventory().length);
+          return result;
         };
       }
     } catch (_) {}
@@ -294,6 +449,8 @@
         const oldSwitch = switchAdminView;
         switchAdminView = function(view) {
           ensureUsersCard();
+          injectLayoutStyles();
+          ensureUsersStatCard();
           if (view !== 'users') {
             const result = oldSwitch(view);
             const card = document.getElementById('usersCard');
@@ -336,6 +493,8 @@
         refreshAdminLists = async function(force) {
           await syncPublicPlayerNames(force);
           const result = await oldRefresh(force);
+          const statUsers = document.getElementById('statUsers');
+          if (statUsers) statUsers.textContent = String(buildUsersInventory().length);
           if (getCurrentView() === 'users') renderUsersInventory();
           else if (typeof renderAdminTabs === 'function') renderAdminTabs();
           return result;
@@ -346,8 +505,11 @@
 
   function install() {
     ensureUsersCard();
+    injectLayoutStyles();
+    ensureUsersStatCard();
     patchNameResolvers();
     patchViewConfig();
+    patchRenderStats();
     patchTabRendering();
     patchSharedSearch();
     patchSwitchAdminView();
@@ -355,6 +517,8 @@
     syncPublicPlayerNames(true).finally(() => {
       try {
         if (typeof renderAdminTabs === 'function') renderAdminTabs();
+        const statUsers = document.getElementById('statUsers');
+        if (statUsers) statUsers.textContent = String(buildUsersInventory().length);
         if (getCurrentView() === 'users') renderUsersInventory();
       } catch (_) {}
     });
