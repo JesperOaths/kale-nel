@@ -192,7 +192,8 @@
     lastStateVersion: -1,
     pollTimer: null,
     redirecting: false,
-    contextVersion: 0
+    contextVersion: 0,
+    staleLobbySince: 0
   };
 
   async function loadPublicState(){
@@ -385,13 +386,26 @@
     if (!stillCurrent()) return;
     if(!UI.gameId){
       if (publicState){
+        UI.staleLobbySince = 0;
         render(publicState);
         setStatus('Publieke lobby geladen, maar deelnemersessie kon nog niet aan deze match worden gekoppeld.', true);
         return;
       }
+      const hasStaleContext = !!(UI.lobbyCode || storedParticipantGameId() || storedParticipantLobbyCode());
+      if (hasStaleContext && isLobbyPage()) {
+        UI.staleLobbySince = UI.staleLobbySince || Date.now();
+        if ((Date.now() - UI.staleLobbySince) > 6000) {
+          clearActiveLobbyContext();
+          setStatus('Deze Pikken-lobby is niet meer actief. Je bent teruggezet naar een schone lobby.', true);
+          return;
+        }
+      } else {
+        UI.staleLobbySince = 0;
+      }
       setStatus(isLivePage() ? 'Geen actieve Pikken-match gekozen. Open deze pagina vanuit de lobby.' : 'Maak of join eerst een lobby.', true);
       return;
     }
+    UI.staleLobbySince = 0;
     try{
       const requestGameId = UI.gameId;
       const state = await rpc('pikken_get_state_scoped', { session_token: sessionToken() || null, game_id_input: requestGameId });

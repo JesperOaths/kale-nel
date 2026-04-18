@@ -8,11 +8,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken live</title>
-  <script>window.GEJAST_PAGE_VERSION='v554';</script>
-  <script src="./gejast-config.js?v554"></script>
-  <script src="./gejast-home-gate.js?v554"></script>
-  <script src="./gejast-scope-context.js?v554"></script>
-  <script src="./badge-registry.js?v554"></script>
+  <script>window.GEJAST_PAGE_VERSION='v569';</script>
+  <script src="./gejast-config.js?v569"></script>
+  <script src="./gejast-home-gate.js?v569"></script>
+  <script src="./gejast-scope-context.js?v569"></script>
+  <script src="./badge-registry.js?v569"></script>
   <style>
     :root{
       --felt1:#0f5a44; --felt2:#08372d; --felt3:#0d4a38; --rail:#8a5d1f; --ink:#211913; --muted:#7d705e;
@@ -352,7 +352,7 @@
   <script>
   (() => {
     const cfg = window.GEJAST_CONFIG || {};
-    const UI = { gameId:'', lobbyCode:'', scope:'friends', state:null, actionBusy:false, profiles:new Map(), lastRevealRound:0, matchOutcomes:null, firstLoaded:false, unresolvedParticipantSince:0, viewerIdentity:'', lastSnapshotToastAt:0 };
+    const UI = { gameId:'', lobbyCode:'', scope:'friends', state:null, actionBusy:false, profiles:new Map(), lastRevealRound:0, matchOutcomes:null, firstLoaded:false, unresolvedParticipantSince:0, lobbyPhaseSince:0, viewerIdentity:'', lastSnapshotToastAt:0, wasDisconnected:false, autoLeaving:false };
     const STORAGE_KEYS = ['gejast_pikken_lobby_code','gejast_pikken_lobby_code_v517'];
     const PARTICIPANT_KEYS = ['gejast_pikken_participant','gejast_pikken_participant_v517'];
     const LEAVE_KEYS = ['gejast_pikken_leave_suppress','gejast_pikken_leave_suppress_v540'];
@@ -403,6 +403,8 @@
       voting:{cls:'phase-chip wait', label:'Stemmen', title:'Iedereen stemt op het bod'},
       finished:{cls:'phase-chip bad', label:'Afgerond', title:'Spel afgerond'}
     };
+    const LOBBY_LIVE_BOUNCE_MS = 7000;
+    const UNRESOLVED_PARTICIPANT_BOUNCE_MS = 12000;
 
     async function parse(res){ const txt = await res.text(); let data = null; try { data = txt ? JSON.parse(txt) : null; } catch(_) { throw new Error(txt || `HTTP ${res.status}`); } if (!res.ok) throw new Error(data?.message || data?.error || txt || `HTTP ${res.status}`); return data; }
     async function rpc(name, payload){ const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers: headers(), body: JSON.stringify(payload || {}) }); const data = await parse(res); return data && data[name] !== undefined ? data[name] : data; }
@@ -965,6 +967,7 @@ async function loadMatchOutcomes(){
           if (resolvedLobbyCode) UI.lobbyCode = resolvedLobbyCode;
           if (resolvedLobbyCode) setStoredLobbyCode(resolvedLobbyCode);
           if (resolvedGameId || resolvedLobbyCode) writeCanonicalLiveUrl();
+          qs('#backLobbyBtn').href = currentLobbyHref(UI.gameId, UI.lobbyCode);
           if ((!participantState || !(participantState?.viewer && (participantState.viewer.is_host || Number(participantState.viewer.seat || 0) > 0))) && UI.gameId) {
             try { const retried = await loadParticipantStateFor(UI.gameId); if (retried) participantState = retried; } catch(_) {}
           }
@@ -986,11 +989,28 @@ async function loadMatchOutcomes(){
           setStatus('Nog bezig met koppelen aan jouw spelerstoel…', false);
           qs('#bidPanel')?.classList.add('hidden');
           qs('#votePanel')?.classList.add('hidden');
+          if ((Date.now() - UI.unresolvedParticipantSince) > UNRESOLVED_PARTICIPANT_BOUNCE_MS) {
+            scheduleReturnToLobby('Deze live-pagina kon niet meer aan jouw spelersessie gekoppeld worden. Terug naar de Pikken-lobby…', { delayMs: 250, clearPresence: false });
+            return;
+          }
           if (UI.wasDisconnected) showToast('Verbinding hersteld');
           UI.wasDisconnected = false;
           return;
         }
         UI.unresolvedParticipantSince = 0;
+        if (phase === 'lobby') {
+          UI.lobbyPhaseSince = UI.lobbyPhaseSince || Date.now();
+          render(state || {});
+          const bounceText = joinedParticipant
+            ? 'De tafel staat nog in de lobbyfase. Je gaat terug naar de echte Pikken-lobby…'
+            : 'Deze live-pagina hoort pas bij een gestarte tafel. Je gaat terug naar de Pikken-lobby…';
+          setStatus(bounceText, false);
+          if ((Date.now() - UI.lobbyPhaseSince) > LOBBY_LIVE_BOUNCE_MS) {
+            scheduleReturnToLobby(bounceText, { delayMs: 250, clearPresence: false });
+          }
+          return;
+        }
+        UI.lobbyPhaseSince = 0;
         if (state?.viewer?.inferred){
           const now = Date.now();
           if (!UI.lastSnapshotToastAt || (now - UI.lastSnapshotToastAt) > 8000){
@@ -1039,6 +1059,23 @@ async function loadMatchOutcomes(){
     async function rejectBid(){ return withAction('Afkeuren…', ()=>rpc('pikken_reject_bid_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId })); }
     async function vote(v){ return withAction('Stemmen…', ()=>rpc('pikken_cast_vote_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId, vote_input: !!v })); }
 
+    function currentLobbyHref(gameId, lobbyCode){
+      const resolvedGameId = String(gameId || UI.gameId || '').trim();
+      const resolvedLobbyCode = String(lobbyCode || UI.lobbyCode || '').trim().toUpperCase();
+      return scopedHref('./pikken.html', { game_id: resolvedGameId, lobby_code: resolvedLobbyCode });
+    }
+    function scheduleReturnToLobby(reason, options){
+      if (UI.autoLeaving) return;
+      UI.autoLeaving = true;
+      const opts = options || {};
+      if (reason) setStatus(reason, false);
+      const target = currentLobbyHref(opts.gameId || UI.gameId || '', opts.lobbyCode || UI.lobbyCode || '');
+      window.setTimeout(() => {
+        if (opts.clearPresence) clearLivePresence(opts.gameId || UI.gameId || '', opts.lobbyCode || UI.lobbyCode || '');
+        window.location.replace(target);
+      }, Math.max(150, Number(opts.delayMs || 650)));
+    }
+
     function clearLivePresence(gameId, lobbyCode){
       setLeaveSuppression(gameId || UI.gameId || '', lobbyCode || UI.lobbyCode || '');
       setParticipantToken('', false, '');
@@ -1046,7 +1083,7 @@ async function loadMatchOutcomes(){
     }
     function exitToLobby(gameId, lobbyCode){
       clearLivePresence(gameId, lobbyCode);
-      window.location.href = scopedHref('./pikken.html');
+      window.location.replace(currentLobbyHref(gameId, lobbyCode));
     }
     async function leaveTable(){
       if (!window.confirm('Weet je zeker dat je deze tafel wilt verlaten?')) return;
@@ -1100,8 +1137,7 @@ async function loadMatchOutcomes(){
       qs('#compactToggleBtn').addEventListener('click', ()=>setCompactMode(!qs('.shell')?.classList.contains('compact')));
       qs('#leaveTableBtn').addEventListener('click', leaveTable);
       qs('#disbandTableBtn').addEventListener('click', disbandTable);
-      const lobbyHref = scopedHref('./pikken.html');
-      qs('#backLobbyBtn').href = lobbyHref;
+      qs('#backLobbyBtn').href = currentLobbyHref(UI.gameId, UI.lobbyCode);
       const homeBtn = qs('.top-actions .btn[href="./index.html"]');
       if (homeBtn) homeBtn.href = scopedHref('./index.html');
       setCompactMode(readCompactMode());
@@ -1111,6 +1147,7 @@ async function loadMatchOutcomes(){
     boot();
   })();
   </script>
+  <script src="./gejast-player-session-ui.js?v569"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
   <div class="site-credit-watermark" data-version-watermark></div>
 </body>
