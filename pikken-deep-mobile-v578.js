@@ -1,7 +1,7 @@
 (function(){
   const path = String(location.pathname || '').toLowerCase().split('/').pop();
   if (!/^pikken(?:_live|_stats)?\.html$/.test(path)) return;
-  window.GEJAST_PAGE_VERSION = 'v580';
+  window.GEJAST_PAGE_VERSION = 'v581';
   window.GEJAST_HIDE_WATERMARK = true;
 
   function onReady(fn){ if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once:true }); else fn(); }
@@ -32,9 +32,9 @@
   }
 
   function injectScrollUnlock(){
-    if (document.getElementById('pkV580ScrollFix')) return;
+    if (document.getElementById('pkV581ScrollFix')) return;
     const style = document.createElement('style');
-    style.id = 'pkV580ScrollFix';
+    style.id = 'pkV581ScrollFix';
     style.textContent = `
       html, body { height:auto !important; min-height:100% !important; overflow-y:auto !important; overflow-x:hidden !important; -webkit-overflow-scrolling:touch !important; }
       body[data-pikken-page="lobby"] { touch-action:pan-y !important; overscroll-behavior-y:auto !important; }
