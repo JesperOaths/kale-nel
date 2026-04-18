@@ -72,7 +72,7 @@
     .page-link-live-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
     .page-link-live-row .live-pill{padding:6px 10px;font-size:11px;line-height:1}
     .page-link-live-hint{font-size:13px;color:#5d5549;font-weight:700}
-    body.boot-pending .main-card { opacity:0; transform:translateY(8px); pointer-events:none; }
+    body.boot-pending .main-card { opacity:.42; transform:translateY(8px); pointer-events:none; }
     body.homepage-ready .main-card { transition:opacity .18s ease, transform .18s ease; }
 
     .site-scene {
@@ -674,7 +674,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v561';</script><script src="./gejast-config.js?v561"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v564';</script><script src="./gejast-config.js?v564"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
   <script src="./gejast-live-summary.js?v389"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
   <script src="./gejast-combined-readers.js?v426"></script>
@@ -1792,45 +1792,61 @@ async function castExtraPollVote(desired_status) {
       try { return !!(window.matchMedia && window.matchMedia('(max-width: 760px)').matches); } catch (_) { return false; }
     }
 
+    function releaseHomepageBootPending(){
+      try { document.body.classList.remove('boot-pending'); } catch (_) {}
+    }
+
     async function bootHomepage(){
+      let bootGuard = null;
       document.body.classList.add('boot-pending');
-      const savedHomepagePoll = hydrateHomepagePollSnapshot();
-      const savedExtraPoll = hydrateExtraPollSnapshot();
-      if (savedHomepagePoll) renderState(savedHomepagePoll);
-      const cached = readHomepageBootCache();
-      if (cached) applyHomepageBootBundle(cached, true);
-      ensureAdminViewer().then(applyAdminViewerRefresh).catch(() => {});
-      const core = await load();
-      document.body.classList.remove('boot-pending');
-      const finishNonCritical = async () => {
-        try {
-          const readers = window.GEJAST_COMBINED_READERS;
-          if (readers && typeof readers.loadHomepageBootBundle === 'function' && !isMobileHomepage()) {
-            const bundle = await readers.loadHomepageBootBundle();
-            applyHomepageBootBundle(bundle || {}, false);
-            writeHomepageBootCache(bundle || {});
-            return;
-          }
-          const [ladders, drinksHome, drinksTop5, liveEntries] = await Promise.all([
-            loadHomepageLadders().catch(()=>null),
-            loadDrinksHome().catch(()=>null),
-            loadDrinksHomeTop5().catch(()=>null),
-            loadHomepageLiveEntries().catch(()=>null)
-          ]);
-          writeHomepageBootCache({
-            homepage_state: core?.homeState || currentHomepageState || {},
-            extra_poll_state: core?.extraState || currentDrinksPollState || {},
-            ladders: ladders || null,
-            drinks_home: drinksHome || null,
-            drinks_top5: drinksTop5 || null,
-            live_entries: liveEntries || null
-          });
-        } catch (_) {}
-      };
-      if (window.requestAnimationFrame) {
-        window.requestAnimationFrame(() => setTimeout(finishNonCritical, 0));
-      } else {
-        setTimeout(finishNonCritical, 0);
+      try {
+        bootGuard = window.setTimeout(releaseHomepageBootPending, 1600);
+        const savedHomepagePoll = hydrateHomepagePollSnapshot();
+        const savedExtraPoll = hydrateExtraPollSnapshot();
+        if (savedHomepagePoll) renderState(savedHomepagePoll);
+        if (savedExtraPoll) renderExtraPollState(savedExtraPoll);
+        const cached = readHomepageBootCache();
+        if (cached) applyHomepageBootBundle(cached, true);
+        ensureAdminViewer().then(applyAdminViewerRefresh).catch(() => {});
+        const core = await load();
+        releaseHomepageBootPending();
+        const finishNonCritical = async () => {
+          try {
+            const readers = window.GEJAST_COMBINED_READERS;
+            if (readers && typeof readers.loadHomepageBootBundle === 'function' && !isMobileHomepage()) {
+              const bundle = await readers.loadHomepageBootBundle();
+              applyHomepageBootBundle(bundle || {}, false);
+              writeHomepageBootCache(bundle || {});
+              return;
+            }
+            const [ladders, drinksHome, drinksTop5, liveEntries] = await Promise.all([
+              loadHomepageLadders().catch(()=>null),
+              loadDrinksHome().catch(()=>null),
+              loadDrinksHomeTop5().catch(()=>null),
+              loadHomepageLiveEntries().catch(()=>null)
+            ]);
+            writeHomepageBootCache({
+              homepage_state: core?.homeState || currentHomepageState || {},
+              extra_poll_state: core?.extraState || currentDrinksPollState || {},
+              ladders: ladders || null,
+              drinks_home: drinksHome || null,
+              drinks_top5: drinksTop5 || null,
+              live_entries: liveEntries || null
+            });
+          } catch (_) {}
+        };
+        if (window.requestAnimationFrame) {
+          window.requestAnimationFrame(() => setTimeout(finishNonCritical, 0));
+        } else {
+          setTimeout(finishNonCritical, 0);
+        }
+      } catch (error) {
+        console.error('Homepage boot failed', error);
+        releaseHomepageBootPending();
+        setStatus('Homepage laden hapert, laatste bekende weergave wordt getoond.', 'warn');
+        setExtraPollStatus('Homepage laden hapert, laatste bekende weergave wordt getoond.', 'warn');
+      } finally {
+        if (bootGuard) window.clearTimeout(bootGuard);
       }
     }
 
@@ -1859,7 +1875,7 @@ async function castExtraPollVote(desired_status) {
     document.getElementById('noBtn').addEventListener('click', () => handleVote('nee'));
     applyScopeChrome();
     wireProtectedDrinksLinks();
-    bootHomepage();
+    Promise.resolve(bootHomepage()).catch((error) => { console.error('Homepage boot promise failed', error); releaseHomepageBootPending(); });
     setInterval(loadDrinksHomeTop5, 15000);
   </script>
 
