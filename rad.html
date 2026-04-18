@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Caute Rad</title>
-  <script>window.GEJAST_PAGE_VERSION='v548';</script>
-  <script src="./gejast-config.js?v548"></script>
+  <script>window.GEJAST_PAGE_VERSION='v564';</script>
+  <script src="./gejast-config.js?v561"></script>
   <script src="./gejast-scope-context.js?v550"></script>
   <script src="./gejast-family-rollout.js?v550"></script>
   <script src="./gejast-drinks-workflow.js?v484"></script>
@@ -25,6 +25,15 @@
     .legend{display:grid;gap:8px;max-height:520px;overflow:auto}.legend-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 12px;border-radius:14px;background:#fff;border:1px solid var(--line);transition:all .18s ease}.legend-row small{color:var(--muted)}.legend-row.is-hot{border-color:rgba(125,18,31,.45);background:linear-gradient(180deg,#fff7ea,#fff0c6);box-shadow:0 0 0 2px rgba(125,18,31,.08) inset,0 8px 18px rgba(125,18,31,.10)}
     dialog{border:none;border-radius:24px;padding:0;max-width:520px;width:min(92vw,520px);background:#fffaf3;box-shadow:0 22px 60px rgba(0,0,0,.25)} dialog::backdrop{background:rgba(0,0,0,.35)} .modal-card{padding:20px 22px}.modal-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
     input,select{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:#fff;font:inherit;margin-top:8px}
+
+    .workflow-stack{display:grid;gap:18px}
+    .workflow-panel{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:18px}
+    .workflow-list{display:grid;gap:10px}
+    .workflow-item{padding:12px 14px;border-radius:16px;background:#fff;border:1px solid var(--line)}
+    .workflow-item strong{display:block}
+    .workflow-item .small{display:block;margin-top:4px}
+    .next-step-box{padding:14px;border-radius:18px;background:linear-gradient(180deg,#fff8ea,#fff0c6);border:1px solid rgba(154,130,65,.25)}
+
     @media(max-width:980px){.layout{grid-template-columns:1fr}.wheel-box{width:min(88vw,460px)}}
   </style>
 </head>
@@ -37,7 +46,15 @@
       <div class="status" id="statusBox"></div>
       <div class="result" id="resultBox"><div class="result-card">Nog niet gedraaid.</div></div>
     </section>
-    <section class="panel"><h2 style="margin-top:0">Segmenten</h2><div class="legend" id="legendBox"></div></section>
+    <div class="workflow-stack">
+      <section class="panel"><h2 style="margin-top:0">Segmenten</h2><div class="legend" id="legendBox"></div></section>
+      <section class="workflow-panel">
+        <h2 style="margin:0 0 10px">Workflow</h2>
+        <div class="next-step-box" id="nextStepBox">Draai het rad. Daarna zie je hier meteen wat jij nu moet doen.</div>
+        <div class="small" style="margin-top:12px">Recente draaien op dit apparaat</div>
+        <div class="workflow-list" id="spinHistoryBox"><div class="workflow-item"><strong>Nog geen spins</strong><span class="small">Je laatste rad-resultaten blijven hier lokaal zichtbaar.</span></div></div>
+      </section>
+    </div>
   </div>
 </div></div>
 <dialog id="nominationDialog"><div class="modal-card"><div class="modal-top"><h2 style="margin:0">Drink uitdelen</h2><button class="btn secondary" id="closeNominationBtn" type="button">Sluiten</button></div><div class="small">Kies een speler om de opdracht aan te geven. Voor zelf-drink segmenten wordt direct een eigen verzoek aangemaakt.</div><label style="display:block;font-weight:800;margin-top:14px">Speler</label><select id="nomineeSelect"></select><div class="small" id="nominationMeta" style="margin-top:10px"></div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px"><button class="btn" id="submitNominationBtn" type="button">Opslaan</button><button class="btn secondary" id="cancelNominationBtn" type="button">Annuleer</button></div></div></dialog>
@@ -94,7 +111,13 @@
   function segmentKey(seg){ return String(seg&&seg.label||'rad').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,''); }
   async function logSpinEvent(seg){ try{ if(!playerToken() || !window.GEJAST_SCOPED_RPC) return null; return await window.GEJAST_SCOPED_RPC.callRpc('rad_log_spin_scoped',{ session_token: playerToken(), segment_key_input: segmentKey(seg), segment_label_input: seg.label, segment_type_input: seg.type, chance_input: Number(seg.chance||0), copy_text_input: seg.copy, drinks_input: seg.drinks||[], meta_input:{ source:'rad.html' }, site_scope_input: scopeValue() }); }catch(err){ console.warn('Rad spin log mislukt', err); return null; } }
   async function logTargetEvent(spinId, seg, target){ try{ if(!playerToken() || !window.GEJAST_SCOPED_RPC || !target) return null; return await window.GEJAST_SCOPED_RPC.callRpc('rad_log_target_nomination_scoped',{ session_token: playerToken(), spin_id_input: spinId||null, segment_key_input: segmentKey(seg), segment_label_input: seg.label, target_player_name_input: target, meta_input:{ source:'rad.html' }, site_scope_input: scopeValue() }); }catch(err){ console.warn('Rad target log mislukt', err); return null; } }
+  const RAD_HISTORY_KEY='gejast_rad_history_v564';
   let lastLoggedSpinId=null; let wheelVelocity=0;
+  function readSpinHistory(){ try{ const raw=localStorage.getItem(RAD_HISTORY_KEY); const parsed=raw?JSON.parse(raw):[]; return Array.isArray(parsed)?parsed:[]; }catch(_){ return []; } }
+  function writeSpinHistory(items){ try{ localStorage.setItem(RAD_HISTORY_KEY, JSON.stringify((items||[]).slice(0,8))); }catch(_){} }
+  function renderSpinHistory(){ const box=document.getElementById('spinHistoryBox'); if(!box) return; const rows=readSpinHistory(); if(!rows.length){ box.innerHTML='<div class="workflow-item"><strong>Nog geen spins</strong><span class="small">Je laatste rad-resultaten blijven hier lokaal zichtbaar.</span></div>'; return; } box.innerHTML=rows.map((row)=>`<div class="workflow-item"><strong>${row.label}</strong><span class="small">${row.copy}</span><span class="small">${row.at}</span></div>`).join(''); }
+  function rememberSpin(seg){ const rows=readSpinHistory(); rows.unshift({ label:seg.label, copy:seg.copy, at:new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'}) }); writeSpinHistory(rows); renderSpinHistory(); }
+  function updateNextStep(seg, targetMode){ const el=document.getElementById('nextStepBox'); if(!el) return; if(!seg){ el.textContent='Draai het rad. Daarna zie je hier meteen wat jij nu moet doen.'; return; } if(targetMode){ el.textContent=`${seg.label}: kies nu een speler en sla de uitdeel-opdracht op.`; return; } if(seg.type==='self'){ el.textContent=`${seg.label}: jouw eigen drinkverzoek wordt direct klaargezet.`; return; } if(seg.type==='social' || seg.type==='special'){ el.textContent=`${seg.label}: voer de opdracht nu uit of regel de afgesproken straf.`; return; } el.textContent=seg.copy || 'Resultaat geladen.'; }
   function totalChance(){ return SEGMENTS.reduce((s,x)=>s+x.chance,0); }
   function syncLegendHighlight(){ document.querySelectorAll('#legendBox .legend-row').forEach((row)=>{ const hot = highlightedIndex >= 0 && row.dataset.seg === SEGMENTS[highlightedIndex].label; row.classList.toggle('is-hot', !!hot); }); }
   function draw(){ const total=totalChance(); const cx=400, cy=400, r=370; ctx.clearRect(0,0,800,800); let start=currentAngle; SEGMENTS.forEach((seg,idx)=>{ const arc=(seg.chance/total)*Math.PI*2; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,start+arc); ctx.closePath(); const isHot = idx===highlightedIndex; ctx.fillStyle=isHot ? '#f6e7b2' : colors[idx%colors.length]; ctx.fill(); ctx.lineWidth=isHot ? 10 : 4; ctx.strokeStyle=isHot ? 'rgba(125,18,31,.85)' : 'rgba(23,19,15,.18)'; ctx.stroke(); if(isHot){ ctx.save(); ctx.shadowColor='rgba(243,227,166,.95)'; ctx.shadowBlur=30; ctx.stroke(); ctx.restore(); } ctx.save(); ctx.translate(cx,cy); const mid=start+arc/2; ctx.rotate(mid); ctx.textAlign='right'; ctx.fillStyle='#2c2117'; ctx.font=isHot ? '800 20px Inter, system-ui, sans-serif' : '700 19px Inter, system-ui, sans-serif'; wrapText(seg.label+` (${seg.chance}%)`, r-26, 0, 200, 22); ctx.restore(); start+=arc; });
@@ -109,8 +132,8 @@
   function playTick(intense=false){ const ctxAudio=ensureAudio(); if(!ctxAudio) return; const now=ctxAudio.currentTime; const osc=ctxAudio.createOscillator(); const gain=ctxAudio.createGain(); osc.type='square'; osc.frequency.value=intense?980:720; gain.gain.setValueAtTime(0.0001, now); gain.gain.exponentialRampToValueAtTime(intense?0.05:0.03, now+0.005); gain.gain.exponentialRampToValueAtTime(0.0001, now+0.06); osc.connect(gain).connect(ctxAudio.destination); osc.start(now); osc.stop(now+0.07); }
   function pointerIndex(){ const total=totalChance(); let start=currentAngle; const pointer=-Math.PI/2; for(let idx=0; idx<SEGMENTS.length; idx++){ const arc=(SEGMENTS[idx].chance/total)*Math.PI*2; let s=((start%(Math.PI*2))+Math.PI*2)%(Math.PI*2); let e=(((start+arc)%(Math.PI*2))+Math.PI*2)%(Math.PI*2); let p=((pointer%(Math.PI*2))+Math.PI*2)%(Math.PI*2); const inside = s<e ? (p>=s && p<e) : (p>=s || p<e); if(inside) return idx; start+=arc; } return -1; }
 
-  async function spin(){ if(spinning) return; if(ensureAudio() && audioCtx.state==='suspended'){ try{ await audioCtx.resume(); }catch(_){} } spinning=true; highlightedIndex=-1; statusBox.textContent='Het rad draait...'; selectedSegment=weightedPick(); const total=totalChance(); let prefix=0; let arc=0; let targetIndex=0; for(let i=0;i<SEGMENTS.length;i++){ const seg=SEGMENTS[i]; arc=(seg.chance/total)*Math.PI*2; if(seg===selectedSegment){ targetIndex=i; break; } prefix+=arc; } const pointer=-Math.PI/2; const normalizedTarget = pointer - (prefix + arc/2); const startAngle=currentAngle; let finalAngle = normalizedTarget; while(finalAngle <= startAngle + Math.PI*10){ finalAngle += Math.PI*2; } finalAngle += Math.PI*4; const startTime=performance.now(); const duration=11800; function easeOutQuint(t){ return 1 - Math.pow(1-t, 5); } function frame(now){ const t=Math.min(1,(now-startTime)/duration); const eased=easeOutQuint(t); currentAngle = startAngle + (finalAngle-startAngle)*eased; const idx=pointerIndex(); if(idx!==highlightedIndex){ highlightedIndex=idx; const dt=now-lastTickAt; if(dt>22){ playTick(t>0.88 || idx===targetIndex); lastTickAt=now; } } draw(); if(t<1){ requestAnimationFrame(frame); } else { currentAngle=finalAngle; highlightedIndex=pointerIndex(); draw(); spinning=false; onLanded(SEGMENTS[highlightedIndex] || selectedSegment); } } requestAnimationFrame(frame); }
-  async function onLanded(seg){ const log=await logSpinEvent(seg); lastLoggedSpinId=log&&log.spin_id?log.spin_id:null; statusBox.textContent=log&&log.spin_id?'Gelukt en opgeslagen.':'Gelukt.'; resultBox.innerHTML=`<div class="result-card"><strong>${seg.label}</strong><div class="small" style="margin-top:6px">${seg.copy}</div><div class="small" style="margin-top:6px">Kans: ${seg.chance}%</div></div>`; if(seg.type==='self' && window.GEJAST_DRINKS_WORKFLOW && Array.isArray(seg.drinks)){ let created=0; for(const [key,qty] of seg.drinks){ try{ await window.GEJAST_DRINKS_WORKFLOW.createDrinkEvent({ event_type_key:key, quantity:qty }); created += qty; }catch(_){ } } if(created){ statusBox.textContent=`Eigen drinkverzoek aangemaakt voor ${seg.label}.`; } }
+  async function spin(){ if(spinning) return; if(!playerToken()){ statusBox.textContent='Log eerst in als speler voordat je het rad draait.'; window.location.href = scopedHref('./home.html'); return; } if(ensureAudio() && audioCtx.state==='suspended'){ try{ await audioCtx.resume(); }catch(_){} } spinning=true; highlightedIndex=-1; statusBox.textContent='Het rad draait...'; selectedSegment=weightedPick(); const total=totalChance(); let prefix=0; let arc=0; let targetIndex=0; for(let i=0;i<SEGMENTS.length;i++){ const seg=SEGMENTS[i]; arc=(seg.chance/total)*Math.PI*2; if(seg===selectedSegment){ targetIndex=i; break; } prefix+=arc; } const pointer=-Math.PI/2; const normalizedTarget = pointer - (prefix + arc/2); const startAngle=currentAngle; let finalAngle = normalizedTarget; while(finalAngle <= startAngle + Math.PI*10){ finalAngle += Math.PI*2; } finalAngle += Math.PI*4; const startTime=performance.now(); const duration=11800; function easeOutQuint(t){ return 1 - Math.pow(1-t, 5); } function frame(now){ const t=Math.min(1,(now-startTime)/duration); const eased=easeOutQuint(t); currentAngle = startAngle + (finalAngle-startAngle)*eased; const idx=pointerIndex(); if(idx!==highlightedIndex){ highlightedIndex=idx; const dt=now-lastTickAt; if(dt>22){ playTick(t>0.88 || idx===targetIndex); lastTickAt=now; } } draw(); if(t<1){ requestAnimationFrame(frame); } else { currentAngle=finalAngle; highlightedIndex=pointerIndex(); draw(); spinning=false; onLanded(SEGMENTS[highlightedIndex] || selectedSegment); } } requestAnimationFrame(frame); }
+  async function onLanded(seg){ const log=await logSpinEvent(seg); lastLoggedSpinId=log&&log.spin_id?log.spin_id:null; statusBox.textContent=log&&log.spin_id?'Gelukt en opgeslagen.':'Gelukt.'; resultBox.innerHTML=`<div class="result-card"><strong>${seg.label}</strong><div class="small" style="margin-top:6px">${seg.copy}</div><div class="small" style="margin-top:6px">Kans: ${seg.chance}%</div></div>`; rememberSpin(seg); updateNextStep(seg, seg.type==='target'); if(seg.type==='self' && window.GEJAST_DRINKS_WORKFLOW && Array.isArray(seg.drinks)){ let created=0; for(const [key,qty] of seg.drinks){ try{ await window.GEJAST_DRINKS_WORKFLOW.createDrinkEvent({ event_type_key:key, quantity:qty }); created += qty; }catch(_){ } } if(created){ statusBox.textContent=`Eigen drinkverzoek aangemaakt voor ${seg.label}.`; } }
     if(seg.type==='target'){ openNomination(seg); }
   }
   async function openNomination(seg){ selectedSegment=seg; nomineeSelect.innerHTML=''; try{ const cfg=window.GEJAST_CONFIG||{}; const headers={'Content-Type':'application/json',apikey:cfg.SUPABASE_PUBLISHABLE_KEY||'',Authorization:`Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY||''}`,Accept:'application/json'}; const res=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/get_requestable_names_scoped`,{method:'POST',headers,body:JSON.stringify({ site_scope_input:scopeValue() })}); const data=await res.json().catch(()=>[]); const rows=Array.isArray(data)?data:(Array.isArray(data?.names)?data.names:[]); const names=rows.map((row)=>typeof row==='string'?row:(row.display_name||row.player_name||row.name||'')).filter(Boolean); nomineeSelect.innerHTML=names.map((n)=>`<option value="${String(n).replace(/"/g,'&quot;')}">${n}</option>`).join(''); }catch(_){ nomineeSelect.innerHTML='<option value="">Geen spelers gevonden</option>'; }
@@ -132,6 +155,8 @@
   spinBtn.addEventListener('click', spin);
   const legendRows = [...SEGMENTS].sort((a,b)=>Number(b.chance||0)-Number(a.chance||0));
   document.getElementById('legendBox').innerHTML = legendRows.map((seg)=>`<div class="legend-row" data-seg="${String(seg.label).replace(/"/g,'&quot;')}"><div><strong>${seg.label}</strong><small style="display:block;margin-top:4px">${seg.copy}</small></div><strong>${seg.chance}%</strong></div>`).join('');
+  renderSpinHistory();
+  updateNextStep(null,false);
   draw();
 })();
 </script>

@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace live</title>
-  <script>window.GEJAST_PAGE_VERSION='v488';</script>
-  <script src="./gejast-config.js?v488"></script>
-  <script src="./gejast-paardenrace.js?v488"></script>
+  <script>window.GEJAST_PAGE_VERSION='v564';</script>
+  <script src="./gejast-config.js?v561"></script>
+  <script src="./gejast-paardenrace.js?v482"></script>
   <style>
     :root {
       --gold: #9a8241;
@@ -395,6 +395,8 @@
       <button class="btn secondary" id="rulesBtn" type="button">Regels</button>
       <a class="btn secondary" id="paardenraceLobbyLink" href="./paardenrace.html">Lobby</a>
       <button class="btn secondary" id="refreshBtn" type="button">Refresh</button>
+      <button class="btn secondary" id="panicBtn" type="button">Noodrem</button>
+      <button class="btn secondary" id="panicReleaseBtn" type="button">Vrijgeven</button>
       <button class="btn warn" id="closeBtn" type="button">Sluit match</button>
     </div>
   </div>
@@ -402,7 +404,7 @@
   <section class="board-panel">
     <div id="boardBox" class="board-shell"></div>
     <div class="status-row">
-      <div class="small">Gate kaarten draaien automatisch via dezelfde knop zodra een gate aan de beurt is.</div>
+      <div class="small">Gate-kaarten en paarden-grid lopen nu via de gedeelde board-owner in gejast-paardenrace.js.</div>
       <div class="status" id="statusBox"></div>
     </div>
   </section>
@@ -499,74 +501,10 @@
   
   function setStatus(msg) { if($('statusBox')) $('statusBox').textContent = msg || ''; }
   
-  function getGridColumnForProgress(progress) {
-    // progress: 0 = start (col 0), 1-10 = track (col 1-10), 11+ = finish (col 11)
-    if (progress <= 0) return 0;
-    if (progress >= 11) return 11;
-    return progress;
-  }
-  
   function renderBoard(match) {
-    if (!match || !match.horse_positions) {
-      return '<div class="pr-live-placeholder">Wachten op countdown of race-start.</div>';
-    }
-    
-    const positions = match.horse_positions || {};
-    const gates = Array.isArray(match.gate_cards) ? match.gate_cards : [];
-    const resolvedSet = new Set(Array.isArray(match.resolved_gates) ? match.resolved_gates.map(Number) : []);
-    const remaining = Math.max(0, (match.draw_deck?.length || 0) - (match.draw_index || 0));
-    const discardCard = match.last_draw_card || '';
-    
-    // Render gate cards
-    const gateHtml = Array.from({length: 10}, (_, idx) => {
-      const gateNo = idx + 1;
-      const isResolved = resolvedSet.has(gateNo);
-      const inner = isResolved ? api.renderFaceUpCard(gates[idx] || '', 'pr-gate-face') : api.renderCardBack('pr-gate-back');
-      return `<div class="pr-gate-slot" data-gate-no="${gateNo}" data-resolved="${isResolved}">${inner}</div>`;
-    }).join('');
-    
-    // Render horses on track
-    let horseHtml = '';
-    for (const suit of SUIT_LIST) {
-      const progress = Number(positions[suit] || 0);
-      const col = getGridColumnForProgress(progress);
-      const row = SUIT_ROW[suit];
-      horseHtml += `<div class="pr-track-cell" style="grid-column: ${col + 1}; grid-row: ${row + 1};">
-        <div class="pr-horse-slot" data-suit="${suit}" data-progress="${progress}">
-          ${api.horseAsset ? `<img src="${api.horseAsset(suit)}" alt="${suit}" class="pr-ace-card" draggable="false">` : ''}
-        </div>
-      </div>`;
-    }
-    
-    // Deck layers
-    const deckLayers = remaining > 0
-      ? [0,1,2].map(i => `<div class="pr-stack-card" style="transform:translate(${i * -3}px, ${i * 3}px)">${api.renderCardBack('pr-deck-back')}</div>`).join('')
-      : '';
-    
-    return `
-      <div class="pr-live-wrap" data-match-ref="${match.match_ref || ''}">
-        <div class="pr-live-stage">
-          <img src="${api.ASSETS?.arena || './paardenrace-live-board-v447.png'}" alt="Paardenrace bord" class="pr-live-arena">
-          <div class="pr-overlay">
-            <div class="pr-deck-zone" data-deck-zone>
-              <div class="pr-deck-slot" data-deck-slot>${deckLayers}</div>
-            </div>
-            <div class="pr-discard-zone">
-              <div class="pr-discard-slot" data-discard-slot>
-                ${discardCard ? api.renderFaceUpCard(discardCard, 'pr-discard-face') : ''}
-              </div>
-            </div>
-            <div class="pr-gate-grid">
-              ${gateHtml}
-            </div>
-            <div class="pr-track-grid">
-              ${horseHtml}
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
+    return api.renderLiveBoard(match);
   }
+
   
   async function animateHorseMove(suit, fromProgress, toProgress) {
     const horseEl = document.querySelector(`.pr-horse-slot[data-suit="${suit}"]`);
@@ -935,6 +873,7 @@
       `).join('') || '<div class="small">Nog geen spelers.</div>';
     }
     
+    syncPanicUi();
     if($('phaseBox')) {
       const phase = [];
       if(match) {
