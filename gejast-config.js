@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v576',
+    VERSION:'v577',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -44,7 +44,7 @@
       position: 'fixed',
       left: '50%',
       transform: 'translateX(-50%)',
-      bottom: compact ? '10px' : '14px',
+      bottom: `calc(${compact ? '10px' : '14px'} + env(safe-area-inset-bottom, 0px))`,
       zIndex: '9999',
       padding: compact ? '7px 11px' : '8px 14px',
       borderRadius: '999px',
@@ -57,7 +57,7 @@
       userSelect: 'none',
       boxShadow: '0 12px 24px rgba(0,0,0,0.18)',
       textAlign: 'center',
-      maxWidth: compact ? 'calc(100vw - 24px)' : '',
+      maxWidth: compact ? 'calc(100vw - 24px)' : 'min(calc(100vw - 28px), 560px)',
       backdropFilter: 'blur(6px)',
       WebkitBackdropFilter: 'blur(6px)'
     });

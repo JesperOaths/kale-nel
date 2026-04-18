@@ -7,17 +7,17 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Spelersprofielen</title>
-  <script>window.GEJAST_PAGE_VERSION='v573';</script>
-  <script src="./gejast-config.js?v573"></script>
+  <script>window.GEJAST_PAGE_VERSION='v577';</script>
+  <script src="./gejast-config.js?v577"></script>
   <script src="./gejast-clickable-cards.js?v386"></script>
   <script src="./gejast-scope-context.js?v391"></script><script src="./gejast-family-rollout.js?v393"></script>
   <style>
     :root{--gold:#d4af37;--ink:#1b1711;--paper:rgba(255,250,243,.92);--line:#e0d6c6;--muted:#6f665e;--soft:#fbf7ef}
     *{box-sizing:border-box}
     body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:linear-gradient(rgba(247,244,238,.84),rgba(247,244,238,.84)),url('./wordtergejast.png') center/cover fixed}
-    .page{width:min(1180px,100%);margin:0 auto;padding:20px 14px 90px}
+    .page{width:min(1180px,100%);margin:0 auto;padding:20px 14px calc(96px + env(safe-area-inset-bottom,0px))}
     .sheet{background:var(--paper);border:1px solid rgba(17,17,17,.08);border-radius:28px;box-shadow:0 20px 40px rgba(0,0,0,.09);overflow:hidden}
-    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line)}
+    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line)}
     .top h1{margin:0;font-size:clamp(28px,5vw,40px)}
     .top p{margin:4px 0 0;color:var(--muted)}
     .back{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:none;cursor:pointer}
@@ -65,8 +65,8 @@
     .rarity-summary-count{display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:36px;padding:0 12px;border-radius:999px;background:#111;color:#fff;font-size:13px;font-weight:900}
     .rarity-accordion-body{padding:0 16px 16px}
     .rarity-badge small{display:block;font-size:12px;color:var(--muted);line-height:1.4;margin-top:3px}.rarity-requirement{display:block;font-size:12px;color:#3d3429;line-height:1.45;margin-top:6px}
-    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}
-    @media (max-width:760px){.page{padding:14px 12px 90px}.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.head{grid-template-columns:64px minmax(0,1fr)}.avatar{width:64px;height:64px}.rarity-list{grid-template-columns:1fr}.rarity-accordion{border-radius:18px}.rarity-summary{padding:14px}.rarity-accordion-body{padding:0 14px 14px}}
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none;max-width:min(calc(100vw - 24px),560px);text-align:center}
+    @media (max-width:760px){.page{padding:14px 12px calc(104px + env(safe-area-inset-bottom,0px))}.top{flex-direction:column;align-items:stretch}.back{width:100%}.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.head{grid-template-columns:64px minmax(0,1fr)}.avatar{width:64px;height:64px}.rarity-list{grid-template-columns:1fr}.rarity-accordion{border-radius:18px}.rarity-summary{padding:14px}.rarity-accordion-body{padding:0 14px 14px}}
   </style>
   <script src="./gejast-scope.js?v386"></script>
   <script src="./gejast-home-gate.js?v386"></script>
@@ -260,7 +260,7 @@
           </div>
           <div class="rarity-grid">
             ${groups.map((group, index) => `
-              <details class="rarity-accordion" data-rarity-accordion ${index === 0 ? 'open' : ''}>
+              <details class="rarity-accordion" data-rarity-accordion data-rarity-label="${group.label}" ${index === 0 ? 'open' : ''}>
                 <summary class="rarity-summary">
                   <div class="rarity-summary-main">
                     <div class="rarity-pill">${group.label}</div>
@@ -291,28 +291,43 @@
         bindBadgeAccordions();
       }
 
-      function bindBadgeAccordions(){
-        const accordions = [...document.querySelectorAll('[data-rarity-accordion]')];
-        if (!accordions.length) return;
-        const mobile = window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
-        if (!mobile) {
-          accordions.forEach((item) => item.setAttribute('open', 'open'));
-          return;
-        }
-        accordions.forEach((item, index) => {
-          if (index !== 0) item.removeAttribute('open');
-          const summary = item.querySelector('summary');
-          if (summary && !summary.dataset.bound) {
-            summary.dataset.bound = '1';
-            summary.addEventListener('click', () => {
-              if (item.hasAttribute('open')) return;
-              accordions.forEach((other) => { if (other !== item) other.removeAttribute('open'); });
-            });
-          }
-        });
-      }
+      
+function bindBadgeAccordions(){
+  const accordions = [...document.querySelectorAll('[data-rarity-accordion]')];
+  if (!accordions.length) return;
+  const mobile = window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
+  const storageKey = 'gejast_profiles_mobile_rarity_v577';
+  const readStored = () => { try { return localStorage.getItem(storageKey) || ''; } catch (_) { return ''; } };
+  const writeStored = (value) => { try { if (value) localStorage.setItem(storageKey, value); } catch (_) {} };
+  if (!mobile) {
+    accordions.forEach((item) => item.setAttribute('open', 'open'));
+    return;
+  }
+  const stored = readStored();
+  let opened = false;
+  accordions.forEach((item, index) => {
+    const label = item.getAttribute('data-rarity-label') || '';
+    const shouldOpen = !opened && ((stored && label === stored) || (!stored && index === 0));
+    if (shouldOpen) {
+      item.setAttribute('open', 'open');
+      opened = true;
+    } else {
+      item.removeAttribute('open');
+    }
+    if (!item.dataset.bound) {
+      item.dataset.bound = '1';
+      item.addEventListener('toggle', () => {
+        const stillMobile = window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
+        if (!stillMobile || !item.open) return;
+        accordions.forEach((other) => { if (other !== item) other.removeAttribute('open'); });
+        writeStored(label);
+      });
+    }
+  });
+  if (!opened && accordions[0]) accordions[0].setAttribute('open', 'open');
+}
 
-      async function boot(){
+async function boot(){
         try {
           const profileSource = window.GEJAST_PROFILE_SOURCE || null;
           const [bundleRaw, allPlayersRaw] = await Promise.allSettled([
