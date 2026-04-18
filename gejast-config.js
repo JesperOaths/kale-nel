@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v579',
+    VERSION:'v580',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -20,9 +20,10 @@
     WEB_PUSH_QUEUE_NEARBY_RPC_V3: 'queue_nearby_verification_pushes_v3',
     WEB_PUSH_CONSUME_ACTION_RPC_V3: 'consume_web_push_action_v3',
     ADMIN_ACTIVE_PUSH_RPC_V3: 'admin_queue_active_web_push_v3',
-    ADMIN_PUSH_DIAGNOSTICS_RPC_V3: 'admin_get_web_push_diagnostics_v3',
+    ADMIN_PUSH_DIAGNOSTICS_RPC_V3: 'admin_get_web_push_diagnostics_v3'
   };
 
+  function parseVersion(v){ const m=String(v||'').match(/v?(\d+)/i); return m?Number(m[1]):0; }
   function detectScriptVersion(){
     try {
       const scripts = Array.from(document.scripts || []);
@@ -31,10 +32,9 @@
       return m ? `v${m[1]}` : null;
     } catch (_) { return null; }
   }
-  function parseVersion(v){ const m=String(v||'').match(/v?(\d+)/i); return m?Number(m[1]):0; }
   const candidates = [detectScriptVersion(), window.GEJAST_PAGE_VERSION, CONFIG.VERSION].filter(Boolean);
   const effectiveVersion = candidates.sort((a,b)=>parseVersion(b)-parseVersion(a))[0] || CONFIG.VERSION;
-  const effectiveNumber = parseVersion(effectiveVersion) || parseVersion(CONFIG.VERSION) || 579;
+  const effectiveNumber = parseVersion(effectiveVersion) || parseVersion(CONFIG.VERSION) || 580;
   const label = `${effectiveVersion} · Made by Bruis`;
   window.GEJAST_PAGE_VERSION = effectiveVersion;
 
@@ -47,7 +47,7 @@
       if (root && root.getAttribute('data-hide-version-watermark') === '1') return true;
       if (body && body.getAttribute('data-hide-version-watermark') === '1') return true;
       if (/\/(?:pikken|pikken_live|pikken_stats|paardenrace|paardenrace_live|paardenrace_stats)\.html$/i.test(path)) return true;
-    }catch(_){}
+    }catch(_){ }
     return false;
   }
 
@@ -100,12 +100,22 @@
     }
     const nodes = ensureVersionWatermark();
     nodes.forEach((node)=>{ node.textContent = label; watermarkStyles(node); });
-    const re = /v\d+\s*[·.-]?\s*Made by Bruis/i;
-    document.querySelectorAll('body *').forEach((node)=>{
-      if (node.children.length) return;
-      const txt=(node.textContent||'').trim();
-      if (re.test(txt)) { node.textContent = label; watermarkStyles(node); }
-    });
+  }
+
+  function purgeStaleClientCaches(){
+    const oldSessionKeys = [
+      'gejast_homepage_boot_v389','gejast_homepage_boot_v426','gejast_homepage_boot_v448','gejast_homepage_boot_v579'
+    ];
+    const oldLocalKeys = [
+      'gejast_homepage_poll_lists_v448','gejast_homepage_poll_lists_v579',
+      'gejast_drinks_donderdag_lists_v448','gejast_drinks_donderdag_lists_v579'
+    ];
+    try {
+      if (sessionStorage.getItem('__gejast_cache_purged_v580') === '1') return;
+      oldSessionKeys.forEach((key)=>sessionStorage.removeItem(key));
+      oldLocalKeys.forEach((key)=>localStorage.removeItem(key));
+      sessionStorage.setItem('__gejast_cache_purged_v580','1');
+    } catch (_) {}
   }
 
   function maybeForceFreshShell(){
@@ -119,7 +129,7 @@
       params.set('__gv', String(effectiveNumber));
       const next = `${location.pathname}?${params.toString()}${location.hash || ''}`;
       location.replace(next);
-    }catch(_){}
+    }catch(_){ }
   }
 
   function normalizeProfileImageUrl(value){
@@ -174,7 +184,6 @@
     } catch(_) {}
     return 'friends';
   }
-
   function sanitizeReturnTarget(raw, fallback=''){
     const value = String(raw || '').trim();
     if (!value) return String(fallback || '').trim();
@@ -193,9 +202,7 @@
       return sanitizeReturnTarget(fallback || 'index.html', 'index.html');
     }
   }
-  function normalizeScope(input){
-    return String(input || '').trim().toLowerCase() === 'family' ? 'family' : 'friends';
-  }
+  function normalizeScope(input){ return String(input || '').trim().toLowerCase() === 'family' ? 'family' : 'friends'; }
   function buildHomeUrl(returnTo, scope){
     const useScope = scope || inferRuntimeScope();
     const url = new URL('./home.html', window.location.href);
@@ -298,7 +305,7 @@
         s.setAttribute('data-gejast-module', baseSrc);
         head.appendChild(s);
       });
-    }catch(_){}
+    }catch(_){ }
   }
 
   window.GEJAST_CONFIG = Object.assign({}, window.GEJAST_CONFIG || {}, CONFIG, {
@@ -325,6 +332,7 @@
     shouldHideWatermark
   });
 
+  purgeStaleClientCaches();
   maybeForceFreshShell();
   loadPageModules();
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyVersionLabel, { once: true });

@@ -1,1893 +1,205 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-    <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
-<meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wordt er gejast donderdag?</title>
   <link rel="stylesheet" href="./site-shell.css" />
-  <style>body{background:linear-gradient(rgba(244,240,232,.56),rgba(244,240,232,.56)), url('./site-bg-desktop.webp') 50% -120px/115% auto no-repeat !important;}.drinks-home-section{margin:18px 0 8px;display:grid;gap:12px}
-    .drinks-home-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-    .drinks-home-head h2{margin:0;font-size:1.1rem}
-    .drinks-home-link{display:inline-flex;padding:9px 12px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800}
-    .drinks-home-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-    .drinks-mini{background:rgba(255,255,255,.72);border:1px solid rgba(17,17,17,.06);border-radius:18px;padding:14px;text-align:left;text-decoration:none;color:inherit;display:flex;flex-direction:column;justify-content:flex-start}.drinks-mini.dark{background:#111;color:#fff}.drinks-mini.gold{background:var(--gold);color:#111}.drinks-mini.gold .drinks-mini-label,.drinks-mini.gold .drinks-mini-value,.drinks-mini.gold .drinks-mini-sub{color:#111}.drinks-mini.dark .drinks-mini-label,.drinks-mini.dark .drinks-mini-sub{color:rgba(255,255,255,.82)}
-    .drinks-mini-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:800;margin-bottom:6px;min-height:30px;display:flex;align-items:flex-start}
-    .drinks-mini-value{font-size:1.55rem;font-weight:900;line-height:1.05;min-height:2.2rem;display:flex;align-items:flex-end}
-    .drinks-mini-sub{display:none}
-    .drinks-home-top5-section{margin:16px 0 8px;display:grid;gap:12px}
-    .drinks-home-top5-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-    .drinks-home-top5-head h2{margin:0;font-size:1.1rem}
-    .drinks-home-top5-grid,.drinks-top5-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-    .drinks-home-top5-card{display:block;text-decoration:none;color:#161616;background:#fff;border:1px solid rgba(0,0,0,.06);border-radius:20px;padding:16px;box-shadow:0 12px 24px rgba(0,0,0,.04)}
-    .drinks-home-top5-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
-    .drinks-home-top5-card-head strong{font-size:16px}
-    .drinks-home-top5-card-head span{color:#8a7a55;font-size:12px;font-weight:700}
-    .drinks-home-top5-list{display:grid;gap:8px}
-    .drinks-home-top5-row{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.72);border:1px solid rgba(17,17,17,.06)}
-    .drinks-home-top5-rank{display:inline-flex;width:28px;height:28px;border-radius:999px;background:#111;color:#fff;align-items:center;justify-content:center;font-size:12px;font-weight:800}
-    .drinks-home-top5-name{font-weight:800;color:#111;text-decoration:none}
-    .drinks-home-top5-meta{font-size:12px;color:var(--muted-text)}
-    .drinks-home-top5-empty{padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.72);border:1px solid rgba(17,17,17,.06);color:var(--muted-text)}
-
-  
-    .drinks-home-top5-name{display:block;color:#161616;text-decoration:none;font-weight:800;line-height:1.15}
-    @media (max-width: 980px){.drinks-home-top5-grid{grid-template-columns:1fr}.drinks-home-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media (max-width: 560px){.drinks-home-top5-row{grid-template-columns:24px 1fr auto;padding:8px 10px}.drinks-home-top5-name{font-size:14px}.drinks-home-top5-meta{font-size:11px}.drinks-mini{min-height:96px;padding:12px}.drinks-mini-label{min-height:24px}.drinks-home-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-
-  
-    @media (max-width: 760px){.drinks-home-top5-grid{display:flex !important;flex-direction:column !important}.drinks-home-top5-card{width:100% !important}.drinks-home-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important}}
-
-  </style>
-  <style>
-    :root {
-      --gold: #9a8241;
-      --gold-hover: #8a7338;
-      --dark-bg: #111;
-      --card-bg: rgba(249, 247, 242, 0.94);
-      --card-line: rgba(17, 17, 17, 0.06);
-      --muted-text: #665f54;
-    }
-
-    * { box-sizing: border-box; }
-
-    html, body { min-height: 100%; }
-
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-
-    body.friends-scope .drinks-top-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
-    body.friends-scope .drinks-top-grid .ladder-card{min-height:210px;}
-    .page-link-live-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .page-link-live-row .live-pill{padding:6px 10px;font-size:11px;line-height:1}
-    .page-link-live-hint{font-size:13px;color:#5d5549;font-weight:700}
-    body.boot-pending .main-card { opacity:0; transform:translateY(8px); pointer-events:none; }
-    body.homepage-ready .main-card { transition:opacity .18s ease, transform .18s ease; }
-
-    .site-scene {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-    }
-
-    .site-scene .left-hand,
-    .site-scene .right-card,
-    .site-scene .spinoza-shadow {
-      position: absolute;
-      pointer-events: none;
-    }
-
-    .site-scene .left-hand {
-      left: -2%;
-      bottom: -1%;
-      width: min(31vw, 470px);
-      opacity: .98;
-      filter: saturate(1.24) contrast(1.1) brightness(1.14) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.18));
-    }
-
-    .site-scene .right-card {
-      right: 1%;
-      bottom: 7%;
-      width: min(24vw, 320px);
-      opacity: .98;
-      filter: contrast(1.14) brightness(1.16) saturate(1.08) drop-shadow(0 18px 34px rgba(40, 18, 12, 0.18));
-    }
-
-    .site-scene .spinoza-shadow {
-      right: 50%;
-      bottom: 8%;
-      transform: translateX(50%);
-      width: min(30vw, 380px);
-      opacity: 0.02;
-      filter: grayscale(1) contrast(1.6) brightness(0.72);
-    }
-
-    .page {
-      position: relative;
-      z-index: 2;
-      width: 100%;
-      display: flex;
-      justify-content: center;
-      padding: 40px 20px;
-    }
-
-    .topbar { display: none; }
-
-    .main-card {
-      background: rgba(255, 251, 245, 0.58);
-      border: 1px solid rgba(255, 255, 255, 0.65);
-      border-radius: 24px;
-      padding: 40px;
-      width: min(700px, 92vw);
-      box-shadow: 0 20px 50px rgba(0,0,0,0.08);
-      position: relative;
-      text-align: center;
-      
-    }
-
-    .card-top-right { position:absolute; top:25px; right:25px; display:flex; align-items:center; gap:14px; }
-    .card-top-left { position:absolute; top:25px; left:25px; display:flex; align-items:center; gap:14px; }
-
-    .admin-badge {
-      background: rgba(255,255,255,0.9);
-      border: 1px solid rgba(17,17,17,0.08);
-      padding: 3px 9px;
-      border-radius: 999px;
-      font-size: 10px;
-      color: #8a8275;
-      text-decoration: none;
-      font-weight: 700;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-    }
-
-    .card-logo {
-      width: 50px;
-      height: auto;
-      display: block;
-    }
-
-    h1 {
-      font-size: clamp(2rem, 4vw, 2.65rem);
-      line-height: 1.02;
-      margin: 0 0 12px 0;
-      color: #1a1a1a;
-      letter-spacing: -0.04em;
-      padding:0; text-align:center;
-    }
-
-    .status-word {
-      font-size: clamp(1.85rem, 3.2vw, 2.15rem);
-      font-weight: 700;
-      font-family: Georgia, 'Times New Roman', serif;
-      margin: 0;
-      line-height: 1;
-      letter-spacing: -0.04em;
-    }
-
-    .status-word.no { color: #1a1a1a; }
-    .status-word.yes { color: #1f8f52; position: relative; display: inline-block; }
-    .status-word.maybe { color: #9b6b08; }
-
-    #drinksStateWord {
-      max-width: 15ch;
-      margin-left: auto;
-      margin-right: auto;
-      line-height: 0.98;
-      font-size: clamp(2.05rem, 5.9vw, 3.15rem);
-      text-wrap: balance;
-    }
-
-    
-    .ja-party-piece.svg-item{background:transparent !important; box-shadow:none !important; border-radius:0 !important; overflow:visible; display:flex; align-items:center; justify-content:center}
-    .ja-party-piece.svg-item svg{width:100%;height:100%;overflow:visible;display:block}
-
-    .ja-party-burst {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      overflow: visible;
-      z-index: 4;
-    }
-
-    .ja-party-piece {
-      position: absolute;
-      left: 50%;
-      top: 58%;
-      width: 16px;
-      height: 30px;
-      border-radius: 4px;
-      opacity: 0;
-      transform: translate(-50%, -50%) rotate(0deg);
-      animation: jaConfettiBurst 2200ms cubic-bezier(.18,.8,.22,1) forwards;
-      will-change: transform, opacity;
-      box-shadow: 0 10px 18px rgba(0,0,0,0.12);
-    }
-
-    .ja-party-piece.balloon {
-      width: 42px;
-      height: 56px;
-      border-radius: 50% 50% 46% 46%;
-      box-shadow: inset -5px -8px 0 rgba(255,255,255,0.18), 0 12px 20px rgba(0,0,0,0.12);
-    }
-
-    .ja-party-piece.balloon::after {
-      content: '';
-      position: absolute;
-      left: 50%;
-      top: 100%;
-      width: 2px;
-      height: 34px;
-      background: rgba(60,60,60,0.55);
-      transform: translateX(-50%);
-    }
-
-    .ja-party-piece.streamer {
-      width: 10px;
-      height: 68px;
-      border-radius: 999px;
-    }
-
-    .ja-party-piece.card {
-      width: 36px;
-      height: 52px;
-      background: linear-gradient(145deg, #fffdf7 0%, #f3ead7 100%);
-      border: 2px solid rgba(17,17,17,0.14);
-      border-radius: 8px;
-      color: #111;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 900;
-      font-size: 18px;
-      overflow: hidden;
-    }
-
-    .ja-party-piece.card::before,
-    .ja-party-piece.card::after {
-      position: absolute;
-      font-size: 11px;
-      font-weight: 800;
-      opacity: .85;
-    }
-
-    .ja-party-piece.card::before {
-      content: attr(data-card);
-      top: 5px;
-      left: 6px;
-    }
-
-    .ja-party-piece.card::after {
-      content: attr(data-card);
-      right: 6px;
-      bottom: 5px;
-      transform: rotate(180deg);
-    }
-
-
-    .ja-party-piece.icon {
-      width:auto; height:auto; min-width: 34px; min-height: 34px;
-      border-radius:0; background:none !important; box-shadow:none;
-      font-size:34px; line-height:1; display:grid; place-items:center;
-      text-shadow:0 10px 16px rgba(0,0,0,.12);
-    }
-    .ja-party-piece.note {
-      width:52px; height:68px; border-radius:10px; background:linear-gradient(180deg,#fff8d9,#f4e7a3);
-      border:2px solid rgba(25,25,25,.12); box-shadow:0 10px 18px rgba(0,0,0,.12);
-      display:flex; align-items:center; justify-content:center; font-weight:900; color:#5f4919; font-size:12px; text-transform:uppercase;
-    }
-    .ja-party-piece.tablearrow {
-      width:auto; height:auto; min-width:42px; min-height:42px; border-radius:0; background:none !important; box-shadow:none; font-size:40px; line-height:1;
-      display:grid; place-items:center; text-shadow:0 10px 16px rgba(0,0,0,.12);
-    }
-
-    @keyframes jaConfettiBurst {
-      0% { opacity: 0; transform: translate(-50%, -18%) scale(.35) rotate(0deg); }
-      8% { opacity: 1; }
-      78% { opacity: 1; }
-      100% { opacity: 0; transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1.08) rotate(var(--rot)); }
-    }
-
-    .status-sub {
-      color: var(--muted-text);
-      font-size: 14px;
-      margin-top: 7px;
-      margin-bottom: 24px;
-    }
-
-    .status {
-      margin: 0 auto 15px;
-      font-size: 13px;
-      line-height: 1.4;
-      border-radius: 10px;
-      min-height: 0;
-      max-width: 420px;
-    }
-
-    .status.show {
-      padding: 10px 14px;
-      border: 1px solid rgba(17,17,17,0.08);
-      background: rgba(255,255,255,0.6);
-    }
-
-    .status.show.ok {
-      background: rgba(154,130,65,0.10);
-      border-color: rgba(154,130,65,0.28);
-      color: #6b5310;
-    }
-
-    .status.show.warn {
-      background: rgba(17,17,17,0.05);
-      border-color: rgba(17,17,17,0.10);
-      color: #514a3f;
-    }
-
-    .vote-row {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      margin-bottom: 30px;
-      flex-wrap: wrap;
-    }
-
-    .vote-btn {
-      border: none;
-      padding: 12px 24px;
-      min-width: 138px;
-      border-radius: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: transform 0.1s ease, filter 0.15s ease;
-      font-size: 13px;
-      text-transform: none;
-      letter-spacing: 0.01em;
-      box-shadow: 0 10px 18px rgba(17,17,17,0.08);
-    }
-
-    .vote-btn:hover { filter: brightness(0.98); }
-    .vote-btn:active { transform: scale(0.97); }
-    .vote-btn.can { background: var(--gold); color: #000; }
-    .vote-btn.cant { background: #111; color: #fff; }
-
-    .lists-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    .list-box {
-      background: rgba(255, 253, 248, 0.86);
-      border: 1px solid var(--card-line);
-      border-radius: 16px;
-      padding: 20px;
-      min-height: 168px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-      text-align: left;
-    }
-    .list-box.legends { text-align:right; }
-    .list-box.legends .name-list li { text-align:right; }
-    .list-box.losers { text-align:left; }
-
-    .list-box h2 {
-      font-size: 18px;
-      margin: 0 0 15px 0;
-      color: #1a1a1a;
-      letter-spacing: -0.02em;
-    }
-
-    .name-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    .name-list li {
-      padding: 4px 0;
-      font-size: 14px;
-      color: #444;
-    }
-
-    .vote-name-row {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .list-box.legends .vote-name-row {
-      justify-content: flex-end;
-    }
-
-    .remove-vote-btn {
-      border: 1px solid rgba(17,17,17,0.12);
-      background: rgba(255,255,255,0.92);
-      color: #6a6256;
-      border-radius: 999px;
-      padding: 3px 8px;
-      font-size: 11px;
-      font-weight: 700;
-      cursor: pointer;
-      line-height: 1.1;
-    }
-
-    .remove-vote-btn:hover {
-      border-color: rgba(17,17,17,0.2);
-      color: #1a1a1a;
-    }
-
-    .remove-vote-btn:disabled {
-      opacity: .6;
-      cursor: wait;
-    }
-
-    .site-scene { display: block; }
-
-    .public-links {
-      margin-top: 22px;
-      text-align: left;
-      display: grid;
-      gap: 14px;
-    }
-
-    .public-links-head {
-      display:none;
-    }
-
-    .public-links-grid {
-      display:grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-      align-items:stretch;
-    }
-
-
-    .public-links-grid.centered-single { grid-template-columns: minmax(0, 1fr); justify-items: center; }
-    .ballroom-link {
-      position: relative;
-      width: min(100%, 320px);
-      min-height: 122px;
-      overflow: hidden;
-      background: linear-gradient(180deg, rgba(255,251,246,.98), rgba(248,242,232,.98));
-      border-color: rgba(122, 69, 43, 0.18);
-      box-shadow: 0 12px 28px rgba(38,22,16,0.10);
-      isolation: isolate;
-    }
-    .ballroom-link::before,
-    .ballroom-link::after {
-      content:'';
-      position:absolute;
-      top:14px;
-      bottom:14px;
-      width:30px;
-      background: linear-gradient(180deg, #8c6237, #6e4621 48%, #8b623a);
-      border:1px solid rgba(67,38,17,.22);
-      box-shadow: inset 0 0 0 3px rgba(255,239,204,.08), inset 6px 0 0 rgba(255,255,255,.06), inset -6px 0 0 rgba(0,0,0,.08);
-      z-index:0;
-    }
-    .ballroom-link::before { left:12px; border-radius:14px 8px 8px 14px; }
-    .ballroom-link::after { right:12px; border-radius:8px 14px 14px 8px; }
-    .ballroom-link-inner{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:7px}
-    .ballroom-link-rope{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:4px}
-    .ballroom-link-post{width:10px;height:38px;border-radius:999px;background:linear-gradient(180deg,#c9a254,#8b6526);box-shadow:inset 0 0 0 2px rgba(255,255,255,.14)}
-    .ballroom-link-velvet{height:12px;flex:1;max-width:170px;border-radius:999px;background:linear-gradient(180deg,#8f0d1c,#6a0712 62%,#a61626);box-shadow:inset 0 2px 0 rgba(255,255,255,.2), 0 6px 14px rgba(106,7,18,.22)}
-    .ballroom-link-copy{margin-top:2px;font-size:13px;line-height:1.35;color:#6d6051;max-width:24ch}
-
-    .scorer-link-row {
-      display:flex;
-      justify-content:center;
-    }
-
-    .page-link-card {
-      display:flex;
-      flex-direction:column;
-      justify-content:center;
-      text-decoration:none;
-      color:#1a1a1a;
-      background: rgba(255, 253, 248, 0.86);
-      border: 1px solid var(--card-line);
-      border-radius: 16px;
-      padding: 16px 18px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
-      text-align:center;
-    }
-    .page-link-card.login-link, .page-link-card.request-link, .page-link-card.scorer-link { text-align:center; align-items:center; width:100%; }
-    .page-link-card.is-live{background:linear-gradient(180deg,rgba(104,13,21,.96),rgba(48,8,13,.98));color:#fff;border-color:rgba(255,194,194,.22);box-shadow:0 18px 34px rgba(80,10,17,.26)}
-    .page-link-card.is-live .page-link-copy,.page-link-card.is-live .page-link-label{color:#fff}
-    .page-link-card.is-live .page-link-copy{opacity:.92}
-    .page-link-card.is-live::after{content:'LIVE';display:inline-flex;align-items:center;justify-content:center;margin-top:10px;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.2);font-size:11px;font-weight:900;letter-spacing:.12em}
-
-    .page-link-card:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 12px 24px rgba(0,0,0,0.06);
-      border-color: rgba(154,130,65,0.38);
-    }
-
-    .page-link-card.placeholder-link {
-      cursor: default;
-      opacity: .88;
-      background: rgba(245, 241, 233, 0.9);
-    }
-    .page-link-card.placeholder-link:hover {
-      transform: none;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
-      border-color: var(--card-line);
-    }
-
-    .page-link-label {
-      font-size: 16px;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-    }
-
-    .page-link-copy {
-      margin-top: 6px;
-      font-size: 13px;
-      line-height: 1.4;
-      color: var(--muted-text);
-    }
-    .page-link-copy.plus-copy {
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      min-height:32px;
-      padding-top:0;
-    }
-    .plus-copy{position:relative}.plus-copy::after{content:"+";position:absolute;left:50%;top:50%;transform:translate(-50%,-52%);font-size:36px;line-height:1;color:var(--gold);font-weight:900;pointer-events:none;text-shadow:0 1px 0 rgba(255,255,255,.35)}
-    .page-link-plus {
-      width:24px;
-      height:24px;
-      display:block;
-      opacity:0;
-      pointer-events:none;
-    }
-    .ladder-section { margin:4px 0 22px; }
-    .ladder-head { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
-    .live-pill { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:.08em; border:1px solid rgba(0,0,0,.08); background:#fff; color:#554e43; }
-    .live-pill::before { content:''; width:9px; height:9px; border-radius:50%; background:#999; box-shadow:0 0 0 rgba(216,44,44,.0); }
-    .live-pill.live { color:#7e1111; background:rgba(255,236,236,.95); border-color:rgba(216,44,44,.28); }
-    .live-pill.live::before { background:#d82c2c; animation:livePulse 1.2s infinite; }
-    .live-pill.standby { color:#665d4f; background:rgba(255,248,234,.95); }
-    .live-pill.standby::before { background:#c7a34b; }
-    @keyframes livePulse { 0% { box-shadow:0 0 0 0 rgba(216,44,44,.65);} 70% { box-shadow:0 0 0 8px rgba(216,44,44,0);} 100% { box-shadow:0 0 0 0 rgba(216,44,44,0);} }
-    .ladder-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
-.drinks-top-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
-    .biggest-player-card{display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;text-align:center;min-height:170px;}
-    .biggest-player-avatar{width:72px;height:72px;border-radius:50%;overflow:hidden;border:2px solid rgba(154,130,65,.32);background:#f4efe4;display:grid;place-items:center;font-size:1.55rem;font-weight:900;color:#5d4820;box-shadow:0 10px 20px rgba(0,0,0,.05);}
-    .biggest-player-avatar img{width:100%;height:100%;object-fit:cover;}
-    .biggest-player-name{font-size:1.1rem;font-weight:900;line-height:1.15;}
-    .biggest-player-meta{font-size:13px;color:#7a6a47;}
-    .ladder-card { display:block; text-decoration:none; color:#161616; background:#fff; border:1px solid rgba(0,0,0,.06); border-radius:20px; padding:16px; box-shadow:0 12px 24px rgba(0,0,0,.04); }
-    .ladder-card:hover { transform:translateY(-1px); box-shadow:0 16px 30px rgba(0,0,0,.06); }
-    .ladder-title span, .ladder-open-link { font-size:13px; font-weight:800; color:#8a7a55; text-decoration:none; }
-    .ladder-card a { color:inherit; text-decoration:none; }
-    .ladder-card a:hover { text-decoration:none; }
-    .ladder-list a, .ladder-list a:visited, .ladder-list a:hover { color:inherit; text-decoration:none; }
-    .ladder-title { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; }
-    .ladder-title strong { font-size:16px; }
-    .ladder-title span { color:#8a7a55; font-size:12px; font-weight:700; }
-    .ladder-list { display:grid; gap:8px; min-width:0; }
-    .ladder-row { display:grid; grid-template-columns:28px minmax(0,1fr) auto; gap:10px; align-items:start; padding:9px 10px; border-radius:14px; background:rgba(249,247,242,.9); overflow:hidden; }
-    .ladder-rank { width:24px; height:24px; border-radius:50%; display:grid; place-items:center; background:#111; color:#fff; font-weight:900; font-size:12px; }
-    .ladder-name { font-weight:800; font-size:14px; min-width:0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; line-height:1.12; word-break:break-word; }
-    .ladder-elo { text-align:right; font-weight:900; font-size:14px; }
-    .ladder-empty { padding:14px; border-radius:14px; background:rgba(249,247,242,.9); color:#6f675b; font-size:13px; }
-
-    .page-link-chip {
-      display:inline-block;
-      margin-top: 10px;
-      font-size: 11px;
-      font-weight: 700;
-      color: #8a8275;
-      background: rgba(255,255,255,0.9);
-      border: 1px solid rgba(17,17,17,0.08);
-      padding: 4px 8px;
-      border-radius: 999px;
-      text-transform: uppercase;
-      letter-spacing: .03em;
-    }
-
-    @media (max-width: 760px) {
-      .card-top-left { display:none !important; }
-      .card-top-right { top:14px; right:14px; gap:10px; }
-      .card-top-right .card-logo { width:58px !important; height:58px !important; }
-      .main-card { padding-top:94px; }
-      .public-links-grid { grid-template-columns:1fr; }
-      .public-links-grid.centered-single { grid-template-columns:1fr; }
-      .page-link-card { min-height:104px; }
-    }
-
-    @media (max-width: 560px) {
-      .page { padding: 18px 12px; }
-      .main-card { padding: 88px 14px 18px; width:min(700px, 96vw); }
-      h1 { padding: 0; margin-top: 4px; }
-      .card-top-right { top:12px; right:12px; }
-      .card-top-right .card-logo { width:52px !important; height:52px !important; }
-      .drinks-home-grid { grid-template-columns:1fr; }
-    }
-
-    @media (max-width: 760px) {
-      .page { padding: 24px 14px; }
-      .main-card {
-        padding: 28px 18px 20px;
-        width: min(700px, 94vw);
-        background: rgba(255,255,255,0.02);
-        border: 2px solid rgba(154,130,65,0.35);
-        box-shadow: 0 18px 40px rgba(0,0,0,0.06);
-        backdrop-filter: blur(0px);
-      }
-      .card-top-right { position:absolute; top:16px; right:16px; margin:0; }
-      .card-top-left { position:absolute; top:16px; left:16px; margin:0; }
-      h1 {
-        padding: 0;
-        font-size: clamp(1.7rem, 8vw, 2.1rem);
-      }
-      .status-word { font-size: clamp(1.55rem, 7vw, 1.95rem); }
-      .status-sub { margin-bottom: 18px; font-size: 13px; }
-      .vote-row { gap: 10px; margin-bottom: 18px; }
-      .vote-btn { min-width: 0; flex: 1 1 calc(50% - 5px); padding: 12px 10px; }
-      .list-box { min-height: 138px; padding: 16px 12px; }
-      .list-box h2 { margin-bottom: 10px; font-size: 17px; }
-      .name-list li { font-size: 13px; }
-      .lists-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-      .public-links-grid { grid-template-columns:1fr; gap: 10px; }
-      .page-link-card { min-height: 116px; padding: 14px 12px; justify-content:center; }
-      .page-link-card.login-link, .page-link-card.request-link, .page-link-card.scorer-link { text-align:center; align-items:center; width:100%; }
-      .plus-copy{position:relative}.plus-copy::after{content:"+";position:absolute;left:50%;top:50%;transform:translate(-50%,-52%);font-size:36px;line-height:1;color:var(--gold);font-weight:900;pointer-events:none;text-shadow:0 1px 0 rgba(255,255,255,.35)} .page-link-plus {opacity:0;filter:grayscale(1); width:12px; height:12px; }
-      .ladder-grid { grid-template-columns:1fr; }
-      .drinks-top-grid { grid-template-columns:1fr; }
-      .site-scene .left-hand {
-        width: min(48vw, 260px);
-        left: 7%;
-        bottom: 11%;
-        opacity: 1;
-      }
-      .site-scene .right-card {
-        width: min(42vw, 230px);
-        right: 8%;
-        bottom: 13%;
-        opacity: 1;
-      }
-      .site-scene .spinoza-shadow {
-        width: min(26vw, 110px);
-        bottom: 20%;
-        opacity: 0.015;
-      }
-    }
-
-    @media (max-width: 460px) {
-      .public-links-grid { grid-template-columns:1fr; gap:8px; }
-      .page-link-card { min-height:108px; padding:12px 10px; }
-      .page-link-label { font-size:15px; }
-      .page-link-copy { font-size:12px; }
-      .page-link-card.login-link, .page-link-card.request-link, .page-link-card.scorer-link { align-items:center; text-align:center; width:100%; }
-      .plus-copy{position:relative}.plus-copy::after{content:"+";position:absolute;left:50%;top:50%;transform:translate(-50%,-52%);font-size:36px;line-height:1;color:var(--gold);font-weight:900;pointer-events:none;text-shadow:0 1px 0 rgba(255,255,255,.35)} .page-link-plus {opacity:0;filter:grayscale(1); width:12px; height:12px; }
-      .ladder-grid { grid-template-columns:1fr; }
-    }
-  
-    .drinks-home-top5-name{display:block;color:#161616;text-decoration:none;font-weight:800;line-height:1.15}
-    @media (max-width: 980px){.drinks-home-top5-grid{grid-template-columns:1fr}.drinks-home-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media (max-width: 560px){.drinks-home-top5-row{grid-template-columns:24px 1fr auto;padding:8px 10px}.drinks-home-top5-name{font-size:14px}.drinks-home-top5-meta{font-size:11px}.drinks-mini{min-height:96px;padding:12px}.drinks-mini-label{min-height:24px}.drinks-home-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-
-  </style>
-
-
-    <style id="bruis-watermark-style">
-    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
-    @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
-  
-    .drinks-home-top5-name{display:block;color:#161616;text-decoration:none;font-weight:800;line-height:1.15}
-    @media (max-width: 980px){.drinks-home-top5-grid{grid-template-columns:1fr}.drinks-home-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media (max-width: 560px){.drinks-home-top5-row{grid-template-columns:24px 1fr auto;padding:8px 10px}.drinks-home-top5-name{font-size:14px}.drinks-home-top5-meta{font-size:11px}.drinks-mini{min-height:96px;padding:12px}.drinks-mini-label{min-height:24px}.drinks-home-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-
-  </style>
-  <link rel="canonical" href="https://kalenel.nl/index.html" />
-  <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v572';</script><script src="./gejast-config.js?v572"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v580';</script>
+  <script src="./gejast-config.js?v580"></script>
+  <script src="./gejast-scope-context.js?v389"></script>
+  <script src="./gejast-scope.js?v389"></script>
+  <script src="./gejast-home-gate.js?v389"></script>
   <script src="./gejast-live-summary.js?v389"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
   <script src="./gejast-combined-readers.js?v426"></script>
-<script src="./gejast-push-runtime.js?v389"></script>
-<script src="./gejast-fairness.js?v389"></script></head>
-<body class="boot-pending homepage-ready"><div id="gejastTopRightToolsMount"></div>
+  <style>
+    :root{--gold:#9a8241;--ink:#16120d;--muted:#665f54;--paper:rgba(255,251,245,.68);--card:#fff;--line:rgba(17,17,17,.08)}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(244,240,232,.56),rgba(244,240,232,.56)),url('./site-bg-desktop.webp') 50% -120px/115% auto no-repeat fixed;color:var(--ink);overflow-x:hidden}
+    .site-scene{position:fixed;inset:0;pointer-events:none;z-index:0}.site-scene .left-hand,.site-scene .right-card,.site-scene .spinoza-shadow{position:absolute}.site-scene .left-hand{left:-2%;bottom:-1%;width:min(31vw,470px);opacity:.98}.site-scene .right-card{right:1%;bottom:7%;width:min(24vw,320px);opacity:.98}.site-scene .spinoza-shadow{right:50%;bottom:8%;transform:translateX(50%);width:min(30vw,380px);opacity:.02}
+    .page{position:relative;z-index:2;width:100%;display:flex;justify-content:center;padding:34px 16px}
+    .main-card{position:relative;width:min(720px,96vw);background:var(--paper);border:1px solid rgba(255,255,255,.68);border-radius:28px;padding:34px 26px 28px;box-shadow:0 20px 50px rgba(0,0,0,.08);backdrop-filter:blur(4px)}
+    .card-top-left,.card-top-right{position:absolute;top:18px;display:flex;align-items:center}.card-top-left{left:18px}.card-top-right{right:18px}.admin-badge{background:rgba(255,255,255,.9);border:1px solid rgba(17,17,17,.08);padding:4px 9px;border-radius:999px;font-size:10px;color:#8a8275;text-decoration:none;font-weight:700;letter-spacing:.03em;text-transform:uppercase}.card-logo{width:60px;height:60px;object-fit:contain;display:block}
+    .section{margin-top:18px}.section:first-of-type{margin-top:0}
+    .ladder-head{display:flex;justify-content:center;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}.live-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.08em;border:1px solid rgba(0,0,0,.08);background:#fff;color:#554e43}.live-pill::before{content:'';width:9px;height:9px;border-radius:50%;background:#c7a34b}.live-pill.live{color:#7e1111;background:rgba(255,236,236,.95);border-color:rgba(216,44,44,.28)}.live-pill.live::before{background:#d82c2c;animation:livePulse 1.2s infinite}.live-pill.standby{color:#665d4f;background:rgba(255,248,234,.95)}@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(216,44,44,.65)}70%{box-shadow:0 0 0 8px rgba(216,44,44,0)}100%{box-shadow:0 0 0 0 rgba(216,44,44,0)}}
+    .ladder-grid,.link-grid,.poll-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.ladder-grid.six{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .ladder-card,.page-link-card,.list-box{display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 12px 24px rgba(0,0,0,.04)}
+    .ladder-card{cursor:pointer}.ladder-title{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:10px}.ladder-title strong{font-size:16px}.ladder-title span{color:#8a7a55;font-size:12px;font-weight:700}.ladder-list{display:grid;gap:8px}.ladder-row{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:start;padding:9px 10px;border-radius:14px;background:rgba(249,247,242,.9)}.ladder-rank{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#111;color:#fff;font-weight:900;font-size:12px}.ladder-name{font-weight:800;font-size:14px;min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.12}.ladder-elo{text-align:right;font-weight:900;font-size:14px;color:var(--gold)}.ladder-empty{padding:12px;border-radius:14px;background:rgba(249,247,242,.9);color:#6f675b;font-size:13px}
+    .page-link-card{display:flex;flex-direction:column;justify-content:center;min-height:106px;text-align:center}.page-link-label{font-size:16px;font-weight:800;letter-spacing:-.02em}.page-link-copy{margin-top:6px;font-size:13px;line-height:1.4;color:var(--muted)}.page-link-card.is-live{background:linear-gradient(180deg,rgba(104,13,21,.96),rgba(48,8,13,.98));color:#fff}.page-link-card.is-live .page-link-copy{color:#fff;opacity:.92}
+    h1{font-size:clamp(2rem,4vw,2.55rem);line-height:1.02;margin:20px 0 10px;color:#1a1a1a;letter-spacing:-.04em;text-align:center}.status-word{font-size:clamp(1.8rem,4.3vw,2.2rem);font-weight:700;font-family:Georgia,'Times New Roman',serif;line-height:1;text-align:center}.status-word.no{color:#1a1a1a}.status-word.yes{color:#1f8f52}.status-word.maybe{color:#9b6b08}.status-sub{color:var(--muted);font-size:14px;margin-top:7px;margin-bottom:20px;text-align:center}.vote-row{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}.vote-btn{border:none;padding:12px 24px;min-width:138px;border-radius:12px;font-weight:700;cursor:pointer;box-shadow:0 10px 18px rgba(17,17,17,.08);font-size:13px}.vote-btn.can{background:var(--gold);color:#000}.vote-btn.cant{background:#111;color:#fff}.lists-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.list-box h2{font-size:18px;margin:0 0 12px}.name-list{list-style:none;padding:0;margin:0;display:grid;gap:6px}.name-list li{font-size:14px;color:#444}
+    .ballroom-link{position:relative;width:min(100%,320px);min-height:122px;overflow:hidden;background:linear-gradient(180deg,rgba(255,251,246,.98),rgba(248,242,232,.98));border-color:rgba(122,69,43,.18);box-shadow:0 12px 28px rgba(38,22,16,.10);isolation:isolate;margin:0 auto}.ballroom-link::before,.ballroom-link::after{content:'';position:absolute;top:14px;bottom:14px;width:30px;background:linear-gradient(180deg,#8c6237,#6e4621 48%,#8b623a);border:1px solid rgba(67,38,17,.22);box-shadow:inset 0 0 0 3px rgba(255,239,204,.08),inset 6px 0 0 rgba(255,255,255,.06),inset -6px 0 0 rgba(0,0,0,.08);z-index:0}.ballroom-link::before{left:12px;border-radius:14px 8px 8px 14px}.ballroom-link::after{right:12px;border-radius:8px 14px 14px 8px}.ballroom-link-inner{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:7px}.ballroom-link-rope{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:4px}.ballroom-link-post{width:10px;height:38px;border-radius:999px;background:linear-gradient(180deg,#c9a254,#8b6526)}.ballroom-link-velvet{height:12px;flex:1;max-width:170px;border-radius:999px;background:linear-gradient(180deg,#8f0d1c,#6a0712 62%,#a61626)}.ballroom-link-copy{margin-top:2px;font-size:13px;line-height:1.35;color:#6d6051;max-width:24ch}
+    @media (max-width:760px){.page{padding:18px 12px}.main-card{padding:84px 16px 20px;width:min(700px,96vw)}.card-top-left{display:none!important}.card-top-right{top:14px;right:14px}.card-logo{width:56px;height:56px}.ladder-grid.six,.ladder-grid,.link-grid,.poll-grid,.lists-grid{grid-template-columns:1fr}.vote-row{gap:10px}.vote-btn{flex:1 1 calc(50% - 5px);min-width:0}.site-scene .left-hand{width:min(48vw,260px);left:7%;bottom:11%}.site-scene .right-card{width:min(42vw,230px);right:8%;bottom:13%}.site-scene .spinoza-shadow{width:min(26vw,110px);bottom:20%}}
+  </style>
+</head>
+<body>
   <div class="site-scene" aria-hidden="true">
     <div class="left-hand"><img src="./kale9goed.png" alt="" style="width:100%;display:block;" /></div>
     <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" style="width:100%;display:block;" /></div>
     <div class="right-card"><img src="./playingcard-accent1-trimmed.png" alt="" style="width:100%;display:block;" /></div>
   </div>
-
   <main class="page">
     <section class="main-card">
-      <div class="card-top-left">
-        <a href="./admin.html" class="admin-badge">Admin</a>
-      </div>
-      <div class="card-top-right">
-        <a href="./index.html" aria-label="Home via logo"><img src="./logo.png" alt="Logo" class="card-logo" style="cursor:pointer;filter:drop-shadow(0 4px 10px rgba(0,0,0,.08));width:66px;height:66px;object-fit:contain" /></a>
-      </div>
+      <div class="card-top-left"><a href="./admin.html" class="admin-badge">Admin</a></div>
+      <div class="card-top-right"><a href="./index.html" aria-label="Home via logo"><img src="./logo.png" alt="Logo" class="card-logo" /></a></div>
 
-            <section class="ladder-section" aria-label="Live ladders">
-        <div class="ladder-head">
-          <div id="homeLivePill" class="live-pill standby">Stand-by</div>
-        </div>
-        <div id="ladderGrid" class="ladder-grid">
-          <div class="ladder-card"><div class="ladder-title"><strong>Klaverjassen</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
-          <div class="ladder-card"><div class="ladder-title"><strong>Boerenbridge</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
-          <div class="ladder-card"><div class="ladder-title"><strong>Beerpong</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
+      <section class="section" aria-label="Live ladders">
+        <div class="ladder-head"><div id="homeLivePill" class="live-pill standby">Stand-by</div></div>
+        <div id="ladderGrid" class="ladder-grid six"></div>
+      </section>
+
+      <section class="section">
+        <div class="link-grid">
+          <a id="homeKlaverjasEntry" class="page-link-card" href="./scorer.html"><div class="page-link-label">Klaverjas</div><div class="page-link-copy">Open scorer / live scoreblad.</div></a>
+          <a id="homeBoerenbridgeEntry" class="page-link-card" href="./boerenbridge.html"><div class="page-link-label">Boerenbridge</div><div class="page-link-copy">Open boerenbridge en de tafelroute.</div></a>
+          <a class="page-link-card" href="./beerpong.html"><div class="page-link-label">Beerpong</div><div class="page-link-copy">Open beerpong.</div></a>
+          <a class="page-link-card" href="./rad.html"><div class="page-link-label">Rad</div><div class="page-link-copy">Open het rad.</div></a>
+          <a class="page-link-card" href="./paardenrace.html"><div class="page-link-label">Paardenrace</div><div class="page-link-copy">Lobby en live race.</div></a>
+          <a class="page-link-card" href="./pikken.html"><div class="page-link-label">Pikken</div><div class="page-link-copy">Lobby en live tafel.</div></a>
+          <a class="page-link-card" href="./beurs.html"><div class="page-link-label">Beurs d'Espinoza</div><div class="page-link-copy">Open het beurs-overzicht en de onderliggende routes.</div></a>
+          <a class="page-link-card" href="./profiles.html"><div class="page-link-label">Spelers</div><div class="page-link-copy">Bekijk spelers en profielen.</div></a>
         </div>
       </section>
 
-      <section class="ladder-section" style="margin-top:16px" aria-label="Extra ladders">
-        <div id="extraLadderGrid" class="ladder-grid">
-          <div class="ladder-card"><div class="ladder-title"><strong>Paardenrace</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
-          <div class="ladder-card"><div class="ladder-title"><strong>Pikken</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
-          <div class="ladder-card"><div class="ladder-title"><strong>Caute Coins</strong><span>₵ Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
-        </div>
-      </section>
-
-      <section class="drinks-home-section" style="margin-top:16px" aria-label="Drinkstand">
-        <div class="drinks-home-head">
-          <div>
-            <h2>Drankstand</h2>
+      <section class="section">
+        <a class="page-link-card ballroom-link" href="./ballroom.html">
+          <div class="ballroom-link-inner">
+            <div class="ballroom-link-rope"><span class="ballroom-link-post"></span><span class="ballroom-link-velvet"></span><span class="ballroom-link-post"></span></div>
+            <div class="page-link-label">Balzaal</div>
+            <div class="ballroom-link-copy">Achter het fluweel wacht de koning.</div>
           </div>
-          
-        </div>
-        <div id="drinksHomeGrid" class="drinks-home-grid">
-          <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">—</div></a>
-          <a class="drinks-mini" style="background:#fff;color:#111;border:1px solid rgba(0,0,0,.12)" href="./drinks_pending.html"><div class="drinks-mini-label">Verifiëren</div><div class="drinks-mini-value" style="color:var(--gold)">+</div></a>
-          <a class="drinks-mini gold" href="./drinks.html"><div class="drinks-mini-label">Snelheids poging</div><div class="drinks-mini-value">+</div></a>
-          <a class="drinks-mini dark" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div></a>
-        </div>
-        
+        </a>
       </section>
 
-      <section class="drinks-home-top5-section" style="margin-top:16px" aria-label="Drinks top 5">
-        <div id="drinksTop5Grid" class="ladder-grid drinks-top-grid">
-          <div class="ladder-card"><div class="ladder-title"><strong id="drinksDayTop5Title">Vandaag</strong><span>Units</span></div><div class="ladder-empty">Nog geen data.</div></div>
-          <div class="ladder-card"><div class="ladder-title"><strong>All-time</strong><span>Units</span></div><div class="ladder-empty">Nog geen data.</div></div>
-          <div class="ladder-card"><div class="ladder-title"><strong id="drinksSpeedTop5Title">1 Bak</strong><span>Seconden</span></div><div class="ladder-empty">Nog geen data.</div></div>
-          <div class="ladder-card"><div class="ladder-title"><strong>Grootste Speler</strong><span>All-time</span></div><div class="ladder-empty">Nog geen data.</div></div>
-        </div>
+      <section class="section">
+        <h1>Wordt er gezopen vanavond?</h1>
+        <div id="drinksStateWord" class="status-word no">triest dispuutsavondje</div>
+        <div id="drinksStateCopy" class="status-sub">Nog niemand heeft bevestigd</div>
+        <div class="vote-row"><button class="vote-btn can" id="drinksYesBtn" type="button">Ik ga drinken</button><button class="vote-btn cant" id="drinksNoBtn" type="button">Nee :(</button></div>
+        <div class="lists-grid"><div class="list-box"><h2>Legends</h2><ul id="drinksLegendsList" class="name-list"></ul></div><div class="list-box"><h2>Losers</h2><ul id="drinksLosersList" class="name-list"></ul></div></div>
       </section>
 
-      <section class="public-links" aria-label="Sitepagina's">
-        <div class="public-links-grid">
-          <a id="homeKlaverjasEntry" class="page-link-card scorer-link" href="./scorer.html" data-default-href="./scorer.html">
-            <div id="homeKlaverjasLabel" class="page-link-label">Klaverjas</div>
-            <div id="homeKlaverjasCopy" class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
-          </a>
-          <a id="homeBoerenbridgeEntry" class="page-link-card scorer-link" href="./boerenbridge.html" data-default-href="./boerenbridge.html">
-            <div id="homeBoerenbridgeLabel" class="page-link-label">Boerenbridge</div>
-            <div id="homeBoerenbridgeCopy" class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
-          </a>
-        </div>
-
-        <div class="public-links-grid">
-          <a class="page-link-card scorer-link" href="./beerpong.html">
-            <div class="page-link-label">Beerpong</div>
-            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
-          </a>
-          <a class="page-link-card login-link" href="./rad.html">
-            <div class="page-link-label">Rad</div>
-            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
-          </a>
-        </div>
-
-        <div class="public-links-grid">
-          <a class="page-link-card login-link" href="./paardenrace.html">
-            <div class="page-link-label">Paardenrace</div>
-            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
-          </a>
-          <a class="page-link-card login-link" href="./pikken.html">
-            <div class="page-link-label">Pikken</div>
-            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
-          </a>
-        </div>
-
-        <div class="public-links-grid">
-          <div class="page-link-card login-link placeholder-link" aria-disabled="true">
-            <div class="page-link-label">Beurs d'Espinoza</div>
-            <div class="page-link-copy">Placeholder — volgt later.</div>
-          </div>
-          <a class="page-link-card login-link" href="./profiles.html">
-            <div class="page-link-label">Spelers</div>
-            <div class="page-link-copy">Bekijk spelers en profielen.</div>
-          </a>
-        </div>
-
-        <div class="public-links-grid centered-single">
-          <a class="page-link-card ballroom-link" href="./ballroom.html">
-            <div class="ballroom-link-inner">
-              <div class="ballroom-link-rope">
-                <span class="ballroom-link-post"></span>
-                <span class="ballroom-link-velvet"></span>
-                <span class="ballroom-link-post"></span>
-              </div>
-              <div class="page-link-label">Balzaal</div>
-              <div class="ballroom-link-copy">Achter het fluweel wacht de koning.</div>
-            </div>
-          </a>
-        </div>
+      <section class="section">
+        <h1>Wordt er gejast donderdag?</h1>
+        <div id="stateWord" class="status-word no">Nee</div>
+        <div id="stateCopy" class="status-sub">Nog niemand heeft Ja gezegd</div>
+        <div class="vote-row"><button class="vote-btn can" id="yesBtn" type="button">Ik kan</button><button class="vote-btn cant" id="noBtn" type="button">Ik kan niet</button></div>
+        <div class="lists-grid"><div class="list-box"><h2>Legends</h2><ul id="legendsList" class="name-list"></ul></div><div class="list-box"><h2>Losers</h2><ul id="losersList" class="name-list"></ul></div></div>
       </section>
-
-      <h1 style="margin-top:22px;text-align:center;">Wordt er gezopen vanavond?</h1>
-      <div id="drinksStateWord" class="status-word no">triest dispuutsavondje</div>
-      <div id="drinksStateCopy" class="status-sub">Nog niemand heeft bevestigd</div>
-
-      <div id="drinksStatusBox" class="status"></div>
-
-      <div class="vote-row">
-        <button class="vote-btn can" id="drinksYesBtn" type="button">Ik ga drinken</button>
-        <button class="vote-btn cant" id="drinksNoBtn" type="button">Nee :(</button>
-      </div>
-
-      <div class="lists-grid">
-        <div class="list-box legends">
-          <h2>Legends</h2>
-          <ul id="drinksLegendsList" class="name-list"></ul>
-        </div>
-        <div class="list-box losers">
-          <h2>Losers</h2>
-          <ul id="drinksLosersList" class="name-list"></ul>
-        </div>
-      </div>
-
-      <div style="display:none;">
-        <span id="drinksYesCount">0</span>
-        <span id="drinksNoCount">0</span>
-        <span id="drinksYesCountPanel">0</span>
-        <span id="drinksNoCountPanel">0</span>
-        <span id="drinksStateWordInline">triest dispuutsavondje</span>
-      </div>
-
-      <h1 style="margin-top:22px;text-align:center;">Wordt er gejast donderdag?</h1>
-      <div id="stateWord" class="status-word no">Nee</div>
-      <div id="stateCopy" class="status-sub">0 mensen hebben Ja gezegd</div>
-
-      <div id="statusBox" class="status"></div>
-
-      <div class="vote-row">
-        <button class="vote-btn can" id="yesBtn" type="button">Ik kan</button>
-        <button class="vote-btn cant" id="noBtn" type="button">Ik kan niet</button>
-      </div>
-
-      <div class="lists-grid">
-        <div class="list-box legends">
-          <h2>Legends</h2>
-          <ul id="legendsList" class="name-list"></ul>
-        </div>
-        <div class="list-box losers">
-          <h2>Losers</h2>
-          <ul id="losersList" class="name-list"></ul>
-        </div>
-      </div>
-
-      <div style="display:none;">
-        <span id="yesCount">0</span>
-        <span id="noCount">0</span>
-        <span id="yesCountPanel">0</span>
-        <span id="noCountPanel">0</span>
-        <span id="stateWordInline">Nee</span>
-        <span id="sessionHint"></span>
-      </div>
     </section>
   </main>
 
+  <div class="site-credit-watermark" data-version-watermark></div>
+  <script src="./gejast-player-session-ui.js?v487"></script>
   <script>
-    const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
-    const SESSION_KEY = "jas_session_token_v11";
-    function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, "Content-Type": "application/json", Accept: "application/json" }; }
-    async function parseResponse(res) {
-      const text = await res.text(); let data = null;
-      try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); }
-      if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`);
-      return data;
-    }
-    function getSessionToken() { return localStorage.getItem(SESSION_KEY); }
-    function clearSessionToken() { localStorage.removeItem(SESSION_KEY); }
-    function getAdminSessionToken() { return sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY) || ''; }
-    async function ensureAdminViewer() {
-      if (adminChecked) return isAdminViewer;
-      adminChecked = true;
-      const token = getAdminSessionToken();
-      if (!token) { isAdminViewer = false; return false; }
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: token }) });
-        await parseResponse(res);
-        isAdminViewer = true;
-      } catch {
-        isAdminViewer = false;
-      }
-      return isAdminViewer;
-    }
-    let currentHomepageState = null;
-    const CURRENT_SCOPE = (window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope()) || 'friends';
-    function scopedHref(base){ try{ const u=new URL(base, location.href); if(CURRENT_SCOPE==='family') u.searchParams.set('scope','family'); return u.pathname.split('/').pop()+u.search; }catch(_){ return base; } }
-    function homepageLadderRoute(game){ return scopedHref(`./ladder.html?game=${encodeURIComponent(game)}`); }
-    function applyScopeChrome(){
-      document.body.classList.toggle('friends-scope', CURRENT_SCOPE!=='family');
-      if(CURRENT_SCOPE!=='family') return;
-      try{ document.querySelector('.admin-badge')?.setAttribute('href', scopedHref('./admin.html')); }catch(_){}
-      try{ document.querySelector('.card-top-right a')?.setAttribute('href','./familie/index.html'); }catch(_){}
-      try{ document.querySelectorAll('a[href="./request.html"],a[href="./login.html"],a[href="./profiles.html"],a[href="./scorer.html"],a[href="./boerenbridge.html"],a[href="./admin.html"]').forEach((a)=>{ const href=a.getAttribute('href'); if(href) a.setAttribute('href', scopedHref(href)); }); }catch(_){}
-      try{ document.querySelectorAll('a[href="./beerpong.html"],a[href^="./drinks"]').forEach((a)=>{ a.style.display='none'; }); const drinksSections=[...document.querySelectorAll('.drinks-home-section,.drinks-home-top5-section')]; drinksSections.forEach((el)=>el.style.display='none'); document.querySelectorAll('.page-link-card').forEach((card)=>{ const txt=(card.textContent||'').toLowerCase(); if(txt.includes('beerpong')||txt.includes('drinks')) card.style.display='none'; }); }catch(_){}
-    }
+    (()=>{
+      const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || '';
+      const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || '';
+      const THURSDAY_POLL_KEY = 'gejast_donderdag';
+      const EXTRA_POLL_KEY = 'gejast_drinks_donderdag';
+      const HOMEPAGE_BOOT_CACHE_KEY = 'gejast_homepage_boot_v580';
+      const HOMEPAGE_POLL_STORAGE_KEY = 'gejast_homepage_poll_lists_v580';
+      const EXTRA_POLL_STORAGE_KEY = 'gejast_drinks_donderdag_lists_v580';
+      const CURRENT_SCOPE = (window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope&&window.GEJAST_SCOPE_UTILS.getScope()) || 'friends';
 
-    function setHomepageLiveState(state='standby', text='Stand-by') {
-      const pill = document.getElementById('homeLivePill');
-      if (!pill) return;
-      pill.className = `live-pill ${state}`;
-      pill.textContent = text;
-    }
-const HOMEPAGE_BOOT_CACHE_KEY = 'gejast_homepage_boot_v389';
-const HOMEPAGE_BOOT_CACHE_TTL = 15 * 1000;
-const HOMEPAGE_POLL_STORAGE_KEY = 'gejast_homepage_poll_lists_v448';
+      function rpcHeaders(){ return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type':'application/json', Accept:'application/json' }; }
+      async function parseResponse(res){ const text=await res.text(); let data=null; try{ data=text?JSON.parse(text):null; }catch{ throw new Error(text||`HTTP ${res.status}`); } if(!res.ok) throw new Error(data?.message||data?.error||data?.hint||`HTTP ${res.status}`); return data; }
+      function scopedHref(base){ try{ const u=new URL(base, location.href); if(CURRENT_SCOPE==='family') u.searchParams.set('scope','family'); return u.pathname.split('/').pop()+u.search; }catch(_){ return base; } }
+      function playerHref(name){ const qs=new URLSearchParams(); if(name) qs.set('player',name); if(CURRENT_SCOPE==='family') qs.set('scope','family'); return `./player.html?${qs.toString()}`; }
+      function getSessionToken(){ return (window.GEJAST_CONFIG&&window.GEJAST_CONFIG.getPlayerSessionToken&&window.GEJAST_CONFIG.getPlayerSessionToken()) || localStorage.getItem('jas_session_token_v11') || ''; }
+      function clearSessionToken(){ try{ localStorage.removeItem('jas_session_token_v11'); sessionStorage.removeItem('jas_session_token_v11'); }catch(_){ } }
+      function goToLoginWithIntent(status,pollKey){ const cfg=window.GEJAST_CONFIG||{}; const target=cfg.buildLoginUrl?cfg.buildLoginUrl(CURRENT_SCOPE==='family'?'index.html?scope=family':'index.html',CURRENT_SCOPE):'./login.html'; const url=new URL(target,location.href); url.searchParams.set('vote',status); url.searchParams.set('vote_poll',pollKey); location.href=url.toString(); }
+      function setLivePill(state='standby', text='Stand-by'){ const pill=document.getElementById('homeLivePill'); if(!pill) return; pill.className=`live-pill ${state}`; pill.textContent=text; }
+      function displayPlayerName(row){ return String(row?.chosen_username || row?.public_display_name || row?.nickname || row?.display_name || row?.player_name || 'Onbekend'); }
 
-function readHomepageBootCache() {
-  try {
-    const raw = sessionStorage.getItem(HOMEPAGE_BOOT_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed?.at || (Date.now() - Number(parsed.at)) > HOMEPAGE_BOOT_CACHE_TTL) return null;
-    return parsed.value || null;
-  } catch (_) {
-    return null;
-  }
-}
+      function yesSaidCopy(canCount){ return canCount===1 ? '1 speler heeft Ja gezegd' : `${canCount} spelers hebben Ja gezegd`; }
+      function drinksYesCopy(canCount){ if (canCount<=0) return 'Nog niemand heeft bevestigd'; if (canCount===1) return '1 persoon heeft bevestigd'; return `${canCount} mensen hebben bevestigd`; }
+      function computeStateLabel(canCount){ if(canCount>=4) return {key:'yes',label:'Ja',copy:yesSaidCopy(canCount)}; if(canCount===3) return {key:'maybe',label:'Wie maakt ons los?',copy:yesSaidCopy(canCount)}; if(canCount===2) return {key:'maybe',label:'Bijna',copy:yesSaidCopy(canCount)}; return {key:'no',label:'Nee',copy:yesSaidCopy(canCount)}; }
+      function computeDrinksPollState(canCount){ const labels=['triest dispuutsavondje','lachend bij','Dit wordt synchroon drinken','Klein clubje, grote dorst','Dit kan nog wel eens wat worden','Dit begint verdacht gezellig te worden','Paar van die biertjes?','Hoop dat de pisangs de ijskast gevuld hebben!!!','Potje stress pong?','Zet die kratten maar koud!','Gargamel is jaloers op het aantal smurfen dat vandaag gaat sneuvelen','Meerderheid dispuut! Dat wordt kanker hard zuipen']; const idx=Math.max(0,Math.min(labels.length-1,Number(canCount)||0)); const key=canCount>=4?'yes':(canCount>=1?'maybe':'no'); return { key, label: labels[idx], copy: drinksYesCopy(canCount) }; }
+      function persistSnapshot(key, legends, losers){ try{ localStorage.setItem(key, JSON.stringify({ legends:Array.isArray(legends)?legends:[], losers:Array.isArray(losers)?losers:[] })); }catch(_){ } }
+      function hydrateSnapshot(key){ try{ const raw=localStorage.getItem(key); return raw?JSON.parse(raw):null; }catch(_){ return null; } }
+      function renderNames(id, items, emptyText){ const root=document.getElementById(id); if(!root) return; root.innerHTML=''; if(!items||!items.length){ root.innerHTML=`<li>${emptyText}</li>`; return; } root.innerHTML = items.map((name)=>`<li><a href="${playerHref(name)}" style="color:inherit;text-decoration:none;font-weight:700">${name}</a></li>`).join(''); }
+      function renderState(data){ data=(data&&typeof data==='object')?{...data}:{}; const legends=data.legends||data.yes_names||[]; const losers=data.losers||data.no_names||[]; const canCount=Number(data.can_count ?? data.yes_count ?? legends.length ?? 0); const state=data.status_label ? { key:data.status_key||'no', label:data.status_label, copy:yesSaidCopy(canCount) } : computeStateLabel(canCount); document.getElementById('stateWord').textContent=state.label; document.getElementById('stateWord').className=`status-word ${state.key}`; document.getElementById('stateCopy').textContent=state.copy; renderNames('legendsList', legends, 'Nog niemand'); renderNames('losersList', losers, 'Nog niemand'); persistSnapshot(HOMEPAGE_POLL_STORAGE_KEY, legends, losers); }
+      function renderExtraPollState(data){ data=(data&&typeof data==='object')?{...data}:{}; const legends=data.legends||data.yes_names||[]; const losers=data.losers||data.no_names||[]; const canCount=Number(data.can_count ?? data.yes_count ?? legends.length ?? 0); const state=computeDrinksPollState(canCount); document.getElementById('drinksStateWord').textContent=state.label; document.getElementById('drinksStateWord').className=`status-word ${state.key}`; document.getElementById('drinksStateCopy').textContent=state.copy; renderNames('drinksLegendsList', legends, 'Nog niemand'); renderNames('drinksLosersList', losers, 'Nog niemand'); persistSnapshot(EXTRA_POLL_STORAGE_KEY, legends, losers); }
 
-function writeHomepageBootCache(value) {
-  try {
-    sessionStorage.setItem(HOMEPAGE_BOOT_CACHE_KEY, JSON.stringify({ at: Date.now(), value }));
-  } catch (_) {}
-  return value;
-}
-
-function persistHomepagePollSnapshot(legends, losers){ try{ localStorage.setItem(HOMEPAGE_POLL_STORAGE_KEY, JSON.stringify({ legends:Array.isArray(legends)?legends:[], losers:Array.isArray(losers)?losers:[] })); }catch(_){ } }
-function hydrateHomepagePollSnapshot(){ try{ const raw = localStorage.getItem(HOMEPAGE_POLL_STORAGE_KEY); return raw ? JSON.parse(raw) : null; }catch(_){ return null; } }
-function mergeSnapshotNames(payload, snapshot){
-  const next = (payload && typeof payload === 'object') ? { ...payload } : {};
-  const saved = (snapshot && typeof snapshot === 'object') ? snapshot : {};
-  const hasLegendsField = Object.prototype.hasOwnProperty.call(next, 'legends') || Object.prototype.hasOwnProperty.call(next, 'yes_names') || Object.prototype.hasOwnProperty.call(next, 'can_count') || Object.prototype.hasOwnProperty.call(next, 'yes_count');
-  const hasLosersField = Object.prototype.hasOwnProperty.call(next, 'losers') || Object.prototype.hasOwnProperty.call(next, 'no_names') || Object.prototype.hasOwnProperty.call(next, 'no_count');
-  const legends = Array.isArray(next.legends) ? next.legends : (Array.isArray(next.yes_names) ? next.yes_names : []);
-  const losers = Array.isArray(next.losers) ? next.losers : (Array.isArray(next.no_names) ? next.no_names : []);
-  if (!hasLegendsField && Array.isArray(saved.legends) && saved.legends.length) {
-    next.legends = [...saved.legends];
-    next.yes_names = [...saved.legends];
-    if (typeof next.can_count === 'undefined' && typeof next.yes_count === 'undefined') next.can_count = saved.legends.length;
-  }
-  if (!hasLosersField && Array.isArray(saved.losers) && saved.losers.length) {
-    next.losers = [...saved.losers];
-    next.no_names = [...saved.losers];
-    if (typeof next.no_count === 'undefined') next.no_count = saved.losers.length;
-  }
-  return next;
-}
-
-function applyAdminViewerRefresh() {
-  try {
-    const savedHomepagePoll = hydrateHomepagePollSnapshot();
-    if (savedHomepagePoll) renderState(savedHomepagePoll);
-    if (currentHomepageState) renderState(currentHomepageState);
-    if (currentDrinksPollState) renderExtraPollState(currentDrinksPollState);
-  } catch (_) {}
-}
-
-
-    function unwrapHomepageLadderPayload(payload){
-      if (payload && payload.get_homepage_ladders_public) return payload.get_homepage_ladders_public;
-      if (payload && payload.get_homepage_ladders_public_scoped) return payload.get_homepage_ladders_public_scoped;
-      if (Array.isArray(payload) && payload[0] && payload[0].get_homepage_ladders_public) return payload[0].get_homepage_ladders_public;
-      if (Array.isArray(payload) && payload[0] && payload[0].get_homepage_ladders_public_scoped) return payload[0].get_homepage_ladders_public_scoped;
-      if (Array.isArray(payload) && payload[0]) return payload[0];
-      return payload || {};
-    }
-
-    function playerHref(name, game=''){ const qs = new URLSearchParams(); if (name) qs.set('player', name); if (game) qs.set('game', game); if (CURRENT_SCOPE==='family') qs.set('scope','family'); return `./player.html?${qs.toString()}`; }
-    function displayPlayerName(row){ return String(row?.chosen_username || row?.public_display_name || row?.nickname || row?.display_name || row?.player_name || 'Onbekend'); }
-    const HOMEPAGE_BLOCKED_NAMES = new Set(['anna','spookinoza 2','evi','fons','caro','daan','bram']);
-    function isHomepageBlockedName(name){ return HOMEPAGE_BLOCKED_NAMES.has(String(name||'').trim().toLowerCase()); }
-    function avatarMarkup(row){ const name = displayPlayerName(row); const helper=(window.GEJAST_CONFIG&&typeof window.GEJAST_CONFIG.normalizeProfileImageUrl==='function')?window.GEJAST_CONFIG.normalizeProfileImageUrl:(v)=>String(v||'').trim(); const src = helper(row?.avatar_url || row?.photo_url || row?.profile_picture_url || ''); return src ? `<div class="biggest-player-avatar"><img src="${src.replace(/"/g,'&quot;')}" alt="${name.replace(/"/g,'&quot;')}" referrerpolicy="no-referrer"></div>` : `<div class="biggest-player-avatar">${(name||'O').slice(0,1).toUpperCase()}</div>`; }
-    function renderHomepageLadders(payload) {
-      const root = document.getElementById('ladderGrid');
-      const extraRoot = document.getElementById('extraLadderGrid');
-      if (!root) return;
-      const source = unwrapHomepageLadderPayload(payload);
-      function renderGroupSet(target, groups){
-        if(!target) return;
-        target.innerHTML = groups.map((group) => {
-          const rows = Array.isArray(group.rows) ? group.rows : [];
-          const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><a class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800" href="${playerHref(String(row.player_name || row.display_name || ''), group.key)}" onclick="event.stopPropagation()">${String(row.player_name || row.display_name || row.public_display_name || 'Onbekend')}</a><div class="ladder-elo" style="color:var(--gold);font-weight:900">${Math.round(Number(row.coins || row.caute_coins || row.balance || row.elo_rating || row.rating || 1000))}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen ladderdata.</div>';
-          return `<article class="ladder-card" role="link" tabindex="0" data-route="${homepageLadderRoute(group.key)}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none">Top 5</span></div>${body}</article>`;
+      function renderHomepageLadders(payload){
+        const source = payload || {};
+        const groups = [
+          { key:'klaverjas', label:'Klaverjassen', rows: source.klaverjas || [] },
+          { key:'boerenbridge', label:'Boerenbridge', rows: source.boerenbridge || [] },
+          { key:'beerpong', label:'Beerpong', rows: source.beerpong || [] },
+          { key:'paardenrace', label:'Paardenrace', rows: source.paardenrace || [] },
+          { key:'pikken', label:'Pikken', rows: source.pikken || [] },
+          { key:'caute-coins', label:'Caute Coins', rows: source.caute_coins || source.coins || source.cauteCoins || [] }
+        ].filter((g)=>!(CURRENT_SCOPE==='family' && g.key==='beerpong'));
+        const root=document.getElementById('ladderGrid'); if(!root) return;
+        root.innerHTML = groups.map((group)=>{
+          const rows=Array.isArray(group.rows)?group.rows:[];
+          const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx)=>`<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><a class="ladder-name" href="${playerHref(String(row.player_name || row.display_name || displayPlayerName(row)))}" onclick="event.stopPropagation()" style="color:inherit;text-decoration:none">${displayPlayerName(row)}</a><div class="ladder-elo">${Math.round(Number(row.coins || row.caute_coins || row.balance || row.elo_rating || row.rating || 1000))}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen ladderdata.</div>';
+          return `<article class="ladder-card" data-route="${scopedHref(`./ladder.html?game=${encodeURIComponent(group.key)}`)}"><div class="ladder-title"><strong>${group.label}</strong><span>Top 5</span></div>${body}</article>`;
         }).join('');
-        target.querySelectorAll('.ladder-card[data-route]').forEach((card)=>{
-          const route = card.getAttribute('data-route');
-          card.addEventListener('click', ()=>{ window.location.href = route; });
-          card.addEventListener('keydown', (ev)=>{ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); window.location.href = route; } });
-        });
+        root.querySelectorAll('.ladder-card[data-route]').forEach((card)=>{ const route = card.getAttribute('data-route'); card.addEventListener('click',()=>location.href=route); card.addEventListener('keydown',(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); location.href=route; } }); card.tabIndex=0; card.setAttribute('role','link'); });
       }
-      const groups = [
-        { key:'klaverjas', label:'Klaverjassen', rows: source?.klaverjas || [] },
-        { key:'boerenbridge', label:'Boerenbridge', rows: source?.boerenbridge || [] },
-        { key:'beerpong', label:'Beerpong', rows: source?.beerpong || [] }
-      ].filter((group)=>!(CURRENT_SCOPE==='family' && group.key==='beerpong'));
-      const extraGroups = [
-        { key:'paardenrace', label:'Paardenrace', rows: source?.paardenrace || [] },
-        { key:'pikken', label:'Pikken', rows: source?.pikken || [] },
-        { key:'caute-coins', label:'Caute Coins', rows: source?.caute_coins || source?.coins || source?.cauteCoins || [] }
-      ];
-      renderGroupSet(root, groups);
-      renderGroupSet(extraRoot, extraGroups);
-    }
 
-    async function fetchHomepageLadderFallback() {
-      const games = CURRENT_SCOPE==='family' ? ['klaverjas','boerenbridge','paardenrace','pikken'] : ['klaverjas','boerenbridge','beerpong','paardenrace','pikken'];
-      const out = {};
-      for (const game of games) {
-        const endpoint = game==='beerpong' ? 'get_public_ladder_page' : 'get_public_ladder_page_scoped';
-        const body = game==='beerpong' ? { game_key: game } : { game_key: game, site_scope_input: CURRENT_SCOPE };
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${endpoint}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(body) });
-        const data = await parseResponse(res);
-        const payload = (Array.isArray(data) ? data[0] : data) || {};
-        const source = payload.get_public_ladder_page_scoped || payload.get_public_ladder_page || payload;
-        out[game] = Array.isArray(source?.ladder) ? source.ladder.filter((row)=>!isHomepageBlockedName(row.player_name||row.display_name||'')).slice(0,5) : [];
+      async function callRpc(name, payload){ const res=await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(payload || {}) }); const data=await parseResponse(res); return data && data[name]!==undefined ? data[name] : data; }
+      async function getHomepageState(){ return await callRpc('get_site_poll_state', { poll_key_input: THURSDAY_POLL_KEY, session_token: getSessionToken() }); }
+      async function getExtraPollState(){ return await callRpc('get_site_poll_state', { poll_key_input: EXTRA_POLL_KEY, session_token: getSessionToken() }); }
+      async function castVote(pollKey, desired_status){ return await callRpc('cast_site_poll_vote', { poll_key_input: pollKey, session_token: getSessionToken(), desired_status }); }
+
+      async function handleVote(pollKey, desired_status){
+        if (!getSessionToken()) { goToLoginWithIntent(desired_status, pollKey); return; }
+        try { await castVote(pollKey, desired_status); if (pollKey===THURSDAY_POLL_KEY) renderState(await getHomepageState()); else renderExtraPollState(await getExtraPollState()); }
+        catch (error) { const msg=error?.message || 'Onbekende fout'; if (/sessie|token|login|ingelogd/i.test(msg)) { clearSessionToken(); goToLoginWithIntent(desired_status, pollKey); } }
       }
-      try { const cres = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_caute_coin_top5_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({}) }); const cdata = await parseResponse(cres); const cpayload = (Array.isArray(cdata)?cdata[0]:cdata)||{}; out.caute_coins = Array.isArray(cpayload?.rows) ? cpayload.rows.slice(0,5) : (Array.isArray(cpayload)?cpayload.slice(0,5):[]); } catch(_){ out.caute_coins = []; }
-      return out;
-    }
 
-    async function loadHomepageLadders() {
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_homepage_ladders_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({}) });
-        const data = await parseResponse(res);
-        renderHomepageLadders(data || {});
-        setHomepageLiveState('live', 'Live');
-        return data || {};
-      } catch (err) {
-        console.warn('Homepage ladders primary RPC failed, trying fallback', err);
-        try {
-          const fallback = await fetchHomepageLadderFallback();
-          renderHomepageLadders(fallback || {});
-          setHomepageLiveState('live', 'Live');
-          return fallback || {};
-        } catch (fallbackErr) {
-          console.warn('Homepage ladders offline', fallbackErr);
-          setHomepageLiveState('standby', 'Offline');
-          return null;
-        }
+      function applyHomepageBootBundle(bundle){
+        if (!bundle || typeof bundle !== 'object') return;
+        if (bundle.homepage_state) renderState(bundle.homepage_state);
+        if (bundle.extra_poll_state) renderExtraPollState(bundle.extra_poll_state);
+        if (bundle.ladders) renderHomepageLadders(bundle.ladders);
+        const liveEntries = bundle.live_entries || {};
+        const hasLive = Object.values(liveEntries).some((item)=>item && item.href);
+        const ladderCount = bundle.ladders && typeof bundle.ladders === 'object' ? Object.values(bundle.ladders).reduce((sum,v)=>sum + (Array.isArray(v)?v.length:0), 0) : 0;
+        setLivePill(hasLive || ladderCount ? 'live' : 'standby', hasLive || ladderCount ? 'Live' : 'Stand-by');
       }
-    }
 
-    let removingVote = false;
-    let removingAdminVote = false;
-    let isAdminViewer = false;
-    let adminChecked = false;
-    const ADMIN_SESSION_KEY = 'jas_admin_session_v8';
-    function setStatus(message = '', tone = 'info') {
-      const box = document.getElementById('statusBox');
-      if (!message) { box.className = 'status'; box.textContent = ''; return; }
-      box.className = `status show ${tone}`; box.textContent = message;
-    }
-    function canShowRemoveButton(name, listKey) {
-      const myName = currentHomepageState?.my_name;
-      const myStatus = currentHomepageState?.my_status;
-      if (!getSessionToken() || !myName || !myStatus) return false;
-      if (String(name || '').trim().toLowerCase() !== String(myName || '').trim().toLowerCase()) return false;
-      if (listKey === 'legends') return myStatus === 'ja';
-      if (listKey === 'losers') return myStatus === 'nee';
-      return false;
-    }
-    function canShowAdminRemoveButton() {
-      return !!isAdminViewer;
-    }
-    async function removeVoteAsAdmin(targetName) {
-      if (removingAdminVote || !targetName) return;
-      removingAdminVote = true;
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_remove_site_poll_vote`, {
-          method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-          body: JSON.stringify({ admin_session_token: getAdminSessionToken(), poll_key_input: THURSDAY_POLL_KEY, display_name_input: targetName })
-        });
-        await parseResponse(res);
-        renderState(await getHomepageState());
-        setStatus(`Stem verwijderd voor ${targetName}.`, 'ok');
-      } catch (error) {
-        const msg = error?.message || 'Onbekende fout';
-        setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
-      } finally {
-        removingAdminVote = false;
-      }
-    }
-    async function removeMyVote() {
-      if (removingVote) return;
-      removingVote = true;
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/remove_my_site_poll_vote`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ poll_key_input: THURSDAY_POLL_KEY, session_token: getSessionToken() }) });
-        await parseResponse(res);
-        renderState(await getHomepageState());
-        setStatus('Je stem is verwijderd.', 'ok');
-      } catch (error) {
-        const msg = error?.message || 'Onbekende fout';
-        if (/sessie|token|login|ingelogd/i.test(msg)) {
-          clearSessionToken();
-          window.location.href = new URL('./login.html', window.location.href).toString();
-          return;
-        }
-        setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
-      } finally {
-        removingVote = false;
-      }
-    }
-    function renderNames(id, items, emptyText, listKey) {
-      const root = document.getElementById(id); root.innerHTML = '';
-      if (!items || items.length === 0) { const li = document.createElement('li'); li.textContent = emptyText; root.appendChild(li); return; }
-      items.forEach((name) => {
-        const li = document.createElement('li');
-        const row = document.createElement('div');
-        row.className = 'vote-name-row';
-        const text = document.createElement('a');
-        text.href = playerHref(name, '');
-        text.textContent = name;
-        text.style.color = 'inherit';
-        text.style.textDecoration = 'none';
-        text.style.fontWeight = '700';
-        row.appendChild(text);
-        if (canShowRemoveButton(name, listKey)) {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'remove-vote-btn';
-          btn.textContent = 'verwijderen';
-          btn.disabled = removingVote;
-          btn.addEventListener('click', removeMyVote);
-          row.appendChild(btn);
-        }
-        if (canShowAdminRemoveButton()) {
-          const adminBtn = document.createElement('button');
-          adminBtn.type = 'button';
-          adminBtn.className = 'remove-vote-btn admin-remove-vote-btn';
-          adminBtn.textContent = 'admin ×';
-          adminBtn.disabled = removingAdminVote;
-          adminBtn.addEventListener('click', () => removeVoteAsAdmin(name));
-          row.appendChild(adminBtn);
-        }
-        li.appendChild(row);
-        root.appendChild(li);
-      });
-    }
-
-const EXTRA_POLL_KEY = 'gejast_drinks_donderdag';
-const EXTRA_POLL_STORAGE_KEY = 'gejast_drinks_donderdag_lists_v448';
-const THURSDAY_POLL_KEY = 'gejast_donderdag';
-let currentDrinksPollState = null;
-let removingExtraVote = false;
-let removingExtraAdminVote = false;
-function setExtraPollStatus(message = '', tone = 'info') {
-  const box = document.getElementById('drinksStatusBox');
-  if (!box) return;
-  if (!message) { box.className = 'status'; box.textContent = ''; return; }
-  box.className = `status show ${tone}`; box.textContent = message;
-}
-function canShowExtraRemoveButton(name, listKey) {
-  const myName = currentDrinksPollState?.my_name;
-  const myStatus = currentDrinksPollState?.my_status;
-  if (!getSessionToken() || !myName || !myStatus) return false;
-  if (String(name || '').trim().toLowerCase() !== String(myName || '').trim().toLowerCase()) return false;
-  if (listKey === 'legends') return myStatus === 'ja';
-  if (listKey === 'losers') return myStatus === 'nee';
-  return false;
-}
-async function removeExtraVoteAsAdmin(targetName) {
-  if (removingExtraAdminVote || !targetName) return;
-  removingExtraAdminVote = true;
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_remove_site_poll_vote`, {
-      method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-      body: JSON.stringify({ admin_session_token: getAdminSessionToken(), poll_key_input: EXTRA_POLL_KEY, display_name_input: targetName })
-    });
-    await parseResponse(res);
-    renderExtraPollState(await getExtraPollState());
-    setExtraPollStatus(`Stem verwijderd voor ${targetName}.`, 'ok');
-  } catch (error) {
-    const msg = error?.message || 'Onbekende fout';
-    setExtraPollStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
-  } finally {
-    removingExtraAdminVote = false;
-  }
-}
-async function removeMyExtraVote() {
-  if (removingExtraVote) return;
-  removingExtraVote = true;
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/remove_my_site_poll_vote`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ poll_key_input: EXTRA_POLL_KEY, session_token: getSessionToken() }) });
-    await parseResponse(res);
-    renderExtraPollState(await getExtraPollState());
-    setExtraPollStatus('Je stem is verwijderd.', 'ok');
-  } catch (error) {
-    const msg = error?.message || 'Onbekende fout';
-    if (/sessie|token|login|ingelogd/i.test(msg)) {
-      clearSessionToken();
-      window.location.href = new URL('./login.html', window.location.href).toString();
-      return;
-    }
-    setExtraPollStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
-  } finally {
-    removingExtraVote = false;
-  }
-}
-function renderExtraNames(id, items, emptyText, listKey) {
-  const root = document.getElementById(id); if (!root) return; root.innerHTML = '';
-  if (!items || items.length === 0) { const li = document.createElement('li'); li.textContent = emptyText; root.appendChild(li); return; }
-  items.forEach((name) => {
-    const li = document.createElement('li');
-    const row = document.createElement('div');
-    row.className = 'vote-name-row';
-    const text = document.createElement('a');
-    text.href = playerHref(name, '');
-    text.textContent = name;
-    text.style.color = 'inherit';
-    text.style.textDecoration = 'none';
-    text.style.fontWeight = '700';
-    row.appendChild(text);
-    if (canShowExtraRemoveButton(name, listKey)) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'remove-vote-btn';
-      btn.textContent = 'verwijderen';
-      btn.disabled = removingExtraVote;
-      btn.addEventListener('click', removeMyExtraVote);
-      row.appendChild(btn);
-    }
-    if (canShowAdminRemoveButton()) {
-      const adminBtn = document.createElement('button');
-      adminBtn.type = 'button';
-      adminBtn.className = 'remove-vote-btn admin-remove-vote-btn';
-      adminBtn.textContent = 'admin ×';
-      adminBtn.disabled = removingExtraAdminVote;
-      adminBtn.addEventListener('click', () => removeExtraVoteAsAdmin(name));
-      row.appendChild(adminBtn);
-    }
-    li.appendChild(row);
-    root.appendChild(li);
-  });
-}
-function persistExtraPollSnapshot(legends, losers){ try{ localStorage.setItem(EXTRA_POLL_STORAGE_KEY, JSON.stringify({ legends:Array.isArray(legends)?legends:[], losers:Array.isArray(losers)?losers:[] })); }catch(_){ } }
-function hydrateExtraPollSnapshot(){ try{ const raw = localStorage.getItem(EXTRA_POLL_STORAGE_KEY); return raw ? JSON.parse(raw) : null; }catch(_){ return null; } }
-function renderExtraPollState(data) {
-  data = (data && typeof data === 'object') ? { ...data } : {};
-  if (!Array.isArray(data.legends) && Array.isArray(data.yes_names)) data.legends = [...data.yes_names];
-  if (!Array.isArray(data.losers) && Array.isArray(data.no_names)) data.losers = [...data.no_names];
-  const previousCount = Number(currentDrinksPollState?.can_count ?? currentDrinksPollState?.yes_count ?? currentDrinksPollState?.legends?.length ?? currentDrinksPollState?.yes_names?.length ?? 0);
-  currentDrinksPollState = data || null;
-  const legends = data.legends || data.yes_names || [];
-  const losers = data.losers || data.no_names || [];
-  const canCount = Number(data.can_count ?? data.yes_count ?? legends.length ?? 0);
-  const state = computeDrinksPollState(canCount);
-  const word = document.getElementById('drinksStateWord');
-  if (word) { word.textContent = state.label; word.className = `status-word ${state.key}`; }
-  const copy = document.getElementById('drinksStateCopy'); if (copy) copy.textContent = state.copy;
-  const yesCount = document.getElementById('drinksYesCount'); if (yesCount) yesCount.textContent = legends.length;
-  const noCount = document.getElementById('drinksNoCount'); if (noCount) noCount.textContent = losers.length;
-  const yesPanel = document.getElementById('drinksYesCountPanel'); if (yesPanel) yesPanel.textContent = legends.length;
-  const noPanel = document.getElementById('drinksNoCountPanel'); if (noPanel) noPanel.textContent = losers.length;
-  const inline = document.getElementById('drinksStateWordInline'); if (inline) inline.textContent = state.label;
-  renderExtraNames('drinksLegendsList', legends, 'Nog niemand', 'legends');
-  renderExtraNames('drinksLosersList', losers, 'Nog niemand', 'losers');
-  persistExtraPollSnapshot(legends, losers);
-  const shouldCelebrate = state.key === 'yes' && canCount >= 4 && canCount > previousCount;
-  if (shouldCelebrate) {
-    lastDrinksCelebrationCount = canCount;
-    window.requestAnimationFrame(() => playDrinksCelebration(canCount));
-  } else if (state.key !== 'yes') {
-    lastDrinksCelebrationCount = null;
-    clearJaCelebration('#drinksStateWord');
-  } else {
-    lastDrinksCelebrationCount = canCount;
-  }
-  currentDrinksPollState = { ...(data || {}), computed_key: state.key, status_key: state.key };
-}
-async function getExtraPollState() {
-  const session_token = getSessionToken();
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_site_poll_state`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ poll_key_input: EXTRA_POLL_KEY, session_token }) });
-  const data = await parseResponse(res);
-  return (data && typeof data === 'object') ? data : {};
-}
-async function castExtraPollVote(desired_status) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cast_site_poll_vote`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ poll_key_input: EXTRA_POLL_KEY, session_token: getSessionToken(), desired_status }) });
-  return await parseResponse(res);
-}
-    function yesSaidCopy(canCount) {
-      if (canCount === 1) return '1 speler heeft Ja gezegd';
-      return `${canCount} spelers hebben Ja gezegd`;
-    }
-    function drinksYesCopy(canCount) {
-      if (canCount <= 0) return 'Nog niemand heeft bevestigd';
-      if (canCount === 1) return '1 persoon heeft bevestigd';
-      return `${canCount} mensen hebben bevestigd`;
-    }
-    function computeStateLabel(canCount) {
-      if (canCount >= 4) return { key: 'yes', label: 'Ja', copy: yesSaidCopy(canCount) };
-      if (canCount === 3) return { key: 'maybe', label: 'Wie maakt ons los?', copy: yesSaidCopy(canCount) };
-      if (canCount === 2) return { key: 'maybe', label: 'Bijna', copy: yesSaidCopy(canCount) };
-      return { key: 'no', label: 'Nee', copy: yesSaidCopy(canCount) };
-    }
-    function computeDrinksPollState(canCount) {
-      const labels = [
-        'triest dispuutsavondje',
-        'lachend bij',
-        'Dit wordt synchroon drinken',
-        'Klein clubje, grote dorst',
-        'Dit kan nog wel eens wat worden',
-        'Dit begint verdacht gezellig te worden',
-        'Paar van die biertjes?',
-        'Hoop dat de pisangs de ijskast gevuld hebben!!!',
-        'Potje stress pong?',
-        'Zet die kratten maar koud!',
-        'Gargamel is jaloers op het aantal smurfen dat vandaag gaat sneuvelen',
-        'Meerderheid dispuut! Dat wordt kanker hard zuipen'
-      ];
-      const idx = Math.max(0, Math.min(labels.length - 1, Number(canCount) || 0));
-      const key = canCount >= 4 ? 'yes' : (canCount >= 1 ? 'maybe' : 'no');
-      return { key, label: labels[idx], copy: drinksYesCopy(canCount) };
-    }
-    let lastHomepageCelebrationCount = null;
-    let lastDrinksCelebrationCount = null;
-    function clearJaCelebration(targetSelector = '#stateWord') {
-      const existing = document.querySelector(`${targetSelector} .ja-party-burst`);
-      if (existing) existing.remove();
-    }
-    function buildBurstPieces(specs, burst) {
-      specs.forEach((spec) => {
-        const piece = document.createElement('span');
-        piece.className = `ja-party-piece ${spec.kind || ''} ${spec.svg ? 'svg-item' : ''}`.trim();
-        piece.style.setProperty('--tx', spec.tx);
-        piece.style.setProperty('--ty', spec.ty);
-        piece.style.setProperty('--rot', spec.rot);
-        if (spec.bg) piece.style.background = spec.bg;
-        if (spec.w) piece.style.width = spec.w;
-        if (spec.h) piece.style.height = spec.h;
-        if (spec.radius) piece.style.borderRadius = spec.radius;
-        if (spec.card) {
-          if (spec.kind === 'card') piece.dataset.card = spec.card;
-          piece.textContent = spec.card;
-        }
-        if (spec.svg) piece.innerHTML = spec.svg;
-        piece.style.animationDelay = spec.delay;
-        burst.appendChild(piece);
-      });
-    }
-    function svgWrap(inner, viewBox='0 0 120 120'){ return `<svg viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`; }
-    function balloonSvg(fill='#d4b366', knot='#8a7338') {
-      return svgWrap(`
-        <path d="M60 14c-20 0-34 15-34 34 0 15 8 27 21 36 4 3 7 7 8 12l1 9h8l1-9c1-5 4-9 8-12 13-9 21-21 21-36 0-19-14-34-34-34z" fill="${fill}" stroke="#2d2418" stroke-width="4"/>
-        <ellipse cx="46" cy="34" rx="10" ry="15" fill="rgba(255,255,255,.22)" transform="rotate(-18 46 34)"/>
-        <path d="M54 103h12l-6 7z" fill="${knot}" stroke="#2d2418" stroke-width="3" stroke-linejoin="round"/>
-        <path d="M60 110c0 10-10 13-10 20 0 6 9 6 10 14 1-8 10-8 10-14 0-7-10-10-10-20z" fill="none" stroke="#524a40" stroke-width="3" stroke-linecap="round"/>
-      `, '0 0 120 150');
-    }
-    function beerGlassSvg(body='#d6a63d', foam='#fffaf1') {
-      return svgWrap(`
-        <path d="M28 22h40c7 0 12 6 12 13v53c0 11-9 20-20 20H36c-11 0-20-9-20-20V35c0-7 5-13 12-13z" fill="${body}" stroke="#2d2418" stroke-width="4"/>
-        <path d="M80 37h11c7 0 13 6 13 13v18c0 10-8 18-18 18H80" fill="none" stroke="#2d2418" stroke-width="4"/>
-        <path d="M18 32c0-9 8-14 14-10 2-8 11-11 17-6 5-5 14-4 18 1 8-4 16 2 16 10 0 8-7 13-14 13H32c-8 0-14-4-14-8z" fill="${foam}" stroke="#2d2418" stroke-width="4" stroke-linejoin="round"/>
-        <path d="M32 54h31M32 67h28M32 80h24" stroke="rgba(255,255,255,.22)" stroke-width="5" stroke-linecap="round"/>
-      `, '0 0 120 120');
-    }
-    function beerBottleSvg(liquid='#c78f2f', label='#f3e7b6') {
-      return svgWrap(`
-        <path d="M52 8h16v13l7 10v63c0 10-8 18-18 18h-4c-10 0-18-8-18-18V31l7-10z" fill="#5c3720" stroke="#2d2418" stroke-width="4"/>
-        <path d="M40 38h40v54H40z" fill="${liquid}" opacity=".92"/>
-        <rect x="42" y="50" width="36" height="22" rx="6" fill="${label}" stroke="#2d2418" stroke-width="3"/>
-        <path d="M48 20h24" stroke="#e7d27c" stroke-width="4" stroke-linecap="round"/>
-      `, '0 0 120 120');
-    }
-    function craftBeerSvg() {
-      return svgWrap(`
-        <path d="M26 28h50l-8 70c-1 8-7 14-15 14H49c-8 0-14-6-15-14z" fill="#d69f36" stroke="#2d2418" stroke-width="4"/>
-        <path d="M18 34c0-8 7-13 13-10 2-8 10-11 17-7 4-5 12-5 17 0 6-4 14-1 17 7 6-3 13 2 13 10 0 7-6 12-13 12H31c-7 0-13-5-13-12z" fill="#fff8ee" stroke="#2d2418" stroke-width="4"/>
-        <path d="M37 58h26M39 72h22M42 86h16" stroke="rgba(255,255,255,.22)" stroke-width="5" stroke-linecap="round"/>
-      `, '0 0 120 120');
-    }
-    function wineBottleSvg() {
-      return svgWrap(`
-        <path d="M56 8h8v17c0 7 6 12 6 24 0 10-4 17-6 24v29c0 6-4 10-8 10s-8-4-8-10V73c-2-7-6-14-6-24 0-12 6-17 6-24z" fill="#532537" stroke="#2d2418" stroke-width="4"/>
-        <rect x="44" y="52" width="24" height="24" rx="6" fill="#efe2c4" stroke="#2d2418" stroke-width="3"/>
-        <path d="M53 14h14" stroke="#d9c66e" stroke-width="4" stroke-linecap="round"/>
-      `, '0 0 120 120');
-    }
-    function champagneBottleSvg() {
-      return svgWrap(`
-        <path d="M50 10h20v15l6 10v59c0 10-8 18-18 18h-2c-10 0-18-8-18-18V35l6-10z" fill="#9a8f3e" stroke="#2d2418" stroke-width="4"/>
-        <rect x="42" y="48" width="36" height="28" rx="7" fill="#efe4b5" stroke="#2d2418" stroke-width="3"/>
-        <circle cx="82" cy="24" r="5" fill="#fff2c7" stroke="#2d2418" stroke-width="3"/><circle cx="95" cy="14" r="3" fill="#fff2c7" stroke="#2d2418" stroke-width="2"/>
-      `, '0 0 120 120');
-    }
-    function pisangBottleSvg() {
-      return svgWrap(`
-        <path d="M50 10h20v14l5 9v62c0 10-8 17-18 17h-2c-10 0-18-7-18-17V33l5-9z" fill="#5ba24c" stroke="#16331a" stroke-width="4"/>
-        <rect x="41" y="46" width="38" height="26" rx="7" fill="#dff1b8" stroke="#16331a" stroke-width="3"/>
-        <path d="M47 58c9-9 17-10 27 0-10 10-18 10-27 0z" fill="#8bc34a" stroke="#16331a" stroke-width="2"/>
-      `, '0 0 120 120');
-    }
-    function shirtSvg() {
-      return svgWrap(`
-        <path d="M39 18l9 11h24l9-11 15 14-10 12v54H34V44L24 32z" fill="#e0bf45" stroke="#2d2418" stroke-width="4" stroke-linejoin="round"/>
-        <path d="M48 18l12 10 12-10" fill="none" stroke="#2d2418" stroke-width="4" stroke-linecap="round"/>
-        <path d="M60 28v62" stroke="#b08b25" stroke-width="4"/>
-      `, '0 0 120 120');
-    }
-    function briefcaseSvg() {
-      return svgWrap(`
-        <rect x="22" y="38" width="62" height="44" rx="8" fill="#5d452f" stroke="#2d2418" stroke-width="4"/>
-        <path d="M44 38v-8c0-6 5-10 11-10h-4c6 0 11 4 11 10v8" fill="none" stroke="#2d2418" stroke-width="4"/>
-        <rect x="47" y="55" width="12" height="10" rx="3" fill="#d9c66e" stroke="#2d2418" stroke-width="3"/>
-        <circle cx="94" cy="52" r="8" fill="none" stroke="#555" stroke-width="4"/>
-        <path d="M84 56c3 0 6 1 10 4" fill="none" stroke="#555" stroke-width="4" stroke-linecap="round"/>
-      `, '0 0 120 120');
-    }
-    function klaverCardSvg(rank='K') {
-      return svgWrap(`
-        <rect x="18" y="8" width="68" height="98" rx="8" fill="#fffdf8" stroke="#201a15" stroke-width="4"/>
-        <g fill="#111">
-          <text x="32" y="34" font-size="30" font-family="Georgia,serif" font-weight="700">${rank}</text>
-          <path d="M52 88c0-8 9-12 9-20 0-7-6-13-13-13-5 0-9 3-12 8-3-5-7-8-12-8-7 0-13 6-13 13 0 8 9 12 9 20-1 1-3 5-5 8h15c2-6 5-11 6-13 2 2 5 7 7 13h15c-2-3-4-7-6-8z" transform="translate(27,0) scale(.42)"/>
-        </g>
-        <path d="M78 14l18 10-18 10z" fill="#111" opacity=".9"/>
-      `, '0 0 120 120');
-    }
-    function noteSvg(text='nat') {
-      return svgWrap(`
-        <rect x="14" y="18" width="92" height="72" rx="8" fill="#fff8e8" stroke="#2d2418" stroke-width="4"/>
-        <path d="M24 38h50M24 50h56M24 62h48" stroke="#c7b274" stroke-width="3" stroke-linecap="round"/>
-        <text x="60" y="80" text-anchor="middle" font-size="20" font-family="Georgia,serif" font-weight="700" fill="#6a4d19">${text}</text>
-      `, '0 0 120 120');
-    }
-    function tableArrowSvg() {
-      return svgWrap(`
-        <ellipse cx="60" cy="44" rx="34" ry="16" fill="#baa06a" stroke="#2d2418" stroke-width="4"/>
-        <path d="M33 44v18M87 44v18" stroke="#7a6240" stroke-width="5" stroke-linecap="round"/>
-        <path d="M60 78V56" stroke="#1e1e1e" stroke-width="5" stroke-linecap="round"/>
-        <path d="M60 82l-12-12h24z" fill="#1e1e1e"/>
-      `, '0 0 120 120');
-    }
-    function playJaCelebration() {
-      const word = document.getElementById('stateWord');
-      if (!word) return;
-      clearJaCelebration('#stateWord');
-      const burst = document.createElement('span');
-      burst.className = 'ja-party-burst';
-      const specs = [
-        { kind:'balloon-svg', svg:balloonSvg('#d4b366','#8a7338'), w:'54px', h:'90px', tx:'-260px', ty:'-300px', rot:'-18deg', delay:'0ms' },
-        { kind:'balloon-svg', svg:balloonSvg('#111111','#444444'), w:'54px', h:'90px', tx:'260px', ty:'-294px', rot:'18deg', delay:'20ms' },
-        { kind:'balloon-svg', svg:balloonSvg('#f0d68a','#a38a47'), w:'58px', h:'96px', tx:'0px', ty:'-350px', rot:'4deg', delay:'40ms' },
-        { kind:'streamer', tx:'-272px', ty:'-80px', rot:'-160deg', bg:'#9a8241', delay:'10ms' },
-        { kind:'streamer', tx:'272px', ty:'-64px', rot:'168deg', bg:'#111', delay:'20ms' },
-        { kind:'confetti', tx:'-200px', ty:'-190px', rot:'-230deg', bg:'#d4b366', delay:'15ms' },
-        { kind:'confetti', tx:'200px', ty:'-200px', rot:'220deg', bg:'#111', delay:'25ms' },
-        { kind:'card-svg', svg:klaverCardSvg('K'), w:'70px', h:'96px', tx:'-250px', ty:'-140px', rot:'-300deg', delay:'20ms' },
-        { kind:'card-svg', svg:klaverCardSvg('Q'), w:'66px', h:'92px', tx:'-168px', ty:'-280px', rot:'-250deg', delay:'45ms' },
-        { kind:'card-svg', svg:klaverCardSvg('J'), w:'64px', h:'90px', tx:'-60px', ty:'-308px', rot:'-180deg', delay:'70ms' },
-        { kind:'card-svg', svg:klaverCardSvg('A'), w:'64px', h:'90px', tx:'58px', ty:'-312px', rot:'188deg', delay:'95ms' },
-        { kind:'card-svg', svg:klaverCardSvg('10'), w:'68px', h:'94px', tx:'168px', ty:'-280px', rot:'230deg', delay:'120ms' },
-        { kind:'card-svg', svg:klaverCardSvg('K'), w:'70px', h:'96px', tx:'250px', ty:'-128px', rot:'280deg', delay:'145ms' },
-        { kind:'note-svg', svg:noteSvg('nat'), w:'92px', h:'68px', tx:'-126px', ty:'-344px', rot:'-16deg', delay:'80ms' },
-        { kind:'note-svg', svg:noteSvg('pit'), w:'88px', h:'64px', tx:'0px', ty:'-382px', rot:'8deg', delay:'105ms' },
-        { kind:'note-svg', svg:noteSvg('verzaakt'), w:'104px', h:'74px', tx:'132px', ty:'-344px', rot:'14deg', delay:'130ms' },
-        { kind:'table-svg', svg:tableArrowSvg(), w:'108px', h:'78px', tx:'-8px', ty:'-246px', rot:'0deg', delay:'120ms' },
-        { kind:'card-svg', svg:klaverCardSvg('Q'), w:'60px', h:'84px', tx:'-312px', ty:'-226px', rot:'-340deg', delay:'155ms' },
-        { kind:'card-svg', svg:klaverCardSvg('J'), w:'60px', h:'84px', tx:'312px', ty:'-220px', rot:'320deg', delay:'170ms' }
-      ];
-      buildBurstPieces(specs, burst);
-      word.appendChild(burst);
-      window.setTimeout(() => { if (burst.isConnected) burst.remove(); }, 3200);
-    }
-    function scalePx(value, factor) {
-      const m = String(value || '').match(/(-?\d+(?:\.\d+)?)px/);
-      if (!m) return value;
-      return `${Math.round(Number(m[1]) * factor)}px`;
-    }
-    function playDrinksCelebration(canCount) {
-      const word = document.getElementById('drinksStateWord');
-      if (!word) return;
-      clearJaCelebration('#drinksStateWord');
-      const burst = document.createElement('span');
-      burst.className = 'ja-party-burst';
-      const factor = 1 + Math.max(0, (Number(canCount) || 4) - 4) * 0.24;
-      const specs = [
-        { kind:'balloon-svg', svg:balloonSvg('#a8813b','#7f6529'), w:'54px', h:'90px', tx:'-214px', ty:'-262px', rot:'-18deg', delay:'0ms' },
-        { kind:'balloon-svg', svg:balloonSvg('#5e7d4b','#405c34'), w:'54px', h:'90px', tx:'214px', ty:'-256px', rot:'18deg', delay:'25ms' },
-        { kind:'balloon-svg', svg:balloonSvg('#d8c07a','#9d8748'), w:'58px', h:'96px', tx:'0px', ty:'-310px', rot:'4deg', delay:'50ms' },
-        { kind:'svg-item', svg:beerGlassSvg('#d6a63d'), w:'68px', h:'68px', tx:'-232px', ty:'-138px', rot:'-300deg', delay:'20ms' },
-        { kind:'svg-item', svg:beerBottleSvg('#c78f2f'), w:'62px', h:'62px', tx:'-146px', ty:'-258px', rot:'-238deg', delay:'40ms' },
-        { kind:'svg-item', svg:craftBeerSvg(), w:'70px', h:'70px', tx:'-46px', ty:'-288px', rot:'-176deg', delay:'60ms' },
-        { kind:'svg-item', svg:wineBottleSvg(), w:'62px', h:'62px', tx:'48px', ty:'-288px', rot:'188deg', delay:'80ms' },
-        { kind:'svg-item', svg:champagneBottleSvg(), w:'64px', h:'64px', tx:'148px', ty:'-262px', rot:'228deg', delay:'100ms' },
-        { kind:'svg-item', svg:beerGlassSvg('#d0a13b'), w:'68px', h:'68px', tx:'236px', ty:'-126px', rot:'278deg', delay:'120ms' },
-        { kind:'svg-item', svg:pisangBottleSvg(), w:'64px', h:'64px', tx:'0px', ty:'-340px', rot:'160deg', delay:'140ms' },
-        { kind:'svg-item', svg:shirtSvg(), w:'64px', h:'64px', tx:'-124px', ty:'-206px', rot:'-80deg', delay:'150ms' },
-        { kind:'svg-item', svg:briefcaseSvg(), w:'68px', h:'68px', tx:'124px', ty:'-206px', rot:'80deg', delay:'160ms' },
-        { kind:'streamer', tx:'-246px', ty:'-60px', rot:'-160deg', bg:'#8e6c2e', delay:'10ms' },
-        { kind:'streamer', tx:'246px', ty:'-48px', rot:'168deg', bg:'#355236', delay:'20ms' }
-      ].map((spec) => ({ ...spec, tx: scalePx(spec.tx, factor), ty: scalePx(spec.ty, factor) }));
-      const extras = Math.max(0, (Number(canCount) || 4) - 4);
-      const cycle = [
-        () => beerGlassSvg('#d6a63d'), () => beerBottleSvg('#c78f2f'), () => craftBeerSvg(), () => wineBottleSvg(),
-        () => champagneBottleSvg(), () => pisangBottleSvg(), () => shirtSvg(), () => briefcaseSvg()
-      ];
-      for (let i = 0; i < extras * 4; i += 1) {
-        const swing = (i % 2 === 0 ? 1 : -1);
-        specs.push(
-          { kind:'confetti', tx: `${Math.round((156 + i * 18) * swing)}px`, ty: `${Math.round((-214 - i * 16) * factor)}px`, rot: `${180 + i * 22}deg`, bg: i % 2 === 0 ? '#d8b45a' : '#2f241c', delay: `${90 + i * 14}ms` },
-          { kind:'balloon-svg', svg:balloonSvg(i % 2 === 0 ? '#c8932e' : '#567241', i % 2 === 0 ? '#8d6a24' : '#425b36'), w:'48px', h:'82px', tx: `${Math.round((118 + i * 22) * swing)}px`, ty: `${Math.round((-266 - i * 18) * factor)}px`, rot: `${swing * (12 + i * 4)}deg`, delay: `${100 + i * 14}ms` },
-          { kind:'svg-item', svg: cycle[i % cycle.length](), w:'58px', h:'58px', tx: `${Math.round((46 + i * 19) * swing)}px`, ty: `${Math.round((-332 - i * 12) * factor)}px`, rot: `${swing * (170 + i * 11)}deg`, delay: `${120 + i * 14}ms` }
-        );
-      }
-      buildBurstPieces(specs, burst);
-      word.appendChild(burst);
-      window.setTimeout(() => { if (burst.isConnected) burst.remove(); }, 3600);
-    }
-    function renderState(data) {
-      data = mergeSnapshotNames(data, hydrateHomepagePollSnapshot());
-
-      const previousCount = Number(currentHomepageState?.can_count ?? currentHomepageState?.yes_count ?? currentHomepageState?.legends?.length ?? currentHomepageState?.yes_names?.length ?? 0);
-      currentHomepageState = data || null;
-      const legends = data.legends || data.yes_names || [];
-      const losers = data.losers || data.no_names || [];
-      const canCount = Number(data.can_count ?? data.yes_count ?? legends.length ?? 0);
-      const state = data.status_label
-        ? { key: data.status_key || 'no', label: data.status_label, copy: yesSaidCopy(canCount) }
-        : computeStateLabel(canCount);
-
-      const word = document.getElementById('stateWord');
-      word.textContent = state.label; word.className = `status-word ${state.key}`;
-
-      document.getElementById('stateWordInline').textContent = state.label;
-      document.getElementById('stateCopy').textContent = state.copy;
-
-      document.getElementById('yesCount').textContent = legends.length;
-      document.getElementById('noCount').textContent = losers.length;
-      document.getElementById('yesCountPanel').textContent = legends.length;
-      document.getElementById('noCountPanel').textContent = losers.length;
-
-      renderNames('legendsList', legends, 'Nog niemand', 'legends');
-      renderNames('losersList', losers, 'Nog niemand', 'losers');
-      persistHomepagePollSnapshot(legends, losers);
-      if (data.my_name && document.getElementById('sessionHint')) document.getElementById('sessionHint').textContent = `Ingelogd als ${data.my_name}.`;
-      const shouldCelebrate = state.key === 'yes' && canCount >= 4 && canCount > previousCount;
-      if (shouldCelebrate) {
-        lastHomepageCelebrationCount = canCount;
-        window.requestAnimationFrame(() => playJaCelebration());
-      } else if (state.key !== 'yes') {
-        lastHomepageCelebrationCount = null;
-        clearJaCelebration();
-      } else {
-        lastHomepageCelebrationCount = canCount;
-      }
-      currentHomepageState = { ...(data || {}), computed_key: state.key, status_key: state.key };
-    }
-    async function getHomepageState() {
-      const session_token = getSessionToken();
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_site_poll_state`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ poll_key_input: THURSDAY_POLL_KEY, session_token }) });
-      return await parseResponse(res);
-    }
-    async function castVote(desired_status) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cast_site_poll_vote`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ poll_key_input: THURSDAY_POLL_KEY, session_token: getSessionToken(), desired_status }) });
-      return await parseResponse(res);
-    }
-    function isThursdayHomepagePayload(data) {
-      if (!data || typeof data !== 'object') return false;
-      const pollKey = String(data.poll_key || '').trim().toLowerCase();
-      if (pollKey) return pollKey === String(THURSDAY_POLL_KEY).toLowerCase();
-      return Array.isArray(data.legends) || Array.isArray(data.losers) || Array.isArray(data.yes_names) || Array.isArray(data.no_names) || typeof data.can_count !== 'undefined' || typeof data.yes_count !== 'undefined';
-    }
-    function goToLoginWithIntent(status, pollKey = 'gejast_donderdag') {
-      const cfg = window.GEJAST_CONFIG || {};
-      const target = cfg.buildLoginUrl ? cfg.buildLoginUrl(CURRENT_SCOPE==='family' ? 'index.html?scope=family' : 'index.html', CURRENT_SCOPE) : './login.html';
-      const url = new URL(target, window.location.href);
-      url.searchParams.set('vote', status);
-      url.searchParams.set('vote_poll', pollKey);
-      window.location.href = url.toString();
-    }
-    async function handleVote(status) {
-      if (!getSessionToken()) { goToLoginWithIntent(status, 'gejast_donderdag'); return; }
-      try {
-        await castVote(status);
-        renderState(await getHomepageState());
-        setStatus(`Opgeslagen: ${status === 'ja' ? 'ik kan' : 'ik kan niet'}.`, 'ok');
-      } catch (error) {
-        const msg = error?.message || 'Onbekende fout';
-        if (/sessie|token|login|ingelogd/i.test(msg)) { clearSessionToken(); goToLoginWithIntent(status, 'gejast_donderdag'); return; }
-        if (/cycle_key/i.test(msg)) {
-          setStatus('De stemfunctie heeft nog een databasefout in de weekcyclus. Draai de v84 SQL-patch en vernieuw daarna de pagina hard.', 'warn');
-          return;
-        }
-        setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
-      }
-    }
-    async function handleExtraPollVote(status) {
-      if (!getSessionToken()) { goToLoginWithIntent(status, EXTRA_POLL_KEY); return; }
-      try {
-        await castExtraPollVote(status);
-        renderExtraPollState(await getExtraPollState());
-        setExtraPollStatus(`Opgeslagen: ${status === 'ja' ? 'ik ga drinken' : 'nee :('}.`, 'ok');
-      } catch (error) {
-        const msg = error?.message || 'Onbekende fout';
-        if (/sessie|token|login|ingelogd/i.test(msg)) { clearSessionToken(); goToLoginWithIntent(status, EXTRA_POLL_KEY); return; }
-        setExtraPollStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
-      }
-    }
-
-    function applyDrinksHomePayload(data){
-      const payload = data?.get_drinks_homepage_public || data || {};
-      const grid = document.getElementById('drinksHomeGrid');
-      if(!grid) return;
-      const totals = payload.totals || {};
-      grid.innerHTML = `
-        <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">${Number(totals.today_events||0)}</div></a>
-        <a class="drinks-mini" style="background:#fff;color:#111;border:1px solid rgba(0,0,0,.12)" href="./drinks_pending.html"><div class="drinks-mini-label">Verifiëren</div><div class="drinks-mini-value" style="color:var(--gold)">+</div></a>
-        <a class="drinks-mini gold" href="./drinks_speed.html"><div class="drinks-mini-label">Snelheids poging</div><div class="drinks-mini-value">+</div></a>
-        <a class="drinks-mini dark" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div></a>`;
-    }
-
-    async function loadDrinksHome(){
-      try{
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
-        const data = await parseResponse(res);
-        applyDrinksHomePayload(data);
-        return data;
-      } catch(_){ return null; }
-    }
-
-    const __gejastDrinksTop5State={dayTitle:'Vandaag',sessionRows:[],allTimeRows:[],speedGroups:[{key:'bak',label:'1 Bak',rows:[]},{key:'2bak',label:'2 Bakken',rows:[]},{key:'ice',label:'Ice',rows:[]},{key:'liter',label:'Liter Bier',rows:[]},{key:'wijn',label:'Fles Wijn',rows:[]}],biggestPlayer:null,speedIdx:0,rotationTimer:null};
-    function renderDrinksHomeTop5(){
-      const root=document.getElementById('drinksTop5Grid');
-      if(!root) return;
-      const state=__gejastDrinksTop5State;
-      const speedGroups=Array.isArray(state.speedGroups)&&state.speedGroups.length?state.speedGroups:[{key:'bak',label:'1 Bak',rows:[]}];
-      const currentSpeedGroup=speedGroups[state.speedIdx % speedGroups.length] || {key:'bak',label:'1 Bak',rows:[]};
-      const unitValue=(row)=>{ const n=Number(row?.total_units ?? row?.units ?? row?.unit_total ?? row?.value ?? 0); return Number.isFinite(n) ? n : 0; };
-      const secondValue=(row)=>{ const n=Number(row?.duration_seconds ?? row?.seconds ?? row?.duration ?? row?.value ?? 0); return Number.isFinite(n) ? n : 0; };
-      const biggestPlayer = state.biggestPlayer || (Array.isArray(state.allTimeRows) && state.allTimeRows[0]) || null;
-      const groups=[
-        { label: state.dayTitle || 'Vandaag', key:'./drinks.html', mode:'units', rows:Array.isArray(state.sessionRows)?state.sessionRows:[] },
-        { label: 'All-time', key:'./drinks.html', mode:'units', rows:Array.isArray(state.allTimeRows)?state.allTimeRows:[] },
-        { label: currentSpeedGroup.label || '1 Bak', key:'./drinks.html', mode:'seconds', rows:Array.isArray(currentSpeedGroup.rows)?currentSpeedGroup.rows:[] },
-        { label: 'Grootste Speler', key: biggestPlayer ? playerHref(String(biggestPlayer.player_name || biggestPlayer.display_name || biggestPlayer.chosen_username || biggestPlayer.nickname || ''), '') : './drinks.html', mode:'biggest', row: biggestPlayer }
-      ];
-      const speedTitle=document.getElementById('drinksSpeedTop5Title');
-      if(speedTitle) speedTitle.textContent=currentSpeedGroup.label || '1 Bak';
-      root.innerHTML = groups.map((group) => {
-        if (group.mode === 'biggest') {
-          const row = group.row || null;
-          const body = row ? `<div class="biggest-player-card">${avatarMarkup(row)}<div class="biggest-player-name">${displayPlayerName(row)}</div><div class="biggest-player-meta">${unitValue(row).toFixed(1)} units all-time</div></div>` : '<div class="ladder-empty">Nog geen data.</div>';
-          return `<article class="ladder-card" role="link" tabindex="0" data-route="${group.key}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:var(--gold);text-decoration:none">All-time</span></div>${body}</article>`;
-        }
-        const rows = Array.isArray(group.rows) ? group.rows : [];
-        const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><a class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800" href="${playerHref(String(row.player_name || row.display_name || row.chosen_username || row.nickname || ''), '')}" onclick="event.stopPropagation()">${displayPlayerName(row)}</a><div class="ladder-elo" style="color:var(--gold);font-weight:900">${group.mode==='seconds' ? `${secondValue(row).toFixed(1)}s` : `${unitValue(row).toFixed(1)}`}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen data.</div>';
-        return `<article class="ladder-card" role="link" tabindex="0" data-route="${group.key}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:var(--gold);text-decoration:none">${group.mode==='seconds' ? 'Seconden' : 'Units'}</span></div>${body}</article>`;
-      }).join('');
-      root.querySelectorAll('.ladder-card[data-route]').forEach((card)=>{ const route = card.getAttribute('data-route'); card.addEventListener('click', ()=>{ window.location.href = route; }); card.addEventListener('keydown', (ev)=>{ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); window.location.href = route; } }); });
-    }
-    function startDrinksHomeTop5Rotation(){
-      if(__gejastDrinksTop5State.rotationTimer) return;
-      __gejastDrinksTop5State.rotationTimer = window.setInterval(()=>{
-        const groups=Array.isArray(__gejastDrinksTop5State.speedGroups)&&__gejastDrinksTop5State.speedGroups.length?__gejastDrinksTop5State.speedGroups:[{key:'bak',label:'1 Bak',rows:[]}];
-        __gejastDrinksTop5State.speedIdx = (__gejastDrinksTop5State.speedIdx + 1) % groups.length;
-        renderDrinksHomeTop5();
-      }, 7000);
-    }
-    function applyDrinksTop5Payload(data){
-      const payload = data?.get_drinks_homepage_top5_public || data || {};
-      const dayNames = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
-      __gejastDrinksTop5State.dayTitle = `${dayNames[new Date().getDay()]||'Vandaag'}`;
-      const unitValue = (row) => { const n = Number(row?.total_units ?? row?.units ?? row?.unit_total ?? row?.value ?? 0); return Number.isFinite(n) ? n : 0; };
-      const secondValue = (row) => { const n = Number(row?.duration_seconds ?? row?.seconds ?? row?.duration ?? row?.value ?? 0); return Number.isFinite(n) ? n : 0; };
-      const normaliseUnitRows = (rows) => (Array.isArray(rows) ? rows : []).filter((r)=>unitValue(r) > 0).slice(0,5).map((row)=>({ ...row, total_units: unitValue(row) }));
-      const normaliseSpeedRows = (rows) => (Array.isArray(rows) ? rows : []).filter((r)=>secondValue(r) > 0).slice(0,5).map((row)=>({ ...row, duration_seconds: secondValue(row) }));
-      __gejastDrinksTop5State.sessionRows = normaliseUnitRows(payload.session_top5 || []);
-      __gejastDrinksTop5State.allTimeRows = normaliseUnitRows(payload.all_time_top5 || []);
-      __gejastDrinksTop5State.biggestPlayer = __gejastDrinksTop5State.allTimeRows[0] || null;
-      const defaults=[
-        {key:'bak',label:'1 Bak',rows:[]},
-        {key:'2bak',label:'2 Bakken',rows:[]},
-        {key:'ice',label:'Ice',rows:[]},
-        {key:'liter',label:'Liter Bier',rows:[]},
-        {key:'wijn',label:'Fles Wijn',rows:[]}
-      ];
-      const byKey=new Map(defaults.map((g)=>[g.key,g]));
-      const rawSpeedGroups = Array.isArray(payload.speed_top5_by_type) ? payload.speed_top5_by_type : [];
-      rawSpeedGroups.forEach((g)=>{
-        const rawKey=String(g?.key || g?.speed_type_key || '').toLowerCase();
-        if(rawKey==='shot') return;
-        const key = rawKey || 'bak';
-        const normalized = { key, label:g.label || g.speed_type_label || byKey.get(key)?.label || '1 Bak', rows:normaliseSpeedRows(Array.isArray(g.rows)?g.rows:[]) };
-        byKey.set(key, normalized);
-      });
-      __gejastDrinksTop5State.speedGroups = Array.from(byKey.values());
-      if(__gejastDrinksTop5State.speedIdx >= __gejastDrinksTop5State.speedGroups.length) __gejastDrinksTop5State.speedIdx = 0;
-      renderDrinksHomeTop5();
-      startDrinksHomeTop5Rotation();
-    }
-
-    async function loadDrinksHomeTop5(){
-      try{
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_drinks_homepage_top5_public`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: '{}' });
-        const data = await parseResponse(res);
-        applyDrinksTop5Payload(data);
-        return data;
-      } catch(err){
-        console.warn('Drinks homepage top 5 load failed', err);
-        renderDrinksHomeTop5();
-        startDrinksHomeTop5Rotation();
-        return null;
-      }
-    }
-
-    function getPlayerSessionToken(){ return (window.GEJAST_SCOPE_CONTEXT&&window.GEJAST_SCOPE_CONTEXT.getPlayerSessionToken)?window.GEJAST_SCOPE_CONTEXT.getPlayerSessionToken():((window.GEJAST_CONFIG&&window.GEJAST_CONFIG.getPlayerSessionToken&&window.GEJAST_CONFIG.getPlayerSessionToken())||''); }
-    function wireProtectedDrinksLinks(){ document.querySelectorAll('a[href="./drinks_add.html"]').forEach((link)=>{ if(link.dataset.bound==='1') return; link.dataset.bound='1'; link.addEventListener('click',(ev)=>{ if(getPlayerSessionToken()) return; ev.preventDefault(); const cfg = window.GEJAST_CONFIG || {}; window.location.href = cfg.buildHomeUrl ? cfg.buildHomeUrl('drinks_add.html', CURRENT_SCOPE) : './home.html?return_to=drinks_add.html'; }); }); }
-
-    const homeEntryDefaults = {
-      klaverjas:{ entryId:'homeKlaverjasEntry', labelId:'homeKlaverjasLabel', copyId:'homeKlaverjasCopy', href:'./scorer.html', label:'Klaverjas', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' },
-      boerenbridge:{ entryId:'homeBoerenbridgeEntry', labelId:'homeBoerenbridgeLabel', copyId:'homeBoerenbridgeCopy', href:'./boerenbridge.html', label:'Boerenbridge', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' }
-    };
-    function setHomeEntryDefault(key){
-      const cfg = homeEntryDefaults[key];
-      if(!cfg) return;
-      const entry=document.getElementById(cfg.entryId), label=document.getElementById(cfg.labelId), copy=document.getElementById(cfg.copyId);
-      if(!entry || !label || !copy) return;
-      entry.classList.remove('is-live');
-      entry.href = cfg.href;
-      label.textContent = cfg.label;
-      copy.className = cfg.copyClass;
-      copy.innerHTML = cfg.copyHtml;
-    }
-    function setHomeEntryLive(key, item){
-      const cfg = homeEntryDefaults[key];
-      if(!cfg) return;
-      const entry=document.getElementById(cfg.entryId), label=document.getElementById(cfg.labelId), copy=document.getElementById(cfg.copyId);
-      if(!entry || !label || !copy || !item || !item.href) { setHomeEntryDefault(key); return; }
-      entry.classList.add('is-live');
-      entry.href = item.href;
-      label.textContent = item.label || (key === 'klaverjas' ? 'KLAVERJAS LIVE' : 'BOERENBRIDGE LIVE');
-      copy.className = 'page-link-copy';
-      copy.textContent = item.copy || 'Open live scoreblad van jouw huidige potje.';
-    }
-    function applyHomepageLiveEntries(entries){
-      Object.keys(homeEntryDefaults).forEach(setHomeEntryDefault);
-      const source = entries || {};
-      setHomeEntryLive('klaverjas', source.klaverjas || null);
-      setHomeEntryLive('boerenbridge', source.boerenbridge || null);
-    }
-
-    async function loadHomepageLiveEntries(){
-      try {
-        applyHomepageLiveEntries({});
-        const live = window.GEJAST_LIVE_SUMMARY;
-        const entries = live && typeof live.loadHomepageState === 'function'
-          ? await live.loadHomepageState(getPlayerSessionToken(), CURRENT_SCOPE)
-          : {};
-        applyHomepageLiveEntries(entries);
-        return entries;
-      } catch(_) {
-        applyHomepageLiveEntries({});
-        return null;
-      }
-    }
-    function applyHomepageBootBundle(bundle, fromCache = false){
-      if (!bundle || typeof bundle !== 'object') return;
-      if (bundle.homepage_state && isThursdayHomepagePayload(bundle.homepage_state)) {
-        renderState(bundle.homepage_state);
-        setStatus('');
-      }
-      if (bundle.extra_poll_state) {
-        const pollKey = String(bundle.extra_poll_state.poll_key || '').trim().toLowerCase();
-        const expectedPollKey = String(EXTRA_POLL_KEY || '').trim().toLowerCase();
-        if (!pollKey || !expectedPollKey || pollKey === expectedPollKey) {
-          renderExtraPollState(bundle.extra_poll_state || {});
-          setExtraPollStatus('');
-        }
-      }
-      if (bundle.ladders) {
-        renderHomepageLadders(bundle.ladders);
-        setHomepageLiveState('live', 'Live');
-      }
-      if (bundle.drinks_home) applyDrinksHomePayload(bundle.drinks_home);
-      if (bundle.drinks_top5) applyDrinksTop5Payload(bundle.drinks_top5);
-      if (bundle.live_entries) applyHomepageLiveEntries(bundle.live_entries);
-      if (fromCache) document.body.classList.remove('boot-pending');
-    }
-
-    function isMobileHomepage(){
-      try { return !!(window.matchMedia && window.matchMedia('(max-width: 760px)').matches); } catch (_) { return false; }
-    }
-
-    async function bootHomepage(){
-      document.body.classList.add('boot-pending');
-      const savedHomepagePoll = hydrateHomepagePollSnapshot();
-      const savedExtraPoll = hydrateExtraPollSnapshot();
-      if (savedHomepagePoll) renderState(savedHomepagePoll);
-      const cached = readHomepageBootCache();
-      if (cached) applyHomepageBootBundle(cached, true);
-      ensureAdminViewer().then(applyAdminViewerRefresh).catch(() => {});
-      const core = await load();
-      document.body.classList.remove('boot-pending');
-      const finishNonCritical = async () => {
+      async function bootHomepage(){
+        const cached = sessionStorage.getItem(HOMEPAGE_BOOT_CACHE_KEY);
+        if (cached) { try { applyHomepageBootBundle(JSON.parse(cached)); } catch(_){} }
+        const snapA = hydrateSnapshot(HOMEPAGE_POLL_STORAGE_KEY); if (snapA) renderState(snapA);
+        const snapB = hydrateSnapshot(EXTRA_POLL_STORAGE_KEY); if (snapB) renderExtraPollState(snapB);
         try {
           const readers = window.GEJAST_COMBINED_READERS;
-          if (readers && typeof readers.loadHomepageBootBundle === 'function' && !isMobileHomepage()) {
+          if (readers && typeof readers.loadHomepageBootBundle === 'function') {
             const bundle = await readers.loadHomepageBootBundle();
-            applyHomepageBootBundle(bundle || {}, false);
-            writeHomepageBootCache(bundle || {});
+            applyHomepageBootBundle(bundle || {});
+            try { sessionStorage.setItem(HOMEPAGE_BOOT_CACHE_KEY, JSON.stringify(bundle || {})); } catch(_) {}
             return;
           }
-          const [ladders, drinksHome, drinksTop5, liveEntries] = await Promise.all([
-            loadHomepageLadders().catch(()=>null),
-            loadDrinksHome().catch(()=>null),
-            loadDrinksHomeTop5().catch(()=>null),
-            loadHomepageLiveEntries().catch(()=>null)
+        } catch(_) {}
+        try {
+          const [homeState, extraState, ladders] = await Promise.all([
+            getHomepageState(),
+            getExtraPollState(),
+            callRpc('get_homepage_ladders_public_scoped', { site_scope_input: CURRENT_SCOPE }).catch(()=>callRpc('get_homepage_ladders_public', {}))
           ]);
-          writeHomepageBootCache({
-            homepage_state: core?.homeState || currentHomepageState || {},
-            extra_poll_state: core?.extraState || currentDrinksPollState || {},
-            ladders: ladders || null,
-            drinks_home: drinksHome || null,
-            drinks_top5: drinksTop5 || null,
-            live_entries: liveEntries || null
-          });
-        } catch (_) {}
-      };
-      if (window.requestAnimationFrame) {
-        window.requestAnimationFrame(() => setTimeout(finishNonCritical, 0));
-      } else {
-        setTimeout(finishNonCritical, 0);
+          applyHomepageBootBundle({ homepage_state: homeState, extra_poll_state: extraState, ladders });
+          try { sessionStorage.setItem(HOMEPAGE_BOOT_CACHE_KEY, JSON.stringify({ homepage_state: homeState, extra_poll_state: extraState, ladders })); } catch(_) {}
+        } catch(_) { setLivePill('standby','Stand-by'); }
       }
-    }
 
-    async function load() {
-      try {
-        const [homeState, extraState] = await Promise.all([getHomepageState(), getExtraPollState()]);
-        renderState(homeState);
-        renderExtraPollState(extraState);
-        setStatus('');
-        setExtraPollStatus('');
-        return { homeState, extraState };
-      }
-      catch (error) {
-        const msg = error?.message || 'Onbekende fout';
-        if (/cycle_key/i.test(msg)) {
-          setStatus('De stemfunctie heeft nog een databasefout in de weekcyclus. Draai de v84 SQL-patch en vernieuw daarna de pagina hard.', 'warn');
-          return null;
-        }
-        setStatus(msg === 'Failed to fetch' ? 'Netwerkfout bij contact met Supabase.' : msg, 'warn');
-        return null;
-      }
-    }
-    document.getElementById('drinksYesBtn').addEventListener('click', () => handleExtraPollVote('ja'));
-    document.getElementById('drinksNoBtn').addEventListener('click', () => handleExtraPollVote('nee'));
-    document.getElementById('yesBtn').addEventListener('click', () => handleVote('ja'));
-    document.getElementById('noBtn').addEventListener('click', () => handleVote('nee'));
-    applyScopeChrome();
-    wireProtectedDrinksLinks();
-    bootHomepage();
-    setInterval(loadDrinksHomeTop5, 15000);
+      document.getElementById('yesBtn').addEventListener('click', ()=>handleVote(THURSDAY_POLL_KEY, 'ja'));
+      document.getElementById('noBtn').addEventListener('click', ()=>handleVote(THURSDAY_POLL_KEY, 'nee'));
+      document.getElementById('drinksYesBtn').addEventListener('click', ()=>handleVote(EXTRA_POLL_KEY, 'ja'));
+      document.getElementById('drinksNoBtn').addEventListener('click', ()=>handleVote(EXTRA_POLL_KEY, 'nee'));
+
+      bootHomepage();
+      setInterval(()=>bootHomepage(), 15000);
+    })();
   </script>
-
-  <div class="site-credit-watermark" data-version-watermark></div>
-
-<script src="./gejast-player-session-ui.js?v487"></script>
-
-
-<script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script><script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v389"></script><script src="./gejast-geo.js?v487"></script><script src="./site-analytics.js?v389"></script>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>

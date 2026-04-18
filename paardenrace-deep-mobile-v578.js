@@ -1,13 +1,51 @@
 (function(){
   const path = String(location.pathname || '').toLowerCase().split('/').pop();
   if (!/^paardenrace(?:_live|_stats)?\.html$/.test(path)) return;
-  window.GEJAST_PAGE_VERSION = 'v579';
+  window.GEJAST_PAGE_VERSION = 'v580';
   window.GEJAST_HIDE_WATERMARK = true;
   function onReady(fn){ if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once:true }); else fn(); }
-  function injectSharedCss(){ if (document.getElementById('prV579MobileCss')) return; const style = document.createElement('style'); style.id = 'prV579MobileCss'; style.textContent = `@media (max-width:820px){body[data-pr-mobile-trim='1'] .top .small,body[data-pr-mobile-trim='1'] #metaBox,body[data-pr-mobile-trim='1'] .status-row .small{display:none!important}body[data-pr-mobile-trim='1'] .hero-card .hero-meta{display:none!important}body[data-pr-mobile-trim='1'] .hero-grid{grid-template-columns:1fr!important;gap:10px!important}body[data-pr-mobile-trim='1'] .hero-card{padding:10px 12px!important}body[data-pr-mobile-trim='1'] .focus-card{padding:12px!important}body[data-pr-mobile-trim='1'] .focus-title{font-size:1.15rem!important;line-height:1.15!important}body[data-pr-mobile-trim='1'] .focus-sub{font-size:13px!important}body[data-pr-mobile-trim='1'] .page{padding-bottom:120px!important}body[data-pr-mobile-trim='1'] .top{margin-bottom:6px!important}body[data-pr-mobile-trim='1'] .top .title{display:none!important}}#prLatestCardMini{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-radius:16px;background:#fff;border:1px solid rgba(0,0,0,.08)}#prLatestCardMini .pr-latest-card{font-weight:900;font-size:16px}#prLatestCardMini .pr-latest-meta{font-size:12px;color:#6d6256}#prLatestCardMini .pr-latest-effect{display:inline-flex;align-items:center;justify-content:center;min-width:42px;height:28px;padding:0 10px;border-radius:999px;font-weight:900;font-size:12px}#prLatestCardMini .pr-latest-effect.plus{background:#edf8f0;color:#2f6d3c}#prLatestCardMini .pr-latest-effect.minus{background:#fff4f2;color:#8a1022}#prLatestCardMini .pr-latest-effect.neutral{background:#f7f1e7;color:#5e4d1d}`; document.head.appendChild(style); }
-  function parseLatestCard(){ const phaseBox = document.getElementById('phaseBox'); const text = String(phaseBox?.textContent || ''); const match = text.match(/Laatste trek:\s*([^\n]+)/i); const card = match ? match[1].trim() : '—'; let effect = 'neutral'; let meta = 'Nog geen laatste kaart zichtbaar.'; const lower = text.toLowerCase(); if (/terug|minus|achteruit|duwt/i.test(lower)) { effect = 'minus'; meta = 'Deze kaart duwde een paard terug.'; } else if (/vooruit|plus|naar voren|wint/i.test(lower)) { effect = 'plus'; meta = 'Deze kaart zette een paard vooruit.'; } else if (card && card !== '—') { meta = 'Laatste kaart uit de trekstapel.'; } return { card, effect, meta }; }
-  function mountLatestCardMini(){ if (path !== 'paardenrace_live.html') return; const focusCard = document.querySelector('.focus-card'); if (!focusCard || document.getElementById('prLatestCardMini')) return; const box = document.createElement('div'); box.id = 'prLatestCardMini'; box.innerHTML = '<div class="pr-latest-card">—</div><div class="pr-latest-meta">Nog geen laatste kaart zichtbaar.</div><div class="pr-latest-effect neutral">kaart</div>'; const actions = focusCard.querySelector('.focus-actions'); if (actions) actions.insertAdjacentElement('beforebegin', box); else focusCard.appendChild(box); }
-  function refreshLatestCardMini(){ const box = document.getElementById('prLatestCardMini'); if (!box) return; const info = parseLatestCard(); const effectLabel = info.effect === 'plus' ? '+' : (info.effect === 'minus' ? '−' : 'kaart'); box.querySelector('.pr-latest-card').textContent = info.card || '—'; box.querySelector('.pr-latest-meta').textContent = info.meta; const effect = box.querySelector('.pr-latest-effect'); effect.className = `pr-latest-effect ${info.effect}`; effect.textContent = effectLabel; }
+  function injectSharedCss(){
+    if (document.getElementById('prV580MobileCss')) return;
+    const style = document.createElement('style');
+    style.id = 'prV580MobileCss';
+    style.textContent = `@media (max-width:820px){body[data-pr-mobile-trim='1'] .top .small,body[data-pr-mobile-trim='1'] #metaBox,body[data-pr-mobile-trim='1'] .status-row .small{display:none!important}body[data-pr-mobile-trim='1'] .hero-card .hero-meta{display:none!important}body[data-pr-mobile-trim='1'] .hero-grid{grid-template-columns:1fr!important;gap:10px!important}body[data-pr-mobile-trim='1'] .hero-card{padding:10px 12px!important}body[data-pr-mobile-trim='1'] .focus-card{padding:12px!important}body[data-pr-mobile-trim='1'] .focus-title{font-size:1.15rem!important;line-height:1.15!important}body[data-pr-mobile-trim='1'] .focus-sub{font-size:13px!important}body[data-pr-mobile-trim='1'] .page{padding-bottom:120px!important}body[data-pr-mobile-trim='1'] .top{margin-bottom:6px!important}body[data-pr-mobile-trim='1'] .top .title{display:none!important}}#prLatestCardMini{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-radius:16px;background:#fff;border:1px solid rgba(0,0,0,.08)}#prLatestCardMini .pr-latest-card{font-weight:900;font-size:16px}#prLatestCardMini .pr-latest-meta{font-size:12px;color:#6d6256}#prLatestCardMini .pr-latest-effect{display:inline-flex;align-items:center;justify-content:center;min-width:42px;height:28px;padding:0 10px;border-radius:999px;font-weight:900;font-size:12px}#prLatestCardMini .pr-latest-effect.plus{background:#edf8f0;color:#2f6d3c}#prLatestCardMini .pr-latest-effect.minus{background:#fff4f2;color:#8a1022}#prLatestCardMini .pr-latest-effect.neutral{background:#f7f1e7;color:#5e4d1d}`;
+    document.head.appendChild(style);
+  }
+  function parseLatestCard(){
+    const phaseBox = document.getElementById('phaseBox');
+    const text = String(phaseBox?.textContent || '');
+    const match = text.match(/Laatste trek:\s*([^\n]+)/i);
+    const card = match ? match[1].trim() : '—';
+    let effect = 'neutral';
+    let meta = 'Nog geen laatste kaart zichtbaar.';
+    const lower = text.toLowerCase();
+    if (/terug|minus|achteruit|duwt/i.test(lower)) { effect = 'minus'; meta = 'Deze kaart duwde een paard terug.'; }
+    else if (/vooruit|plus|naar voren|wint/i.test(lower)) { effect = 'plus'; meta = 'Deze kaart zette een paard vooruit.'; }
+    else if (card && card !== '—') { meta = 'Laatste kaart uit de trekstapel.'; }
+    return { card, effect, meta };
+  }
+  function mountLatestCardMini(){
+    if (path !== 'paardenrace_live.html') return;
+    const focusCard = document.querySelector('.focus-card');
+    if (!focusCard || document.getElementById('prLatestCardMini')) return;
+    const box = document.createElement('div');
+    box.id = 'prLatestCardMini';
+    box.innerHTML = '<div class="pr-latest-card">—</div><div class="pr-latest-meta">Nog geen laatste kaart zichtbaar.</div><div class="pr-latest-effect neutral">kaart</div>';
+    const actions = focusCard.querySelector('.focus-actions');
+    if (actions) actions.insertAdjacentElement('beforebegin', box);
+    else focusCard.appendChild(box);
+  }
+  function refreshLatestCardMini(){
+    const box = document.getElementById('prLatestCardMini');
+    if (!box) return;
+    const info = parseLatestCard();
+    const effectLabel = info.effect === 'plus' ? '+' : (info.effect === 'minus' ? '−' : 'kaart');
+    box.querySelector('.pr-latest-card').textContent = info.card || '—';
+    box.querySelector('.pr-latest-meta').textContent = info.meta;
+    const effect = box.querySelector('.pr-latest-effect');
+    effect.className = `pr-latest-effect ${info.effect}`;
+    effect.textContent = effectLabel;
+  }
   function trimTopChrome(){ if (window.matchMedia && window.matchMedia('(max-width:820px)').matches) document.body.setAttribute('data-pr-mobile-trim', '1'); else document.body.removeAttribute('data-pr-mobile-trim'); }
   onReady(()=>{ injectSharedCss(); trimTopChrome(); mountLatestCardMini(); refreshLatestCardMini(); const observer = new MutationObserver(()=>{ trimTopChrome(); refreshLatestCardMini(); }); observer.observe(document.body, { childList:true, subtree:true, characterData:true }); window.addEventListener('resize', trimTopChrome); });
 })();
