@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v574',
+    VERSION:'v575',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -83,19 +83,17 @@
     document.querySelectorAll('body *').forEach((node)=>{ if (node.children.length) return; const txt=(node.textContent||'').trim(); if (re.test(txt)) { node.textContent = label; watermarkStyles(node); } });
   }
 
-
   function normalizeProfileImageUrl(value){
     const raw = String(value || '').trim();
     if (!raw) return '';
     if (/^(https?:|data:|blob:)/i.test(raw)) return raw;
     if (raw.startsWith('/')) return raw;
     const base = String(CONFIG.SUPABASE_URL || '').trim();
-    if (/^storage\/v1\/object\/public\//i.test(raw) && base) return `${base}/${raw.replace(/^\/+/, '')}`;
-    if (/^(public\/)?avatars?\//i.test(raw) && base) return `${base}/storage/v1/object/public/${raw.replace(/^(public\/)?/, '').replace(/^\/+/, '')}`;
-    if (base && /^[A-Za-z0-9._-]+\/.+/.test(raw)) return `${base}/storage/v1/object/public/${raw.replace(/^\/+/, '')}`;
+    if (/^storage\/v1\/object\/public\//i.test(raw) && base) return `${base}/${raw.replace(/^\//, '')}`;
+    if (/^(public\/)?avatars?\//i.test(raw) && base) return `${base}/storage/v1/object/public/${raw.replace(/^(public\/)?/, '').replace(/^\//, '')}`;
+    if (base && /^[A-Za-z0-9._-]+\/.+/.test(raw)) return `${base}/storage/v1/object/public/${raw.replace(/^\//, '')}`;
     return raw;
   }
-
 
   function normalizePersonName(value){
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -186,7 +184,7 @@
     if (!value) return String(fallback || '').trim();
     if (/^(?:[a-z]+:)?\/\//i.test(value)) return String(fallback || '').trim();
     if (value.includes('..') || value.includes('\\')) return String(fallback || '').trim();
-    const normalized = value.replace(/^\.\//,'').replace(/^\/+/, '');
+    const normalized = value.replace(/^\.\//,'').replace(/^\//, '');
     return normalized || String(fallback || '').trim();
   }
   function currentReturnTarget(fallback='index.html'){
@@ -216,28 +214,28 @@
     return url.toString();
   }
 
-function setPlayerSessionToken(token, storage){
-  const value = String(token || '').trim();
-  if (!value) return '';
-  const primaryKey = CONFIG.PLAYER_SESSION_KEYS[0] || 'jas_session_token_v11';
-  const target = storage === 'session' ? sessionStorage : localStorage;
-  target.setItem(primaryKey, value);
-  const other = target === localStorage ? sessionStorage : localStorage;
-  other.removeItem(primaryKey);
-  touchPlayerActivity();
-  return value;
-}
-function normalizeScope(input){
-  return String(input || '').trim().toLowerCase() === 'family' ? 'family' : 'friends';
-}
-function buildRequestUrl(returnTo, scope){
-  const normalizedScope = normalizeScope(scope || inferRuntimeScope());
-  const url = new URL('./request.html', window.location.href);
-  const safeTarget = sanitizeReturnTarget(returnTo || '', normalizedScope === 'family' ? 'index.html?scope=family' : 'index.html');
-  if (safeTarget) url.searchParams.set('return_to', safeTarget);
-  if (normalizedScope === 'family') url.searchParams.set('scope', 'family');
-  return `${url.pathname}${url.search}${url.hash}`;
-}
+  function setPlayerSessionToken(token, storage){
+    const value = String(token || '').trim();
+    if (!value) return '';
+    const primaryKey = CONFIG.PLAYER_SESSION_KEYS[0] || 'jas_session_token_v11';
+    const target = storage === 'session' ? sessionStorage : localStorage;
+    target.setItem(primaryKey, value);
+    const other = target === localStorage ? sessionStorage : localStorage;
+    other.removeItem(primaryKey);
+    touchPlayerActivity();
+    return value;
+  }
+  function normalizeScope(input){
+    return String(input || '').trim().toLowerCase() === 'family' ? 'family' : 'friends';
+  }
+  function buildRequestUrl(returnTo, scope){
+    const normalizedScope = normalizeScope(scope || inferRuntimeScope());
+    const url = new URL('./request.html', window.location.href);
+    const safeTarget = sanitizeReturnTarget(returnTo || '', normalizedScope === 'family' ? 'index.html?scope=family' : 'index.html');
+    if (safeTarget) url.searchParams.set('return_to', safeTarget);
+    if (normalizedScope === 'family') url.searchParams.set('scope', 'family');
+    return `${url.pathname}${url.search}${url.hash}`;
+  }
 
   function buildAdminUrl(reason='', returnTo=''){
     const url = new URL('./admin.html', window.location.href);

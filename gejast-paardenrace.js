@@ -40,6 +40,7 @@
     discardTopPct: 16.2,
     discardWidthPct: 5.7
   };
+
   function scope(){
     try {
       if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.getScope === 'function'){
@@ -75,7 +76,8 @@
       body: JSON.stringify(body)
     });
     const text = await res.text();
-    const data = text ? (()=>{ try { return JSON.parse(text); } catch { return text; } })() : null;
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch(_) { data = text; }
     if(!res.ok){
       const msg = data && typeof data === 'object' ? (data.message || data.error || data.hint || JSON.stringify(data)) : (text || 'Onbekende fout');
       throw new Error(msg);
@@ -88,6 +90,8 @@
   function suitLabel(s){ return (SUIT_META[String(s||'').toLowerCase()] || {}).label || '—'; }
   function suitSymbol(s){ return (SUIT_META[String(s||'').toLowerCase()] || {}).symbol || '•'; }
   function suitColor(s){ return (SUIT_META[String(s||'').toLowerCase()] || {}).color || '#333'; }
+  function horseAsset(suit){ return ASSETS.horses[suit] || ASSETS.horses.hearts; }
+
   function liveHref(room){
     const code = encodeURIComponent(String(room||'').trim().toUpperCase());
     const url = new URL('./paardenrace_live.html', window.location.href);
@@ -97,6 +101,7 @@
     return `${url.pathname.split('/').pop()}${url.search}`;
   }
   function gotoLive(room, options={}){ const href = liveHref(room); if(options.replace) window.location.replace(href); else window.location.href = href; }
+
   function parseCard(cardCode=''){
     const raw = String(cardCode || '').trim().toUpperCase();
     const match = raw.match(/^(10|[2-9JQKA])([HDCS])$/);
@@ -121,7 +126,6 @@
   function renderCardBack(extraClass=''){
     return `<img src="${ASSETS.cardBack}" alt="Kaart achterkant" class="pr-card-back${extraClass ? ` ${extraClass}` : ''}">`;
   }
-  function horseAsset(suit){ return ASSETS.horses[suit] || ASSETS.horses.hearts; }
   function aceHorseCard(suit){
     const src = horseAsset(suit);
     return `<img src="${src}" alt="${suitLabel(suit)} aas" class="pr-ace-card" draggable="false">`;
@@ -137,6 +141,7 @@
     if (progress >= 11) return 11;
     return progress;
   }
+
   function renderLiveBoard(match){
     if(!match || !match.horse_positions){
       return '<div class="pr-live-placeholder">Wachten op countdown of race-start.</div>';
@@ -186,9 +191,69 @@
       </div>
     `;
   }
+
+  function renderRaceMinimap(match){
+    if (!match || !match.horse_positions) return '<div class="pr-minimap-empty">Wachten op racebord…</div>';
+    const positions = match.horse_positions || {};
+    const rows = SUITS.map((suit)=>{
+      const progress = Math.max(0, Math.min(11, Number(positions[suit] || 0)));
+      const cells = Array.from({ length: 12 }, (_, col)=>{
+        const classes = ['pr-minimap-cell'];
+        if (col === 0) classes.push('is-start');
+        if (col === 11) classes.push('is-finish');
+        const horse = progress === col ? `<span class="pr-minimap-horse" style="color:${suitColor(suit)}">${suitSymbol(suit)}</span>` : '';
+        return `<span class="${classes.join(' ')}">${horse}</span>`;
+      }).join('');
+      return `<div class="pr-minimap-row" data-suit="${suit}">
+        <div class="pr-minimap-label">${suitSymbol(suit)}</div>
+        <div class="pr-minimap-track">${cells}</div>
+      </div>`;
+    }).join('');
+    return `<div class="pr-minimap">${rows}</div>`;
+  }
+
+  function summarizeLiveRoom(room, match, players, viewer){
+    const verified = (Array.isArray(players) ? players : []).filter((p)=>p && p.wager_verified).length;
+    const ready = (Array.isArray(players) ? players : []).filter((p)=>p && p.is_ready).length;
+    const totalPot = (Array.isArray(players) ? players : []).reduce((sum, p)=>sum + Number(p?.wager_bakken || 0), 0);
+    const pendingGate = Math.max(0, 10 - (Array.isArray(match?.resolved_gates) ? match.resolved_gates.length : 0));
+    const winnerSuit = String(match?.winner_suit || '').trim().toLowerCase();
+    const drawCard = String(match?.last_draw_card || '').trim().toUpperCase();
+    const deckLeft = getDrawRemaining(match);
+    const stage = String(room?.stage || 'lobby');
+    const headline = winnerSuit
+      ? `${suitLabel(winnerSuit)} heeft gewonnen`
+      : stage === 'countdown'
+        ? `Countdown ${Number(room?.countdown_remaining_seconds || 0)}s`
+        : stage === 'nominations'
+          ? 'Verdeel nu de Bakken'
+          : stage === 'finished'
+            ? 'Race afgerond'
+            : drawCard
+              ? `Laatste kaart: ${drawCard}`
+              : 'Klaar voor de volgende kaart';
+    const subline = winnerSuit
+      ? `Totale pot ${totalPot} Bakken · draw deck ${deckLeft} kaarten over`
+      : `${verified}/${(players || []).length || 0} verified · ${ready}/${(players || []).length || 0} ready · ${pendingGate} gates nog dicht`;
+    return {
+      headline,
+      subline,
+      totalPot,
+      verified,
+      ready,
+      pendingGate,
+      winnerSuit,
+      deckLeft,
+      drawCard,
+      stage,
+      isHost: !!viewer?.is_host
+    };
+  }
+
   window.GEJAST_PAARDENRACE = {
     rpc, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode,
     suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack, renderLiveBoard,
+    renderRaceMinimap, summarizeLiveRoom,
     gotoLive, liveHref, scopedHref, scope, getDrawRemaining, resolvedGateSet, getGridColumnForProgress,
     getBoardPoints: ()=> JSON.parse(JSON.stringify(BOARD_CALIBRATION)), horseAsset, aceHorseCard, ASSETS
   };
