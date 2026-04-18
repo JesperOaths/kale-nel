@@ -354,7 +354,7 @@
     const cfg = window.GEJAST_CONFIG || {};
     const UI = { gameId:'', lobbyCode:'', scope:'friends', state:null, actionBusy:false, profiles:new Map(), lastRevealRound:0, matchOutcomes:null, firstLoaded:false, unresolvedParticipantSince:0, lobbyPhaseSince:0, viewerIdentity:'', lastSnapshotToastAt:0, wasDisconnected:false, autoLeaving:false };
     const STORAGE_KEYS = ['gejast_pikken_lobby_code','gejast_pikken_lobby_code_v517'];
-    const PARTICIPANT_KEYS = ['gejast_pikken_participant','gejast_pikken_participant_v517'];
+    const PARTICIPANT_KEYS = ['gejast_pikken_participant_v1','gejast_pikken_participant','gejast_pikken_participant_v517'];
     const LEAVE_KEYS = ['gejast_pikken_leave_suppress','gejast_pikken_leave_suppress_v540'];
     const VIEWER_HINT_KEYS = ['gejast_pikken_viewer_hint','gejast_pikken_viewer_hint_v542','gejast_pikken_viewer_hint_v541'];
     const STATE_SNAPSHOT_KEYS = ['gejast_pikken_state_snapshot','gejast_pikken_state_snapshot_v542','gejast_pikken_state_snapshot_v541'];
@@ -384,8 +384,10 @@
     function clearStoredLobbyCode(){ removeStorage(STORAGE_KEYS); }
     function setParticipantToken(gameId, active, lobbyCode){ try { const id = String(gameId||'').trim(); const code = String(lobbyCode||'').trim().toUpperCase(); if(active && (id || code)){ writeStorage(PARTICIPANT_KEYS, JSON.stringify({ game_id:id, lobby_code:code, at:Date.now() })); } else { removeStorage(PARTICIPANT_KEYS); } } catch(_){} }
     function getParticipantToken(){ return readJsonStorage(PARTICIPANT_KEYS); }
-    function setLeaveSuppression(gameId, lobbyCode){ writeStorage(LEAVE_KEYS, JSON.stringify({ game_id:String(gameId||'').trim(), lobby_code:String(lobbyCode||'').trim().toUpperCase(), at:Date.now() })); }
+    function setLeaveSuppression(gameId, lobbyCode){ writeStorage(LEAVE_KEYS, JSON.stringify({ game_id:String(gameId||'').trim(), lobby_code:String(lobbyCode||'').trim().toUpperCase(), scope:UI.scope || currentScope(), at:Date.now() })); }
     function clearLeaveSuppression(){ removeStorage(LEAVE_KEYS); }
+    function clearViewerHint(){ removeStorage(VIEWER_HINT_KEYS); }
+    function clearStateSnapshot(){ removeStorage(STATE_SNAPSHOT_KEYS); }
     function setViewerHint(hint){ try { if(hint && hint.name){ writeStorage(VIEWER_HINT_KEYS, JSON.stringify(Object.assign({}, hint, { at: Date.now() }))); } } catch(_){} }
     function getViewerHint(){ return readJsonStorage(VIEWER_HINT_KEYS); }
     function getStateSnapshot(){ return readJsonStorage(STATE_SNAPSHOT_KEYS); }
@@ -978,9 +980,9 @@ async function loadMatchOutcomes(){
         const snapshotAugmented = augmentStateWithViewer(snapshotState);
         let state = null;
         let joinedParticipant = !!(participantState?.viewer && (participantState.viewer.is_host || Number(participantState.viewer.seat || 0) > 0));
-        if (joinedParticipant) state = participantState;
-        else if (publicState?.viewer && (publicState.viewer.is_host || Number(publicState.viewer.seat || 0) > 0)) { state = publicState; joinedParticipant = true; }
-        else if (snapshotAugmented?.viewer && (snapshotAugmented.viewer.is_host || Number(snapshotAugmented.viewer.seat || 0) > 0)) { state = snapshotAugmented; joinedParticipant = true; }
+        if (joinedParticipant) { clearLeaveSuppression(); state = participantState; }
+        else if (publicState?.viewer && (publicState.viewer.is_host || Number(publicState.viewer.seat || 0) > 0)) { clearLeaveSuppression(); state = publicState; joinedParticipant = true; }
+        else if (snapshotAugmented?.viewer && (snapshotAugmented.viewer.is_host || Number(snapshotAugmented.viewer.seat || 0) > 0)) { clearLeaveSuppression(); state = snapshotAugmented; joinedParticipant = true; }
         else state = publicState || participantState || snapshotAugmented;
         const phase = String(state?.game?.state?.phase || state?.game?.status || '').toLowerCase();
         const playerCount = Array.isArray(state?.players) ? state.players.length : 0;
@@ -990,7 +992,7 @@ async function loadMatchOutcomes(){
           qs('#bidPanel')?.classList.add('hidden');
           qs('#votePanel')?.classList.add('hidden');
           if ((Date.now() - UI.unresolvedParticipantSince) > UNRESOLVED_PARTICIPANT_BOUNCE_MS) {
-            scheduleReturnToLobby('Deze live-pagina kon niet meer aan jouw spelersessie gekoppeld worden. Terug naar de Pikken-lobby…', { delayMs: 250, clearPresence: false });
+            scheduleReturnToLobby('Deze live-pagina kon niet meer aan jouw spelersessie gekoppeld worden. Terug naar de Pikken-lobby…', { delayMs: 250, clearPresence: true });
             return;
           }
           if (UI.wasDisconnected) showToast('Verbinding hersteld');
@@ -1006,7 +1008,7 @@ async function loadMatchOutcomes(){
             : 'Deze live-pagina hoort pas bij een gestarte tafel. Je gaat terug naar de Pikken-lobby…';
           setStatus(bounceText, false);
           if ((Date.now() - UI.lobbyPhaseSince) > LOBBY_LIVE_BOUNCE_MS) {
-            scheduleReturnToLobby(bounceText, { delayMs: 250, clearPresence: false });
+            scheduleReturnToLobby(bounceText, { delayMs: 250, clearPresence: !joinedParticipant });
           }
           return;
         }
@@ -1080,33 +1082,31 @@ async function loadMatchOutcomes(){
       setLeaveSuppression(gameId || UI.gameId || '', lobbyCode || UI.lobbyCode || '');
       setParticipantToken('', false, '');
       clearStoredLobbyCode();
+      clearViewerHint();
+      clearStateSnapshot();
     }
     function exitToLobby(gameId, lobbyCode){
       clearLivePresence(gameId, lobbyCode);
       window.location.replace(currentLobbyHref(gameId, lobbyCode));
     }
-    async function leaveTable(){
-      if (!window.confirm('Weet je zeker dat je deze tafel wilt verlaten?')) return;
-      let canonicalGameId = String(UI.gameId || '').trim();
-      const phase = String(UI.state?.game?.state?.phase || UI.state?.game?.status || '').toLowerCase();
-      try{
-        canonicalGameId = canonicalGameId || await ensureCanonicalGameId();
-        if (phase && phase !== 'lobby'){
-          exitToLobby(canonicalGameId, UI.lobbyCode);
-          return;
-        }
-        if (!canonicalGameId) throw new Error('Geen geldige tafel-id gevonden om te verlaten.');
-        await rpc('pikken_leave_lobby_scoped', { session_token: sessionToken() || null, game_id_input: canonicalGameId });
-        exitToLobby(canonicalGameId, UI.lobbyCode);
-      }catch(err){
-        const msg = String(err && err.message || '');
-        if (/al gestart|niet in deze lobby/i.test(msg)){
-          exitToLobby(canonicalGameId, UI.lobbyCode);
-          return;
-        }
-        setStatus(err.message || 'Verlaten mislukt.', true);
-      }
+
+async function leaveTable(){
+  if (!window.confirm('Weet je zeker dat je deze tafel wilt verlaten?')) return;
+  let canonicalGameId = String(UI.gameId || '').trim();
+  try{
+    canonicalGameId = canonicalGameId || await ensureCanonicalGameId();
+    if (!canonicalGameId) throw new Error('Geen geldige tafel-id gevonden om te verlaten.');
+    await rpc('pikken_leave_lobby_scoped', { session_token: sessionToken() || null, game_id_input: canonicalGameId });
+    exitToLobby(canonicalGameId, UI.lobbyCode);
+  }catch(err){
+    const msg = String(err && err.message || '');
+    if (/niet in deze lobby|niet in dit spel|geen deelnemer|not.*participant/i.test(msg)){
+      exitToLobby(canonicalGameId, UI.lobbyCode);
+      return;
     }
+    setStatus(err.message || 'Verlaten mislukt.', true);
+  }
+}
     async function disbandTable(){
       if (!window.confirm('Weet je zeker dat je de hele tafel wilt opheffen?')) return;
       try{
