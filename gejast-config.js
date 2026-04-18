@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v562',
+    VERSION:'v563',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -133,10 +133,10 @@
       return names;
     }
     const attempts = [
-      ['get_all_site_players_public_scoped', { site_scope_input: resolvedScope }],
-      ['get_profiles_page_bundle_scoped', { site_scope_input: resolvedScope }],
       ['get_login_names_scoped', { site_scope_input: resolvedScope }],
-      ['get_login_names', {}]
+      ['get_login_names', {}],
+      ['get_all_site_players_public_scoped', { site_scope_input: resolvedScope }],
+      ['get_profiles_page_bundle_scoped', { site_scope_input: resolvedScope }]
     ];
     for (const [name, payload] of attempts){
       try {
@@ -514,24 +514,37 @@ function buildRequestUrl(returnTo, scope){
     } catch (_) {}
   }
 
-function ensureAdminUsersPatch(){
-  try {
-    const path = String((location && location.pathname) || '').toLowerCase();
-    if (!/\/admin/i.test(path)) return;
-    if (document.querySelector('script[data-gejast-admin-users-patch]')) return;
-    const script = document.createElement('script');
-    script.src = `./gejast-admin-users-patch.js?${effectiveVersion}`;
-    script.async = false;
-    script.setAttribute('data-gejast-admin-users-patch','1');
-    document.head.appendChild(script);
-  } catch (_) {}
-}
+  function ensureAdminUsersPatch(){
+    try {
+      const path = String((location && location.pathname) || '').toLowerCase();
+      if (!/\/admin/i.test(path)) return;
+      if (document.querySelector('script[data-gejast-admin-users-patch]')) return;
+      const script = document.createElement('script');
+      script.src = `./gejast-admin-users-patch.js?${effectiveVersion}`;
+      script.async = false;
+      script.setAttribute('data-gejast-admin-users-patch','1');
+      document.head.appendChild(script);
+    } catch (_) {}
+  }
 
+  function ensureAccountPagesPatch(){
+    try {
+      const file = String((location && location.pathname) || '').toLowerCase();
+      if (!/(?:\/|^)(request|login)\.html$/i.test(file)) return;
+      if (document.querySelector('script[data-gejast-account-pages-patch]')) return;
+      const script = document.createElement('script');
+      script.src = `./gejast-account-pages-patch.js?${effectiveVersion}`;
+      script.async = false;
+      script.setAttribute('data-gejast-account-pages-patch','1');
+      document.head.appendChild(script);
+    } catch (_) {}
+  }
 
   function afterDomReady(){
     applyVersionLabel();
     ensureSiteAnnouncementRuntime();
     ensureAdminUsersPatch();
+    ensureAccountPagesPatch();
     if (getPlayerSessionToken() && shouldAutoInstallActivityKeepalive()) installActivityKeepalive();
   }
   if (document.readyState === 'loading') {
