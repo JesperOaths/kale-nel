@@ -1,312 +1,428 @@
 (function(){
-  // Wave 5 mobile hardening: drawer state, safe viewer handling, and leave hygiene.
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
-  const LEGACY_PARTICIPANT_KEYS = ['gejast_pikken_participant_v1','gejast_pikken_participant','gejast_pikken_participant_v517'];
-  const LEGACY_LEAVE_KEYS = ['gejast_pikken_leave_suppress','gejast_pikken_leave_suppress_v540'];
-  const LEGACY_VIEWER_KEYS = ['gejast_pikken_viewer_hint','gejast_pikken_viewer_hint_v542','gejast_pikken_viewer_hint_v541'];
-  const LEGACY_SNAPSHOT_KEYS = ['gejast_pikken_state_snapshot','gejast_pikken_state_snapshot_v542','gejast_pikken_state_snapshot_v541'];
-  const CANONICAL_PARTICIPANT_KEY = 'gejast_pikken_identity_v592';
-  const CANONICAL_VIEWER_KEY = 'gejast_pikken_viewer_v592';
-  const CANONICAL_LEAVE_KEY = 'gejast_pikken_leave_v592';
-  const CANONICAL_SNAPSHOT_KEY = 'gejast_pikken_snapshot_v592';
-  const POLL_MS = 1400;
-  const LEAVE_SUPPRESS_MS = 60 * 1000;
-  const SNAPSHOT_MAX_MS = 2 * 60 * 1000;
-  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const PIKKEN_PARTICIPANT_KEY = 'jas_pikken_participant_v1';
+
+  function getScope(){
+    try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
+    catch (_) { return 'friends'; }
+  }
+  function sessionToken(){
+    try { return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; } catch (_) { return ''; }
+  }
+  function headers(){
+    return {
+      apikey: cfg.SUPABASE_PUBLISHABLE_KEY || '',
+      Authorization: `Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY || ''}`,
+      'Content-Type':'application/json',
+      Accept:'application/json'
+    };
+  }
+  async function parse(res){
+    const text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (_) { throw new Error(text || `HTTP ${res.status}`); }
+    if (!res.ok) throw new Error(data?.message || data?.error || data?.details || data?.hint || text || `HTTP ${res.status}`);
+    return data;
+  }
+  async function rpc(name, payload){
+    const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
+      method:'POST',
+      headers:headers(),
+      body: JSON.stringify(payload || {}),
+      cache:'no-store',
+      mode:'cors'
+    });
+    return parse(res);
+  }
+  function qs(sel, root){ return (root || document).querySelector(sel); }
+  function esc(s){ const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(s ?? '').replace(/[&<>"']/g, (m)=>map[m]); }
+  function setStatus(text='', isError=false){
+    const el = qs('#pkStatus');
+    if (!el) return;
+    el.textContent = text || '';
+    el.style.color = isError ? '#7f2f1d' : '#6b6257';
+  }
+  function setParticipantToken(gameId, active){
+    try {
+      if (active && gameId) localStorage.setItem(PIKKEN_PARTICIPANT_KEY, JSON.stringify({ game_id:String(gameId), at:Date.now() }));
+      else localStorage.removeItem(PIKKEN_PARTICIPANT_KEY);
+    } catch (_) {}
+  }
+  function liveHref(gameId){ return `./pikken_live.html?client_match_id=${encodeURIComponent(String(gameId || ''))}`; }
+  function dieImg(face, cls){
+    const n = Number(face || 0);
+    const img = document.createElement('img');
+    img.className = cls || '';
+    img.alt = n ? `die ${n}` : 'die';
+    img.src = n ? `./assets/pikken/dice-${n}.svg` : './assets/pikken/dice-hidden.svg';
+    return img;
+  }
+  function normalizeError(err){
+    const msg = String(err && err.message || err || 'Onbekende fout');
+    if (/game_type\s+ongeldig/i.test(msg)) return 'Pikken live-samenvatting staat backend nog niet open voor dit spel. Draai eerst de Pikken-helper SQL.';
+    if (/Niet ingelogd/i.test(msg)) return 'Log eerst opnieuw in op de site voordat je Pikken gebruikt.';
+    return msg;
+  }
+  function roomCodeValue(){ return String(qs('#pkRoomCode')?.value || '').trim().toUpperCase(); }
+  function renderEmptyRail(target, message){
+    const wrap = qs(target);
+    if (!wrap) return;
+    wrap.innerHTML = `<div class="empty-note">${esc(message)}</div>`;
+  }
+  function parseRowsPayload(payload){
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.rows)) return payload.rows;
+    if (Array.isArray(payload?.items)) return payload.items;
+    return [];
+  }
+
   const UI = {
-    page: (document.body && document.body.dataset && document.body.dataset.pikkenPage) || 'lobby',
-    state: null,
-    publicState: null,
     gameId: '',
-    lobbyCode: '',
-    scope: 'friends',
-    viewerName: '',
-    actionBusy: false,
-    redirecting: false,
-    unresolvedSince: 0,
-    polls: null,
-    toasts: [],
-    profiles: new Map(),
-    openDrawer: '',
-    compact: false,
-    lastRevealRound: 0,
-    lastLoadFailed: false,
-    connectionHint: 'verbinding ok'
+    lastStateVersion: -1,
+    pollTimer: null,
+    roomsTimer: null,
+    roomsLoadedAt: 0,
+    latestState: null
   };
 
-  function isUuid(value){ return UUID_RE.test(String(value || '').trim()); }
-  function qs(sel, root){ return (root || document).querySelector(sel); }
-  function qsa(sel, root){ return Array.from((root || document).querySelectorAll(sel)); }
-  function esc(s){ const map={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(s ?? '').replace(/[&<>"']/g,(m)=>map[m]); }
-  function normalizeName(value){ return String(value || '').replace(/\s+/g,' ').trim().toLowerCase(); }
-  function initials(name){ return (String(name || '?').trim().slice(0,1).toUpperCase() || '?'); }
-  function currentScope(){ try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); } catch(_) { return 'friends'; } }
-  function playerToken(){ try { return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; } catch(_) { return ''; } }
-  function headers(){ return { 'Content-Type':'application/json', apikey: cfg.SUPABASE_PUBLISHABLE_KEY || '', Authorization: `Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY || ''}`, Accept:'application/json' }; }
-  async function parse(res){ const txt = await res.text(); let data = null; try { data = txt ? JSON.parse(txt) : null; } catch(_) { throw new Error(txt || `HTTP ${res.status}`); } if(!res.ok) throw new Error(data?.message || data?.error || txt || `HTTP ${res.status}`); return data; }
-  async function rpc(name, payload){ const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers: headers(), body: JSON.stringify(payload || {}) }); const data = await parse(res); return data && data[name] !== undefined ? data[name] : data; }
-  async function rpcWithTimeout(name, payload, timeoutMs){ const controller = new AbortController(); const timer = setTimeout(()=>controller.abort(), Math.max(800, Number(timeoutMs) || 4200)); try { const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers: headers(), body: JSON.stringify(payload || {}), signal: controller.signal }); const data = await parse(res); return data && data[name] !== undefined ? data[name] : data; } catch(err){ if(err && (err.name === 'AbortError' || /abort/i.test(String(err)))) throw new Error('timeout'); throw err; } finally { clearTimeout(timer); } }
+  function renderRoomRail(rows){
+    const openWrap = qs('#pkOpenRooms');
+    const liveWrap = qs('#pkLiveRooms');
+    const openRows = rows.filter((row)=>String(row?.stage || '').toLowerCase() !== 'live');
+    const liveRows = rows.filter((row)=>String(row?.stage || '').toLowerCase() === 'live');
 
-  function readRaw(keys){ try { for (const key of (Array.isArray(keys) ? keys : [keys])) { const raw = localStorage.getItem(key); if (raw) return raw; } } catch(_){} return ''; }
-  function writeRaw(key, value){ try { localStorage.setItem(key, value); } catch(_){} }
-  function removeRaw(keys){ try { for (const key of (Array.isArray(keys) ? keys : [keys])) localStorage.removeItem(key); } catch(_){} }
-  function readJson(keys){ try { const raw = readRaw(keys); if(!raw) return null; const parsed = JSON.parse(raw); return parsed && typeof parsed === 'object' ? parsed : null; } catch(_) { return null; } }
-  function writeJson(key, value){ try { localStorage.setItem(key, JSON.stringify(value)); } catch(_){} }
-
-  function canonicalContextMatches(record, gameId, lobbyCode){
-    const rid = String(record && record.game_id || '').trim();
-    const rcode = String(record && record.lobby_code || '').trim().toUpperCase();
-    const gid = String(gameId || '').trim();
-    const code = String(lobbyCode || '').trim().toUpperCase();
-    return (!!rid && !!gid && rid === gid) || (!!rcode && !!code && rcode === code);
-  }
-  function migrateLocalState(){
-    const participant = readJson(CANONICAL_PARTICIPANT_KEY) || readJson(LEGACY_PARTICIPANT_KEYS);
-    if (participant) writeJson(CANONICAL_PARTICIPANT_KEY, { game_id: String(participant.game_id || '').trim(), lobby_code: String(participant.lobby_code || participant.lobbyCode || '').trim().toUpperCase(), scope: String(participant.scope || currentScope()), seat: Number(participant.seat || 0) || null, name: String(participant.name || '').trim(), at: Number(participant.at || Date.now()) || Date.now() });
-    const viewer = readJson(CANONICAL_VIEWER_KEY) || readJson(LEGACY_VIEWER_KEYS);
-    if (viewer) writeJson(CANONICAL_VIEWER_KEY, { name: String(viewer.name || '').trim(), seat: Number(viewer.seat || 0) || null, game_id: String(viewer.game_id || '').trim(), lobby_code: String(viewer.lobby_code || '').trim().toUpperCase(), is_host: !!viewer.is_host, at: Number(viewer.at || Date.now()) || Date.now() });
-    const leave = readJson(CANONICAL_LEAVE_KEY) || readJson(LEGACY_LEAVE_KEYS);
-    if (leave) writeJson(CANONICAL_LEAVE_KEY, { game_id: String(leave.game_id || '').trim(), lobby_code: String(leave.lobby_code || '').trim().toUpperCase(), scope: String(leave.scope || currentScope()), at: Number(leave.at || Date.now()) || Date.now() });
-    const snapshot = readJson(CANONICAL_SNAPSHOT_KEY) || readJson(LEGACY_SNAPSHOT_KEYS);
-    if (snapshot) writeJson(CANONICAL_SNAPSHOT_KEY, snapshot);
-    removeRaw(LEGACY_PARTICIPANT_KEYS.concat(LEGACY_VIEWER_KEYS).concat(LEGACY_LEAVE_KEYS).concat(LEGACY_SNAPSHOT_KEYS));
-  }
-  function getParticipantIdentity(){ const rec = readJson(CANONICAL_PARTICIPANT_KEY); return rec && typeof rec === 'object' ? rec : null; }
-  function setParticipantIdentity(identity){ if (!identity || !(identity.game_id || identity.lobby_code)) { removeRaw(CANONICAL_PARTICIPANT_KEY); return; } writeJson(CANONICAL_PARTICIPANT_KEY, { game_id: String(identity.game_id || '').trim(), lobby_code: String(identity.lobby_code || '').trim().toUpperCase(), scope: String(identity.scope || currentScope()), seat: Number(identity.seat || 0) || null, name: String(identity.name || '').trim(), at: Date.now() }); }
-  function getViewerHint(){ const rec = readJson(CANONICAL_VIEWER_KEY); return rec && typeof rec === 'object' ? rec : null; }
-  function setViewerHint(hint){ if (!hint || !hint.name) return; writeJson(CANONICAL_VIEWER_KEY, { name: String(hint.name || '').trim(), seat: Number(hint.seat || 0) || null, game_id: String(hint.game_id || '').trim(), lobby_code: String(hint.lobby_code || '').trim().toUpperCase(), is_host: !!hint.is_host, at: Date.now() }); }
-  function getLeaveSuppression(){ const rec = readJson(CANONICAL_LEAVE_KEY); if(!rec) return null; const at = Number(rec.at || 0); if(!at || (Date.now() - at) > LEAVE_SUPPRESS_MS){ removeRaw(CANONICAL_LEAVE_KEY); return null; } return rec; }
-  function setLeaveSuppression(gameId, lobbyCode){ writeJson(CANONICAL_LEAVE_KEY, { game_id: String(gameId || '').trim(), lobby_code: String(lobbyCode || '').trim().toUpperCase(), scope: currentScope(), at: Date.now() }); }
-  function clearLeaveSuppression(){ removeRaw(CANONICAL_LEAVE_KEY); }
-  function isLeaveSuppressed(gameId, lobbyCode){ const rec = getLeaveSuppression(); return !!(rec && canonicalContextMatches(rec, gameId || UI.gameId, lobbyCode || UI.lobbyCode)); }
-  function getSnapshot(){ const snap = readJson(CANONICAL_SNAPSHOT_KEY); if(!snap) return null; const age = Date.now() - Number(snap.at || 0); if(age > SNAPSHOT_MAX_MS) return null; return snap; }
-  function saveSnapshot(state){ if(!state || !state.game) return; writeJson(CANONICAL_SNAPSHOT_KEY, { at: Date.now(), game_id: String(state.game.id || UI.gameId || '').trim(), lobby_code: String(state.game.lobby_code || UI.lobbyCode || '').trim().toUpperCase(), game: state.game, players: Array.isArray(state.players) ? state.players : [], votes: Array.isArray(state.votes) ? state.votes : [], dice_totals: state.dice_totals || {} }); }
-  function clearRuntimeHints(){ removeRaw([CANONICAL_PARTICIPANT_KEY, CANONICAL_VIEWER_KEY, CANONICAL_SNAPSHOT_KEY]); }
-
-  function scopedHref(path, params){ const url = new URL(path, window.location.href); Object.entries(params || {}).forEach(([key, value])=>{ const v = String(value || '').trim(); if(v) url.searchParams.set(key, v); }); if(currentScope() === 'family') url.searchParams.set('scope', 'family'); return `${url.pathname.split('/').pop()}${url.search}`; }
-  function liveHref(gameId, lobbyCode){ const params = {}; if (gameId) params.client_match_id = String(gameId); if (lobbyCode) params.match_ref = String(lobbyCode).trim().toUpperCase(); return scopedHref('./pikken_live.html', params); }
-  function lobbyHref(gameId, lobbyCode){ const params = {}; if (gameId) params.game_id = String(gameId); if (lobbyCode) params.lobby_code = String(lobbyCode).trim().toUpperCase(); return scopedHref('./pikken.html', params); }
-  function currentUrlGameId(){ try { const params = new URLSearchParams(location.search); const candidates = [params.get('game_id'), params.get('client_match_id'), params.get('match_ref')].filter(Boolean); const match = candidates.find((value)=>isUuid(value)); return String(match || '').trim(); } catch(_) { return ''; } }
-  function currentUrlLobbyCode(){ try { const params = new URLSearchParams(location.search); const candidates = [params.get('lobby_code'), params.get('match_ref'), params.get('client_match_id')].filter(Boolean); const code = candidates.find((value)=>value && !isUuid(value)); return String(code || '').trim().toUpperCase(); } catch(_) { return ''; } }
-  function syncHistoryUrl(){ try { history.replaceState(null, '', UI.page === 'live' ? liveHref(UI.gameId, UI.lobbyCode) : lobbyHref(UI.gameId, UI.lobbyCode)); } catch(_){} }
-
-  function setStatus(text, err){
-    if (UI.page === 'live') { const el = qs('#statusText'); if (el) { el.textContent = text || ''; el.className = err ? 'error' : 'muted'; } }
-    else { const el = qs('#pkStatus'); if (el) { el.textContent = text || ''; el.className = err ? 'status-line error' : 'status-line muted'; } }
-  }
-  function connectionPill(text, cls){ const id = UI.page === 'live' ? '#pkConnectionPill' : '#pkConnectionPill'; const el = qs(id); if (!el) return; el.className = `pill ${cls || 'wait'}`; el.textContent = text; }
-  function showToast(text){ const stack = qs('#toastStack'); if (!stack || !text) return; const toast = document.createElement('div'); toast.className = 'toast'; toast.textContent = text; stack.appendChild(toast); setTimeout(()=>{ toast.remove(); }, 2600); }
-  function normalizeError(err){ const msg = String(err && err.message || err || 'Onbekende fout'); if(/invalid input syntax for type uuid/i.test(msg)) return 'Deze link gebruikt nog geen geldige tafel-id. Open de live tafel opnieuw vanuit de lobby.'; if(/not.*participant|geen.*deelnemer|not.*member|geen.*lid/i.test(msg)) return 'Je spelerssessie hoort niet hard genoeg bewezen bij deze tafel. Je blijft daarom viewer of gaat terug naar de lobby.'; if(/timeout/i.test(msg)) return 'Backend antwoordt traag. De tafel probeert zichzelf opnieuw te laden.'; return msg; }
-  function profileForPlayer(name){ const row = UI.profiles.get(normalizeName(name)) || {}; const helper = (window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.normalizeProfileImageUrl === 'function') ? window.GEJAST_CONFIG.normalizeProfileImageUrl : (v)=>String(v || '').trim(); const src = helper(row.profile_picture_url || row.avatar_url || row.photo_url || ''); let nick = row.nickname || ''; try { const badgeKey = row.best_badge || row.primary_badge_key || row.badge_key || ''; if (!nick && badgeKey && window.GEJAST_BADGE_REGISTRY) { const badge = window.GEJAST_BADGE_REGISTRY.getBadgeByKey?.(badgeKey) || window.GEJAST_BADGE_REGISTRY.getBadgeByLegacyLabel?.(badgeKey); nick = badge?.nickname || ''; } } catch(_){} return { src, nick }; }
-  function nameBySeat(players, seat){ const wanted = Number(seat || 0); const player = (Array.isArray(players) ? players : []).find((row)=>Number(row && row.seat || 0) === wanted); return player ? (player.name || '—') : '—'; }
-  function sortDice(arr){ return (Array.isArray(arr) ? arr : []).map(Number).filter(Boolean).sort((a,b)=>a-b); }
-  function bidText(bid){ const count = Number((bid && (bid.count || bid.bid_count)) || 0); const face = Number((bid && (bid.face || bid.bid_face)) || 0); if (!count || !face) return '—'; return face === 1 ? `${count} × pik` : `${count} × ${face}`; }
-  function gamePhase(game){ const phase = String(game && game.state && game.state.phase || '').trim().toLowerCase(); if (phase) return phase; const status = String(game && game.status || '').trim().toLowerCase(); if (status === 'finished') return 'finished'; if (status === 'live') return 'bidding'; return 'lobby'; }
-  function hasStarted(game){ const phase = gamePhase(game); const status = String(game && game.status || '').trim().toLowerCase(); return phase !== 'lobby' || status === 'live' || status === 'finished'; }
-  function hasActorViewer(viewer){ return !!(viewer && (viewer.is_host || Number(viewer.seat || 0) > 0)); }
-  function hasPlayerIdentity(viewer){ return !!(viewer && Number(viewer.seat || 0) > 0); }
-  function bidHistoryFromState(st){ const arr = []; const raw = Array.isArray(st && st.bid_history) ? st.bid_history : (Array.isArray(st && st.history && st.history.bids) ? st.history.bids : []); raw.forEach((b, idx)=>arr.push({ index:idx+1, bidder_name:b.bidder_name || b.name || '', count:b.count || b.bid_count, face:b.face || b.bid_face, current:false })); if (st && st.bid) arr.push({ index:arr.length+1, bidder_name:st.bid.bidder_name || '', count:st.bid.count || st.bid.bid_count, face:st.bid.face || st.bid.bid_face, current:true }); return arr; }
-  function latestBidByPlayer(st){ const map = new Map(); bidHistoryFromState(st).forEach((item)=>{ if(item.bidder_name) map.set(normalizeName(item.bidder_name), item); }); return map; }
-  function getBidRules(state){ const bid = state && state.game && state.game.state && state.game.state.bid || null; const totalDice = Number((state && state.dice_totals && state.dice_totals.current_total) || 0); return { totalDice, currentCount: Number((bid && (bid.count || bid.bid_count)) || 0), currentFace: Number((bid && (bid.face || bid.bid_face)) || 0) }; }
-  function isHigherBid(nextCount, nextFace, rules){ const c = Number(nextCount || 0), f = Number(nextFace || 0); if (!c || !f || c > Number(rules.totalDice || 0)) return false; const currentCount = Number(rules.currentCount || 0), currentFace = Number(rules.currentFace || 0); if (!currentCount || !currentFace) return true; if (currentFace === 1 && f !== 1) return c >= ((2 * currentCount) + 1); if (currentFace !== 1 && f === 1) return ((2 * c) - 1) > currentCount; if (currentFace === 1 && f === 1) return c > currentCount; if (currentFace !== 1 && f !== 1){ if (c < currentCount) return false; if (c > currentCount) return true; return f > currentFace; } return false; }
-  function allowedFacesForCount(count, rules){ const wanted = Number(count || 0); if (!wanted || wanted > Number(rules.totalDice || 0)) return []; return [1,2,3,4,5,6].filter((face)=>isHigherBid(wanted, face, rules)); }
-
-  async function fetchViewerIdentity(){ if (UI.viewerName) return UI.viewerName; const hint = getViewerHint(); if (hint && hint.name) { UI.viewerName = String(hint.name || ''); return UI.viewerName; } const token = playerToken(); if (!token) return ''; const attempts = [['get_public_state',{session_token:token}],['get_gejast_homepage_state',{session_token:token}],['get_jas_app_state',{session_token:token}],['get_public_state',{session_token_input:token}],['get_gejast_homepage_state',{session_token_input:token}],['get_jas_app_state',{session_token_input:token}]]; for (const [name,payload] of attempts){ try { const data = await rpcWithTimeout(name, payload, 2400); const resolved = String(data && (data.my_name || data.display_name || data.player_name || data.viewer && data.viewer.display_name) || '').replace(/\s+/g,' ').trim(); if (resolved){ UI.viewerName = resolved; return resolved; } } catch(_){} } return ''; }
-  async function loadProfiles(){ try { const rows = await rpc('get_all_site_players_public_scoped', { site_scope_input: UI.scope }); const list = Array.isArray(rows && rows.players) ? rows.players : (Array.isArray(rows) ? rows : []); UI.profiles = new Map(list.map((row)=>[normalizeName(row.player_name || row.display_name || row.public_display_name || row.chosen_username), row])); } catch(_) { UI.profiles = new Map(); } }
-
-  function viewerFromState(state){ const viewer = state && state.viewer || null; if (hasActorViewer(viewer)) return viewer; const players = Array.isArray(state && state.players) ? state.players : []; const preferred = normalizeName(UI.viewerName || (getViewerHint() || {}).name || ''); const identity = getParticipantIdentity(); let match = preferred ? players.find((row)=>normalizeName(row && row.name) === preferred) : null; if (!match && identity && identity.seat) match = players.find((row)=>Number(row && row.seat || 0) === Number(identity.seat || 0)); if (!match) return viewer || null; const hostName = normalizeName(state && state.game && (state.game.created_by_player_name || state.game.host_name) || ''); return Object.assign({}, viewer || {}, { name: match.name || UI.viewerName || '', seat: Number(match.seat || 0) || null, alive: match.alive !== false, dice_count: Number(match.dice_count || 0) || 0, is_host: !!hostName && normalizeName(match.name) === hostName, inferred: true }); }
-  function decorateState(state){ if (!state || typeof state !== 'object') return state; const viewer = viewerFromState(state); const next = Object.assign({}, state, { viewer }); saveSnapshot(next); if (viewer && viewer.name) { setViewerHint({ name: viewer.name, seat: Number(viewer.seat || 0) || null, game_id: String(next.game && next.game.id || UI.gameId || '').trim(), lobby_code: String(next.game && next.game.lobby_code || UI.lobbyCode || '').trim().toUpperCase(), is_host: !!viewer.is_host }); } return next; }
-
-  async function loadParticipantState(gameId){ const token = playerToken(); const lobbyCode = String(UI.lobbyCode || '').trim().toUpperCase(); if (!token || (!gameId && !lobbyCode)) return null; const attempts = [ { session_token: token, game_id_input: gameId || null, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope }, { session_token_input: token, game_id_input: gameId || null, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope }, { session_token: token, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope }, { session_token_input: token, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope }, { session_token: token, game_id_input: gameId || null }, { session_token_input: token, game_id_input: gameId || null } ]; let lastErr = null; for (const payload of attempts){ try { return decorateState(await rpcWithTimeout('pikken_get_state_scoped', payload, 4200)); } catch(err){ lastErr = err; } } throw lastErr || new Error('Laden mislukt.'); }
-  async function loadPublicState(){ const lobbyCode = String(UI.lobbyCode || '').trim().toUpperCase(); const gameId = String(UI.gameId || '').trim(); const attempts = [ { game_id_input: gameId || null, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope }, { game_id: gameId || null, lobby_code_input: lobbyCode || null, site_scope_input: UI.scope }, { lobby_code_input: lobbyCode || null, site_scope_input: UI.scope }, { game_id_input: gameId || null, lobby_code_input: lobbyCode || null }, { lobby_code_input: lobbyCode || null } ]; let lastErr = null; for (const payload of attempts){ try { return decorateState(await rpcWithTimeout('pikken_get_live_state_public', payload, 4200)); } catch(err){ lastErr = err; } } throw lastErr || new Error('Laden mislukt.'); }
-  async function ensureCanonicalGameId(){ if (isUuid(UI.gameId)) return UI.gameId; const state = await loadPublicState(); const gameId = String(state && state.game && state.game.id || '').trim(); const lobbyCode = String(state && state.game && state.game.lobby_code || UI.lobbyCode || '').trim().toUpperCase(); if (gameId) UI.gameId = gameId; if (lobbyCode) UI.lobbyCode = lobbyCode; return UI.gameId; }
-  function syncKnownGame(state){ const game = state && state.game || {}; const gameId = String(game.id || UI.gameId || '').trim(); const lobbyCode = String(game.lobby_code || UI.lobbyCode || '').trim().toUpperCase(); if (gameId) UI.gameId = gameId; if (lobbyCode) UI.lobbyCode = lobbyCode; syncHistoryUrl(); return { gameId:UI.gameId, lobbyCode:UI.lobbyCode }; }
-  function snapshotFallback(){ const snap = getSnapshot(); if (!snap) return null; if (!canonicalContextMatches(snap, UI.gameId, UI.lobbyCode)) return null; return decorateState({ game: snap.game || {}, players: Array.isArray(snap.players) ? snap.players : [], votes: Array.isArray(snap.votes) ? snap.votes : [], dice_totals: snap.dice_totals || {} }); }
-
-  function seatPositions(players, anchorSeat){ const list = Array.isArray(players) ? players.slice() : []; const anchor = Number(anchorSeat || 0) || (list[0] ? Number(list[0].seat || 1) : 1); list.sort((a,b)=>{ const as = Number(a && a.seat || 0), bs = Number(b && b.seat || 0); const ar = ((as - anchor + 1000) % 1000), br = ((bs - anchor + 1000) % 1000); return ar - br || as - bs; }); const count = list.length || 1; let positions; if (count <= 2) positions = [{x:50,y:82},{x:50,y:18}]; else if (count === 3) positions = [{x:50,y:82},{x:22,y:26},{x:78,y:26}]; else if (count === 4) positions = [{x:50,y:84},{x:18,y:56},{x:50,y:14},{x:82,y:56}]; else if (count === 5) positions = [{x:50,y:84},{x:18,y:62},{x:24,y:18},{x:76,y:18},{x:82,y:62}]; else if (count === 6) positions = [{x:50,y:84},{x:16,y:66},{x:16,y:28},{x:50,y:10},{x:84,y:28},{x:84,y:66}]; else { positions = []; const rx = 40, ry = 35; for (let i=0;i<count;i++){ const ang = (90 + i*(360/count)) * Math.PI/180; positions.push({ x:50 + rx*Math.cos(ang), y:46 + ry*Math.sin(ang) }); } } return { players:list, positions }; }
-
-  function renderLobbyRole(state){ const viewer = state && state.viewer || null; const roleLabel = hasActorViewer(viewer) ? (viewer.is_host ? 'Host' : 'Speler') : 'Viewer'; const roleEl = qs('#pkRoleLabel'); if (roleEl) roleEl.textContent = roleLabel; const pill = qs('#pkModePill'); const heading = qs('#pkModeHeading'); const copy = qs('#pkModeCopy'); const identity = qs('#pkIdentityCopy'); if (!pill || !heading || !copy || !identity) return; if (viewer && viewer.is_host){ pill.className = 'pill gold'; pill.textContent = 'host mode'; heading.textContent = `Jij bestuurt deze tafel`; copy.textContent = 'Starten, ready-check en join-flow mogen vanaf hier.'; identity.textContent = `Auto-rejoin staat alleen aan zolang stoel ${Number(viewer.seat || 0)} hard aan jouw sessie hangt.`; } else if (hasPlayerIdentity(viewer)){ pill.className = 'pill ok'; pill.textContent = 'player mode'; heading.textContent = `${viewer.name || 'Jij'} zit aan tafel`; copy.textContent = 'Je bent bevestigd als speler. Klaarzetten, starten en live-redirect mogen nu wel.'; identity.textContent = `Auto-rejoin mag alleen zolang match ${UI.lobbyCode || UI.gameId} én stoel ${Number(viewer.seat || 0)} kloppen.`; } else { pill.className = 'pill wait'; pill.textContent = 'viewer mode'; heading.textContent = 'Je kijkt mee totdat je identiteit hard bewezen is'; copy.textContent = 'Geen acties die een spelerstoel claimen zonder bevestigde deelnemer-state.'; identity.textContent = 'Geen nep-rejoin: zonder match-id én deelnemer-id blijf je kijker.'; } }
-
-  function updateLobbyRail(state){
-    const rail = qs('#pkRoomRail');
-    const game = state && state.game || {};
-    const players = Array.isArray(state && state.players) ? state.players : [];
-    const readyCount = players.filter((p)=>!!(p && p.ready)).length;
-    const variant = String((game.config && game.config.penalty_mode) || qs('#pkPenaltyMode') && qs('#pkPenaltyMode').value || 'wrong_loses').toLowerCase();
-    if (rail) rail.style.display = game && (game.id || UI.lobbyCode) ? '' : 'none';
-    qs('#pkRailLobbyCode') && (qs('#pkRailLobbyCode').textContent = UI.lobbyCode || '—');
-    qs('#pkRailPhase') && (qs('#pkRailPhase').textContent = gamePhase(game));
-    qs('#pkRailPlayers') && (qs('#pkRailPlayers').textContent = `${players.length} / ${readyCount}`);
-    qs('#pkRailVariant') && (qs('#pkRailVariant').textContent = variant === 'right_loses' ? 'Fair' : 'Normal');
-    qs('#pkRoomHeadline') && (qs('#pkRoomHeadline').textContent = game && (game.id || UI.lobbyCode) ? `${game.host_name || game.created_by_player_name || 'Host'} beheert deze lobby · ${gamePhase(game)}` : 'Nog geen actieve lobby.');
-  }
-
-  function renderOpenLobbyBoxes(rows){
-    const liveRoot = qs('#pkLiveRoomsBox');
-    const openRoot = qs('#pkOpenRoomsBox');
-    const items = Array.isArray(rows) ? rows : [];
-    const liveRows = items.filter((row)=>String(row && row.stage || '').toLowerCase() === 'live');
-    const openRows = items.filter((row)=>String(row && row.stage || '').toLowerCase() !== 'live');
-    function cardHtml(row){
-      const code = esc(row && row.lobby_code || '—');
-      const stage = esc(row && row.stage || 'lobby');
-      const players = Number(row && row.player_count || 0);
-      const ready = Number(row && row.ready_count || 0);
-      const variant = String(row && row.penalty_mode || 'wrong_loses').toLowerCase() === 'right_loses' ? 'Fair' : 'Normal';
-      const buttonLabel = String(stage).toLowerCase()==='live' ? 'Open live' : 'Join lobby';
-      return `<div class="player-row"><div><strong>${code}</strong><div class="muted">${esc(row && row.host_name || 'Onbekende host')} · ${players} speler(s) (${ready} ready) · ${variant} · ${stage}</div></div><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="btn alt" type="button" data-pk-open="${code}" data-pk-stage="${stage}">${buttonLabel}</button></div></div>`;
+    if (!openRows.length) renderEmptyRail('#pkOpenRooms', 'Nog geen open lobbies zichtbaar.');
+    else {
+      openWrap.innerHTML = openRows.map((row)=>`
+        <div class="room-card">
+          <div class="room-head">
+            <div>
+              <div class="room-code">${esc(row.lobby_code || '—')}</div>
+              <div class="muted">Host: ${esc(row.host_name || 'Onbekend')}</div>
+            </div>
+            <div class="room-meta">
+              <span class="pill wait">${Number(row.player_count || 0)} spelers</span>
+              <span class="pill ${Number(row.ready_count || 0) >= 2 ? 'ok' : 'wait'}">${Number(row.ready_count || 0)} ready</span>
+            </div>
+          </div>
+          <div class="muted">Variant: ${esc(String(row.penalty_mode || 'wrong_loses').replace('_',' '))}</div>
+          <div class="room-actions">
+            <button class="btn alt" type="button" data-join-room="${esc(row.lobby_code || '')}">Join</button>
+          </div>
+        </div>
+      `).join('');
+      openWrap.querySelectorAll('[data-join-room]').forEach((btn)=>{
+        btn.addEventListener('click', ()=>{
+          const code = btn.getAttribute('data-join-room') || '';
+          qs('#pkRoomCode').value = code;
+          joinLobby().catch((e)=>setStatus(normalizeError(e), true));
+        });
+      });
     }
-    if (liveRoot) liveRoot.innerHTML = liveRows.length ? liveRows.map(cardHtml).join('') : '<div class="player-row"><div class="muted">Nog geen live pikkenlobbies.</div></div>';
-    if (openRoot) openRoot.innerHTML = openRows.length ? openRows.map(cardHtml).join('') : '<div class="player-row"><div class="muted">Nog geen open pikkenlobbies.</div></div>';
-    qsa('[data-pk-open]').forEach((btn)=>{ btn.onclick = ()=>{ const code = String(btn.getAttribute('data-pk-open') || '').trim().toUpperCase(); const stage = String(btn.getAttribute('data-pk-stage') || '').toLowerCase(); const input = qs('#pkJoinCode'); if (input) input.value = code; if (stage === 'live') { clearLeaveSuppression(); window.location.href = liveHref('', code); return; } joinLobby().catch((err)=>setStatus(normalizeError(err), true)); }; });
+
+    if (!liveRows.length) renderEmptyRail('#pkLiveRooms', 'Nog geen actieve Pikken-spellen zichtbaar.');
+    else {
+      liveWrap.innerHTML = liveRows.map((row)=>`
+        <div class="room-card">
+          <div class="room-head">
+            <div>
+              <div class="room-code">${esc(row.lobby_code || '—')}</div>
+              <div class="muted">Host: ${esc(row.host_name || 'Onbekend')}</div>
+            </div>
+            <div class="room-meta">
+              <span class="pill ok">live</span>
+              <span class="pill wait">${Number(row.player_count || 0)} spelers</span>
+            </div>
+          </div>
+          <div class="room-actions">
+            <a class="btn alt" href="${liveHref(row.game_id)}">Kijk live</a>
+            <button class="btn soft" type="button" data-reopen-room="${esc(String(row.game_id || ''))}">Heropen lobby</button>
+          </div>
+        </div>
+      `).join('');
+      liveWrap.querySelectorAll('[data-reopen-room]').forEach((btn)=>{
+        btn.addEventListener('click', ()=>{
+          const gameId = btn.getAttribute('data-reopen-room') || '';
+          if (!gameId) return;
+          UI.gameId = gameId;
+          history.replaceState(null, '', `pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(getScope())}`);
+          startPolling();
+        });
+      });
+    }
+
+    const meta = qs('#pkRoomsMeta');
+    if (meta) meta.textContent = `${openRows.length} open · ${liveRows.length} live`;
   }
 
-  async function refreshOpenLobbies(){
-    if (UI.page !== 'lobby') return [];
+  async function loadRooms(force=false){
+    if (!force && Date.now() - UI.roomsLoadedAt < 3500) return;
+    UI.roomsLoadedAt = Date.now();
     try {
-      const out = await rpcWithTimeout('get_pikken_open_lobbies_public_scoped', { site_scope_input: UI.scope, session_token: playerToken() || null }, 3200);
-      const rows = Array.isArray(out) ? out : (Array.isArray(out && out.rows) ? out.rows : []);
-      renderOpenLobbyBoxes(rows);
-      return rows;
-    } catch(_) {
-      renderOpenLobbyBoxes([]);
-      return [];
+      const payload = await rpc('get_pikken_open_lobbies_public_scoped', { site_scope_input: getScope(), session_token: sessionToken() || null });
+      renderRoomRail(parseRowsPayload(payload));
+    } catch (_) {
+      renderEmptyRail('#pkOpenRooms', 'Open lobby helper nog niet live of tijdelijk niet bereikbaar.');
+      renderEmptyRail('#pkLiveRooms', 'Live lobby helper nog niet live of tijdelijk niet bereikbaar.');
+      const meta = qs('#pkRoomsMeta');
+      if (meta) meta.textContent = 'fallback';
     }
   }
 
-  async function kickLobbyPlayer(targetName, targetSeat){
+  function renderState(state){
+    UI.latestState = state;
+    const game = state?.game || {};
+    const viewer = state?.viewer || {};
+    const players = Array.isArray(state?.players) ? state.players : [];
+    const votes = Array.isArray(state?.votes) ? state.votes : [];
+    const myHand = Array.isArray(state?.my_hand) ? state.my_hand : [];
+    const phase = String(game?.state?.phase || 'lobby');
+    const bid = game?.state?.bid && game.state.bid !== null ? game.state.bid : null;
+    const turnSeat = Number(game?.state?.current_turn_seat || game?.state?.turn_seat || 0);
+    const voteTurnSeat = Number(game?.state?.vote_turn_seat || 0);
+    const lastReveal = game?.state?.last_reveal || null;
+    const readyCount = players.filter((player)=>!!player.ready).length;
+    const isHost = !!viewer.is_host || (viewer.player_id && Number(viewer.player_id) === Number(game?.created_by_player_id || 0));
+    const canStart = String(game?.status || phase || '').toLowerCase() === 'lobby' && isHost && readyCount >= 2;
+
+    qs('#pkLobbyCode').textContent = game?.lobby_code || '—';
+    const liveLink = qs('#pkLiveLink');
+    if (liveLink) {
+      liveLink.href = liveHref(game?.id || UI.gameId);
+      liveLink.style.display = (game?.id || UI.gameId) ? '' : 'none';
+    }
+
+    const phasePill = qs('#pkPhasePill');
+    if (phasePill) {
+      phasePill.textContent = phase;
+      phasePill.className = `pill ${phase === 'finished' ? 'bad' : phase === 'bidding' ? 'ok' : 'wait'}`;
+    }
+
+    qs('#pkPhase').textContent = phase;
+    qs('#pkRoundNo').textContent = String(Number(game?.state?.round_no || 0) || 0);
+    qs('#pkReadyCount').textContent = String(readyCount);
+
+    const totals = state?.dice_totals || {};
+    qs('#pkDiceStart').textContent = String(Number(totals.start_total || 0));
+    qs('#pkDiceCurrent').textContent = String(Number(totals.current_total || 0));
+    qs('#pkDiceCurrentSecondary').textContent = String(Number(totals.current_total || 0));
+    qs('#pkDiceLost').textContent = String(Number(totals.lost_total || 0));
+
+    qs('#pkBidText').textContent = bid ? (Number(bid.face) === 1 ? `${bid.count} × pik` : `${bid.count} × ${bid.face}`) : '—';
+    qs('#pkBidBy').textContent = bid ? `door ${bid.bidder_name || '—'}` : '';
+
+    const startRule = qs('#pkStartRulePill');
+    if (startRule) {
+      startRule.className = `pill ${readyCount >= 2 ? 'ok' : 'wait'}`;
+      startRule.textContent = readyCount >= 2 ? 'Start mag nu' : 'Minimaal 2 ready nodig';
+    }
+
+    const startBtn = qs('#pkStartBtn');
+    if (startBtn) {
+      startBtn.disabled = !canStart;
+      startBtn.textContent = canStart ? 'Start spel' : (isHost ? 'Nog niet startbaar' : 'Alleen host start');
+    }
+
+    const list = qs('#pkPlayers');
+    list.innerHTML = players.length ? players.map((p)=>{
+      const seat = Number(p.seat || p.seat_index || 0);
+      const alive = !!p.alive || String(phase || '').toLowerCase() === 'lobby';
+      const isTurn = phase === 'bidding' && seat === turnSeat;
+      const isVoteTurn = phase === 'voting' && seat === voteTurnSeat;
+      const vote = votes.find((v)=>Number(v.seat || 0) === seat);
+      const voteStatus = vote ? String(vote.status || 'waiting') : 'waiting';
+      const pillText = voteStatus === 'approved' ? 'goedgekeurd' : voteStatus === 'rejected' ? 'afgekeurd' : (p.ready ? 'ready' : 'wacht');
+      const pillClass = voteStatus === 'approved' ? 'pill ok' : voteStatus === 'rejected' ? 'pill bad' : (p.ready ? 'pill ok' : 'pill wait');
+      return `
+        <div class="player-row ${alive ? '' : 'dead'} ${isTurn || isVoteTurn ? 'turn' : ''}">
+          <div class="player-name">
+            <strong>${esc(p.name || p.player_name || 'Speler')}</strong>
+            <div class="muted">Stoel #${seat || '—'} · ${alive ? 'Levend' : 'Dood'} · ${Number(p.dice_count || 0)} dobbelstenen</div>
+          </div>
+          <div class="mini-actions">
+            <span class="${pillClass}">${esc(pillText)}</span>
+          </div>
+        </div>
+      `;
+    }).join('') : '<div class="empty-note">Nog geen spelers in deze lobby.</div>';
+
+    const myDiceWrap = qs('#pkMyDice');
+    myDiceWrap.innerHTML = '';
+    myHand.forEach((face)=>{
+      const n = Number(face || 0);
+      myDiceWrap.appendChild(dieImg(n, `die ${n === 1 ? 'pik' : ''}`.trim()));
+    });
+
+    const myTurn = phase === 'bidding' && Number(viewer.seat || viewer.seat_index || 0) === turnSeat && !!viewer.alive;
+    const myVoteTurn = phase === 'voting' && Number(viewer.seat || viewer.seat_index || 0) === voteTurnSeat && !!viewer.alive;
+    qs('#pkBidPanel').style.display = myTurn ? 'block' : 'none';
+    qs('#pkVotePanel').style.display = myVoteTurn ? 'block' : 'none';
+    qs('#pkRejectBtn').disabled = !myTurn || !bid;
+
+    const revealWrap = qs('#pkReveal');
+    if (!lastReveal) {
+      revealWrap.style.display = 'none';
+      revealWrap.innerHTML = '';
+    } else {
+      revealWrap.style.display = 'block';
+      const lrBid = lastReveal.bid || {};
+      const lrBidTxt = Number(lrBid.face) === 1 ? `${lrBid.count} × pik` : `${lrBid.count} × ${lrBid.face}`;
+      revealWrap.innerHTML = `
+        <details class="accordion" open>
+          <summary>
+            <span>Laatste ronde (R${Number(lastReveal.round_no || 0)}): bod ${esc(lrBidTxt)}</span>
+            <span class="muted">${lastReveal.bid_true ? 'gehaald' : 'niet gehaald'} · geteld ${Number(lastReveal.counted_total || 0)}</span>
+          </summary>
+          <div class="detail">
+            <div class="muted">Verliezers: ${esc(String(lastReveal.losing_kind || ''))} · Starter: stoel ${Number(lastReveal.next_starter_seat || 0)}</div>
+            <div class="reveal-grid">
+              ${(Array.isArray(lastReveal.hands) ? lastReveal.hands : []).map((h)=>`
+                <div class="reveal-card">
+                  <div><strong>${esc(h.name || 'Speler')}</strong> <span class="muted">#${Number(h.seat || 0)}</span></div>
+                  <div class="dice-row">${(Array.isArray(h.dice) ? h.dice : []).map((d)=>`<img class="die ${Number(d) === 1 ? 'pik' : ''}" src="./assets/pikken/dice-${Number(d)}.svg" alt="die ${Number(d)}">`).join('')}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </details>
+      `;
+    }
+
+    if (phase !== 'lobby' && (game?.id || UI.gameId)) {
+      setParticipantToken(game?.id || UI.gameId, true);
+    }
+  }
+
+  async function loadAndRender(forceRooms=false){
+    if (!UI.gameId) { await loadRooms(forceRooms); return; }
+    try {
+      const state = await rpc('pikken_get_state_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId });
+      const version = Number(state?.game?.state_version || -1);
+      if (version !== UI.lastStateVersion) {
+        UI.lastStateVersion = version;
+        renderState(state);
+      }
+      await loadRooms(forceRooms);
+      setStatus('', false);
+    } catch (err) {
+      setStatus(normalizeError(err) || 'Laden mislukt.', true);
+    }
+  }
+
+  function startPolling(){
+    stopPolling();
+    UI.pollTimer = setInterval(()=>{ if (!document.hidden) loadAndRender(false); }, 1200);
+    UI.roomsTimer = setInterval(()=>{ if (!document.hidden) loadRooms(true); }, 7000);
+    loadAndRender(true);
+  }
+  function stopPolling(){
+    if (UI.pollTimer) { clearInterval(UI.pollTimer); UI.pollTimer = null; }
+    if (UI.roomsTimer) { clearInterval(UI.roomsTimer); UI.roomsTimer = null; }
+  }
+
+  async function createLobby(){
+    setStatus('Lobby maken…', false);
+    const mode = qs('#pkPenaltyMode').value || 'wrong_loses';
+    const requestedCode = roomCodeValue();
+    const out = await rpc('pikken_create_lobby_scoped', {
+      session_token: sessionToken() || null,
+      site_scope_input: getScope(),
+      config_input: { penalty_mode: mode }
+    });
+    UI.gameId = out.game_id;
+    setParticipantToken(UI.gameId, true);
+    if (requestedCode && out.game_id) {
+      try { await rpc('pikken_set_lobby_code_scoped', { session_token: sessionToken() || null, game_id_input: out.game_id, lobby_code_input: requestedCode }); } catch (_) {}
+    }
+    history.replaceState(null, '', `pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(getScope())}`);
+    startPolling();
+  }
+
+  async function joinLobby(){
+    const code = roomCodeValue();
+    if (!code) return setStatus('Vul een lobbycode in.', true);
+    setStatus('Lobby joinen…', false);
+    const out = await rpc('pikken_join_lobby_scoped', {
+      session_token: sessionToken() || null,
+      site_scope_input: getScope(),
+      lobby_code_input: code
+    });
+    UI.gameId = out.game_id;
+    setParticipantToken(UI.gameId, true);
+    history.replaceState(null, '', `pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(getScope())}`);
+    startPolling();
+  }
+
+  async function setReady(ready){
     if (!UI.gameId) return;
-    if (!window.confirm(`Weet je zeker dat je ${targetName || 'deze speler'} uit de lobby wilt zetten?`)) return;
-    return withAction('Speler uit lobby zetten…', async()=>{
-      await rpc('pikken_host_kick_player_scoped', { session_token: playerToken() || null, game_id_input: UI.gameId, target_player_name_input: targetName || null, target_seat_input: Number(targetSeat || 0) || null });
-      return await loadParticipantState(UI.gameId);
+    setStatus(ready ? 'Ready…' : 'Unready…', false);
+    await rpc('pikken_set_ready_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId, ready_input: !!ready });
+    await loadAndRender(true);
+  }
+
+  async function startGame(){
+    if (!UI.gameId) return;
+    setStatus('Starten…', false);
+    await rpc('pikken_start_game_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId });
+    await loadAndRender(true);
+    window.location.href = liveHref(UI.gameId);
+  }
+
+  async function placeBid(){
+    const count = Number(qs('#pkBidCount').value || 0);
+    const face = Number(qs('#pkBidFace').value || 0);
+    setStatus('Bieden…', false);
+    const state = await rpc('pikken_place_bid_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId, bid_count_input: count, bid_face_input: face });
+    renderState(state);
+  }
+
+  async function rejectBid(){
+    setStatus('Afkeuren…', false);
+    const state = await rpc('pikken_reject_bid_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId });
+    renderState(state);
+  }
+
+  async function vote(v){
+    setStatus('Stemmen…', false);
+    const state = await rpc('pikken_cast_vote_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId, vote_input: !!v });
+    renderState(state);
+  }
+
+  function boot(){
+    const params = new URLSearchParams(location.search);
+    UI.gameId = params.get('game_id') || '';
+
+    qs('#pkCreateLobbyBtn').addEventListener('click', ()=>createLobby().catch((e)=>setStatus(normalizeError(e), true)));
+    qs('#pkJoinLobbyBtn').addEventListener('click', ()=>joinLobby().catch((e)=>setStatus(normalizeError(e), true)));
+    qs('#pkRefreshRoomsBtn').addEventListener('click', ()=>loadRooms(true).catch((e)=>setStatus(normalizeError(e), true)));
+    qs('#pkReadyBtn').addEventListener('click', ()=>setReady(true).catch((e)=>setStatus(normalizeError(e), true)));
+    qs('#pkUnreadyBtn').addEventListener('click', ()=>setReady(false).catch((e)=>setStatus(normalizeError(e), true)));
+    qs('#pkStartBtn').addEventListener('click', ()=>startGame().catch((e)=>setStatus(normalizeError(e), true)));
+    qs('#pkPlaceBidBtn').addEventListener('click', ()=>placeBid().catch((e)=>setStatus(normalizeError(e), true)));
+    qs('#pkRejectBtn').addEventListener('click', ()=>rejectBid().catch((e)=>setStatus(normalizeError(e), true)));
+    qs('#pkVoteApproveBtn').addEventListener('click', ()=>vote(true).catch((e)=>setStatus(normalizeError(e), true)));
+    qs('#pkVoteRejectBtn').addEventListener('click', ()=>vote(false).catch((e)=>setStatus(normalizeError(e), true)));
+
+    qs('#pkRoomCode').addEventListener('input', (event)=>{
+      event.target.value = String(event.target.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+    });
+
+    if (UI.gameId) {
+      setParticipantToken(UI.gameId, true);
+      startPolling();
+    } else {
+      loadRooms(true).catch(()=>{});
+    }
+
+    document.addEventListener('visibilitychange', ()=>{
+      if (!document.hidden) {
+        if (UI.gameId) loadAndRender(true).catch(()=>{});
+        else loadRooms(true).catch(()=>{});
+      }
     });
   }
 
-  function renderLobby(state){
-    const game = state && state.game || {}; const st = game.state || {}; const viewer = state && state.viewer || null; const players = Array.isArray(state && state.players) ? state.players : []; const liveLink = qs('#pkLiveLink'); const spectate = qs('#pkSpectateLink'); if (liveLink) { liveLink.href = liveHref(UI.gameId, UI.lobbyCode); liveLink.style.display = UI.gameId ? '' : 'none'; }
-    if (spectate) spectate.href = liveHref(UI.gameId, UI.lobbyCode);
-    const home = qs('#pkHomeLink'); if (home) home.href = scopedHref('./index.html');
-    qs('#pkLobbyCode') && (qs('#pkLobbyCode').textContent = UI.lobbyCode || '—');
-    qs('#pkPhase') && (qs('#pkPhase').textContent = gamePhase(game));
-    const variant = String((game.config && game.config.penalty_mode) || qs('#pkPenaltyMode') && qs('#pkPenaltyMode').value || 'wrong_loses').toLowerCase();
-    qs('#pkVariantLabel') && (qs('#pkVariantLabel').textContent = variant === 'right_loses' ? 'Fair' : 'Normal');
-    renderLobbyRole(state);
-    updateLobbyRail(state);
-    const connText = UI.lastLoadFailed ? 'verbinding hapert' : UI.connectionHint; connectionPill(connText, UI.lastLoadFailed ? 'bad' : 'ok');
-    const createBtn = qs('#pkCreateLobbyBtn'); const joinBtn = qs('#pkJoinLobbyBtn'); const readyBtn = qs('#pkReadyBtn'); const unreadyBtn = qs('#pkUnreadyBtn'); const leaveBtn = qs('#pkLeaveBtn'); const disbandBtn = qs('#pkDisbandBtn'); const startBtn = qs('#pkStartBtn'); if (createBtn) createBtn.disabled = UI.actionBusy; if (joinBtn) joinBtn.disabled = UI.actionBusy; if (readyBtn) readyBtn.disabled = UI.actionBusy || !UI.gameId || !hasPlayerIdentity(viewer); if (unreadyBtn) unreadyBtn.disabled = UI.actionBusy || !UI.gameId || !hasPlayerIdentity(viewer); if (leaveBtn) leaveBtn.disabled = UI.actionBusy || !UI.gameId; if (disbandBtn){ disbandBtn.disabled = UI.actionBusy || !viewer || !viewer.is_host || gamePhase(game)!=='lobby'; disbandBtn.style.display = viewer && viewer.is_host && UI.gameId ? '' : 'none'; } if (startBtn){ startBtn.disabled = UI.actionBusy || !viewer || !viewer.is_host || !game.can_start; startBtn.textContent = viewer && viewer.is_host ? 'Start · host' : 'Start · alleen host'; }
-    const playersRoot = qs('#pkPlayers'); if (playersRoot) { playersRoot.innerHTML = players.length ? players.map((p)=>{ const isTurn = Number(p && p.seat || 0) === Number(st.turn_seat || st.current_turn_seat || 0) && gamePhase(game) === 'bidding'; const canKick = !!(viewer && viewer.is_host && gamePhase(game) === 'lobby' && Number(viewer.seat || 0) !== Number(p && p.seat || 0)); return `<div class="player-row ${p && p.alive ? '' : 'dead'} ${isTurn ? 'turn' : ''}"><div><strong>${esc(p && p.name || 'Speler')}</strong> <span class="muted">#${Number(p && p.seat || 0)}</span><div class="player-meta"><span class="tag ${p && p.alive ? 'good' : 'bad'}">${p && p.alive ? 'levend' : 'dood'}</span><span class="tag">${Number(p && p.dice_count || 0)} dobbelstenen</span>${viewer && Number(viewer.seat || 0) === Number(p && p.seat || 0) ? '<span class="tag">jij</span>' : ''}</div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end"><span class="pill ${p && p.ready ? 'ok' : 'wait'}">${p && p.ready ? 'ready' : 'wacht'}</span>${canKick ? `<button class="btn warn" type="button" data-pk-kick="${esc(p && p.name || '')}" data-pk-seat="${Number(p && p.seat || 0)}">Kick</button>` : ''}</div></div>`; }).join('') : '<div class="player-row"><div class="muted">Nog geen spelers in deze lobby.</div></div>'; qsa('[data-pk-kick]', playersRoot).forEach((btn)=>btn.onclick=()=>kickLobbyPlayer(btn.getAttribute('data-pk-kick')||'', Number(btn.getAttribute('data-pk-seat')||0)).catch((err)=>setStatus(normalizeError(err), true))); }
-    const historyRoot = qs('#pkHistoryLine'); if (historyRoot) { const history = bidHistoryFromState(st).slice(-6).reverse(); historyRoot.innerHTML = history.length ? history.map((item, idx)=>`<div class="history-item"><strong>${esc(item.bidder_name || 'Onbekend')}</strong><div class="muted">${item.current ? 'Huidig bod' : `Bod ${history.length - idx}`} · ${esc(bidText(item))}</div></div>`).join('') : '<div class="history-item muted">Nog geen actieve biedingen zichtbaar.</div>'; }
-  }
-
-  function renderSeats(state){
-    const layer = qs('#seatLayer'); if (!layer) return; const game = state && state.game || {}; const st = game.state || {}; const viewer = state && state.viewer || null; const players = Array.isArray(state && state.players) ? state.players : []; const voteMap = new Map((Array.isArray(state && state.votes) ? state.votes : []).map((vote)=>[Number(vote && vote.seat || 0), String(vote && vote.status || '').toLowerCase()])); const bidMap = latestBidByPlayer(st); const phase = gamePhase(game); const turnSeat = (phase === 'voting' ? Number(st.vote_turn_seat || 0) : Number(st.turn_seat || st.current_turn_seat || 0)) || Number(st.bid && st.bid.bidder_seat || 0); const { players:ordered, positions } = seatPositions(players, Number(viewer && viewer.seat || 0)); layer.innerHTML = ordered.map((player, idx)=>{ const pos = positions[idx] || {x:50, y:50}; const prof = profileForPlayer(player && player.name); const lastBid = bidMap.get(normalizeName(player && player.name)); const vote = voteMap.get(Number(player && player.seat || 0)) || ''; const showVote = phase === 'voting'; const voteEmoji = vote === 'approved' ? '👍' : vote === 'rejected' ? '👎' : '…'; const bubble = showVote ? `<div class="vote-bubble ${vote ? '' : 'hidden'}">${voteEmoji}</div>` : `<div class="bid-bubble ${lastBid ? '' : 'hidden'}">${lastBid ? esc(bidText(lastBid)) : '&nbsp;'}</div>`; return `<div class="seat ${player && player.alive ? '' : 'dead'} ${Number(player && player.seat || 0) === Number(turnSeat || 0) && ['bidding','voting'].includes(phase) ? 'turn' : ''}" style="left:${pos.x}%;top:${pos.y}%"><div class="turn-arrow">▼</div>${bubble}<div class="avatar-shell"><div class="avatar">${prof.src ? `<img src="${esc(prof.src)}" alt="${esc(player && player.name || 'Speler')}" referrerpolicy="no-referrer" onerror="this.parentNode.textContent='${esc(initials(player && player.name))}'">` : esc(initials(player && player.name))}</div></div><div class="player-name">${esc(player && player.name || 'Speler')}</div><div class="player-nick">${esc(prof.nick || ' ')}</div><div class="tagline"><span class="tag ${player && player.alive ? 'good' : 'bad'}">${player && player.alive ? 'levend' : 'dood'}</span><span class="tag">${Number(player && player.dice_count || 0)} dice</span>${viewer && Number(viewer.seat || 0) === Number(player && player.seat || 0) ? '<span class="tag">jij</span>' : ''}</div></div>`; }).join(''); }
-
-  function renderDrawers(state){
-    const game = state && state.game || {}; const st = game.state || {}; const viewer = state && state.viewer || null; const players = Array.isArray(state && state.players) ? state.players : []; const history = bidHistoryFromState(st).slice().reverse(); const latestMove = history[0] ? `${history[0].bidder_name || 'Onbekend'} zei ${bidText(history[0])}` : 'Nog geen move zichtbaar.'; const playersBody = qs('#playersDrawerBody'); if (playersBody) playersBody.innerHTML = players.length ? players.map((player)=>`<div class="player-card"><strong>${esc(player && player.name || 'Speler')}</strong><div class="muted">Stoel ${Number(player && player.seat || 0)} · ${player && player.alive ? 'levend' : 'dood'} · ${Number(player && player.dice_count || 0)} dobbelstenen</div></div>`).join('') : '<div class="player-card muted">Nog geen spelers zichtbaar.</div>';
-    const historyBody = qs('#historyDrawerBody'); if (historyBody) historyBody.innerHTML = history.length ? history.map((item, idx)=>`<div class="history-item"><strong>${esc(item.bidder_name || 'Onbekend')}</strong><div class="muted">${idx === 0 ? 'Laatste move' : `Eerder bod ${idx + 1}`} · ${esc(bidText(item))}</div></div>`).join('') : '<div class="history-item muted">Nog geen biedhistorie zichtbaar.</div>';
-    const stateBody = qs('#stateDrawerBody'); if (stateBody) stateBody.innerHTML = `<div class="help-card"><strong>Jouw modus</strong><div class="muted">${hasActorViewer(viewer) ? (viewer.is_host ? 'Host / actor' : `Speler op stoel ${Number(viewer.seat || 0)}`) : 'Viewer fallback'}</div></div><div class="help-card"><strong>Canonical truth</strong><div class="muted">Lobbycode ${esc(UI.lobbyCode || '—')} · game-id ${esc(UI.gameId || '—')} · fase ${esc(gamePhase(game))}</div></div><div class="help-card"><strong>Waarom je wel of niet mag handelen</strong><div class="muted">Actiedock wordt alleen actief als jouw deelnemersidentiteit hard bewezen is. Zonder die koppeling blijf je kijker.</div></div><div class="help-card"><strong>Laatste belangrijke move</strong><div class="muted">${esc(latestMove)}</div></div>`;
-    const helpBody = qs('#helpDrawerBody'); if (helpBody) helpBody.innerHTML = `<div class="help-card"><strong>Snelle regels</strong><div class="muted">Bied aantal × face. Pik telt als joker bij 2–6. Afkeuren start een stemronde. Daarna reveal + verlies van één dobbelsteen volgens de gekozen variant.</div></div><div class="help-card"><strong>Waarom deze mobiele indeling</strong><div class="muted">De hoofdactie blijft centraal. Historie, spelers en troubleshooting leven in drawers zodat het spel zelf niet dichtslibt.</div></div><div class="help-card"><strong>Veilige viewer fallback</strong><div class="muted">Als match-id of speleridentiteit niet stevig genoeg is, wordt er niet gedaan alsof jij een actor bent. Dan krijg je alleen de kijkerslaag.</div></div>`;
-    syncDrawerUi();
-  }
-
-  function updateDock(state){
-    const game = state && state.game || {}; const st = game.state || {}; const viewer = state && state.viewer || null; const phase = gamePhase(game); const bid = st.bid || null; const turnSeat = (phase === 'voting' ? Number(st.vote_turn_seat || 0) : Number(st.turn_seat || st.current_turn_seat || 0)) || Number(bid && bid.bidder_seat || 0); const dockTitle = qs('#dockTitle'); const dockCopy = qs('#dockCopy'); const buttons = qsa('.dock-actions .dock-btn'); const bidPanel = qs('#bidPanel'); const votePanel = qs('#votePanel'); const myTurn = hasPlayerIdentity(viewer) && viewer.alive && phase === 'bidding' && Number(viewer.seat || 0) === Number(turnSeat || 0); const myVoteTurn = hasPlayerIdentity(viewer) && viewer.alive && phase === 'voting' && Number(viewer.seat || 0) === Number(turnSeat || 0); if (dockTitle && dockCopy){ if (!hasPlayerIdentity(viewer)){ dockTitle.textContent = 'Viewer mode'; dockCopy.textContent = 'Je kijkt mee. Acties verschijnen alleen als jouw spelersidentiteit bewezen is.'; } else if (myTurn){ dockTitle.textContent = 'Jij bent aan de beurt'; dockCopy.textContent = 'Bied hoger of keur direct af vanuit het onderste dock.'; } else if (myVoteTurn){ dockTitle.textContent = 'Jouw stem is nodig'; dockCopy.textContent = 'Reageer vanuit het dock en houd de tafel open voor de rest.'; } else { dockTitle.textContent = viewer.is_host ? 'Host mode' : 'Speler mode'; dockCopy.textContent = 'Je zit aan tafel. Niet-jouw-beurt-info blijft compact en de rest zit in drawers.'; } }
-    if (bidPanel) bidPanel.classList.toggle('hidden', !myTurn); if (votePanel) votePanel.classList.toggle('hidden', !myVoteTurn);
-    const rules = getBidRules(state);
-    refreshBidSelectors(rules);
-    buttons.forEach((btn)=>{ const drawer = btn.getAttribute('data-drawer-open'); btn.className = `dock-btn ${(!hasPlayerIdentity(viewer) && (drawer === 'players' || drawer === 'history' || drawer === 'state' || drawer === 'help')) ? 'viewer' : ''}`; });
-    const rejectBtn = qs('#rejectBidBtn'); if (rejectBtn) rejectBtn.disabled = UI.actionBusy || !myTurn || !bid; const placeBtn = qs('#placeBidBtn'); if (placeBtn) placeBtn.disabled = UI.actionBusy || !myTurn; const approveBtn = qs('#voteApproveBtn'); if (approveBtn) approveBtn.disabled = UI.actionBusy || !myVoteTurn; const rejectVoteBtn = qs('#voteRejectBtn'); if (rejectVoteBtn) rejectVoteBtn.disabled = UI.actionBusy || !myVoteTurn;
-  }
-
-  function renderLive(state){
-    const game = state && state.game || {}; const st = game.state || {}; const viewer = state && state.viewer || null; const phase = gamePhase(game); const bid = st.bid || null; qs('#lobbyCode') && (qs('#lobbyCode').textContent = UI.lobbyCode || '—'); qs('#phaseTitleMetric') && (qs('#phaseTitleMetric').textContent = phase); qs('#phaseTitle') && (qs('#phaseTitle').textContent = phase === 'voting' ? 'Iedereen stemt op het bod' : phase === 'finished' ? 'Potje afgerond' : 'Plaats of volg het volgende bod'); qs('#phasePill') && (qs('#phasePill').className = `pill ${phase === 'bidding' ? 'gold' : phase === 'voting' ? 'wait' : phase === 'finished' ? 'bad' : 'wait'}`); qs('#phasePill') && (qs('#phasePill').textContent = phase); qs('#pkLiveModePill') && (qs('#pkLiveModePill').className = `pill ${hasPlayerIdentity(viewer) ? (viewer.is_host ? 'gold' : 'ok') : 'wait'}`); qs('#pkLiveModePill') && (qs('#pkLiveModePill').textContent = hasPlayerIdentity(viewer) ? (viewer.is_host ? 'host mode' : 'player mode') : 'viewer mode'); qs('#turnName') && (qs('#turnName').textContent = nameBySeat(state && state.players, phase === 'voting' ? st.vote_turn_seat : (st.turn_seat || st.current_turn_seat || (bid && bid.bidder_seat)))); qs('#totalCurrentDice') && (qs('#totalCurrentDice').textContent = String(Number(state && state.dice_totals && state.dice_totals.current_total || 0))); qs('#currentBid') && (qs('#currentBid').textContent = bidText(bid)); qs('#bidBy') && (qs('#bidBy').textContent = bid && bid.bidder_name ? `door ${bid.bidder_name}` : ''); const focusMove = bidHistoryFromState(st).slice(-1)[0]; qs('#focusMoveText') && (qs('#focusMoveText').textContent = focusMove ? `${focusMove.bidder_name || 'Onbekend'} zei ${bidText(focusMove)}` : 'Nog geen move zichtbaar.'); qs('#contestedBidLine') && (qs('#contestedBidLine').textContent = phase === 'voting' && focusMove ? `Iedereen stemt nu op ${bidText(focusMove)} van ${focusMove.bidder_name || 'onbekend'}.` : (focusMove ? `Laatste bod: ${bidText(focusMove)} van ${focusMove.bidder_name || 'onbekend'}.` : '')); qs('#viewerMeta') && (qs('#viewerMeta').textContent = hasPlayerIdentity(viewer) ? `${viewer.name || 'Jij'} · stoel ${Number(viewer.seat || 0)} · ${viewer.alive ? 'levend' : 'dood'} · ${Number(viewer.dice_count || 0)} dobbelstenen${viewer.inferred ? ' · herkend via lobby-koppeling' : ''}` : 'Je spelersidentiteit is niet hard genoeg bewezen. Daarom zit je veilig in viewer mode.'); qs('#selfNameLine') && (qs('#selfNameLine').textContent = hasPlayerIdentity(viewer) ? (viewer.name || 'Jij') : 'Viewer'); const prof = profileForPlayer(viewer && viewer.name); const selfAvatar = qs('#selfAvatar'); if (selfAvatar) selfAvatar.innerHTML = viewer && prof.src ? `<img src="${esc(prof.src)}" alt="${esc(viewer.name || 'Speler')}" referrerpolicy="no-referrer" onerror="this.parentNode.textContent='${esc(initials(viewer && viewer.name))}'">` : esc(initials(viewer && viewer.name)); qs('#selfNick') && (qs('#selfNick').textContent = prof.nick || ' '); const myDice = qs('#myDice'); if (myDice){ myDice.innerHTML = ''; sortDice(state && state.my_hand).forEach((face)=>{ myDice.insertAdjacentHTML('beforeend', `<img class="die ${Number(face) === 1 ? 'pik' : ''}" src="./assets/pikken/dice-${Number(face)}.svg" alt="die ${Number(face)}">`); }); if (!sortDice(state && state.my_hand).length) myDice.innerHTML = '<div class="muted">Geen zichtbare hand in viewer mode.</div>'; }
-    const disbandBtn = qs('#disbandTableBtn'); if (disbandBtn) disbandBtn.classList.toggle('hidden', !(viewer && viewer.is_host && phase === 'lobby'));
-    const reveal = st.last_reveal || game.last_reveal || null; const revealEl = qs('#revealBanner'); if (revealEl){ if (!reveal || phase === 'voting'){ revealEl.classList.add('hidden'); revealEl.innerHTML = ''; } else { revealEl.classList.remove('hidden'); revealEl.innerHTML = `${reveal.bid_true ? '✅ Bod gehaald' : '❌ Bod afgekeurd'} · ${Number(reveal.counted_total || 0)} geteld · eerste verliezer: ${esc(nameBySeat(state && state.players, reveal.first_loser_seat) || '—')}`; } }
-    renderSeats(state); renderDrawers(state); updateDock(state); const conn = UI.lastLoadFailed ? 'verbinding hapert' : UI.connectionHint; connectionPill(conn, UI.lastLoadFailed ? 'bad' : 'ok'); }
-
-  function refreshBidSelectors(rules){ const countSel = qs('#bidCount'); const faceSel = qs('#bidFace'); if (!countSel || !faceSel) return; const totalDice = Math.max(1, Number(rules.totalDice || 0)); const currentCount = Number(rules.currentCount || 0); const previousCount = Number(countSel.value || currentCount || 1); const allowedCounts = []; for (let c=1;c<=totalDice;c+=1) if (allowedFacesForCount(c, rules).length) allowedCounts.push(c); countSel.innerHTML = allowedCounts.map((c)=>`<option value="${c}">${c}</option>`).join(''); const selectedCount = allowedCounts.includes(previousCount) ? previousCount : (allowedCounts[0] || 1); countSel.value = String(selectedCount); const faces = allowedFacesForCount(selectedCount, rules); const previousFace = Number(faceSel.value || 0); faceSel.innerHTML = faces.map((face)=>`<option value="${face}">${face === 1 ? 'pik' : face}</option>`).join(''); faceSel.value = String(faces.includes(previousFace) ? previousFace : (faces[0] || 1)); countSel.onchange = ()=>refreshBidSelectors(Object.assign({}, rules, { currentCount: Number(rules.currentCount || 0), currentFace: Number(rules.currentFace || 0) })); }
-
-  function setLobbySurfaceStarted(state){ const viewer = state && state.viewer || null; if (UI.page !== 'lobby') return; if (hasStarted(state && state.game) && UI.gameId && hasActorViewer(viewer) && !isLeaveSuppressed(UI.gameId, UI.lobbyCode)){ UI.redirecting = true; window.location.replace(liveHref(UI.gameId, UI.lobbyCode)); } }
-  function safeViewerFallback(state){ const decorated = decorateState(state); if (decorated && decorated.viewer && !hasPlayerIdentity(decorated.viewer)){ clearParticipantIdentityBits(); } return decorated; }
-  function clearParticipantIdentityBits(){ const identity = getParticipantIdentity(); if (!identity) return; setParticipantIdentity({ game_id: identity.game_id || '', lobby_code: identity.lobby_code || '', scope: identity.scope || currentScope(), seat: null, name: identity.name || UI.viewerName || '' }); }
-
-  async function loadWave(){
-    const fallback = snapshotFallback();
-    let participantState = null; let publicState = null;
-    try { if (UI.gameId || UI.lobbyCode) participantState = await loadParticipantState(UI.gameId); } catch(err) { participantState = null; }
-    if (participantState) syncKnownGame(participantState);
-    try { if (!participantState || !hasActorViewer(participantState.viewer)) publicState = await loadPublicState(); } catch(err) { publicState = null; }
-    if (publicState) syncKnownGame(publicState);
-    const state = safeViewerFallback(participantState || publicState || fallback || null);
-    if (!state){
-      if (UI.page === 'lobby'){
-        UI.lastLoadFailed = false;
-        UI.connectionHint = 'lobby overzicht';
-        connectionPill('lobby overzicht', 'wait');
-        updateLobbyRail(null);
-        refreshOpenLobbies().catch(()=>{});
-        setStatus('Nog geen actieve lobby geselecteerd.', false);
-        return;
-      }
-      UI.lastLoadFailed = true; UI.connectionHint = 'verbinding hapert'; connectionPill(UI.connectionHint, 'bad'); setStatus('Geen actieve tafel gevonden. Open Pikken vanuit de lobby.', true); return; }
-    UI.lastLoadFailed = false; UI.state = state; UI.publicState = publicState || state; syncKnownGame(state);
-    const viewer = state.viewer || null; if (hasPlayerIdentity(viewer)) { setParticipantIdentity({ game_id: UI.gameId, lobby_code: UI.lobbyCode, scope: UI.scope, seat: Number(viewer.seat || 0) || null, name: viewer.name || '' }); clearLeaveSuppression(); }
-    UI.connectionHint = hasPlayerIdentity(viewer) ? 'speler bevestigd' : 'viewer fallback';
-    if (UI.page === 'lobby'){ renderLobby(state); refreshOpenLobbies().catch(()=>{}); setLobbySurfaceStarted(state); }
-    else { renderLive(state); }
-    setStatus('', false);
-    UI.unresolvedSince = 0;
-  }
-
-  function startPolling(){ stopPolling(); UI.polls = setInterval(()=>{ if (!document.hidden && !UI.redirecting) loadWave(); }, POLL_MS); loadWave(); }
-  function stopPolling(){ if (UI.polls){ clearInterval(UI.polls); UI.polls = null; } }
-
-  function syncDrawerUi(){
-    qsa('.drawer').forEach((drawer)=>drawer.classList.remove('show'));
-    qsa('.drawer-backdrop').forEach((el)=>el.classList.toggle('show', !!UI.openDrawer));
-    document.body.classList.toggle('drawer-open', !!UI.openDrawer);
-    qsa('[data-drawer-open]').forEach((btn)=>btn.classList.toggle('active', btn.getAttribute('data-drawer-open') === UI.openDrawer));
-    if (UI.openDrawer){
-      const drawer = qs(`#${UI.openDrawer}Drawer`);
-      if (drawer) drawer.classList.add('show');
-    }
-  }
-  function openDrawer(name){ UI.openDrawer = name || ''; syncDrawerUi(); }
-  function closeDrawers(){ UI.openDrawer = ''; syncDrawerUi(); }
-
-  async function withAction(label, fn){ if (UI.actionBusy) return; UI.actionBusy = true; setStatus(label, false); try { const out = await fn(); if (out && typeof out === 'object') { const state = decorateState(out); UI.state = state; syncKnownGame(state); if (UI.page === 'lobby') renderLobby(state); else renderLive(state); } showToast(label.replace('…','') + ' gelukt'); await loadWave(); } catch(err){ setStatus(normalizeError(err) || `${label} mislukt.`, true); showToast(normalizeError(err) || `${label} mislukt.`); } finally { UI.actionBusy = false; } }
-
-  async function createLobby(){ clearRuntimeHints(); clearLeaveSuppression(); const mode = String(qs('#pkPenaltyMode') && qs('#pkPenaltyMode').value || 'wrong_loses'); const requestedCode = String(qs('#pkJoinCode') && qs('#pkJoinCode').value || '').trim().toUpperCase(); return withAction('Nieuwe lobby maken…', async()=>{ const out = await rpc('pikken_create_lobby_scoped', { session_token: playerToken() || null, site_scope_input: UI.scope, config_input: { penalty_mode: mode } }); UI.gameId = String(out && out.game_id || '').trim(); UI.lobbyCode = String(out && out.lobby_code || '').trim().toUpperCase(); if (requestedCode && UI.gameId){ try { const renamed = await rpc('pikken_set_lobby_code_scoped', { session_token: playerToken() || null, game_id_input: UI.gameId, lobby_code_input: requestedCode }); UI.lobbyCode = String(renamed && (renamed.lobby_code || renamed.requested_lobby_code || requestedCode) || requestedCode).trim().toUpperCase(); } catch(err){ const msg = String(err && err.message || ''); if (!/function .* does not exist|could not find the function|schema cache/i.test(msg)) throw err; } } const input = qs('#pkJoinCode'); if (input && UI.lobbyCode) input.value = UI.lobbyCode; setParticipantIdentity({ game_id: UI.gameId, lobby_code: UI.lobbyCode, scope: UI.scope, seat: null, name: UI.viewerName || '' }); syncHistoryUrl(); return await loadParticipantState(UI.gameId); }); }
-  async function joinLobby(){ const code = String(qs('#pkJoinCode') && qs('#pkJoinCode').value || '').trim().toUpperCase(); if (!code) return setStatus('Vul een lobbycode in.', true); clearRuntimeHints(); clearLeaveSuppression(); return withAction('Lobby joinen…', async()=>{ const out = await rpc('pikken_join_lobby_scoped', { session_token: playerToken() || null, site_scope_input: UI.scope, lobby_code_input: code }); UI.gameId = String(out && out.game_id || '').trim(); UI.lobbyCode = String(out && (out.lobby_code || code) || '').trim().toUpperCase(); setParticipantIdentity({ game_id: UI.gameId, lobby_code: UI.lobbyCode, scope: UI.scope, seat: null, name: UI.viewerName || '' }); syncHistoryUrl(); return await loadParticipantState(UI.gameId); }); }
-  async function setReady(ready){ if (!UI.gameId) return; return withAction(ready ? 'Ready zetten…' : 'Unready zetten…', ()=>rpc('pikken_set_ready_scoped', { session_token: playerToken() || null, game_id_input: UI.gameId, ready_input: !!ready })); }
-  async function startGame(){ if (!UI.gameId) return; clearLeaveSuppression(); return withAction('Tafel starten…', async()=>{ await rpc('pikken_start_game_scoped', { session_token: playerToken() || null, game_id_input: UI.gameId }); const nextState = await loadParticipantState(UI.gameId); if (nextState && hasStarted(nextState.game) && hasActorViewer(nextState.viewer)) { UI.redirecting = true; window.location.replace(liveHref(UI.gameId, UI.lobbyCode)); } return nextState; }); }
-  function finalizeLocalLeave(){ closeDrawers(); setLeaveSuppression(UI.gameId, UI.lobbyCode); clearRuntimeHints(); stopPolling(); const target = lobbyHref('', ''); window.location.replace(target); }
-  async function leaveLobbyOrTable(){ if (!window.confirm(UI.page === 'live' ? 'Weet je zeker dat je deze tafel wilt verlaten?' : 'Weet je zeker dat je deze lobby wilt verlaten?')) return; const canonicalGameId = await ensureCanonicalGameId().catch(()=>String(UI.gameId || '').trim()); if (!canonicalGameId){ finalizeLocalLeave(); return; } try { await rpc('pikken_leave_lobby_scoped', { session_token: playerToken() || null, game_id_input: canonicalGameId }); } catch(err){ const msg = String(err && err.message || ''); if (!/niet in deze lobby|niet in dit spel|geen deelnemer|not.*participant/i.test(msg)) throw err; } finalizeLocalLeave(); }
-  async function disbandTable(){ if (!window.confirm('Weet je zeker dat je de hele tafel wilt opheffen?')) return; const canonicalGameId = await ensureCanonicalGameId(); if (!canonicalGameId) return setStatus('Geen geldige tafel-id gevonden om op te heffen.', true); return withAction('Tafel opheffen…', async()=>{ await rpc('pikken_destroy_lobby_scoped', { session_token: playerToken() || null, game_id_input: canonicalGameId }); finalizeLocalLeave(); return null; }); }
-  async function placeBid(){ const count = Number(qs('#bidCount') && qs('#bidCount').value || 0); const face = Number(qs('#bidFace') && qs('#bidFace').value || 0); const rules = getBidRules(UI.state); if (!count || !face) return setStatus('Kies een geldig bod.', true); if (!isHigherBid(count, face, rules)) return setStatus('Dat bod is volgens de huidige stand niet geldig.', true); return withAction('Bieden…', ()=>rpc('pikken_place_bid_scoped', { session_token: playerToken() || null, game_id_input: UI.gameId, bid_count_input: count, bid_face_input: face })); }
-  async function rejectBid(){ if (!UI.gameId) return; return withAction('Bod afkeuren…', ()=>rpc('pikken_reject_bid_scoped', { session_token: playerToken() || null, game_id_input: UI.gameId })); }
-  async function castVote(vote){ if (!UI.gameId) return; return withAction('Stem doorgeven…', ()=>rpc('pikken_cast_vote_scoped', { session_token: playerToken() || null, game_id_input: UI.gameId, vote_input: !!vote })); }
-
-  function bindLobby(){ const home = qs('#pkHomeLink'); if (home) home.href = scopedHref('./index.html'); const live = qs('#pkLiveLink'); if (live) live.href = liveHref(UI.gameId, UI.lobbyCode); const spectate = qs('#pkSpectateLink'); if (spectate) spectate.href = liveHref(UI.gameId, UI.lobbyCode); const stats = qs('#pkStatsLink'); if (stats) stats.href = scopedHref('./pikken_stats.html'); qs('#pkCreateLobbyBtn') && qs('#pkCreateLobbyBtn').addEventListener('click', ()=>createLobby().catch((err)=>setStatus(normalizeError(err), true))); qs('#pkJoinLobbyBtn') && qs('#pkJoinLobbyBtn').addEventListener('click', ()=>joinLobby().catch((err)=>setStatus(normalizeError(err), true))); qs('#pkReadyBtn') && qs('#pkReadyBtn').addEventListener('click', ()=>setReady(true).catch((err)=>setStatus(normalizeError(err), true))); qs('#pkUnreadyBtn') && qs('#pkUnreadyBtn').addEventListener('click', ()=>setReady(false).catch((err)=>setStatus(normalizeError(err), true))); qs('#pkLeaveBtn') && qs('#pkLeaveBtn').addEventListener('click', ()=>leaveLobbyOrTable().catch((err)=>setStatus(normalizeError(err), true))); qs('#pkDisbandBtn') && qs('#pkDisbandBtn').addEventListener('click', ()=>disbandTable().catch((err)=>setStatus(normalizeError(err), true))); qs('#pkStartBtn') && qs('#pkStartBtn').addEventListener('click', ()=>startGame().catch((err)=>setStatus(normalizeError(err), true))); qs('#pkJoinCode') && qs('#pkJoinCode').addEventListener('keydown', (ev)=>{ if(ev.key==='Enter'){ ev.preventDefault(); joinLobby().catch((err)=>setStatus(normalizeError(err), true)); }}); refreshOpenLobbies().catch(()=>{}); }
-  function bindLive(){ const home = qs('#pkLiveHomeBtn'); if (home) home.href = scopedHref('./index.html'); const lobby = qs('#backLobbyBtn'); if (lobby) lobby.href = lobbyHref(UI.gameId, UI.lobbyCode); qs('#leaveTableBtn') && qs('#leaveTableBtn').addEventListener('click', ()=>leaveLobbyOrTable().catch((err)=>setStatus(normalizeError(err), true))); qs('#disbandTableBtn') && qs('#disbandTableBtn').addEventListener('click', ()=>disbandTable().catch((err)=>setStatus(normalizeError(err), true))); qs('#placeBidBtn') && qs('#placeBidBtn').addEventListener('click', ()=>placeBid().catch((err)=>setStatus(normalizeError(err), true))); qs('#rejectBidBtn') && qs('#rejectBidBtn').addEventListener('click', ()=>rejectBid().catch((err)=>setStatus(normalizeError(err), true))); qs('#voteApproveBtn') && qs('#voteApproveBtn').addEventListener('click', ()=>castVote(true).catch((err)=>setStatus(normalizeError(err), true))); qs('#voteRejectBtn') && qs('#voteRejectBtn').addEventListener('click', ()=>castVote(false).catch((err)=>setStatus(normalizeError(err), true))); qsa('[data-drawer-open]').forEach((btn)=>btn.addEventListener('click', ()=>openDrawer(btn.getAttribute('data-drawer-open')))); qsa('[data-drawer-close]').forEach((btn)=>btn.addEventListener('click', closeDrawers)); qs('#drawerBackdrop') && qs('#drawerBackdrop').addEventListener('click', closeDrawers); }
-
-  async function boot(){
-    migrateLocalState();
-    UI.scope = currentScope();
-    UI.gameId = currentUrlGameId() || String((getParticipantIdentity() || {}).game_id || '').trim();
-    UI.lobbyCode = currentUrlLobbyCode() || String((getParticipantIdentity() || {}).lobby_code || '').trim().toUpperCase();
-    if (isLeaveSuppressed(UI.gameId, UI.lobbyCode) && UI.page === 'lobby'){ UI.gameId = ''; UI.lobbyCode = ''; }
-    UI.viewerName = await fetchViewerIdentity();
-    await loadProfiles();
-    if (UI.page === 'live') bindLive(); else bindLobby();
-    syncHistoryUrl();
-    startPolling();
-    document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) loadWave(); });
-    window.addEventListener('beforeunload', ()=>{ if (UI.state) saveSnapshot(UI.state); });
-  }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ()=>boot().catch((err)=>setStatus(normalizeError(err), true)), { once:true });
-  else boot().catch((err)=>setStatus(normalizeError(err), true));
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once:true });
+  else boot();
 })();

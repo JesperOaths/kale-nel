@@ -5,204 +5,251 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken</title>
-  <script>window.GEJAST_PAGE_VERSION='v592';</script>
-  <script src="./gejast-config.js?v592"></script>
-  <script src="./gejast-home-gate.js?v571"></script>
-  <script src="./gejast-scope-context.js?v571"></script>
+  <script>window.GEJAST_PAGE_VERSION='v594';</script>
+  <script src="./gejast-config.js?v594"></script>
+  <script src="./gejast-home-gate.js?v594"></script>
+  <script src="./gejast-scope.js?v594"></script>
+  <script src="./gejast-scope-context.js?v594"></script>
   <style>
     :root{
-      --paper:#fffaf3;--line:rgba(0,0,0,.10);--muted:#6d6256;--ink:#17130f;--gold:#9a8241;--gold-ink:#5e4d1d;
-      --soft:#f7f1e7;--green:#2f6d3c;--green-bg:#edf8f0;--red:#8a1022;--red-bg:#fff4f2;--shadow:0 18px 40px rgba(0,0,0,.06)
+      --paper:#fbf6ef;--shell:#f5efe6;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241;--gold-soft:#efe5c7;
+      --panel:#fff;--shadow:0 18px 44px rgba(0,0,0,.08);--ok:#1f5d45;--bad:#7f2f1d;--chip:#fbfaf6;
     }
     *{box-sizing:border-box}
-    body{margin:0;padding:12px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
-    .wrap{max-width:1120px;margin:0 auto}
-    .shell{background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.78);border-radius:30px;padding:20px;box-shadow:var(--shadow)}
-    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
-    .brand{display:flex;align-items:center;gap:12px;margin:12px 0 6px}
-    .brand img{width:54px;height:54px;border-radius:16px;background:#fff;padding:8px;border:1px solid rgba(0,0,0,.08)}
-    .muted{color:var(--muted)}
-    .btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:16px;border:1px solid var(--line);background:#17130f;color:#fff;text-decoration:none;font-weight:800;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.06)}
-    .btn.alt{background:#fff;color:#17130f;border-color:rgba(0,0,0,.16)}
-    .btn.soft{background:var(--soft);color:var(--gold-ink);border-color:rgba(154,130,65,.35)}
-    .btn.ok{background:var(--green-bg);color:var(--green);border-color:rgba(47,109,60,.22)}
-    .btn.warn{background:var(--red-bg);color:var(--red);border-color:rgba(138,16,34,.18)}
-    .btn:disabled{opacity:.58;cursor:not-allowed;box-shadow:none}
-    .grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(300px,.95fr);gap:16px;margin-top:18px}
-    .panel{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:18px}
-    .strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-    .stat{padding:12px;border-radius:18px;background:#fff;border:1px solid var(--line)}
-    .stat .k{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55}
-    .stat .v{margin-top:6px;font-size:18px;font-weight:900;line-height:1.1}
-    .field{display:grid;gap:6px;margin-top:12px}
-    label{font-size:.78rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#8a7a55}
-    input,select{padding:12px 14px;border-radius:14px;border:1px solid rgba(0,0,0,.12);background:#fff;font:inherit}
-    .action-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-    .status-line{margin-top:8px;min-height:20px}
-    .mode-card{padding:14px;border-radius:20px;background:#fff;border:1px solid var(--line);display:grid;gap:8px}
-    .mode-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
-    .pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-weight:900;font-size:12px;border:1px solid rgba(0,0,0,.10)}
-    .pill.ok{background:rgba(59,130,96,.12);border-color:rgba(59,130,96,.32);color:#1f5d45}
-    .pill.bad{background:rgba(127,47,29,.10);border-color:rgba(127,47,29,.28);color:#7f2f1d}
+    body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
+    .wrap{max-width:1240px;margin:0 auto}
+    .shell{background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.7);border-radius:30px;padding:24px;box-shadow:var(--shadow)}
+    .top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}
+    .brand{display:flex;gap:14px;align-items:flex-start}
+    .brand-icon{width:56px;height:56px;border-radius:16px;background:#fff;padding:9px;border:1px solid rgba(0,0,0,.08)}
+    h1{margin:0;font-size:34px;letter-spacing:-.04em}
+    .sub{margin:8px 0 0;color:var(--muted);max-width:760px;line-height:1.55}
+    .top-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:11px 15px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer;transition:transform .12s ease, box-shadow .12s ease, opacity .12s ease}
+    .btn:hover{transform:translateY(-1px);box-shadow:0 10px 20px rgba(0,0,0,.08)}
+    .btn.alt{background:#fff;color:#111;border:1px solid var(--line)}
+    .btn.soft{background:var(--gold-soft);color:#4b3d1a;border:1px solid rgba(154,130,65,.25)}
+    .btn[disabled]{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none}
+    .status{margin-top:10px;min-height:22px;color:var(--muted)}
+    .hero-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;margin-top:18px}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:18px;box-shadow:0 10px 24px rgba(0,0,0,.03)}
+    .panel h2{margin:0 0 10px;font-size:18px;letter-spacing:-.03em}
+    .panel p{margin:0;color:var(--muted)}
+    .pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-weight:900;font-size:12px;border:1px solid rgba(0,0,0,.1)}
+    .pill.ok{background:rgba(59,130,96,.12);border-color:rgba(59,130,96,.32);color:var(--ok)}
+    .pill.bad{background:rgba(127,47,29,.10);border-color:rgba(127,47,29,.28);color:var(--bad)}
     .pill.wait{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.12);color:#6b6257}
-    .pill.gold{background:rgba(154,130,65,.12);border-color:rgba(154,130,65,.24);color:#6c5621}
-    .helper-card{margin-top:14px;padding:14px;border-radius:18px;background:#fff;border:1px solid var(--line)}
-    .helper-card strong{display:block;margin-bottom:4px}
-    .players-list{display:grid;gap:10px;margin-top:12px}
-    .player-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px;border-radius:18px;background:#fff;border:1px solid var(--line)}
+    .field{display:grid;gap:6px}
+    .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    label{font-size:.78rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#8a7a55}
+    input,select{width:100%;padding:13px 14px;border-radius:14px;border:1px solid rgba(0,0,0,.12);font:inherit;background:#fff}
+    .action-row,.split-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .split-actions{justify-content:space-between;align-items:center}
+    .lobby-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+    .stack{display:grid;gap:12px}
+    .room-rail{display:grid;gap:10px;max-height:520px;overflow:auto;padding-right:2px}
+    .room-card{border:1px solid var(--line);border-radius:18px;background:var(--chip);padding:14px;display:grid;gap:10px}
+    .room-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .room-code{font-size:20px;font-weight:900;letter-spacing:.06em}
+    .room-meta{display:flex;gap:8px;flex-wrap:wrap}
+    .room-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .muted{color:var(--muted)}
+    .summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}
+    .stat{background:#fff;border:1px solid rgba(0,0,0,.06);border-radius:18px;padding:14px}
+    .stat span{display:block;font-size:11px;color:#8a7a55;text-transform:uppercase;letter-spacing:.08em}
+    .stat strong{display:block;margin-top:6px;font-size:26px}
+    .players-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;margin-top:16px}
+    .player-list{display:grid;gap:10px}
+    .player-row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.06)}
     .player-row.dead{opacity:.55}
     .player-row.turn{outline:2px solid rgba(154,130,65,.38)}
-    .player-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px}
-    .player-meta .tag{display:inline-flex;align-items:center;justify-content:center;padding:4px 8px;border-radius:999px;background:rgba(0,0,0,.05);font-size:11px;font-weight:900;color:#5b5348}
-    .notice-list{display:grid;gap:10px}
-    .notice{padding:12px 14px;border-radius:16px;background:#fff;border:1px solid var(--line);font-size:14px;line-height:1.45}
-
-    .rail{display:grid;gap:10px;margin-top:14px}
-    .rail-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-    .rail-chip{background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px 14px;display:grid;gap:4px}
-    .rail-chip .k{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8a7a55;font-weight:900}
-    .rail-chip .v{font-size:18px;font-weight:900}
-    .room-list-head{font-size:12px;color:var(--muted);margin-top:14px}
-    .accordion{border:1px solid var(--line);border-radius:20px;background:#fff;margin-top:12px;overflow:hidden}
+    .player-name strong{display:block}
+    .mini-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .chip-line{display:flex;gap:8px;flex-wrap:wrap}
+    .accordion{border:1px solid var(--line);border-radius:20px;background:#fff}
     .accordion summary{list-style:none;cursor:pointer;padding:16px;font-weight:900;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
     .accordion summary::-webkit-details-marker{display:none}
     .detail{padding:0 16px 16px}
-    .history-list{display:grid;gap:8px}
-    .history-item{padding:10px 12px;border-radius:16px;background:#fbfaf6;border:1px solid var(--line)}
-    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,.18)}
-    @media (max-width:920px){.grid{grid-template-columns:1fr}.strip{grid-template-columns:repeat(2,minmax(0,1fr))}.rail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media (max-width:760px){body{padding:8px}.shell{padding:14px;border-radius:24px}.strip{grid-template-columns:1fr 1fr}.brand{margin-top:8px}.action-row{display:grid;grid-template-columns:1fr 1fr}.action-row .btn{width:100%}.player-row{grid-template-columns:1fr}.top-actions{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px}}
-    @media (max-width:520px){.strip{grid-template-columns:1fr}.action-row{grid-template-columns:1fr}.top-actions{grid-template-columns:1fr}}
+    .dice-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+    img.die{width:50px;height:50px;display:block}
+    img.die.pik{filter:saturate(1.05)}
+    .reveal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px}
+    .reveal-card{border:1px solid var(--line);border-radius:18px;background:#fbfaf6;padding:12px}
+    .sticky-actions{position:sticky;bottom:10px;margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;padding:12px;border-radius:18px;background:rgba(255,251,245,.92);backdrop-filter:blur(8px);border:1px solid rgba(0,0,0,.08)}
+    .empty-note{padding:14px;border-radius:16px;background:#fbfaf6;border:1px dashed rgba(0,0,0,.12);color:var(--muted)}
+    @media(max-width:1040px){
+      .hero-grid,.lobby-grid,.players-grid{grid-template-columns:1fr}
+      .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media(max-width:700px){
+      body{padding:12px}
+      .shell{padding:16px;border-radius:24px}
+      .brand{align-items:flex-start}
+      .brand-icon{width:48px;height:48px}
+      h1{font-size:28px}
+      .field-grid,.summary-grid{grid-template-columns:1fr}
+      .room-head,.split-actions{display:grid}
+      .sticky-actions{padding:10px}
+      .sticky-actions .btn,.action-row .btn,.room-actions .btn,.mini-actions .btn{flex:1 1 100%}
+      img.die{width:46px;height:46px}
+    }
   </style>
 </head>
-<body data-pikken-page="lobby">
+<body>
   <div class="wrap">
     <div class="shell">
       <div class="top">
         <div>
-          <a class="btn alt" id="pkHomeLink" href="./index.html">Home</a>
-          <div class="brand"><img src="./assets/pikken/pikken-icon.svg" alt="Pikken"><div><h1 style="margin:0">Pikken</h1><div class="muted">Maak of join een lobby. Open en live lobbies staan hier zichtbaar, en zodra de host start gaat iedereen door naar live.</div></div></div>
-          <div id="pkStatus" class="status-line muted"></div>
-        </div>
-        <div class="top-actions" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-          <a class="btn alt" id="pkLiveLink" href="./pikken_live.html" style="display:none">Open live tafel</a>
-          <a class="btn alt" id="pkSpectateLink" href="./pikken_live.html">Spectate</a>
-          <a class="btn alt" id="pkStatsLink" href="./pikken_stats.html">Stats</a>
-        </div>
-      </div>
-
-      <div id="pkRoomRail" class="rail" style="display:none">
-        <div class="rail-grid">
-          <div class="rail-chip"><div class="k">Lobby</div><div id="pkRailLobbyCode" class="v">—</div></div>
-          <div class="rail-chip"><div class="k">Fase</div><div id="pkRailPhase" class="v">Lobby</div></div>
-          <div class="rail-chip"><div class="k">Spelers / ready</div><div id="pkRailPlayers" class="v">0 / 0</div></div>
-          <div class="rail-chip"><div class="k">Variant</div><div id="pkRailVariant" class="v">Normal</div></div>
-        </div>
-        <div class="helper-card" id="pkRoomHeadline">Nog geen actieve lobby.</div>
-      </div>
-
-      <div class="grid">
-        <section class="panel">
-          <div class="strip">
-            <div class="stat"><div class="k">Lobbycode</div><div class="v" id="pkLobbyCode">—</div></div>
-            <div class="stat"><div class="k">Fase</div><div class="v" id="pkPhase">lobby</div></div>
-            <div class="stat"><div class="k">Spelmodus</div><div class="v" id="pkVariantLabel">Normal</div></div>
-            <div class="stat"><div class="k">Rol</div><div class="v" id="pkRoleLabel">Viewer</div></div>
-          </div>
-
-          <div class="mode-card" style="margin-top:14px">
-            <div class="mode-head">
-              <div>
-                <div style="font-size:22px;font-weight:900;line-height:1.1" id="pkModeHeading">Klaar om een tafel te maken of te joinen</div>
-                <div class="muted" id="pkModeCopy">Je bent nog niet aan een spelerstoel gekoppeld. Zonder bewezen identiteit blijf je kijker.</div>
-              </div>
-              <span id="pkModePill" class="pill wait">viewer mode</span>
-            </div>
-            <div class="muted" id="pkIdentityCopy">Auto-rejoin gebeurt alleen als match-id en deelnemer-id allebei kloppen.</div>
-          </div>
-
-          <div class="field">
-            <label>Variant</label>
-            <select id="pkPenaltyMode">
-              <option value="wrong_loses">Normal (fout verliest)</option>
-              <option value="right_loses">Fair (goed verliest)</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>Lobbycode om te maken of te joinen</label>
-            <input id="pkJoinCode" maxlength="12" placeholder="Bijv. PIK123" />
-          </div>
-          <div class="action-row">
-            <button class="btn soft" id="pkCreateLobbyBtn">Nieuwe lobby met deze code</button>
-            <button class="btn alt" id="pkJoinLobbyBtn">Join ingevoerde lobby</button>
-            <button class="btn ok" id="pkReadyBtn">Ready</button>
-            <button class="btn alt" id="pkUnreadyBtn">Unready</button>
-            <button class="btn warn" id="pkLeaveBtn">Verlaat lobby</button>
-            <button class="btn warn" id="pkDisbandBtn" style="display:none">Verwijder lobby</button>
-            <button class="btn soft" id="pkStartBtn" disabled>Start · alleen host</button>
-          </div>
-          <div class="room-list-head">Currently live lobbies</div>
-          <div id="pkLiveRoomsBox" class="players-list"><div class="player-row"><div class="muted">Nog geen live pikkenlobbies.</div></div></div>
-          <div class="room-list-head">Open lobbies om direct te joinen</div>
-          <div id="pkOpenRoomsBox" class="players-list"><div class="player-row"><div class="muted">Nog geen open pikkenlobbies.</div></div></div>
-
-          <div class="helper-card">
-            <strong>Wat deze pagina nu doet</strong>
-            <div class="muted">Maak of join een lobby, laat spelers readyen, laat de host starten en houd open/live lobbies zichtbaar. De live tafel opent pas als de lobby en jouw spelersidentiteit echt kloppen.</div>
-          </div>
-
-          <div class="accordion">
-            <summary><span>Laatste biedlijn in deze tafel</span><span class="muted">open</span></summary>
-            <div class="detail"><div id="pkHistoryLine" class="history-list"><div class="history-item muted">Nog geen actieve biedingen zichtbaar.</div></div></div>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">
+          <div class="brand">
+            <img class="brand-icon" src="./assets/pikken/pikken-icon.svg" alt="Pikken">
             <div>
-              <h2 style="margin:0 0 6px">Deelnemers</h2>
-              <div class="muted">Bij Pikken werkt de lobby nu bijna hetzelfde als Paardenrace: open lobbies zijn zichtbaar, spelers readyen hier op en de host start of ruimt de lobby op.</div>
+              <div class="top-actions" style="margin-bottom:10px">
+                <a class="btn alt" href="./index.html">Home</a>
+                <a class="btn alt" href="./pikken_live.html" id="pkLiveLink" style="display:none">Live openen</a>
+                <a class="btn alt" href="./pikken_stats.html">Stats</a>
+              </div>
+              <h1>Pikken</h1>
+              <p class="sub">Room-first lobbyflow met zichtbare kamerrail, duidelijkere host-acties, minder rommel op desktop en een mobielere informatievolgorde. Start hoort te kunnen zodra er minimaal twee spelers klaar staan.</p>
             </div>
-            <span id="pkConnectionPill" class="pill wait">verbinding ok</span>
           </div>
-          <div id="pkPlayers" class="players-list"></div>
+          <div id="pkStatus" class="status"></div>
+        </div>
+        <div class="panel" style="min-width:280px;max-width:360px">
+          <h2>Lobbystatus</h2>
+          <div class="chip-line">
+            <span class="pill wait" id="pkPhasePill">lobby</span>
+            <span class="pill wait">Code <strong id="pkLobbyCode" style="margin-left:6px">—</strong></span>
+          </div>
+          <p style="margin-top:10px">Gebruik één codeveld voor maken of joinen. Open lobbies en actieve spellen staan rechts, zodat Pikken dichter bij de Paardenrace-flow komt.</p>
+        </div>
+      </div>
 
-          <div class="helper-card">
-            <strong>Korte regels</strong>
-            <div class="notice-list">
-              <div class="notice">Bied aantal × face. Pik telt als joker bij 2–6.</div>
-              <div class="notice">Afkeuren start een stemronde. Daarna reveal + verlies van één dobbelsteen volgens de gekozen variant.</div>
-              <div class="notice">Leaving moet backend presence en lokale hints in één beweging wissen zodat je niet terug in live wordt geslingerd.</div>
+      <div class="hero-grid">
+        <section class="panel">
+          <h2>Lobby bedienen</h2>
+          <div class="field-grid">
+            <div class="field">
+              <label>Lobbycode</label>
+              <input id="pkRoomCode" placeholder="ABC123" autocomplete="off" autocapitalize="characters" spellcheck="false" />
+            </div>
+            <div class="field">
+              <label>Variant</label>
+              <select id="pkPenaltyMode">
+                <option value="wrong_loses">Normal (fout verliest)</option>
+                <option value="right_loses">Fair (goed verliest)</option>
+              </select>
+            </div>
+          </div>
+          <div class="action-row" style="margin-top:12px">
+            <button class="btn" id="pkCreateLobbyBtn" type="button">Maak lobby</button>
+            <button class="btn alt" id="pkJoinLobbyBtn" type="button">Join lobby</button>
+            <button class="btn soft" id="pkRefreshRoomsBtn" type="button">Ververs kamerlijst</button>
+          </div>
+          <details class="accordion" style="margin-top:14px">
+            <summary><span>Regels (kort)</span><span class="muted">open</span></summary>
+            <div class="detail muted">
+              <div>- Bied: aantal × face (2–6 of pik=1). 1 telt als joker bij 2–6.</div>
+              <div>- Afkeuren start stemronde; iedereen kiest goedgekeurd/afgekeurd.</div>
+              <div>- Daarna reveal + verlies 1 dobbelsteen volgens variant.</div>
+              <div>- Straight 1-2-3-4-5-6 telt als 6 × pik.</div>
+            </div>
+          </details>
+        </section>
+
+        <section class="panel">
+          <h2>Open & live kamers</h2>
+          <div class="stack">
+            <div>
+              <div class="split-actions">
+                <strong>Open lobbies</strong>
+                <span class="muted" id="pkRoomsMeta">Laden…</span>
+              </div>
+              <div id="pkOpenRooms" class="room-rail" style="margin-top:10px"></div>
+            </div>
+            <div>
+              <div class="split-actions">
+                <strong>Actieve spellen</strong>
+                <span class="muted">spectate of heropen</span>
+              </div>
+              <div id="pkLiveRooms" class="room-rail" style="margin-top:10px"></div>
             </div>
           </div>
         </section>
+      </div>
+
+      <div class="summary-grid">
+        <div class="stat"><span>Fase</span><strong id="pkPhase">lobby</strong></div>
+        <div class="stat"><span>Ronde</span><strong id="pkRoundNo">0</strong></div>
+        <div class="stat"><span>Ready</span><strong id="pkReadyCount">0</strong></div>
+        <div class="stat"><span>Dobbelstenen nu</span><strong id="pkDiceCurrent">0</strong></div>
+      </div>
+
+      <div class="players-grid">
+        <section class="panel">
+          <div class="split-actions">
+            <div>
+              <h2 style="margin:0">Spelers</h2>
+              <p>Host ziet direct wie ready is en wanneer starten mag.</p>
+            </div>
+            <div class="chip-line">
+              <span class="pill wait" id="pkStartRulePill">Minimaal 2 ready nodig</span>
+            </div>
+          </div>
+          <div id="pkPlayers" class="player-list" style="margin-top:12px"></div>
+        </section>
+
+        <section class="panel">
+          <h2>Match</h2>
+          <div class="muted">Dobbelstenen: start <strong id="pkDiceStart">0</strong> · nu <strong id="pkDiceCurrentSecondary">0</strong> · kwijt <strong id="pkDiceLost">0</strong></div>
+          <div style="margin-top:12px">
+            <div class="muted">Huidig bod</div>
+            <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
+              <div style="font-size:22px;font-weight:900" id="pkBidText">—</div>
+              <div class="muted" id="pkBidBy"></div>
+            </div>
+          </div>
+
+          <div id="pkBidPanel" style="display:none;margin-top:14px">
+            <div class="muted" style="font-weight:900">Jouw beurt: bod plaatsen of afkeuren</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+              <input id="pkBidCount" type="number" min="1" step="1" value="1" style="width:110px" />
+              <select id="pkBidFace">
+                <option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="1">pik (1)</option>
+              </select>
+              <button class="btn" id="pkPlaceBidBtn" type="button">Bied</button>
+              <button class="btn alt" id="pkRejectBtn" type="button">Afkeuren</button>
+            </div>
+          </div>
+
+          <div id="pkVotePanel" style="display:none;margin-top:14px">
+            <div class="muted" style="font-weight:900">Stem: bod goedgekeurd of afgekeurd?</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+              <button class="btn" id="pkVoteApproveBtn" type="button">Goedgekeurd</button>
+              <button class="btn alt" id="pkVoteRejectBtn" type="button">Afgekeurd</button>
+            </div>
+          </div>
+
+          <div style="margin-top:14px">
+            <div class="muted" style="font-weight:900">Jouw dobbelstenen</div>
+            <div class="dice-row" id="pkMyDice"></div>
+          </div>
+
+          <div id="pkReveal" style="margin-top:14px"></div>
+        </section>
+      </div>
+
+      <div class="sticky-actions">
+        <button class="btn alt" id="pkReadyBtn" type="button">Ready</button>
+        <button class="btn alt" id="pkUnreadyBtn" type="button">Unready</button>
+        <button class="btn" id="pkStartBtn" type="button" disabled>Start spel</button>
       </div>
     </div>
   </div>
 
-  <script src="./pikken-dice-canvas.js?v571"></script>
-  <script src="./gejast-pikken.js?v592"></script>
-  <script src="./gejast-player-session-ui.js?v571"></script>
-  <script>
-    (() => {
-      function scopedHref(path){
-        const url = new URL(path, window.location.href);
-        if (new URLSearchParams(window.location.search).get('scope') === 'family') url.searchParams.set('scope', 'family');
-        return `${url.pathname.split('/').pop()}${url.search}`;
-      }
-      const links = {
-        pkHomeLink: './index.html',
-        pkSpectateLink: './pikken_live.html',
-        pkStatsLink: './pikken_stats.html'
-      };
-      Object.entries(links).forEach(([id, path]) => {
-        const el = document.getElementById(id);
-        if (el) el.href = scopedHref(path);
-      });
-    })();
-  </script>
+  <script src="./pikken-dice-canvas.js?v594"></script>
+  <script src="./gejast-pikken.js?v594"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
   <div class="site-credit-watermark" data-version-watermark></div>
 </body>

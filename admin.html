@@ -37,7 +37,6 @@
     .hub-link strong { display:block; font-size:16px; }
     .hub-link small { display:block; margin-top:6px; color:var(--muted); font-size:13px; line-height:1.45; }
     .top-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
-    .trust-banner{margin-top:14px;padding:12px 14px;border-radius:14px;background:rgba(154,130,65,.10);border:1px solid rgba(154,130,65,.22);color:#5c4a1c;font-size:13px;line-height:1.45}
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
     @media (max-width:820px) { .login-grid, .stats, .hub-grid { grid-template-columns:1fr 1fr; } }
@@ -45,19 +44,19 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v590';</script><script src="./gejast-config.js?v590"></script><script src="./admin-desktop-restore-v590.js?v590"></script><script src="./gejast-scope-context.js?v391"></script><script src="./gejast-family-rollout.js?v393"></script>
-  <script src="./gejast-rpc-contract.js?v391"></script>
-  <script src="./gejast-admin-rpc.js?v590"></script>
-  <script src="./admin-session-sync.js?v590"></script>
-  <script src="./admin-topnav.js?v590"></script>
-  <script src="./gejast-admin-claims-buckets.js?v590"></script>
-  <script src="./gejast-admin-claims-source.js?v590"></script>
-<script src="./gejast-scope.js?v391"></script></head>
+  <script>window.GEJAST_PAGE_VERSION='v594';</script><script src="./gejast-config.js?v594"></script><script src="./gejast-scope-context.js?v594"></script><script src="./gejast-family-rollout.js?v594"></script>
+  <script src="./gejast-rpc-contract.js?v594"></script>
+  <script src="./gejast-admin-rpc.js?v594"></script>
+  <script src="./admin-session-sync.js?v594"></script>
+  <script src="./admin-topnav.js?v594"></script>
+  <script src="./gejast-admin-claims-buckets.js?v594"></script>
+  <script src="./gejast-admin-claims-source.js?v594"></script>
+<script src="./gejast-scope.js?v594"></script></head>
 <body>
   <main class="main-card">
     <a href="./index.html" aria-label="Terug naar home"><img src="./logo.png" class="logo" alt="logo" /></a>
     <h1>Beheerhub</h1>
-    <p class="sub">Eén rustige ingang voor accounts, speldata, kluizen en omgeving. Bestaande sessies worden hergebruikt zodat je niet steeds opnieuw hoeft in te loggen.</p>
+    <p class="sub">Eén rustige ingang voor accounts, speldata, kluizen en omgeving. Bestaande sessies en vertrouwde apparaten worden langer hergebruikt zodat een normale site-update je niet telkens uit de admin gooit.</p>
 
     <form id="loginView">
       <div class="login-grid">
@@ -68,7 +67,6 @@
       <div class="btn-row">
         <button id="loginBtn" class="btn primary" type="submit">Inloggen</button>
       </div>
-      <div class="trust-banner">Deze laptop gebruikt nu een vertrouwde-apparaatflow. Na een geslaagde adminlogin wordt dit apparaat 30 dagen onthouden en terwijl je adminpagina’s gebruikt wordt de adminsessie stil ververst. Daardoor hoef je niet steeds opnieuw een Google Authenticator-code in te vullen zolang de server de vertrouwde apparaatcontrole accepteert.</div>
     </form>
 
     <section id="hubView" class="hidden">
@@ -111,10 +109,6 @@
             <a class="hub-link" href="./match_control.html"><strong>Wedstrijden beheren</strong><small>Centraal beheer voor bewerken, verwijderen en rebuilds.</small></a>
             <a class="hub-link" href="./match_swap.html"><strong>Speler vervangen / matchcorrectie</strong><small>Vervang een verkeerd ingevoerde speler in wedstrijdhistorie en werk ranglijsten daarna bij.</small></a>
             <a class="hub-link" href="./drinks_admin.html"><strong>Drankcontrole</strong><small>Flags, verificaties en moderatie voor drinks en snelheidspogingen.</small></a>
-            <a class="hub-link" href="./admin_despimarkt.html"><strong>Admin Beurs d'Espinoza</strong><small>Settlement-queue, promo-wallet, Dry Dock en marktbewegingen.</small></a>
-            <a class="hub-link" href="./admin_pikken.html"><strong>Admin Pikken</strong><small>Reject-rates, zesjes, winnende tafels en recente matchintensiteit.</small></a>
-            <a class="hub-link" href="./admin_paardenrace.html"><strong>Admin Paardenrace</strong><small>Suit-meta, bakdruk, jockeys en live roomdruk.</small></a>
-            <a class="hub-link" href="./admin_rad.html"><strong>Admin ’t Rad</strong><small>Spinfrequentie, target-ellende en segmentstatistiek.</small></a>
           </div>
         </section>
 
@@ -143,6 +137,9 @@
     function getAdminScope(){ const q=new URLSearchParams(location.search).get('scope'); return (q||localStorage.getItem(ADMIN_SCOPE_KEY)||'friends').toLowerCase()==='family' ? 'family' : 'friends'; }
     function applyAdminScope(){ const scope=getAdminScope(); const sel=document.getElementById('adminScopeSelect'); if(sel) sel.value=scope; document.querySelectorAll('a[href^="./"]').forEach((a)=>{ try{ const url=new URL(a.getAttribute('href'), location.href); url.searchParams.set('scope', scope); a.setAttribute('href', url.pathname.split('/').pop() + url.search + url.hash); if(scope==='family' && (/drinks|beerpong/i.test(a.getAttribute('href')) || /drinks|beerpong/i.test(a.textContent||''))) a.style.display='none'; }catch(_){}}); }
 
+    const ADMIN_DEVICE_KEY = "jas_admin_device_v1";
+    const ADMIN_USER_KEY = "jas_admin_user_v1";
+    const ADMIN_DEADLINE_KEY = "jas_admin_deadline_v1";
     const RETURN_TO = new URLSearchParams(window.location.search).get("return_to") || "";
 
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, "Content-Type": "application/json", Accept: "application/json" }; }
@@ -154,31 +151,9 @@
       return data;
     }
 
-    function withTimeout(promise, ms, label='Verzoek') {
-      return Promise.race([
-        promise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timeout na ${Math.round(ms/1000)}s`)), ms))
-      ]);
-    }
-
-    async function fetchJsonWithTimeout(url, init, timeoutMs, label) {
-      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      const timer = controller ? window.setTimeout(() => { try { controller.abort(); } catch (_) {} }, timeoutMs) : null;
-      try {
-        const res = await fetch(url, controller ? { ...(init || {}), signal: controller.signal } : init);
-        return await parseResponse(res);
-      } catch (error) {
-        if (controller && error && error.name === 'AbortError') throw new Error(`${label} timeout na ${Math.round(timeoutMs/1000)}s`);
-        throw error;
-      } finally {
-        if (timer) window.clearTimeout(timer);
-      }
-    }
-
-
     function getAdminSessionToken() { return (window.GEJAST_ADMIN_SESSION && window.GEJAST_ADMIN_SESSION.getToken()) || sessionStorage.getItem(ADMIN_SESSION_KEY) || localStorage.getItem(ADMIN_SESSION_KEY); }
     function setAdminSessionToken(token, username = "", deviceToken = "") { if (window.GEJAST_ADMIN_SESSION) return window.GEJAST_ADMIN_SESSION.setBundle(token, username, true, deviceToken); sessionStorage.setItem(ADMIN_SESSION_KEY, token); localStorage.setItem(ADMIN_SESSION_KEY, token); }
-    function clearAdminSessionToken() { if (window.GEJAST_ADMIN_SESSION) return window.GEJAST_ADMIN_SESSION.clearBundle(); ["jas_admin_session_v8","jas_admin_device_v1","jas_admin_user_v1","jas_admin_deadline_v1","jas_admin_trusted_until_v1"].forEach((key)=>{ sessionStorage.removeItem(key); localStorage.removeItem(key); }); }
+    function clearAdminSessionToken() { if (window.GEJAST_ADMIN_SESSION) return window.GEJAST_ADMIN_SESSION.clearBundle(); [ADMIN_SESSION_KEY, ADMIN_DEVICE_KEY, ADMIN_USER_KEY, ADMIN_DEADLINE_KEY].forEach((key)=>{ sessionStorage.removeItem(key); localStorage.removeItem(key); }); }
 
     function safeReturnTarget(raw) {
       const value = String(raw || '').trim();
@@ -213,20 +188,18 @@
       if (!username) throw new Error('Vul een gebruikersnaam in');
       if (!password) throw new Error('Vul een wachtwoord in');
       if (!/^\d{6}$/.test(totp)) throw new Error('Vul je 6-cijferige Google Authenticator-code in');
-      let data = await fetchJsonWithTimeout(`${SUPABASE_URL}/rest/v1/rpc/admin_login`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_login`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
         body: JSON.stringify({ input_username: username, input_password: password, input_totp_code: totp })
-      }, 12000, 'Adminlogin');
+      });
+      let data = await parseResponse(res);
       if (Array.isArray(data)) data = data[0] || {};
       const token = data.admin_session_token || data.token;
       if (!token) throw new Error('Login gaf geen admin-sessie terug');
-      if (window.GEJAST_ADMIN_SESSION && typeof window.GEJAST_ADMIN_SESSION.consumeLoginResult === 'function') {
-        data = window.GEJAST_ADMIN_SESSION.consumeLoginResult(data, username, true);
-      } else {
-        setAdminSessionToken(token, data.admin_username || username, data.raw_device_token || "");
-      }
+      setAdminSessionToken(token, data.admin_username || username, data.raw_device_token || "");
       return data;
     }
+
 
     async function callFirstRpc(rpcNames, payload) {
       let lastError = null;
@@ -243,11 +216,35 @@
 
     async function checkSession() {
       const data = window.GEJAST_ADMIN_SESSION ? await window.GEJAST_ADMIN_SESSION.validate() : await (async()=>{ const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ admin_session_token: getAdminSessionToken() }) }); return await parseResponse(res); })();
-      if (data.admin_session_token) setAdminSessionToken(data.admin_session_token, data.admin_username || data.username || '', data.raw_device_token || '');
+      if (data.admin_session_token) setAdminSessionToken(data.admin_session_token);
       return data;
     }
 
-    const AdminBuckets = window.GEJAST_ADMIN_BUCKETS || {};
+    function hasActivationEvidence(out) {
+      return Boolean(
+        out.has_pin ??
+        out.pin_is_set ??
+        out.player_has_pin ??
+        out.pin_set ??
+        out.pin_hash_set ??
+        out.pin_hash_present ??
+        out.has_pin_hash ??
+        out.player_pin_hash_set ??
+        out.activated ??
+        out.activated_at ??
+        out.activated_on ??
+        out.link_used_at ??
+        out.activation_used_at ??
+        out.player_activation_used_at ??
+        out.used_at ??
+        out.pin_hash ??
+        out.player_pin_hash ??
+        false
+      );
+    }
+
+const AdminBuckets = window.GEJAST_ADMIN_BUCKETS || {};
+    const deriveAdminBucket = (row)=> (AdminBuckets.deriveBucket ? AdminBuckets.deriveBucket(row) : 'pending');
     const normalizeAdminRows = (rows)=> (AdminBuckets.normalizeRows ? AdminBuckets.normalizeRows(rows) : (rows||[]));
     const normalizeExpiredRows = (rows)=> (AdminBuckets.normalizeExpiredRows ? AdminBuckets.normalizeExpiredRows(rows) : (rows||[]));
     const mergeHistoryWithExpired = (historyRows, expiredRows)=> (AdminBuckets.mergeHistoryWithExpired ? AdminBuckets.mergeHistoryWithExpired(historyRows, expiredRows) : ([...(historyRows||[]), ...(expiredRows||[])]));
@@ -255,125 +252,115 @@
     async function loadCounts(force = false) {
       const source = window.GEJAST_ADMIN_CLAIMS_SOURCE;
       const tokenValue = getAdminSessionToken();
-      const fallbackRender = () => {
-        document.getElementById('statPending').textContent = document.getElementById('statPending').textContent || '0';
-        document.getElementById('statAwaiting').textContent = document.getElementById('statAwaiting').textContent || '0';
-        document.getElementById('statExpired').textContent = document.getElementById('statExpired').textContent || '0';
-        document.getElementById('statActive').textContent = document.getElementById('statActive').textContent || '0';
-        document.getElementById('statRejected').textContent = document.getElementById('statRejected').textContent || '0';
-      };
-      try {
-        const bundlePromise = source && typeof source.load === 'function'
-          ? source.load(tokenValue, { force })
-          : (async()=>{
-              const tokenPayload = { admin_session_token: tokenValue };
-              const [requestsRes, historyRes, expiredRes] = await Promise.all([
-                callFirstRpc(['admin_get_claim_requests','admin_list_claim_requests_action'], tokenPayload),
-                callFirstRpc(['admin_get_claim_history','admin_list_claim_history_action'], tokenPayload),
-                callFirstRpc(['admin_get_expired_activation_queue','admin_list_expired_activation_queue_action'], tokenPayload).catch(() => ({ items: [] }))
-              ]);
-              return {
-                requests: requestsRes.requests || requestsRes.items || [],
-                history: historyRes.history || historyRes.items || [],
-                expiredQueue: Array.isArray(expiredRes?.items) ? expiredRes.items : []
-              };
-            })();
-        const bundle = await withTimeout(bundlePromise, 10000, 'Admin-statistieken laden');
-        const requests = normalizeAdminRows(bundle.requests || []);
-        const history = normalizeAdminRows(bundle.history || []);
-        const expiredItemsNormalized = normalizeExpiredRows(bundle.expiredQueue || []);
-        const mergedHistory = mergeHistoryWithExpired(history, expiredItemsNormalized);
-        const awaitingItems = mergedHistory.filter((item) => item.state_bucket === 'awaiting');
-        const active = mergedHistory.filter((item) => item.state_bucket === 'active').length;
-        const rejected = mergedHistory.filter((item) => item.state_bucket === 'rejected').length;
-        const expiredHistory = mergedHistory.filter((item) => item.state_bucket === 'expired').length;
-        document.getElementById('statPending').textContent = String(requests.length);
-        document.getElementById('statAwaiting').textContent = String(awaitingItems.length);
-        document.getElementById('statExpired').textContent = String(expiredHistory);
-        document.getElementById('statActive').textContent = String(active);
-        document.getElementById('statRejected').textContent = String(rejected);
-        return true;
-      } catch (error) {
-        fallbackRender();
-        throw error;
-      }
+      const bundle = source && typeof source.load === 'function'
+        ? await source.load(tokenValue, { force })
+        : await (async()=>{
+            const tokenPayload = { admin_session_token: tokenValue };
+            const [requestsRes, historyRes, expiredRes] = await Promise.all([
+              callFirstRpc(['admin_get_claim_requests','admin_list_claim_requests_action'], tokenPayload),
+              callFirstRpc(['admin_get_claim_history','admin_list_claim_history_action'], tokenPayload),
+              callFirstRpc(['admin_get_expired_activation_queue','admin_list_expired_activation_queue_action'], tokenPayload).catch(() => ({ items: [] }))
+            ]);
+            return {
+              requests: requestsRes.requests || requestsRes.items || [],
+              history: historyRes.history || historyRes.items || [],
+              expiredQueue: Array.isArray(expiredRes?.items) ? expiredRes.items : []
+            };
+          })();
+      const requests = normalizeAdminRows(bundle.requests || []);
+      const history = normalizeAdminRows(bundle.history || []);
+      const expiredItemsNormalized = normalizeExpiredRows(bundle.expiredQueue || []);
+      const mergedHistory = mergeHistoryWithExpired(history, expiredItemsNormalized);
+      const awaitingItems = mergedHistory.filter((item) => item.state_bucket === 'awaiting');
+      const active = mergedHistory.filter((item) => item.state_bucket === 'active').length;
+      const rejected = mergedHistory.filter((item) => item.state_bucket === 'rejected').length;
+      const expiredHistory = mergedHistory.filter((item) => item.state_bucket === 'expired').length;
+      document.getElementById('statPending').textContent = String(requests.length);
+      document.getElementById('statAwaiting').textContent = String(awaitingItems.length);
+      document.getElementById('statExpired').textContent = String(expiredHistory);
+      document.getElementById('statActive').textContent = String(active);
+      document.getElementById('statRejected').textContent = String(rejected);
     }
     document.addEventListener('DOMContentLoaded', ()=>{ const sel=document.getElementById('adminScopeSelect'); if(sel){ sel.value=getAdminScope(); sel.addEventListener('change', ()=>{ localStorage.setItem(ADMIN_SCOPE_KEY, sel.value); applyAdminScope(); }); } applyAdminScope(); });
 
     async function boot() {
-      const token = getAdminSessionToken();
-      if (!token) { showLoggedOut(); return; }
-      try {
-        await checkSession();
-        showLoggedIn(session.admin_username || session.username || 'admin');
-        if (maybeReturnAfterLogin()) return;
-        setStatus('Beheerhub geladen.', 'ok');
-        loadCounts().then(()=>setStatus('Beheerhub geladen.', 'ok')).catch((error)=>{ setStatus((error?.message || 'Hubdata laden mislukt.') + ' — de hub is wel geopend.', 'warn'); });
-      } catch (error) {
-        clearAdminSessionToken();
-        showLoggedOut();
-        setStatus(error?.message || 'Adminsessie verlopen.', 'warn');
-      }
+    const sessionApi = window.GEJAST_ADMIN_SESSION || null;
+    const token = getAdminSessionToken();
+    const hasLocal = !!(sessionApi && typeof sessionApi.hasUsableLocalSession === 'function' && sessionApi.hasUsableLocalSession());
+    if (!token && !hasLocal) { showLoggedOut(); return; }
+
+    if (hasLocal) {
+      showLoggedIn();
+      loadCounts().catch(()=>{});
+      setStatus('Opgeslagen adminsessie hergebruikt op dit apparaat.', 'ok');
+      setTimeout(async ()=>{
+        try {
+          const data = await sessionApi.backgroundValidate();
+          if (!data) throw new Error('Adminsessie kon niet worden vernieuwd.');
+          await loadCounts();
+          if (maybeReturnAfterLogin()) return;
+          setStatus('Beheerhub geladen.', 'ok');
+        } catch (error) {
+          clearAdminSessionToken();
+          showLoggedOut();
+          setStatus(error?.message || 'Adminsessie verlopen.', 'warn');
+        }
+      }, 0);
+      return;
     }
 
-    document.getElementById('loginView').addEventListener('submit', async (event) => {
-      event.preventDefault();
-      try {
-        setStatus('Inloggen...');
-        const loginResult = await adminLogin();
-        const loginName = loginResult?.admin_username || loginResult?.username || document.getElementById('usernameInput').value.trim();
-        showLoggedIn(loginName);
-        if (maybeReturnAfterLogin()) return;
-        setStatus('Inloggen gelukt. Hub wordt geladen...', 'ok');
-        loadCounts().then(()=>setStatus('Inloggen gelukt.', 'ok')).catch((error)=>{ setStatus((error?.message || 'Adminstatistieken laden mislukt.') + ' — de login zelf is wel gelukt.', 'warn'); });
-      } catch (error) {
-        setStatus(error?.message || 'Inloggen mislukt.', 'warn');
-      }
-    });
-    document.getElementById('loginBtn').addEventListener('click', (event) => {
-      if (event) event.preventDefault();
-      document.getElementById('loginView').requestSubmit();
-    });
-    document.getElementById('refreshBtn').addEventListener('click', async () => {
-      try {
-        setStatus('Verversen...');
-        await loadCounts();
-        setStatus('Hub ververst.', 'ok');
-      } catch (error) {
-        setStatus(error?.message || 'Verversen mislukt.', 'warn');
-      }
-    });
-    document.getElementById('logoutBtn').addEventListener('click', () => {
+    try {
+      await checkSession();
+      showLoggedIn();
+      await loadCounts();
+      if (maybeReturnAfterLogin()) return;
+      setStatus('Beheerhub geladen.', 'ok');
+    } catch (error) {
       clearAdminSessionToken();
       showLoggedOut();
-      setStatus('Uitgelogd.', 'ok');
+      setStatus(error?.message || 'Adminsessie verlopen.', 'warn');
+    }
+  }
+
+  document.getElementById('loginView').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    try {
+      setStatus('Inloggen...');
+      await adminLogin();
+      showLoggedIn();
+      await loadCounts();
+      setStatus('Inloggen gelukt. Dit apparaat wordt nu langer onthouden.', 'ok');
+      if (maybeReturnAfterLogin()) return;
+    } catch (error) {
+      setStatus(error?.message || 'Inloggen mislukt.', 'warn');
+    }
+  });
+  document.getElementById('refreshBtn').addEventListener('click', async () => {
+    try {
+      setStatus('Verversen...');
+      await loadCounts();
+      setStatus('Hub ververst.', 'ok');
+    } catch (error) {
+      setStatus(error?.message || 'Verversen mislukt.', 'warn');
+    }
+  });
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    clearAdminSessionToken();
+    showLoggedOut();
+    setStatus('Uitgelogd.', 'ok');
+  });
+  ['usernameInput','passwordInput','totpInput'].forEach((id) => {
+    document.getElementById(id).addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') { event.preventDefault(); document.getElementById('loginView').requestSubmit(); }
     });
-    ['usernameInput','passwordInput','totpInput'].forEach((id) => {
-      document.getElementById(id).addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') { event.preventDefault(); document.getElementById('loginView').requestSubmit(); }
-      });
-    });
-    window.addEventListener('error', (event) => {
-      if (event?.message) setStatus(event.message, 'warn');
-    });
-    boot();
-    setInterval(() => {
-      if (!document.hidden && !document.getElementById('hubView').classList.contains('hidden')) {
-        loadCounts().catch(() => {});
-        if (window.GEJAST_ADMIN_SESSION && typeof window.GEJAST_ADMIN_SESSION.backgroundValidate === 'function') {
-          window.GEJAST_ADMIN_SESSION.backgroundValidate().catch(() => {});
-        }
-      }
-    }, 15000);
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && !document.getElementById('hubView').classList.contains('hidden')) {
-        loadCounts().catch(() => {});
-        if (window.GEJAST_ADMIN_SESSION && typeof window.GEJAST_ADMIN_SESSION.backgroundValidate === 'function') {
-          window.GEJAST_ADMIN_SESSION.backgroundValidate().catch(() => {});
-        }
-      }
-    });
-  </script>
+  });
+  window.addEventListener('error', (event) => {
+    if (event?.message) setStatus(event.message, 'warn');
+  });
+  boot();
+  setInterval(() => { if (!document.hidden && !document.getElementById('hubView').classList.contains('hidden')) loadCounts().catch(() => {}); }, 15000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && !document.getElementById('hubView').classList.contains('hidden')) loadCounts().catch(() => {}); });
+</script>
 
   <div class="site-credit-watermark" data-version-watermark></div>
   <script src="./site-analytics.js?v374"></script>
