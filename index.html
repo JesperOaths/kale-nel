@@ -5,7 +5,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
 <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wordt er gejast donderdag?</title>
   <link rel="stylesheet" href="./site-shell.css" />
   <style>body{background:linear-gradient(rgba(244,240,232,.56),rgba(244,240,232,.56)), url('./site-bg-desktop.webp') 50% -120px/115% auto no-repeat !important;}.drinks-home-section{margin:18px 0 8px;display:grid;gap:12px}
@@ -599,6 +599,25 @@
     }
 
     @media (max-width: 760px) {
+      .card-top-left { display:none !important; }
+      .card-top-right { top:14px; right:14px; gap:10px; }
+      .card-top-right .card-logo { width:58px !important; height:58px !important; }
+      .main-card { padding-top:94px; }
+      .public-links-grid { grid-template-columns:1fr; }
+      .public-links-grid.centered-single { grid-template-columns:1fr; }
+      .page-link-card { min-height:104px; }
+    }
+
+    @media (max-width: 560px) {
+      .page { padding: 18px 12px; }
+      .main-card { padding: 88px 14px 18px; width:min(700px, 96vw); }
+      h1 { padding: 0; margin-top: 4px; }
+      .card-top-right { top:12px; right:12px; }
+      .card-top-right .card-logo { width:52px !important; height:52px !important; }
+      .drinks-home-grid { grid-template-columns:1fr; }
+    }
+
+    @media (max-width: 760px) {
       .page { padding: 24px 14px; }
       .main-card {
         padding: 28px 18px 20px;
@@ -611,7 +630,7 @@
       .card-top-right { position:absolute; top:16px; right:16px; margin:0; }
       .card-top-left { position:absolute; top:16px; left:16px; margin:0; }
       h1 {
-        padding: 8px 44px 0;
+        padding: 0;
         font-size: clamp(1.7rem, 8vw, 2.1rem);
       }
       .status-word { font-size: clamp(1.55rem, 7vw, 1.95rem); }
@@ -621,7 +640,8 @@
       .list-box { min-height: 138px; padding: 16px 12px; }
       .list-box h2 { margin-bottom: 10px; font-size: 17px; }
       .name-list li { font-size: 13px; }
-      .lists-grid, .public-links-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .lists-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .public-links-grid { grid-template-columns:1fr; gap: 10px; }
       .page-link-card { min-height: 116px; padding: 14px 12px; justify-content:center; }
       .page-link-card.login-link, .page-link-card.request-link, .page-link-card.scorer-link { text-align:center; align-items:center; width:100%; }
       .plus-copy{position:relative}.plus-copy::after{content:"+";position:absolute;left:50%;top:50%;transform:translate(-50%,-52%);font-size:36px;line-height:1;color:var(--gold);font-weight:900;pointer-events:none;text-shadow:0 1px 0 rgba(255,255,255,.35)} .page-link-plus {opacity:0;filter:grayscale(1); width:12px; height:12px; }
@@ -647,7 +667,7 @@
     }
 
     @media (max-width: 460px) {
-      .public-links-grid { grid-template-columns:1fr 1fr; gap:8px; }
+      .public-links-grid { grid-template-columns:1fr; gap:8px; }
       .page-link-card { min-height:108px; padding:12px 10px; }
       .page-link-label { font-size:15px; }
       .page-link-copy { font-size:12px; }
@@ -674,7 +694,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v588';</script><script src="./gejast-config.js?v588"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
+  <script>window.GEJAST_PAGE_VERSION='v592';</script><script src="./gejast-config.js?v592"></script><script src="./gejast-clickable-cards.js?v389"></script><script src="./gejast-scope-context.js?v389"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scope.js?v389"></script><script src="./gejast-home-gate.js?v389"></script>
   <script src="./gejast-live-summary.js?v389"></script>
   <script src="./gejast-scoped-rpc.js?v389"></script>
   <script src="./gejast-combined-readers.js?v426"></script>
@@ -775,10 +795,10 @@
         </div>
 
         <div class="public-links-grid">
-          <a class="page-link-card login-link" href="./despimarkt.html">
+          <div class="page-link-card login-link placeholder-link" aria-disabled="true">
             <div class="page-link-label">Beurs d'Espinoza</div>
-            <div class="page-link-copy">Open meteen de echte Despimarkt-hub.</div>
-          </a>
+            <div class="page-link-copy">Placeholder — volgt later.</div>
+          </div>
           <a class="page-link-card login-link" href="./profiles.html">
             <div class="page-link-label">Spelers</div>
             <div class="page-link-copy">Bekijk spelers en profielen.</div>
@@ -894,7 +914,7 @@
     let currentHomepageState = null;
     const CURRENT_SCOPE = (window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope()) || 'friends';
     function scopedHref(base){ try{ const u=new URL(base, location.href); if(CURRENT_SCOPE==='family') u.searchParams.set('scope','family'); return u.pathname.split('/').pop()+u.search; }catch(_){ return base; } }
-    function homepageLadderRoute(game){ return scopedHref(`./ladder.html?game=${encodeURIComponent(game)}`); }
+    function homepageLadderRoute(game){ const key=String(game||'').toLowerCase(); if(key==='pikken') return scopedHref('./pikken_stats.html'); if(key==='paardenrace') return scopedHref('./paardenrace_stats.html'); if(key==='caute-coins' || key==='caute_coins' || key==='despimarkt') return scopedHref('./despimarkt_stats.html'); return scopedHref(`./ladder.html?game=${encodeURIComponent(game)}`); }
     function applyScopeChrome(){
       document.body.classList.toggle('friends-scope', CURRENT_SCOPE!=='family');
       if(CURRENT_SCOPE!=='family') return;
@@ -1779,11 +1799,13 @@ async function castExtraPollVote(desired_status) {
       }
       if (bundle.ladders) {
         renderHomepageLadders(bundle.ladders);
-        setHomepageLiveState('live', 'Live');
       }
       if (bundle.drinks_home) applyDrinksHomePayload(bundle.drinks_home);
       if (bundle.drinks_top5) applyDrinksTop5Payload(bundle.drinks_top5);
       if (bundle.live_entries) applyHomepageLiveEntries(bundle.live_entries);
+      if (bundle.ladders || bundle.live_entries) {
+        setHomepageLiveState('live', 'Live');
+      }
       if (fromCache) document.body.classList.remove('boot-pending');
     }
 
@@ -1804,11 +1826,10 @@ async function castExtraPollVote(desired_status) {
       const finishNonCritical = async () => {
         try {
           const readers = window.GEJAST_COMBINED_READERS;
+          let bundle = null;
           if (readers && typeof readers.loadHomepageBootBundle === 'function' && !isMobileHomepage()) {
-            const bundle = await readers.loadHomepageBootBundle();
-            applyHomepageBootBundle(bundle || {}, false);
-            writeHomepageBootCache(bundle || {});
-            return;
+            bundle = await readers.loadHomepageBootBundle().catch(()=>null);
+            if (bundle) applyHomepageBootBundle(bundle || {}, false);
           }
           const [ladders, drinksHome, drinksTop5, liveEntries] = await Promise.all([
             loadHomepageLadders().catch(()=>null),
@@ -1817,12 +1838,12 @@ async function castExtraPollVote(desired_status) {
             loadHomepageLiveEntries().catch(()=>null)
           ]);
           writeHomepageBootCache({
-            homepage_state: core?.homeState || currentHomepageState || {},
-            extra_poll_state: core?.extraState || currentDrinksPollState || {},
-            ladders: ladders || null,
-            drinks_home: drinksHome || null,
-            drinks_top5: drinksTop5 || null,
-            live_entries: liveEntries || null
+            homepage_state: core?.homeState || currentHomepageState || bundle?.homepage_state || {},
+            extra_poll_state: core?.extraState || currentDrinksPollState || bundle?.extra_poll_state || {},
+            ladders: ladders || bundle?.ladders || null,
+            drinks_home: drinksHome || bundle?.drinks_home || null,
+            drinks_top5: drinksTop5 || bundle?.drinks_top5 || null,
+            live_entries: liveEntries || bundle?.live_entries || null
           });
         } catch (_) {}
       };
@@ -1864,10 +1885,10 @@ async function castExtraPollVote(desired_status) {
 
   <div class="site-credit-watermark" data-version-watermark></div>
 
-<script src="./gejast-player-session-ui.js?v588"></script>
+<script src="./gejast-player-session-ui.js?v487"></script>
 
 
 <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script><script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./drinks-verify-float.js?v389"></script><script src="./gejast-geo.js?v588"></script><script src="./site-analytics.js?v389"></script>
+<script src="./drinks-verify-float.js?v389"></script><script src="./gejast-geo.js?v487"></script><script src="./site-analytics.js?v389"></script>
 </body>
 </html>

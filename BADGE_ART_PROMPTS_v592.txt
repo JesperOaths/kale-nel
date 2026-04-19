@@ -1,0 +1,26 @@
+BADGE ART PROMPTS v592
+Keep the old Kale Nel badge language:
+- circular gold outer ring
+- warm parchment inner disc
+- simple dark brown line icon in the center
+- subtle radial rays behind the icon
+- bottom gold-to-black name plaque with white serif title
+- clean readable icon, no photorealism, no clutter, no gradients inside the icon itself
+
+The die motif stays on: Pikmeester / De Dobbelbaas (best fit for the dice identity).
+Replace die imagery on the following badges:
+
+1. Eerste Prik
+Prompt: Create a Kale Nel circular badge with the classic gold ring and parchment center. The central icon is a stylized first prick / pointed pick / ceremonial pin angled upward, with a small starting spark beside it. No die. Keep it elegant, simple line art, dark brown icon, readable at small size.
+
+2. Zesjesregen
+Prompt: Create a Kale Nel badge with a storm-cloud icon and falling numeral sixes or six-shaped drops beneath it, implying a rain of sixes without using a die. Dark brown line art on parchment center, gold ring, subtle rays, readable icon.
+
+3. Dubbel Zes
+Prompt: Create a Kale Nel badge with two ornate numeral sixes facing each other like mirrored symbols of luck. No die, no pips. Dark brown central icon, clean and prestigious, same badge framing and plaque style.
+
+4. Pechbaron / De Dobbelvloek
+Prompt: Create a Kale Nel badge with a cracked crown under a storm sign or unlucky mark, suggesting cursed luck and aristocratic misfortune. No die. Dark brown line art, parchment center, gold ring, subtle rays, same plaque style.
+
+5. Dobbel of Niets
+Prompt: Create a Kale Nel badge for a high-risk all-or-nothing gamble. Use a split medallion, wager mark, or all-in symbol with balanced symmetry, but no die. Elegant dark brown line art, same gold-ring parchment badge framing, same plaque style.
