@@ -1,0 +1,34 @@
+Repo-grounded findings from this pass
+
+1) Pikken dice blocker
+- The current live JS binds a click handler to #rollBtn, but the current pikken_live.html did not contain that element.
+- That can throw immediately on page boot and break later live rendering, including the dice section.
+- The replacement files in this patch add the button and make the JS null-safe.
+- The replacement live JS also reads dice from more than one backend shape:
+  state.my_hand
+  viewer.my_hand / viewer.hand / viewer.dice / viewer.dice_values
+  matching player.hand / player.dice / player.current_hand
+- So if the backend already returns dice under a different key, the page now shows them.
+
+2) What this does NOT magically solve
+- If the backend never returns the player hand at all, frontend-only patching cannot invent the dice.
+- In that case the next owner path is the DB/RPC surface behind pikken_get_state_scoped / pikken_get_live_state_public.
+
+3) Site slowness: concrete causes seen in the current repo state
+- There are multiple pages with aggressive repeated polling.
+- Paardenrace lobby uses a 1.2 second poll loop and also calls cleanup from the poll path.
+- Paardenrace live uses a 1.8 second poll loop.
+- Pikken lobby/live also poll repeatedly.
+- Score / scorer architecture is split and old score.html is still the active scorer form path while scorer.html is effectively empty.
+- This patch only reduces Pikken live poll pressure slightly by moving it from 1.5s to 2.2s and making the page safer on boot.
+- Full site-speed work still needs a broader repo pass over the shared poll owners.
+
+4) Klaverjas scorer and live state
+- score.html is still an old single-form klaverjas entry page.
+- scorer.html in the checked repo state is effectively empty.
+- So the user request for a futureproof dedicated scorer/spectator-safe klaverjas path is valid and still outstanding.
+
+5) Paardenrace gate issue
+- The top-row gate cards already have a frontend render path that can show suit/rank once the backend marks the gate as resolved.
+- The complaint that the revealed gate suit is not the horse that gets pushed back points to backend owner logic, not just the HTML/CSS display.
+- That needs the server-side room/match draw+gate transition logic inspected before claiming a fix.
