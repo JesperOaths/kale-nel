@@ -1,0 +1,20 @@
+GEJAST session/login patch v500
+
+Changed files:
+- gejast-config.js
+- gejast-home-gate.js
+- gejast-public-page-gate.js
+- home.html
+- login.html
+
+Intent of this patch:
+1. Make login names load faster and more reliably by querying multiple sources in parallel.
+2. Keep cached names usable immediately so the dropdown is not blank while the network is still loading.
+3. Reduce false logouts by making private-page session validation less eager to hard-invalidate on weak or partial RPC results.
+4. Reduce home-page relogout behavior by only clearing the session on stronger invalidation evidence.
+5. Converge the touched public/session files to visible version v500.
+
+Important honesty note:
+- This is a frontend/runtime patch only.
+- I did not verify the live Supabase schema or run a DB-side session inspection in this turn.
+- If the underlying login-name RPCs or session RPCs are broken in the database, this patch will improve resilience and fallback behavior, but it will not by itself repair a broken backend truth.

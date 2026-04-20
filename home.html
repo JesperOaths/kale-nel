@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <title>Kale Nel Home</title>
-  <script>window.GEJAST_PAGE_VERSION='v493';</script><script src="./gejast-config.js?v493"></script>
+  <script>window.GEJAST_PAGE_VERSION='v500';</script><script src="./gejast-config.js?v500"></script>
   <style>
     :root{--gold:#9a8241;--paper:rgba(255,251,245,.86);--line:rgba(0,0,0,.08);--ink:#1a1a1a;--muted:#6b6257}
     *{box-sizing:border-box} body{margin:0;min-height:100vh;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(rgba(244,240,232,.78),rgba(244,240,232,.78)), url('./site-bg-desktop.webp') center/cover no-repeat fixed;color:var(--ink);display:flex;align-items:center;justify-content:center;padding:20px}
@@ -32,7 +32,7 @@
       <a class="action primary" id="loginLink" href="./login.html"><strong>Login</strong><span>Open je spelersessie en ga direct door naar het beschermde deel van de site.</span></a>
     </div>
   </main>
-  <div class="site-credit-watermark" data-version-watermark>v493 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v500 · Made by Bruis</div>
   <script>
     (function(){
       const cfg = window.GEJAST_CONFIG || {};
@@ -43,63 +43,79 @@
       const req = document.getElementById('requestLink');
       const log = document.getElementById('loginLink');
       const badge = document.getElementById('scopeBadge');
-      if (family){
-        badge.textContent='Familiesite';
-        badge.href='./home.html';
-      } else {
-        badge.href='./home.html?scope=family';
-      }
+      const note = document.getElementById('sessionStateNote');
+      const timeoutMs = Number(cfg.RPC_TIMEOUT_MS || 2500);
+      if (family){ badge.textContent='Familiesite'; badge.href='./home.html'; }
+      else { badge.href='./home.html?scope=family'; }
       req.href = family ? `./request.html?scope=family&return_to=${encodeURIComponent(returnTo)}` : `./request.html?return_to=${encodeURIComponent(returnTo)}`;
       log.href = family ? `./login.html?scope=family&return_to=${encodeURIComponent(returnTo)}` : `./login.html?return_to=${encodeURIComponent(returnTo)}`;
-      const note = document.getElementById('sessionStateNote');
       const rpcHeaders = () => ({ 'Content-Type':'application/json', apikey:(cfg.SUPABASE_PUBLISHABLE_KEY||''), Authorization:`Bearer ${(cfg.SUPABASE_PUBLISHABLE_KEY||'')}` });
       const normalizeName = (v) => String(v || '').replace(/\s+/g,' ').trim();
       async function parseResponse(res){
         const txt = await res.text();
         let data = null;
         try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || (`HTTP ${res.status}`)); }
-        if (!res.ok) throw new Error((data && (data.message || data.error)) || (`HTTP ${res.status}`));
+        if (!res.ok) throw new Error((data && (data.message || data.error || data.details || data.hint)) || (`HTTP ${res.status}`));
         return data;
       }
+      async function rpc(name, body){
+        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        const timer = controller ? setTimeout(() => { try { controller.abort(); } catch (_) {} }, timeoutMs) : null;
+        try {
+          const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(body), signal: controller ? controller.signal : undefined });
+          return await parseResponse(res);
+        } finally {
+          if (timer) clearTimeout(timer);
+        }
+      }
       async function validateToken(token){
-        if (!token || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY) return false;
+        if (!token || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY) return { status:'missing' };
         const attempts = [
           ['get_public_state', { session_token: token }],
-          ['get_gejast_homepage_state', { session_token: token }],
-          ['get_jas_app_state', { session_token: token }],
           ['get_public_state', { session_token_input: token }],
-          ['get_gejast_homepage_state', { session_token_input: token }],
-          ['get_jas_app_state', { session_token_input: token }]
+          ['get_gejast_homepage_state', { session_token: token }],
+          ['get_jas_app_state', { session_token: token }]
         ];
-        for (const [rpc, body] of attempts){
+        let softInvalids = 0;
+        for (const [rpcName, body] of attempts){
           try {
-            const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${rpc}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(body) });
-            const data = await parseResponse(res);
+            const data = await rpc(rpcName, body);
             const name = normalizeName(data && (data.my_name || data.display_name || data.player_name || (data.viewer && data.viewer.display_name) || ''));
-            if (name) return true;
-            if (data && (data.viewer || data.player || data.session_valid === true || data.is_logged_in === true)) return true;
-          } catch (_) {}
+            if (name || (data && (data.viewer || data.player || data.session_valid === true || data.is_logged_in === true))) {
+              return { status:'valid' };
+            }
+            if (data && (data.session_valid === false || data.is_logged_in === false)) softInvalids += 1;
+          } catch (err) {
+            const raw = String(err && err.message || '');
+            if (/invalid session|session.*expired|not logged in|unauthorized|jwt|auth/i.test(raw)) return { status:'invalid' };
+          }
         }
-        return false;
+        return softInvalids >= 2 ? { status:'invalid' } : { status:'unknown' };
       }
-      if (cfg.isPlayerSessionExpired && cfg.isPlayerSessionExpired()) cfg.clearPlayerSessionTokens && cfg.clearPlayerSessionTokens();
+
+      if (cfg.isPlayerSessionExpired && cfg.isPlayerSessionExpired()) {
+        cfg.clearPlayerSessionTokens && cfg.clearPlayerSessionTokens();
+      }
       const token = cfg.getPlayerSessionToken ? cfg.getPlayerSessionToken() : '';
       if (token){
-        Promise.resolve(validateToken(token)).then((ok) => {
-          if (ok){
+        Promise.resolve(validateToken(token)).then((result) => {
+          if (result.status === 'valid'){
             cfg.touchPlayerActivity && cfg.touchPlayerActivity();
             location.replace(returnTo.startsWith('./') ? returnTo : `./${returnTo}`);
             return;
           }
-          cfg.clearPlayerSessionTokens && cfg.clearPlayerSessionTokens();
-          if (note){ note.style.display='block'; note.textContent='Je oude sessie was niet meer geldig. Log opnieuw in om verder te gaan.'; }
+          if (result.status === 'invalid'){
+            cfg.clearPlayerSessionTokens && cfg.clearPlayerSessionTokens();
+            if (note){ note.style.display='block'; note.textContent='Je oude sessie was niet meer geldig. Log opnieuw in om verder te gaan.'; }
+            return;
+          }
+          if (note){ note.style.display='block'; note.textContent='Je sessie kon nu niet hard worden gecontroleerd. Je bent niet automatisch uitgelogd.'; }
         }).catch(() => {
-          cfg.clearPlayerSessionTokens && cfg.clearPlayerSessionTokens();
-          if (note){ note.style.display='block'; note.textContent='Je oude sessie kon niet worden gecontroleerd. Log opnieuw in om verder te gaan.'; }
+          if (note){ note.style.display='block'; note.textContent='De sessiecheck faalde, maar je bent niet automatisch uitgelogd.'; }
         });
       }
     })();
   </script>
-<script src="./site-analytics.js?v493"></script>
+<script src="./site-analytics.js?v500"></script>
 </body>
 </html>

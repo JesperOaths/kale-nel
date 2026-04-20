@@ -7,7 +7,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inloggen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v499';</script>
+  <script>window.GEJAST_PAGE_VERSION='v500';</script>
   <style>
     :root { --gold: #9a8241; --dark-bg: #111; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.08); }
     * { box-sizing: border-box; }
@@ -37,9 +37,9 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/login.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v499"></script>
-  <script src="./gejast-account-scope.js?v499"></script>
-  <script src="./gejast-account-links.js?v499"></script>
+  <script src="./gejast-config.js?v500"></script>
+  <script src="./gejast-account-scope.js?v500"></script>
+  <script src="./gejast-account-links.js?v500"></script>
 </head>
 <body>
   <main class="main-card">
@@ -88,19 +88,21 @@
       }
     } catch (_) {}
 
-    const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || "";
-    const SESSION_KEY = "jas_session_token_v11";
-    const SESSION_KEYS = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.PLAYER_SESSION_KEYS) || ["jas_session_token_v11","jas_session_token_v10"];
-    const LOGIN_NAMES_CACHE_PREFIX = 'gejast_login_names_cache_v499:';
+    const cfg = window.GEJAST_CONFIG || {};
+    const SUPABASE_URL = cfg.SUPABASE_URL || 'https://uiqntazgnrxwliaidkmy.supabase.co';
+    const SUPABASE_PUBLISHABLE_KEY = cfg.SUPABASE_PUBLISHABLE_KEY || '';
+    const SESSION_KEY = 'jas_session_token_v11';
+    const SESSION_KEYS = cfg.PLAYER_SESSION_KEYS || ['jas_session_token_v11','jas_session_token_v10'];
+    const LOGIN_NAMES_CACHE_PREFIX = 'gejast_login_names_cache_v500:';
     const NAMES_MAX = 400;
+    const RPC_TIMEOUT_MS = Number(cfg.LOGIN_NAME_TIMEOUT_MS || cfg.RPC_TIMEOUT_MS || 2200);
 
     function rpcHeaders() {
       return {
         apikey: SUPABASE_PUBLISHABLE_KEY,
         Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-        "Content-Type": "application/json",
-        Accept: "application/json"
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
       };
     }
     async function parseResponse(res) {
@@ -109,6 +111,19 @@
       try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); }
       if (!res.ok) throw new Error(data?.message || data?.error || data?.hint || `HTTP ${res.status}`);
       return data;
+    }
+    async function fetchJson(url, options, timeoutMs = RPC_TIMEOUT_MS) {
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timer = controller ? setTimeout(() => { try { controller.abort(); } catch (_) {} }, Math.max(700, Number(timeoutMs || RPC_TIMEOUT_MS))) : null;
+      try {
+        const res = await fetch(url, Object.assign({}, options || {}, { signal: controller ? controller.signal : undefined }));
+        return await parseResponse(res);
+      } catch (err) {
+        if (err && err.name === 'AbortError') throw new Error('RPC timeout');
+        throw err;
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
     }
     function normalizeDisplayName(name) {
       return String(name || '').replace(/\s+/g, ' ').trim();
@@ -140,17 +155,18 @@
       try { localStorage.setItem(loginNamesCacheKey(scope), JSON.stringify({ ts: Date.now(), names: clean })); } catch (_) {}
     }
     function getSessionToken() {
-      if(window.GEJAST_CONFIG && window.GEJAST_CONFIG.getPlayerSessionToken) return window.GEJAST_CONFIG.getPlayerSessionToken();
+      if(cfg.getPlayerSessionToken) return cfg.getPlayerSessionToken();
       for (const key of SESSION_KEYS){ const v=localStorage.getItem(key)||sessionStorage.getItem(key); if(v) return v; }
-      return "";
+      return '';
     }
     function setSessionToken(token) {
+      if (cfg.setPlayerSessionToken) return cfg.setPlayerSessionToken(token, 'local');
       for (const key of SESSION_KEYS){ localStorage.removeItem(key); sessionStorage.removeItem(key); }
       localStorage.setItem(SESSION_KEY, token);
       sessionStorage.setItem(SESSION_KEY, token);
     }
     function clearSessionToken() {
-      if(window.GEJAST_CONFIG && window.GEJAST_CONFIG.clearPlayerSessionTokens) return window.GEJAST_CONFIG.clearPlayerSessionTokens();
+      if(cfg.clearPlayerSessionTokens) return cfg.clearPlayerSessionTokens();
       for (const key of SESSION_KEYS){ localStorage.removeItem(key); sessionStorage.removeItem(key); }
     }
     function setStatus(message = '', tone = 'info') {
@@ -161,7 +177,6 @@
     }
     function targetUrl() {
       const params = new URLSearchParams(window.location.search);
-      const cfg = window.GEJAST_CONFIG || {};
       const raw = params.get('return_to') || params.get('next') || (params.get('scope')==='family' ? 'index.html?scope=family' : 'index.html');
       const clean = cfg.sanitizeReturnTarget ? cfg.sanitizeReturnTarget(raw, params.get('scope')==='family' ? 'index.html?scope=family' : 'index.html') : raw;
       return clean.startsWith('./') ? clean : `./${clean}`;
@@ -169,7 +184,7 @@
     function pendingVote() { return new URLSearchParams(window.location.search).get('vote') || ''; }
     function friendlyMessage(msg) {
       const raw = String(msg || '');
-      if (/signal is aborted without reason|AbortError|aborted/i.test(raw)) return 'Namen laden werd afgebroken. Probeer opnieuw.';
+      if (/signal is aborted without reason|AbortError|aborted|timeout/i.test(raw)) return 'De login bron reageerde traag. Probeer opnieuw.';
       if (/failed to fetch/i.test(raw)) return 'Netwerk/CORS-fout bij contact met Supabase.';
       if (/schema cache|Could not find the function|no function matches/i.test(raw)) return 'De loginfunctie ontbreekt of is niet goed vernieuwd in Supabase.';
       return raw;
@@ -180,15 +195,21 @@
       const cleanNames = uniqueNames(names).slice(0, NAMES_MAX);
       const current = selected && cleanNames.includes(selected) ? selected : input.value;
       const resetCurrent = resetInput ? resetInput.value : '';
+      const defaultLabel = cleanNames.length ? 'Kies je naam' : 'Geen namen geladen';
 
       const primaryFrag = document.createDocumentFragment();
       const defaultOption = document.createElement('option');
       defaultOption.value = '';
-      defaultOption.textContent = cleanNames.length ? 'Kies je naam' : 'Geen namen geladen';
+      defaultOption.textContent = defaultLabel;
       primaryFrag.appendChild(defaultOption);
 
       const resetFrag = resetInput ? document.createDocumentFragment() : null;
-      if (resetFrag) resetFrag.appendChild(defaultOption.cloneNode(true));
+      if (resetFrag) {
+        const resetDefault = document.createElement('option');
+        resetDefault.value = '';
+        resetDefault.textContent = defaultLabel;
+        resetFrag.appendChild(resetDefault);
+      }
 
       cleanNames.forEach((name) => {
         const option = document.createElement('option');
@@ -213,63 +234,61 @@
       if (Array.isArray(payload?.data)) {
         return payload.data.map((row) => typeof row === 'string' ? row : (row?.display_name || row?.name || row?.desired_name || row?.slug || row?.player_name || '')).filter(Boolean);
       }
+      if (Array.isArray(payload?.players)) {
+        return payload.players.map((row) => typeof row === 'string' ? row : (row?.display_name || row?.public_display_name || row?.name || row?.desired_name || row?.slug || row?.player_name || '')).filter(Boolean);
+      }
+      if (Array.isArray(payload?.profiles)) {
+        return payload.profiles.map((row) => typeof row === 'string' ? row : (row?.display_name || row?.public_display_name || row?.name || row?.desired_name || row?.slug || row?.player_name || '')).filter(Boolean);
+      }
       return [];
     }
 
     async function fetchNamesFast() {
       const scope = currentScope();
-      const helper = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedActivePlayerNames === 'function'
-        ? window.GEJAST_CONFIG.fetchScopedActivePlayerNames
-        : null;
-      if (helper) {
-        try {
-          const names = uniqueNames(await helper(scope));
-          if (names.length) return names;
-        } catch (_) {}
+      const results = [];
+      const requests = [];
+      const pushIfNames = (names) => {
+        const clean = uniqueNames(names);
+        if (clean.length) results.push(...clean);
+      };
+
+      if (cfg.fetchScopedActivePlayerNames && typeof cfg.fetchScopedActivePlayerNames === 'function') {
+        requests.push(Promise.resolve(cfg.fetchScopedActivePlayerNames(scope)).then(pushIfNames).catch(() => {}));
       }
-
-      try {
-        if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
-          const data = await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_login_names_scoped', { site_scope_input: scope });
-          const names = uniqueNames(normalizeLoginNameRows(data));
-          if (names.length) return names;
-        }
-      } catch (_) {}
-
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_login_names_scoped`, {
+      if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
+        requests.push(
+          Promise.resolve(window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_login_names_scoped', { site_scope_input: scope }))
+            .then((data) => pushIfNames(normalizeLoginNameRows(data)))
+            .catch(() => {})
+        );
+      }
+      requests.push(
+        fetchJson(`${SUPABASE_URL}/rest/v1/rpc/get_login_names_scoped`, {
           method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ site_scope_input: scope })
-        });
-        const data = await parseResponse(res);
-        const names = uniqueNames(normalizeLoginNameRows(data));
-        if (names.length) return names;
-      } catch (_) {}
-
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_login_names`, {
+        }).then((data) => pushIfNames(normalizeLoginNameRows(data))).catch(() => {})
+      );
+      requests.push(
+        fetchJson(`${SUPABASE_URL}/rest/v1/rpc/get_login_names`, {
           method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({})
-        });
-        const data = await parseResponse(res);
-        const names = uniqueNames(normalizeLoginNameRows(data));
-        if (names.length) return names;
-      } catch (_) {}
-
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope&order=display_name.asc&limit=${NAMES_MAX}`, {
+        }).then((data) => pushIfNames(normalizeLoginNameRows(data))).catch(() => {})
+      );
+      requests.push(
+        fetchJson(`${SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope&order=display_name.asc&limit=${NAMES_MAX}`, {
           method:'GET', mode:'cors', cache:'no-store',
           headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, Accept:'application/json' }
-        });
-        const data = await parseResponse(res);
-        let names = uniqueNames(normalizeLoginNameRows(data));
-        try {
-          if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') {
-            names = window.GEJAST_SCOPE_UTILS.filterNames(names, scope);
-          }
-        } catch (_) {}
-        if (names.length) return names;
-      } catch (_) {}
+        }).then((data) => {
+          let names = uniqueNames(normalizeLoginNameRows(data));
+          try {
+            if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') {
+              names = window.GEJAST_SCOPE_UTILS.filterNames(names, scope);
+            }
+          } catch (_) {}
+          pushIfNames(names);
+        }).catch(() => {})
+      );
 
-      return [];
+      await Promise.allSettled(requests);
+      return uniqueNames(results);
     }
 
     async function loginPlayer() {
@@ -293,11 +312,10 @@
 
       let lastErr = null;
       for (const payload of payloads) {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/login_player`, {
-          method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(payload)
-        });
         try {
-          return await parseResponse(res);
+          return await fetchJson(`${SUPABASE_URL}/rest/v1/rpc/login_player`, {
+            method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(payload)
+          }, Math.max(RPC_TIMEOUT_MS, 4000));
         } catch (err) {
           const raw = String(err && err.message || '');
           if (/schema cache|Could not find the function|no function matches/i.test(raw)) {
@@ -311,10 +329,9 @@
     }
 
     async function castVote(desired_status) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/cast_vote`, {
+      return await fetchJson(`${SUPABASE_URL}/rest/v1/rpc/cast_vote`, {
         method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token: getSessionToken(), desired_status })
-      });
-      return await parseResponse(res);
+      }, Math.max(RPC_TIMEOUT_MS, 3000));
     }
 
     async function requestPinReset() {
@@ -322,16 +339,13 @@
       const email = String(document.getElementById('resetEmailInput').value || '').trim().toLowerCase();
       if (!desiredName) throw new Error('Vul de gebruikersnaam in waarvoor je de pincode wilt resetten.');
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Vul het gekoppelde e-mailadres in.');
-
       const base_url = new URL('./activate.html', window.location.href).toString();
       if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
         return await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('request_pin_reset_reactivation_action', { input_display_name: desiredName, input_email: email, base_url });
       }
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/request_pin_reset_reactivation_action`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(),
-        body: JSON.stringify({ input_display_name: desiredName, input_email: email, base_url })
-      });
-      return await parseResponse(res);
+      return await fetchJson(`${SUPABASE_URL}/rest/v1/rpc/request_pin_reset_reactivation_action`, {
+        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ input_display_name: desiredName, input_email: email, base_url })
+      }, Math.max(RPC_TIMEOUT_MS, 4000));
     }
 
     function clampFourDigits(input) {
@@ -348,7 +362,6 @@
         fillNames([], '');
         setStatus('Namen laden...', 'info');
       }
-
       try {
         const names = await fetchNamesFast();
         if (names.length) {
@@ -356,7 +369,7 @@
           fillNames(names, document.getElementById('playerNameInput').value || '');
           setStatus('');
         } else if (!cached.length) {
-          setStatus('De namenlijst kwam leeg terug. De login bron geeft nu geen namen terug.', 'warn');
+          setStatus('De namenlijst kwam leeg terug. Controleer de login-RPC of allowed_usernames.', 'warn');
         }
       } catch (err) {
         if (!cached.length) setStatus(friendlyMessage(err instanceof Error ? err.message : String(err)), 'warn');
@@ -369,7 +382,7 @@
         setStatus('Inloggen...');
         const data = await loginPlayer();
         setSessionToken(data.session_token);
-        try{ window.GEJAST_CONFIG && window.GEJAST_CONFIG.touchPlayerActivity && window.GEJAST_CONFIG.touchPlayerActivity(); }catch(_){}
+        try{ cfg.touchPlayerActivity && cfg.touchPlayerActivity(); }catch(_){}
         if (pendingVote()) await castVote(pendingVote());
         window.location.href = targetUrl();
       } catch (err) {
@@ -425,7 +438,7 @@
   })();
   </script>
 
-  <div class="site-credit-watermark" data-version-watermark>v499 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v500 · Made by Bruis</div>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>
