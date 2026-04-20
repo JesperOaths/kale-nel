@@ -38,17 +38,33 @@
     if (!res.ok) throw new Error(data?.message || data?.error || data?.details || data?.hint || `HTTP ${res.status}`);
     return data;
   }
-  function namesFromPayload(raw){
-    const rows = Array.isArray(raw)
+  function rowName(row){
+    if (typeof row === 'string') return row;
+    return row?.public_display_name || row?.chosen_username || row?.nickname || row?.display_name || row?.player_name || row?.name || row?.desired_name || row?.slug || '';
+  }
+  function rowStatus(row){
+    return String(row?.status || row?.account_status || row?.player_status || '').trim().toLowerCase();
+  }
+  function isActivatedStatus(status){
+    return ['active', 'approved', 'activated'].includes(String(status || '').trim().toLowerCase());
+  }
+  function rowsFromPayload(raw){
+    return Array.isArray(raw)
       ? raw
       : (Array.isArray(raw?.players) ? raw.players
         : (Array.isArray(raw?.profiles) ? raw.profiles
         : (Array.isArray(raw?.names) ? raw.names
         : (Array.isArray(raw?.data) ? raw.data : []))));
-    return uniqueNames(rows.map((row)=>{
-      if (typeof row === 'string') return row;
-      return row?.public_display_name || row?.chosen_username || row?.nickname || row?.display_name || row?.player_name || row?.name || row?.desired_name || row?.slug || '';
-    }));
+  }
+  function activatedNamesFromStatusRows(raw, scope){
+    const rows = rowsFromPayload(raw);
+    const filtered = rows.filter((row)=>{
+      if (!row || typeof row === 'string') return false;
+      const rowScope = String(row?.site_scope || row?.scope || row?.site_scope_input || '').trim().toLowerCase();
+      if (rowScope && rowScope !== scope) return false;
+      return isActivatedStatus(rowStatus(row));
+    });
+    return uniqueNames(filtered.map(rowName));
   }
   async function postRpc(name, payload){
     const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
@@ -61,63 +77,81 @@
     return parseResponse(res);
   }
   async function getAllowedUsernames(scope){
-    const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,desired_name,name,slug,status,site_scope&order=display_name.asc&limit=500`, {
-      method:'GET',
-      mode:'cors',
-      cache:'no-store',
-      headers:{ apikey: cfg.SUPABASE_PUBLISHABLE_KEY || '', Authorization: `Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY || ''}`, Accept:'application/json' }
-    });
+    const res = await fetch(
+      `${cfg.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,desired_name,name,slug,status,site_scope&status=in.(active,approved,activated)&order=display_name.asc&limit=500`,
+      {
+        method:'GET',
+        mode:'cors',
+        cache:'no-store',
+        headers:{
+          apikey: cfg.SUPABASE_PUBLISHABLE_KEY || '',
+          Authorization: `Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY || ''}`,
+          Accept:'application/json'
+        }
+      }
+    );
     const data = await parseResponse(res);
     return uniqueNames((Array.isArray(data) ? data : [])
       .filter((row)=>{
         const rowScope = String(row?.site_scope || '').trim().toLowerCase();
         return !rowScope || rowScope === scope;
       })
-      .filter((row)=>{
-        const status = String(row?.status || '').trim().toLowerCase();
-        return !status || ['active','approved','activated','pending_activation','waiting_for_activation'].includes(status);
-      })
-      .map((row)=>row?.display_name || row?.desired_name || row?.name || row?.slug || ''));
+      .filter((row)=>isActivatedStatus(rowStatus(row)))
+      .map(rowName));
   }
 
-  async function robustLoginNames(scope){
-    const merged = [];
-    const tasks = [
-      () => cfg.fetchScopedActivePlayerNames ? cfg.fetchScopedActivePlayerNames(scope) : [],
-      () => postRpc('get_login_names_scoped', { site_scope_input: scope }).then(namesFromPayload),
-      () => postRpc('get_all_site_players_public_scoped', { site_scope_input: scope }).then(namesFromPayload),
-      () => postRpc('get_profiles_page_bundle_scoped', { site_scope_input: scope }).then(namesFromPayload),
-      () => postRpc('get_login_names', {}).then(namesFromPayload),
-      () => getAllowedUsernames(scope)
+  async function robustActivatedLoginNames(scope){
+    const authoritative = [];
+
+    // 1) Strongest path: allowed_usernames with explicit activated-style status.
+    try {
+      const names = await getAllowedUsernames(scope);
+      if (names.length) authoritative.push(...names);
+    } catch (_) {}
+
+    // 2) Scoped public/profile RPCs only if they themselves return status-bearing rows proving activation.
+    const statusAwareTasks = [
+      () => postRpc('get_all_site_players_public_scoped', { site_scope_input: scope }),
+      () => postRpc('get_profiles_page_bundle_scoped', { site_scope_input: scope }),
+      () => postRpc('get_login_names_scoped', { site_scope_input: scope })
     ];
-    for (const task of tasks){
+    for (const task of statusAwareTasks){
       try {
-        const rows = await task();
-        if (Array.isArray(rows) && rows.length) merged.push(...rows);
+        const raw = await task();
+        const names = activatedNamesFromStatusRows(raw, scope);
+        if (names.length) authoritative.push(...names);
       } catch (_) {}
     }
-    return uniqueNames(merged);
+
+    // Intentionally do NOT trust unscoped get_login_names or generic string-only sources here.
+    // If activation cannot be proven from the data, we return an empty list.
+    return uniqueNames(authoritative);
+  }
+
+  function setStrictEmptyMessage(names){
+    const box = document.getElementById('statusBox');
+    if (!box) return;
+    if (Array.isArray(names) && names.length) {
+      if (/geen geactiveerde/i.test(box.textContent || '')) box.textContent = '';
+      return;
+    }
+    if (!String(box.textContent || '').trim()) {
+      box.textContent = 'Geen geactiveerde accounts gevonden voor deze scope.';
+    }
   }
 
   async function refill(){
     if (typeof window.fillNames !== 'function') return;
     const scope = currentScope();
-    const names = await robustLoginNames(scope);
+    const names = await robustActivatedLoginNames(scope);
     const selected = (document.getElementById('playerNameInput') || {}).value || '';
-    if (names.length) {
-      window.fillNames(names, selected);
-      const box = document.getElementById('statusBox');
-      if (box && !box.textContent.trim()) box.textContent = '';
-    } else {
-      const box = document.getElementById('statusBox');
-      if (box && !box.textContent.trim()) box.textContent = 'Nog geen namen gevonden voor deze scope.';
-    }
+    window.fillNames(names, selected);
+    setStrictEmptyMessage(names);
   }
 
-  const originalGetLoginNames = window.getLoginNames;
   window.getLoginNames = async function(){
     const scope = currentScope();
-    const names = await robustLoginNames(scope);
+    const names = await robustActivatedLoginNames(scope);
     return { names };
   };
 
@@ -127,5 +161,5 @@
     setTimeout(refill, 0);
   }
 
-  window.GEJAST_LOGIN_NAMES_FALLBACK = { robustLoginNames, refill };
+  window.GEJAST_LOGIN_NAMES_FALLBACK = { robustActivatedLoginNames, refill };
 })();

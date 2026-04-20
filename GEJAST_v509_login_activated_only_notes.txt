@@ -1,0 +1,8 @@
+v509 login activated-only patch
+- The login dropdown now only includes users whose activation can be proven from status-bearing data.
+- Trusted activation statuses: active, approved, activated.
+- Unscoped/generic string-only name sources are intentionally ignored.
+- If activation cannot be proven from available data, the dropdown remains empty.
+- Sources used:
+  1) allowed_usernames with explicit status filter
+  2) scoped public/profile RPCs only when they return status-bearing rows
