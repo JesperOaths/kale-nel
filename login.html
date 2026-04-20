@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inloggen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v489';</script>
+  <script>window.GEJAST_PAGE_VERSION='v490';</script>
   <style>
     :root { --gold: #9a8241; --dark-bg: #111; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.08); }
     * { box-sizing: border-box; }
@@ -48,7 +48,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/login.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v489"></script><script src="./gejast-family-rollout.js?v489"></script><script src="./gejast-scope.js?v489"></script><script src="./gejast-account-scope.js?v489"></script><script src="./gejast-account-links.js?v489"></script>
+  <script src="./gejast-config.js?v490"></script><script src="./gejast-family-rollout.js?v489"></script><script src="./gejast-scope.js?v489"></script><script src="./gejast-account-scope.js?v489"></script><script src="./gejast-account-links.js?v489"></script>
 </head>
 <body>
 
@@ -193,38 +193,12 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     }
     async function getLoginNames() {
       const scope = currentScope();
-      try {
-        const helper = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedActivePlayerNames === 'function'
-          ? window.GEJAST_CONFIG.fetchScopedActivePlayerNames
-          : null;
-        if (helper) {
-          const names = await helper(scope);
-          if (Array.isArray(names) && names.length) return { names };
-        }
-      } catch (_) {}
-      try {
-        if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
-          const scoped = await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_login_names_scoped', { site_scope_input: scope });
-          const scopedNames = normalizeLoginNameRows(scoped);
-          if (scopedNames.length) return { names: scopedNames };
-          const fallback = await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_login_names', { site_scope_input: scope });
-          const fallbackNames = normalizeLoginNameRows(fallback);
-          if (fallbackNames.length) return { names: fallbackNames };
-        }
-      } catch (_) {}
-      const attempts = [
-        ['get_login_names_scoped', { site_scope_input: scope }],
-        ['get_login_names', { site_scope_input: scope }],
-        ['get_login_names', {}]
-      ];
-      for (const [rpcName, payload] of attempts) {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpcName}`, {
-          method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(payload)
-        });
-        if (!res.ok) continue;
-        const data = await parseResponse(res);
-        const names = normalizeLoginNameRows(data);
-        if (names.length) return { names };
+      const helper = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedActivePlayerNames === 'function'
+        ? window.GEJAST_CONFIG.fetchScopedActivePlayerNames
+        : null;
+      if (helper) {
+        const names = await helper(scope);
+        return { names: Array.isArray(names) ? names : [] };
       }
       return { names: [] };
     }
@@ -362,6 +336,13 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return [];
     }
     async function load() {
+      const scope = currentScope();
+      try {
+        const cached = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.readScopedNameCache === 'function'
+          ? window.GEJAST_CONFIG.readScopedNameCache('login_names', scope)
+          : null;
+        if (cached && Array.isArray(cached.names) && cached.names.length) fillNames(cached.names, '');
+      } catch (_) {}
       const [stateResult, loginNamesResult] = await Promise.allSettled([getPublicState(), getLoginNames()]);
       const state = stateResult.status === 'fulfilled' ? stateResult.value : null;
       const loginNames = loginNamesResult.status === 'fulfilled' ? loginNamesResult.value : null;
@@ -476,7 +457,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     load();
   </script>
 
-  <div class="site-credit-watermark" data-version-watermark>v488 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v490 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}

@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v489',
+    VERSION:'v490',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -110,8 +110,31 @@
       return true;
     });
   }
+
+  function scopedNameCacheKey(kind, scope){
+    return `gejast_${String(kind||'names')}_${normalizeScope(scope || inferRuntimeScope())}_cache_v490`;
+  }
+  function readScopedNameCache(kind, scope){
+    try {
+      const raw = localStorage.getItem(scopedNameCacheKey(kind, scope)) || sessionStorage.getItem(scopedNameCacheKey(kind, scope));
+      if (!raw) return { names: [], fresh: false, updated_at: 0 };
+      const parsed = JSON.parse(raw);
+      const names = uniquePersonNames(Array.isArray(parsed?.names) ? parsed.names : []);
+      const updatedAt = Number(parsed?.updated_at || 0) || 0;
+      const fresh = updatedAt > 0 && (Date.now() - updatedAt) < (15 * 60 * 1000);
+      return { names, fresh, updated_at: updatedAt };
+    } catch (_) {
+      return { names: [], fresh: false, updated_at: 0 };
+    }
+  }
+  function writeScopedNameCache(kind, scope, names){
+    const payload = JSON.stringify({ names: uniquePersonNames(names), updated_at: Date.now() });
+    try { localStorage.setItem(scopedNameCacheKey(kind, scope), payload); } catch (_) {}
+    try { sessionStorage.setItem(scopedNameCacheKey(kind, scope), payload); } catch (_) {}
+  }
   async function fetchScopedActivePlayerNames(scope){
     const resolvedScope = normalizeScope(scope || inferRuntimeScope());
+    const cached = readScopedNameCache('login_names', resolvedScope);
     const headers = { 'Content-Type':'application/json', apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '', Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}` };
     async function callRpc(name, payload){
       const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify(payload || {}) });
@@ -133,18 +156,21 @@
       return names;
     }
     const attempts = [
-      ['get_all_site_players_public_scoped', { site_scope_input: resolvedScope }],
-      ['get_profiles_page_bundle_scoped', { site_scope_input: resolvedScope }],
       ['get_login_names_scoped', { site_scope_input: resolvedScope }],
-      ['get_login_names', {}]
+      ['get_all_site_players_public_scoped', { site_scope_input: resolvedScope }],
+      ['get_login_names', { site_scope_input: resolvedScope }]
     ];
     for (const [name, payload] of attempts){
       try {
         const raw = await callRpc(name, payload);
         const names = toNames(raw);
-        if (names.length) return names;
+        if (names.length) {
+          writeScopedNameCache('login_names', resolvedScope, names);
+          return names;
+        }
       } catch (_) {}
     }
+    if (cached.names.length) return cached.names;
     try {
       const url = `${CONFIG.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope&status=eq.available&order=display_name.asc`;
       const res = await fetch(url, { method:'GET', mode:'cors', cache:'no-store', headers });
@@ -158,12 +184,16 @@
         return !explicitScope || explicitScope === resolvedScope;
       });
       const names = toNames(rows);
-      if (names.length) return names;
+      if (names.length) {
+        writeScopedNameCache('login_names', resolvedScope, names);
+        return names;
+      }
     } catch (_) {}
     return [];
   }
   async function fetchScopedRequestableNames(scope){
     const resolvedScope = normalizeScope(scope || inferRuntimeScope());
+    const cached = readScopedNameCache('request_names', resolvedScope);
     const headers = { 'Content-Type':'application/json', apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '', Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}` };
     async function callRpc(name, payload){
       const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify(payload || {}) });
@@ -186,16 +216,19 @@
     }
     const attempts = [
       ['get_requestable_names_scoped', { site_scope_input: resolvedScope }],
-      ['get_requestable_names', { site_scope_input: resolvedScope }],
-      ['get_requestable_names', {}]
+      ['get_requestable_names', { site_scope_input: resolvedScope }]
     ];
     for (const [name, payload] of attempts){
       try {
         const raw = await callRpc(name, payload);
         const names = toNames(raw);
-        if (names.length) return names;
+        if (names.length) {
+          writeScopedNameCache('request_names', resolvedScope, names);
+          return names;
+        }
       } catch (_) {}
     }
+    if (cached.names.length) return cached.names;
     try {
       const url = `${CONFIG.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope&status=eq.available&order=display_name.asc`;
       const res = await fetch(url, { method:'GET', mode:'cors', cache:'no-store', headers });
@@ -208,7 +241,11 @@
         const explicitScope = String(row?.site_scope || '').trim().toLowerCase();
         return !explicitScope || explicitScope === resolvedScope;
       });
-      return toNames(rows);
+      const names = toNames(rows);
+      if (names.length) {
+        writeScopedNameCache('request_names', resolvedScope, names);
+        return names;
+      }
     } catch (_) {}
     return [];
   }
@@ -363,6 +400,8 @@ function buildRequestUrl(returnTo, scope){
     normalizeProfileImageUrl,
     fetchScopedActivePlayerNames,
     fetchScopedRequestableNames,
+    readScopedNameCache,
+    writeScopedNameCache,
     getPlayerSessionToken,
     clearPlayerSessionTokens,
     touchPlayerActivity,

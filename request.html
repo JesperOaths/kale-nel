@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Naam claimen</title>
-  <script>window.GEJAST_PAGE_VERSION='v489';</script>
+  <script>window.GEJAST_PAGE_VERSION='v490';</script>
   <style>
     :root { --gold: #9a8241; --black: #111; --bg: #f0ede4; }
     * { box-sizing: border-box; }
@@ -34,7 +34,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/request.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v489"></script><script src="./gejast-family-rollout.js?v489"></script><script src="./gejast-scope.js?v489"></script><script src="./gejast-account-scope.js?v489"></script><script src="./gejast-account-links.js?v489"></script>
+  <script src="./gejast-config.js?v490"></script><script src="./gejast-family-rollout.js?v489"></script><script src="./gejast-scope.js?v489"></script><script src="./gejast-account-scope.js?v489"></script><script src="./gejast-account-links.js?v489"></script>
 </head>
 <body>
   <div class="scene">
@@ -163,64 +163,12 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     }
 
     async function getRequestableNames() {
-      const attempts = [];
       const scope = window.GEJAST_ACCOUNT_SCOPE && window.GEJAST_ACCOUNT_SCOPE.currentScope ? window.GEJAST_ACCOUNT_SCOPE.currentScope() : 'friends';
-      try {
-        const helper = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedRequestableNames === 'function'
-          ? window.GEJAST_CONFIG.fetchScopedRequestableNames
-          : null;
-        if (helper) {
-          const names = await helper(scope);
-          if (Array.isArray(names) && names.length) return uniqueNames(names);
-          attempts.push('config-helper-empty');
-        }
-      } catch (err) {
-        attempts.push(err instanceof Error ? err.message : 'config-helper-failed');
-      }
-
-      try {
-        const data = window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function'
-          ? await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_requestable_names_scoped', { site_scope_input: scope })
-          : await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names_scoped`, {
-              method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(), body: JSON.stringify({ site_scope_input: scope })
-            }).then(parseResponse);
-        let names = uniqueNames(normalizeRequestableNamesPayload(data));
-        if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, scope);
-        if (names.length) return names;
-        attempts.push('rpc-scoped-empty');
-      } catch (err) {
-        attempts.push(err instanceof Error ? err.message : 'rpc-scoped-failed');
-      }
-
-      try {
-        const data = window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function'
-          ? await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_requestable_names', { site_scope_input: scope })
-          : await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names`, {
-              method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(), body: JSON.stringify({ site_scope_input: scope })
-            }).then(parseResponse);
-        let names = uniqueNames(normalizeRequestableNamesPayload(data));
-        if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, scope);
-        if (names.length) return names;
-        attempts.push('rpc-empty');
-      } catch (err) {
-        attempts.push(err instanceof Error ? err.message : 'rpc-failed');
-      }
-
-      try {
-        const url = `${SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope&status=eq.available&order=display_name.asc`;
-        const res = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-store', headers: rpcHeaders() });
-        const data = await parseResponse(res);
-        let rows = Array.isArray(data) ? data : [];
-        rows = rows.filter((row) => !row?.site_scope || String(row.site_scope).toLowerCase() === scope);
-        let names = uniqueNames(normalizeRequestableNamesPayload(rows));
-        if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, scope);
-        if (names.length) return names;
-        attempts.push('rest-empty');
-      } catch (err) {
-        attempts.push(err instanceof Error ? err.message : 'rest-failed');
-      }
-
-      throw new Error(attempts.join(' | ') || 'Kon namen niet laden');
+      const helper = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedRequestableNames === 'function'
+        ? window.GEJAST_CONFIG.fetchScopedRequestableNames
+        : null;
+      if (!helper) return [];
+      return await helper(scope);
     }
 
     async function requestClaim() {
@@ -255,6 +203,13 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     }
 
     async function load() {
+      const scope = window.GEJAST_ACCOUNT_SCOPE && window.GEJAST_ACCOUNT_SCOPE.currentScope ? window.GEJAST_ACCOUNT_SCOPE.currentScope() : 'friends';
+      try {
+        const cached = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.readScopedNameCache === 'function'
+          ? window.GEJAST_CONFIG.readScopedNameCache('request_names', scope)
+          : null;
+        if (cached && Array.isArray(cached.names) && cached.names.length) fillNameSelect(cached.names);
+      } catch (_) {}
       try {
         const names = await getRequestableNames();
         fillNameSelect(names);
@@ -313,7 +268,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     load();
   </script>
 
-  <div class="site-credit-watermark" data-version-watermark>v435 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v490 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
