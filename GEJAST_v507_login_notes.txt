@@ -1,0 +1,4 @@
+v507 login fix
+- Fixes: readCachedLoginNames is not defined
+- Adds matching writeCachedLoginNames helper and a 15-minute local cache per scope
+- Visible login page version bumped to v507
