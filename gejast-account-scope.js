@@ -36,7 +36,7 @@
 
   function retryable(error){
     const msg = String(error?.message || error || '');
-    return /schema cache|could not find the function|no function matches|unexpected parameter|unknown parameter|does not exist|function public\.|argument/i.test(msg);
+    return /schema cache|could not find the function|no function matches|unexpected parameter|unknown parameter|does not exist|function public\.|argument|timeout/i.test(msg);
   }
 
   function scopedVariants(payload){
@@ -57,10 +57,10 @@
     return out;
   }
 
-  async function postRpc(name, payload, timeoutMs){
+  async function postRpc(name, payload){
     const url = `${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`;
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const timeout = controller ? global.setTimeout(() => { try { controller.abort(); } catch (_) {} }, Math.max(1200, Number(timeoutMs || 4500))) : null;
+    const timeout = controller ? global.setTimeout(() => { try { controller.abort(); } catch (_) {} }, 6000) : null;
     try {
       const res = await global.fetch(url, {
         method: 'POST',
@@ -79,18 +79,17 @@
     }
   }
 
-  async function callRpcCompat(name, payloadOrPayloads, options){
+  async function callRpcCompat(name, payloadOrPayloads){
     const payloads = Array.isArray(payloadOrPayloads) ? payloadOrPayloads : [payloadOrPayloads || {}];
-    const timeoutMs = options && options.timeoutMs;
     let lastError = null;
     for (const payload of payloads) {
       for (const variant of scopedVariants(payload)) {
         try {
-          return await postRpc(name, variant, timeoutMs);
+          return await postRpc(name, variant);
         } catch (error) {
           lastError = error;
           if (!retryable(error)) {
-            const isOriginal = JSON.stringify(variant) == JSON.stringify(payload);
+            const isOriginal = JSON.stringify(variant) === JSON.stringify(payload);
             if (isOriginal) throw error;
           }
         }

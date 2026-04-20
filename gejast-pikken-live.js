@@ -2,6 +2,7 @@
   const cfg = window.GEJAST_CONFIG || {};
   const liveSummary = window.GEJAST_LIVE_SUMMARY || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
+  const BID_HISTORY_KEY = 'jas_pikken_bid_history_v496';
 
   function getScope(){
     try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
@@ -61,45 +62,62 @@
   function normalizeError(err){
     const msg = String(err && err.message || err || 'Onbekende fout');
     if (/function public\.pikken_get_state_scoped\(text, uuid\) does not exist/i.test(msg) || /pikken\)getstate scoped/i.test(msg.replace(/_/g,''))) {
-      return 'De oude 2-argument Pikken state-reader ontbreekt op de database. Gebruik de meegeleverde compat-fix en herlaad daarna de pagina.';
+      return 'De oude 2-argument Pikken state-reader ontbreekt op de database. Gebruik de meegeleverde SQL compat-fix en herlaad daarna de pagina.';
     }
     return msg;
   }
   function orderFace(face){ return face === 1 ? 7 : face; }
-  function sortDiceFaces(dice){ return (Array.isArray(dice)?dice:[]).map((n)=>Number(n||0)).filter(Boolean).sort((a,b)=>orderFace(a)-orderFace(b)); }
+  function sortDiceFaces(dice){ return (Array.isArray(dice) ? dice : []).map((n)=>Number(n || 0)).filter(Boolean).sort((a,b)=>orderFace(a)-orderFace(b)); }
   function groupDice(dice){
     const grouped = new Map();
     sortDiceFaces(dice).forEach((face)=>{ if (!grouped.has(face)) grouped.set(face, []); grouped.get(face).push(face); });
     return Array.from(grouped.entries()).map(([face, arr])=>({ face, dice: arr }));
   }
-
   const params = new URLSearchParams(location.search);
   const gameId = params.get('client_match_id') || params.get('game_id') || '';
-  const UI = { pollId:null, presenceId:null, currentState:null, bidHistory:[] };
+  const UI = { pollId:null, presenceId:null, currentState:null, bidHistory:[], lastSeenBidKey:'', lastRoundRendered:0 };
 
-  function loadLocalBidHistory(){
-    try { UI.bidHistory = JSON.parse(localStorage.getItem(`jas_pikken_bid_history_v495:${gameId}`) || '[]'); }
-    catch (_) { UI.bidHistory = []; }
-  }
-  function saveLocalBidHistory(){
-    try { localStorage.setItem(`jas_pikken_bid_history_v495:${gameId}`, JSON.stringify(UI.bidHistory.slice(-50))); } catch (_) {}
-  }
+  function bidHistoryStorage(){ try { return JSON.parse(localStorage.getItem(BID_HISTORY_KEY) || '{}'); } catch (_) { return {}; } }
+  function loadLocalBidHistory(){ const store = bidHistoryStorage(); UI.bidHistory = Array.isArray(store[gameId]) ? store[gameId] : []; }
+  function saveLocalBidHistory(){ try { const store = bidHistoryStorage(); store[gameId] = UI.bidHistory.slice(-50); localStorage.setItem(BID_HISTORY_KEY, JSON.stringify(store)); } catch (_) {} }
   function pushBidHistory(entry){
     const key = `${entry.round_no}|${entry.seat}|${entry.label}`;
     if (UI.bidHistory.some((row)=>`${row.round_no}|${row.seat}|${row.label}` === key)) return;
     UI.bidHistory.push(entry);
     saveLocalBidHistory();
   }
+  function backendBidHistory(model){
+    const raw = []
+      .concat(Array.isArray(model?.state?.game?.state?.bid_history) ? model.state.game.state.bid_history : [])
+      .concat(Array.isArray(model?.state?.game?.state?.round_bid_history) ? model.state.game.state.round_bid_history : [])
+      .concat(Array.isArray(model?.state?.bid_history) ? model.state.bid_history : [])
+      .concat(Array.isArray(model?.publicState?.game?.state?.bid_history) ? model.publicState.game.state.bid_history : [])
+      .concat(Array.isArray(model?.publicState?.bid_history) ? model.publicState.bid_history : []);
+    return raw.map((row)=>({
+      round_no: Number(row.round_no || model.roundNo || 0),
+      seat: Number(row.seat || row.bidder_seat || row.seat_index || 0),
+      label: bidText({ count: row.count || row.bid_count, face: row.face || row.bid_face })
+    })).filter((row)=>row.seat && row.label && row.label !== '—');
+  }
+  function mergeBidHistory(model){
+    const backend = backendBidHistory(model);
+    if (backend.length) { UI.bidHistory = backend; saveLocalBidHistory(); return; }
+    const currentBid = model.bid;
+    const bidderSeat = Number(currentBid?.bidder_seat || currentBid?.seat || currentBid?.seat_index || 0);
+    const key = `${model.roundNo}|${bidderSeat}|${bidText(currentBid)}`;
+    if (bidderSeat && currentBid && bidText(currentBid) !== '—' && key !== UI.lastSeenBidKey) {
+      UI.lastSeenBidKey = key;
+      pushBidHistory({ round_no:model.roundNo, seat:bidderSeat, label:bidText(currentBid) });
+    }
+  }
 
   async function getPresenceMap(){
     if (!gameId) return {};
-    try {
-      const raw = await rpcVariants('get_pikken_presence_public', [
-        { game_id_input: gameId },
-        { game_id_input: gameId, site_scope_input: getScope() }
-      ]);
+    try{
+      const raw = await rpcVariants('get_pikken_presence_public', [{ game_id_input: gameId }, { game_id_input: gameId, site_scope_input: getScope() }]);
+      const rows = normalizeRows(raw);
       const map = {};
-      normalizeRows(raw).forEach((row)=>{ const key = String(row.player_name || '').trim().toLowerCase(); if (key) map[key] = row; });
+      rows.forEach((row)=>{ const key = String(row.player_name || '').trim().toLowerCase(); if (key) map[key] = row; });
       return map;
     } catch (_) { return {}; }
   }
@@ -135,132 +153,80 @@
   }
   async function loadPublicState(){
     if (!gameId) return null;
-    try {
-      return await rpcVariants('pikken_get_live_state_public', [
-        { game_id_input: gameId, site_scope_input: getScope() },
-        { game_id_input: gameId }
-      ]);
-    } catch (_) {}
+    try { return await rpcVariants('pikken_get_live_state_public', [{ game_id_input: gameId, site_scope_input: getScope() }, { game_id_input: gameId }]); } catch (_) {}
     try {
       const identity = liveSummary.matchIdentityFromUrl ? liveSummary.matchIdentityFromUrl() : { clientMatchId: gameId, matchRef:'' };
       const item = await liveSummary.loadPublicSummary('pikken', identity);
       return item ? { item } : null;
     } catch (_) { return null; }
   }
-
+  function fallbackTurnSeat(model){
+    const players = (model.players || []).filter((p)=>!!p.alive || model.phase === 'lobby');
+    const activeSeat = Number(model.turnSeat || 0);
+    const bidderSeat = Number(model.bid?.bidder_seat || model.bid?.seat || 0);
+    if (model.phase !== 'bidding' || !players.length || !bidderSeat || activeSeat !== bidderSeat) return activeSeat;
+    const seats = players.map((p)=>Number(p.seat || p.seat_index || 0)).filter(Boolean).sort((a,b)=>a-b);
+    const idx = seats.indexOf(bidderSeat);
+    return idx >= 0 ? seats[(idx + 1) % seats.length] : activeSeat;
+  }
   function normalizeModel(source, presenceMap){
     if (source?.item) {
       const summary = (liveSummary.summaryFromItem ? liveSummary.summaryFromItem(source.item) : (source.item?.summary_payload || {})) || {};
       const st = summary.live_state || summary || {};
-      return {
-        mode:'viewer',
-        phase: String(st.phase || st.status || 'live'),
-        roundNo: Number(st.round_no || 0),
-        bid: st.bid || null,
-        turnSeat: Number(st.current_turn_seat || st.turn_seat || 0),
-        voteTurnSeat: Number(st.vote_turn_seat || 0),
-        penaltyMode: st.penalty_mode,
-        lobbyCode: st.lobby_code || '—',
-        players: Array.isArray(st.players) ? st.players : [],
-        votes: Array.isArray(st.votes) ? st.votes : [],
-        viewer: {},
-        myHand: [],
-        totals: st.dice_totals || {},
-        lastReveal: st.last_reveal || null,
-        presenceMap,
+      const players = Array.isArray(st.players) ? st.players : [];
+      const votes = Array.isArray(st.votes) ? st.votes : [];
+      const model = {
+        mode:'viewer', publicState:source, presenceMap, phase:String(st.phase || st.status || 'live'), roundNo:Number(st.round_no || 0), bid:st.bid || null,
+        turnSeat:Number(st.current_turn_seat || st.turn_seat || 0), voteTurnSeat:Number(st.vote_turn_seat || 0), penaltyMode:st.penalty_mode,
+        lobbyCode:st.lobby_code || '—', players, votes, viewer:{}, myHand:Array.isArray(st.my_hand) ? st.my_hand : [], totals:st.dice_totals || {}, lastReveal:st.last_reveal || null,
         metaText: liveSummary.metaText ? liveSummary.metaText(source.item) : 'Live summary'
       };
+      model.turnSeat = fallbackTurnSeat(model);
+      return model;
     }
     const state = source || {};
     const game = state.game || {};
     const model = {
-      mode:'actor',
-      phase: String(game?.state?.phase || 'lobby'),
-      roundNo: Number(game?.state?.round_no || 0),
-      bid: game?.state?.bid || null,
-      turnSeat: Number(game?.state?.current_turn_seat || game?.state?.turn_seat || 0),
-      voteTurnSeat: Number(game?.state?.vote_turn_seat || 0),
-      penaltyMode: game?.penalty_mode || game?.config?.penalty_mode,
-      lobbyCode: game?.lobby_code || '—',
-      players: Array.isArray(state.players) ? state.players : [],
-      votes: Array.isArray(state.votes) ? state.votes : [],
-      viewer: state.viewer || {},
-      myHand: Array.isArray(state.my_hand) ? state.my_hand : [],
-      totals: state.dice_totals || {},
-      lastReveal: game?.state?.last_reveal || null,
-      presenceMap,
-      metaText: `Live bijgewerkt om ${new Date().toLocaleTimeString('nl-NL', { hour:'2-digit', minute:'2-digit' })}`
+      mode:'actor', state, presenceMap, phase:String(game?.state?.phase || 'lobby'), roundNo:Number(game?.state?.round_no || 0),
+      bid:game?.state?.bid || null, turnSeat:Number(game?.state?.current_turn_seat || game?.state?.turn_seat || 0), voteTurnSeat:Number(game?.state?.vote_turn_seat || 0),
+      penaltyMode:game?.penalty_mode || game?.config?.penalty_mode, lobbyCode:game?.lobby_code || '—', players:Array.isArray(state.players) ? state.players : [],
+      votes:Array.isArray(state.votes) ? state.votes : [], viewer:state.viewer || {}, myHand:Array.isArray(state.my_hand) ? state.my_hand : [], totals:state.dice_totals || {}, lastReveal:game?.state?.last_reveal || null,
+      metaText:`Live bijgewerkt om ${new Date().toLocaleTimeString('nl-NL', { hour:'2-digit', minute:'2-digit' })}`
     };
-    const bidderSeat = Number(model.bid?.bidder_seat || model.bid?.seat || model.bid?.seat_index || 0);
-    if (model.phase === 'bidding' && bidderSeat && model.turnSeat === bidderSeat) {
-      const aliveSeats = model.players.filter((p)=>!!p.alive || p.dice_count > 0).map((p)=>Number(p.seat || p.seat_index || 0)).filter(Boolean).sort((a,b)=>a-b);
-      if (aliveSeats.length > 1) {
-        const idx = aliveSeats.indexOf(bidderSeat);
-        const nextSeat = idx >= 0 ? aliveSeats[(idx + 1) % aliveSeats.length] : 0;
-        if (nextSeat && nextSeat !== bidderSeat) model.turnSeat = nextSeat;
-      }
-    }
+    model.turnSeat = fallbackTurnSeat(model);
     return model;
   }
 
   function computeBidOptions(currentBid, totalDice){
     const total = Math.max(1, Number(totalDice || 0));
-    const options = [];
-    const seen = new Set();
-    function add(count, face){
-      if (!count || !face) return;
-      const label = face === 1 ? `${count} × pik` : `${count} × ${face}`;
-      const value = `${count}:${face}`;
-      if (seen.has(value)) return;
-      seen.add(value);
-      options.push({ value, label, count, face });
-    }
-    if (!currentBid) {
-      for (let face = 2; face <= 6; face += 1) add(1, face);
-      add(1, 1);
-      return options;
-    }
-    const count = Number(currentBid.count || currentBid.bid_count || 0);
-    const face = Number(currentBid.face || currentBid.bid_face || 0);
-    if (face === 1) {
-      for (let nextCount = count + 1; nextCount <= Math.ceil(total / 2); nextCount += 1) add(nextCount, 1);
-      for (let nextCount = Math.max(count * 2 + 1, 1); nextCount <= total; nextCount += 1) {
-        for (let nextFace = 2; nextFace <= 6; nextFace += 1) add(nextCount, nextFace);
-      }
-      return options;
-    }
+    const options = []; const seen = new Set();
+    function add(count, face){ if (!count || !face) return; const label = face === 1 ? `${count} × pik` : `${count} × ${face}`; const value = `${count}:${face}`; if (seen.has(value)) return; seen.add(value); options.push({ value, label, count, face }); }
+    if (!currentBid) { for (let face = 2; face <= 6; face += 1) add(1, face); add(1, 1); return options; }
+    const count = Number(currentBid.count || currentBid.bid_count || 0); const face = Number(currentBid.face || currentBid.bid_face || 0);
+    if (face === 1) { for (let nextCount = count + 1; nextCount <= Math.ceil(total / 2); nextCount += 1) add(nextCount, 1); for (let nextCount = Math.max(count * 2 + 1, 1); nextCount <= total; nextCount += 1) { for (let nextFace = 2; nextFace <= 6; nextFace += 1) add(nextCount, nextFace); } return options; }
     for (let nextFace = face + 1; nextFace <= 6; nextFace += 1) add(count, nextFace);
-    for (let nextCount = count + 1; nextCount <= total; nextCount += 1) {
-      for (let nextFace = 2; nextFace <= 6; nextFace += 1) add(nextCount, nextFace);
-    }
-    for (let pikCount = Math.ceil((count + 1) / 2); pikCount <= Math.ceil(total / 2); pikCount += 1) add(pikCount, 1);
+    for (let nextCount = count + 1; nextCount <= total; nextCount += 1) { for (let nextFace = 2; nextFace <= 6; nextFace += 1) add(nextCount, nextFace); }
+    for (let pikCount = Math.ceil(count / 2); pikCount <= Math.ceil(total / 2); pikCount += 1) add(pikCount, 1);
     return options;
   }
-
   function renderBidSelect(model){
-    const select = qs('#bidSelect');
+    const select = qs('#bidSelect'); if (!select) return;
     const options = computeBidOptions(model.bid, Number(model.totals.current_total || 0));
     select.innerHTML = options.map((opt)=>`<option value="${esc(opt.value)}">${esc(opt.label)}</option>`).join('') || '<option value="">Geen legale biedingen</option>';
     qs('#bidBtn').disabled = !options.length;
   }
   function renderVotes(model){
-    const voteWrap = qs('#tableVotes');
-    if (model.phase !== 'voting' || !model.votes.length) { voteWrap.innerHTML = ''; return; }
-    voteWrap.innerHTML = model.votes.map((vote)=>{
-      const status = String(vote.status || 'waiting');
-      const icon = status === 'approved' ? '👍' : status === 'rejected' ? '👎' : '…';
-      return `<span class="table-vote">${icon} ${esc(vote.name || '')}</span>`;
-    }).join('');
+    const voteWrap = qs('#tableVotes'); const votes = Array.isArray(model.votes) ? model.votes : [];
+    if (!votes.length || model.phase !== 'voting') { voteWrap.innerHTML = ''; return; }
+    voteWrap.innerHTML = votes.map((vote)=>{ const status = String(vote.status || 'waiting'); const icon = status === 'approved' ? '👍' : status === 'rejected' ? '👎' : '…'; return `<span class="table-vote">${icon} ${esc(vote.name || '')}</span>`; }).join('');
   }
   function renderMyDice(model){
-    const wrap = qs('#myDiceBody');
-    const note = qs('#diceStateNote');
-    const dice = sortDiceFaces(model.myHand);
-    note.textContent = dice.length ? 'Jouw actuele gegooide dobbelstenen voor deze ronde.' : 'Nog geen dobbelstenen zichtbaar.';
-    if (!dice.length) {
-      wrap.innerHTML = '<div class="muted">Nog geen dobbelstenen zichtbaar.</div>';
-      return;
-    }
+    const wrap = qs('#myDiceBody'); const note = qs('#diceStateNote'); const rollBtn = qs('#rollBtn');
+    const dice = sortDiceFaces(model.myHand || []);
+    note.textContent = dice.length ? 'Je actieve hand voor deze ronde.' : 'Nog geen dobbelstenen ontvangen vanuit de state.';
+    rollBtn.disabled = true;
+    rollBtn.textContent = dice.length ? 'Dobbelstenen live' : 'Wachten op dobbelstenen';
+    if (!dice.length) { wrap.innerHTML = '<div class="muted">Nog geen dobbelstenen zichtbaar. Dit betekent meestal dat de backend-hand nog niet terugkomt.</div>'; return; }
     wrap.innerHTML = groupDice(dice).map((group)=>`
       <div class="dice-group">
         <div class="dice-group-head">${group.face === 1 ? 'pik' : group.face}</div>
@@ -281,18 +247,7 @@
             <div class="dice-row">${(Array.isArray(h.dice) ? h.dice : []).map((d)=>`<img class="die" src="./assets/pikken/dice-${Number(d)}.svg" alt="die ${Number(d)}">`).join('')}</div>
           </div>
         `).join('')}
-      </div>
-    `;
-  }
-  function mergeBidHistory(model){
-    const backend = []
-      .concat(Array.isArray(model?.lastReveal?.bid_history) ? model.lastReveal.bid_history : [])
-      .concat(Array.isArray(model?.bid_history) ? model.bid_history : []);
-    if (backend.length) {
-      backend.forEach((row)=>pushBidHistory({ round_no:Number(row.round_no || model.roundNo || 0), seat:Number(row.seat || row.bidder_seat || 0), label: bidText({ count:row.count || row.bid_count, face:row.face || row.bid_face }) }));
-    }
-    const bidderSeat = Number(model.bid?.bidder_seat || model.bid?.seat || 0);
-    if (bidderSeat && bidText(model.bid) !== '—') pushBidHistory({ round_no:model.roundNo, seat:bidderSeat, label:bidText(model.bid) });
+      </div>`;
   }
   function renderSeats(model){
     const ring = qs('#seatRing');
@@ -328,11 +283,10 @@
       `;
       ring.appendChild(div);
     });
-    Array.from(ring.querySelectorAll('[data-kick-seat]')).forEach((btn)=>{
-      btn.addEventListener('click', ()=>kickSeat(Number(btn.getAttribute('data-kick-seat') || 0)).catch((e)=>alert(normalizeError(e))));
-    });
+    Array.from(ring.querySelectorAll('[data-kick-seat]')).forEach((btn)=>{ btn.addEventListener('click', ()=>kickSeat(Number(btn.getAttribute('data-kick-seat') || 0)).catch((e)=>alert(normalizeError(e)))); });
   }
   function renderModel(model){
+    if (Number(UI.lastRoundRendered || 0) !== Number(model.roundNo || 0)) UI.lastRoundRendered = Number(model.roundNo || 0);
     mergeBidHistory(model);
     qs('#metaLine').textContent = model.metaText;
     const phasePill = qs('#phasePill');
@@ -345,12 +299,7 @@
     qs('#turnName').textContent = model.players.find((p)=>Number(p.seat || p.seat_index || 0) === activeSeat)?.name || '—';
     qs('#penaltyMode').textContent = penaltyLabel(model.penaltyMode);
     qs('#diceFraction').textContent = `${Number(model.totals.current_total || 0)}/${Number(model.totals.start_total || 0)}`;
-    renderVotes(model);
-    renderSeats(model);
-    renderReveal(model.lastReveal);
-    renderMyDice(model);
-    renderBidSelect(model);
-
+    renderVotes(model); renderSeats(model); renderReveal(model.lastReveal); renderMyDice(model); renderBidSelect(model);
     const mySeat = Number(model.viewer?.seat || model.viewer?.seat_index || 0);
     const meAlive = model.mode === 'viewer' ? true : (!!model.viewer?.alive || model.phase === 'lobby');
     const myTurn = model.mode === 'actor' && model.phase === 'bidding' && mySeat === model.turnSeat && meAlive;
@@ -362,7 +311,6 @@
     qs('#leaveBtn').classList.toggle('hidden', !(model.mode === 'actor' && (model.viewer?.player_id || model.viewer?.display_name || model.viewer?.player_name)));
     qs('#destroyBtn').classList.toggle('hidden', !(model.mode === 'actor' && !!model.viewer?.is_host));
   }
-
   async function refresh(){
     if (!gameId) { qs('#metaLine').textContent = 'Geen game_id in URL.'; return; }
     await touchPresence();
@@ -383,47 +331,20 @@
     if (!seat) return;
     const player = (UI.currentState?.players || []).find((p)=>Number(p.seat || p.seat_index || 0) === Number(seat));
     if (!player) return;
-    const playerName = player.name || player.player_name || 'deze speler';
-    if (!confirm(`Wil je ${playerName} uit het spel gooien?`)) return;
+    if (!confirm(`Wil je ${player.name || player.player_name || 'deze speler'} uit de match gooien?`)) return;
     await rpcVariants('pikken_kick_player_scoped', [
       { session_token: sessionToken(), game_id_input: gameId, seat_index_input: Number(seat), site_scope_input: getScope() },
       { session_token: sessionToken(), game_id_input: gameId, seat_index_input: Number(seat) }
     ]);
     await refresh();
   }
-
-  qs('#bidBtn').addEventListener('click', ()=>{
-    const value = String(qs('#bidSelect').value || '');
-    if (!value.includes(':')) return;
-    const [count, face] = value.split(':').map((n)=>Number(n || 0));
-    act('pikken_place_bid_scoped', { bid_count_input: count, bid_face_input: face }).catch((e)=>alert(normalizeError(e)));
-  });
+  qs('#rollBtn').addEventListener('click', ()=>{ if (UI.currentState) renderMyDice(UI.currentState); });
+  qs('#bidBtn').addEventListener('click', ()=>{ const value = String(qs('#bidSelect').value || ''); if (!value.includes(':')) return; const [count, face] = value.split(':').map((n)=>Number(n || 0)); act('pikken_place_bid_scoped', { bid_count_input: count, bid_face_input: face }).catch((e)=>alert(normalizeError(e))); });
   qs('#rejectBtn').addEventListener('click', ()=>act('pikken_reject_bid_scoped').catch((e)=>alert(normalizeError(e))));
   qs('#approveBtn').addEventListener('click', ()=>act('pikken_cast_vote_scoped', { vote_input:true }).catch((e)=>alert(normalizeError(e))));
   qs('#voteRejectBtn').addEventListener('click', ()=>act('pikken_cast_vote_scoped', { vote_input:false }).catch((e)=>alert(normalizeError(e))));
-  qs('#leaveBtn').addEventListener('click', async ()=>{
-    if (!confirm('Wil je de match verlaten?')) return;
-    try {
-      await rpcVariants('pikken_leave_game_scoped', [
-        { session_token: sessionToken(), game_id_input: gameId },
-        { session_token: sessionToken(), game_id_input: gameId, site_scope_input: getScope() }
-      ]);
-      await releasePresence();
-      location.href = `./pikken.html?scope=${encodeURIComponent(getScope())}`;
-    } catch (e) { alert(normalizeError(e)); }
-  });
-  qs('#destroyBtn').addEventListener('click', async ()=>{
-    if (!confirm('Wil je deze match sluiten en verwijderen?')) return;
-    try {
-      await rpcVariants('pikken_destroy_game_scoped', [
-        { session_token: sessionToken(), game_id_input: gameId },
-        { session_token: sessionToken(), game_id_input: gameId, site_scope_input: getScope() }
-      ]);
-      await releasePresence();
-      location.href = `./pikken.html?scope=${encodeURIComponent(getScope())}`;
-    } catch (e) { alert(normalizeError(e)); }
-  });
-
+  qs('#leaveBtn').addEventListener('click', async ()=>{ if (!confirm('Wil je de match verlaten?')) return; try { await rpcVariants('pikken_leave_game_scoped', [{ session_token: sessionToken(), game_id_input: gameId }, { session_token: sessionToken(), game_id_input: gameId, site_scope_input: getScope() }]); await releasePresence(); location.href = `./pikken.html?scope=${encodeURIComponent(getScope())}`; } catch (e) { alert(normalizeError(e)); } });
+  qs('#destroyBtn').addEventListener('click', async ()=>{ if (!confirm('Host: wil je dit Pikken-spel stoppen en verwijderen?')) return; try { await rpcVariants('pikken_destroy_game_scoped', [{ session_token: sessionToken(), game_id_input: gameId }, { session_token: sessionToken(), game_id_input: gameId, site_scope_input: getScope() }]); await releasePresence(); location.href = `./pikken.html?scope=${encodeURIComponent(getScope())}`; } catch (e) { alert(normalizeError(e)); } });
   window.addEventListener('beforeunload', ()=>{ releasePresence(); });
   loadLocalBidHistory();
   refresh().catch((e)=>{ qs('#metaLine').textContent = normalizeError(e); });
