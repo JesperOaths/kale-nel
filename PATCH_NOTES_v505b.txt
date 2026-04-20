@@ -1,0 +1,13 @@
+Repo-synced homepage owner patch
+
+Source of truth:
+- rebuilt from the newest GitHub main version of gejast-index-top5-route-overrides.js
+
+Changed file:
+- gejast-index-top5-route-overrides.js
+
+Why this replaces the earlier zip:
+- the repo file changed after the earlier patch
+- this artifact now matches the newest repo state instead of an older intermediate version
+
+No SQL in this patch.
