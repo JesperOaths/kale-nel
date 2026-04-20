@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v594',
+    VERSION:'v488',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -11,7 +11,6 @@
     PLAYER_SESSION_KEYS: ['jas_session_token_v11','jas_session_token_v10'],
     PLAYER_LAST_ACTIVITY_KEY: 'jas_last_activity_at_v1',
     PLAYER_SESSION_IDLE_MS: 12 * 60 * 60 * 1000,
-    ADMIN_SESSION_REMEMBER_MS: 45 * 24 * 60 * 60 * 1000,
     WEB_PUSH_PUBLIC_KEY: 'BPqY04jDOB_8RlhNxURgWFl6cMge64Mr7DkrWtgMfG4ARWLJ6S-r6c6JeQJ6o4kysWT0WeR9oVpahP85L8GLl_4',
     NOTIFICATION_BUTTON_ENABLED: true,
     WEB_PUSH_TEST_RPC: 'queue_test_web_push',
@@ -147,6 +146,57 @@
     }
     return [];
   }
+  async function fetchScopedRequestableNames(scope){
+    const resolvedScope = normalizeScope(scope || inferRuntimeScope());
+    const headers = { 'Content-Type':'application/json', apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '', Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}` };
+    async function callRpc(name, payload){
+      const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify(payload || {}) });
+      const txt = await res.text();
+      let data = null;
+      try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || `HTTP ${res.status}`); }
+      if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
+      return data && data[name] !== undefined ? data[name] : data;
+    }
+    function toNames(raw){
+      const rows = Array.isArray(raw)
+        ? raw
+        : (Array.isArray(raw?.requestable_names) ? raw.requestable_names : (Array.isArray(raw?.names) ? raw.names : (Array.isArray(raw?.items) ? raw.items : (Array.isArray(raw?.rows) ? raw.rows : (Array.isArray(raw?.data) ? raw.data : [])))));
+      let names = uniquePersonNames(rows.map((row)=>{
+        if (typeof row === 'string') return row;
+        return row?.display_name || row?.desired_name || row?.name || row?.player_name || row?.public_display_name || row?.chosen_username || row?.slug || '';
+      }));
+      if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, resolvedScope);
+      return names;
+    }
+    const attempts = [
+      ['get_requestable_names_scoped', { site_scope_input: resolvedScope }],
+      ['get_requestable_names', { site_scope_input: resolvedScope }],
+      ['get_requestable_names', {}]
+    ];
+    for (const [name, payload] of attempts){
+      try {
+        const raw = await callRpc(name, payload);
+        const names = toNames(raw);
+        if (names.length) return names;
+      } catch (_) {}
+    }
+    try {
+      const url = `${CONFIG.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope&status=eq.available&order=display_name.asc`;
+      const res = await fetch(url, { method:'GET', mode:'cors', cache:'no-store', headers });
+      const txt = await res.text();
+      let data = null;
+      try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || `HTTP ${res.status}`); }
+      if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
+      let rows = Array.isArray(data) ? data : [];
+      rows = rows.filter((row)=>{
+        const explicitScope = String(row?.site_scope || '').trim().toLowerCase();
+        return !explicitScope || explicitScope === resolvedScope;
+      });
+      return toNames(rows);
+    } catch (_) {}
+    return [];
+  }
+
 
   function getPlayerSessionToken(){
     for(const key of CONFIG.PLAYER_SESSION_KEYS){
@@ -296,6 +346,7 @@ function buildRequestUrl(returnTo, scope){
     applyVersionLabel,
     normalizeProfileImageUrl,
     fetchScopedActivePlayerNames,
+    fetchScopedRequestableNames,
     getPlayerSessionToken,
     clearPlayerSessionTokens,
     touchPlayerActivity,

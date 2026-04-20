@@ -5,43 +5,27 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
 <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Naam claimen</title>
-  <script>window.GEJAST_PAGE_VERSION='v582';</script>
+  <script>window.GEJAST_PAGE_VERSION='v488';</script>
   <style>
     :root { --gold: #9a8241; --black: #111; --bg: #f0ede4; }
     * { box-sizing: border-box; }
-    body { font-family: 'Inter', sans-serif; background: linear-gradient(rgba(240,237,228,0.92), rgba(240,237,228,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed; margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 20px 16px calc(26px + env(safe-area-inset-bottom)); }
+    body { font-family: 'Inter', sans-serif; background: linear-gradient(rgba(240,237,228,0.92), rgba(240,237,228,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed; margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
     .scene { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
     .brand-watermark { position: absolute; top: 10%; left: 5%; opacity: 0.05; width: 30vw; }
     .spinoza-shadow { position: absolute; bottom: 0; right: 0; opacity: 0.1; width: 40vw; }
     .playing-card-accent { position: absolute; bottom: 5%; left: 0; opacity: 0.15; width: 25vw; }
-    .main-card { background: #fff; border-radius: 32px; padding: 40px; width: min(100%, 500px); max-width: 500px; box-shadow: 0 15px 45px rgba(0,0,0,0.05); text-align: center; position: relative; z-index: 1; margin: 0 auto; }
+    .main-card { background: #fff; border-radius: 32px; padding: 40px; width: 90%; max-width: 500px; box-shadow: 0 15px 45px rgba(0,0,0,0.05); text-align: center; position: relative; z-index: 1; }
     .logo-top { position: absolute; top: 25px; right: 25px; width: 45px; }
     h1 { font-size: 28px; margin: 0 0 10px; letter-spacing: -1px; }
     .intro { font-size: 14px; color: #666; margin-bottom: 25px; }
     input, textarea, select { width: 100%; padding: 12px 16px; margin-bottom: 12px; border: 1px solid #eee; border-radius: 12px; background: #fafafa; box-sizing: border-box; font-size: 15px; }
-    textarea { min-height: 118px; resize: vertical; }
     .btn-row { display: flex; gap: 10px; margin-top: 10px; }
     .primary-btn { flex: 1; background: var(--gold); border: none; padding: 14px; border-radius: 10px; font-weight: 800; cursor: pointer; }
     .ghost-link { flex: 1; background: var(--black); color: #fff; text-decoration: none; padding: 14px; border-radius: 10px; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; }
     .status { margin-top: 15px; font-size: 13px; min-height: 18px; }
     label { display: block; text-align: left; font-size: 12px; font-weight: 700; color: #999; margin: 0 0 6px 4px; text-transform: uppercase; }
-    @media (max-width: 760px) {
-      body { min-height: 100svh; align-items: flex-start; justify-content: center; padding: calc(14px + env(safe-area-inset-top)) 14px calc(34px + env(safe-area-inset-bottom)); }
-      .scene { position: absolute; inset: 0; }
-      .main-card { padding: 72px 18px 20px; border-radius: 24px; }
-      .logo-top { top: 16px; right: 16px; width: 42px; }
-      h1 { font-size: 30px; margin-bottom: 8px; }
-      .intro { margin-bottom: 18px; }
-    }
-
-    @media (max-width: 560px) {
-      body { padding: calc(12px + env(safe-area-inset-top)) 12px calc(38px + env(safe-area-inset-bottom)); }
-      .main-card { padding: 68px 16px 18px; width: 100%; }
-      .btn-row { flex-direction: column-reverse; }
-      .primary-btn, .ghost-link { width: 100%; }
-    }
   </style>
 
   <style id="bruis-watermark-style">
@@ -50,7 +34,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/request.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v582"></script><script src="./gejast-family-rollout.js?v435"></script><script src="./gejast-account-scope.js?v435"></script><script src="./gejast-account-links.js?v435"></script>
+  <script src="./gejast-config.js?v488"></script><script src="./gejast-family-rollout.js?v488"></script><script src="./gejast-scope.js?v488"></script><script src="./gejast-account-scope.js?v488"></script><script src="./gejast-account-links.js?v488"></script>
 </head>
 <body>
   <div class="scene">
@@ -182,10 +166,37 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       const attempts = [];
       const scope = window.GEJAST_ACCOUNT_SCOPE && window.GEJAST_ACCOUNT_SCOPE.currentScope ? window.GEJAST_ACCOUNT_SCOPE.currentScope() : 'friends';
       try {
+        const helper = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedRequestableNames === 'function'
+          ? window.GEJAST_CONFIG.fetchScopedRequestableNames
+          : null;
+        if (helper) {
+          const names = await helper(scope);
+          if (Array.isArray(names) && names.length) return uniqueNames(names);
+          attempts.push('config-helper-empty');
+        }
+      } catch (err) {
+        attempts.push(err instanceof Error ? err.message : 'config-helper-failed');
+      }
+
+      try {
         const data = window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function'
-          ? await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_requestable_names', {})
+          ? await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_requestable_names_scoped', { site_scope_input: scope })
+          : await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names_scoped`, {
+              method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(), body: JSON.stringify({ site_scope_input: scope })
+            }).then(parseResponse);
+        let names = uniqueNames(normalizeRequestableNamesPayload(data));
+        if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, scope);
+        if (names.length) return names;
+        attempts.push('rpc-scoped-empty');
+      } catch (err) {
+        attempts.push(err instanceof Error ? err.message : 'rpc-scoped-failed');
+      }
+
+      try {
+        const data = window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function'
+          ? await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_requestable_names', { site_scope_input: scope })
           : await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names`, {
-              method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(), body: JSON.stringify({})
+              method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(), body: JSON.stringify({ site_scope_input: scope })
             }).then(parseResponse);
         let names = uniqueNames(normalizeRequestableNamesPayload(data));
         if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, scope);
@@ -302,7 +313,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     load();
   </script>
 
-  <div class="site-credit-watermark" data-version-watermark>v581 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v435 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}

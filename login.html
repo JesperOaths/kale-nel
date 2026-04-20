@@ -5,17 +5,17 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
 <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inloggen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v582';</script>
+  <script>window.GEJAST_PAGE_VERSION='v488';</script>
   <style>
     :root { --gold: #9a8241; --dark-bg: #111; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.08); }
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 20px 16px calc(26px + env(safe-area-inset-bottom)); font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./site-bg-desktop.webp') center/cover no-repeat; overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+    body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./site-bg-desktop.webp') center/cover no-repeat; }
     .site-scene { display:none; }
     .brand-watermark { display:none; }
     .spinoza-shadow { display:none; }
-    .main-card { background: var(--card-bg); border-radius: 24px; padding: 40px; width: min(100%, 500px); max-width: 500px; box-shadow: 0 20px 50px rgba(0,0,0,0.08); position: relative; text-align: center; margin: 0 auto; }
+    .main-card { background: var(--card-bg); border-radius: 24px; padding: 40px; width: 90%; max-width: 500px; box-shadow: 0 20px 50px rgba(0,0,0,0.08); position: relative; text-align: center; }
     .card-logo { position: absolute; top: 25px; right: 25px; width: 50px; }
     h1 { font-size: 32px; margin: 0 0 20px 0; letter-spacing: -1px; }
     .state-tile { display:none; background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 25px; border: 1px solid var(--line); }
@@ -27,9 +27,9 @@
     .secondary-btn { flex: 1; background: #000; color: #fff; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; }
     .status { margin-top: 15px; font-size: 13px; min-height: 20px; }
     .text-link { display: block; margin-top: 15px; color: #666; font-size: 14px; text-decoration: none; }
-    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); align-items: center; justify-content: center; z-index: 100; }
     .modal.show { display: flex; }
-    .modal-panel { background: #fff; padding: 25px; border-radius: 20px; width: min(100%, 360px); max-height: min(88svh, 720px); overflow: auto; -webkit-overflow-scrolling: touch; }
+    .modal-panel { background: #fff; padding: 25px; border-radius: 20px; width: 300px; }
     .autofill-ghost{position:absolute;left:-9999px;top:auto;width:1px;height:1px;opacity:0;pointer-events:none;}
     .pin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
     .pin-key { padding: 15px; border-radius: 8px; border: 1px solid #eee; background: #fafafa; font-weight: bold; cursor: pointer; }
@@ -40,23 +40,6 @@
     .modal-copy { margin:0 0 16px 0; color:#666; font-size:14px; line-height:1.45; }
     .modal-actions { display:flex; gap:10px; margin-top:10px; }
     .muted-note { color:#666; font-size:12px; line-height:1.4; margin-top:12px; }
-    @media (max-width: 760px) {
-      body { min-height: 100svh; align-items: flex-start; padding: calc(14px + env(safe-area-inset-top)) 14px calc(34px + env(safe-area-inset-bottom)); }
-      .main-card { padding: 72px 18px 22px; }
-      .card-logo { top: 16px; right: 16px; width: 44px; }
-      h1 { font-size: 30px; margin-bottom: 16px; }
-      .helper-links { gap: 10px; }
-      .modal { align-items: flex-start; padding: calc(12px + env(safe-area-inset-top)) 12px calc(18px + env(safe-area-inset-bottom)); }
-      .modal-panel { width: min(100%, 420px); }
-    }
-
-    @media (max-width: 560px) {
-      body { padding: calc(12px + env(safe-area-inset-top)) 12px calc(38px + env(safe-area-inset-bottom)); }
-      .main-card { padding: 68px 16px 20px; }
-      .btn-row { flex-direction: column-reverse; }
-      .primary-btn, .secondary-btn { width: 100%; }
-      .helper-links { flex-direction: column; align-items: center; }
-    }
   </style>
 
   <style id="bruis-watermark-style">
@@ -65,7 +48,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/login.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v582"></script><script src="./gejast-account-scope.js?v394"></script><script src="./gejast-account-links.js?v399"></script>
+  <script src="./gejast-config.js?v488"></script><script src="./gejast-family-rollout.js?v488"></script><script src="./gejast-scope.js?v488"></script><script src="./gejast-account-scope.js?v488"></script><script src="./gejast-account-links.js?v488"></script>
 </head>
 <body>
 
@@ -201,24 +184,49 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       });
       return await parseResponse(res);
     }
-    async function getLoginNames() {
+    function currentScope() {
       try {
-        const scope = new URLSearchParams(window.location.search).get('scope') === 'family' ? 'family' : 'friends';
+        if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.getScope === 'function') return window.GEJAST_SCOPE_UTILS.getScope();
+        if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.currentScope === 'function') return window.GEJAST_ACCOUNT_SCOPE.currentScope();
+      } catch (_) {}
+      return new URLSearchParams(window.location.search).get('scope') === 'family' ? 'family' : 'friends';
+    }
+    async function getLoginNames() {
+      const scope = currentScope();
+      try {
         const helper = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedActivePlayerNames === 'function'
           ? window.GEJAST_CONFIG.fetchScopedActivePlayerNames
           : null;
-        if (helper) return { names: await helper(scope) };
+        if (helper) {
+          const names = await helper(scope);
+          if (Array.isArray(names) && names.length) return { names };
+        }
       } catch (_) {}
       try {
         if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
-          return await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_login_names', {});
+          const scoped = await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_login_names_scoped', { site_scope_input: scope });
+          const scopedNames = normalizeLoginNameRows(scoped);
+          if (scopedNames.length) return { names: scopedNames };
+          const fallback = await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_login_names', { site_scope_input: scope });
+          const fallbackNames = normalizeLoginNameRows(fallback);
+          if (fallbackNames.length) return { names: fallbackNames };
         }
       } catch (_) {}
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_login_names`, {
-        method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({})
-      });
-      if (!res.ok) return null;
-      return await parseResponse(res);
+      const attempts = [
+        ['get_login_names_scoped', { site_scope_input: scope }],
+        ['get_login_names', { site_scope_input: scope }],
+        ['get_login_names', {}]
+      ];
+      for (const [rpcName, payload] of attempts) {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpcName}`, {
+          method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(payload)
+        });
+        if (!res.ok) continue;
+        const data = await parseResponse(res);
+        const names = normalizeLoginNameRows(data);
+        if (names.length) return { names };
+      }
+      return { names: [] };
     }
     async function touchSession() {
       const token = getSessionToken();
@@ -468,7 +476,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     load();
   </script>
 
-  <div class="site-credit-watermark" data-version-watermark>v581 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v488 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
@@ -477,7 +485,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
   .player-session-corner-name{font-size:13px;line-height:1.1;font-weight:800;color:#111;text-align:right;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .player-session-corner-btn{appearance:none;border:0;border-radius:999px;background:#111;color:#fff;font:inherit;font-weight:800;font-size:11px;line-height:1;padding:7px 10px;cursor:pointer;box-shadow:none}
   .player-session-corner-btn:hover{opacity:.92}
-  @media (max-width:760px){.player-session-corner{top:10px;right:10px;padding:6px 8px;min-width:96px;background:rgba(255,255,255,.88);box-shadow:0 8px 20px rgba(0,0,0,.10)}.player-session-corner-name{max-width:112px;font-size:12px}.player-session-corner-label{font-size:10px}.player-session-corner-btn{padding:6px 9px;font-size:10px}}
+  @media (max-width:640px){.player-session-corner{top:10px;right:10px;padding:7px 9px;min-width:100px}.player-session-corner-name{max-width:120px}}
 </style>
 <div id="playerSessionCorner" class="player-session-corner" aria-live="polite">
   <div class="player-session-corner-label">Ingelogd als</div>
