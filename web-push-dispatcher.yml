@@ -1,4 +1,4 @@
-name: Web Push Dispatcher v352
+name: Web Push Dispatcher v613
 
 on:
   workflow_dispatch:
@@ -19,7 +19,7 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - name: Install dispatcher deps
-        run: npm install web-push @supabase/supabase-js
+        run: npm ci --omit=dev
       - name: Run repaired dispatcher
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

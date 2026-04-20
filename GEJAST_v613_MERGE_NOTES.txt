@@ -1,0 +1,20 @@
+v613 consolidated merge patch
+
+What this patch does
+- Fixes login.html so the page has a real working inline login flow again instead of the current broken placeholder file in the repo.
+- Uses a practical current login dropdown rule: prefer pin-set signals, also accept active/approved/activated style records, then fall back to softer current login-name sources so users can still sign in.
+- Keeps version drift in check by bumping gejast-config.js to v613, which becomes the highest version source for the visible watermark on pages that load config.
+- Speeds up index page without replacing the giant index.html file by patching interval behavior in gejast-config.js and updating gejast-index-top5-route-overrides.js.
+- Carries forward clearly useful Codex pack pieces: pinned package files and web-push-dispatcher workflow.
+- Carries forward the current-safe merged gejast-pikken.js rather than blindly overwriting with the older Codex copy.
+
+Files chosen intentionally
+- gejast-config.js: merged, not blind copy
+- login.html: rebuilt from the last good full inline version, then updated to v613 and current dropdown logic
+- gejast-index-top5-route-overrides.js: owner/live + performance helper, avoids replacing index.html
+- package.json / package-lock.json / web-push-dispatcher.yml: selected from Codex pack and version-adjusted
+- gejast-pikken.js: kept from the newer safe merge path, not the older Codex raw file
+
+Honesty
+- I did not blindly overwrite current repo files with the Codex pack.
+- I used the Codex pack selectively where it was clearly useful and not at odds with newer work.
