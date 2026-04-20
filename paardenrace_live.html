@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace live</title>
-  <script>window.GEJAST_PAGE_VERSION='v495';</script>
-  <script src="./gejast-config.js?v495"></script>
-  <script src="./gejast-paardenrace.js?v495"></script>
+  <script>window.GEJAST_PAGE_VERSION='v505';</script>
+  <script src="./gejast-config.js?v505"></script>
+  <script src="./gejast-paardenrace.js?v505"></script>
   <style>
     :root{
       --gold:#9a8241;--paper:#fffaf3;--ink:#17130f;--muted:#6d6256;--line:rgba(0,0,0,.08);--bg:#efe6d7;
@@ -79,7 +79,10 @@
     .pr-board-label{font-weight:900;text-align:center}
     .pr-board-label--gate{color:#5c4a25}
     .pr-board-gate-track{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px}
-    .pr-board-gate-slot{min-height:74px;display:flex;align-items:center;justify-content:center}
+    .pr-board-gate-slot{min-height:90px;display:flex;align-items:flex-start;justify-content:center}
+    .pr-board-gate-stack{display:grid;gap:4px;width:100%}
+    .pr-gate-suit-caption{min-height:18px;text-align:center;font-size:10px;font-weight:900;color:#5c4a25;text-transform:uppercase;letter-spacing:.04em}
+    .pr-gate-suit-caption.red{color:#a11f35}
     .pr-board-rows{display:grid;gap:8px}
     .pr-board-track{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px}
     .pr-track-cell{min-height:44px;border-radius:16px;border:1px solid rgba(0,0,0,.06);background:#fff;display:flex;align-items:center;justify-content:center}
@@ -122,9 +125,10 @@
       .hero-meta{grid-template-columns:1fr 1fr}
       .toolbar{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
       .toolbar .btn,.toolbar a.btn{width:100%}
-      .pr-board-gate-slot{min-height:60px}
+      .pr-board-gate-slot{min-height:76px}
       .pr-track-cell{min-height:36px}
       .pr-horse-token{font-size:24px}
+      .pr-gate-suit-caption{font-size:9px}
     }
   </style>
 </head>
@@ -177,7 +181,7 @@
   <section class="board-panel">
     <div id="boardBox"></div>
     <div class="status-row">
-      <div class="small">Gate-kaarten openen zodra het laatste paard de kolom voor het eerst bereikt of passeert.</div>
+      <div class="small">Open gate-kaarten laten nu ook duidelijk de suit zien. De daadwerkelijke -1 verplaatsing blijft backend-owned.</div>
       <div class="status" id="statusBox"></div>
     </div>
   </section>
@@ -209,36 +213,9 @@
   <div class="drawer-body" id="drawerBody"></div>
 </section>
 
-<dialog id="rulesDialog">
-  <div class="modal-card">
-    <div class="modal-top">
-      <h2 style="margin:0">Paardenrace regels</h2>
-      <button class="btn secondary" id="closeRulesBtn" type="button">Sluiten</button>
-    </div>
-    <ol style="display:grid;gap:10px;line-height:1.5">
-      <li>Iedereen kiest één suit/paard en zet één vaste inzet in Bakken.</li>
-      <li>De host verifieert die inzet in de lobby; pas daarna kan een speler ready drukken.</li>
-      <li>Elke getrokken kaart zet het bijbehorende paard één vak vooruit.</li>
-      <li>Als het laatste paard voor het eerst een gate-kolom bereikt of passeert, opent die gate en gaat het getrokken suit één vak terug.</li>
-      <li>De eerste crossing telt alleen als minstens één speler op dat paard had ingezet.</li>
-      <li>Na de finish verdelen winnaars hun nominaties tot maximaal 2× hun lobby-inzet.</li>
-      <li>Na een nieuwe ronde blijf je in dezelfde lobby, met dezelfde host en spelers, maar kies je opnieuw suit en inzet.</li>
-    </ol>
-  </div>
-</dialog>
+<dialog id="rulesDialog"><div class="modal-card"><div class="modal-top"><h2 style="margin:0">Paardenrace regels</h2><button class="btn secondary" id="closeRulesBtn" type="button">Sluiten</button></div><ol style="display:grid;gap:10px;line-height:1.5"><li>Iedereen kiest één suit/paard en zet één vaste inzet in Bakken.</li><li>De host verifieert die inzet in de lobby; pas daarna kan een speler ready drukken.</li><li>Elke getrokken kaart zet het bijbehorende paard één vak vooruit.</li><li>Als het laatste paard voor het eerst een gate-kolom bereikt of passeert, opent die gate en gaat het getrokken suit één vak terug.</li><li>De eerste crossing telt alleen als minstens één speler op dat paard had ingezet.</li><li>Na de finish verdelen winnaars hun nominaties tot maximaal 2× hun lobby-inzet.</li><li>Na een nieuwe ronde blijf je in dezelfde lobby, met dezelfde host en spelers, maar kies je opnieuw suit en inzet.</li></ol></div></dialog>
 
-<dialog id="nomDialog">
-  <div class="modal-card">
-    <div class="modal-top">
-      <h2 style="margin:0">Verdeel jouw nominaties</h2>
-      <button class="btn secondary" id="closeNomBtn" type="button">Sluiten</button>
-    </div>
-    <div class="small">Je moet exact je volledige budget verdelen over andere spelers. Niet over jezelf.</div>
-    <div id="allocRows" style="margin-top:10px"></div>
-    <div class="status" id="nomStatus"></div>
-    <button class="btn" id="submitNomBtn" type="button" style="margin-top:10px">Nominaties opslaan</button>
-  </div>
-</dialog>
+<dialog id="nomDialog"><div class="modal-card"><div class="modal-top"><h2 style="margin:0">Verdeel jouw nominaties</h2><button class="btn secondary" id="closeNomBtn" type="button">Sluiten</button></div><div class="small">Je moet exact je volledige budget verdelen over andere spelers. Niet over jezelf.</div><div id="allocRows" style="margin-top:10px"></div><div class="status" id="nomStatus"></div><button class="btn" id="submitNomBtn" type="button" style="margin-top:10px">Nominaties opslaan</button></div></dialog>
 
 <script>
 (()=>{
@@ -250,6 +227,8 @@
   let nominationSnapshot = {};
   let statePollTimer = null;
   let autoCloseQueued = false;
+  let lastBoardFingerprint = '';
+  let lastChromeFingerprint = '';
 
   function qRoom(){
     const params = new URLSearchParams(location.search);
@@ -350,7 +329,7 @@
           btn.disabled = true;
           const state = await api.rpc('kick_paardenrace_player_safe', { room_code_input: qRoom(), target_player_name_input: name });
           if (state?.room) {
-            await applyState(state, { noAutoClose:true });
+            await applyState(state, { noAutoClose:true, forceRender:true });
             setStatus(`${name} is uit de match gezet.`);
           } else {
             bounceToLobby('De match is gesloten.');
@@ -399,8 +378,31 @@
     const players = state?.players || [];
     const viewer = state?.viewer || {};
     currentState = state;
-    renderChrome(room, match, players, viewer);
-    renderBoardFrame(match);
+
+    const chromeFingerprint = JSON.stringify({
+      room: room?.room_code || '',
+      stage: room?.stage || '',
+      stageLabel: room?.stage_label || '',
+      count: room?.countdown_remaining_seconds || 0,
+      canDraw: !!room?.can_draw,
+      players: (players || []).map((p)=>[p.player_name,p.selected_suit,p.wager_bakken,p.total_bakken_owed,!!p.is_ready,!!p.is_host,!!p.is_winner]),
+      viewer: [viewer?.player_name || '', !!viewer?.is_host, !!viewer?.can_nominate, viewer?.nomination_budget_bakken || 0],
+      last: match?.last_draw_card || '',
+      winner: match?.winner_suit || '',
+      resolved: match?.resolved_gates || [],
+      pos: match?.horse_positions || {}
+    });
+
+    if (options.forceRender || chromeFingerprint !== lastChromeFingerprint) {
+      renderChrome(room, match, players, viewer);
+      lastChromeFingerprint = chromeFingerprint;
+    }
+    const boardFingerprint = api.liveBoardFingerprint(match);
+    if (options.forceRender || boardFingerprint !== lastBoardFingerprint) {
+      renderBoardFrame(match);
+      lastBoardFingerprint = boardFingerprint;
+    }
+
     if (!options.noAutoClose && room.stage === 'finished' && viewer?.is_host && !viewer?.can_nominate && !autoCloseQueued) {
       autoCloseQueued = true;
       setStatus('Alle nominaties zijn binnen. De match sluit automatisch…');
@@ -413,7 +415,7 @@
     if (!code) return;
     try {
       await cleanupIdleRooms();
-      const state = await api.rpc('tick_paardenrace_room_safe', { room_code_input: code }, { timeoutMs: opts.timeoutMs || 4200 });
+      const state = await api.rpc('tick_paardenrace_room_safe', { room_code_input: code }, { timeoutMs: opts.timeoutMs || 3600 });
       if (!state || !state.room || String(state.room.stage || '').toLowerCase() === 'closed') {
         bounceToLobby('Deze lobby is gesloten. Je gaat terug naar de lobby.');
         return;
@@ -431,14 +433,14 @@
 
   async function drawNext(){
     try {
-      await applyState(await api.rpc('draw_paardenrace_card_safe', { room_code_input: qRoom() }));
+      await applyState(await api.rpc('draw_paardenrace_card_safe', { room_code_input: qRoom() }), { forceRender:true });
       setStatus('Kaart getrokken.');
     } catch(err) {
       const msg = err?.message || 'Trekken mislukt.';
       if (/trekstapel is leeg/i.test(msg)) {
         try {
-          await applyState(await api.rpc('reshuffle_paardenrace_draw_pile_safe', { room_code_input: qRoom() }), { noAutoClose:true });
-          await applyState(await api.rpc('draw_paardenrace_card_safe', { room_code_input: qRoom() }));
+          await applyState(await api.rpc('reshuffle_paardenrace_draw_pile_safe', { room_code_input: qRoom() }), { noAutoClose:true, forceRender:true });
+          await applyState(await api.rpc('draw_paardenrace_card_safe', { room_code_input: qRoom() }), { forceRender:true });
           setStatus('Nieuwe kaart getrokken.');
         } catch(inner) {
           setStatus(inner?.message || 'Opnieuw schudden mislukt.');
@@ -448,7 +450,7 @@
       }
     } finally {
       if (autoplay && currentState?.room?.can_draw && currentState?.room?.stage === 'race') {
-        autoplayTimer = setTimeout(drawNext, 2000);
+        autoplayTimer = setTimeout(drawNext, 2200);
       }
     }
   }
@@ -505,7 +507,7 @@
   $('rulesBtn').addEventListener('click', ()=> $('rulesDialog').showModal());
   $('closeRulesBtn').addEventListener('click', ()=> $('rulesDialog').close());
   $('closeNomBtn').addEventListener('click', ()=> $('nomDialog').close());
-  $('refreshBtn').addEventListener('click', ()=> loadState({ noAutoClose:true }));
+  $('refreshBtn').addEventListener('click', ()=> loadState({ noAutoClose:true, forceRender:true }));
   $('leaveBtn').addEventListener('click', leaveMatchAction);
   $('drawBtn').addEventListener('click', drawNext);
   $('playBtn').addEventListener('click', startAutoplay);
@@ -530,7 +532,7 @@
       })).filter((row)=>row.bakken > 0);
       const state = await api.rpc('submit_paardenrace_nominations_safe', { room_code_input: qRoom(), allocations_input: allocations });
       $('nomStatus').textContent = 'Nominaties opgeslagen.';
-      await applyState(state);
+      await applyState(state, { forceRender:true });
       syncNomDialog(state?.room || {}, state?.players || [], state?.viewer || {});
       if ($('nomDialog').open) window.setTimeout(()=> $('nomDialog').close(), 700);
     } catch(err) {
@@ -543,20 +545,20 @@
   $('drawerOverlay').addEventListener('click', closeDrawer);
 
   $('lobbyLink').href = api.scopedHref('./paardenrace.html');
-  loadState({ noAutoClose:true }).then(()=>{
+  loadState({ noAutoClose:true, forceRender:true }).then(()=>{
     if (currentState) {
       syncNomDialog(currentState.room || {}, currentState.players || [], currentState.viewer || {});
       openDrawer('players');
     }
   });
   statePollTimer = setInterval(async ()=>{
-    if (!document.hidden) {
+    if (!document.hidden && !autoplay) {
       await loadState();
       if (currentState) syncNomDialog(currentState.room || {}, currentState.players || [], currentState.viewer || {});
     }
-  }, 1800);
+  }, 2600);
 })();
 </script>
-<div class="site-credit-watermark" data-version-watermark>v495 · Made by Bruis</div>
+<div class="site-credit-watermark" data-version-watermark>v505 · Made by Bruis</div>
 </body>
 </html>

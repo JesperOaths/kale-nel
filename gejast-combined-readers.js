@@ -1,27 +1,47 @@
 (function (global) {
   const RPC = global.GEJAST_SCOPED_RPC;
+  const HOMEPAGE_BUNDLE_CACHE_KEY = 'gejast_combined_home_boot_v505';
+  const HOMEPAGE_BUNDLE_TTL = 12000;
 
   function unwrap(raw, key) {
     if (key && raw && raw[key] !== undefined) return raw[key];
     return raw || {};
   }
 
+  function readCache(key, ttl) {
+    try {
+      const raw = sessionStorage.getItem(key);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed?.at || (Date.now() - Number(parsed.at)) > Number(ttl || 0)) return null;
+      return parsed.value || null;
+    } catch (_) { return null; }
+  }
+
+  function writeCache(key, value) {
+    try { sessionStorage.setItem(key, JSON.stringify({ at: Date.now(), value })); } catch (_) {}
+    return value;
+  }
+
   async function loadHomepageBootBundle() {
+    const cached = readCache(HOMEPAGE_BUNDLE_CACHE_KEY, HOMEPAGE_BUNDLE_TTL);
+    if (cached) return cached;
     const sessionToken = RPC.getSessionToken();
     try {
-      return await RPC.callRpc('get_homepage_boot_bundle_scoped', {
+      const value = await RPC.callRpc('get_homepage_boot_bundle_scoped', {
         session_token: sessionToken
       });
+      return writeCache(HOMEPAGE_BUNDLE_CACHE_KEY, value);
     } catch (_) {
       const [homepageState, extraPoll, ladders, drinksHome, drinksTop5, liveEntries] = await Promise.allSettled([
         RPC.callRpc('get_gejast_homepage_state', { session_token: sessionToken }).catch(() => RPC.callRpc('get_public_state', { session_token: sessionToken })),
-        RPC.callRpc('get_site_poll_state', { poll_key_input: 'gezopen_vanavond', session_token: sessionToken }),
+        RPC.callRpc('get_site_poll_state', { poll_key_input: 'gejast_drinks_donderdag', session_token: sessionToken }).catch(() => ({})),
         RPC.callRpc('get_homepage_ladders_public_scoped', {}),
         RPC.callRpc('get_drinks_homepage_public_scoped', {}),
         RPC.callRpc('get_drinks_homepage_top5_public_scoped', {}),
-        RPC.callRpc('get_homepage_live_state_public', { session_token: sessionToken })
+        RPC.callRpc('get_homepage_live_state_public_scoped', { session_token: sessionToken }).catch(() => RPC.callRpc('get_homepage_live_state_public', { session_token: sessionToken }))
       ]);
-      return {
+      return writeCache(HOMEPAGE_BUNDLE_CACHE_KEY, {
         homepage_state: homepageState.status === 'fulfilled' ? homepageState.value : {},
         extra_poll_state: extraPoll.status === 'fulfilled' ? extraPoll.value : {},
         ladders: ladders.status === 'fulfilled' ? ladders.value : {},
@@ -33,7 +53,7 @@
           defer_ladders_until_visible: RPC.getScope() === 'family' ? false : true,
           chunk_profile_cards: true
         }
-      };
+      });
     }
   }
 

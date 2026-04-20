@@ -1,6 +1,6 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
-  const STORAGE_KEY = 'gejast_paardenrace_room_code_v495';
+  const STORAGE_KEY = 'gejast_paardenrace_room_code_v505';
   const LIVE_QUERY_KEY = 'live';
   const SUITS = ['spades','hearts','clubs','diamonds'];
   const SUIT_META = {
@@ -32,7 +32,7 @@
     const token = sessionToken();
     const body = Object.assign({}, args, { session_token: token || null, session_token_input: token || null });
     const controller = new AbortController();
-    const timeoutMs = Math.max(900, Number(options.timeoutMs || 3800));
+    const timeoutMs = Math.max(900, Number(options.timeoutMs || 3600));
     const timer = setTimeout(()=>controller.abort(), timeoutMs);
     try {
       const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${fn}`, {
@@ -126,7 +126,12 @@
   function compactGateCard(cardCode, resolved){
     if (!resolved) return `<div class="pr-gate-mini pr-gate-mini--back"></div>`;
     const parsed = parseCard(cardCode);
-    return `<div class="pr-gate-mini ${parsed.isRed ? 'red' : ''}"><span>${parsed.symbol}</span></div>`;
+    return `<div class="pr-gate-mini ${parsed.isRed ? 'red' : ''}" title="${suitLabel(parsed.suitKey)}"><span>${parsed.symbol}</span></div>`;
+  }
+  function gateSuitCaption(cardCode, resolved){
+    if (!resolved) return '<div class="pr-gate-suit-caption">Dicht</div>';
+    const parsed = parseCard(cardCode);
+    return `<div class="pr-gate-suit-caption ${parsed.isRed ? 'red' : ''}">${parsed.symbol} ${suitLabel(parsed.suitKey).replace(/^[♥♦♣♠]\s*/, '')}</div>`;
   }
   function renderRaceMinimap(match){
     if (!match || !match.horse_positions) return '<div class="pr-minimap-empty">Wachten op racebord…</div>';
@@ -164,6 +169,18 @@
     return `<div class="pr-board-row"><div class="pr-board-label" style="color:${suitColor(suit)}">${suitSymbol(suit)}</div><div class="pr-board-track">${cells}</div></div>`;
   }
 
+  function liveBoardFingerprint(match){
+    return JSON.stringify({
+      last: match?.last_draw_card || '',
+      winner: match?.winner_suit || '',
+      positions: match?.horse_positions || {},
+      gates: match?.gate_cards || [],
+      resolved: match?.resolved_gates || [],
+      drawIndex: Number(match?.draw_index || 0),
+      stage: String(match?.stage || '')
+    });
+  }
+
   function renderLiveBoard(match){
     if (!match || !match.horse_positions) return '<div class="pr-live-placeholder">Wachten op countdown of race-start.</div>';
     const positions = match.horse_positions || {};
@@ -174,7 +191,8 @@
     const gateRow = Array.from({ length: 10 }, (_, idx)=>{
       const gateNo = idx + 1;
       const isResolved = resolved.has(gateNo);
-      return `<div class="pr-board-gate-slot">${isResolved ? renderFaceUpCard(gates[idx] || '', 'pr-board-gate-face') : renderCardBack('pr-board-gate-back')}</div>`;
+      const card = gates[idx] || '';
+      return `<div class="pr-board-gate-slot"><div class="pr-board-gate-stack">${isResolved ? renderFaceUpCard(card, 'pr-board-gate-face') : renderCardBack('pr-board-gate-back')}${gateSuitCaption(card, isResolved)}</div></div>`;
     }).join('');
     const trackRows = SUITS.map((suit)=>renderTrackRow(suit, getGridColumnForProgress(positions[suit]))).join('');
     return `
@@ -235,6 +253,6 @@
     suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack,
     renderRaceMinimap, renderLiveBoard, summarizeLiveRoom,
     gotoLive, liveHref, scopedHref, scope,
-    getDrawRemaining, resolvedGateSet, getGridColumnForProgress
+    getDrawRemaining, resolvedGateSet, getGridColumnForProgress, liveBoardFingerprint
   };
 })();

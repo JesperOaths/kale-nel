@@ -1,0 +1,17 @@
+v505 partial owner-path patch bundle
+
+Included:
+- gejast-paardenrace.js
+- paardenrace_live.html
+- gejast-combined-readers.js
+- scorer-live-identity-v505.js
+
+What this does:
+- Paardenrace live board now shows the opened gate suit explicitly under each revealed gate card.
+- Paardenrace live polling/rendering is lighter: slower polling, no poll while autoplay is running, and DOM re-render is skipped when state fingerprints did not change.
+- Homepage/shared combined reader now caches the homepage boot bundle briefly and uses the scoped live-state RPC in fallback.
+- Klaverjas scorer helper strengthens match identity separation by forcing persistent client_match_id/match_ref and reducing live-summary background sync frequency.
+
+Honesty boundary:
+- I could patch the Paardenrace live owner surface that exists in the repo, but the actual gate-triggered -1 horse movement is still backend-owned by the safe RPCs, which are not present in the inspected repo files.
+- I did not have a full writable local copy of the already-patched scorer.html file in this environment, so the Klaverjas tightening is delivered as a drop-in helper JS rather than a full scorer.html replacement in this bundle.
