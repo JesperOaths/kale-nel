@@ -1,0 +1,5 @@
+v503 targeted patch
+- profiles.html: profiles page now merges active players from profiles bundle, public players list, allowed_usernames, and login-name sources for the current scope.
+- rad.html: wheel is scaled down and centered more aggressively on desktop and mobile so it stays on screen.
+- gejast-index-top5-route-overrides.js: helper that rewires homepage top 5 boxes to the intended destination pages.
+- index.html was not fully rebuilt in this bundle; use the included snippet file to add the override script without doing a blind full-page rewrite.

@@ -7,10 +7,17 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Spelersprofielen</title>
-  <script>window.GEJAST_PAGE_VERSION='v583';</script>
-  <script src="./gejast-config.js?v583"></script>
-  <script src="./gejast-clickable-cards.js?v386"></script>
-  <script src="./gejast-scope-context.js?v391"></script><script src="./gejast-family-rollout.js?v393"></script>
+  <script>window.GEJAST_PAGE_VERSION='v503';</script>
+  <script src="./gejast-config.js?v503"></script>
+  <script src="./gejast-clickable-cards.js?v503"></script>
+  <script src="./gejast-scope-context.js?v503"></script>
+  <script src="./gejast-family-rollout.js?v503"></script>
+  <script src="./gejast-scope.js?v503"></script>
+  <script src="./gejast-home-gate.js?v503"></script>
+  <script src="./gejast-badges.js?v503"></script>
+  <script src="./gejast-badge-progress.js?v503"></script>
+  <script src="./gejast-rpc-contract.js?v503"></script>
+  <script src="./gejast-profile-source.js?v503"></script>
   <style>
     :root{--gold:#d4af37;--ink:#1b1711;--paper:rgba(255,250,243,.92);--line:#e0d6c6;--muted:#6f665e;--soft:#fbf7ef}
     *{box-sizing:border-box}
@@ -34,52 +41,10 @@
     .stat{background:var(--soft);border:1px solid rgba(17,17,17,.06);border-radius:16px;padding:10px;text-align:center;min-width:0}
     .stat strong{display:block;font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-    .badge-strip{display:grid;gap:8px}
-    .badge-kicker{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}
-    .badge-note{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-    .badge-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:#111;color:#fff;font-size:12px;font-weight:800;max-width:100%}
-    .badge-pill img{width:22px;height:22px;object-fit:contain;border-radius:8px;background:#fff6de;padding:2px}
-    .badge-mini-row{display:flex;flex-wrap:wrap;gap:8px}
-    .mini-chip{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:14px;background:#fff7e4;border:1px solid rgba(17,17,17,.08);padding:4px;box-shadow:0 8px 18px rgba(0,0,0,.06)}
-    .mini-chip img{width:100%;height:100%;object-fit:contain}
     .bio{font-size:14px;line-height:1.45;color:#3d3429}
-    .gallery-sheet{margin-top:16px}
-    .badge-gallery-wrap{padding:18px;display:grid;gap:16px}
-    .rarity-grid{display:grid;grid-template-columns:1fr;gap:16px}
-    .rarity-col{background:#fff;border:1px solid rgba(17,17,17,.08);border-radius:20px;padding:16px;display:grid;gap:12px;align-content:start;width:100%}
-    .rarity-col h3{margin:0;font-size:18px}
-    .rarity-col p{margin:0;color:var(--muted);font-size:13px}
-    .rarity-pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;background:#f5efe0;color:#70571b;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;width:max-content}
-    .rarity-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-    .rarity-badge{display:grid;grid-template-rows:auto auto;gap:10px;align-items:start;padding:12px;border-radius:16px;background:var(--soft);border:1px solid rgba(17,17,17,.06)}
-    .rarity-badge-visual{display:grid;place-items:center;padding:6px;border-radius:16px;background:#fffaf1;border:1px solid rgba(17,17,17,.08)}
-    .rarity-badge-thumb{appearance:none;border:none;background:none;padding:0;margin:0;cursor:pointer;display:grid;place-items:center;width:100%}
-    .rarity-badge img{width:min(100%,92px);height:92px;object-fit:contain;border-radius:14px;background:#fffaf1;padding:6px}
-    .rarity-badge-copy{display:grid;gap:4px}
-    .rarity-badge strong{display:block;font-size:14px}
-
-    .rarity-accordion{background:#fff;border:1px solid rgba(17,17,17,.08);border-radius:20px;overflow:hidden}
-    .rarity-accordion + .rarity-accordion{margin-top:14px}
-    .rarity-summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:16px}
-    .rarity-summary::-webkit-details-marker{display:none}
-    .rarity-summary-main{display:grid;gap:6px}
-    .rarity-summary-main h3{margin:0;font-size:18px}
-    .rarity-summary-main p{margin:0;color:var(--muted);font-size:13px}
-    .rarity-summary-count{display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:36px;padding:0 12px;border-radius:999px;background:#111;color:#fff;font-size:13px;font-weight:900}
-    .rarity-accordion-body{padding:0 16px 16px}
-    .rarity-badge small{display:block;font-size:12px;color:var(--muted);line-height:1.4;margin-top:3px}.rarity-requirement{display:block;font-size:12px;color:#3d3429;line-height:1.45;margin-top:6px}
-    .badge-lightbox{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:90;padding:16px;background:rgba(11,11,11,.62)}
-    .badge-lightbox.show{display:flex}.badge-lightbox-card{width:min(560px,100%);max-height:min(92vh,860px);overflow:auto;background:#fffdf9;border-radius:24px;padding:18px;border:1px solid rgba(17,17,17,.08);box-shadow:0 24px 56px rgba(0,0,0,.24)}
-    .badge-lightbox-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.badge-lightbox-close{border:none;border-radius:999px;background:#111;color:#fff;width:42px;height:42px;font-size:22px;cursor:pointer}.badge-lightbox-body{display:grid;gap:12px;margin-top:14px}.badge-lightbox-visual{display:grid;place-items:center;border-radius:20px;background:#fffaf1;border:1px solid rgba(17,17,17,.08);padding:14px}.badge-lightbox-visual img{width:min(100%,220px);height:220px;object-fit:contain}
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none;max-width:min(calc(100vw - 24px),560px);text-align:center}
-    @media (max-width:760px){.page{padding:14px 12px calc(104px + env(safe-area-inset-bottom,0px))}.top{flex-direction:column;align-items:stretch}.back{width:100%}.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.head{grid-template-columns:64px minmax(0,1fr)}.avatar{width:64px;height:64px}.rarity-list{grid-template-columns:1fr}.rarity-accordion{border-radius:18px}.rarity-summary{padding:14px}.rarity-accordion-body{padding:0 14px 14px}}
+    @media (max-width:760px){.page{padding:14px 12px calc(104px + env(safe-area-inset-bottom,0px))}.top{flex-direction:column;align-items:stretch}.back{width:100%}.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.head{grid-template-columns:64px minmax(0,1fr)}.avatar{width:64px;height:64px}}
   </style>
-  <script src="./gejast-scope.js?v386"></script>
-  <script src="./gejast-home-gate.js?v386"></script>
-  <script src="./gejast-badges.js?v386"></script>
-  <script src="./gejast-badge-progress.js?v386"></script>
-  <script src="./gejast-rpc-contract.js?v391"></script>
-  <script src="./gejast-profile-source.js?v402"></script>
 </head>
 <body>
   <main class="page">
@@ -87,16 +52,14 @@
       <div class="top">
         <div>
           <h1>Spelers</h1>
-          <p>Alle actieve spelers met profiel, badge-status en kernstats.</p>
+          <p>Alle actieve spelers uit de huidige scope.</p>
         </div>
         <button class="back" type="button" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</button>
       </div>
       <div id="status" class="status">Laden…</div>
       <div id="grid" class="grid"></div>
     </section>
-    <section id="badgeGalleryPanel" class="sheet gallery-sheet"></section>
   </main>
-  <div id="badgeLightbox" class="badge-lightbox" aria-hidden="true"><div class="badge-lightbox-card" role="dialog" aria-modal="true" aria-labelledby="badgeLightboxTitle"><div class="badge-lightbox-top"><div><div style="font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#8a7a55">Badge</div><h2 id="badgeLightboxTitle" style="margin:4px 0 0;font-size:1.6rem;line-height:1.08">Badge</h2></div><button type="button" id="badgeLightboxClose" class="badge-lightbox-close" aria-label="Sluit">×</button></div><div class="badge-lightbox-body"><div class="badge-lightbox-visual"><img id="badgeLightboxImg" src="" alt=""></div><div><div id="badgeLightboxNick" class="submeta"></div><p id="badgeLightboxDesc" style="margin:10px 0 0;color:var(--muted);line-height:1.55"></p><p id="badgeLightboxReq" style="margin:12px 0 0;line-height:1.55"></p></div></div></div></div>
   <div class="site-credit-watermark" data-version-watermark></div>
   <script>
     (function(){
@@ -104,7 +67,6 @@
       const scope = (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) || 'friends';
       const statusNode = document.getElementById('status');
       const gridNode = document.getElementById('grid');
-      const galleryNode = document.getElementById('badgeGalleryPanel');
 
       function headers(){
         return {
@@ -114,7 +76,6 @@
           Accept: 'application/json'
         };
       }
-
       async function parseResponse(res){
         const text = await res.text();
         let data = null;
@@ -122,7 +83,6 @@
         if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
         return data;
       }
-
       async function callRpc(name, payload){
         const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
           method: 'POST',
@@ -134,15 +94,16 @@
         const raw = await parseResponse(res);
         return raw && raw[name] !== undefined ? raw[name] : raw;
       }
-
-      function normalizeName(value){
-        return String(value || '').trim().toLowerCase();
+      function normalizeName(value){ return String(value || '').trim().toLowerCase(); }
+      function displayName(player){
+        return player.nickname || player.chosen_username || player.public_display_name || player.display_name || player.player_name || 'Speler';
       }
-
+      function originalName(player){
+        return player.player_name || player.display_name || player.original_name || '';
+      }
       function initials(name){
         return String(name || '').split(/\s+/).filter(Boolean).slice(0, 2).map((value) => value[0]).join('').toUpperCase() || '?';
       }
-
       function avatarHtml(player){
         const helper = (window.GEJAST_PROFILE_SOURCE && typeof window.GEJAST_PROFILE_SOURCE.profileImageUrl === 'function'
           ? window.GEJAST_PROFILE_SOURCE.profileImageUrl
@@ -151,99 +112,95 @@
             : (value) => String(value || '').trim()));
         const src = helper(player.profile_picture_url || player.avatar_url || player.photo_url || '');
         const label = displayName(player);
-        return src ? `<img class="avatar" src="${src}" alt="${label}" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML='&lt;div class=&quot;avatar initials&quot;&gt;${initials(label)}&lt;/div&gt;'">` : `<div class="avatar initials">${initials(label)}</div>`;
+        return src
+          ? `<img class="avatar" src="${src}" alt="${label}" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML='&lt;div class=&quot;avatar initials&quot;&gt;${initials(label)}&lt;/div&gt;'">`
+          : `<div class="avatar initials">${initials(label)}</div>`;
       }
-
-      function displayName(player){
-        return player.nickname || player.chosen_username || player.public_display_name || player.display_name || player.player_name || 'Speler';
-      }
-
-      function originalName(player){
-        return player.player_name || player.display_name || player.original_name || '';
-      }
-
       function winPct(player){
         const matches = Number(player.total_matches || 0);
         if (!matches) return 0;
         return Math.round((Number(player.total_wins || 0) / matches) * 100);
       }
-
-      function toMiniBadgeRow(attainedBadges){
-        const items = (Array.isArray(attainedBadges) ? attainedBadges : []).slice(0, 8);
-        if (!items.length) return '<div class="submeta">Nog geen badges behaald.</div>';
-        return `<div class="badge-mini-row">${items.map((badge)=>`<span class="mini-chip" title="${badge.title || badge.name}"><img src="${badge.imageMini48 || badge.image || ''}" alt="${badge.title || badge.name}"></span>`).join('')}</div>`;
-      }
-
-      function mergePlayers(bundlePlayers, fallbackPlayers){
+      function mergePlayers(...sets){
         const map = new Map();
-        (Array.isArray(fallbackPlayers) ? fallbackPlayers : []).forEach((player) => {
-          const key = normalizeName(player.player_name || player.display_name || player.public_display_name || player.nickname);
-          if (key) map.set(key, Object.assign({}, player));
-        });
-        (Array.isArray(bundlePlayers) ? bundlePlayers : []).forEach((player) => {
-          const key = normalizeName(player.player_name || player.display_name || player.public_display_name || player.nickname);
+        sets.flat().forEach((player) => {
+          const key = normalizeName(
+            player?.player_name ||
+            player?.display_name ||
+            player?.public_display_name ||
+            player?.nickname ||
+            player?.chosen_username
+          );
           if (!key) return;
           map.set(key, Object.assign({}, map.get(key) || {}, player));
         });
-        return Array.from(map.values()).filter((player) => String(player.player_name || player.display_name || '').trim());
+        return Array.from(map.values()).filter((player) => String(displayName(player)).trim());
       }
-
-      async function fetchActivatedPlayersFromAllowedUsernames(){
-        const url = `${cfg.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,status,site_scope&order=display_name.asc`;
-        const res = await fetch(url, { method:'GET', mode:'cors', cache:'no-store', headers: headers() });
-        const rows = await parseResponse(res);
-        return (Array.isArray(rows) ? rows : []).filter((row)=>{
-          const status = String(row.status || '').toLowerCase();
-          if (!status || ['available','pending','requested','reserved','blocked','disabled','rejected'].includes(status)) return false;
-          const rawScope = String(row.site_scope || '').toLowerCase();
-          if (!rawScope) return scope === 'friends';
-          return rawScope === scope;
-        }).map((row)=>({
-          player_name: row.display_name,
-          display_name: row.display_name,
-          public_display_name: row.display_name,
-          total_matches: 0,
-          total_wins: 0,
-          best_rating: 1000,
-          badge_count: 0,
-          source_kind: 'activation'
-        }));
+      async function fetchActivatedPlayers(){
+        const rows = [];
+        try {
+          const url = `${cfg.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,status,site_scope&order=display_name.asc`;
+          const res = await fetch(url, { method:'GET', mode:'cors', cache:'no-store', headers: headers() });
+          const data = await parseResponse(res);
+          (Array.isArray(data) ? data : []).forEach((row) => {
+            const name = String(row.display_name || '').trim();
+            const rawScope = String(row.site_scope || '').toLowerCase();
+            if (!name) return;
+            if (rawScope && rawScope !== scope) return;
+            rows.push({
+              player_name: name,
+              display_name: name,
+              public_display_name: name,
+              total_matches: 0,
+              total_wins: 0,
+              best_rating: 1000,
+              badge_count: 0
+            });
+          });
+        } catch (_) {}
+        return rows;
       }
-
-      function mergeActivatedNames(players, activatedPlayers){
-        const merged = mergePlayers(players, activatedPlayers);
-        return merged.sort((a,b)=>displayName(a).localeCompare(displayName(b), 'nl'));
+      async function fetchLoginNamesPlayers(){
+        const rows = [];
+        try {
+          const data = await callRpc('get_login_names_scoped', { site_scope_input: scope });
+          const source = Array.isArray(data) ? data : (Array.isArray(data?.names) ? data.names : (Array.isArray(data?.data) ? data.data : []));
+          source.forEach((row) => {
+            const name = typeof row === 'string'
+              ? row
+              : (row?.display_name || row?.name || row?.desired_name || row?.slug || row?.player_name || '');
+            if (!name) return;
+            rows.push({
+              player_name: name,
+              display_name: name,
+              public_display_name: name,
+              total_matches: 0,
+              total_wins: 0,
+              best_rating: 1000,
+              badge_count: 0
+            });
+          });
+        } catch (_) {}
+        try {
+          if (window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedActivePlayerNames === 'function') {
+            const names = await window.GEJAST_CONFIG.fetchScopedActivePlayerNames(scope);
+            (Array.isArray(names) ? names : []).forEach((name) => {
+              rows.push({
+                player_name: name,
+                display_name: name,
+                public_display_name: name,
+                total_matches: 0,
+                total_wins: 0,
+                best_rating: 1000,
+                badge_count: 0
+              });
+            });
+          }
+        } catch (_) {}
+        return rows;
       }
-
-      function normalizedAttained(player){
-        if (Array.isArray(player.attained_badges) && player.attained_badges.length) {
-          return window.GEJAST_BADGE_PROGRESS.sortBadgesDescAlpha(player.attained_badges.map((badge) => Object.assign({}, badge, { title: badge.title || badge.name, name: badge.title || badge.name }))); 
-        }
-        const snapshot = {
-          total_matches: Number(player.total_matches || 0),
-          total_wins: Number(player.total_wins || 0),
-          best_rating: Number(player.best_rating || 1000),
-          klaverjas_matches: Number(player.klaverjas_matches || 0),
-          boerenbridge_matches: Number(player.boerenbridge_matches || 0),
-          beerpong_matches: Number(player.beerpong_matches || 0),
-          drink_units: Number(player.drink_units || player.total_drink_units || 0),
-          speed_best_seconds: Number(player.speed_best_seconds || 0),
-          pussycup_pct: Number(player.pussycup_pct || 0)
-        };
-        return window.GEJAST_BADGES ? window.GEJAST_BADGES.getAttained(snapshot).map((badge) => ({
-          key: badge.key,
-          title: badge.title,
-          name: badge.title,
-          nickname: badge.nickname,
-          imageMini48: badge.imageMini48,
-          image: badge.imageFull,
-          rarityRank: badge.rarityRank,
-          rarityLabel: badge.rarityLabel
-        })) : [];
-      }
-
       function renderPlayers(players){
-        const rows = window.GEJAST_BADGE_PROGRESS.sortBadgesDescAlpha([]) && (Array.isArray(players) ? players.slice() : []).sort((a,b)=>{
+        const rows = (Array.isArray(players) ? players.slice() : []).sort((a,b)=>{
           const matchDiff = Number(b.total_matches || 0) - Number(a.total_matches || 0);
           if (matchDiff) return matchDiff;
           return displayName(a).localeCompare(displayName(b), 'nl');
@@ -255,179 +212,56 @@
         gridNode.innerHTML = rows.map((player) => {
           const shown = displayName(player);
           const original = originalName(player);
-          const attained = normalizedAttained(player);
-          const rarest = attained[0] || player.primary_badge || null;
-          const rarestTitle = rarest ? (rarest.title || rarest.name || 'Nog geen badge') : 'Nog geen badge';
-          const rarestNick = rarest && rarest.nickname ? rarest.nickname : '';
           const profileTarget = original || shown;
           return `<a class="card" href="./player.html?player=${encodeURIComponent(profileTarget)}&scope=${encodeURIComponent(scope)}">
             <div class="head">
               ${avatarHtml(player)}
               <div>
                 <div class="name">${shown}</div>
-                <div class="meta">${original && original !== shown ? `Originele naam: \"${original}\"` : 'Geen alternatieve naam ingesteld.'}</div>
-                <div class="submeta"><strong>Meest zeldzame badge:</strong> ${rarestTitle}${rarestNick ? ` · ${rarestNick}` : ''}</div>
+                <div class="meta">${original && original !== shown ? `Originele naam: "${original}"` : 'Geen alternatieve naam ingesteld.'}</div>
+                <div class="submeta"><strong>Scope:</strong> ${scope === 'family' ? 'familie' : 'vrienden'}</div>
               </div>
             </div>
             <div class="stats">
               <div class="stat"><strong>${player.total_matches || 0}</strong><span>Potjes</span></div>
               <div class="stat"><strong>${winPct(player)}%</strong><span>Win%</span></div>
               <div class="stat"><strong>${Math.round(Number(player.best_rating || 1000))}</strong><span>Beste ELO</span></div>
-              <div class="stat"><strong>${player.badge_count || attained.length || 0}</strong><span>Badges</span></div>
+              <div class="stat"><strong>${player.badge_count || 0}</strong><span>Badges</span></div>
             </div>
-            <div class="badge-strip">
-              <div class="badge-kicker">Badge-overzicht</div>
-              <div class="badge-note">${rarest ? `<span class="badge-pill">${rarest.imageMini48 || rarest.image ? `<img src="${rarest.imageMini48 || rarest.image}" alt="${rarestTitle}">` : ''}<span>${rarestTitle}</span></span>` : '<span class="submeta">Nog geen behaalde badges.</span>'}</div>
-              ${toMiniBadgeRow(attained)}
-            </div>
-            <div class="bio">${player.favorite_game ? `Favoriete spelvorm: ${player.favorite_game}. ` : ''}${player.bio ? player.bio : `${player.total_matches || 0} geregistreerde potjes, ${player.total_wins || 0} overwinningen en ${player.badge_count || attained.length || 0} badge(s).`}</div>
+            <div class="bio">${player.bio ? player.bio : `${player.total_matches || 0} geregistreerde potjes, ${player.total_wins || 0} overwinningen.`}</div>
           </a>`;
         }).join('');
       }
 
-      function renderBadgeGallery(){
-        const groups = window.GEJAST_BADGE_PROGRESS.groupRegistryByRarityAsc ? window.GEJAST_BADGE_PROGRESS.groupRegistryByRarityAsc() : window.GEJAST_BADGE_PROGRESS.groupRegistryByRarity().slice().reverse();
-        galleryNode.innerHTML = `<div class="badge-gallery-wrap">
-          <div>
-            <h2 style="margin:0 0 8px">Badgegalerij</h2>
-            <p style="margin:0;color:var(--muted)">Gesorteerd van minst zeldzaam / makkelijkst naar meest zeldzaam / moeilijkst, daarna alfabetisch. Op mobiel wordt dit per rarity een rustige accordion met één kolom brede badgekaarten.</p>
-          </div>
-          <div class="rarity-grid">
-            ${groups.map((group, index) => `
-              <details class="rarity-accordion" data-rarity-accordion data-rarity-label="${group.label}" ${index === 0 ? 'open' : ''}>
-                <summary class="rarity-summary">
-                  <div class="rarity-summary-main">
-                    <div class="rarity-pill">${group.label}</div>
-                    <div>
-                      <h3>${group.label}</h3>
-                      <p>${group.items.length} badge(s) in deze zeldzaamheidsklasse.</p>
-                    </div>
-                  </div>
-                  <span class="rarity-summary-count">${group.items.length}</span>
-                </summary>
-                <div class="rarity-accordion-body">
-                  <div class="rarity-list">
-                    ${group.items.map((badge) => `
-                      <div class="rarity-badge">
-                        <div class="rarity-badge-visual">
-                          <button type="button" class="rarity-badge-thumb" data-badge-open data-badge-image="${badge.image}" data-badge-title="${String(badge.title || '').replace(/"/g,'&quot;')}" data-badge-nick="${String(badge.nickname || '').replace(/"/g,'&quot;')}" data-badge-desc="${String(badge.description || '').replace(/"/g,'&quot;')}" data-badge-req="${String(badge.requirementsText || 'Zie badge-omschrijving.').replace(/"/g,'&quot;')}">
-                            <img src="${badge.image}" alt="${badge.title}">
-                          </button>
-                        </div>
-                        <div class="rarity-badge-copy">
-                          <strong>${badge.title}</strong>
-                          ${badge.nickname ? `<small>${badge.nickname}</small>` : ''}
-                          <small>${badge.description}</small>
-                          <small class="rarity-requirement"><strong>Te behalen door:</strong> ${badge.requirementsText || 'Zie badge-omschrijving.'}</small>
-                        </div>
-                      </div>`).join('')}
-                  </div>
-                </div>
-              </details>`).join('')}
-          </div>
-        </div>`;
-        bindBadgeAccordions();
-      }
-
-      
-function bindBadgeAccordions(){
-  const accordions = [...document.querySelectorAll('[data-rarity-accordion]')];
-  if (!accordions.length) return;
-  const mobile = window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
-  const storageKey = 'gejast_profiles_mobile_rarity_v577';
-  const readStored = () => { try { return localStorage.getItem(storageKey) || ''; } catch (_) { return ''; } };
-  const writeStored = (value) => { try { if (value) localStorage.setItem(storageKey, value); } catch (_) {} };
-  if (!mobile) {
-    accordions.forEach((item) => item.setAttribute('open', 'open'));
-    return;
-  }
-  const stored = readStored();
-  let opened = false;
-  accordions.forEach((item, index) => {
-    const label = item.getAttribute('data-rarity-label') || '';
-    const shouldOpen = !opened && ((stored && label === stored) || (!stored && index === 0));
-    if (shouldOpen) {
-      item.setAttribute('open', 'open');
-      opened = true;
-    } else {
-      item.removeAttribute('open');
-    }
-    if (!item.dataset.bound) {
-      item.dataset.bound = '1';
-      item.addEventListener('toggle', () => {
-        const stillMobile = window.matchMedia && window.matchMedia('(max-width: 760px)').matches;
-        if (!stillMobile || !item.open) return;
-        accordions.forEach((other) => { if (other !== item) other.removeAttribute('open'); });
-        writeStored(label);
-      });
-    }
-  });
-  if (!opened && accordions[0]) accordions[0].setAttribute('open', 'open');
-}
-
-function bindBadgeLightbox(){
-  const root = document.getElementById('badgeLightbox');
-  if (!root || root.dataset.bound === '1') return;
-  root.dataset.bound = '1';
-  const img = document.getElementById('badgeLightboxImg');
-  const title = document.getElementById('badgeLightboxTitle');
-  const nick = document.getElementById('badgeLightboxNick');
-  const desc = document.getElementById('badgeLightboxDesc');
-  const req = document.getElementById('badgeLightboxReq');
-  const close = ()=>{ root.classList.remove('show'); root.setAttribute('aria-hidden','true'); };
-  document.getElementById('badgeLightboxClose')?.addEventListener('click', close);
-  root.addEventListener('click', (event)=>{ if (event.target === root) close(); });
-  document.addEventListener('click', (event)=>{
-    const btn = event.target.closest('[data-badge-open]');
-    if (!btn) return;
-    img.src = btn.getAttribute('data-badge-image') || '';
-    img.alt = btn.getAttribute('data-badge-title') || 'Badge';
-    title.textContent = btn.getAttribute('data-badge-title') || 'Badge';
-    nick.textContent = btn.getAttribute('data-badge-nick') || '';
-    desc.textContent = btn.getAttribute('data-badge-desc') || '';
-    req.innerHTML = `<strong>Te behalen door:</strong> ${btn.getAttribute('data-badge-req') || 'Zie badge-omschrijving.'}`;
-    root.classList.add('show');
-    root.setAttribute('aria-hidden','false');
-  });
-}
-
-async function boot(){
+      async function boot(){
         try {
           const profileSource = window.GEJAST_PROFILE_SOURCE || null;
-          const [bundleRaw, allPlayersRaw, activatedRaw] = await Promise.allSettled([
+          const [bundleRaw, allPlayersRaw, activatedRaw, loginNameRaw] = await Promise.allSettled([
             profileSource && typeof profileSource.loadProfilesPageBundle === 'function'
               ? profileSource.loadProfilesPageBundle()
               : callRpc('get_profiles_page_bundle_scoped', { site_scope_input: scope }),
             profileSource && typeof profileSource.loadProfilesList === 'function'
               ? profileSource.loadProfilesList()
               : callRpc('get_all_site_players_public_scoped', { site_scope_input: scope }),
-            fetchActivatedPlayersFromAllowedUsernames()
+            fetchActivatedPlayers(),
+            fetchLoginNamesPlayers()
           ]);
           const bundle = bundleRaw.status === 'fulfilled' ? bundleRaw.value : {};
           const allPlayers = allPlayersRaw.status === 'fulfilled' ? ((allPlayersRaw.value && allPlayersRaw.value.players) || []) : [];
           const activatedPlayers = activatedRaw.status === 'fulfilled' ? activatedRaw.value : [];
-          const players = mergeActivatedNames(mergePlayers(bundle.players || [], allPlayers), activatedPlayers);
+          const loginNamePlayers = loginNameRaw.status === 'fulfilled' ? loginNameRaw.value : [];
+          const players = mergePlayers(bundle.players || [], allPlayers, activatedPlayers, loginNamePlayers);
           renderPlayers(players);
-          renderBadgeGallery();
           statusNode.textContent = `${players.length} actieve of geactiveerde speler(s) zichtbaar in de ${scope === 'family' ? 'familie' : 'vrienden'}-scope.`;
-          bindBadgeLightbox();
         } catch (err) {
           statusNode.textContent = err.message || 'Profielen laden mislukt.';
           gridNode.innerHTML = '<article class="card"><div class="bio">Profielen laden mislukt.</div></article>';
-          renderBadgeGallery();
         }
       }
 
-      if (window.GEJAST_BADGES && window.GEJAST_BADGES.injectStyles) window.GEJAST_BADGES.injectStyles();
-      bindBadgeLightbox();
       boot();
-      window.addEventListener('resize', bindBadgeAccordions);
     })();
   </script>
-  <script src="./site-analytics.js?v386"></script>
-  <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./gejast-geo.js?v386"></script>
-  <script src="./drinks-verify-float.js?v386"></script>
 </body>
 </html>
