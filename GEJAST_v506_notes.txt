@@ -1,0 +1,9 @@
+v506 patch bundle
+- scorer.html: direct integrated klaverjas live identity tightening, persistent client_match_id/match_ref, slower summary sync, live link button.
+- gejast-pikken.js: actor-state dice extraction widened to multiple state shapes; slower polling.
+- gejast-pikken-live.js + pikken_live.html: version bump and current live dice/state path retained.
+- gejast_v506a_paardenrace_gate_compat.sql: backend compat patch so opened gates are exposed as both revealed_gates and resolved_gates and draw keeps the gate backstep logic server-side.
+
+Honesty boundary:
+- The Paardenrace SQL patch is grounded in the available v415 SQL owner file on disk.
+- For Pikken I still do not have a verified live DB SQL definition in the inspected repo, so the Pikken work here is the safest repo-grounded frontend/state seam widening rather than a claimed DB rewrite.
