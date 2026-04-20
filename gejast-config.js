@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v493',
+    VERSION:'v494',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -85,7 +85,6 @@
     document.querySelectorAll('body *').forEach((node)=>{ if (node.children.length) return; const txt=(node.textContent||'').trim(); if (re.test(txt)) { node.textContent = label; watermarkStyles(node); } });
   }
 
-
   function normalizeProfileImageUrl(value){
     const raw = String(value || '').trim();
     if (!raw) return '';
@@ -97,7 +96,6 @@
     if (base && /^[A-Za-z0-9._-]+\/.+/.test(raw)) return `${base}/storage/v1/object/public/${raw.replace(/^\/+/, '')}`;
     return raw;
   }
-
 
   function normalizePersonName(value){
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -251,7 +249,6 @@
     return [];
   }
 
-
   function getPlayerSessionToken(){
     for(const key of CONFIG.PLAYER_SESSION_KEYS){
       const value = localStorage.getItem(key) || sessionStorage.getItem(key);
@@ -320,30 +317,28 @@
     if (target) url.searchParams.set('return_to', target);
     return url.toString();
   }
-
-function setPlayerSessionToken(token, storage){
-  const value = String(token || '').trim();
-  if (!value) return '';
-  const primaryKey = CONFIG.PLAYER_SESSION_KEYS[0] || 'jas_session_token_v11';
-  const target = storage === 'session' ? sessionStorage : localStorage;
-  target.setItem(primaryKey, value);
-  const other = target === localStorage ? sessionStorage : localStorage;
-  other.removeItem(primaryKey);
-  touchPlayerActivity();
-  return value;
-}
-function normalizeScope(input){
-  return String(input || '').trim().toLowerCase() === 'family' ? 'family' : 'friends';
-}
-function buildRequestUrl(returnTo, scope){
-  const normalizedScope = normalizeScope(scope || inferRuntimeScope());
-  const url = new URL('./request.html', window.location.href);
-  const safeTarget = sanitizeReturnTarget(returnTo || '', normalizedScope === 'family' ? 'index.html?scope=family' : 'index.html');
-  if (safeTarget) url.searchParams.set('return_to', safeTarget);
-  if (normalizedScope === 'family') url.searchParams.set('scope', 'family');
-  return `${url.pathname}${url.search}${url.hash}`;
-}
-
+  function setPlayerSessionToken(token, storage){
+    const value = String(token || '').trim();
+    if (!value) return '';
+    const primaryKey = CONFIG.PLAYER_SESSION_KEYS[0] || 'jas_session_token_v11';
+    const target = storage === 'session' ? sessionStorage : localStorage;
+    target.setItem(primaryKey, value);
+    const other = target === localStorage ? sessionStorage : localStorage;
+    other.removeItem(primaryKey);
+    touchPlayerActivity();
+    return value;
+  }
+  function normalizeScope(input){
+    return String(input || '').trim().toLowerCase() === 'family' ? 'family' : 'friends';
+  }
+  function buildRequestUrl(returnTo, scope){
+    const normalizedScope = normalizeScope(scope || inferRuntimeScope());
+    const url = new URL('./request.html', window.location.href);
+    const safeTarget = sanitizeReturnTarget(returnTo || '', normalizedScope === 'family' ? 'index.html?scope=family' : 'index.html');
+    if (safeTarget) url.searchParams.set('return_to', safeTarget);
+    if (normalizedScope === 'family') url.searchParams.set('scope', 'family');
+    return `${url.pathname}${url.search}${url.hash}`;
+  }
   function buildAdminUrl(reason='', returnTo=''){
     const url = new URL('./admin.html', window.location.href);
     if (reason) url.searchParams.set('reason', String(reason));

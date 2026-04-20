@@ -7,9 +7,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken match</title>
-  <script>window.GEJAST_PAGE_VERSION='v493';</script>
-  <script src="./gejast-config.js?v493"></script>
-  <script src="./gejast-live-summary.js?v493"></script>
+  <script>window.GEJAST_PAGE_VERSION='v494';</script>
+  <script src="./gejast-config.js?v494"></script>
+  <script src="./gejast-live-summary.js?v494"></script>
   <style>
     :root{
       --paper:#fbf6ef;--shell:#f6f0e7;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;
@@ -17,86 +17,97 @@
       --soft:#f4ecdd;--green:#2f8f5c;
     }
     *{box-sizing:border-box}
-    body{margin:0;padding:14px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
-    .wrap{max-width:1280px;margin:0 auto}
-    .shell{background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.7);border-radius:30px;padding:18px;box-shadow:var(--shadow)}
-    .topbar{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
-    .title-wrap{display:flex;gap:12px;align-items:center}
-    .brand-icon{width:50px;height:50px;border-radius:14px;background:#fff;padding:8px;border:1px solid rgba(0,0,0,.08)}
+    body{margin:0;padding:10px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
+    .wrap{max-width:1320px;margin:0 auto}
+    .shell{background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.7);border-radius:28px;padding:14px;box-shadow:var(--shadow)}
+    .topbar{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}
+    .title-wrap{display:flex;gap:10px;align-items:center}
+    .brand-icon{width:48px;height:48px;border-radius:14px;background:#fff;padding:8px;border:1px solid rgba(0,0,0,.08)}
     .title-wrap h1{margin:0;font-size:24px;letter-spacing:-.04em}
-    .subline{color:var(--muted);margin-top:4px}
+    .subline{color:var(--muted);margin-top:2px;font-size:14px}
     .pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-weight:900;font-size:12px;border:1px solid rgba(0,0,0,.1)}
     .pill.ok{background:rgba(59,130,96,.12);border-color:rgba(59,130,96,.32);color:var(--ok)}
     .pill.bad{background:rgba(127,47,29,.10);border-color:rgba(127,47,29,.28);color:var(--bad)}
     .pill.wait{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.12);color:#6b6257}
-    .btn{display:inline-flex;align-items:center;justify-content:center;padding:11px 15px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer}
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:11px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer}
     .btn.alt{background:#fff;color:#111;border:1px solid var(--line)}
     .btn.soft{background:var(--soft);color:#564117;border:1px solid rgba(154,130,65,.24)}
     .btn.danger{background:#fff;color:var(--bad);border:1px solid rgba(139,45,32,.25)}
     .btn[disabled]{opacity:.55;cursor:not-allowed}
-    .hero{display:grid;grid-template-columns:1.08fr .92fr;gap:16px;margin-top:16px}
-    .panel{background:#fff;border:1px solid var(--line);border-radius:24px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.03)}
-    .panel h2{margin:0 0 10px;font-size:17px;letter-spacing:-.03em}
-    .seat-ring{position:relative;min-height:450px;border-radius:28px;background:radial-gradient(circle at center, #efe6d5 0 31%, #e4dbcb 32% 100%);border:1px solid rgba(0,0,0,.06);overflow:hidden}
-    .table-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(240px,42vw);aspect-ratio:1;border-radius:50%;background:linear-gradient(180deg,#359767,#28744e);border:10px solid #efe6d3;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
-    .table-core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;color:#fff;display:grid;gap:8px;width:76%}
-    .table-core .label{font-size:14px;opacity:.94}
-    .table-core strong{font-size:28px}
-    .table-core .mutedline{font-size:14px;opacity:.94}
-    .seat{position:absolute;min-width:132px;max-width:156px;padding:10px 12px;border-radius:18px;background:rgba(255,255,255,.96);border:1px solid rgba(0,0,0,.08);box-shadow:0 8px 20px rgba(0,0,0,.07)}
+    .hero{display:grid;grid-template-columns:1.08fr .92fr;gap:14px;margin-top:12px}
+    .panel{background:#fff;border:1px solid var(--line);border-radius:24px;padding:14px;box-shadow:0 10px 24px rgba(0,0,0,.03)}
+    .panel h2{margin:0 0 8px;font-size:17px;letter-spacing:-.03em}
+    .seat-ring{position:relative;min-height:420px;border-radius:28px;background:radial-gradient(circle at center, #efe6d5 0 31%, #e4dbcb 32% 100%);border:1px solid rgba(0,0,0,.06);overflow:hidden}
+    .table-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(255px,46vw);aspect-ratio:1;border-radius:50%;background:linear-gradient(180deg,#359767,#28744e);border:10px solid #efe6d3;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
+    .table-core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;color:#fff;display:grid;gap:8px;width:80%}
+    .table-core .label{font-size:12px;opacity:.94}
+    .table-core strong{font-size:28px;line-height:1}
+    .table-core .fraction{font-size:20px;font-weight:900}
+    .table-core .mutedline{font-size:13px;opacity:.94}
+    .table-votes{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:4px}
+    .table-vote{padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.18);font-size:12px;font-weight:800}
+    .seat{position:absolute;min-width:128px;max-width:168px;padding:10px 12px;border-radius:18px;background:rgba(255,255,255,.96);border:1px solid rgba(0,0,0,.08);box-shadow:0 8px 20px rgba(0,0,0,.07)}
     .seat.turn{outline:2px solid rgba(154,130,65,.42)}
     .seat.dead{opacity:.55}
     .seat.me{box-shadow:0 0 0 2px rgba(154,130,65,.18), 0 8px 20px rgba(0,0,0,.07)}
     .seat.disconnected{filter:grayscale(1);opacity:.72}
-    .seat.top{left:50%;top:18px;transform:translateX(-50%)}
-    .seat.right{right:16px;top:50%;transform:translateY(-50%)}
-    .seat.bottom{left:50%;bottom:18px;transform:translateX(-50%)}
-    .seat.left{left:16px;top:50%;transform:translateY(-50%)}
-    .seat.extra1{left:18%;top:44px}
-    .seat.extra2{right:18%;top:44px}
-    .seat.extra3{right:18%;bottom:44px}
-    .seat.extra4{left:18%;bottom:44px}
+    .seat.top{left:50%;top:12px;transform:translateX(-50%)}
+    .seat.right{right:10px;top:50%;transform:translateY(-50%)}
+    .seat.bottom{left:50%;bottom:12px;transform:translateX(-50%)}
+    .seat.left{left:10px;top:50%;transform:translateY(-50%)}
+    .seat.extra1{left:16%;top:34px}
+    .seat.extra2{right:16%;top:34px}
+    .seat.extra3{right:16%;bottom:34px}
+    .seat.extra4{left:16%;bottom:34px}
+    .seat-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
     .seat-name{font-weight:900}
     .seat-meta{font-size:12px;color:#6b6257;margin-top:3px}
     .seat-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+    .seat-history{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+    .seat-history span{font-size:11px;padding:4px 7px;border-radius:999px;background:#fbfaf6;border:1px solid rgba(0,0,0,.06);font-weight:800}
+    .seat-kick{font-size:11px;padding:5px 8px;border-radius:999px;border:1px solid rgba(139,45,32,.22);background:#fff;color:var(--bad);cursor:pointer;font-weight:900}
     .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
     .chip{padding:12px;border-radius:18px;background:#fbfaf6;border:1px solid rgba(0,0,0,.07)}
     .chip span{display:block;font-size:11px;color:#8a7a55;text-transform:uppercase;letter-spacing:.08em}
     .chip strong{display:block;margin-top:6px;font-size:18px}
-    .side-layout{display:grid;gap:16px}
+    .side-layout{display:grid;gap:14px}
     .reveal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:10px}
     .reveal-card{border:1px solid rgba(0,0,0,.08);border-radius:16px;background:#fff;padding:10px}
-    .dice-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-    img.die{width:40px;height:40px;display:block}
-    .dock{position:sticky;bottom:10px;z-index:30;margin-top:16px;padding:12px 14px;border-radius:20px;background:rgba(255,251,245,.96);backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.08);display:grid;gap:12px}
+    .dice-groups{display:grid;gap:8px}
+    .dice-group{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;padding:10px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.07)}
+    .dice-group-head{min-width:52px;padding-top:6px;font-weight:900;color:#8a7a55}
+    .dice-row{display:flex;flex-wrap:wrap;gap:8px}
+    img.die{width:42px;height:42px;display:block}
+    .dock{position:sticky;bottom:10px;z-index:30;margin-top:14px;padding:12px;border-radius:20px;background:rgba(255,251,245,.96);backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.08);display:grid;gap:12px}
     .dock-main{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .dock-main .btn{min-width:120px}
     .dock-right{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}
     .field-inline{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .field-inline input,.field-inline select{padding:12px 13px;border-radius:14px;border:1px solid rgba(0,0,0,.12);font:inherit;background:#fff}
-    .field-inline input{width:100px}
-    .status-note{padding:12px 14px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.08);color:#6b6257}
+    .field-inline select{padding:12px 13px;border-radius:14px;border:1px solid rgba(0,0,0,.12);font:inherit;background:#fff;min-width:220px}
+    .status-note{padding:12px 14px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.08);color:#6b6257;flex:1 1 260px}
+    .vote-big{font-size:18px;line-height:1}
     .hidden{display:none !important}
     @media (max-width: 980px){ .hero{grid-template-columns:1fr} }
     @media (max-width: 700px){
-      body{padding:10px}
-      .shell{padding:14px;border-radius:24px}
-      .topbar{gap:10px}
+      body{padding:8px}
+      .shell{padding:12px;border-radius:22px}
       .title-wrap h1{font-size:21px}
-      .seat-ring{min-height:420px}
-      .table-center{width:min(210px,52vw)}
-      .seat{min-width:96px;max-width:114px;padding:8px 10px}
+      .seat-ring{min-height:380px}
+      .table-center{width:min(205px,54vw)}
+      .seat{min-width:92px;max-width:110px;padding:8px 9px}
       .seat-name{font-size:13px}
       .seat-meta{font-size:11px}
-      .seat.left{left:8px}.seat.right{right:8px}.seat.top{top:10px}.seat.bottom{bottom:10px}
-      .seat.extra1{left:8%;top:56px}.seat.extra2{right:8%;top:56px}.seat.extra3{right:8%;bottom:56px}.seat.extra4{left:8%;bottom:56px}
+      .seat.left{left:6px}.seat.right{right:6px}.seat.top{top:6px}.seat.bottom{bottom:6px}
+      .seat.extra1{left:7%;top:48px}.seat.extra2{right:7%;top:48px}.seat.extra3{right:7%;bottom:48px}.seat.extra4{left:7%;bottom:48px}
       .grid3{grid-template-columns:1fr 1fr}
       .grid3 .chip:last-child{grid-column:1 / -1}
-      .dock{padding:10px 10px 12px}
+      .dock{padding:10px}
       .dock-main,.dock-right{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0}
       .dock-right .btn:last-child{grid-column:1 / -1}
-      .dock-main .btn,.dock-right .btn{min-width:0;width:100%}
-      .mobile-hide{display:none !important}
+      .dock-main .btn,.dock-right .btn,.field-inline .btn{width:100%;min-width:0}
+      .field-inline{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+      .field-inline select{min-width:0;width:100%;grid-column:1 / -1}
+      .status-note{grid-column:1 / -1}
+      img.die{width:38px;height:38px}
     }
   </style>
 </head>
@@ -113,8 +124,8 @@
           <span class="pill wait" id="phasePill">—</span>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <a class="btn alt" href="./pikken.html" id="backLobbyBtn">Terug naar lobby</a>
-          <a class="btn soft" href="./pikken.html" id="reopenLobbyBtn">Lobby</a>
+          <a class="btn alt" href="./pikken.html" id="backLobbyBtn">Lobby</a>
+          <a class="btn soft" href="./pikken.html" id="reopenLobbyBtn">Terug</a>
         </div>
       </div>
 
@@ -126,7 +137,9 @@
               <div class="table-core">
                 <div class="label">Huidig bod</div>
                 <strong id="currentBid">—</strong>
+                <div class="fraction" id="diceFraction">0/0</div>
                 <div class="mutedline" id="bidBy">Nog geen bod</div>
+                <div class="table-votes" id="tableVotes"></div>
               </div>
             </div>
           </div>
@@ -139,13 +152,12 @@
 
         <div class="side-layout">
           <section class="panel">
-            <h2>Matchstatus</h2>
-            <div class="grid3">
-              <div class="chip"><span>Lobby</span><strong id="lobbyCode">—</strong></div>
-              <div class="chip"><span>Start dice</span><strong id="totalStartDice">0</strong></div>
-              <div class="chip"><span>Nu / kwijt</span><strong><span id="totalCurrentDice">0</span> / <span id="totalLostDice">0</span></strong></div>
+            <h2>Jouw dobbelstenen</h2>
+            <div class="field-inline" style="margin-bottom:10px">
+              <button class="btn soft" id="rollBtn" type="button">Werp & vergrendel</button>
+              <div class="status-note" id="diceStateNote">Nog niet gegooid.</div>
             </div>
-            <div class="status-note" id="actorState" style="margin-top:12px">Viewer-modus.</div>
+            <div id="myDiceBody" class="dice-groups"></div>
           </section>
 
           <section class="panel">
@@ -157,21 +169,18 @@
 
       <div class="dock">
         <div class="field-inline hidden" id="bidControls">
-          <input id="bidCount" type="number" min="1" step="1" value="1" />
-          <select id="bidFace">
-            <option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="1">pik (1)</option>
-          </select>
+          <select id="bidSelect"></select>
           <button class="btn" id="bidBtn" type="button">Bied</button>
           <button class="btn alt" id="rejectBtn" type="button">Afkeuren</button>
         </div>
         <div class="field-inline hidden" id="voteControls">
-          <button class="btn" id="approveBtn" type="button">Goedgekeurd</button>
-          <button class="btn alt" id="voteRejectBtn" type="button">Afgekeurd</button>
+          <button class="btn" id="approveBtn" type="button"><span class="vote-big">👍</span>&nbsp; Goedgekeurd</button>
+          <button class="btn alt" id="voteRejectBtn" type="button"><span class="vote-big">👎</span>&nbsp; Afgekeurd</button>
         </div>
         <div class="dock-main">
-          <div class="status-note mobile-hide" id="mobileContext">Wachten op state…</div>
+          <div class="status-note" id="mobileContext">Wachten op state…</div>
           <div class="dock-right">
-            <button class="btn alt hidden" id="leaveBtn" type="button">Verlaat spel</button>
+            <button class="btn alt hidden" id="leaveBtn" type="button">Verlaat match</button>
             <button class="btn danger hidden" id="destroyBtn" type="button">Stop & verwijder</button>
           </div>
         </div>
@@ -179,249 +188,7 @@
     </div>
   </div>
 
-  <script>
-    (() => {
-      const cfg = window.GEJAST_CONFIG || {};
-      const liveSummary = window.GEJAST_LIVE_SUMMARY || {};
-      const params = new URLSearchParams(location.search);
-      const gameId = params.get('client_match_id') || params.get('game_id') || '';
-      let pollId = null;
-      let presenceId = null;
-      let currentState = null;
-
-      function esc(v){ const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(v ?? '').replace(/[&<>"']/g,(m)=>map[m]); }
-      function headers(){
-        return {
-          'Content-Type':'application/json',
-          apikey: cfg.SUPABASE_PUBLISHABLE_KEY || '',
-          Authorization:`Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY || ''}`,
-          Accept:'application/json'
-        };
-      }
-      async function rpc(name, payload){
-        const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
-          method:'POST',
-          headers: headers(),
-          body: JSON.stringify(payload || {}),
-          cache:'no-store',
-          mode:'cors'
-        });
-        const txt = await res.text();
-        let data = null;
-        try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || `HTTP ${res.status}`); }
-        if (!res.ok) throw new Error(data?.message || data?.error || data?.details || txt || `HTTP ${res.status}`);
-        return data && data[name] !== undefined ? data[name] : data;
-      }
-      function sessionToken(){ try { return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; } catch (_) { return ''; } }
-      function seatClass(index, total){
-        const map4 = ['top','right','bottom','left'];
-        const map6 = ['top','extra2','right','bottom','left','extra1'];
-        const map8 = ['top','extra2','right','extra3','bottom','extra4','left','extra1'];
-        const table = total <= 4 ? map4 : total <= 6 ? map6 : map8;
-        return table[index] || `extra${(index % 4) + 1}`;
-      }
-      function bidText(bid){
-        const count = Number(bid?.count || bid?.bid_count || 0);
-        const face = Number(bid?.face || bid?.bid_face || 0);
-        if (!count || !face) return '—';
-        return face === 1 ? `${count} × pik` : `${count} × ${face}`;
-      }
-      function penaltyLabel(raw){
-        return String(raw || '').toLowerCase() === 'right_loses' ? 'Fair' : 'Normal';
-      }
-      async function getPresenceMap(){
-        if (!gameId) return {};
-        try{
-          const raw = await rpc('get_pikken_presence_public', { game_id_input: gameId });
-          const rows = Array.isArray(raw?.rows) ? raw.rows : (Array.isArray(raw) ? raw : []);
-          const map = {};
-          rows.forEach((row)=>{ const key = String(row.player_name || '').trim().toLowerCase(); if (key) map[key] = row; });
-          return map;
-        } catch (_) { return {}; }
-      }
-      async function touchPresence(){
-        const token = sessionToken();
-        if (!token || !gameId) return;
-        try { await rpc('pikken_touch_presence_scoped', { session_token: token, game_id_input: gameId, page_kind_input: 'live' }); } catch (_) {}
-      }
-      async function releasePresence(){
-        const token = sessionToken();
-        if (!token || !gameId) return;
-        try { await rpc('pikken_release_presence_scoped', { session_token: token, game_id_input: gameId }); } catch (_) {}
-      }
-      async function loadState(){
-        const token = sessionToken();
-        if (token && gameId) {
-          try {
-            const [state, presenceMap] = await Promise.all([
-              rpc('pikken_get_state_scoped', { session_token: token, game_id_input: gameId }),
-              getPresenceMap()
-            ]);
-            currentState = { mode:'actor', state, presenceMap };
-            return currentState;
-          } catch (_) {}
-        }
-        const identity = liveSummary.matchIdentityFromUrl ? liveSummary.matchIdentityFromUrl() : { clientMatchId: gameId, matchRef:'' };
-        const item = await liveSummary.loadPublicSummary('pikken', identity);
-        const presenceMap = await getPresenceMap();
-        currentState = { mode:'viewer', item, presenceMap };
-        return currentState;
-      }
-      function renderSeats(players, viewer, phase, turnSeat, voteTurnSeat, presenceMap){
-        const ring = document.getElementById('seatRing');
-        Array.from(ring.querySelectorAll('.seat')).forEach((node)=>node.remove());
-        players.forEach((p, idx)=>{
-          const seat = Number(p.seat || p.seat_index || 0);
-          const alive = !!p.alive || String(phase || '').toLowerCase() === 'lobby';
-          const meSeat = Number(viewer?.seat || viewer?.seat_index || 0);
-          const disconnected = !!(presenceMap && presenceMap[String(p.name || p.player_name || '').trim().toLowerCase()] && presenceMap[String(p.name || p.player_name || '').trim().toLowerCase()].connected === false);
-          const div = document.createElement('div');
-          div.className = `seat ${seatClass(idx, players.length)} ${seat === meSeat ? 'me' : ''} ${(seat === turnSeat || seat === voteTurnSeat) ? 'turn' : ''} ${alive ? '' : 'dead'} ${disconnected ? 'disconnected' : ''}`.trim();
-          const ready = !!p.ready;
-          div.innerHTML = `
-            <div class="seat-name">${esc(p.name || p.player_name || 'Speler')}</div>
-            <div class="seat-meta">Stoel #${seat || '—'} · ${Number(p.dice_count || 0)} dobbelstenen${disconnected ? ' · offline' : ''}</div>
-            <div class="seat-badges">
-              ${String(phase) === 'lobby' ? `<span class="pill ${ready ? 'ok' : 'wait'}">${ready ? 'ready' : 'wacht'}</span>` : ''}
-              ${seat === turnSeat && String(phase) === 'bidding' ? '<span class="pill ok">aan zet</span>' : ''}
-              ${seat === voteTurnSeat && String(phase) === 'voting' ? '<span class="pill wait">stemt nu</span>' : ''}
-            </div>
-          `;
-          ring.appendChild(div);
-        });
-      }
-      function renderReveal(lastReveal){
-        const wrap = document.getElementById('revealBody');
-        if (!lastReveal) {
-          wrap.textContent = 'Nog geen reveal.';
-          return;
-        }
-        const lrBid = lastReveal.bid || {};
-        wrap.innerHTML = `
-          <div><strong>R${Number(lastReveal.round_no || 0)}</strong> · bod ${esc(bidText(lrBid))} · ${lastReveal.bid_true ? 'gehaald' : 'niet gehaald'} · geteld ${Number(lastReveal.counted_total || 0)}</div>
-          <div class="reveal-grid">
-            ${(Array.isArray(lastReveal.hands) ? lastReveal.hands : []).map((h)=>`
-              <div class="reveal-card">
-                <div><strong>${esc(h.name || 'Speler')}</strong> <span class="subline">#${Number(h.seat || 0)}</span></div>
-                <div class="dice-row">${(Array.isArray(h.dice) ? h.dice : []).map((d)=>`<img class="die" src="./assets/pikken/dice-${Number(d)}.svg" alt="die ${Number(d)}">`).join('')}</div>
-              </div>
-            `).join('')}
-          </div>
-        `;
-      }
-      function renderActor(state, presenceMap){
-        const game = state?.game || {};
-        const viewer = state?.viewer || {};
-        const players = Array.isArray(state?.players) ? state.players : [];
-        const phase = String(game?.state?.phase || 'lobby');
-        const bid = game?.state?.bid && game.state.bid !== null ? game.state.bid : null;
-        const turnSeat = Number(game?.state?.current_turn_seat || game?.state?.turn_seat || 0);
-        const voteTurnSeat = Number(game?.state?.vote_turn_seat || 0);
-        const totals = state?.dice_totals || {};
-        const lastReveal = game?.state?.last_reveal || null;
-        document.getElementById('metaLine').textContent = `Live bijgewerkt om ${new Date().toLocaleTimeString('nl-NL', { hour:'2-digit', minute:'2-digit' })}`;
-        const phasePill = document.getElementById('phasePill');
-        phasePill.textContent = phase || 'live';
-        phasePill.className = `pill ${phase === 'finished' ? 'bad' : phase === 'bidding' ? 'ok' : 'wait'}`;
-        document.getElementById('currentBid').textContent = bidText(bid);
-        document.getElementById('bidBy').textContent = bid ? `door ${bid.bidder_name || '—'}` : 'Nog geen bod';
-        document.getElementById('roundNo').textContent = String(Number(game?.state?.round_no || 0));
-        document.getElementById('turnName').textContent = players.find((p)=>Number(p.seat || p.seat_index || 0) === (phase === 'voting' ? voteTurnSeat : turnSeat))?.name || '—';
-        document.getElementById('penaltyMode').textContent = penaltyLabel(game?.penalty_mode || game?.config?.penalty_mode);
-        document.getElementById('lobbyCode').textContent = String(game?.lobby_code || '—');
-        document.getElementById('totalStartDice').textContent = String(Number(totals.start_total || 0));
-        document.getElementById('totalCurrentDice').textContent = String(Number(totals.current_total || 0));
-        document.getElementById('totalLostDice').textContent = String(Number(totals.lost_total || 0));
-        renderSeats(players, viewer, phase, turnSeat, voteTurnSeat, presenceMap);
-        renderReveal(lastReveal);
-
-        const meAlive = !!viewer.alive || phase === 'lobby';
-        const mySeat = Number(viewer.seat || viewer.seat_index || 0);
-        const myTurn = phase === 'bidding' && mySeat === turnSeat && meAlive;
-        const myVoteTurn = phase === 'voting' && mySeat === voteTurnSeat && meAlive;
-        const actorState = document.getElementById('actorState');
-        actorState.textContent = myTurn ? 'Jij bent aan zet.' : (myVoteTurn ? 'Jij moet nu stemmen.' : (viewer.is_host ? 'Host in live match.' : 'Viewer / wachtmodus.'));
-        document.getElementById('mobileContext').textContent = myTurn ? 'Bied of keur af.' : (myVoteTurn ? 'Stem nu.' : 'Volg de match live.');
-        document.getElementById('bidControls').classList.toggle('hidden', !myTurn);
-        document.getElementById('voteControls').classList.toggle('hidden', !myVoteTurn);
-        document.getElementById('rejectBtn').disabled = !myTurn || !bid;
-        document.getElementById('leaveBtn').classList.toggle('hidden', !(viewer.player_id || viewer.display_name || viewer.player_name));
-        document.getElementById('destroyBtn').classList.toggle('hidden', !viewer.is_host);
-      }
-      function renderViewer(item, presenceMap){
-        const summary = (liveSummary.summaryFromItem ? liveSummary.summaryFromItem(item) : (item?.summary_payload || {})) || {};
-        const st = summary.live_state || summary || {};
-        const players = Array.isArray(st.players) ? st.players : [];
-        const phase = String(st.phase || st.status || 'live');
-        const turnSeat = Number(phase === 'voting' ? st.vote_turn_seat : (st.current_turn_seat || st.turn_seat || 0));
-        const voteTurnSeat = Number(st.vote_turn_seat || 0);
-        document.getElementById('metaLine').textContent = liveSummary.metaText ? liveSummary.metaText(item) : 'Live summary';
-        const phasePill = document.getElementById('phasePill');
-        phasePill.textContent = phase;
-        phasePill.className = `pill ${phase === 'finished' ? 'bad' : phase === 'bidding' ? 'ok' : 'wait'}`;
-        document.getElementById('currentBid').textContent = bidText(st.bid || null);
-        document.getElementById('bidBy').textContent = st.bid && st.bid.bidder_name ? `door ${st.bid.bidder_name}` : 'Nog geen bod';
-        document.getElementById('roundNo').textContent = String(Number(st.round_no || 0));
-        document.getElementById('turnName').textContent = players.find((p)=>Number(p.seat || p.seat_index || 0) === turnSeat)?.name || '—';
-        document.getElementById('penaltyMode').textContent = penaltyLabel(st.penalty_mode);
-        document.getElementById('lobbyCode').textContent = String(st.lobby_code || '—');
-        const dt = st.dice_totals || {};
-        document.getElementById('totalStartDice').textContent = String(Number(dt.start_total || 0));
-        document.getElementById('totalCurrentDice').textContent = String(Number(dt.current_total || 0));
-        document.getElementById('totalLostDice').textContent = String(Number(dt.lost_total || 0));
-        renderSeats(players, {}, phase, turnSeat, voteTurnSeat, presenceMap);
-        renderReveal(st.last_reveal || null);
-        document.getElementById('actorState').textContent = 'Spectator / viewer-modus.';
-        document.getElementById('mobileContext').textContent = 'Spectate live match.';
-        document.getElementById('bidControls').classList.add('hidden');
-        document.getElementById('voteControls').classList.add('hidden');
-        document.getElementById('leaveBtn').classList.add('hidden');
-        document.getElementById('destroyBtn').classList.add('hidden');
-      }
-      async function refresh(){
-        if (!gameId) {
-          document.getElementById('metaLine').textContent = 'Geen game_id in URL.';
-          return;
-        }
-        await touchPresence();
-        const loaded = await loadState();
-        if (loaded.mode === 'actor') renderActor(loaded.state, loaded.presenceMap || {});
-        else renderViewer(loaded.item, loaded.presenceMap || {});
-      }
-
-      async function act(name, payload){
-        await rpc(name, Object.assign({ session_token: sessionToken(), game_id_input: gameId }, payload || {}));
-        await refresh();
-      }
-
-      document.getElementById('bidBtn').addEventListener('click', ()=>act('pikken_place_bid_scoped', { bid_count_input:Number(document.getElementById('bidCount').value || 0), bid_face_input:Number(document.getElementById('bidFace').value || 0) }).catch((e)=>alert(e.message || String(e))));
-      document.getElementById('rejectBtn').addEventListener('click', ()=>act('pikken_reject_bid_scoped').catch((e)=>alert(e.message || String(e))));
-      document.getElementById('approveBtn').addEventListener('click', ()=>act('pikken_cast_vote_scoped', { vote_input:true }).catch((e)=>alert(e.message || String(e))));
-      document.getElementById('voteRejectBtn').addEventListener('click', ()=>act('pikken_cast_vote_scoped', { vote_input:false }).catch((e)=>alert(e.message || String(e))));
-      document.getElementById('leaveBtn').addEventListener('click', async ()=>{
-        if (!confirm('Weet je zeker dat je dit Pikken-spel wilt verlaten?')) return;
-        try {
-          await rpc('pikken_leave_game_scoped', { session_token: sessionToken(), game_id_input: gameId });
-          await releasePresence();
-          location.href = './pikken.html';
-        } catch (e) { alert(e.message || String(e)); }
-      });
-      document.getElementById('destroyBtn').addEventListener('click', async ()=>{
-        if (!confirm('Host: wil je dit Pikken-spel stoppen en verwijderen?')) return;
-        try {
-          await rpc('pikken_destroy_game_scoped', { session_token: sessionToken(), game_id_input: gameId });
-          await releasePresence();
-          location.href = './pikken.html';
-        } catch (e) { alert(e.message || String(e)); }
-      });
-
-      window.addEventListener('beforeunload', ()=>{ releasePresence(); });
-      refresh().catch((e)=>{ document.getElementById('metaLine').textContent = e.message || String(e); });
-      pollId = setInterval(()=>{ if (!document.hidden) refresh().catch(()=>{}); }, 3500);
-      presenceId = setInterval(()=>{ if (!document.hidden) touchPresence().catch(()=>{}); }, 8000);
-      document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) refresh().catch(()=>{}); });
-    })();
-  </script>
+  <script src="./gejast-pikken-live.js?v494"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
   <div class="site-credit-watermark" data-version-watermark></div>
 </body>
