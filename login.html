@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inloggen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v614';</script>
+  <script>window.GEJAST_PAGE_VERSION='v615';</script>
   <style>
     :root { --gold: #9a8241; --dark-bg: #111; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.08); }
     * { box-sizing: border-box; }
@@ -45,7 +45,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/login.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v614"></script><script src="./gejast-account-scope.js?v614"></script><script src="./gejast-account-links.js?v614"></script>
+  <script src="./gejast-config.js?v615"></script><script src="./gejast-account-scope.js?v615"></script><script src="./gejast-account-links.js?v615"></script>
 </head>
 <body>
   <main class="main-card">
@@ -79,24 +79,39 @@ const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.S
 const MAKE_WEBHOOK_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.MAKE_WEBHOOK_URL) || "";
 const SESSION_KEY = "jas_session_token_v11";
 const SESSION_KEYS = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.PLAYER_SESSION_KEYS) || ["jas_session_token_v11","jas_session_token_v10"];
-const LOGIN_NAMES_CACHE_PREFIX = 'gejast_login_names_cache_v614:';
+const LOGIN_NAMES_CACHE_PREFIX = 'gejast_login_names_cache_v615:';
+const LEGACY_LOGIN_NAMES_CACHE_PREFIXES = ['gejast_login_names_cache_v615:','gejast_login_names_cache_v614:','gejast_login_names_cache_v613:','gejast_login_names_cache_v500:'];
 const RPC_TIMEOUT_MS = Number((window.GEJAST_CONFIG && (window.GEJAST_CONFIG.LOGIN_NAME_TIMEOUT_MS || window.GEJAST_CONFIG.RPC_TIMEOUT_MS)) || 2200);
-const LOGIN_NAMES_CACHE_TTL_MS = 1000 * 60 * 3;
+const LOGIN_NAMES_CACHE_TTL_MS = 1000 * 60 * 5;
 window.localValidation = window.localValidation || function(){ return true; };
 
-function loginNamesCacheKey(scope){ return `${LOGIN_NAMES_CACHE_PREFIX}${scope === 'family' ? 'family' : 'friends'}`; }
+function loginNamesCacheKey(scope, prefix = LOGIN_NAMES_CACHE_PREFIX){ return `${prefix}${scope === 'family' ? 'family' : 'friends'}`; }
 function clearCachedLoginNames(scope){
-  try{ localStorage.removeItem(loginNamesCacheKey(scope)); }catch(_){}
+  try{
+    LEGACY_LOGIN_NAMES_CACHE_PREFIXES.forEach((prefix)=>localStorage.removeItem(loginNamesCacheKey(scope, prefix)));
+  }catch(_){}
 }
-function readCachedLoginNames(scope){
+function readCachedLoginNames(scope, allowStale = false){
   try{
     const raw = localStorage.getItem(loginNamesCacheKey(scope));
     if(!raw) return [];
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.names)) return [];
-    if (!parsed.at || (Date.now() - Number(parsed.at)) > LOGIN_NAMES_CACHE_TTL_MS) return [];
+    if (!allowStale && (!parsed.at || (Date.now() - Number(parsed.at)) > LOGIN_NAMES_CACHE_TTL_MS)) return [];
     return uniqueNames(parsed.names);
   }catch(_){ return []; }
+}
+function readAnyCachedLoginNames(scope){
+  const merged = [];
+  for (const prefix of LEGACY_LOGIN_NAMES_CACHE_PREFIXES){
+    try{
+      const raw = localStorage.getItem(loginNamesCacheKey(scope, prefix));
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.names)) merged.push(...parsed.names);
+    }catch(_){}
+  }
+  return uniqueNames(merged);
 }
 function writeCachedLoginNames(names, scope){
   const clean = uniqueNames(names);
@@ -115,7 +130,7 @@ function clearSessionToken() { if(window.GEJAST_CONFIG && window.GEJAST_CONFIG.c
 function setStatus(message = '', tone = 'info') { const box = document.getElementById('statusBox'); if (!message) { box.className = 'status'; box.textContent = ''; return; } box.className = `status show ${tone}`; box.textContent = message; }
 function normalizeDisplayName(name) { return String(name || '').replace(/\s+/g, ' ').trim(); }
 function uniqueNames(names) { const seen = new Set(); return (names || []).map(normalizeDisplayName).filter((name) => name && !seen.has(name.toLowerCase()) && seen.add(name.toLowerCase())).sort((a, b) => a.localeCompare(b, 'nl')); }
-function fillNames(names, selected = '') { const input = document.getElementById('playerNameInput'); const resetInput = document.getElementById('resetNameInput'); const cleanNames = uniqueNames(names); const current = selected && cleanNames.includes(selected) ? selected : input.value; const resetCurrent = resetInput ? resetInput.value : ''; const primaryFrag = document.createDocumentFragment(); const defaultOption = document.createElement('option'); defaultOption.value = ''; defaultOption.textContent = 'Kies je naam'; primaryFrag.appendChild(defaultOption); const resetFrag = resetInput ? document.createDocumentFragment() : null; if (resetFrag) resetFrag.appendChild(defaultOption.cloneNode(true)); cleanNames.forEach((name) => { const option = document.createElement('option'); option.value = name; option.textContent = name; primaryFrag.appendChild(option); if (resetFrag) resetFrag.appendChild(option.cloneNode(true)); }); input.replaceChildren(primaryFrag); if (resetInput && resetFrag) resetInput.replaceChildren(resetFrag); input.value = cleanNames.includes(current) ? current : ''; if (resetInput) resetInput.value = cleanNames.includes(resetCurrent) ? resetCurrent : (cleanNames.includes(input.value) ? input.value : ''); }
+function fillNames(names, selected = '') { const input = document.getElementById('playerNameInput'); const resetInput = document.getElementById('resetNameInput'); const cleanNames = uniqueNames(names); const current = selected && cleanNames.includes(selected) ? selected : input.value; const resetCurrent = resetInput ? resetInput.value : ''; const primaryFrag = document.createDocumentFragment(); const defaultOption = document.createElement('option'); defaultOption.value = ''; defaultOption.textContent = cleanNames.length ? 'Kies je naam' : 'Namen laden…'; primaryFrag.appendChild(defaultOption); const resetFrag = resetInput ? document.createDocumentFragment() : null; if (resetFrag) resetFrag.appendChild(defaultOption.cloneNode(true)); cleanNames.forEach((name) => { const option = document.createElement('option'); option.value = name; option.textContent = name; primaryFrag.appendChild(option); if (resetFrag) resetFrag.appendChild(option.cloneNode(true)); }); input.replaceChildren(primaryFrag); if (resetInput && resetFrag) resetInput.replaceChildren(resetFrag); input.value = cleanNames.includes(current) ? current : ''; if (resetInput) resetInput.value = cleanNames.includes(resetCurrent) ? resetCurrent : (cleanNames.includes(input.value) ? input.value : ''); }
 function targetUrl() { const params = new URLSearchParams(window.location.search); const cfg = window.GEJAST_CONFIG || {}; const raw = params.get('return_to') || params.get('next') || (params.get('scope')==='family' ? 'index.html?scope=family' : 'index.html'); const clean = cfg.sanitizeReturnTarget ? cfg.sanitizeReturnTarget(raw, params.get('scope')==='family' ? 'index.html?scope=family' : 'index.html') : raw; return clean.startsWith('./') ? clean : `./${clean}`; }
 function pendingVote() { return new URLSearchParams(window.location.search).get('vote') || ''; }
 function currentScope(){ return new URLSearchParams(window.location.search).get('scope') === 'family' ? 'family' : 'friends'; }
@@ -124,21 +139,22 @@ function friendlyMessage(msg) {
   if (/login_player\(desired_name, entered_pin\).*schema cache/i.test(raw)) return 'Login-RPC ontbreekt nog in Supabase. Draai de v73 SQL-patch opnieuw en vernieuw daarna de pagina hard.';
   if (/failed to fetch/i.test(raw)) return 'Netwerk/CORS-fout bij contact met Supabase.';
   if (/sessions_player_id_key/i.test(raw)) return 'Er stond nog een oude spelsessie open voor deze gebruiker. Probeer opnieuw; de v84 loginpatch vervangt zo\'n oude sessie nu automatisch.';
-  if (/cycle_key/i.test(raw)) return 'De weekstatus kon niet worden geladen door een databasefout in de stemcyclus. De namenlijst hoort wel zichtbaar te blijven na de v84 bundle + SQL-patch.';
-  if (/not active|nog niet actief/i.test(raw)) return 'Deze naam stond nog in een oude of verkeerde namenlijst, of de backend-status van dit account loopt achter. De actieve namenlijst is ververst; kies opnieuw.';
+  if (/cycle_key/i.test(raw)) return 'De weekstatus kon niet worden geladen door een databasefout in de stemcyclus.';
+  if (/not active|nog niet actief/i.test(raw)) return 'De actieve namenlijst is direct opnieuw ververst. Kies je naam opnieuw of probeer nog één keer.';
   return raw;
 }
 async function getPublicState() { if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') { return await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_public_state', { session_token: getSessionToken() }); } const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ session_token: getSessionToken() }) }); return await parseResponse(res); }
 async function getLoginNames(options = {}) {
   const scope = currentScope();
   const bypassCache = !!options.bypassCache;
-  const cached = bypassCache ? [] : readCachedLoginNames(scope);
+  const cachedFresh = bypassCache ? [] : readCachedLoginNames(scope, false);
+  const cachedAnyAge = readAnyCachedLoginNames(scope);
   try {
     const helper = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedActivePlayerNames === 'function' ? window.GEJAST_CONFIG.fetchScopedActivePlayerNames : null;
     if (helper) {
       const names = await helper(scope);
       if (Array.isArray(names) && names.length) writeCachedLoginNames(names, scope);
-      return { names: (Array.isArray(names) && names.length) ? names : cached };
+      return { names: (Array.isArray(names) && names.length) ? names : (cachedFresh.length ? cachedFresh : cachedAnyAge) };
     }
   } catch (_) {}
   try {
@@ -146,7 +162,7 @@ async function getLoginNames(options = {}) {
       const out = await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_login_names', {});
       const names = uniqueNames(Array.isArray(out?.names) ? out.names : []);
       if (names.length) writeCachedLoginNames(names, scope);
-      return { names: names.length ? names : cached };
+      return { names: names.length ? names : (cachedFresh.length ? cachedFresh : cachedAnyAge) };
     }
   } catch (_) {}
   try {
@@ -154,13 +170,13 @@ async function getLoginNames(options = {}) {
     const timer = controller ? setTimeout(() => { try { controller.abort(); } catch (_) {} }, RPC_TIMEOUT_MS) : null;
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_login_names`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({}), signal: controller ? controller.signal : undefined });
     if (timer) clearTimeout(timer);
-    if (!res.ok) return { names: cached };
+    if (!res.ok) return { names: cachedFresh.length ? cachedFresh : cachedAnyAge };
     const out = await parseResponse(res);
     const names = uniqueNames(Array.isArray(out?.names) ? out.names : []);
     if (names.length) writeCachedLoginNames(names, scope);
-    return { names: names.length ? names : cached };
+    return { names: names.length ? names : (cachedFresh.length ? cachedFresh : cachedAnyAge) };
   } catch (_) {
-    return { names: cached };
+    return { names: cachedFresh.length ? cachedFresh : cachedAnyAge };
   }
 }
 async function touchSession() { const token = getSessionToken(); if (!token) return null; if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') { return await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('player_touch_session', { input_token: token }); } const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/player_touch_session`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({ input_token: token }) }); return await parseResponse(res); }
@@ -181,12 +197,22 @@ async function refreshActiveNames(selected = ''){
   return names;
 }
 async function load() {
+  const scope = currentScope();
+  const instant = uniqueNames([...readAnyCachedLoginNames(scope), ...(getSessionToken() ? [] : [])]);
+  if (instant.length) {
+    fillNames(instant, '');
+  } else {
+    fillNames([], '');
+    setStatus('Namen laden...', 'info');
+  }
+
   const [stateResult, loginNamesResult] = await Promise.allSettled([getPublicState(), getLoginNames()]);
   const state = stateResult.status === 'fulfilled' ? stateResult.value : null;
   const loginNames = loginNamesResult.status === 'fulfilled' ? loginNamesResult.value : null;
   const fallbackNames = [];
   if (state?.my_name) fallbackNames.push(state.my_name);
-  fillNames(uniqueNames([...(normalizeLoginNameRows(loginNames)), ...fallbackNames]), state?.my_name || '');
+  const merged = uniqueNames([...(normalizeLoginNameRows(loginNames)), ...fallbackNames, ...instant]);
+  fillNames(merged, state?.my_name || '');
   const stateTile = document.querySelector('.state-tile');
   if (state?.my_name) {
     if (stateTile) stateTile.classList.add('show');
@@ -198,10 +224,10 @@ async function load() {
     document.getElementById('loginStateWord').textContent = '';
     document.getElementById('loginStateCopy').textContent = '';
   }
-  if (stateResult.status === 'rejected') {
+  if (stateResult.status === 'rejected' && !instant.length) {
     const msg = stateResult.reason instanceof Error ? stateResult.reason.message : 'Er ging iets mis';
     setStatus(friendlyMessage(msg), 'warn');
-  } else if (loginNamesResult.status === 'rejected') {
+  } else if (loginNamesResult.status === 'rejected' && !instant.length) {
     const msg = loginNamesResult.reason instanceof Error ? loginNamesResult.reason.message : 'Er ging iets mis';
     setStatus(friendlyMessage(msg), 'warn');
   } else {
@@ -215,24 +241,12 @@ document.getElementById('loginForm').addEventListener('submit', async (event) =>
   event.preventDefault();
   const chosen = normalizeDisplayName(document.getElementById('playerNameInput').value || '');
   try {
-    setStatus('Actieve namenlijst controleren...');
-    const freshAllowed = uniqueNames((await getLoginNames({ bypassCache: true }))?.names || []);
-    fillNames(freshAllowed, chosen);
-    if (freshAllowed.length && chosen && !freshAllowed.includes(chosen)) {
-      clearCachedLoginNames(currentScope());
-      throw new Error('Deze naam is op dit moment niet actief voor deze sitegroep.');
-    }
     setStatus('Inloggen...');
     const data = await loginPlayer();
-    const allowed = uniqueNames((await getLoginNames({ bypassCache: true }))?.names || []);
-    if (allowed.length && chosen && !allowed.includes(chosen)) {
-      clearSessionToken();
-      clearCachedLoginNames(currentScope());
-      throw new Error('Deze gebruiker hoort bij de andere sitegroep of staat niet actief.');
-    }
     setSessionToken(data.session_token);
     try{ window.GEJAST_CONFIG && window.GEJAST_CONFIG.touchPlayerActivity && window.GEJAST_CONFIG.touchPlayerActivity(); }catch(_){ }
-    writeCachedLoginNames(allowed, currentScope());
+    const allowed = uniqueNames((await getLoginNames({ bypassCache: true }))?.names || []);
+    if (allowed.length) writeCachedLoginNames(allowed, currentScope());
     if (pendingVote()) await castVote(pendingVote());
     window.location.href = targetUrl();
   } catch (err) {
@@ -256,7 +270,7 @@ if (forgotPinModal) forgotPinModal.addEventListener('click', (e) => { if (e.targ
 document.getElementById('forgotPinForm').addEventListener('submit', async (event) => { event.preventDefault(); const submitBtn = document.getElementById('forgotPinSubmitBtn'); const cancelBtn = document.getElementById('forgotPinCancelBtn'); try { submitBtn.disabled = true; cancelBtn.disabled = true; setStatus('Pincode resetten en nieuwe activatiemail klaarzetten...'); const result = await requestPinReset(); try { await triggerMakeScenario({ reason: 'pin_reset_reactivation', request_id: result?.request_id ?? null, job_id: result?.job_id ?? null, player_id: result?.player_id ?? null, display_name: result?.display_name ?? document.getElementById('resetNameInput').value.trim(), email: result?.requester_email ?? document.getElementById('resetEmailInput').value.trim().toLowerCase(), activation_url: result?.activation_url ?? null, expires_at: result?.expires_at ?? null, created_at: result?.created_at ?? null }); } catch (wakeErr) { console.warn('Make webhook wake-up mislukt', wakeErr); } const expiresCopy = result?.expires_at ? ` Nieuwe link verloopt op ${formatDateTime(result.expires_at)}.` : ''; setStatus((result?.message || 'Je account staat weer op wacht op activatie. Controleer je mail voor de nieuwe activatielink.') + expiresCopy, 'ok'); closeForgotPinModal(); await load(); } catch (err) { const msg = err instanceof Error ? err.message : 'Resetten mislukt'; setStatus(friendlyMessage(msg), 'warn'); } finally { submitBtn.disabled = false; cancelBtn.disabled = false; } });
 load();
   </script>
-  <div class="site-credit-watermark" data-version-watermark>v614 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v615 · Made by Bruis</div>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>

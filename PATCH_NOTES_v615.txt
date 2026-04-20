@@ -1,0 +1,25 @@
+Login dropdown speed + active list hotfix v615
+
+Changed files:
+- gejast-config.js
+- login.html
+
+What this patch does:
+1. Instant dropdown population
+   - login page now shows any previously cached names immediately
+   - then refreshes active names in the background
+2. Avoid empty dropdown regression
+   - helper no longer uses the over-strict server-side status filter in allowed_usernames
+   - active filtering still happens client-side using active / approved / activated or pin-signal rows
+3. Keeps active-only direction
+   - still tries to exclude non-active names from the refreshed list
+4. Removes the extra post-login allowed-name block
+   - login_player is treated as the real authority for successful login
+   - dropdown freshness is handled before/around loading, not by rejecting a successful login afterward
+
+Important honesty:
+- if the backend login_player RPC itself still says an activated account is inactive,
+  that is no longer a dropdown-speed problem; that becomes backend account-truth work.
+- this patch is aimed at the current frontend regression where the dropdown became empty or too slow.
+
+No SQL included in this patch.

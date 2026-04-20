@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v614',
+    VERSION:'v615',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -135,7 +135,7 @@
       callJson(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/get_all_site_players_public_scoped`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify({ site_scope_input: resolvedScope }) }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then(toNames).catch(()=>[]),
       callJson(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/get_profiles_page_bundle_scoped`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify({ site_scope_input: resolvedScope }) }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then(toNames).catch(()=>[]),
       callJson(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/get_login_names`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify({}) }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then(toNames).catch(()=>[]),
-      callJson(`${CONFIG.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope,pin_is_set,has_pin,pin_set,pin_hash_set,player_has_pin,has_pin_hash&status=in.(active,approved,activated)&order=display_name.asc&limit=400`, { method:'GET', mode:'cors', cache:'no-store', headers:{ apikey: headers.apikey, Authorization: headers.Authorization, Accept:'application/json' } }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then(toNames).catch(()=>[])
+      callJson(`${CONFIG.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope,pin_is_set,has_pin,pin_set,pin_hash_set,player_has_pin,has_pin_hash&order=display_name.asc&limit=400`, { method:'GET', mode:'cors', cache:'no-store', headers:{ apikey: headers.apikey, Authorization: headers.Authorization, Accept:'application/json' } }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then(toNames).catch(()=>[])
     ];
     const settled = await Promise.allSettled(calls);
     const merged = [];
