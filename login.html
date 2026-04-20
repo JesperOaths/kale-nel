@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inloggen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v450';</script>
+  <script>window.GEJAST_PAGE_VERSION='v496';</script>
   <style>
     :root { --gold: #9a8241; --dark-bg: #111; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.08); }
     * { box-sizing: border-box; }
@@ -48,7 +48,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/login.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v449"></script><script src="./gejast-account-scope.js?v394"></script><script src="./gejast-account-links.js?v399"></script>
+  <script src="./gejast-config.js?v496"></script><script src="./gejast-account-scope.js?v496"></script><script src="./gejast-account-links.js?v496"></script>
 </head>
 <body>
 
@@ -415,44 +415,39 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const cached = readCachedLoginNames(scope, 1000 * 60 * 60 * 24 * 30);
       if (cached.length) fillNames(cached, '');
 
-      getPublicState().then((state) => {
-        const fallbackNames = [];
-        if (state?.my_name) fallbackNames.push(state.my_name);
-        if (fallbackNames.length) {
-          fillNames(uniqueNames([...(Array.from(document.querySelectorAll('#playerNameInput option')).map((o) => o.value).filter(Boolean)), ...fallbackNames]), state?.my_name || '');
-        }
-
-        const stateTile = document.querySelector('.state-tile');
-        if (state?.my_name) {
-          if (stateTile) stateTile.classList.add('show');
-          document.getElementById('loginStateWord').textContent = state.my_name;
-          document.getElementById('loginStateWord').className = 'state-word yes';
-          document.getElementById('loginStateCopy').textContent = 'Deze browser heeft al een geldige sessie.';
-        } else {
-          if (stateTile) stateTile.classList.remove('show');
-          document.getElementById('loginStateWord').textContent = '';
-          document.getElementById('loginStateCopy').textContent = '';
-        }
-      }).catch((err) => {
-        const msg = err instanceof Error ? err.message : 'Er ging iets mis';
-        setStatus(friendlyMessage(msg), 'warn');
-      });
-
-      getLoginNames().then((loginNames) => {
-        const names = uniqueNames(normalizeLoginNameRows(loginNames));
+      try {
+        const fast = await fetchFastLoginNames(scope);
+        const names = uniqueNames(normalizeLoginNameRows(fast));
         if (names.length) {
           fillNames(names, document.getElementById('playerNameInput').value || '');
           setStatus('');
         } else if (!cached.length) {
           setStatus('Namen laden duurt langer dan normaal. Probeer opnieuw.', 'warn');
         }
-      }).catch((err) => {
-        const msg = err instanceof Error ? err.message : 'Er ging iets mis';
-        if (!cached.length) setStatus(friendlyMessage(msg), 'warn');
-      });
+      } catch (err) {
+        if (!cached.length) {
+          const msg = err instanceof Error ? err.message : 'Er ging iets mis';
+          setStatus(friendlyMessage(msg), 'warn');
+        }
+      }
+
+      window.setTimeout(async () => {
+        try {
+          const state = await getPublicState();
+          const stateTile = document.querySelector('.state-tile');
+          if (state?.my_name) {
+            if (stateTile) stateTile.classList.add('show');
+            document.getElementById('loginStateWord').textContent = state.my_name;
+            document.getElementById('loginStateWord').className = 'state-word yes';
+            document.getElementById('loginStateCopy').textContent = 'Deze browser heeft al een geldige sessie.';
+          } else {
+            if (stateTile) stateTile.classList.remove('show');
+          }
+        } catch (_) {}
+      }, 120);
 
       if (getSessionToken()) {
-        try { await touchSession(); } catch { clearSessionToken(); }
+        try { await touchSession(); } catch (_) {}
       }
     }
     document.getElementById('loginForm').addEventListener('submit', async (event) => {
@@ -536,7 +531,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     load();
   </script>
 
-  <div class="site-credit-watermark" data-version-watermark>v450 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v496 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
@@ -547,7 +542,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
   .player-session-corner-btn:hover{opacity:.92}
   @media (max-width:640px){.player-session-corner{top:10px;right:10px;padding:7px 9px;min-width:100px}.player-session-corner-name{max-width:120px}}
 </style>
-<div id="playerSessionCorner" class="player-session-corner" aria-live="polite">
+<div id="playerSessionCorner" class="player-session-corner" aria-live="polite" style="display:none!important">
   <div class="player-session-corner-label">Ingelogd als</div>
   <div id="playerSessionCornerName" class="player-session-corner-name"></div>
   <button id="playerSessionCornerLogout" type="button" class="player-session-corner-btn">Log out</button>
@@ -595,12 +590,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
   function show(name){ nameEl.textContent = name; box.classList.add('is-visible'); }
   function hide(){ box.classList.remove('is-visible'); nameEl.textContent = ''; }
   btn.addEventListener('click', function(){ clearTokens(); hide(); window.location.reload(); });
-  document.addEventListener('DOMContentLoaded', async function(){
-    const token = getToken();
-    if (!token) return hide();
-    const name = await fetchMyName(token);
-    if (name) show(name); else hide();
-  });
+  document.addEventListener('DOMContentLoaded', function(){ hide(); });
 })();
 </script>
 
