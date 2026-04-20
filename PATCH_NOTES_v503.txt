@@ -1,0 +1,23 @@
+v503 targeted patch
+
+What changed:
+- gejast-config.js now filters the login dropdown harder toward active / approved / activated users only.
+- gejast-live-summary.js now has homepage fallback logic based on remembered participant tokens for klaverjas and boerenbridge.
+- This is aimed at making the homepage swap to:
+  - Klaverjas Kijken
+  - Boerenbridge begluren
+
+What to do now:
+1. Upload gejast-config.js
+2. Upload gejast-live-summary.js
+3. Hard refresh on mobile and desktop
+4. Test:
+   - login page dropdown only shows activated users
+   - join a klaverjas or boerenbridge game as participant
+   - return to homepage
+   - the respective card should switch into its live-watch state
+
+Honesty:
+- This patch does not include a full direct index.html replacement.
+- It targets the shared owner path already used by index.html, which is lower risk than replacing the full homepage blind.
+- If you want, the next pass should be a direct full index.html replacement plus the remaining spectator hardening and the full Pikken live-page move.
