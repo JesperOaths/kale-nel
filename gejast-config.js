@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v613',
+    VERSION:'v614',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -106,9 +106,9 @@
     if (row.pin_hash || row.player_pin_hash) return true;
     return false;
   }
-  function isBroadActive(row){
+  function isStrictlyActive(row){
     const status = String(row?.status || row?.account_status || row?.player_status || row?.request_status || '').trim().toLowerCase();
-    return ['active','approved','activated','pending_activation'].includes(status);
+    return ['active','approved','activated'].includes(status);
   }
   async function fetchScopedActivePlayerNames(scope){
     const resolvedScope = normalizeScope(scope || inferRuntimeScope());
@@ -124,7 +124,7 @@
           if (!row || typeof row === 'string') return true;
           const rowScope = String(row.site_scope || row.scope || '').trim().toLowerCase();
           if (rowScope && rowScope !== resolvedScope) return false;
-          return hasPinSignal(row) || isBroadActive(row);
+          return hasPinSignal(row) || isStrictlyActive(row);
         })
         .map((row)=> typeof row === 'string' ? row : (row?.public_display_name || row?.chosen_username || row?.nickname || row?.display_name || row?.player_name || row?.name || row?.label || row?.desired_name || row?.slug || '')));
       if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, resolvedScope);
@@ -135,7 +135,7 @@
       callJson(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/get_all_site_players_public_scoped`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify({ site_scope_input: resolvedScope }) }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then(toNames).catch(()=>[]),
       callJson(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/get_profiles_page_bundle_scoped`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify({ site_scope_input: resolvedScope }) }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then(toNames).catch(()=>[]),
       callJson(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/get_login_names`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify({}) }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then(toNames).catch(()=>[]),
-      callJson(`${CONFIG.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope,pin_is_set,has_pin,pin_set,pin_hash_set,player_has_pin,has_pin_hash&order=display_name.asc&limit=400`, { method:'GET', mode:'cors', cache:'no-store', headers:{ apikey: headers.apikey, Authorization: headers.Authorization, Accept:'application/json' } }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then(toNames).catch(()=>[])
+      callJson(`${CONFIG.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope,pin_is_set,has_pin,pin_set,pin_hash_set,player_has_pin,has_pin_hash&status=in.(active,approved,activated)&order=display_name.asc&limit=400`, { method:'GET', mode:'cors', cache:'no-store', headers:{ apikey: headers.apikey, Authorization: headers.Authorization, Accept:'application/json' } }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then(toNames).catch(()=>[])
     ];
     const settled = await Promise.allSettled(calls);
     const merged = [];

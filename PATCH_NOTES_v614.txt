@@ -1,0 +1,29 @@
+Login active-users-only hotfix v614
+
+Changed files:
+- gejast-config.js
+- login.html
+
+Why this patch exists:
+- current repo config still treated pending_activation as effectively active in the login-name helper
+- login.html still held a 15-minute cached names list
+- together that can leave the dropdown showing a stale/wrong login candidate
+
+What this patch changes:
+1. gejast-config.js
+   - removes pending_activation from the broad active list
+   - restricts allowed_usernames query to active / approved / activated
+   - keeps pin-signal users allowed
+2. login.html
+   - bumps page/script version to v614
+   - reduces login names cache TTL to 3 minutes
+   - forces a fresh active-name check before login submit
+   - clears stale cache and refreshes names when backend says “not active”
+
+Important honesty:
+- if the same exact name still comes back as “not active” after this patch,
+  while it is still in the refreshed active names list, that points to a backend
+  account-status mismatch or duplicate-name issue in login_player / account truth.
+- this patch fixes the frontend source/caching path first.
+
+No SQL included in this patch.
