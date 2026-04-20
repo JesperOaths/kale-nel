@@ -2,121 +2,46 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Caute Rad</title>
-  <script>window.GEJAST_PAGE_VERSION='v503';</script>
-  <script src="./gejast-config.js?v503"></script>
-  <script src="./gejast-scope-context.js?v503"></script>
-  <script src="./gejast-family-rollout.js?v503"></script>
-  <script src="./gejast-drinks-workflow.js?v503"></script>
-  <script src="./gejast-scoped-rpc.js?v503"></script>
-  <script src="./gejast-player-session-ui.js?v503"></script>
+  <script>window.GEJAST_PAGE_VERSION='v615';</script>
+  <script src="./gejast-config.js?v615"></script>
+  <script src="./gejast-home-gate.js?v615"></script>
+  <script src="./gejast-drinks-workflow.js?v615"></script>
+  <script src="./gejast-player-session-ui.js?v615"></script>
   <style>
     :root{--gold:#9a8241;--ink:#17130f;--muted:#6d6256;--line:rgba(0,0,0,.1);--paper:#fffaf3;--bg:#f3ede4;}
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,system-ui,sans-serif;background:linear-gradient(180deg,#f5efe6,#ece2d2);color:var(--ink)}
-    .page{max-width:1280px;margin:0 auto;padding:24px 16px 44px}
-    .shell{background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.8);border-radius:30px;padding:20px;box-shadow:0 18px 40px rgba(0,0,0,.06)}
-    .top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
-    .title{font-size:clamp(2rem,4vw,3.2rem);letter-spacing:-.05em;margin:0}
-    .small{font-size:12px;color:var(--muted)}
-    .btn,a.btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:16px;border:1px solid var(--line);background:#17130f;color:#fff;text-decoration:none;font-weight:800;cursor:pointer}
-    .btn.secondary{background:#fff;color:#17130f}
-    .layout{
-      display:grid;
-      grid-template-columns:minmax(300px,480px) minmax(300px,1fr);
-      gap:20px;
-      margin-top:20px;
-      align-items:start;
-      justify-content:center;
-    }
-    .panel{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:18px}
-    .wheel-wrap{display:grid;place-items:center;gap:16px}
-    .wheel-box{
-      position:relative;
-      width:min(72vw,460px);
-      aspect-ratio:1/1;
-      margin-inline:auto;
-      justify-self:center;
-    }
-    .pointer{position:absolute;left:50%;top:-2px;transform:translateX(-50%);width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;border-top:0;border-bottom:34px solid #7d121f;z-index:3;filter:drop-shadow(0 8px 10px rgba(0,0,0,.22))}
-    canvas{width:100%;height:100%;display:block;margin-inline:auto}
-    .spin-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:96px;height:96px;border-radius:50%;border:8px solid rgba(255,255,255,.8);background:linear-gradient(180deg,#2d2016,#111);color:#f3e3a6;font-weight:900;display:grid;place-items:center;box-shadow:0 20px 30px rgba(0,0,0,.18);cursor:pointer;z-index:2}
-    .result{display:grid;gap:10px;width:100%}
-    .result-card{padding:14px;border-radius:18px;background:#fff;border:1px solid var(--line)}
-    .status{min-height:1.3em;font-weight:700;color:#7d121f;text-align:center}
-    .legend{display:grid;gap:8px;max-height:520px;overflow:auto}
-    .legend-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 12px;border-radius:14px;background:#fff;border:1px solid var(--line);transition:all .18s ease}
-    .legend-row small{color:var(--muted)}
-    .legend-row.is-hot{border-color:rgba(125,18,31,.45);background:linear-gradient(180deg,#fff7ea,#fff0c6);box-shadow:0 0 0 2px rgba(125,18,31,.08) inset,0 8px 18px rgba(125,18,31,.10)}
-    dialog{border:none;border-radius:24px;padding:0;max-width:520px;width:min(92vw,520px);background:#fffaf3;box-shadow:0 22px 60px rgba(0,0,0,.25)}
-    dialog::backdrop{background:rgba(0,0,0,.35)}
-    .modal-card{padding:20px 22px}
-    .modal-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,sans-serif;background:linear-gradient(180deg,#f5efe6,#ece2d2);color:var(--ink)}
+    .page{max-width:1280px;margin:0 auto;padding:24px 16px 44px}.shell{background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.8);border-radius:30px;padding:20px;box-shadow:0 18px 40px rgba(0,0,0,.06)}
+    .top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}.title{font-size:clamp(2rem,4vw,3.2rem);letter-spacing:-.05em;margin:0}.small{font-size:12px;color:var(--muted)}
+    .btn,a.btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:16px;border:1px solid var(--line);background:#17130f;color:#fff;text-decoration:none;font-weight:800;cursor:pointer}.btn.secondary{background:#fff;color:#17130f}
+    .layout{display:grid;grid-template-columns:minmax(360px,520px) minmax(320px,1fr);gap:20px;margin-top:20px;align-items:start}.panel{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:18px}
+    .wheel-wrap{display:grid;place-items:center;gap:16px}.wheel-box{position:relative;width:min(78vw,520px);aspect-ratio:1/1}.pointer{position:absolute;left:50%;top:-2px;transform:translateX(-50%);width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;border-top:0;border-bottom:34px solid #7d121f;z-index:3;filter:drop-shadow(0 8px 10px rgba(0,0,0,.22))}
+    canvas{width:100%;height:100%;display:block}.spin-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:108px;height:108px;border-radius:50%;border:8px solid rgba(255,255,255,.8);background:linear-gradient(180deg,#2d2016,#111);color:#f3e3a6;font-weight:900;display:grid;place-items:center;box-shadow:0 20px 30px rgba(0,0,0,.18);cursor:pointer;z-index:2}.wheel-glow{filter:drop-shadow(0 0 18px rgba(243,227,166,.75))}
+    .result{display:grid;gap:10px}.result-card{padding:14px;border-radius:18px;background:#fff;border:1px solid var(--line)}.status{min-height:1.3em;font-weight:700;color:#7d121f}
+    .legend{display:grid;gap:8px;max-height:520px;overflow:auto}.legend-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 12px;border-radius:14px;background:#fff;border:1px solid var(--line);transition:all .18s ease}.legend-row small{color:var(--muted)}.legend-row.is-hot{border-color:rgba(125,18,31,.45);background:linear-gradient(180deg,#fff7ea,#fff0c6);box-shadow:0 0 0 2px rgba(125,18,31,.08) inset,0 8px 18px rgba(125,18,31,.10)}
+    dialog{border:none;border-radius:24px;padding:0;max-width:520px;width:min(92vw,520px);background:#fffaf3;box-shadow:0 22px 60px rgba(0,0,0,.25)} dialog::backdrop{background:rgba(0,0,0,.35)} .modal-card{padding:20px 22px}.modal-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
     input,select{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:#fff;font:inherit;margin-top:8px}
-    .workflow-stack{display:grid;gap:18px}
-    .workflow-panel{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:18px}
-    .workflow-list{display:grid;gap:10px}
-    .workflow-item{padding:12px 14px;border-radius:16px;background:#fff;border:1px solid var(--line)}
-    .workflow-item strong{display:block}
-    .workflow-item .small{display:block;margin-top:4px}
-    .next-step-box{padding:14px;border-radius:18px;background:linear-gradient(180deg,#fff8ea,#fff0c6);border:1px solid rgba(154,130,65,.25)}
-    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}
-    @media(max-width:980px){
-      .layout{grid-template-columns:1fr;justify-items:center}
-      .layout > *{width:100%;max-width:540px;margin-inline:auto}
-      .wheel-box{width:min(84vw,420px)}
-    }
-    @media(max-width:760px){
-      .page{padding:12px 10px 28px}
-      .shell{padding:14px}
-      .rad-heading{display:none}
-      .top{justify-content:center}
-      .rad-top-actions{justify-content:center;width:100%}
-      .layout{margin-top:12px;justify-items:center}
-      .panel,.workflow-panel{width:100%;max-width:520px;margin-inline:auto}
-      .wheel-wrap,.result,.status{align-items:center;text-align:center}
-      .legend-row,.workflow-item,.result-card{justify-items:center;text-align:center}
-      .wheel-box{width:min(calc(100vw - 32px),380px);margin-inline:auto;justify-self:center}
-      .wheel-wrap{justify-items:center}
-      canvas{margin-inline:auto;display:block}
-    }
+    @media(max-width:980px){.layout{grid-template-columns:1fr}.wheel-box{width:min(88vw,460px)}}
   </style>
 </head>
 <body>
 <div class="page"><div class="shell">
-  <div class="top"><div class="rad-heading"><div class="small">Wheel of fortune</div><h1 class="title">Caute Rad</h1><div class="small">Spin het rad. Lichtere straffen hebben een hogere kans. Zwaardere ellende is zeldzamer.</div></div><div style="display:flex;gap:10px;flex-wrap:wrap" class="rad-top-actions"><a class="btn secondary" id="homeLink" href="./index.html">Home</a><a class="btn secondary" id="drinksLink" href="./drinks_add.html">Drinks</a><a class="btn secondary" id="radStatsLink" href="./rad_stats.html">Stats</a></div></div>
+  <div class="top"><div><div class="small">Wheel of fortune</div><h1 class="title">Caute Rad</h1><div class="small">Spin het rad. Lichtere straffen hebben een hogere kans. Zwaardere ellende is zeldzamer.</div></div><div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn secondary" href="./index.html">Home</a><a class="btn secondary" href="./drinks_add.html">Drinks</a></div></div>
   <div class="layout">
     <section class="panel wheel-wrap">
       <div class="wheel-box"><div class="pointer"></div><canvas id="wheelCanvas" width="800" height="800"></canvas><button class="spin-center" id="spinBtn" type="button">SPIN</button></div>
       <div class="status" id="statusBox"></div>
       <div class="result" id="resultBox"><div class="result-card">Nog niet gedraaid.</div></div>
     </section>
-    <div class="workflow-stack">
-      <section class="panel"><h2 style="margin-top:0">Segmenten</h2><div class="legend" id="legendBox"></div></section>
-      <section class="workflow-panel">
-        <h2 style="margin:0 0 10px">Workflow</h2>
-        <div class="next-step-box" id="nextStepBox">Draai het rad. Daarna zie je hier meteen wat jij nu moet doen.</div>
-        <div class="small" style="margin-top:12px">Recente draaien op dit apparaat</div>
-        <div class="workflow-list" id="spinHistoryBox"><div class="workflow-item"><strong>Nog geen spins</strong><span class="small">Je laatste rad-resultaten blijven hier lokaal zichtbaar.</span></div></div>
-      </section>
-    </div>
+    <section class="panel"><h2 style="margin-top:0">Segmenten</h2><div class="legend" id="legendBox"></div></section>
   </div>
 </div></div>
 <dialog id="nominationDialog"><div class="modal-card"><div class="modal-top"><h2 style="margin:0">Drink uitdelen</h2><button class="btn secondary" id="closeNominationBtn" type="button">Sluiten</button></div><div class="small">Kies een speler om de opdracht aan te geven. Voor zelf-drink segmenten wordt direct een eigen verzoek aangemaakt.</div><label style="display:block;font-weight:800;margin-top:14px">Speler</label><select id="nomineeSelect"></select><div class="small" id="nominationMeta" style="margin-top:10px"></div><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px"><button class="btn" id="submitNominationBtn" type="button">Opslaan</button><button class="btn secondary" id="cancelNominationBtn" type="button">Annuleer</button></div></div></dialog>
 <div class="site-credit-watermark" data-version-watermark></div>
 <script>
-(()=> {
-  function scopeValue(){
-    try{ if(window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope){ return window.GEJAST_SCOPE_UTILS.getScope(); } }catch(_){}
-    try{ return (new URLSearchParams(location.search).get('scope') || 'friends').toLowerCase() === 'family' ? 'family' : 'friends'; }catch(_){ return 'friends'; }
-  }
-  function scopedHref(path){
-    const url = new URL(path, window.location.href);
-    url.searchParams.set('scope', scopeValue());
-    return `${url.pathname.split('/').pop()}${url.search}`;
-  }
+(()=>{
   const SEGMENTS = [
     { label:'Snowboard adt', chance:8, type:'self', drinks:[['bier',1]], copy:'Chug een volle bak op je knieën.' },
     { label:'Shotje', chance:7, type:'self', drinks:[['shot',2]], copy:'Neem 2 shots + 1 upside down.' },
@@ -137,165 +62,41 @@
     { label:'Laat de groep een foto kiezen', chance:5, type:'social', copy:'Like die foto of neem 4 slokken.' },
     { label:'Post story camera roll', chance:4, type:'social', copy:'Zonder caption. Fail = 3 shots.' },
     { label:'Caute', chance:10, type:'special', copy:'Skip je volgende drink; rechts van je neemt er 4.' },
-    { label:'Despinoza', chance:8, type:'special', copy:'Iedereen 1, behalve jij; jij kiest +2 extra.' },
+    { label:"Despinoza", chance:8, type:'special', copy:'Iedereen 1, behalve jij; jij kiest +2 extra.' },
     { label:'Double penalty', chance:3, type:'special', copy:'Spin opnieuw en verdubbel het resultaat.' }
   ];
   const colors=['#efe2c6','#d9c39b','#c79d63','#b47a3f','#8f5925','#f5e8ce','#e5d5b1','#d7bc83'];
-  const canvas=document.getElementById('wheelCanvas');
-  const ctx=canvas.getContext('2d');
-  const spinBtn=document.getElementById('spinBtn');
-  const resultBox=document.getElementById('resultBox');
-  const statusBox=document.getElementById('statusBox');
-  const nomDlg=document.getElementById('nominationDialog');
-  const nomineeSelect=document.getElementById('nomineeSelect');
-  let currentAngle=-Math.PI/2, spinning=false, selectedSegment=null, highlightedIndex=-1;
-  document.getElementById('homeLink').href = scopedHref('./index.html');
-  document.getElementById('drinksLink').href = scopedHref('./drinks_add.html');
-  document.getElementById('radStatsLink').href = scopedHref('./rad_stats.html');
-
+  const canvas=document.getElementById('wheelCanvas'); const ctx=canvas.getContext('2d'); const spinBtn=document.getElementById('spinBtn'); const resultBox=document.getElementById('resultBox'); const statusBox=document.getElementById('statusBox');
+  const nomDlg=document.getElementById('nominationDialog'); const nomineeSelect=document.getElementById('nomineeSelect'); let currentAngle=-Math.PI/2, spinning=false, selectedSegment=null, highlightedIndex=-1, audioCtx=null, lastTickAt=0; let wheelVelocity=0;
   function totalChance(){ return SEGMENTS.reduce((s,x)=>s+x.chance,0); }
-  function wrapText(text, x, y, maxWidth, lineHeight){
-    const words=text.split(' ');
-    let line=''; let yy=y;
-    for(const word of words){
-      const test=line?line+' '+word:word;
-      if(ctx.measureText(test).width>maxWidth && line){ ctx.fillText(line, x, yy); line=word; yy+=lineHeight; }
-      else line=test;
-    }
-    if(line) ctx.fillText(line, x, yy);
+  function syncLegendHighlight(){ document.querySelectorAll('#legendBox .legend-row').forEach((row)=>{ const hot = highlightedIndex >= 0 && row.dataset.seg === SEGMENTS[highlightedIndex].label; row.classList.toggle('is-hot', !!hot); }); }
+  function draw(){ const total=totalChance(); const cx=400, cy=400, r=370; ctx.clearRect(0,0,800,800); let start=currentAngle; SEGMENTS.forEach((seg,idx)=>{ const arc=(seg.chance/total)*Math.PI*2; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,start+arc); ctx.closePath(); const isHot = idx===highlightedIndex; ctx.fillStyle=isHot ? '#f6e7b2' : colors[idx%colors.length]; ctx.fill(); ctx.lineWidth=isHot ? 10 : 4; ctx.strokeStyle=isHot ? 'rgba(125,18,31,.85)' : 'rgba(23,19,15,.18)'; ctx.stroke(); if(isHot){ ctx.save(); ctx.shadowColor='rgba(243,227,166,.95)'; ctx.shadowBlur=30; ctx.stroke(); ctx.restore(); } ctx.save(); ctx.translate(cx,cy); const mid=start+arc/2; ctx.rotate(mid); ctx.textAlign='right'; ctx.fillStyle='#2c2117'; ctx.font=isHot ? '800 20px Inter, system-ui, sans-serif' : '700 19px Inter, system-ui, sans-serif'; wrapText(seg.label+` (${seg.chance}%)`, r-26, 0, 200, 22); ctx.restore(); start+=arc; });
+      ctx.beginPath(); ctx.arc(cx,cy,130,0,Math.PI*2); ctx.fillStyle='rgba(255,250,243,.9)'; ctx.fill(); ctx.lineWidth=8; ctx.strokeStyle='rgba(23,19,15,.12)'; ctx.stroke();
+      ctx.fillStyle='#6d5123'; ctx.font='900 36px Georgia, serif'; ctx.textAlign='center'; ctx.fillText('CAUTE', cx, cy-6); ctx.font='800 18px Inter, system-ui, sans-serif'; ctx.fillText('RAD', cx, cy+26);
+      syncLegendHighlight();
   }
-  function pointerIndex(){
-    const total=totalChance();
-    let start=currentAngle;
-    const pointer=-Math.PI/2;
-    for(let idx=0; idx<SEGMENTS.length; idx++){
-      const arc=(SEGMENTS[idx].chance/total)*Math.PI*2;
-      let s=((start%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
-      let e=(((start+arc)%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
-      let p=((pointer%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
-      const inside = s<e ? (p>=s && p<e) : (p>=s || p<e);
-      if(inside) return idx;
-      start+=arc;
-    }
-    return -1;
+  function wrapText(text, x, y, maxWidth, lineHeight){ const words=text.split(' '); let line=''; let yy=y; for(const word of words){ const test=line?line+' '+word:word; if(ctx.measureText(test).width>maxWidth && line){ ctx.fillText(line, x, yy); line=word; yy+=lineHeight; } else line=test; } if(line) ctx.fillText(line, x, yy); }
+  function weightedPick(){ const total=totalChance(); let n=Math.random()*total; for(const seg of SEGMENTS){ n-=seg.chance; if(n<=0) return seg; } return SEGMENTS[SEGMENTS.length-1]; }
+
+  function ensureAudio(){ if(audioCtx) return audioCtx; const Ctx=window.AudioContext||window.webkitAudioContext; if(!Ctx) return null; audioCtx=new Ctx(); return audioCtx; }
+  function playTick(intense=false){ const ctxAudio=ensureAudio(); if(!ctxAudio) return; const now=ctxAudio.currentTime; const osc=ctxAudio.createOscillator(); const gain=ctxAudio.createGain(); osc.type='square'; osc.frequency.value=intense?980:720; gain.gain.setValueAtTime(0.0001, now); gain.gain.exponentialRampToValueAtTime(intense?0.05:0.03, now+0.005); gain.gain.exponentialRampToValueAtTime(0.0001, now+0.06); osc.connect(gain).connect(ctxAudio.destination); osc.start(now); osc.stop(now+0.07); }
+  function pointerIndex(){ const total=totalChance(); let start=currentAngle; const pointer=-Math.PI/2; for(let idx=0; idx<SEGMENTS.length; idx++){ const arc=(SEGMENTS[idx].chance/total)*Math.PI*2; let s=((start%(Math.PI*2))+Math.PI*2)%(Math.PI*2); let e=(((start+arc)%(Math.PI*2))+Math.PI*2)%(Math.PI*2); let p=((pointer%(Math.PI*2))+Math.PI*2)%(Math.PI*2); const inside = s<e ? (p>=s && p<e) : (p>=s || p<e); if(inside) return idx; start+=arc; } return -1; }
+
+  async function spin(){ if(spinning) return; if(ensureAudio() && audioCtx.state==='suspended'){ try{ await audioCtx.resume(); }catch(_){} } spinning=true; highlightedIndex=-1; statusBox.textContent='Het rad draait...'; selectedSegment=weightedPick(); const total=totalChance(); let prefix=0; let arc=0; let targetIndex=0; for(let i=0;i<SEGMENTS.length;i++){ const seg=SEGMENTS[i]; arc=(seg.chance/total)*Math.PI*2; if(seg===selectedSegment){ targetIndex=i; break; } prefix+=arc; } const pointer=-Math.PI/2; const normalizedTarget = pointer - (prefix + arc/2); const startAngle=currentAngle; let finalAngle = normalizedTarget; while(finalAngle <= startAngle + Math.PI*10){ finalAngle += Math.PI*2; } finalAngle += Math.PI*4; const startTime=performance.now(); const duration=11800; function easeOutQuint(t){ return 1 - Math.pow(1-t, 5); } function frame(now){ const t=Math.min(1,(now-startTime)/duration); const eased=easeOutQuint(t); currentAngle = startAngle + (finalAngle-startAngle)*eased; const idx=pointerIndex(); if(idx!==highlightedIndex){ highlightedIndex=idx; const dt=now-lastTickAt; if(dt>22){ playTick(t>0.88 || idx===targetIndex); lastTickAt=now; } } draw(); if(t<1){ requestAnimationFrame(frame); } else { currentAngle=finalAngle; highlightedIndex=pointerIndex(); draw(); spinning=false; onLanded(SEGMENTS[highlightedIndex] || selectedSegment); } } requestAnimationFrame(frame); }
+  async function onLanded(seg){ statusBox.textContent='Gelukt.'; resultBox.innerHTML=`<div class="result-card"><strong>${seg.label}</strong><div class="small" style="margin-top:6px">${seg.copy}</div><div class="small" style="margin-top:6px">Kans: ${seg.chance}%</div></div>`; if(seg.type==='self' && window.GEJAST_DRINKS_WORKFLOW && Array.isArray(seg.drinks)){ let created=0; for(const [key,qty] of seg.drinks){ try{ await window.GEJAST_DRINKS_WORKFLOW.createDrinkEvent({ event_type_key:key, quantity:qty }); created += qty; }catch(_){ } } if(created){ statusBox.textContent=`Eigen drinkverzoek aangemaakt voor ${seg.label}.`; } }
+    if(seg.type==='target'){ openNomination(seg); }
   }
-  function syncLegendHighlight(){
-    document.querySelectorAll('#legendBox .legend-row').forEach((row)=>{
-      const hot = highlightedIndex >= 0 && row.dataset.seg === SEGMENTS[highlightedIndex].label;
-      row.classList.toggle('is-hot', !!hot);
-    });
+  async function openNomination(seg){ selectedSegment=seg; nomineeSelect.innerHTML=''; try{ const cfg=window.GEJAST_CONFIG||{}; const headers={'Content-Type':'application/json',apikey:cfg.SUPABASE_PUBLISHABLE_KEY||'',Authorization:`Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY||''}`,Accept:'application/json'}; const res=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/get_requestable_names_scoped`,{method:'POST',headers,body:JSON.stringify({ site_scope_input:'friends' })}); const data=await res.json().catch(()=>[]); const rows=Array.isArray(data)?data:(Array.isArray(data?.names)?data.names:[]); const names=rows.map((row)=>typeof row==='string'?row:(row.display_name||row.player_name||row.name||'')).filter(Boolean); nomineeSelect.innerHTML=names.map((n)=>`<option value="${String(n).replace(/"/g,'&quot;')}">${n}</option>`).join(''); }catch(_){ nomineeSelect.innerHTML='<option value="">Geen spelers gevonden</option>'; }
+    document.getElementById('nominationMeta').textContent = `${seg.label} gekozen. Kies wie dit moet doen.`;
+    nomDlg.showModal();
   }
-  function draw(){
-    const total=totalChance();
-    const cx=400, cy=400, r=370;
-    ctx.clearRect(0,0,800,800);
-    let start=currentAngle;
-    SEGMENTS.forEach((seg,idx)=>{
-      const arc=(seg.chance/total)*Math.PI*2;
-      ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,start+arc); ctx.closePath();
-      const isHot = idx===highlightedIndex;
-      ctx.fillStyle=isHot ? '#f6e7b2' : colors[idx%colors.length];
-      ctx.fill();
-      ctx.lineWidth=isHot ? 10 : 4;
-      ctx.strokeStyle=isHot ? 'rgba(125,18,31,.85)' : 'rgba(23,19,15,.18)';
-      ctx.stroke();
-      ctx.save();
-      ctx.translate(cx,cy);
-      const mid=start+arc/2;
-      ctx.rotate(mid);
-      ctx.textAlign='right';
-      ctx.fillStyle='#2c2117';
-      ctx.font=isHot ? '800 20px Inter, system-ui, sans-serif' : '700 19px Inter, system-ui, sans-serif';
-      wrapText(seg.label+` (${seg.chance}%)`, r-26, 0, 200, 22);
-      ctx.restore();
-      start+=arc;
-    });
-    ctx.beginPath(); ctx.arc(cx,cy,130,0,Math.PI*2); ctx.fillStyle='rgba(255,250,243,.9)'; ctx.fill(); ctx.lineWidth=8; ctx.strokeStyle='rgba(23,19,15,.12)'; ctx.stroke();
-    ctx.fillStyle='#6d5123'; ctx.font='900 36px Georgia, serif'; ctx.textAlign='center'; ctx.fillText('CAUTE', cx, cy-6); ctx.font='800 18px Inter, system-ui, sans-serif'; ctx.fillText('RAD', cx, cy+26);
-    syncLegendHighlight();
-  }
-  function weightedPick(){
-    const total=totalChance(); let n=Math.random()*total;
-    for(const seg of SEGMENTS){ n-=seg.chance; if(n<=0) return seg; }
-    return SEGMENTS[SEGMENTS.length-1];
-  }
-  function rememberSpin(seg){
-    const key='gejast_rad_history_v564';
-    let rows=[];
-    try{ rows=JSON.parse(localStorage.getItem(key)||'[]'); if(!Array.isArray(rows)) rows=[]; }catch(_){ rows=[]; }
-    rows.unshift({ label:seg.label, copy:seg.copy, at:new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'}) });
-    try{ localStorage.setItem(key, JSON.stringify(rows.slice(0,8))); }catch(_){}
-    renderSpinHistory();
-  }
-  function renderSpinHistory(){
-    const box=document.getElementById('spinHistoryBox');
-    const key='gejast_rad_history_v564';
-    let rows=[];
-    try{ rows=JSON.parse(localStorage.getItem(key)||'[]'); if(!Array.isArray(rows)) rows=[]; }catch(_){ rows=[]; }
-    if(!rows.length){
-      box.innerHTML='<div class="workflow-item"><strong>Nog geen spins</strong><span class="small">Je laatste rad-resultaten blijven hier lokaal zichtbaar.</span></div>';
-      return;
-    }
-    box.innerHTML=rows.map((row)=>`<div class="workflow-item"><strong>${row.label}</strong><span class="small">${row.copy}</span><span class="small">${row.at}</span></div>`).join('');
-  }
-  function updateNextStep(seg, targetMode){
-    const el=document.getElementById('nextStepBox');
-    if(!seg){ el.textContent='Draai het rad. Daarna zie je hier meteen wat jij nu moet doen.'; return; }
-    if(targetMode){ el.textContent=`${seg.label}: kies nu een speler en sla de uitdeel-opdracht op.`; return; }
-    el.textContent = seg.copy || 'Resultaat geladen.';
-  }
-  function onLanded(seg){
-    statusBox.textContent='Gelukt.';
-    resultBox.innerHTML=`<div class="result-card"><strong>${seg.label}</strong><div class="small" style="margin-top:6px">${seg.copy}</div><div class="small" style="margin-top:6px">Kans: ${seg.chance}%</div></div>`;
-    rememberSpin(seg);
-    updateNextStep(seg, seg.type==='target');
-    if(seg.type==='target'){
-      selectedSegment=seg;
-      nomineeSelect.innerHTML='<option value="">Nog geen spelers geladen</option>';
-      document.getElementById('nominationMeta').textContent = `${seg.label} gekozen. Kies wie dit moet doen.`;
-      nomDlg.showModal();
-    }
-  }
-  function spin(){
-    if(spinning) return;
-    spinning=true;
-    highlightedIndex=-1;
-    statusBox.textContent='Het rad draait...';
-    selectedSegment=weightedPick();
-    const total=totalChance();
-    let prefix=0; let arc=0;
-    for(let i=0;i<SEGMENTS.length;i++){ const seg=SEGMENTS[i]; arc=(seg.chance/total)*Math.PI*2; if(seg===selectedSegment){ break; } prefix+=arc; }
-    const pointer=-Math.PI/2;
-    const normalizedTarget = pointer - (prefix + arc/2);
-    const startAngle=currentAngle;
-    let finalAngle = normalizedTarget;
-    while(finalAngle <= startAngle + Math.PI*10){ finalAngle += Math.PI*2; }
-    finalAngle += Math.PI*4;
-    const startTime=performance.now();
-    const duration=9000;
-    function easeOutQuint(t){ return 1 - Math.pow(1-t, 5); }
-    function frame(now){
-      const t=Math.min(1,(now-startTime)/duration);
-      const eased=easeOutQuint(t);
-      currentAngle = startAngle + (finalAngle-startAngle)*eased;
-      highlightedIndex=pointerIndex();
-      draw();
-      if(t<1){ requestAnimationFrame(frame); }
-      else { currentAngle=finalAngle; highlightedIndex=pointerIndex(); draw(); spinning=false; onLanded(SEGMENTS[highlightedIndex] || selectedSegment); }
-    }
-    requestAnimationFrame(frame);
-  }
+  document.getElementById('submitNominationBtn').addEventListener('click', ()=>{ const target=nomineeSelect.value||''; statusBox.textContent = target ? `Uitdeel-opdracht opgeslagen voor ${target}.` : 'Geen speler gekozen.'; nomDlg.close(); });
+  document.getElementById('cancelNominationBtn').addEventListener('click', ()=>nomDlg.close()); document.getElementById('closeNominationBtn').addEventListener('click', ()=>nomDlg.close());
   spinBtn.addEventListener('click', spin);
-  document.getElementById('cancelNominationBtn').addEventListener('click', ()=>nomDlg.close());
-  document.getElementById('closeNominationBtn').addEventListener('click', ()=>nomDlg.close());
-  document.getElementById('submitNominationBtn').addEventListener('click', ()=>nomDlg.close());
   const legendRows = [...SEGMENTS].sort((a,b)=>Number(b.chance||0)-Number(a.chance||0));
   document.getElementById('legendBox').innerHTML = legendRows.map((seg)=>`<div class="legend-row" data-seg="${String(seg.label).replace(/"/g,'&quot;')}"><div><strong>${seg.label}</strong><small style="display:block;margin-top:4px">${seg.copy}</small></div><strong>${seg.chance}%</strong></div>`).join('');
-  renderSpinHistory();
-  updateNextStep(null,false);
   draw();
 })();
 </script>
-<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>

@@ -7,11 +7,11 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Boerenbridge Scoreformulier</title>
-  <script>window.GEJAST_PAGE_VERSION='v491';</script><script src="./gejast-config.js?v491"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-home-gate.js?v372"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('boerenbridge');</script>
+  <script>window.GEJAST_PAGE_VERSION='v615';</script><script src="./gejast-config.js?v615"></script><script src="./gejast-family-rollout.js?v615"></script><script src="./gejast-home-gate.js?v615"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('boerenbridge');</script>
   <style>
     :root {
       --gold:#9a8241; --gold-dark:#8a7338; --ink:#121212; --muted:#666056; --panel:rgba(255,250,242,.88); --panel-line:rgba(17,17,17,.08);
-      --bg:linear-gradient(rgba(244,240,232,.76),rgba(244,240,232,.76)), url('./site-bg-desktop.webp') center/cover no-repeat fixed;
+      --bg:linear-gradient(rgba(244,240,232,.76),rgba(244,240,232,.76)), url('./site-bg-desktop.webp') center/cover no-repeat scroll;
     }
     *{box-sizing:border-box} html,body{min-height:100%}
     body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--ink)}
@@ -63,7 +63,7 @@
     .hint{font-size:12px;color:#71695e}.hint.warn{color:#9e3328;font-weight:800}.rules-copy{white-space:pre-wrap;font-size:14px;line-height:1.55;color:#2d2a26;background:#fbf7ef;border:1px solid rgba(17,17,17,.08);border-radius:18px;padding:14px;max-height:58vh;overflow:auto}
     .hidden{display:none!important}
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);backdrop-filter:blur(6px);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,.18)}
-    @media (max-width:760px){:root{--bg:linear-gradient(rgba(244,240,232,.68),rgba(244,240,232,.68)), url('./site-bg-mobile.webp') center/cover no-repeat fixed}.scene .left-hand{width:min(43vw,210px);left:-8px;bottom:10%;opacity:.76}.scene .right-card{width:min(36vw,180px);right:-8px;bottom:13%;opacity:.7}.sheet{background:rgba(255,252,247,.58)}.topbar{padding:16px 14px 10px}.title-wrap h1{font-size:clamp(1.7rem,8vw,2.2rem)}.page{padding:10px 10px 88px}.summary-card,.footer-actions,.status{padding-left:12px;padding-right:12px}.footer-actions{display:grid;grid-template-columns:1fr 1fr}.footer-actions button{width:100%}.grid,.setup-grid,.round-grid{grid-template-columns:1fr}.setup-grid .field.span-2{grid-column:auto}.modal{padding:16px;border-radius:24px}.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
+    @media (max-width:760px){:root{--bg:linear-gradient(rgba(244,240,232,.68),rgba(244,240,232,.68)), url('./site-bg-mobile.webp') center/cover no-repeat scroll}.scene .left-hand{width:min(43vw,210px);left:-8px;bottom:10%;opacity:.76}.scene .right-card{width:min(36vw,180px);right:-8px;bottom:13%;opacity:.7}.sheet{background:rgba(255,252,247,.58)}.topbar{padding:16px 14px 10px}.title-wrap h1{font-size:clamp(1.7rem,8vw,2.2rem)}.page{padding:10px 10px 88px}.summary-card,.footer-actions,.status{padding-left:12px;padding-right:12px}.footer-actions{display:grid;grid-template-columns:1fr 1fr}.footer-actions button{width:100%}.grid,.setup-grid,.round-grid{grid-template-columns:1fr}.setup-grid .field.span-2{grid-column:auto}.modal{padding:16px;border-radius:24px}.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
   </style>
 
   <style id="page-floating-logo-style">
@@ -72,7 +72,7 @@
     @media(max-width:640px){.page-floating-logo{top:12px;right:12px;width:58px;height:58px}.page-floating-logo img{width:46px;height:46px}}
   </style>
 </head>
-<body data-game-watermark="soft">
+<body>
   <a class="page-floating-logo" href="./index.html" aria-label="Terug naar home"><img src="./logo.png" alt="Logo"></a>
   <div class="floating-head-wrap" id="stickyHeadWrap"><div class="floating-head-viewport"><div class="sticky-head-grid" id="stickyHeadGrid"></div></div></div>
   <div class="scene" aria-hidden="true"><div class="left-hand"><img src="./kale9goed.png" style="width:100%;display:block" alt="" /></div><div class="right-card"><img src="./playingcard-accent1-trimmed.png" style="width:100%;display:block" alt="" /></div></div>
@@ -84,7 +84,7 @@
   <div class="overlay" id="bidOverlay"><div class="modal"><h2 id="bidModalTitle">Biedingen</h2><p id="bidModalCopy">Vul de biedingen in. De deler biedt als laatste en mag het totaal niet exact op het aantal slagen laten uitkomen.</p><div class="hint" id="bidModalHint"></div><div class="round-grid" id="bidPlayerCards"></div><div class="modal-footer"><button class="ghost-btn" id="bidCancelBtn" type="button">Sluiten</button><button class="gold-btn" id="bidSaveBtn" type="button">Biedingen opslaan</button></div></div></div>
   <div class="overlay" id="wonOverlay"><div class="modal"><h2 id="wonModalTitle">Gewonnen slagen invullen</h2><p id="wonModalCopy">Na het spelen vul je per speler in hoeveel slagen echt gewonnen zijn.</p><div class="hint" id="wonModalHint"></div><div class="round-grid" id="wonPlayerCards"></div><div class="modal-footer"><button class="ghost-btn" id="wonCancelBtn" type="button">Sluiten</button><button class="gold-btn" id="wonSaveBtn" type="button">Ronde opslaan</button></div></div></div>
   <div class="overlay" id="rulesOverlay"><div class="modal"><h2>Regels</h2><p>Deze uitleg komt rechtstreeks uit het meegeleverde Boerenbridge-regelbestand.</p><div class="rules-copy" id="rulesCopy"></div><div class="modal-footer"><button class="dark-btn" id="rulesCloseBtn" type="button">Sluiten</button></div></div></div>
-  <div class="site-credit-watermark" data-version-watermark id="watermark" data-version-watermark>v491 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark id="watermark" data-version-watermark>v411 · Made by Bruis</div>
   <script>
     const APP_VERSION = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.VERSION) || 'v107';
     const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || '';
@@ -271,7 +271,7 @@ Per speler per ronde zichtbaar houden:
 </style>
 <a class="manage-match-chip" href="./match_control.html?game=boerenbridge">✎ <span>Beheer wedstrijden<br><small>Eigen inzendingen / admin</small></span></a>
 
-<script src="./gejast-live-sync.js?v407"></script>
+<script src="./gejast-live-sync.js?v615"></script>
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>

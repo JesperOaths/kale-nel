@@ -5,26 +5,20 @@
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Spelersprofielen</title>
-  <script>window.GEJAST_PAGE_VERSION='v503';</script>
-  <script src="./gejast-config.js?v503"></script>
-  <script src="./gejast-clickable-cards.js?v503"></script>
-  <script src="./gejast-scope-context.js?v503"></script>
-  <script src="./gejast-family-rollout.js?v503"></script>
-  <script src="./gejast-scope.js?v503"></script>
-  <script src="./gejast-home-gate.js?v503"></script>
-  <script src="./gejast-badges.js?v503"></script>
-  <script src="./gejast-badge-progress.js?v503"></script>
-  <script src="./gejast-rpc-contract.js?v503"></script>
-  <script src="./gejast-profile-source.js?v503"></script>
+  <script>window.GEJAST_PAGE_VERSION='v615';</script>
+  <script src="./gejast-config.js?v615"></script>
+  <script src="./gejast-home-gate.js?v615"></script>
+  <script defer src="./gejast-clickable-cards.js?v615"></script>
+  <script defer src="./gejast-scope-context.js?v615"></script><script defer src="./gejast-family-rollout.js?v615"></script>
   <style>
     :root{--gold:#d4af37;--ink:#1b1711;--paper:rgba(255,250,243,.92);--line:#e0d6c6;--muted:#6f665e;--soft:#fbf7ef}
     *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:linear-gradient(rgba(247,244,238,.84),rgba(247,244,238,.84)),url('./wordtergejast.png') center/cover fixed}
-    .page{width:min(1180px,100%);margin:0 auto;padding:20px 14px calc(96px + env(safe-area-inset-bottom,0px))}
+    body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:linear-gradient(rgba(247,244,238,.84),rgba(247,244,238,.84)),url('./wordtergejast.png') center/cover scroll}
+    .page{width:min(1180px,100%);margin:0 auto;padding:20px 14px 90px}
     .sheet{background:var(--paper);border:1px solid rgba(17,17,17,.08);border-radius:28px;box-shadow:0 20px 40px rgba(0,0,0,.09);overflow:hidden}
-    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line)}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid var(--line)}
     .top h1{margin:0;font-size:clamp(28px,5vw,40px)}
     .top p{margin:4px 0 0;color:var(--muted)}
     .back{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:none;cursor:pointer}
@@ -41,10 +35,35 @@
     .stat{background:var(--soft);border:1px solid rgba(17,17,17,.06);border-radius:16px;padding:10px;text-align:center;min-width:0}
     .stat strong{display:block;font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .stat span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+    .badge-strip{display:grid;gap:8px}
+    .badge-kicker{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}
+    .badge-note{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .badge-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:#111;color:#fff;font-size:12px;font-weight:800;max-width:100%}
+    .badge-pill img{width:22px;height:22px;object-fit:contain;border-radius:8px;background:#fff6de;padding:2px}
+    .badge-mini-row{display:flex;flex-wrap:wrap;gap:8px}
+    .mini-chip{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:14px;background:#fff7e4;border:1px solid rgba(17,17,17,.08);padding:4px;box-shadow:0 8px 18px rgba(0,0,0,.06)}
+    .mini-chip img{width:100%;height:100%;object-fit:contain}
     .bio{font-size:14px;line-height:1.45;color:#3d3429}
-    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none;max-width:min(calc(100vw - 24px),560px);text-align:center}
-    @media (max-width:760px){.page{padding:14px 12px calc(104px + env(safe-area-inset-bottom,0px))}.top{flex-direction:column;align-items:stretch}.back{width:100%}.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.head{grid-template-columns:64px minmax(0,1fr)}.avatar{width:64px;height:64px}}
+    .gallery-sheet{margin-top:16px}
+    .badge-gallery-wrap{padding:18px;display:grid;gap:16px}
+    .rarity-grid{display:grid;grid-template-columns:1fr;gap:16px}
+    .rarity-col{background:#fff;border:1px solid rgba(17,17,17,.08);border-radius:20px;padding:16px;display:grid;gap:12px;align-content:start;width:100%}
+    .rarity-col h3{margin:0;font-size:18px}
+    .rarity-col p{margin:0;color:var(--muted);font-size:13px}
+    .rarity-pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;background:#f5efe0;color:#70571b;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;width:max-content}
+    .rarity-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .rarity-badge{display:grid;grid-template-columns:56px minmax(0,1fr);gap:10px;align-items:start;padding:10px;border-radius:16px;background:var(--soft);border:1px solid rgba(17,17,17,.06)}
+    .rarity-badge img{width:56px;height:56px;object-fit:contain;border-radius:14px;background:#fffaf1;border:1px solid rgba(17,17,17,.08);padding:6px}
+    .rarity-badge strong{display:block;font-size:14px}
+    .rarity-badge small{display:block;font-size:12px;color:var(--muted);line-height:1.4;margin-top:3px}.rarity-requirement{display:block;font-size:12px;color:#3d3429;line-height:1.45;margin-top:6px}
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}.card.skeleton{pointer-events:none}.skeleton .avatar,.skeleton .line,.skeleton .stat strong,.skeleton .mini-chip{background:linear-gradient(90deg,#f0eadf 25%,#faf6ef 50%,#f0eadf 75%);background-size:200% 100%;animation:profilePulse 1.2s ease-in-out infinite}.skeleton .line{height:12px;border-radius:999px}.skeleton .line.big{height:20px;width:70%}.skeleton .line.small{width:50%}.skeleton .bio{height:44px;border-radius:16px;background:linear-gradient(90deg,#f0eadf 25%,#faf6ef 50%,#f0eadf 75%);background-size:200% 100%;animation:profilePulse 1.2s ease-in-out infinite;color:transparent}.skeleton .stat{background:#fbf7ef}.skeleton .stat strong{height:22px;border-radius:10px;color:transparent}.skeleton .badge-pill{background:#f3ecdd;color:transparent}.skeleton .mini-chip{border:none}.badges-section{display:grid;gap:8px}.badge-accordion{border:1px solid rgba(17,17,17,.08);border-radius:16px;padding:10px 12px;background:#fbf7ef}.badge-accordion summary{cursor:pointer;font-weight:800}.badge-accordion[open]{background:#fff}.badge-accordion-list{display:grid;gap:8px;margin-top:10px}.badge-accordion-item{display:grid;grid-template-columns:36px minmax(0,1fr);gap:10px;align-items:start}.badge-accordion-item img{width:36px;height:36px;object-fit:contain;border-radius:10px;background:#fff7e4;border:1px solid rgba(17,17,17,.08);padding:4px}@keyframes profilePulse{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    @media (max-width:760px){.page{padding:14px 12px 90px}.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.head{grid-template-columns:64px minmax(0,1fr)}.avatar{width:64px;height:64px}}
   </style>
+  <script defer src="./gejast-scope.js?v615"></script>
+  <script defer src="./gejast-badges.js?v615"></script>
+  <script defer src="./gejast-badge-progress.js?v615"></script>
+  <script defer src="./gejast-rpc-contract.js?v615"></script>
+  <script defer src="./gejast-profile-source.js?v615"></script>
 </head>
 <body>
   <main class="page">
@@ -52,13 +71,14 @@
       <div class="top">
         <div>
           <h1>Spelers</h1>
-          <p>Alle actieve spelers uit de huidige scope.</p>
+          <p>Alle actieve spelers met profiel, badge-status en kernstats.</p>
         </div>
         <button class="back" type="button" onclick="if(history.length>1){history.back();}else{location.href='./index.html';}">Terug</button>
       </div>
       <div id="status" class="status">Laden…</div>
       <div id="grid" class="grid"></div>
     </section>
+    <section id="badgeGalleryPanel" class="sheet gallery-sheet"></section>
   </main>
   <div class="site-credit-watermark" data-version-watermark></div>
   <script>
@@ -67,6 +87,50 @@
       const scope = (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) || 'friends';
       const statusNode = document.getElementById('status');
       const gridNode = document.getElementById('grid');
+      const galleryNode = document.getElementById('badgeGalleryPanel');
+      const cacheKey = `gejast_profiles_cache_v615_${scope}`;
+      const cacheTtl = 10 * 60 * 1000;
+
+
+      function readCache(){
+        try {
+          const raw = sessionStorage.getItem(cacheKey);
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          if (!parsed?.at || (Date.now() - Number(parsed.at)) > cacheTtl) return null;
+          return parsed.value || null;
+        } catch (_) { return null; }
+      }
+      function writeCache(value){
+        try { sessionStorage.setItem(cacheKey, JSON.stringify({ at: Date.now(), value })); } catch (_) {}
+        return value;
+      }
+      function renderSkeletons(count=6){
+        gridNode.innerHTML = Array.from({ length: count }).map(() => `
+          <article class="card skeleton">
+            <div class="head">
+              <div class="avatar"></div>
+              <div>
+                <div class="line big"></div>
+                <div class="line small" style="margin-top:8px"></div>
+                <div class="line" style="margin-top:8px;width:80%"></div>
+              </div>
+            </div>
+            <div class="stats">
+              <div class="stat"><strong>&nbsp;</strong><span>Potjes</span></div>
+              <div class="stat"><strong>&nbsp;</strong><span>Win%</span></div>
+              <div class="stat"><strong>&nbsp;</strong><span>Beste ELO</span></div>
+              <div class="stat"><strong>&nbsp;</strong><span>Badges</span></div>
+            </div>
+            <div class="badge-strip">
+              <div class="badge-kicker">Badge-overzicht</div>
+              <div class="badge-note"><span class="badge-pill">Placeholder</span></div>
+              <div class="badge-mini-row"><span class="mini-chip"></span><span class="mini-chip"></span><span class="mini-chip"></span></div>
+            </div>
+            ${buildBadgeAccordion(attained)}
+            <div class="bio">placeholder</div>
+          </article>`).join('');
+      }
 
       function headers(){
         return {
@@ -76,6 +140,7 @@
           Accept: 'application/json'
         };
       }
+
       async function parseResponse(res){
         const text = await res.text();
         let data = null;
@@ -83,6 +148,7 @@
         if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
         return data;
       }
+
       async function callRpc(name, payload){
         const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
           method: 'POST',
@@ -94,16 +160,15 @@
         const raw = await parseResponse(res);
         return raw && raw[name] !== undefined ? raw[name] : raw;
       }
-      function normalizeName(value){ return String(value || '').trim().toLowerCase(); }
-      function displayName(player){
-        return player.nickname || player.chosen_username || player.public_display_name || player.display_name || player.player_name || 'Speler';
+
+      function normalizeName(value){
+        return String(value || '').trim().toLowerCase();
       }
-      function originalName(player){
-        return player.player_name || player.display_name || player.original_name || '';
-      }
+
       function initials(name){
         return String(name || '').split(/\s+/).filter(Boolean).slice(0, 2).map((value) => value[0]).join('').toUpperCase() || '?';
       }
+
       function avatarHtml(player){
         const helper = (window.GEJAST_PROFILE_SOURCE && typeof window.GEJAST_PROFILE_SOURCE.profileImageUrl === 'function'
           ? window.GEJAST_PROFILE_SOURCE.profileImageUrl
@@ -112,95 +177,86 @@
             : (value) => String(value || '').trim()));
         const src = helper(player.profile_picture_url || player.avatar_url || player.photo_url || '');
         const label = displayName(player);
-        return src
-          ? `<img class="avatar" src="${src}" alt="${label}" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML='&lt;div class=&quot;avatar initials&quot;&gt;${initials(label)}&lt;/div&gt;'">`
-          : `<div class="avatar initials">${initials(label)}</div>`;
+        return src ? `<img class="avatar" src="${src}" alt="${label}" loading="lazy" referrerpolicy="no-referrer" onerror="this.outerHTML='&lt;div class=&quot;avatar initials&quot;&gt;${initials(label)}&lt;/div&gt;'">` : `<div class="avatar initials">${initials(label)}</div>`;
       }
+
+      function displayName(player){
+        return player.nickname || player.chosen_username || player.public_display_name || player.display_name || player.player_name || 'Speler';
+      }
+
+      function originalName(player){
+        return player.player_name || player.display_name || player.original_name || '';
+      }
+
       function winPct(player){
         const matches = Number(player.total_matches || 0);
         if (!matches) return 0;
         return Math.round((Number(player.total_wins || 0) / matches) * 100);
       }
-      function mergePlayers(...sets){
+
+      function toMiniBadgeRow(attainedBadges){
+        const items = (Array.isArray(attainedBadges) ? attainedBadges : []).slice(0, 8);
+        if (!items.length) return '<div class="submeta">Nog geen badges behaald.</div>';
+        return `<div class="badge-mini-row">${items.map((badge)=>`<span class="mini-chip" title="${badge.title || badge.name}"><img src="${badge.imageMini48 || badge.image || ''}" alt="${badge.title || badge.name}"></span>`).join('')}</div>`;
+      }
+
+      function mergePlayers(bundlePlayers, fallbackPlayers){
         const map = new Map();
-        sets.flat().forEach((player) => {
-          const key = normalizeName(
-            player?.player_name ||
-            player?.display_name ||
-            player?.public_display_name ||
-            player?.nickname ||
-            player?.chosen_username
-          );
+        (Array.isArray(fallbackPlayers) ? fallbackPlayers : []).forEach((player) => {
+          const key = normalizeName(player.player_name || player.display_name || player.public_display_name || player.nickname);
+          if (key) map.set(key, Object.assign({}, player));
+        });
+        (Array.isArray(bundlePlayers) ? bundlePlayers : []).forEach((player) => {
+          const key = normalizeName(player.player_name || player.display_name || player.public_display_name || player.nickname);
           if (!key) return;
           map.set(key, Object.assign({}, map.get(key) || {}, player));
         });
-        return Array.from(map.values()).filter((player) => String(displayName(player)).trim());
+        return Array.from(map.values()).filter((player) => String(player.player_name || player.display_name || '').trim());
       }
-      async function fetchActivatedPlayers(){
-        const rows = [];
-        try {
-          const url = `${cfg.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,status,site_scope&order=display_name.asc`;
-          const res = await fetch(url, { method:'GET', mode:'cors', cache:'no-store', headers: headers() });
-          const data = await parseResponse(res);
-          (Array.isArray(data) ? data : []).forEach((row) => {
-            const name = String(row.display_name || '').trim();
-            const rawScope = String(row.site_scope || '').toLowerCase();
-            if (!name) return;
-            if (rawScope && rawScope !== scope) return;
-            rows.push({
-              player_name: name,
-              display_name: name,
-              public_display_name: name,
-              total_matches: 0,
-              total_wins: 0,
-              best_rating: 1000,
-              badge_count: 0
-            });
-          });
-        } catch (_) {}
-        return rows;
+
+      function normalizedAttained(player){
+        if (Array.isArray(player.attained_badges) && player.attained_badges.length) {
+          return window.GEJAST_BADGE_PROGRESS.sortBadgesDescAlpha(player.attained_badges.map((badge) => Object.assign({}, badge, { title: badge.title || badge.name, name: badge.title || badge.name }))); 
+        }
+        const snapshot = {
+          total_matches: Number(player.total_matches || 0),
+          total_wins: Number(player.total_wins || 0),
+          best_rating: Number(player.best_rating || 1000),
+          klaverjas_matches: Number(player.klaverjas_matches || 0),
+          boerenbridge_matches: Number(player.boerenbridge_matches || 0),
+          beerpong_matches: Number(player.beerpong_matches || 0),
+          drink_units: Number(player.drink_units || player.total_drink_units || 0),
+          speed_best_seconds: Number(player.speed_best_seconds || 0),
+          pussycup_pct: Number(player.pussycup_pct || 0)
+        };
+        return window.GEJAST_BADGES ? window.GEJAST_BADGES.getAttained(snapshot).map((badge) => ({
+          key: badge.key,
+          title: badge.title,
+          name: badge.title,
+          nickname: badge.nickname,
+          imageMini48: badge.imageMini48,
+          image: badge.imageFull,
+          rarityRank: badge.rarityRank,
+          rarityLabel: badge.rarityLabel
+        })) : [];
       }
-      async function fetchLoginNamesPlayers(){
-        const rows = [];
-        try {
-          const data = await callRpc('get_login_names_scoped', { site_scope_input: scope });
-          const source = Array.isArray(data) ? data : (Array.isArray(data?.names) ? data.names : (Array.isArray(data?.data) ? data.data : []));
-          source.forEach((row) => {
-            const name = typeof row === 'string'
-              ? row
-              : (row?.display_name || row?.name || row?.desired_name || row?.slug || row?.player_name || '');
-            if (!name) return;
-            rows.push({
-              player_name: name,
-              display_name: name,
-              public_display_name: name,
-              total_matches: 0,
-              total_wins: 0,
-              best_rating: 1000,
-              badge_count: 0
-            });
-          });
-        } catch (_) {}
-        try {
-          if (window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedActivePlayerNames === 'function') {
-            const names = await window.GEJAST_CONFIG.fetchScopedActivePlayerNames(scope);
-            (Array.isArray(names) ? names : []).forEach((name) => {
-              rows.push({
-                player_name: name,
-                display_name: name,
-                public_display_name: name,
-                total_matches: 0,
-                total_wins: 0,
-                best_rating: 1000,
-                badge_count: 0
-              });
-            });
-          }
-        } catch (_) {}
-        return rows;
+
+
+      function escapeHtml(value){
+        return String(value || '').replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
       }
+      function buildBadgeAccordion(attained){
+        const earned = Array.isArray(attained) ? attained : [];
+        const earnedHtml = earned.length ? earned.map((badge) => `
+          <div class="badge-accordion-item">
+            ${badge.imageMini48 || badge.image ? `<img src="${badge.imageMini48 || badge.image}" alt="${escapeHtml(badge.title || badge.name || 'Badge')}">` : '<div></div>'}
+            <div><strong>${escapeHtml(badge.title || badge.name || 'Badge')}</strong>${badge.description ? `<div class="submeta">${escapeHtml(badge.description)}</div>` : ''}</div>
+          </div>`).join('') : '<div class="submeta">Nog geen badges behaald.</div>';
+        return `<div class="badges-section"><details class="badge-accordion"><summary>Behaalde badges (${earned.length})</summary><div class="badge-accordion-list">${earnedHtml}</div></details></div>`;
+      }
+
       function renderPlayers(players){
-        const rows = (Array.isArray(players) ? players.slice() : []).sort((a,b)=>{
+        const rows = window.GEJAST_BADGE_PROGRESS.sortBadgesDescAlpha([]) && (Array.isArray(players) ? players.slice() : []).sort((a,b)=>{
           const matchDiff = Number(b.total_matches || 0) - Number(a.total_matches || 0);
           if (matchDiff) return matchDiff;
           return displayName(a).localeCompare(displayName(b), 'nl');
@@ -212,56 +268,109 @@
         gridNode.innerHTML = rows.map((player) => {
           const shown = displayName(player);
           const original = originalName(player);
+          const attained = normalizedAttained(player);
+          const rarest = attained[0] || player.primary_badge || null;
+          const rarestTitle = rarest ? (rarest.title || rarest.name || 'Nog geen badge') : 'Nog geen badge';
+          const rarestNick = rarest && rarest.nickname ? rarest.nickname : '';
           const profileTarget = original || shown;
           return `<a class="card" href="./player.html?player=${encodeURIComponent(profileTarget)}&scope=${encodeURIComponent(scope)}">
             <div class="head">
               ${avatarHtml(player)}
               <div>
                 <div class="name">${shown}</div>
-                <div class="meta">${original && original !== shown ? `Originele naam: "${original}"` : 'Geen alternatieve naam ingesteld.'}</div>
-                <div class="submeta"><strong>Scope:</strong> ${scope === 'family' ? 'familie' : 'vrienden'}</div>
+                <div class="meta">${original && original !== shown ? `Originele naam: \"${original}\"` : 'Geen alternatieve naam ingesteld.'}</div>
+                <div class="submeta"><strong>Meest zeldzame badge:</strong> ${rarestTitle}${rarestNick ? ` · ${rarestNick}` : ''}</div>
               </div>
             </div>
             <div class="stats">
               <div class="stat"><strong>${player.total_matches || 0}</strong><span>Potjes</span></div>
               <div class="stat"><strong>${winPct(player)}%</strong><span>Win%</span></div>
               <div class="stat"><strong>${Math.round(Number(player.best_rating || 1000))}</strong><span>Beste ELO</span></div>
-              <div class="stat"><strong>${player.badge_count || 0}</strong><span>Badges</span></div>
+              <div class="stat"><strong>${player.badge_count || attained.length || 0}</strong><span>Badges</span></div>
             </div>
-            <div class="bio">${player.bio ? player.bio : `${player.total_matches || 0} geregistreerde potjes, ${player.total_wins || 0} overwinningen.`}</div>
+            <div class="badge-strip">
+              <div class="badge-kicker">Badge-overzicht</div>
+              <div class="badge-note">${rarest ? `<span class="badge-pill">${rarest.imageMini48 || rarest.image ? `<img src="${rarest.imageMini48 || rarest.image}" alt="${rarestTitle}">` : ''}<span>${rarestTitle}</span></span>` : '<span class="submeta">Nog geen behaalde badges.</span>'}</div>
+              ${toMiniBadgeRow(attained)}
+            </div>
+            ${buildBadgeAccordion(attained)}
+            <div class="bio">${player.favorite_game ? `Favoriete spelvorm: ${player.favorite_game}. ` : ''}${player.bio ? player.bio : `${player.total_matches || 0} geregistreerde potjes, ${player.total_wins || 0} overwinningen en ${player.badge_count || attained.length || 0} badge(s).`}</div>
           </a>`;
         }).join('');
       }
 
+      function renderBadgeGallery(){
+        const groups = window.GEJAST_BADGE_PROGRESS.groupRegistryByRarityAsc ? window.GEJAST_BADGE_PROGRESS.groupRegistryByRarityAsc() : window.GEJAST_BADGE_PROGRESS.groupRegistryByRarity().slice().reverse();
+        galleryNode.innerHTML = `<div class="badge-gallery-wrap">
+          <div>
+            <h2 style="margin:0 0 8px">Badgegalerij</h2>
+            <p style="margin:0;color:var(--muted)">Gesorteerd van minst zeldzaam / makkelijkst naar meest zeldzaam / moeilijkst, daarna alfabetisch. Elke badge toont de betekenis en onderaan wat je moet doen om hem te behalen.</p>
+          </div>
+          <div class="rarity-grid">
+            ${groups.map((group) => `
+              <section class="rarity-col">
+                <div class="rarity-pill">${group.label}</div>
+                <div>
+                  <h3>${group.label}</h3>
+                  <p>${group.items.length} badge(s) in deze zeldzaamheidsklasse.</p>
+                </div>
+                <div class="rarity-list">
+                  ${group.items.map((badge) => `
+                    <div class="rarity-badge">
+                      <img src="${badge.image}" alt="${badge.title}">
+                      <div>
+                        <strong>${badge.title}</strong>
+                        ${badge.nickname ? `<small>${badge.nickname}</small>` : ''}
+                        <small>${badge.description}</small>
+                        <small class="rarity-requirement"><strong>Te behalen door:</strong> ${badge.requirementsText || 'Zie badge-omschrijving.'}</small>
+                      </div>
+                    </div>`).join('')}
+                </div>
+              </section>`).join('')}
+          </div>
+        </div>`;
+      }
+
       async function boot(){
+        const cached = readCache();
+        renderSkeletons();
+        if (cached && Array.isArray(cached.players) && cached.players.length) {
+          renderPlayers(cached.players);
+          statusNode.textContent = `${cached.players.length} actieve speler(s) direct uit cache geladen.`;
+        }
         try {
           const profileSource = window.GEJAST_PROFILE_SOURCE || null;
-          const [bundleRaw, allPlayersRaw, activatedRaw, loginNameRaw] = await Promise.allSettled([
+          const [bundleRaw, allPlayersRaw] = await Promise.allSettled([
             profileSource && typeof profileSource.loadProfilesPageBundle === 'function'
               ? profileSource.loadProfilesPageBundle()
               : callRpc('get_profiles_page_bundle_scoped', { site_scope_input: scope }),
             profileSource && typeof profileSource.loadProfilesList === 'function'
               ? profileSource.loadProfilesList()
-              : callRpc('get_all_site_players_public_scoped', { site_scope_input: scope }),
-            fetchActivatedPlayers(),
-            fetchLoginNamesPlayers()
+              : callRpc('get_all_site_players_public_scoped', { site_scope_input: scope })
           ]);
           const bundle = bundleRaw.status === 'fulfilled' ? bundleRaw.value : {};
           const allPlayers = allPlayersRaw.status === 'fulfilled' ? ((allPlayersRaw.value && allPlayersRaw.value.players) || []) : [];
-          const activatedPlayers = activatedRaw.status === 'fulfilled' ? activatedRaw.value : [];
-          const loginNamePlayers = loginNameRaw.status === 'fulfilled' ? loginNameRaw.value : [];
-          const players = mergePlayers(bundle.players || [], allPlayers, activatedPlayers, loginNamePlayers);
+          const players = mergePlayers(bundle.players || [], allPlayers);
           renderPlayers(players);
-          statusNode.textContent = `${players.length} actieve of geactiveerde speler(s) zichtbaar in de ${scope === 'family' ? 'familie' : 'vrienden'}-scope.`;
+          writeCache({ players });
+          if ('requestIdleCallback' in window) requestIdleCallback(() => renderBadgeGallery(), { timeout: 1500 });
+          else setTimeout(renderBadgeGallery, 300);
+          statusNode.textContent = `${players.length} actieve speler(s) zichtbaar in de ${scope === 'family' ? 'familie' : 'vrienden'}-scope.`;
         } catch (err) {
           statusNode.textContent = err.message || 'Profielen laden mislukt.';
           gridNode.innerHTML = '<article class="card"><div class="bio">Profielen laden mislukt.</div></article>';
+          renderBadgeGallery();
         }
       }
 
+      if (window.GEJAST_BADGES && window.GEJAST_BADGES.injectStyles) window.GEJAST_BADGES.injectStyles();
       boot();
     })();
   </script>
+  <script defer src="./site-analytics.js?v615"></script>
+  <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <script defer src="./gejast-geo.js?v615"></script>
+  <script defer src="./drinks-verify-float.js?v615"></script>
 </body>
 </html>

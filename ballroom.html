@@ -7,8 +7,8 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Balzaal</title>
-  <script>window.GEJAST_PAGE_VERSION='v492';</script>
-  <script src="./gejast-config.js?v492"></script><script src="./gejast-home-gate.js?v492"></script>
+  <script>window.GEJAST_PAGE_VERSION='v615';</script>
+  <script src="./gejast-config.js?v615"></script><script src="./gejast-home-gate.js?v615"></script>
   <style>
     :root{
       --gold:#c7a85a; --gold-deep:#8c6d31; --royal:#23476a; --royal-deep:#17324e; --cream:#f6efe3; --ink:#181310; --muted:#706557;
@@ -225,7 +225,7 @@
       <div class="info-grid">
         <section class="panel">
           <h2>Wat speelt hier?</h2>
-          <div class="lux-copy" id="introCopy">De zaal is leeg. Eerst moet jouw bak-verzoek worden geverifieerd; daarna opent de troon.</div>
+          <div class="lux-copy" id="introCopy">De zaal is leeg. Wie als eerste trekt een adt, eist de troon op.</div>
           <div class="actions" style="margin-top:14px">
             <button class="btn" id="claimBtn" type="button">Trek een adt</button>
             <button class="btn secondary" id="joinBtn" type="button">Trek een bak</button>
@@ -272,33 +272,6 @@
     function escapeHtml(v){ return String(v ?? '').replace(/[&<>"]/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m])); }
     async function parse(res){ const txt = await res.text(); let data=null; try{ data = txt ? JSON.parse(txt) : null; } catch(err){ throw new Error(txt || `HTTP ${res.status}`); } if(!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }
     async function rpc(name, body){ const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', headers:headers(), body:JSON.stringify(body||{}) }); const raw = await parse(res); return raw?.[name] || raw; }
-
-    async function createBallroomDrink(role){
-      const workflow = window.GEJAST_DRINKS_WORKFLOW;
-      if (!workflow || typeof workflow.createDrinkEvent !== 'function') {
-        throw new Error('Drinks workflow is niet beschikbaar op deze pagina.');
-      }
-      const pos = await new Promise((resolve)=>{
-        if (!navigator.geolocation) return resolve(null);
-        navigator.geolocation.getCurrentPosition((p)=>resolve(p), ()=>resolve(null), { enableHighAccuracy:true, timeout:10000, maximumAge:0 });
-      });
-      const eventRes = await workflow.createDrinkEvent({
-        session_token: token() || null,
-        event_type_key: 'bier',
-        quantity: 1,
-        lat: pos?.coords?.latitude ?? null,
-        lng: pos?.coords?.longitude ?? null,
-        accuracy: pos?.coords?.accuracy ?? null
-      });
-      const eventId = Number(eventRes?.id || eventRes?.drink_event_id || eventRes?.event_id || 0);
-      if (!eventId) throw new Error('Drankverzoek kon niet worden gekoppeld aan de balzaalactie.');
-      if (role === 'member') {
-        try { await rpc('set_drink_event_location_label', { session_token: token() || null, drink_event_id: eventId, location_label_input: 'Balzaal • Hofdame aanvraag' }); } catch (_) {}
-      }
-      await callBallroomWrite('ballroom_register_drink_gate_safe', 'ballroom_register_drink_gate', { drink_event_id_input: eventId, role_input: role });
-      return eventId;
-    }
-
     async function callBallroomWrite(safeName, legacyName, body){
       const sessionToken = token() || null;
       const attempts = [];
@@ -361,7 +334,7 @@
       const queue = Array.isArray(state?.pending_requests) ? state.pending_requests : [];
       const list = document.getElementById('queueList');
       if(!queue.length){ list.innerHTML = '<div class="muted" style="padding-top:10px">Nog geen open verzoeken.</div>'; return; }
-      list.innerHTML = queue.map((row)=>`<div class="queue-row"><div class="queue-main">${avatarMarkup(row.avatar_url,row.display_name,true)}<div><div class="queue-name">${escapeHtml(row.display_name)}</div><div class="queue-meta">Aangemeld ${new Date(row.requested_at).toLocaleString('nl-NL')}</div></div></div><div class="actions">${latest?.viewer?.is_king ? `<button class="small-btn secondary" data-resolve="reject" data-id="${row.id}">Afwijzen</button><button class="small-btn" data-resolve="approve" data-id="${row.id}">Toelaten</button>` : '<span class="queue-meta">Wacht op verificatie / oordeel</span>'}</div></div>`).join('');
+      list.innerHTML = queue.map((row)=>`<div class="queue-row"><div class="queue-main">${avatarMarkup(row.avatar_url,row.display_name,true)}<div><div class="queue-name">${escapeHtml(row.display_name)}</div><div class="queue-meta">Aangemeld ${new Date(row.requested_at).toLocaleString('nl-NL')}</div></div></div><div class="actions">${latest?.viewer?.is_king ? `<button class="small-btn secondary" data-resolve="reject" data-id="${row.id}">Afwijzen</button><button class="small-btn" data-resolve="approve" data-id="${row.id}">Toelaten</button>` : '<span class="queue-meta">Wacht op oordeel</span>'}</div></div>`).join('');
       list.querySelectorAll('[data-resolve]').forEach((btn)=>btn.addEventListener('click', async()=>{
         try{ btn.disabled = true; await callBallroomWrite('ballroom_resolve_request_safe','ballroom_resolve_request',{ request_id_input: Number(btn.dataset.id), approve_input: btn.dataset.resolve === 'approve' }); setStatus(btn.dataset.resolve === 'approve' ? 'De gast mag naar binnen.' : 'Het verzoek is afgewezen.'); await load(); } catch(err){ setStatus(err.message || String(err), true); btn.disabled = false; }
       }));
@@ -375,7 +348,7 @@
       const abdicateBtn = document.getElementById('abdicateBtn');
       const viewer = state?.viewer || {};
       if(!state?.has_king){
-        intro.textContent = 'De zaal is leeg. Eerst moet jouw bak-verzoek worden geverifieerd; daarna opent de troon.';
+        intro.textContent = 'De zaal is leeg. Wie als eerste trekt een adt, eist de troon op.';
         claimBtn.style.display = '';
         claimBtn.disabled = !token();
         joinBtn.style.display = 'none';
@@ -388,11 +361,11 @@
       joinBtn.style.display = '';
       joinBtn.disabled = !token() || viewer.is_king || viewer.is_member || viewer.pending;
       abdicateBtn.style.display = viewer.is_king ? '' : 'none';
-      intro.textContent = `${state.king.display_name} houdt momenteel hof. Vraag entree aan via een bierverzoek. Pas na verificatie komt jouw aanvraag in de balzaal-queue.`;
+      intro.textContent = `${state.king.display_name} houdt momenteel hof. Dien een verzoek in als jij ook achter het fluweel wilt staan.`;
       hostNote.style.display = viewer.is_king ? '' : 'none';
       hostNote.textContent = viewer.is_king ? 'Jij bent de koning van de balzaal. Alleen jij mag nieuwe gasten achter het koord toelaten of de kroon doorgeven.' : '';
       if(viewer.is_member && !viewer.is_king) setStatus('Jij staat al in de balzaal.');
-      else if(viewer.pending) setStatus('Jouw entreeverzoek wacht eerst op drankverificatie en daarna op oordeel.');
+      else if(viewer.pending) setStatus('Jouw entreeverzoek staat klaar voor beoordeling.');
       else if(!token()) setStatus('Log eerst in als speler om een entreeverzoek te plaatsen.');
       else setStatus('');
     }
@@ -421,29 +394,11 @@
 
     document.getElementById('claimBtn').addEventListener('click', async()=>{
       if(!token()){ window.location.href = cfg.buildLoginUrl ? cfg.buildLoginUrl('ballroom.html') : './login.html?return_to=ballroom.html'; return; }
-      try{
-        const state = await callBallroomState().catch(()=>null);
-        if (state?.viewer?.pending_drink_gate_king) {
-          setStatus('Jouw bak-verzoek voor de troon wacht nog op verificatie.');
-          return;
-        }
-        await createBallroomDrink('king');
-        setStatus('Bak-verzoek gemaakt. Zodra het is geverifieerd, opent de troon automatisch.');
-        await load();
-      } catch(err){ setStatus(err.message || String(err), true); }
+      try{ await callBallroomWrite('ballroom_claim_king_safe','ballroom_claim_king',{}); setStatus('De kroon is van jou.'); await load(); } catch(err){ setStatus(err.message || String(err), true); }
     });
     document.getElementById('joinBtn').addEventListener('click', async()=>{
       if(!token()){ window.location.href = cfg.buildLoginUrl ? cfg.buildLoginUrl('ballroom.html') : './login.html?return_to=ballroom.html'; return; }
-      try{
-        const state = await callBallroomState().catch(()=>null);
-        if (state?.viewer?.pending_drink_gate_member) {
-          setStatus('Jouw bierverzoek voor balzaal-entree wacht nog op verificatie.');
-          return;
-        }
-        await createBallroomDrink('member');
-        setStatus('Bierverzoek gemaakt. Na verificatie verschijnt jouw aanvraag in de balzaal-queue.');
-        await load();
-      } catch(err){ setStatus(err.message || String(err), true); }
+      try{ await callBallroomWrite('ballroom_request_entry_safe','ballroom_request_entry',{}); setStatus('Je entreeverzoek ligt nu bij de koning.'); await load(); } catch(err){ setStatus(err.message || String(err), true); }
     });
     document.getElementById('abdicateBtn').addEventListener('click', async()=>{
       try{ await callBallroomWrite('ballroom_abdicate_safe','ballroom_abdicate',{}); setStatus('De kroon is doorgeschoven.'); await load(); } catch(err){ setStatus(err.message || String(err), true); }
@@ -453,7 +408,7 @@
     setInterval(load, 20000);
   })();
   </script>
-  <script src="./gejast-player-session-ui.js?v492"></script><script src="./gejast-geo.js?v492"></script><script src="./drinks-verify-float.js?v492"></script>
-  <script src="./site-analytics.js?v492"></script>
+  <script src="./gejast-player-session-ui.js?v615"></script><script src="./gejast-geo.js?v615"></script><script src="./drinks-verify-float.js?v615"></script>
+  <script src="./site-analytics.js?v615"></script>
 </body>
 </html>

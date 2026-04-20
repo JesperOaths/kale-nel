@@ -16,7 +16,7 @@
 
 /index.html
   X-Robots-Tag: noindex, nofollow, noarchive, nosnippet
-  Cache-Control: no-store, max-age=0
+  Cache-Control: max-age=0, must-revalidate
   Pragma: no-cache
   Referrer-Policy: same-origin
   X-Frame-Options: DENY
@@ -49,6 +49,13 @@
 /match_control.html
 /match_swap.html
 /geo_diagnostics.html
+  X-Robots-Tag: noindex, nofollow, noarchive, nosnippet
+  Cache-Control: max-age=0, must-revalidate
+  Pragma: no-cache
+  Referrer-Policy: same-origin
+  X-Frame-Options: DENY
+  Cross-Origin-Resource-Policy: same-origin
+
 /invite.html
 /login.html
 /request.html
@@ -60,3 +67,16 @@
   Referrer-Policy: same-origin
   X-Frame-Options: DENY
   Cross-Origin-Resource-Policy: same-origin
+
+
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.webp
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.png
+  Cache-Control: public, max-age=31536000, immutable

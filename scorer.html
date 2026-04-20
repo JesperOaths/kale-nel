@@ -31,7 +31,7 @@
       margin:0;
       font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color:var(--ink);
-      background: linear-gradient(rgba(247,244,238,0.78), rgba(247,244,238,0.72)), url('./wordtergejast.png') center/cover no-repeat fixed;
+      background: linear-gradient(rgba(247,244,238,0.78), rgba(247,244,238,0.72)), url('./wordtergejast.png') center/cover no-repeat scroll;
     }
     .page { width:min(580px, 100%); margin:0 auto; min-height:100vh; padding-bottom:94px; }
     .topbar {
@@ -271,7 +271,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/scorer.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v506';</script><script src="./gejast-config.js?v506"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-home-gate.js?v506"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('scorer');</script>
+  <script>window.GEJAST_PAGE_VERSION='v615';</script><script src="./gejast-config.js?v615"></script><script src="./gejast-family-rollout.js?v615"></script><script src="./gejast-home-gate.js?v615"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('scorer');</script>
 
   <style id="page-floating-logo-style">
     .page-floating-logo{position:fixed;top:18px;right:18px;z-index:9998;display:inline-flex;width:64px;height:64px;border-radius:50%;background:rgba(255,251,245,.72);border:1px solid rgba(255,255,255,.65);box-shadow:0 14px 32px rgba(0,0,0,.10);align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
@@ -428,7 +428,7 @@
     </div>
   </div>
 
-  <div id="resumeOverlay" class="overlay"><div class="modal"><h2>Nieuw scoreformulier</h2><p>Deze scorer start nu altijd leeg voor een nieuwe klaverjasmatch.</p><div class="modal-footer"><button class="btn-dark" type="button" onclick="wipeAndStartNew()">Nieuw leeg formulier</button></div></div></div>
+  <div id="resumeOverlay" class="overlay"><div class="modal"><h2>Oud spel gevonden</h2><p>Er staat nog een eerder spel op dit apparaat. Wil je doorgaan of alles wissen?</p><div class="modal-footer"><button class="btn-light" type="button" onclick="resumeExistingGame()">Doorgaan</button><button class="btn-dark" type="button" onclick="wipeAndStartNew()">Wissen en nieuw spel</button></div></div></div>
 
   <script>
     const MATCH_KEY = 'current_match_v67';
@@ -461,12 +461,8 @@
     let actionFuture = [];
 
     function freshGame() {
-      const seed = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
-      const clientMatchId = `klaverjas-${seed}`;
       return {
         id: Date.now(),
-        client_match_id: clientMatchId,
-        match_ref: clientMatchId,
         version: 67,
         createdAt: new Date().toISOString(),
         players: ['', '', '', ''],
@@ -490,8 +486,6 @@
           if (parsed && Array.isArray(parsed.rounds)) {
             if (!parsed.version) parsed.version = 68;
             if (!parsed.players || parsed.players.length !== 4) parsed.players = ['', '', '', ''];
-            if (!parsed.client_match_id) parsed.client_match_id = `klaverjas-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;
-            if (!parsed.match_ref) parsed.match_ref = parsed.client_match_id;
             if (typeof parsed.w !== 'number') parsed.w = (parsed.rounds || []).reduce((sum, r) => sum + Number(r.fw || r.scoreW || 0), 0);
             if (typeof parsed.z !== 'number') parsed.z = (parsed.rounds || []).reduce((sum, r) => sum + Number(r.fz || r.scoreZ || 0), 0);
             if (typeof parsed.rawW !== 'number') parsed.rawW = (parsed.rounds || []).reduce((sum, r) => sum + Number(r.rawW || 0), 0);
@@ -1088,7 +1082,7 @@
       renderSetupOptions();
       render();
     }
-    function newGame() { reallyResetGame(); openSetupModal(); commitActionState(); setMessage('Nieuw leeg scoreformulier gestart.'); }
+    function newGame() { document.getElementById('resumeOverlay').classList.add('show'); }
     function wipeAndStartNew(){ document.getElementById('resumeOverlay').classList.remove('show'); reallyResetGame(); openSetupModal(); commitActionState(); setMessage('Nieuw spel gestart.'); }
     function resumeExistingGame(){ document.getElementById('resumeOverlay').classList.remove('show'); render(); commitActionState(); setMessage('Verder met bestaand spel.'); }
 
@@ -1345,7 +1339,7 @@
     document.getElementById('setupOverlay').addEventListener('click', (event) => { if (event.target.id === 'setupOverlay') closeSetupModal(); });
     document.getElementById('bidOverlay').addEventListener('click', (event) => { if (event.target.id === 'bidOverlay') closeBidModal(); });
     document.getElementById('appMenu').addEventListener('click', (event) => { if (event.target.id === 'appMenu') toggleAppMenu(false); });
-    document.getElementById('resumeOverlay').addEventListener('click', (event) => { if (event.target.id === 'resumeOverlay') wipeAndStartNew(); });
+    document.getElementById('resumeOverlay').addEventListener('click', (event) => { if (event.target.id === 'resumeOverlay') document.getElementById('resumeOverlay').classList.remove('show'); });
 
     async function initPage(){
       try {
@@ -1353,17 +1347,19 @@
         if (Array.isArray(storedPlayers) && storedPlayers.length) knownPlayersCache = uniqueNames([...knownPlayersCache, ...storedPlayers]);
       } catch {}
       knownPlayersCache = uniqueNames([...(await getSitePlayers()), ...knownPlayersCache]);
-      reallyResetGame();
       renderSetupOptions();
       render();
-      openSetupModal();
+      if (game.rounds.length || game.players.filter(Boolean).length) {
+        document.getElementById('resumeOverlay').classList.add('show');
+      } else {
+        openSetupModal();
+      }
       commitActionState();
-      setMessage('Nieuw leeg scoreformulier klaar.');
     }
     function toggleAppMenu(force){ const el=document.getElementById('appMenu'); const should = typeof force === 'boolean' ? force : !el.classList.contains('show'); el.classList.toggle('show', should); }
     initPage();
   </script>
-  <div class="site-credit-watermark" data-version-watermark>v506 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v460 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
@@ -1491,15 +1487,15 @@
   }
   window.closeMatchSummary=function(){ document.getElementById('matchSummaryOverlay').classList.remove('show'); };
   window.copyMatchRecapText=async function(){ const text=buildRecap(); try{ await navigator.clipboard.writeText(text); setMessage('Samenvatting gekopieerd.'); }catch(_){ setMessage(text);} };
-  window.downloadMatchSummaryImage=function(){ const payload=summaryPayload(true).summary; const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=630; const ctx=canvas.getContext('2d'); const grad=ctx.createLinearGradient(0,0,1200,630); grad.addColorStop(0,'#1b1711'); grad.addColorStop(1,'#5d4820'); ctx.fillStyle=grad; ctx.fillRect(0,0,1200,630); ctx.fillStyle='#f6f0e5'; ctx.fillRect(46,46,1108,538); ctx.fillStyle='#111'; ctx.font='900 52px Inter, sans-serif'; ctx.fillText('Klaverjas',84,132); ctx.font='800 34px Inter, sans-serif'; ctx.fillText(`${payload.winner_names_label || payload.winner_names?.join(' · ') || ''}`,84,194); ctx.font='700 72px Inter, sans-serif'; ctx.fillText(`${payload.totals.wij} - ${payload.totals.zij}`,84,292); ctx.font='600 28px Inter, sans-serif'; wrap(ctx,payload.recap_text,84,360,1000,38); ctx.font='700 24px Inter, sans-serif'; ctx.fillText('v506 · Made by Bruis',84,560); const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download='klaverjas-uitslag.png'; a.click(); function wrap(ctx,text,x,y,maxWidth,lineHeight){ const words=String(text||'').split(/\s+/); let line=''; let yy=y; for(const w of words){ const test=line?line+' '+w:w; if(ctx.measureText(test).width>maxWidth && line){ ctx.fillText(line,x,yy); line=w; yy+=lineHeight; } else line=test; } if(line) ctx.fillText(line,x,yy); } };
+  window.downloadMatchSummaryImage=function(){ const payload=summaryPayload(true).summary; const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=630; const ctx=canvas.getContext('2d'); const grad=ctx.createLinearGradient(0,0,1200,630); grad.addColorStop(0,'#1b1711'); grad.addColorStop(1,'#5d4820'); ctx.fillStyle=grad; ctx.fillRect(0,0,1200,630); ctx.fillStyle='#f6f0e5'; ctx.fillRect(46,46,1108,538); ctx.fillStyle='#111'; ctx.font='900 52px Inter, sans-serif'; ctx.fillText('Klaverjas',84,132); ctx.font='800 34px Inter, sans-serif'; ctx.fillText(`${payload.winner_names_label || payload.winner_names?.join(' · ') || ''}`,84,194); ctx.font='700 72px Inter, sans-serif'; ctx.fillText(`${payload.totals.wij} - ${payload.totals.zij}`,84,292); ctx.font='600 28px Inter, sans-serif'; wrap(ctx,payload.recap_text,84,360,1000,38); ctx.font='700 24px Inter, sans-serif'; ctx.fillText('v371 · Made by Bruis',84,560); const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download='klaverjas-uitslag.png'; a.click(); function wrap(ctx,text,x,y,maxWidth,lineHeight){ const words=String(text||'').split(/\s+/); let line=''; let yy=y; for(const w of words){ const test=line?line+' '+w:w; if(ctx.measureText(test).width>maxWidth && line){ ctx.fillText(line,x,yy); line=w; yy+=lineHeight; } else line=test; } if(line) ctx.fillText(line,x,yy); } };
   async function pushSummary(isFinished=false, force=false){
     if(!(window.GEJAST_CONFIG||{}).SUPABASE_URL) return;
     const payload = summaryPayload(isFinished);
     const fingerprint = summaryFingerprint(payload);
     if(!force && !isFinished && fingerprint === lastSummaryFingerprint) return;
     try{
-      if(window.GEJAST_LIVE_SYNC && typeof window.GEJAST_LIVE_SYNC.writeSummary === 'function'){
-        await window.GEJAST_LIVE_SYNC.writeSummary({ gameType:'klaverjas', clientMatchId:String(payload.client_match_id), summaryPayload:payload.summary, force });
+      if(window.GEJAST_LIVE_SYNC && typeof window.GEJAST_LIVE_SYNC.save === 'function'){
+        await window.GEJAST_LIVE_SYNC.save('klaverjas', String(payload.client_match_id), payload.summary, { force, stateKey:`klaverjas:${String(payload.client_match_id)}` });
       } else {
         const token=(localStorage.getItem('jas_session_token_v11')||localStorage.getItem('jas_session_token_v10')||'');
         await fetch(`${window.GEJAST_CONFIG.SUPABASE_URL}/rest/v1/rpc/save_game_match_summary`,{method:'POST',mode:'cors',cache:'no-store',headers:{apikey:window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY}`,'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({session_token:token, game_type:'klaverjas', client_match_id:String(payload.client_match_id), summary_payload:payload.summary})});
@@ -1521,32 +1517,15 @@
     }
     document.addEventListener('visibilitychange', ()=>{ if (document.visibilityState === 'hidden') pushSummary(false, true); else scheduleLiveSummarySync(true); });
     window.addEventListener('beforeunload', ()=>{ try { pushSummary(false, true); } catch(_){} });
-    liveSummaryIntervalId = window.setInterval(()=>{ if (document.visibilityState === 'visible') pushSummary(false, false); }, 30000);
+    liveSummaryIntervalId = window.setInterval(()=>{ if (document.visibilityState === 'visible') pushSummary(false, false); }, 15000);
     scheduleLiveSummarySync(true);
   }
   window.openMatchSummary=function(){ const payload=summaryPayload(true).summary; document.getElementById('matchSummaryCard').innerHTML=`<div class="dealer-card"><span>Winnaar</span><strong>${payload.winner_names_label || payload.winner_names.join(' · ')}</strong></div><div class="dealer-banner"><div class="dealer-card"><span>Wij</span><strong>${payload.totals.wij}</strong></div><div class="dealer-card"><span>Zij</span><strong>${payload.totals.zij}</strong></div></div><div class="contract-card"><div class="eyebrow">Samenvatting</div><strong style="font-size:18px;line-height:1.3">${payload.recap_text}</strong></div>`; document.getElementById('matchSummaryOverlay').classList.add('show'); pushSummary(true, true); };
   const oldFinish=window.finishGame; window.finishGame=function(){ if(oldFinish) oldFinish(); openMatchSummary(); };
   ensureLiveSummaryBinding();
-  (function injectLiveLink(){
-    try {
-      const actions = document.querySelector('.contract-actions');
-      if (!actions || document.getElementById('klaverjasLiveLinkBtn')) return;
-      const clientId = encodeURIComponent(String(game.client_match_id || game.match_ref || game.id || ''));
-      const matchRef = encodeURIComponent(String(game.match_ref || game.client_match_id || game.id || ''));
-      const scope = (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) === 'family' ? '&scope=family' : '';
-      const a = document.createElement('a');
-      a.id = 'klaverjasLiveLinkBtn';
-      a.className = 'text-btn';
-      a.style.background = '#fff';
-      a.style.color = '#111';
-      a.href = `./klaverjas_live.html?client_match_id=${clientId}&match_ref=${matchRef}${scope}`;
-      a.textContent = 'Open live';
-      actions.appendChild(a);
-    } catch(_){}
-  })();
 })();
 </script>
-<script src="./site-analytics.js?v506"></script>
+<script src="./site-analytics.js?v615"></script>
 
 <style id="match-control-chip-style">
   .manage-match-chip{position:fixed;right:18px;bottom:18px;z-index:40;display:inline-flex;align-items:center;gap:8px;padding:12px 16px;border-radius:999px;background:rgba(35,31,26,.92);color:#fff;text-decoration:none;font-weight:800;box-shadow:0 14px 32px rgba(0,0,0,.22)}
@@ -1554,7 +1533,7 @@
 </style>
 <a class="manage-match-chip" href="./match_control.html?game=klaverjas">✎ <span>Beheer wedstrijden<br><small>Eigen inzendingen / admin</small></span></a>
 
-<script src="./gejast-live-sync.js?v506"></script>
+<script src="./gejast-live-sync.js?v615"></script>
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>

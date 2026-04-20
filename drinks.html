@@ -2,12 +2,12 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <title>Drinks overzicht</title>
-  <script>window.GEJAST_PAGE_VERSION='v582';</script><script src="./gejast-config.js?v582"></script><script src="./gejast-clickable-cards.js?v375"></script><script src="./gejast-scope-context.js?v375"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-scoped-rpc.js?v539"></script><script src="./gejast-despimarkt.js?v539"></script>
+  <script>window.GEJAST_PAGE_VERSION='v615';</script><script src="./gejast-config.js?v615"></script><script src="./gejast-clickable-cards.js?v615"></script><script src="./gejast-scope-context.js?v615"></script><script src="./gejast-family-rollout.js?v615"></script>
   <style>
     :root{
       --bg:#ece7dc;--card:rgba(255,251,245,.94);--paper:#fffdfa;--line:rgba(54,40,20,.08);--line-strong:rgba(54,40,20,.14);
@@ -41,8 +41,8 @@
     @media(max-width:1180px){.metric-strip,.grid.quad{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.two,.grid.three{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.hero-tools{justify-content:flex-start}}
     @media(max-width:760px){body{padding:12px}.shell{padding:18px;border-radius:24px}.metric-strip,.grid.quad,.mini-grid{grid-template-columns:1fr}.bar-row{grid-template-columns:1fr}.item{padding:12px}.metric{min-height:auto}.hero-actions,.hero-tools{width:100%}}
   </style>
-  <script src="./gejast-home-gate.js?v375"></script>
-<script src="./gejast-fairness.js?v375"></script></head>
+  <script src="./gejast-home-gate.js?v615"></script>
+<script src="./gejast-fairness.js?v615"></script></head>
 <body>
   <div class="wrap">
     <div class="shell">
@@ -122,7 +122,7 @@
       <div class="grid two">
         <section class="panel">
           <div class="panel-head"><div><h2>Sitebrede statistieken</h2><p>Compacte samenvatting van de drinkdrukte.</p></div></div>
-          <div id="statsMetrics" class="grid quad"></div><div id="fairnessCards" class="list" style="margin-top:14px"></div><div class="panel tinted-gold" style="margin-top:18px"><div class="panel-head"><div><h2>Dry Dock &amp; Wall of Shame</h2><p>Refusal-stats uit Despimarkt, apart van normale drankverificatie.</p></div><a class="btn alt" href="./despimarkt_debts.html">Open schulden &amp; Dry Dock</a></div><div id="despimarktDryDockPanel" class="grid quad"><div class="note">Dry Dock laden…</div></div><div id="despimarktDryDockList" class="list" style="margin-top:14px"></div></div>
+          <div id="statsMetrics" class="grid quad"></div><div id="fairnessCards" class="list" style="margin-top:14px"></div>
         </section>
         <section class="panel">
           <div class="panel-head"><div><h2>Per locatie</h2><p>Waar werden de units precies gedronken?</p></div></div>
@@ -380,12 +380,10 @@ async function loadStats(){
 
       writeCache(STATS_CACHE_KEY, latestStatsData||{});
       renderStats(latestStatsData||{});
-      if(window.GEJAST_DESPIMARKT && typeof window.GEJAST_DESPIMARKT.loadDryDockStatsInto==='function'){ window.GEJAST_DESPIMARKT.loadDryDockStatsInto('despimarktDryDockPanel','despimarktDryDockList'); }
       renderLadder();
       if((!latestStatsData.top_units || !latestStatsData.top_units.length) && Array.isArray(historyRows) && historyRows.length){
         latestStatsData.top_units = synthesizeDashboardFromHistory(historyRows).top_units;
         renderStats(latestStatsData||{});
-        if(window.GEJAST_DESPIMARKT && typeof window.GEJAST_DESPIMARKT.loadDryDockStatsInto==='function'){ window.GEJAST_DESPIMARKT.loadDryDockStatsInto('despimarktDryDockPanel','despimarktDryDockList'); }
       }
     }
     async function loadPage(forceGeo=false,userInitiated=false){
@@ -433,10 +431,10 @@ async function loadStats(){
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./gejast-geo.js?v375"></script><script src="./drinks-verify-float.js?v375"></script>
-  <script src="./gejast-drinks-workflow.js?v375"></script>
-  <script src="./gejast-drinks-analytics.js?v375"></script>
-  <script src="./gejast-session-corner.js?v375"></script>
-<script src="./site-analytics.js?v375"></script>
+  <script src="./gejast-geo.js?v615"></script><script src="./drinks-verify-float.js?v615"></script>
+  <script src="./gejast-drinks-workflow.js?v615"></script>
+  <script src="./gejast-drinks-analytics.js?v615"></script>
+  <script src="./gejast-session-corner.js?v615"></script>
+<script src="./site-analytics.js?v615"></script>
 </body>
 </html>

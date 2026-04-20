@@ -10,7 +10,7 @@
   <style>
     :root { --gold:#9a8241; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#6b655b; --ok:#2b5b37; --warn:#8b3a30; }
     * { box-sizing:border-box; }
-    body { margin:0; padding:20px; font-family:Inter,sans-serif; background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed; min-height:100vh; }
+    body { margin:0; padding:20px; font-family:Inter,sans-serif; background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat scroll; min-height:100vh; }
     .main-card { background:var(--card); border-radius:28px; padding:30px; max-width:980px; margin:0 auto; box-shadow:0 20px 50px rgba(0,0,0,0.08); position:relative; }
     .logo { position:absolute; top:24px; right:24px; width:44px; }
     h1 { margin:0; font-size:32px; letter-spacing:-0.04em; }
@@ -44,19 +44,20 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v489';</script><script src="./gejast-config.js?v489"></script><script src="./gejast-scope-context.js?v489"></script><script src="./gejast-family-rollout.js?v489"></script>
-  <script src="./gejast-rpc-contract.js?v489"></script>
-  <script src="./gejast-admin-rpc.js?v489"></script>
-  <script src="./admin-session-sync.js?v489"></script>
-  <script src="./admin-topnav.js?v489"></script>
-  <script src="./gejast-admin-claims-buckets.js?v489"></script>
-  <script src="./gejast-admin-claims-source.js?v489"></script>
-<script src="./gejast-scope.js?v489"></script></head>
+  <script>window.GEJAST_PAGE_VERSION='v615';</script><script src="./gejast-config.js?v615"></script>
+  <script src="./gejast-home-gate.js?v615"></script><script src="./gejast-scope-context.js?v615"></script><script src="./gejast-family-rollout.js?v615"></script>
+  <script src="./gejast-rpc-contract.js?v615"></script>
+  <script src="./gejast-admin-rpc.js?v615"></script>
+  <script src="./admin-session-sync.js?v615"></script>
+  <script src="./admin-topnav.js?v615"></script>
+  <script src="./gejast-admin-claims-buckets.js?v615"></script>
+  <script src="./gejast-admin-claims-source.js?v615"></script>
+<script src="./gejast-scope.js?v615"></script></head>
 <body>
   <main class="main-card">
     <a href="./index.html" aria-label="Terug naar home"><img src="./logo.png" class="logo" alt="logo" /></a>
     <h1>Beheerhub</h1>
-    <p class="sub">Eén rustige ingang voor accounts, speldata, kluizen en omgeving. Bestaande sessies en vertrouwde apparaten worden langer hergebruikt zodat een normale site-update je niet telkens uit de admin gooit.</p>
+    <p class="sub">Eén rustige ingang voor accounts, speldata, kluizen en omgeving. Bestaande sessies worden hergebruikt zodat je niet steeds opnieuw hoeft in te loggen.</p>
 
     <form id="loginView">
       <div class="login-grid">
@@ -284,86 +285,64 @@ const AdminBuckets = window.GEJAST_ADMIN_BUCKETS || {};
     document.addEventListener('DOMContentLoaded', ()=>{ const sel=document.getElementById('adminScopeSelect'); if(sel){ sel.value=getAdminScope(); sel.addEventListener('change', ()=>{ localStorage.setItem(ADMIN_SCOPE_KEY, sel.value); applyAdminScope(); }); } applyAdminScope(); });
 
     async function boot() {
-    const sessionApi = window.GEJAST_ADMIN_SESSION || null;
-    const token = getAdminSessionToken();
-    const hasLocal = !!(sessionApi && typeof sessionApi.hasUsableLocalSession === 'function' && sessionApi.hasUsableLocalSession());
-    if (!token && !hasLocal) { showLoggedOut(); return; }
-
-    if (hasLocal) {
-      showLoggedIn();
-      loadCounts().catch(()=>{});
-      setStatus('Opgeslagen adminsessie hergebruikt op dit apparaat.', 'ok');
-      setTimeout(async ()=>{
-        try {
-          const data = await sessionApi.backgroundValidate();
-          if (!data) throw new Error('Adminsessie kon niet worden vernieuwd.');
-          await loadCounts();
-          if (maybeReturnAfterLogin()) return;
-          setStatus('Beheerhub geladen.', 'ok');
-        } catch (error) {
-          clearAdminSessionToken();
-          showLoggedOut();
-          setStatus(error?.message || 'Adminsessie verlopen.', 'warn');
-        }
-      }, 0);
-      return;
+      const token = getAdminSessionToken();
+      if (!token) { showLoggedOut(); return; }
+      try {
+        await checkSession();
+        showLoggedIn();
+        await loadCounts();
+        if (maybeReturnAfterLogin()) return;
+        if (maybeReturnAfterLogin()) return;
+        setStatus('Beheerhub geladen.', 'ok');
+      } catch (error) {
+        clearAdminSessionToken();
+        showLoggedOut();
+        setStatus(error?.message || 'Adminsessie verlopen.', 'warn');
+      }
     }
 
-    try {
-      await checkSession();
-      showLoggedIn();
-      await loadCounts();
-      if (maybeReturnAfterLogin()) return;
-      setStatus('Beheerhub geladen.', 'ok');
-    } catch (error) {
+    document.getElementById('loginView').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      try {
+        setStatus('Inloggen...');
+        await adminLogin();
+        showLoggedIn();
+        await loadCounts();
+        setStatus('Inloggen gelukt.', 'ok');
+        if (maybeReturnAfterLogin()) return;
+      } catch (error) {
+        setStatus(error?.message || 'Inloggen mislukt.', 'warn');
+      }
+    });
+    document.getElementById('refreshBtn').addEventListener('click', async () => {
+      try {
+        setStatus('Verversen...');
+        await loadCounts();
+        setStatus('Hub ververst.', 'ok');
+      } catch (error) {
+        setStatus(error?.message || 'Verversen mislukt.', 'warn');
+      }
+    });
+    document.getElementById('logoutBtn').addEventListener('click', () => {
       clearAdminSessionToken();
       showLoggedOut();
-      setStatus(error?.message || 'Adminsessie verlopen.', 'warn');
-    }
-  }
-
-  document.getElementById('loginView').addEventListener('submit', async (event) => {
-    event.preventDefault();
-    try {
-      setStatus('Inloggen...');
-      await adminLogin();
-      showLoggedIn();
-      await loadCounts();
-      setStatus('Inloggen gelukt. Dit apparaat wordt nu langer onthouden.', 'ok');
-      if (maybeReturnAfterLogin()) return;
-    } catch (error) {
-      setStatus(error?.message || 'Inloggen mislukt.', 'warn');
-    }
-  });
-  document.getElementById('refreshBtn').addEventListener('click', async () => {
-    try {
-      setStatus('Verversen...');
-      await loadCounts();
-      setStatus('Hub ververst.', 'ok');
-    } catch (error) {
-      setStatus(error?.message || 'Verversen mislukt.', 'warn');
-    }
-  });
-  document.getElementById('logoutBtn').addEventListener('click', () => {
-    clearAdminSessionToken();
-    showLoggedOut();
-    setStatus('Uitgelogd.', 'ok');
-  });
-  ['usernameInput','passwordInput','totpInput'].forEach((id) => {
-    document.getElementById(id).addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') { event.preventDefault(); document.getElementById('loginView').requestSubmit(); }
+      setStatus('Uitgelogd.', 'ok');
     });
-  });
-  window.addEventListener('error', (event) => {
-    if (event?.message) setStatus(event.message, 'warn');
-  });
-  boot();
-  setInterval(() => { if (!document.hidden && !document.getElementById('hubView').classList.contains('hidden')) loadCounts().catch(() => {}); }, 15000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && !document.getElementById('hubView').classList.contains('hidden')) loadCounts().catch(() => {}); });
-</script>
+    ['usernameInput','passwordInput','totpInput'].forEach((id) => {
+      document.getElementById(id).addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') { event.preventDefault(); document.getElementById('loginView').requestSubmit(); }
+      });
+    });
+    window.addEventListener('error', (event) => {
+      if (event?.message) setStatus(event.message, 'warn');
+    });
+    boot();
+    setInterval(() => { if (!document.hidden && !document.getElementById('hubView').classList.contains('hidden')) loadCounts().catch(() => {}); }, 15000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && !document.getElementById('hubView').classList.contains('hidden')) loadCounts().catch(() => {}); });
+  </script>
 
   <div class="site-credit-watermark" data-version-watermark></div>
-  <script src="./site-analytics.js?v374"></script>
+  <script src="./site-analytics.js?v615"></script>
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
