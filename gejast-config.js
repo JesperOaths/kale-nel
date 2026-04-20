@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v488',
+    VERSION:'v489',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -11,6 +11,7 @@
     PLAYER_SESSION_KEYS: ['jas_session_token_v11','jas_session_token_v10'],
     PLAYER_LAST_ACTIVITY_KEY: 'jas_last_activity_at_v1',
     PLAYER_SESSION_IDLE_MS: 12 * 60 * 60 * 1000,
+    ADMIN_SESSION_REMEMBER_MS: 45 * 24 * 60 * 60 * 1000,
     WEB_PUSH_PUBLIC_KEY: 'BPqY04jDOB_8RlhNxURgWFl6cMge64Mr7DkrWtgMfG4ARWLJ6S-r6c6JeQJ6o4kysWT0WeR9oVpahP85L8GLl_4',
     NOTIFICATION_BUTTON_ENABLED: true,
     WEB_PUSH_TEST_RPC: 'queue_test_web_push',
@@ -144,6 +145,21 @@
         if (names.length) return names;
       } catch (_) {}
     }
+    try {
+      const url = `${CONFIG.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope&status=eq.available&order=display_name.asc`;
+      const res = await fetch(url, { method:'GET', mode:'cors', cache:'no-store', headers });
+      const txt = await res.text();
+      let data = null;
+      try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || `HTTP ${res.status}`); }
+      if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
+      let rows = Array.isArray(data) ? data : [];
+      rows = rows.filter((row)=>{
+        const explicitScope = String(row?.site_scope || '').trim().toLowerCase();
+        return !explicitScope || explicitScope === resolvedScope;
+      });
+      const names = toNames(rows);
+      if (names.length) return names;
+    } catch (_) {}
     return [];
   }
   async function fetchScopedRequestableNames(scope){

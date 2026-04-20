@@ -110,52 +110,20 @@
     @media (max-width:700px){.request-grid,.entry-meta,.hub-grid,.manual-grid{grid-template-columns:1fr}}
   </style>
 
-
-  <style id="admin-mobile-wave2">
-    .activation-tools{margin-top:14px;padding:14px;border-radius:18px;background:#faf7ef;border:1px solid rgba(0,0,0,0.06);display:grid;gap:12px}
-    .pipeline-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-    .pipeline-card{padding:12px 14px;border-radius:16px;background:#fff;border:1px solid rgba(0,0,0,0.06);display:grid;gap:4px}
-    .pipeline-card .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#85754f;font-weight:800}
-    .pipeline-card .value{font-weight:800;line-height:1.3;word-break:break-word}
-    .activation-link-box{background:#fff;border-radius:16px;border:1px solid rgba(0,0,0,0.08);padding:12px 14px;word-break:break-all;font-size:13px}
-    .request .entry-title{font-size:clamp(20px,4vw,26px)}
-    .request details{background:#fff;border:1px solid rgba(0,0,0,0.06);border-radius:16px;padding:0 12px}
-    .request details summary{padding:12px 0}
-    .request .decision-reason{min-height:92px;border-radius:14px}
-    @media (max-width:760px){
-      body{padding:84px 12px 18px}
-      .main-card{padding:18px;border-radius:20px}
-      .card-logo{top:18px;right:18px;width:38px}
-      .request,.card{padding:16px;border-radius:18px}
-      .entry-top{display:grid;gap:10px}
-      .entry-top > div:last-child{text-align:left !important}
-      .entry-title{font-size:26px;line-height:1.02}
-      .entry-meta,.request-grid,.activation-meta,.manual-grid,.hub-grid,.stats-grid,.pipeline-grid{grid-template-columns:1fr}
-      .action-row,.compact-actions,.panel-actions,.toolbar{flex-direction:column;align-items:stretch}
-      .action-row .btn,.action-row .approve-btn,.action-row .reject-btn,.action-row .link-btn,.action-row .mail-btn,.compact-actions .btn,.compact-actions .link-btn,.compact-actions .reject-btn,.compact-actions .approve-btn,.toolbar .btn{width:100%;justify-content:center}
-      .topbar{position:sticky;top:0;z-index:6;background:linear-gradient(180deg,rgba(249,247,242,.98),rgba(249,247,242,.95));padding-bottom:12px}
-      .toolbar{width:100%}
-      .activation-tools{padding:12px}
-      .request .entry-note{font-size:15px}
-      .state-badge{font-size:12px;padding:6px 10px}
-      .version-tag{padding-bottom:4px}
-    }
-  </style>
-
   <style id="bruis-watermark-style">
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
     @media (max-width:640px){.site-credit-watermark{bottom:10px;font-size:12px;padding:7px 11px;max-width:calc(100vw - 24px);text-align:center}}
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v590';</script><script src="./gejast-config.js?v590"></script><script src="./admin-desktop-restore-v590.js?v590"></script><script src="./gejast-scope-context.js?v392"></script><script src="./gejast-family-rollout.js?v393"></script>
+  <script>window.GEJAST_PAGE_VERSION='v489';</script><script src="./gejast-config.js?v489"></script><script src="./gejast-scope-context.js?v489"></script><script src="./gejast-family-rollout.js?v489"></script>
   <script src="./gejast-rpc-contract.js?v392"></script>
-  <script src="./gejast-admin-rpc.js?v590"></script>
-  <script src="./admin-session-sync.js?v590"></script>
-  <script src="./admin-topnav.js?v590"></script>
-  <script src="./gejast-admin-claims-buckets.js?v590"></script>
-  <script src="./gejast-admin-claims-source.js?v590"></script>
-  <script src="./gejast-admin-source.js?v590"></script><script src="./gejast-account-links.js?v399"></script>
+  <script src="./gejast-admin-rpc.js?v392"></script>
+  <script src="./admin-session-sync.js?v489"></script>
+  <script src="./admin-topnav.js?v392"></script>
+  <script src="./gejast-admin-claims-buckets.js?v392"></script>
+  <script src="./gejast-admin-claims-source.js?v392"></script>
+  <script src="./gejast-admin-source.js?v399"></script><script src="./gejast-account-links.js?v489"></script>
 </head>
 <body>
   <div class="main-card">
@@ -292,21 +260,16 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     function activationPanelHtml(req) {
       return `
         <div class="activation-tools hidden" id="activation-tools-${requestIdOf(req)}">
-          <div>
-            <strong>Activatie en mailflow</strong>
-            <div class="muted" style="margin-top:4px;">Leesbare mobiele flow voor link, wachtrij en Make-ping.</div>
-          </div>
-          <div class="pipeline-grid">
-            <div class="pipeline-card"><span class="label">Aangevraagde naam</span><span class="value">${escapeHtml(displayNameOf(req))}</span></div>
-            <div class="pipeline-card"><span class="label">Ontvanger</span><span class="value">${escapeHtml(req.requester_email || 'Onbekend')}</span></div>
-            <div class="pipeline-card"><span class="label">Link verloopt</span><span class="value" id="activation-expires-${requestIdOf(req)}">Nog niet gegenereerd</span></div>
+          <div><strong>Activatielink klaarzetten</strong></div>
+          <div class="muted" style="margin-top:4px;">Genereer, kopieer of queue de activatielink.</div>
+          <div class="activation-meta">
+            ${metaBox('E-mail', req.requester_email || 'Onbekend')}
+            <div class="data-box"><span class="label">Activatie verloopt</span><span id="activation-expires-${requestIdOf(req)}">Nog niet gegenereerd</span></div>
           </div>
           <div class="activation-link-box" id="activation-url-${requestIdOf(req)}">Nog geen activatielink gegenereerd.</div>
           <div class="action-row">
             <button class="copy-btn" type="button" data-copy-activation data-id="${requestIdOf(req)}">Kopieer activatielink</button>
-            <button class="mail-btn" type="button" data-mail-activation data-id="${requestIdOf(req)}">Mailconcept</button>
-            <button class="mail-btn" type="button" data-send-activation data-id="${requestIdOf(req)}">Verstuur via Make</button>
-            <button class="mail-btn" type="button" data-hide-activation data-id="${requestIdOf(req)}">Inklappen</button>
+            <button class="mail-btn" type="button" data-mail-activation data-id="${requestIdOf(req)}">Mailconcept</button><button class="mail-btn" type="button" data-hide-activation data-id="${requestIdOf(req)}">Inklappen</button>
           </div>
         </div>
       `;
@@ -505,7 +468,6 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         </div>
         <div class="entry-note">${noteHtml}</div>
         <div class="entry-meta">
-          ${metaBox('Aangevraagde naam', requestedNameOf(req) || 'Onbekend')}
           ${metaBox('Tijdzone', meta.timezone || 'Onbekend')}
           ${metaBox('Platform', meta.platform || 'Onbekend')}
           ${metaBox('Referrer', meta.referrer || 'Direct')}
@@ -539,7 +501,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       }).forEach((req) => {
         const div = document.createElement('div');
         div.className = 'request';
-        div.innerHTML = `${requestHtml(req)}<div style="margin-top:12px;"><textarea class="decision-reason" data-id="${requestIdOf(req)}" placeholder="Reden (optioneel)"></textarea><div class="action-row"><button class="approve-btn" type="button" data-id="${requestIdOf(req)}" data-decision="approved">Goedkeuren</button><button class="reject-btn" type="button" data-id="${requestIdOf(req)}" data-decision="rejected">Afwijzen</button><button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(req)}">Maak activatielink</button><button class="mail-btn" type="button" data-send-activation data-id="${requestIdOf(req)}">Verstuur via Make</button></div><div class="inline-msg" id="request-msg-${requestIdOf(req)}">Klaar om te beoordelen.</div>${activationPanelHtml(req)}</div>`;
+        div.innerHTML = `${requestHtml(req)}<div style="margin-top:12px;"><textarea class="decision-reason" data-id="${requestIdOf(req)}" placeholder="Reden (optioneel)"></textarea><div class="action-row"><button class="approve-btn" type="button" data-id="${requestIdOf(req)}" data-decision="approved">Goedkeuren</button><button class="reject-btn" type="button" data-id="${requestIdOf(req)}" data-decision="rejected">Afwijzen</button><button class="link-btn" type="button" data-generate-activation data-id="${requestIdOf(req)}">Maak activatielink</button></div><div class="inline-msg" id="request-msg-${requestIdOf(req)}">Klaar om te beoordelen.</div>${activationPanelHtml(req)}</div>`;
         root.appendChild(div);
       });
       document.querySelectorAll('[data-decision]').forEach((btn) => {
@@ -1282,13 +1244,12 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       const urlEl = document.getElementById(`activation-url-${requestId}`);
       const expiresEl = document.getElementById(`activation-expires-${requestId}`);
       if (!panel || !urlEl || !expiresEl) return;
-      const normalized = normalizeMailResult(linkData, { requester_email: panel.dataset.email || '', activation_url: panel.dataset.url || '' });
       panel.classList.remove('hidden');
       rememberActivationPanel(requestId, true);
-      panel.dataset.url = normalized.activation_url || panel.dataset.url || '';
-      panel.dataset.email = normalized.requester_email || normalized.recipient_email || panel.dataset.email || '';
-      panel.dataset.displayName = normalized.display_name || normalized.recipient_name || panel.dataset.displayName || '';
-      panel.dataset.expiresAt = normalized.expires_at || panel.dataset.expiresAt || '';
+      panel.dataset.url = linkData.activation_url || panel.dataset.url || '';
+      panel.dataset.email = linkData.requester_email || panel.dataset.email || '';
+      panel.dataset.displayName = linkData.display_name || panel.dataset.displayName || '';
+      panel.dataset.expiresAt = linkData.expires_at || panel.dataset.expiresAt || '';
       urlEl.dataset.url = panel.dataset.url || '';
       urlEl.textContent = panel.dataset.url || 'Geen link ontvangen van de server.';
       expiresEl.textContent = formatDateTime(panel.dataset.expiresAt);

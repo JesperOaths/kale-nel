@@ -6,128 +6,28 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Make & e-mailpijplijn - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v590';</script><script src="./gejast-config.js?v590"></script><script src="./admin-desktop-restore-v590.js?v590"></script><script src="./gejast-scope-context.js?v567"></script><script src="./gejast-family-rollout.js?v567"></script>
-  <script src="./admin-session-sync.js?v590"></script>
-  <script src="./gejast-admin-rpc.js?v590"></script>
-  <script src="./gejast-admin-source.js?v590"></script>
+  <title>Maildiagnostiek - Wordt er gejast?</title>
+  <script>window.GEJAST_PAGE_VERSION='v489';</script><script src="./gejast-config.js?v489"></script><script src="./gejast-scope-context.js?v489"></script><script src="./gejast-family-rollout.js?v489"></script>
+  <script src="./admin-session-sync.js?v489"></script>
+  <script src="./gejast-admin-rpc.js?v392"></script>
+  <script src="./gejast-admin-source.js?v392"></script>
   <style>
     :root { --gold:#9a8241; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#6b655b; --ok:#2b5b37; --warn:#8b3a30; }
-    *{box-sizing:border-box}
-    body{margin:0;padding:20px;font-family:Inter,sans-serif;background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed;min-height:100vh}
-    .main{max-width:1320px;margin:0 auto;background:var(--card);border-radius:26px;padding:28px;box-shadow:0 20px 50px rgba(0,0,0,0.08);position:relative}
-    .logo{position:absolute;top:24px;right:24px;width:42px}
-    .top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}
-    .row{display:flex;gap:10px;flex-wrap:wrap}
-    .btn{border:none;border-radius:12px;padding:12px 14px;font:inherit;font-weight:800;cursor:pointer;text-decoration:none}.ghost{background:#fff;border:1px solid rgba(0,0,0,0.08);color:#222}.primary{background:var(--gold);color:#111}
-    .grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px;margin-top:18px}
-    .card{background:#fff;border:1px solid rgba(0,0,0,0.06);border-radius:18px;padding:16px}
-    .span-4{grid-column:span 4}.span-6{grid-column:span 6}.span-8{grid-column:span 8}.span-12{grid-column:1 / -1}
-    .status{min-height:20px;margin:14px 0}.status.ok{color:var(--ok)}.status.warn{color:var(--warn)}
-    .muted{color:var(--muted)}
-    .help{font-size:13px;line-height:1.55}
-    .metric-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
-    .metric{background:rgba(249,247,242,.92);border:1px solid rgba(0,0,0,0.06);border-radius:14px;padding:12px}
-    .metric span{display:block;font-size:11px;color:#8a7a55;text-transform:uppercase;letter-spacing:.08em}
-    .metric strong{display:block;margin-top:6px;font-size:26px;line-height:1.1}
-    table{width:100%;border-collapse:collapse;font-size:14px}
-    th,td{text-align:left;padding:10px 8px;border-bottom:1px solid rgba(0,0,0,0.06);vertical-align:top}
-    th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55}
-    .table-wrap{overflow:auto}
-    .pill{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;background:rgba(17,17,17,.06);font-size:12px;font-weight:800}
-    .pill.pending,.pill.queued{background:rgba(154,130,65,.14);color:#5f4e1f}
-    .pill.processing,.pill.claimed,.pill.sending,.pill.claimed_for_make{background:rgba(17,17,17,.08);color:#2d2d2d}
-    .pill.sent,.pill.sent_make{background:rgba(43,91,55,.14);color:#20492b}
-    .pill.failed,.pill.failed_make,.pill.missing_make_callback{background:rgba(139,58,48,.14);color:#7a281e}
-    details{margin:0}
-    summary{cursor:pointer;font-weight:800;color:#574728}
-    pre{margin:8px 0 0;background:#161616;color:#f6f1df;padding:12px;border-radius:12px;white-space:pre-wrap;word-break:break-word;font-size:12px;line-height:1.45}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
-    @media(max-width:1180px){.span-4,.span-6,.span-8{grid-column:1 / -1}.metric-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-    @media(max-width:760px){body{padding:14px}.main{padding:22px}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media(max-width:520px){.metric-grid{grid-template-columns:1fr}}
+    *{box-sizing:border-box} body{margin:0;padding:20px;font-family:Inter,sans-serif;background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed;min-height:100vh}
+    .main{max-width:980px;margin:0 auto;background:var(--card);border-radius:26px;padding:28px;box-shadow:0 20px 50px rgba(0,0,0,0.08);position:relative}
+    .logo{position:absolute;top:24px;right:24px;width:42px}.top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.row{display:flex;gap:10px;flex-wrap:wrap}.btn{border:none;border-radius:12px;padding:12px 14px;font:inherit;font-weight:800;cursor:pointer;text-decoration:none}.ghost{background:#fff;border:1px solid rgba(0,0,0,0.08);color:#222}.primary{background:var(--gold);color:#111}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}.card{background:#fff;border:1px solid rgba(0,0,0,0.06);border-radius:18px;padding:16px}.muted{color:var(--muted)} code,pre{white-space:pre-wrap;word-break:break-word} .status{min-height:20px;margin:14px 0}.status.ok{color:var(--ok)}.status.warn{color:var(--warn)} table{width:100%;border-collapse:collapse;font-size:14px} th,td{text-align:left;padding:8px;border-bottom:1px solid rgba(0,0,0,0.06)} @media(max-width:800px){.grid{grid-template-columns:1fr}} .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)}
   </style>
-  <script src="./admin-topnav.js?v590"></script>
+  <script src="./admin-topnav.js?v392"></script>
 </head>
 <body>
   <main class="main">
     <a href="./admin.html" aria-label="Terug naar admin-overzicht"><img src="./logo.png" class="logo" alt="logo"></a>
-    <div class="top">
-      <div>
-        <h1>Make & e-mailpijplijn</h1>
-        <p class="muted help">Hier zie je de hele keten: welke activation-jobs wij naar Make uitsturen, welke succes- en foutcallbacks Make terugstuurt, en welke aanvragen zonder callback zijn blijven hangen. De groene blokken in Make zijn placeholders; zodra Make de request doet slaan wij de ingevulde stringwaardes op zoals ze echt binnenkomen.</p>
-      </div>
-      <div class="row">
-        <a class="btn ghost" href="./admin.html">Terug naar hub</a>
-        <button id="refreshBtn" class="btn primary" type="button">Ververs</button>
-      </div>
-    </div>
+    <div class="top"><div><h1>Maildiagnostiek</h1><p class="muted">Controleer welke Make-webhook actief is, welke mail-RPC gebruikt wordt en wat de laatste mailjobstatus is.</p></div><div class="row"><a class="btn ghost" href="./admin.html">Terug naar hub</a><button id="refreshBtn" class="btn primary" type="button">Ververs</button></div></div>
     <div id="statusBox" class="status"></div>
     <div class="grid">
-      <section class="card span-4">
-        <h2>Actieve configuratie</h2>
-        <table>
-          <tr><th>Make-webhook</th><td id="webhookCell" class="mono"></td></tr>
-          <tr><th>Claim-RPC</th><td id="claimRpcCell" class="mono"></td></tr>
-          <tr><th>Sent-callback RPC</th><td id="sentRpcCell" class="mono"></td></tr>
-          <tr><th>Failed-callback RPC</th><td id="failedRpcCell" class="mono"></td></tr>
-          <tr><th>Callback-timeout</th><td id="timeoutCell" class="mono"></td></tr>
-          <tr><th>Supabase-project</th><td id="supabaseCell" class="mono"></td></tr>
-        </table>
-      </section>
-
-      <section class="card span-8">
-        <h2>Overzicht</h2>
-        <div class="metric-grid">
-          <div class="metric"><span>Pending</span><strong id="pendingCount">—</strong></div>
-          <div class="metric"><span>Processing</span><strong id="processingCount">—</strong></div>
-          <div class="metric"><span>Sent</span><strong id="sentCount">—</strong></div>
-          <div class="metric"><span>Failed</span><strong id="failedCount">—</strong></div>
-          <div class="metric"><span>Naar Make gestuurd</span><strong id="dispatchCount">—</strong></div>
-          <div class="metric"><span>Succescallbacks</span><strong id="sentReportCount">—</strong></div>
-          <div class="metric"><span>Foutcallbacks</span><strong id="failedReportCount">—</strong></div>
-          <div class="metric"><span>Geen callback</span><strong id="missingReportCount">—</strong></div>
-          <div class="metric"><span>Laatste jobstatus</span><strong id="lastStatus">—</strong></div>
-          <div class="metric"><span>Laatste callback</span><strong id="lastCallback">—</strong></div>
-        </div>
-        <p id="summaryBox" class="muted help" style="margin-top:12px">Nog niet geladen.</p>
-      </section>
-
-      <section class="card span-12">
-        <h2>Laatste uitgaande e-mailjobs</h2>
-        <div id="jobsBox" class="table-wrap muted">Nog niet geladen.</div>
-      </section>
-
-      <section class="card span-12">
-        <h2>Naar Make gestuurd</h2>
-        <div id="dispatchBox" class="table-wrap muted">Nog niet geladen.</div>
-      </section>
-
-      <section class="card span-12">
-        <h2>Make succes-terugmeldingen</h2>
-        <div id="sentReportsBox" class="table-wrap muted">Nog niet geladen.</div>
-      </section>
-
-      <section class="card span-12">
-        <h2>Make fout-terugmeldingen</h2>
-        <div id="failedReportsBox" class="table-wrap muted">Nog niet geladen.</div>
-      </section>
-
-      <section class="card span-12">
-        <h2>Geen callback / pijplijn stilgevallen</h2>
-        <div id="missingReportsBox" class="table-wrap muted">Nog niet geladen.</div>
-      </section>
-
-      <section class="card span-12">
-        <h2>Verzoeken, namen en activaties</h2>
-        <div id="requestsBox" class="table-wrap muted">Nog niet geladen.</div>
-      </section>
-
-      <section class="card span-12">
-        <h2>Laatste activatielinks</h2>
-        <div id="activationsBox" class="table-wrap muted">Nog niet geladen.</div>
-      </section>
+      <section class="card"><h2>Actieve configuratie</h2><table><tr><th>Make-webhook</th><td id="webhookCell"></td></tr><tr><th>Mail-RPC</th><td id="rpcCell"></td></tr><tr><th>Supabase-project</th><td id="supabaseCell"></td></tr></table></section>
+      <section class="card"><h2>Laatste diagnose</h2><div id="summaryBox" class="muted">Nog niet geladen.</div></section>
+      <section class="card" style="grid-column:1 / -1"><h2>Laatste mailjobs</h2><div id="jobsBox" class="muted">Nog niet geladen.</div></section>
     </div>
   </main>
   <script>
@@ -136,132 +36,23 @@
     const SUPABASE_PUBLISHABLE_KEY=(window.GEJAST_CONFIG&&window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY)||'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
     const MAKE_WEBHOOK_URL=(window.GEJAST_CONFIG&&window.GEJAST_CONFIG.MAKE_WEBHOOK_URL)||'';
     const CLAIM_EMAIL_RPC=(window.GEJAST_CONFIG&&window.GEJAST_CONFIG.CLAIM_EMAIL_RPC)||'claim_email_jobs_http';
-    const MAKE_SENT_CALLBACK_RPC=(window.GEJAST_CONFIG&&window.GEJAST_CONFIG.MAKE_SENT_CALLBACK_RPC)||'mark_outbound_email_job_sent_make';
-    const MAKE_FAILED_CALLBACK_RPC=(window.GEJAST_CONFIG&&window.GEJAST_CONFIG.MAKE_FAILED_CALLBACK_RPC)||'mark_outbound_email_job_failed_make';
-    const MAKE_CALLBACK_MISSING_AFTER_MINUTES=Number((window.GEJAST_CONFIG&&window.GEJAST_CONFIG.MAKE_CALLBACK_MISSING_AFTER_MINUTES)||10) || 10;
     const ADMIN_SOURCE = window.GEJAST_ADMIN_SOURCE || null;
-    const DATE_TIME_24H = new Intl.DateTimeFormat('nl-NL', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false });
-    function formatDateTime(value){ if(!value) return '—'; const date = value instanceof Date ? value : new Date(value); return Number.isNaN(date.getTime()) ? String(value) : DATE_TIME_24H.format(date).replace(',', ''); }
+    const DATE_TIME_24H = new Intl.DateTimeFormat('nl-NL', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:false });
+    function formatDateTime(value){ if(!value) return ''; const date = value instanceof Date ? value : new Date(value); return Number.isNaN(date.getTime()) ? String(value) : DATE_TIME_24H.format(date).replace(',', ''); }
     function rpcHeaders(){return {apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,'Content-Type':'application/json',Accept:'application/json'}}
     async function parseResponse(res){const text=await res.text(); let data=null; try{data=text?JSON.parse(text):null}catch{throw new Error(text||`HTTP ${res.status}`)} if(!res.ok) throw new Error(data?.message||data?.error||data?.details||data?.hint||`HTTP ${res.status}`); return data;}
     function token(){return sessionStorage.getItem(ADMIN_SESSION_KEY)||localStorage.getItem(ADMIN_SESSION_KEY)}
     function setStatus(msg='',tone=''){const el=document.getElementById('statusBox'); el.textContent=msg; el.className=`status ${tone}`.trim();}
-    function escapeHtml(value){ return String(value ?? '').replace(/[&<>"']/g, (ch)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch])); }
-    function jsonDetails(label, value){ const text = JSON.stringify(value ?? {}, null, 2); return `<details><summary>${escapeHtml(label)}</summary><pre>${escapeHtml(text)}</pre></details>`; }
-    function statusPill(value){ const raw = String(value || 'onbekend').trim().toLowerCase(); return `<span class="pill ${escapeHtml(raw)}">${escapeHtml(raw || 'onbekend')}</span>`; }
     async function ensureGate(){ if(window.GEJAST_ADMIN_RPC && typeof window.GEJAST_ADMIN_RPC.requirePage==='function'){ return await window.GEJAST_ADMIN_RPC.requirePage('admin_mail_audit.html'); } if(window.GEJAST_ADMIN_SESSION && typeof window.GEJAST_ADMIN_SESSION.requirePage==='function'){ return await window.GEJAST_ADMIN_SESSION.requirePage('admin_mail_audit.html'); } if(!token()){ location.href='./admin.html?return_to=admin_mail_audit.html'; return false; } try { await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_check_session`,{method:'POST',mode:'cors',cache:'no-store',headers:rpcHeaders(),body:JSON.stringify({admin_session_token:token()})}).then(parseResponse); return true; } catch(err){ location.href='./admin.html?return_to=admin_mail_audit.html'; return false; } }
-
-    function renderConfig(){
-      document.getElementById('webhookCell').textContent = MAKE_WEBHOOK_URL || 'Niet ingesteld';
-      document.getElementById('claimRpcCell').textContent = CLAIM_EMAIL_RPC;
-      document.getElementById('sentRpcCell').textContent = MAKE_SENT_CALLBACK_RPC;
-      document.getElementById('failedRpcCell').textContent = MAKE_FAILED_CALLBACK_RPC;
-      document.getElementById('timeoutCell').textContent = `${MAKE_CALLBACK_MISSING_AFTER_MINUTES} minuten zonder callback`;
-      document.getElementById('supabaseCell').textContent = SUPABASE_URL;
-    }
-
-    function renderSummary(data){
-      const summary = data?.summary || {};
-      document.getElementById('pendingCount').textContent = String(summary.pending_count ?? '0');
-      document.getElementById('processingCount').textContent = String(summary.processing_count ?? '0');
-      document.getElementById('sentCount').textContent = String(summary.sent_count ?? '0');
-      document.getElementById('failedCount').textContent = String(summary.failed_count ?? '0');
-      document.getElementById('dispatchCount').textContent = String(summary.dispatched_report_count ?? '0');
-      document.getElementById('sentReportCount').textContent = String(summary.sent_report_count ?? '0');
-      document.getElementById('failedReportCount').textContent = String(summary.failed_report_count ?? '0');
-      document.getElementById('missingReportCount').textContent = String(summary.missing_report_count ?? '0');
-      document.getElementById('lastStatus').textContent = String(summary.last_job_status || '—');
-      document.getElementById('lastCallback').textContent = summary.last_report_at ? formatDateTime(summary.last_report_at) : '—';
-      const parts = [];
-      if (data?.queue_table_exists === false) parts.push('outbound_email_jobs ontbreekt.');
-      if (data?.report_table_exists === false) parts.push('outbound_email_job_delivery_reports ontbreekt.');
-      if (summary.last_provider_message_id) parts.push(`Laatste provider-id: ${summary.last_provider_message_id}`);
-      if (summary.last_job_created_at) parts.push(`Laatste job: ${formatDateTime(summary.last_job_created_at)}`);
-      if (summary.last_sent_at) parts.push(`Laatste sent: ${formatDateTime(summary.last_sent_at)}`);
-      if (summary.last_failed_at) parts.push(`Laatste failed: ${formatDateTime(summary.last_failed_at)}`);
-      if (summary.last_missing_callback_at) parts.push(`Laatste gemiste callback: ${formatDateTime(summary.last_missing_callback_at)}`);
-      document.getElementById('summaryBox').textContent = parts.length ? parts.join(' · ') : 'Geen extra samenvatting beschikbaar.';
-    }
-
-    function renderJobs(rows){
-      const root = document.getElementById('jobsBox');
-      if (!Array.isArray(rows) || !rows.length) { root.innerHTML = '<div class="muted">Geen recente uitgaande jobs gevonden.</div>'; return; }
-      root.innerHTML = `<table><thead><tr><th>E-mailjob</th><th>Status</th><th>Ontvanger</th><th>Verzoek / speler</th><th>Momenten</th><th>Data</th></tr></thead><tbody>${
-        rows.map((row)=>`<tr>
-          <td>#${escapeHtml(row.id ?? '')}</td>
-          <td>${statusPill(row.status || row.job_status)}</td>
-          <td><strong>${escapeHtml(row.recipient_name || row.display_name || '—')}</strong><br><span class="muted">${escapeHtml(row.recipient_email || row.requester_email || '—')}</span></td>
-          <td>request_id: ${escapeHtml(row.request_id_text || row.related_claim_request_id || '—')}<br>player_id: ${escapeHtml(row.player_id_text || row.related_player_id || '—')}<br>username: ${escapeHtml(row.username || '—')}</td>
-          <td>aangemaakt: ${escapeHtml(formatDateTime(row.created_at))}<br>geclaimd: ${escapeHtml(formatDateTime(row.claimed_at))}<br>sent: ${escapeHtml(formatDateTime(row.sent_at))}<br>failed: ${escapeHtml(formatDateTime(row.failed_at))}</td>
-          <td>provider: ${escapeHtml(row.provider_message_id || '—')}<br>attempts: ${escapeHtml(row.attempts ?? 0)}<br>laatste rapport: ${escapeHtml(row.last_delivery_report_kind || '—')}<br>${row.last_error ? `<div class="muted">fout: ${escapeHtml(row.last_error)}</div>` : ''}${jsonDetails('Uitgaande payload', row.payload || {})}${jsonDetails('Laatste rapportpayload', row.last_delivery_report_payload || {})}</td>
-        </tr>`).join('')
-      }</tbody></table>`;
-    }
-
-    function renderReportTable(rootId, rows, emptyText){
-      const root = document.getElementById(rootId);
-      if (!Array.isArray(rows) || !rows.length) { root.innerHTML = `<div class="muted">${escapeHtml(emptyText)}</div>`; return; }
-      root.innerHTML = `<table><thead><tr><th>Tijd</th><th>Soort</th><th>Koppeling</th><th>Velden</th><th>Raw payload</th></tr></thead><tbody>${
-        rows.map((row)=>`<tr>
-          <td>${escapeHtml(formatDateTime(row.created_at))}</td>
-          <td>${statusPill(row.report_kind)}</td>
-          <td>job_id: ${escapeHtml(row.job_id || '—')}<br>reported p_job_id: ${escapeHtml(row.reported_job_id_text || '—')}<br>request_id: ${escapeHtml(row.related_claim_request_id || row.reported_request_id_text || '—')}<br>matched_by: ${escapeHtml(row.matched_by || '—')}</td>
-          <td>display_name: ${escapeHtml(row.reported_display_name || '—')}<br>requester_name: ${escapeHtml(row.reported_requester_name || '—')}<br>requester_email: ${escapeHtml(row.reported_requester_email || '—')}<br>provider_id: ${escapeHtml(row.provider_message_id || '—')}<br>${row.error_text ? `fout: ${escapeHtml(row.error_text)}` : ''}</td>
-          <td>${jsonDetails('Payload', row.raw_payload || {})}</td>
-        </tr>`).join('')
-      }</tbody></table>`;
-    }
-
-    function renderRequests(rows){
-      const root = document.getElementById('requestsBox');
-      if (!Array.isArray(rows) || !rows.length) { root.innerHTML = '<div class="muted">Nog geen verzoek- of snapshotdata gevonden.</div>'; return; }
-      root.innerHTML = `<table><thead><tr><th>Verzoek</th><th>Naam / username</th><th>Aanvrager</th><th>Snapshots</th></tr></thead><tbody>${
-        rows.map((row)=>`<tr>
-          <td>#${escapeHtml(row.claim_request_id || '—')}<br><span class="muted">${escapeHtml(formatDateTime(row.created_at))}</span></td>
-          <td><strong>${escapeHtml(row.requested_display_name || '—')}</strong><br>username: ${escapeHtml(row.username || '—')}<br>status: ${escapeHtml(row.allowed_username_status || '—')}</td>
-          <td>${escapeHtml(row.requester_email || '—')}<br>player_id: ${escapeHtml(row.player_id || '—')}<br>allowed_username_id: ${escapeHtml(row.allowed_username_id || '—')}</td>
-          <td>${jsonDetails('Laatste request-snapshot', row.latest_request_snapshot || {})}${jsonDetails('Laatste activation-snapshot', row.latest_activation_snapshot || {})}</td>
-        </tr>`).join('')
-      }</tbody></table>`;
-    }
-
-    function renderActivations(rows){
-      const root = document.getElementById('activationsBox');
-      if (!Array.isArray(rows) || !rows.length) { root.innerHTML = '<div class="muted">Nog geen activatielinks gevonden.</div>'; return; }
-      root.innerHTML = `<table><thead><tr><th>Link</th><th>Naam</th><th>E-mail</th><th>Gebruik</th><th>Snapshot</th></tr></thead><tbody>${
-        rows.map((row)=>`<tr>
-          <td>#${escapeHtml(row.activation_link_id || row.id || '—')}<br>request_id: ${escapeHtml(row.claim_request_id || '—')}</td>
-          <td><strong>${escapeHtml(row.display_name || row.requested_display_name || '—')}</strong><br>username: ${escapeHtml(row.username || '—')}</td>
-          <td>${escapeHtml(row.requester_email || '—')}</td>
-          <td>aangemaakt: ${escapeHtml(formatDateTime(row.created_at))}<br>verloopt: ${escapeHtml(formatDateTime(row.expires_at))}<br>gebruikt: ${escapeHtml(formatDateTime(row.used_at))}</td>
-          <td>${jsonDetails('Activation snapshot', row.latest_activation_snapshot || {})}</td>
-        </tr>`).join('')
-      }</tbody></table>`;
-    }
-
-    async function loadPipeline(){
-      renderConfig();
-      const data = ADMIN_SOURCE && typeof ADMIN_SOURCE.loadMakeEmailPipeline === 'function'
-        ? await ADMIN_SOURCE.loadMakeEmailPipeline({ limit: 80, missingAfterMinutes: MAKE_CALLBACK_MISSING_AFTER_MINUTES })
-        : await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_make_email_pipeline`,{method:'POST',mode:'cors',cache:'no-store',headers:rpcHeaders(),body:JSON.stringify({admin_session_token:token(), limit_input:80, missing_after_minutes:MAKE_CALLBACK_MISSING_AFTER_MINUTES})}).then(parseResponse);
-      renderSummary(data || {});
-      renderJobs(Array.isArray(data?.jobs) ? data.jobs : []);
-      renderReportTable('dispatchBox', Array.isArray(data?.dispatch_reports) ? data.dispatch_reports : [], 'Nog geen dispatches naar Make gevonden.');
-      renderReportTable('sentReportsBox', Array.isArray(data?.sent_reports) ? data.sent_reports : [], 'Nog geen succescallbacks van Make gevonden.');
-      renderReportTable('failedReportsBox', Array.isArray(data?.failed_reports) ? data.failed_reports : [], 'Nog geen foutcallbacks van Make gevonden.');
-      renderReportTable('missingReportsBox', Array.isArray(data?.missing_reports) ? data.missing_reports : [], 'Nog geen vastgelopen pipelinegevallen gevonden.');
-      renderRequests(Array.isArray(data?.requests) ? data.requests : []);
-      renderActivations(Array.isArray(data?.activations) ? data.activations : []);
-      setStatus('Make & e-mailpijplijn geladen.','ok');
-    }
-
-    document.getElementById('refreshBtn').addEventListener('click',()=>loadPipeline().catch((err)=>setStatus(err?.message||'Laden mislukt.','warn')));
-    setInterval(()=>{ if(!document.hidden) loadPipeline().catch(()=>{}); },20000);
-    document.addEventListener('visibilitychange',()=>{ if(!document.hidden) loadPipeline().catch(()=>{}); });
-    (async()=>{ if(await ensureGate()) loadPipeline().catch((err)=>setStatus(err?.message||'Laden mislukt.','warn')); })();
+    async function loadDiagnostics(){ document.getElementById('webhookCell').textContent = MAKE_WEBHOOK_URL || 'Niet ingesteld'; document.getElementById('rpcCell').textContent = CLAIM_EMAIL_RPC; document.getElementById('supabaseCell').textContent = SUPABASE_URL; const data = ADMIN_SOURCE && typeof ADMIN_SOURCE.loadMailDiagnostics === 'function' ? await ADMIN_SOURCE.loadMailDiagnostics() : await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_get_mail_diagnostics`,{method:'POST',mode:'cors',cache:'no-store',headers:rpcHeaders(),body:JSON.stringify({admin_session_token:token()})}).then(parseResponse); const summary = []; if (data?.queue_table_exists===false) summary.push('Tabel outbound_email_jobs ontbreekt of is niet leesbaar.'); if (data?.queued_count!=null) summary.push(`In wachtrij: ${data.queued_count}`); if (data?.sent_count!=null) summary.push(`Verzonden: ${data.sent_count}`); if (data?.failed_count!=null) summary.push(`Mislukt: ${data.failed_count}`); if (data?.last_status) summary.push(`Laatste status: ${data.last_status}`); document.getElementById('summaryBox').textContent = summary.length ? summary.join(' · ') : 'Geen diagnosegegevens teruggekregen.'; const rows = Array.isArray(data?.jobs) ? data.jobs : []; document.getElementById('jobsBox').innerHTML = rows.length ? `<table><thead><tr><th>ID</th><th>Status</th><th>E-mail</th><th>Onderwerp</th><th>Fout / guard</th><th>Aangemaakt</th></tr></thead><tbody>${rows.map((row)=>`<tr><td>${row.id ?? ''}</td><td>${row.status ?? row.job_status ?? ''}</td><td>${row.recipient_email ?? row.to_email ?? ''}</td><td>${row.subject ?? ''}</td><td>${row.last_error ?? row.failure_reason ?? ''}</td><td>${formatDateTime(row.created_at)}</td></tr>`).join('')}</tbody></table>` : '<div class="muted">Geen recente mailjobs gevonden.</div>'; setStatus('Maildiagnostiek geladen.','ok'); }
+    document.getElementById('refreshBtn').addEventListener('click',()=>loadDiagnostics().catch((err)=>setStatus(err?.message||'Laden mislukt.','warn')));
+    setInterval(()=>{ if(!document.hidden) loadDiagnostics().catch(()=>{}); },15000);
+    document.addEventListener('visibilitychange',()=>{ if(!document.hidden) loadDiagnostics().catch(()=>{}); });
+    (async()=>{ if(await ensureGate()) loadDiagnostics().catch((err)=>setStatus(err?.message||'Laden mislukt.','warn')); })();
   </script>
-  <div class="site-credit-watermark" data-version-watermark>v567 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v411 · Made by Bruis</div>
   <script src="./site-analytics.js?v392"></script>
-  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+
+<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>
