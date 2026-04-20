@@ -7,7 +7,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inloggen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v497';</script>
+  <script>window.GEJAST_PAGE_VERSION='v498';</script>
   <style>
     :root { --gold:#9a8241; --card-bg:#f9f7f2; --line:rgba(0,0,0,0.08); }
     * { box-sizing:border-box; }
@@ -34,9 +34,9 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/login.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v497"></script>
-  <script src="./gejast-account-scope.js?v497"></script>
-  <script src="./gejast-account-links.js?v497"></script>
+  <script src="./gejast-config.js?v498"></script>
+  <script src="./gejast-account-scope.js?v498"></script>
+  <script src="./gejast-account-links.js?v498"></script>
 </head>
 <body>
   <main class="main-card">
@@ -88,7 +88,7 @@
     const MAKE_WEBHOOK_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.MAKE_WEBHOOK_URL) || '';
     const SESSION_KEYS = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.PLAYER_SESSION_KEYS) || ['jas_session_token_v11','jas_session_token_v10'];
     const PRIMARY_SESSION_KEY = SESSION_KEYS[0] || 'jas_session_token_v11';
-    const LOGIN_NAMES_CACHE_PREFIX = 'gejast_login_names_cache_v497:';
+    const LOGIN_NAMES_CACHE_PREFIX = 'gejast_login_names_cache_v498:';
 
     function currentScope(){ return new URLSearchParams(window.location.search).get('scope') === 'family' ? 'family' : 'friends'; }
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type':'application/json', Accept:'application/json' }; }
@@ -142,7 +142,7 @@
     function pendingVote() { return new URLSearchParams(window.location.search).get('vote') || ''; }
     function friendlyMessage(msg) {
       const raw = String(msg || '');
-      if (/RPC timeout/i.test(raw)) return 'Login-namen laden duurde te lang. Herlaad de pagina.';
+      if (/RPC timeout|AbortError|aborted without reason|signal is aborted/i.test(raw)) return 'Login-namen laden duurde te lang. Probeer opnieuw.';
       if (/login_player\(desired_name, entered_pin\).*schema cache/i.test(raw)) return 'Login-RPC ontbreekt nog in Supabase. Draai de juiste SQL-patch opnieuw.';
       if (/failed to fetch/i.test(raw)) return 'Netwerk/CORS-fout bij contact met Supabase.';
       return raw;
@@ -197,15 +197,11 @@
     }
     async function fetchAllowedNamesFast(scope = currentScope()) {
       const base = `${SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,status,site_scope&status=eq.available&site_scope=eq.${encodeURIComponent(scope)}&order=display_name.asc`;
-      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      const timer = controller ? setTimeout(() => { try { controller.abort(); } catch (_) {} }, 1200) : null;
-      try {
-        const res = await fetch(base, { method:'GET', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Accept:'application/json' }, signal: controller ? controller.signal : undefined });
-        const rows = await parseResponse(res);
-        const names = uniqueNames((rows || []).map((row) => row?.display_name || ''));
-        if (names.length) writeCachedLoginNames(names, scope);
-        return names;
-      } finally { if (timer) clearTimeout(timer); }
+      const res = await fetch(base, { method:'GET', mode:'cors', cache:'no-store', headers:{ apikey: SUPABASE_PUBLISHABLE_KEY, Accept:'application/json' } });
+      const rows = await parseResponse(res);
+      const names = uniqueNames((rows || []).map((row) => row?.display_name || ''));
+      if (names.length) writeCachedLoginNames(names, scope);
+      return names;
     }
     async function loginPlayer() {
       const desiredName = document.getElementById('playerNameInput').value.trim() || '';
@@ -322,7 +318,7 @@
     });
   })();
   </script>
-  <div class="site-credit-watermark" data-version-watermark>v497 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v498 · Made by Bruis</div>
   <script src="./site-analytics.js?v497"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
