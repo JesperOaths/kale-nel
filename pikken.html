@@ -7,15 +7,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken</title>
-  <script>window.GEJAST_PAGE_VERSION='v489';</script>
-  <script src="./gejast-config.js?v489"></script>
-  <script src="./gejast-home-gate.js?v489"></script>
-  <script src="./gejast-scope.js?v489"></script>
-  <script src="./gejast-scope-context.js?v489"></script>
+  <script>window.GEJAST_PAGE_VERSION='v491';</script>
+  <script src="./gejast-config.js?v491"></script>
+  <script src="./gejast-home-gate.js?v491"></script>
+  <script src="./gejast-scope.js?v491"></script>
+  <script src="./gejast-scope-context.js?v491"></script>
   <style>
     :root{
       --paper:#fbf6ef;--shell:#f5efe6;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241;--gold-soft:#efe5c7;
-      --panel:#fff;--shadow:0 18px 44px rgba(0,0,0,.08);--ok:#1f5d45;--bad:#7f2f1d;--chip:#fbfaf6;
+      --panel:#fff;--shadow:0 18px 44px rgba(0,0,0,.08);--ok:#1f5d45;--bad:#8b2d20;--chip:#fbfaf6;
+      --ready:#2f855a;--unready:#b23a2f;
     }
     *{box-sizing:border-box}
     body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
@@ -25,60 +26,64 @@
     .brand{display:flex;gap:14px;align-items:flex-start}
     .brand-icon{width:56px;height:56px;border-radius:16px;background:#fff;padding:9px;border:1px solid rgba(0,0,0,.08)}
     h1{margin:0;font-size:34px;letter-spacing:-.04em}
-    .sub{margin:8px 0 0;color:var(--muted);max-width:760px;line-height:1.55}
-    .top-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .top-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+    .status{margin-top:10px;min-height:22px;color:var(--muted)}
     .btn{display:inline-flex;align-items:center;justify-content:center;padding:11px 15px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer;transition:transform .12s ease, box-shadow .12s ease, opacity .12s ease}
     .btn:hover{transform:translateY(-1px);box-shadow:0 10px 20px rgba(0,0,0,.08)}
     .btn.alt{background:#fff;color:#111;border:1px solid var(--line)}
     .btn.soft{background:var(--gold-soft);color:#4b3d1a;border:1px solid rgba(154,130,65,.25)}
+    .btn.ready-active{background:rgba(47,133,90,.16);color:var(--ready);border:1px solid rgba(47,133,90,.35)}
+    .btn.unready-active{background:rgba(178,58,47,.14);color:var(--unready);border:1px solid rgba(178,58,47,.35)}
     .btn[disabled]{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none}
-    .status{margin-top:10px;min-height:22px;color:var(--muted)}
-    .hero-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;margin-top:18px}
+    .hero-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(360px,.8fr);gap:16px;margin-top:18px;align-items:start}
     .panel{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:18px;box-shadow:0 10px 24px rgba(0,0,0,.03)}
     .panel h2{margin:0 0 10px;font-size:18px;letter-spacing:-.03em}
     .panel p{margin:0;color:var(--muted)}
-    .pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-weight:900;font-size:12px;border:1px solid rgba(0,0,0,.1)}
-    .pill.ok{background:rgba(59,130,96,.12);border-color:rgba(59,130,96,.32);color:var(--ok)}
-    .pill.bad{background:rgba(127,47,29,.10);border-color:rgba(127,47,29,.28);color:var(--bad)}
-    .pill.wait{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.12);color:#6b6257}
     .field{display:grid;gap:6px}
     .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     label{font-size:.78rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#8a7a55}
     input,select{width:100%;padding:13px 14px;border-radius:14px;border:1px solid rgba(0,0,0,.12);font:inherit;background:#fff}
-    .action-row,.split-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .action-row,.split-actions,.chip-line,.room-actions,.mini-actions,.sticky-actions,.toolbar-row{display:flex;gap:10px;flex-wrap:wrap}
     .split-actions{justify-content:space-between;align-items:center}
+    .toolbar-row{justify-content:space-between;align-items:center}
     .lobby-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
     .stack{display:grid;gap:12px}
     .room-rail{display:grid;gap:10px;max-height:520px;overflow:auto;padding-right:2px}
     .room-card{border:1px solid var(--line);border-radius:18px;background:var(--chip);padding:14px;display:grid;gap:10px}
     .room-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
     .room-code{font-size:20px;font-weight:900;letter-spacing:.06em}
-    .room-meta{display:flex;gap:8px;flex-wrap:wrap}
-    .room-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-weight:900;font-size:12px;border:1px solid rgba(0,0,0,.1)}
+    .pill.ok{background:rgba(59,130,96,.12);border-color:rgba(59,130,96,.32);color:#1f5d45}
+    .pill.bad{background:rgba(127,47,29,.10);border-color:rgba(127,47,29,.28);color:#7f2f1d}
+    .pill.wait{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.12);color:#6b6257}
     .muted{color:var(--muted)}
     .summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}
     .stat{background:#fff;border:1px solid rgba(0,0,0,.06);border-radius:18px;padding:14px}
     .stat span{display:block;font-size:11px;color:#8a7a55;text-transform:uppercase;letter-spacing:.08em}
     .stat strong{display:block;margin-top:6px;font-size:26px}
-    .players-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;margin-top:16px}
+    .players-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:16px;margin-top:16px}
     .player-list{display:grid;gap:10px}
     .player-row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.06)}
     .player-row.dead{opacity:.55}
     .player-row.turn{outline:2px solid rgba(154,130,65,.38)}
     .player-name strong{display:block}
-    .mini-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-    .chip-line{display:flex;gap:8px;flex-wrap:wrap}
-    .accordion{border:1px solid var(--line);border-radius:20px;background:#fff}
-    .accordion summary{list-style:none;cursor:pointer;padding:16px;font-weight:900;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-    .accordion summary::-webkit-details-marker{display:none}
-    .detail{padding:0 16px 16px}
     .dice-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
     img.die{width:50px;height:50px;display:block}
     img.die.pik{filter:saturate(1.05)}
     .reveal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px}
     .reveal-card{border:1px solid var(--line);border-radius:18px;background:#fbfaf6;padding:12px}
-    .sticky-actions{position:sticky;bottom:10px;margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;padding:12px;border-radius:18px;background:rgba(255,251,245,.92);backdrop-filter:blur(8px);border:1px solid rgba(0,0,0,.08)}
+    .sticky-actions{position:sticky;bottom:10px;margin-top:16px;padding:12px;border-radius:18px;background:rgba(255,251,245,.92);backdrop-filter:blur(8px);border:1px solid rgba(0,0,0,.08)}
+    .sticky-actions .btn{min-width:130px}
     .empty-note{padding:14px;border-radius:16px;background:#fbfaf6;border:1px dashed rgba(0,0,0,.12);color:var(--muted)}
+    .control-panel{display:grid;gap:12px}
+    .rules-fab{white-space:nowrap}
+    .footer-note{margin-top:16px;padding:12px 14px;border-radius:16px;background:rgba(154,130,65,.08);border:1px solid rgba(154,130,65,.18);color:#6b6257;font-size:14px;line-height:1.5}
+    .rules-layer{position:fixed;inset:0;background:rgba(20,16,12,.34);display:none;align-items:flex-end;justify-content:center;z-index:9998;padding:18px}
+    .rules-layer.open{display:flex}
+    .rules-sheet{width:min(720px,100%);background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:22px;padding:18px;box-shadow:0 24px 50px rgba(0,0,0,.18)}
+    .rules-sheet h3{margin:0 0 8px;font-size:20px}
+    .rules-sheet ul{margin:0;padding-left:18px;color:#6b6257;line-height:1.6}
+    .rules-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}
     @media(max-width:1040px){
       .hero-grid,.lobby-grid,.players-grid{grid-template-columns:1fr}
       .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -86,18 +91,19 @@
     @media(max-width:700px){
       body{padding:12px}
       .shell{padding:16px;border-radius:24px}
-      .brand{align-items:flex-start}
       .brand-icon{width:48px;height:48px}
       h1{font-size:28px}
       .field-grid,.summary-grid{grid-template-columns:1fr}
-      .room-head,.split-actions{display:grid}
-      .sticky-actions{padding:10px}
-      .sticky-actions .btn,.action-row .btn,.room-actions .btn,.mini-actions .btn{flex:1 1 100%}
+      .sticky-actions{justify-content:space-between}
+      .sticky-actions .btn{flex:1 1 calc(50% - 5px);min-width:0}
+      #pkStartWrap{flex:1 1 100%}
+      #pkStartWrap .btn{width:100%}
       img.die{width:46px;height:46px}
+      .room-head{display:grid}
     }
   </style>
 </head>
-<body>
+<body data-game-watermark="soft">
   <div class="wrap">
     <div class="shell">
       <div class="top">
@@ -105,57 +111,54 @@
           <div class="brand">
             <img class="brand-icon" src="./assets/pikken/pikken-icon.svg" alt="Pikken">
             <div>
-              <div class="top-actions" style="margin-bottom:10px">
+              <div class="top-actions">
                 <a class="btn alt" href="./index.html">Home</a>
                 <a class="btn alt" href="./pikken_live.html" id="pkLiveLink" style="display:none">Live openen</a>
                 <a class="btn alt" href="./pikken_stats.html">Stats</a>
               </div>
               <h1>Pikken</h1>
-              <p class="sub">Room-first lobbyflow met zichtbare kamerrail, duidelijkere host-acties, minder rommel op desktop en een mobielere informatievolgorde. Start hoort te kunnen zodra er minimaal twee spelers klaar staan.</p>
             </div>
           </div>
           <div id="pkStatus" class="status"></div>
         </div>
-        <div class="panel" style="min-width:280px;max-width:360px">
-          <h2>Lobbystatus</h2>
-          <div class="chip-line">
-            <span class="pill wait" id="pkPhasePill">lobby</span>
-            <span class="pill wait">Code <strong id="pkLobbyCode" style="margin-left:6px">—</strong></span>
+        <div class="panel" style="min-width:260px;max-width:330px">
+          <div class="toolbar-row">
+            <div>
+              <h2 style="margin:0 0 8px">Lobbystatus</h2>
+              <div class="chip-line">
+                <span class="pill wait" id="pkPhasePill">lobby</span>
+                <span class="pill wait">Code <strong id="pkLobbyCode" style="margin-left:6px">—</strong></span>
+              </div>
+            </div>
+            <button class="btn soft rules-fab" id="pkRulesOpenBtn" type="button">Regels</button>
           </div>
-          <p style="margin-top:10px">Gebruik één codeveld voor maken of joinen. Open lobbies en actieve spellen staan rechts, zodat Pikken dichter bij de Paardenrace-flow komt.</p>
+          <p style="margin-top:10px">Als je al in een kamer zit, word je teruggezet in diezelfde lobby in plaats van dat je een nieuwe maakt.</p>
         </div>
       </div>
 
       <div class="hero-grid">
         <section class="panel">
           <h2>Lobby bedienen</h2>
-          <div class="field-grid">
-            <div class="field">
-              <label>Lobbycode</label>
-              <input id="pkRoomCode" placeholder="ABC123" autocomplete="off" autocapitalize="characters" spellcheck="false" />
+          <div class="control-panel">
+            <div class="field-grid">
+              <div class="field">
+                <label>Lobbycode</label>
+                <input id="pkRoomCode" placeholder="ABC123" autocomplete="off" autocapitalize="characters" spellcheck="false" />
+              </div>
+              <div class="field">
+                <label>Variant</label>
+                <select id="pkPenaltyMode">
+                  <option value="wrong_loses">Normal (fout verliest)</option>
+                  <option value="right_loses">Fair (goed verliest)</option>
+                </select>
+              </div>
             </div>
-            <div class="field">
-              <label>Variant</label>
-              <select id="pkPenaltyMode">
-                <option value="wrong_loses">Normal (fout verliest)</option>
-                <option value="right_loses">Fair (goed verliest)</option>
-              </select>
+            <div class="action-row">
+              <button class="btn" id="pkCreateLobbyBtn" type="button">Maak lobby</button>
+              <button class="btn alt" id="pkJoinLobbyBtn" type="button">Join lobby</button>
+              <button class="btn soft" id="pkRefreshRoomsBtn" type="button">Ververs kamerlijst</button>
             </div>
           </div>
-          <div class="action-row" style="margin-top:12px">
-            <button class="btn" id="pkCreateLobbyBtn" type="button">Maak lobby</button>
-            <button class="btn alt" id="pkJoinLobbyBtn" type="button">Join lobby</button>
-            <button class="btn soft" id="pkRefreshRoomsBtn" type="button">Ververs kamerlijst</button>
-          </div>
-          <details class="accordion" style="margin-top:14px">
-            <summary><span>Regels (kort)</span><span class="muted">open</span></summary>
-            <div class="detail muted">
-              <div>- Bied: aantal × face (2–6 of pik=1). 1 telt als joker bij 2–6.</div>
-              <div>- Afkeuren start stemronde; iedereen kiest goedgekeurd/afgekeurd.</div>
-              <div>- Daarna reveal + verlies 1 dobbelsteen volgens variant.</div>
-              <div>- Straight 1-2-3-4-5-6 telt als 6 × pik.</div>
-            </div>
-          </details>
         </section>
 
         <section class="panel">
@@ -241,15 +244,34 @@
       </div>
 
       <div class="sticky-actions">
+        <button class="btn unready-active" id="pkUnreadyBtn" type="button">Unready</button>
         <button class="btn alt" id="pkReadyBtn" type="button">Ready</button>
-        <button class="btn alt" id="pkUnreadyBtn" type="button">Unready</button>
-        <button class="btn" id="pkStartBtn" type="button" disabled>Start spel</button>
+        <div id="pkStartWrap" style="display:none">
+          <button class="btn" id="pkStartBtn" type="button" disabled>Start spel</button>
+        </div>
       </div>
+
+      <div class="footer-note">Pikken gebruikt hier de P2 + T2 mobile richting: tafelgevoel behouden, belangrijkste acties compact en duidelijk, en secundaire uitleg onderin in plaats van boven de pagina. Dit sluit aan op het keuze- en blueprintmateriaal voor mobile Pikken. </div>
     </div>
   </div>
 
-  <script src="./pikken-dice-canvas.js?v489"></script>
-  <script src="./gejast-pikken.js?v489"></script>
+  <div class="rules-layer" id="pkRulesLayer">
+    <div class="rules-sheet">
+      <div class="rules-head">
+        <h3>Regels (kort)</h3>
+        <button class="btn alt" id="pkRulesCloseBtn" type="button">Sluit</button>
+      </div>
+      <ul>
+        <li>Bied: aantal × face (2–6 of pik=1). 1 telt als joker bij 2–6.</li>
+        <li>Afkeuren start een stemronde; iedereen kiest goedgekeurd of afgekeurd.</li>
+        <li>Daarna reveal + verlies 1 dobbelsteen volgens variant.</li>
+        <li>Straight 1-2-3-4-5-6 telt als 6 × pik.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script src="./pikken-dice-canvas.js?v491"></script>
+  <script src="./gejast-pikken.js?v491"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
   <div class="site-credit-watermark" data-version-watermark></div>
 </body>

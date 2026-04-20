@@ -7,63 +7,145 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken live</title>
-  <script>window.GEJAST_PAGE_VERSION='v489';</script>
-  <script src="./gejast-config.js?v489"></script>
-  <script src="./gejast-home-gate.js?v489"></script>
-  <script src="./gejast-live-summary.js?v489"></script>
+  <script>window.GEJAST_PAGE_VERSION='v491';</script>
+  <script src="./gejast-config.js?v491"></script>
+  <script src="./gejast-live-summary.js?v491"></script>
   <style>
-    :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--shadow:0 18px 44px rgba(0,0,0,.08)}
+    :root{
+      --paper:#fbf6ef;--shell:#f5efe6;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;
+      --panel:#fff;--shadow:0 18px 44px rgba(0,0,0,.08);--ok:#1f5d45;--bad:#7f2f1d;--gold:#9a8241;
+    }
     *{box-sizing:border-box}
-    body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
-    .wrap{max-width:1180px;margin:0 auto}.card{background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.7);border-radius:28px;padding:22px;box-shadow:var(--shadow)}
-    .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800}
-    .muted{color:var(--muted)}.panel{margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px}
-    .layout{display:grid;grid-template-columns:1.05fr .95fr;gap:16px;margin-top:16px}
-    .row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.06)}
-    .row.dead{opacity:.55}
-    .row.turn{outline:2px solid rgba(154,130,65,.38)}
+    body{margin:0;padding:16px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
+    .wrap{max-width:1220px;margin:0 auto}
+    .shell{background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.7);border-radius:30px;padding:18px;box-shadow:var(--shadow)}
+    .topbar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+    .top-left{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .brand{display:flex;gap:12px;align-items:center}
+    .brand-icon{width:52px;height:52px;border-radius:14px;background:#fff;padding:9px;border:1px solid rgba(0,0,0,.08)}
     .pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-weight:900;font-size:12px;border:1px solid rgba(0,0,0,.1)}
-    .pill.ok{background:rgba(59,130,96,.12);border-color:rgba(59,130,96,.32);color:#1f5d45}
-    .pill.bad{background:rgba(127,47,29,.10);border-color:rgba(127,47,29,.28);color:#7f2f1d}
+    .pill.ok{background:rgba(59,130,96,.12);border-color:rgba(59,130,96,.32);color:var(--ok)}
+    .pill.bad{background:rgba(127,47,29,.10);border-color:rgba(127,47,29,.28);color:var(--bad)}
     .pill.wait{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.12);color:#6b6257}
-    img.die{width:44px;height:44px}
-    img.die.pik{filter:saturate(1.05)}
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:11px 15px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:0}
+    .btn.alt{background:#fff;color:#111;border:1px solid var(--line)}
+    .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;margin-top:16px}
+    .panel{background:#fff;border:1px solid var(--line);border-radius:24px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.03)}
+    .panel h2{margin:0 0 8px;font-size:18px;letter-spacing:-.03em}
+    .muted{color:var(--muted)}
+    .seat-ring-card{display:grid;gap:14px}
+    .seat-ring{position:relative;min-height:360px;border-radius:28px;background:radial-gradient(circle at center, #f6f2e8 0 30%, #f1eadc 31% 100%);border:1px solid rgba(0,0,0,.06);overflow:hidden}
+    .table-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(220px,52vw);aspect-ratio:1;border-radius:50%;background:linear-gradient(180deg,#2c8b5f,#256f4d);border:10px solid #efe6d3;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+    .table-core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;color:#fff;display:grid;gap:8px;width:75%}
+    .table-core strong{font-size:26px}
+    .table-core .subline{font-size:13px;opacity:.9}
+    .seat{position:absolute;min-width:120px;max-width:150px;padding:10px 12px;border-radius:18px;background:rgba(255,255,255,.94);border:1px solid rgba(0,0,0,.08);box-shadow:0 8px 20px rgba(0,0,0,.07)}
+    .seat.turn{outline:2px solid rgba(154,130,65,.42)}
+    .seat.dead{opacity:.56}
+    .seat.me{box-shadow:0 0 0 2px rgba(154,130,65,.18), 0 8px 20px rgba(0,0,0,.07)}
+    .seat.top{left:50%;top:16px;transform:translateX(-50%)}
+    .seat.right{right:16px;top:50%;transform:translateY(-50%)}
+    .seat.bottom{left:50%;bottom:16px;transform:translateX(-50%)}
+    .seat.left{left:16px;top:50%;transform:translateY(-50%)}
+    .seat.extra1{left:20%;top:44px}
+    .seat.extra2{right:20%;top:44px}
+    .seat.extra3{right:20%;bottom:44px}
+    .seat.extra4{left:20%;bottom:44px}
+    .seat-name{font-weight:900}
+    .seat-meta{font-size:13px;color:#6b6257;margin-top:3px}
+    .bottom-dock{display:grid;gap:12px}
+    .dock-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .dock-chip{padding:12px;border-radius:18px;background:#fbfaf6;border:1px solid rgba(0,0,0,.07)}
+    .dock-chip span{display:block;font-size:11px;color:#8a7a55;text-transform:uppercase;letter-spacing:.08em}
+    .dock-chip strong{display:block;margin-top:6px;font-size:18px}
+    .side-layout{display:grid;gap:16px}
+    .drawer-card{border:1px solid var(--line);border-radius:20px;background:#fbfaf6;padding:14px}
+    .reveal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:10px}
+    .reveal-card{border:1px solid rgba(0,0,0,.08);border-radius:16px;background:#fff;padding:10px}
     .dice-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-    .grid{display:grid;gap:10px}
-      @media(max-width:980px){.layout{grid-template-columns:1fr}}
-    @media(max-width:700px){body{padding:12px}.card{padding:16px;border-radius:24px}}
+    img.die{width:42px;height:42px;display:block}
+    .viewer-note{padding:12px 14px;border-radius:16px;background:rgba(154,130,65,.08);border:1px solid rgba(154,130,65,.18);color:#6b6257}
+    @media (max-width: 980px){
+      .hero{grid-template-columns:1fr}
+    }
+    @media (max-width: 700px){
+      body{padding:12px}
+      .shell{padding:14px;border-radius:24px}
+      .seat-ring{min-height:470px}
+      .table-center{width:min(200px,48vw)}
+      .seat{min-width:98px;max-width:116px;padding:8px 10px}
+      .seat-name{font-size:13px}
+      .seat-meta{font-size:11px}
+      .seat.left{left:8px}
+      .seat.right{right:8px}
+      .seat.top{top:10px}
+      .seat.bottom{bottom:10px}
+      .seat.extra1{left:9%;top:56px}
+      .seat.extra2{right:9%;top:56px}
+      .seat.extra3{right:9%;bottom:56px}
+      .seat.extra4{left:9%;bottom:56px}
+      .dock-row{grid-template-columns:1fr 1fr}
+      .dock-row .dock-chip:last-child{grid-column:1/-1}
+    }
   </style>
 </head>
-<body>
+<body data-game-watermark="soft">
   <div class="wrap">
-    <div class="card">
-      <div class="top">
-        <div>
-          <a class="btn" href="./index.html">Home</a>
-          <div style="display:flex;align-items:center;gap:12px;margin:14px 0 6px"><img src="./assets/pikken/pikken-icon.svg" alt="Pikken" style="width:48px;height:48px;border-radius:14px;background:#fff;padding:8px;border:1px solid rgba(0,0,0,.08)"><h1 style="margin:0">Pikken live</h1></div>
-          <div id="meta" class="muted">Laden…</div>
+    <div class="shell">
+      <div class="topbar">
+        <div class="top-left">
+          <div class="brand">
+            <img class="brand-icon" src="./assets/pikken/pikken-icon.svg" alt="Pikken">
+            <div>
+              <div style="font-size:30px;font-weight:900;letter-spacing:-.04em">Pikken match</div>
+              <div id="meta" class="muted">Laden…</div>
+            </div>
+          </div>
+          <div class="pill wait" id="phasePill">—</div>
         </div>
-        <a class="btn" href="./pikken.html">Terug naar lobby</a>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn alt" href="./pikken.html">Terug naar lobby</a>
+          <a class="btn" id="openLobbyBtn" href="./pikken.html">Lobby</a>
+        </div>
       </div>
 
-      <div class="panel">
-        <h2 style="margin:0 0 8px">Status</h2>
-        <div class="muted">Fase: <span id="phasePill" class="pill wait">—</span> · Ronde: <strong id="roundNo">0</strong> · Beurt: <strong id="turnName">—</strong></div>
-        <div class="muted" style="margin-top:6px">Variant: <strong id="penaltyMode">—</strong> · Lobby: <strong id="lobbyCode">—</strong></div>
-        <div class="muted" style="margin-top:6px">Bod: <strong id="currentBid">—</strong> <span id="bidBy"></span></div>
-        <div class="muted" style="margin-top:6px">Dice: start <strong id="totalStartDice">0</strong> · nu <strong id="totalCurrentDice">0</strong> · kwijt <strong id="totalLostDice">0</strong></div>
-      </div>
+      <div class="hero">
+        <section class="panel seat-ring-card">
+          <h2>Tafel</h2>
+          <div class="seat-ring" id="seatRing">
+            <div class="table-center">
+              <div class="table-core">
+                <div class="subline">Huidig bod</div>
+                <strong id="currentBid">—</strong>
+                <div class="subline" id="bidBy">—</div>
+              </div>
+            </div>
+          </div>
+          <div class="bottom-dock">
+            <div class="dock-row">
+              <div class="dock-chip"><span>Ronde</span><strong id="roundNo">0</strong></div>
+              <div class="dock-chip"><span>Beurt</span><strong id="turnName">—</strong></div>
+              <div class="dock-chip"><span>Variant</span><strong id="penaltyMode">—</strong></div>
+            </div>
+            <div id="viewerNote" class="viewer-note">Deze pagina volgt de P2 + T2 mobile richting: tafelgevoel behouden, primaire match-info compact centraal, details in rustige zijkaarten en drawers. De keuze- en blueprintbestanden noemen P2 als aanrader voor Pikken mobile en T2 als directe vertaalslag van mobile poker-patronen. </div>
+          </div>
+        </section>
 
-      <div class="layout">
-        <div class="panel">
-          <h2 style="margin:0 0 8px">Spelers</h2>
-          <div id="playersList" class="grid muted">—</div>
-        </div>
+        <section class="side-layout">
+          <section class="panel">
+            <h2>Matchstatus</h2>
+            <div class="dock-row">
+              <div class="dock-chip"><span>Lobby</span><strong id="lobbyCode">—</strong></div>
+              <div class="dock-chip"><span>Start dice</span><strong id="totalStartDice">0</strong></div>
+              <div class="dock-chip"><span>Nu / kwijt</span><strong><span id="totalCurrentDice">0</span> / <span id="totalLostDice">0</span></strong></div>
+            </div>
+          </section>
 
-        <div class="panel">
-          <h2 style="margin:0 0 8px">Laatste reveal</h2>
-          <div id="revealBody" class="muted">Nog geen reveal.</div>
-        </div>
+          <section class="panel">
+            <h2>Laatste reveal</h2>
+            <div id="revealBody" class="muted">Nog geen reveal.</div>
+          </section>
+        </section>
       </div>
     </div>
   </div>
@@ -73,8 +155,6 @@
       const live = window.GEJAST_LIVE_SUMMARY || {};
       let pollId = null;
       function esc(v){ const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(v??'').replace(/[&<>"']/g,(m)=>map[m]); }
-
-      // Deterministic class decision tables (matches CSS above)
       const UI_MAP = Object.freeze({
         phase: Object.freeze({
           lobby:    { cls: 'pill wait', label: 'Lobby' },
@@ -88,118 +168,72 @@
           waiting:  { cls: 'pill wait', label: 'wacht' }
         }),
         penaltyMode: Object.freeze({
-          wrong_loses: { label: 'Normal (fout verliest)' },
-          right_loses: { label: 'Fair (goed verliest)' }
+          wrong_loses: { label: 'Normal' },
+          right_loses: { label: 'Fair' }
         })
       });
-
-      function normalizePhase(raw){
-        const v = String(raw || '').trim().toLowerCase();
-        return (v === 'lobby' || v === 'bidding' || v === 'voting' || v === 'finished') ? v : 'bidding';
+      function normalizePhase(raw){ const v = String(raw || '').trim().toLowerCase(); return (v === 'lobby' || v === 'bidding' || v === 'voting' || v === 'finished') ? v : 'bidding'; }
+      function phasePillSpec(liveState){ const status = String(liveState?.status || '').toLowerCase(); const phase = (status === 'finished') ? 'finished' : normalizePhase(liveState?.phase); return UI_MAP.phase[phase] || UI_MAP.phase.bidding; }
+      function bidText(bid){ const count = Number(bid?.count || bid?.bid_count || 0); const face = Number(bid?.face || bid?.bid_face || 0); if (!count || !face) return '—'; return face === 1 ? `${count} × pik` : `${count} × ${face}`; }
+      function penaltyModeLabel(raw){ const key = String(raw || '').trim().toLowerCase(); return (UI_MAP.penaltyMode[key] && UI_MAP.penaltyMode[key].label) ? UI_MAP.penaltyMode[key].label : 'Normal'; }
+      function findNameBySeat(players, seat){ const s = Number(seat || 0); if (!s) return '—'; const p = (Array.isArray(players) ? players : []).find(x => Number(x?.seat || 0) === s); return p?.name || '—'; }
+      function seatClass(index, total){
+        const map4 = ['top','right','bottom','left'];
+        const map6 = ['top','extra2','right','bottom','left','extra1'];
+        const map8 = ['top','extra2','right','extra3','bottom','extra4','left','extra1'];
+        const table = total <= 4 ? map4 : total <= 6 ? map6 : map8;
+        return table[index] || `extra${(index % 4) + 1}`;
       }
-
-      function normalizeVoteStatus(raw){
-        const v = String(raw || '').trim().toLowerCase();
-        if (v === 'approved' || v === 'goedgekeurd' || v === 'believe' || v === 'true') return 'approved';
-        if (v === 'rejected' || v === 'afgekeurd' || v === 'reject' || v === 'false') return 'rejected';
-        return 'waiting';
+      function renderSeats(players, phase, turnSeat, viewerSeat){
+        const wrap = document.getElementById('seatRing');
+        const old = Array.from(wrap.querySelectorAll('.seat'));
+        old.forEach((node)=>node.remove());
+        players.forEach((p, idx)=>{
+          const seat = Number(p.seat || 0);
+          const alive = !!p.alive || String(phase || '').toLowerCase() === 'lobby';
+          const div = document.createElement('div');
+          div.className = `seat ${seatClass(idx, players.length)} ${seat === Number(turnSeat||0) ? 'turn' : ''} ${seat === Number(viewerSeat||0) ? 'me' : ''} ${alive ? '' : 'dead'}`.trim();
+          div.innerHTML = `<div class="seat-name">${esc(p.name||'Speler')}</div><div class="seat-meta">Stoel #${seat || '—'} · ${alive ? 'Levend' : 'Dood'} · ${Number(p.dice_count||0)} dobbelstenen</div>`;
+          wrap.appendChild(div);
+        });
       }
-
-      function phasePillSpec(liveState){
-        const status = String(liveState?.status || '').toLowerCase();
-        const phase = (status === 'finished') ? 'finished' : normalizePhase(liveState?.phase);
-        return UI_MAP.phase[phase] || UI_MAP.phase.bidding;
-      }
-
-      function votePillSpec(status){
-        const key = normalizeVoteStatus(status);
-        return UI_MAP.voteStatus[key] || UI_MAP.voteStatus.waiting;
-      }
-
-      function dieClass(value){
-        const n = Number(value);
-        return n === 1 ? 'die pik' : 'die';
-      }
-
-      function bidText(bid){
-        const count = Number(bid?.count || bid?.bid_count || 0);
-        const face = Number(bid?.face || bid?.bid_face || 0);
-        if (!count || !face) return '—';
-        return face === 1 ? `${count} × pik` : `${count} × ${face}`;
-      }
-
-      function penaltyModeLabel(raw){
-        const key = String(raw || '').trim().toLowerCase();
-        return (UI_MAP.penaltyMode[key] && UI_MAP.penaltyMode[key].label) ? UI_MAP.penaltyMode[key].label : UI_MAP.penaltyMode.wrong_loses.label;
-      }
-
-      function findNameBySeat(players, seat){
-        const s = Number(seat || 0);
-        if (!s) return '—';
-        const p = (Array.isArray(players) ? players : []).find(x => Number(x?.seat || 0) === s);
-        return p?.name || '—';
-      }
-
+      function dieClass(value){ const n = Number(value); return n === 1 ? 'die pik' : 'die'; }
       function render(item){
         const summary = (live.summaryFromItem?live.summaryFromItem(item):(item?.summary_payload||{})) || {};
         const st = summary.live_state || summary || {};
         document.getElementById('meta').textContent = live.metaText ? live.metaText(item) : 'Live';
-
         const phaseSpec = phasePillSpec(st);
         const phaseEl = document.getElementById('phasePill');
         phaseEl.className = phaseSpec.cls;
         phaseEl.textContent = phaseSpec.label;
-
         document.getElementById('roundNo').textContent = String(Number(st.round_no||0));
         document.getElementById('penaltyMode').textContent = penaltyModeLabel(st.penalty_mode);
         document.getElementById('lobbyCode').textContent = String(st.lobby_code || '—');
-
+        document.getElementById('openLobbyBtn').href = `./pikken.html?game_id=${encodeURIComponent(String(st.id || item?.game_id || ''))}`;
         const bid = st.bid && st.bid !== null ? st.bid : null;
         document.getElementById('currentBid').textContent = bidText(bid);
-        document.getElementById('bidBy').textContent = bid && bid.bidder_name ? `door ${bid.bidder_name}` : '';
-
+        document.getElementById('bidBy').textContent = bid && bid.bidder_name ? `door ${bid.bidder_name}` : 'Nog geen bod';
         const dt = st.dice_totals || {};
         document.getElementById('totalStartDice').textContent = String(Number(dt.start_total||0));
         document.getElementById('totalCurrentDice').textContent = String(Number(dt.current_total||0));
         document.getElementById('totalLostDice').textContent = String(Number(dt.lost_total||0));
 
         const players = Array.isArray(st.players)?st.players:[];
-        const votes = Array.isArray(st.votes)?st.votes:[];
         const phase = String(st.phase||'');
         const turnSeat = phase === 'voting' ? Number(st.vote_turn_seat||0) : Number(st.turn_seat||0);
         document.getElementById('turnName').textContent = findNameBySeat(players, turnSeat);
-
-        const playersWrap = document.getElementById('playersList');
-        playersWrap.className='grid';
-        playersWrap.innerHTML = players.map((p)=>{
-          const voteRow = votes.find(v=>Number(v.seat||0)===Number(p.seat||0));
-          const pill = votePillSpec(voteRow ? voteRow.status : 'waiting');
-          const isTurn = Number(p.seat||0) === Number(turnSeat||0) && (phase === 'bidding' || phase === 'voting');
-          const rowCls = `row ${p.alive?'':'dead'} ${isTurn?'turn':''}`.trim();
-          return `<div class="${rowCls}"><div><strong>${esc(p.name||'Speler')}</strong> <span class="muted">#${Number(p.seat||0)}</span><div class="muted">${p.alive?'Levend':'Dood'} · ${Number(p.dice_count||0)} dobbelstenen</div></div>${phase==='voting'?`<span class="${pill.cls}">${pill.label}</span>`:''}</div>`;
-        }).join('');
+        renderSeats(players, phase, turnSeat, 0);
 
         const lr = st.last_reveal || null;
         const revealWrap = document.getElementById('revealBody');
         if(!lr){ revealWrap.textContent='Nog geen reveal.'; return; }
         const hands = Array.isArray(lr.hands)?lr.hands:[];
         const lrBid = lr.bid || null;
-        const lrVotes = Array.isArray(lr.votes) ? lr.votes : [];
-        const firstLoser = findNameBySeat(players, lr.first_loser_seat);
-        const nextStarter = findNameBySeat(players, lr.next_starter_seat);
-
         revealWrap.innerHTML =
           `<div><strong>R${Number(lr.round_no||0)}</strong> · ${lr.bid_true?'gehaald':'niet gehaald'} · bod ${esc(bidText(lrBid))} · geteld ${Number(lr.counted_total||0)}</div>` +
-          `<div class="muted" style="margin-top:6px">Verliezers: ${esc(lr.losing_kind||'')} · starter: ${esc(firstLoser)} → ${esc(nextStarter)}</div>` +
-          (lrVotes.length ? `<div style="margin-top:10px;display:grid;gap:8px">${lrVotes.map(v=>{
-            const pill = votePillSpec(v.vote === true ? 'approved' : 'rejected');
-            return `<div class="row"><div><strong>${esc(v.name||'Speler')}</strong> <span class="muted">#${Number(v.seat||0)}</span></div><span class="${pill.cls}">${pill.label}</span></div>`;
-          }).join('')}</div>` : '') +
-          (hands.length ? `<div style="margin-top:10px;display:grid;gap:10px">${hands.map(h=>`<div class="row"><div><strong>${esc(h.name||'Speler')}</strong> <span class="muted">#${Number(h.seat||0)}</span><div class="dice-row">${(Array.isArray(h.dice)?h.dice:[]).map(d=>`<img class="${dieClass(d)}" src="./assets/pikken/dice-${Number(d)}.svg" alt="die ${Number(d)}">`).join('')}</div></div></div>`).join('')}</div>` : '');
-
+          `<div class="reveal-grid">${hands.map(h=>`<div class="reveal-card"><div><strong>${esc(h.name||'Speler')}</strong> <span class="muted">#${Number(h.seat||0)}</span></div><div class="dice-row">${(Array.isArray(h.dice)?h.dice:[]).map(d=>`<img class="${dieClass(d)}" src="./assets/pikken/dice-${Number(d)}.svg" alt="die ${Number(d)}">`).join('')}</div></div>`).join('')}</div>`;
         if (live.isFinished && live.isFinished(item) && pollId) { clearInterval(pollId); pollId = null; }
       }
-
       async function load(){
         const identity = live.matchIdentityFromUrl ? live.matchIdentityFromUrl() : { clientMatchId:'', matchRef:'' };
         if(!identity.clientMatchId && !identity.matchRef){
@@ -213,13 +247,11 @@
           document.getElementById('meta').textContent = err.message || 'Laden mislukt.';
         }
       }
-
       load();
       pollId = setInterval(load, 5000);
     })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<div class="site-credit-watermark" data-version-watermark></div>
-<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+  <div class="site-credit-watermark" data-version-watermark></div>
 </body>
 </html>

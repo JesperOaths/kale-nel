@@ -1,7 +1,7 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
-  const PIKKEN_PARTICIPANT_KEY = 'jas_pikken_participant_v1';
+  const PIKKEN_PARTICIPANT_KEY = 'jas_pikken_participant_v2';
 
   function getScope(){
     try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
@@ -50,6 +50,56 @@
     } catch (_) {}
   }
   function liveHref(gameId){ return `./pikken_live.html?client_match_id=${encodeURIComponent(String(gameId || ''))}`; }
+
+  function getParticipantHint(){
+    try {
+      const raw = localStorage.getItem(PIKKEN_PARTICIPANT_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed && parsed.game_id ? parsed : null;
+    } catch (_) { return null; }
+  }
+  async function findMyActiveGame(){
+    const token = sessionToken();
+    if (!token) return null;
+    try {
+      const out = await rpc('pikken_find_my_active_game_scoped', { session_token: token, site_scope_input: getScope() });
+      const row = out && (out.game || out.row || out);
+      return row && row.game_id ? row : null;
+    } catch (_) {
+      return null;
+    }
+  }
+  async function ensureNoExistingLobby(){
+    const existing = await findMyActiveGame();
+    if (existing && existing.game_id) {
+      UI.gameId = String(existing.game_id);
+      setParticipantToken(UI.gameId, true);
+      history.replaceState(null, '', `pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(getScope())}`);
+      startPolling();
+      throw new Error('Je zit al in een Pikken-lobby of live spel. Je bent teruggezet naar je huidige kamer.');
+    }
+    return null;
+  }
+  async function resumeIfNeeded(){
+    if (UI.gameId) return false;
+    const active = await findMyActiveGame();
+    if (active && active.game_id) {
+      UI.gameId = String(active.game_id);
+      setParticipantToken(UI.gameId, true);
+      history.replaceState(null, '', `pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(getScope())}`);
+      startPolling();
+      return true;
+    }
+    const hint = getParticipantHint();
+    if (hint && hint.game_id) {
+      UI.gameId = String(hint.game_id);
+      history.replaceState(null, '', `pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(getScope())}`);
+      startPolling();
+      return true;
+    }
+    return false;
+  }
   function dieImg(face, cls){
     const n = Number(face || 0);
     const img = document.createElement('img');
@@ -79,6 +129,9 @@
 
   const UI = {
     gameId: '',
+    activeRedirectDone: false,
+    lastReadyState: null,
+    rulesOpen: false,
     lastStateVersion: -1,
     pollTimer: null,
     roomsTimer: null,
@@ -218,10 +271,21 @@
       startRule.textContent = readyCount >= 2 ? 'Start mag nu' : 'Minimaal 2 ready nodig';
     }
 
+    const readyBtn = qs('#pkReadyBtn');
+    const unreadyBtn = qs('#pkUnreadyBtn');
+    if (readyBtn && unreadyBtn) {
+      const meReady = !!viewer.ready;
+      UI.lastReadyState = meReady;
+      readyBtn.className = meReady ? 'btn ready-active' : 'btn alt';
+      unreadyBtn.className = meReady ? 'btn alt' : 'btn unready-active';
+    }
+
+    const startWrap = qs('#pkStartWrap');
     const startBtn = qs('#pkStartBtn');
-    if (startBtn) {
+    if (startWrap && startBtn) {
+      startWrap.style.display = isHost ? '' : 'none';
       startBtn.disabled = !canStart;
-      startBtn.textContent = canStart ? 'Start spel' : (isHost ? 'Nog niet startbaar' : 'Alleen host start');
+      startBtn.textContent = canStart ? 'Start spel' : 'Nog niet startbaar';
     }
 
     const list = qs('#pkPlayers');
@@ -289,8 +353,14 @@
       `;
     }
 
-    if (phase !== 'lobby' && (game?.id || UI.gameId)) {
+    if ((game?.id || UI.gameId)) {
       setParticipantToken(game?.id || UI.gameId, true);
+    }
+    const liveLike = String(game?.status || '').toLowerCase() === 'live' || (phase && phase !== 'lobby');
+    if (liveLike && !UI.activeRedirectDone && (game?.id || UI.gameId)) {
+      UI.activeRedirectDone = true;
+      window.location.href = liveHref(game?.id || UI.gameId);
+      return;
     }
   }
 
@@ -322,6 +392,7 @@
   }
 
   async function createLobby(){
+    await ensureNoExistingLobby();
     setStatus('Lobby maken…', false);
     const mode = qs('#pkPenaltyMode').value || 'wrong_loses';
     const requestedCode = roomCodeValue();
@@ -340,6 +411,7 @@
   }
 
   async function joinLobby(){
+    await ensureNoExistingLobby();
     const code = roomCodeValue();
     if (!code) return setStatus('Vul een lobbycode in.', true);
     setStatus('Lobby joinen…', false);
@@ -408,11 +480,20 @@
       event.target.value = String(event.target.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
     });
 
+    const rulesOpenBtn = qs('#pkRulesOpenBtn');
+    const rulesCloseBtn = qs('#pkRulesCloseBtn');
+    const rulesLayer = qs('#pkRulesLayer');
+    if (rulesOpenBtn && rulesCloseBtn && rulesLayer) {
+      rulesOpenBtn.addEventListener('click', ()=>rulesLayer.classList.add('open'));
+      rulesCloseBtn.addEventListener('click', ()=>rulesLayer.classList.remove('open'));
+      rulesLayer.addEventListener('click', (e)=>{ if (e.target === rulesLayer) rulesLayer.classList.remove('open'); });
+    }
+
     if (UI.gameId) {
       setParticipantToken(UI.gameId, true);
       startPolling();
     } else {
-      loadRooms(true).catch(()=>{});
+      resumeIfNeeded().then((didResume)=>{ if (!didResume) loadRooms(true).catch(()=>{}); });
     }
 
     document.addEventListener('visibilitychange', ()=>{

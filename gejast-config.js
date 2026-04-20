@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v490',
+    VERSION:'v491',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -11,7 +11,7 @@
     PLAYER_SESSION_KEYS: ['jas_session_token_v11','jas_session_token_v10'],
     PLAYER_LAST_ACTIVITY_KEY: 'jas_last_activity_at_v1',
     PLAYER_SESSION_IDLE_MS: 12 * 60 * 60 * 1000,
-    ADMIN_SESSION_REMEMBER_MS: 45 * 24 * 60 * 60 * 1000,
+    ADMIN_SESSION_REMEMBER_MS: 60 * 24 * 60 * 60 * 1000,
     WEB_PUSH_PUBLIC_KEY: 'BPqY04jDOB_8RlhNxURgWFl6cMge64Mr7DkrWtgMfG4ARWLJ6S-r6c6JeQJ6o4kysWT0WeR9oVpahP85L8GLl_4',
     NOTIFICATION_BUTTON_ENABLED: true,
     WEB_PUSH_TEST_RPC: 'queue_test_web_push',
@@ -41,6 +41,7 @@
   function watermarkStyles(node){
     if (!node || !node.style) return;
     const compact = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+    const softGameWatermark = !!(document.body && document.body.dataset && document.body.dataset.gameWatermark === 'soft');
     Object.assign(node.style, {
       position: 'fixed',
       left: '50%',
@@ -49,18 +50,19 @@
       zIndex: '9999',
       padding: compact ? '7px 11px' : '8px 14px',
       borderRadius: '999px',
-      background: 'rgba(17,17,17,0.88)',
+      background: softGameWatermark ? 'rgba(17,17,17,0.66)' : 'rgba(17,17,17,0.88)',
       border: '1px solid rgba(212,175,55,0.35)',
       color: '#f3e3a6',
       font: compact ? '700 12px/1.2 Inter,system-ui,sans-serif' : '700 13px/1.2 Inter,system-ui,sans-serif',
       letterSpacing: '.03em',
       pointerEvents: 'none',
       userSelect: 'none',
-      boxShadow: '0 12px 24px rgba(0,0,0,0.18)',
+      boxShadow: softGameWatermark ? '0 8px 18px rgba(0,0,0,0.12)' : '0 12px 24px rgba(0,0,0,0.18)',
       textAlign: 'center',
       maxWidth: compact ? 'calc(100vw - 24px)' : '',
       backdropFilter: 'blur(6px)',
-      WebkitBackdropFilter: 'blur(6px)'
+      WebkitBackdropFilter: 'blur(6px)',
+      opacity: softGameWatermark ? '0.75' : '1'
     });
   }
   function ensureVersionWatermark(){
