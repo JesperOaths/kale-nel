@@ -313,15 +313,11 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
   async function fetchMyName(token){
     if (!token || !SUPABASE_URL || !SUPABASE_KEY) return '';
     const payload = JSON.stringify({ session_token: token });
-    for (const rpc of ['get_public_state','get_gejast_homepage_state','get_jas_app_state']){
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpc}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: payload });
-        const data = await res.json().catch(()=>null);
-        if (!res.ok) continue;
-        const name = data?.my_name || data?.display_name || data?.player_name || '';
-        if (name) return name;
-      } catch {}
-    }
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: payload });
+      const data = await res.json().catch(()=>null);
+      if (res.ok) return data?.my_name || data?.display_name || data?.player_name || '';
+    } catch {}
     return '';
   }
   function show(name){ nameEl.textContent = name; box.classList.add('is-visible'); }
@@ -336,7 +332,18 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
 })();
 </script>
 
-  <script src="./site-analytics.js?v435"></script>
+  <script>
+  (function(){
+    function loadAnalytics(){
+      const script = document.createElement('script');
+      script.src = './site-analytics.js?v435';
+      script.async = true;
+      document.body.appendChild(script);
+    }
+    if ('requestIdleCallback' in window) requestIdleCallback(loadAnalytics, { timeout: 2500 });
+    else setTimeout(loadAnalytics, 1500);
+  })();
+  </script>
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>

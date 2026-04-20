@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inloggen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v614';</script>
+  <script>window.GEJAST_PAGE_VERSION='v501';</script>
   <style>
     :root { --gold: #9a8241; --dark-bg: #111; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.08); }
     * { box-sizing: border-box; }
@@ -48,7 +48,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/login.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v614"></script><script src="./gejast-account-scope.js?v614"></script><script src="./gejast-account-links.js?v399"></script>
+  <script src="./gejast-config.js?v501"></script><script src="./gejast-account-scope.js?v501"></script><script src="./gejast-account-links.js?v501"></script>
 </head>
 <body>
 
@@ -107,6 +107,8 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     const MAKE_WEBHOOK_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.MAKE_WEBHOOK_URL) || "";
     const SESSION_KEY = "jas_session_token_v11";
     const SESSION_KEYS = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.PLAYER_SESSION_KEYS) || ["jas_session_token_v11","jas_session_token_v10"];
+    const LOGIN_NAMES_CACHE_PREFIX = 'gejast_login_names_cache_v501:';
+    const RPC_TIMEOUT_MS = Number((window.GEJAST_CONFIG && (window.GEJAST_CONFIG.LOGIN_NAME_TIMEOUT_MS || window.GEJAST_CONFIG.RPC_TIMEOUT_MS)) || 2200);
     window.localValidation = window.localValidation || function(){ return true; };
 
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json", Accept: "application/json" }; }
@@ -165,44 +167,6 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       input.value = cleanNames.includes(current) ? current : '';
       if (resetInput) resetInput.value = cleanNames.includes(resetCurrent) ? resetCurrent : (cleanNames.includes(input.value) ? input.value : '');
     }
-
-    let loginNamesRequest = null;
-    let lastKnownLoginNames = [];
-    const LOGIN_NAMES_CACHE_KEY = ((window.GEJAST_CONFIG && window.GEJAST_CONFIG.LOGIN_NAMES_CACHE_PREFIX) || 'jas_login_names_cache_v1_') + ((new URLSearchParams(window.location.search).get('scope') === 'family') ? 'family' : 'friends');
-
-    function readCachedLoginNames() {
-      try {
-        if (window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.readCachedLoginNames === 'function') {
-          return uniqueNames(window.GEJAST_CONFIG.readCachedLoginNames((new URLSearchParams(window.location.search).get('scope') === 'family') ? 'family' : 'friends'));
-        }
-      } catch (_) {}
-      try {
-        const raw = sessionStorage.getItem(LOGIN_NAMES_CACHE_KEY) || localStorage.getItem(LOGIN_NAMES_CACHE_KEY) || '';
-        if (!raw) return [];
-        const parsed = JSON.parse(raw);
-        return uniqueNames(Array.isArray(parsed?.names) ? parsed.names : []);
-      } catch (_) {
-        return [];
-      }
-    }
-    function rememberLoginNames(names) {
-      lastKnownLoginNames = uniqueNames(names);
-      if (!lastKnownLoginNames.length) return lastKnownLoginNames;
-      try {
-        if (window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.writeCachedLoginNames === 'function') {
-          window.GEJAST_CONFIG.writeCachedLoginNames((new URLSearchParams(window.location.search).get('scope') === 'family') ? 'family' : 'friends', lastKnownLoginNames);
-          return lastKnownLoginNames;
-        }
-      } catch (_) {}
-      const payload = JSON.stringify({ names: lastKnownLoginNames, updated_at: Date.now() });
-      try { sessionStorage.setItem(LOGIN_NAMES_CACHE_KEY, payload); } catch (_) {}
-      try { localStorage.setItem(LOGIN_NAMES_CACHE_KEY, payload); } catch (_) {}
-      return lastKnownLoginNames;
-    }
-    function snapshotAllowedNames() {
-      const rows = Array.from(document.querySelectorAll('#playerNameInput option')).map((opt) => opt.value || '').filter(Boolean);
-      return uniqueNames(rows.length ? rows : lastKnownLoginNames);
-    }
     function targetUrl() { const params = new URLSearchParams(window.location.search); const cfg = window.GEJAST_CONFIG || {}; const raw = params.get('return_to') || params.get('next') || (params.get('scope')==='family' ? 'index.html?scope=family' : 'index.html'); const clean = cfg.sanitizeReturnTarget ? cfg.sanitizeReturnTarget(raw, params.get('scope')==='family' ? 'index.html?scope=family' : 'index.html') : raw; return clean.startsWith('./') ? clean : `./${clean}`; }
     function pendingVote() { return new URLSearchParams(window.location.search).get('vote') || ''; }
     function friendlyMessage(msg) {
@@ -222,48 +186,40 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       });
       return await parseResponse(res);
     }
-    async function getLoginNames(options = {}) {
-      const preferCache = options.preferCache !== false;
-      const forceRefresh = options.forceRefresh === true;
-      if (preferCache) {
-        const cached = readCachedLoginNames();
-        if (cached.length) {
-          rememberLoginNames(cached);
-          if (!forceRefresh) return { names: cached, source: 'cache' };
-        }
-      }
-      if (loginNamesRequest && !forceRefresh) return loginNamesRequest;
-      loginNamesRequest = (async () => {
-        try {
-          const scope = new URLSearchParams(window.location.search).get('scope') === 'family' ? 'family' : 'friends';
-          const helper = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedActivePlayerNames === 'function'
-            ? window.GEJAST_CONFIG.fetchScopedActivePlayerNames
-            : null;
-          if (helper) {
-            const names = uniqueNames(await helper(scope));
-            if (names.length) return { names: rememberLoginNames(names), source: 'scoped-helper' };
-          }
-        } catch (_) {}
-        try {
-          if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
-            const scoped = await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_login_names', {}, { injectScope: false, timeoutMs: 2200 });
-            const names = uniqueNames(normalizeLoginNameRows(scoped));
-            if (names.length) return { names: rememberLoginNames(names), source: 'compat' };
-          }
-        } catch (_) {}
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_login_names`, {
-          method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({})
-        });
-        if (!res.ok) return { names: readCachedLoginNames(), source: 'cache-fallback' };
-        const payload = await parseResponse(res);
-        const names = uniqueNames(normalizeLoginNameRows(payload));
-        return { names: names.length ? rememberLoginNames(names) : readCachedLoginNames(), source: 'rpc' };
-      })();
+    async function getLoginNames() {
+      const scope = new URLSearchParams(window.location.search).get('scope') === 'family' ? 'family' : 'friends';
+      const cached = readCachedLoginNames(scope);
       try {
-        return await loginNamesRequest;
-      } finally {
-        loginNamesRequest = null;
-      }
+        const helper = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedActivePlayerNames === 'function'
+          ? window.GEJAST_CONFIG.fetchScopedActivePlayerNames
+          : null;
+        if (helper) {
+          const names = await helper(scope);
+          if (Array.isArray(names) && names.length) writeCachedLoginNames(names, scope);
+          return { names: (Array.isArray(names) && names.length) ? names : cached };
+        }
+      } catch (_) {}
+      try {
+        if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
+          const out = await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_login_names', {});
+          const names = uniqueNames(Array.isArray(out?.names) ? out.names : []);
+          if (names.length) writeCachedLoginNames(names, scope);
+          return { names: names.length ? names : cached };
+        }
+      } catch (_) {}
+      try {
+        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        const timer = controller ? setTimeout(() => { try { controller.abort(); } catch (_) {} }, RPC_TIMEOUT_MS) : null;
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_login_names`, {
+          method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify({}), signal: controller ? controller.signal : undefined
+        });
+        if (timer) clearTimeout(timer);
+        if (!res.ok) return { names: cached };
+        const out = await parseResponse(res);
+        const names = uniqueNames(Array.isArray(out?.names) ? out.names : []);
+        if (names.length) writeCachedLoginNames(names, scope);
+        return { names: names.length ? names : cached };
+      } catch (_) { return { names: cached }; }
     }
     async function touchSession() {
       const token = getSessionToken();
@@ -399,14 +355,24 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return [];
     }
     async function load() {
-      const cachedNames = readCachedLoginNames();
-      if (cachedNames.length) fillNames(cachedNames);
-      const [stateResult, loginNamesResult] = await Promise.allSettled([getPublicState(), getLoginNames({ forceRefresh: true })]);
-      const state = stateResult.status === 'fulfilled' ? stateResult.value : null;
+      const scope = new URLSearchParams(window.location.search).get('scope') === 'family' ? 'family' : 'friends';
+      const cached = readCachedLoginNames(scope);
+      if (cached.length) fillNames(cached);
+
+      const loginNamesPromise = getLoginNames();
+      const statePromise = getPublicState();
+
+      const loginNamesResult = await Promise.allSettled([loginNamesPromise]).then((results) => results[0]);
       const loginNames = loginNamesResult.status === 'fulfilled' ? loginNamesResult.value : null;
+      if (loginNamesResult.status === 'fulfilled') {
+        fillNames(uniqueNames(normalizeLoginNameRows(loginNames)));
+      }
+
+      const stateResult = await Promise.allSettled([statePromise]).then((results) => results[0]);
+      const state = stateResult.status === 'fulfilled' ? stateResult.value : null;
       const fallbackNames = [];
       if (state?.my_name) fallbackNames.push(state.my_name);
-      fillNames(rememberLoginNames(uniqueNames([...(normalizeLoginNameRows(loginNames)), ...fallbackNames])), state?.my_name || '');
+      fillNames(uniqueNames([...(normalizeLoginNameRows(loginNames)), ...fallbackNames]), state?.my_name || '');
 
       const stateTile = document.querySelector('.state-tile');
       if (state?.my_name) {
@@ -431,44 +397,26 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       }
 
       if (getSessionToken()) {
-        try { await touchSession(); } catch (err) { console.warn('touchSession mislukte op login load; sessie blijft lokaal staan', err); }
+        try { await touchSession(); } catch { clearSessionToken(); }
       }
     }
     document.getElementById('loginForm').addEventListener('submit', async (event) => {
       event.preventDefault();
-      const loginBtn = document.getElementById('loginBtn');
-      const logoutBtn = document.getElementById('logoutBtn');
-      const pinInput = document.getElementById('pinInput');
       try {
-        loginBtn.disabled = true;
-        logoutBtn.disabled = true;
-        pinInput.disabled = true;
         setStatus('Inloggen...');
         const data = await loginPlayer();
-        const token = String(data?.session_token || data?.token || '').trim();
-        if (!token) throw new Error('Login gaf geen sessietoken terug.');
-        setSessionToken(token);
-        try{ window.GEJAST_CONFIG && window.GEJAST_CONFIG.touchPlayerActivity && window.GEJAST_CONFIG.touchPlayerActivity(); }catch(_){ }
         const chosen = normalizeDisplayName(document.getElementById('playerNameInput').value || data?.display_name || data?.player_name || '');
-        const allowed = snapshotAllowedNames();
-        if (allowed.length && chosen && !allowed.includes(chosen)) {
-          clearSessionToken();
-          throw new Error('Deze gebruiker hoort bij de andere sitegroep en kan hier niet inloggen.');
-        }
-        const vote = pendingVote();
-        if (vote) {
-          Promise.resolve().then(() => castVote(vote)).catch((voteErr) => {
-            console.warn('Post-login vote mislukte; login blijft geldig', voteErr);
-          });
-        }
+        setSessionToken(data.session_token);
+        try{ window.GEJAST_CONFIG && window.GEJAST_CONFIG.touchPlayerActivity && window.GEJAST_CONFIG.touchPlayerActivity(); }catch(_){ }
+        try {
+          const scope = new URLSearchParams(window.location.search).get('scope') === 'family' ? 'family' : 'friends';
+          if (chosen) writeCachedLoginNames([chosen, ...((readCachedLoginNames(scope)) || [])], scope);
+        } catch (_) {}
+        if (pendingVote()) await castVote(pendingVote());
         window.location.href = targetUrl();
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Er ging iets mis';
         setStatus(friendlyMessage(msg), 'warn');
-      } finally {
-        loginBtn.disabled = false;
-        logoutBtn.disabled = false;
-        pinInput.disabled = false;
       }
     });
     document.getElementById('logoutBtn').addEventListener('click', () => { clearSessionToken(); setStatus('Browser-sessie gewist.', 'ok'); });
@@ -577,15 +525,11 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
   async function fetchMyName(token){
     if (!token || !SUPABASE_URL || !SUPABASE_KEY) return '';
     const payload = JSON.stringify({ session_token: token });
-    for (const rpc of ['get_public_state','get_gejast_homepage_state','get_jas_app_state']){
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpc}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: payload });
-        const data = await res.json().catch(()=>null);
-        if (!res.ok) continue;
-        const name = data?.my_name || data?.display_name || data?.player_name || '';
-        if (name) return name;
-      } catch {}
-    }
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: payload });
+      const data = await res.json().catch(()=>null);
+      if (res.ok) return data?.my_name || data?.display_name || data?.player_name || '';
+    } catch {}
     return '';
   }
   function show(name){ nameEl.textContent = name; box.classList.add('is-visible'); }
@@ -599,8 +543,18 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
   });
 })();
 </script>
-
-  <script src="./site-analytics.js?v614"></script>
+  <script>
+  (function(){
+    function loadAnalytics(){
+      const script = document.createElement('script');
+      script.src = './site-analytics.js?v371';
+      script.async = true;
+      document.body.appendChild(script);
+    }
+    if ('requestIdleCallback' in window) requestIdleCallback(loadAnalytics, { timeout: 2500 });
+    else setTimeout(loadAnalytics, 1500);
+  })();
+  </script>
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
