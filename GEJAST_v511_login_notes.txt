@@ -1,0 +1,7 @@
+v511 login dropdown rule fix
+- Corrects the too-strict empty-list behavior.
+- Current practical rule:
+  1) prefer users with PIN-set signals
+  2) also accept active/approved/activated style statuses
+  3) if stronger metadata is missing, fall back to softer current login-name sources so the page still works
+- This matches the current broad active-user definition better.
