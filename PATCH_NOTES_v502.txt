@@ -1,0 +1,33 @@
+GEJAST v502 patch notes
+
+Included files:
+- gejast-config.js
+- gejast-live-summary.js
+- pikken.html
+- gejast-pikken.js
+- pikken_live.html
+- gejast-pikken-live.js
+- pikken_spectator.html
+
+What this pass does:
+1. Login helper only returns activated/active/approved names from allowed_usernames, instead of showing every historical or pending name.
+2. Homepage live-entry helper now normalizes klaverjas/boerenbridge entries into:
+   - Klaverjas Kijken
+   - Boerenbridge begluren
+   and decorates the cards with a LIVE pill + hint copy.
+3. Homepage live-entry helper also stores/falls back to lightweight remembered participation tokens for klaverjas/boerenbridge when match ids are present in those pages.
+4. Pikken lobby page is lobby-only again.
+   - Removed table/dice/history UI from lobby.
+   - Added UUID sanitizing so empty/invalid game ids do not trigger the old uuid syntax error on page boot.
+5. Pikken live page now owns the table hand.
+   - Hand zone moved next to the green table.
+   - One tap on a die triggers the one local throw for that round.
+   - Result is sorted and then locked.
+   - Straight 1-2-3-4-5-6 is displayed as 6 pik by collapsing to all pik dice locally.
+6. Pikken spectator now redirects into live with spectator=1 so no meaningful interaction controls are shown.
+
+Important honesty notes:
+- The active-users-only login behavior depends on allowed_usernames status being maintained correctly by activation.
+- The homepage LIVE card styling is applied through the shared live-summary helper at runtime, because index.html already owns the entry ids and load flow.
+- The Pikken throw/lock behavior in this patch is still a frontend/live-page hand helper, not a server-owned round-state rewrite.
+- I did not patch klaverjas_live.html, boerenbridge_live.html, or paardenrace live ownership in this bundle.
