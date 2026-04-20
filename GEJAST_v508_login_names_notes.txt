@@ -1,0 +1,11 @@
+v508 login names patch
+- Fixes empty dropdown by adding a stronger direct fallback chain on the login page.
+- New helper merges names from:
+  1) fetchScopedActivePlayerNames
+  2) get_login_names_scoped
+  3) get_all_site_players_public_scoped
+  4) get_profiles_page_bundle_scoped
+  5) get_login_names
+  6) allowed_usernames REST table
+- Keeps scope filtering for family/friends.
+- login.html now loads gejast-login-names-fallback.js directly.
