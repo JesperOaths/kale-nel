@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v494',
+    VERSION:'v495',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -11,7 +11,6 @@
     PLAYER_SESSION_KEYS: ['jas_session_token_v11','jas_session_token_v10'],
     PLAYER_LAST_ACTIVITY_KEY: 'jas_last_activity_at_v1',
     PLAYER_SESSION_IDLE_MS: 12 * 60 * 60 * 1000,
-    ADMIN_SESSION_REMEMBER_MS: 60 * 24 * 60 * 60 * 1000,
     WEB_PUSH_PUBLIC_KEY: 'BPqY04jDOB_8RlhNxURgWFl6cMge64Mr7DkrWtgMfG4ARWLJ6S-r6c6JeQJ6o4kysWT0WeR9oVpahP85L8GLl_4',
     NOTIFICATION_BUTTON_ENABLED: true,
     WEB_PUSH_TEST_RPC: 'queue_test_web_push',
@@ -33,14 +32,14 @@
     } catch (_) { return null; }
   }
   function parseVersion(v){ const m=String(v||'').match(/v?(\d+)/i); return m?Number(m[1]):0; }
-  const effectiveVersion = CONFIG.VERSION;
+  const candidates = [detectScriptVersion(), window.GEJAST_PAGE_VERSION, CONFIG.VERSION].filter(Boolean);
+  const effectiveVersion = candidates.sort((a,b)=>parseVersion(b)-parseVersion(a))[0] || CONFIG.VERSION;
   const label = `${effectiveVersion} · Made by Bruis`;
   window.GEJAST_PAGE_VERSION = effectiveVersion;
 
   function watermarkStyles(node){
     if (!node || !node.style) return;
     const compact = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
-    const softGameWatermark = !!(document.body && document.body.dataset && document.body.dataset.gameWatermark === 'soft');
     Object.assign(node.style, {
       position: 'fixed',
       left: '50%',
@@ -49,19 +48,18 @@
       zIndex: '9999',
       padding: compact ? '7px 11px' : '8px 14px',
       borderRadius: '999px',
-      background: softGameWatermark ? 'rgba(17,17,17,0.66)' : 'rgba(17,17,17,0.88)',
+      background: 'rgba(17,17,17,0.88)',
       border: '1px solid rgba(212,175,55,0.35)',
       color: '#f3e3a6',
       font: compact ? '700 12px/1.2 Inter,system-ui,sans-serif' : '700 13px/1.2 Inter,system-ui,sans-serif',
       letterSpacing: '.03em',
       pointerEvents: 'none',
       userSelect: 'none',
-      boxShadow: softGameWatermark ? '0 8px 18px rgba(0,0,0,0.12)' : '0 12px 24px rgba(0,0,0,0.18)',
+      boxShadow: '0 12px 24px rgba(0,0,0,0.18)',
       textAlign: 'center',
       maxWidth: compact ? 'calc(100vw - 24px)' : '',
       backdropFilter: 'blur(6px)',
-      WebkitBackdropFilter: 'blur(6px)',
-      opacity: softGameWatermark ? '0.75' : '1'
+      WebkitBackdropFilter: 'blur(6px)'
     });
   }
   function ensureVersionWatermark(){
@@ -85,6 +83,7 @@
     document.querySelectorAll('body *').forEach((node)=>{ if (node.children.length) return; const txt=(node.textContent||'').trim(); if (re.test(txt)) { node.textContent = label; watermarkStyles(node); } });
   }
 
+
   function normalizeProfileImageUrl(value){
     const raw = String(value || '').trim();
     if (!raw) return '';
@@ -96,6 +95,7 @@
     if (base && /^[A-Za-z0-9._-]+\/.+/.test(raw)) return `${base}/storage/v1/object/public/${raw.replace(/^\/+/, '')}`;
     return raw;
   }
+
 
   function normalizePersonName(value){
     return String(value || '').replace(/\s+/g, ' ').trim();
@@ -109,31 +109,8 @@
       return true;
     });
   }
-
-  function scopedNameCacheKey(kind, scope){
-    return `gejast_${String(kind||'names')}_${normalizeScope(scope || inferRuntimeScope())}_cache_v490`;
-  }
-  function readScopedNameCache(kind, scope){
-    try {
-      const raw = localStorage.getItem(scopedNameCacheKey(kind, scope)) || sessionStorage.getItem(scopedNameCacheKey(kind, scope));
-      if (!raw) return { names: [], fresh: false, updated_at: 0 };
-      const parsed = JSON.parse(raw);
-      const names = uniquePersonNames(Array.isArray(parsed?.names) ? parsed.names : []);
-      const updatedAt = Number(parsed?.updated_at || 0) || 0;
-      const fresh = updatedAt > 0 && (Date.now() - updatedAt) < (15 * 60 * 1000);
-      return { names, fresh, updated_at: updatedAt };
-    } catch (_) {
-      return { names: [], fresh: false, updated_at: 0 };
-    }
-  }
-  function writeScopedNameCache(kind, scope, names){
-    const payload = JSON.stringify({ names: uniquePersonNames(names), updated_at: Date.now() });
-    try { localStorage.setItem(scopedNameCacheKey(kind, scope), payload); } catch (_) {}
-    try { sessionStorage.setItem(scopedNameCacheKey(kind, scope), payload); } catch (_) {}
-  }
   async function fetchScopedActivePlayerNames(scope){
     const resolvedScope = normalizeScope(scope || inferRuntimeScope());
-    const cached = readScopedNameCache('login_names', resolvedScope);
     const headers = { 'Content-Type':'application/json', apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '', Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}` };
     async function callRpc(name, payload){
       const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify(payload || {}) });
@@ -155,97 +132,18 @@
       return names;
     }
     const attempts = [
-      ['get_login_names_scoped', { site_scope_input: resolvedScope }],
       ['get_all_site_players_public_scoped', { site_scope_input: resolvedScope }],
-      ['get_login_names', { site_scope_input: resolvedScope }]
+      ['get_profiles_page_bundle_scoped', { site_scope_input: resolvedScope }],
+      ['get_login_names_scoped', { site_scope_input: resolvedScope }],
+      ['get_login_names', {}]
     ];
     for (const [name, payload] of attempts){
       try {
         const raw = await callRpc(name, payload);
         const names = toNames(raw);
-        if (names.length) {
-          writeScopedNameCache('login_names', resolvedScope, names);
-          return names;
-        }
+        if (names.length) return names;
       } catch (_) {}
     }
-    if (cached.names.length) return cached.names;
-    try {
-      const url = `${CONFIG.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope&status=eq.available&order=display_name.asc`;
-      const res = await fetch(url, { method:'GET', mode:'cors', cache:'no-store', headers });
-      const txt = await res.text();
-      let data = null;
-      try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || `HTTP ${res.status}`); }
-      if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
-      let rows = Array.isArray(data) ? data : [];
-      rows = rows.filter((row)=>{
-        const explicitScope = String(row?.site_scope || '').trim().toLowerCase();
-        return !explicitScope || explicitScope === resolvedScope;
-      });
-      const names = toNames(rows);
-      if (names.length) {
-        writeScopedNameCache('login_names', resolvedScope, names);
-        return names;
-      }
-    } catch (_) {}
-    return [];
-  }
-  async function fetchScopedRequestableNames(scope){
-    const resolvedScope = normalizeScope(scope || inferRuntimeScope());
-    const cached = readScopedNameCache('request_names', resolvedScope);
-    const headers = { 'Content-Type':'application/json', apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '', Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}` };
-    async function callRpc(name, payload){
-      const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify(payload || {}) });
-      const txt = await res.text();
-      let data = null;
-      try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || `HTTP ${res.status}`); }
-      if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
-      return data && data[name] !== undefined ? data[name] : data;
-    }
-    function toNames(raw){
-      const rows = Array.isArray(raw)
-        ? raw
-        : (Array.isArray(raw?.requestable_names) ? raw.requestable_names : (Array.isArray(raw?.names) ? raw.names : (Array.isArray(raw?.items) ? raw.items : (Array.isArray(raw?.rows) ? raw.rows : (Array.isArray(raw?.data) ? raw.data : [])))));
-      let names = uniquePersonNames(rows.map((row)=>{
-        if (typeof row === 'string') return row;
-        return row?.display_name || row?.desired_name || row?.name || row?.player_name || row?.public_display_name || row?.chosen_username || row?.slug || '';
-      }));
-      if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, resolvedScope);
-      return names;
-    }
-    const attempts = [
-      ['get_requestable_names_scoped', { site_scope_input: resolvedScope }],
-      ['get_requestable_names', { site_scope_input: resolvedScope }]
-    ];
-    for (const [name, payload] of attempts){
-      try {
-        const raw = await callRpc(name, payload);
-        const names = toNames(raw);
-        if (names.length) {
-          writeScopedNameCache('request_names', resolvedScope, names);
-          return names;
-        }
-      } catch (_) {}
-    }
-    if (cached.names.length) return cached.names;
-    try {
-      const url = `${CONFIG.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope&status=eq.available&order=display_name.asc`;
-      const res = await fetch(url, { method:'GET', mode:'cors', cache:'no-store', headers });
-      const txt = await res.text();
-      let data = null;
-      try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || `HTTP ${res.status}`); }
-      if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
-      let rows = Array.isArray(data) ? data : [];
-      rows = rows.filter((row)=>{
-        const explicitScope = String(row?.site_scope || '').trim().toLowerCase();
-        return !explicitScope || explicitScope === resolvedScope;
-      });
-      const names = toNames(rows);
-      if (names.length) {
-        writeScopedNameCache('request_names', resolvedScope, names);
-        return names;
-      }
-    } catch (_) {}
     return [];
   }
 
@@ -317,28 +215,30 @@
     if (target) url.searchParams.set('return_to', target);
     return url.toString();
   }
-  function setPlayerSessionToken(token, storage){
-    const value = String(token || '').trim();
-    if (!value) return '';
-    const primaryKey = CONFIG.PLAYER_SESSION_KEYS[0] || 'jas_session_token_v11';
-    const target = storage === 'session' ? sessionStorage : localStorage;
-    target.setItem(primaryKey, value);
-    const other = target === localStorage ? sessionStorage : localStorage;
-    other.removeItem(primaryKey);
-    touchPlayerActivity();
-    return value;
-  }
-  function normalizeScope(input){
-    return String(input || '').trim().toLowerCase() === 'family' ? 'family' : 'friends';
-  }
-  function buildRequestUrl(returnTo, scope){
-    const normalizedScope = normalizeScope(scope || inferRuntimeScope());
-    const url = new URL('./request.html', window.location.href);
-    const safeTarget = sanitizeReturnTarget(returnTo || '', normalizedScope === 'family' ? 'index.html?scope=family' : 'index.html');
-    if (safeTarget) url.searchParams.set('return_to', safeTarget);
-    if (normalizedScope === 'family') url.searchParams.set('scope', 'family');
-    return `${url.pathname}${url.search}${url.hash}`;
-  }
+
+function setPlayerSessionToken(token, storage){
+  const value = String(token || '').trim();
+  if (!value) return '';
+  const primaryKey = CONFIG.PLAYER_SESSION_KEYS[0] || 'jas_session_token_v11';
+  const target = storage === 'session' ? sessionStorage : localStorage;
+  target.setItem(primaryKey, value);
+  const other = target === localStorage ? sessionStorage : localStorage;
+  other.removeItem(primaryKey);
+  touchPlayerActivity();
+  return value;
+}
+function normalizeScope(input){
+  return String(input || '').trim().toLowerCase() === 'family' ? 'family' : 'friends';
+}
+function buildRequestUrl(returnTo, scope){
+  const normalizedScope = normalizeScope(scope || inferRuntimeScope());
+  const url = new URL('./request.html', window.location.href);
+  const safeTarget = sanitizeReturnTarget(returnTo || '', normalizedScope === 'family' ? 'index.html?scope=family' : 'index.html');
+  if (safeTarget) url.searchParams.set('return_to', safeTarget);
+  if (normalizedScope === 'family') url.searchParams.set('scope', 'family');
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
   function buildAdminUrl(reason='', returnTo=''){
     const url = new URL('./admin.html', window.location.href);
     if (reason) url.searchParams.set('reason', String(reason));
@@ -395,9 +295,6 @@
     applyVersionLabel,
     normalizeProfileImageUrl,
     fetchScopedActivePlayerNames,
-    fetchScopedRequestableNames,
-    readScopedNameCache,
-    writeScopedNameCache,
     getPlayerSessionToken,
     clearPlayerSessionTokens,
     touchPlayerActivity,

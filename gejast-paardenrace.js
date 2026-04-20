@@ -1,18 +1,7 @@
 (function(){
-  // Wave 5 mobile hardening: shared helpers used by the live presenter remain centralized here.
   const cfg = window.GEJAST_CONFIG || {};
-  const STORAGE_KEY = 'gejast_paardenrace_room_code_v583';
+  const STORAGE_KEY = 'gejast_paardenrace_room_code_v495';
   const LIVE_QUERY_KEY = 'live';
-  const ASSETS = {
-    arena: './paardenrace-live-board-v447.png',
-    cardBack: './paardenrace-card-back.png',
-    horses: {
-      hearts: './paardenrace-ace-hearts-v449.png',
-      diamonds: './paardenrace-ace-diamonds-v449.png',
-      clubs: './paardenrace-ace-clubs-v449.png',
-      spades: './paardenrace-ace-spades-v449.png'
-    }
-  };
   const SUITS = ['spades','hearts','clubs','diamonds'];
   const SUIT_META = {
     hearts: { label:'♥ Harten', symbol:'♥', color:'#a11f35' },
@@ -20,45 +9,24 @@
     clubs: { label:'♣ Klaveren', symbol:'♣', color:'#1f1b1a' },
     spades: { label:'♠ Schoppen', symbol:'♠', color:'#1f1b1a' }
   };
-  const BOARD_CALIBRATION = {
-    imageWidth: 1536,
-    imageHeight: 1024,
-    gateLeftPct: 18.23,
-    gateTopPct: 17.09,
-    gateWidthPct: 63.48,
-    gateHeightPct: 17.68,
-    trackLeftPct: 8.72,
-    trackTopPct: 34.77,
-    trackWidthPct: 82.50,
-    trackHeightPct: 50.49,
-    trackColumns: '1.5fr repeat(10, minmax(0, 1fr)) 1.5fr',
-    horseCardWidthPct: 74,
-    gateCardWidthPct: 72,
-    deckLeftPct: 5.55,
-    deckTopPct: 8.75,
-    deckWidthPct: 7.7,
-    discardRightPct: 9.25,
-    discardTopPct: 16.2,
-    discardWidthPct: 5.7
-  };
 
   function scope(){
     try {
-      if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.getScope === 'function'){
-        return window.GEJAST_SCOPE_UTILS.getScope();
-      }
+      if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.getScope === 'function') return window.GEJAST_SCOPE_UTILS.getScope();
     } catch(_){}
-    try {
-      return new URLSearchParams(window.location.search).get('scope') === 'family' ? 'family' : 'friends';
-    } catch(_){}
+    try { return new URLSearchParams(window.location.search).get('scope') === 'family' ? 'family' : 'friends'; }
+    catch(_){}
     return 'friends';
   }
   function scopedHref(path){
-    const url = new URL(path, window.location.href);
-    if (scope() === 'family') url.searchParams.set('scope', 'family');
-    return `${url.pathname.split('/').pop()}${url.search}`;
+    try {
+      const url = new URL(path, window.location.href);
+      if (scope() === 'family') url.searchParams.set('scope', 'family');
+      return `${url.pathname.split('/').pop()}${url.search}${url.hash}`;
+    } catch (_) {
+      return path;
+    }
   }
-
   function sessionToken(){ return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; }
   async function rpc(fn, args={}, options={}){
     const token = sessionToken();
@@ -70,25 +38,26 @@
       const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${fn}`, {
         method:'POST',
         headers:{
-          'apikey': cfg.SUPABASE_PUBLISHABLE_KEY,
-          'Authorization': `Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY}`,
+          apikey: cfg.SUPABASE_PUBLISHABLE_KEY || '',
+          Authorization: `Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY || ''}`,
           'Content-Type':'application/json',
-          'Accept':'application/json',
+          Accept:'application/json',
           'Cache-Control':'no-store, no-cache, max-age=0',
-          'Pragma':'no-cache'
+          Pragma:'no-cache'
         },
         cache:'no-store',
+        mode:'cors',
         body: JSON.stringify(body),
         signal: controller.signal
       });
       const text = await res.text();
       let data = null;
       try { data = text ? JSON.parse(text) : null; } catch(_) { data = text; }
-      if(!res.ok){
-        const msg = data && typeof data === 'object' ? (data.message || data.error || data.hint || JSON.stringify(data)) : (text || 'Onbekende fout');
+      if (!res.ok) {
+        const msg = data && typeof data === 'object' ? (data.message || data.error || data.details || data.hint || JSON.stringify(data)) : (text || `HTTP ${res.status}`);
         throw new Error(msg);
       }
-      return data;
+      return data && data[fn] !== undefined ? data[fn] : data;
     } catch(err) {
       if (err && (err.name === 'AbortError' || /abort/i.test(String(err)))) throw new Error('timeout');
       throw err;
@@ -96,14 +65,13 @@
       clearTimeout(timer);
     }
   }
+
   function getStoredRoomCode(){ return localStorage.getItem(STORAGE_KEY) || ''; }
-  function setStoredRoomCode(code){ if(code) localStorage.setItem(STORAGE_KEY, String(code).trim().toUpperCase()); }
+  function setStoredRoomCode(code){ if (code) localStorage.setItem(STORAGE_KEY, String(code).trim().toUpperCase()); }
   function clearStoredRoomCode(){ localStorage.removeItem(STORAGE_KEY); }
   function suitLabel(s){ return (SUIT_META[String(s||'').toLowerCase()] || {}).label || '—'; }
   function suitSymbol(s){ return (SUIT_META[String(s||'').toLowerCase()] || {}).symbol || '•'; }
-  function suitColor(s){ return (SUIT_META[String(s||'').toLowerCase()] || {}).color || '#333'; }
-  function horseAsset(suit){ return ASSETS.horses[suit] || ASSETS.horses.hearts; }
-
+  function suitColor(s){ return (SUIT_META[String(s||'').toLowerCase()] || {}).color || '#1f1b1a'; }
   function liveHref(room){
     const code = encodeURIComponent(String(room||'').trim().toUpperCase());
     const url = new URL('./paardenrace_live.html', window.location.href);
@@ -112,17 +80,19 @@
     if (scope() === 'family') url.searchParams.set('scope', 'family');
     return `${url.pathname.split('/').pop()}${url.search}`;
   }
-  function gotoLive(room, options={}){ const href = liveHref(room); if(options.replace) window.location.replace(href); else window.location.href = href; }
+  function gotoLive(room, options={}){
+    const href = liveHref(room);
+    if (options.replace) window.location.replace(href);
+    else window.location.href = href;
+  }
 
   function parseCard(cardCode=''){
     const raw = String(cardCode || '').trim().toUpperCase();
     const match = raw.match(/^(10|[2-9JQKA])([HDCS])$/);
-    if(!match){ return { rank: raw || '—', suitKey: '', symbol: '•', isRed: false, raw }; }
+    if (!match) return { rank: raw || '—', suitKey:'', symbol:'•', isRed:false, raw };
     const rank = match[1];
     const suitKey = ({ H:'hearts', D:'diamonds', C:'clubs', S:'spades' })[match[2]] || '';
-    const symbol = suitSymbol(suitKey);
-    const isRed = suitKey === 'hearts' || suitKey === 'diamonds';
-    return { rank, suitKey, symbol, isRed, raw };
+    return { rank, suitKey, symbol:suitSymbol(suitKey), isRed: suitKey === 'hearts' || suitKey === 'diamonds', raw };
   }
   function renderFaceUpCard(cardCode, extraClass=''){
     const parsed = parseCard(cardCode);
@@ -136,11 +106,7 @@
     `;
   }
   function renderCardBack(extraClass=''){
-    return `<img src="${ASSETS.cardBack}" alt="Kaart achterkant" class="pr-card-back${extraClass ? ` ${extraClass}` : ''}">`;
-  }
-  function aceHorseCard(suit){
-    const src = horseAsset(suit);
-    return `<img src="${src}" alt="${suitLabel(suit)} aas" class="pr-ace-card" draggable="false">`;
+    return `<div class="pr-card-back${extraClass ? ` ${extraClass}` : ''}"><span>GEJAST</span></div>`;
   }
   function getDrawRemaining(match){
     const deck = Array.isArray(match?.draw_deck) ? match.draw_deck : [];
@@ -149,65 +115,31 @@
   }
   function resolvedGateSet(match){ return new Set(Array.isArray(match?.resolved_gates) ? match.resolved_gates.map(Number) : []); }
   function getGridColumnForProgress(progress){
-    if (progress <= 0) return 0;
-    if (progress >= 11) return 11;
-    return progress;
+    const value = Number(progress || 0);
+    if (value <= 0) return 0;
+    if (value >= 11) return 11;
+    return value;
   }
-
-  function renderLiveBoard(match){
-    if(!match || !match.horse_positions){
-      return '<div class="pr-live-placeholder">Wachten op countdown of race-start.</div>';
-    }
-    const pos = match.horse_positions || {};
-    const gates = Array.isArray(match.gate_cards) ? match.gate_cards : [];
-    const resolved = resolvedGateSet(match);
-    const remaining = getDrawRemaining(match);
-    const discardCard = match.last_draw_card || '';
-    const deckLayers = remaining > 0
-      ? [0,1,2].map((i)=>`<div class="pr-stack-card" style="transform:translate(${i * -3}px, ${i * 3}px)">${renderCardBack('pr-deck-back')}</div>`).join('')
-      : '';
-
-    const gateHtml = Array.from({length:10}, (_, idx)=>{
-      const gateNo = idx + 1;
-      const isResolved = resolved.has(gateNo);
-      const inner = isResolved ? renderFaceUpCard(gates[idx] || '', 'pr-gate-face') : renderCardBack('pr-gate-back');
-      return `<div class="pr-gate-slot ${isResolved ? 'is-revealed' : 'is-facedown'}" data-gate-no="${gateNo}" data-resolved="${isResolved}">${inner}</div>`;
-    }).join('');
-
-    const laneHtml = SUITS.map((suit)=>{
-      const raw = Number(pos[suit] || 0);
-      const idx = Math.max(0, Math.min(11, raw));
-      const cells = Array.from({length:12}, (_, col)=>{
-        const classes = ['pr-track-cell'];
-        if(col === 0) classes.push('is-start');
-        if(col === 11) classes.push('is-finish');
-        const horse = col === idx ? `<div class="pr-horse-slot" data-suit="${suit}" data-progress="${idx}">${aceHorseCard(suit)}</div>` : '';
-        return `<div class="${classes.join(' ')}" data-col="${col}" data-progress-cell="${col}">${horse}</div>`;
-      }).join('');
-      return `<div class="pr-lane-grid" data-lane="${suit}">${cells}</div>`;
-    }).join('');
-
-    return `
-      <div class="pr-live-wrap" data-match-ref="${String(match.match_ref || '')}" data-draw-index="${Number(match.draw_index || 0)}">
-        <div class="pr-live-stage" data-stage-root>
-          <img src="${ASSETS.arena}" alt="Paardenrace bord" class="pr-live-arena">
-          <div class="pr-overlay" style="--gate-left:${BOARD_CALIBRATION.gateLeftPct}%;--gate-top:${BOARD_CALIBRATION.gateTopPct}%;--gate-width:${BOARD_CALIBRATION.gateWidthPct}%;--gate-height:${BOARD_CALIBRATION.gateHeightPct}%;--track-left:${BOARD_CALIBRATION.trackLeftPct}%;--track-top:${BOARD_CALIBRATION.trackTopPct}%;--track-width:${BOARD_CALIBRATION.trackWidthPct}%;--track-height:${BOARD_CALIBRATION.trackHeightPct}%;--deck-left:${BOARD_CALIBRATION.deckLeftPct}%;--deck-top:${BOARD_CALIBRATION.deckTopPct}%;--deck-width:${BOARD_CALIBRATION.deckWidthPct}%;--discard-right:${BOARD_CALIBRATION.discardRightPct}%;--discard-top:${BOARD_CALIBRATION.discardTopPct}%;--discard-width:${BOARD_CALIBRATION.discardWidthPct}%">
-            <canvas class="pr-fx-canvas" data-fx-canvas></canvas>
-            <div class="pr-deck-zone"><div class="pr-deck-slot" data-deck-slot>${deckLayers}</div></div>
-            <div class="pr-discard-zone"><div class="pr-discard-slot ${discardCard ? 'has-card' : ''}" data-discard-slot>${discardCard ? renderFaceUpCard(discardCard, 'pr-discard-face') : ''}</div></div>
-            <div class="pr-gate-grid">${gateHtml}</div>
-            <div class="pr-track-lanes">${laneHtml}</div>
-            <div class="pr-animation-layer" data-animation-layer></div>
-          </div>
-        </div>
-      </div>
-    `;
+  function horseMarker(suit){
+    return `<span class="pr-horse-token" style="color:${suitColor(suit)}">${suitSymbol(suit)}</span>`;
   }
-
+  function compactGateCard(cardCode, resolved){
+    if (!resolved) return `<div class="pr-gate-mini pr-gate-mini--back"></div>`;
+    const parsed = parseCard(cardCode);
+    return `<div class="pr-gate-mini ${parsed.isRed ? 'red' : ''}"><span>${parsed.symbol}</span></div>`;
+  }
   function renderRaceMinimap(match){
     if (!match || !match.horse_positions) return '<div class="pr-minimap-empty">Wachten op racebord…</div>';
     const positions = match.horse_positions || {};
-    const rows = SUITS.map((suit)=>{
+    const gates = Array.isArray(match.gate_cards) ? match.gate_cards : [];
+    const resolved = resolvedGateSet(match);
+    const gateCells = Array.from({ length: 12 }, (_, col)=>{
+      if (col === 0 || col === 11) return '<span class="pr-minimap-cell pr-minimap-cell--blank"></span>';
+      const gateNo = col;
+      return `<span class="pr-minimap-cell pr-minimap-gate-cell">${compactGateCard(gates[gateNo - 1] || '', resolved.has(gateNo))}</span>`;
+    }).join('');
+    const gateRow = `<div class="pr-minimap-row pr-minimap-row--gates"><div class="pr-minimap-label">G</div><div class="pr-minimap-track">${gateCells}</div></div>`;
+    const suitRows = SUITS.map((suit)=>{
       const progress = Math.max(0, Math.min(11, Number(positions[suit] || 0)));
       const cells = Array.from({ length: 12 }, (_, col)=>{
         const classes = ['pr-minimap-cell'];
@@ -216,12 +148,48 @@
         const horse = progress === col ? `<span class="pr-minimap-horse" style="color:${suitColor(suit)}">${suitSymbol(suit)}</span>` : '';
         return `<span class="${classes.join(' ')}">${horse}</span>`;
       }).join('');
-      return `<div class="pr-minimap-row" data-suit="${suit}">
-        <div class="pr-minimap-label">${suitSymbol(suit)}</div>
-        <div class="pr-minimap-track">${cells}</div>
-      </div>`;
+      return `<div class="pr-minimap-row" data-suit="${suit}"><div class="pr-minimap-label" style="color:${suitColor(suit)}">${suitSymbol(suit)}</div><div class="pr-minimap-track">${cells}</div></div>`;
     }).join('');
-    return `<div class="pr-minimap">${rows}</div>`;
+    return `<div class="pr-minimap">${gateRow}${suitRows}</div>`;
+  }
+
+  function renderTrackRow(suit, progress){
+    const cells = Array.from({ length: 12 }, (_, col)=>{
+      const classes = ['pr-track-cell'];
+      if (col === 0) classes.push('is-start');
+      if (col === 11) classes.push('is-finish');
+      const marker = col === progress ? horseMarker(suit) : '';
+      return `<div class="${classes.join(' ')}" data-col="${col}">${marker}</div>`;
+    }).join('');
+    return `<div class="pr-board-row"><div class="pr-board-label" style="color:${suitColor(suit)}">${suitSymbol(suit)}</div><div class="pr-board-track">${cells}</div></div>`;
+  }
+
+  function renderLiveBoard(match){
+    if (!match || !match.horse_positions) return '<div class="pr-live-placeholder">Wachten op countdown of race-start.</div>';
+    const positions = match.horse_positions || {};
+    const gates = Array.isArray(match.gate_cards) ? match.gate_cards : [];
+    const resolved = resolvedGateSet(match);
+    const remaining = getDrawRemaining(match);
+    const lastCard = match.last_draw_card || '';
+    const gateRow = Array.from({ length: 10 }, (_, idx)=>{
+      const gateNo = idx + 1;
+      const isResolved = resolved.has(gateNo);
+      return `<div class="pr-board-gate-slot">${isResolved ? renderFaceUpCard(gates[idx] || '', 'pr-board-gate-face') : renderCardBack('pr-board-gate-back')}</div>`;
+    }).join('');
+    const trackRows = SUITS.map((suit)=>renderTrackRow(suit, getGridColumnForProgress(positions[suit]))).join('');
+    return `
+      <div class="pr-live-wrap">
+        <div class="pr-board-topline">
+          <div class="pr-board-kpi"><span>Kaarten over</span><strong>${remaining}</strong></div>
+          <div class="pr-board-kpi"><span>Gates open</span><strong>${resolved.size}/10</strong></div>
+          <div class="pr-board-kpi pr-board-kpi--card"><span>Laatste kaart</span><div class="pr-board-lastcard">${lastCard ? renderFaceUpCard(lastCard, 'pr-last-card') : '<div class="pr-last-card-empty">—</div>'}</div></div>
+        </div>
+        <div class="pr-board-shell-lite">
+          <div class="pr-board-gates"><div class="pr-board-label pr-board-label--gate">G</div><div class="pr-board-gate-track">${gateRow}</div></div>
+          <div class="pr-board-rows">${trackRows}</div>
+        </div>
+      </div>
+    `;
   }
 
   function summarizeLiveRoom(room, match, players, viewer){
@@ -238,14 +206,14 @@
       : stage === 'countdown'
         ? `Countdown ${Number(room?.countdown_remaining_seconds || 0)}s`
         : stage === 'nominations'
-          ? 'Verdeel nu de Bakken'
+          ? 'Verdeel nu de nominaties'
           : stage === 'finished'
             ? 'Race afgerond'
             : drawCard
               ? `Laatste kaart: ${drawCard}`
               : 'Klaar voor de volgende kaart';
     const subline = winnerSuit
-      ? `Totale pot ${totalPot} Bakken · draw deck ${deckLeft} kaarten over`
+      ? `Totale pot ${totalPot} Bakken · ${deckLeft} kaarten over`
       : `${verified}/${(players || []).length || 0} verified · ${ready}/${(players || []).length || 0} ready · ${pendingGate} gates nog dicht`;
     return {
       headline,
@@ -264,9 +232,9 @@
 
   window.GEJAST_PAARDENRACE = {
     rpc, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode,
-    suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack, renderLiveBoard,
-    renderRaceMinimap, summarizeLiveRoom,
-    gotoLive, liveHref, scopedHref, scope, getDrawRemaining, resolvedGateSet, getGridColumnForProgress,
-    getBoardPoints: ()=> JSON.parse(JSON.stringify(BOARD_CALIBRATION)), horseAsset, aceHorseCard, ASSETS
+    suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack,
+    renderRaceMinimap, renderLiveBoard, summarizeLiveRoom,
+    gotoLive, liveHref, scopedHref, scope,
+    getDrawRemaining, resolvedGateSet, getGridColumnForProgress
   };
 })();
