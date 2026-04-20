@@ -1,0 +1,4 @@
+v504 index patch
+- I added the top-5 route helper directly into index.html instead of leaving it as a manual step.
+- Visible version bumped to v504.
+- Included helper file because index now references it directly.
