@@ -151,14 +151,23 @@
   }
   function isClaimedActiveStatus(value){
     const raw = String(value || '').trim().toLowerCase();
-    return raw === 'active' || raw === 'activated' || raw === 'claimed' || raw === 'claim_complete';
+    return raw === 'active'
+      || raw === 'activated'
+      || raw === 'claimed'
+      || raw === 'claim_complete'
+      || raw === 'approved'
+      || raw === 'approved_pending_activation'
+      || raw === 'pending_activation'
+      || raw === 'awaiting_activation'
+      || raw === 'waiting';
   }
   function isRequestableStatus(value){
     const raw = String(value || '').trim().toLowerCase();
     return raw === 'available'
       || raw === 'claimable'
       || raw === 'returned_to_claimable'
-      || raw === 'claimable_again';
+      || raw === 'claimable_again'
+      || raw === 'open';
   }
   async function fetchScopedActivePlayerNames(scope){
     const resolvedScope = normalizeScope(scope || inferRuntimeScope());
@@ -189,6 +198,7 @@
       if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, resolvedScope);
       return names;
     }
+    const mergedNames = [];
     try {
       const rows = await callJson(
         `${CONFIG.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,status,site_scope&order=display_name.asc&limit=400`,
@@ -199,6 +209,10 @@
         const rowScope = normalizeScope(row?.site_scope || resolvedScope);
         return rowScope === resolvedScope && isClaimedActiveStatus(row?.status);
       }).map((row)=>row?.display_name || ''));
+      mergedNames.push(...uniquePersonNames((Array.isArray(rows) ? rows : []).filter((row)=>{
+        const rowScope = normalizeScope(row?.site_scope || resolvedScope);
+        return rowScope === resolvedScope;
+      }).map((row)=>row?.display_name || row?.slug || '')));
       if (canonicalNames.length) return canonicalNames;
     } catch (_) {}
     for (const [endpoint, body] of [
@@ -208,10 +222,13 @@
     ]) {
       try {
         const names = toNames(await callJson(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${endpoint}`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify(body) }, CONFIG.LOGIN_NAME_TIMEOUT_MS));
-        if (names.length) return names;
+        if (names.length) {
+          mergedNames.push(...names);
+          if (endpoint !== 'get_all_site_players_public_scoped') return uniquePersonNames(mergedNames);
+        }
       } catch (_) {}
     }
-    return [];
+    return uniquePersonNames(mergedNames);
   }
   async function fetchScopedRequestableNames(scope){
     const resolvedScope = normalizeScope(scope || inferRuntimeScope());
@@ -243,6 +260,7 @@
       return names;
     }
     const cached = readScopedNameCache('request_names', resolvedScope);
+    const mergedNames = [];
     try {
       const rows = await callJson(
         `${CONFIG.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope&order=display_name.asc&limit=400`,
@@ -253,6 +271,10 @@
         const rowScope = normalizeScope(row?.site_scope || resolvedScope);
         return rowScope === resolvedScope && isRequestableStatus(row?.status);
       }).map((row)=>row?.display_name || row?.slug || ''));
+      mergedNames.push(...uniquePersonNames((Array.isArray(rows) ? rows : []).filter((row)=>{
+        const rowScope = normalizeScope(row?.site_scope || resolvedScope);
+        return rowScope === resolvedScope;
+      }).map((row)=>row?.display_name || row?.slug || '')));
       if (canonicalNames.length) {
         writeScopedNameCache('request_names', resolvedScope, canonicalNames);
         return canonicalNames;
@@ -265,12 +287,14 @@
       try {
         const names = toNames(await callJson(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${endpoint}`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify(body) }, CONFIG.LOGIN_NAME_TIMEOUT_MS));
         if (names.length) {
-          writeScopedNameCache('request_names', resolvedScope, names);
-          return names;
+          mergedNames.push(...names);
+          const out = uniquePersonNames(mergedNames);
+          writeScopedNameCache('request_names', resolvedScope, out);
+          return out;
         }
       } catch (_) {}
     }
-    return cached?.names || [];
+    return uniquePersonNames([...(cached?.names || []), ...mergedNames]);
   }
 
   function getPlayerSessionToken(){

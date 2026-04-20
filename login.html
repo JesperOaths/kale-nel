@@ -138,6 +138,26 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
         .filter((name) => name && !seen.has(name.toLowerCase()) && seen.add(name.toLowerCase()))
         .sort((a, b) => a.localeCompare(b, 'nl'));
     }
+    function readCachedLoginNames(scope = 'friends') {
+      try {
+        const raw = localStorage.getItem(`${LOGIN_NAMES_CACHE_PREFIX}${scope}`);
+        if (!raw) return [];
+        const data = JSON.parse(raw);
+        return uniqueNames(Array.isArray(data?.names) ? data.names : []);
+      } catch (_) {
+        return [];
+      }
+    }
+    function writeCachedLoginNames(names, scope = 'friends') {
+      try {
+        const cleanNames = uniqueNames(names);
+        if (!cleanNames.length) return;
+        localStorage.setItem(`${LOGIN_NAMES_CACHE_PREFIX}${scope}`, JSON.stringify({
+          names: cleanNames,
+          ts: Date.now()
+        }));
+      } catch (_) {}
+    }
     function fillNames(names, selected = '') {
       const input = document.getElementById('playerNameInput');
       const resetInput = document.getElementById('resetNameInput');
