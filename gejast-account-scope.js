@@ -57,10 +57,10 @@
     return out;
   }
 
-  async function postRpc(name, payload){
+  async function postRpc(name, payload, timeoutMs){
     const url = `${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`;
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const timeout = controller ? global.setTimeout(() => { try { controller.abort(); } catch (_) {} }, 2500) : null;
+    const timeout = controller ? global.setTimeout(() => { try { controller.abort(); } catch (_) {} }, Math.max(1200, Number(timeoutMs || 4500))) : null;
     try {
       const res = await global.fetch(url, {
         method: 'POST',
@@ -79,13 +79,14 @@
     }
   }
 
-  async function callRpcCompat(name, payloadOrPayloads){
+  async function callRpcCompat(name, payloadOrPayloads, options){
     const payloads = Array.isArray(payloadOrPayloads) ? payloadOrPayloads : [payloadOrPayloads || {}];
+    const timeoutMs = options && options.timeoutMs;
     let lastError = null;
     for (const payload of payloads) {
       for (const variant of scopedVariants(payload)) {
         try {
-          return await postRpc(name, variant);
+          return await postRpc(name, variant, timeoutMs);
         } catch (error) {
           lastError = error;
           if (!retryable(error)) {
