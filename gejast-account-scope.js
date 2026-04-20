@@ -36,11 +36,25 @@
 
   function retryable(error){
     const msg = String(error?.message || error || '');
-    return /schema cache|could not find the function|no function matches|unexpected parameter|unknown parameter|does not exist|function public\.|argument|timeout/i.test(msg);
+    return /schema cache|could not find the function|no function matches|unexpected parameter|unknown parameter|does not exist|function public\.|argument/i.test(msg);
   }
 
-  function scopedVariants(payload){
+  const RPC_BEHAVIOR = {
+    login_player: { injectScope: false, timeoutMs: 4000 },
+    request_pin_reset_reactivation_action: { injectScope: false, timeoutMs: 4000 },
+    get_public_state: { injectScope: false, timeoutMs: 3000 },
+    player_touch_session: { injectScope: false, timeoutMs: 2500 },
+    cast_vote: { injectScope: false, timeoutMs: 3000 }
+  };
+
+  function rpcBehavior(name, options){
+    return { ...(RPC_BEHAVIOR[name] || {}), ...(options || {}) };
+  }
+
+  function scopedVariants(payload, options){
     const base = payload || {};
+    const behavior = options || {};
+    if (behavior.injectScope === false) return [base];
     const scope = currentScope();
     const out = [];
     const seen = new Set();
@@ -57,10 +71,12 @@
     return out;
   }
 
-  async function postRpc(name, payload){
+  async function postRpc(name, payload, options){
     const url = `${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`;
+    const behavior = rpcBehavior(name, options);
+    const timeoutMs = Number(behavior.timeoutMs) > 0 ? Number(behavior.timeoutMs) : 2500;
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const timeout = controller ? global.setTimeout(() => { try { controller.abort(); } catch (_) {} }, 6000) : null;
+    const timeout = controller ? global.setTimeout(() => { try { controller.abort(); } catch (_) {} }, timeoutMs) : null;
     try {
       const res = await global.fetch(url, {
         method: 'POST',
@@ -79,17 +95,18 @@
     }
   }
 
-  async function callRpcCompat(name, payloadOrPayloads){
+  async function callRpcCompat(name, payloadOrPayloads, options){
+    const behavior = rpcBehavior(name, options);
     const payloads = Array.isArray(payloadOrPayloads) ? payloadOrPayloads : [payloadOrPayloads || {}];
     let lastError = null;
     for (const payload of payloads) {
-      for (const variant of scopedVariants(payload)) {
+      for (const variant of scopedVariants(payload, behavior)) {
         try {
-          return await postRpc(name, variant);
+          return await postRpc(name, variant, behavior);
         } catch (error) {
           lastError = error;
           if (!retryable(error)) {
-            const isOriginal = JSON.stringify(variant) === JSON.stringify(payload);
+            const isOriginal = JSON.stringify(variant) == JSON.stringify(payload);
             if (isOriginal) throw error;
           }
         }

@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v615',
+    VERSION:'v614',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -10,10 +10,8 @@
     GOLD_HOVER: '#8a7338',
     PLAYER_SESSION_KEYS: ['jas_session_token_v11','jas_session_token_v10'],
     PLAYER_LAST_ACTIVITY_KEY: 'jas_last_activity_at_v1',
-    PLAYER_SESSION_IDLE_MS: 30 * 24 * 60 * 60 * 1000,
-    PLAYER_SESSION_SOFT_STALE_MS: 12 * 60 * 60 * 1000,
-    RPC_TIMEOUT_MS: 2500,
-    LOGIN_NAME_TIMEOUT_MS: 2200,
+    LOGIN_NAMES_CACHE_PREFIX: 'jas_login_names_cache_v1_',
+    PLAYER_SESSION_IDLE_MS: 12 * 60 * 60 * 1000,
     WEB_PUSH_PUBLIC_KEY: 'BPqY04jDOB_8RlhNxURgWFl6cMge64Mr7DkrWtgMfG4ARWLJ6S-r6c6JeQJ6o4kysWT0WeR9oVpahP85L8GLl_4',
     NOTIFICATION_BUTTON_ENABLED: true,
     WEB_PUSH_TEST_RPC: 'queue_test_web_push',
@@ -23,7 +21,7 @@
     WEB_PUSH_QUEUE_NEARBY_RPC_V3: 'queue_nearby_verification_pushes_v3',
     WEB_PUSH_CONSUME_ACTION_RPC_V3: 'consume_web_push_action_v3',
     ADMIN_ACTIVE_PUSH_RPC_V3: 'admin_queue_active_web_push_v3',
-    ADMIN_PUSH_DIAGNOSTICS_RPC_V3: 'admin_get_web_push_diagnostics_v3'
+    ADMIN_PUSH_DIAGNOSTICS_RPC_V3: 'admin_get_web_push_diagnostics_v3',
   };
 
   function detectScriptVersion(){
@@ -44,12 +42,25 @@
     if (!node || !node.style) return;
     const compact = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
     Object.assign(node.style, {
-      position: 'fixed', left: '50%', transform: 'translateX(-50%)', bottom: compact ? '10px' : '14px', zIndex: '9999',
-      padding: compact ? '7px 11px' : '8px 14px', borderRadius: '999px', background: 'rgba(17,17,17,0.88)',
-      border: '1px solid rgba(212,175,55,0.35)', color: '#f3e3a6',
+      position: 'fixed',
+      left: '50%',
+      transform: 'translateX(-50%)',
+      bottom: compact ? '10px' : '14px',
+      zIndex: '9999',
+      padding: compact ? '7px 11px' : '8px 14px',
+      borderRadius: '999px',
+      background: 'rgba(17,17,17,0.88)',
+      border: '1px solid rgba(212,175,55,0.35)',
+      color: '#f3e3a6',
       font: compact ? '700 12px/1.2 Inter,system-ui,sans-serif' : '700 13px/1.2 Inter,system-ui,sans-serif',
-      letterSpacing: '.03em', pointerEvents: 'none', userSelect: 'none', boxShadow: '0 12px 24px rgba(0,0,0,0.18)',
-      textAlign: 'center', maxWidth: compact ? 'calc(100vw - 24px)' : '', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)'
+      letterSpacing: '.03em',
+      pointerEvents: 'none',
+      userSelect: 'none',
+      boxShadow: '0 12px 24px rgba(0,0,0,0.18)',
+      textAlign: 'center',
+      maxWidth: compact ? 'calc(100vw - 24px)' : '',
+      backdropFilter: 'blur(6px)',
+      WebkitBackdropFilter: 'blur(6px)'
     });
   }
   function ensureVersionWatermark(){
@@ -66,7 +77,13 @@
     const seen = new Set();
     return nodes.filter((node)=>{ if (seen.has(node)) return false; seen.add(node); return true; });
   }
-  function applyVersionLabel(){ ensureVersionWatermark().forEach((node)=>{ node.textContent = label; watermarkStyles(node); }); }
+  function applyVersionLabel(){
+    const nodes = ensureVersionWatermark();
+    nodes.forEach((node)=>{ node.textContent = label; watermarkStyles(node); });
+    const re = /v\d+\s*[·.-]?\s*Made by Bruis/i;
+    document.querySelectorAll('body *').forEach((node)=>{ if (node.children.length) return; const txt=(node.textContent||'').trim(); if (re.test(txt)) { node.textContent = label; watermarkStyles(node); } });
+  }
+
 
   function normalizeProfileImageUrl(value){
     const raw = String(value || '').trim();
@@ -79,109 +96,259 @@
     if (base && /^[A-Za-z0-9._-]+\/.+/.test(raw)) return `${base}/storage/v1/object/public/${raw.replace(/^\/+/, '')}`;
     return raw;
   }
-  function normalizePersonName(value){ return String(value || '').replace(/\s+/g, ' ').trim(); }
+
+
+  function normalizePersonName(value){
+    return String(value || '').replace(/\s+/g, ' ').trim();
+  }
   function uniquePersonNames(values){
     const seen = new Set();
     return (Array.isArray(values) ? values : []).map(normalizePersonName).filter((name)=>{
-      const key = name.toLowerCase(); if (!name || seen.has(key)) return false; seen.add(key); return true;
+      const key = name.toLowerCase();
+      if (!name || seen.has(key)) return false;
+      seen.add(key);
+      return true;
     });
   }
-  function inferRuntimeScope(){ try { const qs = new URLSearchParams(location.search); if (qs.get('scope') === 'family') return 'family'; if ((location.pathname || '').includes('/familie/')) return 'family'; } catch (_) {} return 'friends'; }
-  function normalizeScope(input){ return String(input || '').trim().toLowerCase() === 'family' ? 'family' : 'friends'; }
-  async function callJson(url, options, timeoutMs){
-    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const timer = controller ? setTimeout(() => { try { controller.abort(); } catch (_) {} }, Math.max(600, Number(timeoutMs || CONFIG.RPC_TIMEOUT_MS || 2500))) : null;
+  const loginNameRequestCache = new Map();
+  function loginNamesCacheKey(scope){
+    return `${CONFIG.LOGIN_NAMES_CACHE_PREFIX || 'jas_login_names_cache_v1_'}${normalizeScope(scope || inferRuntimeScope())}`;
+  }
+  function readCachedLoginNames(scope){
+    const key = loginNamesCacheKey(scope);
     try {
-      const res = await fetch(url, Object.assign({}, options || {}, { signal: controller ? controller.signal : undefined }));
-      const txt = await res.text(); let data = null;
-      try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || `HTTP ${res.status}`); }
-      if (!res.ok) throw new Error(data?.message || data?.error || data?.details || data?.hint || `HTTP ${res.status}`);
-      return data;
-    } finally { if (timer) clearTimeout(timer); }
+      const raw = sessionStorage.getItem(key) || localStorage.getItem(key) || '';
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      const names = uniquePersonNames(Array.isArray(parsed?.names) ? parsed.names : []);
+      return names;
+    } catch (_) { return []; }
   }
-
-  function hasPinSignal(row){
-    if (!row || typeof row === 'string') return false;
-    if (row.has_pin || row.pin_is_set || row.player_has_pin || row.pin_set || row.pin_hash_set || row.pin_hash_present || row.has_pin_hash || row.player_pin_hash_set) return true;
-    if (row.pin_hash || row.player_pin_hash) return true;
-    return false;
-  }
-  function isStrictlyActive(row){
-    const status = String(row?.status || row?.account_status || row?.player_status || row?.request_status || '').trim().toLowerCase();
-    return ['active','approved','activated'].includes(status);
+  function writeCachedLoginNames(scope, names){
+    const clean = uniquePersonNames(names);
+    if (!clean.length) return clean;
+    const key = loginNamesCacheKey(scope);
+    const payload = JSON.stringify({ names: clean, updated_at: Date.now() });
+    try { sessionStorage.setItem(key, payload); } catch (_) {}
+    try { localStorage.setItem(key, payload); } catch (_) {}
+    return clean;
   }
   async function fetchScopedActivePlayerNames(scope){
     const resolvedScope = normalizeScope(scope || inferRuntimeScope());
-    const headers = { 'Content-Type':'application/json', apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '', Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}`, Accept:'application/json' };
-    function rowsFrom(raw){
-      return Array.isArray(raw)
-        ? raw
-        : (Array.isArray(raw?.players) ? raw.players : (Array.isArray(raw?.profiles) ? raw.profiles : (Array.isArray(raw?.names) ? raw.names : (Array.isArray(raw?.data) ? raw.data : []))));
+    const cacheKey = `fetchScopedActivePlayerNames:${resolvedScope}`;
+    if (loginNameRequestCache.has(cacheKey)) return loginNameRequestCache.get(cacheKey);
+    const headers = { 'Content-Type':'application/json', apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '', Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}` };
+    async function callRpc(name, payload, timeoutMs=2200){
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timer = controller ? setTimeout(() => { try { controller.abort(); } catch (_) {} }, timeoutMs) : null;
+      try {
+        const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify(payload || {}), signal: controller ? controller.signal : undefined });
+        const txt = await res.text();
+        let data = null;
+        try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || `HTTP ${res.status}`); }
+        if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
+        return data && data[name] !== undefined ? data[name] : data;
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
     }
     function toNames(raw){
-      let names = uniquePersonNames(rowsFrom(raw)
-        .filter((row)=>{
-          if (!row || typeof row === 'string') return true;
-          const rowScope = String(row.site_scope || row.scope || '').trim().toLowerCase();
-          if (rowScope && rowScope !== resolvedScope) return false;
-          return hasPinSignal(row) || isStrictlyActive(row);
-        })
-        .map((row)=> typeof row === 'string' ? row : (row?.public_display_name || row?.chosen_username || row?.nickname || row?.display_name || row?.player_name || row?.name || row?.label || row?.desired_name || row?.slug || '')));
+      const rows = Array.isArray(raw)
+        ? raw
+        : (Array.isArray(raw?.players) ? raw.players : (Array.isArray(raw?.profiles) ? raw.profiles : (Array.isArray(raw?.names) ? raw.names : (Array.isArray(raw?.data) ? raw.data : []))));
+      let names = uniquePersonNames(rows.map((row)=>{
+        if (typeof row === 'string') return row;
+        return row?.public_display_name || row?.chosen_username || row?.nickname || row?.display_name || row?.player_name || row?.name || row?.label || row?.desired_name || row?.slug || '';
+      }));
       if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, resolvedScope);
       return names;
     }
-    const calls = [
-      callJson(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/get_login_names_scoped`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify({ site_scope_input: resolvedScope }) }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then(toNames).catch(()=>[]),
-      callJson(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/get_all_site_players_public_scoped`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify({ site_scope_input: resolvedScope }) }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then(toNames).catch(()=>[]),
-      callJson(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/get_profiles_page_bundle_scoped`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify({ site_scope_input: resolvedScope }) }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then(toNames).catch(()=>[]),
-      callJson(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/get_login_names`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify({}) }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then(toNames).catch(()=>[]),
-      callJson(`${CONFIG.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope,pin_is_set,has_pin,pin_set,pin_hash_set,player_has_pin,has_pin_hash&order=display_name.asc&limit=400`, { method:'GET', mode:'cors', cache:'no-store', headers:{ apikey: headers.apikey, Authorization: headers.Authorization, Accept:'application/json' } }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then(toNames).catch(()=>[])
+    const cached = readCachedLoginNames(resolvedScope);
+    const attempts = [
+      ['get_login_names_scoped', { site_scope_input: resolvedScope }, 1800],
+      ['get_all_site_players_public_scoped', { site_scope_input: resolvedScope }, 2000],
+      ['get_profiles_page_bundle_scoped', { site_scope_input: resolvedScope }, 2200],
+      ['get_login_names', {}, 1800]
     ];
-    const settled = await Promise.allSettled(calls);
-    const merged = [];
-    settled.forEach((item)=>{ const names = item.status === 'fulfilled' ? item.value : []; if (Array.isArray(names) && names.length) merged.push(...names); });
-    return uniquePersonNames(merged);
+    const request = (async () => {
+      const settled = await Promise.allSettled(attempts.map(([name, payload, timeoutMs]) => callRpc(name, payload, timeoutMs).then(toNames)));
+      const match = settled.find((item) => item.status === 'fulfilled' && Array.isArray(item.value) && item.value.length);
+      if (match && match.status === 'fulfilled') return writeCachedLoginNames(resolvedScope, match.value);
+      return cached;
+    })();
+    loginNameRequestCache.set(cacheKey, request);
+    try {
+      return await request;
+    } finally {
+      loginNameRequestCache.delete(cacheKey);
+    }
   }
 
-  function getPlayerSessionToken(){ for(const key of CONFIG.PLAYER_SESSION_KEYS){ const value = localStorage.getItem(key) || sessionStorage.getItem(key); if (value) return value; } return ''; }
-  function clearPlayerSessionTokens(){ for(const key of CONFIG.PLAYER_SESSION_KEYS){ localStorage.removeItem(key); sessionStorage.removeItem(key); } localStorage.removeItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY); sessionStorage.removeItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY); }
-  function touchPlayerActivity(){ if (!getPlayerSessionToken()) return; const ts = String(Date.now()); localStorage.setItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY, ts); sessionStorage.setItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY, ts); }
-  function isPlayerSessionExpired(){ const token = getPlayerSessionToken(); if (!token) return true; const raw = localStorage.getItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY) || sessionStorage.getItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY) || ''; const last = Number(raw || 0); if (!last) return false; return (Date.now() - last) > CONFIG.PLAYER_SESSION_IDLE_MS; }
-  function sanitizeReturnTarget(raw, fallback=''){ const value = String(raw || '').trim(); if (!value) return String(fallback || '').trim(); if (/^(?:[a-z]+:)?\/\//i.test(value)) return String(fallback || '').trim(); if (value.includes('..') || value.includes('\\')) return String(fallback || '').trim(); const normalized = value.replace(/^\.\//,'').replace(/^\/+/, ''); return normalized || String(fallback || '').trim(); }
-  function currentReturnTarget(fallback='index.html'){ try { const path = (location.pathname || '').split('/').pop() || fallback || 'index.html'; return sanitizeReturnTarget(`${path}${location.search || ''}${location.hash || ''}`, fallback || 'index.html'); } catch (_) { return sanitizeReturnTarget(fallback || 'index.html', 'index.html'); } }
-  function buildHomeUrl(returnTo, scope){ const useScope = scope || inferRuntimeScope(); const url = new URL('./home.html', window.location.href); if (useScope === 'family') url.searchParams.set('scope', 'family'); const target = sanitizeReturnTarget(returnTo, useScope === 'family' ? 'index.html?scope=family' : 'index.html'); if (target) url.searchParams.set('return_to', target); return url.toString(); }
-  function buildLoginUrl(returnTo, scope){ const useScope = scope || inferRuntimeScope(); const url = new URL('./login.html', window.location.href); if (useScope === 'family') url.searchParams.set('scope', 'family'); const target = sanitizeReturnTarget(returnTo, useScope === 'family' ? 'index.html?scope=family' : 'index.html'); if (target) url.searchParams.set('return_to', target); return url.toString(); }
+  function getPlayerSessionToken(){
+    for(const key of CONFIG.PLAYER_SESSION_KEYS){
+      const value = localStorage.getItem(key) || sessionStorage.getItem(key);
+      if (value) return value;
+    }
+    return '';
+  }
+  function clearPlayerSessionTokens(){
+    for(const key of CONFIG.PLAYER_SESSION_KEYS){
+      localStorage.removeItem(key); sessionStorage.removeItem(key);
+    }
+    localStorage.removeItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY);
+    sessionStorage.removeItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY);
+  }
+  function touchPlayerActivity(){
+    if (!getPlayerSessionToken()) return;
+    const ts = String(Date.now());
+    localStorage.setItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY, ts);
+    sessionStorage.setItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY, ts);
+  }
+  function lastPlayerActivity(){
+    const raw = localStorage.getItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY) || sessionStorage.getItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY) || '';
+    const n = Number(raw || 0);
+    return Number.isFinite(n) ? n : 0;
+  }
+  function isPlayerSessionExpired(){
+    const token = getPlayerSessionToken();
+    if (!token) return true;
+    const last = lastPlayerActivity();
+    if (!last) return false;
+    return (Date.now() - last) > CONFIG.PLAYER_SESSION_IDLE_MS;
+  }
+  function inferRuntimeScope(){ try { const qs = new URLSearchParams(location.search); if (qs.get('scope')==='family') return 'family'; if ((location.pathname||'').includes('/familie/')) return 'family'; } catch(_){} return 'friends'; }
 
-  (function patchIntervals(){
-    const original = window.setInterval;
-    const stamps = Object.create(null);
-    window.setInterval = function(callback, delay, ...rest){
-      if (typeof callback !== 'function') return original.call(window, callback, delay, ...rest);
-      const page = (location.pathname || '').split('/').pop() || 'index.html';
-      const name = String(callback.name || '');
-      if (page === 'index.html' || page === '') {
-        const shouldWrap = /loadDrinksHomeTop5|loadHomepageLadders|loadHomepageLiveEntries/.test(name);
-        if (shouldWrap) {
-          const mins = { loadDrinksHomeTop5: 45000, loadHomepageLadders: 60000, loadHomepageLiveEntries: 30000 };
-          const minMs = mins[name] || Number(delay || 0);
-          const wrapped = function(){
-            if (document.hidden) return;
-            const now = Date.now();
-            if (stamps[name] && (now - stamps[name]) < minMs) return;
-            stamps[name] = now;
-            return callback.apply(this, arguments);
-          };
-          return original.call(window, wrapped, delay, ...rest);
-        }
-      }
-      return original.call(window, callback, delay, ...rest);
-    };
-  })();
+  function sanitizeReturnTarget(raw, fallback=''){
+    const value = String(raw || '').trim();
+    if (!value) return String(fallback || '').trim();
+    if (/^(?:[a-z]+:)?\/\//i.test(value)) return String(fallback || '').trim();
+    if (value.includes('..') || value.includes('\\')) return String(fallback || '').trim();
+    const normalized = value.replace(/^\.\//,'').replace(/^\/+/, '');
+    return normalized || String(fallback || '').trim();
+  }
+  function currentReturnTarget(fallback='index.html'){
+    try {
+      const path = (location.pathname || '').split('/').pop() || fallback || 'index.html';
+      const query = location.search || '';
+      const hash = location.hash || '';
+      return sanitizeReturnTarget(`${path}${query}${hash}`, fallback || 'index.html');
+    } catch (_) {
+      return sanitizeReturnTarget(fallback || 'index.html', 'index.html');
+    }
+  }
+  function buildHomeUrl(returnTo, scope){
+    const useScope = scope || inferRuntimeScope();
+    const url = new URL('./home.html', window.location.href);
+    if (useScope === 'family') url.searchParams.set('scope', 'family');
+    const target = sanitizeReturnTarget(returnTo, useScope === 'family' ? 'index.html?scope=family' : 'index.html');
+    if (target) url.searchParams.set('return_to', target);
+    return url.toString();
+  }
+  function buildLoginUrl(returnTo, scope){
+    const useScope = scope || inferRuntimeScope();
+    const url = new URL('./login.html', window.location.href);
+    if (useScope === 'family') url.searchParams.set('scope', 'family');
+    const target = sanitizeReturnTarget(returnTo, useScope === 'family' ? 'index.html?scope=family' : 'index.html');
+    if (target) url.searchParams.set('return_to', target);
+    return url.toString();
+  }
+
+function setPlayerSessionToken(token, storage){
+  const value = String(token || '').trim();
+  if (!value) return '';
+  const primaryKey = CONFIG.PLAYER_SESSION_KEYS[0] || 'jas_session_token_v11';
+  const target = storage === 'session' ? sessionStorage : localStorage;
+  target.setItem(primaryKey, value);
+  const other = target === localStorage ? sessionStorage : localStorage;
+  other.removeItem(primaryKey);
+  touchPlayerActivity();
+  return value;
+}
+function normalizeScope(input){
+  return String(input || '').trim().toLowerCase() === 'family' ? 'family' : 'friends';
+}
+function buildRequestUrl(returnTo, scope){
+  const normalizedScope = normalizeScope(scope || inferRuntimeScope());
+  const url = new URL('./request.html', window.location.href);
+  const safeTarget = sanitizeReturnTarget(returnTo || '', normalizedScope === 'family' ? 'index.html?scope=family' : 'index.html');
+  if (safeTarget) url.searchParams.set('return_to', safeTarget);
+  if (normalizedScope === 'family') url.searchParams.set('scope', 'family');
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+  function buildAdminUrl(reason='', returnTo=''){
+    const url = new URL('./admin.html', window.location.href);
+    if (reason) url.searchParams.set('reason', String(reason));
+    const target = sanitizeReturnTarget(returnTo);
+    if (target) url.searchParams.set('return_to', target);
+    return url.toString();
+  }
+  function ensurePlayerSessionOrRedirect(returnTo){
+    if (isPlayerSessionExpired()) clearPlayerSessionTokens();
+    const token = getPlayerSessionToken();
+    if (!token){
+      const target = sanitizeReturnTarget(returnTo || (location.pathname.split('/').pop() || 'index.html'), 'index.html');
+      window.location.href = buildHomeUrl(target);
+      return false;
+    }
+    touchPlayerActivity();
+    return true;
+  }
+  function installActivityKeepalive(options={}){
+    const suppressLogout = !!options.suppressLogout;
+    const logoutSelectors = options.logoutSelectors || ['#playerSessionCornerLogout','.player-session-corner-btn.logout','[data-player-logout]'];
+    const touch = ()=> touchPlayerActivity();
+    ['pointerdown','keydown','scroll','touchstart','mousemove'].forEach((eventName)=>{
+      window.addEventListener(eventName, touch, { passive:true });
+    });
+    document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) touch(); });
+    window.addEventListener('focus', touch);
+    touch();
+    if (suppressLogout){
+      logoutSelectors.forEach((selector)=>{
+        document.querySelectorAll(selector).forEach((el)=>{
+          el.style.display = 'none';
+          el.setAttribute('aria-hidden','true');
+          el.disabled = true;
+        });
+      });
+    }
+  }
+  function requireMatchEntrySession(returnTo){
+    const ok = ensurePlayerSessionOrRedirect(returnTo);
+    if (!ok) return false;
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', ()=>installActivityKeepalive({ suppressLogout:true }), { once:true });
+    } else {
+      installActivityKeepalive({ suppressLogout:true });
+    }
+    return true;
+  }
 
   window.GEJAST_CONFIG = Object.assign({}, window.GEJAST_CONFIG || {}, CONFIG, {
-    VERSION: effectiveVersion, VERSION_LABEL: label, ensureVersionWatermark, applyVersionLabel, normalizeProfileImageUrl,
-    fetchScopedActivePlayerNames, getPlayerSessionToken, clearPlayerSessionTokens, touchPlayerActivity, isPlayerSessionExpired,
-    buildHomeUrl, buildLoginUrl, normalizeScope, sanitizeReturnTarget, currentReturnTarget
+    VERSION: effectiveVersion,
+    VERSION_LABEL: label,
+    ensureVersionWatermark,
+    applyVersionLabel,
+    normalizeProfileImageUrl,
+    fetchScopedActivePlayerNames,
+    readCachedLoginNames,
+    writeCachedLoginNames,
+    getPlayerSessionToken,
+    clearPlayerSessionTokens,
+    touchPlayerActivity,
+    isPlayerSessionExpired,
+    ensurePlayerSessionOrRedirect,
+    installActivityKeepalive,
+    requireMatchEntrySession,
+    buildHomeUrl,
+    buildLoginUrl,
+    buildAdminUrl,
+    setPlayerSessionToken,
+    buildRequestUrl,
+    normalizeScope,
+    sanitizeReturnTarget,
+    currentReturnTarget
   });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyVersionLabel, { once: true });
