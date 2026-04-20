@@ -1,0 +1,5 @@
+Repo-grounded frontend patch.
+- Reads both revealed_gates and resolved_gates.
+- Surfaces gate_events and explicit suit -1 captions.
+- Keeps backend logic untouched because the live DB already applies the backstep.
+- Version bumped to v506 on these touched frontend files only.
