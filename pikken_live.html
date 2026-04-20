@@ -7,9 +7,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken live</title>
-  <script>window.GEJAST_PAGE_VERSION='v491';</script>
-  <script src="./gejast-config.js?v491"></script>
-  <script src="./gejast-live-summary.js?v491"></script>
+  <script>window.GEJAST_PAGE_VERSION='v492';</script>
+  <script src="./gejast-config.js?v492"></script>
+  <script src="./gejast-live-summary.js?v492"></script>
   <style>
     :root{
       --paper:#fbf6ef;--shell:#f5efe6;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;
@@ -42,6 +42,7 @@
     .seat{position:absolute;min-width:120px;max-width:150px;padding:10px 12px;border-radius:18px;background:rgba(255,255,255,.94);border:1px solid rgba(0,0,0,.08);box-shadow:0 8px 20px rgba(0,0,0,.07)}
     .seat.turn{outline:2px solid rgba(154,130,65,.42)}
     .seat.dead{opacity:.56}
+    .seat.disconnected{filter:grayscale(1);opacity:.72}
     .seat.me{box-shadow:0 0 0 2px rgba(154,130,65,.18), 0 8px 20px rgba(0,0,0,.07)}
     .seat.top{left:50%;top:16px;transform:translateX(-50%)}
     .seat.right{right:16px;top:50%;transform:translateY(-50%)}
@@ -153,6 +154,31 @@
   <script>
     (()=>{
       const live = window.GEJAST_LIVE_SUMMARY || {};
+      const cfg = window.GEJAST_CONFIG || {};
+      async function rpc(name, payload){
+        const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', apikey: cfg.SUPABASE_PUBLISHABLE_KEY || '', Authorization:`Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY || ''}`, Accept:'application/json' },
+          body: JSON.stringify(payload || {}),
+          cache:'no-store',
+          mode:'cors'
+        });
+        const txt = await res.text();
+        let data = null;
+        try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || `HTTP ${res.status}`); }
+        if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
+        return data && data[name] !== undefined ? data[name] : data;
+      }
+      async function getPresenceMap(gameId){
+        if (!gameId) return {};
+        try {
+          const raw = await rpc('get_pikken_presence_public', { game_id_input: gameId });
+          const rows = Array.isArray(raw?.rows) ? raw.rows : (Array.isArray(raw) ? raw : []);
+          const out = {};
+          rows.forEach((row)=>{ const key = String(row.player_name || '').trim().toLowerCase(); if (key) out[key] = row; });
+          return out;
+        } catch (_) { return {}; }
+      }
       let pollId = null;
       function esc(v){ const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(v??'').replace(/[&<>"']/g,(m)=>map[m]); }
       const UI_MAP = Object.freeze({
@@ -184,7 +210,7 @@
         const table = total <= 4 ? map4 : total <= 6 ? map6 : map8;
         return table[index] || `extra${(index % 4) + 1}`;
       }
-      function renderSeats(players, phase, turnSeat, viewerSeat){
+      function renderSeats(players, phase, turnSeat, viewerSeat, presenceMap){
         const wrap = document.getElementById('seatRing');
         const old = Array.from(wrap.querySelectorAll('.seat'));
         old.forEach((node)=>node.remove());
@@ -192,13 +218,14 @@
           const seat = Number(p.seat || 0);
           const alive = !!p.alive || String(phase || '').toLowerCase() === 'lobby';
           const div = document.createElement('div');
-          div.className = `seat ${seatClass(idx, players.length)} ${seat === Number(turnSeat||0) ? 'turn' : ''} ${seat === Number(viewerSeat||0) ? 'me' : ''} ${alive ? '' : 'dead'}`.trim();
+          const disconnected = !!(presenceMap && presenceMap[String(p.name||'').trim().toLowerCase()] && presenceMap[String(p.name||'').trim().toLowerCase()].connected === false);
+          div.className = `seat ${seatClass(idx, players.length)} ${seat === Number(turnSeat||0) ? 'turn' : ''} ${seat === Number(viewerSeat||0) ? 'me' : ''} ${alive ? '' : 'dead'} ${disconnected ? 'disconnected' : ''}`.trim();
           div.innerHTML = `<div class="seat-name">${esc(p.name||'Speler')}</div><div class="seat-meta">Stoel #${seat || '—'} · ${alive ? 'Levend' : 'Dood'} · ${Number(p.dice_count||0)} dobbelstenen</div>`;
           wrap.appendChild(div);
         });
       }
       function dieClass(value){ const n = Number(value); return n === 1 ? 'die pik' : 'die'; }
-      function render(item){
+      async function render(item){
         const summary = (live.summaryFromItem?live.summaryFromItem(item):(item?.summary_payload||{})) || {};
         const st = summary.live_state || summary || {};
         document.getElementById('meta').textContent = live.metaText ? live.metaText(item) : 'Live';
@@ -219,10 +246,11 @@
         document.getElementById('totalLostDice').textContent = String(Number(dt.lost_total||0));
 
         const players = Array.isArray(st.players)?st.players:[];
+        const presenceMap = await getPresenceMap(st.id || item?.game_id || '');
         const phase = String(st.phase||'');
         const turnSeat = phase === 'voting' ? Number(st.vote_turn_seat||0) : Number(st.turn_seat||0);
         document.getElementById('turnName').textContent = findNameBySeat(players, turnSeat);
-        renderSeats(players, phase, turnSeat, 0);
+        renderSeats(players, phase, turnSeat, 0, presenceMap);
 
         const lr = st.last_reveal || null;
         const revealWrap = document.getElementById('revealBody');
@@ -242,7 +270,7 @@
         }
         try{
           const item = await live.loadPublicSummary('pikken', identity);
-          render(item);
+          await render(item);
         }catch(err){
           document.getElementById('meta').textContent = err.message || 'Laden mislukt.';
         }

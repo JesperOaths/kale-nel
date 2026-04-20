@@ -7,11 +7,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken</title>
-  <script>window.GEJAST_PAGE_VERSION='v491';</script>
-  <script src="./gejast-config.js?v491"></script>
-  <script src="./gejast-home-gate.js?v491"></script>
-  <script src="./gejast-scope.js?v491"></script>
-  <script src="./gejast-scope-context.js?v491"></script>
+  <script>window.GEJAST_PAGE_VERSION='v492';</script>
+  <script src="./gejast-config.js?v492"></script>
+  <script src="./gejast-home-gate.js?v492"></script>
+  <script src="./gejast-scope.js?v492"></script>
+  <script src="./gejast-scope-context.js?v492"></script>
   <style>
     :root{
       --paper:#fbf6ef;--shell:#f5efe6;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241;--gold-soft:#efe5c7;
@@ -65,6 +65,7 @@
     .player-list{display:grid;gap:10px}
     .player-row{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.06)}
     .player-row.dead{opacity:.55}
+    .player-row.disconnected{filter:grayscale(1);opacity:.72}
     .player-row.turn{outline:2px solid rgba(154,130,65,.38)}
     .player-name strong{display:block}
     .dice-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
@@ -113,7 +114,7 @@
             <div>
               <div class="top-actions">
                 <a class="btn alt" href="./index.html">Home</a>
-                <a class="btn alt" href="./pikken_live.html" id="pkLiveLink" style="display:none">Live openen</a>
+                <a class="btn alt" href="./pikken_live.html" id="pkLiveLink" style="display:none">Live openen</a><a class="btn soft" href="./pikken_live.html" id="pkReconnectBtn" style="display:none">Reconnect</a>
                 <a class="btn alt" href="./pikken_stats.html">Stats</a>
               </div>
               <h1>Pikken</h1>
@@ -246,12 +247,13 @@
       <div class="sticky-actions">
         <button class="btn unready-active" id="pkUnreadyBtn" type="button">Unready</button>
         <button class="btn alt" id="pkReadyBtn" type="button">Ready</button>
+        <div style="margin-left:auto;align-self:center;font-weight:900;color:#6b6257;padding:0 4px">ready <span id="pkReadyMetric">0/0</span></div>
         <div id="pkStartWrap" style="display:none">
           <button class="btn" id="pkStartBtn" type="button" disabled>Start spel</button>
         </div>
       </div>
 
-      <div class="footer-note">Pikken gebruikt hier de P2 + T2 mobile richting: tafelgevoel behouden, belangrijkste acties compact en duidelijk, en secundaire uitleg onderin in plaats van boven de pagina. Dit sluit aan op het keuze- en blueprintmateriaal voor mobile Pikken. </div>
+      <div class="footer-note">Pikken gebruikt hier de P2 + T2 mobile richting: tafelgevoel behouden, belangrijkste acties compact en duidelijk, en secundaire uitleg pas lager op de pagina. Dit sluit aan op het keuze- en blueprintmateriaal voor mobile Pikken. </div>
     </div>
   </div>
 
@@ -270,8 +272,8 @@
     </div>
   </div>
 
-  <script src="./pikken-dice-canvas.js?v491"></script>
-  <script src="./gejast-pikken.js?v491"></script>
+  <script src="./pikken-dice-canvas.js?v492"></script>
+  <script src="./gejast-pikken.js?v492"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
   <div class="site-credit-watermark" data-version-watermark></div>
 </body>

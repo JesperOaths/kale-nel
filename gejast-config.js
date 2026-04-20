@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v491',
+    VERSION:'v492',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -33,8 +33,7 @@
     } catch (_) { return null; }
   }
   function parseVersion(v){ const m=String(v||'').match(/v?(\d+)/i); return m?Number(m[1]):0; }
-  const candidates = [detectScriptVersion(), window.GEJAST_PAGE_VERSION, CONFIG.VERSION].filter(Boolean);
-  const effectiveVersion = candidates.sort((a,b)=>parseVersion(b)-parseVersion(a))[0] || CONFIG.VERSION;
+  const effectiveVersion = CONFIG.VERSION;
   const label = `${effectiveVersion} · Made by Bruis`;
   window.GEJAST_PAGE_VERSION = effectiveVersion;
 

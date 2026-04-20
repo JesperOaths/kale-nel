@@ -5,10 +5,10 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
 <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Balzaal</title>
-  <script>window.GEJAST_PAGE_VERSION='v583';</script>
-  <script src="./gejast-config.js?v583"></script><script src="./gejast-home-gate.js?v492"></script>
+  <script>window.GEJAST_PAGE_VERSION='v492';</script>
+  <script src="./gejast-config.js?v492"></script><script src="./gejast-home-gate.js?v492"></script>
   <style>
     :root{
       --gold:#c7a85a; --gold-deep:#8c6d31; --royal:#23476a; --royal-deep:#17324e; --cream:#f6efe3; --ink:#181310; --muted:#706557;
@@ -159,12 +159,10 @@
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(212,175,55,.35);color:#f3e3a6;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}
     @media (max-width:980px){.info-grid{grid-template-columns:1fr}.arch-window.left{left:14%}.arch-window.right{right:14%}.column.c2{left:24%}.column.c3{right:24%}}
     @media (max-width:760px){.shell{padding:18px}.hero h1{font-size:2.2rem}.ballroom-scene{min-height:600px}.arch-window{width:118px;height:206px;top:108px}.column{display:none}.curtain{width:23%}.curtain-tie.left{left:12%}.curtain-tie.right{right:12%}.rope-zone{left:3%;right:3%;bottom:140px}.king-throne{width:84vw;bottom:176px}.member-layer{bottom:158px;height:220px}.queue-row{align-items:flex-start;flex-direction:column}.actions{width:100%}.btn,.small-btn{width:100%}}
-    .portrait-hint{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(14,14,18,.78);z-index:90}.portrait-hint-card{max-width:420px;background:#fffdf9;border-radius:24px;padding:20px;text-align:center;box-shadow:0 24px 56px rgba(0,0,0,.28)}
-    @media (orientation:landscape) and (max-width:980px){.portrait-hint{display:flex}}
   </style>
 </head>
 <body>
-  <div id="portraitHint" class="portrait-hint"><div class="portrait-hint-card"><h2 style="margin:0 0 8px">Draai je telefoon rechtop</h2><div style="color:#706557;line-height:1.5">De Balzaal is het duidelijkst in portretstand. In normale mobiele browsers kunnen we dit niet hard afdwingen, dus hier krijg je een rotatiehint.</div><button type="button" id="portraitHintClose" class="pill secondary" style="margin-top:14px">Toch horizontaal blijven</button></div></div><div class="page">
+  <div class="page">
     <div class="shell">
       <div class="topbar">
         <div class="nav-left">
@@ -227,7 +225,7 @@
       <div class="info-grid">
         <section class="panel">
           <h2>Wat speelt hier?</h2>
-          <div class="lux-copy" id="introCopy">De zaal is leeg. Wie als eerste trekt een adt, eist de troon op.</div>
+          <div class="lux-copy" id="introCopy">De zaal is leeg. Eerst moet jouw bak-verzoek worden geverifieerd; daarna opent de troon.</div>
           <div class="actions" style="margin-top:14px">
             <button class="btn" id="claimBtn" type="button">Trek een adt</button>
             <button class="btn secondary" id="joinBtn" type="button">Trek een bak</button>
@@ -274,6 +272,33 @@
     function escapeHtml(v){ return String(v ?? '').replace(/[&<>"]/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m])); }
     async function parse(res){ const txt = await res.text(); let data=null; try{ data = txt ? JSON.parse(txt) : null; } catch(err){ throw new Error(txt || `HTTP ${res.status}`); } if(!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`); return data; }
     async function rpc(name, body){ const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', headers:headers(), body:JSON.stringify(body||{}) }); const raw = await parse(res); return raw?.[name] || raw; }
+
+    async function createBallroomDrink(role){
+      const workflow = window.GEJAST_DRINKS_WORKFLOW;
+      if (!workflow || typeof workflow.createDrinkEvent !== 'function') {
+        throw new Error('Drinks workflow is niet beschikbaar op deze pagina.');
+      }
+      const pos = await new Promise((resolve)=>{
+        if (!navigator.geolocation) return resolve(null);
+        navigator.geolocation.getCurrentPosition((p)=>resolve(p), ()=>resolve(null), { enableHighAccuracy:true, timeout:10000, maximumAge:0 });
+      });
+      const eventRes = await workflow.createDrinkEvent({
+        session_token: token() || null,
+        event_type_key: 'bier',
+        quantity: 1,
+        lat: pos?.coords?.latitude ?? null,
+        lng: pos?.coords?.longitude ?? null,
+        accuracy: pos?.coords?.accuracy ?? null
+      });
+      const eventId = Number(eventRes?.id || eventRes?.drink_event_id || eventRes?.event_id || 0);
+      if (!eventId) throw new Error('Drankverzoek kon niet worden gekoppeld aan de balzaalactie.');
+      if (role === 'member') {
+        try { await rpc('set_drink_event_location_label', { session_token: token() || null, drink_event_id: eventId, location_label_input: 'Balzaal • Hofdame aanvraag' }); } catch (_) {}
+      }
+      await callBallroomWrite('ballroom_register_drink_gate_safe', 'ballroom_register_drink_gate', { drink_event_id_input: eventId, role_input: role });
+      return eventId;
+    }
+
     async function callBallroomWrite(safeName, legacyName, body){
       const sessionToken = token() || null;
       const attempts = [];
@@ -336,7 +361,7 @@
       const queue = Array.isArray(state?.pending_requests) ? state.pending_requests : [];
       const list = document.getElementById('queueList');
       if(!queue.length){ list.innerHTML = '<div class="muted" style="padding-top:10px">Nog geen open verzoeken.</div>'; return; }
-      list.innerHTML = queue.map((row)=>`<div class="queue-row"><div class="queue-main">${avatarMarkup(row.avatar_url,row.display_name,true)}<div><div class="queue-name">${escapeHtml(row.display_name)}</div><div class="queue-meta">Aangemeld ${new Date(row.requested_at).toLocaleString('nl-NL')}</div></div></div><div class="actions">${latest?.viewer?.is_king ? `<button class="small-btn secondary" data-resolve="reject" data-id="${row.id}">Afwijzen</button><button class="small-btn" data-resolve="approve" data-id="${row.id}">Toelaten</button>` : '<span class="queue-meta">Wacht op oordeel</span>'}</div></div>`).join('');
+      list.innerHTML = queue.map((row)=>`<div class="queue-row"><div class="queue-main">${avatarMarkup(row.avatar_url,row.display_name,true)}<div><div class="queue-name">${escapeHtml(row.display_name)}</div><div class="queue-meta">Aangemeld ${new Date(row.requested_at).toLocaleString('nl-NL')}</div></div></div><div class="actions">${latest?.viewer?.is_king ? `<button class="small-btn secondary" data-resolve="reject" data-id="${row.id}">Afwijzen</button><button class="small-btn" data-resolve="approve" data-id="${row.id}">Toelaten</button>` : '<span class="queue-meta">Wacht op verificatie / oordeel</span>'}</div></div>`).join('');
       list.querySelectorAll('[data-resolve]').forEach((btn)=>btn.addEventListener('click', async()=>{
         try{ btn.disabled = true; await callBallroomWrite('ballroom_resolve_request_safe','ballroom_resolve_request',{ request_id_input: Number(btn.dataset.id), approve_input: btn.dataset.resolve === 'approve' }); setStatus(btn.dataset.resolve === 'approve' ? 'De gast mag naar binnen.' : 'Het verzoek is afgewezen.'); await load(); } catch(err){ setStatus(err.message || String(err), true); btn.disabled = false; }
       }));
@@ -350,7 +375,7 @@
       const abdicateBtn = document.getElementById('abdicateBtn');
       const viewer = state?.viewer || {};
       if(!state?.has_king){
-        intro.textContent = 'De zaal is leeg. Wie als eerste trekt een adt, eist de troon op.';
+        intro.textContent = 'De zaal is leeg. Eerst moet jouw bak-verzoek worden geverifieerd; daarna opent de troon.';
         claimBtn.style.display = '';
         claimBtn.disabled = !token();
         joinBtn.style.display = 'none';
@@ -363,11 +388,11 @@
       joinBtn.style.display = '';
       joinBtn.disabled = !token() || viewer.is_king || viewer.is_member || viewer.pending;
       abdicateBtn.style.display = viewer.is_king ? '' : 'none';
-      intro.textContent = `${state.king.display_name} houdt momenteel hof. Dien een verzoek in als jij ook achter het fluweel wilt staan.`;
+      intro.textContent = `${state.king.display_name} houdt momenteel hof. Vraag entree aan via een bierverzoek. Pas na verificatie komt jouw aanvraag in de balzaal-queue.`;
       hostNote.style.display = viewer.is_king ? '' : 'none';
       hostNote.textContent = viewer.is_king ? 'Jij bent de koning van de balzaal. Alleen jij mag nieuwe gasten achter het koord toelaten of de kroon doorgeven.' : '';
       if(viewer.is_member && !viewer.is_king) setStatus('Jij staat al in de balzaal.');
-      else if(viewer.pending) setStatus('Jouw entreeverzoek staat klaar voor beoordeling.');
+      else if(viewer.pending) setStatus('Jouw entreeverzoek wacht eerst op drankverificatie en daarna op oordeel.');
       else if(!token()) setStatus('Log eerst in als speler om een entreeverzoek te plaatsen.');
       else setStatus('');
     }
@@ -396,11 +421,29 @@
 
     document.getElementById('claimBtn').addEventListener('click', async()=>{
       if(!token()){ window.location.href = cfg.buildLoginUrl ? cfg.buildLoginUrl('ballroom.html') : './login.html?return_to=ballroom.html'; return; }
-      try{ await callBallroomWrite('ballroom_claim_king_safe','ballroom_claim_king',{}); setStatus('De kroon is van jou.'); await load(); } catch(err){ setStatus(err.message || String(err), true); }
+      try{
+        const state = await callBallroomState().catch(()=>null);
+        if (state?.viewer?.pending_drink_gate_king) {
+          setStatus('Jouw bak-verzoek voor de troon wacht nog op verificatie.');
+          return;
+        }
+        await createBallroomDrink('king');
+        setStatus('Bak-verzoek gemaakt. Zodra het is geverifieerd, opent de troon automatisch.');
+        await load();
+      } catch(err){ setStatus(err.message || String(err), true); }
     });
     document.getElementById('joinBtn').addEventListener('click', async()=>{
       if(!token()){ window.location.href = cfg.buildLoginUrl ? cfg.buildLoginUrl('ballroom.html') : './login.html?return_to=ballroom.html'; return; }
-      try{ await callBallroomWrite('ballroom_request_entry_safe','ballroom_request_entry',{}); setStatus('Je entreeverzoek ligt nu bij de koning.'); await load(); } catch(err){ setStatus(err.message || String(err), true); }
+      try{
+        const state = await callBallroomState().catch(()=>null);
+        if (state?.viewer?.pending_drink_gate_member) {
+          setStatus('Jouw bierverzoek voor balzaal-entree wacht nog op verificatie.');
+          return;
+        }
+        await createBallroomDrink('member');
+        setStatus('Bierverzoek gemaakt. Na verificatie verschijnt jouw aanvraag in de balzaal-queue.');
+        await load();
+      } catch(err){ setStatus(err.message || String(err), true); }
     });
     document.getElementById('abdicateBtn').addEventListener('click', async()=>{
       try{ await callBallroomWrite('ballroom_abdicate_safe','ballroom_abdicate',{}); setStatus('De kroon is doorgeschoven.'); await load(); } catch(err){ setStatus(err.message || String(err), true); }
@@ -410,7 +453,7 @@
     setInterval(load, 20000);
   })();
   </script>
-  <script src="./gejast-player-session-ui.js?v486"></script><script src="./gejast-geo.js?v486"></script><script src="./drinks-verify-float.js?v486"></script>
-  <script src="./site-analytics.js?v486"></script>
-<script>(function(){try{if(screen.orientation&&screen.orientation.lock){screen.orientation.lock('portrait').catch(function(){});}}catch(_){}document.getElementById('portraitHintClose')?.addEventListener('click',function(){document.getElementById('portraitHint')?.style.setProperty('display','none');});})();</script></body>
+  <script src="./gejast-player-session-ui.js?v492"></script><script src="./gejast-geo.js?v492"></script><script src="./drinks-verify-float.js?v492"></script>
+  <script src="./site-analytics.js?v492"></script>
+</body>
 </html>

@@ -70,6 +70,35 @@
       return null;
     }
   }
+
+  async function touchPresence(){
+    if (!UI.gameId || !sessionToken()) return null;
+    try {
+      return await rpc('pikken_touch_presence_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId, page_kind_input: 'lobby' });
+    } catch (_) { return null; }
+  }
+  async function releasePresence(){
+    if (!UI.gameId || !sessionToken()) return null;
+    try {
+      return await rpc('pikken_release_presence_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId });
+    } catch (_) { return null; }
+  }
+  async function getPresenceMap(){
+    if (!UI.gameId) return {};
+    try {
+      const raw = await rpc('get_pikken_presence_public', { game_id_input: UI.gameId });
+      const rows = Array.isArray(raw?.rows) ? raw.rows : (Array.isArray(raw) ? raw : []);
+      const out = {};
+      rows.forEach((row)=>{
+        const key = String(row.player_name || row.display_name || '').trim().toLowerCase();
+        if (key) out[key] = row;
+      });
+      return out;
+    } catch (_) {
+      return {};
+    }
+  }
+
   async function ensureNoExistingLobby(){
     const existing = await findMyActiveGame();
     if (existing && existing.game_id) {
@@ -136,7 +165,9 @@
     pollTimer: null,
     roomsTimer: null,
     roomsLoadedAt: 0,
-    latestState: null
+    latestState: null,
+    latestPresence: {},
+    presenceTimer: null
   };
 
   function renderRoomRail(rows){
@@ -271,6 +302,16 @@
       startRule.textContent = readyCount >= 2 ? 'Start mag nu' : 'Minimaal 2 ready nodig';
     }
 
+    const readyMetric = qs('#pkReadyMetric');
+    if (readyMetric) readyMetric.textContent = `${readyCount}/${players.length}`;
+
+    const reconnectBtn = qs('#pkReconnectBtn');
+    const liveLikeReconnect = String(game?.status || '').toLowerCase() === 'live' || (phase && phase !== 'lobby');
+    if (reconnectBtn) {
+      reconnectBtn.style.display = liveLikeReconnect && (viewer.player_id || viewer.display_name || viewer.player_name) ? '' : 'none';
+      reconnectBtn.href = liveHref(game?.id || UI.gameId);
+    }
+
     const readyBtn = qs('#pkReadyBtn');
     const unreadyBtn = qs('#pkUnreadyBtn');
     if (readyBtn && unreadyBtn) {
@@ -298,11 +339,14 @@
       const voteStatus = vote ? String(vote.status || 'waiting') : 'waiting';
       const pillText = voteStatus === 'approved' ? 'goedgekeurd' : voteStatus === 'rejected' ? 'afgekeurd' : (p.ready ? 'ready' : 'wacht');
       const pillClass = voteStatus === 'approved' ? 'pill ok' : voteStatus === 'rejected' ? 'pill bad' : (p.ready ? 'pill ok' : 'pill wait');
+      const presenceKey = String(p.name || p.player_name || '').trim().toLowerCase();
+      const presence = UI.latestPresence && UI.latestPresence[presenceKey] ? UI.latestPresence[presenceKey] : null;
+      const disconnected = !!presence && presence.connected === false;
       return `
-        <div class="player-row ${alive ? '' : 'dead'} ${isTurn || isVoteTurn ? 'turn' : ''}">
+        <div class="player-row ${alive ? '' : 'dead'} ${isTurn || isVoteTurn ? 'turn' : ''} ${disconnected ? 'disconnected' : ''}">
           <div class="player-name">
             <strong>${esc(p.name || p.player_name || 'Speler')}</strong>
-            <div class="muted">Stoel #${seat || '—'} · ${alive ? 'Levend' : 'Dood'} · ${Number(p.dice_count || 0)} dobbelstenen</div>
+            <div class="muted">Stoel #${seat || '—'} · ${alive ? 'Levend' : 'Dood'} · ${Number(p.dice_count || 0)} dobbelstenen${disconnected ? ' · offline' : ''}</div>
           </div>
           <div class="mini-actions">
             <span class="${pillClass}">${esc(pillText)}</span>
@@ -367,7 +411,12 @@
   async function loadAndRender(forceRooms=false){
     if (!UI.gameId) { await loadRooms(forceRooms); return; }
     try {
-      const state = await rpc('pikken_get_state_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId });
+      await touchPresence();
+      const [state, presenceMap] = await Promise.all([
+        rpc('pikken_get_state_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId }),
+        getPresenceMap()
+      ]);
+      UI.latestPresence = presenceMap || {};
       const version = Number(state?.game?.state_version || -1);
       if (version !== UI.lastStateVersion) {
         UI.lastStateVersion = version;
@@ -384,11 +433,13 @@
     stopPolling();
     UI.pollTimer = setInterval(()=>{ if (!document.hidden) loadAndRender(false); }, 1200);
     UI.roomsTimer = setInterval(()=>{ if (!document.hidden) loadRooms(true); }, 7000);
+    UI.presenceTimer = setInterval(()=>{ if (!document.hidden) touchPresence(); }, 8000);
     loadAndRender(true);
   }
   function stopPolling(){
     if (UI.pollTimer) { clearInterval(UI.pollTimer); UI.pollTimer = null; }
     if (UI.roomsTimer) { clearInterval(UI.roomsTimer); UI.roomsTimer = null; }
+    if (UI.presenceTimer) { clearInterval(UI.presenceTimer); UI.presenceTimer = null; }
   }
 
   async function createLobby(){
@@ -504,6 +555,7 @@
     });
   }
 
+  window.addEventListener('beforeunload', ()=>{ releasePresence(); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once:true });
   else boot();
 })();

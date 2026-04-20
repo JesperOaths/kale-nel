@@ -1,0 +1,15 @@
+Drink-action audit note v492
+
+Grounded review performed against the concrete repo snapshot in this workspace.
+
+Directly verified frontend drink-request owner paths:
+- drinks_add.html creates normal drink events through create_drink_event / workflow helper
+- drinks_speed.html creates speed attempts through create_drink_speed_attempt / workflow helper
+- drinks_pending.html and drinks-verify-float.js use the canonical verify queue / verify RPCs
+- ballroom.html previously did NOT create a drink request before king/entry actions; this patch changes that
+- no other direct create_drink_event callers were found in the root HTML/JS files during this pass
+
+Important honesty boundary:
+- this repo snapshot does not expose every hidden backend RPC body for every game-forced drinking outcome
+- so I can patch the visible owner paths and the ballroom gate, but I cannot honestly claim that every single forced-drink path across hidden SQL/RPC branches was exhaustively proven here
+- the new ballroom gate path now routes through the normal drink verification pipeline before balzaal entry/king status proceeds
