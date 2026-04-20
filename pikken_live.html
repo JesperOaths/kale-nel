@@ -6,87 +6,97 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pikken live</title>
-  <script>window.GEJAST_PAGE_VERSION='v492';</script>
-  <script src="./gejast-config.js?v492"></script>
-  <script src="./gejast-live-summary.js?v492"></script>
+  <title>Pikken match</title>
+  <script>window.GEJAST_PAGE_VERSION='v493';</script>
+  <script src="./gejast-config.js?v493"></script>
+  <script src="./gejast-live-summary.js?v493"></script>
   <style>
     :root{
-      --paper:#fbf6ef;--shell:#f5efe6;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;
-      --panel:#fff;--shadow:0 18px 44px rgba(0,0,0,.08);--ok:#1f5d45;--bad:#7f2f1d;--gold:#9a8241;
+      --paper:#fbf6ef;--shell:#f6f0e7;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;
+      --panel:#fff;--shadow:0 18px 44px rgba(0,0,0,.08);--ok:#1f6a46;--bad:#8b2d20;--gold:#9a8241;
+      --soft:#f4ecdd;--green:#2f8f5c;
     }
     *{box-sizing:border-box}
-    body{margin:0;padding:16px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
-    .wrap{max-width:1220px;margin:0 auto}
+    body{margin:0;padding:14px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
+    .wrap{max-width:1280px;margin:0 auto}
     .shell{background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.7);border-radius:30px;padding:18px;box-shadow:var(--shadow)}
-    .topbar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
-    .top-left{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-    .brand{display:flex;gap:12px;align-items:center}
-    .brand-icon{width:52px;height:52px;border-radius:14px;background:#fff;padding:9px;border:1px solid rgba(0,0,0,.08)}
+    .topbar{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+    .title-wrap{display:flex;gap:12px;align-items:center}
+    .brand-icon{width:50px;height:50px;border-radius:14px;background:#fff;padding:8px;border:1px solid rgba(0,0,0,.08)}
+    .title-wrap h1{margin:0;font-size:24px;letter-spacing:-.04em}
+    .subline{color:var(--muted);margin-top:4px}
     .pill{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-weight:900;font-size:12px;border:1px solid rgba(0,0,0,.1)}
     .pill.ok{background:rgba(59,130,96,.12);border-color:rgba(59,130,96,.32);color:var(--ok)}
     .pill.bad{background:rgba(127,47,29,.10);border-color:rgba(127,47,29,.28);color:var(--bad)}
     .pill.wait{background:rgba(0,0,0,.05);border-color:rgba(0,0,0,.12);color:#6b6257}
-    .btn{display:inline-flex;align-items:center;justify-content:center;padding:11px 15px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:0}
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:11px 15px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer}
     .btn.alt{background:#fff;color:#111;border:1px solid var(--line)}
-    .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;margin-top:16px}
+    .btn.soft{background:var(--soft);color:#564117;border:1px solid rgba(154,130,65,.24)}
+    .btn.danger{background:#fff;color:var(--bad);border:1px solid rgba(139,45,32,.25)}
+    .btn[disabled]{opacity:.55;cursor:not-allowed}
+    .hero{display:grid;grid-template-columns:1.08fr .92fr;gap:16px;margin-top:16px}
     .panel{background:#fff;border:1px solid var(--line);border-radius:24px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.03)}
-    .panel h2{margin:0 0 8px;font-size:18px;letter-spacing:-.03em}
-    .muted{color:var(--muted)}
-    .seat-ring-card{display:grid;gap:14px}
-    .seat-ring{position:relative;min-height:360px;border-radius:28px;background:radial-gradient(circle at center, #f6f2e8 0 30%, #f1eadc 31% 100%);border:1px solid rgba(0,0,0,.06);overflow:hidden}
-    .table-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(220px,52vw);aspect-ratio:1;border-radius:50%;background:linear-gradient(180deg,#2c8b5f,#256f4d);border:10px solid #efe6d3;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
-    .table-core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;color:#fff;display:grid;gap:8px;width:75%}
-    .table-core strong{font-size:26px}
-    .table-core .subline{font-size:13px;opacity:.9}
-    .seat{position:absolute;min-width:120px;max-width:150px;padding:10px 12px;border-radius:18px;background:rgba(255,255,255,.94);border:1px solid rgba(0,0,0,.08);box-shadow:0 8px 20px rgba(0,0,0,.07)}
+    .panel h2{margin:0 0 10px;font-size:17px;letter-spacing:-.03em}
+    .seat-ring{position:relative;min-height:450px;border-radius:28px;background:radial-gradient(circle at center, #efe6d5 0 31%, #e4dbcb 32% 100%);border:1px solid rgba(0,0,0,.06);overflow:hidden}
+    .table-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(240px,42vw);aspect-ratio:1;border-radius:50%;background:linear-gradient(180deg,#359767,#28744e);border:10px solid #efe6d3;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
+    .table-core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;color:#fff;display:grid;gap:8px;width:76%}
+    .table-core .label{font-size:14px;opacity:.94}
+    .table-core strong{font-size:28px}
+    .table-core .mutedline{font-size:14px;opacity:.94}
+    .seat{position:absolute;min-width:132px;max-width:156px;padding:10px 12px;border-radius:18px;background:rgba(255,255,255,.96);border:1px solid rgba(0,0,0,.08);box-shadow:0 8px 20px rgba(0,0,0,.07)}
     .seat.turn{outline:2px solid rgba(154,130,65,.42)}
-    .seat.dead{opacity:.56}
-    .seat.disconnected{filter:grayscale(1);opacity:.72}
+    .seat.dead{opacity:.55}
     .seat.me{box-shadow:0 0 0 2px rgba(154,130,65,.18), 0 8px 20px rgba(0,0,0,.07)}
-    .seat.top{left:50%;top:16px;transform:translateX(-50%)}
+    .seat.disconnected{filter:grayscale(1);opacity:.72}
+    .seat.top{left:50%;top:18px;transform:translateX(-50%)}
     .seat.right{right:16px;top:50%;transform:translateY(-50%)}
-    .seat.bottom{left:50%;bottom:16px;transform:translateX(-50%)}
+    .seat.bottom{left:50%;bottom:18px;transform:translateX(-50%)}
     .seat.left{left:16px;top:50%;transform:translateY(-50%)}
-    .seat.extra1{left:20%;top:44px}
-    .seat.extra2{right:20%;top:44px}
-    .seat.extra3{right:20%;bottom:44px}
-    .seat.extra4{left:20%;bottom:44px}
+    .seat.extra1{left:18%;top:44px}
+    .seat.extra2{right:18%;top:44px}
+    .seat.extra3{right:18%;bottom:44px}
+    .seat.extra4{left:18%;bottom:44px}
     .seat-name{font-weight:900}
-    .seat-meta{font-size:13px;color:#6b6257;margin-top:3px}
-    .bottom-dock{display:grid;gap:12px}
-    .dock-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-    .dock-chip{padding:12px;border-radius:18px;background:#fbfaf6;border:1px solid rgba(0,0,0,.07)}
-    .dock-chip span{display:block;font-size:11px;color:#8a7a55;text-transform:uppercase;letter-spacing:.08em}
-    .dock-chip strong{display:block;margin-top:6px;font-size:18px}
+    .seat-meta{font-size:12px;color:#6b6257;margin-top:3px}
+    .seat-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+    .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .chip{padding:12px;border-radius:18px;background:#fbfaf6;border:1px solid rgba(0,0,0,.07)}
+    .chip span{display:block;font-size:11px;color:#8a7a55;text-transform:uppercase;letter-spacing:.08em}
+    .chip strong{display:block;margin-top:6px;font-size:18px}
     .side-layout{display:grid;gap:16px}
-    .drawer-card{border:1px solid var(--line);border-radius:20px;background:#fbfaf6;padding:14px}
     .reveal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:10px}
     .reveal-card{border:1px solid rgba(0,0,0,.08);border-radius:16px;background:#fff;padding:10px}
     .dice-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-    img.die{width:42px;height:42px;display:block}
-    .viewer-note{padding:12px 14px;border-radius:16px;background:rgba(154,130,65,.08);border:1px solid rgba(154,130,65,.18);color:#6b6257}
-    @media (max-width: 980px){
-      .hero{grid-template-columns:1fr}
-    }
+    img.die{width:40px;height:40px;display:block}
+    .dock{position:sticky;bottom:10px;z-index:30;margin-top:16px;padding:12px 14px;border-radius:20px;background:rgba(255,251,245,.96);backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.08);display:grid;gap:12px}
+    .dock-main{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .dock-main .btn{min-width:120px}
+    .dock-right{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}
+    .field-inline{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .field-inline input,.field-inline select{padding:12px 13px;border-radius:14px;border:1px solid rgba(0,0,0,.12);font:inherit;background:#fff}
+    .field-inline input{width:100px}
+    .status-note{padding:12px 14px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.08);color:#6b6257}
+    .hidden{display:none !important}
+    @media (max-width: 980px){ .hero{grid-template-columns:1fr} }
     @media (max-width: 700px){
-      body{padding:12px}
+      body{padding:10px}
       .shell{padding:14px;border-radius:24px}
-      .seat-ring{min-height:470px}
-      .table-center{width:min(200px,48vw)}
-      .seat{min-width:98px;max-width:116px;padding:8px 10px}
+      .topbar{gap:10px}
+      .title-wrap h1{font-size:21px}
+      .seat-ring{min-height:420px}
+      .table-center{width:min(210px,52vw)}
+      .seat{min-width:96px;max-width:114px;padding:8px 10px}
       .seat-name{font-size:13px}
       .seat-meta{font-size:11px}
-      .seat.left{left:8px}
-      .seat.right{right:8px}
-      .seat.top{top:10px}
-      .seat.bottom{bottom:10px}
-      .seat.extra1{left:9%;top:56px}
-      .seat.extra2{right:9%;top:56px}
-      .seat.extra3{right:9%;bottom:56px}
-      .seat.extra4{left:9%;bottom:56px}
-      .dock-row{grid-template-columns:1fr 1fr}
-      .dock-row .dock-chip:last-child{grid-column:1/-1}
+      .seat.left{left:8px}.seat.right{right:8px}.seat.top{top:10px}.seat.bottom{bottom:10px}
+      .seat.extra1{left:8%;top:56px}.seat.extra2{right:8%;top:56px}.seat.extra3{right:8%;bottom:56px}.seat.extra4{left:8%;bottom:56px}
+      .grid3{grid-template-columns:1fr 1fr}
+      .grid3 .chip:last-child{grid-column:1 / -1}
+      .dock{padding:10px 10px 12px}
+      .dock-main,.dock-right{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0}
+      .dock-right .btn:last-child{grid-column:1 / -1}
+      .dock-main .btn,.dock-right .btn{min-width:0;width:100%}
+      .mobile-hide{display:none !important}
     }
   </style>
 </head>
@@ -94,71 +104,104 @@
   <div class="wrap">
     <div class="shell">
       <div class="topbar">
-        <div class="top-left">
-          <div class="brand">
-            <img class="brand-icon" src="./assets/pikken/pikken-icon.svg" alt="Pikken">
-            <div>
-              <div style="font-size:30px;font-weight:900;letter-spacing:-.04em">Pikken match</div>
-              <div id="meta" class="muted">Laden…</div>
-            </div>
+        <div class="title-wrap">
+          <img class="brand-icon" src="./assets/pikken/pikken-icon.svg" alt="Pikken">
+          <div>
+            <h1>Pikken match</h1>
+            <div class="subline" id="metaLine">Laden…</div>
           </div>
-          <div class="pill wait" id="phasePill">—</div>
+          <span class="pill wait" id="phasePill">—</span>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <a class="btn alt" href="./pikken.html">Terug naar lobby</a>
-          <a class="btn" id="openLobbyBtn" href="./pikken.html">Lobby</a>
+          <a class="btn alt" href="./pikken.html" id="backLobbyBtn">Terug naar lobby</a>
+          <a class="btn soft" href="./pikken.html" id="reopenLobbyBtn">Lobby</a>
         </div>
       </div>
 
       <div class="hero">
-        <section class="panel seat-ring-card">
+        <section class="panel">
           <h2>Tafel</h2>
           <div class="seat-ring" id="seatRing">
             <div class="table-center">
               <div class="table-core">
-                <div class="subline">Huidig bod</div>
+                <div class="label">Huidig bod</div>
                 <strong id="currentBid">—</strong>
-                <div class="subline" id="bidBy">—</div>
+                <div class="mutedline" id="bidBy">Nog geen bod</div>
               </div>
             </div>
           </div>
-          <div class="bottom-dock">
-            <div class="dock-row">
-              <div class="dock-chip"><span>Ronde</span><strong id="roundNo">0</strong></div>
-              <div class="dock-chip"><span>Beurt</span><strong id="turnName">—</strong></div>
-              <div class="dock-chip"><span>Variant</span><strong id="penaltyMode">—</strong></div>
-            </div>
-            <div id="viewerNote" class="viewer-note">Deze pagina volgt de P2 + T2 mobile richting: tafelgevoel behouden, primaire match-info compact centraal, details in rustige zijkaarten en drawers. De keuze- en blueprintbestanden noemen P2 als aanrader voor Pikken mobile en T2 als directe vertaalslag van mobile poker-patronen. </div>
+          <div class="grid3" style="margin-top:12px">
+            <div class="chip"><span>Ronde</span><strong id="roundNo">0</strong></div>
+            <div class="chip"><span>Beurt</span><strong id="turnName">—</strong></div>
+            <div class="chip"><span>Variant</span><strong id="penaltyMode">Normal</strong></div>
           </div>
         </section>
 
-        <section class="side-layout">
+        <div class="side-layout">
           <section class="panel">
             <h2>Matchstatus</h2>
-            <div class="dock-row">
-              <div class="dock-chip"><span>Lobby</span><strong id="lobbyCode">—</strong></div>
-              <div class="dock-chip"><span>Start dice</span><strong id="totalStartDice">0</strong></div>
-              <div class="dock-chip"><span>Nu / kwijt</span><strong><span id="totalCurrentDice">0</span> / <span id="totalLostDice">0</span></strong></div>
+            <div class="grid3">
+              <div class="chip"><span>Lobby</span><strong id="lobbyCode">—</strong></div>
+              <div class="chip"><span>Start dice</span><strong id="totalStartDice">0</strong></div>
+              <div class="chip"><span>Nu / kwijt</span><strong><span id="totalCurrentDice">0</span> / <span id="totalLostDice">0</span></strong></div>
             </div>
+            <div class="status-note" id="actorState" style="margin-top:12px">Viewer-modus.</div>
           </section>
 
           <section class="panel">
             <h2>Laatste reveal</h2>
             <div id="revealBody" class="muted">Nog geen reveal.</div>
           </section>
-        </section>
+        </div>
+      </div>
+
+      <div class="dock">
+        <div class="field-inline hidden" id="bidControls">
+          <input id="bidCount" type="number" min="1" step="1" value="1" />
+          <select id="bidFace">
+            <option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="1">pik (1)</option>
+          </select>
+          <button class="btn" id="bidBtn" type="button">Bied</button>
+          <button class="btn alt" id="rejectBtn" type="button">Afkeuren</button>
+        </div>
+        <div class="field-inline hidden" id="voteControls">
+          <button class="btn" id="approveBtn" type="button">Goedgekeurd</button>
+          <button class="btn alt" id="voteRejectBtn" type="button">Afgekeurd</button>
+        </div>
+        <div class="dock-main">
+          <div class="status-note mobile-hide" id="mobileContext">Wachten op state…</div>
+          <div class="dock-right">
+            <button class="btn alt hidden" id="leaveBtn" type="button">Verlaat spel</button>
+            <button class="btn danger hidden" id="destroyBtn" type="button">Stop & verwijder</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    (()=>{
-      const live = window.GEJAST_LIVE_SUMMARY || {};
+    (() => {
       const cfg = window.GEJAST_CONFIG || {};
+      const liveSummary = window.GEJAST_LIVE_SUMMARY || {};
+      const params = new URLSearchParams(location.search);
+      const gameId = params.get('client_match_id') || params.get('game_id') || '';
+      let pollId = null;
+      let presenceId = null;
+      let currentState = null;
+
+      function esc(v){ const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(v ?? '').replace(/[&<>"']/g,(m)=>map[m]); }
+      function headers(){
+        return {
+          'Content-Type':'application/json',
+          apikey: cfg.SUPABASE_PUBLISHABLE_KEY || '',
+          Authorization:`Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY || ''}`,
+          Accept:'application/json'
+        };
+      }
       async function rpc(name, payload){
         const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
           method:'POST',
-          headers:{ 'Content-Type':'application/json', apikey: cfg.SUPABASE_PUBLISHABLE_KEY || '', Authorization:`Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY || ''}`, Accept:'application/json' },
+          headers: headers(),
           body: JSON.stringify(payload || {}),
           cache:'no-store',
           mode:'cors'
@@ -166,43 +209,10 @@
         const txt = await res.text();
         let data = null;
         try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || `HTTP ${res.status}`); }
-        if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
+        if (!res.ok) throw new Error(data?.message || data?.error || data?.details || txt || `HTTP ${res.status}`);
         return data && data[name] !== undefined ? data[name] : data;
       }
-      async function getPresenceMap(gameId){
-        if (!gameId) return {};
-        try {
-          const raw = await rpc('get_pikken_presence_public', { game_id_input: gameId });
-          const rows = Array.isArray(raw?.rows) ? raw.rows : (Array.isArray(raw) ? raw : []);
-          const out = {};
-          rows.forEach((row)=>{ const key = String(row.player_name || '').trim().toLowerCase(); if (key) out[key] = row; });
-          return out;
-        } catch (_) { return {}; }
-      }
-      let pollId = null;
-      function esc(v){ const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(v??'').replace(/[&<>"']/g,(m)=>map[m]); }
-      const UI_MAP = Object.freeze({
-        phase: Object.freeze({
-          lobby:    { cls: 'pill wait', label: 'Lobby' },
-          bidding:  { cls: 'pill ok',   label: 'Bieden' },
-          voting:   { cls: 'pill wait', label: 'Stemmen' },
-          finished: { cls: 'pill bad',  label: 'Afgerond' }
-        }),
-        voteStatus: Object.freeze({
-          approved: { cls: 'pill ok',   label: 'goedgekeurd' },
-          rejected: { cls: 'pill bad',  label: 'afgekeurd' },
-          waiting:  { cls: 'pill wait', label: 'wacht' }
-        }),
-        penaltyMode: Object.freeze({
-          wrong_loses: { label: 'Normal' },
-          right_loses: { label: 'Fair' }
-        })
-      });
-      function normalizePhase(raw){ const v = String(raw || '').trim().toLowerCase(); return (v === 'lobby' || v === 'bidding' || v === 'voting' || v === 'finished') ? v : 'bidding'; }
-      function phasePillSpec(liveState){ const status = String(liveState?.status || '').toLowerCase(); const phase = (status === 'finished') ? 'finished' : normalizePhase(liveState?.phase); return UI_MAP.phase[phase] || UI_MAP.phase.bidding; }
-      function bidText(bid){ const count = Number(bid?.count || bid?.bid_count || 0); const face = Number(bid?.face || bid?.bid_face || 0); if (!count || !face) return '—'; return face === 1 ? `${count} × pik` : `${count} × ${face}`; }
-      function penaltyModeLabel(raw){ const key = String(raw || '').trim().toLowerCase(); return (UI_MAP.penaltyMode[key] && UI_MAP.penaltyMode[key].label) ? UI_MAP.penaltyMode[key].label : 'Normal'; }
-      function findNameBySeat(players, seat){ const s = Number(seat || 0); if (!s) return '—'; const p = (Array.isArray(players) ? players : []).find(x => Number(x?.seat || 0) === s); return p?.name || '—'; }
+      function sessionToken(){ try { return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; } catch (_) { return ''; } }
       function seatClass(index, total){
         const map4 = ['top','right','bottom','left'];
         const map6 = ['top','extra2','right','bottom','left','extra1'];
@@ -210,73 +220,206 @@
         const table = total <= 4 ? map4 : total <= 6 ? map6 : map8;
         return table[index] || `extra${(index % 4) + 1}`;
       }
-      function renderSeats(players, phase, turnSeat, viewerSeat, presenceMap){
-        const wrap = document.getElementById('seatRing');
-        const old = Array.from(wrap.querySelectorAll('.seat'));
-        old.forEach((node)=>node.remove());
+      function bidText(bid){
+        const count = Number(bid?.count || bid?.bid_count || 0);
+        const face = Number(bid?.face || bid?.bid_face || 0);
+        if (!count || !face) return '—';
+        return face === 1 ? `${count} × pik` : `${count} × ${face}`;
+      }
+      function penaltyLabel(raw){
+        return String(raw || '').toLowerCase() === 'right_loses' ? 'Fair' : 'Normal';
+      }
+      async function getPresenceMap(){
+        if (!gameId) return {};
+        try{
+          const raw = await rpc('get_pikken_presence_public', { game_id_input: gameId });
+          const rows = Array.isArray(raw?.rows) ? raw.rows : (Array.isArray(raw) ? raw : []);
+          const map = {};
+          rows.forEach((row)=>{ const key = String(row.player_name || '').trim().toLowerCase(); if (key) map[key] = row; });
+          return map;
+        } catch (_) { return {}; }
+      }
+      async function touchPresence(){
+        const token = sessionToken();
+        if (!token || !gameId) return;
+        try { await rpc('pikken_touch_presence_scoped', { session_token: token, game_id_input: gameId, page_kind_input: 'live' }); } catch (_) {}
+      }
+      async function releasePresence(){
+        const token = sessionToken();
+        if (!token || !gameId) return;
+        try { await rpc('pikken_release_presence_scoped', { session_token: token, game_id_input: gameId }); } catch (_) {}
+      }
+      async function loadState(){
+        const token = sessionToken();
+        if (token && gameId) {
+          try {
+            const [state, presenceMap] = await Promise.all([
+              rpc('pikken_get_state_scoped', { session_token: token, game_id_input: gameId }),
+              getPresenceMap()
+            ]);
+            currentState = { mode:'actor', state, presenceMap };
+            return currentState;
+          } catch (_) {}
+        }
+        const identity = liveSummary.matchIdentityFromUrl ? liveSummary.matchIdentityFromUrl() : { clientMatchId: gameId, matchRef:'' };
+        const item = await liveSummary.loadPublicSummary('pikken', identity);
+        const presenceMap = await getPresenceMap();
+        currentState = { mode:'viewer', item, presenceMap };
+        return currentState;
+      }
+      function renderSeats(players, viewer, phase, turnSeat, voteTurnSeat, presenceMap){
+        const ring = document.getElementById('seatRing');
+        Array.from(ring.querySelectorAll('.seat')).forEach((node)=>node.remove());
         players.forEach((p, idx)=>{
-          const seat = Number(p.seat || 0);
+          const seat = Number(p.seat || p.seat_index || 0);
           const alive = !!p.alive || String(phase || '').toLowerCase() === 'lobby';
+          const meSeat = Number(viewer?.seat || viewer?.seat_index || 0);
+          const disconnected = !!(presenceMap && presenceMap[String(p.name || p.player_name || '').trim().toLowerCase()] && presenceMap[String(p.name || p.player_name || '').trim().toLowerCase()].connected === false);
           const div = document.createElement('div');
-          const disconnected = !!(presenceMap && presenceMap[String(p.name||'').trim().toLowerCase()] && presenceMap[String(p.name||'').trim().toLowerCase()].connected === false);
-          div.className = `seat ${seatClass(idx, players.length)} ${seat === Number(turnSeat||0) ? 'turn' : ''} ${seat === Number(viewerSeat||0) ? 'me' : ''} ${alive ? '' : 'dead'} ${disconnected ? 'disconnected' : ''}`.trim();
-          div.innerHTML = `<div class="seat-name">${esc(p.name||'Speler')}</div><div class="seat-meta">Stoel #${seat || '—'} · ${alive ? 'Levend' : 'Dood'} · ${Number(p.dice_count||0)} dobbelstenen</div>`;
-          wrap.appendChild(div);
+          div.className = `seat ${seatClass(idx, players.length)} ${seat === meSeat ? 'me' : ''} ${(seat === turnSeat || seat === voteTurnSeat) ? 'turn' : ''} ${alive ? '' : 'dead'} ${disconnected ? 'disconnected' : ''}`.trim();
+          const ready = !!p.ready;
+          div.innerHTML = `
+            <div class="seat-name">${esc(p.name || p.player_name || 'Speler')}</div>
+            <div class="seat-meta">Stoel #${seat || '—'} · ${Number(p.dice_count || 0)} dobbelstenen${disconnected ? ' · offline' : ''}</div>
+            <div class="seat-badges">
+              ${String(phase) === 'lobby' ? `<span class="pill ${ready ? 'ok' : 'wait'}">${ready ? 'ready' : 'wacht'}</span>` : ''}
+              ${seat === turnSeat && String(phase) === 'bidding' ? '<span class="pill ok">aan zet</span>' : ''}
+              ${seat === voteTurnSeat && String(phase) === 'voting' ? '<span class="pill wait">stemt nu</span>' : ''}
+            </div>
+          `;
+          ring.appendChild(div);
         });
       }
-      function dieClass(value){ const n = Number(value); return n === 1 ? 'die pik' : 'die'; }
-      async function render(item){
-        const summary = (live.summaryFromItem?live.summaryFromItem(item):(item?.summary_payload||{})) || {};
-        const st = summary.live_state || summary || {};
-        document.getElementById('meta').textContent = live.metaText ? live.metaText(item) : 'Live';
-        const phaseSpec = phasePillSpec(st);
-        const phaseEl = document.getElementById('phasePill');
-        phaseEl.className = phaseSpec.cls;
-        phaseEl.textContent = phaseSpec.label;
-        document.getElementById('roundNo').textContent = String(Number(st.round_no||0));
-        document.getElementById('penaltyMode').textContent = penaltyModeLabel(st.penalty_mode);
-        document.getElementById('lobbyCode').textContent = String(st.lobby_code || '—');
-        document.getElementById('openLobbyBtn').href = `./pikken.html?game_id=${encodeURIComponent(String(st.id || item?.game_id || ''))}`;
-        const bid = st.bid && st.bid !== null ? st.bid : null;
-        document.getElementById('currentBid').textContent = bidText(bid);
-        document.getElementById('bidBy').textContent = bid && bid.bidder_name ? `door ${bid.bidder_name}` : 'Nog geen bod';
-        const dt = st.dice_totals || {};
-        document.getElementById('totalStartDice').textContent = String(Number(dt.start_total||0));
-        document.getElementById('totalCurrentDice').textContent = String(Number(dt.current_total||0));
-        document.getElementById('totalLostDice').textContent = String(Number(dt.lost_total||0));
-
-        const players = Array.isArray(st.players)?st.players:[];
-        const presenceMap = await getPresenceMap(st.id || item?.game_id || '');
-        const phase = String(st.phase||'');
-        const turnSeat = phase === 'voting' ? Number(st.vote_turn_seat||0) : Number(st.turn_seat||0);
-        document.getElementById('turnName').textContent = findNameBySeat(players, turnSeat);
-        renderSeats(players, phase, turnSeat, 0, presenceMap);
-
-        const lr = st.last_reveal || null;
-        const revealWrap = document.getElementById('revealBody');
-        if(!lr){ revealWrap.textContent='Nog geen reveal.'; return; }
-        const hands = Array.isArray(lr.hands)?lr.hands:[];
-        const lrBid = lr.bid || null;
-        revealWrap.innerHTML =
-          `<div><strong>R${Number(lr.round_no||0)}</strong> · ${lr.bid_true?'gehaald':'niet gehaald'} · bod ${esc(bidText(lrBid))} · geteld ${Number(lr.counted_total||0)}</div>` +
-          `<div class="reveal-grid">${hands.map(h=>`<div class="reveal-card"><div><strong>${esc(h.name||'Speler')}</strong> <span class="muted">#${Number(h.seat||0)}</span></div><div class="dice-row">${(Array.isArray(h.dice)?h.dice:[]).map(d=>`<img class="${dieClass(d)}" src="./assets/pikken/dice-${Number(d)}.svg" alt="die ${Number(d)}">`).join('')}</div></div>`).join('')}</div>`;
-        if (live.isFinished && live.isFinished(item) && pollId) { clearInterval(pollId); pollId = null; }
-      }
-      async function load(){
-        const identity = live.matchIdentityFromUrl ? live.matchIdentityFromUrl() : { clientMatchId:'', matchRef:'' };
-        if(!identity.clientMatchId && !identity.matchRef){
-          document.getElementById('meta').textContent='Geen match_ref of client_match_id in URL.';
+      function renderReveal(lastReveal){
+        const wrap = document.getElementById('revealBody');
+        if (!lastReveal) {
+          wrap.textContent = 'Nog geen reveal.';
           return;
         }
-        try{
-          const item = await live.loadPublicSummary('pikken', identity);
-          await render(item);
-        }catch(err){
-          document.getElementById('meta').textContent = err.message || 'Laden mislukt.';
-        }
+        const lrBid = lastReveal.bid || {};
+        wrap.innerHTML = `
+          <div><strong>R${Number(lastReveal.round_no || 0)}</strong> · bod ${esc(bidText(lrBid))} · ${lastReveal.bid_true ? 'gehaald' : 'niet gehaald'} · geteld ${Number(lastReveal.counted_total || 0)}</div>
+          <div class="reveal-grid">
+            ${(Array.isArray(lastReveal.hands) ? lastReveal.hands : []).map((h)=>`
+              <div class="reveal-card">
+                <div><strong>${esc(h.name || 'Speler')}</strong> <span class="subline">#${Number(h.seat || 0)}</span></div>
+                <div class="dice-row">${(Array.isArray(h.dice) ? h.dice : []).map((d)=>`<img class="die" src="./assets/pikken/dice-${Number(d)}.svg" alt="die ${Number(d)}">`).join('')}</div>
+              </div>
+            `).join('')}
+          </div>
+        `;
       }
-      load();
-      pollId = setInterval(load, 5000);
+      function renderActor(state, presenceMap){
+        const game = state?.game || {};
+        const viewer = state?.viewer || {};
+        const players = Array.isArray(state?.players) ? state.players : [];
+        const phase = String(game?.state?.phase || 'lobby');
+        const bid = game?.state?.bid && game.state.bid !== null ? game.state.bid : null;
+        const turnSeat = Number(game?.state?.current_turn_seat || game?.state?.turn_seat || 0);
+        const voteTurnSeat = Number(game?.state?.vote_turn_seat || 0);
+        const totals = state?.dice_totals || {};
+        const lastReveal = game?.state?.last_reveal || null;
+        document.getElementById('metaLine').textContent = `Live bijgewerkt om ${new Date().toLocaleTimeString('nl-NL', { hour:'2-digit', minute:'2-digit' })}`;
+        const phasePill = document.getElementById('phasePill');
+        phasePill.textContent = phase || 'live';
+        phasePill.className = `pill ${phase === 'finished' ? 'bad' : phase === 'bidding' ? 'ok' : 'wait'}`;
+        document.getElementById('currentBid').textContent = bidText(bid);
+        document.getElementById('bidBy').textContent = bid ? `door ${bid.bidder_name || '—'}` : 'Nog geen bod';
+        document.getElementById('roundNo').textContent = String(Number(game?.state?.round_no || 0));
+        document.getElementById('turnName').textContent = players.find((p)=>Number(p.seat || p.seat_index || 0) === (phase === 'voting' ? voteTurnSeat : turnSeat))?.name || '—';
+        document.getElementById('penaltyMode').textContent = penaltyLabel(game?.penalty_mode || game?.config?.penalty_mode);
+        document.getElementById('lobbyCode').textContent = String(game?.lobby_code || '—');
+        document.getElementById('totalStartDice').textContent = String(Number(totals.start_total || 0));
+        document.getElementById('totalCurrentDice').textContent = String(Number(totals.current_total || 0));
+        document.getElementById('totalLostDice').textContent = String(Number(totals.lost_total || 0));
+        renderSeats(players, viewer, phase, turnSeat, voteTurnSeat, presenceMap);
+        renderReveal(lastReveal);
+
+        const meAlive = !!viewer.alive || phase === 'lobby';
+        const mySeat = Number(viewer.seat || viewer.seat_index || 0);
+        const myTurn = phase === 'bidding' && mySeat === turnSeat && meAlive;
+        const myVoteTurn = phase === 'voting' && mySeat === voteTurnSeat && meAlive;
+        const actorState = document.getElementById('actorState');
+        actorState.textContent = myTurn ? 'Jij bent aan zet.' : (myVoteTurn ? 'Jij moet nu stemmen.' : (viewer.is_host ? 'Host in live match.' : 'Viewer / wachtmodus.'));
+        document.getElementById('mobileContext').textContent = myTurn ? 'Bied of keur af.' : (myVoteTurn ? 'Stem nu.' : 'Volg de match live.');
+        document.getElementById('bidControls').classList.toggle('hidden', !myTurn);
+        document.getElementById('voteControls').classList.toggle('hidden', !myVoteTurn);
+        document.getElementById('rejectBtn').disabled = !myTurn || !bid;
+        document.getElementById('leaveBtn').classList.toggle('hidden', !(viewer.player_id || viewer.display_name || viewer.player_name));
+        document.getElementById('destroyBtn').classList.toggle('hidden', !viewer.is_host);
+      }
+      function renderViewer(item, presenceMap){
+        const summary = (liveSummary.summaryFromItem ? liveSummary.summaryFromItem(item) : (item?.summary_payload || {})) || {};
+        const st = summary.live_state || summary || {};
+        const players = Array.isArray(st.players) ? st.players : [];
+        const phase = String(st.phase || st.status || 'live');
+        const turnSeat = Number(phase === 'voting' ? st.vote_turn_seat : (st.current_turn_seat || st.turn_seat || 0));
+        const voteTurnSeat = Number(st.vote_turn_seat || 0);
+        document.getElementById('metaLine').textContent = liveSummary.metaText ? liveSummary.metaText(item) : 'Live summary';
+        const phasePill = document.getElementById('phasePill');
+        phasePill.textContent = phase;
+        phasePill.className = `pill ${phase === 'finished' ? 'bad' : phase === 'bidding' ? 'ok' : 'wait'}`;
+        document.getElementById('currentBid').textContent = bidText(st.bid || null);
+        document.getElementById('bidBy').textContent = st.bid && st.bid.bidder_name ? `door ${st.bid.bidder_name}` : 'Nog geen bod';
+        document.getElementById('roundNo').textContent = String(Number(st.round_no || 0));
+        document.getElementById('turnName').textContent = players.find((p)=>Number(p.seat || p.seat_index || 0) === turnSeat)?.name || '—';
+        document.getElementById('penaltyMode').textContent = penaltyLabel(st.penalty_mode);
+        document.getElementById('lobbyCode').textContent = String(st.lobby_code || '—');
+        const dt = st.dice_totals || {};
+        document.getElementById('totalStartDice').textContent = String(Number(dt.start_total || 0));
+        document.getElementById('totalCurrentDice').textContent = String(Number(dt.current_total || 0));
+        document.getElementById('totalLostDice').textContent = String(Number(dt.lost_total || 0));
+        renderSeats(players, {}, phase, turnSeat, voteTurnSeat, presenceMap);
+        renderReveal(st.last_reveal || null);
+        document.getElementById('actorState').textContent = 'Spectator / viewer-modus.';
+        document.getElementById('mobileContext').textContent = 'Spectate live match.';
+        document.getElementById('bidControls').classList.add('hidden');
+        document.getElementById('voteControls').classList.add('hidden');
+        document.getElementById('leaveBtn').classList.add('hidden');
+        document.getElementById('destroyBtn').classList.add('hidden');
+      }
+      async function refresh(){
+        if (!gameId) {
+          document.getElementById('metaLine').textContent = 'Geen game_id in URL.';
+          return;
+        }
+        await touchPresence();
+        const loaded = await loadState();
+        if (loaded.mode === 'actor') renderActor(loaded.state, loaded.presenceMap || {});
+        else renderViewer(loaded.item, loaded.presenceMap || {});
+      }
+
+      async function act(name, payload){
+        await rpc(name, Object.assign({ session_token: sessionToken(), game_id_input: gameId }, payload || {}));
+        await refresh();
+      }
+
+      document.getElementById('bidBtn').addEventListener('click', ()=>act('pikken_place_bid_scoped', { bid_count_input:Number(document.getElementById('bidCount').value || 0), bid_face_input:Number(document.getElementById('bidFace').value || 0) }).catch((e)=>alert(e.message || String(e))));
+      document.getElementById('rejectBtn').addEventListener('click', ()=>act('pikken_reject_bid_scoped').catch((e)=>alert(e.message || String(e))));
+      document.getElementById('approveBtn').addEventListener('click', ()=>act('pikken_cast_vote_scoped', { vote_input:true }).catch((e)=>alert(e.message || String(e))));
+      document.getElementById('voteRejectBtn').addEventListener('click', ()=>act('pikken_cast_vote_scoped', { vote_input:false }).catch((e)=>alert(e.message || String(e))));
+      document.getElementById('leaveBtn').addEventListener('click', async ()=>{
+        if (!confirm('Weet je zeker dat je dit Pikken-spel wilt verlaten?')) return;
+        try {
+          await rpc('pikken_leave_game_scoped', { session_token: sessionToken(), game_id_input: gameId });
+          await releasePresence();
+          location.href = './pikken.html';
+        } catch (e) { alert(e.message || String(e)); }
+      });
+      document.getElementById('destroyBtn').addEventListener('click', async ()=>{
+        if (!confirm('Host: wil je dit Pikken-spel stoppen en verwijderen?')) return;
+        try {
+          await rpc('pikken_destroy_game_scoped', { session_token: sessionToken(), game_id_input: gameId });
+          await releasePresence();
+          location.href = './pikken.html';
+        } catch (e) { alert(e.message || String(e)); }
+      });
+
+      window.addEventListener('beforeunload', ()=>{ releasePresence(); });
+      refresh().catch((e)=>{ document.getElementById('metaLine').textContent = e.message || String(e); });
+      pollId = setInterval(()=>{ if (!document.hidden) refresh().catch(()=>{}); }, 3500);
+      presenceId = setInterval(()=>{ if (!document.hidden) touchPresence().catch(()=>{}); }, 8000);
+      document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) refresh().catch(()=>{}); });
     })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
