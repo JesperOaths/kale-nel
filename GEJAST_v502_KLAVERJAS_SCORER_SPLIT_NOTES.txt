@@ -1,0 +1,17 @@
+GEJAST v502 — Klaverjas scorer/live split patch
+
+Changed files:
+- scorer.html
+- score.html
+
+What this patch does:
+- Restores scorer.html as the dedicated Klaverjas scorer owner page.
+- Makes score.html a thin redirect into scorer.html so old links keep working.
+- Starts scorer.html with a fresh empty score form instead of resuming an old in-progress form from session storage.
+- Keeps the live summary writer on the scorer side so klaverjas_live.html can remain the reader/spectator side.
+- Updates the scorer live-sync call to the current shared runtime API: GEJAST_LIVE_SYNC.writeSummary(...).
+
+Important:
+- This is the scorer/live split on the frontend owner path.
+- It does not redesign the backend live summary schema.
+- The current spectator page should continue to read the shared live summary source.
