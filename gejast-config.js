@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v500',
+    VERSION:'v501',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -23,7 +23,7 @@
     WEB_PUSH_QUEUE_NEARBY_RPC_V3: 'queue_nearby_verification_pushes_v3',
     WEB_PUSH_CONSUME_ACTION_RPC_V3: 'consume_web_push_action_v3',
     ADMIN_ACTIVE_PUSH_RPC_V3: 'admin_queue_active_web_push_v3',
-    ADMIN_PUSH_DIAGNOSTICS_RPC_V3: 'admin_get_web_push_diagnostics_v3'
+    ADMIN_PUSH_DIAGNOSTICS_RPC_V3: 'admin_get_web_push_diagnostics_v3',
   };
 
   function detectScriptVersion(){
@@ -83,12 +83,9 @@
     const nodes = ensureVersionWatermark();
     nodes.forEach((node)=>{ node.textContent = label; watermarkStyles(node); });
     const re = /v\d+\s*[·.-]?\s*Made by Bruis/i;
-    document.querySelectorAll('body *').forEach((node)=>{
-      if (node.children.length) return;
-      const txt=(node.textContent||'').trim();
-      if (re.test(txt)) { node.textContent = label; watermarkStyles(node); }
-    });
+    document.querySelectorAll('body *').forEach((node)=>{ if (node.children.length) return; const txt=(node.textContent||'').trim(); if (re.test(txt)) { node.textContent = label; watermarkStyles(node); } });
   }
+
 
   function normalizeProfileImageUrl(value){
     const raw = String(value || '').trim();
@@ -102,6 +99,7 @@
     return raw;
   }
 
+
   function normalizePersonName(value){
     return String(value || '').replace(/\s+/g, ' ').trim();
   }
@@ -114,46 +112,24 @@
       return true;
     });
   }
-
-  async function callJson(url, options, timeoutMs){
-    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const timer = controller ? setTimeout(() => { try { controller.abort(); } catch (_) {} }, Math.max(500, Number(timeoutMs || CONFIG.RPC_TIMEOUT_MS || 2500))) : null;
-    try {
-      const res = await fetch(url, Object.assign({}, options || {}, { signal: controller ? controller.signal : undefined }));
-      const txt = await res.text();
-      let data = null;
-      try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || `HTTP ${res.status}`); }
-      if (!res.ok) throw new Error(data?.message || data?.error || data?.details || data?.hint || `HTTP ${res.status}`);
-      return data;
-    } catch (error) {
-      if (error && error.name === 'AbortError') throw new Error('RPC timeout');
-      throw error;
-    } finally {
-      if (timer) clearTimeout(timer);
-    }
-  }
-
-  function inferRuntimeScope(){
-    try {
-      const qs = new URLSearchParams(location.search);
-      if (qs.get('scope') === 'family') return 'family';
-      if ((location.pathname || '').includes('/familie/')) return 'family';
-    } catch (_) {}
-    return 'friends';
-  }
-  function normalizeScope(input){
-    return String(input || '').trim().toLowerCase() === 'family' ? 'family' : 'friends';
-  }
-
   async function fetchScopedActivePlayerNames(scope){
     const resolvedScope = normalizeScope(scope || inferRuntimeScope());
-    const headers = {
-      'Content-Type':'application/json',
-      apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '',
-      Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}`,
-      Accept:'application/json'
-    };
-
+    const headers = { 'Content-Type':'application/json', apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '', Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}`, Accept:'application/json' };
+    async function callJson(url, options, timeoutMs){
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timer = controller ? setTimeout(() => { try { controller.abort(); } catch (_) {} }, Math.max(600, Number(timeoutMs || CONFIG.RPC_TIMEOUT_MS || 2500))) : null;
+      try {
+        const res = await fetch(url, Object.assign({}, options || {}, { signal: controller ? controller.signal : undefined }));
+        const txt = await res.text();
+        let data = null;
+        try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || `HTTP ${res.status}`); }
+        if (!res.ok) throw new Error(data?.message || data?.error || data?.details || data?.hint || `HTTP ${res.status}`);
+        return data;
+      } catch (error) {
+        if (error && error.name === 'AbortError') throw new Error('RPC timeout');
+        throw error;
+      } finally { if (timer) clearTimeout(timer); }
+    }
     function toNames(raw){
       const rows = Array.isArray(raw)
         ? raw
@@ -162,31 +138,16 @@
         if (typeof row === 'string') return row;
         return row?.public_display_name || row?.chosen_username || row?.nickname || row?.display_name || row?.player_name || row?.name || row?.label || row?.desired_name || row?.slug || '';
       }));
-      if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') {
-        names = window.GEJAST_SCOPE_UTILS.filterNames(names, resolvedScope);
-      }
+      if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, resolvedScope);
       return names;
     }
-
-    const rpcAttempts = [
-      ['get_login_names_scoped', { site_scope_input: resolvedScope }],
-      ['get_all_site_players_public_scoped', { site_scope_input: resolvedScope }],
-      ['get_profiles_page_bundle_scoped', { site_scope_input: resolvedScope }],
-      ['get_login_names', {}]
+    const calls = [
+      callJson(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/get_login_names_scoped`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify({ site_scope_input: resolvedScope }) }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then(toNames).catch(()=>[]),
+      callJson(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/get_all_site_players_public_scoped`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify({ site_scope_input: resolvedScope }) }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then(toNames).catch(()=>[]),
+      callJson(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/get_profiles_page_bundle_scoped`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify({ site_scope_input: resolvedScope }) }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then(toNames).catch(()=>[]),
+      callJson(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/get_login_names`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify({}) }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then(toNames).catch(()=>[]),
+      callJson(`${CONFIG.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope&order=display_name.asc&limit=400`, { method:'GET', mode:'cors', cache:'no-store', headers:{ apikey: headers.apikey, Authorization: headers.Authorization, Accept:'application/json' } }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then(toNames).catch(()=>[])
     ];
-
-    const calls = rpcAttempts.map(([name, payload]) =>
-      callJson(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${name}`, {
-        method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify(payload || {})
-      }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then((raw)=>toNames(raw)).catch(()=>[])
-    );
-
-    calls.push(
-      callJson(`${CONFIG.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope&order=display_name.asc&limit=400`, {
-        method:'GET', mode:'cors', cache:'no-store', headers:{ apikey: headers.apikey, Authorization: headers.Authorization, Accept:'application/json' }
-      }, CONFIG.LOGIN_NAME_TIMEOUT_MS).then((raw)=>toNames(raw)).catch(()=>[])
-    );
-
     const settled = await Promise.allSettled(calls);
     const merged = [];
     settled.forEach((item)=>{
@@ -205,8 +166,7 @@
   }
   function clearPlayerSessionTokens(){
     for(const key of CONFIG.PLAYER_SESSION_KEYS){
-      localStorage.removeItem(key);
-      sessionStorage.removeItem(key);
+      localStorage.removeItem(key); sessionStorage.removeItem(key);
     }
     localStorage.removeItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY);
     sessionStorage.removeItem(CONFIG.PLAYER_LAST_ACTIVITY_KEY);
@@ -236,6 +196,7 @@
     if (!last) return false;
     return (Date.now() - last) > CONFIG.PLAYER_SESSION_SOFT_STALE_MS;
   }
+  function inferRuntimeScope(){ try { const qs = new URLSearchParams(location.search); if (qs.get('scope')==='family') return 'family'; if ((location.pathname||'').includes('/familie/')) return 'family'; } catch(_){} return 'friends'; }
 
   function sanitizeReturnTarget(raw, fallback=''){
     const value = String(raw || '').trim();
@@ -271,25 +232,30 @@
     if (target) url.searchParams.set('return_to', target);
     return url.toString();
   }
-  function setPlayerSessionToken(token, storage){
-    const value = String(token || '').trim();
-    if (!value) return '';
-    const primaryKey = CONFIG.PLAYER_SESSION_KEYS[0] || 'jas_session_token_v11';
-    const target = storage === 'session' ? sessionStorage : localStorage;
-    target.setItem(primaryKey, value);
-    const other = target === localStorage ? sessionStorage : localStorage;
-    other.removeItem(primaryKey);
-    touchPlayerActivity();
-    return value;
-  }
-  function buildRequestUrl(returnTo, scope){
-    const normalizedScope = normalizeScope(scope || inferRuntimeScope());
-    const url = new URL('./request.html', window.location.href);
-    const safeTarget = sanitizeReturnTarget(returnTo || '', normalizedScope === 'family' ? 'index.html?scope=family' : 'index.html');
-    if (safeTarget) url.searchParams.set('return_to', safeTarget);
-    if (normalizedScope === 'family') url.searchParams.set('scope', 'family');
-    return `${url.pathname}${url.search}${url.hash}`;
-  }
+
+function setPlayerSessionToken(token, storage){
+  const value = String(token || '').trim();
+  if (!value) return '';
+  const primaryKey = CONFIG.PLAYER_SESSION_KEYS[0] || 'jas_session_token_v11';
+  const target = storage === 'session' ? sessionStorage : localStorage;
+  target.setItem(primaryKey, value);
+  const other = target === localStorage ? sessionStorage : localStorage;
+  other.removeItem(primaryKey);
+  touchPlayerActivity();
+  return value;
+}
+function normalizeScope(input){
+  return String(input || '').trim().toLowerCase() === 'family' ? 'family' : 'friends';
+}
+function buildRequestUrl(returnTo, scope){
+  const normalizedScope = normalizeScope(scope || inferRuntimeScope());
+  const url = new URL('./request.html', window.location.href);
+  const safeTarget = sanitizeReturnTarget(returnTo || '', normalizedScope === 'family' ? 'index.html?scope=family' : 'index.html');
+  if (safeTarget) url.searchParams.set('return_to', safeTarget);
+  if (normalizedScope === 'family') url.searchParams.set('scope', 'family');
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
   function buildAdminUrl(reason='', returnTo=''){
     const url = new URL('./admin.html', window.location.href);
     if (reason) url.searchParams.set('reason', String(reason));
@@ -300,12 +266,6 @@
   function ensurePlayerSessionOrRedirect(returnTo){
     const token = getPlayerSessionToken();
     if (!token){
-      const target = sanitizeReturnTarget(returnTo || (location.pathname.split('/').pop() || 'index.html'), 'index.html');
-      window.location.href = buildHomeUrl(target);
-      return false;
-    }
-    if (isPlayerSessionExpired()) {
-      clearPlayerSessionTokens();
       const target = sanitizeReturnTarget(returnTo || (location.pathname.split('/').pop() || 'index.html'), 'index.html');
       window.location.href = buildHomeUrl(target);
       return false;
@@ -354,7 +314,6 @@
     getPlayerSessionToken,
     clearPlayerSessionTokens,
     touchPlayerActivity,
-    lastPlayerActivity,
     isPlayerSessionExpired,
     isPlayerSessionLocallyStale,
     ensurePlayerSessionOrRedirect,

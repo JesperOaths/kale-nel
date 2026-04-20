@@ -1,0 +1,46 @@
+GEJAST v501 patch bundle
+
+Included files
+- gejast-config.js
+- gejast-home-gate.js
+- gejast-public-page-gate.js
+- home.html
+- login.html
+- pikken.html
+- gejast-pikken.js
+- klaverjas_spectator.html
+- boerenbridge_spectator.html
+- pikken_spectator.html
+- paardenrace_spectator.html
+
+What this patch does
+1. Login/session/home-gate
+- makes login name loading more resilient by using broader parallel/fallback loading in gejast-config.js
+- extends local idle expiry to reduce false random logouts
+- makes home.html less eager to hard-logout on validation failure/network uncertainty
+- makes gejast-home-gate.js less eager to kill a session on weak/partial validation
+
+2. Pikken frontend
+- bumps Pikken surface to v501
+- adds host-selectable start dice in the lobby create flow
+- adds leave + destroy controls with RPC-first/fallback-first calling
+- adds host kick buttons (only if viewer host state is present and backend RPC exists)
+- replaces free-form bid entry with legal-next-bid dropdown generation
+- adds clearer voting/thumb state presentation
+- adds remaining/total dice fraction on the table surface
+- sorts/group dice display
+- adds local bid history persistence/feed
+- adds local throw + lock table helper UX for dice
+- redirects start flow toward spectator/table view once the game starts
+
+3. Spectator pages
+- klaverjas_spectator.html -> thin spectator entry alias to existing klaverjas live spectator surface
+- boerenbridge_spectator.html -> thin spectator entry alias to existing boerenbridge live spectator surface
+- pikken_spectator.html -> thin spectator entry alias to existing pikken live table surface
+- paardenrace_spectator.html -> new stripped spectator-only page with room-state polling and board rendering, no host/player controls
+
+Important honesty notes
+- This is a frontend/runtime patch bundle only.
+- Pikken leave/destroy/kick controls depend on the corresponding backend RPCs existing with compatible signatures.
+- Pikken throw + lock is implemented here as a local table helper UX, not proven server-side game-state ownership.
+- I did not claim the old Pikken SQL chain is solved.
