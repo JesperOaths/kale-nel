@@ -37,7 +37,7 @@
   function parseVersion(v){ const m=String(v||'').match(/v?(\d+)/i); return m?Number(m[1]):0; }
   const candidates = [detectScriptVersion(), window.GEJAST_PAGE_VERSION, CONFIG.VERSION].filter(Boolean);
   const effectiveVersion = candidates.sort((a,b)=>parseVersion(b)-parseVersion(a))[0] || CONFIG.VERSION;
-  const label = `${effectiveVersion} · Made by Bruis`;
+  const label = `${effectiveVersion} - Made by Bruis`;
   window.GEJAST_PAGE_VERSION = effectiveVersion;
 
   function watermarkStyles(node){
@@ -112,9 +112,43 @@
       return true;
     });
   }
+  function hasUsablePin(value){
+    return String(value ?? '').trim().length > 0 && String(value ?? '').trim().toLowerCase() !== 'null';
+  }
+  function normalizeMatchKey(value){
+    return normalizePersonName(value).toLowerCase();
+  }
+  function buildPlayerLookup(rows){
+    const byId = new Map();
+    const byKey = new Map();
+    (Array.isArray(rows) ? rows : []).forEach((row)=>{
+      if (!row || typeof row !== 'object') return;
+      const id = row?.id ?? row?.player_id ?? null;
+      if (id !== null && id !== undefined && !byId.has(String(id))) byId.set(String(id), row);
+      [row?.display_name, row?.profile_display_name, row?.public_display_name, row?.chosen_username, row?.player_name, row?.username, row?.slug].forEach((candidate)=>{
+        const key = normalizeMatchKey(candidate);
+        if (!key || byKey.has(key)) return;
+        byKey.set(key, row);
+      });
+    });
+    return { byId, byKey };
+  }
+  function resolveAllowedRowPlayer(row, lookup){
+    if (!row || !lookup) return null;
+    const directId = row?.player_id ?? null;
+    if (directId !== null && directId !== undefined) {
+      const found = lookup.byId.get(String(directId));
+      if (found) return found;
+    }
+    for (const key of [row?.display_name, row?.username, row?.slug].map(normalizeMatchKey).filter(Boolean)) {
+      const found = lookup.byKey.get(key);
+      if (found) return found;
+    }
+    return null;
+  }
   async function fetchScopedActivePlayerNames(scope){
     const resolvedScope = normalizeScope(scope || inferRuntimeScope());
-    const headers = { 'Content-Type':'application/json', apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '', Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}` };
+    const headers = { 'Content-Type':'application/json', apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '', Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}`, Accept:'application/json' };
     async function callRpc(name, payload){
       const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify(payload || {}) });
       const txt = await res.text();
@@ -134,6 +168,28 @@
       if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, resolvedScope);
       return names;
     }
+    try {
+      for (const [name, payload] of [['get_login_names_by_pin_scoped', { site_scope_input: resolvedScope }], ['get_login_names_by_pin', {}]]) {
+        try {
+          const raw = await callRpc(name, payload);
+          const names = toNames(raw);
+          if (names.length) return names;
+        } catch (_) {}
+      }
+      const [allowedResponse, playerResponse] = await Promise.all([
+        fetch(`${CONFIG.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,username,slug,site_scope,player_id&order=display_name.asc&limit=400`, { method:'GET', mode:'cors', cache:'no-store', headers:{ apikey: headers.apikey, Authorization: headers.Authorization, Accept:'application/json' } }),
+        fetch(`${CONFIG.SUPABASE_URL}/rest/v1/players?select=id,display_name,profile_display_name,slug,pin_hash&limit=400`, { method:'GET', mode:'cors', cache:'no-store', headers:{ apikey: headers.apikey, Authorization: headers.Authorization, Accept:'application/json' } })
+      ]);
+      const allowedRows = await allowedResponse.json().catch(()=>[]);
+      const playerRows = await playerResponse.json().catch(()=>[]);
+      const lookup = buildPlayerLookup(playerRows);
+      const names = uniquePersonNames((Array.isArray(allowedRows) ? allowedRows : []).filter((row)=>{
+        const rowScope = normalizeScope(row?.site_scope || resolvedScope);
+        if (rowScope !== resolvedScope) return false;
+        return hasUsablePin(resolveAllowedRowPlayer(row, lookup)?.pin_hash);
+      }).map((row)=>row?.display_name || row?.username || row?.slug || ''));
+      if (names.length) return names;
+    } catch (_) {}
     const attempts = [
       ['get_all_site_players_public_scoped', { site_scope_input: resolvedScope }],
       ['get_profiles_page_bundle_scoped', { site_scope_input: resolvedScope }],
