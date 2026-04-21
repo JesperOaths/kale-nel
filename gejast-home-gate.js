@@ -29,6 +29,10 @@
   verifySoft(token).then(function(status){
     if(status === 'valid'){
       try{ cfg.touchPlayerActivity && cfg.touchPlayerActivity(); }catch(_){}
+      return;
+    }
+    if(status === 'invalid' || status === 'unknown' || status === 'missing'){
+      try{ cfg.touchPlayerActivity && cfg.touchPlayerActivity(); }catch(_){}
     }
   }).catch(function(){});
 })();
