@@ -57,7 +57,7 @@
 
   const params = new URLSearchParams(location.search);
   const gameId = params.get('client_match_id') || params.get('game_id') || '';
-  const UI = { pollId:null, presenceId:null, currentState:null, bidHistory:[], lastSeenBidKey:'', lastRoundRendered:0 };
+  const UI = { pollId:null, presenceId:null, currentState:null, bidHistory:[], lastSeenBidKey:'', lastRoundRendered:0, shakeArmed:false, lastShakeAt:0 };
 
   function bidHistoryStorage(){ try { return JSON.parse(localStorage.getItem(BID_HISTORY_KEY) || '{}'); } catch (_) { return {}; } }
   function loadLocalBidHistory(){ const store = bidHistoryStorage(); UI.bidHistory = Array.isArray(store[gameId]) ? store[gameId] : []; }
@@ -191,13 +191,33 @@
     const diceCount = inferMyDiceCount(model);
     if (diceCount <= 0) return [];
     const existing = loadLocalDiceEntry(model);
-    if (!force && existing && Number(existing.roundNo || 0) === roundNo && Number(existing.count || 0) === diceCount && Array.isArray(existing.dice) && existing.dice.length === diceCount) {
+    if (existing && Number(existing.roundNo || 0) === roundNo && Number(existing.count || 0) === diceCount && Array.isArray(existing.dice) && existing.dice.length === diceCount) {
       return sortDiceFaces(existing.dice);
     }
+    if (!force) return [];
     const dice = rollFaces(diceCount);
     saveLocalDiceEntry(model, { roundNo, count: diceCount, dice, updatedAt: Date.now() });
     return dice;
   }
+  function canThrowThisRound(model){
+    if (!model || model.mode !== 'actor' || !sessionToken()) return false;
+    if (String(model.phase || '').toLowerCase() === 'lobby') return false;
+    if (sortDiceFaces(model.backendMyHand || []).length) return false;
+    return !getLocalOrRolledDice(model).length;
+  }
+  function maybeThrowLocalDice(source){
+    const model = UI.currentState;
+    if (!model || !canThrowThisRound(model)) return false;
+    const dice = getLocalOrRolledDice(model, { force:true });
+    if (!dice.length) return false;
+    model.myHand = dice;
+    model.usingLocalDice = true;
+    renderModel(model);
+    const meta = qs('#metaLine');
+    if (meta) meta.textContent = source === 'shake' ? 'Dobbelstenen gegooid via schudden.' : 'Dobbelstenen gegooid.';
+    return true;
+  }
+  function faceLabel(face){ return Number(face) === 1 ? 'pik' : String(Number(face)); }
 
   function normalizeModel(source, presenceMap){
     if (source?.item) {
@@ -233,17 +253,35 @@
     if(face===1){ for(let nextCount=count+1; nextCount<=Math.ceil(total/2); nextCount+=1) add(nextCount,1); for(let nextCount=Math.max(count*2+1,1); nextCount<=total; nextCount+=1){ for(let nextFace=2; nextFace<=6; nextFace+=1) add(nextCount,nextFace); } return options; }
     for(let nextFace=face+1; nextFace<=6; nextFace+=1) add(count,nextFace); for(let nextCount=count+1; nextCount<=total; nextCount+=1){ for(let nextFace=2; nextFace<=6; nextFace+=1) add(nextCount,nextFace); } for(let pikCount=Math.ceil(count/2); pikCount<=Math.ceil(total/2); pikCount+=1) add(pikCount,1); return options;
   }
-  function renderBidSelect(model){ const select=qs('#bidSelect'); if(!select) return; const options=computeBidOptions(model.bid, Number(model.totals.current_total || 0)); select.innerHTML=options.map((opt)=>`<option value="${esc(opt.value)}">${esc(opt.label)}</option>`).join('') || '<option value="">Geen legale biedingen</option>'; const btn=qs('#bidBtn'); if(btn) btn.disabled=!options.length; }
+  function renderBidSelect(model){
+    const countSelect=qs('#bidCountSelect');
+    const faceSelect=qs('#bidFaceSelect');
+    const btn=qs('#bidBtn');
+    if(!countSelect || !faceSelect) return;
+    const options=computeBidOptions(model.bid, Number(model.totals.current_total || 0));
+    const counts=[...new Set(options.map((opt)=>Number(opt.count || 0)).filter(Boolean))].sort((a,b)=>a-b);
+    const currentCount=Number(countSelect.value || 0);
+    const selectedCount=counts.includes(currentCount) ? currentCount : (counts[0] || 0);
+    countSelect.innerHTML=counts.length ? counts.map((count)=>`<option value="${count}">${count}</option>`).join('') : '<option value="">Geen biedingen</option>';
+    if (selectedCount) countSelect.value=String(selectedCount);
+    const faceOptions=options.filter((opt)=>Number(opt.count||0)===Number(selectedCount));
+    const currentFace=Number(faceSelect.value || 0);
+    const selectedFace=faceOptions.some((opt)=>Number(opt.face||0)===currentFace) ? currentFace : Number(faceOptions[0]?.face || 0);
+    faceSelect.innerHTML=faceOptions.length ? faceOptions.map((opt)=>`<option value="${Number(opt.face)}">${esc(faceLabel(opt.face))}</option>`).join('') : '<option value="">Geen waarden</option>';
+    if (selectedFace) faceSelect.value=String(selectedFace);
+    if(btn) btn.disabled=!options.length || !selectedCount || !selectedFace;
+  }
   function renderVotes(model){ const voteWrap=qs('#tableVotes'); if(!voteWrap) return; const votes=Array.isArray(model.votes) ? model.votes : []; if(!votes.length || model.phase !== 'voting'){ voteWrap.innerHTML=''; return; } voteWrap.innerHTML=votes.map((vote)=>{ const status=String(vote.status || 'waiting'); const icon=status==='approved'?'👍':status==='rejected'?'👎':'…'; return `<span class="table-vote">${icon} ${esc(vote.name || '')}</span>`; }).join(''); }
   function renderMyDice(model){
     const wrap = qs('#myDiceBody'); const note = qs('#diceStateNote'); const rollBtn = qs('#rollBtn');
     if (!wrap || !note) return;
     const dice = sortDiceFaces(model.myHand || []);
     const usingLocalDice = !!model.usingLocalDice;
-    note.textContent = dice.length ? (usingLocalDice ? 'Gesimuleerde lokale hand voor deze ronde. Gebruik herrol als de backend je dobbelstenen nog steeds niet toont.' : 'Je actieve hand voor deze ronde.') : (String(model.phase || '').toLowerCase() === 'lobby' ? 'Wacht tot de lobby echt is gestart; daarna horen je dobbelstenen hier te verschijnen.' : 'Nog geen dobbelstenen zichtbaar in de state.');
+    note.textContent = dice.length ? (usingLocalDice ? 'Je worp voor deze ronde staat vast.' : 'Je actieve hand voor deze ronde.') : (String(model.phase || '').toLowerCase() === 'lobby' ? 'Zodra de lobby start mag je één keer gooien voor je hand van die ronde.' : 'Je mag aan het begin van deze ronde één keer gooien. Daarna staat je worp vast.');
     if (rollBtn) {
-      rollBtn.disabled = String(model.phase || '').toLowerCase() === 'lobby';
-      rollBtn.textContent = usingLocalDice || (!sortDiceFaces(model.backendMyHand || []).length && model.mode === 'actor') ? (dice.length ? 'Herrol dobbelstenen' : 'Rol dobbelstenen') : 'Ververs dobbelstenen';
+      const canThrow = canThrowThisRound(model);
+      rollBtn.disabled = !canThrow;
+      rollBtn.textContent = canThrow ? 'Gooien' : (dice.length ? 'Al gegooid' : 'Wacht op ronde');
     }
     if (!dice.length) { wrap.innerHTML = '<div class="muted">Nog geen dobbelstenen zichtbaar. Dit wijst meestal op een backend-state gat: de hand komt nog niet mee of zit onder een andere sleutel.</div>'; return; }
     wrap.innerHTML = groupDice(dice).map((group)=>`<div class="dice-group"><div class="dice-group-head">${group.face === 1 ? 'pik' : group.face}</div><div class="dice-row">${group.dice.map((face)=>`<img class="die" src="./assets/pikken/dice-${Number(face)}.svg" alt="die ${Number(face)}">`).join('')}</div></div>`).join('');
@@ -269,19 +307,33 @@
   async function act(name, payload){ await rpcVariants(name, payloadVariants(Object.assign({ game_id_input:gameId }, payload || {}))); await refresh(); }
   async function kickSeat(seat){ if(!seat) return; const player=(UI.currentState?.players || []).find((p)=>Number(p.seat || p.seat_index || 0)===Number(seat)); if(!player) return; if(!confirm(`Wil je ${player.name || player.player_name || 'deze speler'} uit de match gooien?`)) return; await rpcVariants('pikken_kick_player_scoped', [...payloadVariants({ game_id_input:gameId, seat_index_input:Number(seat), player_name_input: player?.name || player?.player_name || '' }), { session_token:sessionToken(), game_id_input:gameId, seat_index_input:Number(seat), seat_input:String(seat), target_seat_input: player?.name || player?.player_name || String(seat) }, { session_token_input:sessionToken(), game_id_input:gameId, seat_index_input:Number(seat), seat_input:String(seat), target_seat_input: player?.name || player?.player_name || String(seat) }]); await refresh(); }
 
-  const rollBtn = qs('#rollBtn'); if (rollBtn) rollBtn.addEventListener('click', ()=>{
-    const model = UI.currentState;
-    if (model && model.mode === 'actor' && !sortDiceFaces(model.backendMyHand || []).length) {
-      const dice = getLocalOrRolledDice(model, { force:true });
-      model.myHand = dice;
-      model.usingLocalDice = !!dice.length;
-      renderModel(model);
-      return;
+  const rollBtn = qs('#rollBtn'); if (rollBtn) rollBtn.addEventListener('click', async ()=>{
+    if (typeof window.DeviceMotionEvent !== 'undefined' && typeof window.DeviceMotionEvent.requestPermission === 'function' && !UI.shakeArmed) {
+      try { const result = await window.DeviceMotionEvent.requestPermission(); UI.shakeArmed = result === 'granted'; } catch (_) {}
     }
+    if (maybeThrowLocalDice('button')) return;
     refresh().catch((e)=>{ const meta=qs('#metaLine'); if(meta) meta.textContent = normalizeError(e); });
   });
   const reconnectBtn = qs('#reconnectBtn'); if (reconnectBtn) reconnectBtn.addEventListener('click', ()=>{ reconnectNow().catch(()=>{}); });
-  const bidBtn = qs('#bidBtn'); if (bidBtn) bidBtn.addEventListener('click', ()=>{ const value = String(qs('#bidSelect')?.value || ''); if (!value.includes(':')) return; const [count, face] = value.split(':').map((n)=>Number(n || 0)); act('pikken_place_bid_scoped', { bid_count_input: count, bid_face_input: face }).catch((e)=>alert(normalizeError(e))); });
+  const bidCountSelect = qs('#bidCountSelect'); if (bidCountSelect) bidCountSelect.addEventListener('change', ()=>{ if (UI.currentState) renderBidSelect(UI.currentState); });
+  const bidBtn = qs('#bidBtn'); if (bidBtn) bidBtn.addEventListener('click', async ()=>{
+    const count = Number(qs('#bidCountSelect')?.value || 0);
+    const face = Number(qs('#bidFaceSelect')?.value || 0);
+    if (!count || !face) return;
+    try {
+      await rpcVariants('pikken_place_bid_scoped', [
+        { session_token: sessionToken() || null, game_id_input: gameId, bid_count_input: count, bid_face_input: face },
+        { session_token_input: sessionToken() || null, game_id_input: gameId, bid_count_input: count, bid_face_input: face },
+        { session_token: sessionToken() || null, game_id_input: gameId, bid_count: count, bid_face: face },
+        { session_token: sessionToken() || null, game_id_input: gameId, count_input: count, face_input: face },
+        { session_token: sessionToken() || null, session_token_input: sessionToken() || null, game_id_input: gameId, bid_count_input: count, bid_face_input: face },
+        { session_token: sessionToken() || null, game_id_input: gameId, bid_count_input: count, bid_face_input: face, site_scope_input: getScope() }
+      ]);
+      await refresh();
+    } catch (e) {
+      alert(normalizeError(e));
+    }
+  });
   const rejectBtn = qs('#rejectBtn'); if(rejectBtn) rejectBtn.addEventListener('click', ()=>act('pikken_reject_bid_scoped').catch((e)=>alert(normalizeError(e))));
   const approveBtn = qs('#approveBtn'); if(approveBtn) approveBtn.addEventListener('click', ()=>act('pikken_cast_vote_scoped', { vote_input:true }).catch((e)=>alert(normalizeError(e))));
   const voteRejectBtn = qs('#voteRejectBtn'); if(voteRejectBtn) voteRejectBtn.addEventListener('click', ()=>act('pikken_cast_vote_scoped', { vote_input:false }).catch((e)=>alert(normalizeError(e))));
@@ -295,4 +347,14 @@
   UI.presenceId = setInterval(()=>{ if (!document.hidden) touchPresence().catch(()=>{}); }, 12000);
   document.addEventListener('visibilitychange', ()=>{ if (!document.hidden) reconnectNow().catch(()=>{}); });
   window.addEventListener('online', ()=>{ reconnectNow().catch(()=>{}); });
+  window.addEventListener('devicemotion', (event)=>{
+    const model = UI.currentState;
+    if (!canThrowThisRound(model)) return;
+    const acc = event?.accelerationIncludingGravity || event?.acceleration || {};
+    const magnitude = Math.max(Math.abs(Number(acc.x || 0)), Math.abs(Number(acc.y || 0)), Math.abs(Number(acc.z || 0)));
+    const now = Date.now();
+    if (magnitude < 18 || now - UI.lastShakeAt < 1200) return;
+    UI.lastShakeAt = now;
+    maybeThrowLocalDice('shake');
+  });
 })();
