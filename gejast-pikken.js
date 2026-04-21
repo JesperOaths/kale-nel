@@ -67,6 +67,7 @@
   }
 
   const UI = { gameId:'', lastStateVersion:-1, pollTimer:null, lastPlayers:[], feedTimer:null };
+  let autoLiveRedirectDone = false;
 
   function renderMatchSummary(game, viewer, totals){
     const el = qs('#pkMatchSummary');
@@ -210,6 +211,13 @@
         revealWrap.innerHTML = `<details class="accordion" open><summary><span>Laatste ronde (R${Number(lastReveal.round_no||0)}): bod ${esc(lrBidTxt)}</span><span class="muted">${lastReveal.bid_true ? 'gehaald' : 'niet gehaald'} · geteld ${Number(lastReveal.counted_total||0)}</span></summary><div class="detail"><div class="muted">Verliezers: ${esc(String(lastReveal.losing_kind||''))} · Starter: stoel ${Number(lastReveal.next_starter_seat||0)}</div><div class="reveal-grid">${(Array.isArray(lastReveal.hands)?lastReveal.hands:[]).map((h)=>{ const dice = Array.isArray(h.dice) ? h.dice : []; return `<div class="reveal-card"><div class="reveal-name"><strong>${esc(h.name||'Speler')}</strong> <span class="muted">#${Number(h.seat||0)}</span></div><div class="dice-row">${dice.map((d)=>`<img class="die ${Number(d)===1?'pik':''}" src="./assets/pikken/dice-${Number(d)}.svg" alt="die ${Number(d)}">`).join('')}</div></div>`; }).join('')}</div></div></details>`;
       }
     }
+
+    const isParticipant = !!(viewer?.player_id || viewer?.display_name || viewer?.player_name || viewer?.seat || viewer?.seat_index);
+    if (phase !== 'lobby' && game?.id && isParticipant && !autoLiveRedirectDone) {
+      autoLiveRedirectDone = true;
+      setStatus('Match gestart. Je gaat door naar de live tafel…', false);
+      setTimeout(() => { window.location.href = liveHref(game.id); }, 450);
+    }
   }
 
   async function loadAndRender(){
@@ -266,8 +274,25 @@
     startPolling();
     loadDiscoverFeeds();
   }
-  async function setReady(ready){ if (!UI.gameId) return setStatus('Je zit nog niet in een lobby.', true); setStatus(ready?'Ready…':'Unready…', false); await rpc('pikken_set_ready_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId, ready_input: !!ready }); await loadAndRender(); }
-  async function startGame(){ if (!UI.gameId) return setStatus('Je zit nog niet in een lobby.', true); setStatus('Starten…', false); await rpc('pikken_start_game_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId }); window.location.href = liveHref(UI.gameId); }
+  async function setReady(ready){
+    if (!UI.gameId) return setStatus('Je zit nog niet in een lobby.', true);
+    setStatus(ready?'Ready…':'Unready…', false);
+    await rpcVariants('pikken_set_ready_scoped', [
+      { session_token: sessionToken()||null, game_id_input: UI.gameId, ready_input: !!ready, site_scope_input: getScope() },
+      { session_token: sessionToken()||null, game_id_input: UI.gameId, ready_input: !!ready }
+    ]);
+    await loadAndRender();
+  }
+  async function startGame(){
+    if (!UI.gameId) return setStatus('Je zit nog niet in een lobby.', true);
+    setStatus('Starten…', false);
+    await rpcVariants('pikken_start_game_scoped', [
+      { session_token: sessionToken()||null, game_id_input: UI.gameId, site_scope_input: getScope() },
+      { session_token: sessionToken()||null, game_id_input: UI.gameId }
+    ]);
+    autoLiveRedirectDone = true;
+    window.location.href = liveHref(UI.gameId);
+  }
   async function placeBid(){ const count = Number(qs('#pkBidCount')?.value||0); const face = Number(qs('#pkBidFace')?.value||0); setStatus('Bieden…', false); const state = await rpc('pikken_place_bid_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId, bid_count_input: count, bid_face_input: face }); render(state); }
   async function rejectBid(){ setStatus('Afkeuren…', false); const state = await rpc('pikken_reject_bid_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId }); render(state); }
   async function vote(v){ setStatus('Stemmen…', false); const state = await rpc('pikken_cast_vote_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId, vote_input: !!v }); render(state); }
