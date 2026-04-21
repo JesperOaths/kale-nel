@@ -9,7 +9,7 @@
   <title>Beerpong Scoreformulier</title>
   <link rel="stylesheet" href="./site-shell.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>window.GEJAST_PAGE_VERSION='v615';</script><script src="./gejast-config.js?v615"></script><script src="./gejast-family-rollout.js?v615"></script><script src="./gejast-home-gate.js?v615"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('beerpong');</script>
+  <script>window.GEJAST_PAGE_VERSION='v616';</script><script src="./gejast-config.js?v616"></script><script src="./gejast-family-rollout.js?v616"></script><script src="./gejast-home-gate.js?v616"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('beerpong');</script>
   <style>
     :root{--gold:#9a8241;--gold-dark:#8a7338;--black:#111;--card-bg:rgba(249,247,242,.95);--line:rgba(17,17,17,.08);--muted:#6f675b;}
     *{box-sizing:border-box} html,body{min-height:100%}
@@ -77,6 +77,7 @@
             </div>
             <div class="field">
               <label>Uitslag</label>
+              <div id="winProbBar" style="margin-bottom:10px;padding:12px 14px;border:1px solid rgba(212,175,55,.35);border-radius:16px;background:linear-gradient(180deg,#fff7df,#f7f0df);color:#554e43;font-weight:800;line-height:1.35">Kies spelers om de winstkans te zien.</div>
               <div id="resultInfo" style="padding:12px 14px;border:1px dashed rgba(17,17,17,0.18);border-radius:16px;background:#fffbef;color:#554e43;font-weight:700;line-height:1.35">Team met <strong>10 bekers raak</strong> wint automatisch.</div>
             </div>
             <div class="field"><label for="teamA1">Team A · Speler 1</label><select id="teamA1"></select></div>
@@ -125,8 +126,9 @@
       teamA1: document.getElementById('teamA1'), teamA2: document.getElementById('teamA2'), teamB1: document.getElementById('teamB1'), teamB2: document.getElementById('teamB2'),
       cupsA: document.getElementById('cupsA'), cupsB: document.getElementById('cupsB'), notesInput: document.getElementById('notesInput'), saveBtn: document.getElementById('saveBtn'), resetBtn: document.getElementById('resetBtn'),
       formStatus: document.getElementById('formStatus'), sessionPill: document.getElementById('sessionPill'), leaderboard: document.getElementById('leaderboard'), recentMatches: document.getElementById('recentMatches'),
-      playersCount: document.getElementById('playersCount'), matchesCount: document.getElementById('matchesCount'), avgElo: document.getElementById('avgElo'), lastUpdate: document.getElementById('lastUpdate'), pussycupA: document.getElementById('pussycupA'), pussycupB: document.getElementById('pussycupB'), pussycupRanking: document.getElementById('pussycupRanking')
+      playersCount: document.getElementById('playersCount'), matchesCount: document.getElementById('matchesCount'), avgElo: document.getElementById('avgElo'), lastUpdate: document.getElementById('lastUpdate'), pussycupA: document.getElementById('pussycupA'), pussycupB: document.getElementById('pussycupB'), pussycupRanking: document.getElementById('pussycupRanking'), winProbBar: document.getElementById('winProbBar')
     };
+    let latestLeaderboard = [];
     function getSessionToken(){ return localStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY_FALLBACK) || ''; }
     function getSubmitterMeta(){ return { submitted_via:'beerpong_form', submitted_at:new Date().toISOString(), session_present:!!getSessionToken() }; }
     function setStatus(msg,isError=true){ els.formStatus.style.color=isError?'#8a2d1f':'#1f7a44'; els.formStatus.textContent=msg||''; }
@@ -144,7 +146,7 @@
       const scope = window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.getScope === 'function' ? window.GEJAST_SCOPE_UTILS.getScope() : 'friends';
       let normalized = [];
       try {
-        const helper = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedActivePlayerNames === 'function' ? window.GEJAST_CONFIG.fetchScopedActivePlayerNames : null;
+        const helper = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.getActivatedPlayerNamesForScope === 'function' ? window.GEJAST_CONFIG.getActivatedPlayerNamesForScope : (typeof window.GEJAST_CONFIG.fetchScopedActivePlayerNames === 'function' ? window.GEJAST_CONFIG.fetchScopedActivePlayerNames : null);
         if (helper) normalized = (await helper(scope)).map((name)=>({ value:String(name), label:String(name) }));
       } catch (_) {}
       if (!normalized.length) {
@@ -163,7 +165,11 @@
         const prev=sel.value; sel.innerHTML='<option value="">Kies speler</option>' + options.map(o=>`<option value="${o.value}">${o.label}</option>`).join(''); if(prev) sel.value=prev;
       });
     }
-    function syncPlayerAvailability(){ const sels=[els.teamA1, els.teamA2, els.teamB1, els.teamB2]; const selected=sels.map(s=>s.value).filter(Boolean); sels.forEach((sel)=>{ [...sel.options].forEach((opt,idx)=>{ if(idx===0) return; opt.disabled = opt.value!==sel.value && selected.includes(opt.value); }); }); }
+    function syncPlayerAvailability(){ const sels=[els.teamA1, els.teamA2, els.teamB1, els.teamB2]; const selected=sels.map(s=>s.value).filter(Boolean); sels.forEach((sel)=>{ [...sel.options].forEach((opt,idx)=>{ if(idx===0) return; opt.disabled = opt.value!==sel.value && selected.includes(opt.value); }); }); updateWinProbability(); }
+    function selectedTeamSelectors(){ const format = els.formatInput.value; return { teamA: format==='2v2' ? [els.teamA1, els.teamA2] : [els.teamA1], teamB: format==='2v2' ? [els.teamB1, els.teamB2] : [els.teamB1] }; }
+    function averageRating(selectors){ const lookup = new Map((latestLeaderboard||[]).map((p)=>[String(p.player_id || p.id || p.display_name || p.nickname || '').toLowerCase(), Number(p.rating || 1000)])); const ratings = selectors.map((sel)=>{ const v=String(sel.value||'').toLowerCase(); const label=String(sel.options?.[sel.selectedIndex]?.textContent||'').toLowerCase(); return lookup.get(v) || lookup.get(label) || 1000; }); return ratings.length ? ratings.reduce((a,b)=>a+b,0) / ratings.length : 1000; }
+    function teamLabel(selectors, fallback){ const names = selectors.map((sel)=>String(sel.options?.[sel.selectedIndex]?.textContent || sel.value || '')).filter(Boolean); return names.length ? names.join(' & ') : fallback; }
+    function updateWinProbability(){ if(!els.winProbBar) return; const { teamA, teamB } = selectedTeamSelectors(); const idsA = teamA.map((sel)=>sel.value).filter(Boolean); const idsB = teamB.map((sel)=>sel.value).filter(Boolean); if(!idsA.length || !idsB.length || idsA.length !== teamA.length || idsB.length !== teamB.length){ els.winProbBar.textContent='Kies spelers om de winstkans te zien.'; return; } const avgA = averageRating(teamA); const avgB = averageRating(teamB); const pA = 1 / (1 + Math.pow(10, (avgB - avgA) / 400)); const pB = 1 - pA; els.winProbBar.innerHTML = `<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><span>${teamLabel(teamA,'Team A')} · <strong>${Math.round(pA*100)}%</strong></span><span>${teamLabel(teamB,'Team B')} · <strong>${Math.round(pB*100)}%</strong></span></div><div style="margin-top:8px;font-size:12px;opacity:.8">Inschatting op basis van gemiddelde ELO van de gekozen spelers.</div>`; }
     function syncCupsUI(){ const max=Number(cupsTarget||10); els.cupsA.max=String(max); els.cupsB.max=String(max); const info=document.getElementById('resultInfo'); if(info) info.innerHTML=`Team met <strong>${max} bekers raak</strong> wint automatisch.`; if(Number(els.cupsA.value||0)>max) els.cupsA.value=String(max); if(Number(els.cupsB.value||0)>max) els.cupsB.value=String(max); }
     function applyFormat(){
       const two = els.formatInput.value === '2v2';
@@ -233,7 +239,7 @@
         sb.rpc('get_beerpong_pussycup_ranking_public').catch(()=>({ data:null, error:null }))
       ]);
       if(error){ els.leaderboard.innerHTML='<div class="recent">Ranglijst laden mislukt.</div>'; return; }
-      const board = data?.leaderboard || data?.players || [];
+      const board = data?.leaderboard || data?.players || []; latestLeaderboard = Array.isArray(board) ? board : [];
       const recent = data?.recent_matches || [];
       const pussy = pussyResp && pussyResp.data ? (pussyResp.data.ranking || pussyResp.data?.get_beerpong_pussycup_ranking_public?.ranking || []) : [];
       const pussyMap = new Map((Array.isArray(pussy)?pussy:[]).map((row)=>[String(row.player_name||'').toLowerCase(), row]));
@@ -244,7 +250,7 @@
       els.lastUpdate.textContent = new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
       els.leaderboard.innerHTML = board.length ? board.map((p,i)=>{ const key=String(p.display_name || p.nickname || '').toLowerCase(); const pc=pussyMap.get(key); return `<div class="leader"><div class="rank">${i+1}</div><div><div class="name">${p.display_name || p.nickname || 'Onbekend'}</div><div class="meta">${p.matches_played || 0} potjes · ${p.wins || 0} winst · ${p.losses || 0} verlies${pc?` · Pussycup ${Number(pc.pussycup_pct||0).toFixed(1)}%`:''}</div></div><div class="rating">${Math.round(Number(p.rating||1000))}<div class="meta">ELO</div></div></div>`; }).join('') : '<div class="recent">Nog geen uitslagen.</div>';
       els.recentMatches.innerHTML = recent.length ? recent.map((m)=>`<div class="recent"><strong>${(m.winner_names||[]).join(' + ') || 'Onbekend'}</strong> won van ${(m.loser_names||[]).join(' + ') || 'Onbekend'}<div class="meta">${m.finished_at_local || m.finished_at || ''}</div></div>`).join('') : '<div class="recent">Nog geen gespeelde potjes.</div>';
-      els.pussycupRanking.innerHTML = (Array.isArray(pussy) && pussy.length) ? pussy.filter((row)=>Number(row.matches||0)>=4).map((row,idx)=>`<div class="recent"><strong>#${idx+1} · ${row.player_name||'Onbekend'}</strong><div class="meta">${Number(row.pussycup_pct||0).toFixed(1)}% pussycup · ${row.pussycup_hits||0} van ${row.matches||0} potjes</div></div>`).join('') : '<div class="recent">Nog geen pussycup-data.</div>';
+      els.pussycupRanking.innerHTML = (Array.isArray(pussy) && pussy.length) ? pussy.filter((row)=>Number(row.matches||0)>=4).map((row,idx)=>`<div class="recent"><strong>#${idx+1} · ${row.player_name||'Onbekend'}</strong><div class="meta">${Number(row.pussycup_pct||0).toFixed(1)}% pussycup · ${row.pussycup_hits||0} van ${row.matches||0} potjes</div></div>`).join('') : '<div class="recent">Nog geen pussycup-data.</div>'; updateWinProbability();
     }
     function updateSessionPill(){ els.sessionPill.textContent = getSessionToken() ? 'Spelersessie gevonden' : 'Niet ingelogd'; }
     function resetForm(){ [els.teamA1, els.teamA2, els.teamB1, els.teamB2].forEach(x=>x.value=''); els.cupsA.value='0'; els.cupsB.value='0'; els.pussycupA.checked=false; els.pussycupB.checked=false; els.notesInput.value=''; setStatus(''); }
