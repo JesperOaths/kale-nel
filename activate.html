@@ -5,8 +5,8 @@
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Account activeren</title><script>window.GEJAST_PAGE_VERSION='v582';</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Account activeren</title><script>window.GEJAST_PAGE_VERSION='v629';</script>
   <style>
     :root {
       --gold: #d4af37;
@@ -33,7 +33,7 @@
       align-items: center;
       min-height: 100vh;
       overflow-x: hidden;
-      background: linear-gradient(rgba(240,237,228,0.92), rgba(240,237,228,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed;
+      background: linear-gradient(rgba(240,237,228,0.92), rgba(240,237,228,0.92)), url('./wordtergejast.png') center/cover no-repeat scroll;
       color: var(--black);
     }
 
@@ -409,11 +409,11 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/activate.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v582"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-account-scope.js?v394"></script><script src="./gejast-account-links.js?v399"></script>
+  <script src="./gejast-config.js?v629"></script><script src="./gejast-family-rollout.js?v629"></script><script src="./gejast-account-scope.js?v629"></script><script src="./gejast-account-links.js?v629"></script>
 </head>
 <body>
   <div class="site-scene" aria-hidden="true">
-    <div class="brand-watermark"><img src="./dubbeleD-goud.png" alt="" /></div>
+    <div class="brand-watermark" data-version-watermark><img src="./dubbeleD-goud.png" alt="" /></div>
     <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" /></div>
   </div>
 
@@ -476,7 +476,7 @@
     </div>
   </div>
 
-  <div id="versionWatermark" class="site-credit-watermark" data-version-watermark>v581 · Made by Bruis</div>
+  <div id="versionWatermark" class="site-credit-watermark" data-version-watermark>v411 · Made by Bruis</div>
 
   <script>
     const CONFIG = window.GEJAST_CONFIG || {};
@@ -608,44 +608,6 @@
         { token: activationToken },
         { activation_token: activationToken }
       );
-    }
-    function collectActivationMeta() {
-      return {
-        user_agent: navigator.userAgent || '',
-        language: navigator.language || '',
-        languages: Array.isArray(navigator.languages) ? navigator.languages : [],
-        platform: navigator.userAgentData?.platform || navigator.platform || '',
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
-        screen: `${window.screen?.width || 0}x${window.screen?.height || 0}`,
-        viewport: `${window.innerWidth}x${window.innerHeight}`,
-        referrer: document.referrer || '',
-        page_url: location.href,
-        max_touch_points: navigator.maxTouchPoints || 0
-      };
-    }
-    async function logActivationMetaEvent(eventType, extra = {}) {
-      const payload = {
-        event_type_input: String(eventType || '').trim() || 'activation_link_event',
-        desired_name_input: String(activationContext?.display_name || document.getElementById('approvedName').textContent || '').trim() || null,
-        requester_email_input: String(activationContext?.requester_email || document.getElementById('approvedEmail').textContent || '').trim() || null,
-        site_scope_input: String(activationContext?.site_scope || (window.GEJAST_ACCOUNT_SCOPE && window.GEJAST_ACCOUNT_SCOPE.currentScope ? window.GEJAST_ACCOUNT_SCOPE.currentScope() : 'friends')).trim() || 'friends',
-        metadata_input: Object.assign({}, collectActivationMeta(), extra || {})
-      };
-      try {
-        if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
-          return await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('log_account_identity_event', payload);
-        }
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/log_account_identity_event`, {
-          method:'POST',
-          mode:'cors',
-          cache:'no-store',
-          headers: rpcHeaders(),
-          body: JSON.stringify(payload)
-        });
-        return await parseResponse(res);
-      } catch (_) {
-        return null;
-      }
     }
 
     async function activatePlayer() {
@@ -792,7 +754,6 @@
         setStatus('Activeren...');
         const data = await activatePlayer();
         if (data?.session_token) setSessionToken(data.session_token);
-        try { await logActivationMetaEvent('activation_completed', { activation_result: 'activated' }); } catch (_) {}
         setStatus('Klaar', 'ok', '<strong>Je account is geactiveerd.</strong><br>Je gaat terug naar de homepage.');
         window.setTimeout(() => {
           window.location.href = './index.html';
@@ -818,7 +779,6 @@
             setStatus('Account lijkt al geactiveerd. We proberen je direct in te loggen...');
             const loginData = await loginAfterAlreadyActivated(pin);
             if (loginData?.session_token) setSessionToken(loginData.session_token);
-            try { await logActivationMetaEvent('activation_completed', { activation_result: 'already_active_login' }); } catch (_) {}
             setStatus('Klaar', 'ok', '<strong>Dit account was al actief.</strong><br>Je bent nu direct ingelogd en gaat terug naar de homepage.');
             window.setTimeout(() => {
               window.location.href = './index.html';
@@ -842,10 +802,7 @@
     });
 
     loadActivationContext()
-      .then((data) => {
-        setContext(data);
-        return logActivationMetaEvent('activation_link_opened', { activation_result: 'link_opened' });
-      })
+      .then(setContext)
       .catch((err) => {
         const message = err instanceof Error ? err.message : 'Kon activatiegegevens niet laden';
         setStatus(friendlyActivationMessage(message), 'warn');
@@ -921,7 +878,7 @@
 })();
 </script>
 
-  <script src="./site-analytics.js?v371"></script>
+  <script src="./site-analytics.js?v629"></script>
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>

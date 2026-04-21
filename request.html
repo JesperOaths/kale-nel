@@ -7,11 +7,11 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Naam claimen</title>
-  <script>window.GEJAST_PAGE_VERSION='v490';</script>
+  <script>window.GEJAST_PAGE_VERSION='v629';</script>
   <style>
     :root { --gold: #9a8241; --black: #111; --bg: #f0ede4; }
     * { box-sizing: border-box; }
-    body { font-family: 'Inter', sans-serif; background: linear-gradient(rgba(240,237,228,0.92), rgba(240,237,228,0.92)), url('./wordtergejast.png') center/cover no-repeat fixed; margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    body { font-family: 'Inter', sans-serif; background: linear-gradient(rgba(240,237,228,0.92), rgba(240,237,228,0.92)), url('./wordtergejast.png') center/cover no-repeat scroll; margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
     .scene { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
     .brand-watermark { position: absolute; top: 10%; left: 5%; opacity: 0.05; width: 30vw; }
     .spinoza-shadow { position: absolute; bottom: 0; right: 0; opacity: 0.1; width: 40vw; }
@@ -34,7 +34,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/request.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v490"></script><script src="./gejast-family-rollout.js?v489"></script><script src="./gejast-scope.js?v489"></script><script src="./gejast-account-scope.js?v489"></script><script src="./gejast-account-links.js?v489"></script>
+  <script src="./gejast-config.js?v629"></script><script src="./gejast-family-rollout.js?v629"></script><script src="./gejast-account-scope.js?v629"></script><script src="./gejast-account-links.js?v629"></script>
 </head>
 <body>
   <div class="scene">
@@ -153,31 +153,6 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
         color_scheme: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
       };
     }
-    async function logAccountMetaEvent(eventType, payload = {}) {
-      const scope = window.GEJAST_ACCOUNT_SCOPE && window.GEJAST_ACCOUNT_SCOPE.currentScope ? window.GEJAST_ACCOUNT_SCOPE.currentScope() : 'friends';
-      const body = {
-        event_type_input: String(eventType || '').trim() || 'request_page_event',
-        desired_name_input: payload.desired_name || null,
-        requester_email_input: payload.requester_email || null,
-        site_scope_input: scope,
-        metadata_input: Object.assign({}, collectVisitorMeta(), payload.metadata || {})
-      };
-      try {
-        if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
-          return await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('log_account_identity_event', body);
-        }
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/log_account_identity_event`, {
-          method: 'POST',
-          mode: 'cors',
-          cache: 'no-store',
-          headers: rpcHeaders(),
-          body: JSON.stringify(body)
-        });
-        return await parseResponse(res);
-      } catch (_) {
-        return null;
-      }
-    }
 
     function getInviteToken() {
       try {
@@ -188,48 +163,37 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     }
 
     async function getRequestableNames() {
+      const attempts = [];
       const scope = window.GEJAST_ACCOUNT_SCOPE && window.GEJAST_ACCOUNT_SCOPE.currentScope ? window.GEJAST_ACCOUNT_SCOPE.currentScope() : 'friends';
-      const helper = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedRequestableNames === 'function'
-        ? window.GEJAST_CONFIG.fetchScopedRequestableNames
-        : null;
-      if (helper) {
-        try {
-          const names = await helper(scope);
-          if (Array.isArray(names) && names.length) return names;
-        } catch (_) {}
-      }
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names_by_pin_scoped`, {
-          method: 'POST',
-          mode: 'cors',
-          cache: 'no-store',
-          headers: rpcHeaders(),
-          body: JSON.stringify({ site_scope_input: scope })
-        });
-        const data = await parseResponse(res);
-        const names = uniqueNames(normalizeRequestableNamesPayload(data));
+        const data = window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function'
+          ? await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('get_requestable_names', {})
+          : await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_requestable_names`, {
+              method: "POST", mode: "cors", cache: "no-store", headers: rpcHeaders(), body: JSON.stringify({})
+            }).then(parseResponse);
+        let names = uniqueNames(normalizeRequestableNamesPayload(data));
+        if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, scope);
         if (names.length) return names;
-      } catch (_) {}
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope&order=display_name.asc&limit=400`, {
-          method: 'GET',
-          mode: 'cors',
-          cache: 'no-store',
-          headers: rpcHeaders()
-        });
-        const rows = await parseResponse(res);
-        const names = uniqueNames((Array.isArray(rows) ? rows : []).filter((row) => {
-          const rowScope = String(row?.site_scope || scope || 'friends').trim().toLowerCase() === 'family' ? 'family' : 'friends';
-          const status = String(row?.status || '').trim().toLowerCase();
-          return rowScope === scope && !['active', 'activated', 'claimed', 'claim_complete'].includes(status);
-        }).map((row) => row?.display_name || row?.slug || ''));
-        if (names.length && window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.writeScopedNameCache === 'function') {
-          window.GEJAST_CONFIG.writeScopedNameCache('request_names', scope, names);
-        }
-        return names;
-      } catch (_) {
-        return [];
+        attempts.push('rpc-empty');
+      } catch (err) {
+        attempts.push(err instanceof Error ? err.message : 'rpc-failed');
       }
+
+      try {
+        const url = `${SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope&status=eq.available&order=display_name.asc`;
+        const res = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-store', headers: rpcHeaders() });
+        const data = await parseResponse(res);
+        let rows = Array.isArray(data) ? data : [];
+        rows = rows.filter((row) => !row?.site_scope || String(row.site_scope).toLowerCase() === scope);
+        let names = uniqueNames(normalizeRequestableNamesPayload(rows));
+        if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, scope);
+        if (names.length) return names;
+        attempts.push('rest-empty');
+      } catch (err) {
+        attempts.push(err instanceof Error ? err.message : 'rest-failed');
+      }
+
+      throw new Error(attempts.join(' | ') || 'Kon namen niet laden');
     }
 
     async function requestClaim() {
@@ -239,16 +203,6 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
 
       if (!desiredName) throw new Error("Kies eerst een naam");
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requesterEmail)) throw new Error("Vul een geldig e-mailadres in");
-      try {
-        await logAccountMetaEvent('request_claim_submitted', {
-          desired_name: desiredName,
-          requester_email: requesterEmail,
-          metadata: {
-            requester_note_present: !!requesterNote,
-            invite_token_present: !!getInviteToken()
-          }
-        });
-      } catch (_) {}
       
       if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
         return await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('request_claim_action', {
@@ -274,14 +228,6 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     }
 
     async function load() {
-      const scope = window.GEJAST_ACCOUNT_SCOPE && window.GEJAST_ACCOUNT_SCOPE.currentScope ? window.GEJAST_ACCOUNT_SCOPE.currentScope() : 'friends';
-      try { await logAccountMetaEvent('request_page_opened', { metadata: { page: 'request.html' } }); } catch (_) {}
-      try {
-        const cached = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.readScopedNameCache === 'function'
-          ? window.GEJAST_CONFIG.readScopedNameCache('request_names', scope)
-          : null;
-        if (cached && Array.isArray(cached.names) && cached.names.length) fillNameSelect(cached.names);
-      } catch (_) {}
       try {
         const names = await getRequestableNames();
         fillNameSelect(names);
@@ -340,7 +286,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     load();
   </script>
 
-  <div class="site-credit-watermark" data-version-watermark>v490 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v435 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
@@ -385,11 +331,15 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
   async function fetchMyName(token){
     if (!token || !SUPABASE_URL || !SUPABASE_KEY) return '';
     const payload = JSON.stringify({ session_token: token });
-    try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_public_state`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: payload });
-      const data = await res.json().catch(()=>null);
-      if (res.ok) return data?.my_name || data?.display_name || data?.player_name || '';
-    } catch {}
+    for (const rpc of ['get_public_state','get_gejast_homepage_state','get_jas_app_state']){
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${rpc}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: payload });
+        const data = await res.json().catch(()=>null);
+        if (!res.ok) continue;
+        const name = data?.my_name || data?.display_name || data?.player_name || '';
+        if (name) return name;
+      } catch {}
+    }
     return '';
   }
   function show(name){ nameEl.textContent = name; box.classList.add('is-visible'); }
@@ -404,18 +354,7 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
 })();
 </script>
 
-  <script>
-  (function(){
-    function loadAnalytics(){
-      const script = document.createElement('script');
-      script.src = './site-analytics.js?v435';
-      script.async = true;
-      document.body.appendChild(script);
-    }
-    if ('requestIdleCallback' in window) requestIdleCallback(loadAnalytics, { timeout: 2500 });
-    else setTimeout(loadAnalytics, 1500);
-  })();
-  </script>
+  <script src="./site-analytics.js?v629"></script>
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
