@@ -212,8 +212,8 @@
       }
     }
 
-    const isParticipant = !!(viewer?.player_id || viewer?.display_name || viewer?.player_name || viewer?.seat || viewer?.seat_index);
-    if (phase !== 'lobby' && game?.id && isParticipant && !autoLiveRedirectDone) {
+    const hasParticipantSession = !!sessionToken();
+    if (phase !== 'lobby' && game?.id && hasParticipantSession && !autoLiveRedirectDone) {
       autoLiveRedirectDone = true;
       setStatus('Match gestart. Je gaat door naar de live tafel…', false);
       setTimeout(() => { window.location.href = liveHref(game.id); }, 450);
