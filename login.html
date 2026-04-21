@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Inloggen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v615';</script>
+  <script>window.GEJAST_PAGE_VERSION='v620';</script>
   <style>
     :root { --gold: #9a8241; --dark-bg: #111; --card-bg: #f9f7f2; --line: rgba(0,0,0,0.08); }
     * { box-sizing: border-box; }
@@ -48,7 +48,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/login.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v615"></script><script src="./gejast-account-scope.js?v615"></script><script src="./gejast-account-links.js?v615"></script><script src="./gejast-login-names-fallback.js?v615"></script>
+  <script src="./gejast-config.js?v620"></script><script src="./gejast-account-scope.js?v620"></script><script src="./gejast-account-links.js?v620"></script><script src="./gejast-login-names-fallback.js?v620"></script>
 </head>
 <body>
 
@@ -236,9 +236,11 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       loginNamesRequest = (async () => {
         try {
           const scope = new URLSearchParams(window.location.search).get('scope') === 'family' ? 'family' : 'friends';
-          const helper = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedActivePlayerNames === 'function'
-            ? window.GEJAST_CONFIG.fetchScopedActivePlayerNames
-            : null;
+          const helper = window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.getActivatedPlayerNamesForScope === 'function'
+            ? window.GEJAST_CONFIG.getActivatedPlayerNamesForScope
+            : (window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedActivePlayerNames === 'function'
+              ? window.GEJAST_CONFIG.fetchScopedActivePlayerNames
+              : null);
           if (helper) {
             const names = uniqueNames(await helper(scope));
             if (names.length) return { names: rememberLoginNames(names), source: 'scoped-helper' };
@@ -600,7 +602,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
 })();
 </script>
 
-  <script src="./site-analytics.js?v615"></script>
+  <script src="./site-analytics.js?v620"></script>
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
