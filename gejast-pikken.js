@@ -235,10 +235,15 @@
   function stopFeedPolling(){ if(UI.feedTimer){ clearInterval(UI.feedTimer); UI.feedTimer = null; } }
 
   async function createLobby(){
+    const token = sessionToken();
+    if(!token){
+      resetLobbyState('Jij bent niet ingelogd. Log opnieuw in en probeer het daarna nog eens.');
+      return;
+    }
     setStatus('Lobby maken…', false);
     const mode = qs('#pkPenaltyMode')?.value || 'wrong_loses';
     const startDice = Number(qs('#pkStartDice')?.value || 6);
-    const out = await rpc('pikken_create_lobby_scoped', { session_token: sessionToken() || null, site_scope_input: getScope(), config_input: { penalty_mode: mode, start_dice: startDice } });
+    const out = await rpc('pikken_create_lobby_scoped', { session_token: token, site_scope_input: getScope(), config_input: { penalty_mode: mode, start_dice: startDice } });
     UI.gameId = out.game_id; setParticipantToken(UI.gameId, true);
     if (out?.lobby_code) rememberLobbyCode(out.lobby_code);
     history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(getScope())}`);
@@ -246,11 +251,16 @@
     loadDiscoverFeeds();
   }
   async function joinLobby(){
+    const token = sessionToken();
+    if(!token){
+      resetLobbyState('Jij bent niet ingelogd. Log opnieuw in en probeer het daarna nog eens.');
+      return;
+    }
     const code = String(qs('#pkJoinCode')?.value||'').trim().toUpperCase();
     if(!code) return setStatus('Vul een lobby code in.', true);
     rememberLobbyCode(code);
     setStatus('Lobby joinen…', false);
-    const out = await rpc('pikken_join_lobby_scoped', { session_token: sessionToken() || null, site_scope_input: getScope(), lobby_code_input: code });
+    const out = await rpc('pikken_join_lobby_scoped', { session_token: token, site_scope_input: getScope(), lobby_code_input: code });
     UI.gameId = out.game_id; setParticipantToken(UI.gameId, true);
     history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(getScope())}`);
     startPolling();

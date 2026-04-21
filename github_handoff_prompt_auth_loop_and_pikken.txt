@@ -1,0 +1,40 @@
+﻿Use only the latest GitHub repo files, not any old local folder snapshots.
+
+Priority issues to inspect and preserve in your implementation:
+1. Login/session persistence must be stable across mobile, desktop, and PWA-style reloads.
+2. The site must not get stuck in a login loop where the user logs in, reaches index.html, and is then kicked back out to login.html repeatedly.
+3. Pikken must recognize a valid logged-in player session when creating or joining a lobby.
+4. Pikken should not fall into a stale "Pikken game niet gevonden" state after an auth/session failure.
+5. Do not remove approved features without explicit confirmation.
+
+Known failure pattern:
+- login.html can set a valid player session token
+- index.html or its gate logic can behave as if the user is logged out
+- after a partial page load, the user gets kicked back to login
+- on Pikken, create/join lobby can report "Jij bent niet ingelogd" even though the user just logged in
+- stale remembered game ids can then surface as "Pikken game niet gevonden"
+
+What the current patch does:
+- normalizes player-session storage so the shared session helper mirrors the token across localStorage and sessionStorage
+- stops the lightweight home gate from auto-destroying sessions based on soft verification alone
+- makes index.html use the shared player-session getter/clearer instead of a stale localStorage-only helper
+- stops login.html from clearing the token when a best-effort touch-session call fails
+- makes Pikken create/join refuse early with a clear message when the session token is missing, instead of sending a null token and then cascading into a stale game state
+
+Files involved in the fix:
+- gejast-config.js
+- gejast-home-gate.js
+- index.html
+- login.html
+- gejast-pikken.js
+- repo/gejast-home-gate.js
+- repo/gejast-pikken.js
+
+What to verify after applying:
+- login survives refresh and landing on index.html
+- login survives slow/mobile load instead of bouncing back to login.html
+- Pikken create lobby works immediately after login
+- Pikken join lobby works immediately after login
+- stale/deleted remembered lobbies no longer trap the UI in "game not found"
+
+If you make further changes, keep the shared session logic consistent across all pages. Avoid one page reading only localStorage while another page reads both localStorage and sessionStorage.

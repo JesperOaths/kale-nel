@@ -101,8 +101,7 @@
         redirectHome();
         return;
       }
-      clearTokens();
-      redirectHome();
+      return;
     }).catch(function(){
       /* transient verification failures should not destroy a still-valid session */
     });

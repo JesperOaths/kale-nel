@@ -109,6 +109,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     const SESSION_KEYS = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.PLAYER_SESSION_KEYS) || ["jas_session_token_v11","jas_session_token_v10"];
     const LOGIN_NAMES_CACHE_PREFIX = 'gejast_login_names_cache_v501:';
     const RPC_TIMEOUT_MS = Number((window.GEJAST_CONFIG && (window.GEJAST_CONFIG.LOGIN_NAME_TIMEOUT_MS || window.GEJAST_CONFIG.LOGIN_RPC_TIMEOUT_MS || window.GEJAST_CONFIG.RPC_TIMEOUT_MS)) || 7000);
+    const LOGIN_SUBMIT_TIMEOUT_MS = Number((window.GEJAST_CONFIG && (window.GEJAST_CONFIG.LOGIN_SUBMIT_TIMEOUT_MS || window.GEJAST_CONFIG.LOGIN_RPC_TIMEOUT_MS || window.GEJAST_CONFIG.RPC_TIMEOUT_MS)) || 15000);
     window.localValidation = window.localValidation || function(){ return true; };
 
     function rpcHeaders() { return { apikey: SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json", Accept: "application/json" }; }
@@ -120,7 +121,13 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       return data;
     }
     function getSessionToken() { if(window.GEJAST_CONFIG && window.GEJAST_CONFIG.getPlayerSessionToken) return window.GEJAST_CONFIG.getPlayerSessionToken(); for (const key of SESSION_KEYS){ const v=localStorage.getItem(key)||sessionStorage.getItem(key); if(v) return v; } return ""; }
-    function setSessionToken(token) { for (const key of SESSION_KEYS){ localStorage.removeItem(key); sessionStorage.removeItem(key); } localStorage.setItem(SESSION_KEY, token); sessionStorage.setItem(SESSION_KEY, token); }
+    function setSessionToken(token) {
+      if(window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.setPlayerSessionToken === 'function') return window.GEJAST_CONFIG.setPlayerSessionToken(token);
+      for (const key of SESSION_KEYS){ localStorage.removeItem(key); sessionStorage.removeItem(key); }
+      localStorage.setItem(SESSION_KEY, token);
+      sessionStorage.setItem(SESSION_KEY, token);
+      return token;
+    }
     function clearSessionToken() { if(window.GEJAST_CONFIG && window.GEJAST_CONFIG.clearPlayerSessionTokens) return window.GEJAST_CONFIG.clearPlayerSessionTokens(); for (const key of SESSION_KEYS){ localStorage.removeItem(key); sessionStorage.removeItem(key); } }
     function setStatus(message = '', tone = 'info') {
       const box = document.getElementById('statusBox');
@@ -197,6 +204,26 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       if (/sessions_player_id_key/i.test(raw)) return 'Er stond nog een oude spelsessie open voor deze gebruiker. Probeer opnieuw; de v84 loginpatch vervangt zo\'n oude sessie nu automatisch.';
       if (/cycle_key/i.test(raw)) return 'De weekstatus kon niet worden geladen door een databasefout in de stemcyclus. De namenlijst hoort wel zichtbaar te blijven na de v84 bundle + SQL-patch.';
       return raw;
+    }
+    async function fetchRpcWithTimeout(url, payload, timeoutMs) {
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timer = controller ? setTimeout(() => { try { controller.abort(); } catch (_) {} }, Math.max(4000, Number(timeoutMs || LOGIN_SUBMIT_TIMEOUT_MS))) : null;
+      try {
+        const res = await fetch(url, {
+          method:'POST',
+          mode:'cors',
+          cache:'no-store',
+          headers: rpcHeaders(),
+          body: JSON.stringify(payload || {}),
+          signal: controller ? controller.signal : undefined
+        });
+        return await parseResponse(res);
+      } catch (err) {
+        if (err && err.name === 'AbortError') throw new Error('RPC timeout');
+        throw err;
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
     }
     async function getPublicState() {
       if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
@@ -336,19 +363,21 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       ];
 
       if (window.GEJAST_ACCOUNT_SCOPE && typeof window.GEJAST_ACCOUNT_SCOPE.callRpcCompat === 'function') {
-        return await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('login_player', payloads);
+        try {
+          return await window.GEJAST_ACCOUNT_SCOPE.callRpcCompat('login_player', payloads);
+        } catch (err) {
+          const raw = String(err && err.message || err || '');
+          if (!/timeout|failed to fetch|schema cache|could not find the function|no function matches/i.test(raw)) throw err;
+        }
       }
 
       let lastErr = null;
       for (const payload of payloads) {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/login_player`, {
-          method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(payload)
-        });
         try {
-          return await parseResponse(res);
+          return await fetchRpcWithTimeout(`${SUPABASE_URL}/rest/v1/rpc/login_player`, payload, LOGIN_SUBMIT_TIMEOUT_MS);
         } catch (err) {
           const raw = String(err && err.message || '');
-          if (/schema cache|Could not find the function|no function matches/i.test(raw)) {
+          if (/schema cache|Could not find the function|no function matches|rpc timeout/i.test(raw)) {
             lastErr = err;
             continue;
           }
@@ -418,7 +447,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
       }
 
       if (getSessionToken()) {
-        try { await touchSession(); } catch { clearSessionToken(); }
+        try { await touchSession(); } catch { try{ window.GEJAST_CONFIG && window.GEJAST_CONFIG.touchPlayerActivity && window.GEJAST_CONFIG.touchPlayerActivity(); }catch(_){ } }
       }
     }
     document.getElementById('loginForm').addEventListener('submit', async (event) => {
