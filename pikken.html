@@ -7,10 +7,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken</title>
-  <script>window.GEJAST_PAGE_VERSION='v630';</script>
-  <script src="./gejast-config.js?v630"></script>
-  <script src="./gejast-home-gate.js?v630"></script>
-  <script src="./gejast-scope-context.js?v630"></script>
+  <script>window.GEJAST_PAGE_VERSION='v632';</script>
+  <script src="./gejast-config.js?v632"></script>
+  <script src="./gejast-home-gate.js?v632"></script>
+  <script src="./gejast-scope-context.js?v632"></script>
   <style>
     :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241;--shadow:0 18px 44px rgba(0,0,0,.08)}
     *{box-sizing:border-box}
@@ -124,21 +124,20 @@
         </section>
 
         <section class="panel">
-          <h2 style="margin:0 0 10px">Actieve tafel</h2>
-          <div id="pkMatchSummary" class="muted">Nog geen actieve Pikken-match op dit apparaat.</div>
-          <div id="pkWinProbBar" class="muted" style="margin-top:12px;padding:12px 14px;border:1px solid rgba(154,130,65,.24);border-radius:16px;background:linear-gradient(180deg,#fff7df,#f7f0df);font-weight:800;color:#554e43">Kies of join een lobby om de winstkans te zien.</div>
-
-          <div style="margin-top:12px">
-            <div class="muted">Huidig bod</div>
-            <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
-              <div style="font-size:22px;font-weight:900" id="pkBidText">—</div>
-              <div class="muted" id="pkBidBy"></div>
-            </div>
-          </div>
-
+          <h2 style="margin:0 0 10px">Lobbystatus</h2>
+          <div id="pkMatchSummary" class="muted">Kies een open lobby hieronder of maak er zelf één.</div>
           <div id="pkPlayers"></div>
 
-          <div id="pkBidPanel" style="display:none;margin-top:12px">
+          <div id="pkActivePlayArea" class="hidden">
+            <div style="margin-top:12px">
+              <div class="muted">Huidig bod</div>
+              <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
+                <div style="font-size:22px;font-weight:900" id="pkBidText">—</div>
+                <div class="muted" id="pkBidBy"></div>
+              </div>
+            </div>
+
+            <div id="pkBidPanel" style="display:none;margin-top:12px">
             <div class="muted" style="font-weight:900">Jouw beurt: bod plaatsen of afkeuren</div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
               <input id="pkBidCount" type="number" min="1" step="1" value="1" style="width:110px" />
@@ -164,6 +163,7 @@
           </div>
 
           <div id="pkReveal" style="margin-top:14px"></div>
+          </div>
 
           <div class="sticky-lobby-bar hidden" id="pkLobbySticky">
             <div class="sticky-lobby-meta">
@@ -186,8 +186,8 @@
     </div>
   </div>
 
-  <script src="./pikken-dice-canvas.js?v630"></script>
-  <script src="./gejast-pikken.js?v630"></script>
+  <script src="./pikken-dice-canvas.js?v632"></script>
+  <script src="./gejast-pikken.js?v632"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 <div class="site-credit-watermark" data-version-watermark></div>
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>

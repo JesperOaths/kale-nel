@@ -1,8 +1,10 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
-  const PARTICIPANT_KEY = 'gejast_pikken_participant_v613';
-  const LAST_CODE_KEY = 'gejast_pikken_last_code_v613';
+  const PARTICIPANT_KEY = 'gejast_pikken_participant_v632';
+  const LAST_CODE_KEY = 'gejast_pikken_last_code_v632';
+  const FEED_CACHE_KEY = 'gejast_pikken_feeds_v632';
+  const FEED_CACHE_TTL_MS = 15000;
 
   function getScope(){
     try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
@@ -52,6 +54,37 @@
   function spectatorHref(gameId){ return `./pikken_spectator.html?client_match_id=${encodeURIComponent(String(gameId||''))}`; }
   function spectatorHrefForCode(code){ return `./pikken_spectator.html?lobby_code=${encodeURIComponent(String(code||'').trim().toUpperCase())}${getScope() === 'family' ? '&scope=family' : ''}`; }
   function setStatus(text, isError){ const el = qs('#pkStatus'); if(!el) return; el.textContent = text || ''; el.style.color = isError ? '#7f2f1d' : '#6b6257'; }
+  function phaseKind(raw){
+    const phase = String(raw || '').toLowerCase();
+    if (!phase || phase === 'lobby' || phase === 'waiting' || phase === 'ready' || phase === 'setup') return 'lobby';
+    if (phase === 'finished' || phase === 'ended') return 'finished';
+    return 'live';
+  }
+  function setActivePlayVisibility(show){
+    const area = qs('#pkActivePlayArea');
+    if (area) area.classList.toggle('hidden', !show);
+  }
+  function readFeedCache(){
+    try {
+      const raw = sessionStorage.getItem(FEED_CACHE_KEY) || localStorage.getItem(FEED_CACHE_KEY) || '';
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || !parsed.at || (Date.now() - Number(parsed.at)) > FEED_CACHE_TTL_MS) return null;
+      return parsed;
+    } catch (_) { return null; }
+  }
+  function writeFeedCache(payload){
+    const packet = JSON.stringify(Object.assign({ at: Date.now() }, payload || {}));
+    try { sessionStorage.setItem(FEED_CACHE_KEY, packet); } catch (_) {}
+    try { localStorage.setItem(FEED_CACHE_KEY, packet); } catch (_) {}
+  }
+  async function withTimeout(promise, ms){
+    let timer = null;
+    return await Promise.race([
+      promise,
+      new Promise((_, reject)=>{ timer = setTimeout(()=>reject(new Error('timeout')), ms); })
+    ]).finally(()=>{ if (timer) clearTimeout(timer); });
+  }
   function setChip(text){ const el = qs('#pkStatusChip'); if (el) el.textContent = text || 'Lobby'; }
 
   function sortDiceFaces(dice){ return (Array.isArray(dice) ? dice : []).map((n)=>Number(n || 0)).filter(Boolean).sort((a,b)=>((a===1?7:a)-(b===1?7:b))); }
@@ -86,76 +119,32 @@
     return img;
   }
 
-
-  const PIKKEN_RATINGS = { map:new Map(), loaded:false };
-  function nameKey(value){ return String(value || '').trim().toLowerCase(); }
-  async function fetchPikkenRatings(){
-    if (PIKKEN_RATINGS.loaded && PIKKEN_RATINGS.map.size) return PIKKEN_RATINGS.map;
-    const payloads = [
-      ['get_pikken_ladder_public_scoped', { site_scope_input: getScope() }],
-      ['get_pikken_ladder_public', {}],
-      ['get_pikken_stats_scoped', { site_scope_input: getScope() }]
-    ];
-    for (const [rpcName, payload] of payloads){
-      try {
-        const raw = await rpc(rpcName, payload);
-        const rows = Array.isArray(raw?.ladder) ? raw.ladder : (Array.isArray(raw?.leaderboard) ? raw.leaderboard : (Array.isArray(raw) ? raw : []));
-        const map = new Map();
-        rows.forEach((row)=>{
-          const key = nameKey(row?.player_name || row?.display_name || row?.nickname || row?.name || '');
-          if (!key) return;
-          map.set(key, Number(row?.elo_rating || row?.rating || row?.best_rating || 1000) || 1000);
-        });
-        if (map.size) { PIKKEN_RATINGS.map = map; PIKKEN_RATINGS.loaded = true; return map; }
-      } catch (_) {}
-    }
-    PIKKEN_RATINGS.loaded = true;
-    return PIKKEN_RATINGS.map;
-  }
-  function renderWinProbability(game, players){
-    const bar = qs('#pkWinProbBar');
-    if (!bar) return;
-    const phase = String(game?.state?.phase || 'lobby');
-    const pool = (Array.isArray(players) ? players : []).filter((p)=>{
-      if (phase === 'lobby') return true;
-      return !!(p?.alive || p?.dice_count > 0);
-    });
-    if (pool.length < 2) {
-      bar.textContent = 'Kies of join een lobby om de winstkans te zien.';
-      return;
-    }
-    const rows = pool.map((player)=>({
-      name: String(player?.name || player?.player_name || 'Speler').trim(),
-      rating: Number(PIKKEN_RATINGS.map.get(nameKey(player?.name || player?.player_name || '')) || 1000) || 1000
-    }));
-    const total = rows.reduce((sum, row)=>sum + Math.max(100, row.rating), 0) || (rows.length * 1000);
-    bar.innerHTML = rows.map((row)=>{
-      const pct = Math.round((Math.max(100,row.rating) / total) * 1000) / 10;
-      return `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><span>${esc(row.name)}</span><strong>${pct}% · ELO ${Math.round(row.rating)}</strong></div>`;
-    }).join('') + '<div style="margin-top:8px;font-size:12px;opacity:.8">Schatting op basis van huidige Pikken-ELO van de spelers in deze lobby.</div>';
-  }
-
-  const UI = { gameId:'', lastStateVersion:-1, pollTimer:null, lastPlayers:[], feedTimer:null };
+  const UI = { gameId:'', lastStateVersion:-1, pollTimer:null, lastPlayers:[], feedTimer:null, feedBusy:false, optimisticLobby:false, optimisticHost:false };
+  let pollingBusy = false;
   let autoLiveRedirectDone = false;
 
   function renderMatchSummary(game, viewer, totals){
     const el = qs('#pkMatchSummary');
     if (!el) return;
+    const phase = phaseKind(game?.state?.phase || game?.status || '');
     if (!(game?.id || UI.gameId)) {
-      el.textContent = 'Nog geen actieve Pikken-match op dit apparaat.';
+      el.textContent = 'Kies een open lobby hieronder of maak er zelf één.';
       return;
     }
-    const phase = String(game?.state?.phase || 'lobby');
+    const lobbyCode = String(game?.lobby_code || '').trim();
     const roundNo = Number(game?.state?.round_no || 0);
     const seat = Number(viewer?.seat || viewer?.seat_index || 0);
-    const lobbyCode = String(game?.lobby_code || '').trim();
+    if (phase === 'lobby') {
+      el.textContent = `${lobbyCode ? `Code ${lobbyCode} · ` : ''}lobby open${seat ? ` · jij zit op stoel ${seat}` : ''}. Ready/unready en host-acties staan onderaan vast in beeld.`;
+      return;
+    }
     el.textContent = `${lobbyCode ? `Code ${lobbyCode} · ` : ''}${phase}${roundNo ? ` · ronde ${roundNo}` : ''}${seat ? ` · stoel ${seat}` : ''}${totals?.current_total ? ` · ${Number(totals.current_total || 0)} dobbelstenen actief` : ''}`;
   }
 
   function renderLobbyControls(game, viewer){
-    const phase = String(game?.state?.phase || 'lobby');
+    const phase = phaseKind(game?.state?.phase || game?.status || '');
     const inLobby = !!(game?.id || UI.gameId) && phase === 'lobby';
-    const isHost = !!viewer?.is_host;
+    const isHost = inLobby ? (!!viewer?.is_host || UI.optimisticHost) : false;
     const isReady = !!viewer?.is_ready;
     const createWrap = qs('#pkCreateWrap');
     const joinWrap = qs('#pkJoinWrap');
@@ -182,6 +171,7 @@
     if (leaveBtn) leaveBtn.textContent = 'Verlaat lobby';
     if (destroyBtn) destroyBtn.classList.toggle('hidden', !(inLobby && isHost));
     if (startBtn) startBtn.classList.toggle('hidden', !(inLobby && isHost));
+    setActivePlayVisibility(phase === 'live');
   }
 
   function feedCardMarkup(item, mode){
@@ -210,29 +200,40 @@
   }
 
   async function loadDiscoverFeeds(){
-    try { await rpcVariants('pikken_cleanup_idle_lobbies_v621', [{}]); } catch (_) {}
+    if (UI.feedBusy) return;
+    UI.feedBusy = true;
     try {
-      const rows = await rpcFirst([
+      const cached = readFeedCache();
+      if (cached) {
+        renderLobbyFeed(Array.isArray(cached.lobbies) ? cached.lobbies : []);
+        renderLiveFeed(Array.isArray(cached.live) ? cached.live : []);
+      }
+      try { rpcVariants('pikken_cleanup_idle_lobbies_v621', [{}]).catch(()=>{}); } catch (_) {}
+      const lobbyPromise = withTimeout(rpcFirst([
         'get_pikken_open_lobbies_public_scoped',
         'get_pikken_open_lobbies_public',
         'list_pikken_open_lobbies_public_scoped',
         'list_pikken_open_lobbies_public'
-      ], { site_scope_input: getScope(), session_token: sessionToken() || null });
-      const list = Array.isArray(rows) ? rows : (Array.isArray(rows?.rows) ? rows.rows : (Array.isArray(rows?.items) ? rows.items : []));
-      renderLobbyFeed(list);
-    } catch (_) {
-      renderLobbyFeed([]);
-    }
-    try {
-      const rows = await rpcFirst(['get_live_match_summaries_scoped','get_live_match_summaries'], {
+      ], { site_scope_input: getScope(), session_token: sessionToken() || null }), 2500)
+        .then((rows)=>{
+          const list = Array.isArray(rows) ? rows : (Array.isArray(rows?.rows) ? rows.rows : (Array.isArray(rows?.items) ? rows.items : []));
+          renderLobbyFeed(list);
+          return list;
+        }).catch((_)=>{ if (!cached) renderLobbyFeed([]); return Array.isArray(cached?.lobbies) ? cached.lobbies : []; });
+      const livePromise = withTimeout(rpcFirst(['get_live_match_summaries_scoped','get_live_match_summaries'], {
         session_token: sessionToken() || null,
         game_type_input: 'pikken',
         site_scope_input: getScope()
-      });
-      const list = Array.isArray(rows) ? rows : (Array.isArray(rows?.items) ? rows.items : (Array.isArray(rows?.rows) ? rows.rows : []));
-      renderLiveFeed(list.filter((item)=>String(item?.game_type || item?.type || 'pikken').toLowerCase().includes('pikken')));
-    } catch (_) {
-      renderLiveFeed([]);
+      }), 2500).then((rows)=>{
+        const list = Array.isArray(rows) ? rows : (Array.isArray(rows?.items) ? rows.items : (Array.isArray(rows?.rows) ? rows.rows : []));
+        const filtered = list.filter((item)=>String(item?.game_type || item?.type || 'pikken').toLowerCase().includes('pikken'));
+        renderLiveFeed(filtered);
+        return filtered;
+      }).catch((_)=>{ if (!cached) renderLiveFeed([]); return Array.isArray(cached?.live) ? cached.live : []; });
+      const [lobbies, live] = await Promise.all([lobbyPromise, livePromise]);
+      writeFeedCache({ lobbies, live });
+    } finally {
+      UI.feedBusy = false;
     }
   }
 
@@ -253,6 +254,8 @@
     const phase = String(game?.state?.phase || 'lobby');
     const myHand = extractMyHandFromActorState(state);
     UI.lastPlayers = players.slice();
+    UI.optimisticLobby = phaseKind(game?.state?.phase || game?.status || '') === 'lobby';
+    UI.optimisticHost = !!viewer?.is_host;
 
     setParticipantToken(game?.id || UI.gameId, phase && phase !== 'finished');
     setChip(phase);
@@ -265,7 +268,6 @@
     const totals = state?.dice_totals || {};
     renderMatchSummary(game, viewer, totals);
     renderLobbyControls(game, viewer);
-    renderWinProbability(game, players);
 
     const bid = game?.state?.bid && game.state.bid !== null ? game.state.bid : null;
     const bidTxt = bid ? (Number(bid.face)===1 ? `${bid.count} × pik` : `${bid.count} × ${bid.face}`) : '—';
@@ -325,7 +327,8 @@
   }
 
   async function loadAndRender(){
-    if(!UI.gameId){ setStatus('', false); setChip('Lobby'); return; }
+    if(!UI.gameId){ setStatus('', false); setChip('Lobby'); setActivePlayVisibility(false); return; }
+    pollingBusy = true;
     try{
       const state = await rpcVariants('pikken_get_state_scoped', payloadVariants({ game_id_input: UI.gameId }));
       const version = Number(state?.game?.state_version || -1);
@@ -333,17 +336,20 @@
       setStatus('', false);
     }catch(err){
       const message = normalizeError(err);
+      renderLobbyControls({ id:UI.gameId, state:{ phase:'lobby' } }, { is_host:UI.optimisticHost, is_ready:false });
       if (/niet gevonden|game not found|invalid input syntax for type uuid/i.test(String(message || ''))) {
         resetLobbyState('');
         return;
       }
       setStatus(message, true);
+    } finally {
+      pollingBusy = false;
     }
   }
 
-  function startPolling(){ stopPolling(); UI.pollTimer = setInterval(()=>{ if(!document.hidden) loadAndRender(); }, 1400); loadAndRender(); }
+  function startPolling(){ stopPolling(); UI.pollTimer = setInterval(()=>{ if(!document.hidden && !pollingBusy) loadAndRender(); }, 1400); loadAndRender(); }
   function stopPolling(){ if(UI.pollTimer){ clearInterval(UI.pollTimer); UI.pollTimer=null; } }
-  function startFeedPolling(){ stopFeedPolling(); UI.feedTimer = setInterval(()=>{ if(!document.hidden) loadDiscoverFeeds(); }, 12000); loadDiscoverFeeds(); }
+  function startFeedPolling(){ stopFeedPolling(); UI.feedTimer = setInterval(()=>{ if(!document.hidden) loadDiscoverFeeds(); }, 6000); loadDiscoverFeeds(); }
   function stopFeedPolling(){ if(UI.feedTimer){ clearInterval(UI.feedTimer); UI.feedTimer = null; } }
 
   async function createLobby(){
@@ -356,12 +362,12 @@
     const mode = qs('#pkPenaltyMode')?.value || 'wrong_loses';
     const startDice = Number(qs('#pkStartDice')?.value || 6);
     const out = await rpcVariants('pikken_create_lobby_scoped', payloadVariants({ config_input: { penalty_mode: mode, start_dice: startDice } }));
-    UI.gameId = out.game_id; setParticipantToken(UI.gameId, true);
+    UI.gameId = out.game_id; UI.optimisticLobby = true; UI.optimisticHost = true; setParticipantToken(UI.gameId, true);
+    renderLobbyControls({ id:UI.gameId, state:{ phase:'lobby' } }, { is_host:true, is_ready:false });
     if (out?.lobby_code) rememberLobbyCode(out.lobby_code);
     history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(getScope())}`);
     startPolling();
     loadDiscoverFeeds();
-    fetchPikkenRatings().then(()=>renderWinProbability(null, [])).catch(()=>renderWinProbability(null, []));
   }
   async function joinLobby(){
     const token = sessionToken();
@@ -374,7 +380,8 @@
     rememberLobbyCode(code);
     setStatus('Lobby joinen…', false);
     const out = await rpcVariants('pikken_join_lobby_scoped', payloadVariants({ lobby_code_input: code }));
-    UI.gameId = out.game_id; setParticipantToken(UI.gameId, true);
+    UI.gameId = out.game_id; UI.optimisticLobby = true; UI.optimisticHost = false; setParticipantToken(UI.gameId, true);
+    renderLobbyControls({ id:UI.gameId, state:{ phase:'lobby' } }, { is_host:false, is_ready:false });
     history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(getScope())}`);
     startPolling();
     loadDiscoverFeeds();
@@ -417,12 +424,12 @@
   function resetLobbyState(message){
     setParticipantToken(UI.gameId, false);
     UI.gameId = '';
+    UI.optimisticLobby = false;
+    UI.optimisticHost = false;
     stopPolling();
     history.replaceState(null,'',`pikken.html${getScope() === 'family' ? '?scope=family' : ''}`);
     renderMatchSummary(null, null, null);
     renderLobbyControls(null, {});
-    renderWinProbability(null, []);
-    renderWinProbability(null, []);
     const players = qs('#pkPlayers');
     if (players) players.innerHTML = '<div class="muted">Kies een open lobby hieronder of maak er zelf één.</div>';
     setStatus(message || '', false);
@@ -483,7 +490,6 @@
     if (joinInput && !joinInput.value) joinInput.value = lastLobbyCode();
     restoreParticipantGame();
     renderLobbyControls(null, {});
-    renderWinProbability(null, []);
     qs('#pkCreateLobbyBtn')?.addEventListener('click', ()=>createLobby().catch(e=>setStatus(normalizeError(e),true)));
     qs('#pkJoinLobbyBtn')?.addEventListener('click', ()=>joinLobby().catch(e=>setStatus(normalizeError(e),true)));
     qs('#pkReadyBtn')?.addEventListener('click', ()=>setReady(true).catch(e=>setStatus(normalizeError(e),true)));
@@ -509,7 +515,7 @@
     window.addEventListener('online', ()=>{ if(UI.gameId) loadAndRender(); loadDiscoverFeeds(); });
     document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ if(UI.gameId) loadAndRender(); loadDiscoverFeeds(); } });
     startFeedPolling();
-    if(UI.gameId){ setParticipantToken(UI.gameId, true); startPolling(); } else { setStatus('', false); setChip('Lobby'); renderMatchSummary(null, null, null); const players = qs('#pkPlayers'); if (players) players.innerHTML = '<div class="muted">Kies een open lobby hieronder of maak er zelf één.</div>'; }
+    if(UI.gameId){ setParticipantToken(UI.gameId, true); startPolling(); } else { setStatus('', false); setChip('Lobby'); renderMatchSummary(null, null, null); const players = qs('#pkPlayers'); if (players) players.innerHTML = '<div class="muted">Kies een open lobby hieronder of maak er zelf één.</div>'; setActivePlayVisibility(false); }
   }
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot, { once:true });

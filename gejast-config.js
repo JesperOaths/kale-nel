@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v630',
+    VERSION:'v632',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -223,7 +223,7 @@ function activatedNamesFromRows(rows, scope){
     if (!name) continue;
     weak.push(name);
     const status = rowStatusValue(row);
-    if (rowHasPinSignal(row) || ['active','approved','activated'].includes(status)) strong.push(name);
+    if (rowHasPinSignal(row) || ['active','approved','activated','legacy','legacy_active','legacy-approved','legacy_approved'].includes(status) || status.includes('legacy')) strong.push(name);
   }
   return { strong: uniquePersonNames(strong), weak: uniquePersonNames(weak) };
 }
