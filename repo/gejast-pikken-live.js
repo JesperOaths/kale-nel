@@ -3,6 +3,7 @@
   const liveSummary = window.GEJAST_LIVE_SUMMARY || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
   const BID_HISTORY_KEY = 'jas_pikken_bid_history_v501';
+  const LOCAL_DICE_KEY = 'jas_pikken_live_local_dice_v1';
 
   function getScope(){
     try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
@@ -62,6 +63,8 @@
   function loadLocalBidHistory(){ const store = bidHistoryStorage(); UI.bidHistory = Array.isArray(store[gameId]) ? store[gameId] : []; }
   function saveLocalBidHistory(){ try { const store = bidHistoryStorage(); store[gameId] = UI.bidHistory.slice(-50); localStorage.setItem(BID_HISTORY_KEY, JSON.stringify(store)); } catch (_) {} }
   function pushBidHistory(entry){ const key=`${entry.round_no}|${entry.seat}|${entry.label}`; if(UI.bidHistory.some((row)=>`${row.round_no}|${row.seat}|${row.label}`===key)) return; UI.bidHistory.push(entry); saveLocalBidHistory(); }
+  function localDiceStorage(){ try { return JSON.parse(localStorage.getItem(LOCAL_DICE_KEY) || '{}'); } catch (_) { return {}; } }
+  function saveLocalDiceStorage(store){ try { localStorage.setItem(LOCAL_DICE_KEY, JSON.stringify(store || {})); } catch (_) {} }
   function backendBidHistory(model){
     const raw=[]
       .concat(Array.isArray(model?.state?.game?.state?.bid_history)?model.state.game.state.bid_history:[])
@@ -118,6 +121,83 @@
     }
     return [];
   }
+  function inferViewerIdentity(model){
+    const viewer = model?.viewer || {};
+    const token = sessionToken() || '';
+    return {
+      seat: Number(viewer?.seat || viewer?.seat_index || 0),
+      playerId: Number(viewer?.player_id || 0),
+      name: String(viewer?.display_name || viewer?.player_name || '').trim().toLowerCase(),
+      tokenKey: token ? token.slice(0, 24) : ''
+    };
+  }
+  function localDiceEntryKey(model){
+    const identity = inferViewerIdentity(model);
+    return [getScope(), gameId || '', identity.playerId || '', identity.seat || '', identity.name || '', identity.tokenKey || ''].join('|');
+  }
+  function clearLocalDice(model){
+    try {
+      const store = localDiceStorage();
+      delete store[localDiceEntryKey(model)];
+      saveLocalDiceStorage(store);
+    } catch (_) {}
+  }
+  function loadLocalDiceEntry(model){
+    try {
+      const store = localDiceStorage();
+      const entry = store[localDiceEntryKey(model)];
+      return entry && typeof entry === 'object' ? entry : null;
+    } catch (_) { return null; }
+  }
+  function saveLocalDiceEntry(model, entry){
+    try {
+      const store = localDiceStorage();
+      store[localDiceEntryKey(model)] = entry;
+      saveLocalDiceStorage(store);
+    } catch (_) {}
+  }
+  function findViewerPlayer(model){
+    const identity = inferViewerIdentity(model);
+    const players = Array.isArray(model?.players) ? model.players : [];
+    return players.find((player)=>{
+      const seat = Number(player?.seat || player?.seat_index || 0);
+      const playerId = Number(player?.player_id || 0);
+      const name = String(player?.name || player?.player_name || '').trim().toLowerCase();
+      return (identity.seat && seat === identity.seat) || (identity.playerId && playerId === identity.playerId) || (identity.name && name === identity.name);
+    }) || null;
+  }
+  function inferMyDiceCount(model){
+    const backendDice = sortDiceFaces(model?.backendMyHand || model?.myHand || []);
+    if (backendDice.length) return backendDice.length;
+    const player = findViewerPlayer(model);
+    const playerCount = Number(player?.dice_count || player?.diceCount || player?.starting_dice || 0);
+    if (playerCount > 0) return playerCount;
+    const viewerCount = Number(model?.viewer?.dice_count || model?.viewer?.diceCount || 0);
+    if (viewerCount > 0) return viewerCount;
+    return 6;
+  }
+  function rollFaces(count){
+    return sortDiceFaces(Array.from({ length: Math.max(0, Number(count || 0)) }, ()=>1 + Math.floor(Math.random() * 6)));
+  }
+  function getLocalOrRolledDice(model, options){
+    const force = !!options?.force;
+    if (model?.mode !== 'actor' || !sessionToken()) return [];
+    const phase = String(model?.phase || '').toLowerCase();
+    if (phase === 'lobby') {
+      clearLocalDice(model);
+      return [];
+    }
+    const roundNo = Number(model?.roundNo || 0);
+    const diceCount = inferMyDiceCount(model);
+    if (diceCount <= 0) return [];
+    const existing = loadLocalDiceEntry(model);
+    if (!force && existing && Number(existing.roundNo || 0) === roundNo && Number(existing.count || 0) === diceCount && Array.isArray(existing.dice) && existing.dice.length === diceCount) {
+      return sortDiceFaces(existing.dice);
+    }
+    const dice = rollFaces(diceCount);
+    saveLocalDiceEntry(model, { roundNo, count: diceCount, dice, updatedAt: Date.now() });
+    return dice;
+  }
 
   function normalizeModel(source, presenceMap){
     if (source?.item) {
@@ -125,13 +205,22 @@
       const st=summary.live_state || summary || {};
       const players=Array.isArray(st.players)?st.players:[];
       const votes=Array.isArray(st.votes)?st.votes:[];
-      const model={ mode:'viewer', publicState:source, presenceMap, phase:String(st.phase || st.status || 'live'), roundNo:Number(st.round_no || 0), bid:st.bid || null, turnSeat:Number(st.current_turn_seat || st.turn_seat || 0), voteTurnSeat:Number(st.vote_turn_seat || 0), penaltyMode:st.penalty_mode, lobbyCode:st.lobby_code || '—', players, votes, viewer:{}, myHand:sortDiceFaces(st.my_hand || st.myHand || []), totals:st.dice_totals || {}, lastReveal:st.last_reveal || null, metaText: liveSummary.metaText ? liveSummary.metaText(source.item) : 'Live summary' };
+      const backendMyHand = sortDiceFaces(st.my_hand || st.myHand || []);
+      const model={ mode:'viewer', publicState:source, presenceMap, phase:String(st.phase || st.status || 'live'), roundNo:Number(st.round_no || 0), bid:st.bid || null, turnSeat:Number(st.current_turn_seat || st.turn_seat || 0), voteTurnSeat:Number(st.vote_turn_seat || 0), penaltyMode:st.penalty_mode, lobbyCode:st.lobby_code || '—', players, votes, viewer:{}, backendMyHand, myHand:backendMyHand, totals:st.dice_totals || {}, lastReveal:st.last_reveal || null, metaText: liveSummary.metaText ? liveSummary.metaText(source.item) : 'Live summary', usingLocalDice:false };
       model.turnSeat = fallbackTurnSeat(model);
       return model;
     }
     const state=source || {};
     const game=state.game || {};
-    const model={ mode:'actor', state, presenceMap, phase:String(game?.state?.phase || 'lobby'), roundNo:Number(game?.state?.round_no || 0), bid:game?.state?.bid || null, turnSeat:Number(game?.state?.current_turn_seat || game?.state?.turn_seat || 0), voteTurnSeat:Number(game?.state?.vote_turn_seat || 0), penaltyMode:game?.penalty_mode || game?.config?.penalty_mode, lobbyCode:game?.lobby_code || '—', players:Array.isArray(state.players) ? state.players : [], votes:Array.isArray(state.votes) ? state.votes : [], viewer:state.viewer || {}, myHand:extractMyHandFromActorState(state), totals:state.dice_totals || {}, lastReveal:game?.state?.last_reveal || null, metaText:`Live bijgewerkt om ${new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}` };
+    const backendMyHand = extractMyHandFromActorState(state);
+    const model={ mode:'actor', state, presenceMap, phase:String(game?.state?.phase || 'lobby'), roundNo:Number(game?.state?.round_no || 0), bid:game?.state?.bid || null, turnSeat:Number(game?.state?.current_turn_seat || game?.state?.turn_seat || 0), voteTurnSeat:Number(game?.state?.vote_turn_seat || 0), penaltyMode:game?.penalty_mode || game?.config?.penalty_mode, lobbyCode:game?.lobby_code || '—', players:Array.isArray(state.players) ? state.players : [], votes:Array.isArray(state.votes) ? state.votes : [], viewer:state.viewer || {}, backendMyHand, myHand:backendMyHand, totals:state.dice_totals || {}, lastReveal:game?.state?.last_reveal || null, metaText:`Live bijgewerkt om ${new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`, usingLocalDice:false };
+    if (!model.myHand.length) {
+      const localDice = getLocalOrRolledDice(model);
+      if (localDice.length) {
+        model.myHand = localDice;
+        model.usingLocalDice = true;
+      }
+    }
     model.turnSeat = fallbackTurnSeat(model);
     return model;
   }
@@ -150,8 +239,12 @@
     const wrap = qs('#myDiceBody'); const note = qs('#diceStateNote'); const rollBtn = qs('#rollBtn');
     if (!wrap || !note) return;
     const dice = sortDiceFaces(model.myHand || []);
-    note.textContent = dice.length ? 'Je actieve hand voor deze ronde.' : (String(model.phase || '').toLowerCase() === 'lobby' ? 'Wacht tot de lobby echt is gestart; daarna horen je dobbelstenen hier te verschijnen.' : 'Nog geen dobbelstenen zichtbaar in de state.');
-    if (rollBtn) { rollBtn.disabled = false; rollBtn.textContent = 'Ververs dobbelstenen'; }
+    const usingLocalDice = !!model.usingLocalDice;
+    note.textContent = dice.length ? (usingLocalDice ? 'Gesimuleerde lokale hand voor deze ronde. Gebruik herrol als de backend je dobbelstenen nog steeds niet toont.' : 'Je actieve hand voor deze ronde.') : (String(model.phase || '').toLowerCase() === 'lobby' ? 'Wacht tot de lobby echt is gestart; daarna horen je dobbelstenen hier te verschijnen.' : 'Nog geen dobbelstenen zichtbaar in de state.');
+    if (rollBtn) {
+      rollBtn.disabled = String(model.phase || '').toLowerCase() === 'lobby';
+      rollBtn.textContent = usingLocalDice || (!sortDiceFaces(model.backendMyHand || []).length && model.mode === 'actor') ? (dice.length ? 'Herrol dobbelstenen' : 'Rol dobbelstenen') : 'Ververs dobbelstenen';
+    }
     if (!dice.length) { wrap.innerHTML = '<div class="muted">Nog geen dobbelstenen zichtbaar. Dit wijst meestal op een backend-state gat: de hand komt nog niet mee of zit onder een andere sleutel.</div>'; return; }
     wrap.innerHTML = groupDice(dice).map((group)=>`<div class="dice-group"><div class="dice-group-head">${group.face === 1 ? 'pik' : group.face}</div><div class="dice-row">${group.dice.map((face)=>`<img class="die" src="./assets/pikken/dice-${Number(face)}.svg" alt="die ${Number(face)}">`).join('')}</div></div>`).join('');
   }
@@ -176,7 +269,17 @@
   async function act(name, payload){ await rpcVariants(name, payloadVariants(Object.assign({ game_id_input:gameId }, payload || {}))); await refresh(); }
   async function kickSeat(seat){ if(!seat) return; const player=(UI.currentState?.players || []).find((p)=>Number(p.seat || p.seat_index || 0)===Number(seat)); if(!player) return; if(!confirm(`Wil je ${player.name || player.player_name || 'deze speler'} uit de match gooien?`)) return; await rpcVariants('pikken_kick_player_scoped', [...payloadVariants({ game_id_input:gameId, seat_index_input:Number(seat), player_name_input: player?.name || player?.player_name || '' }), { session_token:sessionToken(), game_id_input:gameId, seat_index_input:Number(seat), seat_input:String(seat), target_seat_input: player?.name || player?.player_name || String(seat) }, { session_token_input:sessionToken(), game_id_input:gameId, seat_index_input:Number(seat), seat_input:String(seat), target_seat_input: player?.name || player?.player_name || String(seat) }]); await refresh(); }
 
-  const rollBtn = qs('#rollBtn'); if (rollBtn) rollBtn.addEventListener('click', ()=>{ refresh().catch((e)=>{ const meta=qs('#metaLine'); if(meta) meta.textContent = normalizeError(e); }); });
+  const rollBtn = qs('#rollBtn'); if (rollBtn) rollBtn.addEventListener('click', ()=>{
+    const model = UI.currentState;
+    if (model && model.mode === 'actor' && !sortDiceFaces(model.backendMyHand || []).length) {
+      const dice = getLocalOrRolledDice(model, { force:true });
+      model.myHand = dice;
+      model.usingLocalDice = !!dice.length;
+      renderModel(model);
+      return;
+    }
+    refresh().catch((e)=>{ const meta=qs('#metaLine'); if(meta) meta.textContent = normalizeError(e); });
+  });
   const reconnectBtn = qs('#reconnectBtn'); if (reconnectBtn) reconnectBtn.addEventListener('click', ()=>{ reconnectNow().catch(()=>{}); });
   const bidBtn = qs('#bidBtn'); if (bidBtn) bidBtn.addEventListener('click', ()=>{ const value = String(qs('#bidSelect')?.value || ''); if (!value.includes(':')) return; const [count, face] = value.split(':').map((n)=>Number(n || 0)); act('pikken_place_bid_scoped', { bid_count_input: count, bid_face_input: face }).catch((e)=>alert(normalizeError(e))); });
   const rejectBtn = qs('#rejectBtn'); if(rejectBtn) rejectBtn.addEventListener('click', ()=>act('pikken_reject_bid_scoped').catch((e)=>alert(normalizeError(e))));
