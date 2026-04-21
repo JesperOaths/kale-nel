@@ -205,9 +205,45 @@
     if (sortDiceFaces(model.backendMyHand || []).length) return false;
     return !getLocalOrRolledDice(model).length;
   }
-  function maybeThrowLocalDice(source){
+  function extractDicePayload(payload){
+    if (Array.isArray(payload)) return sortDiceFaces(payload);
+    return sortDiceFaces(payload?.dice_values || payload?.dice || payload?.my_hand || payload?.hand || payload?.row?.dice_values || payload?.data?.dice_values || []);
+  }
+  async function fetchMyRoundHand(){
+    if (!gameId || !sessionToken()) return [];
+    try {
+      const raw = await rpcVariants('pikken_get_my_hand_scoped', [
+        ...payloadVariants({ game_id_input: gameId }),
+        { game_id_input: gameId, session_token: sessionToken() || null, site_scope_input: getScope() },
+        { game_id_input: gameId, session_token_input: sessionToken() || null, site_scope_input: getScope() },
+        { game_id_input: gameId, session_token: sessionToken() || null, session_token_input: sessionToken() || null, site_scope_input: getScope() }
+      ]);
+      return extractDicePayload(raw);
+    } catch (_) {
+      return [];
+    }
+  }
+  async function throwDiceNow(source){
     const model = UI.currentState;
     if (!model || !canThrowThisRound(model)) return false;
+    try {
+      const raw = await rpcVariants('pikken_throw_hand_scoped', [
+        ...payloadVariants({ game_id_input: gameId }),
+        { game_id_input: gameId, session_token: sessionToken() || null, site_scope_input: getScope() },
+        { game_id_input: gameId, session_token_input: sessionToken() || null, site_scope_input: getScope() },
+        { game_id_input: gameId, session_token: sessionToken() || null, session_token_input: sessionToken() || null, site_scope_input: getScope() }
+      ]);
+      const diceFromDb = extractDicePayload(raw);
+      if (diceFromDb.length) {
+        model.backendMyHand = diceFromDb;
+        model.myHand = diceFromDb;
+        model.usingLocalDice = false;
+        renderModel(model);
+        const meta = qs('#metaLine');
+        if (meta) meta.textContent = source === 'shake' ? 'Dobbelstenen gegooid via schudden.' : 'Dobbelstenen gegooid.';
+        return true;
+      }
+    } catch (_) {}
     const dice = getLocalOrRolledDice(model, { force:true });
     if (!dice.length) return false;
     model.myHand = dice;
@@ -315,7 +351,7 @@
     const mc=qs('#mobileContext'); if(mc) mc.textContent=myTurn?'Kies een legale volgende bieding of keur af.':(myVoteTurn?'Stem zichtbaar met een duim.':(model.mode==='viewer'?'Spectator-modus. Probeer opnieuw verbinden als jij hier eigenlijk meespeelt.':'Volg de match live. Als je verbinding wegviel, probeer opnieuw verbinden.'));
     const bc=qs('#bidControls'); if(bc) bc.classList.toggle('hidden', !myTurn); const vc=qs('#voteControls'); if(vc) vc.classList.toggle('hidden', !myVoteTurn); const rejectBtn=qs('#rejectBtn'); if(rejectBtn) rejectBtn.disabled=!myTurn || !model.bid; const leaveBtn=qs('#leaveBtn'); if(leaveBtn) leaveBtn.classList.toggle('hidden', !(model.mode==='actor' && hasActorSession)); const destroyBtn=qs('#destroyBtn'); if(destroyBtn) destroyBtn.classList.toggle('hidden', !(model.mode==='actor' && !!model.viewer?.is_host));
   }
-  async function refresh(){ if(!gameId){ const meta=qs('#metaLine'); if(meta) meta.textContent='Geen game_id in URL.'; return; } await touchPresence(); const [actorState, publicState, presenceMap] = await Promise.all([loadActorState(), loadPublicState(), getPresenceMap()]); const source = actorState || publicState; if(!source) throw new Error('Geen Pikken-state gevonden.'); UI.currentState = normalizeModel(source, presenceMap || {}); renderModel(UI.currentState); }
+  async function refresh(){ if(!gameId){ const meta=qs('#metaLine'); if(meta) meta.textContent='Geen game_id in URL.'; return; } await touchPresence(); const [actorState, publicState, presenceMap] = await Promise.all([loadActorState(), loadPublicState(), getPresenceMap()]); const source = actorState || publicState; if(!source) throw new Error('Geen Pikken-state gevonden.'); UI.currentState = normalizeModel(source, presenceMap || {}); if(UI.currentState?.mode === 'actor' && !sortDiceFaces(UI.currentState.backendMyHand || []).length){ const serverDice = await fetchMyRoundHand(); if(serverDice.length){ UI.currentState.backendMyHand = serverDice; UI.currentState.myHand = serverDice; UI.currentState.usingLocalDice = false; } } renderModel(UI.currentState); }
   async function act(name, payload){ await rpcVariants(name, payloadVariants(Object.assign({ game_id_input:gameId }, payload || {}))); await refresh(); }
   async function kickSeat(seat){ if(!seat) return; const player=(UI.currentState?.players || []).find((p)=>Number(p.seat || p.seat_index || 0)===Number(seat)); if(!player) return; if(!confirm(`Wil je ${player.name || player.player_name || 'deze speler'} uit de match gooien?`)) return; await rpcVariants('pikken_kick_player_scoped', [...payloadVariants({ game_id_input:gameId, seat_index_input:Number(seat), player_name_input: player?.name || player?.player_name || '' }), { session_token:sessionToken(), game_id_input:gameId, seat_index_input:Number(seat), seat_input:String(seat), target_seat_input: player?.name || player?.player_name || String(seat) }, { session_token_input:sessionToken(), game_id_input:gameId, seat_index_input:Number(seat), seat_input:String(seat), target_seat_input: player?.name || player?.player_name || String(seat) }]); await refresh(); }
 
@@ -323,7 +359,7 @@
     if (typeof window.DeviceMotionEvent !== 'undefined' && typeof window.DeviceMotionEvent.requestPermission === 'function' && !UI.shakeArmed) {
       try { const result = await window.DeviceMotionEvent.requestPermission(); UI.shakeArmed = result === 'granted'; } catch (_) {}
     }
-    if (maybeThrowLocalDice('button')) return;
+    if (await throwDiceNow('button')) return;
     refresh().catch((e)=>{ const meta=qs('#metaLine'); if(meta) meta.textContent = normalizeError(e); });
   });
   const reconnectBtn = qs('#reconnectBtn'); if (reconnectBtn) reconnectBtn.addEventListener('click', ()=>{ reconnectNow().catch(()=>{}); });
@@ -367,6 +403,6 @@
     const now = Date.now();
     if (magnitude < 18 || now - UI.lastShakeAt < 1200) return;
     UI.lastShakeAt = now;
-    maybeThrowLocalDice('shake');
+    throwDiceNow('shake').catch(()=>{});
   });
 })();
