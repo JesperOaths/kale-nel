@@ -19,6 +19,26 @@
     return data && data[name] !== undefined ? data[name] : data;
   }
   async function rpcVariants(name, variants){ let lastErr = null; for (const payload of variants){ try { return await rpc(name, payload); } catch (err){ lastErr = err; } } throw lastErr || new Error('RPC mislukt.'); }
+  function payloadVariants(extra, options){
+    const base = Object.assign({}, extra || {});
+    const token = sessionToken() || null;
+    const includeScope = options?.includeScope !== false;
+    const scope = getScope();
+    const variants = [
+      Object.assign({}, base, includeScope ? { site_scope_input: scope } : {}, { session_token: token }),
+      Object.assign({}, base, includeScope ? { site_scope_input: scope } : {}, { session_token_input: token }),
+      Object.assign({}, base, { session_token: token }),
+      Object.assign({}, base, { session_token_input: token }),
+      Object.assign({}, base, includeScope ? { site_scope_input: scope, session_token: token, session_token_input: token } : { session_token: token, session_token_input: token })
+    ];
+    const seen = new Set();
+    return variants.filter((item)=>{
+      const key = JSON.stringify(item);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
   function qs(sel, root){ return (root || document).querySelector(sel); }
   function esc(v){ const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(v ?? '').replace(/[&<>"']/g,(m)=>map[m]); }
   function bidText(bid){ const count = Number(bid?.count || bid?.bid_count || 0); const face = Number(bid?.face || bid?.bid_face || 0); if (!count || !face) return '—'; return face === 1 ? `${count} × pik` : `${count} × ${face}`; }
@@ -54,8 +74,8 @@
   function mergeBidHistory(model){ const backend=backendBidHistory(model); if(backend.length){ UI.bidHistory=backend; saveLocalBidHistory(); return; } const currentBid=model.bid; const bidderSeat=Number(currentBid?.bidder_seat||currentBid?.seat||currentBid?.seat_index||0); const key=`${model.roundNo}|${bidderSeat}|${bidText(currentBid)}`; if(bidderSeat && currentBid && bidText(currentBid)!=='—' && key!==UI.lastSeenBidKey){ UI.lastSeenBidKey=key; pushBidHistory({ round_no:model.roundNo, seat:bidderSeat, label:bidText(currentBid) }); } }
 
   async function getPresenceMap(){ if(!gameId) return {}; try{ const raw=await rpcVariants('get_pikken_presence_public',[{ game_id_input: gameId },{ game_id_input: gameId, site_scope_input: getScope() }]); const rows=normalizeRows(raw); const map={}; rows.forEach((row)=>{ const key=String(row.player_name || '').trim().toLowerCase(); if(key) map[key]=row; }); return map; }catch(_){ return {}; } }
-  async function touchPresence(){ const token=sessionToken(); if(!token || !gameId) return; try{ await rpcVariants('pikken_touch_presence_scoped',[{ session_token: token, game_id_input: gameId, page_kind_input:'live', site_scope_input:getScope() },{ session_token: token, game_id_input: gameId, page_kind_input:'live' }]); }catch(_){ } }
-  async function releasePresence(){ const token=sessionToken(); if(!token || !gameId) return; try{ await rpcVariants('pikken_release_presence_scoped',[{ session_token: token, game_id_input: gameId, site_scope_input:getScope() },{ session_token: token, game_id_input: gameId }]); }catch(_){ } }
+  async function touchPresence(){ const token=sessionToken(); if(!token || !gameId) return; try{ await rpcVariants('pikken_touch_presence_scoped', payloadVariants({ game_id_input: gameId, page_kind_input:'live' })); }catch(_){ } }
+  async function releasePresence(){ const token=sessionToken(); if(!token || !gameId) return; try{ await rpcVariants('pikken_release_presence_scoped', payloadVariants({ game_id_input: gameId })); }catch(_){ } }
   async function reconnectNow(){
     const meta = qs('#metaLine');
     try {
@@ -68,7 +88,7 @@
       throw err;
     }
   }
-  async function loadActorState(){ const token=sessionToken(); if(!token || !gameId) return null; try{ return await rpcVariants('pikken_get_state_scoped',[{ session_token: token, game_id_input: gameId },{ session_token: token, game_id_input: gameId, site_scope_input:getScope() }]); }catch(_){ return null; } }
+  async function loadActorState(){ const token=sessionToken(); if(!token || !gameId) return null; try{ return await rpcVariants('pikken_get_state_scoped', payloadVariants({ game_id_input: gameId })); }catch(_){ return null; } }
   async function loadPublicState(){
     if(!gameId) return null;
     try { return await rpcVariants('pikken_get_live_state_public',[{ game_id_input: gameId, site_scope_input:getScope() },{ game_id_input: gameId }]); } catch (_) {}
@@ -80,7 +100,7 @@
     const viewer = state?.viewer || {};
     const players = Array.isArray(state?.players) ? state.players : [];
     const directCandidates = [
-      state?.my_hand, state?.myHand, viewer?.my_hand, viewer?.myHand, viewer?.hand, viewer?.dice, viewer?.dice_values,
+      state?.my_hand, state?.myHand, viewer?.my_hand, viewer?.myHand, viewer?.hand, viewer?.dice, viewer?.dice_values, viewer?.private_state?.dice, viewer?.private_state?.dice_values,
       state?.game?.state?.my_hand, state?.actor_state?.my_hand, state?.actor_state?.dice, state?.actor_state?.dice_values,
       state?.private_state?.my_hand, state?.private_state?.dice, state?.private_state?.dice_values
     ];
@@ -153,8 +173,8 @@
     const bc=qs('#bidControls'); if(bc) bc.classList.toggle('hidden', !myTurn); const vc=qs('#voteControls'); if(vc) vc.classList.toggle('hidden', !myVoteTurn); const rejectBtn=qs('#rejectBtn'); if(rejectBtn) rejectBtn.disabled=!myTurn || !model.bid; const leaveBtn=qs('#leaveBtn'); if(leaveBtn) leaveBtn.classList.toggle('hidden', !(model.mode==='actor' && hasActorSession)); const destroyBtn=qs('#destroyBtn'); if(destroyBtn) destroyBtn.classList.toggle('hidden', !(model.mode==='actor' && !!model.viewer?.is_host));
   }
   async function refresh(){ if(!gameId){ const meta=qs('#metaLine'); if(meta) meta.textContent='Geen game_id in URL.'; return; } await touchPresence(); const [actorState, publicState, presenceMap] = await Promise.all([loadActorState(), loadPublicState(), getPresenceMap()]); const source = actorState || publicState; if(!source) throw new Error('Geen Pikken-state gevonden.'); UI.currentState = normalizeModel(source, presenceMap || {}); renderModel(UI.currentState); }
-  async function act(name, payload){ await rpcVariants(name,[Object.assign({ session_token:sessionToken(), game_id_input:gameId }, payload || {}), Object.assign({ session_token:sessionToken(), game_id_input:gameId, site_scope_input:getScope() }, payload || {})]); await refresh(); }
-  async function kickSeat(seat){ if(!seat) return; const player=(UI.currentState?.players || []).find((p)=>Number(p.seat || p.seat_index || 0)===Number(seat)); if(!player) return; if(!confirm(`Wil je ${player.name || player.player_name || 'deze speler'} uit de match gooien?`)) return; await rpcVariants('pikken_kick_player_scoped',[{ session_token:sessionToken(), game_id_input:gameId, seat_index_input:Number(seat), site_scope_input:getScope() }, { session_token:sessionToken(), game_id_input:gameId, seat_index_input:Number(seat) }]); await refresh(); }
+  async function act(name, payload){ await rpcVariants(name, payloadVariants(Object.assign({ game_id_input:gameId }, payload || {}))); await refresh(); }
+  async function kickSeat(seat){ if(!seat) return; const player=(UI.currentState?.players || []).find((p)=>Number(p.seat || p.seat_index || 0)===Number(seat)); if(!player) return; if(!confirm(`Wil je ${player.name || player.player_name || 'deze speler'} uit de match gooien?`)) return; await rpcVariants('pikken_kick_player_scoped', [...payloadVariants({ game_id_input:gameId, seat_index_input:Number(seat), player_name_input: player?.name || player?.player_name || '' }), { session_token:sessionToken(), game_id_input:gameId, seat_index_input:Number(seat), seat_input:String(seat), target_seat_input: player?.name || player?.player_name || String(seat) }, { session_token_input:sessionToken(), game_id_input:gameId, seat_index_input:Number(seat), seat_input:String(seat), target_seat_input: player?.name || player?.player_name || String(seat) }]); await refresh(); }
 
   const rollBtn = qs('#rollBtn'); if (rollBtn) rollBtn.addEventListener('click', ()=>{ refresh().catch((e)=>{ const meta=qs('#metaLine'); if(meta) meta.textContent = normalizeError(e); }); });
   const reconnectBtn = qs('#reconnectBtn'); if (reconnectBtn) reconnectBtn.addEventListener('click', ()=>{ reconnectNow().catch(()=>{}); });
@@ -162,8 +182,8 @@
   const rejectBtn = qs('#rejectBtn'); if(rejectBtn) rejectBtn.addEventListener('click', ()=>act('pikken_reject_bid_scoped').catch((e)=>alert(normalizeError(e))));
   const approveBtn = qs('#approveBtn'); if(approveBtn) approveBtn.addEventListener('click', ()=>act('pikken_cast_vote_scoped', { vote_input:true }).catch((e)=>alert(normalizeError(e))));
   const voteRejectBtn = qs('#voteRejectBtn'); if(voteRejectBtn) voteRejectBtn.addEventListener('click', ()=>act('pikken_cast_vote_scoped', { vote_input:false }).catch((e)=>alert(normalizeError(e))));
-  const leaveBtn = qs('#leaveBtn'); if(leaveBtn) leaveBtn.addEventListener('click', async ()=>{ if(!confirm('Wil je de match verlaten?')) return; try{ await rpcVariants('pikken_leave_game_scoped', [{ session_token: sessionToken(), game_id_input: gameId }, { session_token: sessionToken(), game_id_input: gameId, site_scope_input: getScope() }]); await releasePresence(); location.href = `./pikken.html?scope=${encodeURIComponent(getScope())}`; } catch (e) { alert(normalizeError(e)); } });
-  const destroyBtn = qs('#destroyBtn'); if(destroyBtn) destroyBtn.addEventListener('click', async ()=>{ if(!confirm('Host: wil je dit Pikken-spel stoppen en verwijderen?')) return; try{ await rpcVariants('pikken_destroy_game_scoped', [{ session_token: sessionToken(), game_id_input: gameId }, { session_token: sessionToken(), game_id_input: gameId, site_scope_input: getScope() }]); await releasePresence(); location.href = `./pikken.html?scope=${encodeURIComponent(getScope())}`; } catch (e) { alert(normalizeError(e)); } });
+  const leaveBtn = qs('#leaveBtn'); if(leaveBtn) leaveBtn.addEventListener('click', async ()=>{ if(!confirm('Wil je de match verlaten?')) return; try{ await rpcVariants('pikken_leave_game_scoped', payloadVariants({ game_id_input: gameId })); await releasePresence(); location.href = `./pikken.html?scope=${encodeURIComponent(getScope())}`; } catch (e) { alert(normalizeError(e)); } });
+  const destroyBtn = qs('#destroyBtn'); if(destroyBtn) destroyBtn.addEventListener('click', async ()=>{ if(!confirm('Host: wil je dit Pikken-spel stoppen en verwijderen?')) return; try{ await rpcVariants('pikken_destroy_game_scoped', payloadVariants({ game_id_input: gameId })); await releasePresence(); location.href = `./pikken.html?scope=${encodeURIComponent(getScope())}`; } catch (e) { alert(normalizeError(e)); } });
 
   window.addEventListener('beforeunload', ()=>{ releasePresence(); });
   loadLocalBidHistory();

@@ -1,0 +1,87 @@
+GitHub checkout handoff
+
+Source worked on:
+C:\Users\jespe\Documents\wordt-er-gejast\tmp\github_main_6b74830
+
+What this patch bundle changes
+
+1. Pikken lobby UI
+- Replaces the old scattered lobby controls with a floating sticky lobby bar.
+- Participant lobby controls now show:
+  Ready
+  Unready
+  Verlaat lobby
+- Host lobby controls now show:
+  Ready
+  Unready
+  Verlaat lobby
+  Destroy
+  Start
+- Unready is styled as the default active red state when the viewer is not ready.
+- Ready turns green when the viewer is ready.
+- When already inside a lobby, the page hides:
+  Maak lobby
+  Join lobby
+  join-code input section
+
+2. Pikken RPC hardening
+- gejast-pikken.js now uses broader payload variants for:
+  pikken_get_state_scoped
+  pikken_create_lobby_scoped
+  pikken_join_lobby_scoped
+  pikken_set_ready_scoped
+  pikken_start_game_scoped
+  pikken_leave_game_scoped / pikken_leave_lobby_scoped
+  pikken_destroy_game_scoped / pikken_destroy_lobby_scoped
+  pikken_kick_player_scoped
+- Variants now try:
+  session_token
+  session_token_input
+  with and without site_scope_input
+- This was added because the repo and live DB have shown signature drift across these RPCs.
+
+3. Pikken live page
+- gejast-pikken-live.js now also uses broader payload variants.
+- Reconnect/presence flow remains in place.
+- Dice extraction was widened again to also check:
+  viewer.private_state.dice
+  viewer.private_state.dice_values
+- Leave/destroy on the live page now call the broader payload variants too.
+
+Important truth about dice
+- The frontend is now checking many plausible private-hand paths.
+- If the participant still sees no dice after these files are live, the remaining issue is almost certainly backend state shape in pikken_get_state_scoped.
+- In that case the next owner should inspect the live RPC result directly.
+
+4. Paardenrace fixes
+- paardenrace.html now uses rpcAny() for destroy/disband and cleanup calls.
+- paardenrace_live.html root copy now declares pendingGateQueue so the missing-variable runtime crash should stop.
+- paardenrace_live.html root and repo copies both use rpcAny() for host close/destroy fallback names.
+
+5. Idle lobby cleanup
+- Added SQL file:
+  gejast_v621_lobby_idle_cleanup.sql
+- It creates:
+  public.pikken_cleanup_idle_lobbies_v621()
+  public.paardenrace_cleanup_idle_lobbies_v621()
+- Both delete lobby rows older than 30 minutes without activity.
+- Frontend hooks:
+  gejast-pikken.js calls pikken_cleanup_idle_lobbies_v621() opportunistically before refreshing feeds.
+  paardenrace.html tries paardenrace_cleanup_idle_lobbies_v621() first, then old v495 cleanup.
+
+Files in this bundle
+- pikken.html
+- gejast-pikken.js
+- gejast-pikken-live.js
+- paardenrace.html
+- paardenrace_live.html
+- gejast_v621_lobby_idle_cleanup.sql
+- repo\pikken.html
+- repo\gejast-pikken.js
+- repo\gejast-pikken-live.js
+- repo\paardenrace.html
+- repo\paardenrace_live.html
+
+What still may need follow-up
+- If Pikken participant dice are still blank after deployment, inspect live output of pikken_get_state_scoped for the participant account and active game_id.
+- If Paardenrace destroy still fails after these files are live, capture the exact error text from the RPC response so the next owner can add the correct DB wrapper instead of guessing fallback names.

@@ -21,6 +21,8 @@
     .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer}
     .btn.alt{background:#fff;color:#111;border:1px solid var(--line)}
     .btn.warn{background:#7f2f1d}
+    .btn.ready-active{background:rgba(47,133,90,.16);color:#1f5d45;border:1px solid rgba(47,133,90,.35)}
+    .btn.unready-active{background:rgba(178,58,47,.14);color:#8f2e24;border:1px solid rgba(178,58,47,.35)}
     .muted{color:var(--muted)}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
     .panel{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px}
@@ -50,7 +52,13 @@
     .feed-meta{font-size:12px;color:var(--muted);margin-top:4px}
     .feed-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
     .section-label{font-size:.78rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#8a7a55;margin-top:14px}
+    .sticky-lobby-bar{position:sticky;bottom:10px;z-index:30;display:grid;gap:10px;margin-top:16px;padding:12px;border-radius:20px;background:rgba(255,251,245,.96);backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.08);box-shadow:0 16px 30px rgba(0,0,0,.08)}
+    .sticky-lobby-meta{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+    .sticky-lobby-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .sticky-lobby-actions .btn{min-width:132px}
+    .hidden{display:none !important}
     @media(max-width:900px){.grid{grid-template-columns:1fr}}
+    @media(max-width:700px){.sticky-lobby-actions{display:grid;grid-template-columns:1fr 1fr}.sticky-lobby-actions .btn{width:100%;min-width:0}}
   </style>
 </head>
 <body>
@@ -82,21 +90,16 @@
             </select>
           </div>
 
-          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+          <div id="pkCreateWrap" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
             <button class="btn" id="pkCreateLobbyBtn">Maak lobby</button>
           </div>
 
-          <div class="field">
+          <div class="field" id="pkJoinFieldWrap">
             <label>Join code</label>
             <input id="pkJoinCode" placeholder="ABC123" />
           </div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+          <div id="pkJoinWrap" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
             <button class="btn alt" id="pkJoinLobbyBtn">Join lobby</button>
-            <button class="btn alt" id="pkReadyBtn">Ready</button>
-            <button class="btn alt" id="pkUnreadyBtn">Unready</button>
-            <button class="btn" id="pkStartBtn">Start</button>
-            <button class="btn alt" id="pkLeaveBtn">Verlaat match</button>
-            <button class="btn warn" id="pkDestroyBtn">Destroy</button>
           </div>
 
           <div class="section-label">Open lobbies</div>
@@ -160,6 +163,23 @@
           </div>
 
           <div id="pkReveal" style="margin-top:14px"></div>
+
+          <div class="sticky-lobby-bar hidden" id="pkLobbySticky">
+            <div class="sticky-lobby-meta">
+              <div>
+                <div style="font-weight:900" id="pkLobbyStickyTitle">Lobby acties</div>
+                <div class="muted" id="pkLobbyStickyNote">Je staat standaard op unready tot je zelf ready kiest.</div>
+              </div>
+              <span class="pill wait" id="pkLobbyRolePill">Lobby</span>
+            </div>
+            <div class="sticky-lobby-actions">
+              <button class="btn unready-active" id="pkUnreadyBtn">Unready</button>
+              <button class="btn alt" id="pkReadyBtn">Ready</button>
+              <button class="btn alt" id="pkLeaveBtn">Verlaat lobby</button>
+              <button class="btn warn hidden" id="pkDestroyBtn">Destroy</button>
+              <button class="btn hidden" id="pkStartBtn">Start</button>
+            </div>
+          </div>
         </section>
       </div>
     </div>

@@ -14,6 +14,26 @@
   async function rpc(name, payload){ const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', headers:headers(), body: JSON.stringify(payload || {}), cache:'no-store' }); return parse(res); }
   async function rpcFirst(names, payload){ let last = null; for (const name of names){ try { return await rpc(name, payload); } catch (err) { last = err; } } throw last || new Error('RPC mislukt.'); }
   async function rpcVariants(name, variants){ let last = null; for (const payload of variants || []){ try { return await rpc(name, payload); } catch (err) { last = err; } } throw last || new Error('RPC variant mislukt.'); }
+  function payloadVariants(extra, options){
+    const base = Object.assign({}, extra || {});
+    const token = sessionToken() || null;
+    const includeScope = options?.includeScope !== false;
+    const scope = getScope();
+    const variants = [
+      Object.assign({}, base, includeScope ? { site_scope_input: scope } : {}, { session_token: token }),
+      Object.assign({}, base, includeScope ? { site_scope_input: scope } : {}, { session_token_input: token }),
+      Object.assign({}, base, { session_token: token }),
+      Object.assign({}, base, { session_token_input: token }),
+      Object.assign({}, base, includeScope ? { site_scope_input: scope, session_token: token, session_token_input: token } : { session_token: token, session_token_input: token })
+    ];
+    const seen = new Set();
+    return variants.filter((item)=>{
+      const key = JSON.stringify(item);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
 
   function qs(sel, root){ return (root||document).querySelector(sel); }
   function esc(s){ const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(s??'').replace(/[&<>"']/g,m=>map[m]); }
@@ -40,8 +60,8 @@
     const players = Array.isArray(state?.players) ? state.players : [];
     const directCandidates = [
       state?.my_hand, state?.myHand, viewer?.my_hand, viewer?.myHand, viewer?.hand, viewer?.dice,
-      viewer?.dice_values, state?.game?.state?.my_hand, state?.actor_state?.my_hand, state?.actor_state?.dice,
-      state?.actor_state?.dice_values, state?.private_state?.my_hand, state?.private_state?.dice
+      viewer?.dice_values, viewer?.private_state?.dice, viewer?.private_state?.dice_values, state?.game?.state?.my_hand, state?.actor_state?.my_hand, state?.actor_state?.dice,
+      state?.actor_state?.dice_values, state?.private_state?.my_hand, state?.private_state?.dice, state?.private_state?.dice_values
     ];
     for (const cand of directCandidates){ const dice = sortDiceFaces(cand); if (dice.length) return dice; }
     const mySeat = Number(viewer?.seat || viewer?.seat_index || 0);
@@ -83,6 +103,38 @@
     el.textContent = `${lobbyCode ? `Code ${lobbyCode} · ` : ''}${phase}${roundNo ? ` · ronde ${roundNo}` : ''}${seat ? ` · stoel ${seat}` : ''}${totals?.current_total ? ` · ${Number(totals.current_total || 0)} dobbelstenen actief` : ''}`;
   }
 
+  function renderLobbyControls(game, viewer){
+    const phase = String(game?.state?.phase || 'lobby');
+    const inLobby = !!(game?.id || UI.gameId) && phase === 'lobby';
+    const isHost = !!viewer?.is_host;
+    const isReady = !!viewer?.is_ready;
+    const createWrap = qs('#pkCreateWrap');
+    const joinWrap = qs('#pkJoinWrap');
+    const joinFieldWrap = qs('#pkJoinFieldWrap');
+    const sticky = qs('#pkLobbySticky');
+    const rolePill = qs('#pkLobbyRolePill');
+    const stickyNote = qs('#pkLobbyStickyNote');
+    const readyBtn = qs('#pkReadyBtn');
+    const unreadyBtn = qs('#pkUnreadyBtn');
+    const leaveBtn = qs('#pkLeaveBtn');
+    const destroyBtn = qs('#pkDestroyBtn');
+    const startBtn = qs('#pkStartBtn');
+    if (createWrap) createWrap.classList.toggle('hidden', inLobby);
+    if (joinWrap) joinWrap.classList.toggle('hidden', inLobby);
+    if (joinFieldWrap) joinFieldWrap.classList.toggle('hidden', inLobby);
+    if (sticky) sticky.classList.toggle('hidden', !inLobby);
+    if (rolePill) {
+      rolePill.textContent = inLobby ? (isHost ? 'Host' : 'Deelnemer') : 'Lobby';
+      rolePill.className = `pill ${isReady ? 'ok' : 'wait'}`;
+    }
+    if (stickyNote) stickyNote.textContent = !inLobby ? 'Maak of join eerst een lobby.' : (isReady ? 'Je staat nu op ready. Je kunt altijd terug naar unready.' : 'Je staat nu op unready. Druk ready als je klaar bent.');
+    if (readyBtn) readyBtn.className = `btn ${isReady ? 'ready-active' : 'alt'}`;
+    if (unreadyBtn) unreadyBtn.className = `btn ${isReady ? 'alt' : 'unready-active'}`;
+    if (leaveBtn) leaveBtn.textContent = 'Verlaat lobby';
+    if (destroyBtn) destroyBtn.classList.toggle('hidden', !(inLobby && isHost));
+    if (startBtn) startBtn.classList.toggle('hidden', !(inLobby && isHost));
+  }
+
   function feedCardMarkup(item, mode){
     const title = esc(item?.title || item?.lobby_code || item?.label || 'Pikken-tafel');
     const subtitle = esc(item?.subtitle || item?.status_text || item?.host_name || item?.phase || 'Beschikbaar');
@@ -109,6 +161,7 @@
   }
 
   async function loadDiscoverFeeds(){
+    try { await rpcVariants('pikken_cleanup_idle_lobbies_v621', [{}]); } catch (_) {}
     try {
       const rows = await rpcFirst([
         'get_pikken_open_lobbies_public_scoped',
@@ -162,6 +215,7 @@
 
     const totals = state?.dice_totals || {};
     renderMatchSummary(game, viewer, totals);
+    renderLobbyControls(game, viewer);
 
     const bid = game?.state?.bid && game.state.bid !== null ? game.state.bid : null;
     const bidTxt = bid ? (Number(bid.face)===1 ? `${bid.count} × pik` : `${bid.count} × ${bid.face}`) : '—';
@@ -190,7 +244,7 @@
     const myDiceWrap = qs('#pkMyDice');
     if (myDiceWrap){
       myDiceWrap.innerHTML = '';
-      if (!myHand.length) myDiceWrap.innerHTML = '<div class="muted">Nog geen dobbelstenen zichtbaar. Dit wijst meestal op een backend-state gat of een andere sleutelnaam in de state.</div>';
+      if (!myHand.length) myDiceWrap.innerHTML = `<div class="muted">${phase === 'lobby' ? 'Dobbelstenen verschijnen zodra de host de lobby start en jouw privésituatie wordt meegestuurd.' : 'Nog geen dobbelstenen zichtbaar. Dit wijst meestal op een backend-state gat of een andere sleutelnaam in de state.'}</div>`;
       myHand.forEach((face)=>{ const n = Number(face||0); myDiceWrap.appendChild(dieImg(n, `die ${n===1?'pik':''}`.trim())); });
     }
 
@@ -223,7 +277,7 @@
   async function loadAndRender(){
     if(!UI.gameId){ setStatus('', false); setChip('Lobby'); return; }
     try{
-      const state = await rpc('pikken_get_state_scoped', { session_token: sessionToken() || null, game_id_input: UI.gameId });
+      const state = await rpcVariants('pikken_get_state_scoped', payloadVariants({ game_id_input: UI.gameId }));
       const version = Number(state?.game?.state_version || -1);
       if(version !== UI.lastStateVersion){ UI.lastStateVersion = version; render(state); }
       setStatus('', false);
@@ -251,7 +305,7 @@
     setStatus('Lobby maken…', false);
     const mode = qs('#pkPenaltyMode')?.value || 'wrong_loses';
     const startDice = Number(qs('#pkStartDice')?.value || 6);
-    const out = await rpc('pikken_create_lobby_scoped', { session_token: token, site_scope_input: getScope(), config_input: { penalty_mode: mode, start_dice: startDice } });
+    const out = await rpcVariants('pikken_create_lobby_scoped', payloadVariants({ config_input: { penalty_mode: mode, start_dice: startDice } }));
     UI.gameId = out.game_id; setParticipantToken(UI.gameId, true);
     if (out?.lobby_code) rememberLobbyCode(out.lobby_code);
     history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(getScope())}`);
@@ -268,7 +322,7 @@
     if(!code) return setStatus('Vul een lobby code in.', true);
     rememberLobbyCode(code);
     setStatus('Lobby joinen…', false);
-    const out = await rpc('pikken_join_lobby_scoped', { session_token: token, site_scope_input: getScope(), lobby_code_input: code });
+    const out = await rpcVariants('pikken_join_lobby_scoped', payloadVariants({ lobby_code_input: code }));
     UI.gameId = out.game_id; setParticipantToken(UI.gameId, true);
     history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(getScope())}`);
     startPolling();
@@ -277,19 +331,13 @@
   async function setReady(ready){
     if (!UI.gameId) return setStatus('Je zit nog niet in een lobby.', true);
     setStatus(ready?'Ready…':'Unready…', false);
-    await rpcVariants('pikken_set_ready_scoped', [
-      { session_token: sessionToken()||null, game_id_input: UI.gameId, ready_input: !!ready, site_scope_input: getScope() },
-      { session_token: sessionToken()||null, game_id_input: UI.gameId, ready_input: !!ready }
-    ]);
+    await rpcVariants('pikken_set_ready_scoped', payloadVariants({ game_id_input: UI.gameId, ready_input: !!ready }));
     await loadAndRender();
   }
   async function startGame(){
     if (!UI.gameId) return setStatus('Je zit nog niet in een lobby.', true);
     setStatus('Starten…', false);
-    await rpcVariants('pikken_start_game_scoped', [
-      { session_token: sessionToken()||null, game_id_input: UI.gameId, site_scope_input: getScope() },
-      { session_token: sessionToken()||null, game_id_input: UI.gameId }
-    ]);
+    await rpcVariants('pikken_start_game_scoped', payloadVariants({ game_id_input: UI.gameId }));
     autoLiveRedirectDone = true;
     window.location.href = liveHref(UI.gameId);
   }
@@ -321,6 +369,7 @@
     stopPolling();
     history.replaceState(null,'',`pikken.html${getScope() === 'family' ? '?scope=family' : ''}`);
     renderMatchSummary(null, null, null);
+    renderLobbyControls(null, {});
     const players = qs('#pkPlayers');
     if (players) players.innerHTML = '<div class="muted">Kies een open lobby hieronder of maak er zelf één.</div>';
     setStatus(message || '', false);
@@ -331,10 +380,7 @@
     if(!UI.gameId) return setStatus('Je zit nu niet in een actieve match.', true);
     setStatus('Match verlaten…', false);
     const token = sessionToken() || null;
-    const variants = [
-      { session_token: token, game_id_input: UI.gameId, site_scope_input: getScope() },
-      { session_token: token, game_id_input: UI.gameId }
-    ];
+    const variants = payloadVariants({ game_id_input: UI.gameId });
     try { await rpcVariants('pikken_leave_game_scoped', variants); }
     catch (_) { await rpcVariants('pikken_leave_lobby_scoped', variants); }
     resetLobbyState('Match verlaten.');
@@ -344,10 +390,7 @@
     if(!UI.gameId) return setStatus('Je zit nu niet in een actieve match.', true);
     setStatus('Match verwijderen…', false);
     const token = sessionToken() || null;
-    const variants = [
-      { session_token: token, game_id_input: UI.gameId, site_scope_input: getScope() },
-      { session_token: token, game_id_input: UI.gameId }
-    ];
+    const variants = payloadVariants({ game_id_input: UI.gameId });
     try { await rpcVariants('pikken_destroy_game_scoped', variants); }
     catch (_) { await rpcVariants('pikken_destroy_lobby_scoped', variants); }
     resetLobbyState('Match verwijderd.');
@@ -361,21 +404,16 @@
     if (!targetName) throw new Error('Kon deze spelernaam niet bepalen voor kick.');
     setStatus(`Speler #${seatNo} kicken…`, false);
     await rpcVariants('pikken_kick_player_scoped', [
+      ...payloadVariants({ game_id_input: UI.gameId, seat_index_input: seatNo, player_name_input: targetName }),
       {
         session_token: sessionToken()||null,
         game_id_input: UI.gameId,
         seat_index_input: seatNo,
-        player_name_input: targetName,
-        site_scope_input: getScope()
+        seat_input: String(seatNo),
+        target_seat_input: targetName || String(seatNo)
       },
       {
-        session_token: sessionToken()||null,
-        game_id_input: UI.gameId,
-        seat_index_input: seatNo,
-        player_name_input: targetName
-      },
-      {
-        session_token: sessionToken()||null,
+        session_token_input: sessionToken()||null,
         game_id_input: UI.gameId,
         seat_index_input: seatNo,
         seat_input: String(seatNo),
@@ -391,6 +429,7 @@
     const joinInput = qs('#pkJoinCode');
     if (joinInput && !joinInput.value) joinInput.value = lastLobbyCode();
     restoreParticipantGame();
+    renderLobbyControls(null, {});
     qs('#pkCreateLobbyBtn')?.addEventListener('click', ()=>createLobby().catch(e=>setStatus(normalizeError(e),true)));
     qs('#pkJoinLobbyBtn')?.addEventListener('click', ()=>joinLobby().catch(e=>setStatus(normalizeError(e),true)));
     qs('#pkReadyBtn')?.addEventListener('click', ()=>setReady(true).catch(e=>setStatus(normalizeError(e),true)));

@@ -472,6 +472,7 @@
   let victoryActive = false;
   let pendingGateQueue = [];
   let statePollTimer = null;
+  async function rpcAny(names, payload){ let lastErr=null; for(const name of names){ try{ return await api.rpc(name, payload); }catch(err){ lastErr=err; } } throw lastErr || new Error('Actie mislukt.'); }
   const PANIC_KEY = 'gejast_paardenrace_emergency_brake_v488';
   function panicStorageKey(){ return `${PANIC_KEY}:${qRoom() || 'global'}`; }
   function isPanicActive(){ try{ return localStorage.getItem(panicStorageKey()) === '1'; }catch(_){ return false; } }
@@ -1095,7 +1096,7 @@
   if($('closeBtn')) $('closeBtn').addEventListener('click', async () => {
     try {
       stopAutoplay();
-      await api.rpc('disband_paardenrace_room_safe', { room_code_input: qRoom() });
+      await rpcAny(['disband_paardenrace_room_safe','destroy_paardenrace_room_safe','close_paardenrace_room_safe'], { room_code_input: qRoom() });
       api.clearStoredRoomCode();
       window.location.href = api && api.scopedHref ? api.scopedHref('./paardenrace.html') : './paardenrace.html';
     } catch(e) { setStatus(e.message || 'Sluiten mislukt.'); }
