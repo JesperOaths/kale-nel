@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v501',
+    VERSION:'v622',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -10,10 +10,8 @@
     GOLD_HOVER: '#8a7338',
     PLAYER_SESSION_KEYS: ['jas_session_token_v11','jas_session_token_v10'],
     PLAYER_LAST_ACTIVITY_KEY: 'jas_last_activity_at_v1',
-    PLAYER_SESSION_IDLE_MS: 30 * 24 * 60 * 60 * 1000,
-    PLAYER_SESSION_SOFT_STALE_MS: 12 * 60 * 60 * 1000,
-    RPC_TIMEOUT_MS: 9000,
-    LOGIN_NAME_TIMEOUT_MS: 7000,
+    LOGIN_NAMES_CACHE_PREFIX: 'jas_login_names_cache_v1_',
+    PLAYER_SESSION_IDLE_MS: 12 * 60 * 60 * 1000,
     WEB_PUSH_PUBLIC_KEY: 'BPqY04jDOB_8RlhNxURgWFl6cMge64Mr7DkrWtgMfG4ARWLJ6S-r6c6JeQJ6o4kysWT0WeR9oVpahP85L8GLl_4',
     NOTIFICATION_BUTTON_ENABLED: true,
     WEB_PUSH_TEST_RPC: 'queue_test_web_push',
@@ -112,80 +110,52 @@
       return true;
     });
   }
-  const SCOPED_NAME_CACHE_PREFIX = 'gejast_scoped_names_v1:';
-  function safeStorageGet(key){
-    try { return localStorage.getItem(key); } catch (_) { return ''; }
+  const loginNameRequestCache = new Map();
+  function loginNamesCacheKey(scope){
+    return `${CONFIG.LOGIN_NAMES_CACHE_PREFIX || 'jas_login_names_cache_v1_'}${normalizeScope(scope || inferRuntimeScope())}`;
   }
-  function safeStorageSet(key, value){
-    try { localStorage.setItem(key, value); } catch (_) {}
+
+  async function getActivatedPlayerNamesForScope(scope){
+    return fetchScopedActivePlayerNames(scope);
   }
-  function readScopedNameCache(kind, scope){
-    const resolvedScope = normalizeScope(scope || inferRuntimeScope());
-    const key = `${SCOPED_NAME_CACHE_PREFIX}${kind}:${resolvedScope}`;
+
+  function readCachedLoginNames(scope){
+    const key = loginNamesCacheKey(scope);
     try {
-      const raw = safeStorageGet(key);
-      if (!raw) return null;
-      const data = JSON.parse(raw);
-      const names = uniquePersonNames(Array.isArray(data?.names) ? data.names : []);
-      if (!names.length) return null;
-      return {
-        kind,
-        scope: resolvedScope,
-        names,
-        ts: Number(data?.ts || 0) || 0
-      };
-    } catch (_) {
-      return null;
-    }
+      const raw = sessionStorage.getItem(key) || localStorage.getItem(key) || '';
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      const names = uniquePersonNames(Array.isArray(parsed?.names) ? parsed.names : []);
+      return names;
+    } catch (_) { return []; }
   }
-  function writeScopedNameCache(kind, scope, names){
-    const resolvedScope = normalizeScope(scope || inferRuntimeScope());
-    const cleanNames = uniquePersonNames(names);
-    if (!cleanNames.length) return;
-    const key = `${SCOPED_NAME_CACHE_PREFIX}${kind}:${resolvedScope}`;
-    safeStorageSet(key, JSON.stringify({
-      names: cleanNames,
-      ts: Date.now(),
-      scope: resolvedScope
-    }));
-  }
-  function isClaimedActiveStatus(value){
-    const raw = String(value || '').trim().toLowerCase();
-    return raw === 'active'
-      || raw === 'activated'
-      || raw === 'claimed'
-      || raw === 'claim_complete'
-      || raw === 'approved'
-      || raw === 'approved_pending_activation'
-      || raw === 'pending_activation'
-      || raw === 'awaiting_activation'
-      || raw === 'waiting';
-  }
-  function isRequestableStatus(value){
-    const raw = String(value || '').trim().toLowerCase();
-    return raw === 'available'
-      || raw === 'claimable'
-      || raw === 'returned_to_claimable'
-      || raw === 'claimable_again'
-      || raw === 'open';
+  function writeCachedLoginNames(scope, names){
+    const clean = uniquePersonNames(names);
+    if (!clean.length) return clean;
+    const key = loginNamesCacheKey(scope);
+    const payload = JSON.stringify({ names: clean, updated_at: Date.now() });
+    try { sessionStorage.setItem(key, payload); } catch (_) {}
+    try { localStorage.setItem(key, payload); } catch (_) {}
+    return clean;
   }
   async function fetchScopedActivePlayerNames(scope){
     const resolvedScope = normalizeScope(scope || inferRuntimeScope());
-    const headers = { 'Content-Type':'application/json', apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '', Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}`, Accept:'application/json' };
-    async function callJson(url, options, timeoutMs){
+    const cacheKey = `fetchScopedActivePlayerNames:${resolvedScope}`;
+    if (loginNameRequestCache.has(cacheKey)) return loginNameRequestCache.get(cacheKey);
+    const headers = { 'Content-Type':'application/json', apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '', Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}` };
+    async function callRpc(name, payload, timeoutMs=2200){
       const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      const timer = controller ? setTimeout(() => { try { controller.abort(); } catch (_) {} }, Math.max(600, Number(timeoutMs || CONFIG.RPC_TIMEOUT_MS || 2500))) : null;
+      const timer = controller ? setTimeout(() => { try { controller.abort(); } catch (_) {} }, timeoutMs) : null;
       try {
-        const res = await fetch(url, Object.assign({}, options || {}, { signal: controller ? controller.signal : undefined }));
+        const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify(payload || {}), signal: controller ? controller.signal : undefined });
         const txt = await res.text();
         let data = null;
         try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || `HTTP ${res.status}`); }
-        if (!res.ok) throw new Error(data?.message || data?.error || data?.details || data?.hint || `HTTP ${res.status}`);
-        return data;
-      } catch (error) {
-        if (error && error.name === 'AbortError') throw new Error('RPC timeout');
-        throw error;
-      } finally { if (timer) clearTimeout(timer); }
+        if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
+        return data && data[name] !== undefined ? data[name] : data;
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
     }
     function toNames(raw){
       const rows = Array.isArray(raw)
@@ -198,103 +168,25 @@
       if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, resolvedScope);
       return names;
     }
-    const mergedNames = [];
+    const cached = readCachedLoginNames(resolvedScope);
+    const attempts = [
+      ['get_login_names_scoped', { site_scope_input: resolvedScope }, 1800],
+      ['get_all_site_players_public_scoped', { site_scope_input: resolvedScope }, 2000],
+      ['get_profiles_page_bundle_scoped', { site_scope_input: resolvedScope }, 2200],
+      ['get_login_names', {}, 1800]
+    ];
+    const request = (async () => {
+      const settled = await Promise.allSettled(attempts.map(([name, payload, timeoutMs]) => callRpc(name, payload, timeoutMs).then(toNames)));
+      const match = settled.find((item) => item.status === 'fulfilled' && Array.isArray(item.value) && item.value.length);
+      if (match && match.status === 'fulfilled') return writeCachedLoginNames(resolvedScope, match.value);
+      return cached;
+    })();
+    loginNameRequestCache.set(cacheKey, request);
     try {
-      const rows = await callJson(
-        `${CONFIG.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,status,site_scope&order=display_name.asc&limit=400`,
-        { method:'GET', mode:'cors', cache:'no-store', headers:{ apikey: headers.apikey, Authorization: headers.Authorization, Accept:'application/json' } },
-        CONFIG.LOGIN_NAME_TIMEOUT_MS
-      );
-      const canonicalNames = uniquePersonNames((Array.isArray(rows) ? rows : []).filter((row)=>{
-        const rowScope = normalizeScope(row?.site_scope || resolvedScope);
-        return rowScope === resolvedScope && isClaimedActiveStatus(row?.status);
-      }).map((row)=>row?.display_name || ''));
-      mergedNames.push(...uniquePersonNames((Array.isArray(rows) ? rows : []).filter((row)=>{
-        const rowScope = normalizeScope(row?.site_scope || resolvedScope);
-        return rowScope === resolvedScope;
-      }).map((row)=>row?.display_name || row?.slug || '')));
-      if (canonicalNames.length) return canonicalNames;
-    } catch (_) {}
-    for (const [endpoint, body] of [
-      ['get_login_names_scoped', { site_scope_input: resolvedScope }],
-      ['get_login_names', {}],
-      ['get_all_site_players_public_scoped', { site_scope_input: resolvedScope }]
-    ]) {
-      try {
-        const names = toNames(await callJson(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${endpoint}`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify(body) }, CONFIG.LOGIN_NAME_TIMEOUT_MS));
-        if (names.length) {
-          mergedNames.push(...names);
-          if (endpoint !== 'get_all_site_players_public_scoped') return uniquePersonNames(mergedNames);
-        }
-      } catch (_) {}
+      return await request;
+    } finally {
+      loginNameRequestCache.delete(cacheKey);
     }
-    return uniquePersonNames(mergedNames);
-  }
-  async function fetchScopedRequestableNames(scope){
-    const resolvedScope = normalizeScope(scope || inferRuntimeScope());
-    const headers = { 'Content-Type':'application/json', apikey: CONFIG.SUPABASE_PUBLISHABLE_KEY || '', Authorization:`Bearer ${CONFIG.SUPABASE_PUBLISHABLE_KEY || ''}`, Accept:'application/json' };
-    async function callJson(url, options, timeoutMs){
-      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      const timer = controller ? setTimeout(() => { try { controller.abort(); } catch (_) {} }, Math.max(600, Number(timeoutMs || CONFIG.RPC_TIMEOUT_MS || 2500))) : null;
-      try {
-        const res = await fetch(url, Object.assign({}, options || {}, { signal: controller ? controller.signal : undefined }));
-        const txt = await res.text();
-        let data = null;
-        try { data = txt ? JSON.parse(txt) : null; } catch (_) { throw new Error(txt || `HTTP ${res.status}`); }
-        if (!res.ok) throw new Error(data?.message || data?.error || data?.details || data?.hint || `HTTP ${res.status}`);
-        return data;
-      } catch (error) {
-        if (error && error.name === 'AbortError') throw new Error('RPC timeout');
-        throw error;
-      } finally { if (timer) clearTimeout(timer); }
-    }
-    function toNames(raw){
-      const rows = Array.isArray(raw)
-        ? raw
-        : (Array.isArray(raw?.requestable_names) ? raw.requestable_names : (Array.isArray(raw?.names) ? raw.names : (Array.isArray(raw?.items) ? raw.items : (Array.isArray(raw?.rows) ? raw.rows : (Array.isArray(raw?.data) ? raw.data : [])))));
-      let names = uniquePersonNames(rows.map((row)=>{
-        if (typeof row === 'string') return row;
-        return row?.display_name || row?.desired_name || row?.name || row?.label || row?.slug || '';
-      }));
-      if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') names = window.GEJAST_SCOPE_UTILS.filterNames(names, resolvedScope);
-      return names;
-    }
-    const cached = readScopedNameCache('request_names', resolvedScope);
-    const mergedNames = [];
-    try {
-      const rows = await callJson(
-        `${CONFIG.SUPABASE_URL}/rest/v1/allowed_usernames?select=display_name,slug,status,site_scope&order=display_name.asc&limit=400`,
-        { method:'GET', mode:'cors', cache:'no-store', headers:{ apikey: headers.apikey, Authorization: headers.Authorization, Accept:'application/json' } },
-        CONFIG.LOGIN_NAME_TIMEOUT_MS
-      );
-      const canonicalNames = uniquePersonNames((Array.isArray(rows) ? rows : []).filter((row)=>{
-        const rowScope = normalizeScope(row?.site_scope || resolvedScope);
-        return rowScope === resolvedScope && isRequestableStatus(row?.status);
-      }).map((row)=>row?.display_name || row?.slug || ''));
-      mergedNames.push(...uniquePersonNames((Array.isArray(rows) ? rows : []).filter((row)=>{
-        const rowScope = normalizeScope(row?.site_scope || resolvedScope);
-        return rowScope === resolvedScope;
-      }).map((row)=>row?.display_name || row?.slug || '')));
-      if (canonicalNames.length) {
-        writeScopedNameCache('request_names', resolvedScope, canonicalNames);
-        return canonicalNames;
-      }
-    } catch (_) {}
-    for (const [endpoint, body] of [
-      ['get_requestable_names_scoped', { site_scope_input: resolvedScope }],
-      ['get_requestable_names', {}]
-    ]) {
-      try {
-        const names = toNames(await callJson(`${CONFIG.SUPABASE_URL}/rest/v1/rpc/${endpoint}`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify(body) }, CONFIG.LOGIN_NAME_TIMEOUT_MS));
-        if (names.length) {
-          mergedNames.push(...names);
-          const out = uniquePersonNames(mergedNames);
-          writeScopedNameCache('request_names', resolvedScope, out);
-          return out;
-        }
-      } catch (_) {}
-    }
-    return uniquePersonNames([...(cached?.names || []), ...mergedNames]);
   }
 
   function getPlayerSessionToken(){
@@ -328,13 +220,6 @@
     const last = lastPlayerActivity();
     if (!last) return false;
     return (Date.now() - last) > CONFIG.PLAYER_SESSION_IDLE_MS;
-  }
-  function isPlayerSessionLocallyStale(){
-    const token = getPlayerSessionToken();
-    if (!token) return true;
-    const last = lastPlayerActivity();
-    if (!last) return false;
-    return (Date.now() - last) > CONFIG.PLAYER_SESSION_SOFT_STALE_MS;
   }
   function inferRuntimeScope(){ try { const qs = new URLSearchParams(location.search); if (qs.get('scope')==='family') return 'family'; if ((location.pathname||'').includes('/familie/')) return 'family'; } catch(_){} return 'friends'; }
 
@@ -404,6 +289,7 @@ function buildRequestUrl(returnTo, scope){
     return url.toString();
   }
   function ensurePlayerSessionOrRedirect(returnTo){
+    if (isPlayerSessionExpired()) clearPlayerSessionTokens();
     const token = getPlayerSessionToken();
     if (!token){
       const target = sanitizeReturnTarget(returnTo || (location.pathname.split('/').pop() || 'index.html'), 'index.html');
@@ -451,14 +337,13 @@ function buildRequestUrl(returnTo, scope){
     applyVersionLabel,
     normalizeProfileImageUrl,
     fetchScopedActivePlayerNames,
-    fetchScopedRequestableNames,
-    readScopedNameCache,
-    writeScopedNameCache,
+    getActivatedPlayerNamesForScope,
+    readCachedLoginNames,
+    writeCachedLoginNames,
     getPlayerSessionToken,
     clearPlayerSessionTokens,
     touchPlayerActivity,
     isPlayerSessionExpired,
-    isPlayerSessionLocallyStale,
     ensurePlayerSessionOrRedirect,
     installActivityKeepalive,
     requireMatchEntrySession,

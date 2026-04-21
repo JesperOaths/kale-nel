@@ -1,19 +1,10 @@
 #!/usr/bin/env bash
-set -e
-# sync root html helper cache-busts from VERSIONuo pipefail
-ROOT="${1:-.}"
-VERSION_FILE="$ROOT/VERSION"
-if [[ ! -f "$VERSION_FILE" ]]; then
-  echo "Missing VERSION file at $VERSION_FILE" >&2
-  exit 1
-fi
-VERSION="$(tr -dc '0-9' < "$VERSION_FILE")"
-if [[ -z "$VERSION" ]]; then
-  echo "VERSION file must contain digits" >&2
-  exit 1
-fi
-find "$ROOT" -maxdepth 1 -type f -name '*.html' -print0 | while IFS= read -r -d '' file; do
-  perl -0pi -e "s/window\.GEJAST_PAGE_VERSION='v\d+'/window.GEJAST_PAGE_VERSION='v${VERSION}'/g; s/(\.(?:js|css)\?v)\d+/${1}${VERSION}/g" "$file"
+set -euo pipefail
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VERSION="$(tr -d '[:space:]' < "$ROOT_DIR/VERSION")"
+[[ -n "$VERSION" ]] || { echo "VERSION is empty" >&2; exit 1; }
+find "$ROOT_DIR" -type f \( -name '*.html' -o -name '*.js' \) -print0 | while IFS= read -r -d '' file; do
+  perl -0pi -e "s/window\.GEJAST_PAGE_VERSION='v\d+'/window.GEJAST_PAGE_VERSION='v${VERSION}'/g; s/(gejast-config\.js\?v)\d+/${1}${VERSION}/g; s/(gejast-home-gate\.js\?v)\d+/${1}${VERSION}/g;" "$file"
 done
-perl -0pi -e "s/VERSION:'v\d+'/VERSION:'v${VERSION}'/g" "$ROOT/gejast-config.js"
-echo "Bumped HTML asset versions and gejast-config.js to v${VERSION}."
+perl -0pi -e "s/VERSION:'v\d+'/VERSION:'v${VERSION}'/" "$ROOT_DIR/gejast-config.js"
+echo "Bumped frontend references to v${VERSION}"
