@@ -219,7 +219,14 @@
       const version = Number(state?.game?.state_version || -1);
       if(version !== UI.lastStateVersion){ UI.lastStateVersion = version; render(state); }
       setStatus('', false);
-    }catch(err){ setStatus(normalizeError(err), true); }
+    }catch(err){
+      const message = normalizeError(err);
+      if (/niet gevonden|game not found|invalid input syntax for type uuid/i.test(String(message || ''))) {
+        resetLobbyState('');
+        return;
+      }
+      setStatus(message, true);
+    }
   }
 
   function startPolling(){ stopPolling(); UI.pollTimer = setInterval(()=>{ if(!document.hidden) loadAndRender(); }, 1400); loadAndRender(); }
