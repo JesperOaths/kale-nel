@@ -2,29 +2,81 @@
   var cfg = window.GEJAST_CONFIG || {};
   function getToken(){ return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; }
   function clearTokens(){ try{ cfg.clearPlayerSessionTokens && cfg.clearPlayerSessionTokens(); }catch(_){} }
+  function expired(){ try{ return cfg.isPlayerSessionExpired ? cfg.isPlayerSessionExpired() : !getToken(); }catch(_){ return !getToken(); } }
   function currentTarget(){ try{ return cfg.currentReturnTarget ? cfg.currentReturnTarget('index.html') : 'index.html'; }catch(_){ return 'index.html'; } }
-  function currentScope(){ try{ return (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }catch(_){ return 'friends'; } }
-  function homeUrl(){ try{ return cfg.buildHomeUrl ? cfg.buildHomeUrl(currentTarget(), currentScope()) : './home.html'; }catch(_){ return './home.html'; } }
-  async function verifySoft(token){
-    if(!token || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY) return 'missing';
-    const headers = { 'Content-Type':'application/json', apikey:(cfg.SUPABASE_PUBLISHABLE_KEY||''), Authorization:'Bearer ' + (cfg.SUPABASE_PUBLISHABLE_KEY||'') };
-    const tries = [['get_public_state',{session_token:token}],['get_public_state',{session_token_input:token}],['get_gejast_homepage_state',{session_token:token}],['get_jas_app_state',{session_token:token}]];
-    let soft=0;
-    for (const [rpc,payload] of tries){
+  function currentScope(){
+    try{ if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.getScope === 'function') return window.GEJAST_SCOPE_UTILS.getScope(); }catch(_){}
+    try{ return new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'; }catch(_){ return 'friends'; }
+  }
+  function homeUrl(){
+    var target = currentTarget();
+    try{ return cfg.buildHomeUrl ? cfg.buildHomeUrl(target, currentScope()) : './home.html'; }catch(_){ return './home.html'; }
+  }
+  function headers(){ return { 'Content-Type':'application/json', apikey:(cfg.SUPABASE_PUBLISHABLE_KEY||''), Authorization:`Bearer ${(cfg.SUPABASE_PUBLISHABLE_KEY||'')}` }; }
+  async function parse(res){ var txt=await res.text(); var data=null; try{ data=txt?JSON.parse(txt):null; }catch(_){ throw new Error(txt||('HTTP '+res.status)); } if(!res.ok) throw new Error(data&& (data.message||data.error) || ('HTTP '+res.status)); return data; }
+  function normalizeName(v){ return String(v||'').replace(/\s+/g,' ').trim(); }
+  function uniqueNames(list){ var seen=new Set(); return (Array.isArray(list)?list:[]).map(normalizeName).filter(function(name){ var k=name.toLowerCase(); if(!name||seen.has(k)) return false; seen.add(k); return true; }); }
+  function redirectHome(){ location.replace(homeUrl()); }
+  async function fetchViewerState(token){
+    var rpcList=[['get_public_state',{session_token:token}],['get_gejast_homepage_state',{session_token:token}],['get_jas_app_state',{session_token:token}],['get_public_state',{session_token_input:token}],['get_gejast_homepage_state',{session_token_input:token}],['get_jas_app_state',{session_token_input:token}]];
+    for (const entry of rpcList){
       try{
-        const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${rpc}`, { method:'POST', mode:'cors', cache:'no-store', headers, body: JSON.stringify(payload) });
-        const txt = await res.text();
-        let data = null; try{ data = txt ? JSON.parse(txt) : null; }catch(_){ data = null; }
-        if (res.ok && (data?.viewer || data?.player || data?.session_valid === true || data?.is_logged_in === true || data?.my_name || data?.display_name || data?.player_name)) return 'valid';
-        const raw = String((data && (data.message || data.error || data.details || data.hint)) || txt || '');
-        if (/invalid session|session.*expired|not logged in|unauthorized|jwt|auth/i.test(raw)) return 'invalid';
-        if (data && (data.session_valid === false || data.is_logged_in === false)) soft += 1;
+        var res=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${entry[0]}`,{method:'POST',mode:'cors',cache:'no-store',headers:headers(),body:JSON.stringify(entry[1])});
+        var data=await parse(res);
+        var name=normalizeName(data&& (data.my_name || data.display_name || data.player_name || (data.viewer&&data.viewer.display_name) || ''));
+        if(name) return { ok:true, name:name, data:data };
+        if(data && (data.viewer || data.player || data.session_valid === true || data.is_logged_in === true)) return { ok:true, name:'', data:data };
       }catch(_){ }
     }
-    return soft >= 2 ? 'invalid' : 'unknown';
+    return { ok:false, name:'', data:null };
   }
-  var token = getToken();
-  if (!token){ location.replace(homeUrl()); return; }
-  try{ cfg.touchPlayerActivity && cfg.touchPlayerActivity(); }catch(_){}
-  verifySoft(token).then(function(status){ if(status === 'invalid'){ clearTokens(); location.replace(homeUrl()); } }).catch(function(){});
+  async function fetchAllowedNames(scope){
+    try{
+      var helper=cfg&&typeof cfg.fetchScopedActivePlayerNames==='function'?cfg.fetchScopedActivePlayerNames:null;
+      if(helper){ var active=await helper(scope); if(active&&active.length) return active; }
+    }catch(_){ }
+    var raw=null;
+    try{
+      var scoped=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/get_login_names_scoped`,{method:'POST',mode:'cors',cache:'no-store',headers:headers(),body:JSON.stringify({site_scope_input:scope})});
+      raw=await parse(scoped);
+    }catch(_){
+      try{
+        var res=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/get_login_names`,{method:'POST',mode:'cors',cache:'no-store',headers:headers(),body:JSON.stringify({})});
+        raw=await parse(res);
+      }catch(_2){ raw={ names:[] }; }
+    }
+    var rows=Array.isArray(raw)?raw:(Array.isArray(raw&&raw.names)?raw.names:(Array.isArray(raw&&raw.data)?raw.data:[]));
+    var names=uniqueNames(rows.map(function(row){ return typeof row==='string' ? row : (row&& (row.display_name||row.name||row.desired_name||row.slug||row.player_name) || ''); }));
+    try{ if(window.GEJAST_SCOPE_UTILS&&typeof window.GEJAST_SCOPE_UTILS.filterNames==='function') names=window.GEJAST_SCOPE_UTILS.filterNames(names, scope); }catch(_){ }
+    return names;
+  }
+  async function verifyScopeAndSession(){
+    var token=getToken();
+    if(!token || !cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY) return false;
+    var viewer=await Promise.race([
+      fetchViewerState(token),
+      new Promise(function(resolve){ setTimeout(function(){ resolve({ ok:false, name:'', data:null }); }, 2500); })
+    ]);
+    if(!viewer.ok) return false;
+    if(!viewer.name) return true;
+    var allowed=await Promise.race([
+      fetchAllowedNames(currentScope()),
+      new Promise(function(resolve){ setTimeout(function(){ resolve([]); }, 2500); })
+    ]);
+    return !allowed.length || allowed.indexOf(viewer.name)!==-1;
+  }
+  if(expired()) clearTokens();
+  if(!getToken()){
+    redirectHome();
+  } else {
+    try{ cfg.touchPlayerActivity && cfg.touchPlayerActivity(); }catch(_){ }
+    verifyScopeAndSession().then(function(ok){
+      if(ok) return;
+      clearTokens();
+      redirectHome();
+    }).catch(function(){
+      clearTokens();
+      redirectHome();
+    });
+  }
 })();
