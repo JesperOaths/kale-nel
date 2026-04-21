@@ -218,6 +218,16 @@
     return true;
   }
   function faceLabel(face){ return Number(face) === 1 ? 'pik' : String(Number(face)); }
+  function currentDiceTotal(model){
+    const totals = model?.totals || {};
+    const fromTotals = Number(totals.current_total || 0);
+    if (fromTotals > 0) return fromTotals;
+    const players = Array.isArray(model?.players) ? model.players : [];
+    const fromPlayers = players.reduce((sum, player)=>sum + Math.max(0, Number(player?.dice_count || player?.diceCount || 0)), 0);
+    if (fromPlayers > 0) return fromPlayers;
+    const livingPlayers = players.filter((player)=>player && (player.alive !== false)).length;
+    return Math.max(1, livingPlayers ? livingPlayers * 6 : 1);
+  }
 
   function normalizeModel(source, presenceMap){
     if (source?.item) {
@@ -258,17 +268,19 @@
     const faceSelect=qs('#bidFaceSelect');
     const btn=qs('#bidBtn');
     if(!countSelect || !faceSelect) return;
-    const options=computeBidOptions(model.bid, Number(model.totals.current_total || 0));
+    const options=computeBidOptions(model.bid, currentDiceTotal(model));
     const counts=[...new Set(options.map((opt)=>Number(opt.count || 0)).filter(Boolean))].sort((a,b)=>a-b);
     const currentCount=Number(countSelect.value || 0);
     const selectedCount=counts.includes(currentCount) ? currentCount : (counts[0] || 0);
     countSelect.innerHTML=counts.length ? counts.map((count)=>`<option value="${count}">${count}</option>`).join('') : '<option value="">Geen biedingen</option>';
     if (selectedCount) countSelect.value=String(selectedCount);
+    if (!countSelect.value && counts.length) countSelect.selectedIndex = 0;
     const faceOptions=options.filter((opt)=>Number(opt.count||0)===Number(selectedCount));
     const currentFace=Number(faceSelect.value || 0);
     const selectedFace=faceOptions.some((opt)=>Number(opt.face||0)===currentFace) ? currentFace : Number(faceOptions[0]?.face || 0);
     faceSelect.innerHTML=faceOptions.length ? faceOptions.map((opt)=>`<option value="${Number(opt.face)}">${esc(faceLabel(opt.face))}</option>`).join('') : '<option value="">Geen waarden</option>';
     if (selectedFace) faceSelect.value=String(selectedFace);
+    if (!faceSelect.value && faceOptions.length) faceSelect.selectedIndex = 0;
     if(btn) btn.disabled=!options.length || !selectedCount || !selectedFace;
   }
   function renderVotes(model){ const voteWrap=qs('#tableVotes'); if(!voteWrap) return; const votes=Array.isArray(model.votes) ? model.votes : []; if(!votes.length || model.phase !== 'voting'){ voteWrap.innerHTML=''; return; } voteWrap.innerHTML=votes.map((vote)=>{ const status=String(vote.status || 'waiting'); const icon=status==='approved'?'👍':status==='rejected'?'👎':'…'; return `<span class="table-vote">${icon} ${esc(vote.name || '')}</span>`; }).join(''); }
@@ -296,7 +308,7 @@
     mergeBidHistory(model);
     const set=(id, value)=>{ const n=qs(`#${id}`); if(n) n.textContent=value; };
     set('metaLine', model.metaText); const phasePill=qs('#phasePill'); if(phasePill){ phasePill.textContent=model.phase || 'live'; phasePill.className=`pill ${model.phase==='finished'?'bad':model.phase==='bidding'?'ok':'wait'}`; }
-    set('currentBid', bidText(model.bid)); set('bidBy', model.bid ? `door ${model.bid.bidder_name || model.players.find((p)=>Number(p.seat || p.seat_index || 0)===Number(model.bid.bidder_seat || model.bid.seat || 0))?.name || '—'}` : 'Nog geen bod'); set('roundNo', String(Number(model.roundNo || 0))); const activeSeat=model.phase==='voting' ? model.voteTurnSeat : model.turnSeat; set('turnName', model.players.find((p)=>Number(p.seat || p.seat_index || 0)===activeSeat)?.name || '—'); set('penaltyMode', penaltyLabel(model.penaltyMode)); set('diceFraction', `${Number(model.totals.current_total || 0)}/${Number(model.totals.start_total || 0)}`);
+    set('currentBid', bidText(model.bid)); set('bidBy', model.bid ? `door ${model.bid.bidder_name || model.players.find((p)=>Number(p.seat || p.seat_index || 0)===Number(model.bid.bidder_seat || model.bid.seat || 0))?.name || '—'}` : 'Nog geen bod'); set('roundNo', String(Number(model.roundNo || 0))); const activeSeat=model.phase==='voting' ? model.voteTurnSeat : model.turnSeat; set('turnName', model.players.find((p)=>Number(p.seat || p.seat_index || 0)===activeSeat)?.name || '—'); set('penaltyMode', penaltyLabel(model.penaltyMode)); set('diceFraction', `${currentDiceTotal(model)}/${Number(model.totals.start_total || 0)}`);
     renderVotes(model); renderSeats(model); renderReveal(model.lastReveal); renderMyDice(model); renderBidSelect(model);
     const mySeat=Number(model.viewer?.seat || model.viewer?.seat_index || 0); const meAlive=model.mode==='viewer' ? true : (!!model.viewer?.alive || model.phase==='lobby'); const myTurn=model.mode==='actor' && model.phase==='bidding' && mySeat===model.turnSeat && meAlive; const myVoteTurn=model.mode==='actor' && model.phase==='voting' && mySeat===model.voteTurnSeat && meAlive;
     const hasActorSession = !!sessionToken();
