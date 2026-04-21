@@ -267,11 +267,57 @@ function writeProfilesCache(value) {
     return RPC.callRpc('get_all_site_players_public_scoped', { site_scope_input: CTX.getScope() });
   }
 
+  async function fetchActivatedPlayers(scope) {
+    try {
+      const helper = global.GEJAST_CONFIG && (global.GEJAST_CONFIG.getActivatedPlayerNamesForScope || global.GEJAST_CONFIG.fetchScopedActivePlayerNames);
+      if (!helper) return [];
+      const names = await helper(scope || CTX.getScope());
+      return safeArray(names).map((name) => ({ player_name: name, display_name: name, public_display_name: name }));
+    } catch (_) {
+      return [];
+    }
+  }
+
+  async function fetchLoginNamesPlayers(scope) {
+    try {
+      const helper = global.GEJAST_CONFIG && global.GEJAST_CONFIG.readCachedLoginNames;
+      const names = helper ? helper(scope || CTX.getScope()) : [];
+      return safeArray(names).map((name) => ({ player_name: name, display_name: name, public_display_name: name }));
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function mergeProfilePlayers(bundlePlayers, allPlayers, activatedPlayers, loginNamePlayers) {
+    const map = new Map();
+    function absorb(rows) {
+      safeArray(rows).forEach((player) => {
+        const key = normalizeName(
+          preferredPlayerName(player, player?.player_name || player?.display_name || player?.public_display_name || '')
+        );
+        if (!key) return;
+        map.set(key, Object.assign({}, map.get(key) || {}, player));
+      });
+    }
+    absorb(loginNamePlayers);
+    absorb(activatedPlayers);
+    absorb(allPlayers);
+    absorb(bundlePlayers);
+    return Array.from(map.values()).filter((player) => {
+      const shown = preferredPlayerName(player, player?.player_name || player?.display_name || '');
+      return !!normalizeName(shown);
+    });
+  }
+
+
   global.GEJAST_PROFILE_SOURCE = {
     loadPlayerBundle,
     loadPlayerGamePanels,
     loadProfilesPageBundle,
     loadProfilesList,
+    fetchActivatedPlayers,
+    fetchLoginNamesPlayers,
+    mergeProfilePlayers,
     deriveSharedStats,
     deriveGameInsights,
     profileImageUrl

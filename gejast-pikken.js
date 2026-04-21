@@ -86,6 +86,55 @@
     return img;
   }
 
+
+  const PIKKEN_RATINGS = { map:new Map(), loaded:false };
+  function nameKey(value){ return String(value || '').trim().toLowerCase(); }
+  async function fetchPikkenRatings(){
+    if (PIKKEN_RATINGS.loaded && PIKKEN_RATINGS.map.size) return PIKKEN_RATINGS.map;
+    const payloads = [
+      ['get_pikken_ladder_public_scoped', { site_scope_input: getScope() }],
+      ['get_pikken_ladder_public', {}],
+      ['get_pikken_stats_scoped', { site_scope_input: getScope() }]
+    ];
+    for (const [rpcName, payload] of payloads){
+      try {
+        const raw = await rpc(rpcName, payload);
+        const rows = Array.isArray(raw?.ladder) ? raw.ladder : (Array.isArray(raw?.leaderboard) ? raw.leaderboard : (Array.isArray(raw) ? raw : []));
+        const map = new Map();
+        rows.forEach((row)=>{
+          const key = nameKey(row?.player_name || row?.display_name || row?.nickname || row?.name || '');
+          if (!key) return;
+          map.set(key, Number(row?.elo_rating || row?.rating || row?.best_rating || 1000) || 1000);
+        });
+        if (map.size) { PIKKEN_RATINGS.map = map; PIKKEN_RATINGS.loaded = true; return map; }
+      } catch (_) {}
+    }
+    PIKKEN_RATINGS.loaded = true;
+    return PIKKEN_RATINGS.map;
+  }
+  function renderWinProbability(game, players){
+    const bar = qs('#pkWinProbBar');
+    if (!bar) return;
+    const phase = String(game?.state?.phase || 'lobby');
+    const pool = (Array.isArray(players) ? players : []).filter((p)=>{
+      if (phase === 'lobby') return true;
+      return !!(p?.alive || p?.dice_count > 0);
+    });
+    if (pool.length < 2) {
+      bar.textContent = 'Kies of join een lobby om de winstkans te zien.';
+      return;
+    }
+    const rows = pool.map((player)=>({
+      name: String(player?.name || player?.player_name || 'Speler').trim(),
+      rating: Number(PIKKEN_RATINGS.map.get(nameKey(player?.name || player?.player_name || '')) || 1000) || 1000
+    }));
+    const total = rows.reduce((sum, row)=>sum + Math.max(100, row.rating), 0) || (rows.length * 1000);
+    bar.innerHTML = rows.map((row)=>{
+      const pct = Math.round((Math.max(100,row.rating) / total) * 1000) / 10;
+      return `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><span>${esc(row.name)}</span><strong>${pct}% · ELO ${Math.round(row.rating)}</strong></div>`;
+    }).join('') + '<div style="margin-top:8px;font-size:12px;opacity:.8">Schatting op basis van huidige Pikken-ELO van de spelers in deze lobby.</div>';
+  }
+
   const UI = { gameId:'', lastStateVersion:-1, pollTimer:null, lastPlayers:[], feedTimer:null };
   let autoLiveRedirectDone = false;
 
@@ -216,6 +265,7 @@
     const totals = state?.dice_totals || {};
     renderMatchSummary(game, viewer, totals);
     renderLobbyControls(game, viewer);
+    renderWinProbability(game, players);
 
     const bid = game?.state?.bid && game.state.bid !== null ? game.state.bid : null;
     const bidTxt = bid ? (Number(bid.face)===1 ? `${bid.count} × pik` : `${bid.count} × ${bid.face}`) : '—';
@@ -311,6 +361,7 @@
     history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(getScope())}`);
     startPolling();
     loadDiscoverFeeds();
+    fetchPikkenRatings().then(()=>renderWinProbability(null, [])).catch(()=>renderWinProbability(null, []));
   }
   async function joinLobby(){
     const token = sessionToken();
@@ -331,26 +382,7 @@
   async function setReady(ready){
     if (!UI.gameId) return setStatus('Je zit nog niet in een lobby.', true);
     setStatus(ready?'Ready…':'Unready…', false);
-    const variants = [
-      ...payloadVariants({ game_id_input: UI.gameId, ready_input: !!ready }),
-      ...payloadVariants({ game_id_input: UI.gameId, is_ready_input: !!ready }),
-      ...payloadVariants({ game_id_input: UI.gameId, status_input: !!ready ? 'ready' : 'unready' }),
-      ...payloadVariants({ game_id_input: UI.gameId, ready: !!ready }, { includeScope:false })
-    ];
-    try {
-      await rpcVariants('pikken_set_ready_scoped', variants);
-    } catch (_) {
-      try {
-        await rpcVariants('pikken_set_ready_safe', variants);
-      } catch (_) {
-        await rpcFirst(['pikken_update_ready_scoped','pikken_update_player_ready_scoped'], {
-          session_token: sessionToken() || null,
-          game_id_input: UI.gameId,
-          ready_input: !!ready,
-          site_scope_input: getScope()
-        });
-      }
-    }
+    await rpcVariants('pikken_set_ready_scoped', payloadVariants({ game_id_input: UI.gameId, ready_input: !!ready }));
     await loadAndRender();
   }
   async function startGame(){
@@ -389,6 +421,8 @@
     history.replaceState(null,'',`pikken.html${getScope() === 'family' ? '?scope=family' : ''}`);
     renderMatchSummary(null, null, null);
     renderLobbyControls(null, {});
+    renderWinProbability(null, []);
+    renderWinProbability(null, []);
     const players = qs('#pkPlayers');
     if (players) players.innerHTML = '<div class="muted">Kies een open lobby hieronder of maak er zelf één.</div>';
     setStatus(message || '', false);
@@ -449,6 +483,7 @@
     if (joinInput && !joinInput.value) joinInput.value = lastLobbyCode();
     restoreParticipantGame();
     renderLobbyControls(null, {});
+    renderWinProbability(null, []);
     qs('#pkCreateLobbyBtn')?.addEventListener('click', ()=>createLobby().catch(e=>setStatus(normalizeError(e),true)));
     qs('#pkJoinLobbyBtn')?.addEventListener('click', ()=>joinLobby().catch(e=>setStatus(normalizeError(e),true)));
     qs('#pkReadyBtn')?.addEventListener('click', ()=>setReady(true).catch(e=>setStatus(normalizeError(e),true)));
