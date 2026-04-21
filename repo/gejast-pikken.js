@@ -331,7 +331,26 @@
   async function setReady(ready){
     if (!UI.gameId) return setStatus('Je zit nog niet in een lobby.', true);
     setStatus(ready?'Ready…':'Unready…', false);
-    await rpcVariants('pikken_set_ready_scoped', payloadVariants({ game_id_input: UI.gameId, ready_input: !!ready }));
+    const variants = [
+      ...payloadVariants({ game_id_input: UI.gameId, ready_input: !!ready }),
+      ...payloadVariants({ game_id_input: UI.gameId, is_ready_input: !!ready }),
+      ...payloadVariants({ game_id_input: UI.gameId, status_input: !!ready ? 'ready' : 'unready' }),
+      ...payloadVariants({ game_id_input: UI.gameId, ready: !!ready }, { includeScope:false })
+    ];
+    try {
+      await rpcVariants('pikken_set_ready_scoped', variants);
+    } catch (_) {
+      try {
+        await rpcVariants('pikken_set_ready_safe', variants);
+      } catch (_) {
+        await rpcFirst(['pikken_update_ready_scoped','pikken_update_player_ready_scoped'], {
+          session_token: sessionToken() || null,
+          game_id_input: UI.gameId,
+          ready_input: !!ready,
+          site_scope_input: getScope()
+        });
+      }
+    }
     await loadAndRender();
   }
   async function startGame(){
