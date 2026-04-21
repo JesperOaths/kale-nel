@@ -22,6 +22,43 @@
   }
   function isFinished(item){ return !!(item?.finished_at || summaryFromItem(item)?.finished_at || summaryFromItem(item)?.live_state?.status === 'finished'); }
   function metaText(item){ if(isFinished(item)){ const when = item.finished_at || summaryFromItem(item)?.finished_at; return when ? `Afgerond op ${new Date(when).toLocaleString('nl-NL')}` : 'Wedstrijd afgerond.'; } const updated = item.updated_at || summaryFromItem(item)?.live_state?.updated_at || Date.now(); return `Live bijgewerkt om ${new Date(updated).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`; }
+  function scanSessionStorage(predicate){
+    try {
+      for (let index = 0; index < sessionStorage.length; index += 1){
+        const key = sessionStorage.key(index);
+        if (!key || !predicate(key)) continue;
+        const raw = sessionStorage.getItem(key);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw);
+        if (parsed) return parsed;
+      }
+    } catch (_) {}
+    return null;
+  }
+  function localHomepageEntries(scope){
+    const out = {};
+    try {
+      const klaverjas = JSON.parse(sessionStorage.getItem('current_match_v67') || 'null');
+      if (klaverjas && klaverjas.id && Array.isArray(klaverjas.players) && klaverjas.players.filter(Boolean).length === 4) {
+        out.klaverjas = {
+          href: buildScopedHref('./klaverjas_live_v596.html', { client_match_id: String(klaverjas.id), match_id: String(klaverjas.id), match_ref: String(klaverjas.id) }, scope),
+          label: 'KLAVERJAS LIVE',
+          copy: 'Open live scoreblad van jouw huidige potje.'
+        };
+      }
+    } catch (_) {}
+    try {
+      const boerenbridge = scanSessionStorage((key)=>/^boerenbridge_draft_/i.test(String(key || '')));
+      if (boerenbridge && !boerenbridge.finished_at && boerenbridge.client_match_id && Array.isArray(boerenbridge.players) && boerenbridge.players.filter(Boolean).length >= 2) {
+        out.boerenbridge = {
+          href: buildScopedHref('./boerenbridge_live.html', { client_match_id: String(boerenbridge.client_match_id), match_ref: String(boerenbridge.client_match_id) }, scope),
+          label: 'BOERENBRIDGE LIVE',
+          copy: 'Open live scoreblad van jouw huidige potje.'
+        };
+      }
+    } catch (_) {}
+    return out;
+  }
   function buildScopedHref(base, item, scope){
     try {
       const url = new URL(base, window.location.href);
@@ -31,10 +68,13 @@
       if (matchRef) url.searchParams.set('match_ref', matchRef);
       if ((scope || currentScope()) === 'family') url.searchParams.set('scope', 'family');
       return url.pathname.split('/').pop() + url.search;
-    } catch (_) { return base; }
+    } catch (_) {
+      return base;
+    }
   }
   async function loadPublicSummary(gameType, opts={}){
-    const c=cfg(); const scope = opts.siteScope || currentScope();
+    const c=cfg();
+    const scope = opts.siteScope || currentScope();
     const clientMatchId = String(opts.clientMatchId || '').trim();
     const matchRef = String(opts.matchRef || '').trim();
     try {
@@ -42,61 +82,30 @@
       return itemFromPayload(raw);
     } catch(err) {
       const legacyRef = matchRef || clientMatchId;
-      const raw = await fetch(`${c.SUPABASE_URL}/rest/v1/rpc/get_live_match_summary_public`, { method:'POST', headers:headers(), body: JSON.stringify({ game_type_input: gameType, match_ref_input: legacyRef || null, client_match_id_input: clientMatchId || null }) }).then(parse);
-      return itemFromPayload(raw);
-    }
-  }
-
-  const PARTICIPANT_KEYS = {
-    klaverjas: ['gejast_klaverjas_participant_v1','gejast_klaverjas_participant_v2','gejast_klaverjas_live_participant_v1'],
-    boerenbridge: ['gejast_boerenbridge_participant_v1','gejast_boerenbridge_participant_v2','gejast_boerenbridge_live_participant_v1'],
-    pikken: ['gejast_pikken_participant_v501'],
-    paardenrace: ['gejast_paardenrace_participant_v1','gejast_paardenrace_live_participant_v1']
-  };
-  function readParticipantToken(gameKey){
-    const keys = PARTICIPANT_KEYS[gameKey] || [];
-    for (const key of keys){
       try {
-        const raw = localStorage.getItem(key);
-        if (!raw) continue;
-        const parsed = JSON.parse(raw);
-        if (parsed && (parsed.game_id || parsed.client_match_id || parsed.match_ref || parsed.live_ref || parsed.room_code)) return parsed;
-      } catch (_) {}
+        const raw = await fetch(`${c.SUPABASE_URL}/rest/v1/rpc/get_live_match_summary_public`, { method:'POST', headers:headers(), body: JSON.stringify({ game_type_input: gameType, match_ref_input: legacyRef || null, client_match_id_input: clientMatchId || null }) }).then(parse);
+        return itemFromPayload(raw);
+      } catch(inner) {
+        if(/live_match_summaries/i.test(String(inner?.message || inner || ''))){
+          throw new Error('Live samenvatting is nog niet beschikbaar op deze database. Draai eerst de v488 compat SQL.');
+        }
+        throw inner;
+      }
     }
-    return null;
   }
-  function homepageEntry(gameKey, opts={}){
-    if (gameKey === 'klaverjas') return {
-      label: 'Klaverjas Kijken',
-      copy: 'Open live scoreblad van jouw huidige potje.',
-      href: buildScopedHref('./klaverjas_live.html', opts.item || opts.token || {}, opts.scope || currentScope())
-    };
-    if (gameKey === 'boerenbridge') return {
-      label: 'Boerenbridge begluren',
-      copy: 'Open live scoreblad van jouw huidige potje.',
-      href: buildScopedHref('./boerenbridge_live.html', opts.item || opts.token || {}, opts.scope || currentScope())
-    };
-    return null;
-  }
-
   async function loadHomepageState(sessionToken='', scope){
-    const c = cfg(); const useScope = scope || currentScope(); const token = sessionToken || currentSessionToken();
+    const c = cfg();
+    const useScope = scope || currentScope();
+    const token = sessionToken || currentSessionToken();
+    let backend = {};
     try {
       const raw = await fetch(`${c.SUPABASE_URL}/rest/v1/rpc/get_homepage_live_state_public_scoped`, { method:'POST', headers:headers(), body: JSON.stringify({ session_token: token || null, site_scope_input: useScope }) }).then(parse);
-      const entries = raw?.entries || raw?.by_game || raw || {};
-      if (entries && Object.keys(entries).length) return entries;
-    } catch (_) {}
-    const fallback = {};
-    const k = readParticipantToken('klaverjas');
-    if (k && (k.game_id || k.client_match_id || k.match_ref)) fallback.klaverjas = homepageEntry('klaverjas', { token:k, scope:useScope });
-    const b = readParticipantToken('boerenbridge');
-    if (b && (b.game_id || b.client_match_id || b.match_ref)) fallback.boerenbridge = homepageEntry('boerenbridge', { token:b, scope:useScope });
-    return fallback;
+      backend = raw?.entries || raw?.by_game || raw || {};
+    } catch (_) {
+      const raw = await fetch(`${c.SUPABASE_URL}/rest/v1/rpc/get_homepage_live_state_public`, { method:'POST', headers:headers(), body: JSON.stringify({ session_token: token || null }) }).then(parse);
+      backend = raw?.entries || raw?.by_game || raw || {};
+    }
+    return Object.assign({}, localHomepageEntries(useScope), backend || {});
   }
-
-  window.GEJAST_LIVE_SUMMARY = {
-    currentScope, currentSessionToken, normalizeName, matchIdentityFromUrl, loadPublicSummary,
-    itemFromPayload, summaryFromItem, participants, hostName, isFinished, metaText,
-    buildScopedHref, loadHomepageState, readParticipantToken, homepageEntry
-  };
+  window.GEJAST_LIVE_SUMMARY = { currentScope, currentSessionToken, normalizeName, matchIdentityFromUrl, loadPublicSummary, itemFromPayload, summaryFromItem, participants, hostName, isFinished, metaText, buildScopedHref, localHomepageEntries, loadHomepageState };
 })();

@@ -1,171 +1,24 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
+  <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
-  <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v496';</script>
-  <script src="./gejast-config.js?v496"></script>
-  <script src="./gejast-family-rollout.js?v496"></script>
-  <script src="./gejast-home-gate.js?v496"></script>
-<script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('klaverjas_quick_stats_v593.html');</script>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Klaverjas snelle stats</title>
-<style>
-  :root{--bg:#f4f1ea;--paper:#fcfaf6;--line:#d9d2c7;--ink:#1f1a15;--muted:#655d53;--gold:#b99647;--danger:#a93627;--shadow:0 18px 42px rgba(27,20,12,.09)}
-  *{box-sizing:border-box}
-  body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
-  .page{max-width:720px;margin:0 auto;min-height:100dvh;padding:18px 14px 28px}
-  h1{margin:0 0 14px;font-size:30px;letter-spacing:-.05em}
-  .lead{color:var(--muted);font-weight:700;margin:0 0 18px}
-  .hero{background:var(--paper);border:1px solid rgba(31,26,21,.07);border-radius:28px;padding:18px;box-shadow:var(--shadow);margin-bottom:16px}
-  .score{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin-top:8px}
-  .side{text-align:center}
-  .side .label{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#8e7b55;font-weight:900}
-  .side .names{margin-top:6px;font-size:22px;font-weight:900;line-height:1.12;letter-spacing:-.04em}
-  .side .total{margin-top:10px;font-size:42px;font-weight:900;letter-spacing:-.06em}
-  .vs{font-size:16px;color:var(--muted);font-weight:900}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-  .card{background:var(--paper);border:1px solid rgba(31,26,21,.07);border-radius:24px;padding:16px;box-shadow:var(--shadow)}
-  .card h2{margin:0 0 10px;font-size:18px;letter-spacing:-.03em}
-  .list{display:grid;gap:9px}
-  .row{display:flex;justify-content:space-between;gap:12px;font-size:14px;font-weight:700;color:#2c261f}
-  .row span:last-child{font-weight:900}
-  .muted{color:var(--muted)}
-  .taks{display:grid;gap:10px;margin-top:14px}
-  .tak{border-top:1px solid var(--line);padding-top:10px}
-  .tak:first-child{border-top:0;padding-top:0}
-  .tak-title{font-size:15px;font-weight:900;margin-bottom:6px;color:#6b6256;text-transform:uppercase;letter-spacing:.08em}
-  .round{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;padding:6px 0;border-bottom:1px dashed rgba(31,26,21,.08)}
-  .round:last-child{border-bottom:0}
-  .round .center{font-size:12px;color:#5a5348;text-align:center;font-weight:900}
-  .round .left,.round .right{font-size:14px;font-weight:800}
-  .round .right{text-align:right}
-  .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:#fff;border:1px solid rgba(31,26,21,.08);font-size:13px;font-weight:900}
-  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
-  .btn{appearance:none;border:0;border-radius:999px;padding:13px 18px;font:900 14px/1 Inter,sans-serif;cursor:pointer}
-  .btn.dark{background:#111;color:#fff}
-  .btn.gold{background:var(--gold);color:#111}
-  .empty{padding:28px;border-radius:22px;background:rgba(255,255,255,.6);border:1px dashed rgba(31,26,21,.14);color:var(--muted);font-weight:700;text-align:center}
-  @media (max-width:560px){.grid{grid-template-columns:1fr}.side .names{font-size:18px}.side .total{font-size:34px}}
-</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Klaverjas quick stats</title>
+  <script>window.GEJAST_PAGE_VERSION='v596';</script>
+  <script src="./gejast-config.js?v596"></script>
+  <script>
+    (function(){
+      const url = new URL('./klaverjas_quick_stats_v596_repo.html', window.location.href);
+      const params = new URLSearchParams(window.location.search || '');
+      params.forEach((value, key) => url.searchParams.set(key, value));
+      window.location.replace(url.toString());
+    })();
+  </script>
 </head>
-<body>
-<div class="page">
-  <h1>Snelle stats</h1>
-  <p class="lead">Overzicht van de zojuist gespeelde klaverjaspot.</p>
-  <div id="app"></div>
-</div>
-<script>
-const KEY = 'klaverjas_quick_stats_v593';
-function suitText(s){ return s === 'S' ? 'sans' : s; }
-function getData(){
-  try { return JSON.parse(sessionStorage.getItem(KEY) || 'null'); } catch (_) { return null; }
-}
-function fmtNames(arr){ return (arr || []).filter(Boolean).join(' · ') || '-'; }
-function render(){
-  const data = getData();
-  const app = document.getElementById('app');
-  if (!data) {
-    app.innerHTML = '<div class="empty">Nog geen klaverjasspel in sessie gevonden. Open eerst de scorer en speel of voltooi een pot.</div>';
-    return;
-  }
-  const winner = data.winner || '';
-  const winnerNames = winner === 'W' ? fmtNames(data.players.W) : winner === 'Z' ? fmtNames(data.players.Z) : 'Gelijkspel';
-  const kruip = data.kruip || { danger:'', naakt:false };
-  const totalRoemW = (data.rounds || []).reduce((s,r)=> s + Number(r.roemW || 0), 0);
-  const totalRoemZ = (data.rounds || []).reduce((s,r)=> s + Number(r.roemZ || 0), 0);
-  const natW = (data.rounds || []).filter(r => r.natBy === 'W').length;
-  const natZ = (data.rounds || []).filter(r => r.natBy === 'Z').length;
-  const pitW = (data.rounds || []).filter(r => r.pitBy === 'W').length;
-  const pitZ = (data.rounds || []).filter(r => r.pitBy === 'Z').length;
-  const verzW = (data.rounds || []).filter(r => r.verzaaktBy === 'W').length;
-  const verzZ = (data.rounds || []).filter(r => r.verzaaktBy === 'Z').length;
-  const suits = { W:{}, Z:{} };
-  (data.rounds || []).forEach(r => { const team = r.team || 'W'; const key = suitText(r.suit); suits[team][key] = (suits[team][key] || 0) + 1; });
-  app.innerHTML = `
-    <section class="hero">
-      <div class="pill">${winner ? 'Winnaars' : 'Uitslag'} · <strong>${winnerNames}</strong></div>
-      <div class="score">
-        <div class="side"><div class="label">wij</div><div class="names">${fmtNames(data.players.W)}</div><div class="total">${data.totals.W}</div></div>
-        <div class="vs">tegen</div>
-        <div class="side"><div class="label">zij</div><div class="names">${fmtNames(data.players.Z)}</div><div class="total">${data.totals.Z}</div></div>
-      </div>
-      <div class="actions">
-        <div class="pill">Voortgang · ${Math.round((data.progressRatio || 0) * 100)}%</div>
-        <div class="pill">Rondes · ${data.progressRounds}/16</div>
-        <div class="pill">ELO-schaal · ${(data.eloScale || 0).toFixed(2)}</div>
-        ${kruip.danger ? `<div class="pill">Kruipen-risico · ${kruip.danger === 'W' ? 'wij' : 'zij'}${kruip.naakt ? ' (naakt)' : ''}</div>` : ''}
-      </div>
-    </section>
-
-    <div class="grid">
-      <section class="card">
-        <h2>Hoofdstats</h2>
-        <div class="list">
-          <div class="row"><span>Totaal roem wij</span><span>+${totalRoemW}</span></div>
-          <div class="row"><span>Totaal roem zij</span><span>+${totalRoemZ}</span></div>
-          <div class="row"><span>Ruwe punten wij</span><span>${data.rawTotals.W}</span></div>
-          <div class="row"><span>Ruwe punten zij</span><span>${data.rawTotals.Z}</span></div>
-          <div class="row"><span>Snapshot trigger</span><span class="muted">${data.completed ? 'afgesloten spel' : 'tussenstand'}</span></div>
-        </div>
-      </section>
-      <section class="card">
-        <h2>Specials & blunders</h2>
-        <div class="list">
-          <div class="row"><span>Nat wij / zij</span><span>${natW} / ${natZ}</span></div>
-          <div class="row"><span>Pit wij / zij</span><span>${pitW} / ${pitZ}</span></div>
-          <div class="row"><span>Verzaakt wij / zij</span><span>${verzW} / ${verzZ}</span></div>
-          <div class="row"><span>Kruipen</span><span>${kruip.danger ? (kruip.danger === 'W' ? 'wij' : 'zij') : 'nee'}</span></div>
-          <div class="row"><span>Naakt kruipen</span><span>${kruip.naakt ? 'ja' : 'nee'}</span></div>
-        </div>
-      </section>
-      <section class="card">
-        <h2>Biedingen wij</h2>
-        <div class="list">
-          ${Object.keys(suits.W).length ? Object.entries(suits.W).map(([k,v]) => `<div class="row"><span>${k}</span><span>${v}x</span></div>`).join('') : '<div class="row"><span class="muted">Geen</span><span>-</span></div>'}
-        </div>
-      </section>
-      <section class="card">
-        <h2>Biedingen zij</h2>
-        <div class="list">
-          ${Object.keys(suits.Z).length ? Object.entries(suits.Z).map(([k,v]) => `<div class="row"><span>${k}</span><span>${v}x</span></div>`).join('') : '<div class="row"><span class="muted">Geen</span><span>-</span></div>'}
-        </div>
-      </section>
-    </div>
-
-    <section class="card" style="margin-top:16px">
-      <h2>Takken & rondes</h2>
-      <div class="taks">
-        ${(data.taks || []).map(tak => `
-          <div class="tak">
-            <div class="tak-title">Tak ${tak.tak} · score ${tak.totals.W} - ${tak.totals.Z} · roem +${tak.roemTotals.W} / +${tak.roemTotals.Z}</div>
-            ${(tak.rounds || []).map(r => `
-              <div class="round">
-                <div class="left">${r.fw} <span class="muted">(+${Number(r.roemW || 0)})</span></div>
-                <div class="center">${r.bid}${suitText(r.suit)} ${r.team === 'W' ? '· wij biedt' : '· zij biedt'} ${r.pitBy ? '· pit' : ''} ${r.natBy ? '· nat' : ''} ${r.verzaaktBy ? '· verzaakt' : ''}</div>
-                <div class="right"><span class="muted">(+${Number(r.roemZ || 0)})</span> ${r.fz}</div>
-              </div>
-            `).join('')}
-          </div>
-        `).join('')}
-      </div>
-      <div class="actions">
-        <button class="btn gold" type="button" onclick="window.history.back()">Terug</button>
-        <button class="btn dark" type="button" onclick="sessionStorage.removeItem(KEY); render();">Wis snelle stats</button>
-      </div>
-    </section>
-  `;
-}
-render();
-</script>
-
-<div class="site-credit-watermark" data-version-watermark>v496 · Made by Bruis</div>
-<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./site-analytics.js?v596"></script>
-
+<body data-game-watermark="soft">
+  <div class="site-credit-watermark" data-version-watermark>v596 · Made by Bruis</div>
 </body>
 </html>

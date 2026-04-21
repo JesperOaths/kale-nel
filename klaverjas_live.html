@@ -1,196 +1,24 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8"/>
+  <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Klaverjas spectator</title>
-  <script>window.GEJAST_PAGE_VERSION='v620';</script>
-  <script src="./gejast-config.js?v620"></script>
-  <script src="./gejast-home-gate.js?v620"></script><script src="./gejast-family-rollout.js?v620"></script>
-  <script src="./gejast-scope.js?v620"></script>
-  <script src="./gejast-live-summary.js?v620"></script>
-  <script src="./gejast-spectator-pages.js?v620"></script>
-  <style>
-    :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241;--soft:#f7f3ec;--live:#123a1f;--livebg:#eaf7ee}
-    *{box-sizing:border-box}
-    body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover scroll;color:var(--ink)}
-    .wrap{max-width:1160px;margin:0 auto}
-    .card{background:rgba(255,251,245,.95);border:1px solid rgba(255,255,255,.7);border-radius:30px;padding:24px;box-shadow:0 20px 40px rgba(0,0,0,.08)}
-    .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
-    .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:none;cursor:pointer}
-    .brand-link img{width:64px;height:64px;object-fit:contain}
-    .eyebrow-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-    .chip{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:#efe7cf;color:#6b5220;font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
-    .chip.live{background:var(--livebg);color:var(--live)}
-    h1{margin:0;font-size:40px;letter-spacing:-.04em}
-    .muted{color:var(--muted)}
-    .meta-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-top:20px}
-    .meta-card,.panel,.scorebox,.round-card,.team-card{background:#fff;border:1px solid var(--line);border-radius:22px}
-    .meta-card{padding:14px 16px}.meta-card span{display:block;font-size:11px;color:#8a7a55;text-transform:uppercase;letter-spacing:.08em}.meta-card strong{display:block;margin-top:8px;font-size:17px;line-height:1.35}
-    .teams{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}
-    .team-card{padding:18px;display:grid;gap:12px}.team-card h2{margin:0;font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55}.team-score{font-size:42px;font-weight:900;letter-spacing:-.04em}.team-players{display:grid;gap:6px;color:#4f4539}
-    .panel{padding:18px;margin-top:18px}
-    .panel h2{margin:0 0 10px;font-size:26px;letter-spacing:-.03em}
-    .hero-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;margin-top:18px}
-    .detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
-    .detail{padding:12px;border-radius:16px;background:var(--soft);border:1px solid rgba(0,0,0,.05)}
-    .detail span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55}.detail strong{display:block;margin-top:6px;font-size:16px;line-height:1.35}
-    .rounds{display:grid;gap:12px}
-    .round-card{padding:16px}
-    .round-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
-    .round-title{font-size:20px;font-weight:900;letter-spacing:-.03em}
-    .round-sub{margin-top:4px;color:var(--muted);font-size:14px}
-    .pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    .pill{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:#f5edd9;color:#72581f;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
-    .scoreline{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
-    .scorebox{padding:14px 16px}.scorebox span{display:block;font-size:11px;color:#8a7a55;text-transform:uppercase;letter-spacing:.08em}.scorebox strong{display:block;margin-top:8px;font-size:28px}
-    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}
-    @media(max-width:980px){.meta-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.hero-grid,.teams{grid-template-columns:1fr}}
-    @media(max-width:640px){body{padding:12px}.meta-grid{grid-template-columns:repeat(2,minmax(0,1fr))}h1{font-size:32px}.team-score{font-size:34px}}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="card">
-      <div class="top">
-        <div>
-          <div class="eyebrow-row">
-            <span class="chip" id="spectatorPageChip">Klaverjas spectator</span>
-            <span class="chip" id="scopeChip">Vrienden</span>
-            <span class="chip live" id="statusChip">Laden</span>
-          </div>
-          <button class="btn" id="backLink" type="button">Terug</button>
-          <h1 style="margin-top:16px">Klaverjas live</h1>
-          <div id="metaText" class="muted" style="margin-top:8px">Spectator-weergave wordt geladen…</div>
-        </div>
-        <a class="brand-link" id="brandHomeLink" href="./index.html" aria-label="Home via logo"><img src="./logo.png" alt="Logo"/></a>
-      </div>
-
-      <div class="meta-grid">
-        <div class="meta-card"><span>Spelleider</span><strong id="hostValue">—</strong></div>
-        <div class="meta-card"><span>Spelers</span><strong id="playersValue">—</strong></div>
-        <div class="meta-card"><span>Rondes</span><strong id="roundsValue">—</strong></div>
-        <div class="meta-card"><span>Winnaar</span><strong id="winnerValue">—</strong></div>
-        <div class="meta-card"><span>Laatst bijgewerkt</span><strong id="updatedValue">—</strong></div>
-        <div class="meta-card"><span>Matchref</span><strong id="refValue">—</strong></div>
-      </div>
-
-      <div class="teams">
-        <section class="team-card">
-          <h2>Wij</h2>
-          <div class="team-score" id="scoreWij">0</div>
-          <div class="team-players" id="teamWij">Nog geen teamleden.</div>
-        </section>
-        <section class="team-card">
-          <h2>Zij</h2>
-          <div class="team-score" id="scoreZij">0</div>
-          <div class="team-players" id="teamZij">Nog geen teamleden.</div>
-        </section>
-      </div>
-
-      <div class="hero-grid">
-        <section class="panel">
-          <h2>Samenvatting</h2>
-          <div id="recap" class="muted">Nog geen samenvatting.</div>
-        </section>
-        <section class="panel">
-          <h2>Laatste ronde</h2>
-          <div id="latestRoundWrap" class="muted">Nog geen ronde geregistreerd.</div>
-        </section>
-      </div>
-
-      <section class="panel">
-        <h2>Rondes</h2>
-        <div id="roundsWrap" class="rounds">Nog geen rondes geregistreerd.</div>
-      </section>
-
-      <div style="margin-top:18px"><a class="btn" id="homeLink" href="./index.html">Home</a></div>
-    </div>
-  </div>
-
-  <div class="site-credit-watermark" data-version-watermark></div>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Klaverjas live</title>
+  <script>window.GEJAST_PAGE_VERSION='v596';</script>
+  <script src="./gejast-config.js?v596"></script>
   <script>
     (function(){
-      const spectator = window.GEJAST_SPECTATOR_PAGES || {};
-      function teamMarkup(rows){
-        return rows.length ? rows.map((name)=>`<div>${spectator.esc(name)}</div>`).join('') : 'Nog geen teamleden.';
-      }
-      function roundContract(round){
-        const suit = round?.suit || '';
-        const bid = round?.bid != null && round?.bid !== '' ? `${round.bid}` : '—';
-        const team = round?.team === 'W' ? 'Wij' : (round?.team === 'Z' ? 'Zij' : 'Onbekend');
-        return `${team} · ${bid}${suit ? ' ' + spectator.esc(suit) : ''}`;
-      }
-      function specialPills(round){
-        const pills = [];
-        if (Number(round?.rw || 0)) pills.push(`<span class="pill">Wij roem ${Number(round.rw)}</span>`);
-        if (Number(round?.rz || 0)) pills.push(`<span class="pill">Zij roem ${Number(round.rz)}</span>`);
-        if (round?.nat) pills.push(`<span class="pill">Nat ${round?.natBy === 'W' ? 'door Wij' : round?.natBy === 'Z' ? 'door Zij' : ''}</span>`);
-        if (round?.pit || round?.specialType === 'pit') pills.push(`<span class="pill">Pit ${round?.specialTeam === 'W' ? 'Wij' : round?.specialTeam === 'Z' ? 'Zij' : ''}</span>`);
-        if (round?.verzaaktBy) pills.push(`<span class="pill">Verzaakt ${spectator.esc(round.verzaaktBy)}</span>`);
-        return pills.join('');
-      }
-      function latestRoundMarkup(round){
-        if (!round) return 'Nog geen ronde geregistreerd.';
-        return `<div class="detail-grid">
-          <div class="detail"><span>Contract</span><strong>${roundContract(round)}</strong></div>
-          <div class="detail"><span>Ronde</span><strong>${spectator.esc(round?.round || round?.index || '—')}</strong></div>
-          <div class="detail"><span>Tak</span><strong>${spectator.esc(round?.tak || '—')}</strong></div>
-          <div class="detail"><span>Score</span><strong>${spectator.num(round?.fw)} · ${spectator.num(round?.fz)}</strong></div>
-        </div>
-        ${specialPills(round) ? `<div class="pill-row">${specialPills(round)}</div>` : ''}`;
-      }
-      function roundsMarkup(rounds){
-        if (!rounds.length) return 'Nog geen rondes geregistreerd.';
-        return rounds.slice().reverse().map((round, idx)=>`<article class="round-card">
-          <div class="round-head">
-            <div>
-              <div class="round-title">Ronde ${spectator.esc(round?.round || round?.index || (rounds.length - idx))}</div>
-              <div class="round-sub">${roundContract(round)}${round?.tak ? ` · Tak ${spectator.esc(round.tak)}` : ''}</div>
-            </div>
-            <div class="muted">Ingevoerd ${spectator.esc(round?.enteredScoreW || '—')} / ${spectator.esc(round?.enteredScoreZ || '—')}</div>
-          </div>
-          ${specialPills(round) ? `<div class="pill-row">${specialPills(round)}</div>` : ''}
-          <div class="scoreline">
-            <div class="scorebox"><span>Wij</span><strong>${spectator.num(round?.fw)}</strong></div>
-            <div class="scorebox"><span>Zij</span><strong>${spectator.num(round?.fz)}</strong></div>
-          </div>
-        </article>`).join('');
-      }
-
-      spectator.mount({
-        gameType: 'klaverjas',
-        emptyMessage: 'Geen actieve klaverjaswedstrijd gevonden.',
-        render(meta){
-          const summary = meta.summary || {};
-          const totals = summary.totals || summary.scoreboard || {};
-          const teams = summary.teams || {};
-          const rounds = Array.isArray(summary.rounds) ? summary.rounds : [];
-          const latest = rounds.length ? rounds[rounds.length - 1] : null;
-          document.getElementById('teamWij').innerHTML = teamMarkup(Array.isArray(teams.wij) ? teams.wij : []);
-          document.getElementById('teamZij').innerHTML = teamMarkup(Array.isArray(teams.zij) ? teams.zij : []);
-          document.getElementById('scoreWij').textContent = String(spectator.num(totals.wij));
-          document.getElementById('scoreZij').textContent = String(spectator.num(totals.zij));
-          document.getElementById('recap').textContent = summary.recap_text || 'Nog geen samenvatting.';
-          document.getElementById('latestRoundWrap').innerHTML = latestRoundMarkup(latest);
-          document.getElementById('roundsWrap').innerHTML = roundsMarkup(rounds);
-        },
-        renderEmpty(){
-          document.getElementById('recap').textContent = 'Er is nu geen actieve klaverjaswedstrijd om te volgen.';
-          document.getElementById('latestRoundWrap').textContent = 'Nog geen ronde geregistreerd.';
-          document.getElementById('roundsWrap').textContent = 'Nog geen rondes geregistreerd.';
-          document.getElementById('teamWij').textContent = 'Nog geen teamleden.';
-          document.getElementById('teamZij').textContent = 'Nog geen teamleden.';
-          document.getElementById('scoreWij').textContent = '0';
-          document.getElementById('scoreZij').textContent = '0';
-        }
-      });
+      const url = new URL('./klaverjas_live_v596.html', window.location.href);
+      const params = new URLSearchParams(window.location.search || '');
+      params.forEach((value, key) => url.searchParams.set(key, value));
+      window.location.replace(url.toString());
     })();
   </script>
-  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./site-analytics.js?v620"></script>
+</head>
+<body data-game-watermark="soft">
+  <div class="site-credit-watermark" data-version-watermark>v596 · Made by Bruis</div>
 </body>
 </html>

@@ -5,21 +5,22 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken</title>
-  <script>window.GEJAST_PAGE_VERSION='v581';</script>
-  <script src="./gejast-config.js?v581"></script>
-  <script src="./gejast-home-gate.js?v488"></script>
-  <script src="./gejast-scope-context.js?v486"></script>
+  <script>window.GEJAST_PAGE_VERSION='v615';</script>
+  <script src="./gejast-config.js?v615"></script>
+  <script src="./gejast-home-gate.js?v615"></script>
+  <script src="./gejast-scope-context.js?v615"></script>
   <style>
     :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241;--shadow:0 18px 44px rgba(0,0,0,.08)}
     *{box-sizing:border-box}
-    body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
+    body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.94),rgba(240,235,226,.96)),url('./site-bg-desktop.webp') center/cover scroll;color:var(--ink)}
     .wrap{max-width:1100px;margin:0 auto}
     .card{background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.7);border-radius:28px;padding:22px;box-shadow:var(--shadow)}
     .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
     .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;background:#111;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer}
     .btn.alt{background:#fff;color:#111;border:1px solid var(--line)}
+    .btn.warn{background:#7f2f1d}
     .muted{color:var(--muted)}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
     .panel{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px}
@@ -42,22 +43,29 @@
     .detail{padding:0 16px 16px}
     .reveal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px}
     .reveal-card{border:1px solid var(--line);border-radius:18px;background:#fbfaf6;padding:12px}
+    .feed{display:grid;gap:10px;margin-top:14px}
+    .feed-card{border:1px solid var(--line);border-radius:18px;background:#fbfaf6;padding:12px}
+    .feed-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+    .feed-title{font-weight:900}
+    .feed-meta{font-size:12px;color:var(--muted);margin-top:4px}
+    .feed-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .section-label{font-size:.78rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#8a7a55;margin-top:14px}
     @media(max-width:900px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
-<body data-pikken-page="lobby">
+<body>
   <div class="wrap">
     <div class="card">
       <div class="top">
         <div>
-          <a class="btn alt" id="pkHomeLink" href="./index.html">Home</a>
+          <a class="btn alt" href="./index.html">Home</a>
           <div style="display:flex;align-items:center;gap:12px;margin:14px 0 6px"><img src="./assets/pikken/pikken-icon.svg" alt="Pikken" style="width:52px;height:52px;border-radius:14px;background:#fff;padding:8px;border:1px solid rgba(0,0,0,.08)"><h1 style="margin:0">Pikken</h1></div>
-          <div class="muted">Lobby voor Pikken. Zodra de host start, gaan deelnemers automatisch door naar de live tafel.</div>
+          <div class="muted">Lobby + live dobbelspel. 1 is pik (joker bij 2–6), met spectator-pagina en stats.</div>
           <div id="pkStatus" class="muted" style="margin-top:8px;min-height:20px"></div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-          <a class="btn alt" id="pkLiveLink" href="./pikken_live.html" style="display:none">Naar live tafel</a><a class="btn alt" id="pkSpectateLink" href="./pikken_live.html">Spectate</a>
-          <a class="btn alt" id="pkStatsLink" href="./pikken_stats.html">Stats</a>
+          <a class="btn alt" id="pkLiveLink" href="./pikken_live.html" style="display:none">Live meekijken</a><a class="btn alt" href="./pikken_live.html">Spectate</a>
+          <a class="btn alt" href="./pikken_stats.html">Stats</a>
         </div>
       </div>
 
@@ -86,8 +94,19 @@
             <button class="btn alt" id="pkJoinLobbyBtn">Join lobby</button>
             <button class="btn alt" id="pkReadyBtn">Ready</button>
             <button class="btn alt" id="pkUnreadyBtn">Unready</button>
-            <button class="btn alt" id="pkLeaveBtn">Verlaat lobby</button>
             <button class="btn" id="pkStartBtn">Start</button>
+            <button class="btn alt" id="pkLeaveBtn">Verlaat match</button>
+            <button class="btn warn" id="pkDestroyBtn">Destroy</button>
+          </div>
+
+          <div class="section-label">Open lobbies</div>
+          <div id="pkLobbyFeed" class="feed">
+            <div class="muted">Open Pikken-lobbies laden…</div>
+          </div>
+
+          <div class="section-label">Actieve matches</div>
+          <div id="pkLiveFeed" class="feed">
+            <div class="muted">Actieve Pikken-matches laden…</div>
           </div>
 
           <details class="accordion">
@@ -102,9 +121,8 @@
         </section>
 
         <section class="panel">
-          <h2 style="margin:0 0 10px">Match</h2>
-          <div class="muted">Fase: <strong id="pkPhase">lobby</strong> · Ronde: <strong id="pkRoundNo">0</strong></div>
-          <div class="muted" style="margin-top:6px">Dobbelstenen: start <strong id="pkDiceStart">0</strong> · nu <strong id="pkDiceCurrent">0</strong> · kwijt <strong id="pkDiceLost">0</strong></div>
+          <h2 style="margin:0 0 10px">Actieve tafel</h2>
+          <div id="pkMatchSummary" class="muted">Nog geen actieve Pikken-match op dit apparaat.</div>
 
           <div style="margin-top:12px">
             <div class="muted">Huidig bod</div>
@@ -147,27 +165,11 @@
     </div>
   </div>
 
-  <script src="./pikken-dice-canvas.js?v488"></script>
-  <script src="./gejast-pikken.js?v488"></script>
-  <script>
-    (() => {
-      function scopedHref(path){
-        const url = new URL(path, window.location.href);
-        if (new URLSearchParams(window.location.search).get('scope') === 'family') url.searchParams.set('scope', 'family');
-        return `${url.pathname.split('/').pop()}${url.search}`;
-      }
-      const links = {
-        pkHomeLink: './index.html',
-        pkSpectateLink: './pikken_live.html',
-        pkStatsLink: './pikken_stats.html'
-      };
-      Object.entries(links).forEach(([id, path]) => {
-        const el = document.getElementById(id);
-        if (el) el.href = scopedHref(path);
-      });
-    })();
-  </script>
+  <script src="./pikken-dice-canvas.js?v615"></script>
+  <script src="./gejast-pikken.js?v615"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 <div class="site-credit-watermark" data-version-watermark></div>
+<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>
+
