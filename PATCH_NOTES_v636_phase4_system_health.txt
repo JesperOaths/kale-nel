@@ -1,0 +1,30 @@
+GEJAST v636 Phase 4 — System Health, version, gate and performance hardening
+
+Source base: v635 Phase 3 safe full current repo upload set.
+
+What changed:
+- Added admin_system_health.html.
+- Added gejast-version-source.js as a browser-side version evidence/report layer while preserving gejast-config.js as the configured owner.
+- Added gejast-script-version-normalizer.js to detect script/CSS cache-bust drift in live pages.
+- Added gejast-gate-bootstrap.js as a non-invasive helper; it does not globally replace gejast-home-gate.js.
+- Added gejast-perf-guards.js for reusable single-flight, timeout, interval and page snapshot helpers.
+- Added Phase 4 SQL: version_alignment_audit.sql, boot_bundle_perf_helpers.sql, gate_coverage_audit.sql.
+- Added System Health link to admin.html and admin_implementation_matrix.html.
+- Updated implementation-matrix-template.json and implementation_matrix_seed.sql with Phase 4 status.
+- Bumped visible/runtime version to v636.
+
+SQL run order after upload:
+1. version_alignment_audit.sql
+2. boot_bundle_perf_helpers.sql
+3. gate_coverage_audit.sql
+
+Safety notes:
+- No DROP/TRUNCATE/destructive data statements.
+- Existing active page gate owner is not replaced globally.
+- New gate helper only auto-runs if explicitly called with data-gejast-gate-bootstrap="auto".
+- SQL exposes guarded admin RPCs only; no direct table grants added.
+
+Honesty boundary:
+- Repo/source package is prepared.
+- Supabase runtime is verified only after running the three v636 SQL files.
+- Live deployment/browser behavior is verified only after upload and opening admin_system_health.html.
