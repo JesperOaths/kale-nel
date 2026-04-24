@@ -1,5 +1,5 @@
 (function(){
-  const TARGET='v656', TARGET_NUM=656, WATERMARK_TEXT='Made by Bruis';
+  const TARGET='v657', TARGET_NUM=656, WATERMARK_TEXT='Made by Bruis';
   function parse(v){const m=String(v||'').match(/v?(\d+)/i);return m?Number(m[1]):0;}
   function scripts(){return Array.from(document.scripts||[]).map(s=>({src:s.getAttribute('src')||s.src||'',id:s.id||'',inline:!(s.getAttribute('src')||s.src)}));}
   function scriptVersion(src){const m=String(src||'').match(/[?&]v(\d+)/i);return m?'v'+m[1]:null;}

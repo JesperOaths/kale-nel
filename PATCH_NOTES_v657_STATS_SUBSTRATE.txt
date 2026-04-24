@@ -1,0 +1,29 @@
+GEJAST v657 — Stats substrate bundle (phases 2 + 7 + 8 + 12)
+
+FRONTEND ZIP RULES
+- Actual repo files only.
+- Flat zip(s), no nested folders.
+- No .py files.
+- No .sql files inside frontend zips.
+- SQL is delivered separately as GEJAST_v657_stats_substrate.sql.
+- Split into <=100 files per zip.
+
+WHAT CHANGED
+- Bumped frontend version to v657 while keeping “Made by Bruis”.
+- Implemented RPC-backed shared stats browser helper: gejast-shared-stats.js.
+- Expanded shared stats config with v657 RPC names.
+- Rebuilt admin_shared_stats.html as a real v657 stats substrate console.
+- Added gejast-public-stats-bridge.js for non-invasive public shared stats rendering.
+- Wired leaderboard.html to the shared stats bridge.
+- Updated implementation matrix statuses for phases 2/7/8/12.
+- Added FEATURE_PHASE_MATRIX_v657.md.
+
+SQL
+- Run GEJAST_v657_stats_substrate.sql in Supabase.
+- It creates a non-destructive cache table and read/refresh RPCs.
+- It reads from existing game_elo_ratings_scoped when available.
+
+BOUNDARY
+- This does not replace existing game owners.
+- This does not mutate match histories or ELO source tables.
+- This is implemented as a shared stats read/cache substrate; live correctness still needs Supabase/browser verification after deploy.

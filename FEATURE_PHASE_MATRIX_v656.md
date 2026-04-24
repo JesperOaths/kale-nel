@@ -1,4 +1,4 @@
-# GEJAST v656 Diagnostics / Audit Layer Matrix
+# GEJAST v657 Diagnostics / Audit Layer Matrix
 
 This patch implements the combined safe phase bundle that was selected: **Phase 3 + Phase 4 + Phase 5 + Phase 14**.
 
@@ -15,8 +15,8 @@ Drinks/push, shared stats substrate, Pikken, Beerpong, Boerenbridge, and Despima
 
 ## SQL
 
-The SQL for this patch is separate: `GEJAST_v656_diagnostics_audit_layer.sql`. It is diagnostic-only and catalog-based. It does not mutate game data.
+The SQL for this patch is separate: `GEJAST_v657_diagnostics_audit_layer.sql`. It is diagnostic-only and catalog-based. It does not mutate game data.
 
 ## Live proof still required
 
-After upload/deploy and optional SQL apply, open `admin_implementation_matrix.html`, `admin_system_health.html`, `admin_identity_health.html`, and `admin_ops_observability.html`. Verify GitHub main, deployed page source, and browser-loaded script URLs all show v656.
+After upload/deploy and optional SQL apply, open `admin_implementation_matrix.html`, `admin_system_health.html`, `admin_identity_health.html`, and `admin_ops_observability.html`. Verify GitHub main, deployed page source, and browser-loaded script URLs all show v657.
