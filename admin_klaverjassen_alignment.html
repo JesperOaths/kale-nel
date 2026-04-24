@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <title>Klaverjassen Alignment - GEJAST</title>
+  <script>window.GEJAST_PAGE_VERSION='v644';</script>
+  <script src="./gejast-config.js?v644"></script>
+  <script src="./admin-session-sync.js?v644"></script>
+  <script src="./gejast-shared-stats-config.js?v644"></script>
+  <script src="./gejast-klaverjassen-alignment.js?v644"></script>
+  <style>
+    :root{--gold:#9a8241;--paper:#fbf7ef;--line:rgba(0,0,0,.08);--muted:#665f54;--ink:#151515}
+    *{box-sizing:border-box} body{margin:0;min-height:100vh;padding:22px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(244,240,232,.92),rgba(244,240,232,.94)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
+    .card{max-width:1120px;margin:0 auto;background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.7);border-radius:28px;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.08)}
+    h1{margin:0;font-size:32px;letter-spacing:-.04em}.sub{color:var(--muted);margin:8px 0 18px}.actions{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}.btn{border:0;border-radius:999px;padding:11px 15px;font-weight:900;cursor:pointer;background:#111;color:#fff}.btn.alt{background:#fff;color:#111;border:1px solid var(--line)}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}.tile{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px}.tile span{display:block;color:#8a7a55;text-transform:uppercase;font-size:11px;font-weight:900;letter-spacing:.08em}.tile strong{display:block;margin-top:6px;font-size:26px}.panel{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;margin-top:14px}.ks-row{display:grid;grid-template-columns:minmax(0,1fr) 180px 110px;gap:10px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin:8px 0;background:#fbfaf6}.empty{color:var(--muted);padding:14px}.status{min-height:22px;color:var(--muted);font-weight:700}.site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none}
+    @media(max-width:780px){.grid{grid-template-columns:1fr}.ks-row{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <a class="btn alt" href="./admin.html">← Admin</a>
+    <h1>Klaverjassen Alignment</h1>
+    <p class="sub">Phase 12: controleert of Klaverjassen ladder, shared stats, comeback en opponent-ELO dezelfde bronlogica volgen.</p>
+    <div class="actions"><button class="btn" id="refreshBtn">Audit verversen</button><button class="btn alt" id="rebuildBtn">Cache herbouwen</button></div>
+    <div id="statusBox" class="status">Nog niet geladen.</div>
+    <section class="grid">
+      <div class="tile"><span>Cache rows</span><strong id="statRows">—</strong></div>
+      <div class="tile"><span>Players</span><strong id="statPlayers">—</strong></div>
+      <div class="tile"><span>Status</span><strong id="statStatus">—</strong></div>
+    </section>
+    <section class="panel"><h2>Alignment rows</h2><div id="rowsBox" class="rows"></div></section>
+  </main>
+  <div class="site-credit-watermark" data-version-watermark>v644 · Made by Bruis</div>
+  <script>
+    const api = window.GEJAST_KLAVERJASSEN_ALIGNMENT || {};
+    const $ = (id)=>document.getElementById(id);
+    function setStatus(msg, warn){ $('statusBox').textContent = msg || ''; $('statusBox').style.color = warn ? '#8b3a30' : '#2f5d3f'; }
+    async function load(){
+      try {
+        setStatus('Audit laden...');
+        const audit = await api.getAdminAudit();
+        const rows = audit && (audit.rows || audit.items || audit.alignment_rows) || [];
+        $('statRows').textContent = String(audit.cache_rows ?? rows.length ?? 0);
+        $('statPlayers').textContent = String(audit.players ?? audit.player_count ?? '—');
+        $('statStatus').textContent = audit.ok === false ? 'check' : 'ok';
+        api.renderRows($('rowsBox'), rows);
+        setStatus('Klaverjassen alignment geladen.');
+      } catch (err) { setStatus(err.message || 'Audit laden mislukt.', true); }
+    }
+    $('refreshBtn').addEventListener('click', load);
+    $('rebuildBtn').addEventListener('click', async()=>{ try{ setStatus('Cache herbouwen...'); await api.refreshAdmin(); await load(); } catch(err){ setStatus(err.message || 'Herbouwen mislukt.', true); } });
+    load();
+  </script>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+</body>
+</html>
