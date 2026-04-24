@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phase Completion Audit - GEJAST</title>
+  <script>window.GEJAST_PAGE_VERSION='v647';</script>
+  <script src="./gejast-config.js?v647"></script>
+  <script src="./admin-session-sync.js?v647"></script>
+  <script src="./gejast-phase-completion.js?v647"></script>
+  <style>
+    :root{--gold:#9a8241;--paper:#fbf8f1;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#17130f;--ok:#1f6d42;--warn:#9a6a10;--bad:#9b2f22}
+    *{box-sizing:border-box} body{margin:0;padding:20px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(244,240,232,.92),rgba(244,240,232,.94)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
+    .wrap{max-width:1180px;margin:0 auto} .card{background:var(--paper);border:1px solid rgba(255,255,255,.7);border-radius:28px;padding:24px;box-shadow:0 18px 44px rgba(0,0,0,.08)}
+    .top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap} h1{margin:0;font-size:clamp(2rem,4vw,3rem);letter-spacing:-.05em} .sub{color:var(--muted);max-width:78ch;line-height:1.45}
+    .actions{display:flex;gap:10px;flex-wrap:wrap} .btn{border:0;border-radius:999px;background:#111;color:#fff;padding:11px 15px;font-weight:900;text-decoration:none;cursor:pointer} .btn.alt{background:#fff;color:#111;border:1px solid var(--line)}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0} .stat{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px} .stat span{display:block;color:#8a7a55;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em} .stat strong{display:block;font-size:28px;margin-top:5px}
+    table{width:100%;border-collapse:separate;border-spacing:0 8px} th{font-size:12px;color:#8a7a55;text-transform:uppercase;letter-spacing:.08em;text-align:left;padding:0 10px} td{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 10px;vertical-align:top} td:first-child{border-left:1px solid var(--line);border-radius:14px 0 0 14px} td:last-child{border-right:1px solid var(--line);border-radius:0 14px 14px 0}
+    .pill{display:inline-flex;padding:5px 9px;border-radius:999px;font-weight:900;font-size:11px;border:1px solid var(--line)} .ok{color:var(--ok);background:rgba(31,109,66,.10);border-color:rgba(31,109,66,.25)} .warn{color:var(--warn);background:rgba(154,106,16,.10);border-color:rgba(154,106,16,.25)} .bad{color:var(--bad);background:rgba(155,47,34,.10);border-color:rgba(155,47,34,.25)}
+    .status{min-height:22px;margin-top:12px;color:var(--muted)} .small{font-size:12px;color:var(--muted);line-height:1.35}
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e3a6;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none}
+    @media(max-width:880px){.grid{grid-template-columns:1fr 1fr} table{font-size:13px}} @media(max-width:640px){.grid{grid-template-columns:1fr} .card{padding:18px}}
+  </style>
+</head>
+<body>
+  <main class="wrap card">
+    <div class="top">
+      <div>
+        <h1>Phase Completion Audit</h1>
+        <p class="sub">Post-phase control surface for the completed implementation sequence. This page does not replace subsystem owners. It reads guarded audit RPCs and shows which phase packages are registered, which SQL/RPC pieces are visible, and what still needs runtime proof.</p>
+      </div>
+      <div class="actions">
+        <a class="btn alt" href="./admin.html">Admin hub</a>
+        <button class="btn" id="refreshBtn" type="button">Ververs audit</button>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="stat"><span>Registered</span><strong id="phaseTotal">0</strong></div>
+      <div class="stat"><span>DB applied</span><strong id="phaseDb">0</strong></div>
+      <div class="stat"><span>Frontend package</span><strong id="phaseFrontend">0</strong></div>
+      <div class="stat"><span>Needs runtime proof</span><strong id="phaseRuntime">0</strong></div>
+    </div>
+    <div id="statusBox" class="status">Nog niet geladen.</div>
+    <table aria-label="Phase completion audit">
+      <thead><tr><th>Phase</th><th>Status</th><th>Frontend</th><th>SQL/RPC</th><th>Runtime boundary</th><th>Notes</th></tr></thead>
+      <tbody id="phaseRows"><tr><td colspan="6">Laden…</td></tr></tbody>
+    </table>
+  </main>
+  <div class="site-credit-watermark" data-version-watermark>v647 · Made by Bruis</div>
+</body>
+</html>

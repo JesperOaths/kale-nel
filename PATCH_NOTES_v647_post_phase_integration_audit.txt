@@ -1,0 +1,18 @@
+GEJAST v647 — Post-phase integration audit/control surface
+
+Scope:
+- Adds an admin phase completion audit page.
+- Adds a small browser-side phase completion reader.
+- Adds a runtime smoke-test helper for page/script version mismatch inspection.
+- Adds SQL registry/RPCs for post-phase status and runtime-proof boundaries.
+
+Safety:
+- Additive update-only package.
+- No subsystem owner is replaced.
+- No direct table grants are needed for browser reads; guarded security-definer RPCs are used.
+- No destructive SQL operations are included.
+
+Honesty boundary:
+- This phase records and audits what has been packaged/applied.
+- It does not prove live browser/device behavior by itself.
+- Runtime proof still requires opening deployed pages and testing flows.
