@@ -271,7 +271,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/scorer.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v659';</script><script src="./gejast-config.js?v659"></script><script src="./gejast-home-gate.js?v659"></script><script src="./gejast-family-rollout.js?v659"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('scorer');</script>
+  <script>window.GEJAST_PAGE_VERSION='v660';</script><script src="./gejast-config.js?v660"></script><script src="./gejast-home-gate.js?v660"></script><script src="./gejast-family-rollout.js?v660"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('scorer');</script>
 
   <style id="page-floating-logo-style">
     .page-floating-logo{position:fixed;top:18px;right:18px;z-index:9998;display:inline-flex;width:64px;height:64px;border-radius:50%;background:rgba(255,251,245,.72);border:1px solid rgba(255,255,255,.65);box-shadow:0 14px 32px rgba(0,0,0,.10);align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
@@ -1359,7 +1359,7 @@
     function toggleAppMenu(force){ const el=document.getElementById('appMenu'); const should = typeof force === 'boolean' ? force : !el.classList.contains('show'); el.classList.toggle('show', should); }
     initPage();
   </script>
-  <div class="site-credit-watermark" data-version-watermark>v659 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v660 · Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
@@ -1487,7 +1487,7 @@
   }
   window.closeMatchSummary=function(){ document.getElementById('matchSummaryOverlay').classList.remove('show'); };
   window.copyMatchRecapText=async function(){ const text=buildRecap(); try{ await navigator.clipboard.writeText(text); setMessage('Samenvatting gekopieerd.'); }catch(_){ setMessage(text);} };
-  window.downloadMatchSummaryImage=function(){ const payload=summaryPayload(true).summary; const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=630; const ctx=canvas.getContext('2d'); const grad=ctx.createLinearGradient(0,0,1200,630); grad.addColorStop(0,'#1b1711'); grad.addColorStop(1,'#5d4820'); ctx.fillStyle=grad; ctx.fillRect(0,0,1200,630); ctx.fillStyle='#f6f0e5'; ctx.fillRect(46,46,1108,538); ctx.fillStyle='#111'; ctx.font='900 52px Inter, sans-serif'; ctx.fillText('Klaverjas',84,132); ctx.font='800 34px Inter, sans-serif'; ctx.fillText(`${payload.winner_names_label || payload.winner_names?.join(' · ') || ''}`,84,194); ctx.font='700 72px Inter, sans-serif'; ctx.fillText(`${payload.totals.wij} - ${payload.totals.zij}`,84,292); ctx.font='600 28px Inter, sans-serif'; wrap(ctx,payload.recap_text,84,360,1000,38); ctx.font='700 24px Inter, sans-serif'; ctx.fillText('v659 · Made by Bruis',84,560); const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download='klaverjas-uitslag.png'; a.click(); function wrap(ctx,text,x,y,maxWidth,lineHeight){ const words=String(text||'').split(/\s+/); let line=''; let yy=y; for(const w of words){ const test=line?line+' '+w:w; if(ctx.measureText(test).width>maxWidth && line){ ctx.fillText(line,x,yy); line=w; yy+=lineHeight; } else line=test; } if(line) ctx.fillText(line,x,yy); } };
+  window.downloadMatchSummaryImage=function(){ const payload=summaryPayload(true).summary; const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=630; const ctx=canvas.getContext('2d'); const grad=ctx.createLinearGradient(0,0,1200,630); grad.addColorStop(0,'#1b1711'); grad.addColorStop(1,'#5d4820'); ctx.fillStyle=grad; ctx.fillRect(0,0,1200,630); ctx.fillStyle='#f6f0e5'; ctx.fillRect(46,46,1108,538); ctx.fillStyle='#111'; ctx.font='900 52px Inter, sans-serif'; ctx.fillText('Klaverjas',84,132); ctx.font='800 34px Inter, sans-serif'; ctx.fillText(`${payload.winner_names_label || payload.winner_names?.join(' · ') || ''}`,84,194); ctx.font='700 72px Inter, sans-serif'; ctx.fillText(`${payload.totals.wij} - ${payload.totals.zij}`,84,292); ctx.font='600 28px Inter, sans-serif'; wrap(ctx,payload.recap_text,84,360,1000,38); ctx.font='700 24px Inter, sans-serif'; ctx.fillText('v660 · Made by Bruis',84,560); const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download='klaverjas-uitslag.png'; a.click(); function wrap(ctx,text,x,y,maxWidth,lineHeight){ const words=String(text||'').split(/\s+/); let line=''; let yy=y; for(const w of words){ const test=line?line+' '+w:w; if(ctx.measureText(test).width>maxWidth && line){ ctx.fillText(line,x,yy); line=w; yy+=lineHeight; } else line=test; } if(line) ctx.fillText(line,x,yy); } };
   async function pushSummary(isFinished=false, force=false){
     if(!(window.GEJAST_CONFIG||{}).SUPABASE_URL) return;
     const payload = summaryPayload(isFinished);
@@ -1525,7 +1525,7 @@
   ensureLiveSummaryBinding();
 })();
 </script>
-<script src="./site-analytics.js?v659"></script>
+<script src="./site-analytics.js?v660"></script>
 
 <style id="match-control-chip-style">
   .manage-match-chip{position:fixed;right:18px;bottom:18px;z-index:40;display:inline-flex;align-items:center;gap:8px;padding:12px 16px;border-radius:999px;background:rgba(35,31,26,.92);color:#fff;text-decoration:none;font-weight:800;box-shadow:0 14px 32px rgba(0,0,0,.22)}
@@ -1533,7 +1533,7 @@
 </style>
 <a class="manage-match-chip" href="./match_control.html?game=klaverjas">✎ <span>Beheer wedstrijden<br><small>Eigen inzendingen / admin</small></span></a>
 
-<script src="./gejast-live-sync.js?v659"></script>
+<script src="./gejast-live-sync.js?v660"></script>
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>
