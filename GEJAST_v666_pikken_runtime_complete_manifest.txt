@@ -1,0 +1,22 @@
+{
+  "version": "v666",
+  "bundle": "pikken_runtime_complete",
+  "zip_files": "single flat zip <= 100 files",
+  "frontend_files": [
+    "PATCH_NOTES_v666_PIKKEN_RUNTIME_COMPLETE.txt",
+    "VERSION",
+    "admin_game_group_b_health.html",
+    "admin_pikken.html",
+    "gejast-config.js",
+    "gejast-pikken-contract.js",
+    "gejast-pikken-live.js",
+    "gejast-pikken.js",
+    "pikken.html",
+    "pikken_live.html",
+    "pikken_spectator.html",
+    "pikken_stats.html"
+  ],
+  "sql_file": "GEJAST_v666_pikken_runtime_complete.sql",
+  "no_py": true,
+  "sql_inside_zip": false
+}

@@ -1,0 +1,36 @@
+GEJAST v666 — Pikken runtime completion
+
+This patch is a real implementation bundle, not a health/audit-only layer.
+
+Frontend files:
+- VERSION
+- gejast-config.js
+- gejast-pikken-contract.js
+- gejast-pikken.js
+- gejast-pikken-live.js
+- pikken.html
+- pikken_live.html
+- pikken_spectator.html
+- pikken_stats.html
+- admin_pikken.html
+- admin_game_group_b_health.html
+
+SQL file delivered separately:
+- GEJAST_v666_pikken_runtime_complete.sql
+
+Implemented:
+- Lobby create/join/list.
+- Ready/unready.
+- Host start with ready gate and 2-player minimum.
+- Round hand rolling and private hand visibility.
+- Bidding with legal bid validation.
+- Reject → visible voting round.
+- Reveal and dice-count loss.
+- Elimination and winner finalization.
+- Live page polling and player controls.
+- Presence touch/release and public presence read.
+- Open lobby and live-match public feeds.
+- Basic finished-match stats.
+
+Boundary:
+This does not claim live browser/device proof until uploaded and the SQL runs cleanly in Supabase. It does implement the actual Pikken page → JS → RPC → SQL → stored state → UI refresh chain for this step.

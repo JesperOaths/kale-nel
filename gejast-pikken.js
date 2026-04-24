@@ -1,523 +1,110 @@
 (function(){
-  const cfg = window.GEJAST_CONFIG || {};
-  const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
-  const PARTICIPANT_KEY = 'gejast_pikken_participant_v632';
-  const LAST_CODE_KEY = 'gejast_pikken_last_code_v632';
-  const FEED_CACHE_KEY = 'gejast_pikken_feeds_v632';
-  const FEED_CACHE_TTL_MS = 15000;
-
-  function getScope(){
-    try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
-    catch(_){ return 'friends'; }
+  const api = window.GEJAST_PIKKEN_CONTRACT;
+  if (!api) { console.error('GEJAST_PIKKEN_CONTRACT missing'); return; }
+  const PARTICIPANT_KEY = 'gejast_pikken_participant_v666';
+  const LEGACY_PARTICIPANT_KEY = 'gejast_pikken_participant_v632';
+  let state = { gameId:'', timer:null, busy:false, lastVersion:-1 };
+  const $ = (id)=>document.getElementById(id);
+  const esc = (v)=>String(v ?? '').replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+  function setStatus(msg='', bad=false){ const el=$('pkStatus'); if(el){ el.textContent=msg; el.style.color=bad?'#7f2f1d':'#6b6257'; } }
+  function getStoredGame(){
+    try { return JSON.parse(localStorage.getItem(PARTICIPANT_KEY) || localStorage.getItem(LEGACY_PARTICIPANT_KEY) || 'null')?.game_id || ''; } catch (_) { return ''; }
   }
-  function sessionToken(){ try { return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; } catch(_){ return ''; } }
-  function headers(){ return { apikey: cfg.SUPABASE_PUBLISHABLE_KEY || '', Authorization: `Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY || ''}`, 'Content-Type':'application/json', Accept:'application/json' }; }
-  async function parse(res){ const text = await res.text(); let data = null; try { data = text ? JSON.parse(text) : null; } catch { throw new Error(text || `HTTP ${res.status}`); } if(!res.ok) throw new Error(data?.message || data?.error || text || `HTTP ${res.status}`); return data; }
-  async function rpc(name, payload){ const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', headers:headers(), body: JSON.stringify(payload || {}), cache:'no-store' }); return parse(res); }
-  async function rpcFirst(names, payload){ let last = null; for (const name of names){ try { return await rpc(name, payload); } catch (err) { last = err; } } throw last || new Error('RPC mislukt.'); }
-  async function rpcVariants(name, variants){ let last = null; for (const payload of variants || []){ try { return await rpc(name, payload); } catch (err) { last = err; } } throw last || new Error('RPC variant mislukt.'); }
-  function payloadVariants(extra, options){
-    const base = Object.assign({}, extra || {});
-    const token = sessionToken() || null;
-    const includeScope = options?.includeScope !== false;
-    const scope = getScope();
-    const variants = [
-      Object.assign({}, base, includeScope ? { site_scope_input: scope } : {}, { session_token: token }),
-      Object.assign({}, base, includeScope ? { site_scope_input: scope } : {}, { session_token_input: token }),
-      Object.assign({}, base, { session_token: token }),
-      Object.assign({}, base, { session_token_input: token }),
-      Object.assign({}, base, includeScope ? { site_scope_input: scope, session_token: token, session_token_input: token } : { session_token: token, session_token_input: token })
-    ];
-    const seen = new Set();
-    return variants.filter((item)=>{
-      const key = JSON.stringify(item);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+  function storeGame(id){ try { if(id){ localStorage.setItem(PARTICIPANT_KEY, JSON.stringify({ game_id:id, at:Date.now() })); localStorage.setItem(LEGACY_PARTICIPANT_KEY, JSON.stringify({ game_id:id, at:Date.now() })); } else { localStorage.removeItem(PARTICIPANT_KEY); localStorage.removeItem(LEGACY_PARTICIPANT_KEY); } } catch (_) {} }
+  function gameFromUrl(){ try { const qs = new URLSearchParams(location.search); return qs.get('game_id') || qs.get('client_match_id') || ''; } catch (_) { return ''; } }
+  function liveHref(id){ return `./pikken_live.html?client_match_id=${encodeURIComponent(String(id||''))}${api.scope()==='family'?'&scope=family':''}`; }
+  function updateUrl(id){ if(!id) return; try { history.replaceState(null, '', `pikken.html?game_id=${encodeURIComponent(id)}${api.scope()==='family'?'&scope=family':''}`); } catch (_) {} }
+  function bidText(bid){ const c=Number(bid?.count || bid?.bid_count || 0), f=Number(bid?.face || bid?.bid_face || 0); if(!c || !f) return '—'; return f===1?`${c} × pik`:`${c} × ${f}`; }
+  function faceOrder(face){ return Number(face) === 1 ? 7 : Number(face||0); }
+  function sortedDice(dice){ return (Array.isArray(dice)?dice:[]).map(Number).filter(Boolean).sort((a,b)=>faceOrder(a)-faceOrder(b)); }
+  function die(face){ const n=Number(face||0); return `<img class="die ${n===1?'pik':''}" src="./assets/pikken/dice-${n || 'hidden'}.svg" alt="die ${n||''}">`; }
+  function phaseOf(payload){ return String(payload?.game?.state?.phase || payload?.game?.status || payload?.game?.status || 'lobby').toLowerCase(); }
+  function renderControls(payload){
+    const game = payload?.game || {}; const viewer = payload?.viewer || {}; const phase = phaseOf(payload); const inLobby = !!game.id && phase === 'lobby';
+    ['pkCreateWrap','pkJoinWrap','pkJoinFieldWrap'].forEach((id)=>{ const el=$(id); if(el) el.classList.toggle('hidden', inLobby); });
+    const sticky=$('pkLobbySticky'); if(sticky) sticky.classList.toggle('hidden', !inLobby);
+    const role=$('pkLobbyRolePill'); if(role){ role.textContent = viewer.is_host ? 'Host' : 'Deelnemer'; role.className = `pill ${viewer.is_ready?'ok':'wait'}`; }
+    const note=$('pkLobbyStickyNote'); if(note) note.textContent = viewer.is_ready ? 'Je staat ready.' : 'Je staat unready.';
+    const destroy=$('pkDestroyBtn'); if(destroy) destroy.classList.toggle('hidden', !(inLobby && viewer.is_host));
+    const start=$('pkStartBtn'); if(start) start.classList.toggle('hidden', !(inLobby && viewer.is_host));
   }
-
-  function qs(sel, root){ return (root||document).querySelector(sel); }
-  function esc(s){ const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}; return String(s??'').replace(/[&<>"']/g,m=>map[m]); }
-  function normalizeError(err){
-    const msg = String(err && err.message || err || 'Onbekende fout');
-    if(/invalid input syntax for type uuid/i.test(msg)) return 'Nog geen actieve match geselecteerd. Maak eerst een lobby of join er één.';
-    if(/game_type\s+ongeldig/i.test(msg)) return 'Pikken live-samenvatting staat backend nog niet open voor dit spel. Draai de compat SQL en probeer opnieuw.';
-    return msg;
+  function renderPlayers(payload){
+    const box=$('pkPlayers'); if(!box) return;
+    const game=payload?.game || {}, viewer=payload?.viewer || {}, phase=phaseOf(payload), players=Array.isArray(payload?.players)?payload.players:[], votes=Array.isArray(payload?.votes)?payload.votes:[];
+    const turn=Number(game?.state?.current_turn_seat||0), voteTurn=Number(game?.state?.vote_turn_seat||0);
+    box.innerHTML = players.length ? players.map((p)=>{
+      const seat=Number(p.seat||p.seat_index||0); const alive=!!p.alive || phase==='lobby'; const vote=votes.find((v)=>Number(v.seat||v.seat_index||0)===seat); const voteStatus=String(vote?.status||'waiting');
+      const pill = phase==='voting' ? (voteStatus==='approved'?'goedgekeurd':voteStatus==='rejected'?'afgekeurd':'wacht') : (p.is_host?'Host':p.is_ready?'Ready':'Niet ready');
+      const pillCls = phase==='voting' ? (voteStatus==='approved'?'ok':voteStatus==='rejected'?'bad':'wait') : (p.is_host || p.is_ready ? 'ok' : 'wait');
+      return `<div class="player-row ${alive?'':'dead'} ${(phase==='bidding'&&seat===turn)||(phase==='voting'&&seat===voteTurn)?'turn':''}"><div><div><strong>${esc(p.name||p.player_name||'Speler')}</strong> <span class="muted">#${seat}</span></div><div class="muted">${alive?'Levend':'Uit'} · ${Number(p.dice_count||0)} dobbelstenen</div></div><span class="pill ${pillCls}">${esc(pill)}</span></div>`;
+    }).join('') : '<div class="muted">Nog geen spelers.</div>';
   }
-
-  function setParticipantToken(gameId, active){ try{ if(active && gameId){ localStorage.setItem(PARTICIPANT_KEY, JSON.stringify({game_id:String(gameId), at:Date.now()})); } else { localStorage.removeItem(PARTICIPANT_KEY); } }catch(_){ } }
-  function getParticipantToken(){ try{ const raw = JSON.parse(localStorage.getItem(PARTICIPANT_KEY) || 'null'); return raw && raw.game_id ? String(raw.game_id) : ''; }catch(_){ return ''; } }
-  function rememberLobbyCode(code){ try{ if(code) localStorage.setItem(LAST_CODE_KEY, String(code).trim().toUpperCase()); }catch(_){ } }
-  function lastLobbyCode(){ try{ return String(localStorage.getItem(LAST_CODE_KEY) || '').trim().toUpperCase(); }catch(_){ return ''; } }
-  function liveHref(gameId){ return `./pikken_live.html?client_match_id=${encodeURIComponent(String(gameId||''))}`; }
-  function spectatorHref(gameId){ return `./pikken_spectator.html?client_match_id=${encodeURIComponent(String(gameId||''))}`; }
-  function spectatorHrefForCode(code){ return `./pikken_spectator.html?lobby_code=${encodeURIComponent(String(code||'').trim().toUpperCase())}${getScope() === 'family' ? '&scope=family' : ''}`; }
-  function setStatus(text, isError){ const el = qs('#pkStatus'); if(!el) return; el.textContent = text || ''; el.style.color = isError ? '#7f2f1d' : '#6b6257'; }
-  function phaseKind(raw){
-    const phase = String(raw || '').toLowerCase();
-    if (!phase || phase === 'lobby' || phase === 'waiting' || phase === 'ready' || phase === 'setup') return 'lobby';
-    if (phase === 'finished' || phase === 'ended') return 'finished';
-    return 'live';
+  function renderDice(payload){
+    const wrap=$('pkMyDice'); if(!wrap) return;
+    const dice=sortedDice(payload?.my_hand || payload?.viewer?.my_hand || []);
+    wrap.innerHTML = dice.length ? dice.map(die).join('') : '<div class="muted">Dobbelstenen verschijnen zodra de ronde live is.</div>';
   }
-  function setActivePlayVisibility(show){
-    const area = qs('#pkActivePlayArea');
-    if (area) area.classList.toggle('hidden', !show);
+  function renderActionPanels(payload){
+    const game=payload?.game || {}, viewer=payload?.viewer || {}, phase=phaseOf(payload); const mySeat=Number(viewer.seat||viewer.seat_index||0); const alive=!!viewer.alive || phase==='lobby';
+    const myTurn = phase === 'bidding' && mySeat === Number(game?.state?.current_turn_seat||0) && alive;
+    const myVote = phase === 'voting' && mySeat === Number(game?.state?.vote_turn_seat||0) && alive;
+    const bp=$('pkBidPanel'); if(bp) bp.style.display = myTurn ? 'block' : 'none';
+    const vp=$('pkVotePanel'); if(vp) vp.style.display = myVote ? 'block' : 'none';
+    const rb=$('pkRejectBtn'); if(rb) rb.disabled = !myTurn || !game?.state?.bid;
   }
-  function readFeedCache(){
-    try {
-      const raw = sessionStorage.getItem(FEED_CACHE_KEY) || localStorage.getItem(FEED_CACHE_KEY) || '';
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (!parsed || !parsed.at || (Date.now() - Number(parsed.at)) > FEED_CACHE_TTL_MS) return null;
-      return parsed;
-    } catch (_) { return null; }
+  function renderReveal(payload){
+    const wrap=$('pkReveal'); if(!wrap) return;
+    const lr=payload?.game?.state?.last_reveal || null;
+    if(!lr){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+    wrap.style.display='block';
+    wrap.innerHTML = `<details class="accordion" open><summary><span>Laatste reveal: ${esc(bidText(lr.bid))}</span><span class="muted">${lr.bid_true?'gehaald':'niet gehaald'} · ${Number(lr.counted_total||0)}</span></summary><div class="detail"><div class="muted">Verliezers: ${esc((lr.losers||[]).map((l)=>l.name).join(', ') || 'geen')}</div><div class="reveal-grid">${(Array.isArray(lr.hands)?lr.hands:[]).map((h)=>`<div class="reveal-card"><strong>${esc(h.name||'Speler')}</strong><div class="dice-row">${(h.dice||[]).map(die).join('')}</div></div>`).join('')}</div></div></details>`;
   }
-  function writeFeedCache(payload){
-    const packet = JSON.stringify(Object.assign({ at: Date.now() }, payload || {}));
-    try { sessionStorage.setItem(FEED_CACHE_KEY, packet); } catch (_) {}
-    try { localStorage.setItem(FEED_CACHE_KEY, packet); } catch (_) {}
+  function render(payload){
+    if(!payload || !payload.game){ return; }
+    const game=payload.game, phase=phaseOf(payload);
+    state.gameId = game.id || state.gameId; storeGame(state.gameId); updateUrl(state.gameId);
+    const code=$('pkLobbyCode'); if(code) code.textContent = game.lobby_code || '—';
+    const live=$('pkLiveLink'); if(live){ live.href = liveHref(state.gameId); live.style.display = state.gameId ? '' : 'none'; }
+    const sum=$('pkMatchSummary'); if(sum){ sum.textContent = phase==='lobby' ? `Lobby ${game.lobby_code || ''} · ${payload.players?.length || 0} speler(s)` : `${phase} · ronde ${Number(game?.state?.round_no||0)}`; }
+    const bid=$('pkBidText'); if(bid) bid.textContent = bidText(game?.state?.bid);
+    const bidBy=$('pkBidBy'); if(bidBy) bidBy.textContent = game?.state?.bid ? `door ${game.state.bid.bidder_name || '—'}` : '';
+    renderControls(payload); renderPlayers(payload); renderDice(payload); renderActionPanels(payload); renderReveal(payload);
+    setStatus('');
   }
-  async function withTimeout(promise, ms){
-    let timer = null;
-    return await Promise.race([
-      promise,
-      new Promise((_, reject)=>{ timer = setTimeout(()=>reject(new Error('timeout')), ms); })
-    ]).finally(()=>{ if (timer) clearTimeout(timer); });
+  async function refresh(force=false){
+    if(!state.gameId) return;
+    if(state.busy) return; state.busy=true;
+    try { const payload=await api.getState(state.gameId); const v=Number(payload?.game?.state_version ?? payload?.state_version ?? -1); if(force || v !== state.lastVersion){ state.lastVersion=v; render(payload); } }
+    catch(e){ setStatus(e.message || 'Pikken laden mislukt.', true); }
+    finally{ state.busy=false; }
   }
-  function setChip(text){ const el = qs('#pkStatusChip'); if (el) el.textContent = text || 'Lobby'; }
-
-  function sortDiceFaces(dice){ return (Array.isArray(dice) ? dice : []).map((n)=>Number(n || 0)).filter(Boolean).sort((a,b)=>((a===1?7:a)-(b===1?7:b))); }
-  function extractMyHandFromActorState(state){
-    const viewer = state?.viewer || {};
-    const players = Array.isArray(state?.players) ? state.players : [];
-    const directCandidates = [
-      state?.my_hand, state?.myHand, viewer?.my_hand, viewer?.myHand, viewer?.hand, viewer?.dice,
-      viewer?.dice_values, viewer?.private_state?.dice, viewer?.private_state?.dice_values, state?.game?.state?.my_hand, state?.actor_state?.my_hand, state?.actor_state?.dice,
-      state?.actor_state?.dice_values, state?.private_state?.my_hand, state?.private_state?.dice, state?.private_state?.dice_values
-    ];
-    for (const cand of directCandidates){ const dice = sortDiceFaces(cand); if (dice.length) return dice; }
-    const mySeat = Number(viewer?.seat || viewer?.seat_index || 0);
-    const myPlayerId = Number(viewer?.player_id || 0);
-    const viewerName = String(viewer?.display_name || viewer?.player_name || viewer?.name || '').trim().toLowerCase();
-    for (const player of players){
-      const sameSeat = mySeat && Number(player?.seat || player?.seat_index || 0) === mySeat;
-      const sameId = myPlayerId && Number(player?.player_id || 0) === myPlayerId;
-      const sameName = viewerName && String(player?.name || player?.player_name || '').trim().toLowerCase() === viewerName;
-      if (!(sameSeat || sameId || sameName)) continue;
-      const dice = sortDiceFaces(player?.hand || player?.my_hand || player?.dice || player?.dice_values || player?.current_hand || player?.rolled_dice);
-      if (dice.length) return dice;
-    }
-    return [];
+  function startPolling(){ stopPolling(); state.timer=setInterval(()=>{ if(!document.hidden) refresh(false); }, 1200); refresh(true); }
+  function stopPolling(){ if(state.timer){ clearInterval(state.timer); state.timer=null; } }
+  async function loadFeeds(){
+    const lobbyBox=$('pkLobbyFeed'), liveBox=$('pkLiveFeed');
+    try { const l=await api.openLobbies(); const rows=Array.isArray(l)?l:(l.rows||l.items||[]); if(lobbyBox) lobbyBox.innerHTML = rows.length ? rows.map((r)=>`<article class="feed-card"><div class="feed-head"><div><div class="feed-title">Code ${esc(r.lobby_code||'')}</div><div class="feed-meta">${esc(r.host_name||r.created_by_player_name||'Host')} · ${Number(r.player_count||0)} speler(s) · ${Number(r.ready_count||0)} ready</div></div><span class="pill wait">Lobby</span></div><div class="feed-actions"><button class="btn alt tiny" data-join-code="${esc(r.lobby_code||'')}">Join</button></div></article>`).join('') : '<div class="muted">Geen open Pikken-lobbies.</div>'; } catch(e){ if(lobbyBox) lobbyBox.innerHTML='<div class="muted">Open lobbies konden niet laden.</div>'; }
+    try { const l=await api.liveMatches(); const rows=Array.isArray(l)?l:(l.rows||l.items||[]); if(liveBox) liveBox.innerHTML = rows.length ? rows.map((r)=>`<article class="feed-card"><div class="feed-head"><div><div class="feed-title">${esc(r.lobby_code||'Pikken')}</div><div class="feed-meta">${esc(r.phase||r.status||'live')} · ronde ${Number(r.round_no||0)} · ${Number(r.player_count||0)} speler(s)</div></div><span class="pill ok">Live</span></div><div class="feed-actions"><a class="btn alt tiny" href="${liveHref(r.game_id||r.id)}">Open live</a></div></article>`).join('') : '<div class="muted">Geen live Pikken-matches.</div>'; } catch(e){ if(liveBox) liveBox.innerHTML='<div class="muted">Live matches konden niet laden.</div>'; }
   }
-  function dieImg(face, cls){
-    const n = Number(face||0);
-    const img = document.createElement('img');
-    img.className = cls || '';
-    img.alt = n ? `die ${n}` : 'die';
-    img.src = n ? `./assets/pikken/dice-${n}.svg` : './assets/pikken/dice-hidden.svg';
-    return img;
+  async function createLobby(){ setStatus('Lobby maken…'); const mode=$('pkPenaltyMode')?.value || 'wrong_loses'; const out=await api.createLobby({ penalty_mode:mode, start_dice:6, prev_winner_window_hours:12 }); state.gameId=out.game_id; storeGame(state.gameId); updateUrl(state.gameId); await refresh(true); startPolling(); loadFeeds(); }
+  async function joinLobby(code){ const value=api.cleanCode(code || $('pkJoinCode')?.value || ''); if(!value) return setStatus('Vul een lobbycode in.', true); setStatus('Lobby joinen…'); const out=await api.joinLobby(value); state.gameId=out.game_id; storeGame(state.gameId); updateUrl(state.gameId); await refresh(true); startPolling(); loadFeeds(); }
+  async function startGame(){ setStatus('Starten…'); await api.startGame(state.gameId); window.location.href = liveHref(state.gameId); }
+  async function leave(){ if(!state.gameId) return; await api.leaveGame(state.gameId); storeGame(''); state.gameId=''; stopPolling(); try{ history.replaceState(null,'','pikken.html'); }catch(_){} setStatus('Lobby verlaten.'); await loadFeeds(); }
+  async function destroy(){ if(!state.gameId) return; if(!confirm('Host: deze Pikken-lobby/match verwijderen?')) return; await api.destroyGame(state.gameId); storeGame(''); state.gameId=''; stopPolling(); try{ history.replaceState(null,'','pikken.html'); }catch(_){} setStatus('Lobby verwijderd.'); await loadFeeds(); }
+  function wire(){
+    $('pkCreateLobbyBtn')?.addEventListener('click', ()=>createLobby().catch((e)=>setStatus(e.message,true)));
+    $('pkJoinLobbyBtn')?.addEventListener('click', ()=>joinLobby().catch((e)=>setStatus(e.message,true)));
+    document.addEventListener('click', (ev)=>{ const btn=ev.target.closest('[data-join-code]'); if(btn) joinLobby(btn.getAttribute('data-join-code')).catch((e)=>setStatus(e.message,true)); });
+    $('pkReadyBtn')?.addEventListener('click', ()=>api.setReady(state.gameId,true).then(()=>refresh(true)).catch((e)=>setStatus(e.message,true)));
+    $('pkUnreadyBtn')?.addEventListener('click', ()=>api.setReady(state.gameId,false).then(()=>refresh(true)).catch((e)=>setStatus(e.message,true)));
+    $('pkStartBtn')?.addEventListener('click', ()=>startGame().catch((e)=>setStatus(e.message,true)));
+    $('pkLeaveBtn')?.addEventListener('click', ()=>leave().catch((e)=>setStatus(e.message,true)));
+    $('pkDestroyBtn')?.addEventListener('click', ()=>destroy().catch((e)=>setStatus(e.message,true)));
+    $('pkPlaceBidBtn')?.addEventListener('click', ()=>api.placeBid(state.gameId, Number($('pkBidCount')?.value||0), Number($('pkBidFace')?.value||0)).then((p)=>render(p)).catch((e)=>setStatus(e.message,true)));
+    $('pkRejectBtn')?.addEventListener('click', ()=>api.rejectBid(state.gameId).then((p)=>render(p)).catch((e)=>setStatus(e.message,true)));
+    $('pkVoteApproveBtn')?.addEventListener('click', ()=>api.castVote(state.gameId,true).then((p)=>render(p)).catch((e)=>setStatus(e.message,true)));
+    $('pkVoteRejectBtn')?.addEventListener('click', ()=>api.castVote(state.gameId,false).then((p)=>render(p)).catch((e)=>setStatus(e.message,true)));
+    document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) { refresh(true); loadFeeds(); } });
   }
-
-  const UI = { gameId:'', lastStateVersion:-1, pollTimer:null, lastPlayers:[], feedTimer:null, feedBusy:false, optimisticLobby:false, optimisticHost:false };
-  let pollingBusy = false;
-  let autoLiveRedirectDone = false;
-
-  function renderMatchSummary(game, viewer, totals){
-    const el = qs('#pkMatchSummary');
-    if (!el) return;
-    const phase = phaseKind(game?.state?.phase || game?.status || '');
-    if (!(game?.id || UI.gameId)) {
-      el.textContent = 'Kies een open lobby hieronder of maak er zelf één.';
-      return;
-    }
-    const lobbyCode = String(game?.lobby_code || '').trim();
-    const roundNo = Number(game?.state?.round_no || 0);
-    const seat = Number(viewer?.seat || viewer?.seat_index || 0);
-    if (phase === 'lobby') {
-      el.textContent = `${lobbyCode ? `Code ${lobbyCode} · ` : ''}lobby open${seat ? ` · jij zit op stoel ${seat}` : ''}. Ready/unready en host-acties staan onderaan vast in beeld.`;
-      return;
-    }
-    el.textContent = `${lobbyCode ? `Code ${lobbyCode} · ` : ''}${phase}${roundNo ? ` · ronde ${roundNo}` : ''}${seat ? ` · stoel ${seat}` : ''}${totals?.current_total ? ` · ${Number(totals.current_total || 0)} dobbelstenen actief` : ''}`;
-  }
-
-  function renderLobbyControls(game, viewer){
-    const phase = phaseKind(game?.state?.phase || game?.status || '');
-    const inLobby = !!(game?.id || UI.gameId) && phase === 'lobby';
-    const isHost = inLobby ? (!!viewer?.is_host || UI.optimisticHost) : false;
-    const isReady = !!viewer?.is_ready;
-    const createWrap = qs('#pkCreateWrap');
-    const joinWrap = qs('#pkJoinWrap');
-    const joinFieldWrap = qs('#pkJoinFieldWrap');
-    const sticky = qs('#pkLobbySticky');
-    const rolePill = qs('#pkLobbyRolePill');
-    const stickyNote = qs('#pkLobbyStickyNote');
-    const readyBtn = qs('#pkReadyBtn');
-    const unreadyBtn = qs('#pkUnreadyBtn');
-    const leaveBtn = qs('#pkLeaveBtn');
-    const destroyBtn = qs('#pkDestroyBtn');
-    const startBtn = qs('#pkStartBtn');
-    if (createWrap) createWrap.classList.toggle('hidden', inLobby);
-    if (joinWrap) joinWrap.classList.toggle('hidden', inLobby);
-    if (joinFieldWrap) joinFieldWrap.classList.toggle('hidden', inLobby);
-    if (sticky) sticky.classList.toggle('hidden', !inLobby);
-    if (rolePill) {
-      rolePill.textContent = inLobby ? (isHost ? 'Host' : 'Deelnemer') : 'Lobby';
-      rolePill.className = `pill ${isReady ? 'ok' : 'wait'}`;
-    }
-    if (stickyNote) stickyNote.textContent = !inLobby ? 'Maak of join eerst een lobby.' : (isReady ? 'Je staat nu op ready. Je kunt altijd terug naar unready.' : 'Je staat nu op unready. Druk ready als je klaar bent.');
-    if (readyBtn) readyBtn.className = `btn ${isReady ? 'ready-active' : 'alt'}`;
-    if (unreadyBtn) unreadyBtn.className = `btn ${isReady ? 'alt' : 'unready-active'}`;
-    if (leaveBtn) leaveBtn.textContent = 'Verlaat lobby';
-    if (destroyBtn) destroyBtn.classList.toggle('hidden', !(inLobby && isHost));
-    if (startBtn) startBtn.classList.toggle('hidden', !(inLobby && isHost));
-    setActivePlayVisibility(phase === 'live');
-  }
-
-  function feedCardMarkup(item, mode){
-    const title = esc(item?.title || item?.lobby_code || item?.label || 'Pikken-tafel');
-    const subtitle = esc(item?.subtitle || item?.status_text || item?.host_name || item?.phase || 'Beschikbaar');
-    const code = esc(item?.lobby_code || '');
-    const players = Number(item?.player_count || item?.players_count || item?.participant_count || 0);
-    const gameId = item?.game_id || item?.id || item?.client_match_id || '';
-    const playHref = gameId ? `./pikken.html?game_id=${encodeURIComponent(String(gameId))}${getScope() === 'family' ? '&scope=family' : ''}` : './pikken.html';
-    const liveHrefValue = gameId ? spectatorHref(gameId) : (code ? spectatorHrefForCode(code) : './pikken_spectator.html');
-    return `<article class="feed-card"><div class="feed-head"><div><div class="feed-title">${title}</div><div class="feed-meta">${subtitle}${code ? ` · code ${code}` : ''}${players ? ` · ${players} speler${players === 1 ? '' : 's'}` : ''}</div></div><span class="pill ${mode === 'live' ? 'ok' : 'wait'}">${mode === 'live' ? 'Live' : 'Lobby'}</span></div><div class="feed-actions">${mode === 'lobby' ? `<button class="btn alt tiny" type="button" data-join-code="${code}">Join</button>` : `<a class="btn alt tiny" href="${playHref}">Open</a>`}<a class="btn alt tiny" href="${liveHrefValue}">Spectate</a></div></article>`;
-  }
-
-  function renderLobbyFeed(items){
-    const wrap = qs('#pkLobbyFeed');
-    if (!wrap) return;
-    if (!items.length) { wrap.innerHTML = '<div class="muted">Geen open Pikken-lobbies gevonden.</div>'; return; }
-    wrap.innerHTML = items.map((item)=>feedCardMarkup(item, 'lobby')).join('');
-  }
-
-  function renderLiveFeed(items){
-    const wrap = qs('#pkLiveFeed');
-    if (!wrap) return;
-    if (!items.length) { wrap.innerHTML = '<div class="muted">Geen actieve Pikken-matches gevonden.</div>'; return; }
-    wrap.innerHTML = items.map((item)=>feedCardMarkup(item, 'live')).join('');
-  }
-
-  async function loadDiscoverFeeds(){
-    if (UI.feedBusy) return;
-    UI.feedBusy = true;
-    try {
-      const cached = readFeedCache();
-      if (cached) {
-        renderLobbyFeed(Array.isArray(cached.lobbies) ? cached.lobbies : []);
-        renderLiveFeed(Array.isArray(cached.live) ? cached.live : []);
-      }
-      try { rpcVariants('pikken_cleanup_idle_lobbies_v621', [{}]).catch(()=>{}); } catch (_) {}
-      const lobbyPromise = withTimeout(rpcFirst([
-        'get_pikken_open_lobbies_public_scoped',
-        'get_pikken_open_lobbies_public',
-        'list_pikken_open_lobbies_public_scoped',
-        'list_pikken_open_lobbies_public'
-      ], { site_scope_input: getScope(), session_token: sessionToken() || null }), 2500)
-        .then((rows)=>{
-          const list = Array.isArray(rows) ? rows : (Array.isArray(rows?.rows) ? rows.rows : (Array.isArray(rows?.items) ? rows.items : []));
-          renderLobbyFeed(list);
-          return list;
-        }).catch((_)=>{ if (!cached) renderLobbyFeed([]); return Array.isArray(cached?.lobbies) ? cached.lobbies : []; });
-      const livePromise = withTimeout(rpcFirst(['get_live_match_summaries_scoped','get_live_match_summaries'], {
-        session_token: sessionToken() || null,
-        game_type_input: 'pikken',
-        site_scope_input: getScope()
-      }), 2500).then((rows)=>{
-        const list = Array.isArray(rows) ? rows : (Array.isArray(rows?.items) ? rows.items : (Array.isArray(rows?.rows) ? rows.rows : []));
-        const filtered = list.filter((item)=>String(item?.game_type || item?.type || 'pikken').toLowerCase().includes('pikken'));
-        renderLiveFeed(filtered);
-        return filtered;
-      }).catch((_)=>{ if (!cached) renderLiveFeed([]); return Array.isArray(cached?.live) ? cached.live : []; });
-      const [lobbies, live] = await Promise.all([lobbyPromise, livePromise]);
-      writeFeedCache({ lobbies, live });
-    } finally {
-      UI.feedBusy = false;
-    }
-  }
-
-  function restoreParticipantGame(){
-    if (UI.gameId) return;
-    const storedGameId = getParticipantToken();
-    if (!storedGameId) return;
-    UI.gameId = storedGameId;
-    history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(getScope())}`);
-    setStatus('Actieve Pikken-match teruggezet op dit apparaat.', false);
-  }
-
-  function render(state){
-    const game = state?.game || {};
-    const viewer = state?.viewer || {};
-    const players = Array.isArray(state?.players) ? state.players : [];
-    const votes = Array.isArray(state?.votes) ? state.votes : [];
-    const phase = String(game?.state?.phase || 'lobby');
-    const myHand = extractMyHandFromActorState(state);
-    UI.lastPlayers = players.slice();
-    UI.optimisticLobby = phaseKind(game?.state?.phase || game?.status || '') === 'lobby';
-    UI.optimisticHost = !!viewer?.is_host;
-
-    setParticipantToken(game?.id || UI.gameId, phase && phase !== 'finished');
-    setChip(phase);
-    const liveLink = qs('#pkLiveLink'); if(liveLink){ liveLink.href = liveHref(game?.id || UI.gameId); liveLink.style.display = (game?.id || UI.gameId) ? '' : 'none'; }
-    const spectatorLink = qs('#pkSpectatorLink'); if (spectatorLink) spectatorLink.href = spectatorHref(game?.id || UI.gameId);
-    const lobby = qs('#pkLobbyCode'); if (lobby) lobby.textContent = game?.lobby_code || '—';
-    const phaseEl = qs('#pkPhase'); if (phaseEl) phaseEl.textContent = phase;
-    const roundEl = qs('#pkRoundNo'); if (roundEl) roundEl.textContent = String(Number(game?.state?.round_no || 0) || 0);
-
-    const totals = state?.dice_totals || {};
-    renderMatchSummary(game, viewer, totals);
-    renderLobbyControls(game, viewer);
-
-    const bid = game?.state?.bid && game.state.bid !== null ? game.state.bid : null;
-    const bidTxt = bid ? (Number(bid.face)===1 ? `${bid.count} × pik` : `${bid.count} × ${bid.face}`) : '—';
-    const bidTextEl = qs('#pkBidText'); if (bidTextEl) bidTextEl.textContent = bidTxt;
-    const bidByEl = qs('#pkBidBy'); if (bidByEl) bidByEl.textContent = bid ? `door ${bid.bidder_name || '—'}` : '';
-
-    const turnSeat = Number(game?.state?.current_turn_seat || 0);
-    const voteTurnSeat = Number(game?.state?.vote_turn_seat || 0);
-    const list = qs('#pkPlayers');
-    if (list){
-      list.innerHTML = players.map((p)=>{
-        const seat = Number(p.seat||p.seat_index||0);
-        const alive = !!p.alive || phase === 'lobby';
-        const isTurn = phase === 'bidding' && seat === turnSeat;
-        const isVoteTurn = phase === 'voting' && seat === voteTurnSeat;
-        const kick = viewer?.is_host && !p.is_self ? `<button class="btn alt tiny" data-kick-seat="${seat}">Kick</button>` : '';
-        const vote = votes.find(v=>Number(v.seat||v.seat_index||0)===seat);
-        const voteStatus = vote ? String(vote.status||'waiting') : 'waiting';
-        const pillText = phase === 'voting' ? (voteStatus === 'approved' ? 'goedgekeurd' : voteStatus === 'rejected' ? 'afgekeurd' : 'wacht') : (p.is_host ? 'Host' : (p.is_ready ? 'Ready' : 'Niet ready'));
-        const pillClass = phase === 'voting' ? (voteStatus === 'approved' ? 'pill ok' : voteStatus === 'rejected' ? 'pill bad' : 'pill wait') : (p.is_host ? 'pill ok' : (p.is_ready ? 'pill ok' : 'pill wait'));
-        return `<div class="player-row ${alive?'':'dead'} ${isTurn||isVoteTurn?'turn':''}"><div><div class="name"><strong>${esc(p.name||p.player_name||'Speler')}</strong> <span class="muted">#${seat}</span></div><div class="meta muted">${alive?'Levend':'Dood'} · ${Number(p.dice_count||0)} dobbelstenen</div></div><div><span class="${pillClass}">${pillText}</span></div><div>${kick}</div></div>`;
-      }).join('') || '<div class="muted">Nog geen spelers.</div>';
-    }
-    if (game?.lobby_code) rememberLobbyCode(game.lobby_code);
-
-    const myDiceWrap = qs('#pkMyDice');
-    if (myDiceWrap){
-      myDiceWrap.innerHTML = '';
-      if (!myHand.length) myDiceWrap.innerHTML = `<div class="muted">${phase === 'lobby' ? 'Dobbelstenen verschijnen zodra de host de lobby start en jouw privésituatie wordt meegestuurd.' : 'Nog geen dobbelstenen zichtbaar. Dit wijst meestal op een backend-state gat of een andere sleutelnaam in de state.'}</div>`;
-      myHand.forEach((face)=>{ const n = Number(face||0); myDiceWrap.appendChild(dieImg(n, `die ${n===1?'pik':''}`.trim())); });
-    }
-
-    const myTurn = phase === 'bidding' && Number(viewer.seat||viewer.seat_index||0) === turnSeat && !!viewer.alive;
-    const myVoteTurn = phase === 'voting' && Number(viewer.seat||viewer.seat_index||0) === voteTurnSeat && !!viewer.alive;
-    const bidPanel = qs('#pkBidPanel'); if (bidPanel) bidPanel.style.display = myTurn ? 'block' : 'none';
-    const votePanel = qs('#pkVotePanel'); if (votePanel) votePanel.style.display = myVoteTurn ? 'block' : 'none';
-    const rejectBtn = qs('#pkRejectBtn'); if (rejectBtn) rejectBtn.disabled = !myTurn || !bid;
-
-    const revealWrap = qs('#pkReveal');
-    const lastReveal = game?.state?.last_reveal || null;
-    if (revealWrap){
-      if(!lastReveal){ revealWrap.style.display='none'; revealWrap.innerHTML=''; }
-      else {
-        revealWrap.style.display='block';
-        const lrBid = lastReveal.bid || {};
-        const lrBidTxt = (Number(lrBid.face)===1) ? `${lrBid.count} × pik` : `${lrBid.count} × ${lrBid.face}`;
-        revealWrap.innerHTML = `<details class="accordion" open><summary><span>Laatste ronde (R${Number(lastReveal.round_no||0)}): bod ${esc(lrBidTxt)}</span><span class="muted">${lastReveal.bid_true ? 'gehaald' : 'niet gehaald'} · geteld ${Number(lastReveal.counted_total||0)}</span></summary><div class="detail"><div class="muted">Verliezers: ${esc(String(lastReveal.losing_kind||''))} · Starter: stoel ${Number(lastReveal.next_starter_seat||0)}</div><div class="reveal-grid">${(Array.isArray(lastReveal.hands)?lastReveal.hands:[]).map((h)=>{ const dice = Array.isArray(h.dice) ? h.dice : []; return `<div class="reveal-card"><div class="reveal-name"><strong>${esc(h.name||'Speler')}</strong> <span class="muted">#${Number(h.seat||0)}</span></div><div class="dice-row">${dice.map((d)=>`<img class="die ${Number(d)===1?'pik':''}" src="./assets/pikken/dice-${Number(d)}.svg" alt="die ${Number(d)}">`).join('')}</div></div>`; }).join('')}</div></div></details>`;
-      }
-    }
-
-    const hasParticipantSession = !!sessionToken();
-    if (phase !== 'lobby' && game?.id && hasParticipantSession && !autoLiveRedirectDone) {
-      autoLiveRedirectDone = true;
-      setStatus('Match gestart. Je gaat door naar de live tafel…', false);
-      setTimeout(() => { window.location.href = liveHref(game.id); }, 450);
-    }
-  }
-
-  async function loadAndRender(){
-    if(!UI.gameId){ setStatus('', false); setChip('Lobby'); setActivePlayVisibility(false); return; }
-    pollingBusy = true;
-    try{
-      const state = await rpcVariants('pikken_get_state_scoped', payloadVariants({ game_id_input: UI.gameId }));
-      const version = Number(state?.game?.state_version || -1);
-      if(version !== UI.lastStateVersion){ UI.lastStateVersion = version; render(state); }
-      setStatus('', false);
-    }catch(err){
-      const message = normalizeError(err);
-      renderLobbyControls({ id:UI.gameId, state:{ phase:'lobby' } }, { is_host:UI.optimisticHost, is_ready:false });
-      if (/niet gevonden|game not found|invalid input syntax for type uuid/i.test(String(message || ''))) {
-        resetLobbyState('');
-        return;
-      }
-      setStatus(message, true);
-    } finally {
-      pollingBusy = false;
-    }
-  }
-
-  function startPolling(){ stopPolling(); UI.pollTimer = setInterval(()=>{ if(!document.hidden && !pollingBusy) loadAndRender(); }, 1400); loadAndRender(); }
-  function stopPolling(){ if(UI.pollTimer){ clearInterval(UI.pollTimer); UI.pollTimer=null; } }
-  function startFeedPolling(){ stopFeedPolling(); UI.feedTimer = setInterval(()=>{ if(!document.hidden) loadDiscoverFeeds(); }, 6000); loadDiscoverFeeds(); }
-  function stopFeedPolling(){ if(UI.feedTimer){ clearInterval(UI.feedTimer); UI.feedTimer = null; } }
-
-  async function createLobby(){
-    const token = sessionToken();
-    if(!token){
-      resetLobbyState('Jij bent niet ingelogd. Log opnieuw in en probeer het daarna nog eens.');
-      return;
-    }
-    setStatus('Lobby maken…', false);
-    const mode = qs('#pkPenaltyMode')?.value || 'wrong_loses';
-    const startDice = Number(qs('#pkStartDice')?.value || 6);
-    const out = await rpcVariants('pikken_create_lobby_scoped', payloadVariants({ config_input: { penalty_mode: mode, start_dice: startDice } }));
-    UI.gameId = out.game_id; UI.optimisticLobby = true; UI.optimisticHost = true; setParticipantToken(UI.gameId, true);
-    renderLobbyControls({ id:UI.gameId, state:{ phase:'lobby' } }, { is_host:true, is_ready:false });
-    if (out?.lobby_code) rememberLobbyCode(out.lobby_code);
-    history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(getScope())}`);
-    startPolling();
-    loadDiscoverFeeds();
-  }
-  async function joinLobby(){
-    const token = sessionToken();
-    if(!token){
-      resetLobbyState('Jij bent niet ingelogd. Log opnieuw in en probeer het daarna nog eens.');
-      return;
-    }
-    const code = String(qs('#pkJoinCode')?.value||'').trim().toUpperCase();
-    if(!code) return setStatus('Vul een lobby code in.', true);
-    rememberLobbyCode(code);
-    setStatus('Lobby joinen…', false);
-    const out = await rpcVariants('pikken_join_lobby_scoped', payloadVariants({ lobby_code_input: code }));
-    UI.gameId = out.game_id; UI.optimisticLobby = true; UI.optimisticHost = false; setParticipantToken(UI.gameId, true);
-    renderLobbyControls({ id:UI.gameId, state:{ phase:'lobby' } }, { is_host:false, is_ready:false });
-    history.replaceState(null,'',`pikken.html?game_id=${encodeURIComponent(UI.gameId)}&scope=${encodeURIComponent(getScope())}`);
-    startPolling();
-    loadDiscoverFeeds();
-  }
-  async function setReady(ready){
-    if (!UI.gameId) return setStatus('Je zit nog niet in een lobby.', true);
-    setStatus(ready?'Ready…':'Unready…', false);
-    await rpcVariants('pikken_set_ready_scoped', payloadVariants({ game_id_input: UI.gameId, ready_input: !!ready }));
-    await loadAndRender();
-  }
-  async function startGame(){
-    if (!UI.gameId) return setStatus('Je zit nog niet in een lobby.', true);
-    setStatus('Starten…', false);
-    await rpcVariants('pikken_start_game_scoped', payloadVariants({ game_id_input: UI.gameId }));
-    autoLiveRedirectDone = true;
-    window.location.href = liveHref(UI.gameId);
-  }
-  async function placeBid(){ const count = Number(qs('#pkBidCount')?.value||0); const face = Number(qs('#pkBidFace')?.value||0); setStatus('Bieden…', false); const state = await rpc('pikken_place_bid_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId, bid_count_input: count, bid_face_input: face }); render(state); }
-  async function rejectBid(){ setStatus('Afkeuren…', false); const state = await rpc('pikken_reject_bid_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId }); render(state); }
-  async function vote(v){ setStatus('Stemmen…', false); const state = await rpc('pikken_cast_vote_scoped', { session_token: sessionToken()||null, game_id_input: UI.gameId, vote_input: !!v }); render(state); }
-  async function leaveMatch(){ if(!UI.gameId) return setStatus('Je zit nu niet in een actieve match.', true); setStatus('Match verlaten…', false); await rpcFirst(['pikken_leave_game_scoped','pikken_leave_lobby_scoped'], { session_token: sessionToken()||null, game_id_input: UI.gameId }); setParticipantToken(UI.gameId, false); UI.gameId=''; stopPolling(); history.replaceState(null,'','pikken.html'); renderMatchSummary(null, null, null); const players = qs('#pkPlayers'); if (players) players.innerHTML = '<div class="muted">Nog geen actieve tafel geladen.</div>'; setStatus('Match verlaten.', false); loadDiscoverFeeds(); }
-  async function destroyMatch(){ if(!UI.gameId) return setStatus('Je zit nu niet in een actieve match.', true); setStatus('Match verwijderen…', false); await rpcFirst(['pikken_destroy_game_scoped','pikken_destroy_lobby_scoped'], { session_token: sessionToken()||null, game_id_input: UI.gameId }); setParticipantToken(UI.gameId, false); UI.gameId=''; stopPolling(); history.replaceState(null,'','pikken.html'); renderMatchSummary(null, null, null); const players = qs('#pkPlayers'); if (players) players.innerHTML = '<div class="muted">Nog geen actieve tafel geladen.</div>'; setStatus('Match verwijderd.', false); loadDiscoverFeeds(); }
-  async function kickSeat(seat){
-    if(!UI.gameId) return;
-    const seatNo = Number(seat);
-    const target = (UI.lastPlayers || []).find((player)=>Number(player?.seat || player?.seat_index || 0) === seatNo);
-    const targetName = String(target?.name || target?.player_name || '').trim();
-    if (!targetName) throw new Error('Kon deze spelernaam niet bepalen voor kick.');
-    setStatus(`Speler #${seatNo} kicken…`, false);
-    await rpcFirst(['pikken_kick_player_scoped'], {
-      session_token: sessionToken()||null,
-      game_id_input: UI.gameId,
-      seat_index_input: seatNo,
-      player_name_input: targetName,
-      site_scope_input: getScope()
-    });
-    await loadAndRender();
-  }
-
-  function resetLobbyState(message){
-    setParticipantToken(UI.gameId, false);
-    UI.gameId = '';
-    UI.optimisticLobby = false;
-    UI.optimisticHost = false;
-    stopPolling();
-    history.replaceState(null,'',`pikken.html${getScope() === 'family' ? '?scope=family' : ''}`);
-    renderMatchSummary(null, null, null);
-    renderLobbyControls(null, {});
-    const players = qs('#pkPlayers');
-    if (players) players.innerHTML = '<div class="muted">Kies een open lobby hieronder of maak er zelf één.</div>';
-    setStatus(message || '', false);
-    loadDiscoverFeeds();
-  }
-
-  async function leaveMatchSafe(){
-    if(!UI.gameId) return setStatus('Je zit nu niet in een actieve match.', true);
-    setStatus('Match verlaten…', false);
-    const token = sessionToken() || null;
-    const variants = payloadVariants({ game_id_input: UI.gameId });
-    try { await rpcVariants('pikken_leave_game_scoped', variants); }
-    catch (_) { await rpcVariants('pikken_leave_lobby_scoped', variants); }
-    resetLobbyState('Match verlaten.');
-  }
-
-  async function destroyMatchSafe(){
-    if(!UI.gameId) return setStatus('Je zit nu niet in een actieve match.', true);
-    setStatus('Match verwijderen…', false);
-    const token = sessionToken() || null;
-    const variants = payloadVariants({ game_id_input: UI.gameId });
-    try { await rpcVariants('pikken_destroy_game_scoped', variants); }
-    catch (_) { await rpcVariants('pikken_destroy_lobby_scoped', variants); }
-    resetLobbyState('Match verwijderd.');
-  }
-
-  async function kickSeatSafe(seat){
-    if(!UI.gameId) return;
-    const seatNo = Number(seat);
-    const target = (UI.lastPlayers || []).find((player)=>Number(player?.seat || player?.seat_index || 0) === seatNo);
-    const targetName = String(target?.name || target?.player_name || '').trim();
-    if (!targetName) throw new Error('Kon deze spelernaam niet bepalen voor kick.');
-    setStatus(`Speler #${seatNo} kicken…`, false);
-    await rpcVariants('pikken_kick_player_scoped', [
-      ...payloadVariants({ game_id_input: UI.gameId, seat_index_input: seatNo, player_name_input: targetName }),
-      {
-        session_token: sessionToken()||null,
-        game_id_input: UI.gameId,
-        seat_index_input: seatNo,
-        seat_input: String(seatNo),
-        target_seat_input: targetName || String(seatNo)
-      },
-      {
-        session_token_input: sessionToken()||null,
-        game_id_input: UI.gameId,
-        seat_index_input: seatNo,
-        seat_input: String(seatNo),
-        target_seat_input: targetName || String(seatNo)
-      }
-    ]);
-    await loadAndRender();
-  }
-
-  function boot(){
-    const params = new URLSearchParams(location.search);
-    UI.gameId = params.get('game_id') || '';
-    const joinInput = qs('#pkJoinCode');
-    if (joinInput && !joinInput.value) joinInput.value = lastLobbyCode();
-    restoreParticipantGame();
-    renderLobbyControls(null, {});
-    qs('#pkCreateLobbyBtn')?.addEventListener('click', ()=>createLobby().catch(e=>setStatus(normalizeError(e),true)));
-    qs('#pkJoinLobbyBtn')?.addEventListener('click', ()=>joinLobby().catch(e=>setStatus(normalizeError(e),true)));
-    qs('#pkReadyBtn')?.addEventListener('click', ()=>setReady(true).catch(e=>setStatus(normalizeError(e),true)));
-    qs('#pkUnreadyBtn')?.addEventListener('click', ()=>setReady(false).catch(e=>setStatus(normalizeError(e),true)));
-    qs('#pkStartBtn')?.addEventListener('click', ()=>startGame().catch(e=>setStatus(normalizeError(e),true)));
-    qs('#pkPlaceBidBtn')?.addEventListener('click', ()=>placeBid().catch(e=>setStatus(normalizeError(e),true)));
-    qs('#pkRejectBtn')?.addEventListener('click', ()=>rejectBid().catch(e=>setStatus(normalizeError(e),true)));
-    qs('#pkVoteApproveBtn')?.addEventListener('click', ()=>vote(true).catch(e=>setStatus(normalizeError(e),true)));
-    qs('#pkVoteRejectBtn')?.addEventListener('click', ()=>vote(false).catch(e=>setStatus(normalizeError(e),true)));
-    qs('#pkLeaveBtn')?.addEventListener('click', ()=>leaveMatchSafe().catch(e=>setStatus(normalizeError(e),true)));
-    qs('#pkDestroyBtn')?.addEventListener('click', ()=>destroyMatchSafe().catch(e=>setStatus(normalizeError(e),true)));
-    document.addEventListener('click', (ev)=>{
-      const btn = ev.target.closest('[data-kick-seat]');
-      if (btn && UI.gameId) kickSeatSafe(btn.getAttribute('data-kick-seat')).catch(e=>setStatus(normalizeError(e),true));
-      const joinBtn = ev.target.closest('[data-join-code]');
-      if (joinBtn) {
-        const code = String(joinBtn.getAttribute('data-join-code') || '').trim().toUpperCase();
-        const input = qs('#pkJoinCode');
-        if (input) input.value = code;
-        joinLobby().catch(e=>setStatus(normalizeError(e),true));
-      }
-    });
-    window.addEventListener('online', ()=>{ if(UI.gameId) loadAndRender(); loadDiscoverFeeds(); });
-    document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ if(UI.gameId) loadAndRender(); loadDiscoverFeeds(); } });
-    startFeedPolling();
-    if(UI.gameId){ setParticipantToken(UI.gameId, true); startPolling(); } else { setStatus('', false); setChip('Lobby'); renderMatchSummary(null, null, null); const players = qs('#pkPlayers'); if (players) players.innerHTML = '<div class="muted">Kies een open lobby hieronder of maak er zelf één.</div>'; setActivePlayVisibility(false); }
-  }
-
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot, { once:true });
-  else boot();
+  function boot(){ wire(); state.gameId = gameFromUrl() || getStoredGame(); if(state.gameId) startPolling(); else { renderControls({},{}); } loadFeeds(); setInterval(()=>{ if(!document.hidden) loadFeeds(); }, 8000); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot, { once:true }); else boot();
 })();
