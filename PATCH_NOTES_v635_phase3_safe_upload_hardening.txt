@@ -1,0 +1,31 @@
+GEJAST v635 — Phase 3 safe-upload hardening
+
+Source:
+- Built from GEJAST_v634_PHASE3_FULL_CURRENT_REPO_UPLOAD_SET.zip, which was based on kale-nel-main (20).zip.
+
+Delivery type:
+- Full combined repo upload set, not a partial patch.
+- Includes full repo contents plus Phase 3 files.
+- SQL is included as repo material, but must still be run manually in Supabase.
+
+What changed from v634:
+- VERSION bumped to 635.
+- gejast-config.js bumped to VERSION:'v635'.
+- Recursive version convergence was applied across root and nested repo files, not only root HTML.
+- Local asset refs with ?v### were converged to ?v635.
+- Static 'v### · Made by Bruis' labels were converged to v635.
+- Phase 3 SQL was hardened:
+  - direct SELECT grants on implementation_matrix_features/evidence to anon/authenticated were removed;
+  - explicit REVOKE statements were added;
+  - admin access remains via guarded SECURITY DEFINER RPCs requiring admin_session_token.
+
+SQL run order after upload:
+1. implementation_matrix_seed.sql
+2. rpc_ownership_audit.sql
+3. bundle_surface_audit.sql
+4. game_surface_audit.sql
+
+Honesty boundary:
+- This is safer for GitHub upload than v634.
+- Supabase runtime is still unverified until SQL is run.
+- Live deployment is still unverified until the zip is uploaded/deployed and admin_implementation_matrix.html is opened.

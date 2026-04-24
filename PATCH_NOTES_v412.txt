@@ -8,7 +8,7 @@ What changed
 - Fixed login.html boot crash caused by missing forgotPinModal DOM binding.
 - Added a defensive null guard around the forgot-pin modal handlers so the page no longer aborts if the modal node is absent.
 - Bumped visible shared config version from v411 to v412.
-- Bumped login.html to load gejast-config.js?v412 so the fixed page pulls the new shared config version cleanly.
+- Bumped login.html to load gejast-config.js?v635 so the fixed page pulls the new shared config version cleanly.
 
 SQL
 - None required.

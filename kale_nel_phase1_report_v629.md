@@ -58,7 +58,7 @@ A large portion of root HTML files referenced mixed `?v...` values. That makes b
 - bulk-normalized `window.GEJAST_PAGE_VERSION` markers to `v629`
 
 ### Gate coverage
-Injected `gejast-home-gate.js?v629` into root pages that had config loaded but were missing the player gate, including the despimarkt/admin/live/ladder pages that were still missing it in the snapshot.
+Injected `gejast-home-gate.js?v635` into root pages that had config loaded but were missing the player gate, including the despimarkt/admin/live/ladder pages that were still missing it in the snapshot.
 
 ## What was intentionally left alone
 - No SQL changes were made.

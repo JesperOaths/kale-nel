@@ -13,7 +13,7 @@ What this patch does
   - rotating speed Top 5 box by drink type / Seconden
   - Grootste Speler / All-time
 - keeps the speed-rotation behavior and the non-shot drink type cycling logic from that earlier implementation
-- updates the homepage page-version line to v588 and uses gejast-config.js?v588 as the cache-busting script URL
+- updates the homepage page-version line to v588 and uses gejast-config.js?v635 as the cache-busting script URL
 - keeps Beurs d'Espinoza pointed straight to despimarkt.html in this restored homepage shell
 
 Notes

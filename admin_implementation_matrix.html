@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Implementatiematrix - GEJAST</title>
+  <script>window.GEJAST_PAGE_VERSION='v635';</script>
+  <script src="./gejast-config.js?v635"></script>
+  <script src="./admin-session-sync.js?v635"></script>
+  <script src="./admin-topnav.js?v635"></script>
+  <script src="./gejast-owner-trace-helper.js?v635"></script>
+  <style>
+    :root{--gold:#9a8241;--paper:#f9f7f2;--line:rgba(0,0,0,.08);--muted:#6b655b;--ok:#1f6b3a;--warn:#8a6a12;--bad:#8b2d20}
+    *{box-sizing:border-box} body{margin:0;padding:20px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(232,228,217,.92),rgba(232,228,217,.92)),url('./wordtergejast.png') center/cover fixed;min-height:100vh;color:#17130f}
+    .wrap{max-width:1180px;margin:0 auto;background:rgba(249,247,242,.96);border:1px solid rgba(255,255,255,.72);border-radius:28px;padding:26px;box-shadow:0 20px 50px rgba(0,0,0,.08)}
+    .top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap} h1{margin:0;font-size:clamp(2rem,4vw,3rem);letter-spacing:-.05em} .sub{color:var(--muted);margin:8px 0 0;max-width:72ch;line-height:1.5}
+    .btn{border:0;border-radius:999px;padding:12px 16px;font:inherit;font-weight:850;background:#111;color:#fff;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center} .btn.alt{background:#fff;color:#111;border:1px solid var(--line)}
+    .toolbar{display:grid;grid-template-columns:1fr 160px 180px auto auto;gap:10px;margin-top:18px;align-items:center} input,select{width:100%;padding:12px 13px;border-radius:14px;border:1px solid var(--line);background:#fff;font:inherit}
+    .status{margin-top:12px;color:var(--muted);font-size:13px} .im-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:18px} .im-stat{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px} .im-stat span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:900} .im-stat strong{display:block;font-size:28px;margin-top:4px}
+    .im-phase{margin-top:18px} .im-phase-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px} .im-phase-head h2{margin:0;font-size:20px} .im-phase-head span{color:var(--muted);font-size:13px;font-weight:800}
+    .im-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px} .im-card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.03)} .im-key{font-size:11px;color:#8a7a55;font-weight:900;letter-spacing:.06em;text-transform:uppercase} .im-card h3{margin:6px 0 4px;font-size:17px;letter-spacing:-.03em} .im-card p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
+    .im-badges{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0} .im-badge{border-radius:999px;padding:5px 8px;font-size:11px;font-weight:900;border:1px solid var(--line);background:#f7f2e8} .im-badge.ok{background:rgba(31,107,58,.10);color:var(--ok);border-color:rgba(31,107,58,.22)} .im-badge.warn{background:rgba(138,106,18,.10);color:var(--warn);border-color:rgba(138,106,18,.22)} .im-badge.bad{background:rgba(139,45,32,.10);color:var(--bad);border-color:rgba(139,45,32,.22)}
+    .im-owners{display:grid;gap:7px;margin-top:8px} .im-owners div{display:grid;grid-template-columns:48px 1fr;gap:8px;align-items:center} .im-owners b{font-size:11px;color:#8a7a55;text-transform:uppercase} code{background:#f5efe6;border:1px solid rgba(0,0,0,.06);border-radius:9px;padding:4px 6px;white-space:normal;word-break:break-word} .im-notes{margin-top:12px!important} .im-next{margin-top:8px!important;color:#2f2617!important}
+    .audit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px} .panel{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px} .panel h2{margin:0 0 10px;font-size:18px} pre{margin:10px 0 0;max-height:420px;overflow:auto;background:#111;color:#f4ead5;padding:12px;border-radius:14px;font-size:12px;line-height:1.45;white-space:pre-wrap}
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e3a6;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none}
+    @media(max-width:900px){.toolbar,.audit-grid,.im-grid,.im-summary{grid-template-columns:1fr} .wrap{padding:18px}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="top">
+      <div>
+        <h1>Implementatiematrix</h1>
+        <p class="sub">Phase 3 maakt een repo- en SQL-gebonden statuslaag voor geplande features, owners, RPC's en vervolgacties. Gebruik dit als waarheidshulp vóór nieuwe fases worden gebouwd.</p>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn alt" href="./admin.html">Admin</a><a class="btn alt" href="./index.html">Site</a></div>
+    </div>
+    <div class="toolbar">
+      <input id="matrixSearch" type="search" placeholder="Zoek phase, subsystem, owner, RPC, SQL..." />
+      <select id="phaseFilter"><option value="all">Alle fases</option><option value="0">Phase 0</option><option value="3">Phase 3</option><option value="4">Phase 4</option><option value="5">Phase 5</option><option value="6">Phase 6</option><option value="7">Phase 7</option><option value="8">Phase 8</option><option value="9">Phase 9</option><option value="10">Phase 10</option><option value="11">Phase 11</option><option value="12">Phase 12</option><option value="13">Phase 13</option></select>
+      <select id="statusFilter"><option value="all">Alle statussen</option><option value="implemented">Implemented/present</option><option value="partial">Partial/unknown</option><option value="missing">Missing/planned/critical</option></select>
+      <button id="reloadMatrixBtn" class="btn alt" type="button">Herlaad</button>
+      <button id="runAuditBtn" class="btn" type="button">Run SQL-audits</button>
+    </div>
+    <div id="matrixStatus" class="status">Matrix laden...</div>
+    <section id="matrixSummary" class="im-summary"></section>
+    <section id="matrixRoot"></section>
+    <section class="audit-grid">
+      <div class="panel"><h2>SQL audit output</h2><p class="sub">Werkt na het draaien van de v634 SQL-bestanden.</p><pre id="auditOutput">Nog niet uitgevoerd.</pre></div>
+      <div class="panel"><h2>Owner trace</h2><p class="sub">Client-side trace van een pagina naar scripts en RPC-namen. Dit is repo/live HTML-bewijs, geen Supabase runtimebewijs.</p><div style="display:flex;gap:8px;margin-top:10px"><input id="tracePath" value="admin_implementation_matrix.html"><button id="traceBtn" class="btn alt" type="button">Trace</button></div><pre id="traceOutput">Nog niet uitgevoerd.</pre></div>
+    </section>
+  </main>
+  <div class="site-credit-watermark" data-version-watermark>v635 · Made by Bruis</div>
+  <script src="./gejast-implementation-matrix.js?v635"></script>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+</body>
+</html>

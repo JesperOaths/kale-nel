@@ -1,2 +1,2 @@
 Add this script tag near the bottom of index.html, after the existing homepage scripts:
-<script src="./gejast-index-top5-route-overrides.js?v503"></script>
+<script src="./gejast-index-top5-route-overrides.js?v635"></script>

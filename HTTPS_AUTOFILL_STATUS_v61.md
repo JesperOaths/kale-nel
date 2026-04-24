@@ -7,7 +7,7 @@
   - `admin.html` username / password / TOTP fields
   - `login.html` PIN field and username mirror for password-manager friendliness
   - `request.html` email field
-- made the version watermark much more visible as `v61 · Made by Bruis`
+- made the version watermark much more visible as `v635 · Made by Bruis`
 
 ## Important note
 A front-end redirect helps, but true HTTPS depends on hosting.

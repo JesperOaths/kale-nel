@@ -24,7 +24,7 @@ Main fixes
 
 4) Cache busting / activation
 - gejast-config.js bumped to v589 so the helper modules load with a fresh query line
-- pikken.html, pikken_live.html, paardenrace_live.html point to gejast-config.js?v589
+- pikken.html, pikken_live.html, paardenrace_live.html point to gejast-config.js?v635
 
 Files included
 - gejast-config.js

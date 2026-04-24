@@ -9,7 +9,7 @@ What changed
 - Removes gejast-family-rollout.js from login.html so the login entry page no longer depends on the family rollout MutationObserver boot path.
 - Rewrites fillNames() to build the player-name option lists in document fragments and swap them into the DOM once, instead of appending one option at a time.
 - Bumps shared config version from v412 to v413.
-- Bumps login.html to load gejast-config.js?v413.
+- Bumps login.html to load gejast-config.js?v635.
 
 Why this stronger patch exists
 - If the live page still felt frozen after the v412 fix, the remaining likely entry-page problem is the heavy public-page boot path on login.html itself.
