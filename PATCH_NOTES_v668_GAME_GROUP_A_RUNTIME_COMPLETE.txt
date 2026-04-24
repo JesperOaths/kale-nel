@@ -1,0 +1,38 @@
+GEJAST v668 — Beerpong + Boerenbridge runtime complete bundle
+
+WHAT THIS PATCH TARGETS
+- Complete the practical runtime layer for Beerpong and Boerenbridge together.
+- Keep their existing page owners intact while supplying the missing durable SQL contract behind them.
+
+FRONTEND FILES
+- VERSION
+- gejast-config.js
+- gejast-game-group-a-runtime.js
+- admin_game_group_a_runtime.html
+- admin.html
+- beerpong.html
+- beerpong_vault.html
+- boerenbridge.html
+- boerenbridge_live.html
+- boerenbridge_spectator.html
+- boerenbridge_vault.html
+
+SQL FILE
+- GEJAST_v668_game_group_a_runtime_complete.sql
+
+IMPLEMENTED
+- Beerpong save RPC compatible with the existing score form.
+- Beerpong leaderboard RPC compatible with the existing page.
+- Beerpong pussycup ranking RPC compatible with the existing page.
+- Beerpong durable match table + player ratings table.
+- Boerenbridge save RPC compatible with the existing score form.
+- Boerenbridge durable match table + player ratings table.
+- Runtime bundle RPCs for both games.
+- Admin audit, soft delete and rating rebuild RPCs.
+- Admin runtime page for inspection, delete and rebuild.
+- Vault pages get a direct runtime panel using the v668 read contracts.
+
+BOUNDARY
+- This does not redesign the Boerenbridge scoring UI.
+- This does not replace the existing live page owner; it gives the persistence/rating/read layer it can rely on.
+- Run the SQL before expecting the frontend runtime panels and save flows to work.

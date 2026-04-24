@@ -1,0 +1,27 @@
+{
+  "version": "v668",
+  "file_count": 13,
+  "zip_flat": true,
+  "python_files": [],
+  "sql_in_zip": false,
+  "node_check": [
+    "gejast-config.js",
+    "gejast-game-group-a-runtime.js"
+  ],
+  "stale_refs": [],
+  "frontend_files": [
+    "GEJAST_v668_game_group_a_runtime_complete_manifest.txt",
+    "PATCH_NOTES_v668_GAME_GROUP_A_RUNTIME_COMPLETE.txt",
+    "VERSION",
+    "admin.html",
+    "admin_game_group_a_runtime.html",
+    "beerpong.html",
+    "beerpong_vault.html",
+    "boerenbridge.html",
+    "boerenbridge_live.html",
+    "boerenbridge_spectator.html",
+    "boerenbridge_vault.html",
+    "gejast-config.js",
+    "gejast-game-group-a-runtime.js"
+  ]
+}

@@ -1,0 +1,25 @@
+GEJAST v668 — Game Group A Runtime Complete Manifest
+
+Frontend zip: GEJAST_v668_game_group_a_runtime_complete_actual_files_flat.zip
+SQL: GEJAST_v668_game_group_a_runtime_complete.sql
+
+Frontend file count: 13
+SQL inside zip: no
+Python files inside zip: no
+Nested folders: no
+Version: v668
+
+Changed files:
+- VERSION
+- gejast-config.js
+- gejast-game-group-a-runtime.js
+- admin_game_group_a_runtime.html
+- admin.html
+- beerpong.html
+- beerpong_vault.html
+- boerenbridge.html
+- boerenbridge_live.html
+- boerenbridge_spectator.html
+- boerenbridge_vault.html
+- PATCH_NOTES_v668_GAME_GROUP_A_RUNTIME_COMPLETE.txt
+- PATCH_TEST_REPORT_v668.txt
