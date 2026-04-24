@@ -1,0 +1,30 @@
+GEJAST v641 — Phase 9 Pikken full implementation pack
+
+Scope:
+- Adds Pikken shared-stat integration on top of Phase 7 shared stats framework.
+- Adds defensive Pikken base stats refresh.
+- Adds normalized bid metrics and tilt-factor cache.
+- Adds lightweight live probability cache/reader based on current dice share when a compatible Pikken player table is present.
+- Adds admin audit surface for Pikken shared stats.
+
+Files:
+- VERSION
+- gejast-shared-stats-config.js
+- gejast-pikken-shared-stats.js
+- gejast-pikken-probability.js
+- admin_pikken_shared_stats.html
+- pikken_stats.sql
+- pikken_update_stats.sql
+- pikken_probability.sql
+- pikken_rpc.sql
+- SQL_RUN_ORDER_v641_phase9.txt
+
+Safety:
+- SQL is additive.
+- No DROP/TRUNCATE/DELETE statements are used.
+- New cache tables deny direct public reads; public access goes through security-definer RPCs.
+- Existing gejast-pikken.js is not replaced. This pack adds shared-stat/probability helpers only, preserving the existing Pikken owner.
+
+Runtime boundary:
+- SQL success proves migration acceptance.
+- Live UI correctness still needs deployment and browser testing.

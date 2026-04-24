@@ -1,0 +1,13 @@
+{
+  "version": "v641",
+  "phase": "Phase 9 - Pikken full implementation pack",
+  "update_only_files": 12,
+  "sql_files": [
+    "pikken_stats.sql",
+    "pikken_update_stats.sql",
+    "pikken_probability.sql",
+    "pikken_rpc.sql"
+  ],
+  "destructive_sql_terms_detected": [],
+  "notes": "Additive update-only package; does not replace gejast-pikken.js owner."
+}
