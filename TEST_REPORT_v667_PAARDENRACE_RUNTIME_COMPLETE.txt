@@ -1,0 +1,12 @@
+GEJAST v667 Paardenrace Runtime Complete test report
+
+Static checks performed locally:
+- node --check gejast-config.js: PASS
+- node --check gejast-paardenrace.js: PASS
+- node --check gejast-paardenrace-input-guard.js: PASS
+- zip flatness check: PASS
+- .py files inside zip: 0
+- .sql files inside zip: 0
+- visible/cache-bust frontend refs in patched files point to v667: PASS
+
+SQL cannot be live-executed from this environment. The SQL includes a dynamic drop block for every function owned by this migration to avoid the Postgres return-type/parameter-name replacement errors seen in earlier v665/v666 runs.

@@ -1,5 +1,5 @@
 (function(){
-  const VERSION='v661';
+  const VERSION='v667';
   const SELECTOR='input, textarea, select';
   function inUserEditable(el){return !!(el && el.matches && el.matches(SELECTOR));}
   function isFocused(el){return el && document.activeElement===el;}

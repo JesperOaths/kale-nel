@@ -1,0 +1,35 @@
+GEJAST v667 — Paardenrace Runtime Complete
+
+This is a real implementation bundle, not an audit-only layer.
+
+Frontend files:
+- VERSION
+- gejast-config.js
+- gejast-paardenrace.js
+- gejast-paardenrace-input-guard.js
+- paardenrace.html
+- paardenrace_live.html
+- paardenrace_spectator.html
+- paardenrace_stats.html
+- paardenrace_ladder.html
+- admin_paardenrace.html
+
+SQL is separate: GEJAST_v667_paardenrace_runtime_complete.sql
+
+Implemented runtime chain:
+- Create/join room
+- Open/live room list
+- Room state polling without overwriting inputs
+- Suit + wager lock
+- Host wager verify/reject
+- Ready/unready gating
+- Host start with min-2 players and suit diversity gate
+- Gate card setup, shuffled draw deck, horse positions
+- Draw card, move horse, reveal gates, step suits back
+- Reshuffle draw pile
+- Winner detection only for wagered suits
+- Nominations with exact budget enforcement
+- Finished race stats and leaderboard
+- Host kick, leave, disband/close, reset same room for a new round
+
+Honesty boundary: this implements the static frontend + SQL path. Live proof still requires uploading files, running SQL, then testing the real Supabase/browser flow.
