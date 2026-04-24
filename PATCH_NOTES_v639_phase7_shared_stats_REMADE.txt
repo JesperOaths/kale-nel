@@ -1,0 +1,17 @@
+GEJAST v639 Phase 7 Shared Stats — REMADE RECOVERY BUNDLE
+
+Source boundary:
+- GitHub current VERSION was verified as 638 before remaking these artifacts.
+- This recovery bundle is update-only and additive. It avoids overwriting the full repo because a complete v638 repo archive was not available inside the container.
+
+SQL run order:
+1. shared_stats_schema.sql
+2. shared_stats_helpers.sql
+3. shared_stats_rpc.sql
+4. shared_stats_elo_history.sql
+5. shared_stats_matchups.sql
+
+Honesty boundary:
+- This is not a full repo upload set.
+- It is safe as an additive Phase 7 update-only recovery bundle.
+- It does not replace current v638 Make safety / Phase 6 files.

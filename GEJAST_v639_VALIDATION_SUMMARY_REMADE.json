@@ -1,0 +1,13 @@
+{
+  "version": "v639",
+  "source_boundary": "GitHub VERSION verified as 638; complete v638 archive unavailable; additive update-only recovery bundle",
+  "files_total": 12,
+  "sql_files": [
+    "shared_stats_elo_history.sql",
+    "shared_stats_helpers.sql",
+    "shared_stats_matchups.sql",
+    "shared_stats_rpc.sql",
+    "shared_stats_schema.sql"
+  ],
+  "destructive_sql_terms_detected": []
+}

@@ -1,0 +1,11 @@
+GEJAST_v639_VALIDATION_SUMMARY_REMADE.json
+PATCH_NOTES_v639_phase7_shared_stats_REMADE.txt
+VERSION
+admin_shared_stats.html
+gejast-shared-stats-config.js
+gejast-shared-stats.js
+shared_stats_elo_history.sql
+shared_stats_helpers.sql
+shared_stats_matchups.sql
+shared_stats_rpc.sql
+shared_stats_schema.sql
