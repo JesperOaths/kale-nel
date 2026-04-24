@@ -1,0 +1,15 @@
+GEJAST v655 phase matrix patch
+
+Purpose:
+- Keep the repair-first base bundle aligned at a new visible version.
+- Add a fuller feature-by-feature implementation matrix for the phase list.
+- Preserve Made by Bruis watermark discipline.
+
+No SQL included.
+No Python scripts included.
+Flat upload-ready bundle.
+
+Primary changed logic:
+- gejast-implementation-matrix.js now categorizes each phase as implemented, partial, present_unlinked, missing, or unsafe.
+- FEATURE_PHASE_MATRIX_v655.md provides a downloadable/readable static matrix.
+- Sitewide v655 version/cache-bust alignment is preserved.
