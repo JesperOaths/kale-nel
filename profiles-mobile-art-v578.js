@@ -1,7 +1,7 @@
 (function(){
   const path = String(location.pathname || '').toLowerCase().split('/').pop();
   if (path !== 'profiles.html') return;
-  window.GEJAST_PAGE_VERSION = 'v581';
+  window.GEJAST_PAGE_VERSION='v635';
   function onReady(fn){ if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once:true }); else fn(); }
   onReady(()=>{
     const style = document.createElement('style');
