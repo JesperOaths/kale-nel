@@ -7,7 +7,7 @@
 <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drank toevoegen</title>
-  <script>window.GEJAST_PAGE_VERSION='v661';</script><script src="./gejast-config.js?v661"></script><script src="./gejast-drinks-push-bridge.js?v661"></script><script src="./gejast-home-gate.js?v661"></script><script src="./gejast-push-runtime.js?v661"></script><script src="./gejast-clickable-cards.js?v661"></script><script src="./gejast-scope-context.js?v661"></script><script src="./gejast-family-rollout.js?v661"></script>
+  <script>window.GEJAST_PAGE_VERSION='v664';</script><script src="./gejast-config.js?v664"></script><script src="./gejast-drinks-push-bridge.js?v664"></script><script src="./gejast-home-gate.js?v664"></script><script src="./gejast-push-runtime.js?v664"></script><script src="./gejast-clickable-cards.js?v664"></script><script src="./gejast-scope-context.js?v664"></script><script src="./gejast-family-rollout.js?v664"></script>
   <style>
     :root{
       --line:rgba(0,0,0,.09);
@@ -193,9 +193,9 @@
     </div>
   </div>
 
-  <div class="site-credit-watermark" data-version-watermark>v661 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v664 · Made by Bruis</div>
 
-  <script src="./gejast-geo.js?v661"></script><script src="./drinks-verify-float.js?v661"></script><script src="./gejast-drinks-workflow.js?v661"></script>
+  <script src="./gejast-geo.js?v664"></script><script src="./drinks-verify-float.js?v664"></script><script src="./gejast-drinks-workflow.js?v664"></script>
   <script>
   (function(){
     const cfg=window.GEJAST_CONFIG||{};
@@ -438,8 +438,8 @@
         }catch(err){ setStatus(humanizeError(err) || String(err?.message||err||'Drank toevoegen mislukt.'),'bad'); }
         finally{ submittingDrink=false; }
       }
-    async function verifyDrink(id, approve=true){ try{ const pool=((latestData&&((latestData.all_pending_verifications||latestData.verify_queue)||[]))||[]); const row=pool.find(r=>String(r.id)===String(id))||{}; if(row.viewer_vote_state) throw new Error('Je hebt al gestemd op deze aanvraag.'); const locationSensitive=!isSecretKingLike(row); let usePos=null; if(locationSensitive){ const pos=await getPosition(true,true); if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); usePos=lastPosition||pos; if(!usePos) throw new Error('Geolocatie is nodig om een drankje te bevestigen.'); } await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),lat:usePos?usePos.coords.latitude:null,lng:usePos?usePos.coords.longitude:null,accuracy:usePos?usePos.coords.accuracy:null,approve:!!approve})}).then(parse); setStatus(approve?'Drankje bevestigd.':'Drankje afgekeurd.', 'ok'); await loadPage(false,false); }catch(err){ setStatus(humanizeError(err) || String(err?.message||err||'Drank toevoegen mislukt.'),'bad'); } }
-    async function cancelDrink(id){ try{ await fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_my_pending_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id)})}).then(parse); setStatus('Aanvraag geannuleerd.', 'ok'); await loadPage(false,false); }catch(err){ setStatus(humanizeError(err) || String(err?.message||err||'Drank toevoegen mislukt.'),'bad'); } }
+    async function verifyDrink(id, approve=true){ try{ const pool=((latestData&&((latestData.all_pending_verifications||latestData.verify_queue)||[]))||[]); const row=pool.find(r=>String(r.id)===String(id))||{}; if(row.viewer_vote_state) throw new Error('Je hebt al gestemd op deze aanvraag.'); const locationSensitive=!isSecretKingLike(row); let usePos=null; if(locationSensitive){ const pos=await getPosition(true,true); if(pos) lastPosition=pos; await updateGeoInfo(lastPosition||pos||null); usePos=lastPosition||pos; if(!usePos) throw new Error('Geolocatie is nodig om een drankje te bevestigen.'); } const payload={session_token:token(),drink_event_id:Number(id),lat:usePos?usePos.coords.latitude:null,lng:usePos?usePos.coords.longitude:null,accuracy:usePos?usePos.coords.accuracy:null,approved:!!approve,approve:!!approve}; if(window.GEJAST_DRINKS_WORKFLOW && typeof window.GEJAST_DRINKS_WORKFLOW.verifyDrinkEvent==='function'){ await window.GEJAST_DRINKS_WORKFLOW.verifyDrinkEvent(payload); } else { await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify(payload)}).then(parse); } setStatus(approve?'Drankje bevestigd.':'Drankje afgekeurd.', 'ok'); await loadPage(false,false); }catch(err){ setStatus(humanizeError(err) || String(err?.message||err||'Drank toevoegen mislukt.'),'bad'); } }
+    async function cancelDrink(id){ try{ const payload={session_token:token(),drink_event_id:Number(id)}; if(window.GEJAST_DRINKS_WORKFLOW && typeof window.GEJAST_DRINKS_WORKFLOW.cancelDrinkEvent==='function'){ await window.GEJAST_DRINKS_WORKFLOW.cancelDrinkEvent(payload); } else { await fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_my_pending_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify(payload)}).then(parse); } setStatus('Aanvraag geannuleerd.', 'ok'); await loadPage(false,false); }catch(err){ setStatus(humanizeError(err) || String(err?.message||err||'Drank toevoegen mislukt.'),'bad'); } }
     async function tryAutoPrompt(){
       try{
         const geo=window.GEJAST_GEO;
@@ -459,6 +459,6 @@
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-<script src="./site-analytics.js?v661"></script>
+<script src="./site-analytics.js?v664"></script>
 <script id="gejast-drinks-push-boot">(function(){function boot(){try{window.GEJAST_DRINKS_PUSH_BRIDGE&&window.GEJAST_DRINKS_PUSH_BRIDGE.bootPanel&&window.GEJAST_DRINKS_PUSH_BRIDGE.bootPanel();}catch(_){}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();})();</script></body>
 </html>

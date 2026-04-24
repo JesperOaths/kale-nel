@@ -1,0 +1,35 @@
+GEJAST v664 — Drinks runtime completion correction
+
+This supersedes v663 for the drinks runtime step.
+
+Why v664 exists:
+- v663 created the drinks workflow and contract RPCs, but re-inspection found it was not complete enough to call the step finished.
+- drinks_add.html still verified/cancelled through direct page-local fetch calls instead of the canonical workflow.
+- drinks_speed.html still verified/cancelled through direct page-local fetch calls instead of the canonical workflow.
+- queueNearbyForCreated used payload keys/kind names that did not match the known queue_nearby_verification_pushes_v3 signatures in the SQL handoff catalog.
+
+What v664 fixes:
+- All drinks add/create/verify/reject/cancel paths now prefer GEJAST_DRINKS_WORKFLOW.
+- All speed create/verify/cancel paths now prefer GEJAST_DRINKS_WORKFLOW.
+- Nearby push queueing now normalizes request kinds to drink/speed and tries the correct v3 queue payloads.
+- Adds contract_drinks_queue_nearby_v664 SQL wrapper for robust queue invocation.
+- Adds contract_drinks_read_v664 and contract_drinks_write_v664 while keeping v663 fallbacks in JS.
+
+Files:
+- VERSION
+- gejast-config.js
+- gejast-drinks-workflow.js
+- drinks.html
+- drinks_add.html
+- drinks_pending.html
+- drinks_speed.html
+- admin_drinks_push_health.html
+- admin_push.html
+- PATCH_NOTES_v664_DRINKS_RUNTIME_COMPLETE.txt
+
+SQL:
+- GEJAST_v664_drinks_runtime_complete.sql is separate and must be run in Supabase.
+
+Boundary:
+- This completes the browser/RPC wiring for the drinks runtime step as far as static files + handoff SQL signatures allow.
+- It still cannot prove live Supabase execution, actual push delivery, or iPhone/Android notification behavior until deployed and tested on real devices.
