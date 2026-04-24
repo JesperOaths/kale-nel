@@ -1,0 +1,27 @@
+GEJAST v658 — Game Group A bundle (phases 10 + 11)
+
+FRONTEND ZIP RULES
+- Actual repo files only.
+- Flat zip(s), no nested folders.
+- No .py files.
+- No .sql files inside frontend zips.
+- SQL is delivered separately as GEJAST_v658_game_group_a_phase_10_11.sql.
+- Split into <=100 files per zip.
+
+WHAT CHANGED
+- Bumped frontend version to v658 while keeping “Made by Bruis”.
+- Added gejast-game-phase-bridge.js.
+- Added admin_game_group_a_health.html.
+- Linked Game Group A Health from admin.html.
+- Added non-invasive status panels to beerpong.html, beerpong_vault.html, boerenbridge.html, and boerenbridge_vault.html.
+- Updated implementation matrix statuses for phases 10 and 11.
+- Added FEATURE_PHASE_MATRIX_v658.md.
+
+SQL
+- Run GEJAST_v658_game_group_a_phase_10_11.sql in Supabase.
+- It creates read-only bundle/audit RPCs around existing game rating/history surfaces when present.
+
+BOUNDARY
+- This does not replace Beerpong or Boerenbridge match-entry owners.
+- This does not mutate match histories, live games, or ELO source tables.
+- This is a proof/read layer; live correctness still needs Supabase/browser verification after deploy.
