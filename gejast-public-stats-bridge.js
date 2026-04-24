@@ -18,7 +18,7 @@
     try{
       const data=await shared.leaderboard({scope:scope(),gameKey:game(),limit:5});
       const rows=Array.isArray(data.items)?data.items:[];
-      if(!rows.length){body.textContent=data.note||'Geen gedeelde stats beschikbaar. Draai de v660 SQL en refresh de cache.';return;}
+      if(!rows.length){body.textContent=data.note||'Geen gedeelde stats beschikbaar. Draai de v661 SQL en refresh de cache.';return;}
       body.innerHTML=rows.map((r,i)=>`<div style="display:grid;grid-template-columns:40px 1fr auto;gap:8px;padding:8px 0;border-top:${i?'1px solid rgba(0,0,0,.06)':'0'}"><b>#${r.rank_in_game||i+1}</b><span>${r.player_name||'Onbekend'}<small style="display:block;color:#8a7a55">${r.games_played||0} potjes · ${fmt(r.win_pct)}% winst</small></span><strong>${fmt(r.elo_rating)}</strong></div>`).join('');
     }catch(err){body.textContent='Gedeelde stats konden niet laden: '+(err&&err.message||err);}
   }

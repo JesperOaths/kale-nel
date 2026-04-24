@@ -1,11 +1,11 @@
 (function(){
   const CFG=window.GEJAST_CONFIG||{};
-  const VERSION='v660';
+  const VERSION='v661';
   const RPC={
-    audit:'admin_get_game_group_b_audit_v660',
-    generic:'get_game_group_b_bundle_v660',
-    pikken:'get_pikken_phase_bundle_v660',
-    paardenrace:'get_paardenrace_phase_bundle_v660'
+    audit:'admin_get_game_group_b_audit_v661',
+    generic:'get_game_group_b_bundle_v661',
+    pikken:'get_pikken_phase_bundle_v661',
+    paardenrace:'get_paardenrace_phase_bundle_v661'
   };
   function normScope(value){
     const raw=String(value||'').trim().toLowerCase();
@@ -57,11 +57,11 @@
     const game=data&&data.game_key||'game';
     const panel=target||ensurePanel(game);
     const body=panel.querySelector('[data-game-group-b-body]')||panel;
-    if(!data||data.ok===false){body.innerHTML=`<div>${escapeHtml(data&&data.error||'Geen data beschikbaar. Run de v660 SQL in Supabase.')}</div>`;return;}
+    if(!data||data.ok===false){body.innerHTML=`<div>${escapeHtml(data&&data.error||'Geen data beschikbaar. Run de v661 SQL in Supabase.')}</div>`;return;}
     const totals=data.totals||{};
     const recent=Array.isArray(data.recent_games)?data.recent_games:[];
     const safety=Array.isArray(data.safety_notes)?data.safety_notes:[];
-    body.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px"><div><b>${escapeHtml(totals.games||0)}</b><br><span>games</span></div><div><b>${escapeHtml(totals.players||0)}</b><br><span>spelers/entries</span></div><div><b>${escapeHtml(totals.active||0)}</b><br><span>actief/live</span></div><div><b>${escapeHtml(data.source||'v660')}</b><br><span>bron</span></div></div>`+
+    body.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px"><div><b>${escapeHtml(totals.games||0)}</b><br><span>games</span></div><div><b>${escapeHtml(totals.players||0)}</b><br><span>spelers/entries</span></div><div><b>${escapeHtml(totals.active||0)}</b><br><span>actief/live</span></div><div><b>${escapeHtml(data.source||'v661')}</b><br><span>bron</span></div></div>`+
       (recent.length?`<div style="display:grid;gap:6px">${recent.slice(0,5).map((r,i)=>`<div style="display:flex;justify-content:space-between;gap:10px;border-top:1px solid rgba(0,0,0,.06);padding-top:6px"><span>#${i+1} ${escapeHtml(r.status||r.phase||r.room_name||r.game_id||'game')}</span><b>${escapeHtml(r.created_at||r.updated_at||r.started_at||'')}</b></div>`).join('')}</div>`:`<div>Geen recente games gevonden.</div>`)+
       (safety.length?`<div style="margin-top:10px;color:#6b6257"><b>Safety:</b> ${safety.map(escapeHtml).join(' · ')}</div>`:'');
   }
