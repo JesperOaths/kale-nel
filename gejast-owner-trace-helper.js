@@ -1,4 +1,9 @@
 (function(){
-  function trace(path){const current=(location.pathname.split('/').pop()||'index.html');return{ok:true,target:path||current,current_page:current,note:'Client-side owner trace is limited to loaded page resources. Use repo inspection for full source truth.',loaded_scripts:Array.from(document.scripts||[]).map(s=>s.getAttribute('src')||s.src||'').filter(Boolean)}}
-  window.GEJAST_OWNER_TRACE_HELPER={trace};
+  const RPC_RE=/rpc\/([a-zA-Z0-9_]+)|['"]([a-zA-Z0-9_]+)['"]\s*,\s*\{/g;
+  function loadedScripts(){return Array.from(document.scripts||[]).map(s=>s.getAttribute('src')||s.src||'').filter(Boolean);}
+  async function fetchLocal(path){const p=String(path||'').replace(/^\.\//,'');const res=await fetch('./'+p,{cache:'no-store'});const text=await res.text();return{ok:res.ok,status:res.status,path:p,text};}
+  function extractScriptRefs(html){return Array.from(html.matchAll(/<script[^>]+src=["']([^"']+)["']/gi)).map(m=>m[1]);}
+  function extractRpcNames(text){const found=new Set();let m;while((m=RPC_RE.exec(text))){const v=m[1]||m[2];if(v&&/(get_|admin_|create_|update_|delete_|queue_|register_|touch_|consume_|pikken_|boerenbridge_|beerpong_|drink|claim|login|profile|stats|audit)/i.test(v))found.add(v);}return Array.from(found).sort();}
+  async function trace(path){const current=(location.pathname.split('/').pop()||'index.html');const target=String(path||current).replace(/^\.\//,'');try{const page=await fetchLocal(target);const script_refs=extractScriptRefs(page.text);const rpc=new Set(extractRpcNames(page.text));for(const src of script_refs.filter(s=>!/^https?:/i.test(s)).slice(0,25)){try{const s=await fetchLocal(src.split('?')[0]);extractRpcNames(s.text).forEach(x=>rpc.add(x));}catch(_){}}return{ok:page.ok,target,current_page:current,status:page.status,script_refs,rpc_names:Array.from(rpc).sort(),note:'Client-side owner trace scans same-origin HTML and linked JS. It still does not prove live Supabase success.'};}catch(e){return{ok:false,target,current_page:current,error:e.message||String(e),loaded_scripts:loadedScripts()};}}
+  window.GEJAST_OWNER_TRACE_HELPER={trace,loadedScripts,extractRpcNames};
 })();

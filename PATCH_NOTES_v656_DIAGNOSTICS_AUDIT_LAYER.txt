@@ -1,0 +1,23 @@
+GEJAST v656 diagnostics/audit layer patch
+
+Purpose:
+- Implements the safe multi-phase bundle: phases 3 + 4 + 5 + 14.
+- Keeps later game/drinks/stats/Despimarkt phases separate.
+- Bumps frontend-visible version to v656 and preserves Made by Bruis watermark.
+
+Frontend upload:
+- Use the split flat zip files if uploading through a 100-file limit interface.
+- No .py files are included.
+- No .sql files are inside the zips.
+
+Separate SQL:
+- GEJAST_v656_diagnostics_audit_layer.sql is standalone and diagnostic-only.
+- Apply it in Supabase SQL editor if you want the admin SQL audit buttons to return v656 catalog data.
+- It does not mutate game data.
+
+After upload/deploy:
+1. Open admin.html and confirm Beheerhub links to the diagnostic pages.
+2. Open admin_system_health.html and run Browser version report + Scan deployed pages.
+3. Open admin_identity_health.html and run the identity/profile/badge audits with admin session.
+4. Open admin_ops_observability.html and capture smoke output.
+5. Only then start the next phase bundle.

@@ -1,9 +1,6 @@
 (function(){
   const cfg=window.GEJAST_CONFIG||{};
-  async function getSelector(scope){
-    const resolved=scope==='family'?'family':'friends';
-    if(cfg.getActivatedPlayerNamesForScope){try{const names=await cfg.getActivatedPlayerNamesForScope(resolved);return{ok:true,scope:resolved,activated_names:names,requestable_names:[],source:'GEJAST_CONFIG.getActivatedPlayerNamesForScope'};}catch(e){return{ok:false,scope:resolved,error:e.message||String(e)}}}
-    return{ok:false,scope:resolved,error:'No selector owner available'};
-  }
-  window.GEJAST_PLAYER_SELECTOR={getSelector};
+  async function getSelector(scope){const resolved=scope==='family'?'family':'friends';const diagnostics={scope:resolved,attempts:[]};for(const key of ['getActivatedPlayerNamesForScope','fetchScopedActivePlayerNames']){if(typeof cfg[key]==='function'){try{const names=await cfg[key](resolved);diagnostics.attempts.push({source:'GEJAST_CONFIG.'+key,ok:true,count:(names||[]).length});return{ok:true,scope:resolved,activated_names:names||[],requestable_names:[],source:'GEJAST_CONFIG.'+key,diagnostics};}catch(e){diagnostics.attempts.push({source:'GEJAST_CONFIG.'+key,ok:false,error:e.message||String(e)});}}}return{ok:false,scope:resolved,activated_names:[],requestable_names:[],error:'No selector owner available',diagnostics};}
+  function localDropdownAudit(){const controls=Array.from(document.querySelectorAll('select,input[list]')).map(el=>({id:el.id||'',name:el.name||'',tag:el.tagName,option_count:el.options?el.options.length:null,value:el.value||''}));return{ok:true,controls};}
+  window.GEJAST_PLAYER_SELECTOR={getSelector,localDropdownAudit};
 })();

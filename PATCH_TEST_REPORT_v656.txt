@@ -1,0 +1,9 @@
+{
+  "version": "v656",
+  "file_count": 104,
+  "py_files": [],
+  "sql_files_inside_zip_source": [],
+  "stale_known_refs_files": [],
+  "zip_split_rule": "max 100 files per zip; SQL delivered separately",
+  "ok": true
+}
