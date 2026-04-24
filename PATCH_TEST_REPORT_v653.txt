@@ -1,0 +1,22 @@
+GEJAST v653 version-alignment patch test report
+
+Local test basis:
+- Tested against the uploaded `kale_nel_phase1_patch_v629_flat.zip` source bundle because a full GitHub checkout was not available inside the execution container.
+- This test validates script behavior on a large flat Kale Nel frontend bundle, including the 2.3 MB klaverjas scorer HTML file.
+
+Dry run result:
+- scanned_text_files: 86
+- changed_file_count: 85
+
+Apply result:
+- scanned_text_files: 86
+- changed_file_count: 85
+
+Post-apply verifier result:
+- scanned_frontend_files: 84
+- finding_count: 0
+- ok: true
+
+Important boundary:
+- This proves the script runs and removes stale frontend visible/cache-busting versions on the tested uploaded bundle.
+- It does not prove live Supabase RPC behavior, deployed-browser behavior, iPhone/Android behavior, or that the deployed site cache already matches GitHub main.
