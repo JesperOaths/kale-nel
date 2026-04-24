@@ -10,7 +10,7 @@ Delivery type:
 
 What changed from v634:
 - VERSION bumped to 635.
-- gejast-config.js bumped to VERSION:'v635'.
+- gejast-config.js bumped to VERSION:'v637'.
 - Recursive version convergence was applied across root and nested repo files, not only root HTML.
 - Local asset refs with ?v### were converged to ?v635.
 - Static 'v### · Made by Bruis' labels were converged to v635.

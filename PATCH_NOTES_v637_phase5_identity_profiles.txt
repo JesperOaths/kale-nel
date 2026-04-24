@@ -1,0 +1,44 @@
+GEJAST v637 Phase 5 - Identity, dropdowns, profiles, avatars, badges
+
+SOURCE
+- Built from the v636 Phase 4 full upload set in this workspace.
+- Intended repo source lineage: kale-nel-main (20).zip -> v635 Phase 3 -> v636 Phase 4 -> v637 Phase 5.
+
+WHAT THIS PHASE ADDS
+- Canonical scoped player selector source:
+  - gejast-player-selector.js
+  - player_selector_source.sql
+  - player_selector_cache_views.sql
+- Login dropdown hardening:
+  - gejast-login-dropdown-hardening.js
+  - login.html now loads the Phase 5 selector/hardening helper.
+- Request-name selector fallback:
+  - request.html now tries GEJAST_PLAYER_SELECTOR requestable names before older fallback paths.
+- Profiles/avatar/badge conservative restore helper:
+  - gejast-profiles-restore.js
+  - profiles.html and player.html load it after gejast-profile-source.js.
+- Admin diagnostics:
+  - admin_identity_health.html
+  - admin.html links to Identity Health.
+  - profiles_bundle_alignment.sql
+  - profiles_badge_restore.sql
+
+SAFETY MODEL
+- No destructive SQL.
+- Existing gejast-profile-source.js and badge helpers remain the primary profile/badge owners.
+- Phase 5 helpers are additive/conservative.
+- Direct identity table reads are not granted to browser users.
+- Admin diagnostics use the existing Phase 3 admin guard.
+
+SQL RUN ORDER
+1. player_selector_source.sql
+2. player_selector_cache_views.sql
+3. profiles_bundle_alignment.sql
+4. profiles_badge_restore.sql
+
+HONESTY BOUNDARY
+- Repo/source package built and validated locally.
+- Supabase runtime is not verified until the SQL files are run.
+- Browser/device behavior is not verified until v637 is deployed and login/profiles/admin_identity_health.html are opened live.
+
+Generated: 2026-04-24
