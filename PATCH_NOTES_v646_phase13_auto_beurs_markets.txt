@@ -1,0 +1,20 @@
+GEJAST v646 — Phase 13 Auto Beurs / Despimarkt match markets
+
+Scope:
+- Adds additive auto-market foundations for Beurs d'Espinoza / Despimarkt.
+- Does not replace existing despimarkt.html, gejast-despimarkt.js, wallet, debts, ladder, stats or admin_despimarkt owners.
+- Adds a public live auto-market surface and an admin audit surface.
+- SQL creates safe cache tables/RPCs for match-linked markets, odds seeding and resolution.
+
+Upload files:
+- VERSION
+- gejast-despimarkt-auto-markets.js
+- despimarkt_auto_markets.html
+- admin_despimarkt_auto_markets.html
+
+SQL files are separate and must be run in the listed order.
+
+Honesty boundary:
+- This package implements the Phase 13 foundation and callable lifecycle hooks.
+- Automatic trigger installation is provided through admin_install_despimarkt_auto_market_triggers_v646 but is not auto-run by the migration.
+- Existing match tables/columns vary by subsystem, so trigger attachment should be verified in Supabase before relying on fully automatic lifecycle behavior.

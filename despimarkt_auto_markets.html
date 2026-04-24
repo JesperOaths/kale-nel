@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet" />
+  <title>Beurs d'Espinoza - Live Markten</title>
+  <script>window.GEJAST_PAGE_VERSION='v646';</script>
+  <script src="./gejast-config.js?v646"></script>
+  <script src="./gejast-despimarkt-auto-markets.js?v646"></script>
+  <style>
+    :root{--gold:#9a8241;--paper:#fbf7ef;--line:rgba(0,0,0,.08);--ink:#161616;--muted:#6b6257}*{box-sizing:border-box}body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(241,237,228,.92),rgba(241,237,228,.95)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}main{max-width:1040px;margin:0 auto;background:rgba(255,251,245,.94);border:1px solid rgba(255,255,255,.7);border-radius:28px;padding:22px;box-shadow:0 18px 42px rgba(0,0,0,.08)}h1{margin:0;font-size:clamp(28px,5vw,42px);letter-spacing:-.05em}.sub{color:var(--muted);margin:8px 0 18px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}.btn{border:0;border-radius:999px;background:#111;color:#fff;padding:11px 15px;font-weight:900;cursor:pointer;text-decoration:none}.btn.alt{background:#fff;color:#111;border:1px solid var(--line)}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.dm-auto-card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:15px;box-shadow:0 8px 18px rgba(0,0,0,.035)}.dm-auto-card-head{display:flex;justify-content:space-between;gap:10px}.dm-auto-card-head span{font-size:12px;font-weight:900;color:#8a7a55;text-transform:uppercase}.dm-auto-meta,.dm-auto-odds{margin-top:8px;color:var(--muted);font-size:13px}.dm-auto-empty{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;color:var(--muted)}.site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;pointer-events:none}@media(max-width:760px){.grid{grid-template-columns:1fr}body{padding:12px}main{padding:18px}}
+  </style>
+</head>
+<body>
+<main>
+  <div class="row"><div><h1>Live Beurs Markten</h1><p class="sub">Automatische match-markten uit Phase 13.</p></div><a class="btn alt" href="./despimarkt.html">Despimarkt</a></div>
+  <div id="marketsBox" class="grid"></div>
+</main>
+<div class="site-credit-watermark" data-version-watermark>v646 · Made by Bruis</div>
+<script>
+(async function(){
+  const api = window.GEJAST_DESPIMARKT_AUTO_MARKETS;
+  try { api.renderMarkets('#marketsBox', (await api.listMarkets({ status_input:'open', limit_input:50 })).markets || []); }
+  catch (err) { document.querySelector('#marketsBox').innerHTML = `<div class="dm-auto-empty">${String(err.message || err)}</div>`; }
+  try { window.GEJAST_CONFIG && window.GEJAST_CONFIG.applyVersionLabel && window.GEJAST_CONFIG.applyVersionLabel(); } catch(_){}
+})();
+</script>
+</body>
+</html>
