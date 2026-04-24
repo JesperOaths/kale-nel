@@ -1,0 +1,21 @@
+GEJAST v651 — Ops observability / incident signal inbox
+
+Purpose:
+- Adds a conservative operational observability layer after the deployment verification stage.
+- Provides an admin surface for runtime errors, smoke checks and recent release breadcrumbs.
+- Adds optional client-side error capture and page health beacon helpers.
+
+Safety:
+- SQL is additive.
+- No destructive SQL terms are used.
+- Frontend helpers do not replace existing subsystem owners.
+- Browser error capture writes only through a scoped security-definer RPC with length-clamped fields.
+
+Upload files:
+- VERSION
+- admin_ops_observability.html
+- gejast-ops-observability.js
+- gejast-client-error-capture.js
+- gejast-health-beacon.js
+
+SQL files are provided separately and must be run in the listed order.
