@@ -1,17 +1,10 @@
 (function(){
   const CONFIG = {
-    VERSION:'v638',
+    VERSION:'v653',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
-    MAKE_WEBHOOK_URL: '', // v638: browser no longer owns direct Make webhook invocation
+    MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
     CLAIM_EMAIL_RPC: 'claim_email_jobs_http',
-    MAIL_VALIDATE_RPC_SAFE: 'admin_validate_outbound_email_job_v638',
-    MAIL_WAKE_RPC_SAFE: 'admin_wake_outbound_email_job_safe_v638',
-    MAIL_WAKE_LATEST_RPC_SAFE: 'admin_wake_latest_valid_outbound_email_job_safe_v638',
-    MAIL_SAFETY_AUDIT_RPC: 'admin_get_mail_safety_audit_v638',
-    DRINKS_SPEED_ALLOWED_TYPES_RPC_V638: 'get_drinks_speed_allowed_types_v638',
-    DRINKS_VERIFIED_SPEED_STATS_RPC_V638: 'get_drinks_verified_speed_stats_v638',
-    DRINKS_SPEED_PAGE_RPC_V638: 'get_drink_speed_page_public_v638',
     EMAIL_SUBJECT: 'Activeer je account voor de Kale Nel',
     GOLD: '#9a8241',
     GOLD_HOVER: '#8a7338',
@@ -31,11 +24,6 @@
     WEB_PUSH_CONSUME_ACTION_RPC_V3: 'consume_web_push_action_v3',
     ADMIN_ACTIVE_PUSH_RPC_V3: 'admin_queue_active_web_push_v3',
     ADMIN_PUSH_DIAGNOSTICS_RPC_V3: 'admin_get_web_push_diagnostics_v3',
-    PLAYER_SELECTOR_RPC_V1: 'get_player_selector_source_v1',
-    ADMIN_PLAYER_SELECTOR_AUDIT_RPC_V1: 'admin_get_player_selector_audit_v1',
-    SYSTEM_HEALTH_VERSION_AUDIT_RPC: 'admin_get_version_alignment_audit',
-    SYSTEM_HEALTH_GATE_AUDIT_RPC: 'admin_audit_gate_coverage',
-    SYSTEM_HEALTH_PERF_AUDIT_RPC: 'admin_get_boot_bundle_perf_audit',
   };
 
   function detectScriptVersion(){
@@ -235,7 +223,7 @@ function activatedNamesFromRows(rows, scope){
     if (!name) continue;
     weak.push(name);
     const status = rowStatusValue(row);
-    if (rowHasPinSignal(row) || ['active','approved','activated','legacy','legacy_active','legacy-approved','legacy_approved'].includes(status) || status.includes('legacy')) strong.push(name);
+    if (rowHasPinSignal(row) || ['active','approved','activated'].includes(status)) strong.push(name);
   }
   return { strong: uniquePersonNames(strong), weak: uniquePersonNames(weak) };
 }
