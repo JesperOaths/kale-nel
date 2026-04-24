@@ -1,0 +1,4 @@
+1. klaverjassen_shared_stats.sql
+2. klaverjassen_comeback_stats.sql
+3. klaverjassen_opponent_elo.sql
+4. klaverjassen_shared_rpc.sql

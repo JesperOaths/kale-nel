@@ -1,0 +1,11 @@
+GEJAST_v640_VALIDATION_SUMMARY.json
+PATCH_NOTES_v640_phase8_klaverjassen_shared_stats.txt
+SQL_RUN_ORDER_v640_phase8.txt
+VERSION
+admin_klaverjassen_shared_stats.html
+gejast-klaverjassen-shared-stats.js
+gejast-shared-stats-config.js
+klaverjassen_comeback_stats.sql
+klaverjassen_opponent_elo.sql
+klaverjassen_shared_rpc.sql
+klaverjassen_shared_stats.sql

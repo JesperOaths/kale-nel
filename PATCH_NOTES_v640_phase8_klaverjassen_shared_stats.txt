@@ -1,0 +1,35 @@
+GEJAST v640 — Phase 8 Klaverjassen Shared-Stat Alignment
+
+Scope:
+- Add Klaverjassen alignment to the Phase 7 shared stats framework.
+- Keep existing Klaverjassen scorer/live/ladder owners intact.
+- Do not replace current game-entry or live scoring logic.
+
+Added frontend files:
+- admin_klaverjassen_shared_stats.html
+- gejast-klaverjassen-shared-stats.js
+- gejast-shared-stats-config.js updated to v640 and extended with Klaverjassen RPC names
+
+Added SQL files:
+- klaverjassen_shared_stats.sql
+- klaverjassen_comeback_stats.sql
+- klaverjassen_opponent_elo.sql
+- klaverjassen_shared_rpc.sql
+
+SQL run order:
+1. klaverjassen_shared_stats.sql
+2. klaverjassen_comeback_stats.sql
+3. klaverjassen_opponent_elo.sql
+4. klaverjassen_shared_rpc.sql
+
+Important honesty boundary:
+- This is an update-only Phase 8 package, not a full repo upload set.
+- Current GitHub state was previously verified around v638; Phase 7 SQL was reported successful by the user.
+- This package is additive and avoids overwriting large current repo files.
+- The admin page can be opened directly at admin_klaverjassen_shared_stats.html after upload.
+
+Safety:
+- No DROP/TRUNCATE/DELETE statements.
+- New tables use no-direct-public RLS policies and guarded/public RPC surfaces.
+- Cache writes are upserts only.
+- Existing Klaverjassen owners are not replaced.

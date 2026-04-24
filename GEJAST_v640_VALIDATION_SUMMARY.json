@@ -1,0 +1,16 @@
+{
+  "version": "v640",
+  "phase": "Phase 8 \u2014 Klaverjassen shared-stat alignment",
+  "package_kind": "update-only additive bundle",
+  "files_total": 10,
+  "sql_files": [
+    "klaverjassen_comeback_stats.sql",
+    "klaverjassen_opponent_elo.sql",
+    "klaverjassen_shared_rpc.sql",
+    "klaverjassen_shared_stats.sql"
+  ],
+  "destructive_sql_terms_detected": [],
+  "old_page_version_refs_left": 0,
+  "old_static_made_by_bruis_refs_left": 0,
+  "notes": "No full repo upload set created because current full v638/v639 repo archive was not available in the container. This avoids regression by shipping only additive Phase 8 files and VERSION."
+}
