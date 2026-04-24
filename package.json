@@ -1,7 +1,7 @@
 {
   "name": "wordt-er-gejast-web-push-dispatcher",
   "private": true,
-  "version": "613.0.0",
+  "version": "665.0.0",
   "description": "Pinned dispatcher runtime for GitHub Actions web push delivery.",
   "license": "UNLICENSED",
   "engines": {

@@ -1,0 +1,30 @@
+GEJAST v665 — Push / service worker / dispatcher action-token runtime completion
+
+Goal:
+Complete the next concrete implementation step after v664 drinks runtime: the push/action-token path used by drinks verification notifications.
+
+Frontend files in this patch:
+- VERSION
+- gejast-config.js
+- gejast-push-runtime.js
+- gejast-sw.js
+- gejast-push-admin-source.js
+- web_push_dispatcher.js
+- admin_push.html
+- admin_drinks_push_health.html
+- package.json
+- PATCH_NOTES_v665_PUSH_ACTION_RUNTIME_COMPLETE.txt
+
+SQL delivered separately:
+- GEJAST_v665_push_action_runtime_complete.sql
+
+Implemented behavior:
+- Browser registers service worker, requests notification permission, subscribes to push, syncs subscription to Supabase, and touches active presence with player session, platform, install mode, permission, page path and optional geolocation.
+- Drinks runtime can queue nearby verification push jobs through queue_nearby_verification_pushes_v3.
+- Nearby queueing writes actionable web_push_jobs rows only for active, same-scope, permission-granted nearby users with usable subscription keys and location proximity.
+- Dispatcher claims queued jobs, mints verify/reject action tokens when needed, sends web push payloads with both camelCase and snake_case token fields, and marks jobs sent/failed.
+- Service worker reads both camelCase and snake_case payload fields, shows verify/reject actions when tokens are present, consumes action tokens on notification click, and opens the correct pending/speed page with result query params.
+- SQL consume_web_push_action_v3 applies the action to drink event or speed verification using existing verification owners / v664 contract fallback.
+
+Boundary:
+This completes static frontend + SQL + dispatcher implementation for the push action-token path. Live proof still requires deploying the files, running the SQL, and running the dispatcher with service-role/VAPID private key secrets.

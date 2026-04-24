@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v664',
+    VERSION:'v665',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -24,8 +24,8 @@
     WEB_PUSH_CONSUME_ACTION_RPC_V3: 'consume_web_push_action_v3',
     ADMIN_ACTIVE_PUSH_RPC_V3: 'admin_queue_active_web_push_v3',
     ADMIN_PUSH_DIAGNOSTICS_RPC_V3: 'admin_get_web_push_diagnostics_v3',
-    DRINKS_CONTRACT_READ_RPC_V664: 'contract_drinks_read_v664',
-    DRINKS_CONTRACT_WRITE_RPC_V664: 'contract_drinks_write_v664',
+    DRINKS_CONTRACT_READ_RPC_V664: 'contract_drinks_read_v665',
+    DRINKS_CONTRACT_WRITE_RPC_V664: 'contract_drinks_write_v665',
   };
 
   function detectScriptVersion(){
