@@ -1,0 +1,10 @@
+{
+  "version": "v669",
+  "files": 18,
+  "stale_refs": [],
+  "node_check": [
+    "gejast-config.js",
+    "gejast-despimarkt.js",
+    "gejast-despimarkt-phase-bridge.js"
+  ]
+}

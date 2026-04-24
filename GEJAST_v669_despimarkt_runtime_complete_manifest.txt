@@ -1,0 +1,10 @@
+GEJAST v669 Despimarkt Runtime Complete Manifest
+
+Version: v669
+Frontend zip: GEJAST_v669_despimarkt_runtime_complete_actual_files_flat.zip
+SQL file: GEJAST_v669_despimarkt_runtime_complete.sql
+
+Upload frontend zip to GitHub as flat files.
+Run SQL separately in Supabase.
+No SQL is inside the zip.
+No Python files are inside the zip.

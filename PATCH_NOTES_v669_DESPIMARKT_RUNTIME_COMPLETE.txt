@@ -1,0 +1,39 @@
+GEJAST v669 — Despimarkt / Beurs runtime complete
+
+This is the runtime implementation bundle for Phase 13.
+
+Frontend files:
+- VERSION
+- gejast-config.js
+- gejast-despimarkt.js
+- gejast-despimarkt-phase-bridge.js
+- despimarkt-theme.css
+- despimarkt.html / beurs.html
+- despimarkt_create.html
+- despimarkt_market.html
+- despimarkt_wallet.html
+- despimarkt_debts.html
+- despimarkt_ladder.html
+- despimarkt_stats.html
+- admin_despimarkt.html
+- admin_despimarkt_runtime.html
+- admin.html
+
+SQL:
+- GEJAST_v669_despimarkt_runtime_complete.sql
+
+Implements:
+- Caute Coin wallets
+- market creation
+- binary market positions
+- stake debiting
+- admin resolve/refund/delete
+- pari-mutuel settlement
+- wallet ledger
+- debts and debt settlement
+- ladder and stats
+- admin runtime audit and wallet adjustment
+
+Boundary:
+- Uses v669 canonical Despimarkt tables so it does not destructively rewrite old unknown Beurs tables.
+- Requires the existing player-session resolver and admin-session validator to be present.
