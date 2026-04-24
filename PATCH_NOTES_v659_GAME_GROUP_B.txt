@@ -1,0 +1,26 @@
+GEJAST v659 — Game Group B bundle (Phase 9 + Paardenrace/Pikken safety)
+
+FRONTEND ZIP RULES
+- Actual repo files only.
+- Flat zip(s), no nested folders.
+- No .py files.
+- No .sql files inside frontend zips.
+- SQL is delivered separately as GEJAST_v659_game_group_b_phase_9_paardenrace.sql.
+- Split into <=100 files per zip.
+
+WHAT CHANGED
+- Bumped frontend version to v659 while keeping “Made by Bruis”.
+- Added gejast-game-group-b-bridge.js.
+- Added gejast-paardenrace-input-guard.js.
+- Added admin_game_group_b_health.html and linked it from admin.html.
+- Added non-invasive status panels to Pikken and Paardenrace pages.
+- Updated implementation matrix status for Phase 9 and added Paardenrace safety proof.
+
+SQL
+- Run GEJAST_v659_game_group_b_phase_9_paardenrace.sql in Supabase.
+- It creates read-only bundle/audit RPCs around existing Pikken/Paardenrace tables when present.
+
+BOUNDARY
+- This does not replace the Pikken game engine.
+- This does not replace the Paardenrace race engine or animations.
+- This protects inputs on Paardenrace pages from refresh/polling overwrite and gives a proof surface.
