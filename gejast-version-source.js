@@ -1,5 +1,5 @@
 (function(){
-  const TARGET='v654';
+  const TARGET='v655';
   function parse(v){const m=String(v||'').match(/v?(\d+)/i);return m?Number(m[1]):0;}
   function scripts(){return Array.from(document.scripts||[]).map(s=>s.getAttribute('src')||s.src||'').filter(Boolean);}
   function detect(){const vals=[window.GEJAST_PAGE_VERSION,window.GEJAST_CONFIG&&window.GEJAST_CONFIG.VERSION];scripts().forEach(src=>{const m=src.match(/[?&]v(\d+)/i); if(m) vals.push('v'+m[1]);});return vals.filter(Boolean);}
