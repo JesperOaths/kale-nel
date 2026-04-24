@@ -1,0 +1,29 @@
+GEJAST v670 — Homepage + Profiles + Shared Stats Runtime Complete
+
+Frontend files:
+- VERSION
+- gejast-config.js
+- gejast-home-profile-runtime.js
+- index.html
+- profiles.html
+- player.html
+- admin.html
+- admin_home_profiles_runtime.html
+
+Separate SQL:
+- GEJAST_v670_home_profiles_stats_runtime_complete.sql
+
+Implemented product behavior:
+- Homepage runtime section with Klaverjas, Boerenbridge, Beerpong top-5 ladders.
+- Rotating drinks speed top-5 panel.
+- Session/all-time drink units top lists.
+- Grootste Speler card with all-time unit leader.
+- Profiles page runtime summary across cross-game and drinks data.
+- Player page runtime profile card combining game stats and drinks stats.
+- Admin page for the same runtime audit.
+- Stable RPC layer: get_homepage_runtime_bundle_v670, get_profiles_runtime_bundle_v670, get_player_runtime_bundle_v670, admin_get_home_profile_runtime_audit_v670.
+
+Boundaries:
+- This completes the read/display product surface by composing existing game/drinks/shared stats owners.
+- It does not move match mutation, drinks mutation, or ELO mutation ownership.
+- SQL is separate and should be run after frontend upload.

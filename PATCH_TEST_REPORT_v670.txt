@@ -1,0 +1,34 @@
+{
+  "version": "670",
+  "files": [
+    "GEJAST_v670_home_profiles_stats_runtime_complete.sql",
+    "GEJAST_v670_home_profiles_stats_runtime_complete_manifest.txt",
+    "PATCH_NOTES_v670_HOME_PROFILES_STATS_RUNTIME_COMPLETE.txt",
+    "VERSION",
+    "admin.html",
+    "admin_home_profiles_runtime.html",
+    "gejast-config.js",
+    "gejast-home-profile-runtime.js",
+    "index.html",
+    "player.html",
+    "profiles.html"
+  ],
+  "node_checks": [
+    [
+      "gejast-config.js",
+      0,
+      "",
+      ""
+    ],
+    [
+      "gejast-home-profile-runtime.js",
+      0,
+      "",
+      ""
+    ]
+  ],
+  "stale_refs": [],
+  "file_count": 11,
+  "py_files": [],
+  "sql_inside_zip": false
+}
