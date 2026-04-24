@@ -1,7 +1,7 @@
 (function(){
   const path = String(location.pathname || '').toLowerCase().split('/').pop();
   if (!/^paardenrace(?:_live|_stats)?\.html$/.test(path)) return;
-  window.GEJAST_PAGE_VERSION='v635';
+  window.GEJAST_PAGE_VERSION='v636';
   window.GEJAST_HIDE_WATERMARK = true;
   function onReady(fn){ if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once:true }); else fn(); }
   function injectSharedCss(){
