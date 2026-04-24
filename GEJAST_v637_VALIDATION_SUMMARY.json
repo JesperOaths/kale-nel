@@ -1,0 +1,30 @@
+{
+  "version": "637",
+  "tag": "v637",
+  "source": "/mnt/data/gejast_v636_phase4_work",
+  "total_files": 878,
+  "html_files": 133,
+  "js_files": 98,
+  "phase5_new_files": [
+    "admin_identity_health.html",
+    "gejast-player-selector.js",
+    "gejast-login-dropdown-hardening.js",
+    "gejast-profiles-restore.js",
+    "player_selector_source.sql",
+    "player_selector_cache_views.sql",
+    "profiles_bundle_alignment.sql",
+    "profiles_badge_restore.sql"
+  ],
+  "old_page_version_refs_left": 0,
+  "old_asset_version_refs_left": 0,
+  "old_watermark_refs_left": 0,
+  "sql_run_order": [
+    "player_selector_source.sql",
+    "player_selector_cache_views.sql",
+    "profiles_bundle_alignment.sql",
+    "profiles_badge_restore.sql"
+  ],
+  "generated_at": "2026-04-24T00:52:51.300273",
+  "new_phase5_sql_destructive_terms_detected": [],
+  "note_on_historical_sql": "Historical SQL files from the repo may contain destructive terms; Phase 5 new SQL files were scanned separately."
+}
