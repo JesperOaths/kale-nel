@@ -1,0 +1,29 @@
+GEJAST v648 — Runtime verification / post-phase hardening
+
+Purpose
+- Adds a post-phase runtime verification admin surface after the completed phase sequence.
+- Provides browser-side checks for version presence, script cache-bust drift, direct Make webhook exposure, and admin session visibility.
+- Provides database-side admin/runtime verification RPCs for installed phase infrastructure.
+
+Upload files
+- VERSION
+- admin_runtime_verification.html
+- gejast-runtime-verification.js
+- gejast-post-phase-runtime-checks.js
+
+SQL files, run separately in order
+1. runtime_verification_registry.sql
+2. runtime_verification_seed.sql
+3. runtime_verification_helpers.sql
+4. runtime_verification_rpc.sql
+5. runtime_verification_smoke.sql
+
+Safety
+- Additive only.
+- No DROP/TRUNCATE/destructive data operations.
+- Does not replace existing phase owners.
+- Does not claim live/device verification; it exposes check signals and evidence.
+
+Honesty boundary
+- SQL success proves database objects were accepted.
+- Browser runtime is only verified after upload/deploy and opening admin_runtime_verification.html.
