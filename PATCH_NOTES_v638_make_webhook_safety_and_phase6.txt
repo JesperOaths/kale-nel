@@ -1,0 +1,31 @@
+GEJAST v638 — Make webhook safety + Phase 6 drinks surfaces
+
+Source: v637 full upload set.
+Version: v638.
+
+Included:
+- Browser direct Make webhook ownership disabled in active config.
+- New gejast-mail-queue-safety.js frontend helper calls guarded backend RPCs instead of posting to Make.
+- New make_webhook_safety.sql replaces claim_email_jobs_http so Make/worker claims only preflight-valid jobs; invalid rows are marked failed_preflight with a reason.
+- Admin mail diagnostics now labels the browser webhook as disabled/backend-owned.
+- Phase 6 drinks speed foundations:
+  - allowed speed types table/RPC, shot excluded from speed surfaces.
+  - verified-only speed stats RPC.
+  - noncanonical speed audit/cleanup helper.
+  - v638 speed page RPC.
+  - gejast-drinks-routing.js and gejast-drinks-speed-surface.js.
+- gejast-drinks-analytics.js now prefers v638 verified speed RPC when available and falls back to existing analytics.
+
+SQL run order:
+1. make_webhook_safety.sql
+2. drinks_speed_allowed_types.sql
+3. drinks_verified_speed_stats.sql
+4. drinks_cleanup_non_drink_types.sql
+5. drinks_speed_rpc.sql
+
+Safety boundary:
+- No DROP/TRUNCATE detected in new SQL.
+- Existing drink/event history is not deleted.
+- Cleanup SQL only disables known noncanonical speed type selectors when an enabled column exists; it does not delete attempts.
+- Supabase runtime is verified only after the SQL files return success.
+- Make delivery still depends on your external Make/worker using claim_email_jobs_http; this patch makes that claim endpoint safer.

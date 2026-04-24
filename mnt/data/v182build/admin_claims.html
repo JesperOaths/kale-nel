@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Adminbeheer - Wordt er gejast?</title><script>window.GEJAST_PAGE_VERSION='v637';</script>
+  <title>Adminbeheer - Wordt er gejast?</title><script>window.GEJAST_PAGE_VERSION='v638';</script>
   <style>
     :root { --gold:#d4af37; --card-bg:#f9f7f2; --line:rgba(0,0,0,0.06); --muted:#666; --ok:#2b5b37; --warn:#8b3a30; }
     * { box-sizing:border-box; }
@@ -114,9 +114,9 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v637"></script>
-  <script src="./admin-session-sync.js?v637"></script>
-  <script src="./admin-topnav.js?v637"></script>
+  <script src="./gejast-config.js?v638"></script>
+  <script src="./admin-session-sync.js?v638"></script>
+  <script src="./admin-topnav.js?v638"></script>
 </head>
 <body>
   <div class="main-card">
@@ -212,7 +212,7 @@
 const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY;
-    const MAKE_WEBHOOK_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.MAKE_WEBHOOK_URL) || "https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6";
+    const MAKE_WEBHOOK_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.MAKE_WEBHOOK_URL) || "";
     const ACTIVATION_EMAIL_SUBJECT = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.EMAIL_SUBJECT) || 'Activeer je account voor de Kale Nel';
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
     const ADMIN_USER_KEY = "jas_admin_user_v1";
@@ -1041,7 +1041,7 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     async function triggerMakeScenario(meta = {}) {
       if (!MAKE_WEBHOOK_URL) throw new Error('MAKE_WEBHOOK_URL ontbreekt in admin.html');
       const payload = buildMakeWebhookMeta('admin_claims.html', meta);
-      const res = await fetch(MAKE_WEBHOOK_URL, {
+      const res = await fetch('__MAKE_WEBHOOK_DISABLED_IN_BROWSER_V638__', {
         method:'POST',
         mode:'cors',
         cache:'no-store',

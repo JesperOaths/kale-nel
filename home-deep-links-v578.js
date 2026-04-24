@@ -1,7 +1,7 @@
 (function(){
   const path = String(location.pathname || '').toLowerCase().split('/').pop();
   if (path && path !== 'index.html') return;
-  window.GEJAST_PAGE_VERSION='v637';
+  window.GEJAST_PAGE_VERSION='v638';
 
   function onReady(fn){ if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once:true }); else fn(); }
   function scope(){ try{ return (window.GEJAST_SCOPE_UTILS && window.GEJAST_SCOPE_UTILS.getScope && window.GEJAST_SCOPE_UTILS.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }catch(_){ return 'friends'; } }

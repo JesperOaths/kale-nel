@@ -116,15 +116,15 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_claims.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v637';</script><script src="./gejast-config.js?v637"></script>
-  <script src="./gejast-home-gate.js?v637"></script><script src="./gejast-scope-context.js?v637"></script><script src="./gejast-family-rollout.js?v637"></script>
-  <script src="./gejast-rpc-contract.js?v637"></script>
-  <script src="./gejast-admin-rpc.js?v637"></script>
-  <script src="./admin-session-sync.js?v637"></script>
-  <script src="./admin-topnav.js?v637"></script>
-  <script src="./gejast-admin-claims-buckets.js?v637"></script>
-  <script src="./gejast-admin-claims-source.js?v637"></script>
-  <script src="./gejast-admin-source.js?v637"></script><script src="./gejast-account-links.js?v637"></script>
+  <script>window.GEJAST_PAGE_VERSION='v638';</script><script src="./gejast-config.js?v638"></script><script src="./gejast-mail-queue-safety.js?v638"></script>
+  <script src="./gejast-home-gate.js?v638"></script><script src="./gejast-scope-context.js?v638"></script><script src="./gejast-family-rollout.js?v638"></script>
+  <script src="./gejast-rpc-contract.js?v638"></script>
+  <script src="./gejast-admin-rpc.js?v638"></script>
+  <script src="./admin-session-sync.js?v638"></script>
+  <script src="./admin-topnav.js?v638"></script>
+  <script src="./gejast-admin-claims-buckets.js?v638"></script>
+  <script src="./gejast-admin-claims-source.js?v638"></script>
+  <script src="./gejast-admin-source.js?v638"></script><script src="./gejast-account-links.js?v638"></script>
 </head>
 <body>
   <div class="main-card">
@@ -220,7 +220,7 @@
 const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL) || "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_PUBLISHABLE_KEY) || "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY;
-    const MAKE_WEBHOOK_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.MAKE_WEBHOOK_URL) || "https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6";
+    const MAKE_WEBHOOK_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.MAKE_WEBHOOK_URL) || '';
     const ACTIVATION_EMAIL_SUBJECT = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.EMAIL_SUBJECT) || 'Activeer je account voor de Kale Nel';
     const ADMIN_SOURCE = window.GEJAST_ADMIN_SOURCE || null;
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
@@ -1083,18 +1083,11 @@ const SUPABASE_URL = (window.GEJAST_CONFIG && window.GEJAST_CONFIG.SUPABASE_URL)
     }
 
     async function triggerMakeScenario(meta = {}) {
-      if (!MAKE_WEBHOOK_URL) throw new Error('MAKE_WEBHOOK_URL ontbreekt in admin.html');
       const payload = buildMakeWebhookMeta('admin_claims.html', meta);
-      const res = await fetch(MAKE_WEBHOOK_URL, {
-        method:'POST',
-        mode:'cors',
-        cache:'no-store',
-        keepalive:true,
-        headers:{ 'Content-Type':'application/json', 'Accept':'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error(`Make webhook pingen mislukt (HTTP ${res.status})`);
-      return { ok:true, via:'fetch-json', status:res.status };
+      if (window.GEJAST_MAIL_QUEUE_SAFETY && typeof window.GEJAST_MAIL_QUEUE_SAFETY.triggerMakeScenario === 'function') {
+        return await window.GEJAST_MAIL_QUEUE_SAFETY.triggerMakeScenario(payload);
+      }
+      return { ok:false, skipped:true, message:'Mail safety helper ontbreekt; Make is niet direct vanuit de browser gewekt.', payload };
     }
 
     async function revokePlayerAccess(requestId, reason) {
@@ -1356,7 +1349,7 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
   </script>
 
   <div class="site-credit-watermark" data-version-watermark></div>
-  <script src="./site-analytics.js?v637"></script>
+  <script src="./site-analytics.js?v638"></script>
 
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>

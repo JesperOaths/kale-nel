@@ -600,17 +600,11 @@ function validateMakePayloadLocally(meta = {}) {
     }
 
     async function triggerMakeScenario(meta = {}) {
-      if (!MAKE_WEBHOOK_URL) throw new Error('MAKE_WEBHOOK_URL ontbreekt in admin.js');
       const payload = buildMakeWebhookMeta('admin.js', meta);
-      const localValidation = validateMakePayloadLocally(payload);
-      if (!localValidation.ok) throw new Error(localValidation.message);
-      const res = await fetch(MAKE_WEBHOOK_URL, {
-        method:'POST', mode:'cors', cache:'no-store', keepalive:true,
-        headers:{ 'Content-Type':'application/json', 'Accept':'application/json' },
-        body: JSON.stringify(localValidation.payload)
-      });
-      if (!res.ok) throw new Error(`Make webhook pingen mislukt (HTTP ${res.status})`);
-      return { ok:true, via:'fetch-json', payload: localValidation.payload, status: res.status };
+      if (window.GEJAST_MAIL_QUEUE_SAFETY && typeof window.GEJAST_MAIL_QUEUE_SAFETY.triggerMakeScenario === 'function') {
+        return await window.GEJAST_MAIL_QUEUE_SAFETY.triggerMakeScenario(payload);
+      }
+      return { ok:false, skipped:true, message:'Mail safety helper ontbreekt; Make is niet direct vanuit de browser gewekt.', payload };
     }
 
     async function revokePlayerAccess(requestId, reason) {

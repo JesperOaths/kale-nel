@@ -191,3 +191,23 @@
     esc
   };
 })();
+
+(function(root){
+  const api = root.GEJAST_DRINKS_ANALYTICS || {};
+  const cfg = root.GEJAST_CONFIG || {};
+  if (!api || api.__v638SpeedPatched) return;
+  const originalGetSpeedBundle = api.getSpeedBundle;
+  async function parse(res){ const text=await res.text(); let data=null; try{data=text?JSON.parse(text):null;}catch(_){throw new Error(text||`HTTP ${res.status}`);} if(!res.ok) throw new Error(data?.message||data?.error||data?.hint||text||`HTTP ${res.status}`); return data; }
+  function headers(){ return { apikey:cfg.SUPABASE_PUBLISHABLE_KEY||'', Authorization:`Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY||''}`, 'Content-Type':'application/json', Accept:'application/json' }; }
+  api.getSpeedBundle = async function(sessionToken, playerName){
+    if (cfg.SUPABASE_URL && cfg.DRINKS_SPEED_PAGE_RPC_V638) {
+      try {
+        const raw = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${cfg.DRINKS_SPEED_PAGE_RPC_V638}`, { method:'POST', mode:'cors', cache:'no-store', headers:headers(), body:JSON.stringify({ session_token:sessionToken||null, player_name_input:playerName||null }) }).then(parse);
+        const data = raw && raw[cfg.DRINKS_SPEED_PAGE_RPC_V638] !== undefined ? raw[cfg.DRINKS_SPEED_PAGE_RPC_V638] : raw;
+        if (data && !data.error) return data;
+      } catch (_) {}
+    }
+    return originalGetSpeedBundle ? originalGetSpeedBundle.call(api, sessionToken, playerName) : { players:[], rankings_by_type:[], recent_attempts:[] };
+  };
+  api.__v638SpeedPatched = true;
+})(window);

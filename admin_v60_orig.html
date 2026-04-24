@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="robots" content="noindex,nofollow" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin - Wordt er gejast?</title><script>window.GEJAST_PAGE_VERSION='v637';</script>
+  <title>Admin - Wordt er gejast?</title><script>window.GEJAST_PAGE_VERSION='v638';</script>
   <style>
     :root { --gold:#d4af37; --card-bg:#f9f7f2; --line:rgba(0,0,0,0.06); --muted:#666; --ok:#2b5b37; --warn:#8b3a30; }
     * { box-sizing:border-box; }
@@ -92,8 +92,8 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/admin_v60_orig.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script src="./gejast-config.js?v637"></script>
-  <script src="./gejast-home-gate.js?v637"></script>
+  <script src="./gejast-config.js?v638"></script>
+  <script src="./gejast-home-gate.js?v638"></script>
 </head>
 <body>
   <div class="main-card">
@@ -167,13 +167,13 @@
       </div>
     </div>
     <div id="status"></div>
-    <div class="version-tag">v637 · Made by Bruis</div>
+    <div class="version-tag">v638 · Made by Bruis</div>
   </div>
   <script>
 const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA";
     const SUPABASE_ANON_KEY = SUPABASE_PUBLISHABLE_KEY;
-    const MAKE_WEBHOOK_URL = "https://hook.eu1.make.com/8eslkp3375gpmixa7826fpdpidx5j9qu3";
+    const MAKE_WEBHOOK_URL = "";
     const ADMIN_SESSION_KEY = "jas_admin_session_v8";
     let lastRequests = [];
     let lastHistory = [];
@@ -685,10 +685,10 @@ const SUPABASE_URL = "https://uiqntazgnrxwliaidkmy.supabase.co";
       const payloadText = JSON.stringify(payload);
       if (navigator.sendBeacon) {
         const blob = new Blob([payloadText], { type: 'text/plain;charset=UTF-8' });
-        if (navigator.sendBeacon(MAKE_WEBHOOK_URL, blob)) return { ok: true, via: 'sendBeacon' };
+        if (false && navigator.sendBeacon('__MAKE_WEBHOOK_DISABLED_IN_BROWSER_V638__', blob)) return { ok: true, via: 'sendBeacon' };
       }
       try {
-        await fetch(MAKE_WEBHOOK_URL, {
+        await fetch('__MAKE_WEBHOOK_DISABLED_IN_BROWSER_V638__', {
           method: 'POST',
           mode: 'no-cors',
           keepalive: true,
@@ -872,6 +872,6 @@ document.getElementById('totpInput').addEventListener('keydown', (event) => {
     loadAdmin();
   </script>
 
-  <div class="site-credit-watermark">v637 · Made by Bruis</div>
+  <div class="site-credit-watermark">v638 · Made by Bruis</div>
 </body>
 </html>

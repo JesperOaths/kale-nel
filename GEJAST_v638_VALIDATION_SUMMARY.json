@@ -1,0 +1,21 @@
+{
+  "version": "638",
+  "source": "GEJAST_v637_PHASE5_IDENTITY_PROFILES_FULL_UPLOAD_SET.zip",
+  "full_files": 888,
+  "changed_existing_files": 145,
+  "new_files": 9,
+  "update_total_files": 154,
+  "old_page_version_refs_left": [],
+  "old_asset_version_refs_left": [],
+  "old_asset_version_refs_left_count": 0,
+  "old_static_watermark_refs_left": [],
+  "direct_make_webhook_refs_left": [],
+  "new_sql_destructive_terms_detected": [],
+  "sql_run_order": [
+    "make_webhook_safety.sql",
+    "drinks_speed_allowed_types.sql",
+    "drinks_verified_speed_stats.sql",
+    "drinks_cleanup_non_drink_types.sql",
+    "drinks_speed_rpc.sql"
+  ]
+}
