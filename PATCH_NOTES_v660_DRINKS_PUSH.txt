@@ -1,0 +1,26 @@
+GEJAST v660 — Drinks / Push / Location bundle (Phase 6)
+
+FRONTEND ZIP RULES
+- Actual repo files only.
+- Flat zip(s), no nested folders.
+- No .py files.
+- No .sql files inside frontend zips.
+- SQL is delivered separately as GEJAST_v660_drinks_push_phase_6.sql.
+- Split into <=100 files per zip.
+
+WHAT CHANGED
+- Bumped frontend version to v660 while keeping “Made by Bruis”.
+- Added gejast-drinks-push-bridge.js.
+- Added admin_drinks_push_health.html and linked it from admin.html.
+- Added non-invasive drinks/push status panels to drinks and push-related pages.
+- Added browser permission snapshot for notifications/geolocation/service worker/push manager.
+- Updated implementation matrix status for Phase 6.
+
+SQL
+- Run GEJAST_v660_drinks_push_phase_6.sql in Supabase.
+- It creates read-only summary/audit RPCs around existing drinks, verification, presence and web-push tables when present.
+
+BOUNDARY
+- This does not replace drinks create/verify runtime owners.
+- This does not replace the service worker or web_push_dispatcher.
+- This does not prove iPhone/Android prompts until tested on real devices after deploy.

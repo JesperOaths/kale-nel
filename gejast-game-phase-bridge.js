@@ -1,11 +1,11 @@
 (function(){
   const CFG=window.GEJAST_CONFIG||{};
-  const VERSION='v659';
+  const VERSION='v660';
   const RPC={
-    audit:'admin_get_game_group_a_audit_v659',
-    generic:'get_game_group_a_bundle_v659',
-    beerpong:'get_beerpong_phase_bundle_v659',
-    boerenbridge:'get_boerenbridge_phase_bundle_v659'
+    audit:'admin_get_game_group_a_audit_v660',
+    generic:'get_game_group_a_bundle_v660',
+    beerpong:'get_beerpong_phase_bundle_v660',
+    boerenbridge:'get_boerenbridge_phase_bundle_v660'
   };
   function normScope(value){
     const raw=String(value||'').trim().toLowerCase();
@@ -57,10 +57,10 @@
     const game=data&&data.game_key||'game';
     const panel=target||ensurePanel(game);
     const body=panel.querySelector('[data-game-phase-body]')||panel;
-    if(!data||data.ok===false){body.innerHTML=`<div>${escapeHtml(data&&data.error||'Geen data beschikbaar. Run de v659 SQL in Supabase.')}</div>`;return;}
+    if(!data||data.ok===false){body.innerHTML=`<div>${escapeHtml(data&&data.error||'Geen data beschikbaar. Run de v660 SQL in Supabase.')}</div>`;return;}
     const totals=data.totals||{};
     const leaders=Array.isArray(data.leaderboard)?data.leaderboard:[];
-    body.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px"><div><b>${escapeHtml(totals.players||0)}</b><br><span>spelers</span></div><div><b>${escapeHtml(totals.matches||0)}</b><br><span>matches</span></div><div><b>${escapeHtml(totals.avg_elo||0)}</b><br><span>gem. ELO</span></div><div><b>${escapeHtml(data.source||'v659')}</b><br><span>bron</span></div></div>`+
+    body.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px"><div><b>${escapeHtml(totals.players||0)}</b><br><span>spelers</span></div><div><b>${escapeHtml(totals.matches||0)}</b><br><span>matches</span></div><div><b>${escapeHtml(totals.avg_elo||0)}</b><br><span>gem. ELO</span></div><div><b>${escapeHtml(data.source||'v660')}</b><br><span>bron</span></div></div>`+
       (leaders.length?`<div style="display:grid;gap:6px">${leaders.slice(0,5).map((r,i)=>`<div style="display:flex;justify-content:space-between;gap:10px;border-top:1px solid rgba(0,0,0,.06);padding-top:6px"><span>#${i+1} ${escapeHtml(r.player_name||r.name||'—')}</span><b>${escapeHtml(r.elo_rating||r.rating||'—')}</b></div>`).join('')}</div>`:`<div>Geen leaderboardrijen gevonden.</div>`);
   }
   async function bootPanel(opts={}){

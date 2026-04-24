@@ -7,11 +7,11 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Live pushmeldingen - Wordt er gejast?</title>
-  <script>window.GEJAST_PAGE_VERSION='v659';</script><script src="./gejast-config.js?v659"></script>
-  <script src="./gejast-home-gate.js?v659"></script><script src="./gejast-scope-context.js?v659"></script>
-  <script src="./gejast-admin-rpc.js?v659"></script>
-  <script src="./admin-session-sync.js?v659"></script>
-  <script src="./admin-topnav.js?v659"></script><script src="./gejast-push-runtime.js?v659"></script><script src="./gejast-push-admin-source.js?v659"></script>
+  <script>window.GEJAST_PAGE_VERSION='v660';</script><script src="./gejast-config.js?v660"></script><script src="./gejast-drinks-push-bridge.js?v660"></script>
+  <script src="./gejast-home-gate.js?v660"></script><script src="./gejast-scope-context.js?v660"></script>
+  <script src="./gejast-admin-rpc.js?v660"></script>
+  <script src="./admin-session-sync.js?v660"></script>
+  <script src="./admin-topnav.js?v660"></script><script src="./gejast-push-runtime.js?v660"></script><script src="./gejast-push-admin-source.js?v660"></script>
   <style>
     :root { --gold:#9a8241; --card:#f9f7f2; --line:rgba(0,0,0,0.08); --muted:#6b655b; --ok:#2b5b37; --warn:#8b3a30; }
     *{box-sizing:border-box} body{margin:0;padding:20px;font-family:Inter,sans-serif;background:linear-gradient(rgba(232,228,217,0.92), rgba(232,228,217,0.92)), url('./wordtergejast.png') center/cover no-repeat scroll;min-height:100vh}
@@ -152,8 +152,8 @@
     document.addEventListener('visibilitychange',()=>{ if(!document.hidden) loadActive().catch(()=>{}); });
     (async()=>{ const sel=document.getElementById('pushScopeSelect'); if(sel) sel.value=adminScope(); if(await ensureGate()) loadActive().catch((err)=>setStatus(err?.message||'Laden mislukt.','warn')); })();
   </script>
-  <div class="site-credit-watermark" data-version-watermark>v659 · Made by Bruis</div>
-  <script src="./site-analytics.js?v659"></script>
+  <div class="site-credit-watermark" data-version-watermark>v660 · Made by Bruis</div>
+  <script src="./site-analytics.js?v660"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-</body>
+<script id="gejast-drinks-push-boot">(function(){function boot(){try{window.GEJAST_DRINKS_PUSH_BRIDGE&&window.GEJAST_DRINKS_PUSH_BRIDGE.bootPanel&&window.GEJAST_DRINKS_PUSH_BRIDGE.bootPanel();}catch(_){}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();})();</script></body>
 </html>
