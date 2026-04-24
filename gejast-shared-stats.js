@@ -1,14 +1,7 @@
 (function(){
-  const cfg = window.GEJAST_CONFIG || {};
-  function scope(input){ const raw=String(input||'').trim().toLowerCase(); if(raw==='family') return 'family'; try{return new URLSearchParams(location.search).get('scope')==='family'?'family':'friends';}catch(_){return 'friends';} }
-  function headers(){ return { apikey:cfg.SUPABASE_PUBLISHABLE_KEY||'', Authorization:`Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY||''}`, 'Content-Type':'application/json', Accept:'application/json' }; }
-  async function rpc(name,payload){ if(!cfg.SUPABASE_URL||!cfg.SUPABASE_PUBLISHABLE_KEY) throw new Error('Supabase config ontbreekt.'); const res=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`,{method:'POST',mode:'cors',cache:'no-store',headers:headers(),body:JSON.stringify(payload||{})}); const text=await res.text(); let data=null; try{data=text?JSON.parse(text):null;}catch(_){throw new Error(text||`HTTP ${res.status}`);} if(!res.ok) throw new Error(data?.message||data?.error||data?.details||data?.hint||text||`HTTP ${res.status}`); return data&&data[name]!==undefined?data[name]:data; }
-  function adminToken(){ try{return (window.GEJAST_ADMIN_SESSION&&window.GEJAST_ADMIN_SESSION.getToken&&window.GEJAST_ADMIN_SESSION.getToken())||sessionStorage.getItem('jas_admin_session_v8')||localStorage.getItem('jas_admin_session_v8')||'';}catch(_){return '';} }
-  function summary(o={}){return rpc(cfg.SHARED_STATS_SUMMARY_RPC_V1||'get_shared_stats_summary_public_v1',{site_scope_input:scope(o.scope),game_key_input:o.gameKey||o.game_key||null});}
-  function leaderboard(o={}){return rpc(cfg.SHARED_STATS_LEADERBOARD_RPC_V1||'get_shared_stats_leaderboard_public_v1',{site_scope_input:scope(o.scope),game_key_input:o.gameKey||o.game_key||null,metric_key_input:o.metricKey||o.metric_key||null,limit_input:o.limit||10});}
-  function eloHistory(o={}){return rpc(cfg.SHARED_STATS_ELO_HISTORY_RPC_V1||'get_shared_elo_history_public_v1',{site_scope_input:scope(o.scope),game_key_input:o.gameKey||o.game_key||null,player_name_input:o.playerName||o.player_name||null,limit_input:o.limit||80});}
-  function matchups(o={}){return rpc(cfg.SHARED_STATS_MATCHUPS_RPC_V1||'get_shared_matchups_public_v1',{site_scope_input:scope(o.scope),game_key_input:o.gameKey||o.game_key||null,player_name_input:o.playerName||o.player_name||null,limit_input:o.limit||50});}
-  function adminAudit(){return rpc(cfg.ADMIN_SHARED_STATS_AUDIT_RPC_V1||'admin_get_shared_stats_audit_v1',{admin_session_token:adminToken()});}
-  function renderList(target,rows,emptyText){ const el=typeof target==='string'?document.querySelector(target):target; if(!el)return; const items=Array.isArray(rows)?rows:[]; if(!items.length){el.innerHTML=`<div class="empty">${emptyText||'Geen data gevonden.'}</div>`;return;} el.innerHTML=items.map((row)=>`<div class="shared-stat-row"><strong>${row.metric_label||row.metric_key||row.game_key||'Stat'}</strong><span>${row.player_name||row.game_key||''}</span><b>${row.metric_value??row.players??row.matches_played??''}</b></div>`).join(''); }
-  window.GEJAST_SHARED_STATS={rpc,scope,summary,leaderboard,eloHistory,matchups,adminAudit,renderList};
+  const CFG=window.GEJAST_SHARED_STATS_CONFIG||{};
+  function localAudit(){let raw=null;try{raw=localStorage.getItem(CFG.cache_key||'gejast_shared_stats_cache_v1')}catch(_){}return{ok:true,cache_key:CFG.cache_key,has_cache:!!raw,cache_bytes:raw?raw.length:0};}
+  async function summary(){return{ok:false,items:[],note:'No live SQL RPC called by repair-first helper; verify shared stats SQL before marking implemented.'};}
+  async function leaderboard(){return{ok:false,items:[],note:'No live SQL RPC called by repair-first helper; verify game metrics before marking implemented.'};}
+  window.GEJAST_SHARED_STATS={localAudit,summary,leaderboard};
 })();

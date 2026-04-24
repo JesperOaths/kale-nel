@@ -2,42 +2,25 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>window.GEJAST_PAGE_VERSION='v654';</script>
+  <script src="./gejast-config.js?v654"></script>
+  <script src="./admin-session-sync.js?v654"></script>
+  <script src="./admin-topnav.js?v654"></script>
+  <script src="./gejast-ops-observability.js?v654"></script>
   <title>Ops Observability - GEJAST</title>
-  <script>window.GEJAST_PAGE_VERSION='v651';</script>
-  <script src="./gejast-config.js?v651"></script>
-  <script src="./admin-session-sync.js?v651"></script>
-  <script src="./gejast-ops-observability.js?v651"></script>
-  <style>
-    :root{--gold:#9a8241;--ink:#161616;--muted:#6b6257;--line:rgba(0,0,0,.08);--paper:#fffaf2;--card:#fff;--bad:#8b2d20;--ok:#1f5d45;--warn:#9b6b08}
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,236,228,.92),rgba(240,236,228,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink);padding:22px}.wrap{max-width:1180px;margin:0 auto;background:rgba(255,250,242,.94);border:1px solid rgba(255,255,255,.72);border-radius:28px;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.08)}
-    .top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:999px;background:#111;color:#fff;text-decoration:none;padding:10px 14px;font-weight:900;cursor:pointer}.btn.alt{background:#fff;color:#111;border:1px solid var(--line)}h1{margin:0;font-size:32px;letter-spacing:-.04em}.sub{margin:7px 0 0;color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:18px}.stat,.panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 10px 22px rgba(0,0,0,.035)}.stat span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:900}.stat strong{display:block;margin-top:7px;font-size:28px}.panels{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}.panel h2{margin:0 0 10px;font-size:18px}.status{margin-top:14px;color:var(--muted);min-height:22px}.status.ok{color:var(--ok)}.status.warn{color:var(--bad)}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55}.pill{display:inline-flex;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:900;border:1px solid var(--line);background:#fff}.pill.ok{color:var(--ok);background:rgba(31,93,69,.08);border-color:rgba(31,93,69,.22)}.pill.warn{color:var(--warn);background:rgba(155,107,8,.08);border-color:rgba(155,107,8,.22)}.pill.bad{color:var(--bad);background:rgba(139,45,32,.08);border-color:rgba(139,45,32,.22)}.small{font-size:12px;color:var(--muted)}.site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none}
-    @media(max-width:900px){.grid,.panels{grid-template-columns:1fr}.wrap{padding:16px}}
-  </style>
+  <style>:root{--gold:#9a8241;--paper:#f9f7f2;--line:rgba(0,0,0,.08);--muted:#6b655b;--ok:#1f6b3a;--warn:#8a6a12;--bad:#8b2d20}*{box-sizing:border-box}body{margin:0;padding:20px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(232,228,217,.92),rgba(232,228,217,.92)),url('./wordtergejast.png') center/cover fixed;min-height:100vh;color:#17130f}.wrap{max-width:1180px;margin:0 auto;background:rgba(249,247,242,.96);border:1px solid rgba(255,255,255,.72);border-radius:28px;padding:26px;box-shadow:0 20px 50px rgba(0,0,0,.08)}.top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}h1{margin:0;font-size:clamp(2rem,4vw,3rem);letter-spacing:-.05em}.sub{color:var(--muted);margin:8px 0 0;max-width:78ch;line-height:1.5}.btn{border:0;border-radius:999px;padding:12px 16px;font:inherit;font-weight:850;background:#111;color:#fff;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.btn.alt{background:#fff;color:#111;border:1px solid var(--line)}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}.panel{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.03)}.panel h2{margin:0 0 8px;font-size:18px}.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.pill{display:inline-flex;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#f7f2e8;font-weight:900;font-size:12px}.pill.ok{background:rgba(31,107,58,.10);color:var(--ok);border-color:rgba(31,107,58,.22)}.pill.warn{background:rgba(138,106,18,.10);color:var(--warn);border-color:rgba(138,106,18,.22)}.pill.bad{background:rgba(139,45,32,.10);color:var(--bad);border-color:rgba(139,45,32,.22)}pre{margin:10px 0 0;max-height:460px;overflow:auto;background:#111;color:#f4ead5;padding:12px;border-radius:14px;font-size:12px;line-height:1.45;white-space:pre-wrap}.status{margin-top:12px;color:var(--muted);font-size:13px}.site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e3a6;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none}@media(max-width:900px){.grid{grid-template-columns:1fr}.wrap{padding:18px}}</style>
 </head>
 <body>
   <main class="wrap">
-    <div class="top">
-      <div><h1>Ops Observability</h1><p class="sub">v651 beheerlaag voor runtime errors, smoke checks, release breadcrumbs en veilige vervolgdiagnostiek.</p></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn alt" href="./admin.html">Beheerhub</a><button id="refreshBtn" class="btn" type="button">Ververs</button></div>
-    </div>
-    <div class="grid">
-      <div class="stat"><span>Open issues</span><strong id="openCount">—</strong></div>
-      <div class="stat"><span>Laatste 24u</span><strong id="dayCount">—</strong></div>
-      <div class="stat"><span>Smoke checks</span><strong id="smokeCount">—</strong></div>
-      <div class="stat"><span>Laatste release</span><strong id="releaseVersion">v651</strong></div>
-    </div>
-    <div class="panels">
-      <section class="panel"><h2>Recente runtime signalen</h2><div id="runtimeRows" class="small">Nog niet geladen.</div></section>
-      <section class="panel"><h2>Smoke / readiness signalen</h2><div id="smokeRows" class="small">Nog niet geladen.</div></section>
-    </div>
-    <div id="statusBox" class="status"></div>
+    <div class="top"><div><h1>Ops Observability</h1><p class="sub">Runtime signals, smoke checks, release breadcrumbs and rollback readiness for the repair-first base layer.</p></div><div class="row"><a class="btn alt" href="./admin.html">Admin</a><a class="btn alt" href="./admin_implementation_matrix.html">Matrix</a><a class="btn alt" href="./index.html">Site</a></div></div>
+    <div id="statusBox" class="status">Ops checks laden...</div><section class="grid"><div class="panel"><h2>Release</h2><pre id="releaseBox">{}</pre></div><div class="panel"><h2>Runtime signals</h2><pre id="runtimeRows">{}</pre></div><div class="panel"><h2>Smoke checks</h2><pre id="smokeRows">{}</pre></div><div class="panel"><h2>Rollback notes</h2><pre id="rollbackBox">{}</pre></div></section>
   </main>
-  <div class="site-credit-watermark" data-version-watermark>v651 · Made by Bruis</div>
-  <script>window.GEJAST_OPS_OBSERVABILITY&&window.GEJAST_OPS_OBSERVABILITY.boot&&window.GEJAST_OPS_OBSERVABILITY.boot();</script>
+  <div class="site-credit-watermark" data-version-watermark>v654 · Made by Bruis</div>
+  <script>
+(function(){function boot(){window.GEJAST_OPS_OBSERVABILITY?.boot?.();}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();})();</script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-</body>
-</html>
+</body></html>

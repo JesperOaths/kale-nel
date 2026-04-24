@@ -9,8 +9,8 @@ Purpose:
 What this patch changes:
 - VERSION is set to 653.
 - Frontend visible page versions are aligned to v653.
-- Local cache-busting refs like ?v638, ?v639, ?v651 are aligned to ?v653 in patched frontend files.
-- gejast-config.js declares VERSION:'v653'.
+- Local cache-busting refs like ?v638, ?v639, ?v654 are aligned to ?v654 in patched frontend files.
+- gejast-config.js declares VERSION:'v654'.
 - Existing made by Bruis watermark text is preserved while updating the version.
 
 Verification performed locally against the uploaded flat frontend bundle:

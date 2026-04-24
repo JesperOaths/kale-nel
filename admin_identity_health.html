@@ -6,87 +6,22 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>window.GEJAST_PAGE_VERSION='v654';</script>
+  <script src="./gejast-config.js?v654"></script>
+  <script src="./admin-session-sync.js?v654"></script>
+  <script src="./admin-topnav.js?v654"></script>
+  <script src="./gejast-player-selector.js?v654"></script>
+  <script src="./gejast-profiles-restore.js?v654"></script>
   <title>Identity Health - GEJAST</title>
-  <script>window.GEJAST_PAGE_VERSION='v638';</script>
-  <script src="./gejast-config.js?v638"></script>
-  <script src="./admin-session-sync.js?v638"></script>
-  <script src="./admin-topnav.js?v638"></script>
-  <script src="./gejast-player-selector.js?v638"></script>
-  <script src="./gejast-profiles-restore.js?v638"></script>
-  <style>
-    :root{--gold:#9a8241;--paper:#f9f7f2;--line:rgba(0,0,0,.08);--muted:#6b655b;--ok:#1f6b3a;--warn:#8a6a12;--bad:#8b2d20}
-    *{box-sizing:border-box}body{margin:0;padding:20px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(232,228,217,.92),rgba(232,228,217,.92)),url('./wordtergejast.png') center/cover fixed;min-height:100vh;color:#17130f}
-    .wrap{max-width:1180px;margin:0 auto;background:rgba(249,247,242,.96);border:1px solid rgba(255,255,255,.72);border-radius:28px;padding:26px;box-shadow:0 20px 50px rgba(0,0,0,.08)}
-    .top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}h1{margin:0;font-size:clamp(2rem,4vw,3rem);letter-spacing:-.05em}.sub{color:var(--muted);margin:8px 0 0;max-width:78ch;line-height:1.5}
-    .btn{border:0;border-radius:999px;padding:12px 16px;font:inherit;font-weight:850;background:#111;color:#fff;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.btn.alt{background:#fff;color:#111;border:1px solid var(--line)}
-    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}.panel{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px;box-shadow:0 10px 24px rgba(0,0,0,.03)}
-    .panel h2{margin:0 0 8px}.pillrow{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.pill{display:inline-flex;padding:6px 10px;border-radius:999px;background:#f4efe4;border:1px solid var(--line);font-size:12px;font-weight:850}.pill.ok{color:var(--ok);background:rgba(31,107,58,.08);border-color:rgba(31,107,58,.25)}.pill.warn{color:var(--warn);background:rgba(138,106,18,.08);border-color:rgba(138,106,18,.25)}.pill.bad{color:var(--bad);background:rgba(139,45,32,.08);border-color:rgba(139,45,32,.25)}
-    pre{white-space:pre-wrap;word-break:break-word;background:#15130f;color:#f7efd8;border-radius:16px;padding:14px;max-height:420px;overflow:auto;font-size:12px}.status{margin-top:14px;color:var(--muted);font-weight:750}
-    @media(max-width:820px){.grid{grid-template-columns:1fr}.wrap{padding:18px}}
-  </style>
+  <style>:root{--gold:#9a8241;--paper:#f9f7f2;--line:rgba(0,0,0,.08);--muted:#6b655b;--ok:#1f6b3a;--warn:#8a6a12;--bad:#8b2d20}*{box-sizing:border-box}body{margin:0;padding:20px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(232,228,217,.92),rgba(232,228,217,.92)),url('./wordtergejast.png') center/cover fixed;min-height:100vh;color:#17130f}.wrap{max-width:1180px;margin:0 auto;background:rgba(249,247,242,.96);border:1px solid rgba(255,255,255,.72);border-radius:28px;padding:26px;box-shadow:0 20px 50px rgba(0,0,0,.08)}.top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}h1{margin:0;font-size:clamp(2rem,4vw,3rem);letter-spacing:-.05em}.sub{color:var(--muted);margin:8px 0 0;max-width:78ch;line-height:1.5}.btn{border:0;border-radius:999px;padding:12px 16px;font:inherit;font-weight:850;background:#111;color:#fff;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.btn.alt{background:#fff;color:#111;border:1px solid var(--line)}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}.panel{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.03)}.panel h2{margin:0 0 8px;font-size:18px}.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.pill{display:inline-flex;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:#f7f2e8;font-weight:900;font-size:12px}.pill.ok{background:rgba(31,107,58,.10);color:var(--ok);border-color:rgba(31,107,58,.22)}.pill.warn{background:rgba(138,106,18,.10);color:var(--warn);border-color:rgba(138,106,18,.22)}.pill.bad{background:rgba(139,45,32,.10);color:var(--bad);border-color:rgba(139,45,32,.22)}pre{margin:10px 0 0;max-height:460px;overflow:auto;background:#111;color:#f4ead5;padding:12px;border-radius:14px;font-size:12px;line-height:1.45;white-space:pre-wrap}.status{margin-top:12px;color:var(--muted);font-size:13px}.site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e3a6;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none}@media(max-width:900px){.grid{grid-template-columns:1fr}.wrap{padding:18px}}</style>
 </head>
 <body>
   <main class="wrap">
-    <div class="top">
-      <div>
-        <h1>Identity Health</h1>
-        <p class="sub">Phase 5 controleert de naamselectie, login-dropdown, profielbundles, avatars en badge-restore zonder de bestaande profiel-eigenaars te vervangen.</p>
-      </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <a class="btn alt" href="./admin.html">Admin</a>
-        <a class="btn alt" href="./admin_implementation_matrix.html">Matrix</a>
-        <a class="btn alt" href="./admin_system_health.html">System Health</a>
-      </div>
-    </div>
-    <div class="pillrow" id="topPills"></div>
-    <div class="status" id="status">Nog niet gecontroleerd.</div>
-
-    <section class="grid">
-      <article class="panel">
-        <h2>Browser selector</h2>
-        <button class="btn" id="browserSelectorBtn" type="button">Check browser selector</button>
-        <pre id="browserSelectorReport">{}</pre>
-      </article>
-      <article class="panel">
-        <h2>Admin selector audit</h2>
-        <button class="btn" id="selectorAuditBtn" type="button">Run SQL selector audit</button>
-        <button class="btn alt" id="selectorRefreshBtn" type="button">Refresh audit cache</button>
-        <pre id="selectorSqlReport">{}</pre>
-      </article>
-      <article class="panel">
-        <h2>Profiles bundle alignment</h2>
-        <button class="btn" id="profilesAuditBtn" type="button">Run profiles audit</button>
-        <pre id="profilesSqlReport">{}</pre>
-      </article>
-      <article class="panel">
-        <h2>Badge restore</h2>
-        <button class="btn" id="badgeAuditBtn" type="button">Run badge audit</button>
-        <pre id="badgeSqlReport">{}</pre>
-      </article>
-    </section>
+    <div class="top"><div><h1>Identity Health</h1><p class="sub">Repair-first identity diagnostics for login names, player selector, profile/avatar URL normalization and badge restore helper presence.</p></div><div class="row"><a class="btn alt" href="./admin.html">Admin</a><a class="btn alt" href="./admin_implementation_matrix.html">Matrix</a><a class="btn alt" href="./index.html">Site</a></div></div>
+    <div id="status" class="status">Identity checks laden...</div><section class="grid"><div class="panel"><h2>Player selector</h2><button id="selectorBtn" class="btn" type="button">Check selector</button><pre id="selectorReport">{}</pre></div><div class="panel"><h2>Profile helpers</h2><button id="profileBtn" class="btn alt" type="button">Check helpers</button><pre id="profileReport">{}</pre></div></section>
   </main>
-  <div class="site-credit-watermark" data-version-watermark>v638 · Made by Bruis</div>
-<script>
-(function(){
-  const cfg=window.GEJAST_CONFIG||{};
-  const $=(id)=>document.getElementById(id);
-  function adminToken(){try{return(window.GEJAST_ADMIN_SESSION&&window.GEJAST_ADMIN_SESSION.getToken&&window.GEJAST_ADMIN_SESSION.getToken())||localStorage.getItem('gejast_admin_session_token')||sessionStorage.getItem('gejast_admin_session_token')||localStorage.getItem('jas_admin_session_token')||sessionStorage.getItem('jas_admin_session_token')||localStorage.getItem('jas_admin_session_v8')||sessionStorage.getItem('jas_admin_session_v8')||'';}catch(_){return'';}}
-  function scope(){try{return new URLSearchParams(location.search).get('scope')==='family'?'family':'friends';}catch(_){return'friends';}}
-  function headers(){return{'Content-Type':'application/json',apikey:cfg.SUPABASE_PUBLISHABLE_KEY||'',Authorization:`Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY||''}`,Accept:'application/json'};}
-  async function rpc(name,payload){const res=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`,{method:'POST',mode:'cors',cache:'no-store',headers:headers(),body:JSON.stringify(payload||{})});const txt=await res.text();let data=null;try{data=txt?JSON.parse(txt):null;}catch(_){throw new Error(txt||`HTTP ${res.status}`);}if(!res.ok)throw new Error(data?.message||data?.error||data?.details||data?.hint||`HTTP ${res.status}`);return data&&data[name]!==undefined?data[name]:data;}
-  function writeJson(id,data){const el=$(id);if(el)el.textContent=JSON.stringify(data,null,2);}
-  function pills(rows){const el=$('topPills'); if(!el)return; el.innerHTML=rows.map((r)=>`<span class="pill ${r.tone||''}">${r.label}</span>`).join('');}
-  function setStatus(message){const el=$('status'); if(el)el.textContent=message;}
-  async function runAdmin(name,target){const t=adminToken(); if(!t) throw new Error('Geen adminsessie gevonden. Open admin.html en log in.'); const data=await rpc(name,{admin_session_token:t,site_scope_input:scope()}); writeJson(target,data); return data;}
-  async function browserSelector(){const selector=window.GEJAST_PLAYER_SELECTOR; if(!selector) throw new Error('GEJAST_PLAYER_SELECTOR ontbreekt.'); const data=await selector.getSelector(scope()); writeJson('browserSelectorReport',data); pills([{label:`scope ${scope()}`},{label:`activated ${(data.activated_names||[]).length}`,tone:(data.activated_names||[]).length?'ok':'warn'},{label:`requestable ${(data.requestable_names||[]).length}`,tone:(data.requestable_names||[]).length?'ok':'warn'},{label:data.cached?'cache/fallback':'live rpc',tone:data.cached?'warn':'ok'}]); setStatus('Browser selector gecontroleerd.');}
-  $('browserSelectorBtn')?.addEventListener('click',()=>browserSelector().catch((err)=>writeJson('browserSelectorReport',{ok:false,error:err.message||String(err)})));
-  $('selectorAuditBtn')?.addEventListener('click',()=>runAdmin('admin_get_player_selector_audit_v1','selectorSqlReport').catch((err)=>writeJson('selectorSqlReport',{ok:false,error:err.message||String(err)})));
-  $('selectorRefreshBtn')?.addEventListener('click',()=>runAdmin('admin_refresh_player_selector_audit_cache_v1','selectorSqlReport').catch((err)=>writeJson('selectorSqlReport',{ok:false,error:err.message||String(err)})));
-  $('profilesAuditBtn')?.addEventListener('click',()=>runAdmin('admin_get_profiles_bundle_alignment_v1','profilesSqlReport').catch((err)=>writeJson('profilesSqlReport',{ok:false,error:err.message||String(err)})));
-  $('badgeAuditBtn')?.addEventListener('click',()=>runAdmin('admin_get_profile_badge_restore_audit_v1','badgeSqlReport').catch((err)=>writeJson('badgeSqlReport',{ok:false,error:err.message||String(err)})));
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>browserSelector().catch(()=>{}),{once:true}); else browserSelector().catch(()=>{});
-})();
-</script>
-<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-</body>
-</html>
+  <div class="site-credit-watermark" data-version-watermark>v654 · Made by Bruis</div>
+  <script>
+(function(){const $=(id)=>document.getElementById(id);const j=(id,d)=>$(id).textContent=JSON.stringify(d,null,2);async function selector(){const scope=new URLSearchParams(location.search).get('scope')==='family'?'family':'friends';const data=await (window.GEJAST_PLAYER_SELECTOR?.getSelector?.(scope)||Promise.resolve({ok:false,error:'GEJAST_PLAYER_SELECTOR missing'}));j('selectorReport',data);$('status').textContent='Selector gecontroleerd.'}function profile(){const helper=window.GEJAST_PROFILES_RESTORE||{};j('profileReport',{ok:!!helper.normalizeProfileImageUrl,has_normalize:!!helper.normalizeProfileImageUrl,has_badge_helper:!!helper.badgeSummary,example_avatar:helper.normalizeProfileImageUrl?helper.normalizeProfileImageUrl('avatars/test.png'):null});$('status').textContent='Profile helpers gecontroleerd.'}$('selectorBtn').addEventListener('click',()=>selector().catch(e=>j('selectorReport',{ok:false,error:e.message})));$('profileBtn').addEventListener('click',profile);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{selector().catch(()=>{});profile();},{once:true});else{selector().catch(()=>{});profile();}})();</script>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+</body></html>

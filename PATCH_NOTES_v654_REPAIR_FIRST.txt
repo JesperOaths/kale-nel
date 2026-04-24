@@ -1,0 +1,24 @@
+GEJAST v654 repair-first actual-files patch
+Generated: 2026-04-24T21:02:29.444165Z
+
+Scope completed:
+- Bumps frontend visible/cache-bust version from v653/v638/v639/v651 drift to v654.
+- Keeps Made by Bruis watermark discipline.
+- Adds/updates admin diagnostic links in admin.html.
+- Adds actual diagnostic pages/helpers for:
+  admin_implementation_matrix.html
+  admin_system_health.html
+  admin_identity_health.html
+  admin_shared_stats.html
+  admin_ops_observability.html
+- Includes no .py files and no SQL.
+
+Boundaries:
+- This patch does not claim live Supabase RPC success. Diagnostic pages report missing/runtime data honestly.
+- This patch does not verify iPhone/Android behavior.
+- This patch addresses the repair-first base layer so later feature list review can proceed from a cleaner admin/diagnostic surface.
+
+Upload instructions:
+- Upload all files in this flat zip to the repository root, replacing existing files.
+- Do not run SQL for this patch.
+- After deployment, open admin.html, admin_system_health.html, and admin_implementation_matrix.html and verify the watermark shows v654 · Made by Bruis.

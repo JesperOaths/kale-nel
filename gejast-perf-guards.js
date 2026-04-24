@@ -1,15 +1,4 @@
-(function(global){
-  'use strict';
-  const registry = new Map();
-  function now(){ return (global.performance && performance.now) ? performance.now() : Date.now(); }
-  function record(name, duration, extra){ const row={ name:String(name||'event'), duration_ms:Math.round(Number(duration||0)), page:(location.pathname||'').split('/').pop()||'index.html', at:new Date().toISOString(), extra:extra||null }; try{ const key='gejast_perf_events_v1'; const rows=JSON.parse(sessionStorage.getItem(key)||'[]'); rows.push(row); while(rows.length>80) rows.shift(); sessionStorage.setItem(key, JSON.stringify(rows)); }catch(_){} return row; }
-  function singleFlight(key, fn){ const id=String(key||'default'); if(registry.has(id)) return registry.get(id); const started=now(); const promise=Promise.resolve().then(fn).finally(()=>{ registry.delete(id); try{ record(`singleFlight:${id}`, now()-started); }catch(_){} }); registry.set(id,promise); return promise; }
-  function once(key, fn){ const id=`once:${String(key||'default')}`; if(registry.has(id)) return registry.get(id); const promise=Promise.resolve().then(fn); registry.set(id,promise); return promise; }
-  function timeout(promise, ms, label){ let timer; const guard=new Promise((_,reject)=>{ timer=global.setTimeout(()=>reject(new Error(`${label||'operation'} timeout`)), Math.max(1,Number(ms||8000))); }); return Promise.race([Promise.resolve(promise),guard]).finally(()=>global.clearTimeout(timer)); }
-  function interval(fn, ms, options){ const opts=Object.assign({immediate:false,singleFlightKey:null}, options||{}); let stopped=false,handle=null; async function tick(){ if(stopped) return; try{ if(opts.singleFlightKey) await singleFlight(opts.singleFlightKey,fn); else await Promise.resolve().then(fn); }catch(err){ if(opts.onError) opts.onError(err); } } if(opts.immediate) tick(); handle=global.setInterval(tick, Math.max(250,Number(ms||1000))); return {stop(){stopped=true;if(handle)global.clearInterval(handle);},tick}; }
-  function getRecorded(){ try { return JSON.parse(sessionStorage.getItem('gejast_perf_events_v1')||'[]'); } catch (_) { return []; } }
-  function mark(name){ try { if(performance && performance.mark) performance.mark(name); } catch (_) {} }
-  function measure(name,start,end){ try{ if(performance&&performance.measure){ performance.measure(name,start,end); const entries=performance.getEntriesByName(name); const last=entries[entries.length-1]; return record(name,last&&last.duration||0); } }catch(_){} return null; }
-  function pageSnapshot(){ const nav=performance&&performance.getEntriesByType ? (performance.getEntriesByType('navigation')[0]||null) : null; return { page:(location.pathname||'').split('/').pop()||'index.html', dom_complete:nav?Math.round(nav.domComplete||0):null, dom_interactive:nav?Math.round(nav.domInteractive||0):null, transfer_size:nav?Math.round(nav.transferSize||0):null, script_count:(document.scripts||[]).length, image_count:(document.images||[]).length, recorded:getRecorded(), generated_at:new Date().toISOString() }; }
-  global.GEJAST_PERF_GUARDS = { singleFlight, once, timeout, interval, record, getRecorded, mark, measure, pageSnapshot };
-})(window);
+(function(){
+  function pageSnapshot(){const scripts=document.scripts.length;const images=document.images.length;const perf=performance&&performance.getEntriesByType?performance.getEntriesByType('resource'):[];const resources=perf.map(r=>({name:r.name.split('/').pop(),duration:Math.round(r.duration||0),transferSize:r.transferSize||0})).sort((a,b)=>b.duration-a.duration).slice(0,25);return{ok:true,script_count:scripts,image_count:images,resource_count:perf.length,heavy_page:scripts>35||images>40,slowest_resources:resources};}
+  window.GEJAST_PERF_GUARDS={pageSnapshot};
+})();

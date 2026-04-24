@@ -1,19 +1,4 @@
-(function(global){
-  const Trace = {};
-  const LOCAL_SCRIPT_RE = /(?:src\s*=\s*["'])(\.\/[A-Za-z0-9_.\/-]+\.(?:js|css|json))(?:\?v[^"']*)?/gi;
-  const RPC_RE = /(?:rpc\(|\/rest\/v1\/rpc\/|callRpcCompat\()[`'"]?([a-zA-Z0-9_]+)/g;
-  const HTML_PAGE_RE = /href\s*=\s*["']\.\/([^"'#?]+\.html)(?:[?#][^"']*)?["']/gi;
-  function normalizePath(value){ return String(value || '').trim().replace(/^\.\//,'').replace(/^\/+/, ''); }
-  function currentPage(){ try { return normalizePath((global.location.pathname || '').split('/').pop() || 'index.html'); } catch (_) { return 'index.html'; } }
-  function scriptList(doc){ return Array.from((doc || document).scripts || []).map((script)=>({src: script.getAttribute('src') || '', normalized: normalizePath((script.getAttribute('src') || '').split('?')[0]), version: ((script.getAttribute('src') || '').match(/\?v([0-9a-z]+)/i) || [])[1] || '', id: script.id || '', inline: !script.getAttribute('src')})); }
-  function loadedLocalScripts(doc){ return scriptList(doc).filter((row)=>row.normalized.endsWith('.js') && !/^https?:/i.test(row.src)); }
-  function extractLocalAssetsFromText(text){ const out=[]; let match; while((match = LOCAL_SCRIPT_RE.exec(String(text || '')))) out.push(normalizePath(match[1])); return Array.from(new Set(out)).sort(); }
-  function extractRpcNamesFromText(text){ const out=[]; let match; while((match = RPC_RE.exec(String(text || '')))) { const name = normalizePath(match[1]).replace(/[^A-Za-z0-9_].*$/,''); if (name && !['rpc','fetch'].includes(name)) out.push(name); } return Array.from(new Set(out)).sort(); }
-  function extractHtmlLinksFromText(text){ const out=[]; let match; while((match = HTML_PAGE_RE.exec(String(text || '')))) out.push(normalizePath(match[1])); return Array.from(new Set(out)).sort(); }
-  async function fetchSameOriginText(path){ const clean = normalizePath(path); if (!clean) throw new Error('path_required'); const res = await fetch(clean, { cache:'no-store', credentials:'same-origin' }); const text = await res.text(); if (!res.ok) throw new Error(text || `HTTP ${res.status}`); return text; }
-  async function tracePage(path){ const page = normalizePath(path || currentPage()); const text = await fetchSameOriginText(page); return { page, assets: extractLocalAssetsFromText(text), rpcs: extractRpcNamesFromText(text), links: extractHtmlLinksFromText(text), scanned_at: new Date().toISOString() }; }
-  async function traceAsset(path){ const asset = normalizePath(path); const text = await fetchSameOriginText(asset); return { asset, assets: extractLocalAssetsFromText(text), rpcs: extractRpcNamesFromText(text), links: extractHtmlLinksFromText(text), scanned_at: new Date().toISOString() }; }
-  function classifyFeature(feature, trace){ const ownerPage = normalizePath(feature && feature.owner_page); const ownerJs = normalizePath(feature && feature.owner_js); const ownerRpc = String((feature && feature.owner_rpc) || '').trim(); const assets = new Set((trace && trace.assets || []).map(normalizePath)); const rpcs = new Set(trace && trace.rpcs || []); return { feature_key: feature && feature.feature_key, owner_page_matches: !!ownerPage && ownerPage === normalizePath(trace && trace.page), owner_js_declared: !!ownerJs && assets.has(ownerJs), owner_rpc_observed: !!ownerRpc && rpcs.has(ownerRpc), owner_page: ownerPage, owner_js: ownerJs, owner_rpc: ownerRpc }; }
-  Trace.normalizePath = normalizePath; Trace.currentPage = currentPage; Trace.scriptList = scriptList; Trace.loadedLocalScripts = loadedLocalScripts; Trace.extractLocalAssetsFromText = extractLocalAssetsFromText; Trace.extractRpcNamesFromText = extractRpcNamesFromText; Trace.extractHtmlLinksFromText = extractHtmlLinksFromText; Trace.fetchSameOriginText = fetchSameOriginText; Trace.tracePage = tracePage; Trace.traceAsset = traceAsset; Trace.classifyFeature = classifyFeature;
-  global.GEJAST_OWNER_TRACE = Trace;
-})(window);
+(function(){
+  function trace(path){const current=(location.pathname.split('/').pop()||'index.html');return{ok:true,target:path||current,current_page:current,note:'Client-side owner trace is limited to loaded page resources. Use repo inspection for full source truth.',loaded_scripts:Array.from(document.scripts||[]).map(s=>s.getAttribute('src')||s.src||'').filter(Boolean)}}
+  window.GEJAST_OWNER_TRACE_HELPER={trace};
+})();
