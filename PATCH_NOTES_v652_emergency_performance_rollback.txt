@@ -1,0 +1,20 @@
+GEJAST v652 — Emergency performance rollback
+
+Purpose:
+- Stop the v651 ops-observability browser beacons/error-capture path from adding load to public/player pages.
+- Keep the files present so existing script references do not 404, but make them strict no-ops.
+- VERSION is bumped from current GitHub v651 to v652.
+
+Changed upload files:
+- VERSION
+- gejast-client-error-capture.js
+- gejast-health-beacon.js
+
+SQL:
+- v652_emergency_disable_browser_observability.sql
+  Replaces v651 browser-write RPCs with no-op implementations and revokes broad execute/write behavior where possible.
+
+Safety:
+- No DROP/TRUNCATE/DELETE.
+- No data removal.
+- No subsystem replacement.
