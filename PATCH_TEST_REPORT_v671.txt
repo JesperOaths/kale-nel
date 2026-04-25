@@ -1,0 +1,20 @@
+{
+  "version": "671",
+  "zip": "/mnt/data/GEJAST_v671_account_identity_mail_runtime_complete_actual_files_flat.zip",
+  "frontend_file_count": 12,
+  "py_files": [],
+  "sql_files_in_zip": [],
+  "node_check": [
+    [
+      "gejast-account-runtime.js",
+      0,
+      ""
+    ],
+    [
+      "gejast-config.js",
+      0,
+      ""
+    ]
+  ],
+  "stale_refs": []
+}

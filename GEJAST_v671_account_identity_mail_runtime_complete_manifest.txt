@@ -1,0 +1,17 @@
+GEJAST v671 account/identity/mail runtime complete manifest
+
+Patch directory: /mnt/data/v671_account_identity_mail_runtime_complete
+Frontend zip: /mnt/data/GEJAST_v671_account_identity_mail_runtime_complete_actual_files_flat.zip
+SQL: /mnt/data/GEJAST_v671_account_identity_mail_runtime_complete.sql
+
+Files in frontend zip:
+- PATCH_NOTES_v671_ACCOUNT_IDENTITY_MAIL_RUNTIME_COMPLETE.txt
+- VERSION
+- activate.html
+- admin.html
+- admin_account_runtime.html
+- admin_mail_audit.html
+- gejast-account-runtime.js
+- gejast-config.js
+- login.html
+- request.html

@@ -1,0 +1,25 @@
+GEJAST v671 — Account / Identity / Activation / Make Mail Safety Runtime Complete
+
+Frontend files:
+- VERSION
+- gejast-config.js
+- gejast-account-runtime.js
+- login.html
+- request.html
+- activate.html
+- admin.html
+- admin_account_runtime.html
+- admin_mail_audit.html
+- PATCH_NOTES_v671_ACCOUNT_IDENTITY_MAIL_RUNTIME_COMPLETE.txt
+- GEJAST_v671_account_identity_mail_runtime_complete_manifest.txt
+
+Runtime scope:
+- name request page -> account_request_claim_v671 with existing request_claim_action fallback
+- login page -> existing login_player first, account_login_v671 fallback
+- activation page -> existing activate_player_from_email_link first, account_activate_v671 fallback
+- admin account runtime page: add names, approve/reject claims, inspect queue
+- admin mail diagnostics page: shows blocked/queued/failed/sent jobs
+- Make safety: outbound_email_jobs guard blocks invalid jobs before Make can claim them
+- claim_email_jobs_http only returns jobs with recipient, subject, body, template_key, and activation/reset URL where required
+
+SQL is separate and must be run in Supabase. No SQL is inside the frontend zip.
