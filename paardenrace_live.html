@@ -1,13 +1,13 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace live</title>
-  <script>window.GEJAST_PAGE_VERSION='v683';</script>
-  <script src="./gejast-config.js?v683"></script><script src="./gejast-game-group-b-bridge.js?v683"></script><script src="./gejast-home-gate.js?v683"></script>
-  <script src="./gejast-paardenrace.js?v683"></script>
+  <script>window.GEJAST_PAGE_VERSION='v689';</script>
+  <script src="./gejast-config.js?v689"></script><script src="./gejast-game-group-b-bridge.js?v689"></script><script src="./gejast-home-gate.js?v689"></script>
+  <script src="./gejast-paardenrace.js?v689"></script>
   <style>
     :root{
       --gold:#9a8241;--paper:#fffaf3;--ink:#17130f;--muted:#6d6256;--line:rgba(0,0,0,.08);--bg:#efe6d7;
@@ -127,14 +127,14 @@
       .pr-horse-token{font-size:24px}
     }
   </style>
-<script src="./gejast-paardenrace-input-guard.js?v683"></script></head>
+<script src="./gejast-paardenrace-input-guard.js?v689"></script></head>
 <body data-game-watermark="soft">
 <div class="page"><div class="shell">
   <div class="top">
     <div>
       <div class="small">Room-specifieke live race</div>
       <h1 class="title">Paardenrace live</h1>
-      <div class="small" id="metaBox">Wachten op room…</div>
+      <div class="small" id="metaBox">Wachten op roomâ€¦</div>
     </div>
     <div class="toolbar">
       <button class="btn secondary" id="rulesBtn" type="button">Regels</button>
@@ -155,7 +155,7 @@
         <strong>Minimap</strong>
         <span class="focus-chip" id="heroStageChip">Lobby</span>
       </div>
-      <div id="mobileMinimap" class="pr-minimap-empty">Wachten op racebord…</div>
+      <div id="mobileMinimap" class="pr-minimap-empty">Wachten op racebordâ€¦</div>
       <div class="hero-meta">
         <div class="hero-kpi"><div class="k">Pot</div><div class="v" id="heroPot">0</div></div>
         <div class="hero-kpi"><div class="k">Ready</div><div class="v" id="heroReady">0/0</div></div>
@@ -216,12 +216,12 @@
       <button class="btn secondary" id="closeRulesBtn" type="button">Sluiten</button>
     </div>
     <ol style="display:grid;gap:10px;line-height:1.5">
-      <li>Iedereen kiest één suit/paard en zet één vaste inzet in Bakken.</li>
+      <li>Iedereen kiest Ã©Ã©n suit/paard en zet Ã©Ã©n vaste inzet in Bakken.</li>
       <li>De host verifieert die inzet in de lobby; pas daarna kan een speler ready drukken.</li>
-      <li>Elke getrokken kaart zet het bijbehorende paard één vak vooruit.</li>
-      <li>Als het laatste paard voor het eerst een gate-kolom bereikt of passeert, opent die gate en gaat het getrokken suit één vak terug.</li>
-      <li>De eerste crossing telt alleen als minstens één speler op dat paard had ingezet.</li>
-      <li>Na de finish verdelen winnaars hun nominaties tot maximaal 2× hun lobby-inzet.</li>
+      <li>Elke getrokken kaart zet het bijbehorende paard Ã©Ã©n vak vooruit.</li>
+      <li>Als het laatste paard voor het eerst een gate-kolom bereikt of passeert, opent die gate en gaat het getrokken suit Ã©Ã©n vak terug.</li>
+      <li>De eerste crossing telt alleen als minstens Ã©Ã©n speler op dat paard had ingezet.</li>
+      <li>Na de finish verdelen winnaars hun nominaties tot maximaal 2Ã— hun lobby-inzet.</li>
       <li>Na een nieuwe ronde blijf je in dezelfde lobby, met dezelfde host en spelers, maar kies je opnieuw suit en inzet.</li>
     </ol>
   </div>
@@ -288,7 +288,7 @@
       <div class="player-row">
         <div>
           <strong>${p.player_name}</strong>
-          <div class="small">${api.suitLabel(p.selected_suit)} · inzet ${p.wager_bakken || 0} Bakken · totaal ${p.total_bakken_owed || 0} Bakken</div>
+          <div class="small">${api.suitLabel(p.selected_suit)} Â· inzet ${p.wager_bakken || 0} Bakken Â· totaal ${p.total_bakken_owed || 0} Bakken</div>
         </div>
         <div class="player-actions">
           ${p.is_host ? '<span class="chip">Host</span>' : ''}
@@ -306,7 +306,7 @@
     const others = (Array.isArray(players) ? players : []).filter((p)=>String(p.player_name).toLowerCase() !== String(viewer.player_name).toLowerCase());
     return `
       <div class="nom-row"><strong>Jouw budget</strong><div class="small">${myBudget} Bakken te verdelen</div></div>
-      ${others.map((p)=>`<div class="nom-row"><strong>${p.player_name}</strong><div class="small">${api.suitLabel(p.selected_suit)} · ${p.total_bakken_owed || 0} totaal verschuldigd</div></div>`).join('')}
+      ${others.map((p)=>`<div class="nom-row"><strong>${p.player_name}</strong><div class="small">${api.suitLabel(p.selected_suit)} Â· ${p.total_bakken_owed || 0} totaal verschuldigd</div></div>`).join('')}
       <button class="btn" type="button" id="drawerOpenNomBtn">Verdeling invullen</button>
     `;
   }
@@ -367,7 +367,7 @@
 
   function renderChrome(room, match, players, viewer){
     const summary = api.summarizeLiveRoom(room, match, players, viewer);
-    $('metaBox').textContent = `${room.room_code || '—'} · ${room.stage_label || room.stage || 'Lobby'}${room.countdown_remaining_seconds ? ` · countdown ${room.countdown_remaining_seconds}s` : ''}`;
+    $('metaBox').textContent = `${room.room_code || 'â€”'} Â· ${room.stage_label || room.stage || 'Lobby'}${room.countdown_remaining_seconds ? ` Â· countdown ${room.countdown_remaining_seconds}s` : ''}`;
     $('heroStageChip').textContent = room.stage_label || room.stage || 'Lobby';
     $('heroPot').textContent = String(summary.totalPot || 0);
     $('heroReady').textContent = `${summary.ready}/${(players || []).length || 0}`;
@@ -405,7 +405,7 @@
     renderBoardFrame(match);
     if (!options.noAutoClose && room.stage === 'finished' && viewer?.is_host && !viewer?.can_nominate && !autoCloseQueued) {
       autoCloseQueued = true;
-      setStatus('Alle nominaties zijn binnen. De match sluit automatisch…');
+      setStatus('Alle nominaties zijn binnen. De match sluit automatischâ€¦');
       window.setTimeout(()=>closeMatchAction(true), 1400);
     }
   }
@@ -559,6 +559,6 @@
   }, 1800);
 })();
 </script>
-<div class="site-credit-watermark" data-version-watermark>v683 · Made by Bruis</div>
+<div class="site-credit-watermark" data-version-watermark>v689 Â· Made by Bruis</div>
 <script id="gejast-game-group-b-boot">(function(){function boot(){try{window.GEJAST_GAME_GROUP_B_BRIDGE&&window.GEJAST_GAME_GROUP_B_BRIDGE.bootPanel&&window.GEJAST_GAME_GROUP_B_BRIDGE.bootPanel({game:'paardenrace'});}catch(_){}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();})();</script></body>
 </html>

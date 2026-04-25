@@ -1,5 +1,5 @@
 (function(){
-  if (window.GEJAST_PAARDENRACE && window.GEJAST_PAARDENRACE.__v687_complete) return;
+  if (window.GEJAST_PAARDENRACE && window.GEJAST_PAARDENRACE.__v689_complete) return;
   const cfg = window.GEJAST_CONFIG || {};
   const STORAGE_KEY = 'gejast_paardenrace_room_code_v687';
   const LEGACY_KEYS = ['gejast_paardenrace_room_code_v506'];
@@ -28,6 +28,7 @@
     const body = publicReadFns.has(fn)
       ? Object.assign({ site_scope_input: scope() }, args || {})
       : Object.assign({}, args || {}, { session_token: token || null, session_token_input: token || null, site_scope_input: scope() });
+    if (fn === 'get_paardenrace_open_rooms_fast_v687' && body.limit_input == null) body.limit_input = 30;
     const timeoutMs = Math.max(1600, Number(options.timeoutMs || (publicReadFns.has(fn) ? 2600 : 4200)));
     const controller = new AbortController();
     const timer = setTimeout(()=>controller.abort(), timeoutMs);
@@ -98,5 +99,5 @@
     const subline=latest&&latest.suit?`Gate ${latest.gate_no} open · ${suitLabel(latest.suit)} gaat 1 terug`:winnerSuit?`Totale pot ${totalPot} Bakken · ${deckLeft} kaarten over`:`${verified}/${list.length||0} verified · ${ready}/${list.length||0} ready · ${pendingGate} gates nog dicht`;
     return {headline, subline, totalPot, verified, ready, pendingGate, winnerSuit, deckLeft, drawCard, stage, isHost:!!(viewer&&viewer.is_host)};
   }
-  window.GEJAST_PAARDENRACE = { __v687_complete:true, rpc, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode, suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack, renderRaceMinimap, renderLiveBoard, summarizeLiveRoom, gotoLive, liveHref, scopedHref, scope, getDrawRemaining, resolvedGateSet, normalizedGateEvents, gateEventMap, getGridColumnForProgress, liveBoardFingerprint };
+  window.GEJAST_PAARDENRACE = { __v689_complete:true, rpc, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode, suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack, renderRaceMinimap, renderLiveBoard, summarizeLiveRoom, gotoLive, liveHref, scopedHref, scope, getDrawRemaining, resolvedGateSet, normalizedGateEvents, gateEventMap, getGridColumnForProgress, liveBoardFingerprint };
 })();

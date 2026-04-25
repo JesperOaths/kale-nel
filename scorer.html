@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
@@ -7,11 +7,11 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Klaverjassen scorer</title>
-  <script>window.GEJAST_PAGE_VERSION='v687';</script>
-  <script src="./gejast-config.js?v687"></script>
-  <script src="./gejast-home-gate.js?v687"></script>
-  <script src="./gejast-scope-context.js?v687"></script>
-  <script src="./gejast-klaverjas-runtime.js?v687"></script>
+  <script>window.GEJAST_PAGE_VERSION='v689';</script>
+  <script src="./gejast-config.js?v689"></script>
+  <script src="./gejast-home-gate.js?v689"></script>
+  <script src="./gejast-scope-context.js?v689"></script>
+  <script src="./gejast-klaverjas-runtime.js?v689"></script>
   <style>
     :root{--gold:#9a8241;--ink:#1f1a15;--muted:#6d655c;--paper:#fffaf3;--line:rgba(0,0,0,.08);--ok:#1f6a46;--bad:#8b2d20;--shadow:0 18px 44px rgba(0,0,0,.08)}
     *{box-sizing:border-box}
@@ -79,17 +79,17 @@
 
         <section class="panel">
           <h2>Ranglijst</h2>
-          <div id="ladder" class="list"><div class="muted">Laden…</div></div>
+          <div id="ladder" class="list"><div class="muted">Ladenâ€¦</div></div>
         </section>
 
         <section class="panel">
           <h2>Recente wedstrijden</h2>
-          <div id="recent" class="list"><div class="muted">Laden…</div></div>
+          <div id="recent" class="list"><div class="muted">Ladenâ€¦</div></div>
         </section>
       </div>
     </section>
   </main>
-  <div class="site-credit-watermark" data-version-watermark>v687 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v689 · Made by Bruis</div>
 
   <script>
   (function(){
@@ -118,9 +118,9 @@
       };
     }
     async function save(){
-      const btn=$('saveBtn'); const old=btn.textContent; btn.disabled=true; btn.textContent='Opslaan…';
+      const btn=$('saveBtn'); const old=btn.textContent; btn.disabled=true; btn.textContent='Opslaanâ€¦';
       try {
-        setStatus('Opslaan…');
+        setStatus('Opslaanâ€¦');
         await rt.saveMatch(payload());
         setStatus('Wedstrijd opgeslagen.', 'ok');
         clear(false);
@@ -136,11 +136,11 @@
     }
     function renderLadder(rows){
       const list = Array.isArray(rows) ? rows : [];
-      $('ladder').innerHTML = list.length ? list.slice(0,10).map((r,i)=>`<div class="item"><strong>#${i+1} ${rt.escapeHtml(r.player_name||r.display_name||'Speler')}</strong><small>ELO ${Math.round(Number(r.elo_rating||r.rating||1000))} · ${Number(r.games_played||r.matches_played||0)} potjes</small></div>`).join('') : '<div class="muted">Nog geen ranglijstdata.</div>';
+      $('ladder').innerHTML = list.length ? list.slice(0,10).map((r,i)=>`<div class="item"><strong>#${i+1} ${rt.escapeHtml(r.player_name||r.display_name||'Speler')}</strong><small>ELO ${Math.round(Number(r.elo_rating||r.rating||1000))} Â· ${Number(r.games_played||r.matches_played||0)} potjes</small></div>`).join('') : '<div class="muted">Nog geen ranglijstdata.</div>';
     }
     function renderRecent(rows){
       const list = Array.isArray(rows) ? rows : [];
-      $('recent').innerHTML = list.length ? list.slice(0,10).map((r)=>`<div class="item"><strong>${rt.escapeHtml((r.team_a_names||[]).join(' & ') || r.team_a || 'Team A')} — ${rt.escapeHtml((r.team_b_names||[]).join(' & ') || r.team_b || 'Team B')}</strong><small>${Number(r.team_a_score||r.score_a||0)} - ${Number(r.team_b_score||r.score_b||0)} · ${rt.fmtDate(r.finished_at||r.created_at)}</small></div>`).join('') : '<div class="muted">Nog geen recente wedstrijden.</div>';
+      $('recent').innerHTML = list.length ? list.slice(0,10).map((r)=>`<div class="item"><strong>${rt.escapeHtml((r.team_a_names||[]).join(' & ') || r.team_a || 'Team A')} â€” ${rt.escapeHtml((r.team_b_names||[]).join(' & ') || r.team_b || 'Team B')}</strong><small>${Number(r.team_a_score||r.score_a||0)} - ${Number(r.team_b_score||r.score_b||0)} Â· ${rt.fmtDate(r.finished_at||r.created_at)}</small></div>`).join('') : '<div class="muted">Nog geen recente wedstrijden.</div>';
     }
     async function loadRuntime(){
       try {

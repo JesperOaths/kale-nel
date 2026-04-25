@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
   const cfg = global.GEJAST_CONFIG || {};
-  const VERSION = 'v687';
+  const VERSION = 'v689';
   const DEFAULT_SCOPE = 'friends';
   const SESSION_KEYS = (cfg.PLAYER_SESSION_KEYS || ['jas_session_token_v11','jas_session_token_v10']);
 
@@ -81,9 +81,21 @@
   async function loadNames(){
     try {
       if (cfg.getActivatedPlayerNamesForScope) {
-        const rows = await cfg.getActivatedPlayerNamesForScope(getScope());
+        const rows = await Promise.race([cfg.getActivatedPlayerNamesForScope(getScope()), new Promise((resolve)=>setTimeout(()=>resolve([]), 1600))]);
         if (Array.isArray(rows) && rows.length) return uniqueNames(rows);
       }
+    } catch (_) {}
+    try {
+      const data = await rpc('get_login_active_names_v687', { site_scope_input: getScope() }, { timeoutMs: 1800 });
+      const rows = Array.isArray(data) ? data : (Array.isArray(data && data.names) ? data.names : (Array.isArray(data && data.activated_names) ? data.activated_names : []));
+      const names = uniqueNames(rows.map((row) => typeof row === 'string' ? row : (row.display_name || row.player_name || row.name || '')));
+      if (names.length) return names;
+    } catch (_) {}
+    try {
+      const data = await rpc('get_player_selector_source_v1', { site_scope_input: getScope() }, { timeoutMs: 1800 });
+      const rows = Array.isArray(data && data.activated_names) ? data.activated_names : [];
+      const names = uniqueNames(rows);
+      if (names.length) return names;
     } catch (_) {}
     try {
       const data = await rpc('get_scoped_player_names_v687', { site_scope_input: getScope() }, { timeoutMs: 8000 });

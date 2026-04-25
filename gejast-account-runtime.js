@@ -1,7 +1,7 @@
 (function(){
-  if (window.GEJAST_ACCOUNT_RUNTIME && window.GEJAST_ACCOUNT_RUNTIME.VERSION === 'v688') return;
+  if (window.GEJAST_ACCOUNT_RUNTIME && window.GEJAST_ACCOUNT_RUNTIME.VERSION === 'v689') return;
   const cfg = window.GEJAST_CONFIG || {};
-  const VERSION = 'v688';
+  const VERSION = 'v689';
   const SESSION_KEYS = (Array.isArray(cfg.PLAYER_SESSION_KEYS) && cfg.PLAYER_SESSION_KEYS.length) ? cfg.PLAYER_SESSION_KEYS : ['jas_session_token_v11','jas_session_token_v10'];
   const ADMIN_KEYS = ['jas_admin_session_v8','gejast_admin_session_token','jas_admin_session_token'];
   const LOGIN_CACHE_PREFIX = 'gejast_login_active_names_v687_';
