@@ -1,0 +1,25 @@
+GEJAST v672 scope hardening runtime complete manifest
+
+Frontend zip:
+GEJAST_v672_scope_hardening_runtime_complete_actual_files_flat.zip
+
+Separate SQL:
+GEJAST_v672_scope_hardening_runtime_complete.sql
+
+Files in frontend zip:
+- VERSION
+- gejast-config.js
+- gejast-scope.js
+- gejast-scope-hardening.js
+- admin.html
+- admin_scope_hardening.html
+- PATCH_NOTES_v672_SCOPE_HARDENING_RUNTIME_COMPLETE.txt
+- PATCH_TEST_REPORT_v672.txt
+- GEJAST_v672_scope_hardening_runtime_complete_manifest.txt
+
+Install order:
+1. Upload frontend zip to GitHub/root.
+2. Run GEJAST_v672_scope_hardening_runtime_complete.sql in Supabase after the latest fixed SQL files already used for v665b, v666b, v669a, v670a and v671a.
+3. Open admin_scope_hardening.html.
+4. Verify family scope pages keep ?scope=family and friends-only pages redirect away from family scope.
+5. Verify admin membership corrections can be written.

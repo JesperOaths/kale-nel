@@ -1,0 +1,40 @@
+GEJAST v672 — Friend/family scope hardening runtime complete
+
+Purpose
+- Harden the friends/family split across the browser runtime and recent v666+ SQL runtime tables.
+- Prevent silent cross-pollination by making scope explicit, cached, auditable and visible.
+
+Frontend files
+- VERSION
+- gejast-config.js
+- gejast-scope.js
+- gejast-scope-hardening.js
+- admin.html
+- admin_scope_hardening.html
+
+SQL
+- GEJAST_v672_scope_hardening_runtime_complete.sql
+
+Implemented behavior
+- Adds GEJAST_SCOPE_HARDENING as a sitewide runtime loaded automatically by gejast-config.js.
+- Persists the current scope and exposes a shared currentScope/scopedUrl/defaultHome API.
+- Adds conservative RPC scope injection for scoped RPC names only, avoiding account/mail/admin/push functions that may not accept site_scope_input.
+- Adds family-scope page blocking for friends-only surfaces such as drinks, Beerpong, Pikken, Paardenrace and Despimarkt.
+- Preserves scope in internal links when the viewer is in family scope.
+- Extends GEJAST_SCOPE_UTILS with the v672 dynamic membership map instead of relying only on the older static family-name list.
+- Adds admin_scope_hardening.html for membership map, scope policy, table audit and browser runtime events.
+- Adds an admin hub link to Scope hardening.
+
+SQL implemented behavior
+- Creates gejast_scope_memberships_v672 and seeds known family names.
+- Creates gejast_scope_runtime_events_v672 for server-side scope event logging.
+- Adds/normalizes site_scope columns on recent runtime tables where they exist.
+- Adds check constraints and site_scope indexes on those tables where possible.
+- Adds get_scope_hardening_bundle_v672 for browser membership caching.
+- Adds admin_get_scope_hardening_audit_v672 and admin_set_scope_membership_v672.
+- Adds assert_session_scope_v672 for session/scope verification when the legacy session reader is available.
+
+Boundary
+- This patch does not delete data and does not rewrite old historical match rows.
+- It hardens the active v666+ runtime layer and the browser/page layer.
+- Legacy tables that do not exist in the database are skipped safely.

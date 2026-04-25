@@ -1,0 +1,20 @@
+GEJAST v672 patch test report
+
+Static checks performed:
+- node --check gejast-config.js: PASS
+- node --check gejast-scope.js: PASS
+- node --check gejast-scope-hardening.js: PASS
+- Frontend patch file count: 9
+- Frontend zip will contain 0 .py files
+- Frontend zip will contain 0 .sql files
+- SQL delivered separately
+- Zip structure: flat, no folders
+- Patched runtime/page files use v672 cache-bust/version references.
+
+Manual/live checks still required after upload and SQL run:
+- Open admin_scope_hardening.html and verify audit loads.
+- In family scope, verify internal links keep ?scope=family.
+- In family scope, verify friends-only pages redirect away rather than showing friends data.
+- Verify v672 membership map refreshes from get_scope_hardening_bundle_v672.
+- Verify admin_set_scope_membership_v672 can correct a player scope.
+- Verify no user-facing account/mail/push RPCs are broken by scope injection; v672 intentionally avoids those RPC names.

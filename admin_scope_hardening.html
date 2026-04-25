@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Scope hardening - GEJAST</title>
+  <script>window.GEJAST_PAGE_VERSION='v672';</script>
+  <script src="./gejast-config.js?v672"></script>
+  <script src="./admin-session-sync.js?v672"></script>
+  <script src="./gejast-admin-rpc.js?v672"></script>
+  <script src="./gejast-scope.js?v672"></script>
+  <script src="./gejast-scope-hardening.js?v672"></script>
+  <style>
+    :root{--gold:#9a8241;--card:#f9f7f2;--line:rgba(0,0,0,.08);--muted:#6b655b;--ok:#2b5b37;--warn:#8b3a30;--ink:#14110d}
+    *{box-sizing:border-box} body{margin:0;padding:20px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(232,228,217,.92),rgba(232,228,217,.92)),url('./wordtergejast.png') center/cover fixed;min-height:100vh;color:var(--ink)}
+    .main{max-width:1120px;margin:0 auto;background:var(--card);border-radius:28px;padding:28px;box-shadow:0 20px 50px rgba(0,0,0,.08);position:relative}.logo{position:absolute;top:24px;right:24px;width:44px}.top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:14px;padding:12px 14px;font:inherit;font-weight:900;text-decoration:none;cursor:pointer}.btn.primary{background:var(--gold);color:#111}.btn.ghost{background:#fff;color:#111;border:1px solid var(--line)}.status{margin:14px 0;min-height:20px;color:var(--muted)}.status.ok{color:var(--ok)}.status.warn{color:var(--warn)}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}.card{background:#fff;border:1px solid rgba(0,0,0,.06);border-radius:20px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.03)}.card h2{margin:0 0 8px;font-size:17px}.kpi span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55;font-weight:900}.kpi strong{display:block;margin-top:6px;font-size:28px}.section{margin-top:18px;background:#fff;border:1px solid rgba(0,0,0,.06);border-radius:22px;padding:18px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:9px 8px;border-bottom:1px solid rgba(0,0,0,.06);vertical-align:top}th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55}.pill{display:inline-flex;padding:5px 9px;border-radius:999px;font-weight:900;font-size:11px;border:1px solid rgba(0,0,0,.08)}.pill.ok{background:rgba(43,91,55,.12);color:var(--ok)}.pill.warn{background:rgba(139,58,48,.1);color:var(--warn)}.pill.wait{background:rgba(0,0,0,.05);color:#555}.muted{color:var(--muted)}.row{display:flex;gap:10px;flex-wrap:wrap}.field{display:grid;gap:6px}.form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:900;color:#8a7a55}input,select{width:100%;padding:11px 12px;border-radius:12px;border:1px solid rgba(0,0,0,.12);font:inherit;background:#fff}.site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,.18)}
+    @media(max-width:900px){.grid,.form{grid-template-columns:1fr 1fr}.main{padding:18px}}@media(max-width:620px){.grid,.form{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="main">
+    <a href="./admin.html"><img src="./logo.png" class="logo" alt="Logo"></a>
+    <div class="top"><div><h1>Scope hardening</h1><p class="muted">Vrienden/familie scheiding: client runtime, page policies, RPC scope-injectie, membership-map en table audit.</p></div><div class="row"><a class="btn ghost" href="./admin.html">Admin hub</a><button id="refreshBtn" class="btn primary" type="button">Ververs</button></div></div>
+    <div id="status" class="status">Laden…</div>
+    <section class="grid" id="kpis"></section>
+    <section class="section"><h2>Membership map</h2><p class="muted">Deze lijst is de server-side naam→scope kaart die de runtime gebruikt als harde fallback boven oude naamfilters.</p><div id="memberships">Laden…</div></section>
+    <section class="section"><h2>Scope wijzigen / vastzetten</h2><div class="form"><div class="field"><label>Spelernaam</label><input id="playerNameInput" placeholder="Naam"></div><div class="field"><label>Scope</label><select id="scopeInput"><option value="friends">friends</option><option value="family">family</option></select></div><div class="field"><label>Reden</label><input id="reasonInput" placeholder="Correctie / splitsing"></div><div class="field"><label>Actie</label><button id="saveBtn" class="btn primary" type="button">Opslaan</button></div></div></section>
+    <section class="section"><h2>Table scope audit</h2><div id="tableAudit">Laden…</div></section>
+    <section class="section"><h2>Page policy</h2><div id="pagePolicy">Laden…</div></section>
+    <section class="section"><h2>Browser runtime events</h2><div id="browserAudit">Nog geen runtime events.</div></section>
+  </main>
+  <div class="site-credit-watermark" data-version-watermark>v672 · Made by Bruis</div>
+<script>
+(function(){
+  const ADMIN_KEY='jas_admin_session_v8';
+  const cfg=window.GEJAST_CONFIG||{};
+  const scopeRuntime=window.GEJAST_SCOPE_HARDENING||{};
+  const $=(id)=>document.getElementById(id);
+  function token(){return (window.GEJAST_ADMIN_SESSION&&window.GEJAST_ADMIN_SESSION.getToken&&window.GEJAST_ADMIN_SESSION.getToken())||sessionStorage.getItem(ADMIN_KEY)||localStorage.getItem(ADMIN_KEY)||'';}
+  function setStatus(msg,tone=''){const el=$('status');el.textContent=msg||'';el.className='status '+tone;}
+  async function rpc(name,body){
+    const fn = scopeRuntime.rpc || (async (rpcName,payload)=>{
+      const res=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${rpcName}`,{method:'POST',mode:'cors',cache:'no-store',headers:{apikey:cfg.SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY}`,'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify(payload||{})});
+      const text=await res.text();let data=null;try{data=text?JSON.parse(text):null;}catch(_){throw new Error(text||`HTTP ${res.status}`)}if(!res.ok)throw new Error(data?.message||data?.error||data?.details||data?.hint||`HTTP ${res.status}`);return data&&data[rpcName]!==undefined?data[rpcName]:data;
+    });
+    return await fn(name, body);
+  }
+  function table(rows){ if(!Array.isArray(rows)||!rows.length)return '<div class="muted">Geen rijen.</div>'; const cols=Object.keys(rows[0]); return `<table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${Array.isArray(r[c])?r[c].join(', '):(typeof r[c]==='object'&&r[c]?JSON.stringify(r[c]):(r[c]??''))}</td>`).join('')}</tr>`).join('')}</tbody></table>`; }
+  function render(bundle){
+    const summary=bundle.summary||{};
+    $('kpis').innerHTML=[['Current scope',scopeRuntime.currentScope?scopeRuntime.currentScope():'friends'],['Memberships',summary.membership_count||0],['Family names',summary.family_count||0],['Scoped tables OK',summary.scoped_table_count||0]].map(([k,v])=>`<article class="card kpi"><span>${k}</span><strong>${v}</strong></article>`).join('');
+    $('memberships').innerHTML=table(bundle.memberships||[]);
+    $('tableAudit').innerHTML=table(bundle.table_audit||[]);
+    $('pagePolicy').innerHTML=table(bundle.page_policy||[]);
+    const browser=(scopeRuntime.readAudit&&scopeRuntime.readAudit())||[];
+    $('browserAudit').innerHTML=table(browser);
+  }
+  async function load(){
+    setStatus('Scope-audit laden…');
+    const bundle=await rpc('admin_get_scope_hardening_audit_v672',{admin_session_token:token(), site_scope_input:(scopeRuntime.currentScope&&scopeRuntime.currentScope())||'friends'});
+    render(bundle||{});
+    setStatus('Scope hardening geladen.','ok');
+  }
+  $('refreshBtn').addEventListener('click',()=>load().catch(e=>setStatus(e.message||String(e),'warn')));
+  $('saveBtn').addEventListener('click',async()=>{try{setStatus('Opslaan…');await rpc('admin_set_scope_membership_v672',{admin_session_token:token(), player_name_input:$('playerNameInput').value, site_scope_input:$('scopeInput').value, reason_input:$('reasonInput').value}); await (scopeRuntime.refreshMemberships&&scopeRuntime.refreshMemberships()); await load(); setStatus('Scope opgeslagen.','ok');}catch(e){setStatus(e.message||String(e),'warn');}});
+  load().catch(e=>setStatus(e.message||String(e),'warn'));
+})();
+</script>
+<script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+</body>
+</html>
