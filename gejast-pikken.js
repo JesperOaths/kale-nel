@@ -1,14 +1,14 @@
 (function(){
   const api = window.GEJAST_PIKKEN_CONTRACT;
   if (!api) { console.error('GEJAST_PIKKEN_CONTRACT missing'); return; }
-  const PARTICIPANT_KEY = 'gejast_pikken_participant_v681';
+  const PARTICIPANT_KEY = 'gejast_pikken_participant_v682';
   const LEGACY_PARTICIPANT_KEY = 'gejast_pikken_participant_v632';
   let state = { gameId:'', timer:null, busy:false, lastVersion:-1 };
   const $ = (id)=>document.getElementById(id);
   const esc = (v)=>String(v ?? '').replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
   function setStatus(msg='', bad=false){ const el=$('pkStatus'); if(el){ el.textContent=msg; el.style.color=bad?'#7f2f1d':'#6b6257'; } }
   function loginUrl(){ const target = `pikken.html${api.scope()==='family'?'?scope=family':''}`; return `./login.html?return_to=${encodeURIComponent(target)}${api.scope()==='family'?'&scope=family':''}`; }
-  function normalizeError(e){ const msg=String(e && e.message ? e.message : e || 'Onbekende fout'); if(/Niet ingelogd|not logged|session/i.test(msg)) return `Niet ingelogd. Log eerst in via ${loginUrl()}`; if(/timeout/i.test(msg)) return 'Server reageert niet op de Pikken-RPC. Controleer of de laatste v681 SQL heeft gedraaid.'; if(/could not find|schema cache|function/i.test(msg)) return 'Pikken backend-RPC ontbreekt of Supabase schema cache is nog oud. Draai de v681 SQL en refresh.'; return msg; }
+  function normalizeError(e){ const msg=String(e && e.message ? e.message : e || 'Onbekende fout'); if(/Niet ingelogd|not logged|session/i.test(msg)) return `Niet ingelogd. Log eerst in via ${loginUrl()}`; if(/timeout/i.test(msg)) return 'Server reageert niet op de Pikken-RPC. Controleer of de laatste v682 SQL heeft gedraaid.'; if(/could not find|schema cache|function/i.test(msg)) return 'Pikken backend-RPC ontbreekt of Supabase schema cache is nog oud. Draai de v682 SQL en refresh.'; return msg; }
   function setBusyButton(id,busy,label){ const b=$(id); if(!b) return; b.disabled=!!busy; if(label) b.textContent=busy?label:b.getAttribute('data-original-label')||b.textContent; }
 
   function getStoredGame(){

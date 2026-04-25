@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v681',
+    VERSION:'v682',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -635,9 +635,9 @@ function buildRequestUrl(returnTo, scope){
 
 
 
-  // v681 fast runtime helpers: keep pages visible and prevent long RPC waits from blocking boot.
+  // v682 fast runtime helpers: keep pages visible and prevent long RPC waits from blocking boot.
   const FAST_RUNTIME = window.GEJAST_FAST_RUNTIME || (function(){
-    const DEFAULT_TIMEOUT_MS = 2600;
+    const DEFAULT_TIMEOUT_MS = 2200;
     function timeoutPromise(ms, label){
       return new Promise((_, reject)=>setTimeout(()=>reject(new Error(label || 'RPC timeout')), Number(ms || DEFAULT_TIMEOUT_MS)));
     }
@@ -674,12 +674,12 @@ function buildRequestUrl(returnTo, scope){
       } catch (_) {}
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', ()=>setTimeout(showPageNow, 250), { once:true });
+      document.addEventListener('DOMContentLoaded', ()=>setTimeout(showPageNow, 0), { once:true });
     } else {
       setTimeout(showPageNow, 0);
     }
-    setTimeout(showPageNow, 1200);
-    return { VERSION:'v681', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
+    setTimeout(showPageNow, 650);
+    return { VERSION:'v682', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
   })();
   window.GEJAST_FAST_RUNTIME = FAST_RUNTIME;
 
@@ -731,7 +731,7 @@ function buildRequestUrl(returnTo, scope){
 
   function ensureScopeHardeningRuntime(){
     try {
-      if (window.GEJAST_SCOPE_HARDENING && window.GEJAST_SCOPE_HARDENING.version === 'v673') return;
+      if (window.GEJAST_SCOPE_HARDENING && window.GEJAST_SCOPE_HARDENING.version === 'v682') return;
       if (document.querySelector('script[data-gejast-scope-hardening]')) return;
       const script = document.createElement('script');
       script.src = `./gejast-scope-hardening.js?${effectiveVersion}`;
@@ -742,6 +742,8 @@ function buildRequestUrl(returnTo, scope){
   }
 
   function afterDomReady(){
+    try { FAST_RUNTIME && FAST_RUNTIME.showPageNow && FAST_RUNTIME.showPageNow(); } catch(_) {}
+    try { if ((location.pathname||'').toLowerCase().endsWith('/index.html') || (location.pathname||'').toLowerCase()==='/' || !(location.pathname||'').split('/').pop()) { document.querySelectorAll('#ghprError').forEach(function(n){ n.remove(); }); } } catch(_) {}
     applyVersionLabel();
     ensureSiteAnnouncementRuntime();
     ensureScopeHardeningRuntime();

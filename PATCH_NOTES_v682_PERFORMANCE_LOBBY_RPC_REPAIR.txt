@@ -1,0 +1,13 @@
+GEJAST v682 — frontend speed + lobby RPC compatibility repair
+
+Fixes:
+- index.html no longer sits on a blank hero/background before page content appears.
+- optional home/profile runtime timeout errors are silent and never block the existing page-owned boxes.
+- login uses the v682 active-login source/cache and keeps family/friends filtering.
+- Pikken uses v682 fast RPCs for lobby create/join/open/live feeds and longer create/join timeout only for those mutations.
+- Paardenrace public read calls no longer send session_token/session_token_input into public read RPCs.
+- Paardenrace v682 SQL also adds overload wrappers for already-deployed pages that still send those keys.
+
+Boundary:
+- This is a repair over v681 after real browser errors.
+- SQL must be run for the v682 fast Pikken/Paardenrace wrappers.
