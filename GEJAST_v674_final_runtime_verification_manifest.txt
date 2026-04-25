@@ -1,0 +1,24 @@
+GEJAST v674 final runtime verification manifest
+
+Frontend zip:
+- GEJAST_v674_final_runtime_verification_actual_files_flat.zip
+
+Files in frontend zip:
+- VERSION
+- gejast-config.js
+- admin.html
+- admin_final_runtime_verification.html
+- gejast-final-runtime-verification.js
+- PATCH_NOTES_v674_FINAL_RUNTIME_VERIFICATION.txt
+- PATCH_TEST_REPORT_v674.txt
+- GEJAST_v674_final_runtime_verification_manifest.txt
+
+Separate SQL:
+- GEJAST_v674_final_runtime_verification.sql
+
+Separate runbook:
+- GEJAST_v674_SQL_INSTALL_ORDER_AND_SUPERSEDED.txt
+
+No .sql files are inside the frontend zip.
+No .py files are inside the frontend zip.
+Zip is flat.

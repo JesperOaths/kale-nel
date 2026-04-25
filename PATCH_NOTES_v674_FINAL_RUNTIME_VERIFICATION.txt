@@ -1,0 +1,28 @@
+GEJAST v674 — Final Runtime Verification / SQL install-order cleanup
+
+Changed frontend files:
+- VERSION
+- gejast-config.js
+- admin.html
+- admin_final_runtime_verification.html
+- gejast-final-runtime-verification.js
+- PATCH_NOTES_v674_FINAL_RUNTIME_VERIFICATION.txt
+- PATCH_TEST_REPORT_v674.txt
+- GEJAST_v674_final_runtime_verification_manifest.txt
+
+Separate SQL:
+- GEJAST_v674_final_runtime_verification.sql
+
+Separate runbook:
+- GEJAST_v674_SQL_INSTALL_ORDER_AND_SUPERSEDED.txt
+
+Purpose:
+- Adds a final admin verification page for v664-v673 runtime bundles.
+- Checks SQL object presence through get_final_runtime_verification_v674.
+- Checks key public runtime RPC reachability.
+- Shows browser/device capability checks: service worker, push, notification, geolocation, secure context, admin token.
+- Shows the current SQL run order and superseded/broken SQL files.
+
+Boundary:
+- This bundle does not mutate gameplay data, account data, wallets, drinks, or ratings.
+- It is a final verification/control surface plus SQL install-order cleanup, not a new product feature subsystem.

@@ -1,0 +1,17 @@
+GEJAST v674 patch test report
+
+Static checks performed:
+- node --check gejast-final-runtime-verification.js: PASS
+- node --check gejast-config.js: PASS
+- Frontend zip contains no .py files: PASS
+- Frontend zip contains no .sql files: PASS
+- Zip layout is flat: PASS
+- Patched script cache-bust refs use ?v674: PASS
+
+Runtime checks still required after upload/SQL:
+1. Run GEJAST_v674_final_runtime_verification.sql in Supabase.
+2. Upload GEJAST_v674_final_runtime_verification_actual_files_flat.zip.
+3. Open admin_final_runtime_verification.html.
+4. Click Run checks.
+5. Confirm the SQL objects, public RPC smoke checks and browser checks.
+6. Do manual device flow tests for push on iPhone/Android; browser feature availability is not proof of actual push delivery.
