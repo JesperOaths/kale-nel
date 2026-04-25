@@ -1,0 +1,24 @@
+GEJAST v685 profile/lobby/klaverjas repair manifest
+
+Files in frontend zip:
+- PATCH_NOTES_v685_PROFILE_LOBBY_KLAVERJAS_REPAIR.txt
+- VERSION
+- admin.html
+- gejast-account-runtime.js
+- gejast-config.js
+- gejast-home-gate.js
+- gejast-home-profile-runtime.js
+- gejast-klaverjas-runtime.js
+- gejast-paardenrace.js
+- gejast-pikken-contract.js
+- gejast-pikken.js
+- index.html
+- klaverjas_scorer_v596_repo_ready.html
+- login.html
+- paardenrace.html
+- pikken.html
+- profiles.html
+- score.html
+- scorer.html
+
+SQL: GEJAST_v685_profile_lobby_klaverjas_repair.sql

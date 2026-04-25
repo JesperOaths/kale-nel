@@ -1,7 +1,7 @@
 (function(){
-  if (window.GEJAST_PAARDENRACE && window.GEJAST_PAARDENRACE.__v684_complete) return;
+  if (window.GEJAST_PAARDENRACE && window.GEJAST_PAARDENRACE.__v685_complete) return;
   const cfg = window.GEJAST_CONFIG || {};
-  const STORAGE_KEY = 'gejast_paardenrace_room_code_v684';
+  const STORAGE_KEY = 'gejast_paardenrace_room_code_v685';
   const LEGACY_KEYS = ['gejast_paardenrace_room_code_v506'];
   const LIVE_QUERY_KEY = 'live';
   const SUITS = ['spades','hearts','clubs','diamonds'];
@@ -22,13 +22,13 @@
   function sessionToken(){ try { return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; } catch(_) { return ''; } }
   async function rpc(fn, args={}, options={}){
     const token = sessionToken();
-    const publicReadFns = new Set(['get_paardenrace_open_rooms_public','get_paardenrace_stats_public','get_paardenrace_open_rooms_fast_v684','get_paardenrace_stats_fast_v684']);
-    if (fn === 'get_paardenrace_open_rooms_public') fn = 'get_paardenrace_open_rooms_fast_v684';
-    if (fn === 'get_paardenrace_stats_public') fn = 'get_paardenrace_stats_fast_v684';
+    const publicReadFns = new Set(['get_paardenrace_open_rooms_public','get_paardenrace_stats_public','get_paardenrace_open_rooms_fast_v685','get_paardenrace_stats_fast_v685']);
+    if (fn === 'get_paardenrace_open_rooms_public') fn = 'get_paardenrace_open_rooms_fast_v685';
+    if (fn === 'get_paardenrace_stats_public') fn = 'get_paardenrace_stats_fast_v685';
     const body = publicReadFns.has(fn)
       ? Object.assign({ site_scope_input: scope() }, args || {})
       : Object.assign({}, args || {}, { session_token: token || null, session_token_input: token || null, site_scope_input: scope() });
-    const timeoutMs = Math.max(900, Number(options.timeoutMs || (publicReadFns.has(fn) ? 1700 : 4200)));
+    const timeoutMs = Math.max(1600, Number(options.timeoutMs || (publicReadFns.has(fn) ? 3500 : 7000)));
     const controller = new AbortController();
     const timer = setTimeout(()=>controller.abort(), timeoutMs);
     try {
@@ -98,5 +98,5 @@
     const subline=latest&&latest.suit?`Gate ${latest.gate_no} open · ${suitLabel(latest.suit)} gaat 1 terug`:winnerSuit?`Totale pot ${totalPot} Bakken · ${deckLeft} kaarten over`:`${verified}/${list.length||0} verified · ${ready}/${list.length||0} ready · ${pendingGate} gates nog dicht`;
     return {headline, subline, totalPot, verified, ready, pendingGate, winnerSuit, deckLeft, drawCard, stage, isHost:!!(viewer&&viewer.is_host)};
   }
-  window.GEJAST_PAARDENRACE = { __v684_complete:true, rpc, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode, suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack, renderRaceMinimap, renderLiveBoard, summarizeLiveRoom, gotoLive, liveHref, scopedHref, scope, getDrawRemaining, resolvedGateSet, normalizedGateEvents, gateEventMap, getGridColumnForProgress, liveBoardFingerprint };
+  window.GEJAST_PAARDENRACE = { __v685_complete:true, rpc, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode, suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack, renderRaceMinimap, renderLiveBoard, summarizeLiveRoom, gotoLive, liveHref, scopedHref, scope, getDrawRemaining, resolvedGateSet, normalizedGateEvents, gateEventMap, getGridColumnForProgress, liveBoardFingerprint };
 })();

@@ -7,11 +7,11 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Spelersprofielen</title>
-  <script>window.GEJAST_PAGE_VERSION='v684';</script>
-  <script src="./gejast-config.js?v684"></script>
-  <script src="./gejast-home-gate.js?v684"></script>
-  <script defer src="./gejast-clickable-cards.js?v684"></script>
-  <script defer src="./gejast-scope-context.js?v684"></script><script defer src="./gejast-family-rollout.js?v684"></script>
+  <script>window.GEJAST_PAGE_VERSION='v685';</script>
+  <script src="./gejast-config.js?v685"></script>
+  <script src="./gejast-home-gate.js?v685"></script>
+  <script defer src="./gejast-clickable-cards.js?v685"></script>
+  <script defer src="./gejast-scope-context.js?v685"></script><script defer src="./gejast-family-rollout.js?v685"></script>
   <style>
     :root{--gold:#d4af37;--ink:#1b1711;--paper:rgba(255,250,243,.92);--line:#e0d6c6;--muted:#6f665e;--soft:#fbf7ef}
     *{box-sizing:border-box}
@@ -81,12 +81,12 @@
     @keyframes profilePulse{0%{background-position:200% 0}100%{background-position:-200% 0}}
     @media (max-width:760px){.page{padding:14px 12px 90px}.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.head{grid-template-columns:64px minmax(0,1fr)}.avatar{width:64px;height:64px}}
   </style>
-  <script defer src="./gejast-scope.js?v684"></script>
-  <script defer src="./gejast-badges.js?v684"></script>
-  <script defer src="./gejast-badge-progress.js?v684"></script>
-  <script defer src="./gejast-heavy-page-runtime.js?v684"></script>
-  <script defer src="./gejast-rpc-contract.js?v684"></script>
-  <script defer src="./gejast-profile-source.js?v684"></script>
+  <script defer src="./gejast-scope.js?v685"></script>
+  <script defer src="./gejast-badges.js?v685"></script>
+  <script defer src="./gejast-badge-progress.js?v685"></script>
+  <script defer src="./gejast-heavy-page-runtime.js?v685"></script>
+  <script defer src="./gejast-rpc-contract.js?v685"></script>
+  <script defer src="./gejast-profile-source.js?v685"></script>
 </head>
 <body>
   <main class="page">
@@ -111,7 +111,7 @@
       const statusNode = document.getElementById('status');
       const gridNode = document.getElementById('grid');
       const galleryNode = document.getElementById('badgeGalleryPanel');
-      const cacheKey = `gejast_profiles_cache_v684_${scope}`;
+      const cacheKey = `gejast_profiles_cache_v685_${scope}`;
       const cacheTtl = 10 * 60 * 1000;
 
       function readCache(){
@@ -176,7 +176,7 @@
       async function loadFastProfilesFallback(){
         try {
           let payload = null;
-          try { payload = await withTimeout(callRpc('get_profiles_fast_v684', { site_scope_input: scope, limit_input: 80 }, 1800), 1900, null); } catch (_) { payload = null; }
+          try { payload = await withTimeout(callRpc('get_profiles_fast_v685', { site_scope_input: scope, limit_input: 80 }, 1800), 1900, null); } catch (_) { payload = null; }
           let players = Array.isArray(payload?.players) ? payload.players : (Array.isArray(payload) ? payload : []);
           if (!players.length && window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedActivePlayerNames === 'function') {
             const names = await withTimeout(window.GEJAST_CONFIG.fetchScopedActivePlayerNames(scope), 1200, []);
@@ -430,11 +430,11 @@
       boot();
     })();
   </script>
-  <script defer src="./site-analytics.js?v684"></script>
+  <script defer src="./site-analytics.js?v685"></script>
   <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script defer src="./gejast-geo.js?v684"></script>
-  <script defer src="./drinks-verify-float.js?v684"></script>
-  <script defer src="./gejast-home-profile-runtime.js?v684"></script>
+  <script defer src="./gejast-geo.js?v685"></script>
+  <script defer src="./drinks-verify-float.js?v685"></script>
+  <script defer src="./gejast-home-profile-runtime.js?v685"></script>
 </body>
 </html>

@@ -1,0 +1,53 @@
+GEJAST v685 — Profile / Lobby / Klaverjas Repair
+
+Frontend files:
+- VERSION
+- gejast-config.js
+- gejast-home-gate.js
+- gejast-home-profile-runtime.js
+- gejast-account-runtime.js
+- login.html
+- index.html
+- profiles.html
+- pikken.html
+- gejast-pikken-contract.js
+- gejast-pikken.js
+- paardenrace.html
+- gejast-paardenrace.js
+- gejast-klaverjas-runtime.js
+- klaverjas_scorer_v596_repo_ready.html
+- scorer.html
+- score.html
+- admin.html
+
+SQL:
+- GEJAST_v685_profile_lobby_klaverjas_repair.sql
+
+What changed:
+1. Profiles
+   - Uses get_profiles_fast_v685.
+   - Dynamic SQL discovers the real name/scope/active columns on public.players.
+   - No more skeleton-only page or "0 active players" caused by hardcoded column assumptions.
+   - Does not use requestable/scope-only names as profile data unless the backend can resolve them through active players.
+
+2. Pikken
+   - Uses v685 fast wrappers.
+   - Session resolver now maps account/login sessions to a real public.players.id.
+   - Lobby creation/join no longer inserts synthetic player IDs that violate pikken_game_players_player_id_fkey.
+   - Host/sole-player destroy is more tolerant so empty/single-player rooms can actually be closed.
+
+3. Paardenrace
+   - Uses v685 direct fast wrappers for create/join/state/leave/disband/open/stats.
+   - Removes stale "Room niet gevonden" stored-room errors from normal page boot.
+   - Room create/join no longer relies on slow/ambiguous safe wrappers.
+   - Open room list remains visible and fast.
+
+4. Klaverjassen
+   - scorer.html and klaverjas_scorer_v596_repo_ready.html are restored to a direct score-entry page.
+   - No lobby/live-pot panel is shown on the scorer page.
+   - "Start live-pot" was removed from the scorer page.
+   - The page now focuses on final score entry plus a small leaderboard/recent matches section.
+   - gejast-klaverjas-runtime.js still delegates to the existing v673 Klaverjas RPC owner to preserve history/ELO ownership.
+
+Honesty boundary:
+- This patch is static frontend + SQL repair. It still needs a live Supabase run and browser refresh proof.

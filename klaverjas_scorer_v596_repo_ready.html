@@ -7,82 +7,155 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Klaverjassen scorer</title>
-  <script>window.GEJAST_PAGE_VERSION='v673';</script>
-  <script src="./gejast-config.js?v673"></script>
-  <script src="./gejast-home-gate.js?v673"></script>
-  <script src="./gejast-scope-context.js?v673"></script>
-  <script src="./gejast-klaverjas-runtime.js?v673"></script>
+  <script>window.GEJAST_PAGE_VERSION='v685';</script>
+  <script src="./gejast-config.js?v685"></script>
+  <script src="./gejast-home-gate.js?v685"></script>
+  <script src="./gejast-scope-context.js?v685"></script>
+  <script src="./gejast-klaverjas-runtime.js?v685"></script>
   <style>
     :root{--gold:#9a8241;--ink:#1f1a15;--muted:#6d655c;--paper:#fffaf3;--line:rgba(0,0,0,.08);--ok:#1f6a46;--bad:#8b2d20;--shadow:0 18px 44px rgba(0,0,0,.08)}
-    *{box-sizing:border-box} body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.93),rgba(240,235,226,.95)),url('./wordtergejast.png') center/cover fixed;color:var(--ink)}
-    .wrap{max-width:1180px;margin:0 auto}.shell{background:rgba(255,250,243,.95);border:1px solid rgba(255,255,255,.7);border-radius:30px;padding:22px;box-shadow:var(--shadow)}
-    .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.brand{display:flex;align-items:center;gap:12px}.brand img{width:56px;height:56px;object-fit:contain}.actions,.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    *{box-sizing:border-box}
+    body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(240,235,226,.93),rgba(240,235,226,.95)),url('./wordtergejast.png') center/cover fixed;color:var(--ink)}
+    .wrap{max-width:1040px;margin:0 auto}
+    .shell{background:rgba(255,250,243,.95);border:1px solid rgba(255,255,255,.7);border-radius:30px;padding:22px;box-shadow:var(--shadow)}
+    .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+    .brand{display:flex;align-items:center;gap:12px}.brand img{width:56px;height:56px;object-fit:contain}
+    .actions,.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
     h1{margin:0;font-size:clamp(2rem,5vw,3rem);letter-spacing:-.05em}.muted{color:var(--muted)}
     .btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:999px;padding:11px 15px;font:800 14px/1 Inter,system-ui,sans-serif;text-decoration:none;cursor:pointer;background:#111;color:#fff}.btn.alt{background:#fff;color:#111;border:1px solid var(--line)}.btn.gold{background:var(--gold);color:#111}.btn.warn{background:#fff;color:var(--bad);border:1px solid rgba(139,45,32,.25)}.btn[disabled]{opacity:.55;cursor:not-allowed}
-    .grid{display:grid;grid-template-columns:1.05fr .95fr;gap:14px;margin-top:16px}.panel{background:#fff;border:1px solid var(--line);border-radius:24px;padding:16px}.panel h2{margin:0 0 12px;font-size:1.15rem}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:grid;gap:6px}.field.full{grid-column:1/-1}label{font-size:.76rem;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:#8a7a55}input,select,textarea{width:100%;padding:12px 13px;border-radius:14px;border:1px solid rgba(0,0,0,.12);font:inherit;background:#fff}textarea{min-height:76px;resize:vertical}.score-box{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin-top:12px}.score-box input{font-size:1.6rem;font-weight:900;text-align:center}.versus{font-weight:900;color:#8a7a55}
-    .status{min-height:22px;margin-top:12px;color:var(--muted);font-weight:700}.status.ok{color:var(--ok)}.status.bad{color:var(--bad)}.leader{display:grid;gap:8px}.leader-row,.match-row{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.06)}.rank{width:30px;height:30px;border-radius:999px;background:#111;color:#fff;display:grid;place-items:center;font-weight:900}.name{font-weight:900}.meta{font-size:12px;color:var(--muted)}.rating{font-weight:900;text-align:right}.live-card{padding:12px;border-radius:18px;background:#fbfaf6;border:1px solid rgba(0,0,0,.06);display:grid;gap:10px}.live-score{font-size:2rem;font-weight:900;letter-spacing:-.04em}.pill{display:inline-flex;padding:6px 10px;border-radius:999px;background:rgba(154,130,65,.14);font-size:12px;font-weight:900}
-    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none}
-    @media(max-width:900px){.grid{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.score-box{grid-template-columns:1fr}.versus{text-align:center}.leader-row,.match-row{grid-template-columns:30px 1fr}}
+    .grid{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;margin-top:16px}
+    .panel{background:#fff;border:1px solid var(--line);border-radius:24px;padding:16px}.panel h2{margin:0 0 12px;font-size:1.15rem}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:grid;gap:6px}.field.full{grid-column:1/-1}
+    label{font-size:.76rem;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:#8a7a55}
+    input,select,textarea{width:100%;padding:12px 13px;border-radius:14px;border:1px solid rgba(0,0,0,.12);font:inherit;background:#fff}
+    textarea{min-height:72px;resize:vertical}.score-box{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin-top:12px}.score-box input{font-size:1.6rem;font-weight:900;text-align:center}.versus{font-weight:900;color:#8a7a55}
+    .status{min-height:22px;margin-top:12px;color:var(--muted);font-weight:700}.status.ok{color:var(--ok)}.status.bad{color:var(--bad)}
+    .list{display:grid;gap:8px}.item{padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:#fbfaf6}.item strong{display:block}.item small{color:var(--muted)}
+    .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none}
+    @media(max-width:760px){body{padding:10px}.shell{padding:16px;border-radius:22px}.form-grid{grid-template-columns:1fr}.score-box{grid-template-columns:1fr}.versus{text-align:center}}
   </style>
 </head>
-<body data-game-watermark="soft">
-  <main class="wrap"><section class="shell">
-    <div class="top">
-      <div class="brand"><img src="./logo.png" alt="Logo"><div><h1>Klaverjassen scorer</h1><div class="muted">Runtime v673: opslag, live-score, ELO en historie via één Klaverjas-contract.</div></div></div>
-      <div class="actions"><a class="btn alt" href="./index.html">Home</a><a class="btn alt" href="./klaverjas_live.html">Live</a><a class="btn alt" href="./leaderboard.html">Ranglijst</a></div>
-    </div>
-    <div class="grid">
-      <section class="panel">
-        <h2>Wedstrijd invoeren</h2>
-        <div class="form-grid">
-          <div class="field"><label>Team A speler 1</label><select id="a1"></select></div>
-          <div class="field"><label>Team A speler 2</label><select id="a2"></select></div>
-          <div class="field"><label>Team B speler 1</label><select id="b1"></select></div>
-          <div class="field"><label>Team B speler 2</label><select id="b2"></select></div>
-          <div class="field"><label>Roem team A</label><input id="roemA" type="number" step="1" min="0" value="0"></div>
-          <div class="field"><label>Roem team B</label><input id="roemB" type="number" step="1" min="0" value="0"></div>
-          <div class="field full"><label>Notitie</label><textarea id="notes" placeholder="Bijv. mars, natje, bijzonder potje"></textarea></div>
+<body>
+  <main class="wrap">
+    <section class="shell">
+      <div class="top">
+        <div class="brand">
+          <img src="./logo.png" alt="Logo">
+          <div>
+            <h1>Klaverjassen scorer</h1>
+            <p class="muted">Gewoon eindstand invoeren. Geen lobby, geen live-pot verplicht.</p>
+          </div>
         </div>
-        <div class="score-box"><input id="scoreA" type="number" step="1" value="0" aria-label="Score Team A"><span class="versus">tegen</span><input id="scoreB" type="number" step="1" value="0" aria-label="Score Team B"></div>
-        <div class="row" style="margin-top:14px"><button class="btn gold" id="saveBtn" type="button">Opslaan</button><button class="btn alt" id="startLiveBtn" type="button">Start live-pot</button><button class="btn alt" id="resetBtn" type="button">Leegmaken</button></div>
-        <div id="status" class="status"></div>
-      </section>
-      <section class="panel">
-        <h2>Live pot</h2>
-        <div id="liveBox" class="live-card"><div class="muted">Nog geen live-pot geladen.</div></div>
-        <h2 style="margin-top:16px">Ranglijst</h2>
-        <div id="leaderboard" class="leader"><div class="muted">Laden…</div></div>
-      </section>
-    </div>
-    <section class="panel" style="margin-top:14px"><h2>Recente wedstrijden</h2><div id="recent" class="leader"><div class="muted">Laden…</div></div></section>
-  </section></main>
-  <div class="site-credit-watermark" data-version-watermark>v673 · Made by Bruis</div>
+        <div class="actions">
+          <a class="btn alt" href="./index.html">Home</a>
+          <a class="btn alt" href="./klaverjas_live.html">Live</a>
+          <a class="btn alt" href="./leaderboard.html">Ranglijst</a>
+        </div>
+      </div>
+
+      <div class="grid">
+        <section class="panel">
+          <h2>Wedstrijd invoeren</h2>
+          <div class="form-grid">
+            <div class="field"><label>Team A speler 1</label><select id="a1"></select></div>
+            <div class="field"><label>Team A speler 2</label><select id="a2"></select></div>
+            <div class="field"><label>Team B speler 1</label><select id="b1"></select></div>
+            <div class="field"><label>Team B speler 2</label><select id="b2"></select></div>
+            <div class="field"><label>Roem Team A</label><input id="roemA" type="number" inputmode="numeric" value="0"></div>
+            <div class="field"><label>Roem Team B</label><input id="roemB" type="number" inputmode="numeric" value="0"></div>
+            <div class="field full"><label>Notitie</label><textarea id="notes" placeholder="Bijv. mars, natje, bijzonder potje"></textarea></div>
+          </div>
+          <div class="score-box">
+            <input id="scoreA" type="number" inputmode="numeric" value="0" aria-label="Score team A">
+            <span class="versus">tegen</span>
+            <input id="scoreB" type="number" inputmode="numeric" value="0" aria-label="Score team B">
+          </div>
+          <div class="row" style="margin-top:14px">
+            <button class="btn gold" id="saveBtn" type="button">Opslaan</button>
+            <button class="btn alt" id="clearBtn" type="button">Leegmaken</button>
+          </div>
+          <div id="status" class="status"></div>
+        </section>
+
+        <section class="panel">
+          <h2>Ranglijst</h2>
+          <div id="ladder" class="list"><div class="muted">Laden…</div></div>
+        </section>
+
+        <section class="panel">
+          <h2>Recente wedstrijden</h2>
+          <div id="recent" class="list"><div class="muted">Laden…</div></div>
+        </section>
+      </div>
+    </section>
+  </main>
+  <div class="site-credit-watermark" data-version-watermark>v685 · Made by Bruis</div>
+
   <script>
   (function(){
     const rt = window.GEJAST_KLAVERJAS_RUNTIME;
-    const $ = (id) => document.getElementById(id);
-    function setStatus(msg, tone){ const el=$('status'); el.textContent=msg||''; el.className='status '+(tone||''); }
-    function optionHtml(names){ return '<option value="">Kies speler</option>' + names.map((n)=>`<option value="${rt.escapeHtml(n)}">${rt.escapeHtml(n)}</option>`).join(''); }
-    async function fillNames(){ const names = await rt.loadNames(); const html = optionHtml(names); ['a1','a2','b1','b2'].forEach((id)=>$(id).innerHTML=html); }
-    function payload(){ return { team_a_names:[$('a1').value,$('a2').value], team_b_names:[$('b1').value,$('b2').value], team_a_score:Number($('scoreA').value||0), team_b_score:Number($('scoreB').value||0), roem_a:Number($('roemA').value||0), roem_b:Number($('roemB').value||0), notes:$('notes').value.trim() }; }
-    function reset(){ ['a1','a2','b1','b2'].forEach((id)=>$(id).value=''); $('scoreA').value='0'; $('scoreB').value='0'; $('roemA').value='0'; $('roemB').value='0'; $('notes').value=''; setStatus(''); }
-    function renderBundle(bundle){
-      const board = (bundle && bundle.leaderboard) || [];
-      $('leaderboard').innerHTML = board.length ? board.slice(0,8).map((row,idx)=>`<div class="leader-row"><span class="rank">${idx+1}</span><div><div class="name">${rt.escapeHtml(row.player_name||'Onbekend')}</div><div class="meta">${row.matches_played||0} potjes · ${row.wins||0} winst · ${row.losses||0} verlies</div></div><div class="rating">${Math.round(Number(row.rating||1000))}<div class="meta">ELO</div></div></div>`).join('') : '<div class="muted">Nog geen Klaverjasdata.</div>';
-      const recent = (bundle && bundle.recent_matches) || [];
-      $('recent').innerHTML = recent.length ? recent.slice(0,10).map((m)=>`<div class="match-row"><span class="rank">${m.winner_team==='team_a'?'A':'B'}</span><div><div class="name">${rt.escapeHtml((m.team_a_names||[]).join(' & '))} · ${m.team_a_score} - ${m.team_b_score} · ${rt.escapeHtml((m.team_b_names||[]).join(' & '))}</div><div class="meta">${rt.fmtDate(m.finished_at)} · ${rt.escapeHtml(m.notes||'')}</div></div><div class="rating">${rt.escapeHtml(m.status||'finished')}</div></div>`).join('') : '<div class="muted">Nog geen recente wedstrijden.</div>';
+    const $ = (id)=>document.getElementById(id);
+    const selects = ['a1','a2','b1','b2'].map($);
+    function setStatus(msg='', tone=''){ const el=$('status'); el.textContent=msg; el.className='status '+tone; }
+    function optionHtml(names){ return '<option value="">Kies speler</option>' + (names||[]).map((name)=>`<option value="${rt.escapeHtml(name)}">${rt.escapeHtml(name)}</option>`).join(''); }
+    async function loadNames(){
+      try {
+        const names = await rt.loadNames();
+        const html = optionHtml(names);
+        selects.forEach((s)=>{ s.innerHTML = html; });
+        if(!names.length) setStatus('Geen actieve spelers gevonden voor deze scope.', 'bad');
+      } catch(err){ setStatus(err.message || 'Namen laden mislukt.', 'bad'); }
     }
-    function renderLive(live){
-      const row = live && (live.live_match || (Array.isArray(live.live_matches) && live.live_matches[0]));
-      if(!row){ $('liveBox').innerHTML='<div class="muted">Geen actieve live Klaverjas-pot.</div>'; return; }
-      $('liveBox').innerHTML = `<div><span class="pill">${rt.escapeHtml(row.status||'live')}</span></div><div class="live-score">${Number(row.team_a_score||0)} - ${Number(row.team_b_score||0)}</div><div><strong>${rt.escapeHtml((row.team_a_names||[]).join(' & '))}</strong><br><span class="muted">tegen</span><br><strong>${rt.escapeHtml((row.team_b_names||[]).join(' & '))}</strong></div><a class="btn alt" href="${rt.liveHref(row.client_match_id)}">Open live scherm</a>`;
+    function payload(){
+      return {
+        team_a_names: [$('a1').value, $('a2').value],
+        team_b_names: [$('b1').value, $('b2').value],
+        team_a_score: Number($('scoreA').value||0),
+        team_b_score: Number($('scoreB').value||0),
+        roem_a: Number($('roemA').value||0),
+        roem_b: Number($('roemB').value||0),
+        notes: $('notes').value || ''
+      };
     }
-    async function refresh(){ try{ const [bundle,live] = await Promise.all([rt.getBundle(), rt.getLive(null).catch(()=>null)]); renderBundle(bundle); renderLive(live); }catch(err){ setStatus(err.message||'Laden mislukt','bad'); } }
-    $('saveBtn').addEventListener('click', async()=>{ try{ setStatus('Opslaan…'); const res = await rt.saveMatch(payload()); setStatus('Wedstrijd opgeslagen. ELO is bijgewerkt.','ok'); await refresh(); }catch(err){ setStatus(err.message||'Opslaan mislukt','bad'); } });
-    $('startLiveBtn').addEventListener('click', async()=>{ try{ setStatus('Live-pot starten…'); const res = await rt.startLive(payload()); const id = res && (res.client_match_id || res.live_match && res.live_match.client_match_id); setStatus('Live-pot gestart.','ok'); window.location.href = rt.liveHref(id); }catch(err){ setStatus(err.message||'Live starten mislukt','bad'); } });
-    $('resetBtn').addEventListener('click', reset);
-    fillNames().catch((err)=>setStatus(err.message||'Spelers laden mislukt','bad'));
-    refresh();
+    async function save(){
+      const btn=$('saveBtn'); const old=btn.textContent; btn.disabled=true; btn.textContent='Opslaan…';
+      try {
+        setStatus('Opslaan…');
+        await rt.saveMatch(payload());
+        setStatus('Wedstrijd opgeslagen.', 'ok');
+        clear(false);
+        await loadRuntime();
+      } catch(err){ setStatus(err.message || 'Opslaan mislukt.', 'bad'); }
+      finally { btn.disabled=false; btn.textContent=old; }
+    }
+    function clear(clearStatus=true){
+      selects.forEach((s)=>{ s.value=''; });
+      ['roemA','roemB','scoreA','scoreB'].forEach((id)=>$(id).value='0');
+      $('notes').value='';
+      if(clearStatus) setStatus('');
+    }
+    function renderLadder(rows){
+      const list = Array.isArray(rows) ? rows : [];
+      $('ladder').innerHTML = list.length ? list.slice(0,10).map((r,i)=>`<div class="item"><strong>#${i+1} ${rt.escapeHtml(r.player_name||r.display_name||'Speler')}</strong><small>ELO ${Math.round(Number(r.elo_rating||r.rating||1000))} · ${Number(r.games_played||r.matches_played||0)} potjes</small></div>`).join('') : '<div class="muted">Nog geen ranglijstdata.</div>';
+    }
+    function renderRecent(rows){
+      const list = Array.isArray(rows) ? rows : [];
+      $('recent').innerHTML = list.length ? list.slice(0,10).map((r)=>`<div class="item"><strong>${rt.escapeHtml((r.team_a_names||[]).join(' & ') || r.team_a || 'Team A')} — ${rt.escapeHtml((r.team_b_names||[]).join(' & ') || r.team_b || 'Team B')}</strong><small>${Number(r.team_a_score||r.score_a||0)} - ${Number(r.team_b_score||r.score_b||0)} · ${rt.fmtDate(r.finished_at||r.created_at)}</small></div>`).join('') : '<div class="muted">Nog geen recente wedstrijden.</div>';
+    }
+    async function loadRuntime(){
+      try {
+        const [ladder, bundle] = await Promise.allSettled([rt.getLeaderboard(), rt.getBundle()]);
+        renderLadder(ladder.status==='fulfilled' ? (ladder.value.leaderboard || ladder.value.players || ladder.value || []) : []);
+        const b = bundle.status==='fulfilled' ? bundle.value : {};
+        renderRecent(b.recent_matches || b.matches || []);
+      } catch(_){
+        renderLadder([]); renderRecent([]);
+      }
+    }
+    $('saveBtn').addEventListener('click', save);
+    $('clearBtn').addEventListener('click', ()=>clear(true));
+    loadNames();
+    loadRuntime();
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
