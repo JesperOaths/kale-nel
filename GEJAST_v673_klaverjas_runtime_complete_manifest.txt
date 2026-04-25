@@ -1,0 +1,25 @@
+GEJAST v673 — Klaverjassen Runtime Complete Manifest
+
+Frontend zip:
+GEJAST_v673_klaverjas_runtime_complete_actual_files_flat.zip
+
+SQL:
+GEJAST_v673_klaverjas_runtime_complete.sql
+
+Files in frontend zip:
+VERSION
+admin.html
+admin_klaverjas_runtime.html
+gejast-config.js
+gejast-klaverjas-runtime.js
+klaverjas_live.html
+klaverjas_scorer_v596_repo_ready.html
+klaverjas_spectator.html
+leaderboard.html
+score.html
+scorer.html
+PATCH_NOTES_v673_KLAVERJAS_RUNTIME_COMPLETE.txt
+PATCH_TEST_REPORT_v673.txt
+GEJAST_v673_klaverjas_runtime_complete_manifest.txt
+
+No SQL is inside the zip.

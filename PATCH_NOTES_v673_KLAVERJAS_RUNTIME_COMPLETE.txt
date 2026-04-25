@@ -1,0 +1,43 @@
+GEJAST v673 — Klaverjassen Runtime Complete
+
+Scope:
+- Completes the Klaverjassen runtime path as a real implementation bundle.
+- Adds scorer/live/history/ELO/admin runtime ownership without changing unrelated game runtimes.
+
+Frontend files:
+- VERSION
+- gejast-config.js
+- gejast-klaverjas-runtime.js
+- klaverjas_scorer_v596_repo_ready.html
+- scorer.html
+- score.html
+- klaverjas_live.html
+- klaverjas_spectator.html
+- leaderboard.html
+- admin_klaverjas_runtime.html
+- admin.html
+- PATCH_NOTES_v673_KLAVERJAS_RUNTIME_COMPLETE.txt
+- PATCH_TEST_REPORT_v673.txt
+- GEJAST_v673_klaverjas_runtime_complete_manifest.txt
+
+Separate SQL:
+- GEJAST_v673_klaverjas_runtime_complete.sql
+
+Implemented behavior:
+- 2v2 Klaverjas match entry.
+- Duplicate-player validation.
+- No-draw validation.
+- Durable match storage.
+- Team winner calculation.
+- ELO-style rating rebuild.
+- Public Klaverjas leaderboard.
+- Recent match history.
+- Live match start/update/finish.
+- Live finish writes a real stored match and rebuilds ratings.
+- Admin audit page.
+- Admin soft-delete + rating rebuild.
+
+Boundary:
+- Does not delete or rewrite older legacy Klaverjas tables.
+- v673 stores canonical Klaverjas runtime data in v673 tables.
+- Live proof still requires upload + SQL run + browser test.

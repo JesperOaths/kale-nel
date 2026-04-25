@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v672',
+    VERSION:'v673',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -680,7 +680,7 @@ function buildRequestUrl(returnTo, scope){
 
   function ensureScopeHardeningRuntime(){
     try {
-      if (window.GEJAST_SCOPE_HARDENING && window.GEJAST_SCOPE_HARDENING.version === 'v672') return;
+      if (window.GEJAST_SCOPE_HARDENING && window.GEJAST_SCOPE_HARDENING.version === 'v673') return;
       if (document.querySelector('script[data-gejast-scope-hardening]')) return;
       const script = document.createElement('script');
       script.src = `./gejast-scope-hardening.js?${effectiveVersion}`;

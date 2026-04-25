@@ -1,0 +1,17 @@
+GEJAST v673 test report
+
+Static checks performed:
+- gejast-klaverjas-runtime.js passed node --check.
+- frontend bundle contains 0 .py files.
+- frontend bundle contains 0 .sql files.
+- SQL is delivered separately.
+- bundle is flat, no nested folders.
+- patched files target v673.
+
+Runtime proof still required after deployment:
+- run GEJAST_v673_klaverjas_runtime_complete.sql in Supabase.
+- upload frontend zip to GitHub/site.
+- open score.html and save a 2v2 match.
+- open klaverjas_live.html and test start/update/finish.
+- open leaderboard.html and verify ratings.
+- open admin_klaverjas_runtime.html and test audit/rebuild/delete with admin session.
