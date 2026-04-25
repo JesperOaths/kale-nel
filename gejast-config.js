@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v683',
+    VERSION:'v684',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -635,7 +635,7 @@ function buildRequestUrl(returnTo, scope){
 
 
 
-  // v683 fast runtime helpers: keep pages visible and prevent long RPC waits from blocking boot.
+  // v684 fast runtime helpers: keep pages visible and prevent long RPC waits from blocking boot.
   const FAST_RUNTIME = window.GEJAST_FAST_RUNTIME || (function(){
     const DEFAULT_TIMEOUT_MS = 2200;
     function timeoutPromise(ms, label){
@@ -679,7 +679,7 @@ function buildRequestUrl(returnTo, scope){
       setTimeout(showPageNow, 0);
     }
     setTimeout(showPageNow, 650);
-    return { VERSION:'v683', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
+    return { VERSION:'v684', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
   })();
   window.GEJAST_FAST_RUNTIME = FAST_RUNTIME;
 
@@ -731,7 +731,7 @@ function buildRequestUrl(returnTo, scope){
 
   function ensureScopeHardeningRuntime(){
     try {
-      if (window.GEJAST_SCOPE_HARDENING && window.GEJAST_SCOPE_HARDENING.version === 'v683') return;
+      if (window.GEJAST_SCOPE_HARDENING && window.GEJAST_SCOPE_HARDENING.version === 'v684') return;
       if (document.querySelector('script[data-gejast-scope-hardening]')) return;
       const script = document.createElement('script');
       script.src = `./gejast-scope-hardening.js?${effectiveVersion}`;

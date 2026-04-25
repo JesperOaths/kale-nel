@@ -1,0 +1,13 @@
+GEJAST v684 profiles/pikken/paardenrace repair manifest
+
+Files:
+- PATCH_NOTES_v684_PROFILES_PIKKEN_PAARDENRACE_REPAIR.txt
+- VERSION
+- admin.html
+- gejast-config.js
+- gejast-paardenrace.js
+- gejast-pikken-contract.js
+- gejast-pikken.js
+- paardenrace.html
+- pikken.html
+- profiles.html

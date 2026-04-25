@@ -1,0 +1,11 @@
+GEJAST v684 — Profiles, Pikken and Paardenrace Runtime Repair
+
+This patch fixes the concrete live failures reported after v683/v683a:
+
+- removes the Game Group B status/proof panels from Pikken and Paardenrace user pages
+- keeps Pikken's active table below the lobby creation section in a single-column layout
+- makes profiles load active players via a new fast profile RPC
+- fixes Pikken lobby creation by resolving account sessions to real public.players IDs instead of hash-only IDs
+- adds fast Pikken create/join/open/live/destroy wrappers
+- enhances the Paardenrace session resolver and adds fast create/join/state/leave/disband/open/stats wrappers
+- adds a compatibility get_game_group_b_bundle_v661 RPC so stale bridge calls no longer break pages if an older file is still cached
