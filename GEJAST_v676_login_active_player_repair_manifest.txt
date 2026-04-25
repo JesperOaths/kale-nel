@@ -1,0 +1,19 @@
+GEJAST v676 — Login active-player repair manifest
+
+Frontend zip contents:
+- VERSION
+- gejast-config.js
+- gejast-account-runtime.js
+- login.html
+- admin_account_runtime.html
+- PATCH_NOTES_v676_LOGIN_ACTIVE_PLAYER_REPAIR.txt
+- GEJAST_v676_login_active_player_repair_manifest.txt
+
+Separate SQL:
+- GEJAST_v676_login_active_player_repair.sql
+
+Checks:
+- flat zip
+- no .py files
+- no .sql inside zip
+- node --check passed for gejast-config.js and gejast-account-runtime.js

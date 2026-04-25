@@ -1,0 +1,19 @@
+GEJAST v676 — Login active-player repair
+
+Problem fixed:
+- v675 stopped the empty dropdown, but it could still show a name that was not an actual active login player.
+- That is why selecting Bruis could still return player_not_found_or_not_active: the name existed in a name/scope/requestable source, but the login backend did not see an active player account with a PIN.
+
+Frontend changes:
+- login.html now loads cached active names immediately and refreshes active login names in the background.
+- gejast-account-runtime.js now uses get_login_active_names_v676 first and no longer uses requestable names as login names.
+- login now prefers account_login_bridge_v676, which bridges the legacy login_player RPC and the v671 account layer.
+- user-facing errors explain the real cause when a name is not an active login player.
+
+Admin changes:
+- admin_account_runtime.html now includes Login diagnose / reparatie.
+- Admin can diagnose a name across legacy players, v671 account players, allowed_usernames, and scope membership.
+- Admin can activate/reset login for a name with a new 4-digit PIN.
+
+SQL required:
+- Run GEJAST_v676_login_active_player_repair.sql separately.
