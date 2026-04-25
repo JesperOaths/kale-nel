@@ -1,7 +1,7 @@
 (function(){
-  if (window.GEJAST_ACCOUNT_RUNTIME && window.GEJAST_ACCOUNT_RUNTIME.VERSION === 'v687') return;
+  if (window.GEJAST_ACCOUNT_RUNTIME && window.GEJAST_ACCOUNT_RUNTIME.VERSION === 'v688') return;
   const cfg = window.GEJAST_CONFIG || {};
-  const VERSION = 'v687';
+  const VERSION = 'v688';
   const SESSION_KEYS = (Array.isArray(cfg.PLAYER_SESSION_KEYS) && cfg.PLAYER_SESSION_KEYS.length) ? cfg.PLAYER_SESSION_KEYS : ['jas_session_token_v11','jas_session_token_v10'];
   const ADMIN_KEYS = ['jas_admin_session_v8','gejast_admin_session_token','jas_admin_session_token'];
   const LOGIN_CACHE_PREFIX = 'gejast_login_active_names_v687_';
@@ -45,7 +45,7 @@
       const value = queue.shift();
       if (!value || typeof value !== 'object' || seen.has(value)) continue;
       seen.add(value);
-      ['names','players','profiles','items','rows','data','leaderboard','active_names'].forEach((key)=>{ if (Array.isArray(value[key])) out.push(...value[key]); });
+      ['names','players','profiles','items','rows','data','leaderboard','active_names','activated_names','login_names'].forEach((key)=>{ if (Array.isArray(value[key])) out.push(...value[key]); });
       ['bundle','viewer','player','unified','runtime','homepage','profiles'].forEach((key)=>{ if (value[key] && typeof value[key] === 'object') queue.push(value[key]); });
       if (value.games && typeof value.games === 'object') queue.push(value.games);
     }
@@ -62,24 +62,44 @@
   }
   function namesFromPayload(raw){ return normalizeNames(extractNameRows(raw).filter((row)=>rowScopeMatches(row) && activeNameSignal(row))); }
 
+  async function fetchLoginNamesFromConfig(){
+    const loaders = [
+      cfg.getActivatedPlayerNamesForScope,
+      cfg.fetchScopedActivePlayerNames
+    ].filter((fn)=>typeof fn === 'function');
+    for (const loader of loaders) {
+      try {
+        const names = normalizeNames(await loader(scope()));
+        if (names.length) return names;
+      } catch (_) {}
+    }
+    try {
+      if (window.GEJAST_LOGIN_NAMES_FALLBACK && typeof window.GEJAST_LOGIN_NAMES_FALLBACK.load === 'function') {
+        const names = normalizeNames(await window.GEJAST_LOGIN_NAMES_FALLBACK.load());
+        if (names.length) return names;
+      }
+    } catch (_) {}
+    return [];
+  }
+
   async function getLoginNames(){
     const cached = readLoginCache();
-    // One fast authoritative call first: legacy public.players with active=true + pin_hash, plus v687 activated accounts.
-    // Do not use requestable/scope-only/profile names; those caused the polluted dropdown.
+    // One fast authoritative call first, then the committed selector RPC, then the shared config loader.
+    // Do not use requestable/scope-only names; those caused the polluted dropdown.
     const attempts = [
-      { name:'get_login_active_names_v687', body:{site_scope_input:scope()}, options:{timeoutMs:2200} },
-      { name:'get_login_active_names_v687', body:{site_scope_input:scope()}, options:{timeoutMs:2200} },
-      { name:'get_login_active_names_v687', body:{site_scope_input:scope()}, options:{timeoutMs:2200} },
-      { name:'get_login_active_names_v687', body:{site_scope_input:scope()}, options:{timeoutMs:2200} },
-      { name:'get_login_active_names_v687', body:{site_scope_input:scope()}, options:{timeoutMs:2200} }
+      { name:'get_login_active_names_v687', body:{site_scope_input:scope()}, options:{timeoutMs:1200} },
+      { name:'get_player_selector_source_v1', body:{site_scope_input:scope()}, options:{timeoutMs:1600} },
+      { name:'get_player_selector_source_v1', body:{session_token:null, site_scope_input:scope()}, options:{timeoutMs:1600} }
     ];
     for (const attempt of attempts) {
       try {
-        const names = await rpc(attempt.name, attempt.body, attempt.options);
+        const names = namesFromPayload(await rpc(attempt.name, attempt.body, attempt.options));
         const clean = writeLoginCache(names);
         if (clean.length) return clean;
       } catch (_) {}
     }
+    const configNames = await fetchLoginNamesFromConfig();
+    if (configNames.length) return writeLoginCache(configNames);
     return cached;
   }
 
@@ -220,7 +240,7 @@
     const cached = readLoginCache();
     if (cached.length) { fillSelect(sel, cached); setStatus('statusBox',`Namen direct uit snelle cache geladen; live controle op achtergrond...`,''); }
     else setStatus('statusBox','Actieve loginnamen laden...','');
-    getLoginNames().then((names)=>{ fillSelect(sel,names); if(names.length) setStatus('statusBox',`${names.length} echte actieve loginspeler(s) geladen.`,'ok'); else setStatus('statusBox','Geen actieve loginspelers gevonden. Vraag de beheerder om je login te activeren/resetten; requestable/familie/scope-only namen worden expres niet getoond.','warn'); }).catch((err)=>{ setStatus('statusBox', cached.length ? 'Kon namen niet live verversen; cache blijft zichtbaar.' : friendly(err), cached.length ? '' : 'warn'); });
+    getLoginNames().then((names)=>{ fillSelect(sel,names); if(names.length) setStatus('statusBox',`${names.length} actieve loginspeler(s) geladen.`,'ok'); else setStatus('statusBox','Geen actieve loginnamen ontvangen. Controleer of de login-SQL is uitgerold of open Naam aanvragen als je nog geen pincode hebt.','warn'); }).catch((err)=>{ setStatus('statusBox', cached.length ? 'Kon namen niet live verversen; cache blijft zichtbaar.' : friendly(err), cached.length ? '' : 'warn'); });
     getPublicState().then((st)=>{ if(st?.my_name||st?.display_name||st?.player_name) setStatus('statusBox',`Deze browser heeft al een sessie voor ${st.my_name||st.display_name||st.player_name}.`,'ok'); }).catch(()=>{});
     form.addEventListener('submit', async(ev)=>{ ev.preventDefault(); const name=String(sel.value||'').trim(); const p=String(pin.value||'').replace(/\D/g,'').slice(0,4); if(!name) return setStatus('statusBox','Kies eerst je naam.','warn'); if(!/^\d{4}$/.test(p)) return setStatus('statusBox','Voer je 4-cijferige pincode in.','warn'); try{ setBusy(form,true); setStatus('statusBox','Inloggen...'); const out=await login({name,pin:p}); setStatus('statusBox',`Ingelogd als ${out.display_name||out.player_name||name}.`,'ok'); setTimeout(()=>location.href=loginReturnTarget(),350); }catch(err){ setStatus('statusBox',friendly(err),'warn'); }finally{ setBusy(form,false); } });
     const logout=$('logoutBtn'); if(logout) logout.addEventListener('click',()=>{ clearPlayerToken(); setStatus('statusBox','Sessie gewist.','ok'); });
