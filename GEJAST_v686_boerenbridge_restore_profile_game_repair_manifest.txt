@@ -1,0 +1,20 @@
+GEJAST v686 files
+- gejast-config.js
+- gejast-home-gate.js
+- gejast-account-runtime.js
+- gejast-home-profile-runtime.js
+- boerenbridge.html
+- boerenbridge_live.html
+- boerenbridge_spectator.html
+- boerenbridge_vault.html
+- profiles.html
+- gejast-pikken-contract.js
+- gejast-pikken.js
+- pikken.html
+- gejast-paardenrace.js
+- paardenrace.html
+- scorer.html
+- score.html
+- klaverjas_scorer_v596_repo_ready.html
+- VERSION
+- PATCH_NOTES_v686_BOERENBRIDGE_RESTORE_PROFILE_GAME_REPAIR.txt

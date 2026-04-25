@@ -1,0 +1,6 @@
+GEJAST v686 — Boerenbridge restore + profile/game repair
+
+- Boerenbridge user pages restored from known working pre-runtime baseline and bumped to v686.
+- Removes statuslaag/runtime bridge from Boerenbridge.
+- Profiles now call v686 fast active-player source.
+- Pikken/Paardenrace now call v686 fast wrappers.
