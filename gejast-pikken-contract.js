@@ -1,5 +1,5 @@
 (function(){
-  if (window.GEJAST_PIKKEN_CONTRACT && window.GEJAST_PIKKEN_CONTRACT.VERSION === 'v677') return;
+  if (window.GEJAST_PIKKEN_CONTRACT && window.GEJAST_PIKKEN_CONTRACT.VERSION === 'v681') return;
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
   const PLAYER_KEYS = Array.isArray(cfg.PLAYER_SESSION_KEYS) && cfg.PLAYER_SESSION_KEYS.length ? cfg.PLAYER_SESSION_KEYS : ['jas_session_token_v11','jas_session_token_v10'];
@@ -17,6 +17,8 @@
     openLobbies: cfg.PIKKEN_OPEN_LOBBIES_RPC_V666 || 'get_pikken_open_lobbies_public_scoped',
     liveMatches: cfg.PIKKEN_LIVE_MATCHES_RPC_V666 || 'get_pikken_live_matches_public_scoped',
     myActive: 'pikken_find_my_active_game_scoped',
+    createFast: 'pikken_create_lobby_fast_v681',
+    joinFast: 'pikken_join_lobby_fast_v681',
     stats: 'pikken_get_deep_stats_scoped'
   };
   function scope(){
@@ -41,16 +43,17 @@
   async function rpc(name, payload, timeoutMs){
     if (!cfg.SUPABASE_URL) throw new Error('Supabase URL ontbreekt.');
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const timer = controller ? setTimeout(()=>{ try{ controller.abort(); }catch(_){} }, Number(timeoutMs || 9000)) : null;
+    const timer = controller ? setTimeout(()=>{ try{ controller.abort(); }catch(_){} }, Number(timeoutMs || 3600)) : null;
     try {
       const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, { method:'POST', mode:'cors', cache:'no-store', headers:headers(), body:JSON.stringify(payload || {}), signal:controller?controller.signal:undefined });
       const raw = await parse(res);
       return raw && raw[name] !== undefined ? raw[name] : raw;
     } catch (err) {
-      if (err && err.name === 'AbortError') throw new Error('Pikken RPC timeout: server reageert niet binnen 9 seconden.');
+      if (err && err.name === 'AbortError') throw new Error('Pikken RPC timeout: server reageert niet snel genoeg. Controleer v681 SQL / Supabase.');
       throw err;
     } finally { if (timer) clearTimeout(timer); }
   }
+  async function rpcFirst(calls, timeoutMs){ let last=null; for(const call of calls){ try{ return await rpc(call.name, call.payload, call.timeoutMs || timeoutMs || 3600); }catch(err){ last=err; if(!/could not find|schema cache|function|does not exist/i.test(String(err && err.message || err))) break; } } throw last || new Error('Pikken RPC mislukt.'); }
   function cleanCode(v){ return String(v || '').trim().toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8); }
   function requireSession(){
     const token = sessionToken();
@@ -61,19 +64,19 @@
     return token;
   }
   function tokenPayload(extra){ return Object.assign({ session_token: sessionToken() || null, session_token_input: sessionToken() || null, site_scope_input: scope() }, extra || {}); }
-  async function createLobby(config){ requireSession(); return rpc(RPC.create, tokenPayload({ config_input: config || {} }), 9000); }
-  async function joinLobby(code){ requireSession(); return rpc(RPC.join, tokenPayload({ lobby_code_input: cleanCode(code) }), 9000); }
-  async function getState(gameId, code){ return rpc(RPC.state, tokenPayload({ game_id_input: gameId || null, game_id: gameId || null, lobby_code_input: code ? cleanCode(code) : null }), 9000); }
-  async function setReady(gameId, ready){ requireSession(); return rpc(RPC.ready, tokenPayload({ game_id_input: gameId, ready_input: !!ready }), 9000); }
-  async function startGame(gameId){ requireSession(); return rpc(RPC.start, tokenPayload({ game_id_input: gameId }), 9000); }
-  async function placeBid(gameId, count, face){ requireSession(); return rpc(RPC.bid, tokenPayload({ game_id_input: gameId, bid_count_input: Number(count), bid_face_input: Number(face) }), 9000); }
-  async function rejectBid(gameId){ requireSession(); return rpc(RPC.reject, tokenPayload({ game_id_input: gameId }), 9000); }
-  async function castVote(gameId, vote){ requireSession(); return rpc(RPC.vote, tokenPayload({ game_id_input: gameId, vote_input: !!vote }), 9000); }
-  async function leaveGame(gameId){ requireSession(); return rpc(RPC.leave, tokenPayload({ game_id_input: gameId }), 9000); }
-  async function destroyGame(gameId){ requireSession(); return rpc(RPC.destroy, tokenPayload({ game_id_input: gameId }), 9000); }
-  async function openLobbies(){ return rpc(RPC.openLobbies, { site_scope_input: scope() }, 7000); }
-  async function liveMatches(){ return rpc(RPC.liveMatches, { site_scope_input: scope() }, 7000); }
+  async function createLobby(config){ requireSession(); const payload=tokenPayload({ config_input: config || {} }); return rpcFirst([{name:RPC.createFast,payload},{name:RPC.create,payload}], 3600); }
+  async function joinLobby(code){ requireSession(); const payload=tokenPayload({ lobby_code_input: cleanCode(code) }); return rpcFirst([{name:RPC.joinFast,payload},{name:RPC.join,payload}], 3600); }
+  async function getState(gameId, code){ return rpc(RPC.state, tokenPayload({ game_id_input: gameId || null, game_id: gameId || null, lobby_code_input: code ? cleanCode(code) : null }), 3600); }
+  async function setReady(gameId, ready){ requireSession(); return rpc(RPC.ready, tokenPayload({ game_id_input: gameId, ready_input: !!ready }), 3600); }
+  async function startGame(gameId){ requireSession(); return rpc(RPC.start, tokenPayload({ game_id_input: gameId }), 3600); }
+  async function placeBid(gameId, count, face){ requireSession(); return rpc(RPC.bid, tokenPayload({ game_id_input: gameId, bid_count_input: Number(count), bid_face_input: Number(face) }), 3600); }
+  async function rejectBid(gameId){ requireSession(); return rpc(RPC.reject, tokenPayload({ game_id_input: gameId }), 3600); }
+  async function castVote(gameId, vote){ requireSession(); return rpc(RPC.vote, tokenPayload({ game_id_input: gameId, vote_input: !!vote }), 3600); }
+  async function leaveGame(gameId){ requireSession(); return rpc(RPC.leave, tokenPayload({ game_id_input: gameId }), 3600); }
+  async function destroyGame(gameId){ requireSession(); return rpc(RPC.destroy, tokenPayload({ game_id_input: gameId }), 3600); }
+  async function openLobbies(){ return rpc(RPC.openLobbies, { site_scope_input: scope() }, 2500); }
+  async function liveMatches(){ return rpc(RPC.liveMatches, { site_scope_input: scope() }, 2500); }
   async function myActive(){ return rpc(RPC.myActive, tokenPayload({})); }
   async function stats(){ return rpc(RPC.stats, { site_scope_input: scope(), session_token: sessionToken() || null }); }
-  window.GEJAST_PIKKEN_CONTRACT = { VERSION:'v677', scope, sessionToken, requireSession, rpc, cleanCode, createLobby, joinLobby, getState, setReady, startGame, placeBid, rejectBid, castVote, leaveGame, destroyGame, openLobbies, liveMatches, myActive, stats };
+  window.GEJAST_PIKKEN_CONTRACT = { VERSION:'v681', scope, sessionToken, requireSession, rpc, cleanCode, createLobby, joinLobby, getState, setReady, startGame, placeBid, rejectBid, castVote, leaveGame, destroyGame, rpcFirst, openLobbies, liveMatches, myActive, stats };
 })();

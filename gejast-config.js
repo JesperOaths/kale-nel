@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v680',
+    VERSION:'v681',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -633,9 +633,60 @@ function buildRequestUrl(returnTo, scope){
     return true;
   }
 
+
+
+  // v681 fast runtime helpers: keep pages visible and prevent long RPC waits from blocking boot.
+  const FAST_RUNTIME = window.GEJAST_FAST_RUNTIME || (function(){
+    const DEFAULT_TIMEOUT_MS = 2600;
+    function timeoutPromise(ms, label){
+      return new Promise((_, reject)=>setTimeout(()=>reject(new Error(label || 'RPC timeout')), Number(ms || DEFAULT_TIMEOUT_MS)));
+    }
+    function race(promise, ms, label){
+      return Promise.race([promise, timeoutPromise(ms, label)]);
+    }
+    async function fetchJson(url, options, ms){
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timer = controller ? setTimeout(()=>{ try{ controller.abort(); }catch(_){} }, Number(ms || DEFAULT_TIMEOUT_MS)) : null;
+      try{
+        const finalOptions = Object.assign({}, options || {}, controller ? { signal: controller.signal } : {});
+        const res = await fetch(url, finalOptions);
+        const text = await res.text();
+        let data = null;
+        try { data = text ? JSON.parse(text) : null; } catch (_) { throw new Error(text || ('HTTP ' + res.status)); }
+        if (!res.ok) throw new Error((data && (data.message || data.error || data.details || data.hint)) || ('HTTP ' + res.status));
+        return data;
+      } catch(err){
+        if (err && err.name === 'AbortError') throw new Error('RPC timeout');
+        throw err;
+      } finally { if (timer) clearTimeout(timer); }
+    }
+    function idle(fn, timeout){
+      if ('requestIdleCallback' in window) return requestIdleCallback(fn, { timeout: timeout || 1200 });
+      return setTimeout(fn, 80);
+    }
+    function showPageNow(){
+      try {
+        if (document.body) {
+          document.body.classList.remove('boot-pending');
+          document.body.classList.remove('page-loading');
+          document.body.classList.add('homepage-ready');
+        }
+      } catch (_) {}
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', ()=>setTimeout(showPageNow, 250), { once:true });
+    } else {
+      setTimeout(showPageNow, 0);
+    }
+    setTimeout(showPageNow, 1200);
+    return { VERSION:'v681', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
+  })();
+  window.GEJAST_FAST_RUNTIME = FAST_RUNTIME;
+
   window.GEJAST_CONFIG = Object.assign({}, window.GEJAST_CONFIG || {}, CONFIG, {
     VERSION: effectiveVersion,
     VERSION_LABEL: label,
+    FAST_RUNTIME,
     ensureVersionWatermark,
     applyVersionLabel,
     normalizeProfileImageUrl,

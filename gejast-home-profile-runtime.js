@@ -1,7 +1,7 @@
 (function(){
-  if (window.GEJAST_HOME_PROFILE_RUNTIME) return;
+  if (window.GEJAST_HOME_PROFILE_RUNTIME && window.GEJAST_HOME_PROFILE_RUNTIME.VERSION === 'v681') return;
   const cfg = window.GEJAST_CONFIG || {};
-  const VERSION = 'v670';
+  const VERSION = 'v681';
   const RPC = {
     home:'get_homepage_runtime_bundle_v670',
     profiles:'get_profiles_runtime_bundle_v670',
@@ -16,7 +16,7 @@
   function adminSession(){ try { if(window.GEJAST_ADMIN_SESSION && window.GEJAST_ADMIN_SESSION.getToken) return String(window.GEJAST_ADMIN_SESSION.getToken()||'').trim(); } catch(_){} return localStorage.getItem('jas_admin_session_v8') || sessionStorage.getItem('jas_admin_session_v8') || ''; }
   function headers(){ return {'Content-Type':'application/json',apikey:cfg.SUPABASE_PUBLISHABLE_KEY||'',Authorization:`Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY||''}`,Accept:'application/json'}; }
   async function parse(res){ const txt=await res.text(); let data=null; try{ data=txt?JSON.parse(txt):null; }catch(_){ throw new Error(txt||`HTTP ${res.status}`); } if(!res.ok) throw new Error(data?.message||data?.error||data?.details||data?.hint||`HTTP ${res.status}`); return data && data[Object.keys(data)[0]] !== undefined && Object.keys(data).length===1 ? data[Object.keys(data)[0]] : data; }
-  async function rpc(name, payload){ if(!cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY) throw new Error('Supabase config ontbreekt.'); const raw=await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`,{method:'POST',mode:'cors',cache:'no-store',headers:headers(),body:JSON.stringify(payload||{})}).then(parse); return raw && raw[name] !== undefined ? raw[name] : raw; }
+  async function rpc(name, payload, timeoutMs){ if(!cfg.SUPABASE_URL || !cfg.SUPABASE_PUBLISHABLE_KEY) throw new Error('Supabase config ontbreekt.'); const fast = window.GEJAST_FAST_RUNTIME; const opts={method:'POST',mode:'cors',cache:'no-store',headers:headers(),body:JSON.stringify(payload||{})}; const raw = fast && fast.fetchJson ? await fast.fetchJson(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, opts, timeoutMs||2200).then((data)=> data && data[Object.keys(data)[0]] !== undefined && Object.keys(data).length===1 ? data[Object.keys(data)[0]] : data) : await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`,opts).then(parse); return raw && raw[name] !== undefined ? raw[name] : raw; }
   function playerHref(name){ return `./player.html?player=${encodeURIComponent(name||'')}&scope=${encodeURIComponent(scope())}`; }
   function ladderHref(game){ if(game==='beerpong') return './beerpong.html'; if(game==='boerenbridge') return './ladder.html?game=boerenbridge'; return './leaderboard.html'; }
   function gameLabel(game){ return ({klaverjas:'Klaverjassen',klaverjassen:'Klaverjassen',boerenbridge:'Boerenbridge',beerpong:'Beerpong'}[String(game||'').toLowerCase()] || game || 'Spel'); }
@@ -100,12 +100,12 @@
   async function boot(){
     const path=(location.pathname||'').split('/').pop() || 'index.html';
     try{
-      if(path==='index.html' || path==='home.html' || path==='') await loadHome();
+      if(path==='index.html' || path==='home.html' || path==='') { return; }
       else if(path==='profiles.html') await loadProfiles();
       else if(path==='player.html') await loadPlayer();
       else if(path==='admin_home_profiles_runtime.html') await loadAdmin();
     }catch(err){ console.warn('[home-profile-runtime]', err); const node=document.querySelector('.main-card,.sheet,.card,main')||document.body; if(!$('ghprError')){ injectStyles(); node.insertAdjacentHTML('beforeend', `<div id="ghprError" class="ghpr-alert">Home/profiel runtime kon niet laden: ${esc(err.message||err)}</div>`); } }
   }
   window.GEJAST_HOME_PROFILE_RUNTIME={VERSION,rpc,loadHome,loadProfiles,loadPlayer,loadAdmin,renderHome,renderProfiles,renderPlayer};
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot, {once:true}); else boot();
+  function start(){ const fast=window.GEJAST_FAST_RUNTIME; if(fast&&fast.idle) fast.idle(()=>boot(), 1500); else setTimeout(()=>boot(),120); } if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', start, {once:true}); else start();
 })();

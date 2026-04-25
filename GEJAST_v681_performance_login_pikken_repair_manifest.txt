@@ -1,0 +1,26 @@
+{
+  "version": "v681",
+  "files": [
+    "VERSION",
+    "gejast-config.js",
+    "gejast-account-runtime.js",
+    "gejast-home-gate.js",
+    "gejast-home-profile-runtime.js",
+    "index.html",
+    "login.html",
+    "profiles.html",
+    "player.html",
+    "gejast-pikken-contract.js",
+    "gejast-pikken.js",
+    "pikken.html",
+    "pikken_live.html",
+    "pikken_stats.html",
+    "admin_pikken.html",
+    "admin_account_runtime.html",
+    "request.html",
+    "activate.html",
+    "PATCH_NOTES_v681_PERFORMANCE_LOGIN_PIKKEN_REPAIR.txt"
+  ],
+  "sql": "GEJAST_v681_performance_login_pikken_repair.sql",
+  "zip_rule": "flat zip, no SQL inside, max 100 files"
+}

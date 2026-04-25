@@ -1,0 +1,21 @@
+GEJAST v681 — sitewide performance, login scope, homepage and Pikken repair
+
+This patch fixes the live problems reported after v679/v680:
+- homepage/index no longer hides behind slow RPC boot
+- duplicated v670 homepage runtime is disabled on index.html
+- gejast-home-profile-runtime no longer adds a second homepage ladder block
+- gejast-home-gate redirects missing sessions directly to login.html with return_to instead of dead-ending at home.html
+- session checks are non-blocking and do not destroy sessions on transient timeout
+- login dropdown uses a stricter/faster v681 active-login RPC and a separate v681 cache
+- Pikken create/join uses fast v681 wrappers first, then falls back to v666 RPCs
+- Pikken RPC timeout is reduced and errors are explicit instead of leaving the button stuck on Maken...
+
+SQL v681 adds:
+- get_login_active_names_v681
+- diagnose_login_name_v681
+- account_login_bridge_v681
+- refreshed _pikken_player_from_session_v666 account/legacy resolver
+- pikken_create_lobby_fast_v681 and pikken_join_lobby_fast_v681 wrappers
+
+Boundary:
+Current active legacy users are not blocked for missing v679 metadata. New active users keep the v679+ metadata policy.
