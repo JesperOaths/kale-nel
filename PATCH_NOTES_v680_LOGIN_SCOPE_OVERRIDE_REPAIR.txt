@@ -1,0 +1,15 @@
+GEJAST v680 - Login scope override repair
+
+Fixes: family users such as Jesper appeared in the friends login dropdown because the active-login RPC trusted legacy public.players.site_scope when that column existed.
+
+Implementation:
+- Adds get_login_active_names_v680.
+- Membership/known-family scope now overrides legacy public.players.site_scope for login dropdown filtering.
+- Seeds/repairs known family scope memberships: Jesper, Emil, Anouk, Lilian, Sierk, Gunnar, Evi, Anna, Caro, Jesper Alberts, Anouk Alberts.
+- Keeps the legacy active-player rule: active=true + pin_hash present; approved=true is still not required for old legacy players.
+- Keeps current active users unblocked for missing v679 metadata.
+- Adds diagnose_login_name_v680 to explain effective scope.
+
+Expected result:
+- login.html in friends scope no longer shows Jesper.
+- login.html?scope=family shows Jesper if he is active and has a PIN.

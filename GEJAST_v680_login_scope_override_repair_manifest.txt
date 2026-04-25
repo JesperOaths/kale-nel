@@ -1,0 +1,17 @@
+GEJAST v680 - Login scope override repair
+
+Frontend files:
+- VERSION
+- gejast-config.js
+- gejast-account-runtime.js
+- login.html
+- request.html
+- activate.html
+- admin_account_runtime.html
+- PATCH_NOTES_v680_LOGIN_SCOPE_OVERRIDE_REPAIR.txt
+- GEJAST_v680_login_scope_override_repair_manifest.txt
+
+SQL:
+- GEJAST_v680_login_scope_override_repair.sql
+
+No SQL is included inside the zip.
