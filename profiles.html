@@ -7,11 +7,11 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Spelersprofielen</title>
-  <script>window.GEJAST_PAGE_VERSION='v682';</script>
-  <script src="./gejast-config.js?v682"></script>
-  <script src="./gejast-home-gate.js?v682"></script>
-  <script defer src="./gejast-clickable-cards.js?v682"></script>
-  <script defer src="./gejast-scope-context.js?v682"></script><script defer src="./gejast-family-rollout.js?v682"></script>
+  <script>window.GEJAST_PAGE_VERSION='v683';</script>
+  <script src="./gejast-config.js?v683"></script>
+  <script src="./gejast-home-gate.js?v683"></script>
+  <script defer src="./gejast-clickable-cards.js?v683"></script>
+  <script defer src="./gejast-scope-context.js?v683"></script><script defer src="./gejast-family-rollout.js?v683"></script>
   <style>
     :root{--gold:#d4af37;--ink:#1b1711;--paper:rgba(255,250,243,.92);--line:#e0d6c6;--muted:#6f665e;--soft:#fbf7ef}
     *{box-sizing:border-box}
@@ -81,12 +81,12 @@
     @keyframes profilePulse{0%{background-position:200% 0}100%{background-position:-200% 0}}
     @media (max-width:760px){.page{padding:14px 12px 90px}.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.head{grid-template-columns:64px minmax(0,1fr)}.avatar{width:64px;height:64px}}
   </style>
-  <script defer src="./gejast-scope.js?v682"></script>
-  <script defer src="./gejast-badges.js?v682"></script>
-  <script defer src="./gejast-badge-progress.js?v682"></script>
-  <script defer src="./gejast-heavy-page-runtime.js?v682"></script>
-  <script defer src="./gejast-rpc-contract.js?v682"></script>
-  <script defer src="./gejast-profile-source.js?v682"></script>
+  <script defer src="./gejast-scope.js?v683"></script>
+  <script defer src="./gejast-badges.js?v683"></script>
+  <script defer src="./gejast-badge-progress.js?v683"></script>
+  <script defer src="./gejast-heavy-page-runtime.js?v683"></script>
+  <script defer src="./gejast-rpc-contract.js?v683"></script>
+  <script defer src="./gejast-profile-source.js?v683"></script>
 </head>
 <body>
   <main class="page">
@@ -142,16 +142,57 @@
         if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
         return data;
       }
-      async function callRpc(name, payload){
-        const res = await fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
+      function withTimeout(promise, ms, fallback){
+        let timer;
+        return Promise.race([
+          Promise.resolve(promise),
+          new Promise((resolve)=>{ timer=setTimeout(()=>resolve(fallback), ms); })
+        ]).finally(()=>{ if(timer) clearTimeout(timer); });
+      }
+      async function callRpc(name, payload, timeoutMs){
+        const doFetch = () => fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${name}`, {
           method: 'POST',
           mode: 'cors',
           cache: 'no-store',
           headers: headers(),
           body: JSON.stringify(Object.assign({}, payload || {}))
         });
+        const res = await withTimeout(doFetch(), Number(timeoutMs || 2600), null);
+        if (!res) throw new Error('RPC timeout');
         const raw = await parseResponse(res);
         return raw && raw[name] !== undefined ? raw[name] : raw;
+      }
+      function namesToPlayers(names){
+        return (Array.isArray(names) ? names : []).map((name)=>({
+          player_name: String(name || '').trim(),
+          display_name: String(name || '').trim(),
+          total_matches: 0,
+          total_wins: 0,
+          best_rating: 1000,
+          badge_count: 0,
+          attained_badges: []
+        })).filter((p)=>p.player_name);
+      }
+      async function loadFastProfilesFallback(){
+        try {
+          let payload = null;
+          try { payload = await withTimeout(callRpc('get_profiles_fast_v683', { site_scope_input: scope, limit_input: 80 }, 1800), 1900, null); } catch (_) { payload = null; }
+          let players = Array.isArray(payload?.players) ? payload.players : (Array.isArray(payload) ? payload : []);
+          if (!players.length && window.GEJAST_CONFIG && typeof window.GEJAST_CONFIG.fetchScopedActivePlayerNames === 'function') {
+            const names = await withTimeout(window.GEJAST_CONFIG.fetchScopedActivePlayerNames(scope), 1200, []);
+            players = namesToPlayers(names);
+          }
+          if (players.length) {
+            renderPlayers(players);
+            writeCache({ players });
+            statusNode.textContent = `${players.length} actieve speler(s) snel geladen. Verdere profielstats laden op de achtergrond.`;
+            window.__GEJAST_PROFILES_FAST_RENDERED = true;
+            if ('requestIdleCallback' in window) requestIdleCallback(() => { try { renderBadgeGallery(); } catch (_) {} }, { timeout: 1800 });
+            else setTimeout(() => { try { renderBadgeGallery(); } catch (_) {} }, 400);
+            return players;
+          }
+        } catch (_) {}
+        return [];
       }
       function normalizeName(value){ return String(value || '').trim().toLowerCase(); }
       function initials(name){ return String(name || '').split(/\s+/).filter(Boolean).slice(0, 2).map((value) => value[0]).join('').toUpperCase() || '?'; }
@@ -330,6 +371,7 @@
       async function boot(){
         const cached = readCache();
         renderSkeletons();
+        const fastProfilesPromise = loadFastProfilesFallback();
         if (cached && Array.isArray(cached.players) && cached.players.length) {
           renderPlayers(cached.players);
           statusNode.textContent = `${cached.players.length} actieve speler(s) direct uit cache geladen.`;
@@ -338,25 +380,30 @@
           const profileSource = window.GEJAST_PROFILE_SOURCE || null;
           const [bundleRaw, allPlayersRaw, activatedRaw, loginNamesRaw] = await Promise.allSettled([
             profileSource && typeof profileSource.loadProfilesPageBundle === 'function'
-              ? profileSource.loadProfilesPageBundle()
-              : callRpc('get_profiles_page_bundle_scoped', { site_scope_input: scope }),
+              ? withTimeout(profileSource.loadProfilesPageBundle(), 2200, {})
+              : callRpc('get_profiles_page_bundle_scoped', { site_scope_input: scope }, 2200),
             profileSource && typeof profileSource.loadProfilesList === 'function'
-              ? profileSource.loadProfilesList()
-              : callRpc('get_all_site_players_public_scoped', { site_scope_input: scope }),
+              ? withTimeout(profileSource.loadProfilesList(), 2200, { players: [] })
+              : callRpc('get_all_site_players_public_scoped', { site_scope_input: scope }, 2200),
             profileSource && typeof profileSource.fetchActivatedPlayers === 'function'
-              ? profileSource.fetchActivatedPlayers(scope)
+              ? withTimeout(profileSource.fetchActivatedPlayers(scope), 1800, [])
               : Promise.resolve([]),
             profileSource && typeof profileSource.fetchLoginNamesPlayers === 'function'
-              ? profileSource.fetchLoginNamesPlayers(scope)
+              ? withTimeout(profileSource.fetchLoginNamesPlayers(scope), 1800, [])
               : Promise.resolve([])
           ]);
           const bundle = bundleRaw.status === 'fulfilled' ? bundleRaw.value : {};
           const allPlayers = allPlayersRaw.status === 'fulfilled' ? ((allPlayersRaw.value && allPlayersRaw.value.players) || []) : [];
           const activatedPlayers = activatedRaw.status === 'fulfilled' ? activatedRaw.value : [];
           const loginNamePlayers = loginNamesRaw.status === 'fulfilled' ? loginNamesRaw.value : [];
-          const players = profileSource && typeof profileSource.mergeProfilePlayers === 'function'
+          let players = profileSource && typeof profileSource.mergeProfilePlayers === 'function'
             ? profileSource.mergeProfilePlayers(bundle.players || [], allPlayers, activatedPlayers, loginNamePlayers)
             : mergePlayers(bundle.players || [], [].concat(allPlayers, activatedPlayers, loginNamePlayers));
+          if (!players.length) {
+            const fastPlayers = await withTimeout(fastProfilesPromise, 300, []);
+            if (fastPlayers && fastPlayers.length) return;
+            players = namesToPlayers(await withTimeout(window.GEJAST_CONFIG && window.GEJAST_CONFIG.fetchScopedActivePlayerNames ? window.GEJAST_CONFIG.fetchScopedActivePlayerNames(scope) : Promise.resolve([]), 1200, []));
+          }
           if (window.GEJAST_HEAVY_PAGE_RUNTIME && typeof window.GEJAST_HEAVY_PAGE_RUNTIME.renderChunked === 'function') {
             gridNode.innerHTML = '';
             await window.GEJAST_HEAVY_PAGE_RUNTIME.renderChunked(players, (player) => {
@@ -372,20 +419,22 @@
           else setTimeout(renderBadgeGallery, 300);
           statusNode.textContent = `${players.length} actieve speler(s) zichtbaar in de ${scope === 'family' ? 'familie' : 'vrienden'}-scope.`;
         } catch (err) {
+          const fastPlayers = await withTimeout(fastProfilesPromise, 300, []);
+          if (fastPlayers && fastPlayers.length) return;
           statusNode.textContent = err.message || 'Profielen laden mislukt.';
-          gridNode.innerHTML = '<article class="card"><div class="bio">Profielen laden mislukt.</div></article>';
-          renderBadgeGallery();
+          gridNode.innerHTML = '<article class="card"><div class="bio">Profielen laden mislukt. De snelle fallback vond ook geen actieve spelers.</div></article>';
+          try { renderBadgeGallery(); } catch (_) {}
         }
       }
       if (window.GEJAST_BADGES && window.GEJAST_BADGES.injectStyles) window.GEJAST_BADGES.injectStyles();
       boot();
     })();
   </script>
-  <script defer src="./site-analytics.js?v682"></script>
+  <script defer src="./site-analytics.js?v683"></script>
   <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script defer src="./gejast-geo.js?v682"></script>
-  <script defer src="./drinks-verify-float.js?v682"></script>
-  <script defer src="./gejast-home-profile-runtime.js?v682"></script>
+  <script defer src="./gejast-geo.js?v683"></script>
+  <script defer src="./drinks-verify-float.js?v683"></script>
+  <script defer src="./gejast-home-profile-runtime.js?v683"></script>
 </body>
 </html>

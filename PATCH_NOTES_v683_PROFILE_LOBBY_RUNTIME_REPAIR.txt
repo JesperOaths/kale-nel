@@ -1,0 +1,14 @@
+GEJAST v683 — profile/lobby runtime repair
+
+Fixes from live screenshots:
+- profiles.html no longer stays stuck on skeletons while slow profile/stat RPCs hang.
+- profiles.html now uses get_profiles_fast_v683 first and falls back to strict active login names.
+- Pikken fast RPCs now accept the browser payload keys actually sent by the contract: session_token, session_token_input, site_scope_input, config_input/lobby_code_input.
+- Pikken creates minimal compatible tables if older Pikken migrations did not create them yet.
+- Paardenrace open-room reads now use get_paardenrace_open_rooms_fast_v683 instead of slow/ambiguous public overloads.
+- Paardenrace stats reads now use get_paardenrace_stats_fast_v683.
+- Login bridge v683 keeps legacy login_player and account-layer fallback usable.
+
+Boundary:
+- This patch repairs load/runtime blockers and fast lobby entry.
+- It does not claim every deeper Pikken/Paardenrace gameplay action is live-tested until the new SQL runs cleanly and the browser flow is retested.

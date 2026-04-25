@@ -1,0 +1,13 @@
+GEJAST v683 — Profile / Lobby Runtime Repair
+
+Frontend files: 27
+SQL file: GEJAST_v683_profile_lobby_runtime_repair.sql
+Version target: v683
+Zip rules: flat zip, no SQL inside, no Python files.
+
+Main changes:
+- Fast profiles fallback
+- Pikken v683 payload-compatible lobby wrappers
+- Paardenrace v683 fast public reads
+- v683 account login bridge
+- no visible optional home/profile timeout box

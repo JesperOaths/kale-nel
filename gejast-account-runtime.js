@@ -1,10 +1,10 @@
 (function(){
-  if (window.GEJAST_ACCOUNT_RUNTIME && window.GEJAST_ACCOUNT_RUNTIME.VERSION === 'v682') return;
+  if (window.GEJAST_ACCOUNT_RUNTIME && window.GEJAST_ACCOUNT_RUNTIME.VERSION === 'v683') return;
   const cfg = window.GEJAST_CONFIG || {};
-  const VERSION = 'v682';
+  const VERSION = 'v683';
   const SESSION_KEYS = (Array.isArray(cfg.PLAYER_SESSION_KEYS) && cfg.PLAYER_SESSION_KEYS.length) ? cfg.PLAYER_SESSION_KEYS : ['jas_session_token_v11','jas_session_token_v10'];
   const ADMIN_KEYS = ['jas_admin_session_v8','gejast_admin_session_token','jas_admin_session_token'];
-  const LOGIN_CACHE_PREFIX = 'gejast_login_active_names_v682_';
+  const LOGIN_CACHE_PREFIX = 'gejast_login_active_names_v683_';
   function $(id){ return document.getElementById(id); }
   function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
   function scope(){ try{ if(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope) return window.GEJAST_SCOPE_UTILS.getScope(); }catch(_){} try{ const q=new URLSearchParams(location.search).get('scope'); return q==='family'?'family':'friends'; }catch(_){ return 'friends'; } }
@@ -64,14 +64,14 @@
 
   async function getLoginNames(){
     const cached = readLoginCache();
-    // One fast authoritative call first: legacy public.players with active=true + pin_hash, plus v682 activated accounts.
+    // One fast authoritative call first: legacy public.players with active=true + pin_hash, plus v683 activated accounts.
     // Do not use requestable/scope-only/profile names; those caused the polluted dropdown.
     const attempts = [
-      { name:'get_login_active_names_v682', body:{site_scope_input:scope()}, options:{timeoutMs:2200} },
-      { name:'get_login_active_names_v682', body:{site_scope_input:scope()}, options:{timeoutMs:2200} },
-      { name:'get_login_active_names_v682', body:{site_scope_input:scope()}, options:{timeoutMs:2200} },
-      { name:'get_login_active_names_v682', body:{site_scope_input:scope()}, options:{timeoutMs:2200} },
-      { name:'get_login_active_names_v682', body:{site_scope_input:scope()}, options:{timeoutMs:2200} }
+      { name:'get_login_active_names_v683', body:{site_scope_input:scope()}, options:{timeoutMs:2200} },
+      { name:'get_login_active_names_v683', body:{site_scope_input:scope()}, options:{timeoutMs:2200} },
+      { name:'get_login_active_names_v683', body:{site_scope_input:scope()}, options:{timeoutMs:2200} },
+      { name:'get_login_active_names_v683', body:{site_scope_input:scope()}, options:{timeoutMs:2200} },
+      { name:'get_login_active_names_v683', body:{site_scope_input:scope()}, options:{timeoutMs:2200} }
     ];
     for (const attempt of attempts) {
       try {
@@ -85,7 +85,7 @@
 
   async function getRequestableNames(){
     const data = await rpcFirst([
-      {name:'get_requestable_names_v682', body:{site_scope_input:scope()}},
+      {name:'get_requestable_names_v683', body:{site_scope_input:scope()}},
       {name:'get_requestable_names', body:{site_scope_input:scope()}},
       {name:'get_requestable_names', body:{}}
     ]);
@@ -94,19 +94,19 @@
   async function requestClaim(input){
     const meta = activePlayerMeta({event:'request_claim_submit', desired_name:input.desiredName, requester_email_domain:String(input.email||'').split('@')[1]||''});
     return await rpcFirst([
-      {name:'account_request_claim_v682', body:{desired_name_input:input.desiredName, requester_email_input:input.email, requester_note_input:input.note||'', site_scope_input:scope(), requester_meta_input:input.meta||meta, active_player_meta_input:meta}},
-      {name:'account_request_claim_v682', body:{desired_name_input:input.desiredName, requester_email_input:input.email, requester_note_input:input.note||'', site_scope_input:scope(), requester_meta_input:input.meta||meta, active_player_meta_input:meta}},
-      {name:'account_request_claim_v682', body:{desired_name_input:input.desiredName, requester_email_input:input.email, requester_note_input:input.note||'', site_scope_input:scope(), requester_meta_input:input.meta||meta}},
+      {name:'account_request_claim_v683', body:{desired_name_input:input.desiredName, requester_email_input:input.email, requester_note_input:input.note||'', site_scope_input:scope(), requester_meta_input:input.meta||meta, active_player_meta_input:meta}},
+      {name:'account_request_claim_v683', body:{desired_name_input:input.desiredName, requester_email_input:input.email, requester_note_input:input.note||'', site_scope_input:scope(), requester_meta_input:input.meta||meta, active_player_meta_input:meta}},
+      {name:'account_request_claim_v683', body:{desired_name_input:input.desiredName, requester_email_input:input.email, requester_note_input:input.note||'', site_scope_input:scope(), requester_meta_input:input.meta||meta}},
       {name:'request_claim_action', body:{desired_name:input.desiredName, requester_email:input.email, requester_note:input.note||'', requester_meta:input.meta||meta, site_scope_input:scope()}}
     ]);
   }
-  async function getActivationContext(token){ return await rpcFirst([{name:'account_get_activation_context_v682', body:{activation_token_input:token}},{name:'get_activation_link_context', body:{token}},{name:'get_activation_link_context', body:{activation_token:token}}]); }
+  async function getActivationContext(token){ return await rpcFirst([{name:'account_get_activation_context_v683', body:{activation_token_input:token}},{name:'get_activation_link_context', body:{token}},{name:'get_activation_link_context', body:{activation_token:token}}]); }
   async function activateAccount(token,pin){
     const meta = activePlayerMeta({event:'account_activation_submit', activation_token_present:!!token});
     const out = await rpcFirst([
-      {name:'account_activate_v682', body:{activation_token_input:token, new_pin_input:pin, activation_meta_input:meta}},
-      {name:'account_activate_v682', body:{activation_token_input:token, new_pin_input:pin, activation_meta_input:meta}},
-      {name:'account_activate_v682', body:{activation_token_input:token, new_pin_input:pin}},
+      {name:'account_activate_v683', body:{activation_token_input:token, new_pin_input:pin, activation_meta_input:meta}},
+      {name:'account_activate_v683', body:{activation_token_input:token, new_pin_input:pin, activation_meta_input:meta}},
+      {name:'account_activate_v683', body:{activation_token_input:token, new_pin_input:pin}},
       {name:'activate_player_from_email_link', body:{token, new_pin:pin}},
       {name:'activate_player_from_email_link', body:{activation_token:token, new_pin:pin}}
     ]);
@@ -116,10 +116,10 @@
   async function login(input){
     const name=input.name, pin=input.pin;
     const data = await rpcFirst([
-      {name:'account_login_bridge_v682', body:{display_name_input:name, pin_input:pin, site_scope_input:scope()}, options:{timeoutMs:3200}},
-      {name:'account_login_bridge_v682', body:{display_name_input:name, pin_input:pin, site_scope_input:scope()}, options:{timeoutMs:3200}},
-      {name:'account_login_bridge_v682', body:{display_name_input:name, pin_input:pin, site_scope_input:scope()}, options:{timeoutMs:3200}},
-      {name:'account_login_v682', body:{display_name_input:name, pin_input:pin, site_scope_input:scope()}, options:{timeoutMs:3200}},
+      {name:'account_login_bridge_v683', body:{display_name_input:name, pin_input:pin, site_scope_input:scope()}, options:{timeoutMs:3200}},
+      {name:'account_login_bridge_v683', body:{display_name_input:name, pin_input:pin, site_scope_input:scope()}, options:{timeoutMs:3200}},
+      {name:'account_login_bridge_v683', body:{display_name_input:name, pin_input:pin, site_scope_input:scope()}, options:{timeoutMs:3200}},
+      {name:'account_login_v683', body:{display_name_input:name, pin_input:pin, site_scope_input:scope()}, options:{timeoutMs:3200}},
       {name:'login_player', body:{desired_name:name, entered_pin:pin}, options:{timeoutMs:3200}},
       {name:'login_player', body:{input_username:name, entered_pin:pin}, options:{timeoutMs:3200}},
       {name:'login_player', body:{input_display_name:name, input_pin:pin}, options:{timeoutMs:3200}}
@@ -128,7 +128,7 @@
     try { await storeActivePlayerMetadata({player_name_input:data?.display_name||data?.player_name||name, event_type_input:'login_success', event_source_input:'login.html', session_token_input:data?.session_token||null, metadata_input:activePlayerMeta({event:'login_success'})}); } catch (_) {}
     return data;
   }
-  async function getPublicState(){ const token=playerToken(); if(!token) return null; try{ return await rpcFirst([{name:'get_public_state', body:{session_token:token}, options:{timeoutMs:1200}},{name:'account_public_state_v682', body:{session_token_input:token}, options:{timeoutMs:1200}}]); }catch(_){ return null; } }
+  async function getPublicState(){ const token=playerToken(); if(!token) return null; try{ return await rpcFirst([{name:'get_public_state', body:{session_token:token}, options:{timeoutMs:1200}},{name:'account_public_state_v683', body:{session_token_input:token}, options:{timeoutMs:1200}}]); }catch(_){ return null; } }
   function storageProbe(kind){
     try {
       const s = kind === 'session' ? sessionStorage : localStorage;
@@ -189,14 +189,14 @@
   }
   function activePlayerMeta(extra){
     return visitorMeta(Object.assign({
-      metadata_policy: 'new_active_users_v682_plus_scope_override_v682',
+      metadata_policy: 'new_active_users_v683_plus_scope_override_v683',
       active_login_rule: 'active=true + pin_hash + site_scope + not ghost/deleted/disabled; current legacy users may predate stored metadata',
       legacy_approved_required: false
     }, extra || {}));
   }
   async function storeActivePlayerMetadata(payload){
     try {
-      return await rpc('store_active_player_metadata_v682', Object.assign({
+      return await rpc('store_active_player_metadata_v683', Object.assign({
         site_scope_input: scope(),
         metadata_input: activePlayerMeta({event_hint: payload && payload.event_type_input || 'metadata'})
       }, payload || {}), {timeoutMs:2600});
@@ -229,20 +229,20 @@
   async function bootRequestPage(){ const form=$('requestForm'), sel=$('requestNameSelect'); if(!form) return; try{ fillSelect(sel, await getRequestableNames()); }catch(err){ setStatus('status',friendly(err),'warn'); } form.addEventListener('submit', async(ev)=>{ ev.preventDefault(); const desiredName=String(sel.value||'').trim(); const email=String(($('requestEmailInput')||{}).value||'').trim().toLowerCase(); const note=String(($('requestNoteInput')||{}).value||'').trim(); if(!desiredName) return setStatus('status','Kies eerst een naam.','warn'); if(!emailOk(email)) return setStatus('status','Vul een geldig e-mailadres in.','warn'); try{ setBusy(form,true); setStatus('status','Aanvraag versturen...'); const out=await requestClaim({desiredName,email,note,meta:visitorMeta()}); setStatus('status',out?.message||'Aanvraag verstuurd. Na goedkeuring ontvang je een activatielink.','ok'); form.reset(); try{ fillSelect(sel, await getRequestableNames()); }catch(_){} }catch(err){ setStatus('status',friendly(err),'warn'); }finally{ setBusy(form,false); } }); }
   async function bootActivatePage(){ const form=$('activateForm'); if(!form) return; const token=new URLSearchParams(location.search).get('token')||new URLSearchParams(location.search).get('activation_token')||''; if(!token) setStatus('status','Deze activatielink mist een token.','warn'); try{ const ctx=await getActivationContext(token); if($('approvedName')) $('approvedName').textContent=ctx?.display_name||ctx?.player_name||ctx?.desired_name||'Onbekend'; if($('approvedEmail')) $('approvedEmail').textContent=ctx?.requester_email||ctx?.email||'Onbekend'; }catch(err){ setStatus('status',friendly(err),'warn'); } form.addEventListener('submit', async(ev)=>{ ev.preventDefault(); const p=String(($('pinInput')||{}).value||'').replace(/\D/g,'').slice(0,4); const p2=String(($('pinConfirmInput')||{}).value||'').replace(/\D/g,'').slice(0,4); if(!/^\d{4}$/.test(p)) return setStatus('status','Kies een pincode van precies 4 cijfers.','warn'); if(p!==p2) return setStatus('status','De twee pincodes komen niet overeen.','warn'); try{ setBusy(form,true); setStatus('status','Account activeren...'); const out=await activateAccount(token,p); if(out?.session_token) setPlayerToken(out.session_token); setStatus('status','Account geactiveerd. Je gaat naar de homepage.','ok'); setTimeout(()=>location.href='./index.html',700); }catch(err){ setStatus('status',friendly(err),'warn'); }finally{ setBusy(form,false); } }); ['pinInput','pinConfirmInput'].forEach((id)=>{ const el=$(id); if(el) el.addEventListener('input',()=>{el.value=el.value.replace(/\D/g,'').slice(0,4);}); }); }
 
-  async function adminAudit(){ return await rpcFirst([{name:'admin_get_active_player_metadata_audit_v682', body:{admin_session_token_input:adminToken(),site_scope_input:scope()}},{name:'admin_get_active_player_metadata_audit_v682', body:{admin_session_token_input:adminToken(),site_scope_input:scope()}},{name:'admin_get_account_runtime_audit_v682', body:{admin_session_token:adminToken(),site_scope_input:scope()}}]); }
+  async function adminAudit(){ return await rpcFirst([{name:'admin_get_active_player_metadata_audit_v683', body:{admin_session_token_input:adminToken(),site_scope_input:scope()}},{name:'admin_get_active_player_metadata_audit_v683', body:{admin_session_token_input:adminToken(),site_scope_input:scope()}},{name:'admin_get_account_runtime_audit_v683', body:{admin_session_token:adminToken(),site_scope_input:scope()}}]); }
   async function adminMail(){ return await rpc('admin_get_mail_diagnostics',{admin_session_token:adminToken(),site_scope_input:scope()}); }
-  async function adminDiagnoseLogin(name){ return await rpcFirst([{name:'diagnose_login_name_v682', body:{player_name_input:name,site_scope_input:scope()}},{name:'diagnose_login_name_v682', body:{player_name_input:name,site_scope_input:scope()}},{name:'diagnose_login_name_v682', body:{player_name_input:name,site_scope_input:scope()}}]); }
-  async function adminRepairLogin(name,pin){ return await rpcFirst([{name:'admin_reset_login_player_pin_v682', body:{admin_session_token_input:adminToken(),player_name_input:name,new_pin_input:pin,site_scope_input:scope(),admin_meta_input:activePlayerMeta({event:'admin_reset_login_player_pin', admin_page:'admin_account_runtime.html'})}},{name:'admin_reset_login_player_pin_v682', body:{admin_session_token_input:adminToken(),player_name_input:name,new_pin_input:pin,site_scope_input:scope(),admin_meta_input:activePlayerMeta({event:'admin_reset_login_player_pin', admin_page:'admin_account_runtime.html'})}},{name:'admin_reset_login_player_pin_v682', body:{admin_session_token_input:adminToken(),player_name_input:name,new_pin_input:pin,site_scope_input:scope()}}]); }
-  async function adminAddName(name){ return await rpc('admin_add_requestable_name_v682',{admin_session_token_input:adminToken(),display_name_input:name,site_scope_input:scope()}); }
-  async function adminApprove(id){ return await rpcFirst([{name:'admin_approve_account_claim_v682', body:{admin_session_token_input:adminToken(),claim_id_input:id,site_scope_input:scope(),admin_meta_input:activePlayerMeta({event:'admin_approve_claim', admin_page:'admin_account_runtime.html'})}},{name:'admin_approve_account_claim_v682', body:{admin_session_token_input:adminToken(),claim_id_input:id,site_scope_input:scope(),admin_meta_input:activePlayerMeta({event:'admin_approve_claim', admin_page:'admin_account_runtime.html'})}},{name:'admin_approve_account_claim_v682', body:{admin_session_token_input:adminToken(),claim_id_input:id,site_scope_input:scope()}}]); }
-  async function adminReject(id,reason){ return await rpc('admin_reject_account_claim_v682',{admin_session_token_input:adminToken(),claim_id_input:id,reject_reason_input:reason||'',site_scope_input:scope()}); }
+  async function adminDiagnoseLogin(name){ return await rpcFirst([{name:'diagnose_login_name_v683', body:{player_name_input:name,site_scope_input:scope()}},{name:'diagnose_login_name_v683', body:{player_name_input:name,site_scope_input:scope()}},{name:'diagnose_login_name_v683', body:{player_name_input:name,site_scope_input:scope()}}]); }
+  async function adminRepairLogin(name,pin){ return await rpcFirst([{name:'admin_reset_login_player_pin_v683', body:{admin_session_token_input:adminToken(),player_name_input:name,new_pin_input:pin,site_scope_input:scope(),admin_meta_input:activePlayerMeta({event:'admin_reset_login_player_pin', admin_page:'admin_account_runtime.html'})}},{name:'admin_reset_login_player_pin_v683', body:{admin_session_token_input:adminToken(),player_name_input:name,new_pin_input:pin,site_scope_input:scope(),admin_meta_input:activePlayerMeta({event:'admin_reset_login_player_pin', admin_page:'admin_account_runtime.html'})}},{name:'admin_reset_login_player_pin_v683', body:{admin_session_token_input:adminToken(),player_name_input:name,new_pin_input:pin,site_scope_input:scope()}}]); }
+  async function adminAddName(name){ return await rpc('admin_add_requestable_name_v683',{admin_session_token_input:adminToken(),display_name_input:name,site_scope_input:scope()}); }
+  async function adminApprove(id){ return await rpcFirst([{name:'admin_approve_account_claim_v683', body:{admin_session_token_input:adminToken(),claim_id_input:id,site_scope_input:scope(),admin_meta_input:activePlayerMeta({event:'admin_approve_claim', admin_page:'admin_account_runtime.html'})}},{name:'admin_approve_account_claim_v683', body:{admin_session_token_input:adminToken(),claim_id_input:id,site_scope_input:scope(),admin_meta_input:activePlayerMeta({event:'admin_approve_claim', admin_page:'admin_account_runtime.html'})}},{name:'admin_approve_account_claim_v683', body:{admin_session_token_input:adminToken(),claim_id_input:id,site_scope_input:scope()}}]); }
+  async function adminReject(id,reason){ return await rpc('admin_reject_account_claim_v683',{admin_session_token_input:adminToken(),claim_id_input:id,reject_reason_input:reason||'',site_scope_input:scope()}); }
   async function bootAdminPage(){
     const out=$('accountAuditOutput'); if(!out) return;
     async function refresh(){ const data=await adminAudit(); out.textContent=JSON.stringify(data,null,2); renderClaims(data.claims||[]); renderNames(data.names||[]); renderMail(data.mail||{}); renderMetadata(data.metadata||[]); }
     function renderNames(rows){ const box=$('accountNamesBox'); if(!box) return; box.innerHTML=(rows||[]).length?`<table><thead><tr><th>Naam</th><th>Status</th><th>Scope</th></tr></thead><tbody>${rows.map((r)=>`<tr><td>${esc(r.display_name)}</td><td>${esc(r.status)}</td><td>${esc(r.site_scope)}</td></tr>`).join('')}</tbody></table>`:'Geen namen.'; }
     function renderClaims(rows){ const box=$('accountClaimsBox'); if(!box) return; box.innerHTML=(rows||[]).length?`<table><thead><tr><th>ID</th><th>Naam</th><th>Email</th><th>Status</th><th>Actie</th></tr></thead><tbody>${rows.map((r)=>`<tr><td>${esc(r.id)}</td><td>${esc(r.display_name)}</td><td>${esc(r.requester_email)}</td><td>${esc(r.status)}</td><td>${r.status==='pending'?`<button data-approve="${esc(r.id)}">Approve</button> <button data-reject="${esc(r.id)}">Reject</button>`:''}</td></tr>`).join('')}</tbody></table>`:'Geen claims.'; box.querySelectorAll('[data-approve]').forEach((b)=>b.onclick=async()=>{ b.disabled=true; await adminApprove(b.getAttribute('data-approve')); await refresh(); }); box.querySelectorAll('[data-reject]').forEach((b)=>b.onclick=async()=>{ b.disabled=true; await adminReject(b.getAttribute('data-reject'), prompt('Reden?')||''); await refresh(); }); }
     
-    function renderMetadata(rows){ const box=$('accountMetadataBox'); if(!box) return; box.innerHTML=(rows||[]).length?`<table><thead><tr><th>Naam</th><th>Event</th><th>Scope</th><th>Bron</th><th>Tijd</th></tr></thead><tbody>${rows.map((r)=>`<tr><td>${esc(r.player_name||'')}</td><td>${esc(r.event_type||'')}</td><td>${esc(r.site_scope||'')}</td><td>${esc(r.event_source||'')}</td><td>${esc(r.created_at||'')}</td></tr>`).join('')}</tbody></table>`:'Nog geen v682 metadata-events.'; }
+    function renderMetadata(rows){ const box=$('accountMetadataBox'); if(!box) return; box.innerHTML=(rows||[]).length?`<table><thead><tr><th>Naam</th><th>Event</th><th>Scope</th><th>Bron</th><th>Tijd</th></tr></thead><tbody>${rows.map((r)=>`<tr><td>${esc(r.player_name||'')}</td><td>${esc(r.event_type||'')}</td><td>${esc(r.site_scope||'')}</td><td>${esc(r.event_source||'')}</td><td>${esc(r.created_at||'')}</td></tr>`).join('')}</tbody></table>`:'Nog geen v683 metadata-events.'; }
     function renderMail(mail){ const box=$('accountMailBox'); if(!box) return; const jobs=mail.jobs||[]; box.innerHTML=`<div class="metric-row"><span>Queued: ${mail.queued_count||0}</span><span>Blocked: ${mail.blocked_count||0}</span><span>Failed: ${mail.failed_count||0}</span><span>Sent: ${mail.sent_count||0}</span></div>`+(jobs.length?`<table><thead><tr><th>ID</th><th>Status</th><th>To</th><th>Subject</th><th>Guard/error</th></tr></thead><tbody>${jobs.map((j)=>`<tr><td>${esc(j.id)}</td><td>${esc(j.status)}</td><td>${esc(j.recipient_email||j.to_email)}</td><td>${esc(j.subject)}</td><td>${esc(j.failure_reason||j.last_error||'')}</td></tr>`).join('')}</tbody></table>`:''); }
     const add=$('addNameBtn'); if(add) add.onclick=async()=>{ const name=String(($('newNameInput')||{}).value||'').trim(); if(!name) return; await adminAddName(name); $('newNameInput').value=''; await refresh(); };
     const diag=$('diagnoseLoginBtn'); if(diag) diag.onclick=async()=>{ const name=String(($('loginDiagName')||{}).value||'').trim(); if(!name) return; const data=await adminDiagnoseLogin(name); const box=$('loginDiagOutput'); if(box) box.textContent=JSON.stringify(data,null,2); };
