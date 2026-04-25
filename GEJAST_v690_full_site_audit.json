@@ -1,0 +1,152 @@
+{
+  "generatedAt": "2026-04-25T23:43:48.801Z",
+  "versionDrift": 0,
+  "missingRefs": 0,
+  "missingRpc": [
+    {
+      "name": "admin_check_session",
+      "uses": [
+        "admin.html",
+        "admin.js",
+        "admin_analytics.html",
+        "admin_claims.html",
+        "admin_expired.html",
+        "admin_push.html",
+        "admin_reserved_names.html",
+        "admin_v60_orig.html",
+        "index.html"
+      ]
+    },
+    {
+      "name": "admin_close_paardenrace_room_v683",
+      "uses": [
+        "admin_paardenrace.html"
+      ]
+    },
+    {
+      "name": "admin_dev_login",
+      "uses": [
+        "admin.js",
+        "admin_v60_orig.html"
+      ]
+    },
+    {
+      "name": "admin_get_beerpong_shared_stats_audit_v642",
+      "uses": [
+        "admin_beerpong_shared_stats.html"
+      ]
+    },
+    {
+      "name": "admin_get_claim_history",
+      "uses": [
+        "admin.js",
+        "admin_v60_orig.html"
+      ]
+    },
+    {
+      "name": "admin_get_claim_requests",
+      "uses": [
+        "admin.js",
+        "admin_v60_orig.html"
+      ]
+    },
+    {
+      "name": "admin_get_despimarkt_auto_market_audit_v646",
+      "uses": [
+        "admin_despimarkt_auto_markets.html"
+      ]
+    },
+    {
+      "name": "admin_get_latest_valid_outbound_email_job_webhook_payload",
+      "uses": [
+        "admin.js"
+      ]
+    },
+    {
+      "name": "admin_get_outbound_email_job_webhook_payload",
+      "uses": [
+        "admin.js"
+      ]
+    },
+    {
+      "name": "admin_get_paardenrace_overview_v683",
+      "uses": [
+        "admin_paardenrace.html"
+      ]
+    },
+    {
+      "name": "admin_login",
+      "uses": [
+        "admin.html",
+        "admin.js",
+        "admin_claims.html",
+        "admin_v60_orig.html"
+      ]
+    },
+    {
+      "name": "admin_refresh_beerpong_shared_stats_v642",
+      "uses": [
+        "admin_beerpong_shared_stats.html"
+      ]
+    },
+    {
+      "name": "admin_remove_player_action",
+      "uses": [
+        "admin_claims.html",
+        "admin_expired.html"
+      ]
+    },
+    {
+      "name": "admin_requeue_expired_activation_action",
+      "uses": [
+        "admin_claims.html",
+        "admin_expired.html"
+      ]
+    },
+    {
+      "name": "admin_resend_expired_activation_action",
+      "uses": [
+        "admin_expired.html"
+      ]
+    },
+    {
+      "name": "admin_resend_pending_activation_action",
+      "uses": [
+        "admin_claims.html"
+      ]
+    },
+    {
+      "name": "admin_return_name_to_claimable_action",
+      "uses": [
+        "admin_claims.html"
+      ]
+    },
+    {
+      "name": "admin_revoke_player_access_action",
+      "uses": [
+        "admin_claims.html"
+      ]
+    },
+    {
+      "name": "admin_set_activation_email_subject_action",
+      "uses": [
+        "admin_claims.html",
+        "admin_expired.html"
+      ]
+    },
+    {
+      "name": "admin_validate_outbound_email_job",
+      "uses": [
+        "admin.js",
+        "admin_claims.html",
+        "admin_expired.html"
+      ]
+    },
+    {
+      "name": "create_player_activation_link_action",
+      "uses": [
+        "admin_claims.html"
+      ]
+    }
+  ]
+}

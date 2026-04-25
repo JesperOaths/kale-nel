@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
   const cfg = global.GEJAST_CONFIG || {};
-  const VERSION = 'v689';
+  const VERSION = 'v690';
   const DEFAULT_SCOPE = 'friends';
   const SESSION_KEYS = (cfg.PLAYER_SESSION_KEYS || ['jas_session_token_v11','jas_session_token_v10']);
 
