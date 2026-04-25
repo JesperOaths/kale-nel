@@ -1,0 +1,9 @@
+GEJAST v675 — Login dropdown active names repair
+
+Fixes login.html showing only “Kies je naam”.
+
+Root cause: v671 login used requestable-name loading, which belongs to request.html, not login.html.
+
+Fix: login now loads active login names through getLoginNames(), checking active player helpers and existing login/profile/scope RPCs before falling back.
+
+SQL: none needed.

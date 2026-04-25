@@ -1,0 +1,11 @@
+GEJAST v675 login dropdown active names repair
+
+Files:
+- VERSION
+- gejast-config.js
+- gejast-account-runtime.js
+- login.html
+- PATCH_NOTES_v675_LOGIN_DROPDOWN_ACTIVE_NAMES.txt
+- GEJAST_v675_login_dropdown_active_names_manifest.txt
+
+SQL: none.

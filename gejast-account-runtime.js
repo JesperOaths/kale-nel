@@ -1,7 +1,7 @@
 (function(){
   if (window.GEJAST_ACCOUNT_RUNTIME) return;
   const cfg = window.GEJAST_CONFIG || {};
-  const VERSION = 'v671';
+  const VERSION = 'v675';
   const SESSION_KEYS = (Array.isArray(cfg.PLAYER_SESSION_KEYS) && cfg.PLAYER_SESSION_KEYS.length) ? cfg.PLAYER_SESSION_KEYS : ['jas_session_token_v11','jas_session_token_v10'];
   const ADMIN_KEYS = ['jas_admin_session_v8','gejast_admin_session_token','jas_admin_session_token'];
   function $(id){ return document.getElementById(id); }
@@ -20,6 +20,75 @@
   function setStatus(id,msg,tone=''){ const el=$(id)||$('status')||$('statusBox'); if(!el) return; el.className = (`status ${tone} show`).trim(); el.textContent = msg||''; }
   function emailOk(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim()); }
   function setBusy(form,busy){ if(!form) return; form.querySelectorAll('input,select,textarea,button').forEach((el)=>el.disabled=!!busy); }
+
+  function extractNameRows(raw){
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    const out = [];
+    const queue = [raw];
+    const seen = new Set();
+    while (queue.length) {
+      const value = queue.shift();
+      if (!value || typeof value !== 'object' || seen.has(value)) continue;
+      seen.add(value);
+      ['names','players','profiles','items','rows','data','leaderboard','memberships','requestable_names'].forEach((key)=>{
+        if (Array.isArray(value[key])) out.push(...value[key]);
+      });
+      ['bundle','viewer','player','unified','runtime','homepage','profiles'].forEach((key)=>{
+        if (value[key] && typeof value[key] === 'object') queue.push(value[key]);
+      });
+      if (value.games && typeof value.games === 'object') queue.push(value.games);
+    }
+    return out;
+  }
+  function activeNameSignal(row){
+    if (typeof row === 'string') return true;
+    if (!row || typeof row !== 'object') return true;
+    const status = String(row.status || row.account_status || row.activation_status || row.player_status || row.state || '').trim().toLowerCase();
+    if (!status) return true;
+    return ['active','activated','approved','claimed','available','ok'].includes(status) || row.activated_at || row.has_pin || row.pin_is_set || row.is_active === true;
+  }
+  function rowScopeMatches(row){
+    if (!row || typeof row !== 'object') return true;
+    const raw = String(row.site_scope || row.scope || row.player_site_scope || '').trim().toLowerCase();
+    return !raw || raw === scope();
+  }
+  async function getLoginNames(){
+    const names = [];
+    function add(list){ normalizeNames(list).forEach((name)=>names.push(name)); }
+    function filteredRows(raw){ return extractNameRows(raw).filter((row)=>rowScopeMatches(row) && activeNameSignal(row)); }
+    try {
+      const helper = cfg.getActivatedPlayerNamesForScope || cfg.fetchScopedActivePlayerNames;
+      if (typeof helper === 'function') add(await helper(scope()));
+    } catch (_) {}
+    const attempts = [
+      {name:'get_login_names_scoped', body:{site_scope_input:scope()}},
+      {name:'get_login_names', body:{site_scope_input:scope()}},
+      {name:'get_login_names', body:{}},
+      {name:'get_all_site_players_public_scoped', body:{site_scope_input:scope()}},
+      {name:'get_profiles_page_bundle_scoped', body:{site_scope_input:scope()}},
+      {name:'get_profiles_runtime_bundle_v670', body:{site_scope_input:scope()}},
+      {name:'get_scoped_player_names_v672', body:{site_scope_input:scope()}},
+      {name:'get_requestable_names_v671', body:{site_scope_input:scope()}}
+    ];
+    for (const call of attempts) {
+      try {
+        const data = await rpc(call.name, call.body || {});
+        const before = names.length;
+        add(filteredRows(data));
+        if (names.length > before && call.name !== 'get_requestable_names_v671') break;
+      } catch (_) {}
+    }
+    try {
+      if (cfg.readCachedLoginNames) add(cfg.readCachedLoginNames(scope()));
+    } catch (_) {}
+    let clean = normalizeNames(names);
+    try {
+      if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.filterNames === 'function') clean = window.GEJAST_SCOPE_UTILS.filterNames(clean, scope());
+    } catch (_) {}
+    try { if (cfg.writeCachedLoginNames && clean.length) cfg.writeCachedLoginNames(clean, scope()); } catch (_) {}
+    return clean;
+  }
 
   async function getRequestableNames(){
     const data = await rpcFirst([
@@ -69,7 +138,11 @@
   function fillSelect(sel,names){ if(!sel) return; const current=sel.value; sel.innerHTML='<option value="">Kies je naam</option>'+names.map((n)=>`<option value="${esc(n)}">${esc(n)}`+'</option>').join(''); if(names.includes(current)) sel.value=current; }
   async function bootLoginPage(){
     const form=$('loginForm'), sel=$('playerNameInput'), pin=$('pinInput'); if(!form) return;
-    try{ fillSelect(sel, await getRequestableNames()); }catch(err){ setStatus('statusBox',friendly(err),'warn'); }
+    try{
+      const names = await getLoginNames();
+      fillSelect(sel, names);
+      if (!names.length) setStatus('statusBox','Geen actieve loginnamen gevonden. Draai de SQL/installatie of controleer of er spelers geactiveerd zijn.','warn');
+    }catch(err){ setStatus('statusBox',friendly(err),'warn'); }
     try{ const st=await getPublicState(); if(st?.my_name||st?.display_name||st?.player_name) setStatus('statusBox',`Deze browser heeft al een sessie voor ${st.my_name||st.display_name||st.player_name}.`,'ok'); }catch(_){}
     form.addEventListener('submit', async(ev)=>{ ev.preventDefault(); const name=String(sel.value||'').trim(); const p=String(pin.value||'').replace(/\D/g,'').slice(0,4); if(!name) return setStatus('statusBox','Kies eerst je naam.','warn'); if(!/^\d{4}$/.test(p)) return setStatus('statusBox','Voer je 4-cijferige pincode in.','warn'); try{ setBusy(form,true); setStatus('statusBox','Inloggen...'); const out=await login({name,pin:p}); setStatus('statusBox',`Ingelogd als ${out.display_name||out.player_name||name}.`,'ok'); setTimeout(()=>location.href='./index.html',450); }catch(err){ setStatus('statusBox',friendly(err),'warn'); }finally{ setBusy(form,false); } });
     const logout=$('logoutBtn'); if(logout) logout.addEventListener('click',()=>{ clearPlayerToken(); setStatus('statusBox','Sessie gewist.','ok'); });
@@ -104,6 +177,6 @@
   }
   async function bootMailAuditPage(){ const out=$('mailAuditOutput'); if(!out) return; async function refresh(){ const data=await adminMail(); out.textContent=JSON.stringify(data,null,2); const box=$('jobsBox'); if(box) box.innerHTML=(data.jobs||[]).length?`<table><thead><tr><th>ID</th><th>Status</th><th>To</th><th>Subject</th><th>Guard/error</th><th>Created</th></tr></thead><tbody>${data.jobs.map((j)=>`<tr><td>${esc(j.id)}</td><td>${esc(j.status)}</td><td>${esc(j.recipient_email||j.to_email)}</td><td>${esc(j.subject)}</td><td>${esc(j.failure_reason||j.last_error||'')}</td><td>${esc(j.created_at||'')}</td></tr>`).join('')}</tbody></table>`:'Geen recente jobs.'; } const btn=$('refreshBtn'); if(btn) btn.onclick=()=>refresh().catch((err)=>{ out.textContent=friendly(err); }); await refresh().catch((err)=>{ out.textContent=friendly(err); }); }
   function boot(){ const page=(location.pathname||'').split('/').pop(); if(page==='login.html') bootLoginPage(); else if(page==='request.html') bootRequestPage(); else if(page==='activate.html') bootActivatePage(); else if(page==='admin_account_runtime.html') bootAdminPage(); else if(page==='admin_mail_audit.html') bootMailAuditPage(); }
-  window.GEJAST_ACCOUNT_RUNTIME={VERSION,rpc,rpcFirst,scope,playerToken,setPlayerToken,clearPlayerToken,adminToken,getRequestableNames,requestClaim,getActivationContext,activateAccount,login,getPublicState,adminAudit,adminMail,adminAddName,adminApprove,adminReject,bootLoginPage,bootRequestPage,bootActivatePage,bootAdminPage,bootMailAuditPage};
+  window.GEJAST_ACCOUNT_RUNTIME={VERSION,rpc,rpcFirst,scope,playerToken,setPlayerToken,clearPlayerToken,adminToken,getLoginNames,getRequestableNames,requestClaim,getActivationContext,activateAccount,login,getPublicState,adminAudit,adminMail,adminAddName,adminApprove,adminReject,bootLoginPage,bootRequestPage,bootActivatePage,bootAdminPage,bootMailAuditPage};
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true}); else boot();
 })();
