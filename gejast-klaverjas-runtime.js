@@ -1,7 +1,7 @@
 (function(global){
   'use strict';
   const cfg = global.GEJAST_CONFIG || {};
-  const VERSION = 'v685';
+  const VERSION = 'v687';
   const DEFAULT_SCOPE = 'friends';
   const SESSION_KEYS = (cfg.PLAYER_SESSION_KEYS || ['jas_session_token_v11','jas_session_token_v10']);
 
@@ -86,7 +86,7 @@
       }
     } catch (_) {}
     try {
-      const data = await rpc('get_scoped_player_names_v673', { site_scope_input: getScope() }, { timeoutMs: 8000 });
+      const data = await rpc('get_scoped_player_names_v687', { site_scope_input: getScope() }, { timeoutMs: 8000 });
       const rows = Array.isArray(data) ? data : (Array.isArray(data && data.names) ? data.names : []);
       return uniqueNames(rows.map((row) => typeof row === 'string' ? row : (row.display_name || row.player_name || row.name || '')));
     } catch (_) {}
@@ -111,7 +111,7 @@
   }
   async function saveMatch(input){
     const payload = normalizeMatchInput(input);
-    return await rpc('save_klaverjas_match_v673', {
+    return await rpc('save_klaverjas_match_v687', {
       session_token: getToken() || null,
       session_token_input: getToken() || null,
       client_match_id_input: payload.client_match_id,
@@ -121,7 +121,7 @@
   }
   async function startLive(input){
     const payload = normalizeMatchInput(Object.assign({ team_a_score: 0, team_b_score: 0 }, input || {}));
-    return await rpc('start_klaverjas_live_match_v673', {
+    return await rpc('start_klaverjas_live_match_v687', {
       session_token_input: getToken() || null,
       client_match_id_input: payload.client_match_id,
       match_payload: payload,
@@ -129,7 +129,7 @@
     });
   }
   async function updateLive(clientMatchId, patch){
-    return await rpc('update_klaverjas_live_match_v673', {
+    return await rpc('update_klaverjas_live_match_v687', {
       session_token_input: getToken() || null,
       client_match_id_input: clientMatchId,
       patch_payload: patch || {},
@@ -137,7 +137,7 @@
     });
   }
   async function finishLive(clientMatchId, patch){
-    return await rpc('finish_klaverjas_live_match_v673', {
+    return await rpc('finish_klaverjas_live_match_v687', {
       session_token_input: getToken() || null,
       client_match_id_input: clientMatchId,
       patch_payload: patch || {},
@@ -145,22 +145,22 @@
     });
   }
   async function getLive(clientMatchId){
-    return await rpc('get_klaverjas_live_state_public_v673', { client_match_id_input: clientMatchId || null, site_scope_input: getScope() }, { timeoutMs: 9000 });
+    return await rpc('get_klaverjas_live_state_public_v687', { client_match_id_input: clientMatchId || null, site_scope_input: getScope() }, { timeoutMs: 9000 });
   }
   async function getLeaderboard(){
-    return await rpc('get_klaverjas_leaderboard_public_v673', { site_scope_input: getScope() }, { timeoutMs: 10000 });
+    return await rpc('get_klaverjas_leaderboard_public_v687', { site_scope_input: getScope() }, { timeoutMs: 10000 });
   }
   async function getBundle(){
-    return await rpc('get_klaverjas_runtime_bundle_v673', { site_scope_input: getScope() }, { timeoutMs: 12000 });
+    return await rpc('get_klaverjas_runtime_bundle_v687', { site_scope_input: getScope() }, { timeoutMs: 12000 });
   }
   async function adminAudit(){
-    return await rpc('admin_get_klaverjas_runtime_audit_v673', { admin_session_token_input: getAdminToken() || null, site_scope_input: getScope() }, { timeoutMs: 12000 });
+    return await rpc('admin_get_klaverjas_runtime_audit_v687', { admin_session_token_input: getAdminToken() || null, site_scope_input: getScope() }, { timeoutMs: 12000 });
   }
   async function adminDelete(matchId){
-    return await rpc('admin_delete_klaverjas_match_v673', { admin_session_token_input: getAdminToken() || null, match_id_input: matchId, site_scope_input: getScope() });
+    return await rpc('admin_delete_klaverjas_match_v687', { admin_session_token_input: getAdminToken() || null, match_id_input: matchId, site_scope_input: getScope() });
   }
   async function adminRebuild(){
-    return await rpc('admin_rebuild_klaverjas_ratings_v673', { admin_session_token_input: getAdminToken() || null, site_scope_input: getScope() }, { timeoutMs: 20000 });
+    return await rpc('admin_rebuild_klaverjas_ratings_v687', { admin_session_token_input: getAdminToken() || null, site_scope_input: getScope() }, { timeoutMs: 20000 });
   }
   function escapeHtml(value){
     return String(value ?? '').replace(/[&<>"']/g, (m) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));

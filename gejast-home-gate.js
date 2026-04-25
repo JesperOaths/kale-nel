@@ -1,6 +1,6 @@
 (function(){
   var cfg = window.GEJAST_CONFIG || {};
-  var VERSION = 'v686';
+  var VERSION = 'v687';
   function getToken(){ try { return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; } catch(_){ return ''; } }
   function clearTokens(){ try{ cfg.clearPlayerSessionTokens && cfg.clearPlayerSessionTokens(); }catch(_){} }
   function currentScope(){ try{ if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.getScope === 'function') return window.GEJAST_SCOPE_UTILS.getScope(); }catch(_){} try{ return new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'; }catch(_){ return 'friends'; } }
@@ -18,7 +18,7 @@
   }
   function normalizeName(v){ return String(v||'').replace(/\s+/g,' ').trim(); }
   async function fetchViewerState(token){
-    var attempts=[['get_public_state',{session_token:token}],['get_public_state',{session_token_input:token}],['account_public_state_v686',{session_token_input:token}]];
+    var attempts=[['get_public_state',{session_token:token}],['get_public_state',{session_token_input:token}],['account_public_state_v687',{session_token_input:token}]];
     for(var i=0;i<attempts.length;i++){
       try{
         var data=await rpc(attempts[i][0], attempts[i][1], 1500);

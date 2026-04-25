@@ -1,0 +1,10 @@
+GEJAST v687 — Core runtime repair
+
+Fixes the repeated real failures from the live screenshots:
+- Profiles now render from a fast active-game-player source instead of slow full stats.
+- Klaverjassen scorer dropdown loads from the same fast game-player source.
+- Pikken uses v687 fast RPCs and shorter fail-fast behavior.
+- Paardenrace uses v687 fast room RPCs and avoids slow public safe-wrapper calls.
+- Homepage optional home/profile runtime remains non-blocking.
+
+This patch intentionally prioritizes fast visible page boot and exact active player lists over slow decorative analysis data.

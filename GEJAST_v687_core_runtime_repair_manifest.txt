@@ -1,0 +1,21 @@
+GEJAST v687 patched files
+- gejast-config.js
+- gejast-home-gate.js
+- gejast-home-profile-runtime.js
+- gejast-account-runtime.js
+- gejast-pikken-contract.js
+- gejast-pikken.js
+- pikken.html
+- gejast-paardenrace.js
+- paardenrace.html
+- profiles.html
+- gejast-klaverjas-runtime.js
+- scorer.html
+- klaverjas_scorer_v596_repo_ready.html
+- score.html
+- boerenbridge.html
+- boerenbridge_live.html
+- boerenbridge_spectator.html
+- boerenbridge_vault.html
+- VERSION
+- PATCH_NOTES_v687_CORE_RUNTIME_REPAIR.txt

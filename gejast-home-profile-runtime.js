@@ -1,12 +1,12 @@
 (function(){
-  if (window.GEJAST_HOME_PROFILE_RUNTIME && window.GEJAST_HOME_PROFILE_RUNTIME.VERSION === 'v686') return;
+  if (window.GEJAST_HOME_PROFILE_RUNTIME && window.GEJAST_HOME_PROFILE_RUNTIME.VERSION === 'v687') return;
   const cfg = window.GEJAST_CONFIG || {};
-  const VERSION = 'v686';
+  const VERSION = 'v687';
   const RPC = {
-    home:'get_homepage_runtime_bundle_v686',
-    profiles:'get_profiles_runtime_bundle_v686',
-    player:'get_player_runtime_bundle_v686',
-    admin:'admin_get_home_profile_runtime_audit_v686'
+    home:'get_homepage_runtime_bundle_v687',
+    profiles:'get_profiles_runtime_bundle_v687',
+    player:'get_player_runtime_bundle_v687',
+    admin:'admin_get_home_profile_runtime_audit_v687'
   };
   function $(id){ return document.getElementById(id); }
   function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
@@ -104,7 +104,7 @@
       else if(path==='profiles.html') await loadProfiles();
       else if(path==='player.html') await loadPlayer();
       else if(path==='admin_home_profiles_runtime.html') await loadAdmin();
-    }catch(err){ console.warn('[home-profile-runtime]', err); /* v686: optional runtime must never add visible timeout errors or slow/block the page. Existing page-owned boxes remain visible. */ }
+    }catch(err){ console.warn('[home-profile-runtime]', err); /* v687: optional runtime must never add visible timeout errors or slow/block the page. Existing page-owned boxes remain visible. */ }
   }
   window.GEJAST_HOME_PROFILE_RUNTIME={VERSION,rpc,loadHome,loadProfiles,loadPlayer,loadAdmin,renderHome,renderProfiles,renderPlayer};
   function start(){ const fast=window.GEJAST_FAST_RUNTIME; if(fast&&fast.idle) fast.idle(()=>boot(), 1500); else setTimeout(()=>boot(),120); } if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', start, {once:true}); else start();
