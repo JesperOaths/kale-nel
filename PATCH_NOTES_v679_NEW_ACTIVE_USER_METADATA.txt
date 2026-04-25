@@ -1,0 +1,25 @@
+GEJAST v679 - New active user metadata enforcement
+
+Purpose:
+- Implement the rule that NEW active login users must have stored metadata.
+- Do not retroactively block current legacy active users that predate stored metadata.
+- Preserve v678 login eligibility: legacy active=true + pin_hash, no approved=true requirement.
+
+Changed frontend files:
+- VERSION
+- gejast-config.js
+- gejast-account-runtime.js
+- login.html
+- request.html
+- activate.html
+- admin_account_runtime.html
+
+SQL:
+- GEJAST_v679_new_active_user_metadata.sql
+
+Behavior:
+- request.html submits request/browser metadata to account_request_claim_v679.
+- activate.html submits activation/browser metadata to account_activate_v679.
+- admin_account_runtime.html admin approve/reset actions send admin/browser metadata.
+- login.html uses get_login_active_names_v679 first.
+- get_login_active_names_v679 allows old/current legacy users without metadata, but requires metadata for users created/activated after v679 policy install when a timestamp column exists.

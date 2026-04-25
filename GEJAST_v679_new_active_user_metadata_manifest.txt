@@ -1,0 +1,20 @@
+GEJAST v679 new active user metadata manifest
+
+Frontend files in zip:
+- VERSION
+- gejast-config.js
+- gejast-account-runtime.js
+- login.html
+- request.html
+- activate.html
+- admin_account_runtime.html
+- PATCH_NOTES_v679_NEW_ACTIVE_USER_METADATA.txt
+- GEJAST_v679_new_active_user_metadata_manifest.txt
+
+SQL delivered separately:
+- GEJAST_v679_new_active_user_metadata.sql
+
+Rule implemented:
+- Current legacy active users are not blocked for missing metadata.
+- New active users created/activated after v679 must have stored active-login metadata when the source table exposes a created_at/activated_at timestamp.
+- Login dropdown still uses strict active-login sources only, never requestable/scope-only/profile-only names.
