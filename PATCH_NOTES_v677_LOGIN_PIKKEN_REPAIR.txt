@@ -1,0 +1,11 @@
+GEJAST v677 - login speed/filter + Pikken lobby repair
+
+Fixes:
+- Login dropdown no longer reads the old v676 broad cache.
+- Login dropdown asks only get_login_active_names_v677 and only shows real active login accounts with PIN/activation evidence.
+- Login redirect respects return_to, so logging in from Pikken can return to Pikken.
+- Pikken contract now times out stuck RPCs and shows explicit login/SQL errors.
+- Pikken lobby creation/join derives game_id defensively and no longer sits forever on 'Lobby maken…'.
+- Pikken backend session resolver is repaired by SQL so v671/v676 account sessions can create/join Pikken lobbies.
+
+SQL required: GEJAST_v677_login_pikken_session_repair.sql

@@ -1,10 +1,10 @@
 (function(){
-  if (window.GEJAST_ACCOUNT_RUNTIME && window.GEJAST_ACCOUNT_RUNTIME.VERSION === 'v676') return;
+  if (window.GEJAST_ACCOUNT_RUNTIME && window.GEJAST_ACCOUNT_RUNTIME.VERSION === 'v677') return;
   const cfg = window.GEJAST_CONFIG || {};
-  const VERSION = 'v676';
+  const VERSION = 'v677';
   const SESSION_KEYS = (Array.isArray(cfg.PLAYER_SESSION_KEYS) && cfg.PLAYER_SESSION_KEYS.length) ? cfg.PLAYER_SESSION_KEYS : ['jas_session_token_v11','jas_session_token_v10'];
   const ADMIN_KEYS = ['jas_admin_session_v8','gejast_admin_session_token','jas_admin_session_token'];
-  const LOGIN_CACHE_PREFIX = 'gejast_login_active_names_v676_';
+  const LOGIN_CACHE_PREFIX = 'gejast_login_active_names_v677_';
   function $(id){ return document.getElementById(id); }
   function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,(m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
   function scope(){ try{ if(window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope) return window.GEJAST_SCOPE_UTILS.getScope(); }catch(_){} try{ const q=new URLSearchParams(location.search).get('scope'); return q==='family'?'family':'friends'; }catch(_){ return 'friends'; } }
@@ -63,23 +63,15 @@
   function namesFromPayload(raw){ return normalizeNames(extractNameRows(raw).filter((row)=>rowScopeMatches(row) && activeNameSignal(row))); }
 
   async function getLoginNames(){
-    const found=[];
-    function add(list){ normalizeNames(list).forEach((name)=>found.push(name)); }
-    try { add(await rpc('get_login_active_names_v676', {site_scope_input:scope()}, {timeoutMs:2800})); } catch (_) {}
-    if (found.length) return writeLoginCache(found);
-    const calls = [
-      {name:'get_login_names_scoped', body:{site_scope_input:scope()}, options:{timeoutMs:2500}},
-      {name:'get_login_names', body:{}, options:{timeoutMs:2500}},
-      {name:'get_all_site_players_public_scoped', body:{site_scope_input:scope()}, options:{timeoutMs:2500}},
-      {name:'get_profiles_page_bundle_scoped', body:{site_scope_input:scope()}, options:{timeoutMs:2500}},
-      {name:'get_profiles_runtime_bundle_v670', body:{site_scope_input:scope()}, options:{timeoutMs:2500}}
-    ];
-    await Promise.allSettled(calls.map(async(call)=>{ const data=await rpc(call.name, call.body, call.options); add(namesFromPayload(data)); }));
-    if (!found.length) {
-      try { const helper = cfg.getActivatedPlayerNamesForScope || cfg.fetchScopedActivePlayerNames; if (typeof helper === 'function') add(await Promise.race([helper(scope()), new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),2500))])); } catch (_) {}
-    }
-    const clean = writeLoginCache(found);
-    return clean;
+    const cached = readLoginCache();
+    try {
+      const names = await rpc('get_login_active_names_v677', {site_scope_input:scope()}, {timeoutMs:1800});
+      const clean = writeLoginCache(names);
+      if (clean.length) return clean;
+    } catch (_) {}
+    // Deliberately do not fall back to requestable/scope-only/profile names here.
+    // The login dropdown must only show names that can actually authenticate.
+    return cached;
   }
 
   async function getRequestableNames(){
@@ -96,9 +88,11 @@
   async function login(input){
     const name=input.name, pin=input.pin;
     const data = await rpcFirst([
-      {name:'account_login_bridge_v676', body:{display_name_input:name, pin_input:pin, site_scope_input:scope()}, options:{timeoutMs:8000}},
-      {name:'login_player', body:{desired_name:name, entered_pin:pin}, options:{timeoutMs:8000}},
-      {name:'account_login_v671', body:{display_name_input:name, pin_input:pin, site_scope_input:scope()}, options:{timeoutMs:8000}}
+      {name:'account_login_bridge_v677', body:{display_name_input:name, pin_input:pin, site_scope_input:scope()}, options:{timeoutMs:5500}},
+      {name:'account_login_v671', body:{display_name_input:name, pin_input:pin, site_scope_input:scope()}, options:{timeoutMs:5500}},
+      {name:'login_player', body:{desired_name:name, entered_pin:pin}, options:{timeoutMs:5500}},
+      {name:'login_player', body:{input_username:name, entered_pin:pin}, options:{timeoutMs:5500}},
+      {name:'login_player', body:{input_display_name:name, input_pin:pin}, options:{timeoutMs:5500}}
     ]);
     if(data && data.session_token) setPlayerToken(data.session_token);
     return data;
@@ -107,14 +101,23 @@
   function visitorMeta(){ return {user_agent:navigator.userAgent||'', language:navigator.language||'', timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'', viewport:`${innerWidth}x${innerHeight}`, referrer:document.referrer||'', page_url:location.href}; }
   function fillSelect(sel,names){ if(!sel) return; const current=sel.value; const clean=normalizeNames(names); sel.innerHTML='<option value="">Kies je naam</option>'+clean.map((n)=>`<option value="${esc(n)}">${esc(n)}</option>`).join(''); if(clean.includes(current)) sel.value=current; }
 
+  function safeReturnTarget(raw){
+    const value = String(raw || '').trim();
+    if (!value || /^(?:[a-z]+:)?\/\//i.test(value) || value.includes('..') || value.includes('\\')) return './index.html';
+    return value.startsWith('./') ? value : './' + value.replace(/^\/+/, '');
+  }
+  function loginReturnTarget(){
+    try { return safeReturnTarget(new URLSearchParams(location.search).get('return_to') || 'index.html'); } catch (_) { return './index.html'; }
+  }
+
   async function bootLoginPage(){
     const form=$('loginForm'), sel=$('playerNameInput'), pin=$('pinInput'); if(!form) return;
     const cached = readLoginCache();
     if (cached.length) { fillSelect(sel, cached); setStatus('statusBox',`Namen direct uit cache geladen; verversen op achtergrond...`,''); }
-    else setStatus('statusBox','Namen laden...','');
-    getLoginNames().then((names)=>{ fillSelect(sel,names); if(names.length) setStatus('statusBox',`${names.length} actieve speler(s) geladen.`,'ok'); else setStatus('statusBox','Geen actieve loginnamen gevonden. Deze dropdown toont nu geen requestable/scope-only namen meer.','warn'); }).catch((err)=>{ setStatus('statusBox', cached.length ? 'Kon namen niet live verversen; cache blijft zichtbaar.' : friendly(err), cached.length ? '' : 'warn'); });
+    else setStatus('statusBox','Actieve loginnamen laden...','');
+    getLoginNames().then((names)=>{ fillSelect(sel,names); if(names.length) setStatus('statusBox',`${names.length} echte actieve loginspeler(s) geladen.`,'ok'); else setStatus('statusBox','Geen actieve loginspelers gevonden. Vraag de beheerder om je login te activeren/resetten; requestable/familie/scope-only namen worden expres niet getoond.','warn'); }).catch((err)=>{ setStatus('statusBox', cached.length ? 'Kon namen niet live verversen; cache blijft zichtbaar.' : friendly(err), cached.length ? '' : 'warn'); });
     try{ const st=await getPublicState(); if(st?.my_name||st?.display_name||st?.player_name) setStatus('statusBox',`Deze browser heeft al een sessie voor ${st.my_name||st.display_name||st.player_name}.`,'ok'); }catch(_){}
-    form.addEventListener('submit', async(ev)=>{ ev.preventDefault(); const name=String(sel.value||'').trim(); const p=String(pin.value||'').replace(/\D/g,'').slice(0,4); if(!name) return setStatus('statusBox','Kies eerst je naam.','warn'); if(!/^\d{4}$/.test(p)) return setStatus('statusBox','Voer je 4-cijferige pincode in.','warn'); try{ setBusy(form,true); setStatus('statusBox','Inloggen...'); const out=await login({name,pin:p}); setStatus('statusBox',`Ingelogd als ${out.display_name||out.player_name||name}.`,'ok'); setTimeout(()=>location.href='./index.html',450); }catch(err){ setStatus('statusBox',friendly(err),'warn'); }finally{ setBusy(form,false); } });
+    form.addEventListener('submit', async(ev)=>{ ev.preventDefault(); const name=String(sel.value||'').trim(); const p=String(pin.value||'').replace(/\D/g,'').slice(0,4); if(!name) return setStatus('statusBox','Kies eerst je naam.','warn'); if(!/^\d{4}$/.test(p)) return setStatus('statusBox','Voer je 4-cijferige pincode in.','warn'); try{ setBusy(form,true); setStatus('statusBox','Inloggen...'); const out=await login({name,pin:p}); setStatus('statusBox',`Ingelogd als ${out.display_name||out.player_name||name}.`,'ok'); setTimeout(()=>location.href=loginReturnTarget(),350); }catch(err){ setStatus('statusBox',friendly(err),'warn'); }finally{ setBusy(form,false); } });
     const logout=$('logoutBtn'); if(logout) logout.addEventListener('click',()=>{ clearPlayerToken(); setStatus('statusBox','Sessie gewist.','ok'); });
     if(pin) pin.addEventListener('input',()=>{ pin.value=pin.value.replace(/\D/g,'').slice(0,4); });
   }
@@ -123,8 +126,8 @@
 
   async function adminAudit(){ return await rpc('admin_get_account_runtime_audit_v671',{admin_session_token:adminToken(),site_scope_input:scope()}); }
   async function adminMail(){ return await rpc('admin_get_mail_diagnostics',{admin_session_token:adminToken(),site_scope_input:scope()}); }
-  async function adminDiagnoseLogin(name){ return await rpc('diagnose_login_name_v676',{player_name_input:name,site_scope_input:scope()}); }
-  async function adminRepairLogin(name,pin){ return await rpc('admin_reset_legacy_player_pin_v676',{admin_session_token_input:adminToken(),player_name_input:name,new_pin_input:pin,site_scope_input:scope()}); }
+  async function adminDiagnoseLogin(name){ return await rpc('diagnose_login_name_v677',{player_name_input:name,site_scope_input:scope()}); }
+  async function adminRepairLogin(name,pin){ return await rpc('admin_reset_legacy_player_pin_v677',{admin_session_token_input:adminToken(),player_name_input:name,new_pin_input:pin,site_scope_input:scope()}); }
   async function adminAddName(name){ return await rpc('admin_add_requestable_name_v671',{admin_session_token_input:adminToken(),display_name_input:name,site_scope_input:scope()}); }
   async function adminApprove(id){ return await rpc('admin_approve_account_claim_v671',{admin_session_token_input:adminToken(),claim_id_input:id,site_scope_input:scope()}); }
   async function adminReject(id,reason){ return await rpc('admin_reject_account_claim_v671',{admin_session_token_input:adminToken(),claim_id_input:id,reject_reason_input:reason||'',site_scope_input:scope()}); }

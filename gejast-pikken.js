@@ -1,12 +1,16 @@
 (function(){
   const api = window.GEJAST_PIKKEN_CONTRACT;
   if (!api) { console.error('GEJAST_PIKKEN_CONTRACT missing'); return; }
-  const PARTICIPANT_KEY = 'gejast_pikken_participant_v666';
+  const PARTICIPANT_KEY = 'gejast_pikken_participant_v677';
   const LEGACY_PARTICIPANT_KEY = 'gejast_pikken_participant_v632';
   let state = { gameId:'', timer:null, busy:false, lastVersion:-1 };
   const $ = (id)=>document.getElementById(id);
   const esc = (v)=>String(v ?? '').replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
   function setStatus(msg='', bad=false){ const el=$('pkStatus'); if(el){ el.textContent=msg; el.style.color=bad?'#7f2f1d':'#6b6257'; } }
+  function loginUrl(){ const target = `pikken.html${api.scope()==='family'?'?scope=family':''}`; return `./login.html?return_to=${encodeURIComponent(target)}${api.scope()==='family'?'&scope=family':''}`; }
+  function normalizeError(e){ const msg=String(e && e.message ? e.message : e || 'Onbekende fout'); if(/Niet ingelogd|not logged|session/i.test(msg)) return `Niet ingelogd. Log eerst in via ${loginUrl()}`; if(/timeout/i.test(msg)) return 'Server reageert niet op de Pikken-RPC. Controleer of de laatste v677 SQL heeft gedraaid.'; if(/could not find|schema cache|function/i.test(msg)) return 'Pikken backend-RPC ontbreekt of Supabase schema cache is nog oud. Draai de v677 SQL en refresh.'; return msg; }
+  function setBusyButton(id,busy,label){ const b=$(id); if(!b) return; b.disabled=!!busy; if(label) b.textContent=busy?label:b.getAttribute('data-original-label')||b.textContent; }
+
   function getStoredGame(){
     try { return JSON.parse(localStorage.getItem(PARTICIPANT_KEY) || localStorage.getItem(LEGACY_PARTICIPANT_KEY) || 'null')?.game_id || ''; } catch (_) { return ''; }
   }
@@ -85,26 +89,48 @@
     try { const l=await api.openLobbies(); const rows=Array.isArray(l)?l:(l.rows||l.items||[]); if(lobbyBox) lobbyBox.innerHTML = rows.length ? rows.map((r)=>`<article class="feed-card"><div class="feed-head"><div><div class="feed-title">Code ${esc(r.lobby_code||'')}</div><div class="feed-meta">${esc(r.host_name||r.created_by_player_name||'Host')} · ${Number(r.player_count||0)} speler(s) · ${Number(r.ready_count||0)} ready</div></div><span class="pill wait">Lobby</span></div><div class="feed-actions"><button class="btn alt tiny" data-join-code="${esc(r.lobby_code||'')}">Join</button></div></article>`).join('') : '<div class="muted">Geen open Pikken-lobbies.</div>'; } catch(e){ if(lobbyBox) lobbyBox.innerHTML='<div class="muted">Open lobbies konden niet laden.</div>'; }
     try { const l=await api.liveMatches(); const rows=Array.isArray(l)?l:(l.rows||l.items||[]); if(liveBox) liveBox.innerHTML = rows.length ? rows.map((r)=>`<article class="feed-card"><div class="feed-head"><div><div class="feed-title">${esc(r.lobby_code||'Pikken')}</div><div class="feed-meta">${esc(r.phase||r.status||'live')} · ronde ${Number(r.round_no||0)} · ${Number(r.player_count||0)} speler(s)</div></div><span class="pill ok">Live</span></div><div class="feed-actions"><a class="btn alt tiny" href="${liveHref(r.game_id||r.id)}">Open live</a></div></article>`).join('') : '<div class="muted">Geen live Pikken-matches.</div>'; } catch(e){ if(liveBox) liveBox.innerHTML='<div class="muted">Live matches konden niet laden.</div>'; }
   }
-  async function createLobby(){ setStatus('Lobby maken…'); const mode=$('pkPenaltyMode')?.value || 'wrong_loses'; const out=await api.createLobby({ penalty_mode:mode, start_dice:6, prev_winner_window_hours:12 }); state.gameId=out.game_id; storeGame(state.gameId); updateUrl(state.gameId); await refresh(true); startPolling(); loadFeeds(); }
-  async function joinLobby(code){ const value=api.cleanCode(code || $('pkJoinCode')?.value || ''); if(!value) return setStatus('Vul een lobbycode in.', true); setStatus('Lobby joinen…'); const out=await api.joinLobby(value); state.gameId=out.game_id; storeGame(state.gameId); updateUrl(state.gameId); await refresh(true); startPolling(); loadFeeds(); }
+  async function createLobby(){
+    try { api.requireSession && api.requireSession(); } catch(e){ setStatus(normalizeError(e), true); return; }
+    setStatus('Lobby maken…'); setBusyButton('pkCreateLobbyBtn', true, 'Maken…');
+    try {
+      const mode=$('pkPenaltyMode')?.value || 'wrong_loses';
+      const out=await api.createLobby({ penalty_mode:mode, start_dice:6, prev_winner_window_hours:12 });
+      const id = out?.game_id || out?.id || out?.game?.id || out?.gameId || '';
+      if(!id) throw new Error('Lobby is aangemaakt maar de backend gaf geen game_id terug: '+JSON.stringify(out).slice(0,240));
+      state.gameId=id; storeGame(state.gameId); updateUrl(state.gameId);
+      await refresh(true); startPolling(); loadFeeds(); setStatus('Lobby aangemaakt. Deel de code met de andere spelers.');
+    } catch(e){ setStatus(normalizeError(e), true); }
+    finally{ setBusyButton('pkCreateLobbyBtn', false); }
+  }
+  async function joinLobby(code){
+    try { api.requireSession && api.requireSession(); } catch(e){ setStatus(normalizeError(e), true); return; }
+    const value=api.cleanCode(code || $('pkJoinCode')?.value || ''); if(!value) return setStatus('Vul een lobbycode in.', true);
+    setStatus('Lobby joinen…'); setBusyButton('pkJoinLobbyBtn', true, 'Joinen…');
+    try{
+      const out=await api.joinLobby(value); const id=out?.game_id || out?.id || out?.game?.id || '';
+      if(!id) throw new Error('Join gelukt maar backend gaf geen game_id terug: '+JSON.stringify(out).slice(0,240));
+      state.gameId=id; storeGame(state.gameId); updateUrl(state.gameId); await refresh(true); startPolling(); loadFeeds(); setStatus('Lobby gejoind.');
+    }catch(e){ setStatus(normalizeError(e), true); }
+    finally{ setBusyButton('pkJoinLobbyBtn', false); }
+  }
   async function startGame(){ setStatus('Starten…'); await api.startGame(state.gameId); window.location.href = liveHref(state.gameId); }
   async function leave(){ if(!state.gameId) return; await api.leaveGame(state.gameId); storeGame(''); state.gameId=''; stopPolling(); try{ history.replaceState(null,'','pikken.html'); }catch(_){} setStatus('Lobby verlaten.'); await loadFeeds(); }
   async function destroy(){ if(!state.gameId) return; if(!confirm('Host: deze Pikken-lobby/match verwijderen?')) return; await api.destroyGame(state.gameId); storeGame(''); state.gameId=''; stopPolling(); try{ history.replaceState(null,'','pikken.html'); }catch(_){} setStatus('Lobby verwijderd.'); await loadFeeds(); }
-  function wire(){
-    $('pkCreateLobbyBtn')?.addEventListener('click', ()=>createLobby().catch((e)=>setStatus(e.message,true)));
-    $('pkJoinLobbyBtn')?.addEventListener('click', ()=>joinLobby().catch((e)=>setStatus(e.message,true)));
-    document.addEventListener('click', (ev)=>{ const btn=ev.target.closest('[data-join-code]'); if(btn) joinLobby(btn.getAttribute('data-join-code')).catch((e)=>setStatus(e.message,true)); });
-    $('pkReadyBtn')?.addEventListener('click', ()=>api.setReady(state.gameId,true).then(()=>refresh(true)).catch((e)=>setStatus(e.message,true)));
-    $('pkUnreadyBtn')?.addEventListener('click', ()=>api.setReady(state.gameId,false).then(()=>refresh(true)).catch((e)=>setStatus(e.message,true)));
-    $('pkStartBtn')?.addEventListener('click', ()=>startGame().catch((e)=>setStatus(e.message,true)));
-    $('pkLeaveBtn')?.addEventListener('click', ()=>leave().catch((e)=>setStatus(e.message,true)));
-    $('pkDestroyBtn')?.addEventListener('click', ()=>destroy().catch((e)=>setStatus(e.message,true)));
-    $('pkPlaceBidBtn')?.addEventListener('click', ()=>api.placeBid(state.gameId, Number($('pkBidCount')?.value||0), Number($('pkBidFace')?.value||0)).then((p)=>render(p)).catch((e)=>setStatus(e.message,true)));
-    $('pkRejectBtn')?.addEventListener('click', ()=>api.rejectBid(state.gameId).then((p)=>render(p)).catch((e)=>setStatus(e.message,true)));
-    $('pkVoteApproveBtn')?.addEventListener('click', ()=>api.castVote(state.gameId,true).then((p)=>render(p)).catch((e)=>setStatus(e.message,true)));
-    $('pkVoteRejectBtn')?.addEventListener('click', ()=>api.castVote(state.gameId,false).then((p)=>render(p)).catch((e)=>setStatus(e.message,true)));
+  function wire(){ ['pkCreateLobbyBtn','pkJoinLobbyBtn'].forEach((id)=>{ const b=$(id); if(b && !b.getAttribute('data-original-label')) b.setAttribute('data-original-label', b.textContent); });
+    $('pkCreateLobbyBtn')?.addEventListener('click', ()=>createLobby().catch((e)=>setStatus(normalizeError(e),true)));
+    $('pkJoinLobbyBtn')?.addEventListener('click', ()=>joinLobby().catch((e)=>setStatus(normalizeError(e),true)));
+    document.addEventListener('click', (ev)=>{ const btn=ev.target.closest('[data-join-code]'); if(btn) joinLobby(btn.getAttribute('data-join-code')).catch((e)=>setStatus(normalizeError(e),true)); });
+    $('pkReadyBtn')?.addEventListener('click', ()=>api.setReady(state.gameId,true).then(()=>refresh(true)).catch((e)=>setStatus(normalizeError(e),true)));
+    $('pkUnreadyBtn')?.addEventListener('click', ()=>api.setReady(state.gameId,false).then(()=>refresh(true)).catch((e)=>setStatus(normalizeError(e),true)));
+    $('pkStartBtn')?.addEventListener('click', ()=>startGame().catch((e)=>setStatus(normalizeError(e),true)));
+    $('pkLeaveBtn')?.addEventListener('click', ()=>leave().catch((e)=>setStatus(normalizeError(e),true)));
+    $('pkDestroyBtn')?.addEventListener('click', ()=>destroy().catch((e)=>setStatus(normalizeError(e),true)));
+    $('pkPlaceBidBtn')?.addEventListener('click', ()=>api.placeBid(state.gameId, Number($('pkBidCount')?.value||0), Number($('pkBidFace')?.value||0)).then((p)=>render(p)).catch((e)=>setStatus(normalizeError(e),true)));
+    $('pkRejectBtn')?.addEventListener('click', ()=>api.rejectBid(state.gameId).then((p)=>render(p)).catch((e)=>setStatus(normalizeError(e),true)));
+    $('pkVoteApproveBtn')?.addEventListener('click', ()=>api.castVote(state.gameId,true).then((p)=>render(p)).catch((e)=>setStatus(normalizeError(e),true)));
+    $('pkVoteRejectBtn')?.addEventListener('click', ()=>api.castVote(state.gameId,false).then((p)=>render(p)).catch((e)=>setStatus(normalizeError(e),true)));
     document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) { refresh(true); loadFeeds(); } });
   }
-  function boot(){ wire(); state.gameId = gameFromUrl() || getStoredGame(); if(state.gameId) startPolling(); else { renderControls({},{}); } loadFeeds(); setInterval(()=>{ if(!document.hidden) loadFeeds(); }, 8000); }
+  function boot(){ wire(); if(!api.sessionToken || !api.sessionToken()) setStatus('Niet ingelogd: maak/join werkt pas na login. Ga naar '+loginUrl(), true); state.gameId = gameFromUrl() || getStoredGame(); if(state.gameId) startPolling(); else { renderControls({},{}); } loadFeeds(); setInterval(()=>{ if(!document.hidden) loadFeeds(); }, 8000); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot, { once:true }); else boot();
 })();

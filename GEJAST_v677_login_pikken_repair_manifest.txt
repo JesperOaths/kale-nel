@@ -1,0 +1,18 @@
+GEJAST v677 login + Pikken repair manifest
+
+Files:
+- PATCH_NOTES_v677_LOGIN_PIKKEN_REPAIR.txt
+- VERSION
+- admin_account_runtime.html
+- admin_pikken.html
+- gejast-account-runtime.js
+- gejast-config.js
+- gejast-pikken-contract.js
+- gejast-pikken-live.js
+- gejast-pikken.js
+- login.html
+- pikken.html
+- pikken_live.html
+- pikken_stats.html
+
+SQL separate: GEJAST_v677_login_pikken_session_repair.sql
