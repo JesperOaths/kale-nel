@@ -1,4 +1,4 @@
-(function (global) {
+﻿(function (global) {
   function live() {
     return global.GEJAST_LIVE_SUMMARY || {};
   }
@@ -40,13 +40,13 @@
     return Number.isFinite(n) ? n : fallback;
   }
 
-  function text(value, fallback = '—') {
+  function text(value, fallback = 'â€”') {
     const v = String(value ?? '').trim();
     return v || fallback;
   }
 
   function formatDateTime(value) {
-    if (!value) return '—';
+    if (!value) return 'â€”';
     try {
       return new Date(value).toLocaleString('nl-NL', {
         year: 'numeric',
@@ -118,7 +118,7 @@
       currentRound: num(liveState?.current_round, rounds.length),
       updatedAt: item?.updated_at || liveState?.updated_at || summary?.finished_at || summary?.created_at || null,
       finished: !!(live().isFinished ? live().isFinished(item) : (item?.finished_at || summary?.finished_at)),
-      winnerLabel: text(summary?.winner_names_label || winnerNames.join(' · '), 'Nog geen winnaar'),
+      winnerLabel: text(summary?.winner_names_label || winnerNames.join(' - '), 'Nog geen winnaar'),
       winnerNames
     };
   }
@@ -158,11 +158,11 @@
     setText('metaText', live().metaText ? live().metaText(meta.item) : 'Live scoreblad');
     setText('statusChip', meta.finished ? 'Afgerond' : 'Live');
     setText('hostValue', text(meta.host, 'Onbekend'));
-    setText('playersValue', meta.participants.length ? meta.participants.join(' · ') : 'Nog geen spelers');
+    setText('playersValue', meta.participants.length ? meta.participants.join(' - ') : 'Nog geen spelers');
     setText('roundsValue', `${meta.roundsPlayed}`);
     setText('winnerValue', meta.finished ? meta.winnerLabel : (meta.winnerNames.length ? meta.winnerLabel : 'Nog bezig'));
     setText('updatedValue', formatDateTime(meta.updatedAt));
-    setText('refValue', text(meta.item?.client_match_id || meta.item?.match_ref || meta.summary?.match_ref, '—'));
+    setText('refValue', text(meta.item?.client_match_id || meta.item?.match_ref || meta.summary?.match_ref, 'â€”'));
   }
 
   async function mount(config) {

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="nl">
 <head>
   <meta charset="UTF-8"/>
@@ -7,12 +7,12 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Boerenbridge spectator</title>
-  <script>window.GEJAST_PAGE_VERSION='v698';</script>
-  <script src="./gejast-config.js?v698"></script>
-  <script src="./gejast-home-gate.js?v698"></script><script src="./gejast-family-rollout.js?v698"></script>
-  <script src="./gejast-scope.js?v698"></script>
-  <script src="./gejast-live-summary.js?v698"></script>
-  <script src="./gejast-spectator-pages.js?v698"></script>
+  <script>window.GEJAST_PAGE_VERSION='v699';</script>
+  <script src="./gejast-config.js?v699"></script>
+  <script src="./gejast-home-gate.js?v699"></script><script src="./gejast-family-rollout.js?v699"></script>
+  <script src="./gejast-scope.js?v699"></script>
+  <script src="./gejast-live-summary.js?v699"></script>
+  <script src="./gejast-spectator-pages.js?v699"></script>
   <style>
     :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241;--soft:#f7f3ec;--live:#123a1f;--livebg:#eaf7ee}
     *{box-sizing:border-box}
@@ -64,18 +64,18 @@
           </div>
           <button class="btn" id="backLink" type="button">Terug</button>
           <h1 style="margin-top:16px">Boerenbridge live</h1>
-          <div id="metaText" class="muted" style="margin-top:8px">Spectator-weergave wordt geladen…</div>
+          <div id="metaText" class="muted" style="margin-top:8px">Spectator-weergave wordt geladenâ€¦</div>
         </div>
         <a class="brand-link" id="brandHomeLink" href="./index.html" aria-label="Home via logo"><img src="./logo.png" alt="Logo"/></a>
       </div>
 
       <div class="meta-grid">
-        <div class="meta-card"><span>Spelleider</span><strong id="hostValue">—</strong></div>
-        <div class="meta-card"><span>Spelers</span><strong id="playersValue">—</strong></div>
-        <div class="meta-card"><span>Rondes</span><strong id="roundsValue">—</strong></div>
-        <div class="meta-card"><span>Winnaar / leider</span><strong id="winnerValue">—</strong></div>
-        <div class="meta-card"><span>Laatst bijgewerkt</span><strong id="updatedValue">—</strong></div>
-        <div class="meta-card"><span>Matchref</span><strong id="refValue">—</strong></div>
+        <div class="meta-card"><span>Spelleider</span><strong id="hostValue">â€”</strong></div>
+        <div class="meta-card"><span>Spelers</span><strong id="playersValue">â€”</strong></div>
+        <div class="meta-card"><span>Rondes</span><strong id="roundsValue">â€”</strong></div>
+        <div class="meta-card"><span>Winnaar / leider</span><strong id="winnerValue">â€”</strong></div>
+        <div class="meta-card"><span>Laatst bijgewerkt</span><strong id="updatedValue">â€”</strong></div>
+        <div class="meta-card"><span>Matchref</span><strong id="refValue">â€”</strong></div>
       </div>
 
       <div class="hero-grid">
@@ -107,8 +107,8 @@
         if (!round) return 'Nog geen ronde geregistreerd.';
         const players = Array.isArray(round.players) ? round.players : [];
         return `<div class="detail-grid">
-          <div class="detail"><span>Ronde</span><strong>${spectator.esc(round.round_no || round.round || '—')}</strong></div>
-          <div class="detail"><span>Label</span><strong>${spectator.esc(round.label || '—')}</strong></div>
+          <div class="detail"><span>Ronde</span><strong>${spectator.esc(round.round_no || round.round || 'â€”')}</strong></div>
+          <div class="detail"><span>Label</span><strong>${spectator.esc(round.label || 'â€”')}</strong></div>
           <div class="detail"><span>Slagen te halen</span><strong>${spectator.num(round.trick_count)}</strong></div>
           <div class="detail"><span>Spelers</span><strong>${players.length}</strong></div>
         </div>
@@ -136,7 +136,7 @@
           <div class="round-head">
             <div>
               <div class="round-title">Ronde ${spectator.esc(round.round_no || round.round || (rounds.length - idx))}</div>
-              <div class="round-sub">${spectator.esc(round.label || 'Ronde')} · ${spectator.num(round.trick_count)} slagen</div>
+              <div class="round-sub">${spectator.esc(round.label || 'Ronde')} - ${spectator.num(round.trick_count)} slagen</div>
             </div>
             ${round.special ? `<div class="pill-row"><span class="pill">${spectator.esc(round.special)}</span></div>` : ''}
           </div>
@@ -171,6 +171,6 @@
     })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./site-analytics.js?v698"></script>
+  <script src="./site-analytics.js?v699"></script>
 </body>
 </html>

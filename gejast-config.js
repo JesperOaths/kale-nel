@@ -1,6 +1,6 @@
 ﻿(function(){
   const CONFIG = {
-    VERSION:'v698',
+    VERSION:'v699',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: '',
@@ -313,6 +313,7 @@ function playerSessionKeys(){
   return []
     .concat(Array.isArray(CONFIG.PLAYER_SESSION_KEYS) ? CONFIG.PLAYER_SESSION_KEYS : [])
     .concat(['jas_session_token_v11','jas_session_token_v10'])
+    .concat(['jas_session_token','player_session_token','gejast_player_session_token','gejast_session_token','account_session_token'])
     .map((value)=>String(value || '').trim())
     .filter((value)=>{
       if (!value || seen.has(value)) return false;
@@ -335,6 +336,31 @@ function getPlayerSessionToken(){
     if (value) {
       mirrorPlayerSessionToken(value);
       return String(value).trim();
+    }
+  }
+  const stores = [localStorage, sessionStorage];
+  const tokenFields = ['session_token','session_token_input','player_session_token','token'];
+  for (const store of stores){
+    for (let i = 0; i < store.length; i += 1){
+      const key = store.key(i) || '';
+      if (!/session|account|login|player|gejast|jas/i.test(key)) continue;
+      const raw = store.getItem(key) || '';
+      if (!raw) continue;
+      try {
+        const parsed = JSON.parse(raw);
+        for (const field of tokenFields){
+          const value = parsed && parsed[field];
+          if (typeof value === 'string' && value.trim().length > 12){
+            mirrorPlayerSessionToken(value);
+            return value.trim();
+          }
+        }
+      } catch (_) {
+        if (/^[A-Za-z0-9._~+/=-]{16,}$/.test(raw.trim()) && /session|token/i.test(key)){
+          mirrorPlayerSessionToken(raw);
+          return raw.trim();
+        }
+      }
     }
   }
   return '';
@@ -679,7 +705,7 @@ function buildRequestUrl(returnTo, scope){
       setTimeout(showPageNow, 0);
     }
     setTimeout(showPageNow, 650);
-    return { VERSION:'v698', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
+    return { VERSION:'v699', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
   })();
   window.GEJAST_FAST_RUNTIME = FAST_RUNTIME;
 
