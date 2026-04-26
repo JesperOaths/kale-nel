@@ -1,4 +1,4 @@
-(function(){
+﻿(function(){
   if (window.GEJAST_PAARDENRACE && window.GEJAST_PAARDENRACE.__v690_complete) return;
   const cfg = window.GEJAST_CONFIG || {};
   const STORAGE_KEY = 'gejast_paardenrace_room_code_v687';
@@ -6,10 +6,10 @@
   const LIVE_QUERY_KEY = 'live';
   const SUITS = ['spades','hearts','clubs','diamonds'];
   const SUIT_META = {
-    hearts: { label:'♥ Harten', symbol:'♥', color:'#a11f35', short:'Harten' },
-    diamonds: { label:'♦ Ruiten', symbol:'♦', color:'#a11f35', short:'Ruiten' },
-    clubs: { label:'♣ Klaveren', symbol:'♣', color:'#1f1b1a', short:'Klaveren' },
-    spades: { label:'♠ Schoppen', symbol:'♠', color:'#1f1b1a', short:'Schoppen' }
+    hearts: { label:'â™¥ Harten', symbol:'â™¥', color:'#a11f35', short:'Harten' },
+    diamonds: { label:'â™¦ Ruiten', symbol:'â™¦', color:'#a11f35', short:'Ruiten' },
+    clubs: { label:'â™£ Klaveren', symbol:'â™£', color:'#1f1b1a', short:'Klaveren' },
+    spades: { label:'â™  Schoppen', symbol:'â™ ', color:'#1f1b1a', short:'Schoppen' }
   };
   function scope(){
     try { if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.getScope === 'function') return window.GEJAST_SCOPE_UTILS.getScope(); } catch(_){}
@@ -45,7 +45,7 @@
         throw new Error(msg);
       }
       return data && data[fn] !== undefined ? data[fn] : data;
-    } catch(err){ if (err && (err.name === 'AbortError' || /abort/i.test(String(err)))) throw new Error('v687 RPC timeout — run the v687 SQL or send the exact Supabase error'); throw err; }
+    } catch(err){ if (err && (err.name === 'AbortError' || /abort/i.test(String(err)))) throw new Error('v687 RPC timeout â€” run the v687 SQL or send the exact Supabase error'); throw err; }
     finally { clearTimeout(timer); }
   }
   function getStoredRoomCode(){
@@ -55,13 +55,13 @@
   function setStoredRoomCode(code){ try { if (code) localStorage.setItem(STORAGE_KEY, String(code).trim().toUpperCase()); } catch(_){} }
   function clearStoredRoomCode(){ try { localStorage.removeItem(STORAGE_KEY); LEGACY_KEYS.forEach(k=>localStorage.removeItem(k)); } catch(_){} }
   function suitKey(s){ const key=String(s||'').trim().toLowerCase(); return SUIT_META[key] ? key : ''; }
-  function suitLabel(s){ return (SUIT_META[suitKey(s)] || {}).label || '—'; }
-  function suitSymbol(s){ return (SUIT_META[suitKey(s)] || {}).symbol || '•'; }
+  function suitLabel(s){ return (SUIT_META[suitKey(s)] || {}).label || 'â€”'; }
+  function suitSymbol(s){ return (SUIT_META[suitKey(s)] || {}).symbol || 'â€¢'; }
   function suitColor(s){ return (SUIT_META[suitKey(s)] || {}).color || '#1f1b1a'; }
   function liveHref(room){ const code=encodeURIComponent(String(room||'').trim().toUpperCase()); const url=new URL('./paardenrace_live.html', window.location.href); url.searchParams.set('room', code); url.searchParams.set(LIVE_QUERY_KEY, code); if(scope()==='family') url.searchParams.set('scope','family'); return `${url.pathname.split('/').pop()}${url.search}`; }
   function gotoLive(room, options={}){ const href=liveHref(room); if(options.replace) window.location.replace(href); else window.location.href=href; }
   function parseCard(cardCode=''){
-    const raw=String(cardCode||'').trim().toUpperCase(); const m=raw.match(/^(10|[2-9JQKA])([HDCS])$/); if(!m) return {rank:raw||'—', suitKey:'', symbol:'•', isRed:false, raw};
+    const raw=String(cardCode||'').trim().toUpperCase(); const m=raw.match(/^(10|[2-9JQKA])([HDCS])$/); if(!m) return {rank:raw||'â€”', suitKey:'', symbol:'â€¢', isRed:false, raw};
     const key={H:'hearts',D:'diamonds',C:'clubs',S:'spades'}[m[2]] || ''; return {rank:m[1], suitKey:key, symbol:suitSymbol(key), isRed:key==='hearts'||key==='diamonds', raw};
   }
   function renderFaceUpCard(cardCode, extraClass=''){
@@ -75,9 +75,9 @@
   function getGridColumnForProgress(progress){ const n=Number(progress||0); if(n<=0) return 0; if(n>=11) return 11; return n; }
   function horseMarker(suit){ return `<span class="pr-horse-token" style="color:${suitColor(suit)}">${suitSymbol(suit)}</span>`; }
   function compactGateCard(cardCode, resolved){ if(!resolved) return `<div class="pr-gate-mini pr-gate-mini--back"></div>`; const p=parseCard(cardCode); return `<div class="pr-gate-mini ${p.isRed?'red':''}" title="${suitLabel(p.suitKey)}"><span>${p.symbol}</span></div>`; }
-  function gateSuitCaption(cardCode, resolved, eventRow=null){ if(!resolved) return '<div class="pr-gate-suit-caption">Dicht</div>'; const p=parseCard(cardCode); const stepSuit=suitKey((eventRow && eventRow.suit) || p.suitKey); return `<div class="pr-gate-suit-caption ${p.isRed?'red':''}">${p.symbol} ${(SUIT_META[p.suitKey]||{}).short || '—'}${stepSuit?` · ${suitSymbol(stepSuit)} -1`:''}</div>`; }
+  function gateSuitCaption(cardCode, resolved, eventRow=null){ if(!resolved) return '<div class="pr-gate-suit-caption">Dicht</div>'; const p=parseCard(cardCode); const stepSuit=suitKey((eventRow && eventRow.suit) || p.suitKey); return `<div class="pr-gate-suit-caption ${p.isRed?'red':''}">${p.symbol} ${(SUIT_META[p.suitKey]||{}).short || 'â€”'}${stepSuit?` Â· ${suitSymbol(stepSuit)} -1`:''}</div>`; }
   function renderRaceMinimap(match){
-    if(!match || !match.horse_positions) return '<div class="pr-minimap-empty">Wachten op racebord…</div>';
+    if(!match || !match.horse_positions) return '<div class="pr-minimap-empty">Wachten op racebordâ€¦</div>';
     const positions=match.horse_positions||{}, gates=Array.isArray(match.gate_cards)?match.gate_cards:[], resolved=resolvedGateSet(match), events=gateEventMap(match);
     const gateCells=Array.from({length:12},(_,col)=>{ if(col===0||col===11) return '<span class="pr-minimap-cell pr-minimap-cell--blank"></span>'; const no=col, row=events.get(no)||null; return `<span class="pr-minimap-cell pr-minimap-gate-cell" title="${row && row.suit ? suitLabel(row.suit)+' gaat 1 terug' : ''}">${compactGateCard(gates[no-1]||'', resolved.has(no))}</span>`; }).join('');
     const gateRow=`<div class="pr-minimap-row pr-minimap-row--gates"><div class="pr-minimap-label">G</div><div class="pr-minimap-track">${gateCells}</div></div>`;
@@ -91,12 +91,12 @@
     const positions=match.horse_positions||{}, gates=Array.isArray(match.gate_cards)?match.gate_cards:[], resolved=resolvedGateSet(match), events=gateEventMap(match), remaining=getDrawRemaining(match), lastCard=match.last_draw_card||'';
     const gateRow=Array.from({length:10},(_,idx)=>{ const no=idx+1, isResolved=resolved.has(no), card=gates[idx]||'', row=events.get(no)||null; return `<div class="pr-board-gate-slot"><div class="pr-board-gate-stack">${isResolved?renderFaceUpCard(card,'pr-board-gate-face'):renderCardBack('pr-board-gate-back')}${gateSuitCaption(card,isResolved,row)}</div></div>`; }).join('');
     const trackRows=SUITS.map(suit=>renderTrackRow(suit, getGridColumnForProgress(positions[suit]))).join('');
-    return `<div class="pr-live-wrap"><div class="pr-board-topline"><div class="pr-board-kpi"><span>Kaarten over</span><strong>${remaining}</strong></div><div class="pr-board-kpi"><span>Gates open</span><strong>${resolved.size}/10</strong></div><div class="pr-board-kpi pr-board-kpi--card"><span>Laatste kaart</span><div class="pr-board-lastcard">${lastCard?renderFaceUpCard(lastCard,'pr-last-card'):'<div class="pr-last-card-empty">—</div>'}</div></div></div><div class="pr-board-shell-lite"><div class="pr-board-gates"><div class="pr-board-label pr-board-label--gate">G</div><div class="pr-board-gate-track">${gateRow}</div></div><div class="pr-board-rows">${trackRows}</div></div></div>`;
+    return `<div class="pr-live-wrap"><div class="pr-board-topline"><div class="pr-board-kpi"><span>Kaarten over</span><strong>${remaining}</strong></div><div class="pr-board-kpi"><span>Gates open</span><strong>${resolved.size}/10</strong></div><div class="pr-board-kpi pr-board-kpi--card"><span>Laatste kaart</span><div class="pr-board-lastcard">${lastCard?renderFaceUpCard(lastCard,'pr-last-card'):'<div class="pr-last-card-empty">â€”</div>'}</div></div></div><div class="pr-board-shell-lite"><div class="pr-board-gates"><div class="pr-board-label pr-board-label--gate">G</div><div class="pr-board-gate-track">${gateRow}</div></div><div class="pr-board-rows">${trackRows}</div></div></div>`;
   }
   function summarizeLiveRoom(room, match, players, viewer){
     const list=Array.isArray(players)?players:[]; const verified=list.filter(p=>p&&p.wager_verified).length; const ready=list.filter(p=>p&&p.is_ready).length; const totalPot=list.reduce((s,p)=>s+Number(p&&p.wager_bakken||0),0); const pendingGate=Math.max(0,10-resolvedGateSet(match).size); const winnerSuit=suitKey(match&&match.winner_suit); const drawCard=String(match&&match.last_draw_card||'').trim().toUpperCase(); const deckLeft=getDrawRemaining(match); const stage=String(room&&room.stage||'lobby'); const latest=normalizedGateEvents(match).slice(-1)[0]||null;
     const headline=winnerSuit?`${suitLabel(winnerSuit)} heeft gewonnen`:stage==='countdown'?`Countdown ${Number(room&&room.countdown_remaining_seconds||0)}s`:stage==='nominations'?'Verdeel nu de nominaties':stage==='finished'?'Race afgerond':drawCard?`Laatste kaart: ${drawCard}`:'Klaar voor de volgende kaart';
-    const subline=latest&&latest.suit?`Gate ${latest.gate_no} open · ${suitLabel(latest.suit)} gaat 1 terug`:winnerSuit?`Totale pot ${totalPot} Bakken · ${deckLeft} kaarten over`:`${verified}/${list.length||0} verified · ${ready}/${list.length||0} ready · ${pendingGate} gates nog dicht`;
+    const subline=latest&&latest.suit?`Gate ${latest.gate_no} open Â· ${suitLabel(latest.suit)} gaat 1 terug`:winnerSuit?`Totale pot ${totalPot} Bakken Â· ${deckLeft} kaarten over`:`${verified}/${list.length||0} verified Â· ${ready}/${list.length||0} ready Â· ${pendingGate} gates nog dicht`;
     return {headline, subline, totalPot, verified, ready, pendingGate, winnerSuit, deckLeft, drawCard, stage, isHost:!!(viewer&&viewer.is_host)};
   }
   window.GEJAST_PAARDENRACE = { __v690_complete:true, rpc, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode, suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack, renderRaceMinimap, renderLiveBoard, summarizeLiveRoom, gotoLive, liveHref, scopedHref, scope, getDrawRemaining, resolvedGateSet, normalizedGateEvents, gateEventMap, getGridColumnForProgress, liveBoardFingerprint };
