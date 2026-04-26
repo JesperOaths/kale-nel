@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="nl">
 <head>
     <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
@@ -271,7 +271,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/scorer.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v492';</script><script src="./gejast-config.js?v492"></script><script src="./gejast-family-rollout.js?v393"></script><script src="./gejast-home-gate.js?v492"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('scorer');</script>
+  <script>window.GEJAST_PAGE_VERSION='v694';</script><script src="./gejast-config.js?v694"></script><script src="./gejast-family-rollout.js?v694"></script><script src="./gejast-home-gate.js?v694"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('scorer');</script>
 
   <style id="page-floating-logo-style">
     .page-floating-logo{position:fixed;top:18px;right:18px;z-index:9998;display:inline-flex;width:64px;height:64px;border-radius:50%;background:rgba(255,251,245,.72);border:1px solid rgba(255,255,255,.65);box-shadow:0 14px 32px rgba(0,0,0,.10);align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
@@ -283,9 +283,9 @@
   <a class="page-floating-logo" href="./index.html" aria-label="Terug naar home"><img src="./logo.png" alt="Logo"></a>
   <div class="page">
     <header class="topbar">
-      <button class="icon-btn" type="button" onclick="toggleAppMenu()">☰</button>
+      <button class="icon-btn" type="button" onclick="toggleAppMenu()">Menu</button>
       <div class="topbar-title"><strong>Klaverjas Scoreformulier</strong><span>Mobiel, in takken, met biedingen en roem</span></div>
-      <div class="topbar-actions"><button id="undoBtn" class="icon-btn" type="button" onclick="undoLastAction()">↶</button><button id="redoBtn" class="icon-btn" type="button" onclick="redoLastAction()">↷</button></div>
+      <div class="topbar-actions"><button id="undoBtn" class="icon-btn" type="button" onclick="undoLastAction()">Undo</button><button id="redoBtn" class="icon-btn" type="button" onclick="redoLastAction()">Redo</button></div>
     </header>
 
     <div id="appMenu" class="overlay"><div class="modal"><h2>Klaverjas menu</h2><div class="modal-footer" style="display:grid;grid-template-columns:1fr;"><button class="btn-light" type="button" onclick="openSetupModal()">Teams kiezen</button><button class="btn-light" type="button" onclick="undoRound()">Hele ronde undo</button><button class="btn-light" type="button" onclick="newGame()">Nieuw spel</button><button class="btn-dark" type="button" onclick="window.location.href='./index.html'">Terug naar site</button></div></div></div>
@@ -314,7 +314,7 @@
         </div>
 
         <div class="status-bar">
-          <div class="status-pill" id="roundLabel">Ronde 1 · tak 1</div>
+          <div class="status-pill" id="roundLabel">Ronde 1 - tak 1</div>
           <div class="action-row"></div>
         </div>
 
@@ -378,12 +378,12 @@
   <div id="setupOverlay" class="overlay">
     <div class="modal" role="dialog" aria-modal="true">
       <h2>Wie spelen er mee?</h2>
-      <p>Kies eerst per team de spelers. Elke naam mag maar één keer gebruikt worden.</p>
+      <p>Kies eerst per team de spelers. Elke naam mag maar ??n keer gebruikt worden.</p>
       <div class="setup-grid">
-        <div class="field"><label>Wij · speler 1</label><select id="playerW1"></select></div>
-        <div class="field"><label>Zij · speler 1</label><select id="playerZ1"></select></div>
-        <div class="field"><label>Wij · speler 2</label><select id="playerW2"></select></div>
-        <div class="field"><label>Zij · speler 2</label><select id="playerZ2"></select></div>
+        <div class="field"><label>Wij - speler 1</label><select id="playerW1"></select></div>
+        <div class="field"><label>Zij - speler 1</label><select id="playerZ1"></select></div>
+        <div class="field"><label>Wij - speler 2</label><select id="playerW2"></select></div>
+        <div class="field"><label>Zij - speler 2</label><select id="playerZ2"></select></div>
       </div>
       <div class="helper">De lijst wordt direct gefilterd zodat je geen dubbele naam meer kunt kiezen.</div>
       <div class="modal-footer">
@@ -589,7 +589,7 @@
 
     function teamNames(side) {
       const p = game.players || [];
-      return side === 'W' ? [p[0], p[2]].filter(Boolean).join(' · ') : [p[1], p[3]].filter(Boolean).join(' · ');
+      return side === 'W' ? [p[0], p[2]].filter(Boolean).join(' - ') : [p[1], p[3]].filter(Boolean).join(' - ');
     }
 
     function suitClass(suit) {
@@ -738,7 +738,7 @@
     function saveSetup() {
       const picks = playerSelectIds().map((id) => document.getElementById(id).value.trim());
       if (picks.some((value) => !value)) { setMessage('Kies eerst voor alle vier plekken een speler.'); return; }
-      if (new Set(picks).size < 4) { setMessage('Elke speler mag maar één keer gekozen worden.'); return; }
+      if (new Set(picks).size < 4) { setMessage('Elke speler mag maar ??n keer gekozen worden.'); return; }
       game.players = picks;
       rememberPlayers(picks);
       saveGame();
@@ -817,13 +817,13 @@
       }
       const bidder = contract.team === 'W' ? 'Wij' : 'Zij';
       const suit = contract.suit === 'S' ? 'sans' : contract.suit;
-      text.textContent = `${bidder} · ${contract.bid} ${suit}`;
+      text.textContent = `${bidder} - ${contract.bid} ${suit}`;
       hint.textContent = 'Kaartpunten worden automatisch gespiegeld. Nat en pit vullen direct de juiste kant in.';
     }
 
     function renderRoemLives() {
-      document.getElementById('roemLiveW').textContent = `Roem: ${contract.roem.W}${contract.roem.W ? ` · ${toRoman(contract.roem.W)}` : ''}`;
-      document.getElementById('roemLiveZ').textContent = `Roem: ${contract.roem.Z}${contract.roem.Z ? ` · ${toRoman(contract.roem.Z)}` : ''}`;
+      document.getElementById('roemLiveW').textContent = `Roem: ${contract.roem.W}${contract.roem.W ? ` - ${toRoman(contract.roem.W)}` : ''}`;
+      document.getElementById('roemLiveZ').textContent = `Roem: ${contract.roem.Z}${contract.roem.Z ? ` - ${toRoman(contract.roem.Z)}` : ''}`;
     }
 
     function renderPendingStrip() {
@@ -1216,7 +1216,7 @@
             <div class="compact-points">${leftValue}</div>
             <div class="compact-meta left">${compactMeta(row, 'W')}</div>
           </div>
-          <div class="compact-divider">·</div>
+          <div class="compact-divider">?</div>
           <div class="compact-side right ${losingSide === 'Z' ? 'strike-side' : ''}">
             <div class="compact-meta right">${compactMeta(row, 'Z')}</div>
             <div class="compact-points">${rightValue}</div>
@@ -1261,7 +1261,7 @@
           const section = document.createElement('section');
           section.className = 'tak-summary';
           const totals = compactTakTotals(rows);
-          section.innerHTML = `<div class="tak-divider"><div class="tak-label">Tak ${tak} · ${totals.w} / ${totals.z}</div></div>`;
+          section.innerHTML = `<div class="tak-divider"><div class="tak-label">Tak ${tak} - ${totals.w} / ${totals.z}</div></div>`;
           rows.forEach((row) => {
             section.insertAdjacentHTML('beforeend', renderCompactRow(row));
           });
@@ -1292,7 +1292,7 @@
       const state = currentDealerState();
       document.getElementById('dealerNow').textContent = state.dealer;
       document.getElementById('forehandNow').textContent = state.forehand;
-      document.getElementById('dealerText').textContent = game.players.filter(Boolean).length < 4 ? 'Kies eerst de vier spelers.' : `${state.dealer} deelt · ${state.forehand} zit ervoor`;
+      document.getElementById('dealerText').textContent = game.players.filter(Boolean).length < 4 ? 'Kies eerst de vier spelers.' : `${state.dealer} deelt - ${state.forehand} zit ervoor`;
     }
 
     function render() {
@@ -1300,7 +1300,7 @@
       document.getElementById('teamZijNames').textContent = teamNames('Z') || 'kies spelers';
       document.getElementById('totalW').textContent = game.w;
       document.getElementById('totalZ').textContent = game.z;
-      document.getElementById('roundLabel').textContent = `Ronde ${currentRoundIndex()} · tak ${currentTak()}`;
+      document.getElementById('roundLabel').textContent = `Ronde ${currentRoundIndex()} - tak ${currentTak()}`;
       document.getElementById('labelW').textContent = `invoer ronde ${currentRoundIndex()}`;
       document.getElementById('labelZ').textContent = `invoer ronde ${currentRoundIndex()}`;
       renderDealerInfo();
@@ -1346,7 +1346,6 @@
         const storedPlayers = JSON.parse(PLAYER_STORAGE.getItem(PLAYERS_KEY) || '[]');
         if (Array.isArray(storedPlayers) && storedPlayers.length) knownPlayersCache = uniqueNames([...knownPlayersCache, ...storedPlayers]);
       } catch {}
-      knownPlayersCache = uniqueNames([...(await getSitePlayers()), ...knownPlayersCache]);
       renderSetupOptions();
       render();
       if (game.rounds.length) {
@@ -1358,11 +1357,19 @@
         openSetupModal();
       }
       commitActionState();
+      getSitePlayers().then((names) => {
+        const before = knownPlayersCache.join('\n');
+        knownPlayersCache = uniqueNames([...(Array.isArray(names) ? names : []), ...knownPlayersCache]);
+        if (knownPlayersCache.join('\n') !== before) {
+          renderSetupOptions();
+          refreshSetupOptionsPreserving();
+        }
+      }).catch(() => {});
     }
     function toggleAppMenu(force){ const el=document.getElementById('appMenu'); const should = typeof force === 'boolean' ? force : !el.classList.contains('show'); el.classList.toggle('show', should); }
     initPage();
   </script>
-  <div class="site-credit-watermark" data-version-watermark>v492 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v694 - Made by Bruis</div>
 
 <style>
   .player-session-corner{position:fixed;top:14px;right:14px;z-index:9999;background:rgba(255,255,255,.95);border:1px solid rgba(0,0,0,.08);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.12);padding:8px 10px;min-width:112px;display:none;backdrop-filter:blur(8px)}
@@ -1442,7 +1449,7 @@
   function teamMembers(side){ const p=Array.isArray(game.players)?game.players:[]; return (side==='W' ? [p[0],p[2]] : [p[1],p[3]]).map(v=>String(v||'').trim()).filter(Boolean); }
   function participantNames(){ return (Array.isArray(game.players)?game.players:[]).map(v=>String(v||'').trim()).filter(Boolean); }
   function winnerNamesArray(){ return winnerSide()==='Wij' ? teamMembers('W') : winnerSide()==='Zij' ? teamMembers('Z') : [...teamMembers('W'), ...teamMembers('Z')]; }
-  function winnerNames(){ return winnerNamesArray().join(' · ') || `${teamNames('W')} / ${teamNames('Z')}`; }
+  function winnerNames(){ return winnerNamesArray().join(' - ') || `${teamNames('W')} / ${teamNames('Z')}`; }
   function buildRecap(){ const diff=Math.abs((game.w||0)-(game.z||0)); const specials=(game.rounds||[]).filter(r=>r.nat||r.pit||r.verzaaktBy).length; const lines=[]; lines.push(`${winnerNames()} wint met ${game.w||0} tegen ${game.z||0}.`); if(diff>=30) lines.push('Het verschil liep stevig op.'); else if(diff<=10) lines.push('Het bleef lang spannend.'); if(specials) lines.push(`${specials} ronde${specials===1?'':'s'} met nat, pit of verzaakt.`); const best=(game.rounds||[]).slice().sort((a,b)=>Math.max(b.fw||0,b.fz||0)-Math.max(a.fw||0,a.fz||0))[0]; if(best) lines.push(`Hoogste klap: ${Math.max(best.fw||0,best.fz||0)} punten in ronde ${best.round||'?'}.`); return lines.join(' '); }
   function getMatchSubmitterMeta(){ const token=(window.GEJAST_CONFIG&&window.GEJAST_CONFIG.getPlayerSessionToken?window.GEJAST_CONFIG.getPlayerSessionToken():''); const name=(document.getElementById('playerSessionCornerName')||{}).textContent||''; return { submitted_by_name:name||null, submitted_via:'klaverjas_form', submitted_at:new Date().toISOString(), session_present:!!token }; }
   function summaryPayload(isFinished=false){
@@ -1490,7 +1497,7 @@
   }
   window.closeMatchSummary=function(){ document.getElementById('matchSummaryOverlay').classList.remove('show'); };
   window.copyMatchRecapText=async function(){ const text=buildRecap(); try{ await navigator.clipboard.writeText(text); setMessage('Samenvatting gekopieerd.'); }catch(_){ setMessage(text);} };
-  window.downloadMatchSummaryImage=function(){ const payload=summaryPayload(true).summary; const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=630; const ctx=canvas.getContext('2d'); const grad=ctx.createLinearGradient(0,0,1200,630); grad.addColorStop(0,'#1b1711'); grad.addColorStop(1,'#5d4820'); ctx.fillStyle=grad; ctx.fillRect(0,0,1200,630); ctx.fillStyle='#f6f0e5'; ctx.fillRect(46,46,1108,538); ctx.fillStyle='#111'; ctx.font='900 52px Inter, sans-serif'; ctx.fillText('Klaverjas',84,132); ctx.font='800 34px Inter, sans-serif'; ctx.fillText(`${payload.winner_names_label || payload.winner_names?.join(' · ') || ''}`,84,194); ctx.font='700 72px Inter, sans-serif'; ctx.fillText(`${payload.totals.wij} - ${payload.totals.zij}`,84,292); ctx.font='600 28px Inter, sans-serif'; wrap(ctx,payload.recap_text,84,360,1000,38); ctx.font='700 24px Inter, sans-serif'; ctx.fillText('v492 · Made by Bruis',84,560); const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download='klaverjas-uitslag.png'; a.click(); function wrap(ctx,text,x,y,maxWidth,lineHeight){ const words=String(text||'').split(/\s+/); let line=''; let yy=y; for(const w of words){ const test=line?line+' '+w:w; if(ctx.measureText(test).width>maxWidth && line){ ctx.fillText(line,x,yy); line=w; yy+=lineHeight; } else line=test; } if(line) ctx.fillText(line,x,yy); } };
+  window.downloadMatchSummaryImage=function(){ const payload=summaryPayload(true).summary; const canvas=document.createElement('canvas'); canvas.width=1200; canvas.height=630; const ctx=canvas.getContext('2d'); const grad=ctx.createLinearGradient(0,0,1200,630); grad.addColorStop(0,'#1b1711'); grad.addColorStop(1,'#5d4820'); ctx.fillStyle=grad; ctx.fillRect(0,0,1200,630); ctx.fillStyle='#f6f0e5'; ctx.fillRect(46,46,1108,538); ctx.fillStyle='#111'; ctx.font='900 52px Inter, sans-serif'; ctx.fillText('Klaverjas',84,132); ctx.font='800 34px Inter, sans-serif'; ctx.fillText(`${payload.winner_names_label || payload.winner_names?.join(' - ') || ''}`,84,194); ctx.font='700 72px Inter, sans-serif'; ctx.fillText(`${payload.totals.wij} - ${payload.totals.zij}`,84,292); ctx.font='600 28px Inter, sans-serif'; wrap(ctx,payload.recap_text,84,360,1000,38); ctx.font='700 24px Inter, sans-serif'; ctx.fillText('v694 - Made by Bruis',84,560); const a=document.createElement('a'); a.href=canvas.toDataURL('image/png'); a.download='klaverjas-uitslag.png'; a.click(); function wrap(ctx,text,x,y,maxWidth,lineHeight){ const words=String(text||'').split(/\s+/); let line=''; let yy=y; for(const w of words){ const test=line?line+' '+w:w; if(ctx.measureText(test).width>maxWidth && line){ ctx.fillText(line,x,yy); line=w; yy+=lineHeight; } else line=test; } if(line) ctx.fillText(line,x,yy); } };
   async function pushSummary(isFinished=false, force=false){
     if(!(window.GEJAST_CONFIG||{}).SUPABASE_URL) return;
     const payload = summaryPayload(isFinished);
@@ -1523,20 +1530,20 @@
     liveSummaryIntervalId = window.setInterval(()=>{ if (document.visibilityState === 'visible') pushSummary(false, false); }, 15000);
     scheduleLiveSummarySync(true);
   }
-  window.openMatchSummary=function(){ const payload=summaryPayload(true).summary; document.getElementById('matchSummaryCard').innerHTML=`<div class="dealer-card"><span>Winnaar</span><strong>${payload.winner_names_label || payload.winner_names.join(' · ')}</strong></div><div class="dealer-banner"><div class="dealer-card"><span>Wij</span><strong>${payload.totals.wij}</strong></div><div class="dealer-card"><span>Zij</span><strong>${payload.totals.zij}</strong></div></div><div class="contract-card"><div class="eyebrow">Samenvatting</div><strong style="font-size:18px;line-height:1.3">${payload.recap_text}</strong></div>`; document.getElementById('matchSummaryOverlay').classList.add('show'); pushSummary(true, true); };
+  window.openMatchSummary=function(){ const payload=summaryPayload(true).summary; document.getElementById('matchSummaryCard').innerHTML=`<div class="dealer-card"><span>Winnaar</span><strong>${payload.winner_names_label || payload.winner_names.join(' - ')}</strong></div><div class="dealer-banner"><div class="dealer-card"><span>Wij</span><strong>${payload.totals.wij}</strong></div><div class="dealer-card"><span>Zij</span><strong>${payload.totals.zij}</strong></div></div><div class="contract-card"><div class="eyebrow">Samenvatting</div><strong style="font-size:18px;line-height:1.3">${payload.recap_text}</strong></div>`; document.getElementById('matchSummaryOverlay').classList.add('show'); pushSummary(true, true); };
   const oldFinish=window.finishGame; window.finishGame=function(){ if(oldFinish) oldFinish(); openMatchSummary(); };
   ensureLiveSummaryBinding();
 })();
 </script>
-<script src="./site-analytics.js?v371"></script>
+<script src="./site-analytics.js?v694"></script>
 
 <style id="match-control-chip-style">
   .manage-match-chip{position:fixed;right:18px;bottom:18px;z-index:40;display:inline-flex;align-items:center;gap:8px;padding:12px 16px;border-radius:999px;background:rgba(35,31,26,.92);color:#fff;text-decoration:none;font-weight:800;box-shadow:0 14px 32px rgba(0,0,0,.22)}
   .manage-match-chip small{font-size:12px;font-weight:700;opacity:.82}
 </style>
-<a class="manage-match-chip" href="./match_control.html?game=klaverjas">✎ <span>Beheer wedstrijden<br><small>Eigen inzendingen / admin</small></span></a>
+<a class="manage-match-chip" href="./match_control.html?game=klaverjas">? <span>Beheer wedstrijden<br><small>Eigen inzendingen / admin</small></span></a>
 
-<script src="./gejast-live-sync.js?v371"></script>
+<script src="./gejast-live-sync.js?v694"></script>
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>
