@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Pikken Shared Stats · Admin</title>
-  <script>window.GEJAST_PAGE_VERSION='v697';</script>
-  <script src="./gejast-config.js?v697"></script>
-  <script src="./gejast-shared-stats-config.js?v697"></script>
-  <script src="./admin-session-sync.js?v697"></script>
-  <script src="./admin-topnav.js?v697"></script>
-  <script src="./gejast-pikken-shared-stats.js?v697"></script>
+  <script>window.GEJAST_PAGE_VERSION='v698';</script>
+  <script src="./gejast-config.js?v698"></script>
+  <script src="./gejast-shared-stats-config.js?v698"></script>
+  <script src="./admin-session-sync.js?v698"></script>
+  <script src="./admin-topnav.js?v698"></script>
+  <script src="./gejast-pikken-shared-stats.js?v698"></script>
   <style>
     :root{--gold:#9a8241;--ink:#17130f;--muted:#6f665c;--line:rgba(0,0,0,.08);--paper:#fffaf2;--card:#fff}
     *{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(241,236,227,.94),rgba(241,236,227,.96)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink);padding:22px}.wrap{max-width:1180px;margin:0 auto;background:rgba(255,251,245,.92);border:1px solid rgba(255,255,255,.7);border-radius:30px;padding:24px;box-shadow:0 18px 44px rgba(0,0,0,.08)}.top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}h1{margin:0;font-size:32px;letter-spacing:-.04em}.sub{margin:8px 0 0;color:var(--muted)}.actions{display:flex;gap:10px;flex-wrap:wrap}.btn{border:0;border-radius:999px;background:#111;color:#fff;padding:11px 15px;font-weight:900;text-decoration:none;cursor:pointer}.btn.alt{background:#fff;color:#111;border:1px solid var(--line)}select,input{border:1px solid var(--line);border-radius:14px;padding:11px 12px;font:inherit;background:#fff}.status{margin:16px 0;color:var(--muted);min-height:22px}.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px}.card span{display:block;color:#8a7a55;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:900}.card strong{display:block;margin-top:6px;font-size:28px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.panel{background:#fff;border:1px solid var(--line);border-radius:22px;padding:16px}.panel h2{margin:0 0 10px;font-size:18px}.metrics{display:grid;gap:12px}.pikken-metric{border:1px solid var(--line);border-radius:18px;padding:14px;background:#fff}.pikken-metric h3{margin:0 0 10px}.pikken-row{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;border-top:1px solid rgba(0,0,0,.06);padding:9px 0}.pikken-row:first-of-type{border-top:0}.pikken-rank{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#111;color:#fff;font-size:12px;font-weight:900}.pikken-row em{font-style:normal;font-weight:900}.pikken-empty{color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px}.raw{white-space:pre-wrap;font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;max-height:420px;overflow:auto;background:#111;color:#f5ecd7;border-radius:18px;padding:14px}.site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none}@media(max-width:900px){.cards,.grid{grid-template-columns:1fr 1fr}}@media(max-width:640px){.cards,.grid{grid-template-columns:1fr}.wrap{padding:18px;border-radius:22px}}
@@ -27,7 +27,7 @@
     <section class="cards"><div class="card"><span>Cache rows</span><strong id="cacheRows">0</strong></div><div class="card"><span>Metrics</span><strong id="metricCount">0</strong></div><div class="card"><span>Base source</span><strong id="baseSource">—</strong></div><div class="card"><span>Bid source</span><strong id="bidSource">—</strong></div></section>
     <section class="grid"><div class="panel"><h2>Metrics</h2><div id="metricsBox" class="metrics"></div></div><div class="panel"><h2>Live probability</h2><div id="probBox" data-pikken-probability></div><h2 style="margin-top:18px">Raw audit</h2><pre id="rawBox" class="raw">—</pre></div></section>
   </main>
-  <div class="site-credit-watermark" data-version-watermark>v697 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v698 · Made by Bruis</div>
   <script>
     (function(){
       const api = window.GEJAST_PIKKEN_SHARED_STATS;

@@ -1,0 +1,16 @@
+GEJAST v698 — Pikken, Paardenrace and Beurs repair
+
+Run order:
+1. Run GEJAST_v698_pikken_paardenrace_beurs_repair.sql in Supabase.
+2. Upload the files from GEJAST_v698_pikken_paardenrace_beurs_repair_files_flat.zip to the GitHub repo root.
+3. Hard refresh the browser / clear the affected page cache.
+
+Fixes included:
+- Pikken Afkeuren: replaces the v697 voting/reject RPCs that could still hit the ambiguous gp.* column reference. The new v698 functions avoid the gp alias/record collision and always insert explicit non-null votes into pikken_round_votes.
+- Paardenrace lobby wagers: update_paardenrace_room_choice_safe now has the site_scope_input-compatible signature used by the frontend RPC wrapper, saves selected_suit + wager_bakken, resets verification, and returns room state with pending_verifications. Host verification/rejection reads the target player and updates the lobby state.
+- Beurs / Despimarkt active markets: dashboard and market read wrappers now use canonical market_id-based Despimarkt views/tables and return markets under markets/open_markets/active_markets. Frontend now normalizes old/new field names, attempts a direct REST fallback if the RPC returns no markets, and renders active markets in a clearer market-card layout.
+- Version discipline: frontend files are bumped to v698 and the shared gejast-config VERSION is v698.
+
+Notes:
+- SQL was inspected and JS was syntax-checked locally. The SQL was not executed against the live Supabase from this environment.
+- SQL is intentionally separate from the zip per the established patch convention.
