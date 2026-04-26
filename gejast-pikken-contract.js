@@ -1,5 +1,5 @@
 ﻿(function(){
-  if (window.GEJAST_PIKKEN_CONTRACT && window.GEJAST_PIKKEN_CONTRACT.VERSION === 'v699') return;
+  if (window.GEJAST_PIKKEN_CONTRACT && window.GEJAST_PIKKEN_CONTRACT.VERSION === 'v700') return;
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
   const PLAYER_KEYS = Array.isArray(cfg.PLAYER_SESSION_KEYS) && cfg.PLAYER_SESSION_KEYS.length ? cfg.PLAYER_SESSION_KEYS : ['jas_session_token_v11','jas_session_token_v10'];
@@ -31,6 +31,17 @@
     for (const key of PLAYER_KEYS) {
       try { const v = localStorage.getItem(key) || sessionStorage.getItem(key); if (v) return String(v).trim(); } catch (_) {}
     }
+    function deepToken(value, depth=0){
+      if (!value || depth > 4) return '';
+      if (typeof value === 'string') return value.trim().length > 12 ? value.trim() : '';
+      if (typeof value !== 'object') return '';
+      for (const key of ['session_token','session_token_input','player_session_token','sessionToken','token','access_token']){
+        const v = value[key];
+        if (typeof v === 'string' && v.trim().length > 12) return v.trim();
+      }
+      for (const v of Object.values(value)){ const found = deepToken(v, depth + 1); if (found) return found; }
+      return '';
+    }
     for (const store of [localStorage, sessionStorage]) {
       try {
         for (let i = 0; i < store.length; i += 1) {
@@ -39,14 +50,24 @@
           const raw = store.getItem(key) || '';
           try {
             const obj = JSON.parse(raw);
-            const v = obj && (obj.session_token || obj.session_token_input || obj.player_session_token || obj.token);
-            if (typeof v === 'string' && v.trim().length > 12) return v.trim();
+            const v = deepToken(obj);
+            if (v) return v;
           } catch (_) {
             if (/token|session/i.test(key) && /^[A-Za-z0-9._~+/=-]{16,}$/.test(raw.trim())) return raw.trim();
           }
         }
       } catch (_) {}
     }
+    try {
+      const cookies = String(document.cookie || '').split(';');
+      for (const pair of cookies) {
+        const [k, ...rest] = pair.split('=');
+        const key = decodeURIComponent(String(k || '').trim());
+        if (!/session|token|player|jas|gejast/i.test(key)) continue;
+        const value = decodeURIComponent(rest.join('=').trim());
+        if (value && value.length > 12) return value;
+      }
+    } catch (_) {}
     return '';
   }
   function headers(){ return { apikey: cfg.SUPABASE_PUBLISHABLE_KEY || '', Authorization: `Bearer ${cfg.SUPABASE_PUBLISHABLE_KEY || ''}`, 'Content-Type':'application/json', Accept:'application/json' }; }
@@ -95,5 +116,5 @@
   async function liveMatches(){ return rpc(RPC.liveMatches, { site_scope_input: scope(), limit_input: 30 }, 4200); }
   async function myActive(){ return rpc(RPC.myActive, tokenPayload({})); }
   async function stats(){ return rpc(RPC.stats, { site_scope_input: scope(), session_token: sessionToken() || null }); }
-  window.GEJAST_PIKKEN_CONTRACT = { VERSION:'v699', scope, sessionToken, requireSession, rpc, cleanCode, createLobby, joinLobby, getState, setReady, startGame, placeBid, rejectBid, castVote, leaveGame, destroyGame, rpcFirst, openLobbies, liveMatches, myActive, stats };
+  window.GEJAST_PIKKEN_CONTRACT = { VERSION:'v700', scope, sessionToken, requireSession, rpc, cleanCode, createLobby, joinLobby, getState, setReady, startGame, placeBid, rejectBid, castVote, leaveGame, destroyGame, rpcFirst, openLobbies, liveMatches, myActive, stats };
 })();

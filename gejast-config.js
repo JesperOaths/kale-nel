@@ -1,6 +1,6 @@
 ﻿(function(){
   const CONFIG = {
-    VERSION:'v699',
+    VERSION:'v700',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: '',
@@ -339,7 +339,21 @@ function getPlayerSessionToken(){
     }
   }
   const stores = [localStorage, sessionStorage];
-  const tokenFields = ['session_token','session_token_input','player_session_token','token'];
+  const tokenFields = ['session_token','session_token_input','player_session_token','sessionToken','token','access_token'];
+  function deepToken(value, depth){
+    if (!value || depth > 4) return '';
+    if (typeof value === 'string') return value.trim().length > 12 ? value.trim() : '';
+    if (typeof value !== 'object') return '';
+    for (const field of tokenFields){
+      const found = value[field];
+      if (typeof found === 'string' && found.trim().length > 12) return found.trim();
+    }
+    for (const nested of Object.values(value)){
+      const found = deepToken(nested, depth + 1);
+      if (found) return found;
+    }
+    return '';
+  }
   for (const store of stores){
     for (let i = 0; i < store.length; i += 1){
       const key = store.key(i) || '';
@@ -348,12 +362,10 @@ function getPlayerSessionToken(){
       if (!raw) continue;
       try {
         const parsed = JSON.parse(raw);
-        for (const field of tokenFields){
-          const value = parsed && parsed[field];
-          if (typeof value === 'string' && value.trim().length > 12){
-            mirrorPlayerSessionToken(value);
-            return value.trim();
-          }
+        const value = deepToken(parsed, 0);
+        if (value){
+          mirrorPlayerSessionToken(value);
+          return value;
         }
       } catch (_) {
         if (/^[A-Za-z0-9._~+/=-]{16,}$/.test(raw.trim()) && /session|token/i.test(key)){
@@ -363,6 +375,18 @@ function getPlayerSessionToken(){
       }
     }
   }
+  try {
+    for (const pair of String(document.cookie || '').split(';')){
+      const [rawKey, ...rest] = pair.split('=');
+      const key = decodeURIComponent(String(rawKey || '').trim());
+      if (!/session|token|player|jas|gejast/i.test(key)) continue;
+      const value = decodeURIComponent(rest.join('=').trim());
+      if (value && value.length > 12){
+        mirrorPlayerSessionToken(value);
+        return value;
+      }
+    }
+  } catch (_) {}
   return '';
 }
 function clearPlayerSessionTokens(){
@@ -705,7 +729,7 @@ function buildRequestUrl(returnTo, scope){
       setTimeout(showPageNow, 0);
     }
     setTimeout(showPageNow, 650);
-    return { VERSION:'v699', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
+    return { VERSION:'v700', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
   })();
   window.GEJAST_FAST_RUNTIME = FAST_RUNTIME;
 
