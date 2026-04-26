@@ -1,0 +1,12 @@
+GEJAST v697 repair patch
+
+Frontend/code patch only; run the separate SQL file before or together with these files.
+
+Fixes included:
+- Bumps shared visible version/config/cache-busters to v697 across root HTML pages.
+- Pikken live client targets v697 cache; SQL fixes afkeuren/reject vote not-null handling and final voting fallback.
+- Paardenrace lobby page keeps the last known valid host/lobby state visible when a transient empty room-state is returned; SQL restores the fast room-state wrapper fallback.
+- Beurs/Despimarkt frontend normalizes active-market rows returned by older handoff views/wrappers so active markets display even when fields are named outcome_a_pool/total_pot/etc.; SQL adds robust dashboard/market wrappers.
+- Profiles page no longer lets get_profiles timeout block all fallback active-name sources; SQL broadens fast profile/name wrappers.
+
+SQL is intentionally separate, per patch delivery convention.
