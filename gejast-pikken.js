@@ -1,4 +1,4 @@
-(function(){
+﻿(function(){
   const api = window.GEJAST_PIKKEN_CONTRACT;
   if (!api) { console.error('GEJAST_PIKKEN_CONTRACT missing'); return; }
   const PARTICIPANT_KEY = 'gejast_pikken_participant_v687';

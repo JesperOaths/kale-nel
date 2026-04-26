@@ -1,6 +1,6 @@
-(function(){
+﻿(function(){
   const CONFIG = {
-    VERSION:'v698',
+    VERSION:'v697',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: '',
@@ -37,7 +37,7 @@
   function parseVersion(v){ const m=String(v||'').match(/v?(\d+)/i); return m?Number(m[1]):0; }
   const candidates = [detectScriptVersion(), window.GEJAST_PAGE_VERSION, CONFIG.VERSION].filter(Boolean);
   const effectiveVersion = candidates.sort((a,b)=>parseVersion(b)-parseVersion(a))[0] || CONFIG.VERSION;
-  const label = `${effectiveVersion} · Made by Bruis`;
+  const label = `${effectiveVersion} Â· Made by Bruis`;
   window.GEJAST_PAGE_VERSION = effectiveVersion;
 
   function watermarkStyles(node){
@@ -82,7 +82,7 @@
   function applyVersionLabel(){
     const nodes = ensureVersionWatermark();
     nodes.forEach((node)=>{ node.textContent = label; watermarkStyles(node); });
-    const re = /v\d+\s*[·.-]?\s*Made by Bruis/i;
+    const re = /v\d+\s*[Â·.-]?\s*Made by Bruis/i;
     document.querySelectorAll('body *').forEach((node)=>{ if (node.children.length) return; const txt=(node.textContent||'').trim(); if (re.test(txt)) { node.textContent = label; watermarkStyles(node); } });
   }
 
@@ -679,7 +679,7 @@ function buildRequestUrl(returnTo, scope){
       setTimeout(showPageNow, 0);
     }
     setTimeout(showPageNow, 650);
-    return { VERSION:'v698', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
+    return { VERSION:'v697', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
   })();
   window.GEJAST_FAST_RUNTIME = FAST_RUNTIME;
 
