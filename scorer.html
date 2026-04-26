@@ -1349,9 +1349,12 @@
       knownPlayersCache = uniqueNames([...(await getSitePlayers()), ...knownPlayersCache]);
       renderSetupOptions();
       render();
-      if (game.rounds.length || game.players.filter(Boolean).length) {
+      if (game.rounds.length) {
         document.getElementById('resumeOverlay').classList.add('show');
       } else {
+        game.players = ['', '', '', ''];
+        saveGame();
+        render();
         openSetupModal();
       }
       commitActionState();
