@@ -674,12 +674,12 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v690';</script><script src="./gejast-config.js?v690"></script><script src="./gejast-home-gate.js?v690"></script><script defer src="./gejast-clickable-cards.js?v690"></script><script defer src="./gejast-scope-context.js?v690"></script><script defer src="./gejast-family-rollout.js?v690"></script><script defer src="./gejast-scope.js?v690"></script>
-  <script defer src="./gejast-live-summary.js?v690"></script>
-  <script defer src="./gejast-scoped-rpc.js?v690"></script>
-  <script defer src="./gejast-combined-readers.js?v690"></script>
-<script defer src="./gejast-push-runtime.js?v690"></script>
-<script defer src="./gejast-fairness.js?v690"></script>
+  <script>window.GEJAST_PAGE_VERSION='v695';</script><script src="./gejast-config.js?v695"></script><script src="./gejast-home-gate.js?v695"></script><script defer src="./gejast-clickable-cards.js?v695"></script><script defer src="./gejast-scope-context.js?v695"></script><script defer src="./gejast-family-rollout.js?v695"></script><script defer src="./gejast-scope.js?v695"></script>
+  <script defer src="./gejast-live-summary.js?v695"></script>
+  <script defer src="./gejast-scoped-rpc.js?v695"></script>
+  <script defer src="./gejast-combined-readers.js?v695"></script>
+<script defer src="./gejast-push-runtime.js?v695"></script>
+<script defer src="./gejast-fairness.js?v695"></script>
 <style id="gejast-v685-home-speed-fix">
   body{align-items:flex-start !important;}
   .page{padding-top:18px !important;}
@@ -1076,7 +1076,7 @@ function applyAdminViewerRefresh() {
           return fallback || {};
         } catch (fallbackErr) {
           console.warn('Homepage ladders offline', fallbackErr);
-          if (!cached) setHomepageLiveState('standby', 'Offline');
+          if (!cached) setHomepageLiveState('standby', 'Live-ready');
           return cached || null;
         }
       }
@@ -1780,6 +1780,49 @@ async function castExtraPollVote(desired_status) {
       const source = entries || {};
       setHomeEntryLive('klaverjas', source.klaverjas || null);
       setHomeEntryLive('boerenbridge', source.boerenbridge || null);
+      applyLocalParticipantLiveCards();
+    }
+
+    function readJsonStorage(keys){
+      for (const key of keys) {
+        try {
+          const raw = localStorage.getItem(key) || sessionStorage.getItem(key);
+          if (!raw) continue;
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') return parsed;
+        } catch (_) {}
+      }
+      return null;
+    }
+    function markLocalLiveCard(href, liveHref, label, copy){
+      const entry = document.querySelector(`.page-link-card[href="${href}"]`);
+      if (!entry || !liveHref) return;
+      const labelNode = entry.querySelector('.page-link-label');
+      const copyNode = entry.querySelector('.page-link-copy');
+      entry.classList.add('is-live');
+      entry.href = liveHref;
+      if (labelNode) labelNode.textContent = label;
+      if (copyNode) {
+        copyNode.className = 'page-link-copy';
+        copyNode.innerHTML = `<span class="page-link-live-row"><span class="live-pill live">Live</span><span class="page-link-live-hint">${copy || 'Spectatorweergave openen'}</span></span>`;
+      }
+    }
+    function applyLocalParticipantLiveCards(){
+      try {
+        const pikken = readJsonStorage(['gejast_pikken_participant_v687','gejast_pikken_participant_v632']);
+        if (pikken && (pikken.game_id || pikken.id)) {
+          markLocalLiveCard('./pikken.html', `./pikken_live.html?client_match_id=${encodeURIComponent(pikken.game_id || pikken.id)}${CURRENT_SCOPE==='family'?'&scope=family':''}`, 'PIKKEN LIVE', 'Bekijk tafel zonder acties te verstoren.');
+        }
+        const paard = readJsonStorage(['gejast_paardenrace_room_v687','gejast_paardenrace_participant_v687']);
+        const roomCode = paard && (paard.room_code || paard.code || paard.room);
+        if (roomCode) {
+          markLocalLiveCard('./paardenrace.html', `./paardenrace_live.html?room_code=${encodeURIComponent(roomCode)}${CURRENT_SCOPE==='family'?'&scope=family':''}`, 'PAARDENRACE LIVE', 'Bekijk race en standen als spectator.');
+        }
+        const beerpong = readJsonStorage(['gejast_beerpong_match_v695','gejast_beerpong_participant_v695']);
+        if (beerpong && (beerpong.client_match_id || beerpong.match_id)) {
+          markLocalLiveCard('./beerpong.html', `./beerpong_vault.html?client_match_id=${encodeURIComponent(beerpong.client_match_id || beerpong.match_id)}${CURRENT_SCOPE==='family'?'&scope=family':''}`, 'BEERPONG LIVE', 'Bekijk opgeslagen score en stats.');
+        }
+      } catch (_) {}
     }
 
     async function loadHomepageLiveEntries(){
@@ -1916,7 +1959,7 @@ async function castExtraPollVote(desired_status) {
 
   <div class="site-credit-watermark" data-version-watermark></div>
 
-<script defer src="./gejast-player-session-ui.js?v690"></script>
+<script defer src="./gejast-player-session-ui.js?v695"></script>
 
 
 <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script><script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
@@ -1924,9 +1967,9 @@ async function castExtraPollVote(desired_status) {
   function loadScript(src){ return new Promise((resolve,reject)=>{ var s=document.createElement('script'); s.src=src; s.defer=true; s.onload=resolve; s.onerror=reject; document.body.appendChild(s); }); }
   function bootSecondary(){
     return Promise.allSettled([
-      loadScript('./drinks-verify-float.js?v690'),
-      loadScript('./gejast-geo.js?v690'),
-      loadScript('./site-analytics.js?v690')
+      loadScript('./drinks-verify-float.js?v695'),
+      loadScript('./gejast-geo.js?v695'),
+      loadScript('./site-analytics.js?v695')
     ]);
   }
   if ('requestIdleCallback' in window) requestIdleCallback(()=>bootSecondary(), { timeout: 2500 });

@@ -18,10 +18,29 @@
   function gameFromUrl(){ try { const qs = new URLSearchParams(location.search); return qs.get('game_id') || qs.get('client_match_id') || ''; } catch (_) { return ''; } }
   function liveHref(id){ return `./pikken_live.html?client_match_id=${encodeURIComponent(String(id||''))}${api.scope()==='family'?'&scope=family':''}`; }
   function updateUrl(id){ if(!id) return; try { history.replaceState(null, '', `pikken.html?game_id=${encodeURIComponent(id)}${api.scope()==='family'?'&scope=family':''}`); } catch (_) {} }
-  function bidText(bid){ const c=Number(bid?.count || bid?.bid_count || 0), f=Number(bid?.face || bid?.bid_face || 0); if(!c || !f) return '—'; return f===1?`${c} × pik`:`${c} × ${f}`; }
+  function bidText(bid){ const c=Number(bid?.count || bid?.bid_count || 0), f=Number(bid?.face || bid?.bid_face || 0); if(!c || !f) return '--'; return f===1?`${c} x pik`:`${c} x ${f}`; }
   function faceOrder(face){ return Number(face) === 1 ? 7 : Number(face||0); }
   function sortedDice(dice){ return (Array.isArray(dice)?dice:[]).map(Number).filter(Boolean).sort((a,b)=>faceOrder(a)-faceOrder(b)); }
   function die(face){ const n=Number(face||0); return `<img class="die ${n===1?'pik':''}" src="./assets/pikken/dice-${n || 'hidden'}.svg" alt="die ${n||''}">`; }
+  function extractMyHand(payload){
+    const direct = payload?.my_hand || payload?.hand || payload?.dice || payload?.viewer?.my_hand || payload?.viewer?.hand || payload?.viewer?.dice;
+    if (Array.isArray(direct) && direct.length) return direct;
+    const viewerSeat = Number(payload?.viewer?.seat || payload?.viewer?.seat_index || 0);
+    const viewerId = String(payload?.viewer?.player_id || payload?.viewer?.id || '');
+    const viewerName = String(payload?.viewer?.player_name || payload?.viewer?.name || '').toLowerCase();
+    const hands = payload?.hands || payload?.round_hands || payload?.game?.state?.hands || payload?.game?.state?.round_hands;
+    if (Array.isArray(hands)) {
+      const row = hands.find((h)=>Number(h.seat || h.seat_index || 0) === viewerSeat)
+        || hands.find((h)=>viewerId && String(h.player_id || h.id || '') === viewerId)
+        || hands.find((h)=>viewerName && String(h.player_name || h.name || '').toLowerCase() === viewerName);
+      const dice = row?.dice_values || row?.dice || row?.hand || row?.my_hand;
+      if (Array.isArray(dice) && dice.length) return dice;
+    } else if (hands && typeof hands === 'object') {
+      const dice = hands[String(viewerSeat)] || hands[viewerName] || hands[viewerId];
+      if (Array.isArray(dice) && dice.length) return dice;
+    }
+    return [];
+  }
   function phaseOf(payload){ return String(payload?.game?.state?.phase || payload?.game?.status || payload?.game?.status || 'lobby').toLowerCase(); }
   function renderControls(payload){
     const game = payload?.game || {}; const viewer = payload?.viewer || {}; const phase = phaseOf(payload); const inLobby = !!game.id && phase === 'lobby';
@@ -40,13 +59,14 @@
       const seat=Number(p.seat||p.seat_index||0); const alive=!!p.alive || phase==='lobby'; const vote=votes.find((v)=>Number(v.seat||v.seat_index||0)===seat); const voteStatus=String(vote?.status||'waiting');
       const pill = phase==='voting' ? (voteStatus==='approved'?'goedgekeurd':voteStatus==='rejected'?'afgekeurd':'wacht') : (p.is_host?'Host':p.is_ready?'Ready':'Niet ready');
       const pillCls = phase==='voting' ? (voteStatus==='approved'?'ok':voteStatus==='rejected'?'bad':'wait') : (p.is_host || p.is_ready ? 'ok' : 'wait');
-      return `<div class="player-row ${alive?'':'dead'} ${(phase==='bidding'&&seat===turn)||(phase==='voting'&&seat===voteTurn)?'turn':''}"><div><div><strong>${esc(p.name||p.player_name||'Speler')}</strong> <span class="muted">#${seat}</span></div><div class="muted">${alive?'Levend':'Uit'} · ${Number(p.dice_count||0)} dobbelstenen</div></div><span class="pill ${pillCls}">${esc(pill)}</span></div>`;
+      return `<div class="player-row ${alive?'':'dead'} ${(phase==='bidding'&&seat===turn)||(phase==='voting'&&seat===voteTurn)?'turn':''}"><div><div><strong>${esc(p.name||p.player_name||'Speler')}</strong> <span class="muted">#${seat}</span></div><div class="muted">${alive?'Levend':'Uit'} - ${Number(p.dice_count||0)} dobbelstenen</div></div><span class="pill ${pillCls}">${esc(pill)}</span></div>`;
     }).join('') : '<div class="muted">Nog geen spelers.</div>';
   }
   function renderDice(payload){
     const wrap=$('pkMyDice'); if(!wrap) return;
-    const dice=sortedDice(payload?.my_hand || payload?.viewer?.my_hand || []);
-    wrap.innerHTML = dice.length ? dice.map(die).join('') : '<div class="muted">Dobbelstenen verschijnen zodra de ronde live is.</div>';
+    const dice=sortedDice(extractMyHand(payload));
+    const phase = phaseOf(payload);
+    wrap.innerHTML = dice.length ? dice.map(die).join('') + '<div class="muted" style="width:100%;margin-top:6px">1 is pik en telt als joker. Baseer je bod op je eigen stenen plus wat je van de tafel verwacht.</div>' : `<div class="muted">${phase==='lobby'?'Dobbelstenen worden gegooid zodra de host start.':'Geen hand ontvangen van de backend. Refresh of laat de host de ronde opnieuw starten.'}</div>`;
   }
   function renderActionPanels(payload){
     const game=payload?.game || {}, viewer=payload?.viewer || {}, phase=phaseOf(payload); const mySeat=Number(viewer.seat||viewer.seat_index||0); const alive=!!viewer.alive || phase==='lobby';
@@ -61,17 +81,17 @@
     const lr=payload?.game?.state?.last_reveal || null;
     if(!lr){ wrap.style.display='none'; wrap.innerHTML=''; return; }
     wrap.style.display='block';
-    wrap.innerHTML = `<details class="accordion" open><summary><span>Laatste reveal: ${esc(bidText(lr.bid))}</span><span class="muted">${lr.bid_true?'gehaald':'niet gehaald'} · ${Number(lr.counted_total||0)}</span></summary><div class="detail"><div class="muted">Verliezers: ${esc((lr.losers||[]).map((l)=>l.name).join(', ') || 'geen')}</div><div class="reveal-grid">${(Array.isArray(lr.hands)?lr.hands:[]).map((h)=>`<div class="reveal-card"><strong>${esc(h.name||'Speler')}</strong><div class="dice-row">${(h.dice||[]).map(die).join('')}</div></div>`).join('')}</div></div></details>`;
+    wrap.innerHTML = `<details class="accordion" open><summary><span>Laatste reveal: ${esc(bidText(lr.bid))}</span><span class="muted">${lr.bid_true?'gehaald':'niet gehaald'} - ${Number(lr.counted_total||0)}</span></summary><div class="detail"><div class="muted">Verliezers: ${esc((lr.losers||[]).map((l)=>l.name).join(', ') || 'geen')}</div><div class="reveal-grid">${(Array.isArray(lr.hands)?lr.hands:[]).map((h)=>`<div class="reveal-card"><strong>${esc(h.name||'Speler')}</strong><div class="dice-row">${(h.dice||[]).map(die).join('')}</div></div>`).join('')}</div></div></details>`;
   }
   function render(payload){
     if(!payload || !payload.game){ return; }
     const game=payload.game, phase=phaseOf(payload);
     state.gameId = game.id || state.gameId; storeGame(state.gameId); updateUrl(state.gameId);
-    const code=$('pkLobbyCode'); if(code) code.textContent = game.lobby_code || '—';
+    const code=$('pkLobbyCode'); if(code) code.textContent = game.lobby_code || game.code || '--';
     const live=$('pkLiveLink'); if(live){ live.href = liveHref(state.gameId); live.style.display = state.gameId ? '' : 'none'; }
-    const sum=$('pkMatchSummary'); if(sum){ sum.textContent = phase==='lobby' ? `Lobby ${game.lobby_code || ''} · ${payload.players?.length || 0} speler(s)` : `${phase} · ronde ${Number(game?.state?.round_no||0)}`; }
+    const sum=$('pkMatchSummary'); if(sum){ sum.textContent = phase==='lobby' ? `Lobby ${game.lobby_code || game.code || ''} - ${payload.players?.length || 0} speler(s)` : `${phase} - ronde ${Number(game?.state?.round_no||0)}`; }
     const bid=$('pkBidText'); if(bid) bid.textContent = bidText(game?.state?.bid);
-    const bidBy=$('pkBidBy'); if(bidBy) bidBy.textContent = game?.state?.bid ? `door ${game.state.bid.bidder_name || '—'}` : '';
+    const bidBy=$('pkBidBy'); if(bidBy) bidBy.textContent = game?.state?.bid ? `door ${game.state.bid.bidder_name || '--'}` : '';
     renderControls(payload); renderPlayers(payload); renderDice(payload); renderActionPanels(payload); renderReveal(payload);
     setStatus('');
   }
@@ -86,12 +106,12 @@
   function stopPolling(){ if(state.timer){ clearInterval(state.timer); state.timer=null; } }
   async function loadFeeds(){
     const lobbyBox=$('pkLobbyFeed'), liveBox=$('pkLiveFeed');
-    try { const l=await api.openLobbies(); const rows=Array.isArray(l)?l:(l.rows||l.items||[]); if(lobbyBox) lobbyBox.innerHTML = rows.length ? rows.map((r)=>`<article class="feed-card"><div class="feed-head"><div><div class="feed-title">Code ${esc(r.lobby_code||'')}</div><div class="feed-meta">${esc(r.host_name||r.created_by_player_name||'Host')} · ${Number(r.player_count||0)} speler(s) · ${Number(r.ready_count||0)} ready</div></div><span class="pill wait">Lobby</span></div><div class="feed-actions"><button class="btn alt tiny" data-join-code="${esc(r.lobby_code||'')}">Join</button></div></article>`).join('') : '<div class="muted">Geen open Pikken-lobbies.</div>'; } catch(e){ if(lobbyBox) lobbyBox.innerHTML='<div class="muted">Open lobbies konden niet laden.</div>'; }
-    try { const l=await api.liveMatches(); const rows=Array.isArray(l)?l:(l.rows||l.items||[]); if(liveBox) liveBox.innerHTML = rows.length ? rows.map((r)=>`<article class="feed-card"><div class="feed-head"><div><div class="feed-title">${esc(r.lobby_code||'Pikken')}</div><div class="feed-meta">${esc(r.phase||r.status||'live')} · ronde ${Number(r.round_no||0)} · ${Number(r.player_count||0)} speler(s)</div></div><span class="pill ok">Live</span></div><div class="feed-actions"><a class="btn alt tiny" href="${liveHref(r.game_id||r.id)}">Open live</a></div></article>`).join('') : '<div class="muted">Geen live Pikken-matches.</div>'; } catch(e){ if(liveBox) liveBox.innerHTML='<div class="muted">Live matches konden niet laden.</div>'; }
+    try { const l=await api.openLobbies(); const rows=Array.isArray(l)?l:(l.rows||l.items||l.lobbies||l.matches||[]); if(lobbyBox) lobbyBox.innerHTML = rows.length ? rows.map((r)=>`<article class="feed-card"><div class="feed-head"><div><div class="feed-title">Code ${esc(r.lobby_code||r.code||'')}</div><div class="feed-meta">${esc(r.host_name||r.created_by_player_name||'Host')} - ${Number(r.player_count||0)} speler(s) - ${Number(r.ready_count||0)} ready</div></div><span class="pill wait">Lobby</span></div><div class="feed-actions"><button class="btn alt tiny" data-join-code="${esc(r.lobby_code||r.code||'')}">Join</button></div></article>`).join('') : '<div class="muted">Geen open Pikken-lobbies.</div>'; } catch(e){ if(lobbyBox) lobbyBox.innerHTML='<div class="muted">Open lobbies konden niet laden: '+esc(e.message||e)+'</div>'; }
+    try { const l=await api.liveMatches(); const rows=Array.isArray(l)?l:(l.rows||l.items||l.lobbies||l.matches||[]); if(liveBox) liveBox.innerHTML = rows.length ? rows.map((r)=>`<article class="feed-card"><div class="feed-head"><div><div class="feed-title">${esc(r.lobby_code||r.code||'Pikken')}</div><div class="feed-meta">${esc(r.phase||r.status||'live')} - ronde ${Number(r.round_no||0)} - ${Number(r.player_count||0)} speler(s)</div></div><span class="pill ok">Live</span></div><div class="feed-actions"><a class="btn alt tiny" href="${liveHref(r.game_id||r.id)}">Open live</a></div></article>`).join('') : '<div class="muted">Geen live Pikken-matches.</div>'; } catch(e){ if(liveBox) liveBox.innerHTML='<div class="muted">Live matches konden niet laden: '+esc(e.message||e)+'</div>'; }
   }
   async function createLobby(){
     try { api.requireSession && api.requireSession(); } catch(e){ setStatus(normalizeError(e), true); return; }
-    setStatus('Lobby maken…'); setBusyButton('pkCreateLobbyBtn', true, 'Maken…');
+    setStatus('Lobby maken...'); setBusyButton('pkCreateLobbyBtn', true, 'Maken...');
     try {
       const mode=$('pkPenaltyMode')?.value || 'wrong_loses';
       const out=await api.createLobby({ penalty_mode:mode, start_dice:6, prev_winner_window_hours:12 });
@@ -105,7 +125,7 @@
   async function joinLobby(code){
     try { api.requireSession && api.requireSession(); } catch(e){ setStatus(normalizeError(e), true); return; }
     const value=api.cleanCode(code || $('pkJoinCode')?.value || ''); if(!value) return setStatus('Vul een lobbycode in.', true);
-    setStatus('Lobby joinen…'); setBusyButton('pkJoinLobbyBtn', true, 'Joinen…');
+    setStatus('Lobby joinen...'); setBusyButton('pkJoinLobbyBtn', true, 'Joinen...');
     try{
       const out=await api.joinLobby(value); const id=out?.game_id || out?.id || out?.game?.id || '';
       if(!id) throw new Error('Join gelukt maar backend gaf geen game_id terug: '+JSON.stringify(out).slice(0,240));
@@ -113,7 +133,7 @@
     }catch(e){ setStatus(normalizeError(e), true); }
     finally{ setBusyButton('pkJoinLobbyBtn', false); }
   }
-  async function startGame(){ setStatus('Starten…'); await api.startGame(state.gameId); window.location.href = liveHref(state.gameId); }
+  async function startGame(){ setStatus('Starten...'); await api.startGame(state.gameId); window.location.href = liveHref(state.gameId); }
   async function leave(){ if(!state.gameId) return; await api.leaveGame(state.gameId); storeGame(''); state.gameId=''; stopPolling(); try{ history.replaceState(null,'','pikken.html'); }catch(_){} setStatus('Lobby verlaten.'); await loadFeeds(); }
   async function destroy(){ if(!state.gameId) return; if(!confirm('Host: deze Pikken-lobby/match verwijderen?')) return; await api.destroyGame(state.gameId); storeGame(''); state.gameId=''; stopPolling(); try{ history.replaceState(null,'','pikken.html'); }catch(_){} setStatus('Lobby verwijderd.'); await loadFeeds(); }
   function wire(){ ['pkCreateLobbyBtn','pkJoinLobbyBtn'].forEach((id)=>{ const b=$(id); if(b && !b.getAttribute('data-original-label')) b.setAttribute('data-original-label', b.textContent); });
