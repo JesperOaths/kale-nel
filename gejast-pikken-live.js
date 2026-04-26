@@ -8,42 +8,106 @@
   const esc = (v)=>String(v ?? '').replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
   const faceOrder = (f)=>Number(f)===1?7:Number(f||0);
   const sortDice = (a)=>(Array.isArray(a)?a:[]).map(Number).filter(Boolean).sort((x,y)=>faceOrder(x)-faceOrder(y));
-  const die = (n)=>`<img class="die" src="./assets/pikken/dice-${Number(n)||'hidden'}.svg" alt="die ${Number(n)||''}">`;
-  function bidText(b){ const c=Number(b?.count||b?.bid_count||0), f=Number(b?.face||b?.bid_face||0); if(!c||!f)return '—'; return f===1?`${c} × pik`:`${c} × ${f}`; }
+  const die = (n)=>`<img class="die ${Number(n)===1?'pik':''}" src="./assets/pikken/dice-${Number(n)||'hidden'}.svg" alt="die ${Number(n)||''}">`;
+  function bidText(b){ const c=Number(b?.count||b?.bid_count||0), f=Number(b?.face||b?.bid_face||0); if(!c||!f)return '--'; return f===1?`${c} x pik`:`${c} x ${f}`; }
   function phase(p){ return String(p?.game?.state?.phase || p?.game?.status || 'lobby').toLowerCase(); }
   function setText(id, val){ const el=$(id); if(el) el.textContent=val; }
-  function seatClass(i,total){ const map=['top','right','bottom','left','extra1','extra2','extra3','extra4']; return map[i%map.length]; }
+  function seatClass(i){ const map=['top','right','bottom','left','extra1','extra2','extra3','extra4']; return map[i%map.length]; }
   function legalOptions(bid,total){
-    const out=[]; const add=(c,f)=>{ if(c>0&&f>0&&c<=Math.max(total,1)) out.push({c,f,label:f===1?`${c} × pik`:`${c} × ${f}`}); };
+    const out=[]; const add=(c,f)=>{ if(c>0&&f>0&&c<=Math.max(total,1)) out.push({c,f,label:f===1?`${c} x pik`:`${c} x ${f}`}); };
     const c=Number(bid?.count||0), f=Number(bid?.face||0);
     if(!c||!f){ for(let x=2;x<=6;x++) add(1,x); add(1,1); return out; }
     if(f===1){ for(let n=c+1;n<=Math.ceil(total/2);n++) add(n,1); for(let n=c*2+1;n<=total;n++) for(let x=2;x<=6;x++) add(n,x); return out; }
-    for(let x=f+1;x<=6;x++) add(c,x); for(let n=c+1;n<=total;n++) for(let x=2;x<=6;x++) add(n,x); for(let n=Math.ceil(c/2);n<=Math.ceil(total/2);n++) add(n,1); return out;
+    for(let x=f+1;x<=6;x++) add(c,x);
+    for(let n=c+1;n<=total;n++) for(let x=2;x<=6;x++) add(n,x);
+    for(let n=Math.ceil(c/2);n<=Math.ceil(total/2);n++) add(n,1);
+    return out;
+  }
+  function clearParticipantAndReturn(){
+    try {
+      localStorage.removeItem('gejast_pikken_participant_v687');
+      localStorage.removeItem('gejast_pikken_participant_v632');
+    } catch (_) {}
+    setTimeout(()=>{ location.href='./pikken.html'; }, 650);
   }
   function render(payload){
-    model = payload; const game=payload.game||{}, st=game.state||{}, players=Array.isArray(payload.players)?payload.players:[], viewer=payload.viewer||{}, ph=phase(payload);
-    setText('metaLine', `${game.lobby_code||'Pikken'} · ${ph} · bijgewerkt ${new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`);
+    model = payload;
+    const game=payload.game||{}, st=game.state||{}, players=Array.isArray(payload.players)?payload.players:[], viewer=payload.viewer||{}, ph=phase(payload);
+    setText('metaLine', `${game.lobby_code||'Pikken'} - ${ph} - bijgewerkt ${new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`);
     const pill=$('phasePill'); if(pill){ pill.textContent=ph; pill.className=`pill ${ph==='bidding'?'ok':ph==='finished'?'bad':'wait'}`; }
-    setText('currentBid', bidText(st.bid)); setText('roundNo', String(Number(st.round_no||0))); setText('penaltyMode', String(game.config?.penalty_mode||'wrong_loses')==='right_loses'?'Fair':'Normal');
-    const turn = ph==='voting' ? Number(st.vote_turn_seat||0) : Number(st.current_turn_seat||0); const turnP=players.find((p)=>Number(p.seat||p.seat_index||0)===turn); setText('turnName', turnP?.name || turnP?.player_name || '—');
-    setText('bidBy', st.bid ? `door ${st.bid.bidder_name || '—'}` : 'Nog geen bod');
-    setText('diceFraction', `${Number(payload.dice_totals?.current_total||0)}/${Number(payload.dice_totals?.start_total||0)}`);
-    const ring=$('seatRing'); if(ring){ ring.querySelectorAll('.seat').forEach((n)=>n.remove()); players.forEach((p,i)=>{ const seat=Number(p.seat||p.seat_index||0); const div=document.createElement('div'); div.className=`seat ${seatClass(i,players.length)} ${seat===Number(viewer.seat||viewer.seat_index||0)?'me':''} ${seat===turn?'turn':''} ${p.alive?'':'dead'}`; div.innerHTML=`<div class="seat-top"><div><div class="seat-name">${esc(p.name||p.player_name||'Speler')}</div><div class="seat-meta">stoel ${seat} · ${Number(p.dice_count||0)} dobbel(s)</div></div></div>`; ring.appendChild(div); }); }
-    const dice=sortDice(payload.my_hand || viewer.my_hand || []); const my=$('myDiceBody'); if(my) my.innerHTML = dice.length ? `<div class="dice-row">${dice.map(die).join('')}</div>` : '<div class="muted">Geen privésessie of nog geen hand zichtbaar.</div>';
-    const note=$('diceStateNote'); if(note) note.textContent = dice.length ? 'Je actieve hand.' : 'Open deze pagina als ingelogde speler om je hand te zien.';
-    const voteWrap=$('tableVotes'); if(voteWrap){ const votes=Array.isArray(payload.votes)?payload.votes:[]; voteWrap.innerHTML = ph==='voting' ? votes.map((v)=>`<span class="table-vote">${v.status==='approved'?'👍':v.status==='rejected'?'👎':'…'} ${esc(v.name||'')}</span>`).join('') : ''; }
-    const opts=legalOptions(st.bid, Number(payload.dice_totals?.current_total||1)); const sel=$('bidSelect'); if(sel) sel.innerHTML=opts.map((o)=>`<option value="${o.c}:${o.f}">${esc(o.label)}</option>`).join('');
-    const mySeat=Number(viewer.seat||viewer.seat_index||0), alive=!!viewer.alive; const myTurn=ph==='bidding'&&mySeat===Number(st.current_turn_seat||0)&&alive; const myVote=ph==='voting'&&mySeat===Number(st.vote_turn_seat||0)&&alive;
-    $('bidControls')?.classList.toggle('hidden', !myTurn); $('voteControls')?.classList.toggle('hidden', !myVote); $('leaveBtn')?.classList.toggle('hidden', !api.sessionToken()); $('destroyBtn')?.classList.toggle('hidden', !(viewer.is_host&&api.sessionToken()));
+    setText('currentBid', bidText(st.bid));
+    setText('roundNo', String(Number(st.round_no||0)));
+    setText('penaltyMode', String(game.config?.penalty_mode||'wrong_loses')==='right_loses'?'Fair':'Normal');
+    const turn = ph==='voting' ? Number(st.vote_turn_seat||0) : Number(st.current_turn_seat||0);
+    const turnP=players.find((p)=>Number(p.seat||p.seat_index||0)===turn);
+    setText('turnName', turnP?.name || turnP?.player_name || '--');
+    setText('bidBy', st.bid ? `door ${st.bid.bidder_name || '--'}` : 'Nog geen bod');
+    const fallbackCurrent=players.reduce((s,p)=>s+Number(p.dice_count||0),0), fallbackStart=players.length*6;
+    setText('diceFraction', `${Number(payload.dice_totals?.current_total||fallbackCurrent||0)}/${Number(payload.dice_totals?.start_total||fallbackStart||0)}`);
+
+    const ring=$('seatRing');
+    if(ring){
+      ring.querySelectorAll('.seat').forEach((n)=>n.remove());
+      players.forEach((p,i)=>{
+        const seat=Number(p.seat||p.seat_index||0);
+        const div=document.createElement('div');
+        div.className=`seat ${seatClass(i)} ${seat===Number(viewer.seat||viewer.seat_index||0)?'me':''} ${seat===turn?'turn':''} ${p.alive?'':'dead'}`;
+        div.innerHTML=`<div class="seat-top"><div><div class="seat-name">${esc(p.name||p.player_name||'Speler')}</div><div class="seat-meta">stoel ${seat} - ${Number(p.dice_count||0)} dobbel(s)</div></div></div>`;
+        ring.appendChild(div);
+      });
+    }
+
+    const dice=sortDice(payload.my_hand || viewer.my_hand || []);
+    const diceHtml = dice.length
+      ? `<div class="dice-row">${dice.map(die).join('')}</div><div class="muted" style="margin-top:8px">Gesorteerd 2-6, pik rechts. 1 telt als pik/joker.</div>`
+      : '<div class="muted">Geen privesessie of nog geen hand zichtbaar.</div>';
+    const note=$('diceStateNote'); if(note) note.innerHTML = diceHtml;
+    const my=$('myDiceBody'); if(my) my.innerHTML = '';
+
+    const voteWrap=$('tableVotes');
+    if(voteWrap){
+      const votes=Array.isArray(payload.votes)?payload.votes:[];
+      voteWrap.innerHTML = ph==='voting' ? votes.map((v)=>`<span class="table-vote">${v.status==='approved'?'OK':v.status==='rejected'?'NO':'...'} ${esc(v.name||'')}</span>`).join('') : '';
+    }
+    const opts=legalOptions(st.bid, Number(payload.dice_totals?.current_total||fallbackCurrent||1));
+    const sel=$('bidSelect'); if(sel) sel.innerHTML=opts.map((o)=>`<option value="${o.c}:${o.f}">${esc(o.label)}</option>`).join('');
+    const mySeat=Number(viewer.seat||viewer.seat_index||0), alive=!!viewer.alive;
+    const myTurn=ph==='bidding'&&mySeat===Number(st.current_turn_seat||0)&&alive;
+    const myVote=ph==='voting'&&mySeat===Number(st.vote_turn_seat||0)&&alive;
+    $('bidControls')?.classList.toggle('hidden', !myTurn);
+    $('voteControls')?.classList.toggle('hidden', !myVote);
+    $('leaveBtn')?.classList.toggle('hidden', !api.sessionToken());
+    $('destroyBtn')?.classList.toggle('hidden', !(viewer.is_host&&api.sessionToken()));
     const context=$('mobileContext'); if(context) context.textContent = myTurn ? 'Jij bent aan de beurt.' : myVote ? 'Jij moet stemmen.' : 'Live meekijken.';
-    const reveal=$('revealBody'); if(reveal){ const lr=st.last_reveal; reveal.innerHTML = lr ? `<div><strong>${esc(bidText(lr.bid))}</strong> · ${lr.bid_true?'gehaald':'niet gehaald'} · ${Number(lr.counted_total||0)}</div><div class="reveal-grid">${(lr.hands||[]).map((h)=>`<div class="reveal-card"><strong>${esc(h.name||'Speler')}</strong><div class="dice-row">${(h.dice||[]).map(die).join('')}</div></div>`).join('')}</div>` : 'Nog geen reveal.'; }
+    const reveal=$('revealBody');
+    if(reveal){
+      const lr=st.last_reveal;
+      reveal.innerHTML = lr ? `<div><strong>${esc(bidText(lr.bid))}</strong> - ${lr.bid_true?'gehaald':'niet gehaald'} - ${Number(lr.counted_total||0)}</div><div class="reveal-grid">${(lr.hands||[]).map((h)=>`<div class="reveal-card"><strong>${esc(h.name||'Speler')}</strong><div class="dice-row">${(h.dice||[]).map(die).join('')}</div></div>`).join('')}</div>` : 'Nog geen reveal.';
+    }
   }
-  async function refresh(force=false){ if(!gameId){ setText('metaLine','Geen game_id in URL.'); return; } if(busy) return; busy=true; try{ const payload=await api.getState(gameId); const v=Number(payload?.game?.state_version||-1); if(force||v!==lastVersion){ lastVersion=v; render(payload); } } catch(e){ setText('metaLine', e.message || 'Pikken laden mislukt.'); } finally{ busy=false; } }
+  async function refresh(force=false){
+    if(!gameId){ setText('metaLine','Geen game_id in URL.'); return; }
+    if(busy) return; busy=true;
+    try{
+      const payload=await api.getState(gameId);
+      const v=Number(payload?.game?.state_version||-1);
+      if(force||v!==lastVersion){ lastVersion=v; render(payload); }
+    } catch(e){
+      const msg=String(e.message||e||'');
+      setText('metaLine', msg || 'Pikken laden mislukt.');
+      if(/niet gevonden|not found|missing|deleted|verwijderd/i.test(msg)) clearParticipantAndReturn();
+    } finally{ busy=false; }
+  }
   function act(fn){ return fn().then(()=>refresh(true)).catch((e)=>alert(e.message||String(e))); }
-  $('reconnectBtn')?.addEventListener('click', ()=>refresh(true)); $('rollBtn')?.addEventListener('click', ()=>refresh(true));
+  $('reconnectBtn')?.addEventListener('click', ()=>refresh(true));
+  $('rollBtn')?.addEventListener('click', ()=>refresh(true));
   $('bidBtn')?.addEventListener('click', ()=>{ const [c,f]=String($('bidSelect')?.value||'').split(':').map(Number); if(c&&f) act(()=>api.placeBid(gameId,c,f)); });
-  $('rejectBtn')?.addEventListener('click', ()=>act(()=>api.rejectBid(gameId))); $('approveBtn')?.addEventListener('click', ()=>act(()=>api.castVote(gameId,true))); $('voteRejectBtn')?.addEventListener('click', ()=>act(()=>api.castVote(gameId,false)));
+  $('rejectBtn')?.addEventListener('click', ()=>act(()=>api.rejectBid(gameId)));
+  $('approveBtn')?.addEventListener('click', ()=>act(()=>api.castVote(gameId,true)));
+  $('voteRejectBtn')?.addEventListener('click', ()=>act(()=>api.castVote(gameId,false)));
   $('leaveBtn')?.addEventListener('click', ()=>{ if(confirm('Match verlaten?')) api.leaveGame(gameId).then(()=>{ location.href='./pikken.html'; }).catch((e)=>alert(e.message)); });
   $('destroyBtn')?.addEventListener('click', ()=>{ if(confirm('Host: match verwijderen?')) api.destroyGame(gameId).then(()=>{ location.href='./pikken.html'; }).catch((e)=>alert(e.message)); });
-  refresh(true); timer=setInterval(()=>{ if(!document.hidden) refresh(false); }, 1600); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) refresh(true); });
+  refresh(true);
+  timer=setInterval(()=>{ if(!document.hidden) refresh(false); }, 800);
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) refresh(true); });
 })();

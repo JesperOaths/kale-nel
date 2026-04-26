@@ -87,6 +87,10 @@
     if(!payload || !payload.game){ return; }
     const game=payload.game, phase=phaseOf(payload);
     state.gameId = game.id || state.gameId; storeGame(state.gameId); updateUrl(state.gameId);
+    if (state.gameId && phase !== 'lobby') {
+      window.location.replace(liveHref(state.gameId));
+      return;
+    }
     const code=$('pkLobbyCode'); if(code) code.textContent = game.lobby_code || game.code || '--';
     const live=$('pkLiveLink'); if(live){ live.href = liveHref(state.gameId); live.style.display = state.gameId ? '' : 'none'; }
     const sum=$('pkMatchSummary'); if(sum){ sum.textContent = phase==='lobby' ? `Lobby ${game.lobby_code || game.code || ''} - ${payload.players?.length || 0} speler(s)` : `${phase} - ronde ${Number(game?.state?.round_no||0)}`; }
