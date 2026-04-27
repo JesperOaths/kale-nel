@@ -10,6 +10,13 @@
   const sortDice = (a)=>(Array.isArray(a)?a:[]).map(Number).filter(Boolean).sort((x,y)=>faceOrder(x)-faceOrder(y));
   const die = (n)=>`<img class="die ${Number(n)===1?'pik':''}" src="./assets/pikken/dice-${Number(n)||'hidden'}.svg" alt="die ${Number(n)||''}">`;
   function bidText(b){ const c=Number(b?.count||b?.bid_count||0), f=Number(b?.face||b?.bid_face||0); if(!c||!f)return '--'; return f===1?`${c} x pik`:`${c} x ${f}`; }
+  function revealText(lr){
+    if(!lr) return 'Nog geen reveal.';
+    const loser = lr.loser_name || (lr.loser_id ? `speler ${lr.loser_id}` : 'onbekend');
+    const after = Number.isFinite(Number(lr.loser_dice_after)) ? ` - nu ${Number(lr.loser_dice_after)} dobbel(s)` : '';
+    const next = lr.next_round ? ` Volgende ronde: ${Number(lr.next_round)}.` : '';
+    return `<div><strong>${esc(bidText(lr.bid))}</strong> - ${lr.bid_true?'gehaald':'niet gehaald'} - ${Number(lr.counted_total||0)} hit(s).</div><div class="muted">Verliezer: ${esc(loser)}${after}.${next} Handen blijven verborgen; alleen je eigen dobbelstenen zijn zichtbaar.</div>`;
+  }
   function phase(p){ return String(p?.game?.state?.phase || p?.game?.status || 'lobby').toLowerCase(); }
   function setText(id, val){ const el=$(id); if(el) el.textContent=val; }
   function seatClass(i){ const map=['top','right','bottom','left','extra1','extra2','extra3','extra4']; return map[i%map.length]; }
@@ -73,7 +80,8 @@
     const sel=$('bidSelect'); if(sel) sel.innerHTML=opts.map((o)=>`<option value="${o.c}:${o.f}">${esc(o.label)}</option>`).join('');
     const mySeat=Number(viewer.seat||viewer.seat_index||0), alive=!!viewer.alive;
     const myTurn=ph==='bidding'&&mySeat===Number(st.current_turn_seat||0)&&alive;
-    const myVote=ph==='voting'&&mySeat===Number(st.vote_turn_seat||0)&&alive;
+    const bidderSeat=Number(st.bid?.bidder_seat||0);
+    const myVote=ph==='voting'&&mySeat!==bidderSeat&&mySeat===Number(st.vote_turn_seat||0)&&alive;
     $('bidControls')?.classList.toggle('hidden', !myTurn);
     $('voteControls')?.classList.toggle('hidden', !myVote);
     $('leaveBtn')?.classList.toggle('hidden', !api.sessionToken());
@@ -82,7 +90,7 @@
     const reveal=$('revealBody');
     if(reveal){
       const lr=st.last_reveal;
-      reveal.innerHTML = lr ? `<div><strong>${esc(bidText(lr.bid))}</strong> - ${lr.bid_true?'gehaald':'niet gehaald'} - ${Number(lr.counted_total||0)}</div><div class="reveal-grid">${(lr.hands||[]).map((h)=>`<div class="reveal-card"><strong>${esc(h.name||'Speler')}</strong><div class="dice-row">${(h.dice||[]).map(die).join('')}</div></div>`).join('')}</div>` : 'Nog geen reveal.';
+      reveal.innerHTML = revealText(lr);
     }
   }
   async function refresh(force=false){

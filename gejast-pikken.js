@@ -19,6 +19,12 @@
   function liveHref(id){ return `./pikken_live.html?client_match_id=${encodeURIComponent(String(id||''))}${api.scope()==='family'?'&scope=family':''}`; }
   function updateUrl(id){ if(!id) return; try { history.replaceState(null, '', `pikken.html?game_id=${encodeURIComponent(id)}${api.scope()==='family'?'&scope=family':''}`); } catch (_) {} }
   function bidText(bid){ const c=Number(bid?.count || bid?.bid_count || 0), f=Number(bid?.face || bid?.bid_face || 0); if(!c || !f) return '--'; return f===1?`${c} x pik`:`${c} x ${f}`; }
+  function revealLine(lr){
+    const loser = lr?.loser_name || (lr?.loser_id ? `speler ${lr.loser_id}` : 'onbekend');
+    const after = Number.isFinite(Number(lr?.loser_dice_after)) ? ` - nu ${Number(lr.loser_dice_after)} dobbel(s)` : '';
+    const next = lr?.next_round ? ` Volgende ronde: ${Number(lr.next_round)}.` : '';
+    return `Verliezer: ${loser}${after}.${next} Handen blijven verborgen; alleen je eigen dobbelstenen zijn zichtbaar.`;
+  }
   function faceOrder(face){ return Number(face) === 1 ? 7 : Number(face||0); }
   function sortedDice(dice){ return (Array.isArray(dice)?dice:[]).map(Number).filter(Boolean).sort((a,b)=>faceOrder(a)-faceOrder(b)); }
   function die(face){ const n=Number(face||0); return `<img class="die ${n===1?'pik':''}" src="./assets/pikken/dice-${n || 'hidden'}.svg" alt="die ${n||''}">`; }
@@ -71,7 +77,8 @@
   function renderActionPanels(payload){
     const game=payload?.game || {}, viewer=payload?.viewer || {}, phase=phaseOf(payload); const mySeat=Number(viewer.seat||viewer.seat_index||0); const alive=!!viewer.alive || phase==='lobby';
     const myTurn = phase === 'bidding' && mySeat === Number(game?.state?.current_turn_seat||0) && alive;
-    const myVote = phase === 'voting' && mySeat === Number(game?.state?.vote_turn_seat||0) && alive;
+    const bidderSeat = Number(game?.state?.bid?.bidder_seat || 0);
+    const myVote = phase === 'voting' && mySeat !== bidderSeat && mySeat === Number(game?.state?.vote_turn_seat||0) && alive;
     const bp=$('pkBidPanel'); if(bp) bp.style.display = myTurn ? 'block' : 'none';
     const vp=$('pkVotePanel'); if(vp) vp.style.display = myVote ? 'block' : 'none';
     const rb=$('pkRejectBtn'); if(rb) rb.disabled = !myTurn || !game?.state?.bid;
@@ -81,7 +88,7 @@
     const lr=payload?.game?.state?.last_reveal || null;
     if(!lr){ wrap.style.display='none'; wrap.innerHTML=''; return; }
     wrap.style.display='block';
-    wrap.innerHTML = `<details class="accordion" open><summary><span>Laatste reveal: ${esc(bidText(lr.bid))}</span><span class="muted">${lr.bid_true?'gehaald':'niet gehaald'} - ${Number(lr.counted_total||0)}</span></summary><div class="detail"><div class="muted">Verliezers: ${esc((lr.losers||[]).map((l)=>l.name).join(', ') || 'geen')}</div><div class="reveal-grid">${(Array.isArray(lr.hands)?lr.hands:[]).map((h)=>`<div class="reveal-card"><strong>${esc(h.name||'Speler')}</strong><div class="dice-row">${(h.dice||[]).map(die).join('')}</div></div>`).join('')}</div></div></details>`;
+    wrap.innerHTML = `<details class="accordion" open><summary><span>Laatste reveal: ${esc(bidText(lr.bid))}</span><span class="muted">${lr.bid_true?'gehaald':'niet gehaald'} - ${Number(lr.counted_total||0)}</span></summary><div class="detail"><div class="muted">${esc(revealLine(lr))}</div></div></details>`;
   }
   function render(payload){
     if(!payload || !payload.game){ return; }
