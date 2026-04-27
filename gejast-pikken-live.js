@@ -37,9 +37,29 @@
     } catch (_) {}
     setTimeout(()=>{ location.href='./pikken.html'; }, 650);
   }
+  function viewerActive(payload){
+    const viewer = payload?.viewer || {};
+    if (viewer.is_host) return true;
+    const players = Array.isArray(payload?.players) ? payload.players : [];
+    if (!players.length) return false;
+    const viewerId = String(viewer.player_id || viewer.id || '');
+    const viewerSeat = Number(viewer.seat || viewer.seat_index || 0);
+    const viewerName = String(viewer.player_name || viewer.name || '').toLowerCase();
+    return players.some((p)=>{
+      const pid = String(p.player_id || p.id || '');
+      const seat = Number(p.seat || p.seat_index || 0);
+      const name = String(p.player_name || p.name || '').toLowerCase();
+      return (viewerId && pid === viewerId) || (viewerSeat && seat === viewerSeat) || (viewerName && name === viewerName);
+    });
+  }
   function render(payload){
     model = payload;
     const game=payload.game||{}, st=game.state||{}, players=Array.isArray(payload.players)?payload.players:[], viewer=payload.viewer||{}, ph=phase(payload);
+    if(!viewerActive(payload)){
+      setText('metaLine','Je zit niet meer in deze Pikken-match.');
+      clearParticipantAndReturn();
+      return;
+    }
     setText('metaLine', `${game.lobby_code||'Pikken'} - ${ph} - bijgewerkt ${new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}`);
     const pill=$('phasePill'); if(pill){ pill.textContent=ph; pill.className=`pill ${ph==='bidding'?'ok':ph==='finished'?'bad':'wait'}`; }
     setText('currentBid', bidText(st.bid));
@@ -113,8 +133,8 @@
   $('rejectBtn')?.addEventListener('click', ()=>act(()=>api.rejectBid(gameId)));
   $('approveBtn')?.addEventListener('click', ()=>act(()=>api.castVote(gameId,true)));
   $('voteRejectBtn')?.addEventListener('click', ()=>act(()=>api.castVote(gameId,false)));
-  $('leaveBtn')?.addEventListener('click', ()=>{ if(confirm('Match verlaten?')) api.leaveGame(gameId).then(()=>{ location.href='./pikken.html'; }).catch((e)=>alert(e.message)); });
-  $('destroyBtn')?.addEventListener('click', ()=>{ if(confirm('Host: match verwijderen?')) api.destroyGame(gameId).then(()=>{ location.href='./pikken.html'; }).catch((e)=>alert(e.message)); });
+  $('leaveBtn')?.addEventListener('click', ()=>{ if(confirm('Match verlaten?')) api.leaveGame(gameId).then(()=>{ clearParticipantAndReturn(); }).catch((e)=>alert(e.message)); });
+  $('destroyBtn')?.addEventListener('click', ()=>{ if(confirm('Host: match verwijderen?')) api.destroyGame(gameId).then(()=>{ clearParticipantAndReturn(); }).catch((e)=>alert(e.message)); });
   refresh(true);
   timer=setInterval(()=>{ if(!document.hidden) refresh(false); }, 800);
   document.addEventListener('visibilitychange',()=>{ if(!document.hidden) refresh(true); });

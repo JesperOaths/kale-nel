@@ -48,6 +48,21 @@
     return [];
   }
   function phaseOf(payload){ return String(payload?.game?.state?.phase || payload?.game?.status || payload?.game?.status || 'lobby').toLowerCase(); }
+  function viewerActive(payload){
+    const viewer = payload?.viewer || {};
+    const players = Array.isArray(payload?.players) ? payload.players : [];
+    if (viewer.is_host) return true;
+    if (!players.length) return false;
+    const viewerId = String(viewer.player_id || viewer.id || '');
+    const viewerSeat = Number(viewer.seat || viewer.seat_index || 0);
+    const viewerName = String(viewer.player_name || viewer.name || '').toLowerCase();
+    return players.some((p)=>{
+      const pid = String(p.player_id || p.id || '');
+      const seat = Number(p.seat || p.seat_index || 0);
+      const name = String(p.player_name || p.name || '').toLowerCase();
+      return (viewerId && pid === viewerId) || (viewerSeat && seat === viewerSeat) || (viewerName && name === viewerName);
+    });
+  }
   function renderControls(payload){
     const game = payload?.game || {}; const viewer = payload?.viewer || {}; const phase = phaseOf(payload); const inLobby = !!game.id && phase === 'lobby';
     ['pkCreateWrap','pkJoinWrap','pkJoinFieldWrap'].forEach((id)=>{ const el=$(id); if(el) el.classList.toggle('hidden', inLobby); });
@@ -93,6 +108,15 @@
   function render(payload){
     if(!payload || !payload.game){ return; }
     const game=payload.game, phase=phaseOf(payload);
+    if(!viewerActive(payload)){
+      storeGame('');
+      state.gameId='';
+      stopPolling();
+      try{ history.replaceState(null,'','pikken.html'); }catch(_){}
+      setStatus('Je zit niet meer in deze Pikken-match.');
+      loadFeeds();
+      return;
+    }
     state.gameId = game.id || state.gameId; storeGame(state.gameId); updateUrl(state.gameId);
     if (state.gameId && phase !== 'lobby') {
       window.location.replace(liveHref(state.gameId));
