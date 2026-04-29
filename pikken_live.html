@@ -7,9 +7,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken match</title>
-  <script>window.GEJAST_PAGE_VERSION='v703';</script>
-  <script src="./gejast-config.js?v703"></script><script src="./gejast-game-group-b-bridge.js?v703"></script><script src="./gejast-home-gate.js?v703"></script>
-  <script src="./gejast-live-summary.js?v703"></script>
+  <script>window.GEJAST_PAGE_VERSION='v704';</script>
+  <script src="./gejast-config.js?v704"></script><script src="./gejast-game-group-b-bridge.js?v704"></script><script src="./gejast-home-gate.js?v704"></script>
+  <script src="./gejast-live-summary.js?v704"></script>
   <style>
     :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--panel:#fff;--shadow:0 18px 44px rgba(0,0,0,.08);--ok:#1f6a46;--bad:#8b2d20;--soft:#f4ecdd;--green:#2f8f5c;--gold:#9a8241}
     *{box-sizing:border-box}
@@ -29,6 +29,7 @@
     .dice-groups{display:grid;gap:8px}.dice-group{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;padding:10px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.07)}.dice-group-head{min-width:52px;padding-top:6px;font-weight:900;color:#8a7a55}.dice-row{display:flex;flex-wrap:wrap;gap:8px}img.die{width:42px;height:42px;display:block}
     .rules-copy{padding:12px 14px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.08);color:#5f5549;font-size:13px;line-height:1.45}
     .dock{position:sticky;bottom:10px;z-index:30;margin-top:14px;padding:12px;border-radius:20px;background:rgba(255,251,245,.96);backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.08);display:grid;gap:12px}.dock-main{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.dock-right{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}.field-inline{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.field-inline select{padding:12px 13px;border-radius:14px;border:1px solid rgba(0,0,0,.12);font:inherit;background:#fff;min-width:220px}.status-note{padding:12px 14px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.08);color:#6b6257;flex:1 1 260px}.vote-big{font-size:18px;line-height:1}.hidden{display:none !important}
+    .round-overlay{position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:rgba(20,16,12,.28);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .18s ease}.round-overlay.show{opacity:1}.round-card{width:min(460px,calc(100vw - 28px));border-radius:24px;background:#fffaf2;border:1px solid rgba(0,0,0,.1);box-shadow:0 24px 80px rgba(0,0,0,.24);padding:22px;text-align:center}.round-card h2{margin:0 0 6px;font-size:26px}.round-card p{margin:0 0 16px;color:#6b6257;font-weight:800}.round-dice{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}.round-dice img{animation:throw-pop .62s ease both}.dice-rolling img.die{animation:throw-pop .55s ease both}@keyframes throw-pop{0%{transform:translateY(-20px) rotate(-18deg) scale(.75);opacity:.15}55%{transform:translateY(6px) rotate(12deg) scale(1.08);opacity:1}100%{transform:translateY(0) rotate(0) scale(1);opacity:1}}
     @media (max-width:980px){.hero{grid-template-columns:1fr}} @media (max-width:700px){body{padding:8px}.shell{padding:12px;border-radius:22px}.title-wrap h1{font-size:21px}.seat-ring{min-height:380px}.table-center{width:min(205px,54vw)}.seat{min-width:92px;max-width:110px;padding:8px 9px}.seat-name{font-size:13px}.seat-meta{font-size:11px}.seat.left{left:6px}.seat.right{right:6px}.seat.top{top:6px}.seat.bottom{bottom:6px}.seat.extra1{left:7%;top:48px}.seat.extra2{right:7%;top:48px}.seat.extra3{right:7%;bottom:48px}.seat.extra4{left:7%;bottom:48px}.grid3{grid-template-columns:1fr 1fr}.grid3 .chip:last-child{grid-column:1 / -1}.dock{padding:10px}.dock-main,.dock-right{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0}.dock-right .btn:last-child{grid-column:1 / -1}.dock-main .btn,.dock-right .btn,.field-inline .btn{width:100%;min-width:0}.field-inline{display:grid;grid-template-columns:1fr 1fr;gap:8px}.field-inline select{min-width:0;width:100%;grid-column:1 / -1}.status-note{grid-column:1 / -1}img.die{width:38px;height:38px}}
   </style>
 </head>
@@ -39,9 +40,9 @@
         <img class="brand-icon" src="./assets/pikken/pikken-icon.svg" alt="Pikken">
         <div>
           <h1>Pikken match</h1>
-          <div class="subline" id="metaLine">Ladenâ€¦</div>
+          <div class="subline" id="metaLine">Laden...</div>
         </div>
-        <span class="pill wait" id="phasePill">â€”</span>
+        <span class="pill wait" id="phasePill">--</span>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <a class="btn alt" href="./pikken.html" id="backLobbyBtn">Lobby</a>
@@ -55,9 +56,9 @@
       <section class="panel">
         <h2>Tafel</h2>
         <div class="seat-ring" id="seatRing">
-          <div class="table-center"><div class="table-core"><div class="label">Huidig bod</div><strong id="currentBid">â€”</strong><div class="fraction" id="diceFraction">0/0</div><div class="mutedline" id="bidBy">Nog geen bod</div><div class="table-votes" id="tableVotes"></div></div></div>
+          <div class="table-center"><div class="table-core"><div class="label">Huidig bod</div><strong id="currentBid">--</strong><div class="fraction" id="diceFraction">0/0</div><div class="mutedline" id="bidBy">Nog geen bod</div><div class="table-votes" id="tableVotes"></div></div></div>
         </div>
-        <div class="grid3" style="margin-top:12px"><div class="chip"><span>Ronde</span><strong id="roundNo">0</strong></div><div class="chip"><span>Beurt</span><strong id="turnName">â€”</strong></div><div class="chip"><span>Variant</span><strong id="penaltyMode">Normal</strong></div></div>
+        <div class="grid3" style="margin-top:12px"><div class="chip"><span>Ronde</span><strong id="roundNo">0</strong></div><div class="chip"><span>Beurt</span><strong id="turnName">--</strong></div><div class="chip"><span>Variant</span><strong id="penaltyMode">Normal</strong></div></div>
       </section>
 
       <div class="side-layout">
@@ -79,14 +80,16 @@
 
     <div class="dock">
       <div class="field-inline hidden" id="bidControls"><select id="bidSelect"></select><button class="btn" id="bidBtn" type="button">Bied</button><button class="btn alt" id="rejectBtn" type="button">Afkeuren</button></div>
-      <div class="field-inline hidden" id="voteControls"><button class="btn" id="approveBtn" type="button"><span class="vote-big">ðŸ‘</span>&nbsp; Goedgekeurd</button><button class="btn alt" id="voteRejectBtn" type="button"><span class="vote-big">ðŸ‘Ž</span>&nbsp; Afgekeurd</button></div>
-      <div class="dock-main"><div class="status-note" id="mobileContext">Wachten op stateâ€¦</div><div class="dock-right"><button class="btn alt hidden" id="leaveBtn" type="button">Verlaat match</button><button class="btn danger hidden" id="destroyBtn" type="button">Stop & verwijder</button></div></div>
+      <div class="field-inline hidden" id="voteControls"><button class="btn" id="approveBtn" type="button"><span class="vote-big">OK</span>&nbsp; Goedgekeurd</button><button class="btn alt" id="voteRejectBtn" type="button"><span class="vote-big">NO</span>&nbsp; Afgekeurd</button></div>
+      <div class="dock-main"><div class="status-note" id="mobileContext">Wachten op state...</div><div class="dock-right"><button class="btn alt hidden" id="leaveBtn" type="button">Verlaat match</button><button class="btn danger hidden" id="destroyBtn" type="button">Stop & verwijder</button></div></div>
     </div>
   </div></div>
-  <script src="./gejast-pikken-contract.js?v703"></script>
-  <script src="./gejast-pikken-live.js?v703"></script>
+  <div class="round-overlay hidden" id="roundOverlay"><div class="round-card"><h2 id="roundOverlayTitle">Nieuwe worp</h2><p id="roundOverlayText">Dobbelstenen worden gegooid.</p><div class="round-dice" id="roundOverlayDice"></div></div></div>
+  <script src="./gejast-pikken-contract.js?v704"></script>
+  <script src="./gejast-pikken-live.js?v704"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
   <div class="site-credit-watermark" data-version-watermark></div>
 <script id="gejast-game-group-b-boot">(function(){function boot(){try{window.GEJAST_GAME_GROUP_B_BRIDGE&&window.GEJAST_GAME_GROUP_B_BRIDGE.bootPanel&&window.GEJAST_GAME_GROUP_B_BRIDGE.bootPanel({game:'pikken'});}catch(_){}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();})();</script></body>
 </html>
+
 

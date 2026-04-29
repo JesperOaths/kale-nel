@@ -40,13 +40,13 @@
     return Number.isFinite(n) ? n : fallback;
   }
 
-  function text(value, fallback = 'â€”') {
+  function text(value, fallback = '--') {
     const v = String(value ?? '').trim();
     return v || fallback;
   }
 
   function formatDateTime(value) {
-    if (!value) return 'â€”';
+    if (!value) return '--';
     try {
       return new Date(value).toLocaleString('nl-NL', {
         year: 'numeric',
@@ -162,7 +162,7 @@
     setText('roundsValue', `${meta.roundsPlayed}`);
     setText('winnerValue', meta.finished ? meta.winnerLabel : (meta.winnerNames.length ? meta.winnerLabel : 'Nog bezig'));
     setText('updatedValue', formatDateTime(meta.updatedAt));
-    setText('refValue', text(meta.item?.client_match_id || meta.item?.match_ref || meta.summary?.match_ref, 'â€”'));
+    setText('refValue', text(meta.item?.client_match_id || meta.item?.match_ref || meta.summary?.match_ref, '--'));
   }
 
   async function mount(config) {

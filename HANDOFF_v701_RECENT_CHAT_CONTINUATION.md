@@ -1,4 +1,4 @@
-# Handoff v701 - Kale Nel / Wordt Er Gejast Continuation
+﻿# Handoff v701 - Kale Nel / Wordt Er Gejast Continuation
 
 ## Project Context
 
@@ -164,7 +164,7 @@ SQL:
 5. Prefer direct SQL behavior over frontend masking when a backend state is wrong.
 6. Run `node --check` on changed JS and parse inline scripts with `new Function` where practical.
 7. Keep version/cachebust values aligned with `VERSION`.
-8. Avoid mojibake. Search touched HTML/JS for `Â`, `Ã`, `â`, and `�`.
+8. Avoid mojibake. Search touched HTML/JS for mojibake marker characters before shipping.
 
 ## Current Next Test Checklist
 
@@ -195,4 +195,6 @@ After uploading v701 and running SQL:
    - Live dashboard refresh completes.
    - Quick market creation works.
    - Admin/own market box shows controls when permitted.
+
+
 

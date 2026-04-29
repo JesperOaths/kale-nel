@@ -3,7 +3,7 @@
   if (!api) { console.error('GEJAST_PIKKEN_CONTRACT missing'); return; }
   const params = new URLSearchParams(location.search);
   const gameId = params.get('client_match_id') || params.get('game_id') || '';
-  let timer = null, busy = false, lastVersion = -1, model = null;
+  let timer = null, busy = false, lastVersion = -1, model = null, hasRendered = false, lastRoundNo = 0, lastHandKey = '';
   const $ = (id)=>document.getElementById(id);
   const esc = (v)=>String(v ?? '').replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
   const faceOrder = (f)=>Number(f)===1?7:Number(f||0);
@@ -23,7 +23,7 @@
   function legalOptions(bid,total){
     const out=[]; const add=(c,f)=>{ if(c>0&&f>0&&c<=Math.max(total,1)) out.push({c,f,label:f===1?`${c} x pik`:`${c} x ${f}`}); };
     const c=Number(bid?.count||0), f=Number(bid?.face||0);
-    if(!c||!f){ for(let x=2;x<=6;x++) add(1,x); add(1,1); return out; }
+    if(!c||!f){ for(let n=1;n<=Math.max(total,1);n++){ for(let x=2;x<=6;x++) add(n,x); add(n,1); } return out; }
     if(f===1){ for(let n=c+1;n<=Math.ceil(total/2);n++) add(n,1); for(let n=c*2+1;n<=total;n++) for(let x=2;x<=6;x++) add(n,x); return out; }
     for(let x=f+1;x<=6;x++) add(c,x);
     for(let n=c+1;n<=total;n++) for(let x=2;x<=6;x++) add(n,x);
@@ -51,6 +51,19 @@
       const name = String(p.player_name || p.name || '').toLowerCase();
       return (viewerId && pid === viewerId) || (viewerSeat && seat === viewerSeat) || (viewerName && name === viewerName);
     });
+  }
+  function showRoundOverlay(lr, dice){
+    const overlay=$('roundOverlay');
+    if(!overlay) return;
+    const title=$('roundOverlayTitle'), text=$('roundOverlayText'), row=$('roundOverlayDice');
+    const loser = lr?.loser_name || (lr?.loser_id ? `speler ${lr.loser_id}` : 'de verliezer');
+    if(title) title.textContent = lr ? `${lr.bid_true ? 'Bod gehaald' : 'Bod niet gehaald'}` : 'Nieuwe worp';
+    if(text) text.textContent = lr ? `${loser} verliest een dobbelsteen. Nieuwe ronde wordt gegooid.` : 'Nieuwe dobbelstenen worden gegooid.';
+    if(row) row.innerHTML = sortDice(dice).map(die).join('');
+    overlay.classList.remove('hidden');
+    overlay.classList.add('show');
+    window.clearTimeout(showRoundOverlay._timer);
+    showRoundOverlay._timer = window.setTimeout(()=>{ overlay.classList.remove('show'); overlay.classList.add('hidden'); }, 1800);
   }
   function render(payload){
     model = payload;
@@ -89,6 +102,13 @@
       ? `<div class="dice-row">${dice.map(die).join('')}</div><div class="muted" style="margin-top:8px">Gesorteerd 2-6, pik rechts. 1 telt als pik/joker.</div>`
       : '<div class="muted">Geen privesessie of nog geen hand zichtbaar.</div>';
     const note=$('diceStateNote'); if(note) note.innerHTML = diceHtml;
+    const handKey=dice.join(',');
+    const roundNo=Number(st.round_no||0);
+    if(hasRendered && dice.length && (roundNo!==lastRoundNo || handKey!==lastHandKey)){
+      showRoundOverlay(st.last_reveal || null, dice);
+      if(note){ note.classList.remove('dice-rolling'); void note.offsetWidth; note.classList.add('dice-rolling'); }
+    }
+    lastRoundNo=roundNo; lastHandKey=handKey; hasRendered=true;
     const my=$('myDiceBody'); if(my) my.innerHTML = '';
 
     const voteWrap=$('tableVotes');
