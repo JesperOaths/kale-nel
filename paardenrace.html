@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace Lobby</title>
-  <script>window.GEJAST_PAGE_VERSION='v706';</script>
-  <script src="./gejast-config.js?v706"></script><script src="./gejast-home-gate.js?v706"></script>
-  <script src="./gejast-paardenrace.js?v706"></script>
+  <script>window.GEJAST_PAGE_VERSION='v707';</script>
+  <script src="./gejast-config.js?v707"></script><script src="./gejast-home-gate.js?v707"></script>
+  <script src="./gejast-paardenrace.js?v707"></script>
   <style>
     :root{
       --paper:#fbf6ef;--shell:#f5efe6;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241;--gold-soft:#efe5c7;
@@ -80,7 +80,7 @@
       .sticky-actions{bottom:6px;border-radius:16px}.top-actions .btn{flex:1 1 100%}
     }
   </style>
-<script src="./gejast-paardenrace-input-guard.js?v706"></script></head>
+<script src="./gejast-paardenrace-input-guard.js?v707"></script></head>
 <body data-game-watermark="soft">
   <div class="wrap">
     <div class="shell">
@@ -208,7 +208,18 @@ const api=window.GEJAST_PAARDENRACE; const $=(id)=>document.getElementById(id); 
  function markRoomCodeDirty(){ roomCodeDirty=true; roomCodeTouchedAt=Date.now(); }
  function shouldPreserveRoomCodeInput(){ const el=$('roomCodeInput'); return !!(el && (document.activeElement===el || roomCodeDirty || Date.now()-roomCodeTouchedAt < 2500)); }
  function setRoomCodeInputValue(value){ const el=$('roomCodeInput'); if(!el) return; if(shouldPreserveRoomCodeInput()) return; el.value=value||''; roomCodeDirty=false; }
- function setStatus(msg='',isError=false){ const b=$('statusBox'); b.textContent=msg||''; b.style.color=isError?'#8a1022':'#2f6d3c'; }
+ function roomExistsInCurrentUi(code){
+  const target=upperRoomCode(code);
+  if(!target) return false;
+  const current=upperRoomCode(latestState?.room?.room_code||'');
+  if(current && current===target) return true;
+  return !!document.querySelector(`[data-room-code="${target}"]`);
+ }
+ function setStatus(msg='',isError=false){
+  const text=String(msg||'');
+  if(isError && /room niet gevonden/i.test(text) && roomExistsInCurrentUi(roomCode())){ msg=''; isError=false; }
+  const b=$('statusBox'); b.textContent=msg||''; b.style.color=isError?'#8a1022':'#2f6d3c';
+ }
  function roomCode(){ return String((($('roomCodeInput') && $('roomCodeInput').value) || api.getStoredRoomCode() || '')).trim().toUpperCase(); }
  function isActiveStage(stage){ return ['countdown','race','nominations','finished'].includes(String(stage||'')); }
  function clearLobbyView(){ $('roomShell').style.display='none'; $('roomCodeLabel').textContent='-'; $('roomMeta').textContent='Nog geen room geladen.'; $('playersBox').innerHTML=''; $('lobbySummaryBox').textContent='Nog geen lobby info.'; $('pendingVerifyList').innerHTML=''; $('adminVerifyBox').style.display='none'; $('selectionEditor').style.display=''; $('savedChoiceBox').style.display='none'; $('roomStageStat').textContent='lobby'; $('roomReadyStat').textContent='0/0'; $('roomPotStat').textContent='0'; $('roomReadyMetric').textContent='0/0'; api.clearStoredRoomCode(); latestState=null; roomCodeDirty=false; roomCodeTouchedAt=0; }
@@ -290,7 +301,7 @@ $('unreadyBtn').addEventListener('click', async()=>{ const btn=$('unreadyBtn'); 
 poll(); pollHandle = setInterval(poll, 1000); window.addEventListener('online', poll); document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) poll(); }); window.addEventListener('beforeunload', ()=>{ if(pollHandle) clearInterval(pollHandle); });
 })();
 </script>
-<div class="site-credit-watermark" data-version-watermark>v706 - Made by Bruis</div>
+<div class="site-credit-watermark" data-version-watermark>v707 - Made by Bruis</div>
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>
