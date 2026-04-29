@@ -1,4 +1,4 @@
-﻿(function(){
+(function(){
   if (window.GEJAST_PAARDENRACE && window.GEJAST_PAARDENRACE.__v699_complete) return;
   const cfg = window.GEJAST_CONFIG || {};
   const STORAGE_KEY = 'gejast_paardenrace_room_code_v687';

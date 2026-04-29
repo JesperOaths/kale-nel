@@ -1,4 +1,4 @@
-﻿(function (global) {
+(function (global) {
   function live() {
     return global.GEJAST_LIVE_SUMMARY || {};
   }
