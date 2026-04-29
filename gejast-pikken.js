@@ -1,9 +1,9 @@
-﻿(function(){
+(function(){
   const api = window.GEJAST_PIKKEN_CONTRACT;
   if (!api) { console.error('GEJAST_PIKKEN_CONTRACT missing'); return; }
   const PARTICIPANT_KEY = 'gejast_pikken_participant_v687';
   const LEGACY_PARTICIPANT_KEY = 'gejast_pikken_participant_v632';
-  let state = { gameId:'', timer:null, busy:false, lastVersion:-1 };
+  let state = { gameId:'', timer:null, busy:false, lastVersion:-1, cleanupCheckedAt:0 };
   const $ = (id)=>document.getElementById(id);
   const esc = (v)=>String(v ?? '').replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
   function setStatus(msg='', bad=false){ const el=$('pkStatus'); if(el){ el.textContent=msg; el.style.color=bad?'#7f2f1d':'#6b6257'; } }
@@ -141,6 +141,10 @@
   function stopPolling(){ if(state.timer){ clearInterval(state.timer); state.timer=null; } }
   async function loadFeeds(){
     const lobbyBox=$('pkLobbyFeed'), liveBox=$('pkLiveFeed');
+    if (Date.now() - state.cleanupCheckedAt > 60000) {
+      state.cleanupCheckedAt = Date.now();
+      api.cleanupStale && api.cleanupStale().catch(()=>{});
+    }
     try { const l=await api.openLobbies(); const rows=Array.isArray(l)?l:(l.rows||l.items||l.lobbies||l.matches||[]); if(lobbyBox) lobbyBox.innerHTML = rows.length ? rows.map((r)=>`<article class="feed-card"><div class="feed-head"><div><div class="feed-title">Code ${esc(r.lobby_code||r.code||'')}</div><div class="feed-meta">${esc(r.host_name||r.created_by_player_name||'Host')} - ${Number(r.player_count||0)} speler(s) - ${Number(r.ready_count||0)} ready</div></div><span class="pill wait">Lobby</span></div><div class="feed-actions"><button class="btn alt tiny" data-join-code="${esc(r.lobby_code||r.code||'')}">Join</button></div></article>`).join('') : '<div class="muted">Geen open Pikken-lobbies.</div>'; } catch(e){ if(lobbyBox) lobbyBox.innerHTML='<div class="muted">Open lobbies konden niet laden: '+esc(e.message||e)+'</div>'; }
     try { const l=await api.liveMatches(); const rows=Array.isArray(l)?l:(l.rows||l.items||l.lobbies||l.matches||[]); if(liveBox) liveBox.innerHTML = rows.length ? rows.map((r)=>`<article class="feed-card"><div class="feed-head"><div><div class="feed-title">${esc(r.lobby_code||r.code||'Pikken')}</div><div class="feed-meta">${esc(r.phase||r.status||'live')} - ronde ${Number(r.round_no||0)} - ${Number(r.player_count||0)} speler(s)</div></div><span class="pill ok">Live</span></div><div class="feed-actions"><a class="btn alt tiny" href="${liveHref(r.game_id||r.id)}">Open live</a></div></article>`).join('') : '<div class="muted">Geen live Pikken-matches.</div>'; } catch(e){ if(liveBox) liveBox.innerHTML='<div class="muted">Live matches konden niet laden: '+esc(e.message||e)+'</div>'; }
   }

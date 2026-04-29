@@ -1,4 +1,4 @@
-﻿(function(){
+(function(){
   const api = window.GEJAST_PIKKEN_CONTRACT;
   if (!api) { console.error('GEJAST_PIKKEN_CONTRACT missing'); return; }
   const params = new URLSearchParams(location.search);

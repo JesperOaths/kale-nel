@@ -1,5 +1,5 @@
-﻿(function(){
-  if (window.GEJAST_PIKKEN_CONTRACT && window.GEJAST_PIKKEN_CONTRACT.VERSION === 'v705') return;
+(function(){
+  if (window.GEJAST_PIKKEN_CONTRACT && window.GEJAST_PIKKEN_CONTRACT.VERSION === 'v706') return;
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
   const PLAYER_KEYS = Array.isArray(cfg.PLAYER_SESSION_KEYS) && cfg.PLAYER_SESSION_KEYS.length ? cfg.PLAYER_SESSION_KEYS : ['jas_session_token_v11','jas_session_token_v10'];
@@ -20,7 +20,8 @@
     createFast: 'pikken_create_lobby_fast_v687',
     joinFast: 'pikken_join_lobby_fast_v687',
     destroyFast: 'pikken_destroy_game_fast_v687',
-    stats: 'pikken_get_deep_stats_scoped'
+    stats: 'pikken_get_deep_stats_scoped',
+    cleanup: 'cleanup_stale_pikken_rooms_v706'
   };
   function scope(){
     try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
@@ -116,7 +117,8 @@
   async function liveMatches(){ return rpc(RPC.liveMatches, { site_scope_input: scope(), limit_input: 30 }, 4200); }
   async function myActive(){ return rpc(RPC.myActive, tokenPayload({})); }
   async function stats(){ return rpc(RPC.stats, { site_scope_input: scope(), session_token: sessionToken() || null }); }
-  window.GEJAST_PIKKEN_CONTRACT = { VERSION:'v705', scope, sessionToken, requireSession, rpc, cleanCode, createLobby, joinLobby, getState, setReady, startGame, placeBid, rejectBid, castVote, leaveGame, destroyGame, rpcFirst, openLobbies, liveMatches, myActive, stats };
+  async function cleanupStale(){ return rpc(RPC.cleanup, { site_scope_input: scope() }, 1200); }
+  window.GEJAST_PIKKEN_CONTRACT = { VERSION:'v706', scope, sessionToken, requireSession, rpc, cleanCode, createLobby, joinLobby, getState, setReady, startGame, placeBid, rejectBid, castVote, leaveGame, destroyGame, rpcFirst, openLobbies, liveMatches, myActive, stats, cleanupStale };
 })();
 
 
