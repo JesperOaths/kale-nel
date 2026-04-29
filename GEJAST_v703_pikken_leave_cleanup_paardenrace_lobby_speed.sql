@@ -115,11 +115,14 @@ declare
   p public.players%rowtype;
   v_room_id bigint;
   v_name text;
+  v_name_alt text;
+  v_updated integer := 0;
 begin
   select * into p from public._gejast_player_from_session(coalesce(session_token_input, session_token));
   if p.id is null then raise exception 'Niet ingelogd.'; end if;
 
-  v_name := coalesce(to_jsonb(p)->>'display_name', to_jsonb(p)->>'name', to_jsonb(p)->>'email', '');
+  v_name := coalesce(to_jsonb(p)->>'display_name', to_jsonb(p)->>'name', to_jsonb(p)->>'username', to_jsonb(p)->>'login_name', to_jsonb(p)->>'email', '');
+  v_name_alt := coalesce(to_jsonb(p)->>'name', to_jsonb(p)->>'display_name', to_jsonb(p)->>'username', to_jsonb(p)->>'login_name', to_jsonb(p)->>'email', '');
 
   select r.id into v_room_id
   from public.paardenrace_rooms r
@@ -130,16 +133,17 @@ begin
   if v_room_id is null then raise exception 'Room niet gevonden.'; end if;
 
   if exists(select 1 from information_schema.columns where table_schema='public' and table_name='paardenrace_room_players' and column_name='is_ready') then
-    execute 'update public.paardenrace_room_players set is_ready = $1, updated_at = now() where room_id = $2 and (player_id = $3 or lower(coalesce(player_name,'''')) = lower($4))'
-      using coalesce(ready_input,false), v_room_id, p.id, v_name;
+    execute 'update public.paardenrace_room_players set is_ready = $1, updated_at = now() where room_id = $2 and (player_id = $3 or lower(coalesce(player_name,'''')) in (lower($4), lower($5)))'
+      using coalesce(ready_input,false), v_room_id, p.id, v_name, v_name_alt;
   elsif exists(select 1 from information_schema.columns where table_schema='public' and table_name='paardenrace_room_players' and column_name='ready') then
-    execute 'update public.paardenrace_room_players set ready = $1, updated_at = now() where room_id = $2 and (player_id = $3 or lower(coalesce(player_name,'''')) = lower($4))'
-      using coalesce(ready_input,false), v_room_id, p.id, v_name;
+    execute 'update public.paardenrace_room_players set ready = $1, updated_at = now() where room_id = $2 and (player_id = $3 or lower(coalesce(player_name,'''')) in (lower($4), lower($5)))'
+      using coalesce(ready_input,false), v_room_id, p.id, v_name, v_name_alt;
   else
     raise exception 'paardenrace_ready_column_missing';
   end if;
 
-  if not found then raise exception 'Je zit niet in deze Paardenrace room.'; end if;
+  get diagnostics v_updated = row_count;
+  if coalesce(v_updated,0) <= 0 then raise exception 'Je zit niet in deze Paardenrace room.'; end if;
   update public.paardenrace_rooms set updated_at = now() where id = v_room_id;
 
   if to_regprocedure('public.get_paardenrace_room_state_fast_v687(text,text,text,text)') is not null then

@@ -133,10 +133,10 @@ begin
   if v_room_id is null then raise exception 'Room niet gevonden.'; end if;
 
   if exists(select 1 from information_schema.columns where table_schema='public' and table_name='paardenrace_room_players' and column_name='is_ready') then
-    execute 'update public.paardenrace_room_players set is_ready = $1, updated_at = now() where room_id = $2 and (player_id = $3 or lower(coalesce(player_name,'''')) in (lower($4), lower($5)))'
+    execute 'update public.paardenrace_room_players set is_ready = $1, updated_at = now() where room_id = $2 and (player_id::text = $3::text or lower(coalesce(player_name,'''')) in (lower($4), lower($5)))'
       using coalesce(ready_input,false), v_room_id, p.id, v_name, v_name_alt;
   elsif exists(select 1 from information_schema.columns where table_schema='public' and table_name='paardenrace_room_players' and column_name='ready') then
-    execute 'update public.paardenrace_room_players set ready = $1, updated_at = now() where room_id = $2 and (player_id = $3 or lower(coalesce(player_name,'''')) in (lower($4), lower($5)))'
+    execute 'update public.paardenrace_room_players set ready = $1, updated_at = now() where room_id = $2 and (player_id::text = $3::text or lower(coalesce(player_name,'''')) in (lower($4), lower($5)))'
       using coalesce(ready_input,false), v_room_id, p.id, v_name, v_name_alt;
   else
     raise exception 'paardenrace_ready_column_missing';
@@ -267,6 +267,7 @@ declare
   v_alive_after integer;
   v_loser_alive boolean;
   v_reveal jsonb;
+  v_reveal_hands jsonb := '[]'::jsonb;
 begin
   select * into g from public.pikken_games where id = game_id_input for update;
   if g.id is null then raise exception 'Pikken game niet gevonden.'; end if;
@@ -320,6 +321,23 @@ begin
     else case when v_bid_true then v_challenger_id else v_bidder_id end
   end;
 
+  select coalesce(jsonb_agg(
+    jsonb_build_object(
+      'seat', gp.seat_index,
+      'name', gp.player_name,
+      'loser', gp.player_id = v_loser_id,
+      'dice', coalesce((
+        select jsonb_agg(jsonb_build_object('value', d, 'counted', (d = v_face or d = 1)) order by case when d = 1 then 7 else d end)
+        from unnest(coalesce(h.dice_values, array[]::integer[])) as d
+      ), '[]'::jsonb)
+    )
+    order by gp.seat_index
+  ), '[]'::jsonb)
+    into v_reveal_hands
+  from public.pikken_round_hands h
+  join public.pikken_game_players gp on gp.game_id = h.game_id and gp.player_id = h.player_id
+  where h.game_id = g.id and h.round_no = v_round;
+
   select seat_index, player_name into v_loser_seat, v_loser_name
   from public.pikken_game_players
   where game_id = g.id and player_id = v_loser_id;
@@ -348,7 +366,8 @@ begin
     'loser_seat', v_loser_seat,
     'loser_dice_after', v_loser_dice_after,
     'penalty_mode', v_mode,
-    'dice_private', true
+    'dice_private', false,
+    'hands', v_reveal_hands
   );
 
   if v_alive_after <= 1 then

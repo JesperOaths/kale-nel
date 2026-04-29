@@ -200,7 +200,29 @@ begin
         where h.game_id = g.id and h.round_no = v_round
       ), '[]'::jsonb)
       else '[]'::jsonb end,
-    'votes', v_votes
+    'votes', v_votes,
+    'dice_totals', jsonb_build_object(
+      'start_total', greatest(
+        coalesce((
+          select sum(coalesce(array_length(h.dice_values, 1), 0))
+          from public.pikken_round_hands h
+          where h.game_id = g.id and h.round_no = 1
+        ), 0),
+        coalesce((select count(*) * 6 from public.pikken_game_players gp where gp.game_id = g.id), 0)
+      ),
+      'current_total', coalesce((select sum(coalesce(gp.dice_count,0)) from public.pikken_game_players gp where gp.game_id = g.id and gp.eliminated_at is null), 0),
+      'lost_total', greatest(
+        greatest(
+          coalesce((
+            select sum(coalesce(array_length(h.dice_values, 1), 0))
+            from public.pikken_round_hands h
+            where h.game_id = g.id and h.round_no = 1
+          ), 0),
+          coalesce((select count(*) * 6 from public.pikken_game_players gp where gp.game_id = g.id), 0)
+        ) - coalesce((select sum(coalesce(gp.dice_count,0)) from public.pikken_game_players gp where gp.game_id = g.id and gp.eliminated_at is null), 0),
+        0
+      )
+    )
   );
 end
 $fn$;

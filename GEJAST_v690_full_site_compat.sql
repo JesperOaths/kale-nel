@@ -1264,6 +1264,33 @@ grant execute on function public.reject_paardenrace_wager_safe(text, text, text,
 grant execute on function public.paardenrace_cleanup_idle_lobbies_v495() to anon, authenticated;
 
 
+
+-- Drop ambiguous public read shim overloads before recreating v690 compatibility functions.
+do $$
+declare r record;
+begin
+  for r in
+    select n.nspname, p.proname, pg_get_function_identity_arguments(p.oid) as args
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname in (
+        'get_drinks_page_public',
+        'get_drinks_dashboard_fallback_public',
+        'get_all_pending_drink_event_verifications_public',
+        'get_drink_event_vote_queue_public',
+        'get_caute_coin_top5_public',
+        'get_my_caute_coins_public',
+        'get_homepage_live_state_public_scoped',
+        'get_live_match_summary_public_scoped',
+        'get_beerpong_live_odds_v642',
+        'get_beerpong_shared_leaderboard_v642',
+        'get_beerpong_shared_stats_v642'
+      )
+  loop
+    execute format('drop function if exists %I.%I(%s)', r.nspname, r.proname, r.args);
+  end loop;
+end $$;
 -- v690 public read compatibility shims. These keep public/dashboard pages loading
 -- when optional subsystem SQL has not been deployed yet. They intentionally do not
 -- fake privileged write success.
@@ -1318,7 +1345,7 @@ $fn$;
 
 create or replace function public.get_drinks_dashboard_fallback_public(site_scope_input text default 'friends')
 returns jsonb language sql stable security definer set search_path to 'public' as $fn$
-  select public.get_drinks_page_public(site_scope_input)
+  select jsonb_build_object('ok', true, 'source', 'v690_empty_compat', 'events', '[]'::jsonb, 'pending', '[]'::jsonb, 'leaderboard', '[]'::jsonb, 'scope', site_scope_input)
 $fn$;
 
 create or replace function public.get_all_pending_drink_event_verifications_public(site_scope_input text default 'friends')
@@ -1395,6 +1422,10 @@ grant execute on function public.consume_web_push_action_v3(text) to anon, authe
 grant execute on function public.despimarkt_run_background_maintenance() to anon, authenticated;
 
 -- v690 explicit action compatibility: route safe Paardenrace calls and return clear errors for undeployed drink write owners.
+-- Drop same-signature wrappers first because Postgres cannot rename input parameters with CREATE OR REPLACE.
+drop function if exists public.leave_paardenrace_room_safe(text, text, text, text);
+drop function if exists public.kick_paardenrace_player_safe(text, text, text, text, text);
+drop function if exists public.reshuffle_paardenrace_draw_pile_safe(text, text, text, text);
 create or replace function public.leave_paardenrace_room_safe(session_token text default null, session_token_input text default null, room_code_input text default null, site_scope_input text default 'friends')
 returns jsonb language plpgsql security definer set search_path to 'public' as $fn$
 begin
@@ -1515,4 +1546,6 @@ grant execute on function public.set_drink_event_location_label(text, bigint, te
 grant execute on function public.set_latest_drink_event_location_label(text, text, text) to anon, authenticated;
 
 commit;
+
+
 

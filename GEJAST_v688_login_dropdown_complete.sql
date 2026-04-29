@@ -164,6 +164,11 @@ revoke all on function public.get_player_selector_source_v1(text,text) from publ
 grant execute on function public.get_player_selector_source_v1(text,text) to anon, authenticated;
 
 -- v688 compatibility wrapper expected by login.html/gejast-account-runtime.js.
+-- Supabase/Postgres cannot change an existing function's return type with
+-- CREATE OR REPLACE, so drop this wrapper first. It has no dependent objects
+-- in this bundle and the browser only needs the recreated RPC endpoint.
+drop function if exists public.get_login_active_names_v687(text);
+
 create or replace function public.get_login_active_names_v687(
   site_scope_input text default 'friends'
 )

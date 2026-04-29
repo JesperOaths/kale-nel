@@ -4,6 +4,8 @@ begin;
 
 create extension if not exists pgcrypto;
 
+drop function if exists public._gejast_scope_norm_v698(text);
+
 create or replace function public._gejast_scope_norm_v698(site_scope_input text default 'friends')
 returns text
 language sql

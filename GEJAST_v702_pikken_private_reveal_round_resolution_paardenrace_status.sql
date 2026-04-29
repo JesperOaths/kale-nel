@@ -23,11 +23,13 @@ begin
     where n.nspname = 'public'
       and p.proname in (
         'set_paardenrace_ready_safe',
+        '_pikken_count_bid_hits',
         '_pikken_next_alive_seat_v702',
         '_pikken_deal_round_v702',
         '_pikken_finish_vote_v702',
         'pikken_reject_bid_scoped',
-        'pikken_cast_vote_scoped'
+        'pikken_cast_vote_scoped',
+        'pikken_leave_game_scoped'
       )
   loop
     execute format('drop function if exists %I.%I(%s) cascade', rec.nspname, rec.proname, rec.args);
@@ -427,9 +429,74 @@ begin
 end
 $fn$;
 
+create or replace function public.pikken_leave_game_scoped(
+  session_token text default null,
+  session_token_input text default null,
+  game_id_input uuid default null,
+  site_scope_input text default 'friends'
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public'
+as $fn$
+declare
+  p public.players%rowtype;
+  g public.pikken_games%rowtype;
+  v_alive integer;
+  v_deleted boolean := false;
+begin
+  select * into p from public._gejast_player_from_session(coalesce(session_token_input, session_token));
+  if p.id is null then raise exception 'Niet ingelogd.'; end if;
+
+  select * into g
+  from public.pikken_games
+  where id = game_id_input
+    and public._gejast_scope_norm_v702(site_scope)=public._gejast_scope_norm_v702(site_scope_input)
+  for update;
+  if g.id is null then
+    return jsonb_build_object('ok', true, 'deleted', true, 'reason', 'game_not_found');
+  end if;
+
+  delete from public.pikken_round_votes where game_id = g.id and player_id = p.id;
+  delete from public.pikken_round_hands where game_id = g.id and player_id = p.id;
+  delete from public.pikken_game_players where game_id = g.id and player_id = p.id;
+
+  select count(*) into v_alive
+  from public.pikken_game_players
+  where game_id = g.id and eliminated_at is null;
+
+  if v_alive <= 1 then
+    v_deleted := true;
+    delete from public.pikken_round_votes where game_id = g.id;
+    delete from public.pikken_round_hands where game_id = g.id;
+
+    update public.pikken_games
+       set status = 'finished',
+           finished_at = coalesce(finished_at, now()),
+           state = coalesce(state,'{}'::jsonb) || jsonb_build_object('phase','deleted','deleted_reason','not_enough_players'),
+           state_version = coalesce(state_version,0)+1,
+           updated_at = now()
+     where id = g.id;
+
+    if exists(select 1 from information_schema.columns where table_schema='public' and table_name='pikken_games' and column_name='deleted_at') then
+      execute 'update public.pikken_games set deleted_at = coalesce(deleted_at, now()) where id = $1' using g.id;
+    end if;
+  else
+    update public.pikken_games
+       set state_version = coalesce(state_version,0)+1,
+           updated_at = now()
+     where id = g.id;
+  end if;
+
+  return jsonb_build_object('ok', true, 'deleted', v_deleted, 'remaining_active_players', v_alive);
+end
+$fn$;
+
 grant execute on function public.set_paardenrace_ready_safe(text,text,text,boolean,text) to anon, authenticated;
 grant execute on function public.pikken_reject_bid_scoped(text,text,uuid,text) to anon, authenticated;
 grant execute on function public.pikken_cast_vote_scoped(text,text,uuid,boolean,text) to anon, authenticated;
+grant execute on function public.pikken_leave_game_scoped(text,text,uuid,text) to anon, authenticated;
 
 notify pgrst, 'reload schema';
 notify pgrst, 'reload config';

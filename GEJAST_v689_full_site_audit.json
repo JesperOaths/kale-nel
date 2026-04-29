@@ -1,0 +1,377 @@
+{
+  "generatedAt": "2026-04-25T23:37:57.442Z",
+  "counts": {
+    "html": 113,
+    "js": 135,
+    "sql": 105
+  },
+  "missingRefs": [],
+  "versionDrift": [],
+  "missingRpc": [
+    {
+      "name": "admin_check_session",
+      "uses": [
+        "admin.html",
+        "admin.js",
+        "admin_analytics.html",
+        "admin_claims.html",
+        "admin_expired.html",
+        "admin_push.html",
+        "admin_reserved_names.html",
+        "admin_v60_orig.html",
+        "index.html"
+      ]
+    },
+    {
+      "name": "admin_close_paardenrace_room_v683",
+      "uses": [
+        "admin_paardenrace.html"
+      ]
+    },
+    {
+      "name": "admin_dev_login",
+      "uses": [
+        "admin.js",
+        "admin_v60_orig.html"
+      ]
+    },
+    {
+      "name": "admin_get_beerpong_shared_stats_audit_v642",
+      "uses": [
+        "admin_beerpong_shared_stats.html"
+      ]
+    },
+    {
+      "name": "admin_get_claim_history",
+      "uses": [
+        "admin.js",
+        "admin_v60_orig.html"
+      ]
+    },
+    {
+      "name": "admin_get_claim_requests",
+      "uses": [
+        "admin.js",
+        "admin_v60_orig.html"
+      ]
+    },
+    {
+      "name": "admin_get_despimarkt_auto_market_audit_v646",
+      "uses": [
+        "admin_despimarkt_auto_markets.html"
+      ]
+    },
+    {
+      "name": "admin_get_latest_valid_outbound_email_job_webhook_payload",
+      "uses": [
+        "admin.js"
+      ]
+    },
+    {
+      "name": "admin_get_outbound_email_job_webhook_payload",
+      "uses": [
+        "admin.js"
+      ]
+    },
+    {
+      "name": "admin_get_paardenrace_overview_v683",
+      "uses": [
+        "admin_paardenrace.html"
+      ]
+    },
+    {
+      "name": "admin_login",
+      "uses": [
+        "admin.html",
+        "admin.js",
+        "admin_claims.html",
+        "admin_v60_orig.html"
+      ]
+    },
+    {
+      "name": "admin_refresh_beerpong_shared_stats_v642",
+      "uses": [
+        "admin_beerpong_shared_stats.html"
+      ]
+    },
+    {
+      "name": "admin_remove_player_action",
+      "uses": [
+        "admin_claims.html",
+        "admin_expired.html"
+      ]
+    },
+    {
+      "name": "admin_requeue_expired_activation_action",
+      "uses": [
+        "admin_claims.html",
+        "admin_expired.html"
+      ]
+    },
+    {
+      "name": "admin_resend_expired_activation_action",
+      "uses": [
+        "admin_expired.html"
+      ]
+    },
+    {
+      "name": "admin_resend_pending_activation_action",
+      "uses": [
+        "admin_claims.html"
+      ]
+    },
+    {
+      "name": "admin_return_name_to_claimable_action",
+      "uses": [
+        "admin_claims.html"
+      ]
+    },
+    {
+      "name": "admin_revoke_player_access_action",
+      "uses": [
+        "admin_claims.html"
+      ]
+    },
+    {
+      "name": "admin_set_activation_email_subject_action",
+      "uses": [
+        "admin_claims.html",
+        "admin_expired.html"
+      ]
+    },
+    {
+      "name": "admin_validate_outbound_email_job",
+      "uses": [
+        "admin.js",
+        "admin_claims.html",
+        "admin_expired.html"
+      ]
+    },
+    {
+      "name": "cancel_my_pending_drink_event",
+      "uses": [
+        "drinks_add.html",
+        "drinks_pending.html"
+      ]
+    },
+    {
+      "name": "cancel_my_speed_attempt",
+      "uses": [
+        "drinks_speed.html"
+      ]
+    },
+    {
+      "name": "cast_vote",
+      "uses": [
+        "index_v60_orig.html"
+      ]
+    },
+    {
+      "name": "consume_web_push_action_v3",
+      "uses": [
+        "gejast-sw.js"
+      ]
+    },
+    {
+      "name": "create_drink_event",
+      "uses": [
+        "drinks_add.html"
+      ]
+    },
+    {
+      "name": "create_paardenrace_room_fast_v687",
+      "uses": [
+        "paardenrace.html"
+      ]
+    },
+    {
+      "name": "create_player_activation_link_action",
+      "uses": [
+        "admin_claims.html"
+      ]
+    },
+    {
+      "name": "despimarkt_run_background_maintenance",
+      "uses": [
+        "despimarkt_maintenance_runner.js"
+      ]
+    },
+    {
+      "name": "get_all_pending_drink_event_verifications_public",
+      "uses": [
+        "drinks-verify-float.js"
+      ]
+    },
+    {
+      "name": "get_beerpong_live_odds_v642",
+      "uses": [
+        "gejast-beerpong-odds.js"
+      ]
+    },
+    {
+      "name": "get_beerpong_shared_leaderboard_v642",
+      "uses": [
+        "gejast-beerpong-shared-stats.js"
+      ]
+    },
+    {
+      "name": "get_beerpong_shared_stats_v642",
+      "uses": [
+        "gejast-beerpong-shared-stats.js"
+      ]
+    },
+    {
+      "name": "get_caute_coin_top5_public",
+      "uses": [
+        "caute_coins_ladder.html",
+        "index.html"
+      ]
+    },
+    {
+      "name": "get_drink_event_vote_queue_public",
+      "uses": [
+        "drinks-verify-float.js"
+      ]
+    },
+    {
+      "name": "get_drinks_dashboard_fallback_public",
+      "uses": [
+        "drinks.html"
+      ]
+    },
+    {
+      "name": "get_drinks_page_public",
+      "uses": [
+        "drinks.html"
+      ]
+    },
+    {
+      "name": "get_homepage_live_state_public_scoped",
+      "uses": [
+        "gejast-live-summary.js"
+      ]
+    },
+    {
+      "name": "get_live_match_summary_public_scoped",
+      "uses": [
+        "gejast-live-summary.js"
+      ]
+    },
+    {
+      "name": "get_my_caute_coins_public",
+      "uses": [
+        "caute_coins_ladder.html",
+        "gejast-player-session-ui.js",
+        "gejast-session-corner.js"
+      ]
+    },
+    {
+      "name": "get_my_profile_settings",
+      "uses": [
+        "my_profile.html"
+      ]
+    },
+    {
+      "name": "get_paardenrace_open_rooms_fast_v687",
+      "uses": [
+        "paardenrace.html"
+      ]
+    },
+    {
+      "name": "get_paardenrace_room_state_fast_v687",
+      "uses": [
+        "paardenrace.html"
+      ]
+    },
+    {
+      "name": "get_public_state",
+      "uses": [
+        "index_v60_orig.html"
+      ]
+    },
+    {
+      "name": "join_paardenrace_room_fast_v687",
+      "uses": [
+        "paardenrace.html"
+      ]
+    },
+    {
+      "name": "kick_paardenrace_player_safe",
+      "uses": [
+        "paardenrace_live.html"
+      ]
+    },
+    {
+      "name": "leave_paardenrace_room_fast_v687",
+      "uses": [
+        "paardenrace.html"
+      ]
+    },
+    {
+      "name": "leave_paardenrace_room_safe",
+      "uses": [
+        "paardenrace_live.html"
+      ]
+    },
+    {
+      "name": "paardenrace_cleanup_idle_lobbies_v495",
+      "uses": [
+        "paardenrace_live.html"
+      ]
+    },
+    {
+      "name": "player_touch_session",
+      "uses": [
+        "gejast-config.js"
+      ]
+    },
+    {
+      "name": "reject_paardenrace_wager_safe",
+      "uses": [
+        "paardenrace.html"
+      ]
+    },
+    {
+      "name": "reshuffle_paardenrace_draw_pile_safe",
+      "uses": [
+        "paardenrace_live.html"
+      ]
+    },
+    {
+      "name": "set_drink_event_location_label",
+      "uses": [
+        "drinks_add.html"
+      ]
+    },
+    {
+      "name": "set_latest_drink_event_location_label",
+      "uses": [
+        "drinks_add.html"
+      ]
+    },
+    {
+      "name": "set_paardenrace_ready_safe",
+      "uses": [
+        "paardenrace.html"
+      ]
+    },
+    {
+      "name": "update_my_profile_settings",
+      "uses": [
+        "my_profile.html"
+      ]
+    },
+    {
+      "name": "verify_drink_event_public",
+      "uses": [
+        "drinks_pending.html"
+      ]
+    },
+    {
+      "name": "verify_paardenrace_wager_safe",
+      "uses": [
+        "paardenrace.html"
+      ]
+    }
+  ]
+}
