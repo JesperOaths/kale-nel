@@ -19,14 +19,22 @@
     const handHtml=hands.length?`<div class="reveal-hands">${hands.map(renderRevealHand).join('')}</div>`:'';
     return `<div><strong>${esc(bidText(lr.bid))}</strong> - ${lr.bid_true?'gehaald':'niet gehaald'} - ${Number(lr.counted_total||0)} hit(s).</div><div class="muted">Verliezer: ${esc(loser)}${after}.${next}</div>${handHtml}`;
   }
-  function dieMarked(item){
+  function dieMarked(item, idx=0, all=[], loser=false){
     const n=Number(item?.value||item||0);
     const counted=!!item?.counted;
-    return `<span class="reveal-die ${n===1?'pik':''} ${counted?'counted':''}">${die(n)}</span>`;
+    const lost=!!loser && idx===all.length-1;
+    return `<span class="reveal-die ${n===1?'pik':''} ${counted?'counted':''} ${lost?'lost':''}">${die(n)}</span>`;
   }
   function renderRevealHand(h){
     const dice=Array.isArray(h.dice)?h.dice:[];
-    return `<div class="reveal-hand ${h.loser?'loser':''}"><div><strong>${esc(h.name||'Speler')}</strong>${h.loser?'<span class="loss-pill">-1 dobbelsteen</span>':''}</div><div class="dice-row">${dice.map(dieMarked).join('')}</div></div>`;
+    const eliminated=h.loser && Number(h.dice_after ?? h.loser_dice_after ?? -1) === 0;
+    return `<div class="reveal-hand ${h.loser?'loser':''}"><div><strong>${esc(h.name||'Speler')}</strong>${h.loser?`<span class="loss-pill">${eliminated?'uitgeschakeld':'-1 dobbelsteen'}</span>`:''}</div><div class="dice-row">${dice.map((d,i,a)=>dieMarked(d,i,a,!!h.loser)).join('')}</div></div>`;
+  }
+  function winnerFrom(payload){
+    const st=payload?.game?.state||{};
+    if(st.winner_name) return st.winner_name;
+    const alive=(Array.isArray(payload?.players)?payload.players:[]).filter((p)=>p.alive && Number(p.dice_count||0)>0);
+    return alive.length===1 ? (alive[0].name||alive[0].player_name||'Winnaar') : '';
   }
   function phase(p){ return String(p?.game?.state?.phase || p?.game?.status || 'lobby').toLowerCase(); }
   function setText(id, val){ const el=$(id); if(el) el.textContent=val; }
@@ -63,19 +71,24 @@
       return (viewerId && pid === viewerId) || (viewerSeat && seat === viewerSeat) || (viewerName && name === viewerName);
     });
   }
-  function showRoundOverlay(lr){
+  function showRoundOverlay(lr, opts={}){
     const overlay=$('roundOverlay');
     if(!overlay) return;
     const title=$('roundOverlayTitle'), text=$('roundOverlayText'), row=$('roundOverlayDice'), hands=$('roundOverlayHands');
     const loser = lr?.loser_name || (lr?.loser_id ? `speler ${lr.loser_id}` : 'de verliezer');
-    if(title) title.textContent = lr ? `${lr.bid_true ? 'Bod gehaald' : 'Bod niet gehaald'}` : 'Nieuwe ronde';
-    if(text) text.textContent = lr ? `${bidText(lr.bid)} telde ${Number(lr.counted_total||0)} keer. ${loser} verliest een dobbelsteen.` : 'Nieuwe ronde.';
-    if(row) row.innerHTML = lr?.next_round ? `<span>Nieuwe ronde ${Number(lr.next_round)}</span>` : '';
+    const eliminated=Number(lr?.loser_dice_after ?? -1) === 0;
+    const card=overlay.querySelector('.round-card');
+    if(card) card.classList.toggle('victory', !!opts.victory);
+    if(title) title.textContent = opts.victory ? `${opts.winner || 'Winnaar'} wint Pikken` : (lr ? `${lr.bid_true ? 'Bod gehaald' : 'Bod niet gehaald'}` : 'Nieuwe ronde');
+    if(text) text.textContent = opts.victory ? `${opts.winner || 'De laatste speler'} blijft over. Match afgelopen.` : (lr ? `${bidText(lr.bid)} telde ${Number(lr.counted_total||0)} keer. ${loser} verliest een dobbelsteen${eliminated?' en is uitgeschakeld':''}.` : 'Nieuwe ronde.');
+    if(row) row.innerHTML = opts.victory ? '<span>CAUTE COINS</span><span>DESPINOZA</span><span>WINNAAR</span>' : (lr?.next_round ? `<span>Nieuwe ronde ${Number(lr.next_round)}</span>` : '');
     if(hands) hands.innerHTML = Array.isArray(lr?.hands) ? lr.hands.map(renderRevealHand).join('') : '';
+    if(!overlay.querySelector('.round-close')) overlay.querySelector('.round-card')?.insertAdjacentHTML('beforeend','<button class="btn alt round-close" type="button">Sluiten</button>');
+    overlay.querySelector('.round-close')?.addEventListener('click', ()=>{ overlay.classList.remove('show'); overlay.classList.add('hidden'); }, { once:true });
     overlay.classList.remove('hidden');
     overlay.classList.add('show');
     window.clearTimeout(showRoundOverlay._timer);
-    showRoundOverlay._timer = window.setTimeout(()=>{ overlay.classList.remove('show'); overlay.classList.add('hidden'); }, 5200);
+    if(!opts.sticky) showRoundOverlay._timer = window.setTimeout(()=>{ overlay.classList.remove('show'); overlay.classList.add('hidden'); }, 8200);
   }
   function render(payload){
     model = payload;
@@ -116,8 +129,9 @@
     const note=$('diceStateNote'); if(note) note.innerHTML = diceHtml;
     const roundNo=Number(st.round_no||0);
     const revealKey=st.last_reveal ? `${st.last_reveal.round_no||''}:${st.last_reveal.loser_id||''}:${st.last_reveal.counted_total||''}` : '';
-    if(hasRendered && st.last_reveal && roundNo!==lastRoundNo && revealKey && revealKey!==lastRevealKey){
-      showRoundOverlay(st.last_reveal);
+    if(hasRendered && st.last_reveal && (roundNo!==lastRoundNo || ph==='finished') && revealKey && revealKey!==lastRevealKey){
+      const winner=ph==='finished' ? winnerFrom(payload) : '';
+      showRoundOverlay(st.last_reveal, { victory: ph==='finished', winner, sticky: ph==='finished' });
       if(note){ note.classList.remove('dice-rolling'); void note.offsetWidth; note.classList.add('dice-rolling'); }
     }
     lastRoundNo=roundNo; lastRevealKey=revealKey || lastRevealKey; hasRendered=true;
