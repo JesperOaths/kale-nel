@@ -1,4 +1,4 @@
-﻿(function(){
+(function(){
   if (window.GEJAST_DESPIMARKT) return;
   const cfg = window.GEJAST_CONFIG || {};
   const VERSION = 'v699';
