@@ -3,7 +3,7 @@
   if (!api) { console.error('GEJAST_PIKKEN_CONTRACT missing'); return; }
   const params = new URLSearchParams(location.search);
   const gameId = params.get('client_match_id') || params.get('game_id') || '';
-  let timer = null, busy = false, lastVersion = -1, model = null, hasRendered = false, lastRoundNo = 0, lastHandKey = '';
+  let timer = null, busy = false, lastVersion = -1, model = null, hasRendered = false, lastRoundNo = 0, lastRevealKey = '';
   const $ = (id)=>document.getElementById(id);
   const esc = (v)=>String(v ?? '').replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
   const faceOrder = (f)=>Number(f)===1?7:Number(f||0);
@@ -15,7 +15,18 @@
     const loser = lr.loser_name || (lr.loser_id ? `speler ${lr.loser_id}` : 'onbekend');
     const after = Number.isFinite(Number(lr.loser_dice_after)) ? ` - nu ${Number(lr.loser_dice_after)} dobbel(s)` : '';
     const next = lr.next_round ? ` Volgende ronde: ${Number(lr.next_round)}.` : '';
-    return `<div><strong>${esc(bidText(lr.bid))}</strong> - ${lr.bid_true?'gehaald':'niet gehaald'} - ${Number(lr.counted_total||0)} hit(s).</div><div class="muted">Verliezer: ${esc(loser)}${after}.${next} Handen blijven verborgen; alleen je eigen dobbelstenen zijn zichtbaar.</div>`;
+    const hands=Array.isArray(lr.hands)?lr.hands:[];
+    const handHtml=hands.length?`<div class="reveal-hands">${hands.map(renderRevealHand).join('')}</div>`:'';
+    return `<div><strong>${esc(bidText(lr.bid))}</strong> - ${lr.bid_true?'gehaald':'niet gehaald'} - ${Number(lr.counted_total||0)} hit(s).</div><div class="muted">Verliezer: ${esc(loser)}${after}.${next}</div>${handHtml}`;
+  }
+  function dieMarked(item){
+    const n=Number(item?.value||item||0);
+    const counted=!!item?.counted;
+    return `<span class="reveal-die ${n===1?'pik':''} ${counted?'counted':''}">${die(n)}</span>`;
+  }
+  function renderRevealHand(h){
+    const dice=Array.isArray(h.dice)?h.dice:[];
+    return `<div class="reveal-hand ${h.loser?'loser':''}"><div><strong>${esc(h.name||'Speler')}</strong>${h.loser?'<span class="loss-pill">-1 dobbelsteen</span>':''}</div><div class="dice-row">${dice.map(dieMarked).join('')}</div></div>`;
   }
   function phase(p){ return String(p?.game?.state?.phase || p?.game?.status || 'lobby').toLowerCase(); }
   function setText(id, val){ const el=$(id); if(el) el.textContent=val; }
@@ -52,18 +63,19 @@
       return (viewerId && pid === viewerId) || (viewerSeat && seat === viewerSeat) || (viewerName && name === viewerName);
     });
   }
-  function showRoundOverlay(lr, dice){
+  function showRoundOverlay(lr){
     const overlay=$('roundOverlay');
     if(!overlay) return;
-    const title=$('roundOverlayTitle'), text=$('roundOverlayText'), row=$('roundOverlayDice');
+    const title=$('roundOverlayTitle'), text=$('roundOverlayText'), row=$('roundOverlayDice'), hands=$('roundOverlayHands');
     const loser = lr?.loser_name || (lr?.loser_id ? `speler ${lr.loser_id}` : 'de verliezer');
-    if(title) title.textContent = lr ? `${lr.bid_true ? 'Bod gehaald' : 'Bod niet gehaald'}` : 'Nieuwe worp';
-    if(text) text.textContent = lr ? `${loser} verliest een dobbelsteen. Nieuwe ronde wordt gegooid.` : 'Nieuwe dobbelstenen worden gegooid.';
-    if(row) row.innerHTML = sortDice(dice).map(die).join('');
+    if(title) title.textContent = lr ? `${lr.bid_true ? 'Bod gehaald' : 'Bod niet gehaald'}` : 'Nieuwe ronde';
+    if(text) text.textContent = lr ? `${bidText(lr.bid)} telde ${Number(lr.counted_total||0)} keer. ${loser} verliest een dobbelsteen.` : 'Nieuwe ronde.';
+    if(row) row.innerHTML = lr?.next_round ? `<span>Nieuwe ronde ${Number(lr.next_round)}</span>` : '';
+    if(hands) hands.innerHTML = Array.isArray(lr?.hands) ? lr.hands.map(renderRevealHand).join('') : '';
     overlay.classList.remove('hidden');
     overlay.classList.add('show');
     window.clearTimeout(showRoundOverlay._timer);
-    showRoundOverlay._timer = window.setTimeout(()=>{ overlay.classList.remove('show'); overlay.classList.add('hidden'); }, 1800);
+    showRoundOverlay._timer = window.setTimeout(()=>{ overlay.classList.remove('show'); overlay.classList.add('hidden'); }, 5200);
   }
   function render(payload){
     model = payload;
@@ -102,13 +114,13 @@
       ? `<div class="dice-row">${dice.map(die).join('')}</div><div class="muted" style="margin-top:8px">Gesorteerd 2-6, pik rechts. 1 telt als pik/joker.</div>`
       : '<div class="muted">Geen privesessie of nog geen hand zichtbaar.</div>';
     const note=$('diceStateNote'); if(note) note.innerHTML = diceHtml;
-    const handKey=dice.join(',');
     const roundNo=Number(st.round_no||0);
-    if(hasRendered && dice.length && (roundNo!==lastRoundNo || handKey!==lastHandKey)){
-      showRoundOverlay(st.last_reveal || null, dice);
+    const revealKey=st.last_reveal ? `${st.last_reveal.round_no||''}:${st.last_reveal.loser_id||''}:${st.last_reveal.counted_total||''}` : '';
+    if(hasRendered && st.last_reveal && roundNo!==lastRoundNo && revealKey && revealKey!==lastRevealKey){
+      showRoundOverlay(st.last_reveal);
       if(note){ note.classList.remove('dice-rolling'); void note.offsetWidth; note.classList.add('dice-rolling'); }
     }
-    lastRoundNo=roundNo; lastHandKey=handKey; hasRendered=true;
+    lastRoundNo=roundNo; lastRevealKey=revealKey || lastRevealKey; hasRendered=true;
     const my=$('myDiceBody'); if(my) my.innerHTML = '';
 
     const voteWrap=$('tableVotes');

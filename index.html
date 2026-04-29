@@ -674,12 +674,12 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v698';</script><script src="./gejast-config.js?v698"></script><script src="./gejast-home-gate.js?v698"></script><script defer src="./gejast-clickable-cards.js?v698"></script><script defer src="./gejast-scope-context.js?v698"></script><script defer src="./gejast-family-rollout.js?v698"></script><script defer src="./gejast-scope.js?v698"></script>
-  <script defer src="./gejast-live-summary.js?v698"></script>
-  <script defer src="./gejast-scoped-rpc.js?v698"></script>
-  <script defer src="./gejast-combined-readers.js?v698"></script>
-<script defer src="./gejast-push-runtime.js?v698"></script>
-<script defer src="./gejast-fairness.js?v698"></script>
+  <script>window.GEJAST_PAGE_VERSION='v705';</script><script src="./gejast-config.js?v705"></script><script src="./gejast-home-gate.js?v705"></script><script defer src="./gejast-clickable-cards.js?v705"></script><script defer src="./gejast-scope-context.js?v705"></script><script defer src="./gejast-family-rollout.js?v705"></script><script defer src="./gejast-scope.js?v705"></script>
+  <script defer src="./gejast-live-summary.js?v705"></script>
+  <script defer src="./gejast-scoped-rpc.js?v705"></script>
+  <script defer src="./gejast-combined-readers.js?v705"></script>
+<script defer src="./gejast-push-runtime.js?v705"></script>
+<script defer src="./gejast-fairness.js?v705"></script>
 <style id="gejast-v685-home-speed-fix">
   body{align-items:flex-start !important;}
   .page{padding-top:18px !important;}
@@ -1818,7 +1818,7 @@ async function castExtraPollVote(desired_status) {
         if (roomCode) {
           markLocalLiveCard('./paardenrace.html', `./paardenrace_live.html?room_code=${encodeURIComponent(roomCode)}${CURRENT_SCOPE==='family'?'&scope=family':''}`, 'PAARDENRACE LIVE', 'Bekijk race en standen als spectator.');
         }
-        const beerpong = readJsonStorage(['gejast_beerpong_match_v695','gejast_beerpong_participant_v695']);
+        const beerpong = readJsonStorage(['gejast_beerpong_match_v696','gejast_beerpong_participant_v696']);
         if (beerpong && (beerpong.client_match_id || beerpong.match_id)) {
           markLocalLiveCard('./beerpong.html', `./beerpong_vault.html?client_match_id=${encodeURIComponent(beerpong.client_match_id || beerpong.match_id)}${CURRENT_SCOPE==='family'?'&scope=family':''}`, 'BEERPONG LIVE', 'Bekijk opgeslagen score en stats.');
         }
@@ -1959,7 +1959,7 @@ async function castExtraPollVote(desired_status) {
 
   <div class="site-credit-watermark" data-version-watermark></div>
 
-<script defer src="./gejast-player-session-ui.js?v698"></script>
+<script defer src="./gejast-player-session-ui.js?v705"></script>
 
 
 <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script><script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
@@ -1967,9 +1967,9 @@ async function castExtraPollVote(desired_status) {
   function loadScript(src){ return new Promise((resolve,reject)=>{ var s=document.createElement('script'); s.src=src; s.defer=true; s.onload=resolve; s.onerror=reject; document.body.appendChild(s); }); }
   function bootSecondary(){
     return Promise.allSettled([
-      loadScript('./drinks-verify-float.js?v698'),
-      loadScript('./gejast-geo.js?v698'),
-      loadScript('./site-analytics.js?v698')
+      loadScript('./drinks-verify-float.js?v705'),
+      loadScript('./gejast-geo.js?v705'),
+      loadScript('./site-analytics.js?v705')
     ]);
   }
   if ('requestIdleCallback' in window) requestIdleCallback(()=>bootSecondary(), { timeout: 2500 });

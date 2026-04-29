@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace Lobby</title>
-  <script>window.GEJAST_PAGE_VERSION='v704';</script>
-  <script src="./gejast-config.js?v704"></script><script src="./gejast-home-gate.js?v704"></script>
-  <script src="./gejast-paardenrace.js?v704"></script>
+  <script>window.GEJAST_PAGE_VERSION='v705';</script>
+  <script src="./gejast-config.js?v705"></script><script src="./gejast-home-gate.js?v705"></script>
+  <script src="./gejast-paardenrace.js?v705"></script>
   <style>
     :root{
       --paper:#fbf6ef;--shell:#f5efe6;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241;--gold-soft:#efe5c7;
@@ -74,7 +74,7 @@
       .room-head{display:grid}.top-actions{width:100%}.top-actions .btn{flex:1 1 calc(50% - 5px)}
     }
   </style>
-<script src="./gejast-paardenrace-input-guard.js?v704"></script></head>
+<script src="./gejast-paardenrace-input-guard.js?v705"></script></head>
 <body data-game-watermark="soft">
   <div class="wrap">
     <div class="shell">
@@ -115,7 +115,7 @@
               </div>
             </div>
           </div>
-          <div class="small" style="margin-top:10px">Maak of join een room. Gestarte rooms zijn gesloten voor nieuwe spelers en gaan direct naar het live scherm.</div>
+          <div class="small" style="margin-top:10px">Maak of join een room.</div>
         </section>
 
         <section class="panel">
@@ -135,7 +135,7 @@
         <section class="panel">
           <div class="toolbar-row">
             <h2 style="margin:0">Open lobbies</h2>
-            <span class="muted">Join direct vanaf hier</span>
+            <span class="muted"></span>
           </div>
           <div class="small" style="margin-bottom:8px">Live rooms</div>
           <div id="liveRoomsBox" class="room-rail"></div>
@@ -162,7 +162,7 @@
           <div class="saved-box" id="savedChoiceBox" style="display:none"></div>
           <div class="admin-box" id="adminVerifyBox" style="display:none">
             <strong>Wagers verifiëren</strong>
-            <div class="small" style="margin-top:4px">De host verifieert hier direct de Bakken, zonder locatiecontrole.</div>
+            <div class="small" style="margin-top:4px"></div>
             <div id="pendingVerifyList" class="stack"></div>
           </div>
           <div id="playersBox" class="players"></div>
@@ -262,8 +262,8 @@ async function poll(){ if(polling || createBusy || disbandBusy) return; polling=
  $('createBtn').addEventListener('click', async()=>{ if(createBusy) return; createBusy=true; const btn=$('createBtn'); const oldLabel=btn.textContent; btn.disabled=true; btn.textContent='Lobby staat klaar...'; try{ const requested=upperRoomCode(($('roomCodeInput') && $('roomCodeInput').value) || ''); const optimisticCode=requested || shortRoomCode(); markRoomCodeDirty(); setOptimisticRoom(optimisticCode, 'Lobby staat lokaal al klaar. Server bevestigt nu...'); addOptimisticOpenRoom(optimisticCode); setStatus('Lobby aangemaakt, server synchroniseert...'); const created = await api.rpc('create_paardenrace_room_fast_v687', { room_code_input: requested || null }, { timeoutMs: 6500 }); if(!created || typeof created !== 'object'){ throw new Error('Room werd niet correct aangemaakt.'); } applyState(created); const createdCode = upperRoomCode(created?.room?.room_code || requested || optimisticCode); if(createdCode){ api.setStoredRoomCode(createdCode); roomCodeDirty=false; if($('roomCodeInput')) $('roomCodeInput').value=createdCode; } setStatus(`Nieuwe room ${createdCode || ''} aangemaakt.`.trim()); loadOpenRooms(true).catch(()=>{}); }catch(err){ optimisticUntil=0; optimisticRoomCode=''; clearLobbyView(); setStatus(err.message || 'Aanmaken mislukt.', true); loadOpenRooms(true).catch(()=>{});} finally{ createBusy=false; btn.disabled=false; btn.textContent=oldLabel; } });
  $('joinBtn').addEventListener('click', doJoin); $('refreshBtn').addEventListener('click', poll);
  $('saveBtn').addEventListener('click', async()=>{ try{ setStatus('Keuze opslaan...'); const state = await api.rpc('update_paardenrace_room_choice_safe', { room_code_input: roomCode(), selected_suit_input: $('suitInput').value || null, wager_bakken_input: Number($('wagerInput').value || 0), ready_input: false }); applyState(state); setStatus('Suit + inzet opgeslagen en doorgestuurd voor verificatie.'); await loadOpenRooms(true); }catch(err){ setStatus(err.message || 'Opslaan mislukt.', true);} });
- $('readyBtn').addEventListener('click', async()=>{ try{ applyState(await api.rpc('set_paardenrace_ready_safe', { room_code_input: roomCode(), ready_input: true })); setStatus('Je staat nu op ready.'); await loadOpenRooms(true); }catch(err){ setStatus(err.message || 'Ready mislukt.', true);} });
- $('unreadyBtn').addEventListener('click', async()=>{ try{ applyState(await api.rpc('set_paardenrace_ready_safe', { room_code_input: roomCode(), ready_input: false })); setStatus('Je bent weer unready.'); await loadOpenRooms(true); }catch(err){ setStatus(err.message || 'Unready mislukt.', true);} });
+$('readyBtn').addEventListener('click', async()=>{ const btn=$('readyBtn'); const old=btn.textContent; let ok=false; try{ btn.disabled=true; btn.textContent='Ready...'; applyState(await api.rpc('set_paardenrace_ready_safe', { room_code_input: roomCode(), ready_input: true }, { timeoutMs: 4200 })); ok=true; setStatus('Je staat nu op ready.'); await loadOpenRooms(true); }catch(err){ setStatus(err.message || 'Ready mislukt.', true);} finally{ btn.textContent=old; if(!ok) btn.disabled=false; } });
+$('unreadyBtn').addEventListener('click', async()=>{ const btn=$('unreadyBtn'); const old=btn.textContent; let ok=false; try{ btn.disabled=true; btn.textContent='Unready...'; applyState(await api.rpc('set_paardenrace_ready_safe', { room_code_input: roomCode(), ready_input: false }, { timeoutMs: 4200 })); ok=true; setStatus('Je bent weer unready.'); await loadOpenRooms(true); }catch(err){ setStatus(err.message || 'Unready mislukt.', true);} finally{ btn.textContent=old; if(!ok) btn.disabled=false; } });
  $('leaveBtn').addEventListener('click', async()=>{ try{ const res=await api.rpc('leave_paardenrace_room_fast_v687', { room_code_input: roomCode() }); clearLobbyView(); setStatus(res?.disbanded ? 'Room gesloten of verlaten.' : 'Je hebt de room verlaten.'); await loadOpenRooms(true); }catch(err){ setStatus(err.message || 'Verlaten mislukt.', true);} });
  $('disbandBtn').addEventListener('click', async()=>{ if(disbandBusy) return; disbandBusy=true; const code=upperRoomCode(roomCode()); const btn=$('disbandBtn'); const old=btn.textContent; btn.disabled=true; btn.textContent='Opheffen...'; suppressRoom(code); clearLobbyView(); removeRoomFromLists(code); setStatus('Room wordt definitief verwijderd...'); try{ const res=await rpcAny(['disband_paardenrace_room_fast_v687','destroy_paardenrace_room_safe','close_paardenrace_room_safe','disband_paardenrace_room_safe'], { room_code_input: code }); suppressRoom(code); clearLobbyView(); removeRoomFromLists(code); setStatus((res&&res.destroyed===false)?'Room was al weg.':'Room is definitief opgeheven.'); loadOpenRooms(true).catch(()=>{}); }catch(err){ setStatus(err.message || 'Opheffen mislukt op server. Ververs om de echte status te zien.', true); loadOpenRooms(true).catch(()=>{});} finally{ disbandBusy=false; btn.disabled=false; btn.textContent=old; } });
  $('startBtn').addEventListener('click', async()=>{ try{ const players=Array.isArray(latestState?.players)?latestState.players:[]; const picked=[...new Set(players.map((p)=>String(p.selected_suit||'').trim()).filter(Boolean))]; if(players.length < 2){ setStatus('Paardenrace kan niet starten met minder dan 2 spelers.', true); return; } if(picked.length === 1 && players.length > 1){ setStatus('Paardenrace kan niet starten als iedereen hetzelfde suit heeft gekozen.', true); return; } const state = await api.rpc('start_paardenrace_countdown_safe', { room_code_input: roomCode() }); if(state?.room?.room_code){ api.gotoLive(state.room.room_code); return; } applyState(state); setStatus('Countdown gestart.'); }catch(err){ setStatus(err.message || 'Start mislukt.', true);} });
@@ -273,10 +273,11 @@ async function poll(){ if(polling || createBusy || disbandBusy) return; polling=
 poll(); pollHandle = setInterval(poll, 1000); window.addEventListener('online', poll); document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) poll(); }); window.addEventListener('beforeunload', ()=>{ if(pollHandle) clearInterval(pollHandle); });
 })();
 </script>
-<div class="site-credit-watermark" data-version-watermark>v704 · Made by Bruis</div>
+<div class="site-credit-watermark" data-version-watermark>v705 - Made by Bruis</div>
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>
+
 
 
 

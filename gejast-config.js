@@ -1,6 +1,6 @@
 ﻿(function(){
   const CONFIG = {
-    VERSION:'v704',
+    VERSION:'v705',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: '',
@@ -35,9 +35,10 @@
     } catch (_) { return null; }
   }
   function parseVersion(v){ const m=String(v||'').match(/v?(\d+)/i); return m?Number(m[1]):0; }
-  const candidates = [detectScriptVersion(), window.GEJAST_PAGE_VERSION, CONFIG.VERSION].filter(Boolean);
+  const candidates = [window.GEJAST_SITE_VERSION, window.GEJAST_PAGE_VERSION, CONFIG.VERSION, detectScriptVersion()].filter(Boolean);
   const effectiveVersion = candidates.sort((a,b)=>parseVersion(b)-parseVersion(a))[0] || CONFIG.VERSION;
-  const label = `${effectiveVersion}  -  Made by Bruis`;
+  let currentVersion = effectiveVersion;
+  let label = `${currentVersion}  -  Made by Bruis`;
   window.GEJAST_PAGE_VERSION = effectiveVersion;
 
   function watermarkStyles(node){
@@ -84,6 +85,26 @@
     nodes.forEach((node)=>{ node.textContent = label; watermarkStyles(node); });
     const re = /v\d+\s*[ - .-]?\s*Made by Bruis/i;
     document.querySelectorAll('body *').forEach((node)=>{ if (node.children.length) return; const txt=(node.textContent||'').trim(); if (re.test(txt)) { node.textContent = label; watermarkStyles(node); } });
+  }
+  async function refreshVersionFromFile(){
+    try {
+      const res = await fetch('./VERSION?ts=' + Date.now(), { cache:'no-store' });
+      if (!res.ok) return currentVersion;
+      const text = String(await res.text() || '').trim();
+      const parsed = text.match(/v?\d+/i);
+      if (!parsed) return currentVersion;
+      currentVersion = parsed[0].toLowerCase().startsWith('v') ? parsed[0] : `v${parsed[0]}`;
+      label = `${currentVersion}  -  Made by Bruis`;
+      window.GEJAST_PAGE_VERSION = currentVersion;
+      if (window.GEJAST_CONFIG) {
+        window.GEJAST_CONFIG.VERSION = currentVersion;
+        window.GEJAST_CONFIG.VERSION_LABEL = label;
+      }
+      applyVersionLabel();
+      return currentVersion;
+    } catch (_) {
+      return currentVersion;
+    }
   }
 
 
@@ -729,7 +750,7 @@ function buildRequestUrl(returnTo, scope){
       setTimeout(showPageNow, 0);
     }
     setTimeout(showPageNow, 650);
-    return { VERSION:'v704', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
+    return { VERSION:'v705', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
   })();
   window.GEJAST_FAST_RUNTIME = FAST_RUNTIME;
 
@@ -739,6 +760,7 @@ function buildRequestUrl(returnTo, scope){
     FAST_RUNTIME,
     ensureVersionWatermark,
     applyVersionLabel,
+    refreshVersionFromFile,
     normalizeProfileImageUrl,
     fetchScopedActivePlayerNames,
     getActivatedPlayerNamesForScope,
@@ -795,6 +817,7 @@ function buildRequestUrl(returnTo, scope){
     try { FAST_RUNTIME && FAST_RUNTIME.showPageNow && FAST_RUNTIME.showPageNow(); } catch(_) {}
     try { if ((location.pathname||'').toLowerCase().endsWith('/index.html') || (location.pathname||'').toLowerCase()==='/' || !(location.pathname||'').split('/').pop()) { document.querySelectorAll('#ghprError').forEach(function(n){ n.remove(); }); } } catch(_) {}
     applyVersionLabel();
+    refreshVersionFromFile();
     ensureSiteAnnouncementRuntime();
     ensureScopeHardeningRuntime();
     if (getPlayerSessionToken() && shouldAutoInstallActivityKeepalive()) installActivityKeepalive();
