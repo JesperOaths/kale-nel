@@ -4,6 +4,7 @@
   const params = new URLSearchParams(location.search);
   const gameId = params.get('client_match_id') || params.get('game_id') || '';
   let timer = null, busy = false, lastVersion = -1, model = null, hasRendered = false, lastRoundNo = 0, lastRevealKey = '';
+  const savedCompleted = new Set();
   const $ = (id)=>document.getElementById(id);
   const esc = (v)=>String(v ?? '').replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
   const faceOrder = (f)=>Number(f)===1?7:Number(f||0);
@@ -35,6 +36,14 @@
     if(st.winner_name) return st.winner_name;
     const alive=(Array.isArray(payload?.players)?payload.players:[]).filter((p)=>p.alive && Number(p.dice_count||0)>0);
     return alive.length===1 ? (alive[0].name||alive[0].player_name||'Winnaar') : '';
+  }
+  function victoryBurstHtml(){
+    return '<div class="victory-burst" aria-hidden="true">'
+      + '<span class="burst-card burst-card-a">Pik!</span><span class="burst-card burst-card-b">C</span><span class="burst-card burst-card-c">WIN</span>'
+      + '<img class="burst-logo" src="./logo.png" alt="">'
+      + '<span class="burst-die d1">2</span><span class="burst-die d2">5</span><span class="burst-die d3">pik</span>'
+      + '<span class="burst-confetti c1"></span><span class="burst-confetti c2"></span><span class="burst-confetti c3"></span>'
+      + '</div><div class="victory-tags"><span>Caute Coins</span><span>Despinoza</span><span>Winnaar</span></div>';
   }
   function phase(p){ return String(p?.game?.state?.phase || p?.game?.status || 'lobby').toLowerCase(); }
   function setText(id, val){ const el=$(id); if(el) el.textContent=val; }
@@ -81,7 +90,7 @@
     if(card) card.classList.toggle('victory', !!opts.victory);
     if(title) title.textContent = opts.victory ? `${opts.winner || 'Winnaar'} wint Pikken` : (lr ? `${lr.bid_true ? 'Bod gehaald' : 'Bod niet gehaald'}` : 'Nieuwe ronde');
     if(text) text.textContent = opts.victory ? `${opts.winner || 'De laatste speler'} blijft over. Match afgelopen.` : (lr ? `${bidText(lr.bid)} telde ${Number(lr.counted_total||0)} keer. ${loser} verliest een dobbelsteen${eliminated?' en is uitgeschakeld':''}.` : 'Nieuwe ronde.');
-    if(row) row.innerHTML = opts.victory ? '<span>CAUTE COINS</span><span>DESPINOZA</span><span>WINNAAR</span>' : (lr?.next_round ? `<span>Nieuwe ronde ${Number(lr.next_round)}</span>` : '');
+    if(row) row.innerHTML = opts.victory ? victoryBurstHtml() : (lr?.next_round ? `<span>Nieuwe ronde ${Number(lr.next_round)}</span>` : '');
     if(hands) hands.innerHTML = Array.isArray(lr?.hands) ? lr.hands.map(renderRevealHand).join('') : '';
     if(!overlay.querySelector('.round-close')) overlay.querySelector('.round-card')?.insertAdjacentHTML('beforeend','<button class="btn alt round-close" type="button">Sluiten</button>');
     overlay.querySelector('.round-close')?.addEventListener('click', ()=>{ overlay.classList.remove('show'); overlay.classList.add('hidden'); }, { once:true });
@@ -89,6 +98,21 @@
     overlay.classList.add('show');
     window.clearTimeout(showRoundOverlay._timer);
     if(!opts.sticky) showRoundOverlay._timer = window.setTimeout(()=>{ overlay.classList.remove('show'); overlay.classList.add('hidden'); }, 8200);
+  }
+  async function persistCompleted(payload){
+    const id = payload?.game?.id || gameId;
+    if(!id || !api.recordCompleted) return;
+    const key = `gejast_pikken_completed_saved_${id}`;
+    if(savedCompleted.has(id)) return;
+    try{ if(localStorage.getItem(key)==='1') return; }catch(_){}
+    savedCompleted.add(id);
+    try{
+      await api.recordCompleted(id);
+      try{ localStorage.setItem(key,'1'); }catch(_){}
+    }catch(err){
+      savedCompleted.delete(id);
+      setText('metaLine', 'Match afgelopen, maar stats opslaan mislukte: '+(err.message||err));
+    }
   }
   function render(payload){
     model = payload;
@@ -134,6 +158,7 @@
       showRoundOverlay(st.last_reveal, { victory: ph==='finished', winner, sticky: ph==='finished' });
       if(note){ note.classList.remove('dice-rolling'); void note.offsetWidth; note.classList.add('dice-rolling'); }
     }
+    if(ph==='finished') persistCompleted(payload);
     lastRoundNo=roundNo; lastRevealKey=revealKey || lastRevealKey; hasRendered=true;
     const my=$('myDiceBody'); if(my) my.innerHTML = '';
 

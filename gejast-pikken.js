@@ -69,6 +69,8 @@
     const sticky=$('pkLobbySticky'); if(sticky) sticky.classList.toggle('hidden', !inLobby);
     const role=$('pkLobbyRolePill'); if(role){ role.textContent = viewer.is_host ? 'Host' : 'Deelnemer'; role.className = `pill ${viewer.is_ready?'ok':'wait'}`; }
     const note=$('pkLobbyStickyNote'); if(note) note.textContent = viewer.is_ready ? 'Je staat ready.' : 'Je staat unready.';
+    const ready=$('pkReadyBtn'); if(ready){ ready.className = `btn ${viewer.is_ready?'ready-active':'alt'}`; ready.disabled = !inLobby || !!viewer.is_ready; }
+    const unready=$('pkUnreadyBtn'); if(unready){ unready.className = `btn ${viewer.is_ready?'alt':'unready-active'}`; unready.disabled = !inLobby || !viewer.is_ready; }
     const destroy=$('pkDestroyBtn'); if(destroy) destroy.classList.toggle('hidden', !(inLobby && viewer.is_host));
     const start=$('pkStartBtn'); if(start) start.classList.toggle('hidden', !(inLobby && viewer.is_host));
   }
