@@ -3,7 +3,7 @@
   if (!api) { console.error('GEJAST_PIKKEN_CONTRACT missing'); return; }
   const params = new URLSearchParams(location.search);
   const gameId = params.get('client_match_id') || params.get('game_id') || '';
-  let timer = null, busy = false, lastVersion = -1, model = null, hasRendered = false, lastRoundNo = 0, lastRevealKey = '', finishedOverlayShown = false;
+  let timer = null, busy = false, lastVersion = -1, model = null, hasRendered = false, lastRoundNo = 0, lastRevealKey = '', finishedOverlayShown = false, finishedOrLeaving = false;
   const savedCompleted = new Set();
   const savedCheckpoints = new Set();
   const $ = (id)=>document.getElementById(id);
@@ -67,6 +67,7 @@
     return out;
   }
   function clearParticipantAndReturn(){
+    finishedOrLeaving = true;
     try {
       localStorage.removeItem('gejast_pikken_participant_v687');
       localStorage.removeItem('gejast_pikken_participant_v632');
@@ -120,11 +121,19 @@
     savedCompleted.add(id);
     try{
       await api.recordCompleted(id);
+      finishedOrLeaving = true;
       try{ localStorage.setItem(key,'1'); }catch(_){}
     }catch(err){
       savedCompleted.delete(id);
       setText('metaLine', 'Match afgelopen, maar stats opslaan mislukte: '+(err.message||err));
     }
+  }
+  function closeOnPageExit(){
+    if (finishedOrLeaving || !model || !gameId) return;
+    const ph = phase(model);
+    if (!['lobby','bidding','voting','live'].includes(ph)) return;
+    finishedOrLeaving = true;
+    try { api.abandonAndRecordKeepalive && api.abandonAndRecordKeepalive(gameId, 'page_left'); } catch (_) {}
   }
   async function persistCheckpoint(payload){
     const id = payload?.game?.id || gameId;
@@ -238,6 +247,8 @@
   $('voteRejectBtn')?.addEventListener('click', ()=>act(()=>api.castVote(gameId,false)));
   $('leaveBtn')?.addEventListener('click', ()=>{ if(confirm('Match verlaten?')) api.leaveGame(gameId).then(()=>{ clearParticipantAndReturn(); }).catch((e)=>alert(e.message)); });
   $('destroyBtn')?.addEventListener('click', ()=>{ if(confirm('Host: match verwijderen?')) api.destroyGame(gameId).then(()=>{ clearParticipantAndReturn(); }).catch((e)=>alert(e.message)); });
+  window.addEventListener('pagehide', closeOnPageExit);
+  window.addEventListener('beforeunload', closeOnPageExit);
   refresh(true);
   timer=setInterval(()=>{ if(!document.hidden) refresh(false); }, 800);
   document.addEventListener('visibilitychange',()=>{ if(!document.hidden) refresh(true); });

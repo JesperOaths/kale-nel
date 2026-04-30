@@ -674,12 +674,12 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v707';</script><script src="./gejast-config.js?v707"></script><script src="./gejast-home-gate.js?v707"></script><script defer src="./gejast-clickable-cards.js?v707"></script><script defer src="./gejast-scope-context.js?v707"></script><script defer src="./gejast-family-rollout.js?v707"></script><script defer src="./gejast-scope.js?v707"></script>
-  <script defer src="./gejast-live-summary.js?v707"></script>
-  <script defer src="./gejast-scoped-rpc.js?v707"></script>
-  <script defer src="./gejast-combined-readers.js?v707"></script>
-<script defer src="./gejast-push-runtime.js?v707"></script>
-<script defer src="./gejast-fairness.js?v707"></script>
+  <script>window.GEJAST_PAGE_VERSION='v716';</script><script src="./gejast-config.js?v716"></script><script src="./gejast-home-gate.js?v716"></script><script defer src="./gejast-clickable-cards.js?v716"></script><script defer src="./gejast-scope-context.js?v716"></script><script defer src="./gejast-family-rollout.js?v716"></script><script defer src="./gejast-scope.js?v716"></script>
+  <script defer src="./gejast-live-summary.js?v708"></script>
+  <script defer src="./gejast-scoped-rpc.js?v708"></script>
+  <script defer src="./gejast-combined-readers.js?v708"></script>
+<script defer src="./gejast-push-runtime.js?v708"></script>
+<script defer src="./gejast-fairness.js?v708"></script>
 <style id="gejast-v685-home-speed-fix">
   body{align-items:flex-start !important;}
   .page{padding-top:18px !important;}
@@ -987,6 +987,18 @@ function applyAdminViewerRefresh() {
     const HOMEPAGE_BLOCKED_NAMES = new Set(['anna','spookinoza 2','evi','fons','caro','daan','bram']);
     function isHomepageBlockedName(name){ return HOMEPAGE_BLOCKED_NAMES.has(String(name||'').trim().toLowerCase()); }
     function avatarMarkup(row){ const name = displayPlayerName(row); const helper=(window.GEJAST_CONFIG&&typeof window.GEJAST_CONFIG.normalizeProfileImageUrl==='function')?window.GEJAST_CONFIG.normalizeProfileImageUrl:(v)=>String(v||'').trim(); const src = helper(row?.avatar_url || row?.photo_url || row?.profile_picture_url || ''); return src ? `<div class="biggest-player-avatar"><img src="${src.replace(/"/g,'&quot;')}" alt="${name.replace(/"/g,'&quot;')}" referrerpolicy="no-referrer"></div>` : `<div class="biggest-player-avatar">${(name||'O').slice(0,1).toUpperCase()}</div>`; }
+    function hasPositiveNumber(row, keys) {
+      return keys.some((key) => Number(row && row[key] || 0) > 0);
+    }
+    function validHomepageLadderRow(row, groupKey) {
+      if (!row || typeof row !== 'object') return false;
+      if (groupKey === 'caute-coins') {
+        return hasPositiveNumber(row, ['ledger_count','transaction_count','transactions','market_count','wallet_events','settled_count'])
+          || row.wallet_id || row.source === 'despimarkt_wallet' || row.source === 'caute_coin_ledger';
+      }
+      return hasPositiveNumber(row, ['games_played','matches_played','match_count','total_matches','played','wins','losses'])
+        || row.source === 'game_elo_history' || row.source === 'match_history';
+    }
     function renderHomepageLadders(payload) {
       const root = document.getElementById('ladderGrid');
       const extraRoot = document.getElementById('extraLadderGrid');
@@ -995,7 +1007,7 @@ function applyAdminViewerRefresh() {
       function renderGroupSet(target, groups){
         if(!target) return;
         target.innerHTML = groups.map((group) => {
-          const rows = Array.isArray(group.rows) ? group.rows : [];
+          const rows = (Array.isArray(group.rows) ? group.rows : []).filter((row) => validHomepageLadderRow(row, group.key));
           const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><a class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800" href="${playerHref(String(row.player_name || row.display_name || ''), group.key)}" onclick="event.stopPropagation()">${String(row.player_name || row.display_name || row.public_display_name || 'Onbekend')}</a><div class="ladder-elo" style="color:var(--gold);font-weight:900">${Math.round(Number(row.coins || row.caute_coins || row.balance || row.elo_rating || row.rating || 1000))}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen ladderdata.</div>';
           return `<article class="ladder-card" role="link" tabindex="0" data-route="${homepageLadderRoute(group.key)}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none">Top 5</span></div>${body}</article>`;
         }).join('');
@@ -1959,7 +1971,7 @@ async function castExtraPollVote(desired_status) {
 
   <div class="site-credit-watermark" data-version-watermark></div>
 
-<script defer src="./gejast-player-session-ui.js?v707"></script>
+<script defer src="./gejast-player-session-ui.js?v708"></script>
 
 
 <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script><script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
@@ -1967,9 +1979,9 @@ async function castExtraPollVote(desired_status) {
   function loadScript(src){ return new Promise((resolve,reject)=>{ var s=document.createElement('script'); s.src=src; s.defer=true; s.onload=resolve; s.onerror=reject; document.body.appendChild(s); }); }
   function bootSecondary(){
     return Promise.allSettled([
-      loadScript('./drinks-verify-float.js?v707'),
-      loadScript('./gejast-geo.js?v707'),
-      loadScript('./site-analytics.js?v707')
+      loadScript('./drinks-verify-float.js?v708'),
+      loadScript('./gejast-geo.js?v708'),
+      loadScript('./site-analytics.js?v708')
     ]);
   }
   if ('requestIdleCallback' in window) requestIdleCallback(()=>bootSecondary(), { timeout: 2500 });

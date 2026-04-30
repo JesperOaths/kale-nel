@@ -1,5 +1,5 @@
 (function(){
-  if (window.GEJAST_PIKKEN_CONTRACT && window.GEJAST_PIKKEN_CONTRACT.VERSION === 'v715') return;
+  if (window.GEJAST_PIKKEN_CONTRACT && window.GEJAST_PIKKEN_CONTRACT.VERSION === 'v716') return;
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
   const PLAYER_KEYS = Array.isArray(cfg.PLAYER_SESSION_KEYS) && cfg.PLAYER_SESSION_KEYS.length ? cfg.PLAYER_SESSION_KEYS : ['jas_session_token_v11','jas_session_token_v10'];
@@ -23,7 +23,8 @@
     updateConfig: 'pikken_update_lobby_config_v715',
     stats: 'pikken_get_deep_stats_scoped',
     cleanup: 'cleanup_stale_pikken_rooms_v706',
-    recordCompleted: 'pikken_record_completed_match_v709'
+    recordCompleted: 'pikken_record_completed_match_v709',
+    abandonAndRecord: 'pikken_abandon_and_record_v716'
   };
   function scope(){
     try { return (scopeUtils.getScope && scopeUtils.getScope()) || (new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'); }
@@ -122,7 +123,24 @@
   async function stats(){ return rpc(RPC.stats, { site_scope_input: scope(), session_token: sessionToken() || null }); }
   async function cleanupStale(){ return rpc(RPC.cleanup, { site_scope_input: scope() }, 1200); }
   async function recordCompleted(gameId){ return rpc(RPC.recordCompleted, tokenPayload({ game_id_input: gameId }), 2200); }
-  window.GEJAST_PIKKEN_CONTRACT = { VERSION:'v715', scope, sessionToken, requireSession, rpc, cleanCode, createLobby, joinLobby, getState, setReady, updateLobbyConfig, startGame, placeBid, rejectBid, castVote, leaveGame, destroyGame, rpcFirst, openLobbies, liveMatches, myActive, stats, cleanupStale, recordCompleted };
+  async function abandonAndRecord(gameId, reason){ return rpc(RPC.abandonAndRecord, tokenPayload({ game_id_input: gameId, reason_input: reason || 'page_left' }), 1800); }
+  function abandonAndRecordKeepalive(gameId, reason){
+    const token = sessionToken();
+    if (!cfg.SUPABASE_URL || !gameId || !token) return false;
+    const body = JSON.stringify(tokenPayload({ game_id_input: gameId, reason_input: reason || 'page_left' }));
+    try {
+      fetch(`${cfg.SUPABASE_URL}/rest/v1/rpc/${RPC.abandonAndRecord}`, {
+        method:'POST',
+        mode:'cors',
+        cache:'no-store',
+        keepalive:true,
+        headers:headers(),
+        body
+      }).catch(()=>{});
+      return true;
+    } catch (_) { return false; }
+  }
+  window.GEJAST_PIKKEN_CONTRACT = { VERSION:'v716', scope, sessionToken, requireSession, rpc, cleanCode, createLobby, joinLobby, getState, setReady, updateLobbyConfig, startGame, placeBid, rejectBid, castVote, leaveGame, destroyGame, rpcFirst, openLobbies, liveMatches, myActive, stats, cleanupStale, recordCompleted, abandonAndRecord, abandonAndRecordKeepalive };
 })();
 
 
