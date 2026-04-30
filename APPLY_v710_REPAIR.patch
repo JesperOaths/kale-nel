@@ -1,0 +1,33 @@
+diff --git a/VERSION b/VERSION
+--- a/VERSION
++++ b/VERSION
+@@ -1 +1 @@
+-v709
++v710
+diff --git a/gejast-config.js b/gejast-config.js
+--- a/gejast-config.js
++++ b/gejast-config.js
+@@
+-    VERSION:'v709',
++    VERSION:'v710',
+@@
+ })();
++;(() => {
++  if (window.__GEJAST_V710_REPAIR_LOADER__) return;
++  window.__GEJAST_V710_REPAIR_LOADER__ = true;
++  function loadRepairRuntime(){
++    try {
++      if (window.__GEJAST_V710_REPAIR_RUNTIME__) return;
++      const s = document.createElement('script');
++      s.src = './gejast-v710-repair.js?v710';
++      s.defer = true;
++      s.setAttribute('data-gejast-v710-repair','');
++      document.head.appendChild(s);
++    } catch (_) {}
++  }
++  if (document.readyState === 'loading') {
++    document.addEventListener('DOMContentLoaded', loadRepairRuntime, { once:true });
++  } else {
++    loadRepairRuntime();
++  }
++})();
