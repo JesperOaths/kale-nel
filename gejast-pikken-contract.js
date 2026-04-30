@@ -1,5 +1,5 @@
 (function(){
-  if (window.GEJAST_PIKKEN_CONTRACT && window.GEJAST_PIKKEN_CONTRACT.VERSION === 'v712') return;
+  if (window.GEJAST_PIKKEN_CONTRACT && window.GEJAST_PIKKEN_CONTRACT.VERSION === 'v714') return;
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
   const PLAYER_KEYS = Array.isArray(cfg.PLAYER_SESSION_KEYS) && cfg.PLAYER_SESSION_KEYS.length ? cfg.PLAYER_SESSION_KEYS : ['jas_session_token_v11','jas_session_token_v10'];
@@ -94,7 +94,7 @@
     } finally { if (timer) clearTimeout(timer); }
   }
   async function rpcFirst(calls, timeoutMs){ let last=null; for(const call of calls){ try{ return await rpc(call.name, call.payload, call.timeoutMs || timeoutMs || 2800); }catch(err){ last=err; if(!/could not find|schema cache|function|does not exist|backend_missing|pikken_create_lobby_backend_missing|pikken_join_lobby_backend_missing|pikken_destroy_game_backend_missing/i.test(String(err && err.message || err))) break; } } throw last || new Error('Pikken RPC mislukt.'); }
-  function cleanCode(v){ return String(v || '').trim().toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,8); }
+  function cleanCode(v){ return String(v || '').trim().toUpperCase().replace(/\s+/g,'').replace(/[^A-Z0-9]/g,'').slice(0,16); }
   function requireSession(){
     const token = sessionToken();
     if (!token) {
@@ -120,7 +120,7 @@
   async function stats(){ return rpc(RPC.stats, { site_scope_input: scope(), session_token: sessionToken() || null }); }
   async function cleanupStale(){ return rpc(RPC.cleanup, { site_scope_input: scope() }, 1200); }
   async function recordCompleted(gameId){ return rpc(RPC.recordCompleted, tokenPayload({ game_id_input: gameId }), 2200); }
-  window.GEJAST_PIKKEN_CONTRACT = { VERSION:'v712', scope, sessionToken, requireSession, rpc, cleanCode, createLobby, joinLobby, getState, setReady, startGame, placeBid, rejectBid, castVote, leaveGame, destroyGame, rpcFirst, openLobbies, liveMatches, myActive, stats, cleanupStale, recordCompleted };
+  window.GEJAST_PIKKEN_CONTRACT = { VERSION:'v714', scope, sessionToken, requireSession, rpc, cleanCode, createLobby, joinLobby, getState, setReady, startGame, placeBid, rejectBid, castVote, leaveGame, destroyGame, rpcFirst, openLobbies, liveMatches, myActive, stats, cleanupStale, recordCompleted };
 })();
 
 

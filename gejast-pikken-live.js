@@ -5,6 +5,7 @@
   const gameId = params.get('client_match_id') || params.get('game_id') || '';
   let timer = null, busy = false, lastVersion = -1, model = null, hasRendered = false, lastRoundNo = 0, lastRevealKey = '', finishedOverlayShown = false;
   const savedCompleted = new Set();
+  const savedCheckpoints = new Set();
   const $ = (id)=>document.getElementById(id);
   const esc = (v)=>String(v ?? '').replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
   const faceOrder = (f)=>Number(f)===1?7:Number(f||0);
@@ -37,13 +38,24 @@
     const alive=(Array.isArray(payload?.players)?payload.players:[]).filter((p)=>p.alive && Number(p.dice_count||0)>0);
     return alive.length===1 ? (alive[0].name||alive[0].player_name||'Winnaar') : '';
   }
+  function playerName(p){ return p?.name || p?.player_name || 'Speler'; }
+  function rankingRows(payload){
+    const players=Array.isArray(payload?.players)?payload.players:[];
+    return players.slice().sort((a,b)=>{
+      const ad=Number(a.dice_count||0), bd=Number(b.dice_count||0);
+      const aa=(a.alive && ad>0)?1:0, ba=(b.alive && bd>0)?1:0;
+      if(ba!==aa) return ba-aa;
+      if(bd!==ad) return bd-ad;
+      return Number(a.seat||a.seat_index||0)-Number(b.seat||b.seat_index||0);
+    }).map((p,i)=>`<div class="finish-row ${i===0?'winner':''}"><strong>${i+1}. ${esc(playerName(p))}</strong><span>${Number(p.dice_count||0)} dobbelsteen${Number(p.dice_count||0)===1?'':'stenen'} over</span></div>`).join('');
+  }
   function victoryBurstHtml(){
     return '<div class="victory-burst" aria-hidden="true">'
-      + '<span class="burst-card burst-card-a">Pik!</span><span class="burst-card burst-card-b">C</span><span class="burst-card burst-card-c">WIN</span>'
+      + '<span class="burst-card burst-card-a">Pik!</span><span class="burst-card burst-card-b">D</span><span class="burst-card burst-card-c">1</span>'
       + '<img class="burst-logo" src="./logo.png" alt="">'
       + '<span class="burst-die d1">2</span><span class="burst-die d2">5</span><span class="burst-die d3">pik</span>'
       + '<span class="burst-confetti c1"></span><span class="burst-confetti c2"></span><span class="burst-confetti c3"></span>'
-      + '</div><div class="victory-tags"><span>Caute Coins</span><span>Despinoza</span><span>Winnaar</span></div>';
+      + '</div>';
   }
   function phase(p){ return String(p?.game?.state?.phase || p?.game?.status || 'lobby').toLowerCase(); }
   function setText(id, val){ const el=$(id); if(el) el.textContent=val; }
@@ -52,10 +64,10 @@
     const out=[]; const add=(c,f)=>{ if(c>0&&f>0&&c<=Math.max(total,1)) out.push({c,f,label:f===1?`${c} x pik`:`${c} x ${f}`}); };
     const c=Number(bid?.count||0), f=Number(bid?.face||0);
     if(!c||!f){ for(let n=1;n<=Math.max(total,1);n++){ for(let x=2;x<=6;x++) add(n,x); add(n,1); } return out; }
-    if(f===1){ for(let n=c+1;n<=Math.ceil(total/2);n++) add(n,1); for(let n=c*2+1;n<=total;n++) for(let x=2;x<=6;x++) add(n,x); return out; }
-    for(let x=f+1;x<=6;x++) add(c,x);
-    for(let n=c+1;n<=total;n++) for(let x=2;x<=6;x++) add(n,x);
-    for(let n=Math.ceil(c/2);n<=Math.ceil(total/2);n++) add(n,1);
+    const order=[2,3,4,5,6,1];
+    const idx=order.indexOf(f);
+    order.slice(Math.max(idx+1,0)).forEach((x)=>add(c,x));
+    for(let n=c+1;n<=total;n++) order.forEach((x)=>add(n,x));
     return out;
   }
   function clearParticipantAndReturn(){
@@ -91,7 +103,7 @@
     if(title) title.textContent = opts.victory ? `${opts.winner || 'Winnaar'} wint Pikken` : (lr ? `${lr.bid_true ? 'Bod gehaald' : 'Bod niet gehaald'}` : 'Nieuwe ronde');
     if(text) text.textContent = opts.victory ? `${opts.winner || 'De laatste speler'} blijft over. Match afgelopen.` : (lr ? `${bidText(lr.bid)} telde ${Number(lr.counted_total||0)} keer. ${loser} verliest een dobbelsteen${eliminated?' en is uitgeschakeld':''}.` : 'Nieuwe ronde.');
     if(row) row.innerHTML = opts.victory ? victoryBurstHtml() : (lr?.next_round ? `<span>Nieuwe ronde ${Number(lr.next_round)}</span>` : '');
-    if(hands) hands.innerHTML = Array.isArray(lr?.hands) ? lr.hands.map(renderRevealHand).join('') : '';
+    if(hands) hands.innerHTML = opts.victory ? `<div class="finish-ranking">${rankingRows(model)}</div>` : (Array.isArray(lr?.hands) ? lr.hands.map(renderRevealHand).join('') : '');
     if(!overlay.querySelector('.round-close')) overlay.querySelector('.round-card')?.insertAdjacentHTML('beforeend','<button class="btn alt round-close" type="button">Sluiten</button>');
     overlay.querySelector('.round-close')?.addEventListener('click', ()=>{ overlay.classList.remove('show'); overlay.classList.add('hidden'); }, { once:true });
     overlay.classList.remove('hidden');
@@ -112,6 +124,22 @@
     }catch(err){
       savedCompleted.delete(id);
       setText('metaLine', 'Match afgelopen, maar stats opslaan mislukte: '+(err.message||err));
+    }
+  }
+  async function persistCheckpoint(payload){
+    const id = payload?.game?.id || gameId;
+    const roundNo = Number(payload?.game?.state?.round_no || 0);
+    if(!id || roundNo < 10 || !api.recordCompleted) return;
+    const bucket = Math.floor(roundNo / 10) * 10;
+    const key = `gejast_pikken_checkpoint_saved_${id}_${bucket}`;
+    if(savedCheckpoints.has(key)) return;
+    try{ if(localStorage.getItem(key)==='1') return; }catch(_){}
+    savedCheckpoints.add(key);
+    try{
+      await api.recordCompleted(id);
+      try{ localStorage.setItem(key,'1'); }catch(_){}
+    }catch(err){
+      savedCheckpoints.delete(key);
     }
   }
   function render(payload){
@@ -162,6 +190,7 @@
       if(note){ note.classList.remove('dice-rolling'); void note.offsetWidth; note.classList.add('dice-rolling'); }
     }
     if(ph==='finished') persistCompleted(payload);
+    else persistCheckpoint(payload);
     lastRoundNo=roundNo; lastRevealKey=revealKey || lastRevealKey; hasRendered=true;
     const my=$('myDiceBody'); if(my) my.innerHTML = '';
 

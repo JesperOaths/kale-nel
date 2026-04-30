@@ -19,6 +19,7 @@
   function liveHref(id){ return `./pikken_live.html?client_match_id=${encodeURIComponent(String(id||''))}${api.scope()==='family'?'&scope=family':''}`; }
   function updateUrl(id){ if(!id) return; try { history.replaceState(null, '', `pikken.html?game_id=${encodeURIComponent(id)}${api.scope()==='family'?'&scope=family':''}`); } catch (_) {} }
   function bidText(bid){ const c=Number(bid?.count || bid?.bid_count || 0), f=Number(bid?.face || bid?.bid_face || 0); if(!c || !f) return '--'; return f===1?`${c} x pik`:`${c} x ${f}`; }
+  function displayLobbyCode(code){ const raw=String(code||'').trim(); const m=raw.match(/^DESPINOZA\s*(\d+)$/i); return m ? `Despinoza ${m[1]}` : raw; }
   function revealLine(lr){
     const loser = lr?.loser_name || (lr?.loser_id ? `speler ${lr.loser_id}` : 'onbekend');
     const after = Number.isFinite(Number(lr?.loser_dice_after)) ? ` - nu ${Number(lr.loser_dice_after)} dobbel(s)` : '';
@@ -124,7 +125,7 @@
       window.location.replace(liveHref(state.gameId));
       return;
     }
-    const code=$('pkLobbyCode'); if(code) code.textContent = game.lobby_code || game.code || '--';
+    const code=$('pkLobbyCode'); if(code) code.textContent = displayLobbyCode(game.lobby_code || game.code || '--');
     const live=$('pkLiveLink'); if(live){ live.href = liveHref(state.gameId); live.style.display = state.gameId ? '' : 'none'; }
     const sum=$('pkMatchSummary'); if(sum){ sum.textContent = phase==='lobby' ? `Lobby ${game.lobby_code || game.code || ''} - ${payload.players?.length || 0} speler(s)` : `${phase} - ronde ${Number(game?.state?.round_no||0)}`; }
     const bid=$('pkBidText'); if(bid) bid.textContent = bidText(game?.state?.bid);
@@ -147,8 +148,8 @@
       state.cleanupCheckedAt = Date.now();
       api.cleanupStale && api.cleanupStale().catch(()=>{});
     }
-    try { const l=await api.openLobbies(); const rows=Array.isArray(l)?l:(l.rows||l.items||l.lobbies||l.matches||[]); if(lobbyBox) lobbyBox.innerHTML = rows.length ? rows.map((r)=>`<article class="feed-card"><div class="feed-head"><div><div class="feed-title">Code ${esc(r.lobby_code||r.code||'')}</div><div class="feed-meta">${esc(r.host_name||r.created_by_player_name||'Host')} - ${Number(r.player_count||0)} speler(s) - ${Number(r.ready_count||0)} ready</div></div><span class="pill wait">Lobby</span></div><div class="feed-actions"><button class="btn alt tiny" data-join-code="${esc(r.lobby_code||r.code||'')}">Join</button></div></article>`).join('') : '<div class="muted">Geen open Pikken-lobbies.</div>'; } catch(e){ if(lobbyBox) lobbyBox.innerHTML='<div class="muted">Open lobbies konden niet laden: '+esc(e.message||e)+'</div>'; }
-    try { const l=await api.liveMatches(); const rows=Array.isArray(l)?l:(l.rows||l.items||l.lobbies||l.matches||[]); if(liveBox) liveBox.innerHTML = rows.length ? rows.map((r)=>`<article class="feed-card"><div class="feed-head"><div><div class="feed-title">${esc(r.lobby_code||r.code||'Pikken')}</div><div class="feed-meta">${esc(r.phase||r.status||'live')} - ronde ${Number(r.round_no||0)} - ${Number(r.player_count||0)} speler(s)</div></div><span class="pill ok">Live</span></div><div class="feed-actions"><a class="btn alt tiny" href="${liveHref(r.game_id||r.id)}">Open live</a></div></article>`).join('') : '<div class="muted">Geen live Pikken-matches.</div>'; } catch(e){ if(liveBox) liveBox.innerHTML='<div class="muted">Live matches konden niet laden: '+esc(e.message||e)+'</div>'; }
+    try { const l=await api.openLobbies(); const rows=Array.isArray(l)?l:(l.rows||l.items||l.lobbies||l.matches||[]); if(lobbyBox) lobbyBox.innerHTML = rows.length ? rows.map((r)=>`<article class="feed-card"><div class="feed-head"><div><div class="feed-title">${esc(displayLobbyCode(r.lobby_code||r.code||''))}</div><div class="feed-meta">${esc(r.host_name||r.created_by_player_name||'Host')} - ${Number(r.player_count||0)} speler(s) - ${Number(r.ready_count||0)} ready</div></div><span class="pill wait">Lobby</span></div><div class="feed-actions"><button class="btn alt tiny" data-join-code="${esc(r.lobby_code||r.code||'')}">Join</button></div></article>`).join('') : '<div class="muted">Geen open Pikken-lobbies.</div>'; } catch(e){ if(lobbyBox) lobbyBox.innerHTML='<div class="muted">Open lobbies konden niet laden: '+esc(e.message||e)+'</div>'; }
+    try { const l=await api.liveMatches(); const rows=Array.isArray(l)?l:(l.rows||l.items||l.lobbies||l.matches||[]); if(liveBox) liveBox.innerHTML = rows.length ? rows.map((r)=>`<article class="feed-card"><div class="feed-head"><div><div class="feed-title">${esc(displayLobbyCode(r.lobby_code||r.code||'Pikken'))}</div><div class="feed-meta">${esc(r.phase||r.status||'live')} - ronde ${Number(r.round_no||0)} - ${Number(r.player_count||0)} speler(s)</div></div><span class="pill ok">Live</span></div><div class="feed-actions"><a class="btn alt tiny" href="${liveHref(r.game_id||r.id)}">Open live</a></div></article>`).join('') : '<div class="muted">Geen live Pikken-matches.</div>'; } catch(e){ if(liveBox) liveBox.innerHTML='<div class="muted">Live matches konden niet laden: '+esc(e.message||e)+'</div>'; }
   }
   async function createLobby(){
     try { api.requireSession && api.requireSession(); } catch(e){ setStatus(normalizeError(e), true); return; }
