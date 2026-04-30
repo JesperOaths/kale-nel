@@ -1,9 +1,9 @@
-﻿(function(){
+(function(){
   const CONFIG = {
-    VERSION:'v717',
+    VERSION:'v719',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
-    MAKE_WEBHOOK_URL: '',
+    MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
     CLAIM_EMAIL_RPC: 'claim_email_jobs_http',
     EMAIL_SUBJECT: 'Activeer je account voor de Kale Nel',
     GOLD: '#9a8241',
@@ -35,10 +35,9 @@
     } catch (_) { return null; }
   }
   function parseVersion(v){ const m=String(v||'').match(/v?(\d+)/i); return m?Number(m[1]):0; }
-  const candidates = [window.GEJAST_SITE_VERSION, window.GEJAST_PAGE_VERSION, CONFIG.VERSION, detectScriptVersion()].filter(Boolean);
+  const candidates = [detectScriptVersion(), window.GEJAST_PAGE_VERSION, CONFIG.VERSION].filter(Boolean);
   const effectiveVersion = candidates.sort((a,b)=>parseVersion(b)-parseVersion(a))[0] || CONFIG.VERSION;
-  let currentVersion = effectiveVersion;
-  let label = `${currentVersion}  -  Made by Bruis`;
+  const label = `${effectiveVersion} · Made by Bruis`;
   window.GEJAST_PAGE_VERSION = effectiveVersion;
 
   function watermarkStyles(node){
@@ -83,28 +82,8 @@
   function applyVersionLabel(){
     const nodes = ensureVersionWatermark();
     nodes.forEach((node)=>{ node.textContent = label; watermarkStyles(node); });
-    const re = /v\d+\s*[ - .-]?\s*Made by Bruis/i;
+    const re = /v\d+\s*[·.-]?\s*Made by Bruis/i;
     document.querySelectorAll('body *').forEach((node)=>{ if (node.children.length) return; const txt=(node.textContent||'').trim(); if (re.test(txt)) { node.textContent = label; watermarkStyles(node); } });
-  }
-  async function refreshVersionFromFile(){
-    try {
-      const res = await fetch('./VERSION?ts=' + Date.now(), { cache:'no-store' });
-      if (!res.ok) return currentVersion;
-      const text = String(await res.text() || '').trim();
-      const parsed = text.match(/v?\d+/i);
-      if (!parsed) return currentVersion;
-      currentVersion = parsed[0].toLowerCase().startsWith('v') ? parsed[0] : `v${parsed[0]}`;
-      label = `${currentVersion}  -  Made by Bruis`;
-      window.GEJAST_PAGE_VERSION = currentVersion;
-      if (window.GEJAST_CONFIG) {
-        window.GEJAST_CONFIG.VERSION = currentVersion;
-        window.GEJAST_CONFIG.VERSION_LABEL = label;
-      }
-      applyVersionLabel();
-      return currentVersion;
-    } catch (_) {
-      return currentVersion;
-    }
   }
 
 
@@ -334,7 +313,6 @@ function playerSessionKeys(){
   return []
     .concat(Array.isArray(CONFIG.PLAYER_SESSION_KEYS) ? CONFIG.PLAYER_SESSION_KEYS : [])
     .concat(['jas_session_token_v11','jas_session_token_v10'])
-    .concat(['jas_session_token','player_session_token','gejast_player_session_token','gejast_session_token','account_session_token'])
     .map((value)=>String(value || '').trim())
     .filter((value)=>{
       if (!value || seen.has(value)) return false;
@@ -359,55 +337,6 @@ function getPlayerSessionToken(){
       return String(value).trim();
     }
   }
-  const stores = [localStorage, sessionStorage];
-  const tokenFields = ['session_token','session_token_input','player_session_token','sessionToken','token','access_token'];
-  function deepToken(value, depth){
-    if (!value || depth > 4) return '';
-    if (typeof value === 'string') return value.trim().length > 12 ? value.trim() : '';
-    if (typeof value !== 'object') return '';
-    for (const field of tokenFields){
-      const found = value[field];
-      if (typeof found === 'string' && found.trim().length > 12) return found.trim();
-    }
-    for (const nested of Object.values(value)){
-      const found = deepToken(nested, depth + 1);
-      if (found) return found;
-    }
-    return '';
-  }
-  for (const store of stores){
-    for (let i = 0; i < store.length; i += 1){
-      const key = store.key(i) || '';
-      if (!/session|account|login|player|gejast|jas/i.test(key)) continue;
-      const raw = store.getItem(key) || '';
-      if (!raw) continue;
-      try {
-        const parsed = JSON.parse(raw);
-        const value = deepToken(parsed, 0);
-        if (value){
-          mirrorPlayerSessionToken(value);
-          return value;
-        }
-      } catch (_) {
-        if (/^[A-Za-z0-9._~+/=-]{16,}$/.test(raw.trim()) && /session|token/i.test(key)){
-          mirrorPlayerSessionToken(raw);
-          return raw.trim();
-        }
-      }
-    }
-  }
-  try {
-    for (const pair of String(document.cookie || '').split(';')){
-      const [rawKey, ...rest] = pair.split('=');
-      const key = decodeURIComponent(String(rawKey || '').trim());
-      if (!/session|token|player|jas|gejast/i.test(key)) continue;
-      const value = decodeURIComponent(rest.join('=').trim());
-      if (value && value.length > 12){
-        mirrorPlayerSessionToken(value);
-        return value;
-      }
-    }
-  } catch (_) {}
   return '';
 }
 function clearPlayerSessionTokens(){
@@ -750,7 +679,7 @@ function buildRequestUrl(returnTo, scope){
       setTimeout(showPageNow, 0);
     }
     setTimeout(showPageNow, 650);
-    return { VERSION:'v717', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
+    return { VERSION:'v719', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
   })();
   window.GEJAST_FAST_RUNTIME = FAST_RUNTIME;
 
@@ -760,7 +689,6 @@ function buildRequestUrl(returnTo, scope){
     FAST_RUNTIME,
     ensureVersionWatermark,
     applyVersionLabel,
-    refreshVersionFromFile,
     normalizeProfileImageUrl,
     fetchScopedActivePlayerNames,
     getActivatedPlayerNamesForScope,
@@ -817,7 +745,6 @@ function buildRequestUrl(returnTo, scope){
     try { FAST_RUNTIME && FAST_RUNTIME.showPageNow && FAST_RUNTIME.showPageNow(); } catch(_) {}
     try { if ((location.pathname||'').toLowerCase().endsWith('/index.html') || (location.pathname||'').toLowerCase()==='/' || !(location.pathname||'').split('/').pop()) { document.querySelectorAll('#ghprError').forEach(function(n){ n.remove(); }); } } catch(_) {}
     applyVersionLabel();
-    refreshVersionFromFile();
     ensureSiteAnnouncementRuntime();
     ensureScopeHardeningRuntime();
     if (getPlayerSessionToken() && shouldAutoInstallActivityKeepalive()) installActivityKeepalive();
@@ -827,6 +754,13 @@ function buildRequestUrl(returnTo, scope){
   } else {
     afterDomReady();
   }
+  try {
+    if (typeof document !== 'undefined' && !document.querySelector('script[src*="gejast-v719-repair.js"]')) {
+      var v719s = document.createElement('script');
+      v719s.src = './gejast-v719-repair.js?v719';
+      v719s.async = false;
+      document.head.appendChild(v719s);
+    }
+  } catch (_) {}
+
 })();
-
-

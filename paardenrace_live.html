@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace live</title>
-  <script>window.GEJAST_PAGE_VERSION='v717';</script>
-  <script src="./gejast-config.js?v717"></script><script src="./gejast-game-group-b-bridge.js?v717"></script><script src="./gejast-home-gate.js?v717"></script>
-  <script src="./gejast-paardenrace.js?v717"></script>
+  <script>window.GEJAST_PAGE_VERSION='v683';</script>
+  <script src="./gejast-config.js?v683"></script><script src="./gejast-game-group-b-bridge.js?v683"></script><script src="./gejast-home-gate.js?v683"></script>
+  <script src="./gejast-paardenrace.js?v683"></script>
   <style>
     :root{
       --gold:#9a8241;--paper:#fffaf3;--ink:#17130f;--muted:#6d6256;--line:rgba(0,0,0,.08);--bg:#efe6d7;
@@ -87,15 +87,6 @@
     .pr-track-cell.is-finish{background:linear-gradient(180deg,#ead9b5,#dbc28c)}
     .pr-horse-token{font-size:28px;font-weight:900;line-height:1}
     .pr-live-placeholder,.pr-minimap-empty{padding:16px;border-radius:16px;background:#fff;border:1px solid var(--line);color:var(--muted)}
-    .pr-full-minimap-board{padding:14px;border-radius:24px;background:linear-gradient(180deg,#fff8ed,#f3eadc);border:1px solid rgba(0,0,0,.07)}
-    .pr-full-minimap-board .pr-minimap{gap:12px}
-    .pr-full-minimap-board .pr-minimap-row{grid-template-columns:44px minmax(0,1fr);gap:12px}
-    .pr-full-minimap-board .pr-minimap-label{font-size:20px}
-    .pr-full-minimap-board .pr-minimap-track{gap:7px}
-    .pr-full-minimap-board .pr-minimap-cell{height:48px;border-radius:18px;background:#fff;box-shadow:inset 0 -8px 16px rgba(0,0,0,.035)}
-    .pr-full-minimap-board .pr-minimap-horse{font-size:30px}
-    .pr-full-minimap-board .pr-minimap-gate-cell{min-height:64px}
-    .pr-full-minimap-board .pr-gate-mini{min-height:60px;font-size:18px}
     .pr-card-back{width:100%;aspect-ratio:311/410;border-radius:16px;background:linear-gradient(180deg,#2c2c34 0%,#17130f 100%);border:1px solid rgba(255,255,255,.18);color:#f3e3a6;display:flex;align-items:center;justify-content:center;font:900 12px/1 Inter,system-ui,sans-serif;letter-spacing:.08em;box-shadow:0 10px 22px rgba(0,0,0,.16)}
     .pr-open-card{position:relative;width:100%;aspect-ratio:311/410;border-radius:16px;background:linear-gradient(180deg,#fdf9f0 0%,#f5eedf 100%);border:1px solid rgba(77,57,31,.28);box-shadow:0 10px 22px rgba(0,0,0,.12);overflow:hidden;color:#1f1b1a}
     .pr-open-card.red{color:#a11f35}
@@ -136,14 +127,14 @@
       .pr-horse-token{font-size:24px}
     }
   </style>
-<script src="./gejast-paardenrace-input-guard.js?v717"></script></head>
+<script src="./gejast-paardenrace-input-guard.js?v683"></script></head>
 <body data-game-watermark="soft">
 <div class="page"><div class="shell">
   <div class="top">
     <div>
       <div class="small">Room-specifieke live race</div>
       <h1 class="title">Paardenrace live</h1>
-      <div class="small" id="metaBox">Wachten op room...</div>
+      <div class="small" id="metaBox">Wachten op room…</div>
     </div>
     <div class="toolbar">
       <button class="btn secondary" id="rulesBtn" type="button">Regels</button>
@@ -164,7 +155,7 @@
         <strong>Minimap</strong>
         <span class="focus-chip" id="heroStageChip">Lobby</span>
       </div>
-      <div id="mobileMinimap" class="pr-minimap-empty">Wachten op racebord...</div>
+      <div id="mobileMinimap" class="pr-minimap-empty">Wachten op racebord…</div>
       <div class="hero-meta">
         <div class="hero-kpi"><div class="k">Pot</div><div class="v" id="heroPot">0</div></div>
         <div class="hero-kpi"><div class="k">Ready</div><div class="v" id="heroReady">0/0</div></div>
@@ -225,12 +216,12 @@
       <button class="btn secondary" id="closeRulesBtn" type="button">Sluiten</button>
     </div>
     <ol style="display:grid;gap:10px;line-height:1.5">
-      <li>Iedereen kiest een suit/paard en zet een vaste inzet in Bakken.</li>
+      <li>Iedereen kiest één suit/paard en zet één vaste inzet in Bakken.</li>
       <li>De host verifieert die inzet in de lobby; pas daarna kan een speler ready drukken.</li>
-      <li>Elke getrokken kaart zet het bijbehorende paard een vak vooruit.</li>
-      <li>Als het laatste paard voor het eerst een gate-kolom bereikt of passeert, opent die gate en gaat het getrokken suit een vak terug.</li>
-      <li>De eerste crossing telt alleen als minstens een speler op dat paard had ingezet.</li>
-      <li>Na de finish verdelen winnaars hun nominaties tot maximaal 2x hun lobby-inzet.</li>
+      <li>Elke getrokken kaart zet het bijbehorende paard één vak vooruit.</li>
+      <li>Als het laatste paard voor het eerst een gate-kolom bereikt of passeert, opent die gate en gaat het getrokken suit één vak terug.</li>
+      <li>De eerste crossing telt alleen als minstens één speler op dat paard had ingezet.</li>
+      <li>Na de finish verdelen winnaars hun nominaties tot maximaal 2× hun lobby-inzet.</li>
       <li>Na een nieuwe ronde blijf je in dezelfde lobby, met dezelfde host en spelers, maar kies je opnieuw suit en inzet.</li>
     </ol>
   </div>
@@ -260,17 +251,11 @@
   let pendingGateQueue = [];
   let statePollTimer = null;
   let autoCloseQueued = false;
-  let missingStateCount = 0;
   async function rpcAny(names, payload){ let lastErr=null; for(const name of names){ try{ return await api.rpc(name, payload); }catch(err){ lastErr=err; } } throw lastErr || new Error('Actie mislukt.'); }
 
   function qRoom(){
     const params = new URLSearchParams(location.search);
     return params.get('room') || params.get('live') || api.getStoredRoomCode() || '';
-  }
-  function goBackToLobby(reason){
-    try { stopAutoplay(); if(statePollTimer){ clearInterval(statePollTimer); statePollTimer = null; } } catch(_){}
-    if (reason) setStatus(reason);
-    window.setTimeout(()=>{ window.location.replace(api.scopedHref('./paardenrace.html')); }, 180);
   }
   async function cleanupIdleRooms(){ try{ await api.rpc('paardenrace_cleanup_idle_lobbies_v495', {}); }catch(_){ } }
   function setStatus(msg){ if($('statusBox')) $('statusBox').textContent = msg || ''; }
@@ -303,7 +288,7 @@
       <div class="player-row">
         <div>
           <strong>${p.player_name}</strong>
-          <div class="small">${api.suitLabel(p.selected_suit)} - inzet ${p.wager_bakken || 0} Bakken - totaal ${p.total_bakken_owed || 0} Bakken</div>
+          <div class="small">${api.suitLabel(p.selected_suit)} · inzet ${p.wager_bakken || 0} Bakken · totaal ${p.total_bakken_owed || 0} Bakken</div>
         </div>
         <div class="player-actions">
           ${p.is_host ? '<span class="chip">Host</span>' : ''}
@@ -321,7 +306,7 @@
     const others = (Array.isArray(players) ? players : []).filter((p)=>String(p.player_name).toLowerCase() !== String(viewer.player_name).toLowerCase());
     return `
       <div class="nom-row"><strong>Jouw budget</strong><div class="small">${myBudget} Bakken te verdelen</div></div>
-      ${others.map((p)=>`<div class="nom-row"><strong>${p.player_name}</strong><div class="small">${api.suitLabel(p.selected_suit)} - ${p.total_bakken_owed || 0} totaal verschuldigd</div></div>`).join('')}
+      ${others.map((p)=>`<div class="nom-row"><strong>${p.player_name}</strong><div class="small">${api.suitLabel(p.selected_suit)} · ${p.total_bakken_owed || 0} totaal verschuldigd</div></div>`).join('')}
       <button class="btn" type="button" id="drawerOpenNomBtn">Verdeling invullen</button>
     `;
   }
@@ -382,7 +367,7 @@
 
   function renderChrome(room, match, players, viewer){
     const summary = api.summarizeLiveRoom(room, match, players, viewer);
-    $('metaBox').textContent = `${room.room_code || '-'} - ${room.stage_label || room.stage || 'Lobby'}${room.countdown_remaining_seconds ? ` - countdown ${room.countdown_remaining_seconds}s` : ''}`;
+    $('metaBox').textContent = `${room.room_code || '—'} · ${room.stage_label || room.stage || 'Lobby'}${room.countdown_remaining_seconds ? ` · countdown ${room.countdown_remaining_seconds}s` : ''}`;
     $('heroStageChip').textContent = room.stage_label || room.stage || 'Lobby';
     $('heroPot').textContent = String(summary.totalPot || 0);
     $('heroReady').textContent = `${summary.ready}/${(players || []).length || 0}`;
@@ -408,7 +393,7 @@
     bindKickButtons();
   }
 
-  function renderBoardFrame(match){ $('boardBox').innerHTML = `<div class="pr-full-minimap-board">${api.renderRaceMinimap(match)}</div>`; }
+  function renderBoardFrame(match){ $('boardBox').innerHTML = api.renderLiveBoard(match); }
 
   async function applyState(state, options={}){
     const room = state?.room || {};
@@ -420,7 +405,7 @@
     renderBoardFrame(match);
     if (!options.noAutoClose && room.stage === 'finished' && viewer?.is_host && !viewer?.can_nominate && !autoCloseQueued) {
       autoCloseQueued = true;
-      setStatus('Alle nominaties zijn binnen. De match sluit automatisch...');
+      setStatus('Alle nominaties zijn binnen. De match sluit automatisch…');
       window.setTimeout(()=>closeMatchAction(true), 1400);
     }
   }
@@ -430,32 +415,15 @@
     if (!code) return;
     try {
       await cleanupIdleRooms();
-      let state = await rpcAny(['get_paardenrace_room_state_fast_v687','get_paardenrace_room_state_safe'], { room_code_input: code });
-      if (String(state?.room?.stage || '').toLowerCase() === 'countdown') {
-        state = await api.rpc('tick_paardenrace_room_safe', { room_code_input: code }, { timeoutMs: opts.timeoutMs || 4200 });
-      }
+      const state = await api.rpc('tick_paardenrace_room_safe', { room_code_input: code }, { timeoutMs: opts.timeoutMs || 4200 });
       if (!state || !state.room || String(state.room.stage || '').toLowerCase() === 'closed') {
-        missingStateCount += 1;
-        if (missingStateCount < 3) {
-          setStatus('Room sync loopt achter, opnieuw laden...');
-          return;
-        }
         bounceToLobby('Deze lobby is gesloten. Je gaat terug naar de lobby.');
         return;
-      }
-      missingStateCount = 0;
-      if (String(state.room.stage || '').toLowerCase() === 'lobby') {
-        setStatus('Race is nog niet gestart. Wachten op start vanuit de lobby...');
       }
       await applyState(state, opts);
     } catch(err) {
       const msg = err.message || 'Kon state niet laden.';
       if (/room niet gevonden|gesloten|closed/i.test(msg)) {
-        missingStateCount += 1;
-        if (missingStateCount < 3) {
-          setStatus('Room sync loopt achter, opnieuw laden...');
-          return;
-        }
         bounceToLobby('Deze lobby is niet meer actief. Je gaat terug naar de lobby.');
       } else {
         setStatus(msg);
@@ -591,6 +559,6 @@
   }, 1800);
 })();
 </script>
-<div class="site-credit-watermark" data-version-watermark>v717 - Made by Bruis</div>
+<div class="site-credit-watermark" data-version-watermark>v683 · Made by Bruis</div>
 <script id="gejast-game-group-b-boot">(function(){function boot(){try{window.GEJAST_GAME_GROUP_B_BRIDGE&&window.GEJAST_GAME_GROUP_B_BRIDGE.bootPanel&&window.GEJAST_GAME_GROUP_B_BRIDGE.bootPanel({game:'paardenrace'});}catch(_){}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();})();</script></body>
 </html>
