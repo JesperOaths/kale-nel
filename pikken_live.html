@@ -7,9 +7,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken match</title>
-  <script>window.GEJAST_PAGE_VERSION='v721';</script>
-  <script src="./gejast-config.js?v721"></script><script src="./gejast-game-group-b-bridge.js?v721"></script><script src="./gejast-home-gate.js?v721"></script>
-  <script src="./gejast-live-summary.js?v721"></script>
+  <script>window.GEJAST_PAGE_VERSION='v722';</script>
+  <script src="./gejast-config.js?v722"></script><script src="./gejast-game-group-b-bridge.js?v722"></script><script src="./gejast-home-gate.js?v722"></script>
+  <script src="./gejast-live-summary.js?v722"></script>
   <style>
     :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--panel:#fff;--shadow:0 18px 44px rgba(0,0,0,.08);--ok:#1f6a46;--bad:#8b2d20;--soft:#f4ecdd;--green:#2f8f5c;--gold:#9a8241}
     *{box-sizing:border-box}
@@ -30,6 +30,19 @@
     .rules-copy{padding:12px 14px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.08);color:#5f5549;font-size:13px;line-height:1.45}
     .dock{position:sticky;bottom:10px;z-index:30;margin-top:14px;padding:12px;border-radius:20px;background:rgba(255,251,245,.96);backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.08);display:grid;gap:12px}.dock-main{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.dock-right{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}.field-inline{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.field-inline select{padding:12px 13px;border-radius:14px;border:1px solid rgba(0,0,0,.12);font:inherit;background:#fff;min-width:220px}.status-note{padding:12px 14px;border-radius:16px;background:#fbfaf6;border:1px solid rgba(0,0,0,.08);color:#6b6257;flex:1 1 260px}.vote-big{font-size:18px;line-height:1}.hidden{display:none !important}
     @media (max-width:980px){.hero{grid-template-columns:1fr}} @media (max-width:700px){body{padding:8px}.shell{padding:12px;border-radius:22px}.title-wrap h1{font-size:21px}.seat-ring{min-height:380px}.table-center{width:min(205px,54vw)}.seat{min-width:92px;max-width:110px;padding:8px 9px}.seat-name{font-size:13px}.seat-meta{font-size:11px}.seat.left{left:6px}.seat.right{right:6px}.seat.top{top:6px}.seat.bottom{bottom:6px}.seat.extra1{left:7%;top:48px}.seat.extra2{right:7%;top:48px}.seat.extra3{right:7%;bottom:48px}.seat.extra4{left:7%;bottom:48px}.grid3{grid-template-columns:1fr 1fr}.grid3 .chip:last-child{grid-column:1 / -1}.dock{padding:10px}.dock-main,.dock-right{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0}.dock-right .btn:last-child{grid-column:1 / -1}.dock-main .btn,.dock-right .btn,.field-inline .btn{width:100%;min-width:0}.field-inline{display:grid;grid-template-columns:1fr 1fr;gap:8px}.field-inline select{min-width:0;width:100%;grid-column:1 / -1}.status-note{grid-column:1 / -1}img.die{width:38px;height:38px}}
+  
+    .side-layout .panel:has(.rules-copy){display:none!important}
+    .v722-victory-overlay{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:rgba(20,16,11,.58);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);padding:18px}
+    .v722-victory-card{position:relative;overflow:hidden;width:min(720px,96vw);border-radius:30px;background:linear-gradient(180deg,#fff9ec,#fff);border:1px solid rgba(212,175,55,.45);box-shadow:0 28px 80px rgba(0,0,0,.35);padding:26px}
+    .v722-victory-title{text-align:center;font-size:clamp(30px,6vw,54px);font-weight:1000;letter-spacing:-.06em;margin:0;color:#21170e;position:relative;z-index:2}
+    .v722-victory-winner{text-align:center;font-size:clamp(34px,7vw,66px);font-weight:1000;color:#9a8241;margin:8px 0 12px;position:relative;z-index:2;text-shadow:0 2px 0 #fff}
+    .v722-victory-sub{text-align:center;color:#6b6257;font-weight:800;margin-bottom:14px;position:relative;z-index:2}
+    .v722-finish-list{display:grid;gap:8px;position:relative;z-index:2}
+    .v722-finish-row{display:flex;justify-content:space-between;gap:12px;align-items:center;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:16px;padding:10px 12px;font-weight:900}
+    .v722-finish-row:first-child{background:linear-gradient(90deg,#fff1bd,#fff);border-color:rgba(212,175,55,.45)}
+    .v722-victory-close{position:relative;z-index:2;margin:18px auto 0;display:flex}
+    .v722-burst span,.v722-burst img{position:absolute;z-index:1;pointer-events:none}.v722-balloon{width:34px;height:46px;border-radius:50% 50% 45% 45%;background:#d4af37;animation:v722-pop 900ms ease both}.v722-balloon.b2{background:#8a1022}.v722-balloon.b3{background:#2f6d3c}.v722-streamer{width:130px;height:12px;border-radius:999px;background:linear-gradient(90deg,#d4af37,#8a1022,#2f6d3c);animation:v722-stream 1100ms ease both}.v722-die{width:42px;height:42px;border-radius:10px;background:#fff;border:2px solid #111;display:grid;place-items:center;font-weight:1000;box-shadow:0 10px 20px rgba(0,0,0,.14);animation:v722-pop 900ms ease both}.v722-logo{width:64px;height:64px;opacity:.28;animation:v722-spin 1400ms ease both}
+    @keyframes v722-pop{0%{transform:scale(.2) translateY(30px);opacity:0}70%{opacity:1}100%{transform:scale(1) translateY(0);opacity:1}}@keyframes v722-stream{0%{transform:scaleX(.05) rotate(0);opacity:0}100%{transform:scaleX(1) rotate(var(--r,0deg));opacity:1}}@keyframes v722-spin{from{transform:rotate(-80deg) scale(.4);opacity:0}to{transform:rotate(0) scale(1);opacity:.28}}
   </style>
 </head>
 <body data-game-watermark="soft">
@@ -83,9 +96,9 @@
       <div class="dock-main"><div class="status-note" id="mobileContext" style="display:none">Wachten op state…</div><div class="dock-right"><button class="btn alt hidden" id="leaveBtn" type="button">Verlaat match</button><button class="btn danger hidden" id="destroyBtn" type="button">Stop & verwijder</button></div></div>
     </div>
   </div></div>
-  <script src="./gejast-pikken-contract.js?v721"></script>
-  <script src="./gejast-v721-repair.js?v721"></script>
-  <script src="./gejast-pikken-live.js?v721"></script>
+  <script src="./gejast-pikken-contract.js?v722"></script>
+  <script src="./gejast-v722-repair.js?v722"></script>
+  <script src="./gejast-pikken-live.js?v722"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
   <div class="site-credit-watermark" data-version-watermark></div>
 <script id="gejast-game-group-b-boot">(function(){function boot(){try{window.GEJAST_GAME_GROUP_B_BRIDGE&&window.GEJAST_GAME_GROUP_B_BRIDGE.bootPanel&&window.GEJAST_GAME_GROUP_B_BRIDGE.bootPanel({game:'pikken'});}catch(_){}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();})();</script></body>
