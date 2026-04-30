@@ -3,7 +3,7 @@
   if (!api) { console.error('GEJAST_PIKKEN_CONTRACT missing'); return; }
   const params = new URLSearchParams(location.search);
   const gameId = params.get('client_match_id') || params.get('game_id') || '';
-  let timer = null, busy = false, lastVersion = -1, model = null, hasRendered = false, lastRoundNo = 0, lastRevealKey = '';
+  let timer = null, busy = false, lastVersion = -1, model = null, hasRendered = false, lastRoundNo = 0, lastRevealKey = '', finishedOverlayShown = false;
   const savedCompleted = new Set();
   const $ = (id)=>document.getElementById(id);
   const esc = (v)=>String(v ?? '').replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
@@ -153,9 +153,12 @@
     const note=$('diceStateNote'); if(note) note.innerHTML = diceHtml;
     const roundNo=Number(st.round_no||0);
     const revealKey=st.last_reveal ? `${st.last_reveal.round_no||''}:${st.last_reveal.loser_id||''}:${st.last_reveal.counted_total||''}` : '';
-    if(hasRendered && st.last_reveal && (roundNo!==lastRoundNo || ph==='finished') && revealKey && revealKey!==lastRevealKey){
+    const showFinishedNow = ph === 'finished' && st.last_reveal && revealKey && !finishedOverlayShown;
+    const showRoundNow = hasRendered && st.last_reveal && roundNo !== lastRoundNo && revealKey && revealKey !== lastRevealKey;
+    if(showFinishedNow || showRoundNow){
       const winner=ph==='finished' ? winnerFrom(payload) : '';
       showRoundOverlay(st.last_reveal, { victory: ph==='finished', winner, sticky: ph==='finished' });
+      if(ph === 'finished') finishedOverlayShown = true;
       if(note){ note.classList.remove('dice-rolling'); void note.offsetWidth; note.classList.add('dice-rolling'); }
     }
     if(ph==='finished') persistCompleted(payload);
