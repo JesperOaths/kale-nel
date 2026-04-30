@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v719',
+    VERSION:'v720',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: 'https://hook.eu1.make.com/h63v9tzv3o1i8hqtx2m5lfugrn5funy6',
@@ -679,7 +679,7 @@ function buildRequestUrl(returnTo, scope){
       setTimeout(showPageNow, 0);
     }
     setTimeout(showPageNow, 650);
-    return { VERSION:'v719', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
+    return { VERSION:'v720', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
   })();
   window.GEJAST_FAST_RUNTIME = FAST_RUNTIME;
 
@@ -755,11 +755,11 @@ function buildRequestUrl(returnTo, scope){
     afterDomReady();
   }
   try {
-    if (typeof document !== 'undefined' && !document.querySelector('script[src*="gejast-v719-repair.js"]')) {
-      var v719s = document.createElement('script');
-      v719s.src = './gejast-v719-repair.js?v719';
-      v719s.async = false;
-      document.head.appendChild(v719s);
+    if (typeof document !== 'undefined' && !document.querySelector('script[src*="gejast-v720-repair.js"]')) {
+      var v720s = document.createElement('script');
+      v720s.src = './gejast-v720-repair.js?v720';
+      v720s.async = false;
+      document.head.appendChild(v720s);
     }
   } catch (_) {}
 

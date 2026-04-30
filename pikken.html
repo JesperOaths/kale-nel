@@ -7,9 +7,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pikken</title>
-  <script>window.GEJAST_PAGE_VERSION='v687';</script>
-  <script src="./gejast-config.js?v687"></script><script src="./gejast-home-gate.js?v687"></script>
-  <script src="./gejast-scope-context.js?v687"></script>
+  <script>window.GEJAST_PAGE_VERSION='v720';</script>
+  <script src="./gejast-config.js?v720"></script><script src="./gejast-home-gate.js?v720"></script>
+  <script src="./gejast-scope-context.js?v720"></script>
   <style>
     :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241;--shadow:0 18px 44px rgba(0,0,0,.08)}
     *{box-sizing:border-box}
@@ -165,6 +165,20 @@
               </div>
               <span class="pill wait" id="pkLobbyRolePill">Lobby</span>
             </div>
+
+            <div class="field" id="pkLobbyDiceField" style="max-width:280px;margin-top:0">
+              <label>Startdobbelstenen</label>
+              <select id="pkStartDice">
+                <option value="1">1 dobbelsteen</option>
+                <option value="2">2 dobbelstenen</option>
+                <option value="3">3 dobbelstenen</option>
+                <option value="4">4 dobbelstenen</option>
+                <option value="5">5 dobbelstenen</option>
+                <option value="6" selected>6 dobbelstenen</option>
+                <option value="7">7 dobbelstenen</option>
+                <option value="8">8 dobbelstenen</option>
+              </select>
+            </div>
             <div class="sticky-lobby-actions">
               <button class="btn unready-active" id="pkUnreadyBtn">Unready</button>
               <button class="btn alt" id="pkReadyBtn">Ready</button>
@@ -178,9 +192,10 @@
     </div>
   </div>
 
-  <script src="./pikken-dice-canvas.js?v687"></script>
-  <script src="./gejast-pikken-contract.js?v687"></script>
-  <script src="./gejast-pikken.js?v687"></script>
+  <script src="./pikken-dice-canvas.js?v720"></script>
+  <script src="./gejast-pikken-contract.js?v720"></script>
+  <script src="./gejast-v720-repair.js?v720"></script>
+  <script src="./gejast-pikken.js?v720"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 <div class="site-credit-watermark" data-version-watermark></div>
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
