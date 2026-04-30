@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace Lobby</title>
-  <script>window.GEJAST_PAGE_VERSION='v714';</script>
-  <script src="./gejast-config.js?v714"></script><script src="./gejast-home-gate.js?v714"></script>
-  <script src="./gejast-paardenrace.js?v714"></script>
+  <script>window.GEJAST_PAGE_VERSION='v715';</script>
+  <script src="./gejast-config.js?v715"></script><script src="./gejast-home-gate.js?v715"></script>
+  <script src="./gejast-paardenrace.js?v715"></script>
   <style>
     :root{
       --paper:#fbf6ef;--shell:#f5efe6;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241;--gold-soft:#efe5c7;
@@ -80,7 +80,7 @@
       .sticky-actions{bottom:6px;border-radius:16px}.top-actions .btn{flex:1 1 100%}
     }
   </style>
-<script src="./gejast-paardenrace-input-guard.js?v714"></script></head>
+<script src="./gejast-paardenrace-input-guard.js?v715"></script></head>
 <body data-game-watermark="soft">
   <div class="wrap">
     <div class="shell">
@@ -110,7 +110,7 @@
           <div class="field-grid">
             <div class="field">
               <label>Roomcode</label>
-              <input id="roomCodeInput" maxlength="12" placeholder="Bijv. PAARD1" />
+              <input id="roomCodeInput" maxlength="24" placeholder="Automatisch: Despinoza 1" />
             </div>
             <div class="field">
               <label>Directe acties</label>
@@ -223,8 +223,8 @@ const api=window.GEJAST_PAARDENRACE; const $=(id)=>document.getElementById(id); 
  function roomCode(){ return String((($('roomCodeInput') && $('roomCodeInput').value) || api.getStoredRoomCode() || '')).trim().toUpperCase(); }
  function isActiveStage(stage){ return ['countdown','race','nominations','finished'].includes(String(stage||'')); }
  function clearLobbyView(){ $('roomShell').style.display='none'; $('roomCodeLabel').textContent='-'; $('roomMeta').textContent='Nog geen room geladen.'; $('playersBox').innerHTML=''; $('lobbySummaryBox').textContent='Nog geen lobby info.'; $('pendingVerifyList').innerHTML=''; $('adminVerifyBox').style.display='none'; $('selectionEditor').style.display=''; $('savedChoiceBox').style.display='none'; $('roomStageStat').textContent='lobby'; $('roomReadyStat').textContent='0/0'; $('roomPotStat').textContent='0'; $('roomReadyMetric').textContent='0/0'; api.clearStoredRoomCode(); latestState=null; roomCodeDirty=false; roomCodeTouchedAt=0; }
- function shortRoomCode(){ return upperRoomCode(($('roomCodeInput') && $('roomCodeInput').value) || ('P' + Math.random().toString(36).slice(2,7))).slice(0,12); }
- function upperRoomCode(value){ return String(value||'').trim().toUpperCase().replace(/[^A-Z0-9_-]/g,''); }
+ function shortRoomCode(){ return upperRoomCode(($('roomCodeInput') && $('roomCodeInput').value) || 'DESPINOZA ...').slice(0,24); }
+ function upperRoomCode(value){ return String(value||'').trim().toUpperCase().replace(/\s+/g,' ').replace(/[^A-Z0-9 _-]/g,'').trim(); }
  function setOptimisticRoom(code, label){
   const room = upperRoomCode(code) || shortRoomCode();
   optimisticRoomCode = room;
@@ -287,7 +287,7 @@ function applyState(state){ latestState=state||null; const room=state?.room||nul
 async function load(){ const code=roomCode(); if(!code || isSuppressedRoom(code)) return; try{ applyState(await api.rpc('get_paardenrace_room_state_fast_v687',{ room_code_input: code }, { timeoutMs: 3000 })); optimisticUntil=0; optimisticRoomCode=''; setStatus(''); $('syncNote').textContent = new Date().toLocaleTimeString('nl-NL'); }catch(err){ const msg=String(err.message||''); if(Date.now() < optimisticUntil && upperRoomCode(code) === upperRoomCode(optimisticRoomCode)){ return; } if(msg.toLowerCase().includes('room niet gevonden')){ const current=upperRoomCode(latestState?.room?.room_code||''); if(current && current===upperRoomCode(code)){ setStatus(''); return; } try{ const rooms=await api.rpc('get_paardenrace_open_rooms_fast_v687', {}, { timeoutMs: 1800 }); const row=normalizeRows(rooms).find((r)=>upperRoomCode(r.room_code||r.code||'')===upperRoomCode(code)); if(row){ applyState(stateFromOpenRoom(row)); api.setStoredRoomCode(code); setStatus(''); $('syncNote').textContent = new Date().toLocaleTimeString('nl-NL'); return; } }catch(_){} clearLobbyView(); api.clearStoredRoomCode && api.clearStoredRoomCode(); setStatus('Room is gesloten of niet meer live.'); } else { setStatus(msg || 'Kon room niet laden.', true);} } }
  async function doJoin(){ const code = roomCode(); if(!code){ setStatus('Vul eerst een roomcode in.', true); return; } try{ setStatus('Room joinen...'); const state = await api.rpc('join_paardenrace_room_fast_v687', { room_code_input: code }, { timeoutMs: 5200 }); if(isActiveStage(state?.room?.stage)){ api.setStoredRoomCode(state.room.room_code||code); api.gotoLive(state.room.room_code||code); return; } applyState(state); setStatus('Room geladen.'); await loadOpenRooms(true); }catch(err){ try{ const publicRooms = await api.rpc('get_paardenrace_open_rooms_fast_v687', {}, { timeoutMs: 1800 }); const match = (Array.isArray(publicRooms) ? publicRooms : []).find((row)=>String(row?.room_code||'').trim().toUpperCase() === code); if(match && isActiveStage(match.stage)){ api.setStoredRoomCode(code); api.gotoLive(code); return; } if(match){ setStatus('Lobby bestaat; join wordt opnieuw gesynchroniseerd.'); return; } }catch(_){} setStatus(err.message || 'Join mislukt.', true);} }
 async function poll(){ if(polling || createBusy || disbandBusy) return; polling=true; try{ if(roomCode()) await load(); if(!createBusy && !disbandBusy) loadOpenRooms(false).catch(()=>{}); }catch(err){ setStatus(err.message || 'Live sync mislukt.', true);} finally{ polling=false; } }
- $('createBtn').addEventListener('click', async()=>{ if(createBusy) return; createBusy=true; const btn=$('createBtn'); const oldLabel=btn.textContent; btn.disabled=true; btn.textContent='Lobby staat klaar...'; try{ const requested=upperRoomCode(($('roomCodeInput') && $('roomCodeInput').value) || ''); const optimisticCode=requested || shortRoomCode(); markRoomCodeDirty(); setOptimisticRoom(optimisticCode, 'Lobby staat lokaal al klaar. Server bevestigt nu...'); addOptimisticOpenRoom(optimisticCode); setStatus('Lobby aangemaakt, server synchroniseert...'); const created = await api.rpc('create_paardenrace_room_fast_v687', { room_code_input: requested || null }, { timeoutMs: 6500 }); if(!created || typeof created !== 'object'){ throw new Error('Room werd niet correct aangemaakt.'); } applyState(created); const createdCode = upperRoomCode(created?.room?.room_code || requested || optimisticCode); if(createdCode){ api.setStoredRoomCode(createdCode); roomCodeDirty=false; if($('roomCodeInput')) $('roomCodeInput').value=createdCode; } setStatus(`Nieuwe room ${createdCode || ''} aangemaakt.`.trim()); loadOpenRooms(true).catch(()=>{}); }catch(err){ optimisticUntil=0; optimisticRoomCode=''; clearLobbyView(); setStatus(err.message || 'Aanmaken mislukt.', true); loadOpenRooms(true).catch(()=>{});} finally{ createBusy=false; btn.disabled=false; btn.textContent=oldLabel; } });
+$('createBtn').addEventListener('click', async()=>{ if(createBusy) return; createBusy=true; const btn=$('createBtn'); const oldLabel=btn.textContent; btn.disabled=true; btn.textContent='Lobby staat klaar...'; try{ const requested=''; const optimisticCode=shortRoomCode(); markRoomCodeDirty(); setOptimisticRoom(optimisticCode, 'Lobby staat lokaal al klaar. Server bevestigt nu...'); addOptimisticOpenRoom(optimisticCode); setStatus('Lobby aangemaakt, server synchroniseert...'); const created = await api.rpc('create_paardenrace_room_fast_v687', { room_code_input: null }, { timeoutMs: 6500 }); if(!created || typeof created !== 'object'){ throw new Error('Room werd niet correct aangemaakt.'); } applyState(created); const createdCode = upperRoomCode(created?.room?.room_code || optimisticCode); if(createdCode){ api.setStoredRoomCode(createdCode); roomCodeDirty=false; if($('roomCodeInput')) $('roomCodeInput').value=createdCode; } setStatus(`Nieuwe room ${createdCode || ''} aangemaakt.`.trim()); loadOpenRooms(true).catch(()=>{}); }catch(err){ optimisticUntil=0; optimisticRoomCode=''; clearLobbyView(); setStatus(err.message || 'Aanmaken mislukt.', true); loadOpenRooms(true).catch(()=>{});} finally{ createBusy=false; btn.disabled=false; btn.textContent=oldLabel; } });
  $('joinBtn').addEventListener('click', doJoin); $('refreshBtn').addEventListener('click', poll);
  $('saveBtn').addEventListener('click', async()=>{ try{ setStatus('Keuze opslaan...'); const state = await api.rpc('update_paardenrace_room_choice_safe', { room_code_input: roomCode(), selected_suit_input: $('suitInput').value || null, wager_bakken_input: Number($('wagerInput').value || 0), ready_input: false }); applyState(state); setStatus('Suit + inzet opgeslagen en doorgestuurd voor verificatie.'); await loadOpenRooms(true); }catch(err){ setStatus(err.message || 'Opslaan mislukt.', true);} });
 async function setReadyState(ready){
@@ -318,7 +318,7 @@ $('unreadyBtn').addEventListener('click', async()=>{ const btn=$('unreadyBtn'); 
 poll(); pollHandle = setInterval(poll, 1000); window.addEventListener('online', poll); document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) poll(); }); window.addEventListener('beforeunload', ()=>{ if(pollHandle) clearInterval(pollHandle); });
 })();
 </script>
-<div class="site-credit-watermark" data-version-watermark>v714 - Made by Bruis</div>
+<div class="site-credit-watermark" data-version-watermark>v715 - Made by Bruis</div>
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>

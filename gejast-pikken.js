@@ -68,6 +68,13 @@
     const game = payload?.game || {}; const viewer = payload?.viewer || {}; const phase = phaseOf(payload); const inLobby = !!game.id && phase === 'lobby';
     ['pkCreateWrap','pkJoinWrap','pkJoinFieldWrap'].forEach((id)=>{ const el=$(id); if(el) el.classList.toggle('hidden', inLobby); });
     const sticky=$('pkLobbySticky'); if(sticky) sticky.classList.toggle('hidden', !inLobby);
+    const diceField=$('pkLobbyDiceField'); if(diceField) diceField.classList.toggle('hidden', !(inLobby && viewer.is_host));
+    const diceSelect=$('pkStartDice');
+    if(diceSelect){
+      const configured = Number(game?.config?.start_dice || game?.state?.start_dice || 0);
+      if(configured && String(diceSelect.value) !== String(configured)) diceSelect.value = String(Math.max(1, Math.min(8, configured)));
+      diceSelect.disabled = !(inLobby && viewer.is_host);
+    }
     const role=$('pkLobbyRolePill'); if(role){ role.textContent = viewer.is_host ? 'Host' : 'Deelnemer'; role.className = `pill ${viewer.is_ready?'ok':'wait'}`; }
     const note=$('pkLobbyStickyNote'); if(note) note.textContent = viewer.is_ready ? 'Je staat ready.' : 'Je staat unready.';
     const ready=$('pkReadyBtn'); if(ready){ ready.className = `btn ${viewer.is_ready?'ready-active':'alt'}`; ready.disabled = !inLobby || !!viewer.is_ready; }
@@ -156,8 +163,7 @@
     setStatus('Lobby maken...'); setBusyButton('pkCreateLobbyBtn', true, 'Maken...');
     try {
       const mode=$('pkPenaltyMode')?.value || 'wrong_loses';
-      const startDice=Math.max(1, Math.min(10, Number($('pkStartDice')?.value || 6) || 6));
-      const out=await api.createLobby({ penalty_mode:mode, start_dice:startDice, prev_winner_window_hours:12 });
+      const out=await api.createLobby({ penalty_mode:mode, prev_winner_window_hours:12 });
       const id = out?.game_id || out?.id || out?.game?.id || out?.gameId || '';
       if(!id) throw new Error('Lobby is aangemaakt maar de backend gaf geen game_id terug: '+JSON.stringify(out).slice(0,240));
       state.gameId=id; storeGame(state.gameId); updateUrl(state.gameId);
@@ -176,7 +182,16 @@
     }catch(e){ setStatus(normalizeError(e), true); }
     finally{ setBusyButton('pkJoinLobbyBtn', false); }
   }
-  async function startGame(){ setStatus('Starten...'); await api.startGame(state.gameId); window.location.href = liveHref(state.gameId); }
+  async function startGame(){
+    setStatus('Starten...');
+    const mode=$('pkPenaltyMode')?.value || 'wrong_loses';
+    const startDice=Math.max(1, Math.min(8, Number($('pkStartDice')?.value || 6) || 6));
+    if (api.updateLobbyConfig) {
+      await api.updateLobbyConfig(state.gameId, { penalty_mode:mode, start_dice:startDice, prev_winner_window_hours:12 });
+    }
+    await api.startGame(state.gameId);
+    window.location.href = liveHref(state.gameId);
+  }
   async function leave(){ if(!state.gameId) return; await api.leaveGame(state.gameId); storeGame(''); state.gameId=''; stopPolling(); try{ history.replaceState(null,'','pikken.html'); }catch(_){} setStatus('Lobby verlaten.'); await loadFeeds(); }
   async function destroy(){ if(!state.gameId) return; if(!confirm('Host: deze Pikken-lobby/match verwijderen?')) return; await api.destroyGame(state.gameId); storeGame(''); state.gameId=''; stopPolling(); try{ history.replaceState(null,'','pikken.html'); }catch(_){} setStatus('Lobby verwijderd.'); await loadFeeds(); }
   function wire(){ ['pkCreateLobbyBtn','pkJoinLobbyBtn'].forEach((id)=>{ const b=$(id); if(b && !b.getAttribute('data-original-label')) b.setAttribute('data-original-label', b.textContent); });

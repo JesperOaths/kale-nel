@@ -39,6 +39,10 @@
     return alive.length===1 ? (alive[0].name||alive[0].player_name||'Winnaar') : '';
   }
   function playerName(p){ return p?.name || p?.player_name || 'Speler'; }
+  function diceLabel(n){
+    const v = Number(n || 0);
+    return `${v} ${v === 1 ? 'dobbelsteen' : 'dobbelstenen'} over`;
+  }
   function rankingRows(payload){
     const players=Array.isArray(payload?.players)?payload.players:[];
     return players.slice().sort((a,b)=>{
@@ -47,15 +51,7 @@
       if(ba!==aa) return ba-aa;
       if(bd!==ad) return bd-ad;
       return Number(a.seat||a.seat_index||0)-Number(b.seat||b.seat_index||0);
-    }).map((p,i)=>`<div class="finish-row ${i===0?'winner':''}"><strong>${i+1}. ${esc(playerName(p))}</strong><span>${Number(p.dice_count||0)} dobbelsteen${Number(p.dice_count||0)===1?'':'stenen'} over</span></div>`).join('');
-  }
-  function victoryBurstHtml(){
-    return '<div class="victory-burst" aria-hidden="true">'
-      + '<span class="burst-card burst-card-a">Pik!</span><span class="burst-card burst-card-b">D</span><span class="burst-card burst-card-c">1</span>'
-      + '<img class="burst-logo" src="./logo.png" alt="">'
-      + '<span class="burst-die d1">2</span><span class="burst-die d2">5</span><span class="burst-die d3">pik</span>'
-      + '<span class="burst-confetti c1"></span><span class="burst-confetti c2"></span><span class="burst-confetti c3"></span>'
-      + '</div>';
+    }).map((p,i)=>`<div class="finish-row ${i===0?'winner':''}"><strong>${i+1}. ${esc(playerName(p))}</strong><span>${diceLabel(p.dice_count)}</span></div>`).join('');
   }
   function phase(p){ return String(p?.game?.state?.phase || p?.game?.status || 'lobby').toLowerCase(); }
   function setText(id, val){ const el=$(id); if(el) el.textContent=val; }
@@ -102,10 +98,14 @@
     if(card) card.classList.toggle('victory', !!opts.victory);
     if(title) title.textContent = opts.victory ? `${opts.winner || 'Winnaar'} wint Pikken` : (lr ? `${lr.bid_true ? 'Bod gehaald' : 'Bod niet gehaald'}` : 'Nieuwe ronde');
     if(text) text.textContent = opts.victory ? `${opts.winner || 'De laatste speler'} blijft over. Match afgelopen.` : (lr ? `${bidText(lr.bid)} telde ${Number(lr.counted_total||0)} keer. ${loser} verliest een dobbelsteen${eliminated?' en is uitgeschakeld':''}.` : 'Nieuwe ronde.');
-    if(row) row.innerHTML = opts.victory ? victoryBurstHtml() : (lr?.next_round ? `<span>Nieuwe ronde ${Number(lr.next_round)}</span>` : '');
+    if(row) row.innerHTML = opts.victory ? '<span>Eindstand</span>' : (lr?.next_round ? `<span>Nieuwe ronde ${Number(lr.next_round)}</span>` : '');
     if(hands) hands.innerHTML = opts.victory ? `<div class="finish-ranking">${rankingRows(model)}</div>` : (Array.isArray(lr?.hands) ? lr.hands.map(renderRevealHand).join('') : '');
     if(!overlay.querySelector('.round-close')) overlay.querySelector('.round-card')?.insertAdjacentHTML('beforeend','<button class="btn alt round-close" type="button">Sluiten</button>');
-    overlay.querySelector('.round-close')?.addEventListener('click', ()=>{ overlay.classList.remove('show'); overlay.classList.add('hidden'); }, { once:true });
+    overlay.querySelector('.round-close')?.addEventListener('click', ()=>{
+      overlay.classList.remove('show');
+      overlay.classList.add('hidden');
+      if (opts.victory) clearParticipantAndReturn();
+    }, { once:true });
     overlay.classList.remove('hidden');
     overlay.classList.add('show');
     window.clearTimeout(showRoundOverlay._timer);
@@ -207,8 +207,8 @@
     const myVote=ph==='voting'&&mySeat!==bidderSeat&&mySeat===Number(st.vote_turn_seat||0)&&alive;
     $('bidControls')?.classList.toggle('hidden', !myTurn);
     $('voteControls')?.classList.toggle('hidden', !myVote);
-    $('leaveBtn')?.classList.toggle('hidden', !api.sessionToken());
-    $('destroyBtn')?.classList.toggle('hidden', !(viewer.is_host&&api.sessionToken()));
+    $('leaveBtn')?.classList.toggle('hidden', !api.sessionToken() || ph === 'finished');
+    $('destroyBtn')?.classList.toggle('hidden', !(viewer.is_host&&api.sessionToken()) || ph === 'finished');
     const context=$('mobileContext'); if(context) context.textContent = myTurn ? 'Jij bent aan de beurt.' : myVote ? 'Jij moet stemmen.' : 'Live meekijken.';
     const reveal=$('revealBody');
     if(reveal){
