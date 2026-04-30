@@ -1,0 +1,27 @@
+GEJAST v711 version source-of-truth patch notes
+
+Changed/added files in this flat update bundle:
+- VERSION
+- gejast-version-source-of-truth.js
+- check-version-drift.mjs
+- fix-version-drift.mjs
+- gejast-config.v711.patch
+- README_v711_VERSION_SOURCE.md
+
+Apply order:
+1. Upload/copy VERSION to repo root. It must contain exactly: v711
+2. Upload/copy gejast-version-source-of-truth.js to repo root.
+3. Upload/copy check-version-drift.mjs and fix-version-drift.mjs to repo root or scripts folder.
+4. Patch gejast-config.js using gejast-config.v711.patch:
+   - change CONFIG.VERSION to 'v711'
+   - add ensureVersionSourceOfTruthRuntime()
+   - call ensureVersionSourceOfTruthRuntime() inside afterDomReady() directly after applyVersionLabel()
+5. Run: node fix-version-drift.mjs
+6. Run: node check-version-drift.mjs
+7. Commit/upload all changed active pages that fix-version-drift.mjs touched.
+
+This is frontend/version-only. No SQL is included.
+
+Honesty boundary:
+- This bundle creates the source-of-truth mechanism and guard scripts.
+- The guard script must be run in the actual repo checkout to prove that every active page is clean.

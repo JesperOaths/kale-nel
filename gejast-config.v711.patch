@@ -1,0 +1,26 @@
+diff --git a/gejast-config.js b/gejast-config.js
+--- a/gejast-config.js
++++ b/gejast-config.js
+@@
+-    VERSION:'v709',
++    VERSION:'v711',
+@@
+   window.GEJAST_CONFIG = Object.assign({}, window.GEJAST_CONFIG || {}, CONFIG, {
+@@
+   });
++
++  function ensureVersionSourceOfTruthRuntime(){
++    try {
++      if (window.__GEJAST_VERSION_SOURCE_OF_TRUTH_V711__) return;
++      if (document.querySelector('script[data-gejast-version-source-of-truth]')) return;
++      const script = document.createElement('script');
++      script.src = './gejast-version-source-of-truth.js?v711';
++      script.async = false;
++      script.setAttribute('data-gejast-version-source-of-truth','1');
++      document.head.appendChild(script);
++    } catch (_) {}
++  }
+@@
+     applyVersionLabel();
++    ensureVersionSourceOfTruthRuntime();
+     ensureSiteAnnouncementRuntime();
