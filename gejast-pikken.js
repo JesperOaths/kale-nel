@@ -155,7 +155,8 @@
     setStatus('Lobby maken...'); setBusyButton('pkCreateLobbyBtn', true, 'Maken...');
     try {
       const mode=$('pkPenaltyMode')?.value || 'wrong_loses';
-      const out=await api.createLobby({ penalty_mode:mode, start_dice:6, prev_winner_window_hours:12 });
+      const startDice=Math.max(1, Math.min(10, Number($('pkStartDice')?.value || 6) || 6));
+      const out=await api.createLobby({ penalty_mode:mode, start_dice:startDice, prev_winner_window_hours:12 });
       const id = out?.game_id || out?.id || out?.game?.id || out?.gameId || '';
       if(!id) throw new Error('Lobby is aangemaakt maar de backend gaf geen game_id terug: '+JSON.stringify(out).slice(0,240));
       state.gameId=id; storeGame(state.gameId); updateUrl(state.gameId);
