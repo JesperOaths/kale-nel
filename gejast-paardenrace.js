@@ -1,5 +1,5 @@
 (function(){
-  if (window.GEJAST_PAARDENRACE && window.GEJAST_PAARDENRACE.__v720_complete) return;
+  if (window.GEJAST_PAARDENRACE && window.GEJAST_PAARDENRACE.__v721_complete) return;
   const cfg = window.GEJAST_CONFIG || {};
   const STORAGE_KEY = 'gejast_paardenrace_room_code_v687';
   const LEGACY_KEYS = ['gejast_paardenrace_room_code_v506'];
@@ -105,5 +105,5 @@
     const subline=latest&&latest.suit?`Gate ${latest.gate_no} open · ${suitLabel(latest.suit)} gaat 1 terug`:winnerSuit?`Totale pot ${totalPot} Bakken · ${deckLeft} kaarten over`:`${verified}/${list.length||0} verified · ${ready}/${list.length||0} ready · ${pendingGate} gates nog dicht`;
     return {headline, subline, totalPot, verified, ready, pendingGate, winnerSuit, deckLeft, drawCard, stage, isHost:!!(viewer&&viewer.is_host)};
   }
-  window.GEJAST_PAARDENRACE = { __v720_complete:true, rpc, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode, suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack, renderRaceMinimap, renderLiveBoard, summarizeLiveRoom, gotoLive, liveHref, scopedHref, scope, getDrawRemaining, resolvedGateSet, normalizedGateEvents, gateEventMap, getGridColumnForProgress, liveBoardFingerprint, normalizeRoomCode };
+  window.GEJAST_PAARDENRACE = { __v721_complete:true, rpc, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode, suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack, renderRaceMinimap, renderLiveBoard, summarizeLiveRoom, gotoLive, liveHref, scopedHref, scope, getDrawRemaining, resolvedGateSet, normalizedGateEvents, gateEventMap, getGridColumnForProgress, liveBoardFingerprint, normalizeRoomCode };
 })();
