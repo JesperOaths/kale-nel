@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace Lobby</title>
-  <script>window.GEJAST_PAGE_VERSION='v716';</script>
-  <script src="./gejast-config.js?v716"></script><script src="./gejast-home-gate.js?v716"></script>
-  <script src="./gejast-paardenrace.js?v716"></script>
+  <script>window.GEJAST_PAGE_VERSION='v717';</script>
+  <script src="./gejast-config.js?v717"></script><script src="./gejast-home-gate.js?v717"></script>
+  <script src="./gejast-paardenrace.js?v717"></script>
   <style>
     :root{
       --paper:#fbf6ef;--shell:#f5efe6;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241;--gold-soft:#efe5c7;
@@ -34,7 +34,7 @@
     .btn[disabled]{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none}
     .status{min-height:22px;color:var(--muted);margin-top:10px}
     .hero-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(360px,.95fr);gap:14px;margin-top:14px;align-items:start}
-    .panel{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.03)}
+    .panel{background:linear-gradient(180deg,#fff,#fff7e7);border:1px solid rgba(154,130,65,.2);border-radius:24px;padding:16px;box-shadow:0 10px 24px rgba(0,0,0,.05)}
     .panel h2{margin:0 0 10px;font-size:18px;letter-spacing:-.03em}
     .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .field{display:grid;gap:6px}
@@ -50,7 +50,7 @@
     .stat strong{display:block;margin-top:6px;font-size:24px}
     .lobby-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
     .room-rail,.stack,.players{display:grid;gap:10px}
-    .room-card,.player{border:1px solid var(--line);border-radius:18px;background:var(--chip);padding:13px;display:grid;gap:10px}
+    .room-card,.player{border:1px solid var(--line);border-radius:18px;background:var(--chip);padding:13px;display:grid;gap:10px}.room-card{background:linear-gradient(180deg,#fff,#fff2d4);border-color:rgba(154,130,65,.28)}.player{background:linear-gradient(180deg,#fff,#eef8f1);border-color:rgba(47,111,72,.2)}
     .room-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
     .room-code{font-size:20px;font-weight:900;letter-spacing:.06em}
     .room-meta{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
@@ -80,7 +80,7 @@
       .sticky-actions{bottom:6px;border-radius:16px}.top-actions .btn{flex:1 1 100%}
     }
   </style>
-<script src="./gejast-paardenrace-input-guard.js?v716"></script></head>
+<script src="./gejast-paardenrace-input-guard.js?v717"></script></head>
 <body data-game-watermark="soft">
   <div class="wrap">
     <div class="shell">
@@ -110,7 +110,7 @@
           <div class="field-grid">
             <div class="field">
               <label>Roomcode</label>
-              <input id="roomCodeInput" maxlength="24" placeholder="Automatisch: Despinoza 1" />
+              <input id="roomCodeInput" maxlength="24" placeholder="Automatisch: Despinoza 1" readonly aria-readonly="true" />
             </div>
             <div class="field">
               <label>Directe acties</label>
@@ -155,10 +155,10 @@
             <label>Jouw paard</label>
             <select id="suitInput">
               <option value="">Kies een suit</option>
-              <option value="hearts">H Harten</option>
-              <option value="diamonds">D Ruiten</option>
-              <option value="clubs">C Klaveren</option>
-              <option value="spades">S Schoppen</option>
+              <option value="hearts">&hearts; Harten</option>
+              <option value="diamonds">&diams; Ruiten</option>
+              <option value="clubs">&clubs; Klaveren</option>
+              <option value="spades">&spades; Schoppen</option>
             </select>
             <label>Jouw inzet in Bakken</label>
             <input id="wagerInput" type="number" min="1" step="1" placeholder="Bijv. 2" />
@@ -318,7 +318,7 @@ $('unreadyBtn').addEventListener('click', async()=>{ const btn=$('unreadyBtn'); 
 poll(); pollHandle = setInterval(poll, 1000); window.addEventListener('online', poll); document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) poll(); }); window.addEventListener('beforeunload', ()=>{ if(pollHandle) clearInterval(pollHandle); });
 })();
 </script>
-<div class="site-credit-watermark" data-version-watermark>v716 - Made by Bruis</div>
+<div class="site-credit-watermark" data-version-watermark>v717 - Made by Bruis</div>
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>

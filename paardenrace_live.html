@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace live</title>
-  <script>window.GEJAST_PAGE_VERSION='v716';</script>
-  <script src="./gejast-config.js?v716"></script><script src="./gejast-game-group-b-bridge.js?v716"></script><script src="./gejast-home-gate.js?v716"></script>
-  <script src="./gejast-paardenrace.js?v716"></script>
+  <script>window.GEJAST_PAGE_VERSION='v717';</script>
+  <script src="./gejast-config.js?v717"></script><script src="./gejast-game-group-b-bridge.js?v717"></script><script src="./gejast-home-gate.js?v717"></script>
+  <script src="./gejast-paardenrace.js?v717"></script>
   <style>
     :root{
       --gold:#9a8241;--paper:#fffaf3;--ink:#17130f;--muted:#6d6256;--line:rgba(0,0,0,.08);--bg:#efe6d7;
@@ -136,7 +136,7 @@
       .pr-horse-token{font-size:24px}
     }
   </style>
-<script src="./gejast-paardenrace-input-guard.js?v716"></script></head>
+<script src="./gejast-paardenrace-input-guard.js?v717"></script></head>
 <body data-game-watermark="soft">
 <div class="page"><div class="shell">
   <div class="top">
@@ -445,8 +445,7 @@
       }
       missingStateCount = 0;
       if (String(state.room.stage || '').toLowerCase() === 'lobby') {
-        goBackToLobby('Room staat nog in lobby. Terug naar de lobby om te starten.');
-        return;
+        setStatus('Race is nog niet gestart. Wachten op start vanuit de lobby...');
       }
       await applyState(state, opts);
     } catch(err) {
@@ -592,6 +591,6 @@
   }, 1800);
 })();
 </script>
-<div class="site-credit-watermark" data-version-watermark>v716 - Made by Bruis</div>
+<div class="site-credit-watermark" data-version-watermark>v717 - Made by Bruis</div>
 <script id="gejast-game-group-b-boot">(function(){function boot(){try{window.GEJAST_GAME_GROUP_B_BRIDGE&&window.GEJAST_GAME_GROUP_B_BRIDGE.bootPanel&&window.GEJAST_GAME_GROUP_B_BRIDGE.bootPanel({game:'paardenrace'});}catch(_){}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();})();</script></body>
 </html>

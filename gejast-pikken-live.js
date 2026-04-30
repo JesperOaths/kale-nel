@@ -53,6 +53,15 @@
       return Number(a.seat||a.seat_index||0)-Number(b.seat||b.seat_index||0);
     }).map((p,i)=>`<div class="finish-row ${i===0?'winner':''}"><strong>${i+1}. ${esc(playerName(p))}</strong><span>${diceLabel(p.dice_count)}</span></div>`).join('');
   }
+  function victoryFestivityHtml(winner){
+    return `<div class="victory-fest" aria-hidden="true">
+      <span class="streamer s1"></span><span class="streamer s2"></span><span class="streamer s3"></span>
+      <span class="balloon b1"></span><span class="balloon b2"></span><span class="balloon b3"></span>
+      <img class="fest-logo l1" src="./logo.png" alt=""><img class="fest-logo l2" src="./logo.png" alt="">
+      <span class="fest-die d1">2</span><span class="fest-die d2">6</span><span class="fest-die d3">pik</span>
+      <span class="confetti c1"></span><span class="confetti c2"></span><span class="confetti c3"></span><span class="confetti c4"></span>
+    </div><div class="victory-name-burst">${esc(winner || 'Winnaar')}</div>`;
+  }
   function phase(p){ return String(p?.game?.state?.phase || p?.game?.status || 'lobby').toLowerCase(); }
   function setText(id, val){ const el=$(id); if(el) el.textContent=val; }
   function seatClass(i){ const map=['top','right','bottom','left','extra1','extra2','extra3','extra4']; return map[i%map.length]; }
@@ -99,7 +108,7 @@
     if(card) card.classList.toggle('victory', !!opts.victory);
     if(title) title.textContent = opts.victory ? `${opts.winner || 'Winnaar'} wint Pikken` : (lr ? `${lr.bid_true ? 'Bod gehaald' : 'Bod niet gehaald'}` : 'Nieuwe ronde');
     if(text) text.textContent = opts.victory ? `${opts.winner || 'De laatste speler'} blijft over. Match afgelopen.` : (lr ? `${bidText(lr.bid)} telde ${Number(lr.counted_total||0)} keer. ${loser} verliest een dobbelsteen${eliminated?' en is uitgeschakeld':''}.` : 'Nieuwe ronde.');
-    if(row) row.innerHTML = opts.victory ? '<span>Eindstand</span>' : (lr?.next_round ? `<span>Nieuwe ronde ${Number(lr.next_round)}</span>` : '');
+    if(row) row.innerHTML = opts.victory ? victoryFestivityHtml(opts.winner || winnerFrom(model)) : (lr?.next_round ? `<span>Nieuwe ronde ${Number(lr.next_round)}</span>` : '');
     if(hands) hands.innerHTML = opts.victory ? `<div class="finish-ranking">${rankingRows(model)}</div>` : (Array.isArray(lr?.hands) ? lr.hands.map(renderRevealHand).join('') : '');
     if(!overlay.querySelector('.round-close')) overlay.querySelector('.round-card')?.insertAdjacentHTML('beforeend','<button class="btn alt round-close" type="button">Sluiten</button>');
     overlay.querySelector('.round-close')?.addEventListener('click', ()=>{

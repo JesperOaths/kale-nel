@@ -6,10 +6,10 @@
   const LIVE_QUERY_KEY = 'live';
   const SUITS = ['spades','hearts','clubs','diamonds'];
   const SUIT_META = {
-    hearts: { label:'H Harten', symbol:'H', color:'#a11f35', short:'Harten' },
-    diamonds: { label:'D Ruiten', symbol:'D', color:'#a11f35', short:'Ruiten' },
-    clubs: { label:'C Klaveren', symbol:'C', color:'#1f1b1a', short:'Klaveren' },
-    spades: { label:'S Schoppen', symbol:'S', color:'#1f1b1a', short:'Schoppen' }
+    hearts: { label:'♥ Harten', symbol:'♥', color:'#a11f35', short:'Harten' },
+    diamonds: { label:'♦ Ruiten', symbol:'♦', color:'#a11f35', short:'Ruiten' },
+    clubs: { label:'♣ Klaveren', symbol:'♣', color:'#1f1b1a', short:'Klaveren' },
+    spades: { label:'♠ Schoppen', symbol:'♠', color:'#1f1b1a', short:'Schoppen' }
   };
   function scope(){
     try { if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.getScope === 'function') return window.GEJAST_SCOPE_UTILS.getScope(); } catch(_){}

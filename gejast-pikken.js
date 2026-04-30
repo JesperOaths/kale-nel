@@ -90,7 +90,7 @@
       const seat=Number(p.seat||p.seat_index||0); const alive=!!p.alive || phase==='lobby'; const vote=votes.find((v)=>Number(v.seat||v.seat_index||0)===seat); const voteStatus=String(vote?.status||'waiting');
       const pill = phase==='voting' ? (voteStatus==='approved'?'goedgekeurd':voteStatus==='rejected'?'afgekeurd':'wacht') : (p.is_host?'Host':p.is_ready?'Ready':'Niet ready');
       const pillCls = phase==='voting' ? (voteStatus==='approved'?'ok':voteStatus==='rejected'?'bad':'wait') : (p.is_host || p.is_ready ? 'ok' : 'wait');
-      return `<div class="player-row ${alive?'':'dead'} ${(phase==='bidding'&&seat===turn)||(phase==='voting'&&seat===voteTurn)?'turn':''}"><div><div><strong>${esc(p.name||p.player_name||'Speler')}</strong> <span class="muted">#${seat}</span></div><div class="muted">${alive?'Levend':'Uit'} - ${Number(p.dice_count||0)} dobbelstenen</div></div><span class="pill ${pillCls}">${esc(pill)}</span></div>`;
+      return `<div class="player-row ${alive?'':'dead'} ${(phase==='bidding'&&seat===turn)||(phase==='voting'&&seat===voteTurn)?'turn':''}"><div><div><strong>${esc(p.name||p.player_name||'Speler')}</strong> <span class="muted">#${seat}</span></div></div><span class="pill ${pillCls}">${esc(pill)}</span></div>`;
     }).join('') : '<div class="muted">Nog geen spelers.</div>';
   }
   function renderDice(payload){

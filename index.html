@@ -674,7 +674,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v716';</script><script src="./gejast-config.js?v716"></script><script src="./gejast-home-gate.js?v716"></script><script defer src="./gejast-clickable-cards.js?v716"></script><script defer src="./gejast-scope-context.js?v716"></script><script defer src="./gejast-family-rollout.js?v716"></script><script defer src="./gejast-scope.js?v716"></script>
+  <script>window.GEJAST_PAGE_VERSION='v717';</script><script src="./gejast-config.js?v717"></script><script src="./gejast-home-gate.js?v717"></script><script defer src="./gejast-clickable-cards.js?v717"></script><script defer src="./gejast-scope-context.js?v717"></script><script defer src="./gejast-family-rollout.js?v717"></script><script defer src="./gejast-scope.js?v717"></script>
   <script defer src="./gejast-live-summary.js?v708"></script>
   <script defer src="./gejast-scoped-rpc.js?v708"></script>
   <script defer src="./gejast-combined-readers.js?v708"></script>
@@ -987,17 +987,10 @@ function applyAdminViewerRefresh() {
     const HOMEPAGE_BLOCKED_NAMES = new Set(['anna','spookinoza 2','evi','fons','caro','daan','bram']);
     function isHomepageBlockedName(name){ return HOMEPAGE_BLOCKED_NAMES.has(String(name||'').trim().toLowerCase()); }
     function avatarMarkup(row){ const name = displayPlayerName(row); const helper=(window.GEJAST_CONFIG&&typeof window.GEJAST_CONFIG.normalizeProfileImageUrl==='function')?window.GEJAST_CONFIG.normalizeProfileImageUrl:(v)=>String(v||'').trim(); const src = helper(row?.avatar_url || row?.photo_url || row?.profile_picture_url || ''); return src ? `<div class="biggest-player-avatar"><img src="${src.replace(/"/g,'&quot;')}" alt="${name.replace(/"/g,'&quot;')}" referrerpolicy="no-referrer"></div>` : `<div class="biggest-player-avatar">${(name||'O').slice(0,1).toUpperCase()}</div>`; }
-    function hasPositiveNumber(row, keys) {
-      return keys.some((key) => Number(row && row[key] || 0) > 0);
-    }
     function validHomepageLadderRow(row, groupKey) {
       if (!row || typeof row !== 'object') return false;
-      if (groupKey === 'caute-coins') {
-        return hasPositiveNumber(row, ['ledger_count','transaction_count','transactions','market_count','wallet_events','settled_count'])
-          || row.wallet_id || row.source === 'despimarkt_wallet' || row.source === 'caute_coin_ledger';
-      }
-      return hasPositiveNumber(row, ['games_played','matches_played','match_count','total_matches','played','wins','losses'])
-        || row.source === 'game_elo_history' || row.source === 'match_history';
+      if (groupKey === 'caute-coins') return !!String(row.player_name || row.display_name || row.public_display_name || '').trim();
+      return !!String(row.player_name || row.display_name || row.public_display_name || '').trim();
     }
     function renderHomepageLadders(payload) {
       const root = document.getElementById('ladderGrid');
