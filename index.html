@@ -674,12 +674,12 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v717';</script><script src="./gejast-config.js?v717"></script><script src="./gejast-home-gate.js?v717"></script><script defer src="./gejast-clickable-cards.js?v717"></script><script defer src="./gejast-scope-context.js?v717"></script><script defer src="./gejast-family-rollout.js?v717"></script><script defer src="./gejast-scope.js?v717"></script>
-  <script defer src="./gejast-live-summary.js?v708"></script>
-  <script defer src="./gejast-scoped-rpc.js?v708"></script>
-  <script defer src="./gejast-combined-readers.js?v708"></script>
-<script defer src="./gejast-push-runtime.js?v708"></script>
-<script defer src="./gejast-fairness.js?v708"></script>
+  <script>window.GEJAST_PAGE_VERSION='v718';</script><script src="./gejast-config.js?v718"></script><script src="./gejast-home-gate.js?v718"></script><script defer src="./gejast-clickable-cards.js?v718"></script><script defer src="./gejast-scope-context.js?v718"></script><script defer src="./gejast-family-rollout.js?v718"></script><script defer src="./gejast-scope.js?v718"></script>
+  <script defer src="./gejast-live-summary.js?v718"></script>
+  <script defer src="./gejast-scoped-rpc.js?v718"></script>
+  <script defer src="./gejast-combined-readers.js?v718"></script>
+<script defer src="./gejast-push-runtime.js?v718"></script>
+<script defer src="./gejast-fairness.js?v718"></script>
 <style id="gejast-v685-home-speed-fix">
   body{align-items:flex-start !important;}
   .page{padding-top:18px !important;}
@@ -706,7 +706,7 @@
 
             <section class="ladder-section" aria-label="Live ladders">
         <div class="ladder-head">
-          <div id="homeLivePill" class="live-pill standby">Stand-by</div>
+          <div id="homeLivePill" class="live-pill live">Live</div>
         </div>
         <div id="ladderGrid" class="ladder-grid">
           <div class="ladder-card"><div class="ladder-title"><strong>Klaverjassen</strong><span>Top 5</span></div><div class="ladder-empty">Nog geen ladderdata.</div></div>
@@ -902,7 +902,18 @@
     let currentHomepageState = null;
     const CURRENT_SCOPE = (window.GEJAST_SCOPE_UTILS&&window.GEJAST_SCOPE_UTILS.getScope()) || 'friends';
     function scopedHref(base){ try{ const u=new URL(base, location.href); if(CURRENT_SCOPE==='family') u.searchParams.set('scope','family'); return u.pathname.split('/').pop()+u.search; }catch(_){ return base; } }
-    function homepageLadderRoute(game){ return scopedHref(`./ladder.html?game=${encodeURIComponent(game)}`); }
+    function homepageLadderRoute(game){
+      const key = String(game || '').toLowerCase();
+      const routes = {
+        klaverjassen: './leaderboard.html',
+        boerenbridge: './ladder.html?game=boerenbridge',
+        beerpong: './ladder.html?game=beerpong',
+        paardenrace: './paardenrace.html',
+        pikken: './pikken_stats.html',
+        'caute-coins': './despimarkt.html'
+      };
+      return scopedHref(routes[key] || `./ladder.html?game=${encodeURIComponent(game)}`);
+    }
     function applyScopeChrome(){
       document.body.classList.toggle('friends-scope', CURRENT_SCOPE!=='family');
       if(CURRENT_SCOPE!=='family') return;
@@ -1081,7 +1092,7 @@ function applyAdminViewerRefresh() {
           return fallback || {};
         } catch (fallbackErr) {
           console.warn('Homepage ladders offline', fallbackErr);
-          if (!cached) setHomepageLiveState('standby', 'Live-ready');
+          if (!cached) setHomepageLiveState('live', 'Live');
           return cached || null;
         }
       }
@@ -1667,6 +1678,12 @@ async function castExtraPollVote(desired_status) {
     }
 
     const __gejastDrinksTop5State={dayTitle:'Vandaag',sessionRows:[],allTimeRows:[],speedGroups:[{key:'bak',label:'1 Bak',rows:[]},{key:'2bak',label:'2 Bakken',rows:[]},{key:'ice',label:'Ice',rows:[]},{key:'liter',label:'Liter Bier',rows:[]},{key:'wijn',label:'Fles Wijn',rows:[]}],biggestPlayer:null,speedIdx:0,rotationTimer:null};
+    function drinksTop5Route(group){
+      const key=String(group?.key||'').toLowerCase();
+      if(key==='speed') return scopedHref('./drinks_speed.html');
+      if(key==='biggest') return scopedHref('./drinks.html');
+      return scopedHref('./drinks.html');
+    }
     function renderDrinksHomeTop5(){
       const root=document.getElementById('drinksTop5Grid');
       if(!root) return;
@@ -1688,11 +1705,11 @@ async function castExtraPollVote(desired_status) {
         if (group.mode === 'biggest') {
           const row = group.row || null;
           const body = row ? `<div class="biggest-player-card">${avatarMarkup(row)}<div class="biggest-player-name">${displayPlayerName(row)}</div><div class="biggest-player-meta">${unitValue(row).toFixed(1)} units all-time</div></div>` : '<div class="ladder-empty">Nog geen data.</div>';
-          return `<article class="ladder-card" role="link" tabindex="0" data-route="${group.key}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:var(--gold);text-decoration:none">All-time</span></div>${body}</article>`;
+          return `<article class="ladder-card" role="link" tabindex="0" data-route="${drinksTop5Route(group)}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:var(--gold);text-decoration:none">All-time</span></div>${body}</article>`;
         }
         const rows = Array.isArray(group.rows) ? group.rows : [];
         const body = rows.length ? `<div class="ladder-list">${rows.slice(0,5).map((row, idx) => `<div class="ladder-row"><div class="ladder-rank">${idx+1}</div><a class="ladder-name" style="color:inherit;text-decoration:none;font-weight:800" href="${playerHref(String(row.player_name || row.display_name || row.chosen_username || row.nickname || ''), '')}" onclick="event.stopPropagation()">${displayPlayerName(row)}</a><div class="ladder-elo" style="color:var(--gold);font-weight:900">${group.mode==='seconds' ? `${secondValue(row).toFixed(1)}s` : `${unitValue(row).toFixed(1)}`}</div></div>`).join('')}</div>` : '<div class="ladder-empty">Nog geen data.</div>';
-        return `<article class="ladder-card" role="link" tabindex="0" data-route="${group.key}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:var(--gold);text-decoration:none">${group.mode==='seconds' ? 'Seconden' : 'Units'}</span></div>${body}</article>`;
+        return `<article class="ladder-card" role="link" tabindex="0" data-route="${drinksTop5Route(group)}"><div class="ladder-title"><strong>${group.label}</strong><span class="ladder-open-link" style="font-size:13px;font-weight:800;color:var(--gold);text-decoration:none">${group.mode==='seconds' ? 'Seconden' : 'Units'}</span></div>${body}</article>`;
       }).join('');
       root.querySelectorAll('.ladder-card[data-route]').forEach((card)=>{ const route = card.getAttribute('data-route'); card.addEventListener('click', ()=>{ window.location.href = route; }); card.addEventListener('keydown', (ev)=>{ if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); window.location.href = route; } }); });
     }
@@ -1821,7 +1838,7 @@ async function castExtraPollVote(desired_status) {
         const paard = readJsonStorage(['gejast_paardenrace_room_v687','gejast_paardenrace_participant_v687']);
         const roomCode = paard && (paard.room_code || paard.code || paard.room);
         if (roomCode) {
-          markLocalLiveCard('./paardenrace.html', `./paardenrace_live.html?room_code=${encodeURIComponent(roomCode)}${CURRENT_SCOPE==='family'?'&scope=family':''}`, 'PAARDENRACE LIVE', 'Bekijk race en standen als spectator.');
+          markLocalLiveCard('./paardenrace.html', `./paardenrace_live.html?room=${encodeURIComponent(roomCode)}&live=${encodeURIComponent(roomCode)}${CURRENT_SCOPE==='family'?'&scope=family':''}`, 'PAARDENRACE LIVE', 'Bekijk race en standen als spectator.');
         }
         const beerpong = readJsonStorage(['gejast_beerpong_match_v696','gejast_beerpong_participant_v696']);
         if (beerpong && (beerpong.client_match_id || beerpong.match_id)) {
@@ -1964,7 +1981,7 @@ async function castExtraPollVote(desired_status) {
 
   <div class="site-credit-watermark" data-version-watermark></div>
 
-<script defer src="./gejast-player-session-ui.js?v708"></script>
+<script defer src="./gejast-player-session-ui.js?v718"></script>
 
 
 <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script><script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
@@ -1972,9 +1989,9 @@ async function castExtraPollVote(desired_status) {
   function loadScript(src){ return new Promise((resolve,reject)=>{ var s=document.createElement('script'); s.src=src; s.defer=true; s.onload=resolve; s.onerror=reject; document.body.appendChild(s); }); }
   function bootSecondary(){
     return Promise.allSettled([
-      loadScript('./drinks-verify-float.js?v708'),
-      loadScript('./gejast-geo.js?v708'),
-      loadScript('./site-analytics.js?v708')
+      loadScript('./drinks-verify-float.js?v718'),
+      loadScript('./gejast-geo.js?v718'),
+      loadScript('./site-analytics.js?v718')
     ]);
   }
   if ('requestIdleCallback' in window) requestIdleCallback(()=>bootSecondary(), { timeout: 2500 });
