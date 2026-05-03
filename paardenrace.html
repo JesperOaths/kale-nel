@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace Lobby</title>
-  <script>window.GEJAST_PAGE_VERSION='v719';</script>
-  <script src="./gejast-config.js?v719"></script><script src="./gejast-home-gate.js?v719"></script>
-  <script src="./gejast-paardenrace.js?v719"></script>
+  <script>window.GEJAST_PAGE_VERSION='v720';</script>
+  <script src="./gejast-config.js?v720"></script><script src="./gejast-home-gate.js?v720"></script>
+  <script src="./gejast-paardenrace.js?v720"></script>
   <style>
     :root{
       --paper:#fbf6ef;--shell:#f5efe6;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241;--gold-soft:#efe5c7;
@@ -80,7 +80,7 @@
       .sticky-actions{bottom:6px;border-radius:16px}.top-actions .btn{flex:1 1 100%}
     }
   </style>
-<script src="./gejast-paardenrace-input-guard.js?v719"></script></head>
+<script src="./gejast-paardenrace-input-guard.js?v720"></script></head>
 <body data-game-watermark="soft">
   <div class="wrap">
     <div class="shell">
@@ -225,7 +225,7 @@ const api=window.GEJAST_PAARDENRACE; const $=(id)=>document.getElementById(id); 
  function roomTimeValue(row){ const raw=row?.updated_at || row?.last_activity_at || row?.created_at || row?.started_at || ''; const ms=raw ? Date.parse(raw) : 0; return Number.isFinite(ms) ? ms : 0; }
  function isFreshRoom(row){ const stage=String(row?.stage||'lobby').toLowerCase(); if(['closed','deleted','archived','cancelled','finished'].includes(stage)) return false; const ms=roomTimeValue(row); return !ms || Date.now() - ms < 15*60*1000; }
  function clearLobbyView(){ $('roomShell').style.display='none'; $('roomCodeLabel').textContent='-'; $('roomMeta').textContent='Nog geen room geladen.'; $('playersBox').innerHTML=''; $('lobbySummaryBox').textContent='Nog geen lobby info.'; $('pendingVerifyList').innerHTML=''; $('adminVerifyBox').style.display='none'; $('selectionEditor').style.display=''; $('savedChoiceBox').style.display='none'; $('roomStageStat').textContent='lobby'; $('roomReadyStat').textContent='0/0'; $('roomPotStat').textContent='0'; $('roomReadyMetric').textContent='0/0'; api.clearStoredRoomCode(); latestState=null; roomCodeDirty=false; roomCodeTouchedAt=0; }
- function shortRoomCode(){ return upperRoomCode(($('roomCodeInput') && $('roomCodeInput').value) || 'DESPINOZA ...').slice(0,24); }
+ function shortRoomCode(){ const raw=upperRoomCode(($('roomCodeInput') && $('roomCodeInput').value) || ''); return /^DESPINOZA\s+\d+$/i.test(raw) ? raw.slice(0,24) : 'DESPINOZA ...'; }
  function upperRoomCode(value){ return String(value||'').trim().toUpperCase().replace(/\s+/g,' ').replace(/[^A-Z0-9 _-]/g,'').trim(); }
  function setOptimisticRoom(code, label){
   const room = upperRoomCode(code) || shortRoomCode();
@@ -316,11 +316,11 @@ $('unreadyBtn').addEventListener('click', async()=>{ const btn=$('unreadyBtn'); 
  $('startBtn').addEventListener('click', async()=>{ const btn=$('startBtn'); const old=btn.textContent; try{ btn.disabled=true; btn.textContent='Starten...'; const code=roomCode(); if(latestState?._fallback_public_row){ try{ applyState(await api.rpc('join_paardenrace_room_fast_v687', { room_code_input: code }, { timeoutMs: 4200 })); }catch(_){} try{ applyState(await api.rpc('get_paardenrace_room_state_fast_v687', { room_code_input: code }, { timeoutMs: 4200 })); }catch(_){} } const players=Array.isArray(latestState?.players)?latestState.players:[]; const ready=latestState?._ready_override?.ready ?? players.filter((p)=>p.is_ready).length; const readyTotal=latestState?._ready_override?.total ?? players.length; const picked=[...new Set(players.map((p)=>String(p.selected_suit||'').trim()).filter(Boolean))]; if(readyTotal < 2){ setStatus('Paardenrace kan niet starten met minder dan 2 spelers.', true); return; } if(picked.length === 1 && players.length > 1){ setStatus('Paardenrace kan niet starten als iedereen hetzelfde suit heeft gekozen.', true); return; } if(ready < readyTotal){ setStatus('Niet iedereen staat ready.', true); return; } const state = await rpcAny(['start_paardenrace_countdown_safe','start_paardenrace_countdown_fast_v687','start_paardenrace_room_safe'], { room_code_input: code }); if(state?.room?.room_code){ api.gotoLive(state.room.room_code); return; } applyState(state); setStatus('Countdown gestart.'); }catch(err){ setStatus(err.message || 'Start mislukt.', true);} finally{ btn.textContent=old; btn.disabled=false; } });
  $('roomCodeInput').addEventListener('input', ()=>{ markRoomCodeDirty(); }); $('roomCodeInput').addEventListener('focus', ()=>{ markRoomCodeDirty(); }); $('roomCodeInput').addEventListener('blur', ()=>{ roomCodeTouchedAt=Date.now(); });
  $('rulesBtn').addEventListener('click', ()=> $('rulesDialog').showModal()); $('closeRulesBtn').addEventListener('click', ()=> $('rulesDialog').close());
- const seeded=api.getStoredRoomCode(); if(seeded){ setRoomCodeInputValue(seeded); }
+ const seeded=api.getStoredRoomCode(); if(seeded && /^DESPINOZA\s+\d+$/i.test(seeded)){ setRoomCodeInputValue(seeded); } else if(seeded){ api.clearStoredRoomCode && api.clearStoredRoomCode(); setRoomCodeInputValue(''); }
 poll(); pollHandle = setInterval(poll, 1000); window.addEventListener('online', poll); document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) poll(); }); window.addEventListener('beforeunload', ()=>{ if(pollHandle) clearInterval(pollHandle); });
 })();
 </script>
-<div class="site-credit-watermark" data-version-watermark>v719 - Made by Bruis</div>
+<div class="site-credit-watermark" data-version-watermark>v720 - Made by Bruis</div>
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>
