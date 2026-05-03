@@ -1,5 +1,5 @@
 (function(){
-  if (window.GEJAST_PAARDENRACE && window.GEJAST_PAARDENRACE.__v725_complete) return;
+  if (window.GEJAST_PAARDENRACE && window.GEJAST_PAARDENRACE.__v699_complete) return;
   const cfg = window.GEJAST_CONFIG || {};
   const STORAGE_KEY = 'gejast_paardenrace_room_code_v687';
   const LEGACY_KEYS = ['gejast_paardenrace_room_code_v506'];
@@ -76,21 +76,8 @@
   function horseMarker(suit){ return `<span class="pr-horse-token" style="color:${suitColor(suit)}">${suitSymbol(suit)}</span>`; }
   function compactGateCard(cardCode, resolved){ if(!resolved) return `<div class="pr-gate-mini pr-gate-mini--back"></div>`; const p=parseCard(cardCode); return `<div class="pr-gate-mini ${p.isRed?'red':''}" title="${suitLabel(p.suitKey)}"><span>${p.symbol}</span></div>`; }
   function gateSuitCaption(cardCode, resolved, eventRow=null){ if(!resolved) return '<div class="pr-gate-suit-caption">Dicht</div>'; const p=parseCard(cardCode); const stepSuit=suitKey((eventRow && eventRow.suit) || p.suitKey); return `<div class="pr-gate-suit-caption ${p.isRed?'red':''}">${p.symbol} ${(SUIT_META[p.suitKey]||{}).short || '--'}${stepSuit?`  -  ${suitSymbol(stepSuit)} -1`:''}</div>`; }
-  function normalizeRaceMatch(match){
-    const raw = match && typeof match === 'object' ? match : {};
-    const src = raw.horse_positions || raw.positions || raw.horses || {};
-    return Object.assign({}, raw, {
-      horse_positions: {
-        spades: Number(src.spades ?? src.S ?? src.schoppen ?? 0) || 0,
-        hearts: Number(src.hearts ?? src.H ?? src.harten ?? 0) || 0,
-        clubs: Number(src.clubs ?? src.C ?? src.klaveren ?? 0) || 0,
-        diamonds: Number(src.diamonds ?? src.D ?? src.ruiten ?? 0) || 0
-      },
-      gate_cards: Array.isArray(raw.gate_cards) ? raw.gate_cards : []
-    });
-  }
   function renderRaceMinimap(match){
-    match = normalizeRaceMatch(match);
+    if(!match || !match.horse_positions) return '<div class="pr-minimap-empty">Wachten op racebord...</div>';
     const positions=match.horse_positions||{}, gates=Array.isArray(match.gate_cards)?match.gate_cards:[], resolved=resolvedGateSet(match), events=gateEventMap(match);
     const gateCells=Array.from({length:12},(_,col)=>{ if(col===0||col===11) return '<span class="pr-minimap-cell pr-minimap-cell--blank"></span>'; const no=col, row=events.get(no)||null; return `<span class="pr-minimap-cell pr-minimap-gate-cell" title="${row && row.suit ? suitLabel(row.suit)+' gaat 1 terug' : ''}">${compactGateCard(gates[no-1]||'', resolved.has(no))}</span>`; }).join('');
     const gateRow=`<div class="pr-minimap-row pr-minimap-row--gates"><div class="pr-minimap-label">G</div><div class="pr-minimap-track">${gateCells}</div></div>`;
@@ -100,7 +87,7 @@
   function renderTrackRow(suit, progress){ const cells=Array.from({length:12},(_,col)=>{ const cls=['pr-track-cell']; if(col===0)cls.push('is-start'); if(col===11)cls.push('is-finish'); return `<div class="${cls.join(' ')}" data-col="${col}">${col===progress?horseMarker(suit):''}</div>`; }).join(''); return `<div class="pr-board-row"><div class="pr-board-label" style="color:${suitColor(suit)}">${suitSymbol(suit)}</div><div class="pr-board-track">${cells}</div></div>`; }
   function liveBoardFingerprint(match){ return JSON.stringify({ last:match&&match.last_draw_card||'', winner:match&&match.winner_suit||'', positions:match&&match.horse_positions||{}, gates:match&&match.gate_cards||[], resolved:Array.from(resolvedGateSet(match).values()), drawIndex:Number(match&&match.draw_index||0), stage:String(match&&match.stage||''), events:normalizedGateEvents(match) }); }
   function renderLiveBoard(match){
-    match = normalizeRaceMatch(match);
+    if(!match || !match.horse_positions) return '<div class="pr-live-placeholder">Wachten op countdown of race-start.</div>';
     const positions=match.horse_positions||{}, gates=Array.isArray(match.gate_cards)?match.gate_cards:[], resolved=resolvedGateSet(match), events=gateEventMap(match), remaining=getDrawRemaining(match), lastCard=match.last_draw_card||'';
     const gateRow=Array.from({length:10},(_,idx)=>{ const no=idx+1, isResolved=resolved.has(no), card=gates[idx]||'', row=events.get(no)||null; return `<div class="pr-board-gate-slot"><div class="pr-board-gate-stack">${isResolved?renderFaceUpCard(card,'pr-board-gate-face'):renderCardBack('pr-board-gate-back')}${gateSuitCaption(card,isResolved,row)}</div></div>`; }).join('');
     const trackRows=SUITS.map(suit=>renderTrackRow(suit, getGridColumnForProgress(positions[suit]))).join('');
@@ -112,5 +99,5 @@
     const subline=latest&&latest.suit?`Gate ${latest.gate_no} open  -  ${suitLabel(latest.suit)} gaat 1 terug`:winnerSuit?`Totale pot ${totalPot} Bakken  -  ${deckLeft} kaarten over`:`${verified}/${list.length||0} verified  -  ${ready}/${list.length||0} ready  -  ${pendingGate} gates nog dicht`;
     return {headline, subline, totalPot, verified, ready, pendingGate, winnerSuit, deckLeft, drawCard, stage, isHost:!!(viewer&&viewer.is_host)};
   }
-  window.GEJAST_PAARDENRACE = { __v725_complete:true, rpc, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode, suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack, normalizeRaceMatch, renderRaceMinimap, renderLiveBoard, summarizeLiveRoom, gotoLive, liveHref, scopedHref, scope, getDrawRemaining, resolvedGateSet, normalizedGateEvents, gateEventMap, getGridColumnForProgress, liveBoardFingerprint };
+  window.GEJAST_PAARDENRACE = { __v699_complete:true, rpc, sessionToken, getStoredRoomCode, setStoredRoomCode, clearStoredRoomCode, suitLabel, suitSymbol, suitColor, parseCard, renderFaceUpCard, renderCardBack, renderRaceMinimap, renderLiveBoard, summarizeLiveRoom, gotoLive, liveHref, scopedHref, scope, getDrawRemaining, resolvedGateSet, normalizedGateEvents, gateEventMap, getGridColumnForProgress, liveBoardFingerprint };
 })();

@@ -8,7 +8,7 @@
   const esc = (v)=>String(v ?? '').replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
   function setStatus(msg='', bad=false){ const el=$('pkStatus'); if(el){ el.textContent=msg; el.style.color=bad?'#7f2f1d':'#6b6257'; } }
   function loginUrl(){ const target = `pikken.html${api.scope()==='family'?'?scope=family':''}`; return `./login.html?return_to=${encodeURIComponent(target)}${api.scope()==='family'?'&scope=family':''}`; }
-  function normalizeError(e){ const msg=String(e && e.message ? e.message : e || 'Onbekende fout'); if(/Niet ingelogd|not logged|session/i.test(msg)) return `Niet ingelogd. Log eerst in via ${loginUrl()}`; if(/timeout/i.test(msg)) return 'Pikken-backend reageert te traag. Ververs of run de nieuwste Pikken SQL als dit blijft gebeuren.'; if(/could not find|schema cache|function/i.test(msg)) return 'Pikken state-RPC ontbreekt of Supabase schema cache is nog oud. Run de nieuwste Pikken SQL en refresh.'; return msg; }
+  function normalizeError(e){ const msg=String(e && e.message ? e.message : e || 'Onbekende fout'); if(/Niet ingelogd|not logged|session/i.test(msg)) return `Niet ingelogd. Log eerst in via ${loginUrl()}`; if(/timeout/i.test(msg)) return 'Pikken-backend niet bereikbaar. Run de v687 SQL; als hij faalt, stuur de exacte Supabase error.'; if(/could not find|schema cache|function/i.test(msg)) return 'Pikken backend-RPC ontbreekt of Supabase schema cache is nog oud. Draai de v687 SQL en refresh.'; return msg; }
   function setBusyButton(id,busy,label){ const b=$(id); if(!b) return; b.disabled=!!busy; if(label) b.textContent=busy?label:b.getAttribute('data-original-label')||b.textContent; }
 
   function getStoredGame(){
@@ -20,7 +20,6 @@
   function updateUrl(id){ if(!id) return; try { history.replaceState(null, '', `pikken.html?game_id=${encodeURIComponent(id)}${api.scope()==='family'?'&scope=family':''}`); } catch (_) {} }
   function bidText(bid){ const c=Number(bid?.count || bid?.bid_count || 0), f=Number(bid?.face || bid?.bid_face || 0); if(!c || !f) return '--'; return f===1?`${c} x pik`:`${c} x ${f}`; }
   function displayLobbyCode(code){ const raw=String(code||'').trim(); const m=raw.match(/^DESPINOZA\s*(\d+)$/i); return m ? `Despinoza ${m[1]}` : raw; }
-  function readyOf(row){ return !!(row && (row.is_ready ?? row.ready)); }
   function revealLine(lr){
     const loser = lr?.loser_name || (lr?.loser_id ? `speler ${lr.loser_id}` : 'onbekend');
     const after = Number.isFinite(Number(lr?.loser_dice_after)) ? ` - nu ${Number(lr.loser_dice_after)} dobbel(s)` : '';
@@ -76,11 +75,10 @@
       if(configured && String(diceSelect.value) !== String(configured)) diceSelect.value = String(Math.max(1, Math.min(8, configured)));
       diceSelect.disabled = !(inLobby && viewer.is_host);
     }
-    const viewerReady = readyOf(viewer);
-    const role=$('pkLobbyRolePill'); if(role){ role.textContent = viewer.is_host ? 'Host' : 'Deelnemer'; role.className = `pill ${viewerReady?'ok':'wait'}`; }
-    const note=$('pkLobbyStickyNote'); if(note) note.textContent = viewerReady ? 'Je staat ready.' : 'Je staat unready.';
-    const ready=$('pkReadyBtn'); if(ready){ ready.className = `btn ${viewerReady?'ready-active':'alt'}`; ready.disabled = !inLobby || viewerReady; }
-    const unready=$('pkUnreadyBtn'); if(unready){ unready.className = `btn ${viewerReady?'alt':'unready-active'}`; unready.disabled = !inLobby || !viewerReady; }
+    const role=$('pkLobbyRolePill'); if(role){ role.textContent = viewer.is_host ? 'Host' : 'Deelnemer'; role.className = `pill ${viewer.is_ready?'ok':'wait'}`; }
+    const note=$('pkLobbyStickyNote'); if(note) note.textContent = viewer.is_ready ? 'Je staat ready.' : 'Je staat unready.';
+    const ready=$('pkReadyBtn'); if(ready){ ready.className = `btn ${viewer.is_ready?'ready-active':'alt'}`; ready.disabled = !inLobby || !!viewer.is_ready; }
+    const unready=$('pkUnreadyBtn'); if(unready){ unready.className = `btn ${viewer.is_ready?'alt':'unready-active'}`; unready.disabled = !inLobby || !viewer.is_ready; }
     const destroy=$('pkDestroyBtn'); if(destroy) destroy.classList.toggle('hidden', !(inLobby && viewer.is_host));
     const start=$('pkStartBtn'); if(start) start.classList.toggle('hidden', !(inLobby && viewer.is_host));
   }
@@ -90,9 +88,8 @@
     const turn=Number(game?.state?.current_turn_seat||0), voteTurn=Number(game?.state?.vote_turn_seat||0);
     box.innerHTML = players.length ? players.map((p)=>{
       const seat=Number(p.seat||p.seat_index||0); const alive=!!p.alive || phase==='lobby'; const vote=votes.find((v)=>Number(v.seat||v.seat_index||0)===seat); const voteStatus=String(vote?.status||'waiting');
-      const playerReady = readyOf(p);
-      const pill = phase==='voting' ? (voteStatus==='approved'?'goedgekeurd':voteStatus==='rejected'?'afgekeurd':'wacht') : (p.is_host?'Host':playerReady?'Ready':'Niet ready');
-      const pillCls = phase==='voting' ? (voteStatus==='approved'?'ok':voteStatus==='rejected'?'bad':'wait') : (p.is_host || playerReady ? 'ok' : 'wait');
+      const pill = phase==='voting' ? (voteStatus==='approved'?'goedgekeurd':voteStatus==='rejected'?'afgekeurd':'wacht') : (p.is_host?'Host':p.is_ready?'Ready':'Niet ready');
+      const pillCls = phase==='voting' ? (voteStatus==='approved'?'ok':voteStatus==='rejected'?'bad':'wait') : (p.is_host || p.is_ready ? 'ok' : 'wait');
       return `<div class="player-row ${alive?'':'dead'} ${(phase==='bidding'&&seat===turn)||(phase==='voting'&&seat===voteTurn)?'turn':''}"><div><div><strong>${esc(p.name||p.player_name||'Speler')}</strong> <span class="muted">#${seat}</span></div></div><span class="pill ${pillCls}">${esc(pill)}</span></div>`;
     }).join('') : '<div class="muted">Nog geen spelers.</div>';
   }
@@ -147,19 +144,7 @@
     if(!state.gameId) return;
     if(state.busy) return; state.busy=true;
     try { const payload=await api.getState(state.gameId); const v=Number(payload?.game?.state_version ?? payload?.state_version ?? -1); if(force || v !== state.lastVersion){ state.lastVersion=v; render(payload); } }
-    catch(e){
-      const msg=String(e?.message||e||'');
-      if(/could not find|schema cache|function|does not exist/i.test(msg)){
-        storeGame('');
-        state.gameId='';
-        stopPolling();
-        try{ history.replaceState(null,'','pikken.html'); }catch(_){}
-        setStatus('');
-        await loadFeeds().catch(()=>{});
-        return;
-      }
-      setStatus(e.message || 'Pikken laden mislukt.', true);
-    }
+    catch(e){ setStatus(e.message || 'Pikken laden mislukt.', true); }
     finally{ state.busy=false; }
   }
   function startPolling(){ stopPolling(); state.timer=setInterval(()=>{ if(!document.hidden) refresh(false); }, 1200); refresh(true); }

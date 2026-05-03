@@ -1,11 +1,10 @@
 (function(){
-  if (window.GEJAST_PIKKEN_CONTRACT && window.GEJAST_PIKKEN_CONTRACT.VERSION === 'v725') return;
+  if (window.GEJAST_PIKKEN_CONTRACT && window.GEJAST_PIKKEN_CONTRACT.VERSION === 'v717') return;
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
   const PLAYER_KEYS = Array.isArray(cfg.PLAYER_SESSION_KEYS) && cfg.PLAYER_SESSION_KEYS.length ? cfg.PLAYER_SESSION_KEYS : ['jas_session_token_v11','jas_session_token_v10'];
   const RPC = {
     state: cfg.PIKKEN_CONTRACT_READ_RPC_V666 || 'pikken_get_state_scoped',
-    publicState: 'pikken_get_live_state_public',
     create: cfg.PIKKEN_CREATE_LOBBY_RPC_V666 || 'pikken_create_lobby_scoped',
     join: cfg.PIKKEN_JOIN_LOBBY_RPC_V666 || 'pikken_join_lobby_scoped',
     ready: cfg.PIKKEN_READY_RPC_V666 || 'pikken_set_ready_scoped',
@@ -109,13 +108,7 @@
   function tokenPayload(extra){ return Object.assign({ session_token: sessionToken() || null, session_token_input: sessionToken() || null, site_scope_input: scope() }, extra || {}); }
   async function createLobby(config){ requireSession(); const payload=tokenPayload({ config_input: config || {} }); return rpcFirst([{name:RPC.createFast,payload},{name:RPC.create,payload}], 4200); }
   async function joinLobby(code){ requireSession(); const payload=tokenPayload({ lobby_code_input: cleanCode(code) }); return rpcFirst([{name:RPC.joinFast,payload},{name:RPC.join,payload}], 4200); }
-  async function getState(gameId, code){
-    const payload = tokenPayload({ game_id_input: gameId || null, lobby_code_input: code ? cleanCode(code) : null });
-    return rpcFirst([
-      {name:RPC.state,payload,timeoutMs:4200},
-      {name:RPC.publicState,payload:tokenPayload({ game_id_input: gameId || null, client_match_id: gameId || null, lobby_code_input: code ? cleanCode(code) : null }),timeoutMs:4200}
-    ], 4200);
-  }
+  async function getState(gameId, code){ return rpc(RPC.state, tokenPayload({ game_id_input: gameId || null, game_id: gameId || null, lobby_code_input: code ? cleanCode(code) : null }), 4200); }
   async function setReady(gameId, ready){ requireSession(); return rpc(RPC.ready, tokenPayload({ game_id_input: gameId, ready_input: !!ready }), 2800); }
   async function updateLobbyConfig(gameId, config){ requireSession(); return rpc(RPC.updateConfig, tokenPayload({ game_id_input: gameId, config_input: config || {} }), 2800); }
   async function startGame(gameId){ requireSession(); return rpc(RPC.start, tokenPayload({ game_id_input: gameId }), 2800); }
@@ -147,7 +140,7 @@
       return true;
     } catch (_) { return false; }
   }
-  window.GEJAST_PIKKEN_CONTRACT = { VERSION:'v725', scope, sessionToken, requireSession, rpc, cleanCode, createLobby, joinLobby, getState, setReady, updateLobbyConfig, startGame, placeBid, rejectBid, castVote, leaveGame, destroyGame, rpcFirst, openLobbies, liveMatches, myActive, stats, cleanupStale, recordCompleted, abandonAndRecord, abandonAndRecordKeepalive };
+  window.GEJAST_PIKKEN_CONTRACT = { VERSION:'v717', scope, sessionToken, requireSession, rpc, cleanCode, createLobby, joinLobby, getState, setReady, updateLobbyConfig, startGame, placeBid, rejectBid, castVote, leaveGame, destroyGame, rpcFirst, openLobbies, liveMatches, myActive, stats, cleanupStale, recordCompleted, abandonAndRecord, abandonAndRecordKeepalive };
 })();
 
 
