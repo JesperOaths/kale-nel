@@ -8,7 +8,7 @@
   const esc = (v)=>String(v ?? '').replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
   function setStatus(msg='', bad=false){ const el=$('pkStatus'); if(el){ el.textContent=msg; el.style.color=bad?'#7f2f1d':'#6b6257'; } }
   function loginUrl(){ const target = `pikken.html${api.scope()==='family'?'?scope=family':''}`; return `./login.html?return_to=${encodeURIComponent(target)}${api.scope()==='family'?'&scope=family':''}`; }
-  function normalizeError(e){ const msg=String(e && e.message ? e.message : e || 'Onbekende fout'); if(/Niet ingelogd|not logged|session/i.test(msg)) return `Niet ingelogd. Log eerst in via ${loginUrl()}`; if(/timeout/i.test(msg)) return 'Pikken-backend niet bereikbaar. Run de v687 SQL; als hij faalt, stuur de exacte Supabase error.'; if(/could not find|schema cache|function/i.test(msg)) return 'Pikken backend-RPC ontbreekt of Supabase schema cache is nog oud. Draai de v687 SQL en refresh.'; return msg; }
+  function normalizeError(e){ const msg=String(e && e.message ? e.message : e || 'Onbekende fout'); if(/Niet ingelogd|not logged|session/i.test(msg)) return `Niet ingelogd. Log eerst in via ${loginUrl()}`; if(/timeout/i.test(msg)) return 'Pikken-backend reageert te traag. Ververs of run de nieuwste Pikken SQL als dit blijft gebeuren.'; if(/could not find|schema cache|function/i.test(msg)) return 'Pikken state-RPC ontbreekt of Supabase schema cache is nog oud. Run de nieuwste Pikken SQL en refresh.'; return msg; }
   function setBusyButton(id,busy,label){ const b=$(id); if(!b) return; b.disabled=!!busy; if(label) b.textContent=busy?label:b.getAttribute('data-original-label')||b.textContent; }
 
   function getStoredGame(){
@@ -144,7 +144,19 @@
     if(!state.gameId) return;
     if(state.busy) return; state.busy=true;
     try { const payload=await api.getState(state.gameId); const v=Number(payload?.game?.state_version ?? payload?.state_version ?? -1); if(force || v !== state.lastVersion){ state.lastVersion=v; render(payload); } }
-    catch(e){ setStatus(e.message || 'Pikken laden mislukt.', true); }
+    catch(e){
+      const msg=String(e?.message||e||'');
+      if(/could not find|schema cache|function|does not exist/i.test(msg)){
+        storeGame('');
+        state.gameId='';
+        stopPolling();
+        try{ history.replaceState(null,'','pikken.html'); }catch(_){}
+        setStatus('');
+        await loadFeeds().catch(()=>{});
+        return;
+      }
+      setStatus(e.message || 'Pikken laden mislukt.', true);
+    }
     finally{ state.busy=false; }
   }
   function startPolling(){ stopPolling(); state.timer=setInterval(()=>{ if(!document.hidden) refresh(false); }, 1200); refresh(true); }
