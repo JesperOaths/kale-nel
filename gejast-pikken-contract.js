@@ -1,5 +1,5 @@
 (function(){
-  if (window.GEJAST_PIKKEN_CONTRACT && window.GEJAST_PIKKEN_CONTRACT.VERSION === 'v722') return;
+  if (window.GEJAST_PIKKEN_CONTRACT && window.GEJAST_PIKKEN_CONTRACT.VERSION === 'v724') return;
   const cfg = window.GEJAST_CONFIG || {};
   const scopeUtils = window.GEJAST_SCOPE_UTILS || {};
   const PLAYER_KEYS = Array.isArray(cfg.PLAYER_SESSION_KEYS) && cfg.PLAYER_SESSION_KEYS.length ? cfg.PLAYER_SESSION_KEYS : ['jas_session_token_v11','jas_session_token_v10'];
@@ -147,7 +147,7 @@
       return true;
     } catch (_) { return false; }
   }
-  window.GEJAST_PIKKEN_CONTRACT = { VERSION:'v722', scope, sessionToken, requireSession, rpc, cleanCode, createLobby, joinLobby, getState, setReady, updateLobbyConfig, startGame, placeBid, rejectBid, castVote, leaveGame, destroyGame, rpcFirst, openLobbies, liveMatches, myActive, stats, cleanupStale, recordCompleted, abandonAndRecord, abandonAndRecordKeepalive };
+  window.GEJAST_PIKKEN_CONTRACT = { VERSION:'v724', scope, sessionToken, requireSession, rpc, cleanCode, createLobby, joinLobby, getState, setReady, updateLobbyConfig, startGame, placeBid, rejectBid, castVote, leaveGame, destroyGame, rpcFirst, openLobbies, liveMatches, myActive, stats, cleanupStale, recordCompleted, abandonAndRecord, abandonAndRecordKeepalive };
 })();
 
 
