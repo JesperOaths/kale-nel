@@ -54,13 +54,13 @@
     }).map((p,i)=>`<div class="finish-row ${i===0?'winner':''}"><strong>${i+1}. ${esc(playerName(p))}</strong><span>${diceLabel(p.dice_count)}</span></div>`).join('');
   }
   function victoryFestivityHtml(winner){
-    return `<div class="victory-fest" aria-hidden="true">
-      <span class="streamer s1"></span><span class="streamer s2"></span><span class="streamer s3"></span>
-      <span class="balloon b1"></span><span class="balloon b2"></span><span class="balloon b3"></span>
-      <img class="fest-logo l1" src="./logo.png" alt=""><img class="fest-logo l2" src="./logo.png" alt="">
-      <span class="fest-die d1">2</span><span class="fest-die d2">6</span><span class="fest-die d3">pik</span>
-      <span class="confetti c1"></span><span class="confetti c2"></span><span class="confetti c3"></span><span class="confetti c4"></span>
-    </div><div class="victory-name-burst">${esc(winner || 'Winnaar')}</div>`;
+    const diceFaces=['1','2','3','4','5','6','pik','1','6','pik'];
+    const dice=diceFaces.map((face,i)=>`<span class="fest-die d${i+1}">${esc(face)}</span>`).join('');
+    const balloons=Array.from({length:8},(_,i)=>`<span class="balloon b${i+1}"></span>`).join('');
+    const streamers=Array.from({length:8},(_,i)=>`<span class="streamer s${i+1}"></span>`).join('');
+    const confetti=Array.from({length:26},(_,i)=>`<span class="confetti c${i+1}"></span>`).join('');
+    const logos=Array.from({length:6},(_,i)=>`<img class="fest-logo l${i+1}" src="./logo.png" alt="">`).join('');
+    return `<div class="victory-fest" aria-hidden="true">${streamers}${balloons}${logos}${dice}${confetti}</div><div class="victory-name-burst">${esc(winner || 'Winnaar')}</div>`;
   }
   function phase(p){ return String(p?.game?.state?.phase || p?.game?.status || 'lobby').toLowerCase(); }
   function setText(id, val){ const el=$(id); if(el) el.textContent=val; }
@@ -177,7 +177,14 @@
     const turnP=players.find((p)=>Number(p.seat||p.seat_index||0)===turn);
     setText('turnName', turnP?.name || turnP?.player_name || '--');
     setText('bidBy', st.bid ? `door ${st.bid.bidder_name || '--'}` : 'Nog geen bod');
-    const fallbackCurrent=players.reduce((s,p)=>s+Number(p.dice_count||0),0), fallbackStart=players.length*6;
+    const fallbackCurrent=players.reduce((sum,p)=>sum+Number(p.dice_count||0),0);
+    const configuredStartDice=Number(game.config?.start_dice || st.start_dice || st.initial_dice || 0);
+    const fallbackStart=players.reduce((sum,p)=>{
+      const explicit=Number(p.start_dice_count ?? p.initial_dice_count ?? p.start_dice ?? 0);
+      if(explicit>0) return sum + explicit;
+      if(configuredStartDice>0) return sum + configuredStartDice;
+      return sum + Number(p.dice_count||0);
+    },0) || fallbackCurrent;
     setText('diceFraction', `${Number(payload.dice_totals?.current_total||fallbackCurrent||0)}/${Number(payload.dice_totals?.start_total||fallbackStart||0)}`);
 
     const ring=$('seatRing');
