@@ -78,6 +78,91 @@
     if (getScope() === 'family') url.searchParams.set('scope', 'family');
     return url.pathname.split('/').pop() + url.search;
   }
+  function isMissingRpcError(err){
+    return /schema cache|could not find the function|does not exist|not found/i.test(String(err && err.message || err || ''));
+  }
+  function uuid(){
+    try { if (global.crypto && global.crypto.randomUUID) return global.crypto.randomUUID(); } catch (_) {}
+    return '10000000-1000-4000-8000-' + Math.random().toString(16).slice(2, 14).padEnd(12, '0');
+  }
+  function isUuid(value){
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
+  }
+  function legacyRound(payload, patch){
+    const source = Object.assign({}, payload || {}, patch || {});
+    return {
+      round: Number(source.round_no || source.roundNo || 1) || 1,
+      roundNo: Number(source.round_no || source.roundNo || 1) || 1,
+      team: 'W',
+      bid: 80,
+      suit: 'S',
+      baseW: Number(source.team_a_score ?? source.score_a ?? source.teamAScore ?? 0) || 0,
+      baseZ: Number(source.team_b_score ?? source.score_b ?? source.teamBScore ?? 0) || 0,
+      roemW: Number(source.roem_a ?? source.roemA ?? 0) || 0,
+      roemZ: Number(source.roem_b ?? source.roemB ?? 0) || 0,
+      fw: Number(source.team_a_score ?? source.score_a ?? source.teamAScore ?? 0) || 0,
+      fz: Number(source.team_b_score ?? source.score_b ?? source.teamBScore ?? 0) || 0,
+      note: String(source.note || source.notes || '')
+    };
+  }
+  function legacyPayload(input, status, patch){
+    const payload = Object.assign({}, input || {});
+    const round = legacyRound(payload, patch);
+    const teamA = normalizeTeam(payload.team_a_names || payload.teamA || payload.team_a || []);
+    const teamB = normalizeTeam(payload.team_b_names || payload.teamB || payload.team_b || []);
+    const id = isUuid(payload.client_match_id) ? payload.client_match_id : uuid();
+    return {
+      session_token: getToken() || null,
+      match_id_input: id,
+      site_scope_input: getScope(),
+      team_w_player_ids_input: [],
+      team_z_player_ids_input: [],
+      team_w_player_names_input: teamA,
+      team_z_player_names_input: teamB,
+      rounds_input: (status === 'active' && !patch) ? [] : [round],
+      payload_snapshot_input: Object.assign({}, payload, patch || {}, {
+        client_match_id: id,
+        team_a_names: teamA,
+        team_b_names: teamB,
+        team_a_score: round.fw,
+        team_b_score: round.fz,
+        note: String((patch && patch.note) || payload.note || payload.notes || '')
+      }),
+      status_input: status,
+      started_at_input: payload.started_at || null
+    };
+  }
+  function legacyMatchToLive(data){
+    const match = data && (data.match || data.live_match || data);
+    if (!match || typeof match !== 'object') return { live_matches: [] };
+    const payload = match.payload_snapshot || {};
+    const row = {
+      client_match_id: payload.client_match_id || match.id,
+      status: match.status || 'active',
+      updated_at: match.updated_at || match.started_at || match.finished_at,
+      team_a_names: match.team_w_player_names || payload.team_a_names || [],
+      team_b_names: match.team_z_player_names || payload.team_b_names || [],
+      team_a_score: match.final_score_w ?? payload.team_a_score ?? 0,
+      team_b_score: match.final_score_z ?? payload.team_b_score ?? 0,
+      round_no: match.total_rounds_played || payload.round_no || 0,
+      payload: payload
+    };
+    return { live_match: row, live_matches: [row] };
+  }
+  function legacyInputFromMatch(data, clientMatchId){
+    const match = data && (data.match || data.live_match || data);
+    const payload = (match && match.payload_snapshot) || {};
+    return {
+      client_match_id: payload.client_match_id || clientMatchId,
+      team_a_names: (match && match.team_w_player_names) || payload.team_a_names || [],
+      team_b_names: (match && match.team_z_player_names) || payload.team_b_names || [],
+      team_a_score: (match && match.final_score_w) ?? payload.team_a_score ?? 0,
+      team_b_score: (match && match.final_score_z) ?? payload.team_b_score ?? 0,
+      roem_a: (match && match.total_roem_w) ?? payload.roem_a ?? 0,
+      roem_b: (match && match.total_roem_z) ?? payload.roem_b ?? 0,
+      notes: payload.note || payload.notes || ''
+    };
+  }
   async function loadNames(){
     try {
       if (cfg.getActivatedPlayerNamesForScope) {
@@ -114,7 +199,7 @@
     payload.roem_b = Number(payload.roem_b ?? payload.roemB ?? 0);
     payload.mars_team = String(payload.mars_team || '').trim();
     payload.notes = String(payload.notes || '').trim();
-    payload.client_match_id = String(payload.client_match_id || ('klaverjas-' + Date.now() + '-' + Math.random().toString(16).slice(2, 8)));
+    payload.client_match_id = String(payload.client_match_id || uuid());
     if (payload.team_a_names.length !== 2 || payload.team_b_names.length !== 2) throw new Error('Klaverjassen verwacht precies twee spelers per team.');
     const all = payload.team_a_names.concat(payload.team_b_names).map((x) => x.toLowerCase());
     if (new Set(all).size !== all.length) throw new Error('Elke speler mag maar één keer meedoen.');
@@ -123,47 +208,85 @@
   }
   async function saveMatch(input){
     const payload = normalizeMatchInput(input);
-    return await rpc('save_klaverjas_match_v687', {
-      session_token: getToken() || null,
-      session_token_input: getToken() || null,
-      client_match_id_input: payload.client_match_id,
-      match_payload: payload,
-      site_scope_input: getScope()
-    });
+    try {
+      return await rpc('save_klaverjas_match_v687', {
+        session_token: getToken() || null,
+        session_token_input: getToken() || null,
+        client_match_id_input: payload.client_match_id,
+        match_payload: payload,
+        site_scope_input: getScope()
+      });
+    } catch (err) {
+      if (!isMissingRpcError(err)) throw err;
+      return await rpc('klaverjas_upsert_match_state_scoped', legacyPayload(payload, 'finished'), { timeoutMs: 12000 });
+    }
   }
   async function startLive(input){
     const payload = normalizeMatchInput(Object.assign({ team_a_score: 0, team_b_score: 0 }, input || {}));
-    return await rpc('start_klaverjas_live_match_v687', {
-      session_token_input: getToken() || null,
-      client_match_id_input: payload.client_match_id,
-      match_payload: payload,
-      site_scope_input: getScope()
-    });
+    try {
+      return await rpc('start_klaverjas_live_match_v687', {
+        session_token_input: getToken() || null,
+        client_match_id_input: payload.client_match_id,
+        match_payload: payload,
+        site_scope_input: getScope()
+      });
+    } catch (err) {
+      if (!isMissingRpcError(err)) throw err;
+      return legacyMatchToLive(await rpc('klaverjas_upsert_match_state_scoped', legacyPayload(payload, 'active'), { timeoutMs: 12000 }));
+    }
   }
   async function updateLive(clientMatchId, patch){
-    return await rpc('update_klaverjas_live_match_v687', {
-      session_token_input: getToken() || null,
-      client_match_id_input: clientMatchId,
-      patch_payload: patch || {},
-      site_scope_input: getScope()
-    });
+    try {
+      return await rpc('update_klaverjas_live_match_v687', {
+        session_token_input: getToken() || null,
+        client_match_id_input: clientMatchId,
+        patch_payload: patch || {},
+        site_scope_input: getScope()
+      });
+    } catch (err) {
+      if (!isMissingRpcError(err) || !isUuid(clientMatchId)) throw err;
+      const current = await rpc('klaverjas_get_live_match_public', { match_id_input: clientMatchId }, { timeoutMs: 7000 });
+      return legacyMatchToLive(await rpc('klaverjas_upsert_match_state_scoped', legacyPayload(legacyInputFromMatch(current, clientMatchId), 'active', patch || {}), { timeoutMs: 12000 }));
+    }
   }
   async function finishLive(clientMatchId, patch){
-    return await rpc('finish_klaverjas_live_match_v687', {
-      session_token_input: getToken() || null,
-      client_match_id_input: clientMatchId,
-      patch_payload: patch || {},
-      site_scope_input: getScope()
-    });
+    try {
+      return await rpc('finish_klaverjas_live_match_v687', {
+        session_token_input: getToken() || null,
+        client_match_id_input: clientMatchId,
+        patch_payload: patch || {},
+        site_scope_input: getScope()
+      });
+    } catch (err) {
+      if (!isMissingRpcError(err) || !isUuid(clientMatchId)) throw err;
+      const current = await rpc('klaverjas_get_live_match_public', { match_id_input: clientMatchId }, { timeoutMs: 7000 });
+      return legacyMatchToLive(await rpc('klaverjas_upsert_match_state_scoped', legacyPayload(legacyInputFromMatch(current, clientMatchId), 'finished', patch || {}), { timeoutMs: 12000 }));
+    }
   }
   async function getLive(clientMatchId){
-    return await rpc('get_klaverjas_live_state_public_v687', { client_match_id_input: clientMatchId || null, site_scope_input: getScope() }, { timeoutMs: 9000 });
+    try {
+      return await rpc('get_klaverjas_live_state_public_v687', { client_match_id_input: clientMatchId || null, site_scope_input: getScope() }, { timeoutMs: 9000 });
+    } catch (err) {
+      if (!isMissingRpcError(err)) throw err;
+      if (!isUuid(clientMatchId)) return { live_matches: [] };
+      return legacyMatchToLive(await rpc('klaverjas_get_live_match_public', { match_id_input: clientMatchId }, { timeoutMs: 7000 }));
+    }
   }
   async function getLeaderboard(){
-    return await rpc('get_klaverjas_leaderboard_public_v687', { site_scope_input: getScope() }, { timeoutMs: 10000 });
+    try {
+      return await rpc('get_klaverjas_leaderboard_public_v687', { site_scope_input: getScope() }, { timeoutMs: 10000 });
+    } catch (err) {
+      if (!isMissingRpcError(err) && !/variable not found/i.test(String(err && err.message || err))) throw err;
+      return { leaderboard: [] };
+    }
   }
   async function getBundle(){
-    return await rpc('get_klaverjas_runtime_bundle_v687', { site_scope_input: getScope() }, { timeoutMs: 12000 });
+    try {
+      return await rpc('get_klaverjas_runtime_bundle_v687', { site_scope_input: getScope() }, { timeoutMs: 12000 });
+    } catch (err) {
+      if (!isMissingRpcError(err)) throw err;
+      return { recent_matches: [] };
+    }
   }
   async function adminAudit(){
     return await rpc('admin_get_klaverjas_runtime_audit_v687', { admin_session_token_input: getAdminToken() || null, site_scope_input: getScope() }, { timeoutMs: 12000 });
