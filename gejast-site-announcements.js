@@ -1,5 +1,5 @@
 (function(global){
-  const STATE = { timer:null, showing:false };
+  const STATE = { timer:null, showing:false, disabled:false };
   function cfg(){ return global.GEJAST_CONFIG || {}; }
   function hasPlayer(){ try { return !!(cfg().getPlayerSessionToken && cfg().getPlayerSessionToken()); } catch(_) { return false; } }
   function scope(){
@@ -118,7 +118,7 @@
     global.setTimeout(done, 7000);
   }
   async function poll(){
-    if (!hasPlayer() || STATE.showing) return;
+    if (STATE.disabled || !hasPlayer() || STATE.showing) return;
     try {
       const data = await rpc('get_player_site_announcements_scoped', { site_scope_input: scope(), limit_count: 8 });
       const rows = normalizeRows(data?.rows || data);
@@ -128,7 +128,15 @@
       if (kind === 'despimarkt_market_resolved') await showResolvedOverlay(first);
       else if (kind === 'despimarkt_follow_bet' || kind === 'despimarkt_follow_close_soon' || kind === 'despimarkt_promotional_market_live') await showToast(first);
       else await consumeAnnouncement(first);
-    } catch(_){}
+    } catch(err){
+      if (/could not find|schema cache|function|404/i.test(String(err && err.message || err))) {
+        STATE.disabled = true;
+        if (STATE.timer) {
+          global.clearInterval(STATE.timer);
+          STATE.timer = null;
+        }
+      }
+    }
   }
   function shouldRun(){
     try { const path = (global.location.pathname || '').toLowerCase(); return !/\/admin/.test(path); } catch(_) { return true; }
