@@ -17,7 +17,7 @@ if (!rootVersion) {
 }
 
 const activeExt = new Set(['.html','.js','.mjs','.css']);
-const ignoredDirs = new Set(['.git','node_modules','dist','build','.next','.vercel','coverage','tmp','temp','patch_bundles']);
+const ignoredDirs = new Set(['.git','node_modules','dist','build','.next','.vercel','coverage','tmp','temp','patch_bundles','repo','mnt']);
 const ignoredFiles = new Set(['check-version-drift.mjs','fix-version-drift.mjs']);
 
 function normalizeVersion(value){
@@ -35,9 +35,18 @@ function walk(dir, out=[]){
   }
   return out;
 }
+function isArchivedFile(rel){
+  const base = path.basename(rel);
+  if (/_(?:v\d+|orig)\.html$/i.test(base)) return true;
+  if (/^gejast-v\d+-repair\.js$/i.test(base) && !base.toLowerCase().includes(rootVersion.toLowerCase())) return true;
+  if (/^README_v\d+/i.test(base) || /^PATCH_NOTES_v\d+/i.test(base) || /^GEJAST_v\d+/i.test(base)) return true;
+  return false;
+}
 
 let changed = 0;
 for (const file of walk(root)) {
+  const rel = path.relative(root, file).replaceAll('\\','/');
+  if (isArchivedFile(rel)) continue;
   if (ignoredFiles.has(path.basename(file))) continue;
   if (!activeExt.has(path.extname(file).toLowerCase())) continue;
   const before = fs.readFileSync(file, 'utf8');
@@ -50,7 +59,7 @@ for (const file of walk(root)) {
   if (after !== before) {
     fs.writeFileSync(file, after, 'utf8');
     changed += 1;
-    console.log(`updated ${path.relative(root,file).replaceAll('\\','/')}`);
+    console.log(`updated ${rel}`);
   }
 }
 console.log(`Version drift fixer completed. Root VERSION=${rootVersion}. Files changed=${changed}.`);

@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v718',
+    VERSION:'v725',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: '',
@@ -750,7 +750,7 @@ function buildRequestUrl(returnTo, scope){
       setTimeout(showPageNow, 0);
     }
     setTimeout(showPageNow, 650);
-    return { VERSION:'v718', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
+    return { VERSION:'v725', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
   })();
   window.GEJAST_FAST_RUNTIME = FAST_RUNTIME;
 
@@ -813,6 +813,17 @@ function buildRequestUrl(returnTo, scope){
     } catch (_) {}
   }
 
+  function ensureRepairRuntime(){
+    try {
+      if (window.GEJAST_V725_REPAIR || document.querySelector('script[data-gejast-v725-repair]')) return;
+      const script = document.createElement('script');
+      script.src = `./gejast-v725-repair.js?${effectiveVersion}`;
+      script.defer = true;
+      script.setAttribute('data-gejast-v725-repair','1');
+      document.head.appendChild(script);
+    } catch (_) {}
+  }
+
   function afterDomReady(){
     try { FAST_RUNTIME && FAST_RUNTIME.showPageNow && FAST_RUNTIME.showPageNow(); } catch(_) {}
     try { if ((location.pathname||'').toLowerCase().endsWith('/index.html') || (location.pathname||'').toLowerCase()==='/' || !(location.pathname||'').split('/').pop()) { document.querySelectorAll('#ghprError').forEach(function(n){ n.remove(); }); } } catch(_) {}
@@ -820,6 +831,7 @@ function buildRequestUrl(returnTo, scope){
     refreshVersionFromFile();
     ensureSiteAnnouncementRuntime();
     ensureScopeHardeningRuntime();
+    ensureRepairRuntime();
     if (getPlayerSessionToken() && shouldAutoInstallActivityKeepalive()) installActivityKeepalive();
   }
   if (document.readyState === 'loading') {
@@ -828,5 +840,4 @@ function buildRequestUrl(returnTo, scope){
     afterDomReady();
   }
 })();
-
 
