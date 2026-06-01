@@ -88,6 +88,12 @@
   function isUuid(value){
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
   }
+  function isNumericId(value){
+    return /^\d+$/.test(String(value || ''));
+  }
+  function isLegacyId(value){
+    return isUuid(value) || isNumericId(value);
+  }
   function legacyRound(payload, patch){
     const source = Object.assign({}, payload || {}, patch || {});
     return {
@@ -110,7 +116,7 @@
     const round = legacyRound(payload, patch);
     const teamA = normalizeTeam(payload.team_a_names || payload.teamA || payload.team_a || []);
     const teamB = normalizeTeam(payload.team_b_names || payload.teamB || payload.team_b || []);
-    const id = isUuid(payload.client_match_id) ? payload.client_match_id : uuid();
+    const id = isNumericId(payload.client_match_id) ? Number(payload.client_match_id) : (isUuid(payload.client_match_id) ? payload.client_match_id : null);
     return {
       session_token: getToken() || null,
       match_id_input: id,
@@ -121,7 +127,7 @@
       team_z_player_names_input: teamB,
       rounds_input: (status === 'active' && !patch) ? [] : [round],
       payload_snapshot_input: Object.assign({}, payload, patch || {}, {
-        client_match_id: id,
+        client_match_id: id || payload.client_match_id || null,
         team_a_names: teamA,
         team_b_names: teamB,
         team_a_score: round.fw,
@@ -137,7 +143,7 @@
     if (!match || typeof match !== 'object') return { live_matches: [] };
     const payload = match.payload_snapshot || {};
     const row = {
-      client_match_id: payload.client_match_id || match.id,
+      client_match_id: payload.client_match_id || match.client_match_id || match.id,
       status: match.status || 'active',
       updated_at: match.updated_at || match.started_at || match.finished_at,
       team_a_names: match.team_w_player_names || payload.team_a_names || [],
@@ -244,7 +250,7 @@
         site_scope_input: getScope()
       });
     } catch (err) {
-      if (!isMissingRpcError(err) || !isUuid(clientMatchId)) throw err;
+      if (!isMissingRpcError(err) || !isLegacyId(clientMatchId)) throw err;
       const current = await rpc('klaverjas_get_live_match_public', { match_id_input: clientMatchId }, { timeoutMs: 7000 });
       return legacyMatchToLive(await rpc('klaverjas_upsert_match_state_scoped', legacyPayload(legacyInputFromMatch(current, clientMatchId), 'active', patch || {}), { timeoutMs: 12000 }));
     }
@@ -258,7 +264,7 @@
         site_scope_input: getScope()
       });
     } catch (err) {
-      if (!isMissingRpcError(err) || !isUuid(clientMatchId)) throw err;
+      if (!isMissingRpcError(err) || !isLegacyId(clientMatchId)) throw err;
       const current = await rpc('klaverjas_get_live_match_public', { match_id_input: clientMatchId }, { timeoutMs: 7000 });
       return legacyMatchToLive(await rpc('klaverjas_upsert_match_state_scoped', legacyPayload(legacyInputFromMatch(current, clientMatchId), 'finished', patch || {}), { timeoutMs: 12000 }));
     }
@@ -268,7 +274,7 @@
       return await rpc('get_klaverjas_live_state_public_v687', { client_match_id_input: clientMatchId || null, site_scope_input: getScope() }, { timeoutMs: 9000 });
     } catch (err) {
       if (!isMissingRpcError(err)) throw err;
-      if (!isUuid(clientMatchId)) return { live_matches: [] };
+      if (!isLegacyId(clientMatchId)) return { live_matches: [] };
       return legacyMatchToLive(await rpc('klaverjas_get_live_match_public', { match_id_input: clientMatchId }, { timeoutMs: 7000 }));
     }
   }
