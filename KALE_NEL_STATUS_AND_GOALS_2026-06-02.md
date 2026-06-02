@@ -41,6 +41,7 @@ Added in the continuation pass:
 - Public Supabase probe still returned `PGRST203` for `get_homepage_runtime_bundle_v687` with only `site_scope_input`, so the `GEJAST_v729_homepage_runtime_bundle_overload_fix.sql` drop-overload fix still appears unapplied in Supabase.
 - The defensive three-argument homepage runtime call returned HTTP 200, so the live frontend path remains protected.
 - Public Paardenrace create probe reached the expected player-login guard (`Log eerst in als speler.`), confirming the RPC is reachable; a real logged-in two-player test is still needed to prove the v728 duplicate-room-code fix.
+- Homepage image startup hints were tightened: large decorative images and repeated plus icons now include dimensions, async decoding, and low-priority/lazy loading hints where safe.
 
 Observed:
 

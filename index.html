@@ -690,9 +690,9 @@
 </head>
 <body class="homepage-ready"><div id="gejastTopRightToolsMount"></div>
   <div class="site-scene" aria-hidden="true">
-    <div class="left-hand"><img src="./kale9goed.png" alt="" style="width:100%;display:block;" /></div>
-    <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" style="width:100%;display:block;" /></div>
-    <div class="right-card"><img src="./playingcard-accent1-trimmed.png" alt="" style="width:100%;display:block;" /></div>
+    <div class="left-hand"><img src="./kale9goed.png" alt="" width="1365" height="1766" decoding="async" fetchpriority="low" style="width:100%;display:block;" /></div>
+    <div class="spinoza-shadow"><img src="./spinoza-silhouette.png" alt="" width="10" height="10" decoding="async" fetchpriority="low" style="width:100%;display:block;" /></div>
+    <div class="right-card"><img src="./playingcard-accent1-trimmed.png" alt="" width="1382" height="1968" decoding="async" fetchpriority="low" style="width:100%;display:block;" /></div>
   </div>
 
   <main class="page">
@@ -701,7 +701,7 @@
         <a href="./admin.html" class="admin-badge">Admin</a>
       </div>
       <div class="card-top-right">
-        <a href="./index.html" aria-label="Home via logo"><img src="./logo.png" alt="Logo" class="card-logo" style="cursor:pointer;filter:drop-shadow(0 4px 10px rgba(0,0,0,.08));width:66px;height:66px;object-fit:contain" /></a>
+        <a href="./index.html" aria-label="Home via logo"><img src="./logo.png" alt="Logo" class="card-logo" width="1860" height="1813" decoding="async" fetchpriority="low" style="cursor:pointer;filter:drop-shadow(0 4px 10px rgba(0,0,0,.08));width:66px;height:66px;object-fit:contain" /></a>
       </div>
 
             <section class="ladder-section" aria-label="Live ladders">
@@ -752,33 +752,33 @@
         <div class="public-links-grid">
           <a id="homeKlaverjasEntry" class="page-link-card scorer-link" href="./scorer.html" data-default-href="./scorer.html">
             <div id="homeKlaverjasLabel" class="page-link-label">Klaverjas</div>
-            <div id="homeKlaverjasCopy" class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
+            <div id="homeKlaverjasCopy" class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" width="256" height="256" loading="lazy" decoding="async" /></div>
           </a>
           <a id="homeBoerenbridgeEntry" class="page-link-card scorer-link" href="./boerenbridge.html" data-default-href="./boerenbridge.html">
             <div id="homeBoerenbridgeLabel" class="page-link-label">Boerenbridge</div>
-            <div id="homeBoerenbridgeCopy" class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
+            <div id="homeBoerenbridgeCopy" class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" width="256" height="256" loading="lazy" decoding="async" /></div>
           </a>
         </div>
 
         <div class="public-links-grid">
           <a class="page-link-card scorer-link" href="./beerpong.html">
             <div class="page-link-label">Beerpong</div>
-            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
+            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" width="256" height="256" loading="lazy" decoding="async" /></div>
           </a>
           <a class="page-link-card login-link" href="./rad.html">
             <div class="page-link-label">Rad</div>
-            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
+            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" width="256" height="256" loading="lazy" decoding="async" /></div>
           </a>
         </div>
 
         <div class="public-links-grid">
           <a class="page-link-card login-link" href="./paardenrace.html">
             <div class="page-link-label">Paardenrace</div>
-            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
+            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" width="256" height="256" loading="lazy" decoding="async" /></div>
           </a>
           <a class="page-link-card login-link" href="./pikken.html">
             <div class="page-link-label">Pikken</div>
-            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" /></div>
+            <div class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" width="256" height="256" loading="lazy" decoding="async" /></div>
           </a>
         </div>
 
@@ -1755,8 +1755,8 @@ async function castExtraPollVote(desired_status) {
     function wireProtectedDrinksLinks(){ document.querySelectorAll('a[href="./drinks_add.html"]').forEach((link)=>{ if(link.dataset.bound==='1') return; link.dataset.bound='1'; link.addEventListener('click',(ev)=>{ if(getPlayerSessionToken()) return; ev.preventDefault(); const cfg = window.GEJAST_CONFIG || {}; window.location.href = cfg.buildHomeUrl ? cfg.buildHomeUrl('drinks_add.html', CURRENT_SCOPE) : './home.html?return_to=drinks_add.html'; }); }); }
 
     const homeEntryDefaults = {
-      klaverjas:{ entryId:'homeKlaverjasEntry', labelId:'homeKlaverjasLabel', copyId:'homeKlaverjasCopy', href:'./scorer.html', label:'Klaverjas', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' },
-      boerenbridge:{ entryId:'homeBoerenbridgeEntry', labelId:'homeBoerenbridgeLabel', copyId:'homeBoerenbridgeCopy', href:'./boerenbridge.html', label:'Boerenbridge', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" />', copyClass:'page-link-copy plus-copy' }
+      klaverjas:{ entryId:'homeKlaverjasEntry', labelId:'homeKlaverjasLabel', copyId:'homeKlaverjasCopy', href:'./scorer.html', label:'Klaverjas', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" width="256" height="256" loading="lazy" decoding="async" />', copyClass:'page-link-copy plus-copy' },
+      boerenbridge:{ entryId:'homeBoerenbridgeEntry', labelId:'homeBoerenbridgeLabel', copyId:'homeBoerenbridgeCopy', href:'./boerenbridge.html', label:'Boerenbridge', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" width="256" height="256" loading="lazy" decoding="async" />', copyClass:'page-link-copy plus-copy' }
     };
     function setHomeEntryDefault(key){
       const cfg = homeEntryDefaults[key];
