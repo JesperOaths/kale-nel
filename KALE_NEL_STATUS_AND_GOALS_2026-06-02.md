@@ -32,6 +32,16 @@ Passed:
   - `/profiles.html`
   - `/login.html`
 
+Added in the continuation pass:
+
+- `npm run verify` now runs version drift, RPC coverage, local reference, and active JavaScript syntax checks.
+- `npm run smoke:live` now checks `https://kalenel.nl/VERSION` plus the main public routes.
+- `npm.cmd run verify` passed on Windows PowerShell. Use `npm.cmd` instead of `npm` on machines where `npm.ps1` is blocked by execution policy.
+- `GEJAST_EXPECTED_VERSION=v729 npm.cmd run smoke:live` passed: live `VERSION` was `v729` and every main public route returned HTTP 200.
+- Public Supabase probe still returned `PGRST203` for `get_homepage_runtime_bundle_v687` with only `site_scope_input`, so the `GEJAST_v729_homepage_runtime_bundle_overload_fix.sql` drop-overload fix still appears unapplied in Supabase.
+- The defensive three-argument homepage runtime call returned HTTP 200, so the live frontend path remains protected.
+- Public Paardenrace create probe reached the expected player-login guard (`Log eerst in als speler.`), confirming the RPC is reachable; a real logged-in two-player test is still needed to prove the v728 duplicate-room-code fix.
+
 Observed:
 
 - `/klaverjas.html` returns 404. Current Klaverjas route appears to be `/scorer.html`, so this is only a blocker if links or users expect `/klaverjas.html`.
@@ -60,7 +70,7 @@ Observed:
    - Re-run a two-player live Paardenrace create/join/start test.
 
 4. Resolve the homepage runtime bundle overload.
-   - Apply `GEJAST_v729_homepage_runtime_bundle_overload_fix.sql` in Supabase if the overload still exists.
+   - Apply `GEJAST_v729_homepage_runtime_bundle_overload_fix.sql` in Supabase; the overload still existed in the public probe during the continuation pass.
    - Keep the frontend `session_token:null` compatibility payload in place as a defensive fix.
 
 5. Add permanent guardrails before big changes.
@@ -82,9 +92,8 @@ Observed:
 3. Deploy the v729 frontend cache-bust bump.
 4. Run real account/device live tests for the main games.
 5. Fix any blocker found during live tests.
-6. Add or consolidate the verification command.
-7. Start performance pass on homepage, profiles, Paardenrace, and global analytics/presence.
-8. Clean documentation so this dated file and the current README point to the correct source of truth.
+6. Start performance pass on homepage, profiles, Paardenrace, and global analytics/presence.
+7. Clean documentation so this dated file and the current README point to the correct source of truth.
 
 ## Safety Notes
 
