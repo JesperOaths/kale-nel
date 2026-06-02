@@ -221,7 +221,6 @@
     if (window.GEJAST_PUSH_RUNTIME && typeof window.GEJAST_PUSH_RUNTIME.queueNearbyVerificationPushes === 'function') {
       try {
         const viaRuntime = await window.GEJAST_PUSH_RUNTIME.queueNearbyVerificationPushes({
-          session_token_input: session_token,
           request_kind_input: requestKind,
           request_id_input: numericId,
           site_scope_input
@@ -232,7 +231,7 @@
 
     const attempts = [
       ['contract_drinks_queue_nearby_v664', { session_token, request_kind: requestKind, request_id: numericId, site_scope_input }],
-      [cfg().WEB_PUSH_QUEUE_NEARBY_RPC_V3 || 'queue_nearby_verification_pushes_v3', { session_token_input: session_token, request_kind_input: requestKind, request_id_input: numericId, site_scope_input }],
+      [cfg().WEB_PUSH_QUEUE_NEARBY_RPC_V3 || 'queue_nearby_verification_pushes_v3', { request_kind_input: requestKind, request_id_input: numericId, site_scope_input, cooldown_seconds_input: 300 }],
       [cfg().WEB_PUSH_QUEUE_NEARBY_RPC_V3 || 'queue_nearby_verification_pushes_v3', { request_kind_input: requestKind, request_id_input: numericId, cooldown_seconds_input: 300 }]
     ];
     let last = null;

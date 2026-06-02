@@ -28,7 +28,7 @@
     const body = publicReadFns.has(fn)
       ? Object.assign({ site_scope_input: scope() }, args || {})
       : Object.assign({}, args || {}, { session_token: token || null, session_token_input: token || null, site_scope_input: scope() });
-    if (fn === 'get_paardenrace_open_rooms_fast_v687' && body.limit_input == null) body.limit_input = 30;
+    if ((fn === 'get_paardenrace_open_rooms_fast_v687' || fn === 'get_paardenrace_stats_fast_v687') && body.limit_input == null) body.limit_input = 30;
     const timeoutMs = Math.max(1600, Number(options.timeoutMs || (publicReadFns.has(fn) ? 2600 : 4200)));
     const controller = new AbortController();
     const timer = setTimeout(()=>controller.abort(), timeoutMs);
