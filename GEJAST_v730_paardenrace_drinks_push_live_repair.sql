@@ -27,8 +27,9 @@ security definer
 set search_path to 'public'
 as $fn$
 begin
-  if to_regprocedure('public.get_drinks_pending_verification_summary_v660(integer,text)') is not null then
-    return public.get_drinks_pending_verification_summary_v660(limit_input, site_scope_input);
+  if to_regprocedure('public.get_drinks_pending_verification_summary_v660(integer,text)') is not null
+    or to_regprocedure('public.get_drinks_pending_verification_summary_v660(text,integer)') is not null then
+    return public.get_drinks_pending_verification_summary_v660(limit_input => limit_input, site_scope_input => site_scope_input);
   end if;
   return jsonb_build_object(
     'ok', true,
@@ -53,8 +54,9 @@ security definer
 set search_path to 'public'
 as $fn$
 begin
-  if to_regprocedure('public.get_drinks_push_eligibility_summary_v660(integer,text)') is not null then
-    return public.get_drinks_push_eligibility_summary_v660(limit_input, site_scope_input);
+  if to_regprocedure('public.get_drinks_push_eligibility_summary_v660(integer,text)') is not null
+    or to_regprocedure('public.get_drinks_push_eligibility_summary_v660(text,integer)') is not null then
+    return public.get_drinks_push_eligibility_summary_v660(limit_input => limit_input, site_scope_input => site_scope_input);
   end if;
   return jsonb_build_object(
     'ok', true,
