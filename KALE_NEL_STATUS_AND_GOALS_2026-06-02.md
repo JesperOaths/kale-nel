@@ -43,6 +43,18 @@ Added in the continuation pass:
 - Public Paardenrace create probe reached the expected player-login guard (`Log eerst in als speler.`), confirming the RPC is reachable; a real logged-in two-player test is still needed to prove the v728 duplicate-room-code fix.
 - Homepage image startup hints were tightened: large decorative images and repeated plus icons now include dimensions, async decoding, and low-priority/lazy loading hints where safe.
 
+Supabase/live backend continuation:
+
+- Applied the combined `GEJAST_v729_homepage_runtime_bundle_overload_fix.sql` + `GEJAST_v728_paardenrace_room_create_surgical_fix.sql` script in the Supabase SQL editor for project `jas-site`.
+- Supabase showed the expected destructive-operation confirmation because the v729 script drops the old one-argument homepage overload; the run was confirmed intentionally.
+- Public RPC verification after SQL apply:
+  - `get_homepage_runtime_bundle_v687(site_scope_input)` returned HTTP 200; the earlier `PGRST203` ambiguity is resolved.
+  - `get_homepage_runtime_bundle_v687(site_scope_input, session_token, session_token_input)` still returned HTTP 200.
+  - `_paardenrace_next_despinoza_room_code_v728()` returned HTTP 200, proving the helper is live.
+- Pikken logged-in single-session regression passed: create lobby, ready state update, and backend cleanup/destroy returned OK.
+- Paardenrace logged-in single-session backend flow passed: create room, save suit/wager, host verify wager, set ready, and disband cleanup returned OK.
+- Remaining live gameplay gap: a true two-player Paardenrace start/live-board test still needs a second logged-in player session. A one-player test cannot honestly prove join/start/multi-suit behavior.
+
 Observed:
 
 - `/klaverjas.html` returns 404. Current Klaverjas route appears to be `/scorer.html`, so this is only a blocker if links or users expect `/klaverjas.html`.
@@ -89,12 +101,11 @@ Observed:
 ## Priority Order
 
 1. Confirm live backend state for Paardenrace.
-2. Apply the v729 homepage-runtime overload SQL if approved/needed.
-3. Deploy the v729 frontend cache-bust bump.
-4. Run real account/device live tests for the main games.
-5. Fix any blocker found during live tests.
-6. Start performance pass on homepage, profiles, Paardenrace, and global analytics/presence.
-7. Clean documentation so this dated file and the current README point to the correct source of truth.
+2. Run real two-player Paardenrace join/start/live-board testing with a second logged-in player session.
+3. Run broader account/device live tests for the remaining games.
+4. Fix any blocker found during live tests.
+5. Start performance pass on homepage, profiles, Paardenrace, and global analytics/presence.
+6. Clean documentation so this dated file and the current README point to the correct source of truth.
 
 ## Safety Notes
 
