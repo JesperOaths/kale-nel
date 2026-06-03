@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "site_version": "v732",
+  "site_version": "v733",
   "last_updated": "2026-06-03",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -136,7 +136,8 @@
       "area": "Performance",
       "status": "needs_fix_if_test_fails",
       "proof_needed": "Homepage, profiles, Pikken, Paardenrace, and drinks load acceptably on normal devices.",
-      "next_action": "Measure page weight/startup timing, then optimize heavy images and non-critical startup scripts."
+      "next_action": "Optimize the heaviest discovered assets first: wordtergejast.png, kale9goed.png, playingcard-accent1-trimmed.png, and logo.png.",
+      "latest_probe": "npm.cmd run smoke:beta:perf passed on 2026-06-03; heaviest same-origin assets were 2.6 MB wordtergejast.png, 2.4 MB kale9goed.png, 1.7 MB playingcard-accent1-trimmed.png, and 652 KB logo.png."
     }
   ]
 }

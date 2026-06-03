@@ -125,6 +125,7 @@ Goal: turn the site from "static and surface verified" into a working beta run w
 ### Phase 5 - Performance And Polish
 
 1. Measure live load on homepage, profiles, Pikken, Paardenrace, and drinks pages.
+   - Implemented first pass: `npm.cmd run smoke:beta:perf`
 2. Convert or add WebP/AVIF alternatives for heavy images where safe.
 3. Lazy-load non-critical visual assets and secondary modules.
 4. Defer analytics, presence, push diagnostics, and non-critical widgets until idle/visible.
