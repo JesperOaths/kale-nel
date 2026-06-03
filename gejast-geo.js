@@ -295,17 +295,18 @@
 
   function notificationSetupState(state){
     const s = state || {};
+    const subscribed = !!(s.subscribed || s.subscription);
     if (!s.supported || !s.secure) return { key:'unsupported', label:'niet ondersteund' };
     if (isIOS() && !s.standalone) return { key:'not_installed', label:'niet als app geopend' };
     if (s.permission !== 'granted') return { key:'installed_but_permission_missing', label:'toestemming ontbreekt' };
-    if (!s.subscribed) return { key:'permission_granted_but_not_subscribed', label:'geen push-abonnement' };
+    if (!subscribed) return { key:'permission_granted_but_not_subscribed', label:'geen push-abonnement' };
     if (!(s.backendSync && s.backendSync.synced)) return { key:'subscribed_but_not_synced', label:'backend-sync ontbreekt' };
     return { key:'fully_active', label:'volledig actief' };
   }
   function setNotificationButtonState(permission, extras={}){
     document.querySelectorAll('[data-gejast-notify-button]').forEach((btn)=>{
       const p = permission || 'unsupported';
-      const setup = extras.setupState || notificationSetupState({ supported:p!=='unsupported', secure:!!window.isSecureContext, permission:p, subscribed:!!extras.subscribed, backendSync:extras.backendSync, standalone:extras.standalone });
+      const setup = extras.setupState || notificationSetupState({ supported:p!=='unsupported', secure:!!window.isSecureContext, permission:p, subscribed:!!(extras.subscribed || extras.subscription), backendSync:extras.backendSync, standalone:extras.standalone });
       const fullyActive = setup.key === 'fully_active';
       btn.classList.toggle('is-ready', fullyActive);
       btn.classList.toggle('is-pending', setup.key === 'permission_granted_but_not_subscribed' || setup.key === 'subscribed_but_not_synced' || p === 'default');

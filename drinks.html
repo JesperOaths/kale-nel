@@ -7,8 +7,8 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <title>Drinks overzicht</title>
-  <script>window.GEJAST_PAGE_VERSION='v729';</script><script src="./gejast-config.js?v729"></script><script src="./gejast-drinks-push-bridge.js?v729"></script><script src="./gejast-home-gate.js?v729"></script><script src="./gejast-push-runtime.js?v729"></script>
-<script src="./gejast-clickable-cards.js?v729"></script><script src="./gejast-scope-context.js?v729"></script><script src="./gejast-family-rollout.js?v729"></script>
+  <script>window.GEJAST_PAGE_VERSION='v732';</script><script src="./gejast-config.js?v732"></script><script src="./gejast-drinks-push-bridge.js?v732"></script><script src="./gejast-home-gate.js?v732"></script><script src="./gejast-push-runtime.js?v732"></script>
+<script src="./gejast-clickable-cards.js?v732"></script><script src="./gejast-scope-context.js?v732"></script><script src="./gejast-family-rollout.js?v732"></script>
   <style>
     :root{
       --bg:#ece7dc;--card:rgba(255,251,245,.94);--paper:#fffdfa;--line:rgba(54,40,20,.08);--line-strong:rgba(54,40,20,.14);
@@ -42,7 +42,7 @@
     @media(max-width:1180px){.metric-strip,.grid.quad{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.two,.grid.three{grid-template-columns:1fr}.hero{grid-template-columns:1fr}.hero-tools{justify-content:flex-start}}
     @media(max-width:760px){body{padding:12px}.shell{padding:18px;border-radius:24px}.metric-strip,.grid.quad,.mini-grid{grid-template-columns:1fr}.bar-row{grid-template-columns:1fr}.item{padding:12px}.metric{min-height:auto}.hero-actions,.hero-tools{width:100%}}
   </style>
-  <script src="./gejast-fairness.js?v729"></script></head>
+  <script src="./gejast-fairness.js?v732"></script></head>
 <body>
   <div class="wrap">
     <div class="shell">
@@ -168,7 +168,7 @@
       const s=data.session||{}; const totals=data.totals||{}; const pending=(data.verify_queue||[]).length || (data.my_pending_events||[]).length || 0;
       document.getElementById('sessionGrid').innerHTML=`
         <div class="metric gold"><div class="metric-label">Mijn tempo vandaag</div><div class="metric-value">${fmt((s.units ?? totals.today_units ?? 0),1)}</div><div class="metric-note">${(s.events ?? totals.today_events ?? 0)} drankjes</div></div>
-        
+
         <div class="metric"><div class="metric-label">Vandaag sitebreed</div><div class="metric-value">${fmt(totals.today_units,1)}</div><div class="metric-note">${totals.today_events||0} drankjes</div></div>
         <div class="metric"><div class="metric-label">Totaal units</div><div class="metric-value">${fmt(totals.all_units,1)}</div><div class="metric-note">${totals.all_events||0} drankjes</div></div>
         <a class="metric ink" href="./drinks_add.html"><div class="metric-label">Actie</div><div class="metric-value">+</div><div class="metric-note">Drinks toevoegen</div></a>`;
@@ -431,10 +431,10 @@ async function loadStats(){
   })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./gejast-geo.js?v729"></script><script src="./drinks-verify-float.js?v729"></script>
-  <script src="./gejast-drinks-workflow.js?v729"></script>
-  <script src="./gejast-drinks-analytics.js?v729"></script>
-  <script src="./gejast-session-corner.js?v729"></script>
-<script src="./site-analytics.js?v729"></script>
+  <script src="./gejast-geo.js?v732"></script><script src="./drinks-verify-float.js?v732"></script>
+  <script src="./gejast-drinks-workflow.js?v732"></script>
+  <script src="./gejast-drinks-analytics.js?v732"></script>
+  <script src="./gejast-session-corner.js?v732"></script>
+<script src="./site-analytics.js?v732"></script>
 <script id="gejast-drinks-push-boot">(function(){function boot(){try{window.GEJAST_DRINKS_PUSH_BRIDGE&&window.GEJAST_DRINKS_PUSH_BRIDGE.bootPanel&&window.GEJAST_DRINKS_PUSH_BRIDGE.bootPanel();}catch(_){}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();})();</script></body>
 </html>
