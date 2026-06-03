@@ -12,7 +12,8 @@
     "verify:static": "node check-version-drift.mjs && node check-rpc-coverage.mjs && node check-local-refs.mjs",
     "verify:js": "node check-active-js-syntax.mjs",
     "smoke:live": "node check-live-routes.mjs",
-    "smoke:push": "node check-live-push-health.mjs"
+    "smoke:push": "node check-live-push-health.mjs",
+    "smoke:games": "node check-live-game-flows.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.57.4",

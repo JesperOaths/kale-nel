@@ -59,6 +59,12 @@ Continuation on 2026-06-03:
   - `queue_test_web_push` rejected an invalid session with `MISSING_SESSION`, as expected
 - `npm run verify` passed after adding the push-health checker.
 - `GEJAST_EXPECTED_VERSION=v729 npm run smoke:live` passed after adding the push-health checker.
+- Added `check-live-game-flows.mjs` and `npm run smoke:games`.
+- `npm run smoke:games` passed in public-probe mode:
+  - Pikken open-lobby and live-match RPC surfaces responded
+  - Paardenrace open-room and stats RPC surfaces responded
+  - true two-player creation/start cleanup is ready behind `GEJAST_PLAYER1_TOKEN` and `GEJAST_PLAYER2_TOKEN`
+- To run the destructive-but-cleaning two-player proof, set `GEJAST_PLAYER1_TOKEN` and `GEJAST_PLAYER2_TOKEN`. The script creates, starts, and cleans a Pikken game plus a Paardenrace room, and never prints the tokens.
 
 Supabase/live backend continuation:
 
@@ -118,12 +124,13 @@ Observed:
 ## Priority Order
 
 1. Confirm live backend state for Paardenrace.
-2. Run real two-player Paardenrace join/start/live-board testing with a second logged-in player session.
-3. Run broader account/device live tests for the remaining games.
-4. Run real device push verification with an actual subscribed browser/device, because public probes can prove the RPC/workflow surface but cannot prove end-to-end phone delivery.
-5. Fix any blocker found during live tests.
-6. Start performance pass on homepage, profiles, Paardenrace, and global analytics/presence.
-7. Clean documentation so this dated file and the current README point to the correct source of truth.
+2. Run `npm run smoke:games` with `GEJAST_PLAYER1_TOKEN` and `GEJAST_PLAYER2_TOKEN` set to prove two-player Pikken and Paardenrace create/join/ready/start/cleanup.
+3. Run real two-player Paardenrace live-board browser viewing after the harness passes, because the harness proves backend start but not visual board rendering.
+4. Run broader account/device live tests for the remaining games.
+5. Run real device push verification with an actual subscribed browser/device, because public probes can prove the RPC/workflow surface but cannot prove end-to-end phone delivery.
+6. Fix any blocker found during live tests.
+7. Start performance pass on homepage, profiles, Paardenrace, and global analytics/presence.
+8. Clean documentation so this dated file and the current README point to the correct source of truth.
 
 ## Safety Notes
 
