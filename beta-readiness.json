@@ -63,10 +63,10 @@
       "id": "paardenrace_two_player_visual",
       "priority": 3,
       "area": "Paardenrace",
-      "status": "ready_to_test",
+      "status": "verified_complete",
       "proof_needed": "Two logged-in browser sessions show create/join/suit/wager/ready/start/countdown/live board/spectator/cleanup correctly.",
-      "next_action": "Deploy v735, then rerun browser visual pass on Paardenrace live and spectator pages.",
-      "latest_probe": "Token-backed two-player harness passes on v735. Browser found countdown render gap; v735 patches failed countdown tick to keep valid two-player room state."
+      "next_action": "Keep in regression gate with token-backed two-player flow plus browser visual spot checks.",
+      "latest_probe": "Browser visual proof passed on live v735: two players, countdown, 2/2 ready, pot, player rows, and spectator page with both players visible."
     },
     {
       "id": "drinks_create_verify_reject",
