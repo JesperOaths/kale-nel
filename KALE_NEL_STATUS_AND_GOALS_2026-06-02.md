@@ -43,6 +43,23 @@ Added in the continuation pass:
 - Public Paardenrace create probe reached the expected player-login guard (`Log eerst in als speler.`), confirming the RPC is reachable; a real logged-in two-player test is still needed to prove the v728 duplicate-room-code fix.
 - Homepage image startup hints were tightened: large decorative images and repeated plus icons now include dimensions, async decoding, and low-priority/lazy loading hints where safe.
 
+Continuation on 2026-06-03:
+
+- GitHub `main` and local checkout are aligned at `5d8a25c` (`Record live push delivery repair`).
+- Latest committed repair files after the v729 status pass:
+  - `GEJAST_v730_paardenrace_drinks_push_live_repair.sql`
+  - `GEJAST_v731_live_push_delivery_repair.sql`
+- Public GitHub Actions metadata confirms `.github/workflows/web-push-dispatcher.yml` is active. Latest checked scheduled run was `#902`, completed successfully against `5d8a25c`.
+- Added `check-live-push-health.mjs` and `npm run smoke:push`.
+- `npm run smoke:push` passed:
+  - push dispatcher workflow latest run completed successfully
+  - `get_drinks_pending_verification_summary_v661` returned HTTP 200
+  - `get_drinks_push_eligibility_summary_v661` returned HTTP 200
+  - `queue_nearby_verification_pushes_v3` returned HTTP 200 with safe zero-queue state because no active push subscriptions were visible for the public probe
+  - `queue_test_web_push` rejected an invalid session with `MISSING_SESSION`, as expected
+- `npm run verify` passed after adding the push-health checker.
+- `GEJAST_EXPECTED_VERSION=v729 npm run smoke:live` passed after adding the push-health checker.
+
 Supabase/live backend continuation:
 
 - Applied the combined `GEJAST_v729_homepage_runtime_bundle_overload_fix.sql` + `GEJAST_v728_paardenrace_room_create_surgical_fix.sql` script in the Supabase SQL editor for project `jas-site`.
@@ -103,9 +120,10 @@ Observed:
 1. Confirm live backend state for Paardenrace.
 2. Run real two-player Paardenrace join/start/live-board testing with a second logged-in player session.
 3. Run broader account/device live tests for the remaining games.
-4. Fix any blocker found during live tests.
-5. Start performance pass on homepage, profiles, Paardenrace, and global analytics/presence.
-6. Clean documentation so this dated file and the current README point to the correct source of truth.
+4. Run real device push verification with an actual subscribed browser/device, because public probes can prove the RPC/workflow surface but cannot prove end-to-end phone delivery.
+5. Fix any blocker found during live tests.
+6. Start performance pass on homepage, profiles, Paardenrace, and global analytics/presence.
+7. Clean documentation so this dated file and the current README point to the correct source of truth.
 
 ## Safety Notes
 

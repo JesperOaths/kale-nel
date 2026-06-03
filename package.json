@@ -11,7 +11,8 @@
     "verify": "npm run verify:static && npm run verify:js",
     "verify:static": "node check-version-drift.mjs && node check-rpc-coverage.mjs && node check-local-refs.mjs",
     "verify:js": "node check-active-js-syntax.mjs",
-    "smoke:live": "node check-live-routes.mjs"
+    "smoke:live": "node check-live-routes.mjs",
+    "smoke:push": "node check-live-push-health.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.57.4",
