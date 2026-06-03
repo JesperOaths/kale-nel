@@ -88,49 +88,52 @@
       "id": "badge_awards",
       "priority": 6,
       "area": "Badges",
-      "status": "ready_to_test",
+      "status": "needs_permission",
       "proof_needed": "Known badge criteria trigger after controlled game/drink outcomes and render on profiles/leaderboards.",
-      "next_action": "Create small scenario checklist per badge family and test easiest badges first."
+      "next_action": "Ask approval before controlled game/drink outcome scenarios that can create badge records."
     },
     {
       "id": "scope_isolation",
       "priority": 7,
       "area": "Family/friends scope",
-      "status": "ready_to_test",
+      "status": "verified_complete",
       "proof_needed": "Family and friends data stay isolated across login, games, stats, profiles, admin, and exclusions.",
-      "next_action": "Run one family session and one friends session through read-only pages, then controlled mutation tests if needed."
+      "next_action": "Keep extended read-only scope routes and login-name partition check in regression; require permission before cross-scope mutation scenarios.",
+      "latest_probe": "Live v735 extended read-only smoke passes family/friends profile and family routes; login-name RPCs return friends=11, family=5, overlap=0."
     },
     {
       "id": "secondary_game_save_flows",
       "priority": 8,
       "area": "Klaverjas, Beerpong, Boerenbridge, Rad",
-      "status": "ready_to_test",
+      "status": "needs_permission",
       "proof_needed": "Save/spin flows persist and update vault/history/stats/odds as intended.",
-      "next_action": "Run one clearly marked beta test per game, cleanup or mark data where possible."
+      "next_action": "Ask approval before clearly marked beta save/spin tests that write live game records."
     },
     {
       "id": "profile_editing",
       "priority": 9,
       "area": "Profiles",
-      "status": "ready_to_test",
+      "status": "needs_permission",
       "proof_needed": "Display name and avatar update, persist, and render safely across profile/leaderboard/game rows.",
-      "next_action": "Use one beta profile update and verify render surfaces."
+      "next_action": "Ask approval before changing a real beta profile display name or avatar."
     },
     {
       "id": "stats_elo_predictions",
       "priority": 10,
       "area": "Stats/ELO/predictions",
-      "status": "ready_to_test",
+      "status": "verified_complete",
       "proof_needed": "Stats and prediction widgets appear only in intended slots and use current SQL data.",
-      "next_action": "Check each stats route and existing prediction mount slot; patch only missing mounts."
+      "next_action": "Keep extended stats/ladder smoke in regression and revisit only if a page adds a new stats mount.",
+      "latest_probe": "Live v735 extended read-only smoke passes Pikken, Paardenrace, drinks, drinks speed, Rad, Despimarkt stats plus ladder pages without obvious runtime failure text."
     },
     {
       "id": "analytics_observability",
       "priority": 11,
       "area": "Analytics/admin observability",
-      "status": "ready_to_test",
+      "status": "verified_complete",
       "proof_needed": "Admin analytics and health pages load real data for admin only and do not leak private details publicly.",
-      "next_action": "Run admin read-only browser pass."
+      "next_action": "Keep extended admin observability smoke in regression; admin mutations stay separate.",
+      "latest_probe": "Live v735 extended read-only smoke passes admin system health, ops observability, analytics, deployment verification, and runtime verification pages."
     },
     {
       "id": "performance_beta_pass",
