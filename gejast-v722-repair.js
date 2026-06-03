@@ -82,7 +82,7 @@
         <span class="v722-balloon b1" style="left:8%;top:12%"></span><span class="v722-balloon b2" style="right:10%;top:18%"></span><span class="v722-balloon b3" style="left:18%;bottom:22%"></span>
         <span class="v722-streamer" style="left:-20px;top:42%;--r:18deg"></span><span class="v722-streamer" style="right:-20px;top:36%;--r:-15deg"></span>
         <span class="v722-die" style="left:12%;top:62%">6</span><span class="v722-die" style="right:16%;top:58%">pik</span><span class="v722-die" style="left:46%;top:8%">2</span>
-        <img class="v722-logo" src="./logo.png" style="left:8%;top:6%" alt=""><img class="v722-logo" src="./logo.png" style="right:8%;bottom:8%" alt="">
+        <img class="v722-logo" src="./logo-small.png" style="left:8%;top:6%" alt=""><img class="v722-logo" src="./logo-small.png" style="right:8%;bottom:8%" alt="">
       </div>
       <h2 class="v722-victory-title">Pikken afgelopen</h2>
       <div class="v722-victory-winner">${esc(winner)}</div>

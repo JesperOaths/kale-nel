@@ -382,7 +382,7 @@
     try {
       const reg = await registerNotificationWorker();
       if (!reg || notificationPermission() !== 'granted') return false;
-      await reg.showNotification(title || 'Gejast', Object.assign({ tag:'gejast-generic', badge:'./logo.png', icon:'./logo.png' }, options || {}));
+      await reg.showNotification(title || 'Gejast', Object.assign({ tag:'gejast-generic', badge:'./logo-small.png', icon:'./logo-small.png' }, options || {}));
       try { localStorage.setItem(NOTIFY_LAST_KEY, String(Date.now())); } catch(_){}
       return true;
     } catch(_) { return false; }

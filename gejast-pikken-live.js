@@ -59,7 +59,7 @@
     const balloons=Array.from({length:8},(_,i)=>`<span class="balloon b${i+1}"></span>`).join('');
     const streamers=Array.from({length:8},(_,i)=>`<span class="streamer s${i+1}"></span>`).join('');
     const confetti=Array.from({length:26},(_,i)=>`<span class="confetti c${i+1}"></span>`).join('');
-    const logos=Array.from({length:6},(_,i)=>`<img class="fest-logo l${i+1}" src="./logo.png" alt="">`).join('');
+    const logos=Array.from({length:6},(_,i)=>`<img class="fest-logo l${i+1}" src="./logo-small.png" alt="">`).join('');
     return `<div class="victory-fest" aria-hidden="true">${streamers}${balloons}${logos}${dice}${confetti}</div><div class="victory-name-burst">${esc(winner || 'Winnaar')}</div>`;
   }
   function phase(p){ return String(p?.game?.state?.phase || p?.game?.status || 'lobby').toLowerCase(); }
