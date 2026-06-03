@@ -39,6 +39,12 @@
       "status": "verified_complete",
       "command": "npm.cmd run smoke:beta:read",
       "evidence": "42 beta routes across account, games, drinks, Despimarkt, family, and admin read-only surfaces return HTTP 200 without obvious runtime failure text"
+    },
+    {
+      "id": "live_write_safety_gate",
+      "status": "verified_complete",
+      "command": "npm.cmd run beta:write:readiness",
+      "evidence": "remaining live-write beta tests are listed and refuse to arm without explicit approval flag, required player inputs, admin session, or real device readiness"
     }
   ],
   "beta_gaps": [
