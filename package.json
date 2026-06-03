@@ -13,7 +13,9 @@
     "verify:js": "node check-active-js-syntax.mjs",
     "smoke:live": "node check-live-routes.mjs",
     "smoke:push": "node check-live-push-health.mjs",
-    "smoke:games": "node check-live-game-flows.mjs"
+    "smoke:games": "node check-live-game-flows.mjs",
+    "smoke:beta:read": "node check-beta-readonly-surfaces.mjs",
+    "beta:readiness": "node check-beta-readiness.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.57.4",

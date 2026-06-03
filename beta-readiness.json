@@ -1,0 +1,142 @@
+{
+  "version": 1,
+  "site_version": "v732",
+  "last_updated": "2026-06-03",
+  "status_legend": {
+    "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
+    "ready_to_test": "Code exists and surface checks pass, but real beta proof is still needed.",
+    "needs_permission": "Requires explicit approval because it mutates live/admin data.",
+    "needs_fix_if_test_fails": "Test first, then patch only the failing owner.",
+    "blocked_external": "Requires external device, account, secret, or user action."
+  },
+  "baseline_checks": [
+    {
+      "id": "static_integrity",
+      "status": "verified_complete",
+      "command": "npm.cmd run verify",
+      "evidence": "version drift, RPC coverage, local refs, and JS syntax pass on v732"
+    },
+    {
+      "id": "live_routes",
+      "status": "verified_complete",
+      "command": "npm.cmd run smoke:live",
+      "evidence": "main public routes return HTTP 200 on live v732"
+    },
+    {
+      "id": "push_surface",
+      "status": "verified_complete",
+      "command": "npm.cmd run smoke:push",
+      "evidence": "dispatcher workflow, drinks summary RPCs, queue probe, and invalid-session rejection pass"
+    },
+    {
+      "id": "game_surface",
+      "status": "verified_complete",
+      "command": "npm.cmd run smoke:games",
+      "evidence": "public Pikken and Paardenrace RPC surfaces respond"
+    },
+    {
+      "id": "beta_readonly_surfaces",
+      "status": "verified_complete",
+      "command": "npm.cmd run smoke:beta:read",
+      "evidence": "42 beta routes across account, games, drinks, Despimarkt, family, and admin read-only surfaces return HTTP 200 without obvious runtime failure text"
+    }
+  ],
+  "beta_gaps": [
+    {
+      "id": "real_device_push_delivery",
+      "priority": 1,
+      "area": "Push notifications",
+      "status": "blocked_external",
+      "proof_needed": "A real phone/laptop receives a pushed drink verification notification and click/action handling works.",
+      "next_action": "Use an installed/permissioned device, queue one safe test push, then record delivery result."
+    },
+    {
+      "id": "pikken_two_player_visual",
+      "priority": 2,
+      "area": "Pikken",
+      "status": "ready_to_test",
+      "proof_needed": "Two logged-in browser sessions show create/join/start/live dice-state/spectator/cleanup correctly.",
+      "next_action": "Run token-backed harness, then browser visual pass on Pikken live and spectator pages."
+    },
+    {
+      "id": "paardenrace_two_player_visual",
+      "priority": 3,
+      "area": "Paardenrace",
+      "status": "ready_to_test",
+      "proof_needed": "Two logged-in browser sessions show create/join/suit/wager/ready/start/countdown/live board/spectator/cleanup correctly.",
+      "next_action": "Run token-backed harness, then browser visual pass on Paardenrace live and spectator pages."
+    },
+    {
+      "id": "drinks_create_verify_reject",
+      "priority": 4,
+      "area": "Drinks",
+      "status": "needs_permission",
+      "proof_needed": "A real drink request appears in pending, can be verified/rejected, updates history/stats, and queues notifications.",
+      "next_action": "Ask approval before creating a clearly marked beta test drink request."
+    },
+    {
+      "id": "admin_mutations",
+      "priority": 5,
+      "area": "Admin",
+      "status": "needs_permission",
+      "proof_needed": "Claims, Despimarkt admin, wallet mutation, upload checklist, and release tools mutate only intended records and log/audit correctly.",
+      "next_action": "Run read-only admin dashboards first; ask approval before each reversible mutation."
+    },
+    {
+      "id": "badge_awards",
+      "priority": 6,
+      "area": "Badges",
+      "status": "ready_to_test",
+      "proof_needed": "Known badge criteria trigger after controlled game/drink outcomes and render on profiles/leaderboards.",
+      "next_action": "Create small scenario checklist per badge family and test easiest badges first."
+    },
+    {
+      "id": "scope_isolation",
+      "priority": 7,
+      "area": "Family/friends scope",
+      "status": "ready_to_test",
+      "proof_needed": "Family and friends data stay isolated across login, games, stats, profiles, admin, and exclusions.",
+      "next_action": "Run one family session and one friends session through read-only pages, then controlled mutation tests if needed."
+    },
+    {
+      "id": "secondary_game_save_flows",
+      "priority": 8,
+      "area": "Klaverjas, Beerpong, Boerenbridge, Rad",
+      "status": "ready_to_test",
+      "proof_needed": "Save/spin flows persist and update vault/history/stats/odds as intended.",
+      "next_action": "Run one clearly marked beta test per game, cleanup or mark data where possible."
+    },
+    {
+      "id": "profile_editing",
+      "priority": 9,
+      "area": "Profiles",
+      "status": "ready_to_test",
+      "proof_needed": "Display name and avatar update, persist, and render safely across profile/leaderboard/game rows.",
+      "next_action": "Use one beta profile update and verify render surfaces."
+    },
+    {
+      "id": "stats_elo_predictions",
+      "priority": 10,
+      "area": "Stats/ELO/predictions",
+      "status": "ready_to_test",
+      "proof_needed": "Stats and prediction widgets appear only in intended slots and use current SQL data.",
+      "next_action": "Check each stats route and existing prediction mount slot; patch only missing mounts."
+    },
+    {
+      "id": "analytics_observability",
+      "priority": 11,
+      "area": "Analytics/admin observability",
+      "status": "ready_to_test",
+      "proof_needed": "Admin analytics and health pages load real data for admin only and do not leak private details publicly.",
+      "next_action": "Run admin read-only browser pass."
+    },
+    {
+      "id": "performance_beta_pass",
+      "priority": 12,
+      "area": "Performance",
+      "status": "needs_fix_if_test_fails",
+      "proof_needed": "Homepage, profiles, Pikken, Paardenrace, and drinks load acceptably on normal devices.",
+      "next_action": "Measure page weight/startup timing, then optimize heavy images and non-critical startup scripts."
+    }
+  ]
+}

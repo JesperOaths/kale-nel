@@ -38,6 +38,9 @@ Goal: turn the site from "static and surface verified" into a working beta run w
 ### Phase 1 - Make Beta Tests Repeatable
 
 1. Add a beta checklist doc or JSON status file that tracks each live proof with date, account pair, route, result, and cleanup.
+   - Implemented: `beta-readiness.json`
+   - Implemented: `npm.cmd run beta:readiness`
+   - Optional strict mode for CI/manual gates: `set GEJAST_BETA_FAIL_ON_OPEN=1 && npm.cmd run beta:readiness`
 2. Extend `check-live-game-flows.mjs` only if needed:
    - keep token input via environment variables only
    - never print tokens
@@ -48,6 +51,7 @@ Goal: turn the site from "static and surface verified" into a working beta run w
    - badge/profile read
    - scope read
    - admin diagnostics read
+   - Implemented first pass: `npm.cmd run smoke:beta:read`
 4. Keep `npm.cmd run verify`, `smoke:live`, `smoke:push`, and `smoke:games` as the baseline gate before and after any patch.
 
 ### Phase 2 - Prove User-Facing Core
