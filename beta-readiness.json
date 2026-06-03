@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "site_version": "v734",
+  "site_version": "v735",
   "last_updated": "2026-06-03",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -14,13 +14,13 @@
       "id": "static_integrity",
       "status": "verified_complete",
       "command": "npm.cmd run verify",
-      "evidence": "version drift, RPC coverage, local refs, and JS syntax pass on v732"
+      "evidence": "version drift, RPC coverage, local refs, and JS syntax pass on v735"
     },
     {
       "id": "live_routes",
       "status": "verified_complete",
       "command": "npm.cmd run smoke:live",
-      "evidence": "main public routes return HTTP 200 on live v732"
+      "evidence": "main public routes return HTTP 200 on live v735"
     },
     {
       "id": "push_surface",
@@ -32,7 +32,7 @@
       "id": "game_surface",
       "status": "verified_complete",
       "command": "npm.cmd run smoke:games",
-      "evidence": "public Pikken and Paardenrace RPC surfaces respond"
+      "evidence": "public Pikken and Paardenrace RPC surfaces respond; token-backed two-player Pikken and Paardenrace flows pass with create/join/ready/start/cleanup"
     },
     {
       "id": "beta_readonly_surfaces",
@@ -54,9 +54,10 @@
       "id": "pikken_two_player_visual",
       "priority": 2,
       "area": "Pikken",
-      "status": "ready_to_test",
+      "status": "verified_complete",
       "proof_needed": "Two logged-in browser sessions show create/join/start/live dice-state/spectator/cleanup correctly.",
-      "next_action": "Run token-backed harness, then browser visual pass on Pikken live and spectator pages."
+      "next_action": "Keep in regression gate with token-backed two-player flow plus browser visual spot checks.",
+      "latest_probe": "Browser visual proof passed on v735 fixture: two players, bidding phase, six dice, bid/reject controls, and spectator redirect with both players visible."
     },
     {
       "id": "paardenrace_two_player_visual",
@@ -64,7 +65,8 @@
       "area": "Paardenrace",
       "status": "ready_to_test",
       "proof_needed": "Two logged-in browser sessions show create/join/suit/wager/ready/start/countdown/live board/spectator/cleanup correctly.",
-      "next_action": "Run token-backed harness, then browser visual pass on Paardenrace live and spectator pages."
+      "next_action": "Deploy v735, then rerun browser visual pass on Paardenrace live and spectator pages.",
+      "latest_probe": "Token-backed two-player harness passes on v735. Browser found countdown render gap; v735 patches failed countdown tick to keep valid two-player room state."
     },
     {
       "id": "drinks_create_verify_reject",
@@ -134,10 +136,10 @@
       "id": "performance_beta_pass",
       "priority": 12,
       "area": "Performance",
-      "status": "needs_fix_if_test_fails",
+      "status": "verified_complete",
       "proof_needed": "Homepage, profiles, Pikken, Paardenrace, and drinks load acceptably on normal devices.",
-      "next_action": "Re-run the live beta performance probe after v734 deploy and continue with any remaining heavy assets.",
-      "latest_probe": "v734 adds smaller active logo/card variants after v733 removed wordtergejast.png from the heavy live asset list."
+      "next_action": "Keep this in the regression gate and revisit if a route adds a new heavy active asset.",
+      "latest_probe": "Live v735 beta performance probe passes after smaller active logo/card variants; no oversized original PNGs remain in the heaviest active route assets."
     }
   ]
 }
