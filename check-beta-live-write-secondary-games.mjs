@@ -13,6 +13,10 @@ const player1Name = clean(process.env.GEJAST_BETA_PLAYER1_NAME);
 const player1Pin = clean(process.env.GEJAST_BETA_PLAYER1_PIN);
 const player2Name = clean(process.env.GEJAST_BETA_PLAYER2_NAME);
 const player2Pin = clean(process.env.GEJAST_BETA_PLAYER2_PIN);
+const player3Name = clean(process.env.GEJAST_BETA_PLAYER3_NAME);
+const player3Pin = clean(process.env.GEJAST_BETA_PLAYER3_PIN);
+const player4Name = clean(process.env.GEJAST_BETA_PLAYER4_NAME);
+const player4Pin = clean(process.env.GEJAST_BETA_PLAYER4_PIN);
 const SUPABASE_URL = extractConfig('SUPABASE_URL');
 const KEY = extractConfig('SUPABASE_PUBLISHABLE_KEY');
 
@@ -41,14 +45,18 @@ const evidence = {};
 try {
   const p1 = await login(player1Name, player1Pin);
   const p2 = await login(player2Name, player2Pin);
+  const p3 = player3Name && /^\d{4}$/.test(player3Pin) ? await login(player3Name, player3Pin) : null;
+  const p4 = player4Name && /^\d{4}$/.test(player4Pin) ? await login(player4Name, player4Pin) : null;
   evidence.rad = await runCase('rad', () => testRad(p1, p2));
   evidence.beerpong = await runCase('beerpong', () => testBeerpong(p1, p2));
   evidence.boerenbridge = await runCase('boerenbridge', () => testBoerenbridge(p1, p2));
-  evidence.klaverjas = {
-    ok: false,
-    state: 'blocked',
-    reason: 'Klaverjas create_jas_game requires exactly 4 registered players; only two beta accounts were authorized for this pass.'
-  };
+  evidence.klaverjas = p3 && p4
+    ? await runCase('klaverjas', () => testKlaverjas(p1, p2, p3, p4))
+    : {
+        ok: false,
+        state: 'blocked',
+        reason: 'Klaverjas create_jas_game requires GEJAST_BETA_PLAYER3_* and GEJAST_BETA_PLAYER4_* for exactly 4 registered players.'
+      };
 
   console.log('State: complete.');
   console.log(JSON.stringify(evidence, null, 2));
@@ -228,5 +236,34 @@ async function testBoerenbridge(p1, p2) {
     match_id: Number(out?.match_id || 0) || null,
     client_match_id: clientMatchId,
     stats_applied: !!out?.stats_applied,
+  };
+}
+
+async function testKlaverjas(p1, p2, p3, p4) {
+  const title = `Beta tier 3 klaverjas ${stamp}`;
+  const playedAt = new Date().toISOString().slice(0, 10);
+  const payload = {
+    title,
+    played_at: playedAt,
+    variant: '4_player',
+    scoreboard_mode: 'teams',
+    beta_test: true,
+    source: 'check-beta-live-write-secondary-games',
+    participants: [
+      { name: p1.name, seat_no: 1, team_no: 1, total_points: 1521, is_winner: true },
+      { name: p2.name, seat_no: 2, team_no: 2, total_points: 1197, is_winner: false },
+      { name: p3.name, seat_no: 3, team_no: 1, total_points: 1521, is_winner: true },
+      { name: p4.name, seat_no: 4, team_no: 2, total_points: 1197, is_winner: false },
+    ],
+  };
+  const out = await rpc('create_jas_game', {
+    session_token: p1.token,
+    game_payload: payload,
+  });
+  return {
+    ok: out?.ok !== false,
+    game_id: Number(out?.game_id || 0) || null,
+    title,
+    players: [p1.name, p2.name, p3.name, p4.name],
   };
 }

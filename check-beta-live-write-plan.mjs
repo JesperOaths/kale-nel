@@ -18,6 +18,8 @@ function requirementStatus(requirement) {
   if (requirement === 'live_write_approval') return approved;
   if (requirement === 'player1') return hasEnv('GEJAST_BETA_PLAYER1_NAME') && hasEnv('GEJAST_BETA_PLAYER1_PIN');
   if (requirement === 'player2') return hasEnv('GEJAST_BETA_PLAYER2_NAME') && hasEnv('GEJAST_BETA_PLAYER2_PIN');
+  if (requirement === 'player3') return hasEnv('GEJAST_BETA_PLAYER3_NAME') && hasEnv('GEJAST_BETA_PLAYER3_PIN');
+  if (requirement === 'player4') return hasEnv('GEJAST_BETA_PLAYER4_NAME') && hasEnv('GEJAST_BETA_PLAYER4_PIN');
   if (requirement === 'admin_session') return hasEnv('GEJAST_ADMIN_SESSION_TOKEN');
   if (requirement === 'real_permissioned_device') return hasEnv('GEJAST_REAL_PUSH_DEVICE_READY');
   return false;

@@ -10,6 +10,10 @@
     "GEJAST_BETA_PLAYER1_PIN",
     "GEJAST_BETA_PLAYER2_NAME",
     "GEJAST_BETA_PLAYER2_PIN",
+    "GEJAST_BETA_PLAYER3_NAME",
+    "GEJAST_BETA_PLAYER3_PIN",
+    "GEJAST_BETA_PLAYER4_NAME",
+    "GEJAST_BETA_PLAYER4_PIN",
     "GEJAST_ADMIN_SESSION_TOKEN",
     "GEJAST_REAL_PUSH_DEVICE_READY",
     "GEJAST_BETA_WRITE_TARGET"
@@ -40,7 +44,7 @@
     {
       "id": "secondary_game_save_flows",
       "area": "Klaverjas, Beerpong, Boerenbridge, Rad",
-      "requires": ["player1", "player2", "live_write_approval"],
+      "requires": ["player1", "player2", "player3", "player4", "live_write_approval"],
       "command": "npm.cmd run beta:write:secondary",
       "intent": "Run one clearly marked beta save/spin flow per secondary game and verify vault/history/stats/odds updates.",
       "risk": "Writes game result, spin, vault, stats, or odds records."
