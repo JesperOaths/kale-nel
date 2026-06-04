@@ -7,6 +7,14 @@ begin;
 
 create extension if not exists pgcrypto;
 
+alter table if exists public.players
+  add column if not exists pin_hash text,
+  add column if not exists active boolean not null default false,
+  add column if not exists approved boolean not null default false,
+  add column if not exists site_scope text not null default 'friends',
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists updated_at timestamptz not null default now();
+
 create or replace function public._gejast_hash_secret_v691(secret_input text)
 returns text
 language plpgsql
