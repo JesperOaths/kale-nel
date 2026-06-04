@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "site_version": "v738",
+  "site_version": "v739",
   "last_updated": "2026-06-03",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -14,13 +14,13 @@
       "id": "static_integrity",
       "status": "verified_complete",
       "command": "npm.cmd run verify",
-      "evidence": "version drift, RPC coverage, local refs, and JS syntax pass on v738"
+      "evidence": "version drift, RPC coverage, local refs, and JS syntax pass on v739"
     },
     {
       "id": "live_routes",
       "status": "verified_complete",
       "command": "npm.cmd run smoke:live",
-      "evidence": "main public routes return HTTP 200 on live v738"
+      "evidence": "main public routes return HTTP 200 on live v739"
     },
     {
       "id": "push_surface",
@@ -63,7 +63,7 @@
       "status": "verified_complete",
       "proof_needed": "Two logged-in browser sessions show create/join/start/live dice-state/spectator/cleanup correctly.",
       "next_action": "Keep in regression gate with token-backed two-player flow plus browser visual spot checks.",
-      "latest_probe": "Browser visual proof passed on v738 fixture: two players, bidding phase, six dice, bid/reject controls, and spectator redirect with both players visible."
+      "latest_probe": "Browser visual proof passed on v739 fixture: two players, bidding phase, six dice, bid/reject controls, and spectator redirect with both players visible."
     },
     {
       "id": "paardenrace_two_player_visual",
@@ -72,7 +72,7 @@
       "status": "verified_complete",
       "proof_needed": "Two logged-in browser sessions show create/join/suit/wager/ready/start/countdown/live board/spectator/cleanup correctly.",
       "next_action": "Keep in regression gate with token-backed two-player flow plus browser visual spot checks.",
-      "latest_probe": "Browser visual proof passed on live v738: two players, countdown, 2/2 ready, pot, player rows, and spectator page with both players visible."
+      "latest_probe": "Browser visual proof passed on live v739: two players, countdown, 2/2 ready, pot, player rows, and spectator page with both players visible."
     },
     {
       "id": "drinks_create_verify_reject",
@@ -105,7 +105,7 @@
       "status": "verified_complete",
       "proof_needed": "Family and friends data stay isolated across login, games, stats, profiles, admin, and exclusions.",
       "next_action": "Keep extended read-only scope routes and login-name partition check in regression; require permission before cross-scope mutation scenarios.",
-      "latest_probe": "Live v738 extended read-only smoke passes family/friends profile and family routes; login-name RPCs return friends=11, family=5, overlap=0."
+      "latest_probe": "Live v739 extended read-only smoke passes family/friends profile and family routes; login-name RPCs return friends=11, family=5, overlap=0."
     },
     {
       "id": "secondary_game_save_flows",
@@ -130,7 +130,7 @@
       "status": "verified_complete",
       "proof_needed": "Stats and prediction widgets appear only in intended slots and use current SQL data.",
       "next_action": "Keep extended stats/ladder smoke in regression and revisit only if a page adds a new stats mount.",
-      "latest_probe": "Live v738 extended read-only smoke passes Pikken, Paardenrace, drinks, drinks speed, Rad, Despimarkt stats plus ladder pages without obvious runtime failure text."
+      "latest_probe": "Live v739 extended read-only smoke passes Pikken, Paardenrace, drinks, drinks speed, Rad, Despimarkt stats plus ladder pages without obvious runtime failure text."
     },
     {
       "id": "analytics_observability",
@@ -139,7 +139,7 @@
       "status": "verified_complete",
       "proof_needed": "Admin analytics and health pages load real data for admin only and do not leak private details publicly.",
       "next_action": "Keep extended admin observability smoke in regression; admin mutations stay separate.",
-      "latest_probe": "Live v738 extended read-only smoke passes admin system health, ops observability, analytics, deployment verification, and runtime verification pages."
+      "latest_probe": "Live v739 extended read-only smoke passes admin system health, ops observability, analytics, deployment verification, and runtime verification pages."
     },
     {
       "id": "performance_beta_pass",
@@ -148,7 +148,7 @@
       "status": "verified_complete",
       "proof_needed": "Homepage, profiles, Pikken, Paardenrace, and drinks load acceptably on normal devices.",
       "next_action": "Keep this in the regression gate and revisit if a route adds a new heavy active asset.",
-      "latest_probe": "Live v738 beta performance probe passes after smaller active logo/card variants; no oversized original PNGs remain in the heaviest active route assets."
+      "latest_probe": "Live v739 beta performance probe passes after smaller active logo/card variants; no oversized original PNGs remain in the heaviest active route assets."
     }
   ]
 }

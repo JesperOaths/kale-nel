@@ -7,9 +7,9 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Push beta test - GEJAST</title>
-  <script>window.GEJAST_PAGE_VERSION='v738';</script>
-  <script src="./gejast-config.js?v738"></script>
-  <script src="./gejast-push-runtime.js?v738"></script>
+  <script>window.GEJAST_PAGE_VERSION='v739';</script>
+  <script src="./gejast-config.js?v739"></script>
+  <script src="./gejast-push-runtime.js?v739"></script>
   <style>
     :root{--gold:#9a8241;--paper:#fffaf2;--line:rgba(0,0,0,.08);--muted:#6b6257;--ok:#1f6b3a;--warn:#8a6a12;--bad:#8b2d20}
     *{box-sizing:border-box}
@@ -93,7 +93,7 @@
       </article>
     </section>
   </main>
-  <div class="site-credit-watermark" data-version-watermark>v738 - Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v739 - Made by Bruis</div>
 
   <script>
     (function(){
@@ -130,7 +130,7 @@
         const token = sessionToken();
         const readiness = lastDiag.readiness || {};
         $('pills').innerHTML = [
-          pill('versie', lastDiag.version || 'onbekend', /^v738$/.test(String(lastDiag.version || '')), true),
+          pill('versie', lastDiag.version || 'onbekend', /^v739$/.test(String(lastDiag.version || '')), true),
           pill('sessie', token ? 'aanwezig' : 'mist', !!token, false),
           pill('permissie', lastDiag.permission || 'onbekend', lastDiag.permission === 'granted', lastDiag.permission === 'default'),
           pill('worker', lastDiag.workerReady ? 'klaar' : 'mist', !!lastDiag.workerReady, false),
@@ -175,12 +175,23 @@
         try { window.GEJAST_CONFIG && window.GEJAST_CONFIG.clearPlayerSessionTokens && window.GEJAST_CONFIG.clearPlayerSessionTokens(); } catch(_) {}
         for (const area of [localStorage, sessionStorage]){
           for (const key of Object.keys(area)){
-            if (/jas_session|player.*session|session.*token|gejast.*token/i.test(key)) area.removeItem(key);
+            if (/session|token|player|jas|gejast/i.test(key)) area.removeItem(key);
           }
         }
+        try {
+          for (const pair of String(document.cookie || '').split(';')){
+            const rawKey = pair.split('=')[0];
+            const key = String(rawKey || '').trim();
+            if (!key || !/session|token|player|jas|gejast/i.test(key)) continue;
+            const encoded = encodeURIComponent(key);
+            for (const path of ['/', '/push_beta_test.html']){
+              document.cookie = `${encoded}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}; SameSite=Lax`;
+            }
+          }
+        } catch(_) {}
         $('resultBox').textContent = safeJson({ action:'clear_stale_session', cleared:true, next:'Log opnieuw in en check daarna opnieuw.' });
         await refresh().catch(()=>{});
-        setStatus('Stale sessie gewist. Log opnieuw in en kom terug naar deze pagina.');
+        setStatus(sessionToken() ? 'Sessie kon niet volledig worden gewist. Log uit/in via de browser of loginpagina.' : 'Stale sessie gewist. Log opnieuw in en kom terug naar deze pagina.');
       }
       $('refreshBtn').addEventListener('click', ()=>refresh().catch((err)=>{ setStatus(err.message || String(err)); $('rawBox').textContent = String(err && err.stack || err); }));
       $('setupBtn').addEventListener('click', ()=>setup().catch((err)=>{ setStatus(err.message || String(err)); $('resultBox').textContent = String(err && err.stack || err); }));
