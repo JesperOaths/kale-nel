@@ -8,6 +8,7 @@ begin;
 create extension if not exists pgcrypto;
 
 alter table if exists public.players
+  add column if not exists slug text,
   add column if not exists pin_hash text,
   add column if not exists active boolean not null default false,
   add column if not exists approved boolean not null default false,
@@ -77,79 +78,201 @@ alter table if exists public.allowed_usernames
   add column if not exists pin_is_set boolean not null default false,
   add column if not exists activated boolean not null default false,
   add column if not exists is_active boolean not null default false,
-  add column if not exists site_scope text not null default 'friends';
+  add column if not exists site_scope text not null default 'friends',
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists updated_at timestamptz not null default now();
 
 do $$
 declare
   v_scope text := 'friends';
   v_pin text := '1234';
+  v_hash text;
   v_name text;
+  v_slug text;
   v_player_id bigint;
+  v_allowed_exists boolean;
+  v_cols text[];
+  v_vals text[];
+  v_sets text[];
 begin
   foreach v_name in array array['Beta1', 'Beta2', 'Beta3', 'Beta4']
   loop
-    select p.id
-      into v_player_id
-      from public.players p
-     where lower(trim(coalesce(p.display_name, ''))) = lower(v_name)
-     order by p.id
-     limit 1;
+    v_slug := lower(v_name);
+    v_hash := public._gejast_hash_secret_v691(v_pin);
 
-    if v_player_id is null then
-      insert into public.players(display_name, pin_hash, active, approved, site_scope, created_at, updated_at)
-      values (v_name, public._gejast_hash_secret_v691(v_pin), true, true, v_scope, now(), now())
-      returning id into v_player_id;
-    else
-      update public.players
-         set pin_hash = public._gejast_hash_secret_v691(v_pin),
-             active = true,
-             approved = true,
-             site_scope = v_scope,
-             updated_at = now()
-       where id = v_player_id;
+    execute $sql$
+      select p.id
+        from public.players p
+       where lower(trim(coalesce(to_jsonb(p)->>'display_name', to_jsonb(p)->>'username', to_jsonb(p)->>'slug', ''))) = lower($1)
+       order by p.id
+       limit 1
+    $sql$
+      into v_player_id
+      using v_name;
+
+    v_cols := array[]::text[];
+    v_vals := array[]::text[];
+    v_sets := array[]::text[];
+
+    if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'players' and column_name = 'display_name') then
+      v_cols := array_append(v_cols, 'display_name');
+      v_vals := array_append(v_vals, format('%L', v_name));
+      v_sets := array_append(v_sets, format('%I = %L', 'display_name', v_name));
     end if;
 
-    if to_regclass('public.allowed_usernames') is not null then
-      insert into public.allowed_usernames(
-        username,
-        display_name,
-        status,
-        player_id,
-        slug,
-        site_scope,
-        has_pin,
-        pin_is_set,
-        activated,
-        is_active,
-        created_at,
-        updated_at
+    if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'players' and column_name = 'username') then
+      v_cols := array_append(v_cols, 'username');
+      v_vals := array_append(v_vals, format('%L', v_slug));
+      v_sets := array_append(v_sets, format('%I = %L', 'username', v_slug));
+    end if;
+
+    if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'players' and column_name = 'slug') then
+      v_cols := array_append(v_cols, 'slug');
+      v_vals := array_append(v_vals, format('%L', v_slug));
+      v_sets := array_append(v_sets, format('%I = %L', 'slug', v_slug));
+    end if;
+
+    if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'players' and column_name = 'pin_hash') then
+      v_cols := array_append(v_cols, 'pin_hash');
+      v_vals := array_append(v_vals, format('%L', v_hash));
+      v_sets := array_append(v_sets, format('%I = %L', 'pin_hash', v_hash));
+    end if;
+
+    if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'players' and column_name = 'active') then
+      v_cols := array_append(v_cols, 'active');
+      v_vals := array_append(v_vals, 'true');
+      v_sets := array_append(v_sets, format('%I = true', 'active'));
+    end if;
+
+    if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'players' and column_name = 'approved') then
+      v_cols := array_append(v_cols, 'approved');
+      v_vals := array_append(v_vals, 'true');
+      v_sets := array_append(v_sets, format('%I = true', 'approved'));
+    end if;
+
+    if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'players' and column_name = 'site_scope') then
+      v_cols := array_append(v_cols, 'site_scope');
+      v_vals := array_append(v_vals, format('%L', v_scope));
+      v_sets := array_append(v_sets, format('%I = %L', 'site_scope', v_scope));
+    end if;
+
+    if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'players' and column_name = 'created_at') then
+      v_cols := array_append(v_cols, 'created_at');
+      v_vals := array_append(v_vals, 'now()');
+    end if;
+
+    if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'players' and column_name = 'updated_at') then
+      v_cols := array_append(v_cols, 'updated_at');
+      v_vals := array_append(v_vals, 'now()');
+      v_sets := array_append(v_sets, format('%I = now()', 'updated_at'));
+    end if;
+
+    if v_player_id is null then
+      execute format(
+        'insert into public.players(%s) values (%s) returning id',
+        array_to_string(v_cols, ', '),
+        array_to_string(v_vals, ', ')
       )
-      values (
-        lower(v_name),
-        v_name,
-        'active',
-        v_player_id,
-        lower(v_name),
-        v_scope,
-        true,
-        true,
-        true,
-        true,
-        now(),
-        now()
-      )
-      on conflict (username)
-      do update set
-        display_name = excluded.display_name,
-        status = 'active',
-        player_id = excluded.player_id,
-        slug = excluded.slug,
-        site_scope = excluded.site_scope,
-        has_pin = true,
-        pin_is_set = true,
-        activated = true,
-        is_active = true,
-        updated_at = now();
+        into v_player_id;
+    elsif coalesce(array_length(v_sets, 1), 0) > 0 then
+      execute format(
+        'update public.players set %s where id = %s',
+        array_to_string(v_sets, ', '),
+        v_player_id
+      );
+    end if;
+
+    if to_regclass('public.allowed_usernames') is not null
+       and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'allowed_usernames' and column_name = 'username') then
+      v_cols := array[]::text[];
+      v_vals := array[]::text[];
+      v_sets := array[]::text[];
+
+      v_cols := array_append(v_cols, 'username');
+      v_vals := array_append(v_vals, format('%L', v_slug));
+
+      if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'allowed_usernames' and column_name = 'display_name') then
+        v_cols := array_append(v_cols, 'display_name');
+        v_vals := array_append(v_vals, format('%L', v_name));
+        v_sets := array_append(v_sets, format('%I = %L', 'display_name', v_name));
+      end if;
+
+      if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'allowed_usernames' and column_name = 'status') then
+        v_cols := array_append(v_cols, 'status');
+        v_vals := array_append(v_vals, quote_literal('active'));
+        v_sets := array_append(v_sets, format('%I = %L', 'status', 'active'));
+      end if;
+
+      if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'allowed_usernames' and column_name = 'player_id') then
+        v_cols := array_append(v_cols, 'player_id');
+        v_vals := array_append(v_vals, v_player_id::text);
+        v_sets := array_append(v_sets, format('%I = %s', 'player_id', v_player_id));
+      end if;
+
+      if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'allowed_usernames' and column_name = 'slug') then
+        v_cols := array_append(v_cols, 'slug');
+        v_vals := array_append(v_vals, format('%L', v_slug));
+        v_sets := array_append(v_sets, format('%I = %L', 'slug', v_slug));
+      end if;
+
+      if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'allowed_usernames' and column_name = 'site_scope') then
+        v_cols := array_append(v_cols, 'site_scope');
+        v_vals := array_append(v_vals, format('%L', v_scope));
+        v_sets := array_append(v_sets, format('%I = %L', 'site_scope', v_scope));
+      end if;
+
+      if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'allowed_usernames' and column_name = 'has_pin') then
+        v_cols := array_append(v_cols, 'has_pin');
+        v_vals := array_append(v_vals, 'true');
+        v_sets := array_append(v_sets, format('%I = true', 'has_pin'));
+      end if;
+
+      if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'allowed_usernames' and column_name = 'pin_is_set') then
+        v_cols := array_append(v_cols, 'pin_is_set');
+        v_vals := array_append(v_vals, 'true');
+        v_sets := array_append(v_sets, format('%I = true', 'pin_is_set'));
+      end if;
+
+      if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'allowed_usernames' and column_name = 'activated') then
+        v_cols := array_append(v_cols, 'activated');
+        v_vals := array_append(v_vals, 'true');
+        v_sets := array_append(v_sets, format('%I = true', 'activated'));
+      end if;
+
+      if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'allowed_usernames' and column_name = 'is_active') then
+        v_cols := array_append(v_cols, 'is_active');
+        v_vals := array_append(v_vals, 'true');
+        v_sets := array_append(v_sets, format('%I = true', 'is_active'));
+      end if;
+
+      if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'allowed_usernames' and column_name = 'created_at') then
+        v_cols := array_append(v_cols, 'created_at');
+        v_vals := array_append(v_vals, 'now()');
+      end if;
+
+      if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'allowed_usernames' and column_name = 'updated_at') then
+        v_cols := array_append(v_cols, 'updated_at');
+        v_vals := array_append(v_vals, 'now()');
+        v_sets := array_append(v_sets, format('%I = now()', 'updated_at'));
+      end if;
+
+      if coalesce(array_length(v_sets, 1), 0) > 0 then
+        execute 'update public.allowed_usernames set ' || array_to_string(v_sets, ', ') || ' where lower(username) = lower($1)'
+          using v_slug;
+        v_allowed_exists := found;
+      else
+        execute 'select exists(select 1 from public.allowed_usernames where lower(username) = lower($1))'
+          into v_allowed_exists
+          using v_slug;
+      end if;
+
+      if not coalesce(v_allowed_exists, false) then
+        execute format(
+          'insert into public.allowed_usernames(%s) values (%s)',
+          array_to_string(v_cols, ', '),
+          array_to_string(v_vals, ', ')
+        );
+      end if;
     end if;
   end loop;
 end $$;
