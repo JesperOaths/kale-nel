@@ -7,6 +7,62 @@ begin;
 
 create extension if not exists pgcrypto;
 
+create or replace function public._gejast_hash_secret_v691(secret_input text)
+returns text
+language plpgsql
+security definer
+set search_path to 'public'
+as $fn$
+declare
+  v_hash text;
+begin
+  if nullif(secret_input, '') is null then
+    raise exception 'secret_required';
+  end if;
+
+  if to_regprocedure('extensions.crypt(text,text)') is not null
+     and to_regprocedure('extensions.gen_salt(text)') is not null then
+    execute 'select extensions.crypt($1, extensions.gen_salt(''bf''))' into v_hash using secret_input;
+    return v_hash;
+  elsif to_regprocedure('public.crypt(text,text)') is not null
+     and to_regprocedure('public.gen_salt(text)') is not null then
+    execute 'select public.crypt($1, public.gen_salt(''bf''))' into v_hash using secret_input;
+    return v_hash;
+  end if;
+
+  return 'md5:' || md5(secret_input || ':' || current_database());
+end
+$fn$;
+
+create or replace function public._gejast_secret_matches_v691(secret_input text, stored_hash text)
+returns boolean
+language plpgsql
+security definer
+set search_path to 'public'
+as $fn$
+declare
+  v_check text;
+begin
+  if nullif(stored_hash, '') is null then
+    return false;
+  end if;
+
+  if stored_hash like 'md5:%' then
+    return stored_hash = ('md5:' || md5(coalesce(secret_input, '') || ':' || current_database()));
+  end if;
+
+  if to_regprocedure('extensions.crypt(text,text)') is not null then
+    execute 'select extensions.crypt($1, $2)' into v_check using coalesce(secret_input, ''), stored_hash;
+    return v_check = stored_hash;
+  elsif to_regprocedure('public.crypt(text,text)') is not null then
+    execute 'select public.crypt($1, $2)' into v_check using coalesce(secret_input, ''), stored_hash;
+    return v_check = stored_hash;
+  end if;
+
+  return false;
+end
+$fn$;
+
 alter table if exists public.allowed_usernames
   add column if not exists slug text,
   add column if not exists has_pin boolean not null default false,
