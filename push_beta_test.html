@@ -7,9 +7,9 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Push beta test - GEJAST</title>
-  <script>window.GEJAST_PAGE_VERSION='v737';</script>
-  <script src="./gejast-config.js?v737"></script>
-  <script src="./gejast-push-runtime.js?v737"></script>
+  <script>window.GEJAST_PAGE_VERSION='v738';</script>
+  <script src="./gejast-config.js?v738"></script>
+  <script src="./gejast-push-runtime.js?v738"></script>
   <style>
     :root{--gold:#9a8241;--paper:#fffaf2;--line:rgba(0,0,0,.08);--muted:#6b6257;--ok:#1f6b3a;--warn:#8a6a12;--bad:#8b2d20}
     *{box-sizing:border-box}
@@ -20,6 +20,9 @@
     h2{margin:0 0 10px;font-size:18px}
     .sub{color:var(--muted);line-height:1.45}
     .bar{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+    .controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}
+    label{display:flex;flex-direction:column;gap:5px;color:var(--muted);font-size:12px;font-weight:900}
+    input{width:100%;border:1px solid var(--line);border-radius:12px;background:#fff;padding:10px 11px;font:inherit;color:#17130f}
     button,.btn{border:0;border-radius:999px;background:#111;color:#fff;padding:11px 15px;font:inherit;font-weight:900;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
     button.alt,.btn.alt{background:#fff;color:#111;border:1px solid var(--line)}
     button:disabled{opacity:.45;cursor:not-allowed}
@@ -33,7 +36,7 @@
     .status{margin-top:12px;color:var(--muted);font-weight:800;min-height:24px}
     pre{white-space:pre-wrap;word-break:break-word;background:#111;color:#f3e3a6;border-radius:14px;padding:12px;max-height:460px;overflow:auto;font-size:12px}
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none}
-    @media(max-width:860px){.grid{grid-template-columns:1fr}.wrap{padding:18px}}
+    @media(max-width:860px){.grid,.controls{grid-template-columns:1fr}.wrap{padding:18px}}
   </style>
 </head>
 <body>
@@ -53,6 +56,21 @@
       <button id="refreshBtn" type="button">Check status</button>
       <button id="setupBtn" type="button" class="alt">Vraag permissie + sync</button>
       <button id="queueBtn" type="button" disabled>Queue precies 1 test push</button>
+      <button id="clearSessionBtn" type="button" class="alt">Wis stale sessie</button>
+    </div>
+    <div class="controls" aria-label="Handmatige testlocatie">
+      <label>Test latitude
+        <input id="latInput" inputmode="decimal" autocomplete="off" placeholder="52.3676">
+      </label>
+      <label>Test longitude
+        <input id="lngInput" inputmode="decimal" autocomplete="off" placeholder="4.9041">
+      </label>
+      <label>Accuracy meter
+        <input id="accuracyInput" inputmode="numeric" autocomplete="off" placeholder="25">
+      </label>
+      <label>Scope
+        <input id="scopeInput" autocomplete="off" placeholder="friends">
+      </label>
     </div>
     <div id="status" class="status">Nog niet getest.</div>
 
@@ -63,7 +81,7 @@
       </article>
       <article class="panel">
         <h2>Wat telt als klaar?</h2>
-        <p class="sub">Voor een echte Tier 2 proof moet deze browser een geldige speler-sessie, notification permission, service worker, push subscription, backend-sync en presence hebben. Daarna mag de testknop precies een push queueen.</p>
+        <p class="sub">Voor een echte Tier 2 proof moet deze browser een geldige speler-sessie, notification permission, service worker, push subscription, backend-sync en presence hebben. De handmatige locatie is alleen voor gecontroleerde twee-account tests; daarna mag de testknop precies een push queueen.</p>
       </article>
       <article class="panel">
         <h2>Laatst resultaat</h2>
@@ -75,13 +93,33 @@
       </article>
     </section>
   </main>
-  <div class="site-credit-watermark" data-version-watermark>v737 - Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v738 - Made by Bruis</div>
 
   <script>
     (function(){
       const $ = (id)=>document.getElementById(id);
       let lastDiag = null;
       function sessionToken(){ try { return window.GEJAST_CONFIG && window.GEJAST_CONFIG.getPlayerSessionToken ? window.GEJAST_CONFIG.getPlayerSessionToken() : ''; } catch(_) { return ''; } }
+      function testLocation(){
+        const latRaw = String($('latInput').value || '').trim().replace(',', '.');
+        const lngRaw = String($('lngInput').value || '').trim().replace(',', '.');
+        if (!latRaw && !lngRaw) return null;
+        const lat = Number(latRaw);
+        const lng = Number(lngRaw);
+        const accuracy = Number(String($('accuracyInput').value || '').trim().replace(',', '.')) || 25;
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error('Vul geldige latitude en longitude in, of laat beide leeg.');
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) throw new Error('Latitude/longitude liggen buiten bereik.');
+        return { lat, lng, accuracy: Math.max(1, Math.round(accuracy)) };
+      }
+      function scopeValue(){ return String($('scopeInput').value || '').trim() || undefined; }
+      function testOptions(base){
+        const loc = testLocation();
+        return Object.assign({}, base || {}, { location: loc, scope: scopeValue() });
+      }
+      function locationMode(){
+        try { return testLocation() ? 'handmatig' : 'browser'; }
+        catch (_) { return 'ongeldig'; }
+      }
       function cls(ok, warn){ return ok ? 'ok' : (warn ? 'warn' : 'bad'); }
       function pill(label, state, ok, warn){ return `<span class="pill ${cls(ok,warn)}">${label}: ${state}</span>`; }
       function safeJson(value){ return JSON.stringify(value || {}, null, 2); }
@@ -92,11 +130,12 @@
         const token = sessionToken();
         const readiness = lastDiag.readiness || {};
         $('pills').innerHTML = [
-          pill('versie', lastDiag.version || 'onbekend', /^v737$/.test(String(lastDiag.version || '')), true),
+          pill('versie', lastDiag.version || 'onbekend', /^v738$/.test(String(lastDiag.version || '')), true),
           pill('sessie', token ? 'aanwezig' : 'mist', !!token, false),
           pill('permissie', lastDiag.permission || 'onbekend', lastDiag.permission === 'granted', lastDiag.permission === 'default'),
           pill('worker', lastDiag.workerReady ? 'klaar' : 'mist', !!lastDiag.workerReady, false),
           pill('subscription', lastDiag.subscription ? 'actief' : 'mist', !!lastDiag.subscription, false),
+          pill('locatie', locationMode(), locationMode() !== 'ongeldig', locationMode() === 'browser'),
           pill('backend', lastDiag.backendSync && lastDiag.backendSync.synced ? 'sync ok' : ((lastDiag.backendSync && lastDiag.backendSync.reason) || 'mist'), !!(lastDiag.backendSync && lastDiag.backendSync.synced), false),
           pill('presence', lastDiag.presenceTouch && lastDiag.presenceTouch.touched ? 'ok' : ((lastDiag.presenceTouch && lastDiag.presenceTouch.reason) || 'mist'), !!(lastDiag.presenceTouch && lastDiag.presenceTouch.touched), false),
           pill('readiness', readiness.label || readiness.key || 'onbekend', /ready_/.test(String(readiness.key || '')), readiness.key === 'player_session_required')
@@ -111,14 +150,14 @@
       async function refresh(options){
         const rt = runtime();
         if (!rt || !rt.getSelfDiagnostics) throw new Error('Push runtime ontbreekt.');
-        const diag = await rt.getSelfDiagnostics(Object.assign({ queueTest:false, touchPresence:true, requestLocation:false, pagePath:'/push_beta_test.html' }, options || {}));
+        const diag = await rt.getSelfDiagnostics(testOptions(Object.assign({ queueTest:false, touchPresence:true, requestLocation:false, pagePath:'/push_beta_test.html' }, options || {})));
         render(diag);
         return diag;
       }
       async function setup(){
         const rt = runtime();
         if (!rt || !rt.requestPermissionAndSync) throw new Error('Push runtime ontbreekt.');
-        const out = await rt.requestPermissionAndSync({ pagePath:'/push_beta_test.html', requestLocation:true });
+        const out = await rt.requestPermissionAndSync(testOptions({ pagePath:'/push_beta_test.html', requestLocation:!testLocation() }));
         $('resultBox').textContent = safeJson({ action:'setup', granted:out && out.granted, readiness:out && out.readiness, backendSync:out && out.backendSync, presenceTouch:out && out.presenceTouch });
         render(out && out.diagnostics ? out.diagnostics : await refresh());
       }
@@ -132,9 +171,21 @@
         $('resultBox').textContent = safeJson({ action:'queue_one_test_push', queued:!!(out && out.queued), result:out });
         await refresh({ queueTest:false });
       }
+      async function clearSession(){
+        try { window.GEJAST_CONFIG && window.GEJAST_CONFIG.clearPlayerSessionTokens && window.GEJAST_CONFIG.clearPlayerSessionTokens(); } catch(_) {}
+        for (const area of [localStorage, sessionStorage]){
+          for (const key of Object.keys(area)){
+            if (/jas_session|player.*session|session.*token|gejast.*token/i.test(key)) area.removeItem(key);
+          }
+        }
+        $('resultBox').textContent = safeJson({ action:'clear_stale_session', cleared:true, next:'Log opnieuw in en check daarna opnieuw.' });
+        await refresh().catch(()=>{});
+        setStatus('Stale sessie gewist. Log opnieuw in en kom terug naar deze pagina.');
+      }
       $('refreshBtn').addEventListener('click', ()=>refresh().catch((err)=>{ setStatus(err.message || String(err)); $('rawBox').textContent = String(err && err.stack || err); }));
       $('setupBtn').addEventListener('click', ()=>setup().catch((err)=>{ setStatus(err.message || String(err)); $('resultBox').textContent = String(err && err.stack || err); }));
       $('queueBtn').addEventListener('click', ()=>queueOne().catch((err)=>{ setStatus(err.message || String(err)); $('resultBox').textContent = String(err && err.stack || err); }));
+      $('clearSessionBtn').addEventListener('click', ()=>clearSession().catch((err)=>{ setStatus(err.message || String(err)); $('resultBox').textContent = String(err && err.stack || err); }));
       if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ()=>refresh().catch(()=>{}), { once:true });
       else refresh().catch(()=>{});
       try { window.GEJAST_CONFIG && window.GEJAST_CONFIG.applyVersionLabel && window.GEJAST_CONFIG.applyVersionLabel(); } catch(_) {}

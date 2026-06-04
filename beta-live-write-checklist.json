@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "site_version": "v737",
+  "site_version": "v738",
   "approval_env": {
     "name": "GEJAST_ALLOW_LIVE_WRITE_BETA",
     "required_value": "I_APPROVE_LIVE_BETA_WRITES"
