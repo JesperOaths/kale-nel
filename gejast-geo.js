@@ -296,10 +296,12 @@
   function notificationSetupState(state){
     const s = state || {};
     const subscribed = !!(s.subscribed || s.subscription);
+    const sessionProblemText = [s.backend && s.backend.reason, s.backendSync && s.backendSync.reason, s.presenceTouch && s.presenceTouch.reason, s.backendTest && s.backendTest.reason].map((value)=>String(value || '')).join(' ');
     if (!s.supported || !s.secure) return { key:'unsupported', label:'niet ondersteund' };
     if (isIOS() && !s.standalone) return { key:'not_installed', label:'niet als app geopend' };
     if (s.permission !== 'granted') return { key:'installed_but_permission_missing', label:'toestemming ontbreekt' };
     if (!subscribed) return { key:'permission_granted_but_not_subscribed', label:'geen push-abonnement' };
+    if (/missing[_ -]?session|invalid[_ -]?session|missing_or_invalid_session|ongeldige speler-sessie/i.test(sessionProblemText)) return { key:'player_session_required', label:'opnieuw inloggen nodig' };
     if (!(s.backendSync && s.backendSync.synced)) return { key:'subscribed_but_not_synced', label:'backend-sync ontbreekt' };
     return { key:'fully_active', label:'volledig actief' };
   }
@@ -309,7 +311,7 @@
       const setup = extras.setupState || notificationSetupState({ supported:p!=='unsupported', secure:!!window.isSecureContext, permission:p, subscribed:!!(extras.subscribed || extras.subscription), backendSync:extras.backendSync, standalone:extras.standalone });
       const fullyActive = setup.key === 'fully_active';
       btn.classList.toggle('is-ready', fullyActive);
-      btn.classList.toggle('is-pending', setup.key === 'permission_granted_but_not_subscribed' || setup.key === 'subscribed_but_not_synced' || p === 'default');
+      btn.classList.toggle('is-pending', setup.key === 'permission_granted_but_not_subscribed' || setup.key === 'subscribed_but_not_synced' || setup.key === 'player_session_required' || p === 'default');
       btn.classList.toggle('is-denied', p === 'denied' || p === 'unsupported' || setup.key === 'not_installed');
       btn.classList.toggle('is-bad', p === 'denied' || p === 'unsupported' || setup.key === 'not_installed');
       let title = 'Meldingen instellen';
@@ -317,6 +319,7 @@
       else if (setup.key === 'not_installed') title = 'Open de site als thuisscherm-app';
       else if (setup.key === 'installed_but_permission_missing') title = 'Meldingstoestemming ontbreekt';
       else if (setup.key === 'permission_granted_but_not_subscribed') title = 'Geen push-abonnement actief';
+      else if (setup.key === 'player_session_required') title = 'Log opnieuw in voor meldingen';
       else if (setup.key === 'subscribed_but_not_synced') title = 'Backend-sync ontbreekt';
       else if (p === 'default') title = 'Meldingen inschakelen';
       else if (p === 'denied') title = 'Meldingen geblokkeerd';
