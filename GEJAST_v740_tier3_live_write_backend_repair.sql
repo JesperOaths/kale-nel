@@ -514,6 +514,55 @@ grant execute on function public.rad_log_target_nomination_scoped(text, text, bi
 -- Retry overrides from live Tier 3 results after the first repair was applied.
 -- Keep these last so their definitions win over earlier compatibility attempts.
 
+create unique index if not exists drink_verified_records_unique_source_idx
+  on public.drink_verified_records(source_kind, source_request_id)
+  where source_kind is not null and source_request_id is not null;
+
+create or replace function public._gejast_player_login_payload_v691(player_id_input bigint)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public'
+as $fn$
+declare
+  p record;
+  v_token text := public._gejast_random_hex_v691(32);
+  v_existing_token text;
+begin
+  select * into p from public.players where id = player_id_input;
+  if not found then raise exception 'player_not_found'; end if;
+
+  update public.gejast_player_sessions_v691
+     set session_token = v_token,
+         display_name = p.display_name,
+         site_scope = coalesce(p.site_scope, 'friends'),
+         last_seen_at = now(),
+         expires_at = now() + interval '45 days'
+   where player_id = p.id
+   returning session_token into v_existing_token;
+
+  if v_existing_token is null then
+    insert into public.gejast_player_sessions_v691(session_token, player_id, display_name, site_scope)
+    values (v_token, p.id, p.display_name, coalesce(p.site_scope, 'friends'));
+  end if;
+
+  update public.players
+     set session_token = v_token,
+         last_login_at = now(),
+         updated_at = now()
+   where id = p.id;
+
+  return jsonb_build_object(
+    'ok', true,
+    'session_token', v_token,
+    'player_id', p.id,
+    'display_name', p.display_name,
+    'player_name', p.display_name,
+    'site_scope', coalesce(p.site_scope, 'friends')
+  );
+end;
+$fn$;
+
 drop function if exists public.create_drink_event(text, text, integer, double precision, double precision, double precision);
 
 create or replace function public.create_drink_event(
