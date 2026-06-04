@@ -115,6 +115,7 @@ Continuation on 2026-06-04:
   - `43 KB /logo-small.png`
   - `39 KB /site-bg-mobile.webp`
 - `npm.cmd run beta:write:readiness` passed as a safety gate by refusing to arm live-write tests without explicit approval and required player/admin/device inputs. No live data was changed.
+- `npm.cmd run beta:write:plan` now prints a sanitized, non-mutating execution/evidence checklist for the remaining live-write beta targets. Use `GEJAST_BETA_WRITE_TARGET=<item id>` to focus one target.
 - `npm.cmd run beta:readiness` reports 6 of 12 beta gaps verified complete. Remaining items are intentionally blocked by permission/device requirements:
   - real device push delivery
   - drinks create/verify/reject write flow
