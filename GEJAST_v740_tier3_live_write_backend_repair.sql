@@ -514,9 +514,20 @@ grant execute on function public.rad_log_target_nomination_scoped(text, text, bi
 -- Retry overrides from live Tier 3 results after the first repair was applied.
 -- Keep these last so their definitions win over earlier compatibility attempts.
 
-create unique index if not exists drink_verified_records_unique_source_idx
-  on public.drink_verified_records(source_kind, source_request_id)
-  where source_kind is not null and source_request_id is not null;
+do $$
+begin
+  if to_regclass('public.drink_verified_records') is not null then
+    delete from public.drink_verified_records a
+      using public.drink_verified_records b
+     where a.ctid < b.ctid
+       and a.source_kind = b.source_kind
+       and a.source_request_id = b.source_request_id;
+
+    drop index if exists public.drink_verified_records_unique_source_idx;
+    create unique index if not exists drink_verified_records_unique_source_idx
+      on public.drink_verified_records(source_kind, source_request_id);
+  end if;
+end $$;
 
 create or replace function public._gejast_player_login_payload_v691(player_id_input bigint)
 returns jsonb
@@ -531,6 +542,14 @@ declare
 begin
   select * into p from public.players where id = player_id_input;
   if not found then raise exception 'player_not_found'; end if;
+
+  if to_regclass('public.sessions') is not null then
+    begin
+      execute 'delete from public.sessions where player_id = $1' using p.id;
+    exception when others then
+      null;
+    end;
+  end if;
 
   update public.gejast_player_sessions_v691
      set session_token = v_token,
