@@ -1,4 +1,4 @@
-﻿# Kale Nel / kalenel.nl Status And Goals - 2026-06-02
+# Kale Nel / kalenel.nl Status And Goals - 2026-06-02
 
 ## Verified Baseline
 
@@ -80,7 +80,7 @@ Supabase/live backend continuation:
 
 Continuation on 2026-06-04:
 
-- Current local and live site version: `v736`.
+- Current local and live site version: `v737`.
 - Recent committed beta work in Git history includes:
   - beta audit/readiness tracking
   - beta performance route probe
@@ -95,7 +95,7 @@ Continuation on 2026-06-04:
   - active local HTML references exist
   - active JavaScript syntax OK across `151` files
 - `npm.cmd run smoke:live` passed against `https://kalenel.nl`:
-  - live `VERSION` is `v736`
+  - live `VERSION` is `v737`
   - main public routes returned HTTP 200
 - `npm.cmd run smoke:push` passed:
   - latest checked dispatcher workflow run `#911` completed successfully

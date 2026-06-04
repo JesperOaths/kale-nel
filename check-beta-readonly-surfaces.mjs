@@ -22,7 +22,7 @@ const routeGroups = {
     '/boerenbridge_live.html',
     '/rad.html',
   ],
-  drinks: ['/drinks.html', '/drinks_add.html', '/drinks_pending.html', '/drinks_history.html', '/drinks_speed.html', '/drinks_stats.html'],
+  drinks: ['/drinks.html', '/drinks_add.html', '/drinks_pending.html', '/drinks_history.html', '/drinks_speed.html', '/drinks_stats.html', '/push_beta_test.html'],
   despimarkt: ['/despimarkt.html', '/beurs.html', '/despimarkt_market.html', '/despimarkt_wallet.html', '/despimarkt_stats.html'],
   family: ['/familie.html', '/familie/index.html', '/familie/login.html', '/familie/profiles.html', '/familie/scorer.html', '/familie/leaderboard.html'],
   adminReadOnly: [
