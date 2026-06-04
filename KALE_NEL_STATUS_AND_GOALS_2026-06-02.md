@@ -78,6 +78,55 @@ Supabase/live backend continuation:
 - Paardenrace logged-in single-session backend flow passed: create room, save suit/wager, host verify wager, set ready, and disband cleanup returned OK.
 - Remaining live gameplay gap: a true two-player Paardenrace start/live-board test still needs a second logged-in player session. A one-player test cannot honestly prove join/start/multi-suit behavior.
 
+Continuation on 2026-06-04:
+
+- Current local and live site version: `v735`.
+- Recent committed beta work in Git history includes:
+  - beta audit/readiness tracking
+  - beta performance route probe
+  - lighter active image assets
+  - Paardenrace countdown visual sync fix
+  - live Pikken and Paardenrace visual proof tracking
+  - extended beta read-only gate
+  - guarded live-write beta gate
+- `npm.cmd run verify` passed:
+  - no version drift
+  - RPC coverage OK: frontend RPCs `104`, SQL functions `561`
+  - active local HTML references exist
+  - active JavaScript syntax OK across `151` files
+- `npm.cmd run smoke:live` passed against `https://kalenel.nl`:
+  - live `VERSION` is `v735`
+  - main public routes returned HTTP 200
+- `npm.cmd run smoke:push` passed:
+  - latest checked dispatcher workflow run `#911` completed successfully
+  - drinks pending/eligibility RPCs returned HTTP 200
+  - nearby push queue probe returned safe zero-active-subscriptions state
+  - invalid test-push session was rejected as expected
+- `npm.cmd run smoke:games` passed in public-probe mode:
+  - Pikken public live/lobby RPC surfaces respond
+  - Paardenrace public room/stats RPC surfaces respond
+  - token-backed two-player flow was not rerun in this pass because `GEJAST_PLAYER1_TOKEN` and `GEJAST_PLAYER2_TOKEN` were not present in the environment
+- `npm.cmd run smoke:beta:read` passed across 42 live beta routes.
+- `npm.cmd run smoke:beta:extended` passed across stats, ladder, scope, and admin observability read-only surfaces.
+- `npm.cmd run smoke:beta:perf` passed for homepage, profiles, Pikken, Paardenrace, and drinks routes. Heaviest same-origin active assets now observed:
+  - `415 KB /kale9goed-scene.png`
+  - `315 KB /playingcard-accent1-trimmed-scene.png`
+  - `205 KB /site-bg-desktop.webp`
+  - `43 KB /logo-small.png`
+  - `39 KB /site-bg-mobile.webp`
+- `npm.cmd run beta:write:readiness` passed as a safety gate by refusing to arm live-write tests without explicit approval and required player/admin/device inputs. No live data was changed.
+- `npm.cmd run beta:readiness` reports 6 of 12 beta gaps verified complete. Remaining items are intentionally blocked by permission/device requirements:
+  - real device push delivery
+  - drinks create/verify/reject write flow
+  - admin mutations
+  - badge awards
+  - secondary game save/spin flows
+  - profile editing
+
+Current next action:
+
+The remaining beta list is no longer a coding-only list. It needs either a real permissioned device or explicit approval to write beta test records. Without those, the useful autonomous work is to keep the non-mutating gates green and patch only regressions they reveal.
+
 Observed:
 
 - `/klaverjas.html` returns 404. Current Klaverjas route appears to be `/scorer.html`, so this is only a blocker if links or users expect `/klaverjas.html`.
@@ -123,14 +172,12 @@ Observed:
 
 ## Priority Order
 
-1. Confirm live backend state for Paardenrace.
-2. Run `npm run smoke:games` with `GEJAST_PLAYER1_TOKEN` and `GEJAST_PLAYER2_TOKEN` set to prove two-player Pikken and Paardenrace create/join/ready/start/cleanup.
-3. Run real two-player Paardenrace live-board browser viewing after the harness passes, because the harness proves backend start but not visual board rendering.
-4. Run broader account/device live tests for the remaining games.
-5. Run real device push verification with an actual subscribed browser/device, because public probes can prove the RPC/workflow surface but cannot prove end-to-end phone delivery.
-6. Fix any blocker found during live tests.
-7. Start performance pass on homepage, profiles, Paardenrace, and global analytics/presence.
-8. Clean documentation so this dated file and the current README point to the correct source of truth.
+1. Run real device push verification with an actual subscribed browser/device, because public probes can prove the RPC/workflow surface but cannot prove end-to-end phone delivery.
+2. If approved, run one clearly marked drinks create/verify/reject beta test and inspect pending/history/stats/push-queue behavior.
+3. If approved, run controlled live-write save/spin tests for Klaverjas/scorer, Beerpong, Boerenbridge, and Rad.
+4. If approved, run reversible profile-edit and badge-award scenarios using beta/test records only.
+5. Keep `npm.cmd run verify`, `smoke:live`, `smoke:push`, `smoke:games`, `smoke:beta:read`, `smoke:beta:extended`, `smoke:beta:perf`, and `beta:write:readiness` green.
+6. Patch only blockers or regressions found by those gates or by approved live beta tests.
 
 ## Safety Notes
 
