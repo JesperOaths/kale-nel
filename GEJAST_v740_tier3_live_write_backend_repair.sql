@@ -511,6 +511,214 @@ $fn$;
 
 grant execute on function public.rad_log_target_nomination_scoped(text, text, bigint, text, text, text, jsonb, text) to anon, authenticated;
 
+-- Retry overrides from live Tier 3 results after the first repair was applied.
+-- Keep these last so their definitions win over earlier compatibility attempts.
+
+drop function if exists public.create_drink_event(text, text, integer, double precision, double precision, double precision);
+
+create or replace function public.create_drink_event(
+  session_token text default null,
+  event_type_key text default null,
+  quantity integer default 1,
+  lat double precision default null,
+  lng double precision default null,
+  accuracy double precision default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public'
+as $fn$
+declare
+  p public.players%rowtype;
+  v_cols text[] := array[]::text[];
+  v_vals text[] := array[]::text[];
+  v_sql text;
+  v_id bigint;
+  v_key text := lower(nullif(trim(coalesce(event_type_key, 'bier')), ''));
+  v_qty integer := greatest(1, coalesce(quantity, 1));
+  v_type_id bigint;
+  v_type_label text := coalesce(nullif(trim(event_type_key), ''), 'bier');
+  v_unit numeric := 1;
+  v_player_name text;
+begin
+  p := public._tier3_player_from_any_session_v740(session_token);
+  v_player_name := coalesce(nullif(trim(p.chosen_username), ''), nullif(trim(p.display_name), ''));
+  if p.id is null then
+    raise exception 'Niet ingelogd.';
+  end if;
+
+  begin
+    select id, coalesce(label, key, v_type_label), coalesce(unit_value, 1)
+      into v_type_id, v_type_label, v_unit
+      from public.drink_event_types
+     where lower(key) in (v_key, 'bier', 'beer', 'bak')
+     order by case lower(key) when v_key then 0 when 'bier' then 1 when 'beer' then 2 when 'bak' then 3 else 4 end
+     limit 1;
+  exception when others then
+    null;
+  end;
+
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'drink_events' and column_name = 'player_id') then
+    v_cols := array_append(v_cols, 'player_id'); v_vals := array_append(v_vals, p.id::text);
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'drink_events' and column_name = 'player_name') then
+    v_cols := array_append(v_cols, 'player_name'); v_vals := array_append(v_vals, quote_literal(v_player_name));
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'drink_events' and column_name = 'event_type_id') and v_type_id is not null then
+    v_cols := array_append(v_cols, 'event_type_id'); v_vals := array_append(v_vals, v_type_id::text);
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'drink_events' and column_name = 'event_type_key') then
+    v_cols := array_append(v_cols, 'event_type_key'); v_vals := array_append(v_vals, quote_literal(v_key));
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'drink_events' and column_name = 'event_type_label') then
+    v_cols := array_append(v_cols, 'event_type_label'); v_vals := array_append(v_vals, quote_literal(v_type_label));
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'drink_events' and column_name = 'quantity') then
+    v_cols := array_append(v_cols, 'quantity'); v_vals := array_append(v_vals, v_qty::text);
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'drink_events' and column_name = 'total_units') then
+    v_cols := array_append(v_cols, 'total_units'); v_vals := array_append(v_vals, (v_qty * v_unit)::text);
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'drink_events' and column_name = 'lat') then
+    v_cols := array_append(v_cols, 'lat'); v_vals := array_append(v_vals, coalesce(lat::text, 'null'));
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'drink_events' and column_name = 'lng') then
+    v_cols := array_append(v_cols, 'lng'); v_vals := array_append(v_vals, coalesce(lng::text, 'null'));
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'drink_events' and column_name = 'accuracy') then
+    v_cols := array_append(v_cols, 'accuracy'); v_vals := array_append(v_vals, coalesce(accuracy::text, 'null'));
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'drink_events' and column_name = 'status') then
+    v_cols := array_append(v_cols, 'status'); v_vals := array_append(v_vals, quote_literal('pending'));
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'drink_events' and column_name = 'site_scope') then
+    v_cols := array_append(v_cols, 'site_scope'); v_vals := array_append(v_vals, quote_literal(coalesce(p.site_scope, 'friends')));
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'drink_events' and column_name = 'metadata') then
+    v_cols := array_append(v_cols, 'metadata'); v_vals := array_append(v_vals, quote_literal(jsonb_build_object('source', 'tier3-repair-v740')::text) || '::jsonb');
+  end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'drink_events' and column_name = 'created_at') then
+    v_cols := array_append(v_cols, 'created_at'); v_vals := array_append(v_vals, 'now()');
+  end if;
+
+  v_sql := format('insert into public.drink_events (%s) values (%s) returning id', array_to_string(v_cols, ', '), array_to_string(v_vals, ', '));
+  execute v_sql into v_id;
+  return jsonb_build_object('ok', true, 'drink_event_id', v_id, 'event_id', v_id, 'id', v_id, 'status', 'pending');
+end;
+$fn$;
+
+grant execute on function public.create_drink_event(text, text, integer, double precision, double precision, double precision) to anon, authenticated;
+
+drop function if exists public.save_beerpong_match(text, text, jsonb);
+
+create or replace function public.save_beerpong_match(
+  session_token text default null,
+  client_match_id text default null,
+  payload jsonb default '{}'::jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public'
+as $fn$
+declare
+  p public.players%rowtype;
+  v_client text := nullif(trim(coalesce(save_beerpong_match.client_match_id, '')), '');
+  v_payload jsonb := coalesce(save_beerpong_match.payload, '{}'::jsonb);
+  v_match_id bigint;
+  v_existing bigint;
+begin
+  if v_client is null then raise exception 'client_match_id ontbreekt'; end if;
+  p := public._tier3_player_from_any_session_v740(save_beerpong_match.session_token);
+
+  select m.id into v_existing from public.beerpong_matches m where m.client_match_id = v_client limit 1;
+  if v_existing is null then
+    insert into public.beerpong_matches(client_match_id, created_by_player_id, match_status, match_format, winner_team, finished_at, payload, created_at, updated_at)
+    values (
+      v_client,
+      p.id,
+      'finished',
+      coalesce(nullif(v_payload->>'match_format', ''), '1v1'),
+      case lower(coalesce(v_payload->>'winner_team', 'team_a')) when 'a' then 'team_a' when 'b' then 'team_b' else lower(coalesce(v_payload->>'winner_team', 'team_a')) end,
+      coalesce(nullif(v_payload->>'finished_at', '')::timestamptz, now()),
+      v_payload,
+      now(),
+      now()
+    )
+    returning id into v_match_id;
+  else
+    update public.beerpong_matches m
+       set payload = v_payload,
+           finished_at = coalesce(nullif(v_payload->>'finished_at', '')::timestamptz, m.finished_at, now()),
+           match_status = 'finished',
+           updated_at = now()
+     where m.id = v_existing
+     returning m.id into v_match_id;
+  end if;
+
+  return jsonb_build_object('ok', true, 'match_id', v_match_id, 'client_match_id', v_client, 'ratings_applied', false);
+end;
+$fn$;
+
+grant execute on function public.save_beerpong_match(text, text, jsonb) to anon, authenticated;
+
+drop function if exists public.save_boerenbridge_match(text, text, text, text, jsonb);
+
+create or replace function public.save_boerenbridge_match(
+  session_token text,
+  client_match_id text,
+  rules_version text default null,
+  app_version text default null,
+  match_payload jsonb default '{}'::jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public'
+as $fn$
+declare
+  p public.players%rowtype;
+  v_client text := nullif(trim(coalesce(save_boerenbridge_match.client_match_id, '')), '');
+  v_payload jsonb := coalesce(save_boerenbridge_match.match_payload, '{}'::jsonb);
+  v_match_id bigint;
+  v_existing bigint;
+begin
+  if v_client is null then raise exception 'client_match_id ontbreekt'; end if;
+  p := public._tier3_player_from_any_session_v740(save_boerenbridge_match.session_token);
+
+  select m.id into v_existing from public.boerenbridge_matches m where m.client_match_id = v_client limit 1;
+  if v_existing is null then
+    insert into public.boerenbridge_matches(client_match_id, match_name, match_status, rules_version, app_version, created_by_player_id, started_at, finished_at, payload, updated_at)
+    values (
+      v_client,
+      nullif(trim(coalesce(v_payload->>'match_name', '')), ''),
+      'finished',
+      save_boerenbridge_match.rules_version,
+      save_boerenbridge_match.app_version,
+      p.id,
+      coalesce(nullif(v_payload->>'started_at', '')::timestamptz, now()),
+      coalesce(nullif(v_payload->>'finished_at', '')::timestamptz, now()),
+      v_payload,
+      now()
+    )
+    returning id into v_match_id;
+  else
+    update public.boerenbridge_matches m
+       set payload = v_payload,
+           match_status = 'finished',
+           finished_at = coalesce(nullif(v_payload->>'finished_at', '')::timestamptz, m.finished_at, now()),
+           updated_at = now()
+     where m.id = v_existing
+     returning m.id into v_match_id;
+  end if;
+
+  return jsonb_build_object('ok', true, 'match_id', v_match_id, 'client_match_id', v_client, 'stats_applied', false);
+end;
+$fn$;
+
+grant execute on function public.save_boerenbridge_match(text, text, text, text, jsonb) to anon, authenticated;
+
 notify pgrst, 'reload schema';
 notify pgrst, 'reload config';
 
