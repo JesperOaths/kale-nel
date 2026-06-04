@@ -19,6 +19,7 @@
       "id": "drinks_create_verify_reject",
       "area": "Drinks",
       "requires": ["player1", "player2", "live_write_approval"],
+      "command": "npm.cmd run beta:write:drinks",
       "intent": "Create a clearly marked beta drink request, verify pending/history/stats/notification queue, then reject or cleanly mark the test record where supported.",
       "risk": "Writes drink/request/history/queue data."
     },

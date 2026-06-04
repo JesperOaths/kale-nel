@@ -84,6 +84,7 @@ for (const item of rows) {
   console.log(`## ${item.id} (${item.area})`);
   console.log(`state: ${item.armed ? 'armed' : 'blocked'}`);
   console.log(`risk: ${item.risk}`);
+  if (item.command) console.log(`command: ${item.command}`);
   if (item.missing.length) console.log(`missing: ${item.missing.join(', ')}`);
   console.log('evidence checklist:');
   for (const step of evidence[item.id] || [item.intent]) console.log(`- ${step}`);
