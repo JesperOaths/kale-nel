@@ -25,7 +25,7 @@ jobs:
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
           import crypt
           for name in ("BETA1_HASH", "BETA2_HASH"):
-              print(f"{name}={crypt.crypt('1234', crypt.mksalt(crypt.METHOD_BLOWFISH))}")
+              print(f"{name}={crypt.crypt('1234', crypt.mksalt(crypt.METHOD_BLOWFISH)).replace('$2b$', '$2a$', 1)}")
           PY
       - name: Mask generated hashes
         shell: bash
