@@ -20,6 +20,7 @@
     "beta:write:plan": "node check-beta-live-write-plan.mjs",
     "beta:write:readiness": "node check-beta-live-write-readiness.mjs",
     "beta:write:drinks": "node check-beta-live-write-drinks.mjs",
+    "beta:write:secondary": "node check-beta-live-write-secondary-games.mjs",
     "beta:readiness": "node check-beta-readiness.mjs"
   },
   "dependencies": {

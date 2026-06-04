@@ -41,6 +41,7 @@
       "id": "secondary_game_save_flows",
       "area": "Klaverjas, Beerpong, Boerenbridge, Rad",
       "requires": ["player1", "player2", "live_write_approval"],
+      "command": "npm.cmd run beta:write:secondary",
       "intent": "Run one clearly marked beta save/spin flow per secondary game and verify vault/history/stats/odds updates.",
       "risk": "Writes game result, spin, vault, stats, or odds records."
     },
