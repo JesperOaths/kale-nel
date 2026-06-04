@@ -1,0 +1,140 @@
+name: Setup beta users
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/setup-beta-users.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    if: github.repository == 'JesperOaths/kale-nel'
+    env:
+      SUPABASE_URL: https://uiqntazgnrxwliaidkmy.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - name: Prepare bcrypt hashes
+        id: hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import crypt
+          for name in ("BETA1_HASH", "BETA2_HASH"):
+              print(f"{name}={crypt.crypt('1234', crypt.mksalt(crypt.METHOD_BLOWFISH))}")
+          PY
+      - name: Mask generated hashes
+        shell: bash
+        run: |
+          echo "::add-mask::${{ steps.hashes.outputs.BETA1_HASH }}"
+          echo "::add-mask::${{ steps.hashes.outputs.BETA2_HASH }}"
+      - name: Create or update beta users
+        shell: bash
+        env:
+          BETA1_HASH: ${{ steps.hashes.outputs.BETA1_HASH }}
+          BETA2_HASH: ${{ steps.hashes.outputs.BETA2_HASH }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const url = process.env.SUPABASE_URL;
+          const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+          if (!url || !key) throw new Error('Missing Supabase service role config');
+          const users = [
+            { display_name:'Beta1', slug:'beta1', username:'beta1', pin_hash:process.env.BETA1_HASH, approved_email:'beta1@example.invalid' },
+            { display_name:'Beta2', slug:'beta2', username:'beta2', pin_hash:process.env.BETA2_HASH, approved_email:'beta2@example.invalid' }
+          ];
+          function headers(extra={}) {
+            return {
+              apikey: key,
+              Authorization: `Bearer ${key}`,
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              ...extra
+            };
+          }
+          async function parse(res) {
+            const text = await res.text();
+            let data = null;
+            try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+            if (!res.ok) throw new Error(typeof data === 'string' ? data : (data?.message || data?.error || data?.details || data?.hint || `HTTP ${res.status}`));
+            return data;
+          }
+          async function rest(path, init={}) {
+            return fetch(`${url}/rest/v1/${path}`, {
+              ...init,
+              headers: headers(init.headers || {})
+            }).then(parse);
+          }
+          async function findPlayer(slug) {
+            const rows = await rest(`players?select=id,display_name,slug,site_scope&slug=eq.${encodeURIComponent(slug)}&limit=1`);
+            return Array.isArray(rows) && rows.length ? rows[0] : null;
+          }
+          async function upsertPlayer(user) {
+            const payload = {
+              display_name: user.display_name,
+              slug: user.slug,
+              pin_hash: user.pin_hash,
+              active: true,
+              approved: true,
+              approved_email: user.approved_email,
+              site_scope: 'friends',
+              hidden_from_public: false,
+              is_dummy: false
+            };
+            const existing = await findPlayer(user.slug);
+            if (existing?.id) {
+              const rows = await rest(`players?id=eq.${existing.id}&select=id,display_name,slug,active,approved,site_scope`, {
+                method: 'PATCH',
+                headers: { Prefer: 'return=representation' },
+                body: JSON.stringify(payload)
+              });
+              return rows[0];
+            }
+            const rows = await rest('players?select=id,display_name,slug,active,approved,site_scope', {
+              method: 'POST',
+              headers: { Prefer: 'return=representation' },
+              body: JSON.stringify(payload)
+            });
+            return rows[0];
+          }
+          async function upsertAllowed(user, player) {
+            const full = {
+              username: user.username,
+              display_name: user.display_name,
+              status: 'active',
+              player_id: player.id,
+              site_scope: 'friends',
+              reserved_for_email: user.approved_email,
+              reserved_for_person_note: 'Tier 3 beta test account'
+            };
+            const minimal = {
+              username: user.username,
+              display_name: user.display_name,
+              status: 'active',
+              player_id: player.id
+            };
+            for (const payload of [full, minimal]) {
+              try {
+                const rows = await rest('allowed_usernames?on_conflict=username&select=id,username,display_name,status,player_id,site_scope', {
+                  method: 'POST',
+                  headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+                  body: JSON.stringify(payload)
+                });
+                return Array.isArray(rows) ? rows[0] : rows;
+              } catch (err) {
+                if (payload === minimal) throw err;
+              }
+            }
+          }
+          const result = [];
+          for (const user of users) {
+            const player = await upsertPlayer(user);
+            const allowed = await upsertAllowed(user, player);
+            result.push({ name:user.display_name, player_id:player.id, allowed_id:allowed?.id || null, scope:player.site_scope || 'friends' });
+          }
+          console.log(JSON.stringify({ ok:true, users:result }, null, 2));
+          NODE
