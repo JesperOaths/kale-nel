@@ -42,6 +42,8 @@ create index if not exists players_chosen_username_lower_idx
   on public.players (lower(chosen_username))
   where chosen_username is not null;
 
+drop function if exists public.save_beerpong_match(text, text, jsonb);
+
 create or replace function public.save_beerpong_match(
   session_token text default null,
   client_match_id text default null,
@@ -183,6 +185,8 @@ end;
 $fn$;
 
 grant execute on function public.save_beerpong_match(text, text, jsonb) to anon, authenticated;
+
+drop function if exists public.save_boerenbridge_match(text, text, text, text, jsonb);
 
 create or replace function public.save_boerenbridge_match(
   session_token text,
@@ -374,6 +378,8 @@ begin
 end;
 $fn$;
 
+drop function if exists public.rad_log_spin_scoped(text, text, text, text, text, numeric, text, jsonb, jsonb, text);
+
 create or replace function public.rad_log_spin_scoped(
   session_token text default null,
   session_token_input text default null,
@@ -437,6 +443,8 @@ end;
 $fn$;
 
 grant execute on function public.rad_log_spin_scoped(text, text, text, text, text, numeric, text, jsonb, jsonb, text) to anon, authenticated;
+
+drop function if exists public.rad_log_target_nomination_scoped(text, text, bigint, text, text, text, jsonb, text);
 
 create or replace function public.rad_log_target_nomination_scoped(
   session_token text default null,
