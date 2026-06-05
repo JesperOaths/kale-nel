@@ -163,6 +163,8 @@ async function rpcFirst(calls) {
 
 async function login(name, pin) {
   const data = await rpcFirst([
+    { name:'account_login_bridge_v687', body:{ desired_name:name, entered_pin:pin, display_name_input:name, input_pin:pin, input_username:name, site_scope_input:scope, client_meta:{ source:'check-beta-live-write-drinks' } } },
+    { name:'account_login_v687', body:{ desired_name:name, entered_pin:pin, site_scope_input:scope, client_meta:{ source:'check-beta-live-write-drinks' } } },
     { name:'account_login_bridge_v687', body:{ display_name_input:name, pin_input:pin, site_scope_input:scope } },
     { name:'account_login_v687', body:{ display_name_input:name, pin_input:pin, site_scope_input:scope } },
     { name:'login_player', body:{ desired_name:name, entered_pin:pin } },

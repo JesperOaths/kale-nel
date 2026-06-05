@@ -26,6 +26,10 @@ if (!player1Name) missing.push('GEJAST_BETA_PLAYER1_NAME');
 if (!/^\d{4}$/.test(player1Pin)) missing.push('GEJAST_BETA_PLAYER1_PIN');
 if (!player2Name) missing.push('GEJAST_BETA_PLAYER2_NAME');
 if (!/^\d{4}$/.test(player2Pin)) missing.push('GEJAST_BETA_PLAYER2_PIN');
+if (!player3Name) missing.push('GEJAST_BETA_PLAYER3_NAME');
+if (!/^\d{4}$/.test(player3Pin)) missing.push('GEJAST_BETA_PLAYER3_PIN');
+if (!player4Name) missing.push('GEJAST_BETA_PLAYER4_NAME');
+if (!/^\d{4}$/.test(player4Pin)) missing.push('GEJAST_BETA_PLAYER4_PIN');
 if (!SUPABASE_URL || !KEY) missing.push('public Supabase config');
 
 console.log(`Kale Nel secondary-games live-write beta: ${checklist.site_version || 'unknown version'}`);
@@ -45,18 +49,12 @@ const evidence = {};
 try {
   const p1 = await login(player1Name, player1Pin);
   const p2 = await login(player2Name, player2Pin);
-  const p3 = player3Name && /^\d{4}$/.test(player3Pin) ? await login(player3Name, player3Pin) : null;
-  const p4 = player4Name && /^\d{4}$/.test(player4Pin) ? await login(player4Name, player4Pin) : null;
+  const p3 = await login(player3Name, player3Pin);
+  const p4 = await login(player4Name, player4Pin);
   evidence.rad = await runCase('rad', () => testRad(p1, p2));
   evidence.beerpong = await runCase('beerpong', () => testBeerpong(p1, p2));
   evidence.boerenbridge = await runCase('boerenbridge', () => testBoerenbridge(p1, p2));
-  evidence.klaverjas = p3 && p4
-    ? await runCase('klaverjas', () => testKlaverjas(p1, p2, p3, p4))
-    : {
-        ok: false,
-        state: 'blocked',
-        reason: 'Klaverjas create_jas_game requires GEJAST_BETA_PLAYER3_* and GEJAST_BETA_PLAYER4_* for exactly 4 registered players.'
-      };
+  evidence.klaverjas = await runCase('klaverjas', () => testKlaverjas(p1, p2, p3, p4));
 
   console.log('State: complete.');
   console.log(JSON.stringify(evidence, null, 2));
@@ -141,6 +139,8 @@ async function rpcFirst(calls) {
 
 async function login(name, pin) {
   const data = await rpcFirst([
+    { name:'account_login_bridge_v687', body:{ desired_name:name, entered_pin:pin, display_name_input:name, input_pin:pin, input_username:name, site_scope_input:scope, client_meta:{ source:'check-beta-live-write-secondary-games' } } },
+    { name:'account_login_v687', body:{ desired_name:name, entered_pin:pin, site_scope_input:scope, client_meta:{ source:'check-beta-live-write-secondary-games' } } },
     { name:'account_login_bridge_v687', body:{ display_name_input:name, pin_input:pin, site_scope_input:scope } },
     { name:'account_login_v687', body:{ display_name_input:name, pin_input:pin, site_scope_input:scope } },
     { name:'login_player', body:{ desired_name:name, entered_pin:pin } },
