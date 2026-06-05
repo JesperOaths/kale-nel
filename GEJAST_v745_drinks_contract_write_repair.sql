@@ -12,7 +12,8 @@ alter table if exists public.drink_events
   add column if not exists accuracy double precision,
   add column if not exists site_scope text not null default 'friends',
   add column if not exists metadata jsonb not null default '{}'::jsonb,
-  add column if not exists created_at timestamptz not null default now();
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists updated_at timestamptz not null default now();
 
 alter table if exists public.players
   add column if not exists slug text,
@@ -44,6 +45,18 @@ begin
   end if;
 end $$;
 
+update public.drink_events de
+   set status = 'cancelled',
+       updated_at = now()
+ where coalesce(de.status, 'pending') = 'pending'
+   and coalesce(de.metadata->>'source', '') = 'tier3-repair-v745'
+   and exists (
+     select 1
+       from public.players p
+      where p.id = de.player_id
+        and lower(coalesce(p.display_name, '')) in ('beta1', 'beta2', 'beta3', 'beta4')
+   );
+
 update public.players
    set chosen_username = coalesce(nullif(trim(chosen_username), ''), nullif(trim(display_name), ''), nullif(trim(slug), ''))
  where chosen_username is null or trim(chosen_username) = '';
@@ -57,12 +70,13 @@ begin
       from pg_proc p
       join pg_namespace n on n.oid = p.pronamespace
      where n.nspname = 'public'
-       and p.proname in ('create_drink_event', 'verify_drink_event_public', 'contract_drinks_write_v664', 'contract_drinks_write_v663')
+       and p.proname in ('create_drink_event', 'cancel_my_pending_drink_event', 'verify_drink_event_public', 'contract_drinks_write_v664', 'contract_drinks_write_v663')
      order by case p.proname
        when 'contract_drinks_write_v664' then 1
        when 'contract_drinks_write_v663' then 2
        when 'verify_drink_event_public' then 3
-       when 'create_drink_event' then 4
+       when 'cancel_my_pending_drink_event' then 4
+       when 'create_drink_event' then 5
        else 9
      end
   loop
@@ -179,6 +193,47 @@ $fn$;
 
 grant execute on function public.create_drink_event(text, text, integer, double precision, double precision, double precision) to anon, authenticated;
 
+create or replace function public.cancel_my_pending_drink_event(
+  session_token text default null,
+  drink_event_id bigint default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public'
+as $fn$
+declare
+  p public.players%rowtype;
+  v_id bigint := drink_event_id;
+  v_status text;
+begin
+  if v_id is null then
+    raise exception 'drink_event_id_required';
+  end if;
+
+  p := public._tier3_player_from_any_session_v740(session_token);
+  if p.id is null then
+    raise exception 'Niet ingelogd.';
+  end if;
+
+  update public.drink_events de
+     set status = 'cancelled',
+         updated_at = now()
+   where de.id = v_id
+     and de.player_id = p.id
+     and coalesce(de.status, 'pending') = 'pending'
+   returning de.status into v_status;
+
+  if v_status is null then
+    raise exception 'pending_drink_event_not_found';
+  end if;
+
+  return jsonb_build_object('ok', true, 'id', v_id, 'drink_event_id', v_id, 'status', v_status);
+end;
+$fn$;
+
+grant execute on function public.cancel_my_pending_drink_event(text, bigint) to anon, authenticated;
+
 create or replace function public.verify_drink_event_public(
   session_token text default null,
   drink_event_id bigint default null,
@@ -236,6 +291,11 @@ begin
       lat => nullif(v_payload->>'lat', '')::double precision,
       lng => nullif(v_payload->>'lng', '')::double precision,
       accuracy => nullif(v_payload->>'accuracy', '')::double precision
+    );
+  elsif v_action = 'cancel_event' then
+    v_result := public.cancel_my_pending_drink_event(
+      session_token => session_token,
+      drink_event_id => nullif(coalesce(v_payload->>'drink_event_id', v_payload->>'event_id', v_payload->>'id'), '')::bigint
     );
   elsif v_action = 'verify_event' then
     v_result := public.verify_drink_event_public(
