@@ -22,6 +22,26 @@ alter table if exists public.players
   add column if not exists last_login_at timestamptz,
   add column if not exists updated_at timestamptz not null default now();
 
+alter table if exists public.web_push_jobs
+  add column if not exists dedupe_key text;
+
+do $$
+begin
+  if to_regclass('public.web_push_jobs') is not null
+     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'web_push_jobs' and column_name = 'dedupe_key') then
+    delete from public.web_push_jobs a
+      using public.web_push_jobs b
+     where a.ctid < b.ctid
+       and a.dedupe_key is not null
+       and b.dedupe_key is not null
+       and a.dedupe_key = b.dedupe_key;
+
+    create unique index if not exists web_push_jobs_dedupe_key_uidx
+      on public.web_push_jobs(dedupe_key)
+      where dedupe_key is not null;
+  end if;
+end $$;
+
 update public.players
    set chosen_username = coalesce(nullif(trim(chosen_username), ''), nullif(trim(display_name), ''), nullif(trim(slug), ''))
  where chosen_username is null or trim(chosen_username) = '';
