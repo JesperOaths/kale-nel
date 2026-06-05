@@ -26,7 +26,27 @@ update public.players
    set chosen_username = coalesce(nullif(trim(chosen_username), ''), nullif(trim(display_name), ''), nullif(trim(slug), ''))
  where chosen_username is null or trim(chosen_username) = '';
 
-drop function if exists public.create_drink_event(text, text, integer, double precision, double precision, double precision);
+do $$
+declare
+  r record;
+begin
+  for r in
+    select n.nspname, p.proname, pg_get_function_identity_arguments(p.oid) as args
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public'
+       and p.proname in ('create_drink_event', 'verify_drink_event_public', 'contract_drinks_write_v664', 'contract_drinks_write_v663')
+     order by case p.proname
+       when 'contract_drinks_write_v664' then 1
+       when 'contract_drinks_write_v663' then 2
+       when 'verify_drink_event_public' then 3
+       when 'create_drink_event' then 4
+       else 9
+     end
+  loop
+    execute format('drop function if exists %I.%I(%s)', r.nspname, r.proname, r.args);
+  end loop;
+end $$;
 
 create or replace function public.create_drink_event(
   session_token text default null,
@@ -137,8 +157,6 @@ $fn$;
 
 grant execute on function public.create_drink_event(text, text, integer, double precision, double precision, double precision) to anon, authenticated;
 
-drop function if exists public.verify_drink_event_public(text, bigint, boolean, boolean, double precision, double precision, double precision);
-
 create or replace function public.verify_drink_event_public(
   session_token text default null,
   drink_event_id bigint default null,
@@ -167,8 +185,6 @@ end;
 $fn$;
 
 grant execute on function public.verify_drink_event_public(text, bigint, boolean, boolean, double precision, double precision, double precision) to anon, authenticated;
-
-drop function if exists public.contract_drinks_write_v664(text, text, jsonb, text);
 
 create or replace function public.contract_drinks_write_v664(
   session_token text,
@@ -216,8 +232,6 @@ begin
   return jsonb_build_object('ok', true, 'data', v_result);
 end;
 $fn$;
-
-drop function if exists public.contract_drinks_write_v663(text, text, jsonb, text);
 
 create or replace function public.contract_drinks_write_v663(
   session_token text,
