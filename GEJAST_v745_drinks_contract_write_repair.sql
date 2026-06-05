@@ -36,9 +36,11 @@ begin
        and b.dedupe_key is not null
        and a.dedupe_key = b.dedupe_key;
 
+    drop index if exists public.web_push_jobs_dedupe_key_uidx;
+    drop index if exists public.web_push_jobs_dedupe_uidx;
+
     create unique index if not exists web_push_jobs_dedupe_key_uidx
-      on public.web_push_jobs(dedupe_key)
-      where dedupe_key is not null;
+      on public.web_push_jobs(dedupe_key);
   end if;
 end $$;
 
