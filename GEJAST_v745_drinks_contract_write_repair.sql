@@ -267,13 +267,15 @@ begin
       from pg_proc p
       join pg_namespace n on n.oid = p.pronamespace
      where n.nspname = 'public'
-       and p.proname in ('create_drink_event', 'cancel_my_pending_drink_event', 'verify_drink_event_public', 'contract_drinks_write_v664', 'contract_drinks_write_v663')
+       and p.proname in ('create_drink_event', 'cancel_my_pending_drink_event', 'verify_drink_event_public', 'contract_drinks_read_v664', 'contract_drinks_read_v663', 'contract_drinks_write_v664', 'contract_drinks_write_v663')
      order by case p.proname
        when 'contract_drinks_write_v664' then 1
        when 'contract_drinks_write_v663' then 2
-       when 'verify_drink_event_public' then 3
-       when 'cancel_my_pending_drink_event' then 4
-       when 'create_drink_event' then 5
+       when 'contract_drinks_read_v664' then 3
+       when 'contract_drinks_read_v663' then 4
+       when 'verify_drink_event_public' then 5
+       when 'cancel_my_pending_drink_event' then 6
+       when 'create_drink_event' then 7
        else 9
      end
   loop
@@ -459,6 +461,136 @@ end;
 $fn$;
 
 grant execute on function public.verify_drink_event_public(text, bigint, boolean, boolean, double precision, double precision, double precision) to anon, authenticated;
+
+create or replace function public.contract_drinks_read_v664(
+  session_token text default null,
+  viewer_lat double precision default null,
+  viewer_lng double precision default null,
+  history_limit integer default 40,
+  site_scope_input text default 'friends'
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public'
+as $fn$
+declare
+  p public.players%rowtype;
+  v_scope text := case when lower(coalesce(site_scope_input, 'friends')) = 'family' then 'family' else 'friends' end;
+  v_limit integer := greatest(1, least(coalesce(history_limit, 40), 100));
+  v_viewer_id bigint := null;
+  v_verify_queue jsonb := '[]'::jsonb;
+  v_mine jsonb := '[]'::jsonb;
+  v_recent jsonb := '[]'::jsonb;
+  v_rejected jsonb := '[]'::jsonb;
+  v_event_types jsonb := '[]'::jsonb;
+begin
+  begin
+    p := public._tier3_player_from_any_session_v740(session_token);
+    v_viewer_id := p.id;
+    v_scope := coalesce(p.site_scope, v_scope);
+  exception when others then
+    v_viewer_id := null;
+  end;
+
+  if to_regclass('public.drink_events') is not null then
+    select coalesce(jsonb_agg(to_jsonb(de) order by coalesce(de.created_at, now()) desc), '[]'::jsonb)
+      into v_verify_queue
+      from public.drink_events de
+     where coalesce(de.status, 'pending') = 'pending'
+       and (v_viewer_id is null or de.player_id is distinct from v_viewer_id)
+       and coalesce(de.site_scope, v_scope) = v_scope
+     limit v_limit;
+
+    select coalesce(jsonb_agg(to_jsonb(de) order by coalesce(de.created_at, now()) desc), '[]'::jsonb)
+      into v_mine
+      from public.drink_events de
+     where coalesce(de.status, 'pending') = 'pending'
+       and v_viewer_id is not null
+       and de.player_id = v_viewer_id
+       and coalesce(de.site_scope, v_scope) = v_scope
+     limit v_limit;
+
+    select coalesce(jsonb_agg(to_jsonb(de) order by coalesce(de.updated_at, de.created_at, now()) desc), '[]'::jsonb)
+      into v_recent
+      from public.drink_events de
+     where coalesce(de.status, '') in ('verified', 'approved')
+       and coalesce(de.site_scope, v_scope) = v_scope
+     limit v_limit;
+
+    select coalesce(jsonb_agg(to_jsonb(de) order by coalesce(de.updated_at, de.created_at, now()) desc), '[]'::jsonb)
+      into v_rejected
+      from public.drink_events de
+     where coalesce(de.status, '') in ('rejected', 'cancelled')
+       and coalesce(de.site_scope, v_scope) = v_scope
+     limit v_limit;
+  end if;
+
+  if to_regclass('public.drink_event_types') is not null then
+    select coalesce(jsonb_agg(to_jsonb(t) order by coalesce(to_jsonb(t)->>'sort_order', '1000'), coalesce(to_jsonb(t)->>'label', to_jsonb(t)->>'key')), '[]'::jsonb)
+      into v_event_types
+      from public.drink_event_types t;
+  end if;
+
+  return jsonb_build_object(
+    'ok', true,
+    'version', 'v745',
+    'site_scope', v_scope,
+    'event_types', v_event_types,
+    'verify_queue', v_verify_queue,
+    'all_pending_verifications', v_verify_queue,
+    'my_pending_events', v_mine,
+    'recent_events', v_recent,
+    'verified_history', v_recent,
+    'recent_verified', v_recent,
+    'recent_rejected', v_rejected,
+    'page', jsonb_build_object(
+      'ok', true,
+      'scope', v_scope,
+      'source', 'v745_live_drinks_read',
+      'verify_queue', v_verify_queue,
+      'pending', v_verify_queue,
+      'my_pending_events', v_mine,
+      'recent_events', v_recent,
+      'event_types', v_event_types,
+      'viewer_lat', viewer_lat,
+      'viewer_lng', viewer_lng
+    ),
+    'speed_page', jsonb_build_object(
+      'top_attempts', '[]'::jsonb,
+      'my_attempts', '[]'::jsonb,
+      'verify_queue', '[]'::jsonb,
+      'speed_leaderboards', '[]'::jsonb
+    )
+  );
+end;
+$fn$;
+
+create or replace function public.contract_drinks_read_v663(
+  session_token text default null,
+  viewer_lat double precision default null,
+  viewer_lng double precision default null,
+  history_limit integer default 40,
+  site_scope_input text default 'friends'
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public'
+as $fn$
+begin
+  return public.contract_drinks_read_v664(
+    session_token => session_token,
+    viewer_lat => viewer_lat,
+    viewer_lng => viewer_lng,
+    history_limit => history_limit,
+    site_scope_input => site_scope_input
+  );
+end;
+$fn$;
+
+grant execute on function public.contract_drinks_read_v664(text, double precision, double precision, integer, text) to anon, authenticated;
+grant execute on function public.contract_drinks_read_v663(text, double precision, double precision, integer, text) to anon, authenticated;
 
 create or replace function public.contract_drinks_write_v664(
   session_token text,
