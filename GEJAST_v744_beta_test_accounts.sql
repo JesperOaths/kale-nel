@@ -91,6 +91,7 @@ declare
   v_slug text;
   v_player_id bigint;
   v_allowed_exists boolean;
+  v_row_count integer;
   v_cols text[];
   v_vals text[];
   v_sets text[];
@@ -259,7 +260,8 @@ begin
       if coalesce(array_length(v_sets, 1), 0) > 0 then
         execute 'update public.allowed_usernames set ' || array_to_string(v_sets, ', ') || ' where lower(username) = lower($1)'
           using v_slug;
-        v_allowed_exists := found;
+        get diagnostics v_row_count = row_count;
+        v_allowed_exists := v_row_count > 0;
       else
         execute 'select exists(select 1 from public.allowed_usernames where lower(username) = lower($1))'
           into v_allowed_exists
