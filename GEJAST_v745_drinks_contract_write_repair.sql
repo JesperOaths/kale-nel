@@ -137,6 +137,8 @@ $fn$;
 
 grant execute on function public.create_drink_event(text, text, integer, double precision, double precision, double precision) to anon, authenticated;
 
+drop function if exists public.verify_drink_event_public(text, bigint, boolean, boolean, double precision, double precision, double precision);
+
 create or replace function public.verify_drink_event_public(
   session_token text default null,
   drink_event_id bigint default null,
@@ -165,6 +167,8 @@ end;
 $fn$;
 
 grant execute on function public.verify_drink_event_public(text, bigint, boolean, boolean, double precision, double precision, double precision) to anon, authenticated;
+
+drop function if exists public.contract_drinks_write_v664(text, text, jsonb, text);
 
 create or replace function public.contract_drinks_write_v664(
   session_token text,
@@ -212,6 +216,8 @@ begin
   return jsonb_build_object('ok', true, 'data', v_result);
 end;
 $fn$;
+
+drop function if exists public.contract_drinks_write_v663(text, text, jsonb, text);
 
 create or replace function public.contract_drinks_write_v663(
   session_token text,
