@@ -45,6 +45,203 @@ begin
   end if;
 end $$;
 
+do $$
+begin
+  if to_regclass('public.web_push_subscriptions') is not null
+     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'web_push_subscriptions' and column_name = 'endpoint') then
+    delete from public.web_push_subscriptions a
+      using public.web_push_subscriptions b
+     where a.ctid < b.ctid
+       and a.endpoint is not null
+       and b.endpoint is not null
+       and a.endpoint = b.endpoint;
+
+    create unique index if not exists web_push_subscriptions_endpoint_uidx
+      on public.web_push_subscriptions(endpoint);
+  end if;
+
+  if to_regclass('public.web_push_active_presence') is not null
+     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'web_push_active_presence' and column_name = 'player_id')
+     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'web_push_active_presence' and column_name = 'endpoint') then
+    delete from public.web_push_active_presence a
+      using public.web_push_active_presence b
+     where a.ctid < b.ctid
+       and a.player_id = b.player_id
+       and a.endpoint is not null
+       and b.endpoint is not null
+       and a.endpoint = b.endpoint;
+
+    create unique index if not exists web_push_active_presence_player_endpoint_uidx
+      on public.web_push_active_presence(player_id, endpoint);
+  end if;
+
+  if to_regclass('public.drink_verified_records') is not null
+     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'drink_verified_records' and column_name = 'source_kind')
+     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'drink_verified_records' and column_name = 'source_request_id') then
+    delete from public.drink_verified_records a
+      using public.drink_verified_records b
+     where a.ctid < b.ctid
+       and a.source_kind = b.source_kind
+       and a.source_request_id = b.source_request_id;
+
+    create unique index if not exists drink_verified_records_unique_source_idx
+      on public.drink_verified_records(source_kind, source_request_id);
+  end if;
+
+  if to_regclass('public.drink_type_aliases') is not null
+     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'drink_type_aliases' and column_name = 'alias_key') then
+    delete from public.drink_type_aliases a
+      using public.drink_type_aliases b
+     where a.ctid < b.ctid
+       and a.alias_key is not null
+       and b.alias_key is not null
+       and a.alias_key = b.alias_key;
+
+    create unique index if not exists drink_type_aliases_alias_key_uidx
+      on public.drink_type_aliases(alias_key);
+  end if;
+end $$;
+
+do $$
+begin
+  if to_regclass('public.beerpong_matches') is not null
+     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'beerpong_matches' and column_name = 'client_match_id') then
+    delete from public.beerpong_matches a
+      using public.beerpong_matches b
+     where a.ctid < b.ctid
+       and a.client_match_id is not null
+       and b.client_match_id is not null
+       and a.client_match_id = b.client_match_id;
+
+    create unique index if not exists beerpong_matches_client_match_id_uidx
+      on public.beerpong_matches(client_match_id);
+  end if;
+
+  if to_regclass('public.boerenbridge_matches') is not null
+     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'boerenbridge_matches' and column_name = 'client_match_id') then
+    delete from public.boerenbridge_matches a
+      using public.boerenbridge_matches b
+     where a.ctid < b.ctid
+       and a.client_match_id is not null
+       and b.client_match_id is not null
+       and a.client_match_id = b.client_match_id;
+
+    create unique index if not exists boerenbridge_matches_client_match_id_uidx
+      on public.boerenbridge_matches(client_match_id);
+  end if;
+
+  if to_regclass('public.beerpong_player_ratings') is not null
+     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'beerpong_player_ratings' and column_name = 'player_name') then
+    delete from public.beerpong_player_ratings a
+      using public.beerpong_player_ratings b
+     where a.ctid < b.ctid
+       and a.player_name is not null
+       and b.player_name is not null
+       and a.player_name = b.player_name;
+
+    create unique index if not exists beerpong_player_ratings_player_name_uidx
+      on public.beerpong_player_ratings(player_name);
+  end if;
+
+  if to_regclass('public.beerpong_player_ratings') is not null
+     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'beerpong_player_ratings' and column_name = 'player_id') then
+    delete from public.beerpong_player_ratings a
+      using public.beerpong_player_ratings b
+     where a.ctid < b.ctid
+       and a.player_id is not null
+       and b.player_id is not null
+       and a.player_id = b.player_id;
+
+    create unique index if not exists beerpong_player_ratings_player_id_uidx
+      on public.beerpong_player_ratings(player_id);
+  end if;
+
+  if to_regclass('public.boerenbridge_player_stats') is not null
+     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'boerenbridge_player_stats' and column_name = 'player_name') then
+    delete from public.boerenbridge_player_stats a
+      using public.boerenbridge_player_stats b
+     where a.ctid < b.ctid
+       and a.player_name is not null
+       and b.player_name is not null
+       and a.player_name = b.player_name;
+
+    create unique index if not exists boerenbridge_player_stats_player_name_uidx
+      on public.boerenbridge_player_stats(player_name);
+  end if;
+
+  if to_regclass('public.boerenbridge_player_ratings') is not null
+     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'boerenbridge_player_ratings' and column_name = 'player_name') then
+    delete from public.boerenbridge_player_ratings a
+      using public.boerenbridge_player_ratings b
+     where a.ctid < b.ctid
+       and a.player_name is not null
+       and b.player_name is not null
+       and a.player_name = b.player_name;
+
+    create unique index if not exists boerenbridge_player_ratings_player_name_uidx
+      on public.boerenbridge_player_ratings(player_name);
+  end if;
+
+  if to_regclass('public.klaverjas_player_ratings') is not null
+     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'klaverjas_player_ratings' and column_name = 'player_name') then
+    delete from public.klaverjas_player_ratings a
+      using public.klaverjas_player_ratings b
+     where a.ctid < b.ctid
+       and a.player_name is not null
+       and b.player_name is not null
+       and a.player_name = b.player_name;
+
+    create unique index if not exists klaverjas_player_ratings_player_name_uidx
+      on public.klaverjas_player_ratings(player_name);
+  end if;
+end $$;
+
+do $$
+begin
+  if to_regclass('public.klaverjas_active_match_presence') is not null
+     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'klaverjas_active_match_presence' and column_name = 'session_token')
+     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'klaverjas_active_match_presence' and column_name = 'match_id') then
+    delete from public.klaverjas_active_match_presence a
+      using public.klaverjas_active_match_presence b
+     where a.ctid < b.ctid
+       and a.session_token is not null
+       and b.session_token is not null
+       and a.match_id is not null
+       and b.match_id is not null
+       and a.session_token = b.session_token
+       and a.match_id = b.match_id;
+
+    create unique index if not exists klaverjas_active_presence_session_match_uidx
+      on public.klaverjas_active_match_presence(session_token, match_id);
+  end if;
+
+  if to_regclass('public.pikken_match_archive_v709') is not null
+     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'pikken_match_archive_v709' and column_name = 'game_id') then
+    delete from public.pikken_match_archive_v709 a
+      using public.pikken_match_archive_v709 b
+     where a.ctid < b.ctid
+       and a.game_id = b.game_id;
+
+    create unique index if not exists pikken_match_archive_v709_game_id_uidx
+      on public.pikken_match_archive_v709(game_id);
+  end if;
+
+  if to_regclass('public.pikken_player_stats_v709') is not null
+     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'pikken_player_stats_v709' and column_name = 'site_scope')
+     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'pikken_player_stats_v709' and column_name = 'player_id') then
+    delete from public.pikken_player_stats_v709 a
+      using public.pikken_player_stats_v709 b
+     where a.ctid < b.ctid
+       and a.site_scope = b.site_scope
+       and a.player_id is not null
+       and b.player_id is not null
+       and a.player_id = b.player_id;
+
+    create unique index if not exists pikken_player_stats_v709_scope_player_uidx
+      on public.pikken_player_stats_v709(site_scope, player_id);
+  end if;
+end $$;
+
 update public.drink_events de
    set status = 'cancelled',
        updated_at = now()

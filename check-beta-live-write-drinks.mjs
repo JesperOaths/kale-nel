@@ -47,6 +47,7 @@ const evidence = {
   created: null,
   queue: null,
   rejected: null,
+  cancelled: null,
   postcheck: null,
 };
 
@@ -67,6 +68,10 @@ try {
 
   const rejected = await rejectDrinkEvent(p2.token, eventId);
   evidence.rejected = sanitizeResult(rejected);
+
+  evidence.cancelled = await cancelDrinkEvent(p1.token, eventId)
+    .then(sanitizeResult)
+    .catch((err) => ({ ok:false, reason: err.message || 'cancel-cleanup-failed' }));
 
   const [afterP1, afterP2] = await Promise.all([
     loadDrinks(p1.token).catch((err) => ({ error: err.message })),
@@ -203,6 +208,18 @@ async function rejectDrinkEvent(token, eventId) {
     return await rpcFirst([
       { name:'verify_drink_event_public', body:{ session_token:token, drink_event_id:Number(eventId), approved:false } },
       { name:'verify_drink_event', body:{ session_token:token, drink_event_id:Number(eventId), approve:false, approved:false, lat, lng, accuracy } },
+    ]);
+  }
+}
+
+async function cancelDrinkEvent(token, eventId) {
+  const payload = { drink_event_id: Number(eventId) };
+  try {
+    return await contractWrite(token, 'cancel_event', payload);
+  } catch (_) {
+    return await rpcFirst([
+      { name:'cancel_my_pending_drink_event', body:{ session_token:token, drink_event_id:Number(eventId) } },
+      { name:'cancel_my_pending_drink_event', body:{ session_token_input:token, drink_event_id_input:Number(eventId) } },
     ]);
   }
 }
