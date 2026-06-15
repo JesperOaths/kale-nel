@@ -1,13 +1,20 @@
 (function(){
   var cfg = window.GEJAST_CONFIG || {};
-  var VERSION = 'v687';
+  var VERSION = 'v740';
+  try {
+    document.documentElement.classList.add('gejast-auth-pending');
+    var style = document.createElement('style');
+    style.setAttribute('data-gejast-auth-gate', 'true');
+    style.textContent = 'html.gejast-auth-pending body{visibility:hidden!important}html.gejast-auth-ready body{visibility:visible!important}';
+    (document.head || document.documentElement).appendChild(style);
+  } catch(_) {}
   function getToken(){ try { return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; } catch(_){ return ''; } }
   function clearTokens(){ try{ cfg.clearPlayerSessionTokens && cfg.clearPlayerSessionTokens(); }catch(_){} }
   function currentScope(){ try{ if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.getScope === 'function') return window.GEJAST_SCOPE_UTILS.getScope(); }catch(_){} try{ return new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'; }catch(_){ return 'friends'; } }
   function currentTarget(){ try{ return cfg.currentReturnTarget ? cfg.currentReturnTarget((location.pathname||'').split('/').pop() || 'index.html') : ((location.pathname||'').split('/').pop() || 'index.html') + (location.search||'') + (location.hash||''); }catch(_){ return 'index.html'; } }
   function loginUrl(){ try{ return cfg.buildLoginUrl ? cfg.buildLoginUrl(currentTarget(), currentScope()) : './login.html?return_to=' + encodeURIComponent(currentTarget()) + (currentScope()==='family'?'&scope=family':''); }catch(_){ return './login.html'; } }
   function headers(){ return { 'Content-Type':'application/json', apikey:(cfg.SUPABASE_PUBLISHABLE_KEY||''), Authorization:'Bearer ' + (cfg.SUPABASE_PUBLISHABLE_KEY||'') }; }
-  function showPage(){ try{ if(document.body){ document.body.classList.remove('boot-pending'); document.body.classList.remove('page-loading'); }}catch(_){} }
+  function showPage(){ try{ document.documentElement.classList.remove('gejast-auth-pending'); document.documentElement.classList.add('gejast-auth-ready'); if(document.body){ document.body.classList.remove('boot-pending'); document.body.classList.remove('page-loading'); }}catch(_){} }
   async function parse(res){ var txt=await res.text(); var data=null; try{ data=txt?JSON.parse(txt):null; }catch(_){ throw new Error(txt||('HTTP '+res.status)); } if(!res.ok) throw new Error(data&& (data.message||data.error) || ('HTTP '+res.status)); return data; }
   async function rpc(name,payload,ms){
     var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -29,16 +36,16 @@
     return { ok:false, transient:true };
   }
   function redirectToLogin(){ try{ location.replace(loginUrl()); }catch(_){ location.href='./login.html'; } }
-  showPage();
   var token = getToken();
   if(!token){ redirectToLogin(); return; }
   try{ cfg.touchPlayerActivity && cfg.touchPlayerActivity({ force:false }); }catch(_){}
-  // Do not block page rendering. If the backend is slow/unavailable, keep the page open and let page RPCs report their own errors.
-  Promise.race([fetchViewerState(token), new Promise(function(resolve){ setTimeout(function(){ resolve({ ok:true, timeout:true }); }, 1700); })]).then(function(result){
-    if(result && result.ok) return;
-    if(result && result.transient) return;
+  fetchViewerState(token).then(function(result){
+    if(result && result.ok) { showPage(); return; }
     clearTokens();
     redirectToLogin();
-  }).catch(function(){ /* transient verification failures do not kill navigation */ });
+  }).catch(function(){
+    clearTokens();
+    redirectToLogin();
+  });
   window.GEJAST_HOME_GATE = { VERSION: VERSION };
 })();
