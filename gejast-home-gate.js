@@ -26,12 +26,18 @@
   function normalizeName(v){ return String(v||'').replace(/\s+/g,' ').trim(); }
   async function fetchViewerState(token){
     var attempts=[['get_public_state',{session_token:token}],['get_public_state',{session_token_input:token}],['account_public_state_v687',{session_token_input:token}]];
-    for(var i=0;i<attempts.length;i++){
-      try{
-        var data=await rpc(attempts[i][0], attempts[i][1], 1500);
+    var checks = attempts.map(function(attempt){
+      return rpc(attempt[0], attempt[1], 1500).then(function(data){
         var name=normalizeName(data&& (data.my_name || data.display_name || data.player_name || (data.viewer&&data.viewer.display_name) || ''));
-        if(name || (data && (data.viewer || data.player || data.session_valid === true || data.is_logged_in === true))) return { ok:true, name:name, data:data };
-      }catch(_){}
+        return { ok: !!(name || (data && (data.viewer || data.player || data.session_valid === true || data.is_logged_in === true))), name:name, data:data };
+      }).catch(function(){ return { ok:false }; });
+    });
+    try {
+      var results = await Promise.all(checks);
+      for(var i=0;i<results.length;i++){
+        if(results[i] && results[i].ok) return results[i];
+      }
+    } catch(_) {
     }
     return { ok:false, transient:true };
   }
