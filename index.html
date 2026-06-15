@@ -751,8 +751,12 @@
       <section class="public-links" aria-label="Sitepagina's">
         <div class="public-links-grid">
           <a id="homeKlaverjasEntry" class="page-link-card scorer-link" href="./scorer.html" data-default-href="./scorer.html">
-            <div id="homeKlaverjasLabel" class="page-link-label">Klaverjas</div>
+            <div id="homeKlaverjasLabel" class="page-link-label">Klaverjas Score Formulier</div>
             <div id="homeKlaverjasCopy" class="page-link-copy plus-copy"><img class="page-link-plus" src="./plus-icon.png" alt="Plus" width="256" height="256" loading="lazy" decoding="async" /></div>
+          </a>
+          <a class="page-link-card scorer-link" href="./klaverjas_online.html">
+            <div class="page-link-label">Klaverjas online</div>
+            <div class="page-link-copy">Maak of join een room voor asynchroon Amsterdams klaverjassen.</div>
           </a>
           <a id="homeBoerenbridgeEntry" class="page-link-card scorer-link" href="./boerenbridge.html" data-default-href="./boerenbridge.html">
             <div id="homeBoerenbridgeLabel" class="page-link-label">Boerenbridge</div>
@@ -908,7 +912,7 @@
       if(CURRENT_SCOPE!=='family') return;
       try{ document.querySelector('.admin-badge')?.setAttribute('href', scopedHref('./admin.html')); }catch(_){}
       try{ document.querySelector('.card-top-right a')?.setAttribute('href','./familie/index.html'); }catch(_){}
-      try{ document.querySelectorAll('a[href="./request.html"],a[href="./login.html"],a[href="./profiles.html"],a[href="./scorer.html"],a[href="./boerenbridge.html"],a[href="./admin.html"]').forEach((a)=>{ const href=a.getAttribute('href'); if(href) a.setAttribute('href', scopedHref(href)); }); }catch(_){}
+      try{ document.querySelectorAll('a[href="./request.html"],a[href="./login.html"],a[href="./profiles.html"],a[href="./scorer.html"],a[href="./klaverjas_online.html"],a[href="./boerenbridge.html"],a[href="./admin.html"]').forEach((a)=>{ const href=a.getAttribute('href'); if(href) a.setAttribute('href', scopedHref(href)); }); }catch(_){}
       try{ document.querySelectorAll('a[href="./beerpong.html"],a[href^="./drinks"]').forEach((a)=>{ a.style.display='none'; }); const drinksSections=[...document.querySelectorAll('.drinks-home-section,.drinks-home-top5-section')]; drinksSections.forEach((el)=>el.style.display='none'); document.querySelectorAll('.page-link-card').forEach((card)=>{ const txt=(card.textContent||'').toLowerCase(); if(txt.includes('beerpong')||txt.includes('drinks')) card.style.display='none'; }); }catch(_){}
     }
 
@@ -1755,7 +1759,7 @@ async function castExtraPollVote(desired_status) {
     function wireProtectedDrinksLinks(){ document.querySelectorAll('a[href="./drinks_add.html"]').forEach((link)=>{ if(link.dataset.bound==='1') return; link.dataset.bound='1'; link.addEventListener('click',(ev)=>{ if(getPlayerSessionToken()) return; ev.preventDefault(); const cfg = window.GEJAST_CONFIG || {}; window.location.href = cfg.buildHomeUrl ? cfg.buildHomeUrl('drinks_add.html', CURRENT_SCOPE) : './home.html?return_to=drinks_add.html'; }); }); }
 
     const homeEntryDefaults = {
-      klaverjas:{ entryId:'homeKlaverjasEntry', labelId:'homeKlaverjasLabel', copyId:'homeKlaverjasCopy', href:'./scorer.html', label:'Klaverjas', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" width="256" height="256" loading="lazy" decoding="async" />', copyClass:'page-link-copy plus-copy' },
+      klaverjas:{ entryId:'homeKlaverjasEntry', labelId:'homeKlaverjasLabel', copyId:'homeKlaverjasCopy', href:'./scorer.html', label:'Klaverjas Score Formulier', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" width="256" height="256" loading="lazy" decoding="async" />', copyClass:'page-link-copy plus-copy' },
       boerenbridge:{ entryId:'homeBoerenbridgeEntry', labelId:'homeBoerenbridgeLabel', copyId:'homeBoerenbridgeCopy', href:'./boerenbridge.html', label:'Boerenbridge', copyHtml:'<img class="page-link-plus" src="./plus-icon.png" alt="Plus" width="256" height="256" loading="lazy" decoding="async" />', copyClass:'page-link-copy plus-copy' }
     };
     function setHomeEntryDefault(key){
