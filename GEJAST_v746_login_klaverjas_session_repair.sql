@@ -240,7 +240,7 @@ begin
 end
 $fn$;
 
-create or replace function public.get_jas_app_state(session_token text)
+create or replace function public.get_jas_app_state(session_token text default null)
 returns jsonb
 language plpgsql
 security definer
