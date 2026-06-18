@@ -190,9 +190,93 @@ $fn$;
 drop function if exists public.account_public_state_v687(text);
 drop function if exists public._jas_session_debug_v746(text);
 
+create or replace function public.account_public_state_v687(
+  session_token text default null,
+  session_token_input text default null,
+  site_scope_input text default 'friends'
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public'
+as $fn$
+declare
+  token_value text := coalesce(
+    nullif(trim(session_token_input), ''),
+    nullif(trim(session_token), '')
+  );
+  session_row public.gejast_player_sessions_v746%rowtype;
+begin
+  select *
+    into session_row
+    from public.gejast_player_sessions_v746 s
+   where s.session_token = token_value
+     and s.expires_at > now()
+   limit 1;
+
+  if not found then
+    return jsonb_build_object(
+      'ok', false,
+      'my_name', null,
+      'player_name', null,
+      'display_name', null,
+      'site_scope', case when lower(coalesce(site_scope_input, 'friends')) = 'family' then 'family' else 'friends' end,
+      'version', 'v746'
+    );
+  end if;
+
+  update public.gejast_player_sessions_v746 s
+     set last_seen_at = now()
+   where s.session_token = token_value;
+
+  return jsonb_build_object(
+    'ok', true,
+    'my_name', session_row.display_name,
+    'player_name', session_row.display_name,
+    'display_name', session_row.display_name,
+    'site_scope', session_row.site_scope,
+    'version', 'v746'
+  );
+end
+$fn$;
+
+create or replace function public.get_jas_app_state(session_token text)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public'
+as $fn$
+declare
+  player_row public.players%rowtype;
+  names_json jsonb;
+begin
+  begin
+    player_row := public._jas_session_player(session_token);
+  exception when others then
+    player_row := null;
+  end;
+
+  select coalesce(jsonb_agg(p.display_name order by p.display_name), '[]'::jsonb)
+    into names_json
+    from public.players p
+   where coalesce(p.active, true) = true;
+
+  return jsonb_build_object(
+    'my_name', case when player_row.id is null then null else player_row.display_name end,
+    'display_name', case when player_row.id is null then null else player_row.display_name end,
+    'player_name', case when player_row.id is null then null else player_row.display_name end,
+    'site_scope', case when player_row.id is null then 'friends' else coalesce(player_row.site_scope, 'friends') end,
+    'all_names', names_json,
+    'recent_games', '[]'::jsonb
+  );
+end
+$fn$;
+
 revoke all on function public._jas_session_player(text) from public;
 grant execute on function public._jas_session_player(text) to anon, authenticated;
 grant execute on function public.account_login_bridge_v687(text, text, text, text, text, text, jsonb) to anon, authenticated;
+grant execute on function public.account_public_state_v687(text, text, text) to anon, authenticated;
+grant execute on function public.get_jas_app_state(text) to anon, authenticated;
 
 select pg_notify('pgrst', 'reload schema');
 
