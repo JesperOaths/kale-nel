@@ -20,23 +20,6 @@ begin
 
   select p.*
     into player_row
-    from public.gejast_player_sessions_v691 s
-    join public.players p on p.id = s.player_id
-   where s.session_token = token_value
-     and s.expires_at > now()
-     and coalesce(p.active, true) = true
-   order by s.expires_at desc
-   limit 1;
-
-  if found then
-    update public.gejast_player_sessions_v691
-       set last_seen_at = now()
-     where session_token = token_value;
-    return player_row;
-  end if;
-
-  select p.*
-    into player_row
     from public.players p
    where p.session_token = token_value
      and coalesce(p.active, true) = true
