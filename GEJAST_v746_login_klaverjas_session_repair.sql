@@ -187,54 +187,12 @@ begin
 end
 $fn$;
 
-create or replace function public.account_public_state_v687(session_token_input text)
-returns jsonb
-language plpgsql
-security definer
-set search_path to 'public'
-as $fn$
-declare
-  session_row public.gejast_player_sessions_v746%rowtype;
-begin
-  select *
-    into session_row
-    from public.gejast_player_sessions_v746
-   where session_token = nullif(trim(coalesce(session_token_input, '')), '')
-     and expires_at > now()
-   limit 1;
-
-  if not found then
-    return jsonb_build_object(
-      'ok', false,
-      'my_name', null,
-      'player_name', null,
-      'display_name', null,
-      'site_scope', 'friends',
-      'version', 'v746'
-    );
-  end if;
-
-  update public.gejast_player_sessions_v746
-     set last_seen_at = now()
-   where session_token = session_row.session_token;
-
-  return jsonb_build_object(
-    'ok', true,
-    'my_name', session_row.display_name,
-    'player_name', session_row.display_name,
-    'display_name', session_row.display_name,
-    'site_scope', session_row.site_scope,
-    'version', 'v746'
-  );
-end
-$fn$;
-
+drop function if exists public.account_public_state_v687(text);
 drop function if exists public._jas_session_debug_v746(text);
 
 revoke all on function public._jas_session_player(text) from public;
 grant execute on function public._jas_session_player(text) to anon, authenticated;
 grant execute on function public.account_login_bridge_v687(text, text, text, text, text, text, jsonb) to anon, authenticated;
-grant execute on function public.account_public_state_v687(text) to anon, authenticated;
 
 select pg_notify('pgrst', 'reload schema');
 

@@ -60,9 +60,18 @@ for (const name of names) {
     site_scope_input: 'friends'
   });
   if (!data?.session_token) throw new Error('Login returned no session.');
+  const accountState = await rpc('account_public_state_v687', {
+    session_token_input: data.session_token
+  });
+  const appState = await rpc('get_jas_app_state', {
+    session_token: data.session_token
+  });
+  if ((accountState.display_name || accountState.my_name) !== name || appState.my_name !== name) {
+    throw new Error('Login session is not recognized by account/home state.');
+  }
   sessions.push({ name, token: data.session_token });
 }
-console.log('login: 4/4 sessions valid');
+console.log('login: 4/4 sessions valid across account and home state');
 
 const bot = await rpc('klaverjas_online_create', {
   session_token: sessions[0].token,
