@@ -1,6 +1,6 @@
 (function(){
   var cfg = window.GEJAST_CONFIG || {};
-  var VERSION = 'v740';
+  var VERSION = 'v747';
   try {
     document.documentElement.classList.add('gejast-auth-pending');
     var style = document.createElement('style');
@@ -24,22 +24,28 @@
     finally{ if(timer) clearTimeout(timer); }
   }
   function normalizeName(v){ return String(v||'').replace(/\s+/g,' ').trim(); }
+  function validState(data){
+    var name=normalizeName(data&& (data.my_name || data.display_name || data.player_name || (data.viewer&&data.viewer.display_name) || (data.player&&data.player.display_name) || ''));
+    return !!(name || (data && (data.viewer || data.player || data.session_valid === true || data.is_logged_in === true)));
+  }
+  function invalidState(data){ return !!(data && (data.session_valid === false || data.is_logged_in === false || data.valid === false)); }
   async function fetchViewerState(token){
     var attempts=[['get_public_state',{session_token:token}],['get_public_state',{session_token_input:token}],['account_public_state_v687',{session_token_input:token}]];
+    var hardInvalid=false;
     var checks = attempts.map(function(attempt){
       return rpc(attempt[0], attempt[1], 1500).then(function(data){
-        var name=normalizeName(data&& (data.my_name || data.display_name || data.player_name || (data.viewer&&data.viewer.display_name) || ''));
-        return { ok: !!(name || (data && (data.viewer || data.player || data.session_valid === true || data.is_logged_in === true))), name:name, data:data };
-      }).catch(function(){ return { ok:false }; });
+        if(validState(data)) return { ok:true, data:data };
+        if(invalidState(data)) hardInvalid=true;
+        return { ok:false, transient:true };
+      }).catch(function(){ return { ok:false, transient:true }; });
     });
     try {
       var results = await Promise.all(checks);
       for(var i=0;i<results.length;i++){
         if(results[i] && results[i].ok) return results[i];
       }
-    } catch(_) {
-    }
-    return { ok:false, transient:true };
+    } catch(_) {}
+    return hardInvalid ? { ok:false, hardInvalid:true } : { ok:false, transient:true };
   }
   function redirectToLogin(){ try{ location.replace(loginUrl()); }catch(_){ location.href='./login.html'; } }
   var token = getToken();
@@ -47,11 +53,8 @@
   try{ cfg.touchPlayerActivity && cfg.touchPlayerActivity({ force:false }); }catch(_){}
   fetchViewerState(token).then(function(result){
     if(result && result.ok) { showPage(); return; }
-    clearTokens();
-    redirectToLogin();
-  }).catch(function(){
-    clearTokens();
-    redirectToLogin();
-  });
+    if(result && result.hardInvalid) { clearTokens(); redirectToLogin(); return; }
+    showPage();
+  }).catch(function(){ showPage(); });
   window.GEJAST_HOME_GATE = { VERSION: VERSION };
 })();
