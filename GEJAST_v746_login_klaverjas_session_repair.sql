@@ -81,8 +81,69 @@ $fn$;
 drop function if exists public.account_login_bridge_v687(text, text, text);
 drop function if exists public.account_login_v687(text, text, text);
 
+create or replace function public._jas_session_debug_v746(session_token_input text)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public'
+as $fn$
+declare
+  state_account jsonb;
+  state_jas jsonb;
+  account_error text;
+  jas_error text;
+  token_matches integer := 0;
+  account_name_matches integer := 0;
+  jas_name_matches integer := 0;
+begin
+  select count(*) into token_matches
+  from public.players
+  where session_token = nullif(trim(coalesce(session_token_input, '')), '');
+
+  begin
+    state_account := public.account_public_state_v687(session_token_input);
+  exception when others then
+    account_error := sqlerrm;
+  end;
+
+  begin
+    state_jas := public.get_jas_app_state(session_token_input);
+  exception when others then
+    jas_error := sqlerrm;
+  end;
+
+  select count(*) into account_name_matches
+  from public.players
+  where lower(display_name) = lower(coalesce(
+    nullif(trim(state_account ->> 'my_name'), ''),
+    nullif(trim(state_account ->> 'display_name'), ''),
+    nullif(trim(state_account ->> 'player_name'), '')
+  ));
+
+  select count(*) into jas_name_matches
+  from public.players
+  where lower(display_name) = lower(coalesce(
+    nullif(trim(state_jas ->> 'my_name'), ''),
+    nullif(trim(state_jas ->> 'display_name'), ''),
+    nullif(trim(state_jas ->> 'player_name'), '')
+  ));
+
+  return jsonb_build_object(
+    'token_length', length(coalesce(session_token_input, '')),
+    'token_matches', token_matches,
+    'account_state', state_account,
+    'account_error', account_error,
+    'account_name_matches', account_name_matches,
+    'jas_state', state_jas,
+    'jas_error', jas_error,
+    'jas_name_matches', jas_name_matches
+  );
+end
+$fn$;
+
 revoke all on function public._jas_session_player(text) from public;
 grant execute on function public._jas_session_player(text) to anon, authenticated;
+grant execute on function public._jas_session_debug_v746(text) to anon, authenticated;
 
 select pg_notify('pgrst', 'reload schema');
 
