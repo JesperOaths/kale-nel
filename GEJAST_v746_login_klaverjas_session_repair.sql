@@ -3,6 +3,21 @@
 
 begin;
 
+create extension if not exists pgcrypto;
+
+create table if not exists public.gejast_player_sessions_v746 (
+  session_token text primary key,
+  player_id bigint not null references public.players(id) on delete cascade,
+  display_name text not null,
+  site_scope text not null default 'friends',
+  created_at timestamptz not null default now(),
+  last_seen_at timestamptz not null default now(),
+  expires_at timestamptz not null default (now() + interval '30 days')
+);
+
+create index if not exists gejast_player_sessions_v746_player_idx
+  on public.gejast_player_sessions_v746(player_id, expires_at desc);
+
 create or replace function public._jas_session_player(session_token text)
 returns public.players
 language plpgsql
@@ -16,6 +31,23 @@ declare
 begin
   if token_value is null then
     raise exception 'Log eerst in met een geldige spelersessie';
+  end if;
+
+  select p.*
+    into player_row
+    from public.gejast_player_sessions_v746 s
+    join public.players p on p.id = s.player_id
+   where s.session_token = token_value
+     and s.expires_at > now()
+     and coalesce(p.active, true) = true
+   order by s.expires_at desc
+   limit 1;
+
+  if found then
+    update public.gejast_player_sessions_v746
+       set last_seen_at = now()
+     where session_token = token_value;
+    return player_row;
   end if;
 
   select p.*
@@ -81,69 +113,128 @@ $fn$;
 drop function if exists public.account_login_bridge_v687(text, text, text);
 drop function if exists public.account_login_v687(text, text, text);
 
-create or replace function public._jas_session_debug_v746(session_token_input text)
+create or replace function public.account_login_bridge_v687(
+  desired_name text default null,
+  input_username text default null,
+  display_name_input text default null,
+  entered_pin text default null,
+  input_pin text default null,
+  site_scope_input text default 'friends',
+  client_meta jsonb default '{}'::jsonb
+)
 returns jsonb
 language plpgsql
 security definer
 set search_path to 'public'
 as $fn$
 declare
-  state_account jsonb;
-  state_jas jsonb;
-  account_error text;
-  jas_error text;
-  token_matches integer := 0;
-  account_name_matches integer := 0;
-  jas_name_matches integer := 0;
+  player_row public.players%rowtype;
+  requested_name text := coalesce(
+    nullif(trim(display_name_input), ''),
+    nullif(trim(input_username), ''),
+    nullif(trim(desired_name), '')
+  );
+  requested_pin text := coalesce(
+    nullif(entered_pin, ''),
+    nullif(input_pin, '')
+  );
+  requested_scope text := case when lower(coalesce(site_scope_input, 'friends')) = 'family' then 'family' else 'friends' end;
+  new_token text;
 begin
-  select count(*) into token_matches
-  from public.players
-  where session_token = nullif(trim(coalesce(session_token_input, '')), '');
+  if requested_name is null then raise exception 'missing_player_name'; end if;
+  if requested_pin is null then raise exception 'missing_pin'; end if;
 
-  begin
-    state_account := public.account_public_state_v687(session_token_input);
-  exception when others then
-    account_error := sqlerrm;
-  end;
+  select p.*
+    into player_row
+    from public.players p
+   where lower(p.display_name) = lower(requested_name)
+     and coalesce(p.active, false) = true
+     and lower(coalesce(p.site_scope, 'friends')) = requested_scope
+   order by p.id
+   limit 1;
 
-  begin
-    state_jas := public.get_jas_app_state(session_token_input);
-  exception when others then
-    jas_error := sqlerrm;
-  end;
+  if not found
+     or player_row.pin_hash is null
+     or not public._gejast_secret_matches_v691(requested_pin, player_row.pin_hash) then
+    raise exception 'player_login_invalid';
+  end if;
 
-  select count(*) into account_name_matches
-  from public.players
-  where lower(display_name) = lower(coalesce(
-    nullif(trim(state_account ->> 'my_name'), ''),
-    nullif(trim(state_account ->> 'display_name'), ''),
-    nullif(trim(state_account ->> 'player_name'), '')
-  ));
+  new_token := encode(gen_random_bytes(24), 'hex');
 
-  select count(*) into jas_name_matches
-  from public.players
-  where lower(display_name) = lower(coalesce(
-    nullif(trim(state_jas ->> 'my_name'), ''),
-    nullif(trim(state_jas ->> 'display_name'), ''),
-    nullif(trim(state_jas ->> 'player_name'), '')
-  ));
+  insert into public.gejast_player_sessions_v746(
+    session_token, player_id, display_name, site_scope
+  )
+  values (
+    new_token, player_row.id, player_row.display_name, requested_scope
+  );
+
+  update public.players
+     set session_token = new_token,
+         last_login_at = now(),
+         updated_at = now()
+   where id = player_row.id;
 
   return jsonb_build_object(
-    'token_length', length(coalesce(session_token_input, '')),
-    'token_matches', token_matches,
-    'account_state', state_account,
-    'account_error', account_error,
-    'account_name_matches', account_name_matches,
-    'jas_state', state_jas,
-    'jas_error', jas_error,
-    'jas_name_matches', jas_name_matches
+    'ok', true,
+    'bridge', 'v746',
+    'player_id', player_row.id,
+    'display_name', player_row.display_name,
+    'player_name', player_row.display_name,
+    'site_scope', requested_scope,
+    'session_token', new_token,
+    'expires_at', now() + interval '30 days'
   );
 end
 $fn$;
 
+create or replace function public.account_public_state_v687(session_token_input text)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public'
+as $fn$
+declare
+  session_row public.gejast_player_sessions_v746%rowtype;
+begin
+  select *
+    into session_row
+    from public.gejast_player_sessions_v746
+   where session_token = nullif(trim(coalesce(session_token_input, '')), '')
+     and expires_at > now()
+   limit 1;
+
+  if not found then
+    return jsonb_build_object(
+      'ok', false,
+      'my_name', null,
+      'player_name', null,
+      'display_name', null,
+      'site_scope', 'friends',
+      'version', 'v746'
+    );
+  end if;
+
+  update public.gejast_player_sessions_v746
+     set last_seen_at = now()
+   where session_token = session_row.session_token;
+
+  return jsonb_build_object(
+    'ok', true,
+    'my_name', session_row.display_name,
+    'player_name', session_row.display_name,
+    'display_name', session_row.display_name,
+    'site_scope', session_row.site_scope,
+    'version', 'v746'
+  );
+end
+$fn$;
+
+drop function if exists public._jas_session_debug_v746(text);
+
 revoke all on function public._jas_session_player(text) from public;
 grant execute on function public._jas_session_player(text) to anon, authenticated;
-grant execute on function public._jas_session_debug_v746(text) to anon, authenticated;
+grant execute on function public.account_login_bridge_v687(text, text, text, text, text, text, jsonb) to anon, authenticated;
+grant execute on function public.account_public_state_v687(text) to anon, authenticated;
 
 select pg_notify('pgrst', 'reload schema');
 
