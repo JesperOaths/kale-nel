@@ -31,6 +31,29 @@ begin
   end if;
 
   begin
+    state := public.account_public_state_v687(token_value);
+  exception when others then
+    state := null;
+  end;
+
+  if coalesce(trim(state ->> 'my_name'), trim(state ->> 'display_name'), trim(state ->> 'player_name'), '') <> '' then
+    select p.*
+      into player_row
+      from public.players p
+     where lower(p.display_name) = lower(coalesce(
+       nullif(trim(state ->> 'my_name'), ''),
+       nullif(trim(state ->> 'display_name'), ''),
+       nullif(trim(state ->> 'player_name'), '')
+     ))
+       and coalesce(p.active, true) = true
+     order by p.id
+     limit 1;
+    if found then
+      return player_row;
+    end if;
+  end if;
+
+  begin
     state := public.get_jas_app_state(token_value);
   exception when others then
     state := null;
