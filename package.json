@@ -15,6 +15,7 @@
     "smoke:live": "node check-live-routes.mjs",
     "smoke:push": "node check-live-push-health.mjs",
     "smoke:games": "node check-live-game-flows.mjs",
+    "smoke:klaverjas:write": "node check-live-klaverjas-online.mjs",
     "smoke:beta:read": "node check-beta-readonly-surfaces.mjs",
     "smoke:beta:extended": "node check-beta-readonly-extended.mjs",
     "smoke:beta:perf": "node check-beta-performance.mjs",
