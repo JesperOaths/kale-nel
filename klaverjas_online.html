@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Klaverjas online</title>
-  <script>window.GEJAST_PAGE_VERSION='v740';</script>
-  <script src="./gejast-config.js?v740"></script>
-  <script src="./gejast-home-gate.js?v740"></script>
-  <script src="./gejast-scope-context.js?v740"></script>
+  <script>window.GEJAST_PAGE_VERSION='v746';</script>
+  <script src="./gejast-config.js?v746"></script>
+  <script src="./gejast-home-gate.js?v746"></script>
+  <script src="./gejast-scope-context.js?v746"></script>
   <script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('klaverjas_online.html');</script>
-  <script src="./gejast-live-sync.js?v740"></script>
-  <script src="./gejast-klaverjas-online.js?v740"></script>
+  <script src="./gejast-live-sync.js?v746"></script>
+  <script src="./gejast-klaverjas-online.js?v746"></script>
   <style>
     :root{--felt:#104d38;--felt2:#082d24;--rail:#8a5d1f;--paper:#fffaf3;--ink:#19130f;--muted:#756b5e;--line:rgba(0,0,0,.1);--gold:#d7ad58;--red:#a7192b}
     *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,229,219,.9),rgba(236,229,219,.94)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
@@ -67,7 +67,7 @@
     const K = window.GEJAST_KLAVERJAS_ONLINE;
     const $ = (id) => document.getElementById(id);
     const qs = new URLSearchParams(location.search);
-    const UI = { gameId: qs.get('game_id') || '', lobbyCode: (qs.get('room') || localStorage.getItem('klaverjas_online_room') || '').toUpperCase(), remote: null, busy: false, botTimer: null, poll: null };
+    const UI = { gameId: qs.get('game_id') || '', lobbyCode: (qs.get('room') || localStorage.getItem('klaverjas_online_room') || '').toUpperCase(), remote: null, busy: false, actionBusy: false, saving: false, botTimer: null, poll: null };
     function setStatus(msg, ok=false){ $('status').textContent = msg || ''; $('status').style.color = ok ? '#315f2a' : '#7b281e'; }
     function seat(){ return K.viewerSeat(UI.remote); }
     function state(){ return UI.remote?.game?.state || {}; }
@@ -77,18 +77,37 @@
     function deadlineText(v){ if(!v) return '-'; const ms = new Date(v).getTime() - Date.now(); if(!Number.isFinite(ms)) return '-'; const days = Math.max(0, Math.ceil(ms / 86400000)); return days ? `${days} dagen` : 'vandaag'; }
     function cardHtml(card, playable=false){ const red = card.suit === 'hearts' || card.suit === 'diamonds'; return `<button class="card ${red?'red':''}" data-card="${esc(card.id)}" ${playable?'':'disabled'}>${esc(card.rank)}<span>${K.SUIT_SYMBOLS[card.suit]}</span></button>`; }
     function playedCardHtml(play){ const card = play.card; const red = card.suit === 'hearts' || card.suit === 'diamonds'; const name = (state().players || [])[play.player]?.name || `S${play.player+1}`; return `<div><div class="card ${red?'red':''}">${esc(card.rank)}<span>${K.SUIT_SYMBOLS[card.suit]}</span></div><div class="muted" style="text-align:center;font-size:12px;margin-top:4px">${esc(name)}</div></div>`; }
+    async function runAction(fn){
+      if (UI.actionBusy) return;
+      UI.actionBusy = true;
+      try {
+        await fn();
+      } catch (err) {
+        setStatus(err?.message || 'Actie mislukt. De tafel wordt opnieuw geladen.');
+        try { await load(true); } catch (_) {}
+      } finally {
+        UI.actionBusy = false;
+      }
+    }
     async function save(nextState, force=false){
+      if (UI.saving) throw new Error('De vorige zet wordt nog opgeslagen.');
+      UI.saving = true;
       const g = game();
       const hasBots = K.hasBots(nextState);
       const payload = { session_token: K.sessionToken(), game_id_input: g.id || UI.gameId, state_input: nextState, summary_payload: hasBots ? null : K.publicSummary(nextState, g), final_jas_payload: nextState.finished_at && !hasBots ? K.finalJasPayload(nextState, g) : null };
-      UI.remote = await K.rpc('klaverjas_online_save_state', payload);
-      render();
-      if (force && !hasBots && window.GEJAST_LIVE_SYNC) {
-        try { await window.GEJAST_LIVE_SYNC.writeSummary({ gameType:'klaverjas', clientMatchId:g.id || UI.gameId, summaryPayload:K.publicSummary(nextState, g), siteScope:K.currentScope(), force:true }); } catch(_) {}
+      try {
+        UI.remote = await K.rpc('klaverjas_online_save_state', payload);
+        render();
+        if (force && !hasBots && window.GEJAST_LIVE_SYNC) {
+          try { await window.GEJAST_LIVE_SYNC.writeSummary({ gameType:'klaverjas', clientMatchId:g.id || UI.gameId, summaryPayload:K.publicSummary(nextState, g), siteScope:K.currentScope(), force:true }); } catch(_) {}
+        }
+      } finally {
+        UI.saving = false;
       }
     }
-    async function load(){
+    async function load(force=false){
       if (!UI.gameId && !UI.lobbyCode) return;
+      if (!force && (UI.saving || UI.actionBusy)) return;
       try {
         UI.remote = await K.rpc('klaverjas_online_get_state', { session_token: K.sessionToken(), game_id_input: UI.gameId || null, lobby_code_input: UI.lobbyCode || null, site_scope_input: K.currentScope() });
         UI.gameId = game().id || UI.gameId;
@@ -129,29 +148,29 @@
       const panel = $('actionPanel');
       if (!game().id) { panel.innerHTML = '<h2>Online</h2><div class="muted">Gebruik Nieuwe tafel of Join.</div>'; return; }
       if ((st.players || []).length < 4) { panel.innerHTML = `<h2>Lobby</h2><div class="muted">${(st.players||[]).length}/4 spelers. Roomcode ${esc(game().lobby_code || '')}</div>`; return; }
-      if (st.phase === 'lobby' && me === 0) { panel.innerHTML = '<button class="btn gold" id="startBtn" type="button">Start delen en bieden</button>'; $('startBtn').onclick = startRound; return; }
+      if (st.phase === 'lobby' && me === 0) { panel.innerHTML = '<button class="btn gold" id="startBtn" type="button">Start delen en bieden</button>'; $('startBtn').onclick = () => runAction(startRound); return; }
       if (st.phase === 'bidding' && me === st.bidder_turn) {
         const bids = K.availableBids(st.current_bid);
         panel.innerHTML = `<h2>Bieden</h2><div class="bid-grid">${bids.map((b,i)=>`<button class="btn secondary" data-bid="${i}" type="button">${esc(b.label)}</button>`).join('')}</div>`;
-        panel.querySelectorAll('[data-bid]').forEach(btn => btn.onclick = () => placeBid(bids[Number(btn.dataset.bid)]));
+        panel.querySelectorAll('[data-bid]').forEach(btn => btn.onclick = () => runAction(() => placeBid(bids[Number(btn.dataset.bid)])));
         return;
       }
       if (st.pending_trick) {
         const ownTeam = me >= 0 && K.TEAM_OF[me] === K.TEAM_OF[st.pending_trick.winner];
         const roem = st.pending_trick.roem || { points:0, items:[] };
         panel.innerHTML = `<h2>Slag</h2><div class="muted">${roem.points ? `${roem.points} roem: ${roem.items.map(i=>i.label).join(', ')}` : 'Geen roem.'}</div><div class="top-actions" style="margin-top:10px">${ownTeam && roem.points && !st.pending_trick.klopped ? '<button class="btn gold" id="klopBtn" type="button">Klop</button>' : ''}${ownTeam ? '<button class="btn" id="collectBtn" type="button">Pak slag</button>' : ''}</div>`;
-        if ($('klopBtn')) $('klopBtn').onclick = klop;
-        if ($('collectBtn')) $('collectBtn').onclick = collect;
+        if ($('klopBtn')) $('klopBtn').onclick = () => runAction(klop);
+        if ($('collectBtn')) $('collectBtn').onclick = () => runAction(collect);
         return;
       }
-      if (st.phase === 'roundOver') { const done = K.shouldFinishGame(st); panel.innerHTML = done ? '<button class="btn gold" id="finishBtn" type="button">Potje opslaan</button>' : '<button class="btn gold" id="nextBtn" type="button">Volgende ronde</button><button class="btn secondary" id="finishBtn" type="button" style="margin-left:8px">Nu opslaan</button>'; if($('nextBtn')) $('nextBtn').onclick = nextRound; $('finishBtn').onclick = finishGame; return; }
+      if (st.phase === 'roundOver') { const done = K.shouldFinishGame(st); panel.innerHTML = done ? '<button class="btn gold" id="finishBtn" type="button">Potje opslaan</button>' : '<button class="btn gold" id="nextBtn" type="button">Volgende ronde</button><button class="btn secondary" id="finishBtn" type="button" style="margin-left:8px">Nu opslaan</button>'; if($('nextBtn')) $('nextBtn').onclick = () => runAction(nextRound); $('finishBtn').onclick = () => runAction(() => finishGame()); return; }
       panel.innerHTML = '<h2>Actie</h2><div class="muted">Wachten.</div>';
     }
     function renderHand(st, me){
       const hand = me >= 0 ? (st.hands?.[me] || []) : [];
       const legal = new Set(me === st.turn && st.phase === 'playing' && !st.pending_trick ? K.legalCards(hand, st.trick || [], me, st.accepted_bid?.suit).map(c => c.id) : []);
       $('hand').innerHTML = hand.map(card => cardHtml(card, legal.has(card.id))).join('');
-      $('hand').querySelectorAll('[data-card]').forEach(btn => btn.onclick = () => playCard(btn.dataset.card));
+      $('hand').querySelectorAll('[data-card]').forEach(btn => btn.onclick = () => runAction(() => playCard(btn.dataset.card)));
     }
     async function createGame(){
       try { UI.remote = await K.rpc('klaverjas_online_create', { session_token: K.sessionToken(), site_scope_input: K.currentScope(), settings_input: { finish_mode: $('finishMode').value || 'fixed_rounds', bot_count: $('botGame')?.checked ? 3 : 0 } }); UI.gameId = game().id; UI.lobbyCode = game().lobby_code; localStorage.setItem('klaverjas_online_room', UI.lobbyCode); writeUrl(); render(); loadRooms(); setStatus(K.hasBots(state()) ? 'Bot-testtafel gemaakt.' : 'Tafel gemaakt.', true); } catch(err){ setStatus(err.message); }
@@ -171,9 +190,9 @@
     function applyBid(st, seatNo, bid){ if(!K.isValidBid(bid, st.current_bid)) bid = { action:'pass' }; if(bid.action==='pass'){ st.passes_since_bid = Number(st.passes_since_bid || 0) + 1; if(st.current_bid && st.passes_since_bid >= 3){ st.accepted_bid = st.current_bid; st.phase='playing'; st.turn=(st.dealer+1)%4; st.bidder_turn=null; st.action_needed_seat=st.turn; } else { st.bidder_turn=(st.bidder_turn+1)%4; st.action_needed_seat=st.bidder_turn; } } else { st.current_bid = { ...bid, player: seatNo, team: K.TEAM_OF[seatNo] }; st.passes_since_bid = 0; if(K.closesBidding(st.current_bid)){ st.accepted_bid=st.current_bid; st.phase='playing'; st.turn=(st.dealer+1)%4; st.bidder_turn=null; st.action_needed_seat=st.turn; } else { st.bidder_turn=(st.bidder_turn+1)%4; st.action_needed_seat=st.bidder_turn; } } if(!st.current_bid && st.passes_since_bid>=4){ st.passes_since_bid=0; st.bidder_turn=(st.dealer+1)%4; st.action_needed_seat=st.bidder_turn; } st.action_deadline_at=K.actionDeadline(); }
     function applyBotCard(st, seatNo){ const hand = st.hands?.[seatNo] || []; const card = K.aiChoice(hand, st.trick || [], seatNo, st.accepted_bid?.suit); if(!card) return false; const legal = new Set(K.legalCards(hand, st.trick || [], seatNo, st.accepted_bid?.suit).map(c => c.id)); if(!legal.has(card.id)) return false; st.hands[seatNo] = hand.filter(c => c.id !== card.id); const ai = K.aiChoice(hand, st.trick || [], seatNo, st.accepted_bid?.suit); st.trick.push({ player: seatNo, card }); st.plays = st.plays || []; st.plays.push({ trick_no: (st.taken||[]).length + 1, player: seatNo, player_name: (st.players||[])[seatNo]?.name, card, ai_card: ai }); if(st.trick.length === 4){ const winner = K.currentWinner(st.trick, st.accepted_bid?.suit).player; const roem = K.detectRoem(st.trick.map(p => p.card), st.accepted_bid?.suit); st.pending_trick = { winner, cards: st.trick, roem, klopped:false }; st.trick = []; st.turn = null; st.action_needed_seat=winner; } else { st.turn = (seatNo + 1) % 4; st.action_needed_seat=st.turn; } st.action_deadline_at=K.actionDeadline(); return true; }
     function applyCollect(st){ const winner = st.pending_trick?.winner; if(winner == null) return false; const roem = Number(st.pending_trick.roem?.points || 0); if(roem && !st.pending_trick.klopped) { st.roem_by_team[K.TEAM_OF[winner]-1] += roem; st.pending_trick.klopped = true; } st.taken.push(st.pending_trick); st.turn = winner; st.pending_trick = null; st.action_needed_seat=st.turn; if(st.taken.length === 8){ const result = K.scoreRound(st.taken, st.accepted_bid.team, st.accepted_bid, st.roem_by_team); st.totals[0] += result.scores[0]; st.totals[1] += result.scores[1]; const round = { round: st.rounds.length + 1, bid: st.accepted_bid, bidder_team: st.accepted_bid.team, result, totals: st.totals.slice(), roem_by_team: st.roem_by_team.slice(), plays: st.plays || [] }; round.coach_recap = K.buildCoachRecap(round); st.rounds.push(round); st.phase='roundOver'; st.action_needed_seat=null; st.plays=[]; st.dealer=(st.dealer+1)%4; if(K.shouldFinishGame(st)){ const wt = K.winnerTeam(st); if(wt){ const win = st.totals[wt-1] || 0; const lose = st.totals[wt===1?1:0] || 0; st.kruip = K.kruipLabel(win, lose); } st.phase='finished'; st.finished_at = new Date().toISOString(); } } st.action_deadline_at=K.actionDeadline(); return true; }
-    function queueBotTurns(){ if(UI.busy || UI.botTimer) return; const st = state(); if(!K.hasBots(st) || st.phase === 'finished' || st.phase === 'roundOver') return; if((st.phase === 'bidding' && isBotSeat(st, st.bidder_turn)) || (st.phase === 'playing' && ((st.pending_trick && isBotSeat(st, st.pending_trick.winner)) || (!st.pending_trick && isBotSeat(st, st.turn))))){ UI.botTimer = setTimeout(() => { UI.botTimer = null; runBotTurns(); }, 350); } }
+    function queueBotTurns(){ if(UI.busy || UI.botTimer) return; const st = state(); if(!K.hasBots(st) || st.phase === 'finished' || st.phase === 'roundOver') return; if((st.phase === 'bidding' && isBotSeat(st, st.bidder_turn)) || (st.phase === 'playing' && ((st.pending_trick && isBotSeat(st, st.pending_trick.winner)) || (!st.pending_trick && isBotSeat(st, st.turn))))){ UI.botTimer = setTimeout(() => { UI.botTimer = null; runBotTurns().catch((err)=>setStatus(err?.message || 'Botzet kon niet worden opgeslagen.')); }, 350); } }
     async function runBotTurns(){ if(UI.busy) return; let st = structuredClone(state()); if(!K.hasBots(st)) return; let changed = false; UI.busy = true; try{ for(let guard=0; guard<80; guard++){ if(st.phase === 'bidding' && isBotSeat(st, st.bidder_turn)){ applyBid(st, st.bidder_turn, K.botBid(st, st.bidder_turn)); changed = true; continue; } if(st.phase === 'playing' && st.pending_trick && isBotSeat(st, st.pending_trick.winner)){ if(!applyCollect(st)) break; changed = true; if(st.phase !== 'playing') break; continue; } if(st.phase === 'playing' && !st.pending_trick && isBotSeat(st, st.turn)){ if(!applyBotCard(st, st.turn)) break; changed = true; continue; } break; } if(changed) await save(st, true); } finally { UI.busy = false; } }
-    async function loadRooms(){ try{ const data = await K.rpc('klaverjas_online_list_open', { session_token: K.sessionToken(), site_scope_input: K.currentScope() }); const rows = Array.isArray(data) ? data : []; $('rooms').innerHTML = rows.length ? rows.map(r => `<article class="room-card"><strong>${esc(r.lobby_code)}</strong><div class="muted">${esc(r.status)} · ${esc(r.player_count)}/4 · ${deadlineText(r.action_deadline_at)}</div><button class="btn secondary" data-room="${esc(r.lobby_code)}" type="button">Open tafel</button></article>`).join('') : ''; $('rooms').querySelectorAll('[data-room]').forEach(btn => btn.onclick = () => { $('codeInput').value = btn.dataset.room; joinGame(); }); }catch(_){ $('rooms').innerHTML = ''; } }
+    async function loadRooms(){ try{ const data = await K.rpc('klaverjas_online_list_open', { session_token: K.sessionToken(), site_scope_input: K.currentScope() }); const rows = Array.isArray(data) ? data : []; $('rooms').innerHTML = rows.length ? rows.map(r => `<article class="room-card"><strong>${esc(r.lobby_code)}</strong><div class="muted">${esc(r.status)} · ${esc(r.player_count)}/4 · ${deadlineText(r.action_deadline_at)}</div><button class="btn secondary" data-room="${esc(r.lobby_code)}" type="button">Open tafel</button></article>`).join('') : ''; $('rooms').querySelectorAll('[data-room]').forEach(btn => btn.onclick = () => { $('codeInput').value = btn.dataset.room; runAction(joinGame); }); }catch(_){ $('rooms').innerHTML = ''; } }
     $('createBtn').onclick = createGame; $('joinBtn').onclick = joinGame; if(UI.lobbyCode) $('codeInput').value = UI.lobbyCode; load(); loadRooms(); UI.poll = setInterval(() => { if(!document.hidden) { load(); loadRooms(); } }, 15000);
   })();
   </script>

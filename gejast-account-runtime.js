@@ -136,15 +136,14 @@
   async function login(input){
     const name=input.name, pin=input.pin;
     const data = await rpcFirst([
-      {name:'account_login_bridge_v687', body:{display_name_input:name, pin_input:pin, site_scope_input:scope()}, options:{timeoutMs:3200}},
-      {name:'account_login_bridge_v687', body:{display_name_input:name, pin_input:pin, site_scope_input:scope()}, options:{timeoutMs:3200}},
-      {name:'account_login_bridge_v687', body:{display_name_input:name, pin_input:pin, site_scope_input:scope()}, options:{timeoutMs:3200}},
-      {name:'account_login_v687', body:{display_name_input:name, pin_input:pin, site_scope_input:scope()}, options:{timeoutMs:3200}},
-      {name:'login_player', body:{desired_name:name, entered_pin:pin}, options:{timeoutMs:3200}},
+      {name:'account_login_bridge_v687', body:{display_name_input:name, entered_pin:pin, site_scope_input:scope()}, options:{timeoutMs:3200}},
+      {name:'account_login_v687', body:{display_name_input:name, entered_pin:pin, site_scope_input:scope()}, options:{timeoutMs:3200}},
       {name:'login_player', body:{input_username:name, entered_pin:pin}, options:{timeoutMs:3200}},
-      {name:'login_player', body:{input_display_name:name, input_pin:pin}, options:{timeoutMs:3200}}
+      {name:'login_player_by_name_pin_v687', body:{player_name_input:name, pin_input:pin, login_meta_input:activePlayerMeta({event:'login'})}, options:{timeoutMs:3200}},
+      {name:'login_player', body:{player_name:name, pin}, options:{timeoutMs:3200}}
     ]);
-    if(data && data.session_token) setPlayerToken(data.session_token);
+    if(!data || !data.session_token) throw new Error('Login gaf geen geldige spelersessie terug.');
+    setPlayerToken(data.session_token);
     try { await storeActivePlayerMetadata({player_name_input:data?.display_name||data?.player_name||name, event_type_input:'login_success', event_source_input:'login.html', session_token_input:data?.session_token||null, metadata_input:activePlayerMeta({event:'login_success'})}); } catch (_) {}
     return data;
   }
