@@ -78,14 +78,80 @@ const bot = await rpc('klaverjas_online_create', {
   site_scope_input: 'friends',
   settings_input: { finish_mode: 'fixed_rounds', bot_count: 3 }
 });
+const botPlayers = bot.game.state.players.map((player) => ({
+  name: player.name,
+  is_bot: player.is_bot
+}));
+const botState = K.newClientState(
+  botPlayers,
+  Number(bot.game.dealer_index || 0),
+  null,
+  { finish_mode: 'fixed_rounds', bot_count: 3 }
+);
+botState.accepted_bid = {
+  action: 'bid',
+  mode: 'suit',
+  suit: 'clubs',
+  points: 80,
+  player: 0,
+  team: 1
+};
+botState.current_bid = botState.accepted_bid;
+botState.phase = 'playing';
+botState.turn = (botState.dealer + 1) % 4;
+
+for (let trickNumber = 0; trickNumber < 8; trickNumber += 1) {
+  const trick = [];
+  for (let playNumber = 0; playNumber < 4; playNumber += 1) {
+    const seat = botState.turn;
+    const hand = botState.hands[seat];
+    const card = K.aiChoice(hand, trick, seat, botState.accepted_bid.suit);
+    if (!card) throw new Error('Bot round could not choose a legal card.');
+    botState.hands[seat] = hand.filter((item) => item.id !== card.id);
+    trick.push({ player: seat, card });
+    botState.turn = (seat + 1) % 4;
+  }
+  const winner = K.currentWinner(trick, botState.accepted_bid.suit).player;
+  const roem = K.detectRoem(trick.map((play) => play.card), botState.accepted_bid.suit);
+  botState.roem_by_team[K.TEAM_OF[winner] - 1] += roem.points;
+  botState.taken.push({ winner, cards: trick, roem, klopped: true });
+  botState.turn = winner;
+}
+
+const botResult = K.scoreRound(
+  botState.taken,
+  botState.accepted_bid.team,
+  botState.accepted_bid,
+  botState.roem_by_team
+);
+botState.totals[0] += botResult.scores[0];
+botState.totals[1] += botResult.scores[1];
+botState.rounds.push({
+  round: 1,
+  bid: botState.accepted_bid,
+  bidder_team: botState.accepted_bid.team,
+  result: botResult,
+  totals: botState.totals.slice(),
+  roem_by_team: botState.roem_by_team.slice(),
+  plays: []
+});
+botState.phase = 'roundOver';
+botState.action_needed_seat = null;
 await rpc('klaverjas_online_save_state', {
   session_token: sessions[0].token,
   game_id_input: bot.game.id,
-  state_input: { ...bot.game.state, phase: 'finished', finished_at: new Date().toISOString() },
+  state_input: botState,
   summary_payload: null,
   final_jas_payload: null
 });
-console.log('bot room: create/save/finish ok');
+await rpc('klaverjas_online_save_state', {
+  session_token: sessions[0].token,
+  game_id_input: bot.game.id,
+  state_input: { ...botState, phase: 'finished', finished_at: new Date().toISOString() },
+  summary_payload: null,
+  final_jas_payload: null
+});
+console.log('bot room: complete round/save/score/finish ok');
 
 const room = await rpc('klaverjas_online_create', {
   session_token: sessions[0].token,
