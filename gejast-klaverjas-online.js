@@ -1,7 +1,8 @@
 (function (global) {
   const SUITS = ['clubs', 'spades', 'hearts', 'diamonds'];
+  const DISPLAY_SUITS = ['hearts', 'spades', 'diamonds', 'clubs'];
   const SUIT_LABELS = { clubs: 'Klaver', spades: 'Schoppen', hearts: 'Harten', diamonds: 'Ruiten', sans: 'Sans' };
-  const SUIT_SYMBOLS = { clubs: '♣', spades: '♠', hearts: '♥', diamonds: '♦' };
+  const SUIT_SYMBOLS = { clubs: '♣', spades: '♠', hearts: '♥', diamonds: '♦', sans: 'SA' };
   const RANKS = ['A', '10', 'K', 'Q', 'J', '9', '8', '7'];
   const NORMAL_ORDER = ['A', '10', 'K', 'Q', 'J', '9', '8', '7'];
   const TRUMP_ORDER = ['J', '9', 'A', '10', 'K', 'Q', '8', '7'];
@@ -66,9 +67,20 @@
     return copy;
   }
   function sortHand(hand) {
-    const suitIndex = Object.fromEntries(SUITS.map((suit, index) => [suit, index]));
-    const rankIndex = Object.fromEntries(NORMAL_ORDER.map((rank, index) => [rank, index]));
-    return (hand || []).slice().sort((a, b) => suitIndex[a.suit] - suitIndex[b.suit] || rankIndex[a.rank] - rankIndex[b.rank]);
+    return sortHandForBid(hand, null);
+  }
+  function sortHandForBid(hand, trumpSuit) {
+    const suitIndex = Object.fromEntries(DISPLAY_SUITS.map((suit, index) => [suit, index]));
+    const normalIndex = Object.fromEntries(NORMAL_ORDER.map((rank, index) => [rank, index]));
+    const trumpIndex = Object.fromEntries(TRUMP_ORDER.map((rank, index) => [rank, index]));
+    return (hand || []).slice().sort((a, b) => {
+      const aTrump = trumpSuit && trumpSuit !== 'sans' && a.suit === trumpSuit;
+      const bTrump = trumpSuit && trumpSuit !== 'sans' && b.suit === trumpSuit;
+      if (aTrump !== bTrump) return aTrump ? -1 : 1;
+      if (a.suit !== b.suit) return (suitIndex[a.suit] ?? 99) - (suitIndex[b.suit] ?? 99);
+      const order = aTrump ? trumpIndex : normalIndex;
+      return (order[a.rank] ?? 99) - (order[b.rank] ?? 99);
+    });
   }
   function deal(deck, dealer) {
     const hands = [[], [], [], []];
@@ -81,6 +93,9 @@
       }
     });
     return hands.map(sortHand);
+  }
+  function nextDealer(dealer) {
+    return (Number(dealer || 0) + 1) % 4;
   }
   function cardPoints(card, trumpSuit) {
     return trumpSuit && trumpSuit !== 'sans' && card.suit === trumpSuit ? TRUMP_POINTS[card.rank] : NORMAL_POINTS[card.rank];
@@ -126,13 +141,19 @@
   function bidRank(bid) {
     if (!bid || bid.action === 'pass') return -1;
     if (isAllPointsBid(bid)) return 10000;
-    return Number(bid.points || 0) + (bid.mode === 'sans' ? 0.1 : 0);
+    return bidTarget(bid) + (bid.mode === 'sans' ? 0.1 : 0);
   }
   function isAllPointsBid(bid) {
     return !!bid && (['pit', 'mars', 'doormars'].includes(bid.kind) || (bid.mode === 'sans' && Number(bid.points) === 132));
   }
   function closesBidding(bid) {
     return isAllPointsBid(bid);
+  }
+  function bidTarget(bid) {
+    if (!bid || bid.action === 'pass') return 0;
+    if (isAllPointsBid(bid)) return 162;
+    if (bid.mode === 'suit') return Math.max(82, Number(bid.points || 0));
+    return Number(bid.points || 0);
   }
   function isValidBid(bid, currentBid) {
     if (!bid || bid.action === 'pass') return true;
@@ -152,10 +173,11 @@
     }
     const sansPit = { action: 'bid', mode: 'sans', points: 132, kind: 'pit' };
     if (isValidBid(sansPit, currentBid)) out.push({ ...sansPit, label: '132 sans pit' });
+    const displayOrder = ['hearts', 'spades', 'diamonds', 'clubs'];
     for (let points = 80; points <= 160; points += 10) {
-      SUITS.forEach((suit) => {
+      displayOrder.forEach((suit) => {
         const bid = { action: 'bid', mode: 'suit', suit, points };
-        if (isValidBid(bid, currentBid)) out.push({ ...bid, label: `${points} ${SUIT_LABELS[suit]}` });
+        if (isValidBid(bid, currentBid)) out.push({ ...bid, label: `${points} ${SUIT_LABELS[suit]}${points === 80 ? ' (halen 82)' : ''}` });
       });
     }
     return out;
@@ -164,7 +186,7 @@
     if (!bid) return 'Geen bod';
     if (bid.action === 'pass') return 'Pas';
     if (isAllPointsBid(bid)) return `${bid.points || 132} ${bid.mode === 'sans' ? 'sans' : (SUIT_LABELS[bid.suit] || '')} ${bid.kind || 'pit'}`.trim();
-    return bid.mode === 'sans' ? `${bid.points} sans` : `${bid.points} ${SUIT_LABELS[bid.suit]}`;
+    return bid.mode === 'sans' ? `${bid.points} sans` : `${bid.points} ${SUIT_LABELS[bid.suit]}${Number(bid.points) === 80 ? ' (82)' : ''}`;
   }
   function actionDeadline() {
     return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -182,8 +204,8 @@
     const lose = Number(losingScore || 0);
     const total = win + lose;
     if (total <= 0) return null;
-    if (win >= total * (2 / 3)) return 'naakt_kruipen';
-    if (lose <= win / 2) return 'kruipen';
+    if (lose <= win / 2) return 'naakt_kruipen';
+    if (win >= total * (2 / 3)) return 'kruipen';
     return null;
   }
   function winnerTeam(state) {
@@ -196,15 +218,79 @@
     const order = trumpSuit && trumpSuit !== 'sans' && card.suit === trumpSuit ? TRUMP_ORDER : NORMAL_ORDER;
     return points * 10 + (20 - order.indexOf(card.rank));
   }
-  function aiChoice(hand, trick, playerIndex, trumpSuit) {
+  function seenCards(state) {
+    const out = [];
+    (state?.taken || []).forEach((trick) => (trick.cards || []).forEach((play) => out.push(play.card)));
+    (state?.pending_trick?.cards || []).forEach((play) => out.push(play.card));
+    (state?.trick || []).forEach((play) => out.push(play.card));
+    return out;
+  }
+  function remainingCards(state, myHand) {
+    const seen = new Set([...seenCards(state), ...(myHand || [])].map((card) => card.id));
+    return createDeck().filter((card) => !seen.has(card.id));
+  }
+  function roemThreat(card, hand, trumpSuit) {
+    if (!card) return 0;
+    const sameSuit = (hand || []).filter((c) => c.suit === card.suit).map((c) => c.rank);
+    const positions = sameSuit.map((r) => ROEM_ORDER.indexOf(r)).filter((n) => n >= 0);
+    const pos = ROEM_ORDER.indexOf(card.rank);
+    let threat = 0;
+    if (pos >= 0) {
+      const without = positions.filter((n) => n !== pos);
+      for (let start = Math.max(0, pos - 2); start <= pos; start++) {
+        if ([start, start + 1, start + 2].every((n) => n >= 0 && n < ROEM_ORDER.length && without.includes(n))) threat += 16;
+        if ([start, start + 1, start + 2, start + 3].every((n) => n >= 0 && n < ROEM_ORDER.length && without.includes(n))) threat += 24;
+      }
+    }
+    const hasK = sameSuit.includes('K');
+    const hasQ = sameSuit.includes('Q');
+    if (card.suit === trumpSuit && ((card.rank === 'K' && hasQ) || (card.rank === 'Q' && hasK))) threat += 18;
+    return threat;
+  }
+  function willWin(card, trick, playerIndex, trumpSuit) {
+    const next = [...(trick || []), { player: playerIndex, card }];
+    if (!next.length) return false;
+    return currentWinner(next, trumpSuit)?.player === playerIndex;
+  }
+  function aiCardScore(card, hand, trick, playerIndex, trumpSuit, state) {
+    const legal = legalCards(hand || [], trick || [], playerIndex, trumpSuit);
+    const team = TEAM_OF[playerIndex];
+    const value = cardPoints(card, trumpSuit);
+    let score = 0;
+    const nextTrick = [...(trick || []), { player: playerIndex, card }];
+    const currentWin = currentWinner(nextTrick, trumpSuit);
+    const isWinning = currentWin && currentWin.player === playerIndex;
+    const tablePoints = nextTrick.reduce((sum, play) => sum + cardPoints(play.card, trumpSuit), 0);
+    const partnerWinning = currentWin && TEAM_OF[currentWin.player] === team;
+    const rem = remainingCards(state, hand);
+    const higherRemainingSameSuit = rem.filter((other) => other.suit === card.suit && compareCards(other, card, card.suit, trumpSuit) > 0).length;
+    const canBeCaught = higherRemainingSameSuit > 0;
+
+    if (!trick || !trick.length) {
+      score += value * 0.8;
+      score -= roemThreat(card, hand, trumpSuit) * 1.7;
+      if (card.suit === trumpSuit) score -= 10;
+      if (!canBeCaught) score += 7;
+    } else if (nextTrick.length === 4) {
+      score += isWinning ? tablePoints + 18 : -value;
+      score -= roemThreat(card, hand, trumpSuit) * 1.4;
+    } else {
+      if (isWinning) score += tablePoints + 8;
+      if (partnerWinning && !isWinning) score -= value * 0.65;
+      if (!partnerWinning && !isWinning) score -= value * 0.25;
+      score -= roemThreat(card, hand, trumpSuit) * 1.5;
+    }
+    if (card.suit === trumpSuit && ['J', '9'].includes(card.rank) && !isWinning) score -= 24;
+    return score;
+  }
+  function aiChoice(hand, trick, playerIndex, trumpSuit, state) {
     const legal = legalCards(hand || [], trick || [], playerIndex, trumpSuit);
     if (!legal.length) return null;
-    if (!trick || !trick.length) return legal.slice().sort((a, b) => cardValue(b, trumpSuit) - cardValue(a, trumpSuit))[0];
-    const winner = currentWinner(trick, trumpSuit);
-    const leadSuit = trick[0].card.suit;
-    const winning = legal.filter((card) => compareCards(card, winner.card, leadSuit, trumpSuit) > 0);
-    const pool = winning.length ? winning : legal;
-    return pool.slice().sort((a, b) => cardValue(a, trumpSuit) - cardValue(b, trumpSuit))[0];
+    return legal.slice().sort((a, b) => aiCardScore(b, hand, trick, playerIndex, trumpSuit, state) - aiCardScore(a, hand, trick, playerIndex, trumpSuit, state))[0];
+  }
+  function cardDelta(played, aiCard, trumpSuit) {
+    if (!played || !aiCard) return 0;
+    return cardPoints(played, trumpSuit) - cardPoints(aiCard, trumpSuit);
   }
   function isBotPlayer(player) {
     return !!player && (player.is_bot === true || player.player_type === 'bot');
@@ -222,25 +308,39 @@
       return { seat, name: botName(seat), team: TEAM_OF[seat], is_bot: true, player_type: 'bot' };
     });
   }
+  function estimateSuitStrength(hand, suit) {
+    return (hand || []).filter((card) => card.suit === suit).reduce((sum, card) => {
+      const trumpBonus = card.rank === 'J' ? 14 : (card.rank === '9' ? 10 : 0);
+      return sum + NORMAL_POINTS[card.rank] + trumpBonus;
+    }, 0);
+  }
+  function estimateHandRoem(hand, trumpSuit) {
+    const det = detectRoem(hand || [], trumpSuit);
+    return Number(det.points || 0);
+  }
   function botBid(state, seat) {
     if (state.current_bid) return { action: 'pass', label: 'Pas' };
     const hand = state.hands?.[seat] || [];
-    const suitScores = Object.fromEntries(SUITS.map((suit) => [suit, 0]));
-    hand.forEach((card) => {
-      suitScores[card.suit] += NORMAL_POINTS[card.rank] + (card.rank === 'J' ? 4 : 0) + (card.rank === '9' ? 2 : 0);
-    });
-    const bestSuit = SUITS.slice().sort((a, b) => suitScores[b] - suitScores[a])[0] || 'clubs';
-    return { action: 'bid', mode: 'suit', suit: bestSuit, points: 80, label: `80 ${SUIT_LABELS[bestSuit]}` };
+    const suitScores = Object.fromEntries(SUITS.map((suit) => [suit, estimateSuitStrength(hand, suit) + estimateHandRoem(hand, suit) * 0.25]));
+    const bestSuit = ['hearts', 'spades', 'diamonds', 'clubs'].slice().sort((a, b) => suitScores[b] - suitScores[a])[0] || 'clubs';
+    const best = suitScores[bestSuit] || 0;
+    if (best >= 34) return { action: 'bid', mode: 'suit', suit: bestSuit, points: 90, label: `90 ${SUIT_LABELS[bestSuit]}` };
+    if (best >= 24) return { action: 'bid', mode: 'suit', suit: bestSuit, points: 80, label: `80 ${SUIT_LABELS[bestSuit]} (halen 82)` };
+    return { action: 'pass', label: 'Pas' };
   }
   function buildCoachRecap(round) {
-    return (round.plays || []).filter((play) => play.ai_card && play.card?.id !== play.ai_card?.id).slice(0, 8).map((play) => ({
-      player: play.player,
-      player_name: play.player_name,
-      trick_no: play.trick_no,
-      played: play.card,
-      ai_card: play.ai_card,
-      verdict: cardPoints(play.card, round.bid?.suit) > cardPoints(play.ai_card, round.bid?.suit) ? 'Jij speelde waardevoller dan de simpele AI.' : 'De simpele AI had zuiniger gespeeld.'
-    }));
+    return (round.plays || []).filter((play) => play.ai_card && play.card?.id !== play.ai_card?.id).slice(0, 12).map((play) => {
+      const delta = cardDelta(play.card, play.ai_card, round.bid?.suit);
+      return {
+        player: play.player,
+        player_name: play.player_name,
+        trick_no: play.trick_no,
+        played: play.card,
+        ai_card: play.ai_card,
+        delta,
+        verdict: delta >= 0 ? 'Jij speelde minstens even waardevol als de AI-keuze.' : 'De AI had waardevoller of veiliger gespeeld.'
+      };
+    });
   }
   function detectRoem(cards, trumpSuit) {
     const items = [];
@@ -277,26 +377,25 @@
       cardScores[teamIndex] += (trick.cards || []).reduce((sum, play) => sum + cardPoints(play.card, bid?.suit), 0);
     });
     if (taken && taken.length) cardScores[TEAM_OF[taken[taken.length - 1].winner] - 1] += 10;
-    const raw = [cardScores[0] + Number(roemByTeam?.[0] || 0), cardScores[1] + Number(roemByTeam?.[1] || 0)];
     const bidderIndex = bidderTeam - 1;
     const defenderIndex = bidderIndex ? 0 : 1;
-    const target = isAllPointsBid(bid) ? 162 : Number(bid?.points || 0);
+    const target = bidTarget(bid);
     const allTricks = trickCounts[bidderIndex] === 8;
-    const made = isAllPointsBid(bid) ? allTricks : raw[bidderIndex] >= target;
+    const made = isAllPointsBid(bid) ? allTricks : cardScores[bidderIndex] >= target;
+    const allRoem = Number(roemByTeam?.[0] || 0) + Number(roemByTeam?.[1] || 0);
     if (!made) {
-      const allRoem = Number(roemByTeam?.[0] || 0) + Number(roemByTeam?.[1] || 0);
       const scores = [0, 0];
       scores[defenderIndex] = 162 + allRoem;
-      return { raw, trickCounts, nat: true, scores };
+      return { cardScores, raw: [cardScores[0] + Number(roemByTeam?.[0] || 0), cardScores[1] + Number(roemByTeam?.[1] || 0)], trickCounts, nat: true, scores, target, made: false };
     }
-    const scores = raw.slice();
+    const scores = [cardScores[0] + Number(roemByTeam?.[0] || 0), cardScores[1] + Number(roemByTeam?.[1] || 0)];
     if (allTricks) scores[bidderIndex] += 100;
-    return { raw, trickCounts, nat: false, scores };
+    return { cardScores, raw: scores.slice(), trickCounts, nat: false, scores, target, made: true };
   }
   function newClientState(players, dealerIndex, previous, settings) {
     const hands = deal(shuffle(createDeck()), dealerIndex);
     return {
-      app_version: global.GEJAST_PAGE_VERSION || cfg().VERSION || 'v686',
+      app_version: global.GEJAST_PAGE_VERSION || cfg().VERSION || 'v749',
       phase: 'bidding',
       deal_nonce: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       settings: settings || previous?.settings || { finish_mode: 'fixed_rounds' },
@@ -310,6 +409,7 @@
       accepted_bid: null,
       trick: [],
       pending_trick: null,
+      last_trick: previous?.last_trick || null,
       taken: [],
       roem_by_team: [0, 0],
       totals: (previous?.totals || [0, 0]).slice(),
@@ -317,6 +417,8 @@
       action_deadline_at: actionDeadline(),
       action_needed_seat: (dealerIndex + 1) % 4,
       plays: [],
+      progress_tick: Number(previous?.progress_tick || 0),
+      redeal_count: Number(previous?.redeal_count || 0),
       finished_at: null
     };
   }
@@ -388,15 +490,18 @@
     shuffle,
     deal,
     sortHand,
+    sortHandForBid,
     compareCards,
     currentWinner,
     legalCards,
     cardPoints,
+    cardDelta,
     availableBids,
     isValidBid,
     isAllPointsBid,
     closesBidding,
     bidLabel,
+    bidTarget,
     actionDeadline,
     shouldFinishGame,
     kruipLabel,
@@ -411,6 +516,7 @@
     gameModeLabel,
     detectRoem,
     scoreRound,
+    nextDealer,
     newClientState,
     publicSummary,
     finalJasPayload,
