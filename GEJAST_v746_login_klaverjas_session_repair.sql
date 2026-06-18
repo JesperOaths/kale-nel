@@ -117,11 +117,39 @@ create or replace function public.account_login_v687(
   site_scope_input text default 'friends'
 )
 returns jsonb
-language sql
+language plpgsql
 security definer
 set search_path to 'public'
 as $fn$
-  select public.account_login_bridge_v687(display_name_input, entered_pin, site_scope_input);
+declare
+  player_row public.players%rowtype;
+  requested_scope text := case when lower(coalesce(site_scope_input, 'friends')) = 'family' then 'family' else 'friends' end;
+begin
+  if nullif(trim(coalesce(display_name_input, '')), '') is null then
+    raise exception 'missing_player_name';
+  end if;
+  if nullif(coalesce(entered_pin, ''), '') is null then
+    raise exception 'missing_pin';
+  end if;
+
+  select p.*
+    into player_row
+    from public.players p
+   where lower(p.display_name) = lower(trim(display_name_input))
+     and coalesce(p.active, false) = true
+     and lower(coalesce(p.site_scope, 'friends')) = requested_scope
+   order by p.id
+   limit 1;
+
+  if not found
+     or player_row.pin_hash is null
+     or not public._gejast_secret_matches_v691(entered_pin, player_row.pin_hash) then
+    raise exception 'player_login_invalid';
+  end if;
+
+  return public._gejast_player_login_payload_v691(player_row.id)
+    || jsonb_build_object('bridge', 'v746');
+end
 $fn$;
 
 revoke all on function public._jas_session_player(text) from public;
