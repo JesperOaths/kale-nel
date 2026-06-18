@@ -44,9 +44,9 @@ begin
    limit 1;
 
   if found then
-    update public.gejast_player_sessions_v746
+    update public.gejast_player_sessions_v746 s
        set last_seen_at = now()
-     where session_token = token_value;
+     where s.session_token = token_value;
     return player_row;
   end if;
 
