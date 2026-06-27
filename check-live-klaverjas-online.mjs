@@ -52,6 +52,95 @@ async function rpc(name, body) {
   return data;
 }
 
+async function rpcTry(name, body) {
+  try {
+    return { ok: true, data: await rpc(name, body) };
+  } catch (error) {
+    return { ok: false, error };
+  }
+}
+
+async function listOpen(sessionToken = null) {
+  const rows = await rpc('klaverjas_online_list_open', {
+    session_token: sessionToken,
+    site_scope_input: 'friends'
+  });
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function closeAllOpenRooms(reason) {
+  const cleanup = await rpcTry('klaverjas_online_cleanup_rooms', {
+    site_scope_input: 'friends',
+    close_all: true
+  });
+  if (cleanup.ok) {
+    console.log(`${reason}: cleanup RPC closed ${cleanup.data || 0} active room(s)`);
+    return { ok: true, usedCleanupRpc: true };
+  }
+  console.log(`${reason}: cleanup RPC unavailable (${cleanup.error.message})`);
+  return { ok: false, usedCleanupRpc: false, error: cleanup.error };
+}
+
+function makeFinishedRoundState(players, dealerIndex, settings) {
+  const state = K.newClientState(players, Number(dealerIndex || 0), null, settings);
+  state.accepted_bid = {
+    action: 'bid',
+    mode: 'suit',
+    suit: 'clubs',
+    points: 80,
+    player: 0,
+    team: 1
+  };
+  state.current_bid = state.accepted_bid;
+  state.phase = 'playing';
+  state.turn = (state.dealer + 1) % 4;
+  state.action_needed_seat = state.turn;
+
+  for (let trickNumber = 0; trickNumber < 8; trickNumber += 1) {
+    const trick = [];
+    for (let playNumber = 0; playNumber < 4; playNumber += 1) {
+      const seat = state.turn;
+      const hand = state.hands[seat];
+      const card = K.aiChoice(hand, trick, seat, state.accepted_bid.suit, state);
+      if (!card) throw new Error('Could not choose a deterministic legal card.');
+      state.hands[seat] = hand.filter((item) => item.id !== card.id);
+      trick.push({ player: seat, card });
+      state.turn = (seat + 1) % 4;
+    }
+    const winner = K.currentWinner(trick, state.accepted_bid.suit).player;
+    const roem = K.detectRoem(trick.map((play) => play.card), state.accepted_bid.suit);
+    state.roem_by_team[K.TEAM_OF[winner] - 1] += roem.points;
+    state.taken.push({ winner, cards: trick, roem, klopped: true });
+    state.turn = winner;
+  }
+
+  const result = K.scoreRound(
+    state.taken,
+    state.accepted_bid.team,
+    state.accepted_bid,
+    state.roem_by_team
+  );
+  state.totals[0] += result.scores[0];
+  state.totals[1] += result.scores[1];
+  const round = {
+    round: 1,
+    bid: state.accepted_bid,
+    bidder_team: state.accepted_bid.team,
+    result,
+    totals: state.totals.slice(),
+    roem_by_team: state.roem_by_team.slice(),
+    plays: [],
+    saved_at: new Date().toISOString(),
+    dealer: state.dealer
+  };
+  state.rounds.push(round);
+  state.phase = 'finished';
+  state.finished_at = new Date().toISOString();
+  state.action_needed_seat = null;
+  state.action_deadline_at = K.actionDeadline();
+  return state;
+}
+
 const sessions = [];
 for (const name of names) {
   const data = await rpc('account_login_bridge_v687', {
@@ -72,6 +161,12 @@ for (const name of names) {
   sessions.push({ name, token: data.session_token });
 }
 console.log('login: 4/4 sessions valid across account and home state');
+
+await closeAllOpenRooms('preflight');
+let openRooms = await listOpen();
+if (openRooms.length) {
+  console.log(`preflight: ${openRooms.length} active room(s) still visible before tests: ${openRooms.map((row) => row.lobby_code).join(', ')}`);
+}
 
 const bot = await rpc('klaverjas_online_create', {
   session_token: sessions[0].token,
@@ -151,6 +246,15 @@ await rpc('klaverjas_online_save_state', {
   summary_payload: null,
   final_jas_payload: null
 });
+const finishedBot = await rpc('klaverjas_online_get_state', {
+  session_token: sessions[0].token,
+  game_id_input: bot.game.id,
+  lobby_code_input: null,
+  site_scope_input: 'friends'
+});
+if (finishedBot.game.saved_jas_game_id !== null) {
+  throw new Error('Bot game was unexpectedly saved into jas_games.');
+}
 console.log('bot room: complete round/save/score/finish ok');
 
 const room = await rpc('klaverjas_online_create', {
@@ -158,12 +262,28 @@ const room = await rpc('klaverjas_online_create', {
   site_scope_input: 'friends',
   settings_input: { finish_mode: 'fixed_rounds', bot_count: 0 }
 });
+const duplicateCreate = await rpcTry('klaverjas_online_create', {
+  session_token: sessions[0].token,
+  site_scope_input: 'friends',
+  settings_input: { finish_mode: 'fixed_rounds', bot_count: 0 }
+});
+if (duplicateCreate.ok || !/actieve klaverjastafel/i.test(duplicateCreate.error.message)) {
+  throw new Error('One-active-room create blocking did not trigger.');
+}
 for (let index = 1; index < 4; index += 1) {
   await rpc('klaverjas_online_join', {
     session_token: sessions[index].token,
     lobby_code_input: room.game.lobby_code,
     site_scope_input: 'friends'
   });
+}
+const duplicateJoin = await rpc('klaverjas_online_join', {
+  session_token: sessions[1].token,
+  lobby_code_input: room.game.lobby_code,
+  site_scope_input: 'friends'
+});
+if ((duplicateJoin.players || []).length !== 4) {
+  throw new Error('Duplicate join should return the existing table without adding seats.');
 }
 
 let full = await rpc('klaverjas_online_get_state', {
@@ -188,6 +308,16 @@ await rpc('klaverjas_online_save_state', {
   summary_payload: K.publicSummary(started, full.game),
   final_jas_payload: null
 });
+full = await rpc('klaverjas_online_get_state', {
+  session_token: sessions[0].token,
+  game_id_input: room.game.id,
+  lobby_code_input: null,
+  site_scope_input: 'friends'
+});
+const deadlineMs = new Date(full.game.state.action_deadline_at).getTime() - Date.now();
+if (!(deadlineMs > 6.5 * 24 * 60 * 60 * 1000 && deadlineMs < 7.5 * 24 * 60 * 60 * 1000)) {
+  throw new Error('Seven-day action deadline was not persisted correctly.');
+}
 
 for (let index = 0; index < 4; index += 1) {
   const view = await rpc('klaverjas_online_get_state', {
@@ -204,17 +334,53 @@ for (let index = 0; index < 4; index += 1) {
 }
 console.log('four-human room: join/deal/rejoin/private hands ok');
 
-full = await rpc('klaverjas_online_get_state', {
+const finishedHumanState = makeFinishedRoundState(
+  full.players.map((player) => ({ name: player.name, is_bot: false })),
+  Number(full.game.dealer_index || 0),
+  { finish_mode: 'fixed_rounds', bot_count: 0 }
+);
+const savedHuman = await rpc('klaverjas_online_save_state', {
   session_token: sessions[0].token,
   game_id_input: room.game.id,
+  state_input: finishedHumanState,
+  summary_payload: K.publicSummary(finishedHumanState, full.game),
+  final_jas_payload: K.finalJasPayload(finishedHumanState, full.game)
+});
+if (!savedHuman.game.saved_jas_game_id) {
+  throw new Error('Finished four-human game did not save to jas_games.');
+}
+console.log('four-human room: final save into jas_games ok');
+
+const hostRoom = await rpc('klaverjas_online_create', {
+  session_token: sessions[0].token,
+  site_scope_input: 'friends',
+  settings_input: { finish_mode: 'fixed_rounds', bot_count: 0 }
+});
+const hostRows = await listOpen(sessions[0].token);
+const listedHostRoom = hostRows.find((row) => row.id === hostRoom.game.id);
+if (!listedHostRoom?.is_host || !listedHostRoom?.has_me) {
+  throw new Error('Host lobby metadata did not mark the host room correctly.');
+}
+const nonHostDelete = await rpcTry('klaverjas_online_delete_room', {
+  session_token: sessions[1].token,
+  game_id_input: hostRoom.game.id,
   lobby_code_input: null,
   site_scope_input: 'friends'
 });
-await rpc('klaverjas_online_save_state', {
+if (nonHostDelete.ok || !/Alleen de host/i.test(nonHostDelete.error.message)) {
+  throw new Error('Non-host delete blocking did not trigger.');
+}
+await rpc('klaverjas_online_delete_room', {
   session_token: sessions[0].token,
-  game_id_input: room.game.id,
-  state_input: { ...full.game.state, phase: 'finished', finished_at: new Date().toISOString() },
-  summary_payload: null,
-  final_jas_payload: null
+  game_id_input: hostRoom.game.id,
+  lobby_code_input: null,
+  site_scope_input: 'friends'
 });
-console.log('cleanup: test room finished');
+console.log('host close: host metadata, non-host block, and host delete ok');
+
+await closeAllOpenRooms('postflight');
+openRooms = await listOpen();
+if (openRooms.length) {
+  throw new Error(`Active Klaverjas room(s) still visible: ${openRooms.map((row) => `${row.lobby_code} (${row.created_by_player_name})`).join(', ')}`);
+}
+console.log('cleanup: no active Klaverjas rooms remain');

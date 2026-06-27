@@ -70,7 +70,21 @@
     return sortHandForBid(hand, null);
   }
   function sortHandForBid(hand, trumpSuit) {
-    const suitIndex = Object.fromEntries(DISPLAY_SUITS.map((suit, index) => [suit, index]));
+    const red = new Set(['hearts', 'diamonds']);
+    let suitOrder = DISPLAY_SUITS.slice();
+    if (trumpSuit && trumpSuit !== 'sans' && SUITS.includes(trumpSuit)) {
+      const trumpRed = red.has(trumpSuit);
+      const rest = DISPLAY_SUITS.filter((suit) => suit !== trumpSuit);
+      const orderedRest = [];
+      let wantRed = !trumpRed;
+      while (rest.length) {
+        const nextIndex = rest.findIndex((suit) => red.has(suit) === wantRed);
+        orderedRest.push(...rest.splice(nextIndex >= 0 ? nextIndex : 0, 1));
+        wantRed = !wantRed;
+      }
+      suitOrder = [trumpSuit, ...orderedRest];
+    }
+    const suitIndex = Object.fromEntries(suitOrder.map((suit, index) => [suit, index]));
     const normalIndex = Object.fromEntries(NORMAL_ORDER.map((rank, index) => [rank, index]));
     const trumpIndex = Object.fromEntries(TRUMP_ORDER.map((rank, index) => [rank, index]));
     return (hand || []).slice().sort((a, b) => {
@@ -225,6 +239,38 @@
     (state?.trick || []).forEach((play) => out.push(play.card));
     return out;
   }
+  function cardsBySuit(cards) {
+    return (cards || []).reduce((map, card) => {
+      if (!map[card.suit]) map[card.suit] = [];
+      map[card.suit].push(card);
+      return map;
+    }, {});
+  }
+  function highestRemainingRank(state, suit, trumpSuit, myHand) {
+    const remaining = remainingCards(state, myHand).filter((card) => card.suit === suit);
+    if (!remaining.length) return null;
+    return remaining.slice().sort((a, b) => compareCards(b, a, suit, trumpSuit))[0]?.rank || null;
+  }
+  function signalMemory(state) {
+    const memory = {};
+    (state?.taken || []).forEach((trick) => {
+      const cards = trick.cards || [];
+      const winner = trick.winner;
+      const leadSuit = cards[0]?.card?.suit;
+      if (winner == null || !leadSuit) return;
+      cards.forEach((play) => {
+        if (TEAM_OF[play.player] !== TEAM_OF[winner] || play.player === winner || play.card.suit === leadSuit) return;
+        const key = `${play.player}:${leadSuit}`;
+        if (['7', '8', '9'].includes(play.card.rank) && play.card.suit !== state?.accepted_bid?.suit) {
+          memory[key] = { type: 'aanseinen', suit: leadSuit, player: play.player };
+        }
+        if (['10', 'K', 'Q', 'J'].includes(play.card.rank) && play.card.suit !== state?.accepted_bid?.suit) {
+          memory[key] = { type: 'afseinen', suit: leadSuit, player: play.player };
+        }
+      });
+    });
+    return memory;
+  }
   function remainingCards(state, myHand) {
     const seen = new Set([...seenCards(state), ...(myHand || [])].map((card) => card.id));
     return createDeck().filter((card) => !seen.has(card.id));
@@ -252,7 +298,7 @@
     if (!next.length) return false;
     return currentWinner(next, trumpSuit)?.player === playerIndex;
   }
-  function aiCardScore(card, hand, trick, playerIndex, trumpSuit, state) {
+  function aiCardScore(card, hand, trick, playerIndex, trumpSuit, state, difficulty) {
     const legal = legalCards(hand || [], trick || [], playerIndex, trumpSuit);
     const team = TEAM_OF[playerIndex];
     const value = cardPoints(card, trumpSuit);
@@ -265,12 +311,19 @@
     const rem = remainingCards(state, hand);
     const higherRemainingSameSuit = rem.filter((other) => other.suit === card.suit && compareCards(other, card, card.suit, trumpSuit) > 0).length;
     const canBeCaught = higherRemainingSameSuit > 0;
+    const signals = signalMemory(state);
+    const partner = [0, 1, 2, 3].find((seat) => seat !== playerIndex && TEAM_OF[seat] === TEAM_OF[playerIndex]);
+    const partnerSignal = signals[`${partner}:${card.suit}`];
+    const hard = difficulty !== 'easy';
 
     if (!trick || !trick.length) {
       score += value * 0.8;
       score -= roemThreat(card, hand, trumpSuit) * 1.7;
       if (card.suit === trumpSuit) score -= 10;
       if (!canBeCaught) score += 7;
+      if (hard && partnerSignal?.type === 'aanseinen') score += 18;
+      if (hard && partnerSignal?.type === 'afseinen') score -= 18;
+      if (hard && highestRemainingRank(state, card.suit, trumpSuit, hand) === card.rank) score += 12;
     } else if (nextTrick.length === 4) {
       score += isWinning ? tablePoints + 18 : -value;
       score -= roemThreat(card, hand, trumpSuit) * 1.4;
@@ -279,14 +332,25 @@
       if (partnerWinning && !isWinning) score -= value * 0.65;
       if (!partnerWinning && !isWinning) score -= value * 0.25;
       score -= roemThreat(card, hand, trumpSuit) * 1.5;
+      if (hard && partnerWinning && ['7', '8', '9'].includes(card.rank) && card.suit !== trumpSuit) score += 10;
+      if (hard && !partnerWinning && isWinning && highestRemainingRank(state, card.suit, trumpSuit, hand) === card.rank) score += 10;
     }
     if (card.suit === trumpSuit && ['J', '9'].includes(card.rank) && !isWinning) score -= 24;
     return score;
   }
-  function aiChoice(hand, trick, playerIndex, trumpSuit, state) {
+  function botDifficulty(player) {
+    return player?.bot_difficulty || player?.difficulty || 'hard';
+  }
+  function aiChoice(hand, trick, playerIndex, trumpSuit, state, difficulty) {
     const legal = legalCards(hand || [], trick || [], playerIndex, trumpSuit);
     if (!legal.length) return null;
-    return legal.slice().sort((a, b) => aiCardScore(b, hand, trick, playerIndex, trumpSuit, state) - aiCardScore(a, hand, trick, playerIndex, trumpSuit, state))[0];
+    const level = difficulty || botDifficulty(state?.players?.[playerIndex]);
+    const ranked = legal.slice().sort((a, b) => aiCardScore(b, hand, trick, playerIndex, trumpSuit, state, level) - aiCardScore(a, hand, trick, playerIndex, trumpSuit, state, level));
+    if (level === 'easy') {
+      const weak = ranked.slice(-Math.min(3, ranked.length));
+      return weak[Math.floor(Math.random() * weak.length)] || ranked[0];
+    }
+    return ranked[0];
   }
   function cardDelta(played, aiCard, trumpSuit) {
     if (!played || !aiCard) return 0;
@@ -298,14 +362,16 @@
   function hasBots(state) {
     return (state?.players || []).some(isBotPlayer);
   }
-  function botName(seat) {
-    return ['Klavertje Bot', 'Schoppen Bot', 'Harten Bot', 'Ruiten Bot'][seat] || `Bot ${seat + 1}`;
+  function botName(seat, difficulty) {
+    const prefix = difficulty === 'easy' ? 'Leerling' : 'Scherpe';
+    return `${prefix} ${['Klaver', 'Schoppen', 'Harten', 'Ruiten'][seat] || `Bot ${seat + 1}`}`;
   }
-  function botPlayers(count, startSeat) {
+  function botPlayers(count, startSeat, difficulty) {
     const total = Math.max(0, Math.min(3, Number(count || 0)));
     return Array.from({ length: total }, (_, index) => {
       const seat = startSeat + index;
-      return { seat, name: botName(seat), team: TEAM_OF[seat], is_bot: true, player_type: 'bot' };
+      const level = difficulty || 'hard';
+      return { seat, name: botName(seat, level), team: TEAM_OF[seat], is_bot: true, player_type: 'bot', bot_difficulty: level };
     });
   }
   function estimateSuitStrength(hand, suit) {
@@ -321,16 +387,44 @@
   function botBid(state, seat) {
     if (state.current_bid) return { action: 'pass', label: 'Pas' };
     const hand = state.hands?.[seat] || [];
+    const level = botDifficulty(state.players?.[seat]);
     const suitScores = Object.fromEntries(SUITS.map((suit) => [suit, estimateSuitStrength(hand, suit) + estimateHandRoem(hand, suit) * 0.25]));
     const bestSuit = ['hearts', 'spades', 'diamonds', 'clubs'].slice().sort((a, b) => suitScores[b] - suitScores[a])[0] || 'clubs';
     const best = suitScores[bestSuit] || 0;
+    if (level === 'easy' && best < 30) return { action: 'pass', label: 'Pas' };
     if (best >= 34) return { action: 'bid', mode: 'suit', suit: bestSuit, points: 90, label: `90 ${SUIT_LABELS[bestSuit]}` };
     if (best >= 24) return { action: 'bid', mode: 'suit', suit: bestSuit, points: 80, label: `80 ${SUIT_LABELS[bestSuit]} (halen 82)` };
     return { action: 'pass', label: 'Pas' };
   }
+  function scoreSwingWeight(round, playerDelta) {
+    const res = round?.result || {};
+    const bidderTeam = Number(round?.bidder_team || round?.bid?.team || 1);
+    const bidIndex = bidderTeam - 1;
+    const target = Number(res.target || bidTarget(round?.bid) || 82);
+    const bidderPoints = Number(res.cardScores?.[bidIndex] || 0);
+    const nearLine = Math.abs(bidderPoints - target) <= 3;
+    const natMultiplier = nearLine ? 2.8 : (res.nat ? 1.8 : 1);
+    return Math.round(Number(playerDelta || 0) * natMultiplier);
+  }
+  function updateAiMmr(state, round) {
+    const current = { ...(state.ai_mmr || {}) };
+    (state.players || []).forEach((player) => {
+      if (isBotPlayer(player)) return;
+      const deltas = (round.plays || []).filter((play) => play.player === player.seat).map((play) => cardDelta(play.card, play.ai_card, round.bid?.suit));
+      const raw = deltas.reduce((sum, value) => sum + Number(value || 0), 0);
+      const level = (state.players || []).some((p) => isBotPlayer(p) && botDifficulty(p) === 'easy') ? 'easy' : 'hard';
+      const divisor = level === 'easy' ? 3.2 : 2.1;
+      const change = Math.max(-32, Math.min(32, Math.round(scoreSwingWeight(round, raw) / divisor)));
+      const name = player.name || `Stoel ${player.seat + 1}`;
+      current[name] = { rating: Math.max(600, Number(current[name]?.rating || 1200) + change), last_change: change, last_round: round.round };
+    });
+    state.ai_mmr = current;
+    return current;
+  }
   function buildCoachRecap(round) {
-    return (round.plays || []).filter((play) => play.ai_card && play.card?.id !== play.ai_card?.id).slice(0, 12).map((play) => {
+    return (round.plays || []).filter((play) => play.ai_card && play.card?.id !== play.ai_card?.id).slice(0, 16).map((play) => {
       const delta = cardDelta(play.card, play.ai_card, round.bid?.suit);
+      const weighted = scoreSwingWeight(round, delta);
       return {
         player: play.player,
         player_name: play.player_name,
@@ -338,7 +432,9 @@
         played: play.card,
         ai_card: play.ai_card,
         delta,
-        verdict: delta >= 0 ? 'Jij speelde minstens even waardevol als de AI-keuze.' : 'De AI had waardevoller of veiliger gespeeld.'
+        delta_points: delta,
+        weighted_delta: weighted,
+        verdict: delta >= 0 ? `Jij speelde minstens even waardevol als de AI-keuze (${weighted >= 0 ? '+' : ''}${weighted} gewogen).` : `De AI had waardevoller of veiliger gespeeld (${weighted} gewogen).`
       };
     });
   }
@@ -395,12 +491,12 @@
   function newClientState(players, dealerIndex, previous, settings) {
     const hands = deal(shuffle(createDeck()), dealerIndex);
     return {
-      app_version: global.GEJAST_PAGE_VERSION || cfg().VERSION || 'v749',
+      app_version: global.GEJAST_PAGE_VERSION || cfg().VERSION || 'v750',
       phase: 'bidding',
       deal_nonce: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
       settings: settings || previous?.settings || { finish_mode: 'fixed_rounds' },
       dealer: dealerIndex,
-      players: players.map((p, i) => ({ seat: i, name: p.name, team: TEAM_OF[i], is_bot: !!p.is_bot, player_type: p.is_bot ? 'bot' : 'human' })),
+      players: players.map((p, i) => ({ seat: i, name: p.name, team: TEAM_OF[i], is_bot: !!p.is_bot, player_type: p.is_bot ? 'bot' : 'human', bot_difficulty: p.bot_difficulty || p.difficulty || null })),
       hands,
       bidder_turn: (dealerIndex + 1) % 4,
       turn: null,
@@ -419,6 +515,8 @@
       plays: [],
       progress_tick: Number(previous?.progress_tick || 0),
       redeal_count: Number(previous?.redeal_count || 0),
+      ai_mmr: { ...(previous?.ai_mmr || {}) },
+      recovery_snapshot: null,
       finished_at: null
     };
   }
@@ -440,6 +538,7 @@
       action_deadline_at: state.action_deadline_at || null,
       kruip: state.kruip || null,
       coach_recaps: (state.rounds || []).flatMap((r) => r.coach_recap || []).slice(-16),
+      ai_mmr: state.ai_mmr || {},
       live_state: { status: state.finished_at ? 'finished' : state.phase, updated_at: new Date().toISOString(), rounds_played: (state.rounds || []).length },
       finished_at: state.finished_at || null
     };
@@ -470,6 +569,7 @@
         round_count: (state.rounds || []).length,
         finish_mode: gameModeLabel(state.settings),
         coach_recaps: (state.rounds || []).flatMap((r) => r.coach_recap || []).slice(-16)
+        , ai_mmr: state.ai_mmr || {}
       },
       rounds: state.rounds || []
     };
@@ -513,6 +613,11 @@
     botName,
     botPlayers,
     botBid,
+    botDifficulty,
+    signalMemory,
+    highestRemainingRank,
+    scoreSwingWeight,
+    updateAiMmr,
     gameModeLabel,
     detectRoem,
     scoreRound,
