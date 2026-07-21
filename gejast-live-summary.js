@@ -107,5 +107,65 @@
     }
     return Object.assign({}, localHomepageEntries(useScope), backend || {});
   }
-  window.GEJAST_LIVE_SUMMARY = { currentScope, currentSessionToken, normalizeName, matchIdentityFromUrl, loadPublicSummary, itemFromPayload, summaryFromItem, participants, hostName, isFinished, metaText, buildScopedHref, localHomepageEntries, loadHomepageState };
+
+  // v755 homepage repairs. These are intentionally additive so existing homepage
+  // ownership and game-state code can remain unchanged.
+  const SPEED_LABELS = new Set(['1 bak','2 bakken','ice','liter bier','fles wijn']);
+  function scopedPage(path){
+    try { const url=new URL(path, location.href); if(currentScope()==='family') url.searchParams.set('scope','family'); return url.pathname.split('/').pop()+url.search; }
+    catch(_){ return path; }
+  }
+  function repairHomepageDom(){
+    const livePill=document.getElementById('homeLivePill');
+    if(livePill && /live-ready/i.test(livePill.textContent||'')){
+      livePill.textContent='Stand-by';
+      livePill.classList.remove('live');
+      livePill.classList.add('standby');
+    }
+
+    const scorer=document.getElementById('homeKlaverjasEntry');
+    if(scorer && !document.getElementById('homeToepenEntry')){
+      const card=document.createElement('a');
+      card.id='homeToepenEntry';
+      card.className='page-link-card scorer-link feature-primary';
+      card.href=scopedPage('./toepen.html');
+      card.innerHTML='<div class="page-link-label">Toepen scorer</div><div class="page-link-copy">Houd strafpunten, toeps en uitvallers bij in één mobiel formulier.</div>';
+      scorer.insertAdjacentElement('afterend', card);
+    }
+
+    document.querySelectorAll('a.admin-badge[href*="admin.html"]').forEach((link)=>{
+      link.href='https://admin.kalenel.nl/';
+      link.rel='nofollow noopener';
+    });
+  }
+  function speedCardFromEvent(event){
+    const card=event.target && event.target.closest ? event.target.closest('#drinksTop5Grid .ladder-card') : null;
+    if(!card) return null;
+    const title=normalizeName(card.querySelector('.ladder-title strong')?.textContent || '');
+    return SPEED_LABELS.has(title) ? card : null;
+  }
+  function installHomepageRepairs(){
+    if(document.documentElement.dataset.gejastV755HomepageRepairs==='1') return;
+    document.documentElement.dataset.gejastV755HomepageRepairs='1';
+    repairHomepageDom();
+    const observer=new MutationObserver(repairHomepageDom);
+    observer.observe(document.documentElement,{subtree:true,childList:true,characterData:true});
+    document.addEventListener('click',(event)=>{
+      if(!speedCardFromEvent(event)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      location.href=scopedPage('./drinks_speed.html');
+    },true);
+    document.addEventListener('keydown',(event)=>{
+      if(event.key!=='Enter' && event.key!==' ') return;
+      if(!speedCardFromEvent(event)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      location.href=scopedPage('./drinks_speed.html');
+    },true);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',installHomepageRepairs,{once:true});
+  else installHomepageRepairs();
+
+  window.GEJAST_LIVE_SUMMARY = { currentScope, currentSessionToken, normalizeName, matchIdentityFromUrl, loadPublicSummary, itemFromPayload, summaryFromItem, participants, hostName, isFinished, metaText, buildScopedHref, localHomepageEntries, loadHomepageState, installHomepageRepairs };
 })();
