@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "site_version": "v739",
-  "last_updated": "2026-06-03",
+  "site_version": "v755 candidate / live v750+v756 SQL hotfix",
+  "last_updated": "2026-07-24",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
     "ready_to_test": "Code exists and surface checks pass, but real beta proof is still needed.",
@@ -14,37 +14,37 @@
       "id": "static_integrity",
       "status": "verified_complete",
       "command": "npm.cmd run verify",
-      "evidence": "version drift, RPC coverage, local refs, and JS syntax pass on v739"
+      "evidence": "npm run verify passes on PR head aa4ecc5: version drift, RPC coverage, local refs, and JS syntax all pass for v755."
     },
     {
       "id": "live_routes",
       "status": "verified_complete",
       "command": "npm.cmd run smoke:live",
-      "evidence": "main public routes return HTTP 200 on live v739"
+      "evidence": "npm run smoke:live passes against production; live frontend VERSION remains v750 while backend v756 ladder hotfix is applied."
     },
     {
       "id": "push_surface",
       "status": "verified_complete",
       "command": "npm.cmd run smoke:push",
-      "evidence": "dispatcher workflow, drinks summary RPCs, queue probe, and invalid-session rejection pass"
+      "evidence": "npm run smoke:push passes; latest web-push dispatcher #1500 completed/success; drinks summary/eligibility probes return HTTP 200 and invalid public push probe is rejected."
     },
     {
       "id": "game_surface",
       "status": "verified_complete",
       "command": "npm.cmd run smoke:games",
-      "evidence": "public Pikken and Paardenrace RPC surfaces respond; token-backed two-player Pikken and Paardenrace flows pass with create/join/ready/start/cleanup"
+      "evidence": "npm run smoke:games passes public Pikken/Paardenrace probes; token-backed two-player mutation flows are skipped unless beta player tokens are supplied."
     },
     {
       "id": "beta_readonly_surfaces",
       "status": "verified_complete",
       "command": "npm.cmd run smoke:beta:read",
-      "evidence": "42 beta routes across account, games, drinks, Despimarkt, family, and admin read-only surfaces return HTTP 200 without obvious runtime failure text"
+      "evidence": "npm run smoke:beta:read and smoke:beta:extended pass; 43 base beta routes plus extended stats/ladder/scope/admin-observability routes return HTTP 200."
     },
     {
       "id": "live_write_safety_gate",
       "status": "verified_complete",
       "command": "npm.cmd run beta:write:readiness",
-      "evidence": "remaining live-write beta tests are listed and refuse to arm without explicit approval flag, required player inputs, admin session, or real device readiness"
+      "evidence": "npm run beta:write:readiness and beta:write:plan list all live-write tests and refuse to arm without explicit approval flag, required beta player inputs, admin session, or real device readiness."
     }
   ],
   "beta_gaps": [
@@ -105,7 +105,7 @@
       "status": "verified_complete",
       "proof_needed": "Family and friends data stay isolated across login, games, stats, profiles, admin, and exclusions.",
       "next_action": "Keep extended read-only scope routes and login-name partition check in regression; require permission before cross-scope mutation scenarios.",
-      "latest_probe": "Live v739 extended read-only smoke passes family/friends profile and family routes; login-name RPCs return friends=11, family=5, overlap=0."
+      "latest_probe": "2026-07-24: live scoped homepage ladder RPC now returns HTTP 200 for friends and family after v756 SQL hotfix; extended scope routes pass."
     },
     {
       "id": "secondary_game_save_flows",
@@ -130,7 +130,7 @@
       "status": "verified_complete",
       "proof_needed": "Stats and prediction widgets appear only in intended slots and use current SQL data.",
       "next_action": "Keep extended stats/ladder smoke in regression and revisit only if a page adds a new stats mount.",
-      "latest_probe": "Live v739 extended read-only smoke passes Pikken, Paardenrace, drinks, drinks speed, Rad, Despimarkt stats plus ladder pages without obvious runtime failure text."
+      "latest_probe": "2026-07-24: extended stats/ladder smoke passes; homepage ladder RPC missing-rating defect repaired and verified live."
     },
     {
       "id": "analytics_observability",
@@ -139,7 +139,7 @@
       "status": "verified_complete",
       "proof_needed": "Admin analytics and health pages load real data for admin only and do not leak private details publicly.",
       "next_action": "Keep extended admin observability smoke in regression; admin mutations stay separate.",
-      "latest_probe": "Live v739 extended read-only smoke passes admin system health, ops observability, analytics, deployment verification, and runtime verification pages."
+      "latest_probe": "2026-07-24: read-only admin observability routes return HTTP 200, but public admin access remains an admin-host/Cloudflare blocker before final rollout."
     },
     {
       "id": "performance_beta_pass",
@@ -148,7 +148,7 @@
       "status": "verified_complete",
       "proof_needed": "Homepage, profiles, Pikken, Paardenrace, and drinks load acceptably on normal devices.",
       "next_action": "Keep this in the regression gate and revisit if a route adds a new heavy active asset.",
-      "latest_probe": "Live v739 beta performance probe passes after smaller active logo/card variants; no oversized original PNGs remain in the heaviest active route assets."
+      "latest_probe": "2026-07-24: beta performance probe completed across 8 routes; largest active same-origin assets are 415 KB, 315 KB, and 205 KB; no blocking performance failure found."
     }
   ]
 }

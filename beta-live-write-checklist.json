@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "site_version": "v739",
+  "site_version": "v755 candidate / live v750+v756 SQL hotfix",
   "approval_env": {
     "name": "GEJAST_ALLOW_LIVE_WRITE_BETA",
     "required_value": "I_APPROVE_LIVE_BETA_WRITES"
@@ -22,7 +22,11 @@
     {
       "id": "drinks_create_verify_reject",
       "area": "Drinks",
-      "requires": ["player1", "player2", "live_write_approval"],
+      "requires": [
+        "player1",
+        "player2",
+        "live_write_approval"
+      ],
       "command": "npm.cmd run beta:write:drinks",
       "intent": "Create a clearly marked beta drink request, verify pending/history/stats/notification queue, then reject or cleanly mark the test record where supported.",
       "risk": "Writes drink/request/history/queue data."
@@ -30,21 +34,34 @@
     {
       "id": "admin_mutations",
       "area": "Admin",
-      "requires": ["admin_session", "live_write_approval"],
+      "requires": [
+        "admin_session",
+        "live_write_approval"
+      ],
       "intent": "Run one reversible/admin-audited mutation for claims, Despimarkt wallet/admin tools, upload checklist, and release tooling.",
       "risk": "Writes admin/audit/business records; requires admin session/token."
     },
     {
       "id": "badge_awards",
       "area": "Badges",
-      "requires": ["player1", "player2", "live_write_approval"],
+      "requires": [
+        "player1",
+        "player2",
+        "live_write_approval"
+      ],
       "intent": "Trigger known simple badge criteria through controlled game/drink outcomes and verify profile/leaderboard rendering.",
       "risk": "May create badge award records and supporting game/drink history."
     },
     {
       "id": "secondary_game_save_flows",
       "area": "Klaverjas, Beerpong, Boerenbridge, Rad",
-      "requires": ["player1", "player2", "player3", "player4", "live_write_approval"],
+      "requires": [
+        "player1",
+        "player2",
+        "player3",
+        "player4",
+        "live_write_approval"
+      ],
       "command": "npm.cmd run beta:write:secondary",
       "intent": "Run one clearly marked beta save/spin flow per secondary game and verify vault/history/stats/odds updates.",
       "risk": "Writes game result, spin, vault, stats, or odds records."
@@ -52,14 +69,20 @@
     {
       "id": "profile_editing",
       "area": "Profiles",
-      "requires": ["player1", "live_write_approval"],
+      "requires": [
+        "player1",
+        "live_write_approval"
+      ],
       "intent": "Apply a reversible beta profile edit, verify rendering across profile/leaderboard/game rows, then restore the original value if possible.",
       "risk": "Changes a real player profile/avatar/display value."
     },
     {
       "id": "real_device_push_delivery",
       "area": "Push notifications",
-      "requires": ["real_permissioned_device", "live_write_approval"],
+      "requires": [
+        "real_permissioned_device",
+        "live_write_approval"
+      ],
       "intent": "Queue one safe test notification and verify a real phone/laptop receives and handles it.",
       "risk": "Sends a real push notification to an installed device."
     }
