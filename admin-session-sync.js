@@ -1,6 +1,20 @@
 (function(){
   // v755: admin pages belong on the protected admin host. Public-site access is
   // redirected before any admin session data is read or rendered.
+  const pageName = (()=>{
+    try { return (window.location.pathname.split('/').pop() || 'admin.html').toLowerCase(); }
+    catch (_) { return 'admin.html'; }
+  })();
+  const protectedAdminPage = /^admin/i.test(pageName) && pageName !== 'admin.html';
+  if (protectedAdminPage) {
+    try {
+      document.documentElement.classList.add('admin-gate-pending');
+      const style = document.createElement('style');
+      style.setAttribute('data-admin-session-gate', 'true');
+      style.textContent = 'html.admin-gate-pending body{visibility:hidden!important}html.admin-gate-ready body{visibility:visible!important}';
+      (document.head || document.documentElement).appendChild(style);
+    } catch (_) {}
+  }
   try {
     const host=String(window.location.hostname||'').toLowerCase();
     if(host==='kalenel.nl' || host==='www.kalenel.nl'){
@@ -150,15 +164,20 @@
     }
   }
 
+  function revealProtectedPage(){
+    try {
+      document.documentElement.classList.remove('admin-gate-pending');
+      document.documentElement.classList.add('admin-gate-ready');
+    } catch (_) {}
+  }
+
   async function requirePage(returnTo=''){
-    if (hasUsableLocalSession()) {
-      setTimeout(()=>{ backgroundValidate().catch(()=>{}); }, 0);
-      return true;
-    }
     try {
       await validate();
+      revealProtectedPage();
       return true;
     } catch (err) {
+      clearBundle();
       redirectToAdminLogin((err && err.message) || 'session_invalid', returnTo);
       return false;
     }

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 
 const scorer = fs.readFileSync(new URL('./toepen.html', import.meta.url), 'utf8');
 const vault = fs.readFileSync(new URL('./toepen_vault.html', import.meta.url), 'utf8');
-const homepageOwner = fs.readFileSync(new URL('./gejast-live-summary.js', import.meta.url), 'utf8');
+const homepageOwner = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8');
 const sql = fs.readFileSync(new URL('./GEJAST_v755_toepen_backend.sql', import.meta.url), 'utf8');
 
 function assert(condition, message) {
@@ -17,7 +17,7 @@ assert(!/create_jas_game/.test(scorer), 'Toepen scorer must never call the Klave
 assert(/folded_at_stake/.test(scorer), 'Toepen scorer must preserve fold-at-stake data');
 assert(/undo_stack/.test(scorer), 'Toepen scorer must support undo');
 assert(/get_toepen_vault_summary/.test(vault), 'Toepen vault must use the dedicated analytics RPC');
-assert(/homeToepenEntry/.test(homepageOwner) && /toepen\.html/.test(homepageOwner), 'Homepage owner must add the Toepen entry');
+assert(/id="homeToepenEntry"/.test(homepageOwner) && /href="\.\/toepen\.html"/.test(homepageOwner), 'Homepage owner must include the native Toepen entry');
 assert(/create table if not exists public\.toepen_games/i.test(sql), 'Toepen SQL must create a separate game table');
 assert(/create table if not exists public\.toepen_round_results/i.test(sql), 'Toepen SQL must preserve normalized round results');
 assert(/security definer/i.test(sql), 'Toepen SQL must expose controlled RPCs');

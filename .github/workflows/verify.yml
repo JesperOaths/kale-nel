@@ -43,6 +43,8 @@ jobs:
       - name: Toepen static regression
         run: node check-toepen.mjs
 
-      - name: Version drift report
-        continue-on-error: true
+      - name: Homepage root-fix regression
+        run: node check-homepage-root-fixes.mjs
+
+      - name: Version drift gate
         run: node check-version-drift.mjs

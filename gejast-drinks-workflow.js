@@ -284,7 +284,10 @@
     return rpc('verify_drink_event_public', {
       session_token: payload.session_token,
       drink_event_id: payload.drink_event_id,
-      approved: payload.approve
+      approved: payload.approve,
+      lat: payload.lat,
+      lng: payload.lng,
+      accuracy: payload.accuracy
     });
   }
 

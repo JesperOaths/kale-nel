@@ -9,7 +9,7 @@
   },
   "scripts": {
     "verify": "npm run verify:static && npm run verify:js",
-    "verify:static": "node check-version-drift.mjs && node check-rpc-coverage.mjs && node check-local-refs.mjs",
+    "verify:static": "node check-version-drift.mjs && node check-rpc-coverage.mjs && node check-local-refs.mjs && node check-homepage-root-fixes.mjs && node check-toepen.mjs && node check-toepen-engine.mjs",
     "verify:js": "node check-active-js-syntax.mjs",
     "verify:klaverjas": "node check-klaverjas-online.mjs",
     "smoke:live": "node check-live-routes.mjs",

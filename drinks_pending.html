@@ -6,10 +6,10 @@
   <meta http-equiv="Pragma" content="no-cache" />
 <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Drankverificatie</title><script>window.GEJAST_PAGE_VERSION='v755';</script>
-  <script src="./gejast-config.js?v755"></script><script src="./gejast-drinks-push-bridge.js?v755"></script><script src="./gejast-home-gate.js?v755"></script><script src="./gejast-push-runtime.js?v755"></script><script src="./gejast-clickable-cards.js?v755"></script><script src="./gejast-scope-context.js?v755"></script><script src="./gejast-family-rollout.js?v755"></script>
-  <script src="./gejast-geo.js?v755"></script>
-  <script src="./gejast-drinks-workflow.js?v755"></script>
+<title>Drankverificatie</title><script>window.GEJAST_PAGE_VERSION='v757';</script>
+  <script src="./gejast-config.js?v757"></script><script src="./gejast-mobile-route-fixes-v583.js?v757" defer></script><script src="./gejast-mobile-foundation-v583.js?v757" defer></script><script src="./gejast-drinks-push-bridge.js?v757"></script><script src="./gejast-home-gate.js?v757"></script><script src="./gejast-push-runtime.js?v757"></script><script src="./gejast-clickable-cards.js?v757"></script><script src="./gejast-scope-context.js?v757"></script><script src="./gejast-family-rollout.js?v757"></script>
+  <script src="./gejast-geo.js?v757"></script>
+  <script src="./gejast-drinks-workflow.js?v757"></script>
   <style>
     :root{--bg:#ece7dc;--card:#f8f2e7;--line:#d7c7a7;--ink:#1d1a17;--muted:#736758;--gold:#b79b56;--good:#dfead7;--bad:#f1dfd7}
     *{box-sizing:border-box} body{margin:0;padding:18px;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,231,220,.94),rgba(236,231,220,.97)),url('./site-bg-mobile.webp') center/cover no-repeat scroll;color:var(--ink)}
@@ -73,7 +73,8 @@ function applyLandingState(){
   if (row){ row.style.outline = '3px solid rgba(183,155,86,.85)'; row.style.outlineOffset = '2px'; row.scrollIntoView({behavior:'smooth', block:'center'}); }
 }
 
-async function verifyItem(id, approved){ const workflow=window.GEJAST_DRINKS_WORKFLOW; if(workflow && workflow.verifyDrinkEvent) return workflow.verifyDrinkEvent({ session_token:token(), drink_event_id:Number(id), approved:!!approved }); return fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),approved:!!approved})}).then(parse); }
+async function freshGeoForVote(){ const geo=window.GEJAST_GEO; if(!geo || !geo.ensure) throw new Error('Locatiecontrole is niet geladen. Herlaad de pagina en probeer opnieuw.'); const pos=await geo.ensure(true,{silent:false}); const c=pos&&pos.coords; if(!c || !Number.isFinite(Number(c.latitude)) || !Number.isFinite(Number(c.longitude))) throw new Error('Geen geldige locatie gevonden. Zet locatie aan en probeer opnieuw.'); return { lat:Number(c.latitude), lng:Number(c.longitude), accuracy:c.accuracy==null?null:Number(c.accuracy) }; }
+async function verifyItem(id, approved){ const loc=await freshGeoForVote(); const workflow=window.GEJAST_DRINKS_WORKFLOW; if(workflow && workflow.verifyDrinkEvent) return workflow.verifyDrinkEvent({ session_token:token(), drink_event_id:Number(id), approved:!!approved, ...loc }); return fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_drink_event_public`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id),approved:!!approved,...loc})}).then(parse); }
 async function cancelMine(id){ const workflow=window.GEJAST_DRINKS_WORKFLOW; if(workflow && workflow.cancelDrinkEvent) return workflow.cancelDrinkEvent({ session_token:token(), drink_event_id:Number(id) }); return fetch(`${SUPABASE_URL}/rest/v1/rpc/cancel_my_pending_drink_event`,{method:'POST',headers:headers(),body:JSON.stringify({session_token:token(),drink_event_id:Number(id)})}).then(parse); }
 async function load(){
   try{
@@ -98,6 +99,6 @@ async function load(){
 load();
 </script>
 <div class="site-credit-watermark" data-version-watermark style="position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,0.88);border:1px solid rgba(154,130,65,0.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui,sans-serif;letter-spacing:.03em;pointer-events:none;user-select:none;box-shadow:0 12px 24px rgba(0,0,0,0.18)"></div>
-<script src="./site-analytics.js?v755"></script>
+<script src="./site-analytics.js?v757"></script>
 <script id="gejast-drinks-push-boot">(function(){function boot(){try{window.GEJAST_DRINKS_PUSH_BRIDGE&&window.GEJAST_DRINKS_PUSH_BRIDGE.bootPanel&&window.GEJAST_DRINKS_PUSH_BRIDGE.bootPanel();}catch(_){}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();})();</script></body>
 </html>
