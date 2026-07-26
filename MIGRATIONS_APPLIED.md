@@ -10,7 +10,7 @@
 - Proof immediately after apply: `account_login_v687` Beta1 returned canonical session; `create_paardenrace_room_fast_v687` succeeded for `DESPINOZA 11`; cleanup via `disband_paardenrace_room_fast_v687` succeeded.
 
 ## Candidate migrations not yet applied in this session
-- GEJAST_v755_toepen_backend.sql — dedicated Toepen backend lane. Pending safe production apply/proof.
+- GEJAST_v755_toepen_backend.sql — dedicated Toepen backend lane. Rechecked during the 2026-07-26 deployment-proof audit; still pending safe production apply/proof. Do not run destructively and do not combine with unrelated deployment/cache work.
 
 ## Rule
 SQL remains separate from frontend code. Record every future apply with timestamp, actor/tool, statements/file, function signatures, grants/RLS proof, PostgREST reload proof, controlled IDs, cleanup evidence, and rollback notes.
