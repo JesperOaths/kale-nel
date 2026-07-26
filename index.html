@@ -728,7 +728,7 @@
   <main class="page">
     <section class="main-card">
       <div class="card-top-left">
-        <a href="https://admin.kalenel.nl/" class="admin-badge" rel="nofollow noopener">Admin</a>
+        <a href="./admin.html" class="admin-badge" rel="nofollow noopener">Admin</a>
       </div>
       <div class="card-top-right">
         <a href="./index.html" aria-label="Home via logo"><img src="./logo-small.png" alt="Logo" class="card-logo" width="1860" height="1813" decoding="async" fetchpriority="low" style="cursor:pointer;filter:drop-shadow(0 4px 10px rgba(0,0,0,.08));width:66px;height:66px;object-fit:contain" /></a>
@@ -935,7 +935,7 @@
     function applyScopeChrome(){
       document.body.classList.toggle('friends-scope', CURRENT_SCOPE!=='family');
       if(CURRENT_SCOPE!=='family') return;
-      try{ document.querySelector('.admin-badge')?.setAttribute('href', 'https://admin.kalenel.nl/'); }catch(_){}
+      try{ document.querySelector('.admin-badge')?.setAttribute('href', './admin.html'); }catch(_){}
       try{ document.querySelector('.card-top-right a')?.setAttribute('href','./familie/index.html'); }catch(_){}
       try{ document.querySelectorAll('a[href="./request.html"],a[href="./login.html"],a[href="./profiles.html"],a[href="./scorer.html"],a[href="./toepen.html"],a[href="./klaverjas_online.html"],a[href="./boerenbridge.html"],a[href="./admin.html"]').forEach((a)=>{ const href=a.getAttribute('href'); if(href) a.setAttribute('href', scopedHref(href)); }); }catch(_){}
       try{ document.querySelectorAll('a[href="./beerpong.html"],a[href^="./drinks"]').forEach((a)=>{ a.style.display='none'; }); const drinksSections=[...document.querySelectorAll('.drinks-home-section,.drinks-home-top5-section')]; drinksSections.forEach((el)=>el.style.display='none'); document.querySelectorAll('.page-link-card').forEach((card)=>{ const txt=(card.textContent||'').toLowerCase(); if(txt.includes('beerpong')||txt.includes('drinks')) card.style.display='none'; }); }catch(_){}

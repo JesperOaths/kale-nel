@@ -11,7 +11,7 @@ function assert(condition, message) {
 assert(!/Live-ready/i.test(index), 'Active homepage owner must not contain Live-ready fallback text');
 assert(/setHomepageLiveState\('standby', 'Stand-by'\)/.test(index), 'Homepage owner must set failed ladder state to Stand-by');
 assert(/id="homeToepenEntry"[\s\S]*href="\.\/toepen\.html"/.test(index), 'Homepage markup must include native Toepen entry');
-assert(/href="https:\/\/admin\.kalenel\.nl\/" class="admin-badge"/.test(index), 'Homepage admin badge must point to protected admin host in source markup');
+assert(/href="\.\/admin\.html" class="admin-badge"/.test(index), 'Homepage admin badge must point to reachable protected admin login in source markup');
 assert(/mode:'seconds'[\s\S]{0,140}key:'\.\/drinks_speed\.html'|key:'\.\/drinks_speed\.html'[\s\S]{0,140}mode:'seconds'/.test(index), 'Speed-ranking card route must be drinks_speed.html in the renderer');
 assert(!/livePill\.textContent='Stand-by'/.test(liveSummary), 'Live summary must not rewrite Live-ready as a DOM workaround');
 assert(!/createElement\('a'\)[\s\S]{0,500}homeToepenEntry/.test(liveSummary), 'Live summary must not inject Toepen as a DOM workaround');

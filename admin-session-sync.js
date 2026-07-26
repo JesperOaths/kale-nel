@@ -1,6 +1,6 @@
 (function(){
-  // v755: admin pages belong on the protected admin host. Public-site access is
-  // redirected before any admin session data is read or rendered.
+  // v757: protected admin pages stay hidden until backend admin validation succeeds.
+  // Do not force admin.kalenel.nl here: that hostname may not be configured yet.
   const pageName = (()=>{
     try { return (window.location.pathname.split('/').pop() || 'admin.html').toLowerCase(); }
     catch (_) { return 'admin.html'; }
@@ -15,18 +15,6 @@
       (document.head || document.documentElement).appendChild(style);
     } catch (_) {}
   }
-  try {
-    const host=String(window.location.hostname||'').toLowerCase();
-    if(host==='kalenel.nl' || host==='www.kalenel.nl'){
-      const target=new URL(window.location.href);
-      target.protocol='https:';
-      target.hostname='admin.kalenel.nl';
-      target.port='';
-      window.location.replace(target.toString());
-      return;
-    }
-  } catch (_) {}
-
   const ADMIN_SESSION_KEY = 'jas_admin_session_v8';
   const ADMIN_DEVICE_KEY = 'jas_admin_device_v1';
   const ADMIN_USER_KEY = 'jas_admin_user_v1';

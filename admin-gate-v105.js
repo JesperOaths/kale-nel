@@ -1,16 +1,4 @@
 (function(){
-  try {
-    const host=String(window.location.hostname||'').toLowerCase();
-    if(host==='kalenel.nl' || host==='www.kalenel.nl'){
-      const target=new URL(window.location.href);
-      target.protocol='https:';
-      target.hostname='admin.kalenel.nl';
-      target.port='';
-      window.location.replace(target.toString());
-      return;
-    }
-  } catch (_) {}
-
   const ADMIN_SESSION_KEY = 'jas_admin_session_v8';
   const ADMIN_DEVICE_KEY = 'jas_admin_device_v1';
   const ADMIN_USER_KEY = 'jas_admin_user_v1';
