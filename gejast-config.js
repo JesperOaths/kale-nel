@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v760',
+    VERSION:'v761',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: '',
@@ -344,7 +344,7 @@ function playerSessionKeys(){
 }
 function looksLikePlayerSessionToken(value){
   const token = String(value || '').trim();
-  if (!token || token.length < 16) return false;
+  if (!token || token.length < 24) return false;
   if (/^vis[_-]/i.test(token)) return false;
   if (/^visit[_-]/i.test(token)) return false;
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/i.test(token)) return false;
@@ -759,7 +759,7 @@ function buildRequestUrl(returnTo, scope){
       setTimeout(showPageNow, 0);
     }
     setTimeout(showPageNow, 650);
-    return { VERSION:'v760', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
+    return { VERSION:'v761', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
   })();
   window.GEJAST_FAST_RUNTIME = FAST_RUNTIME;
 
