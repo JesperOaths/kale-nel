@@ -1,0 +1,280 @@
+{
+    "timestamp":  "2026-07-26 06:17:36 +02:00",
+    "default_branch":  "main",
+    "pushed_at":  "2026-07-26T03:49:20Z",
+    "homepage":  null,
+    "visibility":  "public",
+    "pages_api":  {
+                      "ok":  false,
+                      "status":  404,
+                      "error":  "The remote server returned an error: (404) Not Found."
+                  },
+    "branches":  [
+                     {
+                         "name":  "agent/v755-phase2",
+                         "sha":  "e05b4c6f428f789e8167c81297ba491034b77da8"
+                     },
+                     {
+                         "name":  "agent/v755-stabilization",
+                         "sha":  "e05b4c6f428f789e8167c81297ba491034b77da8"
+                     },
+                     {
+                         "name":  "agent/v757-finalization",
+                         "sha":  "b1d6626db0bd50d48c570bcd178cf06dcf9f8bc2"
+                     },
+                     {
+                         "name":  "codex/v749-klaverjas-complete-gameplay-repair",
+                         "sha":  "6b4fe11e9dd7d37f91795a4098057fc196079fe1"
+                     },
+                     {
+                         "name":  "github/workflows/web-push-dispatcher.yml",
+                         "sha":  "8984c05f112c93f5860d8ff1a1f76189cb9f792a"
+                     },
+                     {
+                         "name":  "github/workflows/web-push-dispatcher.yml-1",
+                         "sha":  "40425f8b8ed60b00fcbbdae758948e4f3a2d2865"
+                     },
+                     {
+                         "name":  "main",
+                         "sha":  "82476d8ae87fa9b41cd7a53e6aab42a3a32baaa2"
+                     },
+                     {
+                         "name":  "__not_needed_probe",
+                         "sha":  "18fbeed5678b940e6f7a653ea8cc9c8b4615ec0c"
+                     }
+                 ],
+    "prs":  [
+                {
+                    "number":  2,
+                    "state":  "closed",
+                    "merged_at":  "2026-07-26T00:52:56Z",
+                    "title":  "v755 stabilize homepage, games, admin host, and CI",
+                    "head":  "e05b4c6f428f789e8167c81297ba491034b77da8",
+                    "base":  "main"
+                },
+                {
+                    "number":  1,
+                    "state":  "closed",
+                    "merged_at":  null,
+                    "title":  "Add files via upload",
+                    "head":  "40425f8b8ed60b00fcbbdae758948e4f3a2d2865",
+                    "base":  "main"
+                }
+            ],
+    "deployments":  [
+                        {
+                            "id":  5607088538,
+                            "sha":  "82476d8ae87fa9b41cd7a53e6aab42a3a32baaa2",
+                            "ref":  "main",
+                            "environment":  "github-pages",
+                            "created_at":  "2026-07-26T03:49:53Z",
+                            "updated_at":  "2026-07-26T03:50:09Z"
+                        },
+                        {
+                            "id":  5607071801,
+                            "sha":  "dc0d44a0c698ca090ffd3643c2b85bd93c5a2543",
+                            "ref":  "main",
+                            "environment":  "github-pages",
+                            "created_at":  "2026-07-26T03:46:16Z",
+                            "updated_at":  "2026-07-26T03:50:09Z"
+                        },
+                        {
+                            "id":  5607052369,
+                            "sha":  "8656bf633576bbbea77fbde6972250a1ba4a9be6",
+                            "ref":  "main",
+                            "environment":  "github-pages",
+                            "created_at":  "2026-07-26T03:42:18Z",
+                            "updated_at":  "2026-07-26T03:46:30Z"
+                        },
+                        {
+                            "id":  5606255455,
+                            "sha":  "b1d6626db0bd50d48c570bcd178cf06dcf9f8bc2",
+                            "ref":  "main",
+                            "environment":  "github-pages",
+                            "created_at":  "2026-07-26T01:05:03Z",
+                            "updated_at":  "2026-07-26T03:42:31Z"
+                        },
+                        {
+                            "id":  5606225217,
+                            "sha":  "f3e70b32968b99c2b1bd983e88fef77035f89b3c",
+                            "ref":  "main",
+                            "environment":  "github-pages",
+                            "created_at":  "2026-07-26T00:59:57Z",
+                            "updated_at":  "2026-07-26T01:05:19Z"
+                        },
+                        {
+                            "id":  5606190868,
+                            "sha":  "f296fbf3b57f8ec5ee457a34703907b04604103a",
+                            "ref":  "main",
+                            "environment":  "github-pages",
+                            "created_at":  "2026-07-26T00:53:50Z",
+                            "updated_at":  "2026-07-26T01:00:12Z"
+                        },
+                        {
+                            "id":  5217363135,
+                            "sha":  "dba341b02fe969d08aceed18ed8f2a2d8249377c",
+                            "ref":  "main",
+                            "environment":  "github-pages",
+                            "created_at":  "2026-06-27T00:47:18Z",
+                            "updated_at":  "2026-07-26T00:54:03Z"
+                        },
+                        {
+                            "id":  5116617460,
+                            "sha":  "436bb4445d9d877fce7a4fabdbb9bfc9ac5c2e60",
+                            "ref":  "main",
+                            "environment":  "github-pages",
+                            "created_at":  "2026-06-18T23:15:09Z",
+                            "updated_at":  "2026-06-27T00:47:33Z"
+                        },
+                        {
+                            "id":  5116606512,
+                            "sha":  "2d8bb8e5562b9c6e64a4737d9a300ec9a409b2cb",
+                            "ref":  "main",
+                            "environment":  "github-pages",
+                            "created_at":  "2026-06-18T23:13:38Z",
+                            "updated_at":  "2026-06-18T23:15:22Z"
+                        },
+                        {
+                            "id":  5111932926,
+                            "sha":  "4abaf91361b14ca7d50360946463376a03b26be3",
+                            "ref":  "main",
+                            "environment":  "github-pages",
+                            "created_at":  "2026-06-18T16:05:57Z",
+                            "updated_at":  "2026-06-18T23:13:50Z"
+                        }
+                    ],
+    "runs":  [
+                 {
+                     "name":  "GEJAST verification",
+                     "path":  ".github/workflows/verify.yml",
+                     "sha":  "82476d8ae87fa9b41cd7a53e6aab42a3a32baaa2",
+                     "branch":  "main",
+                     "status":  "completed",
+                     "conclusion":  "success",
+                     "created_at":  "2026-07-26T03:49:22Z",
+                     "updated_at":  "2026-07-26T03:49:43Z",
+                     "url":  "https://github.com/JesperOaths/kale-nel/actions/runs/30186774634"
+                 },
+                 {
+                     "name":  "pages build and deployment",
+                     "path":  "dynamic/pages/pages-build-deployment",
+                     "sha":  "82476d8ae87fa9b41cd7a53e6aab42a3a32baaa2",
+                     "branch":  "main",
+                     "status":  "completed",
+                     "conclusion":  "success",
+                     "created_at":  "2026-07-26T03:49:21Z",
+                     "updated_at":  "2026-07-26T03:50:08Z",
+                     "url":  "https://github.com/JesperOaths/kale-nel/actions/runs/30186774427"
+                 },
+                 {
+                     "name":  "GEJAST verification",
+                     "path":  ".github/workflows/verify.yml",
+                     "sha":  "dc0d44a0c698ca090ffd3643c2b85bd93c5a2543",
+                     "branch":  "main",
+                     "status":  "completed",
+                     "conclusion":  "success",
+                     "created_at":  "2026-07-26T03:45:52Z",
+                     "updated_at":  "2026-07-26T03:46:13Z",
+                     "url":  "https://github.com/JesperOaths/kale-nel/actions/runs/30186685474"
+                 },
+                 {
+                     "name":  "pages build and deployment",
+                     "path":  "dynamic/pages/pages-build-deployment",
+                     "sha":  "dc0d44a0c698ca090ffd3643c2b85bd93c5a2543",
+                     "branch":  "main",
+                     "status":  "completed",
+                     "conclusion":  "success",
+                     "created_at":  "2026-07-26T03:45:51Z",
+                     "updated_at":  "2026-07-26T03:46:29Z",
+                     "url":  "https://github.com/JesperOaths/kale-nel/actions/runs/30186685011"
+                 },
+                 {
+                     "name":  "GEJAST verification",
+                     "path":  ".github/workflows/verify.yml",
+                     "sha":  "8656bf633576bbbea77fbde6972250a1ba4a9be6",
+                     "branch":  "main",
+                     "status":  "completed",
+                     "conclusion":  "success",
+                     "created_at":  "2026-07-26T03:41:45Z",
+                     "updated_at":  "2026-07-26T03:42:02Z",
+                     "url":  "https://github.com/JesperOaths/kale-nel/actions/runs/30186575000"
+                 },
+                 {
+                     "name":  "pages build and deployment",
+                     "path":  "dynamic/pages/pages-build-deployment",
+                     "sha":  "8656bf633576bbbea77fbde6972250a1ba4a9be6",
+                     "branch":  "main",
+                     "status":  "completed",
+                     "conclusion":  "success",
+                     "created_at":  "2026-07-26T03:41:44Z",
+                     "updated_at":  "2026-07-26T03:42:31Z",
+                     "url":  "https://github.com/JesperOaths/kale-nel/actions/runs/30186574709"
+                 },
+                 {
+                     "name":  "GEJAST web push dispatcher",
+                     "path":  ".github/workflows/web-push-dispatcher.yml",
+                     "sha":  "b1d6626db0bd50d48c570bcd178cf06dcf9f8bc2",
+                     "branch":  "main",
+                     "status":  "completed",
+                     "conclusion":  "success",
+                     "created_at":  "2026-07-26T01:08:34Z",
+                     "updated_at":  "2026-07-26T01:08:56Z",
+                     "url":  "https://github.com/JesperOaths/kale-nel/actions/runs/30182387630"
+                 },
+                 {
+                     "name":  "GEJAST verification",
+                     "path":  ".github/workflows/verify.yml",
+                     "sha":  "b1d6626db0bd50d48c570bcd178cf06dcf9f8bc2",
+                     "branch":  "main",
+                     "status":  "completed",
+                     "conclusion":  "success",
+                     "created_at":  "2026-07-26T01:04:36Z",
+                     "updated_at":  "2026-07-26T01:05:01Z",
+                     "url":  "https://github.com/JesperOaths/kale-nel/actions/runs/30182276233"
+                 },
+                 {
+                     "name":  "pages build and deployment",
+                     "path":  "dynamic/pages/pages-build-deployment",
+                     "sha":  "b1d6626db0bd50d48c570bcd178cf06dcf9f8bc2",
+                     "branch":  "main",
+                     "status":  "completed",
+                     "conclusion":  "success",
+                     "created_at":  "2026-07-26T01:04:36Z",
+                     "updated_at":  "2026-07-26T01:05:19Z",
+                     "url":  "https://github.com/JesperOaths/kale-nel/actions/runs/30182275930"
+                 },
+                 {
+                     "name":  "GEJAST verification",
+                     "path":  ".github/workflows/verify.yml",
+                     "sha":  "b1d6626db0bd50d48c570bcd178cf06dcf9f8bc2",
+                     "branch":  "agent/v757-finalization",
+                     "status":  "completed",
+                     "conclusion":  "success",
+                     "created_at":  "2026-07-26T01:04:34Z",
+                     "updated_at":  "2026-07-26T01:05:01Z",
+                     "url":  "https://github.com/JesperOaths/kale-nel/actions/runs/30182274820"
+                 },
+                 {
+                     "name":  "pages build and deployment",
+                     "path":  "dynamic/pages/pages-build-deployment",
+                     "sha":  "f3e70b32968b99c2b1bd983e88fef77035f89b3c",
+                     "branch":  "main",
+                     "status":  "completed",
+                     "conclusion":  "success",
+                     "created_at":  "2026-07-26T00:59:28Z",
+                     "updated_at":  "2026-07-26T01:00:09Z",
+                     "url":  "https://github.com/JesperOaths/kale-nel/actions/runs/30182115506"
+                 },
+                 {
+                     "name":  "GEJAST verification",
+                     "path":  ".github/workflows/verify.yml",
+                     "sha":  "f3e70b32968b99c2b1bd983e88fef77035f89b3c",
+                     "branch":  "main",
+                     "status":  "completed",
+                     "conclusion":  "success",
+                     "created_at":  "2026-07-26T00:59:28Z",
+                     "updated_at":  "2026-07-26T00:59:47Z",
+                     "url":  "https://github.com/JesperOaths/kale-nel/actions/runs/30182115479"
+                 }
+             ]
+}
