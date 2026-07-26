@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v758',
+    VERSION:'v759',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: '',
@@ -342,9 +342,16 @@ function playerSessionKeys(){
       return true;
     });
 }
+function looksLikePlayerSessionToken(value){
+  const token = String(value || '').trim();
+  if (!token || token.length < 16) return false;
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/i.test(token)) return false;
+  if (/^\d{10,}$/.test(token)) return false;
+  return /^[A-Za-z0-9._~+/=-]{16,}$/.test(token);
+}
 function mirrorPlayerSessionToken(value){
   const token = String(value || '').trim();
-  if (!token) return '';
+  if (!looksLikePlayerSessionToken(token)) return '';
   for (const key of playerSessionKeys()){
     localStorage.setItem(key, token);
     sessionStorage.setItem(key, token);
@@ -354,7 +361,7 @@ function mirrorPlayerSessionToken(value){
 function getPlayerSessionToken(){
   for (const key of playerSessionKeys()){
     const value = localStorage.getItem(key) || sessionStorage.getItem(key);
-    if (value) {
+    if (looksLikePlayerSessionToken(value)) {
       mirrorPlayerSessionToken(value);
       return String(value).trim();
     }
@@ -363,11 +370,11 @@ function getPlayerSessionToken(){
   const tokenFields = ['session_token','session_token_input','player_session_token','sessionToken','token','access_token'];
   function deepToken(value, depth){
     if (!value || depth > 4) return '';
-    if (typeof value === 'string') return value.trim().length > 12 ? value.trim() : '';
+    if (typeof value === 'string') return looksLikePlayerSessionToken(value) ? value.trim() : '';
     if (typeof value !== 'object') return '';
     for (const field of tokenFields){
       const found = value[field];
-      if (typeof found === 'string' && found.trim().length > 12) return found.trim();
+      if (typeof found === 'string' && looksLikePlayerSessionToken(found)) return found.trim();
     }
     for (const nested of Object.values(value)){
       const found = deepToken(nested, depth + 1);
@@ -389,7 +396,7 @@ function getPlayerSessionToken(){
           return value;
         }
       } catch (_) {
-        if (/^[A-Za-z0-9._~+/=-]{16,}$/.test(raw.trim()) && /session|token/i.test(key)){
+        if (looksLikePlayerSessionToken(raw) && /session|token/i.test(key)){
           mirrorPlayerSessionToken(raw);
           return raw.trim();
         }
@@ -402,7 +409,7 @@ function getPlayerSessionToken(){
       const key = decodeURIComponent(String(rawKey || '').trim());
       if (!/session|token|player|jas|gejast/i.test(key)) continue;
       const value = decodeURIComponent(rest.join('=').trim());
-      if (value && value.length > 12){
+      if (looksLikePlayerSessionToken(value)){
         mirrorPlayerSessionToken(value);
         return value;
       }
@@ -750,7 +757,7 @@ function buildRequestUrl(returnTo, scope){
       setTimeout(showPageNow, 0);
     }
     setTimeout(showPageNow, 650);
-    return { VERSION:'v758', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
+    return { VERSION:'v759', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
   })();
   window.GEJAST_FAST_RUNTIME = FAST_RUNTIME;
 
