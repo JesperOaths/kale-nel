@@ -107,6 +107,9 @@ declare
   client_id text;
   seen_names text[] := '{}'::text[];
   lower_name text;
+  creator_name text;
+  creator_slug text;
+  creator_seen boolean := false;
   active_seats integer[];
   winner_seat_value integer;
   stake_value integer;
@@ -124,6 +127,11 @@ begin
   if viewer.id is null then
     raise exception 'Niet ingelogd.';
   end if;
+  if lower(coalesce(viewer.site_scope,'friends')) <> use_scope then
+    raise exception 'Verkeerde Toepen-scope voor deze speler.';
+  end if;
+  creator_name := lower(trim(coalesce(viewer.display_name,'')));
+  creator_slug := lower(trim(coalesce(viewer.slug,'')));
 
   client_id := nullif(trim(game_payload->>'client_match_id'),'');
   if client_id is null then
@@ -177,6 +185,9 @@ begin
       raise exception 'Een Toepen-deelnemer komt dubbel voor.';
     end if;
     seen_names := array_append(seen_names, lower_name);
+    if lower_name = creator_name or (creator_slug <> '' and lower_name = creator_slug) then
+      creator_seen := true;
+    end if;
     insert into public.toepen_game_participants(
       game_id,seat_no,player_name,start_points,end_points,eliminated,eliminated_round_no,finish_rank
     ) values (
@@ -190,6 +201,10 @@ begin
       nullif(participant->>'finish_rank','')::integer
     );
   end loop;
+
+  if not creator_seen then
+    raise exception 'Alleen een deelnemer mag dit Toepen-potje opslaan.';
+  end if;
 
   for round_row in select value from jsonb_array_elements(game_payload->'rounds')
   loop

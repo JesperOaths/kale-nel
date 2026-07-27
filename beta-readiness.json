@@ -1,7 +1,7 @@
 {
   "version": 2,
   "site_version": "live v761 / main 82476d8ae87fa9b41cd7a53e6aab42a3a32baaa2",
-  "last_updated": "2026-07-26",
+  "last_updated": "2026-07-27",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
     "ready_to_test": "Code exists and surface checks pass, but real beta proof is still needed.",
@@ -85,10 +85,10 @@
       "id": "toepen_backend_live",
       "priority": 2,
       "area": "Toepen",
-      "status": "blocked_external",
-      "proof_needed": "SQL backend is applied and schema/security proof passed; remaining proof needs valid beta player sessions for friends/family controlled saves, duplicate-save proof, admin vault session proof, and cleanup evidence.",
-      "next_action": "Provide or create valid beta player sessions/names+PINs and a valid admin session, then run controlled Toepen save/idempotency/vault tests and clean only controlled test rows.",
-      "latest_probe": "2026-07-26: GEJAST_v755_toepen_backend.sql, v755b admin-session guard, and v755c grant hardening applied to production jas-site. Invalid player/admin tokens reject, direct table reads deny, grants/indexes verified, npm run verify passes."
+      "status": "verified_complete",
+      "proof_needed": "Complete: Toepen SQL backend applied and live-proven in friends and family scopes, including canonical login_player sessions, toep+fold saves, duplicate-save idempotency, history/vault/stat output, invalid token rejection, wrong-player rejection, cross-scope isolation, and cleanup evidence.",
+      "next_action": "No Toepen action required unless future frontend/backend changes alter the contract. Evidence: TOEPEN_V761_LIVE_PROOF_2026-07-27.md.",
+      "latest_probe": "2026-07-27: Applied v755d creator/scope guard, v755e admin reset compatibility, and v755f login session bridge. Controlled friends game_id=1 and family game_id=2 saved/retried/proven, then controlled games deleted and temp players 151-158 deactivated with PIN/session material cleared."
     },
     {
       "id": "admin_host_security",

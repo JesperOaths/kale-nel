@@ -26,7 +26,11 @@ Do not force-push `main` unless Bruis explicitly authorises an emergency history
 
 ## SQL rollback / forward-fix posture
 
-`GEJAST_v755_toepen_backend.sql` is additive: it creates Toepen-only tables/RPCs and does not alter Klaverjas, drinks, Boerenbridge, or account tables.
+`GEJAST_v755_toepen_backend.sql` is additive: it creates Toepen-only tables/RPCs and does not alter Klaverjas, drinks, Boerenbridge, or account tables. Follow-up SQL-only fixes applied during live proof:
+
+- `GEJAST_v755d_toepen_creator_scope_guard.sql` replaces only `create_toepen_game` to enforce creator participation and matching scope.
+- `GEJAST_v755e_admin_reset_login_player_pin_compat.sql` restores a missing account-runtime compatibility function required by existing v679/v680/v681 wrappers.
+- `GEJAST_v755f_login_session_bridge.sql` replaces only `_gejast_player_from_session` to recognise hashed canonical `login_player` sessions.
 
 Preferred recovery if Toepen SQL apply partially fails:
 
@@ -39,7 +43,10 @@ If the migration was applied and controlled Toepen test rows must be cleaned:
 
 - Delete only rows whose `client_match_id` uses the controlled beta prefix recorded in the test report.
 - Rely on `toepen_games` cascade to remove participant/round/result rows for those controlled test game IDs.
-- Never delete unrelated Toepen rows.
+- Deactivate/clear only temporary players matching the explicit `AutoV761Toep%` test-account prefix.
+- Never delete unrelated Toepen rows or real player accounts.
+
+2026-07-27 cleanup already removed the two controlled Toepen games and deactivated/cleared temp player IDs `151–158`; see `TOEPEN_V761_LIVE_PROOF_2026-07-27.md`.
 
 ## Admin perimeter recovery
 
