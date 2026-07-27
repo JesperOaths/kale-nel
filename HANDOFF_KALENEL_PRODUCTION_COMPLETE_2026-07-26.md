@@ -23,6 +23,8 @@ Rollback tag: `pre-v761-production-completion-20260726`.
 
 - Toepen exit gate is complete. Evidence: `TOEPEN_V761_LIVE_PROOF_2026-07-27.md`.
 - Boerenbridge authenticated read-only vault proof is complete after `GEJAST_v755g_boerenbridge_admin_audit_guard.sql`; invalid admin audit now rejects with `admin_session_invalid`. Evidence: `BOERENBRIDGE_V761_VAULT_PROOF_2026-07-27.md`.
+- Admin perimeter remains externally blocked: `admin.kalenel.nl` does not resolve, `https://kalenel.nl/admin.html` returns HTTP 200 with admin HTML, and no local Cloudflare credential env names were present. Evidence: `ADMIN_PERIMETER_V761_PROOF_2026-07-27.md`.
+- Real-device/browser push queue proof passed but delivery remains externally blocked: temporary player `AutoV761PushDevice_202607270136`/`159` reached `ready_actionable`, queued exactly one self-test push job `21`, then job/subscription/session were deleted and player was deactivated/cleared. Dispatcher env names were missing locally, so send/click proof was not claimed. Evidence: `PUSH_V761_REAL_DEVICE_PROOF_2026-07-27.md`.
 - Boerenbridge authenticated vault proof.
 - Admin DNS/Cloudflare Access perimeter.
 - Real-device backend push proof.

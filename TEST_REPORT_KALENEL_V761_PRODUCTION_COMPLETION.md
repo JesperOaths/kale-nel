@@ -19,6 +19,26 @@ Passed / confirmed:
   - `create_toepen_game`: 404 function not found.
   - Result: Toepen backend migration remains unapplied; no write occurred.
 
+## Admin subdomain / Cloudflare Access perimeter
+
+Status: blocked externally.
+
+Proof:
+
+- `admin.kalenel.nl` does not resolve.
+- `https://admin.kalenel.nl` cannot be reached because the remote name cannot be resolved.
+- `https://kalenel.nl/admin.html` still returns HTTP `200` and serves admin HTML from the apex.
+- No local environment variable names matching `CLOUDFLARE`, `CF_`, or `KALENEL` were present.
+
+Conclusion:
+
+- Supabase/browser admin gates are active, but Cloudflare Access/default-deny perimeter is not configured or proven.
+- This requires Cloudflare/DNS account access and cannot be completed as a repository-only change.
+
+Evidence:
+
+- `ADMIN_PERIMETER_V761_PROOF_2026-07-27.md`
+
 ## Boerenbridge authenticated vault
 
 Status: complete for read-only/authenticated vault proof.
@@ -79,25 +99,27 @@ Evidence:
 
 Still pending outside Toepen:
 
-- Admin subdomain / Cloudflare Access perimeter.
-- Real-device backend push proof.
+- Real-device backend push delivery/click proof with dispatcher environment or production dispatcher evidence.
 - Remaining controlled live-write matrix.
 
-## Boerenbridge authenticated vault
+## Real-device backend push
 
-Status: pending.
+Status: queue proof passed; real delivery/click proof blocked externally.
 
-## Admin perimeter
+Completed:
 
-Status: pending.
+- Created temporary player `AutoV761PushDevice_202607270136` / player `159` in friends scope.
+- Obtained canonical player session through normal `login_player`; PIN/session token not recorded.
+- Browser diagnostics reached `ready_actionable`: notification permission granted, service worker ready, push subscription present, backend sync true, presence touch true.
+- Queued exactly one backend test push through `queue_test_web_push`; result `queued=true`, `queued_count=1`.
+- SQL proof showed self-test job `21` queued for the temp player/subscription.
+- Local dispatcher environment presence check showed all required dispatcher env names missing: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `WEB_PUSH_VAPID_PUBLIC_KEY`, `WEB_PUSH_VAPID_PRIVATE_KEY`, `WEB_PUSH_VAPID_SUBJECT`.
+- Because dispatcher secrets/runtime were unavailable, no real send/click proof was claimed.
+- Cleanup deleted job `21`, one subscription, one session, and deactivated/cleared player `159`; post-cleanup counts for controlled jobs/sessions/subscriptions were `0`.
 
-Known starting blocker: `admin.kalenel.nl` does not resolve.
+Evidence:
 
-## Real-device push
-
-Status: pending.
-
-Known starting blocker: needs a valid logged-in player subscription and real permissioned browser/device.
+- `PUSH_V761_REAL_DEVICE_PROOF_2026-07-27.md`
 
 ## Controlled live-write matrix
 

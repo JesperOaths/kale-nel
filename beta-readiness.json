@@ -78,8 +78,9 @@
       "priority": 1,
       "area": "Push notifications",
       "status": "blocked_external",
-      "proof_needed": "A real logged-in subscribed player device receives a backend-queued web push and click/action handling works, including replay/expiry behaviour.",
-      "next_action": "Use a valid logged-in player session with notification permission and a synced push subscription, queue one safe test push, then record delivery/click result."
+      "proof_needed": "Partially proven: valid temporary player session, browser notification permission, service worker, push subscription, backend sync/presence, and exactly one queue_test_web_push queued_count=1 all passed. Remaining proof requires dispatcher delivery/click evidence.",
+      "next_action": "Run web_push_dispatcher.js with SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, WEB_PUSH_VAPID_PUBLIC_KEY, and WEB_PUSH_VAPID_PRIVATE_KEY, or provide production dispatcher run evidence, then verify OS notification delivery/click handling.",
+      "latest_probe": "2026-07-27: Temporary player AutoV761PushDevice_202607270136/player 159 queued one self_test push job 21 from ready_actionable browser. Dispatcher env names were missing locally, so delivery was blocked. Job/subscription/session cleaned; player deactivated and PIN/session cleared. Evidence PUSH_V761_REAL_DEVICE_PROOF_2026-07-27.md."
     },
     {
       "id": "toepen_backend_live",
@@ -94,9 +95,10 @@
       "id": "admin_host_security",
       "priority": 3,
       "area": "Admin",
-      "status": "needs_fix_if_test_fails",
-      "proof_needed": "admin.kalenel.nl exists, Cloudflare Access/default-deny or equivalent blocks static admin HTML before load, and Supabase admin session gates remain as a second layer.",
-      "next_action": "Configure/prove the admin hostname and access policy; until then, document main-host admin HTML reachability as an architecture gap."
+      "status": "blocked_external",
+      "proof_needed": "Blocked externally: admin.kalenel.nl DNS does not resolve and apex https://kalenel.nl/admin.html still returns HTTP 200 with admin HTML. Cloudflare Access/default-deny is not proven/configured.",
+      "next_action": "Use Cloudflare/DNS account access to create admin.kalenel.nl, protect it with Access/default-deny, split/route admin static pages behind that perimeter, then re-prove unauthenticated block and authenticated access.",
+      "latest_probe": "2026-07-27: Resolve-DnsName admin.kalenel.nl failed; https://kalenel.nl/admin.html HEAD/GET returned 200; no local CLOUDFLARE/CF_/KALENEL env names found. Evidence ADMIN_PERIMETER_V761_PROOF_2026-07-27.md."
     },
     {
       "id": "boerenbridge_admin_contracts",
