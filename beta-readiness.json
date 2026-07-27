@@ -102,9 +102,10 @@
       "id": "boerenbridge_admin_contracts",
       "priority": 4,
       "area": "Boerenbridge",
-      "status": "needs_permission",
-      "proof_needed": "Authenticated admin vault loads live rankings/history/insights with correct scope and protected-page behaviour; unauthorized user cannot view protected data.",
-      "next_action": "Run with a valid admin session; do read-only vault proof first, then only approved mutations."
+      "status": "verified_complete",
+      "proof_needed": "Complete for read-only/authenticated vault contract: live Boerenbridge vault loads under admin browser session, friends/family data RPCs return current rows, valid admin audit returns five checks, invalid admin audit rejects after v755g guard, and no rebuild/write action was run.",
+      "next_action": "No read-only vault action required. Any Boerenbridge rebuild/cache mutation remains permissioned separately.",
+      "latest_probe": "2026-07-27: Applied GEJAST_v755g_boerenbridge_admin_audit_guard.sql after invalid admin token was accepted by admin_get_boerenbridge_shared_stats_audit_v643. Reproof passed; evidence BOERENBRIDGE_V761_VAULT_PROOF_2026-07-27.md."
     },
     {
       "id": "drinks_create_verify_reject",

@@ -22,6 +22,7 @@ Rollback tag: `pre-v761-production-completion-20260726`.
 ## Not complete yet
 
 - Toepen exit gate is complete. Evidence: `TOEPEN_V761_LIVE_PROOF_2026-07-27.md`.
+- Boerenbridge authenticated read-only vault proof is complete after `GEJAST_v755g_boerenbridge_admin_audit_guard.sql`; invalid admin audit now rejects with `admin_session_invalid`. Evidence: `BOERENBRIDGE_V761_VAULT_PROOF_2026-07-27.md`.
 - Boerenbridge authenticated vault proof.
 - Admin DNS/Cloudflare Access perimeter.
 - Real-device backend push proof.

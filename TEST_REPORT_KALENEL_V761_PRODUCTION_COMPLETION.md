@@ -19,6 +19,27 @@ Passed / confirmed:
   - `create_toepen_game`: 404 function not found.
   - Result: Toepen backend migration remains unapplied; no write occurred.
 
+## Boerenbridge authenticated vault
+
+Status: complete for read-only/authenticated vault proof.
+
+Completed:
+
+- Opened live `https://kalenel.nl/boerenbridge_vault.html` in authenticated admin browser session.
+- Page loaded with status `Kluis geladen vanuit de actuele Boerenbridge-database.`
+- Admin gate object was present and admin token existed in browser session; token was not recorded.
+- Friends scope rendered `10` match cards; public friends data RPC returned `recent_match_count=10`, `ladder_count=0`.
+- Public family data RPC returned `recent_match_count=11`, `ladder_count=5`.
+- Initial audit check found `admin_get_boerenbridge_shared_stats_audit_v643` accepted invalid admin token.
+- Applied `GEJAST_v755g_boerenbridge_admin_audit_guard.sql` to require `admin_check_session(...).ok === true`.
+- Post-fix valid admin audit returned five checks: cache table, match facts, source `boerenbridge_matches`, source `game_match_summaries`, and `rpc_version=v643`.
+- Post-fix invalid admin audit rejected with `admin_session_invalid`.
+- No Boerenbridge rebuild/cache-refresh/write action was run.
+
+Evidence:
+
+- `BOERENBRIDGE_V761_VAULT_PROOF_2026-07-27.md`
+
 ## Toepen backend
 
 Status: complete for Toepen exit gate.
@@ -58,7 +79,6 @@ Evidence:
 
 Still pending outside Toepen:
 
-- Authenticated Boerenbridge vault proof.
 - Admin subdomain / Cloudflare Access perimeter.
 - Real-device backend push proof.
 - Remaining controlled live-write matrix.
