@@ -1,21 +1,28 @@
 # Security model — Kalenel v761 production completion
 
-Updated: 2026-07-26.
+Updated: 2026-07-29.
 
 ## Public site
 
 `https://kalenel.nl` serves public gameplay, login, request, activation, profile/stat, and spectator/read-only pages. It may use the Supabase publishable key only. It must never contain service-role keys or secrets.
+
+Public account activation and account-request pages must remain available on the public host.
 
 ## Admin site target
 
 Target architecture:
 
 - `https://admin.kalenel.nl` resolves separately.
-- Cloudflare Access default-deny protects the hostname before static HTML loads.
-- Approved identities and MFA are required.
+- Cloudflare Access default-deny protects `admin.kalenel.nl/*` before static HTML, JS, or assets load.
+- Only explicitly approved identities/groups may enter.
+- MFA is required through the identity provider / Access posture configuration.
 - Existing Supabase admin session/TOTP checks remain required after Access.
+- Direct public requests for admin-only HTML/JS/vault assets on `kalenel.nl` redirect to the protected host or return safe denial.
+- JavaScript hiding or redirects are not perimeter security.
 
-Current state is not final: admin HTML is still reachable on the public host and relies on frontend/backend gates.
+Current state is not final: `admin.kalenel.nl` is unresolved and admin HTML/JS is still reachable on the public host.
+
+Canonical admin perimeter implementation notes live in `cloudflare/admin-perimeter-v761.md`.
 
 ## Database security
 
