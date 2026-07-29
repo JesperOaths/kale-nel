@@ -204,7 +204,11 @@ function now() { return Math.floor(Date.now() / 1000); }
 function randomToken(bytes) { const a = new Uint8Array(bytes); crypto.getRandomValues(a); return btoa(String.fromCharCode(...a)).replace(/[+/=]/g, (m) => ({ '+': '-', '/': '_', '=': '' }[m])); }
 function escapeHtml(s) { return String(s).replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c])); }
 
-function requireEnv(env, keys) { for (const key of keys) if (!env[key]) throw new Error(`Missing ${key}`); if (String(env.COOKIE_SECRET || '').length < 32) throw new Error('COOKIE_SECRET too short'); }
+function requireEnv(env, keys) {
+  for (const key of keys) if (!env[key]) throw new Error(`Missing ${key}`);
+  if (String(env.COOKIE_SECRET || '').length < 32) throw new Error('COOKIE_SECRET too short');
+  if (env.GITHUB_CLIENT_ID && !/^[A-Za-z0-9_.-]{10,128}$/.test(String(env.GITHUB_CLIENT_ID))) throw new Error('GITHUB_CLIENT_ID malformed');
+}
 function isAllowedGithubAccount(env, github) { const id = String(github?.id || ''); const login = String(github?.login || '').toLowerCase(); const allowedId = String(env.APPROVED_GITHUB_ID || '').trim(); const allowedLogin = String(env.APPROVED_GITHUB_LOGIN || '').trim().toLowerCase(); return !!((allowedId && id && constantTimeEqual(id, allowedId)) || (allowedLogin && login && constantTimeEqual(login, allowedLogin))); }
 function constantTimeEqual(a, b) { a = String(a); b = String(b); if (a.length !== b.length) return false; let out = 0; for (let i = 0; i < a.length; i++) out |= a.charCodeAt(i) ^ b.charCodeAt(i); return out === 0; }
 

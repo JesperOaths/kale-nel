@@ -11,25 +11,11 @@ workers_dev = false
 # - static admin files are served from Workers Static Assets behind the Worker OAuth gate
 
 routes = [
-  { pattern = "admin.kalenel.nl", custom_domain = true },
-  { pattern = "kalenel.nl/admin*", zone_name = "kalenel.nl" },
-  { pattern = "kalenel.nl/gejast-admin*", zone_name = "kalenel.nl" },
-  { pattern = "kalenel.nl/gejast-push-admin-source.js", zone_name = "kalenel.nl" },
-  { pattern = "kalenel.nl/drinks_admin.html", zone_name = "kalenel.nl" },
-  { pattern = "kalenel.nl/familie_admin.html", zone_name = "kalenel.nl" },
-  { pattern = "kalenel.nl/match_control.html", zone_name = "kalenel.nl" },
-  { pattern = "kalenel.nl/match_swap.html", zone_name = "kalenel.nl" },
-  { pattern = "kalenel.nl/*_vault.html", zone_name = "kalenel.nl" },
-  { pattern = "kalenel.nl/vault.html", zone_name = "kalenel.nl" },
-  { pattern = "kalenel.nl/familie/admin.html", zone_name = "kalenel.nl" },
-  { pattern = "kalenel.nl/repo/admin*", zone_name = "kalenel.nl" },
-  { pattern = "kalenel.nl/*.md", zone_name = "kalenel.nl" },
-  { pattern = "kalenel.nl/*.txt", zone_name = "kalenel.nl" },
-  { pattern = "kalenel.nl/*.sql", zone_name = "kalenel.nl" },
-  { pattern = "kalenel.nl/*.patch", zone_name = "kalenel.nl" },
-  { pattern = "kalenel.nl/mnt/*", zone_name = "kalenel.nl" },
-  { pattern = "kalenel.nl/deployment_forensics_v761/*", zone_name = "kalenel.nl" },
-  { pattern = "kalenel.nl/sql/*", zone_name = "kalenel.nl" }
+  # Classic Workers routes only. This avoids Cloudflare custom-domain setup and works on Workers Free.
+  # Apex is routed through the Worker so invalid middle-wildcard classes like `*.md` and `*_vault.html`
+  # can be enforced in Worker code while ordinary public pages pass through to the origin.
+  { pattern = "admin.kalenel.nl/*", zone_name = "kalenel.nl" },
+  { pattern = "kalenel.nl/*", zone_name = "kalenel.nl" }
 ]
 
 [assets]

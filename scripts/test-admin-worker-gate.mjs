@@ -13,7 +13,7 @@ const ENV_KEYS = {
 function env(extra = {}) {
   return {
     [ENV_KEYS.cookie]: FAKE_COOKIE_SIGNING_VALUE,
-    [ENV_KEYS.clientId]: 'not-real',
+    [ENV_KEYS.clientId]: 'Iv1.notrealclientid',
     [ENV_KEYS.clientSecret]: 'not-real',
     [ENV_KEYS.approvedId]: '12345',
     [ENV_KEYS.approvedLogin]: 'bruis-approved',
@@ -83,5 +83,9 @@ assert.equal(__test.isAllowedGithubAccount(env(), { id: 999, login: 'other' }), 
 const callbackMismatch = await req('https://admin.kalenel.nl/oauth/callback?state=wrong&code=fake');
 assert.equal(callbackMismatch.status, 403);
 assert.match(await callbackMismatch.text(), /state mismatch|expired callback/i);
+
+const malformedClientId = await req('https://admin.kalenel.nl/login?return_to=/admin.html', {}, env({ [ENV_KEYS.clientId]: '\u0016' }));
+assert.equal(malformedClientId.status, 403);
+assert.equal(malformedClientId.headers.get('X-Kalenel-Fail-Closed'), 'true');
 
 console.log('admin worker gate tests passed');
