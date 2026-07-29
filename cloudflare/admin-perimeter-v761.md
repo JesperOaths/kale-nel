@@ -1,56 +1,28 @@
-# Kalenel admin perimeter — v761 Cloudflare implementation plan
+# Kalenel admin perimeter — v761/v762 Cloudflare implementation plan
 
-Status: **not complete until Cloudflare/DNS evidence is captured**.
+Status: **Cloudflare Access proposal superseded**. Do not activate Cloudflare Zero Trust, request billing details, enter a payment method, enable paid subscriptions, or authorize overages. The active plan is the free Cloudflare Workers gate in `cloudflare/admin-worker-gate-v762.md`.
 
-This is the operator-facing perimeter configuration for the existing v761 frontend. It intentionally does not contain credentials, tokens, API keys, service-role keys, or identity values.
+This is the operator-facing perimeter configuration. It intentionally does not contain credentials, tokens, API keys, service-role keys, cookie values, or private identity values.
 
 ## Hosting architecture
 
-- Public site remains on `https://kalenel.nl`.
+- Public gameplay site remains on `https://kalenel.nl` with v761 behaviour unchanged.
 - Protected admin site is `https://admin.kalenel.nl`.
-- `admin.kalenel.nl` must be Cloudflare-proxied and covered by a valid Cloudflare TLS certificate.
-- Cloudflare Access protects `admin.kalenel.nl/*` **before** any static HTML, JS, or assets are served.
-- The existing Supabase admin session + TOTP validation remains the inner lock after Cloudflare Access.
-- If GitHub Pages remains the public origin, do not rely on repo `_headers`/static files for enforcement; enforce the perimeter at Cloudflare.
-- Preferred long-term shape: a filtered admin bundle or separate Cloudflare Pages project for `admin.kalenel.nl`, plus public apex rules denying admin-only paths.
+- `admin.kalenel.nl` is Cloudflare-proxied and must be served by the `kalenel-admin-gate` Worker Custom Domain.
+- Cloudflare Workers Free protects `admin.kalenel.nl/*` **before** any static HTML, JS, or assets are served.
+- Workers Static Assets serves the protected admin bundle.
+- GitHub OAuth in the Worker is the outer gate.
+- The existing Supabase admin session + TOTP validation remains the independent inner lock after the Worker gate.
+- Do not rely on JavaScript redirects, hidden DOM, or static repo files for perimeter enforcement.
 
-## DNS
+## DNS and Worker routing
 
-Create a proxied DNS record for `admin.kalenel.nl` that points at the admin static deployment/origin.
+`admin.kalenel.nl` must resolve through Cloudflare. The Worker config adds:
 
-Acceptable origin choices:
+- Custom Domain: `admin.kalenel.nl`
+- Worker routes for public apex protected paths on `kalenel.nl`
 
-1. **Preferred:** Cloudflare Pages deployment from the repo, ideally filtered to admin-only files.
-2. **Temporary:** same static bundle as public origin, but only if Cloudflare Access gates the whole `admin.kalenel.nl/*` hostname and public apex rules block admin-only source paths.
-
-Do not mark admin complete while `admin.kalenel.nl` is NXDOMAIN or while `https://kalenel.nl/admin.html` returns `200` HTML.
-
-## Cloudflare Access application
-
-Application:
-
-- Type: Self-hosted/public hostname.
-- Hostname: `admin.kalenel.nl`.
-- Path: `/*`.
-- Session duration: short enough for admin risk; remembered Supabase devices are still controlled by the inner lock.
-- Policy posture: default-deny. Cloudflare Access already denies users who do not match an allow policy.
-- Allow policy: only explicitly approved identities/groups.
-- MFA: required by the identity provider / Access posture configuration.
-
-Evidence to record, without secret values:
-
-- Application ID or name.
-- Hostname.
-- Policy names.
-- Approved identity/group labels only if non-sensitive.
-- MFA requirement state.
-- Test timestamp and result.
-
-## Public apex edge rules
-
-Once the admin hostname works, configure the public apex so admin source is no longer served from `kalenel.nl`.
-
-Admin-only paths to redirect to `https://admin.kalenel.nl/<same path>` or deny safely:
+Protected public paths redirect to the matching `admin.kalenel.nl` route or fail safely:
 
 ```txt
 /admin*.html
@@ -69,7 +41,7 @@ Admin-only paths to redirect to `https://admin.kalenel.nl/<same path>` or deny s
 /repo/admin*.html
 ```
 
-Sensitive repo artifacts that should not be publicly served:
+Sensitive repo artifacts should not be publicly served:
 
 ```txt
 /admin-dev.html
@@ -106,7 +78,7 @@ Public pages that must remain available on `kalenel.nl` include:
 /boerenbridge.html
 /boerenbridge_live.html
 /boerenbridge_spectator.html
-/drinks*.html
+/drinks*.html except drinks_admin.html
 /klaverjas*.html
 /paardenrace*.html
 /pikken*.html
@@ -119,29 +91,42 @@ Public pages that must remain available on `kalenel.nl` include:
 
 Exception: admin/vault variants remain protected even if their prefix also appears in a public feature.
 
+## Worker application
+
+Worker:
+
+- Runtime: Cloudflare Workers Free.
+- Static content: Workers Static Assets.
+- Hostname: `admin.kalenel.nl`.
+- Path: `/*`.
+- Session duration: short-lived Worker cookie; Supabase remembered-device rules remain inner-lock behaviour.
+- Outer identity: GitHub OAuth.
+- Allow policy: exact approved GitHub account specified locally by Bruis during setup, stored as encrypted Worker secrets only.
+- No Cloudflare Zero Trust, payment method, billing address, paid Workers plan, R2, Queues, Workers AI, or usage-billed service.
+
 ## Required proof matrix
 
 Do not treat JavaScript redirects or hidden DOM as perimeter proof. Required perimeter evidence:
 
-- `admin.kalenel.nl` resolves.
-- TLS certificate validates for `admin.kalenel.nl`.
-- Anonymous `https://admin.kalenel.nl/admin.html` is blocked by Cloudflare Access before static HTML loads.
-- Denied Cloudflare identity cannot enter.
-- Approved Cloudflare identity with MFA can reach admin host.
-- Invalid Supabase admin session is blocked by the inner lock after Access.
-- Expired Supabase admin session is blocked or renewed only through remembered-device rules.
-- Valid Supabase admin session reaches protected admin pages.
-- Remembered device path still validates server-side.
-- Logout and revocation clear/deny access.
-- Malicious `return_to` values do not create open redirects.
-- Direct protected asset requests are blocked/redirected from public apex and Access-gated on admin host.
+- `admin.kalenel.nl` resolves and TLS validates.
+- Anonymous `https://admin.kalenel.nl/admin.html` shows Worker login, not admin HTML.
+- Failed GitHub login is denied.
+- Unapproved GitHub user is denied.
+- Approved GitHub user reaches protected admin host.
+- Expired Worker session is denied.
+- Modified Worker session cookie is denied.
+- OAuth state mismatch and replayed callback are denied.
+- Logout clears Worker access.
+- Direct protected asset requests require Worker session on admin host.
+- Public apex admin paths no longer expose admin content.
+- Invalid Supabase admin session is blocked by the inner lock after Worker login.
+- Valid Supabase admin/TOTP session reaches protected admin pages.
 - Important admin RPCs reject anonymous, normal-player, wrong-scope, and expired-admin calls; valid admin succeeds.
+- Account remains on Workers Free; no payment method, paid subscription, or billable product was enabled.
+- Live v761 gameplay routes remain unchanged.
 
-## Current v761 blocker
+## Current state before Worker deployment
 
-As of the v761 production-completion branch, live checks still show:
-
-- `admin.kalenel.nl`: NXDOMAIN / does not resolve.
-- `https://kalenel.nl/admin.html`: `200` public static HTML.
-
-So the admin perimeter is still externally blocked on Cloudflare/DNS configuration.
+- `admin.kalenel.nl` resolves through Cloudflare.
+- `https://admin.kalenel.nl/` returns `404` until Worker Custom Domain deployment.
+- `https://kalenel.nl/admin.html` still returns public admin HTML until public apex Worker routes deploy.
