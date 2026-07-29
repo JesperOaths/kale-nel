@@ -94,7 +94,7 @@ async function login(request, env, url) {
   const oauth = { kind: 'oauth', state, nonce, returnTo, exp: now() + OAUTH_TTL_SECONDS, used: false };
   const callback = `https://${ADMIN_HOST}/oauth/callback`;
   const github = new URL('https://github.com/login/oauth/authorize');
-  github.searchParams.set('client_id', env.GITHUB_CLIENT_ID);
+  github.searchParams.set('client_id', getGithubClientId(env));
   github.searchParams.set('redirect_uri', callback);
   github.searchParams.set('scope', 'read:user');
   github.searchParams.set('state', state);
@@ -104,7 +104,7 @@ async function login(request, env, url) {
     Location: github.toString(),
     'Cache-Control': 'no-store'
   });
-  headers.append('Set-Cookie', await signedCookie(env, OAUTH_COOKIE, oauth, OAUTH_TTL_SECONDS));
+  headers.append('Set-Cookie', await signedCookie(env, OAUTH_COOKIE, oauth, OAUTH_TTL_SECONDS, 'Lax')); 
   headers.append('Set-Cookie', await signedCookie(env, ATTEMPT_COOKIE, bumpAttempts(attempts), ATTEMPT_WINDOW_SECONDS));
   return new Response(null, { status: 302, headers });
 }
@@ -121,8 +121,8 @@ async function oauthCallback(request, env, url) {
 
   const callback = `https://${ADMIN_HOST}/oauth/callback`;
   const tokenPayload = { code, redirect_uri: callback };
-  tokenPayload[['client', 'id'].join('_')] = env.GITHUB_CLIENT_ID;
-  tokenPayload[['client', 'secret'].join('_')] = env.GITHUB_CLIENT_SECRET;
+  tokenPayload[['client', 'id'].join('_')] = getGithubClientId(env);
+  tokenPayload[['client', 'secret'].join('_')] = getGithubClientSecret(env);
   const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'kalenel-admin-worker' },
@@ -207,14 +207,28 @@ function escapeHtml(s) { return String(s).replace(/[&<>'"]/g, c => ({ '&': '&amp
 function requireEnv(env, keys) {
   for (const key of keys) if (!env[key]) throw new Error(`Missing ${key}`);
   if (String(env.COOKIE_SECRET || '').length < 32) throw new Error('COOKIE_SECRET too short');
-  if (env.GITHUB_CLIENT_ID && !/^[A-Za-z0-9_.-]{10,128}$/.test(String(env.GITHUB_CLIENT_ID))) throw new Error('GITHUB_CLIENT_ID malformed');
+  if (env.GITHUB_CLIENT_ID) getGithubClientId(env);
+  if (env.GITHUB_CLIENT_SECRET) getGithubClientSecret(env);
+}
+function trimWrappedSecret(value) {
+  return String(value || '').trim().replace(/^["']|["']$/g, '');
+}
+function getGithubClientId(env) {
+  const value = trimWrappedSecret(env.GITHUB_CLIENT_ID);
+  if (!/^[A-Za-z0-9_.-]{10,128}$/.test(value)) throw new Error('GITHUB_CLIENT_ID malformed');
+  return value;
+}
+function getGithubClientSecret(env) {
+  const value = trimWrappedSecret(env.GITHUB_CLIENT_SECRET);
+  if (value.length < 10 || value.length > 256 || /[\u0000-\u001f\u007f]/.test(value)) throw new Error('GITHUB_CLIENT_SECRET malformed');
+  return value;
 }
 function isAllowedGithubAccount(env, github) { const id = String(github?.id || ''); const login = String(github?.login || '').toLowerCase(); const allowedId = String(env.APPROVED_GITHUB_ID || '').trim(); const allowedLogin = String(env.APPROVED_GITHUB_LOGIN || '').trim().toLowerCase(); return !!((allowedId && id && constantTimeEqual(id, allowedId)) || (allowedLogin && login && constantTimeEqual(login, allowedLogin))); }
 function constantTimeEqual(a, b) { a = String(a); b = String(b); if (a.length !== b.length) return false; let out = 0; for (let i = 0; i < a.length; i++) out |= a.charCodeAt(i) ^ b.charCodeAt(i); return out === 0; }
 
 function parseCookies(request) { const raw = request.headers.get('Cookie') || ''; const out = {}; for (const part of raw.split(';')) { const idx = part.indexOf('='); if (idx > -1) out[part.slice(0, idx).trim()] = part.slice(idx + 1).trim(); } return out; }
 async function readSignedCookie(request, env, name) { const raw = parseCookies(request)[name]; if (!raw) return null; const [payload, sig] = raw.split('.'); if (!payload || !sig) return null; const expected = await hmac(env, payload); if (!constantTimeEqual(sig, expected)) return null; const text = atob(payload.replace(/-/g, '+').replace(/_/g, '/')); return JSON.parse(text); }
-async function signedCookie(env, name, value, maxAge) { const payload = btoa(JSON.stringify(value)).replace(/[+/=]/g, (m) => ({ '+': '-', '/': '_', '=': '' }[m])); const sig = await hmac(env, payload); return `${name}=${payload}.${sig}; Max-Age=${maxAge}; Path=/; HttpOnly; Secure; SameSite=Strict`; }
+async function signedCookie(env, name, value, maxAge, sameSite = 'Strict') { const payload = btoa(JSON.stringify(value)).replace(/[+/=]/g, (m) => ({ '+': '-', '/': '_', '=': '' }[m])); const sig = await hmac(env, payload); return `${name}=${payload}.${sig}; Max-Age=${maxAge}; Path=/; HttpOnly; Secure; SameSite=${sameSite}`; }
 function expireCookie(name) { return `${name}=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Strict`; }
 async function hmac(env, payload) { const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.COOKIE_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']); const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload)); return btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/[+/=]/g, (m) => ({ '+': '-', '/': '_', '=': '' }[m])); }
 async function readAttemptCookie(request, env) { const v = await readSignedCookie(request, env, ATTEMPT_COOKIE); if (!v || v.resetAt <= now()) return { count: 0, resetAt: now() + ATTEMPT_WINDOW_SECONDS }; return v; }

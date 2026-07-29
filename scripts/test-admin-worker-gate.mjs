@@ -14,7 +14,7 @@ function env(extra = {}) {
   return {
     [ENV_KEYS.cookie]: FAKE_COOKIE_SIGNING_VALUE,
     [ENV_KEYS.clientId]: 'Iv1.notrealclientid',
-    [ENV_KEYS.clientSecret]: 'not-real',
+    [ENV_KEYS.clientSecret]: 'a'.repeat(40),
     [ENV_KEYS.approvedId]: '12345',
     [ENV_KEYS.approvedLogin]: 'bruis-approved',
     ASSETS: {
@@ -57,6 +57,11 @@ const asset = await req('https://admin.kalenel.nl/admin.js', { headers: { Cookie
 assert.equal(asset.status, 200);
 assert.equal(asset.headers.get('X-Kalenel-Admin-Gate'), 'worker');
 
+const loginStart = await req('https://admin.kalenel.nl/login?return_to=/admin.html', { redirect: 'manual' });
+assert.equal(loginStart.status, 302);
+assert.match(loginStart.headers.get('Set-Cookie'), /__Host-kalenel_admin_oauth=.*SameSite=Lax/);
+assert.match(loginStart.headers.get('Set-Cookie'), /__Host-kalenel_admin_attempts=.*SameSite=Strict/);
+
 const logout = await req('https://admin.kalenel.nl/logout', { headers: { Cookie: validCookie }, redirect: 'manual' });
 assert.equal(logout.status, 302);
 assert.match(logout.headers.get('Set-Cookie'), /Max-Age=0/);
@@ -84,8 +89,19 @@ const callbackMismatch = await req('https://admin.kalenel.nl/oauth/callback?stat
 assert.equal(callbackMismatch.status, 403);
 assert.match(await callbackMismatch.text(), /state mismatch|expired callback/i);
 
+const quotedClientId = await req('https://admin.kalenel.nl/login?return_to=/admin.html', {}, env({ [ENV_KEYS.clientId]: '"Iv1.notrealclientid"' }));
+assert.equal(quotedClientId.status, 302);
+assert.match(quotedClientId.headers.get('Location'), /client_id=Iv1\.notrealclientid/);
+
 const malformedClientId = await req('https://admin.kalenel.nl/login?return_to=/admin.html', {}, env({ [ENV_KEYS.clientId]: '\u0016' }));
 assert.equal(malformedClientId.status, 403);
 assert.equal(malformedClientId.headers.get('X-Kalenel-Fail-Closed'), 'true');
+
+const quotedClientSecret = await req('https://admin.kalenel.nl/login?return_to=/admin.html', {}, env({ [ENV_KEYS.clientSecret]: '"secret value with spaces"' }));
+assert.equal(quotedClientSecret.status, 302);
+
+const malformedClientSecret = await req('https://admin.kalenel.nl/login?return_to=/admin.html', {}, env({ [ENV_KEYS.clientSecret]: '\u0016' }));
+assert.equal(malformedClientSecret.status, 403);
+assert.equal(malformedClientSecret.headers.get('X-Kalenel-Fail-Closed'), 'true');
 
 console.log('admin worker gate tests passed');
