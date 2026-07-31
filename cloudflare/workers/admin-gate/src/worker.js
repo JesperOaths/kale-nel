@@ -226,7 +226,9 @@ function getGithubClientSecret(env) {
   if (value.length < 10 || value.length > 256 || /[\u0000-\u001f\u007f]/.test(value)) throw new Error('GITHUB_CLIENT_SECRET malformed');
   return value;
 }
-function isAllowedGithubAccount(env, github) { const id = String(github?.id || ''); const login = String(github?.login || '').toLowerCase(); const allowedId = String(env.APPROVED_GITHUB_ID || '').trim(); const allowedLogin = String(env.APPROVED_GITHUB_LOGIN || '').trim().toLowerCase(); return !!((allowedId && id && constantTimeEqual(id, allowedId)) || (allowedLogin && login && constantTimeEqual(login, allowedLogin))); }
+function normalizeGithubId(value) { return String(value || '').trim(); }
+function normalizeGithubLogin(value) { return String(value || '').trim().toLowerCase(); }
+function isAllowedGithubAccount(env, github) { const id = normalizeGithubId(github?.id); const login = normalizeGithubLogin(github?.login); const allowedId = normalizeGithubId(env.APPROVED_GITHUB_ID); const allowedLogin = normalizeGithubLogin(env.APPROVED_GITHUB_LOGIN); return !!((allowedId && id && constantTimeEqual(id, allowedId)) || (allowedLogin && login && constantTimeEqual(login, allowedLogin))); }
 function constantTimeEqual(a, b) { a = String(a); b = String(b); if (a.length !== b.length) return false; let out = 0; for (let i = 0; i < a.length; i++) out |= a.charCodeAt(i) ^ b.charCodeAt(i); return out === 0; }
 
 function parseCookies(request) { const raw = request.headers.get('Cookie') || ''; const out = {}; for (const part of raw.split(';')) { const idx = part.indexOf('='); if (idx > -1) out[part.slice(0, idx).trim()] = part.slice(idx + 1).trim(); } return out; }

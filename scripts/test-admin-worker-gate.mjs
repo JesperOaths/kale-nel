@@ -82,7 +82,9 @@ assert.equal(__test.sanitizeReturnTo('//evil.test/'), '');
 assert.equal(__test.sanitizeReturnTo('/../admin.html'), '');
 assert.equal(__test.sanitizeReturnTo('/oauth/callback'), '/admin.html');
 assert.equal(__test.isAllowedGithubAccount(env(), { id: 12345, login: 'anything' }), true);
+assert.equal(__test.isAllowedGithubAccount(env(), { id: ' 12345 ', login: 'anything' }), true);
 assert.equal(__test.isAllowedGithubAccount(env(), { id: 999, login: 'bruis-approved' }), true);
+assert.equal(__test.isAllowedGithubAccount(env(), { id: 999, login: ' Bruis-Approved ' }), true);
 assert.equal(__test.isAllowedGithubAccount(env(), { id: 999, login: 'other' }), false);
 
 const callbackMismatch = await req('https://admin.kalenel.nl/oauth/callback?state=wrong&code=fake');
