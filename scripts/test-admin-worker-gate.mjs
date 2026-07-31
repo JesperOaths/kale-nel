@@ -91,6 +91,37 @@ const callbackMismatch = await req('https://admin.kalenel.nl/oauth/callback?stat
 assert.equal(callbackMismatch.status, 403);
 assert.match(await callbackMismatch.text(), /state mismatch|expired callback/i);
 
+const oauthEnv = env();
+const oauthState = 'state-ok';
+const oauthCookie = await __test.signedCookie(oauthEnv, '__Host-kalenel_admin_oauth', { kind: 'oauth', state: oauthState, nonce: 'nonce-ok', returnTo: '/admin.html', exp: Math.floor(Date.now()/1000) + 60, used: false }, 60, 'Lax');
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async (url) => {
+  const value = String(url);
+  if (value === 'https://github.com/login/oauth/access_token') return Response.json({ [['access', 'token'].join('_')]: 'ok' });
+  if (value === 'https://api.github.com/user') return Response.json({ id: ' 12345 ', login: ' Bruis-Approved ' });
+  return originalFetch(url);
+};
+try {
+  const callbackSuccess = await req(`https://admin.kalenel.nl/oauth/callback?state=${oauthState}&code=fake-code`, { headers: { Cookie: oauthCookie } }, oauthEnv);
+  assert.equal(callbackSuccess.status, 200);
+  assert.equal(callbackSuccess.headers.get('Cache-Control'), 'no-store');
+  assert.match(callbackSuccess.headers.get('Content-Type'), /text\/html/);
+  assert.match(callbackSuccess.headers.get('Set-Cookie'), /__Host-kalenel_admin_session=.*SameSite=Strict/);
+  assert.match(callbackSuccess.headers.get('Set-Cookie'), /__Host-kalenel_admin_oauth=; Max-Age=0/);
+  const callbackBody = await callbackSuccess.text();
+  assert.match(callbackBody, /GitHub-login voltooid/);
+  assert.match(callbackBody, /http-equiv="refresh" content="1;url=\/admin\.html"/);
+  assert.match(callbackBody, /href="\/admin\.html"/);
+  const sessionCookie = extractCookie(callbackSuccess.headers.get('Set-Cookie'), '__Host-kalenel_admin_session');
+  assert.ok(sessionCookie);
+  const adminAfterCallback = await req('https://admin.kalenel.nl/admin.html', { headers: { Cookie: sessionCookie } }, oauthEnv);
+  assert.equal(adminAfterCallback.status, 200);
+  assert.equal(adminAfterCallback.headers.get('X-Kalenel-Admin-Gate'), 'worker');
+  assert.match(await adminAfterCallback.text(), /Beheerhub/);
+} finally {
+  globalThis.fetch = originalFetch;
+}
+
 const quotedClientId = await req('https://admin.kalenel.nl/login?return_to=/admin.html', {}, env({ [ENV_KEYS.clientId]: '"Iv1.notrealclientid"' }));
 assert.equal(quotedClientId.status, 302);
 assert.match(quotedClientId.headers.get('Location'), /client_id=Iv1\.notrealclientid/);
@@ -107,3 +138,8 @@ assert.equal(malformedClientSecret.status, 403);
 assert.equal(malformedClientSecret.headers.get('X-Kalenel-Fail-Closed'), 'true');
 
 console.log('admin worker gate tests passed');
+
+function extractCookie(setCookie, name) {
+  const match = String(setCookie || '').match(new RegExp(`(?:^|,\\s*)(${name}=[^;,]+)`));
+  return match ? match[1] : '';
+}

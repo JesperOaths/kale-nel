@@ -144,14 +144,15 @@ async function oauthCallback(request, env, url) {
     exp: now() + SESSION_TTL_SECONDS,
     nonce: oauth.nonce
   };
+  const returnTo = sanitizeReturnTo(oauth.returnTo) || '/admin.html';
   const headers = secureHeaders({
-    Location: sanitizeReturnTo(oauth.returnTo) || '/admin.html',
+    'Content-Type': 'text/html; charset=utf-8',
     'Cache-Control': 'no-store'
   });
   headers.append('Set-Cookie', await signedCookie(env, SESSION_COOKIE, session, SESSION_TTL_SECONDS));
   headers.append('Set-Cookie', expireCookie(OAUTH_COOKIE));
   headers.append('Set-Cookie', expireCookie(ATTEMPT_COOKIE));
-  return new Response(null, { status: 302, headers });
+  return new Response(oauthCompletePage(returnTo), { status: 200, headers });
 }
 
 function logout(url) {
@@ -180,6 +181,12 @@ function loginPage(url, reason, status = 401) {
   const returnTo = sanitizeReturnTo(url.pathname + url.search) || '/admin.html';
   const body = `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kalenel admin login</title><style>body{font-family:system-ui,sans-serif;background:#0f1115;color:#f7f3e8;display:grid;place-items:center;min-height:100vh;margin:0}.card{max-width:520px;padding:28px;border:1px solid #d4af3744;border-radius:18px;background:#171a22}a{display:inline-block;margin-top:16px;color:#111;background:#d4af37;padding:12px 16px;border-radius:12px;text-decoration:none;font-weight:800}</style></head><body><main class="card"><h1>Admin login vereist</h1><p>Deze beheeromgeving staat achter een Cloudflare Worker GitHub-login en daarna de bestaande Supabase admin/TOTP-controle.</p><p>Reden: ${escapeHtml(reason)}</p><a href="/login?return_to=${encodeURIComponent(returnTo)}">Login met GitHub</a></main></body></html>`;
   return new Response(body, { status, headers: secureHeaders({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }) });
+}
+
+function oauthCompletePage(returnTo) {
+  const safeReturnTo = sanitizeReturnTo(returnTo) || '/admin.html';
+  const href = escapeHtml(safeReturnTo);
+  return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="1;url=${href}"><title>Kalenel admin login voltooid</title><style>body{font-family:system-ui,sans-serif;background:#0f1115;color:#f7f3e8;display:grid;place-items:center;min-height:100vh;margin:0}.card{max-width:520px;padding:28px;border:1px solid #d4af3744;border-radius:18px;background:#171a22}a{display:inline-block;margin-top:16px;color:#111;background:#d4af37;padding:12px 16px;border-radius:12px;text-decoration:none;font-weight:800}</style></head><body><main class="card"><h1>GitHub-login voltooid</h1><p>Je beveiligde sessie is gezet. Ga verder naar de adminomgeving via een same-origin navigatie.</p><a href="${href}">Verder naar admin</a></main></body></html>`;
 }
 
 function clearOauthAndDeny(message) {
