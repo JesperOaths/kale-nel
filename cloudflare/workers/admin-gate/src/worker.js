@@ -219,7 +219,10 @@ function getGithubClientId(env) {
   return value;
 }
 function getGithubClientSecret(env) {
-  const value = trimWrappedSecret(env.GITHUB_CLIENT_SECRET);
+  const raw = trimWrappedSecret(env.GITHUB_CLIENT_SECRET);
+  const compact = raw.replace(/[^\x21-\x7e]+/g, '');
+  const embeddedHexSecret = compact.match(/[a-f0-9]{40}/i);
+  const value = embeddedHexSecret ? embeddedHexSecret[0] : compact;
   if (value.length < 10 || value.length > 256 || /[\u0000-\u001f\u007f]/.test(value)) throw new Error('GITHUB_CLIENT_SECRET malformed');
   return value;
 }
