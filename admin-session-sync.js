@@ -102,9 +102,35 @@
     }
   }
 
+  function isMainAdminHub(){
+    return normalizeAdminPageName() === 'admin.html';
+  }
+
+  function stripRecursiveReturnTo(target){
+    const cleaned = safeReturnTarget(target);
+    if (!cleaned) return '';
+    try {
+      const url = new URL(cleaned, window.location.href || 'https://admin.kalenel.nl/admin.html');
+      const name = (url.pathname.split('/').pop() || '').toLowerCase();
+      if (name === 'admin.html' || name === 'admin' || !name) return '';
+      url.searchParams.delete('return_to');
+      const path = url.pathname.replace(/^\/+/, '') || 'admin.html';
+      return safeReturnTarget(`${path}${url.search}${url.hash}`);
+    } catch (_) {
+      return cleaned.includes('return_to=') ? '' : cleaned;
+    }
+  }
+
   function redirectToAdminLogin(reason='session_invalid', returnTo=''){
-    const here = safeReturnTarget(returnTo || pageNameFromLocation()) || 'admin.html';
-    window.location.href = `./admin.html?reason=${encodeURIComponent(reason)}&return_to=${encodeURIComponent(here)}`;
+    if (isMainAdminHub()) {
+      clearBundle();
+      revealProtectedPage();
+      return false;
+    }
+    const here = stripRecursiveReturnTo(returnTo || pageNameFromLocation());
+    const suffix = here ? `&return_to=${encodeURIComponent(here)}` : '';
+    window.location.href = `./admin.html?reason=${encodeURIComponent(reason)}${suffix}`;
+    return true;
   }
 
   function hasDeviceRemember(){
@@ -176,7 +202,7 @@
       return true;
     } catch (err) {
       clearBundle();
-      redirectToAdminLogin((err && err.message) || 'session_invalid', returnTo);
+      redirectToAdminLogin('session_invalid', returnTo);
       return false;
     }
   }
@@ -200,8 +226,14 @@
     backgroundValidate,
     requirePage,
     redirectToAdminLogin,
+    isMainAdminHub,
+    stripRecursiveReturnTo,
     pageNameFromLocation,
     fingerprint,
     rememberMs: REMEMBER_MS
   };
+
+  if (protectedAdminPage && typeof setTimeout === 'function') {
+    setTimeout(() => { requirePage(pageNameFromLocation()).catch(() => {}); }, 0);
+  }
 })();
