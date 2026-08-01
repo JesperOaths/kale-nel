@@ -1,0 +1,272 @@
+[
+  {
+    "browserName": "chromium",
+    "name": "admin-html-missing-inner",
+    "failed": "",
+    "chain": [
+      {
+        "event": "request",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "redirectedFrom": "",
+        "stack": ""
+      },
+      {
+        "event": "response",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "status": 200,
+        "location": ""
+      },
+      {
+        "event": "framenavigated",
+        "url": "https://admin.kalenel.nl/admin.html"
+      },
+      {
+        "event": "console-error",
+        "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      },
+      {
+        "event": "console-error",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      },
+      {
+        "event": "console-error",
+        "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      }
+    ],
+    "navStacks": [],
+    "state": {
+      "url": "https://admin.kalenel.nl/admin.html",
+      "pathname": "/admin.html",
+      "search": "",
+      "loginVisible": true,
+      "hubHidden": true,
+      "hubVisible": false,
+      "loginHidden": false,
+      "status": ""
+    },
+    "docRequestCount": 1
+  },
+  {
+    "browserName": "chromium",
+    "name": "admin-html-valid-inner",
+    "failed": "",
+    "chain": [
+      {
+        "event": "request",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "redirectedFrom": "",
+        "stack": ""
+      },
+      {
+        "event": "response",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "status": 200,
+        "location": ""
+      },
+      {
+        "event": "framenavigated",
+        "url": "https://admin.kalenel.nl/admin.html"
+      },
+      {
+        "event": "console-error",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      }
+    ],
+    "navStacks": [],
+    "state": {
+      "url": "https://admin.kalenel.nl/admin.html",
+      "pathname": "/admin.html",
+      "search": "",
+      "loginVisible": false,
+      "hubHidden": false,
+      "hubVisible": true,
+      "loginHidden": true,
+      "status": "Beheerhub geladen."
+    },
+    "docRequestCount": 1
+  },
+  {
+    "browserName": "chromium",
+    "name": "protected-subpage-missing-inner",
+    "failed": "",
+    "chain": [
+      {
+        "event": "request",
+        "url": "https://admin.kalenel.nl/admin_claims.html",
+        "redirectedFrom": "",
+        "stack": ""
+      },
+      {
+        "event": "response",
+        "url": "https://admin.kalenel.nl/admin_claims.html",
+        "status": 200,
+        "location": ""
+      },
+      {
+        "event": "framenavigated",
+        "url": "https://admin.kalenel.nl/admin_claims.html"
+      },
+      {
+        "event": "request",
+        "url": "https://admin.kalenel.nl/admin.html?reason=session_invalid&return_to=admin_claims.html",
+        "redirectedFrom": "",
+        "stack": ""
+      },
+      {
+        "event": "response",
+        "url": "https://admin.kalenel.nl/admin.html?reason=session_invalid&return_to=admin_claims.html",
+        "status": 200,
+        "location": ""
+      },
+      {
+        "event": "framenavigated",
+        "url": "https://admin.kalenel.nl/admin.html?reason=session_invalid&return_to=admin_claims.html"
+      },
+      {
+        "event": "console-error",
+        "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      },
+      {
+        "event": "console-error",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      },
+      {
+        "event": "console-error",
+        "text": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      }
+    ],
+    "navStacks": [],
+    "state": {
+      "url": "https://admin.kalenel.nl/admin.html?reason=session_invalid&return_to=admin_claims.html",
+      "pathname": "/admin.html",
+      "search": "?reason=session_invalid&return_to=admin_claims.html",
+      "loginVisible": true,
+      "hubHidden": true,
+      "hubVisible": false,
+      "loginHidden": false,
+      "status": ""
+    },
+    "docRequestCount": 2
+  },
+  {
+    "browserName": "firefox",
+    "name": "admin-html-missing-inner",
+    "failed": "",
+    "chain": [
+      {
+        "event": "request",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "redirectedFrom": "",
+        "stack": ""
+      },
+      {
+        "event": "response",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "status": 200,
+        "location": ""
+      },
+      {
+        "event": "framenavigated",
+        "url": "https://admin.kalenel.nl/admin.html"
+      }
+    ],
+    "navStacks": [],
+    "state": {
+      "url": "https://admin.kalenel.nl/admin.html",
+      "pathname": "/admin.html",
+      "search": "",
+      "loginVisible": true,
+      "hubHidden": true,
+      "hubVisible": false,
+      "loginHidden": false,
+      "status": ""
+    },
+    "docRequestCount": 1
+  },
+  {
+    "browserName": "firefox",
+    "name": "admin-html-valid-inner",
+    "failed": "",
+    "chain": [
+      {
+        "event": "request",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "redirectedFrom": "",
+        "stack": ""
+      },
+      {
+        "event": "response",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "status": 200,
+        "location": ""
+      },
+      {
+        "event": "framenavigated",
+        "url": "https://admin.kalenel.nl/admin.html"
+      }
+    ],
+    "navStacks": [],
+    "state": {
+      "url": "https://admin.kalenel.nl/admin.html",
+      "pathname": "/admin.html",
+      "search": "",
+      "loginVisible": false,
+      "hubHidden": false,
+      "hubVisible": true,
+      "loginHidden": true,
+      "status": "Beheerhub geladen."
+    },
+    "docRequestCount": 1
+  },
+  {
+    "browserName": "firefox",
+    "name": "protected-subpage-missing-inner",
+    "failed": "",
+    "chain": [
+      {
+        "event": "request",
+        "url": "https://admin.kalenel.nl/admin_claims.html",
+        "redirectedFrom": "",
+        "stack": ""
+      },
+      {
+        "event": "response",
+        "url": "https://admin.kalenel.nl/admin_claims.html",
+        "status": 200,
+        "location": ""
+      },
+      {
+        "event": "framenavigated",
+        "url": "https://admin.kalenel.nl/admin_claims.html"
+      },
+      {
+        "event": "request",
+        "url": "https://admin.kalenel.nl/admin.html?reason=session_invalid&return_to=admin_claims.html",
+        "redirectedFrom": "",
+        "stack": ""
+      },
+      {
+        "event": "response",
+        "url": "https://admin.kalenel.nl/admin.html?reason=session_invalid&return_to=admin_claims.html",
+        "status": 200,
+        "location": ""
+      },
+      {
+        "event": "framenavigated",
+        "url": "https://admin.kalenel.nl/admin.html?reason=session_invalid&return_to=admin_claims.html"
+      }
+    ],
+    "navStacks": [],
+    "state": {
+      "url": "https://admin.kalenel.nl/admin.html?reason=session_invalid&return_to=admin_claims.html",
+      "pathname": "/admin.html",
+      "search": "?reason=session_invalid&return_to=admin_claims.html",
+      "loginVisible": true,
+      "hubHidden": true,
+      "hubVisible": false,
+      "loginHidden": false,
+      "status": ""
+    },
+    "docRequestCount": 2
+  }
+]
