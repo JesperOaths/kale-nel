@@ -77,8 +77,12 @@ async function handleAdminHost(request, env, url) {
     return loginPage(url, 'session_required', 401);
   }
 
-  const assetPath = url.pathname === '/' ? '/admin.html' : url.pathname;
+  const assetPath = adminAssetPath(url.pathname);
   return await serveProtectedAsset(request, env, assetPath);
+}
+
+function adminAssetPath(pathname) {
+  return (pathname === '/' || pathname === '/admin' || pathname === '/admin/') ? '/admin.html' : pathname;
 }
 
 async function login(request, env, url) {
@@ -255,4 +259,4 @@ function applySecurityHeaders(headers) {
   headers.set('Content-Security-Policy', "default-src 'self' https://uiqntazgnrxwliaidkmy.supabase.co; connect-src 'self' https://uiqntazgnrxwliaidkmy.supabase.co https://api.github.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self' https://github.com");
 }
 
-export const __test = { signedCookie, expireCookie, sanitizeReturnTo, isProtectedPublicPath, isAllowedGithubAccount };
+export const __test = { signedCookie, expireCookie, sanitizeReturnTo, isProtectedPublicPath, isAllowedGithubAccount, adminAssetPath };

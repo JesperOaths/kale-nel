@@ -53,6 +53,15 @@ assert.equal(approved.headers.get('X-Kalenel-Admin-Gate'), 'worker');
 assert.equal(approved.headers.get('Cache-Control'), 'no-store');
 assert.match(await approved.text(), /Beheerhub/);
 
+const approvedAdminAlias = await req('https://admin.kalenel.nl/admin', { headers: { Cookie: validCookie } });
+assert.equal(approvedAdminAlias.status, 200);
+assert.equal(approvedAdminAlias.headers.get('X-Kalenel-Admin-Gate'), 'worker');
+assert.match(await approvedAdminAlias.text(), /Beheerhub/);
+
+const anonymousAdminAlias = await req('https://admin.kalenel.nl/admin');
+assert.equal(anonymousAdminAlias.status, 401);
+assert.match(await anonymousAdminAlias.text(), /Admin login vereist/);
+
 const asset = await req('https://admin.kalenel.nl/admin.js', { headers: { Cookie: validCookie } });
 assert.equal(asset.status, 200);
 assert.equal(asset.headers.get('X-Kalenel-Admin-Gate'), 'worker');
@@ -86,6 +95,10 @@ assert.equal(__test.isAllowedGithubAccount(env(), { id: ' 12345 ', login: 'anyth
 assert.equal(__test.isAllowedGithubAccount(env(), { id: 999, login: 'bruis-approved' }), true);
 assert.equal(__test.isAllowedGithubAccount(env(), { id: 999, login: ' Bruis-Approved ' }), true);
 assert.equal(__test.isAllowedGithubAccount(env(), { id: 999, login: 'other' }), false);
+assert.equal(__test.adminAssetPath('/'), '/admin.html');
+assert.equal(__test.adminAssetPath('/admin'), '/admin.html');
+assert.equal(__test.adminAssetPath('/admin/'), '/admin.html');
+assert.equal(__test.adminAssetPath('/admin_claims.html'), '/admin_claims.html');
 
 const callbackMismatch = await req('https://admin.kalenel.nl/oauth/callback?state=wrong&code=fake');
 assert.equal(callbackMismatch.status, 403);

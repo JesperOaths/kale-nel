@@ -1,10 +1,20 @@
 (function(){
   // v757: protected admin pages stay hidden until backend admin validation succeeds.
   // Do not force admin.kalenel.nl here: that hostname may not be configured yet.
-  const pageName = (()=>{
-    try { return (window.location.pathname.split('/').pop() || 'admin.html').toLowerCase(); }
-    catch (_) { return 'admin.html'; }
-  })();
+  function normalizeAdminPageName(){
+    try {
+      const path = window.location.pathname || '';
+      const raw = (path.split('/').pop() || '').toLowerCase();
+      // The Worker intentionally exposes the main admin hub as /, /admin and
+      // /admin.html. Those routes must render the inner Supabase/TOTP lock when
+      // the inner session is missing, not be hidden by the protected-page gate.
+      if (!raw || raw === 'admin' || raw === 'admin/') return 'admin.html';
+      return raw;
+    } catch (_) {
+      return 'admin.html';
+    }
+  }
+  const pageName = normalizeAdminPageName();
   const protectedAdminPage = /^admin/i.test(pageName) && pageName !== 'admin.html';
   if (protectedAdminPage) {
     try {
@@ -86,7 +96,7 @@
 
   function pageNameFromLocation(){
     try {
-      return safeReturnTarget((window.location.pathname.split('/').pop() || 'admin.html') + window.location.search + window.location.hash) || 'admin.html';
+      return safeReturnTarget(normalizeAdminPageName() + window.location.search + window.location.hash) || 'admin.html';
     } catch (_) {
       return 'admin.html';
     }
