@@ -39,6 +39,13 @@ assert.match(await anonymous.text(), /Admin login vereist/);
 assert.equal(anonymous.headers.get('Cache-Control'), 'no-store');
 assert.equal(anonymous.headers.get('X-Frame-Options'), 'DENY');
 
+const anonymousAdminAliasRedirect = await req('https://admin.kalenel.nl/admin', { redirect: 'manual' });
+assert.equal(anonymousAdminAliasRedirect.status, 302);
+assert.equal(anonymousAdminAliasRedirect.headers.get('Location'), '/admin.html');
+const anonymousAdminSlashRedirect = await req('https://admin.kalenel.nl/admin/', { redirect: 'manual' });
+assert.equal(anonymousAdminSlashRedirect.status, 302);
+assert.equal(anonymousAdminSlashRedirect.headers.get('Location'), '/admin.html');
+
 const tampered = await req('https://admin.kalenel.nl/admin.html', { headers: { Cookie: '__Host-kalenel_admin_session=bad.payload' } });
 assert.equal(tampered.status, 401);
 
@@ -53,14 +60,15 @@ assert.equal(approved.headers.get('X-Kalenel-Admin-Gate'), 'worker');
 assert.equal(approved.headers.get('Cache-Control'), 'no-store');
 assert.match(await approved.text(), /Beheerhub/);
 
-const approvedAdminAlias = await req('https://admin.kalenel.nl/admin', { headers: { Cookie: validCookie } });
-assert.equal(approvedAdminAlias.status, 200);
-assert.equal(approvedAdminAlias.headers.get('X-Kalenel-Admin-Gate'), 'worker');
-assert.match(await approvedAdminAlias.text(), /Beheerhub/);
+const approvedAdminAlias = await follow('https://admin.kalenel.nl/admin', { Cookie: validCookie });
+assert.deepEqual(approvedAdminAlias.chain.map((hop) => [hop.status, hop.location]), [[302, '/admin.html'], [200, '']]);
+assert.equal(approvedAdminAlias.finalUrl, 'https://admin.kalenel.nl/admin.html');
+assert.equal(approvedAdminAlias.final.status, 200);
+assert.equal(approvedAdminAlias.final.headers.get('X-Kalenel-Admin-Gate'), 'worker');
 
-const anonymousAdminAlias = await req('https://admin.kalenel.nl/admin');
-assert.equal(anonymousAdminAlias.status, 401);
-assert.match(await anonymousAdminAlias.text(), /Admin login vereist/);
+const approvedAdminSlashAlias = await follow('https://admin.kalenel.nl/admin/', { Cookie: validCookie });
+assert.deepEqual(approvedAdminSlashAlias.chain.map((hop) => [hop.status, hop.location]), [[302, '/admin.html'], [200, '']]);
+assert.equal(approvedAdminSlashAlias.finalUrl, 'https://admin.kalenel.nl/admin.html');
 
 const asset = await req('https://admin.kalenel.nl/admin.js', { headers: { Cookie: validCookie } });
 assert.equal(asset.status, 200);
@@ -96,9 +104,13 @@ assert.equal(__test.isAllowedGithubAccount(env(), { id: 999, login: 'bruis-appro
 assert.equal(__test.isAllowedGithubAccount(env(), { id: 999, login: ' Bruis-Approved ' }), true);
 assert.equal(__test.isAllowedGithubAccount(env(), { id: 999, login: 'other' }), false);
 assert.equal(__test.adminAssetPath('/'), '/admin.html');
-assert.equal(__test.adminAssetPath('/admin'), '/admin.html');
-assert.equal(__test.adminAssetPath('/admin/'), '/admin.html');
+assert.equal(__test.adminAssetPath('/admin'), '/admin');
+assert.equal(__test.adminAssetPath('/admin/'), '/admin/');
 assert.equal(__test.adminAssetPath('/admin_claims.html'), '/admin_claims.html');
+assert.equal(__test.canonicalizeAdminReturnTo('/admin'), '/admin.html');
+assert.equal(__test.canonicalizeAdminReturnTo('/admin/'), '/admin.html');
+assert.equal(__test.canonicalizeAdminReturnTo('/admin?x=1'), '/admin.html?x=1');
+assert.equal(__test.canonicalizeAdminReturnTo('/admin.html'), '/admin.html');
 
 const callbackMismatch = await req('https://admin.kalenel.nl/oauth/callback?state=wrong&code=fake');
 assert.equal(callbackMismatch.status, 403);
@@ -151,6 +163,22 @@ assert.equal(malformedClientSecret.status, 403);
 assert.equal(malformedClientSecret.headers.get('X-Kalenel-Fail-Closed'), 'true');
 
 console.log('admin worker gate tests passed');
+
+async function follow(url, cookieHeaders = {}, max = 5) {
+  const chain = [];
+  let current = url;
+  const seen = new Set();
+  for (let i = 0; i < max; i += 1) {
+    if (seen.has(current)) throw new Error(`redirect cycle at ${current}`);
+    seen.add(current);
+    const res = await req(current, { redirect: 'manual', headers: cookieHeaders });
+    const location = res.headers.get('Location') || '';
+    chain.push({ status: res.status, location, url: current });
+    if (![301, 302, 303, 307, 308].includes(res.status)) return { chain, final: res, finalUrl: current };
+    current = new URL(location, current).toString();
+  }
+  throw new Error(`too many redirects from ${url}`);
+}
 
 function extractCookie(setCookie, name) {
   const match = String(setCookie || '').match(new RegExp(`(?:^|,\\s*)(${name}=[^;,]+)`));

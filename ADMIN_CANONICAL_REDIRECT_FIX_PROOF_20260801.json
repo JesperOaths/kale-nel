@@ -1,0 +1,21 @@
+﻿{
+    "timestamp_utc":  "2026-08-01T18:57:26.7363617Z",
+    "deployed_worker_version":  "57501792-e76b-41ee-8236-9057ef6f606c",
+    "canonical_admin_url":  "https://admin.kalenel.nl/admin.html",
+    "behavior":  {
+                     "admin":  "/admin returns 302 Location: /admin.html before auth/session checks",
+                     "admin_slash":  "/admin/ returns 302 Location: /admin.html before auth/session checks",
+                     "admin_html":  "/admin.html is terminal: no redirect back to aliases; unauthenticated outer session returns 401 Worker login gate; valid signed test outer session returns 200 admin hub shell",
+                     "oauth_completion":  "canonicalizeAdminReturnTo forces /admin and /admin/ to /admin.html; test asserts completion meta refresh and Continue href use /admin.html",
+                     "inner_lock":  "admin-session-sync treats /admin.html as main hub; test asserts missing inner Supabase session renders username/password/TOTP lock and does not expose hub; valid mocked inner session reaches hub"
+                 },
+    "tests":  [
+                  "node scripts/test-admin-worker-gate.mjs =\u003e admin worker gate tests passed",
+                  "node scripts/test-admin-inner-render.mjs =\u003e admin inner render integration tests passed",
+                  "npm run verify:js =\u003e Active JavaScript syntax ok. Files checked=311.",
+                  "npm run admin-worker:dry-run =\u003e dry-run succeeded",
+                  "npx wrangler deploy --config cloudflare/workers/admin-gate/wrangler.toml =\u003e deployed version 57501792-e76b-41ee-8236-9057ef6f606c"
+              ],
+    "live_redirect_matrix_file":  "ADMIN_CANONICAL_REDIRECT_LIVE_MATRIX_20260801.json",
+    "no_github_oauth_probe":  true
+}

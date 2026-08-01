@@ -68,6 +68,9 @@ async function handleAdminHost(request, env, url) {
   if (request.method !== 'GET' && request.method !== 'HEAD') return methodNotAllowed();
   if (!isSafePath(url.pathname)) return notFound();
 
+  const canonical = canonicalAdminRedirectTarget(url);
+  if (canonical) return canonicalRedirect(canonical);
+
   if (url.pathname === '/logout') return logout(url);
   if (url.pathname === '/oauth/callback') return await oauthCallback(request, env, url);
   if (url.pathname === '/login' || url.pathname === '/login/') return await login(request, env, url);
@@ -82,7 +85,30 @@ async function handleAdminHost(request, env, url) {
 }
 
 function adminAssetPath(pathname) {
-  return (pathname === '/' || pathname === '/admin' || pathname === '/admin/') ? '/admin.html' : pathname;
+  return pathname === '/' ? '/admin.html' : pathname;
+}
+
+function canonicalAdminRedirectTarget(url) {
+  if (url.hostname !== ADMIN_HOST) return '';
+  if (url.pathname !== '/admin' && url.pathname !== '/admin/') return '';
+  return `/admin.html${url.search || ''}`;
+}
+
+function canonicalizeAdminReturnTo(value) {
+  const safe = sanitizeReturnTo(value) || '/admin.html';
+  if (safe === '/admin' || safe === '/admin/') return '/admin.html';
+  if (safe.startsWith('/admin?')) return `/admin.html${safe.slice('/admin'.length)}`;
+  return safe;
+}
+
+function canonicalRedirect(location) {
+  return new Response(null, {
+    status: 302,
+    headers: secureHeaders({
+      Location: location,
+      'Cache-Control': 'no-store'
+    })
+  });
 }
 
 async function login(request, env, url) {
@@ -92,7 +118,7 @@ async function login(request, env, url) {
     return plain('Too many login attempts. Try again later.', 429);
   }
 
-  const returnTo = sanitizeReturnTo(url.searchParams.get('return_to')) || '/admin.html';
+  const returnTo = canonicalizeAdminReturnTo(url.searchParams.get('return_to'));
   const state = randomToken(24);
   const nonce = randomToken(24);
   const oauth = { kind: 'oauth', state, nonce, returnTo, exp: now() + OAUTH_TTL_SECONDS, used: false };
@@ -148,7 +174,7 @@ async function oauthCallback(request, env, url) {
     exp: now() + SESSION_TTL_SECONDS,
     nonce: oauth.nonce
   };
-  const returnTo = sanitizeReturnTo(oauth.returnTo) || '/admin.html';
+  const returnTo = canonicalizeAdminReturnTo(oauth.returnTo);
   const headers = secureHeaders({
     'Content-Type': 'text/html; charset=utf-8',
     'Cache-Control': 'no-store'
@@ -182,13 +208,13 @@ async function serveProtectedAsset(request, env, pathname) {
 }
 
 function loginPage(url, reason, status = 401) {
-  const returnTo = sanitizeReturnTo(url.pathname + url.search) || '/admin.html';
+  const returnTo = canonicalizeAdminReturnTo(url.pathname + url.search);
   const body = `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kalenel admin login</title><style>body{font-family:system-ui,sans-serif;background:#0f1115;color:#f7f3e8;display:grid;place-items:center;min-height:100vh;margin:0}.card{max-width:520px;padding:28px;border:1px solid #d4af3744;border-radius:18px;background:#171a22}a{display:inline-block;margin-top:16px;color:#111;background:#d4af37;padding:12px 16px;border-radius:12px;text-decoration:none;font-weight:800}</style></head><body><main class="card"><h1>Admin login vereist</h1><p>Deze beheeromgeving staat achter een Cloudflare Worker GitHub-login en daarna de bestaande Supabase admin/TOTP-controle.</p><p>Reden: ${escapeHtml(reason)}</p><a href="/login?return_to=${encodeURIComponent(returnTo)}">Login met GitHub</a></main></body></html>`;
   return new Response(body, { status, headers: secureHeaders({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }) });
 }
 
 function oauthCompletePage(returnTo) {
-  const safeReturnTo = sanitizeReturnTo(returnTo) || '/admin.html';
+  const safeReturnTo = canonicalizeAdminReturnTo(returnTo);
   const href = escapeHtml(safeReturnTo);
   return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="refresh" content="1;url=${href}"><title>Kalenel admin login voltooid</title><style>body{font-family:system-ui,sans-serif;background:#0f1115;color:#f7f3e8;display:grid;place-items:center;min-height:100vh;margin:0}.card{max-width:520px;padding:28px;border:1px solid #d4af3744;border-radius:18px;background:#171a22}a{display:inline-block;margin-top:16px;color:#111;background:#d4af37;padding:12px 16px;border-radius:12px;text-decoration:none;font-weight:800}</style></head><body><main class="card"><h1>GitHub-login voltooid</h1><p>Je beveiligde sessie is gezet. Ga verder naar de adminomgeving via een same-origin navigatie.</p><a href="${href}">Verder naar admin</a></main></body></html>`;
 }
@@ -259,4 +285,4 @@ function applySecurityHeaders(headers) {
   headers.set('Content-Security-Policy', "default-src 'self' https://uiqntazgnrxwliaidkmy.supabase.co; connect-src 'self' https://uiqntazgnrxwliaidkmy.supabase.co https://api.github.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self' https://github.com");
 }
 
-export const __test = { signedCookie, expireCookie, sanitizeReturnTo, isProtectedPublicPath, isAllowedGithubAccount, adminAssetPath };
+export const __test = { signedCookie, expireCookie, sanitizeReturnTo, isProtectedPublicPath, isAllowedGithubAccount, adminAssetPath, canonicalAdminRedirectTarget, canonicalizeAdminReturnTo };
