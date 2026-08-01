@@ -20,7 +20,7 @@ function env(extra = {}) {
     ASSETS: {
       async fetch(request) {
         const url = new URL(request.url);
-        if (url.pathname === '/admin.html') return new Response('<!doctype html><title>Beheerhub - Wordt er gejast?</title>', { status: 200, headers: { 'Content-Type': 'text/html' } });
+        if (url.pathname === '/admin.html') return new Response('<!doctype html><title>Beheerhub - Wordt er gejast?</title><script>window.GEJAST_PAGE_VERSION=\'v762\';</script><script src="./gejast-home-gate.js?v762"></script><script src="./admin-session-sync.js?v762"></script>', { status: 200, headers: { 'Content-Type': 'text/html' } });
         if (url.pathname === '/admin.js') return new Response('window.GEJAST_ADMIN=1;', { status: 200, headers: { 'Content-Type': 'application/javascript' } });
         return new Response('missing', { status: 404 });
       }
@@ -37,6 +37,7 @@ const anonymous = await req('https://admin.kalenel.nl/admin.html');
 assert.equal(anonymous.status, 401);
 assert.match(await anonymous.text(), /Admin login vereist/);
 assert.equal(anonymous.headers.get('Cache-Control'), 'no-store');
+assert.equal(anonymous.headers.get('X-Kalenel-Admin-Build'), 'v762');
 assert.equal(anonymous.headers.get('X-Frame-Options'), 'DENY');
 
 const anonymousAdminAliasRedirect = await req('https://admin.kalenel.nl/admin', { redirect: 'manual' });
@@ -58,7 +59,12 @@ const approved = await req('https://admin.kalenel.nl/admin.html', { headers: { C
 assert.equal(approved.status, 200);
 assert.equal(approved.headers.get('X-Kalenel-Admin-Gate'), 'worker');
 assert.equal(approved.headers.get('Cache-Control'), 'no-store');
-assert.match(await approved.text(), /Beheerhub/);
+assert.equal(approved.headers.get('X-Kalenel-Admin-Build'), 'v762');
+const approvedHtml = await approved.text();
+assert.match(approvedHtml, /Beheerhub/);
+assert.match(approvedHtml, /GEJAST_PAGE_VERSION='v762'/);
+assert.match(approvedHtml, /gejast-home-gate\.js\?v762/);
+assert.match(approvedHtml, /admin-session-sync\.js\?v762/);
 
 const approvedAdminAlias = await follow('https://admin.kalenel.nl/admin', { Cookie: validCookie });
 assert.deepEqual(approvedAdminAlias.chain.map((hop) => [hop.status, hop.location]), [[302, '/admin.html'], [200, '']]);
@@ -73,6 +79,8 @@ assert.equal(approvedAdminSlashAlias.finalUrl, 'https://admin.kalenel.nl/admin.h
 const asset = await req('https://admin.kalenel.nl/admin.js', { headers: { Cookie: validCookie } });
 assert.equal(asset.status, 200);
 assert.equal(asset.headers.get('X-Kalenel-Admin-Gate'), 'worker');
+assert.equal(asset.headers.get('Cache-Control'), 'no-store');
+assert.equal(asset.headers.get('X-Kalenel-Admin-Build'), 'v762');
 
 const loginStart = await req('https://admin.kalenel.nl/login?return_to=/admin.html', { redirect: 'manual' });
 assert.equal(loginStart.status, 302);
@@ -142,7 +150,9 @@ try {
   const adminAfterCallback = await req('https://admin.kalenel.nl/admin.html', { headers: { Cookie: sessionCookie } }, oauthEnv);
   assert.equal(adminAfterCallback.status, 200);
   assert.equal(adminAfterCallback.headers.get('X-Kalenel-Admin-Gate'), 'worker');
-  assert.match(await adminAfterCallback.text(), /Beheerhub/);
+  const adminAfterCallbackHtml = await adminAfterCallback.text();
+  assert.match(adminAfterCallbackHtml, /Beheerhub/);
+  assert.match(adminAfterCallbackHtml, /GEJAST_PAGE_VERSION='v762'/);
 } finally {
   globalThis.fetch = originalFetch;
 }

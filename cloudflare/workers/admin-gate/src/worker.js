@@ -7,6 +7,7 @@ const SESSION_TTL_SECONDS = 30 * 60;
 const OAUTH_TTL_SECONDS = 10 * 60;
 const ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const MAX_LOGIN_ATTEMPTS = 8;
+const ADMIN_BUILD = 'v762';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
@@ -202,15 +203,16 @@ async function serveProtectedAsset(request, env, pathname) {
   if (!response || response.status === 404) return notFound();
   const headers = new Headers(response.headers);
   applySecurityHeaders(headers);
-  if (/\.html$/i.test(pathname) || pathname === '/admin.html') headers.set('Cache-Control', 'no-store');
+  headers.set('Cache-Control', 'no-store');
   headers.set('X-Kalenel-Admin-Gate', 'worker');
+  headers.set('X-Kalenel-Admin-Build', ADMIN_BUILD);
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
 function loginPage(url, reason, status = 401) {
   const returnTo = canonicalizeAdminReturnTo(url.pathname + url.search);
   const body = `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Kalenel admin login</title><style>body{font-family:system-ui,sans-serif;background:#0f1115;color:#f7f3e8;display:grid;place-items:center;min-height:100vh;margin:0}.card{max-width:520px;padding:28px;border:1px solid #d4af3744;border-radius:18px;background:#171a22}a{display:inline-block;margin-top:16px;color:#111;background:#d4af37;padding:12px 16px;border-radius:12px;text-decoration:none;font-weight:800}</style></head><body><main class="card"><h1>Admin login vereist</h1><p>Deze beheeromgeving staat achter een Cloudflare Worker GitHub-login en daarna de bestaande Supabase admin/TOTP-controle.</p><p>Reden: ${escapeHtml(reason)}</p><a href="/login?return_to=${encodeURIComponent(returnTo)}">Login met GitHub</a></main></body></html>`;
-  return new Response(body, { status, headers: secureHeaders({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }) });
+  return new Response(body, { status, headers: secureHeaders({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Kalenel-Admin-Build': ADMIN_BUILD }) });
 }
 
 function oauthCompletePage(returnTo) {
