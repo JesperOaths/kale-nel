@@ -13,9 +13,10 @@
   <script src="./gejast-scope-context.js?v761"></script>
   <script src="./admin-session-sync.js?v761"></script>
   <script src="./admin-topnav.js?v761"></script>
+  <script src="./gejast-push-runtime.js?v761"></script>
   <style>
     :root{--gold:#9a8241;--card:#f9f7f2;--line:rgba(0,0,0,.08);--muted:#6b655b;--ok:#285b34;--warn:#8b3a30;--ink:#181510}
-    *{box-sizing:border-box}body{margin:0;padding:20px;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(rgba(232,228,217,.94),rgba(232,228,217,.94)),url('./site-bg-desktop.webp') center/cover no-repeat fixed;color:var(--ink);min-height:100vh}.main{max-width:860px;margin:0 auto;background:var(--card);border-radius:26px;padding:28px;box-shadow:0 20px 50px rgba(0,0,0,.08);position:relative}.logo{position:absolute;top:24px;right:24px;width:42px}.top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.btn{border:0;border-radius:14px;padding:12px 15px;font:inherit;font-weight:850;cursor:pointer;text-decoration:none}.btn[disabled]{opacity:.45;cursor:not-allowed}.primary{background:var(--gold);color:#111}.ghost{background:#fff;border:1px solid var(--line);color:#222}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:16px}.muted{color:var(--muted)}.small{font-size:13px}.status{margin-top:14px;min-height:22px;font-weight:750}.status.ok{color:var(--ok)}.status.warn{color:var(--warn)}label{display:block;font-weight:850;margin:0 0 6px}input{width:100%;padding:14px;border:1px solid #ddd;border-radius:14px;font:inherit;background:#fff}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.row{display:flex;gap:10px;flex-wrap:wrap}.result{white-space:pre-wrap;background:#f3efe5;border:1px solid var(--line);border-radius:14px;padding:14px;min-height:120px;overflow:auto}.pill{display:inline-flex;padding:7px 10px;border-radius:999px;background:#f3efe5;font-size:12px;font-weight:850;margin:3px 4px 3px 0}.site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui;letter-spacing:.03em;pointer-events:none;user-select:none}@media(max-width:760px){.grid{grid-template-columns:1fr}.main{padding:22px}.logo{position:static;width:38px}}
+    *{box-sizing:border-box}body{margin:0;padding:20px;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(rgba(232,228,217,.94),rgba(232,228,217,.94)),url('./site-bg-desktop.webp') center/cover no-repeat fixed;color:var(--ink);min-height:100vh}.main{max-width:900px;margin:0 auto;background:var(--card);border-radius:26px;padding:28px;box-shadow:0 20px 50px rgba(0,0,0,.08);position:relative}.logo{position:absolute;top:24px;right:24px;width:42px}.top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.btn{border:0;border-radius:14px;padding:12px 15px;font:inherit;font-weight:850;cursor:pointer;text-decoration:none}.btn[disabled]{opacity:.45;cursor:not-allowed}.primary{background:var(--gold);color:#111}.ghost{background:#fff;border:1px solid var(--line);color:#222}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:16px}.muted{color:var(--muted)}.small{font-size:13px}.status{margin-top:14px;min-height:22px;font-weight:750}.status.ok{color:var(--ok)}.status.warn{color:var(--warn)}label{display:block;font-weight:850;margin:0 0 6px}input{width:100%;padding:14px;border:1px solid #ddd;border-radius:14px;font:inherit;background:#fff}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.row{display:flex;gap:10px;flex-wrap:wrap}.result{white-space:pre-wrap;background:#f3efe5;border:1px solid var(--line);border-radius:14px;padding:14px;min-height:150px;overflow:auto}.pill{display:inline-flex;padding:7px 10px;border-radius:999px;background:#f3efe5;font-size:12px;font-weight:850;margin:3px 4px 3px 0}.site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui;letter-spacing:.03em;pointer-events:none;user-select:none}@media(max-width:760px){.grid{grid-template-columns:1fr}.main{padding:22px}.logo{position:static;width:38px}}
   </style>
 </head>
 <body>
@@ -24,7 +25,7 @@
     <div class="top">
       <div>
         <h1>Gerichte push test</h1>
-        <p class="muted">Queue-only controle voor één expliciet abonnement. Deze pagina verstuurt niets en start geen dispatcher.</p>
+        <p class="muted">Queue-only controle voor een expliciet abonnement. Deze pagina verstuurt niets en start geen dispatcher.</p>
       </div>
       <a class="btn ghost" href="./admin.html">Terug naar hub</a>
     </div>
@@ -40,18 +41,25 @@
     </section>
 
     <section class="card">
-      <h2>Stap 1 — validate only</h2>
-      <p class="muted small">Gebruikt de bestaande inner adminsessie via <code>admin-session-sync.js</code>. De sessietoken wordt nooit weergegeven of gelogd.</p>
+      <h2>Stap 0 - refresh permitted readiness</h2>
+      <p class="muted small">Probeert alleen een bestaand lokaal push-abonnement op deze origin opnieuw te toucheren. Dit vraagt geen nieuwe permissies, maakt geen nieuw abonnement en toont geen sleutelmateriaal.</p>
+      <button id="refreshReadinessBtn" class="btn ghost" type="button">Refresh readiness if possible</button>
+      <div id="refreshStatus" class="status"></div>
+    </section>
+
+    <section class="card">
+      <h2>Stap 1 - validate only</h2>
+      <p class="muted small">Gebruikt de bestaande inner adminsessie via <code>admin-session-sync.js</code>. De sessietoken wordt nooit weergegeven of gelogd. De validatie toont alleen gesanitiseerde statusvelden.</p>
       <button id="validateBtn" class="btn ghost" type="button">Validate only</button>
       <div id="validateStatus" class="status"></div>
     </section>
 
     <section class="card">
-      <h2>Stap 2 — queue één job</h2>
+      <h2>Stap 2 - queue een job</h2>
       <p class="muted small">Pas beschikbaar na succesvolle validatie. Typ <strong>357</strong> om de queue-knop te ontgrendelen. Dit maakt alleen een durable queued row; het verstuurt niets.</p>
       <label for="confirmInput">Bevestig subscription id</label>
       <input id="confirmInput" inputmode="numeric" autocomplete="off" placeholder="Typ 357" />
-      <div class="row" style="margin-top:12px"><button id="queueBtn" class="btn primary" type="button" disabled>Queue exactly one job — does not send</button></div>
+      <div class="row" style="margin-top:12px"><button id="queueBtn" class="btn primary" type="button" disabled>Queue exactly one job - does not send</button></div>
       <div id="queueStatus" class="status"></div>
     </section>
 
@@ -74,30 +82,67 @@
       let validationOk = false;
       let queuedThisLoad = false;
 
+      const refreshReadinessBtn = document.getElementById('refreshReadinessBtn');
       const validateBtn = document.getElementById('validateBtn');
       const queueBtn = document.getElementById('queueBtn');
       const confirmInput = document.getElementById('confirmInput');
       const resultBox = document.getElementById('resultBox');
+      const refreshStatus = document.getElementById('refreshStatus');
       const validateStatus = document.getElementById('validateStatus');
       const queueStatus = document.getElementById('queueStatus');
 
       function setStatus(el, text, tone){ el.textContent = text || ''; el.className = `status ${tone || ''}`.trim(); }
       function rpcHeaders(){ return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type': 'application/json', Accept: 'application/json' }; }
+      function cleanInt(value, fallback){ const n = Number(value); return Number.isFinite(n) ? n : fallback; }
       function renderSanitized(data){
         const safe = {
           ok: !!data?.ok,
-          queued_count: Number(data?.queued_count || 0),
+          eligible: !!data?.eligible,
+          blocker: data?.blocker || null,
+          queued_count: cleanInt(data?.queued_count, 0),
           job_id: data?.job_id ?? null,
-          target_subscription_id: Number(data?.target_subscription_id || TARGET_SUBSCRIPTION_ID),
-          site_scope: data?.site_scope || TARGET_SCOPE
+          target_subscription_id: cleanInt(data?.target_subscription_id, TARGET_SUBSCRIPTION_ID),
+          site_scope: data?.site_scope || TARGET_SCOPE,
+          status: data?.status || null,
+          trigger_kind: data?.trigger_kind || null,
+          subscription_state: data?.subscription_state || null,
+          presence_state: data?.presence_state || null,
+          presence_age_seconds: data?.presence_age_seconds ?? null,
+          duplicate_open_count: cleanInt(data?.duplicate_open_count, 0)
         };
         resultBox.textContent = JSON.stringify(safe, null, 2);
         resultBox.classList.remove('muted');
         return safe;
       }
       function renderError(message){
-        resultBox.textContent = JSON.stringify({ ok:false, error: String(message || 'Actie mislukt.') }, null, 2);
+        resultBox.textContent = JSON.stringify({ ok:false, eligible:false, blocker: String(message || 'ACTION_FAILED') }, null, 2);
         resultBox.classList.remove('muted');
+      }
+      function renderLocalRefresh(data){
+        const safe = {
+          ok: !!data?.ok,
+          eligible: !!data?.eligible,
+          blocker: data?.blocker || null,
+          local_origin: location.hostname || null,
+          subscription_present: !!data?.subscription_present,
+          permission: data?.permission || null,
+          touched: !!data?.touched
+        };
+        resultBox.textContent = JSON.stringify(safe, null, 2);
+        resultBox.classList.remove('muted');
+        return safe;
+      }
+      async function refreshLocalReadiness(){
+        const rt = window.GEJAST_PUSH_RUNTIME;
+        if (!rt || typeof rt.getSubscription !== 'function' || typeof rt.touchPresence !== 'function') return { ok:false, eligible:false, blocker:'PUSH_RUNTIME_UNAVAILABLE' };
+        const permission = typeof rt.notificationPermission === 'function' ? rt.notificationPermission() : null;
+        if (permission !== 'granted') return { ok:false, eligible:false, blocker:'NOTIFICATION_PERMISSION_NOT_GRANTED', permission };
+        const subscription = await rt.getSubscription();
+        if (!subscription) return { ok:false, eligible:false, blocker:'LOCAL_SUBSCRIPTION_MISSING', permission, subscription_present:false };
+        const touched = await rt.touchPresence({ subscription, scope:TARGET_SCOPE, pagePath:TARGET_URL, requestLocation:false });
+        if (!touched?.touched) return { ok:false, eligible:false, blocker:touched?.reason || 'PRESENCE_TOUCH_FAILED', permission, subscription_present:true, touched:false };
+        if (typeof rt.startPresenceHeartbeat === 'function') rt.startPresenceHeartbeat({ scope:TARGET_SCOPE, pagePath:TARGET_URL, requestLocation:false });
+        return { ok:true, eligible:true, permission, subscription_present:true, touched:true };
       }
       async function parseResponse(res){
         const text = await res.text();
@@ -107,10 +152,10 @@
         return data;
       }
       async function adminToken(){
-        if (!window.GEJAST_ADMIN_SESSION || typeof window.GEJAST_ADMIN_SESSION.validate !== 'function') throw new Error('Adminsessie-hulp ontbreekt.');
+        if (!window.GEJAST_ADMIN_SESSION || typeof window.GEJAST_ADMIN_SESSION.validate !== 'function') throw new Error('ADMIN_SESSION_HELPER_MISSING');
         const state = await window.GEJAST_ADMIN_SESSION.validate();
         const token = state?.admin_session_token || (window.GEJAST_ADMIN_SESSION.getToken && window.GEJAST_ADMIN_SESSION.getToken());
-        if (!token) throw new Error('Geen geldige inner adminsessie.');
+        if (!token) throw new Error('INNER_ADMIN_SESSION_REQUIRED');
         return token;
       }
       async function callQueueRpc(dryRun){
@@ -129,19 +174,32 @@
       function refreshQueueEnabled(){
         queueBtn.disabled = !validationOk || queuedThisLoad || confirmInput.value.trim() !== String(TARGET_SUBSCRIPTION_ID);
       }
+      refreshReadinessBtn.addEventListener('click', async () => {
+        refreshReadinessBtn.disabled = true;
+        setStatus(refreshStatus, 'Readiness-refresh loopt...', '');
+        try {
+          const safe = renderLocalRefresh(await refreshLocalReadiness());
+          setStatus(refreshStatus, safe.ok ? 'Lokale readiness is ververst waar mogelijk.' : (safe.blocker || 'Readiness kon niet lokaal worden ververst.'), safe.ok ? 'ok' : 'warn');
+        } catch (err) {
+          renderError(err?.message || 'READINESS_REFRESH_FAILED');
+          setStatus(refreshStatus, err?.message || 'Readiness-refresh mislukt.', 'warn');
+        } finally {
+          refreshReadinessBtn.disabled = false;
+        }
+      });
       validateBtn.addEventListener('click', async () => {
         validationOk = false;
         refreshQueueEnabled();
         validateBtn.disabled = true;
-        setStatus(validateStatus, 'Validatie loopt…', '');
+        setStatus(validateStatus, 'Validatie loopt...', '');
         try {
           const data = await callQueueRpc(true);
           const safe = renderSanitized(data);
-          if (!safe.ok || safe.queued_count !== 0) throw new Error('Validatie gaf geen veilige dry-run respons.');
+          if (!safe.ok || !safe.eligible || safe.queued_count !== 0) throw new Error(safe.blocker || 'VALIDATION_NOT_ELIGIBLE');
           validationOk = true;
           setStatus(validateStatus, 'Validatie gelukt. Queue-knop is beschikbaar na bevestiging 357.', 'ok');
         } catch (err) {
-          renderError(err?.message || 'Validatie mislukt.');
+          renderError(err?.message || 'VALIDATION_FAILED');
           setStatus(validateStatus, err?.message || 'Validatie mislukt.', 'warn');
         } finally {
           validateBtn.disabled = false;
@@ -154,29 +212,29 @@
         if (confirmInput.value.trim() !== String(TARGET_SUBSCRIPTION_ID)) return setStatus(queueStatus, 'Typ exact 357.', 'warn');
         if (queuedThisLoad) return;
         queueBtn.disabled = true;
-        setStatus(queueStatus, 'Queue-aanvraag loopt…', '');
+        setStatus(queueStatus, 'Queue-aanvraag loopt...', '');
         try {
           const data = await callQueueRpc(false);
           const safe = renderSanitized(data);
-          if (!safe.ok || safe.queued_count !== 1 || !safe.job_id || safe.target_subscription_id !== TARGET_SUBSCRIPTION_ID || safe.site_scope !== TARGET_SCOPE) throw new Error('Queue-respons voldoet niet aan de veiligheidsverwachting.');
+          if (!safe.ok || !safe.eligible || safe.queued_count !== 1 || !safe.job_id || safe.target_subscription_id !== TARGET_SUBSCRIPTION_ID || safe.site_scope !== TARGET_SCOPE || safe.status !== 'queued' || safe.trigger_kind !== 'admin_targeted_test') throw new Error(safe.blocker || 'QUEUE_RESPONSE_UNSAFE');
           queuedThisLoad = true;
-          setStatus(queueStatus, 'Precies één job is gequeued. Deze pagina verstuurt niets.', 'ok');
+          setStatus(queueStatus, 'Precies een job is gequeued. Deze pagina verstuurt niets.', 'ok');
         } catch (err) {
-          renderError(err?.message || 'Queue mislukt.');
+          renderError(err?.message || 'QUEUE_FAILED');
           setStatus(queueStatus, err?.message || 'Queue mislukt.', 'warn');
           refreshQueueEnabled();
         }
       });
       (async () => {
         try {
-          if (!window.GEJAST_ADMIN_SESSION || typeof window.GEJAST_ADMIN_SESSION.requirePage !== 'function') throw new Error('Adminsessie-hulp ontbreekt.');
+          if (!window.GEJAST_ADMIN_SESSION || typeof window.GEJAST_ADMIN_SESSION.requirePage !== 'function') throw new Error('ADMIN_SESSION_HELPER_MISSING');
           await window.GEJAST_ADMIN_SESSION.requirePage('admin_push_targeted_test.html');
         } catch (_) {}
         refreshQueueEnabled();
       })();
     })();
   </script>
-  <div class="site-credit-watermark" data-version-watermark>v761 · Made by Bruis</div>
+  <div class="site-credit-watermark" data-version-watermark>v761 - Made by Bruis</div>
   <script src="./site-analytics.js?v761"></script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
