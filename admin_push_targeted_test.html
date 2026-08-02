@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
+  <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gerichte push test - Wordt er gejast?</title>
+  <script>window.GEJAST_PAGE_VERSION='v761';</script>
+  <script src="./gejast-config.js?v761"></script>
+  <script src="./gejast-home-gate.js?v761"></script>
+  <script src="./gejast-scope-context.js?v761"></script>
+  <script src="./admin-session-sync.js?v761"></script>
+  <script src="./admin-topnav.js?v761"></script>
+  <style>
+    :root{--gold:#9a8241;--card:#f9f7f2;--line:rgba(0,0,0,.08);--muted:#6b655b;--ok:#285b34;--warn:#8b3a30;--ink:#181510}
+    *{box-sizing:border-box}body{margin:0;padding:20px;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(rgba(232,228,217,.94),rgba(232,228,217,.94)),url('./site-bg-desktop.webp') center/cover no-repeat fixed;color:var(--ink);min-height:100vh}.main{max-width:860px;margin:0 auto;background:var(--card);border-radius:26px;padding:28px;box-shadow:0 20px 50px rgba(0,0,0,.08);position:relative}.logo{position:absolute;top:24px;right:24px;width:42px}.top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}.btn{border:0;border-radius:14px;padding:12px 15px;font:inherit;font-weight:850;cursor:pointer;text-decoration:none}.btn[disabled]{opacity:.45;cursor:not-allowed}.primary{background:var(--gold);color:#111}.ghost{background:#fff;border:1px solid var(--line);color:#222}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:16px}.muted{color:var(--muted)}.small{font-size:13px}.status{margin-top:14px;min-height:22px;font-weight:750}.status.ok{color:var(--ok)}.status.warn{color:var(--warn)}label{display:block;font-weight:850;margin:0 0 6px}input{width:100%;padding:14px;border:1px solid #ddd;border-radius:14px;font:inherit;background:#fff}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.row{display:flex;gap:10px;flex-wrap:wrap}.result{white-space:pre-wrap;background:#f3efe5;border:1px solid var(--line);border-radius:14px;padding:14px;min-height:120px;overflow:auto}.pill{display:inline-flex;padding:7px 10px;border-radius:999px;background:#f3efe5;font-size:12px;font-weight:850;margin:3px 4px 3px 0}.site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,system-ui;letter-spacing:.03em;pointer-events:none;user-select:none}@media(max-width:760px){.grid{grid-template-columns:1fr}.main{padding:22px}.logo{position:static;width:38px}}
+  </style>
+</head>
+<body>
+  <main class="main">
+    <a href="./admin.html" aria-label="Terug naar admin-overzicht"><img src="./logo-small.png" class="logo" alt="logo"></a>
+    <div class="top">
+      <div>
+        <h1>Gerichte push test</h1>
+        <p class="muted">Queue-only controle voor één expliciet abonnement. Deze pagina verstuurt niets en start geen dispatcher.</p>
+      </div>
+      <a class="btn ghost" href="./admin.html">Terug naar hub</a>
+    </div>
+
+    <section class="card">
+      <h2>Vaste doelinstellingen</h2>
+      <p><span class="pill">subscription 357</span><span class="pill">scope friends</span><span class="pill">dry-run eerst verplicht</span><span class="pill">geen dispatcher</span></p>
+      <div class="grid">
+        <div><label>Titel</label><input id="titleInput" value="GEJAST v763 single targeted push proof" readonly></div>
+        <div><label>Doellink</label><input id="targetUrlInput" value="./push_beta_test.html?push_test=targeted" readonly></div>
+      </div>
+      <div style="margin-top:12px"><label>Bericht</label><input id="bodyInput" value="Clearly labelled one-device web-push queue proof. This only queues; it does not send." readonly></div>
+    </section>
+
+    <section class="card">
+      <h2>Stap 1 — validate only</h2>
+      <p class="muted small">Gebruikt de bestaande inner adminsessie via <code>admin-session-sync.js</code>. De sessietoken wordt nooit weergegeven of gelogd.</p>
+      <button id="validateBtn" class="btn ghost" type="button">Validate only</button>
+      <div id="validateStatus" class="status"></div>
+    </section>
+
+    <section class="card">
+      <h2>Stap 2 — queue één job</h2>
+      <p class="muted small">Pas beschikbaar na succesvolle validatie. Typ <strong>357</strong> om de queue-knop te ontgrendelen. Dit maakt alleen een durable queued row; het verstuurt niets.</p>
+      <label for="confirmInput">Bevestig subscription id</label>
+      <input id="confirmInput" inputmode="numeric" autocomplete="off" placeholder="Typ 357" />
+      <div class="row" style="margin-top:12px"><button id="queueBtn" class="btn primary" type="button" disabled>Queue exactly one job — does not send</button></div>
+      <div id="queueStatus" class="status"></div>
+    </section>
+
+    <section class="card">
+      <h2>Sanitized output</h2>
+      <div id="resultBox" class="result muted">Nog geen resultaat.</div>
+    </section>
+  </main>
+
+  <script>
+    (function(){
+      'use strict';
+      const TARGET_SUBSCRIPTION_ID = 357;
+      const TARGET_SCOPE = 'friends';
+      const TARGET_URL = './push_beta_test.html?push_test=targeted';
+      const RPC_NAME = 'admin_queue_targeted_web_push_test_v763';
+      const cfg = window.GEJAST_CONFIG || {};
+      const SUPABASE_URL = cfg.SUPABASE_URL || 'https://uiqntazgnrxwliaidkmy.supabase.co';
+      const SUPABASE_PUBLISHABLE_KEY = cfg.SUPABASE_PUBLISHABLE_KEY || '';
+      let validationOk = false;
+      let queuedThisLoad = false;
+
+      const validateBtn = document.getElementById('validateBtn');
+      const queueBtn = document.getElementById('queueBtn');
+      const confirmInput = document.getElementById('confirmInput');
+      const resultBox = document.getElementById('resultBox');
+      const validateStatus = document.getElementById('validateStatus');
+      const queueStatus = document.getElementById('queueStatus');
+
+      function setStatus(el, text, tone){ el.textContent = text || ''; el.className = `status ${tone || ''}`.trim(); }
+      function rpcHeaders(){ return { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'Content-Type': 'application/json', Accept: 'application/json' }; }
+      function renderSanitized(data){
+        const safe = {
+          ok: !!data?.ok,
+          queued_count: Number(data?.queued_count || 0),
+          job_id: data?.job_id ?? null,
+          target_subscription_id: Number(data?.target_subscription_id || TARGET_SUBSCRIPTION_ID),
+          site_scope: data?.site_scope || TARGET_SCOPE
+        };
+        resultBox.textContent = JSON.stringify(safe, null, 2);
+        resultBox.classList.remove('muted');
+        return safe;
+      }
+      function renderError(message){
+        resultBox.textContent = JSON.stringify({ ok:false, error: String(message || 'Actie mislukt.') }, null, 2);
+        resultBox.classList.remove('muted');
+      }
+      async function parseResponse(res){
+        const text = await res.text();
+        let data = null;
+        try { data = text ? JSON.parse(text) : null; } catch (_) { throw new Error(`HTTP ${res.status}`); }
+        if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
+        return data;
+      }
+      async function adminToken(){
+        if (!window.GEJAST_ADMIN_SESSION || typeof window.GEJAST_ADMIN_SESSION.validate !== 'function') throw new Error('Adminsessie-hulp ontbreekt.');
+        const state = await window.GEJAST_ADMIN_SESSION.validate();
+        const token = state?.admin_session_token || (window.GEJAST_ADMIN_SESSION.getToken && window.GEJAST_ADMIN_SESSION.getToken());
+        if (!token) throw new Error('Geen geldige inner adminsessie.');
+        return token;
+      }
+      async function callQueueRpc(dryRun){
+        const token = await adminToken();
+        const payload = {
+          admin_session_token: token,
+          target_subscription_id_input: TARGET_SUBSCRIPTION_ID,
+          title_input: document.getElementById('titleInput').value,
+          body_input: document.getElementById('bodyInput').value,
+          target_url_input: TARGET_URL,
+          site_scope_input: TARGET_SCOPE,
+          dry_run: !!dryRun
+        };
+        return fetch(`${SUPABASE_URL}/rest/v1/rpc/${RPC_NAME}`, { method:'POST', mode:'cors', cache:'no-store', headers: rpcHeaders(), body: JSON.stringify(payload) }).then(parseResponse);
+      }
+      function refreshQueueEnabled(){
+        queueBtn.disabled = !validationOk || queuedThisLoad || confirmInput.value.trim() !== String(TARGET_SUBSCRIPTION_ID);
+      }
+      validateBtn.addEventListener('click', async () => {
+        validationOk = false;
+        refreshQueueEnabled();
+        validateBtn.disabled = true;
+        setStatus(validateStatus, 'Validatie loopt…', '');
+        try {
+          const data = await callQueueRpc(true);
+          const safe = renderSanitized(data);
+          if (!safe.ok || safe.queued_count !== 0) throw new Error('Validatie gaf geen veilige dry-run respons.');
+          validationOk = true;
+          setStatus(validateStatus, 'Validatie gelukt. Queue-knop is beschikbaar na bevestiging 357.', 'ok');
+        } catch (err) {
+          renderError(err?.message || 'Validatie mislukt.');
+          setStatus(validateStatus, err?.message || 'Validatie mislukt.', 'warn');
+        } finally {
+          validateBtn.disabled = false;
+          refreshQueueEnabled();
+        }
+      });
+      confirmInput.addEventListener('input', refreshQueueEnabled);
+      queueBtn.addEventListener('click', async () => {
+        if (!validationOk) return setStatus(queueStatus, 'Valideer eerst.', 'warn');
+        if (confirmInput.value.trim() !== String(TARGET_SUBSCRIPTION_ID)) return setStatus(queueStatus, 'Typ exact 357.', 'warn');
+        if (queuedThisLoad) return;
+        queueBtn.disabled = true;
+        setStatus(queueStatus, 'Queue-aanvraag loopt…', '');
+        try {
+          const data = await callQueueRpc(false);
+          const safe = renderSanitized(data);
+          if (!safe.ok || safe.queued_count !== 1 || !safe.job_id || safe.target_subscription_id !== TARGET_SUBSCRIPTION_ID || safe.site_scope !== TARGET_SCOPE) throw new Error('Queue-respons voldoet niet aan de veiligheidsverwachting.');
+          queuedThisLoad = true;
+          setStatus(queueStatus, 'Precies één job is gequeued. Deze pagina verstuurt niets.', 'ok');
+        } catch (err) {
+          renderError(err?.message || 'Queue mislukt.');
+          setStatus(queueStatus, err?.message || 'Queue mislukt.', 'warn');
+          refreshQueueEnabled();
+        }
+      });
+      (async () => {
+        try {
+          if (!window.GEJAST_ADMIN_SESSION || typeof window.GEJAST_ADMIN_SESSION.requirePage !== 'function') throw new Error('Adminsessie-hulp ontbreekt.');
+          await window.GEJAST_ADMIN_SESSION.requirePage('admin_push_targeted_test.html');
+        } catch (_) {}
+        refreshQueueEnabled();
+      })();
+    })();
+  </script>
+  <div class="site-credit-watermark" data-version-watermark>v761 · Made by Bruis</div>
+  <script src="./site-analytics.js?v761"></script>
+  <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
+</body>
+</html>
