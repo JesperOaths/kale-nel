@@ -9,7 +9,7 @@
   },
   "scripts": {
     "verify": "npm run verify:static && npm run verify:js",
-    "verify:static": "node check-version-drift.mjs && node check-rpc-coverage.mjs && node check-local-refs.mjs && node check-homepage-root-fixes.mjs && node check-beta-readonly-surfaces-regression.mjs && node check-web-push-dispatcher-guards.mjs && node check-toepen.mjs && node check-toepen-engine.mjs && node check-toepen-backend-contract.mjs",
+    "verify:static": "node check-version-drift.mjs && node check-rpc-coverage.mjs && node check-local-refs.mjs && node check-homepage-root-fixes.mjs && node check-beta-readonly-surfaces-regression.mjs && node check-web-push-dispatcher-guards.mjs && node check-web-push-sql-hardening-v763.mjs && node check-toepen.mjs && node check-toepen-engine.mjs && node check-toepen-backend-contract.mjs",
     "verify:js": "node check-active-js-syntax.mjs",
     "admin-worker:build": "node scripts/build-admin-worker-assets.mjs",
     "admin-worker:test": "node scripts/test-admin-worker-gate.mjs",
