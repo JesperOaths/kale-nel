@@ -1,0 +1,47 @@
+[
+    {
+        "file":  "VERSION",
+        "sha256":  "3000d470d1030147114706b173230f35f4f877e30b4ecb3b6078f1daeaf6ab32",
+        "bytes":  5
+    },
+    {
+        "file":  "index.html",
+        "sha256":  "66e6b9952a6290535f8202af77e8e6fd698b7dadb00f2305b9d4d64c25e3b6f2",
+        "bytes":  113660
+    },
+    {
+        "file":  "boerenbridge_vault.html",
+        "sha256":  "48372cacaef1ca5e1b53ad253b2454e0767451531efb8ed055d4535b5bb617e0",
+        "bytes":  8755
+    },
+    {
+        "file":  "toepen.html",
+        "sha256":  "0ac5747219422622f156c3b91bb88390c528fc165d636a1215f0dab9d8f313d8",
+        "bytes":  18689
+    },
+    {
+        "file":  "gejast-config.js",
+        "sha256":  "9c1dc79eb1bba77a162dab54f0ceb6ef541797b995e20b6cba129b89bfc47364",
+        "bytes":  37572
+    },
+    {
+        "file":  "admin-session-sync.js",
+        "sha256":  "7ff83db2c9c36f084f91d8280f0962968d1aaaa5bf4fe3957bd6f23fcdf9ddbf",
+        "bytes":  7532
+    },
+    {
+        "file":  "admin-gate-v105.js",
+        "sha256":  "af901ebf3119aba3e9d10c5735314bf49dcfda3385b5cda6dbbe390386257c45",
+        "bytes":  6094
+    },
+    {
+        "file":  "gejast-sw.js",
+        "sha256":  "6586061384421573d448b1d9c95536b707ad660a12a6ae471bb5fed421a4a357",
+        "bytes":  5753
+    },
+    {
+        "file":  "CNAME",
+        "sha256":  "75393a7bd7eac0027047e4b77a31deff5da421840ff44b9d0c8296a72c95575c",
+        "bytes":  12
+    }
+]

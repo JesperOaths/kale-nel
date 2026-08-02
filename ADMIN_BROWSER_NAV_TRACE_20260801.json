@@ -1,0 +1,168 @@
+[
+  {
+    "browser": "chromium",
+    "target": "https://admin.kalenel.nl/admin.html",
+    "outcome": "goto resolved status 401",
+    "finalUrl": "https://admin.kalenel.nl/admin.html",
+    "cycle": false,
+    "navCount": 1,
+    "title": "Kalenel admin login",
+    "hasOuterLoginGate": true,
+    "hasGithubLoginLink": true,
+    "hasInnerTotpLock": false,
+    "mainChain": [
+      {
+        "event": "request",
+        "browser": "chromium",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "method": "GET",
+        "resourceType": "document",
+        "isMainDocument": true,
+        "requestCookies": "",
+        "initiatorType": "document/navigation",
+        "redirectedFrom": "",
+        "redirectedTo": ""
+      },
+      {
+        "event": "response",
+        "browser": "chromium",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "status": 401,
+        "isMainDocument": true,
+        "location": "",
+        "setCookie": "",
+        "fromServiceWorker": false,
+        "requestCookies": "",
+        "initiatorType": "document/navigation",
+        "redirectedFrom": "",
+        "redirectedTo": ""
+      },
+      {
+        "event": "framenavigated",
+        "browser": "chromium",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "isMainDocument": true
+      }
+    ],
+    "events": [
+      {
+        "event": "request",
+        "browser": "chromium",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "method": "GET",
+        "resourceType": "document",
+        "isMainDocument": true,
+        "requestCookies": "",
+        "initiatorType": "document/navigation",
+        "redirectedFrom": "",
+        "redirectedTo": ""
+      },
+      {
+        "event": "response",
+        "browser": "chromium",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "status": 401,
+        "isMainDocument": true,
+        "location": "",
+        "setCookie": "",
+        "fromServiceWorker": false,
+        "requestCookies": "",
+        "initiatorType": "document/navigation",
+        "redirectedFrom": "",
+        "redirectedTo": ""
+      },
+      {
+        "event": "framenavigated",
+        "browser": "chromium",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "isMainDocument": true
+      },
+      {
+        "event": "console",
+        "browser": "chromium",
+        "type": "error",
+        "text": "Failed to load resource: the server responded with a status of 401 ()"
+      }
+    ]
+  },
+  {
+    "browser": "firefox",
+    "target": "https://admin.kalenel.nl/admin.html",
+    "outcome": "goto resolved status 401",
+    "finalUrl": "https://admin.kalenel.nl/admin.html",
+    "cycle": false,
+    "navCount": 1,
+    "title": "Kalenel admin login",
+    "hasOuterLoginGate": true,
+    "hasGithubLoginLink": true,
+    "hasInnerTotpLock": false,
+    "mainChain": [
+      {
+        "event": "request",
+        "browser": "firefox",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "method": "GET",
+        "resourceType": "document",
+        "isMainDocument": true,
+        "requestCookies": "",
+        "initiatorType": "document/navigation",
+        "redirectedFrom": "",
+        "redirectedTo": ""
+      },
+      {
+        "event": "response",
+        "browser": "firefox",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "status": 401,
+        "isMainDocument": true,
+        "location": "",
+        "setCookie": "",
+        "fromServiceWorker": false,
+        "requestCookies": "",
+        "initiatorType": "document/navigation",
+        "redirectedFrom": "",
+        "redirectedTo": ""
+      },
+      {
+        "event": "framenavigated",
+        "browser": "firefox",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "isMainDocument": true
+      }
+    ],
+    "events": [
+      {
+        "event": "request",
+        "browser": "firefox",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "method": "GET",
+        "resourceType": "document",
+        "isMainDocument": true,
+        "requestCookies": "",
+        "initiatorType": "document/navigation",
+        "redirectedFrom": "",
+        "redirectedTo": ""
+      },
+      {
+        "event": "response",
+        "browser": "firefox",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "status": 401,
+        "isMainDocument": true,
+        "location": "",
+        "setCookie": "",
+        "fromServiceWorker": false,
+        "requestCookies": "",
+        "initiatorType": "document/navigation",
+        "redirectedFrom": "",
+        "redirectedTo": ""
+      },
+      {
+        "event": "framenavigated",
+        "browser": "firefox",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "isMainDocument": true
+      }
+    ]
+  }
+]

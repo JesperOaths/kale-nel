@@ -8,6 +8,12 @@
     style.textContent = 'html.gejast-auth-pending body{visibility:hidden!important}html.gejast-auth-ready body{visibility:visible!important}';
     (document.head || document.documentElement).appendChild(style);
   } catch(_) {}
+  function isAdminSurface(){
+    try {
+      var file = ((location.pathname || '').split('/').pop() || '').toLowerCase();
+      return file === 'admin' || file === 'admin.html' || /^admin_.*\.html$/i.test(file);
+    } catch(_) { return false; }
+  }
   function getToken(){ try { return (cfg.getPlayerSessionToken && cfg.getPlayerSessionToken()) || ''; } catch(_){ return ''; } }
   function clearTokens(){ try{ cfg.clearPlayerSessionTokens && cfg.clearPlayerSessionTokens(); }catch(_){} }
   function currentScope(){ try{ if (window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.getScope === 'function') return window.GEJAST_SCOPE_UTILS.getScope(); }catch(_){} try{ return new URLSearchParams(location.search).get('scope') === 'family' ? 'family' : 'friends'; }catch(_){ return 'friends'; } }
@@ -48,6 +54,7 @@
     return hardInvalid ? { ok:false, hardInvalid:true } : { ok:false, transient:true };
   }
   function redirectToLogin(){ try{ location.replace(loginUrl()); }catch(_){ location.href='./login.html'; } }
+  if (isAdminSurface()) { showPage(); window.GEJAST_HOME_GATE = { VERSION: VERSION, skipped: 'admin-surface' }; return; }
   var token = getToken();
   if(!token){ redirectToLogin(); return; }
   try{ cfg.touchPlayerActivity && cfg.touchPlayerActivity({ force:false }); }catch(_){}

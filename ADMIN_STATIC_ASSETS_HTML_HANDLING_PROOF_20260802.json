@@ -1,0 +1,79 @@
+{
+  "assets": {
+    "directory": "./static",
+    "binding": "ASSETS",
+    "not_found_handling": "none",
+    "html_handling": "none",
+    "run_worker_first": "true"
+  },
+  "synthetic_valid_outer_session": true,
+  "pre_fix_model": {
+    "html_handling": "auto-trailing-slash",
+    "chain": [
+      {
+        "url": "https://admin.kalenel.nl/admin.html",
+        "status": 307,
+        "location": "/admin"
+      },
+      {
+        "url": "https://admin.kalenel.nl/admin",
+        "status": 302,
+        "location": "/admin.html"
+      }
+    ],
+    "cycle": true,
+    "next_repeated_url": "https://admin.kalenel.nl/admin.html"
+  },
+  "post_fix_model": {
+    "html_handling": "none",
+    "direct_admin_html": {
+      "chain": [
+        {
+          "url": "https://admin.kalenel.nl/admin.html",
+          "status": 200,
+          "location": ""
+        }
+      ],
+      "cycle": false,
+      "final_url": "https://admin.kalenel.nl/admin.html",
+      "final_headers": {
+        "cache-control": "no-store",
+        "content-security-policy": "default-src 'self' https://uiqntazgnrxwliaidkmy.supabase.co; connect-src 'self' https://uiqntazgnrxwliaidkmy.supabase.co https://api.github.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self' https://github.com",
+        "content-type": "text/html; charset=utf-8",
+        "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=()",
+        "referrer-policy": "no-referrer",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "x-kalenel-admin-build": "v762",
+        "x-kalenel-admin-gate": "worker"
+      }
+    },
+    "admin_alias_followed": {
+      "chain": [
+        {
+          "url": "https://admin.kalenel.nl/admin",
+          "status": 302,
+          "location": "/admin.html"
+        },
+        {
+          "url": "https://admin.kalenel.nl/admin.html",
+          "status": 200,
+          "location": ""
+        }
+      ],
+      "cycle": false,
+      "final_url": "https://admin.kalenel.nl/admin.html",
+      "final_headers": {
+        "cache-control": "no-store",
+        "content-security-policy": "default-src 'self' https://uiqntazgnrxwliaidkmy.supabase.co; connect-src 'self' https://uiqntazgnrxwliaidkmy.supabase.co https://api.github.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self' https://github.com",
+        "content-type": "text/html; charset=utf-8",
+        "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=()",
+        "referrer-policy": "no-referrer",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "x-kalenel-admin-build": "v762",
+        "x-kalenel-admin-gate": "worker"
+      }
+    }
+  }
+}

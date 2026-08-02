@@ -1,0 +1,74 @@
+﻿{
+    "prebuild_hashes":  {
+                            "value":  [
+                                          {
+                                              "file":  "gejast-home-gate.js",
+                                              "root_exists":  true,
+                                              "static_exists":  true,
+                                              "root_sha256":  "789254b525d5fc4b2d0752ebe774aeb3822dad39e696a264cf4d6e3565fbdbde",
+                                              "static_sha256":  "789254b525d5fc4b2d0752ebe774aeb3822dad39e696a264cf4d6e3565fbdbde",
+                                              "equal":  true
+                                          },
+                                          {
+                                              "file":  "admin-session-sync.js",
+                                              "root_exists":  true,
+                                              "static_exists":  true,
+                                              "root_sha256":  "3db3b85b7d5dca4b25de80b70151df0b5e657d59901a3bf74a8e10e4032d16de",
+                                              "static_sha256":  "3db3b85b7d5dca4b25de80b70151df0b5e657d59901a3bf74a8e10e4032d16de",
+                                              "equal":  true
+                                          },
+                                          {
+                                              "file":  "admin.html",
+                                              "root_exists":  true,
+                                              "static_exists":  true,
+                                              "root_sha256":  "93f2b1c0d456c4eafbe017d6edeeb8fdda7571f199c64c51aab6c0b75baa653a",
+                                              "static_sha256":  "93f2b1c0d456c4eafbe017d6edeeb8fdda7571f199c64c51aab6c0b75baa653a",
+                                              "equal":  true
+                                          }
+                                      ],
+                            "Count":  3
+                        },
+    "postbuild_hashes":  {
+                             "value":  [
+                                           {
+                                               "file":  "gejast-home-gate.js",
+                                               "root_sha256":  "789254b525d5fc4b2d0752ebe774aeb3822dad39e696a264cf4d6e3565fbdbde",
+                                               "static_sha256":  "789254b525d5fc4b2d0752ebe774aeb3822dad39e696a264cf4d6e3565fbdbde",
+                                               "equal":  true
+                                           },
+                                           {
+                                               "file":  "admin-session-sync.js",
+                                               "root_sha256":  "3db3b85b7d5dca4b25de80b70151df0b5e657d59901a3bf74a8e10e4032d16de",
+                                               "static_sha256":  "3db3b85b7d5dca4b25de80b70151df0b5e657d59901a3bf74a8e10e4032d16de",
+                                               "equal":  true
+                                           },
+                                           {
+                                               "file":  "admin.html",
+                                               "root_sha256":  "63f88485b5cc5f90401ef38a4ff7135f0feca8c8d975ee6a798ba3ccfe8fb753",
+                                               "static_sha256":  "63f88485b5cc5f90401ef38a4ff7135f0feca8c8d975ee6a798ba3ccfe8fb753",
+                                               "equal":  true
+                                           }
+                                       ],
+                             "Count":  3
+                         },
+    "deployment_version":  "4c2e5cb6-5422-4c73-9090-174797ee4654",
+    "previous_deployment_version":  "b8126a59-99fe-4320-be8f-6a02dd26322d",
+    "deploy_output_file":  "ADMIN_V762_DEPLOY_OUTPUT_20260802.txt",
+    "live_unauth_headers_file":  "ADMIN_V762_LIVE_UNAUTH_HEADERS_20260802.json",
+    "generated_static_checks":  {
+                                    "admin_html_v762_marker":  true,
+                                    "admin_html_home_gate_v762":  true,
+                                    "admin_html_session_sync_v762":  true,
+                                    "static_home_gate_admin_skip":  true,
+                                    "static_session_sync_main_hub_guard":  true
+                                },
+    "tests":  [
+                  "npm run admin-worker:build",
+                  "SHA-256 root/static equality gate for gejast-home-gate.js, admin-session-sync.js, admin.html",
+                  "node scripts/test-admin-worker-gate.mjs",
+                  "node scripts/test-admin-outer-inner-browser.mjs",
+                  "node scripts/test-admin-inner-render.mjs",
+                  "npm run verify:js",
+                  "npm run admin-worker:dry-run"
+              ]
+}

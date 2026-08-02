@@ -1,7 +1,7 @@
 {
-  "version": 1,
-  "site_version": "v755 candidate / live v750+v756 SQL hotfix",
-  "last_updated": "2026-07-24",
+  "version": 2,
+  "site_version": "live v761 / main 82476d8ae87fa9b41cd7a53e6aab42a3a32baaa2",
+  "last_updated": "2026-07-27",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
     "ready_to_test": "Code exists and surface checks pass, but real beta proof is still needed.",
@@ -9,42 +9,67 @@
     "needs_fix_if_test_fails": "Test first, then patch only the failing owner.",
     "blocked_external": "Requires external device, account, secret, or user action."
   },
+  "deployment_identity": {
+    "status": "verified_complete",
+    "live_version": "v761",
+    "deployed_sha": "82476d8ae87fa9b41cd7a53e6aab42a3a32baaa2",
+    "source": "GitHub Pages generated deployment from main",
+    "evidence": [
+      "DEPLOYMENT_DRIFT_DIAGNOSIS_v758.md",
+      "RECOVERY_DEPLOYMENT_v758.md",
+      "LIVE_DEPLOYMENT_PROOF_v758.md",
+      "deployment_forensics_v761/"
+    ],
+    "note": "The original v758 mismatch facts are stale; current live origin and main agree as v761. No downgrade to v758 was performed."
+  },
   "baseline_checks": [
     {
       "id": "static_integrity",
       "status": "verified_complete",
       "command": "npm.cmd run verify",
-      "evidence": "npm run verify passes on PR head aa4ecc5: version drift, RPC coverage, local refs, and JS syntax all pass for v755."
+      "evidence": "Passed for v761/current main; version drift, RPC coverage, local refs, homepage owner fixes, Toepen checks, and JS syntax pass."
+    },
+    {
+      "id": "klaverjas_regression",
+      "status": "verified_complete",
+      "command": "npm.cmd run verify:klaverjas",
+      "evidence": "Online Klaverjas regression smoke ok."
     },
     {
       "id": "live_routes",
       "status": "verified_complete",
       "command": "npm.cmd run smoke:live",
-      "evidence": "npm run smoke:live passes against production; live frontend VERSION remains v750 while backend v756 ladder hotfix is applied."
+      "evidence": "Production routes pass against live v761; live /VERSION and representative file hashes match Git HEAD 82476d8."
     },
     {
       "id": "push_surface",
       "status": "verified_complete",
       "command": "npm.cmd run smoke:push",
-      "evidence": "npm run smoke:push passes; latest web-push dispatcher #1500 completed/success; drinks summary/eligibility probes return HTTP 200 and invalid public push probe is rejected."
+      "evidence": "Push surface smoke passes; browser/Kalenel-origin notification popup was proven earlier. Backend user-targeted delivery still needs a logged-in subscribed device."
     },
     {
       "id": "game_surface",
       "status": "verified_complete",
       "command": "npm.cmd run smoke:games",
-      "evidence": "npm run smoke:games passes public Pikken/Paardenrace probes; token-backed two-player mutation flows are skipped unless beta player tokens are supplied."
+      "evidence": "Public Pikken/Paardenrace probes pass; token-backed two-player mutation flows remain permission/input-gated."
     },
     {
       "id": "beta_readonly_surfaces",
       "status": "verified_complete",
-      "command": "npm.cmd run smoke:beta:read",
-      "evidence": "npm run smoke:beta:read and smoke:beta:extended pass; 43 base beta routes plus extended stats/ladder/scope/admin-observability routes return HTTP 200."
+      "command": "npm.cmd run smoke:beta:read && npm.cmd run smoke:beta:extended",
+      "evidence": "Base beta read-only routes and extended stats/ladder/scope/admin-observability routes return HTTP 200."
+    },
+    {
+      "id": "performance_beta_pass",
+      "status": "verified_complete",
+      "command": "npm.cmd run smoke:beta:perf",
+      "evidence": "Performance probe completed across 8 routes; largest same-origin assets remain known/static and no blocking performance failure was found."
     },
     {
       "id": "live_write_safety_gate",
       "status": "verified_complete",
-      "command": "npm.cmd run beta:write:readiness",
-      "evidence": "npm run beta:write:readiness and beta:write:plan list all live-write tests and refuse to arm without explicit approval flag, required beta player inputs, admin session, or real device readiness."
+      "command": "npm.cmd run beta:write:readiness / beta:readiness",
+      "evidence": "Readiness gate lists all live-write tests and refuses to arm without explicit scenario approval, beta player inputs, admin session, or real device readiness."
     }
   ],
   "beta_gaps": [
@@ -53,38 +78,48 @@
       "priority": 1,
       "area": "Push notifications",
       "status": "blocked_external",
-      "proof_needed": "A real phone/laptop receives a pushed drink verification notification and click/action handling works.",
-      "next_action": "Use an installed/permissioned device, queue one safe test push, then record delivery result."
+      "proof_needed": "Partially proven: valid temporary player session, browser notification permission, service worker, push subscription, backend sync/presence, and exactly one queue_test_web_push queued_count=1 all passed. Remaining proof requires dispatcher delivery/click evidence.",
+      "next_action": "Run web_push_dispatcher.js with SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, WEB_PUSH_VAPID_PUBLIC_KEY, and WEB_PUSH_VAPID_PRIVATE_KEY, or provide production dispatcher run evidence, then verify OS notification delivery/click handling.",
+      "latest_probe": "2026-07-27: Temporary player AutoV761PushDevice_202607270136/player 159 queued one self_test push job 21 from ready_actionable browser. Dispatcher env names were missing locally, so delivery was blocked. Job/subscription/session cleaned; player deactivated and PIN/session cleared. Evidence PUSH_V761_REAL_DEVICE_PROOF_2026-07-27.md."
     },
     {
-      "id": "pikken_two_player_visual",
+      "id": "toepen_backend_live",
       "priority": 2,
-      "area": "Pikken",
+      "area": "Toepen",
       "status": "verified_complete",
-      "proof_needed": "Two logged-in browser sessions show create/join/start/live dice-state/spectator/cleanup correctly.",
-      "next_action": "Keep in regression gate with token-backed two-player flow plus browser visual spot checks.",
-      "latest_probe": "Browser visual proof passed on v739 fixture: two players, bidding phase, six dice, bid/reject controls, and spectator redirect with both players visible."
+      "proof_needed": "Complete: Toepen SQL backend applied and live-proven in friends and family scopes, including canonical login_player sessions, toep+fold saves, duplicate-save idempotency, history/vault/stat output, invalid token rejection, wrong-player rejection, cross-scope isolation, and cleanup evidence.",
+      "next_action": "No Toepen action required unless future frontend/backend changes alter the contract. Evidence: TOEPEN_V761_LIVE_PROOF_2026-07-27.md.",
+      "latest_probe": "2026-07-27: Applied v755d creator/scope guard, v755e admin reset compatibility, and v755f login session bridge. Controlled friends game_id=1 and family game_id=2 saved/retried/proven, then controlled games deleted and temp players 151-158 deactivated with PIN/session material cleared."
     },
     {
-      "id": "paardenrace_two_player_visual",
+      "id": "admin_host_security",
       "priority": 3,
-      "area": "Paardenrace",
+      "area": "Admin",
+      "status": "blocked_external",
+      "proof_needed": "Blocked externally: admin.kalenel.nl DNS does not resolve and apex https://kalenel.nl/admin.html still returns HTTP 200 with admin HTML. Cloudflare Access/default-deny is not proven/configured.",
+      "next_action": "Use Cloudflare/DNS account access to create admin.kalenel.nl, protect it with Access/default-deny, split/route admin static pages behind that perimeter, then re-prove unauthenticated block and authenticated access.",
+      "latest_probe": "2026-07-27: Resolve-DnsName admin.kalenel.nl failed; https://kalenel.nl/admin.html HEAD/GET returned 200; no local CLOUDFLARE/CF_/KALENEL env names found. Evidence ADMIN_PERIMETER_V761_PROOF_2026-07-27.md."
+    },
+    {
+      "id": "boerenbridge_admin_contracts",
+      "priority": 4,
+      "area": "Boerenbridge",
       "status": "verified_complete",
-      "proof_needed": "Two logged-in browser sessions show create/join/suit/wager/ready/start/countdown/live board/spectator/cleanup correctly.",
-      "next_action": "Keep in regression gate with token-backed two-player flow plus browser visual spot checks.",
-      "latest_probe": "Browser visual proof passed on live v739: two players, countdown, 2/2 ready, pot, player rows, and spectator page with both players visible."
+      "proof_needed": "Complete for read-only/authenticated vault contract: live Boerenbridge vault loads under admin browser session, friends/family data RPCs return current rows, valid admin audit returns five checks, invalid admin audit rejects after v755g guard, and no rebuild/write action was run.",
+      "next_action": "No read-only vault action required. Any Boerenbridge rebuild/cache mutation remains permissioned separately.",
+      "latest_probe": "2026-07-27: Applied GEJAST_v755g_boerenbridge_admin_audit_guard.sql after invalid admin token was accepted by admin_get_boerenbridge_shared_stats_audit_v643. Reproof passed; evidence BOERENBRIDGE_V761_VAULT_PROOF_2026-07-27.md."
     },
     {
       "id": "drinks_create_verify_reject",
-      "priority": 4,
+      "priority": 5,
       "area": "Drinks",
       "status": "needs_permission",
-      "proof_needed": "A real drink request appears in pending, can be verified/rejected, updates history/stats, and queues notifications.",
-      "next_action": "Ask approval before creating a clearly marked beta test drink request."
+      "proof_needed": "A clearly marked beta drink request appears in pending, can be verified/rejected, updates history/stats, preserves Ice at exactly 2.8 units, and queues notifications.",
+      "next_action": "Ask approval before creating a beta test drink request."
     },
     {
       "id": "admin_mutations",
-      "priority": 5,
+      "priority": 6,
       "area": "Admin",
       "status": "needs_permission",
       "proof_needed": "Claims, Despimarkt admin, wallet mutation, upload checklist, and release tools mutate only intended records and log/audit correctly.",
@@ -92,24 +127,23 @@
     },
     {
       "id": "badge_awards",
-      "priority": 6,
+      "priority": 7,
       "area": "Badges",
       "status": "needs_permission",
       "proof_needed": "Known badge criteria trigger after controlled game/drink outcomes and render on profiles/leaderboards.",
-      "next_action": "Ask approval before controlled game/drink outcome scenarios that can create badge records."
+      "next_action": "Ask approval before controlled game/drink outcome scenarios that create badge records."
     },
     {
       "id": "scope_isolation",
-      "priority": 7,
+      "priority": 8,
       "area": "Family/friends scope",
       "status": "verified_complete",
       "proof_needed": "Family and friends data stay isolated across login, games, stats, profiles, admin, and exclusions.",
-      "next_action": "Keep extended read-only scope routes and login-name partition check in regression; require permission before cross-scope mutation scenarios.",
-      "latest_probe": "2026-07-24: live scoped homepage ladder RPC now returns HTTP 200 for friends and family after v756 SQL hotfix; extended scope routes pass."
+      "next_action": "Keep extended read-only scope routes and login-name partition checks in regression; require permission before cross-scope mutation scenarios."
     },
     {
       "id": "secondary_game_save_flows",
-      "priority": 8,
+      "priority": 9,
       "area": "Klaverjas, Beerpong, Boerenbridge, Rad",
       "status": "needs_permission",
       "proof_needed": "Save/spin flows persist and update vault/history/stats/odds as intended.",
@@ -117,7 +151,7 @@
     },
     {
       "id": "profile_editing",
-      "priority": 9,
+      "priority": 10,
       "area": "Profiles",
       "status": "needs_permission",
       "proof_needed": "Display name and avatar update, persist, and render safely across profile/leaderboard/game rows.",
@@ -125,30 +159,19 @@
     },
     {
       "id": "stats_elo_predictions",
-      "priority": 10,
+      "priority": 11,
       "area": "Stats/ELO/predictions",
       "status": "verified_complete",
       "proof_needed": "Stats and prediction widgets appear only in intended slots and use current SQL data.",
-      "next_action": "Keep extended stats/ladder smoke in regression and revisit only if a page adds a new stats mount.",
-      "latest_probe": "2026-07-24: extended stats/ladder smoke passes; homepage ladder RPC missing-rating defect repaired and verified live."
+      "next_action": "Keep extended stats/ladder smoke in regression and revisit only if a page adds a new stats mount."
     },
     {
       "id": "analytics_observability",
-      "priority": 11,
+      "priority": 12,
       "area": "Analytics/admin observability",
       "status": "verified_complete",
-      "proof_needed": "Admin analytics and health pages load real data for admin only and do not leak private details publicly.",
-      "next_action": "Keep extended admin observability smoke in regression; admin mutations stay separate.",
-      "latest_probe": "2026-07-24: read-only admin observability routes return HTTP 200, but public admin access remains an admin-host/Cloudflare blocker before final rollout."
-    },
-    {
-      "id": "performance_beta_pass",
-      "priority": 12,
-      "area": "Performance",
-      "status": "verified_complete",
-      "proof_needed": "Homepage, profiles, Pikken, Paardenrace, and drinks load acceptably on normal devices.",
-      "next_action": "Keep this in the regression gate and revisit if a route adds a new heavy active asset.",
-      "latest_probe": "2026-07-24: beta performance probe completed across 8 routes; largest active same-origin assets are 415 KB, 315 KB, and 205 KB; no blocking performance failure found."
+      "proof_needed": "Admin analytics and health pages load without public data leakage; mutation/admin-only effects remain gated.",
+      "next_action": "Keep extended admin observability smoke in regression; fix public admin-host exposure separately."
     }
   ]
 }

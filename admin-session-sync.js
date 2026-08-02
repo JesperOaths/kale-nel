@@ -1,10 +1,20 @@
 (function(){
   // v757: protected admin pages stay hidden until backend admin validation succeeds.
   // Do not force admin.kalenel.nl here: that hostname may not be configured yet.
-  const pageName = (()=>{
-    try { return (window.location.pathname.split('/').pop() || 'admin.html').toLowerCase(); }
-    catch (_) { return 'admin.html'; }
-  })();
+  function normalizeAdminPageName(){
+    try {
+      const path = window.location.pathname || '';
+      const raw = (path.split('/').pop() || '').toLowerCase();
+      // The Worker intentionally exposes the main admin hub as /, /admin and
+      // /admin.html. Those routes must render the inner Supabase/TOTP lock when
+      // the inner session is missing, not be hidden by the protected-page gate.
+      if (!raw || raw === 'admin' || raw === 'admin/') return 'admin.html';
+      return raw;
+    } catch (_) {
+      return 'admin.html';
+    }
+  }
+  const pageName = normalizeAdminPageName();
   const protectedAdminPage = /^admin/i.test(pageName) && pageName !== 'admin.html';
   if (protectedAdminPage) {
     try {
@@ -86,15 +96,41 @@
 
   function pageNameFromLocation(){
     try {
-      return safeReturnTarget((window.location.pathname.split('/').pop() || 'admin.html') + window.location.search + window.location.hash) || 'admin.html';
+      return safeReturnTarget(normalizeAdminPageName() + window.location.search + window.location.hash) || 'admin.html';
     } catch (_) {
       return 'admin.html';
     }
   }
 
+  function isMainAdminHub(){
+    return normalizeAdminPageName() === 'admin.html';
+  }
+
+  function stripRecursiveReturnTo(target){
+    const cleaned = safeReturnTarget(target);
+    if (!cleaned) return '';
+    try {
+      const url = new URL(cleaned, window.location.href || 'https://admin.kalenel.nl/admin.html');
+      const name = (url.pathname.split('/').pop() || '').toLowerCase();
+      if (name === 'admin.html' || name === 'admin' || !name) return '';
+      url.searchParams.delete('return_to');
+      const path = url.pathname.replace(/^\/+/, '') || 'admin.html';
+      return safeReturnTarget(`${path}${url.search}${url.hash}`);
+    } catch (_) {
+      return cleaned.includes('return_to=') ? '' : cleaned;
+    }
+  }
+
   function redirectToAdminLogin(reason='session_invalid', returnTo=''){
-    const here = safeReturnTarget(returnTo || pageNameFromLocation()) || 'admin.html';
-    window.location.href = `./admin.html?reason=${encodeURIComponent(reason)}&return_to=${encodeURIComponent(here)}`;
+    if (isMainAdminHub()) {
+      clearBundle();
+      revealProtectedPage();
+      return false;
+    }
+    const here = stripRecursiveReturnTo(returnTo || pageNameFromLocation());
+    const suffix = here ? `&return_to=${encodeURIComponent(here)}` : '';
+    window.location.href = `./admin.html?reason=${encodeURIComponent(reason)}${suffix}`;
+    return true;
   }
 
   function hasDeviceRemember(){
@@ -166,7 +202,7 @@
       return true;
     } catch (err) {
       clearBundle();
-      redirectToAdminLogin((err && err.message) || 'session_invalid', returnTo);
+      redirectToAdminLogin('session_invalid', returnTo);
       return false;
     }
   }
@@ -190,8 +226,14 @@
     backgroundValidate,
     requirePage,
     redirectToAdminLogin,
+    isMainAdminHub,
+    stripRecursiveReturnTo,
     pageNameFromLocation,
     fingerprint,
     rememberMs: REMEMBER_MS
   };
+
+  if (protectedAdminPage && typeof setTimeout === 'function') {
+    setTimeout(() => { requirePage(pageNameFromLocation()).catch(() => {}); }, 0);
+  }
 })();

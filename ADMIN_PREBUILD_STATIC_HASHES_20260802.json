@@ -1,0 +1,26 @@
+﻿[
+    {
+        "file":  "gejast-home-gate.js",
+        "root_exists":  true,
+        "static_exists":  true,
+        "root_sha256":  "789254b525d5fc4b2d0752ebe774aeb3822dad39e696a264cf4d6e3565fbdbde",
+        "static_sha256":  "789254b525d5fc4b2d0752ebe774aeb3822dad39e696a264cf4d6e3565fbdbde",
+        "equal":  true
+    },
+    {
+        "file":  "admin-session-sync.js",
+        "root_exists":  true,
+        "static_exists":  true,
+        "root_sha256":  "3db3b85b7d5dca4b25de80b70151df0b5e657d59901a3bf74a8e10e4032d16de",
+        "static_sha256":  "3db3b85b7d5dca4b25de80b70151df0b5e657d59901a3bf74a8e10e4032d16de",
+        "equal":  true
+    },
+    {
+        "file":  "admin.html",
+        "root_exists":  true,
+        "static_exists":  true,
+        "root_sha256":  "93f2b1c0d456c4eafbe017d6edeeb8fdda7571f199c64c51aab6c0b75baa653a",
+        "static_sha256":  "93f2b1c0d456c4eafbe017d6edeeb8fdda7571f199c64c51aab6c0b75baa653a",
+        "equal":  true
+    }
+]

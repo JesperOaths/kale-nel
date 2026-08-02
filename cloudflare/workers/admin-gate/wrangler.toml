@@ -1,0 +1,29 @@
+name = "kalenel-admin-gate"
+main = "src/worker.js"
+compatibility_date = "2026-07-29"
+workers_dev = false
+
+# Free Workers architecture:
+# - no R2
+# - no Queues
+# - no Workers AI
+# - no paid Workers plan features
+# - static admin files are served from Workers Static Assets behind the Worker OAuth gate
+
+routes = [
+  # Classic Workers routes only. This avoids Cloudflare custom-domain setup and works on Workers Free.
+  # Apex is routed through the Worker so invalid middle-wildcard classes like `*.md` and `*_vault.html`
+  # can be enforced in Worker code while ordinary public pages pass through to the origin.
+  { pattern = "admin.kalenel.nl/*", zone_name = "kalenel.nl" },
+  { pattern = "kalenel.nl/*", zone_name = "kalenel.nl" }
+]
+
+[assets]
+directory = "./static"
+binding = "ASSETS"
+not_found_handling = "none"
+html_handling = "none"
+run_worker_first = true
+
+# All OAuth and allowlist values, including GITHUB_CLIENT_ID, are installed as Worker secrets
+# by scripts/setup-admin-worker-secrets.ps1. None are stored in Git.

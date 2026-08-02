@@ -1,0 +1,140 @@
+[
+  {
+    "browser": "chromium",
+    "case": "default",
+    "outcome": "status 401",
+    "finalUrl": "https://admin.kalenel.nl/admin.html",
+    "title": "Kalenel admin login",
+    "chain": [
+      {
+        "event": "request",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "cookies": "",
+        "redirectedFrom": ""
+      },
+      {
+        "event": "response",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "status": 401,
+        "location": "",
+        "setCookie": "",
+        "fromSW": false
+      }
+    ]
+  },
+  {
+    "browser": "chromium",
+    "case": "no-js",
+    "outcome": "status 401",
+    "finalUrl": "https://admin.kalenel.nl/admin.html",
+    "title": "Kalenel admin login",
+    "chain": [
+      {
+        "event": "request",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "cookies": "",
+        "redirectedFrom": ""
+      },
+      {
+        "event": "response",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "status": 401,
+        "location": "",
+        "setCookie": "",
+        "fromSW": false
+      }
+    ]
+  },
+  {
+    "browser": "chromium",
+    "case": "strict-firefox-ua",
+    "outcome": "status 401",
+    "finalUrl": "https://admin.kalenel.nl/admin.html",
+    "title": "Kalenel admin login",
+    "chain": [
+      {
+        "event": "request",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "cookies": "",
+        "redirectedFrom": ""
+      },
+      {
+        "event": "response",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "status": 401,
+        "location": "",
+        "setCookie": "",
+        "fromSW": false
+      }
+    ]
+  },
+  {
+    "browser": "firefox",
+    "case": "default",
+    "outcome": "status 401",
+    "finalUrl": "https://admin.kalenel.nl/admin.html",
+    "title": "Kalenel admin login",
+    "chain": [
+      {
+        "event": "request",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "cookies": "",
+        "redirectedFrom": ""
+      },
+      {
+        "event": "response",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "status": 401,
+        "location": "",
+        "setCookie": "",
+        "fromSW": false
+      }
+    ]
+  },
+  {
+    "browser": "firefox",
+    "case": "no-js",
+    "outcome": "status 401",
+    "finalUrl": "https://admin.kalenel.nl/admin.html",
+    "title": "Kalenel admin login",
+    "chain": [
+      {
+        "event": "request",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "cookies": "",
+        "redirectedFrom": ""
+      },
+      {
+        "event": "response",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "status": 401,
+        "location": "",
+        "setCookie": "",
+        "fromSW": false
+      }
+    ]
+  },
+  {
+    "browser": "firefox",
+    "case": "strict-firefox-ua",
+    "outcome": "status 401",
+    "finalUrl": "https://admin.kalenel.nl/admin.html",
+    "title": "Kalenel admin login",
+    "chain": [
+      {
+        "event": "request",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "cookies": "",
+        "redirectedFrom": ""
+      },
+      {
+        "event": "response",
+        "url": "https://admin.kalenel.nl/admin.html",
+        "status": 401,
+        "location": "",
+        "setCookie": "",
+        "fromSW": false
+      }
+    ]
+  }
+]
