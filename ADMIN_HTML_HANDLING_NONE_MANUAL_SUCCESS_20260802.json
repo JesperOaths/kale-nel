@@ -1,0 +1,36 @@
+﻿{
+    "timestamp_local":  "Sun 2026-08-02 03:53 GMT+2",
+    "worker_version":  "79e680cd-4baf-433f-8310-da2d1f1c2b9c",
+    "branch":  "agent/v761-production-completion",
+    "manual_live_proof":  {
+                              "source":  "user manual browser verification",
+                              "canonical_url":  "https://admin.kalenel.nl/admin.html",
+                              "result":  "success",
+                              "admin_html_loop":  "resolved",
+                              "github_worker_outer_gate":  "passed",
+                              "inner_supabase_username_password_totp_lock":  "rendered",
+                              "protected_admin_hub_after_inner_authentication":  "loaded"
+                          },
+    "preserved_behavior":  {
+                               "canonical_browser_url":  "/admin.html",
+                               "admin_alias_redirect":  "/admin and /admin/ redirect exactly once to /admin.html",
+                               "github_oauth":  "preserved",
+                               "approved_account_allowlist":  "preserved",
+                               "outer_session_cookie":  "preserved",
+                               "inner_supabase_totp_lock":  "preserved",
+                               "v762_no_store_and_build_marker":  "preserved",
+                               "public_gameplay_behavior":  "unchanged by this final evidence-only record"
+                           },
+    "privacy":  {
+                    "cookies":  "not recorded",
+                    "credentials":  "not recorded",
+                    "totp_values":  "not recorded",
+                    "session_tokens":  "not recorded"
+                },
+    "related_evidence":  [
+                             "ADMIN_STATIC_ASSETS_HTML_HANDLING_PROOF_20260802.json",
+                             "ADMIN_HTML_HANDLING_NONE_DEPLOY_OUTPUT_20260802.txt",
+                             "ADMIN_HTML_HANDLING_NONE_LIVE_PROOF_20260802.json"
+                         ],
+    "final_fix_commit":  "adf205d"
+}
