@@ -9,10 +9,24 @@
 begin;
 
 -- Keep public reads available through existing read paths, but block direct table
--- mutations from the anon/authenticated API roles. Writes must go through guarded RPCs.
-revoke insert, update, delete on table public.boerenbridge_matches from anon, authenticated;
-revoke insert, update, delete on table public.boerenbridge_match_rounds from anon, authenticated;
-revoke insert, update, delete on table public.boerenbridge_player_stats from anon, authenticated;
+-- mutations from browser API roles. Writes must go through the guarded RPC.
+-- The live database may not have every historical companion table, so each
+-- explicit REVOKE is applied conditionally to keep the migration transaction-safe.
+do $revoke_tables$
+begin
+  if to_regclass('public.boerenbridge_matches') is not null then
+    execute 'revoke insert, update, delete on table public.boerenbridge_matches from public, anon, authenticated';
+  end if;
+
+  if to_regclass('public.boerenbridge_match_rounds') is not null then
+    execute 'revoke insert, update, delete on table public.boerenbridge_match_rounds from public, anon, authenticated';
+  end if;
+
+  if to_regclass('public.boerenbridge_player_stats') is not null then
+    execute 'revoke insert, update, delete on table public.boerenbridge_player_stats from public, anon, authenticated';
+  end if;
+end
+$revoke_tables$;
 
 drop function if exists public.save_boerenbridge_match(text, text, text, text, jsonb);
 
@@ -34,6 +48,7 @@ declare
   v_payload jsonb := coalesce(save_boerenbridge_match.match_payload, '{}'::jsonb);
   v_match_id bigint;
   v_existing public.boerenbridge_matches%rowtype;
+  v_persisted_owner bigint;
 begin
   if v_client is null then
     raise exception 'client_match_id ontbreekt';
@@ -93,6 +108,15 @@ begin
      returning m.id into v_match_id;
   end if;
 
+  select m.created_by_player_id
+    into v_persisted_owner
+    from public.boerenbridge_matches m
+   where m.id = v_match_id;
+
+  if v_persisted_owner is null or v_persisted_owner is distinct from p.id then
+    raise exception 'boerenbridge_owner_assertion_failed';
+  end if;
+
   return jsonb_build_object(
     'ok', true,
     'match_id', v_match_id,
@@ -102,6 +126,7 @@ begin
 end;
 $fn$;
 
+revoke all on function public.save_boerenbridge_match(text, text, text, text, jsonb) from public;
 grant execute on function public.save_boerenbridge_match(text, text, text, text, jsonb) to anon, authenticated;
 
 notify pgrst, 'reload schema';
