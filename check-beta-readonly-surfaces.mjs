@@ -3,7 +3,10 @@
    Fetches important beta routes and looks for obvious deployment/runtime failure text.
    It does not log in, submit forms, create records, or mutate live data. */
 
+import { fileURLToPath } from 'node:url';
+
 const baseUrl = process.env.GEJAST_LIVE_BASE_URL || 'https://kalenel.nl';
+const adminBaseUrl = process.env.GEJAST_ADMIN_BASE_URL || 'https://admin.kalenel.nl';
 const timeoutMs = Number(process.env.GEJAST_BETA_SURFACE_TIMEOUT_MS || 15000);
 
 const routeGroups = {
@@ -37,6 +40,8 @@ const routeGroups = {
   ],
 };
 
+export const expectedProtected401Routes = new Set(routeGroups.adminReadOnly);
+
 const badTextPatterns = [
   /schema cache/i,
   /Could not find the function/i,
@@ -51,14 +56,14 @@ async function fetchWithTimeout(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(url, { cache: 'no-store', signal: controller.signal });
+    return await fetch(url, { cache: 'no-store', redirect: 'manual', signal: controller.signal });
   } finally {
     clearTimeout(timer);
   }
 }
 
 function urlFor(pathname) {
-  const url = new URL(pathname, baseUrl);
+  const url = new URL(pathname, expectedProtected401Routes.has(pathname) ? adminBaseUrl : baseUrl);
   url.searchParams.set('beta_readonly_smoke', String(Date.now()));
   return url.toString();
 }
@@ -66,6 +71,32 @@ function urlFor(pathname) {
 const failures = [];
 let checked = 0;
 
+export function classifyRouteResponse(route, responseStatus, bodyText = '') {
+  const isExpectedProtected = expectedProtected401Routes.has(route);
+  const bad = badTextPatterns.find((pattern) => pattern.test(bodyText));
+
+  if (isExpectedProtected) {
+    if (responseStatus === 401) {
+      return { ok: !bad, expected401: true, bad };
+    }
+    return {
+      ok: false,
+      expected401: true,
+      bad,
+      failure: `${route} protected route returned HTTP ${responseStatus}; expected HTTP 401`,
+    };
+  }
+
+  const okStatus = responseStatus >= 200 && responseStatus < 400;
+  return {
+    ok: okStatus && !bad,
+    expected401: false,
+    bad,
+    failure: !okStatus ? `${route} returned HTTP ${responseStatus}` : undefined,
+  };
+}
+
+export async function runBetaReadonlySurfaceCheck() {
 for (const [group, routes] of Object.entries(routeGroups)) {
   console.log(`${group}:`);
   for (const route of routes) {
@@ -73,11 +104,10 @@ for (const [group, routes] of Object.entries(routeGroups)) {
     try {
       const response = await fetchWithTimeout(urlFor(route));
       const text = await response.text();
-      const bad = badTextPatterns.find((pattern) => pattern.test(text));
-      const okStatus = response.status >= 200 && response.status < 400;
-      console.log(`- ${route} HTTP ${response.status}${bad ? ` bad-text:${bad}` : ''}`);
-      if (!okStatus) failures.push(`${route} returned HTTP ${response.status}`);
-      if (bad) failures.push(`${route} contains obvious failure text matching ${bad}`);
+      const result = classifyRouteResponse(route, response.status, text);
+      console.log(`- ${route} HTTP ${response.status}${result.expected401 ? ' expected-protected-401' : ''}${result.bad ? ` bad-text:${result.bad}` : ''}`);
+      if (result.failure) failures.push(result.failure);
+      if (result.bad) failures.push(`${route} contains obvious failure text matching ${result.bad}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.log(`- ${route} failed ${message}`);
@@ -92,4 +122,9 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`Beta read-only surfaces ok. Routes checked=${checked}. Base=${baseUrl}`);
+console.log(`Beta read-only surfaces ok. Routes checked=${checked}. Base=${baseUrl}. AdminBase=${adminBaseUrl}`);
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  await runBetaReadonlySurfaceCheck();
+}

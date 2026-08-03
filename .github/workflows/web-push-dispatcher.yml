@@ -2,6 +2,31 @@ name: GEJAST web push dispatcher
 
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Validate a targeted queued job without sending; requeues it after validation.'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      require_explicit_target:
+        description: 'Require WEB_PUSH_TARGET_SUBSCRIPTION_ID before processing jobs.'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      target_subscription_id:
+        description: 'Explicit target web_push_subscriptions.id for controlled test sends.'
+        required: false
+        default: ''
+      max_jobs:
+        description: 'Maximum jobs to process. Use 1 for targeted proofs.'
+        required: false
+        default: '25'
   schedule:
     - cron: '*/5 * * * *'
 
@@ -33,4 +58,9 @@ jobs:
           WEB_PUSH_VAPID_PUBLIC_KEY: ${{ secrets.WEB_PUSH_VAPID_PUBLIC_KEY }}
           WEB_PUSH_VAPID_PRIVATE_KEY: ${{ secrets.WEB_PUSH_VAPID_PRIVATE_KEY }}
           WEB_PUSH_VAPID_SUBJECT: ${{ secrets.WEB_PUSH_VAPID_SUBJECT }}
+          WEB_PUSH_WORKER_ID: github-actions-dispatcher
+          WEB_PUSH_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || 'false' }}
+          WEB_PUSH_REQUIRE_EXPLICIT_TARGET: ${{ github.event_name == 'workflow_dispatch' && inputs.require_explicit_target || 'false' }}
+          WEB_PUSH_TARGET_SUBSCRIPTION_ID: ${{ github.event_name == 'workflow_dispatch' && inputs.target_subscription_id || '' }}
+          WEB_PUSH_MAX_JOBS: ${{ github.event_name == 'workflow_dispatch' && inputs.max_jobs || '25' }}
         run: node web_push_dispatcher.js
