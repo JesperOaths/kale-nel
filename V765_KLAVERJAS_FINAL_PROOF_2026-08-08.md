@@ -55,14 +55,15 @@ v755r:
 
 Before PR #7 is made ready/merged, run `LIVE_POSTAPPLY_V755R_VERIFY.sql` read-only in production. Required final state:
 
-- save RPC exists;
-- both write RPCs contain the session guard;
-- PUBLIC execute is absent while anon/authenticated guarded execution remains;
-- direct web-role DML grants remain zero across target tables;
-- controlled v765 residue remains zero;
-- controlled push rows remain zero;
-- Ice remains `2.8`;
-- current baseline snapshot is recorded.
+- `save_rpc_exists`: PASS;
+- `rpc_auth_boundary`: PASS;
+- `direct_dml_boundary`: PASS;
+- `controlled_v765_residue`: PASS;
+- `controlled_push_jobs`: PASS;
+- `ice_invariant`: PASS;
+- `baseline_snapshot`: informational PASS with the current production counts.
+
+No persistent writes are performed by the independent postcheck.
 
 ## Scope boundary
 
