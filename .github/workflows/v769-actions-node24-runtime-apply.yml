@@ -1,0 +1,63 @@
+name: v769 actions Node24 runtime apply
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'agent/v769-actions-node24-runtime'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prove checkout v5
+        uses: actions/checkout@v5
+        with:
+          ref: agent/v769-actions-node24-runtime
+          fetch-depth: 0
+      - name: Prove setup-node v5 while keeping app Node 20
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Apply workflow action-runtime migration
+        run: node scripts/apply-v769-actions-node24-runtime.mjs
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Dependency security
+        run: npm audit --audit-level=high
+      - name: Full repository verification
+        run: npm run verify
+      - name: Live read-only deployment smoke
+        env:
+          GEJAST_EXPECTED_VERSION: v766
+          GEJAST_DEPLOY_WAIT_SECONDS: '0'
+        run: npm run smoke:live
+      - name: Beta read-only smoke
+        run: npm run smoke:beta:read
+      - name: Push health smoke without send
+        run: npm run smoke:push
+      - name: Commit safe generated infrastructure changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u .github/workflows package.json
+          git add check-github-actions-node24-runtime.mjs
+          if git diff --cached --quiet; then
+            echo 'No infrastructure changes to commit.'
+            exit 0
+          fi
+          bad="$(git diff --cached --name-only | grep -Ev '^(\.github/workflows/.*\.ya?ml|package\.json|check-github-actions-node24-runtime\.mjs)$' || true)"
+          if [ -n "$bad" ]; then
+            echo 'Refusing unexpected staged files:'
+            echo "$bad"
+            exit 1
+          fi
+          git commit -m "ci: migrate GitHub actions to Node24 runtime"
+          git push origin HEAD:agent/v769-actions-node24-runtime
