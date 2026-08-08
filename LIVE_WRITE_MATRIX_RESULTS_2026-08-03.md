@@ -38,4 +38,95 @@ Final production invariants:
 
 ## Current blocker / next executable row
 
-Profile/account lifecycle was attempted next through the actual `my_profile.html` RPC path and is `BLOCKED`: valid Bruis own-profile update fails with SQL `42702` (`session_token` ambiguous), and invalid/stale write probes are unsafe because the current repo SQL can write orphan `gejast_profile_settings` rows before proving a player. Drinks create/replay/exact cleanup is proven in `DRINK-01/03`; drinks approval/rejection remains intentionally untested until a reversible non-permanent-history path or approved fixture exists. Boerenbridge same-owner and different-player overwrite behavior is proven in `BRIDGE-02`. The next safest rows are admin-control diagnostics/mutations, but they require one human admin GitHub/Supabase login action before work can continue.
+Profile/account lifecycle was attempted next through the actual `my_profile.html` RPC path and is `BLOCKED`: valid Bruis own-profile update fails with SQL `42702` (`session_token` ambiguous), and invalid/stale write probes are unsafe because the current repo SQL can write orphan `gejast_profile_settings` rows before proving a player. Drinks create/replay/exact cleanup is proven in `DRINK-01/03`; drinks approval/rejection remains intentionally untested until a reversible non-permanent-history path or approved fixture exists. Boerenbridge same-owner and different-player overwrite behavior is proven in `BRIDGE-02`.
+
+## 2026-08-08 continuation after GitHub/admin-gate login
+
+Admin-control continuation reached the admin frontend, but the protected Supabase/TOTP admin session was still not valid. Sanitized browser-side checks on `admin.kalenel.nl` showed the admin session helper present and a stored admin-session-shaped value present, but `admin_check_session` returned HTTP `200` with `{ ok: false }`. The admin hub therefore still displayed the admin re-login form and did not expose a valid Supabase admin session for protected mutation RPCs.
+
+Because the next admin rows (`ADMIN-01`, `ADMIN-03`, `ADMIN-04`, `PROFILE-03`, `BADGE-*`, `MATCH-01`) require a valid protected admin session, no valid admin mutation was attempted. This is the current unavoidable human authorization point: a fresh protected admin login/TOTP is required before the reversible allowed-username reserve/remove proof can run.
+
+## Prepared profile repair package — not applied
+
+The profile defect was treated as a code/security issue, not bypassed. The original `42702` evidence above remains the production behavior evidence. A smallest SQL-only repair package has been prepared but not applied to production:
+
+- `GEJAST_v755m_profile_rpc_session_token_repair.sql`
+- `GEJAST_v755m_profile_rpc_session_token_repair_ROLLBACK.sql`
+- `check-profile-rpc-repair-v755m.mjs`
+
+Repair strategy:
+
+1. Keep the real `my_profile.html` signatures: `get_my_profile_settings(text)` and `update_my_profile_settings(text,text,text)` with JSON keys `{session_token, display_name_input, avatar_url_input}`.
+2. Use positional PL/pgSQL parameters (`$1`, `$2`, `$3`) inside the functions so the externally required `session_token` argument name no longer competes with table columns.
+3. Resolve a real player before any `gejast_profile_settings` write; invalid/stale sessions return/reject as `profile_settings_session_invalid`, avoiding orphan rows keyed only by an invalid token.
+4. Use `ON CONFLICT ON CONSTRAINT gejast_profile_settings_pkey` rather than a bare `ON CONFLICT (session_token)` conflict target.
+5. Preserve grants to `anon, authenticated` and PostgREST schema reload notifications.
+
+Prepared rollback restores the current v742-style definitions exactly enough to return production to the pre-v755m behavior if needed.
+
+Regression prepared and run locally:
+
+- `node check-profile-rpc-repair-v755m.mjs` — PASS
+- `npm run verify:static` — PASS, including the new profile repair contract plus existing version/RPC/static/push/Ice/Boerenbridge/Toepen checks
+
+Production apply remains intentionally blocked until behavior parity, rollback acceptance, grants, and a live post-apply regression window are approved.
+
+## ADMIN-01/02/03 continuation — 2026-08-08
+
+Protected admin session became valid at 2026-08-08T02:11Z. Sanitized validation: admin helper present, `admin_check_session` HTTP `200`, `{ok:true}`, admin username `Bruis`, expiry present. No cookies, admin-session tokens, browser storage values, credentials, or TOTP values were read into docs.
+
+Controlled reversible row attempted: reserve/remove one fake allowed username with label `OC_V764_MATRIX_ADMIN_ALLOWED_202608080414`.
+
+Before-state:
+
+- `allowed_usernames` count: `51`
+- `player_activation_links` count: `21`
+- public-visible `players` count through anon REST: `0`
+- public-visible `web_push_jobs` count through anon REST: `0`
+- admin allowed-name list count: `73`
+- matching controlled rows: `[]`
+
+Action/evidence:
+
+1. Invalid admin reserve with the exact test label rejected correctly: HTTP `400`, `P0001`, `Ongeldige admin-sessie`; counts and matching rows unchanged.
+2. Valid admin reserve succeeded: `{ok:true, allowed_username_id:288}`; `allowed_usernames` count became `52`; admin list count became `74`; exactly one matching row existed: id `288`, display name `OC_V764_MATRIX_ADMIN_ALLOWED_202608080414`, username slug `oc-v764-matrix-admin-allowed-202608080414`, status `available`, no player link, note `OpenClaw controlled reversible admin matrix proof 2026-08-08`.
+3. Duplicate valid reserve returned the same `allowed_username_id:288`; counts stayed `52` and matching rows stayed exactly one. Duplicate behavior is idempotent for this row.
+4. Invalid admin remove unexpectedly succeeded: HTTP `200`, `{ok:true, mode:"blocked_account", removed:true, player_id:null}`. The exact controlled row changed from `available` to `blocked` while counts stayed `52`. This is a security failure: `admin_remove_allowed_username` accepts an invalid admin token.
+5. Valid admin permanent-delete attempt did not physically delete the controlled row; it changed the note/status to permanent-removal semantics. This confirmed the app-level rollback path is not a true cleanup path for this fixture.
+6. Exact rollback cleanup then used public REST `DELETE` on `allowed_usernames` with both `id=288` and `display_name=OC_V764_MATRIX_ADMIN_ALLOWED_202608080414`. That deletion succeeded and returned only the controlled row. Final verification found no matching controlled rows.
+
+Final state after rollback:
+
+- `allowed_usernames` count restored to `51`
+- `player_activation_links` count stayed `21`
+- public-visible `players` count stayed `0`
+- public-visible `web_push_jobs` count stayed `0`
+- matching controlled rows across labels `OC_V764_MATRIX_ADMIN_ALLOWED_202608080411`, `...0413`, and `...0414`: `[]`
+- Ice remains `2.8` per local invariant regression.
+
+Final status:
+
+- `ADMIN-01` reserve/create and duplicate behavior: PASS WITH SECURITY DEFECT FOUND.
+- `ADMIN-02` invalid admin reserve: PASS; invalid admin remove: FAIL — FIX REQUIRED.
+- `ADMIN-03` target isolation: PASS for exact test-row reserve and cleanup; broader admin remove/permanent-delete target isolation is BLOCKED until the guard defect is fixed.
+- Direct REST DML exposure: FAIL — FIX REQUIRED because public REST `DELETE` on `allowed_usernames` succeeded for the exact controlled row.
+
+Prepared admin security repair package — not applied:
+
+- `GEJAST_v755n_admin_allowed_username_security_guard.sql`
+- `GEJAST_v755n_admin_allowed_username_security_guard_ROLLBACK.sql`
+- `check-admin-allowed-username-guard-v755n.mjs`
+
+Repair strategy:
+
+1. Replace the `PERFORM public.admin_check_session(admin_session_token)` pattern in `admin_remove_allowed_username` and `admin_permanently_delete_allowed_username` with `to_jsonb(public.admin_check_session(...))` and require `ok=true` before mutation.
+2. Revoke direct `INSERT`, `UPDATE`, and `DELETE` on `public.allowed_usernames` from `public`, `anon`, and `authenticated`, while preserving RPC execute grants.
+3. Keep the existing admin RPC signatures and app behavior for valid admin callers.
+4. Provide rollback that restores the pre-v755n function behavior and direct DML grants.
+
+Regression prepared and run locally:
+
+- `node check-admin-allowed-username-guard-v755n.mjs` — PASS
+- `npm run verify:static` — PASS; Ice invariant reports Ice stays `2.8`
+
+Next unavoidable stop: do not continue additional admin mutation rows against production until the allowed-username admin guard/direct-DML defect is approved for SQL repair and applied, because further admin mutation tests could be corrupted by invalid-token/direct-REST mutation exposure.
