@@ -10,17 +10,18 @@
 --   * direct Toepen table writes remain closed to PUBLIC/anon/authenticated
 --   * participant end_points must match the sum of persisted round penalties
 --
--- This boundary-preserving rollback only reasserts grants and reloads PostgREST.
+-- This boundary-preserving rollback only reasserts the security boundary and
+-- reloads PostgREST. It intentionally does not remove legitimate read grants.
 
 begin;
 
 revoke all on function public.create_toepen_game(text,jsonb,text) from public;
 grant execute on function public.create_toepen_game(text,jsonb,text) to anon, authenticated;
 
-revoke all on public.toepen_games from anon, authenticated;
-revoke all on public.toepen_game_participants from anon, authenticated;
-revoke all on public.toepen_rounds from anon, authenticated;
-revoke all on public.toepen_round_results from anon, authenticated;
+revoke insert, update, delete on table public.toepen_games from public, anon, authenticated;
+revoke insert, update, delete on table public.toepen_game_participants from public, anon, authenticated;
+revoke insert, update, delete on table public.toepen_rounds from public, anon, authenticated;
+revoke insert, update, delete on table public.toepen_round_results from public, anon, authenticated;
 
 notify pgrst, 'reload schema';
 notify pgrst, 'reload config';
