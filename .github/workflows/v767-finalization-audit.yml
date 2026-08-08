@@ -22,6 +22,20 @@ jobs:
           cache: npm
       - name: Install pinned dependencies
         run: npm ci
+      - name: Dependency vulnerability detail
+        shell: bash
+        run: |
+          set +e
+          npm audit --json > /tmp/npm-audit.json
+          audit_code=$?
+          set -e
+          node <<'NODE'
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync('/tmp/npm-audit.json','utf8'));
+          console.log('npm audit metadata:', JSON.stringify(data.metadata || {}, null, 2));
+          console.log('npm audit vulnerabilities:', JSON.stringify(data.vulnerabilities || {}, null, 2));
+          NODE
+          echo "npm audit exit=${audit_code}"
       - name: Full repository verification
         run: npm run verify
       - name: Fresh live route smoke at v766
