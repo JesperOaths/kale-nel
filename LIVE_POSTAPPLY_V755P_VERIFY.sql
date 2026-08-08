@@ -61,11 +61,11 @@ select 'live_owner_guard',
        'existing client_match_id is owner-scoped'
 union all
 select 'live_format_alias',
-       case when exists(select 1 from fn where position("v_payload->>'match_format'" in definition)>0 and position("v_payload->>'format'" in definition)>0) then 'PASS' else 'FAIL' end,
+       case when exists(select 1 from fn where position('v_payload->>''match_format''' in definition)>0 and position('v_payload->>''format''' in definition)>0) then 'PASS' else 'FAIL' end,
        'match_format + format aliases compiled'
 union all
 select 'live_cups_alias',
-       case when exists(select 1 from fn where position("cups_left_team_a" in definition)>0 and position("cups_left_team_b" in definition)>0) then 'PASS' else 'FAIL' end,
+       case when exists(select 1 from fn where position('cups_left_team_a' in definition)>0 and position('cups_left_team_b' in definition)>0) then 'PASS' else 'FAIL' end,
        'cups aliases compiled'
 union all
 select 'no_rating_rebuild',
@@ -73,7 +73,7 @@ select 'no_rating_rebuild',
        'v755p must not rebuild ratings/history'
 union all
 select 'ratings_applied_false_contract',
-       case when exists(select 1 from fn where position("'ratings_applied', false" in definition)>0) then 'PASS' else 'FAIL' end,
+       case when exists(select 1 from fn where position('''ratings_applied'', false' in definition)>0) then 'PASS' else 'FAIL' end,
        'current no-rating-save contract preserved'
 union all
 select 'public_execute_revoked',
