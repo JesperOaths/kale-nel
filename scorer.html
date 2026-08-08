@@ -174,9 +174,10 @@
     .special-btn.active.nat { border-color:rgba(204,45,36,0.28); background:#fff4f3; color:var(--red); }
     .special-btn.active.pit { border-color:rgba(154,130,65,0.36); background:#fff8dd; color:#7d5e06; }
     .danger-mini { width:100%; margin-top:10px; border:none; background:#f0e2de; color:#8f3028; border-radius:14px; padding:10px 12px; font-weight:800; cursor:pointer; }
-    .save-bar { padding:10px 14px calc(10px + env(safe-area-inset-bottom)); background:linear-gradient(180deg, rgba(247,244,238,0), rgba(247,244,238,0.96) 40%, rgba(247,244,238,0.98)); }
+    .save-bar { display:grid; gap:8px; padding:10px 14px calc(10px + env(safe-area-inset-bottom)); background:linear-gradient(180deg, rgba(247,244,238,0), rgba(247,244,238,0.96) 40%, rgba(247,244,238,0.98)); }
     .save-btn { width:100%; border:none; border-radius:16px; padding:14px; background:#111; color:#fff; font-size:17px; font-weight:900; box-shadow:0 16px 24px rgba(0,0,0,0.16); cursor:pointer; }
     .save-btn:disabled { opacity:.45; cursor:not-allowed; }
+    .save-match-btn { background:var(--gold); color:#111; }
     .contract-actions{display:flex;flex-direction:column;gap:10px;align-self:stretch;justify-content:center}.contract-actions .text-btn{min-width:160px} @media (max-width:760px){.contract-actions{width:100%}.contract-actions .text-btn{width:100%}}
     .footer { text-align:center; color:#58534b; font-size:14px; padding:10px 16px 2px; }
     .message { min-height:20px; text-align:center; color:#7a7368; font-size:13px; padding:2px 14px 12px; }
@@ -271,7 +272,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/scorer.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v767';</script><script src="./gejast-config.js?v767"></script><script src="./gejast-mobile-route-fixes-v583.js?v767" defer></script><script src="./gejast-mobile-foundation-v583.js?v767" defer></script><script src="./gejast-family-rollout.js?v767"></script><script src="./gejast-home-gate.js?v767"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('scorer');</script>
+  <script>window.GEJAST_PAGE_VERSION='v768';</script><script src="./gejast-config.js?v768"></script><script src="./gejast-mobile-route-fixes-v583.js?v768" defer></script><script src="./gejast-mobile-foundation-v583.js?v768" defer></script><script src="./gejast-family-rollout.js?v768"></script><script src="./gejast-home-gate.js?v768"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('scorer');</script>
 
   <style id="page-floating-logo-style">
     .page-floating-logo{position:fixed;top:18px;right:18px;z-index:9998;display:inline-flex;width:64px;height:64px;border-radius:50%;background:rgba(255,251,245,.72);border:1px solid rgba(255,255,255,.65);box-shadow:0 14px 32px rgba(0,0,0,.10);align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
@@ -372,7 +373,7 @@
       </section>
     </div>
 
-    <div class="save-bar"><button id="saveRoundBtn" class="save-btn" type="button" onclick="saveRound()">Ronde opslaan</button></div>
+    <div class="save-bar"><button id="saveRoundBtn" class="save-btn" type="button" onclick="saveRound()">Ronde opslaan</button><button id="saveMatchBtn" class="save-btn save-match-btn" type="button" onclick="handoffFinishedGame()" hidden>Wedstrijd opslaan</button></div>
   </div>
 
   <div id="setupOverlay" class="overlay">
@@ -437,6 +438,7 @@
     const LEGACY_MATCH_KEYS = ['current_match_v64','current_match_v66'];
     const HISTORY_KEY = 'vault_history';
     const PLAYERS_KEY = 'vault_players_v67';
+    const FINISHED_HANDOFF_KEY = 'gejast_klaverjas_finished_handoff_v1';
     const SUPABASE_URL = 'https://uiqntazgnrxwliaidkmy.supabase.co';
     const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA';
     const DEFAULT_NAMES = [];
@@ -1070,8 +1072,40 @@
       commitActionState();
     }
 
+    function finishedMatchHandoffPayload() {
+      if (game.rounds.length < 16) throw new Error('Rond eerst alle 16 rondes af.');
+      const players = (game.players || []).map((name) => String(name || '').trim());
+      if (players.length !== 4 || players.some((name) => !name)) throw new Error('De vier spelers ontbreken; kies de teams opnieuw.');
+      return {
+        schema_version: 1,
+        source: 'round-scorer',
+        created_at: new Date().toISOString(),
+        rounds: game.rounds.length,
+        team_a_names: [game.players[0], game.players[2]],
+        team_b_names: [game.players[1], game.players[3]],
+        team_a_score: Number(game.w || 0),
+        team_b_score: Number(game.z || 0),
+        raw_a_score: Number(game.rawW || 0),
+        raw_b_score: Number(game.rawZ || 0)
+      };
+    }
+
+    function handoffFinishedGame() {
+      try {
+        const handoff = finishedMatchHandoffPayload();
+        sessionStorage.setItem(FINISHED_HANDOFF_KEY, JSON.stringify(handoff));
+        const url = new URL('./score.html', window.location.href);
+        url.searchParams.set('handoff', '1');
+        const scope = window.GEJAST_SCOPE_UTILS && typeof window.GEJAST_SCOPE_UTILS.getScope === 'function' ? window.GEJAST_SCOPE_UTILS.getScope() : 'friends';
+        if (scope === 'family') url.searchParams.set('scope', 'family');
+        window.location.href = url.toString();
+      } catch (error) {
+        setMessage(error?.message || 'Eindstand overnemen mislukt.');
+      }
+    }
+
     function finishGame() {
-      setMessage('16 rondes bereikt. Sla dit potje in de database-opslag op via de andere scorepagina als je dat wilt bewaren.');
+      setMessage('16 rondes voltooid. Controleer de eindstand en kies Wedstrijd opslaan.');
     }
 
     function reallyResetGame() {
@@ -1308,7 +1342,14 @@
       renderRoemLives();
       renderPendingStrip();
       renderBoard();
-      document.getElementById('saveRoundBtn').disabled = game.rounds.length >= 16; const topBtn=document.getElementById('saveRoundBtnTop'); if(topBtn) topBtn.disabled = document.getElementById('saveRoundBtn').disabled;
+      const finished = game.rounds.length >= 16;
+      const saveRoundBtn = document.getElementById('saveRoundBtn');
+      saveRoundBtn.disabled = finished;
+      const topBtn = document.getElementById('saveRoundBtnTop');
+      if (topBtn) topBtn.disabled = finished;
+      const saveMatchBtn = document.getElementById('saveMatchBtn');
+      if (saveMatchBtn) saveMatchBtn.hidden = !finished;
+      if (finished) document.getElementById('roundLabel').textContent = '16 rondes voltooid';
     }
 
     document.querySelectorAll('[data-team-choice]').forEach((btn) => btn.addEventListener('click', () => {
@@ -1535,7 +1576,7 @@
   ensureLiveSummaryBinding();
 })();
 </script>
-<script src="./site-analytics.js?v767"></script>
+<script src="./site-analytics.js?v768"></script>
 
 <style id="match-control-chip-style">
   .manage-match-chip{position:fixed;right:18px;bottom:18px;z-index:40;display:inline-flex;align-items:center;gap:8px;padding:12px 16px;border-radius:999px;background:rgba(35,31,26,.92);color:#fff;text-decoration:none;font-weight:800;box-shadow:0 14px 32px rgba(0,0,0,.22)}
@@ -1543,7 +1584,7 @@
 </style>
 <a class="manage-match-chip" href="./match_control.html?game=klaverjas">? <span>Beheer wedstrijden<br><small>Eigen inzendingen / admin</small></span></a>
 
-<script src="./gejast-live-sync.js?v767"></script>
+<script src="./gejast-live-sync.js?v768"></script>
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>

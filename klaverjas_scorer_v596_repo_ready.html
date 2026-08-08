@@ -7,11 +7,11 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Klaverjassen scorer</title>
-  <script>window.GEJAST_PAGE_VERSION='v767';</script>
-  <script src="./gejast-config.js?v767"></script><script src="./gejast-mobile-route-fixes-v583.js?v767" defer></script><script src="./gejast-mobile-foundation-v583.js?v767" defer></script>
-  <script src="./gejast-home-gate.js?v767"></script>
-  <script src="./gejast-scope-context.js?v767"></script>
-  <script src="./gejast-klaverjas-runtime.js?v767"></script>
+  <script>window.GEJAST_PAGE_VERSION='v768';</script>
+  <script src="./gejast-config.js?v768"></script><script src="./gejast-mobile-route-fixes-v583.js?v768" defer></script><script src="./gejast-mobile-foundation-v583.js?v768" defer></script>
+  <script src="./gejast-home-gate.js?v768"></script>
+  <script src="./gejast-scope-context.js?v768"></script>
+  <script src="./gejast-klaverjas-runtime.js?v768"></script>
   <style>
     :root{--gold:#9a8241;--ink:#1f1a15;--muted:#6d655c;--paper:#fffaf3;--line:rgba(0,0,0,.08);--ok:#1f6a46;--bad:#8b2d20;--shadow:0 18px 44px rgba(0,0,0,.08)}
     *{box-sizing:border-box}
@@ -97,14 +97,46 @@
     const rt = window.GEJAST_KLAVERJAS_RUNTIME;
     const $ = (id)=>document.getElementById(id);
     const selects = ['a1','a2','b1','b2'].map($);
+    const FINISHED_HANDOFF_KEY = 'gejast_klaverjas_finished_handoff_v1';
     function setStatus(msg='', tone=''){ const el=$('status'); el.textContent=msg; el.className='status '+tone; }
     function optionHtml(names){ return '<option value="">Kies speler</option>' + (names||[]).map((name)=>`<option value="${rt.escapeHtml(name)}">${rt.escapeHtml(name)}</option>`).join(''); }
+    function readFinishedHandoff(){
+      const params=new URLSearchParams(window.location.search||'');
+      if(params.get('handoff')!=='1') return null;
+      try {
+        const data=JSON.parse(sessionStorage.getItem(FINISHED_HANDOFF_KEY)||'null');
+        if(!data||data.schema_version!==1||data.source!=='round-scorer') return null;
+        if(!Array.isArray(data.team_a_names)||data.team_a_names.length!==2||!Array.isArray(data.team_b_names)||data.team_b_names.length!==2) return null;
+        const team_a_score=Number(data.team_a_score); const team_b_score=Number(data.team_b_score);
+        if(!Number.isFinite(team_a_score)||!Number.isFinite(team_b_score)) return null;
+        return {...data,team_a_names:data.team_a_names.map((x)=>String(x||'').trim()),team_b_names:data.team_b_names.map((x)=>String(x||'').trim()),team_a_score,team_b_score};
+      } catch(_){ return null; }
+    }
+    let pendingHandoff=readFinishedHandoff();
+    function handoffPlayerNames(){ return pendingHandoff ? pendingHandoff.team_a_names.concat(pendingHandoff.team_b_names).filter(Boolean) : []; }
+    function applyFinishedHandoff(){
+      if(!pendingHandoff) return;
+      const wanted=pendingHandoff.team_a_names.concat(pendingHandoff.team_b_names);
+      const missing=[];
+      selects.forEach((select,index)=>{ const name=wanted[index]||''; const option=[...select.options].find((item)=>item.value===name); if(option) select.value=name; else if(name) missing.push(name); });
+      if(missing.length){ setStatus('Eindstand gevonden, maar speler(s) ontbreken in de actieve lijst: '+missing.join(', ')+'.', 'bad'); return; }
+      $('scoreA').value=String(pendingHandoff.team_a_score);
+      $('scoreB').value=String(pendingHandoff.team_b_score);
+      $('roemA').value='0'; $('roemB').value='0';
+      if(!$('notes').value) $('notes').value='Overgenomen uit Klaverjas Score Formulier (16 rondes).';
+      sessionStorage.removeItem(FINISHED_HANDOFF_KEY);
+      pendingHandoff=null;
+      const url=new URL(window.location.href); url.searchParams.delete('handoff'); history.replaceState(null,'',url.pathname+url.search+url.hash);
+      setStatus('Eindstand overgenomen. Controleer alles en druk daarna op Opslaan.', 'ok');
+    }
     async function loadNames(){
       try {
         const names = await rt.loadNames();
-        const html = optionHtml(names);
+        const merged=[...new Set((names||[]).concat(handoffPlayerNames()).map((name)=>String(name||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'nl'));
+        const html = optionHtml(merged);
         selects.forEach((s)=>{ s.innerHTML = html; });
-        if(!names.length) setStatus('Geen actieve spelers gevonden voor deze scope.', 'bad');
+        if(!merged.length) setStatus('Geen actieve spelers gevonden voor deze scope.', 'bad');
+        applyFinishedHandoff();
       } catch(err){ setStatus(err.message || 'Namen laden mislukt.', 'bad'); }
     }
     function payload(){

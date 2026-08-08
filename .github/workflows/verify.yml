@@ -49,6 +49,9 @@ jobs:
       - name: Active frontend encoding regression
         run: node check-active-frontend-encoding-v767.mjs
 
+      - name: Klaverjas finished-game handoff regression
+        run: node check-klaverjas-round-finish-handoff-v768.mjs
+
       - name: GitHub Actions Node24 runtime pins
         run: node check-github-actions-node24-runtime.mjs
 
