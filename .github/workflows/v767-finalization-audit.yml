@@ -1,0 +1,88 @@
+name: v767 finalization live audit
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Full repository verification
+        run: npm run verify
+      - name: Fresh live route smoke at v766
+        env:
+          GEJAST_EXPECTED_VERSION: v766
+        run: npm run smoke:live
+      - name: Beta read-only smoke
+        run: npm run smoke:beta:read
+      - name: Push health smoke without send
+        run: npm run smoke:push
+      - name: Fresh deployed Klaverjas route/content proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          cb="${GITHUB_SHA}-$(date +%s)"
+          live_version="$(curl -fsSL --retry 2 --retry-delay 1 "https://kalenel.nl/VERSION?cb=${cb}" | tr -d '\r\n')"
+          echo "Live VERSION=${live_version}"
+          test "${live_version}" = "v766"
+
+          curl -fsSL --retry 2 "https://kalenel.nl/index.html?cb=${cb}" -o /tmp/index.html
+          grep -Fq 'id="homeKlaverjasEntry"' /tmp/index.html
+          grep -Fq 'href="./scorer.html"' /tmp/index.html
+          grep -Fq 'id="homeKlaverjasLiveEntry"' /tmp/index.html
+          grep -Fq 'href="./score.html"' /tmp/index.html
+          grep -Fq "GEJAST_PAGE_VERSION='v766'" /tmp/index.html
+
+          curl -fsSL --retry 2 "https://kalenel.nl/score.html?cb=${cb}" -o /tmp/score.html
+          grep -Fq "new URL('./klaverjas_scorer_v596_repo_ready.html',location.href)" /tmp/score.html
+          grep -Fq "GEJAST_PAGE_VERSION='v766'" /tmp/score.html
+
+          curl -fsSL --retry 2 "https://kalenel.nl/klaverjas_scorer_v596_repo_ready.html?cb=${cb}" -o /tmp/live-scorer.html
+          grep -Fq 'id="liveBtn"' /tmp/live-scorer.html
+          grep -Fq 'Live starten' /tmp/live-scorer.html
+          grep -Fq './gejast-klaverjas-runtime.js?v766' /tmp/live-scorer.html
+
+          curl -fsSL --retry 2 "https://kalenel.nl/gejast-klaverjas-runtime.js?cb=${cb}" -o /tmp/runtime.js
+          grep -Fq 'function normalizeMatchInput(input, options)' /tmp/runtime.js
+          grep -Fq '{ allowTie: true }' /tmp/runtime.js
+          grep -Fq 'start_klaverjas_live_match_v687' /tmp/runtime.js
+
+          for route in \
+            /scorer.html \
+            /score.html \
+            /klaverjas_scorer_v596_repo_ready.html \
+            /klaverjas_live.html \
+            /klaverjas_online.html \
+            /toepen.html \
+            /boerenbridge.html \
+            /beerpong.html \
+            /paardenrace.html \
+            /pikken.html \
+            /drinks.html \
+            /drinks_add.html \
+            /profiles.html \
+            /login.html; do
+            code="$(curl -sS -o /dev/null -w '%{http_code}' --retry 2 "https://kalenel.nl${route}?cb=${cb}")"
+            echo "${route} HTTP ${code}"
+            test "${code}" = "200"
+          done
+
+          echo 'Public admin perimeter headers:'
+          curl -sS -D - -o /dev/null --max-time 15 "https://kalenel.nl/admin.html?cb=${cb}" | sed -n '1,12p'
+          echo 'Admin subdomain perimeter headers:'
+          curl -sS -D - -o /dev/null --max-time 15 "https://admin.kalenel.nl/admin.html?cb=${cb}" | sed -n '1,12p'
