@@ -68,7 +68,7 @@ select 'baseline',
        coalesce((select unit_value::text from public.drink_event_types where key='ice' limit 1),'missing')
 union all
 select 'baseline',
-       'controlled_v765_residue',
+       'controlled_v765_push_jobs',
        'expected_zero',
        '',
        (
