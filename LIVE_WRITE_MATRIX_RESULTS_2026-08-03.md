@@ -461,16 +461,28 @@ Classification:
 - Limitation: cross-player join/host-only denial coverage was not run because a second valid player session was not safely available without human login or unsafe account changes.
 - Start/bid/reject/vote/archive/completed-match paths remain untested and intentionally out of scope.
 
-## PAARDENRACE lobby lifecycle read-only preflight - 2026-08-08
+## PAARDENRACE lobby lifecycle controlled proof - 2026-08-08
 
-No Paardenrace production write was run.
+Verdict: PASS WITH LIMITATION.
 
-Read-only deployed-state findings:
+Scope actually run:
 
-- Baseline counts: `paardenrace_rooms=26`, `paardenrace_room_players=41`, `paardenrace_obligations=2`, `paardenrace_match_history=0`.
+- Controlled label: `OC_V764_PAARDENRACE_1786163249094`.
+- Controlled room id: `205`.
+- Player A/host: Bruis, player id `141`.
+- Only lobby/soft-close paths were called: create, invalid-session create probes, choice retry, host wager verify, ready, unready, normal host disband, exact SQL cleanup.
+- No race advancement, draw/tick, nomination, finish, history, obligation-producing, or notification path was called.
+- Player B lifecycle was not run because the protected admin account runtime required a fresh admin login (`session_required`). I stopped rather than creating or modifying an account through unsafe shortcuts.
+
+Fresh before-state:
+
+- `paardenrace_rooms=26`, `paardenrace_room_players=41`, `paardenrace_obligations=2`, `paardenrace_match_history=0`.
 - controlled `OC_V764_PAARDENRACE_*` fixture count `0`.
 - controlled Paardenrace push jobs `0`.
 - Ice `2.8`.
+
+Deployed-state findings retained from preflight:
+
 - Deployed `create_paardenrace_room_fast_v687(text,text,text,text,text)` delegates to `create_paardenrace_room_safe(session_token, session_token_input, room_code_input)`.
 - Deployed `create_paardenrace_room_safe(text,text,text)` requires `_paardenrace_require_name(text,text)` and `_paardenrace_player_id(text,text)`, then inserts a lobby and upserts the host participant.
 - Deployed lobby lifecycle RPCs inspected:
@@ -485,9 +497,45 @@ Read-only deployed-state findings:
   - `paardenrace_obligations.room_id -> paardenrace_rooms(id) ON DELETE CASCADE`.
   - `paardenrace_match_history.room_id -> paardenrace_rooms(id) ON DELETE SET NULL`.
 
-Rollback classification before any write:
+Controlled proof results:
 
-- A lobby-only proof can likely be isolated if the controlled room is tagged with a unique requested room code/label and is kept strictly in lobby/soft-closed stages.
-- Normal host disband is soft-close only, so exact baseline restoration would require an exact controlled SQL cleanup after proving the terminal soft-closed state.
-- Exact cleanup appears feasible for a lobby-only room because no history/obligation-producing path is needed; players cascade and obligations should remain zero for lobby-only. However, because match history uses `ON DELETE SET NULL`, Paardenrace must not advance to finish/history before cleanup.
-- Recommendation: Paardenrace remains a later controlled candidate only for create/join/choice/verify/ready/unready/leave/disband, with direct preflight and exact controlled cleanup. Do not call race advancement, draw/tick, nominations, finish, history, or obligation-producing paths.
+- Missing raw session create rejected: `Log eerst in als speler.`
+- Invalid raw session create rejected: `Log eerst in als speler.`
+- Controlled create succeeded for room id `205`, `stage='lobby'`, host Bruis/player id `141`.
+- Initial zero-wager choice was rejected by production validation: `Vul eerst een inzet in Bakken in.` This was not treated as a defect; the proof continued with the minimal valid wager `1`.
+- Choice retry with `selected_suit='hearts'`, `wager_bakken=1` was deterministic and stayed in `lobby`.
+- Host wager verify set Bruis `wager_verified=true` without creating obligations/history.
+- Ready transition set Bruis `is_ready=true`.
+- Unready transition set Bruis `is_ready=false`.
+- Direct DB readback after Player A operations:
+  - room id `205`, `stage='lobby'`, `room_status='lobby'`, `active_match={}`, `active_match_ref=null`, `countdown_ends_at=null`.
+  - player row: Bruis/player id `141`, `selected_suit='hearts'`, `wager_bakken=1`, `wager_verified=true`, `is_ready=false`.
+  - obligations `0`, history `0`, controlled queued push jobs `0`, Ice `2.8`.
+- Normal host disband returned `{ ok: true, destroyed: true }` and soft-closed the controlled room.
+- Terminal guard before cleanup:
+  - exact room id `205`, room code `OC_V764_PAARDENRACE_1786163249094`, host Bruis/player id `141`, `stage='closed'`, `finished_at` set.
+  - player row retained in terminal state: Bruis/player id `141`, `selected_suit='hearts'`, `wager_bakken=1`, `wager_verified=true`, `is_ready=false`.
+  - obligations `0`, history `0`, controlled queued push jobs `0`, Ice `2.8`.
+
+Exact cleanup:
+
+- Broad cleanup RPCs were not used.
+- Exact guarded SQL cleanup deleted only the controlled room id `205` after proving:
+  - exact room code/host/player match,
+  - `stage='closed'`,
+  - expected Bruis player row existed,
+  - no controlled obligations existed,
+  - no controlled match history existed.
+- The controlled player row was removed by the verified `ON DELETE CASCADE` FK.
+- A follow-up locate query found no remaining controlled Paardenrace rooms, players, obligations, or history.
+- Final verification returned exactly to baseline:
+  - `paardenrace_rooms=26`, `paardenrace_room_players=41`, `paardenrace_obligations=2`, `paardenrace_match_history=0`.
+  - controlled fixture count `0`.
+  - controlled queued push jobs `0`.
+  - Ice `2.8`.
+
+Classification:
+
+- Paardenrace host-only lobby lifecycle is PASS WITH LIMITATION.
+- Limitation: cross-player join/leave coverage was not run because no safe second valid player session was available without protected admin login or unsafe account changes.
+- Keep Paardenrace finish/history/obligation paths untested and out of scope unless a transaction-only proof or exact aggregate/history rollback is reviewed first.
