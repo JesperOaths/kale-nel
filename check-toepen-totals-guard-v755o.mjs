@@ -16,11 +16,9 @@ assert.match(sql, /grant execute on function public\.create_toepen_game\(text,js
 assert.match(rollback, /Do not roll back to a function that accepts inconsistent totals/i, 'rollback must not restore known totals vulnerability');
 assert.doesNotMatch(rollback, /create or replace function public\.create_toepen_game/i, 'rollback must not restore vulnerable function body');
 for (const table of ['toepen_games', 'toepen_game_participants', 'toepen_rounds', 'toepen_round_results']) {
-  assert.match(
-    rollback,
-    new RegExp(`revoke insert, update, delete on table public\\.${table} from public, anon, authenticated;`, 'i'),
-    `rollback must preserve ${table} write boundary without stripping read grants`,
-  );
+  const writeBoundary = new RegExp(`revoke insert, update, delete on table public\\.${table} from public, anon, authenticated;`, 'i');
+  assert.match(sql, writeBoundary, `migration must self-contain ${table} direct-write boundary`);
+  assert.match(rollback, writeBoundary, `rollback must preserve ${table} write boundary without stripping read grants`);
 }
 assert.doesNotMatch(rollback, /revoke all on public\.toepen_/i, 'forward-fix must not unnecessarily revoke legitimate read grants');
 
