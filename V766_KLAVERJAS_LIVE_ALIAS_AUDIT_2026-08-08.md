@@ -2,7 +2,7 @@
 
 Branch: `agent/v766-klaverjas-live-aliases`
 Base: v765 merge commit `8962f3e4b28f6ed9a4c215164cd7aa334578283f`
-Mode: backend live-alias compatibility/security follow-up. No v766 production writes yet.
+Mode: backend live-alias compatibility/security follow-up.
 
 ## v765 state inherited
 
@@ -31,14 +31,14 @@ v755r is deployed and independently verified:
 
 Confirmed:
 
-- all four v687 live RPCs are **not deployed**: start, update, finish and public live-state getter;
-- `save_klaverjas_match_v687` is deployed `SECURITY DEFINER` with session/client-id/owner/scope guards;
-- hardened `klaverjas_upsert_match_state_scoped` is deployed `SECURITY DEFINER` with the same core guard fingerprint;
-- legacy `klaverjas_get_live_match_public(bigint)` remains deployed and PUBLIC-executable, but is read-only and bigint-only;
-- `klaverjas_matches` has the required unique text `client_match_id` plus `created_by_player_id` ownership field;
-- v765 direct-DML boundary remains PASS with zero web-role INSERT/UPDATE/DELETE grants;
-- legacy baseline: matches=7, active=7, finished=0, abandoned=0, rounds=0, snapshots=0;
-- controlled v766 legacy residue=0;
+- all four v687 live RPCs were not deployed: start, update, finish and public live-state getter;
+- `save_klaverjas_match_v687` was deployed `SECURITY DEFINER` with session/client-id/owner/scope guards;
+- hardened `klaverjas_upsert_match_state_scoped` was deployed `SECURITY DEFINER` with the same core guard fingerprint;
+- legacy `klaverjas_get_live_match_public(bigint)` remained PUBLIC-executable but read-only and bigint-only;
+- `klaverjas_matches` had unique text `client_match_id` plus `created_by_player_id`;
+- v765 direct-DML boundary remained PASS with zero web-role INSERT/UPDATE/DELETE grants;
+- baseline before v755s: matches=7, active=7, finished=0, abandoned=0, rounds=0, snapshots=0;
+- controlled v766 residue=0;
 - controlled v766 push rows=0;
 - Ice=2.8.
 
@@ -50,7 +50,7 @@ The runtime generates UUID-capable `client_match_id` values. Its legacy live fal
 - update/finish/get fallbacks call `klaverjas_get_live_match_public(match_id_input bigint)`;
 - therefore the old fallback cannot reliably support current UUID-backed live games.
 
-## v755s repair — prepared
+## v755s repair — APPLIED + CONTROLLED PROOF PASS
 
 Artifacts:
 
@@ -69,33 +69,42 @@ v755s adds the exact four runtime aliases over the v755r-hardened legacy persist
 
 Write aliases remove PUBLIC execute and retain anon/authenticated execution behind the database session guard. The public getter remains intentionally PUBLIC because it is read-only and scope-filtered. v755r direct table DML revokes are repeated defensively.
 
-## Transaction-gated production proof
+`LIVE_APPLY_AND_VERIFY_V755S_KLAVERJAS_LIVE_ALIASES.sql` completed successfully in production. The migration committed only after all controlled proof assertions passed:
 
-`LIVE_APPLY_AND_VERIFY_V755S_KLAVERJAS_LIVE_ALIASES.sql` applies v755s and proves it in one transaction. It commits only if all of these pass:
+- `valid_uuid_start`: PASS — UUID/text live match created active at 0-0 with correct creator and zero rounds;
+- `same_owner_start_replay`: PASS — same-owner start replay returned the same active row;
+- `public_uuid_get`: PASS — public scope-filtered getter resolved the UUID/text client ID;
+- `owner_live_update`: PASS — owner update persisted 40-20 and public round_no=3;
+- `cross_player_owner_guard`: PASS — different valid player rejected on live update;
+- `session_guards`: PASS — missing, invalid and stale sessions rejected before live writes;
+- `owner_live_finish`: PASS — owner finish persisted 120-90, round_no=8 and finished state;
+- `same_owner_finish_replay`: PASS — finished replay idempotent and retained one row;
+- `direct_dml_boundary`: PASS — PUBLIC/anon/authenticated direct INSERT/UPDATE/DELETE grants remain zero;
+- `rpc_execute_boundary`: PASS — write aliases PUBLIC=false; guarded web-role execution retained;
+- `rating_history_isolation`: PASS — jas_games/entries/rebuild queue unchanged;
+- `baseline_restored`: PASS — controlled live match/round/snapshot fixture removed exactly;
+- `controlled_residue`: PASS — no controlled v766 match/session rows remain;
+- `controlled_push_jobs`: PASS — OC_V766 push rows=0;
+- `ice_invariant`: PASS — Ice=2.8.
 
-- valid UUID/text 0-0 start with correct creator and zero scoring rounds;
-- same-owner start replay returns the same active row;
-- public UUID/text getter resolves the live row;
-- owner update persists 40-20 with public `round_no=3`;
-- cross-player update rejects with `klaverjas_match_owner_mismatch`;
-- missing, invalid and stale sessions reject before writes;
-- owner finish persists 120-90, `round_no=8`, status finished;
-- same-owner finish replay is idempotent;
+## Independent post-apply gate
+
+Before PR #8 is merged, run `LIVE_POSTAPPLY_V755S_VERIFY.sql` read-only in production. It must independently confirm:
+
+- all four aliases exist;
+- all three write aliases remain non-PUBLIC and retain anon/authenticated guarded execution;
+- all three write aliases contain the session and owner guard fingerprints;
+- public getter remains PUBLIC, scope-filtered and read-only;
 - direct web-role DML remains zero;
-- write aliases are not PUBLIC executable;
-- classic `jas_games`, entries and rating rebuild queue are unchanged;
-- exact controlled match/session cleanup restores legacy baselines;
-- controlled v766 residue=0;
-- controlled v766 push jobs=0;
-- Ice=2.8.
+- controlled v766 residue and push jobs remain zero;
+- Ice remains 2.8;
+- current baseline counts are recorded.
 
-Any failed assertion aborts the migration and all controlled writes.
-
-## Separate frontend defects — immediate next phase, not mixed into v766 backend repair
+## Separate frontend defects — immediate next phase
 
 Two frontend defects are confirmed independently of the database aliases:
 
 1. `startLive()` currently calls `normalizeMatchInput()` with 0-0 scores even though that validator rejects tied scores, so a normal live start can fail before RPC execution.
 2. `klaverjas_live.html` says to start via the scorer, but the scorer has no start-live button.
 
-These require a frontend release/version/cache-buster change and will be handled immediately after v755s is production-proven and merged. This backend branch deliberately does not change frontend files or the root version.
+These require a frontend release/version/cache-buster change and will be handled immediately after v755s is independently verified and merged. This backend branch deliberately does not change frontend files or the root version.
