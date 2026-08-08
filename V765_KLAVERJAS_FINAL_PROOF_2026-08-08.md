@@ -44,28 +44,30 @@ v755r:
 | stale_session_rejected | PASS | expired controlled session rejected before write |
 | valid_uuid_save | PASS | text/UUID-style client id persisted once with creator and 120-90 score |
 
-## Residue / invariants after controlled proof
+## Independent read-only post-apply verification
+
+`LIVE_POSTAPPLY_V755R_VERIFY.sql` was run after the committed repair and returned PASS for every check:
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| baseline_snapshot | PASS | legacy matches=7, rounds=0, snapshots=0, jas_games=15, jas_entries=60, rebuild_queue=87, online_games=49, online_player_stats=4 |
+| controlled_push_jobs | PASS | OC_V765 push rows=0 |
+| controlled_v765_residue | PASS | matches=0, sessions=0 |
+| direct_dml_boundary | PASS | web-role direct DML grants=0 |
+| ice_invariant | PASS | Ice=2.8 |
+| rpc_auth_boundary | PASS | both write RPCs PUBLIC=false, anon=true, authenticated=true, session_guard=true |
+| save_rpc_exists | PASS | `save_klaverjas_match_v687(text,text,text,jsonb,text)` |
+
+## Final v765 state
 
 - Controlled v765 Klaverjas match/session residue: `0`.
 - Controlled v765 push jobs: `0`.
 - Ice: `2.8`.
-- Classic `jas_games` / `jas_game_entries` / rating rebuild queue were unchanged by the current scorer proof.
-
-## Sole remaining gate
-
-Run `LIVE_POSTAPPLY_V755R_VERIFY.sql` read-only in production. Required final state:
-
-- `save_rpc_exists`: PASS;
-- `rpc_auth_boundary`: PASS;
-- `direct_dml_boundary`: PASS;
-- `controlled_v765_residue`: PASS;
-- `controlled_push_jobs`: PASS;
-- `ice_invariant`: PASS;
-- `baseline_snapshot`: informational PASS with the current production counts.
-
-No persistent writes are performed by the independent postcheck.
-
-After that check passes, the remaining steps are repository-only: record evidence, final CI, mark PR #7 ready, merge to `main`, and verify the merged state.
+- Legacy baseline: `klaverjas_matches=7`, `klaverjas_rounds=0`, `klaverjas_match_snapshots=0`.
+- Classic baseline: `jas_games=15`, `jas_game_entries=60`, `game_rating_rebuild_queue=87`.
+- Online baseline: `klaverjas_online_games=49`, `klaverjas_online_player_stats=4`.
+- Direct web-role DML grants on the inventoried target tables: `0`.
+- Both deployed write RPCs retain authenticated session guards and no PUBLIC execute.
 
 ## Scope boundary
 
