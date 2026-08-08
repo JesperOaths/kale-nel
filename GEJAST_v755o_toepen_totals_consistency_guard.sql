@@ -230,6 +230,11 @@ $fn$;
 revoke all on function public.create_toepen_game(text,jsonb,text) from public;
 grant execute on function public.create_toepen_game(text,jsonb,text) to anon, authenticated;
 
+revoke insert, update, delete on table public.toepen_games from public, anon, authenticated;
+revoke insert, update, delete on table public.toepen_game_participants from public, anon, authenticated;
+revoke insert, update, delete on table public.toepen_rounds from public, anon, authenticated;
+revoke insert, update, delete on table public.toepen_round_results from public, anon, authenticated;
+
 notify pgrst, 'reload schema';
 notify pgrst, 'reload config';
 
