@@ -19,7 +19,7 @@ function match(pattern, message) {
   assert(pattern.test(html), message);
 }
 
-includes('admin-session-sync.js?v764', 'targeted page must use admin-session-sync.js');
+includes('admin-session-sync.js?v765', 'targeted page must use admin-session-sync.js');
 includes('window.GEJAST_ADMIN_SESSION.requirePage', 'targeted page must require protected inner admin page session');
 includes('window.GEJAST_ADMIN_SESSION.validate', 'targeted page must validate existing inner admin token');
 includes("const TARGET_SUBSCRIPTION_ID = 357;", 'targeted page must hard-code subscription 357');
