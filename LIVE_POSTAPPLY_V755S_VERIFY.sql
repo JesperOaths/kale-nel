@@ -1,4 +1,9 @@
 -- v755s Klaverjas live alias post-apply verification. READ ONLY.
+--
+-- Note: pg_get_functiondef preserves source formatting. The original verifier looked for
+-- the exact spaced token `m.site_scope = v_scope`, while the deployed v755s getter was
+-- created as `m.site_scope=v_scope`. This verifier normalizes whitespace before checking
+-- the semantic scope/read-only boundary.
 
 create temp table if not exists _v755s_post(
   check_name text primary key,
@@ -37,14 +42,27 @@ from f;
 with f as (
   select p.oid,
          exists(select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a where a.grantee=0 and a.privilege_type='EXECUTE') public_exec,
-         lower(pg_get_functiondef(p.oid)) def
+         lower(pg_get_functiondef(p.oid)) def,
+         regexp_replace(lower(pg_get_functiondef(p.oid)), '[[:space:]]+', '', 'g') def_compact
   from pg_proc p join pg_namespace n on n.oid=p.pronamespace
   where n.nspname='public' and p.proname='get_klaverjas_live_state_public_v687'
 )
 insert into _v755s_post
 select 'public_live_getter_boundary',
-       case when count(*)=1 and bool_and(public_exec and def like '%m.site_scope = v_scope%' and def not like '%insert into%' and def not like '%delete from%' and def not like '%update public.%') then 'PASS' else 'FAIL' end,
-       case when count(*)=1 then 'PUBLIC='||bool_or(public_exec)::text||', scope_filter='||bool_or(def like '%m.site_scope = v_scope%')::text||', read_only='||bool_and(def not like '%insert into%' and def not like '%delete from%' and def not like '%update public.%')::text else 'getter missing' end
+       case when count(*)=1 and bool_and(
+         public_exec
+         and def_compact like '%v_scope:text:=public._klaverjas_safe_scope(site_scope_input)%'
+         and def_compact like '%wherem.site_scope=v_scope%'
+         and def not like '%insert into%'
+         and def not like '%delete from%'
+         and def not like '%update public.%'
+       ) then 'PASS' else 'FAIL' end,
+       case when count(*)=1 then
+         'PUBLIC='||bool_or(public_exec)::text||
+         ', safe_scope='||bool_or(def_compact like '%v_scope:text:=public._klaverjas_safe_scope(site_scope_input)%')::text||
+         ', scope_filter='||bool_or(def_compact like '%wherem.site_scope=v_scope%')::text||
+         ', read_only='||bool_and(def not like '%insert into%' and def not like '%delete from%' and def not like '%update public.%')::text
+       else 'getter missing' end
 from f;
 
 with g as (
