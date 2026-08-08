@@ -1,0 +1,34 @@
+name: v764 final smoke
+
+on:
+  push:
+    branches:
+      - agent/v764-live-write-matrix
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  final-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/v764-live-write-matrix
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Full repository verification
+        run: npm run verify
+      - name: Live route smoke
+        run: npm run smoke:live
+      - name: Beta read-only smoke
+        run: npm run smoke:beta:read
+      - name: Push health smoke (no real send)
+        run: npm run smoke:push
