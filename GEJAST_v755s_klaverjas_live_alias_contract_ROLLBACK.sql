@@ -1,0 +1,8 @@
+-- v755s rollback policy — forward-safe only.
+--
+-- Do NOT restore the missing/unsafe UUID->bigint fallback behavior and do NOT re-open
+-- PUBLIC or web-role direct table writes. If v755s causes an application regression,
+-- remove or replace only the affected v687 alias after proving the minimum compatible
+-- contract. The v755r save/upsert guards and direct-DML revokes must remain in place.
+--
+-- No SQL is intentionally executed by this file.
