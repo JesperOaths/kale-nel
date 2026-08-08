@@ -271,7 +271,7 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/scorer.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v766';</script><script src="./gejast-config.js?v766"></script><script src="./gejast-mobile-route-fixes-v583.js?v766" defer></script><script src="./gejast-mobile-foundation-v583.js?v766" defer></script><script src="./gejast-family-rollout.js?v766"></script><script src="./gejast-home-gate.js?v766"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('scorer');</script>
+  <script>window.GEJAST_PAGE_VERSION='v767';</script><script src="./gejast-config.js?v767"></script><script src="./gejast-mobile-route-fixes-v583.js?v767" defer></script><script src="./gejast-mobile-foundation-v583.js?v767" defer></script><script src="./gejast-family-rollout.js?v767"></script><script src="./gejast-home-gate.js?v767"></script><script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('scorer');</script>
 
   <style id="page-floating-logo-style">
     .page-floating-logo{position:fixed;top:18px;right:18px;z-index:9998;display:inline-flex;width:64px;height:64px;border-radius:50%;background:rgba(255,251,245,.72);border:1px solid rgba(255,255,255,.65);box-shadow:0 14px 32px rgba(0,0,0,.10);align-items:center;justify-content:center;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
@@ -378,7 +378,7 @@
   <div id="setupOverlay" class="overlay">
     <div class="modal" role="dialog" aria-modal="true">
       <h2>Wie spelen er mee?</h2>
-      <p>Kies eerst per team de spelers. Elke naam mag maar ??n keer gebruikt worden.</p>
+      <p>Kies eerst per team de spelers. Elke naam mag maar één keer gebruikt worden.</p>
       <div class="setup-grid">
         <div class="field"><label>Wij - speler 1</label><select id="playerW1"></select></div>
         <div class="field"><label>Zij - speler 1</label><select id="playerZ1"></select></div>
@@ -407,10 +407,10 @@
         <div class="pick-group">
           <span class="pick-label">Soort</span>
           <div class="suits-grid">
-            <button class="suit-btn black" type="button" data-suit="â™£">â™£</button>
-            <button class="suit-btn red" type="button" data-suit="â™¥">â™¥</button>
-            <button class="suit-btn black" type="button" data-suit="â™ ">â™ </button>
-            <button class="suit-btn red" type="button" data-suit="â™¦">â™¦</button>
+            <button class="suit-btn black" type="button" data-suit="♣">♣</button>
+            <button class="suit-btn red" type="button" data-suit="♥">♥</button>
+            <button class="suit-btn black" type="button" data-suit="♠">♠</button>
+            <button class="suit-btn red" type="button" data-suit="♦">♦</button>
             <button class="suit-btn sans" type="button" data-suit="S">sans</button>
           </div>
         </div>
@@ -451,7 +451,7 @@
         .filter((name) => name && !seen.has(name.toLowerCase()) && seen.add(name.toLowerCase()))
         .sort((a, b) => a.localeCompare(b, 'nl'));
     }
-    const SUIT_LABELS = { 'â™£':'â™£', 'â™¥':'â™¥', 'â™ ':'â™ ', 'â™¦':'â™¦', 'S':'sans' };
+    const SUIT_LABELS = { '♣':'♣', '♥':'♥', '♠':'♠', '♦':'♦', 'S':'sans' };
     const REGULAR_BID_OPTIONS = [80,90,100,110,120,130,140,150,160];
     const SANS_BID_OPTIONS = [70,80,90,100,110,120,130];
 
@@ -475,7 +475,7 @@
     }
 
     function freshContract() {
-      return { team: '', bid: 80, suit: 'â™ ', roem: { W:0, Z:0 }, roemTrail: { W:[], Z:[] }, special: { team:'', type:'' } };
+      return { team: '', bid: 80, suit: '♠', roem: { W:0, Z:0 }, roemTrail: { W:[], Z:[] }, special: { team:'', type:'' } };
     }
 
     function loadGame() {
@@ -593,7 +593,7 @@
     }
 
     function suitClass(suit) {
-      return suit === 'â™¥' || suit === 'â™¦' ? 'red' : 'black';
+      return suit === '♥' || suit === '♦' ? 'red' : 'black';
     }
 
     function setMessage(msg='') {
@@ -738,7 +738,7 @@
     function saveSetup() {
       const picks = playerSelectIds().map((id) => document.getElementById(id).value.trim());
       if (picks.some((value) => !value)) { setMessage('Kies eerst voor alle vier plekken een speler.'); return; }
-      if (new Set(picks).size < 4) { setMessage('Elke speler mag maar ??n keer gekozen worden.'); return; }
+      if (new Set(picks).size < 4) { setMessage('Elke speler mag maar één keer gekozen worden.'); return; }
       game.players = picks;
       rememberPlayers(picks);
       saveGame();
@@ -833,7 +833,7 @@
 
     function syncInputs(sideChanged) {
       if (contract.special.type === 'nat' || contract.special.type === 'pit') return;
-      const total = totalRawForSuit(contract.suit || 'â™ ');
+      const total = totalRawForSuit(contract.suit || '♠');
       const inputA = document.getElementById(sideChanged === 'W' ? 'inputW' : 'inputZ');
       const inputB = document.getElementById(sideChanged === 'W' ? 'inputZ' : 'inputW');
       let value = parseInt(inputA.value || '0', 10);
@@ -859,7 +859,7 @@
     function applyInstantSpecialState() {
       const inputW = document.getElementById('inputW');
       const inputZ = document.getElementById('inputZ');
-      const total = totalRawForSuit(contract.suit || 'â™ ');
+      const total = totalRawForSuit(contract.suit || '♠');
       const locked = contract.special.type === 'nat' || contract.special.type === 'pit';
       inputW.readOnly = locked;
       inputZ.readOnly = locked;
@@ -1090,7 +1090,7 @@
     function readPreviewBaseScores() {
       const rawW = document.getElementById('inputW').value.trim();
       const rawZ = document.getElementById('inputZ').value.trim();
-      const total = totalRawForSuit(contract.suit || 'â™ ');
+      const total = totalRawForSuit(contract.suit || '♠');
       let baseW = rawW === '' ? null : parseInt(rawW, 10);
       let baseZ = rawZ === '' ? null : parseInt(rawZ, 10);
       if (Number.isNaN(baseW)) baseW = null;
@@ -1535,7 +1535,7 @@
   ensureLiveSummaryBinding();
 })();
 </script>
-<script src="./site-analytics.js?v766"></script>
+<script src="./site-analytics.js?v767"></script>
 
 <style id="match-control-chip-style">
   .manage-match-chip{position:fixed;right:18px;bottom:18px;z-index:40;display:inline-flex;align-items:center;gap:8px;padding:12px 16px;border-radius:999px;background:rgba(35,31,26,.92);color:#fff;text-decoration:none;font-weight:800;box-shadow:0 14px 32px rgba(0,0,0,.22)}
@@ -1543,7 +1543,7 @@
 </style>
 <a class="manage-match-chip" href="./match_control.html?game=klaverjas">? <span>Beheer wedstrijden<br><small>Eigen inzendingen / admin</small></span></a>
 
-<script src="./gejast-live-sync.js?v766"></script>
+<script src="./gejast-live-sync.js?v767"></script>
 <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
 </body>
 </html>
