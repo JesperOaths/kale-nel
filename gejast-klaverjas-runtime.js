@@ -195,7 +195,8 @@
     } catch (_) {}
     return [];
   }
-  function normalizeMatchInput(input){
+  function normalizeMatchInput(input, options){
+    const allowTie = Boolean(options && options.allowTie);
     const payload = Object.assign({}, input || {});
     payload.team_a_names = normalizeTeam(payload.team_a_names || payload.teamA || payload.team_a || []);
     payload.team_b_names = normalizeTeam(payload.team_b_names || payload.teamB || payload.team_b || []);
@@ -209,7 +210,7 @@
     if (payload.team_a_names.length !== 2 || payload.team_b_names.length !== 2) throw new Error('Klaverjassen verwacht precies twee spelers per team.');
     const all = payload.team_a_names.concat(payload.team_b_names).map((x) => x.toLowerCase());
     if (new Set(all).size !== all.length) throw new Error('Elke speler mag maar één keer meedoen.');
-    if (payload.team_a_score === payload.team_b_score) throw new Error('Een Klaverjas-pot kan niet gelijk eindigen.');
+    if (!allowTie && payload.team_a_score === payload.team_b_score) throw new Error('Een Klaverjas-pot kan niet gelijk eindigen.');
     return payload;
   }
   async function saveMatch(input){
@@ -228,7 +229,7 @@
     }
   }
   async function startLive(input){
-    const payload = normalizeMatchInput(Object.assign({ team_a_score: 0, team_b_score: 0 }, input || {}));
+    const payload = normalizeMatchInput(Object.assign({ team_a_score: 0, team_b_score: 0 }, input || {}), { allowTie: true });
     try {
       return await rpc('start_klaverjas_live_match_v687', {
         session_token_input: getToken() || null,
