@@ -71,12 +71,13 @@ Purpose:
 
 - Reject inconsistent submitted Toepen participant totals so a valid participant cannot persist forged `end_points` that disagree with persisted round penalties.
 - Preserve the existing `create_toepen_game(text,jsonb,text)` RPC signature, session/scope/participant checks, and intended browser-role RPC execution.
-- Preserve the direct table write boundary without unnecessarily stripping legitimate read grants in the forward-fix fallback.
+- Explicitly preserve the direct table write boundary in both the main migration and forward-fix fallback without unnecessarily stripping legitimate read grants.
 
 Repository review status:
 
 - Static regression included in `npm run verify:static`.
-- Forward-fix ACL fallback was tightened to revoke only `INSERT/UPDATE/DELETE` from `PUBLIC`, `anon`, and `authenticated`, rather than broad read privileges.
+- Main migration now self-contains `INSERT/UPDATE/DELETE` revokes on the four Toepen persistence tables for `PUBLIC`, `anon`, and `authenticated`.
+- Forward-fix ACL fallback revokes only write privileges rather than broad read privileges.
 - Production application is authorized after a fresh live signature/ACL/residue/Ice preflight.
 - Still not applied from this chat because no Supabase/database connector is available.
 
@@ -137,23 +138,23 @@ The harness does not store tokens, cookies, PINs, service-role keys, or session 
 
 ## Repository verification checkpoint
 
-Draft PR `#5` was opened from `agent/v764-live-write-matrix` to `main` as a draft only; it must not be merged until the remaining production proofs are complete.
+Draft PR `#5` is open from `agent/v764-live-write-matrix` to `main` as a draft only; it must not be merged until the remaining production proofs are complete.
 
-Current reviewed head at this checkpoint:
+Current reviewed head:
 
-- `7852ec4b57f930af1ad1b39f37b2ca174ccc2c6d`
+- `e2407bb70999a6168e34885828ca7a1ee070d889`
 
-GitHub Actions:
+GitHub Actions at this head:
 
 - Workflow: `GEJAST verification`
-- Run: `#90`
+- Run: `#96`
 - Job: `verify`
 - Conclusion: `success`
 - Passed steps include JavaScript syntax, RPC coverage, local reference integrity, Klaverjas static regression, Toepen static regression, homepage root-fix regression, and version drift gate.
 
 Additional repository gates previously reported by the matrix work include:
 
-- `node check-beerpong-save-auth-guard-v755p.mjs` PASS before the dependency-preservation tightening; the updated PR CI also passed at current head.
+- `node check-beerpong-save-auth-guard-v755p.mjs` PASS before the dependency-preservation tightening; the updated PR CI also passes at current head.
 - `npm run verify:static` PASS at the latest OpenClaw checkpoint before this chat-side hardening.
 - `npm run verify:js` PASS at that checkpoint.
 - `git diff --check` PASS.
@@ -165,8 +166,9 @@ Additional repository gates previously reported by the matrix work include:
 1. Fresh production preflight and apply/prove Toepen `v755o`.
 2. Fresh production preflight and apply/prove Beerpong `v755p` only after `v755o` passes.
 3. Re-read and restore all production baselines after each proof; controlled residue and controlled push jobs must end at `0`, Ice at `2.8`.
-4. Do not expand v764 into Klaverjas finished-score/history, real push delivery, permanent badge awards, Paardenrace finish/history, or other irreversible families.
-5. Before marking the PR ready/final, run the complete final gate suite:
+4. Resolve the release-version/cache-busting treatment for the real frontend change in `drinks_add.html` (`Ice` fallback `3` -> `2.8`) before merge.
+5. Do not expand v764 into Klaverjas finished-score/history, real push delivery, permanent badge awards, Paardenrace finish/history, or other irreversible families.
+6. Before marking the PR ready/final, run the complete final gate suite:
    - `npm run verify`
    - `npm run smoke:live`
    - `npm run smoke:beta:read`
@@ -181,4 +183,4 @@ Additional repository gates previously reported by the matrix work include:
 
 ## Current conclusion
 
-Repository-side v764 work is ready for the remaining production database checkpoint. The two unresolved high-value families are intentionally reduced to narrow repairs: Toepen enforces totals consistency, and Beerpong enforces session/owner/DML/contract safety without changing rating behavior. PR `#5` remains draft and unmerged until those production applies and proofs are complete.
+Repository-side v764 work is ready for the remaining production database checkpoint. The two unresolved high-value families are intentionally reduced to narrow repairs: Toepen enforces totals consistency and self-contained write ACLs, while Beerpong enforces session/owner/DML/contract safety without changing rating behavior. PR `#5` remains draft and unmerged until those production applies and proofs are complete.
