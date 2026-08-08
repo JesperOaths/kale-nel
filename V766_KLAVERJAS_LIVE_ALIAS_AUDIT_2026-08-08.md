@@ -87,18 +87,13 @@ Write aliases remove PUBLIC execute and retain anon/authenticated execution behi
 - `controlled_push_jobs`: PASS — OC_V766 push rows=0;
 - `ice_invariant`: PASS — Ice=2.8.
 
-## Independent post-apply gate
+## Independent post-apply verifier correction
 
-Before PR #8 is merged, run `LIVE_POSTAPPLY_V755S_VERIFY.sql` read-only in production. It must independently confirm:
+The first `LIVE_POSTAPPLY_V755S_VERIFY.sql` run passed aliases, write guards/ACLs, direct DML, residue, push residue, Ice and the baseline. Its only FAIL was `public_live_getter_boundary`, with `PUBLIC=true, scope_filter=false, read_only=true`.
 
-- all four aliases exist;
-- all three write aliases remain non-PUBLIC and retain anon/authenticated guarded execution;
-- all three write aliases contain the session and owner guard fingerprints;
-- public getter remains PUBLIC, scope-filtered and read-only;
-- direct web-role DML remains zero;
-- controlled v766 residue and push jobs remain zero;
-- Ice remains 2.8;
-- current baseline counts are recorded.
+That was a verifier false negative. The deployed getter source contains the required guard as `where m.site_scope=v_scope`. The verifier searched for the whitespace-specific literal `m.site_scope = v_scope`, while `pg_get_functiondef` preserved the no-space formatting from the transaction-gated apply file.
+
+The corrected verifier normalizes whitespace and independently checks both `_klaverjas_safe_scope(site_scope_input)` and `m.site_scope=v_scope`. No production migration needs to be re-applied. One corrected read-only rerun is the sole remaining v766 gate.
 
 ## Separate frontend defects — immediate next phase
 
