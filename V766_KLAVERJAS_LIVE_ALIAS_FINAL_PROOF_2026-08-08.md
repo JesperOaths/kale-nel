@@ -51,6 +51,23 @@ v755s:
 | session_guards | PASS | missing, invalid and stale sessions rejected before live writes |
 | valid_uuid_start | PASS | UUID/text live match created active at 0-0 with correct creator and zero rounds |
 
+## Independent post-apply verification — PASS
+
+The first two post-check attempts exposed verifier-only formatting bugs in the `pg_get_functiondef` text matcher. The deployed getter itself was unchanged and always contained both required protections. The verifier was corrected to test semantic tokens instead of PL/pgSQL declaration whitespace.
+
+Final independent read-only post-check results:
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| baseline_snapshot | PASS | legacy matches=7, active=7, finished=0, rounds=0, snapshots=0, jas_games=15, jas_entries=60, rebuild_queue=87 |
+| controlled_push_jobs | PASS | OC_V766 push rows=0 |
+| controlled_v766_residue | PASS | matches=0, sessions=0 |
+| direct_dml_boundary | PASS | web-role direct DML grants=0 |
+| ice_invariant | PASS | Ice=2.8 |
+| live_aliases_exist | PASS | all four v687 live aliases present |
+| live_write_rpc_boundary | PASS | start/update/finish PUBLIC=false, anon/authenticated=true, session_guard=true, owner_guard=true |
+| public_live_getter_boundary | PASS | PUBLIC=true, safe_scope=true, scope_filter=true, read_only=true |
+
 ## Residue / invariants
 
 - Controlled v766 match/session residue: `0`.
@@ -58,36 +75,11 @@ v755s:
 - Ice: `2.8`.
 - Direct web-role Klaverjas DML grants on the inventoried target tables: `0`.
 - Classic `jas_games` / entries / rating rebuild queue were unchanged by the live proof.
+- Final independent production verification: PASS.
 
-## Independent post-apply verification — matcher correction
+## Next phase
 
-The first run of `LIVE_POSTAPPLY_V755S_VERIFY.sql` returned PASS for aliases, write-RPC session/owner boundaries, direct DML, residue, push residue, Ice and the production baseline. Its only FAIL was `public_live_getter_boundary`, reporting `PUBLIC=true, scope_filter=false, read_only=true`.
-
-That FAIL was traced to the verifier, not to production. The deployed v755s getter source contains the required scope guard as `where m.site_scope=v_scope`, while the verifier searched for the whitespace-specific literal `m.site_scope = v_scope`. `pg_get_functiondef` preserved the deployed no-space formatting, producing a false negative.
-
-The post-check has been corrected to normalize whitespace before checking both:
-
-- `v_scope := public._klaverjas_safe_scope(site_scope_input)`; and
-- `where m.site_scope=v_scope`.
-
-No production migration needs to be re-applied. The corrected read-only post-check must be rerun once before PR #8 is made ready/merged.
-
-## Final independent gate
-
-Required corrected rerun state:
-
-- `live_aliases_exist`: PASS;
-- `live_write_rpc_boundary`: PASS;
-- `public_live_getter_boundary`: PASS with `PUBLIC=true, safe_scope=true, scope_filter=true, read_only=true`;
-- `direct_dml_boundary`: PASS;
-- `controlled_v766_residue`: PASS;
-- `controlled_push_jobs`: PASS;
-- `ice_invariant`: PASS;
-- `baseline_snapshot`: informational PASS with current production counts.
-
-## Next phase already identified
-
-After v766 merges, the frontend still needs a separate release to:
+After v766 merges, the frontend needs a separate release to:
 
 1. allow a 0-0 live start without using the finished-match tie validator;
 2. expose a Start Live action from the scorer, matching the live page instructions;
