@@ -42,6 +42,7 @@ Artifacts:
 - `check-klaverjas-save-contract-v755r.mjs`
 - `LIVE_APPLY_AND_VERIFY_V755R_KLAVERJAS_SAVE_GUARD.sql`
 - `LIVE_POSTAPPLY_V755R_VERIFY.sql`
+- `V765_KLAVERJAS_FINAL_PROOF_2026-08-08.md`
 
 v755r:
 
@@ -76,11 +77,11 @@ Returned proof:
 
 This proves the v755r production repair is applied and the controlled transaction completed cleanly with no controlled residue.
 
-## Independent post-apply gate
+## Sole remaining gate
 
-`LIVE_POSTAPPLY_V755R_VERIFY.sql` is the final independent read-only production check. It verifies the deployed RPC signatures/guards, ACL boundaries, zero controlled residue, zero controlled push jobs, Ice `2.8`, and current baseline counts without creating persistent data.
+`LIVE_POSTAPPLY_V755R_VERIFY.sql` is the final independent **read-only** production check. It verifies the deployed RPC signatures/guards, ACL boundaries, zero controlled residue, zero controlled push jobs, Ice `2.8`, and current baseline counts without creating persistent data.
 
-PR #7 remains draft until that independent post-apply check is clean and final branch CI passes on the evidence-only head.
+After that check passes, the remaining work is automatic: record its evidence, wait for final CI, mark PR #7 ready, merge it into `main`, and verify the merged state. No additional production write is planned for v765.
 
 ## Deliberate scope boundary
 
