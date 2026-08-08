@@ -22,7 +22,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
 
       - name: Install pinned dependencies
@@ -48,6 +48,9 @@ jobs:
 
       - name: GitHub Actions Node24 runtime pins
         run: node check-github-actions-node24-runtime.mjs
+
+      - name: Application Node24 runtime policy
+        run: node check-node24-app-runtime.mjs
 
       - name: Version drift gate
         run: node check-version-drift.mjs
