@@ -15,6 +15,7 @@ function bodyWithoutRevokes(text) {
 
 for (const [name, text] of [['migration', migration], ['rollback', rollback]]) {
   assert.match(text, /create or replace function public\.save_beerpong_match\(\s*session_token text default null,\s*client_match_id text default null,\s*payload jsonb default '\{\}'::jsonb\s*\)/s, `${name}: preserves public save_beerpong_match signature`);
+  assert.doesNotMatch(text, /drop function if exists public\.save_beerpong_match\(text,\s*text,\s*jsonb\)/i, `${name}: must preserve dependencies on the existing RPC signature`);
   assert.match(text, /if nullif\(trim\(coalesce\(save_beerpong_match\.session_token, ''\)\), ''\) is null then\s*raise exception 'Niet ingelogd\.'/s, `${name}: missing session rejected`);
   assert.match(text, /_tier3_player_from_any_session_v740\(save_beerpong_match\.session_token\)/, `${name}: uses deployed session resolver`);
   assert.match(text, /if p\.id is null then\s*raise exception 'Niet ingelogd\.'/s, `${name}: invalid session resolver result rejected`);
