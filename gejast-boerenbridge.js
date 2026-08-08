@@ -13,5 +13,5 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootSharedStatsWidgets, { once:true });
   else bootSharedStatsWidgets();
-  window.GEJAST_BOERENBRIDGE = Object.assign({}, existing, { VERSION:'v764', bootSharedStatsWidgets });
+  window.GEJAST_BOERENBRIDGE = Object.assign({}, existing, { VERSION:'v765', bootSharedStatsWidgets });
 })();

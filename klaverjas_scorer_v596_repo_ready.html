@@ -7,11 +7,11 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Klaverjassen scorer</title>
-  <script>window.GEJAST_PAGE_VERSION='v764';</script>
-  <script src="./gejast-config.js?v764"></script><script src="./gejast-mobile-route-fixes-v583.js?v764" defer></script><script src="./gejast-mobile-foundation-v583.js?v764" defer></script>
-  <script src="./gejast-home-gate.js?v764"></script>
-  <script src="./gejast-scope-context.js?v764"></script>
-  <script src="./gejast-klaverjas-runtime.js?v764"></script>
+  <script>window.GEJAST_PAGE_VERSION='v765';</script>
+  <script src="./gejast-config.js?v765"></script><script src="./gejast-mobile-route-fixes-v583.js?v765" defer></script><script src="./gejast-mobile-foundation-v583.js?v765" defer></script>
+  <script src="./gejast-home-gate.js?v765"></script>
+  <script src="./gejast-scope-context.js?v765"></script>
+  <script src="./gejast-klaverjas-runtime.js?v765"></script>
   <style>
     :root{--gold:#9a8241;--ink:#1f1a15;--muted:#6d655c;--paper:#fffaf3;--line:rgba(0,0,0,.08);--ok:#1f6a46;--bad:#8b2d20;--shadow:0 18px 44px rgba(0,0,0,.08)}
     *{box-sizing:border-box}
@@ -71,6 +71,7 @@
             <input id="scoreB" type="number" inputmode="numeric" value="0" aria-label="Score team B">
           </div>
           <div class="row" style="margin-top:14px">
+            <button class="btn" id="liveBtn" type="button">Live starten</button>
             <button class="btn gold" id="saveBtn" type="button">Opslaan</button>
             <button class="btn alt" id="clearBtn" type="button">Leegmaken</button>
           </div>
@@ -128,6 +129,24 @@
       } catch(err){ setStatus(err.message || 'Opslaan mislukt.', 'bad'); }
       finally { btn.disabled=false; btn.textContent=old; }
     }
+    function liveClientId(result){
+      const live = result && (result.live_match || (Array.isArray(result.live_matches) ? result.live_matches[0] : null));
+      return String((live && live.client_match_id) || (result && result.client_match_id) || '');
+    }
+    async function startLiveMatch(){
+      const btn=$('liveBtn'); const old=btn.textContent; btn.disabled=true; btn.textContent='Starten…';
+      try {
+        setStatus('Live-pot starten…');
+        const liveInput=payload();
+        liveInput.team_a_score=0; liveInput.team_b_score=0; liveInput.roem_a=0; liveInput.roem_b=0;
+        const result=await rt.startLive(liveInput);
+        const clientId=liveClientId(result);
+        if(!clientId) throw new Error('Live-pot gestart, maar wedstrijd-id ontbreekt.');
+        setStatus('Live-pot gestart.', 'ok');
+        window.location.assign(rt.liveHref(clientId));
+      } catch(err){ setStatus(err.message || 'Live-pot starten mislukt.', 'bad'); }
+      finally { btn.disabled=false; btn.textContent=old; }
+    }
     function clear(clearStatus=true){
       selects.forEach((s)=>{ s.value=''; });
       ['roemA','roemB','scoreA','scoreB'].forEach((id)=>$(id).value='0');
@@ -152,6 +171,7 @@
         renderLadder([]); renderRecent([]);
       }
     }
+    $('liveBtn').addEventListener('click', startLiveMatch);
     $('saveBtn').addEventListener('click', save);
     $('clearBtn').addEventListener('click', ()=>clear(true));
     loadNames();
