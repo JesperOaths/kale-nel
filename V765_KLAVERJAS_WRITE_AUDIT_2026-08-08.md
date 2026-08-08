@@ -1,105 +1,87 @@
 # v765 Klaverjas write-path audit — 2026-08-08
 
 Branch: `agent/v765-klaverjas-write-hardening`
-Mode: narrow security/correctness follow-up after v764. No finished production Klaverjas game has been written by v765.
+Mode: narrow security/correctness follow-up after v764. No finished production Klaverjas game has been written by v765 outside controlled transaction-gated proof planning.
 
 ## Current frontend path
 
-The current root `score.html` redirects to `klaverjas_scorer_v596_repo_ready.html`.
+The current scorer uses `GEJAST_KLAVERJAS_RUNTIME.saveMatch(...)`.
 
-That scorer uses `GEJAST_KLAVERJAS_RUNTIME.saveMatch(...)` rather than calling a database RPC directly.
+Current runtime behavior:
 
-Current `gejast-klaverjas-runtime.js` behavior:
-
-1. Normalize the 2v2 player list, final scores, roem, notes and a generated UUID `client_match_id`.
-2. Primary save RPC: `save_klaverjas_match_v687` with both session-token keys, `client_match_id_input`, `match_payload`, and `site_scope_input`.
+1. Normalize 2v2 names, scores, roem, notes and a generated UUID `client_match_id`.
+2. Primary RPC: `save_klaverjas_match_v687` with both session-token keys, `client_match_id_input`, `match_payload`, and `site_scope_input`.
 3. Compatibility fallback only when the primary RPC is missing: `klaverjas_upsert_match_state_scoped(..., status='finished')`.
-4. The legacy fallback signature uses `match_id_input bigint`, while the current runtime can carry a generated UUID client ID. This is a correctness mismatch that must be resolved from the exact deployed definition rather than guessed around.
 
-Important correction to the v764 inventory: `create_jas_game(text,jsonb)` remains a deployed historical/classic persistence/rating surface, but it is not the direct primary call in the current scorer runtime.
+## Production captures — final findings
 
-## Production preflight result — 2026-08-08
-
-`LIVE_PREFLIGHT_V765_KLAVERJAS_WRITE_SURFACE.sql` was run read-only in production.
-
-Confirmed:
+Read-only production captures proved:
 
 - `save_klaverjas_match_v687`: **not deployed**.
-- `finish_klaverjas_live_match_v687`: **not deployed**.
-- `start_klaverjas_live_match_v687`: **not deployed**.
-- `klaverjas_upsert_match_state_scoped(...)`: deployed, `SECURITY DEFINER`.
-- `create_jas_game(text,jsonb)`: deployed, `SECURITY DEFINER`.
-- Production therefore does **not** have the current v687 primary save RPC and necessarily relies on compatibility behavior when the scorer attempts a finished save.
-- PUBLIC, `anon`, and `authenticated` had EXECUTE on both deployed target RPCs.
-- Direct INSERT/UPDATE/DELETE grants existed for `anon` and `authenticated` on `jas_games`, `jas_game_entries`, `game_rating_rebuild_queue`, `klaverjas_online_games`, and `klaverjas_online_player_stats`.
-- RLS was **disabled** on `jas_games`, `jas_game_entries`, and `game_rating_rebuild_queue`.
-- Entry triggers: `trg_apply_klaverjas_elo` and `trg_apply_klaverjas_elo_scoped`.
-- Baseline: `jas_games=15`, `jas_game_entries=60`, `game_rating_rebuild_queue=87`, `klaverjas_online_games=49`, `klaverjas_online_player_stats=4`; discovered Klaverjas rating/history tables were all `0` in this snapshot.
-- Controlled `OC_V765` residue `0`; controlled push rows `0`; Ice `2.8`.
+- `start_klaverjas_live_match_v687` / `finish_klaverjas_live_match_v687`: **not deployed**.
+- `klaverjas_upsert_match_state_scoped(...)`: deployed `SECURITY DEFINER`, but its body never validates or uses the supplied `session_token`.
+- The deployed fallback accepts `match_id_input bigint`, while the current scorer generates text/UUID client IDs.
+- The fallback can insert/update caller-selected numeric match IDs, delete/rewrite child rounds/snapshots, and has no creator/owner check.
+- `klaverjas_matches` already has the correct fields needed for a safe current contract:
+  - `client_match_id text NOT NULL UNIQUE`
+  - `created_by_player_id bigint`
+- `klaverjas_matches`, `klaverjas_rounds`, and `klaverjas_match_snapshots` all have RLS enabled, but direct `anon`/`authenticated` INSERT/UPDATE/DELETE grants still exist.
+- Direct web-role DML also existed on `jas_games`, `jas_game_entries`, `game_rating_rebuild_queue`, `klaverjas_online_games`, and `klaverjas_online_player_stats`.
+- RLS is disabled on `jas_games`, `jas_game_entries`, and `game_rating_rebuild_queue`.
+- Historical `create_jas_game(text,jsonb)` authenticates via `_jas_session_player`, writes `jas_games`/`jas_game_entries`, fires two ELO triggers, queues a Klaverjas rating rebuild, and processes the rebuild queue. It is therefore not behaviorally interchangeable with the legacy/current scorer persistence path.
+- `_jas_session_player(text)` validates current sessions before returning a player and rejects missing/expired/invalid sessions.
+- `klaverjas_matches` baseline: `7` rows; `klaverjas_rounds=0`; `klaverjas_match_snapshots=0` at final capture.
+- Classic baseline at prior capture: `jas_games=15`, `jas_game_entries=60`, `game_rating_rebuild_queue=87`.
+- Controlled `OC_V765` push rows: `0`.
+- Ice: `2.8`.
 
-## Exact deployed-definition capture — 2026-08-08
+## Superseded v755q
 
-`LIVE_CAPTURE_V765_KLAVERJAS_DEPLOYED_DEFINITIONS.sql` was run read-only in production.
+The earlier ACL-only `GEJAST_v755q_klaverjas_write_boundary_guard.sql` is deliberately **SUPERSEDED** and aborts if executed. Exact function capture proved that ACL-only hardening while leaving the unauthenticated `SECURITY DEFINER` fallback callable would preserve a write bypass.
 
-### `klaverjas_upsert_match_state_scoped(...)`
+## v755r combined repair
 
-The exact body materially strengthens the security finding:
+Prepared:
 
-- the function accepts `session_token text`, but **never validates, resolves, or otherwise uses it**;
-- it is `SECURITY DEFINER`;
-- if `match_id_input` is null, it directly inserts a `klaverjas_matches` row;
-- if `match_id_input` is non-null, it performs `INSERT ... ON CONFLICT(id) DO UPDATE`, so caller-supplied numeric IDs can replace existing match state;
-- no creator/owner comparison is performed before that update;
-- it deletes and rewrites all matching `klaverjas_rounds` and `klaverjas_match_snapshots` child rows;
-- it therefore cannot safely remain web-callable in its current form.
+- `GEJAST_v755r_klaverjas_save_contract_guard.sql`
+- `check-klaverjas-save-contract-v755r.mjs`
+- `LIVE_APPLY_AND_VERIFY_V755R_KLAVERJAS_SAVE_GUARD.sql`
+- `LIVE_POSTAPPLY_V755R_VERIFY.sql`
 
-The current runtime can generate UUID `client_match_id` values, but this RPC accepts only `match_id_input bigint`; the runtime fallback can therefore fail before the RPC body for UUID-backed scorer saves.
+v755r does all of the following without switching persistence models:
 
-### `create_jas_game(text,jsonb)`
+1. Replaces `klaverjas_upsert_match_state_scoped` with a session-validated, creator-owned implementation while preserving its existing round/progress/scoring calculations.
+2. Uses `client_match_id` as the idempotency key when present.
+3. Rejects unknown-owner and cross-player overwrite attempts.
+4. Installs the missing current `save_klaverjas_match_v687(text,text,text,jsonb,text)` signature used by the frontend.
+5. Accepts text/UUID client IDs and maps the simple scorer payload into the same one-round compatibility representation the existing frontend fallback already intended to use.
+6. Does not call `create_jas_game`, does not enqueue/process rating rebuilds, and does not write classic `jas_games`/`jas_game_entries`.
+7. Revokes direct `PUBLIC`/`anon`/`authenticated` INSERT/UPDATE/DELETE across the inventoried legacy/classic/online persistence tables while leaving SELECT untouched.
+8. Removes `PUBLIC EXECUTE` from the write RPCs while retaining `anon`/`authenticated` execution on the now-guarded RPCs.
 
-The exact classic function is materially different from the legacy upsert:
+## Transaction-gated production apply
 
-- it resolves the caller via `_jas_session_player(session_token)` before persistence;
-- it validates a 4-player/teams payload and registered player names;
-- it creates `jas_games` + four `jas_game_entries` rows;
-- entry inserts fire both deployed Klaverjas ELO triggers;
-- it additionally enqueues `_enqueue_rating_rebuild('klaverjas', ...)` and calls `process_game_rating_rebuild_queue(10)`;
-- it has no explicit client-match idempotency/ownership contract in the function body.
+`LIVE_APPLY_AND_VERIFY_V755R_KLAVERJAS_SAVE_GUARD.sql` is the intended production execution artifact. It performs the migration and its controlled proof in a single transaction.
 
-Therefore simply replacing the current fallback with `create_jas_game` would change persistence/rating behavior and would still not provide safe same-client replay ownership.
+Before COMMIT it requires all of these to pass:
 
-### v755q status
+- valid text/UUID-style client-ID save;
+- correct creator ownership;
+- exact score persistence;
+- one canonical scorer round;
+- same-owner deterministic replay with one row only;
+- cross-player overwrite rejection;
+- missing/invalid/stale session rejection before write;
+- direct DML grants reduced to zero on target tables;
+- PUBLIC execute removed from write RPCs;
+- classic `jas_games` / entries / rating rebuild queue unchanged by the current scorer proof;
+- exact controlled match/session cleanup;
+- legacy match/round/snapshot baseline restored;
+- controlled push residue `0`;
+- Ice `2.8`.
 
-The earlier ACL-only `GEJAST_v755q_klaverjas_write_boundary_guard.sql` is now deliberately **SUPERSEDED / DO NOT APPLY STANDALONE**. Once the unsafe fallback body was captured, it became clear that revoking direct table DML while retaining web-role EXECUTE on that function would leave a write bypass. The file now intentionally aborts and its regression asserts that safety stop.
+Any failed assertion aborts the whole transaction, including the function/ACL changes and controlled data writes. The migration commits only if the complete proof reaches the cleanup and invariant checks.
 
-## Required combined repair shape
+## Deliberate scope boundary
 
-The replacement v765 repair must be atomic and must not rely on frontend-only validation. It must:
-
-1. install a current `save_klaverjas_match_v687` contract that accepts text/UUID client IDs and validates a real player session before any write;
-2. provide deterministic same-owner replay and reject cross-player reuse of the same client ID;
-3. harden or remove web-role execution of the unsafe legacy upsert path;
-4. revoke direct INSERT/UPDATE/DELETE from web roles on all affected persistence/queue tables while preserving required SELECT access;
-5. preserve the intended current scoring/persistence/rating behavior rather than arbitrarily switching between the legacy and classic models;
-6. be transaction-only proven before any persistent finished-game test.
-
-## Final schema/read-contract capture still required
-
-`LIVE_CAPTURE_V765_KLAVERJAS_LEGACY_SCHEMA.sql` captures the remaining exact information needed to implement the combined repair without guessing:
-
-- `klaverjas_matches`, `klaverjas_rounds`, and `klaverjas_match_snapshots` columns/constraints/indexes/RLS/direct grants;
-- `_jas_session_player` and `_klaverjas_safe_scope` definitions;
-- deployed v687 runtime bundle/leaderboard read functions, if present;
-- legacy public live-match read function;
-- legacy row counts, controlled push residue and Ice invariant.
-
-## Existing v764 evidence to preserve
-
-- Reversible Klaverjas online-room create/save/read/delete/cleanup already passed.
-- Invalid online-room sessions reject.
-- Direct anonymous REST insert to `klaverjas_online_games` was rejected by RLS.
-- Finished score/history was deliberately not written in production because rating/stat rollback was not proven safe.
-
-## Safety rule
-
-No irreversible finished-game production write is needed to diagnose the current bug. After the combined repair is prepared, behavioral proof must run inside an explicit transaction and roll back all match/round/snapshot/game/entry/rating/queue/stat effects atomically.
+v755r fixes the **finished simple scorer save contract** and hardens the deployed legacy upsert. It does not invent missing `start_klaverjas_live_match_v687` / `finish_klaverjas_live_match_v687` APIs in this same repair. Those live-runtime aliases can be handled separately after the finished-save path is proven, to avoid expanding the production change beyond the identified v765 blocker.
