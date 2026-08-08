@@ -1,0 +1,25 @@
+name: Live deployment health
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Read expected deployed version
+        shell: bash
+        run: echo "GEJAST_EXPECTED_VERSION=$(tr -d '\r\n' < VERSION)" >> "$GITHUB_ENV"
+      - name: Verify deployed public and admin surfaces
+        env:
+          GEJAST_DEPLOY_WAIT_SECONDS: '240'
+          GEJAST_SMOKE_TIMEOUT_MS: '15000'
+        run: node check-live-routes.mjs
