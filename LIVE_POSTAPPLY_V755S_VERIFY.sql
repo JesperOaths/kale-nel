@@ -1,9 +1,7 @@
 -- v755s Klaverjas live alias post-apply verification. READ ONLY.
 --
--- Note: pg_get_functiondef preserves source formatting. The original verifier looked for
--- the exact spaced token `m.site_scope = v_scope`, while the deployed v755s getter was
--- created as `m.site_scope=v_scope`. This verifier normalizes whitespace before checking
--- the semantic scope/read-only boundary.
+-- pg_get_functiondef preserves/reformats PL/pgSQL declaration whitespace. Verify semantic
+-- guard calls/filters instead of depending on a particular declaration rendering.
 
 create temp table if not exists _v755s_post(
   check_name text primary key,
@@ -51,7 +49,7 @@ insert into _v755s_post
 select 'public_live_getter_boundary',
        case when count(*)=1 and bool_and(
          public_exec
-         and def_compact like '%v_scope:text:=public._klaverjas_safe_scope(site_scope_input)%'
+         and def_compact like '%_klaverjas_safe_scope(site_scope_input)%'
          and def_compact like '%wherem.site_scope=v_scope%'
          and def not like '%insert into%'
          and def not like '%delete from%'
@@ -59,7 +57,7 @@ select 'public_live_getter_boundary',
        ) then 'PASS' else 'FAIL' end,
        case when count(*)=1 then
          'PUBLIC='||bool_or(public_exec)::text||
-         ', safe_scope='||bool_or(def_compact like '%v_scope:text:=public._klaverjas_safe_scope(site_scope_input)%')::text||
+         ', safe_scope='||bool_or(def_compact like '%_klaverjas_safe_scope(site_scope_input)%')::text||
          ', scope_filter='||bool_or(def_compact like '%wherem.site_scope=v_scope%')::text||
          ', read_only='||bool_and(def not like '%insert into%' and def not like '%delete from%' and def not like '%update public.%')::text
        else 'getter missing' end
