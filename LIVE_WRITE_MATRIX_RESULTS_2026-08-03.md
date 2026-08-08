@@ -130,3 +130,67 @@ Regression prepared and run locally:
 - `npm run verify:static` — PASS; Ice invariant reports Ice stays `2.8`
 
 Next unavoidable stop: do not continue additional admin mutation rows against production until the allowed-username admin guard/direct-DML defect is approved for SQL repair and applied, because further admin mutation tests could be corrupted by invalid-token/direct-REST mutation exposure.
+
+## v755m/v755n production repair apply - 2026-08-08
+
+Amended the still-unapplied repair artifacts in-place before production application; no new migration suffixes were created.
+
+Local/static gates before apply:
+
+- `node check-profile-rpc-repair-v755m.mjs` - PASS
+- `node check-admin-allowed-username-guard-v755n.mjs` - PASS
+- `npm run verify:static` - PASS
+- `git diff --check` - PASS
+- Secret scan - PASS
+- Commit guard - PASS
+
+Live preflight was run with sanitized SQL/editor evidence only. No cookies, storage values, session tokens, Supabase service credentials, TOTP values, or other secrets were exposed. Preflight verified exact RPC signatures and owners, profile table/`gejast_profile_settings_pkey` existence, admin function/table ACL shape, `admin_check_session(text)` invalid response shape, no controlled residue, and baselines: `allowed_usernames=51`, `drink_events=28`, `boerenbridge_matches=98`, queued controlled test push jobs `0`, Ice `2.8`.
+
+### v755n apply and verification
+
+Applied `GEJAST_v755n_admin_allowed_username_security_guard.sql` first. The first post-apply valid remove check exposed a live status constraint mismatch because the prepared function used `status='archived'`. The unapplied artifact was amended in place to preserve live behavior by using `status='blocked'` and returning mode `blocked_account`; the corrected v755n SQL was then reapplied successfully.
+
+Post-apply v755n proof:
+
+- Exact admin RPC overload enumeration found only `admin_remove_allowed_username(text,bigint)` and `admin_permanently_delete_allowed_username(text,bigint)`; alternate callable overload count `0`.
+- Both functions are owned by `postgres`, have `PUBLIC EXECUTE=false`, `anon/authenticated EXECUTE=true`, require `admin_check_session(...).ok=true`, and no longer contain the old `PERFORM public.admin_check_session(admin_session_token);` guard.
+- Direct `allowed_usernames` table DML ACLs are false for `PUBLIC`, `anon`, and `authenticated` for `INSERT`, `UPDATE`, and `DELETE`.
+- Invalid admin remove rejected: HTTP `400`, `P0001`, `Ongeldige admin-sessie`.
+- Missing admin remove rejected: HTTP `400`, `P0001`, `Ongeldige admin-sessie`.
+- Stale/expired admin remove rejected: HTTP `400`, `P0001`, `Ongeldige admin-sessie`.
+- Anonymous direct REST `INSERT`, `UPDATE`, and `DELETE` on `allowed_usernames` all rejected with `permission denied for table allowed_usernames`.
+- Authenticated direct DML rejection was proven by SQL ACL: `authenticated_insert=false`, `authenticated_update=false`, `authenticated_delete=false`.
+- Valid admin reversible action succeeded: reserved controlled label `OC_V764_MATRIX_V755N_VERIFY_202608080439` as row id `291`, then valid remove returned `{ok:true, removed:true, mode:"blocked_account", player_id:null}`.
+- Exact SQL cleanup deleted only id `291` with the controlled display name/username predicate.
+- Final cleanup check returned `allowed_usernames=51` and controlled residue `0`.
+
+### v755m apply and verification
+
+Applied `GEJAST_v755m_profile_rpc_session_token_repair.sql` after v755n verification passed.
+
+Post-apply v755m proof through the real `my_profile.html` contract:
+
+- Original Bruis state captured first: player id `141`, display name `Bruis`, avatar present; avatar evidence was recorded only as length/hash, not raw data.
+- Missing session update rejected with `profile_settings_session_missing`; no write marker remained.
+- Invalid session update rejected with `profile_settings_session_invalid`; no write marker remained.
+- Stale session update rejected with `profile_settings_session_invalid`; no write marker remained.
+- Cross-player tamper by submitted player id was not callable through the real frontend RPC contract: extra `player_id`/`player_id_input` fields produced PostgREST function-not-found for that signature, confirming the exposed RPC does not accept a target player id.
+- Valid Bruis update succeeded to harmless temporary display name `Bruis v755m proof`.
+- App readback after valid update returned player id `141` and display name `Bruis v755m proof`.
+- Retry of the same valid update succeeded deterministically and readback remained `Bruis v755m proof`.
+- Exact restore succeeded; app readback returned display name `Bruis`, same avatar length/hash as the captured original.
+- Database readback agreed after restore: player id `141`, `players.display_name='Bruis'`, `chosen_username='Bruis'`, profile-settings display name `Bruis`, avatar/profile-picture lengths `220`.
+- SQL residue checks found `invalid_profile_marker_rows=0` in `gejast_profile_settings` and `invalid_profile_marker_players=0` in `players`, proving missing/invalid/stale probes created no orphan profile rows or player writes.
+- Exact profile RPC signatures remain `get_my_profile_settings(text)` and `update_my_profile_settings(text,text,text)`; `PUBLIC EXECUTE=false`, `anon/authenticated EXECUTE=true`.
+- Profile table and `gejast_profile_settings_pkey` exist; update function uses `ON CONFLICT ON CONSTRAINT gejast_profile_settings_pkey`.
+
+Final production baselines after both repairs:
+
+- `allowed_usernames=51`
+- `drink_events=28`
+- `boerenbridge_matches=98`
+- controlled matrix residue `0`
+- queued controlled test push jobs `0`
+- Ice `2.8`
+
+Remaining matrix work can now continue past the former v755n/v755m blockers. The profile `42702 session_token ambiguous` defect is preserved above as pre-repair evidence and is no longer reproduced after v755m.

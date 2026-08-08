@@ -15,6 +15,9 @@ assert.match(sql, /select to_jsonb\(public\.admin_check_session\(admin_session_t
 assert.match(sql, /coalesce\(\(v_admin_state->>'ok'\)::boolean, false\) is not true/i, 'must require admin_check_session ok=true');
 assert.doesNotMatch(sql, /perform public\.admin_check_session\(admin_session_token\);/i, 'must not use PERFORM-only admin check');
 assert.match(sql, /revoke insert, update, delete on table public\.allowed_usernames from public, anon, authenticated;/i, 'must remove direct web-role DML');
+assert.match(sql, /set status = 'blocked'/i, 'remove action must use live-allowed blocked status');
+assert.match(sql, /'mode', 'blocked_account'/i, 'remove action keeps live blocked_account behavior');
+assert.doesNotMatch(sql, /set status = 'archived'/i, 'archived violates current live status constraint');
 assert.doesNotMatch(sql, /grant insert, update, delete on table public\.allowed_usernames to (public|anon|authenticated)/i, 'migration must not grant direct web-role DML');
 assert.match(sql, /notify pgrst, 'reload schema';/i);
 

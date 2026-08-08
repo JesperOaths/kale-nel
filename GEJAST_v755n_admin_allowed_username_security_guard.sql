@@ -49,12 +49,12 @@ begin
   perform public._clear_player_account_access(v_row.player_id);
 
   update public.allowed_usernames
-     set status = 'archived',
+     set status = 'blocked',
          reserved_for_email = null,
          updated_at = now()
    where id = allowed_username_id_input;
 
-  return jsonb_build_object('ok', true, 'removed', true, 'mode', 'archived_account', 'player_id', v_row.player_id);
+  return jsonb_build_object('ok', true, 'removed', true, 'mode', 'blocked_account', 'player_id', v_row.player_id);
 end;
 $fn$;
 
