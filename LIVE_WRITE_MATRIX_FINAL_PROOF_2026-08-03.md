@@ -2,7 +2,9 @@
 
 Branch: `agent/v764-live-write-matrix`
 
-Status: FINAL-PROOF DRAFT. This file consolidates completed reversible evidence and explicitly marks remaining authorization/login blockers. It does not claim that repair-first mutation families are production-approved.
+Draft PR: `#5` (`v764 live-write matrix security hardening`).
+
+Status: FINAL-PROOF DRAFT. Repository-side review, prepared migration hardening, and draft-PR CI are complete. The remaining blocker is production application/proof of the already reviewed `v755o` and `v755p` SQL repairs. This file does not claim those two repairs are applied yet.
 
 ## Safety model used
 
@@ -14,6 +16,7 @@ Status: FINAL-PROOF DRAFT. This file consolidates completed reversible evidence 
 - No real notification was sent during the remaining matrix phase.
 - No broad cleanup RPCs were used as rollback primitives.
 - Prepared repair SQL is documented as prepared-only unless explicitly stated as applied.
+- Known security/correctness defects are never deliberately restored by rollback files; forward-fix fallbacks preserve the repaired boundary.
 
 ## Completed production repairs already applied and proven
 
@@ -23,7 +26,7 @@ Status: FINAL-PROOF DRAFT. This file consolidates completed reversible evidence 
 | `GEJAST_v755m_profile_rpc_session_token_repair.sql` | APPLIED / PASS | `get_my_profile_settings(text)` and `update_my_profile_settings(text,text,text)` preserved; ambiguous `session_token` defect fixed; invalid/missing/stale sessions rejected; Bruis update/retry/restore proven. |
 | `GEJAST_v755n_admin_allowed_username_security_guard.sql` | APPLIED / PASS | Admin functions require `admin_check_session(...).ok=true`; direct `allowed_usernames` DML revoked from `PUBLIC`, `anon`, `authenticated`; remove/permanent-delete status boundary preserved. |
 
-Post-cleanup baseline after applied repairs:
+Post-cleanup baseline after applied repairs and controlled proofs:
 
 - `allowed_usernames=51`
 - `drink_events=28`
@@ -32,6 +35,8 @@ Post-cleanup baseline after applied repairs:
 - controlled queued push jobs `0`
 - Ice unit value `2.8`
 
+These are the latest recorded production baselines from the live matrix. They must be freshly re-read before and after applying `v755o`/`v755p`.
+
 ## Completed matrix proof status
 
 | Surface | Verdict | What was proven | Limitation / remaining risk |
@@ -39,20 +44,20 @@ Post-cleanup baseline after applied repairs:
 | Boerenbridge | PASS | Auth/session/owner/replay/cleanup/direct-DML boundary. | No repeat proof needed unless implementation changes. |
 | Drinks create/replay | PASS WITH LIMITATION | Valid session create, invalid session rejection, replay unique-pending rejection, exact cleanup, Ice restored to `2.8`. | Approval/rejection not tested because it can create permanent drink history. |
 | Profile/account own-profile | PASS | Own profile get/update/retry/restore, no orphan markers. | Revisit only if Matrix Player B is created for cross-account proof. |
-| Admin allowed username | PASS | Admin session required, public direct DML revoked, controlled cleanup verified. | Admin session currently requires login for future admin-gated tasks. |
-| Toepen save | REPAIR FIRST | Missing/invalid/stale/non-participant rejected; malformed winner rejected; valid controlled save/replay/exact cleanup passed; direct REST rejected. | Correctness defect: valid participant could forge inconsistent `end_points`; v755o prepared-only totals guard must be reviewed/applied before further Toepen mutation proof. |
+| Admin allowed username | PASS | Admin session required, public direct DML revoked, controlled cleanup verified. | Admin login is still required for future protected account setup if used. |
+| Toepen save | REPAIR FIRST / AUTHORIZED TO APPLY | Missing/invalid/stale/non-participant rejected; malformed winner rejected; valid controlled save/replay/exact cleanup passed; direct REST rejected. | Correctness defect: valid participant could forge inconsistent `end_points`; reviewed `v755o` must be applied and positively re-proven before Toepen becomes PASS. |
 | Klaverjas online room | PASS WITH LIMITATION | Invalid create/save rejected; controlled room create/save/retry/delete/cleanup passed; direct REST insert rejected by RLS. | Finished-score/history path is unsafe without transaction-only proof or approved aggregate/rating restore. `klaverjas_upsert_match_state_scoped(...)` remains a candidate auth defect. |
-| Klaverjas score/history | REPAIR FIRST | Risk classified; no unsafe live write performed. | `create_jas_game(text,jsonb)` and scoped upsert need repair/transaction plan before production mutation. |
+| Klaverjas score/history | REPAIR FIRST | Risk classified; no unsafe live write performed. | `create_jas_game(text,jsonb)` and scoped upsert need a separate repair/transaction plan; intentionally not expanded in v764. |
 | Pikken lobby | PASS WITH LIMITATION | Host create/config retry/ready/unready/replay join/host destroy/exact cleanup; no archive/stat/push residue; Ice `2.8`. | No second valid player session available, so cross-player authorization deferred. Start/bid/vote/archive paths remain out of scope. |
 | Paardenrace lobby | PASS WITH LIMITATION | Host create/choice retry/wager verify/ready/unready/disband/cleanup; final counts restored: rooms `26`, players `41`, obligations `2`, history `0`, controlled residue `0`, controlled push jobs `0`, Ice `2.8`. | No second valid player session available; no race advancement/draw/tick/nominations/finish/history/obligation-producing paths called. |
-| Beerpong | REPAIR FIRST | Static/read-only inventory identified active caller and effective risky overriding implementation; prepared v755p package only. | No production Beerpong write until v755p or equivalent is reviewed/applied/proven. |
+| Beerpong | REPAIR FIRST / AUTHORIZED AFTER LIVE PREFLIGHT | Static/read-only inventory identified active caller and risky existing overwrite/direct-DML behavior; `v755p` is now a narrow security/contract repair only. | No production Beerpong write until `v755p` is applied/proven. Rating rebuild/history mutation is explicitly excluded. |
 | Badges | NO LIVE WRITE NEEDED | Badge surfaces treated as display/derived only in safe scope. | No permanent badge award attempted. |
-| Push | PASS WITH LIMITATION | Static/admin-targeted queue guards and prior queue behavior proven; no new queued controlled push jobs after cleanup. | Dispatcher delivery/click proof blocked by missing dispatcher env/secrets and no approval to send a real notification. |
+| Push | PASS WITH LIMITATION | Static/admin-targeted queue guards and prior queue behavior proven; no new queued controlled push jobs after cleanup. | No additional real push is needed for v764. |
 | Rad | NO LIVE WRITE NEEDED | No active production write path identified in targeted inventory. | Reclassify only if a mutation path is later confirmed. |
 | Despimarkt/Beurs | OUT OF SCOPE / LOCAL ONLY | Admin-read inventory only. | Economy/ledger rollback would need a separate reviewed plan. |
 | Match control/corrections | PASSABLE LATER | Classified as dependent on a controlled target match. | Can affect ratings/rebuild; should only run after target-domain proof/repair. |
 
-## Prepared-only repair packages not applied
+## Prepared-only repair packages not yet applied
 
 ### Toepen v755o totals consistency guard
 
@@ -64,14 +69,18 @@ Files:
 
 Purpose:
 
-- Reject or recompute inconsistent submitted Toepen participant totals so a valid participant cannot persist forged `end_points` that disagree with round results.
+- Reject inconsistent submitted Toepen participant totals so a valid participant cannot persist forged `end_points` that disagree with persisted round penalties.
+- Preserve the existing `create_toepen_game(text,jsonb,text)` RPC signature, session/scope/participant checks, and intended browser-role RPC execution.
+- Preserve the direct table write boundary without unnecessarily stripping legitimate read grants in the forward-fix fallback.
 
-Status:
+Repository review status:
 
 - Static regression included in `npm run verify:static`.
-- Production mutation family remains blocked until reviewed/applied/proven.
+- Forward-fix ACL fallback was tightened to revoke only `INSERT/UPDATE/DELETE` from `PUBLIC`, `anon`, and `authenticated`, rather than broad read privileges.
+- Production application is authorized after a fresh live signature/ACL/residue/Ice preflight.
+- Still not applied from this chat because no Supabase/database connector is available.
 
-### Beerpong v755p save auth guard
+### Beerpong v755p save auth/contract guard
 
 Files:
 
@@ -86,15 +95,19 @@ Purpose:
 - Require non-null creator and owner-only update/replay for existing `client_match_id`.
 - Normalize frontend `format` and backend `match_format`.
 - Normalize cups aliases.
-- Use current player-name Beerpong match schema.
+- Validate 1v1/2v2 team shape, winner value, and cross-team duplicate player names.
+- Use the current player-name Beerpong match schema.
 - Defensively revoke direct Beerpong match/rating/history table DML from `PUBLIC`, `anon`, and `authenticated`.
 - Preserve current save-time rating behavior: no rating rebuild, no rating/history mutation, and `ratings_applied=false`.
-- Provide a forward-fix rollback that keeps auth/owner/DML hardening and the no-rating-rebuild behavior.
+- Preserve dependencies on the existing RPC by using `CREATE OR REPLACE` without dropping the unchanged function signature.
+- Provide a forward-fix fallback that keeps auth/owner/DML hardening and the no-rating-rebuild behavior.
 
-Status:
+Repository review status:
 
-- Static regression included in `npm run verify:static` and fails if the main migration invokes `rebuild_beerpong_ratings()` or mutates rating/history tables.
-- Not applied yet; authorized after parity/schema/ACL/static preflight passes.
+- Static regression included in `npm run verify:static` and fails if the migration invokes `rebuild_beerpong_ratings()` or mutates rating/history tables.
+- Regression also fails if the migration/forward-fix drops the unchanged `save_beerpong_match(text,text,jsonb)` signature.
+- Production application is authorized after fresh deployed-function parity/schema/ACL/residue/Ice preflight.
+- Still not applied from this chat because no Supabase/database connector is available.
 
 ## Controlled fixture cleanup evidence highlights
 
@@ -110,7 +123,7 @@ Completed exact cleanup proofs reported zero controlled residue for:
 
 ## Reusable FAST MATRIX MODE harness
 
-`./scripts/matrix-harness.mjs` now supports repository-safe:
+`./scripts/matrix-harness.mjs` supports repository-safe:
 
 - sanitized SQL snapshot generation;
 - per-domain public count snapshots;
@@ -122,23 +135,38 @@ Completed exact cleanup proofs reported zero controlled residue for:
 
 The harness does not store tokens, cookies, PINs, service-role keys, or session values.
 
-## Gates run for latest Beerpong-prep checkpoint
+## Repository verification checkpoint
 
-- `node check-beerpong-save-auth-guard-v755p.mjs` PASS.
-- `npm run verify:static` PASS.
-- `npm run verify:js` PASS.
-- `git diff --check` PASS, with expected Windows LF-to-CRLF warnings only.
+Draft PR `#5` was opened from `agent/v764-live-write-matrix` to `main` as a draft only; it must not be merged until the remaining production proofs are complete.
+
+Current reviewed head at this checkpoint:
+
+- `7852ec4b57f930af1ad1b39f37b2ca174ccc2c6d`
+
+GitHub Actions:
+
+- Workflow: `GEJAST verification`
+- Run: `#90`
+- Job: `verify`
+- Conclusion: `success`
+- Passed steps include JavaScript syntax, RPC coverage, local reference integrity, Klaverjas static regression, Toepen static regression, homepage root-fix regression, and version drift gate.
+
+Additional repository gates previously reported by the matrix work include:
+
+- `node check-beerpong-save-auth-guard-v755p.mjs` PASS before the dependency-preservation tightening; the updated PR CI also passed at current head.
+- `npm run verify:static` PASS at the latest OpenClaw checkpoint before this chat-side hardening.
+- `npm run verify:js` PASS at that checkpoint.
+- `git diff --check` PASS.
 - Secret scan PASS.
-- Commit guard PASS for `fix: prepare beerpong save auth guard`.
+- Commit guard PASS.
 
 ## Remaining blockers before PR is truly final
 
-1. Review/authorize/apply/prove Toepen v755o, or keep Toepen explicitly blocked.
-2. Review/authorize/apply/prove Beerpong v755p, or keep Beerpong explicitly blocked.
-3. If cross-player coverage is still required, create one reusable `OC_V764_MATRIX_PLAYER_B` after protected admin login and use it only for the smallest missing probes.
-4. Do not run Klaverjas score/history proof until a transaction-only or exact aggregate/rating restore plan is approved.
-5. Do not send a real push notification without explicit approval.
-6. Before opening PR, run the complete final gate suite:
+1. Fresh production preflight and apply/prove Toepen `v755o`.
+2. Fresh production preflight and apply/prove Beerpong `v755p` only after `v755o` passes.
+3. Re-read and restore all production baselines after each proof; controlled residue and controlled push jobs must end at `0`, Ice at `2.8`.
+4. Do not expand v764 into Klaverjas finished-score/history, real push delivery, permanent badge awards, Paardenrace finish/history, or other irreversible families.
+5. Before marking the PR ready/final, run the complete final gate suite:
    - `npm run verify`
    - `npm run smoke:live`
    - `npm run smoke:beta:read`
@@ -153,4 +181,4 @@ The harness does not store tokens, cookies, PINs, service-role keys, or session 
 
 ## Current conclusion
 
-The matrix has strong evidence for the already-repaired core account/admin/profile/Boerenbridge surfaces and limited but clean evidence for reversible lobby/create surfaces. The remaining high-risk families are correctly stopped at repair/authorization boundaries rather than being forced through unsafe live writes.
+Repository-side v764 work is ready for the remaining production database checkpoint. The two unresolved high-value families are intentionally reduced to narrow repairs: Toepen enforces totals consistency, and Beerpong enforces session/owner/DML/contract safety without changing rating behavior. PR `#5` remains draft and unmerged until those production applies and proofs are complete.
