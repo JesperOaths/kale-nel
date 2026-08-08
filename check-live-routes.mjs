@@ -6,7 +6,9 @@ const adminBaseUrl = process.env.GEJAST_ADMIN_BASE_URL || 'https://admin.kalenel
 const expectedVersion = process.env.GEJAST_EXPECTED_VERSION || '';
 const timeoutMs = Number(process.env.GEJAST_SMOKE_TIMEOUT_MS || 15000);
 const deployWaitSeconds = Math.max(0, Number(process.env.GEJAST_DEPLOY_WAIT_SECONDS || 0));
+const transientRetries = Math.max(0, Number(process.env.GEJAST_SMOKE_RETRIES || 2));
 const cacheBuster = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const transientStatuses = new Set([408, 425, 429, 500, 502, 503, 504]);
 
 const publicRoutes = [
   '/',
@@ -50,7 +52,7 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchWithTimeout(url, options = {}) {
+async function fetchOnce(url, options = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -62,6 +64,27 @@ async function fetchWithTimeout(url, options = {}) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function fetchWithTimeout(url, options = {}) {
+  const method = String(options.method || 'GET').toUpperCase();
+  const retrySafe = method === 'GET' || method === 'HEAD';
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= transientRetries; attempt += 1) {
+    try {
+      const response = await fetchOnce(url, options);
+      if (!retrySafe || !transientStatuses.has(response.status) || attempt === transientRetries) return response;
+      console.warn(`Transient HTTP ${response.status} for ${url}; retry ${attempt + 1}/${transientRetries}.`);
+    } catch (error) {
+      lastError = error;
+      if (!retrySafe || attempt === transientRetries) throw error;
+      console.warn(`Transient fetch failure for ${url}: ${error instanceof Error ? error.message : String(error)}; retry ${attempt + 1}/${transientRetries}.`);
+    }
+    await sleep(Math.min(2000, 300 * (2 ** attempt)));
+  }
+
+  throw lastError || new Error(`Fetch failed for ${url}`);
 }
 
 function urlFor(pathname, origin = baseUrl) {
@@ -206,4 +229,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`Live deployment health ok. Base=${baseUrl}; AdminBase=${adminBaseUrl}; routes=${publicRoutes.length}`);
+console.log(`Live deployment health ok. Base=${baseUrl}; AdminBase=${adminBaseUrl}; routes=${publicRoutes.length}; transientRetries=${transientRetries}`);
