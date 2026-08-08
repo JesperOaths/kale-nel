@@ -59,13 +59,26 @@ v755s:
 - Direct web-role Klaverjas DML grants on the inventoried target tables: `0`.
 - Classic `jas_games` / entries / rating rebuild queue were unchanged by the live proof.
 
+## Independent post-apply verification — matcher correction
+
+The first run of `LIVE_POSTAPPLY_V755S_VERIFY.sql` returned PASS for aliases, write-RPC session/owner boundaries, direct DML, residue, push residue, Ice and the production baseline. Its only FAIL was `public_live_getter_boundary`, reporting `PUBLIC=true, scope_filter=false, read_only=true`.
+
+That FAIL was traced to the verifier, not to production. The deployed v755s getter source contains the required scope guard as `where m.site_scope=v_scope`, while the verifier searched for the whitespace-specific literal `m.site_scope = v_scope`. `pg_get_functiondef` preserved the deployed no-space formatting, producing a false negative.
+
+The post-check has been corrected to normalize whitespace before checking both:
+
+- `v_scope := public._klaverjas_safe_scope(site_scope_input)`; and
+- `where m.site_scope=v_scope`.
+
+No production migration needs to be re-applied. The corrected read-only post-check must be rerun once before PR #8 is made ready/merged.
+
 ## Final independent gate
 
-Before PR #8 is made ready/merged, run `LIVE_POSTAPPLY_V755S_VERIFY.sql` read-only in production. Required final state:
+Required corrected rerun state:
 
 - `live_aliases_exist`: PASS;
 - `live_write_rpc_boundary`: PASS;
-- `public_live_getter_boundary`: PASS;
+- `public_live_getter_boundary`: PASS with `PUBLIC=true, safe_scope=true, scope_filter=true, read_only=true`;
 - `direct_dml_boundary`: PASS;
 - `controlled_v766_residue`: PASS;
 - `controlled_push_jobs`: PASS;
