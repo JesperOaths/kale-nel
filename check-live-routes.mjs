@@ -6,62 +6,49 @@ const adminBaseUrl = process.env.GEJAST_ADMIN_BASE_URL || 'https://admin.kalenel
 const expectedVersion = process.env.GEJAST_EXPECTED_VERSION || '';
 const timeoutMs = Number(process.env.GEJAST_SMOKE_TIMEOUT_MS || 15000);
 const deployWaitSeconds = Math.max(0, Number(process.env.GEJAST_DEPLOY_WAIT_SECONDS || 0));
+const transientRetries = Math.max(0, Number(process.env.GEJAST_SMOKE_RETRIES || 2));
 const cacheBuster = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const transientStatuses = new Set([408, 425, 429, 500, 502, 503, 504]);
 
 const publicRoutes = [
-  '/',
-  '/index.html',
-  '/scorer.html',
-  '/score.html',
-  '/klaverjas_scorer_v596_repo_ready.html',
-  '/klaverjas_live.html',
-  '/klaverjas_online.html',
-  '/toepen.html',
-  '/beerpong.html',
-  '/boerenbridge.html',
-  '/boerenbridge_live.html',
-  '/pikken.html',
-  '/pikken_live.html',
-  '/pikken_spectator.html',
-  '/paardenrace.html',
-  '/paardenrace_live.html',
-  '/paardenrace_spectator.html',
-  '/drinks.html',
-  '/drinks_add.html',
-  '/drinks_pending.html',
-  '/drinks_history.html',
-  '/drinks_speed.html',
-  '/despimarkt.html',
-  '/beurs.html',
-  '/rad.html',
-  '/profiles.html',
-  '/my_profile.html',
-  '/login.html',
-  '/request.html',
-  '/activate.html',
-  '/familie.html',
-  '/familie/index.html',
-  '/familie/login.html',
-  '/familie/scorer.html',
-  '/familie/leaderboard.html',
+  '/', '/index.html', '/scorer.html', '/score.html', '/klaverjas_scorer_v596_repo_ready.html',
+  '/klaverjas_live.html', '/klaverjas_online.html', '/toepen.html', '/beerpong.html', '/boerenbridge.html',
+  '/boerenbridge_live.html', '/pikken.html', '/pikken_live.html', '/pikken_spectator.html', '/paardenrace.html',
+  '/paardenrace_live.html', '/paardenrace_spectator.html', '/drinks.html', '/drinks_add.html', '/drinks_pending.html',
+  '/drinks_history.html', '/drinks_speed.html', '/despimarkt.html', '/beurs.html', '/rad.html', '/profiles.html',
+  '/my_profile.html', '/login.html', '/request.html', '/activate.html', '/familie.html', '/familie/index.html',
+  '/familie/login.html', '/familie/scorer.html', '/familie/leaderboard.html',
 ];
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
-async function fetchWithTimeout(url, options = {}) {
+async function fetchOnce(url, options = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(url, {
-      cache: 'no-store',
-      ...options,
-      signal: controller.signal,
-    });
+    return await fetch(url, { cache: 'no-store', ...options, signal: controller.signal });
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function fetchWithTimeout(url, options = {}) {
+  const method = String(options.method || 'GET').toUpperCase();
+  const retrySafe = method === 'GET' || method === 'HEAD';
+  let lastError = null;
+  for (let attempt = 0; attempt <= transientRetries; attempt += 1) {
+    try {
+      const response = await fetchOnce(url, options);
+      if (!retrySafe || !transientStatuses.has(response.status) || attempt === transientRetries) return response;
+      console.warn(`Transient HTTP ${response.status} for ${url}; retry ${attempt + 1}/${transientRetries}.`);
+    } catch (error) {
+      lastError = error;
+      if (!retrySafe || attempt === transientRetries) throw error;
+      console.warn(`Transient fetch failure for ${url}: ${error instanceof Error ? error.message : String(error)}; retry ${attempt + 1}/${transientRetries}.`);
+    }
+    await sleep(Math.min(2000, 300 * (2 ** attempt)));
+  }
+  throw lastError || new Error(`Fetch failed for ${url}`);
 }
 
 function urlFor(pathname, origin = baseUrl) {
@@ -103,7 +90,6 @@ async function waitForExpectedVersion(failures) {
     if (Date.now() >= deadline) break;
     await sleep(5000);
   } while (true);
-
   if (lastError) failures.push(lastError instanceof Error ? lastError.message : String(lastError));
   else if (expectedVersion) failures.push(`/VERSION expected ${expectedVersion}, got ${lastVersion || '(empty)'}`);
   return lastVersion;
@@ -130,18 +116,14 @@ try {
   requireText(text, 'id="homeKlaverjasLiveEntry"', 'homepage live-scorer entry', failures);
   requireText(text, 'href="./score.html"', 'homepage live-scorer route', failures);
   if (expectedVersion) requireText(text, `GEJAST_PAGE_VERSION='${expectedVersion}'`, 'homepage deployed version', failures);
-} catch (error) {
-  failures.push(`homepage content probe failed: ${error instanceof Error ? error.message : String(error)}`);
-}
+} catch (error) { failures.push(`homepage content probe failed: ${error instanceof Error ? error.message : String(error)}`); }
 
 try {
   const { response, text } = await readText('/score.html');
   if (!response.ok) failures.push(`/score.html content probe returned HTTP ${response.status}`);
   requireText(text, "new URL('./klaverjas_scorer_v596_repo_ready.html',location.href)", 'score alias target', failures);
   if (expectedVersion) requireText(text, `GEJAST_PAGE_VERSION='${expectedVersion}'`, 'score alias deployed version', failures);
-} catch (error) {
-  failures.push(`score alias content probe failed: ${error instanceof Error ? error.message : String(error)}`);
-}
+} catch (error) { failures.push(`score alias content probe failed: ${error instanceof Error ? error.message : String(error)}`); }
 
 try {
   const { response, text } = await readText('/klaverjas_scorer_v596_repo_ready.html');
@@ -149,9 +131,7 @@ try {
   requireText(text, 'id="liveBtn"', 'Klaverjas live-start button', failures);
   requireText(text, 'Live starten', 'Klaverjas live-start label', failures);
   if (expectedVersion) requireText(text, `./gejast-klaverjas-runtime.js?${expectedVersion}`, 'Klaverjas runtime cache version', failures);
-} catch (error) {
-  failures.push(`Klaverjas live scorer content probe failed: ${error instanceof Error ? error.message : String(error)}`);
-}
+} catch (error) { failures.push(`Klaverjas live scorer content probe failed: ${error instanceof Error ? error.message : String(error)}`); }
 
 try {
   const { response, text } = await readText('/gejast-klaverjas-runtime.js');
@@ -159,46 +139,35 @@ try {
   requireText(text, 'function normalizeMatchInput(input, options)', 'Klaverjas split validator', failures);
   requireText(text, '{ allowTie: true }', 'Klaverjas 0-0 live-start allowance', failures);
   requireText(text, 'start_klaverjas_live_match_v687', 'Klaverjas live start RPC alias', failures);
-} catch (error) {
-  failures.push(`Klaverjas runtime content probe failed: ${error instanceof Error ? error.message : String(error)}`);
-}
+} catch (error) { failures.push(`Klaverjas runtime content probe failed: ${error instanceof Error ? error.message : String(error)}`); }
 
 try {
   const { response, text } = await readText('/scorer.html');
   if (!response.ok) failures.push(`/scorer.html content probe returned HTTP ${response.status}`);
   requireText(text, '<title>Klaverjas Scoreformulier</title>', 'round-by-round scorer preservation', failures);
-} catch (error) {
-  failures.push(`round scorer content probe failed: ${error instanceof Error ? error.message : String(error)}`);
-}
+} catch (error) { failures.push(`round scorer content probe failed: ${error instanceof Error ? error.message : String(error)}`); }
 
 try {
   const response = await fetchWithTimeout(urlFor('/admin.html'), { redirect: 'manual' });
   const location = response.headers.get('location') || '';
-  if (![301, 302, 303, 307, 308].includes(response.status)) {
-    failures.push(`/admin.html expected redirect to admin perimeter, got HTTP ${response.status}`);
-  } else {
+  if (![301, 302, 303, 307, 308].includes(response.status)) failures.push(`/admin.html expected redirect to admin perimeter, got HTTP ${response.status}`);
+  else {
     let redirectHost = '';
     try { redirectHost = new URL(location, baseUrl).host; } catch (_) {}
     if (redirectHost !== new URL(adminBaseUrl).host) failures.push(`/admin.html redirected to unexpected host ${redirectHost || '(invalid)'}`);
   }
-  if ((response.headers.get('cache-control') || '').toLowerCase().includes('no-store') === false) {
-    failures.push('/admin.html redirect missing Cache-Control: no-store');
-  }
+  if (!(response.headers.get('cache-control') || '').toLowerCase().includes('no-store')) failures.push('/admin.html redirect missing Cache-Control: no-store');
   console.log(`/admin.html HTTP ${response.status} -> ${location || '(no location)'}`);
-} catch (error) {
-  failures.push(`public admin perimeter probe failed: ${error instanceof Error ? error.message : String(error)}`);
-}
+} catch (error) { failures.push(`public admin perimeter probe failed: ${error instanceof Error ? error.message : String(error)}`); }
 
 try {
   const response = await fetchWithTimeout(urlFor('/admin.html', adminBaseUrl), { redirect: 'manual' });
   if (response.status !== 401) failures.push(`admin subdomain expected unauthenticated HTTP 401, got ${response.status}`);
-  if ((response.headers.get('cache-control') || '').toLowerCase().includes('no-store') === false) failures.push('admin subdomain missing Cache-Control: no-store');
+  if (!(response.headers.get('cache-control') || '').toLowerCase().includes('no-store')) failures.push('admin subdomain missing Cache-Control: no-store');
   if ((response.headers.get('x-frame-options') || '').toUpperCase() !== 'DENY') failures.push('admin subdomain missing X-Frame-Options: DENY');
   if ((response.headers.get('x-content-type-options') || '').toLowerCase() !== 'nosniff') failures.push('admin subdomain missing X-Content-Type-Options: nosniff');
   console.log(`Admin perimeter HTTP ${response.status}; build=${response.headers.get('x-kalenel-admin-build') || 'unknown'}`);
-} catch (error) {
-  failures.push(`admin subdomain perimeter probe failed: ${error instanceof Error ? error.message : String(error)}`);
-}
+} catch (error) { failures.push(`admin subdomain perimeter probe failed: ${error instanceof Error ? error.message : String(error)}`); }
 
 if (failures.length) {
   console.error(`Live deployment health failed for ${failures.length} check(s).`);
@@ -206,4 +175,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`Live deployment health ok. Base=${baseUrl}; AdminBase=${adminBaseUrl}; routes=${publicRoutes.length}`);
+console.log(`Live deployment health ok. Base=${baseUrl}; AdminBase=${adminBaseUrl}; routes=${publicRoutes.length}; transientRetries=${transientRetries}`);
