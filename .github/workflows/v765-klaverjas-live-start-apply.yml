@@ -1,0 +1,51 @@
+name: v765 Klaverjas live-start apply
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'agent/v765-frontend-klaverjas-live-start-clean'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/v765-frontend-klaverjas-live-start-clean
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Apply narrow Klaverjas frontend patch
+        run: node scripts/apply-v765-klaverjas-live-start-fix.mjs
+      - name: Synchronize frontend version markers
+        run: node fix-version-drift.mjs
+      - name: Verify generated state
+        run: npm run verify
+      - name: Commit generated frontend release safely
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u
+          git add check-klaverjas-live-start-frontend-v765.mjs
+          if git diff --cached --quiet; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+          if git diff --cached --name-only | grep -q '^node_modules/'; then
+            echo "Refusing to commit node_modules"
+            exit 1
+          fi
+          git commit -m "v765 fix Klaverjas live start frontend"
+          git push origin HEAD:agent/v765-frontend-klaverjas-live-start-clean
