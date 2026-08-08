@@ -3,7 +3,8 @@
 Date finalized: 2026-08-08
 Branch: `agent/v764-live-write-matrix`
 Pull request: `#5` (`v764 live-write matrix security hardening`)
-Merge status: **NOT MERGED**
+Merge status: **MERGED**
+Merge commit: `075891fefc66d5129619b1eb3e6e9618d5359577`
 
 ## Final verdict
 
@@ -126,6 +127,6 @@ The final smoke included:
 
 The temporary `v764 final smoke` workflow was removed after this successful proof. Only evidence/documentation cleanup followed; no application/security behavior was weakened or reverted.
 
-## Final release rule
+## Merge completion
 
-PR #5 may be marked ready for review, but **must not be merged automatically**. Merge remains a separate human review/approval decision.
+PR #5 was merged into `main` on 2026-08-08 with merge commit `075891fefc66d5129619b1eb3e6e9618d5359577` after the matrix and final verification gates passed.
