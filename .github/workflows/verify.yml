@@ -46,5 +46,8 @@ jobs:
       - name: Homepage root-fix regression
         run: node check-homepage-root-fixes.mjs
 
+      - name: GitHub Actions Node24 runtime pins
+        run: node check-github-actions-node24-runtime.mjs
+
       - name: Version drift gate
         run: node check-version-drift.mjs
