@@ -1,24 +1,62 @@
-name: v767 frontend encoding audit
+name: v767 frontend encoding repair
 
 on:
   pull_request:
     branches:
       - main
-    types: [opened]
+    types: [synchronize]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  audit:
+  apply-and-prove:
     if: github.event.pull_request.head.ref == 'agent/v767-frontend-encoding-repair'
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Check out repair branch
         uses: actions/checkout@v5
+        with:
+          ref: agent/v767-frontend-encoding-repair
+          fetch-depth: 0
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
           node-version: '24'
-      - name: Audit active frontend encoding
-        run: node scripts/audit-active-frontend-encoding-v767.mjs
+          cache: npm
+      - name: Apply narrow scorer encoding repair
+        run: node scripts/apply-v767-frontend-encoding-repair.mjs
+      - name: Synchronize frontend version markers
+        run: node fix-version-drift.mjs
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Dependency security
+        run: npm audit --audit-level=high
+      - name: Full repository verification
+        run: npm run verify
+      - name: Live read-only smoke against current v766 deployment
+        env:
+          GEJAST_EXPECTED_VERSION: v766
+        run: npm run smoke:live
+      - name: Beta read-only smoke
+        run: npm run smoke:beta:read
+      - name: Push health smoke without send
+        run: npm run smoke:push
+      - name: Commit generated v767 release safely
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u
+          git add check-active-frontend-encoding-v767.mjs
+          if git diff --cached --quiet; then
+            echo 'No generated changes to commit.'
+            exit 0
+          fi
+          if git diff --cached --name-only | grep -q '^node_modules/'; then
+            echo 'Refusing node_modules.'
+            exit 1
+          fi
+          git commit -m "v767 repair active frontend encoding corruption"
+          git push origin HEAD:agent/v767-frontend-encoding-repair
