@@ -15,8 +15,6 @@ begin
   end if;
 end $$;
 
-drop function if exists public.save_beerpong_match(text, text, jsonb);
-
 create or replace function public.save_beerpong_match(
   session_token text default null,
   client_match_id text default null,
