@@ -1,5 +1,6 @@
--- GEJAST v755n: admin allowed-username security guard (PREPARED ONLY).
--- Do not apply to production until reviewed/approved.
+-- GEJAST v755n: admin allowed-username security guard.
+-- Apply before v755m. This migration intentionally preserves valid admin RPC behavior
+-- while closing invalid-session and direct-table-DML mutation paths.
 --
 -- Evidence from controlled matrix 2026-08-08:
 --   * admin_reserve_allowed_username correctly rejected an invalid admin token.
@@ -9,7 +10,8 @@
 --
 -- Minimal SQL-only repair:
 --   * require admin_check_session(...).ok before mutating in remove/permanent-delete functions
---   * revoke direct table DML on allowed_usernames from public web roles; keep RPC execute grants
+--   * revoke direct table DML on allowed_usernames from public web roles; keep intended RPC execute grants
+--   * revoke PUBLIC function execute and grant only to anon/authenticated
 
 begin;
 
@@ -114,13 +116,16 @@ begin
   update public.allowed_usernames
      set status = 'retired_permanently',
          reserved_for_email = null,
-         reserved_for_person_note = coalesce(reserved_for_person_note, '') || case when coalesce(reserved_for_person_note,'')='' then '' else ' · ' end || 'permanent verwijderd',
+         reserved_for_person_note = coalesce(reserved_for_person_note, '') || case when coalesce(reserved_for_person_note,'')='' then '' else ' - ' end || 'permanent verwijderd',
          updated_at = now()
    where id = allowed_username_id_input;
 
   return jsonb_build_object('ok', true, 'placeholder_name', v_placeholder, 'player_id', v_row.player_id, 'hidden_from_public', true);
 end;
 $fn$;
+
+revoke all on function public.admin_remove_allowed_username(text, bigint) from public;
+revoke all on function public.admin_permanently_delete_allowed_username(text, bigint) from public;
 
 grant execute on function public.admin_remove_allowed_username(text, bigint) to anon, authenticated;
 grant execute on function public.admin_permanently_delete_allowed_username(text, bigint) to anon, authenticated;
