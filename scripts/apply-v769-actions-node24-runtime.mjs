@@ -17,8 +17,32 @@ for (const name of fs.readdirSync(workflowDir)) {
   }
 }
 
-const regression = `#!/usr/bin/env node\nimport fs from 'node:fs';\nimport path from 'node:path';\n\nconst dir='.github/workflows';\nconst failures=[];\nlet files=0;\nfor(const name of fs.readdirSync(dir)){\n  if(!/\\.ya?ml$/i.test(name)) continue;\n  files+=1;\n  const file=path.join(dir,name);\n  const text=fs.readFileSync(file,'utf8');\n  for(const match of text.matchAll(/actions\\\/(checkout|setup-node)@v([1-4])\\b/g)){\n    failures.push(\\`\${file}: \${match[0]}\\`);\n  }\n}\nif(failures.length){\n  console.error('Deprecated GitHub action runtime pins found:');\n  failures.forEach((item)=>console.error('- '+item));\n  process.exit(1);\n}\nconsole.log(\\`GitHub action Node24-runtime pin regression PASS. Workflows checked=\${files}.\\`);\n`;
-fs.writeFileSync('check-github-actions-node24-runtime.mjs', regression, 'utf8');
+const regressionLines = [
+  '#!/usr/bin/env node',
+  "import fs from 'node:fs';",
+  "import path from 'node:path';",
+  '',
+  "const dir='.github/workflows';",
+  'const failures=[];',
+  'let files=0;',
+  'for(const name of fs.readdirSync(dir)){',
+  '  if(!/\\.ya?ml$/i.test(name)) continue;',
+  '  files+=1;',
+  '  const file=path.join(dir,name);',
+  "  const text=fs.readFileSync(file,'utf8');",
+  '  for(const match of text.matchAll(/actions\\\/(checkout|setup-node)@v([1-4])\\b/g)){',
+  "    failures.push(file+': '+match[0]);",
+  '  }',
+  '}',
+  'if(failures.length){',
+  "  console.error('Deprecated GitHub action runtime pins found:');",
+  "  failures.forEach((item)=>console.error('- '+item));",
+  '  process.exit(1);',
+  '}',
+  "console.log('GitHub action Node24-runtime pin regression PASS. Workflows checked='+files+'.');",
+  '',
+];
+fs.writeFileSync('check-github-actions-node24-runtime.mjs', regressionLines.join('\n'), 'utf8');
 
 const packagePath = 'package.json';
 const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
