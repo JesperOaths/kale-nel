@@ -1,0 +1,11 @@
+-- GEJAST v755q rollback policy
+--
+-- This repair only removes unsafe direct DML/PUBLIC EXECUTE privileges. Re-granting those
+-- privileges would deliberately recreate the security defect proven by the v765 preflight.
+-- Therefore there is no insecure automatic rollback.
+--
+-- If an application regression is ever traced to this ACL repair, restore only the minimum
+-- specific privilege needed after proving the caller and path. Do NOT broadly re-grant
+-- INSERT/UPDATE/DELETE to PUBLIC/anon/authenticated and do NOT restore PUBLIC RPC EXECUTE.
+--
+-- No SQL is intentionally executed by this file.
