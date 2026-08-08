@@ -37,7 +37,7 @@ const domains = {
     cleanup: toepenCleanup,
   },
   beerpong: {
-    tables: ['beerpong_matches', 'beerpong_match_players', 'beerpong_rating_history'],
+    tables: ['beerpong_matches', 'beerpong_player_ratings', 'beerpong_player_rating_history'],
     rootTable: 'beerpong_matches',
     rootPredicate: (l) => `client_match_id = '${sql(l)}' or to_jsonb(beerpong_matches)::text like '%${sql(l)}%'`,
     cleanup: null,
