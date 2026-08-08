@@ -34,6 +34,9 @@ for (const [name, text] of [['migration', migration], ['rollback', rollback]]) {
   assert.match(text, /coalesce\(v_payload->>'team_b_cups_left', v_payload->>'cups_left_team_b'\)/, `${name}: canonicalizes team B cups aliases`);
   assert.match(text, /if v_match_format = '1v1'[\s\S]*<> 1[\s\S]*Bij 1v1/s, `${name}: validates 1v1 team sizes`);
   assert.match(text, /else[\s\S]*<> 2[\s\S]*Bij 2v2/s, `${name}: validates 2v2 team sizes`);
+  assert.match(text, /if v_winner_team = 'a' then v_winner_team := 'team_a'; end if;/, `${name}: normalizes short winner alias to production team_a value`);
+  assert.match(text, /if v_winner_team = 'b' then v_winner_team := 'team_b'; end if;/, `${name}: normalizes short winner alias to production team_b value`);
+  assert.match(text, /v_winner_team not in \('team_a','team_b'\)/, `${name}: validates winner against production check constraint values`);
   assert.match(text, /winner_team ongeldig/, `${name}: validates winner`);
   assert.match(text, /join unnest\(v_team_b\) b on lower\(trim\(a\)\) = lower\(trim\(b\)\)/, `${name}: rejects cross-team duplicate player names`);
   assert.match(text, /team_a_player_names/s, `${name}: uses current player-name Beerpong schema`);

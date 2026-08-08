@@ -22,7 +22,7 @@ Purpose: batch the remaining unresolved production write surfaces before further
 | Toepen save | `create_toepen_game(text,jsonb,text)` | v755o proof: missing/invalid/stale/non-participant rejected. | Saver must be participant; inconsistent submitted totals now reject server-side. | Direct table access remains closed to public web roles. | Valid replay deterministic for controlled id. | Proven exact game cascade cleanup; final table counts and controlled residue `0`. | Low after v755o; revisit only if implementation changes. | No repeat proof required. | PASS |
 | Klaverjas online room | `klaverjas_online_create/join/save_state/delete_room` | Invalid create/save rejected; participant room path proven. | Room-only host/participant paths partly proven. | Direct REST insert rejected by RLS. | Room save/retry/delete proven. | Room cleanup proven. | Room-only acceptable; full score/history path risky. | No repeat room proof needed; score/history only with transaction or approved aggregate restore. | PASS WITH LIMITATION |
 | Klaverjas score/history | `create_jas_game(text,jsonb)`, `klaverjas_upsert_match_state_scoped(...)` | `create_jas_game` and scoped upsert need repair/transaction review. | `klaverjas_upsert_match_state_scoped` accepts `session_token` but appears not to validate it. | Score persistence touches historical/aggregate/rating surfaces. | No safe client-match idempotency proven. | Unsafe without exact aggregate/rating restore. | High: history/rating/aggregate side effects and candidate auth defect. | Do not live-write until repair or transaction-only proof. | REPAIR FIRST |
-| Beerpong | `save_beerpong_match(text,text,jsonb)` | Live source uses `_tier3_player_from_any_session_v740(session_token)`, but missing/invalid token handling was fragile in the overriding definition. | No proven owner/session guard before existing `client_match_id` update. | Defensive DML revokes prepared; live direct-DML proof deferred until authorization/proof phase. | Existing client id overwrite risk unresolved until v755p. | Exact match cleanup plus canonical rating rebuild required. | High: owner overwrite, payload drift, rating/schema parity, direct-DML boundary. | v755p repair package prepared only; requires review/authorization before any production write. | REPAIR FIRST |
+| Beerpong | `save_beerpong_match(text,text,jsonb)` | v755p proof rejects missing/invalid/stale sessions. | Same-owner replay passes; null-owner legacy overwrite rejects with `beerpong_match_owner_mismatch`. | Direct Beerpong table DML revoked from public web roles and proven by REST/SQL ACL. | Same `client_match_id` returns same match id with `already_saved=true`. | Exact cleanup of controlled rows `64`/`65`; rating/history stayed `0/0`. | Low after v755p for save path; rating rebuild/history intentionally excluded. | No repeat proof required unless implementation changes. | PASS |
 | Drinks create/replay | `create_drink_event`, pending unique constraint path | Valid/invalid session proof completed. | Own pending create only; approval/rejection intentionally untested. | Completed proof restored counts; direct bypass not current blocker. | Replay rejected by unique pending constraint. | Exact controlled cleanup proven. | Low for create/replay; approval/rejection can create permanent history. | No repeat create proof. Approval/rejection only if safe rollback approved. | PASS WITH LIMITATION |
 | Boerenbridge | `save_boerenbridge_match` | v755l guard applied and proven for invalid/missing/stale sessions. | Owner mismatch rejected. | Public direct DML rejected in proof. | Same-owner retry works; other-owner overwrite rejected. | Exact controlled cleanup proven. | Low after v755l. | No repeat proof required. | PASS |
 | Profile/account own-profile | `get_my_profile_settings`, `update_my_profile_settings` | v755m applied; invalid/missing/stale rejected. | Own profile update/retry/restore proven. | Direct public mutation not the active path. | Retry deterministic. | Restore proven; no orphan markers. | Low after v755m. | No repeat proof required unless Player B created. | PASS |
@@ -35,7 +35,7 @@ Purpose: batch the remaining unresolved production write surfaces before further
 
 ## Beerpong v755p prepared-only repair package - 2026-08-08
 
-Status: PREPARED ONLY / NOT APPLIED.
+Status: APPLIED / PASS.
 
 Files prepared:
 
@@ -57,13 +57,12 @@ Prepared v755p repair intent:
 - Preserve current deployed save-time rating behavior: no `rebuild_beerpong_ratings()`, no rating/history mutation, and `ratings_applied=false`.
 - Provide a forward-fix rollback that also keeps the session/owner/DML hardening and rating behavior disabled.
 
-Because this is a production authorization/security migration, it remains an application/proof gate even though rating behavior is intentionally unchanged.
+Applied/proven on 2026-08-08. Initial live apply exposed production `winner_team` constraint parity (`team_a/team_b`), so the artifact and regression were amended in place, reapplied, and proven. Immediate v755p cleanup restored the then-observed Beerpong count to `19`; the final proof later identified that this included one older controlled inventory probe and removed it exactly, leaving the genuine final baseline `beerpong_matches=18`, rating/history `0/0`, controlled Beerpong residue `0`, controlled push jobs `0`, Ice `2.8`.
 
 ## Fast-mode next actions
 
 1. Do not repeat Paardenrace/Pikken host-only proofs.
-2. Keep Beerpong as the next high-value repair-first surface.
-3. Review/authorize v755p Beerpong before production application or live Beerpong write proof.
-4. Toepen v755o is applied/proven; no repeat Toepen proof unless implementation changes.
-5. Ask for admin login only when ready to create the one reusable `OC_V764_MATRIX_PLAYER_B` or to authorize/apply consequential SQL.
-6. At final matrix completion, remove `OC_V764_MATRIX_PLAYER_B` and verify all controlled `OC_V764_*` residue zero.
+2. Beerpong v755p is applied/proven; no repeat proof unless implementation changes.
+3. Toepen v755o is applied/proven; no repeat Toepen proof unless implementation changes.
+4. Matrix Player B was not needed for final Beerpong proof.
+5. Final controlled residue is zero for the completed matrix scope.

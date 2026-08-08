@@ -76,9 +76,9 @@ begin
     raise exception 'Een speler mag maar in een team staan';
   end if;
 
-  if v_winner_team = 'team_a' then v_winner_team := 'a'; end if;
-  if v_winner_team = 'team_b' then v_winner_team := 'b'; end if;
-  if v_winner_team not in ('a','b') then
+  if v_winner_team = 'a' then v_winner_team := 'team_a'; end if;
+  if v_winner_team = 'b' then v_winner_team := 'team_b'; end if;
+  if v_winner_team not in ('team_a','team_b') then
     raise exception 'winner_team ongeldig';
   end if;
 

@@ -584,3 +584,45 @@ Classification:
 - Paardenrace host-only lobby lifecycle is PASS WITH LIMITATION.
 - Limitation: cross-player join/leave coverage was not run because no safe second valid player session was available without protected admin login or unsafe account changes.
 - Keep Paardenrace finish/history/obligation paths untested and out of scope unless a transaction-only proof or exact aggregate/history rollback is reviewed first.
+
+
+## BEERPONG-v755p apply/proof continuation - 2026-08-08
+
+Verdict: PASS.
+
+Authorized order was followed: Toepen v755o was completed first; Beerpong v755p was then preflighted, applied, amended for live winner constraint parity, reapplied, proven, and exactly cleaned.
+
+Preflight before apply verified one deployed `save_beerpong_match(text,text,jsonb)` function owned by `postgres`, security definer, using `_tier3_player_from_any_session_v740`, returning `ratings_applied=false`, and not invoking `rebuild_beerpong_ratings()`. Live schema is player-name based: `beerpong_matches`, `beerpong_player_ratings`, and `beerpong_player_rating_history`. Baseline was `beerpong_matches=19`, rating/history `0/0`, controlled Beerpong residue `0`, controlled push jobs `0`, Ice `2.8`. Direct DML was open to `anon/authenticated` before v755p.
+
+Initial apply succeeded, and early proof showed missing/invalid session rejection plus direct DML closure, but valid save exposed the live check constraint `beerpong_matches_winner_team_check`: stored values must be `team_a`/`team_b`. The v755p SQL and rollback were amended in place to normalize short aliases `a`/`b` to the production-safe `team_a`/`team_b` values. `check-beerpong-save-auth-guard-v755p.mjs` was tightened to catch this, and `node check-beerpong-save-auth-guard-v755p.mjs`, `npm run verify:static`, `npm run verify:js`, and `git diff --check` passed before reapply.
+
+Post-fix controlled proof used label `OC_V764_BEERPONG_V755P_1786177208078`:
+
+- Missing session rejected: HTTP `400`, `P0001`, `Niet ingelogd.`
+- Invalid session rejected: HTTP `400`, `P0001`, `Niet ingelogd.`
+- Temporary expired `gejast_player_sessions_v746` stale fixture rejected with `Niet ingelogd.`; stale session/match residue `0`.
+- Valid Bruis save succeeded as match id `64`, `already_saved=false`, `ratings_applied=false`.
+- Same-owner replay/alias payload returned same match id `64`, `already_saved=true`, `ratings_applied=false`; stored row normalized `format`/`match_format` to `1v1`, cups to `4/0`, and winner to `team_a`.
+- Bad 1v1 team shape rejected: `Bij 1v1 moet elk team precies 1 speler hebben`.
+- Duplicate cross-team player rejected: `Een speler mag maar in een team staan`.
+- Bad winner rejected: `winner_team ongeldig`.
+- Public REST direct insert/update/delete against `beerpong_matches` rejected with permission denied.
+- Public REST direct insert against `beerpong_player_ratings` rejected with permission denied.
+- SQL ACL after v755p showed insert/update/delete false for `anon` and `authenticated` on `beerpong_matches`, `beerpong_player_ratings`, and `beerpong_player_rating_history`; function execute is `PUBLIC=false`, `anon=true`, `authenticated=true`.
+- Controlled null-owner decoy row id `65` rejected valid Bruis overwrite with `beerpong_match_owner_mismatch`, proving the legacy/null-owner update boundary without creating Matrix Player B.
+
+Exact cleanup deleted only controlled rows `64` and `65`. Separate immediate read-only snapshot after that cleanup showed:
+
+- `beerpong_matches=19`
+- `beerpong_player_ratings=0`
+- `beerpong_player_rating_history=0`
+- `allowed_usernames=51`
+- `drink_events=28`
+- `boerenbridge_matches=98`
+- controlled Beerpong/rating/history residue `0`
+- controlled push jobs `0`
+- Ice `2.8`
+
+The later final global residue sweep identified that the `19` Beerpong count still included one older controlled inventory probe (`OC_V764_MATRIX_20260803_READONLY_BEER`) and removed it exactly; the genuine final production baseline is therefore `beerpong_matches=18`, ratings/history `0/0`, global controlled residue `0`, controlled push jobs `0`, Ice `2.8`.
+
+No rating rebuild/history mutation was performed.
