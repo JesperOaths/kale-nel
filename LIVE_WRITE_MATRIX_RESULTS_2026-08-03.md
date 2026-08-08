@@ -195,3 +195,125 @@ Final production baselines after both repairs:
 - Ice `2.8`
 
 Remaining matrix work can now continue past the former v755n/v755m blockers. The profile `42702 session_token ambiguous` defect is preserved above as pre-repair evidence and is no longer reproduced after v755m.
+
+## TOEPEN-01/02/03/04/05 - 2026-08-08
+
+Inventory summary:
+
+- Frontend caller: `toepen.html` finish button calls `create_toepen_game` through the shared `rpc()` helper after requiring a local player session token.
+- Write RPC signature: `public.create_toepen_game(text,jsonb,text)`.
+- Read RPCs: `get_toepen_app_state(text,text)` and `get_toepen_vault_summary(text,integer,text)`.
+- Underlying tables: `toepen_games`, `toepen_game_participants`, `toepen_rounds`, `toepen_round_results`; all child tables cascade from `toepen_games(id)`.
+- Grants: `create_toepen_game` has `PUBLIC EXECUTE=false`, `anon/authenticated EXECUTE=true`; direct Toepen table insert access is closed to public web roles.
+- Validation: player session resolves through `_tier3_player_from_any_session_v740`; saver must match the requested scope and be present in the participant list; malformed round winner/results/fold/stake rules are partially validated.
+- Replay handling: `client_match_id` is unique; same client id returns `{already_saved:true}` after the first save.
+- Cleanup plan: exact privileged SQL delete by controlled `client_match_id`, relying on cascade to remove participants, rounds, and round results.
+
+Baseline before controlled Toepen write:
+
+- `toepen_games=0`, `toepen_game_participants=0`, `toepen_rounds=0`, `toepen_round_results=0`
+- controlled Toepen residue `0`
+- `allowed_usernames=51`, `drink_events=28`, `boerenbridge_matches=98`
+- queued controlled push jobs `0`
+- Ice `2.8`
+
+Controlled label/client id: `OC_V764_TOEPEN_1786160409392`.
+
+Authorization/isolation proof:
+
+- Missing session rejected: HTTP `400`, `P0001`, `Niet ingelogd.`
+- Invalid session rejected: HTTP `400`, `P0001`, `Niet ingelogd.`
+- Stale session rejected: HTTP `400`, `P0001`, `Niet ingelogd.`
+- Non-participant valid Bruis session with an outsider-only payload rejected: HTTP `400`, `P0001`, `Alleen een deelnemer mag dit Toepen-potje opslaan.`
+- Malformed round winner rejected: HTTP `400`, `P0001`, `Rondewinnaar is geen actieve Toepen-speler.`
+- Direct anonymous REST insert into `toepen_games` rejected with `permission denied for table toepen_games`.
+
+Valid/replay proof:
+
+- Valid Bruis participant save succeeded: `{ok:true, game_id:6, already_saved:false}`.
+- Application readback through `get_toepen_app_state` showed the controlled game in recent games with one round, participants `Bruis` and `OC V764 Toepen Test`, and winner `Bruis`.
+- Replay with the same `client_match_id` returned `{ok:true, game_id:6, already_saved:true}` with no duplicate.
+- Database readback before cleanup showed exactly one game, two participants, one round, and two round results. Stored penalties were exact: Bruis `0`, controlled test player `5`.
+- Exact cleanup deleted only `toepen_games.id=6` with `client_match_id='OC_V764_TOEPEN_1786160409392'`; cascade removed participants/rounds/results.
+- Final counts returned to baseline: all four Toepen tables `0`, controlled Toepen residue `0`, `allowed_usernames=51`, `drink_events=28`, `boerenbridge_matches=98`, queued controlled push jobs `0`, Ice `2.8`.
+
+Defect found - Toepen derived totals are not server-recomputed:
+
+- Controlled client id: `OC_V764_TOEPEN_BAD_TOTAL_1786160497914`.
+- A valid Bruis participant payload with round penalties `0`/`5` but forged participant totals `Bruis end_points=99` and controlled player `end_points=0` was accepted: `{ok:true, game_id:7, already_saved:false}`.
+- Database evidence confirmed the inconsistent state persisted exactly as submitted: participant totals did not match `toepen_round_results.penalty_points` sums.
+- Exact cleanup deleted only game id `7`; final Toepen table counts returned to `0`, controlled Toepen residue `0`, queued controlled push jobs `0`, Ice `2.8`.
+
+Classification: production correctness defect. Authorization, direct DML boundary, non-participant rejection, malformed winner rejection, replay/idempotency, application readback, and exact cleanup passed. Derived score/totals validation failed because the server accepts participant `end_points` instead of recomputing or rejecting mismatch.
+
+Prepared repair package - not applied:
+
+- `GEJAST_v755o_toepen_totals_consistency_guard.sql`
+- `GEJAST_v755o_toepen_totals_consistency_guard_ROLLBACK.sql`
+- `check-toepen-totals-guard-v755o.mjs`
+
+Repair strategy:
+
+1. Preserve `create_toepen_game(text,jsonb,text)` and existing session/scope/participant guards.
+2. After persisted round results are inserted, compute each participant's total from `toepen_round_results.penalty_points` grouped by seat.
+3. Reject and trigger the existing cleanup-on-error path if submitted `toepen_game_participants.end_points` differs from the computed total.
+4. Keep direct Toepen table writes closed to web roles.
+5. Safe rollback does not restore the known inconsistent-total vulnerability; it only reasserts grants/table boundary and documents forward-fix policy.
+
+Static regression:
+
+- `node check-toepen-totals-guard-v755o.mjs` - PASS
+- Added to `npm run verify:static`.
+
+Next: do not continue Toepen mutation rows or apply v755o until reviewed/approved. Continue other matrix families that are independent and safely reversible.
+
+## KLAVERJAS-ONLINE-01/02/03 - 2026-08-08
+
+Inventory summary:
+
+- Frontend callers: `klaverjas_online.html`, `klaverjas_room.html`, and `gejast-klaverjas-online.js` use online room RPCs. Finished human games can additionally build a `final_jas_payload` that reaches `create_jas_game`; that historical score path was not exercised because exact rating/stat rollback is not safe without transaction or full aggregate restore.
+- Room/state RPCs: `klaverjas_online_create(text,text,jsonb)`, `klaverjas_online_join(text,text,text)`, `klaverjas_online_save_state(text,uuid,jsonb,jsonb,jsonb)`, `klaverjas_online_get_state(text,uuid,text,text)`, `klaverjas_online_delete_room(text,uuid,text,text)`, `klaverjas_online_list_open(text,text)`, `klaverjas_online_cleanup_rooms(text,boolean)`.
+- Score/history RPC: `create_jas_game(text,jsonb)` writes to `jas_games`/`jas_game_entries` and triggers Klaverjas rating rebuild side effects; left untested in production.
+- Underlying online room table: `klaverjas_online_games`; online stats table `klaverjas_online_player_stats` is only affected by finished non-bot games.
+- Live preflight showed `open_online_games=0`, controlled Klaverjas residue `0`, `jas_games=15`, `jas_game_entries=60`, `allowed_usernames=51`, `drink_events=28`, `boerenbridge_matches=98`, queued controlled push jobs `0`, Ice `2.8`.
+- Function execute is still broadly callable via PostgREST roles (`PUBLIC` and anon/authenticated execute show true for online and classic score RPCs), so the real boundary relies on internal session checks/RLS rather than revoked PUBLIC execute. Direct table insert grants exist for anon/authenticated on some Klaverjas tables, but RLS rejected the controlled direct REST insert below.
+
+Controlled room-only proof, no score/history finalization:
+
+- Direct anonymous REST insert into `klaverjas_online_games` with controlled label `OC_V764_KLAVERJAS_DIRECT_1786160816592` was rejected by RLS: `new row violates row-level security policy for table "klaverjas_online_games"`.
+- Invalid `klaverjas_online_create` rejected: `Log eerst in met een geldige spelersessie`.
+- Valid Bruis create succeeded with controlled label `OC_V764_KLAVERJAS_ROOM_1786160836496`; room id `e3832427-2a0c-4706-8d01-d9938f02093e`, lobby `5Z52W`, one participant Bruis, status `lobby`, no `saved_jas_game_id`.
+- Invalid `klaverjas_online_save_state` rejected with the same session error.
+- Valid save of harmless lobby state succeeded; retry of the same lobby state also succeeded deterministically and left totals `[0,0]`, rounds `[]`, status `lobby`, and no `saved_jas_game_id`.
+- Application readback via `klaverjas_online_get_state` returned the controlled lobby state.
+- Host delete via `klaverjas_online_delete_room` succeeded and marked the room `closed`; application readback showed `phase="closed"`, `closed_by="Bruis"`, still no `saved_jas_game_id`.
+- Exact SQL cleanup then deleted only the controlled row by id/lobby/matrix label.
+- Final counts returned to preflight baseline: `online_games=49`, open rooms `0`, controlled Klaverjas residue `0`, `jas_games=15`, `jas_entries=60`, `allowed_usernames=51`, `drink_events=28`, `boerenbridge_matches=98`, queued controlled push jobs `0`, Ice `2.8`.
+
+Status: PASS WITH LIMITATION. Online room create/save/read/delete/cleanup, invalid session rejection, direct REST RLS rejection, replay/deterministic save, and exact physical cleanup are proven. Historical score finalization through `create_jas_game` / ratings / online player stats remains untested in production because it has broad rating/stat side effects and no simple app-level rollback; use transaction-only or a fully preapproved aggregate restore plan for that row.
+
+## Secondary games / badges / push classification - 2026-08-08
+
+Read-only classification (no production writes in this section):
+
+| Surface | Classification | Current status / next action |
+| --- | --- | --- |
+| Toepen | RPC-backed + database-backed | Controlled proof ran; authorization/replay/cleanup passed, but server accepted forged participant totals. `v755o` repair prepared but not applied. Stop Toepen until reviewed. |
+| Klaverjas online room | RPC-backed + database-backed | Room-only proof ran and passed with limitation; historical score finalization intentionally untested because `jas_games`/ratings/stats rollback is complex. |
+| Klaverjas classic score/live runtime | RPC-backed + database-backed | `create_jas_game` and live/scorer paths can affect `jas_games`, entries, rating rebuild queue/history, and summaries. Use transaction-only or preapproved aggregate restore; no production history write done. |
+| Boerenbridge | RPC-backed + database-backed | Already complete/proven in earlier BRIDGE rows. |
+| Drinks controlled create/replay | RPC-backed + database-backed | Already complete/proven with limitation; approval/rejection remains intentionally untested due permanent-history risk. |
+| Beerpong | RPC-backed + database-backed | Active `save_beerpong_match` path exists. Needs separate inventory before write; subagent noted possible existing-`client_match_id` owner-check risk, so cross-player overwrite proof should wait for review. |
+| Rad | Active page mostly browser-local; backend RPCs exist but active UI mainly routes drink self-events | Treat active Rad wheel as browser-local plus drinks side effect. Backend Rad logging proof should be transaction-only or exact-delete by controlled segment, because it is not the same active browser path. |
+| Ballroom | RPC/database-backed global singleton | Production write proof is risky because state/history are global. Prefer transaction-only; no production mutation. |
+| Paardenrace | RPC/database-backed room lifecycle | Candidate for later safe open-room lifecycle only: create/join/update/leave/disband before finish/archive; needs valid test sessions. |
+| Pikken | RPC/database-backed lobby/live/archive | Candidate for later safe lobby-only proof: create/config/leave/destroy before archive. Avoid `recordCompleted`/archive until rollback known. |
+| Despimarkt / Beurs economy | Frontend RPC-backed, backend definitions incomplete in repo | Read-only existence/ACL classification first; economy mutation rollback unsafe. |
+| Badges / achievements | Mostly read-only/derived from other tables | No active direct award RPC found. Do not award permanent badges. Use read-only comparison or transaction-only fixture. |
+| Push jobs | RPC/table-backed notification queue | No real notification sent. Read-only inventory found many push functions and queue table state; controlled queued jobs remain `0`. Any queue proof must use dry-run/transaction or immediate exact cleanup before dispatcher eligibility. |
+
+Badge/push read-only live inventory notes:
+
+- Badge display functions are read/derived (`get_player_badge_bundle_scoped`, `get_player_badge_facts[_scoped]`, `get_site_player_badge_cards_scoped`, registry helpers). No safe direct award RPC was identified in active frontend code.
+- Push write surfaces include subscription/presence, self-test queue, nearby verification queues, admin active broadcast, targeted test, and dispatcher claim/mark functions. No push job was queued during this section.
+- Final controlled queued push jobs remained `0`; Ice remained `2.8`.
