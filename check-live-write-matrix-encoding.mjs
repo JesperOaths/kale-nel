@@ -1,7 +1,7 @@
 ﻿import { readdirSync, readFileSync } from 'node:fs';
 
 const evidencePattern = /^LIVE_WRITE_MATRIX.*\.(md|txt)$/i;
-const forbiddenText = ['â€”', 'â€“', 'â€™', 'â€œ', 'â€', 'ï»¿'];
+const forbiddenText = ['â€”', 'â€“', 'â€™', 'â€œ', 'â€', 'ï»¿', '\uFFFD'];
 let failed = false;
 
 for (const name of readdirSync('.')) {
