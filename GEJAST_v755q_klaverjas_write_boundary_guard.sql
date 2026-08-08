@@ -1,52 +1,20 @@
--- GEJAST v755q — Klaverjas direct-write boundary guard
--- Security-only repair. Does not alter scoring, ratings, payloads, RLS policies, or RPC bodies.
+-- GEJAST v755q — SUPERSEDED / DO NOT APPLY STANDALONE
 --
--- Production preflight (2026-08-08) proved:
--- - save_klaverjas_match_v687 is not deployed;
--- - current compatibility RPCs are SECURITY DEFINER;
--- - PUBLIC/anon/authenticated can directly INSERT/UPDATE/DELETE several Klaverjas persistence tables;
--- - jas_games, jas_game_entries and game_rating_rebuild_queue have RLS disabled;
--- - PUBLIC can EXECUTE create_jas_game and klaverjas_upsert_match_state_scoped.
+-- The production definition capture on 2026-08-08 proved that
+-- public.klaverjas_upsert_match_state_scoped(...) accepts session_token but never validates or
+-- otherwise uses it before mutating legacy Klaverjas tables. Therefore an ACL-only repair that
+-- leaves anon/authenticated EXECUTE on that SECURITY DEFINER RPC would NOT close the write boundary.
 --
--- This patch closes only those privilege boundaries while retaining guarded RPC execution for
--- anon/authenticated. SELECT privileges are deliberately untouched.
+-- This file intentionally aborts. The replacement v765 repair must atomically:
+--   1. install/repair a session-validated current save contract;
+--   2. close or harden the unsafe legacy upsert RPC;
+--   3. revoke direct web-role table DML;
+--   4. preserve required read access and existing gameplay/scoring semantics;
+--   5. add idempotent text client-match ownership before any finished production proof.
+--
+-- Kept in the branch as evidence of the initially identified ACL issue and why it was superseded.
 
-begin;
-
-revoke insert, update, delete on table public.jas_games from public, anon, authenticated;
-revoke insert, update, delete on table public.jas_game_entries from public, anon, authenticated;
-revoke insert, update, delete on table public.game_rating_rebuild_queue from public, anon, authenticated;
-revoke insert, update, delete on table public.klaverjas_online_games from public, anon, authenticated;
-revoke insert, update, delete on table public.klaverjas_online_player_stats from public, anon, authenticated;
-
-revoke execute on function public.create_jas_game(text, jsonb) from public;
-grant execute on function public.create_jas_game(text, jsonb) to anon, authenticated;
-
-revoke execute on function public.klaverjas_upsert_match_state_scoped(
-  text,
-  bigint,
-  text,
-  jsonb,
-  jsonb,
-  jsonb,
-  jsonb,
-  jsonb,
-  jsonb,
-  text,
-  timestamp with time zone
-) from public;
-grant execute on function public.klaverjas_upsert_match_state_scoped(
-  text,
-  bigint,
-  text,
-  jsonb,
-  jsonb,
-  jsonb,
-  jsonb,
-  jsonb,
-  jsonb,
-  text,
-  timestamp with time zone
-) to anon, authenticated;
-
-commit;
+do $$
+begin
+  raise exception 'GEJAST_v755q is superseded: do not apply standalone; use the reviewed combined v765 Klaverjas repair';
+end $$;
