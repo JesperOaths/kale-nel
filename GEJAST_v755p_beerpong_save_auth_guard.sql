@@ -1,12 +1,12 @@
--- GEJAST v755p - Beerpong save auth/owner/DML/rating guard
--- PREPARED ONLY. Do not apply until reviewed/authorized.
--- Goals:
+-- GEJAST v755p - Beerpong save auth/owner/DML/contract guard
+-- PREPARED ONLY until applied in the authorized v764 matrix flow.
+-- Narrow security/data-integrity repair only:
 -- - require a valid player session for save_beerpong_match
 -- - require non-null creator ownership on insert and owner-only update/replay
 -- - canonicalize frontend `format` and backend `match_format`
 -- - canonicalize `cups_left_team_a/b` and `team_a/b_cups_left`
 -- - harden direct table DML from PUBLIC/anon/authenticated
--- - preserve current deployed schema by using player-name Beerpong ratings and canonical rebuild
+-- - preserve current deployed rating behavior: no rating rebuild/history mutation, ratings_applied=false
 
 begin;
 
@@ -47,7 +47,6 @@ declare
   v_match public.beerpong_matches%rowtype;
   v_match_id bigint;
   v_existing boolean := false;
-  v_rebuilt boolean := false;
 begin
   if v_client is null then
     raise exception 'client_match_id ontbreekt';
@@ -126,9 +125,9 @@ begin
            updated_at = now()
      where m.id = v_match.id
        and m.created_by_player_id = p.id
-     returning * into v_match;
+     returning m.id into v_match_id;
   else
-    insert into public.beerpong_matches (
+    insert into public.beerpong_matches(
       client_match_id,
       created_by_player_id,
       match_status,
@@ -155,23 +154,7 @@ begin
       v_payload,
       now()
     )
-    returning * into v_match;
-  end if;
-
-  v_match_id := v_match.id;
-
-  if v_match.match_status = 'finished' then
-    update public.beerpong_matches
-       set payload = jsonb_set(coalesce(payload, '{}'::jsonb), '{ratings_applied_at}', to_jsonb(now()::text), true),
-           updated_at = now()
-     where id = v_match_id;
-
-    if to_regprocedure('public.rebuild_beerpong_ratings()') is not null then
-      perform public.rebuild_beerpong_ratings();
-      v_rebuilt := true;
-    else
-      raise exception 'rebuild_beerpong_ratings_missing';
-    end if;
+    returning id into v_match_id;
   end if;
 
   return jsonb_build_object(
@@ -179,13 +162,15 @@ begin
     'match_id', v_match_id,
     'client_match_id', v_client,
     'already_saved', v_existing,
-    'ratings_applied', v_rebuilt,
-    'ratings_rebuilt', v_rebuilt
+    'ratings_applied', false
   );
 end;
 $fn$;
 
 revoke all on function public.save_beerpong_match(text, text, jsonb) from public;
 grant execute on function public.save_beerpong_match(text, text, jsonb) to anon, authenticated;
+
+notify pgrst, 'reload schema';
+notify pgrst, 'reload config';
 
 commit;

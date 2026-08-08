@@ -86,14 +86,15 @@ Purpose:
 - Require non-null creator and owner-only update/replay for existing `client_match_id`.
 - Normalize frontend `format` and backend `match_format`.
 - Normalize cups aliases.
-- Use current player-name Beerpong schema and canonical `rebuild_beerpong_ratings()`.
+- Use current player-name Beerpong match schema.
 - Defensively revoke direct Beerpong match/rating/history table DML from `PUBLIC`, `anon`, and `authenticated`.
-- Provide a forward-fix rollback that keeps auth/owner/DML hardening while disabling save-time rating rebuild if behavior parity must be paused.
+- Preserve current save-time rating behavior: no rating rebuild, no rating/history mutation, and `ratings_applied=false`.
+- Provide a forward-fix rollback that keeps auth/owner/DML hardening and the no-rating-rebuild behavior.
 
 Status:
 
-- Static regression included in `npm run verify:static`.
-- Not applied because it touches scoring/rating behavior and remains an authorization point.
+- Static regression included in `npm run verify:static` and fails if the main migration invokes `rebuild_beerpong_ratings()` or mutates rating/history tables.
+- Not applied yet; authorized after parity/schema/ACL/static preflight passes.
 
 ## Controlled fixture cleanup evidence highlights
 

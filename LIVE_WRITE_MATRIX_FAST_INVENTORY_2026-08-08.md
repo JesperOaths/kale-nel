@@ -54,10 +54,10 @@ Prepared v755p repair intent:
 - Normalize cups aliases: `cups_left_team_a/b` and `team_a/b_cups_left`.
 - Write current schema fields: `team_a_player_names`, `team_b_player_names`, `winner_team`, `team_a_cups_left`, `team_b_cups_left`.
 - Revoke direct `insert/update/delete` on Beerpong match/rating/history tables from `PUBLIC`, `anon`, and `authenticated`, while preserving RPC execute for web roles.
-- Use canonical `rebuild_beerpong_ratings()` after a finished save, instead of ad-hoc older-schema rating mutation.
-- Provide a forward-fix rollback that keeps the session/owner/DML hardening but disables save-time rating rebuild if behavior parity needs to be paused.
+- Preserve current deployed save-time rating behavior: no `rebuild_beerpong_ratings()`, no rating/history mutation, and `ratings_applied=false`.
+- Provide a forward-fix rollback that also keeps the session/owner/DML hardening and rating behavior disabled.
 
-Because this touches scoring/rating behavior, it remains an authorization point before any production application.
+Because this is a production authorization/security migration, it remains an application/proof gate even though rating behavior is intentionally unchanged.
 
 ## Fast-mode next actions
 

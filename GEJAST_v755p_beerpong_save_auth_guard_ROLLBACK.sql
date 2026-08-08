@@ -1,8 +1,7 @@
 -- GEJAST v755p rollback / forward-fix fallback
--- PREPARED ONLY. This intentionally does NOT restore the vulnerable owner-bypass behavior.
+-- This intentionally does NOT restore the vulnerable owner-bypass behavior.
 -- It preserves valid-session, owner-only update, frontend/backend payload normalization,
--- current player-name Beerpong schema, and table-DML hardening, but disables rating rebuild
--- from save_beerpong_match if rating parity needs to be paused after review.
+-- table-DML hardening, and current no-rating-rebuild behavior.
 
 begin;
 
@@ -59,6 +58,24 @@ begin
 
   if v_match_format not in ('1v1','2v2') then
     raise exception 'match_format ongeldig';
+  end if;
+
+  if v_match_format = '1v1' then
+    if coalesce(array_length(v_team_a, 1), 0) <> 1 or coalesce(array_length(v_team_b, 1), 0) <> 1 then
+      raise exception 'Bij 1v1 moet elk team precies 1 speler hebben';
+    end if;
+  else
+    if coalesce(array_length(v_team_a, 1), 0) <> 2 or coalesce(array_length(v_team_b, 1), 0) <> 2 then
+      raise exception 'Bij 2v2 moet elk team precies 2 spelers hebben';
+    end if;
+  end if;
+
+  if exists (
+    select 1
+    from unnest(v_team_a) a
+    join unnest(v_team_b) b on lower(trim(a)) = lower(trim(b))
+  ) then
+    raise exception 'Een speler mag maar in een team staan';
   end if;
 
   if v_winner_team = 'team_a' then v_winner_team := 'a'; end if;
@@ -148,5 +165,8 @@ $fn$;
 
 revoke all on function public.save_beerpong_match(text, text, jsonb) from public;
 grant execute on function public.save_beerpong_match(text, text, jsonb) to anon, authenticated;
+
+notify pgrst, 'reload schema';
+notify pgrst, 'reload config';
 
 commit;
