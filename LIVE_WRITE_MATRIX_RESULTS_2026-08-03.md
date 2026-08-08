@@ -460,3 +460,34 @@ Classification:
 - Pikken lobby-only lifecycle is PASS WITH LIMITATION.
 - Limitation: cross-player join/host-only denial coverage was not run because a second valid player session was not safely available without human login or unsafe account changes.
 - Start/bid/reject/vote/archive/completed-match paths remain untested and intentionally out of scope.
+
+## PAARDENRACE lobby lifecycle read-only preflight - 2026-08-08
+
+No Paardenrace production write was run.
+
+Read-only deployed-state findings:
+
+- Baseline counts: `paardenrace_rooms=26`, `paardenrace_room_players=41`, `paardenrace_obligations=2`, `paardenrace_match_history=0`.
+- controlled `OC_V764_PAARDENRACE_*` fixture count `0`.
+- controlled Paardenrace push jobs `0`.
+- Ice `2.8`.
+- Deployed `create_paardenrace_room_fast_v687(text,text,text,text,text)` delegates to `create_paardenrace_room_safe(session_token, session_token_input, room_code_input)`.
+- Deployed `create_paardenrace_room_safe(text,text,text)` requires `_paardenrace_require_name(text,text)` and `_paardenrace_player_id(text,text)`, then inserts a lobby and upserts the host participant.
+- Deployed lobby lifecycle RPCs inspected:
+  - `join_paardenrace_room_fast_v687(text,text,text,text)` uses session-derived player identity.
+  - `update_paardenrace_room_choice_safe(text,text,text,text,integer,boolean,text)` uses session-derived player identity and only updates lobby choice/wager fields.
+  - `set_paardenrace_ready_safe(text,boolean,text,text,text)` uses session-derived player identity and updates ready state.
+  - `leave_paardenrace_room_fast_v687(text,text,text,text)` uses session-derived player identity and can soft-close if host leaves.
+  - `disband_paardenrace_room_fast_v687(text,text,text,text)` uses session-derived host identity, soft-closes, and does not hard-delete rooms.
+  - `verify_paardenrace_wager_safe(text,text,text,text,text)` and `reject_paardenrace_wager_safe(text,text,text,text,text)` use host/session identity and do not touch history/obligation tables.
+- Foreign-key rollback basis:
+  - `paardenrace_room_players.room_id -> paardenrace_rooms(id) ON DELETE CASCADE`.
+  - `paardenrace_obligations.room_id -> paardenrace_rooms(id) ON DELETE CASCADE`.
+  - `paardenrace_match_history.room_id -> paardenrace_rooms(id) ON DELETE SET NULL`.
+
+Rollback classification before any write:
+
+- A lobby-only proof can likely be isolated if the controlled room is tagged with a unique requested room code/label and is kept strictly in lobby/soft-closed stages.
+- Normal host disband is soft-close only, so exact baseline restoration would require an exact controlled SQL cleanup after proving the terminal soft-closed state.
+- Exact cleanup appears feasible for a lobby-only room because no history/obligation-producing path is needed; players cascade and obligations should remain zero for lobby-only. However, because match history uses `ON DELETE SET NULL`, Paardenrace must not advance to finish/history before cleanup.
+- Recommendation: Paardenrace remains a later controlled candidate only for create/join/choice/verify/ready/unready/leave/disband, with direct preflight and exact controlled cleanup. Do not call race advancement, draw/tick, nominations, finish, history, or obligation-producing paths.
