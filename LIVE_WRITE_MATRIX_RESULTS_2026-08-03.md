@@ -317,3 +317,63 @@ Badge/push read-only live inventory notes:
 - Badge display functions are read/derived (`get_player_badge_bundle_scoped`, `get_player_badge_facts[_scoped]`, `get_site_player_badge_cards_scoped`, registry helpers). No safe direct award RPC was identified in active frontend code.
 - Push write surfaces include subscription/presence, self-test queue, nearby verification queues, admin active broadcast, targeted test, and dispatcher claim/mark functions. No push job was queued during this section.
 - Final controlled queued push jobs remained `0`; Ice remained `2.8`.
+
+## BEERPONG inventory - 2026-08-08
+
+Read-only verdict: BLOCKED before controlled live proof.
+
+Verified from repo and live catalog:
+
+- Active frontend caller: `beerpong.html` saves with `sb.rpc('save_beerpong_match', { session_token, client_match_id, payload })` after client-side match-entry session requirement.
+- Runtime/admin caller: `gejast-game-group-a-runtime.js` maps Beerpong save to `save_beerpong_match` and references `get_beerpong_runtime_bundle_v668`, `admin_delete_game_group_a_match_v668`, and `admin_rebuild_game_group_a_ratings_v668`; those v668 admin/runtime RPC definitions were not found in repo search.
+- Match-control caller: `match_control.html` posts to `save_match_control_edit` for Beerpong rows.
+- Live write RPC: `save_beerpong_match(text,text,jsonb)`, executable by anon/authenticated and still `PUBLIC EXECUTE=true` in live catalog.
+- Live deployed `save_beerpong_match` body uses `_tier3_player_from_any_session_v740(session_token)`, uses `client_match_id` as existing-row lookup, and returns `ratings_applied=false` in the current deployed source. It does not contain an `ON CONFLICT` contract and the source excerpt did not prove an owner/session guard before updating an existing `client_match_id`.
+- Live tables: `beerpong_matches` rows `19`, `beerpong_player_ratings` rows `0`, `beerpong_player_rating_history` rows `0`.
+- Live Beerpong tables have `anon_insert=true` and `authenticated_insert=true`; RLS is not enabled on these three tables. This is materially weaker than the hardened Boerenbridge/Toepen table boundary and must be reviewed before any live mutation proof.
+- Controlled Beerpong residue was `0`; unrelated baseline still `allowed_usernames=51`, `drink_events=28`, `boerenbridge_matches=98`, queued controlled push jobs `0`, Ice `2.8`.
+
+Risk classification:
+
+- Multiple historical `save_beerpong_match` definitions exist (`v114`, `v120`, `v740`, `v741`) with different rating/schema behavior.
+- Current active frontend sends `format`, while the later backend source uses/normalizes `match_format`; possible contract drift.
+- Missing/invalid session behavior and existing-`client_match_id` overwrite behavior need repair/static proof before a live write. The safest assumption is that a controlled proof could accidentally prove a real overwrite/unauthenticated write in production.
+- Cleanup is not yet cleanly proven because exact deletion may require broad rating rebuild/history reconciliation, and the referenced admin delete/rebuild RPCs are missing from repo search.
+
+Required repair/review before proof:
+
+1. Canonicalize `save_beerpong_match` to require a valid player session.
+2. On existing `client_match_id`, allow update only for the original creator/session or an explicit admin correction path.
+3. Align frontend/backend payload fields (`format` vs `match_format`, winner/cups fields).
+4. Confirm canonical Beerpong rating schema and whether ratings should apply at save time.
+5. Harden direct table writes with RLS/revokes or prove RPC-only mutation boundary.
+6. Add a Beerpong static regression and only then run controlled preflight/write/replay/unauthorized-overwrite/exact-cleanup proof.
+
+## PAARDENRACE and PIKKEN inventory - 2026-08-08
+
+Read-only verification completed; no production mutation was run in this section.
+
+Paardenrace:
+
+- Active callers: `paardenrace.html`, `paardenrace_live.html`, and `gejast-paardenrace.js` use create/join/update-choice/ready/leave/disband/start/draw/reset/submit paths.
+- Core tables: `paardenrace_rooms`, `paardenrace_room_players`, `paardenrace_obligations`, `paardenrace_match_history`.
+- Live catalog corrected an earlier repo-history concern: deployed `disband_paardenrace_room_fast_v687(text,text,text,text)` is host/session-validated and does not contain a hard `delete from public.paardenrace_rooms`; it is a soft-close style cleanup path.
+- Live catalog also corrected the older `v690` concern: deployed `verify_paardenrace_wager_safe` and `reject_paardenrace_wager_safe` have the five-argument signatures including `target_player_name_input`, mention the target, check host/session, and update wager verification state.
+- Live tables have RLS enabled but still show anon insert privilege at the table-grant level, so the practical boundary depends on policies plus RPC validation; direct table proof was not run here.
+- Existing live counts at inventory time: `paardenrace_rooms=26`, `paardenrace_room_players=41`, `paardenrace_obligations=2`, `paardenrace_match_history=0`.
+- Safe next proof after separate preflight: create controlled lobby, join a second valid session, save choices, host verify wager, ready/unready, leave/disband soft-close, then exact cleanup only if a controlled row is physically retained. Avoid draw/tick/nominations/finish because those advance deck/history/obligations.
+
+Pikken:
+
+- Active callers: `gejast-pikken-contract.js`, `gejast-pikken.js`, and `gejast-pikken-live.js` use create/join/ready/config/start/bid/reject/vote/leave/destroy plus archive/cleanup paths.
+- Core tables referenced: `pikken_games`, `pikken_game_players`, `pikken_round_hands`, `pikken_round_votes`, archive/stat tables `pikken_match_archive_v709` and `pikken_player_stats_v709`.
+- Live catalog shows `pikken_create_lobby_fast_v687(text,text,jsonb,text)` requires `_gejast_player_from_session` and rejects missing session; `pikken_destroy_game_fast_v687(text,text,uuid,text)` also requires a session and checks the game owner/host before destroying. `pikken_record_completed_match_v709` exists and writes archive/history and should not be used for reversible proof.
+- `cleanup_stale_pikken_rooms_v706` is broad and should not be used as a controlled cleanup primitive unless scoped/approved.
+- Create is not idempotent; join/ready/config/destroy are mostly replay-safe state changes. Start/bid/reject/vote are live-game mutations and should be avoided until a separate rollback plan exists.
+- Safest next proof candidate is Pikken lobby-only lifecycle: create controlled lobby, optional second-session join, ready/unready/config replay, host destroy, verify no active controlled lobby and no archive/history rows. If no second valid session is available, stop after host create/config/destroy and document as limited.
+
+Status update for remaining matrix:
+
+- Beerpong: BLOCKED pending repair/review.
+- Paardenrace: candidate for a later controlled lobby proof; deployed wager/disband concerns look better than repo history, but proof needs careful preflight and likely two valid sessions.
+- Pikken: safest next controlled candidate, but only lobby lifecycle; avoid start/archive paths.
