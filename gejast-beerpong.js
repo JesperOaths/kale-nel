@@ -12,5 +12,5 @@
   }
   function playerName(){ try { return (cfg.getPlayerName && cfg.getPlayerName()) || ''; } catch (_) { return ''; } }
   function scope(){ try { return (cfg.normalizeScope && cfg.normalizeScope(new URLSearchParams(location.search).get('scope'))) || 'friends'; } catch (_) { return 'friends'; } }
-  window.GEJAST_BEERPONG = Object.assign({}, window.GEJAST_BEERPONG || {}, { VERSION:'v766', rpc, playerName, scope });
+  window.GEJAST_BEERPONG = Object.assign({}, window.GEJAST_BEERPONG || {}, { VERSION:'v767', rpc, playerName, scope });
 })();

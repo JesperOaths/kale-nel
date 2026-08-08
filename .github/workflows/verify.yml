@@ -46,6 +46,9 @@ jobs:
       - name: Homepage root-fix regression
         run: node check-homepage-root-fixes.mjs
 
+      - name: Active frontend encoding regression
+        run: node check-active-frontend-encoding-v767.mjs
+
       - name: GitHub Actions Node24 runtime pins
         run: node check-github-actions-node24-runtime.mjs
 
