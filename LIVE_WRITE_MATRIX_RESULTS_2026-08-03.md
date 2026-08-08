@@ -1,4 +1,4 @@
-# Live write matrix results — 2026-08-03
+﻿# Live write matrix results â€” 2026-08-03
 
 Branch: `agent/v764-live-write-matrix`
 
@@ -13,20 +13,20 @@ Branch: `agent/v764-live-write-matrix`
 
 | Row ID | Date/time | Sanitized actor identity | Before-state | Action performed | Expected result | Actual result | Unauthorized result | Duplicate/replay result | Rollback result | Final status | Relevant commit/migration |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| DRINK-02 | 2026-08-03T04:04Z | Public anonymous read path / static repo scan | Production `VERSION` returned `v761`; production `drink_event_types` public read for key `ice` returned one row with `unit_value=2.8`; production `drinks_add.html` still contained a fallback `Ice` unit value of `3`; `get_drinks_page_public` returned `v690_empty_compat` without `event_types` for anonymous/no-session read | Read-only production fetches for `VERSION`, `gejast-config.js?v761`, `drinks_add.html`, `drinks.html`, Supabase `get_drinks_page_public`, and REST `drink_event_types?key=eq.ice`; then local branch hotfix changed only the fallback value in `drinks_add.html` from `3` to `2.8` and added `check-ice-unit-invariant.mjs` to `npm run verify:static` | Ice must be exactly `2.8` through DB and application read paths; no repository fallback or regression should permit Ice to appear as `3.0` | DB/public table read passed at `2.8`; app anonymous RPC did not expose event types; production static fallback failed by showing Ice as `3`; local branch fix and regression now pass | N/A — read-only invariant; no mutation attempted | Regression re-run: `npm run verify:static` passed and asserts no Ice `3.0` fallback in active drinks code/repair SQL | N/A — no production write; local branch fix pending deploy | PASS WITH DOCUMENTED LIMITATION: production DB is correct, branch fixes stale static fallback; production static fallback remains old until PR merge/deploy | `GEJAST_v755h_ice_unit_value_repair.sql`; commit `79e831f` |
+| DRINK-02 | 2026-08-03T04:04Z | Public anonymous read path / static repo scan | Production `VERSION` returned `v761`; production `drink_event_types` public read for key `ice` returned one row with `unit_value=2.8`; production `drinks_add.html` still contained a fallback `Ice` unit value of `3`; `get_drinks_page_public` returned `v690_empty_compat` without `event_types` for anonymous/no-session read | Read-only production fetches for `VERSION`, `gejast-config.js?v761`, `drinks_add.html`, `drinks.html`, Supabase `get_drinks_page_public`, and REST `drink_event_types?key=eq.ice`; then local branch hotfix changed only the fallback value in `drinks_add.html` from `3` to `2.8` and added `check-ice-unit-invariant.mjs` to `npm run verify:static` | Ice must be exactly `2.8` through DB and application read paths; no repository fallback or regression should permit Ice to appear as `3.0` | DB/public table read passed at `2.8`; app anonymous RPC did not expose event types; production static fallback failed by showing Ice as `3`; local branch fix and regression now pass | N/A â€” read-only invariant; no mutation attempted | Regression re-run: `npm run verify:static` passed and asserts no Ice `3.0` fallback in active drinks code/repair SQL | N/A â€” no production write; local branch fix pending deploy | PASS WITH DOCUMENTED LIMITATION: production DB is correct, branch fixes stale static fallback; production static fallback remains old until PR merge/deploy | `GEJAST_v755h_ice_unit_value_repair.sql`; commit `79e831f` |
 | DRINK-01/03 | 2026-08-04T01:24Z | Logged-in Player A `Bruis`, sanitized player ID `141` | Before write: `drink_events=28`, pending drink events `0`, no controlled rows at `lat=53.219766` / `lng=6.566766` / `accuracy=766`, queued `web_push_jobs=0`, Ice `unit_value=2.8`. | Called live `create_drink_event` once for `ice`, quantity `1`, with the controlled coordinate/accuracy marker; verified exact returned ID; retried the same create once; stopped before approval/rejection; cleaned up only returned controlled ID `404`. | One pending Ice event owned by player `141`, total units exactly `2.8`; invalid session rejects; replay must not create an uncontrolled duplicate; cleanup restores counts and leaves no queued notification job. | PASS. Invalid session rejected with `Niet ingelogd.`. Create returned event ID `404`, status `pending`; DB readback showed `event_type_key=ice`, `quantity=1`, `total_units=2.8`, owner `141`, scope `friends`, controlled coordinates. App readback via `contract_drinks_read_v664` found the event in own pending list and showed Ice unit `2.8`. Replay returned HTTP `409` on unique constraint `drink_events_one_pending_per_player_uidx`, so no duplicate was created. | Invalid session create rejected with HTTP `400` / `P0001` / `Niet ingelogd.` and zero row delta. | Replay rejected with HTTP `409`; no second event ID returned and controlled count stayed `1`. | After cleanup: `drink_events=28`, pending `0`, controlled ID `404` remaining `0`, controlled coordinate rows `0`, queued `web_push_jobs=0`, Ice `2.8`; app readback no longer found controlled ID in own pending. | Public REST exact delete hit `permission denied for table drink_verified_records`, so cleanup used authenticated Supabase SQL Editor with exact predicate `id=404`, `player_id=141`, `status=pending`, `event_type_key=ice`, and the controlled coordinates/accuracy. No approval/rejection was performed because that could create permanent drink history and no fully reversible lifecycle has yet been proven. | PASS WITH LIMITATION: create/replay/exact cleanup proven; approval/rejection intentionally not executed because it may produce permanent drink history and no fully reversible lifecycle has yet been proven. | Live `create_drink_event`; app read via `contract_drinks_read_v664`; cleanup SQL exact-ID predicate only. |
 | BRIDGE-01 | 2026-08-03T04:10Z / post-apply 04:34Z | Invalid/missing player session, anonymous public REST role, stale browser player session | Pre-fix `boerenbridge_matches` count was `98`; no existing rows for controlled `OC_V764_MATRIX_*` labels; live ACL granted `INSERT/UPDATE/DELETE` to `anon` and `authenticated`; live function had `PUBLIC`, `anon`, and `authenticated` execute and did not reject null player resolution | Pre-fix: called `save_boerenbridge_match` with invalid session and controlled client IDs, then deleted exact probe rows. Pre-apply: captured ACL and `pg_get_functiondef`, compared parity, prepared rollback. Applied amended `GEJAST_v755l_boerenbridge_write_auth_guard.sql`. Post-apply: missing session, invalid session, anonymous direct insert/update/delete, ACL checks, stale-session authorized-attempt check, Ice/version/no-push/no-OC-row checks | Invalid/missing/expired sessions reject; direct table writes blocked for `PUBLIC`, `anon`, and `authenticated`; function callable only by `anon/authenticated` and internally session-guarded; no row may persist with null owner | v755l applied successfully. Post-apply missing/null session rejected with `boerenbridge_session_invalid`; invalid session rejected with `boerenbridge_session_invalid`; anonymous direct `INSERT/UPDATE/DELETE` all returned permission denied; SQL ACL check showed table DML false for `PUBLIC`, `anon`, and `authenticated`; function execute false for `PUBLIC`, true for `anon/authenticated`. A stale browser player session was rejected, so no authorized controlled write was performed. | Unauthorized invalid-session write is now rejected; anonymous direct insert/update/delete are now rejected. Authenticated direct DML was verified by SQL ACL as false for `authenticated`; no Supabase Auth JWT was available for an HTTP authenticated-role DML probe. | Same-owner retry and other-player overwrite proof remain blocked because the available browser player session is stale/invalid and no second valid test player session is available. | Pre-fix probe rows `OC_V764_MATRIX_20260803_READONLY_BRIDGE` and `OC_V764_MATRIX_PROBE` were deleted exactly; post-apply no authorized row was created; final `OC_V764_MATRIX_*` lookup returned `[]`; match count returned to/stayed `98`; no push job sent/created | PASS for unauthorized/grant repair; BLOCKED for authorized same-owner/other-player behavior until valid test player sessions are available | `GEJAST_v755l_boerenbridge_write_auth_guard.sql`; rollback `GEJAST_v755l_boerenbridge_write_auth_guard_ROLLBACK.sql`; pre-apply review `BOERENBRIDGE_V755L_PREAPPLY_REVIEW_2026-08-03.md` |
 | BRIDGE-02 | 2026-08-03T21:34Z / 2026-08-04T00:15Z | Player A `Bruis` sanitized player ID `141`; temporary Player B `OC_V764_PLAYER_B` sanitized player ID `160`; protected admin session for setup/cleanup only | Before Player A write: `boerenbridge_matches=98`, no row for `OC_V764_MATRIX_BRIDGE_AUTH_20260803213426`, `boerenbridge_player_stats` count/hash `5` / `1081:3164682a`, Ice `2.8`, pending web push jobs `0`. Before temp Player B creation: `players=55`, `allowed_usernames=51`, `claim_requests=24`, `player_activation_links=21`, `sessions=21`, no temp account/name/claim/Boerenbridge rows. | Player A saved controlled match with `client_match_id=OC_V764_MATRIX_BRIDGE_AUTH_20260803213426`; Player A retried same client ID; user activated temporary Player B through normal activation page with a user-chosen undisclosed PIN; Player B attempted to save the same client ID once; cleanup deleted exact controlled match and removed temp account through `admin_remove_player_action`. | Player A create succeeds once with non-null owner `141`; Player A retry updates same row without duplicate; Player B overwrite rejects with `boerenbridge_match_owner_mismatch`; Player A row remains unchanged; cleanup removes only controlled match and temp account artifacts. | PASS. Player A create returned `ok:true`, row id `291`, owner non-null `141`, scope `friends`, app `v761`, rules `matrix-bridge-auth-v764`, stats not applied. Same-owner retry returned same `match_id`, no duplicate, owner stayed `141`, stats hash unchanged. Temporary Player B was created through normal protected admin/name-claim/activation path and activated as player `160`; no existing Beta account/PIN was touched. Player B overwrite returned HTTP `400`, code `P0001`, message `boerenbridge_match_owner_mismatch`. Post-attempt row id `291` still owner `141`, hash `157050636d211452629eef1bf72575ea`, no mismatch marker, app `v761`. | Missing/invalid/stale sessions and anonymous direct DML were already rejected in BRIDGE-01. This row adds the valid different-player overwrite rejection. | Same-owner replay used the same `client_match_id` and returned the same `match_id` with no duplicate; different-player replay was not repeated after the expected owner-mismatch rejection to avoid unnecessary production writes. | Player A stats hash stayed `1081:3164682a`; Boerenbridge match count returned to `98`; player/account aggregate counts returned to `players=55`, `allowed_usernames=51`, `claim_requests=24`, `player_activation_links=21`, `sessions=21`; targeted temp residue checks across push/session/claim/drink surfaces returned `0`; Ice stayed `2.8`. | Controlled row `291` was deleted by exact `id/client_match_id/owner` predicate. Temporary account request `79` / player `160` / allowed username `287` was removed through protected `admin_remove_player_action` and returned `removed:true`. Browser-side stale temp player session keys were cleared. | PASS | v755l live function guard plus static regression `check-boerenbridge-write-auth-guard-v755l.mjs`; no new migration required. |
-| PROFILE-01/02/04/05 | 2026-08-08T02:10Z | Logged-in Player A `Bruis`, sanitized player ID `141` | Actual frontend path identified: `my_profile.html` load calls `get_my_profile_settings`; save button calls `update_my_profile_settings` with `{session_token, display_name_input, avatar_url_input}`. Sanitized current value before any write attempt: display name `Bruis`, avatar present with length `8495`; rollback prepared to restore display name `Bruis` and same avatar value. Ice public DB read returned `2.8`. Player self push diagnostics returned ok with recent job status `sent`, not a queued controlled test job. | Attempted the safest own-profile mutation only: change Bruis display name to `Bruis matrix proof` through the same live profile RPC, then immediately restore the captured value. Did not submit any player ID because the actual frontend/RPC path exposes no `player_id` field. Did not attempt an invalid-token update because repository SQL shows the live function may insert an orphan `gejast_profile_settings` row for invalid tokens before resolving a player, which is not safely reversible without admin cleanup. | Valid Bruis session should update only Bruis and allow exact rollback; missing/invalid/stale sessions should reject; payload player-ID tampering should be impossible or rejected; friends/family boundaries should remain unchanged. | BLOCKED before mutation. Valid Bruis update returned HTTP `400` / SQL `42702`: `column reference "session_token" is ambiguous`. App readback after the failed update still returned `Bruis` with the same avatar length, so no genuine profile value changed. Missing update rejected with `profile_settings_session_missing`; missing get returned `{ok:false,error:profile_settings_session_missing}`. Invalid-token get was read-only and returned `{ok:true, player_id:null, display_name:""}`, which is weak evidence that invalid write should not be exercised until hardened. | Missing session update rejected. Invalid/stale write was not executed because current SQL catches player-resolution errors and can write settings keyed only by the submitted invalid token; creating that orphan row would violate the reversible-test rule. Cross-player tampering by submitted player ID is not applicable to the current frontend/RPC payload because no player ID is accepted. | Retry behavior could not be safely proven because the first valid own-profile update fails before mutation with ambiguous `session_token`; repeating the same failing request would add no evidence and was not done. | No application-visible profile change occurred; app readback before/after/restored all showed Bruis/player `141`. Public REST readback of `players` with `profile_picture_url` failed because that column does not exist, further confirming the profile path needs schema/RPC repair before live mutation. No sessions, claims, notifications, badges, game data, or drink records were intentionally touched by this row; aggregate count proof is deferred until admin diagnostics are available. | Exact rollback was prepared but not needed because the valid update failed before mutation. A rollback RPC call also failed with the same ambiguous `session_token` error and app readback remained at the original value. | BLOCKED — live own-profile write path is not reliable/reversible due ambiguous `session_token`; invalid/stale write probes would risk creating orphan profile-settings rows without admin cleanup. | Live `my_profile.html`; `GEJAST_v742_profile_rpc_overload_repair.sql` current repo definition; public Ice REST check; player self push diagnostics v2. |
+| PROFILE-01/02/04/05 | 2026-08-08T02:10Z | Logged-in Player A `Bruis`, sanitized player ID `141` | Actual frontend path identified: `my_profile.html` load calls `get_my_profile_settings`; save button calls `update_my_profile_settings` with `{session_token, display_name_input, avatar_url_input}`. Sanitized current value before any write attempt: display name `Bruis`, avatar present with length `8495`; rollback prepared to restore display name `Bruis` and same avatar value. Ice public DB read returned `2.8`. Player self push diagnostics returned ok with recent job status `sent`, not a queued controlled test job. | Attempted the safest own-profile mutation only: change Bruis display name to `Bruis matrix proof` through the same live profile RPC, then immediately restore the captured value. Did not submit any player ID because the actual frontend/RPC path exposes no `player_id` field. Did not attempt an invalid-token update because repository SQL shows the live function may insert an orphan `gejast_profile_settings` row for invalid tokens before resolving a player, which is not safely reversible without admin cleanup. | Valid Bruis session should update only Bruis and allow exact rollback; missing/invalid/stale sessions should reject; payload player-ID tampering should be impossible or rejected; friends/family boundaries should remain unchanged. | BLOCKED before mutation. Valid Bruis update returned HTTP `400` / SQL `42702`: `column reference "session_token" is ambiguous`. App readback after the failed update still returned `Bruis` with the same avatar length, so no genuine profile value changed. Missing update rejected with `profile_settings_session_missing`; missing get returned `{ok:false,error:profile_settings_session_missing}`. Invalid-token get was read-only and returned `{ok:true, player_id:null, display_name:""}`, which is weak evidence that invalid write should not be exercised until hardened. | Missing session update rejected. Invalid/stale write was not executed because current SQL catches player-resolution errors and can write settings keyed only by the submitted invalid token; creating that orphan row would violate the reversible-test rule. Cross-player tampering by submitted player ID is not applicable to the current frontend/RPC payload because no player ID is accepted. | Retry behavior could not be safely proven because the first valid own-profile update fails before mutation with ambiguous `session_token`; repeating the same failing request would add no evidence and was not done. | No application-visible profile change occurred; app readback before/after/restored all showed Bruis/player `141`. Public REST readback of `players` with `profile_picture_url` failed because that column does not exist, further confirming the profile path needs schema/RPC repair before live mutation. No sessions, claims, notifications, badges, game data, or drink records were intentionally touched by this row; aggregate count proof is deferred until admin diagnostics are available. | Exact rollback was prepared but not needed because the valid update failed before mutation. A rollback RPC call also failed with the same ambiguous `session_token` error and app readback remained at the original value. | BLOCKED â€” live own-profile write path is not reliable/reversible due ambiguous `session_token`; invalid/stale write probes would risk creating orphan profile-settings rows without admin cleanup. | Live `my_profile.html`; `GEJAST_v742_profile_rpc_overload_repair.sql` current repo definition; public Ice REST check; player self push diagnostics v2. |
 
 ## Post-apply verification summary
 
 Commands passed after v755l apply:
 
-- `npm run verify` — static checks and active JS syntax ok; files checked `330`.
-- `npm run smoke:live` — live `VERSION` `v761`; core routes HTTP 200.
-- `npm run smoke:beta:read` — 43 read-only beta/admin-protected routes ok.
-- `npm run smoke:push` — latest workflow success, push health ok; no real push send triggered by this work.
+- `npm run verify` â€” static checks and active JS syntax ok; files checked `330`.
+- `npm run smoke:live` â€” live `VERSION` `v761`; core routes HTTP 200.
+- `npm run smoke:beta:read` â€” 43 read-only beta/admin-protected routes ok.
+- `npm run smoke:push` â€” latest workflow success, push health ok; no real push send triggered by this work.
 
 Final production invariants:
 
@@ -46,7 +46,7 @@ Admin-control continuation reached the admin frontend, but the protected Supabas
 
 Because the next admin rows (`ADMIN-01`, `ADMIN-03`, `ADMIN-04`, `PROFILE-03`, `BADGE-*`, `MATCH-01`) require a valid protected admin session, no valid admin mutation was attempted. This is the current unavoidable human authorization point: a fresh protected admin login/TOTP is required before the reversible allowed-username reserve/remove proof can run.
 
-## Prepared profile repair package — not applied
+## Prepared profile repair package â€” not applied
 
 The profile defect was treated as a code/security issue, not bypassed. The original `42702` evidence above remains the production behavior evidence. A smallest SQL-only repair package has been prepared but not applied to production:
 
@@ -66,12 +66,12 @@ Prepared rollback restores the current v742-style definitions exactly enough to 
 
 Regression prepared and run locally:
 
-- `node check-profile-rpc-repair-v755m.mjs` — PASS
-- `npm run verify:static` — PASS, including the new profile repair contract plus existing version/RPC/static/push/Ice/Boerenbridge/Toepen checks
+- `node check-profile-rpc-repair-v755m.mjs` â€” PASS
+- `npm run verify:static` â€” PASS, including the new profile repair contract plus existing version/RPC/static/push/Ice/Boerenbridge/Toepen checks
 
 Production apply remains intentionally blocked until behavior parity, rollback acceptance, grants, and a live post-apply regression window are approved.
 
-## ADMIN-01/02/03 continuation — 2026-08-08
+## ADMIN-01/02/03 continuation â€” 2026-08-08
 
 Protected admin session became valid at 2026-08-08T02:11Z. Sanitized validation: admin helper present, `admin_check_session` HTTP `200`, `{ok:true}`, admin username `Bruis`, expiry present. No cookies, admin-session tokens, browser storage values, credentials, or TOTP values were read into docs.
 
@@ -107,11 +107,11 @@ Final state after rollback:
 Final status:
 
 - `ADMIN-01` reserve/create and duplicate behavior: PASS WITH SECURITY DEFECT FOUND.
-- `ADMIN-02` invalid admin reserve: PASS; invalid admin remove: FAIL — FIX REQUIRED.
+- `ADMIN-02` invalid admin reserve: PASS; invalid admin remove: FAIL â€” FIX REQUIRED.
 - `ADMIN-03` target isolation: PASS for exact test-row reserve and cleanup; broader admin remove/permanent-delete target isolation is BLOCKED until the guard defect is fixed.
-- Direct REST DML exposure: FAIL — FIX REQUIRED because public REST `DELETE` on `allowed_usernames` succeeded for the exact controlled row.
+- Direct REST DML exposure: FAIL â€” FIX REQUIRED because public REST `DELETE` on `allowed_usernames` succeeded for the exact controlled row.
 
-Prepared admin security repair package — not applied:
+Prepared admin security repair package â€” not applied:
 
 - `GEJAST_v755n_admin_allowed_username_security_guard.sql`
 - `GEJAST_v755n_admin_allowed_username_security_guard_ROLLBACK.sql`
@@ -126,8 +126,8 @@ Repair strategy:
 
 Regression prepared and run locally:
 
-- `node check-admin-allowed-username-guard-v755n.mjs` — PASS
-- `npm run verify:static` — PASS; Ice invariant reports Ice stays `2.8`
+- `node check-admin-allowed-username-guard-v755n.mjs` â€” PASS
+- `npm run verify:static` â€” PASS; Ice invariant reports Ice stays `2.8`
 
 Next unavoidable stop: do not continue additional admin mutation rows against production until the allowed-username admin guard/direct-DML defect is approved for SQL repair and applied, because further admin mutation tests could be corrupted by invalid-token/direct-REST mutation exposure.
 
@@ -377,3 +377,86 @@ Status update for remaining matrix:
 - Beerpong: BLOCKED pending repair/review.
 - Paardenrace: candidate for a later controlled lobby proof; deployed wager/disband concerns look better than repo history, but proof needs careful preflight and likely two valid sessions.
 - Pikken: safest next controlled candidate, but only lobby lifecycle; avoid start/archive paths.
+
+## PIKKEN lobby-only controlled proof - 2026-08-08
+
+Verdict: PASS WITH LIMITATION.
+
+Scope restrictions honored:
+
+- Did not call start, bid, reject, vote, `pikken_record_completed_match_v709`, `pikken_abandon_and_record_v716`, archive paths, or `cleanup_stale_pikken_rooms_v706`.
+- No completed-game archive/stat records were created.
+- Beerpong was not mutated.
+
+Preflight:
+
+- Branch/head before proof: `975743d180c4ad762d3dbdc65978b1a221a418e8` on `agent/v764-live-write-matrix`.
+- Deployed inspected RPCs:
+  - `pikken_create_lobby_fast_v687(text,text,jsonb,text)` requires `_gejast_player_from_session(...)`; no round/archive writes in source flags.
+  - `pikken_join_lobby_fast_v687(text,text,text,text)` requires `_gejast_player_from_session(...)`; join/upsert style membership behavior.
+  - `pikken_set_ready_scoped(text,text,uuid,boolean,text)` requires session and participant membership.
+  - `pikken_update_lobby_config_v715(text,text,uuid,jsonb,text)` requires session and host/owner (`created_by_player_id`).
+  - `pikken_destroy_game_fast_v687(text,text,uuid,text)` requires session, selects exact `game_id_input` plus scope for update, checks host/owner, and only marks that game `status='finished'`, `state.phase='deleted'`.
+- Function execution remains granted to public/anon/authenticated; Pikken tables have RLS enabled but broad anon DML grants. This is noted for future hardening but did not block the RPC-only controlled proof because direct table writes were not used for proof mutation.
+- Baseline/control checks before the controlled write:
+  - Ice `2.8`.
+  - controlled Pikken push jobs `0`.
+  - no existing `OC_V764_PIKKEN_*` fixture.
+
+Controlled fixture:
+
+- Label: `OC_V764_PIKKEN_1786162000362`.
+- Game id: `8ed4b632-8243-4c9a-98e7-e07c1b43de00`.
+- Lobby code: `DESPINOZA 1`.
+- Player A / host: Bruis, player id `141`.
+- Missing session create rejected: `Niet ingelogd.`
+- Invalid session create rejected: `Niet ingelogd.`
+- Stale session check: not run; no safely available stale player session token existed without guessing or preserving token material.
+
+Active fixture readback:
+
+- Application/RPC readback: exactly one lobby visible for the controlled game, viewer is host, status `lobby`, one player.
+- Direct DB readback while active:
+  - `pikken_games=27`, `pikken_game_players=44`, `pikken_round_hands=40`, `pikken_round_votes=6`, `pikken_match_archive_v709=8`, `pikken_player_stats_v709=2`.
+  - Controlled game count `1` with config `{ matrix_label: OC_V764_PIKKEN_1786162000362, start_dice: 3, variant: normal }`.
+  - Controlled player count `1`, Bruis/player id `141`, ready `false`, dice `3`.
+  - Controlled round hands `0`, votes `0`, archive rows `0`, stat-label rows `0`.
+  - controlled push jobs `0`, Ice `2.8`.
+
+Reversible lobby operations:
+
+- Deterministic config retry: Player A set `start_dice=4` twice; both calls succeeded and left the same lobby/player state.
+- Ready transition: ready `true` succeeded.
+- Unready transition: ready `false` succeeded.
+- Replay behavior: Player A repeated join on the same lobby; membership stayed `1` before and after, so no duplicate membership row.
+- Invalid session could not update host config: `Niet ingelogd.`
+- Invalid session could not destroy: `Niet ingelogd.`
+- Second-player coverage: PASS WITH LIMITATION. No second valid player session was safely available through the already-proven reversible temporary-account lifecycle. I did not reset/guess Beta-account PINs and did not request human login because host-only lifecycle was sufficient to keep this proof reversible.
+
+Host destroy and exact cleanup:
+
+- Player A invoked normal host destroy through `pikken_destroy_game_fast_v687`.
+- Destroy result: `{ ok: true, destroyed: true }` for the exact controlled game id.
+- Destroy replay also returned `{ ok: true, destroyed: true }` for the same exact game; app readback showed the retained terminal row, not an active lobby.
+- Direct terminal DB readback before cleanup:
+  - active controlled lobby count `0`.
+  - controlled game retained as `status='finished'`, `state.phase='deleted'`, `deleted_reason='host_destroyed'`, `finished_at` set.
+  - controlled membership row retained in documented terminal state: Bruis/player id `141`, ready `false`, dice `4`.
+  - controlled round hands `0`, votes `0`, archive rows `0`, stat-label rows `0`.
+  - unrelated active lobbies `0`; controlled push jobs `0`; Ice `2.8`.
+- Broad stale cleanup was not used.
+- Exact controlled SQL cleanup was then run only after the host destroy terminal state was proven:
+  - Deleted exact controlled game `1` and exact controlled player row `1`.
+  - Deleted exact controlled hands `0`, votes `0`, archive rows `0`.
+- Post-cleanup verification:
+  - `pikken_games=26`, `pikken_game_players=43`, `pikken_round_hands=40`, `pikken_round_votes=6`, `pikken_match_archive_v709=8`, `pikken_player_stats_v709=2`.
+  - controlled fixture count `0`.
+  - remaining controlled game `null`.
+  - controlled push jobs `0`.
+  - Ice `2.8`.
+
+Classification:
+
+- Pikken lobby-only lifecycle is PASS WITH LIMITATION.
+- Limitation: cross-player join/host-only denial coverage was not run because a second valid player session was not safely available without human login or unsafe account changes.
+- Start/bid/reject/vote/archive/completed-match paths remain untested and intentionally out of scope.
