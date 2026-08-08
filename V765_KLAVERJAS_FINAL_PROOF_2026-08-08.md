@@ -51,9 +51,9 @@ v755r:
 - Ice: `2.8`.
 - Classic `jas_games` / `jas_game_entries` / rating rebuild queue were unchanged by the current scorer proof.
 
-## Final independent gate
+## Sole remaining gate
 
-Before PR #7 is made ready/merged, run `LIVE_POSTAPPLY_V755R_VERIFY.sql` read-only in production. Required final state:
+Run `LIVE_POSTAPPLY_V755R_VERIFY.sql` read-only in production. Required final state:
 
 - `save_rpc_exists`: PASS;
 - `rpc_auth_boundary`: PASS;
@@ -64,6 +64,8 @@ Before PR #7 is made ready/merged, run `LIVE_POSTAPPLY_V755R_VERIFY.sql` read-on
 - `baseline_snapshot`: informational PASS with the current production counts.
 
 No persistent writes are performed by the independent postcheck.
+
+After that check passes, the remaining steps are repository-only: record evidence, final CI, mark PR #7 ready, merge to `main`, and verify the merged state.
 
 ## Scope boundary
 
