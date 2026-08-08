@@ -114,7 +114,7 @@ begin
   end if;
 
   update public.allowed_usernames
-     set status = 'retired_permanently',
+     set status = 'blocked',
          reserved_for_email = null,
          reserved_for_person_note = coalesce(reserved_for_person_note, '') || case when coalesce(reserved_for_person_note,'')='' then '' else ' - ' end || 'permanent verwijderd',
          updated_at = now()

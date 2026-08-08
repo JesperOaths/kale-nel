@@ -18,6 +18,7 @@ assert.match(sql, /revoke insert, update, delete on table public\.allowed_userna
 assert.match(sql, /set status = 'blocked'/i, 'remove action must use live-allowed blocked status');
 assert.match(sql, /'mode', 'blocked_account'/i, 'remove action keeps live blocked_account behavior');
 assert.doesNotMatch(sql, /set status = 'archived'/i, 'archived violates current live status constraint');
+assert.doesNotMatch(sql, /set status = 'retired_permanently'/i, 'retired_permanently violates current live status constraint');
 assert.doesNotMatch(sql, /grant insert, update, delete on table public\.allowed_usernames to (public|anon|authenticated)/i, 'migration must not grant direct web-role DML');
 assert.match(sql, /notify pgrst, 'reload schema';/i);
 

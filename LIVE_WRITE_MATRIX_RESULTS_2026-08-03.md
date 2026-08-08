@@ -148,7 +148,7 @@ Live preflight was run with sanitized SQL/editor evidence only. No cookies, stor
 
 ### v755n apply and verification
 
-Applied `GEJAST_v755n_admin_allowed_username_security_guard.sql` first. The first post-apply valid remove check exposed a live status constraint mismatch because the prepared function used `status='archived'`. The unapplied artifact was amended in place to preserve live behavior by using `status='blocked'` and returning mode `blocked_account`; the corrected v755n SQL was then reapplied successfully.
+Applied `GEJAST_v755n_admin_allowed_username_security_guard.sql` first. Post-apply valid remove exposed a live status constraint mismatch because the prepared function used `status='archived'`; the artifact was amended in place to use `status='blocked'` and return mode `blocked_account`, then reapplied. Continuing the matrix then exposed the same live constraint mismatch in valid permanent-delete because it used `status='retired_permanently'`; the same v755n artifact was amended in place again so permanent-delete also preserves the security boundary while using live-allowed `status='blocked'`, then reapplied successfully.
 
 Post-apply v755n proof:
 
@@ -160,9 +160,10 @@ Post-apply v755n proof:
 - Stale/expired admin remove rejected: HTTP `400`, `P0001`, `Ongeldige admin-sessie`.
 - Anonymous direct REST `INSERT`, `UPDATE`, and `DELETE` on `allowed_usernames` all rejected with `permission denied for table allowed_usernames`.
 - Authenticated direct DML rejection was proven by SQL ACL: `authenticated_insert=false`, `authenticated_update=false`, `authenticated_delete=false`.
-- Valid admin reversible action succeeded: reserved controlled label `OC_V764_MATRIX_V755N_VERIFY_202608080439` as row id `291`, then valid remove returned `{ok:true, removed:true, mode:"blocked_account", player_id:null}`.
-- Exact SQL cleanup deleted only id `291` with the controlled display name/username predicate.
-- Final cleanup check returned `allowed_usernames=51` and controlled residue `0`.
+- Valid admin reversible remove action succeeded: reserved controlled label `OC_V764_MATRIX_V755N_VERIFY_202608080439` as row id `291`, then valid remove returned `{ok:true, removed:true, mode:"blocked_account", player_id:null}`.
+- Continuing matrix valid permanent-delete proof: controlled labels `OC_V764_MATRIX_ADMIN_PERM_202608080450` and `OC_V764_MATRIX_ADMIN_PERM_202608080454` were used only on null-player reversible rows. Invalid and missing admin permanent-delete rejected with `Ongeldige admin-sessie`; after the live status fix, valid permanent-delete returned `{ok:true, player_id:null, hidden_from_public:true}` and left the controlled row `blocked`.
+- Exact SQL cleanup deleted only the controlled ids `291`, `292`, and `293` with matching controlled display-name/username predicates.
+- Final cleanup check returned `allowed_usernames=51`, admin permanent residue `0`, all allowed-username matrix residue `0`, and Ice `2.8`.
 
 ### v755m apply and verification
 
