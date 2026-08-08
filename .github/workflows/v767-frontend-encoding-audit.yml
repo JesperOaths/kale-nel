@@ -1,0 +1,24 @@
+name: v767 frontend encoding audit
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: github.event.pull_request.head.ref == 'agent/v767-frontend-encoding-repair'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - name: Audit active frontend encoding
+        run: node scripts/audit-active-frontend-encoding-v767.mjs
