@@ -267,6 +267,51 @@ Static regression:
 
 Next: do not continue Toepen mutation rows or apply v755o until reviewed/approved. Continue other matrix families that are independent and safely reversible.
 
+### TOEPEN-v755o apply/proof continuation - 2026-08-08
+
+Authorized order was followed: `GEJAST_v755o_toepen_totals_consistency_guard.sql` was preflighted, applied once, and proven before Beerpong v755p production work.
+
+Preflight immediately before apply verified:
+
+- Deployed `create_toepen_game(session_token text, game_payload jsonb, site_scope_input text)` signature count `1`.
+- Owner/security shape remained `postgres` / security definer.
+- Execute grants remained `anon` and `authenticated`; direct Toepen table DML was not open to public web roles.
+- Baseline Toepen counts were `0` for `toepen_games`, `toepen_game_participants`, `toepen_rounds`, and `toepen_round_results`.
+- Controlled Toepen residue `0`, controlled push jobs `0`, Ice `2.8`.
+
+Production apply:
+
+- Applied `GEJAST_v755o_toepen_totals_consistency_guard.sql` once through the logged-in Supabase SQL editor.
+- Supabase returned success/no rows.
+
+Post-apply controlled RPC proof through the live Toepen page/session context used run label `OC_V764_TOEPEN_V755O_1786175018865` and did not record player-session tokens.
+
+- Valid Bruis participant save accepted as game id `12`: HTTP `200`, `{ok:true, already_saved:false}`.
+- Replay with the same client id returned HTTP `200`, `{ok:true, already_saved:true}` and the same game id.
+- Inconsistent participant totals rejected with HTTP `400`, `P0001`, `Toepen-eindscore komt niet overeen met rondepunten.`
+- Missing session rejected with HTTP `400`, `P0001`, `Niet ingelogd.`
+- Invalid session rejected with HTTP `400`, `P0001`, `Niet ingelogd.`
+- Temporary expired `gejast_player_sessions_v746` fixture rejected with HTTP/SQL `P0001`, `Niet ingelogd.`, then deleted exactly; stale session residue `0` and stale game residue `0`.
+- Non-participant valid Bruis session with outsider-only payload rejected with HTTP `400`, `P0001`, `Alleen een deelnemer mag dit Toepen-potje opslaan.`
+- Malformed winner/result payload rejected with HTTP `400`, `P0001`, `Alleen de rondewinnaar mag als winnaar worden opgeslagen.`
+
+SQL readback before cleanup showed exactly one controlled game row, two participants, one round, and two results; rejected calls left `0` game rows. Exact cleanup deleted only game id `12` with `client_match_id='OC_V764_TOEPEN_V755O_1786175018865_VALID'` and its child rows.
+
+Final read-only snapshot after cleanup:
+
+- `toepen_games=0`
+- `toepen_game_participants=0`
+- `toepen_rounds=0`
+- `toepen_round_results=0`
+- controlled Toepen games/rounds/stale sessions `0`
+- controlled push jobs `0`
+- Ice `2.8`
+- `create_toepen_game(text,jsonb,text)` signature count `1`
+- deployed function source contains the totals error guard
+- execute grants: `anon=EXECUTE`, `authenticated=EXECUTE`
+
+Status: PASS. The earlier forged-total correctness defect is fixed by v755o; Toepen now has live proof for auth/session rejection, participant ownership, malformed winner/result rejection, totals consistency rejection, replay/idempotency, exact cleanup, no push residue, and final zero controlled residue.
+
 ## KLAVERJAS-ONLINE-01/02/03 - 2026-08-08
 
 Inventory summary:
@@ -298,7 +343,7 @@ Read-only classification (no production writes in this section):
 
 | Surface | Classification | Current status / next action |
 | --- | --- | --- |
-| Toepen | RPC-backed + database-backed | Controlled proof ran; authorization/replay/cleanup passed, but server accepted forged participant totals. `v755o` repair prepared but not applied. Stop Toepen until reviewed. |
+| Toepen | RPC-backed + database-backed | v755o applied/proven; authorization/replay/cleanup passed and forged participant totals now reject. Final controlled residue `0`. |
 | Klaverjas online room | RPC-backed + database-backed | Room-only proof ran and passed with limitation; historical score finalization intentionally untested because `jas_games`/ratings/stats rollback is complex. |
 | Klaverjas classic score/live runtime | RPC-backed + database-backed | `create_jas_game` and live/scorer paths can affect `jas_games`, entries, rating rebuild queue/history, and summaries. Use transaction-only or preapproved aggregate restore; no production history write done. |
 | Boerenbridge | RPC-backed + database-backed | Already complete/proven in earlier BRIDGE rows. |

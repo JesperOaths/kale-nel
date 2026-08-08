@@ -4,7 +4,7 @@ Branch: `agent/v764-live-write-matrix`
 
 Draft PR: `#5` (`v764 live-write matrix security hardening`).
 
-Status: FINAL-PROOF DRAFT. Repository-side review, prepared migration hardening, and draft-PR CI are complete. The remaining blocker is production application/proof of the already reviewed `v755o` and `v755p` SQL repairs. This file does not claim those two repairs are applied yet.
+Status: FINAL-PROOF DRAFT. Repository-side review, prepared migration hardening, and draft-PR CI are complete. `v755o` Toepen is now applied/proven; the remaining production blocker is application/proof of the already reviewed `v755p` Beerpong SQL repair.
 
 ## Safety model used
 
@@ -25,6 +25,7 @@ Status: FINAL-PROOF DRAFT. Repository-side review, prepared migration hardening,
 | `GEJAST_v755l_boerenbridge_write_auth_guard.sql` | APPLIED / PASS | Missing/invalid/stale sessions rejected, owner mismatch rejected, same-owner retry works, public direct DML rejected, exact cleanup verified. |
 | `GEJAST_v755m_profile_rpc_session_token_repair.sql` | APPLIED / PASS | `get_my_profile_settings(text)` and `update_my_profile_settings(text,text,text)` preserved; ambiguous `session_token` defect fixed; invalid/missing/stale sessions rejected; Bruis update/retry/restore proven. |
 | `GEJAST_v755n_admin_allowed_username_security_guard.sql` | APPLIED / PASS | Admin functions require `admin_check_session(...).ok=true`; direct `allowed_usernames` DML revoked from `PUBLIC`, `anon`, `authenticated`; remove/permanent-delete status boundary preserved. |
+| `GEJAST_v755o_toepen_totals_consistency_guard.sql` | APPLIED / PASS | Signature preserved; missing/invalid/stale/non-participant sessions rejected; valid save/replay succeeded; inconsistent submitted totals rejected; exact cleanup restored all Toepen counts/residue to zero. |
 
 Post-cleanup baseline after applied repairs and controlled proofs:
 
@@ -35,7 +36,7 @@ Post-cleanup baseline after applied repairs and controlled proofs:
 - controlled queued push jobs `0`
 - Ice unit value `2.8`
 
-These are the latest recorded production baselines from the live matrix. They must be freshly re-read before and after applying `v755o`/`v755p`.
+These are the latest recorded production baselines from the live matrix. They must be freshly re-read before and after applying `v755p`.
 
 ## Completed matrix proof status
 
@@ -45,7 +46,7 @@ These are the latest recorded production baselines from the live matrix. They mu
 | Drinks create/replay | PASS WITH LIMITATION | Valid session create, invalid session rejection, replay unique-pending rejection, exact cleanup, Ice restored to `2.8`. | Approval/rejection not tested because it can create permanent drink history. |
 | Profile/account own-profile | PASS | Own profile get/update/retry/restore, no orphan markers. | Revisit only if Matrix Player B is created for cross-account proof. |
 | Admin allowed username | PASS | Admin session required, public direct DML revoked, controlled cleanup verified. | Admin login is still required for future protected account setup if used. |
-| Toepen save | REPAIR FIRST / AUTHORIZED TO APPLY | Missing/invalid/stale/non-participant rejected; malformed winner rejected; valid controlled save/replay/exact cleanup passed; direct REST rejected. | Correctness defect: valid participant could forge inconsistent `end_points`; reviewed `v755o` must be applied and positively re-proven before Toepen becomes PASS. |
+| Toepen save | PASS | v755o applied after preflight; missing/invalid/stale/non-participant rejected; malformed winner/result rejected; valid controlled save/replay passed; inconsistent participant totals now reject with `Toepen-eindscore komt niet overeen met rondepunten.`; final exact cleanup left all Toepen tables and controlled residue at `0`. | Direct REST table reads/writes remain closed to public web roles; no further Toepen mutation proof needed unless implementation changes. |
 | Klaverjas online room | PASS WITH LIMITATION | Invalid create/save rejected; controlled room create/save/retry/delete/cleanup passed; direct REST insert rejected by RLS. | Finished-score/history path is unsafe without transaction-only proof or approved aggregate/rating restore. `klaverjas_upsert_match_state_scoped(...)` remains a candidate auth defect. |
 | Klaverjas score/history | REPAIR FIRST | Risk classified; no unsafe live write performed. | `create_jas_game(text,jsonb)` and scoped upsert need a separate repair/transaction plan; intentionally not expanded in v764. |
 | Pikken lobby | PASS WITH LIMITATION | Host create/config retry/ready/unready/replay join/host destroy/exact cleanup; no archive/stat/push residue; Ice `2.8`. | No second valid player session available, so cross-player authorization deferred. Start/bid/vote/archive paths remain out of scope. |
@@ -57,7 +58,7 @@ These are the latest recorded production baselines from the live matrix. They mu
 | Despimarkt/Beurs | OUT OF SCOPE / LOCAL ONLY | Admin-read inventory only. | Economy/ledger rollback would need a separate reviewed plan. |
 | Match control/corrections | PASSABLE LATER | Classified as dependent on a controlled target match. | Can affect ratings/rebuild; should only run after target-domain proof/repair. |
 
-## Prepared-only repair packages not yet applied
+## Repair package status
 
 ### Toepen v755o totals consistency guard
 
@@ -75,11 +76,15 @@ Purpose:
 
 Repository review status:
 
+- APPLIED / PASS on 2026-08-08 after immediate live preflight.
 - Static regression included in `npm run verify:static`.
-- Main migration now self-contains `INSERT/UPDATE/DELETE` revokes on the four Toepen persistence tables for `PUBLIC`, `anon`, and `authenticated`.
+- Main migration self-contains `INSERT/UPDATE/DELETE` revokes on the four Toepen persistence tables for `PUBLIC`, `anon`, and `authenticated`.
 - Forward-fix ACL fallback revokes only write privileges rather than broad read privileges.
-- Production application is authorized after a fresh live signature/ACL/residue/Ice preflight.
-- Still not applied from this chat because no Supabase/database connector is available.
+- Applied once in production on 2026-08-08 after fresh live signature/ACL/residue/Ice preflight.
+- Live proof run `OC_V764_TOEPEN_V755O_1786175018865` accepted a valid Bruis participant save as game id `12`; replay returned the same game with `already_saved=true`.
+- Missing session, invalid session, stale session, non-participant payload, malformed winner/result payload, and inconsistent submitted totals all rejected.
+- Exact cleanup deleted game id `12` and child rows; final read-only snapshot showed `toepen_games=0`, `toepen_game_participants=0`, `toepen_rounds=0`, `toepen_round_results=0`, controlled Toepen residue `0`, controlled push jobs `0`, and Ice `2.8`.
+- `create_toepen_game(text,jsonb,text)` signature count stayed `1`, `anon/authenticated` execute grants remained present, and the deployed source contains the totals error guard.
 
 ### Beerpong v755p save auth/contract guard
 
@@ -114,7 +119,7 @@ Repository review status:
 
 Completed exact cleanup proofs reported zero controlled residue for:
 
-- Toepen valid fixture `OC_V764_TOEPEN_1786160409392` and defect fixture `OC_V764_TOEPEN_BAD_TOTAL_1786160497914`.
+- Toepen valid fixture `OC_V764_TOEPEN_1786160409392`, defect fixture `OC_V764_TOEPEN_BAD_TOTAL_1786160497914`, and post-repair v755o fixture `OC_V764_TOEPEN_V755O_1786175018865_VALID` / game id `12`.
 - Klaverjas room fixture `OC_V764_KLAVERJAS_ROOM_1786160836496` / room `e3832427-2a0c-4706-8d01-d9938f02093e` / lobby `5Z52W`.
 - Pikken fixture `OC_V764_PIKKEN_1786162000362` / game `8ed4b632-8243-4c9a-98e7-e07c1b43de00`.
 - Paardenrace fixture `OC_V764_PAARDENRACE_1786163249094` / room `205`.
@@ -163,9 +168,9 @@ Additional repository gates previously reported by the matrix work include:
 
 ## Remaining blockers before PR is truly final
 
-1. Fresh production preflight and apply/prove Toepen `v755o`.
-2. Fresh production preflight and apply/prove Beerpong `v755p` only after `v755o` passes.
-3. Re-read and restore all production baselines after each proof; controlled residue and controlled push jobs must end at `0`, Ice at `2.8`.
+1. Fresh production preflight and apply/prove Beerpong `v755p`.
+2. Re-read and restore all production baselines after the Beerpong proof; controlled residue and controlled push jobs must end at `0`, Ice at `2.8`.
+3. If cross-player coverage is still required, create one reusable `OC_V764_MATRIX_PLAYER_B` after protected admin login and use it only for the smallest missing probes.
 4. Resolve the release-version/cache-busting treatment for the real frontend change in `drinks_add.html` (`Ice` fallback `3` -> `2.8`) before merge.
 5. Do not expand v764 into Klaverjas finished-score/history, real push delivery, permanent badge awards, Paardenrace finish/history, or other irreversible families.
 6. Before marking the PR ready/final, run the complete final gate suite:
@@ -183,4 +188,4 @@ Additional repository gates previously reported by the matrix work include:
 
 ## Current conclusion
 
-Repository-side v764 work is ready for the remaining production database checkpoint. The two unresolved high-value families are intentionally reduced to narrow repairs: Toepen enforces totals consistency and self-contained write ACLs, while Beerpong enforces session/owner/DML/contract safety without changing rating behavior. PR `#5` remains draft and unmerged until those production applies and proofs are complete.
+Repository-side v764 work is ready for the remaining Beerpong production database checkpoint. Toepen now enforces totals consistency and self-contained write ACLs in production; Beerpong remains reduced to a narrow session/owner/DML/contract repair without changing rating behavior. PR `#5` remains draft and unmerged until the remaining Beerpong production apply/proof is complete.
