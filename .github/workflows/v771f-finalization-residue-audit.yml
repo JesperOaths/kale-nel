@@ -1,0 +1,28 @@
+name: v771f finalization residue audit
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/finalization-residue-audit-v771f.mjs'
+      - '.github/workflows/v771f-finalization-residue-audit.yml'
+      - '*.html'
+      - '*.js'
+      - '*.mjs'
+      - '*.json'
+      - '*.css'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Run finalization residue inventory
+        run: node scripts/finalization-residue-audit-v771f.mjs
