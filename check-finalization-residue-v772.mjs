@@ -23,6 +23,7 @@ const index=fs.readFileSync('index.html','utf8');
 if(!index.includes('Snelheidspoging')) failures.push('homepage must use Snelheidspoging');
 if(index.includes('Snelheids poging')) failures.push('homepage still contains Snelheids poging');
 const version=fs.readFileSync('VERSION','utf8').trim();
-if(version!=='v772') failures.push('finalization residue guard expects root VERSION v772, got '+version);
+const versionNumber=Number(String(version).replace(/^v/i,''));
+if(!Number.isFinite(versionNumber)||versionNumber<772) failures.push('finalization residue guard expects root VERSION >= v772, got '+version);
 if(failures.length){console.error('Finalization residue v772 FAILED');failures.forEach((f)=>console.error('- '+f));process.exit(1);}
 console.log('Finalization residue v772 PASS: 9 obsolete public artifacts absent, builder residue absent, node_modules ignored, and homepage Snelheidspoging copy is corrected.');

@@ -11,7 +11,7 @@ const gate=fs.readFileSync('check-beta-live-write-readiness.mjs','utf8');
 const failures=[];
 const permissionIds=(readiness.beta_gaps||[]).filter((item)=>item.status==='needs_permission').map((item)=>item.id).sort();
 const checklistIds=(checklist.items||[]).map((item)=>item.id).sort();
-if(checklist.site_version!=='v772') failures.push('live-write checklist must target v772');
+if(checklist.site_version!=='v773') failures.push('live-write checklist must target v773');
 if(permissionIds.length!==0) failures.push('finalized readiness must expose zero permission-gated gaps');
 if(checklistIds.length!==0) failures.push('completed live-write checklist must contain zero armed mutation items');
 for(const id of ['drinks_create_verify_reject','admin_mutations','profile_editing','secondary_game_save_flows','real_device_push_delivery','badge_awards']) if(checklistIds.includes(id)) failures.push(id+' must not remain armed');

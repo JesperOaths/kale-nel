@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import './check-diagnostic-self-consistency-v773.mjs';
 import './check-finalization-residue-v772.mjs';
 
 const index = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8');
