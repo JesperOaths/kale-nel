@@ -24,7 +24,6 @@
     "smoke:beta:perf": "node check-beta-performance.mjs",
     "beta:write:plan": "node check-beta-live-write-plan.mjs",
     "beta:write:readiness": "node check-beta-live-write-readiness.mjs",
-    "beta:write:drinks": "node check-beta-live-write-drinks.mjs",
     "beta:readiness": "node check-beta-readiness.mjs",
     "matrix:sql": "node scripts/matrix-harness.mjs sql",
     "matrix:cleanup-sql": "node scripts/matrix-harness.mjs cleanup-sql",

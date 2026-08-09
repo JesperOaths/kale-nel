@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* Live-write beta readiness gate.
-   This script does not mutate data. It verifies that the remaining beta-write
-   tests are explicitly approved and that required inputs are present. */
+   This script does not mutate data. It reports whether any explicitly tracked
+   live-write beta targets remain and, if so, whether their inputs are present. */
 
 import fs from 'node:fs';
 
@@ -25,12 +25,20 @@ function requirementStatus(requirement) {
   return false;
 }
 
-const rows = checklist.items.map((item) => {
+const items = Array.isArray(checklist.items) ? checklist.items : [];
+console.log(`Kale Nel live-write beta gate: ${checklist.site_version || 'unknown version'}`);
+
+if (!items.length) {
+  console.log('State: complete. No live-write beta mutation targets remain armed.');
+  console.log('No data was changed. Any future production mutation proof must be added deliberately with a new scoped approval gate.');
+  process.exit(0);
+}
+
+const rows = items.map((item) => {
   const missing = (item.requires || []).filter((requirement) => !requirementStatus(requirement));
   return { ...item, missing };
 });
 
-console.log(`Kale Nel live-write beta gate: ${checklist.site_version || 'unknown version'}`);
 console.log(`Approval: ${approved ? 'present' : `missing (${approvalName}=${approvalValue})`}`);
 if (secondaryTarget) console.log(`Secondary target: ${secondaryTarget}${allowedSecondaryTargets.has(secondaryTarget) ? '' : ' (invalid)'}`);
 console.log('');

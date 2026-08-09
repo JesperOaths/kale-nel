@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-/* Prints a sanitized, non-mutating plan for the remaining live-write beta tests.
-   This deliberately does not call mutation RPCs. It tells the operator which
-   tests are armed and what evidence/cleanup each test must produce. */
+/* Prints a sanitized, non-mutating plan for remaining live-write beta tests.
+   This deliberately does not call mutation RPCs. */
 import fs from 'node:fs';
 
 const checklist = JSON.parse(fs.readFileSync('beta-live-write-checklist.json', 'utf8'));
@@ -9,6 +8,14 @@ const target = String(process.env.GEJAST_BETA_WRITE_TARGET || 'all').trim();
 const approvalName = checklist.approval_env?.name || 'GEJAST_ALLOW_LIVE_WRITE_BETA';
 const approvalValue = checklist.approval_env?.required_value || 'I_APPROVE_LIVE_BETA_WRITES';
 const approved = process.env[approvalName] === approvalValue;
+const items = Array.isArray(checklist.items) ? checklist.items : [];
+
+if (!items.length) {
+  console.log(`Kale Nel live-write beta plan: ${checklist.site_version || 'unknown version'}`);
+  console.log('State: complete. There are no remaining live-write beta targets to plan or arm.');
+  console.log('This command changed no live data. Future mutation proof must be introduced as a new explicitly scoped checklist item.');
+  process.exit(0);
+}
 
 function hasEnv(name) {
   return String(process.env[name] || '').trim().length > 0;
@@ -67,7 +74,7 @@ function selected(item) {
   return target === 'all' || target === item.id || target === item.area;
 }
 
-const rows = checklist.items.filter(selected).map((item) => {
+const rows = items.filter(selected).map((item) => {
   const missing = (item.requires || []).filter((requirement) => !requirementStatus(requirement));
   return { ...item, missing, armed: missing.length === 0 };
 });

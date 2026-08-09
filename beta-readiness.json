@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "site_version": "live v771 / current frontend release v771",
   "last_updated": "2026-08-09",
   "status_legend": {
@@ -13,7 +13,7 @@
     "status": "verified_complete",
     "live_version": "v771",
     "frontend_release_merge": "98fbeee1e1c3622d48fbd3a1836d332244a3e43b",
-    "repository_head_at_audit": "98fbeee1e1c3622d48fbd3a1836d332244a3e43b",
+    "repository_head_at_audit": "f0e6ab9bc80cb596a6cd00ba73878777a8903c5c",
     "source": "GitHub Pages/static deployment from main plus Cloudflare admin perimeter",
     "evidence": [
       "npm run smoke:live",
@@ -21,14 +21,14 @@
       "npm run smoke:beta:extended",
       "npm run smoke:push"
     ],
-    "note": "2026-08-09 post-merge proof confirmed deployed /VERSION v771, all 35 hardened live routes healthy, truthful Rad Kiezen/gekozen copy deployed, old false persistence copy absent, and push health PASS without a send."
+    "note": "2026-08-09 post-merge proof confirmed deployed /VERSION v771, all 35 hardened live routes healthy, truthful Rad Kiezen/gekozen copy deployed, old false persistence copy absent, and push health PASS without a send. Repository-only readiness/proof work through v771d does not change the frontend deployment version."
   },
   "baseline_checks": [
     {
       "id": "static_integrity",
       "status": "verified_complete",
       "command": "npm run verify",
-      "evidence": "Current Node 24 verification passes JavaScript syntax, RPC coverage, local references, version drift, security/runtime regressions, Klaverjas/Toepen checks, Ballroom v769a, scoped live-read v770a, push runtime v770b, and canonical Beurs runtime checks."
+      "evidence": "Current Node 24 verification passes JavaScript syntax, RPC coverage, local references, version drift, security/runtime regressions, Klaverjas/Toepen checks, Ballroom v769a, scoped live-read v770a, push runtime v770b, canonical Beurs runtime checks, and the permanent v771d Drinks rollback-proof regression."
     },
     {
       "id": "klaverjas_regression",
@@ -52,7 +52,7 @@
       "id": "game_surface",
       "status": "verified_complete",
       "command": "npm run smoke:games",
-      "evidence": "Public game surfaces and guarded backend contracts pass. Existing controlled production proofs now cover the active Klaverjas, Beerpong and Boerenbridge persistence paths; Rad spin state is browser-local and its drink side effects route through the separately tracked Drinks workflow."
+      "evidence": "Public game surfaces and guarded backend contracts pass. Existing controlled production proofs now cover the active Klaverjas, Beerpong and Boerenbridge persistence paths; Rad spin state is browser-local and its drink side effects route through the separately proven Drinks workflow."
     },
     {
       "id": "beta_readonly_surfaces",
@@ -70,7 +70,7 @@
       "id": "live_write_safety_gate",
       "status": "verified_complete",
       "command": "npm run beta:write:readiness / beta:readiness",
-      "evidence": "Permissioned mutation scenarios remain explicit. Automated finalization work does not silently create game/drink/profile/admin records or send real notifications."
+      "evidence": "All 12 tracked beta-readiness categories are verified complete. The live-write checklist has zero armed mutation targets; any future consequential production mutation must be introduced deliberately with a new scoped approval gate."
     }
   ],
   "beta_gaps": [
@@ -114,10 +114,10 @@
       "id": "drinks_create_verify_reject",
       "priority": 5,
       "area": "Drinks",
-      "status": "needs_permission",
-      "proof_needed": "Remaining proof is the user-visible verify/reject lifecycle: a clearly marked controlled request appears in pending, is verified or rejected, updates permanent history/stats appropriately, preserves Ice at exactly 2.8 units, and exercises notification side effects deliberately.",
-      "next_action": "Request approval before a new controlled drink verify/reject scenario because approval/rejection creates permanent history and may queue notifications.",
-      "latest_probe": "v764 controlled drinks create/replay passed with limitation; approval/rejection was intentionally skipped because its history is permanent. Ice=2.8 and current read/push health remain green."
+      "status": "verified_complete",
+      "proof_needed": "Complete: the current v664 production lifecycle was proven end-to-end for create -> pending -> approve and create -> pending -> reject using one controlled creator and three independent verifiers, while respecting the one-pending-per-player invariant.",
+      "next_action": "No further Drinks mutation proof is required unless contract_drinks_write_v664, contract_drinks_read_v664, pending uniqueness, verification policy, history behavior, Ice units, or notification side effects change.",
+      "latest_probe": "2026-08-09 production Supabase proof LIVE_V771D_DRINKS_TRANSACTIONAL_PROOF.sql returned 10/10 PASS: approval_lifecycle, rejection_lifecycle, one_pending_invariant, scope_and_sessions, read_contract, push_safety, ice_invariant, rollback_counts, sequence_restore and controlled_residue. All controlled Drinks/session rows were rolled back, exact table counts and owned sequence states were restored, no controlled session residue remained, no push-queue RPC was called, and Ice remained exactly 2.8."
     },
     {
       "id": "admin_mutations",

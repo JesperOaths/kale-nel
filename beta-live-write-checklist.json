@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "site_version": "v771",
   "approval_env": {
     "name": "GEJAST_ALLOW_LIVE_WRITE_BETA",
@@ -11,18 +11,5 @@
     "GEJAST_BETA_PLAYER2_NAME",
     "GEJAST_BETA_PLAYER2_PIN"
   ],
-  "items": [
-    {
-      "id": "drinks_create_verify_reject",
-      "area": "Drinks",
-      "requires": [
-        "player1",
-        "player2",
-        "live_write_approval"
-      ],
-      "command": "npm run beta:write:drinks",
-      "intent": "Create one clearly marked beta drink request, prove pending visibility and rejection flow, inspect resulting history, and attempt supported cleanup of the pending record.",
-      "risk": "Creates drink/request history and may queue verification notifications. Rejection/history can be permanent; do not run casually."
-    }
-  ]
+  "items": []
 }
