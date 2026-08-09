@@ -1,6 +1,6 @@
 {
   "version": 7,
-  "site_version": "live v774 / current frontend release v774",
+  "site_version": "release candidate v775 / live v774",
   "last_updated": "2026-08-09",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -21,7 +21,8 @@
       "npm run smoke:beta:extended",
       "npm run smoke:push"
     ],
-    "note": "2026-08-09 v774 public-edge proof PASS after production browser acceptance release: live VERSION v774, 35/35 critical routes healthy, admin perimeter preserved, deployed Beerpong optional RPC promise handling fixed, cross-origin analytics uses same-origin-gated Beacon plus keepalive fetch, and login copy is production-clean."
+    "note": "v775 release candidate: remove unreferenced public geolocation diagnostics and redundant public push-beta console; keep targeted push operations behind the existing admin perimeter and point test notifications to the normal Drinks verification UI. Current tree and full Git history audits found zero high-confidence private-secret exposures. Live remains v774 until post-merge edge proof.",
+    "release_candidate_version": "v775"
   },
   "baseline_checks": [
     {
