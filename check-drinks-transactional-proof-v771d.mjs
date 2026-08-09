@@ -51,7 +51,19 @@ for (const legacy of ['contract_drinks_write_v663', 'contract_drinks_write_v391'
   if (code.includes(legacy)) failures.push(`proof must not fall back to legacy contract ${legacy}`);
 }
 
-// Both lifecycle directions must be exercised using independent valid sessions.
+// Production enforces one pending drink per player. The controlled creator must therefore
+// have no pre-existing pending row and the second fixture must be created only after the first
+// lifecycle reaches a terminal approved/verified state.
+requireCode(/not\s+exists\s*\(\s*select\s+1[\s\S]*?from\s+public\.drink_events\s+e[\s\S]*?e\.player_id\s*=\s*p\.id[\s\S]*?lower\s*\(\s*coalesce\s*\(\s*e\.status\s*,\s*'pending'\s*\)\s*\)\s*=\s*'pending'/i, 'creator exclusion for existing pending drinks');
+requireText("v771d proof requires one active friends-scope player with no existing pending drink", 'free-creator hard stop');
+requireText("creator still has a pending drink after approval closure", 'post-approval pending hard stop');
+const approveClosedIndex = code.indexOf("if v_status not in ('verified','approved')");
+const rejectCreateIndex = code.indexOf('v_create_reject:=public.contract_drinks_write_v664');
+if (approveClosedIndex < 0 || rejectCreateIndex < 0 || rejectCreateIndex < approveClosedIndex) {
+  failures.push('rejection fixture must be created only after approval lifecycle closes');
+}
+
+// Both lifecycle directions must be exercised using independent valid verifier sessions.
 requireText("'create_event'", 'create_event action');
 requireText("'verify_event'", 'verify_event action');
 requireText("'approved',true", 'approval vote');
@@ -63,6 +75,7 @@ requireText("v_status in ('verified','approved')", 'approved terminal-state proo
 requireText("v_status in ('rejected','cancelled')", 'rejected terminal-state proof');
 requireText("position('recent_verified' in v_read::text)", 'final approved read-contract evidence');
 requireText("position('recent_rejected' in v_read::text)", 'final rejected read-contract evidence');
+requireText("('one_pending_invariant','PASS'", 'one-pending invariant PASS row');
 
 // Scope/session safety and complete rollback residue checks.
 requireText("'friends'", 'friends scope fixture');
