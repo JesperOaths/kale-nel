@@ -1,6 +1,6 @@
 {
   "version": 4,
-  "site_version": "live v770 / current frontend release v770",
+  "site_version": "release v771 / post-merge live proof pending",
   "last_updated": "2026-08-09",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -11,7 +11,7 @@
   },
   "deployment_identity": {
     "status": "verified_complete",
-    "live_version": "v770",
+    "live_version": "v771",
     "frontend_release_merge": "8d85700519b85bbd1581395f26df53afeb0895e6",
     "repository_head_at_audit": "6c9ee68add07fcd5e45d22a091075a6ad0341ef7",
     "source": "GitHub Pages/static deployment from main plus Cloudflare admin perimeter",
@@ -21,7 +21,7 @@
       "npm run smoke:beta:extended",
       "npm run smoke:push"
     ],
-    "note": "2026-08-09 live /VERSION reports v770. Main may contain later SQL-only, CI-only, or repository-cleanup commits without requiring a frontend VERSION bump."
+    "note": "v771 frontend release candidate. The v770 production evidence remains the pre-merge baseline; after merge, hardened live health must confirm deployed /VERSION v771 before this note is finalized."
   },
   "baseline_checks": [
     {
