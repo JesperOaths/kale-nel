@@ -58,6 +58,9 @@ jobs:
       - name: Ballroom safe-read v769a repair boundary
         run: node check-ballroom-safe-read-repair-v769a.mjs
 
+      - name: Stale repair-copy v770 regression
+        run: node check-stale-repair-copy-v770.mjs
+
       - name: GitHub Actions Node24 runtime pins
         run: node check-github-actions-node24-runtime.mjs
 
