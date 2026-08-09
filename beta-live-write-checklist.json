@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "site_version": "v770",
   "approval_env": {
     "name": "GEJAST_ALLOW_LIVE_WRITE_BETA",
@@ -10,8 +10,7 @@
     "GEJAST_BETA_PLAYER1_PIN",
     "GEJAST_BETA_PLAYER2_NAME",
     "GEJAST_BETA_PLAYER2_PIN",
-    "GEJAST_ADMIN_SESSION_TOKEN",
-    "GEJAST_BETA_WRITE_TARGET"
+    "GEJAST_ADMIN_SESSION_TOKEN"
   ],
   "items": [
     {
@@ -46,30 +45,6 @@
       ],
       "intent": "Trigger one known simple badge criterion through a controlled outcome and verify profile/leaderboard rendering.",
       "risk": "May create permanent badge and supporting game/drink history. No generic badge mutation should run without a target-specific plan."
-    },
-    {
-      "id": "secondary_game_save_flows",
-      "area": "Beerpong, Boerenbridge, Rad",
-      "requires": [
-        "player1",
-        "player2",
-        "secondary_target",
-        "live_write_approval"
-      ],
-      "command": "npm run beta:write:secondary",
-      "intent": "Run exactly one explicitly selected remaining game write: GEJAST_BETA_WRITE_TARGET=beerpong, boerenbridge, or rad. Klaverjas is already proven and is excluded.",
-      "risk": "Creates a clearly marked game/spin/history record and may affect stats/ratings/odds. The harness does not automatically erase audited history."
-    },
-    {
-      "id": "profile_editing",
-      "area": "Profiles",
-      "requires": [
-        "player1",
-        "live_write_approval"
-      ],
-      "command": "npm run beta:write:profile",
-      "intent": "Capture original display/avatar values, apply one temporary display-name-only marker, verify it, restore the original values in finally, and verify restoration.",
-      "risk": "Temporarily changes one player's visible display name. Avatar data is carried through unchanged. A restoration failure is a hard stop requiring manual restoration before further mutation testing."
     }
   ]
 }
