@@ -1,0 +1,60 @@
+name: v770b Node24 push dispatcher proof
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  prove:
+    if: github.event.pull_request.head.ref == 'agent/v770b-node24-push-dispatcher'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v5
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Report runtime
+        run: node --version && npm --version
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Dependency security
+        run: npm audit --audit-level=high
+      - name: Mocked dispatcher runtime proof
+        run: node check-web-push-node24-runtime-v770b.mjs
+      - name: Validate real dispatcher secrets and libraries without running queue
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          WEB_PUSH_VAPID_PUBLIC_KEY: ${{ secrets.WEB_PUSH_VAPID_PUBLIC_KEY }}
+          WEB_PUSH_VAPID_PRIVATE_KEY: ${{ secrets.WEB_PUSH_VAPID_PRIVATE_KEY }}
+          WEB_PUSH_VAPID_SUBJECT: ${{ secrets.WEB_PUSH_VAPID_SUBJECT }}
+          WEB_PUSH_WORKER_ID: node24-secret-validation
+          WEB_PUSH_REQUIRE_EXPLICIT_TARGET: 'true'
+          WEB_PUSH_TARGET_SUBSCRIPTION_ID: '1'
+          WEB_PUSH_DRY_RUN: 'true'
+          WEB_PUSH_MAX_JOBS: '1'
+        run: |
+          node <<'NODE'
+          const d=require('./web_push_dispatcher.js');
+          const options=d.buildOptions();
+          d.createDispatcher(options);
+          console.log('Node24 dispatcher construction with configured secrets PASS; dispatcher.run() intentionally not called.');
+          NODE
+      - name: Full repository verification
+        run: npm run verify
+      - name: Live v770 read-only deployment health
+        env:
+          GEJAST_EXPECTED_VERSION: v770
+          GEJAST_DEPLOY_WAIT_SECONDS: '30'
+        run: npm run smoke:live
+      - name: Push health without send
+        run: npm run smoke:push
