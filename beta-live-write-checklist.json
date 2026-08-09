@@ -1,6 +1,6 @@
 {
-  "version": 5,
-  "site_version": "v770",
+  "version": 6,
+  "site_version": "v771",
   "approval_env": {
     "name": "GEJAST_ALLOW_LIVE_WRITE_BETA",
     "required_value": "I_APPROVE_LIVE_BETA_WRITES"
@@ -9,8 +9,7 @@
     "GEJAST_BETA_PLAYER1_NAME",
     "GEJAST_BETA_PLAYER1_PIN",
     "GEJAST_BETA_PLAYER2_NAME",
-    "GEJAST_BETA_PLAYER2_PIN",
-    "GEJAST_ADMIN_SESSION_TOKEN"
+    "GEJAST_BETA_PLAYER2_PIN"
   ],
   "items": [
     {
@@ -24,16 +23,6 @@
       "command": "npm run beta:write:drinks",
       "intent": "Create one clearly marked beta drink request, prove pending visibility and rejection flow, inspect resulting history, and attempt supported cleanup of the pending record.",
       "risk": "Creates drink/request history and may queue verification notifications. Rejection/history can be permanent; do not run casually."
-    },
-    {
-      "id": "admin_mutations",
-      "area": "Admin",
-      "requires": [
-        "admin_session",
-        "live_write_approval"
-      ],
-      "intent": "Run one separately chosen reversible/admin-audited mutation only after its exact target and rollback are reviewed.",
-      "risk": "Writes admin/audit/business records. No generic multi-admin mutation harness is considered armed."
     }
   ]
 }

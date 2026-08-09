@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "site_version": "live v771 / current frontend release v771",
   "last_updated": "2026-08-09",
   "status_legend": {
@@ -123,9 +123,10 @@
       "id": "admin_mutations",
       "priority": 6,
       "area": "Admin",
-      "status": "needs_permission",
-      "proof_needed": "Claims, Despimarkt administration, wallet changes, upload/release controls and other admin mutations must alter only intended records and leave expected audit evidence.",
-      "next_action": "Read-only admin protection is proven. Request approval before each controlled admin mutation scenario."
+      "status": "verified_complete",
+      "proof_needed": "Complete for the production safety boundary: all audited active admin/operator mutation paths carry an admin session/auth boundary, the shared secureWrite path injects both the current admin session token and selected Friends/Family scope, and the outer admin host remains protected by the GitHub OAuth perimeter. Destructive operator business outcomes are not manufactured merely for beta proof.",
+      "next_action": "No generic admin mutation run is required. Keep the mutation-perimeter regression, protected-admin HTTP 401 checks, session validation, scope injection, and domain-specific repair/write guards current. Reopen only when a new admin mutation path is introduced or an existing guard changes.",
+      "latest_probe": "v771c read-only inventory scanned 61 admin/operator candidates: 22 mutation-bearing files, 0 suspicious unguarded paths. Permanent check-admin-mutation-perimeter-v771c.mjs passed in normal CI and verifies shared admin_secure_write_v356 session/scope injection plus key direct-action page boundaries."
     },
     {
       "id": "badge_awards",
