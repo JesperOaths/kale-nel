@@ -6,8 +6,8 @@ const requiredNode24 = [
   '.github/workflows/dependency-security.yml',
   '.github/workflows/verify.yml',
   '.github/workflows/live-deployment-health.yml',
+  '.github/workflows/web-push-dispatcher.yml',
 ];
-const productionException = '.github/workflows/web-push-dispatcher.yml';
 const failures = [];
 
 for (const file of requiredNode24) {
@@ -22,21 +22,14 @@ for (const name of fs.readdirSync('.github/workflows')) {
   const text = fs.readFileSync(file, 'utf8');
   for (const match of text.matchAll(/node-version:\s*['"]?(\d+)(?:\.\d+)?['"]?/g)) {
     const major = Number(match[1]);
-    if (Number.isFinite(major) && major < 24 && file !== productionException) {
-      failures.push(`${file} contains unsupported ${match[0]}`);
-    }
+    if (Number.isFinite(major) && major < 24) failures.push(`${file} contains unsupported ${match[0]}`);
   }
 }
 
-const dispatcher = fs.readFileSync(productionException, 'utf8');
-if (!/node-version:\s*['"]20['"]/.test(dispatcher)) {
-  failures.push(`${productionException} production exception must remain explicitly pinned to Node 20 until its isolated migration is approved`);
-}
-
 if (failures.length) {
-  console.error('Node 24 CI runtime policy failed:');
+  console.error('Node 24 runtime policy failed:');
   failures.forEach((failure) => console.error(`- ${failure}`));
   process.exit(1);
 }
 
-console.log('Node 24 CI runtime policy PASS; production web-push dispatcher remains isolated on Node 20.');
+console.log('Node 24 runtime policy PASS across all active workflows, including production web push.');
