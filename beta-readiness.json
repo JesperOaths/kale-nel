@@ -1,7 +1,7 @@
 {
-  "version": 2,
-  "site_version": "live v761 / main 82476d8ae87fa9b41cd7a53e6aab42a3a32baaa2",
-  "last_updated": "2026-07-27",
+  "version": 3,
+  "site_version": "live v770 / current frontend release v770",
+  "last_updated": "2026-08-09",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
     "ready_to_test": "Code exists and surface checks pass, but real beta proof is still needed.",
@@ -11,65 +11,66 @@
   },
   "deployment_identity": {
     "status": "verified_complete",
-    "live_version": "v761",
-    "deployed_sha": "82476d8ae87fa9b41cd7a53e6aab42a3a32baaa2",
-    "source": "GitHub Pages generated deployment from main",
+    "live_version": "v770",
+    "frontend_release_merge": "8d85700519b85bbd1581395f26df53afeb0895e6",
+    "repository_head_at_audit": "6c9ee68add07fcd5e45d22a091075a6ad0341ef7",
+    "source": "GitHub Pages/static deployment from main plus Cloudflare admin perimeter",
     "evidence": [
-      "DEPLOYMENT_DRIFT_DIAGNOSIS_v758.md",
-      "RECOVERY_DEPLOYMENT_v758.md",
-      "LIVE_DEPLOYMENT_PROOF_v758.md",
-      "deployment_forensics_v761/"
+      "npm run smoke:live",
+      "npm run smoke:beta:read",
+      "npm run smoke:beta:extended",
+      "npm run smoke:push"
     ],
-    "note": "The original v758 mismatch facts are stale; current live origin and main agree as v761. No downgrade to v758 was performed."
+    "note": "2026-08-09 live /VERSION reports v770. Main may contain later SQL-only, CI-only, or repository-cleanup commits without requiring a frontend VERSION bump."
   },
   "baseline_checks": [
     {
       "id": "static_integrity",
       "status": "verified_complete",
-      "command": "npm.cmd run verify",
-      "evidence": "Passed for v761/current main; version drift, RPC coverage, local refs, homepage owner fixes, Toepen checks, and JS syntax pass."
+      "command": "npm run verify",
+      "evidence": "Current Node 24 verification passes JavaScript syntax, RPC coverage, local references, version drift, security/runtime regressions, Klaverjas/Toepen checks, Ballroom v769a, scoped live-read v770a, push runtime v770b, and canonical Beurs runtime checks."
     },
     {
       "id": "klaverjas_regression",
       "status": "verified_complete",
-      "command": "npm.cmd run verify:klaverjas",
-      "evidence": "Online Klaverjas regression smoke ok."
+      "command": "npm run verify:klaverjas",
+      "evidence": "Klaverjas static/live contracts are covered through v755r/v755s plus frontend v765-v769 regressions, including live start, scope-safe reads, finished-game handoff and round-scorer polish."
     },
     {
       "id": "live_routes",
       "status": "verified_complete",
-      "command": "npm.cmd run smoke:live",
-      "evidence": "Production routes pass against live v761; live /VERSION and representative file hashes match Git HEAD 82476d8."
+      "command": "npm run smoke:live",
+      "evidence": "2026-08-09 hardened production health reports live VERSION v770 and 35/35 critical public routes healthy; apex admin redirects to the protected admin host and unauthenticated admin returns 401."
     },
     {
       "id": "push_surface",
       "status": "verified_complete",
-      "command": "npm.cmd run smoke:push",
-      "evidence": "Push surface smoke passes; browser/Kalenel-origin notification popup was proven earlier. Backend user-targeted delivery still needs a logged-in subscribed device."
+      "command": "npm run smoke:push",
+      "evidence": "Real targeted push delivery/click was proven in the v763 controlled proof. The production scheduled dispatcher was later migrated to Node 24 and scheduled run #1760 on merge 656886435b9c4dfa5c9cb3b5d9b99af112238b16 completed successfully; current push health passes."
     },
     {
       "id": "game_surface",
       "status": "verified_complete",
-      "command": "npm.cmd run smoke:games",
-      "evidence": "Public Pikken/Paardenrace probes pass; token-backed two-player mutation flows remain permission/input-gated."
+      "command": "npm run smoke:games",
+      "evidence": "Public game surfaces and guarded backend contracts pass. Controlled v764/v765/v766 proofs established several authenticated write boundaries; remaining irreversible or user-visible mutation scenarios stay separately permission-gated below."
     },
     {
       "id": "beta_readonly_surfaces",
       "status": "verified_complete",
-      "command": "npm.cmd run smoke:beta:read && npm.cmd run smoke:beta:extended",
-      "evidence": "Base beta read-only routes and extended stats/ladder/scope/admin-observability routes return HTTP 200."
+      "command": "npm run smoke:beta:read && npm run smoke:beta:extended",
+      "evidence": "2026-08-09 base checker passes 43 routes. Extended checker passes 6 stats, 4 ladder, 5 scope routes and 5 protected admin-observability routes; unauthenticated admin pages correctly return HTTP 401 on admin.kalenel.nl."
     },
     {
       "id": "performance_beta_pass",
       "status": "verified_complete",
-      "command": "npm.cmd run smoke:beta:perf",
-      "evidence": "Performance probe completed across 8 routes; largest same-origin assets remain known/static and no blocking performance failure was found."
+      "command": "npm run smoke:beta:perf",
+      "evidence": "2026-08-09 performance probe passes 8 routes. Slowest measured HTML response was homepage 113 ms; largest HTML 109 KB. Largest discovered same-origin asset was kale9goed-scene.png at 415 KB. No configured route/HTML budget was exceeded."
     },
     {
       "id": "live_write_safety_gate",
       "status": "verified_complete",
-      "command": "npm.cmd run beta:write:readiness / beta:readiness",
-      "evidence": "Readiness gate lists all live-write tests and refuses to arm without explicit scenario approval, beta player inputs, admin session, or real device readiness."
+      "command": "npm run beta:write:readiness / beta:readiness",
+      "evidence": "Permissioned mutation scenarios remain explicit. Automated finalization work does not silently create game/drink/profile/admin records or send real notifications."
     }
   ],
   "beta_gaps": [
@@ -77,101 +78,107 @@
       "id": "real_device_push_delivery",
       "priority": 1,
       "area": "Push notifications",
-      "status": "blocked_external",
-      "proof_needed": "Partially proven: valid temporary player session, browser notification permission, service worker, push subscription, backend sync/presence, and exactly one queue_test_web_push queued_count=1 all passed. Remaining proof requires dispatcher delivery/click evidence.",
-      "next_action": "Run web_push_dispatcher.js with SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, WEB_PUSH_VAPID_PUBLIC_KEY, and WEB_PUSH_VAPID_PRIVATE_KEY, or provide production dispatcher run evidence, then verify OS notification delivery/click handling.",
-      "latest_probe": "2026-07-27: Temporary player AutoV761PushDevice_202607270136/player 159 queued one self_test push job 21 from ready_actionable browser. Dispatcher env names were missing locally, so delivery was blocked. Job/subscription/session cleaned; player deactivated and PIN/session cleared. Evidence PUSH_V761_REAL_DEVICE_PROOF_2026-07-27.md."
+      "status": "verified_complete",
+      "proof_needed": "Complete: subscription, targeted queueing, dispatcher provider acceptance, operating-system notification display and click handling were proven in the controlled v763 push proof; production dispatcher runtime/schedule health is also current.",
+      "next_action": "No push-delivery action required unless push code, VAPID configuration, service worker handling or dispatcher contracts change.",
+      "latest_probe": "2026-08-09: scheduled dispatcher run #1760 executed on Node 24.18.0 from merge 656886435b9c4dfa5c9cb3b5d9b99af112238b16 and completed successfully with no queued jobs. Earlier targeted proof used subscription 357 / job 24; provider accepted sent=1 and the notification/click was observed."
     },
     {
       "id": "toepen_backend_live",
       "priority": 2,
       "area": "Toepen",
       "status": "verified_complete",
-      "proof_needed": "Complete: Toepen SQL backend applied and live-proven in friends and family scopes, including canonical login_player sessions, toep+fold saves, duplicate-save idempotency, history/vault/stat output, invalid token rejection, wrong-player rejection, cross-scope isolation, and cleanup evidence.",
-      "next_action": "No Toepen action required unless future frontend/backend changes alter the contract. Evidence: TOEPEN_V761_LIVE_PROOF_2026-07-27.md.",
-      "latest_probe": "2026-07-27: Applied v755d creator/scope guard, v755e admin reset compatibility, and v755f login session bridge. Controlled friends game_id=1 and family game_id=2 saved/retried/proven, then controlled games deleted and temp players 151-158 deactivated with PIN/session material cleared."
+      "proof_needed": "Complete: Toepen SQL backend applied and live-proven in friends and family scopes, including canonical login sessions, toep/fold saves, duplicate-save idempotency, history/vault/stat output, invalid-token rejection, wrong-player rejection, cross-scope isolation and cleanup evidence.",
+      "next_action": "No Toepen action required unless future frontend/backend changes alter the contract.",
+      "latest_probe": "Controlled friends/family write proof and later v755o totals/auth guard remain covered by current static regression."
     },
     {
       "id": "admin_host_security",
       "priority": 3,
       "area": "Admin",
-      "status": "blocked_external",
-      "proof_needed": "Blocked externally: admin.kalenel.nl DNS does not resolve and apex https://kalenel.nl/admin.html still returns HTTP 200 with admin HTML. Cloudflare Access/default-deny is not proven/configured.",
-      "next_action": "Use Cloudflare/DNS account access to create admin.kalenel.nl, protect it with Access/default-deny, split/route admin static pages behind that perimeter, then re-prove unauthenticated block and authenticated access.",
-      "latest_probe": "2026-07-27: Resolve-DnsName admin.kalenel.nl failed; https://kalenel.nl/admin.html HEAD/GET returned 200; no local CLOUDFLARE/CF_/KALENEL env names found. Evidence ADMIN_PERIMETER_V761_PROOF_2026-07-27.md."
+      "status": "verified_complete",
+      "proof_needed": "Complete: public admin entry redirects to admin.kalenel.nl; unauthenticated admin-host access is denied; GitHub OAuth outer allowlist and Supabase username/password/TOTP inner gate protect the admin surface.",
+      "next_action": "Keep apex redirect, admin 401/security headers and gate routing in live regression. Reopen only if Cloudflare Worker/DNS/admin authentication changes.",
+      "latest_probe": "2026-08-09: hardened live checker sees apex /admin.html HTTP 302 to admin.kalenel.nl and admin perimeter HTTP 401 with build v762. Base/extended beta read-only checks treat protected admin routes as expected 401."
     },
     {
       "id": "boerenbridge_admin_contracts",
       "priority": 4,
       "area": "Boerenbridge",
       "status": "verified_complete",
-      "proof_needed": "Complete for read-only/authenticated vault contract: live Boerenbridge vault loads under admin browser session, friends/family data RPCs return current rows, valid admin audit returns five checks, invalid admin audit rejects after v755g guard, and no rebuild/write action was run.",
-      "next_action": "No read-only vault action required. Any Boerenbridge rebuild/cache mutation remains permissioned separately.",
-      "latest_probe": "2026-07-27: Applied GEJAST_v755g_boerenbridge_admin_audit_guard.sql after invalid admin token was accepted by admin_get_boerenbridge_shared_stats_audit_v643. Reproof passed; evidence BOERENBRIDGE_V761_VAULT_PROOF_2026-07-27.md."
+      "proof_needed": "Complete for read-only/authenticated vault contract: live Boerenbridge vault and scope-specific data/audit paths were proven, including invalid-admin rejection after the v755g guard.",
+      "next_action": "No read-only vault action required. Any rebuild/cache mutation remains permissioned separately.",
+      "latest_probe": "Existing v755g audit-guard proof remains covered by current verification; current Boerenbridge public/live routes return HTTP 200."
     },
     {
       "id": "drinks_create_verify_reject",
       "priority": 5,
       "area": "Drinks",
       "status": "needs_permission",
-      "proof_needed": "A clearly marked beta drink request appears in pending, can be verified/rejected, updates history/stats, preserves Ice at exactly 2.8 units, and queues notifications.",
-      "next_action": "Ask approval before creating a beta test drink request."
+      "proof_needed": "Remaining proof is the user-visible verify/reject lifecycle: a clearly marked controlled request appears in pending, is verified or rejected, updates permanent history/stats appropriately, preserves Ice at exactly 2.8 units, and exercises notification side effects deliberately.",
+      "next_action": "Request approval before a new controlled drink verify/reject scenario because approval/rejection creates permanent history and may queue notifications.",
+      "latest_probe": "v764 controlled drinks create/replay passed with limitation; approval/rejection was intentionally skipped because its history is permanent. Ice=2.8 and current read/push health remain green."
     },
     {
       "id": "admin_mutations",
       "priority": 6,
       "area": "Admin",
       "status": "needs_permission",
-      "proof_needed": "Claims, Despimarkt admin, wallet mutation, upload checklist, and release tools mutate only intended records and log/audit correctly.",
-      "next_action": "Run read-only admin dashboards first; ask approval before each reversible mutation."
+      "proof_needed": "Claims, Despimarkt administration, wallet changes, upload/release controls and other admin mutations must alter only intended records and leave expected audit evidence.",
+      "next_action": "Read-only admin protection is proven. Request approval before each controlled admin mutation scenario."
     },
     {
       "id": "badge_awards",
       "priority": 7,
       "area": "Badges",
       "status": "needs_permission",
-      "proof_needed": "Known badge criteria trigger after controlled game/drink outcomes and render on profiles/leaderboards.",
-      "next_action": "Ask approval before controlled game/drink outcome scenarios that create badge records."
+      "proof_needed": "Known badge criteria must be triggered by controlled game/drink outcomes and then render correctly on profiles/leaderboards without unintended awards.",
+      "next_action": "Request approval before controlled outcomes that create badge or underlying game/drink records."
     },
     {
       "id": "scope_isolation",
       "priority": 8,
       "area": "Family/friends scope",
       "status": "verified_complete",
-      "proof_needed": "Family and friends data stay isolated across login, games, stats, profiles, admin, and exclusions.",
-      "next_action": "Keep extended read-only scope routes and login-name partition checks in regression; require permission before cross-scope mutation scenarios."
+      "proof_needed": "Complete: Family and Friends stay isolated across login/data surfaces, and current scoped live-summary/homepage signatures preserve the requested scope.",
+      "next_action": "Keep read-only scope routes and scoped live-read contracts in regression; require permission before future cross-scope mutation scenarios.",
+      "latest_probe": "v770a production post-apply proof returned HTTP 200 for current scoped frontend signatures in friends/family and preserved null-session viewer isolation. Extended scope routes passed again on 2026-08-09."
     },
     {
       "id": "secondary_game_save_flows",
       "priority": 9,
       "area": "Klaverjas, Beerpong, Boerenbridge, Rad",
       "status": "needs_permission",
-      "proof_needed": "Save/spin flows persist and update vault/history/stats/odds as intended.",
-      "next_action": "Ask approval before clearly marked beta save/spin tests that write live game records."
+      "proof_needed": "Klaverjas save/live paths are now strongly proven. Remaining end-to-end controlled persistence/side-effect proof is still needed for the unproven portions of Beerpong, Boerenbridge and Rad save/spin flows.",
+      "next_action": "Do not repeat Klaverjas proof. Request approval only for the remaining clearly marked Beerpong/Boerenbridge/Rad mutation scenarios.",
+      "latest_probe": "Klaverjas v755r/v755s plus v765-v769 are production/static proven. v764 Beerpong guard and room-level secondary-game checks passed, but not every irreversible history/rating/odds side effect was exercised."
     },
     {
       "id": "profile_editing",
       "priority": 10,
       "area": "Profiles",
       "status": "needs_permission",
-      "proof_needed": "Display name and avatar update, persist, and render safely across profile/leaderboard/game rows.",
-      "next_action": "Ask approval before changing a real beta profile display name or avatar."
+      "proof_needed": "A controlled display-name/avatar edit must persist and render safely across profile, leaderboard and game surfaces without altering an unintended user.",
+      "next_action": "Request approval before changing a real or controlled beta profile display name/avatar.",
+      "latest_probe": "v764 profile/session repair/auth proof passed, but that is not equivalent to a complete real display-name/avatar edit lifecycle."
     },
     {
       "id": "stats_elo_predictions",
       "priority": 11,
       "area": "Stats/ELO/predictions",
       "status": "verified_complete",
-      "proof_needed": "Stats and prediction widgets appear only in intended slots and use current SQL data.",
-      "next_action": "Keep extended stats/ladder smoke in regression and revisit only if a page adds a new stats mount."
+      "proof_needed": "Stats and prediction widgets appear only in intended slots and read current scoped/backend data.",
+      "next_action": "Keep extended stats/ladder smoke in regression and revisit only when a new stats mount or rating contract is introduced.",
+      "latest_probe": "2026-08-09 extended read-only audit passed six stats pages and four ladder pages."
     },
     {
       "id": "analytics_observability",
       "priority": 12,
       "area": "Analytics/admin observability",
       "status": "verified_complete",
-      "proof_needed": "Admin analytics and health pages load without public data leakage; mutation/admin-only effects remain gated.",
-      "next_action": "Keep extended admin observability smoke in regression; fix public admin-host exposure separately."
+      "proof_needed": "Admin analytics and observability surfaces must remain behind the admin perimeter and must not leak their HTML/data to unauthenticated public requests.",
+      "next_action": "Keep protected-admin 401 expectations in both base and extended read-only regression.",
+      "latest_probe": "2026-08-09 extended audit confirmed admin_system_health, admin_ops_observability, admin_analytics, admin_deployment_verification and admin_runtime_verification all return expected unauthenticated HTTP 401 on admin.kalenel.nl."
     }
   ]
 }

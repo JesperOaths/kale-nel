@@ -3,6 +3,7 @@
    Verifies stats, ladder, scope, and admin observability pages without login or mutation. */
 
 const baseUrl = process.env.GEJAST_LIVE_BASE_URL || 'https://kalenel.nl';
+const adminBaseUrl = process.env.GEJAST_ADMIN_BASE_URL || 'https://admin.kalenel.nl';
 const timeoutMs = Number(process.env.GEJAST_BETA_SURFACE_TIMEOUT_MS || 15000);
 
 const checks = [
@@ -21,11 +22,11 @@ const checks = [
   { area: 'scope', path: '/familie/leaderboard.html', text: /leaderboard|ranglijst|familie/i },
   { area: 'scope', path: '/profiles.html?scope=friends', text: /profiel|profiles|spelers/i },
   { area: 'scope', path: '/profiles.html?scope=family', text: /profiel|profiles|spelers/i },
-  { area: 'adminObservability', path: '/admin_system_health.html', text: /health|systeem|admin/i },
-  { area: 'adminObservability', path: '/admin_ops_observability.html', text: /observability|ops|admin/i },
-  { area: 'adminObservability', path: '/admin_analytics.html', text: /analytics|bezoekers|admin/i },
-  { area: 'adminObservability', path: '/admin_deployment_verification.html', text: /deployment|verification|admin/i },
-  { area: 'adminObservability', path: '/admin_runtime_verification.html', text: /runtime|verification|admin/i },
+  { area: 'adminObservability', path: '/admin_system_health.html', protected: true },
+  { area: 'adminObservability', path: '/admin_ops_observability.html', protected: true },
+  { area: 'adminObservability', path: '/admin_analytics.html', protected: true },
+  { area: 'adminObservability', path: '/admin_deployment_verification.html', protected: true },
+  { area: 'adminObservability', path: '/admin_runtime_verification.html', protected: true },
 ];
 
 const badTextPatterns = [
@@ -42,14 +43,14 @@ async function fetchWithTimeout(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(url, { cache: 'no-store', signal: controller.signal });
+    return await fetch(url, { cache: 'no-store', redirect: 'manual', signal: controller.signal });
   } finally {
     clearTimeout(timer);
   }
 }
 
-function urlFor(path) {
-  const url = new URL(path, baseUrl);
+function urlFor(check) {
+  const url = new URL(check.path, check.protected ? adminBaseUrl : baseUrl);
   url.searchParams.set('beta_extended_smoke', String(Date.now()));
   return url.toString();
 }
@@ -58,14 +59,22 @@ const failures = [];
 const counts = new Map();
 
 for (const check of checks) {
-  const url = urlFor(check.path);
+  const url = urlFor(check);
   try {
     const response = await fetchWithTimeout(url);
     const text = await response.text();
     const bad = badTextPatterns.find((pattern) => pattern.test(text));
+    counts.set(check.area, (counts.get(check.area) || 0) + 1);
+
+    if (check.protected) {
+      console.log(`${check.area}: ${check.path} HTTP ${response.status}${response.status === 401 ? ' expected-protected-401' : ''}${bad ? ` bad-text:${bad}` : ''}`);
+      if (response.status !== 401) failures.push(`${check.path} protected admin route returned HTTP ${response.status}; expected HTTP 401`);
+      if (bad) failures.push(`${check.path} protected response contains obvious failure text matching ${bad}`);
+      continue;
+    }
+
     const hasExpectedText = check.text.test(text);
     const okStatus = response.status >= 200 && response.status < 400;
-    counts.set(check.area, (counts.get(check.area) || 0) + 1);
     console.log(`${check.area}: ${check.path} HTTP ${response.status}${hasExpectedText ? '' : ' missing-expected-text'}${bad ? ` bad-text:${bad}` : ''}`);
     if (!okStatus) failures.push(`${check.path} returned HTTP ${response.status}`);
     if (!hasExpectedText) failures.push(`${check.path} did not contain expected ${check.area} text`);
@@ -83,4 +92,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`Extended beta read-only surfaces ok. ${Array.from(counts.entries()).map(([area, count]) => `${area}=${count}`).join(', ')}. Base=${baseUrl}`);
+console.log(`Extended beta read-only surfaces ok. ${Array.from(counts.entries()).map(([area, count]) => `${area}=${count}`).join(', ')}. Base=${baseUrl}. AdminBase=${adminBaseUrl}`);
