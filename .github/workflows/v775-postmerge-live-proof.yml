@@ -1,0 +1,30 @@
+name: v775 postmerge public surface proof
+
+on:
+  pull_request:
+    paths:
+      - 'check-live-v775-public-surface.mjs'
+      - '.github/workflows/v775-postmerge-live-proof.yml'
+      - 'beta-readiness.json'
+
+permissions:
+  contents: read
+
+jobs:
+  live-proof:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Prove full hardened live route suite at v775
+        env:
+          GEJAST_EXPECTED_VERSION: v775
+          GEJAST_DEPLOY_WAIT_SECONDS: '120'
+          GEJAST_SMOKE_RETRIES: '3'
+        run: node check-live-routes.mjs
+      - name: Prove v775 public operational surface reduction
+        env:
+          GEJAST_DEPLOY_WAIT_SECONDS: '120'
+        run: node check-live-v775-public-surface.mjs
