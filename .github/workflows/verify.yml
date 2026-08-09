@@ -76,6 +76,9 @@ jobs:
       - name: Live-write safety and target isolation
         run: node check-live-write-safety-v770e.mjs
 
+      - name: Reversible profile proof harness
+        run: node check-profile-edit-harness-v770f.mjs
+
       - name: GitHub Actions Node24 runtime pins
         run: node check-github-actions-node24-runtime.mjs
 

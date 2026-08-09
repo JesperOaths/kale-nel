@@ -32,7 +32,7 @@ else {
   }
 }
 
-for (const id of ['admin_mutations', 'badge_awards', 'profile_editing']) {
+for (const id of ['admin_mutations', 'badge_awards']) {
   const item = checklist.items.find((entry) => entry.id === id);
   if (!item) failures.push(`${id} checklist item missing`);
   else if (item.command) failures.push(`${id} must remain unarmed until a target-specific reversible harness exists`);
@@ -65,4 +65,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log('Live-write beta safety v770e PASS: checklist matches five permission gaps; secondary writes are single-target and Klaverjas execution is excluded.');
+console.log('Live-write beta safety v770e PASS: checklist matches five permission gaps; secondary writes are single-target; generic admin/badge writes remain unarmed.');
