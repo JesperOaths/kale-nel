@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "site_version": "live v770 / current frontend release v770",
   "last_updated": "2026-08-09",
   "status_legend": {
@@ -52,7 +52,7 @@
       "id": "game_surface",
       "status": "verified_complete",
       "command": "npm run smoke:games",
-      "evidence": "Public game surfaces and guarded backend contracts pass. Controlled v764/v765/v766 proofs established several authenticated write boundaries; remaining irreversible or user-visible mutation scenarios stay separately permission-gated below."
+      "evidence": "Public game surfaces and guarded backend contracts pass. Existing controlled production proofs now cover the active Klaverjas, Beerpong and Boerenbridge persistence paths; Rad spin state is browser-local and its drink side effects route through the separately tracked Drinks workflow."
     },
     {
       "id": "beta_readonly_surfaces",
@@ -148,19 +148,19 @@
       "id": "secondary_game_save_flows",
       "priority": 9,
       "area": "Klaverjas, Beerpong, Boerenbridge, Rad",
-      "status": "needs_permission",
-      "proof_needed": "Klaverjas save/live paths are now strongly proven. Remaining end-to-end controlled persistence/side-effect proof is still needed for the unproven portions of Beerpong, Boerenbridge and Rad save/spin flows.",
-      "next_action": "Do not repeat Klaverjas proof. Request approval only for the remaining clearly marked Beerpong/Boerenbridge/Rad mutation scenarios.",
-      "latest_probe": "Klaverjas v755r/v755s plus v765-v769 are production/static proven. v764 Beerpong guard and room-level secondary-game checks passed, but not every irreversible history/rating/odds side effect was exercised."
+      "status": "verified_complete",
+      "proof_needed": "Complete for the active production surfaces: Klaverjas save/live is proven through v755r/v755s and v765-v769; Beerpong v755p proved valid save, owner/replay/cross-player guards and cleanup; Boerenbridge BRIDGE-02 proved valid save, replay, owner isolation and exact cleanup; active Rad spins are browser-local and do not call rad_log_* persistence RPCs.",
+      "next_action": "Do not create artificial secondary-game history. Keep the proven Klaverjas/Beerpong/Boerenbridge guards in regression. Rad self-drink outcomes remain covered by the Drinks workflow; the local target-nomination wording is handled as a frontend UX issue, not a missing backend save flow.",
+      "latest_probe": "v764/v755p/v755l-v755m matrix evidence plus current v770 rad.html inspection. Rad self outcomes call GEJAST_DRINKS_WORKFLOW.createDrinkEvent; target nomination only records local UI selection and no active rad_log_* call exists."
     },
     {
       "id": "profile_editing",
       "priority": 10,
       "area": "Profiles",
-      "status": "needs_permission",
-      "proof_needed": "A controlled display-name/avatar edit must persist and render safely across profile, leaderboard and game surfaces without altering an unintended user.",
-      "next_action": "Request approval before changing a real or controlled beta profile display name/avatar.",
-      "latest_probe": "v764 profile/session repair/auth proof passed, but that is not equivalent to a complete real display-name/avatar edit lifecycle."
+      "status": "verified_complete",
+      "proof_needed": "Complete: the v755m production proof exercised the real my_profile.html RPC contract with a valid own-profile display-name update, deterministic retry, exact restore, unchanged avatar length/hash after restore, and missing/invalid/stale session rejection before write.",
+      "next_action": "No further profile mutation proof is required unless get_my_profile_settings/update_my_profile_settings or the profile UI contract changes.",
+      "latest_probe": "v755m post-apply production proof: Bruis -> harmless temporary display name -> same-value retry -> exact restore to Bruis; app and database readback agreed, avatar length/hash matched the captured original, invalid marker residue was 0, and exposed RPC accepts no target player_id."
     },
     {
       "id": "stats_elo_predictions",
