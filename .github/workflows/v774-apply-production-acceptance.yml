@@ -1,0 +1,48 @@
+name: v774 apply production acceptance release
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/apply-v774-production-acceptance.mjs'
+      - '.github/workflows/v774-apply-production-acceptance.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - name: Apply deterministic v774 fixes
+        run: node scripts/apply-v774-production-acceptance.mjs
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Verify generated release candidate
+        run: |
+          npm run verify
+          node check-production-acceptance-v774.mjs
+          git config core.whitespace cr-at-eol
+          git diff --check
+      - name: Commit v774 release candidate
+        run: |
+          rm -rf node_modules
+          git status --short
+          git add -A
+          git config core.whitespace cr-at-eol
+          git diff --cached --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'v774 fix production browser acceptance defects'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
