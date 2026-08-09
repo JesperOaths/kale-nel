@@ -1,0 +1,29 @@
+name: v774 production browser acceptance audit
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/audit-live-browser-v774.mjs'
+      - '.github/workflows/v774-production-browser-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Install temporary Playwright runtime
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Audit real v773 production journeys in Chromium
+        env:
+          GEJAST_EXPECTED_VERSION: v773
+          GEJAST_BROWSER_TIMEOUT_MS: '20000'
+        run: node scripts/audit-live-browser-v774.mjs
