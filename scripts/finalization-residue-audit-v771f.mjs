@@ -28,6 +28,7 @@ for (const file of allTextFiles) {
 const rootFiles = fs.readdirSync(root, { withFileTypes: true }).filter((e) => e.isFile()).map((e) => e.name).sort();
 const htmlFiles = rootFiles.filter((f) => f.endsWith('.html'));
 const rootSource = new Map(htmlFiles.map((f) => [f, allSource.get(f) || '']));
+const runtimeRootFiles = rootFiles.filter((f) => /\.(?:html|js|css)$/i.test(f));
 
 function localTarget(raw) {
   const value = String(raw || '').trim();
@@ -54,17 +55,26 @@ function visibleText(html) {
     .trim();
 }
 
-function repoMentions(filename) {
+function mentionsIn(files, filename) {
   const refs = [];
-  for (const [file, text] of allSource) {
+  for (const file of files) {
     if (file === filename) continue;
+    const text = allSource.get(file) || '';
     if (text.includes(filename)) refs.push(file);
   }
   return refs;
 }
 
+function openingTagAround(html, index) {
+  const start = html.lastIndexOf('<', index);
+  const end = html.indexOf('>', index);
+  if (start < 0 || end < 0 || end - start > 700) return '';
+  return html.slice(start, end + 1).replace(/\s+/g, ' ').trim().slice(0, 260);
+}
+
 const incomingHtml = new Map(htmlFiles.map((f) => [f, []]));
-const repoRefs = new Map(htmlFiles.map((f) => [f, repoMentions(f)]));
+const repoRefs = new Map(htmlFiles.map((f) => [f, mentionsIn(allTextFiles, f)]));
+const runtimeRefs = new Map(htmlFiles.map((f) => [f, mentionsIn(runtimeRootFiles, f)]));
 const deadAnchors = [];
 const missingMeta = [];
 const duplicateStaticIds = [];
@@ -78,7 +88,9 @@ for (const file of htmlFiles) {
   let m;
   while ((m = attrRe.exec(html))) {
     const raw = m[1];
-    if (raw === '' || raw === '#' || /^javascript:void\s*\(0\)/i.test(raw)) deadAnchors.push({ file, value: raw || '(empty)' });
+    if (raw === '' || raw === '#' || /^javascript:void\s*\(0\)/i.test(raw)) {
+      deadAnchors.push({ file, value: raw || '(empty)', tag: openingTagAround(html, m.index) });
+    }
     const target = localTarget(raw);
     if (target && incomingHtml.has(target)) incomingHtml.get(target).push(file);
   }
@@ -112,12 +124,13 @@ for (const file of htmlFiles) {
 
 const specialRoots = new Set(['index.html', 'admin.html', 'login.html', '404.html']);
 const htmlOrphans = htmlFiles.filter((f) => !specialRoots.has(f) && (incomingHtml.get(f) || []).length === 0);
+const runtimeUnreferenced = htmlFiles.filter((f) => !specialRoots.has(f) && (runtimeRefs.get(f) || []).length === 0);
 const repoUnreferenced = htmlFiles.filter((f) => !specialRoots.has(f) && (repoRefs.get(f) || []).length === 0);
-const fullyUnreferenced = htmlFiles.filter((f) => !specialRoots.has(f) && (incomingHtml.get(f) || []).length === 0 && (repoRefs.get(f) || []).length === 0);
 
 const suspiciousNames = htmlFiles.filter((f) => /(?:^|[-_.])(backup|copy|old|test|debug|tmp|temp|prototype|draft|legacy|unused|archive|bak)(?:[-_.]|$)/i.test(f));
 const strongArtifactPattern = /^(?:ADMIN_ADMINHTML_BODY_\d+|(?:index|scorer|admin)_v\d+_orig|klaverjas_(?:live|quick_stats)_v\d+(?:_repo)?|.*_art_(?:export|preview)|probe|push_beta_test|admin-dev)\.html$/i;
-const highConfidenceResidue = fullyUnreferenced.filter((f) => strongArtifactPattern.test(f));
+const strongArtifacts = htmlFiles.filter((f) => strongArtifactPattern.test(f));
+const runtimeUnreferencedArtifacts = strongArtifacts.filter((f) => (runtimeRefs.get(f) || []).length === 0);
 
 const monitoredCorpus = [...allSource.entries()]
   .filter(([f]) => /(?:^|\/)(?:check-|beta-|LIVE_|README|FINAL|PRODUCTION)/i.test(f))
@@ -125,18 +138,27 @@ const monitoredCorpus = [...allSource.entries()]
   .join('\n');
 const unmentionedByChecks = htmlFiles.filter((f) => !monitoredCorpus.includes(f));
 
-const repoReferenceSummary = htmlOrphans.map((file) => ({
+const orphanReferenceSummary = htmlOrphans.map((file) => ({
   file,
+  runtime_ref_count: (runtimeRefs.get(file) || []).length,
+  runtime_refs: (runtimeRefs.get(file) || []).slice(0, 10),
   repo_ref_count: (repoRefs.get(file) || []).length,
-  refs: (repoRefs.get(file) || []).slice(0, 8),
-})).sort((a, b) => a.repo_ref_count - b.repo_ref_count || a.file.localeCompare(b.file));
+  repo_refs: (repoRefs.get(file) || []).slice(0, 6),
+})).sort((a, b) => a.runtime_ref_count - b.runtime_ref_count || a.repo_ref_count - b.repo_ref_count || a.file.localeCompare(b.file));
+
+const artifactReferenceSummary = strongArtifacts.map((file) => ({
+  file,
+  runtime_refs: runtimeRefs.get(file) || [],
+  repo_ref_count: (repoRefs.get(file) || []).length,
+}));
 
 const report = {
   root_html_count: htmlFiles.length,
   html_orphan_count: htmlOrphans.length,
+  runtime_unreferenced_html_count: runtimeUnreferenced.length,
   repo_unreferenced_html_count: repoUnreferenced.length,
-  fully_unreferenced_html_count: fullyUnreferenced.length,
-  high_confidence_residue_count: highConfidenceResidue.length,
+  strong_artifact_count: strongArtifacts.length,
+  runtime_unreferenced_artifact_count: runtimeUnreferencedArtifacts.length,
   suspicious_filename_count: suspiciousNames.length,
   dead_anchor_count: deadAnchors.length,
   duplicate_static_id_page_count: duplicateStaticIds.length,
@@ -147,7 +169,7 @@ const report = {
   unmentioned_by_check_corpus_count: unmentionedByChecks.length,
 };
 
-console.log('FINALIZATION_RESIDUE_AUDIT_V771F_REFINED');
+console.log('FINALIZATION_RESIDUE_AUDIT_V771F_RUNTIME_REFINED');
 console.log(JSON.stringify(report, null, 2));
 
 function printGroup(label, rows) {
@@ -156,11 +178,11 @@ function printGroup(label, rows) {
   for (const row of rows) console.log(typeof row === 'string' ? `- ${row}` : `- ${JSON.stringify(row)}`);
 }
 
-printGroup('HIGH_CONFIDENCE_RESIDUE', highConfidenceResidue);
-printGroup('FULLY_UNREFERENCED_ROOT_HTML', fullyUnreferenced);
-printGroup('HTML_ORPHANS_WITH_REPO_REFERENCE_COUNTS', repoReferenceSummary);
+printGroup('STRONG_ARTIFACT_REFERENCE_SUMMARY', artifactReferenceSummary);
+printGroup('RUNTIME_UNREFERENCED_STRONG_ARTIFACTS', runtimeUnreferencedArtifacts);
+printGroup('HTML_ORPHANS_REFERENCE_SUMMARY', orphanReferenceSummary);
 printGroup('SUSPICIOUS_ROOT_FILENAMES', suspiciousNames);
-printGroup('DEAD_OR_EMPTY_ANCHORS', deadAnchors);
+printGroup('DEAD_OR_EMPTY_ANCHORS_WITH_TAGS', deadAnchors);
 printGroup('DUPLICATE_STATIC_IDS', duplicateStaticIds);
 printGroup('MISSING_BASIC_META', missingMeta);
 printGroup('VISIBLE_UNFINISHED_MARKERS', unfinished);
