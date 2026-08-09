@@ -7,10 +7,20 @@ const tracker = JSON.parse(trackerText);
 const extended = fs.readFileSync('check-beta-readonly-extended.mjs', 'utf8');
 const failures = [];
 
-const trackedReleaseVersion = tracker.deployment_identity?.release_candidate_version || tracker.deployment_identity?.live_version;
+const releaseCandidateVersion = tracker.deployment_identity?.release_candidate_version || '';
+const liveVersion = tracker.deployment_identity?.live_version || '';
+const trackedReleaseVersion = releaseCandidateVersion || liveVersion;
 if (trackedReleaseVersion !== version) failures.push(`tracker release/live version ${trackedReleaseVersion || '(missing)'} must equal root VERSION ${version}`);
 if (!String(tracker.site_version || '').includes(version)) failures.push(`tracker site_version must mention ${version}`);
 if (!/^\d{4}-\d{2}-\d{2}$/.test(String(tracker.last_updated || ''))) failures.push('tracker last_updated must be YYYY-MM-DD');
+
+if (!releaseCandidateVersion) {
+  if (liveVersion !== version) failures.push(`promoted deployment live_version must equal root VERSION ${version}`);
+  if (tracker.site_version !== `live ${version} / current frontend release ${version}`) failures.push(`promoted site_version must explicitly identify live/current ${version}`);
+  if (!/^[0-9a-f]{40}$/i.test(String(tracker.deployment_identity?.frontend_release_merge || ''))) failures.push('promoted deployment must record a full 40-character frontend release merge SHA');
+  if (!/^[0-9a-f]{40}$/i.test(String(tracker.deployment_identity?.repository_head_at_audit || ''))) failures.push('promoted deployment must record a full 40-character repository audit SHA');
+}
+
 for (const stale of ['live v761 / main','DNS does not resolve','delivery was blocked','Backend user-targeted delivery still needs','fix public admin-host exposure separately']) if (trackerText.includes(stale)) failures.push(`stale readiness claim remains: ${stale}`);
 
 const gaps = new Map((tracker.beta_gaps || []).map((item) => [item.id, item]));
@@ -36,4 +46,4 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`- ${failure}`));
   process.exit(1);
 }
-console.log(`Beta readiness current-state regression PASS. ${version}; complete=${completeCount}; permission-gated=0; blocked=0.`);
+console.log(`Beta readiness current-state regression PASS. ${version}; complete=${completeCount}; permission-gated=0; blocked=0; deployment=${releaseCandidateVersion ? 'release-candidate' : 'live-promoted'}.`);
