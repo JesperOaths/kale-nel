@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import './check-finalization-residue-v772.mjs';
 
 const index = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8');
 const liveSummary = fs.readFileSync(new URL('./gejast-live-summary.js', import.meta.url), 'utf8');
