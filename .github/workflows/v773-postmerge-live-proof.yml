@@ -1,0 +1,32 @@
+name: v773 postmerge diagnostic edge proof
+
+on:
+  pull_request:
+    paths:
+      - 'check-live-v773-diagnostics.mjs'
+      - '.github/workflows/v773-postmerge-live-proof.yml'
+      - 'beta-readiness.json'
+
+permissions:
+  contents: read
+
+jobs:
+  live-proof:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Prove full hardened live route suite at v773
+        env:
+          GEJAST_EXPECTED_VERSION: v773
+          GEJAST_DEPLOY_WAIT_SECONDS: '120'
+          GEJAST_SMOKE_RETRIES: '3'
+        run: node check-live-routes.mjs
+      - name: Prove repaired diagnostic assets on public edge
+        env:
+          GEJAST_DEPLOY_WAIT_SECONDS: '120'
+        run: node check-live-v773-diagnostics.mjs
