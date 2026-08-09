@@ -6,13 +6,17 @@ const config = fs.readFileSync('gejast-config.js','utf8');
 const url = config.match(/SUPABASE_URL:\s*'([^']+)'/)?.[1];
 const key = config.match(/SUPABASE_PUBLISHABLE_KEY:\s*'([^']+)'/)?.[1];
 if (!url || !key) throw new Error('Could not resolve public Supabase config.');
+const headers = { apikey:key, Authorization:`Bearer ${key}`, 'Content-Type':'application/json', Accept:'application/json' };
 
-const response = await fetch(`${url}/rest/v1/`, {
-  headers: { apikey:key, Authorization:`Bearer ${key}`, Accept:'application/openapi+json, application/json' }
-});
-if (!response.ok) throw new Error(`OpenAPI HTTP ${response.status}`);
-const spec = await response.json();
-const paths = new Set(Object.keys(spec.paths || {}));
+function walk(dir, out=[]){
+  for(const entry of fs.readdirSync(dir,{withFileTypes:true})){
+    if(entry.name==='.git'||entry.name==='node_modules') continue;
+    const p=path.join(dir,entry.name);
+    if(entry.isDirectory()) walk(p,out); else out.push(p);
+  }
+  return out;
+}
+const allFiles = walk('.');
 
 const rpcNames = [
   'get_live_match_summary_public_scoped',
@@ -33,24 +37,46 @@ const rpcNames = [
   'ballroom_abdicate',
 ];
 
-console.log('## Public PostgREST RPC exposure');
-for (const name of rpcNames) {
-  const present = paths.has(`/rpc/${name}`);
-  console.log(`${name}=${present ? 'EXPOSED' : 'ABSENT'}`);
+console.log('## Local SQL definition tracing');
+for(const name of rpcNames){
+  const defs=[];
+  for(const file of allFiles){
+    const rel=file.replace(/^\.\//,'').replaceAll('\\','/');
+    if(!/\.sql$/i.test(rel)) continue;
+    const text=fs.readFileSync(file,'utf8');
+    if(text.includes(name)) defs.push(rel);
+  }
+  console.log(`${name}=${defs.length ? defs.join(',') : 'NO_SQL_REFERENCE'}`);
 }
 
-function walk(dir, out=[]){
-  for(const entry of fs.readdirSync(dir,{withFileTypes:true})){
-    if(entry.name==='.git'||entry.name==='node_modules') continue;
-    const p=path.join(dir,entry.name);
-    if(entry.isDirectory()) walk(p,out); else out.push(p);
-  }
-  return out;
+async function readProbe(name, body){
+  const res = await fetch(`${url}/rest/v1/rpc/${name}`, { method:'POST', headers, body:JSON.stringify(body||{}) });
+  const text = await res.text();
+  const concise = text.replace(/\s+/g,' ').slice(0,300);
+  const missing = res.status===404 || /could not find the function|function .* does not exist|schema cache/i.test(concise);
+  console.log(`READ_PROBE ${name} HTTP=${res.status} MISSING=${missing} BODY=${concise}`);
+  return {status:res.status,missing,text};
+}
+
+console.log('\n## Read-only production RPC probes');
+await readProbe('get_live_match_summary_public_scoped', {
+  game_type_input:'klaverjas',
+  match_ref_input:'__v770_missing_probe__',
+  client_match_id_input:'__v770_missing_probe__',
+  site_scope_input:'friends'
+});
+await readProbe('get_homepage_live_state_public_scoped', { session_token:null, site_scope_input:'friends' });
+let ballroomRead = await readProbe('get_ballroom_state_safe', { session_token:null, session_token_input:null });
+if(ballroomRead.missing || ballroomRead.status===400){
+  ballroomRead = await readProbe('get_ballroom_state_safe', { session_token_input:null });
+}
+if(ballroomRead.missing){
+  await readProbe('get_ballroom_public_state_safe', { session_token_input:null });
 }
 
 const refNeedle='gejast-beurs.js';
 const refs=[];
-for(const file of walk('.')){
+for(const file of allFiles){
   const rel=file.replace(/^\.\//,'').replaceAll('\\','/');
   if(rel==='gejast-beurs.js'||rel.startsWith('scripts/')||rel.startsWith('.github/')) continue;
   if(!/\.(?:html|js|css|json|md)$/i.test(rel)) continue;
