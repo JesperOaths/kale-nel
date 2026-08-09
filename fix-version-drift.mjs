@@ -19,6 +19,7 @@ if (!rootVersion) {
 const activeExt = new Set(['.html','.js','.mjs','.css']);
 const ignoredDirs = new Set(['.git','node_modules','dist','build','.next','.vercel','coverage','tmp','temp','patch_bundles','repo','mnt']);
 const ignoredFiles = new Set(['check-version-drift.mjs','fix-version-drift.mjs']);
+const allowedStaticVersionFiles = new Set(['admin.html','cloudflare/workers/admin-gate/static/admin.html','scripts/test-admin-static-assets-html-handling.mjs','scripts/test-admin-worker-gate.mjs']);
 
 function normalizeVersion(value){
   const match = String(value || '').match(/v?\s*(\d+)/i);
@@ -50,12 +51,13 @@ for (const file of walk(root)) {
   if (ignoredFiles.has(path.basename(file))) continue;
   if (!activeExt.has(path.extname(file).toLowerCase())) continue;
   const before = fs.readFileSync(file, 'utf8');
-  let after = before
-    .replace(/\?v\d+/gi, `?${rootVersion}`)
-    .replace(/(GEJAST_PAGE_VERSION\s*=\s*['"])v\d+(['"])/gi, `$1${rootVersion}$2`)
-    .replace(/(GEJAST_SITE_VERSION\s*=\s*['"])v\d+(['"])/gi, `$1${rootVersion}$2`)
-    .replace(/(VERSION\s*:\s*['"])v\d+(['"])/gi, `$1${rootVersion}$2`)
-    .replace(/v\d+\s*[-–—.]?\s*Made by Bruis/gi, `${rootVersion}  -  Made by Bruis`);
+  const preserveStaticV762 = allowedStaticVersionFiles.has(rel);
+    let after = before
+    .replace(/\?v(\d+)/gi, (match, digits) => preserveStaticV762 && digits === '762' ? match : `?${rootVersion}`)
+    .replace(/(GEJAST_PAGE_VERSION\s*=\s*['"])v(\d+)(['"])/gi, (match, prefix, digits, suffix) => preserveStaticV762 && digits === '762' ? match : `${prefix}${rootVersion}${suffix}`)
+    .replace(/(GEJAST_SITE_VERSION\s*=\s*['"])v(\d+)(['"])/gi, (match, prefix, digits, suffix) => preserveStaticV762 && digits === '762' ? match : `${prefix}${rootVersion}${suffix}`)
+    .replace(/(VERSION\s*:\s*['"])v(\d+)(['"])/gi, (match, prefix, digits, suffix) => preserveStaticV762 && digits === '762' ? match : `${prefix}${rootVersion}${suffix}`)
+    .replace(/v(\d+)\s*[-–—.]?\s*Made by Bruis/gi, (match, digits) => preserveStaticV762 && digits === '762' ? match : `${rootVersion}  -  Made by Bruis`);
   if (after !== before) {
     fs.writeFileSync(file, after, 'utf8');
     changed += 1;
