@@ -52,6 +52,9 @@ jobs:
       - name: Klaverjas finished-game handoff regression
         run: node check-klaverjas-round-finish-handoff-v768.mjs
 
+      - name: Klaverjas round scorer polish regression
+        run: node check-klaverjas-round-scorer-polish-v769.mjs
+
       - name: GitHub Actions Node24 runtime pins
         run: node check-github-actions-node24-runtime.mjs
 
