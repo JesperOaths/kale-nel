@@ -1,0 +1,51 @@
+name: v770 post-merge live proof
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened]
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    if: github.event.pull_request.head.ref == 'agent/v770-postmerge-live-proof'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main-derived proof branch
+        uses: actions/checkout@v5
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Hardened live routes require v770
+        env:
+          GEJAST_EXPECTED_VERSION: v770
+          GEJAST_DEPLOY_WAIT_SECONDS: '180'
+          GEJAST_SMOKE_TIMEOUT_MS: '15000'
+        run: npm run smoke:live
+      - name: Prove deployed v770 cleanup content
+        shell: bash
+        run: |
+          set -euo pipefail
+          cb="${GITHUB_SHA}-$(date +%s)"
+          curl -fsSL --retry 4 --retry-all-errors "https://kalenel.nl/VERSION?cb=${cb}" -o /tmp/version
+          test "$(tr -d '\r\n' </tmp/version)" = "v770"
+          curl -fsSL --retry 4 --retry-all-errors "https://kalenel.nl/ballroom.html?cb=${cb}" -o /tmp/ballroom.html
+          grep -Fq 'Balzaalactie is tijdelijk niet beschikbaar. Vernieuw de pagina en probeer het opnieuw.' /tmp/ballroom.html
+          ! grep -Fq 'Run eerst de balzaal-repair SQL' /tmp/ballroom.html
+          curl -fsSL --retry 4 --retry-all-errors "https://kalenel.nl/gejast-live-summary.js?cb=${cb}" -o /tmp/live-summary.js
+          grep -Fq 'Live samenvatting kon niet worden geladen. Vernieuw de pagina en probeer het opnieuw.' /tmp/live-summary.js
+          ! grep -Fq 'v488 compat SQL' /tmp/live-summary.js
+          echo 'Deployed v770 cleanup content PASS.'
+      - name: Ballroom v769a production read remains healthy
+        run: node check-live-ballroom-safe-read-v769a.mjs
+      - name: Beta read-only surfaces
+        run: npm run smoke:beta:read
+      - name: Push health without send
+        run: npm run smoke:push
