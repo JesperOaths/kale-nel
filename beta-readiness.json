@@ -1,6 +1,6 @@
 {
   "version": 4,
-  "site_version": "release v771 / post-merge live proof pending",
+  "site_version": "live v771 / current frontend release v771",
   "last_updated": "2026-08-09",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -12,8 +12,8 @@
   "deployment_identity": {
     "status": "verified_complete",
     "live_version": "v771",
-    "frontend_release_merge": "8d85700519b85bbd1581395f26df53afeb0895e6",
-    "repository_head_at_audit": "6c9ee68add07fcd5e45d22a091075a6ad0341ef7",
+    "frontend_release_merge": "98fbeee1e1c3622d48fbd3a1836d332244a3e43b",
+    "repository_head_at_audit": "98fbeee1e1c3622d48fbd3a1836d332244a3e43b",
     "source": "GitHub Pages/static deployment from main plus Cloudflare admin perimeter",
     "evidence": [
       "npm run smoke:live",
@@ -21,7 +21,7 @@
       "npm run smoke:beta:extended",
       "npm run smoke:push"
     ],
-    "note": "v771 frontend release candidate. The v770 production evidence remains the pre-merge baseline; after merge, hardened live health must confirm deployed /VERSION v771 before this note is finalized."
+    "note": "2026-08-09 post-merge proof confirmed deployed /VERSION v771, all 35 hardened live routes healthy, truthful Rad Kiezen/gekozen copy deployed, old false persistence copy absent, and push health PASS without a send."
   },
   "baseline_checks": [
     {
@@ -40,7 +40,7 @@
       "id": "live_routes",
       "status": "verified_complete",
       "command": "npm run smoke:live",
-      "evidence": "2026-08-09 hardened production health reports live VERSION v770 and 35/35 critical public routes healthy; apex admin redirects to the protected admin host and unauthenticated admin returns 401."
+      "evidence": "2026-08-09 post-merge production proof reports live VERSION v771 and 35/35 critical routes healthy; apex admin redirects to the protected admin host and unauthenticated admin returns 401. Deployed Rad truthful nomination copy is present."
     },
     {
       "id": "push_surface",
@@ -151,7 +151,7 @@
       "status": "verified_complete",
       "proof_needed": "Complete for the active production surfaces: Klaverjas save/live is proven through v755r/v755s and v765-v769; Beerpong v755p proved valid save, owner/replay/cross-player guards and cleanup; Boerenbridge BRIDGE-02 proved valid save, replay, owner isolation and exact cleanup; active Rad spins are browser-local and do not call rad_log_* persistence RPCs.",
       "next_action": "Do not create artificial secondary-game history. Keep the proven Klaverjas/Beerpong/Boerenbridge guards in regression. Rad self-drink outcomes remain covered by the Drinks workflow; the local target-nomination wording is handled as a frontend UX issue, not a missing backend save flow.",
-      "latest_probe": "v764/v755p/v755l-v755m matrix evidence plus current v770 rad.html inspection. Rad self outcomes call GEJAST_DRINKS_WORKFLOW.createDrinkEvent; target nomination only records local UI selection and no active rad_log_* call exists."
+      "latest_probe": "Existing Klaverjas/Beerpong/Boerenbridge production evidence remains valid. Post-merge v771 proof confirmed active Rad target nomination is explicitly local-only (`Kiezen` / `gekozen`) while self-drink outcomes continue through GEJAST_DRINKS_WORKFLOW.createDrinkEvent."
     },
     {
       "id": "profile_editing",
