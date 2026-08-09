@@ -6,6 +6,8 @@
 -- - no COMMIT exists in this file;
 -- - controlled sessions/events exist only inside one transaction;
 -- - all public drink* tables + the session table are write-locked for the short proof;
+-- - the controlled creator is selected only when they have no existing pending drink;
+-- - approval is fully closed before the same creator starts the rejection fixture;
 -- - owned sequence state is captured and restored before ROLLBACK;
 -- - no push-queue RPC is called, so no notification job is created;
 -- - post-rollback counts, sequence state, controlled-session residue and Ice=2.8 are rechecked.
@@ -30,6 +32,8 @@ begin
   if to_regclass('public.gejast_player_sessions_v746') is null then raise exception 'v771d missing gejast_player_sessions_v746'; end if;
   if to_regclass('public.drink_events') is null then raise exception 'v771d missing drink_events'; end if;
   if to_regclass('public.drink_event_types') is null then raise exception 'v771d missing drink_event_types'; end if;
+  if not exists(select 1 from information_schema.columns where table_schema='public' and table_name='drink_events' and column_name='player_id') then raise exception 'v771d missing drink_events.player_id'; end if;
+  if not exists(select 1 from information_schema.columns where table_schema='public' and table_name='drink_events' and column_name='status') then raise exception 'v771d missing drink_events.status'; end if;
   if to_regprocedure('public.contract_drinks_write_v664(text,text,jsonb,text)') is null then raise exception 'v771d missing contract_drinks_write_v664(text,text,jsonb,text)'; end if;
   if to_regprocedure('public.contract_drinks_read_v664(text,double precision,double precision,integer,text)') is null then raise exception 'v771d missing contract_drinks_read_v664 current signature'; end if;
   if not exists(select 1 from public.drink_event_types where lower(key)='ice' and unit_value::numeric=2.8) then raise exception 'v771d Ice invariant is not 2.8 before proof'; end if;
@@ -101,12 +105,15 @@ begin
 end
 $racecheck$;
 
--- Controlled lifecycle proof. Multiple independent verifier sessions are available so the
--- proof follows whatever current vote threshold is configured instead of assuming one vote.
+-- Controlled lifecycle proof. One free creator is reused sequentially so the production
+-- one-pending-drink-per-player invariant is respected. Three independent verifier sessions
+-- are available so the proof follows the current vote threshold without using the creator.
 do $proof$
 declare
-  v_ids bigint[];
-  v_names text[];
+  v_creator_id bigint;
+  v_creator_name text;
+  v_verifier_ids bigint[];
+  v_verifier_names text[];
   v_token_a text:='OC_V771D_DRINKS_A_'||txid_current()::text;
   v_token_b text:='OC_V771D_DRINKS_B_'||txid_current()::text;
   v_token_c text:='OC_V771D_DRINKS_C_'||txid_current()::text;
@@ -125,25 +132,44 @@ declare
   v_lng double precision:=4.9041;
   v_accuracy double precision:=25;
 begin
+  -- The creator must not already own a real pending drink, because production enforces
+  -- drink_events_one_pending_per_player_uidx on pending rows.
+  select p.id,p.display_name
+    into v_creator_id,v_creator_name
+    from public.players p
+   where coalesce(p.active,true)=true
+     and nullif(trim(p.display_name),'') is not null
+     and lower(coalesce(p.site_scope,'friends'))='friends'
+     and not exists(
+       select 1
+         from public.drink_events e
+        where e.player_id=p.id
+          and lower(coalesce(e.status,'pending'))='pending'
+     )
+   order by p.id
+   limit 1;
+  if v_creator_id is null then raise exception 'v771d proof requires one active friends-scope player with no existing pending drink'; end if;
+
   select array_agg(id order by id),array_agg(display_name order by id)
-    into v_ids,v_names
+    into v_verifier_ids,v_verifier_names
     from (
-      select id,display_name
-        from public.players
-       where coalesce(active,true)=true
-         and nullif(trim(display_name),'') is not null
-         and lower(coalesce(site_scope,'friends'))='friends'
-       order by id
-       limit 4
+      select p.id,p.display_name
+        from public.players p
+       where coalesce(p.active,true)=true
+         and nullif(trim(p.display_name),'') is not null
+         and lower(coalesce(p.site_scope,'friends'))='friends'
+         and p.id<>v_creator_id
+       order by p.id
+       limit 3
     ) s;
-  if coalesce(array_length(v_ids,1),0)<>4 then raise exception 'v771d proof requires four active friends-scope players'; end if;
+  if coalesce(array_length(v_verifier_ids,1),0)<>3 then raise exception 'v771d proof requires three additional active friends-scope verifier players'; end if;
 
   insert into public.gejast_player_sessions_v746(session_token,player_id,display_name,site_scope,created_at,last_seen_at,expires_at)
   values
-    (v_token_a,v_ids[1],v_names[1],'friends',now(),now(),now()+interval '30 minutes'),
-    (v_token_b,v_ids[2],v_names[2],'friends',now(),now(),now()+interval '30 minutes'),
-    (v_token_c,v_ids[3],v_names[3],'friends',now(),now(),now()+interval '30 minutes'),
-    (v_token_d,v_ids[4],v_names[4],'friends',now(),now(),now()+interval '30 minutes');
+    (v_token_a,v_creator_id,v_creator_name,'friends',now(),now(),now()+interval '30 minutes'),
+    (v_token_b,v_verifier_ids[1],v_verifier_names[1],'friends',now(),now(),now()+interval '30 minutes'),
+    (v_token_c,v_verifier_ids[2],v_verifier_names[2],'friends',now(),now(),now()+interval '30 minutes'),
+    (v_token_d,v_verifier_ids[3],v_verifier_names[3],'friends',now(),now(),now()+interval '30 minutes');
   v_tokens:=array[v_token_b,v_token_c,v_token_d];
 
   -- Event 1: approval lifecycle.
@@ -163,7 +189,32 @@ begin
   );
   if v_approve_id is null then raise exception 'v771d approve fixture missing event id: %',v_create_approve; end if;
 
-  -- Event 2: rejection lifecycle.
+  select lower(coalesce(status,'pending')) into v_status from public.drink_events where id=v_approve_id;
+  if v_status<>'pending' then raise exception 'v771d approve fixture did not start pending: %',v_status; end if;
+
+  -- Current read contract must expose the approval fixture while it is pending.
+  v_read:=public.contract_drinks_read_v664(v_token_b,v_lat,v_lng,40,'friends');
+  if coalesce((v_read->>'ok')::boolean,true)=false then raise exception 'v771d approval pending read contract returned ok=false'; end if;
+  if position(v_approve_id::text in v_read::text)=0 then raise exception 'v771d approval pending event not visible through current read contract'; end if;
+
+  -- Approve with independent verifier sessions until current policy closes the request.
+  foreach v_token in array v_tokens
+  loop
+    v_verify:=public.contract_drinks_write_v664(
+      v_token,'verify_event',
+      jsonb_build_object('session_token',v_token,'drink_event_id',v_approve_id,'approved',true,'approve',true,'lat',v_lat,'lng',v_lng,'accuracy',v_accuracy),
+      'friends'
+    );
+    if coalesce((v_verify->>'ok')::boolean,true)=false then raise exception 'v771d approval vote returned ok=false: %',v_verify; end if;
+    select lower(coalesce(status,'pending')) into v_status from public.drink_events where id=v_approve_id;
+    exit when v_status in ('verified','approved');
+  end loop;
+  if v_status not in ('verified','approved') then raise exception 'v771d approval lifecycle did not close after three independent verifiers: %',v_status; end if;
+  if exists(select 1 from public.drink_events where player_id=v_creator_id and lower(coalesce(status,'pending'))='pending') then
+    raise exception 'v771d creator still has a pending drink after approval closure';
+  end if;
+
+  -- Event 2 is created only after Event 1 is terminal, matching the real one-pending invariant.
   v_create_reject:=public.contract_drinks_write_v664(
     v_token_a,'create_event',
     jsonb_build_object('session_token',v_token_a,'event_type_key','bier','quantity',1,'lat',v_lat,'lng',v_lng,'accuracy',v_accuracy),
@@ -181,33 +232,15 @@ begin
   if v_reject_id is null then raise exception 'v771d reject fixture missing event id: %',v_create_reject; end if;
   if v_reject_id=v_approve_id then raise exception 'v771d controlled event ids collided'; end if;
 
-  select lower(coalesce(status,'pending')) into v_status from public.drink_events where id=v_approve_id;
-  if v_status<>'pending' then raise exception 'v771d approve fixture did not start pending: %',v_status; end if;
   select lower(coalesce(status,'pending')) into v_status from public.drink_events where id=v_reject_id;
   if v_status<>'pending' then raise exception 'v771d reject fixture did not start pending: %',v_status; end if;
 
-  -- Current read contract must expose the pending fixtures to another valid viewer.
+  -- Current read contract must expose the rejection fixture while it is pending.
   v_read:=public.contract_drinks_read_v664(v_token_b,v_lat,v_lng,40,'friends');
-  if coalesce((v_read->>'ok')::boolean,true)=false then raise exception 'v771d pending read contract returned ok=false'; end if;
-  if position(v_approve_id::text in v_read::text)=0 or position(v_reject_id::text in v_read::text)=0 then
-    raise exception 'v771d pending events not visible through current read contract';
-  end if;
+  if coalesce((v_read->>'ok')::boolean,true)=false then raise exception 'v771d rejection pending read contract returned ok=false'; end if;
+  if position(v_reject_id::text in v_read::text)=0 then raise exception 'v771d rejection pending event not visible through current read contract'; end if;
 
-  -- Approve with independent verifier sessions until current policy closes the request.
-  foreach v_token in array v_tokens
-  loop
-    v_verify:=public.contract_drinks_write_v664(
-      v_token,'verify_event',
-      jsonb_build_object('session_token',v_token,'drink_event_id',v_approve_id,'approved',true,'approve',true,'lat',v_lat,'lng',v_lng,'accuracy',v_accuracy),
-      'friends'
-    );
-    if coalesce((v_verify->>'ok')::boolean,true)=false then raise exception 'v771d approval vote returned ok=false: %',v_verify; end if;
-    select lower(coalesce(status,'pending')) into v_status from public.drink_events where id=v_approve_id;
-    exit when v_status in ('verified','approved');
-  end loop;
-  if v_status not in ('verified','approved') then raise exception 'v771d approval lifecycle did not close after three independent verifiers: %',v_status; end if;
-
-  -- Reject a second request under the same current verifier policy.
+  -- Reject the second request under the same current verifier policy.
   foreach v_token in array v_tokens
   loop
     v_verify:=public.contract_drinks_write_v664(
@@ -268,9 +301,10 @@ $postcheck$;
 
 select * from (values
   ('approval_lifecycle','PASS','controlled drink created pending, exposed by current read contract, and closed as verified/approved'),
-  ('rejection_lifecycle','PASS','second controlled drink created pending, exposed by current read contract, and closed as rejected/cancelled'),
-  ('scope_and_sessions','PASS','four temporary friends-scope verifier sessions were used only inside the rolled-back transaction'),
-  ('read_contract','PASS','current v664 read contract exposed pending and final verified/rejected lifecycle states'),
+  ('rejection_lifecycle','PASS','second controlled drink created only after approval closure, exposed pending, and closed as rejected/cancelled'),
+  ('one_pending_invariant','PASS','creator had no pre-existing pending drink and the second fixture started only after the first became terminal'),
+  ('scope_and_sessions','PASS','one temporary creator session plus three independent friends-scope verifier sessions were used only inside the rolled-back transaction'),
+  ('read_contract','PASS','current v664 read contract exposed each pending fixture and both final verified/rejected lifecycle states'),
   ('push_safety','PASS','no push-queue RPC was called; uncommitted controlled rows were never visible to the scheduled dispatcher'),
   ('ice_invariant','PASS','Ice unit value remained exactly 2.8 before, during and after proof'),
   ('rollback_counts','PASS','all public drink* tables and gejast_player_sessions_v746 returned to exact baseline row counts'),
