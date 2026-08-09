@@ -20,7 +20,7 @@ function env(extra = {}) {
     ASSETS: {
       async fetch(request) {
         const url = new URL(request.url);
-        if (url.pathname === '/admin.html') return new Response('<!doctype html><title>Beheerhub - Wordt er gejast?</title><script>window.GEJAST_PAGE_VERSION=\'v762\';</script><script src="./gejast-home-gate.js?v774"></script><script src="./admin-session-sync.js?v774"></script>', { status: 200, headers: { 'Content-Type': 'text/html' } });
+        if (url.pathname === '/admin.html') return new Response('<!doctype html><title>Beheerhub - Wordt er gejast?</title><script>window.GEJAST_PAGE_VERSION=\'v762\';</script><script src="./gejast-home-gate.js?v775"></script><script src="./admin-session-sync.js?v775"></script>', { status: 200, headers: { 'Content-Type': 'text/html' } });
         if (url.pathname === '/admin.js') return new Response('window.GEJAST_ADMIN=1;', { status: 200, headers: { 'Content-Type': 'application/javascript' } });
         return new Response('missing', { status: 404 });
       }
@@ -62,9 +62,9 @@ assert.equal(approved.headers.get('Cache-Control'), 'no-store');
 assert.equal(approved.headers.get('X-Kalenel-Admin-Build'), 'v762');
 const approvedHtml = await approved.text();
 assert.match(approvedHtml, /Beheerhub/);
-assert.match(approvedHtml, /GEJAST_PAGE_VERSION='v774'/);
-assert.match(approvedHtml, /gejast-home-gate\.js\?v774/);
-assert.match(approvedHtml, /admin-session-sync\.js\?v774/);
+assert.match(approvedHtml, /GEJAST_PAGE_VERSION='v775'/);
+assert.match(approvedHtml, /gejast-home-gate\.js\?v775/);
+assert.match(approvedHtml, /admin-session-sync\.js\?v775/);
 
 const approvedAdminAlias = await follow('https://admin.kalenel.nl/admin', { Cookie: validCookie });
 assert.deepEqual(approvedAdminAlias.chain.map((hop) => [hop.status, hop.location]), [[302, '/admin.html'], [200, '']]);
@@ -95,9 +95,9 @@ const publicAdmin = await req('https://kalenel.nl/admin.html', { redirect: 'manu
 assert.equal(publicAdmin.status, 302);
 assert.equal(publicAdmin.headers.get('Location'), 'https://admin.kalenel.nl/admin.html');
 
-const publicAsset = await req('https://kalenel.nl/gejast-admin-rpc.js?v774', { redirect: 'manual' });
+const publicAsset = await req('https://kalenel.nl/gejast-admin-rpc.js?v775', { redirect: 'manual' });
 assert.equal(publicAsset.status, 302);
-assert.equal(publicAsset.headers.get('Location'), 'https://admin.kalenel.nl/gejast-admin-rpc.js?v774');
+assert.equal(publicAsset.headers.get('Location'), 'https://admin.kalenel.nl/gejast-admin-rpc.js?v775');
 
 const traversal = await req('https://admin.kalenel.nl/%5cadmin.html', { headers: { Cookie: validCookie } });
 assert.equal(traversal.status, 404);
@@ -152,7 +152,7 @@ try {
   assert.equal(adminAfterCallback.headers.get('X-Kalenel-Admin-Gate'), 'worker');
   const adminAfterCallbackHtml = await adminAfterCallback.text();
   assert.match(adminAfterCallbackHtml, /Beheerhub/);
-  assert.match(adminAfterCallbackHtml, /GEJAST_PAGE_VERSION='v774'/);
+  assert.match(adminAfterCallbackHtml, /GEJAST_PAGE_VERSION='v775'/);
 } finally {
   globalThis.fetch = originalFetch;
 }

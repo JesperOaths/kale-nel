@@ -75,7 +75,7 @@ await row('TOE-01 invalid session create rejection', [], async () => {
 });
 
 await row('BRIDGE-01 invalid session save rejection', ['boerenbridge_matches'], async () => {
-  const out = await rpc('save_boerenbridge_match', { session_token: invalidPlayerToken, client_match_id: `${testLabel}_BRIDGE`, rules_version: 'matrix', app_version: 'v774', match_payload: { source: testLabel, players: ['Test A', 'Test B'], totals: [] } });
+  const out = await rpc('save_boerenbridge_match', { session_token: invalidPlayerToken, client_match_id: `${testLabel}_BRIDGE`, rules_version: 'matrix', app_version: 'v775', match_payload: { source: testLabel, players: ['Test A', 'Test B'], totals: [] } });
   return rejectionSummary(out);
 });
 

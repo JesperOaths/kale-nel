@@ -19,12 +19,13 @@ function match(pattern, message) {
   assert(pattern.test(html), message);
 }
 
-includes('admin-session-sync.js?v774', 'targeted page must use admin-session-sync.js');
+includes('admin-session-sync.js?v775', 'targeted page must use admin-session-sync.js');
 includes('window.GEJAST_ADMIN_SESSION.requirePage', 'targeted page must require protected inner admin page session');
 includes('window.GEJAST_ADMIN_SESSION.validate', 'targeted page must validate existing inner admin token');
 includes("const TARGET_SUBSCRIPTION_ID = 357;", 'targeted page must hard-code subscription 357');
 includes("const TARGET_SCOPE = 'friends';", 'targeted page must hard-code friends scope');
-includes("const TARGET_URL = './push_beta_test.html?push_test=targeted';", 'targeted page must hard-code requested target URL');
+includes("const TARGET_URL = './drinks_pending.html?push_test=targeted';", 'targeted page must hard-code the normal Drinks verification target URL');
+notIncludes('push_beta_test.html', 'targeted page must not link notifications to the removed public beta-test console');
 includes("const RPC_NAME = 'admin_queue_targeted_web_push_test_v763';", 'targeted page must call only the admin queue RPC');
 includes('Refresh readiness if possible', 'targeted page must expose a bounded local readiness refresh button');
 includes('Validate only', 'targeted page must expose a validate-only button');
