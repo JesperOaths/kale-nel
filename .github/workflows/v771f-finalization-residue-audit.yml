@@ -10,6 +10,7 @@ on:
       - '*.mjs'
       - '*.json'
       - '*.css'
+      - 'VERSION'
 
 permissions:
   contents: read
@@ -26,3 +27,15 @@ jobs:
           node-version: 24
       - name: Run finalization residue inventory
         run: node scripts/finalization-residue-audit-v771f.mjs
+      - name: Simulate mechanical v772 version alignment
+        run: |
+          set -euo pipefail
+          printf 'v772\n' > VERSION
+          node fix-version-drift.mjs
+          echo '--- V772_CHANGED_FILE_COUNT ---'
+          git status --short | wc -l
+          echo '--- V772_CHANGED_FILES ---'
+          git status --short
+          echo '--- V772_DIFF_STAT ---'
+          git diff --stat
+          git reset --hard HEAD >/dev/null
