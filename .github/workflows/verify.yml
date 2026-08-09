@@ -58,7 +58,7 @@ jobs:
       - name: Ballroom safe-read v769a repair boundary
         run: node check-ballroom-safe-read-repair-v769a.mjs
 
-      - name: Stale repair-copy v770 regression
+      - name: Stale repair-copy regression
         run: node check-stale-repair-copy-v770.mjs
 
       - name: Scoped live-read v770a repair boundary
@@ -75,6 +75,9 @@ jobs:
 
       - name: Live-write safety and target isolation
         run: node check-live-write-safety-v770e.mjs
+
+      - name: Rad local nomination copy
+        run: node check-rad-local-nomination-copy-v771.mjs
 
       - name: GitHub Actions Node24 runtime pins
         run: node check-github-actions-node24-runtime.mjs

@@ -27,9 +27,9 @@ assert.deepEqual(assets, {
 });
 
 const adminHtml = fs.readFileSync(STATIC_ADMIN_HTML, 'utf8');
-assert.match(adminHtml, /GEJAST_PAGE_VERSION='v770'/);
-assert.match(adminHtml, /gejast-home-gate\.js\?v770/);
-assert.match(adminHtml, /admin-session-sync\.js\?v770/);
+assert.match(adminHtml, /GEJAST_PAGE_VERSION='v771'/);
+assert.match(adminHtml, /gejast-home-gate\.js\?v771/);
+assert.match(adminHtml, /admin-session-sync\.js\?v771/);
 
 function env(htmlHandling = assets.html_handling) {
   return {
@@ -85,7 +85,7 @@ assert.deepEqual(postFixDirect.chain.map((hop) => [hop.status, hop.location]), [
 assert.equal(postFixDirect.finalUrl, 'https://admin.kalenel.nl/admin.html');
 assert.equal(postFixDirect.finalHeaders['x-kalenel-admin-build'], 'v762');
 assert.equal(postFixDirect.finalHeaders['cache-control'], 'no-store');
-assert.match(postFixDirect.finalBodySnippet, /GEJAST_PAGE_VERSION='v770'/);
+assert.match(postFixDirect.finalBodySnippet, /GEJAST_PAGE_VERSION='v771'/);
 
 const postFixAlias = await trace('https://admin.kalenel.nl/admin', env('none'), validCookie);
 assert.equal(postFixAlias.cycle, false);

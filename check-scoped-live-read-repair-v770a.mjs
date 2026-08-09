@@ -4,9 +4,7 @@ import fs from 'node:fs';
 const sql = fs.readFileSync('GEJAST_v770a_scoped_live_read_repair.sql', 'utf8');
 const rollback = fs.readFileSync('GEJAST_v770a_scoped_live_read_repair_ROLLBACK.sql', 'utf8');
 const frontend = fs.readFileSync('gejast-live-summary.js', 'utf8');
-const version = fs.readFileSync('VERSION', 'utf8').trim();
 const failures = [];
-const lower = sql.toLowerCase();
 
 function requireText(text, label) {
   if (!sql.includes(text)) failures.push(`migration missing ${label}`);
@@ -15,9 +13,6 @@ function requireRollback(text, label) {
   if (!rollback.includes(text)) failures.push(`rollback missing ${label}`);
 }
 
-if (version !== 'v770') failures.push(`SQL-only v770a repair must keep root VERSION at v770, got ${version}`);
-
-// The repair must be function DDL only. Reject any persistent table/data mutation.
 const forbidden = [
   /\binsert\s+into\b/i,
   /\bupdate\s+(?:public\.)?[a-z_]/i,
@@ -74,5 +69,4 @@ if (failures.length) {
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
-
 console.log('v770a scoped live read repair regression PASS.');
