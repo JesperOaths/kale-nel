@@ -37,13 +37,13 @@ requireText("if not v_expected_rollback then raise exception 'v771d controlled s
 const controlledWriteIndex = code.indexOf('insert into public.gejast_player_sessions_v746');
 const signalIndex = code.search(/raise\s+exception\s+using\s+errcode\s*=\s*'P771D'/i);
 const expectedHandlerIndex = code.search(/when\s+sqlstate\s+'P771D'/i);
-const restoreAfterIndex = code.indexOf('-- Restore sequence states after the expected controlled rollback.');
-const postcheckIndex = code.indexOf('-- Exact post-rollback checks while the write locks are still held.');
+const lastSetvalIndex = code.lastIndexOf('perform setval(r.seq_name::regclass,r.last_value,r.is_called)');
+const postcheckIndex = code.indexOf('select * from jsonb_to_recordset(v_baseline)');
 const passTableIndex = code.indexOf("('approval_lifecycle','PASS'");
 if (controlledWriteIndex < 0 || signalIndex < controlledWriteIndex) failures.push('private rollback signal must occur after controlled lifecycle DML');
 if (expectedHandlerIndex < signalIndex) failures.push('P771D handler must follow the private rollback signal');
-if (restoreAfterIndex < expectedHandlerIndex) failures.push('sequence restore must occur after expected controlled rollback');
-if (postcheckIndex < restoreAfterIndex) failures.push('exact postchecks must occur after sequence restoration');
+if (lastSetvalIndex < expectedHandlerIndex) failures.push('sequence restore must occur after expected controlled rollback');
+if (postcheckIndex < lastSetvalIndex) failures.push('exact table postchecks must occur after sequence restoration');
 if (passTableIndex < postcheckIndex) failures.push('PASS rows must be emitted only after rollback/residue verification');
 
 // No schema/permission mutation belongs in a proof-only script.
