@@ -18,31 +18,41 @@ function forbidCode(pattern, label) {
   if (pattern.test(code)) failures.push(`proof contains forbidden ${label}`);
 }
 
-// The production proof must be rollback-only. Comments are stripped before these checks so
-// documentation such as "no COMMIT exists" cannot accidentally satisfy/fail the contract.
-forbidCode(/\bcommit\s*;/i, 'COMMIT');
-if ((code.match(/\bbegin\s*;/gi) || []).length !== 1) failures.push('proof must contain exactly one explicit transaction BEGIN;');
-if ((code.match(/\brollback\s*;/gi) || []).length !== 1) failures.push('proof must contain exactly one explicit ROLLBACK;');
+// Supabase SQL Editor can wrap the whole submission in a transaction. Therefore the proof must
+// not use script-level transaction control or temp baseline tables that disappear on ROLLBACK.
+forbidCode(/\b(?:commit|rollback)\s*;/i, 'script-level COMMIT/ROLLBACK');
+forbidCode(/\bcreate\s+(?:temp(?:orary)?\s+)?table\b/i, 'helper table creation');
+forbidCode(/\btruncate\b/i, 'TRUNCATE');
+if (code.includes('_v771d_baseline') || code.includes('_v771d_sequences')) failures.push('proof must not depend on temp baseline/sequence tables');
+requireText("v_baseline jsonb := '[]'::jsonb", 'in-memory row-count baseline');
+requireText("v_sequences jsonb := '[]'::jsonb", 'in-memory sequence baseline');
 
-const beginIndex = code.search(/\bbegin\s*;/i);
+// Controlled DML must be rolled back by a private PL/pgSQL exception subtransaction. Only the
+// private P771D signal is success; unexpected errors must restore sequences and re-raise.
+requireCode(/raise\s+exception\s+using\s+errcode\s*=\s*'P771D'/i, 'private P771D rollback signal');
+requireCode(/when\s+sqlstate\s+'P771D'\s+then[\s\S]*?v_expected_rollback\s*:=\s*true/i, 'P771D success handler');
+requireCode(/when\s+others\s+then[\s\S]*?perform\s+setval\([\s\S]*?\braise\s*;/i, 'unexpected-error sequence restore and re-raise');
+requireText("if not v_expected_rollback then raise exception 'v771d controlled subtransaction did not execute expected rollback'", 'expected rollback hard stop');
+
 const controlledWriteIndex = code.indexOf('insert into public.gejast_player_sessions_v746');
-const restoreIndex = code.indexOf('do $restoreseq$');
-const rollbackIndex = code.search(/\brollback\s*;/i);
-const postcheckIndex = code.indexOf('do $postcheck$');
-if (beginIndex < 0 || controlledWriteIndex < beginIndex) failures.push('controlled production writes must occur only after explicit BEGIN');
-if (restoreIndex < 0 || rollbackIndex < 0 || restoreIndex > rollbackIndex) failures.push('sequence restoration must occur before ROLLBACK');
-if (postcheckIndex < 0 || rollbackIndex < 0 || postcheckIndex < rollbackIndex) failures.push('post-rollback residue checks must occur after ROLLBACK');
+const signalIndex = code.search(/raise\s+exception\s+using\s+errcode\s*=\s*'P771D'/i);
+const expectedHandlerIndex = code.search(/when\s+sqlstate\s+'P771D'/i);
+const restoreAfterIndex = code.indexOf('-- Restore sequence states after the expected controlled rollback.');
+const postcheckIndex = code.indexOf('-- Exact post-rollback checks while the write locks are still held.');
+const passTableIndex = code.indexOf("('approval_lifecycle','PASS'");
+if (controlledWriteIndex < 0 || signalIndex < controlledWriteIndex) failures.push('private rollback signal must occur after controlled lifecycle DML');
+if (expectedHandlerIndex < signalIndex) failures.push('P771D handler must follow the private rollback signal');
+if (restoreAfterIndex < expectedHandlerIndex) failures.push('sequence restore must occur after expected controlled rollback');
+if (postcheckIndex < restoreAfterIndex) failures.push('exact postchecks must occur after sequence restoration');
+if (passTableIndex < postcheckIndex) failures.push('PASS rows must be emitted only after rollback/residue verification');
 
-// No schema/permission mutation belongs in a proof-only script. Temporary helper tables are
-// allowed; permanent table/function/policy/grant changes are not.
+// No schema/permission mutation belongs in a proof-only script.
 forbidCode(/\balter\s+(?:table|function|policy|sequence)\b/i, 'ALTER DDL');
 forbidCode(/\bdrop\s+(?:table|function|policy|sequence)\b/i, 'DROP DDL');
 forbidCode(/\bgrant\b/i, 'GRANT');
 forbidCode(/\brevoke\b/i, 'REVOKE');
-if (/\bcreate\s+table\b/i.test(code)) failures.push('proof may create TEMP tables only, never permanent tables');
 
-// Pin the exact current production contracts. This proof intentionally does not use legacy
-// fallbacks because readiness is meant to certify the active v664 path.
+// Pin the exact active production contracts; no legacy fallback is allowed in readiness proof.
 requireText("to_regprocedure('public.contract_drinks_write_v664(text,text,jsonb,text)')", 'v664 write-contract preflight');
 requireText("to_regprocedure('public.contract_drinks_read_v664(text,double precision,double precision,integer,text)')", 'v664 read-contract preflight');
 requireCode(/public\.contract_drinks_write_v664\s*\(/i, 'v664 write contract invocation');
@@ -51,26 +61,23 @@ for (const legacy of ['contract_drinks_write_v663', 'contract_drinks_write_v391'
   if (code.includes(legacy)) failures.push(`proof must not fall back to legacy contract ${legacy}`);
 }
 
-// Production enforces one pending drink per player. The controlled creator must therefore
-// have no pre-existing pending row and the second fixture must be created only after the first
-// lifecycle reaches a terminal approved/verified state.
+// Production enforces one pending drink per player. The creator must be free before the proof,
+// approval must become terminal, and only then may the rejection fixture be created.
 requireCode(/not\s+exists\s*\(\s*select\s+1[\s\S]*?from\s+public\.drink_events\s+e[\s\S]*?e\.player_id\s*=\s*p\.id[\s\S]*?lower\s*\(\s*coalesce\s*\(\s*e\.status\s*,\s*'pending'\s*\)\s*\)\s*=\s*'pending'/i, 'creator exclusion for existing pending drinks');
-requireText("v771d proof requires one active friends-scope player with no existing pending drink", 'free-creator hard stop');
-requireText("creator still has a pending drink after approval closure", 'post-approval pending hard stop');
+requireText('v771d proof requires one active friends-scope player with no existing pending drink', 'free-creator hard stop');
+requireText('creator still has a pending drink after approval closure', 'post-approval pending hard stop');
 const approveClosedIndex = code.indexOf("if v_status not in ('verified','approved')");
-const rejectCreateIndex = code.indexOf('v_create_reject:=public.contract_drinks_write_v664');
-if (approveClosedIndex < 0 || rejectCreateIndex < 0 || rejectCreateIndex < approveClosedIndex) {
-  failures.push('rejection fixture must be created only after approval lifecycle closes');
-}
+const rejectCreateIndex = code.indexOf('v_create_reject := public.contract_drinks_write_v664');
+if (approveClosedIndex < 0 || rejectCreateIndex < 0 || rejectCreateIndex < approveClosedIndex) failures.push('rejection fixture must be created only after approval lifecycle closes');
 
-// Both lifecycle directions must be exercised using independent valid verifier sessions.
+// Both lifecycle directions must be exercised using independent non-creator verifier sessions.
 requireText("'create_event'", 'create_event action');
 requireText("'verify_event'", 'verify_event action');
 requireText("'approved',true", 'approval vote');
 requireText("'approve',true", 'approval compatibility flag');
 requireText("'approved',false", 'rejection vote');
 requireText("'approve',false", 'rejection compatibility flag');
-requireText("v_tokens:=array[v_token_b,v_token_c,v_token_d]", 'three independent verifier sessions');
+requireCode(/v_tokens\s*:=\s*array\[v_token_b,v_token_c,v_token_d\]/i, 'three independent verifier sessions');
 requireText("v_status in ('verified','approved')", 'approved terminal-state proof');
 requireText("v_status in ('rejected','cancelled')", 'rejected terminal-state proof');
 requireText("position('recent_verified' in v_read::text)", 'final approved read-contract evidence');
@@ -82,25 +89,23 @@ requireText("'friends'", 'friends scope fixture');
 requireText("session_token like 'OC_V771D_DRINKS_%'", 'controlled-session residue check');
 requireText("tablename like 'drink%' or tablename='gejast_player_sessions_v746'", 'Drinks/session baseline coverage');
 requireText("lock table public.%I in share row exclusive mode", 'short proof write locks');
-requireText("perform setval(r.seq_name::regclass,r.last_value,r.is_called)", 'sequence restoration');
-requireText("v_count<>r.row_count", 'exact row-count restoration check');
-requireText("v_last<>r.last_value or v_called<>r.is_called", 'exact sequence-state restoration check');
+requireCode(/jsonb_build_object\('table_name',r\.tablename,'row_count',v_count\)/i, 'in-memory table baseline capture');
+requireCode(/jsonb_build_object\('seq_name',r\.seq_name,'last_value',v_last,'is_called',v_called\)/i, 'in-memory sequence baseline capture');
+requireText('perform setval(r.seq_name::regclass,r.last_value,r.is_called)', 'sequence restoration');
+requireText('v_count<>r.row_count', 'exact row-count restoration check');
+requireText('v_last<>r.last_value or v_called<>r.is_called', 'exact sequence-state restoration check');
 
-// The proof must never enqueue/send push work. A literal mention in comments is harmless, but
-// executable code must not call any known push queue/send primitive.
+// The proof must never enqueue/send push work.
 forbidCode(/\bqueue_nearby_verification_pushes(?:_v\d+)?\s*\(/i, 'push queue RPC call');
 forbidCode(/\b(?:send|dispatch)[a-z0-9_]*push[a-z0-9_]*\s*\(/i, 'push send/dispatch call');
 
-// Preserve the product invariant that motivated the Drinks audit.
+// Preserve Ice=2.8 before, during and after the controlled lifecycle.
 requireText("lower(key)='ice' and unit_value::numeric=2.8", 'pre/post Ice=2.8 invariant');
-requireText("if v_ice<>2.8", 'in-transaction Ice=2.8 invariant');
+requireText('if v_ice<>2.8', 'in-lifecycle Ice=2.8 invariant');
 
-// PASS output should only be reachable after rollback/postcheck sections.
-requireText("('approval_lifecycle','PASS'", 'approval PASS row');
-requireText("('rejection_lifecycle','PASS'", 'rejection PASS row');
-requireText("('rollback_counts','PASS'", 'rollback-count PASS row');
-requireText("('sequence_restore','PASS'", 'sequence-restore PASS row');
-requireText("('controlled_residue','PASS'", 'controlled-residue PASS row');
+for (const row of ['approval_lifecycle','rejection_lifecycle','one_pending_invariant','rollback_counts','sequence_restore','controlled_residue']) {
+  requireText(`('${row}','PASS'`, `${row} PASS row`);
+}
 
 if (failures.length) {
   console.error('v771d Drinks transactional proof regression FAILED');
