@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import './check-production-acceptance-v774.mjs';
 import './check-diagnostic-self-consistency-v773.mjs';
 import './check-finalization-residue-v772.mjs';
 

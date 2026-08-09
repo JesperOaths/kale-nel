@@ -3,7 +3,8 @@ import fs from 'node:fs';
 
 const failures=[];
 const version=fs.readFileSync('VERSION','utf8').trim();
-if(version!=='v773') failures.push('diagnostic self-consistency guard expects v773 candidate, got '+version);
+const versionNumber=Number((version.match(/v(\d+)/i)||[])[1]||0);
+if(versionNumber<773) failures.push('diagnostic self-consistency guard requires VERSION >= v773, got '+version);
 function text(file){return fs.readFileSync(file,'utf8');}
 const home=text('home.html');
 if(home.includes("want='v757'")) failures.push('home.html still pins obsolete v757 cache bust');
@@ -37,4 +38,4 @@ if(!text('gejast-drinks-push-bridge.js').includes('Controleer de bestaande read-
 if(!text('gejast-account-runtime.js').includes("const VERSION = 'v690'")) failures.push('account runtime v690 module contract was changed unexpectedly');
 if(!text('gejast-home-profile-runtime.js').includes("const VERSION = 'v687'")) failures.push('home/profile runtime v687 module contract was changed unexpectedly');
 if(failures.length){console.error('Diagnostic self-consistency v773 FAILED');failures.forEach(f=>console.error('- '+f));process.exit(1);}
-console.log('Diagnostic self-consistency v773 PASS: current-release diagnostics are dynamic; historical module/RPC versions remain distinct and truthful.');
+console.log('Diagnostic self-consistency v773 PASS: v773+ releases preserve dynamic current-release diagnostics and distinct historical module/RPC versions.');

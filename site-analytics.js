@@ -169,15 +169,18 @@
   };
 
   function sendEvent(payload){
+    const endpoint = `${SUPABASE_URL}/rest/v1/rpc/track_site_event`;
     const body = JSON.stringify(payload);
-    if (navigator.sendBeacon) {
+    let sameOrigin = false;
+    try { sameOrigin = new URL(endpoint, location.href).origin === location.origin; } catch (_) {}
+    if (sameOrigin && navigator.sendBeacon) {
       try {
         const blob = new Blob([body], { type: 'application/json' });
-        const ok = navigator.sendBeacon(`${SUPABASE_URL}/rest/v1/rpc/track_site_event`, blob);
+        const ok = navigator.sendBeacon(endpoint, blob);
         if (ok) return Promise.resolve();
       } catch (_) {}
     }
-    return fetch(`${SUPABASE_URL}/rest/v1/rpc/track_site_event`, {
+    return fetch(endpoint, {
       method: 'POST', mode: 'cors', keepalive: true,
       headers: rpcHeaders(), body
     }).catch(() => {});
