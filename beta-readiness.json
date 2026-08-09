@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "site_version": "live v771 / current frontend release v771",
   "last_updated": "2026-08-09",
   "status_legend": {
@@ -131,9 +131,10 @@
       "id": "badge_awards",
       "priority": 7,
       "area": "Badges",
-      "status": "needs_permission",
-      "proof_needed": "Known badge criteria must be triggered by controlled game/drink outcomes and then render correctly on profiles/leaderboards without unintended awards.",
-      "next_action": "Request approval before controlled outcomes that create badge or underlying game/drink records."
+      "status": "verified_complete",
+      "proof_needed": "Complete: badges are derived from existing player snapshots by deterministic BADGE_RULES/evaluateBadgeKeys rather than granted by a separate badge-award mutation engine. Player/profile rendering uses the same evaluator/progress model.",
+      "next_action": "No badge-trigger mutation proof is required. Keep threshold/evaluator/profile-integration regression current when badge rules or snapshot fields change.",
+      "latest_probe": "v771b executable proof covers below/at-threshold behavior for Starter, Groeier, Klaverkoning, IJskoud, Verifieermeester and Pussycup-prins, verifies attained progress, and confirms player.html feeds buildBadgeSnapshot() into GEJAST_BADGE_PROGRESS.getBadgeProgressList()."
     },
     {
       "id": "scope_isolation",

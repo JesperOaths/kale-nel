@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "site_version": "v770",
   "approval_env": {
     "name": "GEJAST_ALLOW_LIVE_WRITE_BETA",
@@ -34,17 +34,6 @@
       ],
       "intent": "Run one separately chosen reversible/admin-audited mutation only after its exact target and rollback are reviewed.",
       "risk": "Writes admin/audit/business records. No generic multi-admin mutation harness is considered armed."
-    },
-    {
-      "id": "badge_awards",
-      "area": "Badges",
-      "requires": [
-        "player1",
-        "player2",
-        "live_write_approval"
-      ],
-      "intent": "Trigger one known simple badge criterion through a controlled outcome and verify profile/leaderboard rendering.",
-      "risk": "May create permanent badge and supporting game/drink history. No generic badge mutation should run without a target-specific plan."
     }
   ]
 }
