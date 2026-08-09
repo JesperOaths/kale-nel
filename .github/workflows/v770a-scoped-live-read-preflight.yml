@@ -1,0 +1,41 @@
+name: v770a scoped live-read preflight
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    if: github.event.pull_request.head.ref == 'agent/v770a-scoped-live-read-repair'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repair branch
+        uses: actions/checkout@v5
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Verify v770a DDL/read boundary
+        run: node check-scoped-live-read-repair-v770a.mjs
+      - name: Prove deployed signature drift and read-only helper availability
+        run: node check-live-scoped-live-read-v770a.mjs
+      - name: Full repository verification
+        run: npm run verify
+      - name: Confirm deployed frontend remains v770
+        env:
+          GEJAST_EXPECTED_VERSION: v770
+          GEJAST_DEPLOY_WAIT_SECONDS: '30'
+          GEJAST_SMOKE_TIMEOUT_MS: '15000'
+        run: npm run smoke:live
+      - name: Ballroom v769a read remains healthy
+        run: node check-live-ballroom-safe-read-v769a.mjs
+      - name: Push health without send
+        run: npm run smoke:push
