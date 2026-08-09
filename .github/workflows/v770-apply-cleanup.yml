@@ -1,0 +1,123 @@
+name: Apply guarded v770 cleanup
+
+on:
+  push:
+    branches:
+      - agent/v770-stale-repair-copy-cleanup
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out v770 branch
+        uses: actions/checkout@v5
+        with:
+          ref: agent/v770-stale-repair-copy-cleanup
+          fetch-depth: 0
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Apply narrow copy fixes, safe version bump and regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+
+          function replaceExact(path, from, to) {
+            const before = fs.readFileSync(path, 'utf8');
+            if (!before.includes(from)) throw new Error(`${path}: expected source text not found`);
+            const after = before.replace(from, to);
+            fs.writeFileSync(path, after, 'utf8');
+          }
+
+          replaceExact(
+            'ballroom.html',
+            "Balzaalactie is nog niet beschikbaar. Run eerst de balzaal-repair SQL.",
+            "Balzaalactie is tijdelijk niet beschikbaar. Vernieuw de pagina en probeer het opnieuw."
+          );
+          replaceExact(
+            'gejast-live-summary.js',
+            "Live samenvatting is nog niet beschikbaar op deze database. Draai eerst de v488 compat SQL.",
+            "Live samenvatting kon niet worden geladen. Vernieuw de pagina en probeer het opnieuw."
+          );
+
+          fs.writeFileSync('VERSION', 'v770\n', 'utf8');
+
+          const fixerPath = 'fix-version-drift.mjs';
+          let fixer = fs.readFileSync(fixerPath, 'utf8');
+          const fixerNeedle = "const ignoredFiles = new Set(['check-version-drift.mjs','fix-version-drift.mjs']);\n";
+          const fixerInsert = fixerNeedle + "const allowedStaticVersionFiles = new Set(['admin.html','cloudflare/workers/admin-gate/static/admin.html','scripts/test-admin-static-assets-html-handling.mjs','scripts/test-admin-worker-gate.mjs']);\n";
+          if (!fixer.includes('allowedStaticVersionFiles')) {
+            if (!fixer.includes(fixerNeedle)) throw new Error('fix-version-drift.mjs insertion point missing');
+            fixer = fixer.replace(fixerNeedle, fixerInsert);
+            const walkNeedle = "  if (isArchivedFile(rel)) continue;\n  if (ignoredFiles.has(path.basename(file))) continue;\n";
+            const walkInsert = "  if (isArchivedFile(rel)) continue;\n  if (allowedStaticVersionFiles.has(rel)) continue;\n  if (ignoredFiles.has(path.basename(file))) continue;\n";
+            if (!fixer.includes(walkNeedle)) throw new Error('fix-version-drift.mjs walk insertion point missing');
+            fixer = fixer.replace(walkNeedle, walkInsert);
+            fs.writeFileSync(fixerPath, fixer, 'utf8');
+          }
+
+          const checker = `#!/usr/bin/env node
+          import fs from 'node:fs';
+          const ballroom = fs.readFileSync('ballroom.html','utf8');
+          const live = fs.readFileSync('gejast-live-summary.js','utf8');
+          const version = fs.readFileSync('VERSION','utf8').trim();
+          const failures = [];
+          if (version !== 'v770') failures.push('root VERSION is not v770');
+          if (ballroom.includes('Run eerst de balzaal-repair SQL')) failures.push('Ballroom still exposes repair-SQL instructions');
+          if (!ballroom.includes('Balzaalactie is tijdelijk niet beschikbaar. Vernieuw de pagina en probeer het opnieuw.')) failures.push('Ballroom generic recovery copy missing');
+          if (live.includes('v488 compat SQL')) failures.push('Live summary still exposes v488 SQL instructions');
+          if (!live.includes('Live samenvatting kon niet worden geladen. Vernieuw de pagina en probeer het opnieuw.')) failures.push('Live-summary generic recovery copy missing');
+          if (!ballroom.includes('get_ballroom_state_safe') || !ballroom.includes('get_ballroom_public_state_safe')) failures.push('Ballroom safe read fallback contract changed');
+          if (!ballroom.includes('ballroom_claim_king_safe') || !ballroom.includes('ballroom_request_entry_safe')) failures.push('Ballroom safe write contract changed');
+          if (!live.includes('get_live_match_summary_public_scoped') || !live.includes('get_live_match_summary_public')) failures.push('Live-summary scoped/legacy fallback contract changed');
+          if (!live.includes('get_homepage_live_state_public_scoped') || !live.includes('get_homepage_live_state_public')) failures.push('Homepage scoped/legacy fallback contract changed');
+          if (failures.length) { failures.forEach((x)=>console.error('- '+x)); process.exit(1); }
+          console.log('v770 stale repair-copy regression PASS.');
+          `;
+          fs.writeFileSync('check-stale-repair-copy-v770.mjs', checker.replace(/^          /gm,''), 'utf8');
+
+          let pkg = fs.readFileSync('package.json','utf8');
+          if (!pkg.includes('check-stale-repair-copy-v770.mjs')) {
+            const pkgNeedle = 'node check-ballroom-safe-read-repair-v769a.mjs"';
+            if (!pkg.includes(pkgNeedle)) throw new Error('package verify insertion point missing');
+            pkg = pkg.replace(pkgNeedle, 'node check-ballroom-safe-read-repair-v769a.mjs && node check-stale-repair-copy-v770.mjs"');
+            fs.writeFileSync('package.json', pkg, 'utf8');
+          }
+
+          let verify = fs.readFileSync('.github/workflows/verify.yml','utf8');
+          if (!verify.includes('Stale repair-copy v770 regression')) {
+            const verifyNeedle = "      - name: Ballroom safe-read v769a repair boundary\n        run: node check-ballroom-safe-read-repair-v769a.mjs\n";
+            if (!verify.includes(verifyNeedle)) throw new Error('verify.yml insertion point missing');
+            verify = verify.replace(verifyNeedle, verifyNeedle + "\n      - name: Stale repair-copy v770 regression\n        run: node check-stale-repair-copy-v770.mjs\n");
+            fs.writeFileSync('.github/workflows/verify.yml', verify, 'utf8');
+          }
+          NODE
+
+          node fix-version-drift.mjs
+          node check-version-drift.mjs
+          node check-stale-repair-copy-v770.mjs
+          npm run verify
+
+          rm -f .github/workflows/v770-apply-cleanup.yml
+      - name: Commit generated v770 release changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+          git commit -m "v770 clean stale repair instructions"
+          git push origin HEAD:agent/v770-stale-repair-copy-cleanup
