@@ -1,6 +1,6 @@
 {
   "version": 7,
-  "site_version": "release candidate v775 / live v774",
+  "site_version": "live v775 / current frontend release v775",
   "last_updated": "2026-08-09",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -11,9 +11,9 @@
   },
   "deployment_identity": {
     "status": "verified_complete",
-    "live_version": "v774",
-    "frontend_release_merge": "575067cfaebb9305b8653c6947bcdfd22a415240",
-    "repository_head_at_audit": "575067cfaebb9305b8653c6947bcdfd22a415240",
+    "live_version": "v775",
+    "frontend_release_merge": "5028146da1c30959b74cf0a5dd7ad7e9fd28cf2f",
+    "repository_head_at_audit": "5028146da1c30959b74cf0a5dd7ad7e9fd28cf2f",
     "source": "GitHub Pages/static deployment from main plus Cloudflare admin perimeter",
     "evidence": [
       "npm run smoke:live",
@@ -21,15 +21,14 @@
       "npm run smoke:beta:extended",
       "npm run smoke:push"
     ],
-    "note": "v775 release candidate: remove unreferenced public geolocation diagnostics and redundant public push-beta console; keep targeted push operations behind the existing admin perimeter and point test notifications to the normal Drinks verification UI. Current tree and full Git history audits found zero high-confidence private-secret exposures. Live remains v774 until post-merge edge proof.",
-    "release_candidate_version": "v775"
+    "note": "2026-08-09 v775 public-edge proof PASS: live VERSION v775, 35/35 critical routes healthy, geo_diagnostics.html and push_beta_test.html return 404, admin_push_targeted_test.html remains perimeter-protected and terminates 401 unauthenticated, drinks_pending.html?push_test=targeted returns 200, and the Despimarkt nomination compatibility redirect remains intact. Current-tree and full-history high-confidence private-secret scans both returned zero findings."
   },
   "baseline_checks": [
     {
       "id": "static_integrity",
       "status": "verified_complete",
       "command": "npm run verify",
-      "evidence": "Current Node 24 verification passes JavaScript syntax, RPC coverage, local references, version drift, security/runtime regressions, Klaverjas/Toepen checks, Ballroom v769a, scoped live-read v770a, push runtime v770b, canonical Beurs runtime checks, the permanent v771d Drinks rollback-proof regression, v772 finalization-residue guard, v773 diagnostic self-consistency guard, and v774 production-acceptance guard."
+      "evidence": "Current Node 24 verification passes JavaScript syntax, RPC coverage, local references, version drift, security/runtime regressions, Klaverjas/Toepen checks, Ballroom v769a, scoped live-read v770a, push runtime v770b, canonical Beurs runtime checks, the permanent v771d Drinks rollback-proof regression, v772 finalization-residue guard, v773 diagnostic self-consistency guard, v774 production-acceptance guard, and v775 public-surface/secret-exposure guard."
     },
     {
       "id": "klaverjas_regression",
@@ -41,7 +40,7 @@
       "id": "live_routes",
       "status": "verified_complete",
       "command": "npm run smoke:live",
-      "evidence": "2026-08-09 v774 post-merge public-edge proof reports live VERSION v774 and 35/35 critical routes healthy; apex admin redirects to the protected admin host and unauthenticated admin returns 401. Targeted edge checks confirmed deployed Beerpong Promise handling, cross-origin analytics transport, and concise production login copy."
+      "evidence": "2026-08-09 v775 post-merge public-edge proof reports live VERSION v775 and 35/35 critical routes healthy; apex admin redirects to the protected admin host and unauthenticated admin returns 401. Removed public diagnostic/push-test consoles return 404 and the normal Drinks verification target remains healthy."
     },
     {
       "id": "push_surface",
@@ -100,7 +99,7 @@
       "status": "verified_complete",
       "proof_needed": "Complete: public admin entry redirects to admin.kalenel.nl; unauthenticated admin-host access is denied; GitHub OAuth outer allowlist and Supabase username/password/TOTP inner gate protect the admin surface.",
       "next_action": "Keep apex redirect, admin 401/security headers and gate routing in live regression. Reopen only if Cloudflare Worker/DNS/admin authentication changes.",
-      "latest_probe": "2026-08-09 v774 live proof: apex /admin.html HTTP 302 to admin.kalenel.nl and admin perimeter HTTP 401 with build v762; protected admin routes remain inaccessible without authentication."
+      "latest_probe": "2026-08-09 v775 live proof: admin targeted push tool routes apex 302 to admin.kalenel.nl and terminates unauthenticated HTTP 401; public operational consoles removed in v775 return 404."
     },
     {
       "id": "boerenbridge_admin_contracts",
