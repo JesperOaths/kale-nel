@@ -1,4 +1,4 @@
-name: v770a scoped live-read preflight
+name: v770a scoped live-read post-apply proof
 
 on:
   pull_request:
@@ -132,7 +132,9 @@ jobs:
           echo 'v770a PostgreSQL compile/rollback/rerun PASS.'
       - name: Verify v770a DDL/read boundary
         run: node check-scoped-live-read-repair-v770a.mjs
-      - name: Prove deployed signature drift and read-only helper availability
+      - name: Prove deployed v770a scoped frontend read contracts
+        env:
+          GEJAST_SCOPED_LIVE_EXPECT_POST: '1'
         run: node check-live-scoped-live-read-v770a.mjs
       - name: Full repository verification
         run: npm run verify
