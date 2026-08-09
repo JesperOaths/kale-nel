@@ -67,6 +67,9 @@ jobs:
       - name: Web push Node24 runtime regression
         run: node check-web-push-node24-runtime-v770b.mjs
 
+      - name: Canonical Beurs runtime route
+        run: node check-beurs-runtime-route-v770c.mjs
+
       - name: GitHub Actions Node24 runtime pins
         run: node check-github-actions-node24-runtime.mjs
 
