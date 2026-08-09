@@ -73,6 +73,9 @@ jobs:
       - name: Current beta readiness tracker
         run: node check-beta-readiness-current-v770d.mjs
 
+      - name: Live-write safety and target isolation
+        run: node check-live-write-safety-v770e.mjs
+
       - name: GitHub Actions Node24 runtime pins
         run: node check-github-actions-node24-runtime.mjs
 
