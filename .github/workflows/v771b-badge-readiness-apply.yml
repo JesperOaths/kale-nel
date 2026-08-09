@@ -1,0 +1,58 @@
+name: v771b badge readiness apply
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [synchronize]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.ref == 'agent/v771b-badge-derived-proof'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v5
+        with:
+          ref: agent/v771b-badge-derived-proof
+          fetch-depth: 0
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Apply badge readiness consolidation
+        run: node scripts/apply-v771b-badge-readiness.mjs
+      - name: Remove temporary ordinary generator
+        run: rm scripts/apply-v771b-badge-readiness.mjs
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Full repository verification
+        run: npm run verify
+      - name: Current readiness report
+        run: npm run beta:readiness
+      - name: Live v771 read-only health
+        env:
+          GEJAST_EXPECTED_VERSION: v771
+          GEJAST_DEPLOY_WAIT_SECONDS: '30'
+        run: npm run smoke:live
+      - name: Push health without send
+        run: npm run smoke:push
+      - name: Commit expected ordinary files only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add beta-readiness.json beta-live-write-checklist.json check-live-write-safety-v770e.mjs
+          git add -u scripts/apply-v771b-badge-readiness.mjs
+          changed="$(git diff --cached --name-only | sort)"
+          printf '%s\n' "$changed"
+          bad="$(printf '%s\n' "$changed" | grep -Ev '^(beta-readiness\.json|beta-live-write-checklist\.json|check-live-write-safety-v770e\.mjs|scripts/apply-v771b-badge-readiness\.mjs)$' || true)"
+          if [ -n "$bad" ]; then echo "Unexpected staged files:"; echo "$bad"; exit 1; fi
+          git commit -m "v771b retire derived badges from mutation readiness"
+          git push origin HEAD:agent/v771b-badge-derived-proof
