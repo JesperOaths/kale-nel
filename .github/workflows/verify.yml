@@ -55,6 +55,9 @@ jobs:
       - name: Klaverjas round scorer polish regression
         run: node check-klaverjas-round-scorer-polish-v769.mjs
 
+      - name: Ballroom safe-read v769a repair boundary
+        run: node check-ballroom-safe-read-repair-v769a.mjs
+
       - name: GitHub Actions Node24 runtime pins
         run: node check-github-actions-node24-runtime.mjs
 
