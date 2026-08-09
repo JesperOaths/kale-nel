@@ -1,0 +1,37 @@
+name: v771c admin mutation audit
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: github.event.pull_request.head.ref == 'agent/v771c-admin-mutation-audit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v5
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Inventory admin mutation contracts
+        run: node scripts/audit-admin-mutations-v771c.mjs
+      - name: Full repository verification
+        run: npm run verify
+      - name: Extended protected-admin read proof
+        run: npm run smoke:beta:extended
+      - name: Live v771 health
+        env:
+          GEJAST_EXPECTED_VERSION: v771
+          GEJAST_DEPLOY_WAIT_SECONDS: '30'
+        run: npm run smoke:live
