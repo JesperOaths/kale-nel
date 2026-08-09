@@ -9,6 +9,8 @@ const checklist = JSON.parse(fs.readFileSync('beta-live-write-checklist.json', '
 const approvalName = checklist.approval_env?.name || 'GEJAST_ALLOW_LIVE_WRITE_BETA';
 const approvalValue = checklist.approval_env?.required_value || 'I_APPROVE_LIVE_BETA_WRITES';
 const approved = process.env[approvalName] === approvalValue;
+const secondaryTarget = String(process.env.GEJAST_BETA_WRITE_TARGET || '').trim().toLowerCase();
+const allowedSecondaryTargets = new Set(['beerpong', 'boerenbridge', 'rad']);
 
 function hasEnv(name) {
   return String(process.env[name] || '').trim().length > 0;
@@ -18,10 +20,8 @@ function requirementStatus(requirement) {
   if (requirement === 'live_write_approval') return approved;
   if (requirement === 'player1') return hasEnv('GEJAST_BETA_PLAYER1_NAME') && hasEnv('GEJAST_BETA_PLAYER1_PIN');
   if (requirement === 'player2') return hasEnv('GEJAST_BETA_PLAYER2_NAME') && hasEnv('GEJAST_BETA_PLAYER2_PIN');
-  if (requirement === 'player3') return hasEnv('GEJAST_BETA_PLAYER3_NAME') && hasEnv('GEJAST_BETA_PLAYER3_PIN');
-  if (requirement === 'player4') return hasEnv('GEJAST_BETA_PLAYER4_NAME') && hasEnv('GEJAST_BETA_PLAYER4_PIN');
   if (requirement === 'admin_session') return hasEnv('GEJAST_ADMIN_SESSION_TOKEN');
-  if (requirement === 'real_permissioned_device') return hasEnv('GEJAST_REAL_PUSH_DEVICE_READY');
+  if (requirement === 'secondary_target') return allowedSecondaryTargets.has(secondaryTarget);
   return false;
 }
 
@@ -32,6 +32,7 @@ const rows = checklist.items.map((item) => {
 
 console.log(`Kale Nel live-write beta gate: ${checklist.site_version || 'unknown version'}`);
 console.log(`Approval: ${approved ? 'present' : `missing (${approvalName}=${approvalValue})`}`);
+if (secondaryTarget) console.log(`Secondary target: ${secondaryTarget}${allowedSecondaryTargets.has(secondaryTarget) ? '' : ' (invalid)'}`);
 console.log('');
 
 for (const item of rows) {
@@ -50,4 +51,4 @@ if (blocked.length) {
 }
 
 console.log('');
-console.log('Live-write beta inputs are present. Use the dedicated mutation harnesses only after final human confirmation in the current chat.');
+console.log('Live-write beta inputs are present. Run only the single dedicated mutation target explicitly approved in the current chat.');
