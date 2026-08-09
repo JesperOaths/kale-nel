@@ -7,6 +7,7 @@ const version=fs.readFileSync('VERSION','utf8').trim();
 const n=Number((version.match(/v(\d+)/i)||[])[1]||0);
 if(n<775) failures.push('public-surface security v775 guard requires VERSION >= v775, got '+version);
 for(const removed of ['geo_diagnostics.html','push_beta_test.html']) if(fs.existsSync(removed)) failures.push('removed public operational residue returned: '+removed);
+if(!fs.existsSync('drinks_pending.html')) failures.push('normal Drinks verification target drinks_pending.html is missing');
 
 const targeted=fs.readFileSync('admin_push_targeted_test.html','utf8');
 if(targeted.includes('push_beta_test.html')) failures.push('admin targeted push tool still references removed public beta-test console');
@@ -29,6 +30,7 @@ if(listed.status!==0) failures.push('git ls-files failed during current secret e
 else {
   const tracked=listed.stdout.split('\0').filter(Boolean);
   for(const removed of ['geo_diagnostics.html','push_beta_test.html']) if(tracked.includes(removed)) failures.push('removed public operational residue is still tracked: '+removed);
+  if(!tracked.includes('drinks_pending.html')) failures.push('replacement Drinks verification target is not tracked');
   const files=tracked.filter((file)=>file!=='check-public-surface-security-v775.mjs' && /\.(?:html|js|mjs|json|yml|yaml|toml|txt|md|sql|ps1|sh)$/i.test(file));
   const patterns=[
     ['private_key_block',/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/],
@@ -42,4 +44,4 @@ else {
   for(const file of files){let text='';try{text=fs.readFileSync(file,'utf8');}catch(_){continue;}for(const [kind,re] of patterns)if(re.test(text))failures.push('high-confidence current-tree secret finding: '+kind+' in '+file);if(serviceRoleJwt(text))failures.push('high-confidence current-tree service-role JWT in '+file);}
 }
 if(failures.length){console.error('Public-surface security v775 FAILED');failures.forEach(f=>console.error('- '+f));process.exit(1);}
-console.log(`Public-surface security v775 PASS at ${version}: public diagnostic/test consoles are absent, targeted push remains admin-session bounded with a normal verification destination, compatibility redirect stays non-mutating, and current tree has no high-confidence private secrets.`);
+console.log(`Public-surface security v775 PASS at ${version}: removed public consoles are absent, the replacement Drinks verification target exists, targeted push remains admin-session bounded, compatibility redirect stays non-mutating, and current tree has no high-confidence private secrets.`);
