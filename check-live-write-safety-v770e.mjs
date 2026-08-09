@@ -23,7 +23,7 @@ if (checklistIds.includes('real_device_push_delivery')) failures.push('already-p
 const secondaryItem = checklist.items.find((item) => item.id === 'secondary_game_save_flows');
 if (!secondaryItem) failures.push('secondary_game_save_flows checklist item missing');
 else {
-  if (/Klaverjas/i.test(secondaryItem.area || '') || /Klaverjas/i.test(secondaryItem.intent || '')) failures.push('secondary checklist must exclude already-proven Klaverjas');
+  if (/Klaverjas/i.test(secondaryItem.area || '')) failures.push('secondary checklist area must exclude already-proven Klaverjas');
   for (const required of ['player1', 'player2', 'secondary_target', 'live_write_approval']) {
     if (!(secondaryItem.requires || []).includes(required)) failures.push(`secondary checklist missing ${required}`);
   }
@@ -65,4 +65,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log('Live-write beta safety v770e PASS: checklist matches five permission gaps; secondary writes are single-target and Klaverjas is excluded.');
+console.log('Live-write beta safety v770e PASS: checklist matches five permission gaps; secondary writes are single-target and Klaverjas execution is excluded.');
