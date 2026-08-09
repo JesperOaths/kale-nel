@@ -7,7 +7,8 @@ const tracker = JSON.parse(trackerText);
 const extended = fs.readFileSync('check-beta-readonly-extended.mjs', 'utf8');
 const failures = [];
 
-if (tracker.deployment_identity?.live_version !== version) failures.push(`tracker live_version ${tracker.deployment_identity?.live_version || '(missing)'} must equal root VERSION ${version}`);
+const trackedReleaseVersion = tracker.deployment_identity?.release_candidate_version || tracker.deployment_identity?.live_version;
+if (trackedReleaseVersion !== version) failures.push(`tracker release/live version ${trackedReleaseVersion || '(missing)'} must equal root VERSION ${version}`);
 if (!String(tracker.site_version || '').includes(version)) failures.push(`tracker site_version must mention ${version}`);
 if (!/^\d{4}-\d{2}-\d{2}$/.test(String(tracker.last_updated || ''))) failures.push('tracker last_updated must be YYYY-MM-DD');
 for (const stale of ['live v761 / main','DNS does not resolve','delivery was blocked','Backend user-targeted delivery still needs','fix public admin-host exposure separately']) if (trackerText.includes(stale)) failures.push(`stale readiness claim remains: ${stale}`);
