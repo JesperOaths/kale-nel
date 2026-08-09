@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import './check-drinks-transactional-proof-v771d.mjs';
 
 const checklist=JSON.parse(fs.readFileSync('beta-live-write-checklist.json','utf8'));
 const readiness=JSON.parse(fs.readFileSync('beta-readiness.json','utf8'));
