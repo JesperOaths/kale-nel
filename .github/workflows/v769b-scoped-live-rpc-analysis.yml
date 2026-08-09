@@ -1,0 +1,24 @@
+name: v769b scoped live RPC analysis
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: github.event.pull_request.head.ref == 'agent/v769b-scoped-live-rpc-analysis'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - name: Trace repo SQL definitions and frontend signatures
+        run: node scripts/audit-scoped-live-rpc-signatures-v769b.mjs
