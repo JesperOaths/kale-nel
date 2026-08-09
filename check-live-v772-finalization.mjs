@@ -23,14 +23,29 @@ function urlFor(pathname) {
   url.searchParams.set('cb', cacheBuster);
   return url.toString();
 }
-async function get(pathname, options = {}) {
+async function fetchManual(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(urlFor(pathname), { cache: 'no-store', redirect: 'manual', ...options, signal: controller.signal });
+    return await fetch(url, { cache: 'no-store', redirect: 'manual', signal: controller.signal });
   } finally {
     clearTimeout(timer);
   }
+}
+async function get(pathname) {
+  return fetchManual(urlFor(pathname));
+}
+async function followToTerminal(pathname, maxRedirects = 5) {
+  let url = urlFor(pathname);
+  const chain = [];
+  for (let hop = 0; hop <= maxRedirects; hop += 1) {
+    const response = await fetchManual(url);
+    const location = response.headers.get('location') || '';
+    chain.push({ url, status: response.status, location });
+    if (response.status < 300 || response.status >= 400 || !location) return { response, chain };
+    url = new URL(location, url).toString();
+  }
+  throw new Error(`redirect chain exceeded ${maxRedirects} hops`);
 }
 
 async function waitForV772() {
@@ -70,10 +85,11 @@ try {
 
 for (const pathname of removed) {
   try {
-    const response = await get(pathname);
+    const { response, chain } = await followToTerminal(pathname);
     const text = await response.text();
-    console.log(`${pathname} HTTP ${response.status}; bytes=${text.length}`);
-    if (response.status < 400) failures.push(`${pathname} is still publicly served with HTTP ${response.status}`);
+    const chainText = chain.map((hop) => `${hop.status}${hop.location ? `->${hop.location}` : ''}`).join(' | ');
+    console.log(`${pathname} chain=${chainText}; terminal=${response.status}; bytes=${text.length}`);
+    if (response.status < 400) failures.push(`${pathname} still resolves to publicly served HTTP ${response.status}`);
   } catch (error) {
     failures.push(`${pathname} edge proof failed: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -85,4 +101,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log('v772 public edge proof PASS: VERSION=v772, homepage copy/version are current, and all nine removed public artifacts are unavailable.');
+console.log('v772 public edge proof PASS: VERSION=v772, homepage copy/version are current, and all nine removed public artifacts terminate at non-public HTTP status after any perimeter redirect.');
