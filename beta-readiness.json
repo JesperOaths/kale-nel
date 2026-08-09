@@ -1,6 +1,6 @@
 {
   "version": 7,
-  "site_version": "live v773 / current frontend release v773",
+  "site_version": "release candidate v774 / live v773",
   "last_updated": "2026-08-09",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -21,7 +21,8 @@
       "npm run smoke:beta:extended",
       "npm run smoke:push"
     ],
-    "note": "2026-08-09 post-merge public-edge proof confirmed /VERSION=v773, all 35 hardened live routes healthy, apex admin still redirecting to protected admin.kalenel.nl with unauthenticated HTTP 401, home.html using the current page release for its cache-bust instead of v757, and the deployed version-source/ops/deployment/readiness/runtime-smoke/bridge assets serving the repaired release-aware diagnostic logic. Historical module/RPC versions remain distinct from the current frontend release."
+    "note": "v774 release candidate: production browser acceptance fixes for Beerpong optional RPC promise handling, cross-origin analytics delivery, and finished-product login copy. Live remains v773 until post-merge public-edge proof.",
+    "release_candidate_version": "v774"
   },
   "baseline_checks": [
     {
