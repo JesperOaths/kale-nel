@@ -1,0 +1,22 @@
+name: v775 public surface security audit
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/audit-public-surface-security-v775.mjs'
+      - '.github/workflows/v775-public-surface-security-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Inventory public operational surfaces, secret patterns, and live headers
+        run: node scripts/audit-public-surface-security-v775.mjs
