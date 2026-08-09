@@ -87,7 +87,7 @@
         return itemFromPayload(raw);
       } catch(inner) {
         if(/live_match_summaries/i.test(String(inner?.message || inner || ''))){
-          throw new Error('Live samenvatting is nog niet beschikbaar op deze database. Draai eerst de v488 compat SQL.');
+          throw new Error('Live samenvatting kon niet worden geladen. Vernieuw de pagina en probeer het opnieuw.');
         }
         throw inner;
       }
