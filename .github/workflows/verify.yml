@@ -61,6 +61,9 @@ jobs:
       - name: Stale repair-copy v770 regression
         run: node check-stale-repair-copy-v770.mjs
 
+      - name: Scoped live-read v770a repair boundary
+        run: node check-scoped-live-read-repair-v770a.mjs
+
       - name: GitHub Actions Node24 runtime pins
         run: node check-github-actions-node24-runtime.mjs
 
