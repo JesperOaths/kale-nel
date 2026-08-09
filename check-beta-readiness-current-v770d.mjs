@@ -15,17 +15,17 @@ for (const stale of ['live v761 / main','DNS does not resolve','delivery was blo
 const gaps = new Map((tracker.beta_gaps || []).map((item) => [item.id, item]));
 for (const id of [
   'real_device_push_delivery','admin_host_security','scope_isolation','analytics_observability',
-  'profile_editing','secondary_game_save_flows','badge_awards'
+  'profile_editing','secondary_game_save_flows','badge_awards','admin_mutations'
 ]) if (gaps.get(id)?.status !== 'verified_complete') failures.push(`${id} must remain verified_complete unless current evidence is deliberately revised`);
 
-const permissionIds = ['drinks_create_verify_reject','admin_mutations'];
+const permissionIds = ['drinks_create_verify_reject'];
 for (const id of permissionIds) if (gaps.get(id)?.status !== 'needs_permission') failures.push(`${id} must remain permission-gated until controlled mutation proof exists`);
 
 const blocked = [...gaps.values()].filter((item) => item.status === 'blocked_external');
 if (blocked.length) failures.push(`tracker unexpectedly has blocked_external gaps: ${blocked.map((item) => item.id).join(', ')}`);
 const completeCount = [...gaps.values()].filter((item) => item.status === 'verified_complete').length;
 const permissionCount = [...gaps.values()].filter((item) => item.status === 'needs_permission').length;
-if (completeCount !== 10 || permissionCount !== 2) failures.push(`expected current readiness split 10 complete / 2 permission-gated, got ${completeCount} / ${permissionCount}`);
+if (completeCount !== 11 || permissionCount !== 1) failures.push(`expected current readiness split 11 complete / 1 permission-gated, got ${completeCount} / ${permissionCount}`);
 
 if (!extended.includes("const adminBaseUrl = process.env.GEJAST_ADMIN_BASE_URL || 'https://admin.kalenel.nl';")) failures.push('extended beta checker must target the protected admin host');
 if (!extended.includes('if (response.status !== 401)')) failures.push('extended beta checker must require unauthenticated admin HTTP 401');
