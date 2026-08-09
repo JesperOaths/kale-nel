@@ -4,7 +4,7 @@ on:
   pull_request:
     branches:
       - main
-    types: [opened]
+    types: [opened, synchronize]
 
 permissions:
   contents: read
@@ -25,6 +25,8 @@ jobs:
         run: npm ci
       - name: Scan active frontend for unfinished UX markers
         run: node scripts/audit-active-frontend-finalization-v770.mjs
+      - name: Inspect deployed RPC contracts and stale runtime references
+        run: node scripts/audit-runtime-contracts-v770.mjs
       - name: Fresh live v769 deployment health
         env:
           GEJAST_EXPECTED_VERSION: v769
