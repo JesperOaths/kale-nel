@@ -704,12 +704,12 @@
   </style>
   <link rel="canonical" href="https://kalenel.nl/index.html" />
   <script id="force-https">(function(){var h=window.location.hostname||'';if((h==='kalenel.nl'||h.endsWith('.kalenel.nl'))&&window.location.protocol==='http:'){window.location.replace('https://'+window.location.host+window.location.pathname+window.location.search+window.location.hash);}})();</script>
-  <script>window.GEJAST_PAGE_VERSION='v771';</script><script src="./gejast-config.js?v771"></script><script src="./gejast-mobile-route-fixes-v583.js?v771" defer></script><script src="./gejast-mobile-foundation-v583.js?v771" defer></script><script src="./gejast-home-gate.js?v771"></script><script defer src="./gejast-clickable-cards.js?v771"></script><script defer src="./gejast-scope-context.js?v771"></script><script defer src="./gejast-family-rollout.js?v771"></script><script defer src="./gejast-scope.js?v771"></script>
-  <script defer src="./gejast-live-summary.js?v771"></script>
-  <script defer src="./gejast-scoped-rpc.js?v771"></script>
-  <script defer src="./gejast-combined-readers.js?v771"></script>
-<script defer src="./gejast-push-runtime.js?v771"></script>
-<script defer src="./gejast-fairness.js?v771"></script>
+  <script>window.GEJAST_PAGE_VERSION='v772';</script><script src="./gejast-config.js?v772"></script><script src="./gejast-mobile-route-fixes-v583.js?v772" defer></script><script src="./gejast-mobile-foundation-v583.js?v772" defer></script><script src="./gejast-home-gate.js?v772"></script><script defer src="./gejast-clickable-cards.js?v772"></script><script defer src="./gejast-scope-context.js?v772"></script><script defer src="./gejast-family-rollout.js?v772"></script><script defer src="./gejast-scope.js?v772"></script>
+  <script defer src="./gejast-live-summary.js?v772"></script>
+  <script defer src="./gejast-scoped-rpc.js?v772"></script>
+  <script defer src="./gejast-combined-readers.js?v772"></script>
+<script defer src="./gejast-push-runtime.js?v772"></script>
+<script defer src="./gejast-fairness.js?v772"></script>
 <style id="gejast-v685-home-speed-fix">
   body{align-items:flex-start !important;}
   .page{padding-top:18px !important;}
@@ -763,7 +763,7 @@
         <div id="drinksHomeGrid" class="drinks-home-grid">
           <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">—</div></a>
           <a class="drinks-mini" style="background:#fff;color:#111;border:1px solid rgba(0,0,0,.12)" href="./drinks_pending.html"><div class="drinks-mini-label">Verifiëren</div><div class="drinks-mini-value" style="color:var(--gold)">+</div></a>
-          <a class="drinks-mini gold" href="./drinks_speed.html"><div class="drinks-mini-label">Snelheids poging</div><div class="drinks-mini-value">+</div></a>
+          <a class="drinks-mini gold" href="./drinks_speed.html"><div class="drinks-mini-label">Snelheidspoging</div><div class="drinks-mini-value">+</div></a>
           <a class="drinks-mini dark" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div></a>
         </div>
 
@@ -1686,7 +1686,7 @@ async function castExtraPollVote(desired_status) {
       grid.innerHTML = `
         <a class="drinks-mini" href="./drinks.html"><div class="drinks-mini-label">Vandaag</div><div class="drinks-mini-value">${Number(totals.today_events||0)}</div></a>
         <a class="drinks-mini" style="background:#fff;color:#111;border:1px solid rgba(0,0,0,.12)" href="./drinks_pending.html"><div class="drinks-mini-label">Verifiëren</div><div class="drinks-mini-value" style="color:var(--gold)">+</div></a>
-        <a class="drinks-mini gold" href="./drinks_speed.html"><div class="drinks-mini-label">Snelheids poging</div><div class="drinks-mini-value">+</div></a>
+        <a class="drinks-mini gold" href="./drinks_speed.html"><div class="drinks-mini-label">Snelheidspoging</div><div class="drinks-mini-value">+</div></a>
         <a class="drinks-mini dark" href="./drinks_add.html"><div class="drinks-mini-label">Drinks toevoegen</div><div class="drinks-mini-value">+</div></a>`;
     }
 
@@ -1997,7 +1997,7 @@ async function castExtraPollVote(desired_status) {
 
   <div class="site-credit-watermark" data-version-watermark></div>
 
-<script defer src="./gejast-player-session-ui.js?v771"></script>
+<script defer src="./gejast-player-session-ui.js?v772"></script>
 
 
 <script>(function(){if(window.GEJAST_CLICKABLE_CARDS){window.GEJAST_CLICKABLE_CARDS.bind(document);window.GEJAST_CLICKABLE_CARDS.bindBackLinks(document);window.GEJAST_CLICKABLE_CARDS.upgradeJavascriptVoidLinks(document);}})();</script><script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
@@ -2005,9 +2005,9 @@ async function castExtraPollVote(desired_status) {
   function loadScript(src){ return new Promise((resolve,reject)=>{ var s=document.createElement('script'); s.src=src; s.defer=true; s.onload=resolve; s.onerror=reject; document.body.appendChild(s); }); }
   function bootSecondary(){
     return Promise.allSettled([
-      loadScript('./drinks-verify-float.js?v771'),
-      loadScript('./gejast-geo.js?v771'),
-      loadScript('./site-analytics.js?v771')
+      loadScript('./drinks-verify-float.js?v772'),
+      loadScript('./gejast-geo.js?v772'),
+      loadScript('./site-analytics.js?v772')
     ]);
   }
   if ('requestIdleCallback' in window) requestIdleCallback(()=>bootSecondary(), { timeout: 2500 });
