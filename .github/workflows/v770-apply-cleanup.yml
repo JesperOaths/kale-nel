@@ -36,8 +36,7 @@ jobs:
           function replaceExact(path, from, to) {
             const before = fs.readFileSync(path, 'utf8');
             if (!before.includes(from)) throw new Error(`${path}: expected source text not found`);
-            const after = before.replace(from, to);
-            fs.writeFileSync(path, after, 'utf8');
+            fs.writeFileSync(path, before.replace(from, to), 'utf8');
           }
 
           replaceExact(
@@ -55,15 +54,29 @@ jobs:
 
           const fixerPath = 'fix-version-drift.mjs';
           let fixer = fs.readFileSync(fixerPath, 'utf8');
-          const fixerNeedle = "const ignoredFiles = new Set(['check-version-drift.mjs','fix-version-drift.mjs']);\n";
-          const fixerInsert = fixerNeedle + "const allowedStaticVersionFiles = new Set(['admin.html','cloudflare/workers/admin-gate/static/admin.html','scripts/test-admin-static-assets-html-handling.mjs','scripts/test-admin-worker-gate.mjs']);\n";
           if (!fixer.includes('allowedStaticVersionFiles')) {
-            if (!fixer.includes(fixerNeedle)) throw new Error('fix-version-drift.mjs insertion point missing');
-            fixer = fixer.replace(fixerNeedle, fixerInsert);
-            const walkNeedle = "  if (isArchivedFile(rel)) continue;\n  if (ignoredFiles.has(path.basename(file))) continue;\n";
-            const walkInsert = "  if (isArchivedFile(rel)) continue;\n  if (allowedStaticVersionFiles.has(rel)) continue;\n  if (ignoredFiles.has(path.basename(file))) continue;\n";
-            if (!fixer.includes(walkNeedle)) throw new Error('fix-version-drift.mjs walk insertion point missing');
-            fixer = fixer.replace(walkNeedle, walkInsert);
+            const ignoredNeedle = "const ignoredFiles = new Set(['check-version-drift.mjs','fix-version-drift.mjs']);\n";
+            if (!fixer.includes(ignoredNeedle)) throw new Error('fix-version-drift.mjs constants insertion point missing');
+            fixer = fixer.replace(
+              ignoredNeedle,
+              ignoredNeedle + "const allowedStaticVersionFiles = new Set(['admin.html','cloudflare/workers/admin-gate/static/admin.html','scripts/test-admin-static-assets-html-handling.mjs','scripts/test-admin-worker-gate.mjs']);\n"
+            );
+
+            const oldBlock = `  let after = before
+              .replace(/\\?v\\d+/gi, \`?\${rootVersion}\`)
+              .replace(/(GEJAST_PAGE_VERSION\\s*=\\s*['\"])v\\d+(['\"])/gi, \`$1\${rootVersion}$2\`)
+              .replace(/(GEJAST_SITE_VERSION\\s*=\\s*['\"])v\\d+(['\"])/gi, \`$1\${rootVersion}$2\`)
+              .replace(/(VERSION\\s*:\\s*['\"])v\\d+(['\"])/gi, \`$1\${rootVersion}$2\`)
+              .replace(/v\\d+\\s*[-–—.]?\\s*Made by Bruis/gi, \`\${rootVersion}  -  Made by Bruis\`);`;
+            const newBlock = `  const preserveStaticV762 = allowedStaticVersionFiles.has(rel);
+              let after = before
+              .replace(/\\?v(\\d+)/gi, (match, digits) => preserveStaticV762 && digits === '762' ? match : \`?\${rootVersion}\`)
+              .replace(/(GEJAST_PAGE_VERSION\\s*=\\s*['\"])v(\\d+)(['\"])/gi, (match, prefix, digits, suffix) => preserveStaticV762 && digits === '762' ? match : \`\${prefix}\${rootVersion}\${suffix}\`)
+              .replace(/(GEJAST_SITE_VERSION\\s*=\\s*['\"])v(\\d+)(['\"])/gi, (match, prefix, digits, suffix) => preserveStaticV762 && digits === '762' ? match : \`\${prefix}\${rootVersion}\${suffix}\`)
+              .replace(/(VERSION\\s*:\\s*['\"])v(\\d+)(['\"])/gi, (match, prefix, digits, suffix) => preserveStaticV762 && digits === '762' ? match : \`\${prefix}\${rootVersion}\${suffix}\`)
+              .replace(/v(\\d+)\\s*[-–—.]?\\s*Made by Bruis/gi, (match, digits) => preserveStaticV762 && digits === '762' ? match : \`\${rootVersion}  -  Made by Bruis\`);`;
+            if (!fixer.includes(oldBlock)) throw new Error('fix-version-drift.mjs replacement block missing');
+            fixer = fixer.replace(oldBlock, newBlock);
             fs.writeFileSync(fixerPath, fixer, 'utf8');
           }
 
@@ -72,6 +85,7 @@ jobs:
           const ballroom = fs.readFileSync('ballroom.html','utf8');
           const live = fs.readFileSync('gejast-live-summary.js','utf8');
           const version = fs.readFileSync('VERSION','utf8').trim();
+          const fixer = fs.readFileSync('fix-version-drift.mjs','utf8');
           const failures = [];
           if (version !== 'v770') failures.push('root VERSION is not v770');
           if (ballroom.includes('Run eerst de balzaal-repair SQL')) failures.push('Ballroom still exposes repair-SQL instructions');
@@ -82,6 +96,7 @@ jobs:
           if (!ballroom.includes('ballroom_claim_king_safe') || !ballroom.includes('ballroom_request_entry_safe')) failures.push('Ballroom safe write contract changed');
           if (!live.includes('get_live_match_summary_public_scoped') || !live.includes('get_live_match_summary_public')) failures.push('Live-summary scoped/legacy fallback contract changed');
           if (!live.includes('get_homepage_live_state_public_scoped') || !live.includes('get_homepage_live_state_public')) failures.push('Homepage scoped/legacy fallback contract changed');
+          if (!fixer.includes('preserveStaticV762') || !fixer.includes("digits === '762'")) failures.push('version fixer does not preserve only intentional v762 tokens');
           if (failures.length) { failures.forEach((x)=>console.error('- '+x)); process.exit(1); }
           console.log('v770 stale repair-copy regression PASS.');
           `;
