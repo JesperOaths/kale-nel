@@ -1,6 +1,8 @@
 #!/usr/bin/env node
-/* Controlled live-write beta test for secondary games.
-   Uses only the configured beta player accounts and never prints tokens/PINs. */
+/* Controlled live-write beta test for the remaining secondary games.
+   Executes exactly one explicitly selected target and never prints tokens/PINs.
+   This harness can create permanent/audited history; it must not run without
+   explicit live-write approval in the current chat. */
 import fs from 'node:fs';
 
 const checklist = JSON.parse(fs.readFileSync('beta-live-write-checklist.json', 'utf8'));
@@ -8,33 +10,30 @@ const configText = fs.readFileSync('gejast-config.js', 'utf8');
 const approvalName = checklist.approval_env?.name || 'GEJAST_ALLOW_LIVE_WRITE_BETA';
 const approvalValue = checklist.approval_env?.required_value || 'I_APPROVE_LIVE_BETA_WRITES';
 const scope = normalizeScope(process.env.GEJAST_BETA_SCOPE || 'friends');
+const target = clean(process.env.GEJAST_BETA_WRITE_TARGET).toLowerCase();
+const allowedTargets = new Set(['beerpong', 'boerenbridge', 'rad']);
 
 const player1Name = clean(process.env.GEJAST_BETA_PLAYER1_NAME);
 const player1Pin = clean(process.env.GEJAST_BETA_PLAYER1_PIN);
 const player2Name = clean(process.env.GEJAST_BETA_PLAYER2_NAME);
 const player2Pin = clean(process.env.GEJAST_BETA_PLAYER2_PIN);
-const player3Name = clean(process.env.GEJAST_BETA_PLAYER3_NAME);
-const player3Pin = clean(process.env.GEJAST_BETA_PLAYER3_PIN);
-const player4Name = clean(process.env.GEJAST_BETA_PLAYER4_NAME);
-const player4Pin = clean(process.env.GEJAST_BETA_PLAYER4_PIN);
 const SUPABASE_URL = extractConfig('SUPABASE_URL');
 const KEY = extractConfig('SUPABASE_PUBLISHABLE_KEY');
 
 const missing = [];
 if (process.env[approvalName] !== approvalValue) missing.push(`${approvalName}=${approvalValue}`);
+if (!allowedTargets.has(target)) missing.push('GEJAST_BETA_WRITE_TARGET=beerpong|boerenbridge|rad');
 if (!player1Name) missing.push('GEJAST_BETA_PLAYER1_NAME');
 if (!/^\d{4}$/.test(player1Pin)) missing.push('GEJAST_BETA_PLAYER1_PIN');
 if (!player2Name) missing.push('GEJAST_BETA_PLAYER2_NAME');
 if (!/^\d{4}$/.test(player2Pin)) missing.push('GEJAST_BETA_PLAYER2_PIN');
-if (!player3Name) missing.push('GEJAST_BETA_PLAYER3_NAME');
-if (!/^\d{4}$/.test(player3Pin)) missing.push('GEJAST_BETA_PLAYER3_PIN');
-if (!player4Name) missing.push('GEJAST_BETA_PLAYER4_NAME');
-if (!/^\d{4}$/.test(player4Pin)) missing.push('GEJAST_BETA_PLAYER4_PIN');
 if (!SUPABASE_URL || !KEY) missing.push('public Supabase config');
 
-console.log(`Kale Nel secondary-games live-write beta: ${checklist.site_version || 'unknown version'}`);
-console.log('Target: secondary_game_save_flows');
+console.log(`Kale Nel secondary-game live-write beta: ${checklist.site_version || 'unknown version'}`);
+console.log('Target group: secondary_game_save_flows');
+console.log(`Selected game: ${target || '(missing)'}`);
 console.log(`Scope: ${scope}`);
+console.log('Warning: this harness creates one clearly marked game/spin flow and does not erase audited history automatically.');
 console.log('');
 
 if (missing.length) {
@@ -44,24 +43,22 @@ if (missing.length) {
 }
 
 const stamp = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14);
-const evidence = {};
 
 try {
   const p1 = await login(player1Name, player1Pin);
   const p2 = await login(player2Name, player2Pin);
-  const p3 = await login(player3Name, player3Pin);
-  const p4 = await login(player4Name, player4Pin);
-  evidence.rad = await runCase('rad', () => testRad(p1, p2));
-  evidence.beerpong = await runCase('beerpong', () => testBeerpong(p1, p2));
-  evidence.boerenbridge = await runCase('boerenbridge', () => testBoerenbridge(p1, p2));
-  evidence.klaverjas = await runCase('klaverjas', () => testKlaverjas(p1, p2, p3, p4));
+  let evidence;
+  if (target === 'rad') evidence = await testRad(p1, p2);
+  else if (target === 'beerpong') evidence = await testBeerpong(p1, p2);
+  else if (target === 'boerenbridge') evidence = await testBoerenbridge(p1, p2);
+  else throw new Error(`Unsupported target ${target}`);
 
-  console.log('State: complete.');
-  console.log(JSON.stringify(evidence, null, 2));
+  if (!evidence || evidence.ok === false) throw new Error(`${target} controlled write did not report success.`);
+  console.log('State: complete. Exactly one selected target was executed.');
+  console.log(JSON.stringify({ [target]: evidence }, null, 2));
 } catch (err) {
   console.error('State: failed.');
   console.error(err?.message || String(err));
-  console.error(JSON.stringify(evidence, null, 2));
   process.exit(1);
 }
 
@@ -76,18 +73,6 @@ function normalizeScope(value) {
 function extractConfig(name) {
   const pattern = new RegExp(`${name}\\s*:\\s*['"]([^'"]+)['"]`);
   return configText.match(pattern)?.[1] || '';
-}
-
-async function runCase(name, fn) {
-  try {
-    return await fn();
-  } catch (err) {
-    return {
-      ok: false,
-      state: 'failed',
-      error: String(err?.message || err || `${name} failed`).slice(0, 320),
-    };
-  }
 }
 
 function headers() {
@@ -153,37 +138,40 @@ async function login(name, pin) {
 }
 
 async function testRad(p1, p2) {
+  const segmentKey = `beta_v770e_rad_${stamp}`;
   const spin = await rpc('rad_log_spin_scoped', {
     session_token: p1.token,
-    segment_key_input: `beta_tier3_rad_${stamp}`,
-    segment_label_input: `Beta tier 3 rad ${stamp}`,
+    segment_key_input: segmentKey,
+    segment_label_input: `Beta v770e rad ${stamp}`,
     segment_type_input: 'beta-test',
     chance_input: 1,
-    copy_text_input: 'Controlled Tier 3 beta spin',
+    copy_text_input: 'Controlled v770e beta spin',
     drinks_input: [],
-    meta_input: { source:'check-beta-live-write-secondary-games', beta:true, stamp },
+    meta_input: { source:'check-beta-live-write-secondary-games', beta:true, version:'v770e', stamp },
     site_scope_input: scope,
   });
   const spinId = Number(spin?.spin_id || 0);
-  const target = await rpc('rad_log_target_nomination_scoped', {
+  if (!spinId) throw new Error('Rad write did not return spin_id.');
+  const nomination = await rpc('rad_log_target_nomination_scoped', {
     session_token: p1.token,
-    spin_id_input: spinId || null,
-    segment_key_input: `beta_tier3_rad_${stamp}`,
-    segment_label_input: `Beta tier 3 rad ${stamp}`,
+    spin_id_input: spinId,
+    segment_key_input: segmentKey,
+    segment_label_input: `Beta v770e rad ${stamp}`,
     target_player_name_input: p2.name,
-    meta_input: { source:'check-beta-live-write-secondary-games', beta:true, stamp },
+    meta_input: { source:'check-beta-live-write-secondary-games', beta:true, version:'v770e', stamp },
     site_scope_input: scope,
   });
   return {
-    ok: !!spinId,
-    spin_id: spinId || null,
-    target_id: Number(target?.target_id || target?.id || 0) || null,
+    ok: true,
+    spin_id: spinId,
+    target_id: Number(nomination?.target_id || nomination?.id || 0) || null,
     target_player: p2.name,
+    marker: segmentKey,
   };
 }
 
 async function testBeerpong(p1, p2) {
-  const clientMatchId = `beta-tier3-beerpong-${stamp}`;
+  const clientMatchId = `beta-v770e-beerpong-${stamp}`;
   const payload = {
     match_format: '1v1',
     team_a_player_names: [p1.name],
@@ -194,6 +182,7 @@ async function testBeerpong(p1, p2) {
     finished_at: new Date().toISOString(),
     beta_test: true,
     source: 'check-beta-live-write-secondary-games',
+    beta_version: 'v770e',
   };
   const out = await rpc('save_beerpong_match', {
     session_token: p1.token,
@@ -209,9 +198,9 @@ async function testBeerpong(p1, p2) {
 }
 
 async function testBoerenbridge(p1, p2) {
-  const clientMatchId = `beta-tier3-boerenbridge-${stamp}`;
+  const clientMatchId = `beta-v770e-boerenbridge-${stamp}`;
   const payload = {
-    match_name: `Beta tier 3 boerenbridge ${stamp}`,
+    match_name: `Beta v770e boerenbridge ${stamp}`,
     match_status: 'finished',
     started_at: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
     finished_at: new Date().toISOString(),
@@ -223,11 +212,12 @@ async function testBoerenbridge(p1, p2) {
     ],
     beta_test: true,
     source: 'check-beta-live-write-secondary-games',
+    beta_version: 'v770e',
   };
   const out = await rpc('save_boerenbridge_match', {
     session_token: p1.token,
     client_match_id: clientMatchId,
-    rules_version: 'beta-tier3',
+    rules_version: 'beta-v770e',
     app_version: checklist.site_version || 'beta',
     match_payload: payload,
   });
@@ -236,34 +226,5 @@ async function testBoerenbridge(p1, p2) {
     match_id: Number(out?.match_id || 0) || null,
     client_match_id: clientMatchId,
     stats_applied: !!out?.stats_applied,
-  };
-}
-
-async function testKlaverjas(p1, p2, p3, p4) {
-  const title = `Beta tier 3 klaverjas ${stamp}`;
-  const playedAt = new Date().toISOString().slice(0, 10);
-  const payload = {
-    title,
-    played_at: playedAt,
-    variant: '4_player',
-    scoreboard_mode: 'teams',
-    beta_test: true,
-    source: 'check-beta-live-write-secondary-games',
-    participants: [
-      { name: p1.name, seat_no: 1, team_no: 1, total_points: 1521, is_winner: true },
-      { name: p2.name, seat_no: 2, team_no: 2, total_points: 1197, is_winner: false },
-      { name: p3.name, seat_no: 3, team_no: 1, total_points: 1521, is_winner: true },
-      { name: p4.name, seat_no: 4, team_no: 2, total_points: 1197, is_winner: false },
-    ],
-  };
-  const out = await rpc('create_jas_game', {
-    session_token: p1.token,
-    game_payload: payload,
-  });
-  return {
-    ok: out?.ok !== false,
-    game_id: Number(out?.game_id || 0) || null,
-    title,
-    players: [p1.name, p2.name, p3.name, p4.name],
   };
 }
