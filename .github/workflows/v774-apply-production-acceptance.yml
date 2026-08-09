@@ -34,6 +34,7 @@ jobs:
           npm run verify
           node check-production-acceptance-v774.mjs
           node check-diagnostic-self-consistency-v773.mjs
+          node check-live-write-safety-v770e.mjs
           git config core.whitespace cr-at-eol
           git diff --check
       - name: Commit v774 release candidate
