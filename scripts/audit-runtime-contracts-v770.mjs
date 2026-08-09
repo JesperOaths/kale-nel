@@ -52,7 +52,7 @@ for(const name of rpcNames){
 async function readProbe(name, body){
   const res = await fetch(`${url}/rest/v1/rpc/${name}`, { method:'POST', headers, body:JSON.stringify(body||{}) });
   const text = await res.text();
-  const concise = text.replace(/\s+/g,' ').slice(0,300);
+  const concise = text.replace(/\s+/g,' ').slice(0,360);
   const missing = res.status===404 || /could not find the function|function .* does not exist|schema cache/i.test(concise);
   console.log(`READ_PROBE ${name} HTTP=${res.status} MISSING=${missing} BODY=${concise}`);
   return {status:res.status,missing,text};
@@ -65,7 +65,13 @@ await readProbe('get_live_match_summary_public_scoped', {
   client_match_id_input:'__v770_missing_probe__',
   site_scope_input:'friends'
 });
+await readProbe('get_live_match_summary_public', {
+  game_type_input:'klaverjas',
+  match_ref_input:'__v770_missing_probe__',
+  client_match_id_input:'__v770_missing_probe__'
+});
 await readProbe('get_homepage_live_state_public_scoped', { session_token:null, site_scope_input:'friends' });
+await readProbe('get_homepage_live_state_public', { session_token:null });
 let ballroomRead = await readProbe('get_ballroom_state_safe', { session_token:null, session_token_input:null });
 if(ballroomRead.missing || ballroomRead.status===400){
   ballroomRead = await readProbe('get_ballroom_state_safe', { session_token_input:null });
