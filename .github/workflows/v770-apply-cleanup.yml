@@ -109,31 +109,24 @@ jobs:
             pkg = pkg.replace(pkgNeedle, 'node check-ballroom-safe-read-repair-v769a.mjs && node check-stale-repair-copy-v770.mjs"');
             fs.writeFileSync('package.json', pkg, 'utf8');
           }
-
-          let verify = fs.readFileSync('.github/workflows/verify.yml','utf8');
-          if (!verify.includes('Stale repair-copy v770 regression')) {
-            const verifyNeedle = "      - name: Ballroom safe-read v769a repair boundary\n        run: node check-ballroom-safe-read-repair-v769a.mjs\n";
-            if (!verify.includes(verifyNeedle)) throw new Error('verify.yml insertion point missing');
-            verify = verify.replace(verifyNeedle, verifyNeedle + "\n      - name: Stale repair-copy v770 regression\n        run: node check-stale-repair-copy-v770.mjs\n");
-            fs.writeFileSync('.github/workflows/verify.yml', verify, 'utf8');
-          }
           NODE
 
           node fix-version-drift.mjs
           node check-version-drift.mjs
           node check-stale-repair-copy-v770.mjs
           npm run verify
-
-          rm -f .github/workflows/v770-apply-cleanup.yml
-      - name: Commit generated v770 release changes
+      - name: Commit generated ordinary v770 release files
         shell: bash
         run: |
           set -euo pipefail
+          rm -rf node_modules
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
+          git restore --staged .github/workflows/v770-apply-cleanup.yml || true
+          git restore --staged .github/workflows/verify.yml || true
           if git diff --cached --quiet; then
-            echo "No generated changes to commit."
+            echo "No generated ordinary-file changes to commit."
             exit 0
           fi
           git commit -m "v770 clean stale repair instructions"
