@@ -26,10 +26,10 @@ for (const file of removedArtifacts) {
 
 let index = fs.readFileSync('index.html', 'utf8');
 const typoMatches = index.match(/Snelheids poging/g) || [];
-if (typoMatches.length !== 1) throw new Error(`Expected exactly one homepage 'Snelheids poging', found ${typoMatches.length}`);
-index = index.replace('Snelheids poging', 'Snelheidspoging');
+if (typoMatches.length !== 2) throw new Error(`Expected exactly two raw homepage 'Snelheids poging' labels, found ${typoMatches.length}`);
+index = index.replaceAll('Snelheids poging', 'Snelheidspoging');
 fs.writeFileSync('index.html', index, 'utf8');
-console.log('fixed homepage Snelheidspoging copy');
+console.log('fixed both homepage Snelheidspoging labels');
 
 fs.writeFileSync('VERSION', `${TARGET}\n`, 'utf8');
 const versionFix = spawnSync(process.execPath, ['fix-version-drift.mjs'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
