@@ -1,4 +1,4 @@
-name: Web Push Dispatcher v763
+name: Web Push Dispatcher v770b
 
 on:
   workflow_dispatch:
@@ -28,7 +28,7 @@ on:
         required: false
         default: '25'
   schedule:
-    - cron: '*/3 * * * *'
+    - cron: '*/5 * * * *'
 
 jobs:
   dispatch:
@@ -38,10 +38,10 @@ jobs:
       group: web-push-dispatcher
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
       - name: Install dispatcher deps
         run: npm ci --omit=dev
