@@ -57,7 +57,7 @@
     const game=data&&data.game_key||'game';
     const panel=target||ensurePanel(game);
     const body=panel.querySelector('[data-game-phase-body]')||panel;
-    if(!data||data.ok===false){body.innerHTML=`<div>${escapeHtml(data&&data.error||'Geen data beschikbaar. Run de v661 SQL in Supabase.')}</div>`;return;}
+    if(!data||data.ok===false){body.innerHTML=`<div>${escapeHtml(data&&data.error||'Geen data beschikbaar. Controleer de bestaande v661 read-contract/RPC-beschikbaarheid en de gekozen scope.')}</div>`;return;}
     const totals=data.totals||{};
     const leaders=Array.isArray(data.leaderboard)?data.leaderboard:[];
     body.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:10px"><div><b>${escapeHtml(totals.players||0)}</b><br><span>spelers</span></div><div><b>${escapeHtml(totals.matches||0)}</b><br><span>matches</span></div><div><b>${escapeHtml(totals.avg_elo||0)}</b><br><span>gem. ELO</span></div><div><b>${escapeHtml(data.source||'v661')}</b><br><span>bron</span></div></div>`+

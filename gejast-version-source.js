@@ -2,7 +2,8 @@
   function parse(v){const m=String(v||'').match(/v?(\d+)/i);return m?Number(m[1]):0;}
   const initialPageVersion=String(window.GEJAST_PAGE_VERSION||'').trim();
   const initialConfigVersion=String(window.GEJAST_CONFIG&&window.GEJAST_CONFIG.VERSION||'').trim();
-  const TARGET=initialPageVersion||initialConfigVersion||'v773';
+  const ownScriptVersion=(()=>{try{const src=String(document.currentScript&&document.currentScript.src||'');const m=src.match(/[?&]v(\d+)/i);return m?'v'+m[1]:'';}catch(_){return'';}})();
+  const TARGET=initialPageVersion||initialConfigVersion||ownScriptVersion;
   const TARGET_NUM=parse(TARGET), WATERMARK_TEXT='Made by Bruis';
   function scripts(){return Array.from(document.scripts||[]).map(s=>({src:s.getAttribute('src')||s.src||'',id:s.id||'',inline:!(s.getAttribute('src')||s.src)}));}
   function scriptVersion(src){const m=String(src||'').match(/[?&]v(\d+)/i);return m?'v'+m[1]:null;}

@@ -1,6 +1,6 @@
 (function(){
   const cfg = window.GEJAST_CONFIG || {};
-  const VERSION = 'v650';
+  const MODULE_VERSION = 'v650';
   function $(id){ return document.getElementById(id); }
   function setStatus(message, warn){ const el=$('statusBox'); if(el){ el.textContent=message||''; el.style.color=warn?'#8b3a30':'#1f6d43'; } }
   function tag(state){ const cls=state==='ok'?'ok':state==='warn'?'warn':'wait'; return `<span class="tag ${cls}">${state}</span>`; }
@@ -16,7 +16,7 @@
   function runBrowserChecks(){
     const scripts = Array.from(document.scripts || []).map((s)=>s.src||'').filter(Boolean);
     const rows = [
-      { name:'Page version', state: window.GEJAST_PAGE_VERSION === VERSION ? 'ok':'warn', detail:`window.GEJAST_PAGE_VERSION=${window.GEJAST_PAGE_VERSION||'missing'}` },
+      { name:'Page/config release', state: (window.GEJAST_PAGE_VERSION && cfg.VERSION && window.GEJAST_PAGE_VERSION===cfg.VERSION) ? 'ok' : (window.GEJAST_PAGE_VERSION?'ok':'warn'), detail:`page=${window.GEJAST_PAGE_VERSION||'missing'}; config=${cfg.VERSION||'missing'}; audit contract=${MODULE_VERSION}` },
       { name:'Config availability', state: cfg && cfg.SUPABASE_URL && cfg.SUPABASE_PUBLISHABLE_KEY ? 'ok':'warn', detail: cfg.SUPABASE_URL ? 'Supabase config present' : 'Supabase config missing' },
       { name:'Direct Make webhook removed', state: cfg.MAKE_WEBHOOK_URL ? 'warn':'ok', detail: cfg.MAKE_WEBHOOK_URL ? 'Browser still has a Make webhook URL' : 'Browser has no direct Make webhook URL' },
       { name:'Versioned local scripts', state: scripts.every((src)=>!src.includes(location.host) || /\?v\d+/.test(src) || !/\.js$/i.test(src)) ? 'ok':'warn', detail:`${scripts.length} script tags inspected` },
