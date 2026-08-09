@@ -2,6 +2,63 @@
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
+function cleanDiffIntroducedTrailingWhitespace() {
+  let check = spawnSync('git', ['diff', '--check'], { encoding: 'utf8' });
+  if (check.status === 0) return;
+
+  const output = `${check.stdout || ''}${check.stderr || ''}`;
+  const byFile = new Map();
+  const unhandled = [];
+
+  for (const line of output.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    const match = line.match(/^(.+?):(\d+): trailing whitespace\.$/);
+    if (!match) {
+      // The following diff-content line starts with '+' and is informational for a preceding
+      // trailing-whitespace diagnostic; ignore it. Anything else remains a hard failure.
+      if (line.startsWith('+')) continue;
+      unhandled.push(line);
+      continue;
+    }
+    const [, file, lineNumberText] = match;
+    const lineNumber = Number(lineNumberText);
+    if (!Number.isInteger(lineNumber) || lineNumber < 1) {
+      unhandled.push(line);
+      continue;
+    }
+    if (!byFile.has(file)) byFile.set(file, new Set());
+    byFile.get(file).add(lineNumber);
+  }
+
+  if (unhandled.length) {
+    throw new Error(`git diff --check reported non-trailing-whitespace errors:\n${unhandled.join('\n')}`);
+  }
+  if (!byFile.size) {
+    throw new Error(`git diff --check failed but no precise trailing-whitespace locations were parsed:\n${output}`);
+  }
+
+  let cleaned = 0;
+  for (const [file, lineNumbers] of byFile) {
+    if (!fs.existsSync(file)) throw new Error(`Cannot clean diff whitespace because file is missing: ${file}`);
+    const original = fs.readFileSync(file, 'utf8');
+    const lines = original.split('\n');
+    for (const lineNumber of lineNumbers) {
+      const index = lineNumber - 1;
+      if (index >= lines.length) throw new Error(`git diff --check line ${lineNumber} is outside ${file}`);
+      const before = lines[index];
+      lines[index] = before.replace(/[ \t]+(?=\r?$)/, '');
+      if (lines[index] !== before) cleaned += 1;
+    }
+    fs.writeFileSync(file, lines.join('\n'), 'utf8');
+  }
+
+  check = spawnSync('git', ['diff', '--check'], { encoding: 'utf8' });
+  if (check.status !== 0) {
+    throw new Error(`git diff --check still fails after precise cleanup:\n${check.stdout || ''}${check.stderr || ''}`);
+  }
+  console.log(`cleaned ${cleaned} diff-introduced trailing-whitespace line(s)`);
+}
+
 const TARGET = 'v772';
 const CURRENT = fs.readFileSync('VERSION', 'utf8').trim();
 if (CURRENT !== 'v771') throw new Error(`Expected VERSION v771 before v772 apply, got ${CURRENT}`);
@@ -100,4 +157,5 @@ for (const temporary of [
   }
 }
 
+cleanDiffIntroducedTrailingWhitespace();
 console.log('v772 finalization release candidate prepared.');
