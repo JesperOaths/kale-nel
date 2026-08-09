@@ -64,10 +64,13 @@ jobs:
       - name: Scoped live-read v770a repair boundary
         run: node check-scoped-live-read-repair-v770a.mjs
 
+      - name: Web push Node24 runtime regression
+        run: node check-web-push-node24-runtime-v770b.mjs
+
       - name: GitHub Actions Node24 runtime pins
         run: node check-github-actions-node24-runtime.mjs
 
-      - name: Node24 CI runtime policy
+      - name: Node24 runtime policy
         run: node check-node24-ci-runtime.mjs
 
       - name: Version drift gate
