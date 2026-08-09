@@ -61,6 +61,8 @@ jobs:
         run: node check-rad-local-nomination-copy-v771.mjs
       - name: Derived badge contract
         run: node check-derived-badges-v771b.mjs
+      - name: Admin mutation perimeter
+        run: node check-admin-mutation-perimeter-v771c.mjs
       - name: GitHub Actions Node24 runtime pins
         run: node check-github-actions-node24-runtime.mjs
       - name: Node24 runtime policy
