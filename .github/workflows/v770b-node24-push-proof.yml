@@ -7,7 +7,7 @@ on:
     types: [opened, synchronize]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   prove:
@@ -17,6 +17,9 @@ jobs:
     steps:
       - name: Check out branch
         uses: actions/checkout@v5
+        with:
+          ref: agent/v770b-node24-push-dispatcher
+          fetch-depth: 0
       - name: Set up Node.js 24
         uses: actions/setup-node@v5
         with:
@@ -24,6 +27,16 @@ jobs:
           cache: npm
       - name: Report runtime
         run: node --version && npm --version
+      - name: Synchronize root lockfile engine metadata
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const path='package-lock.json';
+          const lock=JSON.parse(fs.readFileSync(path,'utf8'));
+          if(!lock.packages||!lock.packages['']) throw new Error('package-lock root metadata missing');
+          lock.packages[''].engines={...(lock.packages[''].engines||{}),node:'>=24'};
+          fs.writeFileSync(path,JSON.stringify(lock,null,2)+'\n');
+          NODE
       - name: Install pinned dependencies
         run: npm ci
       - name: Dependency security
@@ -58,3 +71,21 @@ jobs:
         run: npm run smoke:live
       - name: Push health without send
         run: npm run smoke:push
+      - name: Commit lockfile metadata only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          if git diff --cached --quiet; then
+            echo 'No lockfile metadata change required.'
+            exit 0
+          fi
+          changed="$(git diff --cached --name-only)"
+          if [ "$changed" != "package-lock.json" ]; then
+            echo "Refusing unexpected staged files: $changed"
+            exit 1
+          fi
+          git commit -m "ci: synchronize Node24 dispatcher engine policy"
+          git push origin HEAD:agent/v770b-node24-push-dispatcher
