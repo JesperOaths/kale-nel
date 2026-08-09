@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "site_version": "v770",
   "approval_env": {
     "name": "GEJAST_ALLOW_LIVE_WRITE_BETA",
@@ -67,8 +67,9 @@
         "player1",
         "live_write_approval"
       ],
-      "intent": "Apply one explicitly reversible profile edit only after the original value and restoration path are captured, verify rendering, then restore it.",
-      "risk": "Temporarily changes a real player profile/avatar/display value. No profile mutation harness is considered armed until restore is guaranteed."
+      "command": "npm run beta:write:profile",
+      "intent": "Capture original display/avatar values, apply one temporary display-name-only marker, verify it, restore the original values in finally, and verify restoration.",
+      "risk": "Temporarily changes one player's visible display name. Avatar data is carried through unchanged. A restoration failure is a hard stop requiring manual restoration before further mutation testing."
     }
   ]
 }
