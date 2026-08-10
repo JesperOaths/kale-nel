@@ -19,6 +19,9 @@ if (!releaseCandidateVersion) {
   if (tracker.site_version !== `live ${version} / current frontend release ${version}`) failures.push(`promoted site_version must explicitly identify live/current ${version}`);
   if (!/^[0-9a-f]{40}$/i.test(String(tracker.deployment_identity?.frontend_release_merge || ''))) failures.push('promoted deployment must record a full 40-character frontend release merge SHA');
   if (!/^[0-9a-f]{40}$/i.test(String(tracker.deployment_identity?.repository_head_at_audit || ''))) failures.push('promoted deployment must record a full 40-character repository audit SHA');
+  const deploymentNote = String(tracker.deployment_identity?.note || '');
+  if (!deploymentNote.includes(version)) failures.push(`promoted deployment note must mention current version ${version}`);
+  if (!/\bPASS\b/i.test(deploymentNote)) failures.push('promoted deployment note must record explicit PASS evidence');
 }
 
 for (const stale of ['live v761 / main','DNS does not resolve','delivery was blocked','Backend user-targeted delivery still needs','fix public admin-host exposure separately']) if (trackerText.includes(stale)) failures.push(`stale readiness claim remains: ${stale}`);
