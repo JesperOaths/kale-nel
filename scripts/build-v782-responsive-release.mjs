@@ -36,11 +36,11 @@ replaceOnce(
   'Klaverjas lobby grid repair'
 );
 
-// 3. Homepage page + static watermark are body siblings; stack them instead of placing them beside each other.
+// 3. Homepage page + static watermark are body siblings; stack the specific main body flex container vertically.
 replaceOnce(
   'index.html',
-  '      display: flex;\n      justify-content: center;',
-  '      display: flex;\n      flex-direction: column;\n      justify-content: center;',
+  '    body {\n      margin: 0;\n      padding: 0;\n      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;\n      display: flex;\n      justify-content: center;',
+  '    body {\n      margin: 0;\n      padding: 0;\n      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;\n      display: flex;\n      flex-direction: column;\n      justify-content: center;',
   'Homepage vertical flex flow'
 );
 
