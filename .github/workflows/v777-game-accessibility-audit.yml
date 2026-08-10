@@ -1,0 +1,20 @@
+name: v777 game accessibility audit
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/audit-game-control-accessibility-v777.mjs'
+      - '.github/workflows/v777-game-accessibility-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: node scripts/audit-game-control-accessibility-v777.mjs
