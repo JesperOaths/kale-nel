@@ -1,0 +1,2495 @@
+{
+  "version": "v784-live-diagnostic",
+  "pages": {
+    "home_friends": {
+      "docWidth": 390,
+      "viewportWidth": 390,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                "article[data-route=\"ladder.html?game=klaverjas\"] > .ladder-title > .ladder-open-link"
+              ],
+              "html": "<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "ladder-open-link",
+                "text": "Top 5",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "13px",
+                "fontWeight": "800",
+                "width": 33.703125,
+                "height": 15,
+                "left": 293.296875,
+                "right": 327,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                "article[data-route=\"ladder.html?game=boerenbridge\"] > .ladder-title > .ladder-open-link"
+              ],
+              "html": "<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "ladder-open-link",
+                "text": "Top 5",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "13px",
+                "fontWeight": "800",
+                "width": 33.703125,
+                "height": 15,
+                "left": 293.296875,
+                "right": 327,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                "article[data-route=\"ladder.html?game=beerpong\"] > .ladder-title > .ladder-open-link"
+              ],
+              "html": "<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "ladder-open-link",
+                "text": "Top 5",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "13px",
+                "fontWeight": "800",
+                "width": 33.703125,
+                "height": 15,
+                "left": 293.296875,
+                "right": 327,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                "article[data-route=\"ladder.html?game=paardenrace\"] > .ladder-title > .ladder-open-link"
+              ],
+              "html": "<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "ladder-open-link",
+                "text": "Top 5",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "13px",
+                "fontWeight": "800",
+                "width": 33.703125,
+                "height": 15,
+                "left": 293.296875,
+                "right": 327,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                "article[data-route=\"ladder.html?game=pikken\"] > .ladder-title > .ladder-open-link"
+              ],
+              "html": "<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "ladder-open-link",
+                "text": "Top 5",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "13px",
+                "fontWeight": "800",
+                "width": 33.703125,
+                "height": 15,
+                "left": 293.296875,
+                "right": 327,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                "article[data-route=\"ladder.html?game=caute-coins\"] > .ladder-title > .ladder-open-link"
+              ],
+              "html": "<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "ladder-open-link",
+                "text": "Top 5",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "13px",
+                "fontWeight": "800",
+                "width": 33.703125,
+                "height": 15,
+                "left": 293.296875,
+                "right": 327,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                "a[href$=\"drinks_pending.html\"] > .drinks-mini-label"
+              ],
+              "html": "<div class=\"drinks-mini-label\">Verifiëren</div>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "div",
+                "id": "",
+                "className": "drinks-mini-label",
+                "text": "Verifiëren",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "11px",
+                "fontWeight": "800",
+                "width": 118,
+                "height": 24,
+                "left": 213,
+                "right": 331,
+                "display": "flex",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                "article[data-route=\"./drinks.html\"]:nth-child(1) > .ladder-title > .ladder-open-link"
+              ],
+              "html": "<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:var(--gold);text-decoration:none\">Units</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.72 (foreground color: #9a8241, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "ladder-open-link",
+                "text": "Units",
+                "color": "rgb(154, 130, 65)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "13px",
+                "fontWeight": "800",
+                "width": 32.5,
+                "height": 15,
+                "left": 294.5,
+                "right": 327,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                "article[data-route=\"./drinks.html\"]:nth-child(2) > .ladder-title > .ladder-open-link"
+              ],
+              "html": "<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:var(--gold);text-decoration:none\">Units</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.72 (foreground color: #9a8241, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "ladder-open-link",
+                "text": "Units",
+                "color": "rgb(154, 130, 65)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "13px",
+                "fontWeight": "800",
+                "width": 32.5,
+                "height": 15,
+                "left": 294.5,
+                "right": 327,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                "article[data-route=\"./drinks_speed.html\"] > .ladder-title > .ladder-open-link"
+              ],
+              "html": "<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:var(--gold);text-decoration:none\">Seconden</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.72 (foreground color: #9a8241, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "ladder-open-link",
+                "text": "Seconden",
+                "color": "rgb(154, 130, 65)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "13px",
+                "fontWeight": "800",
+                "width": 62.125,
+                "height": 15,
+                "left": 264.875,
+                "right": 327,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                "article[data-route=\"./drinks.html\"]:nth-child(4) > .ladder-title > .ladder-open-link"
+              ],
+              "html": "<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:var(--gold);text-decoration:none\">All-time</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.72 (foreground color: #9a8241, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "ladder-open-link",
+                "text": "All-time",
+                "color": "rgb(154, 130, 65)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "13px",
+                "fontWeight": "800",
+                "width": 47.671875,
+                "height": 15,
+                "left": 279.328125,
+                "right": 327,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            }
+          ]
+        }
+      ],
+      "overflow": [
+        {
+          "tag": "div",
+          "id": "",
+          "className": "gdf-card",
+          "text": "VerificatieMeldingen aanzettenBevestigenAfkeurenOpen paginaLater",
+          "left": 616.7999877929688,
+          "right": 957.199951171875,
+          "width": 340.39996337890625,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "globalDrinksVerifyFloat",
+            "className": "",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "gdfTitle",
+          "className": "gdf-title",
+          "text": "Verificatie",
+          "left": 630.5999755859375,
+          "right": 943.4000244140625,
+          "width": 312.800048828125,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-card",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "gdfBody",
+          "className": "gdf-body",
+          "text": "",
+          "left": 630.5999755859375,
+          "right": 943.4000244140625,
+          "width": 312.800048828125,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-card",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "gdf-actions",
+          "text": "Meldingen aanzettenBevestigenAfkeurenOpen paginaLater",
+          "left": 630.5999755859375,
+          "right": 943.4000244140625,
+          "width": 312.800048828125,
+          "position": "static",
+          "display": "flex",
+          "overflowX": "visible",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-card",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "button",
+          "id": "gdfEnableNotificationsBtn",
+          "className": "gdf-btn alt",
+          "text": "Meldingen aanzetten",
+          "left": 630.5999755859375,
+          "right": 799.2906494140625,
+          "width": 168.690673828125,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-actions",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "button",
+          "id": "gdfVerifyBtn",
+          "className": "gdf-btn",
+          "text": "Bevestigen",
+          "left": 806.650634765625,
+          "right": 907.275634765625,
+          "width": 100.625,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-actions",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "button",
+          "id": "gdfRejectBtn",
+          "className": "gdf-btn alt",
+          "text": "Afkeuren",
+          "left": 630.5999755859375,
+          "right": 718.3306274414062,
+          "width": 87.73065185546875,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-actions",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "button",
+          "id": "gdfOpenBtn",
+          "className": "gdf-btn alt",
+          "text": "Open pagina",
+          "left": 725.6906127929688,
+          "right": 838.764404296875,
+          "width": 113.07379150390625,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-actions",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "button",
+          "id": "gdfDismissBtn",
+          "className": "gdf-btn alt",
+          "text": "Later",
+          "left": 846.1243896484375,
+          "right": 906.0393676757812,
+          "width": 59.91497802734375,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-actions",
+            "overflowX": "visible"
+          }
+        }
+      ]
+    },
+    "home_family": {
+      "docWidth": 390,
+      "viewportWidth": 390,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                "article[data-route=\"ladder.html?game=klaverjas\"] > .ladder-title > .ladder-open-link"
+              ],
+              "html": "<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "ladder-open-link",
+                "text": "Top 5",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "13px",
+                "fontWeight": "800",
+                "width": 33.703125,
+                "height": 15,
+                "left": 293.296875,
+                "right": 327,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                "article[data-route=\"ladder.html?game=boerenbridge\"] > .ladder-title > .ladder-open-link"
+              ],
+              "html": "<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "ladder-open-link",
+                "text": "Top 5",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "13px",
+                "fontWeight": "800",
+                "width": 33.703125,
+                "height": 15,
+                "left": 293.296875,
+                "right": 327,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                "article[data-route=\"ladder.html?game=paardenrace\"] > .ladder-title > .ladder-open-link"
+              ],
+              "html": "<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "ladder-open-link",
+                "text": "Top 5",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "13px",
+                "fontWeight": "800",
+                "width": 33.703125,
+                "height": 15,
+                "left": 293.296875,
+                "right": 327,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                "article[data-route=\"ladder.html?game=pikken\"] > .ladder-title > .ladder-open-link"
+              ],
+              "html": "<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "ladder-open-link",
+                "text": "Top 5",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "13px",
+                "fontWeight": "800",
+                "width": 33.703125,
+                "height": 15,
+                "left": 293.296875,
+                "right": 327,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                "article[data-route=\"ladder.html?game=caute-coins\"] > .ladder-title > .ladder-open-link"
+              ],
+              "html": "<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "ladder-open-link",
+                "text": "Top 5",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "13px",
+                "fontWeight": "800",
+                "width": 33.703125,
+                "height": 15,
+                "left": 293.296875,
+                "right": 327,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            }
+          ]
+        }
+      ],
+      "overflow": [
+        {
+          "tag": "div",
+          "id": "",
+          "className": "gdf-card",
+          "text": "VerificatieMeldingen aanzettenBevestigenAfkeurenOpen paginaLater",
+          "left": 616.7999877929688,
+          "right": 957.199951171875,
+          "width": 340.39996337890625,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "globalDrinksVerifyFloat",
+            "className": "",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "gdfTitle",
+          "className": "gdf-title",
+          "text": "Verificatie",
+          "left": 630.5999755859375,
+          "right": 943.4000244140625,
+          "width": 312.800048828125,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-card",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "gdfBody",
+          "className": "gdf-body",
+          "text": "",
+          "left": 630.5999755859375,
+          "right": 943.4000244140625,
+          "width": 312.800048828125,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-card",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "gdf-actions",
+          "text": "Meldingen aanzettenBevestigenAfkeurenOpen paginaLater",
+          "left": 630.5999755859375,
+          "right": 943.4000244140625,
+          "width": 312.800048828125,
+          "position": "static",
+          "display": "flex",
+          "overflowX": "visible",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-card",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "button",
+          "id": "gdfEnableNotificationsBtn",
+          "className": "gdf-btn alt",
+          "text": "Meldingen aanzetten",
+          "left": 630.5999755859375,
+          "right": 799.2906494140625,
+          "width": 168.690673828125,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-actions",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "button",
+          "id": "gdfVerifyBtn",
+          "className": "gdf-btn",
+          "text": "Bevestigen",
+          "left": 806.650634765625,
+          "right": 907.275634765625,
+          "width": 100.625,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-actions",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "button",
+          "id": "gdfRejectBtn",
+          "className": "gdf-btn alt",
+          "text": "Afkeuren",
+          "left": 630.5999755859375,
+          "right": 718.3306274414062,
+          "width": 87.73065185546875,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-actions",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "button",
+          "id": "gdfOpenBtn",
+          "className": "gdf-btn alt",
+          "text": "Open pagina",
+          "left": 725.6906127929688,
+          "right": 838.764404296875,
+          "width": 113.07379150390625,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-actions",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "button",
+          "id": "gdfDismissBtn",
+          "className": "gdf-btn alt",
+          "text": "Later",
+          "left": 846.1243896484375,
+          "right": 906.0393676757812,
+          "width": 59.91497802734375,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-actions",
+            "overflowX": "visible"
+          }
+        }
+      ]
+    },
+    "scorer": {
+      "docWidth": 390,
+      "viewportWidth": 390,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".field:nth-child(1) > label"
+              ],
+              "html": "<label>Team A speler 1</label>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.1pt (12.16px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "label",
+                "id": "",
+                "className": "",
+                "text": "Team A speler 1",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "12.16px",
+                "fontWeight": "900",
+                "width": 298,
+                "height": 14,
+                "left": 46,
+                "right": 344,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                ".field:nth-child(2) > label"
+              ],
+              "html": "<label>Team A speler 2</label>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.1pt (12.16px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "label",
+                "id": "",
+                "className": "",
+                "text": "Team A speler 2",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "12.16px",
+                "fontWeight": "900",
+                "width": 298,
+                "height": 14,
+                "left": 46,
+                "right": 344,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                ".field:nth-child(3) > label"
+              ],
+              "html": "<label>Team B speler 1</label>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.1pt (12.16px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "label",
+                "id": "",
+                "className": "",
+                "text": "Team B speler 1",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "12.16px",
+                "fontWeight": "900",
+                "width": 298,
+                "height": 14,
+                "left": 46,
+                "right": 344,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                ".field:nth-child(4) > label"
+              ],
+              "html": "<label>Team B speler 2</label>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.1pt (12.16px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "label",
+                "id": "",
+                "className": "",
+                "text": "Team B speler 2",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "12.16px",
+                "fontWeight": "900",
+                "width": 298,
+                "height": 14,
+                "left": 46,
+                "right": 344,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                ".field:nth-child(5) > label"
+              ],
+              "html": "<label>Roem Team A</label>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.1pt (12.16px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "label",
+                "id": "",
+                "className": "",
+                "text": "Roem Team A",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "12.16px",
+                "fontWeight": "900",
+                "width": 298,
+                "height": 14,
+                "left": 46,
+                "right": 344,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                ".field:nth-child(6) > label"
+              ],
+              "html": "<label>Roem Team B</label>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.1pt (12.16px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "label",
+                "id": "",
+                "className": "",
+                "text": "Roem Team B",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "12.16px",
+                "fontWeight": "900",
+                "width": 298,
+                "height": 14,
+                "left": 46,
+                "right": 344,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                ".full > label"
+              ],
+              "html": "<label>Notitie</label>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.1pt (12.16px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "label",
+                "id": "",
+                "className": "",
+                "text": "Notitie",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "12.16px",
+                "fontWeight": "900",
+                "width": 298,
+                "height": 14,
+                "left": 46,
+                "right": 344,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                "span"
+              ],
+              "html": "<span class=\"versus\">tegen</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 12.0pt (16px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "versus",
+                "text": "tegen",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "16px",
+                "fontWeight": "900",
+                "width": 298,
+                "height": 19,
+                "left": 46,
+                "right": 344,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            }
+          ]
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "help": "Form elements must have labels",
+          "nodes": [
+            {
+              "target": [
+                "#roemA"
+              ],
+              "html": "<input id=\"roemA\" type=\"number\" inputmode=\"numeric\" value=\"0\">",
+              "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+              "computed": {
+                "tag": "input",
+                "id": "roemA",
+                "className": "",
+                "text": "0",
+                "color": "rgb(0, 0, 0)",
+                "backgroundColor": "rgb(255, 255, 255)",
+                "fontSize": "16px",
+                "fontWeight": "400",
+                "width": 298,
+                "height": 45,
+                "left": 46,
+                "right": 344,
+                "display": "block",
+                "overflowX": "clip",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                "#roemB"
+              ],
+              "html": "<input id=\"roemB\" type=\"number\" inputmode=\"numeric\" value=\"0\">",
+              "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element has no placeholder attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+              "computed": {
+                "tag": "input",
+                "id": "roemB",
+                "className": "",
+                "text": "0",
+                "color": "rgb(0, 0, 0)",
+                "backgroundColor": "rgb(255, 255, 255)",
+                "fontSize": "16px",
+                "fontWeight": "400",
+                "width": 298,
+                "height": 45,
+                "left": 46,
+                "right": 344,
+                "display": "block",
+                "overflowX": "clip",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            }
+          ]
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "help": "Select element must have an accessible name",
+          "nodes": [
+            {
+              "target": [
+                "#a1"
+              ],
+              "html": "<select id=\"a1\">",
+              "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+              "computed": {
+                "tag": "select",
+                "id": "a1",
+                "className": "",
+                "text": "Kies spelerAntoniBeta1Beta2Beta3Beta4BoudewijnBruisDavidJesperJorisLyonMerijnRobin MSamTimVerifier 1111",
+                "color": "rgb(0, 0, 0)",
+                "backgroundColor": "rgb(255, 255, 255)",
+                "fontSize": "16px",
+                "fontWeight": "400",
+                "width": 298,
+                "height": 47,
+                "left": 46,
+                "right": 344,
+                "display": "block",
+                "overflowX": "clip",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "pre"
+              }
+            },
+            {
+              "target": [
+                "#a2"
+              ],
+              "html": "<select id=\"a2\">",
+              "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+              "computed": {
+                "tag": "select",
+                "id": "a2",
+                "className": "",
+                "text": "Kies spelerAntoniBeta1Beta2Beta3Beta4BoudewijnBruisDavidJesperJorisLyonMerijnRobin MSamTimVerifier 1111",
+                "color": "rgb(0, 0, 0)",
+                "backgroundColor": "rgb(255, 255, 255)",
+                "fontSize": "16px",
+                "fontWeight": "400",
+                "width": 298,
+                "height": 47,
+                "left": 46,
+                "right": 344,
+                "display": "block",
+                "overflowX": "clip",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "pre"
+              }
+            },
+            {
+              "target": [
+                "#b1"
+              ],
+              "html": "<select id=\"b1\">",
+              "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+              "computed": {
+                "tag": "select",
+                "id": "b1",
+                "className": "",
+                "text": "Kies spelerAntoniBeta1Beta2Beta3Beta4BoudewijnBruisDavidJesperJorisLyonMerijnRobin MSamTimVerifier 1111",
+                "color": "rgb(0, 0, 0)",
+                "backgroundColor": "rgb(255, 255, 255)",
+                "fontSize": "16px",
+                "fontWeight": "400",
+                "width": 298,
+                "height": 47,
+                "left": 46,
+                "right": 344,
+                "display": "block",
+                "overflowX": "clip",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "pre"
+              }
+            },
+            {
+              "target": [
+                "#b2"
+              ],
+              "html": "<select id=\"b2\">",
+              "failureSummary": "Fix any of the following:\n  Element does not have an implicit (wrapped) <label>\n  Element does not have an explicit <label>\n  aria-label attribute does not exist or is empty\n  aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty\n  Element has no title attribute\n  Element's default semantics were not overridden with role=\"none\" or role=\"presentation\"",
+              "computed": {
+                "tag": "select",
+                "id": "b2",
+                "className": "",
+                "text": "Kies spelerAntoniBeta1Beta2Beta3Beta4BoudewijnBruisDavidJesperJorisLyonMerijnRobin MSamTimVerifier 1111",
+                "color": "rgb(0, 0, 0)",
+                "backgroundColor": "rgb(255, 255, 255)",
+                "fontSize": "16px",
+                "fontWeight": "400",
+                "width": 298,
+                "height": 47,
+                "left": 46,
+                "right": 344,
+                "display": "block",
+                "overflowX": "clip",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "pre"
+              }
+            }
+          ]
+        }
+      ],
+      "overflow": []
+    },
+    "bridge_live": {
+      "docWidth": 390,
+      "viewportWidth": 390,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".meta-card:nth-child(1) > span"
+              ],
+              "html": "<span>Spelleider</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "",
+                "text": "Spelleider",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "11px",
+                "fontWeight": "400",
+                "width": 124,
+                "height": 13,
+                "left": 48,
+                "right": 172,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "0px",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                ".meta-card:nth-child(2) > span"
+              ],
+              "html": "<span>Spelers</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "",
+                "text": "Spelers",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "11px",
+                "fontWeight": "400",
+                "width": 124,
+                "height": 13,
+                "left": 218,
+                "right": 342,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "0px",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                ".meta-card:nth-child(3) > span"
+              ],
+              "html": "<span>Rondes</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "",
+                "text": "Rondes",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "11px",
+                "fontWeight": "400",
+                "width": 124,
+                "height": 13,
+                "left": 48,
+                "right": 172,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "0px",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                ".meta-card:nth-child(4) > span"
+              ],
+              "html": "<span>Winnaar / leider</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "",
+                "text": "Winnaar / leider",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "11px",
+                "fontWeight": "400",
+                "width": 124,
+                "height": 13,
+                "left": 218,
+                "right": 342,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "0px",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                ".meta-card:nth-child(5) > span"
+              ],
+              "html": "<span>Laatst bijgewerkt</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "",
+                "text": "Laatst bijgewerkt",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "11px",
+                "fontWeight": "400",
+                "width": 124,
+                "height": 26,
+                "left": 48,
+                "right": 172,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "0px",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                ".meta-card:nth-child(6) > span"
+              ],
+              "html": "<span>Matchref</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "",
+                "text": "Matchref",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "11px",
+                "fontWeight": "400",
+                "width": 124,
+                "height": 13,
+                "left": 218,
+                "right": 342,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "0px",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            }
+          ]
+        }
+      ],
+      "overflow": []
+    },
+    "race_spectator": {
+      "docWidth": 390,
+      "viewportWidth": 390,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".box:nth-child(1) > span"
+              ],
+              "html": "<span>Room</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "",
+                "text": "Room",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "11px",
+                "fontWeight": "400",
+                "width": 133,
+                "height": 13,
+                "left": 44,
+                "right": 177,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "0px",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                ".box:nth-child(2) > span"
+              ],
+              "html": "<span>Stage</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "",
+                "text": "Stage",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "11px",
+                "fontWeight": "400",
+                "width": 133,
+                "height": 13,
+                "left": 213,
+                "right": 346,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "0px",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                ".box:nth-child(3) > span"
+              ],
+              "html": "<span>Spelers</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "",
+                "text": "Spelers",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "11px",
+                "fontWeight": "400",
+                "width": 133,
+                "height": 13,
+                "left": 44,
+                "right": 177,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "0px",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                ".box:nth-child(4) > span"
+              ],
+              "html": "<span>Laatste kaart</span>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "span",
+                "id": "",
+                "className": "",
+                "text": "Laatste kaart",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "11px",
+                "fontWeight": "400",
+                "width": 133,
+                "height": 13,
+                "left": 213,
+                "right": 346,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "0px",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            }
+          ]
+        }
+      ],
+      "overflow": []
+    },
+    "drinks_add": {
+      "docWidth": 390,
+      "viewportWidth": 390,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".metric:nth-child(1) > .label"
+              ],
+              "html": "<div class=\"label\">Vandaag</div>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "div",
+                "id": "",
+                "className": "label",
+                "text": "Vandaag",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "11px",
+                "fontWeight": "800",
+                "width": 276,
+                "height": 13,
+                "left": 57,
+                "right": 333,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                ".metric:nth-child(2) > .label"
+              ],
+              "html": "<div class=\"label\">Open aanvragen</div>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "div",
+                "id": "",
+                "className": "label",
+                "text": "Open aanvragen",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "11px",
+                "fontWeight": "800",
+                "width": 276,
+                "height": 13,
+                "left": 57,
+                "right": 333,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                ".metric:nth-child(3) > .label"
+              ],
+              "html": "<div class=\"label\">Totaal</div>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "div",
+                "id": "",
+                "className": "label",
+                "text": "Totaal",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "11px",
+                "fontWeight": "800",
+                "width": 276,
+                "height": 13,
+                "left": 57,
+                "right": 333,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "auto",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            }
+          ]
+        }
+      ],
+      "overflow": [
+        {
+          "tag": "div",
+          "id": "",
+          "className": "gdf-card",
+          "text": "VerificatieMeldingen aanzettenBevestigenAfkeurenOpen paginaLater",
+          "left": 616.7999877929688,
+          "right": 957.199951171875,
+          "width": 340.39996337890625,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "globalDrinksVerifyFloat",
+            "className": "",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "gdfTitle",
+          "className": "gdf-title",
+          "text": "Verificatie",
+          "left": 630.5999755859375,
+          "right": 943.4000244140625,
+          "width": 312.800048828125,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-card",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "gdfBody",
+          "className": "gdf-body",
+          "text": "",
+          "left": 630.5999755859375,
+          "right": 943.4000244140625,
+          "width": 312.800048828125,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-card",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "gdf-actions",
+          "text": "Meldingen aanzettenBevestigenAfkeurenOpen paginaLater",
+          "left": 630.5999755859375,
+          "right": 943.4000244140625,
+          "width": 312.800048828125,
+          "position": "static",
+          "display": "flex",
+          "overflowX": "visible",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-card",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "button",
+          "id": "gdfEnableNotificationsBtn",
+          "className": "gdf-btn alt",
+          "text": "Meldingen aanzetten",
+          "left": 630.5999755859375,
+          "right": 829.8231201171875,
+          "width": 199.22314453125,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-actions",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "button",
+          "id": "gdfVerifyBtn",
+          "className": "gdf-btn",
+          "text": "Bevestigen",
+          "left": 630.5999755859375,
+          "right": 745.3125,
+          "width": 114.7125244140625,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-actions",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "button",
+          "id": "gdfRejectBtn",
+          "className": "gdf-btn alt",
+          "text": "Afkeuren",
+          "left": 752.6724853515625,
+          "right": 851.9749755859375,
+          "width": 99.302490234375,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-actions",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "button",
+          "id": "gdfOpenBtn",
+          "className": "gdf-btn alt",
+          "text": "Open pagina",
+          "left": 630.5999755859375,
+          "right": 759.6300048828125,
+          "width": 129.030029296875,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-actions",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "button",
+          "id": "gdfDismissBtn",
+          "className": "gdf-btn alt",
+          "text": "Later",
+          "left": 766.989990234375,
+          "right": 834.5093994140625,
+          "width": 67.5194091796875,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "gdf-actions",
+            "overflowX": "visible"
+          }
+        }
+      ]
+    },
+    "activate": {
+      "docWidth": 390,
+      "viewportWidth": 390,
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": [
+            {
+              "target": [
+                ".detail:nth-child(4) > strong"
+              ],
+              "html": "<strong>Goedgekeurde naam</strong>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.0pt (12px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "strong",
+                "id": "",
+                "className": "",
+                "text": "Goedgekeurde naam",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "12px",
+                "fontWeight": "700",
+                "width": 298,
+                "height": 14,
+                "left": 46,
+                "right": 344,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "0px",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            },
+            {
+              "target": [
+                ".detail:nth-child(5) > strong"
+              ],
+              "html": "<strong>E-mailadres</strong>",
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.0pt (12px), font weight: bold). Expected contrast ratio of 4.5:1",
+              "computed": {
+                "tag": "strong",
+                "id": "",
+                "className": "",
+                "text": "E-mailadres",
+                "color": "rgb(138, 122, 85)",
+                "backgroundColor": "rgba(0, 0, 0, 0)",
+                "fontSize": "12px",
+                "fontWeight": "700",
+                "width": 298,
+                "height": 14,
+                "left": 46,
+                "right": 344,
+                "display": "block",
+                "overflowX": "visible",
+                "minWidth": "0px",
+                "maxWidth": "none",
+                "whiteSpace": "normal"
+              }
+            }
+          ]
+        }
+      ],
+      "overflow": []
+    },
+    "rad": {
+      "docWidth": 445,
+      "viewportWidth": 390,
+      "violations": [],
+      "overflow": [
+        {
+          "tag": "section",
+          "id": "",
+          "className": "panel wheel-wrap",
+          "text": "SPIN Nog niet gedraaid.",
+          "left": 33,
+          "right": 445.390625,
+          "width": 412.390625,
+          "position": "static",
+          "display": "grid",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "520px",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "layout",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "wheel-box",
+          "text": "SPIN",
+          "left": 52,
+          "right": 426.390625,
+          "width": 374.390625,
+          "position": "relative",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "section",
+            "id": "",
+            "className": "panel wheel-wrap",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "canvas",
+          "id": "wheelCanvas",
+          "className": "",
+          "text": "",
+          "left": 52,
+          "right": 426.390625,
+          "width": 374.390625,
+          "position": "static",
+          "display": "block",
+          "overflowX": "clip",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "wheel-box",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "section",
+          "id": "",
+          "className": "panel",
+          "text": "SegmentenCauteSkip je volgende drink; rechts van je neemt er 4.10%Snowboard adtChug een volle bak op je knieën.8%Riet ad",
+          "left": 33,
+          "right": 445.390625,
+          "width": 412.390625,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "520px",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "layout",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "h2",
+          "id": "",
+          "className": "",
+          "text": "Segmenten",
+          "left": 52,
+          "right": 426.390625,
+          "width": 374.390625,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "section",
+            "id": "",
+            "className": "panel",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "legendBox",
+          "className": "legend",
+          "text": "CauteSkip je volgende drink; rechts van je neemt er 4.10%Snowboard adtChug een volle bak op je knieën.8%Riet adtDrink ee",
+          "left": 52,
+          "right": 426.390625,
+          "width": 374.390625,
+          "position": "static",
+          "display": "grid",
+          "overflowX": "auto",
+          "minWidth": "0px",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "section",
+            "id": "",
+            "className": "panel",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "legend-row",
+          "text": "CauteSkip je volgende drink; rechts van je neemt er 4.10%",
+          "left": 52,
+          "right": 426.390625,
+          "width": 374.390625,
+          "position": "static",
+          "display": "grid",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "legendBox",
+            "className": "legend",
+            "overflowX": "auto"
+          }
+        },
+        {
+          "tag": "strong",
+          "id": "",
+          "className": "",
+          "text": "10%",
+          "left": 375.09375,
+          "right": 413.390625,
+          "width": 38.296875,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "legend-row",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "legend-row",
+          "text": "Snowboard adtChug een volle bak op je knieën.8%",
+          "left": 52,
+          "right": 426.390625,
+          "width": 374.390625,
+          "position": "static",
+          "display": "grid",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "legendBox",
+            "className": "legend",
+            "overflowX": "auto"
+          }
+        },
+        {
+          "tag": "strong",
+          "id": "",
+          "className": "",
+          "text": "8%",
+          "left": 386.21875,
+          "right": 413.390625,
+          "width": 27.171875,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "legend-row",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "legend-row",
+          "text": "Riet adtDrink een volle 33cl met rietje.8%",
+          "left": 52,
+          "right": 426.390625,
+          "width": 374.390625,
+          "position": "static",
+          "display": "grid",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "legendBox",
+            "className": "legend",
+            "overflowX": "auto"
+          }
+        },
+        {
+          "tag": "strong",
+          "id": "",
+          "className": "",
+          "text": "8%",
+          "left": 386.21875,
+          "right": 413.390625,
+          "width": 27.171875,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "legend-row",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "legend-row",
+          "text": "DespinozaIedereen 1, behalve jij; jij kiest +2 extra.8%",
+          "left": 52,
+          "right": 426.390625,
+          "width": 374.390625,
+          "position": "static",
+          "display": "grid",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "legendBox",
+            "className": "legend",
+            "overflowX": "auto"
+          }
+        },
+        {
+          "tag": "strong",
+          "id": "",
+          "className": "",
+          "text": "8%",
+          "left": 386.21875,
+          "right": 413.390625,
+          "width": 27.171875,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "legend-row",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "legend-row",
+          "text": "ShotjeNeem 2 shots + 1 upside down.7%",
+          "left": 52,
+          "right": 426.390625,
+          "width": 374.390625,
+          "position": "static",
+          "display": "grid",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "legendBox",
+            "className": "legend",
+            "overflowX": "auto"
+          }
+        },
+        {
+          "tag": "strong",
+          "id": "",
+          "className": "",
+          "text": "7%",
+          "left": 386.21875,
+          "right": 413.390625,
+          "width": 27.171875,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "legend-row",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "legend-row",
+          "text": "Shot uitdelenDeel 5 shots uit.7%",
+          "left": 52,
+          "right": 426.390625,
+          "width": 374.390625,
+          "position": "static",
+          "display": "grid",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "legendBox",
+            "className": "legend",
+            "overflowX": "auto"
+          }
+        },
+        {
+          "tag": "strong",
+          "id": "",
+          "className": "",
+          "text": "7%",
+          "left": 386.21875,
+          "right": 413.390625,
+          "width": 27.171875,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "legend-row",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "legend-row",
+          "text": "Groep adtIedereen in de cirkel neemt 2 slokken.7%",
+          "left": 52,
+          "right": 426.390625,
+          "width": 374.390625,
+          "position": "static",
+          "display": "grid",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "legendBox",
+            "className": "legend",
+            "overflowX": "auto"
+          }
+        },
+        {
+          "tag": "strong",
+          "id": "",
+          "className": "",
+          "text": "7%",
+          "left": 386.21875,
+          "right": 413.390625,
+          "width": 27.171875,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "legend-row",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "legend-row",
+          "text": "Riet adt uitdelenKies iemand voor een riet adt.6%",
+          "left": 52,
+          "right": 426.390625,
+          "width": 374.390625,
+          "position": "static",
+          "display": "grid",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "legendBox",
+            "className": "legend",
+            "overflowX": "auto"
+          }
+        },
+        {
+          "tag": "strong",
+          "id": "",
+          "className": "",
+          "text": "6%",
+          "left": 386.21875,
+          "right": 413.390625,
+          "width": 27.171875,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "legend-row",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "legend-row",
+          "text": "Jagerbomb adtDoe een jagerbomb + extra shot.5%",
+          "left": 52,
+          "right": 426.390625,
+          "width": 374.390625,
+          "position": "static",
+          "display": "grid",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "legendBox",
+            "className": "legend",
+            "overflowX": "auto"
+          }
+        },
+        {
+          "tag": "strong",
+          "id": "",
+          "className": "",
+          "text": "5%",
+          "left": 386.21875,
+          "right": 413.390625,
+          "width": 27.171875,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "legend-row",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "legend-row",
+          "text": "Helm adtDrink ondersteboven met helm/bak.5%",
+          "left": 52,
+          "right": 426.390625,
+          "width": 374.390625,
+          "position": "static",
+          "display": "grid",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "legendBox",
+            "className": "legend",
+            "overflowX": "auto"
+          }
+        },
+        {
+          "tag": "strong",
+          "id": "",
+          "className": "",
+          "text": "5%",
+          "left": 386.21875,
+          "right": 413.390625,
+          "width": 27.171875,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "legend-row",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "legend-row",
+          "text": "Draai adtDraai 8 keer en ad of neem 4 shots.5%",
+          "left": 52,
+          "right": 426.390625,
+          "width": 374.390625,
+          "position": "static",
+          "display": "grid",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "legendBox",
+            "className": "legend",
+            "overflowX": "auto"
+          }
+        },
+        {
+          "tag": "strong",
+          "id": "",
+          "className": "",
+          "text": "5%",
+          "left": 386.21875,
+          "right": 413.390625,
+          "width": 27.171875,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "legend-row",
+            "overflowX": "visible"
+          }
+        },
+        {
+          "tag": "div",
+          "id": "",
+          "className": "legend-row",
+          "text": "Jager uitdelenKies 3 mensen voor een jager-style straf.5%",
+          "left": 52,
+          "right": 426.390625,
+          "width": 374.390625,
+          "position": "static",
+          "display": "grid",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "legendBox",
+            "className": "legend",
+            "overflowX": "auto"
+          }
+        },
+        {
+          "tag": "strong",
+          "id": "",
+          "className": "",
+          "text": "5%",
+          "left": 386.21875,
+          "right": 413.390625,
+          "width": 27.171875,
+          "position": "static",
+          "display": "block",
+          "overflowX": "visible",
+          "minWidth": "auto",
+          "maxWidth": "none",
+          "whiteSpace": "normal",
+          "parent": {
+            "tag": "div",
+            "id": "",
+            "className": "legend-row",
+            "overflowX": "visible"
+          }
+        }
+      ]
+    }
+  },
+  "blockedWrites": 54
+}
