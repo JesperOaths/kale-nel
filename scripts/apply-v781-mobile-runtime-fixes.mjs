@@ -15,8 +15,8 @@ if(read('VERSION').trim()!=='v780') throw new Error('v781 builder expects root V
 if(!fs.existsSync('check-mobile-touch-runtime-v781.mjs')) throw new Error('permanent v781 guard missing');
 
 replaceOnce('drinks.html',
-  'let latestPageData=null, latestStatsData=null, latestDashboardData=null, latestLocation=null, activeSession=null, pagePromise=null, loadToken=0;',
-  'let latestPageData=null, latestStatsData=null, latestDashboardData=null, latestLocation=null, activeSession=null, pagePromise=null, loadToken=0, lastStatsLoadedAt=0, statsLoadPromise=null, statsLoadScheduled=false;',
+  "let latestPageData=null, latestStatsData=null, latestTop5Data=null, latestDashboardData=null, currentLadderKey='today_units', currentSpeedType='', lastPosition=null, loadToken=0;",
+  "let latestPageData=null, latestStatsData=null, latestTop5Data=null, latestDashboardData=null, currentLadderKey='today_units', currentSpeedType='', lastPosition=null, loadToken=0, lastStatsLoadedAt=0, statsLoadPromise=null, statsLoadScheduled=false;",
   'declare Drinks stats queue state');
 replaceOnce('drinks.html',
   '<select id="speedTypeSelect" class="select-field" aria-label="Kies dranktype" style="margin-top:8px"></select>',
@@ -64,9 +64,9 @@ const readiness=JSON.parse(read('beta-readiness.json'));
 readiness.site_version='release candidate v781 / live v780';
 readiness.last_updated='2026-08-10';
 readiness.deployment_identity.release_candidate_version='v781';
-readiness.deployment_identity.note='v781 release candidate: isolated no-write mobile Chromium audit covered 24 routes and intercepted 201 non-GET requests. High-confidence findings are fixed narrowly: Drinks stats queue state is explicitly declared (removing the live lastStatsLoadedAt ReferenceError), the Drinks speed-type selector has a 44px touch surface, the off-canvas verification float is aria-hidden/inert while closed, and Beerpong top navigation/Pussycup controls have >=24px touch targets. Boerenbridge\'s wide special selects remain intentionally inside its horizontally scrollable score-table owner, and Toepen rule checkboxes remain inside padded label-pill targets. Live remains v780 until post-merge edge proof.';
+readiness.deployment_identity.note='v781 release candidate: isolated no-write mobile Chromium audit covered 24 routes and intercepted 201 non-GET requests. High-confidence findings are fixed narrowly: Drinks stats queue state is explicitly declared (removing the live lastStatsLoadedAt ReferenceError), the Drinks speed-type selector has a 44px touch surface, the off-canvas verification float is aria-hidden/inert while closed, and Beerpong top navigation/Pussycup controls have >=24px touch targets. Boerenbridge\'s wide special selects remain intentionally inside its horizontally scrollable score-table owner, and Toepen rule checkboxes remain inside padded label-pill targets. Live remains v780 until post-merge public-edge proof.';
 const staticCheck=(readiness.baseline_checks||[]).find(x=>x.id==='static_integrity');
-if(staticCheck) staticCheck.evidence='Current Node 24 verification passes all existing frontend/backend/security/accessibility regressions through v781. The v780 rendered Chromium/axe zero-violation proof remains protected. v781 adds the mobile/runtime baseline for declared Drinks stats queue state, touch-sized Drinks/Beerpong controls and an inert hidden global verification float.';
+if(staticCheck) staticCheck.evidence='Current Node 24 verification passes all existing frontend/backend/security/accessibility regressions through v781. The accessibility naming backlog remains closed 70/70: 58 static controls are protected by v777 and 12 runtime-generated controls by v778; v779 keyboard/focus and v780 rendered Chromium/axe zero-violation baselines remain protected. v781 adds the mobile/runtime baseline for declared Drinks stats queue state, touch-sized Drinks/Beerpong controls and an inert hidden global verification float.';
 write('beta-readiness.json',JSON.stringify(readiness,null,2)+'\n');
 
 const checklist=JSON.parse(read('beta-live-write-checklist.json'));
