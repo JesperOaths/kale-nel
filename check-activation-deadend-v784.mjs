@@ -21,8 +21,9 @@ assert.match(runtime,/approvedName[^]*?Niet beschikbaar/,'invalid activation sta
 assert.match(runtime,/const activationName=.*ctx[^]*?const activationEmail=.*ctx/,'valid activation context must derive approved identity fields');
 assert.match(runtime,/if\(!activationName\|\|!activationEmail\) throw new Error\('Deze activatielink is ongeldig of verlopen\.'\)/,'incomplete activation context must remain non-actionable');
 assert.match(runtime,/setBusy\(form,false\);\s*showActivationFallback\(false\);/,'valid activation context must explicitly re-enable the form and hide fallback');
-const enableIndex=runtime.indexOf('setBusy(form,false);\n      showActivationFallback(false);');
+const enableIndex=runtime.indexOf('setBusy(form,false);');
+const fallbackHideIndex=runtime.indexOf('showActivationFallback(false);',enableIndex);
 const submitIndex=runtime.indexOf("form.addEventListener('submit'");
-assert.ok(enableIndex>=0 && submitIndex>enableIndex,'activation submit handler must only be attached after valid context re-enables the form');
+assert.ok(enableIndex>=0 && fallbackHideIndex>enableIndex && submitIndex>fallbackHideIndex,'activation submit handler must only be attached after valid context re-enables the form and hides fallback');
 
 console.log(`v784 activation dead-end PASS at ${version}: activation ships disabled, stays non-actionable without valid context, and only wires submit after valid context is proven.`);
