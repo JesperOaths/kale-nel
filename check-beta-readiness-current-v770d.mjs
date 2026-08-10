@@ -36,6 +36,19 @@ if (versionNumber >= 778) {
   if (!/12 runtime-generated/i.test(evidence)) failures.push('v778+ static_integrity evidence must preserve the 12 runtime-generated-control completion');
 }
 
+// v780 added rendered-browser proof. Future live/readiness records must preserve the zero-violation Chromium/axe result.
+if (versionNumber >= 780) {
+  const staticIntegrity = (tracker.baseline_checks || []).find((item) => item.id === 'static_integrity');
+  const staticEvidence = String(staticIntegrity?.evidence || '');
+  if (!/Chromium\/axe/i.test(staticEvidence)) failures.push('v780+ static_integrity evidence must preserve Chromium/axe rendered-accessibility coverage');
+  if (!/zero violations|zero axe violations/i.test(staticEvidence)) failures.push('v780+ static_integrity evidence must preserve the zero-violation rendered result');
+  if (!releaseCandidateVersion) {
+    const deploymentNote = String(tracker.deployment_identity?.note || '');
+    if (!/Chromium\/axe/i.test(deploymentNote)) failures.push('v780+ promoted deployment note must preserve live Chromium/axe proof');
+    if (!/zero (?:total )?axe violations/i.test(deploymentNote)) failures.push('v780+ promoted deployment note must preserve zero live axe violations');
+  }
+}
+
 const gaps = new Map((tracker.beta_gaps || []).map((item) => [item.id, item]));
 for (const id of [
   'real_device_push_delivery','admin_host_security','scope_isolation','analytics_observability',
