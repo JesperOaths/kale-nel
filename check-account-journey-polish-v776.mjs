@@ -14,8 +14,20 @@ for(const [file,pairs] of Object.entries({
   for(const [id,label] of pairs) assert.ok(html.includes('<label for="'+id+'">'+label+'</label>'),file+' missing programmatic label for '+id);
   assert.match(html,/role=["']status["'][^>]*aria-live=["']polite["']|aria-live=["']polite["'][^>]*role=["']status["']/i,file+' must expose polite live status');
 }
-for(const [file,marker] of [['activate.html','v680 slaat'],['request.html','v680 browser'],['leaderboard.html','Publieke v673'],['despimarkt_auto_markets.html','Phase 13']]) assert.ok(!text(file).includes(marker),file+' still contains development-era copy: '+marker);
-assert.match(text('request.html'),/Na goedkeuring krijg je een veilige activatielink per e-mail./);
-assert.match(text('leaderboard.html'),/ELO-ranglijst op basis van gespeelde Klaverjaswedstrijden./);
-assert.match(text('despimarkt_auto_markets.html'),/Automatische markten voor actuele wedstrijden./);
-console.log('v776 account-journey polish PASS: login/request/activation controls are programmatically labelled, status feedback is live-announced, and development-era public copy is removed.');
+const login=text('login.html');
+assert.match(login,/id="playerNameInput"[^>]*autocomplete="username"/);
+assert.match(login,/id="pinInput"[^>]*autocomplete="current-password"/);
+const request=text('request.html');
+assert.match(request,/id="requestEmailInput"[^>]*autocomplete="email"/);
+const activate=text('activate.html');
+assert.match(activate,/id="pinInput"[^>]*autocomplete="new-password"/);
+assert.match(activate,/id="pinConfirmInput"[^>]*autocomplete="new-password"/);
+for(const [file,marker] of [
+  ['activate.html','v680 slaat'],['activate.html','device/browsermetadata'],
+  ['request.html','v680 browser'],['request.html','mailqueue'],['request.html','browser/scope/aanvraagmetadata'],
+  ['leaderboard.html','Publieke v673'],['despimarkt_auto_markets.html','Phase 13']
+]) assert.ok(!text(file).includes(marker),file+' still contains development-era copy: '+marker);
+assert.match(request,/Na goedkeuring krijg je een veilige activatielink per e-mail\./);
+assert.match(text('leaderboard.html'),/ELO-ranglijst op basis van gespeelde Klaverjaswedstrijden\./);
+assert.match(text('despimarkt_auto_markets.html'),/Automatische markten voor actuele wedstrijden\./);
+console.log('v776 account-journey polish PASS: account controls are programmatically labelled with correct autocomplete semantics, status feedback is live-announced, and development-era public copy is removed.');
