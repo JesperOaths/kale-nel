@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import worker, { __test } from '../cloudflare/workers/admin-gate/src/worker.js';
+
+const FRONTEND_VERSION = fs.readFileSync(new URL('../VERSION', import.meta.url), 'utf8').trim();
 
 const FAKE_COOKIE_SIGNING_VALUE = `not-real-${'x'.repeat(40)}`;
 const ENV_KEYS = {
@@ -20,7 +23,7 @@ function env(extra = {}) {
     ASSETS: {
       async fetch(request) {
         const url = new URL(request.url);
-        if (url.pathname === '/admin.html') return new Response('<!doctype html><title>Beheerhub - Wordt er gejast?</title><script>window.GEJAST_PAGE_VERSION=\'v762\';</script><script src="./gejast-home-gate.js?v775"></script><script src="./admin-session-sync.js?v775"></script>', { status: 200, headers: { 'Content-Type': 'text/html' } });
+        if (url.pathname === '/admin.html') return new Response(`<!doctype html><title>Beheerhub - Wordt er gejast?</title><script>window.GEJAST_PAGE_VERSION='${FRONTEND_VERSION}';</script><script src="./gejast-home-gate.js?${FRONTEND_VERSION}"></script><script src="./admin-session-sync.js?${FRONTEND_VERSION}"></script>`, { status: 200, headers: { 'Content-Type': 'text/html' } });
         if (url.pathname === '/admin.js') return new Response('window.GEJAST_ADMIN=1;', { status: 200, headers: { 'Content-Type': 'application/javascript' } });
         return new Response('missing', { status: 404 });
       }
@@ -62,9 +65,9 @@ assert.equal(approved.headers.get('Cache-Control'), 'no-store');
 assert.equal(approved.headers.get('X-Kalenel-Admin-Build'), 'v762');
 const approvedHtml = await approved.text();
 assert.match(approvedHtml, /Beheerhub/);
-assert.match(approvedHtml, /GEJAST_PAGE_VERSION='v775'/);
-assert.match(approvedHtml, /gejast-home-gate\.js\?v775/);
-assert.match(approvedHtml, /admin-session-sync\.js\?v775/);
+assert.ok(approvedHtml.includes(`GEJAST_PAGE_VERSION='${FRONTEND_VERSION}'`));
+assert.ok(approvedHtml.includes(`gejast-home-gate.js?${FRONTEND_VERSION}`));
+assert.ok(approvedHtml.includes(`admin-session-sync.js?${FRONTEND_VERSION}`));
 
 const approvedAdminAlias = await follow('https://admin.kalenel.nl/admin', { Cookie: validCookie });
 assert.deepEqual(approvedAdminAlias.chain.map((hop) => [hop.status, hop.location]), [[302, '/admin.html'], [200, '']]);
@@ -152,7 +155,7 @@ try {
   assert.equal(adminAfterCallback.headers.get('X-Kalenel-Admin-Gate'), 'worker');
   const adminAfterCallbackHtml = await adminAfterCallback.text();
   assert.match(adminAfterCallbackHtml, /Beheerhub/);
-  assert.match(adminAfterCallbackHtml, /GEJAST_PAGE_VERSION='v775'/);
+  assert.ok(adminAfterCallbackHtml.includes(`GEJAST_PAGE_VERSION='${FRONTEND_VERSION}'`));
 } finally {
   globalThis.fetch = originalFetch;
 }
