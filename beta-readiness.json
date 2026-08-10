@@ -1,6 +1,6 @@
 {
   "version": 7,
-  "site_version": "live v781 / current frontend release v781",
+  "site_version": "release candidate v782 / live v781",
   "last_updated": "2026-08-10",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -21,14 +21,15 @@
       "npm run smoke:beta:extended",
       "npm run smoke:push"
     ],
-    "note": "2026-08-10 v781 post-merge public-edge proof PASS: public VERSION v781, hardened 35-route live suite PASS, exact served source contains the Drinks stats-queue declarations, 44px speed selector, hidden verification-float aria-hidden/inert lifecycle and scoped Beerpong touch-target sizing. An isolated no-write live mobile Chromium proof at 390x844 confirmed no Drinks stats-queue ReferenceError, speed selector >=44px high, hidden verification-float controls cannot receive focus, Drinks document horizontal overflow remains within tolerance, and both Beerpong links plus Pussycup checkboxes meet the >=24px target baseline. All non-GET browser traffic was intercepted locally. The 70/70 naming closure and v779 keyboard baseline remain preserved, and the v780 live Chromium/axe proof remains preserved with zero axe violations on the nine repaired pages. Infrastructure-only v775b public-header code remains merged but not live pending authenticated Cloudflare deployment."
+    "note": "2026-08-10 v782 release candidate: responsive Chromium audit across 69 page/viewport combinations found and repaired three scoped owners: the missing Drinks type-distribution renderBars runtime, desktop Klaverjas online lobby overflow, and tablet-portrait homepage watermark flow. The prior live v781 mobile/runtime proof remains the current production baseline until post-merge v782 edge proof. The 70/70 naming closure, v779 keyboard baseline, v780 live Chromium/axe zero axe violations proof, and v781 stats-queue/touch/inert protections remain preserved. Infrastructure-only v775b public-header code remains merged but not live pending authenticated Cloudflare deployment.",
+    "release_candidate_version": "v782"
   },
   "baseline_checks": [
     {
       "id": "static_integrity",
       "status": "verified_complete",
       "command": "npm run verify",
-      "evidence": "Current Node 24 verification passes all existing frontend/backend/security/accessibility regressions through v781. The accessibility naming backlog remains closed 70/70: 58 static controls are protected by v777 and 12 runtime-generated controls by v778; v779 keyboard/focus remains protected; v780 rendered Chromium/axe proof remains preserved with zero axe violations on the nine repaired pages. v781 protects declared Drinks stats-queue state, mobile-sized Drinks/Beerpong targets and the aria-hidden/inert off-canvas verification-float lifecycle."
+      "evidence": "Current Node 24 verification passes all existing frontend/backend/security/accessibility regressions through the v782 release candidate. The accessibility naming backlog remains closed 70/70: 58 static controls are protected by v777 and 12 runtime-generated controls by v778; v779 keyboard/focus remains protected; v780 rendered Chromium/axe proof remains preserved with zero axe violations on the nine repaired pages. v781 protects declared Drinks stats-queue state, mobile-sized Drinks/Beerpong targets and the aria-hidden/inert off-canvas verification-float lifecycle. v782 adds the Drinks bar renderer plus responsive homepage/Klaverjas layout invariants while preserving intentional Boerenbridge table scrolling."
     },
     {
       "id": "klaverjas_regression",
@@ -40,7 +41,7 @@
       "id": "live_routes",
       "status": "verified_complete",
       "command": "npm run smoke:live",
-      "evidence": "2026-08-10 v781 post-merge public-edge proof reports live VERSION v781 and hardened 35-route suite PASS. Exact source plus isolated no-write mobile Chromium proof confirm the Drinks runtime error is gone, the speed selector and Beerpong controls meet scoped touch-size baselines, the hidden verification float is inert/non-focusable, and no new Drinks horizontal document overflow is present."
+      "evidence": "Live production remains v781 until v782 is merged and edge-proven. The v781 post-merge public-edge proof reports hardened 35-route PASS; isolated no-write mobile Chromium confirmed the Drinks stats-queue runtime repair, >=44px Drinks selector, inert/non-focusable hidden verification float and >=24px scoped Beerpong targets. v782 candidate responsive fixes are pre-merge only."
     },
     {
       "id": "push_surface",
