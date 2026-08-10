@@ -35,7 +35,17 @@ try {
   assert.match(await response.text(),/Public test/);
 } finally { globalThis.fetch=originalFetch; }
 
+const protectedRedirect=await worker.fetch(new Request('https://kalenel.nl/admin.html',{redirect:'manual'}),{},{});
+assert.equal(protectedRedirect.status,302);
+assert.equal(protectedRedirect.headers.get('Location'),'https://admin.kalenel.nl/admin.html');
+assert.equal(protectedRedirect.headers.get('Cache-Control'),'no-store');
+assert.equal(protectedRedirect.headers.get('X-Content-Type-Options'),'nosniff');
+assert.equal(protectedRedirect.headers.get('Referrer-Policy'),'no-referrer');
+assert.equal(protectedRedirect.headers.get('X-Frame-Options'),'DENY');
+assert.equal(protectedRedirect.headers.get('Permissions-Policy'),'camera=(), microphone=(), geolocation=(), payment=()');
+assert.match(protectedRedirect.headers.get('Content-Security-Policy')||'',/frame-ancestors 'none'/);
+
 const adminTest=fs.readFileSync('scripts/test-admin-worker-gate.mjs','utf8');
 assert.match(adminTest,/const FRONTEND_VERSION = fs.readFileSync/);
 assert.doesNotMatch(adminTest,/GEJAST_PAGE_VERSION=\\'v762/);
-console.log('v775b public edge header regression PASS: low-risk baseline headers are applied, admin fixture follows root VERSION, and geolocation/CSP/HSTS remain intentionally unrestricted/deferred.');
+console.log('v775b public edge header regression PASS: ordinary public responses get the compatible baseline, protected paths retain the strict admin policy, and the admin fixture follows root VERSION.');
