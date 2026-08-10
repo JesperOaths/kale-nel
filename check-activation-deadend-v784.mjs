@@ -14,15 +14,15 @@ for(const id of ['pinInput','pinConfirmInput']) assert.match(page,new RegExp(`id
 assert.match(page,/<button[^>]*type="submit"[^>]*\bdisabled\b[^>]*>Account activeren<\/button>/i,'activation submit button must ship disabled');
 
 const runtime=fs.readFileSync('gejast-account-runtime.js','utf8');
-assert.match(runtime,/async function bootActivatePage\(\)\{[^]*?setBusy\(form,true\)/,'activation form must start disabled until context is proven');
-assert.match(runtime,/if\(!token\)\{[^]*?Deze activatielink mist een token\.[^]*?return;/,'missing activation token must stop before context lookup');
-assert.match(runtime,/function showActivationFallback\(show\)/,'activation runtime must own explicit fallback visibility');
-assert.match(runtime,/approvedName[^]*?Niet beschikbaar/,'invalid activation state must replace misleading loading/unknown identity text');
-assert.match(runtime,/const activationName=.*ctx[^]*?const activationEmail=.*ctx/,'valid activation context must derive approved identity fields');
-assert.match(runtime,/if\(!activationName\|\|!activationEmail\) throw new Error\('Deze activatielink is ongeldig of verlopen\.'\)/,'incomplete activation context must remain non-actionable');
-assert.match(runtime,/setBusy\(form,false\);\s*showActivationFallback\(false\);/,'valid activation context must explicitly re-enable the form and hide fallback');
-const enableIndex=runtime.indexOf('setBusy(form,false);\n      showActivationFallback(false);');
-const submitIndex=runtime.indexOf("form.addEventListener('submit'");
-assert.ok(enableIndex>=0 && submitIndex>enableIndex,'activation submit handler must only be attached after valid context re-enables the form');
+const bootMatch=runtime.match(/async function bootActivatePage\(\)\{([\s\S]*?)\r?\n\s*async function adminAudit/);
+assert.ok(bootMatch,'activation runtime must contain bootActivatePage before adminAudit');
+const boot=bootMatch[1];
+assert.match(boot,/setBusy\(form,true\)/,'activation form must start disabled until context is proven');
+assert.match(boot,/if\(!token\)\{[^]*?Deze activatielink mist een token\.[^]*?return;/,'missing activation token must stop before context lookup');
+assert.match(boot,/function showActivationFallback\(show\)/,'activation runtime must own explicit fallback visibility');
+assert.match(boot,/approvedName[^]*?Niet beschikbaar/,'invalid activation state must replace misleading loading/unknown identity text');
+assert.match(boot,/const activationName=.*ctx[^]*?const activationEmail=.*ctx/,'valid activation context must derive approved identity fields');
+assert.match(boot,/if\(!activationName\|\|!activationEmail\) throw new Error\('Deze activatielink is ongeldig of verlopen\.'\)/,'incomplete activation context must remain non-actionable');
+assert.match(boot,/setBusy\(form,false\);\s*showActivationFallback\(false\);[\s\S]*?form\.addEventListener\('submit'/,'activation submit handler must only be attached after valid context re-enables the form and hides fallback');
 
 console.log(`v784 activation dead-end PASS at ${version}: activation ships disabled, stays non-actionable without valid context, and only wires submit after valid context is proven.`);

@@ -25,9 +25,10 @@ const routeGroups = {
     '/boerenbridge_live.html',
     '/rad.html',
   ],
-  drinks: ['/drinks.html', '/drinks_add.html', '/drinks_pending.html', '/drinks_history.html', '/drinks_speed.html', '/drinks_stats.html', '/push_beta_test.html'],
+  drinks: ['/drinks.html', '/drinks_add.html', '/drinks_pending.html', '/drinks_history.html', '/drinks_speed.html', '/drinks_stats.html'],
   despimarkt: ['/despimarkt.html', '/beurs.html', '/despimarkt_market.html', '/despimarkt_wallet.html', '/despimarkt_stats.html'],
   family: ['/familie.html', '/familie/index.html', '/familie/login.html', '/familie/profiles.html', '/familie/scorer.html', '/familie/leaderboard.html'],
+  retiredPublic: ['/push_beta_test.html'],
   adminReadOnly: [
     '/admin.html',
     '/admin_system_health.html',
@@ -41,6 +42,7 @@ const routeGroups = {
 };
 
 export const expectedProtected401Routes = new Set(routeGroups.adminReadOnly);
+export const expectedRetired404Routes = new Set(routeGroups.retiredPublic);
 
 const badTextPatterns = [
   /schema cache/i,
@@ -73,17 +75,29 @@ let checked = 0;
 
 export function classifyRouteResponse(route, responseStatus, bodyText = '') {
   const isExpectedProtected = expectedProtected401Routes.has(route);
+  const isExpectedRetired = expectedRetired404Routes.has(route);
   const bad = badTextPatterns.find((pattern) => pattern.test(bodyText));
 
   if (isExpectedProtected) {
     if (responseStatus === 401) {
-      return { ok: !bad, expected401: true, bad };
+      return { ok: !bad, expected401: true, expected404: false, bad };
     }
     return {
       ok: false,
       expected401: true,
+      expected404: false,
       bad,
       failure: `${route} protected route returned HTTP ${responseStatus}; expected HTTP 401`,
+    };
+  }
+
+  if (isExpectedRetired) {
+    return {
+      ok: responseStatus === 404,
+      expected401: false,
+      expected404: true,
+      bad: undefined,
+      failure: responseStatus === 404 ? undefined : `${route} retired public route returned HTTP ${responseStatus}; expected HTTP 404`,
     };
   }
 
@@ -91,6 +105,7 @@ export function classifyRouteResponse(route, responseStatus, bodyText = '') {
   return {
     ok: okStatus && !bad,
     expected401: false,
+    expected404: false,
     bad,
     failure: !okStatus ? `${route} returned HTTP ${responseStatus}` : undefined,
   };
@@ -105,7 +120,7 @@ for (const [group, routes] of Object.entries(routeGroups)) {
       const response = await fetchWithTimeout(urlFor(route));
       const text = await response.text();
       const result = classifyRouteResponse(route, response.status, text);
-      console.log(`- ${route} HTTP ${response.status}${result.expected401 ? ' expected-protected-401' : ''}${result.bad ? ` bad-text:${result.bad}` : ''}`);
+      console.log(`- ${route} HTTP ${response.status}${result.expected401 ? ' expected-protected-401' : ''}${result.expected404 ? ' expected-retired-404' : ''}${result.bad ? ` bad-text:${result.bad}` : ''}`);
       if (result.failure) failures.push(result.failure);
       if (result.bad) failures.push(`${route} contains obvious failure text matching ${result.bad}`);
     } catch (error) {
