@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import { chromium } from 'playwright';
 
+const require=createRequire(import.meta.url);
 const base='https://kalenel.nl';
 const axeSource=fs.readFileSync(require.resolve('axe-core/axe.min.js'),'utf8');
 const routes=[
