@@ -45,6 +45,9 @@ jobs:
           rm -f scripts/build-v786-rad-overflow-fix.mjs
           rm -f scripts/prove-v786-rad-overflow.mjs
           rm -rf node_modules
+          test ! -e .github/workflows/v786-rad-overflow-builder.yml
+          test ! -e scripts/build-v786-rad-overflow-fix.mjs
+          test ! -e scripts/prove-v786-rad-overflow.mjs
           git config core.whitespace cr-at-eol
           git diff --check
           git config user.name "github-actions[bot]"
