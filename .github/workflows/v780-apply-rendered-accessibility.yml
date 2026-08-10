@@ -1,0 +1,65 @@
+name: v780 apply rendered accessibility fixes
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/apply-v780-rendered-accessibility.mjs'
+      - 'scripts/verify-v780-rendered-a11y-local.mjs'
+      - '.github/workflows/v780-apply-rendered-accessibility.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Apply deterministic v780 patch
+        run: node scripts/apply-v780-rendered-accessibility.mjs
+      - name: Verify permanent and repository regressions
+        run: |
+          node check-rendered-accessibility-v780.mjs
+          node check-keyboard-focus-accessibility-v779.mjs
+          node check-static-control-accessibility-v777.mjs
+          node check-dynamic-control-accessibility-v778.mjs
+          npm run verify
+          node check-beta-readiness-current-v770d.mjs
+          node check-live-write-safety-v770e.mjs
+          git -c core.whitespace=cr-at-eol diff --check
+      - name: Install temporary Chromium/axe tooling
+        run: |
+          npm install --no-save playwright @axe-core/playwright
+          npx playwright install --with-deps chromium
+      - name: Start local candidate server
+        shell: bash
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/v780-http.log 2>&1 &
+          echo $! >/tmp/v780-http.pid
+          for i in {1..20}; do curl -fsS http://127.0.0.1:4173/VERSION && break; sleep 0.25; done
+      - name: Rendered Chromium/axe proof on patched candidate
+        run: node scripts/verify-v780-rendered-a11y-local.mjs
+      - name: Remove one-time audit/builder/browser machinery and commit permanent v780 release
+        shell: bash
+        run: |
+          rm -f scripts/audit-isolated-browser-accessibility-v780.mjs
+          rm -f scripts/apply-v780-rendered-accessibility.mjs
+          rm -f scripts/verify-v780-rendered-a11y-local.mjs
+          rm -f .github/workflows/v780-isolated-browser-accessibility-audit.yml
+          rm -f .github/workflows/v780-apply-rendered-accessibility.yml
+          rm -rf node_modules
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git -c core.whitespace=cr-at-eol diff --cached --check
+          git commit -m 'accessibility: fix rendered WCAG findings v780'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
