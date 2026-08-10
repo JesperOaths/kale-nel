@@ -1,0 +1,28 @@
+name: v776 postmerge live proof
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/check-live-v776-account-polish.mjs'
+      - '.github/workflows/v776-postmerge-live-proof.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  prove:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Hardened live route suite
+        env:
+          GEJAST_EXPECTED_VERSION: v776
+          GEJAST_SMOKE_RETRIES: 4
+        run: npm run smoke:live
+      - name: Exact v776 account/public-copy edge proof
+        run: node scripts/check-live-v776-account-polish.mjs
