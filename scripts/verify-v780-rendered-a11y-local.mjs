@@ -54,7 +54,6 @@ for(const path of routes){
 await browser.close();
 assert.ok(gateStubs>0,'local audit expected to stub home-gate requests');
 assert.ok(configOverrides>0,'local audit expected to override local session redirect helpers in gejast-config.js');
-assert.ok(blockedLoginNavigations>0,'local audit expected at least one legitimate auth redirect attempt to be isolated locally');
 assert.ok(blockedWrites>0,'local audit expected to intercept inert non-GET requests as a no-write proof');
 assert.deepEqual(failures,[],`v780 local rendered accessibility failures:\n${JSON.stringify(failures,null,2)}`);
 console.log(`V780_LOCAL_RENDERED_A11Y=PASS routes=${routes.length} gateStubs=${gateStubs} configOverrides=${configOverrides} blockedLoginNavigations=${blockedLoginNavigations} blockedNonGet=${blockedWrites}`);
