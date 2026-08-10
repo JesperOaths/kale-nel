@@ -1,0 +1,53 @@
+name: v782 postmerge live proof
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  prove:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install temporary Chromium tooling
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Hardened live route suite
+        env:
+          GEJAST_EXPECTED_VERSION: v782
+          GEJAST_SMOKE_RETRIES: 4
+        run: npm run smoke:live
+      - name: Exact live v782 responsive proof
+        run: node scripts/check-live-v782-responsive.mjs
+      - name: Promote durable v782 readiness evidence
+        run: |
+          node scripts/finalize-live-v782-evidence.mjs
+          node check-beta-readiness-current-v770d.mjs
+          node check-live-write-safety-v770e.mjs
+          git -c core.whitespace=cr-at-eol diff --check
+      - name: Remove temporary proof machinery and commit evidence
+        run: |
+          rm -f scripts/check-live-v782-responsive.mjs
+          rm -f scripts/finalize-live-v782-evidence.mjs
+          rm -f .github/workflows/v782-postmerge-live-proof.yml
+          rm -rf node_modules
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config core.whitespace cr-at-eol
+          git add -A
+          git diff --cached --check
+          git commit -m "docs: record live v782 responsive proof"
+          git push origin HEAD:${{ github.head_ref }}
