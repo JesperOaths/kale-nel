@@ -6,10 +6,10 @@
   <meta http-equiv="Cache-Control" content="no-store, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wedstrijden beheren</title><script>window.GEJAST_PAGE_VERSION='v776';</script>
+  <title>Wedstrijden beheren</title><script>window.GEJAST_PAGE_VERSION='v777';</script>
   <link rel="stylesheet" href="./site-shell.css" />
-  <script defer src="./gejast-config.js?v776"></script><script src="./gejast-mobile-route-fixes-v583.js?v776" defer></script><script src="./gejast-mobile-foundation-v583.js?v776" defer></script>
-  <script src="./gejast-home-gate.js?v776"></script>
+  <script defer src="./gejast-config.js?v777"></script><script src="./gejast-mobile-route-fixes-v583.js?v777" defer></script><script src="./gejast-mobile-foundation-v583.js?v777" defer></script>
+  <script src="./gejast-home-gate.js?v777"></script>
   <script defer src="./admin-gate-v105.js"></script>
   <style>
     body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(rgba(244,240,232,.72),rgba(244,240,232,.72)), url('./site-bg-desktop.webp') center/cover no-repeat scroll;color:#161616}
@@ -27,7 +27,7 @@
     .hidden{display:none}.status{margin-top:12px;padding:12px 14px;border-radius:14px;background:rgba(17,17,17,.05)}.participant-picks{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}.participant-chip{padding:8px 10px;border-radius:999px;border:1px solid rgba(17,17,17,.12);background:#fff;cursor:pointer;font:inherit;font-weight:700}.participant-chip.active{background:#161616;color:#fff;border-color:#161616}.participant-chip.inline{padding:4px 8px;font-size:12px}
     @media (max-width: 900px){.grid{grid-template-columns:1fr}.controls{grid-template-columns:1fr 1fr}}
   </style>
-<script src="./gejast-scope.js?v776"></script></head>
+<script src="./gejast-scope.js?v777"></script></head>
 <body>
   <div class="wrap">
     <div class="panel">
@@ -52,11 +52,11 @@
           <div class="card">
             <h3 style="margin-top:0">Filters</h3>
             <div class="controls">
-              <select id="scopeFilter"><option value="friends">Vrienden</option><option value="family">Familie</option></select>
-              <select id="gameFilter"><option value="">Alle spellen</option><option value="klaverjas">Klaverjassen</option><option value="boerenbridge">Boerenbridge</option><option value="beerpong">Beerpong</option></select>
-              <input id="playerFilter" placeholder="Speler" />
-              <input id="fromFilter" type="date" />
-              <input id="toFilter" type="date" />
+              <select id="scopeFilter" aria-label="Groep"><option value="friends">Vrienden</option><option value="family">Familie</option></select>
+              <select id="gameFilter" aria-label="Spel"><option value="">Alle spellen</option><option value="klaverjas">Klaverjassen</option><option value="boerenbridge">Boerenbridge</option><option value="beerpong">Beerpong</option></select>
+              <input id="playerFilter" aria-label="Speler" placeholder="Speler" />
+              <input id="fromFilter" aria-label="Vanaf datum" type="date" />
+              <input id="toFilter" aria-label="Tot datum" type="date" />
             </div>
           </div>
           <div class="card">
@@ -64,20 +64,20 @@
             <div id="selectionEmpty" class="muted">Kies een wedstrijd rechts om details te bekijken of te bewerken.</div>
             <form id="editForm" class="hidden">
               <div class="controls" style="grid-template-columns:1fr 1fr; margin-bottom:10px;">
-                <input id="editGame" disabled />
-                <input id="editClientId" disabled />
+                <input id="editGame" aria-label="Spel" disabled />
+                <input id="editClientId" aria-label="Client-ID" disabled />
               </div>
               <div id="participantPickWrap" class="participant-picks hidden"></div>
               <div class="card" style="margin-bottom:10px;background:#fbfaf6">
                 <h4 style="margin:0 0 10px">Speler vervangen in payload</h4>
                 <div class="controls" style="grid-template-columns:1fr 1fr auto;">
-                  <select id="replaceOldPlayer"><option value="">Oude speler</option></select>
-                  <select id="replaceNewPlayer"><option value="">Nieuwe speler</option></select>
+                  <select id="replaceOldPlayer" aria-label="Oude speler"><option value="">Oude speler</option></select>
+                  <select id="replaceNewPlayer" aria-label="Nieuwe speler"><option value="">Nieuwe speler</option></select>
                   <button class="btn ghost" id="replacePlayerBtn" type="button">Vervang overal</button>
                 </div>
                 <div class="muted" style="margin-top:8px;font-size:13px">Werkt direct op de JSON voor klaverjas, boerenbridge en beerpong. Controleer daarna de payload en sla op.</div>
               </div>
-              <textarea id="editPayload" rows="16" spellcheck="false"></textarea>
+              <textarea id="editPayload" aria-label="Wedstrijdgegevens JSON" rows="16" spellcheck="false"></textarea>
               <div class="row-actions" style="margin-top:10px"><button class="btn" type="submit">Opslaan</button><button class="mini" id="deleteBtn" type="button">Verwijderen</button></div>
             </form>
             <div id="statusBox" class="status hidden"></div>

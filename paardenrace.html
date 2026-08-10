@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace Lobby</title>
-  <script>window.GEJAST_PAGE_VERSION='v776';</script>
-  <script src="./gejast-config.js?v776"></script><script src="./gejast-mobile-route-fixes-v583.js?v776" defer></script><script src="./gejast-mobile-foundation-v583.js?v776" defer></script><script src="./gejast-home-gate.js?v776"></script>
-  <script src="./gejast-paardenrace.js?v776"></script>
+  <script>window.GEJAST_PAGE_VERSION='v777';</script>
+  <script src="./gejast-config.js?v777"></script><script src="./gejast-mobile-route-fixes-v583.js?v777" defer></script><script src="./gejast-mobile-foundation-v583.js?v777" defer></script><script src="./gejast-home-gate.js?v777"></script>
+  <script src="./gejast-paardenrace.js?v777"></script>
   <style>
     :root{
       --paper:#fbf6ef;--shell:#f5efe6;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241;--gold-soft:#efe5c7;
@@ -80,7 +80,7 @@
       .sticky-actions{bottom:6px;border-radius:16px}.top-actions .btn{flex:1 1 100%}
     }
   </style>
-<script src="./gejast-paardenrace-input-guard.js?v776"></script></head>
+<script src="./gejast-paardenrace-input-guard.js?v777"></script></head>
 <body data-game-watermark="soft">
   <div class="wrap">
     <div class="shell">
@@ -109,7 +109,7 @@
         <section class="panel">
           <div class="field-grid">
             <div class="field">
-              <label>Roomcode</label>
+              <label for="roomCodeInput">Roomcode</label>
               <input id="roomCodeInput" maxlength="24" placeholder="Automatisch: Despinoza 1" readonly aria-readonly="true" />
             </div>
             <div class="field">
@@ -152,7 +152,7 @@
         <section class="panel" id="roomShell" style="display:none">
           <h2>Jouw lobby</h2>
           <div id="selectionEditor">
-            <label>Jouw paard</label>
+            <label for="suitInput">Jouw paard</label>
             <select id="suitInput">
               <option value="">Kies een suit</option>
               <option value="hearts">&hearts; Harten</option>
@@ -160,7 +160,7 @@
               <option value="clubs">&clubs; Klaveren</option>
               <option value="spades">&spades; Schoppen</option>
             </select>
-            <label>Jouw inzet in Bakken</label>
+            <label for="wagerInput">Jouw inzet in Bakken</label>
             <input id="wagerInput" type="number" min="1" step="1" placeholder="Bijv. 2" />
             <div class="action-row"><button class="btn" id="saveBtn" type="button">Suit + inzet opslaan</button></div>
             <div class="small">Je kiest je suit en inzet een keer. Daarna verdwijnt dit invoerveld om verwarring te voorkomen.</div>

@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Klaverjas lobby</title>
-  <script>window.GEJAST_PAGE_VERSION='v776';</script>
-  <script src="./gejast-config.js?v776"></script><script src="./gejast-mobile-route-fixes-v583.js?v776" defer></script><script src="./gejast-mobile-foundation-v583.js?v776" defer></script>
-  <script src="./gejast-home-gate.js?v776"></script>
-  <script src="./gejast-scope-context.js?v776"></script>
+  <script>window.GEJAST_PAGE_VERSION='v777';</script>
+  <script src="./gejast-config.js?v777"></script><script src="./gejast-mobile-route-fixes-v583.js?v777" defer></script><script src="./gejast-mobile-foundation-v583.js?v777" defer></script>
+  <script src="./gejast-home-gate.js?v777"></script>
+  <script src="./gejast-scope-context.js?v777"></script>
   <script>window.GEJAST_CONFIG&&window.GEJAST_CONFIG.requireMatchEntrySession('klaverjas_online.html');</script>
-  <script src="./gejast-live-sync.js?v776"></script>
-  <script src="./gejast-klaverjas-online.js?v776"></script>
+  <script src="./gejast-live-sync.js?v777"></script>
+  <script src="./gejast-klaverjas-online.js?v777"></script>
   <style>
     :root{--felt:#104d38;--felt2:#082d24;--rail:#8a5d1f;--paper:#fffaf3;--ink:#19130f;--muted:#756b5e;--line:rgba(0,0,0,.1);--gold:#d7ad58;--red:#a7192b;--p0:#d7ad58;--p1:#60a5fa;--p2:#fb7185;--p3:#34d399}
     *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;background:linear-gradient(rgba(236,229,219,.9),rgba(236,229,219,.94)),url('./site-bg-desktop.webp') center/cover fixed;color:var(--ink)}
@@ -51,7 +51,7 @@
         <h2>Tafel starten</h2>
         <div class="muted">Kies het potje, voeg eventueel bots toe, en ga daarna naar de tafelpagina.</div>
         <div class="setup-row">
-        <select id="finishMode"><option value="fixed_rounds">16 rondes</option><option value="first_to_162">Eerste tot 162</option></select>
+        <select id="finishMode" aria-label="Eindmodus"><option value="fixed_rounds">16 rondes</option><option value="first_to_162">Eerste tot 162</option></select>
           <button id="createBtn" class="btn gold" type="button">Maak tafel</button>
         </div>
         <div class="bot-builder" id="botBuilder">
@@ -70,7 +70,7 @@
         <h2>Open tafels</h2>
         <div class="muted">Gebruik een code of kies direct een tafel. Hosts kunnen hun eigen tafels sluiten.</div>
         <div class="join-row">
-        <input id="codeInput" placeholder="Roomcode" style="text-transform:uppercase">
+        <input id="codeInput" aria-label="Roomcode" placeholder="Roomcode" style="text-transform:uppercase">
           <button id="joinBtn" class="btn" type="button">Open</button>
         </div>
         <h3>Lobbylijst</h3>
