@@ -1,0 +1,41 @@
+name: final v784 acceptance freeze audit
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  final-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Permanent repository regressions
+        run: npm run verify
+      - name: Hardened live route suite
+        env:
+          GEJAST_EXPECTED_VERSION: v784
+          GEJAST_SMOKE_RETRIES: 4
+        run: npm run smoke:live
+      - name: Read-only beta surfaces
+        run: |
+          npm run smoke:beta:read
+          npm run smoke:beta:extended
+      - name: Live performance budgets
+        run: npm run smoke:beta:perf
+      - name: Install temporary browser/accessibility tooling
+        run: |
+          npm install --no-save playwright axe-core
+          npx playwright install --with-deps chromium
+      - name: Final browser acceptance
+        run: node scripts/final-acceptance-browser-audit.mjs
