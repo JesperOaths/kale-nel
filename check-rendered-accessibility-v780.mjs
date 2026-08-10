@@ -6,7 +6,7 @@ const version=fs.readFileSync('VERSION','utf8').trim();
 const versionNumber=Number(version.match(/^v(\d+)$/)?.[1]||0);
 assert.ok(versionNumber>=780,`v780 rendered accessibility invariant requires frontend v780+, got ${version}`);
 
-const goldFiles=['drinks_speed.html','paardenrace.html','paardenrace_live.html','toepen.html','despimarkt_create.html','despimarkt_debts.html','klaverjas_live.html'];
+const goldFiles=['drinks_speed.html','paardenrace.html','paardenrace_live.html','toepen.html','klaverjas_live.html','despimarkt-theme.css'];
 for(const file of goldFiles){
   const text=fs.readFileSync(file,'utf8');
   assert.doesNotMatch(text,/#8a7a55/i,`${file} must not restore the sub-AA muted gold #8a7a55`);
@@ -24,4 +24,4 @@ assert.match(race,/\$\('mobileDrawer'\)\.setAttribute\('aria-hidden', 'true'\);\
 const rad=fs.readFileSync('rad.html','utf8');
 assert.match(rad,/<div class="legend" id="legendBox" tabindex="0" aria-label="Segmenten van het rad"><\/div>/,'scrollable Rad legend must be keyboard focusable and named');
 
-console.log(`v780 rendered accessibility PASS at ${version}: AA-safe muted text colors, inert hidden Paardenrace drawer lifecycle, and keyboard-focusable Rad legend are protected.`);
+console.log(`v780 rendered accessibility PASS at ${version}: AA-safe muted text colors (including shared Despimarkt theme ownership), inert hidden Paardenrace drawer lifecycle, and keyboard-focusable Rad legend are protected.`);
