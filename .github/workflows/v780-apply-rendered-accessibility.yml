@@ -5,6 +5,7 @@ on:
     paths:
       - 'scripts/apply-v780-rendered-accessibility.mjs'
       - 'scripts/verify-v780-rendered-a11y-local.mjs'
+      - 'check-rendered-accessibility-v780.mjs'
       - '.github/workflows/v780-apply-rendered-accessibility.yml'
 
 permissions:
