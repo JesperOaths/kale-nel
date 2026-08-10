@@ -52,9 +52,12 @@ export default {
   }
 };
 
-function handlePublicApex(request, url) {
+async function handlePublicApex(request, url) {
   if (!isSafePath(url.pathname)) return notFound();
-  if (!isProtectedPublicPath(url.pathname)) return fetch(request);
+  if (!isProtectedPublicPath(url.pathname)) {
+    const response = await fetch(request);
+    return withPublicSecurityHeaders(response);
+  }
   const target = new URL(url.pathname + url.search, `https://${ADMIN_HOST}`);
   return new Response(null, {
     status: 302,
@@ -277,6 +280,18 @@ function expireCookie(name) { return `${name}=; Max-Age=0; Path=/; HttpOnly; Sec
 async function hmac(env, payload) { const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.COOKIE_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']); const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload)); return btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/[+/=]/g, (m) => ({ '+': '-', '/': '_', '=': '' }[m])); }
 async function readAttemptCookie(request, env) { const v = await readSignedCookie(request, env, ATTEMPT_COOKIE); if (!v || v.resetAt <= now()) return { count: 0, resetAt: now() + ATTEMPT_WINDOW_SECONDS }; return v; }
 function bumpAttempts(v) { return { kind: 'attempts', count: Number(v.count || 0) + 1, resetAt: v.resetAt || (now() + ATTEMPT_WINDOW_SECONDS) }; }
+
+function withPublicSecurityHeaders(response) {
+  const headers = new Headers(response.headers);
+  applyPublicSecurityHeaders(headers);
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+function applyPublicSecurityHeaders(headers) {
+  headers.set('X-Content-Type-Options', 'nosniff');
+  headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  headers.set('X-Frame-Options', 'SAMEORIGIN');
+  headers.set('Permissions-Policy', 'camera=(), microphone=(), payment=()');
+}
 
 function secureHeaders(init = {}) { const headers = new Headers(init); applySecurityHeaders(headers); return headers; }
 function applySecurityHeaders(headers) {
