@@ -22,6 +22,19 @@ const checks=[
 ];
 assert.equal(checks.length,12);
 for(const [file,marker] of checks) assert.ok(sources[file].includes(marker),file+' missing dynamic accessibility marker '+marker);
+
+// Runtime/user-controlled names must be assigned as DOM attributes rather than injected as raw aria-label HTML.
+for(const file of ['boerenbridge.html','paardenrace_live.html','toepen.html']) {
+  assert.match(sources[file],/\.setAttribute\(['"]aria-label['"]/,file+' must assign runtime accessible names through DOM setAttribute');
+}
+assert.doesNotMatch(sources['boerenbridge.html'],/aria-label="\$\{playerName\}/,'Boerenbridge must not interpolate playerName directly into aria-label markup');
+assert.doesNotMatch(sources['paardenrace_live.html'],/aria-label="\$\{name\}/,'Paardenrace must not interpolate target name directly into aria-label markup');
+assert.doesNotMatch(sources['toepen.html'],/aria-label="\$\{playerName\}/,'Toepen must not interpolate playerName directly into aria-label markup');
+
+// Drinks admin renders inside an HTML template, so its contextual labels must stay escaped.
+assert.match(sources['drinks_admin.html'],/data-kind="events"[^>]*aria-label="\$\{esc\(/);
+assert.match(sources['drinks_admin.html'],/data-kind="speed"[^>]*aria-label="\$\{esc\(/);
 assert.match(sources['drinks_admin.html'],/Selecteer .*event_type_label[\s\S]* van .*player_name/);
 assert.match(sources['drinks_admin.html'],/Selecteer .*speed_type_label[\s\S]* van .*player_name/);
-console.log(`v778 dynamic control accessibility PASS at ${version}: all 12 runtime-generated control templates receive context-aware accessible names across Boerenbridge, Drinks admin, Paardenrace and Toepen.`);
+
+console.log(`v778 dynamic control accessibility PASS at ${version}: all 12 runtime-generated control templates receive context-aware accessible names, runtime player names use DOM assignment, and Drinks template labels remain escaped.`);
