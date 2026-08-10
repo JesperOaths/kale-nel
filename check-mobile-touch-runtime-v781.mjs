@@ -8,8 +8,10 @@ assert.ok(versionNumber>=781,`v781 mobile/runtime invariant requires frontend v7
 
 const drinks=fs.readFileSync('drinks.html','utf8');
 assert.match(drinks,/lastStatsLoadedAt=0,\s*statsLoadPromise=null,\s*statsLoadScheduled=false/,'Drinks stats queue state must be declared before queueStatsLoad reads it');
+const declIndex=drinks.indexOf('lastStatsLoadedAt=0');
+const queueIndex=drinks.indexOf('function queueStatsLoad(force=false)');
+assert.ok(declIndex>=0 && queueIndex>declIndex,'Drinks stats queue declarations must appear before queueStatsLoad');
 assert.match(drinks,/\.select-field\{[^}]*width:100%;[^}]*min-height:44px;[^}]*padding:11px 12px/i,'Drinks speed type select must retain a mobile-sized control surface');
-assert.doesNotMatch(drinks,/\blastStatsLoadedAt\b[\s\S]*?function queueStatsLoad\(force=false\)[\s\S]*?if\(!force && lastStatsLoadedAt/,'placeholder');
 
 const float=fs.readFileSync('drinks-verify-float.js','utf8');
 assert.match(float,/box\.setAttribute\('aria-hidden','true'\);\s*box\.setAttribute\('inert',''\);/,'verification float must start hidden and inert');
