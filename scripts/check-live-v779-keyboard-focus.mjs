@@ -18,7 +18,11 @@ assert.match(drinks,/GEJAST_PAGE_VERSION='v779'/);
 assert.match(drinks,/\.geo-card\.linklike:focus-visible\{[^}]*outline:3px solid var\(--verify-border\);[^}]*outline-offset:3px/i);
 assert.ok(!/\.geo-card\.linklike:hover,\.geo-card\.linklike:focus-visible\{/.test(drinks),'hover/focus rule must remain separated');
 assert.ok(!/outline\s*:\s*(?:none|0)(?:\s*[;}])/.test(drinks),'drinks_add must not suppress focus outline');
-assert.match(drinks,/<section class="geo-card linklike"[^>]*data-route="\.\/drinks_pending\.html"[^>]*role="link"[^>]*tabindex="0"[^>]*aria-label="Open verificatiepagina"/i);
+assert.match(drinks,/<section class="geo-card linklike" id="verifyGeoCard" role="link" tabindex="0" aria-label="Open verificatiepagina">/i);
+assert.match(drinks,/const verifyGeoCard=document\.getElementById\('verifyGeoCard'\);/);
+assert.match(drinks,/const goVerify=\(\)=>\{ window\.location\.href='\.\/drinks\.html#verifyPanel'; \};/);
+assert.match(drinks,/verifyGeoCard\.addEventListener\('click', goVerify\);/);
+assert.match(drinks,/verifyGeoCard\.addEventListener\('keydown',\(ev\)=>\{ if\(ev\.key==='Enter' \|\| ev\.key===' '\)\{ ev\.preventDefault\(\); goVerify\(\); \} \}\);/);
 
 const clickable=await get('gejast-clickable-cards.js');
 assert.match(clickable,/node\.setAttribute\('tabindex', '0'\)/);
@@ -38,4 +42,4 @@ for(const [file,marker] of [
   assert.ok(html.includes(marker),`${file} lost accessibility marker ${marker}`);
 }
 
-console.log('LIVE_V779_KEYBOARD_FOCUS=PASS: explicit keyboard focus styling and shared Enter/Space navigation are deployed while the 70/70 naming closure persists.');
+console.log('LIVE_V779_KEYBOARD_FOCUS=PASS: the explicit Drinks focus ring and its own click + Enter/Space route to #verifyPanel are deployed, shared clickable cards retain keyboard activation, and the 70/70 naming closure persists.');
