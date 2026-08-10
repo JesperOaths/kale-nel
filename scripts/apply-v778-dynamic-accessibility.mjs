@@ -11,6 +11,7 @@ function replaceOnce(file,from,to,label){
   console.log(`patched ${file}: ${label}`);
 }
 if(read('VERSION').trim()!=='v777') throw new Error('v778 builder expects root VERSION v777');
+if(!fs.existsSync('check-dynamic-control-accessibility-v778.mjs')) throw new Error('permanent v778 guard missing');
 
 replaceOnce('boerenbridge.html',
   "</select>`; box.appendChild(field); } renderDealerSelect();",
@@ -56,9 +57,6 @@ replaceOnce('toepen.html',
   "$('roundPlayers').querySelectorAll('.round-player').forEach(r=>{const a=r.querySelector('.action');const seat=+r.dataset.seat;const playerName=state.match?.players.find(p=>p.seat_no===seat)?.name||`speler ${seat}`;a.setAttribute('aria-label',`Actie voor ${playerName}`);r.querySelector('.foldAt')?.setAttribute('aria-label',`Past op waarde voor ${playerName}`);if(+r.dataset.seat===win)a.value='win';",
   'round action and fold context');
 
-const guard=`#!/usr/bin/env node\nimport assert from 'node:assert/strict';\nimport fs from 'node:fs';\nconst version=fs.readFileSync('VERSION','utf8').trim();\nconst versionNumber=Number(version.match(/^v(\\d+)$/)?.[1]||0);\nassert.ok(versionNumber>=778,\`v778 dynamic accessibility invariant requires frontend v778+, got \${version}\`);\nconst sources=Object.fromEntries(['boerenbridge.html','drinks_admin.html','paardenrace_live.html','toepen.html'].map(f=>[f,fs.readFileSync(f,'utf8')]));\nconst checks=[\n ['boerenbridge.html',\"setupSelect?.setAttribute('aria-label',`Speler \\${i+1}`)\"],\n ['boerenbridge.html',\"setAttribute('aria-label',`Speciale ronde \\${Number(sel.getAttribute('data-special-index'))+1}`)\"],\n ['boerenbridge.html',\"el.setAttribute('aria-label',`Bod voor \\${playerName}`)\"],\n ['boerenbridge.html',\"input[disabled]')?.setAttribute('aria-label',`Bod voor \\${playerName}`)\"],\n ['boerenbridge.html',\"[data-won-player-index]')?.setAttribute('aria-label',`Gewonnen slagen voor \\${playerName}`)\"],\n ['boerenbridge.html',\"input.setAttribute('aria-label',`Punten voor \\${playerName}`)\"],\n ['drinks_admin.html','data-kind=\\\"events\\\" value=\\\"${Number(r.id||0)}\\\" aria-label=\\\"${esc('],\n ['drinks_admin.html','data-kind=\\\"speed\\\" value=\\\"${Number(r.id||0)}\\\" aria-label=\\\"${esc('],\n ['paardenrace_live.html',\"input.setAttribute('aria-label',`Bakken nomineren voor \\${name}`)\"],\n ['toepen.html',\"s.setAttribute('aria-label',`Speler \\${i+1}`)\"],\n ['toepen.html',\"a.setAttribute('aria-label',`Actie voor \\${playerName}`)\"],\n ['toepen.html',\"setAttribute('aria-label',`Past op waarde voor \\${playerName}`)\"]\n];\nassert.equal(checks.length,12);\nfor(const [file,marker] of checks) assert.ok(sources[file].includes(marker),file+' missing dynamic accessibility marker '+marker);\nassert.match(sources['drinks_admin.html'],/Selecteer .*event_type_label[\\s\\S]* van .*player_name/);\nassert.match(sources['drinks_admin.html'],/Selecteer .*speed_type_label[\\s\\S]* van .*player_name/);\nconsole.log(\`v778 dynamic control accessibility PASS at \${version}: all 12 runtime-generated control templates receive context-aware accessible names across Boerenbridge, Drinks admin, Paardenrace and Toepen.\`);\n`;
-write('check-dynamic-control-accessibility-v778.mjs',guard);
-
 let v777Guard=read('check-static-control-accessibility-v777.mjs');
 v777Guard=v777Guard.replace('the 12 known runtime-generated controls remain explicitly tracked for context-aware naming.','the 12 known runtime-generated control templates remain explicitly tracked as a separate accessibility class.');
 write('check-static-control-accessibility-v777.mjs',v777Guard);
@@ -66,6 +64,7 @@ write('check-static-control-accessibility-v777.mjs',v777Guard);
 let pkg=read('package.json');
 const anchor='node check-static-control-accessibility-v777.mjs';
 if(!pkg.includes(anchor)) throw new Error('verify:static v777 anchor missing');
+if(pkg.includes('node check-dynamic-control-accessibility-v778.mjs')) throw new Error('v778 guard unexpectedly already wired');
 pkg=pkg.replace(anchor,`${anchor} && node check-dynamic-control-accessibility-v778.mjs`);
 write('package.json',pkg);
 
