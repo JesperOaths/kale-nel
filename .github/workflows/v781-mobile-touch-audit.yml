@@ -1,0 +1,27 @@
+name: v781 mobile touch and overflow audit
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/audit-mobile-touch-v781.mjs'
+      - '.github/workflows/v781-mobile-touch-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install temporary Chromium tooling
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Run isolated no-write mobile audit
+        run: node scripts/audit-mobile-touch-v781.mjs
