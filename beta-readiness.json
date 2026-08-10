@@ -1,6 +1,6 @@
 {
   "version": 7,
-  "site_version": "live v780 / current frontend release v780",
+  "site_version": "release candidate v781 / live v780",
   "last_updated": "2026-08-10",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -21,14 +21,15 @@
       "npm run smoke:beta:extended",
       "npm run smoke:push"
     ],
-    "note": "2026-08-10 v780 post-merge public-edge proof PASS: public VERSION v780, hardened 35-route live suite PASS, exact served contrast/drawer/legend source markers match v780, and an isolated no-write Chromium/axe audit of all nine formerly failing pages returned zero serious/critical violations, zero total axe violations, zero positive tabindex and zero page errors. The live harness locally neutralized only authentication redirects and intercepted all non-GET requests before they could reach production. The 70/70 accessible-name closure and v779 keyboard/focus baseline remain deployed. Infrastructure-only v775b public-header code remains merged but not live pending authenticated Cloudflare deployment."
+    "note": "v781 release candidate: isolated no-write mobile Chromium audit covered 24 routes and intercepted 201 non-GET requests. High-confidence findings are fixed narrowly: Drinks stats queue state is explicitly declared (removing the live lastStatsLoadedAt ReferenceError), the Drinks speed-type selector has a 44px touch surface, the off-canvas verification float is aria-hidden/inert while closed, and Beerpong top navigation/Pussycup controls have >=24px touch targets. Boerenbridge's wide special selects remain intentionally inside its horizontally scrollable score-table owner, and Toepen rule checkboxes remain inside padded label-pill targets. Live remains v780 until post-merge public-edge proof.",
+    "release_candidate_version": "v781"
   },
   "baseline_checks": [
     {
       "id": "static_integrity",
       "status": "verified_complete",
       "command": "npm run verify",
-      "evidence": "Current Node 24 verification passes all existing frontend/backend/security regressions through v780. The accessibility naming backlog remains closed 70/70: 58 static controls are protected by v777 and 12 runtime-generated controls by v778; v779 keyboard/focus invariants remain protected. v780 adds numeric WCAG AA contrast protection, shared Despimarkt contrast ownership, inert Paardenrace drawer lifecycle, keyboard Rad legend access, and rendered Chromium/axe proof of zero violations on the nine repaired pages."
+      "evidence": "Current Node 24 verification passes all existing frontend/backend/security/accessibility regressions through v781. The accessibility naming backlog remains closed 70/70: 58 static controls are protected by v777 and 12 runtime-generated controls by v778; v779 keyboard/focus remains protected, and the v780 rendered Chromium/axe proof remains preserved with zero axe violations on the nine repaired pages. v781 adds the mobile/runtime baseline for declared Drinks stats queue state, touch-sized Drinks/Beerpong controls and an inert hidden global verification float."
     },
     {
       "id": "klaverjas_regression",
