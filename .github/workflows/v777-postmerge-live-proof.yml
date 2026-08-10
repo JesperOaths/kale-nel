@@ -1,0 +1,28 @@
+name: v777 postmerge live proof
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/check-live-v777-static-accessibility.mjs'
+      - '.github/workflows/v777-postmerge-live-proof.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  prove:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Hardened live route suite
+        env:
+          GEJAST_EXPECTED_VERSION: v777
+          GEJAST_SMOKE_RETRIES: 4
+        run: npm run smoke:live
+      - name: Exact v777 static accessibility edge proof
+        run: node scripts/check-live-v777-static-accessibility.mjs
