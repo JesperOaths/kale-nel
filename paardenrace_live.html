@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,max-image-preview:none" />
   <title>Paardenrace live</title>
-  <script>window.GEJAST_PAGE_VERSION='v779';</script>
-  <script src="./gejast-config.js?v779"></script><script src="./gejast-mobile-route-fixes-v583.js?v779" defer></script><script src="./gejast-mobile-foundation-v583.js?v779" defer></script><script src="./gejast-game-group-b-bridge.js?v779"></script><script src="./gejast-home-gate.js?v779"></script>
-  <script src="./gejast-paardenrace.js?v779"></script>
+  <script>window.GEJAST_PAGE_VERSION='v780';</script>
+  <script src="./gejast-config.js?v780"></script><script src="./gejast-mobile-route-fixes-v583.js?v780" defer></script><script src="./gejast-mobile-foundation-v583.js?v780" defer></script><script src="./gejast-game-group-b-bridge.js?v780"></script><script src="./gejast-home-gate.js?v780"></script>
+  <script src="./gejast-paardenrace.js?v780"></script>
   <style>
     :root{
       --gold:#9a8241;--paper:#fffaf3;--ink:#17130f;--muted:#6d6256;--line:rgba(0,0,0,.08);--bg:#efe6d7;
@@ -32,7 +32,7 @@
     .hero-card{display:grid;gap:10px}
     .hero-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
     .hero-kpi{background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px;display:grid;gap:4px}
-    .hero-kpi .k{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8a7a55;font-weight:900}
+    .hero-kpi .k{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#7a705a;font-weight:900}
     .hero-kpi .v{font-size:18px;font-weight:900}
     .focus-card{display:grid;gap:10px}
     .focus-title{font-size:clamp(1.25rem,2.7vw,1.9rem);font-weight:900;letter-spacing:-.03em}
@@ -69,11 +69,11 @@
     .pr-live-wrap{display:grid;gap:12px}
     .pr-board-topline{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
     .pr-board-kpi{background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px;display:grid;gap:4px}
-    .pr-board-kpi span{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8a7a55;font-weight:900}
+    .pr-board-kpi span{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#7a705a;font-weight:900}
     .pr-board-kpi strong{font-size:20px}
     .pr-board-kpi--card{align-items:start}
     .pr-board-lastcard{width:86px;max-width:100%}
-    .pr-last-card-empty{height:110px;border-radius:16px;border:1px dashed rgba(0,0,0,.14);display:flex;align-items:center;justify-content:center;color:#8a7a55;background:#fbfaf6;font-weight:900}
+    .pr-last-card-empty{height:110px;border-radius:16px;border:1px dashed rgba(0,0,0,.14);display:flex;align-items:center;justify-content:center;color:#7a705a;background:#fbfaf6;font-weight:900}
     .pr-board-shell-lite{background:#f8f1e6;border:1px solid rgba(0,0,0,.06);border-radius:24px;padding:12px;display:grid;gap:10px}
     .pr-board-gates,.pr-board-row{display:grid;grid-template-columns:34px minmax(0,1fr);gap:8px;align-items:center}
     .pr-board-label{font-weight:900;text-align:center}
@@ -136,7 +136,7 @@
       .pr-horse-token{font-size:24px}
     }
   </style>
-<script src="./gejast-paardenrace-input-guard.js?v779"></script></head>
+<script src="./gejast-paardenrace-input-guard.js?v780"></script></head>
 <body data-game-watermark="soft">
 <div class="page"><div class="shell">
   <div class="top">
@@ -210,7 +210,7 @@
   <button type="button" data-drawer-target="nominations">Nomineer</button>
 </div>
 <div class="drawer-overlay" id="drawerOverlay"></div>
-<section class="drawer" id="mobileDrawer" aria-hidden="true">
+<section class="drawer" id="mobileDrawer" aria-hidden="true" inert>
   <div class="drawer-head">
     <strong id="drawerTitle">Spelers</strong>
     <button type="button" class="drawer-close" id="drawerCloseBtn">Sluiten</button>
@@ -331,6 +331,7 @@
     $('drawerOverlay').classList.add('show');
     $('mobileDrawer').classList.add('show');
     $('mobileDrawer').setAttribute('aria-hidden', 'false');
+    $('mobileDrawer').removeAttribute('inert');
     document.body.classList.add('drawer-open');
     document.querySelectorAll('#mobileDock [data-drawer-target]').forEach((btn)=>btn.classList.toggle('active', btn.dataset.drawerTarget === name));
     const room = currentState?.room || {};
@@ -354,6 +355,7 @@
     $('drawerOverlay').classList.remove('show');
     $('mobileDrawer').classList.remove('show');
     $('mobileDrawer').setAttribute('aria-hidden', 'true');
+    $('mobileDrawer').setAttribute('inert', '');
     document.body.classList.remove('drawer-open');
   }
 

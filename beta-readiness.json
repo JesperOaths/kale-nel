@@ -1,6 +1,6 @@
 {
   "version": 7,
-  "site_version": "live v779 / current frontend release v779",
+  "site_version": "release candidate v780 / live v779",
   "last_updated": "2026-08-10",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -21,14 +21,15 @@
       "npm run smoke:beta:extended",
       "npm run smoke:push"
     ],
-    "note": "2026-08-10 v779 post-merge public-edge proof PASS: public VERSION v779, hardened 35-route live suite PASS, drinks_add.html serves the explicit focus-visible ring on the named keyboard-link verification card with no outline suppression, and gejast-clickable-cards.js serves the shared tabindex/role plus Enter/Space activation runtime. The live accessibility naming closure remains 70/70: 58 static controls from v777 plus 12 runtime-generated controls from v778. The earlier temporary Chromium/axe audit found 0 axe violations, 0 serious/critical findings, 0 positive tabindex, 0 missing visible focus indicators and 0 page errors on the unauthenticated rendered journeys. Infrastructure-only v775b public-header code remains merged but not live pending authenticated Cloudflare deployment."
+    "note": "v780 release candidate: isolated no-write Chromium/axe audit reached 20 key page layouts by stubbing only the auth gate and locally intercepting 168 non-GET requests. It found ten serious accessibility classes: eight repeated muted-text contrast failures plus an aria-hidden focusable Paardenrace drawer and a non-focusable scrollable Rad legend. v780 applies narrowly scoped AA-safe text tones, including the shared Despimarkt theme owner, an inert closed-drawer lifecycle, and a named tabindex=0 Rad legend. Live remains v779 until post-merge public-edge proof. Infrastructure-only v775b public-header code remains merged but not live pending authenticated Cloudflare deployment.",
+    "release_candidate_version": "v780"
   },
   "baseline_checks": [
     {
       "id": "static_integrity",
       "status": "verified_complete",
       "command": "npm run verify",
-      "evidence": "Current Node 24 verification passes all existing frontend/backend/security regressions through v779. The accessibility naming backlog remains closed 70/70: 58 static controls are protected by v777 and 12 runtime-generated controls by v778. v779 protects the keyboard/focus baseline: no positive tab order, no non-native inline public clicks, no public outline suppression, explicit Drinks focus-visible styling, and preserved shared Enter/Space activation."
+      "evidence": "Current Node 24 verification passes all existing frontend/backend/security regressions through v780. The accessibility naming backlog remains closed 70/70: 58 static controls are protected by v777 and 12 runtime-generated controls are protected by v778; the v779 keyboard baseline also remains protected. v780 adds rendered-accessibility invariants for AA-safe muted label tones, including shared Despimarkt theme ownership, an inert hidden Paardenrace drawer lifecycle, and keyboard access to the scrollable Rad legend."
     },
     {
       "id": "klaverjas_regression",
