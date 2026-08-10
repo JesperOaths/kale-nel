@@ -7,12 +7,12 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Boerenbridge spectator</title>
-  <script>window.GEJAST_PAGE_VERSION='v784';</script>
-  <script src="./gejast-config.js?v784"></script><script src="./gejast-mobile-route-fixes-v583.js?v784" defer></script><script src="./gejast-mobile-foundation-v583.js?v784" defer></script>
-  <script src="./gejast-home-gate.js?v784"></script><script src="./gejast-family-rollout.js?v784"></script>
-  <script src="./gejast-scope.js?v784"></script>
-  <script src="./gejast-live-summary.js?v784"></script>
-  <script src="./gejast-spectator-pages.js?v784"></script>
+  <script>window.GEJAST_PAGE_VERSION='v785';</script>
+  <script src="./gejast-config.js?v785"></script><script src="./gejast-mobile-route-fixes-v583.js?v785" defer></script><script src="./gejast-mobile-foundation-v583.js?v785" defer></script>
+  <script src="./gejast-home-gate.js?v785"></script><script src="./gejast-family-rollout.js?v785"></script>
+  <script src="./gejast-scope.js?v785"></script>
+  <script src="./gejast-live-summary.js?v785"></script>
+  <script src="./gejast-spectator-pages.js?v785"></script>
   <style>
     :root{--paper:#fbf6ef;--line:rgba(0,0,0,.08);--muted:#6b6257;--ink:#201b16;--gold:#9a8241;--soft:#f7f3ec;--live:#123a1f;--livebg:#eaf7ee}
     *{box-sizing:border-box}
@@ -29,7 +29,7 @@
     .muted{color:var(--muted)}
     .meta-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-top:20px}
     .meta-card,.panel,.standing-row,.round-card{background:#fff;border:1px solid var(--line);border-radius:22px}
-    .meta-card{padding:14px 16px}.meta-card span{display:block;font-size:11px;color:#8a7a55;text-transform:uppercase;letter-spacing:.08em}.meta-card strong{display:block;margin-top:8px;font-size:17px;line-height:1.35}
+    .meta-card{padding:14px 16px}.meta-card span{display:block;font-size:11px;color:#827148;text-transform:uppercase;letter-spacing:.08em}.meta-card strong{display:block;margin-top:8px;font-size:17px;line-height:1.35}
     .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:16px;margin-top:18px}
     .panel{padding:18px}
     .panel h2{margin:0 0 10px;font-size:26px;letter-spacing:-.03em}
@@ -37,16 +37,16 @@
     .standing-row{padding:14px 16px;display:grid;grid-template-columns:44px minmax(0,1fr) repeat(3,auto);gap:14px;align-items:center}
     .rank{width:44px;height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:#f5edd9;color:#72581f;font-weight:900}
     .player-copy strong{display:block;font-size:18px}.player-copy span{display:block;color:var(--muted);font-size:13px;margin-top:4px}
-    .metric{display:grid;justify-items:end}.metric span{font-size:11px;color:#8a7a55;text-transform:uppercase;letter-spacing:.08em}.metric strong{display:block;margin-top:6px;font-size:18px}
+    .metric{display:grid;justify-items:end}.metric span{font-size:11px;color:#827148;text-transform:uppercase;letter-spacing:.08em}.metric strong{display:block;margin-top:6px;font-size:18px}
     .detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
     .detail{padding:12px;border-radius:16px;background:var(--soft);border:1px solid rgba(0,0,0,.05)}
-    .detail span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55}.detail strong{display:block;margin-top:6px;font-size:16px;line-height:1.35}
+    .detail span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#827148}.detail strong{display:block;margin-top:6px;font-size:16px;line-height:1.35}
     .rounds{display:grid;gap:12px}
     .round-card{padding:16px}
     .round-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
     .round-title{font-size:20px;font-weight:900;letter-spacing:-.03em}.round-sub{margin-top:4px;color:var(--muted);font-size:14px}
     .pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.pill{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:#f5edd9;color:#72581f;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
-    table{width:100%;border-collapse:collapse;margin-top:12px}th,td{text-align:left;padding:8px 0;border-top:1px solid rgba(0,0,0,.06)}th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#8a7a55}tbody tr:first-child td{border-top:1px solid rgba(0,0,0,.08)}
+    table{width:100%;border-collapse:collapse;margin-top:12px}th,td{text-align:left;padding:8px 0;border-top:1px solid rgba(0,0,0,.06)}th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#827148}tbody tr:first-child td{border-top:1px solid rgba(0,0,0,.08)}
     .site-credit-watermark{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:9999;padding:8px 14px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid rgba(154,130,65,.35);color:#f3e0ad;font:700 13px/1.2 Inter,sans-serif;letter-spacing:.03em;pointer-events:none}
     @media(max-width:1040px){.meta-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.hero-grid{grid-template-columns:1fr}.standing-row{grid-template-columns:44px minmax(0,1fr) 1fr 1fr}}
     @media(max-width:640px){body{padding:12px}.meta-grid{grid-template-columns:repeat(2,minmax(0,1fr))}h1{font-size:32px}.standing-row{grid-template-columns:44px minmax(0,1fr);align-items:start}.metric{justify-items:start}}
@@ -171,6 +171,6 @@
     })();
   </script>
   <script id="gejast-version-sync-inline">(function(){function sync(){try{window.GEJAST_CONFIG&&window.GEJAST_CONFIG.applyVersionLabel&&window.GEJAST_CONFIG.applyVersionLabel();}catch(_){}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',sync,{once:true});}else{sync();}})();</script>
-  <script src="./site-analytics.js?v784"></script>
+  <script src="./site-analytics.js?v785"></script>
 </body>
 </html>
