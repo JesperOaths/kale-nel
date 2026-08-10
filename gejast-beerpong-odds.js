@@ -17,5 +17,5 @@
       el.innerHTML = `<div class="bp-odds"><div><span>Team A</span><strong>${Math.round(a * 100)}%</strong></div><div><span>Team B</span><strong>${Math.round(b * 100)}%</strong></div><small>${esc(data?.basis || 'Gebaseerd op cached Beerpong performance rating.')}</small></div>`;
     } catch (err) { el.innerHTML = `<div class="bp-error">${esc(err.message || err)}</div>`; }
   }
-  window.GEJAST_BEERPONG_ODDS = { VERSION:'v782', calculate, render, parseNames };
+  window.GEJAST_BEERPONG_ODDS = { VERSION:'v783', calculate, render, parseNames };
 })();
