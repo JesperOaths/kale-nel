@@ -5,16 +5,18 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   final-acceptance:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
         with:
           ref: ${{ github.head_ref }}
+          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -38,4 +40,33 @@ jobs:
           npm install --no-save playwright axe-core
           npx playwright install --with-deps chromium
       - name: Final browser acceptance
-        run: node scripts/final-acceptance-browser-audit.mjs
+        id: browser
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          node scripts/final-acceptance-browser-audit.mjs 2>&1 | tee /tmp/final-acceptance.log
+          status=${PIPESTATUS[0]}
+          summary_line=$(grep '^FINAL_ACCEPTANCE_SUMMARY=' /tmp/final-acceptance.log | tail -1 || true)
+          if [ -z "$summary_line" ]; then
+            printf '%s\n' '{"combinations":0,"failures":1,"blockedWrites":0,"details":[{"path":"__audit__","viewport":"n/a","navigationError":"Final audit did not emit FINAL_ACCEPTANCE_SUMMARY"}]}' > FINAL_ACCEPTANCE_RESULTS.json
+          else
+            printf '%s\n' "${summary_line#FINAL_ACCEPTANCE_SUMMARY=}" > FINAL_ACCEPTANCE_RESULTS.json
+          fi
+          echo "browser_status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Persist temporary classification result
+        if: always()
+        run: |
+          test -f FINAL_ACCEPTANCE_RESULTS.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add FINAL_ACCEPTANCE_RESULTS.json
+          if ! git diff --cached --quiet; then
+            git commit -m "test: record temporary final acceptance findings"
+            git push origin HEAD:${{ github.head_ref }}
+          fi
+      - name: Enforce final browser acceptance
+        if: always()
+        run: |
+          node -e "const r=require('./FINAL_ACCEPTANCE_RESULTS.json'); if(r.failures||Number('${{ steps.browser.outputs.browser_status }}')!==0){ console.error(JSON.stringify(r,null,2)); process.exit(1); } console.log('Final browser acceptance persisted clean.');"
