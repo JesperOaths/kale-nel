@@ -1,20 +1,21 @@
-name: v784 form and dead-end audit
+name: v784 activation usability release builder
 
 on:
   pull_request:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  audit:
+  build:
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v5
         with:
           ref: ${{ github.head_ref }}
+          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -24,5 +25,39 @@ jobs:
         run: |
           npm install --no-save playwright
           npx playwright install --with-deps chromium
-      - name: Run v784 form/dead-end audit
-        run: node scripts/audit-form-deadends-v784.mjs
+      - name: Build scoped v784 candidate
+        run: node scripts/build-v784-activation-release.mjs
+      - name: Preserve browser checker outside repository
+        run: cp scripts/check-candidate-v784-activation.mjs /tmp/check-candidate-v784-activation.mjs
+      - name: Remove temporary audit/build machinery
+        run: |
+          rm -f scripts/audit-form-deadends-v784.mjs
+          rm -f scripts/check-candidate-v784-activation.mjs
+          rm -f scripts/build-v784-activation-release.mjs
+          rm -f .github/workflows/v784-form-deadend-audit.yml
+      - name: Verify clean candidate repository
+        run: |
+          node check-activation-deadend-v784.mjs
+          npm run verify
+          git -c core.whitespace=cr-at-eol diff --check
+      - name: Serve patched candidate locally
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/v784-http.log 2>&1 &
+          echo $! >/tmp/v784-http.pid
+          sleep 2
+      - name: Render activation states in Chromium
+        run: |
+          cp /tmp/check-candidate-v784-activation.mjs scripts/.v784-browser-check.mjs
+          node scripts/.v784-browser-check.mjs
+          rm -f scripts/.v784-browser-check.mjs
+      - name: Commit clean v784 candidate
+        run: |
+          rm -rf node_modules
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config core.whitespace cr-at-eol
+          git add -A
+          git diff --cached --check
+          git status --short
+          git commit -m "v784 fix invalid activation dead end"
+          git push origin HEAD:${{ github.head_ref }}
