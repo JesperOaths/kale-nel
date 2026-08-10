@@ -10,7 +10,7 @@ function replaceAllRequired(file,from,to,label){const before=read(file);const co
 if(read('VERSION').trim()!=='v779') throw new Error('v780 builder expects root VERSION v779');
 if(!fs.existsSync('check-rendered-accessibility-v780.mjs')) throw new Error('permanent v780 guard missing');
 
-for(const file of ['drinks_speed.html','paardenrace.html','paardenrace_live.html','toepen.html','despimarkt_create.html','despimarkt_debts.html','klaverjas_live.html']) replaceAllRequired(file,'#8a7a55','#7a705a','AA-safe muted gold');
+for(const file of ['drinks_speed.html','paardenrace.html','paardenrace_live.html','toepen.html','klaverjas_live.html','despimarkt-theme.css']) replaceAllRequired(file,'#8a7a55','#7a705a','AA-safe muted gold');
 replaceAllRequired('beerpong.html','#8a7f6b','#7a6f5d','AA-safe Beerpong label tone');
 
 replaceOnce('paardenrace_live.html','<section class="drawer" id="mobileDrawer" aria-hidden="true">','<section class="drawer" id="mobileDrawer" aria-hidden="true" inert>','closed drawer inert state');
@@ -33,9 +33,9 @@ const readiness=JSON.parse(read('beta-readiness.json'));
 readiness.site_version='release candidate v780 / live v779';
 readiness.last_updated='2026-08-10';
 readiness.deployment_identity.release_candidate_version='v780';
-readiness.deployment_identity.note='v780 release candidate: isolated no-write Chromium/axe audit reached 20 key page layouts by stubbing only the auth gate and locally intercepting 168 non-GET requests. It found ten serious accessibility classes: eight repeated muted-text contrast failures plus an aria-hidden focusable Paardenrace drawer and a non-focusable scrollable Rad legend. v780 applies narrowly scoped AA-safe text tones, an inert closed-drawer lifecycle, and a named tabindex=0 Rad legend. Live remains v779 until post-merge public-edge proof. Infrastructure-only v775b public-header code remains merged but not live pending authenticated Cloudflare deployment.';
+readiness.deployment_identity.note='v780 release candidate: isolated no-write Chromium/axe audit reached 20 key page layouts by stubbing only the auth gate and locally intercepting 168 non-GET requests. It found ten serious accessibility classes: eight repeated muted-text contrast failures plus an aria-hidden focusable Paardenrace drawer and a non-focusable scrollable Rad legend. v780 applies narrowly scoped AA-safe text tones, including the shared Despimarkt theme owner, an inert closed-drawer lifecycle, and a named tabindex=0 Rad legend. Live remains v779 until post-merge public-edge proof. Infrastructure-only v775b public-header code remains merged but not live pending authenticated Cloudflare deployment.';
 const staticCheck=(readiness.baseline_checks||[]).find(x=>x.id==='static_integrity');
-if(staticCheck) staticCheck.evidence='Current Node 24 verification passes all existing frontend/backend/security regressions through v780. The 70/70 accessible-name closure and v779 keyboard baseline remain protected. v780 adds rendered-accessibility invariants for AA-safe muted label tones, an inert hidden Paardenrace drawer lifecycle, and keyboard access to the scrollable Rad legend.';
+if(staticCheck) staticCheck.evidence='Current Node 24 verification passes all existing frontend/backend/security regressions through v780. The 70/70 accessible-name closure and v779 keyboard baseline remain protected. v780 adds rendered-accessibility invariants for AA-safe muted label tones, including shared Despimarkt theme ownership, an inert hidden Paardenrace drawer lifecycle, and keyboard access to the scrollable Rad legend.';
 write('beta-readiness.json',JSON.stringify(readiness,null,2)+'\n');
 
 const checklist=JSON.parse(read('beta-live-write-checklist.json'));
