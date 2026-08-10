@@ -49,6 +49,27 @@ if (versionNumber >= 780) {
   }
 }
 
+// v781 added live mobile/runtime proof. Future readiness records must retain both no-write mobile evidence and the exact owner outcomes.
+if (versionNumber >= 781) {
+  const staticIntegrity = (tracker.baseline_checks || []).find((item) => item.id === 'static_integrity');
+  const staticEvidence = String(staticIntegrity?.evidence || '');
+  if (!/mobile-sized Drinks\/Beerpong|mobile\/runtime/i.test(staticEvidence)) failures.push('v781+ static_integrity evidence must preserve the mobile/runtime accessibility baseline');
+  if (!/stats-queue/i.test(staticEvidence)) failures.push('v781+ static_integrity evidence must preserve the Drinks stats-queue repair');
+  if (!/aria-hidden\/inert|inert off-canvas/i.test(staticEvidence)) failures.push('v781+ static_integrity evidence must preserve the verification-float inert lifecycle');
+  if (!releaseCandidateVersion) {
+    const deploymentNote = String(tracker.deployment_identity?.note || '');
+    const liveRoutes = (tracker.baseline_checks || []).find((item) => item.id === 'live_routes');
+    const liveEvidence = String(liveRoutes?.evidence || '');
+    if (!/isolated no-write live mobile Chromium/i.test(deploymentNote)) failures.push('v781+ promoted deployment note must preserve isolated no-write live mobile Chromium proof');
+    if (!/non-GET browser traffic was intercepted locally/i.test(deploymentNote)) failures.push('v781+ promoted deployment note must preserve write-isolation proof');
+    if (!/stats-queue ReferenceError/i.test(deploymentNote)) failures.push('v781+ promoted deployment note must preserve the live Drinks runtime-error outcome');
+    if (!/>=44px|44px/i.test(deploymentNote)) failures.push('v781+ promoted deployment note must preserve the live Drinks touch-size proof');
+    if (!/>=24px|24px/i.test(deploymentNote)) failures.push('v781+ promoted deployment note must preserve the live Beerpong target-size proof');
+    if (!/isolated no-write mobile Chromium/i.test(liveEvidence)) failures.push('v781+ live_routes evidence must preserve the mobile Chromium proof');
+    if (!/inert\/non-focusable/i.test(liveEvidence)) failures.push('v781+ live_routes evidence must preserve the hidden-float non-focusability result');
+  }
+}
+
 const gaps = new Map((tracker.beta_gaps || []).map((item) => [item.id, item]));
 for (const id of [
   'real_device_push_delivery','admin_host_security','scope_isolation','analytics_observability',
