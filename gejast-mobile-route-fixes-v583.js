@@ -143,7 +143,7 @@
         .layout{justify-items:center !important;}
         .layout > *{width:100% !important;max-width:520px !important;margin-inline:auto !important;}
         .wheel-wrap,.result,.status,.legend-row,.workflow-item,.result-card{text-align:center !important;justify-items:center !important;}
-        .wheel-box{width:min(96vw,460px) !important;margin-inline:auto !important;justify-self:center !important;}
+        .wheel-box{width:min(100%,460px) !important;max-width:100% !important;box-sizing:border-box !important;margin-inline:auto !important;justify-self:center !important;}
       }
     `);
   }
