@@ -1,7 +1,7 @@
 {
   "version": 7,
-  "site_version": "live v775 / current frontend release v775",
-  "last_updated": "2026-08-09",
+  "site_version": "release candidate v776 / live v775",
+  "last_updated": "2026-08-10",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
     "ready_to_test": "Code exists and surface checks pass, but real beta proof is still needed.",
@@ -21,14 +21,15 @@
       "npm run smoke:beta:extended",
       "npm run smoke:push"
     ],
-    "note": "2026-08-09 v775 public-edge proof PASS: live VERSION v775, 35/35 critical routes healthy, geo_diagnostics.html and push_beta_test.html return 404, admin_push_targeted_test.html remains perimeter-protected and terminates 401 unauthenticated, drinks_pending.html?push_test=targeted returns 200, and the Despimarkt nomination compatibility redirect remains intact. Current-tree and full-history high-confidence private-secret scans both returned zero findings."
+    "note": "v776 release candidate: finished-product account journey polish. Login/request/activation labels are programmatically associated, status feedback is announced politely, and v680/v673/Phase 13 development-era public copy is removed. Live remains v775 until post-merge public-edge proof. Infrastructure-only v775b public-header code is merged but still awaits authenticated Cloudflare Worker deployment.",
+    "release_candidate_version": "v776"
   },
   "baseline_checks": [
     {
       "id": "static_integrity",
       "status": "verified_complete",
       "command": "npm run verify",
-      "evidence": "Current Node 24 verification passes JavaScript syntax, RPC coverage, local references, version drift, security/runtime regressions, Klaverjas/Toepen checks, Ballroom v769a, scoped live-read v770a, push runtime v770b, canonical Beurs runtime checks, the permanent v771d Drinks rollback-proof regression, v772 finalization-residue guard, v773 diagnostic self-consistency guard, v774 production-acceptance guard, and v775 public-surface/secret-exposure guard."
+      "evidence": "Current Node 24 verification passes JavaScript syntax, RPC coverage, local references, version drift, security/runtime regressions, Klaverjas/Toepen checks, Ballroom v769a, scoped live-read v770a, push runtime v770b, canonical Beurs runtime checks, v771d Drinks rollback proof, v772 finalization residue, v773 diagnostic consistency, v774 production acceptance, v775 public-surface security, v775b public-edge-header regression, and v776 account-journey polish."
     },
     {
       "id": "klaverjas_regression",
