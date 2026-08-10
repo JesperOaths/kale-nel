@@ -1,0 +1,28 @@
+name: v778 postmerge live proof
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/check-live-v778-dynamic-accessibility.mjs'
+      - '.github/workflows/v778-postmerge-live-proof.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  prove:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Hardened live route suite
+        env:
+          GEJAST_EXPECTED_VERSION: v778
+          GEJAST_SMOKE_RETRIES: 4
+        run: npm run smoke:live
+      - name: Exact v778 dynamic accessibility edge proof
+        run: node scripts/check-live-v778-dynamic-accessibility.mjs
