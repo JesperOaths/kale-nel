@@ -1,6 +1,6 @@
 {
   "version": 7,
-  "site_version": "release candidate v779 / live v778",
+  "site_version": "live v779 / current frontend release v779",
   "last_updated": "2026-08-10",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -11,9 +11,9 @@
   },
   "deployment_identity": {
     "status": "verified_complete",
-    "live_version": "v778",
-    "frontend_release_merge": "639269520263e8edd392ccf7c76009a6fa6a4999",
-    "repository_head_at_audit": "639269520263e8edd392ccf7c76009a6fa6a4999",
+    "live_version": "v779",
+    "frontend_release_merge": "020bd5ca50e13d6b7dab692164a2f6c8e7446262",
+    "repository_head_at_audit": "020bd5ca50e13d6b7dab692164a2f6c8e7446262",
     "source": "GitHub Pages/static deployment from main plus Cloudflare admin perimeter",
     "evidence": [
       "npm run smoke:live",
@@ -21,15 +21,14 @@
       "npm run smoke:beta:extended",
       "npm run smoke:push"
     ],
-    "note": "v779 release candidate: keyboard/focus hardening after the live v778 70/70 naming closure. The Drinks verification/location card now has an explicit focus-visible ring instead of suppressing the browser outline. The permanent keyboard baseline forbids positive tabindex, inline click handlers on non-native public elements and focus-outline suppression while preserving shared Enter/Space activation for clickable cards. Live remains v778 until post-merge public-edge proof. Infrastructure-only v775b public-header code remains merged but not live pending authenticated Cloudflare deployment.",
-    "release_candidate_version": "v779"
+    "note": "2026-08-10 v779 post-merge public-edge proof PASS: public VERSION v779, hardened 35-route live suite PASS, drinks_add.html serves the explicit focus-visible ring on the named keyboard-link verification card with no outline suppression, and gejast-clickable-cards.js serves the shared tabindex/role plus Enter/Space activation runtime. The live accessibility naming closure remains 70/70: 58 static controls from v777 plus 12 runtime-generated controls from v778. The earlier temporary Chromium/axe audit found 0 axe violations, 0 serious/critical findings, 0 positive tabindex, 0 missing visible focus indicators and 0 page errors on the unauthenticated rendered journeys. Infrastructure-only v775b public-header code remains merged but not live pending authenticated Cloudflare deployment."
   },
   "baseline_checks": [
     {
       "id": "static_integrity",
       "status": "verified_complete",
       "command": "npm run verify",
-      "evidence": "Current Node 24 verification passes all existing frontend/backend/security regressions through v779. The accessibility naming backlog remains closed 70/70: 58 static controls are protected by v777 and 12 runtime-generated controls by v778. v779 adds the keyboard/focus baseline: no positive tab order, no non-native inline click handlers, no public outline suppression, explicit Drinks focus-visible styling, and preserved Enter/Space activation in the shared clickable-card runtime."
+      "evidence": "Current Node 24 verification passes all existing frontend/backend/security regressions through v779. The accessibility naming backlog remains closed 70/70: 58 static controls are protected by v777 and 12 runtime-generated controls by v778. v779 protects the keyboard/focus baseline: no positive tab order, no non-native inline public clicks, no public outline suppression, explicit Drinks focus-visible styling, and preserved shared Enter/Space activation."
     },
     {
       "id": "klaverjas_regression",
@@ -41,7 +40,7 @@
       "id": "live_routes",
       "status": "verified_complete",
       "command": "npm run smoke:live",
-      "evidence": "2026-08-10 v778 post-merge public-edge proof reports live VERSION v778 and hardened 35-route suite PASS. Targeted edge proof confirms v778 runtime accessibility naming is deployed on Boerenbridge, Paardenrace live and Toepen, protected Drinks admin remains HTTP 401 unauthenticated, and representative v777 static labels persist."
+      "evidence": "2026-08-10 v779 post-merge public-edge proof reports live VERSION v779 and hardened 35-route suite PASS. Targeted edge proof confirms the explicit Drinks focus-visible ring and keyboard-link semantics, served Enter/Space clickable-card runtime, and representative v777/v778 accessibility markers remain deployed."
     },
     {
       "id": "push_surface",
