@@ -10,12 +10,16 @@ function associate(file,id,label){
   const count=text.split(control).length-1;
   if(count!==1) throw new Error(`${file} ${id}: expected one static id marker, found ${count}`);
   const controlIndex=text.indexOf(control);
-  const plain=`<label>${label}</label>`;
-  const labelled=`<label for="${id}">${label}</label>`;
-  if(text.includes(labelled)) throw new Error(`${file} ${id}: already labelled before builder`);
-  const labelIndex=text.lastIndexOf(plain,controlIndex);
-  if(labelIndex<0 || controlIndex-labelIndex>500) throw new Error(`${file} ${id}: nearby visible label not found`);
-  text=text.slice(0,labelIndex)+labelled+text.slice(labelIndex+plain.length);
+  const start=Math.max(0,controlIndex-500);
+  const before=text.slice(start,controlIndex);
+  const close=before.lastIndexOf('</label>');
+  const open=before.lastIndexOf('<label',close);
+  if(open<0 || close<0) throw new Error(`${file} ${id}: nearby visible label not found`);
+  const segment=before.slice(open,close+8);
+  if(!segment.includes(`>${label}</label>`)) throw new Error(`${file} ${id}: nearest label text mismatch: ${segment}`);
+  if(/\bfor\s*=/.test(segment)) throw new Error(`${file} ${id}: label already has for attribute before builder`);
+  const absolute=start+open;
+  text=text.slice(0,absolute+6)+` for="${id}"`+text.slice(absolute+6);
   write(file,text);
 }
 function aria(file,id,label){
@@ -56,7 +60,7 @@ for(const args of associated) associate(...args);
 for(const args of ariaNamed) aria(...args);
 if(associated.length+ariaNamed.length!==58) throw new Error('v777 patch map must cover exactly 58 static controls');
 
-const guard=`#!/usr/bin/env node\nimport assert from 'node:assert/strict';\nimport fs from 'node:fs';\nconst version=fs.readFileSync('VERSION','utf8').trim();\nassert.equal(version,'v777');\nconst associated=${JSON.stringify(associated)};\nconst ariaNamed=${JSON.stringify(ariaNamed)};\nassert.equal(associated.length+ariaNamed.length,58);\nfor(const [file,id,label] of associated){const text=fs.readFileSync(file,'utf8');assert.ok(text.includes('<label for="'+id+'">'+label+'</label>'),file+' missing label association for '+id);}\nfor(const [file,id,label] of ariaNamed){const text=fs.readFileSync(file,'utf8');assert.ok(text.includes('id="'+id+'" aria-label="'+label+'"'),file+' missing aria-label for '+id);}\nconsole.log('v777 static control accessibility PASS: 58 static controls have deterministic accessible names; dynamic runtime controls are intentionally deferred.');\n`;
+const guard=`#!/usr/bin/env node\nimport assert from 'node:assert/strict';\nimport fs from 'node:fs';\nconst version=fs.readFileSync('VERSION','utf8').trim();\nassert.equal(version,'v777');\nconst associated=${JSON.stringify(associated)};\nconst ariaNamed=${JSON.stringify(ariaNamed)};\nassert.equal(associated.length+ariaNamed.length,58);\nfor(const [file,id,label] of associated){const text=fs.readFileSync(file,'utf8');const ci=text.indexOf('id="'+id+'"');const fi=text.lastIndexOf('for="'+id+'"',ci);assert.ok(ci>=0&&fi>=0&&ci-fi<500,file+' missing nearby label association for '+id);assert.ok(text.slice(fi,ci).includes('>'+label+'</label>'),file+' associated label text mismatch for '+id);}\nfor(const [file,id,label] of ariaNamed){const text=fs.readFileSync(file,'utf8');assert.ok(text.includes('id="'+id+'" aria-label="'+label+'"'),file+' missing aria-label for '+id);}\nconsole.log('v777 static control accessibility PASS: 58 static controls have deterministic accessible names; dynamic runtime controls are intentionally deferred.');\n`;
 write('check-static-control-accessibility-v777.mjs',guard);
 
 let pkg=read('package.json');
