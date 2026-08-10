@@ -1,6 +1,6 @@
 {
   "version": 7,
-  "site_version": "release candidate v784 / live v783",
+  "site_version": "live v784 / current frontend release v784",
   "last_updated": "2026-08-10",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -11,9 +11,9 @@
   },
   "deployment_identity": {
     "status": "verified_complete",
-    "live_version": "v783",
-    "frontend_release_merge": "92b8a9590dd37842a3ce1ef5146e09e202cb6f2e",
-    "repository_head_at_audit": "92b8a9590dd37842a3ce1ef5146e09e202cb6f2e",
+    "live_version": "v784",
+    "frontend_release_merge": "fa16723ac12e341ba09b810f82dcc86b9c4414f6",
+    "repository_head_at_audit": "fa16723ac12e341ba09b810f82dcc86b9c4414f6",
     "source": "GitHub Pages/static deployment from main plus Cloudflare admin perimeter",
     "evidence": [
       "npm run smoke:live",
@@ -21,15 +21,14 @@
       "npm run smoke:beta:extended",
       "npm run smoke:push"
     ],
-    "note": "2026-08-10 v784 release candidate: no-write form/dead-end Chromium audit covered 29 important user-facing routes at phone and desktop size (58 combinations). False positives were classified and preserved: scorer has Later, Toepen has Annuleren, Drinks Back links have working history/fallback handlers, and Beurs has a shared status line. The confirmed defect was activate.html remaining actionable without a valid activation context. v784 makes activation controls disabled by default, skips activation-context lookup when the token is missing, keeps invalid/incomplete context non-actionable, and exposes a clear login fallback; valid context explicitly re-enables the form. Production remains live v783 until post-merge v784 proof. Earlier v780-v783 browser evidence remains preserved. Infrastructure-only v775b public-header code remains merged but not live pending authenticated Cloudflare deployment.",
-    "release_candidate_version": "v784"
+    "note": "2026-08-10 v784 post-merge public-edge proof PASS: public VERSION v784 and hardened 35-route live suite PASS. The v784 no-write usability audit covered 29 important user-facing routes at phone and desktop size (58 combinations); scorer Later, Toepen Annuleren, Drinks Back handlers and Beurs feedback were classified as intentional working controls, while invalid activation state was the one confirmed dead end. Live activate.html and gejast-account-runtime.js now ship PIN/submit controls disabled, stop missing-token flow before activation-context lookup, keep invalid/expired context non-actionable with Niet beschikbaar identity text, expose Terug naar inloggen, and only re-enable after valid context. Isolated no-write live Chromium confirmed a missing token makes zero activation-context calls and zero activation-write RPCs, while a locally simulated expired token makes only its context lookup and still makes zero activation-write RPCs; both states keep the form disabled and show the login fallback. The only unrelated blocked POST was the read-only get_scope_hardening_bundle_v672 scope lookup, intercepted locally. The prior no-write runtime-stability Chromium audit remains preserved across all 35 public routes at phone and desktop size (70 combinations): zero JavaScript page crashes, zero console-error pages, zero same-origin HTTP 4xx/5xx resources, zero stuck/hidden pages and zero empty pages; 446 non-GET requests were intercepted locally, and live v783 redirect aliases preserve zero aborted same-origin resources before navigation. The prior isolated no-write live mobile Chromium proof remains preserved: no Drinks stats-queue ReferenceError, the Drinks speed selector remains >=44px high, hidden verification-float controls are inert/non-focusable and cannot receive focus, and both Beerpong navigation links plus Pussycup checkboxes meet the >=24px target baseline; all non-GET browser traffic was intercepted locally. The 70/70 naming closure and v779 keyboard baseline remain preserved, the v780 live Chromium/axe proof remains preserved with zero axe violations on the nine repaired pages, and the v782 no-write responsive Chromium proof remains preserved. Infrastructure-only v775b public-header code remains merged but not live pending authenticated Cloudflare deployment."
   },
   "baseline_checks": [
     {
       "id": "static_integrity",
       "status": "verified_complete",
       "command": "npm run verify",
-      "evidence": "Current Node 24 verification passes all existing frontend/backend/security/accessibility regressions through the v784 release candidate. The accessibility naming backlog remains closed 70/70: 58 static controls are protected by v777 and 12 runtime-generated controls by v778; v779 keyboard/focus remains protected; v780 rendered Chromium/axe proof remains preserved with zero axe violations on the nine repaired pages. v781 protects the Drinks stats-queue repair, mobile-sized Drinks/Beerpong targets and the aria-hidden/inert verification-float lifecycle. v782 protects the Drinks bar renderer plus responsive homepage/Klaverjas layout owners and intentional Boerenbridge scrolling. v783 protects runtime-light direct score/Pikken spectator redirect aliases. v784 protects non-actionable invalid activation state plus explicit login fallback."
+      "evidence": "Current Node 24 verification passes all existing frontend/backend/security/accessibility regressions through v784. The accessibility naming backlog remains closed 70/70: 58 static controls are protected by v777 and 12 runtime-generated controls by v778; v779 keyboard/focus remains protected; v780 rendered Chromium/axe proof remains preserved with zero axe violations on the nine repaired pages. v781 protects the Drinks stats-queue repair, mobile-sized Drinks/Beerpong targets and the aria-hidden/inert verification-float lifecycle. v782 protects the Drinks bar renderer plus responsive homepage/Klaverjas layout owners and intentional Boerenbridge scrolling. v783 protects runtime-light direct score/Pikken spectator redirect aliases. v784 protects disabled-by-default activation controls, missing/invalid-context early exits, clear login fallback and valid-context-only submit wiring."
     },
     {
       "id": "klaverjas_regression",
@@ -41,7 +40,7 @@
       "id": "live_routes",
       "status": "verified_complete",
       "command": "npm run smoke:live",
-      "evidence": "Live production remains v783 until v784 is merged and edge-proven. Live v783 hardened 35-route suite PASS; the 70-combination no-write runtime-stability audit reported zero page crashes, console-error pages, same-origin 4xx/5xx resources, stuck/hidden pages or empty pages. Prior isolated no-write mobile Chromium and v782 responsive Chromium evidence remain preserved. v784 activation usability proof is candidate-only."
+      "evidence": "2026-08-10 live v784 hardened 35-route suite PASS. Isolated no-write live Chromium confirms missing-token activation makes zero activation-context calls and zero activation-write RPCs, while a locally simulated expired context keeps activation disabled and makes zero activation-write RPCs; both unusable-link states show a clear login fallback. The prior 70-combination no-write runtime-stability audit reported zero page crashes, console-error pages, same-origin 4xx/5xx resources, stuck/hidden pages or empty pages. The prior isolated no-write mobile Chromium proof remains preserved: no Drinks stats-queue ReferenceError, >=44px Drinks speed selector, hidden verification float inert/non-focusable, and >=24px scoped Beerpong navigation/Pussycup targets. The v782 no-write responsive Chromium evidence also remains preserved."
     },
     {
       "id": "push_surface",
