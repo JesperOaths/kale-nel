@@ -1,0 +1,27 @@
+name: v779 keyboard and focus audit
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/audit-keyboard-focus-v779.mjs'
+      - '.github/workflows/v779-keyboard-focus-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install temporary browser audit dependencies
+        run: |
+          npm install --no-save playwright @axe-core/playwright
+          npx playwright install --with-deps chromium
+      - name: Run live keyboard/focus/axe audit
+        run: node scripts/audit-keyboard-focus-v779.mjs
