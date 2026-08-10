@@ -25,4 +25,4 @@ const deferredDynamic=[
 ];
 assert.equal(deferredDynamic.length,12);
 for(const [file,marker] of deferredDynamic){const text=fs.readFileSync(file,'utf8');assert.ok(text.includes(marker),file+' dynamic accessibility baseline changed or disappeared: '+marker);}
-console.log(`v777 static control accessibility PASS at ${version}: 58 static controls keep deterministic accessible names and the 12 known runtime-generated controls remain explicitly tracked for context-aware naming.`);
+console.log(`v777 static control accessibility PASS at ${version}: 58 static controls keep deterministic accessible names and the 12 known runtime-generated control templates remain explicitly tracked as a separate accessibility class.`);
