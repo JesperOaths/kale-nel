@@ -1,0 +1,67 @@
+name: v786 live final acceptance and freeze
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  final-acceptance:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Permanent repository verification before promotion
+        run: npm run verify
+      - name: Hardened live v786 route suite
+        env:
+          GEJAST_EXPECTED_VERSION: v786
+          GEJAST_SMOKE_RETRIES: 5
+        run: npm run smoke:live
+      - name: Live read-only beta surfaces
+        run: |
+          npm run smoke:beta:read
+          npm run smoke:beta:extended
+      - name: Live performance budgets
+        run: npm run smoke:beta:perf
+      - name: Install temporary browser/accessibility tooling
+        run: |
+          npm install --no-save playwright axe-core
+          npx playwright install --with-deps chromium
+      - name: Full v786 live Chromium acceptance
+        run: node scripts/v786-live-final-acceptance.mjs
+      - name: Promote v786 finalized baseline
+        run: node scripts/promote-v786-finalized-baseline.mjs
+      - name: Remove temporary finalization machinery
+        run: |
+          rm -f V786_LIVE_FINAL_ACCEPTANCE.json
+          rm -f scripts/v786-live-final-acceptance.mjs
+          rm -f scripts/promote-v786-finalized-baseline.mjs
+          rm -f .github/workflows/v786-live-final-acceptance.yml
+      - name: Verify clean promoted baseline
+        run: npm run verify
+      - name: Commit durable finalized evidence only
+        run: |
+          rm -rf node_modules
+          test ! -e V786_LIVE_FINAL_ACCEPTANCE.json
+          test ! -e scripts/v786-live-final-acceptance.mjs
+          test ! -e scripts/promote-v786-finalized-baseline.mjs
+          test ! -e .github/workflows/v786-live-final-acceptance.yml
+          git config core.whitespace cr-at-eol
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "docs: freeze finalized live v786 baseline"
+          git push origin HEAD:${{ github.head_ref }}
