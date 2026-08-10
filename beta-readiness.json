@@ -1,6 +1,6 @@
 {
   "version": 7,
-  "site_version": "live v782 / current frontend release v782",
+  "site_version": "release candidate v783 / live v782",
   "last_updated": "2026-08-10",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -21,14 +21,15 @@
       "npm run smoke:beta:extended",
       "npm run smoke:push"
     ],
-    "note": "2026-08-10 v782 post-merge public-edge proof PASS: public VERSION v782 and hardened 35-route live suite PASS. Exact served source contains the restored Drinks renderBars display renderer with bounded widths, the full-grid Klaverjas online lobby repair, the vertical homepage body flow, and preserved Boerenbridge internal table scrolling. Isolated no-write responsive Chromium confirmed no missing-renderBars page error at 768/1024/1366 widths, no Klaverjas desktop document overflow with room-code controls inside the 1366px viewport, and no homepage tablet-portrait overflow with the watermark inside 768px. All non-GET browser traffic was intercepted locally. The prior isolated no-write live mobile Chromium proof remains preserved: no Drinks stats-queue ReferenceError, >=44px Drinks selector, inert/non-focusable hidden verification float, and >=24px scoped Beerpong targets. The 70/70 naming closure and v779 keyboard baseline remain preserved, and the v780 live Chromium/axe proof remains preserved with zero axe violations on the nine repaired pages. Infrastructure-only v775b public-header code remains merged but not live pending authenticated Cloudflare deployment."
+    "note": "2026-08-10 v783 release candidate: a no-write Chromium runtime-stability audit rendered all 35 authoritative public routes at phone and desktop size (70 combinations). It found zero JavaScript page crashes, zero console-error pages, zero same-origin HTTP 4xx/5xx resources, zero stuck/hidden pages and zero empty pages. The only repeated runtime noise came from score.html and pikken_spectator.html starting gejast-mobile-foundation-v583.js immediately before deliberate location.replace redirects; v783 converts those two aliases to direct redirect-only documents while preserving query/scope forwarding. Production remains live v782 until post-merge v783 proof. The 70/70 naming closure, v779 keyboard baseline, v780 live Chromium/axe proof with zero axe violations, v781 no-write mobile/runtime proof, and v782 no-write responsive proof remain preserved. Infrastructure-only v775b public-header code remains merged but not live pending authenticated Cloudflare deployment.",
+    "release_candidate_version": "v783"
   },
   "baseline_checks": [
     {
       "id": "static_integrity",
       "status": "verified_complete",
       "command": "npm run verify",
-      "evidence": "Current Node 24 verification passes all existing frontend/backend/security/accessibility regressions through v782. The accessibility naming backlog remains closed 70/70: 58 static controls are protected by v777 and 12 runtime-generated controls by v778; v779 keyboard/focus remains protected; v780 rendered Chromium/axe proof remains preserved with zero axe violations on the nine repaired pages. v781 protects declared Drinks stats-queue state, mobile-sized Drinks/Beerpong targets and the aria-hidden/inert off-canvas verification-float lifecycle. v782 protects the bounded/escaped Drinks bar renderer, responsive homepage/Klaverjas layout owners and intentional Boerenbridge table scrolling."
+      "evidence": "Current Node 24 verification passes all existing frontend/backend/security/accessibility regressions through the v783 release candidate. The accessibility naming backlog remains closed 70/70: 58 static controls are protected by v777 and 12 runtime-generated controls by v778; v779 keyboard/focus remains protected; v780 rendered Chromium/axe proof remains preserved with zero axe violations on the nine repaired pages. v781 protects the Drinks stats-queue repair, mobile-sized Drinks/Beerpong targets and the aria-hidden/inert verification-float lifecycle. v782 protects the Drinks bar renderer plus responsive homepage/Klaverjas layout owners and intentional Boerenbridge scrolling. v783 protects direct runtime-light score/Pikken spectator redirect aliases."
     },
     {
       "id": "klaverjas_regression",
@@ -40,7 +41,7 @@
       "id": "live_routes",
       "status": "verified_complete",
       "command": "npm run smoke:live",
-      "evidence": "2026-08-10 v782 post-merge public-edge proof reports live VERSION v782 and hardened 35-route suite PASS. Isolated no-write responsive Chromium confirms the three v782 owners are live-clean: Drinks no missing-renderBars runtime error, Klaverjas desktop room controls remain on-screen without document overflow, and the 768px homepage stays within the viewport. The prior isolated no-write mobile Chromium proof remains preserved with the hidden verification float inert/non-focusable and scoped v781 touch targets intact."
+      "evidence": "Live production remains v782 until v783 is merged and edge-proven. The v782 post-merge public-edge proof reports hardened 35-route PASS with isolated no-write responsive Chromium coverage. The prior isolated no-write live mobile Chromium proof remains preserved with no Drinks stats-queue ReferenceError, the hidden verification float inert/non-focusable, >=44px Drinks selector and >=24px scoped Beerpong targets. The v783 70-combination runtime audit is pre-merge candidate evidence only."
     },
     {
       "id": "push_surface",
