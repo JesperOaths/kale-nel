@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 
 const version = fs.readFileSync('VERSION', 'utf8').trim();
+const versionNumber = Number(version.match(/^v(\d+)$/)?.[1] || 0);
 const trackerText = fs.readFileSync('beta-readiness.json', 'utf8');
 const tracker = JSON.parse(trackerText);
 const extended = fs.readFileSync('check-beta-readonly-extended.mjs', 'utf8');
@@ -25,6 +26,15 @@ if (!releaseCandidateVersion) {
 }
 
 for (const stale of ['live v761 / main','DNS does not resolve','delivery was blocked','Backend user-targeted delivery still needs','fix public admin-host exposure separately']) if (trackerText.includes(stale)) failures.push(`stale readiness claim remains: ${stale}`);
+
+// v778 closed the unnamed-control accessibility backlog. Future readiness rewrites must preserve that durable completion evidence.
+if (versionNumber >= 778) {
+  const staticIntegrity = (tracker.baseline_checks || []).find((item) => item.id === 'static_integrity');
+  const evidence = String(staticIntegrity?.evidence || '');
+  if (!evidence.includes('70/70')) failures.push('v778+ static_integrity evidence must preserve the 70/70 accessibility closure');
+  if (!/58 static/i.test(evidence)) failures.push('v778+ static_integrity evidence must preserve the 58 static-control completion');
+  if (!/12 runtime-generated/i.test(evidence)) failures.push('v778+ static_integrity evidence must preserve the 12 runtime-generated-control completion');
+}
 
 const gaps = new Map((tracker.beta_gaps || []).map((item) => [item.id, item]));
 for (const id of [

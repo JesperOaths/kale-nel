@@ -1,6 +1,6 @@
 {
   "version": 7,
-  "site_version": "release candidate v778 / live v777",
+  "site_version": "live v778 / current frontend release v778",
   "last_updated": "2026-08-10",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -11,9 +11,9 @@
   },
   "deployment_identity": {
     "status": "verified_complete",
-    "live_version": "v777",
-    "frontend_release_merge": "46d1c36d1f8da9bf5a516e9088da779d7c9a0d25",
-    "repository_head_at_audit": "46d1c36d1f8da9bf5a516e9088da779d7c9a0d25",
+    "live_version": "v778",
+    "frontend_release_merge": "639269520263e8edd392ccf7c76009a6fa6a4999",
+    "repository_head_at_audit": "639269520263e8edd392ccf7c76009a6fa6a4999",
     "source": "GitHub Pages/static deployment from main plus Cloudflare admin perimeter",
     "evidence": [
       "npm run smoke:live",
@@ -21,15 +21,14 @@
       "npm run smoke:beta:extended",
       "npm run smoke:push"
     ],
-    "note": "v778 release candidate: the final 12 runtime-generated controls now receive context-aware accessible names across Boerenbridge, Drinks admin, Paardenrace live and Toepen. This completes the 70-control accessibility backlog identified after v776: 58 static controls fixed in v777 plus 12 dynamic controls in v778. Live remains v777 until post-merge public-edge proof. Infrastructure-only v775b public-header code remains merged but not live pending authenticated Cloudflare deployment.",
-    "release_candidate_version": "v778"
+    "note": "2026-08-10 v778 post-merge public-edge proof PASS: public VERSION v778, hardened 35-route live suite PASS, served Boerenbridge/Paardenrace/Toepen source contains the context-aware runtime accessibility naming introduced in v778, protected drinks_admin.html remains admin-perimeter bounded and terminates 401 unauthenticated, and representative v777 static accessibility markers remain served. The unnamed-control accessibility backlog identified after v776 is now closed 70/70 on the live site: 58 static controls fixed in v777 plus 12 runtime-generated controls fixed in v778. Infrastructure-only v775b public-header code remains merged but not live pending authenticated Cloudflare deployment."
   },
   "baseline_checks": [
     {
       "id": "static_integrity",
       "status": "verified_complete",
       "command": "npm run verify",
-      "evidence": "Current Node 24 verification passes all existing frontend/backend/security regressions through v777 plus the v778 context-aware runtime accessibility guard. The 70-control accessibility backlog identified after v776 is fully covered: 58 static controls by v777 and 12 runtime-generated controls by v778."
+      "evidence": "Current Node 24 verification passes all existing frontend/backend/security regressions through v778. The accessibility backlog identified after v776 is closed 70/70: v777 protects 58 static control names and v778 protects all 12 runtime-generated context-aware names plus safe DOM/escaping behavior."
     },
     {
       "id": "klaverjas_regression",
@@ -41,7 +40,7 @@
       "id": "live_routes",
       "status": "verified_complete",
       "command": "npm run smoke:live",
-      "evidence": "2026-08-10 v777 post-merge public-edge proof reports live VERSION v777 and hardened 35-route suite PASS. Targeted edge proof confirms v777 accessibility markers across 16 public affected pages while protected match-management pages remain 401-bounded on admin.kalenel.nl."
+      "evidence": "2026-08-10 v778 post-merge public-edge proof reports live VERSION v778 and hardened 35-route suite PASS. Targeted edge proof confirms v778 runtime accessibility naming is deployed on Boerenbridge, Paardenrace live and Toepen, protected Drinks admin remains HTTP 401 unauthenticated, and representative v777 static labels persist."
     },
     {
       "id": "push_surface",
