@@ -16,7 +16,7 @@ const rad=fs.readFileSync('rad.html','utf8');
 const failures=[];
 if(n<786) failures.push('v786 Rad live-overflow guard requires VERSION >= v786');
 if(route.includes('.wheel-box{width:min(96vw,460px)')) failures.push('Rad mobile runtime must not size wheel-box from viewport width');
-for(const marker of ['.wheel-box{width:min(100%,460px) !important;max-width:100% !important;box-sizing:border-box !important;','case \'rad.html\': patchRad(); break;']) if(!route.includes(marker)) failures.push('Rad mobile runtime marker missing: '+marker);
+for(const marker of ['.wheel-box{width:min(100%,460px) !important;max-width:100% !important;box-sizing:border-box !important;',"case 'rad.html': patchRad(); break;"]) if(!route.includes(marker)) failures.push('Rad mobile runtime marker missing: '+marker);
 for(const marker of ['.layout{grid-template-columns:minmax(0,1fr)}','.panel{min-width:0}.wheel-box{width:min(100%,460px)}']) if(!rad.includes(marker)) failures.push('Rad page containment marker missing: '+marker);
 for(const path of ['scripts/build-v786-rad-overflow-fix.mjs','scripts/prove-v786-rad-overflow.mjs','.github/workflows/v786-rad-overflow-builder.yml']) if(fs.existsSync(path)) failures.push('temporary v786 builder residue remains: '+path);
 if(failures.length){console.error('v786 Rad live-overflow regression failed:');for(const f of failures)console.error('- '+f);process.exit(1);}
