@@ -1,0 +1,184 @@
+PAGE home_friends doc=390/390
+  VIOLATION color-contrast serious nodes=11
+    target=["article[data-route=\"ladder.html?game=klaverjas\"] > .ladder-title > .ladder-open-link"] tag=span id= class=ladder-open-link text="Top 5" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=13px/800
+      html="<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=["article[data-route=\"ladder.html?game=boerenbridge\"] > .ladder-title > .ladder-open-link"] tag=span id= class=ladder-open-link text="Top 5" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=13px/800
+      html="<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=["article[data-route=\"ladder.html?game=beerpong\"] > .ladder-title > .ladder-open-link"] tag=span id= class=ladder-open-link text="Top 5" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=13px/800
+      html="<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=["article[data-route=\"ladder.html?game=paardenrace\"] > .ladder-title > .ladder-open-link"] tag=span id= class=ladder-open-link text="Top 5" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=13px/800
+      html="<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=["article[data-route=\"ladder.html?game=pikken\"] > .ladder-title > .ladder-open-link"] tag=span id= class=ladder-open-link text="Top 5" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=13px/800
+      html="<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=["article[data-route=\"ladder.html?game=caute-coins\"] > .ladder-title > .ladder-open-link"] tag=span id= class=ladder-open-link text="Top 5" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=13px/800
+      html="<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=["a[href$=\"drinks_pending.html\"] > .drinks-mini-label"] tag=div id= class=drinks-mini-label text="Verifiëren" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=11px/800
+      html="<div class=\"drinks-mini-label\">Verifiëren</div>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=["article[data-route=\"./drinks.html\"]:nth-child(1) > .ladder-title > .ladder-open-link"] tag=span id= class=ladder-open-link text="Units" color=rgb(154, 130, 65) bg=rgba(0, 0, 0, 0) font=13px/800
+      html="<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:var(--gold);text-decoration:none\">Units</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 3.72 (foreground color: #9a8241, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=["article[data-route=\"./drinks.html\"]:nth-child(2) > .ladder-title > .ladder-open-link"] tag=span id= class=ladder-open-link text="Units" color=rgb(154, 130, 65) bg=rgba(0, 0, 0, 0) font=13px/800
+      html="<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:var(--gold);text-decoration:none\">Units</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 3.72 (foreground color: #9a8241, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=["article[data-route=\"./drinks_speed.html\"] > .ladder-title > .ladder-open-link"] tag=span id= class=ladder-open-link text="Seconden" color=rgb(154, 130, 65) bg=rgba(0, 0, 0, 0) font=13px/800
+      html="<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:var(--gold);text-decoration:none\">Seconden</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 3.72 (foreground color: #9a8241, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=["article[data-route=\"./drinks.html\"]:nth-child(4) > .ladder-title > .ladder-open-link"] tag=span id= class=ladder-open-link text="All-time" color=rgb(154, 130, 65) bg=rgba(0, 0, 0, 0) font=13px/800
+      html="<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:var(--gold);text-decoration:none\">All-time</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 3.72 (foreground color: #9a8241, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+PAGE home_family doc=390/390
+  VIOLATION color-contrast serious nodes=5
+    target=["article[data-route=\"ladder.html?game=klaverjas\"] > .ladder-title > .ladder-open-link"] tag=span id= class=ladder-open-link text="Top 5" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=13px/800
+      html="<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=["article[data-route=\"ladder.html?game=boerenbridge\"] > .ladder-title > .ladder-open-link"] tag=span id= class=ladder-open-link text="Top 5" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=13px/800
+      html="<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=["article[data-route=\"ladder.html?game=paardenrace\"] > .ladder-title > .ladder-open-link"] tag=span id= class=ladder-open-link text="Top 5" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=13px/800
+      html="<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=["article[data-route=\"ladder.html?game=pikken\"] > .ladder-title > .ladder-open-link"] tag=span id= class=ladder-open-link text="Top 5" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=13px/800
+      html="<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=["article[data-route=\"ladder.html?game=caute-coins\"] > .ladder-title > .ladder-open-link"] tag=span id= class=ladder-open-link text="Top 5" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=13px/800
+      html="<span class=\"ladder-open-link\" style=\"font-size:13px;font-weight:800;color:#8a7a55;text-decoration:none\">Top 5</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected contrast ratio of 4.5:1"
+PAGE scorer doc=390/390
+  VIOLATION color-contrast serious nodes=8
+    target=[".field:nth-child(1) > label"] tag=label id= class= text="Team A speler 1" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=12.16px/900
+      html="<label>Team A speler 1</label>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.1pt (12.16px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=[".field:nth-child(2) > label"] tag=label id= class= text="Team A speler 2" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=12.16px/900
+      html="<label>Team A speler 2</label>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.1pt (12.16px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=[".field:nth-child(3) > label"] tag=label id= class= text="Team B speler 1" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=12.16px/900
+      html="<label>Team B speler 1</label>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.1pt (12.16px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=[".field:nth-child(4) > label"] tag=label id= class= text="Team B speler 2" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=12.16px/900
+      html="<label>Team B speler 2</label>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.1pt (12.16px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=[".field:nth-child(5) > label"] tag=label id= class= text="Roem Team A" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=12.16px/900
+      html="<label>Roem Team A</label>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.1pt (12.16px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=[".field:nth-child(6) > label"] tag=label id= class= text="Roem Team B" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=12.16px/900
+      html="<label>Roem Team B</label>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.1pt (12.16px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=[".full > label"] tag=label id= class= text="Notitie" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=12.16px/900
+      html="<label>Notitie</label>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.1pt (12.16px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=["span"] tag=span id= class=versus text="tegen" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=16px/900
+      html="<span class=\"versus\">tegen</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 12.0pt (16px), font weight: bold). Expected contrast ratio of 4.5:1"
+  VIOLATION label critical nodes=2
+    target=["#roemA"] tag=input id=roemA class= text="0" color=rgb(0, 0, 0) bg=rgb(255, 255, 255) font=16px/400
+      html="<input id=\"roemA\" type=\"number\" inputmode=\"numeric\" value=\"0\">"
+      failure="Fix any of the following: Element does not have an implicit (wrapped) <label> Element does not have an explicit <label> aria-label attribute does not exist or is empty aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty Element has no"
+    target=["#roemB"] tag=input id=roemB class= text="0" color=rgb(0, 0, 0) bg=rgb(255, 255, 255) font=16px/400
+      html="<input id=\"roemB\" type=\"number\" inputmode=\"numeric\" value=\"0\">"
+      failure="Fix any of the following: Element does not have an implicit (wrapped) <label> Element does not have an explicit <label> aria-label attribute does not exist or is empty aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty Element has no"
+  VIOLATION select-name critical nodes=4
+    target=["#a1"] tag=select id=a1 class= text="Kies spelerAntoniBeta1Beta2Beta3Beta4BoudewijnBruisDavidJesperJorisLyonMerijnRobin MSamTimVerifier 1111" color=rgb(0, 0, 0) bg=rgb(255, 255, 255) font=16px/400
+      html="<select id=\"a1\">"
+      failure="Fix any of the following: Element does not have an implicit (wrapped) <label> Element does not have an explicit <label> aria-label attribute does not exist or is empty aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty Element has no"
+    target=["#a2"] tag=select id=a2 class= text="Kies spelerAntoniBeta1Beta2Beta3Beta4BoudewijnBruisDavidJesperJorisLyonMerijnRobin MSamTimVerifier 1111" color=rgb(0, 0, 0) bg=rgb(255, 255, 255) font=16px/400
+      html="<select id=\"a2\">"
+      failure="Fix any of the following: Element does not have an implicit (wrapped) <label> Element does not have an explicit <label> aria-label attribute does not exist or is empty aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty Element has no"
+    target=["#b1"] tag=select id=b1 class= text="Kies spelerAntoniBeta1Beta2Beta3Beta4BoudewijnBruisDavidJesperJorisLyonMerijnRobin MSamTimVerifier 1111" color=rgb(0, 0, 0) bg=rgb(255, 255, 255) font=16px/400
+      html="<select id=\"b1\">"
+      failure="Fix any of the following: Element does not have an implicit (wrapped) <label> Element does not have an explicit <label> aria-label attribute does not exist or is empty aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty Element has no"
+    target=["#b2"] tag=select id=b2 class= text="Kies spelerAntoniBeta1Beta2Beta3Beta4BoudewijnBruisDavidJesperJorisLyonMerijnRobin MSamTimVerifier 1111" color=rgb(0, 0, 0) bg=rgb(255, 255, 255) font=16px/400
+      html="<select id=\"b2\">"
+      failure="Fix any of the following: Element does not have an implicit (wrapped) <label> Element does not have an explicit <label> aria-label attribute does not exist or is empty aria-labelledby attribute does not exist, references elements that do not exist or references elements that are empty Element has no"
+PAGE bridge_live doc=390/390
+  VIOLATION color-contrast serious nodes=6
+    target=[".meta-card:nth-child(1) > span"] tag=span id= class= text="Spelleider" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=11px/400
+      html="<span>Spelleider</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1"
+    target=[".meta-card:nth-child(2) > span"] tag=span id= class= text="Spelers" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=11px/400
+      html="<span>Spelers</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1"
+    target=[".meta-card:nth-child(3) > span"] tag=span id= class= text="Rondes" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=11px/400
+      html="<span>Rondes</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1"
+    target=[".meta-card:nth-child(4) > span"] tag=span id= class= text="Winnaar / leider" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=11px/400
+      html="<span>Winnaar / leider</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1"
+    target=[".meta-card:nth-child(5) > span"] tag=span id= class= text="Laatst bijgewerkt" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=11px/400
+      html="<span>Laatst bijgewerkt</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1"
+    target=[".meta-card:nth-child(6) > span"] tag=span id= class= text="Matchref" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=11px/400
+      html="<span>Matchref</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1"
+PAGE race_spectator doc=390/390
+  VIOLATION color-contrast serious nodes=4
+    target=[".box:nth-child(1) > span"] tag=span id= class= text="Room" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=11px/400
+      html="<span>Room</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1"
+    target=[".box:nth-child(2) > span"] tag=span id= class= text="Stage" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=11px/400
+      html="<span>Stage</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1"
+    target=[".box:nth-child(3) > span"] tag=span id= class= text="Spelers" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=11px/400
+      html="<span>Spelers</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1"
+    target=[".box:nth-child(4) > span"] tag=span id= class= text="Laatste kaart" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=11px/400
+      html="<span>Laatste kaart</span>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1"
+PAGE drinks_add doc=390/390
+  VIOLATION color-contrast serious nodes=3
+    target=[".metric:nth-child(1) > .label"] tag=div id= class=label text="Vandaag" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=11px/800
+      html="<div class=\"label\">Vandaag</div>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=[".metric:nth-child(2) > .label"] tag=div id= class=label text="Open aanvragen" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=11px/800
+      html="<div class=\"label\">Open aanvragen</div>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=[".metric:nth-child(3) > .label"] tag=div id= class=label text="Totaal" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=11px/800
+      html="<div class=\"label\">Totaal</div>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+PAGE activate doc=390/390
+  VIOLATION color-contrast serious nodes=2
+    target=[".detail:nth-child(4) > strong"] tag=strong id= class= text="Goedgekeurde naam" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=12px/700
+      html="<strong>Goedgekeurde naam</strong>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.0pt (12px), font weight: bold). Expected contrast ratio of 4.5:1"
+    target=[".detail:nth-child(5) > strong"] tag=strong id= class= text="E-mailadres" color=rgb(138, 122, 85) bg=rgba(0, 0, 0, 0) font=12px/700
+      html="<strong>E-mailadres</strong>"
+      failure="Fix any of the following: Element has insufficient color contrast of 4.2 (foreground color: #8a7a55, background color: #ffffff, font size: 9.0pt (12px), font weight: bold). Expected contrast ratio of 4.5:1"
+PAGE rad doc=445/390
+  OVERFLOW count=30
+    tag=section id= class=panel wheel-wrap left=33 right=445 width=412 display=grid position=static minWidth=auto maxWidth=520px whiteSpace=normal parent={"tag":"div","id":"","className":"layout","overflowX":"visible"} text="SPIN Nog niet gedraaid."
+    tag=div id= class=wheel-box left=52 right=426 width=374 display=block position=relative minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"section","id":"","className":"panel wheel-wrap","overflowX":"visible"} text="SPIN"
+    tag=canvas id=wheelCanvas class= left=52 right=426 width=374 display=block position=static minWidth=0px maxWidth=none whiteSpace=normal parent={"tag":"div","id":"","className":"wheel-box","overflowX":"visible"} text=""
+    tag=section id= class=panel left=33 right=445 width=412 display=block position=static minWidth=auto maxWidth=520px whiteSpace=normal parent={"tag":"div","id":"","className":"layout","overflowX":"visible"} text="SegmentenCauteSkip je volgende drink; rechts van je neemt er 4.10%Snowboard adtChug een volle bak op je knieën.8%Riet ad"
+    tag=h2 id= class= left=52 right=426 width=374 display=block position=static minWidth=0px maxWidth=none whiteSpace=normal parent={"tag":"section","id":"","className":"panel","overflowX":"visible"} text="Segmenten"
+    tag=div id=legendBox class=legend left=52 right=426 width=374 display=grid position=static minWidth=0px maxWidth=none whiteSpace=normal parent={"tag":"section","id":"","className":"panel","overflowX":"visible"} text="CauteSkip je volgende drink; rechts van je neemt er 4.10%Snowboard adtChug een volle bak op je knieën.8%Riet adtDrink ee"
+    tag=div id= class=legend-row left=52 right=426 width=374 display=grid position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"legendBox","className":"legend","overflowX":"auto"} text="CauteSkip je volgende drink; rechts van je neemt er 4.10%"
+    tag=strong id= class= left=375 right=413 width=38 display=block position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"","className":"legend-row","overflowX":"visible"} text="10%"
+    tag=div id= class=legend-row left=52 right=426 width=374 display=grid position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"legendBox","className":"legend","overflowX":"auto"} text="Snowboard adtChug een volle bak op je knieën.8%"
+    tag=strong id= class= left=386 right=413 width=27 display=block position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"","className":"legend-row","overflowX":"visible"} text="8%"
+    tag=div id= class=legend-row left=52 right=426 width=374 display=grid position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"legendBox","className":"legend","overflowX":"auto"} text="Riet adtDrink een volle 33cl met rietje.8%"
+    tag=strong id= class= left=386 right=413 width=27 display=block position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"","className":"legend-row","overflowX":"visible"} text="8%"
+    tag=div id= class=legend-row left=52 right=426 width=374 display=grid position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"legendBox","className":"legend","overflowX":"auto"} text="DespinozaIedereen 1, behalve jij; jij kiest +2 extra.8%"
+    tag=strong id= class= left=386 right=413 width=27 display=block position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"","className":"legend-row","overflowX":"visible"} text="8%"
+    tag=div id= class=legend-row left=52 right=426 width=374 display=grid position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"legendBox","className":"legend","overflowX":"auto"} text="ShotjeNeem 2 shots + 1 upside down.7%"
+    tag=strong id= class= left=386 right=413 width=27 display=block position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"","className":"legend-row","overflowX":"visible"} text="7%"
+    tag=div id= class=legend-row left=52 right=426 width=374 display=grid position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"legendBox","className":"legend","overflowX":"auto"} text="Shot uitdelenDeel 5 shots uit.7%"
+    tag=strong id= class= left=386 right=413 width=27 display=block position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"","className":"legend-row","overflowX":"visible"} text="7%"
+    tag=div id= class=legend-row left=52 right=426 width=374 display=grid position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"legendBox","className":"legend","overflowX":"auto"} text="Groep adtIedereen in de cirkel neemt 2 slokken.7%"
+    tag=strong id= class= left=386 right=413 width=27 display=block position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"","className":"legend-row","overflowX":"visible"} text="7%"
+    tag=div id= class=legend-row left=52 right=426 width=374 display=grid position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"legendBox","className":"legend","overflowX":"auto"} text="Riet adt uitdelenKies iemand voor een riet adt.6%"
+    tag=strong id= class= left=386 right=413 width=27 display=block position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"","className":"legend-row","overflowX":"visible"} text="6%"
+    tag=div id= class=legend-row left=52 right=426 width=374 display=grid position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"legendBox","className":"legend","overflowX":"auto"} text="Jagerbomb adtDoe een jagerbomb + extra shot.5%"
+    tag=strong id= class= left=386 right=413 width=27 display=block position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"","className":"legend-row","overflowX":"visible"} text="5%"
+    tag=div id= class=legend-row left=52 right=426 width=374 display=grid position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"legendBox","className":"legend","overflowX":"auto"} text="Helm adtDrink ondersteboven met helm/bak.5%"
+    tag=strong id= class= left=386 right=413 width=27 display=block position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"","className":"legend-row","overflowX":"visible"} text="5%"
+    tag=div id= class=legend-row left=52 right=426 width=374 display=grid position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"legendBox","className":"legend","overflowX":"auto"} text="Draai adtDraai 8 keer en ad of neem 4 shots.5%"
+    tag=strong id= class= left=386 right=413 width=27 display=block position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"","className":"legend-row","overflowX":"visible"} text="5%"
+    tag=div id= class=legend-row left=52 right=426 width=374 display=grid position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"legendBox","className":"legend","overflowX":"auto"} text="Jager uitdelenKies 3 mensen voor een jager-style straf.5%"
+    tag=strong id= class= left=386 right=413 width=27 display=block position=static minWidth=auto maxWidth=none whiteSpace=normal parent={"tag":"div","id":"","className":"legend-row","overflowX":"visible"} text="5%"
+BLOCKED_WRITES 50
