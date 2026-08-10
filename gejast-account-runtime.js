@@ -246,7 +246,54 @@
     if(pin) pin.addEventListener('input',()=>{ pin.value=pin.value.replace(/\D/g,'').slice(0,4); });
   }
   async function bootRequestPage(){ const form=$('requestForm'), sel=$('requestNameSelect'); if(!form) return; try{ fillSelect(sel, await getRequestableNames()); }catch(err){ setStatus('status',friendly(err),'warn'); } form.addEventListener('submit', async(ev)=>{ ev.preventDefault(); const desiredName=String(sel.value||'').trim(); const email=String(($('requestEmailInput')||{}).value||'').trim().toLowerCase(); const note=String(($('requestNoteInput')||{}).value||'').trim(); if(!desiredName) return setStatus('status','Kies eerst een naam.','warn'); if(!emailOk(email)) return setStatus('status','Vul een geldig e-mailadres in.','warn'); try{ setBusy(form,true); setStatus('status','Aanvraag versturen...'); const out=await requestClaim({desiredName,email,note,meta:visitorMeta()}); setStatus('status',out?.message||'Aanvraag verstuurd. Na goedkeuring ontvang je een activatielink.','ok'); form.reset(); try{ fillSelect(sel, await getRequestableNames()); }catch(_){} }catch(err){ setStatus('status',friendly(err),'warn'); }finally{ setBusy(form,false); } }); }
-  async function bootActivatePage(){ const form=$('activateForm'); if(!form) return; const token=new URLSearchParams(location.search).get('token')||new URLSearchParams(location.search).get('activation_token')||''; if(!token) setStatus('status','Deze activatielink mist een token.','warn'); try{ const ctx=await getActivationContext(token); if($('approvedName')) $('approvedName').textContent=ctx?.display_name||ctx?.player_name||ctx?.desired_name||'Onbekend'; if($('approvedEmail')) $('approvedEmail').textContent=ctx?.requester_email||ctx?.email||'Onbekend'; }catch(err){ setStatus('status',friendly(err),'warn'); } form.addEventListener('submit', async(ev)=>{ ev.preventDefault(); const p=String(($('pinInput')||{}).value||'').replace(/\D/g,'').slice(0,4); const p2=String(($('pinConfirmInput')||{}).value||'').replace(/\D/g,'').slice(0,4); if(!/^\d{4}$/.test(p)) return setStatus('status','Kies een pincode van precies 4 cijfers.','warn'); if(p!==p2) return setStatus('status','De twee pincodes komen niet overeen.','warn'); try{ setBusy(form,true); setStatus('status','Account activeren...'); const out=await activateAccount(token,p); if(out?.session_token) setPlayerToken(out.session_token); setStatus('status','Account geactiveerd. Je gaat naar de homepage.','ok'); setTimeout(()=>location.href='./index.html',700); }catch(err){ setStatus('status',friendly(err),'warn'); }finally{ setBusy(form,false); } }); ['pinInput','pinConfirmInput'].forEach((id)=>{ const el=$(id); if(el) el.addEventListener('input',()=>{el.value=el.value.replace(/\D/g,'').slice(0,4);}); }); }
+  async function bootActivatePage(){
+    const form=$('activateForm');
+    if(!form) return;
+    const fallback=$('activationFallback');
+    function showActivationFallback(show){ if(fallback) fallback.hidden=!show; }
+    function setUnavailable(){ if($('approvedName')) $('approvedName').textContent='Niet beschikbaar'; if($('approvedEmail')) $('approvedEmail').textContent='Niet beschikbaar'; }
+    const token=new URLSearchParams(location.search).get('token')||new URLSearchParams(location.search).get('activation_token')||'';
+    setBusy(form,true);
+    showActivationFallback(false);
+    if(!token){
+      setUnavailable();
+      showActivationFallback(true);
+      setStatus('status','Deze activatielink mist een token. Open de activatielink uit je e-mail opnieuw.','warn');
+      return;
+    }
+    try{
+      const ctx=await getActivationContext(token);
+      const activationName=String(ctx?.display_name||ctx?.player_name||ctx?.desired_name||'').trim();
+      const activationEmail=String(ctx?.requester_email||ctx?.email||'').trim();
+      if(!activationName||!activationEmail) throw new Error('Deze activatielink is ongeldig of verlopen.');
+      if($('approvedName')) $('approvedName').textContent=activationName;
+      if($('approvedEmail')) $('approvedEmail').textContent=activationEmail;
+      setBusy(form,false);
+      showActivationFallback(false);
+    }catch(err){
+      setUnavailable();
+      showActivationFallback(true);
+      setStatus('status','Deze activatielink is ongeldig of verlopen. Vraag zo nodig een nieuwe activatielink aan.','warn');
+      return;
+    }
+    form.addEventListener('submit', async(ev)=>{
+      ev.preventDefault();
+      const p=String(($('pinInput')||{}).value||'').replace(/\D/g,'').slice(0,4);
+      const p2=String(($('pinConfirmInput')||{}).value||'').replace(/\D/g,'').slice(0,4);
+      if(!/^\d{4}$/.test(p)) return setStatus('status','Kies een pincode van precies 4 cijfers.','warn');
+      if(p!==p2) return setStatus('status','De twee pincodes komen niet overeen.','warn');
+      try{
+        setBusy(form,true);
+        setStatus('status','Account activeren...');
+        const out=await activateAccount(token,p);
+        if(out?.session_token) setPlayerToken(out.session_token);
+        setStatus('status','Account geactiveerd. Je gaat naar de homepage.','ok');
+        setTimeout(()=>location.href='./index.html',700);
+      }catch(err){ setStatus('status',friendly(err),'warn'); }
+      finally{ setBusy(form,false); }
+    });
+    ['pinInput','pinConfirmInput'].forEach((id)=>{ const el=$(id); if(el) el.addEventListener('input',()=>{el.value=el.value.replace(/\D/g,'').slice(0,4);}); });
+  }
 
   async function adminAudit(){ return await rpcFirst([{name:'admin_get_active_player_metadata_audit_v687', body:{admin_session_token_input:adminToken(),site_scope_input:scope()}},{name:'admin_get_active_player_metadata_audit_v687', body:{admin_session_token_input:adminToken(),site_scope_input:scope()}},{name:'admin_get_account_runtime_audit_v687', body:{admin_session_token:adminToken(),site_scope_input:scope()}}]); }
   async function adminMail(){ return await rpc('admin_get_mail_diagnostics',{admin_session_token:adminToken(),site_scope_input:scope()}); }
