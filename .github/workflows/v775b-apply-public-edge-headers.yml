@@ -1,0 +1,60 @@
+name: v775b apply public edge headers
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/apply-v775b-public-edge-headers.mjs'
+      - '.github/workflows/v775b-apply-public-edge-headers.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Apply deterministic v775b patch
+        run: node scripts/apply-v775b-public-edge-headers.mjs
+      - name: Verify Worker and repository
+        run: |
+          node check-public-edge-headers-v775b.mjs
+          npm run admin-worker:test
+          npm run verify
+          npm run admin-worker:build
+          npm run admin-worker:dry-run
+          git -c core.whitespace=cr-at-eol diff --check
+      - name: Report Cloudflare deploy credential presence safely
+        shell: bash
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ]; then echo 'CLOUDFLARE_API_TOKEN=PRESENT'; else echo 'CLOUDFLARE_API_TOKEN=MISSING'; fi
+          if [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then echo 'CLOUDFLARE_ACCOUNT_ID=PRESENT'; else echo 'CLOUDFLARE_ACCOUNT_ID=MISSING'; fi
+      - name: Remove one-time machinery and commit permanent v775b changes
+        shell: bash
+        run: |
+          rm -f scripts/apply-v775b-public-edge-headers.mjs
+          rm -f .github/workflows/v775b-apply-public-edge-headers.yml
+          rm -rf node_modules cloudflare/workers/admin-gate/static
+          git status --short
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add cloudflare/workers/admin-gate/src/worker.js package.json check-public-edge-headers-v775b.mjs
+          git add -u scripts/apply-v775b-public-edge-headers.mjs .github/workflows/v775b-apply-public-edge-headers.yml
+          git -c core.whitespace=cr-at-eol diff --cached --check
+          git commit -m 'security: add compatible public edge headers v775b'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
