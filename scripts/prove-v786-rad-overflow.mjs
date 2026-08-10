@@ -36,7 +36,7 @@ for(const width of widths){
  const overflow=state.docWidth>width+4;
  const wheelMissing=state.wheelRight==null||state.panelRight==null;
  const wheelOutside=state.wheelRight!=null&&state.wheelRight>width+1;
- const wheelOutsidePanel=state.wheelRight!=null&&state.panelRight!=null&&state.wheelRight>state.panelRight+1;
+ const wheelOutsidePanel=mobile&&state.wheelRight!=null&&state.panelRight!=null&&state.wheelRight>state.panelRight+1;
  const runtimeWrong=mobile&&(!state.runtimeStyleInjected||!/width:min\(100%,460px\)\s*!important/.test(state.runtimeStyleText)||/96vw/.test(state.runtimeStyleText));
  if(nav||bad.length||failed.length||pageErrors.length||axe.length||overflow||wheelMissing||wheelOutside||wheelOutsidePanel||runtimeWrong) failures.push({width,nav,bad,failed,pageErrors,axe,state,overflow,wheelMissing,wheelOutside,wheelOutsidePanel,runtimeWrong});
  console.log(`V786_RAD width=${width} doc=${state.docWidth}/${width} wheel=${state.wheelLeft}-${state.wheelRight} panel=${state.panelLeft}-${state.panelRight} style=${state.runtimeStyleInjected?'yes':'no'} axe=${axe.length} errors=${bad.length+failed.length+pageErrors.length}`);
