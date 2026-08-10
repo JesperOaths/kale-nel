@@ -28,7 +28,7 @@
       "id": "static_integrity",
       "status": "verified_complete",
       "command": "npm run verify",
-      "evidence": "Current Node 24 verification passes all existing frontend/backend/security regressions through v776 plus the v777 static-control accessibility guard covering 58 controls."
+      "evidence": "Current Node 24 verification passes all existing frontend/backend/security regressions through v777. The v777 accessibility baseline proves 58 formerly unnamed static controls now retain deterministic accessible names and explicitly tracks the remaining 12 runtime-generated controls for context-aware naming rather than treating them as silently complete."
     },
     {
       "id": "klaverjas_regression",
