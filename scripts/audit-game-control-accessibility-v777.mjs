@@ -1,19 +1,23 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
-import path from 'node:path';
 
 const files=fs.readdirSync('.').filter(f=>/\.html$/i.test(f) && !/^(?:admin|familie_admin)|_vault\.html$|^vault\.html$|(?:test|debug|diagnostic|health|runtime|audit|preview|export)|_orig\.html$|_v\d+.*\.html$|_repo.*\.html$/i.test(f)).sort();
 const ignore=new Set(['login.html','request.html','activate.html']);
 const findings=[];
 function lineOf(text,index){return text.slice(0,index).split('\n').length;}
 function inScript(text,index){return text.lastIndexOf('<script',index)>text.lastIndexOf('</script>',index);}
-function attr(tag,name){const m=tag.match(new RegExp('\\b'+name+'\\s*=\\s*["\\']([^"\\']*)["\\']','i'));return m?m[1]:'';}
+function attr(tag,name){
+  const m=tag.match(new RegExp("\\b"+name+"\\s*=\\s*([\"'])(.*?)\\1","i"));
+  return m?m[2]:'';
+}
+function escapeRegExp(value){return value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
 function hasName(text,tag,index){
   if(/\b(?:aria-label|aria-labelledby|title)\s*=\s*["'][^"']+/i.test(tag)) return true;
   const id=attr(tag,'id');
   if(id){
-    const escaped=id.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-    if(new RegExp('<label\\b[^>]*for=["\\']'+escaped+'["\\']','i').test(text)) return true;
+    const escaped=escapeRegExp(id);
+    const labelRx=new RegExp("<label\\b[^>]*for=([\"'])"+escaped+"\\1","i");
+    if(labelRx.test(text)) return true;
   }
   const before=text.slice(Math.max(0,index-250),index);
   const open=before.lastIndexOf('<label');
