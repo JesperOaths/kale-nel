@@ -49,7 +49,10 @@ jobs:
           echo $! >/tmp/v782-http.pid
           sleep 2
       - name: Render patched candidate in Chromium
-        run: node /tmp/check-candidate-v782-responsive.mjs
+        run: |
+          cp /tmp/check-candidate-v782-responsive.mjs scripts/.v782-browser-check.mjs
+          node scripts/.v782-browser-check.mjs
+          rm -f scripts/.v782-browser-check.mjs
       - name: Commit clean v782 candidate
         run: |
           rm -rf node_modules
