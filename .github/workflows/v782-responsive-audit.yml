@@ -1,20 +1,21 @@
-name: v782 responsive breakpoint audit
+name: v782 responsive release builder
 
 on:
   pull_request:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  audit:
+  build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v5
         with:
           ref: ${{ github.head_ref }}
+          fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -24,7 +25,39 @@ jobs:
         run: |
           npm install --no-save playwright
           npx playwright install --with-deps chromium
-      - name: Run responsive breakpoint audit
-        run: node scripts/audit-responsive-breakpoints-v782.mjs
-      - name: Trace overflow owners
-        run: node scripts/debug-responsive-v782.mjs
+      - name: Build scoped v782 candidate
+        run: node scripts/build-v782-responsive-release.mjs
+      - name: Preserve browser checker outside repository
+        run: cp scripts/check-candidate-v782-responsive.mjs /tmp/check-candidate-v782-responsive.mjs
+      - name: Remove temporary audit/build machinery
+        run: |
+          rm -f scripts/audit-responsive-breakpoints-v782.mjs
+          rm -f scripts/debug-responsive-v782.mjs
+          rm -f scripts/check-candidate-v782-responsive.mjs
+          rm -f scripts/build-v782-responsive-release.mjs
+          rm -f V782_RESPONSIVE_AUDIT.md
+          rm -f V782_AUDIT_TRIGGER.txt
+          rm -f .github/workflows/v782-responsive-audit.yml
+      - name: Verify clean candidate repository
+        run: |
+          node check-responsive-runtime-v782.mjs
+          npm run verify
+          git -c core.whitespace=cr-at-eol diff --check
+      - name: Serve patched candidate locally
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/v782-http.log 2>&1 &
+          echo $! >/tmp/v782-http.pid
+          sleep 2
+      - name: Render patched candidate in Chromium
+        run: node /tmp/check-candidate-v782-responsive.mjs
+      - name: Commit clean v782 candidate
+        run: |
+          rm -rf node_modules
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config core.whitespace cr-at-eol
+          git add -A
+          git diff --cached --check
+          git status --short
+          git commit -m "v782 fix responsive runtime defects"
+          git push origin HEAD:${{ github.head_ref }}
