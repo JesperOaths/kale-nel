@@ -16,6 +16,7 @@ files.sort();
 
 function stripNonVisible(html){
   return html
+    .replace(/<[^>]*class=["'][^"']*site-credit-watermark[^"']*["'][^>]*>[\s\S]*?<\/[^>]+>/gi,' ')
     .replace(/<!--[\s\S]*?-->/g,' ')
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ')
     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' ')
@@ -35,6 +36,7 @@ function snippets(text,rx){
   }
   return out;
 }
+function escRx(value){return String(value).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
 const devPatterns=[
   ['phase',/\bphase\s*\d+/ig],
   ['proof',/\b(?:proof|regression|smoke\s*test|test\s*console)\b/ig],
@@ -48,28 +50,47 @@ const summaries=[];
 for(const file of files){
   const html=fs.readFileSync(file,'utf8');
   const visible=stripNonVisible(html);
+  const redirectShim=(/<meta\b[^>]*http-equiv=["']refresh["']/i.test(html) || /window\.location\.replace\s*\(/.test(html)) && visible.length<40;
   const item={file,issues:[]};
   if(!/<html\b[^>]*\blang=["'][^"']+["']/i.test(html)) item.issues.push({kind:'missing-lang'});
   if(!/<title>\s*[^<\s][\s\S]*?<\/title>/i.test(html)) item.issues.push({kind:'missing-title'});
-  if(!/<meta\b[^>]*name=["']viewport["']/i.test(html)) item.issues.push({kind:'missing-viewport'});
+  if(!redirectShim && !/<meta\b[^>]*name=["']viewport["']/i.test(html)) item.issues.push({kind:'missing-viewport'});
   const images=[...html.matchAll(/<img\b[^>]*>/gi)].map(m=>m[0]);
   const missingAlt=images.filter(tag=>!(/\balt\s*=/.test(tag)));
   if(missingAlt.length) item.issues.push({kind:'images-missing-alt',count:missingAlt.length,samples:missingAlt.slice(0,3)});
   const buttons=[...html.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/gi)];
   const unlabeledButtons=buttons.filter(([,attrs,body])=>{
     const text=stripNonVisible(body);
-    return !text && !/\b(?:aria-label|title)\s*=\s*["'][^"']+/i.test(attrs);
+    return !text && !/\b(?:aria-label|aria-labelledby|title)\s*=\s*["'][^"']+/i.test(attrs);
   });
   if(unlabeledButtons.length) item.issues.push({kind:'unlabeled-buttons',count:unlabeledButtons.length,samples:unlabeledButtons.slice(0,3).map(m=>m[0].slice(0,180))});
   const anchors=[...html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)];
   const deadAnchors=anchors.filter(([,attrs])=>/\bhref\s*=\s*["'](?:\s*|#|javascript:void\(0\);?)["']/i.test(attrs) && !/\bonclick\s*=/.test(attrs));
   if(deadAnchors.length) item.issues.push({kind:'dead-anchors',count:deadAnchors.length,samples:deadAnchors.slice(0,3).map(m=>m[0].slice(0,180))});
+
+  if(!redirectShim){
+    const controls=[...html.matchAll(/<(input|select|textarea)\b([^>]*)>/gi)];
+    const unnamed=[];
+    for(const match of controls){
+      const [tag,kind,attrs]=match;
+      const type=(attrs.match(/\btype\s*=\s*["']([^"']+)/i)||[])[1]?.toLowerCase()||'';
+      if(kind.toLowerCase()==='input' && ['hidden','submit','button','reset','image'].includes(type)) continue;
+      if(/\b(?:aria-label|aria-labelledby|title)\s*=\s*["'][^"']+/i.test(attrs)) continue;
+      const id=(attrs.match(/\bid\s*=\s*["']([^"']+)/i)||[])[1]||'';
+      if(id && new RegExp(`<label\\b[^>]*\\bfor=["']${escRx(id)}["']`,'i').test(html)) continue;
+      const before=html.slice(Math.max(0,(match.index||0)-240),match.index||0);
+      if(/<label\b[^>]*>[^<]*$/i.test(before)) continue;
+      unnamed.push(tag.slice(0,180));
+    }
+    if(unnamed.length) item.issues.push({kind:'controls-without-programmatic-label',count:unnamed.length,samples:unnamed.slice(0,4)});
+  }
+
   for(const [kind,rx] of devPatterns){
     const hits=snippets(visible,rx);
     if(hits.length) item.issues.push({kind:`visible-${kind}`,count:hits.length,samples:hits});
   }
   if(item.issues.length) findings.push(item);
-  summaries.push({file,visibleChars:visible.length,images:images.length,buttons:buttons.length,anchors:anchors.length,issues:item.issues.length});
+  summaries.push({file,redirectShim,visibleChars:visible.length,images:images.length,buttons:buttons.length,anchors:anchors.length,issues:item.issues.length});
 }
 
 console.log(`PUBLIC_USER_HTML=${files.length}`);
