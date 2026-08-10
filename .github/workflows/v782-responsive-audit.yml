@@ -26,3 +26,5 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Run responsive breakpoint audit
         run: node scripts/audit-responsive-breakpoints-v782.mjs
+      - name: Trace overflow owners
+        run: node scripts/debug-responsive-v782.mjs
