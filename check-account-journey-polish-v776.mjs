@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const version=fs.readFileSync('VERSION','utf8').trim();
-assert.equal(version,'v776');
+const versionNumber=Number(version.match(/^v(\d+)$/)?.[1]||0);
+assert.ok(versionNumber>=776,`v776 account-journey invariant requires frontend v776+, got ${version}`);
 function text(file){return fs.readFileSync(file,'utf8');}
 for(const [file,pairs] of Object.entries({
   'login.html':[['playerNameInput','Naam'],['pinInput','Pincode']],
@@ -30,4 +31,4 @@ for(const [file,marker] of [
 assert.match(request,/Na goedkeuring krijg je een veilige activatielink per e-mail\./);
 assert.match(text('leaderboard.html'),/ELO-ranglijst op basis van gespeelde Klaverjaswedstrijden\./);
 assert.match(text('despimarkt_auto_markets.html'),/Automatische markten voor actuele wedstrijden\./);
-console.log('v776 account-journey polish PASS: account controls are programmatically labelled with correct autocomplete semantics, status feedback is live-announced, and development-era public copy is removed.');
+console.log(`v776 account-journey polish PASS at ${version}: v776+ releases preserve account labels/autocomplete/live status and finished public copy.`);
