@@ -1,0 +1,26 @@
+name: diagnose remaining live Rad overflow
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose-rad:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - run: node scripts/diagnose-live-rad-overflow.mjs
