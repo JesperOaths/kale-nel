@@ -66,5 +66,6 @@ fs.rmSync('scripts/build-v787-family-alias-cleanup.mjs',{force:true});
 fs.rmSync('.github/workflows/v787-family-alias-cleanup.yml',{force:true});
 
 execFileSync('npm',['run','verify'],{stdio:'inherit'});
+execFileSync('git',['config','core.whitespace','cr-at-eol'],{stdio:'inherit'});
 execFileSync('git',['diff','--check'],{stdio:'inherit'});
 console.log('V787_CANDIDATE_BUILD=PASS');
