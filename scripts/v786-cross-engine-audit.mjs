@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Temporary PR-only cross-engine audit; no product behavior is modified.
 import { firefox, webkit } from 'playwright';
 
 const base='https://kalenel.nl';
