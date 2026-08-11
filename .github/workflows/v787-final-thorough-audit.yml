@@ -37,7 +37,7 @@ jobs:
       - name: Static metadata, residue, secret and push-schedule audit
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/v787-final-thorough-static-audit.mjs
+        run: node scripts/v787-final-thorough-static-audit-v2.mjs
 
   browser-matrix:
     runs-on: ubuntu-24.04
