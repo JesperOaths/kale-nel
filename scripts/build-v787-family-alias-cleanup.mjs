@@ -30,7 +30,31 @@ fs.writeFileSync('beta-readiness.json',JSON.stringify(readiness,null,2)+'\n');
 
 execFileSync(process.execPath,['fix-version-drift.mjs'],{stdio:'inherit'});
 
-const guard=`#!/usr/bin/env node\nimport fs from 'node:fs';\nconst root=fs.readFileSync('VERSION','utf8').trim();\nconst rootN=Number(root.match(/^v(\\d+)$/)?.[1]||0);\nconst failures=[];\nif(rootN<787) failures.push('v787 Family alias guard requires VERSION >= v787');\nconst aliases=[\n  ['familie/index.html','../index.html?scope=family'],\n  ['familie/login.html','../login.html?scope=family'],\n  ['familie/scorer.html','../scorer.html?scope=family'],\n  ['familie/leaderboard.html','../leaderboard.html?scope=family']\n];\nfor(const [path,target] of aliases){\n  const text=fs.readFileSync(path,'utf8');\n  if(/<script\\s+[^>]*src=/i.test(text)) failures.push(path+' must not load external scripts');\n  if(/<link\\s+[^>]*href=/i.test(text)) failures.push(path+' must not load external styles/resources');\n  if(!text.includes(\`location.replace('\\${target}')\`)) failures.push(path+' must preserve JS redirect to '+target);\n  if(!text.includes(\`http-equiv=\"refresh\" content=\"0; url=\\${target}\"\`)) failures.push(path+' must preserve non-JS redirect fallback to '+target);\n  if(!text.includes(\`href=\"\\${target}\"\`)) failures.push(path+' must preserve visible fallback link to '+target);\n  if(/gejast-config\\.js|gejast-scope-hardening\\.js|gejast-v725-repair\\.js|gejast-site-announcements\\.js/i.test(text)) failures.push(path+' must not bootstrap normal runtime before redirect');\n}\nfor(const path of ['scripts/build-v787-family-alias-cleanup.mjs','.github/workflows/v787-family-alias-cleanup.yml']) if(fs.existsSync(path)) failures.push('temporary v787 builder residue remains: '+path);\nif(failures.length){console.error('v787 Family redirect alias regression failed:');for(const f of failures) console.error('- '+f);process.exit(1);}\nconsole.log('v787 Family redirect aliases PASS: four wrappers are runtime-light, preserve exact family-scope destinations, and retain JS + meta-refresh + visible-link fallbacks.');\n`;
+const guard=`#!/usr/bin/env node
+import fs from 'node:fs';
+const root=fs.readFileSync('VERSION','utf8').trim();
+const rootN=Number(root.match(/^v(\\d+)$/)?.[1]||0);
+const failures=[];
+if(rootN<787) failures.push('v787 Family alias guard requires VERSION >= v787');
+const aliases=[
+  ['familie/index.html','../index.html?scope=family'],
+  ['familie/login.html','../login.html?scope=family'],
+  ['familie/scorer.html','../scorer.html?scope=family'],
+  ['familie/leaderboard.html','../leaderboard.html?scope=family']
+];
+for(const [path,target] of aliases){
+  const text=fs.readFileSync(path,'utf8');
+  if(/<script\\s+[^>]*src=/i.test(text)) failures.push(path+' must not load external scripts');
+  if(/<link\\s+[^>]*href=/i.test(text)) failures.push(path+' must not load external styles/resources');
+  if(!text.includes("location.replace('"+target+"')")) failures.push(path+' must preserve JS redirect to '+target);
+  if(!text.includes('http-equiv="refresh" content="0; url='+target+'"')) failures.push(path+' must preserve non-JS redirect fallback to '+target);
+  if(!text.includes('href="'+target+'"')) failures.push(path+' must preserve visible fallback link to '+target);
+  if(/gejast-config\\.js|gejast-scope-hardening\\.js|gejast-v725-repair\\.js|gejast-site-announcements\\.js/i.test(text)) failures.push(path+' must not bootstrap normal runtime before redirect');
+}
+for(const path of ['scripts/build-v787-family-alias-cleanup.mjs','.github/workflows/v787-family-alias-cleanup.yml']) if(fs.existsSync(path)) failures.push('temporary v787 builder residue remains: '+path);
+if(failures.length){console.error('v787 Family redirect alias regression failed:');for(const f of failures) console.error('- '+f);process.exit(1);}
+console.log('v787 Family redirect aliases PASS: four wrappers are runtime-light, preserve exact family-scope destinations, and retain JS + meta-refresh + visible-link fallbacks.');
+`;
 fs.writeFileSync('check-family-redirect-alias-v787.mjs',guard);
 
 const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
