@@ -36,7 +36,7 @@ if (versionNumber >= 778) {
   if (!/12 runtime-generated/i.test(evidence)) failures.push('v778+ static_integrity evidence must preserve the 12 runtime-generated-control completion');
 }
 
-// v780 added rendered-browser proof. Future live/readiness records must preserve the zero-violation Chromium/axe result.
+// v780 added rendered-browser proof. Preserve the proof facts durably without forcing every later release note to repeat historical wording.
 if (versionNumber >= 780) {
   const staticIntegrity = (tracker.baseline_checks || []).find((item) => item.id === 'static_integrity');
   const staticEvidence = String(staticIntegrity?.evidence || '');
@@ -44,12 +44,15 @@ if (versionNumber >= 780) {
   if (!/zero violations|zero axe violations/i.test(staticEvidence)) failures.push('v780+ static_integrity evidence must preserve the zero-violation rendered result');
   if (!releaseCandidateVersion) {
     const deploymentNote = String(tracker.deployment_identity?.note || '');
-    if (!/Chromium\/axe/i.test(deploymentNote)) failures.push('v780+ promoted deployment note must preserve live Chromium/axe proof');
-    if (!/zero (?:total )?axe violations/i.test(deploymentNote)) failures.push('v780+ promoted deployment note must preserve zero live axe violations');
+    const liveRoutes = (tracker.baseline_checks || []).find((item) => item.id === 'live_routes');
+    const liveEvidence = String(liveRoutes?.evidence || '');
+    const promotedEvidence = [deploymentNote, staticEvidence, liveEvidence].join('\n');
+    if (!/Chromium\/axe/i.test(promotedEvidence)) failures.push('v780+ promoted readiness must preserve live Chromium/axe proof');
+    if (!/zero (?:total )?axe violations/i.test(promotedEvidence)) failures.push('v780+ promoted readiness must preserve zero live axe violations');
   }
 }
 
-// v781 added live mobile/runtime proof. Future readiness records must retain both no-write mobile evidence and the exact owner outcomes.
+// v781 added live mobile/runtime proof. Preserve exact owner outcomes somewhere in the durable promoted evidence, not necessarily the newest note.
 if (versionNumber >= 781) {
   const staticIntegrity = (tracker.baseline_checks || []).find((item) => item.id === 'static_integrity');
   const staticEvidence = String(staticIntegrity?.evidence || '');
@@ -60,12 +63,13 @@ if (versionNumber >= 781) {
     const deploymentNote = String(tracker.deployment_identity?.note || '');
     const liveRoutes = (tracker.baseline_checks || []).find((item) => item.id === 'live_routes');
     const liveEvidence = String(liveRoutes?.evidence || '');
-    if (!/isolated no-write live mobile Chromium/i.test(deploymentNote)) failures.push('v781+ promoted deployment note must preserve isolated no-write live mobile Chromium proof');
-    if (!/non-GET browser traffic was intercepted locally/i.test(deploymentNote)) failures.push('v781+ promoted deployment note must preserve write-isolation proof');
-    if (!/stats-queue ReferenceError/i.test(deploymentNote)) failures.push('v781+ promoted deployment note must preserve the live Drinks runtime-error outcome');
-    if (!/>=44px|44px/i.test(deploymentNote)) failures.push('v781+ promoted deployment note must preserve the live Drinks touch-size proof');
-    if (!/>=24px|24px/i.test(deploymentNote)) failures.push('v781+ promoted deployment note must preserve the live Beerpong target-size proof');
-    if (!/isolated no-write mobile Chromium/i.test(liveEvidence)) failures.push('v781+ live_routes evidence must preserve the mobile Chromium proof');
+    const promotedEvidence = [deploymentNote, staticEvidence, liveEvidence].join('\n');
+    if (!/isolated no-write (?:live )?mobile Chromium/i.test(promotedEvidence)) failures.push('v781+ promoted readiness must preserve isolated no-write live mobile Chromium proof');
+    if (!/non-GET (?:browser traffic|requests) (?:was )?intercepted locally/i.test(promotedEvidence)) failures.push('v781+ promoted readiness must preserve write-isolation proof');
+    if (!/stats-queue ReferenceError/i.test(promotedEvidence)) failures.push('v781+ promoted readiness must preserve the live Drinks runtime-error outcome');
+    if (!/>=44px|44px/i.test(promotedEvidence)) failures.push('v781+ promoted readiness must preserve the live Drinks touch-size proof');
+    if (!/>=24px|24px/i.test(promotedEvidence)) failures.push('v781+ promoted readiness must preserve the live Beerpong target-size proof');
+    if (!/isolated no-write (?:live )?mobile Chromium/i.test(liveEvidence)) failures.push('v781+ live_routes evidence must preserve the mobile Chromium proof');
     if (!/inert\/non-focusable/i.test(liveEvidence)) failures.push('v781+ live_routes evidence must preserve the hidden-float non-focusability result');
   }
 }
