@@ -15,6 +15,9 @@ const requests=[];
 const server=http.createServer((req,res)=>{
   const url=new URL(req.url,'http://127.0.0.1');
   requests.push(url.pathname+url.search);
+  if(url.pathname==='/favicon.ico'){
+    res.writeHead(204,{'cache-control':'no-store'});res.end();return;
+  }
   const alias=aliases.find(([path])=>path===url.pathname);
   if(alias){
     const disk=alias[0].replace(/^\//,'');
@@ -54,7 +57,7 @@ try{
         });
         const unexpected=requests.filter((value)=>{
           const u=new URL(value,base);
-          return u.pathname!==alias&&u.pathname!==target;
+          return u.pathname!==alias&&u.pathname!==target&&u.pathname!=='/favicon.ico';
         });
         const ok=!navError&&final.pathname===target&&final.searchParams.get('scope')===scope&&wrongFamilyRequests.length===0&&unexpected.length===0&&requests.some((value)=>new URL(value,base).pathname===target);
         if(!ok) failures.push({engine:engineName,viewport:viewportName,alias,target,navError,final:final.pathname+final.search,requests:[...requests],wrongFamilyRequests,unexpected});
@@ -67,4 +70,4 @@ try{
 } finally { await new Promise(resolve=>server.close(resolve)); }
 console.log(`V787_ALIAS_BROWSER_SUMMARY combinations=${combinations} failures=${failures.length}`);
 if(failures.length){console.error(JSON.stringify(failures,null,2));process.exit(1);}
-console.log('V787_ALIAS_BROWSER_PROOF=PASS Firefox+WebKit phone+desktop; exact family destinations; zero wrong /familie/ subresource requests.');
+console.log('V787_ALIAS_BROWSER_PROOF=PASS Firefox+WebKit phone+desktop; exact family destinations; zero wrong /familie/ subresource requests; browser-owned favicon requests ignored.');
