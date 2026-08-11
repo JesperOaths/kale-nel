@@ -15,7 +15,7 @@ assert.match(staticEvidence,/disabled-by-default activation controls/i,'v784+ st
 assert.match(staticEvidence,/valid-context-only submit wiring/i,'v784+ static evidence must preserve valid-context-only submit wiring');
 
 if(!readiness.deployment_identity?.release_candidate_version){
-  assert.match(durableEvidence,/missing token[^.]{0,180}zero activation-context calls[^.]{0,180}zero activation-write RPCs/i,'v784+ durable evidence must preserve missing-token no-write proof');
+  assert.match(durableEvidence,/missing[- ]token[^.]{0,180}zero activation-context calls[^.]{0,180}zero activation-write RPCs/i,'v784+ durable evidence must preserve missing-token no-write proof');
   assert.match(durableEvidence,/expired token|expired context/i,'v784+ durable evidence must preserve expired-token coverage');
   assert.match(durableEvidence,/expired[^.]{0,220}zero activation-write RPCs/i,'v784+ durable evidence must preserve expired-token no-write proof');
   assert.match(durableEvidence,/form disabled|activation disabled|keep the form disabled/i,'v784+ durable evidence must preserve unusable-link disabled state');

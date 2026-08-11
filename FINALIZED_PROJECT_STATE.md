@@ -1,12 +1,12 @@
 # Kalenel — finalized project state
 
-Finalized on **2026-08-10** after the v786 production-acceptance closure.
+Finalized on **2026-08-11** after the v787 cross-engine production-acceptance closure.
 
 ## Authoritative stable baseline
 
-- Finalized frontend baseline: **v786**
-- Current live frontend at freeze: **v786**
-- Frontend release merge: `81c6ba88e579188effa7342cc6a9d3790d5d0637`
+- Finalized frontend baseline: **v787**
+- Current live frontend at freeze: **v787**
+- Frontend release merge: `bbfc7c4afe232c0e9046d333e2b49b93b9159a2d`
 - Public frontend: GitHub Pages/static deployment from `main`
 - Protected admin perimeter: Cloudflare Worker build **v762** on `admin.kalenel.nl` (separate version stream from the frontend)
 - Backend/data: Supabase authenticated RPC contracts
@@ -16,13 +16,15 @@ Finalized on **2026-08-10** after the v786 production-acceptance closure.
 
 ## Final production acceptance
 
-Live v786 passed the hardened **35-route** public health suite, base and extended read-only beta checks, configured performance budgets, and a real Chromium sweep of all 35 authoritative public routes at phone and desktop size (**70 combinations**). The sweep intercepted all non-GET browser traffic locally and finished with zero page exceptions, zero console-error pages, zero same-origin GET/HEAD failures, zero stuck auth/loading states, zero whole-page overflow, zero positive-tabindex/hidden-focus violations, and zero serious/critical axe accessibility violations.
+Live v787 passed the hardened **35-route** public health suite, base and extended read-only beta checks, and configured performance budgets. The v786 full Chromium freeze remains preserved: all 35 authoritative public routes at phone and desktop size (**70 combinations**) completed with zero page exceptions, zero console-error pages, zero same-origin GET/HEAD failures, zero stuck auth/loading states, zero whole-page overflow, zero positive-tabindex/hidden-focus violations, and zero serious/critical axe accessibility violations.
 
-The Rad runtime received an additional live multi-width proof at **320, 360, 390, 430 and 760px**. The shared mobile runtime now sizes the wheel from its container with `min(100%,460px)`, no longer injects the faulty `96vw` override, and keeps the page and wheel inside the mobile panel. This closes the sole 69/70 failure from the v785 freeze attempt.
+v787 adds a cross-engine closure for the four Family compatibility aliases. Firefox and WebKit each proved `familie/index.html`, `familie/login.html`, `familie/scorer.html`, and `familie/leaderboard.html` at phone and desktop size (**16 focused combinations**). Every alias reached its exact canonical `scope=family` first destination with **zero wrong `/familie/` subresource requests**. The wrappers are redirect-only and no longer bootstrap normal runtime/config code before navigation.
+
+The prior Rad runtime multi-width proof at **320, 360, 390, 430 and 760px** remains protected. The shared mobile runtime sizes the wheel from its container with `min(100%,460px)`, does not reintroduce the faulty `96vw` override, and keeps the page and wheel inside the mobile panel.
 
 ## User-facing product surface
 
-Friends and Family scopes remain isolated. The public product includes the homepage/game launcher, profiles and account claim/login/activation flows, Klaverjas scorer/live/online/leaderboard surfaces, Toepen, Beerpong, Boerenbridge, Pikken, Paardenrace, Drinks and verification/statistics, Caute Rad, and Beurs d'Espinoza/Caute Coins surfaces. Compatibility/deep-link aliases are retained only where current runtime navigation still depends on them.
+Friends and Family scopes remain isolated. The public product includes the homepage/game launcher, profiles and account claim/login/activation flows, Klaverjas scorer/live/online/leaderboard surfaces, Toepen, Beerpong, Boerenbridge, Pikken, Paardenrace, Drinks and verification/statistics, Caute Rad, and Beurs d'Espinoza/Caute Coins surfaces. Compatibility/deep-link aliases are retained only where current runtime navigation still depends on them; redirect aliases must remain runtime-light.
 
 ## Security and operations
 
@@ -39,7 +41,8 @@ Production mutation proof is closed rather than continuously re-run: Drinks, Toe
 - Admin Worker build **v762** is not the frontend VERSION and must not be mechanically bumped with frontend releases.
 - Historical module/RPC suffixes identify contracts and are not current frontend-version markers.
 - The Rad shared mobile runtime must remain container-bounded; the removed `96vw` wheel override must not return.
+- Family redirect aliases must not load normal runtime/config dependencies before redirecting to their canonical `scope=family` destination.
 
 ## Change policy after freeze
 
-v786 is the stable finished baseline. Future work should normally be a deliberate feature or a specifically reported defect, not open-ended cleanup for its own sake. Change only the affected owner, preserve working behavior outside that scope, add or update a focused regression, bump the frontend VERSION for a real frontend change, and repeat the relevant live proof plus the standard verification suite. Consequential production mutations remain permissioned and should not be manufactured merely for testing.
+v787 is the stable finished baseline. Future work should normally be a deliberate feature or a specifically reported defect, not open-ended cleanup for its own sake. Change only the affected owner, preserve working behavior outside that scope, add or update a focused regression, bump the frontend VERSION for a real frontend change, and repeat the relevant live proof plus the standard verification suite. Consequential production mutations remain permissioned and should not be manufactured merely for testing.
