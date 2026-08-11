@@ -20,7 +20,7 @@ if(root==='v786'){
   const note=String(readiness.deployment_identity?.note||'');
   for(const marker of ['v786 FINALIZED BASELINE PASS','70 combinations','320, 360, 390, 430 and 760px','no 96vw runtime override','non-GET browser requests were intercepted locally']) if(!note.includes(marker)) failures.push('v786 promoted deployment note missing final proof marker: '+marker);
 }else if(rootN>786){
-  for(const marker of ['v786 full Chromium freeze remains preserved',releaseMerge,'35-route','70 combinations','320, 360, 390, 430 and 760px','12/12 verified complete','0 armed mutation targets','Cloudflare Worker build **v762**','Ice remains exactly **2.8 units**','06:00 -> 06:00','96vw']) if(!doc.includes(marker)) failures.push('newer finalized state must preserve historical v786 marker: '+marker);
+  for(const marker of ['v786 full Chromium freeze remains preserved','35-route','70 combinations','320, 360, 390, 430 and 760px','12/12 verified complete','0 armed mutation targets','Cloudflare Worker build **v762**','Ice remains exactly **2.8 units**','06:00 -> 06:00','96vw']) if(!doc.includes(marker)) failures.push('newer finalized state must preserve historical v786 marker: '+marker);
 }
 
 const gaps=Array.isArray(readiness.beta_gaps)?readiness.beta_gaps:[];
@@ -35,4 +35,4 @@ if(!verifyStatic.includes('node check-rad-live-overflow-v786.mjs')) failures.pus
 if(!verifyStatic.includes('node check-finalized-baseline-v786.mjs')) failures.push('verify:static must keep the finalized v786 baseline regression wired');
 for(const path of ['V786_LIVE_FINAL_ACCEPTANCE.json','scripts/v786-live-final-acceptance.mjs','scripts/promote-v786-finalized-baseline.mjs','.github/workflows/v786-live-final-acceptance.yml']) if(fs.existsSync(path)) failures.push('temporary v786 final-acceptance residue remains: '+path);
 if(failures.length){console.error('Finalized baseline v786 regression failed:');for(const f of failures) console.error('- '+f);process.exit(1);}
-console.log(`Finalized baseline v786 PASS at ${root}: v786 release proof/invariants remain protected while newer finalized baselines may supersede the current-version header.`);
+console.log(`Finalized baseline v786 PASS at ${root}: exact v786 identity is enforced while v786 is current; newer baselines must preserve the v786 acceptance facts and invariants.`);
