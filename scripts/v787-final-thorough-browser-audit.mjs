@@ -86,6 +86,9 @@ async function auditPage(path,viewportName,width,height,{focusedRad=false}={}){
     const positiveTab=[...document.querySelectorAll('[tabindex]')].filter(el=>Number(el.getAttribute('tabindex'))>0).map(el=>`${el.tagName.toLowerCase()}#${el.id||''}[tabindex=${el.getAttribute('tabindex')}]`).slice(0,20);
     const hiddenFocus=[...document.querySelectorAll('[aria-hidden="true"]:not([inert]) a[href],[aria-hidden="true"]:not([inert]) button,[aria-hidden="true"]:not([inert]) input,[aria-hidden="true"]:not([inert]) select,[aria-hidden="true"]:not([inert]) textarea,[aria-hidden="true"]:not([inert]) [tabindex]')]
       .filter(el=>!el.disabled&&el.tabIndex>=0&&visible(el)).map(el=>`${el.tagName.toLowerCase()}#${el.id||''}`).slice(0,20);
+    const counts=new Map();
+    for(const el of document.querySelectorAll('[id]')) counts.set(el.id,(counts.get(el.id)||0)+1);
+    const duplicateDomIds=[...counts].filter(([,count])=>count>1).map(([id,count])=>`${id}:${count}`).slice(0,20);
     const docWidth=Math.max(document.documentElement.scrollWidth,document.body?.scrollWidth||0);
     return {
       url:location.href,
@@ -93,11 +96,11 @@ async function auditPage(path,viewportName,width,height,{focusedRad=false}={}){
       bodyText:(document.body?.innerText||'').replace(/\s+/g,' ').trim().slice(0,220),
       authPending:document.documentElement.classList.contains('gejast-auth-pending')||document.body?.classList.contains('boot-pending'),
       docWidth,viewportWidth:innerWidth,
-      positiveTab,hiddenFocus,
+      positiveTab,hiddenFocus,duplicateDomIds,
       htmlOverflow:getComputedStyle(document.documentElement).overflowX,
       bodyOverflow:document.body?getComputedStyle(document.body).overflowX:'none'
     };
-  }).catch(()=>({url:page.url(),title:'',bodyText:'',authPending:true,docWidth:99999,viewportWidth:width,positiveTab:['evaluation-failed'],hiddenFocus:['evaluation-failed']}));
+  }).catch(()=>({url:page.url(),title:'',bodyText:'',authPending:true,docWidth:99999,viewportWidth:width,positiveTab:['evaluation-failed'],hiddenFocus:['evaluation-failed'],duplicateDomIds:['evaluation-failed']}));
 
   const familyTarget=familyTargets.get(initialPath);
   let familyMismatch='';
@@ -109,7 +112,7 @@ async function auditPage(path,viewportName,width,height,{focusedRad=false}={}){
   }
 
   const row={engine:engineName,viewport:viewportName,width,height,path,navigationError,pageErrors:uniq(pageErrors),consoleErrors:uniq(consoleErrors),badSameOrigin:uniq(badSameOrigin),failedSameOrigin:uniq(failedSameOrigin),axeSeriousCritical,axeError,familyMismatch,wrongFamilyRequests:uniq(wrongFamilyRequests),state};
-  const failed=Boolean(row.navigationError||row.pageErrors.length||row.consoleErrors.length||row.badSameOrigin.length||row.failedSameOrigin.length||row.axeSeriousCritical.length||row.axeError||row.familyMismatch||row.wrongFamilyRequests.length||row.state.authPending||!row.state.title||!row.state.bodyText||row.state.docWidth>row.state.viewportWidth+4||row.state.positiveTab.length||row.state.hiddenFocus.length||!sameSite(row.state.url));
+  const failed=Boolean(row.navigationError||row.pageErrors.length||row.consoleErrors.length||row.badSameOrigin.length||row.failedSameOrigin.length||row.axeSeriousCritical.length||row.axeError||row.familyMismatch||row.wrongFamilyRequests.length||row.state.authPending||!row.state.title||!row.state.bodyText||row.state.docWidth>row.state.viewportWidth+4||row.state.positiveTab.length||row.state.hiddenFocus.length||row.state.duplicateDomIds.length||!sameSite(row.state.url));
   rows.push(row);
   if(failed){failures.push(row);console.log('FINAL_BROWSER_FAIL '+JSON.stringify(row));}
   await context.close();
