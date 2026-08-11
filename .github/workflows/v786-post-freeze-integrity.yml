@@ -1,0 +1,35 @@
+name: v786 post-freeze integrity audit
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  integrity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Permanent finalized baseline verification
+        run: npm run verify
+      - name: Live v786 route health
+        env:
+          GEJAST_EXPECTED_VERSION: v786
+          GEJAST_SMOKE_RETRIES: 4
+        run: npm run smoke:live
+      - name: Read-only beta surfaces
+        run: |
+          npm run smoke:beta:read
+          npm run smoke:beta:extended
+      - name: Live performance budgets
+        run: npm run smoke:beta:perf
