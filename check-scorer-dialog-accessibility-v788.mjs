@@ -33,7 +33,10 @@ for (const owner of required) {
 }
 
 const dialogs = [...html.matchAll(/<div\b[^>]*\brole=["']dialog["'][^>]*>/gi)].map((match) => match[0]);
-if (dialogs.length !== 2) failures.push(`expected exactly 2 scorer role=dialog containers, got ${dialogs.length}`);
+// v788 introduced exactly the setup + bidding dialogs. Preserve that exact historical
+// baseline while allowing later releases to add additional, properly named dialogs.
+if (versionNumber === 788 && dialogs.length !== 2) failures.push(`v788 baseline expected exactly 2 scorer role=dialog containers, got ${dialogs.length}`);
+if (versionNumber > 788 && dialogs.length < 2) failures.push(`newer release must retain at least the 2 v788 scorer dialogs, got ${dialogs.length}`);
 for (const dialog of dialogs) {
   if (!/\baria-(?:label|labelledby)=["'][^"']+["']/i.test(dialog)) failures.push(`unnamed scorer dialog remains: ${dialog}`);
 }
@@ -47,4 +50,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`v788 scorer dialog accessibility PASS at ${version}: setup and bid dialogs retain visible-title accessible names; permanent verify wiring is present; no gameplay/layout owner changed.`);
+console.log(`v788 scorer dialog accessibility PASS at ${version}: setup and bid dialogs retain visible-title accessible names; every scorer role=dialog remains named; permanent verify wiring is present.`);
