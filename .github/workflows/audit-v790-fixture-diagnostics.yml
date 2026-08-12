@@ -1,0 +1,49 @@
+name: audit v790 fixture diagnostics
+
+on:
+  push:
+    branches:
+      - 'agent/full-gameplay-acceptance-v790'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Build isolated fixture
+        run: |
+          rm -rf /tmp/kalenel-audit-site
+          mkdir -p /tmp/kalenel-audit-site
+          tar --exclude=.git --exclude=node_modules -cf - . | tar -xf - -C /tmp/kalenel-audit-site
+          cat > /tmp/kalenel-audit-site/gejast-home-gate.js <<'EOF'
+          (function(){try{document.documentElement.classList.remove('gejast-auth-pending');document.documentElement.classList.add('gejast-auth-ready');if(document.body){document.body.classList.remove('boot-pending');document.body.classList.remove('page-loading');}}catch(_){}window.GEJAST_HOME_GATE={audit:true};})();
+          EOF
+          cat >> /tmp/kalenel-audit-site/gejast-config.js <<'EOF'
+          ;(function(){window.GEJAST_CONFIG=window.GEJAST_CONFIG||{};window.GEJAST_CONFIG.requireMatchEntrySession=function(){return true};window.GEJAST_CONFIG.ensurePlayerSessionOrRedirect=function(){return true};window.GEJAST_CONFIG.requirePlayerSession=function(){return true};})();
+          EOF
+      - name: Start isolated site
+        run: |
+          cd /tmp/kalenel-audit-site
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/kalenel-audit-http.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:4173/VERSION >/dev/null && exit 0
+            sleep 1
+          done
+          exit 1
+      - name: Diagnose fixtures
+        env:
+          AUDIT_BASE_URL: http://127.0.0.1:4173
+        run: node scripts/audit-v790-fixture-diagnostics.mjs
