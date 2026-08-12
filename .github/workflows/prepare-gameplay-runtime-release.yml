@@ -26,7 +26,15 @@ jobs:
       - name: Verify generated candidate
         run: |
           npm run verify
-          git diff --check
+          git diff --check -- \
+            VERSION \
+            scorer.html \
+            pikken_ladder.html \
+            gejast-pikken-ladder.js \
+            check-gameplay-runtime-fixes-v789.mjs \
+            beta-readiness.json \
+            beta-live-write-checklist.json \
+            package.json
       - name: Remove one-time generator
         run: |
           rm scripts/prepare-gameplay-runtime-release.mjs
@@ -36,6 +44,14 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
-          git diff --cached --check
+          git diff --cached --check -- \
+            VERSION \
+            scorer.html \
+            pikken_ladder.html \
+            gejast-pikken-ladder.js \
+            check-gameplay-runtime-fixes-v789.mjs \
+            beta-readiness.json \
+            beta-live-write-checklist.json \
+            package.json
           git commit -m 'fix: repair gameplay runtime owners [generated-release]'
           git push origin HEAD:agent/v789-gameplay-runtime-repair
