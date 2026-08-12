@@ -1,0 +1,24 @@
+name: v788 scorer dialog browser proof
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  proof:
+    if: github.head_ref == 'agent/v788-scorer-dialog-accessibility'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save playwright
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: node scripts/v788-scorer-dialog-browser-proof.mjs
+      - run: |
+          git config core.whitespace cr-at-eol
+          git diff --check
