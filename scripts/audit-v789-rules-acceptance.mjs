@@ -122,21 +122,27 @@ async function paardenraceRules(browser,engine){
     const cardProof=await page.evaluate(()=>({heart:GEJAST_PAARDENRACE.renderFaceUpCard('QH'),diamond:GEJAST_PAARDENRACE.renderFaceUpCard('10D'),spade:GEJAST_PAARDENRACE.renderFaceUpCard('AS'),club:GEJAST_PAARDENRACE.renderFaceUpCard('KC')}));
     assert.match(cardProof.heart,/pr-open-card red/); assert.match(cardProof.diamond,/pr-open-card red/); assert.doesNotMatch(cardProof.spade,/pr-open-card red/); assert.doesNotMatch(cardProof.club,/pr-open-card red/);
     assert.equal(await page.locator('#drawBtn').isVisible(),true,'Host draw control must be visible');
-    const visibleKick=page.locator('[data-kick-player]:visible');
+    await page.locator('#mobileDock [data-drawer-target="players"]').click();
+    await page.waitForFunction(()=>document.querySelector('#mobileDrawer')?.classList.contains('show'),{timeout:3000});
+    const visibleKick=page.locator('#drawerBody [data-kick-player]:visible');
     assert.equal(await visibleKick.count(),1,'Exactly one responsive kick control should be visible to host');
     await visibleKick.first().click();
     const confirms=await page.evaluate(()=>window.__confirmMessages);
     assert.ok(confirms.some(m=>/uit het spel gooien\?/i.test(m)),'Kick confirmation must be Dutch and explicit');
+    await page.locator('#drawerCloseBtn').click();
 
     state.paard.host=false;
     await page.waitForTimeout(1950);
     assert.equal(await page.locator('#drawBtn').isVisible(),false,'Participant must not see host draw control');
-    assert.equal(await page.locator('[data-kick-player]:visible').count(),0,'Participant must not see host kick controls');
+    await page.locator('#mobileDock [data-drawer-target="players"]').click();
+    assert.equal(await page.locator('#drawerBody [data-kick-player]:visible').count(),0,'Participant must not see host kick controls');
+    await page.locator('#drawerCloseBtn').click();
 
     state.paard.host=true; state.paard.stage='nominations';
     await page.waitForTimeout(1950);
-    assert.match(await page.locator('#desktopNominationBox').innerText(),/Jouw budget[\s\S]*4 Bakken/i,'Nomination budget must expose 2x a 2-Bakken starting wager');
-    assert.doesNotMatch(await page.locator('#desktopNominationBox').innerText(),/Ada[\s\S]*totaal verschuldigd/i,'Winner must not nominate self');
+    await page.locator('#mobileDock [data-drawer-target="nominations"]').click();
+    assert.match(await page.locator('#drawerBody').innerText(),/Jouw budget[\s\S]*4 Bakken/i,'Nomination budget must expose 2x a 2-Bakken starting wager');
+    assert.doesNotMatch(await page.locator('#drawerBody').innerText(),/Ada[\s\S]*totaal verschuldigd/i,'Winner must not nominate self');
     assert.equal(await page.getByText('Noodrem',{exact:false}).count(),0,'Obsolete Noodrem control/text must be absent');
     const mobileLabels=await page.locator('#mobileDock button').allTextContents();
     assert.deepEqual(mobileLabels.map(s=>s.trim()),['Spelers','Log','Nomineer'],'Mobile dock must not contain obsolete Race bar');
