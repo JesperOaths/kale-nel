@@ -36,7 +36,7 @@ assert.ok(start>=0&&end>start,'Pikken legalOptions owner missing');
 const legalOptions=vm.runInNewContext('('+source.slice(start,end).trim()+')');
 const key=(x)=>x.c+':'+x.f;
 const base=legalOptions(null,12);
-assert.deepEqual(base.slice(0,6).map(x=>x.label),['1 x 2','1 x 3','1 x 4','1 x 5','1 x 6','1 x pik'],'base bid ordering changed');
+assert.equal(JSON.stringify(base.slice(0,6).map(x=>x.label)),JSON.stringify(['1 x 2','1 x 3','1 x 4','1 x 5','1 x 6','1 x pik']),'base bid ordering changed');
 const below=legalOptions({count:4,face:6},12).map(key);
 assert.equal(below.includes('2:1'),false,'2 x pik must not unlock below 5 regular');
 const threshold=legalOptions({count:5,face:6},12).map(key);
