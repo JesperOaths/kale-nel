@@ -1,0 +1,32 @@
+#!/usr/bin/env node
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+
+const version=fs.readFileSync('VERSION','utf8').trim();
+const versionNumber=Number(version.match(/^v(\d+)$/)?.[1]||0);
+assert.ok(versionNumber>=790,'Pikken pik-conversion invariant requires frontend v790+');
+const source=fs.readFileSync('gejast-pikken-live.js','utf8');
+assert.match(source,/const order=\[2,3,4,5,6,1\];/,'Pikken face order must remain 2<3<4<5<6<pik');
+assert.match(source,/if\(f!==1 && c>=5\) add\(2,1\);/,'Pikken must expose 2 x pik once at least 5 regular is bid');
+const start=source.indexOf('function legalOptions(bid,total){');
+const end=source.indexOf('\n  function clearParticipantAndReturn',start);
+assert.ok(start>=0&&end>start,'Pikken legalOptions owner missing');
+const legalOptions=vm.runInNewContext('('+source.slice(start,end).trim()+')');
+const key=(x)=>x.c+':'+x.f;
+const base=legalOptions(null,12);
+assert.equal(JSON.stringify(base.slice(0,6).map(x=>x.label)),JSON.stringify(['1 x 2','1 x 3','1 x 4','1 x 5','1 x 6','1 x pik']),'base bid ordering changed');
+const below=legalOptions({count:4,face:6},12).map(key);
+assert.equal(below.includes('2:1'),false,'2 x pik must not unlock below 5 regular');
+const threshold=legalOptions({count:5,face:6},12).map(key);
+assert.equal(threshold.filter(x=>x==='2:1').length,1,'5 regular must unlock exactly one 2 x pik option');
+const above=legalOptions({count:6,face:2},12).map(key);
+assert.equal(above.filter(x=>x==='2:1').length,1,'6+ regular must retain the legal 2 x pik conversion');
+const pikBid=legalOptions({count:5,face:1},12).map(key);
+assert.equal(pikBid.includes('2:1'),false,'pik-to-lower-pik must not be generated');
+assert.match(source,/const \[c,f\]=String\(\$\('bidSelect'\)\?\.value\|\|''\)\.split\(':'\)\.map\(Number\)/,'selected bid must still parse count and face from the established bid selector');
+assert.match(source,/api\.placeBid\(gameId,c,f\)/,'selected bid must still use the established scoped bid contract');
+const checklist=JSON.parse(fs.readFileSync('beta-live-write-checklist.json','utf8'));
+assert.equal(checklist.site_version,version,'live-write checklist must follow release version');
+assert.deepEqual(checklist.items,[],'Pikken frontend repair must not arm production writes');
+console.log('Pikken v790 bid-conversion regression PASS: base order preserved; 2 x pik unlocks at 5 regular only; write targets remain unarmed.');

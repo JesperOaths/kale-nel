@@ -71,6 +71,7 @@
     if(!c||!f){ for(let n=1;n<=Math.max(total,1);n++){ for(let x=2;x<=6;x++) add(n,x); add(n,1); } return out; }
     const order=[2,3,4,5,6,1];
     const idx=order.indexOf(f);
+    if(f!==1 && c>=5) add(2,1);
     order.slice(Math.max(idx+1,0)).forEach((x)=>add(c,x));
     for(let n=c+1;n<=total;n++) order.forEach((x)=>add(n,x));
     return out;
