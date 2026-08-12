@@ -78,7 +78,9 @@ const ladderHtml = fs.readFileSync('pikken_ladder.html','utf8');
 assert.match(ladderHtml, /gejast-pikken-ladder\\.js\\?v\\d+/, 'Pikken ladder must load its game-owned renderer');
 assert.match(ladderHtml, /GEJAST_PIKKEN_LADDER&&window\\.GEJAST_PIKKEN_LADDER\\.load\\(\\)/, 'Pikken ladder must boot the game-owned renderer');
 assert.doesNotMatch(ladderHtml, /GEJAST_DESPIMARKT[^\\n]*loadLadderPage\\('pikken'\\)/, 'Pikken ladder must not call the incompatible Beurs ladder renderer');
-for (const id of ['ladderStatus','ladderOverviewGrid','ladderStoryGrid','ladderRows','ladderHistory','ladderSectionsWrap','ladderTablesWrap','ladderFormulaNote']) assert.match(ladderHtml, new RegExp('id=[\\"\\\\\']' + id + '[\\"\\\\\']'), 'Pikken ladder DOM owner missing #' + id);
+for (const id of ['ladderStatus','ladderOverviewGrid','ladderStoryGrid','ladderRows','ladderHistory','ladderSectionsWrap','ladderTablesWrap','ladderFormulaNote']) {
+  assert.ok(ladderHtml.includes('id="' + id + '"') || ladderHtml.includes("id='" + id + "'"), 'Pikken ladder DOM owner missing #' + id);
+}
 
 const renderer = fs.readFileSync('gejast-pikken-ladder.js','utf8');
 assert.match(renderer, /callRpc\\('get_pikken_stats_scoped'/, 'Pikken ladder must use the scoped Pikken stats contract');
