@@ -3,17 +3,24 @@ import assert from 'node:assert/strict';
 import { chromium, firefox, webkit } from 'playwright';
 
 const BASE=process.env.PROOF_BASE_URL||'http://127.0.0.1:4173';
+const ORIGIN=new URL(BASE).origin;
 const engines=[['chromium',chromium],['firefox',firefox],['webkit',webkit]];
 const viewports=[['mobile',{width:390,height:844}],['desktop',{width:1366,height:768}]];
 const failures=[]; const passes=[];
 const NAMES=['Ada','Bram','Caro','Daan','Evi','Fons','Gijs','Hugo'];
-const CORS={
-  'access-control-allow-origin':'*',
-  'access-control-allow-methods':'GET,POST,OPTIONS',
-  'access-control-allow-headers':'apikey,authorization,content-type,prefer,x-client-info,x-gejast-scope,x-gejast-session',
-  'access-control-expose-headers':'content-range'
-};
 
+function corsHeaders(req,extra={}){
+  const requested=req.headers()['access-control-request-headers']||'apikey,authorization,content-type,accept';
+  return {
+    'access-control-allow-origin':ORIGIN,
+    'access-control-allow-methods':'GET,POST,OPTIONS',
+    'access-control-allow-headers':requested,
+    'access-control-allow-credentials':'true',
+    'access-control-expose-headers':'content-range',
+    'vary':'Origin, Access-Control-Request-Headers',
+    ...extra
+  };
+}
 function rpcName(url){try{return decodeURIComponent(new URL(url).pathname.match(/\/rest\/v1\/rpc\/([^/?]+)/)?.[1]||'');}catch{return '';}}
 function playerRows(){return NAMES.map((name,i)=>({player_id:`p${i+1}`,id:`p${i+1}`,display_name:name,player_name:name,public_display_name:name,login_active:true,active:true,site_scope:'friends'}));}
 function mockRpc(name){
@@ -42,18 +49,18 @@ async function runCase(browser,engine,viewportName,viewport){
     const req=route.request(); let u; try{u=new URL(req.url());}catch{return route.continue();}
     if(u.hostname.includes('supabase.co')){
       if(req.method()==='OPTIONS'){
-        calls.push({name:`PREFLIGHT:${u.pathname}`,method:'OPTIONS'});
-        return route.fulfill({status:204,headers:CORS,body:''});
+        calls.push({name:`PREFLIGHT:${u.pathname}`,method:'OPTIONS',requestedHeaders:req.headers()['access-control-request-headers']||''});
+        return route.fulfill({status:204,headers:corsHeaders(req),body:''});
       }
       if(u.pathname.includes('/rest/v1/rpc/')){
         const name=rpcName(req.url()); let body={}; try{body=req.postDataJSON()||{};}catch{}
         calls.push({name,method:req.method(),body});
-        return route.fulfill({status:200,contentType:'application/json',headers:CORS,body:JSON.stringify(mockRpc(name,body))});
+        return route.fulfill({status:200,contentType:'application/json',headers:corsHeaders(req),body:JSON.stringify(mockRpc(name,body))});
       }
       if(req.method()==='GET'&&u.pathname==='/rest/v1/allowed_usernames'){
         const allowed=playerRows().map(r=>({...r,status:'active',has_pin:true,pin_is_set:true,activated:true,is_active:true}));
         calls.push({name:`READ:${req.method()}:${u.pathname}`,method:req.method()});
-        return route.fulfill({status:200,contentType:'application/json',headers:{...CORS,'content-range':`0-${Math.max(0,allowed.length-1)}/${allowed.length}`},body:JSON.stringify(allowed)});
+        return route.fulfill({status:200,contentType:'application/json',headers:corsHeaders(req,{'content-range':`0-${Math.max(0,allowed.length-1)}/${allowed.length}`}),body:JSON.stringify(allowed)});
       }
       calls.push({name:`ESCAPE:${req.method()}:${u.pathname}`,method:req.method()});
       return route.abort('blockedbyclient');
