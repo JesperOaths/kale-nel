@@ -140,7 +140,7 @@
       return true;
     } catch (_) { return false; }
   }
-  window.GEJAST_PIKKEN_CONTRACT = { VERSION:'v787', scope, sessionToken, requireSession, rpc, cleanCode, createLobby, joinLobby, getState, setReady, updateLobbyConfig, startGame, placeBid, rejectBid, castVote, leaveGame, destroyGame, rpcFirst, openLobbies, liveMatches, myActive, stats, cleanupStale, recordCompleted, abandonAndRecord, abandonAndRecordKeepalive };
+  window.GEJAST_PIKKEN_CONTRACT = { VERSION:'v788', scope, sessionToken, requireSession, rpc, cleanCode, createLobby, joinLobby, getState, setReady, updateLobbyConfig, startGame, placeBid, rejectBid, castVote, leaveGame, destroyGame, rpcFirst, openLobbies, liveMatches, myActive, stats, cleanupStale, recordCompleted, abandonAndRecord, abandonAndRecordKeepalive };
 })();
 
 
