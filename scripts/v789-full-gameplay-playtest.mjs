@@ -138,7 +138,7 @@ async function caseRun(engine, browser, label, fn) {
 }
 
 async function playScorer(context) {
-  const {page,pageErrors} = await openPage(context, '/scorer.html?v789play=1');
+  const {page,pageErrors} = await openPage(context, '/scorer.html?auditplay=1');
   await page.locator('#setupOverlay.show').waitFor({timeout:8000});
   await selectByText(page, '#playerW1', 'Ada');
   await selectByText(page, '#playerZ1', 'Bram');
@@ -171,7 +171,7 @@ async function assertVisibleEnabled(page, selector) {
 }
 
 async function playToepen(context, calls) {
-  const {page,pageErrors} = await openPage(context, '/toepen.html?v789play=1');
+  const {page,pageErrors} = await openPage(context, '/toepen.html?auditplay=1');
   await page.locator('#setupDialog').waitFor({state:'visible',timeout:8000});
   for (const [i,name] of ['Ada','Bram','Caro','Daan'].entries()) await selectByText(page, `#setupPlayers select[data-seat="${i}"]`, name);
   await page.locator('#target').selectOption('10');
@@ -195,7 +195,7 @@ async function playToepen(context, calls) {
 }
 
 async function playBoerenbridge(context) {
-  const {page,pageErrors} = await openPage(context, '/boerenbridge.html?v789play=1');
+  const {page,pageErrors} = await openPage(context, '/boerenbridge.html?auditplay=1');
   await page.locator('#setupOverlay.show').waitFor({timeout:8000});
   await page.locator('#playerCountInput').selectOption('4');
   for (const [i,name] of ['Ada','Bram','Caro','Daan'].entries()) await selectByText(page, `#playerFields select[data-player-index="${i}"]`, name);
@@ -219,7 +219,7 @@ async function playBoerenbridge(context) {
 }
 
 async function playBeerpong(context, calls) {
-  const {page,pageErrors} = await openPage(context, '/beerpong.html?v789play=1');
+  const {page,pageErrors} = await openPage(context, '/beerpong.html?auditplay=1');
   for (const [selector,name] of [['#teamA1','Ada'],['#teamA2','Bram'],['#teamB1','Caro'],['#teamB2','Daan']]) await selectByText(page, selector, name);
   await page.locator('#cupsA').fill('10');
   await page.locator('#cupsB').fill('6');
@@ -236,7 +236,7 @@ async function playBeerpong(context, calls) {
 }
 
 async function playRad(context) {
-  const {page,pageErrors} = await openPage(context, '/rad.html?v789play=1');
+  const {page,pageErrors} = await openPage(context, '/rad.html?auditplay=1');
   await page.evaluate(() => { Math.random = () => 0.001; });
   await page.locator('#spinBtn').click();
   await page.waitForFunction(() => !document.querySelector('#resultBox')?.textContent.includes('Nog niet gedraaid'), null, {timeout:12000});
@@ -247,7 +247,7 @@ async function playRad(context) {
 }
 
 async function playPaardenrace(context, calls) {
-  const {page,pageErrors} = await openPage(context, '/paardenrace.html?v789play=1');
+  const {page,pageErrors} = await openPage(context, '/paardenrace.html?auditplay=1');
   await page.locator('#createBtn').click();
   await page.waitForFunction(() => document.querySelector('#roomCodeLabel')?.textContent === 'PR789', null, {timeout:6000});
   assert.ok(calls.some(c=>c.name==='create_paardenrace_room_fast_v687'), 'Paardenrace create RPC not called');
@@ -268,7 +268,7 @@ async function playPaardenrace(context, calls) {
 }
 
 async function playPikken(context, calls) {
-  const {page,pageErrors} = await openPage(context, '/pikken.html?v789play=1');
+  const {page,pageErrors} = await openPage(context, '/pikken.html?auditplay=1');
   await page.locator('#pkCreateLobbyBtn').click();
   await page.waitForTimeout(700);
   assert.ok(calls.some(c=>c.name==='pikken_create_lobby_fast_v687'), 'Pikken create RPC not called');
@@ -287,7 +287,7 @@ async function playPikken(context, calls) {
 }
 
 async function playKlaverjasEngine(context) {
-  const {page,pageErrors} = await openPage(context, '/klaverjas_online.html?v789play=1');
+  const {page,pageErrors} = await openPage(context, '/klaverjas_online.html?auditplay=1');
   const proof = await page.evaluate(() => {
     const rt = window.GEJAST_KLAVERJAS_ONLINE;
     if (!rt) return {missing:true};
@@ -318,7 +318,7 @@ const SURFACES = [
 ];
 async function smokeAllSurfaces(context) {
   for (const path of SURFACES) {
-    const {page,pageErrors} = await openPage(context, `${path}?v789play=1`);
+    const {page,pageErrors} = await openPage(context, `${path}?auditplay=1`);
     const state = await page.evaluate(() => ({title:document.title.trim(), text:(document.body?.innerText||'').trim(), width:document.documentElement.scrollWidth, viewport:innerWidth}));
     assert.ok(state.title, `${path} missing title`);
     assert.ok(state.text.length > 8, `${path} effectively empty`);
