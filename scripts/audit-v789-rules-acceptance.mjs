@@ -91,8 +91,8 @@ async function pikkenRules(browser,engine){
   try{
     const {page,errors}=await openPage(context,'/pikken_live.html?client_match_id=pk-audit&auditplay=1');
     await page.waitForFunction(()=>document.querySelector('#diceFraction')?.textContent==='12/12',{timeout:6000});
-    assert.equal(await page.locator('#myDiceBody img.die').count(),6,'Pikken must render six private dice');
-    assert.equal(await page.locator('#myDiceBody img.pik').count(),1,'Pikken hand must visually identify one as pik/joker');
+    assert.equal(await page.locator('#diceStateNote img.die').count(),6,'Pikken must render six private dice');
+    assert.equal(await page.locator('#diceStateNote img.pik').count(),1,'Pikken hand must visually identify one as pik/joker');
     const initial=await page.locator('#bidSelect option').allTextContents();
     assert.deepEqual(initial.slice(0,6),['1 x 2','1 x 3','1 x 4','1 x 5','1 x 6','1 x pik'],'Pikken base face order must be 2<3<4<5<6<pik');
 
@@ -122,15 +122,16 @@ async function paardenraceRules(browser,engine){
     const cardProof=await page.evaluate(()=>({heart:GEJAST_PAARDENRACE.renderFaceUpCard('QH'),diamond:GEJAST_PAARDENRACE.renderFaceUpCard('10D'),spade:GEJAST_PAARDENRACE.renderFaceUpCard('AS'),club:GEJAST_PAARDENRACE.renderFaceUpCard('KC')}));
     assert.match(cardProof.heart,/pr-open-card red/); assert.match(cardProof.diamond,/pr-open-card red/); assert.doesNotMatch(cardProof.spade,/pr-open-card red/); assert.doesNotMatch(cardProof.club,/pr-open-card red/);
     assert.equal(await page.locator('#drawBtn').isVisible(),true,'Host draw control must be visible');
-    assert.equal(await page.locator('[data-kick-player]').count(),1,'Host must receive kick control for other player');
-    await page.locator('[data-kick-player]').click();
+    const visibleKick=page.locator('[data-kick-player]:visible');
+    assert.equal(await visibleKick.count(),1,'Exactly one responsive kick control should be visible to host');
+    await visibleKick.first().click();
     const confirms=await page.evaluate(()=>window.__confirmMessages);
     assert.ok(confirms.some(m=>/uit het spel gooien\?/i.test(m)),'Kick confirmation must be Dutch and explicit');
 
     state.paard.host=false;
     await page.waitForTimeout(1950);
     assert.equal(await page.locator('#drawBtn').isVisible(),false,'Participant must not see host draw control');
-    assert.equal(await page.locator('[data-kick-player]').count(),0,'Participant must not see host kick controls');
+    assert.equal(await page.locator('[data-kick-player]:visible').count(),0,'Participant must not see host kick controls');
 
     state.paard.host=true; state.paard.stage='nominations';
     await page.waitForTimeout(1950);
