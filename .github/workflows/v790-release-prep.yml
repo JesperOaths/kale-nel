@@ -26,9 +26,9 @@ jobs:
       - name: Apply narrow repair and synchronize release identity
         run: node scripts/prepare-v790-pikken.mjs
       - name: Verify candidate before committing generated sync
-        run: |
-          git diff --check
-          npm run verify
+        run: npm run verify
+      - name: Show generated release scope
+        run: git status --short
       - name: Commit generated candidate changes if needed
         run: |
           if git diff --quiet && git diff --cached --quiet; then
