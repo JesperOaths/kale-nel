@@ -1,9 +1,9 @@
-name: audit v789 rules acceptance
+name: audit v790 rules acceptance
 
 on:
   push:
     branches:
-      - 'agent/full-gameplay-acceptance-v789'
+      - 'agent/full-gameplay-acceptance-v790'
   workflow_dispatch:
 
 permissions:
