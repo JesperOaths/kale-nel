@@ -162,7 +162,7 @@ async function drinksFlow(browser,engine){
     await page.getByRole('button',{name:/Ice/i}).first().click(); await page.locator('#speedSeconds').fill('3.7'); await page.locator('#submitSpeed').click();
     await page.waitForFunction(()=>document.querySelector('#speedMine')?.textContent?.includes('3.7'),{timeout:8000});
     assert.ok(state.drinks.actions.includes('create_speed_attempt'),'Drinks Speed did not use preferred create action');
-    await page.locator('[data-speed-cancel="101"]').click(); await page.waitForFunction(()=>!document.querySelector('[data-speed-cancel="101"]'),{timeout:8000});
+    await page.locator('[data-cancel-speed="101"]').click(); await page.waitForFunction(()=>!document.querySelector('[data-cancel-speed="101"]'),{timeout:8000});
     assert.ok(state.drinks.actions.includes('cancel_speed_attempt'),'Drinks Speed did not use preferred cancel action');
     await page.locator('[data-speed-verify="102"]').click(); await page.waitForFunction(()=>!document.querySelector('[data-speed-verify="102"]'),{timeout:8000});
     assert.ok(state.drinks.actions.includes('verify_speed_attempt'),'Drinks Speed did not use preferred verify action');
