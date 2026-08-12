@@ -12,7 +12,7 @@ permissions:
 jobs:
   rules-acceptance:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
@@ -66,9 +66,22 @@ jobs:
           cat /tmp/kalenel-audit-http.log
           exit 1
       - name: Deep Pikken and Paardenrace acceptance
+        id: deep_rules
+        continue-on-error: true
         env:
           AUDIT_BASE_URL: http://127.0.0.1:4173
         run: node scripts/audit-v789-rules-acceptance.mjs
+      - name: Beurs Balzaal and Drinks Speed acceptance
+        id: extra_systems
+        continue-on-error: true
+        env:
+          AUDIT_BASE_URL: http://127.0.0.1:4173
+        run: node scripts/audit-v789-extra-systems.mjs
+      - name: Enforce acceptance results
+        if: always()
+        run: |
+          test "${{ steps.deep_rules.outcome }}" = "success" || { echo "Deep rules acceptance failed"; exit 1; }
+          test "${{ steps.extra_systems.outcome }}" = "success" || { echo "Extra systems acceptance failed"; exit 1; }
       - name: Prove repository stayed clean
         if: always()
         run: |
