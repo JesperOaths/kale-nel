@@ -22,7 +22,9 @@ jobs:
       - name: Install pinned dependencies
         run: npm ci
       - name: Generate release-owned edits
-        run: node scripts/prepare-gameplay-runtime-release.mjs
+        run: |
+          node scripts/prepare-gameplay-runtime-release.mjs
+          sed -i 's/[[:space:]]\+$//' pikken_ladder.html
       - name: Verify generated candidate
         run: |
           npm run verify
