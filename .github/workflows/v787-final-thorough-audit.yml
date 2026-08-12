@@ -19,6 +19,8 @@ jobs:
         run: npm ci
       - name: Permanent repository verification
         run: npm run verify
+      - name: Final static closure scan
+        run: node scripts/v787-final-static-closure-audit.mjs
       - name: Live v787 hardened route suite
         env:
           GEJAST_EXPECTED_VERSION: v787
@@ -36,7 +38,7 @@ jobs:
         run: npm run smoke:games
       - name: Install browser audit dependencies
         run: |
-          npm install --no-save playwright @axe-core/playwright
+          npm install --no-save playwright @axe-core/playwright axe-core
           npx playwright install --with-deps chromium firefox webkit
       - name: 210-case Chromium Firefox WebKit phone desktop sweep
         run: node scripts/v787-final-thorough-live-audit.mjs
