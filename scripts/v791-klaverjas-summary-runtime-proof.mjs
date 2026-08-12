@@ -40,6 +40,11 @@ async function runCase(browser,engine,viewportName,viewport){
         calls.push({name,method:req.method(),body});
         return route.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:JSON.stringify(mockRpc(name,body))});
       }
+      if(req.method()==='GET'&&u.pathname==='/rest/v1/allowed_usernames'){
+        const allowed=playerRows().map(r=>({...r,status:'active',has_pin:true,pin_is_set:true,activated:true,is_active:true}));
+        calls.push({name:`READ:${req.method()}:${u.pathname}`,method:req.method()});
+        return route.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':'*','content-range':`0-${Math.max(0,allowed.length-1)}/${allowed.length}`},body:JSON.stringify(allowed)});
+      }
       calls.push({name:`ESCAPE:${req.method()}:${u.pathname}`,method:req.method()});
       return route.abort('blockedbyclient');
     }
@@ -89,7 +94,8 @@ async function runCase(browser,engine,viewportName,viewport){
     assert.equal(await page.locator('#a1').inputValue(),'Ada');
     assert.equal(await page.locator('#b1').inputValue(),'Bram');
     assert.ok(Number(await page.locator('#scoreA').inputValue())>Number(await page.locator('#scoreB').inputValue()),'handoff totals must preserve winning side');
-    assert.ok(calls.every(c=>!String(c.name).startsWith('ESCAPE:')),`unexpected Supabase escape: ${JSON.stringify(calls.filter(c=>String(c.name).startsWith('ESCAPE:')))}`);
+    const escapes=calls.filter(c=>String(c.name).startsWith('ESCAPE:'));
+    assert.deepEqual(escapes,[],`unexpected Supabase escape: ${JSON.stringify(escapes)}`);
     assert.deepEqual(errors,[],`page errors after handoff: ${errors.join(' | ')}`);
     passes.push(`${engine}:${viewportName}`); console.log(`PROOF_PASS ${engine} ${viewportName}`);
     await page.close();
