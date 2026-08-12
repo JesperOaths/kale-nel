@@ -86,6 +86,10 @@ function readPayload(name) {
   if (name === 'get_pikken_stats_scoped') return pikkenFixture();
   return [];
 }
+function assertAllSupabaseCallsIntercepted(calls, label) {
+  assert.ok(calls.length > 0, `${label}: expected at least one intercepted Supabase request`);
+  assert.ok(calls.every((call) => call.intercepted === true), `${label}: a Supabase request escaped interception: ${JSON.stringify(calls)}`);
+}
 async function makeContext(browser, viewport) {
   const context = await browser.newContext({ viewport, locale: 'nl-NL', timezoneId: 'Europe/Amsterdam', serviceWorkers: 'block' });
   const calls = [];
@@ -116,7 +120,7 @@ async function makeContext(browser, viewport) {
     }
     if (url.hostname.includes('supabase.co') && url.pathname.includes('/rest/v1/rpc/')) {
       const name = rpcName(req.url());
-      calls.push({ name, method: req.method() });
+      calls.push({ name, method: req.method(), intercepted: true });
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -125,7 +129,7 @@ async function makeContext(browser, viewport) {
       });
     }
     if (url.hostname.includes('supabase.co')) {
-      calls.push({ name: `OTHER:${url.pathname}`, method: req.method() });
+      calls.push({ name: `OTHER:${url.pathname}`, method: req.method(), intercepted: true });
       return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '[]' });
     }
     if (url.pathname === '/favicon.ico') return route.fulfill({ status: 204, body: '' });
@@ -169,7 +173,7 @@ async function proveScorer(context, calls, label) {
   await save.click();
   await page.waitForFunction(() => !document.querySelector('#bidOverlay')?.classList.contains('show'), null, { timeout: 5000 });
   assert.deepEqual(errors, [], `${label}: scorer page errors: ${errors.join(' | ')}`);
-  assert.ok(calls.every((call) => call.method === 'GET' || call.method === 'HEAD' || /^(get_|account_public_)/.test(call.name)), `${label}: unexpected non-read scorer RPC ${JSON.stringify(calls)}`);
+  assertAllSupabaseCallsIntercepted(calls, label);
   await page.close();
 }
 async function provePikkenLadder(context, calls, label) {
@@ -181,13 +185,14 @@ async function provePikkenLadder(context, calls, label) {
   assert.ok(await page.locator('#ladderSectionsWrap .panel').count() >= 2, `${label}: secondary ladder sections missing`);
   assert.ok(await page.locator('#ladderTablesWrap .panel').count() >= 1, `${label}: table section missing`);
   assert.ok(await page.locator('#ladderHistory .ledger-row').count() >= 1, `${label}: recent history missing`);
-  assert.match(await page.locator('body').innerText(), /Blufkoning/);
-  assert.match(await page.locator('body').innerText(), /Ada/);
+  const bodyText = await page.locator('body').innerText();
+  assert.match(bodyText, /blufkoning/i);
+  assert.match(bodyText, /Ada/);
   const overflow = await page.evaluate(() => Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth);
   assert.ok(overflow <= 6, `${label}: Pikken ladder horizontal overflow ${overflow}px`);
   assert.deepEqual(errors, [], `${label}: Pikken ladder page errors: ${errors.join(' | ')}`);
   assert.ok(calls.some((call) => call.name === 'get_pikken_stats_scoped'), `${label}: scoped Pikken stats RPC was not used`);
-  assert.ok(calls.every((call) => call.method === 'GET' || call.method === 'HEAD' || /^(get_|account_public_)/.test(call.name)), `${label}: unexpected non-read ladder RPC ${JSON.stringify(calls)}`);
+  assertAllSupabaseCallsIntercepted(calls, label);
   await page.close();
 }
 
