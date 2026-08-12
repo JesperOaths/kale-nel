@@ -30,10 +30,37 @@ jobs:
         run: npm run verify
       - name: Install isolated browser dependencies
         run: |
-          npm install --no-save playwright
+          npm install --no-save --package-lock=false playwright
           npx playwright install --with-deps chromium firefox webkit
-      - name: Start local static site
+      - name: Build isolated browser fixture
         run: |
+          rm -rf /tmp/v789-site
+          mkdir -p /tmp/v789-site
+          tar --exclude=.git --exclude=node_modules -cf - . | tar -xf - -C /tmp/v789-site
+          cat > /tmp/v789-site/gejast-home-gate.js <<'EOF'
+          (function(){
+            try {
+              document.documentElement.classList.remove('gejast-auth-pending');
+              document.documentElement.classList.add('gejast-auth-ready');
+              if (document.body) {
+                document.body.classList.remove('boot-pending');
+                document.body.classList.remove('page-loading');
+              }
+            } catch (_) {}
+            window.GEJAST_HOME_GATE = { audit: true };
+          })();
+          EOF
+          cat >> /tmp/v789-site/gejast-config.js <<'EOF'
+          ;(function(){
+            window.GEJAST_CONFIG = window.GEJAST_CONFIG || {};
+            window.GEJAST_CONFIG.requireMatchEntrySession = function(){ return true; };
+            window.GEJAST_CONFIG.ensurePlayerSessionOrRedirect = function(){ return true; };
+            window.GEJAST_CONFIG.requirePlayerSession = function(){ return true; };
+          })();
+          EOF
+      - name: Start isolated local static site
+        run: |
+          cd /tmp/v789-site
           python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/v789-http.log 2>&1 &
           echo $! >/tmp/v789-http.pid
           for i in $(seq 1 30); do
@@ -47,6 +74,7 @@ jobs:
           V789_BASE_URL: http://127.0.0.1:4173
         run: node scripts/v789-full-gameplay-playtest.mjs
       - name: Prove repository stayed clean
+        if: always()
         run: |
           git diff --check
           git status --short
