@@ -1,0 +1,47 @@
+name: v787 final thorough production audit
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Permanent repository verification
+        run: npm run verify
+      - name: Live v787 hardened route suite
+        env:
+          GEJAST_EXPECTED_VERSION: v787
+          GEJAST_SMOKE_RETRIES: '2'
+        run: npm run smoke:live
+      - name: Live read-only beta surfaces
+        run: |
+          npm run smoke:beta:read
+          npm run smoke:beta:extended
+      - name: Live performance budgets
+        run: npm run smoke:beta:perf
+      - name: Live push health read-only probe
+        run: npm run smoke:push
+      - name: Live game surface read-only probe
+        run: npm run smoke:games
+      - name: Install browser audit dependencies
+        run: |
+          npm install --no-save playwright @axe-core/playwright
+          npx playwright install --with-deps chromium firefox webkit
+      - name: 210-case Chromium Firefox WebKit phone desktop sweep
+        run: node scripts/v787-final-thorough-live-audit.mjs
+      - name: Ensure audit made no repository mutation
+        run: |
+          git config core.whitespace cr-at-eol
+          git diff --check
+          git status --short
