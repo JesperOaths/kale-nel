@@ -76,7 +76,7 @@ jobs:
         continue-on-error: true
         env:
           AUDIT_BASE_URL: http://127.0.0.1:4173
-        run: node scripts/audit-v789-rules-acceptance.mjs
+        run: node scripts/run-v790-rules-corrected.mjs
       - name: Beurs Balzaal and Drinks Speed acceptance
         id: extra_systems
         continue-on-error: true
