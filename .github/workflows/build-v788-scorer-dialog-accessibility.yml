@@ -1,0 +1,42 @@
+name: build v788 scorer dialog accessibility
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  build:
+    if: github.head_ref == 'agent/v788-scorer-dialog-accessibility'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Build v788 candidate
+        run: node scripts/build-v788-scorer-dialog-accessibility.mjs
+      - name: Remove one-time builder
+        run: |
+          rm -f scripts/build-v788-scorer-dialog-accessibility.mjs
+          rm -f .github/workflows/build-v788-scorer-dialog-accessibility.yml
+      - name: Verify complete candidate
+        run: |
+          npm run verify
+          node check-scorer-dialog-accessibility-v788.mjs
+          git config core.whitespace cr-at-eol
+          git diff --check
+      - name: Commit deterministic candidate
+        run: |
+          rm -rf node_modules
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: name Klaverjas scorer dialogs for accessibility'
+          git push origin HEAD:${{ github.head_ref }}
