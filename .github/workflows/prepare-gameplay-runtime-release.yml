@@ -1,0 +1,41 @@
+name: prepare gameplay runtime release
+on:
+  push:
+    branches:
+      - 'agent/v789-gameplay-runtime-repair'
+permissions:
+  contents: write
+jobs:
+  prepare:
+    if: ${{ !contains(github.event.head_commit.message, '[generated-release]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: agent/v789-gameplay-runtime-repair
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Generate release-owned edits
+        run: node scripts/prepare-gameplay-runtime-release.mjs
+      - name: Verify generated candidate
+        run: |
+          npm run verify
+          git diff --check
+      - name: Remove one-time generator
+        run: |
+          rm scripts/prepare-gameplay-runtime-release.mjs
+          rm .github/workflows/prepare-gameplay-runtime-release.yml
+      - name: Commit generated release tree
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'fix: repair gameplay runtime owners [generated-release]'
+          git push origin HEAD:agent/v789-gameplay-runtime-repair
