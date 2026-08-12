@@ -45,8 +45,6 @@ function sameSite(url) {
 function uniq(values) { return [...new Set(values)]; }
 
 async function auditPage(browser, engineName, viewport, routePath) {
-  // A fresh context for every route prevents auth/session/localStorage state from one page
-  // contaminating any later page. No production cookie/storage state is reused.
   const context = await browser.newContext({
     viewport: { width: viewport.width, height: viewport.height },
     locale: 'nl-NL',
@@ -69,7 +67,6 @@ async function auditPage(browser, engineName, viewport, routePath) {
     let url;
     try { url = new URL(req.url()); } catch { return route.continue(); }
 
-    // Remove browser-default favicon noise so every remaining 404 has an actionable owner.
     if (url.hostname === 'kalenel.nl' && url.pathname === '/favicon.ico') {
       return route.fulfill({ status: 204, contentType: 'image/x-icon', body: '' });
     }
@@ -78,8 +75,6 @@ async function auditPage(browser, engineName, viewport, routePath) {
       wrongFamilyRequests.push(`${req.method()} ${url.pathname}`);
     }
 
-    // The visual/browser audit must render the actual public page rather than disappear behind
-    // a session gate. Backend/read-only contracts are tested separately earlier in this workflow.
     if (url.hostname === 'kalenel.nl' && /\/gejast-home-gate\.js$/i.test(url.pathname)) {
       return route.fulfill({
         status: 200,
@@ -106,8 +101,6 @@ async function auditPage(browser, engineName, viewport, routePath) {
       return route.abort('aborted');
     }
 
-    // This is a visual/runtime acceptance pass, not a data-flow pass. Every non-GET is fulfilled
-    // locally with an inert response. This both proves interception and makes a production write impossible.
     if (!['GET', 'HEAD'].includes(req.method())) {
       blockedNonGet += 1;
       return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
@@ -148,7 +141,7 @@ async function auditPage(browser, engineName, viewport, routePath) {
 
   let navigationError = '';
   try {
-    await page.goto(`${base}${routePath}?finalaudit=20260812c-${Date.now()}-${Math.random().toString(36).slice(2)}`, {
+    await page.goto(`${base}${routePath}?finalaudit=20260812d-${Date.now()}-${Math.random().toString(36).slice(2)}`, {
       waitUntil: 'domcontentloaded',
       timeout: 30000
     });
@@ -156,7 +149,6 @@ async function auditPage(browser, engineName, viewport, routePath) {
     navigationError = clean(err?.message || err);
   }
 
-  // Let deferred runtime settle. Fresh contexts make this wait deterministic instead of inheriting state.
   await page.waitForTimeout(1400);
 
   let axeSeriousCritical = [];
@@ -173,7 +165,10 @@ async function auditPage(browser, engineName, viewport, routePath) {
           id: v.id,
           impact: v.impact,
           help: v.help,
-          nodes: v.nodes.slice(0, 8).map((n) => ({ target: n.target, failureSummary: clean(n.failureSummary, 220) }))
+          nodes: v.nodes.slice(0, 8).map((n) => ({
+            target: n.target,
+            failureSummary: String(n.failureSummary || '').replace(/\s+/g, ' ').trim().slice(0, 220)
+          }))
         }));
     });
   } catch (err) {
@@ -206,7 +201,7 @@ async function auditPage(browser, engineName, viewport, routePath) {
       .map((el) => {
         const rect = el.getBoundingClientRect();
         return {
-          selector: el.id ? `#${el.id}` : `${el.tagName.toLowerCase()}${el.classList?.length ? '.' + [...el.classList].slice(0,3).join('.') : ''}`,
+          selector: el.id ? `#${el.id}` : `${el.tagName.toLowerCase()}${el.classList?.length ? '.' + [...el.classList].slice(0, 3).join('.') : ''}`,
           left: Math.round(rect.left * 10) / 10,
           right: Math.round(rect.right * 10) / 10,
           width: Math.round(rect.width * 10) / 10,
@@ -223,7 +218,7 @@ async function auditPage(browser, engineName, viewport, routePath) {
         id: el.id || '',
         label: el.getAttribute('aria-label') || '',
         labelledby: el.getAttribute('aria-labelledby') || '',
-        heading: clean(el.querySelector('h1,h2,h3')?.textContent || '', 140)
+        heading: String(el.querySelector('h1,h2,h3')?.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 140)
       }));
     return {
       url: location.href,
@@ -299,10 +294,10 @@ async function auditPage(browser, engineName, viewport, routePath) {
     console.log(`REQUEST_DIAGNOSTIC ${JSON.stringify(row)}`);
   }
   if (routePath === '/beerpong.html' && viewport.name === 'phone' && engineName === 'firefox') {
-    console.log(`BEERPONG_FIREFOX_PHONE_DIAGNOSTIC ${JSON.stringify({state: row.state, consoleErrors: row.consoleErrors, badSameOrigin: row.badSameOrigin})}`);
+    console.log(`BEERPONG_FIREFOX_PHONE_DIAGNOSTIC ${JSON.stringify({ state: row.state, consoleErrors: row.consoleErrors, badSameOrigin: row.badSameOrigin })}`);
   }
   if ((routePath === '/scorer.html' || routePath === '/familie/scorer.html') && row.state.visibleDialogs.length) {
-    console.log(`SCORER_DIALOG_DIAGNOSTIC ${JSON.stringify({engine: engineName, viewport: viewport.name, path: routePath, dialogs: row.state.visibleDialogs, axe: row.axeSeriousCritical})}`);
+    console.log(`SCORER_DIALOG_DIAGNOSTIC ${JSON.stringify({ engine: engineName, viewport: viewport.name, path: routePath, dialogs: row.state.visibleDialogs, axe: row.axeSeriousCritical })}`);
   }
 
   rows.push(row);
