@@ -12,7 +12,7 @@ permissions:
 jobs:
   gameplay:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 50
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -31,6 +31,9 @@ jobs:
 
       - name: Player and game contract matrix
         run: node scripts/v791-finalization-player-contract-matrix.mjs
+
+      - name: Exhaustive Toepen rules matrix
+        run: node scripts/v791-finalization-toepen-rules-matrix.mjs
 
       - name: Install Playwright engines
         run: npx playwright install --with-deps chromium firefox webkit
@@ -74,10 +77,15 @@ jobs:
           cat /tmp/v791-http.log
           exit 1
 
-      - name: Cross-engine gameplay acceptance without production writes
+      - name: Cross-engine Pikken and Paardenrace gameplay acceptance without production writes
         env:
           V791_BASE_URL: http://127.0.0.1:4173
         run: node scripts/v791-core-gameplay-acceptance-v2.mjs
+
+      - name: Cross-engine Toepen and Boerenbridge every supported player count
+        env:
+          V791_BASE_URL: http://127.0.0.1:4173
+        run: node scripts/v791-finalization-player-setup-browser-matrix.mjs
 
       - name: Prove audit left repository clean
         if: always()
