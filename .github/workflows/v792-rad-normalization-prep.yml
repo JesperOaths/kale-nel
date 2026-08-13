@@ -38,7 +38,7 @@ jobs:
         run: node check-rad-probability-validity-v792.mjs
 
       - name: Diff integrity
-        run: git diff --check
+        run: git -c core.whitespace=cr-at-eol diff --check
 
       - name: Commit verified v792 product tree
         run: |
