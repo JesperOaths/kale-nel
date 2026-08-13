@@ -1,0 +1,84 @@
+name: v791 finalization cross-engine gameplay
+
+on:
+  push:
+    branches:
+      - agent/full-site-finalization-v791
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gameplay:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install repository dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Permanent verification first
+        run: npm run verify
+
+      - name: Player and game contract matrix
+        run: node scripts/v791-finalization-player-contract-matrix.mjs
+
+      - name: Install Playwright engines
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Build isolated browser fixture
+        run: |
+          rm -rf /tmp/v791-site
+          mkdir -p /tmp/v791-site
+          tar --exclude=.git --exclude=node_modules -cf - . | tar -xf - -C /tmp/v791-site
+          cat > /tmp/v791-site/gejast-home-gate.js <<'EOF'
+          (function(){
+            try {
+              document.documentElement.classList.remove('gejast-auth-pending');
+              document.documentElement.classList.add('gejast-auth-ready');
+              if (document.body) {
+                document.body.classList.remove('boot-pending');
+                document.body.classList.remove('page-loading');
+              }
+            } catch (_) {}
+            window.GEJAST_HOME_GATE = { audit: true };
+          })();
+          EOF
+          cat >> /tmp/v791-site/gejast-config.js <<'EOF'
+          ;(function(){
+            window.GEJAST_CONFIG = window.GEJAST_CONFIG || {};
+            window.GEJAST_CONFIG.requireMatchEntrySession = function(){ return true; };
+            window.GEJAST_CONFIG.ensurePlayerSessionOrRedirect = function(){ return true; };
+            window.GEJAST_CONFIG.requirePlayerSession = function(){ return true; };
+          })();
+          EOF
+
+      - name: Start isolated local site
+        run: |
+          cd /tmp/v791-site
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/v791-http.log 2>&1 &
+          echo $! >/tmp/v791-http.pid
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/VERSION >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/v791-http.log
+          exit 1
+
+      - name: Cross-engine gameplay acceptance without production writes
+        env:
+          V791_BASE_URL: http://127.0.0.1:4173
+        run: node scripts/v791-core-gameplay-acceptance-v2.mjs
+
+      - name: Prove audit left repository clean
+        if: always()
+        run: git diff --check
