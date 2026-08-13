@@ -92,14 +92,22 @@ async function rad(context){
   assert.equal(probs.length,21,'Rad must show a normalized probability for every segment');
   const roundedTotal=probs.reduce((a,b)=>a+b,0);
   assert.ok(Math.abs(roundedTotal-100)<=0.6,`Rad displayed rounded probabilities should total about 100%, got ${roundedTotal}`);
-  // Accelerate only the animation clock; execute the real weighted pick, pointer landing and result rendering.
+  // Keep production animation/rules intact while advancing only RAF timestamps. Starting
+  // from the browser's real performance clock avoids Firefox/WebKit clock-origin drift.
+  // Disable audio in this isolated fixture so AudioContext.resume cannot gate the spin.
   await page.evaluate(()=>{
-    let fakeNow=0;
-    try{Object.defineProperty(performance,'now',{configurable:true,value:()=>fakeNow});}catch(_){performance.now=()=>fakeNow;}
+    let fakeNow=performance.now();
+    try{Object.defineProperty(window,'AudioContext',{configurable:true,value:undefined});}catch(_){}
+    try{Object.defineProperty(window,'webkitAudioContext',{configurable:true,value:undefined});}catch(_){}
     window.requestAnimationFrame=(cb)=>setTimeout(()=>{fakeNow+=1200;cb(fakeNow);},0);
   });
   await page.locator('#spinBtn').click();
-  await page.locator('#statusBox').filter({hasText:'Gelukt.'}).waitFor({state:'visible',timeout:5000});
+  // "Gelukt." is intentionally transient for self-drink segments: onLanded can replace it
+  // with the drink-request status immediately. The durable proof is the landed result card.
+  await page.waitForFunction(()=>{
+    const text=document.querySelector('#resultBox')?.textContent||'';
+    return text.trim().length>0&&!text.includes('Nog niet gedraaid.');
+  },null,{timeout:5000});
   const result=await page.locator('#resultBox').innerText();
   assert.match(result,/Kans:\s*[0-9]+(?:[,.][0-9]+)?%/,'Rad spin must render landed normalized probability');
   assert.ok(result.trim().length>10,'Rad spin must render a landed result');
