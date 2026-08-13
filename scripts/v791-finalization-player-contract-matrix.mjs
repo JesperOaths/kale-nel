@@ -75,7 +75,7 @@ for (let n = 2; n <= 20; n += 1) {
 pass('Paardenrace', 'minimum 2 authoritative; frontend predicate stress-tested 2..20 with ready/suit invalid states; backend maximum remains separately provable');
 
 // Pikken cardinality is backend-owned in the current frontend/contract. Pin the current scoped lifecycle RPCs and
-// bid guard while the backend cardinality source is located; do not invent a numeric player limit.
+// permanent bid conversion regression while the backend cardinality source is located; do not invent a numeric player limit.
 const pikken = read('gejast-pikken-contract.js');
 assert.match(pikken, /pikken_create_lobby_scoped/, 'Pikken create-lobby contract missing');
 assert.match(pikken, /pikken_join_lobby_scoped/, 'Pikken join-lobby contract missing');
@@ -85,9 +85,10 @@ assert.match(pikken, /pikken_record_completed_match_v709/, 'Pikken completed-mat
 assert.match(pikken, /pikken_abandon_and_record_v716/, 'Pikken abandon-and-record contract missing');
 assert.match(pikken, /pikken_destroy_game_scoped/, 'Pikken destroy-game contract missing');
 assert.match(pikken, /pikken_update_lobby_config_v715/, 'Pikken lobby-config contract missing');
-const pikkenBidGuard = read('scripts/check-pikken-bid-invariants-v790.mjs');
-assert.match(pikkenBidGuard, /regular 6|regulier 6|leading regular bid/i, 'Pikken two-pik conversion regression guard missing');
-pass('Pikken', 'current scoped create/join/ready/start/destroy/config plus complete/abandon recording and bid invariant pinned; numeric player range intentionally not guessed');
+const pikkenBidGuard = read('check-pikken-pik-conversion-v790.mjs');
+assert.match(pikkenBidGuard, /2 x pik once at least 5 regular is bid|5 regular must unlock exactly one 2 x pik option/, 'Pikken two-pik conversion regression missing');
+assert.match(pikkenBidGuard, /pikken.*write targets remain unarmed|write targets remain unarmed/i, 'Pikken conversion guard must retain zero-write safety proof');
+pass('Pikken', 'current scoped create/join/ready/start/destroy/config plus complete/abandon recording and permanent 2-pik conversion invariant pinned; numeric player range intentionally not guessed');
 
 // Current main added this permanent regression as check-rad-probability-validity-v792.mjs while the frontend stays v791.
 const radGuard = read('check-rad-probability-validity-v792.mjs');
