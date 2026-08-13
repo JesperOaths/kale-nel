@@ -1,0 +1,29 @@
+name: v791 finalization player contract matrix
+
+on:
+  push:
+    branches:
+      - agent/full-site-finalization-v791
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  player-contract-matrix:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Finalization player contract matrix
+        run: node scripts/v791-finalization-player-contract-matrix.mjs
+
+      - name: Permanent Rad probability validity regression
+        run: node check-rad-probability-validity-v792.mjs
