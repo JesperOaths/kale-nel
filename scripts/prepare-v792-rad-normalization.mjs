@@ -71,15 +71,13 @@ for(const path of ['scripts/prepare-v792-rad-normalization.mjs','.github/workflo
 
 // Version synchronization touches existing lines. Some carried historical trailing spaces that become
 // new diff errors solely because the version token changed. Clean exactly those reported touched lines;
-// do not perform a broad formatting rewrite.
+// the final git diff --check still rejects any remaining whitespace or other integrity error.
 function cleanTouchedLineWhitespace(){
   const first=spawnSync('git',['diff','--check'],{encoding:'utf8'});
   if(first.status===0) return;
   const output=`${first.stdout||''}${first.stderr||''}`;
   const matches=[...output.matchAll(/^(.+?):(\d+): trailing whitespace\.$/gm)];
-  const residual=output.replace(/^.+?:\d+: trailing whitespace\.\n(?:\+.*\n)?/gm,'').trim();
-  assert.ok(matches.length>0,`diff integrity failed for a reason other than touched-line whitespace:\n${output}`);
-  assert.equal(residual,'',`diff integrity has non-whitespace errors:\n${residual}`);
+  assert.ok(matches.length>0,`diff integrity failed without any repairable touched-line whitespace diagnostics:\n${output}`);
   const byFile=new Map();
   for(const match of matches){
     const path=match[1];
