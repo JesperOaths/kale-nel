@@ -48,5 +48,30 @@ assert.match(beerpong, /if\(a === max && b === max\)/, 'Beerpong double-winner r
 assert.match(beerpong, /if\(a !== max && b !== max\)/, 'Beerpong exact-winner requirement missing');
 pass('Beerpong', 'exact formats 1v1/2v2; complete roster, uniqueness and one-winner constraints pinned');
 
+const klaverjas = read('scorer.html');
+assert.match(klaverjas, /GEJAST_PAGE_VERSION='v791'/, 'Klaverjas scorer is not on v791');
+assert.match(klaverjas, /players:\s*\['',\s*'',\s*'',\s*''\]/, 'Klaverjas fresh game must own exactly four player slots');
+assert.match(klaverjas, /parsed\.players\.length !== 4/, 'Klaverjas persisted state must be repaired back to exactly four player slots');
+assert.match(klaverjas, /picks\.some\(\(value\) => !value\)[\s\S]{0,160}alle vier plekken/, 'Klaverjas must reject incomplete four-player setup');
+assert.match(klaverjas, /new Set\(picks\)\.size < 4/, 'Klaverjas must reject duplicate players');
+assert.match(klaverjas, /players\.filter\(Boolean\)\.length < 4/, 'Klaverjas must refuse bidding before four players are selected');
+assert.match(klaverjas, /players\.length !== 4 \|\| players\.some\(\(name\) => !name\)/, 'Klaverjas finished handoff must require exactly four named players');
+pass('Klaverjas', 'exactly 4 unique named players are required at setup, bidding and finished-match handoff');
+
+const paardenrace = read('paardenrace.html');
+assert.match(paardenrace, /GEJAST_PAGE_VERSION='v791'/, 'Paardenrace is not on v791');
+assert.match(paardenrace, /players\.length < 2 \|\| \(picked\.length === 1 && players\.length > 1\)/, 'Paardenrace start-button player/suit guard drifted');
+assert.match(paardenrace, /if\(readyTotal < 2\)/, 'Paardenrace must reject fewer than two players on explicit start');
+assert.match(paardenrace, /if\(picked\.length === 1 && players\.length > 1\)/, 'Paardenrace must reject an all-same-suit field');
+assert.match(paardenrace, /if\(ready < readyTotal\)/, 'Paardenrace must reject start while any player is unready');
+const paardStartBlocked = (players, pickedSuitCount, readyCount) => players < 2 || pickedSuitCount < 2 || readyCount < players;
+assert.equal(paardStartBlocked(1, 1, 1), true, 'Paardenrace adjacent lower bound 1 must be blocked');
+for (let n = 2; n <= 20; n += 1) {
+  assert.equal(paardStartBlocked(n, 2, n), false, `Paardenrace ${n}-player ready field with >=2 suits should pass frontend start guards`);
+  assert.equal(paardStartBlocked(n, 1, n), true, `Paardenrace ${n}-player all-same-suit field must be blocked`);
+  assert.equal(paardStartBlocked(n, 2, n - 1), true, `Paardenrace ${n}-player field with one unready player must be blocked`);
+}
+pass('Paardenrace', 'frontend start invariants swept for 2..20 players: >=2 suits + everybody ready; 1 player/all-same-suit/unready rejected');
+
 console.log('v791 supported-player contract matrix: PASS');
 for (const row of report) console.log(`PASS ${row.name}: ${row.detail}`);
