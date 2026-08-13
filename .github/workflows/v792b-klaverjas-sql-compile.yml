@@ -1,0 +1,143 @@
+name: v792b Klaverjas SQL compile
+
+on:
+  pull_request:
+    paths:
+      - 'GEJAST_v792b*.sql'
+      - '.github/workflows/v792b-klaverjas-sql-compile.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gejast_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d gejast_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGPASSWORD: postgres
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: gejast_test
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Create isolated compile schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          create table public.players (
+            id uuid primary key,
+            display_name text not null
+          );
+          create table public.klaverjas_online_games (
+            id uuid primary key,
+            state jsonb not null default '{}'::jsonb,
+            status text not null default 'lobby',
+            created_by_player_id uuid,
+            created_by_player_name text
+          );
+          create or replace function public._jas_session_player(token text)
+          returns public.players
+          language sql
+          stable
+          as $$ select p from public.players p order by display_name limit 1 $$;
+          create or replace function public.klaverjas_online_save_state(
+            session_token text,
+            game_id_input uuid,
+            state_input jsonb,
+            summary_payload jsonb default null,
+            final_jas_payload jsonb default null
+          ) returns jsonb
+          language sql
+          as $$ select coalesce(state_input, '{}'::jsonb) $$;
+          SQL
+
+      - name: Compile ordered v792b migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            GEJAST_v792b_klaverjas_online_state_transition_guard.sql
+            GEJAST_v792b1_klaverjas_online_redacted_state_bridge.sql
+            GEJAST_v792b2_klaverjas_online_canonical_deck_fix.sql
+            GEJAST_v792b3_klaverjas_online_deal_guard.sql
+            GEJAST_v792b4_klaverjas_online_history_guard.sql
+            GEJAST_v792b5_klaverjas_online_bid_guard.sql
+            GEJAST_v792b6_klaverjas_online_play_guard.sql
+            GEJAST_v792b7_klaverjas_online_effective_state.sql
+            GEJAST_v792b8_klaverjas_online_save_guard_chain.sql
+            GEJAST_v792b9_klaverjas_online_bid_null_guard.sql
+            GEJAST_v792b10_klaverjas_card_strength.sql
+            GEJAST_v792b11_klaverjas_card_legality.sql
+            GEJAST_v792b12_klaverjas_human_card_legality_guard.sql
+            GEJAST_v792b13_klaverjas_partial_trick_winner.sql
+          )
+          for file in "${files[@]}"; do
+            echo "Compiling $file"
+            psql -v ON_ERROR_STOP=1 --file "$file"
+          done
+
+      - name: Probe deterministic helpers
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          declare
+            deck jsonb;
+            trick jsonb;
+            hand jsonb;
+          begin
+            select jsonb_build_object(
+              'hands', jsonb_build_array(
+                jsonb_agg(jsonb_build_object('id',suit||'-'||rank,'suit',suit,'rank',rank)) filter (where seat=0),
+                jsonb_agg(jsonb_build_object('id',suit||'-'||rank,'suit',suit,'rank',rank)) filter (where seat=1),
+                jsonb_agg(jsonb_build_object('id',suit||'-'||rank,'suit',suit,'rank',rank)) filter (where seat=2),
+                jsonb_agg(jsonb_build_object('id',suit||'-'||rank,'suit',suit,'rank',rank)) filter (where seat=3)
+              ),
+              'trick','[]'::jsonb,'pending_trick',null,'taken','[]'::jsonb
+            ) into deck
+            from (
+              select suit, rank, (row_number() over ())::integer % 4 as seat
+              from unnest(array['clubs','spades','hearts','diamonds']) suit
+              cross join unnest(array['A','10','K','Q','J','9','8','7']) rank
+            ) cards;
+            if not public._klaverjas_online_state_has_canonical_deck(deck) then
+              raise exception 'canonical deck probe failed';
+            end if;
+
+            if not public._klaverjas_online_bid_valid_v792b5('{"mode":"suit","suit":"hearts","points":80}'::jsonb, null) then
+              raise exception 'valid bid probe failed';
+            end if;
+            if public._klaverjas_online_bid_valid_v792b5('{"mode":"suit","suit":"hearts","points":81}'::jsonb, null) then
+              raise exception 'invalid bid step probe failed';
+            end if;
+
+            trick := '[{"player":0,"card":{"id":"hearts-A","suit":"hearts","rank":"A"}},{"player":1,"card":{"id":"hearts-J","suit":"hearts","rank":"J"}}]'::jsonb;
+            if public._klaverjas_online_trick_winner_v792b6(trick,'hearts') <> 1 then
+              raise exception 'partial trick winner probe failed';
+            end if;
+
+            hand := '[{"id":"hearts-7","suit":"hearts","rank":"7"},{"id":"clubs-A","suit":"clubs","rank":"A"}]'::jsonb;
+            if public._klaverjas_online_card_legal_v792b11(hand, '[{"player":0,"card":{"id":"hearts-A","suit":"hearts","rank":"A"}}]'::jsonb, 1, 'clubs', '{"id":"clubs-A","suit":"clubs","rank":"A"}'::jsonb) then
+              raise exception 'follow-suit legality probe failed';
+            end if;
+          end $$;
+          SQL
