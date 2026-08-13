@@ -69,4 +69,45 @@ for(const path of ['scripts/prepare-v792-rad-normalization.mjs','.github/workflo
   try{fs.rmSync(path);}catch(error){if(error?.code!=='ENOENT') throw error;}
 }
 
+// Version synchronization touches existing lines. Some carried historical trailing spaces that become
+// new diff errors solely because the version token changed. Clean exactly those reported touched lines;
+// do not perform a broad formatting rewrite.
+function cleanTouchedLineWhitespace(){
+  const first=spawnSync('git',['diff','--check'],{encoding:'utf8'});
+  if(first.status===0) return;
+  const output=`${first.stdout||''}${first.stderr||''}`;
+  const matches=[...output.matchAll(/^(.+?):(\d+): trailing whitespace\.$/gm)];
+  const residual=output.replace(/^.+?:\d+: trailing whitespace\.\n(?:\+.*\n)?/gm,'').trim();
+  assert.ok(matches.length>0,`diff integrity failed for a reason other than touched-line whitespace:\n${output}`);
+  assert.equal(residual,'',`diff integrity has non-whitespace errors:\n${residual}`);
+  const byFile=new Map();
+  for(const match of matches){
+    const path=match[1];
+    const line=Number(match[2]);
+    if(!byFile.has(path)) byFile.set(path,new Set());
+    byFile.get(path).add(line);
+  }
+  for(const [path,lineNos] of byFile){
+    const text=fs.readFileSync(path,'utf8');
+    const hadFinalNewline=text.endsWith('\n');
+    const lines=text.split('\n');
+    for(const lineNo of lineNos){
+      const index=lineNo-1;
+      assert.ok(index>=0&&index<lines.length,`${path}:${lineNo} is outside file bounds`);
+      lines[index]=lines[index].replace(/[ \t]+$/,'');
+    }
+    let cleaned=lines.join('\n');
+    if(hadFinalNewline&&!cleaned.endsWith('\n')) cleaned+='\n';
+    fs.writeFileSync(path,cleaned,'utf8');
+  }
+  const after=spawnSync('git',['diff','--check'],{encoding:'utf8'});
+  if(after.status!==0){
+    process.stderr.write(after.stdout||'');
+    process.stderr.write(after.stderr||'');
+    process.exit(after.status||1);
+  }
+  console.log(`Touched-line whitespace cleanup PASS. Files=${byFile.size}; lines=${matches.length}.`);
+}
+cleanTouchedLineWhitespace();
+
 console.log('PREP_V792_RAD_NORMALIZATION=PASS');
