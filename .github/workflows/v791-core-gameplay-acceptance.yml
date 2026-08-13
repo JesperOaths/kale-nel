@@ -25,6 +25,8 @@ jobs:
         run: npm ci
       - name: Permanent verification first
         run: npm run verify
+      - name: Prove supported player-count contracts
+        run: node scripts/v791-player-count-contract-matrix.mjs
       - name: Install isolated browser dependencies
         run: |
           npm install --no-save --package-lock=false playwright
