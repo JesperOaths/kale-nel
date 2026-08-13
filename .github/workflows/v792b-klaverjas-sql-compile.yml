@@ -88,6 +88,13 @@ jobs:
             GEJAST_v792b11_klaverjas_card_legality.sql
             GEJAST_v792b12_klaverjas_human_card_legality_guard.sql
             GEJAST_v792b13_klaverjas_partial_trick_winner.sql
+            GEJAST_v792b14_klaverjas_card_points.sql
+            GEJAST_v792b16_klaverjas_bid_target.sql
+            GEJAST_v792b17_klaverjas_round_base.sql
+            GEJAST_v792b18_klaverjas_round_scores.sql
+            GEJAST_v792b19_klaverjas_round_result_match.sql
+            GEJAST_v792b20_klaverjas_cumulative_totals.sql
+            GEJAST_v792b21_klaverjas_final_save_guard_chain.sql
           )
           for file in "${files[@]}"; do
             echo "Compiling $file"
@@ -104,6 +111,7 @@ jobs:
             deck jsonb;
             trick jsonb;
             hand jsonb;
+            score jsonb;
           begin
             select jsonb_build_object(
               'hands', jsonb_build_array(
@@ -138,6 +146,24 @@ jobs:
             hand := '[{"id":"hearts-7","suit":"hearts","rank":"7"},{"id":"clubs-A","suit":"clubs","rank":"A"}]'::jsonb;
             if public._klaverjas_online_card_legal_v792b11(hand, '[{"player":0,"card":{"id":"hearts-A","suit":"hearts","rank":"A"}}]'::jsonb, 1, 'clubs', '{"id":"clubs-A","suit":"clubs","rank":"A"}'::jsonb) then
               raise exception 'follow-suit legality probe failed';
+            end if;
+
+            if public._klaverjas_online_card_points_v792b14('{"id":"hearts-J","suit":"hearts","rank":"J"}'::jsonb,'hearts') <> 20
+               or public._klaverjas_online_card_points_v792b14('{"id":"hearts-J","suit":"hearts","rank":"J"}'::jsonb,'sans') <> 2 then
+              raise exception 'card points probe failed';
+            end if;
+            if public._klaverjas_online_bid_target_v792b16('{"mode":"suit","suit":"hearts","points":80}'::jsonb) <> 82
+               or public._klaverjas_online_bid_target_v792b16('{"mode":"sans","points":132,"kind":"pit"}'::jsonb) <> 162 then
+              raise exception 'bid target probe failed';
+            end if;
+
+            score := public._klaverjas_online_round_scores_v792b18('[100,62]'::jsonb,'[5,3]'::jsonb,1,'{"mode":"suit","suit":"hearts","points":80}'::jsonb,'[20,0]'::jsonb);
+            if score #>> '{scores,0}' <> '120' or score #>> '{scores,1}' <> '62' or score ->> 'made' <> 'true' then
+              raise exception 'made round score probe failed';
+            end if;
+            score := public._klaverjas_online_round_scores_v792b18('[70,92]'::jsonb,'[3,5]'::jsonb,1,'{"mode":"suit","suit":"hearts","points":80}'::jsonb,'[20,40]'::jsonb);
+            if score #>> '{scores,0}' <> '0' or score #>> '{scores,1}' <> '222' or score ->> 'nat' <> 'true' then
+              raise exception 'nat round score probe failed';
             end if;
           end $$;
           SQL
