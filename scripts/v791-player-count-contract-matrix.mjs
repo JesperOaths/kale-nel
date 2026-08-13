@@ -21,7 +21,7 @@ function optionAttributeValues(html, id) {
 }
 
 const toepen = read('toepen.html');
-assert.match(toepen, /GEJAST_PAGE_VERSION='v791'/, 'Toepen is not on v791');
+assert.match(toepen, /GEJAST_PAGE_VERSION='v792'/, 'Toepen is not on v792');
 assert.match(toepen, /Kies 2–8 geregistreerde spelers\./, 'Toepen visible player-range copy drifted');
 assert.deepEqual(selectValues(toepen, 'playerCount'), [2,3,4,5,6,7,8], 'Toepen must expose every and only supported count 2..8');
 assert.doesNotMatch(toepen, /<select id="playerCount">[\s\S]*?<option>1<\/option>/, 'Toepen must reject one-player setup');
@@ -29,7 +29,7 @@ assert.doesNotMatch(toepen, /<select id="playerCount">[\s\S]*?<option>9<\/option
 pass('Toepen', 'supported counts 2,3,4,5,6,7,8; adjacent 1/9 absent');
 
 const boerenbridge = read('boerenbridge.html');
-assert.match(boerenbridge, /GEJAST_PAGE_VERSION='v791'/, 'Boerenbridge is not on v791');
+assert.match(boerenbridge, /GEJAST_PAGE_VERSION='v792'/, 'Boerenbridge is not on v792');
 const bbCountLiteral = boerenbridge.match(/playerCountInput'\)\.innerHTML=\[([^\]]+)\]\.map/);
 assert.ok(bbCountLiteral, 'Boerenbridge player-count owner not found');
 const bbCounts = bbCountLiteral[1].split(',').map((v) => Number(v.trim()));
@@ -40,7 +40,7 @@ assert.match(boerenbridge, /new Set\(lowered\)\.size!==lowered\.length/, 'Boeren
 pass('Boerenbridge', 'supported counts 2,3,4,5,6,7 plus special-round and duplicate-player guards');
 
 const beerpong = read('beerpong.html');
-assert.match(beerpong, /GEJAST_PAGE_VERSION='v791'/, 'Beerpong is not on v791');
+assert.match(beerpong, /GEJAST_PAGE_VERSION='v792'/, 'Beerpong is not on v792');
 assert.deepEqual(optionAttributeValues(beerpong, 'formatInput'), ['2v2','1v1'], 'Beerpong must expose exactly 2v2 and 1v1');
 assert.match(beerpong, /format==='2v2' \? \[els\.teamA1, els\.teamA2, els\.teamB1, els\.teamB2\] : \[els\.teamA1, els\.teamB1\]/, 'Beerpong format-to-player cardinality validation missing');
 assert.match(beerpong, /new Set\(vals\)\)\.size !== vals\.length/, 'Beerpong duplicate-player rejection missing');
@@ -49,7 +49,7 @@ assert.match(beerpong, /if\(a !== max && b !== max\)/, 'Beerpong exact-winner re
 pass('Beerpong', 'exact formats 1v1/2v2; complete roster, uniqueness and one-winner constraints pinned');
 
 const klaverjas = read('scorer.html');
-assert.match(klaverjas, /GEJAST_PAGE_VERSION='v791'/, 'Klaverjas scorer is not on v791');
+assert.match(klaverjas, /GEJAST_PAGE_VERSION='v792'/, 'Klaverjas scorer is not on v792');
 assert.match(klaverjas, /players:\s*\['',\s*'',\s*'',\s*''\]/, 'Klaverjas fresh game must own exactly four player slots');
 assert.match(klaverjas, /parsed\.players\.length !== 4/, 'Klaverjas persisted state must be repaired back to exactly four player slots');
 assert.match(klaverjas, /picks\.some\(\(value\) => !value\)[\s\S]{0,160}alle vier plekken/, 'Klaverjas must reject incomplete four-player setup');
@@ -59,7 +59,7 @@ assert.match(klaverjas, /players\.length !== 4 \|\| players\.some\(\(name\) => !
 pass('Klaverjas', 'exactly 4 unique named players are required at setup, bidding and finished-match handoff');
 
 const paardenrace = read('paardenrace.html');
-assert.match(paardenrace, /GEJAST_PAGE_VERSION='v791'/, 'Paardenrace is not on v791');
+assert.match(paardenrace, /GEJAST_PAGE_VERSION='v792'/, 'Paardenrace is not on v792');
 assert.match(paardenrace, /players\.length < 2 \|\| \(picked\.length === 1 && players\.length > 1\)/, 'Paardenrace start-button player/suit guard drifted');
 assert.match(paardenrace, /if\(readyTotal < 2\)/, 'Paardenrace must reject fewer than two players on explicit start');
 assert.match(paardenrace, /if\(picked\.length === 1 && players\.length > 1\)/, 'Paardenrace must reject an all-same-suit field');
@@ -73,5 +73,5 @@ for (let n = 2; n <= 20; n += 1) {
 }
 pass('Paardenrace', 'source proves minimum 2 + >=2 suits + everybody ready; 2..20 is only a representative frontend guard stress sweep and is NOT asserted as the authoritative maximum');
 
-console.log('v791 supported-player contract matrix: PASS');
+console.log('v792 supported-player contract matrix: PASS');
 for (const row of report) console.log(`PASS ${row.name}: ${row.detail}`);
