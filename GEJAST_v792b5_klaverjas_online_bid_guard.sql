@@ -128,7 +128,7 @@ begin
   if new_passes <> 0
      or not public._klaverjas_online_bid_valid_v792b5(new_bid, old_bid)
      or coalesce((new_bid ->> 'player')::integer,-1) <> actor_seat
-     or coalesce((new_bid ->> 'team')::integer,-1) <> case when actor_seat in (0,2) then 1 else 2 end then
+     or coalesce((new_bid ->> 'team')::integer,-1) <> (case when actor_seat in (0,2) then 1 else 2 end) then
     raise exception 'klaverjas_online_bid_transition_rejected';
   end if;
 
