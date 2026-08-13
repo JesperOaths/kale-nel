@@ -25,5 +25,8 @@ jobs:
       - name: Finalization player contract matrix
         run: node scripts/v791-finalization-player-contract-matrix.mjs
 
+      - name: Exhaustive Toepen rules for every supported player count
+        run: node scripts/v791-finalization-toepen-rules-matrix.mjs
+
       - name: Permanent Rad probability validity regression
         run: node check-rad-probability-validity-v792.mjs
