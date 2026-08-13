@@ -12,7 +12,7 @@ permissions:
 jobs:
   gameplay:
     runs-on: ubuntu-24.04
-    timeout-minutes: 50
+    timeout-minutes: 55
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -86,6 +86,11 @@ jobs:
         env:
           V791_BASE_URL: http://127.0.0.1:4173
         run: node scripts/v791-finalization-player-setup-browser-matrix.mjs
+
+      - name: Cross-engine Beerpong 1v1 and 2v2 validity and save contract
+        env:
+          V791_BASE_URL: http://127.0.0.1:4173
+        run: node scripts/v791-finalization-beerpong-browser-matrix.mjs
 
       - name: Prove audit left repository clean
         if: always()
