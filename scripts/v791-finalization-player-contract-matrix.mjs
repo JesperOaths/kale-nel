@@ -20,7 +20,6 @@ function optionAttributeValues(html, id) {
   return [...match[1].matchAll(/<option[^>]*value=["']([^"']+)["'][^>]*>/gi)].map((m) => m[1]);
 }
 
-// Finite player-count games: prove every supported count and both adjacent invalid counts.
 const toepen = read('toepen.html');
 assert.match(toepen, /GEJAST_PAGE_VERSION='v791'/, 'Toepen is not on v791');
 assert.match(toepen, /Kies 2–8 geregistreerde spelers\./, 'Toepen visible player-range copy drifted');
@@ -75,8 +74,8 @@ for (let n = 2; n <= 20; n += 1) {
 }
 pass('Paardenrace', 'minimum 2 authoritative; frontend predicate stress-tested 2..20 with ready/suit invalid states; backend maximum remains separately provable');
 
-// Pikken player cardinality is backend-owned in the current frontend/contract. Pin the actual room/start RPCs and
-// the bidding invariant while the backend cardinality source is located, rather than inventing a numeric range.
+// Pikken cardinality is backend-owned in the current frontend/contract. Pin the real lifecycle RPCs and bid guard
+// while the backend cardinality source is located; do not invent a numeric player limit.
 const pikken = read('gejast-pikken-contract.js');
 const pikkenRuntime = read('gejast-pikken.js');
 assert.match(pikken, /pikken_create_room/, 'Pikken create-room contract missing');
@@ -90,10 +89,10 @@ const pikkenBidGuard = read('scripts/check-pikken-bid-invariants-v790.mjs');
 assert.match(pikkenBidGuard, /regular 6|regulier 6|leading regular bid/i, 'Pikken two-pik conversion regression guard missing');
 pass('Pikken', 'room lifecycle/start/finish/abandon contract and bid-invariant guard pinned; numeric player range intentionally not guessed');
 
-// Keep the permanent Rad mathematical validity guard in the same finalization gate.
-const radGuard = read('scripts/check-rad-probability-validity-v791.mjs');
+// Current main added this permanent regression as check-rad-probability-validity-v792.mjs while the frontend stays v791.
+const radGuard = read('check-rad-probability-validity-v792.mjs');
 assert.match(radGuard, /probab|weight|chance|kans/i, 'Rad probability validity guard no longer contains probability/weight validation');
-pass('Rad', 'permanent v791 probability validity regression present');
+pass('Rad', 'permanent normalized-probability validity regression present');
 
 console.log('v791 finalization player contract matrix: PASS');
 for (const row of report) console.log(`PASS ${row.name}: ${row.detail}`);
