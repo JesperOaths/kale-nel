@@ -65,13 +65,13 @@ assert.match(paardenrace, /if\(readyTotal < 2\)/, 'Paardenrace must reject fewer
 assert.match(paardenrace, /if\(picked\.length === 1 && players\.length > 1\)/, 'Paardenrace must reject an all-same-suit field');
 assert.match(paardenrace, /if\(ready < readyTotal\)/, 'Paardenrace must reject start while any player is unready');
 const paardStartBlocked = (players, pickedSuitCount, readyCount) => players < 2 || pickedSuitCount < 2 || readyCount < players;
-assert.equal(paardStartBlocked(1, 1, 1), true, 'Paardenrace adjacent lower bound 1 must be blocked');
+assert.equal(paardStartBlocked(1, 1, 1), true, 'Paardenrace source-proven lower bound 1 must be blocked');
 for (let n = 2; n <= 20; n += 1) {
-  assert.equal(paardStartBlocked(n, 2, n), false, `Paardenrace ${n}-player ready field with >=2 suits should pass frontend start guards`);
+  assert.equal(paardStartBlocked(n, 2, n), false, `Paardenrace ${n}-player ready field with >=2 suits should pass known frontend start guards`);
   assert.equal(paardStartBlocked(n, 1, n), true, `Paardenrace ${n}-player all-same-suit field must be blocked`);
   assert.equal(paardStartBlocked(n, 2, n - 1), true, `Paardenrace ${n}-player field with one unready player must be blocked`);
 }
-pass('Paardenrace', 'frontend start invariants swept for 2..20 players: >=2 suits + everybody ready; 1 player/all-same-suit/unready rejected');
+pass('Paardenrace', 'source proves minimum 2 + >=2 suits + everybody ready; 2..20 is only a representative frontend guard stress sweep and is NOT asserted as the authoritative maximum');
 
 console.log('v791 supported-player contract matrix: PASS');
 for (const row of report) console.log(`PASS ${row.name}: ${row.detail}`);
