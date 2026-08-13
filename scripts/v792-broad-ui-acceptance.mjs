@@ -24,7 +24,7 @@ function initSafeReadFixture(){
       let body=[];
       if(path.includes('/rpc/get_public_state')||path.includes('/rpc/get_gejast_homepage_state')||path.includes('/rpc/account_public_state_v687')){
         body={session_valid:true,is_logged_in:true,my_name:'Ada',display_name:'Ada',player_name:'Ada',viewer:{player_id:'p1',display_name:'Ada',player_name:'Ada'}};
-      } else if(/login.*names|player.*names|selector/i.test(path)) {
+      } else if(/login.*names|player.*names|selector|requestable_names/i.test(path)) {
         body=['Ada','Bram','Caro','Daan','Evi','Fons','Gijs','Henk'].map((name,i)=>({player_id:`p${i+1}`,id:`p${i+1}`,display_name:name,player_name:name,public_display_name:name,login_active:true,active:true,site_scope:'friends'}));
       }
       return new Response(JSON.stringify(body),{status:200,headers:{'content-type':'application/json','access-control-allow-origin':'*'}});
@@ -92,6 +92,17 @@ async function rad(context){
   assert.equal(probs.length,21,'Rad must show a normalized probability for every segment');
   const roundedTotal=probs.reduce((a,b)=>a+b,0);
   assert.ok(Math.abs(roundedTotal-100)<=0.6,`Rad displayed rounded probabilities should total about 100%, got ${roundedTotal}`);
+  // Accelerate only the animation clock; execute the real weighted pick, pointer landing and result rendering.
+  await page.evaluate(()=>{
+    let fakeNow=0;
+    try{Object.defineProperty(performance,'now',{configurable:true,value:()=>fakeNow});}catch(_){performance.now=()=>fakeNow;}
+    window.requestAnimationFrame=(cb)=>setTimeout(()=>{fakeNow+=1200;cb(fakeNow);},0);
+  });
+  await page.locator('#spinBtn').click();
+  await page.locator('#statusBox').filter({hasText:'Gelukt.'}).waitFor({state:'visible',timeout:5000});
+  const result=await page.locator('#resultBox').innerText();
+  assert.match(result,/Kans:\s*[0-9]+(?:[,.][0-9]+)?%/,'Rad spin must render landed normalized probability');
+  assert.ok(result.trim().length>10,'Rad spin must render a landed result');
   await common(page,errors,'Rad'); await page.close();
 }
 async function navigation(context){
@@ -102,7 +113,7 @@ async function navigation(context){
   await common(page,errors,'Homepage'); await page.close();
 }
 
-const TESTS=[['homepage-navigation',navigation],['toepen-counts',toepen],['boerenbridge-counts',boerenbridge],['beerpong-formats',beerpong],['klaverjas-four-player-ui',klaverjas],['rad-probabilities',rad]];
+const TESTS=[['homepage-navigation',navigation],['toepen-counts',toepen],['boerenbridge-counts',boerenbridge],['beerpong-formats',beerpong],['klaverjas-four-player-ui',klaverjas],['rad-spin-and-probabilities',rad]];
 for(const [engineName,engine] of ENGINES){
   const browser=await engine.launch({headless:true});
   for(const [viewName,viewport] of VIEWPORTS){
