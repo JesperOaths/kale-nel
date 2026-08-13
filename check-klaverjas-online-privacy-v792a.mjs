@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import './check-klaverjas-online-integrity-v792b.mjs';
 
 const sql = fs.readFileSync('GEJAST_v792a_klaverjas_online_privacy_guard.sql', 'utf8');
 const room = fs.readFileSync('klaverjas_room.html', 'utf8');
