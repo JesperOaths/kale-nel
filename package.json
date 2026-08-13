@@ -14,7 +14,7 @@
     "admin-worker:build": "node scripts/build-admin-worker-assets.mjs",
     "admin-worker:test": "node scripts/test-admin-worker-gate.mjs",
     "admin-worker:dry-run": "npx wrangler deploy --config cloudflare/workers/admin-gate/wrangler.toml --dry-run",
-    "verify:klaverjas": "node check-klaverjas-online.mjs",
+    "verify:klaverjas": "node check-klaverjas-online.mjs && node check-klaverjas-online-privacy-v792a.mjs",
     "smoke:live": "node check-live-routes.mjs",
     "smoke:push": "node check-live-push-health.mjs",
     "smoke:games": "node check-live-game-flows.mjs",
