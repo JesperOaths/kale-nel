@@ -74,20 +74,20 @@ for (let n = 2; n <= 20; n += 1) {
 }
 pass('Paardenrace', 'minimum 2 authoritative; frontend predicate stress-tested 2..20 with ready/suit invalid states; backend maximum remains separately provable');
 
-// Pikken cardinality is backend-owned in the current frontend/contract. Pin the real lifecycle RPCs and bid guard
-// while the backend cardinality source is located; do not invent a numeric player limit.
+// Pikken cardinality is backend-owned in the current frontend/contract. Pin the current scoped lifecycle RPCs and
+// bid guard while the backend cardinality source is located; do not invent a numeric player limit.
 const pikken = read('gejast-pikken-contract.js');
-const pikkenRuntime = read('gejast-pikken.js');
-assert.match(pikken, /pikken_create_room/, 'Pikken create-room contract missing');
-assert.match(pikken, /pikken_join_room/, 'Pikken join-room contract missing');
-assert.match(pikken, /pikken_ready_v2/, 'Pikken ready contract missing');
+assert.match(pikken, /pikken_create_lobby_scoped/, 'Pikken create-lobby contract missing');
+assert.match(pikken, /pikken_join_lobby_scoped/, 'Pikken join-lobby contract missing');
+assert.match(pikken, /pikken_set_ready_scoped/, 'Pikken ready contract missing');
 assert.match(pikken, /pikken_start_game_scoped/, 'Pikken scoped start contract missing');
-assert.match(pikken, /pikken_finish_game_v3/, 'Pikken finish-game contract missing');
-assert.match(pikken, /pikken_abandon_room/, 'Pikken abandon-room contract missing');
-assert.match(pikkenRuntime, /pikken_start_game_scoped/, 'Pikken runtime no longer invokes scoped start');
+assert.match(pikken, /pikken_record_completed_match_v709/, 'Pikken completed-match recording contract missing');
+assert.match(pikken, /pikken_abandon_and_record_v716/, 'Pikken abandon-and-record contract missing');
+assert.match(pikken, /pikken_destroy_game_scoped/, 'Pikken destroy-game contract missing');
+assert.match(pikken, /pikken_update_lobby_config_v715/, 'Pikken lobby-config contract missing');
 const pikkenBidGuard = read('scripts/check-pikken-bid-invariants-v790.mjs');
 assert.match(pikkenBidGuard, /regular 6|regulier 6|leading regular bid/i, 'Pikken two-pik conversion regression guard missing');
-pass('Pikken', 'room lifecycle/start/finish/abandon contract and bid-invariant guard pinned; numeric player range intentionally not guessed');
+pass('Pikken', 'current scoped create/join/ready/start/destroy/config plus complete/abandon recording and bid invariant pinned; numeric player range intentionally not guessed');
 
 // Current main added this permanent regression as check-rad-probability-validity-v792.mjs while the frontend stays v791.
 const radGuard = read('check-rad-probability-validity-v792.mjs');
