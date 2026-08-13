@@ -22,7 +22,7 @@ function initSafeReadFixture(){
     if(url.hostname.includes('supabase.co')){
       const path=url.pathname;
       let body=[];
-      if(path.includes('/rpc/get_public_state')||path.includes('/rpc/get_gejast_homepage_state')||path.includes('/rpc/account_public_state')){
+      if(path.includes('/rpc/get_public_state')||path.includes('/rpc/get_gejast_homepage_state')||path.includes('/rpc/account_public_state_v687')){
         body={session_valid:true,is_logged_in:true,my_name:'Ada',display_name:'Ada',player_name:'Ada',viewer:{player_id:'p1',display_name:'Ada',player_name:'Ada'}};
       } else if(/login.*names|player.*names|selector/i.test(path)) {
         body=['Ada','Bram','Caro','Daan','Evi','Fons','Gijs','Henk'].map((name,i)=>({player_id:`p${i+1}`,id:`p${i+1}`,display_name:name,player_name:name,public_display_name:name,login_active:true,active:true,site_scope:'friends'}));
