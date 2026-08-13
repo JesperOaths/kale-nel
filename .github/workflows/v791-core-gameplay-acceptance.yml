@@ -1,4 +1,4 @@
-name: v791 core gameplay acceptance
+name: v792 exhaustive gameplay acceptance
 
 on:
   push:
@@ -12,7 +12,7 @@ permissions:
 jobs:
   acceptance:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
@@ -35,10 +35,10 @@ jobs:
           npx playwright install --with-deps chromium firefox webkit
       - name: Build isolated browser fixture
         run: |
-          rm -rf /tmp/v791-site
-          mkdir -p /tmp/v791-site
-          tar --exclude=.git --exclude=node_modules -cf - . | tar -xf - -C /tmp/v791-site
-          cat > /tmp/v791-site/gejast-home-gate.js <<'EOF'
+          rm -rf /tmp/v792-site
+          mkdir -p /tmp/v792-site
+          tar --exclude=.git --exclude=node_modules -cf - . | tar -xf - -C /tmp/v792-site
+          cat > /tmp/v792-site/gejast-home-gate.js <<'EOF'
           (function(){
             try {
               document.documentElement.classList.remove('gejast-auth-pending');
@@ -51,7 +51,7 @@ jobs:
             window.GEJAST_HOME_GATE = { audit: true };
           })();
           EOF
-          cat >> /tmp/v791-site/gejast-config.js <<'EOF'
+          cat >> /tmp/v792-site/gejast-config.js <<'EOF'
           ;(function(){
             window.GEJAST_CONFIG = window.GEJAST_CONFIG || {};
             window.GEJAST_CONFIG.requireMatchEntrySession = function(){ return true; };
@@ -61,19 +61,23 @@ jobs:
           EOF
       - name: Start isolated local site
         run: |
-          cd /tmp/v791-site
-          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/v791-http.log 2>&1 &
-          echo $! >/tmp/v791-http.pid
+          cd /tmp/v792-site
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/v792-http.log 2>&1 &
+          echo $! >/tmp/v792-http.pid
           for i in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:4173/VERSION >/dev/null; then exit 0; fi
             sleep 1
           done
-          cat /tmp/v791-http.log
+          cat /tmp/v792-http.log
           exit 1
-      - name: Run cross-engine gameplay acceptance without production writes
+      - name: Run Pikken and Paardenrace gameplay acceptance without production writes
         env:
           V791_BASE_URL: http://127.0.0.1:4173
         run: node scripts/v791-core-gameplay-acceptance-v2.mjs
+      - name: Run broad cross-engine UI acceptance without production writes
+        env:
+          V792_BASE_URL: http://127.0.0.1:4173
+        run: node scripts/v792-broad-ui-acceptance.mjs
       - name: Prove repository stayed clean
         if: always()
         run: |
