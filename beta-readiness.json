@@ -1,6 +1,6 @@
 {
   "version": 7,
-  "site_version": "live v790 / release candidate v791",
+  "site_version": "live v791 / release candidate v792",
   "last_updated": "2026-08-13",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -11,9 +11,9 @@
   },
   "deployment_identity": {
     "status": "verified_complete",
-    "live_version": "v790",
-    "frontend_release_merge": "a6ad0b61b99e47ecb63e347d79180bf9ef816d9e",
-    "repository_head_at_audit": "a6ad0b61b99e47ecb63e347d79180bf9ef816d9e",
+    "live_version": "v791",
+    "frontend_release_merge": "03b8b09f9fb8fcb8c649b62bc899f186c06a7b0d",
+    "repository_head_at_audit": "af33bb50144d0e3bb311b09ebbd60458235f40fb",
     "source": "GitHub Pages/static deployment from main plus Cloudflare admin perimeter",
     "evidence": [
       "npm run smoke:live",
@@ -24,17 +24,18 @@
       "2026-08-12 v788 candidate: canonical Klaverjas setup and bid dialogs receive visible-title accessible names via aria-labelledby; no gameplay/layout/backend owner changed.",
       "v789 candidate: cross-browser gameplay audit identified and repairs two isolated runtime owners — Klaverjas scorer modal stacking and the Pikken ladder renderer; no backend schema, game scoring, admin perimeter, Drinks units or production write contract changed.",
       "v790 candidate: Pikken live bidding preserves normal 2<3<4<5<6<pik ordering and adds only the approved 2 x pik conversion once a regular bid reaches at least 5; no backend schema, dice-loss owner, Drinks units, admin perimeter or production-write target changes.",
-      "v791 candidate: Klaverjas 16-round scorer now owns the finished-match summary dialog that its existing finish wrapper renders, while score calculation, live-summary sync, handoff payload, backend contracts and production-write freeze remain unchanged."
+      "v791 candidate: Klaverjas 16-round scorer now owns the finished-match summary dialog that its existing finish wrapper renders, while score calculation, live-summary sync, handoff payload, backend contracts and production-write freeze remain unchanged.",
+      "v792 candidate: Caute Rad keeps the existing weighted wheel behavior but displays each segment chance as its normalized share of total wheel weight; canvas, result and legend use the same Dutch one-decimal probability label, and the permanent regression is wired into npm verification."
     ],
     "note": "2026-08-11 live v787 production closure PASS after merge bbfc7c4afe232c0e9046d333e2b49b93b9159a2d: public VERSION v787, hardened 35-route suite, base/extended read-only beta checks and configured performance budgets passed. Firefox + WebKit on phone + desktop proved all four Family redirect aliases reach the exact scope=family canonical first destination with zero wrong /familie/ subresource requests. Beta readiness remains 12/12 and no production write target is armed.",
-    "release_candidate_version": "v791"
+    "release_candidate_version": "v792"
   },
   "baseline_checks": [
     {
       "id": "static_integrity",
       "status": "verified_complete",
       "command": "npm run verify",
-      "evidence": "Current Node 24 verification passes all existing frontend/backend/security/accessibility regressions through v786. The accessibility naming backlog remains closed 70/70: 58 static controls are protected by v777 and 12 runtime-generated controls by v778; v779 keyboard/focus remains protected; v780 rendered Chromium/axe proof remains preserved with zero axe violations on the nine repaired pages. v781 protects the Drinks stats-queue repair, mobile-sized Drinks/Beerpong targets and the aria-hidden/inert verification-float lifecycle. v782 protects the Drinks bar renderer plus responsive homepage/Klaverjas layout owners and intentional Boerenbridge scrolling. v783 protects runtime-light direct score/Pikken spectator redirect aliases. v784 protects disabled-by-default activation controls, missing/invalid-context early exits, clear login fallback and valid-context-only submit wiring. v785 final-acceptance protects AA-safe audited text contrast, explicit standalone Klaverjas field labels/names, and Rad phone-width containment. v786 Rad live-overflow protects the shared mobile runtime from overriding container-bounded wheel sizing. v787 protects the four Family compatibility wrappers as <=1800-byte redirect-only aliases with no external runtime/network bootstrap and exact scope=family fallbacks. v788 adds explicit visible-title accessible names to the two existing canonical Klaverjas scorer dialogs without changing gameplay or layout. v789 protects the canonical Klaverjas scorer modal as the top interactive layer and gives the Pikken ladder its own scoped stats renderer instead of the incompatible Beurs ladder owner. v790 protects the Pikken special bid conversion: 2 x pik is unavailable below 5 regular, becomes available at 5+ regular, and the established face order and scoped bid RPC remain unchanged. v791 protects Klaverjas finished-match summary ownership: the 16-round finish wrapper has an accessible dialog/card target and its image/copy/close actions plus score handoff remain wired."
+      "evidence": "Current Node 24 verification passes all existing frontend/backend/security/accessibility regressions through v786. The accessibility naming backlog remains closed 70/70: 58 static controls are protected by v777 and 12 runtime-generated controls by v778; v779 keyboard/focus remains protected; v780 rendered Chromium/axe proof remains preserved with zero axe violations on the nine repaired pages. v781 protects the Drinks stats-queue repair, mobile-sized Drinks/Beerpong targets and the aria-hidden/inert verification-float lifecycle. v782 protects the Drinks bar renderer plus responsive homepage/Klaverjas layout owners and intentional Boerenbridge scrolling. v783 protects runtime-light direct score/Pikken spectator redirect aliases. v784 protects disabled-by-default activation controls, missing/invalid-context early exits, clear login fallback and valid-context-only submit wiring. v785 final-acceptance protects AA-safe audited text contrast, explicit standalone Klaverjas field labels/names, and Rad phone-width containment. v786 Rad live-overflow protects the shared mobile runtime from overriding container-bounded wheel sizing. v787 protects the four Family compatibility wrappers as <=1800-byte redirect-only aliases with no external runtime/network bootstrap and exact scope=family fallbacks. v788 adds explicit visible-title accessible names to the two existing canonical Klaverjas scorer dialogs without changing gameplay or layout. v789 protects the canonical Klaverjas scorer modal as the top interactive layer and gives the Pikken ladder its own scoped stats renderer instead of the incompatible Beurs ladder owner. v790 protects the Pikken special bid conversion: 2 x pik is unavailable below 5 regular, becomes available at 5+ regular, and the established face order and scoped bid RPC remain unchanged. v791 protects Klaverjas finished-match summary ownership: the 16-round finish wrapper has an accessible dialog/card target and its image/copy/close actions plus score handoff remain wired. v792 protects Caute Rad probability validity: raw wheel weights are never presented as percentages, normalized displayed probabilities sum to 100%, and the regression is part of verify:static."
     },
     {
       "id": "klaverjas_regression",
