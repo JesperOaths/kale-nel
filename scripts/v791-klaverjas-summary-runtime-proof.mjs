@@ -39,6 +39,19 @@ async function runCase(browser,engine,viewportName,viewport){
   const calls=[]; const errors=[];
   const context=await browser.newContext({viewport,locale:'nl-NL',timezoneId:'Europe/Amsterdam',serviceWorkers:'block'});
   await context.addInitScript(()=>{
+    const nativeFetch=window.fetch.bind(window);
+    window.__v791SupabaseFetchCalls=[];
+    window.fetch=async (input,init={})=>{
+      const raw=typeof input==='string' ? input : (input?.url || String(input||''));
+      let url=null;
+      try { url=new URL(raw,location.href); } catch (_) {}
+      const name=url?.pathname?.match(/\/rest\/v1\/rpc\/(save_game_match_summary_scoped|save_game_match_summary)$/)?.[1]||'';
+      if(url?.hostname?.includes('supabase.co') && name){
+        window.__v791SupabaseFetchCalls.push({name,method:String(init?.method||input?.method||'POST').toUpperCase()});
+        return new Response(JSON.stringify({ok:true,data:{ok:true}}),{status:200,headers:{'Content-Type':'application/json'}});
+      }
+      return nativeFetch(input,init);
+    };
     localStorage.setItem('jas_session_token_v11','v791-proof-session-123456789');
     sessionStorage.setItem('jas_session_token_v11','v791-proof-session-123456789');
     localStorage.removeItem('klaverjas_scorer_v596_game');
@@ -96,7 +109,8 @@ async function runCase(browser,engine,viewportName,viewport){
     assert.ok(Number(await page.locator('#totalW').textContent())>0,'Klaverjas final total must be positive');
     await page.waitForFunction(()=>document.querySelector('#saveMatchBtn')&&!document.querySelector('#saveMatchBtn').hidden,{timeout:5000});
     await page.waitForTimeout(350);
-    assert.ok(calls.some(c=>c.name==='save_game_match_summary_scoped'||c.name==='save_game_match_summary'),'finished summary did not attempt established match-summary sync');
+    const shimCalls=await page.evaluate(()=>window.__v791SupabaseFetchCalls||[]);
+    assert.ok(calls.some(c=>c.name==='save_game_match_summary_scoped'||c.name==='save_game_match_summary')||shimCalls.some(c=>c.name==='save_game_match_summary_scoped'||c.name==='save_game_match_summary'),'finished summary did not attempt established match-summary sync');
 
     const summaryClose=page.locator('#matchSummaryOverlay button').filter({hasText:'Sluiten'});
     await summaryClose.click();
