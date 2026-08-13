@@ -50,6 +50,7 @@ begin
   end if;
   perform public._klaverjas_online_bid_guard_v792b5(game_row.state, effective_state, actor_seat);
   perform public._klaverjas_online_play_guard_v792b6(game_row.state, effective_state, actor_seat);
+  perform public._klaverjas_online_human_card_legality_guard_v792b12(game_row.state, effective_state, actor_seat);
 
   return public._klaverjas_online_save_state_v792a(
     session_token,
