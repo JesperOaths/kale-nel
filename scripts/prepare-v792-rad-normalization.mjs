@@ -92,7 +92,8 @@ function cleanTouchedLineWhitespace(){
     for(const lineNo of lineNos){
       const index=lineNo-1;
       assert.ok(index>=0&&index<lines.length,`${path}:${lineNo} is outside file bounds`);
-      lines[index]=lines[index].replace(/[ \t]+$/,'');
+      // Preserve CRLF/LF convention while removing spaces/tabs immediately before the line ending.
+      lines[index]=lines[index].replace(/[ \t]+(?=\r?$)/,'');
     }
     let cleaned=lines.join('\n');
     if(hadFinalNewline&&!cleaned.endsWith('\n')) cleaned+='\n';
