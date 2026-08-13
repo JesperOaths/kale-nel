@@ -69,7 +69,7 @@ jobs:
       - name: Run cross-engine gameplay acceptance without production writes
         env:
           V791_BASE_URL: http://127.0.0.1:4173
-        run: node scripts/v791-core-gameplay-acceptance.mjs
+        run: node scripts/v791-core-gameplay-acceptance-v2.mjs
       - name: Prove repository stayed clean
         if: always()
         run: |
