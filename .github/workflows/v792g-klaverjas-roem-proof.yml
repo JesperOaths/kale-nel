@@ -1,0 +1,119 @@
+name: v792g Klaverjas roem PostgreSQL proof
+
+on:
+  pull_request:
+    paths:
+      - 'GEJAST_v792g_klaverjas_online_roem_wrapper_fix.sql'
+      - '.github/workflows/v792g-klaverjas-roem-proof.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-roem-proof:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gejast_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d gejast_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGPASSWORD: postgres
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: gejast_test
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Create client roles
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          SQL
+
+      - name: Apply v792g helper replacement
+        run: psql -v ON_ERROR_STOP=1 --file GEJAST_v792g_klaverjas_online_roem_wrapper_fix.sql
+
+      - name: Prove wrapped trick roem
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          begin
+            if public._klaverjas_online_roem_points(
+              '[
+                {"player":0,"card":{"id":"hearts-A","suit":"hearts","rank":"A"}},
+                {"player":1,"card":{"id":"hearts-K","suit":"hearts","rank":"K"}},
+                {"player":2,"card":{"id":"hearts-Q","suit":"hearts","rank":"Q"}},
+                {"player":3,"card":{"id":"clubs-7","suit":"clubs","rank":"7"}}
+              ]'::jsonb,
+              'clubs'
+            ) <> 20 then
+              raise exception 'wrapped three-card sequence roem failed';
+            end if;
+
+            if public._klaverjas_online_roem_points(
+              '[
+                {"player":0,"card":{"id":"hearts-A","suit":"hearts","rank":"A"}},
+                {"player":1,"card":{"id":"hearts-K","suit":"hearts","rank":"K"}},
+                {"player":2,"card":{"id":"hearts-Q","suit":"hearts","rank":"Q"}},
+                {"player":3,"card":{"id":"hearts-J","suit":"hearts","rank":"J"}}
+              ]'::jsonb,
+              'clubs'
+            ) <> 50 then
+              raise exception 'wrapped four-card sequence roem failed';
+            end if;
+
+            if public._klaverjas_online_roem_points(
+              '[
+                {"player":0,"card":{"id":"spades-K","suit":"spades","rank":"K"}},
+                {"player":1,"card":{"id":"spades-Q","suit":"spades","rank":"Q"}},
+                {"player":2,"card":{"id":"hearts-7","suit":"hearts","rank":"7"}},
+                {"player":3,"card":{"id":"clubs-8","suit":"clubs","rank":"8"}}
+              ]'::jsonb,
+              'spades'
+            ) <> 20 then
+              raise exception 'wrapped trump king-queen roem failed';
+            end if;
+
+            if public._klaverjas_online_roem_points(
+              '[
+                {"player":0,"card":{"id":"clubs-J","suit":"clubs","rank":"J"}},
+                {"player":1,"card":{"id":"spades-J","suit":"spades","rank":"J"}},
+                {"player":2,"card":{"id":"hearts-J","suit":"hearts","rank":"J"}},
+                {"player":3,"card":{"id":"diamonds-J","suit":"diamonds","rank":"J"}}
+              ]'::jsonb,
+              'clubs'
+            ) <> 200 then
+              raise exception 'wrapped four-jacks roem failed';
+            end if;
+
+            if public._klaverjas_online_roem_points(
+              '[
+                {"player":0,"card":{"id":"clubs-A","suit":"clubs","rank":"A"}},
+                {"player":1,"card":{"id":"spades-10","suit":"spades","rank":"10"}},
+                {"player":2,"card":{"id":"hearts-8","suit":"hearts","rank":"8"}},
+                {"player":3,"card":{"id":"diamonds-7","suit":"diamonds","rank":"7"}}
+              ]'::jsonb,
+              'clubs'
+            ) <> 0 then
+              raise exception 'wrapped no-roem trick produced points';
+            end if;
+
+            if has_function_privilege('anon','public._klaverjas_online_roem_points(jsonb,text)','EXECUTE')
+               or has_function_privilege('authenticated','public._klaverjas_online_roem_points(jsonb,text)','EXECUTE') then
+              raise exception 'roem helper is executable by client roles';
+            end if;
+          end
+          $$;
+          SQL
