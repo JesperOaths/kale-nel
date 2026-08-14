@@ -234,7 +234,7 @@ declare
 begin
   if bid_input is null or bid_input = 'null'::jsonb or bid_input ->> 'action' <> 'bid' then return false; end if;
   if nullif(bid_input ->> 'player','')::integer <> player_seat then return false; end if;
-  if coalesce(nullif(bid_input ->> 'team','')::integer,0) <> case when player_seat in (0,2) then 1 else 2 end then return false; end if;
+  if coalesce(nullif(bid_input ->> 'team','')::integer,0) <> (case when player_seat in (0,2) then 1 else 2 end) then return false; end if;
 
   all_points := kind_text in ('pit','mars','doormars') or (mode_text='sans' and points=132);
   if all_points then return true; end if;
