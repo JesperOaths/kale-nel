@@ -338,7 +338,7 @@ begin
       if stored_phase <> 'lobby'
          or not coalesce((input_player ->> 'is_bot')::boolean, false)
          or nullif(input_player ->> 'seat','')::integer not between 0 and 3
-         or coalesce((input_player ->> 'team')::integer, 0) <> case when nullif(input_player ->> 'seat','')::integer in (0,2) then 1 else 2 end
+         or coalesce((input_player ->> 'team')::integer, 0) <> (case when nullif(input_player ->> 'seat','')::integer in (0,2) then 1 else 2 end)
       then raise exception 'klaverjas_online_roster_addition_rejected'; end if;
       has_bots := true;
     end if;
