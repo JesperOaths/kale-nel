@@ -44,7 +44,7 @@ declare
 begin
   if bid_input is null or bid_input='null'::jsonb or bid_input ->> 'action'<>'bid' then return false; end if;
   if nullif(bid_input ->> 'player','')::integer<>player_seat then return false; end if;
-  if coalesce(nullif(bid_input ->> 'team','')::integer,0)<>case when player_seat in (0,2) then 1 else 2 end then return false; end if;
+  if coalesce(nullif(bid_input ->> 'team','')::integer,0)<>(case when player_seat in (0,2) then 1 else 2 end) then return false; end if;
 
   -- Current UI's only all-points contract. Reject malformed synthetic kind/mode/point mixtures.
   if kind_text is not null then
