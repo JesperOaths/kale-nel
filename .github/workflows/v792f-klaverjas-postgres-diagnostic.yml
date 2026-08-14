@@ -1,0 +1,103 @@
+name: v792f Klaverjas PostgreSQL diagnostic
+
+on:
+  pull_request:
+    paths:
+      - 'GEJAST_v792b_klaverjas_online_transition_guard.sql'
+      - 'GEJAST_v792c_klaverjas_online_rules_guard.sql'
+      - 'GEJAST_v792d_klaverjas_online_transition_compat.sql'
+      - 'GEJAST_v792e_klaverjas_online_bid_rank_guard.sql'
+      - 'GEJAST_v792f_klaverjas_online_persistence_guard.sql'
+      - '.github/workflows/v792f-klaverjas-postgres-diagnostic.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  split-compile:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gejast_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d gejast_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGPASSWORD: postgres
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: gejast_test
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          create table public.players (id uuid primary key, display_name text not null unique);
+          create table public.klaverjas_online_games (
+            id uuid primary key,
+            lobby_code text,
+            state jsonb not null default '{}'::jsonb,
+            status text not null default 'lobby',
+            created_by_player_id uuid,
+            created_by_player_name text,
+            saved_jas_game_id bigint,
+            site_scope text not null default 'friends',
+            updated_at timestamptz not null default now(),
+            action_deadline_at timestamptz,
+            finished_at timestamptz
+          );
+          create table public.klaverjas_online_player_stats (
+            player_name text primary key,
+            games_played integer not null default 0,
+            games_won integer not null default 0,
+            kruipen integer not null default 0,
+            naakt_kruipen integer not null default 0,
+            caused_kruipen integer not null default 0,
+            caused_naakt_kruipen integer not null default 0,
+            last_game_at timestamptz,
+            updated_at timestamptz not null default now()
+          );
+          create table public._test_jas_payloads (payload jsonb not null);
+          create table public._test_summary_payloads (payload jsonb not null);
+          create or replace function public._jas_session_player(token text)
+          returns public.players language sql stable set search_path to 'public'
+          as $$ select p from public.players p order by display_name limit 1 $$;
+          create or replace function public.create_jas_game(session_token text, payload_input jsonb)
+          returns jsonb language sql set search_path to 'public'
+          as $$ select jsonb_build_object('game_id','123') $$;
+          create or replace function public.save_game_match_summary_scoped(session_token text, game_type text, match_id text, payload_input jsonb, scope_input text)
+          returns jsonb language sql set search_path to 'public'
+          as $$ select jsonb_build_object('ok',true) $$;
+          create or replace function public.save_game_match_summary(session_token text, game_type text, match_id text, payload_input jsonb)
+          returns jsonb language sql set search_path to 'public'
+          as $$ select jsonb_build_object('ok',true) $$;
+          create or replace function public._klaverjas_online_public(game_row public.klaverjas_online_games, session_token text)
+          returns jsonb language sql stable set search_path to 'public'
+          as $$ select jsonb_build_object('id',game_row.id,'status',game_row.status,'state',game_row.state,'saved_jas_game_id',game_row.saved_jas_game_id) $$;
+          create or replace function public.klaverjas_online_save_state(session_token text, game_id_input uuid, state_input jsonb, summary_payload jsonb default null, final_jas_payload jsonb default null)
+          returns jsonb language sql as $$ select coalesce(state_input,'{}'::jsonb) $$;
+          SQL
+
+      - name: Compile v792b
+        run: psql -v ON_ERROR_STOP=1 --file GEJAST_v792b_klaverjas_online_transition_guard.sql
+      - name: Compile v792c
+        run: psql -v ON_ERROR_STOP=1 --file GEJAST_v792c_klaverjas_online_rules_guard.sql
+      - name: Compile v792d
+        run: psql -v ON_ERROR_STOP=1 --file GEJAST_v792d_klaverjas_online_transition_compat.sql
+      - name: Compile v792e
+        run: psql -v ON_ERROR_STOP=1 --file GEJAST_v792e_klaverjas_online_bid_rank_guard.sql
+      - name: Compile v792f
+        run: psql -v ON_ERROR_STOP=1 --file GEJAST_v792f_klaverjas_online_persistence_guard.sql
