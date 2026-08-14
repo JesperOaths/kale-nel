@@ -1,0 +1,377 @@
+name: v792f Klaverjas PostgreSQL proof
+
+on:
+  pull_request:
+    paths:
+      - 'GEJAST_v792b_klaverjas_online_transition_guard.sql'
+      - 'GEJAST_v792c_klaverjas_online_rules_guard.sql'
+      - 'GEJAST_v792d_klaverjas_online_transition_compat.sql'
+      - 'GEJAST_v792e_klaverjas_online_bid_rank_guard.sql'
+      - 'GEJAST_v792f_klaverjas_online_persistence_guard.sql'
+      - '.github/workflows/v792f-klaverjas-postgres-proof.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-proof:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gejast_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d gejast_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGPASSWORD: postgres
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: gejast_test
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Create isolated deployed-contract fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+
+          create table public.players (
+            id uuid primary key,
+            display_name text not null unique
+          );
+
+          create table public.klaverjas_online_games (
+            id uuid primary key,
+            lobby_code text,
+            state jsonb not null default '{}'::jsonb,
+            status text not null default 'lobby',
+            created_by_player_id uuid,
+            created_by_player_name text,
+            saved_jas_game_id bigint,
+            site_scope text not null default 'friends',
+            updated_at timestamptz not null default now(),
+            action_deadline_at timestamptz,
+            finished_at timestamptz
+          );
+
+          create table public.klaverjas_online_player_stats (
+            player_name text primary key,
+            games_played integer not null default 0,
+            games_won integer not null default 0,
+            kruipen integer not null default 0,
+            naakt_kruipen integer not null default 0,
+            caused_kruipen integer not null default 0,
+            caused_naakt_kruipen integer not null default 0,
+            last_game_at timestamptz,
+            updated_at timestamptz not null default now()
+          );
+
+          create table public._test_jas_payloads (
+            payload jsonb not null,
+            captured_at timestamptz not null default now()
+          );
+          create table public._test_summary_payloads (
+            payload jsonb not null,
+            captured_at timestamptz not null default now()
+          );
+
+          insert into public.players(id,display_name) values
+            ('00000000-0000-0000-0000-000000000001','Alice'),
+            ('00000000-0000-0000-0000-000000000002','Bob'),
+            ('00000000-0000-0000-0000-000000000003','Carol'),
+            ('00000000-0000-0000-0000-000000000004','Dave');
+
+          create or replace function public._jas_session_player(token text)
+          returns public.players
+          language sql
+          stable
+          set search_path to 'public'
+          as $$
+            select p from public.players p
+             where p.display_name = case token when 'alice-token' then 'Alice' else '__invalid__' end
+             limit 1
+          $$;
+
+          create or replace function public.create_jas_game(session_token text, payload_input jsonb)
+          returns jsonb
+          language plpgsql
+          set search_path to 'public'
+          as $$
+          begin
+            insert into public._test_jas_payloads(payload) values (payload_input);
+            return jsonb_build_object('game_id','123');
+          end
+          $$;
+
+          create or replace function public.save_game_match_summary_scoped(
+            session_token text,
+            game_type text,
+            match_id text,
+            payload_input jsonb,
+            scope_input text
+          ) returns jsonb
+          language plpgsql
+          set search_path to 'public'
+          as $$
+          begin
+            insert into public._test_summary_payloads(payload) values (payload_input);
+            return jsonb_build_object('ok',true);
+          end
+          $$;
+
+          create or replace function public.save_game_match_summary(
+            session_token text,
+            game_type text,
+            match_id text,
+            payload_input jsonb
+          ) returns jsonb
+          language sql
+          set search_path to 'public'
+          as $$ select jsonb_build_object('ok',true) $$;
+
+          create or replace function public._klaverjas_online_public(
+            game_row public.klaverjas_online_games,
+            session_token text
+          ) returns jsonb
+          language sql
+          stable
+          set search_path to 'public'
+          as $$
+            select jsonb_build_object(
+              'id',game_row.id,
+              'status',game_row.status,
+              'state',game_row.state,
+              'saved_jas_game_id',game_row.saved_jas_game_id
+            )
+          $$;
+
+          -- v792b replaces this deployed-signature function. Keeping the stub here makes the
+          -- fixture fail if a migration unexpectedly changes the public signature.
+          create or replace function public.klaverjas_online_save_state(
+            session_token text,
+            game_id_input uuid,
+            state_input jsonb,
+            summary_payload jsonb default null,
+            final_jas_payload jsonb default null
+          ) returns jsonb
+          language sql
+          as $$ select coalesce(state_input,'{}'::jsonb) $$;
+          SQL
+
+      - name: Compile the exact v792b-v792f chain
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            GEJAST_v792b_klaverjas_online_transition_guard.sql
+            GEJAST_v792c_klaverjas_online_rules_guard.sql
+            GEJAST_v792d_klaverjas_online_transition_compat.sql
+            GEJAST_v792e_klaverjas_online_bid_rank_guard.sql
+            GEJAST_v792f_klaverjas_online_persistence_guard.sql
+          )
+          for file in "${files[@]}"; do
+            echo "Applying $file"
+            psql -v ON_ERROR_STOP=1 --file "$file"
+          done
+
+      - name: Probe deterministic rule helpers
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          begin
+            if public._klaverjas_online_bid_rank(
+              '{"action":"bid","player":0,"team":1,"mode":"suit","suit":"hearts","points":80}'::jsonb
+            ) <> 82 then
+              raise exception 'suit-80 rank parity failed';
+            end if;
+
+            if not public._klaverjas_online_bid_valid(
+              '{"action":"bid","player":0,"team":1,"mode":"sans","points":90}'::jsonb,
+              '{"action":"bid","player":1,"team":2,"mode":"suit","suit":"clubs","points":80}'::jsonb,
+              0
+            ) then
+              raise exception 'valid sans-over-suit bid rejected';
+            end if;
+
+            if public._klaverjas_online_bid_valid(
+              '{"action":"bid","player":0,"team":1,"mode":"sans","points":95}'::jsonb,
+              null,
+              0
+            ) then
+              raise exception 'invalid non-10-point bid accepted';
+            end if;
+
+            if public._klaverjas_online_bid_valid(
+              '{"action":"bid","player":0,"team":1,"mode":"suit","suit":"hearts","points":80,"kind":"pit"}'::jsonb,
+              null,
+              0
+            ) then
+              raise exception 'malformed pit accepted';
+            end if;
+          end
+          $$;
+          SQL
+
+      - name: Prove forged persistence inputs are ignored
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          insert into public.klaverjas_online_games(
+            id,lobby_code,state,status,created_by_player_id,created_by_player_name,site_scope
+          ) values (
+            '11111111-1111-1111-1111-111111111111',
+            'TEST',
+            jsonb_build_object(
+              'phase','roundOver',
+              'players',jsonb_build_array(
+                jsonb_build_object('name','Alice','seat',0,'team',1,'is_bot',false,'player_type','human'),
+                jsonb_build_object('name','Bob','seat',1,'team',2,'is_bot',false,'player_type','human'),
+                jsonb_build_object('name','Carol','seat',2,'team',1,'is_bot',false,'player_type','human'),
+                jsonb_build_object('name','Dave','seat',3,'team',2,'is_bot',false,'player_type','human')
+              ),
+              'settings',jsonb_build_object('finish_mode','first_to_162'),
+              'deal_nonce','deal-1',
+              'dealer',0,
+              'bidder_turn',null,
+              'turn',null,
+              'current_bid',null,
+              'accepted_bid',null,
+              'hands',jsonb_build_array('[]'::jsonb,'[]'::jsonb,'[]'::jsonb,'[]'::jsonb),
+              'trick','[]'::jsonb,
+              'pending_trick',null,
+              'taken','[]'::jsonb,
+              'roem_by_team','[0,0]'::jsonb,
+              'rounds',jsonb_build_array(jsonb_build_object('round',1)),
+              'totals','[200,100]'::jsonb
+            ),
+            'roundOver',
+            '00000000-0000-0000-0000-000000000001',
+            'Alice',
+            'friends'
+          );
+
+          select public.klaverjas_online_save_state(
+            'alice-token',
+            '11111111-1111-1111-1111-111111111111',
+            (
+              select state
+                     || jsonb_build_object(
+                          'phase','finished',
+                          'summary',jsonb_build_object('winner_team',2,'forged',true),
+                          'kruip','forged',
+                          'action_needed_seat',3,
+                          'action_deadline_at','2099-01-01T00:00:00Z',
+                          'finished_at','2000-01-01T00:00:00Z'
+                        )
+                from public.klaverjas_online_games
+               where id='11111111-1111-1111-1111-111111111111'
+            ),
+            '{"forged":true,"winner_names":["Mallory"],"totals":{"wij":1,"zij":999}}'::jsonb,
+            '{"forged":true,"title":"HACKED","participants":[{"name":"Mallory"}]}'::jsonb
+          );
+
+          do $$
+          declare
+            room public.klaverjas_online_games%rowtype;
+            jas jsonb;
+            summary jsonb;
+            stat record;
+          begin
+            select * into room from public.klaverjas_online_games
+             where id='11111111-1111-1111-1111-111111111111';
+            select payload into jas from public._test_jas_payloads order by captured_at desc limit 1;
+            select payload into summary from public._test_summary_payloads order by captured_at desc limit 1;
+
+            if room.status <> 'finished' or room.saved_jas_game_id <> 123 then
+              raise exception 'finished room/Jas persistence failed';
+            end if;
+            if room.state #>> '{summary,winner_team}' <> '1' then
+              raise exception 'forged winner_team survived';
+            end if;
+            if room.state ->> 'kruip' <> 'naakt_kruipen' then
+              raise exception 'kruip was not derived from canonical totals';
+            end if;
+            if room.action_deadline_at is not null or room.state #>> '{action_deadline_at}' is not null then
+              raise exception 'forged finished-state deadline survived';
+            end if;
+            if room.finished_at is null or room.finished_at < now() - interval '5 minutes'
+               or room.state #>> '{finished_at}' = '2000-01-01T00:00:00Z' then
+              raise exception 'finished_at was not server-owned';
+            end if;
+
+            if jas is null or coalesce((jas ->> 'forged')::boolean,false) then
+              raise exception 'caller final_jas_payload reached persistence';
+            end if;
+            if jas ->> 'title' <> 'Online klaverjas TEST'
+               or jas ->> 'variant' <> '4_player'
+               or jas ->> 'scoreboard_mode' <> 'teams'
+               or jas ->> 'source' <> 'klaverjas_online'
+               or jsonb_array_length(jas -> 'participants') <> 4 then
+              raise exception 'canonical Jas payload contract mismatch';
+            end if;
+            if (select count(*) from jsonb_array_elements(jas -> 'participants') p
+                 where p ->> 'name' in ('Alice','Carol') and (p ->> 'is_winner')::boolean) <> 2
+               or (select count(*) from jsonb_array_elements(jas -> 'participants') p
+                 where p ->> 'name' in ('Bob','Dave') and not (p ->> 'is_winner')::boolean) <> 2 then
+              raise exception 'canonical Jas winner flags mismatch';
+            end if;
+
+            if summary is null or coalesce((summary ->> 'forged')::boolean,false) then
+              raise exception 'caller summary_payload reached persistence';
+            end if;
+            if summary #>> '{totals,wij}' <> '200' or summary #>> '{totals,zij}' <> '100'
+               or summary -> 'winner_names' <> '["Alice","Carol"]'::jsonb
+               or summary ->> 'kruip' <> 'naakt_kruipen'
+               or summary #>> '{action_deadline_at}' is not null then
+              raise exception 'canonical summary contract mismatch';
+            end if;
+
+            for stat in select * from public.klaverjas_online_player_stats loop
+              if stat.player_name in ('Alice','Carol') then
+                if stat.games_played <> 1 or stat.games_won <> 1
+                   or stat.caused_naakt_kruipen <> 1 or stat.naakt_kruipen <> 0 then
+                  raise exception 'winner stats were not canonical for %',stat.player_name;
+                end if;
+              elsif stat.player_name in ('Bob','Dave') then
+                if stat.games_played <> 1 or stat.games_won <> 0
+                   or stat.naakt_kruipen <> 1 or stat.caused_naakt_kruipen <> 0 then
+                  raise exception 'loser stats were not canonical for %',stat.player_name;
+                end if;
+              else
+                raise exception 'unexpected player stat row %',stat.player_name;
+              end if;
+            end loop;
+            if (select count(*) from public.klaverjas_online_player_stats) <> 4 then
+              raise exception 'expected exactly four canonical stat rows';
+            end if;
+
+            if has_function_privilege('anon',
+                 'public._klaverjas_online_save_state_v792e_inner(text,uuid,jsonb,jsonb,jsonb)','EXECUTE')
+               or has_function_privilege('authenticated',
+                 'public._klaverjas_online_save_state_v792e_inner(text,uuid,jsonb,jsonb,jsonb)','EXECUTE') then
+              raise exception 'private v792e inner RPC is executable by client roles';
+            end if;
+            if not has_function_privilege('anon',
+                 'public.klaverjas_online_save_state(text,uuid,jsonb,jsonb,jsonb)','EXECUTE')
+               or not has_function_privilege('authenticated',
+                 'public.klaverjas_online_save_state(text,uuid,jsonb,jsonb,jsonb)','EXECUTE') then
+              raise exception 'public save RPC lost expected client execute grant';
+            end if;
+          end
+          $$;
+          SQL
