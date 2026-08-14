@@ -1,0 +1,167 @@
+name: v792h Klaverjas recovery PostgreSQL proof
+
+on:
+  pull_request:
+    paths:
+      - 'GEJAST_v792h_klaverjas_online_recovery_snapshot_bridge.sql'
+      - '.github/workflows/v792h-klaverjas-recovery-proof.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-recovery-proof:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gejast_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d gejast_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGPASSWORD: postgres
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: gejast_test
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Create isolated deployed-contract fixture
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+
+          create table public.players (
+            id uuid primary key,
+            display_name text not null unique
+          );
+          insert into public.players(id,display_name) values
+            ('00000000-0000-0000-0000-000000000001','Alice');
+
+          create table public.klaverjas_online_games (
+            id uuid primary key,
+            state jsonb not null,
+            status text not null default 'playing'
+          );
+
+          create table public._test_save_capture (
+            state jsonb not null
+          );
+
+          create or replace function public._jas_session_player(token text)
+          returns public.players
+          language sql
+          stable
+          set search_path to 'public'
+          as $$
+            select p from public.players p
+             where p.display_name = case token when 'alice-token' then 'Alice' else '__invalid__' end
+             limit 1
+          $$;
+
+          create or replace function public.klaverjas_online_save_state(
+            session_token text,
+            game_id_input uuid,
+            state_input jsonb,
+            summary_payload jsonb default null,
+            final_jas_payload jsonb default null
+          ) returns jsonb
+          language plpgsql
+          set search_path to 'public'
+          as $$
+          begin
+            insert into public._test_save_capture(state) values (state_input);
+            return state_input;
+          end
+          $$;
+
+          insert into public.klaverjas_online_games(id,status,state) values (
+            '11111111-1111-1111-1111-111111111111',
+            'playing',
+            jsonb_build_object(
+              'deal_nonce','deal-1',
+              'players',jsonb_build_array(
+                jsonb_build_object('name','Alice','seat',0,'team',1,'is_bot',false,'player_type','human'),
+                jsonb_build_object('name','Bob','seat',1,'team',2,'is_bot',false,'player_type','human'),
+                jsonb_build_object('name','Robot','seat',2,'team',1,'is_bot',true,'player_type','bot'),
+                jsonb_build_object('name','Dave','seat',3,'team',2,'is_bot',false,'player_type','human')
+              ),
+              'recovery_snapshot',jsonb_build_object(
+                'hands',jsonb_build_array(
+                  jsonb_build_array('stored-alice'),
+                  jsonb_build_array('stored-bob'),
+                  jsonb_build_array('stored-bot'),
+                  jsonb_build_array('stored-dave')
+                )
+              )
+            )
+          );
+          SQL
+
+      - name: Apply v792h bridge
+        run: psql -v ON_ERROR_STOP=1 --file GEJAST_v792h_klaverjas_online_recovery_snapshot_bridge.sql
+
+      - name: Prove hidden recovery hands are rehydrated
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          select public.klaverjas_online_save_state(
+            'alice-token',
+            '11111111-1111-1111-1111-111111111111',
+            jsonb_build_object(
+              'deal_nonce','deal-1',
+              'recovery_snapshot',jsonb_build_object(
+                'hands',jsonb_build_array(
+                  jsonb_build_array('caller-alice'),
+                  '[]'::jsonb,
+                  jsonb_build_array('caller-bot'),
+                  '[]'::jsonb
+                )
+              )
+            ),
+            null,
+            null
+          );
+
+          do $$
+          declare
+            captured jsonb;
+          begin
+            select state into captured from public._test_save_capture order by ctid desc limit 1;
+            if captured #> '{recovery_snapshot,hands,0}' <> '["caller-alice"]'::jsonb then
+              raise exception 'actor recovery hand was unexpectedly replaced';
+            end if;
+            if captured #> '{recovery_snapshot,hands,1}' <> '["stored-bob"]'::jsonb then
+              raise exception 'hidden Bob recovery hand was not restored';
+            end if;
+            if captured #> '{recovery_snapshot,hands,2}' <> '["caller-bot"]'::jsonb then
+              raise exception 'visible bot recovery hand was unexpectedly replaced';
+            end if;
+            if captured #> '{recovery_snapshot,hands,3}' <> '["stored-dave"]'::jsonb then
+              raise exception 'hidden Dave recovery hand was not restored';
+            end if;
+
+            if has_function_privilege('anon',
+                 'public._klaverjas_online_save_state_v792f_inner(text,uuid,jsonb,jsonb,jsonb)','EXECUTE')
+               or has_function_privilege('authenticated',
+                 'public._klaverjas_online_save_state_v792f_inner(text,uuid,jsonb,jsonb,jsonb)','EXECUTE') then
+              raise exception 'private v792f save function is executable by client roles';
+            end if;
+            if not has_function_privilege('anon',
+                 'public.klaverjas_online_save_state(text,uuid,jsonb,jsonb,jsonb)','EXECUTE')
+               or not has_function_privilege('authenticated',
+                 'public.klaverjas_online_save_state(text,uuid,jsonb,jsonb,jsonb)','EXECUTE') then
+              raise exception 'public save RPC lost expected client execute grant';
+            end if;
+          end
+          $$;
+          SQL
