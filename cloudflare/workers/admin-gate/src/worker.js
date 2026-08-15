@@ -7,7 +7,7 @@ const SESSION_TTL_SECONDS = 30 * 60;
 const OAUTH_TTL_SECONDS = 10 * 60;
 const ATTEMPT_WINDOW_SECONDS = 15 * 60;
 const MAX_LOGIN_ATTEMPTS = 8;
-const ADMIN_BUILD = 'v762';
+const ADMIN_BUILD = 'v763';
 
 const PROTECTED_PUBLIC_PATTERNS = [
   /^\/admin[^/]*\.html$/i,
@@ -41,6 +41,17 @@ export default {
     try {
       if (!isSafeRawUrl(request.url)) return notFound();
       const url = new URL(request.url);
+      if (url.protocol === 'http:') {
+        const target = new URL(url.toString());
+        target.protocol = 'https:';
+        return new Response(null, {
+          status: 308,
+          headers: secureHeaders({
+            Location: target.toString(),
+            'Cache-Control': 'no-store'
+          })
+        });
+      }
       if (url.hostname === PUBLIC_HOST || url.hostname === `www.${PUBLIC_HOST}`) {
         return handlePublicApex(request, url);
       }
