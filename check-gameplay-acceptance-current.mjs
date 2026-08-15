@@ -2,6 +2,8 @@
 import fs from 'node:fs';
 import './check-pikken-live-viewmodel-v792.mjs';
 import './check-paardenrace-live-viewmodel-v792.mjs';
+import './check-backend-rpc-provenance.mjs';
+import './check-backend-rpc-acl-hardening.mjs';
 
 const version = fs.readFileSync('VERSION', 'utf8').trim();
 const tracker = JSON.parse(fs.readFileSync('gameplay-acceptance.json', 'utf8'));
