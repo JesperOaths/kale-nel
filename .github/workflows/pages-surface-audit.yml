@@ -20,7 +20,7 @@ jobs:
         shell: bash
         run: |
           set -u
-          # Re-run marker: historical-directory surface audit after deployment 088402c.
+          # Re-run marker: broad repository-evidence surface audit after deployment 088402c.
 
           probe() {
             local label="$1"
@@ -70,6 +70,12 @@ jobs:
           probe 'historical-v182-admin' 'https://kalenel.nl/mnt/data/v182build/admin.html' 'yes'
           probe 'deployment-forensics' 'https://kalenel.nl/deployment_forensics_v761/hash_git_head.js' 'yes'
           probe 'repo-duplicate-asset' 'https://kalenel.nl/repo/gejast-game-hq.css' 'yes'
+          probe 'inventory-markdown-raw' 'https://kalenel.nl/LIVE_WRITE_SURFACE_INVENTORY_2026-08-03.md' 'yes'
+          probe 'inventory-markdown-rendered' 'https://kalenel.nl/LIVE_WRITE_SURFACE_INVENTORY_2026-08-03.html' 'yes'
+          probe 'release-markdown-rendered' 'https://kalenel.nl/RELEASES/v758.html' 'yes'
+          probe 'readme-text' 'https://kalenel.nl/README_v437.txt' 'yes'
+          probe 'patch-manifest-text' 'https://kalenel.nl/PATCH_MANIFEST_v581_mobile_repo.txt' 'yes'
+          probe 'validation-json' 'https://kalenel.nl/GEJAST_v635_VALIDATION_SUMMARY.json' 'yes'
           probe 'pages-origin-package-json' 'https://jesperoaths.github.io/kale-nel/package.json' 'yes'
           probe 'pages-origin-gameplay-evidence' 'https://jesperoaths.github.io/kale-nel/gameplay-acceptance.json' 'yes'
           probe 'pages-origin-ci-source' 'https://jesperoaths.github.io/kale-nel/check-canonical-gejast-gate-v792.mjs' 'yes'
