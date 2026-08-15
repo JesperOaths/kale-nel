@@ -31,6 +31,8 @@ jobs:
         run: node check-rpc-coverage.mjs
       - name: Backend RPC provenance
         run: node check-backend-rpc-provenance.mjs
+      - name: Reconstructed Paardenrace RPC source safety
+        run: node check-paardenrace-rpc-source-safety.mjs
       - name: Gameplay acceptance
         run: node check-gameplay-acceptance-current.mjs
       - name: Local reference integrity
