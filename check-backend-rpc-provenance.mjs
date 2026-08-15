@@ -59,11 +59,13 @@ for (const file of sqlFiles) {
 
 const status = manifest.repository_authority?.status;
 const mappedPaths = manifest.repository_authority?.authoritative_sql_paths || [];
-const definedNames = [...definitions.entries()].filter(([, files]) => files.length).map(([name]) => name);
+const definedMappings = [...definitions.entries()]
+  .filter(([, files]) => files.length)
+  .map(([name, files]) => `${name}=>${files.sort().join('|')}`);
 if (!['missing', 'checked_in'].includes(status)) failures.push('repository authority status must be missing or checked_in');
 if (status === 'missing') {
   if (mappedPaths.length !== 0) failures.push('missing repository authority must not claim authoritative SQL paths');
-  if (definedNames.length) failures.push(`tracked backend definitions entered Git without provenance transition: ${definedNames.join(', ')}`);
+  if (definedMappings.length) failures.push(`tracked backend definitions entered Git without provenance transition: ${definedMappings.join(', ')}`);
 }
 if (status === 'checked_in') {
   if (mappedPaths.length === 0) failures.push('checked_in repository authority requires authoritative SQL paths');
