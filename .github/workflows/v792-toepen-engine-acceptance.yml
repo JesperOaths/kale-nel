@@ -1,0 +1,20 @@
+name: v792 Toepen gameplay acceptance
+
+on:
+  pull_request:
+    paths:
+      - 'gejast-toepen-engine.js'
+      - 'check-toepen-engine-v792.mjs'
+      - '.github/workflows/v792-toepen-engine-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  toepen-engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run deterministic gameplay matrix
+        run: node check-toepen-engine-v792.mjs
