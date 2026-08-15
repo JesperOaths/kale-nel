@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+const setupNodeV5 = 'actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444';
 const requiredNode24 = [
   '.github/workflows/dependency-security.yml',
   '.github/workflows/verify.yml',
@@ -12,7 +13,7 @@ const failures = [];
 
 for (const file of requiredNode24) {
   const text = fs.readFileSync(file, 'utf8');
-  if (!text.includes('actions/setup-node@v5')) failures.push(`${file} must use actions/setup-node@v5`);
+  if (!text.includes(setupNodeV5)) failures.push(`${file} must use the approved immutable setup-node v5 commit`);
   if (!/node-version:\s*['"]24['"]/.test(text)) failures.push(`${file} must pin node-version: '24'`);
 }
 
