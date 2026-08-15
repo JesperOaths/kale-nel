@@ -1,0 +1,60 @@
+name: Runtime route audit
+
+on:
+  push:
+    branches:
+      - agent/runtime-route-audit-v792
+    paths:
+      - '.github/workflows/runtime-route-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - name: Classify versioned and unreferenced HTML owners
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const { execFileSync } = require('child_process');
+
+          const tracked = execFileSync('git', ['ls-files'], { encoding: 'utf8' }).split(/\r?\n/).filter(Boolean);
+          const historyPrefixes = ['repo/', 'mnt/', 'deployment_forensics_v761/', '.github/', 'cloudflare/', 'scripts/', 'RELEASES/', 'docs/'];
+          const web = tracked.filter((p) => /\.(?:html|js|css)$/i.test(p) && !historyPrefixes.some((prefix) => p.startsWith(prefix)) && !/^check-/.test(p));
+          const html = web.filter((p) => /\.html$/i.test(p));
+          const bodies = web.map((p) => [p, fs.readFileSync(p, 'utf8')]);
+
+          function inbound(target) {
+            const base = path.basename(target);
+            const variants = new Set([target, `./${target}`, `/${target}`, base, `./${base}`, `/${base}`]);
+            const hits = [];
+            for (const [src, body] of bodies) {
+              if (src === target) continue;
+              if ([...variants].some((v) => body.includes(v))) hits.push(src);
+            }
+            return [...new Set(hits)].sort();
+          }
+
+          const rows = html.map((file) => ({ file, refs: inbound(file) }));
+          const versioned = rows.filter(({ file }) => /(?:^|[_-])v\d{3,}[a-z]?(?:[_.-]|$)/i.test(path.basename(file)));
+          const versionedUnreferenced = versioned.filter(({ refs }) => refs.length === 0);
+          const rootUnreferenced = rows.filter(({ file, refs }) => !file.includes('/') && refs.length === 0);
+
+          console.log(`ACTIVE_HTML_CANDIDATES=${html.length}`);
+          console.log(`VERSION_NAMED_HTML=${versioned.length}`);
+          console.log(`VERSION_NAMED_UNREFERENCED=${versionedUnreferenced.length}`);
+          console.log(`ROOT_UNREFERENCED=${rootUnreferenced.length}`);
+
+          console.log('--- VERSION_NAMED_HTML ---');
+          for (const row of versioned) console.log(`${row.file} | inbound=${row.refs.length} | ${row.refs.join(',')}`);
+          console.log('--- ROOT_UNREFERENCED ---');
+          for (const row of rootUnreferenced) console.log(row.file);
+
+          console.log('RESULT=RUNTIME_ROUTE_AUDIT_V792_COMPLETE');
+          NODE
