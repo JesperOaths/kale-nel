@@ -49,7 +49,9 @@ const required = [
   'gejast-mobile-foundation-v581.css',
   'gejast-mobile-foundation-v581.js',
   'gejast-mobile-foundation-v582.css',
-  'gejast-mobile-foundation-v582.js'
+  'gejast-mobile-foundation-v582.js',
+  'paardenrace_cards_supplied_exact.html',
+  'paardenrace_track_supplied_cards.html'
 ];
 
 for (const entry of required) {
@@ -77,9 +79,6 @@ assert.match(
   'verify:static must enforce the Pages publication boundary'
 );
 
-// The repository currently has no active frontend dependency on the globally
-// excluded data/evidence file classes. Guard that assumption so a future real
-// runtime dependency cannot be silently broken by the Pages deny boundary.
 const tracked = execFileSync('git', ['ls-files'], { encoding: 'utf8' })
   .split(/\r?\n/)
   .filter(Boolean);
@@ -133,7 +132,9 @@ const historicalWebFiles = [
   'gejast-mobile-foundation-v581.css',
   'gejast-mobile-foundation-v581.js',
   'gejast-mobile-foundation-v582.css',
-  'gejast-mobile-foundation-v582.js'
+  'gejast-mobile-foundation-v582.js',
+  'paardenrace_cards_supplied_exact.html',
+  'paardenrace_track_supplied_cards.html'
 ];
 for (const historicalFile of historicalWebFiles) {
   assert.ok(tracked.includes(historicalFile), `historical Pages exclusion no longer maps to a tracked provenance file: ${historicalFile}`);
@@ -141,7 +142,7 @@ for (const historicalFile of historicalWebFiles) {
     if (sourceFile === historicalFile) continue;
     assert.ok(
       !body.includes(historicalFile),
-      `Historical/dead web file became an active runtime dependency and must be reclassified: ${sourceFile} -> ${historicalFile}`
+      `Historical/dead/reference web file became an active runtime dependency and must be reclassified: ${sourceFile} -> ${historicalFile}`
     );
   }
 }

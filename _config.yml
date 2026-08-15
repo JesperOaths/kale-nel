@@ -53,9 +53,11 @@ exclude:
   - "APPLY_*"
   - "*_PROOF_*"
   - "*_MATRIX_*"
-  # Proven dead/duplicate web owners retained in Git for provenance only.
+  # Proven dead/duplicate/reference web owners retained in Git for provenance only.
   - "gejast-family-rollout-v437.js"
   - "gejast-mobile-foundation-v581.css"
   - "gejast-mobile-foundation-v581.js"
   - "gejast-mobile-foundation-v582.css"
   - "gejast-mobile-foundation-v582.js"
+  - "paardenrace_cards_supplied_exact.html"
+  - "paardenrace_track_supplied_cards.html"
