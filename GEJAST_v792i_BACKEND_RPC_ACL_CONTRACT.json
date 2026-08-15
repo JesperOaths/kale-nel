@@ -1,0 +1,78 @@
+{
+  "id": "GEJAST_v792i_BACKEND_RPC_ACL_CONTRACT",
+  "schema_version": 1,
+  "frontend_version": 792,
+  "sql_suffix": "v792i",
+  "deployment_status": "repository_patch_ready_not_applied",
+  "production_observation": {
+    "observed_at": "2026-08-15",
+    "method": "read-only pg_proc inspection plus has_function_privilege",
+    "production_mutated": false,
+    "security_definer_private_helper_count": 118,
+    "anon_execute_count": 118,
+    "authenticated_execute_count": 118
+  },
+  "scope": {
+    "schema": "public",
+    "security_definer_required": true,
+    "name_prefixes": [
+      "_pikken_",
+      "_paardenrace_"
+    ],
+    "client_contract": "Shipped browser clients must call public wrapper RPCs, never underscore-prefixed implementation helpers."
+  },
+  "remediation": {
+    "sql_path": "GEJAST_v792i_BACKEND_RPC_ACL_HARDENING.sql",
+    "revoke_execute_from": [
+      "PUBLIC",
+      "anon",
+      "authenticated"
+    ],
+    "privileges_added": [],
+    "roles_left_untouched": [
+      "function owner",
+      "service_role"
+    ],
+    "gameplay_dml_allowed": false,
+    "function_body_replacement_allowed": false,
+    "requires_explicit_production_sql_authorization": true
+  },
+  "confirmed_unguarded_examples": [
+    {
+      "name": "_pikken_destroy_game_cascade",
+      "identity_arguments": "game_id_input uuid",
+      "definition_md5": "9b5cdf677d24b0910608f400ee4ad4c1",
+      "risk": "cascade deletion of Pikken game data"
+    },
+    {
+      "name": "_pikken_set_game_host",
+      "identity_arguments": "game_id_input uuid, player_id_input bigint, player_name_input text",
+      "definition_md5": "ce72340e6fc78edd8bb39c63f3ec5ed3",
+      "risk": "host reassignment"
+    },
+    {
+      "name": "_pikken_finish_empty_game",
+      "identity_arguments": "game_id_input uuid, reason_input text",
+      "definition_md5": "c60153eaaf238905e469443fd02fed95",
+      "risk": "empty-game finalization mutation"
+    },
+    {
+      "name": "_paardenrace_insert_verified_drink_event",
+      "identity_arguments": "player_id_input bigint, player_name_input text, verifier_player_id_input bigint, verifier_player_name_input text, bakken_input integer, source_kind_input text, room_code_input text, match_ref_input uuid, selected_suit_input text",
+      "definition_md5": "812b8ccf29ecdda7d322bc06c167b4fd",
+      "risk": "verified drink-event insertion"
+    },
+    {
+      "name": "_paardenrace_seed_player_row",
+      "identity_arguments": "room_id_input bigint, player_id_input bigint, player_name_input text",
+      "definition_md5": "607a3441bfdb62379c05775f06499492",
+      "risk": "room-player upsert"
+    },
+    {
+      "name": "_paardenrace_cleanup_empty_rooms",
+      "identity_arguments": "",
+      "definition_md5": "2fa6f37c465ca49358de20915a94c500",
+      "risk": "empty-room cleanup mutation"
+    }
+  ]
+}
