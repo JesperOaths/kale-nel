@@ -30,7 +30,7 @@ const names=['getSpecialTrickCount','getRoundPlan','buildRoundOrder','calcRoundP
 const declarations=names.map(extractFunction).join('\n');
 const api=new Function(`${declarations}\nreturn {getSpecialTrickCount,getRoundPlan,buildRoundOrder,calcRoundPoints,recalcMatch,forbiddenDealerBid};`)();
 
-assert.deepEqual([2,3,4,5,6,7], [...source.matchAll(/\[2,3,4,5,6,7\]/g)].map(()=>2).length ? [2,3,4,5,6,7] : [], 'Boerenbridge player-count contract changed unexpectedly');
+assert.match(source,/\.innerHTML=\[2,3,4,5,6,7\]\.map/,'Boerenbridge player-count contract is no longer 2–7');
 for(const count of [2,3,4,5,6,7]){
   const match={players:Array.from({length:count},(_,i)=>`P${i+1}`),dealer_index:0,special_choices:[null,null,null,null],rounds:[]};
   const order=api.buildRoundOrder(match);
@@ -54,7 +54,7 @@ console.log('Boerenbridge scoring formula boundaries: ok');
 {
   const match={players:['A','B','C','D'],dealer_index:0,special_choices:['Blind bieden','Nul bieden','Zonder troef','Voor troef'],rounds:[]};
   const order=api.buildRoundOrder(match);
-  match.rounds=order.map((round)=>({players:match.players.map(name=>({name,bid:0,won:0}))}));
+  match.rounds=order.map(()=>({players:match.players.map(name=>({name,bid:0,won:0}))}));
   api.recalcMatch(match);
   assert.equal(match.rounds.length,18);
   for(const player of match.players){
