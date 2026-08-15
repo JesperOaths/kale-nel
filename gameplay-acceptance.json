@@ -1,8 +1,8 @@
 {
-  "version": 1,
+  "version": 2,
   "site_version": "v792",
   "last_updated": "2026-08-15",
-  "scope": "Gameplay acceptance is tracked separately from general beta readiness. Deterministic engine proof is not labeled as live multiplayer proof, and route/RPC reachability is not labeled as play-to-completion proof.",
+  "scope": "Gameplay acceptance is tracked separately from general beta readiness. Deterministic engine proof is not labeled as live multiplayer proof, and route/RPC reachability is not labeled as play-to-completion proof. Player-count limits are only recorded as exact when current shipped source or deterministic acceptance grounds them; unknown backend-owned limits remain explicitly unknown.",
   "live_write_approval": {
     "name": "GEJAST_ALLOW_LIVE_WRITE_BETA",
     "required_value": "I_APPROVE_LIVE_BETA_WRITES"
@@ -10,7 +10,16 @@
   "games": [
     {
       "id": "toepen",
+      "canonical_route": "./toepen.html",
       "supported_players": [2, 3, 4, 5, 6, 7, 8],
+      "player_contract": {
+        "authority": "shipped_gameplay_matrix",
+        "supported_player_counts": [2, 3, 4, 5, 6, 7, 8],
+        "minimum": 2,
+        "maximum": 8,
+        "minimum_status": "grounded",
+        "maximum_status": "grounded"
+      },
       "deterministic_status": "verified_complete",
       "deterministic_evidence": "check-toepen-gameplay-matrix-v792.mjs plays the shipped engine through completion at every supported player count and covers fold/stake/undo behavior.",
       "live_status": "backend_contract_proven",
@@ -18,7 +27,16 @@
     },
     {
       "id": "boerenbridge",
+      "canonical_route": "./boerenbridge.html",
       "supported_players": [2, 3, 4, 5, 6, 7],
+      "player_contract": {
+        "authority": "shipped_gameplay_matrix",
+        "supported_player_counts": [2, 3, 4, 5, 6, 7],
+        "minimum": 2,
+        "maximum": 7,
+        "minimum_status": "grounded",
+        "maximum_status": "grounded"
+      },
       "deterministic_status": "verified_complete",
       "deterministic_evidence": "check-boerenbridge-gameplay-matrix-v792.mjs exercises the shipped 18-round cycle, dealer rotation, special rounds, bid restriction, scoring and running totals for every supported player count.",
       "live_status": "persistence_contract_proven",
@@ -26,7 +44,20 @@
     },
     {
       "id": "beerpong",
+      "canonical_route": "./beerpong.html",
       "supported_formats": ["1v1", "2v2"],
+      "player_contract": {
+        "authority": "shipped_gameplay_matrix",
+        "supported_player_counts": [2, 4],
+        "formats": {
+          "1v1": 2,
+          "2v2": 4
+        },
+        "minimum": 2,
+        "maximum": 4,
+        "minimum_status": "grounded",
+        "maximum_status": "grounded"
+      },
       "deterministic_status": "verified_complete",
       "deterministic_evidence": "check-beerpong-gameplay-matrix-v792.mjs validates both shipped formats, player uniqueness, cup bounds, unique winner and valid submission boundaries.",
       "live_status": "persistence_contract_proven",
@@ -34,23 +65,61 @@
     },
     {
       "id": "pikken",
+      "canonical_route": "./pikken.html",
+      "player_contract": {
+        "authority": "backend_rpc_contract_not_grounded_in_checked_in_source",
+        "supported_player_counts_status": "not_yet_proven",
+        "live_proven_player_counts": [2],
+        "minimum": null,
+        "maximum": null,
+        "minimum_status": "not_yet_proven",
+        "maximum_status": "not_yet_proven"
+      },
       "deterministic_status": "rules_regression_proven",
       "deterministic_evidence": "Current permanent regressions protect bid ordering and the v790 pik conversion; broader backend gameplay remains room/RPC coupled.",
       "live_status": "two_player_start_cleanup_available",
       "live_evidence": "check-live-game-flows.mjs can create, join, ready, start and destroy a controlled two-player Pikken room when two explicit session tokens are supplied.",
-      "remaining_gap": "Run the manual controlled-live-game-flows workflow with explicitly approved beta session tokens after any relevant Pikken backend change; do not infer exhaustive player-count coverage from the two-player smoke."
+      "remaining_gap": "The checked-in Pikken frontend delegates start acceptance to the backend RPC and does not establish an exact minimum or maximum room size. Two players are a proven accepted startup count, not an inferred minimum or maximum. Ground the current backend limit before recording an exact supported range."
     },
     {
       "id": "paardenrace",
+      "canonical_route": "./paardenrace.html",
+      "player_contract": {
+        "authority": "shipped_frontend_start_predicate_plus_controlled_live_smoke",
+        "supported_player_counts_status": "minimum_grounded_maximum_unknown",
+        "live_proven_player_counts": [2],
+        "minimum": 2,
+        "maximum": null,
+        "minimum_status": "grounded",
+        "maximum_status": "not_yet_proven",
+        "source": "paardenrace.html"
+      },
       "deterministic_status": "verified_engine_helpers",
       "deterministic_evidence": "check-paardenrace-engine-v792.mjs covers shipped card parsing, four-horse progress, ten gates, draw accounting, ready/wager summary and winner summary.",
       "live_status": "two_player_start_cleanup_available",
       "live_evidence": "check-live-game-flows.mjs can create/join a two-player room, select distinct suits, verify wagers, ready, start countdown and disband the controlled room when two explicit session tokens are supplied.",
-      "remaining_gap": "The deterministic four-horse state proof and two-player room smoke are intentionally recorded as different evidence classes."
+      "remaining_gap": "The shipped lobby explicitly refuses to start below two members. No checked-in frontend contract establishes a maximum human room size, and the four horse suits are race entities rather than evidence of a four-human room maximum."
     },
     {
       "id": "klaverjas_online",
+      "canonical_route": "./klaverjas_online.html",
       "supported_seats": 4,
+      "player_contract": {
+        "authority": "shipped_frontend_four_seat_lobby",
+        "seats": 4,
+        "supported_humans": {
+          "minimum": 1,
+          "maximum": 4
+        },
+        "supported_bots": {
+          "minimum": 0,
+          "maximum": 3
+        },
+        "start_requires_full_table": true,
+        "minimum_status": "grounded",
+        "maximum_status": "grounded",
+        "source": "klaverjas_online.html"
+      },
       "deterministic_status": "repository_postgres_proven",
       "deterministic_evidence": "v792b-v792h transition, rule, persistence, roem-wrapper and hidden recovery-hand guards are covered by static and real-PostgreSQL proofs.",
       "live_status": "production_guard_chain_not_applied",
