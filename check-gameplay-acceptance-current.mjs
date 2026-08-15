@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import './check-pikken-live-viewmodel-v792.mjs';
 
 const version = fs.readFileSync('VERSION', 'utf8').trim();
 const tracker = JSON.parse(fs.readFileSync('gameplay-acceptance.json', 'utf8'));
@@ -54,6 +55,8 @@ if (!same(beerpong?.player_contract?.supported_player_counts, [2,4]) || !same(be
 if (beerpong?.deterministic_status !== 'verified_complete') failures.push('Beerpong deterministic matrix must remain verified_complete');
 
 const pikken = games.get('pikken');
+if (pikken?.deterministic_status !== 'rules_and_live_viewmodel_proven') failures.push('Pikken deterministic evidence must include the shipped live-viewmodel acceptance');
+if (!/check-pikken-live-viewmodel-v792\.mjs/.test(String(pikken?.deterministic_evidence || ''))) failures.push('Pikken tracker must name the permanent live-viewmodel regression');
 if (!String(pikken?.live_status || '').includes('two_player')) failures.push('pikken live evidence must remain explicitly two-player scoped');
 if (!same(pikken?.player_contract?.live_proven_player_counts, [2])) failures.push('Pikken player contract must preserve only the live-proven two-player startup count');
 if (pikken?.player_contract?.minimum !== null || pikken?.player_contract?.maximum !== null) failures.push('Pikken must not invent an exact minimum or maximum while the backend room-size contract is not grounded');
