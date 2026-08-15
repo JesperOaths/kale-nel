@@ -25,55 +25,9 @@ jobs:
           cache: npm
       - name: Install pinned dependencies
         run: npm ci
-      - name: JavaScript syntax
-        run: npm run verify:js
-      - name: RPC coverage
-        run: node check-rpc-coverage.mjs
-      - name: Backend RPC provenance
-        run: node check-backend-rpc-provenance.mjs
+      - name: Canonical repository verification
+        run: npm run verify
       - name: Reconstructed Paardenrace RPC source safety
         run: node check-paardenrace-rpc-source-safety.mjs
-      - name: Gameplay acceptance
-        run: node check-gameplay-acceptance-current.mjs
       - name: Paardenrace backend minimum evidence
         run: node check-paardenrace-minimum-backend-v792.mjs
-      - name: Local reference integrity
-        run: node check-local-refs.mjs
-      - name: Online Klaverjas static regression
-        run: npm run verify:klaverjas
-      - name: Toepen static regression
-        run: node check-toepen.mjs
-      - name: Homepage root-fix regression
-        run: node check-homepage-root-fixes.mjs
-      - name: Active frontend encoding regression
-        run: node check-active-frontend-encoding-v767.mjs
-      - name: Klaverjas finished-game handoff regression
-        run: node check-klaverjas-round-finish-handoff-v768.mjs
-      - name: Klaverjas round scorer polish regression
-        run: node check-klaverjas-round-scorer-polish-v769.mjs
-      - name: Ballroom safe-read v769a repair boundary
-        run: node check-ballroom-safe-read-repair-v769a.mjs
-      - name: Stale repair-copy regression
-        run: node check-stale-repair-copy-v770.mjs
-      - name: Scoped live-read v770a repair boundary
-        run: node check-scoped-live-read-repair-v770a.mjs
-      - name: Web push Node24 runtime regression
-        run: node check-web-push-node24-runtime-v770b.mjs
-      - name: Canonical Beurs runtime route
-        run: node check-beurs-runtime-route-v770c.mjs
-      - name: Current beta readiness tracker
-        run: node check-beta-readiness-current-v770d.mjs
-      - name: Live-write safety and target isolation
-        run: node check-live-write-safety-v770e.mjs
-      - name: Rad local nomination copy
-        run: node check-rad-local-nomination-copy-v771.mjs
-      - name: Derived badge contract
-        run: node check-derived-badges-v771b.mjs
-      - name: Admin mutation perimeter
-        run: node check-admin-mutation-perimeter-v771c.mjs
-      - name: GitHub Actions Node24 runtime pins
-        run: node check-github-actions-node24-runtime.mjs
-      - name: Node24 runtime policy
-        run: node check-node24-ci-runtime.mjs
-      - name: Version drift gate
-        run: node check-version-drift.mjs
