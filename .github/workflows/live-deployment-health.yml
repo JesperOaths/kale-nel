@@ -12,6 +12,7 @@ permissions:
 jobs:
   live-health:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Check out repository
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -27,3 +28,15 @@ jobs:
           GEJAST_DEPLOY_WAIT_SECONDS: '240'
           GEJAST_SMOKE_TIMEOUT_MS: '15000'
         run: node check-live-routes.mjs
+      - name: Run primary read-only beta acceptance
+        env:
+          GEJAST_BETA_SURFACE_TIMEOUT_MS: '15000'
+        run: node check-beta-readonly-surfaces.mjs
+      - name: Run extended read-only beta acceptance
+        env:
+          GEJAST_BETA_SURFACE_TIMEOUT_MS: '15000'
+        run: node check-beta-readonly-extended.mjs
+      - name: Record live beta performance probe
+        env:
+          GEJAST_PERF_TIMEOUT_MS: '20000'
+        run: node check-beta-performance.mjs
