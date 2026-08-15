@@ -5,6 +5,7 @@ import './check-paardenrace-live-viewmodel-v792.mjs';
 
 const version = fs.readFileSync('VERSION', 'utf8').trim();
 const tracker = JSON.parse(fs.readFileSync('gameplay-acceptance.json', 'utf8'));
+const provenance = JSON.parse(fs.readFileSync('backend-rpc-provenance.json', 'utf8'));
 const workflow = fs.readFileSync('.github/workflows/controlled-live-game-flows.yml', 'utf8');
 const smoke = fs.readFileSync('check-live-game-flows.mjs', 'utf8');
 const indexHtml = fs.readFileSync('index.html', 'utf8');
@@ -19,6 +20,7 @@ const routeHrefPresent = (route) => {
   const escaped = String(route).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return new RegExp(`href=["']${escaped}["']`).test(indexHtml);
 };
+const rpcEvidence = (name, identityArguments) => (provenance.rpcs || []).find((rpc) => rpc?.name === name && rpc?.identity_arguments === identityArguments);
 
 if (tracker.version !== 2) failures.push('gameplay tracker schema must remain version 2');
 if (tracker.site_version !== version) failures.push(`gameplay tracker ${tracker.site_version || '(missing)'} must equal VERSION ${version}`);
@@ -56,13 +58,33 @@ if (!same(beerpong?.player_contract?.supported_player_counts, [2,4]) || !same(be
 if (beerpong?.deterministic_status !== 'verified_complete') failures.push('Beerpong deterministic matrix must remain verified_complete');
 
 const pikken = games.get('pikken');
+const pikkenStartIdentity = 'session_token text, session_token_input text, game_id_input uuid, site_scope_input text';
+const pikkenStartProvenance = rpcEvidence('pikken_start_game_scoped', pikkenStartIdentity);
+const pikkenMinimumEvidence = pikken?.player_contract?.minimum_evidence || {};
 if (pikken?.deterministic_status !== 'rules_and_live_viewmodel_proven') failures.push('Pikken deterministic evidence must include the shipped live-viewmodel acceptance');
 if (!/check-pikken-live-viewmodel-v792\.mjs/.test(String(pikken?.deterministic_evidence || ''))) failures.push('Pikken tracker must name the permanent live-viewmodel regression');
 if (!String(pikken?.live_status || '').includes('two_player')) failures.push('pikken live evidence must remain explicitly two-player scoped');
 if (!same(pikken?.player_contract?.live_proven_player_counts, [2])) failures.push('Pikken player contract must preserve only the live-proven two-player startup count');
-if (pikken?.player_contract?.minimum !== null || pikken?.player_contract?.maximum !== null) failures.push('Pikken must not invent an exact minimum or maximum while the backend room-size contract is not grounded');
-if (pikken?.player_contract?.minimum_status !== 'not_yet_proven' || pikken?.player_contract?.maximum_status !== 'not_yet_proven') failures.push('Pikken unknown player limits must remain explicit');
-if (!/backend RPC/i.test(String(pikken?.remaining_gap || '')) || !/not an inferred minimum or maximum/i.test(String(pikken?.remaining_gap || ''))) failures.push('Pikken remaining gap must explain the backend-owned unknown range');
+if (pikken?.player_contract?.minimum !== 2 || pikken?.player_contract?.minimum_status !== 'grounded') failures.push('Pikken minimum-to-start must remain grounded at two players');
+if (pikken?.player_contract?.maximum !== null || pikken?.player_contract?.maximum_status !== 'not_yet_proven') failures.push('Pikken maximum player count must remain explicitly unknown until an authoritative constraint proves it');
+if (pikken?.player_contract?.supported_player_counts_status !== 'minimum_grounded_maximum_unknown') failures.push('Pikken player-count status must distinguish grounded minimum from unknown maximum');
+if (!pikkenStartProvenance) {
+  failures.push('Pikken grounded minimum requires exact pikken_start_game_scoped provenance');
+} else {
+  const authorityPath = String(pikkenStartProvenance?.repository_authority?.path || '').replaceAll('\\', '/');
+  if (pikkenStartProvenance?.repository_authority?.status !== 'checked_in' || !authorityPath) failures.push('Pikken grounded minimum requires checked-in authority for the exact start RPC');
+  if (pikkenMinimumEvidence.rpc !== 'pikken_start_game_scoped' || pikkenMinimumEvidence.identity_arguments !== pikkenStartIdentity) failures.push('Pikken minimum evidence must identify the exact start RPC identity');
+  if (pikkenMinimumEvidence.repository_authority_path !== authorityPath || pikken?.player_contract?.source !== authorityPath) failures.push('Pikken minimum evidence/source must match backend RPC provenance authority path');
+  if (pikkenMinimumEvidence.observed_production_definition_md5 !== pikkenStartProvenance?.observed_production?.definition_md5) failures.push('Pikken minimum evidence must remain tied to the observed production definition fingerprint');
+  if (authorityPath && fs.existsSync(authorityPath)) {
+    const authoritySql = fs.readFileSync(authorityPath, 'utf8');
+    if (!/create\s+or\s+replace\s+function\s+public\.pikken_start_game_scoped\s*\(/i.test(authoritySql)) failures.push('Pikken authority path must still define pikken_start_game_scoped');
+    if (!/if\s+v_players\s*<\s*2\s+then\s+raise\s+exception\s+'Pikken kan niet starten met minder dan 2 spelers\.'/i.test(authoritySql)) failures.push('Pikken authoritative start RPC must preserve the explicit fewer-than-two rejection');
+  } else if (authorityPath) {
+    failures.push(`Pikken authority path does not exist: ${authorityPath}`);
+  }
+}
+if (!/minimum at 2/i.test(String(pikken?.remaining_gap || '')) || !/maximum remains unknown/i.test(String(pikken?.remaining_gap || ''))) failures.push('Pikken remaining gap must preserve the grounded minimum/unknown maximum distinction');
 if (!/await\s+api\.startGame\(state\.gameId\)/.test(pikkenJs)) failures.push('Pikken shipped lobby must still delegate start acceptance to its contract/backend API');
 
 const paardenrace = games.get('paardenrace');
