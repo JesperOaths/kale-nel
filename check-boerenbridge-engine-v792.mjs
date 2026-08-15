@@ -26,9 +26,9 @@ function extractFunction(name){
   throw new Error(`Unclosed function: ${name}`);
 }
 
-const names=['getSpecialTrickCount','getRoundPlan','buildRoundOrder','calcRoundPoints','recalcMatch','forbiddenDealerBid'];
+const names=['getSpecialTrickCount','getRoundPlan','buildRoundOrder','calcRoundPoints','recalcMatch','getBidOrderIndices','forbiddenDealerBid'];
 const declarations=names.map(extractFunction).join('\n');
-const api=new Function(`${declarations}\nreturn {getSpecialTrickCount,getRoundPlan,buildRoundOrder,calcRoundPoints,recalcMatch,forbiddenDealerBid};`)();
+const api=new Function(`const state={draft:null}; ${declarations}\nreturn {getSpecialTrickCount,getRoundPlan,buildRoundOrder,calcRoundPoints,recalcMatch,getBidOrderIndices,forbiddenDealerBid,setDraft:(draft)=>{state.draft=draft;}};`)();
 
 assert.match(source,/\.innerHTML=\[2,3,4,5,6,7\]\.map/,'Boerenbridge player-count contract is no longer 2–7');
 for(const count of [2,3,4,5,6,7]){
@@ -70,9 +70,10 @@ console.log('Boerenbridge scoring formula boundaries: ok');
 {
   const match={players:['A','B','C','D'],dealer_index:0,special_choices:[null,null,null,null],rounds:[]};
   const meta=api.buildRoundOrder(match)[3];
-  const dealerIndex=meta.dealer_index;
-  const bids={};
-  for(let i=0;i<4;i+=1) bids[i]=i===dealerIndex?0:1;
+  api.setDraft(match);
+  const orderIndices=api.getBidOrderIndices(meta);
+  const dealerIndex=orderIndices.at(-1);
+  const bids=Object.fromEntries(orderIndices.map((idx)=>[idx,idx===dealerIndex?0:1]));
   const forbidden=api.forbiddenDealerBid(meta,bids);
   assert.equal(forbidden.dealerIndex,dealerIndex);
   assert.equal(forbidden.value,meta.trickCount-3);
