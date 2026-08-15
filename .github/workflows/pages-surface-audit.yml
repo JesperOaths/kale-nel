@@ -20,7 +20,7 @@ jobs:
         shell: bash
         run: |
           set -u
-          # Re-run marker: post-merge acceptance for Pages cleanup deployment 6111f79.
+          # Re-run marker: live transport acceptance after repository Worker v763 merge 60564ec.
 
           probe() {
             local label="$1"
