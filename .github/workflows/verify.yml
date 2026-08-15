@@ -29,6 +29,10 @@ jobs:
         run: npm run verify:js
       - name: RPC coverage
         run: node check-rpc-coverage.mjs
+      - name: Backend RPC provenance
+        run: node check-backend-rpc-provenance.mjs
+      - name: Gameplay acceptance
+        run: node check-gameplay-acceptance-current.mjs
       - name: Local reference integrity
         run: node check-local-refs.mjs
       - name: Online Klaverjas static regression

@@ -72,7 +72,7 @@ if (!String(paardenrace?.live_status || '').includes('two_player')) failures.pus
 if (!same(paardenrace?.player_contract?.live_proven_player_counts, [2])) failures.push('Paardenrace player contract must preserve the live-proven two-player startup count');
 if (paardenrace?.player_contract?.minimum !== 2 || paardenrace?.player_contract?.minimum_status !== 'grounded') failures.push('Paardenrace minimum-to-start must remain grounded at two players');
 if (paardenrace?.player_contract?.maximum !== null || paardenrace?.player_contract?.maximum_status !== 'not_yet_proven') failures.push('Paardenrace must not infer a maximum human room size from the four horse suits');
-if (!/members\.length\s*<\s*2/.test(paardenraceHtml) || !/minimaal 2 spelers nodig/i.test(paardenraceHtml)) failures.push('Paardenrace shipped lobby must preserve its explicit two-player minimum start guard');
+if (!/players\.length\s*<\s*2/.test(paardenraceHtml) || !/readyTotal\s*<\s*2/.test(paardenraceHtml) || !/kan niet starten met minder dan 2 spelers/i.test(paardenraceHtml)) failures.push('Paardenrace shipped lobby must preserve both two-player minimum start guards and user-facing rejection');
 if (!String(paardenrace?.remaining_gap || '').trim()) failures.push('paardenrace must retain an explicit remaining-gap statement');
 
 const klaverjas = games.get('klaverjas_online');
