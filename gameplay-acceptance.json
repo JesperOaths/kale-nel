@@ -92,20 +92,26 @@
       "id": "paardenrace",
       "canonical_route": "./paardenrace.html",
       "player_contract": {
-        "authority": "shipped_frontend_start_predicate_plus_controlled_live_smoke",
+        "authority": "checked_in_backend_start_rpc_plus_shipped_frontend_plus_controlled_live_smoke",
         "supported_player_counts_status": "minimum_grounded_maximum_unknown",
         "live_proven_player_counts": [2],
         "minimum": 2,
         "maximum": null,
         "minimum_status": "grounded",
         "maximum_status": "not_yet_proven",
-        "source": "paardenrace.html"
+        "source": "GEJAST_v725a_SURGICAL_rpc_wrapper_repair.sql",
+        "minimum_evidence": {
+          "rpc": "start_paardenrace_room_safe",
+          "identity_arguments": "room_code_input text, session_token text, session_token_input text, site_scope_input text",
+          "repository_authority_path": "GEJAST_v725a_SURGICAL_rpc_wrapper_repair.sql",
+          "observed_production_definition_md5": "5e4d7a832fe413dfe36fb6c79f625b17"
+        }
       },
       "deterministic_status": "engine_and_live_viewmodel_proven",
       "deterministic_evidence": "check-paardenrace-engine-v792.mjs covers shipped card parsing, four-horse progress, ten gates, draw accounting, ready/wager summary and winner summary; check-paardenrace-live-viewmodel-v792.mjs executes shipped live helpers for race logs, player/ready/winner presentation, host kick boundaries, nomination targeting, the two-player live-state sanity guard and close/leave handoff wiring. This still does not claim backend play-to-completion.",
       "live_status": "two_player_start_cleanup_available",
-      "live_evidence": "check-live-game-flows.mjs can create/join a two-player room, select distinct suits, verify wagers, ready, start countdown and disband the controlled room when two explicit session tokens are supplied.",
-      "remaining_gap": "The shipped lobby explicitly refuses to start below two members. No checked-in frontend contract establishes a maximum human room size, and the four horse suits are race entities rather than evidence of a four-human room maximum."
+      "live_evidence": "check-live-game-flows.mjs can create/join a two-player room, select distinct suits, verify wagers, ready, start countdown and disband the controlled room when two explicit session tokens are supplied. Separately, read-only production catalog evidence records the deployed exact start-RPC definition fingerprint in backend-rpc-provenance.json.",
+      "remaining_gap": "The exact checked-in Paardenrace start RPC, its observed deployed definition and the shipped lobby all explicitly reject starts below two players, grounding the minimum at 2. No authoritative checked-in room/join/schema constraint proves a maximum human room size, and the four horse suits are race entities rather than evidence of a four-human maximum."
     },
     {
       "id": "klaverjas_online",
