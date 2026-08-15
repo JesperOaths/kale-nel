@@ -2,9 +2,6 @@ name: Setup beta users
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - ".github/workflows/setup-beta-users.yml"
 
 permissions:
   contents: read
