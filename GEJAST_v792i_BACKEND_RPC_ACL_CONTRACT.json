@@ -6,11 +6,14 @@
   "deployment_status": "repository_patch_ready_not_applied",
   "production_observation": {
     "observed_at": "2026-08-15",
-    "method": "read-only pg_proc inspection plus has_function_privilege",
+    "method": "read-only pg_proc inspection plus has_function_privilege/aclexplode",
     "production_mutated": false,
     "security_definer_private_helper_count": 118,
     "anon_execute_count": 118,
-    "authenticated_execute_count": 118
+    "authenticated_execute_count": 118,
+    "explicit_service_role_execute_count": 118,
+    "without_explicit_service_role_execute_count": 0,
+    "service_role_owned_count": 0
   },
   "scope": {
     "schema": "public",
@@ -33,6 +36,7 @@
       "function owner",
       "service_role"
     ],
+    "service_role_access_basis": "All 118 targeted helpers have an explicit service_role EXECUTE grant, so revoking PUBLIC does not remove service_role access.",
     "gameplay_dml_allowed": false,
     "function_body_replacement_allowed": false,
     "requires_explicit_production_sql_authorization": true
