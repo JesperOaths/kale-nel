@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
-      - name: Classify root check programs by authoritative references
+      - name: Classify root check programs by authoritative and composed references
         shell: bash
         run: |
           node <<'NODE'
@@ -32,33 +32,36 @@ jobs:
           const workflows = fs.readdirSync(workflowDir)
             .filter((name) => /\.ya?ml$/.test(name))
             .map((name) => [name, fs.readFileSync(path.join(workflowDir, name), 'utf8')]);
+          const checkerBodies = checks.map((name) => [name, fs.readFileSync(name, 'utf8')]);
 
           const rows = checks.map((name) => {
             const npm = pkg.includes(name);
             const wf = workflows.filter(([, body]) => body.includes(name)).map(([file]) => file);
-            return { name, npm, wf };
+            const checkerRefs = checkerBodies
+              .filter(([other, body]) => other !== name && body.includes(name))
+              .map(([other]) => other);
+            return { name, npm, wf, checkerRefs };
           });
 
-          const orphaned = rows.filter((row) => !row.npm && row.wf.length === 0);
-          const npmOnly = rows.filter((row) => row.npm && row.wf.length === 0);
+          const noTopLevel = rows.filter((row) => !row.npm && row.wf.length === 0);
+          const composed = noTopLevel.filter((row) => row.checkerRefs.length > 0);
+          const trulyUnreferenced = noTopLevel.filter((row) => row.checkerRefs.length === 0);
           const workflowOnly = rows.filter((row) => !row.npm && row.wf.length > 0);
-          const both = rows.filter((row) => row.npm && row.wf.length > 0);
 
           console.log(`TOTAL_CHECKS=${rows.length}`);
-          console.log(`ORPHANED=${orphaned.length}`);
-          console.log(`NPM_ONLY=${npmOnly.length}`);
+          console.log(`NO_TOP_LEVEL_REFERENCE=${noTopLevel.length}`);
+          console.log(`COMPOSED_BY_CHECKER=${composed.length}`);
+          console.log(`TRULY_UNREFERENCED=${trulyUnreferenced.length}`);
           console.log(`WORKFLOW_ONLY=${workflowOnly.length}`);
-          console.log(`BOTH=${both.length}`);
 
-          const print = (label, items) => {
-            console.log(`--- ${label} ---`);
-            for (const row of items) {
-              console.log(`${row.name}${row.wf.length ? ` | workflows=${row.wf.join(',')}` : ''}`);
-            }
-          };
+          console.log('--- COMPOSED_BY_CHECKER ---');
+          for (const row of composed) console.log(`${row.name} | inbound=${row.checkerRefs.join(',')}`);
 
-          print('ORPHANED', orphaned);
-          print('WORKFLOW_ONLY', workflowOnly);
-          print('NPM_ONLY', npmOnly);
+          console.log('--- TRULY_UNREFERENCED ---');
+          for (const row of trulyUnreferenced) console.log(row.name);
+
+          console.log('--- WORKFLOW_ONLY ---');
+          for (const row of workflowOnly) console.log(`${row.name} | workflows=${row.wf.join(',')}`);
+
           console.log('RESULT=ORPHAN_CHECK_AUDIT_V792_COMPLETE');
           NODE
