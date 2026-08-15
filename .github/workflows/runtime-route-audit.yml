@@ -13,7 +13,7 @@ permissions:
 jobs:
   audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v5
       - name: Classify versioned and unreferenced HTML owners
@@ -43,18 +43,60 @@ jobs:
 
           const rows = html.map((file) => ({ file, refs: inbound(file) }));
           const versioned = rows.filter(({ file }) => /(?:^|[_-])v\d{3,}[a-z]?(?:[_.-]|$)/i.test(path.basename(file)));
-          const versionedUnreferenced = versioned.filter(({ refs }) => refs.length === 0);
           const rootUnreferenced = rows.filter(({ file, refs }) => !file.includes('/') && refs.length === 0);
 
           console.log(`ACTIVE_HTML_CANDIDATES=${html.length}`);
           console.log(`VERSION_NAMED_HTML=${versioned.length}`);
-          console.log(`VERSION_NAMED_UNREFERENCED=${versionedUnreferenced.length}`);
           console.log(`ROOT_UNREFERENCED=${rootUnreferenced.length}`);
-
           console.log('--- VERSION_NAMED_HTML ---');
           for (const row of versioned) console.log(`${row.file} | inbound=${row.refs.length} | ${row.refs.join(',')}`);
           console.log('--- ROOT_UNREFERENCED ---');
           for (const row of rootUnreferenced) console.log(row.file);
-
-          console.log('RESULT=RUNTIME_ROUTE_AUDIT_V792_COMPLETE');
+          console.log('RESULT=RUNTIME_ROUTE_STATIC_AUDIT_V792_COMPLETE');
           NODE
+
+      - name: Read-only production gating probes for direct-entry candidates
+        shell: bash
+        run: |
+          set -u
+          routes=(
+            admin_beerpong_shared_stats.html
+            admin_boerenbridge_shared_stats.html
+            admin_cross_game_stats.html
+            admin_deployment_verification.html
+            admin_despimarkt_auto_markets.html
+            admin_game_group_a_runtime.html
+            admin_klaverjassen_alignment.html
+            admin_klaverjassen_shared_stats.html
+            admin_match_control.html
+            admin_phase_completion.html
+            admin_pikken_shared_stats.html
+            admin_push_targeted_test.html
+            admin_rad.html
+            admin_runtime_verification.html
+            boerenbridge_spectator.html
+            caute_coins_ladder.html
+            despimarkt_auto_markets.html
+            despimarkt_force.html
+            familie.html
+            familie_admin.html
+            klaverjas_spectator.html
+            paardenrace_cards_supplied_exact.html
+            paardenrace_ladder.html
+            paardenrace_track_supplied_cards.html
+            pikken_ladder.html
+          )
+
+          for route in "${routes[@]}"; do
+            body="$(mktemp)"
+            headers="$(mktemp)"
+            meta="$(curl --connect-timeout 10 --max-time 30 --silent --show-error --location \
+              --output "$body" --dump-header "$headers" \
+              --write-out '%{http_code}|%{url_effective}|%{content_type}|%{size_download}' \
+              "https://kalenel.nl/${route}")"
+            location="$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit}' "$headers")"
+            hash="$(sha256sum "$body" | awk '{print $1}')"
+            printf 'ROUTE=%s|META=%s|FIRST_LOCATION=%s|SHA256=%s\n' "$route" "$meta" "${location:-<none>}" "$hash"
+            rm -f "$body" "$headers"
+          done
+          echo 'RESULT=RUNTIME_ROUTE_LIVE_AUDIT_V792_COMPLETE'
