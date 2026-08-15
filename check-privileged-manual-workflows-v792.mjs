@@ -4,6 +4,7 @@ import fs from 'node:fs';
 
 const repoGuard = "github.repository == 'JesperOaths/kale-nel'";
 const mainGuard = "github.ref == 'refs/heads/main'";
+const checkoutV5 = 'actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09';
 
 function read(path) {
   return fs.readFileSync(path, 'utf8');
@@ -24,12 +25,14 @@ guard(repairPath, repair);
 assert.match(repair, /SQL_FILE_INPUT:\s*\$\{\{\s*inputs\.sql_file\s*\}\}/, 'repair filename input must enter shell through env');
 assert.match(repair, /sql_file="\$SQL_FILE_INPUT"/, 'repair filename validation must consume the env value');
 assert.doesNotMatch(repair, /sql_file="\$\{\{\s*inputs\.sql_file\s*\}\}"/, 'repair filename must not be interpolated into shell source');
-assert.match(repair, /uses:\s*actions\/checkout@v5[\s\S]*?ref:\s*\$\{\{\s*github\.sha\s*\}\}/, 'repair checkout must pin the dispatched main SHA');
+assert.ok(repair.includes(`uses: ${checkoutV5}`), 'repair checkout must use the approved immutable checkout v5 commit');
+assert.match(repair, /ref:\s*\$\{\{\s*github\.sha\s*\}\}/, 'repair checkout must pin the dispatched main SHA');
 
 const gamePath = '.github/workflows/controlled-live-game-flows.yml';
 const game = read(gamePath);
 guard(gamePath, game);
-assert.match(game, /uses:\s*actions\/checkout@v5[\s\S]*?ref:\s*\$\{\{\s*github\.sha\s*\}\}/, 'controlled game checkout must pin the dispatched main SHA');
+assert.ok(game.includes(`uses: ${checkoutV5}`), 'controlled game checkout must use the approved immutable checkout v5 commit');
+assert.match(game, /ref:\s*\$\{\{\s*github\.sha\s*\}\}/, 'controlled game checkout must pin the dispatched main SHA');
 
 const betaPath = '.github/workflows/setup-beta-users.yml';
 const beta = read(betaPath);
