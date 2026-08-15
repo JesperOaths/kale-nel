@@ -10,6 +10,11 @@ assert.equal(
   'npm run verify:static && npm run verify:js && npm run admin-worker:test',
   'package.json verify must remain the canonical full repository verification entrypoint'
 );
+assert.equal(
+  pkg.scripts?.['admin-worker:test'],
+  'node scripts/test-admin-worker-gate.mjs',
+  'canonical verification must execute the deterministic Cloudflare admin-worker security suite'
+);
 assert.match(
   pkg.scripts?.['verify:static'] ?? '',
   /(?:^|&&\s*)node check-canonical-gejast-gate-v792\.mjs(?:\s*&&|$)/,
@@ -21,5 +26,5 @@ assert.match(
   'GEJAST verification workflow must execute npm run verify as its canonical repository gate'
 );
 
-console.log('Canonical npm verification is required by GEJAST CI.');
+console.log('Canonical npm verification is required by GEJAST CI, including the Cloudflare Worker security suite.');
 console.log('RESULT=CANONICAL_GEJAST_GATE_V792_PASS');
