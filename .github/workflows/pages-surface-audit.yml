@@ -20,7 +20,7 @@ jobs:
         shell: bash
         run: |
           set -u
-          # Re-run marker: post-merge acceptance for comprehensive evidence-boundary deployment 0c88c3a.
+          # Re-run marker: post-merge acceptance for Pages cleanup deployment 6111f79.
 
           probe() {
             local label="$1"
@@ -76,6 +76,9 @@ jobs:
           probe 'readme-text' 'https://kalenel.nl/README_v437.txt' 'yes'
           probe 'patch-manifest-text' 'https://kalenel.nl/PATCH_MANIFEST_v581_mobile_repo.txt' 'yes'
           probe 'validation-json' 'https://kalenel.nl/GEJAST_v635_VALIDATION_SUMMARY.json' 'yes'
+          probe 'paardenrace-reference-cards' 'https://kalenel.nl/paardenrace_cards_supplied_exact.html' 'yes'
+          probe 'paardenrace-reference-track' 'https://kalenel.nl/paardenrace_track_supplied_cards.html' 'yes'
+          probe 'accidental-placeholder' 'https://kalenel.nl/placeholder.tmp' 'yes'
           probe 'pages-origin-package-json' 'https://jesperoaths.github.io/kale-nel/package.json' 'yes'
           probe 'pages-origin-gameplay-evidence' 'https://jesperoaths.github.io/kale-nel/gameplay-acceptance.json' 'yes'
           probe 'pages-origin-ci-source' 'https://jesperoaths.github.io/kale-nel/check-canonical-gejast-gate-v792.mjs' 'yes'
