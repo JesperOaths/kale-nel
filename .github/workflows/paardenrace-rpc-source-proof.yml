@@ -6,6 +6,7 @@ on:
       - 'backend-source-paardenrace-v687-production.sql'
       - 'backend-rpc-provenance.json'
       - 'check-paardenrace-rpc-source-safety.mjs'
+      - 'check-paardenrace-rpc-semantics-v792.sql'
       - '.github/workflows/paardenrace-rpc-source-proof.yml'
 
 permissions:
@@ -65,19 +66,35 @@ jobs:
           );
 
           create or replace function public._gejast_v687a_scope_norm(value text)
-          returns text language sql immutable as $$ select coalesce(nullif(trim(value),''),'friends') $$;
+          returns text language sql immutable as $$
+            select coalesce(nullif(trim(value),''),'friends')
+          $$;
 
           create or replace function public._paardenrace_require_name(token text, token_input text)
-          returns text language sql stable as $$ select 'Fixture Player'::text $$;
+          returns text language sql stable as $$
+            select case lower(coalesce(nullif(trim(token_input),''), nullif(trim(token),''), ''))
+              when 'host-token' then 'Host'
+              when 'guest-token' then 'Guest'
+              else 'Unknown'
+            end
+          $$;
 
           create or replace function public._paardenrace_player_id(token text, token_input text)
-          returns bigint language sql stable as $$ select 1::bigint $$;
+          returns bigint language sql stable as $$
+            select case lower(coalesce(nullif(trim(token_input),''), nullif(trim(token),''), ''))
+              when 'host-token' then 1::bigint
+              when 'guest-token' then 2::bigint
+              else 999::bigint
+            end
+          $$;
 
           create or replace function public._paardenrace_upsert_player(room_id_input bigint, player_name_input text, player_id_input bigint)
           returns void language plpgsql as $$ begin return; end $$;
 
           create or replace function public._paardenrace_build_room_state(room_code_input text, token text, token_input text)
-          returns jsonb language sql stable as $$ select '{}'::jsonb $$;
+          returns jsonb language sql stable as $$
+            select jsonb_build_object('room_code', upper(trim(coalesce(room_code_input,''))))
+          $$;
           SQL
 
       - name: Compile reconstructed production source
@@ -135,5 +152,11 @@ jobs:
           $$;
           SQL
 
+      - name: Prove reconstructed RPC behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 --file check-paardenrace-rpc-semantics-v792.sql
+
       - name: Report source reconstruction proof
-        run: echo 'Paardenrace RPC source proof PASS — 3 reconstructed definitions compile on PostgreSQL 17.6 and match normalized read-only production fingerprints.'
+        run: echo 'Paardenrace RPC source proof PASS — 3 reconstructed definitions compile on PostgreSQL 17.6, match normalized read-only production fingerprints, and satisfy deterministic behavior invariants.'
