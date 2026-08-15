@@ -1,6 +1,9 @@
 name: v792 Paardenrace gameplay acceptance
 
 on:
+  push:
+    branches:
+      - 'agent/v792-paardenrace-engine-matrix'
   pull_request:
     paths:
       - 'gejast-paardenrace.js'
