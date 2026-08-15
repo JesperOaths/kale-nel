@@ -16,15 +16,17 @@ const expected = [
   ['get_paardenrace_room_state_fast_v687', 'id_input character varying', '8f7f866581a8c67ebb31b5ae1287e732'],
   ['paardenrace_disband_room_v687', 'room_id_input bigint, player_id_input bigint, session_token_input uuid', 'c189392453949aca77ace1baaedb4d70']
 ];
+const expectedNames = expected.map(([name]) => name);
 
 if (manifest.id !== 'GEJAST_v792_BACKEND_RPC_PROVENANCE') failures.push('provenance manifest id drifted');
-if (manifest.schema_version !== 1) failures.push('provenance schema must remain version 1');
+if (manifest.schema_version !== 2) failures.push('provenance schema must remain version 2');
 if (manifest.frontend_version !== 792) failures.push('SQL/provenance-only boundary must not bump frontend version 792');
 if (manifest.production_observation?.status !== 'read_only_snapshot_only') failures.push('production observation must remain explicitly read-only and non-authoritative');
 if (manifest.production_observation?.production_mutated !== false) failures.push('provenance evidence must state that production was not mutated');
 
 const observed = manifest.production_observation?.functions || [];
 if (observed.length !== expected.length) failures.push(`expected ${expected.length} tracked production RPC observations, found ${observed.length}`);
+if (new Set(observed.map((item) => item.name)).size !== observed.length) failures.push('production RPC observation names must be unique');
 for (const [name, args, md5] of expected) {
   const row = observed.find((item) => item.name === name);
   if (!row) failures.push(`missing tracked production RPC observation: ${name}`);
@@ -47,37 +49,54 @@ function walk(dir) {
 walk('.');
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const definitions = new Map(expected.map(([name]) => [name, []]));
+const definitions = new Map(expectedNames.map((name) => [name, []]));
 for (const file of sqlFiles) {
   const source = fs.readFileSync(file, 'utf8');
-  for (const [name] of expected) {
+  for (const name of expectedNames) {
     const escaped = escapeRegex(name);
     const createPattern = new RegExp(`\\bcreate\\s+(?:or\\s+replace\\s+)?function\\s+(?:public\\s*\\.\\s*)?[\"']?${escaped}[\"']?\\s*\\(`, 'i');
-    if (createPattern.test(source)) definitions.get(name).push(file.replaceAll('\\\\', '/'));
+    if (createPattern.test(source)) definitions.get(name).push(file.split(path.sep).join('/'));
+  }
+}
+for (const files of definitions.values()) files.sort();
+
+const authority = manifest.repository_authority || {};
+const authorityRows = authority.functions || [];
+if (authorityRows.length !== expected.length) failures.push(`repository authority must map exactly ${expected.length} tracked RPCs`);
+if (new Set(authorityRows.map((item) => item.name)).size !== authorityRows.length) failures.push('repository authority RPC names must be unique');
+const extraAuthorityNames = authorityRows.map((item) => item.name).filter((name) => !expectedNames.includes(name));
+if (extraAuthorityNames.length) failures.push(`repository authority contains untracked RPCs: ${extraAuthorityNames.join(', ')}`);
+
+let presentCount = 0;
+for (const name of expectedNames) {
+  const actualPaths = definitions.get(name) || [];
+  const row = authorityRows.find((item) => item.name === name);
+  if (!row) {
+    failures.push(`missing repository authority row: ${name}`);
+    continue;
+  }
+  const mappedPaths = Array.isArray(row.definition_paths) ? [...row.definition_paths].sort() : [];
+  if (new Set(mappedPaths).size !== mappedPaths.length) failures.push(`${name} definition_paths must not contain duplicates`);
+  if (JSON.stringify(mappedPaths) !== JSON.stringify(actualPaths)) {
+    failures.push(`${name} SQL source mapping drifted: manifest=[${mappedPaths.join('|')}] actual=[${actualPaths.join('|')}]`);
+  }
+
+  if (actualPaths.length) {
+    presentCount += 1;
+    if (row.source_status !== 'checked_in_definitions_present') failures.push(`${name} must mark checked-in definitions present`);
+    if (row.production_parity_status !== 'not_proven_against_snapshot') failures.push(`${name} checked-in source must not claim deployed parity without deterministic proof`);
+  } else {
+    if (row.source_status !== 'missing') failures.push(`${name} must remain explicitly missing while no CREATE FUNCTION source exists`);
+    if (row.production_parity_status !== 'not_reconstructible_from_git') failures.push(`${name} missing source must remain non-reconstructible from Git`);
   }
 }
 
-const status = manifest.repository_authority?.status;
-const mappedPaths = manifest.repository_authority?.authoritative_sql_paths || [];
-const definedMappings = [...definitions.entries()]
-  .filter(([, files]) => files.length)
-  .map(([name, files]) => `${name}=>${files.sort().join('|')}`);
-if (!['missing', 'checked_in'].includes(status)) failures.push('repository authority status must be missing or checked_in');
-if (status === 'missing') {
-  if (mappedPaths.length !== 0) failures.push('missing repository authority must not claim authoritative SQL paths');
-  if (definedMappings.length) failures.push(`tracked backend definitions entered Git without provenance transition: ${definedMappings.join(', ')}`);
-}
-if (status === 'checked_in') {
-  if (mappedPaths.length === 0) failures.push('checked_in repository authority requires authoritative SQL paths');
-  const absent = expected.map(([name]) => name).filter((name) => definitions.get(name).length === 0);
-  if (absent.length) failures.push(`checked_in authority is missing CREATE FUNCTION source for: ${absent.join(', ')}`);
-  for (const sourcePath of mappedPaths) {
-    if (!fs.existsSync(sourcePath)) failures.push(`authoritative SQL path does not exist: ${sourcePath}`);
-  }
-}
-
-if (!/observational evidence/i.test(String(manifest.repository_authority?.rule || ''))) failures.push('manifest must preserve the observation-versus-source-authority rule');
-if (!/same change/i.test(String(manifest.transition_policy?.missing_to_checked_in || ''))) failures.push('manifest must force provenance transition in the same change as new authority');
+const computedStatus = presentCount === 0 ? 'missing' : presentCount === expected.length ? 'checked_in' : 'partial';
+if (authority.status !== computedStatus) failures.push(`repository authority status must be ${computedStatus}, found ${authority.status || '(missing)'}`);
+if (!/observational evidence/i.test(String(authority.rule || ''))) failures.push('manifest must preserve the observation-versus-source-authority rule');
+if (!/same change/i.test(String(manifest.transition_policy?.source_mapping || ''))) failures.push('manifest must force source mapping updates in the same change');
+if (!/deterministic comparison/i.test(String(manifest.transition_policy?.production_parity || ''))) failures.push('manifest must prohibit unproven production-parity claims');
+if (!/all tracked RPCs/i.test(String(manifest.transition_policy?.complete_authority || ''))) failures.push('complete authority transition must require all tracked RPCs');
 
 if (failures.length) {
   console.error(`Backend RPC provenance regression failed for ${failures.length} item(s):`);
@@ -85,4 +104,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`Backend RPC provenance PASS: ${expected.length} production fingerprints remain observation-only; repository authority=${status}.`);
+console.log(`Backend RPC provenance PASS: ${presentCount}/${expected.length} tracked RPCs have checked-in definitions; production fingerprints remain observation-only; repository authority=${computedStatus}.`);
