@@ -20,6 +20,7 @@ jobs:
         shell: bash
         run: |
           set -u
+          # Re-run marker: post-publication-boundary deployment 088402c.
 
           probe() {
             local label="$1"
@@ -60,18 +61,11 @@ jobs:
             return 0
           }
 
-          # Plain HTTP is intentionally not followed so redirect enforcement is visible.
           probe 'custom-http-root' 'http://kalenel.nl/' 'no'
-
-          # The HTTPS homepage establishes the normal public route.
           probe 'custom-https-root' 'https://kalenel.nl/' 'yes'
-
-          # These are repository/verification artifacts, not intended website routes.
           probe 'custom-package-json' 'https://kalenel.nl/package.json' 'yes'
           probe 'custom-gameplay-evidence' 'https://kalenel.nl/gameplay-acceptance.json' 'yes'
           probe 'custom-ci-source' 'https://kalenel.nl/check-canonical-gejast-gate-v792.mjs' 'yes'
-
-          # Probe the GitHub Pages origin as well to separate Pages publication from custom-domain routing.
           probe 'pages-origin-package-json' 'https://jesperoaths.github.io/kale-nel/package.json' 'yes'
           probe 'pages-origin-gameplay-evidence' 'https://jesperoaths.github.io/kale-nel/gameplay-acceptance.json' 'yes'
           probe 'pages-origin-ci-source' 'https://jesperoaths.github.io/kale-nel/check-canonical-gejast-gate-v792.mjs' 'yes'
