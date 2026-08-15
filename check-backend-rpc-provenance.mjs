@@ -3,7 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const manifestPath = 'backend-rpc-provenance.json';
+const liveSmokePath = 'check-live-game-flows.mjs';
 const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+const liveSmoke = fs.readFileSync(liveSmokePath, 'utf8');
 const failures = [];
 
 const ignoredDirectories = new Set(['.git', 'node_modules', '.wrangler', 'dist', 'coverage']);
@@ -29,6 +31,13 @@ function definesRpc(sql, rpc) {
   return new RegExp(`\\bcreate\\s+(?:or\\s+replace\\s+)?function\\s+${qualified}\\s*\\(`, 'i').test(sql);
 }
 
+function canonicalLiveSmokeRpcNames(source) {
+  const names = new Set();
+  for (const match of source.matchAll(/\brpc\(\s*['"]([a-z][a-z0-9_]+)['"]/gi)) names.add(match[1]);
+  for (const match of source.matchAll(/^\s*\[\s*['"]([a-z][a-z0-9_]+)['"]\s*,\s*\{/gim)) names.add(match[1]);
+  return [...names].sort();
+}
+
 walk('.');
 const sqlByPath = new Map(sqlFiles.map((file) => [file, fs.readFileSync(file, 'utf8')]));
 
@@ -37,6 +46,7 @@ if (!String(manifest.purpose || '').trim()) failures.push('backend RPC provenanc
 if (!Array.isArray(manifest.rpcs) || manifest.rpcs.length === 0) failures.push('backend RPC provenance manifest must list at least one RPC');
 
 const seen = new Set();
+const manifestRpcNames = new Set();
 for (const rpc of manifest.rpcs || []) {
   const label = `${rpc?.schema || '(missing schema)'}.${rpc?.name || '(missing name)'}(${rpc?.identity_arguments || ''})`;
   const key = `${rpc?.schema}\u0000${rpc?.name}\u0000${rpc?.identity_arguments}`;
@@ -47,6 +57,7 @@ for (const rpc of manifest.rpcs || []) {
     failures.push(`${label} must declare schema, name and identity_arguments`);
     continue;
   }
+  manifestRpcNames.add(rpc.name);
 
   if (rpc?.observed_production?.status !== 'observed') failures.push(`${label} production evidence status must be observed`);
   if (!/^[0-9a-f]{32}$/.test(String(rpc?.observed_production?.definition_md5 || ''))) failures.push(`${label} production definition_md5 must be 32 lowercase hex characters`);
@@ -68,6 +79,11 @@ for (const rpc of manifest.rpcs || []) {
   }
 }
 
+const smokeRpcNames = canonicalLiveSmokeRpcNames(liveSmoke);
+for (const rpcName of smokeRpcNames) {
+  if (!manifestRpcNames.has(rpcName)) failures.push(`canonical live-game smoke RPC lacks provenance entry: ${rpcName}`);
+}
+
 if (failures.length) {
   console.error(`Backend RPC provenance regression failed for ${failures.length} item(s):`);
   for (const failure of failures) console.error(`- ${failure}`);
@@ -75,4 +91,4 @@ if (failures.length) {
 }
 
 const missing = (manifest.rpcs || []).filter((rpc) => rpc?.repository_authority?.status === 'missing').length;
-console.log(`Backend RPC provenance PASS: ${manifest.rpcs.length} deployed RPC fingerprint(s) tracked; ${missing} still explicitly lack checked-in SQL authority.`);
+console.log(`Backend RPC provenance PASS: ${manifest.rpcs.length} deployed RPC fingerprint(s) tracked; ${smokeRpcNames.length} canonical live-smoke RPC name(s) covered; ${missing} still explicitly lack checked-in SQL authority.`);
