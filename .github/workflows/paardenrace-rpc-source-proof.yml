@@ -1,0 +1,139 @@
+name: Paardenrace RPC source proof
+
+on:
+  pull_request:
+    paths:
+      - 'backend-source-paardenrace-v687-production.sql'
+      - 'backend-rpc-provenance.json'
+      - 'check-paardenrace-rpc-source-safety.mjs'
+      - '.github/workflows/paardenrace-rpc-source-proof.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-proof:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gejast_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d gejast_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGPASSWORD: postgres
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: gejast_test
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Verify source isolation
+        run: node check-paardenrace-rpc-source-safety.mjs
+
+      - name: Create isolated dependency fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          create table public.paardenrace_rooms (
+            id bigint primary key,
+            room_code text,
+            stage text,
+            host_name text,
+            updated_at timestamptz
+          );
+
+          create table public.paardenrace_room_players (
+            room_id bigint,
+            player_name text,
+            selected_suit text,
+            wager_bakken integer,
+            wager_verified boolean,
+            wager_saved_at timestamptz,
+            is_ready boolean,
+            updated_at timestamptz
+          );
+
+          create or replace function public._gejast_v687a_scope_norm(value text)
+          returns text language sql immutable as $$ select coalesce(nullif(trim(value),''),'friends') $$;
+
+          create or replace function public._paardenrace_require_name(token text, token_input text)
+          returns text language sql stable as $$ select 'Fixture Player'::text $$;
+
+          create or replace function public._paardenrace_player_id(token text, token_input text)
+          returns bigint language sql stable as $$ select 1::bigint $$;
+
+          create or replace function public._paardenrace_upsert_player(room_id_input bigint, player_name_input text, player_id_input bigint)
+          returns void language plpgsql as $$ begin return; end $$;
+
+          create or replace function public._paardenrace_build_room_state(room_code_input text, token text, token_input text)
+          returns jsonb language sql stable as $$ select '{}'::jsonb $$;
+          SQL
+
+      - name: Compile reconstructed production source
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 --file backend-source-paardenrace-v687-production.sql
+
+      - name: Reconcile exact identities and normalized production fingerprints
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          declare
+            actual_identity text;
+            actual_hash text;
+          begin
+            select pg_get_function_identity_arguments(p.oid),
+                   md5(replace(replace(pg_get_functiondef(p.oid), E'\r\n', E'\n'), E'\r', E'\n'))
+              into actual_identity, actual_hash
+              from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+             where n.nspname='public' and p.proname='get_paardenrace_stats_fast_v687';
+            if actual_identity <> 'site_scope_input text, limit_input integer' then
+              raise exception 'stats RPC identity mismatch: %', actual_identity;
+            end if;
+            if actual_hash <> 'e00a6cba57167f82bfb03bcea34ddef8' then
+              raise exception 'stats RPC normalized fingerprint mismatch: %', actual_hash;
+            end if;
+
+            select pg_get_function_identity_arguments(p.oid),
+                   md5(replace(replace(pg_get_functiondef(p.oid), E'\r\n', E'\n'), E'\r', E'\n'))
+              into actual_identity, actual_hash
+              from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+             where n.nspname='public' and p.proname='update_paardenrace_room_choice_safe';
+            if actual_identity <> 'session_token text, session_token_input text, room_code_input text, selected_suit_input text, wager_bakken_input integer, ready_input boolean, site_scope_input text' then
+              raise exception 'choice RPC identity mismatch: %', actual_identity;
+            end if;
+            if actual_hash <> '8348776c3324df2cdec284d38338f444' then
+              raise exception 'choice RPC normalized fingerprint mismatch: %', actual_hash;
+            end if;
+
+            select pg_get_function_identity_arguments(p.oid),
+                   md5(replace(replace(pg_get_functiondef(p.oid), E'\r\n', E'\n'), E'\r', E'\n'))
+              into actual_identity, actual_hash
+              from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+             where n.nspname='public' and p.proname='verify_paardenrace_wager_safe';
+            if actual_identity <> 'session_token text, session_token_input text, room_code_input text, target_player_name_input text, site_scope_input text' then
+              raise exception 'wager verification RPC identity mismatch: %', actual_identity;
+            end if;
+            if actual_hash <> '1aa01d9ed17d1238af35cb9aa66fa232' then
+              raise exception 'wager verification RPC normalized fingerprint mismatch: %', actual_hash;
+            end if;
+          end
+          $$;
+          SQL
+
+      - name: Report source reconstruction proof
+        run: echo 'Paardenrace RPC source proof PASS — 3 reconstructed definitions compile on PostgreSQL 17.6 and match normalized read-only production fingerprints.'
