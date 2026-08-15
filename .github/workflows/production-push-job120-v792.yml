@@ -1,0 +1,48 @@
+name: v792 exact production push job 120
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/production-push-job120-v792.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  send-job-120:
+    runs-on: ubuntu-latest
+    if: github.repository == 'JesperOaths/kale-nel' && github.ref == 'refs/heads/main'
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact main commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install pinned dispatcher dependencies
+        run: npm ci
+
+      - name: Send only queued work for Bruis subscription 487
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          WEB_PUSH_VAPID_PUBLIC_KEY: ${{ secrets.WEB_PUSH_VAPID_PUBLIC_KEY }}
+          WEB_PUSH_VAPID_PRIVATE_KEY: ${{ secrets.WEB_PUSH_VAPID_PRIVATE_KEY }}
+          WEB_PUSH_VAPID_SUBJECT: ${{ secrets.WEB_PUSH_VAPID_SUBJECT }}
+          WEB_PUSH_WORKER_ID: production-finalization-v792-job120
+          WEB_PUSH_DRY_RUN: 'false'
+          WEB_PUSH_REQUIRE_EXPLICIT_TARGET: 'true'
+          WEB_PUSH_TARGET_SUBSCRIPTION_ID: '487'
+          WEB_PUSH_MAX_JOBS: '1'
+        run: node web_push_dispatcher.js
+
+      - name: Exact push dispatch completed
+        run: echo 'RESULT=V792_EXACT_PUSH_DISPATCH_COMPLETE'
