@@ -1,0 +1,160 @@
+name: v792 production live gameplay and push validation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/production-live-tests-v792-resume3.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v792-production-live-tests-once
+  cancel-in-progress: false
+
+jobs:
+  validate-production:
+    runs-on: ubuntu-latest
+    if: github.repository == 'JesperOaths/kale-nel' && github.ref == 'refs/heads/main'
+    timeout-minutes: 15
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      WEB_PUSH_VAPID_PUBLIC_KEY: ${{ secrets.WEB_PUSH_VAPID_PUBLIC_KEY }}
+      WEB_PUSH_VAPID_PRIVATE_KEY: ${{ secrets.WEB_PUSH_VAPID_PRIVATE_KEY }}
+      WEB_PUSH_VAPID_SUBJECT: ${{ secrets.WEB_PUSH_VAPID_SUBJECT }}
+      GEJAST_ALLOW_LIVE_WRITE_BETA: I_APPROVE_LIVE_BETA_WRITES
+      GEJAST_SITE_SCOPE: friends
+      GEJAST_REQUIRE_TWO_PLAYER: '1'
+    steps:
+      - name: Check out exact main commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install runtime dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          sudo apt-get update >/dev/null
+          sudo apt-get install -y postgresql-client >/dev/null
+          test -n "${SUPABASE_DB_URL:-}" || { echo 'SUPABASE_DB_URL missing'; exit 1; }
+
+      - name: Re-prove live Klaverjas v792b-v792h hardening
+        shell: bash
+        run: |
+          set -euo pipefail
+          result="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -F'|' -c "select (to_regprocedure('public._klaverjas_online_full_deal_valid(jsonb)') is not null)::int,(to_regprocedure('public._klaverjas_online_card_legal(jsonb,jsonb,integer,text,jsonb)') is not null)::int,(to_regprocedure('public._klaverjas_online_human_transition_valid(jsonb,jsonb,integer)') is not null)::int,(to_regprocedure('public._klaverjas_online_bid_rank(jsonb)') is not null)::int,(to_regprocedure('public._klaverjas_online_save_state_v792e_inner(text,uuid,jsonb,jsonb,jsonb)') is not null)::int,(to_regprocedure('public._klaverjas_online_roem_points(jsonb,text)') is not null)::int,(to_regprocedure('public._klaverjas_online_save_state_v792f_inner(text,uuid,jsonb,jsonb,jsonb)') is not null)::int,public._klaverjas_online_bid_rank('{\"action\":\"bid\",\"player\":0,\"team\":1,\"mode\":\"suit\",\"suit\":\"hearts\",\"points\":80}'::jsonb),public._klaverjas_online_roem_points('[{\"player\":0,\"card\":{\"id\":\"hearts-A\",\"suit\":\"hearts\",\"rank\":\"A\"}},{\"player\":1,\"card\":{\"id\":\"hearts-K\",\"suit\":\"hearts\",\"rank\":\"K\"}},{\"player\":2,\"card\":{\"id\":\"hearts-Q\",\"suit\":\"hearts\",\"rank\":\"Q\"}},{\"player\":3,\"card\":{\"id\":\"clubs-7\",\"suit\":\"clubs\",\"rank\":\"7\"}}]'::jsonb,'clubs');")"
+          echo "Klaverjas production proof: $result"
+          test "$result" = '1|1|1|1|1|1|1|82|20'
+
+      - name: Provision masked disposable Beta1 and Beta2 sessions
+        shell: bash
+        run: |
+          set -euo pipefail
+          token1="v792-final-$(openssl rand -hex 24)"
+          token2="v792-final-$(openssl rand -hex 24)"
+          echo "::add-mask::$token1"
+          echo "::add-mask::$token2"
+          echo "GEJAST_PLAYER1_TOKEN=$token1" >> "$GITHUB_ENV"
+          echo "GEJAST_PLAYER2_TOKEN=$token2" >> "$GITHUB_ENV"
+
+          account1="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -c "select id from public.gejast_account_players_v671 where site_scope='friends' and lower(display_name)='beta1' order by created_at desc limit 1")"
+          account2="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -c "select id from public.gejast_account_players_v671 where site_scope='friends' and lower(display_name)='beta2' order by created_at desc limit 1")"
+          player1="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -c "select id from public.players where lower(display_name)='beta1' and coalesce(active,true)=true order by id limit 1")"
+          player2="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -c "select id from public.players where lower(display_name)='beta2' and coalesce(active,true)=true order by id limit 1")"
+          test -n "$account1" && test -n "$account2" && test -n "$player1" && test -n "$player2"
+
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -c "insert into public.gejast_account_sessions_v671(session_token,player_id,site_scope,expires_at) values ('$token1','$account1','friends',now()+interval '30 minutes'),('$token2','$account2','friends',now()+interval '30 minutes');"
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -c "insert into public.gejast_player_sessions_v746(session_token,player_id,display_name,site_scope,expires_at) values ('$token1',$player1,'Beta1','friends',now()+interval '30 minutes'),('$token2',$player2,'Beta2','friends',now()+interval '30 minutes');"
+
+      - name: Prove disposable session resolution
+        shell: bash
+        run: |
+          set -euo pipefail
+          resolved="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -F'|' -c "select coalesce(public._gejast_v687_session_name('$GEJAST_PLAYER1_TOKEN'),''),coalesce(public._gejast_v687_session_name('$GEJAST_PLAYER2_TOKEN'),''),coalesce(public._gejast_name_for_session('$GEJAST_PLAYER1_TOKEN'),''),coalesce(public._gejast_name_for_session('$GEJAST_PLAYER2_TOKEN'),''),coalesce((public._jas_session_player('$GEJAST_PLAYER1_TOKEN')).display_name,''),coalesce((public._jas_session_player('$GEJAST_PLAYER2_TOKEN')).display_name,'');")"
+          echo "Session resolver matrix: $resolved"
+          test "$resolved" = 'Beta1|Beta2|Beta1|Beta2|Beta1|Beta2'
+
+      - name: Run reversible authenticated two-player live gameplay smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          node check-live-game-flows.mjs
+
+      - name: Remove disposable sessions and temporary account identities
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${GEJAST_PLAYER1_TOKEN:-}" ] && [ -n "${GEJAST_PLAYER2_TOKEN:-}" ]; then
+            psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -c "delete from public.gejast_player_sessions_v746 where session_token in ('$GEJAST_PLAYER1_TOKEN','$GEJAST_PLAYER2_TOKEN'); delete from public.gejast_account_sessions_v671 where session_token in ('$GEJAST_PLAYER1_TOKEN','$GEJAST_PLAYER2_TOKEN');"
+          fi
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -c "delete from public.gejast_account_players_v671 where site_scope='friends' and ((lower(display_name)='beta1' and email='beta1@example.invalid') or (lower(display_name)='beta2' and email='beta2@example.invalid')) and pin_hash is null;"
+
+      - name: Queue exactly one targeted Bruis push
+        id: push
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_URL:-}" && test -n "${SUPABASE_SERVICE_ROLE_KEY:-}"
+          test -n "${WEB_PUSH_VAPID_PUBLIC_KEY:-}" && test -n "${WEB_PUSH_VAPID_PRIVATE_KEY:-}"
+          target_id="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -c "select id from public.web_push_subscriptions where display_name='Bruis' and disabled_at is null and nullif(endpoint,'') is not null and nullif(coalesce(p256dh_key,p256dh),'') is not null and nullif(coalesce(auth_key,auth),'') is not null order by last_seen_at desc nulls last,updated_at desc,id desc limit 1")"
+          test -n "$target_id"
+          job_id="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -c "insert into public.web_push_jobs(status,target_player_id,target_subscription_id,title,body,target_url,payload,site_scope,trigger_kind,target_player_name,dedupe_key,notification_tag,require_interaction) select 'queued',player_id,id,'GEJAST productietest','Gecontroleerde push-test na de v792 productiehardening.','./push_beta_test.html?push_test=production-finalization-v792',jsonb_build_object('kind','admin_targeted_test','target_subscription_id',id,'source','production-finalization-v792'),coalesce(site_scope,'friends'),'admin_targeted_test',display_name,'production-finalization-v792:'||id||':'||to_char(clock_timestamp(),'YYYYMMDDHH24MISSMS'),'production-finalization-v792-'||id,false from public.web_push_subscriptions where id=$target_id returning id")"
+          test -n "$job_id"
+          echo "target_id=$target_id" >> "$GITHUB_OUTPUT"
+          echo "job_id=$job_id" >> "$GITHUB_OUTPUT"
+          echo "Queued one controlled push job $job_id for subscription $target_id"
+
+      - name: Send exactly the queued push
+        shell: bash
+        env:
+          WEB_PUSH_WORKER_ID: production-finalization-v792
+          WEB_PUSH_DRY_RUN: 'false'
+          WEB_PUSH_REQUIRE_EXPLICIT_TARGET: 'true'
+          WEB_PUSH_TARGET_SUBSCRIPTION_ID: ${{ steps.push.outputs.target_id }}
+          WEB_PUSH_MAX_JOBS: '1'
+        run: |
+          set -euo pipefail
+          node web_push_dispatcher.js
+
+      - name: Prove push terminal delivery state
+        shell: bash
+        env:
+          PUSH_JOB_ID: ${{ steps.push.outputs.job_id }}
+          PUSH_TARGET_ID: ${{ steps.push.outputs.target_id }}
+        run: |
+          set -euo pipefail
+          status=''
+          error_code=''
+          for _ in $(seq 1 15); do
+            status="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -c "select status from public.web_push_jobs where id=$PUSH_JOB_ID")"
+            error_code="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -c "select coalesce(error_code,'') from public.web_push_jobs where id=$PUSH_JOB_ID")"
+            if [ "$status" = 'sent' ] || [ "$status" = 'failed' ]; then break; fi
+            sleep 2
+          done
+          echo "Targeted push terminal status: $status ${error_code:+($error_code)}"
+          test "$status" = 'sent'
+          active="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -c "select case when disabled_at is null then 'active' else 'disabled' end from public.web_push_subscriptions where id=$PUSH_TARGET_ID")"
+          test "$active" = 'active'
+
+      - name: Re-run Worker v763 deterministic build and security suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run admin-worker:build
+          npm run admin-worker:test
+
+      - name: Production live validation complete
+        run: echo 'RESULT=V792_PRODUCTION_LIVE_GAMEPLAY_PUSH_PASS'
