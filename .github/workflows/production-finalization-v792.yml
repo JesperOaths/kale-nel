@@ -1,0 +1,287 @@
+name: v792 production finalization once
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/production-finalization-v792.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v792-production-finalization-once
+  cancel-in-progress: false
+
+jobs:
+  finalize-production:
+    runs-on: ubuntu-latest
+    if: github.repository == 'JesperOaths/kale-nel' && github.ref == 'refs/heads/main'
+    timeout-minutes: 25
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      GEJAST_ALLOW_LIVE_WRITE_BETA: I_APPROVE_LIVE_BETA_WRITES
+      GEJAST_SITE_SCOPE: friends
+      GEJAST_PLAYER1_TOKEN: ${{ secrets.BETA1_SESSION_TOKEN }}
+      GEJAST_PLAYER2_TOKEN: ${{ secrets.BETA2_SESSION_TOKEN }}
+      GEJAST_REQUIRE_TWO_PLAYER: '1'
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      WEB_PUSH_VAPID_PUBLIC_KEY: ${{ secrets.WEB_PUSH_VAPID_PUBLIC_KEY }}
+      WEB_PUSH_VAPID_PRIVATE_KEY: ${{ secrets.WEB_PUSH_VAPID_PRIVATE_KEY }}
+      WEB_PUSH_VAPID_SUBJECT: ${{ secrets.WEB_PUSH_VAPID_SUBJECT }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Check out exact main commit
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install pinned application dependencies and PostgreSQL client
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Require production SQL and beta credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || { echo 'SUPABASE_DB_URL missing'; exit 1; }
+          test -n "${GEJAST_PLAYER1_TOKEN:-}" || { echo 'BETA1_SESSION_TOKEN missing'; exit 1; }
+          test -n "${GEJAST_PLAYER2_TOKEN:-}" || { echo 'BETA2_SESSION_TOKEN missing'; exit 1; }
+          test "$GEJAST_PLAYER1_TOKEN" != "$GEJAST_PLAYER2_TOKEN" || { echo 'Beta tokens must be distinct'; exit 1; }
+
+      - name: Snapshot current Klaverjas production function fingerprints
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At <<'SQL'
+          select p.proname || '|' || pg_get_function_identity_arguments(p.oid) || '|' || md5(pg_get_functiondef(p.oid))
+            from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+           where n.nspname='public'
+             and (p.proname='klaverjas_online_save_state' or p.proname like '_klaverjas_online_%')
+           order by p.proname, pg_get_function_identity_arguments(p.oid);
+          SQL
+
+      - name: Apply v792b-v792h Online Klaverjas production repairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            GEJAST_v792b_klaverjas_online_transition_guard.sql
+            GEJAST_v792c_klaverjas_online_rules_guard.sql
+            GEJAST_v792d_klaverjas_online_transition_compat.sql
+            GEJAST_v792e_klaverjas_online_bid_rank_guard.sql
+            GEJAST_v792f_klaverjas_online_persistence_guard.sql
+            GEJAST_v792g_klaverjas_online_roem_wrapper_fix.sql
+            GEJAST_v792h_klaverjas_online_recovery_snapshot_bridge.sql
+          )
+          for file in "${files[@]}"; do
+            test -f "$file" || { echo "Missing checked-in repair: $file"; exit 1; }
+            echo "Applying $file"
+            psql "$SUPABASE_DB_URL" -X \
+              --set ON_ERROR_STOP=1 \
+              --set statement_timeout=120000 \
+              --file "$file"
+          done
+
+      - name: Prove hardened Klaverjas production contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          begin
+            if to_regprocedure('public._klaverjas_online_full_deal_valid(jsonb)') is null then
+              raise exception 'v792b full-deal guard missing';
+            end if;
+            if to_regprocedure('public._klaverjas_online_human_transition_valid(jsonb,jsonb,integer)') is null then
+              raise exception 'v792d transition guard missing';
+            end if;
+            if to_regprocedure('public._klaverjas_online_card_legal(jsonb,jsonb,integer,text,jsonb)') is null then
+              raise exception 'v792c card legality guard missing';
+            end if;
+            if to_regprocedure('public._klaverjas_online_bid_rank(jsonb)') is null then
+              raise exception 'v792e bid-rank guard missing';
+            end if;
+            if to_regprocedure('public._klaverjas_online_save_state_v792e_inner(text,uuid,jsonb,jsonb,jsonb)') is null then
+              raise exception 'v792f private persistence inner missing';
+            end if;
+            if to_regprocedure('public._klaverjas_online_save_state_v792f_inner(text,uuid,jsonb,jsonb,jsonb)') is null then
+              raise exception 'v792h recovery bridge inner missing';
+            end if;
+            if has_function_privilege('anon','public._klaverjas_online_bid_rank(jsonb)','EXECUTE')
+               or has_function_privilege('authenticated','public._klaverjas_online_bid_rank(jsonb)','EXECUTE')
+               or has_function_privilege('anon','public._klaverjas_online_roem_points(jsonb,text)','EXECUTE')
+               or has_function_privilege('authenticated','public._klaverjas_online_roem_points(jsonb,text)','EXECUTE')
+               or has_function_privilege('anon','public._klaverjas_online_save_state_v792f_inner(text,uuid,jsonb,jsonb,jsonb)','EXECUTE')
+               or has_function_privilege('authenticated','public._klaverjas_online_save_state_v792f_inner(text,uuid,jsonb,jsonb,jsonb)','EXECUTE') then
+              raise exception 'private Klaverjas helper unexpectedly client-executable';
+            end if;
+            if not has_function_privilege('anon','public.klaverjas_online_save_state(text,uuid,jsonb,jsonb,jsonb)','EXECUTE')
+               or not has_function_privilege('authenticated','public.klaverjas_online_save_state(text,uuid,jsonb,jsonb,jsonb)','EXECUTE') then
+              raise exception 'public Klaverjas save RPC lost client execute grant';
+            end if;
+            if public._klaverjas_online_bid_rank('{"action":"bid","player":0,"team":1,"mode":"suit","suit":"hearts","points":80}'::jsonb) <> 82 then
+              raise exception 'v792e suit-80 rank parity failed';
+            end if;
+            if public._klaverjas_online_roem_points(
+              '[
+                {"player":0,"card":{"id":"hearts-A","suit":"hearts","rank":"A"}},
+                {"player":1,"card":{"id":"hearts-K","suit":"hearts","rank":"K"}},
+                {"player":2,"card":{"id":"hearts-Q","suit":"hearts","rank":"Q"}},
+                {"player":3,"card":{"id":"clubs-7","suit":"clubs","rank":"7"}}
+              ]'::jsonb,
+              'clubs'
+            ) <> 20 then
+              raise exception 'v792g wrapped-trick roem parity failed';
+            end if;
+          end
+          $$;
+          SQL
+
+      - name: Run reversible live two-player gameplay smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          node check-live-game-flows.mjs
+
+      - name: Require push runtime secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_URL:-}" || { echo 'SUPABASE_URL missing'; exit 1; }
+          test -n "${SUPABASE_SERVICE_ROLE_KEY:-}" || { echo 'SUPABASE_SERVICE_ROLE_KEY missing'; exit 1; }
+          test -n "${WEB_PUSH_VAPID_PUBLIC_KEY:-}" || { echo 'WEB_PUSH_VAPID_PUBLIC_KEY missing'; exit 1; }
+          test -n "${WEB_PUSH_VAPID_PRIVATE_KEY:-}" || { echo 'WEB_PUSH_VAPID_PRIVATE_KEY missing'; exit 1; }
+
+      - name: Queue one targeted Bruis production push
+        id: queue_push
+        shell: bash
+        run: |
+          set -euo pipefail
+          read -r target_id job_id < <(
+            psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -F' ' <<'SQL'
+            with target as (
+              select id, player_id, display_name, site_scope
+                from public.web_push_subscriptions
+               where display_name='Bruis'
+                 and disabled_at is null
+                 and nullif(endpoint,'') is not null
+                 and nullif(coalesce(p256dh_key,p256dh),'') is not null
+                 and nullif(coalesce(auth_key,auth),'') is not null
+               order by last_seen_at desc nulls last, updated_at desc, id desc
+               limit 1
+            ), inserted as (
+              insert into public.web_push_jobs(
+                status,target_player_id,target_subscription_id,title,body,target_url,payload,
+                site_scope,trigger_kind,target_player_name,dedupe_key,notification_tag,require_interaction
+              )
+              select
+                'queued',player_id,id,
+                'GEJAST productietest',
+                'Gecontroleerde push-test na de v792 productiehardening.',
+                './push_beta_test.html?push_test=production-finalization-v792',
+                jsonb_build_object('kind','admin_targeted_test','target_subscription_id',id,'source','production-finalization-v792'),
+                coalesce(site_scope,'friends'),'admin_targeted_test',display_name,
+                'production-finalization-v792:' || id || ':' || to_char(clock_timestamp(),'YYYYMMDDHH24MISSMS'),
+                'production-finalization-v792-' || id,
+                false
+              from target
+              returning id,target_subscription_id
+            )
+            select target_subscription_id,id from inserted;
+            SQL
+          )
+          test -n "${target_id:-}" || { echo 'No eligible Bruis push subscription found'; exit 1; }
+          test -n "${job_id:-}" || { echo 'Targeted push job was not queued'; exit 1; }
+          echo "target_id=$target_id" >> "$GITHUB_OUTPUT"
+          echo "job_id=$job_id" >> "$GITHUB_OUTPUT"
+          echo "Queued controlled push job $job_id for subscription $target_id"
+
+      - name: Send exactly the targeted push job
+        shell: bash
+        env:
+          WEB_PUSH_WORKER_ID: production-finalization-v792
+          WEB_PUSH_DRY_RUN: 'false'
+          WEB_PUSH_REQUIRE_EXPLICIT_TARGET: 'true'
+          WEB_PUSH_TARGET_SUBSCRIPTION_ID: ${{ steps.queue_push.outputs.target_id }}
+          WEB_PUSH_MAX_JOBS: '1'
+        run: |
+          set -euo pipefail
+          node web_push_dispatcher.js
+
+      - name: Prove targeted push delivery state
+        shell: bash
+        env:
+          PUSH_JOB_ID: ${{ steps.queue_push.outputs.job_id }}
+          PUSH_TARGET_ID: ${{ steps.queue_push.outputs.target_id }}
+        run: |
+          set -euo pipefail
+          status="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -c "select status from public.web_push_jobs where id=${PUSH_JOB_ID}::bigint")"
+          echo "Targeted push terminal status: $status"
+          test "$status" = 'sent' || { echo "Push job did not reach sent status"; exit 1; }
+          disabled="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -c "select case when disabled_at is null then 'active' else 'disabled' end from public.web_push_subscriptions where id=${PUSH_TARGET_ID}::bigint")"
+          test "$disabled" = 'active' || { echo 'Target subscription was disabled by provider response'; exit 1; }
+
+      - name: Build and test Cloudflare Worker v763 before production deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run admin-worker:build
+          npm run admin-worker:test
+
+      - name: Deploy Cloudflare Worker v763 to production
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo 'CLOUDFLARE_API_TOKEN repository secret missing'; exit 1; }
+          npx --yes wrangler@4.118.0 deploy \
+            --config cloudflare/workers/admin-gate/wrangler.toml \
+            --keep-vars
+
+      - name: Prove live HTTP to HTTPS transport enforcement
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import urllib.request, urllib.error
+
+          def probe(url):
+              req = urllib.request.Request(url, method='GET')
+              opener = urllib.request.build_opener(urllib.request.HTTPHandler())
+              try:
+                  r = opener.open(req, timeout=20)
+                  return r.status, r.headers.get('Location')
+              except urllib.error.HTTPError as e:
+                  return e.code, e.headers.get('Location')
+
+          checks = [
+              ('http://kalenel.nl/', 308, 'https://kalenel.nl/'),
+              ('http://kalenel.nl/index.html?finalization=v792', 308, 'https://kalenel.nl/index.html?finalization=v792'),
+              ('http://admin.kalenel.nl/admin.html?finalization=v792', 308, 'https://admin.kalenel.nl/admin.html?finalization=v792'),
+          ]
+          for url, expected_status, expected_location in checks:
+              status, location = probe(url)
+              print(url, status, location)
+              if status != expected_status or location != expected_location:
+                  raise SystemExit(f'transport proof failed for {url}: {status} {location!r}')
+          status, _ = probe('https://kalenel.nl/')
+          if status != 200:
+              raise SystemExit(f'https homepage unhealthy: {status}')
+          PY
+          node check-live-routes.mjs
+
+      - name: Production finalization complete
+        run: echo 'RESULT=V792_PRODUCTION_FINALIZATION_PASS'
