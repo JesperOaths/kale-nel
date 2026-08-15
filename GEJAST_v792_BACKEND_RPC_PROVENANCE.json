@@ -1,12 +1,102 @@
 {
   "id": "GEJAST_v792_BACKEND_RPC_PROVENANCE",
-  "schema_version": 1,
+  "schema_version": 2,
   "frontend_version": 792,
   "observed_at": "2026-08-15",
   "repository_authority": {
-    "status": "missing",
-    "authoritative_sql_paths": [],
-    "rule": "Production function fingerprints are read-only observational evidence and must never be treated as reconstructible source authority."
+    "status": "partial",
+    "rule": "Production function fingerprints are read-only observational evidence and must never be treated as proof that checked-in SQL matches the deployed definition.",
+    "functions": [
+      {
+        "name": "pikken_join_lobby_fast_v687",
+        "source_status": "checked_in_definitions_present",
+        "production_parity_status": "not_proven_against_snapshot",
+        "definition_paths": [
+          "GEJAST_v695_live_pikken_paardenrace_drinks_beurs_fix.sql",
+          "GEJAST_v696_live_pikken_paardenrace_beurs_followup.sql",
+          "GEJAST_v697_pikken_paardenrace_profiles_speed.sql",
+          "GEJAST_v725_pikken_paardenrace_pipeline_contract.sql"
+        ]
+      },
+      {
+        "name": "pikken_start_game_scoped",
+        "source_status": "checked_in_definitions_present",
+        "production_parity_status": "not_proven_against_snapshot",
+        "definition_paths": [
+          "GEJAST_v695_live_pikken_paardenrace_drinks_beurs_fix.sql",
+          "GEJAST_v696_live_pikken_paardenrace_beurs_followup.sql",
+          "GEJAST_v697_pikken_paardenrace_profiles_speed.sql",
+          "GEJAST_v725_pikken_paardenrace_pipeline_contract.sql"
+        ]
+      },
+      {
+        "name": "pikken_destroy_game_fast_v687",
+        "source_status": "checked_in_definitions_present",
+        "production_parity_status": "not_proven_against_snapshot",
+        "definition_paths": [
+          "GEJAST_v695_live_pikken_paardenrace_drinks_beurs_fix.sql",
+          "GEJAST_v696_live_pikken_paardenrace_beurs_followup.sql",
+          "GEJAST_v697_pikken_paardenrace_profiles_speed.sql",
+          "GEJAST_v725_pikken_paardenrace_pipeline_contract.sql"
+        ]
+      },
+      {
+        "name": "join_paardenrace_room_fast_v687",
+        "source_status": "checked_in_definitions_present",
+        "production_parity_status": "not_proven_against_snapshot",
+        "definition_paths": [
+          "GEJAST_v690_full_site_compat.sql",
+          "GEJAST_v722_rpc_contract_repair.sql",
+          "GEJAST_v723_paardenrace_no_ambiguous_safe_calls.sql",
+          "GEJAST_v724_live_contract_compat.sql",
+          "GEJAST_v725_pikken_paardenrace_pipeline_contract.sql",
+          "GEJAST_v725a_SURGICAL_rpc_wrapper_repair.sql"
+        ]
+      },
+      {
+        "name": "paardenrace_start_countdown_v687",
+        "source_status": "missing",
+        "production_parity_status": "not_reconstructible_from_git",
+        "definition_paths": []
+      },
+      {
+        "name": "start_paardenrace_room_safe",
+        "source_status": "checked_in_definitions_present",
+        "production_parity_status": "not_proven_against_snapshot",
+        "definition_paths": [
+          "GEJAST_v713_paardenrace_start_alias_pikken_dice.sql",
+          "GEJAST_v714_pikken_lobby_elo_push_paardenrace.sql",
+          "GEJAST_v717_lobby_start_ladders_fix.sql",
+          "GEJAST_v722_rpc_contract_repair.sql",
+          "GEJAST_v723_paardenrace_no_ambiguous_safe_calls.sql",
+          "GEJAST_v724_live_contract_compat.sql",
+          "GEJAST_v725_pikken_paardenrace_pipeline_contract.sql",
+          "GEJAST_v725a_SURGICAL_rpc_wrapper_repair.sql"
+        ]
+      },
+      {
+        "name": "get_paardenrace_room_state_fast_v687",
+        "source_status": "checked_in_definitions_present",
+        "production_parity_status": "not_proven_against_snapshot",
+        "definition_paths": [
+          "GEJAST_v690_full_site_compat.sql",
+          "GEJAST_v692_overload_profiles_speed_fix.sql",
+          "GEJAST_v709_pikken_persist_paardenrace_fast_state.sql",
+          "GEJAST_v721_paardenrace_live_pikken_ready_fix.sql",
+          "GEJAST_v722_rpc_contract_repair.sql",
+          "GEJAST_v723_paardenrace_no_ambiguous_safe_calls.sql",
+          "GEJAST_v724_live_contract_compat.sql",
+          "GEJAST_v725_pikken_paardenrace_pipeline_contract.sql",
+          "GEJAST_v725a_SURGICAL_rpc_wrapper_repair.sql"
+        ]
+      },
+      {
+        "name": "paardenrace_disband_room_v687",
+        "source_status": "missing",
+        "production_parity_status": "not_reconstructible_from_git",
+        "definition_paths": []
+      }
+    ]
   },
   "production_observation": {
     "status": "read_only_snapshot_only",
@@ -56,7 +146,8 @@
     ]
   },
   "transition_policy": {
-    "missing_to_checked_in": "If an authoritative CREATE FUNCTION definition for any tracked RPC is added to Git, this manifest and its source-path mapping must be updated in the same change.",
-    "checked_in_requirement": "Every tracked RPC must have a checked-in authoritative SQL definition before repository_authority.status may become checked_in."
+    "source_mapping": "If a tracked CREATE FUNCTION definition is added, removed, or renamed, its per-RPC source mapping must be updated in the same change.",
+    "production_parity": "Checked-in source presence must not be promoted to production parity without a deterministic comparison against PostgreSQL-normalized deployed definitions.",
+    "complete_authority": "repository_authority.status may become checked_in only when all tracked RPCs have checked-in definitions."
   }
 }
