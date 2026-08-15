@@ -35,6 +35,8 @@ jobs:
         run: node check-paardenrace-rpc-source-safety.mjs
       - name: Gameplay acceptance
         run: node check-gameplay-acceptance-current.mjs
+      - name: Paardenrace backend minimum evidence
+        run: node check-paardenrace-minimum-backend-v792.mjs
       - name: Local reference integrity
         run: node check-local-refs.mjs
       - name: Online Klaverjas static regression
