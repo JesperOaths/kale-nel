@@ -231,7 +231,7 @@ jobs:
           set -euo pipefail
           status="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -c "select status from public.web_push_jobs where id=${PUSH_JOB_ID}::bigint")"
           echo "Targeted push terminal status: $status"
-          test "$status" = 'sent' || { echo "Push job did not reach sent status"; exit 1; }
+          test "$status" = 'sent' || { echo 'Push job did not reach sent status'; exit 1; }
           disabled="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -c "select case when disabled_at is null then 'active' else 'disabled' end from public.web_push_subscriptions where id=${PUSH_TARGET_ID}::bigint")"
           test "$disabled" = 'active' || { echo 'Target subscription was disabled by provider response'; exit 1; }
 
@@ -255,32 +255,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          import urllib.request, urllib.error
-
-          def probe(url):
-              req = urllib.request.Request(url, method='GET')
-              opener = urllib.request.build_opener(urllib.request.HTTPHandler())
-              try:
-                  r = opener.open(req, timeout=20)
-                  return r.status, r.headers.get('Location')
-              except urllib.error.HTTPError as e:
-                  return e.code, e.headers.get('Location')
-
-          checks = [
-              ('http://kalenel.nl/', 308, 'https://kalenel.nl/'),
-              ('http://kalenel.nl/index.html?finalization=v792', 308, 'https://kalenel.nl/index.html?finalization=v792'),
-              ('http://admin.kalenel.nl/admin.html?finalization=v792', 308, 'https://admin.kalenel.nl/admin.html?finalization=v792'),
-          ]
-          for url, expected_status, expected_location in checks:
-              status, location = probe(url)
-              print(url, status, location)
-              if status != expected_status or location != expected_location:
-                  raise SystemExit(f'transport proof failed for {url}: {status} {location!r}')
-          status, _ = probe('https://kalenel.nl/')
-          if status != 200:
-              raise SystemExit(f'https homepage unhealthy: {status}')
-          PY
+          probe_redirect() {
+            local url="$1"
+            local expected_location="$2"
+            local headers code location
+            headers="$(mktemp)"
+            code="$(curl -sS --max-time 20 -o /dev/null -D "$headers" -w '%{http_code}' "$url")"
+            location="$(awk 'BEGIN{IGNORECASE=1} /^Location:/ {sub(/^[^:]*:[[:space:]]*/, ""); sub(/\r$/, ""); print}' "$headers" | tail -n 1)"
+            rm -f "$headers"
+            echo "$url -> $code $location"
+            test "$code" = '308' || { echo "Expected 308 for $url"; exit 1; }
+            test "$location" = "$expected_location" || { echo "Unexpected Location for $url: $location"; exit 1; }
+          }
+          probe_redirect 'http://kalenel.nl/' 'https://kalenel.nl/'
+          probe_redirect 'http://kalenel.nl/index.html?finalization=v792' 'https://kalenel.nl/index.html?finalization=v792'
+          probe_redirect 'http://admin.kalenel.nl/admin.html?finalization=v792' 'https://admin.kalenel.nl/admin.html?finalization=v792'
+          https_code="$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' 'https://kalenel.nl/')"
+          test "$https_code" = '200' || { echo "HTTPS homepage unhealthy: $https_code"; exit 1; }
           node check-live-routes.mjs
 
       - name: Production finalization complete
