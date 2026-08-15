@@ -1,0 +1,49 @@
+name: Enforce Pages HTTPS once
+
+on:
+  push:
+    branches:
+      - agent/enforce-pages-https-v792
+    paths:
+      - '.github/workflows/enforce-pages-https-once.yml'
+
+permissions:
+  contents: read
+  pages: write
+
+jobs:
+  enforce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Enforce HTTPS through GitHub Pages API
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(mktemp)"
+          status="$(curl --silent --show-error \
+            --request PUT \
+            --header 'Accept: application/vnd.github+json' \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header 'X-GitHub-Api-Version: 2026-03-10' \
+            --output "$body" \
+            --write-out '%{http_code}' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pages" \
+            --data '{"https_enforced":true}')"
+
+          echo "HTTP_STATUS=${status}"
+          if [[ -s "$body" ]]; then
+            echo 'API_RESPONSE_BEGIN'
+            cat "$body"
+            echo
+            echo 'API_RESPONSE_END'
+          fi
+
+          if [[ "$status" == '204' ]]; then
+            echo 'RESULT=PAGES_HTTPS_ENFORCED'
+          else
+            echo 'RESULT=PAGES_HTTPS_ENFORCEMENT_BLOCKED'
+          fi
+          rm -f "$body"
