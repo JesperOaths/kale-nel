@@ -15,6 +15,9 @@ if (contract.deployment_status !== 'repository_patch_ready_not_applied') failure
 if (contract.production_observation?.production_mutated !== false) failures.push('ACL evidence must state that production was not mutated');
 if (contract.production_observation?.security_definer_private_helper_count !== 118) failures.push('read-only helper snapshot count must remain 118 until deliberately refreshed');
 if (contract.production_observation?.anon_execute_count !== 118 || contract.production_observation?.authenticated_execute_count !== 118) failures.push('read-only browser-role exposure counts must remain 118 until deliberately refreshed');
+if (contract.production_observation?.explicit_service_role_execute_count !== 118 || contract.production_observation?.without_explicit_service_role_execute_count !== 0) failures.push('service_role must retain an explicit EXECUTE grant on all 118 targeted helpers');
+if (contract.production_observation?.service_role_owned_count !== 0) failures.push('service_role preservation proof must not rely on function ownership');
+if (!/explicit service_role EXECUTE grant/i.test(String(contract.remediation?.service_role_access_basis || ''))) failures.push('ACL contract must document why PUBLIC revocation preserves service_role access');
 if (contract.remediation?.gameplay_dml_allowed !== false) failures.push('ACL repair must prohibit gameplay DML');
 if (contract.remediation?.function_body_replacement_allowed !== false) failures.push('ACL repair must prohibit function-body replacement');
 if (contract.remediation?.requires_explicit_production_sql_authorization !== true) failures.push('ACL repair must preserve explicit production SQL authorization boundary');
@@ -35,6 +38,7 @@ for (const role of ['public', 'anon', 'authenticated']) {
   const revoke = new RegExp(`revoke\\s+execute\\s+on\\s+function[\\s\\S]*?from\\s+${role}`, 'i');
   if (!revoke.test(strippedSql)) failures.push(`ACL SQL must revoke EXECUTE from ${role}`);
 }
+if (/revoke\s+execute[\s\S]*?\bfrom\s+service_role\b/i.test(strippedSql)) failures.push('ACL SQL must not revoke explicit service_role helper access');
 if (/grant\s+execute[\s\S]*?\bto\s+(?:public|anon|authenticated)\b/i.test(strippedSql)) failures.push('ACL SQL must never grant helper EXECUTE to a browser role');
 if (/\bcreate\s+(?:or\s+replace\s+)?function\b/i.test(strippedSql)) failures.push('ACL repair must not replace function bodies');
 if (/(?:^|;)\s*(?:insert|update|delete|truncate)\b/im.test(strippedSql)) failures.push('ACL repair must not contain gameplay DML statements');
@@ -69,7 +73,7 @@ walk('.');
 const privateRpcCall = /\.rpc\s*\(\s*['"]_(?:pikken|paardenrace)_/i;
 for (const file of clientFiles) {
   const source = fs.readFileSync(file, 'utf8');
-  if (privateRpcCall.test(source)) failures.push(`shipped client directly calls a private gameplay helper: ${file.replaceAll('\\', '/')}`);
+  if (privateRpcCall.test(source)) failures.push(`shipped client directly calls a private gameplay helper: ${file.split(path.sep).join('/')}`);
 }
 
 if (failures.length) {
@@ -78,4 +82,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log('Backend RPC ACL hardening PASS: v792i remains privilege-only, fail-closed, and private helpers stay outside the shipped client contract.');
+console.log('Backend RPC ACL hardening PASS: v792i remains privilege-only, fail-closed, service_role-safe, and private helpers stay outside the shipped client contract.');
