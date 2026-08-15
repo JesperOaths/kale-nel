@@ -67,5 +67,9 @@ jobs:
         run: node check-github-actions-node24-runtime.mjs
       - name: Node24 runtime policy
         run: node check-node24-ci-runtime.mjs
+      - name: Backend RPC provenance boundary
+        run: node check-backend-rpc-provenance.mjs
+      - name: Backend private-helper ACL boundary
+        run: node check-backend-rpc-acl-hardening.mjs
       - name: Version drift gate
         run: node check-version-drift.mjs
