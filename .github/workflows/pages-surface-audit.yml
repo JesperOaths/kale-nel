@@ -1,0 +1,79 @@
+name: Pages surface audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/pages-surface-audit-v792
+    paths:
+      - '.github/workflows/pages-surface-audit.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read-only live surface probes
+        shell: bash
+        run: |
+          set -u
+
+          probe() {
+            local label="$1"
+            local url="$2"
+            local follow="${3:-no}"
+            local body headers meta rc hash length
+            body="$(mktemp)"
+            headers="$(mktemp)"
+
+            if [[ "$follow" == "yes" ]]; then
+              meta="$(curl --connect-timeout 10 --max-time 30 --silent --show-error --location \
+                --output "$body" --dump-header "$headers" \
+                --write-out '%{http_code}|%{content_type}|%{url_effective}|%{size_download}' \
+                "$url")"
+              rc=$?
+            else
+              meta="$(curl --connect-timeout 10 --max-time 30 --silent --show-error \
+                --output "$body" --dump-header "$headers" \
+                --write-out '%{http_code}|%{content_type}|%{url_effective}|%{size_download}' \
+                "$url")"
+              rc=$?
+            fi
+
+            hash="$(sha256sum "$body" | awk '{print $1}')"
+            length="$(wc -c < "$body" | tr -d ' ')"
+            location="$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit}' "$headers")"
+
+            printf 'PROBE=%s\n' "$label"
+            printf 'URL=%s\n' "$url"
+            printf 'CURL_EXIT=%s\n' "$rc"
+            printf 'META=%s\n' "$meta"
+            printf 'BODY_BYTES=%s\n' "$length"
+            printf 'BODY_SHA256=%s\n' "$hash"
+            printf 'LOCATION=%s\n' "${location:-<none>}"
+            printf '%s\n' '---'
+
+            rm -f "$body" "$headers"
+            return 0
+          }
+
+          # Plain HTTP is intentionally not followed so redirect enforcement is visible.
+          probe 'custom-http-root' 'http://kalenel.nl/' 'no'
+
+          # The HTTPS homepage establishes the normal public route.
+          probe 'custom-https-root' 'https://kalenel.nl/' 'yes'
+
+          # These are repository/verification artifacts, not intended website routes.
+          probe 'custom-package-json' 'https://kalenel.nl/package.json' 'yes'
+          probe 'custom-gameplay-evidence' 'https://kalenel.nl/gameplay-acceptance.json' 'yes'
+          probe 'custom-ci-source' 'https://kalenel.nl/check-canonical-gejast-gate-v792.mjs' 'yes'
+
+          # Probe the GitHub Pages origin as well to separate Pages publication from custom-domain routing.
+          probe 'pages-origin-package-json' 'https://jesperoaths.github.io/kale-nel/package.json' 'yes'
+          probe 'pages-origin-gameplay-evidence' 'https://jesperoaths.github.io/kale-nel/gameplay-acceptance.json' 'yes'
+          probe 'pages-origin-ci-source' 'https://jesperoaths.github.io/kale-nel/check-canonical-gejast-gate-v792.mjs' 'yes'
+
+          echo 'RESULT=PAGES_SURFACE_AUDIT_V792_COMPLETE'
