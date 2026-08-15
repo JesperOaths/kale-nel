@@ -7,7 +7,7 @@ const workflow = fs.readFileSync('.github/workflows/verify.yml', 'utf8');
 
 assert.equal(
   pkg.scripts?.verify,
-  'npm run verify:static && npm run verify:js',
+  'npm run verify:static && npm run verify:js && npm run admin-worker:test',
   'package.json verify must remain the canonical full repository verification entrypoint'
 );
 assert.match(
