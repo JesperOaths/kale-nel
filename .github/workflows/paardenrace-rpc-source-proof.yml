@@ -1,6 +1,15 @@
 name: Paardenrace RPC source proof
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend-source-paardenrace-v687-production.sql'
+      - 'backend-rpc-provenance.json'
+      - 'check-paardenrace-rpc-source-safety.mjs'
+      - 'check-paardenrace-rpc-semantics-v792.sql'
+      - '.github/workflows/paardenrace-rpc-source-proof.yml'
   pull_request:
     paths:
       - 'backend-source-paardenrace-v687-production.sql'
