@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "site_version": "v792",
+  "last_updated": "2026-08-15",
+  "scope": "Gameplay acceptance is tracked separately from general beta readiness. Deterministic engine proof is not labeled as live multiplayer proof, and route/RPC reachability is not labeled as play-to-completion proof.",
+  "live_write_approval": {
+    "name": "GEJAST_ALLOW_LIVE_WRITE_BETA",
+    "required_value": "I_APPROVE_LIVE_BETA_WRITES"
+  },
+  "games": [
+    {
+      "id": "toepen",
+      "supported_players": [2, 3, 4, 5, 6, 7, 8],
+      "deterministic_status": "verified_complete",
+      "deterministic_evidence": "check-toepen-gameplay-matrix-v792.mjs plays the shipped engine through completion at every supported player count and covers fold/stake/undo behavior.",
+      "live_status": "backend_contract_proven",
+      "live_evidence": "Historical controlled Friends/Family backend write proofs cover authenticated Toepen persistence, idempotency, scope isolation and cleanup; this is not reclassified as a full browser multiplayer playthrough."
+    },
+    {
+      "id": "boerenbridge",
+      "supported_players": [2, 3, 4, 5, 6, 7],
+      "deterministic_status": "verified_complete",
+      "deterministic_evidence": "check-boerenbridge-gameplay-matrix-v792.mjs exercises the shipped 18-round cycle, dealer rotation, special rounds, bid restriction, scoring and running totals for every supported player count.",
+      "live_status": "persistence_contract_proven",
+      "live_evidence": "Historical controlled production proof covers authenticated persistence/vault contracts; no claim is made that every player-count combination has been played live in separate browsers."
+    },
+    {
+      "id": "beerpong",
+      "supported_formats": ["1v1", "2v2"],
+      "deterministic_status": "verified_complete",
+      "deterministic_evidence": "check-beerpong-gameplay-matrix-v792.mjs validates both shipped formats, player uniqueness, cup bounds, unique winner and valid submission boundaries.",
+      "live_status": "persistence_contract_proven",
+      "live_evidence": "Historical controlled production save proof exists; it is not treated as a full multi-device match playthrough."
+    },
+    {
+      "id": "pikken",
+      "deterministic_status": "rules_regression_proven",
+      "deterministic_evidence": "Current permanent regressions protect bid ordering and the v790 pik conversion; broader backend gameplay remains room/RPC coupled.",
+      "live_status": "two_player_start_cleanup_available",
+      "live_evidence": "check-live-game-flows.mjs can create, join, ready, start and destroy a controlled two-player Pikken room when two explicit session tokens are supplied.",
+      "remaining_gap": "Run the manual controlled-live-game-flows workflow with explicitly approved beta session tokens after any relevant Pikken backend change; do not infer exhaustive player-count coverage from the two-player smoke."
+    },
+    {
+      "id": "paardenrace",
+      "deterministic_status": "verified_engine_helpers",
+      "deterministic_evidence": "check-paardenrace-engine-v792.mjs covers shipped card parsing, four-horse progress, ten gates, draw accounting, ready/wager summary and winner summary.",
+      "live_status": "two_player_start_cleanup_available",
+      "live_evidence": "check-live-game-flows.mjs can create/join a two-player room, select distinct suits, verify wagers, ready, start countdown and disband the controlled room when two explicit session tokens are supplied.",
+      "remaining_gap": "The deterministic four-horse state proof and two-player room smoke are intentionally recorded as different evidence classes."
+    },
+    {
+      "id": "klaverjas_online",
+      "supported_seats": 4,
+      "deterministic_status": "repository_postgres_proven",
+      "deterministic_evidence": "v792b-v792h transition, rule, persistence, roem-wrapper and hidden recovery-hand guards are covered by static and real-PostgreSQL proofs.",
+      "live_status": "production_guard_chain_not_applied",
+      "live_evidence": "The frontend/live routes are healthy, but v792b-v792h production SQL application is a separately authorized consequential action and has not been represented as deployed.",
+      "remaining_gap": "After explicit production SQL authorization and application, run the dedicated controlled Online Klaverjas live-write smoke before upgrading live gameplay status."
+    }
+  ]
+}

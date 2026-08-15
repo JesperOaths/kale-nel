@@ -1,0 +1,63 @@
+name: Controlled live game flows
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type I_APPROVE_LIVE_BETA_WRITES to run controlled production game-room smoke.'
+        required: true
+        default: ''
+      site_scope:
+        description: 'Scope for controlled test rooms.'
+        required: true
+        default: 'friends'
+        type: choice
+        options:
+          - friends
+          - family
+
+permissions:
+  contents: read
+
+concurrency:
+  group: controlled-live-game-flows-${{ inputs.site_scope }}
+  cancel-in-progress: false
+
+jobs:
+  controlled-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GEJAST_ALLOW_LIVE_WRITE_BETA: ${{ inputs.confirmation }}
+      GEJAST_SITE_SCOPE: ${{ inputs.site_scope }}
+      GEJAST_PLAYER1_TOKEN: ${{ secrets.BETA1_SESSION_TOKEN }}
+      GEJAST_PLAYER2_TOKEN: ${{ secrets.BETA2_SESSION_TOKEN }}
+      GEJAST_REQUIRE_TWO_PLAYER: '1'
+    steps:
+      - name: Require explicit live-write approval
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$GEJAST_ALLOW_LIVE_WRITE_BETA" != "I_APPROVE_LIVE_BETA_WRITES" ]; then
+            echo 'Confirmation mismatch. No live game rooms were created.'
+            exit 1
+          fi
+          if [ -z "${GEJAST_PLAYER1_TOKEN:-}" ] || [ -z "${GEJAST_PLAYER2_TOKEN:-}" ]; then
+            echo 'Missing BETA1_SESSION_TOKEN or BETA2_SESSION_TOKEN repository secret. No live game rooms were created.'
+            exit 1
+          fi
+          if [ "$GEJAST_PLAYER1_TOKEN" = "$GEJAST_PLAYER2_TOKEN" ]; then
+            echo 'Beta session tokens must be distinct. No live game rooms were created.'
+            exit 1
+          fi
+
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Run reversible two-player production smoke
+        run: node check-live-game-flows.mjs
