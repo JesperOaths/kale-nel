@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "purpose": "Distinguish read-only production observations from checked-in backend SQL authority. A production fingerprint is evidence of what is deployed, not source authority and not permission to mutate production. Every production RPC used by the canonical Pikken/Paardenrace live-game smoke must be represented here.",
-  "observation_method": "PostgreSQL pg_get_function_identity_arguments + md5(pg_get_functiondef)",
+  "observation_method": "PostgreSQL pg_get_function_identity_arguments + md5(pg_get_functiondef); reconstructed production-only source also records line-ending-normalized pg_get_functiondef MD5 for isolated PostgreSQL 17.6 reconciliation",
   "rpcs": [
     {
       "schema": "public",
@@ -35,8 +35,8 @@
       "schema": "public",
       "name": "get_paardenrace_stats_fast_v687",
       "identity_arguments": "site_scope_input text, limit_input integer",
-      "observed_production": { "status": "observed", "definition_md5": "7a5154d5deefe0cecaf556afe615cdde" },
-      "repository_authority": { "status": "missing", "path": null }
+      "observed_production": { "status": "observed", "definition_md5": "7a5154d5deefe0cecaf556afe615cdde", "normalized_definition_md5": "e00a6cba57167f82bfb03bcea34ddef8" },
+      "repository_authority": { "status": "checked_in", "path": "backend-source-paardenrace-v687-production.sql", "source_kind": "read_only_production_reconstruction" }
     },
     {
       "schema": "public",
@@ -133,15 +133,15 @@
       "schema": "public",
       "name": "update_paardenrace_room_choice_safe",
       "identity_arguments": "session_token text, session_token_input text, room_code_input text, selected_suit_input text, wager_bakken_input integer, ready_input boolean, site_scope_input text",
-      "observed_production": { "status": "observed", "definition_md5": "895d2ffd439debfb1414dd52237914ff" },
-      "repository_authority": { "status": "missing", "path": null }
+      "observed_production": { "status": "observed", "definition_md5": "895d2ffd439debfb1414dd52237914ff", "normalized_definition_md5": "8348776c3324df2cdec284d38338f444" },
+      "repository_authority": { "status": "checked_in", "path": "backend-source-paardenrace-v687-production.sql", "source_kind": "read_only_production_reconstruction" }
     },
     {
       "schema": "public",
       "name": "verify_paardenrace_wager_safe",
       "identity_arguments": "session_token text, session_token_input text, room_code_input text, target_player_name_input text, site_scope_input text",
-      "observed_production": { "status": "observed", "definition_md5": "dd9cca34cccdf4f3e94337e42a4fd7bb" },
-      "repository_authority": { "status": "missing", "path": null }
+      "observed_production": { "status": "observed", "definition_md5": "dd9cca34cccdf4f3e94337e42a4fd7bb", "normalized_definition_md5": "1aa01d9ed17d1238af35cb9aa66fa232" },
+      "repository_authority": { "status": "checked_in", "path": "backend-source-paardenrace-v687-production.sql", "source_kind": "read_only_production_reconstruction" }
     }
   ]
 }
