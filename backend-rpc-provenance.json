@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "purpose": "Distinguish read-only production observations from checked-in backend SQL authority. A production fingerprint is evidence of what is deployed, not source authority and not permission to mutate production.",
+  "observation_method": "PostgreSQL pg_get_function_identity_arguments + md5(pg_get_functiondef)",
+  "rpcs": [
+    {
+      "schema": "public",
+      "name": "get_paardenrace_room_state_fast_v687",
+      "identity_arguments": "session_token text, session_token_input text, room_code_input text, site_scope_input text",
+      "observed_production": {
+        "status": "observed",
+        "definition_md5": "8f7b682ac7fd361e11b97912571faedb"
+      },
+      "repository_authority": {
+        "status": "missing",
+        "path": null
+      }
+    },
+    {
+      "schema": "public",
+      "name": "join_paardenrace_room_fast_v687",
+      "identity_arguments": "session_token text, session_token_input text, room_code_input text, site_scope_input text",
+      "observed_production": {
+        "status": "observed",
+        "definition_md5": "e9a6f2447fc2d24969f4a1dfe7fd5e0b"
+      },
+      "repository_authority": {
+        "status": "missing",
+        "path": null
+      }
+    },
+    {
+      "schema": "public",
+      "name": "pikken_join_lobby_fast_v687",
+      "identity_arguments": "session_token text, session_token_input text, lobby_code_input text, site_scope_input text",
+      "observed_production": {
+        "status": "observed",
+        "definition_md5": "63615b2ef4d1233d0ed08fba470a7753"
+      },
+      "repository_authority": {
+        "status": "missing",
+        "path": null
+      }
+    },
+    {
+      "schema": "public",
+      "name": "pikken_start_game_scoped",
+      "identity_arguments": "session_token text, session_token_input text, game_id_input uuid, site_scope_input text",
+      "observed_production": {
+        "status": "observed",
+        "definition_md5": "993fb68fbc1457a699742ac49a056d5b"
+      },
+      "repository_authority": {
+        "status": "missing",
+        "path": null
+      }
+    },
+    {
+      "schema": "public",
+      "name": "start_paardenrace_room_safe",
+      "identity_arguments": "room_code_input text, session_token text, session_token_input text, site_scope_input text",
+      "observed_production": {
+        "status": "observed",
+        "definition_md5": "5e4d7a832fe413dfe36fb6c79f625b17"
+      },
+      "repository_authority": {
+        "status": "missing",
+        "path": null
+      }
+    }
+  ]
+}
