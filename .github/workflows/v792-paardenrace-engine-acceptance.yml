@@ -1,0 +1,20 @@
+name: v792 Paardenrace gameplay acceptance
+
+on:
+  pull_request:
+    paths:
+      - 'gejast-paardenrace.js'
+      - 'check-paardenrace-engine-v792.mjs'
+      - '.github/workflows/v792-paardenrace-engine-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  paardenrace-engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run deterministic race matrix
+        run: node check-paardenrace-engine-v792.mjs
