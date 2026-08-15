@@ -94,8 +94,8 @@
         "maximum_status": "not_yet_proven",
         "source": "paardenrace.html"
       },
-      "deterministic_status": "verified_engine_helpers",
-      "deterministic_evidence": "check-paardenrace-engine-v792.mjs covers shipped card parsing, four-horse progress, ten gates, draw accounting, ready/wager summary and winner summary.",
+      "deterministic_status": "engine_and_live_viewmodel_proven",
+      "deterministic_evidence": "check-paardenrace-engine-v792.mjs covers shipped card parsing, four-horse progress, ten gates, draw accounting, ready/wager summary and winner summary; check-paardenrace-live-viewmodel-v792.mjs executes shipped live helpers for race logs, player/ready/winner presentation, host kick boundaries, nomination targeting, the two-player live-state sanity guard and close/leave handoff wiring. This still does not claim backend play-to-completion.",
       "live_status": "two_player_start_cleanup_available",
       "live_evidence": "check-live-game-flows.mjs can create/join a two-player room, select distinct suits, verify wagers, ready, start countdown and disband the controlled room when two explicit session tokens are supplied.",
       "remaining_gap": "The shipped lobby explicitly refuses to start below two members. No checked-in frontend contract establishes a maximum human room size, and the four horse suits are race entities rather than evidence of a four-human room maximum."
