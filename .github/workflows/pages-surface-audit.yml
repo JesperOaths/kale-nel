@@ -20,7 +20,7 @@ jobs:
         shell: bash
         run: |
           set -u
-          # Re-run marker: post-publication-boundary deployment 088402c.
+          # Re-run marker: historical-directory surface audit after deployment 088402c.
 
           probe() {
             local label="$1"
@@ -66,6 +66,10 @@ jobs:
           probe 'custom-package-json' 'https://kalenel.nl/package.json' 'yes'
           probe 'custom-gameplay-evidence' 'https://kalenel.nl/gameplay-acceptance.json' 'yes'
           probe 'custom-ci-source' 'https://kalenel.nl/check-canonical-gejast-gate-v792.mjs' 'yes'
+          probe 'historical-v182-index' 'https://kalenel.nl/mnt/data/v182build/index.html' 'yes'
+          probe 'historical-v182-admin' 'https://kalenel.nl/mnt/data/v182build/admin.html' 'yes'
+          probe 'deployment-forensics' 'https://kalenel.nl/deployment_forensics_v761/hash_git_head.js' 'yes'
+          probe 'repo-duplicate-asset' 'https://kalenel.nl/repo/gejast-game-hq.css' 'yes'
           probe 'pages-origin-package-json' 'https://jesperoaths.github.io/kale-nel/package.json' 'yes'
           probe 'pages-origin-gameplay-evidence' 'https://jesperoaths.github.io/kale-nel/gameplay-acceptance.json' 'yes'
           probe 'pages-origin-ci-source' 'https://jesperoaths.github.io/kale-nel/check-canonical-gejast-gate-v792.mjs' 'yes'
