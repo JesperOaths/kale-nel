@@ -1,0 +1,22 @@
+# GitHub Pages publishes this repository from main:/ using Jekyll.
+# Keep repository evidence, tests and backend tooling in Git while preventing
+# those files from becoming public website routes. Runtime web assets are not
+# globally excluded; exclusions below target repository-only material.
+exclude:
+  - ".github/"
+  - "scripts/"
+  - "cloudflare/"
+  - "check-*.mjs"
+  - "package.json"
+  - "package-lock.json"
+  - "gameplay-acceptance.json"
+  - "beta-live-write-checklist.json"
+  - "*.sql"
+  - "**/*.sql"
+  - "*.patch"
+  - "**/*.patch"
+  - "ADMIN_*"
+  - "AUDIT_*"
+  - "APPLY_*"
+  - "*_PROOF_*"
+  - "*_MATRIX_*"
