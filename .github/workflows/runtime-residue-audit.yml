@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
-      - name: Scan active web-source residue and duplicate owners
+      - name: Scan active web-source residue, duplicate owners and inbound references
         shell: bash
         run: |
           node <<'NODE'
@@ -63,6 +63,31 @@ jobs:
 
           const versionNamed = activeCandidates.filter((p) => /v\d{3,}[a-z]?/i.test(p));
 
+          const targets = [
+            'repo/gejast-game-hq.css',
+            'deployment_forensics_v761/',
+            'mnt/data/v182build/',
+            'gejast-family-rollout-v437.js',
+            'gejast-family-rollout.js',
+            'gejast-mobile-foundation-v581.css',
+            'gejast-mobile-foundation-v582.css',
+            'gejast-mobile-foundation-v581.js',
+            'gejast-mobile-foundation-v582.js',
+          ];
+          const refs = new Map(targets.map((target) => [target, []]));
+          for (const p of tracked) {
+            if (!fs.statSync(p).isFile()) continue;
+            let text;
+            try { text = fs.readFileSync(p, 'utf8'); } catch { continue; }
+            const lines = text.split(/\r?\n/);
+            for (const target of targets) {
+              if (p === target || p.startsWith(target)) continue;
+              lines.forEach((line, i) => {
+                if (line.includes(target)) refs.get(target).push(`${p}:${i + 1}:${line.trim().slice(0, 180)}`);
+              });
+            }
+          }
+
           console.log(`TRACKED_WEB_FILES=${web.length}`);
           console.log(`ACTIVE_CANDIDATES=${activeCandidates.length}`);
           console.log(`TODO_FIXME_HACK_XXX=${markers.length}`);
@@ -76,6 +101,11 @@ jobs:
           suspiciousNames.forEach((x) => console.log(x));
           console.log('--- DUPLICATES ---');
           duplicates.forEach((x) => console.log(`${x.hash.slice(0, 12)} ${x.paths.join(' | ')}`));
+          console.log('--- TARGET_REFERENCES ---');
+          for (const [target, hits] of refs) {
+            console.log(`TARGET=${target} INBOUND=${hits.length}`);
+            hits.forEach((hit) => console.log(hit));
+          }
           console.log('--- VERSION_NAMED ---');
           versionNamed.forEach((x) => console.log(x));
           console.log('RESULT=RUNTIME_RESIDUE_AUDIT_V792_COMPLETE');
