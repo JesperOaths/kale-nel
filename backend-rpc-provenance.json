@@ -8,28 +8,28 @@
       "name": "create_paardenrace_room_fast_v687",
       "identity_arguments": "session_token text, session_token_input text, room_code_input text, room_name_input text, site_scope_input text",
       "observed_production": { "status": "observed", "definition_md5": "fd169ca8137264a3f44013b7541cc176" },
-      "repository_authority": { "status": "missing", "path": null }
+      "repository_authority": { "status": "checked_in", "path": "GEJAST_v728_paardenrace_room_create_surgical_fix.sql" }
     },
     {
       "schema": "public",
       "name": "disband_paardenrace_room_fast_v687",
       "identity_arguments": "session_token text, session_token_input text, room_code_input text, site_scope_input text",
       "observed_production": { "status": "observed", "definition_md5": "c18956e1678f2dde8835826291673eca" },
-      "repository_authority": { "status": "missing", "path": null }
+      "repository_authority": { "status": "checked_in", "path": "GEJAST_v725_pikken_paardenrace_pipeline_contract.sql" }
     },
     {
       "schema": "public",
       "name": "get_paardenrace_open_rooms_fast_v687",
       "identity_arguments": "site_scope_input text, limit_input integer",
       "observed_production": { "status": "observed", "definition_md5": "cdeb54757f57a36af4732652045f534d" },
-      "repository_authority": { "status": "missing", "path": null }
+      "repository_authority": { "status": "checked_in", "path": "GEJAST_v725_pikken_paardenrace_pipeline_contract.sql" }
     },
     {
       "schema": "public",
       "name": "get_paardenrace_room_state_fast_v687",
       "identity_arguments": "session_token text, session_token_input text, room_code_input text, site_scope_input text",
       "observed_production": { "status": "observed", "definition_md5": "8f7b682ac7fd361e11b97912571faedb" },
-      "repository_authority": { "status": "missing", "path": null }
+      "repository_authority": { "status": "checked_in", "path": "GEJAST_v709_pikken_persist_paardenrace_fast_state.sql" }
     },
     {
       "schema": "public",
@@ -43,91 +43,91 @@
       "name": "get_pikken_live_matches_fast_v687",
       "identity_arguments": "site_scope_input text, limit_input integer",
       "observed_production": { "status": "observed", "definition_md5": "8753b4752dc29340bff6c42dc3dd73ac" },
-      "repository_authority": { "status": "missing", "path": null }
+      "repository_authority": { "status": "checked_in", "path": "GEJAST_v725_pikken_paardenrace_pipeline_contract.sql" }
     },
     {
       "schema": "public",
       "name": "get_pikken_open_lobbies_fast_v687",
       "identity_arguments": "site_scope_input text, limit_input integer",
       "observed_production": { "status": "observed", "definition_md5": "cf8ecdbf5f695c46a40cdff07a491098" },
-      "repository_authority": { "status": "missing", "path": null }
+      "repository_authority": { "status": "checked_in", "path": "GEJAST_v725_pikken_paardenrace_pipeline_contract.sql" }
     },
     {
       "schema": "public",
       "name": "join_paardenrace_room_fast_v687",
       "identity_arguments": "session_token text, session_token_input text, room_code_input text, site_scope_input text",
       "observed_production": { "status": "observed", "definition_md5": "e9a6f2447fc2d24969f4a1dfe7fd5e0b" },
-      "repository_authority": { "status": "missing", "path": null }
+      "repository_authority": { "status": "checked_in", "path": "GEJAST_v725a_SURGICAL_rpc_wrapper_repair.sql" }
     },
     {
       "schema": "public",
       "name": "pikken_create_lobby_fast_v687",
       "identity_arguments": "session_token text, session_token_input text, config_input jsonb, site_scope_input text",
       "observed_production": { "status": "observed", "definition_md5": "844075ca742f2eaa7bda2900e3946683" },
-      "repository_authority": { "status": "missing", "path": null }
+      "repository_authority": { "status": "checked_in", "path": "GEJAST_v725_pikken_paardenrace_pipeline_contract.sql" }
     },
     {
       "schema": "public",
       "name": "pikken_destroy_game_fast_v687",
       "identity_arguments": "session_token text, session_token_input text, game_id_input uuid, site_scope_input text",
       "observed_production": { "status": "observed", "definition_md5": "91eb442c97a54a3e61d291ab8c0bbba6" },
-      "repository_authority": { "status": "missing", "path": null }
+      "repository_authority": { "status": "checked_in", "path": "GEJAST_v725_pikken_paardenrace_pipeline_contract.sql" }
     },
     {
       "schema": "public",
       "name": "pikken_get_state_scoped",
       "identity_arguments": "session_token text, session_token_input text, game_id_input uuid, game_id uuid, lobby_code_input text, site_scope_input text",
       "observed_production": { "status": "observed", "definition_md5": "05992027f1ac3789c289d82e380609da" },
-      "repository_authority": { "status": "missing", "path": null }
+      "repository_authority": { "status": "checked_in", "path": "GEJAST_v725a_SURGICAL_rpc_wrapper_repair.sql" }
     },
     {
       "schema": "public",
       "name": "pikken_join_lobby_fast_v687",
       "identity_arguments": "session_token text, session_token_input text, lobby_code_input text, site_scope_input text",
       "observed_production": { "status": "observed", "definition_md5": "63615b2ef4d1233d0ed08fba470a7753" },
-      "repository_authority": { "status": "missing", "path": null }
+      "repository_authority": { "status": "checked_in", "path": "GEJAST_v725_pikken_paardenrace_pipeline_contract.sql" }
     },
     {
       "schema": "public",
       "name": "pikken_set_ready_scoped",
       "identity_arguments": "session_token text, session_token_input text, game_id_input uuid, ready_input boolean, site_scope_input text",
       "observed_production": { "status": "observed", "definition_md5": "b16628f89605c87442109856a5045e49" },
-      "repository_authority": { "status": "missing", "path": null }
+      "repository_authority": { "status": "checked_in", "path": "GEJAST_v725_pikken_paardenrace_pipeline_contract.sql" }
     },
     {
       "schema": "public",
       "name": "pikken_start_game_scoped",
       "identity_arguments": "session_token text, session_token_input text, game_id_input uuid, site_scope_input text",
       "observed_production": { "status": "observed", "definition_md5": "993fb68fbc1457a699742ac49a056d5b" },
-      "repository_authority": { "status": "missing", "path": null }
+      "repository_authority": { "status": "checked_in", "path": "GEJAST_v725_pikken_paardenrace_pipeline_contract.sql" }
     },
     {
       "schema": "public",
       "name": "pikken_update_lobby_config_v715",
       "identity_arguments": "session_token text, session_token_input text, game_id_input uuid, config_input jsonb, site_scope_input text",
       "observed_production": { "status": "observed", "definition_md5": "8d83dbf07a1f2aeb4775e245e6360400" },
-      "repository_authority": { "status": "missing", "path": null }
+      "repository_authority": { "status": "checked_in", "path": "GEJAST_v725_pikken_paardenrace_pipeline_contract.sql" }
     },
     {
       "schema": "public",
       "name": "set_paardenrace_ready_safe",
       "identity_arguments": "room_code_input text, ready_input boolean, session_token text, session_token_input text, site_scope_input text",
       "observed_production": { "status": "observed", "definition_md5": "3cb7a0c0a65f48e9c959133d44765830" },
-      "repository_authority": { "status": "missing", "path": null }
+      "repository_authority": { "status": "checked_in", "path": "GEJAST_v725a_SURGICAL_rpc_wrapper_repair.sql" }
     },
     {
       "schema": "public",
       "name": "start_paardenrace_countdown_safe",
       "identity_arguments": "room_code_input text, session_token text, session_token_input text, site_scope_input text",
       "observed_production": { "status": "observed", "definition_md5": "833520e5fa885475acca0e92f036b56d" },
-      "repository_authority": { "status": "missing", "path": null }
+      "repository_authority": { "status": "checked_in", "path": "GEJAST_v725a_SURGICAL_rpc_wrapper_repair.sql" }
     },
     {
       "schema": "public",
       "name": "start_paardenrace_room_safe",
       "identity_arguments": "room_code_input text, session_token text, session_token_input text, site_scope_input text",
       "observed_production": { "status": "observed", "definition_md5": "5e4d7a832fe413dfe36fb6c79f625b17" },
-      "repository_authority": { "status": "missing", "path": null }
+      "repository_authority": { "status": "checked_in", "path": "GEJAST_v725a_SURGICAL_rpc_wrapper_repair.sql" }
     },
     {
       "schema": "public",
