@@ -67,19 +67,26 @@
       "id": "pikken",
       "canonical_route": "./pikken.html",
       "player_contract": {
-        "authority": "backend_rpc_contract_not_grounded_in_checked_in_source",
-        "supported_player_counts_status": "not_yet_proven",
+        "authority": "checked_in_backend_start_rpc_plus_controlled_live_smoke",
+        "supported_player_counts_status": "minimum_grounded_maximum_unknown",
         "live_proven_player_counts": [2],
-        "minimum": null,
+        "minimum": 2,
         "maximum": null,
-        "minimum_status": "not_yet_proven",
-        "maximum_status": "not_yet_proven"
+        "minimum_status": "grounded",
+        "maximum_status": "not_yet_proven",
+        "source": "GEJAST_v725_pikken_paardenrace_pipeline_contract.sql",
+        "minimum_evidence": {
+          "rpc": "pikken_start_game_scoped",
+          "identity_arguments": "session_token text, session_token_input text, game_id_input uuid, site_scope_input text",
+          "repository_authority_path": "GEJAST_v725_pikken_paardenrace_pipeline_contract.sql",
+          "observed_production_definition_md5": "993fb68fbc1457a699742ac49a056d5b"
+        }
       },
       "deterministic_status": "rules_and_live_viewmodel_proven",
       "deterministic_evidence": "check-pikken-pik-conversion-v790.mjs protects bid ordering and pik conversion, while check-pikken-live-viewmodel-v792.mjs executes shipped live-view helpers for dice ordering, bid labels, winner detection, phase normalization, viewer membership and completion/abandonment handoff wiring. This still does not claim backend play-to-completion.",
       "live_status": "two_player_start_cleanup_available",
-      "live_evidence": "check-live-game-flows.mjs can create, join, ready, start and destroy a controlled two-player Pikken room when two explicit session tokens are supplied.",
-      "remaining_gap": "The checked-in Pikken frontend delegates start acceptance to the backend RPC and does not establish an exact minimum or maximum room size. Two players are a proven accepted startup count, not an inferred minimum or maximum. Ground the current backend limit before recording an exact supported range."
+      "live_evidence": "check-live-game-flows.mjs can create, join, ready, start and destroy a controlled two-player Pikken room when two explicit session tokens are supplied. Separately, read-only production catalog evidence records the deployed exact start-RPC definition fingerprint in backend-rpc-provenance.json.",
+      "remaining_gap": "The exact checked-in Pikken start RPC and its observed deployed definition explicitly reject fewer than two players, grounding the minimum at 2. No authoritative checked-in room/join constraint currently proves a maximum player count, so the maximum remains unknown and must not be inferred from two-player startup success."
     },
     {
       "id": "paardenrace",
