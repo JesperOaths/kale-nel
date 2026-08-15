@@ -13,33 +13,54 @@ jobs:
     env:
       SUPABASE_URL: https://uiqntazgnrxwliaidkmy.supabase.co
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      BETA1_PIN: ${{ secrets.BETA1_PIN }}
+      BETA2_PIN: ${{ secrets.BETA2_PIN }}
     steps:
-      - name: Prepare bcrypt hashes
-        id: hashes
+      - name: Validate beta PIN secrets
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY' >> "$GITHUB_OUTPUT"
-          import crypt
-          for name in ("BETA1_HASH", "BETA2_HASH"):
-              print(f"{name}={crypt.crypt('1234', crypt.mksalt(crypt.METHOD_BLOWFISH)).replace('$2b$', '$2a$', 1)}")
-          PY
-      - name: Mask generated hashes
+          if [[ ! "${BETA1_PIN:-}" =~ ^[0-9]{4}$ ]]; then
+            echo "Missing or invalid BETA1_PIN secret; expected exactly four digits."
+            exit 1
+          fi
+          if [[ ! "${BETA2_PIN:-}" =~ ^[0-9]{4}$ ]]; then
+            echo "Missing or invalid BETA2_PIN secret; expected exactly four digits."
+            exit 1
+          fi
+          if [ "$BETA1_PIN" = "$BETA2_PIN" ]; then
+            echo "BETA1_PIN and BETA2_PIN must be different."
+            exit 1
+          fi
+
+      - name: Prepare bcrypt hashes
         shell: bash
         run: |
-          echo "::add-mask::${{ steps.hashes.outputs.BETA1_HASH }}"
-          echo "::add-mask::${{ steps.hashes.outputs.BETA2_HASH }}"
+          set -euo pipefail
+          python3 - <<'PY'
+          import crypt
+          import os
+
+          pins = {
+              "BETA1_HASH": os.environ["BETA1_PIN"],
+              "BETA2_HASH": os.environ["BETA2_PIN"],
+          }
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env_file:
+              for name, pin in pins.items():
+                  hashed = crypt.crypt(pin, crypt.mksalt(crypt.METHOD_BLOWFISH)).replace("$2b$", "$2a$", 1)
+                  print(f"::add-mask::{hashed}")
+                  env_file.write(f"{name}={hashed}\n")
+          PY
+
       - name: Create or update beta users
         shell: bash
-        env:
-          BETA1_HASH: ${{ steps.hashes.outputs.BETA1_HASH }}
-          BETA2_HASH: ${{ steps.hashes.outputs.BETA2_HASH }}
         run: |
           set -euo pipefail
           node <<'NODE'
           const url = process.env.SUPABASE_URL;
           const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
           if (!url || !key) throw new Error('Missing Supabase service role config');
+          if (!process.env.BETA1_HASH || !process.env.BETA2_HASH) throw new Error('Missing generated beta PIN hashes');
           const users = [
             { display_name:'Beta1', slug:'beta1', username:'beta1', pin_hash:process.env.BETA1_HASH, approved_email:'beta1@example.invalid' },
             { display_name:'Beta2', slug:'beta2', username:'beta2', pin_hash:process.env.BETA2_HASH, approved_email:'beta2@example.invalid' }
