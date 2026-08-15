@@ -55,6 +55,27 @@ jobs:
           console.log('RESULT=RUNTIME_ROUTE_STATIC_AUDIT_V792_COMPLETE');
           NODE
 
+      - name: Trace all repository references to Paardenrace reference pages
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const { execFileSync } = require('child_process');
+          const tracked = execFileSync('git', ['ls-files'], { encoding: 'utf8' }).split(/\r?\n/).filter(Boolean);
+          const targets = ['paardenrace_cards_supplied_exact.html', 'paardenrace_track_supplied_cards.html'];
+          for (const target of targets) {
+            const hits = [];
+            for (const file of tracked) {
+              if (file === target || file === '.github/workflows/runtime-route-audit.yml') continue;
+              let text;
+              try { text = fs.readFileSync(file, 'utf8'); } catch { continue; }
+              if (text.includes(target)) hits.push(file);
+            }
+            console.log(`TARGET=${target}|ALL_TRACKED_INBOUND=${hits.length}|${hits.join(',')}`);
+          }
+          console.log('RESULT=PAARDENRACE_REFERENCE_PAGE_TRACE_V792_COMPLETE');
+          NODE
+
       - name: Read-only production gating probes for direct-entry candidates
         shell: bash
         run: |
