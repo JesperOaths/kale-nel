@@ -75,8 +75,8 @@
         "minimum_status": "not_yet_proven",
         "maximum_status": "not_yet_proven"
       },
-      "deterministic_status": "rules_regression_proven",
-      "deterministic_evidence": "Current permanent regressions protect bid ordering and the v790 pik conversion; broader backend gameplay remains room/RPC coupled.",
+      "deterministic_status": "rules_and_live_viewmodel_proven",
+      "deterministic_evidence": "check-pikken-pik-conversion-v790.mjs protects bid ordering and pik conversion, while check-pikken-live-viewmodel-v792.mjs executes shipped live-view helpers for dice ordering, bid labels, winner detection, phase normalization, viewer membership and completion/abandonment handoff wiring. This still does not claim backend play-to-completion.",
       "live_status": "two_player_start_cleanup_available",
       "live_evidence": "check-live-game-flows.mjs can create, join, ready, start and destroy a controlled two-player Pikken room when two explicit session tokens are supplied.",
       "remaining_gap": "The checked-in Pikken frontend delegates start acceptance to the backend RPC and does not establish an exact minimum or maximum room size. Two players are a proven accepted startup count, not an inferred minimum or maximum. Ground the current backend limit before recording an exact supported range."
