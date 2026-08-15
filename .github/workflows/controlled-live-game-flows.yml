@@ -26,6 +26,7 @@ concurrency:
 jobs:
   controlled-smoke:
     runs-on: ubuntu-latest
+    if: github.repository == 'JesperOaths/kale-nel' && github.ref == 'refs/heads/main'
     timeout-minutes: 10
     env:
       GEJAST_ALLOW_LIVE_WRITE_BETA: ${{ inputs.confirmation }}
@@ -53,6 +54,8 @@ jobs:
 
       - name: Check out repository
         uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v5
