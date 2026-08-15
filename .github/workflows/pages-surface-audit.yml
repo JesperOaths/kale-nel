@@ -20,7 +20,7 @@ jobs:
         shell: bash
         run: |
           set -u
-          # Re-run marker: broad repository-evidence surface audit after deployment 088402c.
+          # Re-run marker: comprehensive evidence-boundary deployment 0c88c3a.
 
           probe() {
             local label="$1"
