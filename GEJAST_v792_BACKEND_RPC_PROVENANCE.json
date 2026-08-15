@@ -1,0 +1,62 @@
+{
+  "id": "GEJAST_v792_BACKEND_RPC_PROVENANCE",
+  "schema_version": 1,
+  "frontend_version": 792,
+  "observed_at": "2026-08-15",
+  "repository_authority": {
+    "status": "missing",
+    "authoritative_sql_paths": [],
+    "rule": "Production function fingerprints are read-only observational evidence and must never be treated as reconstructible source authority."
+  },
+  "production_observation": {
+    "status": "read_only_snapshot_only",
+    "method": "pg_proc + pg_get_function_identity_arguments + md5(pg_get_functiondef)",
+    "production_mutated": false,
+    "functions": [
+      {
+        "name": "pikken_join_lobby_fast_v687",
+        "identity_arguments": "pin_input character varying, player_id_input bigint, player_name_input text, session_token_input uuid",
+        "definition_md5": "63615a7a93565475461203eccf137f63"
+      },
+      {
+        "name": "pikken_start_game_scoped",
+        "identity_arguments": "game_id_input uuid, player_id_input bigint, session_token_input uuid",
+        "definition_md5": "993fb4156472aaf6d43fc4dc0984c972"
+      },
+      {
+        "name": "pikken_destroy_game_fast_v687",
+        "identity_arguments": "game_id_input uuid, player_id_input bigint, session_token_input uuid",
+        "definition_md5": "91eb159533802ec9ba4977c982bf4e63"
+      },
+      {
+        "name": "join_paardenrace_room_fast_v687",
+        "identity_arguments": "pin_input text, player_id_input bigint, player_name_input text, session_token_input uuid",
+        "definition_md5": "e9a6b66f732efa6119a0a47c3fe9d543"
+      },
+      {
+        "name": "paardenrace_start_countdown_v687",
+        "identity_arguments": "pin_input character varying, player_id_input bigint, session_token_input uuid",
+        "definition_md5": "2a28ce008e6125aa266108290231c24e"
+      },
+      {
+        "name": "start_paardenrace_room_safe",
+        "identity_arguments": "pin_input character varying, player_id_input bigint, session_token_input uuid",
+        "definition_md5": "5e4deac18e12d5c44839bf26ee5117a3"
+      },
+      {
+        "name": "get_paardenrace_room_state_fast_v687",
+        "identity_arguments": "id_input character varying",
+        "definition_md5": "8f7f866581a8c67ebb31b5ae1287e732"
+      },
+      {
+        "name": "paardenrace_disband_room_v687",
+        "identity_arguments": "room_id_input bigint, player_id_input bigint, session_token_input uuid",
+        "definition_md5": "c189392453949aca77ace1baaedb4d70"
+      }
+    ]
+  },
+  "transition_policy": {
+    "missing_to_checked_in": "If an authoritative CREATE FUNCTION definition for any tracked RPC is added to Git, this manifest and its source-path mapping must be updated in the same change.",
+    "checked_in_requirement": "Every tracked RPC must have a checked-in authoritative SQL definition before repository_authority.status may become checked_in."
+  }
+}
