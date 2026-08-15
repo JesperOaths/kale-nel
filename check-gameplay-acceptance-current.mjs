@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import './check-pikken-live-viewmodel-v792.mjs';
+import './check-paardenrace-live-viewmodel-v792.mjs';
 
 const version = fs.readFileSync('VERSION', 'utf8').trim();
 const tracker = JSON.parse(fs.readFileSync('gameplay-acceptance.json', 'utf8'));
@@ -65,6 +66,8 @@ if (!/backend RPC/i.test(String(pikken?.remaining_gap || '')) || !/not an inferr
 if (!/await\s+api\.startGame\(state\.gameId\)/.test(pikkenJs)) failures.push('Pikken shipped lobby must still delegate start acceptance to its contract/backend API');
 
 const paardenrace = games.get('paardenrace');
+if (paardenrace?.deterministic_status !== 'engine_and_live_viewmodel_proven') failures.push('Paardenrace deterministic evidence must include engine and shipped live-viewmodel acceptance');
+if (!/check-paardenrace-live-viewmodel-v792\.mjs/.test(String(paardenrace?.deterministic_evidence || ''))) failures.push('Paardenrace tracker must name the permanent live-viewmodel regression');
 if (!String(paardenrace?.live_status || '').includes('two_player')) failures.push('paardenrace live evidence must remain explicitly two-player scoped');
 if (!same(paardenrace?.player_contract?.live_proven_player_counts, [2])) failures.push('Paardenrace player contract must preserve the live-proven two-player startup count');
 if (paardenrace?.player_contract?.minimum !== 2 || paardenrace?.player_contract?.minimum_status !== 'grounded') failures.push('Paardenrace minimum-to-start must remain grounded at two players');
