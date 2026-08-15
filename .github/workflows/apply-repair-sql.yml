@@ -17,9 +17,10 @@ permissions:
 jobs:
   apply:
     runs-on: ubuntu-latest
-    if: github.repository == 'JesperOaths/kale-nel'
+    if: github.repository == 'JesperOaths/kale-nel' && github.ref == 'refs/heads/main'
     env:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SQL_FILE_INPUT: ${{ inputs.sql_file }}
     steps:
       - name: Check confirmation
         shell: bash
@@ -32,12 +33,14 @@ jobs:
 
       - name: Check out repository
         uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
 
       - name: Validate selected SQL file
         shell: bash
         run: |
           set -euo pipefail
-          sql_file="${{ inputs.sql_file }}"
+          sql_file="$SQL_FILE_INPUT"
           case "$sql_file" in
             GEJAST_v7*_*.sql) ;;
             *)

@@ -9,7 +9,7 @@ permissions:
 jobs:
   setup:
     runs-on: ubuntu-latest
-    if: github.repository == 'JesperOaths/kale-nel'
+    if: github.repository == 'JesperOaths/kale-nel' && github.ref == 'refs/heads/main'
     env:
       SUPABASE_URL: https://uiqntazgnrxwliaidkmy.supabase.co
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
