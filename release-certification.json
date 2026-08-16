@@ -8,5 +8,24 @@
     "artifact": "final-acceptance-v792.json"
   },
   "current_audit_issue": 153,
-  "reason": "v801 fixes a live-proven forced-login scope-isolation defect: account_public_state_v687 returns ok=true for a valid player session without enforcing site_scope_input, while v800 gejast-auth-gate.js accepted ok=true without comparing the returned session site_scope to the requested page scope. A Friends session could therefore reveal Family surfaces. v801 requires returned session scope to equal requestedScope() before reveal. Fresh exact-main Phase-1 live auth/gameplay proof remains required."
+  "reason": "Exact-v801 Phase 1 and Phase 2 revalidation are complete: full visual audit, forced-login/auth scope isolation, real PIN login, authenticated game surfaces, two-human Klaverjas, natural Pikken and Paardenrace completion with reconnect/persistence rereads, and isolated Klaverjas transition/rules/persistence/roem/recovery PostgreSQL proofs. Phase 2 also live-proved one remaining production backend authorization defect: an unrelated authenticated Friends player can replay another player's Toepen client_match_id and receive the existing game_id. SQL-only v801a is merged and rollback-proven against the production schema, but is deliberately not deployed to Supabase without explicit authorization. Certification remains fail-closed until v801a is authorized/applied and fresh post-deploy owner-isolation plus deep live regression evidence passes.",
+  "current_evidence": {
+    "frontend_version": "v801",
+    "frontend_merge": "d5388341c5ca0a595f80f239ebb5cafa84b6af60",
+    "audited_repository_head": "66e6f7ad13c1360a1eadfdd528acdb4290957e43",
+    "full_visual_audit_run": 31943987257,
+    "phase1_live_auth_gameplay_run": 31944683360,
+    "phase2_deep_live_run": 31952351394,
+    "toepen_owner_defect_control_run": 31952921912,
+    "v801a_rollback_only_schema_proof_run": 31953380650,
+    "postmerge_live_health_run": 31953491375,
+    "klaverjas_postgres_persistence_run": 31953687334,
+    "klaverjas_postgres_roem_run": 31953687328,
+    "klaverjas_postgres_recovery_run": 31953687352
+  },
+  "required_next": [
+    "Obtain explicit authorization before applying GEJAST_v801a_toepen_idempotency_owner_guard.sql to production Supabase.",
+    "After deployment, prove same-owner Toepen idempotency still returns the same game while unrelated-owner, invalid-session and wrong-scope replay fail closed, with zero residue.",
+    "Rerun exact-current live health and the deep Phase-2 gameplay campaign after the backend mutation before considering PASS."
+  ]
 }
