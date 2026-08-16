@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_version": "v800",
+  "current_version": "v801",
   "status": "REVALIDATION_REQUIRED",
   "prior_certification": {
     "version": "v792",
@@ -8,5 +8,5 @@
     "artifact": "final-acceptance-v792.json"
   },
   "current_audit_issue": 153,
-  "reason": "v800 fixes a session-token recovery false positive proven by the v799 live invalid-session diagnostic. The shared getPlayerSessionToken recovery heuristic accepted arbitrary 24+ character audit strings such as membership_cache_refreshed and mirrored them into canonical session-token keys after a rejected token had already been cleared. Production evidence shows all 158 player-session rows use exactly 48 hexadecimal characters, so v800 constrains recovered player-session tokens to that deployed contract. Fresh exact-main Phase-1 live auth/gameplay proof remains required."
+  "reason": "v801 fixes a live-proven forced-login scope-isolation defect: account_public_state_v687 returns ok=true for a valid player session without enforcing site_scope_input, while v800 gejast-auth-gate.js accepted ok=true without comparing the returned session site_scope to the requested page scope. A Friends session could therefore reveal Family surfaces. v801 requires returned session scope to equal requestedScope() before reveal. Fresh exact-main Phase-1 live auth/gameplay proof remains required."
 }

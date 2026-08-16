@@ -112,9 +112,9 @@ const publicAdmin = await req('https://kalenel.nl/admin.html', { redirect: 'manu
 assert.equal(publicAdmin.status, 302);
 assert.equal(publicAdmin.headers.get('Location'), 'https://admin.kalenel.nl/admin.html');
 
-const publicAsset = await req('https://kalenel.nl/gejast-admin-rpc.js?v800', { redirect: 'manual' });
+const publicAsset = await req('https://kalenel.nl/gejast-admin-rpc.js?v801', { redirect: 'manual' });
 assert.equal(publicAsset.status, 302);
-assert.equal(publicAsset.headers.get('Location'), 'https://admin.kalenel.nl/gejast-admin-rpc.js?v800');
+assert.equal(publicAsset.headers.get('Location'), 'https://admin.kalenel.nl/gejast-admin-rpc.js?v801');
 
 const traversal = await req('https://admin.kalenel.nl/%5cadmin.html', { headers: { Cookie: validCookie } });
 assert.equal(traversal.status, 404);
