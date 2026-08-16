@@ -1,6 +1,6 @@
 (function(){
   const CONFIG = {
-    VERSION:'v799',
+    VERSION:'v800',
     SUPABASE_URL: 'https://uiqntazgnrxwliaidkmy.supabase.co',
     SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_rBDv3k3BWdnQZMDi2hjfuA_76FVf_wA',
     MAKE_WEBHOOK_URL: '',
@@ -344,12 +344,7 @@ function playerSessionKeys(){
 }
 function looksLikePlayerSessionToken(value){
   const token = String(value || '').trim();
-  if (!token || token.length < 24) return false;
-  if (/^vis[_-]/i.test(token)) return false;
-  if (/^visit[_-]/i.test(token)) return false;
-  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/i.test(token)) return false;
-  if (/^\d{10,}$/.test(token)) return false;
-  return /^[A-Za-z0-9._~+/=-]{16,}$/.test(token);
+  return /^[0-9a-f]{48}$/i.test(token);
 }
 function mirrorPlayerSessionToken(value){
   const token = String(value || '').trim();
@@ -759,7 +754,7 @@ function buildRequestUrl(returnTo, scope){
       setTimeout(showPageNow, 0);
     }
     setTimeout(showPageNow, 650);
-    return { VERSION:'v799', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
+    return { VERSION:'v800', DEFAULT_TIMEOUT_MS, timeoutPromise, race, fetchJson, idle, showPageNow };
   })();
   window.GEJAST_FAST_RUNTIME = FAST_RUNTIME;
 
