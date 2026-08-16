@@ -1,0 +1,41 @@
+name: v795 version sync
+
+on:
+  push:
+    branches:
+      - test/v794-middle-dot-watermark-drift
+    paths:
+      - 'VERSION'
+      - 'fix-version-drift.mjs'
+      - '.github/workflows/v795-version-sync.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    if: github.repository == 'JesperOaths/kale-nel'
+    steps:
+      - name: Check out repair branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: test/v794-middle-dot-watermark-drift
+          fetch-depth: 1
+
+      - name: Apply canonical version sync
+        run: node fix-version-drift.mjs
+
+      - name: Commit synchronized frontend versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'No generated version changes.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: synchronize v795 frontend versions'
+          git push origin HEAD:test/v794-middle-dot-watermark-drift
