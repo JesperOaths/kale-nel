@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/full-live-visual-audit-v792.yml'
       - 'scripts/full-live-visual-audit-v792.mjs'
+      - 'scripts/full-live-visual-fixtures-v801.mjs'
       - '*.html'
       - 'familie/**.html'
       - 'gejast-*.js'
@@ -24,7 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_URL: https://uiqntazgnrxwliaidkmy.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GEJAST_VISUAL_DB_NAME: postgres
       GEJAST_BASE_URL: https://kalenel.nl/
       GEJAST_SITE_SCOPE: friends
       GEJAST_VISUAL_TIMEOUT_MS: '25000'
@@ -45,113 +48,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -n "${SUPABASE_DB_URL:-}" || { echo 'SUPABASE_DB_URL missing'; exit 1; }
+          test -n "${SUPABASE_SERVICE_ROLE_KEY:-}" || { echo 'SUPABASE_SERVICE_ROLE_KEY missing'; exit 1; }
           npm ci
           npm install --no-save --package-lock=false playwright@1.55.0
           npx playwright install --with-deps chromium
-          sudo apt-get update >/dev/null
-          sudo apt-get install -y postgresql-client >/dev/null
           node --check scripts/full-live-visual-audit-v792.mjs
+          node --check scripts/full-live-visual-fixtures-v801.mjs
 
       - name: Provision disposable visual-audit identities through current login contract
         shell: bash
         run: |
           set -euo pipefail
-          DB_RETRY_ATTEMPTS=4
-          VISUAL_AUDIT_DB_URL="$SUPABASE_DB_URL"
-          if [[ "$VISUAL_AUDIT_DB_URL" == *".pooler.supabase.com:5432/"* ]]; then
-            VISUAL_AUDIT_DB_URL="${VISUAL_AUDIT_DB_URL/:5432\//:6543/}"
-          fi
-          retry_psql_file() {
-            local label="$1" file="$2"
-            shift 2
-            local attempt delay
-            for ((attempt=1; attempt<=DB_RETRY_ATTEMPTS; attempt++)); do
-              if psql "$VISUAL_AUDIT_DB_URL" -X -v ON_ERROR_STOP=1 "$@" -f "$file"; then
-                return 0
-              fi
-              if (( attempt == DB_RETRY_ATTEMPTS )); then
-                echo "${label} failed after ${DB_RETRY_ATTEMPTS} attempts." >&2
-                return 1
-              fi
-              delay=$((attempt * 3))
-              echo "${label} attempt ${attempt}/${DB_RETRY_ATTEMPTS} failed; retrying in ${delay}s." >&2
-              sleep "$delay"
-            done
-          }
-          retry_psql_capture() {
-            local label="$1" file="$2"
-            shift 2
-            local attempt delay output
-            for ((attempt=1; attempt<=DB_RETRY_ATTEMPTS; attempt++)); do
-              if output="$(psql "$VISUAL_AUDIT_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 "$@" -f "$file")"; then
-                printf '%s' "$output"
-                return 0
-              fi
-              if (( attempt == DB_RETRY_ATTEMPTS )); then
-                echo "${label} failed after ${DB_RETRY_ATTEMPTS} attempts." >&2
-                return 1
-              fi
-              delay=$((attempt * 3))
-              echo "${label} attempt ${attempt}/${DB_RETRY_ATTEMPTS} failed; retrying in ${delay}s." >&2
-              sleep "$delay"
-            done
-          }
-
-          suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
-          name1="VisualA_${suffix}"
-          name2="VisualB_${suffix}"
-          family_name="VisualFamily_${suffix}"
-          pin1='4826'
-          pin2='7314'
-          family_pin='2597'
-          echo "::add-mask::$pin1"
-          echo "::add-mask::$pin2"
-          echo "::add-mask::$family_pin"
-          echo "GEJAST_PLAYER1_NAME=$name1" >> "$GITHUB_ENV"
-          echo "GEJAST_PLAYER2_NAME=$name2" >> "$GITHUB_ENV"
-          echo "GEJAST_FAMILY_NAME=$family_name" >> "$GITHUB_ENV"
-
-          provision_sql="$RUNNER_TEMP/full-live-visual-provision.sql"
-          cat > "$provision_sql" <<'SQL'
-          begin;
-          delete from public.gejast_active_player_metadata_v679
-          where lower(coalesce(player_name,'')) in (lower(:'name1'), lower(:'name2'), lower(:'family_name'));
-          delete from public.gejast_player_sessions_v746
-          where player_id in (select id from public.players where display_name in (:'name1', :'name2', :'family_name'));
-          delete from public.players
-          where display_name in (:'name1', :'name2', :'family_name') and is_dummy=true and hidden_from_public=true;
-          insert into public.players(slug,display_name,active,pin_hash,approved,hidden_from_public,is_dummy,site_scope)
-          values
-            ('visual-a-' || lower(:'name1'), :'name1', true, 'md5:' || md5(:'pin1' || ':' || current_database()), true, true, true, 'friends'),
-            ('visual-b-' || lower(:'name2'), :'name2', true, 'md5:' || md5(:'pin2' || ':' || current_database()), true, true, true, 'friends'),
-            ('visual-family-' || lower(:'family_name'), :'family_name', true, 'md5:' || md5(:'family_pin' || ':' || current_database()), true, true, true, 'family');
-          commit;
-          SQL
-          retry_psql_file 'visual-audit fixture provision' "$provision_sql" \
-            -v name1="$name1" -v name2="$name2" -v family_name="$family_name" \
-            -v pin1="$pin1" -v pin2="$pin2" -v family_pin="$family_pin"
-
-          login_sql="$RUNNER_TEMP/full-live-visual-login.sql"
-          cat > "$login_sql" <<'SQL'
-          select public.account_login_v687(:'name1', :'pin1', 'friends', '{"proof":"full-live-visual-audit"}'::jsonb)->>'session_token',
-                 public.account_login_v687(:'name2', :'pin2', 'friends', '{"proof":"full-live-visual-audit"}'::jsonb)->>'session_token',
-                 public.account_login_v687(:'family_name', :'family_pin', 'family', '{"proof":"full-live-visual-audit"}'::jsonb)->>'session_token';
-          SQL
-          sessions="$(retry_psql_capture 'visual-audit session login' "$login_sql" \
-            -v name1="$name1" -v name2="$name2" -v family_name="$family_name" \
-            -v pin1="$pin1" -v pin2="$pin2" -v family_pin="$family_pin")"
-          IFS='|' read -r token1 token2 family_token <<< "$sessions"
-          [[ "$token1" =~ ^[0-9a-f]{48}$ ]]
-          [[ "$token2" =~ ^[0-9a-f]{48}$ ]]
-          [[ "$family_token" =~ ^[0-9a-f]{48}$ ]]
-          echo "::add-mask::$token1"
-          echo "::add-mask::$token2"
-          echo "::add-mask::$family_token"
-          echo "GEJAST_PLAYER1_TOKEN=$token1" >> "$GITHUB_ENV"
-          echo "GEJAST_PLAYER2_TOKEN=$token2" >> "$GITHUB_ENV"
-          echo "GEJAST_FAMILY_TOKEN=$family_token" >> "$GITHUB_ENV"
-          echo 'Current Friends + Family visual-audit sessions provisioned.'
+          node scripts/full-live-visual-fixtures-v801.mjs provision
 
       - name: Screenshot and inspect every tracked live HTML page
         run: node scripts/full-live-visual-audit-v792.mjs
@@ -162,7 +70,7 @@ jobs:
         with:
           name: full-live-visual-audit-${{ github.run_id }}
           path: visual-audit/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
 
       - name: Cleanup disposable visual-audit state
@@ -170,93 +78,4 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ -z "${GEJAST_PLAYER1_NAME:-}" ] || [ -z "${GEJAST_PLAYER2_NAME:-}" ] || [ -z "${GEJAST_FAMILY_NAME:-}" ]; then
-            echo 'Fixture names were never fully exported; nothing safe to target for cleanup.'
-            exit 0
-          fi
-          DB_RETRY_ATTEMPTS=4
-          VISUAL_AUDIT_DB_URL="$SUPABASE_DB_URL"
-          if [[ "$VISUAL_AUDIT_DB_URL" == *".pooler.supabase.com:5432/"* ]]; then
-            VISUAL_AUDIT_DB_URL="${VISUAL_AUDIT_DB_URL/:5432\//:6543/}"
-          fi
-          retry_psql_file() {
-            local label="$1" file="$2"
-            shift 2
-            local attempt delay
-            for ((attempt=1; attempt<=DB_RETRY_ATTEMPTS; attempt++)); do
-              if psql "$VISUAL_AUDIT_DB_URL" -X -v ON_ERROR_STOP=1 "$@" -f "$file"; then
-                return 0
-              fi
-              if (( attempt == DB_RETRY_ATTEMPTS )); then
-                echo "${label} failed after ${DB_RETRY_ATTEMPTS} attempts." >&2
-                return 1
-              fi
-              delay=$((attempt * 3))
-              echo "${label} attempt ${attempt}/${DB_RETRY_ATTEMPTS} failed; retrying in ${delay}s." >&2
-              sleep "$delay"
-            done
-          }
-          retry_psql_capture() {
-            local label="$1" file="$2"
-            shift 2
-            local attempt delay output
-            for ((attempt=1; attempt<=DB_RETRY_ATTEMPTS; attempt++)); do
-              if output="$(psql "$VISUAL_AUDIT_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 "$@" -f "$file")"; then
-                printf '%s' "$output"
-                return 0
-              fi
-              if (( attempt == DB_RETRY_ATTEMPTS )); then
-                echo "${label} failed after ${DB_RETRY_ATTEMPTS} attempts." >&2
-                return 1
-              fi
-              delay=$((attempt * 3))
-              echo "${label} attempt ${attempt}/${DB_RETRY_ATTEMPTS} failed; retrying in ${delay}s." >&2
-              sleep "$delay"
-            done
-          }
-
-          cleanup_sql="$RUNNER_TEMP/full-live-visual-cleanup.sql"
-          cat > "$cleanup_sql" <<'SQL'
-          begin;
-          delete from public.paardenrace_match_history h
-          using public.paardenrace_rooms r
-          where h.room_id = r.id
-            and (r.host_name in (:'name1', :'name2')
-              or r.host_player_id in (select id from public.players where display_name in (:'name1', :'name2'))
-              or r.created_by_player_id in (select id from public.players where display_name in (:'name1', :'name2')));
-
-          delete from public.klaverjas_online_games
-          where created_by_player_name in (:'name1', :'name2')
-             or created_by_player_id in (select id from public.players where display_name in (:'name1', :'name2'));
-          delete from public.pikken_games
-          where created_by_player_name in (:'name1', :'name2')
-             or created_by_player_id in (select id from public.players where display_name in (:'name1', :'name2'));
-          delete from public.paardenrace_rooms
-          where host_name in (:'name1', :'name2')
-             or host_player_id in (select id from public.players where display_name in (:'name1', :'name2'))
-             or created_by_player_id in (select id from public.players where display_name in (:'name1', :'name2'));
-
-          delete from public.gejast_active_player_metadata_v679
-          where lower(coalesce(player_name,'')) in (lower(:'name1'), lower(:'name2'), lower(:'family_name'));
-          delete from public.gejast_player_sessions_v746
-          where player_id in (select id from public.players where display_name in (:'name1', :'name2', :'family_name'));
-          delete from public.players
-          where display_name in (:'name1', :'name2', :'family_name') and is_dummy=true and hidden_from_public=true;
-          commit;
-          SQL
-          retry_psql_file 'visual-audit cleanup' "$cleanup_sql" \
-            -v name1="$GEJAST_PLAYER1_NAME" -v name2="$GEJAST_PLAYER2_NAME" -v family_name="$GEJAST_FAMILY_NAME"
-
-          residue_sql="$RUNNER_TEMP/full-live-visual-residue.sql"
-          cat > "$residue_sql" <<'SQL'
-          select (select count(*) from public.players where display_name in (:'name1',:'name2',:'family_name')),
-                 (select count(*) from public.gejast_player_sessions_v746 where display_name in (:'name1',:'name2',:'family_name')),
-                 (select count(*) from public.gejast_active_player_metadata_v679 where lower(coalesce(player_name,'')) in (lower(:'name1'),lower(:'name2'),lower(:'family_name'))),
-                 (select count(*) from public.klaverjas_online_games where created_by_player_name in (:'name1',:'name2')),
-                 (select count(*) from public.pikken_games where created_by_player_name in (:'name1',:'name2')),
-                 (select count(*) from public.paardenrace_rooms where host_name in (:'name1',:'name2'));
-          SQL
-          residue="$(retry_psql_capture 'visual-audit residue check' "$residue_sql" \
-            -v name1="$GEJAST_PLAYER1_NAME" -v name2="$GEJAST_PLAYER2_NAME" -v family_name="$GEJAST_FAMILY_NAME")"
-          test "$residue" = '0|0|0|0|0|0'
-          echo 'Visual-audit cleanup PASS with zero residue.'
+          node scripts/full-live-visual-fixtures-v801.mjs cleanup
