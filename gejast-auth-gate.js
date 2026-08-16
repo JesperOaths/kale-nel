@@ -4,7 +4,8 @@
   const SESSION_KEY='jas_session_token_v11';
   const LEGACY_SESSION_KEY='jas_session_token_v10';
   const ACTIVITY_KEY='jas_last_activity_at_v1';
-  const CONFIG_SRC='/gejast-config.js?v798';
+  const SERVER_TOUCH_KEY='jas_last_server_touch_at_v1';
+  const CONFIG_SRC='/gejast-config.js?v799';
   root.setAttribute('data-gejast-auth-state','checking');
   root.style.setProperty('visibility','hidden','important');
 
@@ -21,11 +22,23 @@
     return '/login.html'+(requestedScope()==='family'?'?scope=family':'');
   }
   function readToken(){
-    try{return String(localStorage.getItem(SESSION_KEY)||localStorage.getItem(LEGACY_SESSION_KEY)||'').trim();}
-    catch(_){return '';}
+    try{
+      return String(
+        localStorage.getItem(SESSION_KEY)||sessionStorage.getItem(SESSION_KEY)||
+        localStorage.getItem(LEGACY_SESSION_KEY)||sessionStorage.getItem(LEGACY_SESSION_KEY)||''
+      ).trim();
+    }catch(_){return '';}
   }
   function clearSession(){
-    try{localStorage.removeItem(SESSION_KEY);localStorage.removeItem(LEGACY_SESSION_KEY);localStorage.removeItem(ACTIVITY_KEY);}catch(_){ }
+    try{window.GEJAST_CONFIG?.clearPlayerSessionTokens?.();}catch(_){ }
+    for(const storage of [localStorage,sessionStorage]){
+      try{
+        storage.removeItem(SESSION_KEY);
+        storage.removeItem(LEGACY_SESSION_KEY);
+        storage.removeItem(ACTIVITY_KEY);
+        storage.removeItem(SERVER_TOUCH_KEY);
+      }catch(_){ }
+    }
   }
   function deny({clear=false}={}){
     if(clear) clearSession();
