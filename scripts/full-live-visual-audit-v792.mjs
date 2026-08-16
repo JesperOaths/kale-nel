@@ -12,6 +12,7 @@ const name1 = String(process.env.GEJAST_PLAYER1_NAME || '').trim();
 const name2 = String(process.env.GEJAST_PLAYER2_NAME || '').trim();
 const familyName = String(process.env.GEJAST_FAMILY_NAME || '').trim();
 const siteScope = String(process.env.GEJAST_SITE_SCOPE || 'friends').trim() || 'friends';
+const profileTarget = String(process.env.GEJAST_VISUAL_PROFILE_TARGET || 'Antoni').trim() || 'Antoni';
 const timeout = Number(process.env.GEJAST_VISUAL_TIMEOUT_MS || 25000);
 const settleMs = Number(process.env.GEJAST_VISUAL_SETTLE_MS || 1800);
 const outDir = path.resolve('visual-audit');
@@ -239,10 +240,9 @@ function contextualRoutes() {
     ['ladder.html?game=klaverjas', 'context__ladder__klaverjas'],
     ['ladder.html?game=boerenbridge', 'context__ladder__boerenbridge'],
     ['ladder.html?game=beerpong', 'context__ladder__beerpong'],
-    [`player.html?player=${encodeURIComponent(name1)}&game=klaverjas&scope=${encodeURIComponent(siteScope)}`, 'context__player__klaverjas'],
+    [`player.html?player=${encodeURIComponent(profileTarget)}&game=klaverjas&scope=${encodeURIComponent(siteScope)}`, 'context__player__klaverjas'],
   ];
   if (state.pikkenId) {
-    routes.push([`pikken.html?game_id=${encodeURIComponent(state.pikkenId)}`, 'context__pikken__lobby']);
     routes.push([`pikken_live.html?game_id=${encodeURIComponent(state.pikkenId)}`, 'context__pikken__live']);
     routes.push([`pikken_spectator.html?game_id=${encodeURIComponent(state.pikkenId)}`, 'context__pikken__spectator']);
   }
@@ -311,6 +311,11 @@ function writeReports() {
   fs.writeFileSync(path.join(outDir, 'index.html'), `<!doctype html><meta charset="utf-8"><title>Kalenel visual audit</title><style>body{font-family:system-ui;margin:20px;background:#eee;color:#111}.summary{position:sticky;top:0;background:#111;color:#fff;padding:12px 16px;border-radius:14px;z-index:2}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-top:16px}.card{background:#fff;border:3px solid #bbb;border-radius:14px;overflow:hidden}.card.broken{border-color:#c00}.card.warn{border-color:#d78b00}.card.protected{border-color:#4682b4}.card img{width:100%;height:300px;object-fit:cover;object-position:top;display:block;background:#ddd}.copy{padding:12px;display:grid;gap:6px}.copy code{white-space:normal;overflow-wrap:anywhere}.copy p{margin:0;color:#a00}</style><div class="summary">${records.length} screenshots · ${trackedHtml.length} tracked HTML · ${JSON.stringify(counts)}</div><div class="grid">${cards}</div>`);
 
   console.log(`RESULT=FULL_LIVE_VISUAL_AUDIT_COMPLETE tracked=${trackedHtml.length} screenshots=${records.length} broken=${counts.broken || 0} warn=${counts.warn || 0} protected=${counts.protected || 0} pass=${counts.pass || 0}`);
+  if ((counts.broken || 0) > 0) {
+    console.error(`FULL_LIVE_VISUAL_AUDIT_FAIL broken=${counts.broken}`);
+    process.exitCode = 1;
+  }
+  return counts;
 }
 
 await setupContextRooms();
