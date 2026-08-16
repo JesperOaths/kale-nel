@@ -1,0 +1,50 @@
+name: v794 branch version sync
+
+on:
+  push:
+    branches:
+      - fix/v794-group-b-status-panel
+    paths:
+      - '.github/workflows/v794-branch-version-sync.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  sync-version:
+    runs-on: ubuntu-latest
+    if: github.repository == 'JesperOaths/kale-nel'
+    steps:
+      - name: Check out exact branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: fix/v794-group-b-status-panel
+          fetch-depth: 0
+
+      - name: Synchronize active frontend to v794
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = 'v793'
+          printf 'v794\n' > VERSION
+          node fix-version-drift.mjs
+          node check-version-drift.mjs
+
+      - name: Verify synchronized branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run verify
+
+      - name: Commit synchronized version bump
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add VERSION '*.html' '*.js' '*.mjs' '*.css' ':!repo/**' ':!mnt/**' || true
+          git add -u
+          git diff --cached --quiet && { echo 'Expected v794 version changes were not produced'; exit 1; }
+          git commit -m 'chore: synchronize active frontend to v794'
+          git push origin HEAD:fix/v794-group-b-status-panel
