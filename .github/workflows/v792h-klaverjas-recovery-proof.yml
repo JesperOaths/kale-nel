@@ -1,4 +1,5 @@
 name: v792h Klaverjas recovery PostgreSQL proof
+# v801 Phase-2 isolated proof trigger only; no product or SQL change.
 
 on:
   pull_request:
