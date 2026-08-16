@@ -1,6 +1,6 @@
 {
-  "version": 7,
-  "site_version": "release candidate v801 / live v800",
+  "version": 8,
+  "site_version": "live v801 / current frontend release v801",
   "last_updated": "2026-08-16",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -11,11 +11,14 @@
   },
   "deployment_identity": {
     "status": "verified_complete",
-    "live_version": "v800",
-    "frontend_release_merge": "79e18fc9dcd2c9eadf404131863102cdc8abaef2",
-    "repository_head_at_audit": "141e7301944a79452eca9d354180a684249cdcd2",
+    "live_version": "v801",
+    "frontend_release_merge": "d5388341c5ca0a595f80f239ebb5cafa84b6af60",
+    "repository_head_at_audit": "66e6f7ad13c1360a1eadfdd528acdb4290957e43",
     "source": "GitHub Pages/static deployment from main plus Cloudflare admin perimeter",
     "evidence": [
+      "2026-08-16 live v801: Phase-1 auth/gameplay run 31944683360 PASS with logged-out invisibility, invalid-token cleanup, real PIN login-to-main, seven authenticated game surfaces, Friends/Family isolation, two-human Klaverjas and zero residue.",
+      "2026-08-16 live v801: Phase-2 deep run 31952351394 PASS with multi-context/mobile/reconnect coverage plus natural Pikken and Paardenrace completion/persistence rereads and zero residue.",
+      "2026-08-16 repository head 66e6f7ad13c1360a1eadfdd528acdb4290957e43: live deployment health run 31953491375 PASS; SQL-only v801a migration record does not change frontend VERSION or deploy the production function.",
       "npm run smoke:live",
       "npm run smoke:beta:read",
       "npm run smoke:beta:extended",
@@ -29,8 +32,8 @@
       "2026-08-14 live v792: frontend release merge 79e18fc9dcd2c9eadf404131863102cdc8abaef2 completed its own Live deployment health run #60 successfully; later SQL-only repository audit head 141e7301944a79452eca9d354180a684249cdcd2 also passed Live deployment health without changing frontend VERSION.",
       "v793 candidate: full production screenshot audit found and repairs visible Klaverjas duplication, ladder game-key mismatch, stale game status RPC owners, Pikken spectator context loss and Rad stats aggregation failure; current release remains REVALIDATION_REQUIRED until post-deploy screenshots and gameplay are re-run."
     ],
-    "note": "2026-08-14 live v792 frontend promotion PASS: frontend release merge 79e18fc9dcd2c9eadf404131863102cdc8abaef2 independently passed Live deployment health with public VERSION v792; the later repository audit head 141e7301944a79452eca9d354180a684249cdcd2 also passed the live route/admin perimeter health suite. Historical Chromium/axe proof remains zero total axe violations; isolated no-write live mobile Chromium proof remains preserved with non-GET requests intercepted locally, no Drinks stats-queue ReferenceError, >=44px Drinks controls and >=24px scoped Beerpong/Pussycup targets. This frontend promotion does not claim that the later v792b-v792h Klaverjas SQL chain has been applied to production; production SQL remains a separately authorized consequential action.",
-    "release_candidate_version": "v801"
+    "note": "2026-08-16 live v801 PASS for deployment identity and current frontend health: exact-v801 visual/auth/game evidence is current, and SQL-only repository head 66e6f7ad13c1360a1eadfdd528acdb4290957e43 leaves frontend VERSION at v801. Historical Chromium/axe proof remains zero total axe violations; isolated no-write live mobile Chromium proof remains preserved with non-GET requests intercepted locally, no Drinks stats-queue ReferenceError, >=44px Drinks controls and >=24px scoped Beerpong/Pussycup targets. This deployment identity PASS does not mean release certification PASS: exact-v801 Phase 2 found a Toepen owner-replay defect and merged v801a remains deliberately undeployed pending explicit authorization.",
+    "release_candidate_version": ""
   },
   "baseline_checks": [
     {
@@ -49,7 +52,7 @@
       "id": "live_routes",
       "status": "verified_complete",
       "command": "npm run smoke:live",
-      "evidence": "2026-08-14 live v792 deployment health PASS on frontend release merge 79e18fc9dcd2c9eadf404131863102cdc8abaef2 and again on later SQL-only repository audit head 141e7301944a79452eca9d354180a684249cdcd2: public /VERSION is v792, the current public route/version/runtime checks pass, and the admin redirect/security perimeter remains healthy. 2026-08-11 live v787 hardened 35-route suite PASS; Firefox + WebKit Family alias proof PASS across 16 phone/desktop combinations with exact family-scope first destinations and zero wrong /familie/ subresource requests. Historical v783 runtime proof remains preserved: 70 combinations; zero JavaScript page crashes; zero console-error pages; zero same-origin HTTP 4xx/5xx resources; zero stuck/hidden pages; zero empty pages; 446 non-GET requests were intercepted locally; zero aborted same-origin resources; runtime-light direct score/Pikken spectator redirect aliases. Historical v784 activation proof remains preserved: missing-token activation makes zero activation-context calls and zero activation-write RPCs; a locally simulated expired context keeps activation disabled and makes zero activation-write RPCs; unusable-link states show a clear login fallback; the unrelated blocked request was identified as the read-only scope lookup get_scope_hardening_bundle_v672. 2026-08-10 live v786 hardened 35-route suite PASS; full isolated no-write Chromium final acceptance PASS across 70 phone/desktop combinations, plus live Rad runtime widths 320/360/390/430/760 PASS. Zero runtime/network failures, zero whole-page overflow, and zero serious/critical axe violations; 441 non-GET requests intercepted locally. 2026-08-10 live v784 hardened 35-route suite PASS. Isolated no-write live Chromium confirms missing-token activation makes zero activation-context calls and zero activation-write RPCs, while a locally simulated expired context keeps activation disabled and makes zero activation-write RPCs; both unusable-link states show a clear login fallback. The prior 70-combination no-write runtime-stability audit reported zero page crashes, console-error pages, same-origin 4xx/5xx resources, stuck/hidden pages or empty pages. The prior isolated no-write mobile Chromium proof remains preserved: no Drinks stats-queue ReferenceError, >=44px Drinks speed selector, hidden verification float inert/non-focusable, and >=24px scoped Beerpong navigation/Pussycup targets. The v782 no-write responsive Chromium evidence also remains preserved."
+      "evidence": "2026-08-16 live v801 deployment health run 31953491375 PASS on SQL-only repository head 66e6f7ad13c1360a1eadfdd528acdb4290957e43; public VERSION remains v801 and the protected admin perimeter is healthy. 2026-08-14 live v792 deployment health PASS on frontend release merge 79e18fc9dcd2c9eadf404131863102cdc8abaef2 and again on later SQL-only repository audit head 141e7301944a79452eca9d354180a684249cdcd2: public /VERSION is v792, the current public route/version/runtime checks pass, and the admin redirect/security perimeter remains healthy. 2026-08-11 live v787 hardened 35-route suite PASS; Firefox + WebKit Family alias proof PASS across 16 phone/desktop combinations with exact family-scope first destinations and zero wrong /familie/ subresource requests. Historical v783 runtime proof remains preserved: 70 combinations; zero JavaScript page crashes; zero console-error pages; zero same-origin HTTP 4xx/5xx resources; zero stuck/hidden pages; zero empty pages; 446 non-GET requests were intercepted locally; zero aborted same-origin resources; runtime-light direct score/Pikken spectator redirect aliases. Historical v784 activation proof remains preserved: missing-token activation makes zero activation-context calls and zero activation-write RPCs; a locally simulated expired context keeps activation disabled and makes zero activation-write RPCs; unusable-link states show a clear login fallback; the unrelated blocked request was identified as the read-only scope lookup get_scope_hardening_bundle_v672. 2026-08-10 live v786 hardened 35-route suite PASS; full isolated no-write Chromium final acceptance PASS across 70 phone/desktop combinations, plus live Rad runtime widths 320/360/390/430/760 PASS. Zero runtime/network failures, zero whole-page overflow, and zero serious/critical axe violations; 441 non-GET requests intercepted locally. 2026-08-10 live v784 hardened 35-route suite PASS. Isolated no-write live Chromium confirms missing-token activation makes zero activation-context calls and zero activation-write RPCs, while a locally simulated expired context keeps activation disabled and makes zero activation-write RPCs; both unusable-link states show a clear login fallback. The prior 70-combination no-write runtime-stability audit reported zero page crashes, console-error pages, same-origin 4xx/5xx resources, stuck/hidden pages or empty pages. The prior isolated no-write mobile Chromium proof remains preserved: no Drinks stats-queue ReferenceError, >=44px Drinks speed selector, hidden verification float inert/non-focusable, and >=24px scoped Beerpong navigation/Pussycup targets. The v782 no-write responsive Chromium evidence also remains preserved."
     },
     {
       "id": "push_surface",
@@ -61,7 +64,7 @@
       "id": "game_surface",
       "status": "verified_complete",
       "command": "npm run smoke:games",
-      "evidence": "Current smoke:games proves the public game RPC surface and guarded backend contracts; with controlled tokens its live mutation path covers 2-player Pikken and 2-player Paardenrace create/join/start/cleanup. Separate historical controlled production proofs cover active Klaverjas, Beerpong and Boerenbridge persistence paths; Rad spin state is browser-local and its drink side effects route through the separately proven Drinks workflow. This baseline does not claim exhaustive play-to-completion coverage for every game and every supported player count; that broader non-production gameplay acceptance matrix is a separate audit workstream."
+      "evidence": "2026-08-16 exact-v801 Phase-2 deep run 31952351394 proves natural two-player Pikken and Paardenrace completion with reconnect/persistence rereads; Phase-1 run 31944683360 proves two-human Klaverjas and all authenticated game surfaces. Current smoke:games proves the public game RPC surface and guarded backend contracts; with controlled tokens its live mutation path covers 2-player Pikken and 2-player Paardenrace create/join/start/cleanup. Separate historical controlled production proofs cover active Klaverjas, Beerpong and Boerenbridge persistence paths; Rad spin state is browser-local and its drink side effects route through the separately proven Drinks workflow. This baseline does not claim exhaustive play-to-completion coverage for every game and every supported player count; that broader non-production gameplay acceptance matrix is a separate audit workstream."
     },
     {
       "id": "beta_readonly_surfaces",
@@ -79,7 +82,7 @@
       "id": "live_write_safety_gate",
       "status": "verified_complete",
       "command": "npm run beta:write:readiness / beta:readiness",
-      "evidence": "All 12 tracked beta-readiness categories are verified complete. The live-write checklist has zero armed mutation targets; any future consequential production mutation must be introduced deliberately with a new scoped approval gate."
+      "evidence": "The live-write checklist remains fully disarmed with zero automated mutation targets. One live-proven Toepen backend repair is explicitly permission-gated and not armed; v801a requires separate human authorization before production deployment."
     }
   ],
   "beta_gaps": [
@@ -96,10 +99,10 @@
       "id": "toepen_backend_live",
       "priority": 2,
       "area": "Toepen",
-      "status": "verified_complete",
-      "proof_needed": "Complete: Toepen SQL backend applied and live-proven in friends and family scopes, including canonical login sessions, toep/fold saves, duplicate-save idempotency, history/vault/stat output, invalid-token rejection, wrong-player rejection, cross-scope isolation and cleanup evidence.",
-      "next_action": "No Toepen action required unless future frontend/backend changes alter the contract.",
-      "latest_probe": "Controlled friends/family write proof and later v755o totals/auth guard remain covered by current static regression."
+      "status": "needs_permission",
+      "proof_needed": "Current live blocker: exact-v801 run 31952921912 proved unrelated authenticated same-scope client_match_id replay returns a foreign existing Toepen game_id. v801a is merged and rollback-proven against the production schema but not deployed.",
+      "next_action": "With explicit authorization, apply GEJAST_v801a_toepen_idempotency_owner_guard.sql to production Supabase, then rerun same-owner idempotency, unrelated-owner denial, invalid-session/wrong-scope denial, totals guard, deep gameplay regression and zero-residue checks.",
+      "latest_probe": "2026-08-16: owner-control run 31952921912 proved the live defect and Boerenbridge/Beerpong controls; rollback-only v801a production-schema run 31953380650 passed owner/session/scope/totals assertions and proved production remained untouched after rollback."
     },
     {
       "id": "admin_host_security",

@@ -38,8 +38,9 @@
       },
       "deterministic_status": "verified_complete",
       "deterministic_evidence": "check-toepen-gameplay-matrix-v792.mjs plays the shipped engine through completion at every supported player count and covers fold/stake/undo behavior.",
-      "live_status": "backend_contract_proven",
-      "live_evidence": "Historical controlled Friends/Family backend write proofs cover authenticated Toepen persistence, idempotency, scope isolation and cleanup; this is not reclassified as a full browser multiplayer playthrough."
+      "live_status": "owner_isolation_defect_proven_fix_requires_authorization",
+      "live_evidence": "Exact-v801 live owner-control run 31952921912 saved a structurally valid completed Toepen match, confirmed invalid-session denial, and proved an unrelated authenticated Friends player can replay the creator's client_match_id and receive already_saved=true with the foreign game_id. The foreign game is not mutated. SQL-only v801a is merged and rollback-proven but not deployed.",
+      "remaining_gap": "Authorize and deploy v801a, then rerun same-owner idempotency, unrelated-owner denial, invalid-session/wrong-scope denial, totals consistency and zero-residue proof."
     },
     {
       "id": "boerenbridge",
@@ -70,7 +71,7 @@
       "deterministic_status": "verified_complete",
       "deterministic_evidence": "check-boerenbridge-gameplay-matrix-v792.mjs exercises the shipped 18-round cycle, dealer rotation, special rounds, bid restriction, scoring and running totals for every supported player count.",
       "live_status": "persistence_contract_proven",
-      "live_evidence": "Historical controlled production proof covers authenticated persistence/vault contracts; no claim is made that every player-count combination has been played live in separate browsers."
+      "live_evidence": "Historical controlled production persistence/vault proof remains valid. Exact-v801 owner-control run 31952921912 additionally proves an unrelated authenticated player cannot replay another owner's client_match_id. The deterministic 18-round engine matrix remains the full-match authority for all supported player counts."
     },
     {
       "id": "beerpong",
@@ -97,7 +98,7 @@
       "deterministic_status": "verified_complete",
       "deterministic_evidence": "check-beerpong-gameplay-matrix-v792.mjs validates both shipped formats, player uniqueness, cup bounds, unique winner and valid submission boundaries.",
       "live_status": "persistence_contract_proven",
-      "live_evidence": "Historical controlled production save proof exists; it is not treated as a full multi-device match playthrough."
+      "live_evidence": "Historical controlled production save proof remains valid. Exact-v801 owner-control run 31952921912 additionally proves unrelated-player client_match_id replay is rejected. This is persistence/authorization proof, not a full multi-device cup-by-cup browser playthrough claim."
     },
     {
       "id": "pikken",
@@ -122,9 +123,9 @@
       },
       "deterministic_status": "rules_and_live_viewmodel_proven",
       "deterministic_evidence": "check-pikken-pik-conversion-v790.mjs protects bid ordering and pik conversion, while check-pikken-live-viewmodel-v792.mjs executes shipped live-view helpers for dice ordering, bid labels, winner detection, phase normalization, viewer membership and completion/abandonment handoff wiring. This still does not claim backend play-to-completion.",
-      "live_status": "two_player_start_cleanup_proven",
-      "live_evidence": "Controlled authenticated production acceptance created, joined, readied, started and destroyed a two-player Pikken room with disposable sessions; check-live-game-flows.mjs remains the cleanup-capable canonical smoke. Read-only production catalog evidence also records the deployed exact start-RPC fingerprint in backend-rpc-provenance.json.",
-      "remaining_gap": "The exact checked-in Pikken start RPC and its observed deployed definition explicitly reject fewer than two players, grounding the minimum at 2. No authoritative checked-in room/join constraint currently proves a maximum player count, so the maximum remains unknown and must not be inferred from two-player startup success."
+      "live_status": "two_player_natural_completion_reconnect_proven",
+      "live_evidence": "Exact-v801 Phase-2 deep live run 31952351394 used disposable authenticated identities and multiple browser contexts to create/join/start Pikken, exercise reconnect/state reread, naturally reach terminal completion, persist/reread the winner and completed state, and clean all controlled fixtures to zero residue.",
+      "remaining_gap": "The exact checked-in Pikken start RPC and deployed provenance ground the minimum at 2. Phase-2 now proves natural two-player completion, but no authoritative room/join constraint proves a maximum player count, so the maximum remains unknown and higher player-count live completion is not inferred."
     },
     {
       "id": "paardenrace",
@@ -149,9 +150,9 @@
       },
       "deterministic_status": "engine_and_live_viewmodel_proven",
       "deterministic_evidence": "check-paardenrace-engine-v792.mjs covers shipped card parsing, four-horse progress, ten gates, draw accounting, ready/wager summary and winner summary; check-paardenrace-live-viewmodel-v792.mjs executes shipped live helpers for race logs, player/ready/winner presentation, host kick boundaries, nomination targeting, the two-player live-state sanity guard and close/leave handoff wiring. This still does not claim backend play-to-completion.",
-      "live_status": "two_player_start_cleanup_proven",
-      "live_evidence": "Controlled authenticated production acceptance created/joined a two-player room, selected distinct suits, verified wagers, readied, started countdown and disbanded the room using disposable sessions; check-live-game-flows.mjs remains the canonical cleanup-capable smoke. Read-only production catalog evidence also records the deployed exact start-RPC fingerprint in backend-rpc-provenance.json.",
-      "remaining_gap": "The exact checked-in Paardenrace start RPC, its observed deployed definition and the shipped lobby all explicitly reject starts below two players, grounding the minimum at 2. No authoritative checked-in room/join/schema constraint proves a maximum human room size, and the four horse suits are race entities rather than evidence of a four-human maximum."
+      "live_status": "two_player_natural_completion_reconnect_proven",
+      "live_evidence": "Exact-v801 Phase-2 deep live run 31952351394 used disposable authenticated identities and multiple browser contexts to create/join/start Paardenrace, exercise reconnect/state reread and nominations, naturally reach terminal completion, persist/reread terminal state, and clean all controlled fixtures to zero residue.",
+      "remaining_gap": "The exact checked-in Paardenrace start RPC and shipped lobby ground the minimum at 2. Phase-2 now proves natural two-player completion, but no authoritative room/join/schema constraint proves a maximum human room size; higher player-count live completion is not inferred from the four horse suits."
     },
     {
       "id": "klaverjas_online",
@@ -174,10 +175,10 @@
         "source": "klaverjas_online.html"
       },
       "deterministic_status": "repository_postgres_proven",
-      "deterministic_evidence": "v792b-v792h transition, rule, persistence, roem-wrapper and hidden recovery-hand guards are covered by static and real-PostgreSQL proofs and are applied in production.",
+      "deterministic_evidence": "v792b-v792h transition, rule, persistence, roem-wrapper and hidden recovery-hand guards remain covered by static proof and are applied in production. On current v801 repository state, isolated PostgreSQL runs 31953687334, 31953687328 and 31953687352 recompiled/reproved transition/rules/persistence, forged-input-resistant finished persistence/player stats, roem calculations/privilege isolation, and hidden recovery-hand rehydration/private RPC boundaries.",
       "live_status": "two_player_room_lifecycle_proven",
-      "live_evidence": "Production v792b-v792h is applied. On 2026-08-16 a controlled production smoke used two randomized disposable player sessions to create a zero-bot room, join a second human, read state independently as both viewers, close the room as host, and then physically remove the room/sessions/player fixtures. Post-cleanup counts were zero.",
-      "remaining_gap": "No backend or frontend gap remains for the controlled two-human room lifecycle. Full four-seat play rules and completion are covered separately by the deterministic/PostgreSQL acceptance suite; live browser multi-context certification is tracked by final acceptance issue #131 rather than being implied by this backend smoke."
+      "live_evidence": "Production v792b-v792h is applied. On 2026-08-16 a controlled production smoke used two randomized disposable player sessions to create a zero-bot room, join a second human, read state independently as both viewers, close the room as host, and physically remove room/session/player fixtures; post-cleanup counts were zero. Exact-v801 Phase-1 run 31944683360 again created a two-human room with distinct seats, and Phase-2 deep run 31952351394 exercised multi-context Klaverjas state/reconnect behavior. No full four-human production play-to-completion claim is made.",
+      "remaining_gap": "No backend/frontend gap remains for the controlled two-human room lifecycle. Full four-seat rules/completion are covered by deterministic and isolated PostgreSQL acceptance; a full four-human production browser completion remains unclaimed."
     }
   ]
 }
