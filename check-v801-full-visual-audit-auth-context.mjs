@@ -28,5 +28,9 @@ assert.match(runner, /GEJAST_VISUAL_PROFILE_TARGET \|\| 'Antoni'/, 'context prof
 assert.doesNotMatch(runner, /context__pikken__lobby/, 'invalid Pikken game_id lobby variant must not return');
 assert.match(runner, /process\.exitCode = 1/, 'visual audit must fail the workflow when broken pages are recorded');
 assert.match(runner, /FULL_LIVE_VISUAL_AUDIT_FAIL broken=/, 'visual audit must expose an explicit broken-page failure marker');
+assert.match(runner, /trackedRouteUsesAuthGate/, 'tracked routes that load the auth gate must be identified from checked-in HTML');
+assert.match(runner, /waitForAuthGateToSettle/, 'visual audit must explicitly wait for gated pages to leave transient checking state');
+assert.match(runner, /auth gate did not settle within/, 'a genuinely stuck auth gate must remain a fail-closed broken result');
+assert.match(runner, /if \(!protectedOnArrival\) \{\s*authGate = await waitForAuthGateToSettle/s, 'Cloudflare-protected admin responses must bypass player-auth settlement waiting');
 
 console.log('PASS v801 full visual audit current-session/context contract');
