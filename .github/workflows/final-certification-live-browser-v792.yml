@@ -126,9 +126,32 @@ jobs:
             -v name1="$GEJAST_PLAYER1_NAME" -v name2="$GEJAST_PLAYER2_NAME" \
             -v token1="${GEJAST_PLAYER1_TOKEN:-missing}" -v token2="${GEJAST_PLAYER2_TOKEN:-missing}" <<'SQL'
           begin;
+
+          -- Remove browser-created game parents first. Their child rows are either
+          -- CASCADE-owned or become harmless history rows; test-owned history is
+          -- removed explicitly before its Paardenrace parent disappears.
+          delete from public.paardenrace_match_history h
+          using public.paardenrace_rooms r
+          where h.room_id = r.id
+            and (
+              r.host_name in (:'name1', :'name2')
+              or r.host_player_id in (select id from public.players where display_name in (:'name1', :'name2'))
+              or r.created_by_player_id in (select id from public.players where display_name in (:'name1', :'name2'))
+            );
+
           delete from public.klaverjas_online_games
-           where created_by_player_name in (:'name1', :'name2')
-             and status in ('lobby','closed');
+          where created_by_player_name in (:'name1', :'name2')
+             or created_by_player_id in (select id from public.players where display_name in (:'name1', :'name2'));
+
+          delete from public.pikken_games
+          where created_by_player_name in (:'name1', :'name2')
+             or created_by_player_id in (select id from public.players where display_name in (:'name1', :'name2'));
+
+          delete from public.paardenrace_rooms
+          where host_name in (:'name1', :'name2')
+             or host_player_id in (select id from public.players where display_name in (:'name1', :'name2'))
+             or created_by_player_id in (select id from public.players where display_name in (:'name1', :'name2'));
+
           delete from public.gejast_player_sessions_v746 where session_token in (:'token1', :'token2');
           delete from public.gejast_account_sessions_v671 where session_token in (:'token1', :'token2');
           delete from public.players where display_name in (:'name1', :'name2') and is_dummy=true and hidden_from_public=true;
@@ -137,14 +160,19 @@ jobs:
           SQL
 
           residue="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -F'|' \
-            -v name1="$GEJAST_PLAYER1_NAME" -v name2="$GEJAST_PLAYER2_NAME" <<'SQL'
+            -v name1="$GEJAST_PLAYER1_NAME" -v name2="$GEJAST_PLAYER2_NAME" \
+            -v token1="${GEJAST_PLAYER1_TOKEN:-missing}" -v token2="${GEJAST_PLAYER2_TOKEN:-missing}" <<'SQL'
           select (select count(*) from public.players where display_name in (:'name1',:'name2')),
                  (select count(*) from public.gejast_account_players_v671 where display_name in (:'name1',:'name2')),
-                 (select count(*) from public.klaverjas_online_games where created_by_player_name in (:'name1',:'name2'));
+                 (select count(*) from public.gejast_player_sessions_v746 where session_token in (:'token1',:'token2')),
+                 (select count(*) from public.gejast_account_sessions_v671 where session_token in (:'token1',:'token2')),
+                 (select count(*) from public.klaverjas_online_games where created_by_player_name in (:'name1',:'name2')),
+                 (select count(*) from public.pikken_games where created_by_player_name in (:'name1',:'name2')),
+                 (select count(*) from public.paardenrace_rooms where host_name in (:'name1',:'name2'));
           SQL
           )"
-          test "$residue" = '0|0|0'
-          echo 'Disposable browser-certification identities/rooms cleanup PASS.'
+          test "$residue" = '0|0|0|0|0|0|0'
+          echo 'Disposable browser-certification identities, sessions and game parents cleanup PASS.'
 
       - name: Final browser certification marker
         run: echo 'RESULT=V792_FINAL_LIVE_BROWSER_CERTIFICATION_PASS'
