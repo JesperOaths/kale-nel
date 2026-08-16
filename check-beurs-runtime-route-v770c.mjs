@@ -29,7 +29,7 @@ function isArchived(rel) {
 }
 
 const beurs = fs.readFileSync('beurs.html', 'utf8');
-if (!beurs.includes('./gejast-despimarkt.js?v798')) failures.push('beurs.html must load gejast-despimarkt.js?v798');
+if (!beurs.includes('./gejast-despimarkt.js?v799')) failures.push('beurs.html must load gejast-despimarkt.js?v799');
 if (!beurs.includes('window.GEJAST_DESPIMARKT.loadHubPage()')) failures.push('beurs.html must boot the GEJAST_DESPIMARKT hub runtime');
 if (beurs.includes('gejast-beurs.js')) failures.push('beurs.html must not load stale gejast-beurs.js');
 if (fs.existsSync('gejast-beurs.js')) failures.push('stale gejast-beurs.js must be removed from the active repository root');

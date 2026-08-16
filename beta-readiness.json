@@ -1,6 +1,6 @@
 {
   "version": 7,
-  "site_version": "release candidate v798 / live v797",
+  "site_version": "release candidate v799 / live v798",
   "last_updated": "2026-08-16",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -11,7 +11,7 @@
   },
   "deployment_identity": {
     "status": "verified_complete",
-    "live_version": "v797",
+    "live_version": "v798",
     "frontend_release_merge": "79e18fc9dcd2c9eadf404131863102cdc8abaef2",
     "repository_head_at_audit": "141e7301944a79452eca9d354180a684249cdcd2",
     "source": "GitHub Pages/static deployment from main plus Cloudflare admin perimeter",
@@ -30,7 +30,7 @@
       "v793 candidate: full production screenshot audit found and repairs visible Klaverjas duplication, ladder game-key mismatch, stale game status RPC owners, Pikken spectator context loss and Rad stats aggregation failure; current release remains REVALIDATION_REQUIRED until post-deploy screenshots and gameplay are re-run."
     ],
     "note": "2026-08-14 live v792 frontend promotion PASS: frontend release merge 79e18fc9dcd2c9eadf404131863102cdc8abaef2 independently passed Live deployment health with public VERSION v792; the later repository audit head 141e7301944a79452eca9d354180a684249cdcd2 also passed the live route/admin perimeter health suite. Historical Chromium/axe proof remains zero total axe violations; isolated no-write live mobile Chromium proof remains preserved with non-GET requests intercepted locally, no Drinks stats-queue ReferenceError, >=44px Drinks controls and >=24px scoped Beerpong/Pussycup targets. This frontend promotion does not claim that the later v792b-v792h Klaverjas SQL chain has been applied to production; production SQL remains a separately authorized consequential action.",
-    "release_candidate_version": "v798"
+    "release_candidate_version": "v799"
   },
   "baseline_checks": [
     {
