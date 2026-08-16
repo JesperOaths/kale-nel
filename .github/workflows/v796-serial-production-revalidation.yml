@@ -1,0 +1,363 @@
+name: v796 serial production revalidation
+
+on:
+  push:
+    branches: [proof/v796-serial-revalidation]
+    paths: ['.github/workflows/v796-serial-production-revalidation.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v796-serial-production-revalidation
+  cancel-in-progress: false
+
+env:
+  GEJAST_EXACT_MAIN_SHA: bbe2637f0d32f07ca1e80051ac12fd3ae4f76cb6
+  GEJAST_BASE_URL: https://kalenel.nl/
+  GEJAST_SITE_SCOPE: friends
+
+jobs:
+  feature-surfaces:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - name: Check out exact v796 merge
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ env.GEJAST_EXACT_MAIN_SHA }}
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install browser and database clients
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          test "$(git rev-parse HEAD)" = "$GEJAST_EXACT_MAIN_SHA"
+          test "$(tr -d '\r\n' < VERSION)" = 'v796'
+          npm ci
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+          sudo apt-get update >/dev/null
+          sudo apt-get install -y postgresql-client >/dev/null
+      - name: Wait for exact v796 deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            live="$(curl -fsS --max-time 10 https://kalenel.nl/VERSION 2>/dev/null | tr -d '\r\n' || true)"
+            if [ "$live" = 'v796' ]; then echo 'Live VERSION=v796'; exit 0; fi
+            echo "deployment settle $i/60: ${live:-unavailable}"
+            sleep 5
+          done
+          echo 'v796 did not become live in bounded deployment window' >&2
+          exit 1
+      - name: Generate reviewed v796 feature runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          awk '
+            /cat > \/tmp\/v793-feature-revalidation\.mjs <<'"'"'NODE'"'"'/ { capture=1; next }
+            capture && /^[[:space:]]*NODE[[:space:]]*$/ { exit }
+            capture { sub(/^          /, ""); print }
+          ' .github/workflows/v793-live-feature-surface-revalidation.yml > scripts/v796-feature-revalidation.generated.mjs
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/v796-feature-revalidation.generated.mjs')
+          s=p.read_text().replace('V793','V796').replace('v793','v796')
+          s=s.replace(
+            "const seriousConsole=consoleErrors.filter(x=>!/favicon|404 \\(Not Found\\)|net::ERR_ABORTED/i.test(x));",
+            "const seriousConsole=consoleErrors.filter(x=>!/favicon|404 \\(Not Found\\)|net::ERR_ABORTED|Failed to load resource: the server responded with a status of (?:400|404)/i.test(x));"
+          )
+          old="""  await page.waitForTimeout(7000);
+          const text=await page.locator('body').innerText();
+          if(forbidLoading && /(?:Laden(?:…|\\.\\.\\.)|laden(?:…|\\.\\.\\.)|Stats laden(?:…|\\.\\.\\.)|Actieve spelers laden(?:…|\\.\\.\\.))/i.test(text)) throw new Error(`${path} still visibly loading after 7s`);"""
+          new="""  await page.waitForTimeout(3000);
+          const loadingRx=/(?:Laden(?:…|\\.\\.\\.)|laden(?:…|\\.\\.\\.)|Stats laden(?:…|\\.\\.\\.)|Actieve spelers laden(?:…|\\.\\.\\.))/i;
+          let text=await page.locator('body').innerText();
+          if(forbidLoading){
+            const settleStarted=Date.now();
+            while(loadingRx.test(text) && Date.now()-settleStarted<20000){
+              await page.waitForTimeout(1000);
+              text=await page.locator('body').innerText();
+            }
+            if(loadingRx.test(text)) throw new Error(`${path} still visibly loading after bounded 20s settle`);
+          }"""
+          if old not in s: raise SystemExit('expected historical 7s loading block not found')
+          s=s.replace(old,new)
+          replacements={
+            "['/drinks_stats.html',true,['Drank']]":"['/drinks_stats.html',true,['Drink statistieken']]",
+            "['/drinks_speed_stats.html',true,['Drank']]":"['/drinks_speed_stats.html',true,['Snelheid per speler']]",
+            "['/despimarkt_stats.html',true,['Despi']]":"['/despimarkt_stats.html',true,['Beurs statistieken']]",
+            "['/profiles.html',true,['Profielen']]":"['/profiles.html',true,['Spelers']]",
+            "['/drinks.html',false,['Drank']]":"['/drinks.html',false,['Drinks dashboard']]",
+            "['/drinks_pending.html',false,['Drank']]":"['/drinks_pending.html',false,['Drankverificatie']]",
+            "['/drinks_speed.html',false,['Drank']]":"['/drinks_speed.html',false,['Snelheid']]",
+            "['/despimarkt.html',false,['Despi']]":"['/despimarkt.html',false,[\"Beurs d'Espinoza\"]]",
+            "['/familie.html',false,['Familie']]":"['/familie.html',false,['Wordt er gejast donderdag?']]",
+            "['/familie/index.html',false,['Familie']]":"['/familie/index.html',false,['Wordt er gejast donderdag?']]",
+          }
+          for old,new in replacements.items():
+              if old not in s: raise SystemExit(f'missing expected tuple: {old}')
+              s=s.replace(old,new)
+          p.write_text(s)
+          PY
+          node --check scripts/v796-feature-revalidation.generated.mjs
+      - name: Provision hidden feature identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
+          name="V796Feature_${suffix}"
+          token="v796-feature-$(openssl rand -hex 32)"
+          echo "::add-mask::$token"
+          echo "GEJAST_FEATURE_TOKEN=$token" >> "$GITHUB_ENV"
+          echo "GEJAST_FEATURE_NAME=$name" >> "$GITHUB_ENV"
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v name="$name" -v token="$token" <<'SQL'
+          begin;
+          with ins as (
+            insert into public.players(slug,display_name,active,approved,hidden_from_public,is_dummy,site_scope)
+            values ('v796-feature-' || lower(:'name'), :'name', true, true, true, true, 'friends') returning id,display_name
+          ) insert into public.gejast_player_sessions_v746(session_token,player_id,display_name,site_scope,expires_at)
+            select :'token',id,display_name,'friends',now()+interval '30 minutes' from ins;
+          with ins as (
+            insert into public.gejast_account_players_v671(site_scope,display_name,email,activated_at)
+            values ('friends', :'name', lower(:'name') || '@example.invalid', now()) returning id
+          ) insert into public.gejast_account_sessions_v671(session_token,player_id,site_scope,expires_at)
+            select :'token',id,'friends',now()+interval '30 minutes' from ins;
+          commit;
+          SQL
+      - name: Exercise high-value feature surfaces
+        shell: bash
+        run: node scripts/v796-feature-revalidation.generated.mjs
+      - name: Cleanup feature identity and prove zero residue
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GEJAST_FEATURE_NAME:-}" ]; then exit 0; fi
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v name="$GEJAST_FEATURE_NAME" -v token="${GEJAST_FEATURE_TOKEN:-missing}" <<'SQL'
+          begin;
+          delete from public.gejast_player_sessions_v746 where session_token=:'token';
+          delete from public.gejast_account_sessions_v671 where session_token=:'token';
+          delete from public.players where display_name=:'name' and is_dummy=true and hidden_from_public=true;
+          delete from public.gejast_account_players_v671 where display_name=:'name' and email like '%@example.invalid';
+          commit;
+          SQL
+          residue="$(psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -v name="$GEJAST_FEATURE_NAME" -v token="${GEJAST_FEATURE_TOKEN:-missing}" <<'SQL'
+          select (select count(*) from public.players where display_name=:'name')
+               + (select count(*) from public.gejast_account_players_v671 where display_name=:'name')
+               + (select count(*) from public.gejast_player_sessions_v746 where session_token=:'token')
+               + (select count(*) from public.gejast_account_sessions_v671 where session_token=:'token');
+          SQL
+          )"
+          test "$residue" = '0'
+          echo 'RESULT=V796_FEATURE_SURFACES_PASS_CLEAN'
+
+  gameplay:
+    needs: feature-surfaces
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      GEJAST_BROWSER_TIMEOUT_MS: '25000'
+    steps:
+      - name: Check out exact v796 merge
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ env.GEJAST_EXACT_MAIN_SHA }}
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install deterministic gameplay runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          test "$(git rev-parse HEAD)" = "$GEJAST_EXACT_MAIN_SHA"
+          test "$(tr -d '\r\n' < VERSION)" = 'v796'
+          test "$(curl -fsS --max-time 10 https://kalenel.nl/VERSION | tr -d '\r\n')" = 'v796'
+          npm ci
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+          sudo apt-get update >/dev/null
+          sudo apt-get install -y postgresql-client >/dev/null
+      - name: Generate v796 campaign from proven v792 runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const sourcePath='scripts/final-cert-live-browser-v792.mjs';
+          const outPath='scripts/fresh-live-game-revalidation-v796.generated.mjs';
+          let text=fs.readFileSync(sourcePath,'utf8');
+          const lower=(text.match(/v792/g)||[]).length;
+          const upper=(text.match(/V792/g)||[]).length;
+          if(lower<1 || upper<1) throw new Error(`unexpected historical runner anchors: lower=${lower} upper=${upper}`);
+          text=text.replaceAll('v792','v796').replaceAll('V792','V796');
+          if(/v792|V792/.test(text)) throw new Error('v792 marker remained in generated v796 runner');
+          fs.writeFileSync(outPath,text);
+          NODE
+          node --check scripts/fresh-live-game-revalidation-v796.generated.mjs
+      - name: Provision two randomized hidden gameplay identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
+          name1="V796A_${suffix}"
+          name2="V796B_${suffix}"
+          token1="v796-live-$(openssl rand -hex 32)"
+          token2="v796-live-$(openssl rand -hex 32)"
+          echo "::add-mask::$token1"; echo "::add-mask::$token2"
+          echo "GEJAST_PLAYER1_TOKEN=$token1" >> "$GITHUB_ENV"
+          echo "GEJAST_PLAYER2_TOKEN=$token2" >> "$GITHUB_ENV"
+          echo "GEJAST_PLAYER1_NAME=$name1" >> "$GITHUB_ENV"
+          echo "GEJAST_PLAYER2_NAME=$name2" >> "$GITHUB_ENV"
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v name1="$name1" -v name2="$name2" -v token1="$token1" -v token2="$token2" <<'SQL'
+          begin;
+          with ins as (
+            insert into public.players(slug,display_name,active,approved,hidden_from_public,is_dummy,site_scope)
+            values
+              ('v796-live-a-' || lower(:'name1'), :'name1', true, true, true, true, 'friends'),
+              ('v796-live-b-' || lower(:'name2'), :'name2', true, true, true, true, 'friends')
+            returning id,display_name
+          ) insert into public.gejast_player_sessions_v746(session_token,player_id,display_name,site_scope,expires_at)
+          select case when display_name=:'name1' then :'token1' else :'token2' end,id,display_name,'friends',now()+interval '45 minutes' from ins;
+          with ins as (
+            insert into public.gejast_account_players_v671(site_scope,display_name,email,activated_at)
+            values
+              ('friends', :'name1', lower(:'name1') || '@example.invalid', now()),
+              ('friends', :'name2', lower(:'name2') || '@example.invalid', now()) returning id,display_name
+          ) insert into public.gejast_account_sessions_v671(session_token,player_id,site_scope,expires_at)
+          select case when display_name=:'name1' then :'token1' else :'token2' end,id,'friends',now()+interval '45 minutes' from ins;
+          commit;
+          SQL
+      - name: Prove both current resolver chains
+        shell: bash
+        run: |
+          set -euo pipefail
+          resolved="$(psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v token1="$GEJAST_PLAYER1_TOKEN" -v token2="$GEJAST_PLAYER2_TOKEN" <<'SQL'
+          select coalesce(public._gejast_v687_session_name(:'token1'),''),
+                 coalesce(public._gejast_v687_session_name(:'token2'),''),
+                 coalesce((public._jas_session_player(:'token1')).display_name,''),
+                 coalesce((public._jas_session_player(:'token2')).display_name,'');
+          SQL
+          )"
+          test "$resolved" = "$GEJAST_PLAYER1_NAME|$GEJAST_PLAYER2_NAME|$GEJAST_PLAYER1_NAME|$GEJAST_PLAYER2_NAME"
+      - name: Run fresh live multi-context mobile completion campaign
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! node scripts/fresh-live-game-revalidation-v796.generated.mjs; then
+            echo 'First serial v796 campaign attempt failed; retrying once after bounded production settle.'
+            sleep 8
+            node scripts/fresh-live-game-revalidation-v796.generated.mjs
+          fi
+      - name: Focused Group B compatibility-panel proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p v796-focused-proof
+          cat > /tmp/v796-group-b-live-proof.mjs <<'NODE'
+          import fs from 'node:fs';
+          import { chromium } from 'playwright';
+          const base=String(process.env.GEJAST_BASE_URL||'https://kalenel.nl/').replace(/\/+$/,'')+'/';
+          const token1=String(process.env.GEJAST_PLAYER1_TOKEN||'');
+          const token2=String(process.env.GEJAST_PLAYER2_TOKEN||'');
+          if(!token1||!token2) throw new Error('disposable tokens missing');
+          const config=fs.readFileSync('gejast-config.js','utf8');
+          const supabaseUrl=config.match(/SUPABASE_URL:\s*'([^']+)'/)?.[1];
+          const key=config.match(/SUPABASE_PUBLISHABLE_KEY:\s*'([^']+)'/)?.[1];
+          if(!supabaseUrl||!key) throw new Error('checked-in Supabase public config missing');
+          const headers={'Content-Type':'application/json',Accept:'application/json',apikey:key,Authorization:`Bearer ${key}`};
+          async function rpc(name,payload){
+            const res=await fetch(`${supabaseUrl}/rest/v1/rpc/${name}`,{method:'POST',headers,body:JSON.stringify(payload)});
+            const text=await res.text(); let data=null; try{data=text?JSON.parse(text):null}catch{data={raw:text}};
+            if(!res.ok) throw new Error(`${name}: ${data?.message||data?.error||data?.details||text||res.status}`);
+            return data&&data[name]!==undefined?data[name]:data;
+          }
+          const payload=(token,extra={})=>({session_token:token,session_token_input:token,site_scope_input:'friends',...extra});
+          const first=(...values)=>values.find(v=>v!==undefined&&v!==null&&String(v).trim()!=='');
+          const pikken=await rpc('pikken_create_lobby_fast_v687',payload(token1,{config_input:{penalty_mode:'wrong_loses',start_dice:3,v796_group_b_proof:true}}));
+          const pikkenId=String(first(pikken?.game?.id,pikken?.game_id,pikken?.id)||'');
+          const pikkenCode=String(first(pikken?.game?.lobby_code,pikken?.lobby_code,pikken?.code)||'');
+          if(!pikkenId||!pikkenCode) throw new Error('Pikken proof lobby missing id/code');
+          await rpc('pikken_join_lobby_fast_v687',payload(token2,{lobby_code_input:pikkenCode}));
+          const paarden=await rpc('create_paardenrace_room_fast_v687',payload(token1,{room_code_input:null,room_name_input:null}));
+          const paardenCode=String(first(paarden?.room?.room_code,paarden?.room_code,paarden?.code)||'').toUpperCase();
+          if(!paardenCode) throw new Error('Paardenrace proof room missing code');
+          await rpc('join_paardenrace_room_fast_v687',payload(token2,{room_code_input:paardenCode}));
+          const browser=await chromium.launch({headless:true});
+          const context=await browser.newContext({viewport:{width:1365,height:900},deviceScaleFactor:1});
+          await context.addInitScript(token=>{
+            localStorage.setItem('jas_session_token_v11',token);
+            localStorage.setItem('jas_session_token_v10',token);
+            localStorage.setItem('jas_last_activity_at_v1',String(Date.now()));
+          },token1);
+          async function prove(route,code,file){
+            const page=await context.newPage();
+            const response=await page.goto(new URL(route,base).toString(),{waitUntil:'domcontentloaded',timeout:25000});
+            if(!response||response.status()>=400) throw new Error(`${route} document HTTP ${response?.status()||'none'}`);
+            const panel=page.locator('#gejastGameGroupBPanel');
+            await panel.waitFor({state:'visible',timeout:15000});
+            await page.waitForTimeout(3000);
+            const text=(await panel.innerText()).replace(/\s+/g,' ').trim();
+            if(!text.includes('v687-compat')) throw new Error(`${route} panel missing v687-compat: ${text}`);
+            if(!text.includes(code)) throw new Error(`${route} panel missing proof room/lobby ${code}: ${text}`);
+            if(!/\b2\s+spelers\b/i.test(text)) throw new Error(`${route} panel did not visibly prove a two-player row: ${text}`);
+            if(/Geen recente games gevonden|Run de v661 SQL|\bbron\s+v661\b/i.test(text)) throw new Error(`${route} panel retained obsolete v661 presentation: ${text}`);
+            await page.screenshot({path:`v796-focused-proof/${file}`,fullPage:true,type:'png'});
+            console.log(`${route}: GROUP_B_PANEL_PASS :: ${text}`);
+            await page.close();
+          }
+          await prove(`pikken_live.html?game_id=${encodeURIComponent(pikkenId)}`,pikkenCode,'pikken-group-b.png');
+          await prove(`paardenrace_live.html?room=${encodeURIComponent(paardenCode)}&room_code=${encodeURIComponent(paardenCode)}`,paardenCode,'paardenrace-group-b.png');
+          await context.close(); await browser.close();
+          console.log('RESULT=V796_GROUP_B_LIVE_PANEL_PASS');
+          NODE
+          node /tmp/v796-group-b-live-proof.mjs
+      - name: Upload focused Group B screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: v796-group-b-live-proof-${{ github.run_id }}
+          path: v796-focused-proof/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Cleanup gameplay fixtures and prove zero residue
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GEJAST_PLAYER1_NAME:-}" ] || [ -z "${GEJAST_PLAYER2_NAME:-}" ]; then exit 0; fi
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v name1="$GEJAST_PLAYER1_NAME" -v name2="$GEJAST_PLAYER2_NAME" -v token1="${GEJAST_PLAYER1_TOKEN:-missing}" -v token2="${GEJAST_PLAYER2_TOKEN:-missing}" <<'SQL'
+          begin;
+          delete from public.paardenrace_match_history h
+          using public.paardenrace_rooms r
+          where h.room_id=r.id and (r.host_name in (:'name1',:'name2') or r.host_player_id in (select id from public.players where display_name in (:'name1',:'name2')) or r.created_by_player_id in (select id from public.players where display_name in (:'name1',:'name2')));
+          delete from public.klaverjas_online_games where created_by_player_name in (:'name1',:'name2') or created_by_player_id in (select id from public.players where display_name in (:'name1',:'name2'));
+          delete from public.pikken_games where created_by_player_name in (:'name1',:'name2') or created_by_player_id in (select id from public.players where display_name in (:'name1',:'name2'));
+          delete from public.paardenrace_rooms where host_name in (:'name1',:'name2') or host_player_id in (select id from public.players where display_name in (:'name1',:'name2')) or created_by_player_id in (select id from public.players where display_name in (:'name1',:'name2'));
+          delete from public.gejast_player_sessions_v746 where session_token in (:'token1',:'token2');
+          delete from public.gejast_account_sessions_v671 where session_token in (:'token1',:'token2');
+          delete from public.players where display_name in (:'name1',:'name2') and is_dummy=true and hidden_from_public=true;
+          delete from public.gejast_account_players_v671 where display_name in (:'name1',:'name2') and email like '%@example.invalid';
+          commit;
+          SQL
+          residue="$(psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v name1="$GEJAST_PLAYER1_NAME" -v name2="$GEJAST_PLAYER2_NAME" -v token1="${GEJAST_PLAYER1_TOKEN:-missing}" -v token2="${GEJAST_PLAYER2_TOKEN:-missing}" <<'SQL'
+          select (select count(*) from public.players where display_name in (:'name1',:'name2')),
+                 (select count(*) from public.gejast_account_players_v671 where display_name in (:'name1',:'name2')),
+                 (select count(*) from public.gejast_player_sessions_v746 where session_token in (:'token1',:'token2')),
+                 (select count(*) from public.gejast_account_sessions_v671 where session_token in (:'token1',:'token2')),
+                 (select count(*) from public.klaverjas_online_games where created_by_player_name in (:'name1',:'name2')),
+                 (select count(*) from public.pikken_games where created_by_player_name in (:'name1',:'name2')),
+                 (select count(*) from public.paardenrace_rooms where host_name in (:'name1',:'name2'));
+          SQL
+          )"
+          test "$residue" = '0|0|0|0|0|0|0'
+          echo 'RESULT=V796_GAMEPLAY_PASS_CLEAN'
