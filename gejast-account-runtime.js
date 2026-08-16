@@ -231,7 +231,10 @@
     return value.startsWith('./') ? value : './' + value.replace(/^\/+/, '');
   }
   function loginReturnTarget(){
-    try { return safeReturnTarget(new URLSearchParams(location.search).get('return_to') || 'index.html'); } catch (_) { return './index.html'; }
+    try{
+      const scope=String(new URLSearchParams(location.search||'').get('scope')||'').toLowerCase();
+      return scope==='family'||scope==='familie'?'./index.html?scope=family':'./index.html';
+    }catch(_){return './index.html';}
   }
 
   async function bootLoginPage(){
