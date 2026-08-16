@@ -62,10 +62,13 @@ jobs:
             "const seriousConsole=consoleErrors.filter(x=>!/favicon|404 \\(Not Found\\)|net::ERR_ABORTED/i.test(x));",
             "const seriousConsole=consoleErrors.filter(x=>!/favicon|404 \\(Not Found\\)|net::ERR_ABORTED|Failed to load resource: the server responded with a status of (?:400|404)/i.test(x));"
           )
-          old="""  await page.waitForTimeout(7000);
-          const text=await page.locator('body').innerText();
-          if(forbidLoading && /(?:Laden(?:…|\\.\\.\\.)|laden(?:…|\\.\\.\\.)|Stats laden(?:…|\\.\\.\\.)|Actieve spelers laden(?:…|\\.\\.\\.))/i.test(text)) throw new Error(`${path} still visibly loading after 7s`);"""
-          new="""  await page.waitForTimeout(3000);
+          start_marker='await page.waitForTimeout(7000);'
+          end_marker='throw new Error(`${path} still visibly loading after 7s`);'
+          start=s.find(start_marker)
+          end=s.find(end_marker,start)
+          if start < 0 or end < 0: raise SystemExit('expected fixed 7s loading block not found')
+          end += len(end_marker)
+          new="""await page.waitForTimeout(3000);
           const loadingRx=/(?:Laden(?:…|\\.\\.\\.)|laden(?:…|\\.\\.\\.)|Stats laden(?:…|\\.\\.\\.)|Actieve spelers laden(?:…|\\.\\.\\.))/i;
           let text=await page.locator('body').innerText();
           if(forbidLoading){
@@ -76,8 +79,7 @@ jobs:
             }
             if(loadingRx.test(text)) throw new Error(`${path} still visibly loading after bounded 20s settle`);
           }"""
-          if old not in s: raise SystemExit('expected fixed 7s loading block not found')
-          s=s.replace(old,new)
+          s=s[:start]+new+s[end:]
           replacements={
             "['/drinks_stats.html',true,['Drank']]":"['/drinks_stats.html',true,['Drink statistieken']]",
             "['/drinks_speed_stats.html',true,['Drank']]":"['/drinks_speed_stats.html',true,['Snelheid per speler']]",
