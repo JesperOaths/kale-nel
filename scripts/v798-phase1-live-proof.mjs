@@ -76,21 +76,28 @@ async function noSessionMatrix(){
 }
 
 async function invalidTokenProof(){
-  const bad='v798-invalid-session-token';
+  const bad='ffffffffffffffffffffffffffffffffffffffffffffffff';
   const context=await browser.newContext({viewport:{width:1280,height:800}});
   await context.addInitScript(token=>{
     if(location.pathname==='/toepen.html'){
       localStorage.setItem('jas_session_token_v11',token);
+      sessionStorage.setItem('jas_session_token_v11',token);
       localStorage.setItem('jas_last_activity_at_v1',String(Date.now()));
+      sessionStorage.setItem('jas_last_activity_at_v1',String(Date.now()));
     }
   },bad);
   const page=await context.newPage();
   await committed(page,new URL('toepen.html',base).toString());
   await page.waitForURL(u=>u.pathname==='/login.html',{timeout:15000});
-  const remaining=await page.evaluate(()=>localStorage.getItem('jas_session_token_v11'));
-  assert(!remaining,'invalid stored session token was not cleared');
+  await page.waitForTimeout(1200);
+  const remaining=await page.evaluate(()=>({
+    local:localStorage.getItem('jas_session_token_v11')||'',
+    session:sessionStorage.getItem('jas_session_token_v11')||'',
+    recovered:(()=>{try{return window.GEJAST_CONFIG?.getPlayerSessionToken?.()||'';}catch{return '';}})()
+  }));
+  assert(!remaining.local&&!remaining.session&&!remaining.recovered,`invalid stored session token was not fully cleared: ${JSON.stringify(remaining)}`);
   await context.close();
-  console.log('AUTH_INVALID_SESSION_PASS token_cleared=true');
+  console.log('AUTH_INVALID_SESSION_PASS canonical_shape_rejected=true token_cleared_both_stores=true');
 }
 
 async function loginThroughUi(name,pin,label){
@@ -214,7 +221,7 @@ try{
   await crossScopeDenial(s1);
   await s1.context.close();
   await s2.context.close();
-  console.log('RESULT=V798_PHASE1_AUTH_AND_SURFACES_PASS');
+  console.log('RESULT=V800_PHASE1_AUTH_AND_SURFACES_PASS');
 }catch(err){
   fail(err?.stack||err?.message||String(err));
 }finally{
