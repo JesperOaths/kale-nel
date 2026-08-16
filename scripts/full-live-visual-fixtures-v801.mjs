@@ -20,6 +20,9 @@ const safeMessage = (value) => String(value?.message || value || 'unknown').repl
 const inFilter = (values) => `in.(${values.map((value) => String(value)).join(',')})`;
 
 function fixtureNames() {
+  // GITHUB_RUN_ATTEMPT changes on every rerun. Together with GITHUB_RUN_ID this
+  // makes each provisioning attempt a fresh namespace, so provision never needs
+  // a speculative cleanup/read sweep before the first write.
   const suffix = `${process.env.GITHUB_RUN_ID || 'local'}${process.env.GITHUB_RUN_ATTEMPT || '1'}`;
   return {
     friend1: String(process.env.GEJAST_PLAYER1_NAME || `VisualA_${suffix}`).trim(),
@@ -158,11 +161,17 @@ async function login(displayName, pin, scope) {
 async function provision() {
   const names = fixtureNames();
   const nameList = [names.friend1, names.friend2, names.family];
+  if (new Set(nameList.map((name) => name.toLowerCase())).size !== 3) throw new Error('Visual-audit fixture names must be distinct');
   const pins = { friend1: '4826', friend2: '7314', family: '2597' };
   Object.values(pins).forEach((pin) => console.log(`::add-mask::${pin}`));
+  // Export names before the first write so the workflow's always() cleanup step can
+  // target a partially provisioned attempt if the insert succeeds but a later login fails.
   appendGithubEnv({ GEJAST_PLAYER1_NAME: names.friend1, GEJAST_PLAYER2_NAME: names.friend2, GEJAST_FAMILY_NAME: names.family });
 
-  await cleanupState(nameList, { verify: true });
+  // Do not perform a cleanup/read sweep before provisioning. The run-id + attempt-id
+  // namespace is unique, so such a sweep cannot find legitimate prior state and only
+  // multiplies database pressure before the required write. Cleanup remains unconditional
+  // after the workflow step and still verifies zero residue.
   const rows = [
     { slug: `visual-a-${names.friend1.toLowerCase()}`, display_name: names.friend1, active: true, pin_hash: pinHash(pins.friend1), approved: true, hidden_from_public: true, is_dummy: true, site_scope: 'friends' },
     { slug: `visual-b-${names.friend2.toLowerCase()}`, display_name: names.friend2, active: true, pin_hash: pinHash(pins.friend2), approved: true, hidden_from_public: true, is_dummy: true, site_scope: 'friends' },
