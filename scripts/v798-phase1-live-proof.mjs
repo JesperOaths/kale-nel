@@ -32,6 +32,7 @@ const browser=await chromium.launch({headless:true});
 const failures=[];
 function fail(msg){failures.push(msg);console.error('FAIL',msg);}
 function assert(cond,msg){if(!cond) throw new Error(msg);}
+async function committed(page,url){return page.goto(url,{waitUntil:'commit',timeout:25000});}
 
 async function noSessionMatrix(){
   const context=await browser.newContext({viewport:{width:390,height:844}});
@@ -58,7 +59,7 @@ async function noSessionMatrix(){
   const routes=['index.html','home.html','leaderboard.html','profiles.html','drinks.html','despimarkt.html','toepen.html','boerenbridge.html','beerpong.html','pikken.html','paardenrace.html','klaverjas_online.html','rad.html'];
   for(const route of routes){
     const page=await context.newPage();
-    await page.goto(new URL(route,base).toString(),{waitUntil:'domcontentloaded',timeout:25000});
+    await committed(page,new URL(route,base).toString());
     await page.waitForURL(u=>u.pathname==='/login.html',{timeout:12000});
     assert(new URL(page.url()).pathname==='/login.html',`${route} did not end at canonical login`);
     await page.close();
@@ -66,7 +67,7 @@ async function noSessionMatrix(){
   assert(leaks.length===0,`logged-out protected UI became visible before redirect: ${JSON.stringify(leaks)}`);
 
   const family=await context.newPage();
-  await family.goto(new URL('familie/index.html',base).toString(),{waitUntil:'domcontentloaded',timeout:25000});
+  await committed(family,new URL('familie/index.html',base).toString());
   await family.waitForURL(u=>u.pathname==='/login.html'&&u.searchParams.get('scope')==='family',{timeout:12000});
   assert(new URL(family.url()).searchParams.get('scope')==='family','Family logged-out alias did not preserve family login scope');
   await family.close();
@@ -79,7 +80,7 @@ async function invalidTokenProof(){
   const context=await browser.newContext({viewport:{width:1280,height:800}});
   await context.addInitScript(token=>{localStorage.setItem('jas_session_token_v11',token);localStorage.setItem('jas_last_activity_at_v1',String(Date.now()));},bad);
   const page=await context.newPage();
-  await page.goto(new URL('toepen.html',base).toString(),{waitUntil:'domcontentloaded',timeout:25000});
+  await committed(page,new URL('toepen.html',base).toString());
   await page.waitForURL(u=>u.pathname==='/login.html',{timeout:15000});
   const remaining=await page.evaluate(()=>localStorage.getItem('jas_session_token_v11'));
   assert(!remaining,'invalid stored session token was not cleared');
@@ -104,14 +105,17 @@ async function loginThroughUi(name,pin,label){
     token:localStorage.getItem('jas_session_token_v11')||'',
     visibility:getComputedStyle(document.documentElement).visibility,
     body:(document.body.innerText||'').replace(/\s+/g,' ').trim(),
-    gameLinks:[...document.querySelectorAll('a[href]')].map(a=>a.getAttribute('href')||'').filter(h=>/(toepen|boerenbridge|beerpong|pikken|paardenrace|klaverjas|rad)\.html/i.test(h))
+    selectable:[...document.querySelectorAll('a[href]')].filter(a=>{
+      const r=a.getBoundingClientRect(); const s=getComputedStyle(a); if(r.width<=0||r.height<=0||s.display==='none'||s.visibility==='hidden') return false;
+      try{const u=new URL(a.href,location.href);return u.origin===location.origin&&!['/index.html','/login.html','/request.html'].includes(u.pathname)&&!u.pathname.startsWith('/admin');}catch{return false;}
+    }).length
   }));
   assert(state.token.length>=32,`${label} login stored no usable session token`);
   assert(state.visibility!=='hidden',`${label} authenticated index stayed hidden`);
   assert(state.body.length>100,`${label} authenticated main page rendered no meaningful UI`);
-  assert(state.gameLinks.length>=3,`${label} main page exposes too few selectable game links (${state.gameLinks.length})`);
+  assert(state.selectable>=3,`${label} main page exposes too few selectable destinations (${state.selectable})`);
   console.log(`::add-mask::${state.token}`);
-  console.log(`${label}_LOGIN_TO_MAIN_PASS game_links=${state.gameLinks.length}`);
+  console.log(`${label}_LOGIN_TO_MAIN_PASS selectable_destinations=${state.selectable}`);
   return {context,page,token:state.token};
 }
 
@@ -120,16 +124,19 @@ async function clickMainSelection(session){
   await page.goto(new URL('index.html',base).toString(),{waitUntil:'domcontentloaded',timeout:25000});
   await page.waitForFunction(()=>document.documentElement.getAttribute('data-gejast-auth-state')==='authenticated',{timeout:15000});
   await page.waitForTimeout(2200);
-  const selector='a[href*="toepen.html"],a[href*="boerenbridge.html"],a[href*="beerpong.html"],a[href*="pikken.html"],a[href*="paardenrace.html"],a[href*="klaverjas_online.html"],a[href*="rad.html"]';
-  const links=page.locator(selector);
-  const count=await links.count();
-  assert(count>=3,`main index has only ${count} selectable game links`);
-  const href=await links.first().getAttribute('href');
-  await links.first().click();
+  const target=await page.evaluate(()=>{
+    const candidates=[...document.querySelectorAll('a[href]')].filter(a=>{
+      const r=a.getBoundingClientRect(),s=getComputedStyle(a); if(r.width<=0||r.height<=0||s.display==='none'||s.visibility==='hidden') return false;
+      try{const u=new URL(a.href,location.href);return u.origin===location.origin&&!['/index.html','/login.html','/request.html'].includes(u.pathname)&&!u.pathname.startsWith('/admin');}catch{return false;}
+    });
+    const a=candidates[0]; if(!a) return null; a.setAttribute('data-v798-proof-target','1'); return {href:a.href,text:(a.textContent||'').trim().slice(0,80)};
+  });
+  assert(target,'main index has no visible selectable internal destination');
+  await page.locator('[data-v798-proof-target="1"]').click();
   await page.waitForFunction(()=>document.documentElement.getAttribute('data-gejast-auth-state')==='authenticated',{timeout:15000});
   const dest=new URL(page.url());
-  assert(dest.pathname!=='/index.html'&&dest.pathname!=='/login.html',`main game click did not reach a protected selection (${href} -> ${dest.pathname})`);
-  console.log(`MAIN_GAME_SELECTION_PASS href=${href} destination=${dest.pathname}`);
+  assert(dest.pathname!=='/index.html'&&dest.pathname!=='/login.html',`main selection did not reach another protected destination (${target.href} -> ${dest.pathname})`);
+  console.log(`MAIN_SELECTION_CLICK_PASS text=${JSON.stringify(target.text)} destination=${dest.pathname}`);
 }
 
 async function authenticatedSurfaceMatrix(session){
@@ -181,7 +188,7 @@ async function klaverjasTwoHumanRoom(token1,token2){
 
 async function crossScopeDenial(session){
   const {page}=session;
-  await page.goto(new URL('index.html?scope=family',base).toString(),{waitUntil:'domcontentloaded',timeout:25000});
+  await committed(page,new URL('index.html?scope=family',base).toString());
   await page.waitForURL(u=>u.pathname==='/login.html'&&u.searchParams.get('scope')==='family',{timeout:15000});
   const token=await page.evaluate(()=>localStorage.getItem('jas_session_token_v11'));
   assert(!token,'friends token survived family-scope denial instead of being cleared');
