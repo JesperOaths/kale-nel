@@ -1,0 +1,64 @@
+name: v800 token-shape build
+
+on:
+  push:
+    branches: [agent/v800-session-token-shape]
+    paths: ['.github/workflows/v800-token-shape-build.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/v800-session-token-shape
+          fetch-depth: 1
+      - name: Build v800 token-shape repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('fs');
+          fs.writeFileSync('VERSION','v800\n');
+          let cfg=fs.readFileSync('gejast-config.js','utf8');
+          const old=`function looksLikePlayerSessionToken(value){\n  const token = String(value || '').trim();\n  if (!token || token.length < 24) return false;\n  if (/^vis[_-]/i.test(token)) return false;\n  if (/^visit[_-]/i.test(token)) return false;\n  if (/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$/i.test(token)) return false;\n  if (/^\\d{10,}$/.test(token)) return false;\n  return /^[A-Za-z0-9._~+/=-]{16,}$/.test(token);\n}`;
+          const next=`function looksLikePlayerSessionToken(value){\n  const token = String(value || '').trim();\n  return /^[0-9a-f]{48}$/i.test(token);\n}`;
+          if(!cfg.includes(old)) throw new Error('looksLikePlayerSessionToken owner changed unexpectedly');
+          cfg=cfg.replace(old,next);
+          fs.writeFileSync('gejast-config.js',cfg);
+          NODE
+          node fix-version-drift.mjs
+          node <<'NODE'
+          const fs=require('fs');
+          const beta=JSON.parse(fs.readFileSync('beta-readiness.json','utf8'));
+          beta.site_version='release candidate v800 / live v799'; beta.last_updated='2026-08-16';
+          if(beta.deployment_identity){beta.deployment_identity.live_version='v799';beta.deployment_identity.release_candidate_version='v800';}
+          fs.writeFileSync('beta-readiness.json',JSON.stringify(beta,null,2)+'\n');
+          const gameplay=JSON.parse(fs.readFileSync('gameplay-acceptance.json','utf8')); gameplay.site_version='v800'; gameplay.last_updated='2026-08-16'; fs.writeFileSync('gameplay-acceptance.json',JSON.stringify(gameplay,null,2)+'\n');
+          const checklist=JSON.parse(fs.readFileSync('beta-live-write-checklist.json','utf8')); checklist.site_version='v800'; fs.writeFileSync('beta-live-write-checklist.json',JSON.stringify(checklist,null,2)+'\n');
+          const cert=JSON.parse(fs.readFileSync('release-certification.json','utf8'));
+          cert.current_version='v800'; cert.status='REVALIDATION_REQUIRED'; cert.current_audit_issue=153;
+          cert.reason='v800 fixes a session-token recovery false positive proven by the v799 live invalid-session diagnostic. The shared getPlayerSessionToken recovery heuristic accepted arbitrary 24+ character audit strings such as membership_cache_refreshed and mirrored them into canonical session-token keys after a rejected token had already been cleared. Production evidence shows all 158 player-session rows use exactly 48 hexadecimal characters, so v800 constrains recovered player-session tokens to that deployed contract. Fresh exact-main Phase-1 live auth/gameplay proof remains required.';
+          fs.writeFileSync('release-certification.json',JSON.stringify(cert,null,2)+'\n');
+          fs.writeFileSync('check-v800-session-token-shape.mjs',`#!/usr/bin/env node\nimport assert from 'node:assert/strict';\nimport fs from 'node:fs';\nconst version=fs.readFileSync('VERSION','utf8').trim();\nconst current=Number((version.match(/\\d+/)||['0'])[0]);\nassert.ok(current>=800,'v800 session-token-shape contract requires VERSION v800 or newer');\nconst cfg=fs.readFileSync('gejast-config.js','utf8');\nconst owner=cfg.match(/function looksLikePlayerSessionToken\\(value\\)\\{[\\s\\S]*?\\n\\}/)?.[0]||'';\nassert(owner.includes('/^[0-9a-f]{48}$/i'),'player session recovery must require the deployed 48-hex token shape');\nassert(!owner.includes('token.length < 24'),'legacy permissive length heuristic must be removed');\nassert(!owner.includes('A-Za-z0-9._~+/=-'),'legacy arbitrary-string token charset heuristic must be removed');\nconst rx=/^[0-9a-f]{48}$/i;\nassert(rx.test('0123456789abcdef0123456789abcdef0123456789abcdef'),'canonical 48-hex token must remain accepted');\nfor(const invalid of ['membership_cache_refreshed','v799-invalid-session-token','000000000000000000000000','2026-08-16T10:50:57.761Z']) assert(!rx.test(invalid),\`non-token recovery string must be rejected: \${invalid}\`);\nconsole.log('v800 player-session token shape contract ok.');\n`);
+          const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+          const marker='node check-v799-auth-storage-cleanup.mjs';
+          const next='node check-v800-session-token-shape.mjs';
+          if(!pkg.scripts['verify:static'].includes(next)){
+            if(!pkg.scripts['verify:static'].includes(marker)) throw new Error('v799 verifier marker missing');
+            pkg.scripts['verify:static']=pkg.scripts['verify:static'].replace(marker,marker+' && '+next);
+          }
+          fs.writeFileSync('package.json',JSON.stringify(pkg,null,2)+'\n');
+          NODE
+      - name: Commit deterministic v800 repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: constrain recovered player session tokens'
+          git push origin HEAD:agent/v800-session-token-shape
