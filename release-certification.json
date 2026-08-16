@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_version": "v796",
+  "current_version": "v797",
   "status": "REVALIDATION_REQUIRED",
   "prior_certification": {
     "version": "v792",
@@ -8,5 +8,5 @@
     "artifact": "final-acceptance-v792.json"
   },
   "current_audit_issue": 153,
-  "reason": "v796 preserves the v795 watermark and v794 gameplay/status repairs while replacing the sole publicly published exact-version Klaverjas legacy live page with a canonical compatibility redirect and making public exact-version HTML visible to version-drift verification. Exact-main v796 deployment and complete visual revalidation remain required. The concurrent exact-v795 feature/game campaigns were incomplete under production load; a subsequent isolated authenticated Klaverjas ladder probe settled normally with get_public_ladder_page_scoped completing in about 540 ms and all controlled fixture residue cleaned to zero, so no ladder product defect is claimed. Fresh serial feature/game revalidation remains required before PASS."
+  "reason": "v797 hardens visible watermark version synchronization after the exact-v796 feature proof exposed 14 active v757 fallback labels using an encoding-damaged question-mark separator that the prior drift checker/fixer did not recognize. The repair broadens separator matching, synchronizes all active frontend owners to v797, and requires fresh exact-main deployment/visual/feature revalidation before PASS. Gameplay owners are unchanged."
 }

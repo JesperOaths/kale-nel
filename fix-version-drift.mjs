@@ -56,7 +56,7 @@ for (const file of walk(root)) {
     .replace(/(GEJAST_PAGE_VERSION\s*=\s*['"])v(\d+)(['"])/gi, (match, prefix, digits, suffix) => preserveStaticV762 && digits === '762' ? match : `${prefix}${rootVersion}${suffix}`)
     .replace(/(GEJAST_SITE_VERSION\s*=\s*['"])v(\d+)(['"])/gi, (match, prefix, digits, suffix) => preserveStaticV762 && digits === '762' ? match : `${prefix}${rootVersion}${suffix}`)
     .replace(/(VERSION\s*:\s*['"])v(\d+)(['"])/gi, (match, prefix, digits, suffix) => preserveStaticV762 && digits === '762' ? match : `${prefix}${rootVersion}${suffix}`)
-    .replace(/v(\d+)\s*[-–—.·]?\s*Made by Bruis/gi, (match, digits) => preserveStaticV762 && digits === '762' ? match : `${rootVersion}  -  Made by Bruis`);
+    .replace(/v(\d+)\s*[^\w\r\n<>]{0,12}\s*Made by Bruis/gi, (match, digits) => preserveStaticV762 && digits === '762' ? match : `${rootVersion}  -  Made by Bruis`);
   if (after !== before) {
     fs.writeFileSync(file, after, 'utf8');
     changed += 1;

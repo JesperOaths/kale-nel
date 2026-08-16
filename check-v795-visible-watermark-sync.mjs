@@ -9,8 +9,9 @@ assert.ok(currentVersion>=795,'v795 watermark repair contract requires VERSION v
 
 const checker = fs.readFileSync('check-version-drift.mjs','utf8');
 const fixer = fs.readFileSync('fix-version-drift.mjs','utf8');
-assert(checker.includes('[-–—.·]?'),'version drift checker must recognize the middle-dot watermark separator');
-assert(fixer.includes('[-–—.·]?'),'version drift fixer must recognize the middle-dot watermark separator');
+const supportsMiddleDot = body => body.includes('[-–—.·]?') || body.includes('[^\\w\\r\\n<>]{0,12}');
+assert(supportsMiddleDot(checker),'version drift checker must recognize the middle-dot watermark separator');
+assert(supportsMiddleDot(fixer),'version drift fixer must recognize the middle-dot watermark separator');
 
 const representative = ['home.html','login.html','leaderboard.html','beerpong.html','boerenbridge.html','klaverjas_quick_stats_v596_repo.html','klaverjas_scorer_v596_repo_ready.html','pikken_spectator.html'];
 for (const file of representative) {
