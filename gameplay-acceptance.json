@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "site_version": "v796",
+  "site_version": "v797",
   "last_updated": "2026-08-16",
   "scope": "Gameplay acceptance is tracked separately from general beta readiness. Deterministic engine proof is not labeled as live multiplayer proof, and route/RPC reachability is not labeled as play-to-completion proof. Player-count limits are only recorded as exact when current shipped source or deterministic acceptance grounds them; unknown backend-owned limits remain explicitly unknown.",
   "live_write_approval": {
