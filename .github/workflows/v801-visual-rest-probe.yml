@@ -1,0 +1,137 @@
+name: v801 visual REST fixture probe
+
+on:
+  push:
+    branches:
+      - proof/v801-visual-rest-probe
+    paths:
+      - '.github/workflows/v801-visual-rest-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  rest-fixtures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - name: Check out exact proof root
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+
+      - name: Prepare disposable names and bcrypt PIN hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_SERVICE_ROLE_KEY:-}" || { echo 'SUPABASE_SERVICE_ROLE_KEY missing'; exit 1; }
+          suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
+          echo "VISUAL_NAME1=RestVisualA_${suffix}" >> "$GITHUB_ENV"
+          echo "VISUAL_NAME2=RestVisualB_${suffix}" >> "$GITHUB_ENV"
+          echo "VISUAL_FAMILY=RestVisualFamily_${suffix}" >> "$GITHUB_ENV"
+          python3 <<'PY'
+          import crypt, os
+          pins={'VISUAL_PIN1':'4826','VISUAL_PIN2':'7314','VISUAL_FAMILY_PIN':'2597'}
+          with open(os.environ['GITHUB_ENV'],'a',encoding='utf-8') as f:
+              for key,pin in pins.items():
+                  hashed=crypt.crypt(pin, crypt.mksalt(crypt.METHOD_BLOWFISH)).replace('$2b$','$2a$',1)
+                  print(f'::add-mask::{pin}')
+                  print(f'::add-mask::{hashed}')
+                  f.write(f'{key}={pin}\n{key}_HASH={hashed}\n')
+          PY
+
+      - name: Create current-login sessions through PostgREST and clean them again
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('fs');
+          const config=fs.readFileSync('gejast-config.js','utf8');
+          const supabaseUrl=config.match(/SUPABASE_URL:\s*'([^']+)'/)?.[1];
+          const publishable=config.match(/SUPABASE_PUBLISHABLE_KEY:\s*'([^']+)'/)?.[1];
+          const service=process.env.SUPABASE_SERVICE_ROLE_KEY;
+          if(!supabaseUrl || !publishable || !service) throw new Error('Supabase REST configuration missing');
+
+          const users=[
+            {name:process.env.VISUAL_NAME1, slug:`rest-visual-a-${process.env.GITHUB_RUN_ID}`, pin:process.env.VISUAL_PIN1, hash:process.env.VISUAL_PIN1_HASH, scope:'friends'},
+            {name:process.env.VISUAL_NAME2, slug:`rest-visual-b-${process.env.GITHUB_RUN_ID}`, pin:process.env.VISUAL_PIN2, hash:process.env.VISUAL_PIN2_HASH, scope:'friends'},
+            {name:process.env.VISUAL_FAMILY, slug:`rest-visual-family-${process.env.GITHUB_RUN_ID}`, pin:process.env.VISUAL_FAMILY_PIN, hash:process.env.VISUAL_FAMILY_PIN_HASH, scope:'family'}
+          ];
+          const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
+          const headers=(key,extra={})=>({apikey:key,Authorization:`Bearer ${key}`,'Content-Type':'application/json',Accept:'application/json',...extra});
+          async function request(path,{key=service,method='GET',body,prefer,timeoutMs=12000,retries=3}={}){
+            let last;
+            for(let attempt=1;attempt<=retries;attempt++){
+              const controller=new AbortController();
+              const timer=setTimeout(()=>controller.abort(),timeoutMs);
+              try{
+                const res=await fetch(`${supabaseUrl}/rest/v1/${path}`,{method,headers:headers(key,prefer?{Prefer:prefer}:{}),body:body===undefined?undefined:JSON.stringify(body),signal:controller.signal});
+                const text=await res.text();
+                let data=null; try{data=text?JSON.parse(text):null;}catch{data=text;}
+                if(!res.ok){
+                  const msg=typeof data==='string'?data:(data?.message||data?.error||data?.details||data?.hint||`HTTP ${res.status}`);
+                  const e=new Error(`${method} ${path}: ${msg}`); e.status=res.status;
+                  throw e;
+                }
+                return data;
+              }catch(err){
+                last=err;
+                const transient=err?.name==='AbortError' || !err?.status || err.status===429 || err.status>=500;
+                if(!transient || attempt===retries) throw err;
+                console.log(`REST ${method} ${path} transient attempt ${attempt}/${retries}: ${err.message}`);
+                await sleep(attempt*2500);
+              }finally{clearTimeout(timer);}
+            }
+            throw last;
+          }
+          const eq=(v)=>encodeURIComponent(String(v));
+          async function cleanup(){
+            for(const u of users){
+              await request(`gejast_active_player_metadata_v679?player_name=eq.${eq(u.name)}`,{method:'DELETE'}).catch(e=>console.log(`metadata cleanup warning ${u.name}: ${e.message}`));
+              await request(`gejast_player_sessions_v746?display_name=eq.${eq(u.name)}`,{method:'DELETE'}).catch(e=>console.log(`session cleanup warning ${u.name}: ${e.message}`));
+              await request(`players?display_name=eq.${eq(u.name)}&is_dummy=eq.true&hidden_from_public=eq.true`,{method:'DELETE'}).catch(e=>console.log(`player cleanup warning ${u.name}: ${e.message}`));
+            }
+          }
+          async function assertZero(){
+            const residue=[];
+            for(const u of users){
+              const players=await request(`players?select=id&display_name=eq.${eq(u.name)}`);
+              const sessions=await request(`gejast_player_sessions_v746?select=session_token&display_name=eq.${eq(u.name)}`);
+              const meta=await request(`gejast_active_player_metadata_v679?select=id&player_name=eq.${eq(u.name)}`);
+              residue.push((players?.length||0)+(sessions?.length||0)+(meta?.length||0));
+            }
+            if(residue.some(Boolean)) throw new Error(`REST fixture residue remained: ${residue.join('|')}`);
+            console.log('RESULT=V801_VISUAL_REST_ZERO_RESIDUE_PASS');
+          }
+
+          let mainError=null;
+          try{
+            await cleanup();
+            const payload=users.map(u=>({slug:u.slug,display_name:u.name,active:true,pin_hash:u.hash,approved:true,hidden_from_public:true,is_dummy:true,site_scope:u.scope}));
+            const rows=await request('players?select=id,display_name,site_scope',{method:'POST',body:payload,prefer:'return=representation'});
+            if(!Array.isArray(rows)||rows.length!==3) throw new Error(`Expected 3 REST-created players, got ${Array.isArray(rows)?rows.length:'non-array'}`);
+            console.log('RESULT=V801_VISUAL_REST_CREATE_PASS');
+
+            for(const u of users){
+              const login=await request('rpc/account_login_v687',{key:publishable,method:'POST',body:{display_name_input:u.name,entered_pin:u.pin,site_scope_input:u.scope},timeoutMs:15000,retries:3});
+              const token=String(login?.session_token||'');
+              if(!/^[0-9a-f]{48}$/.test(token)) throw new Error(`${u.name} did not receive canonical session token`);
+              const state=await request('rpc/account_public_state_v687',{key:publishable,method:'POST',body:{session_token_input:token},timeoutMs:15000,retries:3});
+              if(!state?.ok || String(state?.display_name||'')!==u.name) throw new Error(`${u.name} public state did not resolve current session`);
+            }
+            console.log('RESULT=V801_VISUAL_REST_LOGIN_PASS');
+          }catch(err){
+            mainError=err;
+            console.error(`REST fixture probe failure: ${err?.stack||err}`);
+          }finally{
+            try{ await cleanup(); await assertZero(); }
+            catch(cleanErr){ console.error(`REST cleanup failure: ${cleanErr?.stack||cleanErr}`); if(!mainError) mainError=cleanErr; }
+          }
+          if(mainError) process.exit(1);
+          console.log('RESULT=V801_VISUAL_REST_FIXTURE_PROBE_PASS');
+          NODE
