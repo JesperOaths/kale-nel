@@ -1,0 +1,81 @@
+name: Diagnose v799 rejected-token recovery
+
+on:
+  push:
+    branches: [proof/v798-phase1-live]
+    paths: ['.github/workflows/diag-v799-invalid-token-recovery.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: 73a791429e90fe876cff7a143cf37bc3787cacb4
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install isolated Chromium
+        run: |
+          npm ci
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Trace rejected token through protected-to-login navigation
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+          const bad='v799-invalid-session-token';
+          const browser=await chromium.launch({headless:true});
+          const context=await browser.newContext({viewport:{width:1280,height:800}});
+          const writes=[];
+          await context.exposeBinding('__traceTokenWrite',(_source,event)=>writes.push(event));
+          await context.addInitScript(token=>{
+            const original=Storage.prototype.setItem;
+            Storage.prototype.setItem=function(key,value){
+              try{
+                if(String(value||'').includes(token)){
+                  window.__traceTokenWrite({path:location.pathname,key:String(key),storage:this===localStorage?'local':'session',stack:new Error().stack?.split('\n').slice(1,5).join(' | ')||''});
+                }
+              }catch(_){ }
+              return original.call(this,key,value);
+            };
+            if(location.pathname==='/toepen.html'){
+              localStorage.setItem('jas_session_token_v11',token);
+              localStorage.setItem('jas_last_activity_at_v1',String(Date.now()));
+            }
+          },bad);
+          const page=await context.newPage();
+          const consoleEvents=[];
+          page.on('console',m=>consoleEvents.push(`${m.type()}:${m.text()}`));
+          page.on('pageerror',e=>consoleEvents.push(`pageerror:${e.message}`));
+          await page.goto('https://kalenel.nl/toepen.html',{waitUntil:'commit',timeout:25000});
+          await page.waitForURL(u=>u.pathname==='/login.html',{timeout:15000});
+          await page.waitForTimeout(3000);
+          const snapshot=await page.evaluate(token=>{
+            function dump(storage){
+              const out={};
+              for(let i=0;i<storage.length;i++){
+                const k=storage.key(i); const v=storage.getItem(k)||'';
+                if(v.includes(token)||/session|token|account|login|player|gejast|jas/i.test(k||'')) out[k]=v.includes(token)?`<BAD_TOKEN:${v.length}>`:v.slice(0,180);
+              }
+              return out;
+            }
+            return {
+              path:location.pathname,
+              authState:document.documentElement.getAttribute('data-gejast-auth-state'),
+              local:dump(localStorage),
+              session:dump(sessionStorage),
+              getPlayerSessionToken:(()=>{try{return window.GEJAST_CONFIG?.getPlayerSessionToken?.()||'';}catch(e){return `ERR:${e.message}`;}})()
+            };
+          },bad);
+          console.log('SNAPSHOT',JSON.stringify(snapshot,null,2));
+          console.log('TOKEN_WRITES',JSON.stringify(writes,null,2));
+          console.log('CONSOLE',JSON.stringify(consoleEvents,null,2));
+          await browser.close();
+          NODE
