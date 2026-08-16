@@ -20,6 +20,7 @@ if (!supabaseUrl || !publishableKey) throw new Error('Could not resolve checked-
 const state = { pikkenId: '', paardenCode: '', klaverId: '', klaverCode: '' };
 const failures = [];
 const safe = (value) => String(value?.message || value || 'unknown').replaceAll(token1, '[TOKEN1]').replaceAll(token2, '[TOKEN2]');
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function rpc(name, payload = {}) {
   const controller = new AbortController();
@@ -43,9 +44,13 @@ const tokenPayload = (token, extra = {}) => ({ session_token: token, session_tok
 const gameId = (x) => String(x?.game?.id || x?.game_id || x?.id || '').trim();
 const lobbyCode = (x) => String(x?.game?.lobby_code || x?.lobby_code || x?.code || '').trim();
 const roomCode = (x) => String(x?.room?.room_code || x?.room_code || x?.code || '').trim().toUpperCase();
+const pikkenPhase = (x) => String(x?.game?.state?.phase || x?.state?.phase || x?.game?.status || x?.status || '').trim().toLowerCase();
+const paardenStage = (x) => String(x?.room?.stage || x?.stage || '').trim().toLowerCase();
 
 async function setupOnlineRooms() {
-  const pikken = await rpc('pikken_create_lobby_fast_v687', tokenPayload(token1, { config_input: { penalty_mode: 'wrong_loses', start_dice: 6, final_certification: true } }));
+  // One die makes the two-player completion proof deterministic: the first resolved
+  // challenge removes exactly one player's last die and must finish the match.
+  const pikken = await rpc('pikken_create_lobby_fast_v687', tokenPayload(token1, { config_input: { penalty_mode: 'wrong_loses', start_dice: 1, final_certification: true } }));
   state.pikkenId = gameId(pikken);
   const pCode = lobbyCode(pikken);
   if (!state.pikkenId || !pCode) throw new Error('Pikken certification room create returned no id/code');
@@ -185,11 +190,108 @@ async function browserAcceptance() {
   }
 }
 
+async function completePikkenNaturally() {
+  let s1 = await rpc('pikken_set_ready_scoped', tokenPayload(token1, { game_id_input: state.pikkenId, ready_input: true }));
+  let s2 = await rpc('pikken_set_ready_scoped', tokenPayload(token2, { game_id_input: state.pikkenId, ready_input: true }));
+  if (!s1?.viewer?.is_ready || !s2?.viewer?.is_ready) throw new Error('Pikken completion: both players did not become ready');
+
+  let started = await rpc('pikken_start_game_scoped', tokenPayload(token1, { game_id_input: state.pikkenId }));
+  if (pikkenPhase(started) !== 'bidding') throw new Error(`Pikken completion: expected bidding after start, got ${pikkenPhase(started) || 'unknown'}`);
+  if (Number(started?.viewer?.dice_count || 0) !== 1) throw new Error('Pikken completion: certification host did not start with exactly one die');
+
+  const bid = await rpc('pikken_place_bid_scoped', tokenPayload(token1, { game_id_input: state.pikkenId, bid_count_input: 1, bid_face_input: 1 }));
+  if (!bid?.game?.state?.bid) throw new Error('Pikken completion: first legal bid was not stored');
+
+  const resolved = await rpc('pikken_reject_bid_scoped', tokenPayload(token2, { game_id_input: state.pikkenId }));
+  if (pikkenPhase(resolved) !== 'finished') throw new Error(`Pikken completion: one-die two-player challenge did not finish match; phase=${pikkenPhase(resolved) || 'unknown'}`);
+  const winnerId = resolved?.game?.state?.winner_id;
+  const alive = Array.isArray(resolved?.players) ? resolved.players.filter((p) => p?.alive && Number(p?.dice_count || 0) > 0) : [];
+  if (!winnerId || alive.length !== 1) throw new Error(`Pikken completion: invalid terminal winner/alive state winner=${winnerId || 'none'} alive=${alive.length}`);
+
+  const reread = await rpc('pikken_get_state_scoped', tokenPayload(token2, { game_id_input: state.pikkenId, game_id: state.pikkenId, lobby_code_input: null }));
+  if (pikkenPhase(reread) !== 'finished' || String(reread?.game?.state?.winner_id || '') !== String(winnerId)) {
+    throw new Error('Pikken completion: finished winner did not persist on independent reread');
+  }
+  console.log(`Pikken natural completion PASS: winner_id=${winnerId}`);
+}
+
+async function completePaardenraceNaturally() {
+  // Mirror the shipped lobby RPC shapes: save choice, host verification, ready, start.
+  await rpc('update_paardenrace_room_choice_safe', tokenPayload(token1, { room_code_input: state.paardenCode, selected_suit_input: 'hearts', wager_bakken_input: 1, ready_input: false }));
+  await rpc('update_paardenrace_room_choice_safe', tokenPayload(token2, { room_code_input: state.paardenCode, selected_suit_input: 'spades', wager_bakken_input: 1, ready_input: false }));
+  await rpc('verify_paardenrace_wager_safe', tokenPayload(token1, { room_code_input: state.paardenCode, target_player_name_input: name1 }));
+  await rpc('verify_paardenrace_wager_safe', tokenPayload(token1, { room_code_input: state.paardenCode, target_player_name_input: name2 }));
+  await rpc('set_paardenrace_ready_safe', tokenPayload(token1, { room_code_input: state.paardenCode, ready_input: true }));
+  const ready = await rpc('set_paardenrace_ready_safe', tokenPayload(token2, { room_code_input: state.paardenCode, ready_input: true }));
+  const players = Array.isArray(ready?.players) ? ready.players : [];
+  if (players.length !== 2 || players.some((p) => !p?.is_ready || !p?.wager_verified)) {
+    throw new Error('Paardenrace completion: verified/ready two-player lobby invariant failed');
+  }
+
+  const countdown = await rpc('start_paardenrace_countdown_safe', tokenPayload(token1, { room_code_input: state.paardenCode }));
+  if (paardenStage(countdown) !== 'countdown') throw new Error(`Paardenrace completion: expected countdown, got ${paardenStage(countdown) || 'unknown'}`);
+  await sleep(5600);
+
+  // Exact browser helper payload shape includes both session token names + site_scope_input;
+  // v792q specifically guarantees this resolves to the current room pipeline.
+  let race = await rpc('tick_paardenrace_room_safe', tokenPayload(token1, { room_code_input: state.paardenCode }));
+  if (paardenStage(race) !== 'race') throw new Error(`Paardenrace completion: countdown tick did not enter race, got ${paardenStage(race) || 'unknown'}`);
+
+  let draws = 0;
+  let reshuffles = 0;
+  const maxDraws = 260;
+  const maxReshuffles = 10;
+  while (paardenStage(race) === 'race' && draws < maxDraws) {
+    try {
+      race = await rpc('draw_paardenrace_card_safe', tokenPayload(token1, { room_code_input: state.paardenCode }));
+      draws += 1;
+    } catch (error) {
+      const message = safe(error);
+      if (!/trekstapel.*leeg|geen kaarten meer/i.test(message)) throw error;
+      if (reshuffles >= maxReshuffles) throw new Error(`Paardenrace completion: exceeded ${maxReshuffles} real reshuffles without winner`);
+      race = await rpc('reshuffle_paardenrace_draw_pile_safe', tokenPayload(token1, { room_code_input: state.paardenCode }));
+      reshuffles += 1;
+      if (paardenStage(race) !== 'race') throw new Error(`Paardenrace completion: reshuffle changed stage to ${paardenStage(race) || 'unknown'}`);
+      const resetIndex = Number(race?.match?.draw_index ?? -1);
+      const newDeck = Array.isArray(race?.match?.draw_deck) ? race.match.draw_deck : [];
+      if (resetIndex !== 0 || newDeck.length === 0) throw new Error('Paardenrace completion: real reshuffle did not reset draw index/build a deck');
+    }
+  }
+
+  if (paardenStage(race) !== 'nominations') {
+    throw new Error(`Paardenrace completion: no claimed winner after ${draws} draws/${reshuffles} reshuffles; stage=${paardenStage(race) || 'unknown'}`);
+  }
+  const winnerSuit = String(race?.match?.winner_suit || '').trim().toLowerCase();
+  if (!['hearts', 'spades'].includes(winnerSuit)) throw new Error(`Paardenrace completion: unclaimed/invalid winner suit ${winnerSuit || 'none'}`);
+
+  const winnerToken = winnerSuit === 'hearts' ? token1 : token2;
+  const winnerName = winnerSuit === 'hearts' ? name1 : name2;
+  const targetName = winnerSuit === 'hearts' ? name2 : name1;
+  const nomination = await rpc('submit_paardenrace_nominations_safe', tokenPayload(winnerToken, {
+    room_code_input: state.paardenCode,
+    allocations_input: [{ target_player_name: targetName, bakken: 2 }],
+  }));
+  if (paardenStage(nomination) !== 'finished') throw new Error(`Paardenrace completion: nomination did not finalize race; stage=${paardenStage(nomination) || 'unknown'}`);
+  if (String(nomination?.match?.winner_suit || '').toLowerCase() !== winnerSuit) throw new Error('Paardenrace completion: winner suit changed during finalization');
+  if (!nomination?.result_summary || typeof nomination.result_summary !== 'object') throw new Error('Paardenrace completion: terminal result summary missing');
+
+  const persisted = await rpc('get_paardenrace_room_state_fast_v687', tokenPayload(winnerToken, { room_code_input: state.paardenCode }));
+  if (paardenStage(persisted) !== 'finished' || String(persisted?.match?.winner_suit || '').toLowerCase() !== winnerSuit) {
+    throw new Error('Paardenrace completion: finished state/winner did not persist on reread');
+  }
+  console.log(`Paardenrace natural completion PASS: winner=${winnerName}/${winnerSuit}, draws=${draws}, reshuffles=${reshuffles}`);
+}
+
 try {
   await setupOnlineRooms();
   console.log(`Online fixtures ready: Pikken=${state.pikkenId ? 'yes' : 'no'} Paardenrace=${state.paardenCode ? 'yes' : 'no'} Klaverjas=${state.klaverId ? 'yes' : 'no'}`);
   await browserAcceptance();
   console.log('RESULT=V792_LIVE_BROWSER_MULTI_CONTEXT_PASS');
+  await completePikkenNaturally();
+  console.log('RESULT=V792_PIKKEN_PLAY_TO_COMPLETION_PASS');
+  await completePaardenraceNaturally();
+  console.log('RESULT=V792_PAARDENRACE_PLAY_TO_COMPLETION_PASS');
+  console.log('RESULT=V792_LIVE_GAME_COMPLETION_CERTIFICATION_PASS');
 } catch (error) {
   failures.push(safe(error));
 } finally {
