@@ -1,0 +1,37 @@
+name: Harden Phase 1 surface settle
+
+on:
+  push:
+    branches: [proof/v798-phase1-live]
+    paths: ['.github/workflows/settle-phase1-surfaces.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  patch-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v798-phase1-live
+      - name: Add bounded content settle before surface assertions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('scripts/v798-phase1-live-proof.mjs')
+          s=p.read_text()
+          old="""    const current=new URL(page.url());\n    assert(current.pathname===`/${route}`,`${route} bounced away despite valid session: ${current.pathname}`);\n    const info=await page.evaluate(()=>({visibility:getComputedStyle(document.documentElement).visibility,body:(document.body.innerText||'').replace(/\\s+/g,' ').trim(),interactive:[...document.querySelectorAll('button,a[href],input,select')].filter(el=>{const r=el.getBoundingClientRect();const s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}).length}));\n"""
+          new="""    const current=new URL(page.url());\n    assert(current.pathname===`/${route}`,`${route} bounced away despite valid session: ${current.pathname}`);\n    try{\n      await page.waitForFunction(({source})=>{\n        const body=(document.body?.innerText||'').replace(/\\s+/g,' ').trim();\n        return body.length>60 && new RegExp(source,'i').test(body);\n      },{source:rx.source},{timeout:6000});\n    }catch(_){ }\n    const info=await page.evaluate(()=>({visibility:getComputedStyle(document.documentElement).visibility,body:(document.body.innerText||'').replace(/\\s+/g,' ').trim(),interactive:[...document.querySelectorAll('button,a[href],input,select')].filter(el=>{const r=el.getBoundingClientRect();const s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}).length}));\n"""
+          if old not in s: raise SystemExit('surface assertion owner changed unexpectedly')
+          s=s.replace(old,new)
+          s=s.replace("console.log(`GAME_SURFACE_PASS ${route} controls=${info.interactive}`);","console.log(`GAME_SURFACE_PASS ${route} controls=${info.interactive} body_chars=${info.body.length}`);")
+          p.write_text(s)
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add scripts/v798-phase1-live-proof.mjs
+          git commit -m 'test: wait for authenticated game surfaces to settle'
+          git push origin HEAD:proof/v798-phase1-live
