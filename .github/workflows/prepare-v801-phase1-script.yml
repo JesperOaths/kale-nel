@@ -1,0 +1,36 @@
+name: Prepare v801 Phase 1 proof script
+
+on:
+  push:
+    branches: [proof/v801-phase1-live]
+    paths: ['.github/workflows/prepare-v801-phase1-script.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v801-phase1-live
+      - name: Retag proof-only markers for v801
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('scripts/v801-phase1-live-proof.mjs')
+          s=p.read_text()
+          s=s.replace('RESULT=V800_PHASE1_AUTH_AND_SURFACES_PASS','RESULT=V801_PHASE1_AUTH_AND_SURFACES_PASS')
+          s=s.replace('v798_phase1:true','v801_phase1:true')
+          s=s.replace('data-v798-proof-target','data-v801-proof-target')
+          p.write_text(s)
+          PY
+          node --check scripts/v801-phase1-live-proof.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add scripts/v801-phase1-live-proof.mjs
+          git commit -m 'test: retag Phase 1 proof for v801'
+          git push origin HEAD:proof/v801-phase1-live
