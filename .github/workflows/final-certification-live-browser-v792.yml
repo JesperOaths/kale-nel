@@ -107,11 +107,19 @@ jobs:
           test "$resolved" = "$expected"
           echo 'Both disposable account/player session resolver chains PASS.'
 
-      - name: Run live Chromium multi-context and mobile/touch acceptance
+      - name: Run live Chromium multi-context mobile and completion acceptance
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/final-cert-live-browser-v792.mjs
+          # The public Pages/edge path can briefly return an empty document while a
+          # same-version deployment is converging. The campaign is destructive only to
+          # its own disposable fixtures and has its own room cleanup, so allow exactly
+          # one full clean retry. A deterministic product failure still fails twice.
+          if ! node scripts/final-cert-live-browser-v792.mjs; then
+            echo 'First browser campaign attempt failed; retrying once after edge settle.'
+            sleep 4
+            node scripts/final-cert-live-browser-v792.mjs
+          fi
 
       - name: Cleanup all disposable certification state
         if: always()
