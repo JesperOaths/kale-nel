@@ -1,4 +1,4 @@
-name: Production Cloudflare v763 finalization
+name: Diagnose Cloudflare v763 edge routing
 
 on:
   push:
@@ -7,119 +7,172 @@ on:
 
 permissions:
   contents: read
-
-concurrency:
-  group: production-cloudflare-v763-finalization
-  cancel-in-progress: false
+  issues: write
 
 jobs:
-  deploy-and-prove:
+  diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Check out exact finalization branch
+      - name: Check out exact diagnostic branch
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - name: Set up Node.js 24
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
-        with:
-          node-version: '24'
-          cache: npm
-
-      - name: Fail closed if Cloudflare credentials are absent
+      - name: Query Cloudflare, public DNS, and live edge responses
         shell: bash
         run: |
           set -euo pipefail
-          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo 'CLOUDFLARE_API_TOKEN is missing'; exit 1; }
-          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo 'CLOUDFLARE_ACCOUNT_ID is missing'; exit 1; }
-          echo 'Cloudflare credential presence PASS (values not printed).'
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo 'CLOUDFLARE_API_TOKEN missing'; exit 1; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo 'CLOUDFLARE_ACCOUNT_ID missing'; exit 1; }
 
-      - name: Install pinned repository dependencies
-        run: npm ci
+          auth=(-H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H 'Content-Type: application/json')
 
-      - name: Run canonical repository verification before production deploy
-        run: npm run verify
+          curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones?name=kalenel.nl&account.id=${CLOUDFLARE_ACCOUNT_ID}" > /tmp/zone.json
 
-      - name: Build protected admin static asset bundle
-        run: npm run admin-worker:build
+          python3 - <<'PY'
+          import json,sys
+          z=json.load(open('/tmp/zone.json'))
+          if not z.get('success'):
+              print('Cloudflare zone API failed:', z.get('errors'), file=sys.stderr); sys.exit(1)
+          results=z.get('result') or []
+          if len(results)!=1:
+              print(f'Expected exactly one kalenel.nl zone, got {len(results)}', file=sys.stderr); sys.exit(1)
+          zone=results[0]
+          open('/tmp/zone_id','w').write(zone['id'])
+          safe={k:zone.get(k) for k in ('name','status','paused','type','name_servers','original_name_servers')}
+          json.dump(safe,open('/tmp/zone_safe.json','w'),indent=2)
+          PY
 
-      - name: Compile Worker deployment without changing production
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx --yes wrangler@4 deploy --config cloudflare/workers/admin-gate/wrangler.toml --dry-run
+          ZONE_ID="$(cat /tmp/zone_id)"
+          curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/workers/routes" > /tmp/routes.json
+          curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?name=kalenel.nl" > /tmp/dns_apex.json
+          curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?name=admin.kalenel.nl" > /tmp/dns_admin.json
 
-      - name: Deploy checked-in Worker v763 to production
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx --yes wrangler@4 deploy --config cloudflare/workers/admin-gate/wrangler.toml
+          python3 - <<'PY'
+          import json,sys
+          for src,dst,kind in [('/tmp/routes.json','/tmp/routes_safe.json','routes'),('/tmp/dns_apex.json','/tmp/dns_apex_safe.json','dns'),('/tmp/dns_admin.json','/tmp/dns_admin_safe.json','dns')]:
+              data=json.load(open(src))
+              if not data.get('success'):
+                  print(f'Cloudflare {kind} API failed: {data.get("errors")}', file=sys.stderr); sys.exit(1)
+              if kind=='routes':
+                  safe=[{'pattern':r.get('pattern'),'script':r.get('script')} for r in data.get('result',[])]
+              else:
+                  safe=[{'type':r.get('type'),'name':r.get('name'),'content':r.get('content'),'proxied':r.get('proxied'),'ttl':r.get('ttl')} for r in data.get('result',[])]
+              json.dump(safe,open(dst,'w'),indent=2)
+          PY
 
-      - name: Prove production HTTP to HTTPS and admin perimeter
-        shell: bash
-        run: |
-          set -euo pipefail
+          dig +short NS kalenel.nl > /tmp/public_ns.txt || true
+          dig +short A kalenel.nl > /tmp/public_apex_a.txt || true
+          dig +short A admin.kalenel.nl > /tmp/public_admin_a.txt || true
 
-          request() {
-            local method="$1"
-            local url="$2"
-            local prefix="$3"
-            rm -f "${prefix}.headers" "${prefix}.body"
+          probe() {
+            local method="$1" url="$2" name="$3"
             curl --silent --show-error --request "$method" --max-time 30 --connect-timeout 10 \
-              --output "${prefix}.body" --dump-header "${prefix}.headers" \
-              --write-out '%{http_code}' "$url"
+              --output "/tmp/${name}.body" --dump-header "/tmp/${name}.headers" \
+              --write-out '%{http_code}' "$url" > "/tmp/${name}.status" || echo 'curl_error' > "/tmp/${name}.status"
           }
+          probe GET 'http://kalenel.nl/' http_apex
+          probe GET 'http://kalenel.nl/index.html?probe=cf-diagnostic&keep=1' http_path
+          probe GET 'http://admin.kalenel.nl/admin.html?probe=cf-diagnostic' http_admin
+          probe GET 'https://kalenel.nl/' https_apex
+          probe GET 'https://admin.kalenel.nl/admin.html?probe=cf-diagnostic' https_admin
 
-          header_value() {
-            local file="$1"
-            local wanted="$2"
-            awk -v wanted="$wanted" 'BEGIN{IGNORECASE=1} $1 ~ ("^" wanted ":$") {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); value=$0} END{print value}' "$file"
-          }
+          python3 - <<'PY'
+          import json,re
+          from pathlib import Path
+          def hdr(name,key):
+              p=Path(f'/tmp/{name}.headers')
+              if not p.exists(): return ''
+              val=''
+              for line in p.read_text(errors='replace').splitlines():
+                  if line.lower().startswith(key.lower()+':'):
+                      val=line.split(':',1)[1].strip()
+              return val
+          def status(name):
+              p=Path(f'/tmp/{name}.status')
+              return p.read_text().strip() if p.exists() else 'missing'
+          probes=[]
+          for name,url in [
+              ('http_apex','http://kalenel.nl/'),
+              ('http_path','http://kalenel.nl/index.html?probe=cf-diagnostic&keep=1'),
+              ('http_admin','http://admin.kalenel.nl/admin.html?probe=cf-diagnostic'),
+              ('https_apex','https://kalenel.nl/'),
+              ('https_admin','https://admin.kalenel.nl/admin.html?probe=cf-diagnostic')]:
+              probes.append({'url':url,'status':status(name),'location':hdr(name,'Location'),'server':hdr(name,'Server'),'build':hdr(name,'X-Kalenel-Admin-Build')})
+          json.dump(probes,open('/tmp/probes_safe.json','w'),indent=2)
+          PY
 
-          wait_for() {
-            local method="$1"
-            local url="$2"
-            local expected_status="$3"
-            local expected_location="$4"
-            local expected_build="$5"
-            local prefix="$6"
-            local status='' location='' build=''
-            for attempt in $(seq 1 18); do
-              status="$(request "$method" "$url" "$prefix" || true)"
-              location="$(header_value "${prefix}.headers" 'Location' 2>/dev/null || true)"
-              build="$(header_value "${prefix}.headers" 'X-Kalenel-Admin-Build' 2>/dev/null || true)"
-              if [[ "$status" == "$expected_status" ]] \
-                && { [[ -z "$expected_location" ]] || [[ "$location" == "$expected_location" ]]; } \
-                && { [[ -z "$expected_build" ]] || [[ "$build" == "$expected_build" ]]; }; then
-                printf 'PASS %s %s -> %s' "$method" "$url" "$status"
-                [[ -n "$location" ]] && printf ' location=%s' "$location"
-                [[ -n "$build" ]] && printf ' build=%s' "$build"
-                printf '\n'
-                return 0
-              fi
-              echo "Waiting for deployed edge state (attempt ${attempt}/18): status=${status} location=${location:-<none>} build=${build:-<none>}"
-              sleep 10
-            done
-            echo "FAIL ${method} ${url}: expected status=${expected_status} location=${expected_location:-<any>} build=${expected_build:-<any>}; got status=${status} location=${location:-<none>} build=${build:-<none>}"
-            echo '--- response headers ---'
-            cat "${prefix}.headers" || true
-            exit 1
-          }
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          zone=json.load(open('/tmp/zone_safe.json'))
+          routes=json.load(open('/tmp/routes_safe.json'))
+          apex=json.load(open('/tmp/dns_apex_safe.json'))
+          admin=json.load(open('/tmp/dns_admin_safe.json'))
+          probes=json.load(open('/tmp/probes_safe.json'))
+          public_ns=[x.strip() for x in Path('/tmp/public_ns.txt').read_text().splitlines() if x.strip()]
+          public_apex=[x.strip() for x in Path('/tmp/public_apex_a.txt').read_text().splitlines() if x.strip()]
+          public_admin=[x.strip() for x in Path('/tmp/public_admin_a.txt').read_text().splitlines() if x.strip()]
+          assigned=[str(x).rstrip('.') for x in (zone.get('name_servers') or [])]
+          observed=[str(x).rstrip('.') for x in public_ns]
+          ns_match=set(assigned)==set(observed) and bool(assigned)
+          lines=[]
+          lines.append('## Cloudflare v763 edge diagnostic')
+          lines.append('')
+          lines.append('The v763 Wrangler deployment command completed successfully, but the first live 308 acceptance check did not. This report records the post-deploy routing state without exposing credentials.')
+          lines.append('')
+          lines.append(f"- Zone status: `{zone.get('status')}`")
+          lines.append(f"- Zone paused: `{zone.get('paused')}`")
+          lines.append(f"- Zone type: `{zone.get('type')}`")
+          lines.append(f"- Cloudflare-assigned nameservers: `{', '.join(assigned) or '<none>'}`")
+          lines.append(f"- Publicly delegated nameservers: `{', '.join(observed) or '<none>'}`")
+          lines.append(f"- Public NS matches Cloudflare assignment: `{ns_match}`")
+          lines.append(f"- Public apex A: `{', '.join(public_apex) or '<none>'}`")
+          lines.append(f"- Public admin A: `{', '.join(public_admin) or '<none>'}`")
+          lines.append('')
+          lines.append('### Worker routes')
+          for r in routes:
+              lines.append(f"- `{r.get('pattern')}` -> `{r.get('script')}`")
+          if not routes: lines.append('- `<none>`')
+          lines.append('')
+          lines.append('### Cloudflare DNS records')
+          for label,records in [('apex',apex),('admin',admin)]:
+              for r in records:
+                  lines.append(f"- {label}: `{r.get('type')} {r.get('name')} -> {r.get('content')}` proxied=`{r.get('proxied')}` ttl=`{r.get('ttl')}`")
+              if not records: lines.append(f'- {label}: `<none>`')
+          lines.append('')
+          lines.append('### Live probes')
+          for p in probes:
+              lines.append(f"- `{p['url']}` -> status=`{p['status']}` location=`{p['location'] or '<none>'}` server=`{p['server'] or '<none>'}` build=`{p['build'] or '<none>'}`")
+          lines.append('')
+          if zone.get('status')!='active':
+              lines.append('**Diagnosis:** Cloudflare reports the zone is not active. Worker deployment can succeed in the account while public traffic still bypasses the Worker until zone activation/delegation is complete.')
+          elif not ns_match:
+              lines.append('**Diagnosis:** The zone is marked active but public nameserver delegation does not match the Cloudflare assignment. Public traffic may not be reaching this Cloudflare zone.')
+          elif not any(r.get('pattern')=='kalenel.nl/*' and r.get('script')=='kalenel-admin-gate' for r in routes):
+              lines.append('**Diagnosis:** The apex Worker route is missing or bound to another script.')
+          elif not any(r.get('proxied') is True for r in apex):
+              lines.append('**Diagnosis:** The apex DNS record is not proxied, so the Worker route cannot intercept the request.')
+          else:
+              lines.append('**Diagnosis:** Zone authority, proxying, and the apex Worker route appear present; the live response mismatch needs a deeper Cloudflare edge/configuration check.')
+          Path('/tmp/report.md').write_text('\n'.join(lines)+'\n')
+          print(Path('/tmp/report.md').read_text())
+          PY
 
-          wait_for GET 'http://kalenel.nl/' '308' 'https://kalenel.nl/' '' /tmp/http-apex
-          wait_for GET 'http://kalenel.nl/index.html?probe=cf-v763&keep=1' '308' 'https://kalenel.nl/index.html?probe=cf-v763&keep=1' '' /tmp/http-path-query
-          wait_for POST 'http://kalenel.nl/request.html?probe=cf-v763-post' '308' 'https://kalenel.nl/request.html?probe=cf-v763-post' '' /tmp/http-post
-          wait_for GET 'http://admin.kalenel.nl/admin.html?probe=cf-v763' '308' 'https://admin.kalenel.nl/admin.html?probe=cf-v763' '' /tmp/http-admin
-          wait_for GET 'https://kalenel.nl/' '200' '' '' /tmp/https-apex
-          wait_for GET 'https://admin.kalenel.nl/admin.html?probe=cf-v763' '401' '' 'v763' /tmp/https-admin
+          python3 - <<'PY'
+          import json
+          body=open('/tmp/report.md').read()
+          json.dump({'body':body},open('/tmp/comment.json','w'))
+          PY
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/comment.json \
+            'https://api.github.com/repos/JesperOaths/kale-nel/issues/122/comments' >/dev/null
 
-          cache_control="$(header_value /tmp/http-apex.headers 'Cache-Control')"
-          [[ "$cache_control" == 'no-store' ]] || { echo "Expected HTTP redirect Cache-Control no-store, got: ${cache_control:-<none>}"; exit 1; }
-
-          admin_body="$(cat /tmp/https-admin.body)"
-          [[ "$admin_body" == *'Admin login vereist'* ]] || { echo 'Anonymous HTTPS admin did not return the expected fail-closed login perimeter.'; exit 1; }
-
-          echo 'RESULT=CLOUDFLARE_V763_PRODUCTION_DEPLOY_AND_PROOF_PASS'
+          echo 'RESULT=CLOUDFLARE_V763_EDGE_DIAGNOSTIC_RECORDED'
