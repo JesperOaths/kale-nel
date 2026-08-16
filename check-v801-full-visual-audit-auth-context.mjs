@@ -32,5 +32,6 @@ assert.match(runner, /trackedRouteUsesAuthGate/, 'tracked routes that load the a
 assert.match(runner, /waitForAuthGateToSettle/, 'visual audit must explicitly wait for gated pages to leave transient checking state');
 assert.match(runner, /auth gate did not settle within/, 'a genuinely stuck auth gate must remain a fail-closed broken result');
 assert.match(runner, /if \(!protectedOnArrival\) \{\s*authGate = await waitForAuthGateToSettle/s, 'Cloudflare-protected admin responses must bypass player-auth settlement waiting');
+assert.match(runner, /seriousConsole\.length && judgement !== 'broken' && judgement !== 'protected'/, 'expected Cloudflare protection must not be downgraded to warning by perimeter console noise');
 
 console.log('PASS v801 full visual audit current-session/context contract');

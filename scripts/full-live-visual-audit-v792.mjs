@@ -235,7 +235,7 @@ async function capture(context, route, label, index, kind = 'tracked') {
   if (signals.length) { judgement = 'broken'; reasons.push(`visible runtime signal: ${signals.join(', ')}`); }
   if (kind === 'context' && finalPath === '/login.html') { judgement = 'broken'; reasons.push('contextual authenticated capture ended at login'); }
   if (kind === 'context' && authState !== 'authenticated') { judgement = 'broken'; reasons.push(`contextual auth state is ${authState || 'missing'}, expected authenticated`); }
-  if (seriousConsole.length && judgement !== 'broken') { judgement = 'warn'; reasons.push(`${seriousConsole.length} console error(s)`); }
+  if (seriousConsole.length && judgement !== 'broken' && judgement !== 'protected') { judgement = 'warn'; reasons.push(`${seriousConsole.length} console error(s)`); }
   if (seriousRequestFailures.length && judgement === 'pass') { judgement = 'warn'; reasons.push(`${seriousRequestFailures.length} failed request(s)`); }
   if (overflow > 16 && judgement === 'pass') { judgement = 'warn'; reasons.push(`horizontal overflow ${overflow}px`); }
   if (staleLoadingCount > 0 && judgement === 'pass') { judgement = 'warn'; reasons.push(`${staleLoadingCount} visible loading placeholder(s) after ${settleMs}ms`); }
