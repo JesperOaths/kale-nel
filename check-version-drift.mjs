@@ -20,7 +20,7 @@ if (!rootVersion) {
 const activeExt = new Set(['.html','.js','.mjs','.css']);
 const ignoredDirs = new Set(['.git','node_modules','dist','build','.next','.vercel','coverage','tmp','temp','patch_bundles','repo','mnt']);
 const ignoredFiles = new Set(['check-version-drift.mjs','fix-version-drift.mjs']);
-const versionPattern = /(?:\?v\d+|GEJAST_PAGE_VERSION\s*=\s*['"]v\d+['"]|VERSION\s*:\s*['"]v\d+['"]|v\d+\s*[-–—.]?\s*Made by Bruis)/gi;
+const versionPattern = /(?:\?v\d+|GEJAST_PAGE_VERSION\s*=\s*['"]v\d+['"]|VERSION\s*:\s*['"]v\d+['"]|v\d+\s*[-–—.·]?\s*Made by Bruis)/gi;
 
 function normalizeVersion(value){
   const match = String(value || '').match(/v?\s*(\d+)/i);
