@@ -100,7 +100,6 @@ jobs:
             first_result jsonb;
             replay_result jsonb;
             first_id bigint;
-            replay_id bigint;
           begin
             insert into public.players(slug,display_name,active,pin_hash,approved,hidden_from_public,is_dummy,site_scope)
             values
@@ -136,9 +135,8 @@ jobs:
             first_id := (first_result->>'game_id')::bigint;
 
             replay_result := public.create_toepen_game(token_a,payload,'friends');
-            replay_id := (replay_result->>'game_id')::bigint;
             if coalesce((replay_result->>'already_saved')::boolean,false) is distinct from true
-               or replay_id is distinct from first_id then
+               or (replay_result->>'game_id')::bigint is distinct from first_id then
               raise exception 'same-owner idempotency contract failed: %', replay_result;
             end if;
 
@@ -146,27 +144,21 @@ jobs:
               perform public.create_toepen_game(token_b,payload,'friends');
               raise exception 'foreign replay unexpectedly succeeded';
             exception when others then
-              if sqlerrm <> 'toepen_game_owner_mismatch' then
-                raise exception 'foreign replay wrong error: %', sqlerrm;
-              end if;
+              if sqlerrm <> 'toepen_game_owner_mismatch' then raise exception 'foreign replay wrong error: %', sqlerrm; end if;
             end;
 
             begin
               perform public.create_toepen_game('ffffffffffffffffffffffffffffffffffffffffffffffff',payload,'friends');
               raise exception 'invalid session unexpectedly succeeded';
             exception when others then
-              if position('Niet ingelogd' in sqlerrm)=0 then
-                raise exception 'invalid session wrong error: %', sqlerrm;
-              end if;
+              if position('Niet ingelogd' in sqlerrm)=0 then raise exception 'invalid session wrong error: %', sqlerrm; end if;
             end;
 
             begin
               perform public.create_toepen_game(token_a,payload,'family');
               raise exception 'wrong-scope replay unexpectedly succeeded';
             exception when others then
-              if position('Verkeerde Toepen-scope' in sqlerrm)=0 then
-                raise exception 'wrong-scope replay wrong error: %', sqlerrm;
-              end if;
+              if position('Verkeerde Toepen-scope' in sqlerrm)=0 then raise exception 'wrong-scope replay wrong error: %', sqlerrm; end if;
             end;
 
             forged := jsonb_set(payload,'{client_match_id}',to_jsonb(bad_client_id),false);
@@ -175,21 +167,14 @@ jobs:
               perform public.create_toepen_game(token_a,forged,'friends');
               raise exception 'forged totals unexpectedly succeeded';
             exception when others then
-              if position('Toepen-eindscore komt niet overeen met rondepunten' in sqlerrm)=0 then
-                raise exception 'totals guard wrong error: %', sqlerrm;
-              end if;
+              if position('Toepen-eindscore komt niet overeen met rondepunten' in sqlerrm)=0 then raise exception 'totals guard wrong error: %', sqlerrm; end if;
             end;
 
-            if (select count(*) from public.toepen_games where client_match_id=client_id) <> 1 then
-              raise exception 'expected exactly one valid proof game';
-            end if;
-            if (select count(*) from public.toepen_games where client_match_id=bad_client_id) <> 0 then
-              raise exception 'forged totals game residue exists inside transaction';
-            end if;
+            if (select count(*) from public.toepen_games where client_match_id=client_id) <> 1 then raise exception 'expected exactly one valid proof game'; end if;
+            if (select count(*) from public.toepen_games where client_match_id=bad_client_id) <> 0 then raise exception 'forged totals game residue exists inside transaction'; end if;
             raise notice 'RESULT=V801A_TRANSACTIONAL_OWNER_GUARD_PASS';
           end
           $proof$;
-
           rollback;
           SQL
           echo 'RESULT=V801A_TRANSACTION_ROLLBACK_COMPLETED'
@@ -202,12 +187,7 @@ jobs:
           after="$(psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -c "select position('toepen_game_owner_mismatch' in pg_get_functiondef('public.create_toepen_game(text,jsonb,text)'::regprocedure));")"
           test "$after" = 0
           if [ -n "${PROOF_A:-}" ]; then
-            residue="$(psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v a="$PROOF_A" -v b="$PROOF_B" -v c="$PROOF_CLIENT" -v badc="$PROOF_BAD_CLIENT" <<'SQL'
-            select (select count(*) from public.players where display_name in (:'a',:'b')),
-                   (select count(*) from public.gejast_player_sessions_v746 where display_name in (:'a',:'b')),
-                   (select count(*) from public.toepen_games where client_match_id in (:'c',:'badc'));
-            SQL
-            )"
+            residue="$(psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -c "select (select count(*) from public.players where display_name in ('$PROOF_A','$PROOF_B')),(select count(*) from public.gejast_player_sessions_v746 where display_name in ('$PROOF_A','$PROOF_B')),(select count(*) from public.toepen_games where client_match_id in ('$PROOF_CLIENT','$PROOF_BAD_CLIENT'));" )"
             test "$residue" = '0|0|0'
           fi
           test "$(curl -fsS --max-time 10 https://kalenel.nl/VERSION | tr -d '\r\n')" = v801
