@@ -1,6 +1,6 @@
 {
   "version": 7,
-  "site_version": "release candidate v793 / live v792",
+  "site_version": "release candidate v794 / live v792",
   "last_updated": "2026-08-16",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -30,7 +30,7 @@
       "v793 candidate: full production screenshot audit found and repairs visible Klaverjas duplication, ladder game-key mismatch, stale game status RPC owners, Pikken spectator context loss and Rad stats aggregation failure; current release remains REVALIDATION_REQUIRED until post-deploy screenshots and gameplay are re-run."
     ],
     "note": "2026-08-14 live v792 frontend promotion PASS: frontend release merge 79e18fc9dcd2c9eadf404131863102cdc8abaef2 independently passed Live deployment health with public VERSION v792; the later repository audit head 141e7301944a79452eca9d354180a684249cdcd2 also passed the live route/admin perimeter health suite. Historical Chromium/axe proof remains zero total axe violations; isolated no-write live mobile Chromium proof remains preserved with non-GET requests intercepted locally, no Drinks stats-queue ReferenceError, >=44px Drinks controls and >=24px scoped Beerpong/Pussycup targets. This frontend promotion does not claim that the later v792b-v792h Klaverjas SQL chain has been applied to production; production SQL remains a separately authorized consequential action.",
-    "release_candidate_version": "v793"
+    "release_candidate_version": "v794"
   },
   "baseline_checks": [
     {
