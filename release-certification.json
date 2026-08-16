@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_version": "v801",
+  "current_version": "v802",
   "status": "REVALIDATION_REQUIRED",
   "prior_certification": {
     "version": "v792",
@@ -8,24 +8,27 @@
     "artifact": "final-acceptance-v792.json"
   },
   "current_audit_issue": 153,
-  "reason": "Exact-v801 Phase 1 and Phase 2 revalidation are complete: full visual audit, forced-login/auth scope isolation, real PIN login, authenticated game surfaces, two-human Klaverjas, natural Pikken and Paardenrace completion with reconnect/persistence rereads, and isolated Klaverjas transition/rules/persistence/roem/recovery PostgreSQL proofs. Phase 2 also live-proved one remaining production backend authorization defect: an unrelated authenticated Friends player can replay another player's Toepen client_match_id and receive the existing game_id. SQL-only v801a is merged and rollback-proven against the production schema, but is deliberately not deployed to Supabase without explicit authorization. Certification remains fail-closed until v801a is authorized/applied and fresh post-deploy owner-isolation plus deep live regression evidence passes.",
+  "reason": "v802 is a narrow published Family redirect repair: familie/player.html now preserves the requested player/game query while forcing family scope before handing off to the canonical protected player page. All prior v801 Phase 1/Phase 2 evidence remains historical input, not a v802 certification. The full production visual audit is still blocked before Chromium by project-specific Supabase data-plane timeouts, and SQL-only Toepen v801a remains deliberately undeployed without explicit authorization. Certification therefore stays fail-closed until the current frontend is deployed and fresh production evidence is obtainable, v801a is separately authorized/applied, and the required post-change owner-isolation/deep-regression proofs pass.",
   "current_evidence": {
-    "frontend_version": "v801",
-    "frontend_merge": "d5388341c5ca0a595f80f239ebb5cafa84b6af60",
-    "audited_repository_head": "66e6f7ad13c1360a1eadfdd528acdb4290957e43",
-    "full_visual_audit_run": 31943987257,
-    "phase1_live_auth_gameplay_run": 31944683360,
-    "phase2_deep_live_run": 31952351394,
+    "frontend_version": "v802",
+    "frontend_merge": null,
+    "audited_repository_head": null,
+    "inherited_v801_full_visual_audit_run": 31943987257,
+    "inherited_v801_phase1_live_auth_gameplay_run": 31944683360,
+    "inherited_v801_phase2_deep_live_run": 31952351394,
     "toepen_owner_defect_control_run": 31952921912,
     "v801a_rollback_only_schema_proof_run": 31953380650,
-    "postmerge_live_health_run": 31953491375,
-    "klaverjas_postgres_persistence_run": 31953687334,
-    "klaverjas_postgres_roem_run": 31953687328,
-    "klaverjas_postgres_recovery_run": 31953687352
+    "inherited_v801_postmerge_live_health_run": 31953491375,
+    "inherited_v801_klaverjas_postgres_persistence_run": 31953687334,
+    "inherited_v801_klaverjas_postgres_roem_run": 31953687328,
+    "inherited_v801_klaverjas_postgres_recovery_run": 31953687352,
+    "v802_visual_audit_status": "PENDING_DEPLOYMENT_AND_SUPABASE_RECOVERY"
   },
   "required_next": [
+    "Merge/deploy the v802 Family redirect repair and verify the live alias preserves the requested query while forcing scope=family.",
+    "Complete a fresh exact-v802 full live visual audit with authenticated Friends/Family contexts, zero-residue cleanup and manual screenshot review once the Supabase data plane is responsive.",
     "Obtain explicit authorization before applying GEJAST_v801a_toepen_idempotency_owner_guard.sql to production Supabase.",
-    "After deployment, prove same-owner Toepen idempotency still returns the same game while unrelated-owner, invalid-session and wrong-scope replay fail closed, with zero residue.",
+    "After v801a deployment, prove same-owner Toepen idempotency still returns the same game while unrelated-owner, invalid-session and wrong-scope replay fail closed, with zero residue.",
     "Rerun exact-current live health and the deep Phase-2 gameplay campaign after the backend mutation before considering PASS."
   ]
 }

@@ -1,6 +1,6 @@
 {
   "version": 8,
-  "site_version": "live v801 / current frontend release v801",
+  "site_version": "release candidate v802 / live v801",
   "last_updated": "2026-08-16",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
@@ -32,8 +32,8 @@
       "2026-08-14 live v792: frontend release merge 79e18fc9dcd2c9eadf404131863102cdc8abaef2 completed its own Live deployment health run #60 successfully; later SQL-only repository audit head 141e7301944a79452eca9d354180a684249cdcd2 also passed Live deployment health without changing frontend VERSION.",
       "v793 candidate: full production screenshot audit found and repairs visible Klaverjas duplication, ladder game-key mismatch, stale game status RPC owners, Pikken spectator context loss and Rad stats aggregation failure; current release remains REVALIDATION_REQUIRED until post-deploy screenshots and gameplay are re-run."
     ],
-    "note": "2026-08-16 live v801 PASS for deployment identity and current frontend health: exact-v801 visual/auth/game evidence is current, and SQL-only repository head 66e6f7ad13c1360a1eadfdd528acdb4290957e43 leaves frontend VERSION at v801. Historical Chromium/axe proof remains zero total axe violations; isolated no-write live mobile Chromium proof remains preserved with non-GET requests intercepted locally, no Drinks stats-queue ReferenceError, >=44px Drinks controls and >=24px scoped Beerpong/Pussycup targets. This deployment identity PASS does not mean release certification PASS: exact-v801 Phase 2 found a Toepen owner-replay defect and merged v801a remains deliberately undeployed pending explicit authorization.",
-    "release_candidate_version": ""
+    "note": "v802 candidate: familie/player.html is now a runtime-light query-preserving Family alias. Live deployment remains v801 until merge/deploy. Prior v801 proof is historical input only; release certification remains fail-closed because the full visual revalidation is blocked by project-specific Supabase data-plane timeouts and Toepen v801a still requires explicit deployment authorization.",
+    "release_candidate_version": "v802"
   },
   "baseline_checks": [
     {
