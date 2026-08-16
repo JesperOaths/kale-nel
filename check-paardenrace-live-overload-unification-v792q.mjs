@@ -35,6 +35,9 @@ for (const [label, block, delegatedCall] of [
   requireText(block, delegatedCall, `${label} wrapper`);
   requireText(block, 'public._scope_norm(site_scope_input)', `${label} scope guard`);
   requireText(block, "RAISE EXCEPTION 'Deze kamer hoort bij een andere site-scope.'", `${label} scope rejection`);
+  requireText(block, 'session_token text DEFAULT NULL::text', `${label} default args`);
+  requireText(block, 'session_token_input text DEFAULT NULL::text', `${label} default args`);
+  requireText(block, 'site_scope_input text DEFAULT NULL::text', `${label} default args`);
   for (const retired of [
     '_pr_require_host_v667',
     '_pr_require_player_in_room_v667',
