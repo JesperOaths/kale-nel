@@ -21,6 +21,12 @@ jobs:
           ref: fix/v794-group-b-status-panel
           fetch-depth: 0
 
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+
       - name: Synchronize active frontend to v794
         shell: bash
         run: |
@@ -28,7 +34,20 @@ jobs:
           test "$(tr -d '\r\n' < VERSION)" = 'v793'
           printf 'v794\n' > VERSION
           node fix-version-drift.mjs
+          node - <<'NODE'
+          const fs=require('fs');
+          const path='release-certification.json';
+          const state=JSON.parse(fs.readFileSync(path,'utf8'));
+          if(state.current_version!=='v793') throw new Error(`Unexpected certification source version: ${state.current_version}`);
+          state.current_version='v794';
+          state.status='REVALIDATION_REQUIRED';
+          state.prior_certification={version:'v792',issue:131,artifact:'final-acceptance-v792.json'};
+          state.current_audit_issue=153;
+          state.reason='Screenshot-driven group-B compatibility panel repair requires fresh production visual, feature-surface, and gameplay revalidation.';
+          fs.writeFileSync(path,JSON.stringify(state,null,2)+'\n');
+          NODE
           node check-version-drift.mjs
+          node check-release-certification-state.mjs
 
       - name: Verify synchronized branch
         shell: bash
@@ -43,7 +62,7 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add VERSION '*.html' '*.js' '*.mjs' '*.css' ':!repo/**' ':!mnt/**' || true
+          git add VERSION release-certification.json '*.html' '*.js' '*.mjs' '*.css' ':!repo/**' ':!mnt/**' || true
           git add -u
           git diff --cached --quiet && { echo 'Expected v794 version changes were not produced'; exit 1; }
           git commit -m 'chore: synchronize active frontend to v794'
