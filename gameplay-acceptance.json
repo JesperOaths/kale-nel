@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "site_version": "v792",
+  "site_version": "v793",
   "last_updated": "2026-08-16",
   "scope": "Gameplay acceptance is tracked separately from general beta readiness. Deterministic engine proof is not labeled as live multiplayer proof, and route/RPC reachability is not labeled as play-to-completion proof. Player-count limits are only recorded as exact when current shipped source or deterministic acceptance grounds them; unknown backend-owned limits remain explicitly unknown.",
   "live_write_approval": {
@@ -11,10 +11,26 @@
     {
       "id": "toepen",
       "canonical_route": "./toepen.html",
-      "supported_players": [2, 3, 4, 5, 6, 7, 8],
+      "supported_players": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
       "player_contract": {
         "authority": "shipped_gameplay_matrix",
-        "supported_player_counts": [2, 3, 4, 5, 6, 7, 8],
+        "supported_player_counts": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
         "minimum": 2,
         "maximum": 8,
         "minimum_status": "grounded",
@@ -28,10 +44,24 @@
     {
       "id": "boerenbridge",
       "canonical_route": "./boerenbridge.html",
-      "supported_players": [2, 3, 4, 5, 6, 7],
+      "supported_players": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
       "player_contract": {
         "authority": "shipped_gameplay_matrix",
-        "supported_player_counts": [2, 3, 4, 5, 6, 7],
+        "supported_player_counts": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
         "minimum": 2,
         "maximum": 7,
         "minimum_status": "grounded",
@@ -45,11 +75,20 @@
     {
       "id": "beerpong",
       "canonical_route": "./beerpong.html",
-      "supported_formats": ["1v1", "2v2"],
+      "supported_formats": [
+        "1v1",
+        "2v2"
+      ],
       "player_contract": {
         "authority": "shipped_gameplay_matrix",
-        "supported_player_counts": [2, 4],
-        "formats": { "1v1": 2, "2v2": 4 },
+        "supported_player_counts": [
+          2,
+          4
+        ],
+        "formats": {
+          "1v1": 2,
+          "2v2": 4
+        },
         "minimum": 2,
         "maximum": 4,
         "minimum_status": "grounded",
@@ -66,7 +105,9 @@
       "player_contract": {
         "authority": "checked_in_backend_start_rpc_plus_controlled_live_smoke",
         "supported_player_counts_status": "minimum_grounded_maximum_unknown",
-        "live_proven_player_counts": [2],
+        "live_proven_player_counts": [
+          2
+        ],
         "minimum": 2,
         "maximum": null,
         "minimum_status": "grounded",
@@ -91,7 +132,9 @@
       "player_contract": {
         "authority": "checked_in_backend_start_rpc_plus_shipped_frontend_plus_controlled_live_smoke",
         "supported_player_counts_status": "minimum_grounded_maximum_unknown",
-        "live_proven_player_counts": [2],
+        "live_proven_player_counts": [
+          2
+        ],
         "minimum": 2,
         "maximum": null,
         "minimum_status": "grounded",
@@ -117,8 +160,14 @@
       "player_contract": {
         "authority": "shipped_frontend_four_seat_lobby",
         "seats": 4,
-        "supported_humans": { "minimum": 1, "maximum": 4 },
-        "supported_bots": { "minimum": 0, "maximum": 3 },
+        "supported_humans": {
+          "minimum": 1,
+          "maximum": 4
+        },
+        "supported_bots": {
+          "minimum": 0,
+          "maximum": 3
+        },
         "start_requires_full_table": true,
         "minimum_status": "grounded",
         "maximum_status": "grounded",

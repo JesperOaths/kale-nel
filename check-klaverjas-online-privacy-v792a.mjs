@@ -7,8 +7,9 @@ const room = fs.readFileSync('klaverjas_room.html', 'utf8');
 const liveSmoke = fs.readFileSync('check-live-klaverjas-online-v792a.mjs', 'utf8');
 const smokeEntry = fs.readFileSync('check-live-klaverjas-online.mjs', 'utf8');
 const version = fs.readFileSync('VERSION', 'utf8').trim();
+const versionNumber = Number(version.match(/^v(\d+)$/)?.[1] || 0);
 
-assert.equal(version, 'v792', 'v792a is SQL-only and must not bump the frontend version');
+assert.ok(versionNumber >= 792, `v792a privacy invariant requires frontend v792+, got ${version}`);
 assert.match(room, /recovery_snapshot\s*=\s*makeRecoverySnapshot/i, 'room persists a recovery snapshot');
 assert.match(room, /hands:st\.hands\s*\|\|\s*\[\]/, 'recovery snapshot contains hands');
 
@@ -28,4 +29,4 @@ assert.match(liveSmoke, /row\?\.is_host/, 'live cleanup must be restricted to fi
 assert.match(liveSmoke, /recovery_snapshot/i, 'live proof must exercise nested hand redaction');
 assert.match(smokeEntry, /check-live-klaverjas-online-v792a\.mjs/, 'canonical smoke entry must route through the controlled v792a proof');
 
-console.log('Online Klaverjas v792a privacy boundary guard ok.');
+console.log(`Online Klaverjas v792a privacy boundary guard remains enforced at ${version}.`);
