@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_version": "v797",
+  "current_version": "v798",
   "status": "REVALIDATION_REQUIRED",
   "prior_certification": {
     "version": "v792",
@@ -8,5 +8,5 @@
     "artifact": "final-acceptance-v792.json"
   },
   "current_audit_issue": 153,
-  "reason": "v797 hardens visible watermark version synchronization after the exact-v796 feature proof exposed 14 active v757 fallback labels using an encoding-damaged question-mark separator that the prior drift checker/fixer did not recognize. The repair broadens separator matching, synchronizes all active frontend owners to v797, and requires fresh exact-main deployment/visual/feature revalidation before PASS. Gameplay owners are unchanged."
+  "reason": "v798 reinstates a fail-closed player forced-login boundary across every published non-admin, non-account-entry HTML page. Protected UI stays hidden until account_public_state_v687 proves an unexpired scoped player session; missing/invalid sessions redirect to canonical login, and successful login always lands on the main index page. Exact-main live auth and gameplay revalidation is required before PASS."
 }
