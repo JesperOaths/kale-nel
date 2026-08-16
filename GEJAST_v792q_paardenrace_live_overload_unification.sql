@@ -6,17 +6,17 @@
 -- retired v667 tables. The current lobby/start pipeline uses public.paardenrace_rooms,
 -- public.paardenrace_room_players and the newer three/four-argument implementations.
 --
--- This migration keeps the public overload signatures stable for the browser, adds an
--- explicit scope check, and delegates each overload to the current implementation.
--- No frontend VERSION bump: SQL-only repair.
+-- This migration keeps the public overload signatures stable for the browser, preserves
+-- their existing default arguments, adds an explicit scope check, and delegates each
+-- overload to the current implementation. No frontend VERSION bump: SQL-only repair.
 
 BEGIN;
 
 CREATE OR REPLACE FUNCTION public.tick_paardenrace_room_safe(
   room_code_input text,
-  session_token text,
-  session_token_input text,
-  site_scope_input text
+  session_token text DEFAULT NULL::text,
+  session_token_input text DEFAULT NULL::text,
+  site_scope_input text DEFAULT NULL::text
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -51,9 +51,9 @@ $function$;
 
 CREATE OR REPLACE FUNCTION public.draw_paardenrace_card_safe(
   room_code_input text,
-  session_token text,
-  session_token_input text,
-  site_scope_input text
+  session_token text DEFAULT NULL::text,
+  session_token_input text DEFAULT NULL::text,
+  site_scope_input text DEFAULT NULL::text
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -89,9 +89,9 @@ $function$;
 CREATE OR REPLACE FUNCTION public.submit_paardenrace_nominations_safe(
   room_code_input text,
   allocations_input jsonb,
-  session_token text,
-  session_token_input text,
-  site_scope_input text
+  session_token text DEFAULT NULL::text,
+  session_token_input text DEFAULT NULL::text,
+  site_scope_input text DEFAULT NULL::text
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -130,6 +130,9 @@ DECLARE
   v_tick text;
   v_draw text;
   v_nom text;
+  v_tick_args text;
+  v_draw_args text;
+  v_nom_args text;
   v_bad text[] := ARRAY[
     '_pr_require_host_v667',
     '_pr_require_player_in_room_v667',
@@ -139,15 +142,15 @@ DECLARE
   ];
   v_marker text;
 BEGIN
-  SELECT p.prosrc INTO v_tick
+  SELECT p.prosrc, pg_get_function_arguments(p.oid) INTO v_tick, v_tick_args
   FROM pg_proc p
   WHERE p.oid = to_regprocedure('public.tick_paardenrace_room_safe(text,text,text,text)');
 
-  SELECT p.prosrc INTO v_draw
+  SELECT p.prosrc, pg_get_function_arguments(p.oid) INTO v_draw, v_draw_args
   FROM pg_proc p
   WHERE p.oid = to_regprocedure('public.draw_paardenrace_card_safe(text,text,text,text)');
 
-  SELECT p.prosrc INTO v_nom
+  SELECT p.prosrc, pg_get_function_arguments(p.oid) INTO v_nom, v_nom_args
   FROM pg_proc p
   WHERE p.oid = to_regprocedure('public.submit_paardenrace_nominations_safe(text,jsonb,text,text,text)');
 
@@ -165,6 +168,12 @@ BEGIN
      OR position('_scope_norm(site_scope_input)' IN v_draw) = 0
      OR position('_scope_norm(site_scope_input)' IN v_nom) = 0 THEN
     RAISE EXCEPTION 'v792q scope guard missing from one or more browser overloads';
+  END IF;
+
+  IF v_tick_args NOT LIKE '%session_token text DEFAULT NULL::text%session_token_input text DEFAULT NULL::text%site_scope_input text DEFAULT NULL::text%'
+     OR v_draw_args NOT LIKE '%session_token text DEFAULT NULL::text%session_token_input text DEFAULT NULL::text%site_scope_input text DEFAULT NULL::text%'
+     OR v_nom_args NOT LIKE '%session_token text DEFAULT NULL::text%session_token_input text DEFAULT NULL::text%site_scope_input text DEFAULT NULL::text%' THEN
+    RAISE EXCEPTION 'v792q existing browser overload defaults were not preserved';
   END IF;
 
   FOREACH v_marker IN ARRAY v_bad LOOP
