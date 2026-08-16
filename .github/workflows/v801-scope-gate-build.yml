@@ -1,0 +1,64 @@
+name: v801 scope gate build
+
+on:
+  push:
+    branches: [agent/v801-auth-scope-isolation]
+    paths: ['.github/workflows/v801-scope-gate-build.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/v801-auth-scope-isolation
+          fetch-depth: 1
+      - name: Build v801 scope-isolation repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('fs');
+          fs.writeFileSync('VERSION','v801\n');
+          let gate=fs.readFileSync('gejast-auth-gate.js','utf8');
+          const old="      const data=await response.json();\n      return data&&data.ok===true;";
+          const next="      const data=await response.json();\n      const responseScope=String(data&&data.site_scope||'').trim().toLowerCase()==='family'?'family':'friends';\n      return data&&data.ok===true&&responseScope===requestedScope();";
+          if(!gate.includes(old)) throw new Error('auth gate validation owner changed unexpectedly');
+          gate=gate.replace(old,next);
+          fs.writeFileSync('gejast-auth-gate.js',gate);
+          NODE
+          node fix-version-drift.mjs
+          node <<'NODE'
+          const fs=require('fs');
+          const beta=JSON.parse(fs.readFileSync('beta-readiness.json','utf8'));
+          beta.site_version='release candidate v801 / live v800'; beta.last_updated='2026-08-16';
+          if(beta.deployment_identity){beta.deployment_identity.live_version='v800';beta.deployment_identity.release_candidate_version='v801';}
+          fs.writeFileSync('beta-readiness.json',JSON.stringify(beta,null,2)+'\n');
+          const gameplay=JSON.parse(fs.readFileSync('gameplay-acceptance.json','utf8')); gameplay.site_version='v801'; gameplay.last_updated='2026-08-16'; fs.writeFileSync('gameplay-acceptance.json',JSON.stringify(gameplay,null,2)+'\n');
+          const checklist=JSON.parse(fs.readFileSync('beta-live-write-checklist.json','utf8')); checklist.site_version='v801'; fs.writeFileSync('beta-live-write-checklist.json',JSON.stringify(checklist,null,2)+'\n');
+          const cert=JSON.parse(fs.readFileSync('release-certification.json','utf8'));
+          cert.current_version='v801'; cert.status='REVALIDATION_REQUIRED'; cert.current_audit_issue=153;
+          cert.reason='v801 fixes a live-proven forced-login scope-isolation defect: account_public_state_v687 returns ok=true for a valid player session without enforcing site_scope_input, while v800 gejast-auth-gate.js accepted ok=true without comparing the returned session site_scope to the requested page scope. A Friends session could therefore reveal Family surfaces. v801 requires returned session scope to equal requestedScope() before reveal. Fresh exact-main Phase-1 live auth/gameplay proof remains required.';
+          fs.writeFileSync('release-certification.json',JSON.stringify(cert,null,2)+'\n');
+          fs.writeFileSync('check-v801-auth-scope-isolation.mjs',`#!/usr/bin/env node\nimport assert from 'node:assert/strict';\nimport fs from 'node:fs';\nconst version=fs.readFileSync('VERSION','utf8').trim();\nassert.ok(Number((version.match(/\\d+/)||['0'])[0])>=801,'v801 scope isolation requires VERSION v801+');\nconst gate=fs.readFileSync('gejast-auth-gate.js','utf8');\nassert(gate.includes("responseScope===requestedScope()"),'auth gate must compare validated session scope to requested page scope');\nassert(gate.includes("data&&data.ok===true&&responseScope===requestedScope()"),'ok=true alone must not reveal protected pages');\nassert(gate.includes("site_scope_input:requestedScope()"),'auth RPC must still receive requested scope');\nconsole.log('v801 auth scope isolation contract ok.');\n`);
+          const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+          const marker='node check-v800-session-token-shape.mjs';
+          const next='node check-v801-auth-scope-isolation.mjs';
+          if(!pkg.scripts['verify:static'].includes(next)){
+            if(!pkg.scripts['verify:static'].includes(marker)) throw new Error('v800 verifier marker missing');
+            pkg.scripts['verify:static']=pkg.scripts['verify:static'].replace(marker,marker+' && '+next);
+          }
+          fs.writeFileSync('package.json',JSON.stringify(pkg,null,2)+'\n');
+          NODE
+      - name: Commit deterministic v801 repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: enforce player session scope at auth gate'
+          git push origin HEAD:agent/v801-auth-scope-isolation
