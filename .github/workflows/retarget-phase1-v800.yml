@@ -1,0 +1,48 @@
+name: Retarget Phase 1 proof to v800
+
+on:
+  push:
+    branches: [proof/v798-phase1-live]
+    paths: ['.github/workflows/retarget-phase1-v800.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  retarget:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v798-phase1-live
+          fetch-depth: 0
+      - name: Retarget exact-main Phase 1 proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          workflow = Path('.github/workflows/v798-phase1-live-proof.yml')
+          text = workflow.read_text()
+          text = text.replace('name: v799 Phase 1 live auth and gameplay proof', 'name: v800 Phase 1 live auth and gameplay proof')
+          text = text.replace('73a791429e90fe876cff7a143cf37bc3787cacb4', 'be9c67365a94bfd8eb8e800d9a7f294405c37b36')
+          text = text.replace('v799', 'v800').replace('V799', 'V800')
+          workflow.write_text(text)
+
+          script = Path('scripts/v798-phase1-live-proof.mjs')
+          text = script.read_text()
+          old = """async function invalidTokenProof(){\n  const bad='v798-invalid-session-token';\n  const context=await browser.newContext({viewport:{width:1280,height:800}});\n  await context.addInitScript(token=>{\n    if(location.pathname==='/toepen.html'){\n      localStorage.setItem('jas_session_token_v11',token);\n      localStorage.setItem('jas_last_activity_at_v1',String(Date.now()));\n    }\n  },bad);\n  const page=await context.newPage();\n  await committed(page,new URL('toepen.html',base).toString());\n  await page.waitForURL(u=>u.pathname==='/login.html',{timeout:15000});\n  const remaining=await page.evaluate(()=>localStorage.getItem('jas_session_token_v11'));\n  assert(!remaining,'invalid stored session token was not cleared');\n  await context.close();\n  console.log('AUTH_INVALID_SESSION_PASS token_cleared=true');\n}\n"""
+          new = """async function invalidTokenProof(){\n  const bad='ffffffffffffffffffffffffffffffffffffffffffffffff';\n  const context=await browser.newContext({viewport:{width:1280,height:800}});\n  await context.addInitScript(token=>{\n    if(location.pathname==='/toepen.html'){\n      localStorage.setItem('jas_session_token_v11',token);\n      sessionStorage.setItem('jas_session_token_v11',token);\n      localStorage.setItem('jas_last_activity_at_v1',String(Date.now()));\n      sessionStorage.setItem('jas_last_activity_at_v1',String(Date.now()));\n    }\n  },bad);\n  const page=await context.newPage();\n  await committed(page,new URL('toepen.html',base).toString());\n  await page.waitForURL(u=>u.pathname==='/login.html',{timeout:15000});\n  await page.waitForTimeout(1200);\n  const remaining=await page.evaluate(()=>({\n    local:localStorage.getItem('jas_session_token_v11')||'',\n    session:sessionStorage.getItem('jas_session_token_v11')||'',\n    recovered:(()=>{try{return window.GEJAST_CONFIG?.getPlayerSessionToken?.()||'';}catch{return '';}})()\n  }));\n  assert(!remaining.local&&!remaining.session&&!remaining.recovered,`invalid stored session token was not fully cleared: ${JSON.stringify(remaining)}`);\n  await context.close();\n  console.log('AUTH_INVALID_SESSION_PASS canonical_shape_rejected=true token_cleared_both_stores=true');\n}\n"""
+          if old not in text:
+              raise SystemExit('invalidTokenProof owner changed unexpectedly')
+          text = text.replace(old, new)
+          text = text.replace("RESULT=V798_PHASE1_AUTH_AND_SURFACES_PASS", "RESULT=V800_PHASE1_AUTH_AND_SURFACES_PASS")
+          script.write_text(text)
+          PY
+          git rm .github/workflows/retarget-phase1-v800.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/v798-phase1-live-proof.yml scripts/v798-phase1-live-proof.mjs
+          git commit -m 'test: retarget Phase 1 live proof to v800'
+          git push origin HEAD:proof/v798-phase1-live
