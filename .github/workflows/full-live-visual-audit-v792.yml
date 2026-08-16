@@ -84,9 +84,9 @@ jobs:
                 printf '%s' "$output"
                 return 0
               fi
-              if printf '%s\n' "$output" | grep -Eq 'ECHECKOUTTIMEOUT|unable to check out connection from the pool'; then
+              if printf '%s\n' "$output" | grep -Eq 'ECHECKOUTTIMEOUT|unable to check out connection from the pool|authentication did not complete within [0-9]+ms|canceling statement due to statement timeout'; then
                 if [ "$attempt" -lt 6 ]; then
-                  echo "$label: Supabase session-pool checkout unavailable (attempt $attempt/6); retrying." >&2
+                  echo "$label: transient Supabase pool/database pressure (attempt $attempt/6); retrying." >&2
                   sleep $((attempt * 5))
                   continue
                 fi
@@ -116,6 +116,10 @@ jobs:
             -v name1="$name1" -v name2="$name2" -v family_name="$family_name" \
             -v pin1="$pin1" -v pin2="$pin2" -v family_pin="$family_pin" \
             -f "$provision_sql")"
+          # A successful psql return means the single provisioning transaction committed.
+          # Export this before token-shape assertions so cleanup still runs if a malformed
+          # token exposes a real auth-contract regression after committed fixture creation.
+          echo 'GEJAST_VISUAL_PROVISIONED=1' >> "$GITHUB_ENV"
           IFS='|' read -r token1 token2 family_token <<< "$sessions"
           [[ "$token1" =~ ^[0-9a-f]{48}$ ]]
           [[ "$token2" =~ ^[0-9a-f]{48}$ ]]
@@ -145,9 +149,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ -z "${GEJAST_PLAYER1_NAME:-}" ] || [ -z "${GEJAST_PLAYER2_NAME:-}" ] || [ -z "${GEJAST_FAMILY_NAME:-}" ]; then
-            echo 'Fixture names were never fully exported; nothing safe to target for cleanup.'
+          if [ "${GEJAST_VISUAL_PROVISIONED:-0}" != '1' ]; then
+            echo 'Visual-audit provisioning transaction did not commit; cleanup is not required.'
             exit 0
+          fi
+          if [ -z "${GEJAST_PLAYER1_NAME:-}" ] || [ -z "${GEJAST_PLAYER2_NAME:-}" ] || [ -z "${GEJAST_FAMILY_NAME:-}" ]; then
+            echo 'Committed visual-audit fixture marker is present but names are incomplete; refusing unsafe cleanup.'
+            exit 1
           fi
 
           run_psql_with_pool_retry() {
@@ -163,9 +171,9 @@ jobs:
                 printf '%s' "$output"
                 return 0
               fi
-              if printf '%s\n' "$output" | grep -Eq 'ECHECKOUTTIMEOUT|unable to check out connection from the pool'; then
+              if printf '%s\n' "$output" | grep -Eq 'ECHECKOUTTIMEOUT|unable to check out connection from the pool|authentication did not complete within [0-9]+ms|canceling statement due to statement timeout'; then
                 if [ "$attempt" -lt 6 ]; then
-                  echo "$label: Supabase session-pool checkout unavailable (attempt $attempt/6); retrying." >&2
+                  echo "$label: transient Supabase pool/database pressure (attempt $attempt/6); retrying." >&2
                   sleep $((attempt * 5))
                   continue
                 fi
