@@ -21,12 +21,12 @@ assert.ok(!/gejast-mobile-foundation|gejast-home-gate|gejast-config\.js/i.test(s
 
 const spectator=fs.readFileSync('pikken_spectator.html','utf8');
 assert.match(spectator,/new URL\('\.\/pikken_live\.html',location\.href\)/,'Pikken spectator alias must retain the live-page target');
-assert.match(spectator,/q\.get\('client_match_id'\)/,'Pikken spectator alias must preserve client_match_id forwarding');
-assert.match(spectator,/q\.get\('match_ref'\)/,'Pikken spectator alias must preserve match_ref forwarding');
+assert.match(spectator,/\['game_id','client_match_id','match_ref','lobby_code'\]/,'Pikken spectator alias must preserve canonical game and compatible room identifiers');
+assert.match(spectator,/if\(q\.get\(key\)\)u\.searchParams\.set\(key,q\.get\(key\)\)/,'Pikken spectator alias must forward every declared gameplay identifier');
 assert.match(spectator,/q\.get\('scope'\)==='family'/,'Pikken spectator alias must preserve family scope forwarding');
 assert.match(spectator,/u\.searchParams\.set\('spectator','1'\)/,'Pikken spectator alias must force spectator mode');
 assert.match(spectator,/location\.replace\(u\.pathname\+u\.search\+u\.hash\)/,'Pikken spectator alias must retain replace-navigation semantics');
 assertRuntimeLight(spectator,'Pikken spectator',2200);
 assert.ok(!/gejast-mobile-foundation|gejast-home-gate|gejast-config\.js|gejast-game-group-b-bridge/i.test(spectator),'Pikken spectator alias must stay runtime-light');
 
-console.log(`v783 redirect alias runtime PASS at ${version}: score and Pikken spectator aliases redirect directly without starting unused runtime/style downloads.`);
+console.log(`v783 redirect alias runtime PASS at ${version}: score and Pikken spectator aliases redirect directly without starting unused runtime/style downloads, and spectator navigation preserves game context.`);
