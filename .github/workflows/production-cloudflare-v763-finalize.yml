@@ -1,0 +1,125 @@
+name: Production Cloudflare v763 finalization
+
+on:
+  push:
+    branches:
+      - ops/finalize-cloudflare-v763-20260816
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-cloudflare-v763-finalization
+  cancel-in-progress: false
+
+jobs:
+  deploy-and-prove:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Check out exact finalization branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Fail closed if Cloudflare credentials are absent
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo 'CLOUDFLARE_API_TOKEN is missing'; exit 1; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo 'CLOUDFLARE_ACCOUNT_ID is missing'; exit 1; }
+          echo 'Cloudflare credential presence PASS (values not printed).'
+
+      - name: Install pinned repository dependencies
+        run: npm ci
+
+      - name: Run canonical repository verification before production deploy
+        run: npm run verify
+
+      - name: Build protected admin static asset bundle
+        run: npm run admin-worker:build
+
+      - name: Compile Worker deployment without changing production
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 deploy --config cloudflare/workers/admin-gate/wrangler.toml --dry-run
+
+      - name: Deploy checked-in Worker v763 to production
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 deploy --config cloudflare/workers/admin-gate/wrangler.toml
+
+      - name: Prove production HTTP to HTTPS and admin perimeter
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          request() {
+            local method="$1"
+            local url="$2"
+            local prefix="$3"
+            rm -f "${prefix}.headers" "${prefix}.body"
+            curl --silent --show-error --request "$method" --max-time 30 --connect-timeout 10 \
+              --output "${prefix}.body" --dump-header "${prefix}.headers" \
+              --write-out '%{http_code}' "$url"
+          }
+
+          header_value() {
+            local file="$1"
+            local wanted="$2"
+            awk -v wanted="$wanted" 'BEGIN{IGNORECASE=1} $1 ~ ("^" wanted ":$") {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); value=$0} END{print value}' "$file"
+          }
+
+          wait_for() {
+            local method="$1"
+            local url="$2"
+            local expected_status="$3"
+            local expected_location="$4"
+            local expected_build="$5"
+            local prefix="$6"
+            local status='' location='' build=''
+            for attempt in $(seq 1 18); do
+              status="$(request "$method" "$url" "$prefix" || true)"
+              location="$(header_value "${prefix}.headers" 'Location' 2>/dev/null || true)"
+              build="$(header_value "${prefix}.headers" 'X-Kalenel-Admin-Build' 2>/dev/null || true)"
+              if [[ "$status" == "$expected_status" ]] \
+                && { [[ -z "$expected_location" ]] || [[ "$location" == "$expected_location" ]]; } \
+                && { [[ -z "$expected_build" ]] || [[ "$build" == "$expected_build" ]]; }; then
+                printf 'PASS %s %s -> %s' "$method" "$url" "$status"
+                [[ -n "$location" ]] && printf ' location=%s' "$location"
+                [[ -n "$build" ]] && printf ' build=%s' "$build"
+                printf '\n'
+                return 0
+              fi
+              echo "Waiting for deployed edge state (attempt ${attempt}/18): status=${status} location=${location:-<none>} build=${build:-<none>}"
+              sleep 10
+            done
+            echo "FAIL ${method} ${url}: expected status=${expected_status} location=${expected_location:-<any>} build=${expected_build:-<any>}; got status=${status} location=${location:-<none>} build=${build:-<none>}"
+            echo '--- response headers ---'
+            cat "${prefix}.headers" || true
+            exit 1
+          }
+
+          wait_for GET 'http://kalenel.nl/' '308' 'https://kalenel.nl/' '' /tmp/http-apex
+          wait_for GET 'http://kalenel.nl/index.html?probe=cf-v763&keep=1' '308' 'https://kalenel.nl/index.html?probe=cf-v763&keep=1' '' /tmp/http-path-query
+          wait_for POST 'http://kalenel.nl/request.html?probe=cf-v763-post' '308' 'https://kalenel.nl/request.html?probe=cf-v763-post' '' /tmp/http-post
+          wait_for GET 'http://admin.kalenel.nl/admin.html?probe=cf-v763' '308' 'https://admin.kalenel.nl/admin.html?probe=cf-v763' '' /tmp/http-admin
+          wait_for GET 'https://kalenel.nl/' '200' '' '' /tmp/https-apex
+          wait_for GET 'https://admin.kalenel.nl/admin.html?probe=cf-v763' '401' '' 'v763' /tmp/https-admin
+
+          cache_control="$(header_value /tmp/http-apex.headers 'Cache-Control')"
+          [[ "$cache_control" == 'no-store' ]] || { echo "Expected HTTP redirect Cache-Control no-store, got: ${cache_control:-<none>}"; exit 1; }
+
+          admin_body="$(cat /tmp/https-admin.body)"
+          [[ "$admin_body" == *'Admin login vereist'* ]] || { echo 'Anonymous HTTPS admin did not return the expected fail-closed login perimeter.'; exit 1; }
+
+          echo 'RESULT=CLOUDFLARE_V763_PRODUCTION_DEPLOY_AND_PROOF_PASS'
