@@ -14,7 +14,8 @@ assert.match(workflow, /delete from public\.gejast_player_sessions_v746/, 'visua
 assert.match(workflow, /Visual-audit cleanup PASS with zero residue/, 'visual audit must retain explicit cleanup success marker');
 assert.match(workflow, /DB_RETRY_ATTEMPTS=4/, 'visual audit DB access must use a bounded retry budget');
 assert.match(workflow, /\.pooler\.supabase\.com:5432\//, 'visual audit must recognize the shared Supavisor session-pooler URL');
-assert.match(workflow, /VISUAL_AUDIT_DB_URL=.*:6543\//, 'ephemeral GitHub audit DB access must prefer Supavisor transaction mode');
+assert.ok(workflow.includes('VISUAL_AUDIT_DB_URL="${VISUAL_AUDIT_DB_URL/:5432/:6543}"'), 'ephemeral GitHub audit DB access must switch only the Supavisor port so the database path is preserved');
+assert.doesNotMatch(workflow, /VISUAL_AUDIT_DB_URL="\$\{VISUAL_AUDIT_DB_URL\/:5432\\\//, 'pool-mode rewrite must not consume the slash before the database name');
 assert.match(workflow, /retry_psql_file 'visual-audit fixture provision'/, 'fixture provisioning must retry transient database checkout failures');
 assert.match(workflow, /retry_psql_capture 'visual-audit session login'/, 'session provisioning must retry transient database checkout failures');
 assert.match(workflow, /retry_psql_file 'visual-audit cleanup'/, 'cleanup must retry transient database checkout failures');
