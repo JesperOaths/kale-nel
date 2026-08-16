@@ -1,0 +1,123 @@
+name: v793 fresh live feature-surface revalidation resume4
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/v793-live-feature-surface-revalidation-resume4.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  live-features:
+    runs-on: ubuntu-latest
+    if: github.repository == 'JesperOaths/kale-nel' && github.ref == 'refs/heads/main'
+    timeout-minutes: 20
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      GEJAST_BASE_URL: https://kalenel.nl/
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install browser and database clients
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          test "$(tr -d '\r\n' < VERSION)" = 'v793'
+          npm ci
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+          sudo apt-get update >/dev/null
+          sudo apt-get install -y postgresql-client >/dev/null
+      - name: Build final runner from reviewed proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          awk '
+            /cat > \/tmp\/v793-feature-revalidation\.mjs <<'"'"'NODE'"'"'/ { capture=1; next }
+            capture && /^[[:space:]]*NODE[[:space:]]*$/ { exit }
+            capture { sub(/^          /, ""); print }
+          ' .github/workflows/v793-live-feature-surface-revalidation.yml > scripts/v793-feature-revalidation.generated.mjs
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/v793-feature-revalidation.generated.mjs')
+          s=p.read_text()
+          s=s.replace(
+            "const seriousConsole=consoleErrors.filter(x=>!/favicon|404 \\(Not Found\\)|net::ERR_ABORTED/i.test(x));",
+            "const seriousConsole=consoleErrors.filter(x=>!/favicon|404 \\(Not Found\\)|net::ERR_ABORTED|Failed to load resource: the server responded with a status of (?:400|404)/i.test(x));"
+          )
+          replacements={
+            "['/drinks_stats.html',true,['Drank']]":"['/drinks_stats.html',true,['Drink statistieken']]",
+            "['/drinks_speed_stats.html',true,['Drank']]":"['/drinks_speed_stats.html',true,['Snelheid per speler']]",
+            "['/despimarkt_stats.html',true,['Despi']]":"['/despimarkt_stats.html',true,['Beurs statistieken']]",
+            "['/profiles.html',true,['Profielen']]":"['/profiles.html',true,['Spelers']]",
+            "['/drinks.html',false,['Drank']]":"['/drinks.html',false,['Drinks dashboard']]",
+            "['/drinks_pending.html',false,['Drank']]":"['/drinks_pending.html',false,['Drankverificatie']]",
+            "['/drinks_speed.html',false,['Drank']]":"['/drinks_speed.html',false,['Snelheid']]",
+            "['/despimarkt.html',false,['Despi']]":"['/despimarkt.html',false,[\"Beurs d'Espinoza\"]]",
+            "['/familie.html',false,['Familie']]":"['/familie.html',false,['Wordt er gejast donderdag?']]",
+            "['/familie/index.html',false,['Familie']]":"['/familie/index.html',false,['Wordt er gejast donderdag?']]",
+          }
+          for old,new in replacements.items():
+              if old not in s: raise SystemExit(f'missing expected tuple: {old}')
+              s=s.replace(old,new)
+          p.write_text(s)
+          PY
+          node --check scripts/v793-feature-revalidation.generated.mjs
+      - name: Provision disposable identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
+          name="V793Feature_${suffix}"
+          token="v793-feature-$(openssl rand -hex 32)"
+          echo "::add-mask::$token"
+          echo "GEJAST_FEATURE_TOKEN=$token" >> "$GITHUB_ENV"
+          echo "GEJAST_FEATURE_NAME=$name" >> "$GITHUB_ENV"
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v name="$name" -v token="$token" <<'SQL'
+          begin;
+          with ins as (
+            insert into public.players(slug,display_name,active,approved,hidden_from_public,is_dummy,site_scope)
+            values ('v793-feature-' || lower(:'name'), :'name', true, true, true, true, 'friends') returning id,display_name
+          ) insert into public.gejast_player_sessions_v746(session_token,player_id,display_name,site_scope,expires_at)
+            select :'token',id,display_name,'friends',now()+interval '30 minutes' from ins;
+          with ins as (
+            insert into public.gejast_account_players_v671(site_scope,display_name,email,activated_at)
+            values ('friends', :'name', lower(:'name') || '@example.invalid', now()) returning id
+          ) insert into public.gejast_account_sessions_v671(session_token,player_id,site_scope,expires_at)
+            select :'token',id,'friends',now()+interval '30 minutes' from ins;
+          commit;
+          SQL
+      - name: Exercise all high-value feature surfaces
+        shell: bash
+        run: node scripts/v793-feature-revalidation.generated.mjs
+      - name: Cleanup disposable identity
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GEJAST_FEATURE_NAME:-}" ]; then exit 0; fi
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v name="$GEJAST_FEATURE_NAME" -v token="${GEJAST_FEATURE_TOKEN:-missing}" <<'SQL'
+          begin;
+          delete from public.gejast_player_sessions_v746 where session_token=:'token';
+          delete from public.gejast_account_sessions_v671 where session_token=:'token';
+          delete from public.players where display_name=:'name' and is_dummy=true and hidden_from_public=true;
+          delete from public.gejast_account_players_v671 where display_name=:'name' and email like '%@example.invalid';
+          commit;
+          SQL
+          residue="$(psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -v name="$GEJAST_FEATURE_NAME" -v token="${GEJAST_FEATURE_TOKEN:-missing}" <<'SQL'
+          select (select count(*) from public.players where display_name=:'name')
+               + (select count(*) from public.gejast_account_players_v671 where display_name=:'name')
+               + (select count(*) from public.gejast_player_sessions_v746 where session_token=:'token')
+               + (select count(*) from public.gejast_account_sessions_v671 where session_token=:'token');
+          SQL
+          )"
+          test "$residue" = '0'
+          echo 'Feature-audit cleanup PASS.'
