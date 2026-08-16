@@ -1,0 +1,185 @@
+name: v793 fresh live feature-surface revalidation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/v793-live-feature-surface-revalidation.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v793-fresh-live-feature-surface-revalidation
+  cancel-in-progress: false
+
+jobs:
+  live-features:
+    runs-on: ubuntu-latest
+    if: github.repository == 'JesperOaths/kale-nel' && github.ref == 'refs/heads/main'
+    timeout-minutes: 20
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      GEJAST_BASE_URL: https://kalenel.nl/
+    steps:
+      - name: Check out exact merged main
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install live browser runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || { echo 'SUPABASE_DB_URL missing'; exit 1; }
+          test "$(tr -d '\r\n' < VERSION)" = 'v793'
+          npm ci
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+          sudo apt-get update >/dev/null
+          sudo apt-get install -y postgresql-client >/dev/null
+
+      - name: Provision disposable feature-audit identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
+          name="V793Feature_${suffix}"
+          token="v793-feature-$(openssl rand -hex 32)"
+          echo "::add-mask::$token"
+          echo "GEJAST_FEATURE_TOKEN=$token" >> "$GITHUB_ENV"
+          echo "GEJAST_FEATURE_NAME=$name" >> "$GITHUB_ENV"
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v name="$name" -v token="$token" <<'SQL'
+          begin;
+          with ins as (
+            insert into public.players(slug,display_name,active,approved,hidden_from_public,is_dummy,site_scope)
+            values ('v793-feature-' || lower(:'name'), :'name', true, true, true, true, 'friends')
+            returning id,display_name
+          )
+          insert into public.gejast_player_sessions_v746(session_token,player_id,display_name,site_scope,expires_at)
+          select :'token',id,display_name,'friends',now()+interval '30 minutes' from ins;
+          with ins as (
+            insert into public.gejast_account_players_v671(site_scope,display_name,email,activated_at)
+            values ('friends', :'name', lower(:'name') || '@example.invalid', now())
+            returning id
+          )
+          insert into public.gejast_account_sessions_v671(session_token,player_id,site_scope,expires_at)
+          select :'token',id,'friends',now()+interval '30 minutes' from ins;
+          commit;
+          SQL
+
+      - name: Exercise repaired and high-value feature surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/v793-feature-revalidation.mjs <<'NODE'
+          import { chromium } from 'playwright';
+          const base=String(process.env.GEJAST_BASE_URL||'https://kalenel.nl/').replace(/\/+$/,'')+'/';
+          const token=String(process.env.GEJAST_FEATURE_TOKEN||'');
+          const player=String(process.env.GEJAST_FEATURE_NAME||'');
+          if(!token||!player) throw new Error('feature fixture missing');
+          const browser=await chromium.launch({headless:true});
+          const context=await browser.newContext({viewport:{width:1365,height:900},deviceScaleFactor:1});
+          await context.addInitScript((t)=>{
+            localStorage.setItem('jas_session_token_v11',t);
+            localStorage.setItem('jas_session_token_v10',t);
+            localStorage.setItem('jas_last_activity_at_v1',String(Date.now()));
+          },token);
+          const commonBad=[/game[_ ]key ongeldig/i,/could not find the function/i,/schema cache/i,/function .* does not exist/i,/supabase config missing/i];
+          async function inspect(path,{forbidLoading=false,required=[]}={}){
+            const page=await context.newPage();
+            const consoleErrors=[]; const badResponses=[]; const pageErrors=[];
+            page.on('console',msg=>{if(msg.type()==='error') consoleErrors.push(msg.text())});
+            page.on('pageerror',err=>pageErrors.push(String(err?.message||err)));
+            page.on('response',res=>{
+              try{const u=new URL(res.url()); if(u.hostname.endsWith('kalenel.nl') && res.status()>=400 && !/favicon/i.test(u.pathname)) badResponses.push(`${res.status()} ${u.pathname}`);}catch{}
+            });
+            const response=await page.goto(new URL(path.replace(/^\//,''),base).toString(),{waitUntil:'domcontentloaded',timeout:25000});
+            await page.waitForTimeout(7000);
+            const text=await page.locator('body').innerText();
+            const title=await page.title();
+            if(!response || response.status()>=400) throw new Error(`${path} document HTTP ${response?.status()||'none'}`);
+            for(const rx of commonBad) if(rx.test(text)) throw new Error(`${path} visible runtime error ${rx}`);
+            if(forbidLoading && /(?:Laden(?:…|\.\.\.)|laden(?:…|\.\.\.)|Stats laden(?:…|\.\.\.)|Actieve spelers laden(?:…|\.\.\.))/i.test(text)) throw new Error(`${path} still visibly loading after 7s`);
+            for(const needle of required) if(!text.includes(needle)) throw new Error(`${path} missing visible ${JSON.stringify(needle)}`);
+            const seriousConsole=consoleErrors.filter(x=>!/favicon|404 \(Not Found\)|net::ERR_ABORTED/i.test(x));
+            if(pageErrors.length) throw new Error(`${path} pageerror: ${pageErrors.join(' | ')}`);
+            if(seriousConsole.length) throw new Error(`${path} console error: ${seriousConsole.join(' | ')}`);
+            if(badResponses.length) throw new Error(`${path} same-origin HTTP errors: ${badResponses.join(', ')}`);
+            console.log(`${path}: PASS :: ${title}`);
+            return page;
+          }
+
+          const home=await inspect('/index.html',{required:['Klaverjas Score Formulier','Klaverjas online']});
+          const scoreLabels=await home.locator('#homeKlaverjasEntry').count();
+          const onlineLabels=await home.locator('a[href="./klaverjas_online.html"] .page-link-label').filter({hasText:'Klaverjas online'}).count();
+          const duplicate=await home.locator('#homeKlaverjasLiveEntry').count();
+          if(scoreLabels!==1||onlineLabels!==1||duplicate!==0) throw new Error(`homepage Klaverjas product count mismatch score=${scoreLabels} online=${onlineLabels} duplicate=${duplicate}`);
+          await home.close();
+
+          await (await inspect('/scorer.html',{required:['Klaverjas Scoreformulier']})).close();
+          const compat=await inspect('/klaverjas_scorer_v596_repo_ready.html',{forbidLoading:true,required:['Wedstrijd invoeren','Live starten','Opslaan']});
+          const options=await compat.locator('#a1 option').count();
+          if(options<2) throw new Error(`Klaverjas compatibility scorer did not load player names; options=${options}`);
+          await compat.locator('#scoreA').fill('101');
+          await compat.locator('#scoreB').fill('82');
+          if(await compat.locator('#scoreA').inputValue()!=='101'||await compat.locator('#scoreB').inputValue()!=='82') throw new Error('Klaverjas scorer score inputs are not interactive');
+          console.log('Klaverjas scorer player load + score input interaction: PASS');
+          await compat.close();
+
+          const checks=[
+            ['/ladder.html?game=klaverjas',true,['Ladder']],
+            ['/leaderboard.html',true,['Klaverjas']],
+            ['/pikken_ladder.html',true,['Pikken']],
+            ['/pikken_stats.html',true,['Pikken']],
+            ['/paardenrace_stats.html',true,['Paardenrace']],
+            ['/rad_stats.html',true,['Spins','Populairste segmenten']],
+            ['/drinks_stats.html',true,['Drank']],
+            ['/drinks_speed_stats.html',true,['Drank']],
+            ['/despimarkt_stats.html',true,['Despi']],
+            ['/profiles.html',true,['Profielen']],
+            [`/player.html?player=${encodeURIComponent(player)}&game=klaverjas&scope=friends`,true,[player]],
+            ['/drinks.html',false,['Drank']],
+            ['/drinks_pending.html',false,['Drank']],
+            ['/drinks_speed.html',false,['Drank']],
+            ['/despimarkt.html',false,['Despi']],
+            ['/beurs.html',false,['Beurs']],
+            ['/rad.html',false,['Rad']],
+            ['/familie.html',false,['Familie']],
+            ['/familie/index.html',false,['Familie']],
+            ['/familie/scorer.html',false,['Score']],
+            ['/familie/leaderboard.html',true,['Ranglijst']],
+          ];
+          for(const [route,forbidLoading,required] of checks){ const page=await inspect(route,{forbidLoading,required}); await page.close(); }
+          await context.close(); await browser.close();
+          console.log('RESULT=V793_FRESH_LIVE_FEATURE_SURFACES_PASS');
+          NODE
+          node /tmp/v793-feature-revalidation.mjs
+
+      - name: Cleanup disposable feature-audit identity
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GEJAST_FEATURE_NAME:-}" ]; then exit 0; fi
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v name="$GEJAST_FEATURE_NAME" -v token="${GEJAST_FEATURE_TOKEN:-missing}" <<'SQL'
+          begin;
+          delete from public.gejast_player_sessions_v746 where session_token=:'token';
+          delete from public.gejast_account_sessions_v671 where session_token=:'token';
+          delete from public.players where display_name=:'name' and is_dummy=true and hidden_from_public=true;
+          delete from public.gejast_account_players_v671 where display_name=:'name' and email like '%@example.invalid';
+          commit;
+          SQL
+          residue="$(psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -v name="$GEJAST_FEATURE_NAME" -v token="${GEJAST_FEATURE_TOKEN:-missing}" <<'SQL'
+          select (select count(*) from public.players where display_name=:'name')+(select count(*) from public.gejast_account_players_v671 where display_name=:'name')+(select count(*) from public.gejast_player_sessions_v746 where session_token=:'token')+(select count(*) from public.gejast_account_sessions_v671 where session_token=:'token');
+          SQL
+          )"
+          test "$residue" = '0'
+          echo 'Feature-audit cleanup PASS.'
