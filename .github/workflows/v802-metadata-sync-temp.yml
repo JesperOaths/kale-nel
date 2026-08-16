@@ -1,0 +1,47 @@
+name: TEMP v802 metadata sync
+
+on:
+  push:
+    branches:
+      - agent/v802-family-player-alias
+    paths:
+      - '.github/workflows/v802-metadata-sync-temp.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/v802-family-player-alias
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+      - name: Align current-version metadata without promoting live state
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs=require('fs');
+          const write=(p,x)=>fs.writeFileSync(p,JSON.stringify(x,null,2)+'\n');
+          const beta=JSON.parse(fs.readFileSync('beta-readiness.json','utf8'));
+          beta.site_version='release candidate v802 / live v801';
+          beta.deployment_identity.release_candidate_version='v802';
+          beta.deployment_identity.note='v802 candidate: familie/player.html is now a runtime-light query-preserving Family alias. Live deployment remains v801 until merge/deploy. Prior v801 proof is historical input only; release certification remains fail-closed because the full visual revalidation is blocked by project-specific Supabase data-plane timeouts and Toepen v801a still requires explicit deployment authorization.';
+          write('beta-readiness.json',beta);
+          const gameplay=JSON.parse(fs.readFileSync('gameplay-acceptance.json','utf8'));
+          gameplay.site_version='v802';
+          write('gameplay-acceptance.json',gameplay);
+          NODE
+          node check-beta-readiness-current-v770d.mjs
+          node check-gameplay-acceptance-current.mjs
+      - name: Commit candidate metadata
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add beta-readiness.json gameplay-acceptance.json
+          git commit -m 'release: align v802 candidate metadata'
+          git push origin HEAD:agent/v802-family-player-alias
