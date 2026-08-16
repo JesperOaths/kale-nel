@@ -1,7 +1,7 @@
 {
   "version": 2,
   "site_version": "v792",
-  "last_updated": "2026-08-15",
+  "last_updated": "2026-08-16",
   "scope": "Gameplay acceptance is tracked separately from general beta readiness. Deterministic engine proof is not labeled as live multiplayer proof, and route/RPC reachability is not labeled as play-to-completion proof. Player-count limits are only recorded as exact when current shipped source or deterministic acceptance grounds them; unknown backend-owned limits remain explicitly unknown.",
   "live_write_approval": {
     "name": "GEJAST_ALLOW_LIVE_WRITE_BETA",
@@ -49,10 +49,7 @@
       "player_contract": {
         "authority": "shipped_gameplay_matrix",
         "supported_player_counts": [2, 4],
-        "formats": {
-          "1v1": 2,
-          "2v2": 4
-        },
+        "formats": { "1v1": 2, "2v2": 4 },
         "minimum": 2,
         "maximum": 4,
         "minimum_status": "grounded",
@@ -84,8 +81,8 @@
       },
       "deterministic_status": "rules_and_live_viewmodel_proven",
       "deterministic_evidence": "check-pikken-pik-conversion-v790.mjs protects bid ordering and pik conversion, while check-pikken-live-viewmodel-v792.mjs executes shipped live-view helpers for dice ordering, bid labels, winner detection, phase normalization, viewer membership and completion/abandonment handoff wiring. This still does not claim backend play-to-completion.",
-      "live_status": "two_player_start_cleanup_available",
-      "live_evidence": "check-live-game-flows.mjs can create, join, ready, start and destroy a controlled two-player Pikken room when two explicit session tokens are supplied. Separately, read-only production catalog evidence records the deployed exact start-RPC definition fingerprint in backend-rpc-provenance.json.",
+      "live_status": "two_player_start_cleanup_proven",
+      "live_evidence": "Controlled authenticated production acceptance created, joined, readied, started and destroyed a two-player Pikken room with disposable sessions; check-live-game-flows.mjs remains the cleanup-capable canonical smoke. Read-only production catalog evidence also records the deployed exact start-RPC fingerprint in backend-rpc-provenance.json.",
       "remaining_gap": "The exact checked-in Pikken start RPC and its observed deployed definition explicitly reject fewer than two players, grounding the minimum at 2. No authoritative checked-in room/join constraint currently proves a maximum player count, so the maximum remains unknown and must not be inferred from two-player startup success."
     },
     {
@@ -109,8 +106,8 @@
       },
       "deterministic_status": "engine_and_live_viewmodel_proven",
       "deterministic_evidence": "check-paardenrace-engine-v792.mjs covers shipped card parsing, four-horse progress, ten gates, draw accounting, ready/wager summary and winner summary; check-paardenrace-live-viewmodel-v792.mjs executes shipped live helpers for race logs, player/ready/winner presentation, host kick boundaries, nomination targeting, the two-player live-state sanity guard and close/leave handoff wiring. This still does not claim backend play-to-completion.",
-      "live_status": "two_player_start_cleanup_available",
-      "live_evidence": "check-live-game-flows.mjs can create/join a two-player room, select distinct suits, verify wagers, ready, start countdown and disband the controlled room when two explicit session tokens are supplied. Separately, read-only production catalog evidence records the deployed exact start-RPC definition fingerprint in backend-rpc-provenance.json.",
+      "live_status": "two_player_start_cleanup_proven",
+      "live_evidence": "Controlled authenticated production acceptance created/joined a two-player room, selected distinct suits, verified wagers, readied, started countdown and disbanded the room using disposable sessions; check-live-game-flows.mjs remains the canonical cleanup-capable smoke. Read-only production catalog evidence also records the deployed exact start-RPC fingerprint in backend-rpc-provenance.json.",
       "remaining_gap": "The exact checked-in Paardenrace start RPC, its observed deployed definition and the shipped lobby all explicitly reject starts below two players, grounding the minimum at 2. No authoritative checked-in room/join/schema constraint proves a maximum human room size, and the four horse suits are race entities rather than evidence of a four-human maximum."
     },
     {
@@ -120,24 +117,18 @@
       "player_contract": {
         "authority": "shipped_frontend_four_seat_lobby",
         "seats": 4,
-        "supported_humans": {
-          "minimum": 1,
-          "maximum": 4
-        },
-        "supported_bots": {
-          "minimum": 0,
-          "maximum": 3
-        },
+        "supported_humans": { "minimum": 1, "maximum": 4 },
+        "supported_bots": { "minimum": 0, "maximum": 3 },
         "start_requires_full_table": true,
         "minimum_status": "grounded",
         "maximum_status": "grounded",
         "source": "klaverjas_online.html"
       },
       "deterministic_status": "repository_postgres_proven",
-      "deterministic_evidence": "v792b-v792h transition, rule, persistence, roem-wrapper and hidden recovery-hand guards are covered by static and real-PostgreSQL proofs.",
-      "live_status": "production_guard_chain_not_applied",
-      "live_evidence": "The frontend/live routes are healthy, but v792b-v792h production SQL application is a separately authorized consequential action and has not been represented as deployed.",
-      "remaining_gap": "After explicit production SQL authorization and application, run the dedicated controlled Online Klaverjas live-write smoke before upgrading live gameplay status."
+      "deterministic_evidence": "v792b-v792h transition, rule, persistence, roem-wrapper and hidden recovery-hand guards are covered by static and real-PostgreSQL proofs and are applied in production.",
+      "live_status": "two_player_room_lifecycle_proven",
+      "live_evidence": "Production v792b-v792h is applied. On 2026-08-16 a controlled production smoke used two randomized disposable player sessions to create a zero-bot room, join a second human, read state independently as both viewers, close the room as host, and then physically remove the room/sessions/player fixtures. Post-cleanup counts were zero.",
+      "remaining_gap": "No backend or frontend gap remains for the controlled two-human room lifecycle. Full four-seat play rules and completion are covered separately by the deterministic/PostgreSQL acceptance suite; live browser multi-context certification is tracked by final acceptance issue #131 rather than being implied by this backend smoke."
     }
   ]
 }
