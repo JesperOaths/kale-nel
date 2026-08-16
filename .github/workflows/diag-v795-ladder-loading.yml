@@ -11,7 +11,9 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -20,18 +22,54 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-      - name: Install diagnostic browser
+      - name: Install diagnostic runtime
         run: |
+          test -n "${SUPABASE_DB_URL:-}"
           npm ci
           npm install --no-save --package-lock=false playwright@1.55.0
           npx playwright install --with-deps chromium
-      - name: Inspect live Klaverjas ladder after settle
+          sudo apt-get update >/dev/null
+          sudo apt-get install -y postgresql-client >/dev/null
+      - name: Provision one hidden disposable session
+        shell: bash
+        run: |
+          set -euo pipefail
+          name="V795LadderDiag_${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
+          token="v795-ladder-diag-$(openssl rand -hex 32)"
+          echo "::add-mask::$token"
+          echo "GEJAST_DIAG_NAME=$name" >> "$GITHUB_ENV"
+          echo "GEJAST_DIAG_TOKEN=$token" >> "$GITHUB_ENV"
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v name="$name" -v token="$token" <<'SQL'
+          begin;
+          with ins as (
+            insert into public.players(slug,display_name,active,approved,hidden_from_public,is_dummy,site_scope)
+            values ('v795-ladder-diag-' || lower(:'name'), :'name', true, true, true, true, 'friends')
+            returning id,display_name
+          )
+          insert into public.gejast_player_sessions_v746(session_token,player_id,display_name,site_scope,expires_at)
+          select :'token',id,display_name,'friends',now()+interval '15 minutes' from ins;
+          with ins as (
+            insert into public.gejast_account_players_v671(site_scope,display_name,email,activated_at)
+            values ('friends', :'name', lower(:'name') || '@example.invalid', now()) returning id
+          )
+          insert into public.gejast_account_sessions_v671(session_token,player_id,site_scope,expires_at)
+          select :'token',id,'friends',now()+interval '15 minutes' from ins;
+          commit;
+          SQL
+      - name: Inspect authenticated live Klaverjas ladder after settle
         shell: bash
         run: |
           node --input-type=module <<'NODE'
           import { chromium } from 'playwright';
+          const token=process.env.GEJAST_DIAG_TOKEN;
           const browser=await chromium.launch({headless:true});
-          const page=await browser.newPage({viewport:{width:1280,height:900}});
+          const context=await browser.newContext({viewport:{width:1280,height:900}});
+          await context.addInitScript(t=>{
+            localStorage.setItem('jas_session_token_v11',t);
+            localStorage.setItem('jas_session_token_v10',t);
+            localStorage.setItem('jas_last_activity_at_v1',String(Date.now()));
+          },token);
+          const page=await context.newPage();
           const events=[];
           page.on('console',m=>events.push(`console:${m.type()}:${m.text()}`));
           page.on('pageerror',e=>events.push(`pageerror:${e.message}`));
@@ -41,31 +79,43 @@ jobs:
           await page.goto('https://kalenel.nl/ladder.html?game=klaverjas&scope=friends',{waitUntil:'domcontentloaded',timeout:30000});
           await page.waitForTimeout(10000);
           const state=await page.evaluate(()=>{
+            const rx=/(?:Laden(?:…|\.\.\.)|laden(?:…|\.\.\.)|Stats laden|Actieve spelers laden)/i;
             const loading=[...document.querySelectorAll('body *')].filter(el=>{
               const style=getComputedStyle(el); const rect=el.getBoundingClientRect();
-              return style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0&&/(?:Laden(?:…|\.\.\.)|laden(?:…|\.\.\.)|Stats laden|Actieve spelers laden)/i.test(el.textContent||'');
-            }).filter(el=>![...el.children].some(ch=>/(?:Laden(?:…|\.\.\.)|laden(?:…|\.\.\.)|Stats laden|Actieve spelers laden)/i.test(ch.textContent||'')))
+              return style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0&&rx.test(el.textContent||'');
+            }).filter(el=>![...el.children].some(ch=>rx.test(ch.textContent||'')))
               .map(el=>({tag:el.tagName,id:el.id,cls:el.className,text:(el.textContent||'').trim().slice(0,180)}));
             const resources=performance.getEntriesByType('resource').filter(e=>/rest\/v1\/rpc/.test(e.name)).map(e=>({name:e.name.split('/rpc/')[1]?.split('?')[0]||e.name,duration:Math.round(e.duration),transferSize:e.transferSize}));
-            return {
-              url:location.href,
-              title:document.title,
-              bodyClass:document.body.className,
-              loading,
-              graphText:document.querySelector('#graphWrap')?.textContent?.trim(),
-              graphClass:document.querySelector('#graphWrap')?.className,
-              ladderText:document.querySelector('#ladderWrap')?.textContent?.trim().slice(0,240),
-              checkboxes:document.querySelectorAll('[data-player-toggle]').length,
-              resources
-            };
+            return {url:location.href,title:document.title,bodyClass:document.body.className,loading,graphText:document.querySelector('#graphWrap')?.textContent?.trim(),graphClass:document.querySelector('#graphWrap')?.className,ladderText:document.querySelector('#ladderWrap')?.textContent?.trim().slice(0,240),checkboxes:document.querySelectorAll('[data-player-toggle]').length,resources};
           });
           console.log('elapsed_ms',Date.now()-started);
           console.log(JSON.stringify(state,null,2));
           console.log('events',JSON.stringify(events,null,2));
           await page.screenshot({path:'ladder-diagnostic.png',fullPage:true});
           await browser.close();
-          if(state.loading.length) process.exitCode=2;
+          if(!/\/ladder\.html/.test(new URL(state.url).pathname)) throw new Error(`unexpected redirect: ${state.url}`);
+          if(state.loading.length) throw new Error(`visible loading remains: ${JSON.stringify(state.loading)}`);
           NODE
+      - name: Cleanup hidden diagnostic session
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GEJAST_DIAG_NAME:-}" ]; then exit 0; fi
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v name="$GEJAST_DIAG_NAME" -v token="${GEJAST_DIAG_TOKEN:-missing}" <<'SQL'
+          begin;
+          delete from public.gejast_player_sessions_v746 where session_token=:'token';
+          delete from public.gejast_account_sessions_v671 where session_token=:'token';
+          delete from public.players where display_name=:'name' and is_dummy=true and hidden_from_public=true;
+          delete from public.gejast_account_players_v671 where display_name=:'name' and email like '%@example.invalid';
+          commit;
+          SQL
+          residue="$(psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -v name="$GEJAST_DIAG_NAME" -v token="${GEJAST_DIAG_TOKEN:-missing}" <<'SQL'
+          select (select count(*) from public.players where display_name=:'name')+(select count(*) from public.gejast_account_players_v671 where display_name=:'name')+(select count(*) from public.gejast_player_sessions_v746 where session_token=:'token')+(select count(*) from public.gejast_account_sessions_v671 where session_token=:'token');
+          SQL
+          )"
+          test "$residue" = '0'
+          echo 'Ladder diagnostic cleanup PASS.'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
