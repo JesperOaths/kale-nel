@@ -18,61 +18,53 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Check out exact diagnostic branch
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
-
-      - name: Query Cloudflare, public DNS, and live edge responses
+      - name: Record Cloudflare and public edge diagnostic
         shell: bash
         run: |
-          set -euo pipefail
+          set -u
           test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo 'CLOUDFLARE_API_TOKEN missing'; exit 1; }
           test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo 'CLOUDFLARE_ACCOUNT_ID missing'; exit 1; }
 
-          auth=(-H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H 'Content-Type: application/json')
+          cfget() {
+            local url="$1" out="$2"
+            curl --silent --show-error --max-time 30 \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H 'Content-Type: application/json' \
+              --output "$out" --write-out '%{http_code}' "$url" > "${out}.status" || echo 'curl_error' > "${out}.status"
+          }
 
-          curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones?name=kalenel.nl&account.id=${CLOUDFLARE_ACCOUNT_ID}" > /tmp/zone.json
+          cfget "https://api.cloudflare.com/client/v4/zones?name=kalenel.nl&account.id=${CLOUDFLARE_ACCOUNT_ID}" /tmp/zone.json
 
-          python3 - <<'PY'
-          import json,sys
-          z=json.load(open('/tmp/zone.json'))
-          if not z.get('success'):
-              print('Cloudflare zone API failed:', z.get('errors'), file=sys.stderr); sys.exit(1)
-          results=z.get('result') or []
-          if len(results)!=1:
-              print(f'Expected exactly one kalenel.nl zone, got {len(results)}', file=sys.stderr); sys.exit(1)
-          zone=results[0]
-          open('/tmp/zone_id','w').write(zone['id'])
-          safe={k:zone.get(k) for k in ('name','status','paused','type','name_servers','original_name_servers')}
-          json.dump(safe,open('/tmp/zone_safe.json','w'),indent=2)
+          ZONE_ID="$(python3 - <<'PY'
+          import json
+          try:
+            d=json.load(open('/tmp/zone.json'))
+            r=d.get('result') or []
+            print(r[0].get('id','') if len(r)==1 else '')
+          except Exception:
+            print('')
           PY
+          )"
 
-          ZONE_ID="$(cat /tmp/zone_id)"
-          curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/workers/routes" > /tmp/routes.json
-          curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?name=kalenel.nl" > /tmp/dns_apex.json
-          curl -fsS "${auth[@]}" "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?name=admin.kalenel.nl" > /tmp/dns_admin.json
+          if [[ -n "$ZONE_ID" ]]; then
+            cfget "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/workers/routes" /tmp/routes.json
+            cfget "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?name=kalenel.nl" /tmp/dns_apex.json
+            cfget "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records?name=admin.kalenel.nl" /tmp/dns_admin.json
+          else
+            echo 'not_attempted' > /tmp/routes.json.status; echo '{}' > /tmp/routes.json
+            echo 'not_attempted' > /tmp/dns_apex.json.status; echo '{}' > /tmp/dns_apex.json
+            echo 'not_attempted' > /tmp/dns_admin.json.status; echo '{}' > /tmp/dns_admin.json
+          fi
 
-          python3 - <<'PY'
-          import json,sys
-          for src,dst,kind in [('/tmp/routes.json','/tmp/routes_safe.json','routes'),('/tmp/dns_apex.json','/tmp/dns_apex_safe.json','dns'),('/tmp/dns_admin.json','/tmp/dns_admin_safe.json','dns')]:
-              data=json.load(open(src))
-              if not data.get('success'):
-                  print(f'Cloudflare {kind} API failed: {data.get("errors")}', file=sys.stderr); sys.exit(1)
-              if kind=='routes':
-                  safe=[{'pattern':r.get('pattern'),'script':r.get('script')} for r in data.get('result',[])]
-              else:
-                  safe=[{'type':r.get('type'),'name':r.get('name'),'content':r.get('content'),'proxied':r.get('proxied'),'ttl':r.get('ttl')} for r in data.get('result',[])]
-              json.dump(safe,open(dst,'w'),indent=2)
-          PY
-
-          dig +short NS kalenel.nl > /tmp/public_ns.txt || true
-          dig +short A kalenel.nl > /tmp/public_apex_a.txt || true
-          dig +short A admin.kalenel.nl > /tmp/public_admin_a.txt || true
+          dig +short NS kalenel.nl > /tmp/public_ns.txt 2>/dev/null || true
+          dig +short A kalenel.nl > /tmp/public_apex_a.txt 2>/dev/null || true
+          dig +short A admin.kalenel.nl > /tmp/public_admin_a.txt 2>/dev/null || true
 
           probe() {
             local method="$1" url="$2" name="$3"
             curl --silent --show-error --request "$method" --max-time 30 --connect-timeout 10 \
               --output "/tmp/${name}.body" --dump-header "/tmp/${name}.headers" \
-              --write-out '%{http_code}' "$url" > "/tmp/${name}.status" || echo 'curl_error' > "/tmp/${name}.status"
+              --write-out '%{http_code}' "$url" > "/tmp/${name}.status" 2>/dev/null || echo 'curl_error' > "/tmp/${name}.status"
           }
           probe GET 'http://kalenel.nl/' http_apex
           probe GET 'http://kalenel.nl/index.html?probe=cf-diagnostic&keep=1' http_path
@@ -81,98 +73,56 @@ jobs:
           probe GET 'https://admin.kalenel.nl/admin.html?probe=cf-diagnostic' https_admin
 
           python3 - <<'PY'
-          import json,re
+          import json
           from pathlib import Path
+          def load(path):
+            try: return json.load(open(path))
+            except Exception: return {}
+          def text(path):
+            try: return Path(path).read_text(errors='replace').strip()
+            except Exception: return ''
+          def errors(d):
+            return [{'code':e.get('code'),'message':e.get('message')} for e in (d.get('errors') or [])]
+          zone_raw=load('/tmp/zone.json'); zone_results=zone_raw.get('result') or []
+          zone=zone_results[0] if len(zone_results)==1 else {}
+          routes_raw=load('/tmp/routes.json'); apex_raw=load('/tmp/dns_apex.json'); admin_raw=load('/tmp/dns_admin.json')
+          routes=[{'pattern':r.get('pattern'),'script':r.get('script')} for r in (routes_raw.get('result') or [])]
+          apex=[{'type':r.get('type'),'name':r.get('name'),'content':r.get('content'),'proxied':r.get('proxied'),'ttl':r.get('ttl')} for r in (apex_raw.get('result') or [])]
+          admin=[{'type':r.get('type'),'name':r.get('name'),'content':r.get('content'),'proxied':r.get('proxied'),'ttl':r.get('ttl')} for r in (admin_raw.get('result') or [])]
           def hdr(name,key):
-              p=Path(f'/tmp/{name}.headers')
-              if not p.exists(): return ''
-              val=''
-              for line in p.read_text(errors='replace').splitlines():
-                  if line.lower().startswith(key.lower()+':'):
-                      val=line.split(':',1)[1].strip()
-              return val
-          def status(name):
-              p=Path(f'/tmp/{name}.status')
-              return p.read_text().strip() if p.exists() else 'missing'
+            p=Path(f'/tmp/{name}.headers')
+            if not p.exists(): return ''
+            v=''
+            for line in p.read_text(errors='replace').splitlines():
+              if line.lower().startswith(key.lower()+':'): v=line.split(':',1)[1].strip()
+            return v
           probes=[]
-          for name,url in [
-              ('http_apex','http://kalenel.nl/'),
-              ('http_path','http://kalenel.nl/index.html?probe=cf-diagnostic&keep=1'),
-              ('http_admin','http://admin.kalenel.nl/admin.html?probe=cf-diagnostic'),
-              ('https_apex','https://kalenel.nl/'),
-              ('https_admin','https://admin.kalenel.nl/admin.html?probe=cf-diagnostic')]:
-              probes.append({'url':url,'status':status(name),'location':hdr(name,'Location'),'server':hdr(name,'Server'),'build':hdr(name,'X-Kalenel-Admin-Build')})
-          json.dump(probes,open('/tmp/probes_safe.json','w'),indent=2)
-          PY
-
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          zone=json.load(open('/tmp/zone_safe.json'))
-          routes=json.load(open('/tmp/routes_safe.json'))
-          apex=json.load(open('/tmp/dns_apex_safe.json'))
-          admin=json.load(open('/tmp/dns_admin_safe.json'))
-          probes=json.load(open('/tmp/probes_safe.json'))
-          public_ns=[x.strip() for x in Path('/tmp/public_ns.txt').read_text().splitlines() if x.strip()]
-          public_apex=[x.strip() for x in Path('/tmp/public_apex_a.txt').read_text().splitlines() if x.strip()]
-          public_admin=[x.strip() for x in Path('/tmp/public_admin_a.txt').read_text().splitlines() if x.strip()]
+          for name,url in [('http_apex','http://kalenel.nl/'),('http_path','http://kalenel.nl/index.html?probe=cf-diagnostic&keep=1'),('http_admin','http://admin.kalenel.nl/admin.html?probe=cf-diagnostic'),('https_apex','https://kalenel.nl/'),('https_admin','https://admin.kalenel.nl/admin.html?probe=cf-diagnostic')]:
+            probes.append({'url':url,'status':text(f'/tmp/{name}.status'),'location':hdr(name,'Location'),'server':hdr(name,'Server'),'build':hdr(name,'X-Kalenel-Admin-Build')})
+          public_ns=[x.strip().rstrip('.') for x in text('/tmp/public_ns.txt').splitlines() if x.strip()]
           assigned=[str(x).rstrip('.') for x in (zone.get('name_servers') or [])]
-          observed=[str(x).rstrip('.') for x in public_ns]
-          ns_match=set(assigned)==set(observed) and bool(assigned)
-          lines=[]
-          lines.append('## Cloudflare v763 edge diagnostic')
-          lines.append('')
-          lines.append('The v763 Wrangler deployment command completed successfully, but the first live 308 acceptance check did not. This report records the post-deploy routing state without exposing credentials.')
-          lines.append('')
-          lines.append(f"- Zone status: `{zone.get('status')}`")
-          lines.append(f"- Zone paused: `{zone.get('paused')}`")
-          lines.append(f"- Zone type: `{zone.get('type')}`")
-          lines.append(f"- Cloudflare-assigned nameservers: `{', '.join(assigned) or '<none>'}`")
-          lines.append(f"- Publicly delegated nameservers: `{', '.join(observed) or '<none>'}`")
-          lines.append(f"- Public NS matches Cloudflare assignment: `{ns_match}`")
-          lines.append(f"- Public apex A: `{', '.join(public_apex) or '<none>'}`")
-          lines.append(f"- Public admin A: `{', '.join(public_admin) or '<none>'}`")
-          lines.append('')
+          ns_match=bool(assigned) and set(assigned)==set(public_ns)
+          lines=['## Cloudflare v763 edge diagnostic','', 'Worker v763 deployment itself completed successfully. The initial production 308 acceptance failed, so this records the routing state without exposing credentials.','']
+          lines += [f"- Zone API HTTP: `{text('/tmp/zone.json.status')}`", f"- Zone API errors: `{errors(zone_raw) or '<none>'}`", f"- Zone status: `{zone.get('status','<unavailable>')}`", f"- Zone paused: `{zone.get('paused','<unavailable>')}`", f"- Zone type: `{zone.get('type','<unavailable>')}`", f"- Cloudflare-assigned nameservers: `{', '.join(assigned) or '<unavailable>'}`", f"- Publicly delegated nameservers: `{', '.join(public_ns) or '<none>'}`", f"- Public NS matches Cloudflare assignment: `{ns_match if assigned else '<unknown>'}`", f"- Public apex A: `{text('/tmp/public_apex_a.txt').replace(chr(10), ', ') or '<none>'}`", f"- Public admin A: `{text('/tmp/public_admin_a.txt').replace(chr(10), ', ') or '<none>'}`", '']
+          lines += ['### Cloudflare route/DNS API access', f"- Worker routes API HTTP: `{text('/tmp/routes.json.status')}` errors=`{errors(routes_raw) or '<none>'}`", f"- Apex DNS API HTTP: `{text('/tmp/dns_apex.json.status')}` errors=`{errors(apex_raw) or '<none>'}`", f"- Admin DNS API HTTP: `{text('/tmp/dns_admin.json.status')}` errors=`{errors(admin_raw) or '<none>'}`", '']
           lines.append('### Worker routes')
-          for r in routes:
-              lines.append(f"- `{r.get('pattern')}` -> `{r.get('script')}`")
-          if not routes: lines.append('- `<none>`')
+          lines += [f"- `{r.get('pattern')}` -> `{r.get('script')}`" for r in routes] or ['- `<unavailable or none>`']
+          lines += ['', '### Cloudflare DNS records']
+          for label,recs in [('apex',apex),('admin',admin)]:
+            lines += [f"- {label}: `{r.get('type')} {r.get('name')} -> {r.get('content')}` proxied=`{r.get('proxied')}` ttl=`{r.get('ttl')}`" for r in recs] or [f'- {label}: `<unavailable or none>`']
+          lines += ['', '### Live probes']
+          lines += [f"- `{p['url']}` -> status=`{p['status']}` location=`{p['location'] or '<none>'}` server=`{p['server'] or '<none>'}` build=`{p['build'] or '<none>'}`" for p in probes]
           lines.append('')
-          lines.append('### Cloudflare DNS records')
-          for label,records in [('apex',apex),('admin',admin)]:
-              for r in records:
-                  lines.append(f"- {label}: `{r.get('type')} {r.get('name')} -> {r.get('content')}` proxied=`{r.get('proxied')}` ttl=`{r.get('ttl')}`")
-              if not records: lines.append(f'- {label}: `<none>`')
-          lines.append('')
-          lines.append('### Live probes')
-          for p in probes:
-              lines.append(f"- `{p['url']}` -> status=`{p['status']}` location=`{p['location'] or '<none>'}` server=`{p['server'] or '<none>'}` build=`{p['build'] or '<none>'}`")
-          lines.append('')
-          if zone.get('status')!='active':
-              lines.append('**Diagnosis:** Cloudflare reports the zone is not active. Worker deployment can succeed in the account while public traffic still bypasses the Worker until zone activation/delegation is complete.')
-          elif not ns_match:
-              lines.append('**Diagnosis:** The zone is marked active but public nameserver delegation does not match the Cloudflare assignment. Public traffic may not be reaching this Cloudflare zone.')
-          elif not any(r.get('pattern')=='kalenel.nl/*' and r.get('script')=='kalenel-admin-gate' for r in routes):
-              lines.append('**Diagnosis:** The apex Worker route is missing or bound to another script.')
-          elif not any(r.get('proxied') is True for r in apex):
-              lines.append('**Diagnosis:** The apex DNS record is not proxied, so the Worker route cannot intercept the request.')
-          else:
-              lines.append('**Diagnosis:** Zone authority, proxying, and the apex Worker route appear present; the live response mismatch needs a deeper Cloudflare edge/configuration check.')
-          Path('/tmp/report.md').write_text('\n'.join(lines)+'\n')
-          print(Path('/tmp/report.md').read_text())
+          if zone and zone.get('status')!='active': diagnosis='Cloudflare reports the zone is not active; public traffic can bypass the deployed Worker until zone activation/delegation is complete.'
+          elif assigned and not ns_match: diagnosis='Public nameserver delegation does not match the nameservers assigned to this Cloudflare zone.'
+          elif routes and not any(r.get('pattern')=='kalenel.nl/*' and r.get('script')=='kalenel-admin-gate' for r in routes): diagnosis='The apex Worker route is missing or bound to another script.'
+          elif apex and not any(r.get('proxied') is True for r in apex): diagnosis='The apex DNS record is not proxied, so the Worker route cannot intercept it.'
+          elif not zone: diagnosis='The deployment token cannot read zone metadata; public DNS/live probes above are still authoritative for diagnosing whether traffic reaches Cloudflare.'
+          else: diagnosis='Zone authority/proxy/route metadata appears compatible; inspect the live response data for the remaining edge mismatch.'
+          lines.append(f'**Diagnosis:** {diagnosis}')
+          report='\n'.join(lines)+'\n'; Path('/tmp/report.md').write_text(report); print(report)
+          json.dump({'body':report},open('/tmp/comment.json','w'))
           PY
 
-          python3 - <<'PY'
-          import json
-          body=open('/tmp/report.md').read()
-          json.dump({'body':body},open('/tmp/comment.json','w'))
-          PY
-          curl -fsS -X POST \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H 'Accept: application/vnd.github+json' \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            -H 'Content-Type: application/json' \
-            --data-binary @/tmp/comment.json \
-            'https://api.github.com/repos/JesperOaths/kale-nel/issues/122/comments' >/dev/null
-
+          curl -fsS -X POST -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' -H 'Content-Type: application/json' --data-binary @/tmp/comment.json 'https://api.github.com/repos/JesperOaths/kale-nel/issues/122/comments' >/dev/null
           echo 'RESULT=CLOUDFLARE_V763_EDGE_DIAGNOSTIC_RECORDED'
