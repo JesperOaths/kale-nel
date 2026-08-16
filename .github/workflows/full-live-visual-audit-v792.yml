@@ -60,7 +60,7 @@ jobs:
           DB_RETRY_ATTEMPTS=4
           VISUAL_AUDIT_DB_URL="$SUPABASE_DB_URL"
           if [[ "$VISUAL_AUDIT_DB_URL" == *".pooler.supabase.com:5432/"* ]]; then
-            VISUAL_AUDIT_DB_URL="${VISUAL_AUDIT_DB_URL/:5432\//:6543/}"
+            VISUAL_AUDIT_DB_URL="${VISUAL_AUDIT_DB_URL/:5432/:6543}"
           fi
           retry_psql_file() {
             local label="$1" file="$2"
@@ -177,7 +177,7 @@ jobs:
           DB_RETRY_ATTEMPTS=4
           VISUAL_AUDIT_DB_URL="$SUPABASE_DB_URL"
           if [[ "$VISUAL_AUDIT_DB_URL" == *".pooler.supabase.com:5432/"* ]]; then
-            VISUAL_AUDIT_DB_URL="${VISUAL_AUDIT_DB_URL/:5432\//:6543/}"
+            VISUAL_AUDIT_DB_URL="${VISUAL_AUDIT_DB_URL/:5432/:6543}"
           fi
           retry_psql_file() {
             local label="$1" file="$2"
