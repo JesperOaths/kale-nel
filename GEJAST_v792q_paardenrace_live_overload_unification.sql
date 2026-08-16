@@ -1,6 +1,6 @@
 -- GEJAST v792q — unify Paardenrace browser/live RPC overloads onto the current room pipeline
 --
--- Final-certification completion testing found that paarde​nrace_live.html calls the
+-- Final-certification completion testing found that paardenrace_live.html calls the
 -- browser RPC helper with site_scope_input. PostgREST therefore resolves the older
 -- room_code-first overloads of tick/draw/nominations, whose bodies still target the
 -- retired v667 tables. The current lobby/start pipeline uses public.paardenrace_rooms,
