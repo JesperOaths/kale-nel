@@ -3,12 +3,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const artifact = JSON.parse(fs.readFileSync('final-acceptance-v792.json', 'utf8'));
-const version = fs.readFileSync('VERSION', 'utf8').trim();
 const gameplay = JSON.parse(fs.readFileSync('gameplay-acceptance.json', 'utf8'));
 
 assert.equal(artifact.schema_version, 1, 'unsupported final acceptance schema');
-assert.equal(version, 'v792', 'repository VERSION must remain v792');
-assert.equal(artifact.site_version, version, 'final acceptance must certify the checked-in VERSION');
+assert.equal(artifact.site_version, 'v792', 'historical final acceptance artifact must remain v792');
 assert.equal(artifact.status, 'PASS', 'FINAL ACCEPTANCE must fail closed unless explicitly PASS');
 assert.equal(artifact.issue, 131, 'final acceptance must remain tied to issue #131');
 assert.match(artifact.evidence_baseline_main_sha, /^[0-9a-f]{40}$/, 'baseline main SHA must be exact');
@@ -94,5 +92,5 @@ for (const name of ['verify', 'audit', 'live_health', 'pages_build', 'pages_depl
 const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 assert.match(packageJson.scripts?.['verify:static'] || '', /check-final-acceptance-v792\.mjs/, 'canonical verify:static must enforce final acceptance');
 
-console.log('FINAL ACCEPTANCE v792 artifact is internally consistent and fail-closed.');
+console.log('Historical FINAL ACCEPTANCE v792 artifact remains internally consistent.');
 console.log('RESULT=V792_FINAL_ACCEPTANCE_STATIC_PASS');

@@ -280,12 +280,9 @@
     }
   }
   async function getLeaderboard(){
-    try {
-      return await rpc('get_klaverjas_leaderboard_public_v687', { site_scope_input: getScope() }, { timeoutMs: 10000 });
-    } catch (err) {
-      if (!isMissingRpcError(err) && !/variable not found/i.test(String(err && err.message || err))) throw err;
-      return { leaderboard: [] };
-    }
+    const data = await rpc('get_public_ladder_page_scoped', { game_key: 'klaverjas', site_scope_input: getScope() }, { timeoutMs: 10000 });
+    const rows = Array.isArray(data?.ladder) ? data.ladder : [];
+    return Object.assign({}, data || {}, { leaderboard: rows });
   }
   async function getBundle(){
     try {

@@ -1,6 +1,6 @@
 (function(){
   const CFG=window.GEJAST_CONFIG||{};
-  const VERSION='v661';
+  const VERSION='v793';
   const RPC={
     audit:'admin_get_game_group_b_audit_v661',
     generic:'get_game_group_b_bundle_v661',
@@ -33,11 +33,7 @@
   async function bundle(opts={}){
     const game=normGame(opts.gameKey||opts.game_key||opts.game);
     const payload={site_scope_input:normScope(opts.scope),game_key_input:game,limit_input:Math.max(1,Math.min(100,Number(opts.limit||20)||20))};
-    const specific=game==='paardenrace'?RPC.paardenrace:RPC.pikken;
-    try{return await rpc(specific,payload);}catch(err){
-      if(!/could not find|schema cache|function|does not exist/i.test(String(err.message||err))) throw err;
-      return await rpc(RPC.generic,payload);
-    }
+    return rpc(RPC.generic,payload);
   }
   async function audit(opts={}){return await rpc(RPC.audit,{site_scope_input:normScope(opts.scope)});}
   function escapeHtml(v){return String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]||c));}

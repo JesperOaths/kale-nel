@@ -40,13 +40,13 @@ if(badges&&progress){
 const player=fs.readFileSync('player.html','utf8');
 const profiles=fs.readFileSync('profiles.html','utf8');
 for(const marker of [
-  './gejast-badges.js?v792',
-  './gejast-badge-progress.js?v792',
+  './gejast-badges.js?v793',
+  './gejast-badge-progress.js?v793',
   'function buildBadgeSnapshot()',
   'window.GEJAST_BADGE_PROGRESS.getBadgeProgressList(buildBadgeSnapshot())',
   'progressList.filter((badge) => badge.attained)'
 ]) if(!player.includes(marker)) failures.push(`player.html missing badge integration marker: ${marker}`);
-for(const marker of ['./gejast-badges.js?v792','./gejast-badge-progress.js?v792','badgeGalleryPanel']) if(!profiles.includes(marker)) failures.push(`profiles.html missing badge gallery marker: ${marker}`);
+for(const marker of ['./gejast-badges.js?v793','./gejast-badge-progress.js?v793','badgeGalleryPanel']) if(!profiles.includes(marker)) failures.push(`profiles.html missing badge gallery marker: ${marker}`);
 
 const badgeSource=fs.readFileSync('gejast-badges.js','utf8');
 for(const forbidden of ['award_badge','grant_badge','insert_badge','save_badge_award']) if(new RegExp(forbidden,'i').test(badgeSource)) failures.push(`badge evaluator unexpectedly contains mutation primitive ${forbidden}`);

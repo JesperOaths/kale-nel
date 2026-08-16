@@ -1,0 +1,27 @@
+#!/usr/bin/env node
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const index=fs.readFileSync('index.html','utf8');
+assert(!index.includes('homeKlaverjasLiveEntry'),'homepage must not expose duplicate Klaverjas live/scorer tile');
+assert.equal((index.match(/id="homeKlaverjasEntry"/g)||[]).length,1,'homepage must expose exactly one Klaverjas score-form tile');
+assert.equal((index.match(/<div class=\"page-link-label\">Klaverjas online<\/div>/g)||[]).length,1,'homepage must expose exactly one Klaverjas online tile');
+const ladder=fs.readFileSync('ladder.html','utf8');
+assert(ladder.includes("requestedGame==='klaverjassen'?'klaverjas':requestedGame"),'plural Klaverjas URL alias must canonicalize to singular');
+assert(ladder.includes("klaverjas:'klaverjas'"),'ladder backend key must be singular klaverjas');
+assert(!/apiGame\s*[!=]==?\s*['\"]klaverjassen['\"]/.test(ladder),'ladder must never compare backend key to plural klaverjassen');
+const a=fs.readFileSync('gejast-game-phase-bridge.js','utf8');
+assert(a.includes('get_game_group_a_runtime_bundle_v668'),'group A status bridge must use current runtime bundle');
+assert(a.includes('get_beerpong_runtime_bundle_v668'),'Beerpong status bridge must use current runtime RPC');
+assert(a.includes('get_boerenbridge_runtime_bundle_v668'),'Boerenbridge status bridge must use current runtime RPC');
+assert(!/get_(?:game_group_a_bundle|beerpong_phase_bundle|boerenbridge_phase_bundle)_v661/.test(a),'stale group A v661 phase endpoints must not be used');
+const b=fs.readFileSync('gejast-game-group-b-bridge.js','utf8');
+assert(b.includes('return rpc(RPC.generic,payload)'),'group B status bridge must avoid nonexistent specific phase RPCs');
+const kl=fs.readFileSync('gejast-klaverjas-runtime.js','utf8');
+assert(kl.includes("get_public_ladder_page_scoped"),'standalone Klaverjas leaderboard must use current ladder RPC');
+assert(!kl.includes("get_klaverjas_leaderboard_public_v687"),'removed legacy Klaverjas leaderboard RPC must not remain active');
+const spec=fs.readFileSync('pikken_spectator.html','utf8');
+assert(spec.includes("['game_id','client_match_id','match_ref','lobby_code']"),'Pikken spectator alias must preserve game_id/context');
+const sql=fs.readFileSync('GEJAST_v793a_rad_stats_aggregate_repair.sql','utf8');
+assert(sql.includes('from (\n            select segment_label'),'Rad leaderboard must pre-aggregate before jsonb_agg');
+assert(sql.includes('v793a Rad stats payload shape verification failed'),'Rad migration must self-verify');
+console.log('v793 visual-audit repair regressions ok.');

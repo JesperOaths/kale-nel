@@ -135,7 +135,7 @@ write('release-certification.json', `${JSON.stringify({
   schema_version: 1,
   current_version: 'v793',
   status: 'REVALIDATION_REQUIRED',
-  prior_certification: { version: 'v792', issue: 131, artifact: 'final-acceptance-v792.json' },
+  prior_certification: { version: 'v793', issue: 131, artifact: 'final-acceptance-v792.json' },
   current_audit_issue: 153,
   reason: 'Frontend/runtime repairs from the full screenshot audit require fresh production visual and gameplay revalidation.'
 }, null, 2)}\n`);

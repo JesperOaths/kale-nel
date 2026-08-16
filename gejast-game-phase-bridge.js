@@ -1,11 +1,11 @@
 (function(){
   const CFG=window.GEJAST_CONFIG||{};
-  const VERSION='v661';
+  const VERSION='v793';
   const RPC={
     audit:'admin_get_game_group_a_audit_v661',
-    generic:'get_game_group_a_bundle_v661',
-    beerpong:'get_beerpong_phase_bundle_v661',
-    boerenbridge:'get_boerenbridge_phase_bundle_v661'
+    generic:'get_game_group_a_runtime_bundle_v668',
+    beerpong:'get_beerpong_runtime_bundle_v668',
+    boerenbridge:'get_boerenbridge_runtime_bundle_v668'
   };
   function normScope(value){
     const raw=String(value||'').trim().toLowerCase();
@@ -32,11 +32,12 @@
   }
   async function bundle(opts={}){
     const game=normGame(opts.gameKey||opts.game_key||opts.game);
-    const payload={site_scope_input:normScope(opts.scope),game_key_input:game,limit_input:Math.max(1,Math.min(100,Number(opts.limit||20)||20))};
+    const siteScope=normScope(opts.scope);
+    const limit=Math.max(1,Math.min(100,Number(opts.limit||20)||20));
     const specific=game==='boerenbridge'?RPC.boerenbridge:RPC.beerpong;
-    try{return await rpc(specific,payload);}catch(err){
+    try{return await rpc(specific,{site_scope_input:siteScope,limit_input:limit});}catch(err){
       if(!/could not find|schema cache|function|does not exist/i.test(String(err.message||err))) throw err;
-      return await rpc(RPC.generic,payload);
+      return await rpc(RPC.generic,{site_scope_input:siteScope,game_key_input:game,limit_input:limit});
     }
   }
   async function audit(opts={}){return await rpc(RPC.audit,{site_scope_input:normScope(opts.scope)});}
