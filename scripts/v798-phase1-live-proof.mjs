@@ -167,12 +167,18 @@ async function authenticatedSurfaceMatrix(session){
     await page.waitForFunction(()=>document.documentElement.getAttribute('data-gejast-auth-state')==='authenticated',{timeout:15000});
     const current=new URL(page.url());
     assert(current.pathname===`/${route}`,`${route} bounced away despite valid session: ${current.pathname}`);
+    try{
+      await page.waitForFunction(({source})=>{
+        const body=(document.body?.innerText||'').replace(/\s+/g,' ').trim();
+        return body.length>60 && new RegExp(source,'i').test(body);
+      },{source:rx.source},{timeout:6000});
+    }catch(_){ }
     const info=await page.evaluate(()=>({visibility:getComputedStyle(document.documentElement).visibility,body:(document.body.innerText||'').replace(/\s+/g,' ').trim(),interactive:[...document.querySelectorAll('button,a[href],input,select')].filter(el=>{const r=el.getBoundingClientRect();const s=getComputedStyle(el);return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none';}).length}));
     assert(info.visibility!=='hidden',`${route} remained hidden after valid auth`);
     assert(info.body.length>60,`${route} rendered no meaningful body`);
     assert(rx.test(info.body),`${route} missing expected gameplay copy`);
     assert(info.interactive>0,`${route} exposes no interactive controls`);
-    console.log(`GAME_SURFACE_PASS ${route} controls=${info.interactive}`);
+    console.log(`GAME_SURFACE_PASS ${route} controls=${info.interactive} body_chars=${info.body.length}`);
   }
 }
 
