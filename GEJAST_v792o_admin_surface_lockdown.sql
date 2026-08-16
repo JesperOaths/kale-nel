@@ -47,7 +47,7 @@ $$;
 
 -- Replace legacy token-presence / undefined-column fallbacks with the canonical
 -- non-rotating predicate.
-CREATE OR REPLACE FUNCTION public._gejast_admin_session_required(admin_session_token text)
+CREATE OR REPLACE FUNCTION public._gejast_admin_session_required(admin_session_token text DEFAULT NULL::text)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -76,7 +76,7 @@ AS $$
   SELECT public._gejast_admin_session_ok_v792m(admin_session_token_input);
 $$;
 
-CREATE OR REPLACE FUNCTION public._klaverjas_v673_assert_admin(admin_session_token_input text)
+CREATE OR REPLACE FUNCTION public._klaverjas_v673_assert_admin(admin_session_token_input text DEFAULT NULL::text)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
