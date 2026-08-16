@@ -7,15 +7,17 @@ import { chromium } from 'playwright';
 const BASE = String(process.env.GEJAST_BASE_URL || 'https://kalenel.nl/').replace(/\/+$/, '') + '/';
 const token1 = String(process.env.GEJAST_PLAYER1_TOKEN || '').trim();
 const token2 = String(process.env.GEJAST_PLAYER2_TOKEN || '').trim();
+const familyToken = String(process.env.GEJAST_FAMILY_TOKEN || '').trim();
 const name1 = String(process.env.GEJAST_PLAYER1_NAME || '').trim();
 const name2 = String(process.env.GEJAST_PLAYER2_NAME || '').trim();
+const familyName = String(process.env.GEJAST_FAMILY_NAME || '').trim();
 const siteScope = String(process.env.GEJAST_SITE_SCOPE || 'friends').trim() || 'friends';
 const timeout = Number(process.env.GEJAST_VISUAL_TIMEOUT_MS || 25000);
 const settleMs = Number(process.env.GEJAST_VISUAL_SETTLE_MS || 1800);
 const outDir = path.resolve('visual-audit');
 const screenshotsDir = path.join(outDir, 'screenshots');
 
-if (!token1 || !token2 || !name1 || !name2) throw new Error('Two disposable visual-audit sessions/names are required');
+if (!token1 || !token2 || !familyToken || !name1 || !name2 || !familyName) throw new Error('Two Friends sessions plus one Family visual-audit session/name are required');
 fs.rmSync(outDir, { recursive: true, force: true });
 fs.mkdirSync(screenshotsDir, { recursive: true });
 
@@ -33,7 +35,7 @@ const trackedHtml = execFileSync('git', ['ls-files', '-z', '*.html'], { encoding
 
 const state = { pikkenId: '', pikkenCode: '', paardenCode: '', klaverId: '', klaverCode: '' };
 const records = [];
-const safe = (value) => String(value?.message || value || 'unknown').replaceAll(token1, '[TOKEN1]').replaceAll(token2, '[TOKEN2]');
+const safe = (value) => String(value?.message || value || 'unknown').replaceAll(token1, '[TOKEN1]').replaceAll(token2, '[TOKEN2]').replaceAll(familyToken, '[FAMILY_TOKEN]');
 
 async function rpc(name, payload = {}) {
   const controller = new AbortController();
@@ -112,17 +114,19 @@ function expectedProtected(route, status, finalUrl) {
   } catch { return false; }
 }
 
-async function newContext(browser) {
+async function newContext(browser, tokenValue = token1, paardCode = '') {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
-  await context.addInitScript(({ tokenValue, paardCode }) => {
-    localStorage.setItem('jas_session_token_v11', tokenValue);
-    localStorage.setItem('jas_session_token_v10', tokenValue);
-    localStorage.setItem('jas_last_activity_at_v1', String(Date.now()));
-    if (paardCode) {
-      localStorage.setItem('gejast_paardenrace_room_code_v687', paardCode);
-      localStorage.setItem('gejast_paardenrace_room_code_v506', paardCode);
+  await context.addInitScript(({ sessionToken, savedPaardCode }) => {
+    for (const store of [localStorage, sessionStorage]) {
+      store.setItem('jas_session_token_v11', sessionToken);
+      store.setItem('jas_session_token_v10', sessionToken);
+      store.setItem('jas_last_activity_at_v1', String(Date.now()));
     }
-  }, { tokenValue: token1, paardCode: state.paardenCode });
+    if (savedPaardCode) {
+      localStorage.setItem('gejast_paardenrace_room_code_v687', savedPaardCode);
+      localStorage.setItem('gejast_paardenrace_room_code_v506', savedPaardCode);
+    }
+  }, { sessionToken: tokenValue, savedPaardCode: paardCode });
   return context;
 }
 
@@ -143,6 +147,9 @@ async function capture(context, route, label, index, kind = 'tracked') {
   const started = Date.now();
   try {
     response = await page.goto(routeUrl(route), { waitUntil: 'domcontentloaded', timeout });
+    if (kind === 'context') {
+      await page.waitForFunction(() => document.documentElement.getAttribute('data-gejast-auth-state') === 'authenticated', null, { timeout: Math.min(timeout, 12000) }).catch(() => {});
+    }
     await page.waitForTimeout(settleMs);
   } catch (error) {
     navigationError = safe(error);
@@ -150,6 +157,9 @@ async function capture(context, route, label, index, kind = 'tracked') {
 
   const status = response?.status() || 0;
   const finalUrl = page.url();
+  let finalPath = '';
+  try { finalPath = new URL(finalUrl).pathname; } catch {}
+  const authState = await page.evaluate(() => document.documentElement.getAttribute('data-gejast-auth-state') || '').catch(() => '');
   const title = await page.title().catch(() => '');
   const bodyText = await page.locator('body').innerText().catch(() => '');
   const metrics = await page.evaluate(() => ({
@@ -185,6 +195,8 @@ async function capture(context, route, label, index, kind = 'tracked') {
   if (!protectedGate && status >= 500) { judgement = 'broken'; reasons.push(`document HTTP ${status}`); }
   if (!protectedGate && bodyText.trim().length < 20) { judgement = 'broken'; reasons.push('rendered body is effectively empty'); }
   if (signals.length) { judgement = 'broken'; reasons.push(`visible runtime signal: ${signals.join(', ')}`); }
+  if (kind === 'context' && finalPath === '/login.html') { judgement = 'broken'; reasons.push('contextual authenticated capture ended at login'); }
+  if (kind === 'context' && authState !== 'authenticated') { judgement = 'broken'; reasons.push(`contextual auth state is ${authState || 'missing'}, expected authenticated`); }
   if (seriousConsole.length && judgement !== 'broken') { judgement = 'warn'; reasons.push(`${seriousConsole.length} console error(s)`); }
   if (seriousRequestFailures.length && judgement === 'pass') { judgement = 'warn'; reasons.push(`${seriousRequestFailures.length} failed request(s)`); }
   if (overflow > 16 && judgement === 'pass') { judgement = 'warn'; reasons.push(`horizontal overflow ${overflow}px`); }
@@ -200,6 +212,7 @@ async function capture(context, route, label, index, kind = 'tracked') {
     final_url: finalUrl,
     status,
     title,
+    auth_state: authState,
     elapsed_ms: Date.now() - started,
     body_chars: bodyText.trim().length,
     body_preview: bodyText.replace(/\s+/g, ' ').trim().slice(0, 700),
@@ -222,6 +235,7 @@ async function capture(context, route, label, index, kind = 'tracked') {
 
 function contextualRoutes() {
   const routes = [
+    ['index.html', 'context__index__authenticated'],
     ['ladder.html?game=klaverjas', 'context__ladder__klaverjas'],
     ['ladder.html?game=boerenbridge', 'context__ladder__boerenbridge'],
     ['ladder.html?game=beerpong', 'context__ladder__beerpong'],
@@ -242,6 +256,18 @@ function contextualRoutes() {
     routes.push([`klaverjas_online.html?game_id=${encodeURIComponent(state.klaverId)}&room=${encodeURIComponent(state.klaverCode)}`, 'context__klaverjas__online']);
   }
   return routes;
+}
+
+function contextualFamilyRoutes() {
+  return [
+    ['familie/index.html', 'context__family__index'],
+    ['familie/ladder.html', 'context__family__ladder'],
+    ['familie/leaderboard.html', 'context__family__leaderboard'],
+    ['familie/profiles.html', 'context__family__profiles'],
+    [`familie/player.html?player=${encodeURIComponent(familyName)}&scope=family`, 'context__family__player'],
+    ['familie/boerenbridge.html', 'context__family__boerenbridge'],
+    ['familie/scorer.html', 'context__family__scorer'],
+  ];
 }
 
 function writeReports() {
@@ -289,17 +315,25 @@ function writeReports() {
 
 await setupContextRooms();
 const browser = await chromium.launch({ headless: true });
-const context = await newContext(browser);
 try {
   let index = 0;
   for (const htmlPath of trackedHtml) {
-    await capture(context, htmlPath, htmlPath, index++, 'tracked');
+    const familyRoute = htmlPath === 'familie.html' || htmlPath.startsWith('familie/');
+    const context = await newContext(browser, familyRoute ? familyToken : token1, familyRoute ? '' : state.paardenCode);
+    try { await capture(context, htmlPath, htmlPath, index++, 'tracked'); }
+    finally { await context.close(); }
   }
   for (const [route, label] of contextualRoutes()) {
-    await capture(context, route, label, index++, 'context');
+    const context = await newContext(browser, token1, state.paardenCode);
+    try { await capture(context, route, label, index++, 'context'); }
+    finally { await context.close(); }
+  }
+  for (const [route, label] of contextualFamilyRoutes()) {
+    const context = await newContext(browser, familyToken, '');
+    try { await capture(context, route, label, index++, 'context'); }
+    finally { await context.close(); }
   }
 } finally {
-  await context.close();
   await browser.close();
   writeReports();
 }
