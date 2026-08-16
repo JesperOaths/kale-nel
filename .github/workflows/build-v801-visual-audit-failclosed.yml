@@ -1,0 +1,36 @@
+name: Build fail-closed v801 visual audit
+
+on:
+  push:
+    branches: [test/v801-visual-audit-failclosed]
+    paths: ['.github/workflows/build-v801-visual-audit-failclosed.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: test/v801-visual-audit-failclosed
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Patch permanent audit runner and regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          python3 scripts/patch-v801-visual-audit-failclosed.py
+          node --check scripts/full-live-visual-audit-v792.mjs
+          node check-v801-full-visual-audit-auth-context.mjs
+          npm run verify:static
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add scripts/full-live-visual-audit-v792.mjs check-v801-full-visual-audit-auth-context.mjs
+          git commit -m 'test: make full visual audit fail closed'
+          git push origin HEAD:test/v801-visual-audit-failclosed
