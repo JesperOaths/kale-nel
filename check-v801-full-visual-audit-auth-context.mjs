@@ -33,6 +33,12 @@ assert.match(fixtures, /paardenrace_match_history/, 'fixture cleanup must remove
 assert.match(fixtures, /Visual-audit cleanup PASS with zero residue/, 'fixture cleanup must retain explicit zero-residue verification');
 assert.match(fixtures, /GITHUB_ENV/, 'fixture manager must export names and canonical sessions to later browser steps');
 assert.match(fixtures, /crypto\.createHash\('md5'\).*DATABASE_NAME/s, 'fixture PIN hashes must retain the deployed legacy database-name salt contract');
+assert.match(fixtures, /GITHUB_RUN_ID[\s\S]*GITHUB_RUN_ATTEMPT/, 'fixture names must remain unique across workflow runs and reruns');
+assert.match(fixtures, /new Set\(nameList\.map\(\(name\) => name\.toLowerCase\(\)\)\)\.size !== 3/, 'fixture manager must reject colliding disposable names before writing');
+const provisionBody = fixtures.match(/async function provision\(\) \{([\s\S]*?)\n\}\n\nconst names = fixtureNames\(\);/)?.[1] || '';
+assert.ok(provisionBody, 'fixture manager provision body must remain inspectable');
+assert.doesNotMatch(provisionBody, /cleanupState\s*\(/, 'run-unique provisioning must not multiply database pressure with speculative pre-cleanup');
+assert.match(provisionBody, /appendGithubEnv\(\{ GEJAST_PLAYER1_NAME:[\s\S]*?\}\);[\s\S]*?request\('players\?select=id,display_name,site_scope'/, 'fixture names must be exported before the first write so always-cleanup can target partial provisioning');
 
 assert.match(runner, /GEJAST_FAMILY_TOKEN/, 'runner must require Family auth context');
 assert.match(runner, /for \(const store of \[localStorage, sessionStorage\]\)/, 'runner must seed current session into both browser stores');
