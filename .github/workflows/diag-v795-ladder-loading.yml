@@ -1,0 +1,75 @@
+name: Diagnostic v795 Klaverjas ladder loading
+
+on:
+  push:
+    branches: [agent/v796-legacy-klaverjas-live-alias]
+    paths: ['.github/workflows/diag-v795-ladder-loading.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install diagnostic browser
+        run: |
+          npm ci
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Inspect live Klaverjas ladder after settle
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+          const browser=await chromium.launch({headless:true});
+          const page=await browser.newPage({viewport:{width:1280,height:900}});
+          const events=[];
+          page.on('console',m=>events.push(`console:${m.type()}:${m.text()}`));
+          page.on('pageerror',e=>events.push(`pageerror:${e.message}`));
+          page.on('requestfailed',r=>events.push(`requestfailed:${r.url()}:${r.failure()?.errorText||''}`));
+          page.on('response',r=>{if(r.status()>=400)events.push(`http:${r.status()}:${r.url()}`)});
+          const started=Date.now();
+          await page.goto('https://kalenel.nl/ladder.html?game=klaverjas&scope=friends',{waitUntil:'domcontentloaded',timeout:30000});
+          await page.waitForTimeout(10000);
+          const state=await page.evaluate(()=>{
+            const loading=[...document.querySelectorAll('body *')].filter(el=>{
+              const style=getComputedStyle(el); const rect=el.getBoundingClientRect();
+              return style.display!=='none'&&style.visibility!=='hidden'&&rect.width>0&&rect.height>0&&/(?:Laden(?:…|\.\.\.)|laden(?:…|\.\.\.)|Stats laden|Actieve spelers laden)/i.test(el.textContent||'');
+            }).filter(el=>![...el.children].some(ch=>/(?:Laden(?:…|\.\.\.)|laden(?:…|\.\.\.)|Stats laden|Actieve spelers laden)/i.test(ch.textContent||'')))
+              .map(el=>({tag:el.tagName,id:el.id,cls:el.className,text:(el.textContent||'').trim().slice(0,180)}));
+            const resources=performance.getEntriesByType('resource').filter(e=>/rest\/v1\/rpc/.test(e.name)).map(e=>({name:e.name.split('/rpc/')[1]?.split('?')[0]||e.name,duration:Math.round(e.duration),transferSize:e.transferSize}));
+            return {
+              url:location.href,
+              title:document.title,
+              bodyClass:document.body.className,
+              loading,
+              graphText:document.querySelector('#graphWrap')?.textContent?.trim(),
+              graphClass:document.querySelector('#graphWrap')?.className,
+              ladderText:document.querySelector('#ladderWrap')?.textContent?.trim().slice(0,240),
+              checkboxes:document.querySelectorAll('[data-player-toggle]').length,
+              resources
+            };
+          });
+          console.log('elapsed_ms',Date.now()-started);
+          console.log(JSON.stringify(state,null,2));
+          console.log('events',JSON.stringify(events,null,2));
+          await page.screenshot({path:'ladder-diagnostic.png',fullPage:true});
+          await browser.close();
+          if(state.loading.length) process.exitCode=2;
+          NODE
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: v795-ladder-diagnostic-${{ github.run_id }}
+          path: ladder-diagnostic.png
+          if-no-files-found: warn
+          retention-days: 7
