@@ -1,4 +1,4 @@
-name: v799 Phase 1 live auth and gameplay proof
+name: v800 Phase 1 live auth and gameplay proof
 
 on:
   push:
@@ -19,10 +19,10 @@ jobs:
     env:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       GEJAST_BASE_URL: https://kalenel.nl/
-      GEJAST_EXACT_MAIN_SHA: 73a791429e90fe876cff7a143cf37bc3787cacb4
+      GEJAST_EXACT_MAIN_SHA: be9c67365a94bfd8eb8e800d9a7f294405c37b36
       GEJAST_SITE_SCOPE: friends
     steps:
-      - name: Check out proof branch derived from exact v799 main
+      - name: Check out proof branch derived from exact v800 main
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           ref: proof/v798-phase1-live
@@ -34,19 +34,19 @@ jobs:
           node-version: '24'
           cache: npm
 
-      - name: Prove product tree is exact v799 main plus proof-only files
+      - name: Prove product tree is exact v800 main plus proof-only files
         shell: bash
         run: |
           set -euo pipefail
           test -n "${SUPABASE_DB_URL:-}"
-          test "$(git show "$GEJAST_EXACT_MAIN_SHA:VERSION" | tr -d '\r\n')" = 'v799'
+          test "$(git show "$GEJAST_EXACT_MAIN_SHA:VERSION" | tr -d '\r\n')" = 'v800'
           for i in $(seq 1 60); do
             live="$(curl -fsS --max-time 10 https://kalenel.nl/VERSION 2>/dev/null | tr -d '\r\n' || true)"
-            [ "$live" = 'v799' ] && break
+            [ "$live" = 'v800' ] && break
             echo "deployment settle $i/60: ${live:-unavailable}"
             sleep 5
           done
-          test "$(curl -fsS --max-time 10 https://kalenel.nl/VERSION | tr -d '\r\n')" = 'v799'
+          test "$(curl -fsS --max-time 10 https://kalenel.nl/VERSION | tr -d '\r\n')" = 'v800'
           unexpected="$(git diff --name-only "$GEJAST_EXACT_MAIN_SHA"..HEAD | grep -Ev '^(scripts/v798-phase1-live-proof\.mjs|\.github/workflows/v798-phase1-live-proof\.yml)$' || true)"
           test -z "$unexpected" || { echo "Unexpected proof-branch product drift:"; echo "$unexpected"; exit 1; }
 
@@ -66,8 +66,8 @@ jobs:
         run: |
           set -euo pipefail
           suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
-          name1="V799P1_${suffix}"
-          name2="V799P2_${suffix}"
+          name1="V800P1_${suffix}"
+          name2="V800P2_${suffix}"
           pin1='4826'
           pin2='7314'
           echo "::add-mask::$pin1"
@@ -81,8 +81,8 @@ jobs:
           begin;
           insert into public.players(slug,display_name,active,pin_hash,approved,hidden_from_public,is_dummy,site_scope)
           values
-            ('v799-p1-' || lower(:'name1'), :'name1', true, 'md5:' || md5(:'pin1' || ':' || current_database()), true, true, true, 'friends'),
-            ('v799-p2-' || lower(:'name2'), :'name2', true, 'md5:' || md5(:'pin2' || ':' || current_database()), true, true, true, 'friends');
+            ('v800-p1-' || lower(:'name1'), :'name1', true, 'md5:' || md5(:'pin1' || ':' || current_database()), true, true, true, 'friends'),
+            ('v800-p2-' || lower(:'name2'), :'name2', true, 'md5:' || md5(:'pin2' || ':' || current_database()), true, true, true, 'friends');
           commit;
           SQL
 
@@ -110,7 +110,7 @@ jobs:
           SQL
           )"
           test "$resolved" = "$GEJAST_PLAYER1_NAME|$GEJAST_PLAYER2_NAME"
-          echo 'RESULT=V799_PHASE1_SESSION_POST_GAME_PASS'
+          echo 'RESULT=V800_PHASE1_SESSION_POST_GAME_PASS'
 
       - name: Cleanup every controlled Phase-1 fixture and prove zero residue
         if: always()
@@ -157,4 +157,4 @@ jobs:
           SQL
           )"
           test "$residue" = '0|0|0|0|0|0'
-          echo 'RESULT=V799_PHASE1_ZERO_RESIDUE_PASS'
+          echo 'RESULT=V800_PHASE1_ZERO_RESIDUE_PASS'
