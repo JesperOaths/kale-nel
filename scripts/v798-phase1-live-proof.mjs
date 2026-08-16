@@ -99,6 +99,7 @@ async function loginThroughUi(name,pin,label){
   assert(new URL(page.url()).pathname==='/index.html',`${label} login did not land on main index`);
   assert(!page.url().includes('toepen.html'),`${label} login honored forbidden deep-link return target`);
   await page.waitForFunction(()=>document.documentElement.getAttribute('data-gejast-auth-state')==='authenticated',{timeout:15000});
+  await page.waitForTimeout(2500);
   const state=await page.evaluate(()=>({
     token:localStorage.getItem('jas_session_token_v11')||'',
     visibility:getComputedStyle(document.documentElement).visibility,
@@ -112,6 +113,23 @@ async function loginThroughUi(name,pin,label){
   console.log(`::add-mask::${state.token}`);
   console.log(`${label}_LOGIN_TO_MAIN_PASS game_links=${state.gameLinks.length}`);
   return {context,page,token:state.token};
+}
+
+async function clickMainSelection(session){
+  const {page}=session;
+  await page.goto(new URL('index.html',base).toString(),{waitUntil:'domcontentloaded',timeout:25000});
+  await page.waitForFunction(()=>document.documentElement.getAttribute('data-gejast-auth-state')==='authenticated',{timeout:15000});
+  await page.waitForTimeout(2200);
+  const selector='a[href*="toepen.html"],a[href*="boerenbridge.html"],a[href*="beerpong.html"],a[href*="pikken.html"],a[href*="paardenrace.html"],a[href*="klaverjas_online.html"],a[href*="rad.html"]';
+  const links=page.locator(selector);
+  const count=await links.count();
+  assert(count>=3,`main index has only ${count} selectable game links`);
+  const href=await links.first().getAttribute('href');
+  await links.first().click();
+  await page.waitForFunction(()=>document.documentElement.getAttribute('data-gejast-auth-state')==='authenticated',{timeout:15000});
+  const dest=new URL(page.url());
+  assert(dest.pathname!=='/index.html'&&dest.pathname!=='/login.html',`main game click did not reach a protected selection (${href} -> ${dest.pathname})`);
+  console.log(`MAIN_GAME_SELECTION_PASS href=${href} destination=${dest.pathname}`);
 }
 
 async function authenticatedSurfaceMatrix(session){
@@ -139,6 +157,28 @@ async function authenticatedSurfaceMatrix(session){
   }
 }
 
+async function klaverjasTwoHumanRoom(token1,token2){
+  let roomId='';
+  try{
+    const room=await rpc('klaverjas_online_create',{session_token:token1,site_scope_input:'friends',settings_input:{finish_mode:'fixed_rounds',bot_count:0,v798_phase1:true}});
+    roomId=String(room?.game?.id||room?.id||'');
+    const code=String(room?.game?.lobby_code||room?.lobby_code||'');
+    assert(roomId&&code,'Klaverjas create returned no room id/code');
+    await rpc('klaverjas_online_join',{session_token:token2,lobby_code_input:code,site_scope_input:'friends'});
+    const a=await rpc('klaverjas_online_get_state',{session_token:token1,game_id_input:roomId,lobby_code_input:null,site_scope_input:'friends'});
+    const b=await rpc('klaverjas_online_get_state',{session_token:token2,game_id_input:roomId,lobby_code_input:null,site_scope_input:'friends'});
+    assert((a?.players||[]).length===2,`Klaverjas host view expected 2 humans, got ${(a?.players||[]).length}`);
+    assert((b?.players||[]).length===2,`Klaverjas joiner view expected 2 humans, got ${(b?.players||[]).length}`);
+    assert(a?.viewer?.seat!==undefined&&b?.viewer?.seat!==undefined&&a.viewer.seat!==b.viewer.seat,'Klaverjas viewers did not receive distinct seats');
+    console.log(`KLAVERJAS_TWO_HUMAN_ROOM_PASS code=${code} seats=${a.viewer.seat},${b.viewer.seat}`);
+  }finally{
+    if(roomId){
+      try{await rpc('klaverjas_online_delete_room',{session_token:token1,game_id_input:roomId,lobby_code_input:null,site_scope_input:'friends'});}
+      catch(err){console.log(`Klaverjas cleanup warning: ${err.message}`);}
+    }
+  }
+}
+
 async function crossScopeDenial(session){
   const {page}=session;
   await page.goto(new URL('index.html?scope=family',base).toString(),{waitUntil:'domcontentloaded',timeout:25000});
@@ -152,8 +192,10 @@ try{
   await noSessionMatrix();
   await invalidTokenProof();
   const s1=await loginThroughUi(player1,pin1,'PLAYER1');
+  await clickMainSelection(s1);
   await authenticatedSurfaceMatrix(s1);
   const s2=await loginThroughUi(player2,pin2,'PLAYER2');
+  await klaverjasTwoHumanRoom(s1.token,s2.token);
   const envFile=process.env.GITHUB_ENV;
   if(!envFile) throw new Error('GITHUB_ENV missing');
   fs.appendFileSync(envFile,`GEJAST_PLAYER1_TOKEN=${s1.token}\nGEJAST_PLAYER2_TOKEN=${s2.token}\n`);
