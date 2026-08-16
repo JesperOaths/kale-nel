@@ -1,0 +1,192 @@
+name: v793 fresh live game revalidation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/v793-live-game-revalidation.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v793-fresh-live-game-revalidation
+  cancel-in-progress: false
+
+jobs:
+  live-games:
+    runs-on: ubuntu-latest
+    if: github.repository == 'JesperOaths/kale-nel' && github.ref == 'refs/heads/main'
+    timeout-minutes: 25
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      GEJAST_BASE_URL: https://kalenel.nl/
+      GEJAST_SITE_SCOPE: friends
+      GEJAST_BROWSER_TIMEOUT_MS: '25000'
+    steps:
+      - name: Check out exact merged main
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install deterministic browser runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}" || { echo 'SUPABASE_DB_URL missing'; exit 1; }
+          test "$(tr -d '\r\n' < VERSION)" = 'v793'
+          npm ci
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+          sudo apt-get update >/dev/null
+          sudo apt-get install -y postgresql-client >/dev/null
+
+      - name: Generate v793 runner from the proven v792 campaign
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const sourcePath='scripts/final-cert-live-browser-v792.mjs';
+          const outPath='scripts/fresh-live-game-revalidation-v793.generated.mjs';
+          let text=fs.readFileSync(sourcePath,'utf8');
+          const lower=(text.match(/v792/g)||[]).length;
+          const upper=(text.match(/V792/g)||[]).length;
+          if(lower<1 || upper<1) throw new Error(`unexpected historical runner anchors: lower=${lower} upper=${upper}`);
+          text=text.replaceAll('v792','v793').replaceAll('V792','V793');
+          if(/v792|V792/.test(text)) throw new Error('v792 marker remained in generated v793 runner');
+          fs.writeFileSync(outPath,text);
+          console.log(`Generated v793 runner from historical campaign; replaced lower=${lower} upper=${upper}`);
+          NODE
+
+      - name: Provision randomized disposable v793 identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
+          name1="V793A_${suffix}"
+          name2="V793B_${suffix}"
+          token1="v793-live-$(openssl rand -hex 32)"
+          token2="v793-live-$(openssl rand -hex 32)"
+          echo "::add-mask::$token1"
+          echo "::add-mask::$token2"
+          echo "GEJAST_PLAYER1_TOKEN=$token1" >> "$GITHUB_ENV"
+          echo "GEJAST_PLAYER2_TOKEN=$token2" >> "$GITHUB_ENV"
+          echo "GEJAST_PLAYER1_NAME=$name1" >> "$GITHUB_ENV"
+          echo "GEJAST_PLAYER2_NAME=$name2" >> "$GITHUB_ENV"
+
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 \
+            -v name1="$name1" -v name2="$name2" -v token1="$token1" -v token2="$token2" <<'SQL'
+          begin;
+          with ins as (
+            insert into public.players(slug,display_name,active,approved,hidden_from_public,is_dummy,site_scope)
+            values
+              ('v793-live-a-' || lower(:'name1'), :'name1', true, true, true, true, 'friends'),
+              ('v793-live-b-' || lower(:'name2'), :'name2', true, true, true, true, 'friends')
+            returning id,display_name
+          )
+          insert into public.gejast_player_sessions_v746(session_token,player_id,display_name,site_scope,expires_at)
+          select case when display_name=:'name1' then :'token1' else :'token2' end,id,display_name,'friends',now()+interval '45 minutes'
+          from ins;
+
+          with ins as (
+            insert into public.gejast_account_players_v671(site_scope,display_name,email,activated_at)
+            values
+              ('friends', :'name1', lower(:'name1') || '@example.invalid', now()),
+              ('friends', :'name2', lower(:'name2') || '@example.invalid', now())
+            returning id,display_name
+          )
+          insert into public.gejast_account_sessions_v671(session_token,player_id,site_scope,expires_at)
+          select case when display_name=:'name1' then :'token1' else :'token2' end,id,'friends',now()+interval '45 minutes'
+          from ins;
+          commit;
+          SQL
+
+      - name: Prove both current session resolver chains
+        shell: bash
+        run: |
+          set -euo pipefail
+          resolved="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -F'|' \
+            -v token1="$GEJAST_PLAYER1_TOKEN" -v token2="$GEJAST_PLAYER2_TOKEN" <<'SQL'
+          select coalesce(public._gejast_v687_session_name(:'token1'),''),
+                 coalesce(public._gejast_v687_session_name(:'token2'),''),
+                 coalesce((public._jas_session_player(:'token1')).display_name,''),
+                 coalesce((public._jas_session_player(:'token2')).display_name,'');
+          SQL
+          )"
+          expected="$GEJAST_PLAYER1_NAME|$GEJAST_PLAYER2_NAME|$GEJAST_PLAYER1_NAME|$GEJAST_PLAYER2_NAME"
+          test "$resolved" = "$expected"
+          echo 'Both disposable v793 account/player session resolver chains PASS.'
+
+      - name: Run fresh live Chromium multi-context mobile and completion campaign
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! node scripts/fresh-live-game-revalidation-v793.generated.mjs; then
+            echo 'First v793 browser campaign attempt failed; retrying once after edge settle.'
+            sleep 4
+            node scripts/fresh-live-game-revalidation-v793.generated.mjs
+          fi
+
+      - name: Cleanup all disposable v793 state
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GEJAST_PLAYER1_NAME:-}" ] || [ -z "${GEJAST_PLAYER2_NAME:-}" ]; then
+            echo 'Fixture names were never exported; nothing to clean.'
+            exit 0
+          fi
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 \
+            -v name1="$GEJAST_PLAYER1_NAME" -v name2="$GEJAST_PLAYER2_NAME" \
+            -v token1="${GEJAST_PLAYER1_TOKEN:-missing}" -v token2="${GEJAST_PLAYER2_TOKEN:-missing}" <<'SQL'
+          begin;
+          delete from public.paardenrace_match_history h
+          using public.paardenrace_rooms r
+          where h.room_id = r.id
+            and (
+              r.host_name in (:'name1', :'name2')
+              or r.host_player_id in (select id from public.players where display_name in (:'name1', :'name2'))
+              or r.created_by_player_id in (select id from public.players where display_name in (:'name1', :'name2'))
+            );
+          delete from public.klaverjas_online_games
+          where created_by_player_name in (:'name1', :'name2')
+             or created_by_player_id in (select id from public.players where display_name in (:'name1', :'name2'));
+          delete from public.pikken_games
+          where created_by_player_name in (:'name1', :'name2')
+             or created_by_player_id in (select id from public.players where display_name in (:'name1', :'name2'));
+          delete from public.paardenrace_rooms
+          where host_name in (:'name1', :'name2')
+             or host_player_id in (select id from public.players where display_name in (:'name1', :'name2'))
+             or created_by_player_id in (select id from public.players where display_name in (:'name1', :'name2'));
+          delete from public.gejast_player_sessions_v746 where session_token in (:'token1', :'token2');
+          delete from public.gejast_account_sessions_v671 where session_token in (:'token1', :'token2');
+          delete from public.players where display_name in (:'name1', :'name2') and is_dummy=true and hidden_from_public=true;
+          delete from public.gejast_account_players_v671 where display_name in (:'name1', :'name2') and email like '%@example.invalid';
+          commit;
+          SQL
+
+          residue="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -F'|' \
+            -v name1="$GEJAST_PLAYER1_NAME" -v name2="$GEJAST_PLAYER2_NAME" \
+            -v token1="${GEJAST_PLAYER1_TOKEN:-missing}" -v token2="${GEJAST_PLAYER2_TOKEN:-missing}" <<'SQL'
+          select (select count(*) from public.players where display_name in (:'name1',:'name2')),
+                 (select count(*) from public.gejast_account_players_v671 where display_name in (:'name1',:'name2')),
+                 (select count(*) from public.gejast_player_sessions_v746 where session_token in (:'token1',:'token2')),
+                 (select count(*) from public.gejast_account_sessions_v671 where session_token in (:'token1',:'token2')),
+                 (select count(*) from public.klaverjas_online_games where created_by_player_name in (:'name1',:'name2')),
+                 (select count(*) from public.pikken_games where created_by_player_name in (:'name1',:'name2')),
+                 (select count(*) from public.paardenrace_rooms where host_name in (:'name1',:'name2'));
+          SQL
+          )"
+          test "$residue" = '0|0|0|0|0|0|0'
+          echo 'Fresh v793 browser-revalidation cleanup PASS.'
+
+      - name: Final fresh v793 game-revalidation marker
+        run: echo 'RESULT=V793_FRESH_LIVE_GAME_REVALIDATION_PASS'
