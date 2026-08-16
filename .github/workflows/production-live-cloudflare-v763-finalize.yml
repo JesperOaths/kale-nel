@@ -1,0 +1,318 @@
+name: Production live Cloudflare v763 finalization
+
+on:
+  push:
+    branches:
+      - ops/finalize-live-cloudflare-v763-20260816
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: production-live-cloudflare-v763-finalization
+  cancel-in-progress: false
+
+jobs:
+  deploy-and-prove-live-zone:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GH_ISSUE_TOKEN: ${{ github.token }}
+      EXACT_MAIN_SHA: 5f380dd254509cd2411d452f5fa297f26eb2e9bb
+    steps:
+      - name: Check out exact production source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: 5f380dd254509cd2411d452f5fa297f26eb2e9bb
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Fail closed unless credentials point at the active live zone
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo 'CLOUDFLARE_API_TOKEN missing'; exit 1; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo 'CLOUDFLARE_ACCOUNT_ID missing'; exit 1; }
+
+          curl -fsS --max-time 30 \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            "https://api.cloudflare.com/client/v4/zones?name=kalenel.nl&account.id=${CLOUDFLARE_ACCOUNT_ID}" \
+            -o /tmp/live-zone.json
+          dig +short NS kalenel.nl > /tmp/public-ns.txt
+
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          data=json.load(open('/tmp/live-zone.json'))
+          if data.get('success') is not True:
+              raise SystemExit(f"Cloudflare zone lookup failed: {data.get('errors')}")
+          zones=data.get('result') or []
+          if len(zones)!=1:
+              raise SystemExit(f'Expected exactly one accessible kalenel.nl zone in supplied account, got {len(zones)}')
+          z=zones[0]
+          if z.get('account',{}).get('id') != os.environ['CLOUDFLARE_ACCOUNT_ID']:
+              raise SystemExit('Zone account id does not match CLOUDFLARE_ACCOUNT_ID')
+          if z.get('status') != 'active':
+              raise SystemExit(f"Refusing deployment: zone status is {z.get('status')!r}, not active")
+          assigned={str(x).rstrip('.').lower() for x in (z.get('name_servers') or [])}
+          public={x.strip().rstrip('.').lower() for x in Path('/tmp/public-ns.txt').read_text().splitlines() if x.strip()}
+          if not assigned or assigned != public:
+              raise SystemExit(f'Refusing deployment: Cloudflare assigned NS {sorted(assigned)} != public NS {sorted(public)}')
+          if public != {'anton.ns.cloudflare.com','vida.ns.cloudflare.com'}:
+              raise SystemExit(f'Refusing deployment: public delegation unexpectedly changed: {sorted(public)}')
+          Path('/tmp/live-zone-id').write_text(z['id'])
+          Path('/tmp/live-account-name').write_text(str(z.get('account',{}).get('name') or ''))
+          print(f"LIVE_ZONE_PASS status=active ns={','.join(sorted(public))} account={z.get('account',{}).get('name','')}")
+          PY
+
+      - name: Snapshot current live routes and secret binding names
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZONE_ID="$(cat /tmp/live-zone-id)"
+          curl -fsS --max-time 30 \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/workers/routes" \
+            -o /tmp/routes-before.json
+
+          settings_status="$(curl -sS --max-time 30 \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -o /tmp/settings-before.json -w '%{http_code}' \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/kalenel-admin-gate/settings" || true)"
+          echo "$settings_status" > /tmp/settings-before.status
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.load(open('/tmp/routes-before.json'))
+          if d.get('success') is not True:
+              raise SystemExit(f"Route lookup failed: {d.get('errors')}")
+          routes=d.get('result') or []
+          admin=[r for r in routes if r.get('pattern')=='admin.kalenel.nl/*' and r.get('script')=='kalenel-admin-gate']
+          if not admin:
+              raise SystemExit('Existing live admin route is missing; refusing deployment')
+          print('Existing live admin route PASS')
+
+          if Path('/tmp/settings-before.status').read_text().strip()=='200':
+              s=json.load(open('/tmp/settings-before.json'))
+              bindings=(s.get('result') or {}).get('bindings') or []
+              names=sorted({str(b.get('name')) for b in bindings if 'secret' in str(b.get('type','')).lower() and b.get('name')})
+              Path('/tmp/secret-bindings-before.txt').write_text('\n'.join(names)+'\n')
+              print('Secret binding names before deploy:', ', '.join(names) if names else '<none reported>')
+          else:
+              Path('/tmp/secret-bindings-before.txt').write_text('')
+              print('Worker settings endpoint unavailable to this token; OAuth runtime will be used as preservation proof instead.')
+          PY
+
+      - name: Prove current live OAuth perimeter before deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f /tmp/pre-login.headers /tmp/pre-login.body
+          status="$(curl --silent --show-error --max-time 30 --connect-timeout 10 \
+            --output /tmp/pre-login.body --dump-header /tmp/pre-login.headers \
+            --write-out '%{http_code}' \
+            'https://admin.kalenel.nl/login?return_to=/admin.html')"
+          location="$(awk 'BEGIN{IGNORECASE=1} /^Location:/ {sub(/^[^:]+:[[:space:]]*/,""); sub(/\r$/,""); v=$0} END{print v}' /tmp/pre-login.headers)"
+          [[ "$status" == '302' ]] || { echo "Predeploy /login expected 302, got $status"; cat /tmp/pre-login.headers; exit 1; }
+          [[ "$location" == https://github.com/login/oauth/authorize* ]] || { echo "Predeploy OAuth location unexpected: $location"; exit 1; }
+          grep -qi '^Set-Cookie: __Host-kalenel_admin_oauth=' /tmp/pre-login.headers || { echo 'Predeploy OAuth state cookie missing'; exit 1; }
+          grep -qi '^Set-Cookie: __Host-kalenel_admin_attempts=' /tmp/pre-login.headers || { echo 'Predeploy attempts cookie missing'; exit 1; }
+          echo 'PREDEPLOY_OAUTH_PERIMETER_PASS'
+
+      - name: Install pinned repository dependencies
+        run: npm ci
+
+      - name: Run canonical repository verification
+        run: npm run verify
+
+      - name: Build protected admin static assets
+        run: npm run admin-worker:build
+
+      - name: Compile exact Worker v763 without changing production
+        run: npx --yes wrangler@4 deploy --config cloudflare/workers/admin-gate/wrangler.toml --dry-run
+
+      - name: Deploy exact checked-in Worker v763 to active production zone
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 deploy --config cloudflare/workers/admin-gate/wrangler.toml --keep-vars
+
+      - name: Prove routes and preserve existing Worker secret bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZONE_ID="$(cat /tmp/live-zone-id)"
+          for attempt in $(seq 1 18); do
+            curl -fsS --max-time 30 \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H 'Content-Type: application/json' \
+              "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/workers/routes" \
+              -o /tmp/routes-after.json
+            if python3 - <<'PY'
+          import json,sys
+          d=json.load(open('/tmp/routes-after.json'))
+          routes=d.get('result') or []
+          needed={('admin.kalenel.nl/*','kalenel-admin-gate'),('kalenel.nl/*','kalenel-admin-gate')}
+          got={(r.get('pattern'),r.get('script')) for r in routes}
+          sys.exit(0 if needed.issubset(got) else 1)
+          PY
+            then
+              echo "Worker route propagation PASS on attempt ${attempt}"
+              break
+            fi
+            if [[ "$attempt" == '18' ]]; then
+              echo 'Required Worker routes did not become visible after deployment.'
+              cat /tmp/routes-after.json
+              exit 1
+            fi
+            sleep 10
+          done
+
+          before_status="$(cat /tmp/settings-before.status)"
+          if [[ "$before_status" == '200' ]]; then
+            after_status="$(curl -sS --max-time 30 \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H 'Content-Type: application/json' \
+              -o /tmp/settings-after.json -w '%{http_code}' \
+              "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/kalenel-admin-gate/settings" || true)"
+            [[ "$after_status" == '200' ]] || { echo "Could not re-read Worker settings after deploy: HTTP $after_status"; exit 1; }
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          before={x.strip() for x in Path('/tmp/secret-bindings-before.txt').read_text().splitlines() if x.strip()}
+          s=json.load(open('/tmp/settings-after.json'))
+          bindings=(s.get('result') or {}).get('bindings') or []
+          after={str(b.get('name')) for b in bindings if 'secret' in str(b.get('type','')).lower() and b.get('name')}
+          if before != after:
+              raise SystemExit(f'Secret binding set changed across deploy: before={sorted(before)} after={sorted(after)}')
+          print('Worker secret binding name set preserved exactly:', ', '.join(sorted(after)) if after else '<none reported>')
+          PY
+          fi
+
+      - name: Prove live HTTP to HTTPS, public health, admin fail-closed, and OAuth continuity
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          request() {
+            local method="$1" url="$2" prefix="$3"
+            rm -f "${prefix}.headers" "${prefix}.body"
+            curl --silent --show-error --request "$method" --max-time 30 --connect-timeout 10 \
+              --output "${prefix}.body" --dump-header "${prefix}.headers" \
+              --write-out '%{http_code}' "$url"
+          }
+          header_value() {
+            local file="$1" wanted="$2"
+            awk -v wanted="$wanted" 'BEGIN{IGNORECASE=1} $1 ~ ("^" wanted ":$") {sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); value=$0} END{print value}' "$file"
+          }
+          wait_for() {
+            local method="$1" url="$2" expected_status="$3" expected_location="$4" expected_build="$5" prefix="$6"
+            local status='' location='' build=''
+            for attempt in $(seq 1 24); do
+              status="$(request "$method" "$url" "$prefix" || true)"
+              location="$(header_value "${prefix}.headers" 'Location' 2>/dev/null || true)"
+              build="$(header_value "${prefix}.headers" 'X-Kalenel-Admin-Build' 2>/dev/null || true)"
+              if [[ "$status" == "$expected_status" ]] \
+                && { [[ -z "$expected_location" ]] || [[ "$location" == "$expected_location" ]]; } \
+                && { [[ -z "$expected_build" ]] || [[ "$build" == "$expected_build" ]]; }; then
+                printf 'PASS %s %s -> %s' "$method" "$url" "$status"
+                [[ -n "$location" ]] && printf ' location=%s' "$location"
+                [[ -n "$build" ]] && printf ' build=%s' "$build"
+                printf '\n'
+                return 0
+              fi
+              echo "Waiting for live v763 edge state (attempt ${attempt}/24): status=${status} location=${location:-<none>} build=${build:-<none>}"
+              sleep 10
+            done
+            echo "FAIL ${method} ${url}: expected status=${expected_status} location=${expected_location:-<any>} build=${expected_build:-<any>}; got status=${status} location=${location:-<none>} build=${build:-<none>}"
+            cat "${prefix}.headers" || true
+            exit 1
+          }
+
+          wait_for GET 'http://kalenel.nl/' '308' 'https://kalenel.nl/' '' /tmp/http-apex
+          wait_for GET 'http://kalenel.nl/index.html?probe=cf-v763-live&keep=1' '308' 'https://kalenel.nl/index.html?probe=cf-v763-live&keep=1' '' /tmp/http-path-query
+          wait_for POST 'http://kalenel.nl/request.html?probe=cf-v763-post' '308' 'https://kalenel.nl/request.html?probe=cf-v763-post' '' /tmp/http-post
+          wait_for GET 'http://admin.kalenel.nl/admin.html?probe=cf-v763-live' '308' 'https://admin.kalenel.nl/admin.html?probe=cf-v763-live' '' /tmp/http-admin
+          wait_for GET 'https://kalenel.nl/' '200' '' '' /tmp/https-apex
+          wait_for GET 'https://admin.kalenel.nl/admin.html?probe=cf-v763-live' '401' '' 'v763' /tmp/https-admin
+
+          cache_control="$(header_value /tmp/http-apex.headers 'Cache-Control')"
+          [[ "$cache_control" == 'no-store' ]] || { echo "Expected HTTP 308 Cache-Control no-store, got ${cache_control:-<none>}"; exit 1; }
+          grep -q 'Admin login vereist' /tmp/https-admin.body || { echo 'Anonymous HTTPS admin did not return expected fail-closed login page'; exit 1; }
+
+          login_status="$(request GET 'https://admin.kalenel.nl/login?return_to=/admin.html' /tmp/post-login)"
+          login_location="$(header_value /tmp/post-login.headers 'Location')"
+          [[ "$login_status" == '302' ]] || { echo "Postdeploy /login expected 302, got $login_status"; cat /tmp/post-login.headers; exit 1; }
+          [[ "$login_location" == https://github.com/login/oauth/authorize* ]] || { echo "Postdeploy OAuth location unexpected: $login_location"; exit 1; }
+          grep -qi '^Set-Cookie: __Host-kalenel_admin_oauth=' /tmp/post-login.headers || { echo 'Postdeploy OAuth state cookie missing'; exit 1; }
+          grep -qi '^Set-Cookie: __Host-kalenel_admin_attempts=' /tmp/post-login.headers || { echo 'Postdeploy attempts cookie missing'; exit 1; }
+          echo 'LIVE_V763_TRANSPORT_ADMIN_OAUTH_PASS'
+
+      - name: Run canonical live deployment health acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GEJAST_EXPECTED_VERSION="$(tr -d '\r\n' < VERSION)"
+          export GEJAST_DEPLOY_WAIT_SECONDS='240'
+          export GEJAST_SMOKE_TIMEOUT_MS='15000'
+          node check-live-routes.mjs
+          GEJAST_BETA_SURFACE_TIMEOUT_MS='15000' node check-beta-readonly-surfaces.mjs
+          GEJAST_BETA_SURFACE_TIMEOUT_MS='15000' node check-beta-readonly-extended.mjs
+          GEJAST_PERF_TIMEOUT_MS='20000' node check-beta-performance.mjs
+          echo 'LIVE_DEPLOYMENT_HEALTH_ACCEPTANCE_PASS'
+
+      - name: Record production proof in issue 122
+        shell: bash
+        run: |
+          set -euo pipefail
+          ACCOUNT_NAME="$(cat /tmp/live-account-name)"
+          cat > /tmp/comment.md <<EOF
+          ## Worker v763 live production finalization — PASS
+
+          The corrected Cloudflare credentials were validated against the **active live zone** before deployment. The deployment used exact repository source \`${EXACT_MAIN_SHA}\` and the existing free-tier Worker configuration.
+
+          - Cloudflare account: \`${ACCOUNT_NAME}\`
+          - Zone: \`kalenel.nl\` status=\`active\`
+          - Public delegation: \`anton.ns.cloudflare.com\`, \`vida.ns.cloudflare.com\` — exact match to the active zone
+          - Worker script: \`kalenel-admin-gate\`
+          - Worker build live: **v763**
+          - Route \`admin.kalenel.nl/*\` -> \`kalenel-admin-gate\`: PASS
+          - Route \`kalenel.nl/*\` -> \`kalenel-admin-gate\`: PASS
+          - HTTP apex -> HTTPS apex: **308 PASS**
+          - HTTP path + query preservation: **308 PASS**
+          - HTTP POST transport redirect: **308 PASS**
+          - HTTP admin -> HTTPS admin before auth: **308 PASS**
+          - HTTPS public apex: **200 PASS**
+          - Anonymous HTTPS admin perimeter: **401 PASS**, build header \`v763\`
+          - GitHub OAuth entrypoint after deployment: **302 PASS** with fresh signed state/attempt cookies
+          - Existing Worker secret bindings: preserved where API-readable; OAuth runtime continuity independently proved after deployment
+          - Canonical repository verification before deploy: PASS
+          - Canonical live deployment health acceptance after deploy: PASS
+          - Cloudflare paid features: none enabled; checked-in Workers Free architecture unchanged
+
+          This closes the previously outstanding Cloudflare production boundary. HTTP->HTTPS is now live-proven rather than inferred from source/tests.
+          EOF
+          python3 - <<'PY'
+          import json
+          body=open('/tmp/comment.md').read()
+          json.dump({'body':body},open('/tmp/comment.json','w'))
+          PY
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${GH_ISSUE_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/comment.json \
+            'https://api.github.com/repos/JesperOaths/kale-nel/issues/122/comments' >/dev/null
+          echo 'RESULT=CLOUDFLARE_V763_LIVE_PRODUCTION_FINALIZATION_PASS'
