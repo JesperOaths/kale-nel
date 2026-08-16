@@ -100,4 +100,4 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`- ${failure}`));
   process.exit(1);
 }
-console.log(`Beta readiness current-state regression PASS. ${version}; complete=${completeCount}; permission-gated=0; blocked=0; deployment=${releaseCandidateVersion ? 'release-candidate' : 'live-promoted'}.`);
+console.log(`Beta readiness current-state regression PASS. ${version}; complete=${completeCount}; permission-gated=${permission.length}; blocked=${blocked.length}; deployment=${releaseCandidateVersion ? 'release-candidate' : 'live-promoted'}.`);
