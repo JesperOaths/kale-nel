@@ -1,0 +1,93 @@
+name: v795 metadata sync
+
+on:
+  push:
+    branches:
+      - test/v794-middle-dot-watermark-drift
+    paths:
+      - '.github/workflows/v795-metadata-sync.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    if: github.repository == 'JesperOaths/kale-nel'
+    steps:
+      - name: Check out repair branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: test/v794-middle-dot-watermark-drift
+          fetch-depth: 1
+
+      - name: Synchronize v795 release metadata and gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+
+          const beta = JSON.parse(fs.readFileSync('beta-readiness.json','utf8'));
+          beta.site_version = 'release candidate v795 / live v794';
+          beta.last_updated = '2026-08-16';
+          if (beta.deployment_identity) {
+            beta.deployment_identity.live_version = 'v794';
+            beta.deployment_identity.release_candidate_version = 'v795';
+          }
+          fs.writeFileSync('beta-readiness.json', JSON.stringify(beta,null,2)+'\n');
+
+          const gameplay = JSON.parse(fs.readFileSync('gameplay-acceptance.json','utf8'));
+          gameplay.site_version = 'v795';
+          gameplay.last_updated = '2026-08-16';
+          fs.writeFileSync('gameplay-acceptance.json', JSON.stringify(gameplay,null,2)+'\n');
+
+          const certification = JSON.parse(fs.readFileSync('release-certification.json','utf8'));
+          certification.current_version = 'v795';
+          certification.status = 'REVALIDATION_REQUIRED';
+          certification.current_audit_issue = 153;
+          certification.reason = 'v795 repairs systemic stale visible version watermarks that the prior drift checker missed, so exact-main production visual revalidation is required.';
+          fs.writeFileSync('release-certification.json', JSON.stringify(certification,null,2)+'\n');
+
+          const v794 = fs.readFileSync('check-v794-klaverjas-public-surface.mjs','utf8');
+          const updatedV794 = v794.replace(
+            "assert.equal(fs.readFileSync('VERSION','utf8').trim(),'v794','v794 public-surface cleanup must carry VERSION v794');",
+            "const currentVersion=Number((fs.readFileSync('VERSION','utf8').trim().match(/\\d+/)||['0'])[0]);\nassert.ok(currentVersion>=794,'v794 public-surface cleanup contract requires VERSION v794 or newer');"
+          );
+          if (updatedV794 === v794) throw new Error('v794 version assertion replacement did not apply');
+          fs.writeFileSync('check-v794-klaverjas-public-surface.mjs', updatedV794);
+          NODE
+
+          cat > check-release-certification-state.mjs <<'EOF'
+          #!/usr/bin/env node
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+
+          const version = fs.readFileSync('VERSION', 'utf8').trim();
+          const state = JSON.parse(fs.readFileSync('release-certification.json', 'utf8'));
+
+          assert.equal(state.schema_version, 1, 'unsupported release certification schema');
+          assert.equal(state.current_version, version, 'release certification state must track root VERSION');
+          assert(['REVALIDATION_REQUIRED', 'PASS'].includes(state.status), 'invalid release certification state');
+
+          if (state.status === 'PASS') {
+            const acceptancePath = `final-acceptance-${version}.json`;
+            assert(fs.existsSync(acceptancePath), `PASS requires ${acceptancePath}`);
+            const final = JSON.parse(fs.readFileSync(acceptancePath, 'utf8'));
+            assert.equal(final.schema_version, 1, 'unsupported current final acceptance schema');
+            assert.equal(final.site_version, version, 'final acceptance must match current VERSION');
+            assert.equal(final.status, 'PASS', 'current final acceptance must be PASS');
+          }
+
+          console.log('Release certification state:', state.current_version, state.status);
+          EOF
+
+      - name: Commit synchronized metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add beta-readiness.json gameplay-acceptance.json release-certification.json check-v794-klaverjas-public-surface.mjs check-release-certification-state.mjs
+          git commit -m 'fix: synchronize v795 release metadata'
+          git push origin HEAD:test/v794-middle-dot-watermark-drift
