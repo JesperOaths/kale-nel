@@ -57,81 +57,86 @@ jobs:
           const service=process.env.SUPABASE_SERVICE_ROLE_KEY;
           if(!supabaseUrl || !publishable || !service) throw new Error('Supabase REST configuration missing');
 
-          const users=[
-            {name:process.env.VISUAL_NAME1, slug:`rest-visual-a-${process.env.GITHUB_RUN_ID}`, pin:process.env.VISUAL_PIN1, hash:process.env.VISUAL_PIN1_HASH, scope:'friends'},
-            {name:process.env.VISUAL_NAME2, slug:`rest-visual-b-${process.env.GITHUB_RUN_ID}`, pin:process.env.VISUAL_PIN2, hash:process.env.VISUAL_PIN2_HASH, scope:'friends'},
-            {name:process.env.VISUAL_FAMILY, slug:`rest-visual-family-${process.env.GITHUB_RUN_ID}`, pin:process.env.VISUAL_FAMILY_PIN, hash:process.env.VISUAL_FAMILY_PIN_HASH, scope:'family'}
-          ];
-          const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
-          const headers=(key,extra={})=>({apikey:key,Authorization:`Bearer ${key}`,'Content-Type':'application/json',Accept:'application/json',...extra});
-          async function request(path,{key=service,method='GET',body,prefer,timeoutMs=12000,retries=3}={}){
-            let last;
-            for(let attempt=1;attempt<=retries;attempt++){
-              const controller=new AbortController();
-              const timer=setTimeout(()=>controller.abort(),timeoutMs);
-              try{
-                const res=await fetch(`${supabaseUrl}/rest/v1/${path}`,{method,headers:headers(key,prefer?{Prefer:prefer}:{}),body:body===undefined?undefined:JSON.stringify(body),signal:controller.signal});
-                const text=await res.text();
-                let data=null; try{data=text?JSON.parse(text):null;}catch{data=text;}
-                if(!res.ok){
-                  const msg=typeof data==='string'?data:(data?.message||data?.error||data?.details||data?.hint||`HTTP ${res.status}`);
-                  const e=new Error(`${method} ${path}: ${msg}`); e.status=res.status;
-                  throw e;
-                }
-                return data;
-              }catch(err){
-                last=err;
-                const transient=err?.name==='AbortError' || !err?.status || err.status===429 || err.status>=500;
-                if(!transient || attempt===retries) throw err;
-                console.log(`REST ${method} ${path} transient attempt ${attempt}/${retries}: ${err.message}`);
-                await sleep(attempt*2500);
-              }finally{clearTimeout(timer);}
+          (async()=>{
+            const users=[
+              {name:process.env.VISUAL_NAME1, slug:`rest-visual-a-${process.env.GITHUB_RUN_ID}`, pin:process.env.VISUAL_PIN1, hash:process.env.VISUAL_PIN1_HASH, scope:'friends'},
+              {name:process.env.VISUAL_NAME2, slug:`rest-visual-b-${process.env.GITHUB_RUN_ID}`, pin:process.env.VISUAL_PIN2, hash:process.env.VISUAL_PIN2_HASH, scope:'friends'},
+              {name:process.env.VISUAL_FAMILY, slug:`rest-visual-family-${process.env.GITHUB_RUN_ID}`, pin:process.env.VISUAL_FAMILY_PIN, hash:process.env.VISUAL_FAMILY_PIN_HASH, scope:'family'}
+            ];
+            const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
+            const headers=(key,extra={})=>({apikey:key,Authorization:`Bearer ${key}`,'Content-Type':'application/json',Accept:'application/json',...extra});
+            async function request(path,{key=service,method='GET',body,prefer,timeoutMs=12000,retries=3}={}){
+              let last;
+              for(let attempt=1;attempt<=retries;attempt++){
+                const controller=new AbortController();
+                const timer=setTimeout(()=>controller.abort(),timeoutMs);
+                try{
+                  const res=await fetch(`${supabaseUrl}/rest/v1/${path}`,{method,headers:headers(key,prefer?{Prefer:prefer}:{}),body:body===undefined?undefined:JSON.stringify(body),signal:controller.signal});
+                  const text=await res.text();
+                  let data=null; try{data=text?JSON.parse(text):null;}catch{data=text;}
+                  if(!res.ok){
+                    const msg=typeof data==='string'?data:(data?.message||data?.error||data?.details||data?.hint||`HTTP ${res.status}`);
+                    const e=new Error(`${method} ${path}: ${msg}`); e.status=res.status;
+                    throw e;
+                  }
+                  return data;
+                }catch(err){
+                  last=err;
+                  const transient=err?.name==='AbortError' || !err?.status || err.status===429 || err.status>=500;
+                  if(!transient || attempt===retries) throw err;
+                  console.log(`REST ${method} ${path} transient attempt ${attempt}/${retries}: ${err.message}`);
+                  await sleep(attempt*2500);
+                }finally{clearTimeout(timer);}
+              }
+              throw last;
             }
-            throw last;
-          }
-          const eq=(v)=>encodeURIComponent(String(v));
-          async function cleanup(){
-            for(const u of users){
-              await request(`gejast_active_player_metadata_v679?player_name=eq.${eq(u.name)}`,{method:'DELETE'}).catch(e=>console.log(`metadata cleanup warning ${u.name}: ${e.message}`));
-              await request(`gejast_player_sessions_v746?display_name=eq.${eq(u.name)}`,{method:'DELETE'}).catch(e=>console.log(`session cleanup warning ${u.name}: ${e.message}`));
-              await request(`players?display_name=eq.${eq(u.name)}&is_dummy=eq.true&hidden_from_public=eq.true`,{method:'DELETE'}).catch(e=>console.log(`player cleanup warning ${u.name}: ${e.message}`));
+            const eq=(v)=>encodeURIComponent(String(v));
+            async function cleanup(){
+              for(const u of users){
+                await request(`gejast_active_player_metadata_v679?player_name=eq.${eq(u.name)}`,{method:'DELETE'}).catch(e=>console.log(`metadata cleanup warning ${u.name}: ${e.message}`));
+                await request(`gejast_player_sessions_v746?display_name=eq.${eq(u.name)}`,{method:'DELETE'}).catch(e=>console.log(`session cleanup warning ${u.name}: ${e.message}`));
+                await request(`players?display_name=eq.${eq(u.name)}&is_dummy=eq.true&hidden_from_public=eq.true`,{method:'DELETE'}).catch(e=>console.log(`player cleanup warning ${u.name}: ${e.message}`));
+              }
             }
-          }
-          async function assertZero(){
-            const residue=[];
-            for(const u of users){
-              const players=await request(`players?select=id&display_name=eq.${eq(u.name)}`);
-              const sessions=await request(`gejast_player_sessions_v746?select=session_token&display_name=eq.${eq(u.name)}`);
-              const meta=await request(`gejast_active_player_metadata_v679?select=id&player_name=eq.${eq(u.name)}`);
-              residue.push((players?.length||0)+(sessions?.length||0)+(meta?.length||0));
+            async function assertZero(){
+              const residue=[];
+              for(const u of users){
+                const players=await request(`players?select=id&display_name=eq.${eq(u.name)}`);
+                const sessions=await request(`gejast_player_sessions_v746?select=session_token&display_name=eq.${eq(u.name)}`);
+                const meta=await request(`gejast_active_player_metadata_v679?select=id&player_name=eq.${eq(u.name)}`);
+                residue.push((players?.length||0)+(sessions?.length||0)+(meta?.length||0));
+              }
+              if(residue.some(Boolean)) throw new Error(`REST fixture residue remained: ${residue.join('|')}`);
+              console.log('RESULT=V801_VISUAL_REST_ZERO_RESIDUE_PASS');
             }
-            if(residue.some(Boolean)) throw new Error(`REST fixture residue remained: ${residue.join('|')}`);
-            console.log('RESULT=V801_VISUAL_REST_ZERO_RESIDUE_PASS');
-          }
 
-          let mainError=null;
-          try{
-            await cleanup();
-            const payload=users.map(u=>({slug:u.slug,display_name:u.name,active:true,pin_hash:u.hash,approved:true,hidden_from_public:true,is_dummy:true,site_scope:u.scope}));
-            const rows=await request('players?select=id,display_name,site_scope',{method:'POST',body:payload,prefer:'return=representation'});
-            if(!Array.isArray(rows)||rows.length!==3) throw new Error(`Expected 3 REST-created players, got ${Array.isArray(rows)?rows.length:'non-array'}`);
-            console.log('RESULT=V801_VISUAL_REST_CREATE_PASS');
+            let mainError=null;
+            try{
+              await cleanup();
+              const payload=users.map(u=>({slug:u.slug,display_name:u.name,active:true,pin_hash:u.hash,approved:true,hidden_from_public:true,is_dummy:true,site_scope:u.scope}));
+              const rows=await request('players?select=id,display_name,site_scope',{method:'POST',body:payload,prefer:'return=representation'});
+              if(!Array.isArray(rows)||rows.length!==3) throw new Error(`Expected 3 REST-created players, got ${Array.isArray(rows)?rows.length:'non-array'}`);
+              console.log('RESULT=V801_VISUAL_REST_CREATE_PASS');
 
-            for(const u of users){
-              const login=await request('rpc/account_login_v687',{key:publishable,method:'POST',body:{display_name_input:u.name,entered_pin:u.pin,site_scope_input:u.scope},timeoutMs:15000,retries:3});
-              const token=String(login?.session_token||'');
-              if(!/^[0-9a-f]{48}$/.test(token)) throw new Error(`${u.name} did not receive canonical session token`);
-              const state=await request('rpc/account_public_state_v687',{key:publishable,method:'POST',body:{session_token_input:token},timeoutMs:15000,retries:3});
-              if(!state?.ok || String(state?.display_name||'')!==u.name) throw new Error(`${u.name} public state did not resolve current session`);
+              for(const u of users){
+                const login=await request('rpc/account_login_v687',{key:publishable,method:'POST',body:{display_name_input:u.name,entered_pin:u.pin,site_scope_input:u.scope},timeoutMs:15000,retries:3});
+                const token=String(login?.session_token||'');
+                if(!/^[0-9a-f]{48}$/.test(token)) throw new Error(`${u.name} did not receive canonical session token`);
+                const state=await request('rpc/account_public_state_v687',{key:publishable,method:'POST',body:{session_token_input:token},timeoutMs:15000,retries:3});
+                if(!state?.ok || String(state?.display_name||'')!==u.name) throw new Error(`${u.name} public state did not resolve current session`);
+              }
+              console.log('RESULT=V801_VISUAL_REST_LOGIN_PASS');
+            }catch(err){
+              mainError=err;
+              console.error(`REST fixture probe failure: ${err?.stack||err}`);
+            }finally{
+              try{ await cleanup(); await assertZero(); }
+              catch(cleanErr){ console.error(`REST cleanup failure: ${cleanErr?.stack||cleanErr}`); if(!mainError) mainError=cleanErr; }
             }
-            console.log('RESULT=V801_VISUAL_REST_LOGIN_PASS');
-          }catch(err){
-            mainError=err;
-            console.error(`REST fixture probe failure: ${err?.stack||err}`);
-          }finally{
-            try{ await cleanup(); await assertZero(); }
-            catch(cleanErr){ console.error(`REST cleanup failure: ${cleanErr?.stack||cleanErr}`); if(!mainError) mainError=cleanErr; }
-          }
-          if(mainError) process.exit(1);
-          console.log('RESULT=V801_VISUAL_REST_FIXTURE_PROBE_PASS');
+            if(mainError) process.exitCode=1;
+            else console.log('RESULT=V801_VISUAL_REST_FIXTURE_PROBE_PASS');
+          })().catch((err)=>{
+            console.error(`REST fixture probe fatal: ${err?.stack||err}`);
+            process.exitCode=1;
+          });
           NODE
