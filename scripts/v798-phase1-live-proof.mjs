@@ -78,7 +78,12 @@ async function noSessionMatrix(){
 async function invalidTokenProof(){
   const bad='v798-invalid-session-token';
   const context=await browser.newContext({viewport:{width:1280,height:800}});
-  await context.addInitScript(token=>{localStorage.setItem('jas_session_token_v11',token);localStorage.setItem('jas_last_activity_at_v1',String(Date.now()));},bad);
+  await context.addInitScript(token=>{
+    if(location.pathname==='/toepen.html'){
+      localStorage.setItem('jas_session_token_v11',token);
+      localStorage.setItem('jas_last_activity_at_v1',String(Date.now()));
+    }
+  },bad);
   const page=await context.newPage();
   await committed(page,new URL('toepen.html',base).toString());
   await page.waitForURL(u=>u.pathname==='/login.html',{timeout:15000});
