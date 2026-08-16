@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_version": "v793",
+  "current_version": "v794",
   "status": "REVALIDATION_REQUIRED",
   "prior_certification": {
     "version": "v792",
@@ -8,5 +8,5 @@
     "artifact": "final-acceptance-v792.json"
   },
   "current_audit_issue": 153,
-  "reason": "Frontend/runtime repairs from the full screenshot audit require fresh production visual and gameplay revalidation."
+  "reason": "v794 removes stale public Klaverjas prototype surfaces and changes the contextless quick-stats handoff, so fresh production visual and live feature revalidation is required."
 }
