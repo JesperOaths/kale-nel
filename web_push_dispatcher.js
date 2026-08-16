@@ -110,7 +110,7 @@ function createDispatcher(options, deps = {}) {
       return rpc('mark_web_push_job_sent_v763', {
         job_id_input: jobId,
         claim_token_input: claimToken,
-        worker_id_input: options.workerId,
+        worker_id_input: val(item, 'claimed_by', 'worker_id') || options.workerId,
         provider_message_id_input: providerMessageId,
       });
     }
@@ -124,7 +124,7 @@ function createDispatcher(options, deps = {}) {
       return rpc('mark_web_push_job_failed_v763', {
         job_id_input: jobId,
         claim_token_input: claimToken,
-        worker_id_input: options.workerId,
+        worker_id_input: val(item, 'claimed_by', 'worker_id') || options.workerId,
         error_stage_input: stage,
         error_code_input: code,
         error_text_input: sanitizeLogText(errorText),
@@ -145,7 +145,7 @@ function createDispatcher(options, deps = {}) {
     return rpc('requeue_web_push_job_dry_run_v763', {
       job_id_input: val(item, 'job_id', 'id'),
       claim_token_input: claimToken,
-      worker_id_input: options.workerId,
+      worker_id_input: val(item, 'claimed_by', 'worker_id') || options.workerId,
     });
   }
 
