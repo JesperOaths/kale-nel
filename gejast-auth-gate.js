@@ -5,7 +5,7 @@
   const LEGACY_SESSION_KEY='jas_session_token_v10';
   const ACTIVITY_KEY='jas_last_activity_at_v1';
   const SERVER_TOUCH_KEY='jas_last_server_touch_at_v1';
-  const CONFIG_SRC='/gejast-config.js?v800';
+  const CONFIG_SRC='/gejast-config.js?v801';
   root.setAttribute('data-gejast-auth-state','checking');
   root.style.setProperty('visibility','hidden','important');
 
@@ -85,7 +85,8 @@
       });
       if(!response.ok) throw new Error('auth_rpc_http_'+response.status);
       const data=await response.json();
-      return data&&data.ok===true;
+      const responseScope=String(data&&data.site_scope||'').trim().toLowerCase()==='family'?'family':'friends';
+      return data&&data.ok===true&&responseScope===requestedScope();
     }finally{clearTimeout(timeout);}
   }
 
