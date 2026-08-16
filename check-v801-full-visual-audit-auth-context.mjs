@@ -4,22 +4,35 @@ import assert from 'node:assert/strict';
 
 const workflow = fs.readFileSync('.github/workflows/full-live-visual-audit-v792.yml', 'utf8');
 const runner = fs.readFileSync('scripts/full-live-visual-audit-v792.mjs', 'utf8');
+const fixtures = fs.readFileSync('scripts/full-live-visual-fixtures-v801.mjs', 'utf8');
 
-assert.match(workflow, /account_login_v687\(:'name1',\s*:'pin1',\s*'friends'/, 'visual audit must provision Friends token 1 through current login contract');
-assert.match(workflow, /account_login_v687\(:'name2',\s*:'pin2',\s*'friends'/, 'visual audit must provision Friends token 2 through current login contract');
-assert.match(workflow, /account_login_v687\(:'family_name',\s*:'family_pin',\s*'family'/, 'visual audit must provision a current Family session');
-assert.match(workflow, /\^\[0-9a-f\]\{48\}\$/, 'visual audit must reject non-canonical session-token shapes');
-assert.doesNotMatch(workflow, /v793-visual-|insert into public\.gejast_account_sessions_v671|insert into public\.gejast_account_players_v671/i, 'legacy visual-audit session fabrication must not return');
-assert.match(workflow, /delete from public\.gejast_player_sessions_v746/, 'visual audit must clean current player sessions');
-assert.match(workflow, /Visual-audit cleanup PASS with zero residue/, 'visual audit must retain explicit cleanup success marker');
-assert.match(workflow, /DB_RETRY_ATTEMPTS=4/, 'visual audit DB access must use a bounded retry budget');
-assert.match(workflow, /\.pooler\.supabase\.com:5432\//, 'visual audit must recognize the shared Supavisor session-pooler URL');
-assert.match(workflow, /VISUAL_AUDIT_DB_URL=.*:6543\//, 'ephemeral GitHub audit DB access must prefer Supavisor transaction mode');
-assert.match(workflow, /retry_psql_file 'visual-audit fixture provision'/, 'fixture provisioning must retry transient database checkout failures');
-assert.match(workflow, /retry_psql_capture 'visual-audit session login'/, 'session provisioning must retry transient database checkout failures');
-assert.match(workflow, /retry_psql_file 'visual-audit cleanup'/, 'cleanup must retry transient database checkout failures');
-assert.match(workflow, /retry_psql_capture 'visual-audit residue check'/, 'cleanup residue verification must retry transient database checkout failures');
-assert.match(workflow, /delete from public\.players[\s\S]*is_dummy=true and hidden_from_public=true;[\s\S]*insert into public\.players/, 'fixture provisioning retries must be idempotent for the exact disposable identities');
+assert.match(workflow, /SUPABASE_SERVICE_ROLE_KEY:\s*\$\{\{ secrets\.SUPABASE_SERVICE_ROLE_KEY \}\}/, 'visual audit fixture CRUD must use the existing service-role secret');
+assert.match(workflow, /SUPABASE_URL:\s*https:\/\/uiqntazgnrxwliaidkmy\.supabase\.co/, 'visual audit must target the checked production Supabase project');
+assert.match(workflow, /GEJAST_VISUAL_DB_NAME:\s*postgres/, 'visual audit must pin the database name used by the legacy PIN hash contract');
+assert.match(workflow, /node scripts\/full-live-visual-fixtures-v801\.mjs provision/, 'visual audit must provision disposable identities through the REST fixture manager');
+assert.match(workflow, /node scripts\/full-live-visual-fixtures-v801\.mjs cleanup/, 'visual audit must always invoke REST fixture cleanup');
+assert.match(workflow, /node --check scripts\/full-live-visual-fixtures-v801\.mjs/, 'visual audit must syntax-check the REST fixture manager before use');
+assert.doesNotMatch(workflow, /\bpsql\b|SUPABASE_DB_URL|\.pooler\.supabase\.com/, 'visual audit must not depend on direct Postgres or Supavisor connectivity');
+assert.match(workflow, /if-no-files-found:\s*warn/, 'pre-screenshot infrastructure failures must not add a second artifact-upload failure');
+
+assert.match(fixtures, /SUPABASE_SERVICE_ROLE_KEY/, 'fixture manager must require service-role authorization for disposable row CRUD');
+assert.match(fixtures, /RETRY_ATTEMPTS\s*=\s*4/, 'fixture REST access must retain a bounded retry budget');
+assert.match(fixtures, /\/rest\/v1\//, 'fixture manager must use the Supabase REST surface');
+assert.match(fixtures, /account_login_v687/, 'fixture manager must create sessions through the current public login RPC');
+assert.match(fixtures, /key:\s*PUBLIC_KEY/, 'session creation must exercise the public publishable-key boundary rather than service-role RPC authentication');
+assert.match(fixtures, /\{ display_name_input: displayName, entered_pin: pin, site_scope_input: scope \}/, 'session creation must use the current named login contract');
+assert.match(fixtures, /\^\[0-9a-f\]\{48\}\$/, 'fixture manager must reject non-canonical session-token shapes');
+assert.match(fixtures, /is_dummy:\s*true/, 'visual identities must remain disposable dummy players');
+assert.match(fixtures, /hidden_from_public:\s*true/, 'visual identities must remain hidden from public surfaces');
+assert.match(fixtures, /gejast_player_sessions_v746/, 'fixture cleanup must remove current player sessions');
+assert.match(fixtures, /gejast_active_player_metadata_v679/, 'fixture cleanup must remove visual account metadata');
+assert.match(fixtures, /klaverjas_online_games/, 'fixture cleanup must remove Klaverjas rooms created by the audit');
+assert.match(fixtures, /pikken_games/, 'fixture cleanup must remove Pikken rooms created by the audit');
+assert.match(fixtures, /paardenrace_rooms/, 'fixture cleanup must remove Paardenrace rooms created by the audit');
+assert.match(fixtures, /paardenrace_match_history/, 'fixture cleanup must remove dependent Paardenrace history first');
+assert.match(fixtures, /Visual-audit cleanup PASS with zero residue/, 'fixture cleanup must retain explicit zero-residue verification');
+assert.match(fixtures, /GITHUB_ENV/, 'fixture manager must export names and canonical sessions to later browser steps');
+assert.match(fixtures, /crypto\.createHash\('md5'\).*DATABASE_NAME/s, 'fixture PIN hashes must retain the deployed legacy database-name salt contract');
 
 assert.match(runner, /GEJAST_FAMILY_TOKEN/, 'runner must require Family auth context');
 assert.match(runner, /for \(const store of \[localStorage, sessionStorage\]\)/, 'runner must seed current session into both browser stores');
@@ -31,7 +44,6 @@ assert.match(runner, /const familyRoute = htmlPath === 'familie\.html' \|\| html
 assert.match(runner, /const context = await newContext\(browser, familyRoute \? familyToken : token1/, 'tracked captures must isolate scope-correct sessions');
 assert.match(runner, /finally \{ await context\.close\(\); \}/, 'per-route contexts must be closed to prevent storage poisoning');
 assert.doesNotMatch(runner, /const context = await newContext\(browser\);\s*try \{\s*let index = 0;/s, 'single shared authenticated context must not return');
-
 assert.match(runner, /GEJAST_VISUAL_PROFILE_TARGET \|\| 'Antoni'/, 'context profile capture must use a visible profile target rather than the hidden audit identity');
 assert.doesNotMatch(runner, /context__pikken__lobby/, 'invalid Pikken game_id lobby variant must not return');
 assert.match(runner, /process\.exitCode = 1/, 'visual audit must fail the workflow when broken pages are recorded');
@@ -42,4 +54,4 @@ assert.match(runner, /auth gate did not settle within/, 'a genuinely stuck auth 
 assert.match(runner, /if \(!protectedOnArrival\) \{\s*authGate = await waitForAuthGateToSettle/s, 'Cloudflare-protected admin responses must bypass player-auth settlement waiting');
 assert.match(runner, /seriousConsole\.length && judgement !== 'broken' && judgement !== 'protected'/, 'expected Cloudflare protection must not be downgraded to warning by perimeter console noise');
 
-console.log('PASS v801 full visual audit current-session/context contract');
+console.log('PASS v801 full visual audit REST-fixture/auth-context contract');
