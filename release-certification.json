@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_version": "v798",
+  "current_version": "v799",
   "status": "REVALIDATION_REQUIRED",
   "prior_certification": {
     "version": "v792",
@@ -8,5 +8,5 @@
     "artifact": "final-acceptance-v792.json"
   },
   "current_audit_issue": 153,
-  "reason": "v798 reinstates a fail-closed player forced-login boundary across every published non-admin, non-account-entry HTML page. Protected UI stays hidden until account_public_state_v687 proves an unexpired scoped player session; missing/invalid sessions redirect to canonical login, and successful login always lands on the main index page. Exact-main live auth and gameplay revalidation is required before PASS."
+  "reason": "v799 fixes forced-login invalid-session cleanup across the shared localStorage/sessionStorage mirror. The v798 live denial test proved 13/13 logged-out routes had zero visible UI leaks but exposed that an invalid token mirrored into sessionStorage could be restored by the login runtime after redirect. v799 reads and clears both session stores, calls the shared clearPlayerSessionTokens helper when available, and requires a fresh exact-main Phase-1 live auth/gameplay proof."
 }
