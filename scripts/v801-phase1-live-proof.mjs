@@ -141,10 +141,10 @@ async function clickMainSelection(session){
       const r=a.getBoundingClientRect(),s=getComputedStyle(a); if(r.width<=0||r.height<=0||s.display==='none'||s.visibility==='hidden') return false;
       try{const u=new URL(a.href,location.href);return u.origin===location.origin&&!['/index.html','/login.html','/request.html'].includes(u.pathname)&&!u.pathname.startsWith('/admin');}catch{return false;}
     });
-    const a=candidates[0]; if(!a) return null; a.setAttribute('data-v798-proof-target','1'); return {href:a.href,text:(a.textContent||'').trim().slice(0,80)};
+    const a=candidates[0]; if(!a) return null; a.setAttribute('data-v801-proof-target','1'); return {href:a.href,text:(a.textContent||'').trim().slice(0,80)};
   });
   assert(target,'main index has no visible selectable internal destination');
-  await page.locator('[data-v798-proof-target="1"]').click();
+  await page.locator('[data-v801-proof-target="1"]').click();
   await page.waitForFunction(()=>document.documentElement.getAttribute('data-gejast-auth-state')==='authenticated',{timeout:15000});
   const dest=new URL(page.url());
   assert(dest.pathname!=='/index.html'&&dest.pathname!=='/login.html',`main selection did not reach another protected destination (${target.href} -> ${dest.pathname})`);
@@ -185,7 +185,7 @@ async function authenticatedSurfaceMatrix(session){
 async function klaverjasTwoHumanRoom(token1,token2){
   let roomId='';
   try{
-    const room=await rpc('klaverjas_online_create',{session_token:token1,site_scope_input:'friends',settings_input:{finish_mode:'fixed_rounds',bot_count:0,v798_phase1:true}});
+    const room=await rpc('klaverjas_online_create',{session_token:token1,site_scope_input:'friends',settings_input:{finish_mode:'fixed_rounds',bot_count:0,v801_phase1:true}});
     roomId=String(room?.game?.id||room?.id||'');
     const code=String(room?.game?.lobby_code||room?.lobby_code||'');
     assert(roomId&&code,'Klaverjas create returned no room id/code');
@@ -227,7 +227,7 @@ try{
   await crossScopeDenial(s1);
   await s1.context.close();
   await s2.context.close();
-  console.log('RESULT=V800_PHASE1_AUTH_AND_SURFACES_PASS');
+  console.log('RESULT=V801_PHASE1_AUTH_AND_SURFACES_PASS');
 }catch(err){
   fail(err?.stack||err?.message||String(err));
 }finally{
