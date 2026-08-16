@@ -58,12 +58,16 @@ jobs:
         run: |
           set -euo pipefail
           DB_RETRY_ATTEMPTS=4
+          VISUAL_AUDIT_DB_URL="$SUPABASE_DB_URL"
+          if [[ "$VISUAL_AUDIT_DB_URL" == *".pooler.supabase.com:5432/"* ]]; then
+            VISUAL_AUDIT_DB_URL="${VISUAL_AUDIT_DB_URL/:5432\//:6543/}"
+          fi
           retry_psql_file() {
             local label="$1" file="$2"
             shift 2
             local attempt delay
             for ((attempt=1; attempt<=DB_RETRY_ATTEMPTS; attempt++)); do
-              if psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 "$@" -f "$file"; then
+              if psql "$VISUAL_AUDIT_DB_URL" -X -v ON_ERROR_STOP=1 "$@" -f "$file"; then
                 return 0
               fi
               if (( attempt == DB_RETRY_ATTEMPTS )); then
@@ -80,7 +84,7 @@ jobs:
             shift 2
             local attempt delay output
             for ((attempt=1; attempt<=DB_RETRY_ATTEMPTS; attempt++)); do
-              if output="$(psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 "$@" -f "$file")"; then
+              if output="$(psql "$VISUAL_AUDIT_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 "$@" -f "$file")"; then
                 printf '%s' "$output"
                 return 0
               fi
@@ -171,12 +175,16 @@ jobs:
             exit 0
           fi
           DB_RETRY_ATTEMPTS=4
+          VISUAL_AUDIT_DB_URL="$SUPABASE_DB_URL"
+          if [[ "$VISUAL_AUDIT_DB_URL" == *".pooler.supabase.com:5432/"* ]]; then
+            VISUAL_AUDIT_DB_URL="${VISUAL_AUDIT_DB_URL/:5432\//:6543/}"
+          fi
           retry_psql_file() {
             local label="$1" file="$2"
             shift 2
             local attempt delay
             for ((attempt=1; attempt<=DB_RETRY_ATTEMPTS; attempt++)); do
-              if psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 "$@" -f "$file"; then
+              if psql "$VISUAL_AUDIT_DB_URL" -X -v ON_ERROR_STOP=1 "$@" -f "$file"; then
                 return 0
               fi
               if (( attempt == DB_RETRY_ATTEMPTS )); then
@@ -193,7 +201,7 @@ jobs:
             shift 2
             local attempt delay output
             for ((attempt=1; attempt<=DB_RETRY_ATTEMPTS; attempt++)); do
-              if output="$(psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 "$@" -f "$file")"; then
+              if output="$(psql "$VISUAL_AUDIT_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 "$@" -f "$file")"; then
                 printf '%s' "$output"
                 return 0
               fi
