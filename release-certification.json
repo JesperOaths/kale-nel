@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_version": "v794",
+  "current_version": "v795",
   "status": "REVALIDATION_REQUIRED",
   "prior_certification": {
     "version": "v792",
@@ -8,5 +8,5 @@
     "artifact": "final-acceptance-v792.json"
   },
   "current_audit_issue": 153,
-  "reason": "v794 removes stale public Klaverjas prototype surfaces, changes the contextless quick-stats handoff, and repairs the Pikken/Paardenrace group-B status panel to interpret the deployed v687-compat payload truthfully, so fresh production visual, feature-surface, and gameplay revalidation is required."
+  "reason": "v795 preserves the v794 Klaverjas and Pikken/Paardenrace group-B repairs while synchronizing systemic stale visible version watermarks that the prior drift checker missed; exact-main production visual, feature-surface, and gameplay revalidation remains required."
 }
