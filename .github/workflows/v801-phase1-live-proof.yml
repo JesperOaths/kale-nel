@@ -105,11 +105,16 @@ jobs:
           test -n "${GEJAST_PLAYER2_TOKEN:-}"
           resolved="$(psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 \
             -v token1="$GEJAST_PLAYER1_TOKEN" -v token2="$GEJAST_PLAYER2_TOKEN" <<'SQL'
-          select coalesce(public._gejast_v687_session_name(:'token1'),''),
-                 coalesce(public._gejast_v687_session_name(:'token2'),'');
+          with states as (
+            select public.account_public_state_v687(:'token1', :'token1', 'friends') as a,
+                   public.account_public_state_v687(:'token2', :'token2', 'friends') as b
+          )
+          select coalesce(a->>'ok','false'), coalesce(a->>'display_name',''),
+                 coalesce(b->>'ok','false'), coalesce(b->>'display_name','')
+          from states;
           SQL
           )"
-          test "$resolved" = "$GEJAST_PLAYER1_NAME|$GEJAST_PLAYER2_NAME"
+          test "$resolved" = "true|$GEJAST_PLAYER1_NAME|true|$GEJAST_PLAYER2_NAME"
           echo 'RESULT=V801_PHASE1_SESSION_POST_GAME_PASS'
 
       - name: Cleanup every controlled Phase-1 fixture and prove zero residue
