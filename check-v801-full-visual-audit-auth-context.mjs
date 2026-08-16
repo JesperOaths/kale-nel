@@ -12,12 +12,15 @@ assert.match(workflow, /\^\[0-9a-f\]\{48\}\$/, 'visual audit must reject non-can
 assert.doesNotMatch(workflow, /v793-visual-|insert into public\.gejast_account_sessions_v671|insert into public\.gejast_account_players_v671/i, 'legacy visual-audit session fabrication must not return');
 assert.match(workflow, /delete from public\.gejast_player_sessions_v746/, 'visual audit must clean current player sessions');
 assert.match(workflow, /Visual-audit cleanup PASS with zero residue/, 'visual audit must retain explicit cleanup success marker');
-assert.match(workflow, /run_psql_with_pool_retry\(\)/, 'visual audit must wrap database fixture access with bounded pool retries');
-assert.match(workflow, /for attempt in 1 2 3 4 5 6/, 'visual audit pool retry must remain bounded');
-assert.match(workflow, /ECHECKOUTTIMEOUT\|unable to check out connection from the pool/, 'visual audit must retry only the proven pool-checkout failure class');
-assert.match(workflow, /visual-audit-provision\.sql/, 'visual audit provisioning must use one retryable SQL file/session');
+assert.match(workflow, /run_psql_with_pool_retry\(\)/, 'visual audit must wrap database fixture access with bounded transient retries');
+assert.match(workflow, /for attempt in 1 2 3 4 5 6/, 'visual audit database retry must remain bounded');
+assert.match(workflow, /ECHECKOUTTIMEOUT\|unable to check out connection from the pool\|authentication did not complete within \[0-9\]\+ms\|canceling statement due to statement timeout/, 'visual audit must recognize only the proven transient pool/database pressure classes');
+assert.match(workflow, /visual-audit-provision\.sql/, 'visual audit provisioning must use one retryable atomic SQL file/session');
 assert.match(workflow, /visual-audit-cleanup\.sql/, 'visual audit cleanup and residue proof must use one retryable SQL file/session');
 assert.match(workflow, /psql "\$SUPABASE_DB_URL" -X -qAt -F'\|'/, 'visual audit database sessions must emit machine-checkable tuple-only output');
+assert.match(workflow, /GEJAST_VISUAL_PROVISIONED=1/, 'visual audit must export a committed-fixture marker only after successful atomic provisioning');
+assert.match(workflow, /GEJAST_VISUAL_PROVISIONED:-0.*!= '1'/, 'cleanup must skip database work when provisioning never committed');
+assert.match(workflow, /Committed visual-audit fixture marker is present but names are incomplete; refusing unsafe cleanup/, 'committed fixtures with incomplete targeting data must fail closed');
 
 assert.match(runner, /GEJAST_FAMILY_TOKEN/, 'runner must require Family auth context');
 assert.match(runner, /for \(const store of \[localStorage, sessionStorage\]\)/, 'runner must seed current session into both browser stores');
