@@ -87,7 +87,7 @@ jobs:
           echo "GEJAST_PLAYER1_TOKEN=$token1" >> "$GITHUB_ENV"
           echo "GEJAST_PLAYER2_TOKEN=$token2" >> "$GITHUB_ENV"
 
-      - name: Save complete Toepen match and prove cross-owner replay defect
+      - name: Save complete Toepen match and prove replay authorization defects
         shell: bash
         run: |
           set -euo pipefail
@@ -112,21 +112,22 @@ jobs:
           )"
           echo "$first" | grep -q '"ok": true'
           echo "$first" | grep -q '"already_saved": false'
-          replay="$(psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -v token="$GEJAST_PLAYER2_TOKEN" -v client="$client" -v n1="$GEJAST_PLAYER1_NAME" -v n2="$GEJAST_PLAYER2_NAME" <<'SQL'
-          select public.create_toepen_game(:'token',jsonb_build_object(
-            'client_match_id',:'client','game_type','toepen','target_points',1,
-            'participants',jsonb_build_array(
-              jsonb_build_object('seat_no',1,'name',:'n1','end_points',0,'eliminated',false,'finish_rank',1),
-              jsonb_build_object('seat_no',2,'name',:'n2','end_points',1,'eliminated',true,'eliminated_round_no',1,'finish_rank',2)
-            ),
-            'rounds',jsonb_build_array(jsonb_build_object('round_no',1,'dealer_seat',1,'winner_seat',1,'winner_name',:'n1','stake_final',1,'results',jsonb_build_array(
-              jsonb_build_object('seat_no',1,'name',:'n1','action','win','penalty_points',0),
-              jsonb_build_object('seat_no',2,'name',:'n2','action','stay','penalty_points',1)
-            )))
-          ),'friends');
+
+          replay="$(psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -v token="$GEJAST_PLAYER2_TOKEN" -v client="$client" <<'SQL'
+          select public.create_toepen_game(:'token',jsonb_build_object('client_match_id',:'client'),'friends');
           SQL
           )"
           echo "$replay" | grep -q '"already_saved": true'
+          echo 'RESULT=V801_TOEPEN_CROSS_OWNER_IDEMPOTENCY_DEFECT_PROVEN'
+
+          invalid='ffffffffffffffffffffffffffffffffffffffffffffffff'
+          unauth="$(psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -v token="$invalid" -v client="$client" <<'SQL'
+          select public.create_toepen_game(:'token',jsonb_build_object('client_match_id',:'client'),'friends');
+          SQL
+          )"
+          echo "$unauth" | grep -q '"already_saved": true'
+          echo 'RESULT=V801_TOEPEN_INVALID_SESSION_IDEMPOTENCY_DEFECT_PROVEN'
+
           counts="$(psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v client="$client" <<'SQL'
           select (select count(*) from public.toepen_games where client_match_id=:'client'),
                  (select count(*) from public.toepen_game_participants p join public.toepen_games g on g.id=p.game_id where g.client_match_id=:'client'),
@@ -135,7 +136,6 @@ jobs:
           SQL
           )"
           test "$counts" = '1|2|1|2'
-          echo 'RESULT=V801_TOEPEN_CROSS_OWNER_IDEMPOTENCY_DEFECT_PROVEN'
 
       - name: Prove Boerenbridge and Beerpong owner isolation live
         shell: bash
@@ -149,12 +149,24 @@ jobs:
           select public.save_boerenbridge_match(:'token',:'bb','v801-proof','v801',jsonb_build_object('match_name','Phase 2 proof','site_scope','friends','rounds',18));
           select public.save_beerpong_match(:'token',:'bp',jsonb_build_object('format','1v1','status','finished','team_a_player_names',jsonb_build_array(:'n1'),'team_b_player_names',jsonb_build_array(:'n2'),'winner_team','team_a','cups_left_team_a',10,'cups_left_team_b',4));
           SQL
-          if psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v token="$GEJAST_PLAYER2_TOKEN" -v bb="$bb" -c "select public.save_boerenbridge_match(:'token',:'bb','v801-proof','v801','{}'::jsonb);" >/tmp/bb-cross.out 2>&1; then
-            cat /tmp/bb-cross.out; echo 'Boerenbridge cross-owner replay unexpectedly succeeded'; exit 1
+
+          if psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v token="$GEJAST_PLAYER2_TOKEN" -v bb="$bb" >/tmp/bb-cross.out 2>&1 <<'SQL'
+          select public.save_boerenbridge_match(:'token',:'bb','v801-proof','v801','{}'::jsonb);
+          SQL
+          then
+            cat /tmp/bb-cross.out
+            echo 'Boerenbridge cross-owner replay unexpectedly succeeded'
+            exit 1
           fi
           grep -q 'boerenbridge_match_owner_mismatch' /tmp/bb-cross.out
-          if psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v token="$GEJAST_PLAYER2_TOKEN" -v bp="$bp" -v n1="$GEJAST_PLAYER1_NAME" -v n2="$GEJAST_PLAYER2_NAME" -c "select public.save_beerpong_match(:'token',:'bp',jsonb_build_object('format','1v1','status','finished','team_a_player_names',jsonb_build_array(:'n1'),'team_b_player_names',jsonb_build_array(:'n2'),'winner_team','team_a','cups_left_team_a',10,'cups_left_team_b',4));" >/tmp/bp-cross.out 2>&1; then
-            cat /tmp/bp-cross.out; echo 'Beerpong cross-owner replay unexpectedly succeeded'; exit 1
+
+          if psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v token="$GEJAST_PLAYER2_TOKEN" -v bp="$bp" -v n1="$GEJAST_PLAYER1_NAME" -v n2="$GEJAST_PLAYER2_NAME" >/tmp/bp-cross.out 2>&1 <<'SQL'
+          select public.save_beerpong_match(:'token',:'bp',jsonb_build_object('format','1v1','status','finished','team_a_player_names',jsonb_build_array(:'n1'),'team_b_player_names',jsonb_build_array(:'n2'),'winner_team','team_a','cups_left_team_a',10,'cups_left_team_b',4));
+          SQL
+          then
+            cat /tmp/bp-cross.out
+            echo 'Beerpong cross-owner replay unexpectedly succeeded'
+            exit 1
           fi
           grep -q 'beerpong_match_owner_mismatch' /tmp/bp-cross.out
           echo 'RESULT=V801_BOERENBRIDGE_BEERPONG_OWNER_ISOLATION_PASS'
