@@ -1,0 +1,28 @@
+name: Rebase Phase 1 proof onto v799
+
+on:
+  push:
+    branches: [proof/v798-phase1-live]
+    paths: ['.github/workflows/rebase-proof-v799.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  rebase-proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v798-phase1-live
+          fetch-depth: 0
+      - name: Merge exact current main into proof branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git show origin/main:VERSION | tr -d '\r\n')" = 'v799'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git merge --no-edit origin/main
+          git push origin HEAD:proof/v798-phase1-live
