@@ -3,11 +3,12 @@ import fs from 'node:fs';
 
 const migration = fs.readFileSync('GEJAST_v792s_paardenrace_unambiguous_live_rpc.sql', 'utf8');
 const reshuffleMigration = fs.readFileSync('GEJAST_v792r_paardenrace_draw_pile_reshuffle.sql', 'utf8');
+const drinkMigration = fs.readFileSync('GEJAST_v792t_paardenrace_bak_drink_helper.sql', 'utf8');
 const helper = fs.readFileSync('gejast-paardenrace.js', 'utf8');
 const live = fs.readFileSync('paardenrace_live.html', 'utf8');
 
 function fail(message) {
-  console.error(`Paardenrace v792s/r live RPC invariant failed: ${message}`);
+  console.error(`Paardenrace v792s/r/t live RPC invariant failed: ${message}`);
   process.exit(1);
 }
 
@@ -98,6 +99,32 @@ for (const needle of [
 ]) requireText(reshuffle, needle, 'reshuffle RPC');
 if (/return\s+public\.get_paardenrace_room_state_safe/i.test(reshuffle)) fail('reshuffle RPC is still a state-read no-op');
 
+const drinkHelper = functionBlock(drinkMigration, '_gejast_create_bak_drink_request_v695');
+for (const needle of [
+  "source_kind_input text DEFAULT 'paardenrace'::text",
+  'source_ref_input text DEFAULT NULL::text',
+  "metadata_input jsonb DEFAULT '{}'::jsonb",
+  'SECURITY DEFINER',
+  'p.display_name',
+  'p.profile_display_name',
+  'p.chosen_username',
+  'public._scope_norm(p.site_scope)',
+  "RAISE EXCEPTION 'Speler voor Bak-verzoek niet gevonden.'",
+  'v_client_event_id := coalesce(',
+  'INSERT INTO public.drink_events(',
+  'client_event_id,',
+  'player_id,',
+  'event_type_id,',
+  'event_type_key,',
+  'event_type_label,',
+  'site_scope,',
+  'raw_payload,',
+  'metadata,',
+  'WHEN unique_violation THEN',
+]) requireText(drinkHelper, needle, 'Bak drink helper');
+rejectText(drinkHelper, "coalesce(display_name,name,email,''", 'Bak drink helper historical player lookup');
+rejectText(drinkHelper, "execute 'select id from public.players", 'Bak drink helper dynamic player lookup');
+
 requireText(helper, 'site_scope_input: scope()', 'Paardenrace RPC helper');
 requireText(helper, 'session_token: token || null', 'Paardenrace RPC helper');
 requireText(helper, 'session_token_input: token || null', 'Paardenrace RPC helper');
@@ -109,4 +136,4 @@ for (const rpc of [
   'submit_paardenrace_nominations_safe',
 ]) requireText(live, rpc, 'paardenrace_live.html');
 
-console.log('Paardenrace v792s/r unambiguous live RPC and draw-pile invariants ok.');
+console.log('Paardenrace v792s/r/t live RPC, draw-pile and Bak/drink invariants ok.');
