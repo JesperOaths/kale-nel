@@ -12,6 +12,12 @@ assert.match(workflow, /\^\[0-9a-f\]\{48\}\$/, 'visual audit must reject non-can
 assert.doesNotMatch(workflow, /v793-visual-|insert into public\.gejast_account_sessions_v671|insert into public\.gejast_account_players_v671/i, 'legacy visual-audit session fabrication must not return');
 assert.match(workflow, /delete from public\.gejast_player_sessions_v746/, 'visual audit must clean current player sessions');
 assert.match(workflow, /Visual-audit cleanup PASS with zero residue/, 'visual audit must retain explicit cleanup success marker');
+assert.match(workflow, /DB_RETRY_ATTEMPTS=4/, 'visual audit DB access must use a bounded retry budget');
+assert.match(workflow, /retry_psql_file 'visual-audit fixture provision'/, 'fixture provisioning must retry transient database checkout failures');
+assert.match(workflow, /retry_psql_capture 'visual-audit session login'/, 'session provisioning must retry transient database checkout failures');
+assert.match(workflow, /retry_psql_file 'visual-audit cleanup'/, 'cleanup must retry transient database checkout failures');
+assert.match(workflow, /retry_psql_capture 'visual-audit residue check'/, 'cleanup residue verification must retry transient database checkout failures');
+assert.match(workflow, /delete from public\.players[\s\S]*is_dummy=true and hidden_from_public=true;[\s\S]*insert into public\.players/, 'fixture provisioning retries must be idempotent for the exact disposable identities');
 
 assert.match(runner, /GEJAST_FAMILY_TOKEN/, 'runner must require Family auth context');
 assert.match(runner, /for \(const store of \[localStorage, sessionStorage\]\)/, 'runner must seed current session into both browser stores');
