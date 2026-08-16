@@ -1,0 +1,127 @@
+name: v797 Despimarkt focused probe
+
+on:
+  push:
+    branches: [proof/v797-release-evidence]
+    paths: ['.github/workflows/v797-despimarkt-probe.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      EXACT_SHA: d99cde789cf4c204086e73661bfedc91e97b52f7
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ env.EXACT_SHA }}
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install isolated browser and DB client
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          test "$(git rev-parse HEAD)" = "$EXACT_SHA"
+          test "$(tr -d '\r\n' < VERSION)" = 'v797'
+          test "$(curl -fsS --max-time 10 https://kalenel.nl/VERSION | tr -d '\r\n')" = 'v797'
+          npm ci
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+          sudo apt-get update >/dev/null
+          sudo apt-get install -y postgresql-client >/dev/null
+      - name: Provision one hidden disposable session
+        shell: bash
+        run: |
+          set -euo pipefail
+          name="V797Despi_${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
+          token="v797-despi-$(openssl rand -hex 32)"
+          echo "::add-mask::$token"
+          echo "PROBE_NAME=$name" >> "$GITHUB_ENV"
+          echo "PROBE_TOKEN=$token" >> "$GITHUB_ENV"
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v name="$name" -v token="$token" <<'SQL'
+          begin;
+          with ins as (
+            insert into public.players(slug,display_name,active,approved,hidden_from_public,is_dummy,site_scope)
+            values ('v797-despi-' || lower(:'name'), :'name', true, true, true, true, 'friends')
+            returning id,display_name
+          ) insert into public.gejast_player_sessions_v746(session_token,player_id,display_name,site_scope,expires_at)
+            select :'token',id,display_name,'friends',now()+interval '15 minutes' from ins;
+          with ins as (
+            insert into public.gejast_account_players_v671(site_scope,display_name,email,activated_at)
+            values ('friends', :'name', lower(:'name') || '@example.invalid', now()) returning id
+          ) insert into public.gejast_account_sessions_v671(session_token,player_id,site_scope,expires_at)
+            select :'token',id,'friends',now()+interval '15 minutes' from ins;
+          commit;
+          SQL
+      - name: Inspect exact live Despimarkt rendering
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+          const token=process.env.PROBE_TOKEN;
+          const browser=await chromium.launch({headless:true});
+          const context=await browser.newContext({viewport:{width:1280,height:900}});
+          await context.addInitScript(t=>{
+            localStorage.setItem('jas_session_token_v11',t);
+            localStorage.setItem('jas_session_token_v10',t);
+            localStorage.setItem('jas_last_activity_at_v1',String(Date.now()));
+          },token);
+          const page=await context.newPage();
+          const events=[];
+          page.on('console',m=>events.push(`console:${m.type()}:${m.text()}`));
+          page.on('pageerror',e=>events.push(`pageerror:${e.message}`));
+          page.on('response',r=>{if(r.status()>=400) events.push(`http:${r.status()}:${r.url()}`)});
+          await page.goto('https://kalenel.nl/despimarkt.html?scope=friends',{waitUntil:'domcontentloaded',timeout:30000});
+          await page.waitForTimeout(6000);
+          const state=await page.evaluate(()=>({
+            url:location.href,
+            title:document.title,
+            h1:[...document.querySelectorAll('h1')].map(x=>x.textContent?.trim()).filter(Boolean),
+            headings:[...document.querySelectorAll('h2,h3,.eyebrow')].map(x=>x.textContent?.trim()).filter(Boolean).slice(0,30),
+            body:(document.body.innerText||'').replace(/\s+/g,' ').trim().slice(0,2500),
+            watermark:[...document.querySelectorAll('[data-version-watermark],.site-credit-watermark')].map(x=>x.textContent?.trim()).filter(Boolean),
+            pageVersion:window.GEJAST_PAGE_VERSION||null
+          }));
+          console.log(JSON.stringify(state,null,2));
+          console.log('events',JSON.stringify(events,null,2));
+          await page.screenshot({path:'v797-despimarkt.png',fullPage:true});
+          await browser.close();
+          if(!/\/despimarkt\.html$/.test(new URL(state.url).pathname)) throw new Error(`unexpected redirect: ${state.url}`);
+          if(state.pageVersion!=='v797') throw new Error(`unexpected page version: ${state.pageVersion}`);
+          if(!state.watermark.some(x=>x.includes('v797'))) throw new Error(`v797 watermark not visible: ${state.watermark.join(' | ')}`);
+          if(!/Handelsvloer/i.test(state.body)) throw new Error('stable visible Despimarkt heading Handelsvloer missing');
+          NODE
+      - name: Cleanup and prove zero residue
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${PROBE_NAME:-}" ]; then exit 0; fi
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v name="$PROBE_NAME" -v token="${PROBE_TOKEN:-missing}" <<'SQL'
+          begin;
+          delete from public.gejast_player_sessions_v746 where session_token=:'token';
+          delete from public.gejast_account_sessions_v671 where session_token=:'token';
+          delete from public.players where display_name=:'name' and is_dummy=true and hidden_from_public=true;
+          delete from public.gejast_account_players_v671 where display_name=:'name' and email like '%@example.invalid';
+          commit;
+          SQL
+          residue="$(psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -v name="$PROBE_NAME" -v token="${PROBE_TOKEN:-missing}" <<'SQL'
+          select (select count(*) from public.players where display_name=:'name')+(select count(*) from public.gejast_account_players_v671 where display_name=:'name')+(select count(*) from public.gejast_player_sessions_v746 where session_token=:'token')+(select count(*) from public.gejast_account_sessions_v671 where session_token=:'token');
+          SQL
+          )"
+          test "$residue" = '0'
+          echo 'RESULT=V797_DESPIMARKT_PROBE_PASS_CLEAN'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: v797-despimarkt-${{ github.run_id }}
+          path: v797-despimarkt.png
+          if-no-files-found: warn
+          retention-days: 7
