@@ -15,6 +15,7 @@ const siteScope = String(process.env.GEJAST_SITE_SCOPE || 'friends').trim() || '
 const profileTarget = String(process.env.GEJAST_VISUAL_PROFILE_TARGET || 'Antoni').trim() || 'Antoni';
 const timeout = Number(process.env.GEJAST_VISUAL_TIMEOUT_MS || 25000);
 const settleMs = Number(process.env.GEJAST_VISUAL_SETTLE_MS || 1800);
+const authSettleTimeout = Math.min(timeout, 12000);
 const outDir = path.resolve('visual-audit');
 const screenshotsDir = path.join(outDir, 'screenshots');
 
@@ -131,6 +132,39 @@ async function newContext(browser, tokenValue = token1, paardCode = '') {
   return context;
 }
 
+function trackedRouteUsesAuthGate(route) {
+  const repoPath = String(route || '').split('?')[0].replace(/^\/+/, '');
+  if (!repoPath || !fs.existsSync(repoPath)) return false;
+  try { return /gejast-auth-gate\.js/i.test(fs.readFileSync(repoPath, 'utf8')); }
+  catch { return false; }
+}
+
+async function waitForAuthGateToSettle(page, route, kind) {
+  const expected = kind === 'context' || trackedRouteUsesAuthGate(route);
+  if (!expected) return { expected: false, settled: true, state: '', waited_ms: 0 };
+
+  const started = Date.now();
+  const deadline = started + authSettleTimeout;
+  let lastState = '';
+  while (Date.now() < deadline) {
+    let authState = '';
+    try { authState = await page.evaluate(() => document.documentElement.getAttribute('data-gejast-auth-state') || ''); }
+    catch (_) {}
+    if (authState) lastState = authState;
+
+    let currentPath = '';
+    try { currentPath = new URL(page.url()).pathname; } catch (_) {}
+    if (authState && authState !== 'checking') {
+      return { expected: true, settled: true, state: authState, waited_ms: Date.now() - started };
+    }
+    if (currentPath === '/login.html' && authState !== 'checking') {
+      return { expected: true, settled: true, state: authState, waited_ms: Date.now() - started };
+    }
+    await page.waitForTimeout(200);
+  }
+  return { expected: true, settled: false, state: lastState, waited_ms: Date.now() - started };
+}
+
 async function capture(context, route, label, index, kind = 'tracked') {
   const page = await context.newPage();
   const consoleErrors = [];
@@ -145,11 +179,13 @@ async function capture(context, route, label, index, kind = 'tracked') {
 
   let response = null;
   let navigationError = '';
+  let authGate = { expected: false, settled: true, state: '', waited_ms: 0 };
   const started = Date.now();
   try {
     response = await page.goto(routeUrl(route), { waitUntil: 'domcontentloaded', timeout });
-    if (kind === 'context') {
-      await page.waitForFunction(() => document.documentElement.getAttribute('data-gejast-auth-state') === 'authenticated', null, { timeout: Math.min(timeout, 12000) }).catch(() => {});
+    const protectedOnArrival = expectedProtected(route, response?.status() || 0, page.url());
+    if (!protectedOnArrival) {
+      authGate = await waitForAuthGateToSettle(page, route, kind);
     }
     await page.waitForTimeout(settleMs);
   } catch (error) {
@@ -194,6 +230,7 @@ async function capture(context, route, label, index, kind = 'tracked') {
   if (protectedGate) { judgement = 'protected'; reasons.push('live Cloudflare admin perimeter correctly visible instead of protected asset'); }
   if (navigationError) { judgement = 'broken'; reasons.push(`navigation: ${navigationError}`); }
   if (!protectedGate && status >= 500) { judgement = 'broken'; reasons.push(`document HTTP ${status}`); }
+  if (!protectedGate && authGate.expected && !authGate.settled) { judgement = 'broken'; reasons.push(`auth gate did not settle within ${authSettleTimeout}ms (last state ${authState || authGate.state || 'missing'})`); }
   if (!protectedGate && bodyText.trim().length < 20) { judgement = 'broken'; reasons.push('rendered body is effectively empty'); }
   if (signals.length) { judgement = 'broken'; reasons.push(`visible runtime signal: ${signals.join(', ')}`); }
   if (kind === 'context' && finalPath === '/login.html') { judgement = 'broken'; reasons.push('contextual authenticated capture ended at login'); }
@@ -214,6 +251,9 @@ async function capture(context, route, label, index, kind = 'tracked') {
     status,
     title,
     auth_state: authState,
+    auth_gate_expected: authGate.expected,
+    auth_gate_settled: authGate.settled,
+    auth_gate_wait_ms: authGate.waited_ms,
     elapsed_ms: Date.now() - started,
     body_chars: bodyText.trim().length,
     body_preview: bodyText.replace(/\s+/g, ' ').trim().slice(0, 700),
