@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "current_version": "v799",
+  "current_version": "v800",
   "status": "REVALIDATION_REQUIRED",
   "prior_certification": {
     "version": "v792",
@@ -8,5 +8,5 @@
     "artifact": "final-acceptance-v792.json"
   },
   "current_audit_issue": 153,
-  "reason": "v799 fixes forced-login invalid-session cleanup across the shared localStorage/sessionStorage mirror. The v798 live denial test proved 13/13 logged-out routes had zero visible UI leaks but exposed that an invalid token mirrored into sessionStorage could be restored by the login runtime after redirect. v799 reads and clears both session stores, calls the shared clearPlayerSessionTokens helper when available, and requires a fresh exact-main Phase-1 live auth/gameplay proof."
+  "reason": "v800 fixes a session-token recovery false positive proven by the v799 live invalid-session diagnostic. The shared getPlayerSessionToken recovery heuristic accepted arbitrary 24+ character audit strings such as membership_cache_refreshed and mirrored them into canonical session-token keys after a rejected token had already been cleared. Production evidence shows all 158 player-session rows use exactly 48 hexadecimal characters, so v800 constrains recovered player-session tokens to that deployed contract. Fresh exact-main Phase-1 live auth/gameplay proof remains required."
 }
