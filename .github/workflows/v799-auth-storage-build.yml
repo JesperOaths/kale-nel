@@ -1,0 +1,58 @@
+name: v799 auth storage build
+
+on:
+  push:
+    branches: [agent/v799-auth-storage-cleanup]
+    paths: ['.github/workflows/v799-auth-storage-build.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: agent/v799-auth-storage-cleanup
+          fetch-depth: 1
+      - name: Synchronize v799 and release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          node fix-version-drift.mjs
+          node <<'NODE'
+          const fs=require('fs');
+          const beta=JSON.parse(fs.readFileSync('beta-readiness.json','utf8'));
+          beta.site_version='release candidate v799 / live v798';
+          beta.last_updated='2026-08-16';
+          if(beta.deployment_identity){beta.deployment_identity.live_version='v798';beta.deployment_identity.release_candidate_version='v799';}
+          fs.writeFileSync('beta-readiness.json',JSON.stringify(beta,null,2)+'\n');
+          const gameplay=JSON.parse(fs.readFileSync('gameplay-acceptance.json','utf8'));
+          gameplay.site_version='v799'; gameplay.last_updated='2026-08-16';
+          fs.writeFileSync('gameplay-acceptance.json',JSON.stringify(gameplay,null,2)+'\n');
+          const checklist=JSON.parse(fs.readFileSync('beta-live-write-checklist.json','utf8'));
+          checklist.site_version='v799'; fs.writeFileSync('beta-live-write-checklist.json',JSON.stringify(checklist,null,2)+'\n');
+          const cert=JSON.parse(fs.readFileSync('release-certification.json','utf8'));
+          cert.current_version='v799'; cert.status='REVALIDATION_REQUIRED'; cert.current_audit_issue=153;
+          cert.reason='v799 fixes forced-login invalid-session cleanup across the shared localStorage/sessionStorage mirror. The v798 live denial test proved 13/13 logged-out routes had zero visible UI leaks but exposed that an invalid token mirrored into sessionStorage could be restored by the login runtime after redirect. v799 reads and clears both session stores, calls the shared clearPlayerSessionTokens helper when available, and requires a fresh exact-main Phase-1 live auth/gameplay proof.';
+          fs.writeFileSync('release-certification.json',JSON.stringify(cert,null,2)+'\n');
+          fs.writeFileSync('check-v799-auth-storage-cleanup.mjs',`#!/usr/bin/env node\nimport assert from 'node:assert/strict';\nimport fs from 'node:fs';\nconst version=fs.readFileSync('VERSION','utf8').trim();\nconst current=Number((version.match(/\\d+/)||['0'])[0]);\nassert.ok(current>=799,'v799 auth storage cleanup requires VERSION v799 or newer');\nconst gate=fs.readFileSync('gejast-auth-gate.js','utf8');\nfor(const owner of ['sessionStorage.getItem(SESSION_KEY)','sessionStorage.getItem(LEGACY_SESSION_KEY)','window.GEJAST_CONFIG?.clearPlayerSessionTokens?.()','for(const storage of [localStorage,sessionStorage])','storage.removeItem(SESSION_KEY)','storage.removeItem(LEGACY_SESSION_KEY)','storage.removeItem(ACTIVITY_KEY)','storage.removeItem(SERVER_TOUCH_KEY)']) assert(gate.includes(owner),\`v799 gate missing mirrored-session cleanup owner: \${owner}\`);\nassert(gate.includes("CONFIG_SRC='/gejast-config.js?v799'"),'v799 gate config bootstrap must carry v799');\nconsole.log('v799 mirrored auth storage cleanup contract ok.');\n`);
+          const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+          const marker='node check-v798-forced-login-gate.mjs';
+          const next='node check-v799-auth-storage-cleanup.mjs';
+          if(!pkg.scripts['verify:static'].includes(next)){
+            if(!pkg.scripts['verify:static'].includes(marker)) throw new Error('v798 verifier marker missing');
+            pkg.scripts['verify:static']=pkg.scripts['verify:static'].replace(marker,marker+' && '+next);
+          }
+          fs.writeFileSync('package.json',JSON.stringify(pkg,null,2)+'\n');
+          NODE
+      - name: Commit deterministic v799 repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: synchronize v799 auth storage cleanup'
+          git push origin HEAD:agent/v799-auth-storage-cleanup
