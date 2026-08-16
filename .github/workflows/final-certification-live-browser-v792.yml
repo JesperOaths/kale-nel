@@ -96,8 +96,13 @@ jobs:
         run: |
           set -euo pipefail
           resolved="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -F'|' \
-            -v token1="$GEJAST_PLAYER1_TOKEN" -v token2="$GEJAST_PLAYER2_TOKEN" \
-            -c "select coalesce(public._gejast_v687_session_name(:'token1'),''),coalesce(public._gejast_v687_session_name(:'token2'),''),coalesce((public._jas_session_player(:'token1')).display_name,''),coalesce((public._jas_session_player(:'token2')).display_name,'');")"
+            -v token1="$GEJAST_PLAYER1_TOKEN" -v token2="$GEJAST_PLAYER2_TOKEN" <<'SQL'
+          select coalesce(public._gejast_v687_session_name(:'token1'),''),
+                 coalesce(public._gejast_v687_session_name(:'token2'),''),
+                 coalesce((public._jas_session_player(:'token1')).display_name,''),
+                 coalesce((public._jas_session_player(:'token2')).display_name,'');
+          SQL
+          )"
           expected="$GEJAST_PLAYER1_NAME|$GEJAST_PLAYER2_NAME|$GEJAST_PLAYER1_NAME|$GEJAST_PLAYER2_NAME"
           test "$resolved" = "$expected"
           echo 'Both disposable account/player session resolver chains PASS.'
@@ -131,7 +136,13 @@ jobs:
           commit;
           SQL
 
-          residue="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -F'|' -v name1="$GEJAST_PLAYER1_NAME" -v name2="$GEJAST_PLAYER2_NAME" -c "select (select count(*) from public.players where display_name in (:'name1',:'name2')),(select count(*) from public.gejast_account_players_v671 where display_name in (:'name1',:'name2')),(select count(*) from public.klaverjas_online_games where created_by_player_name in (:'name1',:'name2'));")"
+          residue="$(psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -At -F'|' \
+            -v name1="$GEJAST_PLAYER1_NAME" -v name2="$GEJAST_PLAYER2_NAME" <<'SQL'
+          select (select count(*) from public.players where display_name in (:'name1',:'name2')),
+                 (select count(*) from public.gejast_account_players_v671 where display_name in (:'name1',:'name2')),
+                 (select count(*) from public.klaverjas_online_games where created_by_player_name in (:'name1',:'name2'));
+          SQL
+          )"
           test "$residue" = '0|0|0'
           echo 'Disposable browser-certification identities/rooms cleanup PASS.'
 
