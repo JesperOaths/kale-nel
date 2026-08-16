@@ -39,7 +39,6 @@ function walk(dir, out=[]){
 }
 function isArchivedFile(rel){
   const base = path.basename(rel);
-  if (/_(?:v\d+|orig)\.html$/i.test(base)) return true;
   if (/^gejast-v\d+-repair\.js$/i.test(base) && !base.toLowerCase().includes(rootVersion.toLowerCase())) return true;
   if (/^README_v\d+/i.test(base) || /^PATCH_NOTES_v\d+/i.test(base) || /^GEJAST_v\d+/i.test(base)) return true;
   return false;
