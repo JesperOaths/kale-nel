@@ -8,8 +8,6 @@ on:
 permissions:
   contents: read
 
-# Share the visual-audit serialization slot so temporary gameplay fixtures never
-# appear in the full screenshot campaign.
 concurrency:
   group: full-live-visual-audit
   cancel-in-progress: false
@@ -29,6 +27,12 @@ jobs:
         with:
           ref: proof/v798-phase1-live
           fetch-depth: 0
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
 
       - name: Prove product tree is exact v798 main plus proof-only files
         shell: bash
@@ -119,7 +123,6 @@ jobs:
             and (r.host_name in (:'name1',:'name2')
               or r.host_player_id in (select id from public.players where display_name in (:'name1',:'name2'))
               or r.created_by_player_id in (select id from public.players where display_name in (:'name1',:'name2')));
-
           delete from public.klaverjas_online_games
           where created_by_player_name in (:'name1',:'name2')
              or created_by_player_id in (select id from public.players where display_name in (:'name1',:'name2'));
@@ -130,7 +133,6 @@ jobs:
           where host_name in (:'name1',:'name2')
              or host_player_id in (select id from public.players where display_name in (:'name1',:'name2'))
              or created_by_player_id in (select id from public.players where display_name in (:'name1',:'name2'));
-
           delete from public.gejast_active_player_metadata_v679
           where lower(coalesce(player_name,'')) in (lower(:'name1'),lower(:'name2'));
           delete from public.gejast_player_sessions_v746
@@ -139,7 +141,6 @@ jobs:
           where display_name in (:'name1',:'name2') and is_dummy=true and hidden_from_public=true;
           commit;
           SQL
-
           residue="$(psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v name1="$GEJAST_PLAYER1_NAME" -v name2="$GEJAST_PLAYER2_NAME" <<'SQL'
           select (select count(*) from public.players where display_name in (:'name1',:'name2')),
                  (select count(*) from public.gejast_player_sessions_v746 where display_name in (:'name1',:'name2')),
