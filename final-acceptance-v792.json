@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "site_version": "v792",
+  "status": "PASS",
+  "certified_at": "2026-08-16",
+  "issue": 131,
+  "evidence_baseline_main_sha": "9eb45785acd1c634d2d76350c072276b158be179",
+  "truthfulness_policy": {
+    "unknown_limits_are_not_invented": true,
+    "third_party_interactive_auth_is_not_faked": true,
+    "no_duplicate_push_was_sent_for_final_certification": true
+  },
+  "player_contracts": {
+    "pikken": {
+      "minimum": 2,
+      "maximum": null,
+      "maximum_status": "not_enforced_or_proven",
+      "representative_live_stress_counts": [2, 4, 8]
+    },
+    "paardenrace": {
+      "minimum": 2,
+      "maximum": null,
+      "maximum_status": "not_enforced_or_proven",
+      "representative_live_stress_counts": [2, 4, 8]
+    }
+  },
+  "authoritative_runs": {
+    "live_browser": {
+      "run_id": 31924553809,
+      "attempt": 4,
+      "markers": [
+        "RESULT=V792_LIVE_BROWSER_MULTI_CONTEXT_PASS",
+        "RESULT=V792_PIKKEN_PLAY_TO_COMPLETION_PASS",
+        "RESULT=V792_PAARDENRACE_PLAY_TO_COMPLETION_PASS",
+        "RESULT=V792_LIVE_GAME_COMPLETION_CERTIFICATION_PASS",
+        "RESULT=V792_FINAL_LIVE_BROWSER_CERTIFICATION_PASS"
+      ]
+    },
+    "account_journey": {
+      "run_id": 31922510300,
+      "conclusion": "success"
+    },
+    "admin_outer_auth_boundary": {
+      "run_id": 31929136927,
+      "job_id": 95121242281,
+      "marker": "RESULT=V792_LIVE_ADMIN_OUTER_AUTH_BOUNDARY_PASS",
+      "interactive_github_credential_step": "external_third_party_not_automated"
+    }
+  },
+  "push_evidence": {
+    "provider_delivery_job_id": 120,
+    "target_subscription_id": 487,
+    "provider_delivery_status": "sent",
+    "provider_message_id_present": true,
+    "attempt_count": 1,
+    "additional_push_sent_for_final_certification": false,
+    "latest_hygiene_migration": "gejast_v792u_web_push_dead_subscription_hygiene",
+    "open_jobs_after_reconciliation": 0,
+    "proven_dead_subscriptions_still_claimable": 0
+  },
+  "production_state": {
+    "supabase_project_id": "uiqntazgnrxwliaidkmy",
+    "latest_migration": "gejast_v792u_web_push_dead_subscription_hygiene",
+    "latest_migration_version": "20260816052323",
+    "uncovered_public_foreign_keys": 0,
+    "standalone_duplicate_index_groups": 0,
+    "disposable_certification_residue": 0,
+    "dev_activation_named_functions": 0,
+    "invalid_admin_session_fails_closed": true,
+    "admin_browser_mutators_total": 67,
+    "admin_browser_mutators_unguarded": 0
+  },
+  "edge_and_governance": {
+    "cloudflare_worker": {
+      "name": "kalenel-admin-gate",
+      "build": "v763",
+      "live_https_redirect_proven": true,
+      "free_tier_only": true
+    },
+    "rulesets": {
+      "main_pr_ci_gate_id": 20899009,
+      "main_pr_required": true,
+      "required_checks": ["verify", "audit"],
+      "strict_status_checks": true,
+      "deletion_non_fast_forward_ruleset_id": 14810246,
+      "emergency_recovery_bypass_preserved": true
+    }
+  },
+  "baseline_exact_main_checks": {
+    "sha": "9eb45785acd1c634d2d76350c072276b158be179",
+    "verify": "success",
+    "audit": "success",
+    "live_health": "success",
+    "pages_build": "success",
+    "pages_deploy": "success",
+    "pages_report": "success"
+  },
+  "criteria": {
+    "1": {
+      "status": "PASS",
+      "summary": "Gameplay acceptance was reconciled against deterministic, PostgreSQL and controlled production evidence without relabeling weaker evidence as stronger proof."
+    },
+    "2": {
+      "status": "PASS",
+      "summary": "Pikken and Paardenrace minimum 2 is grounded by deployed start behavior; no maximum is invented where no authoritative limit exists."
+    },
+    "3": {
+      "status": "PASS",
+      "summary": "Live Chromium acceptance covered all six game surfaces; Pikken, Paardenrace and Klaverjas used independent player contexts."
+    },
+    "4": {
+      "status": "PASS",
+      "summary": "Pikken and Paardenrace were exercised through their natural completion lifecycle; finite local/engine lifecycles are covered by deterministic completion suites."
+    },
+    "5": {
+      "status": "PASS",
+      "summary": "Finite supported configurations are covered by gameplay matrices; uncapped Pikken and Paardenrace were stress-proven at 2, 4 and 8 players without inventing a maximum."
+    },
+    "6": {
+      "status": "PASS",
+      "summary": "Refresh/reconnect, leave/abandon/cleanup, persistence, idempotency and recovery boundaries are covered by live browser, controlled production and PostgreSQL acceptance."
+    },
+    "7": {
+      "status": "PASS",
+      "summary": "Disposable request, activation, state, logout, fresh PIN login and expired-session rejection completed in production with zero residue and no real activation email."
+    },
+    "8": {
+      "status": "PASS",
+      "summary": "Live admin perimeter fails closed, emits signed-state GitHub OAuth handoff, and preserves the password+TOTP Supabase inner gate. Interactive GitHub credential entry is external and intentionally not automated or faked."
+    },
+    "9": {
+      "status": "PASS",
+      "summary": "Existing exact provider-delivery proof remains valid; dispatcher/subscription hygiene was repaired in v792u, dead endpoints are disabled, healthy subscriptions remain active, queues are empty and no duplicate certification push was sent."
+    },
+    "10": {
+      "status": "PASS",
+      "summary": "All six game surfaces passed live Chromium 390x844 touch/mobile acceptance with zero horizontal overflow in the certification run."
+    },
+    "11": {
+      "status": "PASS",
+      "summary": "Production DB, security, edge deployment, repository governance and exact-main CI were reconciled green with zero disposable certification residue."
+    },
+    "12": {
+      "status": "PASS",
+      "summary": "FINAL ACCEPTANCE is stamped PASS only after criteria 1 through 11 have objective green evidence, and this artifact is enforced by the canonical verification gate."
+    }
+  }
+}
