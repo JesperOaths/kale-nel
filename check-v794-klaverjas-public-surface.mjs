@@ -2,7 +2,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-assert.equal(fs.readFileSync('VERSION','utf8').trim(),'v794','v794 public-surface cleanup must carry VERSION v794');
+const currentVersion=Number((fs.readFileSync('VERSION','utf8').trim().match(/\d+/)||['0'])[0]);
+assert.ok(currentVersion>=794,'v794 public-surface cleanup contract requires VERSION v794 or newer');
 
 const index=fs.readFileSync('index.html','utf8');
 assert(!index.includes('homeKlaverjasLiveEntry'),'homepage must not expose a duplicate Klaverjas live tile');
