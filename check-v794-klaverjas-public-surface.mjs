@@ -22,7 +22,7 @@ assert(quick.includes("new URL('./leaderboard.html',location.href)"),'contextles
 assert(quick.includes("if(!q.get('match_id')&&!stored)"),'quick stats must redirect only when no match context exists');
 
 const activeFiles=fs.readdirSync('.',{withFileTypes:true})
-  .filter((entry)=>entry.isFile() && /\.(?:html|js|mjs|css)$/i.test(entry.name))
+  .filter((entry)=>entry.isFile() && /\.(?:html|js|css)$/i.test(entry.name))
   .map((entry)=>entry.name);
 for (const file of activeFiles) {
   const body=fs.readFileSync(file,'utf8');
