@@ -8,5 +8,5 @@
     "artifact": "final-acceptance-v792.json"
   },
   "current_audit_issue": 153,
-  "reason": "v794 removes stale public Klaverjas prototype surfaces and changes the contextless quick-stats handoff, so fresh production visual and live feature revalidation is required."
+  "reason": "v794 removes stale public Klaverjas prototype surfaces, changes the contextless quick-stats handoff, and repairs the Pikken/Paardenrace group-B status panel to interpret the deployed v687-compat payload truthfully, so fresh production visual, feature-surface, and gameplay revalidation is required."
 }
