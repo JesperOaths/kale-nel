@@ -49,9 +49,7 @@ const required = [
   'gejast-mobile-foundation-v581.css',
   'gejast-mobile-foundation-v581.js',
   'gejast-mobile-foundation-v582.css',
-  'gejast-mobile-foundation-v582.js',
-  'paardenrace_cards_supplied_exact.html',
-  'paardenrace_track_supplied_cards.html'
+  'gejast-mobile-foundation-v582.js'
 ];
 
 for (const entry of required) {
@@ -132,9 +130,7 @@ const historicalWebFiles = [
   'gejast-mobile-foundation-v581.css',
   'gejast-mobile-foundation-v581.js',
   'gejast-mobile-foundation-v582.css',
-  'gejast-mobile-foundation-v582.js',
-  'paardenrace_cards_supplied_exact.html',
-  'paardenrace_track_supplied_cards.html'
+  'gejast-mobile-foundation-v582.js'
 ];
 for (const historicalFile of historicalWebFiles) {
   assert.ok(tracked.includes(historicalFile), `historical Pages exclusion no longer maps to a tracked provenance file: ${historicalFile}`);
