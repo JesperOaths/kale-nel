@@ -67,6 +67,10 @@ function requireText(text, needle, label, failures) {
   if (!text.includes(needle)) failures.push(`${label} missing ${JSON.stringify(needle)}`);
 }
 
+function rejectText(text, needle, label, failures) {
+  if (text.includes(needle)) failures.push(`${label} unexpectedly contains ${JSON.stringify(needle)}`);
+}
+
 async function readLiveVersion() {
   const { response, text } = await readText('/VERSION');
   if (!response.ok) throw new Error(`/VERSION returned HTTP ${response.status}`);
@@ -111,17 +115,18 @@ for (const route of publicRoutes) {
 try {
   const { response, text } = await readText('/index.html');
   if (!response.ok) failures.push(`/index.html content probe returned HTTP ${response.status}`);
-  requireText(text, 'id="homeKlaverjasEntry"', 'homepage round-scorer entry', failures);
-  requireText(text, 'href="./scorer.html"', 'homepage round-scorer route', failures);
-  requireText(text, 'id="homeKlaverjasLiveEntry"', 'homepage live-scorer entry', failures);
-  requireText(text, 'href="./score.html"', 'homepage live-scorer route', failures);
+  requireText(text, 'id="homeKlaverjasEntry"', 'homepage Klaverjas score-form entry', failures);
+  requireText(text, 'href="./scorer.html"', 'homepage Klaverjas score-form route', failures);
+  requireText(text, '<div class="page-link-label">Klaverjas online</div>', 'homepage Klaverjas online entry', failures);
+  requireText(text, 'href="./klaverjas_online.html"', 'homepage Klaverjas online route', failures);
+  rejectText(text, 'id="homeKlaverjasLiveEntry"', 'homepage duplicate legacy Klaverjas live entry', failures);
   if (expectedVersion) requireText(text, `GEJAST_PAGE_VERSION='${expectedVersion}'`, 'homepage deployed version', failures);
 } catch (error) { failures.push(`homepage content probe failed: ${error instanceof Error ? error.message : String(error)}`); }
 
 try {
   const { response, text } = await readText('/score.html');
   if (!response.ok) failures.push(`/score.html content probe returned HTTP ${response.status}`);
-  requireText(text, "new URL('./klaverjas_scorer_v596_repo_ready.html',location.href)", 'score alias target', failures);
+  requireText(text, "new URL('./klaverjas_scorer_v596_repo_ready.html',location.href)", 'score compatibility alias target', failures);
   if (expectedVersion) requireText(text, `GEJAST_PAGE_VERSION='${expectedVersion}'`, 'score alias deployed version', failures);
 } catch (error) { failures.push(`score alias content probe failed: ${error instanceof Error ? error.message : String(error)}`); }
 
