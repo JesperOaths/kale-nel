@@ -1,0 +1,147 @@
+name: v801 Phase 2 owner-isolation controls
+
+on:
+  push:
+    branches: [proof/v801-phase2-owner-controls]
+    paths: ['.github/workflows/v801-phase2-owner-controls.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: full-live-visual-audit
+  cancel-in-progress: false
+
+jobs:
+  owner-controls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      GEJAST_EXACT_MAIN_SHA: d5388341c5ca0a595f80f239ebb5cafa84b6af60
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v801-phase2-owner-controls
+          fetch-depth: 0
+
+      - name: Prove exact v801 baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          test "$(git show "$GEJAST_EXACT_MAIN_SHA:VERSION" | tr -d '\r\n')" = v801
+          test "$(curl -fsS --max-time 10 https://kalenel.nl/VERSION | tr -d '\r\n')" = v801
+          unexpected="$(git diff --name-only "$GEJAST_EXACT_MAIN_SHA"..HEAD | grep -Ev '^\.github/workflows/v801-phase2-owner-controls\.yml$' || true)"
+          test -z "$unexpected"
+          sudo apt-get update >/dev/null
+          sudo apt-get install -y postgresql-client >/dev/null
+
+      - name: Provision two unrelated hidden players
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
+          a="V801OwnerA_${suffix}"; b="V801OwnerB_${suffix}"
+          p1=4826; p2=7314
+          echo "::add-mask::$p1"; echo "::add-mask::$p2"
+          echo "GEJAST_A=$a" >> "$GITHUB_ENV"; echo "GEJAST_B=$b" >> "$GITHUB_ENV"
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v a="$a" -v b="$b" -v p1="$p1" -v p2="$p2" <<'SQL'
+          insert into public.players(slug,display_name,active,pin_hash,approved,hidden_from_public,is_dummy,site_scope)
+          values ('v801-owner-a-'||lower(:'a'),:'a',true,'md5:'||md5(:'p1'||':'||current_database()),true,true,true,'friends'),
+                 ('v801-owner-b-'||lower(:'b'),:'b',true,'md5:'||md5(:'p2'||':'||current_database()),true,true,true,'friends');
+          SQL
+          tokens="$(psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v a="$a" -v b="$b" -v p1="$p1" -v p2="$p2" <<'SQL'
+          select public.account_login_v687(:'a',:'p1','friends','{}'::jsonb)->>'session_token',
+                 public.account_login_v687(:'b',:'p2','friends','{}'::jsonb)->>'session_token';
+          SQL
+          )"
+          IFS='|' read -r ta tb <<< "$tokens"
+          [[ "$ta" =~ ^[0-9a-f]{48}$ && "$tb" =~ ^[0-9a-f]{48}$ ]]
+          echo "::add-mask::$ta"; echo "::add-mask::$tb"
+          echo "GEJAST_TA=$ta" >> "$GITHUB_ENV"; echo "GEJAST_TB=$tb" >> "$GITHUB_ENV"
+
+      - name: Prove Toepen cross-owner replay and invalid-session denial
+        shell: bash
+        run: |
+          set -euo pipefail
+          c="v801-owner-toepen-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "GEJAST_TC=$c" >> "$GITHUB_ENV"
+          payload_sql="jsonb_build_object('client_match_id',:'c','game_type','toepen','target_points',1,'participants',jsonb_build_array(jsonb_build_object('seat_no',1,'name',:'a','start_points',0,'end_points',0,'eliminated',false,'finish_rank',1),jsonb_build_object('seat_no',2,'name','Synthetic Opponent','start_points',0,'end_points',1,'eliminated',true,'eliminated_round_no',1,'finish_rank',2)),'rounds',jsonb_build_array(jsonb_build_object('round_no',1,'dealer_seat',1,'winner_seat',1,'winner_name',:'a','stake_final',1,'results',jsonb_build_array(jsonb_build_object('seat_no',1,'name',:'a','action','win','penalty_points',0),jsonb_build_object('seat_no',2,'name','Synthetic Opponent','action','stay','penalty_points',1)))))"
+          first="$(psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -v t="$GEJAST_TA" -v c="$c" -v a="$GEJAST_A" <<SQL
+          select public.create_toepen_game(:'t',$payload_sql,'friends');
+          SQL
+          )"
+          echo "$first" | grep -q '"already_saved": false'
+          replay="$(psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -v t="$GEJAST_TB" -v c="$c" -v a="$GEJAST_A" <<SQL
+          select public.create_toepen_game(:'t',$payload_sql,'friends');
+          SQL
+          )"
+          echo "$replay" | grep -q '"already_saved": true'
+          echo 'RESULT=V801_TOEPEN_UNRELATED_PLAYER_REPLAY_DEFECT_PROVEN'
+
+          bad=ffffffffffffffffffffffffffffffffffffffffffffffff
+          if psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v t="$bad" -v c="$c" -v a="$GEJAST_A" >/tmp/toepen-invalid.out 2>&1 <<SQL
+          select public.create_toepen_game(:'t',$payload_sql,'friends');
+          SQL
+          then
+            cat /tmp/toepen-invalid.out; echo 'Invalid Toepen session unexpectedly succeeded'; exit 1
+          fi
+          grep -q 'Niet ingelogd' /tmp/toepen-invalid.out
+          echo 'RESULT=V801_TOEPEN_INVALID_SESSION_DENIAL_PASS'
+
+      - name: Prove Boerenbridge and Beerpong reject unrelated-player replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          bb="v801-owner-bb-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          bp="v801-owner-bp-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "GEJAST_BB=$bb" >> "$GITHUB_ENV"; echo "GEJAST_BP=$bp" >> "$GITHUB_ENV"
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v t="$GEJAST_TA" -v bb="$bb" -v bp="$bp" -v a="$GEJAST_A" <<'SQL'
+          select public.save_boerenbridge_match(:'t',:'bb','v801-owner-proof','v801',jsonb_build_object('match_name','Owner proof','site_scope','friends','rounds',18));
+          select public.save_beerpong_match(:'t',:'bp',jsonb_build_object('format','1v1','status','finished','team_a_player_names',jsonb_build_array(:'a'),'team_b_player_names',jsonb_build_array('Synthetic Opponent'),'winner_team','team_a','cups_left_team_a',10,'cups_left_team_b',4));
+          SQL
+
+          if psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v t="$GEJAST_TB" -v bb="$bb" >/tmp/bb.out 2>&1 <<'SQL'
+          select public.save_boerenbridge_match(:'t',:'bb','v801-owner-proof','v801','{}'::jsonb);
+          SQL
+          then
+            cat /tmp/bb.out; echo 'Boerenbridge unrelated replay unexpectedly succeeded'; exit 1
+          fi
+          grep -q 'boerenbridge_match_owner_mismatch' /tmp/bb.out
+
+          if psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v t="$GEJAST_TB" -v bp="$bp" -v a="$GEJAST_A" >/tmp/bp.out 2>&1 <<'SQL'
+          select public.save_beerpong_match(:'t',:'bp',jsonb_build_object('format','1v1','status','finished','team_a_player_names',jsonb_build_array(:'a'),'team_b_player_names',jsonb_build_array('Synthetic Opponent'),'winner_team','team_a','cups_left_team_a',10,'cups_left_team_b',4));
+          SQL
+          then
+            cat /tmp/bp.out; echo 'Beerpong unrelated replay unexpectedly succeeded'; exit 1
+          fi
+          grep -q 'beerpong_match_owner_mismatch' /tmp/bp.out
+          echo 'RESULT=V801_BOERENBRIDGE_BEERPONG_OWNER_ISOLATION_PASS'
+
+      - name: Cleanup and prove zero residue
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "${GEJAST_A:-}" ] || exit 0
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v a="$GEJAST_A" -v b="$GEJAST_B" -v tc="${GEJAST_TC:-__none__}" -v bb="${GEJAST_BB:-__none__}" -v bp="${GEJAST_BP:-__none__}" <<'SQL'
+          begin;
+          delete from public.toepen_games where client_match_id=:'tc';
+          delete from public.boerenbridge_matches where client_match_id=:'bb';
+          delete from public.beerpong_matches where client_match_id=:'bp';
+          delete from public.gejast_active_player_metadata_v679 where lower(coalesce(player_name,'')) in (lower(:'a'),lower(:'b'));
+          delete from public.gejast_player_sessions_v746 where player_id in (select id from public.players where display_name in (:'a',:'b'));
+          delete from public.players where display_name in (:'a',:'b') and is_dummy=true and hidden_from_public=true;
+          commit;
+          SQL
+          r="$(psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v a="$GEJAST_A" -v b="$GEJAST_B" -v tc="${GEJAST_TC:-__none__}" -v bb="${GEJAST_BB:-__none__}" -v bp="${GEJAST_BP:-__none__}" <<'SQL'
+          select (select count(*) from public.players where display_name in (:'a',:'b')),
+                 (select count(*) from public.gejast_player_sessions_v746 where display_name in (:'a',:'b')),
+                 (select count(*) from public.toepen_games where client_match_id=:'tc'),
+                 (select count(*) from public.boerenbridge_matches where client_match_id=:'bb'),
+                 (select count(*) from public.beerpong_matches where client_match_id=:'bp');
+          SQL
+          )"
+          test "$r" = '0|0|0|0|0'
+          echo 'RESULT=V801_PHASE2_OWNER_CONTROL_ZERO_RESIDUE_PASS'
