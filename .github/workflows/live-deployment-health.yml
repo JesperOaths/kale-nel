@@ -28,6 +28,10 @@ jobs:
           GEJAST_DEPLOY_WAIT_SECONDS: '240'
           GEJAST_SMOKE_TIMEOUT_MS: '15000'
         run: node check-live-routes.mjs
+      - name: Verify live admin GitHub OAuth outer boundary
+        env:
+          GEJAST_ADMIN_AUTH_TIMEOUT_MS: '15000'
+        run: node check-live-admin-auth-boundary.mjs
       - name: Run primary read-only beta acceptance
         env:
           GEJAST_BETA_SURFACE_TIMEOUT_MS: '15000'
