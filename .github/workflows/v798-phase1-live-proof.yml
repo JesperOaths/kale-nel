@@ -1,0 +1,153 @@
+name: v798 Phase 1 live auth and gameplay proof
+
+on:
+  push:
+    branches: [proof/v798-phase1-live]
+    paths: ['.github/workflows/v798-phase1-live-proof.yml']
+
+permissions:
+  contents: read
+
+# Share the visual-audit serialization slot so temporary gameplay fixtures never
+# appear in the full screenshot campaign.
+concurrency:
+  group: full-live-visual-audit
+  cancel-in-progress: false
+
+jobs:
+  phase1-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      GEJAST_BASE_URL: https://kalenel.nl/
+      GEJAST_EXACT_MAIN_SHA: ea2610298d36c37ee804d1cd61a74c3c29fdec12
+      GEJAST_SITE_SCOPE: friends
+    steps:
+      - name: Check out proof branch derived from exact v798 main
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v798-phase1-live
+          fetch-depth: 0
+
+      - name: Prove product tree is exact v798 main plus proof-only files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          test "$(git show "$GEJAST_EXACT_MAIN_SHA:VERSION" | tr -d '\r\n')" = 'v798'
+          test "$(curl -fsS --max-time 10 https://kalenel.nl/VERSION | tr -d '\r\n')" = 'v798'
+          unexpected="$(git diff --name-only "$GEJAST_EXACT_MAIN_SHA"..HEAD | grep -Ev '^(scripts/v798-phase1-live-proof\.mjs|\.github/workflows/v798-phase1-live-proof\.yml)$' || true)"
+          test -z "$unexpected" || { echo "Unexpected proof-branch product drift:"; echo "$unexpected"; exit 1; }
+
+      - name: Install browser and database clients
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+          sudo apt-get update >/dev/null
+          sudo apt-get install -y postgresql-client >/dev/null
+          node --check scripts/v798-phase1-live-proof.mjs
+
+      - name: Provision two hidden disposable login players
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
+          name1="V798P1_${suffix}"
+          name2="V798P2_${suffix}"
+          pin1='4826'
+          pin2='7314'
+          echo "::add-mask::$pin1"
+          echo "::add-mask::$pin2"
+          echo "GEJAST_PLAYER1_NAME=$name1" >> "$GITHUB_ENV"
+          echo "GEJAST_PLAYER2_NAME=$name2" >> "$GITHUB_ENV"
+          echo "GEJAST_PLAYER1_PIN=$pin1" >> "$GITHUB_ENV"
+          echo "GEJAST_PLAYER2_PIN=$pin2" >> "$GITHUB_ENV"
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 \
+            -v name1="$name1" -v name2="$name2" -v pin1="$pin1" -v pin2="$pin2" <<'SQL'
+          begin;
+          insert into public.players(slug,display_name,active,pin_hash,approved,hidden_from_public,is_dummy,site_scope)
+          values
+            ('v798-p1-' || lower(:'name1'), :'name1', true, 'md5:' || md5(:'pin1' || ':' || current_database()), true, true, true, 'friends'),
+            ('v798-p2-' || lower(:'name2'), :'name2', true, 'md5:' || md5(:'pin2' || ':' || current_database()), true, true, true, 'friends');
+          commit;
+          SQL
+
+      - name: Run real browser auth, main-navigation and every-game surface matrix
+        shell: bash
+        run: node scripts/v798-phase1-live-proof.mjs
+
+      - name: Run controlled two-player Pikken and Paardenrace live-start flows
+        shell: bash
+        env:
+          GEJAST_REQUIRE_TWO_PLAYER: '1'
+          GEJAST_GAME_FLOW_TIMEOUT_MS: '20000'
+        run: node check-live-game-flows.mjs
+
+      - name: Prove both player sessions still resolve after gameplay
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${GEJAST_PLAYER1_TOKEN:-}"
+          test -n "${GEJAST_PLAYER2_TOKEN:-}"
+          resolved="$(psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 \
+            -v token1="$GEJAST_PLAYER1_TOKEN" -v token2="$GEJAST_PLAYER2_TOKEN" <<'SQL'
+          select coalesce(public._gejast_v687_session_name(:'token1'),''),
+                 coalesce(public._gejast_v687_session_name(:'token2'),'');
+          SQL
+          )"
+          test "$resolved" = "$GEJAST_PLAYER1_NAME|$GEJAST_PLAYER2_NAME"
+          echo 'RESULT=V798_PHASE1_SESSION_POST_GAME_PASS'
+
+      - name: Cleanup every controlled Phase-1 fixture and prove zero residue
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GEJAST_PLAYER1_NAME:-}" ] || [ -z "${GEJAST_PLAYER2_NAME:-}" ]; then
+            echo 'Controlled names were never exported; nothing to clean.'
+            exit 0
+          fi
+          psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v name1="$GEJAST_PLAYER1_NAME" -v name2="$GEJAST_PLAYER2_NAME" <<'SQL'
+          begin;
+          delete from public.paardenrace_match_history h
+          using public.paardenrace_rooms r
+          where h.room_id=r.id
+            and (r.host_name in (:'name1',:'name2')
+              or r.host_player_id in (select id from public.players where display_name in (:'name1',:'name2'))
+              or r.created_by_player_id in (select id from public.players where display_name in (:'name1',:'name2')));
+
+          delete from public.klaverjas_online_games
+          where created_by_player_name in (:'name1',:'name2')
+             or created_by_player_id in (select id from public.players where display_name in (:'name1',:'name2'));
+          delete from public.pikken_games
+          where created_by_player_name in (:'name1',:'name2')
+             or created_by_player_id in (select id from public.players where display_name in (:'name1',:'name2'));
+          delete from public.paardenrace_rooms
+          where host_name in (:'name1',:'name2')
+             or host_player_id in (select id from public.players where display_name in (:'name1',:'name2'))
+             or created_by_player_id in (select id from public.players where display_name in (:'name1',:'name2'));
+
+          delete from public.gejast_active_player_metadata_v679
+          where lower(coalesce(player_name,'')) in (lower(:'name1'),lower(:'name2'));
+          delete from public.gejast_player_sessions_v746
+          where player_id in (select id from public.players where display_name in (:'name1',:'name2'));
+          delete from public.players
+          where display_name in (:'name1',:'name2') and is_dummy=true and hidden_from_public=true;
+          commit;
+          SQL
+
+          residue="$(psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v name1="$GEJAST_PLAYER1_NAME" -v name2="$GEJAST_PLAYER2_NAME" <<'SQL'
+          select (select count(*) from public.players where display_name in (:'name1',:'name2')),
+                 (select count(*) from public.gejast_player_sessions_v746 where display_name in (:'name1',:'name2')),
+                 (select count(*) from public.gejast_active_player_metadata_v679 where lower(coalesce(player_name,'')) in (lower(:'name1'),lower(:'name2'))),
+                 (select count(*) from public.klaverjas_online_games where created_by_player_name in (:'name1',:'name2')),
+                 (select count(*) from public.pikken_games where created_by_player_name in (:'name1',:'name2')),
+                 (select count(*) from public.paardenrace_rooms where host_name in (:'name1',:'name2'));
+          SQL
+          )"
+          test "$residue" = '0|0|0|0|0|0'
+          echo 'RESULT=V798_PHASE1_ZERO_RESIDUE_PASS'
