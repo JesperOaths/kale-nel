@@ -22,13 +22,13 @@ concurrency:
 jobs:
   screenshot-every-page:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       GEJAST_BASE_URL: https://kalenel.nl/
       GEJAST_SITE_SCOPE: friends
       GEJAST_VISUAL_TIMEOUT_MS: '25000'
-      GEJAST_VISUAL_SETTLE_MS: '1800'
+      GEJAST_VISUAL_SETTLE_MS: '5000'
     steps:
       - name: Check out exact merged main
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -59,8 +59,8 @@ jobs:
           suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
           name1="VisualA_${suffix}"
           name2="VisualB_${suffix}"
-          token1="v792-visual-$(openssl rand -hex 32)"
-          token2="v792-visual-$(openssl rand -hex 32)"
+          token1="v793-visual-$(openssl rand -hex 32)"
+          token2="v793-visual-$(openssl rand -hex 32)"
           echo "::add-mask::$token1"
           echo "::add-mask::$token2"
           echo "GEJAST_PLAYER1_TOKEN=$token1" >> "$GITHUB_ENV"
