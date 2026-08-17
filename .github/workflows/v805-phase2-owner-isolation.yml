@@ -1,0 +1,190 @@
+name: v805 Phase 2 owner isolation proof
+
+on:
+  push:
+    branches: [proof/v805-phase2-owner-isolation]
+    paths: ['.proof/start-owner-isolation']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v805-phase2-owner-isolation
+  cancel-in-progress: false
+
+jobs:
+  owner-isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      GEJAST_EXACT_MAIN_SHA: b64a116f2b2684d1fbd475b40c2b76f569d40942
+      PGCONNECT_TIMEOUT: '10'
+      PGOPTIONS: '-c statement_timeout=10000'
+    steps:
+      - name: Check out proof branch rooted at exact current main
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v805-phase2-owner-isolation
+          fetch-depth: 0
+
+      - name: Record run identity on proof branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .proof
+          printf '%s\n' "$GITHUB_RUN_ID" > .proof/phase2-run-id.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .proof/phase2-run-id.txt
+          git commit -m 'test: record phase2 proof run id'
+          git push origin HEAD:proof/v805-phase2-owner-isolation
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Prove exact v805 product tree and live deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_DB_URL:-}"
+          test "$(git show "$GEJAST_EXACT_MAIN_SHA:VERSION" | tr -d '\r\n')" = 'v805'
+          test "$(curl -fsS --max-time 10 https://kalenel.nl/VERSION | tr -d '\r\n')" = 'v805'
+          unexpected="$(git diff --name-only "$GEJAST_EXACT_MAIN_SHA"..HEAD | grep -Ev '^(\.github/workflows/v805-phase2-owner-isolation\.yml|\.proof/(start-owner-isolation|phase2-run-id\.txt))$' || true)"
+          test -z "$unexpected" || { echo 'Unexpected proof-branch product drift:'; echo "$unexpected"; exit 1; }
+          echo 'RESULT=V805_PHASE2_EXACT_MAIN_PASS'
+
+      - name: Run deterministic gameplay and persistence regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          node check-toepen-engine-v792.mjs
+          node check-boerenbridge-engine-v792.mjs
+          node check-beerpong-gameplay-v792.mjs
+          node check-klaverjas-online.mjs
+          node check-klaverjas-online-transition-v792b.mjs
+          node check-klaverjas-online-rules-v792c.mjs
+          node check-klaverjas-online-persistence-v792f.mjs
+          node check-toepen-idempotency-owner-guard-v801a.mjs
+          echo 'RESULT=V805_PHASE2_DETERMINISTIC_PASS'
+
+      - name: Provision two hidden current-login identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix="${GITHUB_RUN_ID}${GITHUB_RUN_ATTEMPT}"
+          name1="V805OwnA_${suffix}"
+          name2="V805OwnB_${suffix}"
+          pin1='4826'; pin2='7314'
+          echo "::add-mask::$pin1"; echo "::add-mask::$pin2"
+          {
+            echo "GEJAST_PLAYER1_NAME=$name1"
+            echo "GEJAST_PLAYER2_NAME=$name2"
+          } >> "$GITHUB_ENV"
+          timeout 20s psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v name1="$name1" -v name2="$name2" -v pin1="$pin1" -v pin2="$pin2" <<'SQL'
+          insert into public.players(slug,display_name,active,pin_hash,approved,hidden_from_public,is_dummy,site_scope)
+          values
+            ('v805-own-a-'||lower(:'name1'),:'name1',true,'md5:'||md5(:'pin1'||':'||current_database()),true,true,true,'friends'),
+            ('v805-own-b-'||lower(:'name2'),:'name2',true,'md5:'||md5(:'pin2'||':'||current_database()),true,true,true,'friends');
+          SQL
+          sessions="$(timeout 20s psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v name1="$name1" -v name2="$name2" -v pin1="$pin1" -v pin2="$pin2" <<'SQL'
+          select public.account_login_v687(:'name1',:'pin1','friends','{}'::jsonb)->>'session_token',
+                 public.account_login_v687(:'name2',:'pin2','friends','{}'::jsonb)->>'session_token';
+          SQL
+          )"
+          IFS='|' read -r token1 token2 <<< "$sessions"
+          [[ "$token1" =~ ^[0-9a-f]{48}$ && "$token2" =~ ^[0-9a-f]{48}$ ]]
+          echo "::add-mask::$token1"; echo "::add-mask::$token2"
+          {
+            echo "GEJAST_PLAYER1_TOKEN=$token1"
+            echo "GEJAST_PLAYER2_TOKEN=$token2"
+          } >> "$GITHUB_ENV"
+          echo 'RESULT=V805_PHASE2_FIXTURE_LOGIN_PASS'
+
+      - name: Prove Boerenbridge owner isolation and same-owner replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          bb="v805-bb-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "GEJAST_BB_CLIENT=$bb" >> "$GITHUB_ENV"
+          first="$(timeout 20s psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -v token="$GEJAST_PLAYER1_TOKEN" -v bb="$bb" <<'SQL'
+          select public.save_boerenbridge_match(:'token',:'bb','v805-proof','v805',jsonb_build_object('match_name','Phase 2 proof','site_scope','friends','rounds',18));
+          SQL
+          )"
+          echo "$first" | grep -q '"ok": true'
+          replay="$(timeout 20s psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -v token="$GEJAST_PLAYER1_TOKEN" -v bb="$bb" <<'SQL'
+          select public.save_boerenbridge_match(:'token',:'bb','v805-proof','v805',jsonb_build_object('match_name','Phase 2 proof replay','site_scope','friends','rounds',18));
+          SQL
+          )"
+          echo "$replay" | grep -q '"ok": true'
+          if timeout 20s psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v token="$GEJAST_PLAYER2_TOKEN" -v bb="$bb" >/tmp/bb-cross.out 2>&1 <<'SQL'
+          select public.save_boerenbridge_match(:'token',:'bb','v805-proof','v805','{}'::jsonb);
+          SQL
+          then
+            cat /tmp/bb-cross.out
+            echo 'Boerenbridge cross-owner replay unexpectedly succeeded'
+            exit 1
+          fi
+          grep -q 'boerenbridge_match_owner_mismatch' /tmp/bb-cross.out
+          echo 'RESULT=V805_BOERENBRIDGE_OWNER_ISOLATION_PASS'
+
+      - name: Prove Beerpong owner isolation and same-owner replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          bp="v805-bp-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "GEJAST_BP_CLIENT=$bp" >> "$GITHUB_ENV"
+          payload="$(printf '{\"format\":\"1v1\",\"status\":\"finished\",\"team_a_player_names\":[\"%s\"],\"team_b_player_names\":[\"%s\"],\"winner_team\":\"team_a\",\"cups_left_team_a\":10,\"cups_left_team_b\":4}' "$GEJAST_PLAYER1_NAME" "$GEJAST_PLAYER2_NAME")"
+          first="$(timeout 20s psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -v token="$GEJAST_PLAYER1_TOKEN" -v bp="$bp" -v payload="$payload" <<'SQL'
+          select public.save_beerpong_match(:'token',:'bp',:'payload'::jsonb);
+          SQL
+          )"
+          echo "$first" | grep -q '"ok": true'
+          echo "$first" | grep -q '"already_saved": false'
+          replay="$(timeout 20s psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -v token="$GEJAST_PLAYER1_TOKEN" -v bp="$bp" -v payload="$payload" <<'SQL'
+          select public.save_beerpong_match(:'token',:'bp',:'payload'::jsonb);
+          SQL
+          )"
+          echo "$replay" | grep -q '"already_saved": true'
+          if timeout 20s psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v token="$GEJAST_PLAYER2_TOKEN" -v bp="$bp" -v payload="$payload" >/tmp/bp-cross.out 2>&1 <<'SQL'
+          select public.save_beerpong_match(:'token',:'bp',:'payload'::jsonb);
+          SQL
+          then
+            cat /tmp/bp-cross.out
+            echo 'Beerpong cross-owner replay unexpectedly succeeded'
+            exit 1
+          fi
+          grep -q 'beerpong_match_owner_mismatch' /tmp/bp-cross.out
+          echo 'RESULT=V805_BEERPONG_OWNER_ISOLATION_PASS'
+
+      - name: Cleanup every controlled fixture and prove zero residue
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${GEJAST_PLAYER1_NAME:-}" ]; then echo 'No fixture names exported; nothing to clean.'; exit 0; fi
+          timeout 20s psql "$SUPABASE_DB_URL" -X -v ON_ERROR_STOP=1 -v n1="$GEJAST_PLAYER1_NAME" -v n2="$GEJAST_PLAYER2_NAME" -v bb="${GEJAST_BB_CLIENT:-__none__}" -v bp="${GEJAST_BP_CLIENT:-__none__}" <<'SQL'
+          begin;
+          delete from public.boerenbridge_matches where client_match_id=:'bb';
+          delete from public.beerpong_matches where client_match_id=:'bp';
+          delete from public.gejast_active_player_metadata_v679 where lower(coalesce(player_name,'')) in (lower(:'n1'),lower(:'n2'));
+          delete from public.gejast_player_sessions_v746 where player_id in (select id from public.players where display_name in (:'n1',:'n2'));
+          delete from public.players where display_name in (:'n1',:'n2') and is_dummy=true and hidden_from_public=true;
+          commit;
+          SQL
+          residue="$(timeout 20s psql "$SUPABASE_DB_URL" -X -At -F'|' -v ON_ERROR_STOP=1 -v n1="$GEJAST_PLAYER1_NAME" -v n2="$GEJAST_PLAYER2_NAME" -v bb="${GEJAST_BB_CLIENT:-__none__}" -v bp="${GEJAST_BP_CLIENT:-__none__}" <<'SQL'
+          select (select count(*) from public.players where display_name in (:'n1',:'n2')),
+                 (select count(*) from public.gejast_player_sessions_v746 where display_name in (:'n1',:'n2')),
+                 (select count(*) from public.boerenbridge_matches where client_match_id=:'bb'),
+                 (select count(*) from public.beerpong_matches where client_match_id=:'bp');
+          SQL
+          )"
+          test "$residue" = '0|0|0|0'
+          echo 'RESULT=V805_PHASE2_OWNER_ISOLATION_ZERO_RESIDUE_PASS'
+
+      - name: Final marker
+        run: echo 'RESULT=V805_PHASE2_REMAINING_OWNER_ISOLATION_PASS'
