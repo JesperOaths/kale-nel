@@ -1,0 +1,90 @@
+name: v804 candidate v725 cadence proof
+
+on:
+  push:
+    branches: [proof/v804-v725-candidate-cadence]
+    paths: ['.github/workflows/v804-v725-candidate-cadence.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  cadence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v804-v725-candidate-cadence
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Prove proof-only branch identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat VERSION | tr -d '\r\n')" = 'v804'
+          test "$(git show 7ecd8551c6bf0f384cba85f8e28880871ee0c955:VERSION | tr -d '\r\n')" = 'v804'
+          unexpected="$(git diff --name-only 7ecd8551c6bf0f384cba85f8e28880871ee0c955..HEAD | grep -Ev '^\.github/workflows/v804-v725-candidate-cadence\.yml$' || true)"
+          test -z "$unexpected" || { echo 'Unexpected product drift:'; echo "$unexpected"; exit 1; }
+      - name: Install Chromium runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Measure candidate timers in isolated browser pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p probe
+          cat > probe/pikken.html <<'EOF'
+          <!doctype html><html><head><meta charset="utf-8"></head><body>
+          <div id="pkLobbyFeed"></div><div id="pkLiveFeed"></div><div id="pkStatus"></div>
+          <script>
+          window.__rpcCounts={};
+          window.GEJAST_PIKKEN_CONTRACT={sessionToken:()=>'',rpc:async function(fn){window.__rpcCounts[fn]=(window.__rpcCounts[fn]||0)+1; return [];}};
+          </script>
+          <script src="../gejast-v725-repair.js"></script>
+          </body></html>
+          EOF
+          cat > probe/paardenrace_live.html <<'EOF'
+          <!doctype html><html><head><meta charset="utf-8"></head><body>
+          <div id="mobileDrawer"></div><div id="drawerOverlay"></div><div id="mobileDock"></div>
+          <script>
+          window.__rpcCounts={};
+          window.GEJAST_PAARDENRACE={scope:()=> 'friends',getStoredRoomCode:()=> 'ABC',rpc:async function(fn){window.__rpcCounts[fn]=(window.__rpcCounts[fn]||0)+1; return {players:[{id:'p1'}],room:{stage:'race'}};}};
+          </script>
+          <script src="../gejast-v725-repair.js"></script>
+          </body></html>
+          EOF
+          python3 -m http.server 8127 --bind 127.0.0.1 >/tmp/v804-http.log 2>&1 &
+          server=$!
+          trap 'kill $server 2>/dev/null || true' EXIT
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+          const browser=await chromium.launch({headless:true});
+          try {
+            const pik=await browser.newPage();
+            await pik.goto('http://127.0.0.1:8127/probe/pikken.html',{waitUntil:'load'});
+            await pik.waitForTimeout(5800);
+            const p=await pik.evaluate(()=>({counts:window.__rpcCounts,patched:window.__gejastV725PikkenPagePatched,timer:!!window.__gejastV725PikkenFeedTimer}));
+            const open=p.counts.get_pikken_open_lobbies_fast_v687||0;
+            const live=p.counts.get_pikken_live_matches_fast_v687||0;
+            if(open!==3||live!==3||p.patched!==true||!p.timer) throw new Error(`Unexpected Pikken candidate cadence: ${JSON.stringify(p)}`);
+            console.log(`V804_PIKKEN_CADENCE_PASS open=${open} live=${live}`);
+            await pik.close();
+
+            const paard=await browser.newPage();
+            await paard.goto('http://127.0.0.1:8127/probe/paardenrace_live.html?room=ABC&live=ABC',{waitUntil:'load'});
+            await paard.waitForTimeout(4800);
+            const r=await paard.evaluate(()=>({counts:window.__rpcCounts,patched:window.__gejastV725PaardenracePagePatched,timer:!!window.__gejastV725PaardenraceMonitorTimer}));
+            const states=r.counts.get_paardenrace_room_state_fast_v687||0;
+            if(states!==2||r.patched!==true||!r.timer) throw new Error(`Unexpected Paardenrace candidate cadence: ${JSON.stringify(r)}`);
+            console.log(`V804_PAARDENRACE_CADENCE_PASS state=${states}`);
+            await paard.close();
+            console.log('RESULT=V804_V725_CANDIDATE_CADENCE_PASS');
+          } finally { await browser.close(); }
+          NODE
