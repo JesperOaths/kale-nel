@@ -29,9 +29,12 @@ function finalPathname(finalUrl) {
   catch { return ''; }
 }
 
-function onlyRedirectNoise(reasons) {
-  if (!Array.isArray(reasons) || reasons.length === 0) return true;
-  return reasons.every((reason) => /^\d+ failed request\(s\)$/.test(String(reason || '').trim()));
+function onlyRedirectNoise(record) {
+  const reasons = Array.isArray(record?.reasons) ? record.reasons : [];
+  if (!reasons.every((reason) => /^\d+ failed request\(s\)$/.test(String(reason || '').trim()))) return false;
+
+  const failedRequests = Array.isArray(record?.failed_requests) ? record.failed_requests : [];
+  return failedRequests.every((request) => /:: net::ERR_ABORTED$/.test(String(request || '').trim()));
 }
 
 let refined = 0;
@@ -40,11 +43,11 @@ for (const record of report.records) {
   if (!trackedRouteUsesAuthGate(record?.route)) continue;
   if (finalPathname(record?.final_url) !== '/login.html') continue;
   if (record?.judgement === 'broken' || record?.judgement === 'protected') continue;
-  if (!onlyRedirectNoise(record?.reasons)) continue;
+  if (!onlyRedirectNoise(record)) continue;
 
   record.judgement = 'login-gated';
   record.anonymous_login_gate = true;
-  record.reasons = ['degraded anonymous route correctly redirected to login'];
+  record.reasons = ['degraded anonymous route correctly redirected to login; raw failures are redirect-aborted only'];
   refined += 1;
 }
 
