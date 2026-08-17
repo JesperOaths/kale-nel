@@ -15,6 +15,22 @@ assert.match(workflow, /node --check scripts\/full-live-visual-fixtures-v801\.mj
 assert.doesNotMatch(workflow, /\bpsql\b|SUPABASE_DB_URL|\.pooler\.supabase\.com/, 'visual audit must not depend on direct Postgres or Supavisor connectivity');
 assert.match(workflow, /if-no-files-found:\s*warn/, 'pre-screenshot infrastructure failures must not add a second artifact-upload failure');
 
+const provisionStep = workflow.match(/- name: Provision disposable visual-audit identities through current login contract([\s\S]*?)(?=\n\s*- name:)/)?.[1] || '';
+assert.ok(provisionStep, 'visual audit provisioning step must remain inspectable');
+assert.match(provisionStep, /id:\s*provision/, 'fixture provisioning must expose an outcome for degraded fallback control');
+assert.match(provisionStep, /continue-on-error:\s*true/, 'fixture provisioning failure must not suppress all screenshot evidence');
+assert.match(workflow, /- name: Fall back to anonymous perimeter coverage when fixtures are unavailable[\s\S]*?if:\s*steps\.provision\.outcome == 'failure'/, 'only an actual fixture failure may activate explicit anonymous visual fallback');
+assert.match(workflow, /GEJAST_PLAYER1_TOKEN=([0-9a-f])\1{47}/i, 'degraded fallback must use a well-formed synthetic 48-hex token for Friends A');
+assert.match(workflow, /GEJAST_PLAYER2_TOKEN=([0-9a-f])\1{47}/i, 'degraded fallback must use a well-formed synthetic 48-hex token for Friends B');
+assert.match(workflow, /GEJAST_FAMILY_TOKEN=([0-9a-f])\1{47}/i, 'degraded fallback must use a well-formed synthetic 48-hex token for Family');
+assert.match(workflow, /GEJAST_PLAYER1_NAME=\$\{GEJAST_PLAYER1_NAME:-VisualA_\$\{suffix\}\}/, 'degraded fallback must preserve an already-exported real fixture name for cleanup');
+assert.match(workflow, /GEJAST_VISUAL_TIMEOUT_MS=5000/, 'degraded fallback must bound auth/data-plane waiting so anonymous coverage can finish');
+assert.match(workflow, /GEJAST_VISUAL_SETTLE_MS=1200/, 'degraded fallback must use a bounded settle period');
+assert.match(workflow, /- name: Screenshot and inspect every tracked live HTML page\s*\n\s*if:\s*always\(\) && \(steps\.provision\.outcome == 'success' \|\| steps\.provision\.outcome == 'failure'\)/, 'screenshot execution must run after attempted provisioning but not misclassify skipped setup as fixture failure');
+assert.match(workflow, /DEGRADED_FIXTURE_PROVISIONING\.txt/, 'degraded artifacts must carry an unmistakable fixture-failure marker');
+assert.match(workflow, /MUST NOT be treated as authenticated visual certification or zero-residue proof/, 'degraded artifact marker must explicitly forbid false certification');
+assert.match(workflow, /- name: Cleanup disposable visual-audit state\s*\n\s*if:\s*always\(\)/, 'fixture cleanup must remain unconditional after degraded coverage');
+
 assert.match(fixtures, /SUPABASE_SERVICE_ROLE_KEY/, 'fixture manager must require service-role authorization for disposable row CRUD');
 assert.match(fixtures, /RETRY_ATTEMPTS\s*=\s*4/, 'fixture REST access must retain a bounded retry budget');
 assert.match(fixtures, /\/rest\/v1\//, 'fixture manager must use the Supabase REST surface');
@@ -60,4 +76,4 @@ assert.match(runner, /auth gate did not settle within/, 'a genuinely stuck auth 
 assert.match(runner, /if \(!protectedOnArrival\) \{\s*authGate = await waitForAuthGateToSettle/s, 'Cloudflare-protected admin responses must bypass player-auth settlement waiting');
 assert.match(runner, /seriousConsole\.length && judgement !== 'broken' && judgement !== 'protected'/, 'expected Cloudflare protection must not be downgraded to warning by perimeter console noise');
 
-console.log('PASS v801 full visual audit REST-fixture/auth-context contract');
+console.log('PASS v801 full visual audit REST-fixture/auth-context + degraded-fallback contract');
