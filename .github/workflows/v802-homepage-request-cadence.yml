@@ -1,0 +1,44 @@
+name: v802 homepage request cadence proof
+
+on:
+  push:
+    branches: [proof/v802-homepage-request-cadence]
+    paths: ['.github/workflows/v802-homepage-request-cadence.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  cadence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GEJAST_EXACT_MAIN_SHA: e3798a3b0002052c3a52a7a99569850bd3917bf6
+    steps:
+      - name: Check out proof branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v802-homepage-request-cadence
+          fetch-depth: 0
+
+      - name: Prove exact v802 product tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git show "$GEJAST_EXACT_MAIN_SHA:VERSION" | tr -d '\r\n')" = 'v802'
+          unexpected="$(git diff --name-only "$GEJAST_EXACT_MAIN_SHA"..HEAD | grep -Ev '^\.github/workflows/v802-homepage-request-cadence\.yml$' || true)"
+          test -z "$unexpected" || { echo 'Unexpected product drift:'; echo "$unexpected"; exit 1; }
+
+      - name: Inventory every homepage-live RPC caller and fast timer
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== RPC literal call sites ==='
+          grep -RIn --exclude-dir=.git --include='*.js' --include='*.html' 'get_homepage_live_state_public_scoped' . || true
+          echo '=== loadHomepageState call sites ==='
+          grep -RIn --exclude-dir=.git --include='*.js' --include='*.html' 'loadHomepageState' . || true
+          echo '=== sub-5-second interval/timeout literals in shipped JS/HTML ==='
+          grep -RInE --exclude-dir=.git --include='*.js' --include='*.html' '(setInterval|setTimeout)[^\n]{0,180}(250|500|750|1000|1500|2000|2500|3000|4000)' . || true
+          echo '=== exact 1-second timer literals ==='
+          grep -RInE --exclude-dir=.git --include='*.js' --include='*.html' '(setInterval|setTimeout)[^\n]{0,180}1000' . || true
+          echo 'RESULT=V802_HOMEPAGE_REQUEST_CADENCE_INVENTORY_COMPLETE'
