@@ -1,7 +1,7 @@
 {
   "version": 8,
-  "site_version": "live v802 / current frontend release v802",
-  "last_updated": "2026-08-16",
+  "site_version": "release candidate v803 / live v802",
+  "last_updated": "2026-08-17",
   "status_legend": {
     "verified_complete": "Proven enough for beta by automated checks and/or live proof.",
     "ready_to_test": "Code exists and surface checks pass, but real beta proof is still needed.",
@@ -16,6 +16,7 @@
     "repository_head_at_audit": "a0af7b08dba0222fee78f9f6fbf68e26e0bf7610",
     "source": "GitHub Pages/static deployment from main plus Cloudflare admin perimeter",
     "evidence": [
+      "2026-08-17 v803 candidate: exact-v802 homepage request cadence inventory run 31981237343 and legacy repair load-graph run 31981327145 proved the shipped one-second redundant homepage-live RPC owner; v803 regression requires zero legacy calls when canonical live-summary ownership is present.",
       "2026-08-16 live v802: frontend merge a0af7b08dba0222fee78f9f6fbf68e26e0bf7610 reached /VERSION=v802 during exact-main Live deployment health run 31974690719; public/admin routes, GitHub OAuth perimeter, base+extended read-only acceptance and performance all PASS. Exact-v802 visual run 31974690727 failed before Chromium because every service-role REST fixture provision attempt timed out; no screenshots/artifact were produced and cleanup also timed out, so residue is unverified rather than zero.",
       "2026-08-16 live v801: Phase-1 auth/gameplay run 31944683360 PASS with logged-out invisibility, invalid-token cleanup, real PIN login-to-main, seven authenticated game surfaces, Friends/Family isolation, two-human Klaverjas and zero residue.",
       "2026-08-16 live v801: Phase-2 deep run 31952351394 PASS with multi-context/mobile/reconnect coverage plus natural Pikken and Paardenrace completion/persistence rereads and zero residue.",
@@ -33,7 +34,8 @@
       "2026-08-14 live v792: frontend release merge 79e18fc9dcd2c9eadf404131863102cdc8abaef2 completed its own Live deployment health run #60 successfully; later SQL-only repository audit head 141e7301944a79452eca9d354180a684249cdcd2 also passed Live deployment health without changing frontend VERSION.",
       "v793 candidate: full production screenshot audit found and repairs visible Klaverjas duplication, ladder game-key mismatch, stale game status RPC owners, Pikken spectator context loss and Rad stats aggregation failure; current release remains REVALIDATION_REQUIRED until post-deploy screenshots and gameplay are re-run."
     ],
-    "note": "Live v802 deployment PASS: exact-main run 31974690719 proved /VERSION=v802 plus public/admin routes, GitHub OAuth perimeter, base+extended read-only acceptance and performance. Release certification remains fail-closed because exact-v802 visual run 31974690727 could not provision disposable identities: the production Supabase data plane timed out on every service-role REST attempt, Chromium never ran, no screenshot artifact exists, and cleanup/residue verification also timed out. SQL-only Toepen v801a still requires explicit production deployment authorization."
+    "note": "v803 release candidate: exact-v802 diagnostics proved gejast-config.js globally injects gejast-v725-repair.js, whose 1-second boot loop redundantly called get_homepage_live_state_public_scoped on authenticated index.html. v803 gives the canonical gejast-live-summary runtime ownership of homepage hydration and bounds the legacy fallback to at most one call; deterministic cadence regression reports canonical=0. Production remains live v802 until merge/deploy. Existing v802 live deployment health remains PASS, while exact-current authenticated visual/live-write revalidation is still blocked by the Supabase data-plane outage. SQL-only Toepen v801a remains permission-gated and undeployed.",
+    "release_candidate_version": "v803"
   },
   "baseline_checks": [
     {
