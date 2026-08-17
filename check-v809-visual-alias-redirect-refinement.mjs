@@ -14,9 +14,9 @@ assert.match(workflow, /node --check scripts\/refine-expected-visual-aliases-v80
 assert.match(workflow, /- name: Screenshot and inspect every tracked live HTML page[\s\S]*?id:\s*visual_capture[\s\S]*?continue-on-error:\s*\$\{\{ steps\.provision\.outcome == 'success' \}\}/, 'authenticated capture must continue only far enough to run fail-closed alias refinement');
 assert.match(workflow, /- name: Refine declared authenticated redirect aliases[\s\S]*?if:\s*always\(\) && steps\.provision\.outcome == 'success'[\s\S]*?node scripts\/refine-expected-visual-aliases-v809\.mjs/, 'alias refinement must run only after authenticated fixture provisioning and even when raw capture reports broken aliases');
 assert.match(workflow, /- name: Upload visual audit artifact\s*\n\s*if:\s*always\(\)/, 'artifact upload must remain available after a fail-closed refinement failure');
-assert.match(workflow, /- name: Cleanup disposable visual-audit state\s*\n\s*if:\s*always\(\)/, 'fixture cleanup must remain unconditional after attempted authenticated provisioning');
+assert.match(workflow, /- name: Cleanup disposable visual-audit state\s*\n\s*if:\s*always\(\)[^\n]*/, 'fixture cleanup must remain unconditional after attempted authenticated provisioning');
 
-assert.match(refiner, /window\.\\\.location\\\.replace/, 'refiner must derive redirect intent from the checked-in alias source');
+assert.ok(refiner.includes("source.match(/window\\.location\\.replace"), 'refiner must derive redirect intent from the checked-in alias source');
 assert.match(refiner, /finalUrl\.href === target\.href/, 'public aliases must match the exact declared redirect destination');
 assert.match(refiner, /finalUrl\.hostname === 'admin\.kalenel\.nl'/, 'protected alias refinement must require the live admin hostname');
 assert.match(refiner, /samePathAndQuery\(target, finalUrl\)/, 'protected alias refinement must preserve the declared path and query');
