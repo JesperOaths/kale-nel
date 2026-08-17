@@ -76,7 +76,7 @@ assert.match(fixtures, /Visual-audit cleanup PASS with zero residue/, 'fixture c
 assert.match(fixtures, /GITHUB_ENV/, 'fixture manager must export names and canonical sessions to later browser steps');
 assert.match(fixtures, /crypto\.createHash\('md5'\).*DATABASE_NAME/s, 'fixture PIN hashes must retain the deployed legacy database-name salt contract');
 assert.match(fixtures, /GITHUB_RUN_ID[\s\S]*GITHUB_RUN_ATTEMPT/, 'fixture names must remain unique across workflow runs and reruns');
-assert.match(fixtures, /new Set\(nameList\.map\(\(name\) => name\.toLowerCase\(\)\)\.size !== 3/, 'fixture manager must reject colliding disposable names before writing');
+assert.match(fixtures, /new Set\(nameList\.map\(\(name\) => name\.toLowerCase\(\)\)\)\.size !== 3/, 'fixture manager must reject colliding disposable names before writing');
 const provisionBody = fixtures.match(/async function provision\(\) \{([\s\S]*?)\n\}\n\nconst names = fixtureNames\(\);/)?.[1] || '';
 assert.ok(provisionBody, 'fixture manager provision body must remain inspectable');
 assert.doesNotMatch(provisionBody, /cleanupState\s*\(/, 'run-unique provisioning must not multiply database pressure with speculative pre-cleanup');
