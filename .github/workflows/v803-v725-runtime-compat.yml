@@ -1,0 +1,114 @@
+name: v803 deployed v725 runtime compatibility
+
+on:
+  push:
+    branches: [proof/v803-v725-runtime-compat]
+    paths: ['.github/workflows/v803-v725-runtime-compat.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v803-v725-runtime-compat
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Prove exact live v803 identity and install browser
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = 'v803'
+          test "$(curl -fsS --max-time 10 "https://kalenel.nl/VERSION?cb=${GITHUB_RUN_ID}" | tr -d '\r\n')" = 'v803'
+          npm ci
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Exercise homepage Pikken and Paardenrace with no production writes
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > .v803-v725-runtime-compat.mjs <<'EOF'
+          import { chromium } from 'playwright';
+
+          const browser = await chromium.launch({headless:true});
+          const token='b'.repeat(48);
+          const cases=[
+            {name:'home-desktop',path:'index.html',viewport:{width:1280,height:900},kind:'home'},
+            {name:'home-mobile',path:'index.html',viewport:{width:390,height:844},kind:'home'},
+            {name:'pikken-desktop',path:'pikken.html',viewport:{width:1280,height:900},kind:'pikken'},
+            {name:'pikken-mobile',path:'pikken.html',viewport:{width:390,height:844},kind:'pikken'},
+            {name:'paardenrace-desktop',path:'paardenrace.html',viewport:{width:1280,height:900},kind:'paardenrace'},
+            {name:'paardenrace-mobile',path:'paardenrace.html',viewport:{width:390,height:844},kind:'paardenrace'},
+          ];
+
+          function rpcBody(path){
+            if(path.endsWith('/rpc/account_public_state_v687')) return {ok:true,site_scope:'friends',player_name:'V803Compat'};
+            if(path.includes('pikken_open_lobbies') || path.includes('pikken_live_matches')) return [];
+            if(path.includes('paardenrace') && (path.includes('open') || path.includes('live') || path.includes('list'))) return [];
+            if(path.endsWith('/rpc/get_homepage_live_state_public_scoped')) return {ok:true,entries:{},site_scope:'friends'};
+            if(path.endsWith('/rpc/get_homepage_live_state_public')) return {ok:true,entries:{}};
+            if(path.endsWith('/rpc/get_drinks_homepage_top5_public')) return [];
+            if(path.includes('homepage')) return {ok:true,entries:{}};
+            if(path.includes('ladder') || path.includes('leaderboard')) return [];
+            return {};
+          }
+
+          for(const tc of cases){
+            const context=await browser.newContext({viewport:tc.viewport});
+            await context.addInitScript(({token})=>{
+              localStorage.setItem('jas_session_token_v11',token);
+              sessionStorage.setItem('jas_session_token_v11',token);
+            },{token});
+            const writes=[];
+            const pageErrors=[];
+            await context.route('https://uiqntazgnrxwliaidkmy.supabase.co/rest/v1/**',async route=>{
+              const req=route.request();
+              const url=new URL(req.url());
+              if(req.method()!=='GET' && req.method()!=='HEAD' && !url.pathname.includes('/rpc/account_public_state_v687')) writes.push(`${req.method()} ${url.pathname}`);
+              return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(rpcBody(url.pathname))});
+            });
+            const page=await context.newPage();
+            page.on('pageerror',err=>pageErrors.push(String(err?.message||err)));
+            await page.goto(`https://kalenel.nl/${tc.path}?cb=${Date.now()}-${tc.name}`,{waitUntil:'domcontentloaded',timeout:30000});
+            await page.waitForFunction(()=>document.documentElement.getAttribute('data-gejast-auth-state')==='authenticated',{timeout:15000});
+            await page.waitForTimeout(3500);
+            const state=await page.evaluate((kind)=>{
+              const visible=(el)=>!!el && getComputedStyle(el).visibility!=='hidden' && getComputedStyle(el).display!=='none';
+              const controls=[...document.querySelectorAll('button,a[href],input,select,textarea')].filter(visible).length;
+              const bodyText=(document.body?.innerText||'').replace(/\s+/g,' ').trim();
+              const overflow=Math.max(0,document.documentElement.scrollWidth-document.documentElement.clientWidth);
+              return {
+                bodyChars:bodyText.length,
+                controls,
+                overflow,
+                auth:document.documentElement.getAttribute('data-gejast-auth-state'),
+                v725Css:!!document.getElementById('gejastV725Css'),
+                v725Resource:performance.getEntriesByType('resource').some(e=>String(e.name||'').includes('gejast-v725-repair.js')),
+                pikkenPatched:!!(window.GEJAST_PIKKEN_CONTRACT&&window.GEJAST_PIKKEN_CONTRACT.__v724Patched),
+                paardenracePatched:!!(window.GEJAST_PAARDENRACE&&window.GEJAST_PAARDENRACE.__v724Patched),
+                canonicalLive:!!window.GEJAST_LIVE_SUMMARY,
+                kind
+              };
+            },tc.kind);
+            console.log(tc.name,JSON.stringify(state),'intercepted_nonread=',writes.length,'pageerrors=',JSON.stringify(pageErrors));
+            if(state.auth!=='authenticated') throw new Error(`${tc.name}: auth gate did not reveal page`);
+            if(state.bodyChars<100 || state.controls<2) throw new Error(`${tc.name}: rendered surface too small`);
+            if(state.overflow>1) throw new Error(`${tc.name}: horizontal overflow ${state.overflow}px`);
+            if(!state.v725Css && !state.v725Resource) throw new Error(`${tc.name}: v725 runtime not observed`);
+            if(!state.canonicalLive) throw new Error(`${tc.name}: canonical live-summary runtime missing`);
+            if(tc.kind==='pikken' && !state.pikkenPatched) throw new Error(`${tc.name}: Pikken contract was not patched by v725 compatibility layer`);
+            if(tc.kind==='paardenrace' && !state.paardenracePatched) throw new Error(`${tc.name}: Paardenrace contract was not patched by v725 compatibility layer`);
+            if(pageErrors.length) throw new Error(`${tc.name}: page errors: ${pageErrors.join(' | ')}`);
+            await context.close();
+          }
+          console.log('RESULT=V803_DEPLOYED_V725_RUNTIME_COMPAT_PASS cases=6 production_writes=0');
+          await browser.close();
+          EOF
+          node .v803-v725-runtime-compat.mjs
+          rm .v803-v725-runtime-compat.mjs
