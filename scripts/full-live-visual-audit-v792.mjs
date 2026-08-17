@@ -20,7 +20,8 @@ const authSettleTimeout = degradedFixtures ? Math.min(timeout, 1500) : Math.min(
 const outDir = path.resolve('visual-audit');
 const screenshotsDir = path.join(outDir, 'screenshots');
 
-if (!token1 || !token2 || !familyToken || !name1 || !name2 || !familyName) throw new Error('Two Friends sessions plus one Family visual-audit session/name are required');
+if (!name1 || !name2 || !familyName) throw new Error('Two Friends names plus one Family visual-audit name are required');
+if (!degradedFixtures && (!token1 || !token2 || !familyToken)) throw new Error('Two Friends sessions plus one Family visual-audit session are required outside degraded fixture mode');
 fs.rmSync(outDir, { recursive: true, force: true });
 fs.mkdirSync(screenshotsDir, { recursive: true });
 
@@ -38,7 +39,13 @@ const trackedHtml = execFileSync('git', ['ls-files', '-z', '*.html'], { encoding
 
 const state = { pikkenId: '', pikkenCode: '', paardenCode: '', klaverId: '', klaverCode: '' };
 const records = [];
-const safe = (value) => String(value?.message || value || 'unknown').replaceAll(token1, '[TOKEN1]').replaceAll(token2, '[TOKEN2]').replaceAll(familyToken, '[FAMILY_TOKEN]');
+function safe(value) {
+  let text = String(value?.message || value || 'unknown');
+  for (const [token, label] of [[token1, '[TOKEN1]'], [token2, '[TOKEN2]'], [familyToken, '[FAMILY_TOKEN]']]) {
+    if (token) text = text.replaceAll(token, label);
+  }
+  return text;
+}
 
 async function rpc(name, payload = {}) {
   const controller = new AbortController();
@@ -125,10 +132,12 @@ function expectedProtected(route, status, finalUrl) {
 async function newContext(browser, tokenValue = token1, paardCode = '') {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
   await context.addInitScript(({ sessionToken, savedPaardCode }) => {
-    for (const store of [localStorage, sessionStorage]) {
-      store.setItem('jas_session_token_v11', sessionToken);
-      store.setItem('jas_session_token_v10', sessionToken);
-      store.setItem('jas_last_activity_at_v1', String(Date.now()));
+    if (sessionToken) {
+      for (const store of [localStorage, sessionStorage]) {
+        store.setItem('jas_session_token_v11', sessionToken);
+        store.setItem('jas_session_token_v10', sessionToken);
+        store.setItem('jas_last_activity_at_v1', String(Date.now()));
+      }
     }
     if (savedPaardCode) {
       localStorage.setItem('gejast_paardenrace_room_code_v687', savedPaardCode);
@@ -378,7 +387,9 @@ try {
   let index = 0;
   for (const htmlPath of trackedHtml) {
     const familyRoute = htmlPath === 'familie.html' || htmlPath.startsWith('familie/');
-    const context = await newContext(browser, familyRoute ? familyToken : token1, familyRoute ? '' : state.paardenCode);
+    const sessionToken = degradedFixtures ? '' : (familyRoute ? familyToken : token1);
+    const paardCode = (degradedFixtures || familyRoute) ? '' : state.paardenCode;
+    const context = await newContext(browser, sessionToken, paardCode);
     try { await capture(context, htmlPath, htmlPath, index++, 'tracked'); }
     finally { await context.close(); }
   }
