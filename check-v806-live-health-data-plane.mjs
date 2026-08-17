@@ -11,10 +11,31 @@ assert.match(authGate, /\/rest\/v1\/rpc\/account_public_state_v687/, 'shipped au
 assert.match(authGate, /JSON\.stringify\(\{session_token:token,session_token_input:token,site_scope_input:requestedScope\(\)\}\)/, 'health probe must remain grounded in the shipped auth payload contract');
 assert.match(authGate, /data&&data\.ok===true/, 'shipped auth gate must still treat ok=true as authenticated');
 
-assert.match(workflow, /- name: Verify Supabase auth data-plane liveness[\s\S]*?run: node check-live-data-plane\.mjs/, 'main live-health workflow must run the database-backed auth probe');
+const dataPlaneStep = workflow.match(/- name: Verify Supabase auth data-plane liveness([\s\S]*?)(?=\n\s*- name:)/)?.[1] || '';
+assert.ok(dataPlaneStep, 'main live-health workflow must expose an inspectable database-backed auth probe step');
+assert.match(dataPlaneStep, /id:\s*data_plane/, 'data-plane probe must expose its true outcome for final fail-closed enforcement');
+assert.match(dataPlaneStep, /continue-on-error:\s*true/, 'data-plane failure must not suppress independent live-health evidence');
+assert.match(dataPlaneStep, /run: node check-live-data-plane\.mjs/, 'main live-health workflow must run the database-backed auth probe');
 assert.match(workflow, /GEJAST_DATA_PLANE_TIMEOUT_MS:\s*'10000'/, 'workflow must keep each data-plane attempt bounded to 10 seconds');
 assert.match(workflow, /GEJAST_DATA_PLANE_ATTEMPTS:\s*'2'/, 'workflow may make at most two bounded liveness attempts');
 assert.match(workflow, /GEJAST_DATA_PLANE_RETRY_DELAY_MS:\s*'750'/, 'workflow must use a small bounded retry delay');
+
+const attemptedProbeCondition = "if: always() && (steps.data_plane.outcome == 'success' || steps.data_plane.outcome == 'failure')";
+for (const stepName of [
+  'Run primary read-only beta acceptance',
+  'Run extended read-only beta acceptance',
+  'Record live beta performance probe',
+]) {
+  const body = workflow.match(new RegExp(`- name: ${stepName.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}([\\s\\S]*?)(?=\\n\\s*- name:)`))?.[1] || '';
+  assert.ok(body, `${stepName} must remain present`);
+  assert.ok(body.includes(attemptedProbeCondition), `${stepName} must continue after an attempted data-plane probe, including outage failure`);
+}
+
+const enforcementStep = workflow.match(/- name: Enforce Supabase auth data-plane health([\s\S]*)$/)?.[1] || '';
+assert.ok(enforcementStep, 'live-health workflow must finish with explicit data-plane enforcement');
+assert.match(enforcementStep, /if:\s*always\(\) && steps\.data_plane\.outcome == 'failure'/, 'final enforcement must activate only after a real probe failure');
+assert.match(enforcementStep, /DATA_PLANE_HEALTH_ENFORCEMENT_FAIL/, 'final enforcement must emit an explicit failure marker');
+assert.match(enforcementStep, /exit 1/, 'final enforcement must keep outage runs red');
 
 assert.match(probe, /fs\.readFileSync\('gejast-config\.js', 'utf8'\)/, 'probe must source the deployed public project config from checked-in application config');
 assert.match(probe, /SUPABASE_PUBLISHABLE_KEY/, 'probe must use the public publishable key');
@@ -41,4 +62,4 @@ for (const signal of mutatingSignals) {
 
 assert.match(pkg.scripts?.['verify:static'] || '', /check-v806-live-health-data-plane\.mjs/, 'canonical repository verification must enforce the data-plane health contract statically');
 
-console.log('PASS v806 live health has a bounded read-only Supabase auth data-plane gate');
+console.log('PASS v806 live health has a bounded read-only data-plane gate and preserves independent outage evidence');
