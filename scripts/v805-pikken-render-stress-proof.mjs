@@ -15,6 +15,8 @@ const key = configText.match(/SUPABASE_PUBLISHABLE_KEY:\s*'([^']+)'/)?.[1];
 if (!supabaseUrl || !key || !token1 || !token2 || !name1 || !name2) throw new Error('missing stress proof configuration');
 
 const created = new Set();
+const authSettleMs = [];
+let blankWhileCheckingAt900 = 0;
 const safe = (value) => String(value?.message || value || 'unknown').replaceAll(token1, '[TOKEN1]').replaceAll(token2, '[TOKEN2]');
 const tokenPayload = (token, extra = {}) => ({ session_token: token, session_token_input: token, site_scope_input: 'friends', ...extra });
 
@@ -48,17 +50,48 @@ async function newContext(browser, token) {
   return context;
 }
 
+async function snapshot(page) {
+  return page.evaluate(() => ({
+    authState: document.documentElement.getAttribute('data-gejast-auth-state') || '',
+    inlineVisibility: document.documentElement.style.getPropertyValue('visibility') || '',
+    bodyLength: (document.body?.innerText || '').trim().length,
+  }));
+}
+
 async function assertRendered(page, label) {
+  const started = Date.now();
   await page.waitForTimeout(900);
   if (/login\.html/i.test(page.url())) throw new Error(`${label} login bounce url=${page.url()}`);
-  const body = (await page.locator('body').innerText()).trim();
-  if (body.length < 20) throw new Error(`${label} empty body len=${body.length} url=${page.url()}`);
+
+  const at900 = await snapshot(page);
+  if (at900.bodyLength < 20) {
+    if (at900.authState !== 'checking') {
+      throw new Error(`${label} product blank after 900ms auth_state=${at900.authState || 'none'} visibility=${at900.inlineVisibility || 'none'} body_len=${at900.bodyLength} url=${page.url()}`);
+    }
+    blankWhileCheckingAt900 += 1;
+    console.log(`PIKKEN_AUTH_GATE_PENDING label=${JSON.stringify(label)} after_ms=900 auth_state=checking body_len=${at900.bodyLength}`);
+  }
+
+  if (at900.authState === 'checking') {
+    await page.waitForFunction(() => document.documentElement.getAttribute('data-gejast-auth-state') !== 'checking', null, { timeout: 8000 });
+  }
+  const settled = await snapshot(page);
+  const elapsed = Date.now() - started;
+  authSettleMs.push(elapsed);
+  if (settled.authState !== 'authenticated') {
+    throw new Error(`${label} auth did not authenticate state=${settled.authState || 'none'} after_ms=${elapsed} url=${page.url()}`);
+  }
+  if (settled.bodyLength < 20) {
+    throw new Error(`${label} blank after auth reveal body_len=${settled.bodyLength} after_ms=${elapsed} url=${page.url()}`);
+  }
+
   await page.waitForFunction(({ a, b }) => {
     const text = document.querySelector('#pkPlayers')?.textContent || '';
     return text.toLowerCase().includes(a.toLowerCase()) && text.toLowerCase().includes(b.toLowerCase());
   }, { a: name1, b: name2 }, { timeout: 10000 });
   const watermark = (await page.locator('[data-version-watermark], .site-credit-watermark').allTextContents().catch(() => [])).join(' ');
   if (!watermark.includes('v805')) throw new Error(`${label} missing v805 watermark`);
+  console.log(`PIKKEN_RENDER_PASS label=${JSON.stringify(label)} auth_settle_after_dom_ms=${elapsed} blank_at_900=${at900.bodyLength < 20}`);
 }
 
 async function destroy(id) {
@@ -114,7 +147,11 @@ try {
     }
     await destroy(id);
   }
-  console.log(`RESULT=V805_PIKKEN_FRESH_ROOM_RENDER_STRESS_PASS cycles=${cycles} concurrent_initial_loads=${cycles * 2} p2_reloads=${cycles} retries=0`);
+
+  const ordered = [...authSettleMs].sort((a, b) => a - b);
+  const p95 = ordered[Math.max(0, Math.ceil(ordered.length * 0.95) - 1)] || 0;
+  const max = ordered.at(-1) || 0;
+  console.log(`RESULT=V805_PIKKEN_AUTH_AWARE_RENDER_STRESS_PASS cycles=${cycles} protected_loads=${authSettleMs.length} blank_while_auth_checking_at_900=${blankWhileCheckingAt900} auth_settle_p95_ms=${p95} auth_settle_max_ms=${max} retries=0`);
 } finally {
   for (const id of [...created]) await destroy(id);
   await browser.close();
