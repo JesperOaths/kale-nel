@@ -26,6 +26,7 @@ assert.match(workflow, /GEJAST_FAMILY_TOKEN=([0-9a-f])\1{47}/i, 'degraded fallba
 assert.match(workflow, /GEJAST_PLAYER1_NAME=\$\{GEJAST_PLAYER1_NAME:-VisualA_\$\{suffix\}\}/, 'degraded fallback must preserve an already-exported real fixture name for cleanup');
 assert.match(workflow, /GEJAST_VISUAL_TIMEOUT_MS=5000/, 'degraded fallback must bound auth/data-plane waiting so anonymous coverage can finish');
 assert.match(workflow, /GEJAST_VISUAL_SETTLE_MS=1200/, 'degraded fallback must use a bounded settle period');
+assert.match(workflow, /GEJAST_VISUAL_DEGRADED_FIXTURES=1/, 'fixture failure must explicitly tell the runner it is operating in degraded mode');
 assert.match(workflow, /- name: Screenshot and inspect every tracked live HTML page\s*\n\s*if:\s*always\(\) && \(steps\.provision\.outcome == 'success' \|\| steps\.provision\.outcome == 'failure'\)/, 'screenshot execution must run after attempted provisioning but not misclassify skipped setup as fixture failure');
 assert.match(workflow, /DEGRADED_FIXTURE_PROVISIONING\.txt/, 'degraded artifacts must carry an unmistakable fixture-failure marker');
 assert.match(workflow, /MUST NOT be treated as authenticated visual certification or zero-residue proof/, 'degraded artifact marker must explicitly forbid false certification');
@@ -76,4 +77,15 @@ assert.match(runner, /auth gate did not settle within/, 'a genuinely stuck auth 
 assert.match(runner, /if \(!protectedOnArrival\) \{\s*authGate = await waitForAuthGateToSettle/s, 'Cloudflare-protected admin responses must bypass player-auth settlement waiting');
 assert.match(runner, /seriousConsole\.length && judgement !== 'broken' && judgement !== 'protected'/, 'expected Cloudflare protection must not be downgraded to warning by perimeter console noise');
 
-console.log('PASS v801 full visual audit REST-fixture/auth-context + degraded-fallback contract');
+assert.match(runner, /const degradedFixtures = String\(process\.env\.GEJAST_VISUAL_DEGRADED_FIXTURES \|\| ''\) === '1'/, 'runner must consume the workflow degraded-fixture flag explicitly');
+assert.match(runner, /const authSettleTimeout = degradedFixtures \? Math\.min\(timeout, 1500\) : Math\.min\(timeout, 12000\)/, 'degraded mode must bound per-page auth-gate waiting more tightly than authenticated certification');
+assert.match(runner, /async function setupContextRooms\(\) \{\s*if \(degradedFixtures\) \{[\s\S]*?tracked-route\/perimeter evidence only\.[\s\S]*?return;/, 'degraded mode must not attempt authenticated game-room setup with synthetic sessions');
+assert.match(runner, /degraded_fixture_mode:\s*degradedFixtures/, 'report.json must record whether fixture mode was degraded');
+assert.match(runner, /certification_eligible:\s*!degradedFixtures/, 'report.json must explicitly deny certification eligibility in degraded mode');
+assert.match(runner, /Fixture mode: \$\{degradedFixtures \? 'DEGRADED — anonymous\/perimeter evidence only'/, 'human-readable report must label degraded evidence');
+assert.match(runner, /if \(!degradedFixtures\) \{\s*for \(const \[route, label\] of contextualRoutes\(\)\)/s, 'degraded mode must skip contextual authenticated Friends variants');
+assert.match(runner, /if \(!degradedFixtures\)[\s\S]*?contextualFamilyRoutes\(\)/, 'degraded mode must skip contextual authenticated Family variants');
+assert.match(runner, /FULL_LIVE_VISUAL_AUDIT_DEGRADED fixture provisioning unavailable; artifact is not certification eligible/, 'degraded runner must emit an explicit fail-closed marker');
+assert.match(runner, /if \(degradedFixtures\) \{[\s\S]*?process\.exitCode = 1;/, 'degraded evidence must keep the workflow red even when no individual screenshot is broken');
+
+console.log('PASS v801 full visual audit REST-fixture/auth-context + explicit degraded-mode contract');
