@@ -62,11 +62,13 @@ assert.match(fixtures, /RETRY_ATTEMPTS\s*=\s*4/, 'fixture REST access must retai
 assert.match(fixtures, /\/rest\/v1\//, 'fixture manager must use the Supabase REST surface');
 assert.match(fixtures, /account_login_v687/, 'fixture manager must create sessions through the current public login RPC');
 assert.match(fixtures, /key:\s*PUBLIC_KEY/, 'session creation must exercise the public publishable-key boundary rather than service-role RPC authentication');
-assert.match(fixtures, /\{ display_name_input: displayName, entered_pin: pin, site_scope_input: scope \}/, 'session creation must use the current named login contract');
+assert.match(fixtures, /\{ desired_name: displayName, entered_pin: pin, site_scope_input: scope, client_meta: \{\} \}/, 'session creation must use the deployed four-argument named login contract');
+assert.doesNotMatch(fixtures, /display_name_input:\s*displayName/, 'obsolete display_name_input login argument must not return');
 assert.match(fixtures, /\^\[0-9a-f\]\{48\}\$/, 'fixture manager must reject non-canonical session-token shapes');
 assert.match(fixtures, /is_dummy:\s*true/, 'visual identities must remain disposable dummy players');
 assert.match(fixtures, /hidden_from_public:\s*true/, 'visual identities must remain hidden from public surfaces');
 assert.match(fixtures, /gejast_player_sessions_v746/, 'fixture cleanup must remove current player sessions');
+assert.match(fixtures, /select:\s*'session_token'[\s\S]*?display_name:\s*inFilter\(names\)/, 'fixture cleanup verification must use the deployed session_token column');
 assert.match(fixtures, /gejast_active_player_metadata_v679/, 'fixture cleanup must remove visual account metadata');
 assert.match(fixtures, /klaverjas_online_games/, 'fixture cleanup must remove Klaverjas rooms created by the audit');
 assert.match(fixtures, /pikken_games/, 'fixture cleanup must remove Pikken rooms created by the audit');
