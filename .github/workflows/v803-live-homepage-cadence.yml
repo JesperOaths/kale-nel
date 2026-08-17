@@ -1,0 +1,81 @@
+name: v803 live homepage cadence proof
+
+on:
+  push:
+    branches: [proof/v803-live-homepage-cadence]
+    paths: ['.github/workflows/v803-live-homepage-cadence.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  cadence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: proof/v803-live-homepage-cadence
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install browser runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = 'v803'
+          for i in $(seq 1 20); do
+            live="$(curl -fsS --max-time 10 "https://kalenel.nl/VERSION?cb=${GITHUB_RUN_ID}-${i}" | tr -d '\r\n' || true)"
+            [ "$live" = 'v803' ] && break
+            sleep 3
+          done
+          test "$live" = 'v803'
+          npm ci
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Prove fresh deployed v803 has no one-second homepage-live loop
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/v803-live-cadence.mjs <<'EOF'
+          import { chromium } from 'playwright';
+          const browser = await chromium.launch({headless:true});
+          const context = await browser.newContext();
+          const token = 'a'.repeat(48);
+          await context.addInitScript(({token}) => {
+            localStorage.setItem('jas_session_token_v11', token);
+            sessionStorage.setItem('jas_session_token_v11', token);
+          }, {token});
+          const calls=[];
+          await context.route('https://uiqntazgnrxwliaidkmy.supabase.co/rest/v1/**', async route => {
+            const url=route.request().url();
+            const path=new URL(url).pathname;
+            if(path.endsWith('/rpc/account_public_state_v687')) {
+              return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,site_scope:'friends',player_name:'V803Proof'})});
+            }
+            if(path.endsWith('/rpc/get_homepage_live_state_public_scoped')) {
+              calls.push(Date.now());
+              return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,players:[],rooms:[],site_scope:'friends'})});
+            }
+            if(path.endsWith('/rpc/get_drinks_homepage_top5_public')) {
+              return route.fulfill({status:200,contentType:'application/json',body:'[]'});
+            }
+            return route.fulfill({status:200,contentType:'application/json',body:'{}'});
+          });
+          const page=await context.newPage();
+          const started=Date.now();
+          await page.goto(`https://kalenel.nl/index.html?cb=${Date.now()}`, {waitUntil:'domcontentloaded',timeout:30000});
+          await page.waitForFunction(() => document.documentElement.getAttribute('data-gejast-auth-state')==='authenticated',{timeout:15000});
+          await page.waitForTimeout(7500);
+          const offsets=calls.map(t=>t-started);
+          console.log('homepage-live calls=',calls.length,'offset_ms=',JSON.stringify(offsets));
+          if(calls.length>3) throw new Error(`Fresh v803 emitted ${calls.length} homepage-live calls in 7.5s; expected <=3 boot calls`);
+          const late=offsets.filter(ms=>ms>3000);
+          if(late.length>0) throw new Error(`Fresh v803 emitted late/repeating homepage-live calls after 3s: ${JSON.stringify(late)}`);
+          const v725=await page.evaluate(() => ({loaded:!!window.GEJAST_V725_REPAIR, canonical:!!window.GEJAST_LIVE_SUMMARY}));
+          if(!v725.loaded||!v725.canonical) throw new Error(`Expected both v725 compatibility and canonical live-summary runtimes: ${JSON.stringify(v725)}`);
+          console.log('RESULT=V803_FRESH_LIVE_HOMEPAGE_CADENCE_PASS');
+          await browser.close();
+          EOF
+          node /tmp/v803-live-cadence.mjs
