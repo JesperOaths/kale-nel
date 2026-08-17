@@ -27,8 +27,7 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
-          import json,re
-
+          import json,re,base64
           p=Path('gejast-v725-repair.js')
           s=p.read_text()
           s2,n=re.subn(r"\n  let paardNoPlayerCount=0;\n  async function monitorPaardenraceLive\(\)\{.*?\n  \}\n  let homepageLiveCardsChecked=false;", "\n  let homepageLiveCardsChecked=false;", s, count=1, flags=re.S)
@@ -38,10 +37,8 @@ jobs:
           new="function boot(){ if(booted) return; booted=true; injectCss(); patchPikkenContract(); patchPikkenPage(); patchPaardenraceApi(); patchPaardenracePages(); patchHomepageLiveCards(); }\n  ready(boot);"
           if s2.count(old)!=1:
             raise SystemExit(f'Expected one v804 boot tail, found {s2.count(old)}')
-          s2=s2.replace(old,new,1)
-          p.write_text(s2)
+          p.write_text(s2.replace(old,new,1))
           Path('VERSION').write_text('v805\n')
-
           checker=Path('check-v804-v725-idempotent-boot.mjs')
           c=checker.read_text()
           old_checks="assert(source.includes('window.__gejastV725PaardenraceMonitorTimer=setInterval'), 'Paardenrace compatibility monitor must have one global timer owner');\nassert(/__gejastV725PaardenraceMonitorTimer=setInterval\\(\\(\\)=>\\{ if\\(!document\\.hidden\\) monitorPaardenraceLive\\(\\); \\},2500\\)/.test(source), 'Paardenrace compatibility monitor cadence must remain 2500ms');"
@@ -49,37 +46,18 @@ jobs:
           if c.count(old_checks)!=1:
             raise SystemExit('Could not locate v804 monitor assertions')
           checker.write_text(c.replace(old_checks,new_checks,1))
-
-          Path('check-v805-paardenrace-native-poll-owner.mjs').write_text("""#!/usr/bin/env node
-import assert from 'node:assert/strict';
-import fs from 'node:fs';
-const version=fs.readFileSync('VERSION','utf8').trim();
-const n=Number(version.match(/^v(\\d+)$/)?.[1]||0);
-assert(n>=805,`v805 Paardenrace native poll regression requires v805+, got ${version}`);
-const compat=fs.readFileSync('gejast-v725-repair.js','utf8');
-const live=fs.readFileSync('paardenrace_live.html','utf8');
-assert(!compat.includes('monitorPaardenraceLive'),'legacy v725 Paardenrace room-state monitor must stay removed');
-assert(!compat.includes('__gejastV725PaardenraceMonitorTimer'),'legacy v725 Paardenrace monitor timer must stay removed');
-assert(live.includes('loadState({ noAutoClose:true }).then(()=>{'),'native Paardenrace live page must retain its immediate state load');
-assert(/statePollTimer = setInterval\\(async \\(\\)=>\\{[\\s\\S]*?\\}, 1800\\);/.test(live),'native Paardenrace live page must retain its 1800ms state poll');
-assert(live.includes("['countdown','race','nominations','live','active'].includes(liveStage) && livePlayers.length < 2"),'native live-page insufficient-player guard must stay present');
-assert(live.includes("bounceToLobby('Deze race heeft te weinig actieve spelers en is gesloten. Je gaat terug naar de lobby.');"),'native live-page stale/undersized race recovery must stay present');
-console.log(`PASS v805 Paardenrace native state-poll ownership at ${version}`);
-""")
-
+          Path('check-v805-paardenrace-native-poll-owner.mjs').write_bytes(base64.b64decode('IyEvdXNyL2Jpbi9lbnYgbm9kZQppbXBvcnQgYXNzZXJ0IGZyb20gJ25vZGU6YXNzZXJ0L3N0cmljdCc7CmltcG9ydCBmcyBmcm9tICdub2RlOmZzJzsKY29uc3QgdmVyc2lvbj1mcy5yZWFkRmlsZVN5bmMoJ1ZFUlNJT04nLCd1dGY4JykudHJpbSgpOwpjb25zdCBuPU51bWJlcih2ZXJzaW9uLm1hdGNoKC9edihcZCspJC8pPy5bMV18fDApOwphc3NlcnQobj49ODA1LGB2ODA1IFBhYXJkZW5yYWNlIG5hdGl2ZSBwb2xsIHJlZ3Jlc3Npb24gcmVxdWlyZXMgdjgwNSssIGdvdCAke3ZlcnNpb259YCk7CmNvbnN0IGNvbXBhdD1mcy5yZWFkRmlsZVN5bmMoJ2dlamFzdC12NzI1LXJlcGFpci5qcycsJ3V0ZjgnKTsKY29uc3QgbGl2ZT1mcy5yZWFkRmlsZVN5bmMoJ3BhYXJkZW5yYWNlX2xpdmUuaHRtbCcsJ3V0ZjgnKTsKYXNzZXJ0KCFjb21wYXQuaW5jbHVkZXMoJ21vbml0b3JQYWFyZGVucmFjZUxpdmUnKSwnbGVnYWN5IHY3MjUgUGFhcmRlbnJhY2Ugcm9vbS1zdGF0ZSBtb25pdG9yIG11c3Qgc3RheSByZW1vdmVkJyk7CmFzc2VydCghY29tcGF0LmluY2x1ZGVzKCdfX2dlamFzdFY3MjVQYWFyZGVucmFjZU1vbml0b3JUaW1lcicpLCdsZWdhY3kgdjcyNSBQYWFyZGVucmFjZSBtb25pdG9yIHRpbWVyIG11c3Qgc3RheSByZW1vdmVkJyk7CmFzc2VydChsaXZlLmluY2x1ZGVzKCdsb2FkU3RhdGUoeyBub0F1dG9DbG9zZTp0cnVlIH0pLnRoZW4oKCk9PnsnKSwnbmF0aXZlIFBhYXJkZW5yYWNlIGxpdmUgcGFnZSBtdXN0IHJldGFpbiBpdHMgaW1tZWRpYXRlIHN0YXRlIGxvYWQnKTsKYXNzZXJ0KC9zdGF0ZVBvbGxUaW1lciA9IHNldEludGVydmFsXChhc3luYyBcKFwpPT5ce1tcc1xTXSo/XH0sIDE4MDBcKTsvLnRlc3QobGl2ZSksJ25hdGl2ZSBQYWFyZGVucmFjZSBsaXZlIHBhZ2UgbXVzdCByZXRhaW4gaXRzIDE4MDBtcyBzdGF0ZSBwb2xsJyk7CmFzc2VydChsaXZlLmluY2x1ZGVzKCJbJ2NvdW50ZG93bicsJ3JhY2UnLCdub21pbmF0aW9ucycsJ2xpdmUnLCdhY3RpdmUnXS5pbmNsdWRlcyhsaXZlU3RhZ2UpICYmIGxpdmVQbGF5ZXJzLmxlbmd0aCA8IDIiKSwnbmF0aXZlIGxpdmUtcGFnZSBpbnN1ZmZpY2llbnQtcGxheWVyIGd1YXJkIG11c3Qgc3RheSBwcmVzZW50Jyk7CmFzc2VydChsaXZlLmluY2x1ZGVzKCJib3VuY2VUb0xvYmJ5KCdEZXplIHJhY2UgaGVlZnQgdGUgd2VpbmlnIGFjdGlldmUgc3BlbGVycyBlbiBpcyBnZXNsb3Rlbi4gSmUgZ2FhdCB0ZXJ1ZyBuYWFyIGRlIGxvYmJ5LicpOyIpLCduYXRpdmUgbGl2ZS1wYWdlIHN0YWxlL3VuZGVyc2l6ZWQgcmFjZSByZWNvdmVyeSBtdXN0IHN0YXkgcHJlc2VudCcpOwpjb25zb2xlLmxvZyhgUEFTUyB2ODA1IFBhYXJkZW5yYWNlIG5hdGl2ZSBzdGF0ZS1wb2xsIG93bmVyc2hpcCBhdCAke3ZlcnNpb259YCk7Cg=='))
           cert=json.loads(Path('release-certification.json').read_text())
           cert['current_version']='v805'; cert['status']='REVALIDATION_REQUIRED'
           cert['reason']='v805 is a release candidate removing the redundant legacy v725 Paardenrace room-state monitor after exact-live v804 proof measured five room-state calls in 4.6 seconds: three are owned by the native live page (immediate + 1800ms poll) and two by the weaker compatibility monitor. v805 retains the stronger native insufficient-player recovery and removes the duplicate compatibility reads. Exact-v804 live health passed, but exact-current authenticated visual/live-write certification remains blocked by Supabase data-plane timeouts, and SQL-only Toepen v801a remains undeployed pending explicit authorization.'
           ev=cert.setdefault('current_evidence',{}); ev['candidate_version']='v805'; ev['candidate_status']='SOURCE_VERIFICATION_PENDING_THEN_DEPLOYMENT_REVALIDATION'; ev['v804_live_deployment_health_run']=31984946122; ev['v804_live_cadence_diagnostic_run']=31985032771
           Path('release-certification.json').write_text(json.dumps(cert,indent=2,ensure_ascii=False)+'\n')
-
           readiness=json.loads(Path('beta-readiness.json').read_text())
           readiness['site_version']='release candidate v805 / live v804'; readiness['last_updated']='2026-08-17'
           dep=readiness.setdefault('deployment_identity',{}); dep['release_candidate_version']='v805'; dep['live_version']='v804'; dep['note']='Release candidate v805 / live v804. Exact-v804 live health 31984946122 is green. v805 removes the redundant v725 Paardenrace room-state monitor while preserving the native immediate + 1800ms live-page poll and its stronger insufficient-player recovery. Exact-current visual/live-write proof remains blocked by Supabase data-plane timeouts; Toepen v801a remains separately permission-gated.'
           Path('beta-readiness.json').write_text(json.dumps(readiness,indent=2,ensure_ascii=False)+'\n')
-
           gameplay=json.loads(Path('gameplay-acceptance.json').read_text()); gameplay['site_version']='v805'; gameplay['last_updated']='2026-08-17'; Path('gameplay-acceptance.json').write_text(json.dumps(gameplay,indent=2,ensure_ascii=False)+'\n')
-          checklist=json.loads(Path('beta-live-write-checklist.json').read_text()); checklist['site_version']='v805';
+          checklist=json.loads(Path('beta-live-write-checklist.json').read_text()); checklist['site_version']='v805'
           if checklist.get('items') != []: raise SystemExit('Refusing to arm live-write checklist')
           Path('beta-live-write-checklist.json').write_text(json.dumps(checklist,indent=2,ensure_ascii=False)+'\n')
           PY
