@@ -33,20 +33,31 @@ jobs:
           GEJAST_ADMIN_AUTH_TIMEOUT_MS: '15000'
         run: node check-live-admin-auth-boundary.mjs
       - name: Verify Supabase auth data-plane liveness
+        id: data_plane
+        continue-on-error: true
         env:
           GEJAST_DATA_PLANE_TIMEOUT_MS: '10000'
           GEJAST_DATA_PLANE_ATTEMPTS: '2'
           GEJAST_DATA_PLANE_RETRY_DELAY_MS: '750'
         run: node check-live-data-plane.mjs
       - name: Run primary read-only beta acceptance
+        if: always() && (steps.data_plane.outcome == 'success' || steps.data_plane.outcome == 'failure')
         env:
           GEJAST_BETA_SURFACE_TIMEOUT_MS: '15000'
         run: node check-beta-readonly-surfaces.mjs
       - name: Run extended read-only beta acceptance
+        if: always() && (steps.data_plane.outcome == 'success' || steps.data_plane.outcome == 'failure')
         env:
           GEJAST_BETA_SURFACE_TIMEOUT_MS: '15000'
         run: node check-beta-readonly-extended.mjs
       - name: Record live beta performance probe
+        if: always() && (steps.data_plane.outcome == 'success' || steps.data_plane.outcome == 'failure')
         env:
           GEJAST_PERF_TIMEOUT_MS: '20000'
         run: node check-beta-performance.mjs
+      - name: Enforce Supabase auth data-plane health
+        if: always() && steps.data_plane.outcome == 'failure'
+        shell: bash
+        run: |
+          echo 'DATA_PLANE_HEALTH_ENFORCEMENT_FAIL read-only auth probe failed; see Verify Supabase auth data-plane liveness above.'
+          exit 1
