@@ -1,5 +1,6 @@
 name: v805 current data-plane recovery proof
 
+# Recovery rerun after Supabase project restart on 2026-08-18.
 on:
   push:
     branches: [proof/v805-current-recovery]
