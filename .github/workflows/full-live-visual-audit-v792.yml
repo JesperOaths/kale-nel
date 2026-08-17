@@ -64,7 +64,7 @@ jobs:
           node scripts/full-live-visual-fixtures-v801.mjs provision
 
       - name: Fall back to anonymous perimeter coverage when fixtures are unavailable
-        if: steps.provision.outcome != 'success'
+        if: steps.provision.outcome == 'failure'
         shell: bash
         run: |
           set -euo pipefail
@@ -83,11 +83,11 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Screenshot and inspect every tracked live HTML page
-        if: always()
+        if: always() && (steps.provision.outcome == 'success' || steps.provision.outcome == 'failure')
         run: node scripts/full-live-visual-audit-v792.mjs
 
       - name: Record degraded visual-audit status
-        if: always() && steps.provision.outcome != 'success'
+        if: always() && steps.provision.outcome == 'failure'
         shell: bash
         run: |
           set -euo pipefail
