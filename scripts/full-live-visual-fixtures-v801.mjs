@@ -127,7 +127,7 @@ async function cleanupState(names, { verify = true } = {}) {
   if (!verify) return;
   const residue = [];
   residue.push((await selectRows('players', { select: 'id', display_name: inFilter(names), limit: '1' })).length);
-  residue.push((await selectRows('gejast_player_sessions_v746', { select: 'id', display_name: inFilter(names), limit: '1' })).length);
+  residue.push((await selectRows('gejast_player_sessions_v746', { select: 'session_token', display_name: inFilter(names), limit: '1' })).length);
   residue.push((await selectRows('gejast_active_player_metadata_v679', { select: 'player_name', player_name: inFilter(names), limit: '1' })).length);
   residue.push((await selectRows('klaverjas_online_games', { select: 'id', created_by_player_name: inFilter(names), limit: '1' })).length);
   residue.push((await selectRows('pikken_games', { select: 'id', created_by_player_name: inFilter(names), limit: '1' })).length);
@@ -151,7 +151,7 @@ async function login(displayName, pin, scope) {
   const data = unwrapRpc(await request(`rpc/${name}`, {
     method: 'POST',
     key: PUBLIC_KEY,
-    body: { display_name_input: displayName, entered_pin: pin, site_scope_input: scope },
+    body: { desired_name: displayName, entered_pin: pin, site_scope_input: scope, client_meta: {} },
   }), name);
   const token = String(data?.session_token || '').trim();
   if (!/^[0-9a-f]{48}$/.test(token)) throw new Error(`${name} returned no canonical 48-hex session token for ${displayName}`);
