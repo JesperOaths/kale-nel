@@ -9,6 +9,7 @@ on:
       - 'scripts/full-live-visual-audit-v792.mjs'
       - 'scripts/full-live-visual-fixtures-v801.mjs'
       - 'scripts/refine-degraded-visual-report-v807.mjs'
+      - 'scripts/refine-expected-visual-aliases-v809.mjs'
       - 'check-live-data-plane.mjs'
       - '*.html'
       - 'familie/**.html'
@@ -57,6 +58,7 @@ jobs:
           node --check scripts/full-live-visual-audit-v792.mjs
           node --check scripts/full-live-visual-fixtures-v801.mjs
           node --check scripts/refine-degraded-visual-report-v807.mjs
+          node --check scripts/refine-expected-visual-aliases-v809.mjs
           node --check check-live-data-plane.mjs
 
       - name: Probe Supabase auth data plane before fixture provisioning
@@ -94,12 +96,18 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Screenshot and inspect every tracked live HTML page
+        id: visual_capture
         if: always() && (steps.data_plane.outcome == 'failure' || steps.provision.outcome == 'success' || steps.provision.outcome == 'failure')
+        continue-on-error: ${{ steps.provision.outcome == 'success' }}
         run: node scripts/full-live-visual-audit-v792.mjs
 
       - name: Classify expected degraded login redirects
         if: always() && env.GEJAST_VISUAL_DEGRADED_FIXTURES == '1'
         run: node scripts/refine-degraded-visual-report-v807.mjs
+
+      - name: Refine declared authenticated redirect aliases
+        if: always() && steps.provision.outcome == 'success'
+        run: node scripts/refine-expected-visual-aliases-v809.mjs
 
       - name: Record degraded visual-audit status
         if: always() && (steps.data_plane.outcome == 'failure' || steps.provision.outcome == 'failure')
