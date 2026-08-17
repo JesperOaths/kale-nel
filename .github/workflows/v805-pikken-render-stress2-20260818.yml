@@ -1,9 +1,11 @@
-name: v805 Pikken fresh-room render stress corrected
+name: v805 Pikken auth-aware fresh-room render stress
 
 on:
   push:
     branches: [proof/v805-pikken-render-stress2-20260818]
-    paths: ['.github/workflows/v805-pikken-render-stress2-20260818.yml']
+    paths:
+      - '.github/workflows/v805-pikken-render-stress2-20260818.yml'
+      - 'scripts/v805-pikken-render-stress-proof.mjs'
 
 permissions:
   contents: write
@@ -37,7 +39,7 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add .proof/v805-pikken-stress2-run-id.txt
-          git commit -m 'test: record corrected v805 Pikken stress run id'
+          git commit -m 'test: record auth-aware v805 Pikken stress run id'
           git push origin HEAD:proof/v805-pikken-render-stress2-20260818
 
       - name: Set up Node.js 24
@@ -98,7 +100,7 @@ jobs:
           } >> "$GITHUB_ENV"
           echo 'RESULT=V805_PIKKEN_STRESS2_FIXTURES_PASS'
 
-      - name: Run 20 fresh-room two-context stress cycles with no retries
+      - name: Run 20 auth-aware fresh-room cycles with no retries
         env:
           GEJAST_STRESS_CYCLES: '20'
         run: node scripts/v805-pikken-render-stress-proof.mjs
