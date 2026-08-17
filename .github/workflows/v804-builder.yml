@@ -74,6 +74,12 @@ jobs:
           gameplay['site_version']='v804'
           gameplay['last_updated']='2026-08-17'
           Path('gameplay-acceptance.json').write_text(json.dumps(gameplay,indent=2,ensure_ascii=False)+'\n')
+
+          checklist=json.loads(Path('beta-live-write-checklist.json').read_text())
+          checklist['site_version']='v804'
+          if checklist.get('items') != []:
+            raise SystemExit('Refusing to arm live-write checklist during v804 build')
+          Path('beta-live-write-checklist.json').write_text(json.dumps(checklist,indent=2,ensure_ascii=False)+'\n')
           PY
           node fix-version-drift.mjs
           npm ci
